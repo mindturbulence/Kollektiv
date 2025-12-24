@@ -1,0 +1,6 @@
+{
+  "name": "Kollektiv",
+  "description": "An application that uses Gemini AI to enhance and provide variations of user-inputted prompts, making them more effective for other generative AI models.",
+  "requestFramePermissions": [],
+  "prompt": ""
+}

@@ -1,0 +1,78 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="abyss">
+  <head>
+    <meta charset="UTF-8" />
+    <link rel="icon" type="image/svg+xml" href="/vite.svg" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Kollektiv</title>
+    <link rel="stylesheet" href="https://fonts.bunny.net/css?family=urbanist:100,200,300,400,500,600,700,800,900,100i,200i,300i,400i,500i,600i,700i,800i,900i&display=swap" />
+    <style type="text/css">
+      html, body, #root {
+        height: 100%;
+        margin: 0;
+        padding: 0;
+      }
+      #initial-loader {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        height: 100%;
+        background-color: oklch(20% 0.08 209);
+        color: oklch(90% 0.076 70.697);
+        font-family: 'Urbanist', sans-serif;
+      }
+      .loader-spinner {
+        width: 48px;
+        height: 48px;
+        border: 5px solid oklch(90% 0.076 70.697 / 0.3);
+        border-bottom-color: oklch(92% 0.2653 125);
+        border-radius: 50%;
+        display: inline-block;
+        box-sizing: border-box;
+        animation: rotation 1s linear infinite;
+      }
+      @keyframes rotation {
+        0% { transform: rotate(0deg); }
+        100% { transform: rotate(360deg); }
+      }
+    </style>
+<script type="importmap">
+{
+  "imports": {
+    "react": "https://esm.sh/react@^19.1.1?corp",
+    "react/jsx-runtime": "https://esm.sh/react@^19.1.1/jsx-runtime?corp",
+    "react/jsx-dev-runtime": "https://esm.sh/react@^19.1.1/jsx-dev-runtime?corp",
+    "react-dom/client": "https://esm.sh/react-dom@^19.1.1/client?corp",
+    "react-dom": "https://esm.sh/react-dom@^19.1.1?corp",
+    "@google/genai": "https://esm.sh/@google/genai@^1.12.0?corp",
+    "uuid": "https://esm.sh/uuid@^11.1.0?corp",
+    "jszip": "https://esm.sh/jszip@^3.10.1?corp",
+    "idb": "https://esm.sh/idb@^8.0.3?corp",
+    "@ffmpeg/ffmpeg": "https://esm.sh/@ffmpeg/ffmpeg@^0.12.6?corp",
+    "@ffmpeg/util": "https://esm.sh/@ffmpeg/util@^0.12.1?corp",
+    "@vitejs/plugin-react": "https://esm.sh/@vitejs/plugin-react@^5.0.0?corp",
+    "vite": "https://esm.sh/vite@^7.1.1?corp",
+    "path": "https://esm.sh/path@^0.12.7?corp",
+    "url": "https://esm.sh/url@^0.11.4?corp",
+    "react/": "https://esm.sh/react@^19.1.1/",
+    "react-dom/": "https://esm.sh/react-dom@^19.1.1/",
+    "daisyui": "https://esm.sh/daisyui@^5.0.50"
+  }
+}
+</script>
+<link rel="stylesheet" href="/index.css">
+</head>
+  <body>
+    <div id="root">
+      <div id="initial-loader">
+        <div class="loader-spinner"></div>
+        <p id="loading-status" class="mt-4 text-sm">Loading application...</p>
+        <div id="loading-progress-container" class="w-64 h-2 bg-base-content/10 rounded-full mt-4 overflow-hidden" style="display: none;">
+          <div id="loading-progress-bar" class="h-full bg-primary rounded-full transition-all duration-300" style="width: 0%;"></div>
+        </div>
+      </div>
+    </div>
+    <script type="module" src="/index.tsx"></script>
+  </body>
+</html>

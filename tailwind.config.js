@@ -1,0 +1,68 @@
+import daisyui from 'daisyui';
+
+/** @type {import('tailwindcss').Config} */
+export default {
+  content: [
+    "./index.html",
+    "./index.tsx",
+    "./components/**/*.{js,ts,jsx,tsx}",
+    "./constants/**/*.{js,ts,jsx,tsx}",
+    "./contexts/**/*.{js,ts,jsx,tsx}",
+    "./services/**/*.{js,ts,jsx,tsx}",
+    "./types.ts",
+    "./utils/**/*.{js,ts,jsx,tsx}",
+  ],
+  theme: {
+    extend: {
+      fontFamily: {
+        sans: ['Urbanist', 'sans-serif'],
+      },
+      keyframes: {
+        'fade-in': {
+          '0%': { opacity: '0' },
+          '100%': { opacity: '1' },
+        },
+        'fade-out': {
+          '0%': { opacity: '1' },
+          '100%': { opacity: '0' },
+        },
+        'slide-in-from-right': {
+          '0%': { transform: 'translateX(100%)', opacity: '0' },
+          '100%': { transform: 'translateX(0)', opacity: '1' },
+        },
+        'slide-out-to-left': {
+          '0%': { transform: 'translateX(0)', opacity: '1' },
+          '100%': { transform: 'translateX(-100%)', opacity: '0' },
+        },
+        'slide-in-from-left': {
+          '0%': { transform: 'translateX(-100%)', opacity: '0' },
+          '100%': { transform: 'translateX(0)', opacity: '1' },
+        },
+        'slide-out-to-right': {
+          '0%': { transform: 'translateX(0)', opacity: '1' },
+          '100%': { transform: 'translateX(100%)', opacity: '0' },
+        },
+      },
+      animation: {
+        'fade-in': 'fade-in 0.3s ease-out forwards',
+        'fade-out': 'fade-out 0.3s ease-out forwards',
+        'slide-in-from-right': 'slide-in-from-right 0.3s ease-out forwards',
+        'slide-out-to-left': 'slide-out-to-left 0.3s ease-out forwards',
+        'slide-in-from-left': 'slide-in-from-left 0.3s ease-out forwards',
+        'slide-out-to-right': 'slide-out-to-right 0.3s ease-out forwards',
+      },
+    },
+  },
+  plugins: [
+    daisyui,
+  ],
+  daisyui: {
+    themes: [
+      "light", "cupcake", "bumblebee", "emerald", "corporate", "retro", "cyberpunk", 
+      "valentine", "garden", "aqua", "lofi", "pastel", "fantasy", "wireframe", 
+      "cmyk", "autumn", "acid", "lemonade", "winter", "dark", "synthwave", 
+      "halloween", "forest", "black", "luxury", "dracula", "business", "night", 
+      "coffee", "dim", "sunset", "abyss"
+    ],
+  },
+};

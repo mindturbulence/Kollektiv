@@ -1,0 +1,84 @@
+export const PROMPT_DETAIL_LEVELS = {
+  SHORT: 'Short',
+  MEDIUM: 'Medium',
+  LONG: 'Long',
+};
+
+// --- Midjourney Specific Modifiers ---
+export const MIDJOURNEY_VERSIONS = ["6", "5.2", "5.1", "5", "4"];
+export const MIDJOURNEY_ASPECT_RATIOS = ["1:1", "2:3", "3:2", "4:5", "5:4", "9:16", "16:9"];
+
+// --- Refiner Dropdown Options ---
+export const COMPOSITION_OPTIONS = [
+    'Rule of Thirds', 'Golden Ratio', 'Leading Lines', 'Symmetry', 'Asymmetrical Balance',
+    'Frame within a Frame', 'Vanishing Point', 'Centered Composition', 'Diagonal Composition',
+    'Low Angle Shot', 'High Angle Shot', 'Birds Eye View', 'Worms Eye View',
+    'Dutch Angle', 'Over-the-Shoulder Shot'
+];
+
+export const LIGHTING_OPTIONS = [
+    'Cinematic Lighting', 'Volumetric Lighting', 'Soft Light', 'Hard Light', 'Rim Lighting',
+    'Backlighting', 'Studio Lighting', 'Golden Hour', 'Blue Hour', 'Neon Lighting',
+    'Chiaroscuro', 'Ambient Occlusion', 'Global Illumination', 'Crepuscular Rays'
+];
+
+export const PHOTOGRAPHY_STYLES = [
+    'Street Photography',
+    'Portrait Photography',
+    'Landscape Photography',
+    'Wildlife Photography',
+    'Macro Photography',
+    'Architectural Photography',
+    'Fashion Photography',
+    'Food Photography',
+    'Abstract Photography',
+    'Documentary Photography',
+    'Glamour Photography',
+    'Still Life Photography',
+];
+
+export const CAMERA_TYPES = [
+    'DSLR', 'Mirrorless Camera', 'Film Camera', 'Action Camera (GoPro)', 'Drone Footage',
+    'Security Camera Footage', 'Smartphone Camera', 'Analog Film', 'Pinhole Camera', 'Vintage Camera'
+];
+
+export const LENS_TYPES = [
+    'Wide-Angle Lens', 'Telephoto Lens', 'Macro Lens', 'Prime Lens (50mm)', 'Fisheye Lens',
+    'Tilt-Shift Lens', 'Anamorphic Lens', 'Lens Flare'
+];
+
+export const ANALOG_FILM_STOCKS = [
+    // Kodak
+    'Kodak Portra 400',
+    'Kodak Portra 160',
+    'Kodak Portra 800',
+    'Kodak Ektar 100',
+    'Kodak Gold 200',
+    'Kodak ColorPlus 200',
+    'Kodak Pro Image 100',
+    'Kodak Vision3 50D',
+    'Kodak Vision3 250D',
+    'Kodak Vision3 500T',
+    'Kodak Tri-X 400',
+    'Kodak T-MAX 400',
+    // Fujifilm
+    'Fujifilm Superia X-TRA 400',
+    'Fujifilm Pro 400H',
+    'Fujifilm Fujicolor C200',
+    'Fujifilm Velvia 50',
+    'Fujifilm Provia 100F',
+    'Fujifilm Acros 100',
+    // CineStill
+    'CineStill 800T',
+    'CineStill 50D',
+    'CineStill 400D',
+    // Ilford
+    'Ilford HP5 Plus 400',
+    'Ilford Delta 3200',
+    'Ilford FP4 Plus 125',
+    // Lomography
+    'Lomography Color Negative 400',
+    'Lomography Color Negative 800',
+    'Lomography LomoChrome Metropolis',
+    'Lomography LomoChrome Purple',
+];
