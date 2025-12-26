@@ -12,13 +12,12 @@ type ImageItem = {
   width: number;
   height: number;
   scale: number;
-  posX: number;
-  posY: number;
+  posX: number; // Percent -0.5 to 0.5
+  posY: number; // Percent -0.5 to 0.5
 }
 
 // --- HELPER FUNCTIONS ---
 const gcd = (a: number, b: number): number => b === 0 ? a : gcd(b, a % b);
-
 
 // --- SUB-COMPONENTS ---
 
@@ -34,20 +33,15 @@ const GridCell: React.FC<{
     const containerRef = useRef<HTMLDivElement>(null);
 
     const handleWheel = (e: React.WheelEvent) => {
-        if (imageFit !== 'contain') return; // Prevent zoom in 'cover' mode
+        if (imageFit !== 'contain') return; 
         e.preventDefault();
         const delta = e.deltaY * -0.001;
-        const newScale = Math.max(0.5, Math.min(item.scale + delta, 5));
-        
-        if (newScale <= 1) { // If scale is at or below 1, reset position
-            onTransform({ scale: newScale, posX: 0, posY: 0 });
-        } else {
-            onTransform({ scale: newScale });
-        }
+        const newScale = Math.max(0.1, Math.min(item.scale + delta, 10));
+        onTransform({ scale: newScale });
     };
     
     const handleMouseDown = (e: React.MouseEvent<HTMLDivElement>) => {
-        if (e.button !== 0 || imageFit !== 'contain') return; // Prevent pan in 'cover' mode
+        if (e.button !== 0 || imageFit !== 'contain') return;
         e.preventDefault();
         isPanning.current = true;
         lastMousePos.current = { x: e.clientX, y: e.clientY };
@@ -55,30 +49,32 @@ const GridCell: React.FC<{
     };
 
     const handleMouseMove = (e: React.MouseEvent<HTMLDivElement>) => {
-        if (!isPanning.current || imageFit !== 'contain') return;
+        if (!isPanning.current || imageFit !== 'contain' || !containerRef.current) return;
+        const rect = (containerRef.current as any).getBoundingClientRect();
+        
         const dx = e.clientX - lastMousePos.current.x;
         const dy = e.clientY - lastMousePos.current.y;
         lastMousePos.current = { x: e.clientX, y: e.clientY };
         
-        onTransform({ posX: item.posX + dx, posY: item.posY + dy });
+        // Convert pixel drag to percentage of cell
+        const dxPercent = dx / rect.width;
+        const dyPercent = dy / rect.height;
+        
+        onTransform({ 
+            posX: item.posX + dxPercent, 
+            posY: item.posY + dyPercent 
+        });
     };
     
     const handleMouseUp = (e: React.MouseEvent<HTMLDivElement>) => {
-        if (isPanning.current) {
-            isPanning.current = false;
-            if (imageFit === 'contain') {
-                (e.currentTarget as any).style.cursor = 'grab';
-            }
+        isPanning.current = false;
+        if (imageFit === 'contain') {
+            (e.currentTarget as any).style.cursor = 'grab';
         }
     };
 
     const handleMouseLeave = (e: React.MouseEvent<HTMLDivElement>) => {
-        if (isPanning.current) {
-            isPanning.current = false;
-            if (imageFit === 'contain') {
-               (e.currentTarget as any).style.cursor = 'grab';
-            }
-        }
+        isPanning.current = false;
         setIsHovered(false);
     };
 
@@ -105,29 +101,29 @@ const GridCell: React.FC<{
                     objectFit: imageFit,
                     width: '100%',
                     height: '100%',
-                    transform: `translate(${item.posX}px, ${item.posY}px) scale(${item.scale})`
+                    transform: `translate(${item.posX * 100}%, ${item.posY * 100}%) scale(${item.scale})`
                 }}
                 alt={item.file.name} 
                 draggable="false"
             />
             {isHovered && imageFit === 'contain' && (
-                <div className="absolute inset-0 bg-black/20 pointer-events-none"></div>
+                <div className="absolute inset-0 bg-black/10 pointer-events-none"></div>
             )}
-             <button onClick={onRemove} className="btn btn-xs btn-circle btn-error absolute -top-1 -right-1 z-10 opacity-0 group-hover:opacity-100">
+             <button onClick={onRemove} className="btn btn-xs btn-circle btn-error absolute -top-1 -right-1 z-10 opacity-0 group-hover:opacity-100 shadow-sm">
                 <CloseIcon className="w-3 h-3"/>
             </button>
             {isHovered && imageFit === 'contain' && (
-                <div className="absolute bottom-2 left-2 right-2 z-10 flex items-center gap-2 bg-black/50 p-1 rounded-full backdrop-blur-sm pointer-events-auto">
+                <div className="absolute bottom-2 left-2 right-2 z-10 flex items-center gap-2 bg-black/60 p-1.5 rounded-full backdrop-blur-md pointer-events-auto shadow-lg">
                     <input 
                         type="range"
-                        min="0.5"
+                        min="0.1"
                         max="5"
-                        step="0.05"
+                        step="0.01"
                         value={item.scale}
                         onChange={(e) => onTransform({ scale: parseFloat((e.currentTarget as any).value) })}
                         className="range range-xs range-primary flex-grow"
                     />
-                    <button onClick={handleReset} className="btn btn-xs btn-ghost btn-circle" title="Reset Position & Scale">
+                    <button onClick={handleReset} className="btn btn-xs btn-ghost btn-circle text-white" title="Reset">
                         <RefreshIcon className="w-3 h-3" />
                     </button>
                 </div>
@@ -138,7 +134,6 @@ const GridCell: React.FC<{
 
 
 const ComposerPage: React.FC = () => {
-    // --- STATE MANAGEMENT ---
     const fileInputRef = useRef<HTMLInputElement>(null);
     const previewContainerRef = useRef<HTMLDivElement>(null);
     const [isDownloading, setIsDownloading] = useState(false);
@@ -149,33 +144,20 @@ const ComposerPage: React.FC = () => {
     const [columns, setColumns] = useLocalStorage('composerCols', 3);
     const [rows, setRows] = useLocalStorage('composerRows', 3);
     const [spacing, setSpacing] = useLocalStorage('composerSpacing', 8);
-    
-    // Refactored imageFit to force a state transition on load, triggering the useLayoutEffect.
     const [storedImageFit, setStoredImageFit] = useLocalStorage<'cover' | 'contain'>('composerFit', 'contain');
-    const [imageFit, setImageFit] = useState<'cover' | 'contain'>('contain');
-
     const [outputFormat, setOutputFormat] = useLocalStorage<'png' | 'jpeg'>('composerFormat', 'jpeg');
     const [bgColor, setBgColor] = useLocalStorage('composerBgColor', '#FFFFFF');
-    
-    // Aspect Ratio State
     const [width, setWidth] = useLocalStorage('composerWidth', '1024');
     const [height, setHeight] = useLocalStorage('composerHeight', '1024');
     const [isLocked, setIsLocked] = useLocalStorage('composerLock', true);
-    const [ratio, setRatio] = useState(1);
     
     const [gridItems, setGridItems] = useState<(ImageItem | null)[]>([]);
-
-    // State for flicker-free rendering
     const [gridPixelDimensions, setGridPixelDimensions] = useState({ width: 0, height: 0 });
-    
-    // --- EFFECTS ---
-    
-    // Sync internal imageFit state with localStorage value on mount.
-    useEffect(() => {
-        setImageFit(storedImageFit);
-    }, [storedImageFit]);
 
-    // Initialize or resize the grid array when columns/rows change
+    // SyncFit
+    const imageFit = useMemo(() => storedImageFit, [storedImageFit]);
+
+    // Update grid size
     useEffect(() => {
         setGridItems(currentItems => {
             const newSize = columns * rows;
@@ -188,492 +170,330 @@ const ComposerPage: React.FC = () => {
         });
     }, [columns, rows]);
 
-    // When the global image fit mode changes, reset all image transforms
-    useLayoutEffect(() => {
-        setGridItems(currentItems => 
-            currentItems.map(item => 
-                item ? { ...item, scale: 1, posX: 0, posY: 0 } : null
-            )
-        );
-    }, [imageFit]);
-    
-    // Update ratio whenever width or height changes
-    useEffect(() => {
-        const numW = parseInt(width, 10);
-        const numH = parseInt(height, 10);
-        if (numW > 0 && numH > 0) {
-            setRatio(numW / numH);
-        }
-    }, [width, height]);
+    // Normalized scale factor for visual consistency in preview
+    const previewScale = useMemo(() => {
+        const outW = parseInt(width, 10) || 1024;
+        return gridPixelDimensions.width > 0 ? gridPixelDimensions.width / outW : 1;
+    }, [width, gridPixelDimensions.width]);
 
-    // Flicker-free resizing logic for preview
     useLayoutEffect(() => {
         const container = previewContainerRef.current;
-        if (!container || typeof window === 'undefined' || !('ResizeObserver' in (window as any))) return;
+        if (!container || typeof window === 'undefined') return;
 
         const updateDimensions = () => {
             const numW = parseInt(width, 10);
             const numH = parseInt(height, 10);
-            if (isNaN(numW) || isNaN(numH) || numW <= 0 || numH <= 0) {
-                setGridPixelDimensions({ width: 0, height: 0 });
-                return;
-            };
+            if (!numW || !numH) return;
             
-            const aspectRatio = numW / numH;
-            const { clientWidth: containerWidth, clientHeight: containerHeight } = container as any;
+            const targetAspect = numW / numH;
+            const containerWidth = (container as any).offsetWidth - 64; // Padding
+            const containerHeight = (container as any).offsetHeight - 64;
 
             let gridW, gridH;
-            const widthAtMaxHeight = containerHeight * aspectRatio;
-
-            if (widthAtMaxHeight <= containerWidth) {
+            if (containerWidth / containerHeight > targetAspect) {
                 gridH = containerHeight;
-                gridW = widthAtMaxHeight;
+                gridW = containerHeight * targetAspect;
             } else {
                 gridW = containerWidth;
-                gridH = containerWidth / aspectRatio;
+                gridH = containerWidth / targetAspect;
             }
-            
             setGridPixelDimensions({ width: gridW, height: gridH });
         };
         
         const observer = new (window as any).ResizeObserver(updateDimensions);
         observer.observe(container);
         updateDimensions();
-
         return () => observer.disconnect();
-
     }, [width, height]);
 
-    // Cleanup object URLs
-    useEffect(() => () => {
-        gridItems.forEach(item => {
-            if (item) URL.revokeObjectURL(item.originalUrl);
-        });
-    }, []);
-
-    // --- DERIVED STATE & MEMOS ---
-    const ratioText = useMemo(() => {
-        const w = parseInt(width, 10);
-        const h = parseInt(height, 10);
-        if (isNaN(w) || isNaN(h) || w <= 0 || h <= 0) return 'N/A';
-        const divisor = gcd(w, h);
-        return `${w / divisor}:${h / divisor}`;
-    }, [width, height]);
-
-    // --- CALLBACKS & HANDLERS ---
-    const handleWidthChange = (value: string) => {
-        setWidth(value);
-        if (isLocked) {
-            const numW = parseInt(value, 10);
-            if (numW > 0) {
-                const numH = parseInt(height, 10);
-                const currentRatio = (numH > 0 && numW > 0) ? numW / numH : ratio;
-                setHeight(String(Math.round(numW / currentRatio)));
-            } else if (value === '') {
-                setHeight('');
-            }
+    // Handlers
+    const handleWidthChange = (val: string) => {
+        const numW = parseInt(val, 10) || 0;
+        setWidth(val);
+        if (isLocked && numW > 0) {
+            const oldW = parseInt(width, 10) || 1024;
+            const oldH = parseInt(height, 10) || 1024;
+            setHeight(String(Math.round(numW * (oldH / oldW))));
         }
     };
 
-    const handleHeightChange = (value: string) => {
-        setHeight(value);
-        if (isLocked) {
-            const numH = parseInt(value, 10);
-            if (numH > 0) {
-                const numW = parseInt(width, 10);
-                const currentRatio = (numW > 0 && numH > 0) ? numW / numH : ratio;
-                setWidth(String(Math.round(numH * currentRatio)));
-            } else if (value === '') {
-                setWidth('');
-            }
+    const handleHeightChange = (val: string) => {
+        const numH = parseInt(val, 10) || 0;
+        setHeight(val);
+        if (isLocked && numH > 0) {
+            const oldW = parseInt(width, 10) || 1024;
+            const oldH = parseInt(height, 10) || 1024;
+            setWidth(String(Math.round(numH * (oldW / oldH))));
         }
-    };
-    
-    const applyPreset = (preset: Pick<Preset, 'width' | 'height'>) => {
-        setWidth(String(preset.width));
-        setHeight(String(preset.height));
     };
     
     const handleAddFiles = useCallback(async (files: File[], dropIndex?: number) => {
-        if (typeof window === 'undefined') return;
         const imageFiles = files.filter(f => f.type.startsWith('image/'));
-        if (imageFiles.length === 0) return;
+        const newItems = await Promise.all(imageFiles.map(file => new Promise<ImageItem>(res => {
+            const url = URL.createObjectURL(file);
+            const img = new (window as any).Image();
+            img.onload = () => res({
+                file, id: Math.random().toString(36).substr(2, 9),
+                originalUrl: url, width: img.naturalWidth, height: img.naturalHeight,
+                scale: 1, posX: 0, posY: 0
+            });
+            img.src = url;
+        })));
 
-        const newImageItems: (ImageItem | null)[] = await Promise.all(
-            imageFiles.map(file => new Promise<ImageItem | null>(resolve => {
-                const originalUrl = URL.createObjectURL(file);
-                const img = new (window as any).Image();
-                img.onload = () => resolve({
-                    file,
-                    id: `${file.name}-${file.lastModified}-${Math.random()}`,
-                    originalUrl,
-                    width: img.naturalWidth,
-                    height: img.naturalHeight,
-                    scale: 1, posX: 0, posY: 0
-                });
-                img.onerror = () => {
-                    URL.revokeObjectURL(originalUrl);
-                    resolve(null);
-                };
-                img.src = originalUrl;
-            }))
-        );
-        const validImages = newImageItems.filter((item): item is ImageItem => item !== null);
-
-        setGridItems(currentItems => {
-            const updatedItems = [...currentItems];
-            let validImageIdx = 0;
-
-            if (dropIndex !== undefined) {
-                for (let i = dropIndex; i < updatedItems.length && validImageIdx < validImages.length; i++) {
-                    if (updatedItems[i] === null) {
-                        updatedItems[i] = validImages[validImageIdx++];
-                    }
-                }
+        setGridItems(current => {
+            const updated = [...current];
+            let added = 0;
+            const start = dropIndex !== undefined ? dropIndex : 0;
+            for (let i = start; i < updated.length && added < newItems.length; i++) {
+                if (!updated[i]) updated[i] = newItems[added++];
             }
-            for (let i = 0; i < updatedItems.length && validImageIdx < validImages.length; i++) {
-                 if (updatedItems[i] === null) {
-                    updatedItems[i] = validImages[validImageIdx++];
-                }
+            // Fill remaining if dropIndex was used
+            for (let i = 0; i < updated.length && added < newItems.length; i++) {
+                if (!updated[i]) updated[i] = newItems[added++];
             }
-            return updatedItems;
+            return updated;
         });
     }, []);
 
+    // --- FIX: Added handleRemoveImage ---
     const handleRemoveImage = (index: number) => {
-        setGridItems(prev => {
-            const newItems = [...prev];
-            const itemToRemove = newItems[index];
-            if (itemToRemove) {
-                URL.revokeObjectURL(itemToRemove.originalUrl);
-            }
-            newItems[index] = null;
-            return newItems;
+        setGridItems(current => {
+            const next = [...current];
+            const item = next[index];
+            if (item) URL.revokeObjectURL(item.originalUrl);
+            next[index] = null;
+            return next;
         });
     };
 
+    // --- FIX: Added handleItemTransform ---
     const handleItemTransform = (index: number, transform: { scale?: number; posX?: number; posY?: number }) => {
-        setGridItems(prev => {
-            const newItems = [...prev];
-            const item = newItems[index];
-            if (item) {
-                newItems[index] = { ...item, ...transform };
-            }
-            return newItems;
+        setGridItems(current => {
+            const next = [...current];
+            const item = next[index];
+            if (!item) return current;
+            next[index] = { ...item, ...transform };
+            return next;
         });
-    };
-    
-    const handleClearAll = () => {
-        gridItems.forEach(img => {
-            if (img) URL.revokeObjectURL(img.originalUrl);
-        });
-        setGridItems(Array(columns * rows).fill(null));
     };
 
-    const handleDownload = useCallback(async () => {
-        if (gridItems.filter(Boolean).length === 0 || typeof window === 'undefined' || typeof (window as any).document === 'undefined') return;
+    const handleDownload = async () => {
+        if (!gridPixelDimensions.width) return;
         setIsDownloading(true);
-
+        
+        const outW = parseInt(width, 10);
+        const outH = parseInt(height, 10);
         const canvas = (window as any).document.createElement('canvas');
+        canvas.width = outW;
+        canvas.height = outH;
         const ctx = canvas.getContext('2d');
-        const numW = parseInt(width, 10);
-        const numH = parseInt(height, 10);
-        const container = previewContainerRef.current;
+        if (!ctx) return;
 
-        if (!ctx || isNaN(numW) || isNaN(numH) || numW <= 0 || numH <= 0 || !container) {
-            console.error("Invalid canvas dimensions or context.");
-            setIsDownloading(false);
-            return;
-        }
-
-        canvas.width = numW;
-        canvas.height = numH;
-        
         ctx.fillStyle = bgColor;
-        ctx.fillRect(0, 0, canvas.width, canvas.height);
-        
-        const numCols = columns;
-        const spacingPx = spacing;
+        ctx.fillRect(0, 0, outW, outH);
 
-        const cellWidth = (canvas.width - (spacingPx * (numCols - 1))) / numCols;
-        const cellHeight = (canvas.height - (spacingPx * (rows - 1))) / rows;
-        
-        const previewCellWidth = (gridPixelDimensions.width - (spacingPx * (numCols - 1))) / numCols;
-        const panScaleFactor = previewCellWidth > 0 ? cellWidth / previewCellWidth : 1;
+        const cellW = (outW - (spacing * (columns - 1))) / columns;
+        const cellH = (outH - (spacing * (rows - 1))) / rows;
 
-        const imagePromises = gridItems.map((item, i) => {
-            if (!item) return Promise.resolve();
-            return new Promise<void>(async (resolve) => {
-                const img = new (window as any).Image();
-                img.src = item.originalUrl;
-                img.crossOrigin = "anonymous";
-                await new Promise(res => { img.onload = res; img.onerror = () => { console.error("failed to load image for canvas"); res(null); }; });
-                
-                if (!img.naturalWidth) { resolve(); return; }
+        for (let i = 0; i < gridItems.length; i++) {
+            const item = gridItems[i];
+            if (!item) continue;
 
-                const row = Math.floor(i / numCols);
-                const col = i % numCols;
-                const cellX = col * (cellWidth + spacingPx);
-                const cellY = row * (cellHeight + spacingPx);
+            const col = i % columns;
+            const row = Math.floor(i / columns);
+            const x = col * (cellW + spacing);
+            const y = row * (cellH + spacing);
 
-                ctx.save();
-                ctx.beginPath();
-                ctx.rect(cellX, cellY, cellWidth, cellHeight);
-                ctx.clip();
-                
+            const img = new (window as any).Image();
+            img.src = item.originalUrl;
+            await new Promise(res => img.onload = res);
+
+            ctx.save();
+            ctx.beginPath();
+            ctx.rect(x, y, cellW, cellH);
+            ctx.clip();
+
+            if (imageFit === 'cover') {
                 const imgAspect = img.naturalWidth / img.naturalHeight;
-                
-                if (imageFit === 'cover') {
-                    const cellAspect = cellWidth / cellHeight;
-                    let sx, sy, sWidth, sHeight;
-                    if (imgAspect > cellAspect) { // image wider than cell
-                        sHeight = img.naturalHeight;
-                        sWidth = sHeight * cellAspect;
-                        sx = (img.naturalWidth - sWidth) / 2;
-                        sy = 0;
-                    } else { // image taller than cell
-                        sWidth = img.naturalWidth;
-                        sHeight = sWidth / cellAspect;
-                        sx = 0;
-                        sy = (img.naturalHeight - sHeight) / 2;
-                    }
-                    ctx.drawImage(img, sx, sy, sWidth, sHeight, cellX, cellY, cellWidth, cellHeight);
-                } else { // 'contain'
-                    const cellAspect = cellWidth / cellHeight;
-                    let dWidth, dHeight, dx, dy;
-
-                    if (imgAspect > cellAspect) { // image wider than cell
-                        dHeight = cellWidth / imgAspect;
-                        dWidth = cellWidth;
-                        dx = cellX;
-                        dy = cellY + (cellHeight - dHeight) / 2;
-                    } else { // image taller or same aspect
-                        dWidth = cellHeight * imgAspect;
-                        dHeight = cellHeight;
-                        dy = cellY;
-                        dx = cellX + (cellWidth - dWidth) / 2;
-                    }
-
-                    const panX = item.posX * panScaleFactor;
-                    const panY = item.posY * panScaleFactor;
-                    const scale = item.scale;
-
-                    const scaledWidth = dWidth * scale;
-                    const scaledHeight = dHeight * scale;
-                    const finalDx = dx - (scaledWidth - dWidth) / 2 + panX;
-                    const finalDy = dy - (scaledHeight - dHeight) / 2 + panY;
-
-                    ctx.drawImage(img, 0, 0, img.naturalWidth, img.naturalHeight, finalDx, finalDy, scaledWidth, scaledHeight);
+                const cellAspect = cellW / cellH;
+                let sw, sh, sx, sy;
+                if (imgAspect > cellAspect) {
+                    sh = img.naturalHeight;
+                    sw = sh * cellAspect;
+                    sx = (img.naturalWidth - sw) / 2;
+                    sy = 0;
+                } else {
+                    sw = img.naturalWidth;
+                    sh = sw / cellAspect;
+                    sx = 0;
+                    sy = (img.naturalHeight - sh) / 2;
+                }
+                ctx.drawImage(img, sx, sy, sw, sh, x, y, cellW, cellH);
+            } else {
+                const imgAspect = img.naturalWidth / img.naturalHeight;
+                const cellAspect = cellW / cellH;
+                let dw, dh;
+                if (imgAspect > cellAspect) {
+                    dw = cellW;
+                    dh = cellW / imgAspect;
+                } else {
+                    dh = cellH;
+                    dw = cellH * imgAspect;
                 }
                 
-                ctx.restore();
-                resolve();
-            });
-        });
-
-        await Promise.all(imagePromises);
-
-        const blob = await new Promise<Blob | null>(res => canvas.toBlob(res, `image/${outputFormat}`));
-
-        if (blob && typeof window !== 'undefined' && typeof (window as any).document !== 'undefined') {
-            const link = (window as any).document.createElement("a");
-            link.href = URL.createObjectURL(blob);
-            link.download = `kollektiv_grid_${Date.now()}.${outputFormat}`;
-            link.click();
-            URL.revokeObjectURL(link.href);
+                const finalScale = item.scale;
+                const scaledW = dw * finalScale;
+                const scaledH = dh * finalScale;
+                
+                const dx = x + (cellW - dw) / 2 + (item.posX * cellW) - (scaledW - dw) / 2;
+                const dy = y + (cellH - dh) / 2 + (item.posY * cellH) - (scaledH - dh) / 2;
+                
+                ctx.drawImage(img, 0, 0, img.naturalWidth, img.naturalHeight, dx, dy, scaledW, scaledH);
+            }
+            ctx.restore();
         }
 
+        const dataUrl = canvas.toDataURL(`image/${outputFormat}`, 0.95);
+        const link = (window as any).document.createElement('a');
+        link.download = `composed-grid-${Date.now()}.${outputFormat}`;
+        link.href = dataUrl;
+        link.click();
         setIsDownloading(false);
-    }, [gridItems, width, height, columns, rows, spacing, imageFit, bgColor, outputFormat, gridPixelDimensions]);
-
-    // --- DRAG & DROP ---
-    const handleDragStart = (e: React.DragEvent<HTMLDivElement>, index: number) => {
-        if (!gridItems[index]) {
-            e.preventDefault();
-            return;
-        }
-        dragItemIndex.current = index;
-        if (e.dataTransfer) {
-            (e.dataTransfer as any).effectAllowed = 'move';
-        }
     };
 
-    const handleDragOver = (e: React.DragEvent<HTMLDivElement>, index: number) => {
-        e.preventDefault();
-        if (dragItemIndex.current !== null && dragItemIndex.current !== index) {
-            setDragOverIndex(index);
-        }
-    };
-    
-    const handleDragLeave = (e: React.DragEvent<HTMLDivElement>) => {
-        setDragOverIndex(null);
-    };
-
-    const handleDrop = (e: React.DragEvent<HTMLElement>, dropIndex: number) => {
-        e.preventDefault();
-        setDragOverIndex(null);
-
-        // Handle file drop from outside
-        if ((e.dataTransfer as any)?.files?.length > 0) {
-            handleAddFiles(Array.from((e.dataTransfer as any).files), dropIndex);
-            return;
-        }
-
-        // Handle internal re-ordering
-        const dragIndex = dragItemIndex.current;
-        dragItemIndex.current = null;
-        if (dragIndex === null || dragIndex === dropIndex) return;
-
-        setGridItems(prev => {
-            const newItems = [...prev];
-            const draggedItem = newItems[dragIndex];
-            newItems[dragIndex] = newItems[dropIndex];
-            newItems[dropIndex] = draggedItem;
-            return newItems;
-        });
-    };
-    
     return (
-        <div className="p-6 bg-base-200 h-full">
-            <div className="grid grid-cols-1 lg:grid-cols-4 gap-6 h-full">
-                {/* Left Column */}
-                <aside className="lg:col-span-1 bg-base-100 rounded-xl shadow-xl flex flex-col min-h-0 text-sm">
-                    <div className="p-4 border-b border-base-300"><h2 className="text-lg font-bold">Grid Composer</h2></div>
-                    <div className="flex-grow p-4 space-y-4 overflow-y-auto">
-                        
-                        {/* Grid layout */}
-                        <div className="form-control"><label className="label-text pb-1 font-semibold">Grid Layout</label>
-                            <div className="flex items-center gap-2">
-                                <input type="number" value={columns} onChange={(e) => setColumns(Math.max(1, parseInt((e.currentTarget as any).value) || 1))} className="input input-sm input-bordered w-full" placeholder="Cols"/>
-                                <span className="text-xl">×</span>
-                                <input type="number" value={rows} onChange={(e) => setRows(Math.max(1, parseInt((e.currentTarget as any).value) || 1))} className="input input-sm input-bordered w-full" placeholder="Rows"/>
+        <div className="p-6 bg-base-200 h-full flex flex-col gap-6 overflow-hidden">
+            <div className="grid grid-cols-1 lg:grid-cols-4 gap-6 h-full min-h-0">
+                <aside className="lg:col-span-1 bg-base-100 rounded-xl shadow-xl flex flex-col min-h-0 text-sm border border-base-300">
+                    <div className="p-4 border-b border-base-300 font-bold text-lg flex items-center gap-2">
+                        <ViewGridIcon className="w-5 h-5 text-primary"/> Grid Composer
+                    </div>
+                    <div className="flex-grow p-4 space-y-5 overflow-y-auto">
+                        <div className="form-control">
+                            <label className="label-text pb-2 font-semibold">Grid Layout</label>
+                            <div className="flex items-center gap-3">
+                                <input type="number" value={columns} onChange={(e) => setColumns(Math.max(1, parseInt((e.currentTarget as any).value) || 1))} className="input input-sm input-bordered w-full text-center" placeholder="Cols"/>
+                                <span className="opacity-40">×</span>
+                                <input type="number" value={rows} onChange={(e) => setRows(Math.max(1, parseInt((e.currentTarget as any).value) || 1))} className="input input-sm input-bordered w-full text-center" placeholder="Rows"/>
                             </div>
                         </div>
 
-                        {/* Dimensions */}
-                        <div className="form-control"><label className="label-text pb-1 font-semibold">Dimensions</label>
+                        <div className="form-control">
+                            <label className="label-text pb-2 font-semibold">Resolution</label>
                             <div className="flex items-center gap-2">
-                                <input type="text" value={width} onChange={(e) => handleWidthChange((e.currentTarget as any).value)} className="input input-sm input-bordered w-full" placeholder="Width"/>
-                                <button onClick={() => setIsLocked(l => !l)} className="btn btn-sm btn-ghost btn-square">{isLocked ? <LinkIcon/> : <LinkOffIcon/>}</button>
-                                <input type="text" value={height} onChange={(e) => handleHeightChange((e.currentTarget as any).value)} className="input input-sm input-bordered w-full" placeholder="Height"/>
+                                <input type="text" value={width} onChange={(e) => handleWidthChange((e.currentTarget as any).value)} className="input input-sm input-bordered w-full" placeholder="W"/>
+                                <button onClick={() => setIsLocked(!isLocked)} className={`btn btn-xs btn-ghost ${isLocked ? 'text-primary' : 'opacity-30'}`}>{isLocked ? <LinkIcon className="w-4 h-4"/> : <LinkOffIcon className="w-4 h-4"/>}</button>
+                                <input type="text" value={height} onChange={(e) => handleHeightChange((e.currentTarget as any).value)} className="input input-sm input-bordered w-full" placeholder="H"/>
                             </div>
-                            <select 
-                                className="select select-sm select-bordered w-full mt-2"
-                                onChange={e => {
-                                    const value = (e.currentTarget as any).value;
-                                    if (value) {
-                                        const [w, h] = value.split('x').map(Number);
-                                        applyPreset({ width: w, height: h });
-                                    }
-                                }}
-                                value={width && height ? `${width}x${height}` : ""}
-                            >
-                                <option value="" disabled>Or select a preset...</option>
-                                {COMPOSER_PRESETS.map(cat => (
-                                    <optgroup key={cat.category} label={cat.category}>
-                                        {cat.presets.map(p => <option key={p.name} value={`${p.width}x${p.height}`}>{p.name} ({p.width}x{p.height})</option>)}
-                                    </optgroup>
-                                ))}
+                             <select className="select select-xs select-bordered w-full mt-2" onChange={e => { const [w, h] = (e.currentTarget as any).value.split('x'); setWidth(w); setHeight(h); }} value={`${width}x${height}`}>
+                                <option value="" disabled>Presets...</option>
+                                {COMPOSER_PRESETS.flatMap(c => c.presets).map(p => <option key={p.name} value={`${p.width}x${p.height}`}>{p.name}</option>)}
                             </select>
                         </div>
                         
-                        {/* Style */}
-                        <div className="form-control"><label className="label-text pb-1 font-semibold">Style</label>
-                            <div className="grid grid-cols-2 gap-2">
+                        <div className="form-control">
+                            <label className="label-text pb-2 font-semibold">Appearance</label>
+                            <div className="space-y-3">
                                 <div>
-                                    <label className="label-text text-xs">Spacing</label>
-                                    <input type="range" min="0" max="64" value={spacing} onChange={(e) => setSpacing(parseInt((e.currentTarget as any).value, 10))} className="range range-xs" />
+                                    <div className="flex justify-between mb-1"><span className="text-[10px] uppercase opacity-60">Spacing</span><span className="text-[10px] font-mono">{spacing}px</span></div>
+                                    <input type="range" min="0" max="100" value={spacing} onChange={(e) => setSpacing(parseInt((e.currentTarget as any).value))} className="range range-xs range-primary" />
                                 </div>
-                                <div>
-                                    <label className="label-text text-xs">Bg Color</label>
-                                    <input type="color" value={bgColor} onChange={(e) => setBgColor((e.currentTarget as any).value)} className="input input-sm h-8 w-full" />
+                                <div className="flex items-center justify-between">
+                                    <span className="text-[10px] uppercase opacity-60">Background</span>
+                                    <input type="color" value={bgColor} onChange={(e) => setBgColor((e.currentTarget as any).value)} className="w-8 h-8 rounded cursor-pointer border-none p-0 overflow-hidden" />
                                 </div>
                             </div>
                         </div>
 
-                        {/* Image Fit */}
-                        <div className="form-control"><label className="label-text pb-1 font-semibold">Image Fit</label>
+                        <div className="form-control">
+                            <label className="label-text pb-2 font-semibold">Image Fitting</label>
                             <div className="join w-full">
-                                <button onClick={() => setStoredImageFit('cover')} className={`join-item btn btn-sm flex-1 ${imageFit === 'cover' ? 'btn-active' : ''}`}>Cover</button>
-                                <button onClick={() => setStoredImageFit('contain')} className={`join-item btn btn-sm flex-1 ${imageFit === 'contain' ? 'btn-active' : ''}`}>Contain</button>
+                                <button onClick={() => setStoredImageFit('cover')} className={`join-item btn btn-xs flex-1 ${imageFit === 'cover' ? 'btn-active' : ''}`}>Cover</button>
+                                <button onClick={() => setStoredImageFit('contain')} className={`join-item btn btn-xs flex-1 ${imageFit === 'contain' ? 'btn-active' : ''}`}>Contain</button>
                             </div>
-                            <p className="text-[10px] text-base-content/60 mt-1">
-                                {imageFit === 'contain' ? 'Scale & Pan allowed.' : 'Fixed fill.'}
-                            </p>
                         </div>
 
-                        {/* Output Format */}
-                        <div className="form-control"><label className="label-text pb-1 font-semibold">Output</label>
-                            <select value={outputFormat} onChange={(e) => setOutputFormat((e.currentTarget as any).value)} className="select select-sm select-bordered w-full">
-                                <option value="jpeg">JPEG</option>
-                                <option value="png">PNG</option>
+                        <div className="form-control">
+                            <label className="label-text pb-2 font-semibold">Format</label>
+                            <select value={outputFormat} onChange={(e) => setOutputFormat((e.currentTarget as any).value as any)} className="select select-sm select-bordered w-full">
+                                <option value="jpeg">JPEG (High Quality)</option>
+                                <option value="png">PNG (Lossless)</option>
                             </select>
-                        </div>
-                        
-                        <div className="divider"></div>
-                        <div className="text-xs text-center text-base-content/50">
-                            Ratio: {ratioText}
                         </div>
                     </div>
                     
-                    <div className="p-4 border-t border-base-300 grid grid-cols-2 gap-2">
-                        <button onClick={handleClearAll} className="btn btn-sm btn-error btn-outline">Reset</button>
-                        <button onClick={handleDownload} disabled={isDownloading || gridItems.filter(Boolean).length === 0} className="btn btn-sm btn-primary">
-                            {isDownloading ? <span className="loading loading-spinner loading-xs"></span> : <DownloadIcon className="w-4 h-4 mr-2"/>}
-                            Download
+                    <div className="p-4 border-t border-base-300 grid grid-cols-2 gap-2 bg-base-200/30">
+                        <button onClick={() => setGridItems(Array(columns * rows).fill(null))} className="btn btn-sm btn-outline btn-error">Clear</button>
+                        <button onClick={handleDownload} disabled={isDownloading || !gridItems.some(Boolean)} className="btn btn-sm btn-primary">
+                            {isDownloading ? <span className="loading loading-spinner loading-xs"></span> : <DownloadIcon className="w-4 h-4 mr-1"/>}
+                            Export
                         </button>
                     </div>
                 </aside>
 
-                {/* Main Area */}
-                <main className="lg:col-span-3 bg-base-100 rounded-xl shadow-xl flex flex-col min-h-0 relative overflow-hidden">
-                    <div ref={previewContainerRef} className="flex-grow flex items-center justify-center p-8 bg-base-200/50 relative">
+                <main ref={previewContainerRef} className="lg:col-span-3 bg-base-300 rounded-xl shadow-inner flex items-center justify-center p-8 relative overflow-hidden">
+                    {gridPixelDimensions.width > 0 && (
                         <div 
-                            className="bg-white shadow-2xl transition-all duration-200"
+                            className="shadow-2xl transition-all duration-200 ease-in-out relative"
                             style={{
                                 width: gridPixelDimensions.width,
                                 height: gridPixelDimensions.height,
                                 display: 'grid',
                                 gridTemplateColumns: `repeat(${columns}, 1fr)`,
                                 gridTemplateRows: `repeat(${rows}, 1fr)`,
-                                gap: `${spacing}px`,
-                                padding: `${spacing}px`,
+                                gap: `${spacing * previewScale}px`,
+                                padding: `${spacing * previewScale}px`,
                                 backgroundColor: bgColor,
                             }}
+                            onDragOver={e => e.preventDefault()}
+                            onDrop={e => {
+                                e.preventDefault();
+                                if ((e.dataTransfer as any).files.length) handleAddFiles(Array.from((e.dataTransfer as any).files));
+                            }}
                         >
-                            {gridItems.map((item, index) => (
+                            {gridItems.map((item, idx) => (
                                 <div 
-                                    key={index}
-                                    className={`relative bg-base-200 border-2 border-dashed border-base-300 rounded-sm overflow-hidden flex items-center justify-center
-                                        ${dragOverIndex === index ? 'border-primary bg-primary/10' : ''}
-                                        ${item ? 'border-none' : ''}
+                                    key={idx}
+                                    className={`relative bg-base-100/30 border border-dashed border-base-content/10 flex items-center justify-center overflow-hidden
+                                        ${dragOverIndex === idx ? 'ring-2 ring-primary ring-inset' : ''}
+                                        ${item ? 'border-none' : 'hover:bg-base-100/50 transition-colors cursor-pointer'}
                                     `}
-                                    onDragStart={(e) => handleDragStart(e, index)}
-                                    onDragOver={(e) => handleDragOver(e, index)}
-                                    onDragLeave={handleDragLeave}
-                                    onDrop={(e) => handleDrop(e, index)}
+                                    onDragStart={e => { if (item) { dragItemIndex.current = idx; (e.dataTransfer as any).effectAllowed = 'move'; } }}
+                                    onDragOver={e => { e.preventDefault(); setDragOverIndex(idx); }}
+                                    onDragLeave={() => setDragOverIndex(null)}
+                                    onDrop={e => {
+                                        e.preventDefault();
+                                        setDragOverIndex(null);
+                                        if ((e.dataTransfer as any).files.length) {
+                                            handleAddFiles(Array.from((e.dataTransfer as any).files), idx);
+                                        } else if (dragItemIndex.current !== null) {
+                                            const from = dragItemIndex.current;
+                                            setGridItems(prev => {
+                                                const next = [...prev];
+                                                [next[from], next[idx]] = [next[idx], next[from]];
+                                                return next;
+                                            });
+                                            dragItemIndex.current = null;
+                                        }
+                                    }}
                                     draggable={!!item}
+                                    onClick={() => !item && (fileInputRef.current as any).click()}
                                 >
                                     {item ? (
                                         <GridCell 
                                             item={item} 
                                             imageFit={imageFit} 
-                                            onRemove={() => handleRemoveImage(index)}
-                                            onTransform={(t) => handleItemTransform(index, t)}
+                                            onRemove={() => handleRemoveImage(idx)}
+                                            onTransform={t => handleItemTransform(idx, t)}
                                         />
                                     ) : (
-                                        <div 
-                                            className="w-full h-full flex items-center justify-center cursor-pointer hover:bg-base-300/50 transition-colors"
-                                            onClick={() => (fileInputRef.current as any)?.click()}
-                                        >
-                                            <UploadIcon className="w-6 h-6 text-base-content/20" />
-                                        </div>
+                                        <UploadIcon className="w-6 h-6 opacity-10" />
                                     )}
                                 </div>
                             ))}
                         </div>
-                    </div>
-                    <input type="file" ref={fileInputRef} onChange={(e) => handleAddFiles(Array.from((e.currentTarget as any).files))} multiple accept="image/*" className="hidden" />
+                    )}
+                    <input type="file" ref={fileInputRef} onChange={e => handleAddFiles(Array.from((e.currentTarget as any).files))} multiple accept="image/*" className="hidden" />
                 </main>
             </div>
         </div>
