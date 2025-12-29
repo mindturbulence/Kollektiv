@@ -1,3 +1,4 @@
+
 import React, { useState, useCallback, useEffect } from 'react';
 import { useSettings } from '../contexts/SettingsContext';
 import { dissectPrompt, generateFocusedVariations } from '../services/llmService';
@@ -148,7 +149,8 @@ export const PromptAnatomyPanel: React.FC<PromptAnatomyPanelProps> = ({ promptTo
                     <div className="pl-5 space-y-2 text-sm">
                      {Object.keys(components).length > 0 ? (
                         <>
-                            {Object.entries(components).map(([key, value]) => (
+                            {/* Fix: Added explicit type cast to Object.entries */}
+                            {(Object.entries(components) as [string, string][]).map(([key, value]) => (
                                 <div key={key} className="flex justify-between items-center group">
                                     <div className="flex-grow">
                                         <h4 className="text-xs font-semibold text-base-content/60 uppercase tracking-wider">{key}</h4>
@@ -196,7 +198,8 @@ export const PromptAnatomyPanel: React.FC<PromptAnatomyPanelProps> = ({ promptTo
                                 Variations
                             </summary>
                             <div className="pl-5 space-y-2">
-                                {Object.entries(variations).map(([key, values]) => {
+                                {/* Fix: Added explicit type cast to Object.entries */}
+                                {(Object.entries(variations) as [string, string[]][]).map(([key, values]) => {
                                     const isAnyVariationProcessing = !!processingVariation;
 
                                     return (
@@ -212,6 +215,7 @@ export const PromptAnatomyPanel: React.FC<PromptAnatomyPanelProps> = ({ promptTo
                                                 <h4 className="text-xs font-semibold text-base-content/60 uppercase tracking-wider">{key}</h4>
                                             </summary>
                                             <div className="flex flex-wrap gap-1.5 mt-2 pl-4 items-start">
+                                                {/* Fix: values is now typed as string[] */}
                                                 {values.map((v, i) => {
                                                     const isThisOneProcessing = processingVariation?.key === key && processingVariation?.value === v;
                                                     return (
@@ -219,7 +223,7 @@ export const PromptAnatomyPanel: React.FC<PromptAnatomyPanelProps> = ({ promptTo
                                                             key={i} 
                                                             onClick={() => handleVariationClick(key, v)}
                                                             className="badge badge-outline h-auto py-1 text-left whitespace-normal hover:badge-primary cursor-pointer disabled:cursor-not-allowed disabled:bg-base-200 disabled:border-base-300"
-                                                            title={`Replace "${components[key]}" with "${v}" in your result`}
+                                                            title={`Replace "${components ? components[key] : ''}" with "${v}" in your result`}
                                                             disabled={isProcessing || isReconstructing || isAnyVariationProcessing}
                                                         >
                                                             {isThisOneProcessing ? <span className="loading loading-spinner loading-xs" /> : v}
