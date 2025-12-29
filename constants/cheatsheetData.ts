@@ -104,6 +104,7 @@ export const ARTIST_CHEATSHEET_DATA: CheatsheetCategory[] = [
       { id: 'art-digi-3', name: 'Ilya Kuvshinov', description: 'Modern anime-influenced style with clean lines and atmospheric lighting.', imageUrls: [] },
       { id: 'art-digi-4', name: 'Artgerm (Stanley Lau)', description: 'Highly polished, semi-realistic superhero and pop culture illustrations.', imageUrls: [] },
       { id: 'art-digi-5', name: 'Sparth (Nicolas Bouvier)', description: 'Master of scale, futuristic architecture, and atmospheric sci-fi concept art.', imageUrls: [] },
+      { id: 'art-digi-6', name: 'Beeple (Mike Winkelmann)', description: 'Known for surreal, satirical digital collages and NFT pioneering.', imageUrls: [] },
     ]
   },
   {
@@ -114,6 +115,7 @@ export const ARTIST_CHEATSHEET_DATA: CheatsheetCategory[] = [
       { id: 'art-trad-3', name: 'Rembrandt van Rijn', description: 'Master of Chiaroscuro (light and shadow) and soulful portraiture.', imageUrls: [] },
       { id: 'art-trad-4', name: 'John Singer Sargent', description: 'Virtuoso portraitist known for his "fluid" brushstrokes and elegant style.', imageUrls: [] },
       { id: 'art-trad-5', name: 'Albrecht Dürer', description: 'Northern Renaissance master of detailed woodcuts and engravings.', imageUrls: [] },
+      { id: 'art-trad-6', name: 'Leonardo da Vinci', description: 'The ultimate Renaissance polymath; master of sfumato and anatomical precision.', imageUrls: [] },
     ]
   },
   {
@@ -134,6 +136,7 @@ export const ARTIST_CHEATSHEET_DATA: CheatsheetCategory[] = [
       { id: 'art-hist-3', name: 'Andy Warhol', description: 'Leading figure in Pop Art, using silk-screening and bright, commercial colors.', imageUrls: [] },
       { id: 'art-hist-4', name: 'Alphonse Mucha', description: 'Defining artist of Art Nouveau with elegant female figures and floral motifs.', imageUrls: [] },
       { id: 'art-hist-5', name: 'Gustav Klimt', description: 'Symbolist painter known for his "Golden Phase" and intricate decorative patterns.', imageUrls: [] },
+      { id: 'art-hist-6', name: 'Jackson Pollock', description: 'Abstract Expressionist famous for his "drip" technique and immense scale.', imageUrls: [] },
     ]
   },
   {
@@ -144,6 +147,7 @@ export const ARTIST_CHEATSHEET_DATA: CheatsheetCategory[] = [
       { id: 'art-sf-3', name: 'Frank Frazetta', description: 'The "Godfather" of fantasy art, known for powerful warriors and dynamic action.', imageUrls: [] },
       { id: 'art-sf-4', name: 'Moebius (Jean Giraud)', description: 'Whimsical, detailed, and surreal sci-fi worlds with unique line art.', imageUrls: [] },
       { id: 'art-sf-5', name: 'Zdzisław Beksiński', description: 'Dystopian surrealism with haunting, decayed, and architectural nightscapes.', imageUrls: [] },
+      { id: 'art-sf-6', name: 'Simon Stålenhag', description: 'Retro-futuristic landscapes where giant machinery meets rural Scandinavia.', imageUrls: [] },
     ]
   },
   {
@@ -153,6 +157,7 @@ export const ARTIST_CHEATSHEET_DATA: CheatsheetCategory[] = [
       { id: 'art-cult-2', name: 'Frida Kahlo', description: 'Symbolic self-portraits exploring identity, post-colonialism, and pain.', imageUrls: [] },
       { id: 'art-cult-3', name: 'Diego Rivera', description: 'Famed muralist known for bold colors and social/political themes.', imageUrls: [] },
       { id: 'art-cult-4', name: 'Tyrus Wong', description: 'Brought traditional Chinese painting aesthetics to American animation (Bambi).', imageUrls: [] },
+      { id: 'art-cult-5', name: 'El Anatsui', description: 'Contemporary sculptor from Ghana known for huge tapestries made of recycled materials.', imageUrls: [] },
     ]
   }
 ];
@@ -219,26 +224,6 @@ export const CHEATSHEET_DATA: CheatsheetCategory[] = [
     ]
   },
   {
-    category: 'Visual Concepts & Qualities',
-    items: [
-      { id: 'detail-1', name: 'Highly Detailed', description: 'Adds a high level of intricate detail to the image.', imageUrls: [] },
-      { id: 'detail-2', name: 'Intricate', description: 'Similar to highly detailed, emphasizing complex patterns and fine elements.', imageUrls: [] },
-      { id: 'detail-3', name: '4K / 8K / UHD', description: 'Keywords to suggest ultra-high resolution and sharpness.', imageUrls: [] },
-      { id: 'detail-4', name: 'Sharp Focus', description: 'Ensures the main subject is crisp and clear.', imageUrls: [] },
-      { id: 'detail-5', name: 'Textured', description: 'Adds a tactile surface quality to the image.', imageUrls: [] },
-      { id: 'detail-6', name: 'Smooth', description: 'Creates a clean, polished surface with minimal texture.', imageUrls: [] },
-      { id: 'color-1', name: 'Vibrant Colors', description: 'Creates a bright, saturated, and energetic color palette.', imageUrls: [] },
-      { id: 'color-2', name: 'Monochromatic', description: 'Uses variations of a single color.', imageUrls: [] },
-      { id: 'color-3', name: 'Analogous Colors', description: 'Uses colors that are next to each other on the color wheel, creating a harmonious look.', imageUrls: [] },
-      { id: 'color-4', name: 'Complementary Colors', description: 'Uses colors opposite each other on the color wheel for high-contrast, vibrant scenes.', imageUrls: [] },
-      { id: 'color-5', name: 'Pastel Colors', description: 'Soft, desaturated, and light colors for a gentle and dreamy mood.', imageUrls: [] },
-      { id: 'color-6', name: 'Earthy Tones', description: 'A palette of browns, greens, beiges, and warm grays, creating a natural and grounded feel.', imageUrls: [] },
-      { id: 'color-7', name: 'Serene', description: 'Creates a calm, peaceful, and tranquil atmosphere.', imageUrls: [] },
-      { id: 'color-8', name: 'Eerie', description: 'Creates a strange, frightening, and mysterious mood.', imageUrls: [] },
-      { id: 'color-9', name: 'Nostalgic', description: 'Evokes a feeling of sentimental longing for the past.', imageUrls: [] },
-    ]
-  },
-  {
     category: 'Platform Guide: Midjourney',
     items: [
       { id: 'mj-ar', name: 'Aspect Ratio (--ar)', description: "Sets the image's width-to-height ratio. Different versions have different maximum ratios. Common values are 1:1, 4:5, 2:3, 9:16, 16:9.", example: 'a cat in a spaceship --ar 16:9', imageUrls: [] },
@@ -269,12 +254,12 @@ export const CHEATSHEET_DATA: CheatsheetCategory[] = [
     ]
   },
   {
-    category: 'Platform Guide: New Gen Models',
+    category: 'Platform Guide: Z-Image Turbo',
     items: [
-        { id: 'flux-2-1', name: 'Flux 2: Natural Language', description: 'Flux 2 excels with natural, conversational prompts. Avoid tag lists ("word salad"). Describe the scene as if speaking to a person.', example: 'A close-up photo of a woman with red hair standing in the rain, cinematic lighting, 85mm lens.', imageUrls: [] },
-        { id: 'flux-2-2', name: 'Flux 2: Text Rendering', description: 'Flux 2 is excellent at rendering text. Specify text clearly in quotes.', example: 'A neon sign that says "OPEN LATE" glowing in a dark alleyway.', imageUrls: [] },
-        { id: 'z-image-1', name: 'Z-Image: Structured Narrative', description: 'Use a structured paragraph approach: [Subject] + [Context/Setting] + [Lighting/Mood] + [Style/Medium]. Be precise with artistic references.', example: 'A majestic dragon perched on a mountain peak, sunset lighting, fantasy art style, highly detailed scales.', imageUrls: [] },
-        { id: 'wan-25-1', name: 'WAN 2.5: Video & Audio', description: 'For WAN 2.5 video generation, describe the visual motion AND the audio atmosphere. Include "Sound of..." or "Audio:" descriptions.', example: 'A car speeding down a highway, camera tracking from the side. Audio: The roar of a V8 engine and wind rushing by.', imageUrls: [] },
+        { id: 'z-turbo-1', name: 'Core Generation Recipe', description: 'Z-Image Turbo works best with a highly structured narrative prompt. Use the following order: [Subject], [Background/Environment], [Action/Pose], [Lighting/Atmosphere], [Style/Medium], [Quality Modifiers].', example: 'A futuristic cyborg warrior, standing in a rain-slicked cyberpunk alleyway, holding a glowing katana, dramatic blue and pink neon lighting, hyper-realistic oil painting style, 8k resolution, cinematic composition.', imageUrls: [] },
+        { id: 'z-turbo-2', name: 'Efficiency Keywords', description: 'Turbo models are optimized for speed but sensitive to specific detail triggers. Use technical keywords to "wake up" the texture engine.', keywords: ['high-speed render', 'optimized textures', 'turbo-sharp details', 'efficient photorealism', 'instant-render clarity'], imageUrls: [] },
+        { id: 'z-turbo-3', name: 'Technical Parameters', description: 'Recommended settings for Z-Image Turbo generation. Lower CFG scales often yield better textural results in Turbo models.', keywords: ['CFG Scale: 3.0-5.0', 'Resolution: 1024x1024', 'Aspect Ratio: --ar 3:2', 'Sampling Steps: 20-30'], imageUrls: [] },
+        { id: 'z-turbo-4', name: 'Negative Prompt Strategy', description: 'Because Z-Image is highly descriptive, negative prompts should focus on removing "hallucinated" artifacts or low-quality textures.', keywords: ['mutated anatomy', 'blurry background', 'oversaturated colors', 'pixelated edges', 'distorted lighting'], imageUrls: [] },
     ]
   },
   {
@@ -299,22 +284,6 @@ export const CHEATSHEET_DATA: CheatsheetCategory[] = [
       { id: 'vid-1', name: 'Describe Motion & Sequence', description: "Prompts for video AI must describe action over time. Instead of 'a knight standing', use 'a knight drawing his sword'. Detail a short sequence of events.", imageUrls: [] },
       { id: 'vid-2', name: 'Key Components', description: "For best results, structure prompts to include: Subject, Action/Movement, Environment, Camera Movement, and overall Style/Mood.", imageUrls: [] },
       { id: 'vid-3', name: 'Camera Movement', description: "Explicitly add camera movements to guide the video generation. Use cinematic terms.", keywords: ['[pan left]', '[dolly zoom]', '[crane shot]', '[handheld footage]', '[slow motion]', '[time-lapse]'], imageUrls: [] },
-    ]
-  },
-  {
-    category: 'Platform Guide: Google Veo',
-    items: [
-      { id: 'goo-4', name: 'Describe Motion and Action', description: "For Veo, your prompt must describe a sequence of events or actions. Focus on verbs and phrases that imply movement over a short duration.", example: 'A fluffy golden retriever puppy playfully chases a red ball across a vibrant green lawn.', imageUrls: [] },
-      { id: 'goo-5', name: 'Specify Camera Work', description: "Direct the 'camera' to create more dynamic videos. Include cinematic terms to guide the perspective and movement within the scene.", keywords: ['dolly zoom', 'pan right', 'crane shot', 'handheld footage', 'aerial shot'], imageUrls: [] },
-      { id: 'goo-6', name: 'Cinematic Effects', description: "Incorporate terms for visual effects to enhance the style and pacing of your video. This can add a professional touch to the generated content.", keywords: ['timelapse of clouds', 'slow motion', 'hyperlapse', 'cinematic color grading'], imageUrls: [] },
-    ]
-  },
-  {
-    category: 'Platform Guide: HaiLuo',
-    items: [
-      { id: 'hailuo-1', name: 'Image: Prompt Structure', description: 'Structure image prompts with a clear Main Subject, followed by descriptive Details (adjectives, actions, environment), and ending with Style Modifiers.', example: 'A majestic lion, golden mane, on a rocky outcrop, cinematic lighting, masterpiece, unreal engine 5, --ar 16:9', imageUrls: [] },
-      { id: 'hailuo-2', name: 'Image: Parameters', description: 'Use --ar to control the aspect ratio and --no for negative prompts to remove unwanted elements.', keywords: ['--ar 16:9', '--ar 4:5', '--no blurry', '--no low quality'], imageUrls: [] },
-      { id: 'hailuo-3', name: 'Video: Descriptive Prose', description: 'For video generation, use rich, descriptive natural language that details a scene with motion and action over time. The model excels at realistic scenes with accurate physics.', example: 'A majestic dragon soaring through a stormy sky, its scales shimmering with lightning as it unleashes a torrent of fire.', imageUrls: [] },
     ]
   }
 ];
