@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { loadSavedPrompts } from '../utils/promptStorage';
 import { loadGalleryItems } from '../utils/galleryStorage';
@@ -12,7 +13,7 @@ interface DashboardProps {
 }
 
 const RecentPromptItem: React.FC<{ prompt: SavedPrompt; onNavigate: () => void }> = ({ prompt, onNavigate }) => (
-    <button onClick={onNavigate} className="w-full text-left p-3 rounded-lg hover:bg-base-200 transition-colors">
+    <button onClick={onNavigate} className="w-full text-left p-3 rounded-lg hover:bg-base-200 transition-colors border border-transparent hover:border-base-300">
         <p className="text-base-content font-semibold truncate">{prompt.title || prompt.basePrompt || 'Untitled Prompt'}</p>
         <p className="text-xs text-base-content/70 truncate">{prompt.text}</p>
     </button>
@@ -59,8 +60,8 @@ const RecentImageItem: React.FC<{ item: GalleryItem; onNavigate: () => void }> =
     if (hasError) {
         return (
             <button onClick={onNavigate} className="relative group w-full aspect-square bg-base-200 rounded-lg overflow-hidden flex flex-col items-center justify-center text-error">
-                <PhotoIcon className="w-8 h-8" />
-                <span className="text-xs mt-1">Load failed</span>
+                <PhotoIcon className="w-6 h-6" />
+                <span className="text-[10px] mt-1">Error</span>
             </button>
         );
     }
@@ -70,30 +71,26 @@ const RecentImageItem: React.FC<{ item: GalleryItem; onNavigate: () => void }> =
     }
 
     return (
-        <button onClick={onNavigate} className="relative group w-full aspect-square bg-base-200 rounded-lg overflow-hidden">
+        <button onClick={onNavigate} className="relative group w-full aspect-square bg-base-200 rounded-lg overflow-hidden shadow-sm">
             {item.type === 'video' ? (
                 <video src={mediaUrl} className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105" muted loop autoPlay />
             ) : (
                 <img src={mediaUrl} alt={item.title} className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105" loading="lazy" />
             )}
-            <div className="absolute inset-0 bg-gradient-to-t from-black/70 to-transparent flex items-end p-2">
-                <p className="text-white text-xs font-semibold truncate">{item.title}</p>
+            <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity flex items-end p-1.5">
+                <p className="text-white text-[10px] font-semibold truncate">{item.title}</p>
             </div>
         </button>
     );
 };
 
-const ActionCard: React.FC<{ title: string; description: string; icon: React.ReactNode; onClick: () => void; className?: string }> = 
-({ title, description, icon, onClick, className = '' }) => (
-    <button onClick={onClick} className={`text-left p-6 rounded-xl shadow-lg hover:shadow-2xl flex flex-col justify-between gap-4 transition-all duration-300 ease-in-out transform hover:-translate-y-1 ${className}`}>
-        <div>
-            <div className="p-3 inline-block rounded-full bg-base-100/80 mb-4">
-                {icon}
-            </div>
-            <h3 className="text-lg font-bold">{title}</h3>
-            <p className="text-sm opacity-80 mt-1">{description}</p>
+const CompactActionCard: React.FC<{ title: string; icon: React.ReactNode; onClick: () => void; className?: string }> = 
+({ title, icon, onClick, className = '' }) => (
+    <button onClick={onClick} className={`text-center p-3 rounded-xl shadow-sm hover:shadow-md flex flex-col items-center justify-center gap-2 transition-all duration-300 ease-in-out transform hover:-translate-y-1 group border border-base-300/10 ${className}`}>
+        <div className="p-2 rounded-lg bg-base-100/20 group-hover:bg-base-100/40 transition-colors">
+            {icon}
         </div>
-        <div className="text-right font-semibold text-sm">→</div>
+        <h3 className="text-xs font-bold leading-tight px-1">{title}</h3>
     </button>
 );
 
@@ -112,8 +109,8 @@ const Dashboard: React.FC<DashboardProps> = ({ onNavigate }) => {
                     settings.features.isGalleryEnabled ? loadGalleryItems() : Promise.resolve([]),
                 ]);
         
-                setRecentPrompts(prompts.slice(0, 5));
-                setRecentItems(items.filter(item => !item.isNsfw).slice(0, 4));
+                setRecentPrompts(prompts.slice(0, 8));
+                setRecentItems(items.filter(item => !item.isNsfw).slice(0, 9)); // Increased count to fit 3 columns nicely
             } catch(e) {
                 console.error("Dashboard failed to load data:", e);
             } finally {
@@ -129,55 +126,62 @@ const Dashboard: React.FC<DashboardProps> = ({ onNavigate }) => {
     }
 
     return (
-        <section className="p-4 sm:p-6 lg:p-8 animate-fade-in">
-            <div className="mb-8">
-                <h1 className="text-3xl font-bold text-base-content">Dashboard</h1>
-                <p className="text-base-content/70 mt-1">Welcome back! Here's a quick overview of your creative workspace.</p>
+        <section className="p-6 animate-fade-in">
+            <div className="mb-6">
+                <h1 className="text-3xl font-bold text-base-content">Overview</h1>
+                <p className="text-base-content/70 mt-1">Quick access to your creative hub.</p>
             </div>
             
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-                {/* Main Column */}
+            {/* Quick Shortcuts Row */}
+            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-4 mb-8">
+                <CompactActionCard title="Prompt Refiner" icon={<SparklesIcon className="w-5 h-5"/>} onClick={() => onNavigate('prompts')} className="bg-primary/80 text-primary-content"/>
+                {settings.features.isPromptLibraryEnabled && <CompactActionCard title="Library" icon={<PromptIcon className="w-5 h-5"/>} onClick={() => onNavigate('prompt')} className="bg-secondary/80 text-secondary-content"/>}
+                {settings.features.isGalleryEnabled && <CompactActionCard title="Gallery" icon={<PhotoIcon className="w-5 h-5"/>} onClick={() => onNavigate('gallery')} className="bg-accent/80 text-accent-content"/>}
+                {settings.features.isToolsEnabled && <CompactActionCard title="Creative Tools" icon={<AdjustmentsVerticalIcon className="w-5 h-5"/>} onClick={() => onNavigate('resizer')} className="bg-info/80 text-info-content"/>}
+                {settings.features.isCheatsheetsEnabled && (
+                    <>
+                        <CompactActionCard title="Prompt Guide" icon={<BookOpenIcon className="w-5 h-5"/>} onClick={() => onNavigate('cheatsheet')} className="bg-neutral text-neutral-content"/>
+                        <CompactActionCard title="Art Styles" icon={<PaletteIcon className="w-5 h-5"/>} onClick={() => onNavigate('artstyles')} className="bg-neutral text-neutral-content"/>
+                    </>
+                )}
+            </div>
+
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+                {/* Main Column: Recent Prompts */}
                 <div className="lg:col-span-2 space-y-6">
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                        <ActionCard title="AI Prompt Refiner" description="Let Gemini enhance your creative ideas into powerful prompts." icon={<SparklesIcon className="w-8 h-8 text-primary"/>} onClick={() => onNavigate('prompts')} className="bg-primary/80 text-primary-content"/>
-                        {settings.features.isPromptLibraryEnabled && <ActionCard title="Prompt Library" description="Browse and manage your collection of saved prompts." icon={<PromptIcon className="w-8 h-8 text-secondary"/>} onClick={() => onNavigate('prompt')} className="bg-secondary/80 text-secondary-content"/>}
-                        {settings.features.isGalleryEnabled && <ActionCard title="Gallery" description="Organize and view your generated images and videos." icon={<PhotoIcon className="w-8 h-8 text-accent"/>} onClick={() => onNavigate('gallery')} className="bg-accent/80 text-accent-content"/>}
-                        {settings.features.isToolsEnabled && <ActionCard title="Creative Tools" description="Use utilities like the resizer, color extractor, and more." icon={<AdjustmentsVerticalIcon className="w-8 h-8 text-info"/>} onClick={() => onNavigate('resizer')} className="bg-info/80 text-info-content"/>}
+                    <div className="card bg-base-100 shadow-md border border-base-300">
+                        <div className="card-body p-6">
+                            <div className="flex justify-between items-center mb-4">
+                                <h2 className="card-title text-primary text-lg">Recent Prompts</h2>
+                                <button onClick={() => onNavigate('prompt')} className="btn btn-xs btn-ghost">View All</button>
+                            </div>
+                            <div className="space-y-1">
+                                {recentPrompts.length > 0 ? (
+                                    recentPrompts.map(p => <RecentPromptItem key={p.id} prompt={p} onNavigate={() => onNavigate('prompt')} />)
+                                ) : (
+                                    <p className="text-sm text-base-content/50 py-8 text-center italic">No prompts saved yet.</p>
+                                )}
+                            </div>
+                        </div>
                     </div>
-
-                    {settings.features.isPromptLibraryEnabled && recentPrompts.length > 0 && (
-                        <div className="card bg-base-100 shadow-lg">
-                            <div className="card-body">
-                                <h2 className="card-title text-primary">Recent Prompts</h2>
-                                <div className="space-y-2">
-                                    {recentPrompts.map(p => <RecentPromptItem key={p.id} prompt={p} onNavigate={() => onNavigate('prompt')} />)}
-                                </div>
-                            </div>
-                        </div>
-                    )}
-
-                    {settings.features.isGalleryEnabled && recentItems.length > 0 && (
-                         <div className="card bg-base-100 shadow-lg">
-                            <div className="card-body">
-                               <h2 className="card-title text-primary">Recent Gallery Items</h2>
-                                <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
-                                    {recentItems.map(item => <RecentImageItem key={item.id} item={item} onNavigate={() => onNavigate('gallery')} />)}
-                                </div>
-                            </div>
-                        </div>
-                    )}
                 </div>
 
-                {/* Right Sidebar Column */}
+                {/* Right Sidebar Column: Recent Gallery */}
                 <div className="space-y-6">
-                    {settings.features.isCheatsheetsEnabled && (
-                        <div className="card bg-base-100 shadow-lg">
-                            <div className="card-body">
-                                <h2 className="card-title text-primary">Cheatsheets</h2>
-                                <ul className="menu menu-sm">
-                                    <li><a onClick={() => onNavigate('cheatsheet')}><BookOpenIcon className="w-5 h-5"/> Prompting Guide</a></li>
-                                    <li><a onClick={() => onNavigate('artstyles')}><PaletteIcon className="w-5 h-5"/> Art Styles</a></li>
-                                </ul>
+                    {settings.features.isGalleryEnabled && (
+                         <div className="card bg-base-100 shadow-md border border-base-300">
+                            <div className="card-body p-6">
+                               <div className="flex justify-between items-center mb-4">
+                                    <h2 className="card-title text-primary text-lg">Recent Gallery</h2>
+                                    <button onClick={() => onNavigate('gallery')} className="btn btn-xs btn-ghost">View All</button>
+                               </div>
+                                {recentItems.length > 0 ? (
+                                    <div className="grid grid-cols-3 gap-2">
+                                        {recentItems.map(item => <RecentImageItem key={item.id} item={item} onNavigate={() => onNavigate('gallery')} />)}
+                                    </div>
+                                ) : (
+                                    <p className="text-sm text-base-content/50 py-8 text-center italic">Gallery is empty.</p>
+                                )}
                             </div>
                         </div>
                     )}
