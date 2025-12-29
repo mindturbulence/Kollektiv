@@ -1,3 +1,4 @@
+
 // --- Core App Types ---
 export type ActiveTab =
   | 'dashboard'
@@ -65,6 +66,9 @@ export interface PromptModifiers {
   filmStock?: string;
   lighting?: string;
   composition?: string;
+  // Video specific
+  motion?: string;
+  cameraMovement?: string;
   // Midjourney specific
   mjAspectRatio?: string;
   mjChaos?: string;

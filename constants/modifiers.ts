@@ -1,3 +1,4 @@
+
 export const PROMPT_DETAIL_LEVELS = {
   SHORT: 'Short',
   MEDIUM: 'Medium',
@@ -40,6 +41,18 @@ export const PHOTOGRAPHY_STYLES = [
 export const CAMERA_TYPES = [
     'DSLR', 'Mirrorless Camera', 'Film Camera', 'Action Camera (GoPro)', 'Drone Footage',
     'Security Camera Footage', 'Smartphone Camera', 'Analog Film', 'Pinhole Camera', 'Vintage Camera'
+];
+
+export const CAMERA_MOVEMENT_OPTIONS = [
+    'Static Camera', 'Panning Shot', 'Tilting Shot', 'Dolly Zoom', 'Tracking Shot',
+    'Crane Shot', 'Handheld Movement', 'Drone Flyover', 'Orbit Shot', 'POV (Point of View)',
+    'Fast Zoom In', 'Slow Zoom Out', 'Steadicam Follow'
+];
+
+export const MOTION_OPTIONS = [
+    'Subtle Movement', 'Fast Action', 'Fluid Motion', 'Slow Motion (Slo-mo)',
+    'Explosive Energy', 'Graceful Flow', 'Chaotic Motion', 'Time-lapse Style',
+    'Windy Atmosphere', 'Gentle Breeze', 'High-Speed Chase'
 ];
 
 export const LENS_TYPES = [

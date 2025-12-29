@@ -46,24 +46,28 @@ export const buildSystemInstructionForEnhancer = (
     const isVideo = TARGET_VIDEO_AI_MODELS.includes(targetAIModel);
     const target = targetAIModel.toLowerCase();
 
-    let base = `Act as an expert prompt engineer. Enhance the user's idea into 3 vivid variations. 
-Rules: 1. Keep core subject. 2. Use all modifiers. 3. Variety in suggestions. 4. Return ONLY 3 prompts, newline separated. No preamble.
-Style: ${promptLength === 'Short' ? 'Poetic, single-sentence impactful fragments.' : promptLength === 'Long' ? 'Immersive world-building narrative.' : 'Detailed cinematic shot description.'}\n`;
+    let base = `Act as Prompt Expert. Generate 3 vivid prompts for ${targetAIModel}. No preamble. Newline separated.
+Length: ${promptLength}. Keep subject. Use modifiers.\n`;
 
     if (isVideo) {
-        if (target.includes('wan')) base += "WAN 2.5: Describe motion, camera work, and AUDIO atmosphere.\n";
-        else if (target.includes('hun yuan')) base += "Hunyuan: [Subject] + [Environment] + [Camera] + [Style] + [Lighting] + [Motion].\n";
-        else base += "Video AI: Include camera movement in brackets like [pan right].\n";
+        if (target.includes('hunyuan')) {
+            base += "Hunyuan Recipe: [Subject] + [Environment] + [Camera] + [Style] + [Lighting] + [Motion].\n";
+            base += "Mandatory Style Keywords: '8k resolution', 'extremely high detail', 'professional cinematography', 'cinematic lighting'.\n";
+            base += "Motion: Describe specific action sequence. Camera: Describe angle and movement.\n";
+        } else if (target.includes('wan')) {
+            base += "WAN 2.5: Detailed visual motion + sound effects/audio atmosphere description.\n";
+        } else {
+            base += "Video: Structure with camera work, lighting, and action in brackets [].\n";
+        }
     } else {
-        if (target.includes('flux 2')) base += "FLUX 2: Natural language. Use quotes for text rendering.\n";
-        else if (target.includes('flux')) base += "FLUX: Descriptive natural language prose.\n";
-        else if (target.includes('z-image')) base += "Z-Image: Structured [Subject], [Environment], [Lighting], [Style].\n";
+        if (target.includes('flux')) base += "FLUX: Descriptive natural language prose.\n";
         else if (target.includes('pony')) base += "Pony: Start with 'score_9, score_8_up, source_anime'.\n";
-        else if (target.includes('midjourney')) base += "Midjourney: Focus on narrative prose. No parameters.\n";
     }
     
-    if (modifiers.artStyle) base += `Art Style: ${modifiers.artStyle}. `;
+    if (modifiers.artStyle) base += `Style: ${modifiers.artStyle}. `;
     if (modifiers.artist) base += `Artist: ${modifiers.artist}. `;
+    if (modifiers.motion) base += `Motion Context: ${modifiers.motion}. `;
+    if (modifiers.cameraMovement) base += `Camera Movement: ${modifiers.cameraMovement}. `;
     return base;
 };
 
@@ -81,7 +85,7 @@ export const enhancePrompt = async (
         : await enhancePromptGemini(originalPrompt, constantModifier, settings, systemInstruction);
 
     const midjourneyParams = targetAIModel.toLowerCase().includes('midjourney') ? buildMidjourneyParams(modifiers) : '';
-    const suggestions = text.split('\n').map(s => s.trim().replace(/^\s*\d+\.\s*/, '')).filter(Boolean).map(s => [s, midjourneyParams.trim()].filter(Boolean).join(' '));
+    const suggestions = text.split('\n').map(s => s.trim().replace(/^\d+\.\s*/, '')).filter(Boolean).map(s => [s, midjourneyParams.trim()].filter(Boolean).join(' '));
     if (suggestions.length === 0) throw new Error("Empty response.");
     return { suggestions };
 };
@@ -108,28 +112,25 @@ const buildSystemInstructionForRefiner = async (targetAIModel: string) => {
         artStylesCache = artStyles; artistsCache = artists; generalCheatsheetCache = generalCheatsheet;
     }
     
-    // Efficiency: Limit to 12 items per category to save significant tokens
     const cheatsheetData = [
-        { name: 'Art Style', items: (artStylesCache || []).flatMap(c => c.items.map(i => i.name)).slice(0, 12) },
-        { name: 'Artist', items: (artistsCache || []).flatMap(c => c.items.map(i => i.name)).slice(0, 12) },
-        ...(generalCheatsheetCache || []).map(c => ({ name: c.category, items: c.items.map(i => i.name).slice(0, 12) }))
+        { n: 'Style', i: (artStylesCache || []).flatMap(c => c.items.map(i => i.name)).slice(0, 8) },
+        { n: 'Artist', i: (artistsCache || []).flatMap(c => c.items.map(i => i.name)).slice(0, 8) },
+        ...(generalCheatsheetCache || []).slice(0, 4).map(c => ({ n: c.category, i: c.items.map(i => i.name).slice(0, 8) }))
     ];
 
-    let context = "Context: " + cheatsheetData.map(s => `${s.name}(${s.items.join(',')})`).join('; ') + "\n";
+    let context = "Ref: " + cheatsheetData.map(s => `${s.n}[${s.i.join(',')}]`).join('; ') + "\n";
     const target = targetAIModel.toLowerCase();
     let targetInstr = `Model: ${targetAIModel}. `;
     
     if (TARGET_VIDEO_AI_MODELS.includes(targetAIModel)) {
-        if (target.includes('wan')) targetInstr += "WAN 2.5: Describe motion + audio ambience.";
-        else if (target.includes('hun yuan')) targetInstr += "Hunyuan: Order as [Subject], [Background], [Camera], [Atmosphere], [Lighting].";
-        else targetInstr += "Video AI: Include [camera movement] brackets.";
-    } else {
-        if (target.includes('flux 2')) targetInstr += "FLUX 2: Natural language only, quotes for text.";
-        else if (target.includes('midjourney')) targetInstr += "Midjourney: Prose only, append MJ parameters.";
-        else if (target.includes('pony')) targetInstr += "Pony: Score tags first.";
+        if (target.includes('hunyuan')) {
+            targetInstr += "Strict Recipe: [Subject] + [Environment] + [Camera] + [Style] + [Lighting] + [Motion]. Use keywords: '8k resolution', 'extremely high detail'.";
+        } else {
+            targetInstr += "Video: Focus on action continuity and camera movement.";
+        }
     }
 
-    return `Expert Prompt Rewriter. Task: Rewrite user input for ${targetAIModel}. Return ONLY refined prompt. No preamble.\n${targetInstr}\n${context}`;
+    return `Expert Rewrite for ${targetAIModel}. One result. No preamble.\n${targetInstr}\n${context}`;
 };
 
 export const refineSinglePrompt = async (promptText: string, targetAIModel: string, settings: LLMSettings): Promise<string> => {

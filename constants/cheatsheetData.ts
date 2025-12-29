@@ -96,16 +96,65 @@ export const ART_STYLES_DATA: CheatsheetCategory[] = [
 ];
 
 export const ARTIST_CHEATSHEET_DATA: CheatsheetCategory[] = [
-  // ... (keeping existing artists unchanged, assumed populated based on previous context, truncated here for brevity in update)
   {
-    category: 'Renaissance & Baroque Masters',
+    category: 'Digital Art & Illustration',
     items: [
-      { id: 'art-1', name: 'Leonardo da Vinci', description: 'Sfumato (soft, hazy) style, scientific realism, masterful human anatomy.', imageUrls: [] },
-      { id: 'art-2', name: 'Michelangelo', description: 'Muscular figures, dramatic poses, and a sense of monumental scale.', imageUrls: [] },
-      // ... and so on
+      { id: 'art-digi-1', name: 'Loish (Andrea Schulz)', description: 'Soft, flowing lines, vibrant color palettes, and expressive female characters.', imageUrls: [] },
+      { id: 'art-digi-2', name: 'Ross Tran (RossDraws)', description: 'High energy, glowing lighting effects, and dynamic character illustrations.', imageUrls: [] },
+      { id: 'art-digi-3', name: 'Ilya Kuvshinov', description: 'Modern anime-influenced style with clean lines and atmospheric lighting.', imageUrls: [] },
+      { id: 'art-digi-4', name: 'Artgerm (Stanley Lau)', description: 'Highly polished, semi-realistic superhero and pop culture illustrations.', imageUrls: [] },
+      { id: 'art-digi-5', name: 'Sparth (Nicolas Bouvier)', description: 'Master of scale, futuristic architecture, and atmospheric sci-fi concept art.', imageUrls: [] },
     ]
   },
-  // ... Assuming other categories exist as per original file
+  {
+    category: 'Traditional Painting & Drawing',
+    items: [
+      { id: 'art-trad-1', name: 'Vincent van Gogh', description: 'Post-Impressionist with bold colors, dramatic brushwork, and emotional intensity.', imageUrls: [] },
+      { id: 'art-trad-2', name: 'Claude Monet', description: 'Father of Impressionism, focused on light, color, and natural scenes.', imageUrls: [] },
+      { id: 'art-trad-3', name: 'Rembrandt van Rijn', description: 'Master of Chiaroscuro (light and shadow) and soulful portraiture.', imageUrls: [] },
+      { id: 'art-trad-4', name: 'John Singer Sargent', description: 'Virtuoso portraitist known for his "fluid" brushstrokes and elegant style.', imageUrls: [] },
+      { id: 'art-trad-5', name: 'Albrecht Dürer', description: 'Northern Renaissance master of detailed woodcuts and engravings.', imageUrls: [] },
+    ]
+  },
+  {
+    category: 'Photographic Styles',
+    items: [
+      { id: 'art-photo-1', name: 'Ansel Adams', description: 'Legendary black and white landscape photography with high contrast and clarity.', imageUrls: [] },
+      { id: 'art-photo-2', name: 'Annie Leibovitz', description: 'Iconic celebrity portraiture with dramatic, staged compositions.', imageUrls: [] },
+      { id: 'art-photo-3', name: 'Steve McCurry', description: 'Vivid color documentary photography capturing the human element.', imageUrls: [] },
+      { id: 'art-photo-4', name: 'Gregory Crewdson', description: 'Staged, cinematic, and eerie suburbia scenes with elaborate lighting.', imageUrls: [] },
+      { id: 'art-photo-5', name: 'Helmut Newton', description: 'Bold, provocative, and high-fashion black and white photography.', imageUrls: [] },
+    ]
+  },
+  {
+    category: 'Historical Art Movements',
+    items: [
+      { id: 'art-hist-1', name: 'Salvador Dalí', description: 'Surrealist master of bizarre, dream-like imagery and meticulous detail.', imageUrls: [] },
+      { id: 'art-hist-2', name: 'Pablo Picasso', description: 'Co-founder of Cubism, known for fragmented forms and multiple perspectives.', imageUrls: [] },
+      { id: 'art-hist-3', name: 'Andy Warhol', description: 'Leading figure in Pop Art, using silk-screening and bright, commercial colors.', imageUrls: [] },
+      { id: 'art-hist-4', name: 'Alphonse Mucha', description: 'Defining artist of Art Nouveau with elegant female figures and floral motifs.', imageUrls: [] },
+      { id: 'art-hist-5', name: 'Gustav Klimt', description: 'Symbolist painter known for his "Golden Phase" and intricate decorative patterns.', imageUrls: [] },
+    ]
+  },
+  {
+    category: 'Sci-Fi & Fantasy Genres',
+    items: [
+      { id: 'art-sf-1', name: 'H.R. Giger', description: 'Biomechanical surrealism, dark, erotic, and alien aesthetics.', imageUrls: [] },
+      { id: 'art-sf-2', name: 'Syd Mead', description: 'The "visual futurist" behind Cyberpunk aesthetics and high-tech vehicle designs.', imageUrls: [] },
+      { id: 'art-sf-3', name: 'Frank Frazetta', description: 'The "Godfather" of fantasy art, known for powerful warriors and dynamic action.', imageUrls: [] },
+      { id: 'art-sf-4', name: 'Moebius (Jean Giraud)', description: 'Whimsical, detailed, and surreal sci-fi worlds with unique line art.', imageUrls: [] },
+      { id: 'art-sf-5', name: 'Zdzisław Beksiński', description: 'Dystopian surrealism with haunting, decayed, and architectural nightscapes.', imageUrls: [] },
+    ]
+  },
+  {
+    category: 'Cultural & Regional',
+    items: [
+      { id: 'art-cult-1', name: 'Katsushika Hokusai', description: 'Ukiyo-e master known for "The Great Wave" and dramatic woodblock prints.', imageUrls: [] },
+      { id: 'art-cult-2', name: 'Frida Kahlo', description: 'Symbolic self-portraits exploring identity, post-colonialism, and pain.', imageUrls: [] },
+      { id: 'art-cult-3', name: 'Diego Rivera', description: 'Famed muralist known for bold colors and social/political themes.', imageUrls: [] },
+      { id: 'art-cult-4', name: 'Tyrus Wong', description: 'Brought traditional Chinese painting aesthetics to American animation (Bambi).', imageUrls: [] },
+    ]
+  }
 ];
 
 export const CHEATSHEET_DATA: CheatsheetCategory[] = [

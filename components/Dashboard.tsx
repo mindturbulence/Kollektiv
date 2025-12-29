@@ -90,7 +90,7 @@ const CompactActionCard: React.FC<{ title: string; icon: React.ReactNode; onClic
         <div className="p-2 rounded-lg bg-base-100/20 group-hover:bg-base-100/40 transition-colors">
             {icon}
         </div>
-        <h3 className="text-xs font-bold leading-tight px-1">{title}</h3>
+        <h3 className="text-[10px] sm:text-xs font-bold leading-tight px-1 uppercase tracking-tighter">{title}</h3>
     </button>
 );
 
@@ -110,7 +110,7 @@ const Dashboard: React.FC<DashboardProps> = ({ onNavigate }) => {
                 ]);
         
                 setRecentPrompts(prompts.slice(0, 8));
-                setRecentItems(items.filter(item => !item.isNsfw).slice(0, 9)); // Increased count to fit 3 columns nicely
+                setRecentItems(items.filter(item => !item.isNsfw).slice(0, 9)); 
             } catch(e) {
                 console.error("Dashboard failed to load data:", e);
             } finally {
@@ -132,16 +132,16 @@ const Dashboard: React.FC<DashboardProps> = ({ onNavigate }) => {
                 <p className="text-base-content/70 mt-1">Quick access to your creative hub.</p>
             </div>
             
-            {/* Quick Shortcuts Row */}
-            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-4 mb-8">
-                <CompactActionCard title="Prompt Refiner" icon={<SparklesIcon className="w-5 h-5"/>} onClick={() => onNavigate('prompts')} className="bg-primary/80 text-primary-content"/>
+            {/* Quick Shortcuts Row - 6 Items */}
+            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3 mb-8">
+                <CompactActionCard title="Refiner" icon={<SparklesIcon className="w-5 h-5"/>} onClick={() => onNavigate('prompts')} className="bg-primary/80 text-primary-content"/>
                 {settings.features.isPromptLibraryEnabled && <CompactActionCard title="Library" icon={<PromptIcon className="w-5 h-5"/>} onClick={() => onNavigate('prompt')} className="bg-secondary/80 text-secondary-content"/>}
                 {settings.features.isGalleryEnabled && <CompactActionCard title="Gallery" icon={<PhotoIcon className="w-5 h-5"/>} onClick={() => onNavigate('gallery')} className="bg-accent/80 text-accent-content"/>}
-                {settings.features.isToolsEnabled && <CompactActionCard title="Creative Tools" icon={<AdjustmentsVerticalIcon className="w-5 h-5"/>} onClick={() => onNavigate('resizer')} className="bg-info/80 text-info-content"/>}
+                {settings.features.isToolsEnabled && <CompactActionCard title="Tools" icon={<AdjustmentsVerticalIcon className="w-5 h-5"/>} onClick={() => onNavigate('resizer')} className="bg-info/80 text-info-content"/>}
                 {settings.features.isCheatsheetsEnabled && (
                     <>
-                        <CompactActionCard title="Prompt Guide" icon={<BookOpenIcon className="w-5 h-5"/>} onClick={() => onNavigate('cheatsheet')} className="bg-neutral text-neutral-content"/>
-                        <CompactActionCard title="Art Styles" icon={<PaletteIcon className="w-5 h-5"/>} onClick={() => onNavigate('artstyles')} className="bg-neutral text-neutral-content"/>
+                        <CompactActionCard title="Guide" icon={<BookOpenIcon className="w-5 h-5"/>} onClick={() => onNavigate('cheatsheet')} className="bg-neutral text-neutral-content"/>
+                        <CompactActionCard title="Styles" icon={<PaletteIcon className="w-5 h-5"/>} onClick={() => onNavigate('artstyles')} className="bg-neutral text-neutral-content"/>
                     </>
                 )}
             </div>
@@ -152,8 +152,8 @@ const Dashboard: React.FC<DashboardProps> = ({ onNavigate }) => {
                     <div className="card bg-base-100 shadow-md border border-base-300">
                         <div className="card-body p-6">
                             <div className="flex justify-between items-center mb-4">
-                                <h2 className="card-title text-primary text-lg">Recent Prompts</h2>
-                                <button onClick={() => onNavigate('prompt')} className="btn btn-xs btn-ghost">View All</button>
+                                <h2 className="card-title text-primary text-lg font-bold uppercase tracking-widest">Recent Prompts</h2>
+                                <button onClick={() => onNavigate('prompt')} className="btn btn-xs btn-ghost opacity-50 hover:opacity-100">View All</button>
                             </div>
                             <div className="space-y-1">
                                 {recentPrompts.length > 0 ? (
@@ -172,8 +172,8 @@ const Dashboard: React.FC<DashboardProps> = ({ onNavigate }) => {
                          <div className="card bg-base-100 shadow-md border border-base-300">
                             <div className="card-body p-6">
                                <div className="flex justify-between items-center mb-4">
-                                    <h2 className="card-title text-primary text-lg">Recent Gallery</h2>
-                                    <button onClick={() => onNavigate('gallery')} className="btn btn-xs btn-ghost">View All</button>
+                                    <h2 className="card-title text-primary text-lg font-bold uppercase tracking-widest">Recent Gallery</h2>
+                                    <button onClick={() => onNavigate('gallery')} className="btn btn-xs btn-ghost opacity-50 hover:opacity-100">View All</button>
                                </div>
                                 {recentItems.length > 0 ? (
                                     <div className="grid grid-cols-3 gap-2">

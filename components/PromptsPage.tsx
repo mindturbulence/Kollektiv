@@ -1,3 +1,4 @@
+
 import React, { useState, useCallback, useEffect, useMemo } from 'react';
 import { useSettings } from '../contexts/SettingsContext';
 import { loadPromptCategories, addSavedPrompt } from '../utils/promptStorage';
@@ -15,6 +16,8 @@ import {
     COMPOSITION_OPTIONS,
     LIGHTING_OPTIONS,
     CAMERA_TYPES,
+    CAMERA_MOVEMENT_OPTIONS,
+    MOTION_OPTIONS,
     LENS_TYPES,
     ANALOG_FILM_STOCKS,
     PHOTOGRAPHY_STYLES,
@@ -171,6 +174,7 @@ const PromptsPage: React.FC<PromptsPageProps> = ({
   };
   
   const isMidjourneySelected = targetAIModel.toLowerCase().includes('midjourney');
+  const isVideoSelected = aiTargetType === 'video';
   
   useEffect(() => {
     if (!isMidjourneySelected && activeRefineSubTab === 'midjourney') {
@@ -254,6 +258,28 @@ const PromptsPage: React.FC<PromptsPageProps> = ({
                                     placeholder="Search Artist Styles..."
                                 />
                             </div>
+                            {isVideoSelected && (
+                                <>
+                                    <div className="form-control">
+                                        <label className="label py-1"><span className="label-text text-primary font-bold">Camera Movement</span></label>
+                                        <AutocompleteSelect
+                                            value={modifiers.cameraMovement || ''}
+                                            onChange={(newValue) => setModifiers({...modifiers, cameraMovement: newValue})}
+                                            options={CAMERA_MOVEMENT_OPTIONS}
+                                            placeholder="Select movement..."
+                                        />
+                                    </div>
+                                    <div className="form-control">
+                                        <label className="label py-1"><span className="label-text text-primary font-bold">Motion / Action</span></label>
+                                        <AutocompleteSelect
+                                            value={modifiers.motion || ''}
+                                            onChange={(newValue) => setModifiers({...modifiers, motion: newValue})}
+                                            options={MOTION_OPTIONS}
+                                            placeholder="Select motion..."
+                                        />
+                                    </div>
+                                </>
+                            )}
                             <div className="form-control">
                                 <label className="label py-1"><span className="label-text">Photography Style</span></label>
                                 <AutocompleteSelect

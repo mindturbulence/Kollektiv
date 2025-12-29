@@ -10,6 +10,8 @@ const getGeminiClient = (settings: LLMSettings): GoogleGenAI => {
     return new GoogleGenAI({ apiKey });
 };
 
+const DEFAULT_MODEL = 'gemini-3-flash-preview';
+
 export const detectSalientRegionGemini = async (
     base64ImageData: string,
     settings: LLMSettings
@@ -19,22 +21,20 @@ export const detectSalientRegionGemini = async (
         const imagePart = { inlineData: { mimeType: 'image/jpeg', data: base64ImageData } };
         
         return await ai.models.generateContent({
-            model: 'gemini-3-flash-preview',
+            model: DEFAULT_MODEL,
             contents: { parts: [imagePart] },
             config: {
-                systemInstruction: "Identify the primary subject's bounding box in [y_min, x_min, y_max, x_max] format (0.0 to 1.0). Return JSON only.",
+                systemInstruction: "Task: Identify primary subject's box [ymin, xmin, ymax, xmax] (0-1). JSON only.",
                 responseMimeType: 'application/json',
                 responseSchema: {
                     type: Type.OBJECT,
-                    properties: {
-                        box: { type: Type.ARRAY, items: { type: Type.NUMBER } }
-                    },
+                    properties: { box: { type: Type.ARRAY, items: { type: Type.NUMBER } } },
                     required: ['box'],
                 },
             }
-        }).then(res => JSON.parse(res.text));
+        }).then(res => JSON.parse(res.text || '{"box":[0,0,1,1]}'));
     } catch (err) {
-        throw handleGeminiError(err, 'detecting salient region');
+        throw handleGeminiError(err, 'detecting region');
     }
 };
 
@@ -48,13 +48,13 @@ export const enhancePromptGemini = async (
         const ai = getGeminiClient(settings);
         const fullPrompt = [prompt.trim(), constantModifier.trim()].filter(Boolean).join('\n\n');
         const response = await ai.models.generateContent({
-            model: 'gemini-3-flash-preview',
+            model: DEFAULT_MODEL,
             contents: fullPrompt,
             config: { systemInstruction }
         });
-        return response.text;
+        return response.text || '';
     } catch (err) {
-        throw handleGeminiError(err, 'enhancing your prompt');
+        throw handleGeminiError(err, 'enhancing prompt');
     }
 };
 
@@ -68,13 +68,13 @@ export async function* enhancePromptGeminiStream(
         const ai = getGeminiClient(settings);
         const fullPrompt = [prompt.trim(), constantModifier.trim()].filter(Boolean).join('\n\n');
         const response = await ai.models.generateContentStream({
-            model: 'gemini-3-flash-preview',
+            model: DEFAULT_MODEL,
             contents: fullPrompt,
             config: { systemInstruction }
         });
-        for await (const chunk of response) yield chunk.text;
+        for await (const chunk of response) yield chunk.text || '';
     } catch (err) {
-        throw handleGeminiError(err, 'enhancing your prompt');
+        throw handleGeminiError(err, 'enhancing prompt');
     }
 }
 
@@ -82,13 +82,13 @@ export const refineSinglePromptGemini = async (promptText: string, cheatsheetCon
     try {
         const ai = getGeminiClient(settings);
         const response = await ai.models.generateContent({
-            model: 'gemini-3-flash-preview',
+            model: DEFAULT_MODEL,
             contents: promptText,
             config: { systemInstruction }
         });
-        return response.text.trim();
+        return (response.text || '').trim();
     } catch (err) {
-        throw handleGeminiError(err, 'refining the prompt');
+        throw handleGeminiError(err, 'refining prompt');
     }
 };
 
@@ -96,13 +96,13 @@ export async function* refineSinglePromptGeminiStream(promptText: string, cheats
     try {
         const ai = getGeminiClient(settings);
         const response = await ai.models.generateContentStream({
-            model: 'gemini-3-flash-preview',
+            model: DEFAULT_MODEL,
             contents: promptText,
             config: { systemInstruction }
         });
-        for await (const chunk of response) yield chunk.text;
+        for await (const chunk of response) yield chunk.text || '';
     } catch (err) {
-        throw handleGeminiError(err, 'refining the prompt');
+        throw handleGeminiError(err, 'refining prompt');
     }
 }
 
@@ -110,150 +110,114 @@ export const analyzePaletteMood = async (hexColors: string[], settings: LLMSetti
   try {
     const ai = getGeminiClient(settings);
     const response = await ai.models.generateContent({
-      model: 'gemini-3-flash-preview',
-      contents: `Mood for palette: ${hexColors.join(', ')}`,
-      config: { systemInstruction: "Describe the mood in 3-5 evocative words.", temperature: 0.5 }
+      model: DEFAULT_MODEL,
+      contents: `Colors: ${hexColors.join(', ')}`,
+      config: { systemInstruction: "Describe mood in 3-5 words.", temperature: 0.5 }
     });
-    return response.text.trim();
-  } catch (err) {
-    return "Analysis unavailable";
-  }
+    return (response.text || '').trim();
+  } catch (err) { return "Analysis unavailable"; }
 };
 
 export const generateColorNameGemini = async (hexColor: string, mood: string, settings: LLMSettings): Promise<string> => {
     try {
         const ai = getGeminiClient(settings);
         const response = await ai.models.generateContent({
-            model: 'gemini-3-flash-preview',
-            contents: `Color: ${hexColor}, Mood: ${mood}`,
-            config: { systemInstruction: "Generate one creative, poetic 2-3 word name for this color. Return only the name.", temperature: 0.8 }
+            model: DEFAULT_MODEL,
+            contents: `Hex: ${hexColor}, Mood: ${mood}`,
+            config: { systemInstruction: "One poetic 2-word name. Text only.", temperature: 0.8 }
         });
-        return response.text.trim().replace(/"/g, '');
-    } catch (err) {
-        return "Unnamed Color";
-    }
+        return (response.text || '').trim().replace(/"/g, '');
+    } catch (err) { return "Unnamed Color"; }
 };
 
 export const dissectPromptGemini = async (promptText: string, settings: LLMSettings): Promise<{ [key: string]: string }> => {
     try {
         const ai = getGeminiClient(settings);
         const response = await ai.models.generateContent({
-            model: 'gemini-3-flash-preview',
+            model: DEFAULT_MODEL,
             contents: promptText,
             config: {
-                systemInstruction: "Dissect prompt into components (subject, action, style, etc). Return JSON object only.",
+                systemInstruction: "Task: JSON dissect prompt into (subject, action, style, mood, composition, lighting, details).",
                 responseMimeType: 'application/json',
-                responseSchema: {
-                    type: Type.OBJECT,
-                    properties: {
-                        subject: { type: Type.STRING },
-                        action: { type: Type.STRING },
-                        setting: { type: Type.STRING },
-                        style: { type: Type.STRING },
-                        mood: { type: Type.STRING },
-                        composition: { type: Type.STRING },
-                        lighting: { type: Type.STRING },
-                        details: { type: Type.STRING }
-                    }
-                }
             }
         });
-        // Fix: Changed res.text to response.text
-        return JSON.parse(response.text);
-    } catch (err) {
-        throw handleGeminiError(err, 'dissecting your prompt');
-    }
+        return JSON.parse(response.text || '{}');
+    } catch (err) { throw handleGeminiError(err, 'dissecting'); }
 };
 
 export const generateFocusedVariationsGemini = async (promptText: string, components: { [key: string]: string }, settings: LLMSettings): Promise<{ [key: string]: string[] }> => {
     try {
         const ai = getGeminiClient(settings);
-        const properties: { [key: string]: any } = {};
-        for (const key in components) properties[key] = { type: Type.ARRAY, items: { type: Type.STRING } };
-
         const response = await ai.models.generateContent({
-            model: 'gemini-3-flash-preview',
-            contents: `Prompt: "${promptText}", Components: ${JSON.stringify(components)}`,
+            model: DEFAULT_MODEL,
+            contents: `Prompt: ${promptText}\nKeys: ${Object.keys(components).join(',')}`,
             config: {
-                systemInstruction: "Generate 3 creative variations for each provided component. Return JSON only.",
+                systemInstruction: "Task: Generate 3 creative variations for each key. Return JSON.",
                 responseMimeType: 'application/json',
-                responseSchema: { type: Type.OBJECT, properties }
             }
         });
-        return JSON.parse(response.text);
-    } catch (err) {
-        throw handleGeminiError(err, 'generating focused variations');
-    }
+        return JSON.parse(response.text || '{}');
+    } catch (err) { throw handleGeminiError(err, 'variating'); }
 };
 
 export const reconstructPromptGemini = async (components: { [key: string]: string }, settings: LLMSettings): Promise<string> => {
     try {
         const ai = getGeminiClient(settings);
         const response = await ai.models.generateContent({
-            model: 'gemini-3-flash-preview',
-            contents: `Components: ${JSON.stringify(components)}`,
-            config: { systemInstruction: "Reconstruct a cohesive natural language prompt from these components. Return text only." }
+            model: DEFAULT_MODEL,
+            contents: JSON.stringify(components),
+            config: { systemInstruction: "Merge into one cohesive natural language prompt. No preamble." }
         });
-        return response.text.trim();
-    } catch (err) {
-        throw handleGeminiError(err, 'reconstructing your prompt');
-    }
+        return (response.text || '').trim();
+    } catch (err) { throw handleGeminiError(err, 'reconstructing'); }
 };
 
 export const replaceComponentInPromptGemini = async (originalPrompt: string, componentKey: string, newValue: string, settings: LLMSettings): Promise<string> => {
     try {
         const ai = getGeminiClient(settings);
         const response = await ai.models.generateContent({
-            model: 'gemini-3-flash-preview',
-            contents: `Prompt: "${originalPrompt}", Replace "${componentKey}" with "${newValue}"`,
-            config: { systemInstruction: "Seamlessly replace the component in the prompt while maintaining grammar and tone. Return text only." }
+            model: DEFAULT_MODEL,
+            contents: `Original: ${originalPrompt}\nKey: ${componentKey}\nNewValue: ${newValue}`,
+            config: { systemInstruction: "Swap value seamlessly. Keep grammar. No preamble." }
         });
-        return response.text.trim();
-    } catch (err) {
-        throw handleGeminiError(err, 'replacing a prompt component');
-    }
+        return (response.text || '').trim();
+    } catch (err) { throw handleGeminiError(err, 'replacing'); }
 };
 
 export const reconstructFromIntentGemini = async (intents: string[], settings: LLMSettings): Promise<string> => {
     try {
         const ai = getGeminiClient(settings);
         const response = await ai.models.generateContent({
-            model: 'gemini-3-flash-preview',
-            contents: `Intents: ${intents.join(', ')}`,
-            config: { systemInstruction: "Weave these intents into one descriptive natural language prompt. Return text only." }
+            model: DEFAULT_MODEL,
+            contents: intents.join(', '),
+            config: { systemInstruction: "Merge intents into one descriptive prompt. No preamble." }
         });
-        return response.text.trim();
-    } catch (err) {
-        throw handleGeminiError(err, 'reconstructing from intent');
-    }
+        return (response.text || '').trim();
+    } catch (err) { throw handleGeminiError(err, 'reconstructing'); }
 };
 
 export const generatePromptFormulaGemini = async (promptText: string, settings: LLMSettings): Promise<string> => {
     try {
         const ai = getGeminiClient(settings);
         const response = await ai.models.generateContent({
-            model: 'gemini-3-flash-preview',
+            model: DEFAULT_MODEL,
             contents: promptText,
-            config: { systemInstruction: "Convert prompt to a template using __placeholder__ syntax for core components. Return template only." }
+            config: { systemInstruction: "Task: Replace nouns/styles with __placeholders__. Template only." }
         });
-        return response.text.trim();
-    } catch (err) {
-        throw handleGeminiError(err, 'generating a prompt formula');
-    }
+        return (response.text || '').trim();
+    } catch (err) { throw handleGeminiError(err, 'formula'); }
 };
 
 export const generateArtistDescriptionGemini = async (artistName: string, settings: LLMSettings): Promise<string> => {
     try {
         const ai = getGeminiClient(settings);
         const response = await ai.models.generateContent({
-            model: 'gemini-3-flash-preview',
-            contents: `Artist: ${artistName}`,
-            config: { systemInstruction: "Describe artist's signature style in one brief sentence. No preamble.", temperature: 0.5 }
+            model: DEFAULT_MODEL,
+            contents: artistName,
+            config: { systemInstruction: "Brief 1-sentence style description. No preamble.", temperature: 0.5 }
         });
-        return response.text.trim();
-    } catch (err) {
-        throw handleGeminiError(err, `generating description for ${artistName}`);
-    }
+        return (response.text || '').trim();
+    } catch (err) { throw handleGeminiError(err, artistName); }
 };
 
 export const abstractImageGemini = async (
@@ -265,18 +229,12 @@ export const abstractImageGemini = async (
     try {
         const ai = getGeminiClient(settings);
         const imagePart = { inlineData: { mimeType: 'image/jpeg', data: base64ImageData } };
-        const textPart = { text: `Target: ${targetAIModel}, Length: ${promptLength}` };
-
         const response = await ai.models.generateContent({
-            model: 'gemini-3-flash-preview',
-            contents: { parts: [imagePart, textPart] },
-            config: { systemInstruction: "Analyze image. Generate 3 creative prompts for the target AI. Newline separated. No preamble." }
+            model: DEFAULT_MODEL,
+            contents: { parts: [imagePart, { text: `Target: ${targetAIModel}, Length: ${promptLength}` }] },
+            config: { systemInstruction: "Analyze image. Return 3 creative prompts. Newline separated. No preamble." }
         });
-        
-        const suggestions = response.text.split('\n').map(s => s.trim().replace(/^\s*\d+\.\s*/, '')).filter(Boolean);
-        if (suggestions.length === 0) throw new Error("Empty response.");
+        const suggestions = (response.text || '').split('\n').map(s => s.trim().replace(/^\d+\.\s*/, '')).filter(Boolean);
         return { suggestions };
-    } catch (err) {
-        throw handleGeminiError(err, 'describing your image');
-    }
+    } catch (err) { throw handleGeminiError(err, 'describing image'); }
 };
