@@ -1,3 +1,4 @@
+
 import React from 'react';
 import { MenuIcon, BookmarkIcon } from './icons';
 import type { ActiveTab } from '../types';
@@ -25,7 +26,7 @@ const Header: React.FC<HeaderProps> = ({ onMenuClick, activeTab, clippedIdeasCou
     color_palette_extractor: 'Color Palette Extractor',
     composer: 'Grid Composer',
     resizer: 'Image Resizer',
-    video_to_frames: 'Video Editor',
+    video_to_frames: 'Video Tool',
   };
 
   const pageTitle = pageTitleMap[activeTab] || 'Kollektiv';

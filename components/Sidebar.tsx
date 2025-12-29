@@ -1,3 +1,4 @@
+
 import React from 'react';
 import type { ActiveTab } from '../types';
 import { useSettings } from '../contexts/SettingsContext';
@@ -110,7 +111,7 @@ const Sidebar: React.FC<SidebarProps> = ({ activeTab, onNavigate, isSidebarOpen,
                 <NavItem id="image_compare" label="Image Comparer" icon={<ViewColumnsIcon className="w-5 h-5 mr-3" />} activeTab={activeTab} onClick={onNavigate} />
                 <NavItem id="color_palette_extractor" label="Color Palette" icon={<PaletteIcon className="w-5 h-5 mr-3" />} activeTab={activeTab} onClick={onNavigate} />
                 <NavItem id="resizer" label="Image Resizer" icon={<CropIcon className="w-5 h-5 mr-3" />} activeTab={activeTab} onClick={onNavigate} />
-                <NavItem id="video_to_frames" label="Video Editor" icon={<FilmIcon className="w-5 h-5 mr-3" />} activeTab={activeTab} onClick={onNavigate} />
+                <NavItem id="video_to_frames" label="Video Tool" icon={<FilmIcon className="w-5 h-5 mr-3" />} activeTab={activeTab} onClick={onNavigate} />
             </Section>
         )}
 

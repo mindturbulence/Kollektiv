@@ -277,9 +277,9 @@ export const VideoToFrames: React.FC = () => {
     };
 
     return (
-        <div className="h-full bg-base-200 flex flex-col lg:flex-row overflow-hidden p-6 lg:p-10 gap-6">
+        <div className="h-full bg-base-200 flex flex-col lg:flex-row overflow-hidden p-6 gap-6">
             {/* Sidebar Controls */}
-            <aside className="w-full lg:w-80 bg-base-100 border border-base-300 rounded-3xl flex flex-col p-6 shadow-xl z-10 flex-shrink-0 overflow-y-auto custom-scrollbar">
+            <aside className="w-full lg:w-80 bg-base-100 border border-base-300 rounded-xl flex flex-col p-6 shadow-xl z-10 flex-shrink-0 overflow-y-auto custom-scrollbar">
                 <div className="tabs tabs-boxed mb-6 w-full">
                     <button onClick={() => setActiveTab('extractor')} className={`tab flex-1 text-xs font-bold ${activeTab === 'extractor' ? 'tab-active' : ''}`}>Extractor</button>
                     <button onClick={() => setActiveTab('joiner')} className={`tab flex-1 text-xs font-bold ${activeTab === 'joiner' ? 'tab-active' : ''}`}>Joiner</button>
@@ -375,7 +375,7 @@ export const VideoToFrames: React.FC = () => {
                             <div className="space-y-2 pr-1">
                                 {joinFiles.length > 0 ? (
                                     joinFiles.map((v, i) => (
-                                        <div key={v.id} className="p-2 bg-base-200 rounded-xl flex items-center gap-3 border border-base-300 group">
+                                        <div key={v.id} className="p-2 bg-base-200 rounded-lg flex items-center gap-3 border border-base-300 group">
                                             <div className="w-10 h-10 bg-black rounded-lg flex-shrink-0 overflow-hidden shadow-inner">
                                                 <video src={v.url} className="w-full h-full object-cover" />
                                             </div>
@@ -391,7 +391,7 @@ export const VideoToFrames: React.FC = () => {
                                         </div>
                                     ))
                                 ) : (
-                                    <div className="h-32 flex flex-col items-center justify-center opacity-20 text-center p-4 border-2 border-dashed border-base-content/20 rounded-2xl">
+                                    <div className="h-32 flex flex-col items-center justify-center opacity-20 text-center p-4 border-2 border-dashed border-base-content/20 rounded-xl">
                                         <FilmIcon className="w-8 h-8 mb-2"/>
                                         <p className="text-[10px] font-bold">List is empty</p>
                                     </div>
@@ -417,7 +417,7 @@ export const VideoToFrames: React.FC = () => {
             {/* Main Area: Stretched & Scrollable */}
             <main className="flex-grow flex flex-col lg:flex-row gap-6 min-h-0 relative">
                 {isJoining && (
-                    <div className="absolute inset-0 bg-base-300/80 backdrop-blur-md z-40 flex flex-col items-center justify-center text-center rounded-3xl">
+                    <div className="absolute inset-0 bg-base-300/80 backdrop-blur-md z-40 flex flex-col items-center justify-center text-center rounded-xl">
                         <LoadingSpinner />
                         <h2 className="text-2xl font-black mt-6">Rendering Sequence</h2>
                         <div className="w-64 mt-6">
@@ -431,8 +431,8 @@ export const VideoToFrames: React.FC = () => {
                     <div className="flex-grow flex flex-col lg:flex-row gap-6 h-full min-h-0">
                         {/* Video Player (Left Column) */}
                         <div className="flex-1 flex flex-col h-full min-h-0">
-                            <div className="bg-base-100 rounded-[2.5rem] overflow-hidden shadow-2xl border border-base-300 p-2 flex flex-col h-full">
-                                <div className="bg-black rounded-[2rem] aspect-video relative flex items-center justify-center overflow-hidden shadow-inner flex-grow">
+                            <div className="bg-base-100 rounded-xl overflow-hidden shadow-2xl border border-base-300 p-2 flex flex-col h-full">
+                                <div className="bg-black rounded-lg aspect-video relative flex items-center justify-center overflow-hidden shadow-inner flex-grow">
                                     {extractorUrl ? (
                                         <video ref={extractorVideoRef} src={extractorUrl} className="w-full h-full" controls />
                                     ) : (
@@ -451,7 +451,7 @@ export const VideoToFrames: React.FC = () => {
                             </div>
                             <input id="extractor-file" type="file" accept="video/*" className="hidden" onChange={(e) => (e.currentTarget as any).files?.[0] && handleExtractorFileSelect((e.currentTarget as any).files[0])}/>
                             
-                            <div className="bg-info/5 p-6 rounded-3xl border border-info/10 flex gap-4 text-sm mt-6">
+                            <div className="bg-info/5 p-6 rounded-xl border border-info/10 flex gap-4 text-sm mt-6">
                                 <InformationCircleIcon className="w-6 h-6 text-info flex-shrink-0"/>
                                 <p className="text-base-content/70">
                                     Frame extraction works locally in your browser. Higher intervals or very long videos may take a moment to process each frame into a high-res image.
@@ -469,12 +469,12 @@ export const VideoToFrames: React.FC = () => {
                                 <div className="badge badge-primary font-mono text-[10px]">{frames.length} Items</div>
                             </div>
                             
-                            <div className="bg-base-100 rounded-3xl border border-base-300 shadow-xl overflow-hidden flex-grow flex flex-col">
+                            <div className="bg-base-100 rounded-xl border border-base-300 shadow-xl overflow-hidden flex-grow flex flex-col">
                                 <div className="p-4 flex-grow overflow-y-auto custom-scrollbar space-y-4">
                                     {frames.length > 0 ? (
                                         <div className="grid grid-cols-2 gap-4">
                                             {frames.map(f => (
-                                                <div key={f.id} className="group relative aspect-square bg-base-300 rounded-2xl overflow-hidden border border-base-300 shadow-md hover:shadow-lg transition-all duration-300">
+                                                <div key={f.id} className="group relative aspect-square bg-base-300 rounded-lg overflow-hidden border border-base-300 shadow-md hover:shadow-lg transition-all duration-300">
                                                     <img src={f.url} className="w-full h-full object-cover" alt="frame"/>
                                                     <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity flex flex-col justify-end p-3">
                                                         <p className="text-[10px] text-white/60 font-mono mb-2 uppercase">{formatTime(f.timestamp)}</p>
@@ -499,8 +499,8 @@ export const VideoToFrames: React.FC = () => {
                 ) : (
                     /* Joiner View (No right panel) */
                     <div className="flex-grow flex flex-col h-full min-h-0 max-w-5xl mx-auto w-full">
-                        <div className="bg-base-100 rounded-[2.5rem] overflow-hidden shadow-2xl border border-base-300 p-2 flex-grow flex flex-col">
-                            <div className="bg-black rounded-[2rem] aspect-video relative flex flex-col items-center justify-center overflow-hidden shadow-inner h-full">
+                        <div className="bg-base-100 rounded-xl overflow-hidden shadow-2xl border border-base-300 p-2 flex-grow flex flex-col">
+                            <div className="bg-black rounded-lg aspect-video relative flex flex-col items-center justify-center overflow-hidden shadow-inner h-full">
                                 <canvas ref={joinCanvasRef} className="hidden" />
                                 <video ref={joinVideoRef} className={`w-full h-full ${isJoining ? 'block' : 'hidden'}`} muted />
                                 
@@ -526,7 +526,7 @@ export const VideoToFrames: React.FC = () => {
                         </div>
 
                         <div className="flex flex-col md:flex-row gap-6 mt-6">
-                            <div className="flex-1 bg-primary/5 p-6 rounded-[2rem] border border-primary/10 flex gap-4">
+                            <div className="flex-1 bg-primary/5 p-6 rounded-xl border border-primary/10 flex gap-4">
                                 <InformationCircleIcon className="w-8 h-8 text-primary flex-shrink-0"/>
                                 <div className="text-sm">
                                     <p className="font-black uppercase tracking-widest text-primary text-xs mb-2">Technical Note</p>
@@ -535,7 +535,7 @@ export const VideoToFrames: React.FC = () => {
                                     </p>
                                 </div>
                             </div>
-                            <div className="flex-1 bg-base-100 p-6 rounded-[2rem] border border-base-300 flex gap-4">
+                            <div className="flex-1 bg-base-100 p-6 rounded-xl border border-base-300 flex gap-4">
                                 <FilmIcon className="w-8 h-8 text-base-content/40 flex-shrink-0"/>
                                 <div className="text-sm">
                                     <p className="font-black uppercase tracking-widest text-base-content/40 text-xs mb-2">Aspect Ratios</p>
