@@ -46,29 +46,34 @@ export const buildSystemInstructionForEnhancer = (
     const isVideo = TARGET_VIDEO_AI_MODELS.includes(targetAIModel);
     const target = targetAIModel.toLowerCase();
 
-    let base = `Act as Prompt Expert. Generate 3 vivid prompts for ${targetAIModel}. No preamble. Newline separated.
-Length: ${promptLength}. Keep subject. Use modifiers.\n`;
+    let base = `Prompt Expert. Output 3 vivid ${targetAIModel} prompts. No preamble. Newline-sep. Length: ${promptLength}. Preserve subject. Apply modifiers.\n`;
 
     if (isVideo) {
         if (target.includes('hunyuan')) {
-            base += "Hunyuan Recipe: [Subject] + [Environment] + [Camera] + [Style] + [Lighting] + [Motion].\n";
-            base += "Mandatory Style Keywords: '8k resolution', 'extremely high detail', 'professional cinematography', 'cinematic lighting'.\n";
-            base += "Motion: Describe specific action sequence. Camera: Describe angle and movement.\n";
+            base += "Hunyuan: [Subject]+[Environment]+[Camera]+[Style]+[Lighting]+[Motion]. Keywords: '8k', 'high detail', 'cinematography'. Detail action sequence and camera.\n";
         } else if (target.includes('wan')) {
-            base += "WAN 2.5: Detailed visual motion + sound effects/audio atmosphere description.\n";
+            base += "WAN 2.5: Detailed motion + audio atmosphere/SFX description.\n";
         } else {
-            base += "Video: Structure with camera work, lighting, and action in brackets [].\n";
+            base += "Video: Structure with camera, lighting, action in [].\n";
         }
     } else {
-        if (target.includes('flux')) base += "FLUX: Descriptive natural language prose.\n";
+        if (target.includes('flux')) base += "FLUX: Descriptive natural prose.\n";
         else if (target.includes('pony')) base += "Pony: Start with 'score_9, score_8_up, source_anime'.\n";
     }
     
-    if (modifiers.artStyle) base += `Style: ${modifiers.artStyle}. `;
-    if (modifiers.artist) base += `Artist: ${modifiers.artist}. `;
-    if (modifiers.zImageStyle) base += `Z-Image Visual Aesthetic: ${modifiers.zImageStyle}. `;
-    if (modifiers.motion) base += `Motion Context: ${modifiers.motion}. `;
-    if (modifiers.cameraMovement) base += `Camera Movement: ${modifiers.cameraMovement}. `;
+    // Efficient modifier mapping
+    const activeMods = [];
+    if (modifiers.artStyle) activeMods.push(`Style:${modifiers.artStyle}`);
+    if (modifiers.artist) activeMods.push(`Artist:${modifiers.artist}`);
+    if (modifiers.zImageStyle) activeMods.push(`Visual:${modifiers.zImageStyle}`);
+    if (modifiers.cameraAngle) activeMods.push(`Angle:${modifiers.cameraAngle}`);
+    if (modifiers.cameraProximity) activeMods.push(`Distance:${modifiers.cameraProximity}`);
+    if (modifiers.cameraSettings) activeMods.push(`CamOpts:${modifiers.cameraSettings}`);
+    if (modifiers.filmType) activeMods.push(`Film:${modifiers.filmType}`);
+    if (modifiers.motion) activeMods.push(`Motion:${modifiers.motion}`);
+    if (modifiers.cameraMovement) activeMods.push(`CameraMov:${modifiers.cameraMovement}`);
+    
+    if (activeMods.length) base += `Context: ${activeMods.join(', ')}.`;
     return base;
 };
 
@@ -113,25 +118,26 @@ const buildSystemInstructionForRefiner = async (targetAIModel: string) => {
         artStylesCache = artStyles; artistsCache = artists; generalCheatsheetCache = generalCheatsheet;
     }
     
+    // Reduced reference slice for token efficiency
     const cheatsheetData = [
-        { n: 'Style', i: (artStylesCache || []).flatMap(c => c.items.map(i => i.name)).slice(0, 8) },
-        { n: 'Artist', i: (artistsCache || []).flatMap(c => c.items.map(i => i.name)).slice(0, 8) },
-        ...(generalCheatsheetCache || []).slice(0, 4).map(c => ({ n: c.category, i: c.items.map(i => i.name).slice(0, 8) }))
+        { n: 'Style', i: (artStylesCache || []).flatMap(c => c.items.map(i => i.name)).slice(0, 4) },
+        { n: 'Artist', i: (artistsCache || []).flatMap(c => c.items.map(i => i.name)).slice(0, 4) },
+        ...(generalCheatsheetCache || []).slice(0, 2).map(c => ({ n: c.category, i: c.items.map(i => i.name).slice(0, 4) }))
     ];
 
     let context = "Ref: " + cheatsheetData.map(s => `${s.n}[${s.i.join(',')}]`).join('; ') + "\n";
     const target = targetAIModel.toLowerCase();
-    let targetInstr = `Model: ${targetAIModel}. `;
+    let targetInstr = `Model:${targetAIModel}. `;
     
     if (TARGET_VIDEO_AI_MODELS.includes(targetAIModel)) {
         if (target.includes('hunyuan')) {
-            targetInstr += "Strict Recipe: [Subject] + [Environment] + [Camera] + [Style] + [Lighting] + [Motion]. Use keywords: '8k resolution', 'extremely high detail'.";
+            targetInstr += "Strict:[Subject]+[Env]+[Cam]+[Style]+[Light]+[Motion]. Use: '8k', 'high detail'.";
         } else {
-            targetInstr += "Video: Focus on action continuity and camera movement.";
+            targetInstr += "Focus: Action continuity, camera work.";
         }
     }
 
-    return `Expert Rewrite for ${targetAIModel}. One result. No preamble.\n${targetInstr}\n${context}`;
+    return `Expert Rewrite for ${targetAIModel}. 1 result. No preamble.\n${targetInstr}\n${context}`;
 };
 
 export const refineSinglePrompt = async (promptText: string, targetAIModel: string, settings: LLMSettings): Promise<string> => {

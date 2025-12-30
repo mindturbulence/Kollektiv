@@ -31,9 +31,103 @@ export const Z_IMAGE_STYLES = [
 // --- Refiner Dropdown Options ---
 export const COMPOSITION_OPTIONS = [
     'Rule of Thirds', 'Golden Ratio', 'Leading Lines', 'Symmetry', 'Asymmetrical Balance',
-    'Frame within a Frame', 'Vanishing Point', 'Centered Composition', 'Diagonal Composition',
-    'Low Angle Shot', 'High Angle Shot', 'Birds Eye View', 'Worms Eye View',
-    'Dutch Angle', 'Over-the-Shoulder Shot'
+    'Frame within a Frame', 'Vanishing Point', 'Centered Composition', 'Diagonal Composition'
+];
+
+export const CAMERA_ANGLES = [
+    'Eye Level Shot',
+    'High Angle Shot',
+    'Low Angle Shot',
+    'Bird\'s Eye View',
+    'Worm\'s Eye View',
+    'Dutch Angle (Canted)',
+    'Over-the-Shoulder Shot',
+    'POV (Point of View)',
+    'Top-Down Shot',
+    'Under-View Shot',
+    'Hip Level Shot',
+    'Knee Level Shot',
+    'Ground Level Shot',
+    'Shoulder Level Shot',
+    'Extreme High Angle',
+    'Extreme Low Angle'
+];
+
+export const CAMERA_PROXIMITY = [
+    'Extreme Close-Up',
+    'Close-Up',
+    'Medium Close-Up',
+    'Medium Shot',
+    'Medium Long Shot',
+    'Long Shot',
+    'Full Shot',
+    'Extreme Long Shot',
+    'Establishing Shot',
+    'Macro Shot',
+    'Microscopic Shot',
+    'Wide Shot',
+    'Very Wide Shot',
+    'Zoomed In',
+    'Zoomed Out',
+    'Telephoto Zoom',
+    'Super Wide Angle'
+];
+
+export const CAMERA_SETTINGS = [
+    'Fast Shutter Speed',
+    'Slow Shutter Speed',
+    'Motion Blur',
+    'Deep Depth of Field',
+    'Shallow Depth of Field',
+    'Bokeh',
+    'Sharp Focus',
+    'Soft Focus',
+    'Out of Focus',
+    'Lens Flare',
+    'Chromatic Aberration',
+    'High ISO Grain',
+    'Long Exposure',
+    'Double Exposure',
+    'Time-lapse',
+    'High Dynamic Range (HDR)',
+    'Vignetting',
+    'Motion Trails',
+    'Light Painting',
+    'High Contrast',
+    'Low Contrast',
+    'High Saturation',
+    'Desaturated',
+    'Overexposed',
+    'Underexposed'
+];
+
+export const FILM_TYPES = [
+    'Black and White',
+    'Monochromatic',
+    'Polaroid',
+    'Instax',
+    'Kodachrome',
+    'Ektachrome',
+    'Fujifilm Velvia',
+    'Agfacolor',
+    'Technicolor',
+    'Sepia',
+    'Cyanotype',
+    'Daguerreotype',
+    'Orthochromatic',
+    'Panchromatic',
+    'Infrared Film',
+    '35mm Film',
+    '70mm IMAX',
+    'Super 8',
+    '16mm',
+    'Grainy Film',
+    'Damaged Film Stock',
+    'Expired Film',
+    'Cross Processed',
+    'Bleach Bypass',
+    'Autochrome',
+    'Calotype'
 ];
 
 export const LIGHTING_OPTIONS = [

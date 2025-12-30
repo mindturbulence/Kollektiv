@@ -24,7 +24,7 @@ export const detectSalientRegionGemini = async (
             model: DEFAULT_MODEL,
             contents: { parts: [imagePart] },
             config: {
-                systemInstruction: "Task: Identify primary subject's box [ymin, xmin, ymax, xmax] (0-1). JSON only.",
+                systemInstruction: "Task: Output [ymin,xmin,ymax,xmax] (0-1) for primary subject. JSON only.",
                 responseMimeType: 'application/json',
                 responseSchema: {
                     type: Type.OBJECT,
@@ -112,7 +112,7 @@ export const analyzePaletteMood = async (hexColors: string[], settings: LLMSetti
     const response = await ai.models.generateContent({
       model: DEFAULT_MODEL,
       contents: `Colors: ${hexColors.join(', ')}`,
-      config: { systemInstruction: "Describe mood in 3-5 words.", temperature: 0.5 }
+      config: { systemInstruction: "Output mood in 3-5 words.", temperature: 0.5 }
     });
     return (response.text || '').trim();
   } catch (err) { return "Analysis unavailable"; }
@@ -123,8 +123,8 @@ export const generateColorNameGemini = async (hexColor: string, mood: string, se
         const ai = getGeminiClient(settings);
         const response = await ai.models.generateContent({
             model: DEFAULT_MODEL,
-            contents: `Hex: ${hexColor}, Mood: ${mood}`,
-            config: { systemInstruction: "One poetic 2-word name. Text only.", temperature: 0.8 }
+            contents: `Hex:${hexColor}, Mood:${mood}`,
+            config: { systemInstruction: "Output one poetic 2-word name. Text only.", temperature: 0.8 }
         });
         return (response.text || '').trim().replace(/"/g, '');
     } catch (err) { return "Unnamed Color"; }
@@ -137,7 +137,7 @@ export const dissectPromptGemini = async (promptText: string, settings: LLMSetti
             model: DEFAULT_MODEL,
             contents: promptText,
             config: {
-                systemInstruction: "Task: JSON dissect prompt into (subject, action, style, mood, composition, lighting, details).",
+                systemInstruction: "Task: JSON dissect prompt into keys (subject, action, style, mood, composition, lighting, details).",
                 responseMimeType: 'application/json',
             }
         });
@@ -150,9 +150,9 @@ export const generateFocusedVariationsGemini = async (promptText: string, compon
         const ai = getGeminiClient(settings);
         const response = await ai.models.generateContent({
             model: DEFAULT_MODEL,
-            contents: `Prompt: ${promptText}\nKeys: ${Object.keys(components).join(',')}`,
+            contents: `Prompt:${promptText}\nKeys:${Object.keys(components).join(',')}`,
             config: {
-                systemInstruction: "Task: Generate 3 creative variations for each key. Return JSON.",
+                systemInstruction: "Task: Output 3 creative variations per key. JSON only.",
                 responseMimeType: 'application/json',
             }
         });
@@ -166,7 +166,7 @@ export const reconstructPromptGemini = async (components: { [key: string]: strin
         const response = await ai.models.generateContent({
             model: DEFAULT_MODEL,
             contents: JSON.stringify(components),
-            config: { systemInstruction: "Merge into one cohesive natural language prompt. No preamble." }
+            config: { systemInstruction: "Merge into cohesive natural prose. No preamble." }
         });
         return (response.text || '').trim();
     } catch (err) { throw handleGeminiError(err, 'reconstructing'); }
@@ -177,8 +177,8 @@ export const replaceComponentInPromptGemini = async (originalPrompt: string, com
         const ai = getGeminiClient(settings);
         const response = await ai.models.generateContent({
             model: DEFAULT_MODEL,
-            contents: `Original: ${originalPrompt}\nKey: ${componentKey}\nNewValue: ${newValue}`,
-            config: { systemInstruction: "Swap value seamlessly. Keep grammar. No preamble." }
+            contents: `Orig:${originalPrompt}\nKey:${componentKey}\nNew:${newValue}`,
+            config: { systemInstruction: "Swap value seamlessly. No preamble." }
         });
         return (response.text || '').trim();
     } catch (err) { throw handleGeminiError(err, 'replacing'); }
@@ -190,7 +190,7 @@ export const reconstructFromIntentGemini = async (intents: string[], settings: L
         const response = await ai.models.generateContent({
             model: DEFAULT_MODEL,
             contents: intents.join(', '),
-            config: { systemInstruction: "Merge intents into one descriptive prompt. No preamble." }
+            config: { systemInstruction: "Merge intents into descriptive prose. No preamble." }
         });
         return (response.text || '').trim();
     } catch (err) { throw handleGeminiError(err, 'reconstructing'); }
@@ -202,7 +202,7 @@ export const generatePromptFormulaGemini = async (promptText: string, settings: 
         const response = await ai.models.generateContent({
             model: DEFAULT_MODEL,
             contents: promptText,
-            config: { systemInstruction: "Task: Replace nouns/styles with __placeholders__. Template only." }
+            config: { systemInstruction: "Task: Replace specifics with __placeholders__. Template only." }
         });
         return (response.text || '').trim();
     } catch (err) { throw handleGeminiError(err, 'formula'); }
@@ -231,8 +231,8 @@ export const abstractImageGemini = async (
         const imagePart = { inlineData: { mimeType: 'image/jpeg', data: base64ImageData } };
         const response = await ai.models.generateContent({
             model: DEFAULT_MODEL,
-            contents: { parts: [imagePart, { text: `Target: ${targetAIModel}, Length: ${promptLength}` }] },
-            config: { systemInstruction: "Analyze image. Return 3 creative prompts. Newline separated. No preamble." }
+            contents: { parts: [imagePart, { text: `Target:${targetAIModel}, Len:${promptLength}` }] },
+            config: { systemInstruction: "Analyze image. Return 3 prompts. Newline-sep. No preamble." }
         });
         const suggestions = (response.text || '').split('\n').map(s => s.trim().replace(/^\d+\.\s*/, '')).filter(Boolean);
         return { suggestions };

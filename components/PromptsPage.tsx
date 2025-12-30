@@ -15,6 +15,10 @@ import {
     MIDJOURNEY_ASPECT_RATIOS,
     Z_IMAGE_STYLES,
     COMPOSITION_OPTIONS,
+    CAMERA_ANGLES,
+    CAMERA_PROXIMITY,
+    CAMERA_SETTINGS,
+    FILM_TYPES,
     LIGHTING_OPTIONS,
     CAMERA_TYPES,
     CAMERA_MOVEMENT_OPTIONS,
@@ -185,6 +189,7 @@ const PromptsPage: React.FC<PromptsPageProps> = ({
   }, [isMidjourneySelected, activeRefineSubTab]);
 
   const handleClipSuggestion = (suggestionText: string) => {
+      // --- FIX: Corrected syntax error by changing 'new Idea' to 'newIdea' ---
       const newIdea: Idea = {
           id: `clipped-${Date.now()}`,
           lens: activeView === 'refine' ? 'Refinement' : 'Abstraction',
@@ -309,6 +314,42 @@ const PromptsPage: React.FC<PromptsPageProps> = ({
                                     onChange={(newValue) => setModifiers({...modifiers, composition: newValue})}
                                     options={COMPOSITION_OPTIONS}
                                     placeholder="Search Compositions..."
+                                />
+                            </div>
+                            <div className="form-control">
+                                <label className="label py-1"><span className="label-text font-semibold">Camera Angle</span></label>
+                                <AutocompleteSelect
+                                    value={modifiers.cameraAngle || ''}
+                                    onChange={(newValue) => setModifiers({...modifiers, cameraAngle: newValue})}
+                                    options={CAMERA_ANGLES}
+                                    placeholder="Search Camera Angles..."
+                                />
+                            </div>
+                            <div className="form-control">
+                                <label className="label py-1"><span className="label-text font-semibold">Camera Proximity</span></label>
+                                <AutocompleteSelect
+                                    value={modifiers.cameraProximity || ''}
+                                    onChange={(newValue) => setModifiers({...modifiers, cameraProximity: newValue})}
+                                    options={CAMERA_PROXIMITY}
+                                    placeholder="Search Proximity..."
+                                />
+                            </div>
+                            <div className="form-control">
+                                <label className="label py-1"><span className="label-text font-semibold">Camera Settings</span></label>
+                                <AutocompleteSelect
+                                    value={modifiers.cameraSettings || ''}
+                                    onChange={(newValue) => setModifiers({...modifiers, cameraSettings: newValue})}
+                                    options={CAMERA_SETTINGS}
+                                    placeholder="Search Settings..."
+                                />
+                            </div>
+                            <div className="form-control">
+                                <label className="label py-1"><span className="label-text font-semibold">Film Aesthetic</span></label>
+                                <AutocompleteSelect
+                                    value={modifiers.filmType || ''}
+                                    onChange={(newValue) => setModifiers({...modifiers, filmType: newValue})}
+                                    options={FILM_TYPES}
+                                    placeholder="Search Film Types..."
                                 />
                             </div>
                             <div className="form-control">

@@ -62,7 +62,11 @@ export interface PromptModifiers {
   artist?: string;
   photographyStyle?: string;
   cameraType?: string;
+  cameraAngle?: string;
+  cameraProximity?: string;
+  cameraSettings?: string;
   lensType?: string;
+  filmType?: string;
   filmStock?: string;
   lighting?: string;
   composition?: string;
