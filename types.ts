@@ -66,6 +66,8 @@ export interface PromptModifiers {
   filmStock?: string;
   lighting?: string;
   composition?: string;
+  // Specific model styles
+  zImageStyle?: string;
   // Video specific
   motion?: string;
   cameraMovement?: string;

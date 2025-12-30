@@ -13,6 +13,7 @@ import {
     TARGET_VIDEO_AI_MODELS,
     MIDJOURNEY_VERSIONS,
     MIDJOURNEY_ASPECT_RATIOS,
+    Z_IMAGE_STYLES,
     COMPOSITION_OPTIONS,
     LIGHTING_OPTIONS,
     CAMERA_TYPES,
@@ -174,6 +175,7 @@ const PromptsPage: React.FC<PromptsPageProps> = ({
   };
   
   const isMidjourneySelected = targetAIModel.toLowerCase().includes('midjourney');
+  const isZImageSelected = targetAIModel === 'Z-Image';
   const isVideoSelected = aiTargetType === 'video';
   
   useEffect(() => {
@@ -258,6 +260,17 @@ const PromptsPage: React.FC<PromptsPageProps> = ({
                                     placeholder="Search Artist Styles..."
                                 />
                             </div>
+                            {isZImageSelected && (
+                                <div className="form-control col-span-full">
+                                    <label className="label py-1"><span className="label-text text-primary font-bold">Z-Image Style</span></label>
+                                    <AutocompleteSelect
+                                        value={modifiers.zImageStyle || ''}
+                                        onChange={(newValue) => setModifiers({...modifiers, zImageStyle: newValue})}
+                                        options={Z_IMAGE_STYLES}
+                                        placeholder="Select Z-Image Style..."
+                                    />
+                                </div>
+                            )}
                             {isVideoSelected && (
                                 <>
                                     <div className="form-control">

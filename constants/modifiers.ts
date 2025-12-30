@@ -9,6 +9,25 @@ export const PROMPT_DETAIL_LEVELS = {
 export const MIDJOURNEY_VERSIONS = ["6", "5.2", "5.1", "5", "4"];
 export const MIDJOURNEY_ASPECT_RATIOS = ["1:1", "2:3", "3:2", "4:5", "5:4", "9:16", "16:9"];
 
+// --- Z-Image Specific Styles ---
+export const Z_IMAGE_STYLES = [
+    'Lo-fi Mobile Photo',
+    'Casual Mobile Photo',
+    'Vintage Candid Photo',
+    'Classic Film Photo',
+    'Analog Photo',
+    'Vintage Introspection',
+    'Wide Angle / Peephole',
+    'Low-Poly Render',
+    'Comic',
+    'Vintage Comic',
+    'Anime',
+    'Oil Painting',
+    'Minimalist Sketchwash',
+    'Retro Pixel Art',
+    'Vintage VGA Monitor'
+];
+
 // --- Refiner Dropdown Options ---
 export const COMPOSITION_OPTIONS = [
     'Rule of Thirds', 'Golden Ratio', 'Leading Lines', 'Symmetry', 'Asymmetrical Balance',

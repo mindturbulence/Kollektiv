@@ -66,6 +66,7 @@ Length: ${promptLength}. Keep subject. Use modifiers.\n`;
     
     if (modifiers.artStyle) base += `Style: ${modifiers.artStyle}. `;
     if (modifiers.artist) base += `Artist: ${modifiers.artist}. `;
+    if (modifiers.zImageStyle) base += `Z-Image Visual Aesthetic: ${modifiers.zImageStyle}. `;
     if (modifiers.motion) base += `Motion Context: ${modifiers.motion}. `;
     if (modifiers.cameraMovement) base += `Camera Movement: ${modifiers.cameraMovement}. `;
     return base;
