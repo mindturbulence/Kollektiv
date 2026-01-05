@@ -1,10 +1,11 @@
 
-import React, { useState, useCallback, useEffect, useMemo } from 'react';
+import React, { useState, useCallback, useEffect, useMemo, useRef } from 'react';
 import { useSettings } from '../contexts/SettingsContext';
 import { loadPromptCategories, addSavedPrompt } from '../utils/promptStorage';
-import { enhancePromptStream, buildMidjourneyParams } from '../services/llmService';
+import { enhancePromptStream, buildMidjourneyParams, generateWithImagen, generateWithNanoBanana, generateWithVeo } from '../services/llmService';
 import { loadArtStyles } from '../utils/artstyleStorage';
 import { loadArtists } from '../utils/artistStorage';
+import { fileToBase64 } from '../utils/fileUtils';
 
 import type { AppError, SavedPrompt, PromptCategory, EnhancementResult, PromptModifiers, CheatsheetCategory, Idea } from '../types';
 import { 
@@ -18,6 +19,7 @@ import {
     CAMERA_ANGLES,
     CAMERA_PROXIMITY,
     CAMERA_SETTINGS,
+    CAMERA_EFFECTS,
     FILM_TYPES,
     LIGHTING_OPTIONS,
     CAMERA_TYPES,
@@ -34,7 +36,7 @@ import PromptCrafter from './PromptCrafter';
 import { ImageAbstractor } from './ImageAbstractor';
 import LoadingSpinner from './LoadingSpinner';
 import AutocompleteSelect from './AutocompleteSelect';
-import { SparklesIcon } from './icons';
+import { SparklesIcon, PhotoIcon, CloseIcon, UploadIcon, DownloadIcon } from './icons';
 
 interface PromptsPageProps {
   initialState?: { prompt?: string, artStyle?: string, artist?: string, view?: 'enhancer' | 'composer' | 'create', id?: string } | null;
@@ -61,13 +63,18 @@ const PromptsPage: React.FC<PromptsPageProps> = ({
   const [aiTargetType, setAiTargetType] = useState<'image' | 'video'>('image');
   const [targetAIModel, setTargetAIModel] = useState<string>(TARGET_IMAGE_AI_MODELS[0]);
   const [modifiers, setModifiers] = useState<PromptModifiers>({});
+  const [imageReferences, setImageReferences] = useState<(string | null)[]>(Array(4).fill(null));
+  
   const [artStyles, setArtStyles] = useState<CheatsheetCategory[]>([]);
   const [artists, setArtists] = useState<CheatsheetCategory[]>([]);
   const [isLoadingRefine, setIsLoadingRefine] = useState(false);
   const [errorRefine, setErrorRefine] = useState<AppError | null>(null);
+  
   const [resultsRefine, setResultsRefine] = useState<EnhancementResult | null>(null);
-  const [activeRefineSubTab, setActiveRefineSubTab] = useState<'prompt' | 'modifiers' | 'midjourney'>('prompt');
-
+  const [directMediaResult, setDirectMediaResult] = useState<{ url: string, type: 'image' | 'video', target: string, prompt: string } | null>(null);
+  
+  const [activeRefineSubTab, setActiveRefineSubTab] = useState<'prompt' | 'modifiers' | 'midjourney' | 'reference'>('prompt');
+  const [loadingMsg, setLoadingMsg] = useState<string>('');
 
   // --- State for "Composer" View ---
   const [composerPromptToInsert, setComposerPromptToInsert] = useState<{ content: string, id: string } | null>(null);
@@ -77,6 +84,19 @@ const PromptsPage: React.FC<PromptsPageProps> = ({
   const [suggestionToSave, setSuggestionToSave] = useState<Partial<SavedPrompt> | null>(null);
   const [promptCategories, setPromptCategories] = useState<PromptCategory[]>([]);
   
+  const refFileInputRefs = useRef<(HTMLInputElement | null)[]>([]);
+
+  // Helpers
+  const isGoogleImageProduct = useMemo(() => {
+    const target = targetAIModel.toLowerCase();
+    return target.includes('imagen') || target.includes('nano banana');
+  }, [targetAIModel]);
+
+  const isGoogleProduct = useMemo(() => {
+      const target = targetAIModel.toLowerCase();
+      return isGoogleImageProduct || target.includes('veo');
+  }, [isGoogleImageProduct, targetAIModel]);
+
   // Load external data for selectors
   useEffect(() => {
     const loadData = async () => {
@@ -128,6 +148,7 @@ const PromptsPage: React.FC<PromptsPageProps> = ({
     setIsLoadingRefine(true);
     setErrorRefine(null);
     setResultsRefine(null);
+    setDirectMediaResult(null);
     let fullText = '';
     
     try {
@@ -159,6 +180,45 @@ const PromptsPage: React.FC<PromptsPageProps> = ({
     }
   }, [refineText, constantModifier, promptLength, targetAIModel, modifiers, settings]);
 
+  const handleDirectGenerate = async () => {
+    setIsLoadingRefine(true);
+    setErrorRefine(null);
+    setResultsRefine(null);
+    setDirectMediaResult(null);
+    setLoadingMsg('Connecting to Google AI...');
+
+    try {
+        const target = targetAIModel.toLowerCase();
+        let resultUrl = '';
+        const combinedPrompt = [refineText, constantModifier].filter(Boolean).join('. ');
+
+        if (target.includes('imagen')) {
+            setLoadingMsg('Imaging your prompt...');
+            resultUrl = await generateWithImagen(combinedPrompt);
+        } else if (target.includes('nano banana')) {
+            setLoadingMsg('Simulating snapshot...');
+            const validRefs = imageReferences.filter((r): r is string => r !== null);
+            resultUrl = await generateWithNanoBanana(combinedPrompt, validRefs);
+        } else if (target.includes('veo')) {
+            resultUrl = await generateWithVeo(combinedPrompt, (msg) => setLoadingMsg(msg));
+        } else {
+            throw new Error("Direct generation not supported for this model.");
+        }
+
+        setDirectMediaResult({
+            url: resultUrl,
+            type: target.includes('veo') ? 'video' : 'image',
+            target: targetAIModel,
+            prompt: combinedPrompt
+        });
+    } catch (err: any) {
+        console.error("Direct generation failed:", err);
+        setErrorRefine({ message: err.message || "An unexpected error occurred during direct generation." });
+    } finally {
+        setIsLoadingRefine(false);
+    }
+  };
+
   const handleSaveSuggestion = (suggestionText: string) => {
     setSuggestionToSave({ 
       text: suggestionText, 
@@ -186,10 +246,12 @@ const PromptsPage: React.FC<PromptsPageProps> = ({
     if (!isMidjourneySelected && activeRefineSubTab === 'midjourney') {
       setActiveRefineSubTab('prompt');
     }
-  }, [isMidjourneySelected, activeRefineSubTab]);
+    if (!isGoogleImageProduct && activeRefineSubTab === 'reference') {
+      setActiveRefineSubTab('prompt');
+    }
+  }, [isMidjourneySelected, isGoogleImageProduct, activeRefineSubTab]);
 
   const handleClipSuggestion = (suggestionText: string) => {
-      // --- FIX: Corrected syntax error by changing 'new Idea' to 'newIdea' ---
       const newIdea: Idea = {
           id: `clipped-${Date.now()}`,
           lens: activeView === 'refine' ? 'Refinement' : 'Abstraction',
@@ -214,8 +276,33 @@ const PromptsPage: React.FC<PromptsPageProps> = ({
     setRefineText(text);
     setActiveView('refine');
     setResultsRefine(null);
+    setDirectMediaResult(null);
     setErrorRefine(null);
     showGlobalFeedback('Sent to Refiner!');
+  };
+
+  const handleRefImageChange = async (index: number, e: React.ChangeEvent<HTMLInputElement>) => {
+      const file = (e.currentTarget as any).files?.[0];
+      if (!file) return;
+      try {
+          const base64 = await fileToBase64(file);
+          setImageReferences(prev => {
+              const next = [...prev];
+              next[index] = base64;
+              return next;
+          });
+      } catch (err) {
+          console.error("Failed to load reference image", err);
+      }
+      if (e.currentTarget) e.currentTarget.value = '';
+  };
+
+  const removeRefImage = (index: number) => {
+      setImageReferences(prev => {
+          const next = [...prev];
+          next[index] = null;
+          return next;
+      });
   };
 
   const renderRefine = () => (
@@ -229,6 +316,9 @@ const PromptsPage: React.FC<PromptsPageProps> = ({
                     <a onClick={() => setActiveRefineSubTab('modifiers')} className={`tab flex-1 ${activeRefineSubTab === 'modifiers' ? 'tab-active' : ''}`}>Modifiers</a>
                     {isMidjourneySelected && (
                         <a onClick={() => setActiveRefineSubTab('midjourney')} className={`tab flex-1 ${activeRefineSubTab === 'midjourney' ? 'tab-active' : ''}`}>Midjourney</a>
+                    )}
+                    {isGoogleImageProduct && (
+                        <a onClick={() => setActiveRefineSubTab('reference')} className={`tab flex-1 ${activeRefineSubTab === 'reference' ? 'tab-active' : ''}`}>Reference</a>
                     )}
                 </div>
             </div>
@@ -344,12 +434,30 @@ const PromptsPage: React.FC<PromptsPageProps> = ({
                                 />
                             </div>
                             <div className="form-control">
+                                <label className="label py-1"><span className="label-text font-semibold">Camera Effect</span></label>
+                                <AutocompleteSelect
+                                    value={modifiers.cameraEffect || ''}
+                                    onChange={(newValue) => setModifiers({...modifiers, cameraEffect: newValue})}
+                                    options={CAMERA_EFFECTS}
+                                    placeholder="Search Effects..."
+                                />
+                            </div>
+                            <div className="form-control">
                                 <label className="label py-1"><span className="label-text font-semibold">Film Aesthetic</span></label>
                                 <AutocompleteSelect
                                     value={modifiers.filmType || ''}
                                     onChange={(newValue) => setModifiers({...modifiers, filmType: newValue})}
                                     options={FILM_TYPES}
                                     placeholder="Search Film Types..."
+                                />
+                            </div>
+                            <div className="form-control">
+                                <label className="label py-1"><span className="label-text font-semibold">Film Stock</span></label>
+                                <AutocompleteSelect
+                                    value={modifiers.filmStock || ''}
+                                    onChange={(newValue) => setModifiers({...modifiers, filmStock: newValue})}
+                                    options={ANALOG_FILM_STOCKS}
+                                    placeholder="Search Film Stocks..."
                                 />
                             </div>
                             <div className="form-control">
@@ -360,16 +468,9 @@ const PromptsPage: React.FC<PromptsPageProps> = ({
                                 <label className="label py-1"><span className="label-text">Camera Type</span></label>
                                 <AutocompleteSelect value={modifiers.cameraType || ''} onChange={(newValue) => {
                                     const newModifiers: PromptModifiers = { ...modifiers, cameraType: newValue };
-                                    if (newValue !== 'Analog Film') { delete newModifiers.filmStock; }
                                     setModifiers(newModifiers);
                                 }} options={CAMERA_TYPES} placeholder="Search Camera Types..."/>
                             </div>
-                            {modifiers.cameraType === 'Analog Film' && (
-                                <div className="form-control">
-                                    <label className="label py-1"><span className="label-text">Film Stock</span></label>
-                                    <AutocompleteSelect value={modifiers.filmStock || ''} onChange={(newValue) => setModifiers({...modifiers, filmStock: newValue})} options={ANALOG_FILM_STOCKS} placeholder="Search Film Stocks..."/>
-                                </div>
-                            )}
                             <div className="form-control">
                                 <label className="label py-1"><span className="label-text">Lens Type</span></label>
                                 <AutocompleteSelect value={modifiers.lensType || ''} onChange={(newValue) => setModifiers({...modifiers, lensType: newValue})} options={LENS_TYPES} placeholder="Search Lens Types..."/>
@@ -401,31 +502,111 @@ const PromptsPage: React.FC<PromptsPageProps> = ({
                         </div>
                     </div>
                  )}
+                 {activeRefineSubTab === 'reference' && isGoogleImageProduct && (
+                    <div className="space-y-4">
+                        <div className="grid grid-cols-2 gap-4">
+                            {imageReferences.map((ref, idx) => (
+                                <div key={idx} className="relative aspect-square bg-base-200 rounded-lg border-2 border-dashed border-base-content/20 flex flex-col items-center justify-center overflow-hidden group hover:border-primary/50 transition-colors">
+                                    {ref ? (
+                                        <>
+                                            <img src={ref} className="w-full h-full object-cover" alt={`Reference ${idx + 1}`} />
+                                            <button onClick={() => removeRefImage(idx)} className="btn btn-xs btn-circle btn-error absolute top-1 right-1 opacity-0 group-hover:opacity-100 shadow-md">
+                                                <CloseIcon className="w-3 h-3"/>
+                                            </button>
+                                        </>
+                                    ) : (
+                                        <button 
+                                            onClick={() => refFileInputRefs.current[idx]?.click()}
+                                            className="w-full h-full flex flex-col items-center justify-center text-base-content/40 hover:text-primary transition-colors"
+                                        >
+                                            <UploadIcon className="w-8 h-8 mb-1"/>
+                                            <span className="text-[10px] font-bold uppercase">Slot {idx + 1}</span>
+                                        </button>
+                                    )}
+                                    <input 
+                                        type="file" 
+                                        accept="image/*" 
+                                        className="hidden" 
+                                        /* --- FIX: Wrapped assignment in braces to return void and satisfy Ref type --- */
+                                        ref={(el) => { refFileInputRefs.current[idx] = el; }}
+                                        onChange={(e) => handleRefImageChange(idx, e)}
+                                    />
+                                </div>
+                            ))}
+                        </div>
+                        <div className="bg-info/10 p-3 rounded-md text-xs text-info flex gap-2">
+                             <SparklesIcon className="w-4 h-4 flex-shrink-0"/>
+                             <p>Add image references to guide the visual composition. Currently supported by <b>Nano Banana</b>.</p>
+                        </div>
+                    </div>
+                 )}
             </div>
-            <div className="p-4 border-t border-base-300 flex-shrink-0">
-                <button onClick={handleEnhance} disabled={isLoadingRefine || !refineText.trim()} className="btn btn-sm btn-primary w-full">
-                    {isLoadingRefine ? 'Working...' : 'Refine Prompt'}
-                </button>
+            <div className="p-4 border-t border-base-300 flex-shrink-0 flex flex-col gap-2">
+                <div className="flex gap-2">
+                    <button onClick={handleEnhance} disabled={isLoadingRefine || !refineText.trim()} className={`btn btn-sm ${isGoogleProduct ? 'btn-ghost flex-1' : 'btn-primary w-full'}`}>
+                        {isLoadingRefine && !loadingMsg ? 'Working...' : 'Refine Prompt'}
+                    </button>
+                    {isGoogleProduct && (
+                        <button onClick={handleDirectGenerate} disabled={isLoadingRefine || !refineText.trim()} className="btn btn-sm btn-primary flex-1">
+                            {isLoadingRefine && loadingMsg ? 'Crafting...' : 'Generate'}
+                        </button>
+                    )}
+                </div>
             </div>
         </div>
         {/* Right Column: Results */}
         <div className="lg:col-span-2 bg-base-100 rounded-lg shadow-lg flex flex-col min-h-0">
-            <div className="p-4 border-b border-base-300"><h2 className="text-xl font-bold text-primary">Suggestions</h2></div>
+            <div className="p-4 border-b border-base-300"><h2 className="text-xl font-bold text-primary">Results</h2></div>
             <div className="flex-grow p-4 overflow-y-auto">
-                {isLoadingRefine ? <LoadingSpinner /> :
-                 errorRefine ? <div className="alert alert-error"><span>Error: {errorRefine.message}</span></div> :
-                 resultsRefine ? <div className="space-y-4">{resultsRefine.suggestions.map((suggestion, index) => ( 
+                {isLoadingRefine ? (
+                    <div className="flex flex-col items-center justify-center py-16 text-center space-y-4">
+                        <LoadingSpinner />
+                        {loadingMsg && (
+                            <div className="space-y-1">
+                                <p className="font-bold text-sm uppercase tracking-widest text-primary animate-pulse">{loadingMsg}</p>
+                                <p className="text-xs text-base-content/50 italic px-4">Direct Google AI generation in progress...</p>
+                            </div>
+                        )}
+                    </div>
+                ) : errorRefine ? <div className="alert alert-error"><span>Error: {errorRefine.message}</span></div> :
+                 directMediaResult ? (
+                    <div className="max-w-2xl mx-auto space-y-6 animate-fade-in">
+                        <div className="relative group bg-black rounded-2xl overflow-hidden shadow-2xl border border-base-300">
+                             {directMediaResult.type === 'video' ? (
+                                <video src={directMediaResult.url} controls autoPlay loop className="w-full h-auto aspect-video sm:aspect-square object-contain" />
+                            ) : (
+                                <img src={directMediaResult.url} alt="Direct result" className="w-full h-auto aspect-square object-contain" />
+                            )}
+                            <div className="absolute top-4 right-4 opacity-0 group-hover:opacity-100 transition-opacity">
+                                <a href={directMediaResult.url} download={`kollektiv_direct_${directMediaResult.target.replace(/\s+/g, '_')}_${Date.now()}.${directMediaResult.type === 'video' ? 'mp4' : 'jpg'}`} className="btn btn-sm btn-primary shadow-lg">
+                                    <DownloadIcon className="w-4 h-4 mr-1"/> Download
+                                </a>
+                            </div>
+                        </div>
+                        <div className="flex flex-col gap-2 px-2">
+                             <div className="flex justify-between items-center">
+                                <span className="badge badge-primary font-black uppercase tracking-tighter text-[10px] h-6">{directMediaResult.target} Direct Output</span>
+                                <button onClick={() => setDirectMediaResult(null)} className="btn btn-link btn-xs no-underline text-base-content/40 hover:text-primary">Clear Result</button>
+                             </div>
+                             <div className="bg-base-200 p-4 rounded-xl text-sm italic text-base-content/80 border border-base-300">
+                                "{directMediaResult.prompt}"
+                             </div>
+                        </div>
+                    </div>
+                 ) : resultsRefine ? <div className="space-y-4 animate-fade-in">{resultsRefine.suggestions.map((suggestion, index) => ( 
                     <SuggestionItem 
                         key={index} 
                         suggestionText={suggestion} 
+                        targetAI={targetAIModel}
                         onSave={handleSaveSuggestion}
                         onClip={handleClipSuggestion}
                         onRefine={handleSendToRefine}
                     />
                 ))}</div> : (
-                    <div className="text-center p-8">
-                        <SparklesIcon className="w-16 h-16 mx-auto text-base-content/30" />
-                        <p className="mt-4 text-base-content/70">Your refined prompts will appear here.</p>
+                    <div className="text-center p-12 flex flex-col items-center justify-center h-full text-base-content/30">
+                        <SparklesIcon className="w-20 h-20 mx-auto" />
+                        <p className="mt-4 text-base font-medium">Your creative sparks will appear here.</p>
+                        <p className="text-sm">Refine your idea or Generate directly with Google models.</p>
                     </div>
                 )}
             </div>

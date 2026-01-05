@@ -1,4 +1,5 @@
 
+import { GoogleGenAI, GenerateContentResponse, Type } from "@google/genai";
 import type { EnhancementResult, LLMSettings, PromptModifiers, PromptAnatomy, CheatsheetCategory } from '../types';
 import { enhancePromptGemini, analyzePaletteMood as analyzePaletteMoodGemini, generatePromptFormulaGemini, refineSinglePromptGemini, abstractImageGemini, generateColorNameGemini, dissectPromptGemini, generateFocusedVariationsGemini, reconstructPromptGemini, reconstructFromIntentGemini, replaceComponentInPromptGemini, detectSalientRegionGemini, generateArtistDescriptionGemini, enhancePromptGeminiStream, refineSinglePromptGeminiStream } from './geminiService';
 import { enhancePromptOllama, analyzePaletteMoodOllama, generatePromptFormulaOllama, refineSinglePromptOllama, abstractImageOllama, generateColorNameOllama, dissectPromptOllama, generateFocusedVariationsOllama, reconstructPromptOllama, replaceComponentInPromptOllama, reconstructFromIntentOllama, generateArtistDescriptionOllama, enhancePromptOllamaStream, refineSinglePromptOllamaStream } from './ollamaService';
@@ -69,7 +70,9 @@ export const buildSystemInstructionForEnhancer = (
     if (modifiers.cameraAngle) activeMods.push(`Angle:${modifiers.cameraAngle}`);
     if (modifiers.cameraProximity) activeMods.push(`Distance:${modifiers.cameraProximity}`);
     if (modifiers.cameraSettings) activeMods.push(`CamOpts:${modifiers.cameraSettings}`);
-    if (modifiers.filmType) activeMods.push(`Film:${modifiers.filmType}`);
+    if (modifiers.cameraEffect) activeMods.push(`Effect:${modifiers.cameraEffect}`);
+    if (modifiers.filmType) activeMods.push(`FilmType:${modifiers.filmType}`);
+    if (modifiers.filmStock) activeMods.push(`FilmStock:${modifiers.filmStock}`);
     if (modifiers.motion) activeMods.push(`Motion:${modifiers.motion}`);
     if (modifiers.cameraMovement) activeMods.push(`CameraMov:${modifiers.cameraMovement}`);
     
@@ -111,6 +114,104 @@ export async function* enhancePromptStream(
         for await (const chunk of enhancePromptGeminiStream(originalPrompt, constantModifier, settings, systemInstruction)) yield chunk;
     }
 }
+
+// --- Content Generation for Google Models ---
+
+export const generateWithNanoBanana = async (prompt: string, images: string[] = []): Promise<string> => {
+    const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
+    
+    const imageParts = images.map(dataUrl => {
+        const [meta, data] = dataUrl.split(',');
+        const mimeType = meta.split(':')[1].split(';')[0];
+        return {
+            inlineData: {
+                data: data,
+                mimeType: mimeType
+            }
+        };
+    });
+
+    const response = await ai.models.generateContent({
+        model: 'gemini-2.5-flash-image',
+        contents: { parts: [...imageParts, { text: prompt }] },
+        config: { imageConfig: { aspectRatio: "1:1" } }
+    });
+    
+    for (const part of response.candidates[0].content.parts) {
+        if (part.inlineData) {
+            return `data:image/png;base64,${part.inlineData.data}`;
+        }
+    }
+    throw new Error("No image data returned from Nano Banana.");
+};
+
+export const generateWithImagen = async (prompt: string): Promise<string> => {
+    const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
+    const response = await ai.models.generateImages({
+        model: 'imagen-4.0-generate-001',
+        prompt: prompt,
+        config: { numberOfImages: 1, aspectRatio: '1:1', outputMimeType: 'image/jpeg' }
+    });
+    
+    if (response.generatedImages?.[0]?.image?.imageBytes) {
+        return `data:image/jpeg;base64,${response.generatedImages[0].image.imageBytes}`;
+    }
+    throw new Error("No image data returned from Imagen.");
+};
+
+export const generateWithVeo = async (prompt: string, onProgress?: (msg: string) => void): Promise<string> => {
+    const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
+    
+    // Safety check for environment
+    if (typeof window !== 'undefined' && (window as any).aistudio) {
+        const hasKey = await (window as any).aistudio.hasSelectedApiKey();
+        if (!hasKey) {
+            await (window as any).aistudio.openSelectKey();
+            // Proceed assuming success as per instructions
+        }
+    }
+
+    try {
+        let operation = await ai.models.generateVideos({
+            model: 'veo-3.1-fast-generate-preview',
+            prompt: prompt,
+            config: { numberOfVideos: 1, resolution: '720p', aspectRatio: '16:9' }
+        });
+
+        const progressMessages = [
+            "Initializing neural engine...",
+            "Simulating particle dynamics...",
+            "Refining fluid motion...",
+            "Optimizing cinematic lighting...",
+            "Applying temporal consistency...",
+            "Almost there! Finalizing frames..."
+        ];
+        let msgIndex = 0;
+
+        while (!operation.done) {
+            if (onProgress) {
+                onProgress(progressMessages[msgIndex % progressMessages.length]);
+                msgIndex++;
+            }
+            await new Promise(resolve => setTimeout(resolve, 8000));
+            operation = await ai.operations.getVideosOperation({ operation: operation });
+        }
+
+        const downloadLink = operation.response?.generatedVideos?.[0]?.video?.uri;
+        if (!downloadLink) throw new Error("Video generation failed or link missing.");
+        
+        const fetchResponse = await fetch(`${downloadLink}&key=${process.env.API_KEY}`);
+        const blob = await fetchResponse.blob();
+        return URL.createObjectURL(blob);
+    } catch (err: any) {
+        if (err.message?.includes("Requested entity was not found")) {
+             if (typeof window !== 'undefined' && (window as any).aistudio) {
+                await (window as any).aistudio.openSelectKey();
+             }
+        }
+        throw err;
+    }
+};
 
 const buildSystemInstructionForRefiner = async (targetAIModel: string) => {
     if (!artStylesCache || !artistsCache || !generalCheatsheetCache) {

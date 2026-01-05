@@ -65,6 +65,7 @@ export interface PromptModifiers {
   cameraAngle?: string;
   cameraProximity?: string;
   cameraSettings?: string;
+  cameraEffect?: string;
   lensType?: string;
   filmType?: string;
   filmStock?: string;
