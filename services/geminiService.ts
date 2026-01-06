@@ -3,10 +3,9 @@ import { GoogleGenAI, GenerateContentResponse, Type } from "@google/genai";
 import { handleGeminiError } from '../utils/errorHandler';
 import type { EnhancementResult, LLMSettings, PromptModifiers, PromptAnatomy } from '../types';
 
+// FIX: Updated to use process.env.API_KEY directly as instructed in guidelines
 const getGeminiClient = (settings: LLMSettings): GoogleGenAI => {
-    const apiKey = process.env.API_KEY;
-    if (!apiKey) throw new Error("API key missing.");
-    return new GoogleGenAI({ apiKey });
+    return new GoogleGenAI({ apiKey: process.env.API_KEY });
 };
 
 const DEFAULT_MODEL = 'gemini-3-flash-preview';
@@ -24,7 +23,9 @@ export const detectSalientRegionGemini = async (
             config: {
                 systemInstruction: "Task: Output [ymin,xmin,ymax,xmax] (0-1) for primary subject. JSON only.",
                 responseMimeType: 'application/json',
+                // FIX: Added thinkingBudget: 0 to avoid empty response with small maxOutputTokens
                 maxOutputTokens: 60,
+                thinkingConfig: { thinkingBudget: 0 },
                 responseSchema: {
                     type: Type.OBJECT,
                     properties: { box: { type: Type.ARRAY, items: { type: Type.NUMBER } } },
@@ -39,11 +40,16 @@ export const enhancePromptGemini = async (prompt: string, constantModifier: stri
     try {
         const ai = getGeminiClient(settings);
         const input = [prompt.trim(), constantModifier.trim()].filter(Boolean).join('\n\n');
-        const tokenBudget = length === 'Long' ? 2500 : 800;
+        const tokenBudget = length === 'Long' ? 4000 : 1000;
         const response = await ai.models.generateContent({
             model: settings.llmModel || DEFAULT_MODEL,
             contents: input,
-            config: { systemInstruction, maxOutputTokens: tokenBudget }
+            config: { 
+                systemInstruction, 
+                // FIX: Added thinkingBudget: 0 when maxOutputTokens is specified
+                maxOutputTokens: tokenBudget,
+                thinkingConfig: { thinkingBudget: 0 }
+            }
         });
         return response.text || '';
     } catch (err) { throw handleGeminiError(err, 'enhancing prompt'); }
@@ -53,11 +59,16 @@ export async function* enhancePromptGeminiStream(prompt: string, constantModifie
     try {
         const ai = getGeminiClient(settings);
         const input = [prompt.trim(), constantModifier.trim()].filter(Boolean).join('\n\n');
-        const tokenBudget = length === 'Long' ? 3000 : 1000;
+        const tokenBudget = length === 'Long' ? 4500 : 1200;
         const response = await ai.models.generateContentStream({
             model: settings.llmModel || DEFAULT_MODEL,
             contents: input,
-            config: { systemInstruction, maxOutputTokens: tokenBudget }
+            config: { 
+                systemInstruction, 
+                // FIX: Added thinkingBudget: 0 when maxOutputTokens is specified
+                maxOutputTokens: tokenBudget,
+                thinkingConfig: { thinkingBudget: 0 }
+            }
         });
         for await (const chunk of response) yield chunk.text || '';
     } catch (err) { throw handleGeminiError(err, 'enhancing prompt'); }
@@ -69,7 +80,12 @@ export const refineSinglePromptGemini = async (promptText: string, cheatsheetCon
         const response = await ai.models.generateContent({
             model: settings.llmModel || DEFAULT_MODEL,
             contents: promptText,
-            config: { systemInstruction, maxOutputTokens: 1000 }
+            config: { 
+                systemInstruction, 
+                // FIX: Added thinkingBudget: 0 when maxOutputTokens is specified
+                maxOutputTokens: 1500,
+                thinkingConfig: { thinkingBudget: 0 }
+            }
         });
         return (response.text || '').trim();
     } catch (err) { throw handleGeminiError(err, 'refining prompt'); }
@@ -81,7 +97,12 @@ export async function* refineSinglePromptGeminiStream(promptText: string, cheats
         const response = await ai.models.generateContentStream({
             model: settings.llmModel || DEFAULT_MODEL,
             contents: promptText,
-            config: { systemInstruction, maxOutputTokens: 1200 }
+            config: { 
+                systemInstruction, 
+                // FIX: Added thinkingBudget: 0 when maxOutputTokens is specified
+                maxOutputTokens: 1800,
+                thinkingConfig: { thinkingBudget: 0 }
+            }
         });
         for await (const chunk of response) yield chunk.text || '';
     } catch (err) { throw handleGeminiError(err, 'refining prompt'); }
@@ -93,7 +114,13 @@ export const analyzePaletteMood = async (hexColors: string[], settings: LLMSetti
     const response = await ai.models.generateContent({
       model: DEFAULT_MODEL,
       contents: `Colors: ${hexColors.join(', ')}`,
-      config: { systemInstruction: "Output mood in 3-5 words.", temperature: 0.5, maxOutputTokens: 30 }
+      config: { 
+          systemInstruction: "Output mood in 3-5 words.", 
+          temperature: 0.5, 
+          // FIX: Added thinkingBudget: 0 when maxOutputTokens is specified
+          maxOutputTokens: 30,
+          thinkingConfig: { thinkingBudget: 0 }
+      }
     });
     return (response.text || '').trim();
   } catch (err) { return "Analysis unavailable"; }
@@ -105,7 +132,13 @@ export const generateColorNameGemini = async (hexColor: string, mood: string, se
         const response = await ai.models.generateContent({
             model: DEFAULT_MODEL,
             contents: `Hex:${hexColor}, Mood:${mood}`,
-            config: { systemInstruction: "Output one poetic 2-word name. Text only.", temperature: 0.8, maxOutputTokens: 20 }
+            config: { 
+                systemInstruction: "Output one poetic 2-word name. Text only.", 
+                temperature: 0.8, 
+                // FIX: Added thinkingBudget: 0 when maxOutputTokens is specified
+                maxOutputTokens: 20,
+                thinkingConfig: { thinkingBudget: 0 }
+            }
         });
         return (response.text || '').trim().replace(/"/g, '');
     } catch (err) { return "Unnamed Color"; }
@@ -120,7 +153,9 @@ export const dissectPromptGemini = async (promptText: string, settings: LLMSetti
             config: {
                 systemInstruction: "Task: JSON dissect prompt into keys (subject, action, style, mood, composition, lighting, details).",
                 responseMimeType: 'application/json',
-                maxOutputTokens: 500
+                // FIX: Added thinkingBudget: 0 when maxOutputTokens is specified
+                maxOutputTokens: 600,
+                thinkingConfig: { thinkingBudget: 0 }
             }
         });
         return JSON.parse(response.text || '{}');
@@ -136,7 +171,9 @@ export const generateFocusedVariationsGemini = async (promptText: string, compon
             config: {
                 systemInstruction: "Task: Output 3 creative variations per key. JSON only.",
                 responseMimeType: 'application/json',
-                maxOutputTokens: 1000
+                // FIX: Added thinkingBudget: 0 when maxOutputTokens is specified
+                maxOutputTokens: 1200,
+                thinkingConfig: { thinkingBudget: 0 }
             }
         });
         return JSON.parse(response.text || '{}');
@@ -149,7 +186,12 @@ export const reconstructPromptGemini = async (components: { [key: string]: strin
         const response = await ai.models.generateContent({
             model: DEFAULT_MODEL,
             contents: JSON.stringify(components),
-            config: { systemInstruction: "Merge into cohesive natural prose. No preamble.", maxOutputTokens: 800 }
+            config: { 
+                systemInstruction: "Merge into cohesive natural prose. No preamble.", 
+                // FIX: Added thinkingBudget: 0 when maxOutputTokens is specified
+                maxOutputTokens: 1000,
+                thinkingConfig: { thinkingBudget: 0 }
+            }
         });
         return (response.text || '').trim();
     } catch (err) { throw handleGeminiError(err, 'reconstructing'); }
@@ -161,7 +203,12 @@ export const replaceComponentInPromptGemini = async (originalPrompt: string, com
         const response = await ai.models.generateContent({
             model: DEFAULT_MODEL,
             contents: `Orig:${originalPrompt}\nKey:${componentKey}\nNew:${newValue}`,
-            config: { systemInstruction: "Swap value seamlessly. No preamble.", maxOutputTokens: 800 }
+            config: { 
+                systemInstruction: "Swap value seamlessly. No preamble.", 
+                // FIX: Added thinkingBudget: 0 when maxOutputTokens is specified
+                maxOutputTokens: 1000,
+                thinkingConfig: { thinkingBudget: 0 }
+            }
         });
         return (response.text || '').trim();
     } catch (err) { throw handleGeminiError(err, 'replacing'); }
@@ -173,7 +220,12 @@ export const reconstructFromIntentGemini = async (intents: string[], settings: L
         const response = await ai.models.generateContent({
             model: DEFAULT_MODEL,
             contents: intents.join(', '),
-            config: { systemInstruction: "Merge intents into descriptive prose. No preamble.", maxOutputTokens: 1000 }
+            config: { 
+                systemInstruction: "Merge intents into descriptive prose. No preamble.", 
+                // FIX: Added thinkingBudget: 0 when maxOutputTokens is specified
+                maxOutputTokens: 1200,
+                thinkingConfig: { thinkingBudget: 0 }
+            }
         });
         return (response.text || '').trim();
     } catch (err) { throw handleGeminiError(err, 'reconstructing'); }
@@ -185,7 +237,12 @@ export const generatePromptFormulaGemini = async (promptText: string, settings: 
         const response = await ai.models.generateContent({
             model: DEFAULT_MODEL,
             contents: promptText,
-            config: { systemInstruction, maxOutputTokens: 600 }
+            config: { 
+                systemInstruction, 
+                // FIX: Added thinkingBudget: 0 when maxOutputTokens is specified
+                maxOutputTokens: 800,
+                thinkingConfig: { thinkingBudget: 0 }
+            }
         });
         return (response.text || '').trim();
     } catch (err) { throw handleGeminiError(err, 'formula'); }
@@ -197,7 +254,13 @@ export const generateArtistDescriptionGemini = async (artistName: string, settin
         const response = await ai.models.generateContent({
             model: DEFAULT_MODEL,
             contents: artistName,
-            config: { systemInstruction: "Brief 1-sentence style description. No preamble.", temperature: 0.5, maxOutputTokens: 150 }
+            config: { 
+                systemInstruction: "Brief 1-sentence style description. No preamble.", 
+                temperature: 0.5, 
+                // FIX: Added thinkingBudget: 0 when maxOutputTokens is specified
+                maxOutputTokens: 150,
+                thinkingConfig: { thinkingBudget: 0 }
+            }
         });
         return (response.text || '').trim();
     } catch (err) { throw handleGeminiError(err, artistName); }
@@ -210,7 +273,12 @@ export const abstractImageGemini = async (base64ImageData: string, promptLength:
         const response = await ai.models.generateContent({
             model: DEFAULT_MODEL,
             contents: { parts: [imagePart, { text: `Target:${targetAIModel}, Len:${promptLength}` }] },
-            config: { systemInstruction: "Analyze image. Return 3 prompts. Newline-sep. No preamble.", maxOutputTokens: 1500 }
+            config: { 
+                systemInstruction: "Analyze image. Return 3 prompts. Newline-sep. No preamble.", 
+                // FIX: Added thinkingBudget: 0 when maxOutputTokens is specified
+                maxOutputTokens: 2000,
+                thinkingConfig: { thinkingBudget: 0 }
+            }
         });
         const suggestions = (response.text || '').split('\n').map(s => s.trim().replace(/^\d+\.\s*/, '')).filter(Boolean);
         return { suggestions };
@@ -221,9 +289,8 @@ export const abstractImageGemini = async (base64ImageData: string, promptLength:
 
 export const generateWithNanoBanana = async (prompt: string, referenceImages: string[] = []): Promise<string> => {
     try {
-        const apiKey = process.env.API_KEY;
-        if (!apiKey) throw new Error("API key missing.");
-        const ai = new GoogleGenAI({ apiKey });
+        // FIX: Always use process.env.API_KEY directly
+        const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
         const parts: any[] = [{ text: prompt }];
         if (referenceImages && referenceImages.length > 0) {
             referenceImages.forEach(img => {
@@ -247,9 +314,8 @@ export const generateWithNanoBanana = async (prompt: string, referenceImages: st
 
 export const generateWithImagen = async (prompt: string): Promise<string> => {
     try {
-        const apiKey = process.env.API_KEY;
-        if (!apiKey) throw new Error("API key missing.");
-        const ai = new GoogleGenAI({ apiKey });
+        // FIX: Always use process.env.API_KEY directly
+        const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
         const response = await ai.models.generateImages({
             model: 'imagen-4.0-generate-001',
             prompt: prompt,
@@ -261,10 +327,16 @@ export const generateWithImagen = async (prompt: string): Promise<string> => {
 };
 
 export const generateWithVeo = async (prompt: string, onProgress?: (msg: string) => void): Promise<string> => {
+    // FIX: Veo models MUST use mandatory API key selection logic
+    if (typeof window !== 'undefined' && (window as any).aistudio) {
+        if (!(await (window as any).aistudio.hasSelectedApiKey())) {
+            await (window as any).aistudio.openSelectKey();
+            // Proceed assuming selection was successful
+        }
+    }
+
     try {
-        const apiKey = process.env.API_KEY;
-        if (!apiKey) throw new Error("API key missing.");
-        const ai = new GoogleGenAI({ apiKey });
+        const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
         let operation = await ai.models.generateVideos({
             model: 'veo-3.1-fast-generate-preview',
             prompt: prompt,
@@ -276,7 +348,8 @@ export const generateWithVeo = async (prompt: string, onProgress?: (msg: string)
         }
         const downloadLink = operation.response?.generatedVideos?.[0]?.video?.uri;
         if (!downloadLink) throw new Error("Video generation failed.");
-        const vidResponse = await fetch(`${downloadLink}&key=${apiKey}`);
+        // FIX: Append process.env.API_KEY to download link
+        const vidResponse = await fetch(`${downloadLink}&key=${process.env.API_KEY}`);
         if (!vidResponse.ok) throw new Error(`Failed to download video.`);
         const blob = await vidResponse.blob();
         return URL.createObjectURL(blob);

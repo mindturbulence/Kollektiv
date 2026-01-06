@@ -3,70 +3,86 @@ import { GoogleGenAI, GenerateContentResponse, Type } from "@google/genai";
 import type { EnhancementResult, LLMSettings, PromptModifiers, PromptAnatomy, CheatsheetCategory } from '../types';
 import { enhancePromptGemini, analyzePaletteMood as analyzePaletteMoodGemini, generatePromptFormulaGemini, refineSinglePromptGemini, abstractImageGemini, generateColorNameGemini, dissectPromptGemini, generateFocusedVariationsGemini, reconstructPromptGemini, reconstructFromIntentGemini, replaceComponentInPromptGemini, detectSalientRegionGemini, generateArtistDescriptionGemini, enhancePromptGeminiStream, refineSinglePromptGeminiStream } from './geminiService';
 import { enhancePromptOllama, analyzePaletteMoodOllama, generatePromptFormulaOllama, refineSinglePromptOllama, abstractImageOllama, generateColorNameOllama, dissectPromptOllama, generateFocusedVariationsOllama, reconstructPromptOllama, replaceComponentInPromptOllama, reconstructFromIntentOllama, generateArtistDescriptionOllama, enhancePromptOllamaStream, refineSinglePromptOllamaStream } from './ollamaService';
+import { TARGET_VIDEO_AI_MODELS } from '../constants/models';
 
 // --- Model-Specific Reference Logic ---
 const getModelSyntax = (model: string) => {
     const lower = model.toLowerCase();
     
+    // Pony/Illustrious Scoring System
     if (lower.includes('pony') || lower.includes('illustrious')) {
         return {
             format: "Comma-separated tags + Scoring system.",
             prefix: "score_9, score_8_up, score_7_up, rating_safe, source_anime, ",
-            rules: "Start with quality scores. Use specific descriptive tags. NO prose sentences. Use underscores for multi-word tags (e.g., long_hair)."
+            rules: "Start with quality scores. Use specific descriptive tags with underscores (e.g., cyber_armor). Focus on character traits and artist names as tags."
         };
     }
     
-    if (lower.includes('stable diffusion') || lower.includes('sd 1.5') || lower.includes('sdxl')) {
+    // Stable Diffusion Weighting
+    if (lower.includes('stable diffusion') || lower.includes('sd 1.5') || lower.includes('sdxl') || lower.includes('chroma')) {
         return {
             format: "Weighted keywords and descriptive phrases.",
             prefix: "masterpiece, best quality, ultra-detailed, ",
-            rules: "Focus on subject, then style, then lighting. Use (parentheses:1.2) for emphasis on the most important keywords."
+            rules: "Use (parentheses:1.2) for emphasis. Focus on: Subject > Style > Environment > Lighting > Technical specs."
         };
     }
 
-    if (lower.includes('flux') || lower.includes('midjourney') || lower.includes('imagen') || lower.includes('dall-e')) {
+    // High-End Textual Narrative Models (WAN, HunYuan, Flux, MJ)
+    if (lower.includes('wan') || lower.includes('hunyuan') || lower.includes('flux') || lower.includes('midjourney') || lower.includes('imagen') || lower.includes('lumina') || lower.includes('playground')) {
         return {
-            format: "Sophisticated natural language narrative.",
+            format: "Exquisite natural language narrative.",
             prefix: "",
-            rules: "Write in a cohesive, evocative paragraph. Describe the 'physics' of the scene: light bounce, material textures, and depth. Avoid generic buzzwords like '4k'."
+            rules: "Write a high-utility paragraph describing scene physics: how light interacts with skin/fabric, atmospheric density, and micro-textures. No buzzwords."
         };
     }
 
     return {
-        format: "Descriptive prose or tags as appropriate.",
+        format: "Natural language descriptive prose.",
         prefix: "",
-        rules: "Clearly describe the visual elements requested."
+        rules: "Clearly describe visual elements in cohesive sentences."
     };
 };
 
 // --- Token-Efficient & Model-Aware Roles ---
 const AI_ROLES = {
-    ENHANCER: (model: string, length: string) => {
+    ENHANCER: (model: string, length: string, isVideo: boolean, hasManualCamera: boolean) => {
         const syntax = getModelSyntax(model);
         const lengthGuides = {
-            'Short': 'approx 15-20 words.',
-            'Medium': 'approx 50-70 words.',
-            'Long': '200-300 words. Exhaustive technical and sensory depth.'
+            'Short': 'approx 20 words. One punchy, evocative sentence.',
+            'Medium': 'approx 70-90 words. A detailed descriptive paragraph.',
+            'Long': 'MINIMUM 350 words. An exhaustive, multi-paragraph visual bible covering every technical detail, sensory element, and historical/artistic layer.'
         };
         const guide = lengthGuides[length as keyof typeof lengthGuides] || lengthGuides['Medium'];
 
-        return `Role: Kollektiv Premier Prompt Engineer for ${model}.
+        const videoLogic = isVideo 
+            ? `VIDEO AI RULES: ${hasManualCamera 
+                ? "Strictly use the provided camera modifiers." 
+                : "USER HAS NOT SPECIFIED MOVEMENT: You MUST creatively invent a cinematic camera movement (e.g., sweeping orbit, slow-motion dolly zoom, handheld tracking) that matches the prompt's emotion."}` 
+            : "";
+
+        return `Role: Kollektiv Chief Prompt Architect for ${model}.
 Target System Syntax: ${syntax.format}
 Official Reference Rules: ${syntax.rules}
+${videoLogic}
 
-TASK: Expand the SUBJECT into 3 unique variations.
+TASK: Generate 3 unique variations of the USER SUBJECT.
 MANDATORY: 
-- Prepend this EXACT prefix to every result: "${syntax.prefix}"
-- Detail Level [${length}]: Each result MUST be ${guide}
+- Prepend "${syntax.prefix}" to every result if applicable.
+- Detail Level [${length}]: Results MUST be ${guide}
 - Output EXACTLY 3 lines. One result per line. 
-- NO reasoning, NO markdown, NO conversational text.`;
+- NO preamble, NO numbering, NO markdown, NO thinking.`;
     },
 
-    REFINER: (model: string) => {
+    REFINER: (model: string, isVideo: boolean, hasManualCamera: boolean) => {
         const syntax = getModelSyntax(model);
+        const videoLogic = isVideo && !hasManualCamera 
+            ? "MANDATORY: Creatively inject a cinematic camera movement appropriate for this scene." 
+            : "";
+            
         return `Role: Art Director for ${model}. 
-Task: Re-write the input into optimized ${syntax.format} according to these official rules: ${syntax.rules}.
-Requirement: Prepend "${syntax.prefix}" if necessary. Output ONLY the improved text.`;
+Task: Convert input into optimized ${syntax.format} based on these rules: ${syntax.rules}.
+${videoLogic}
+Requirement: Prepend "${syntax.prefix}" if necessary. Output ONLY the refined prompt text.`;
     },
 
     ANALYST: "Task: JSON dissect prompt into keys: subject, action, style, mood, composition, lighting, details. Output JSON only.",
@@ -79,7 +95,7 @@ export const cleanLLMResponse = (text: string): string => {
     let cleaned = text.replace(/<(think|thought)>[\s\S]*?(<\/\1>|$)/gi, '').trim();
     cleaned = cleaned.replace(/```[a-z]*\n([\s\S]*?)\n```/gi, '$1').replace(/`/g, '');
     
-    const stopWords = [/^here/i, /^sure/i, /^certainly/i, /^expanded/i, /^refined/i, /^output/i, /^okay/i, /^suggestion/i, /^the following/i, /^result/i];
+    const stopWords = [/^here/i, /^sure/i, /^certainly/i, /^expanded/i, /^refined/i, /^output/i, /^okay/i, /^suggestion/i, /^the following/i, /^result/i, /^1\.\s/i];
     return cleaned.split('\n')
         .map(l => l.trim().replace(/^(\d+[\.\)]|\*|-|\+)\s+/, ''))
         .filter(l => l && !stopWords.some(r => r.test(l)))
@@ -111,15 +127,16 @@ export const buildContextForEnhancer = (modifiers: PromptModifiers): string => {
     const ctx = [];
     if (modifiers.artStyle) ctx.push(`Art Style: ${modifiers.artStyle}`);
     if (modifiers.artist) ctx.push(`Artist: ${modifiers.artist}`);
-    if (modifiers.zImageStyle) ctx.push(`Visual Aesthetic: ${modifiers.zImageStyle}`);
-    if (modifiers.photographyStyle) ctx.push(`Photo Style: ${modifiers.photographyStyle}`);
+    if (modifiers.zImageStyle) ctx.push(`Aesthetic: ${modifiers.zImageStyle}`);
+    if (modifiers.photographyStyle) ctx.push(`Photography: ${modifiers.photographyStyle}`);
     if (modifiers.cameraAngle) ctx.push(`Angle: ${modifiers.cameraAngle}`);
     if (modifiers.cameraProximity) ctx.push(`Distance: ${modifiers.cameraProximity}`);
     if (modifiers.lighting) ctx.push(`Lighting: ${modifiers.lighting}`);
     if (modifiers.composition) ctx.push(`Composition: ${modifiers.composition}`);
-    if (modifiers.filmStock) ctx.push(`Film: ${modifiers.filmStock}`);
+    if (modifiers.cameraMovement) ctx.push(`Camera Movement: ${modifiers.cameraMovement}`);
+    if (modifiers.motion) ctx.push(`Action/Motion: ${modifiers.motion}`);
     
-    return ctx.length ? `[REQUIRED MODIFIERS]\n${ctx.join('\n')}` : '';
+    return ctx.length ? `[MANDATORY CONTEXT]\n${ctx.join('\n')}` : '';
 };
 
 export async function* enhancePromptStream(
@@ -130,7 +147,9 @@ export async function* enhancePromptStream(
     modifiers: PromptModifiers,
     settings: LLMSettings
 ): AsyncGenerator<string> {
-    const systemInstruction = AI_ROLES.ENHANCER(targetAIModel, promptLength);
+    const isVideo = !!TARGET_VIDEO_AI_MODELS.find(m => m === targetAIModel);
+    const hasManualCamera = !!modifiers.cameraMovement;
+    const systemInstruction = AI_ROLES.ENHANCER(targetAIModel, promptLength, isVideo, hasManualCamera);
     const context = buildContextForEnhancer(modifiers);
     const input = `${context}\n\n[USER SUBJECT]\n${originalPrompt}`;
 
@@ -146,8 +165,10 @@ export async function* enhancePromptStream(
     }
 }
 
-export const refineSinglePrompt = async (promptText: string, targetAIModel: string, settings: LLMSettings): Promise<string> => {
-    const sys = AI_ROLES.REFINER(targetAIModel);
+export const refineSinglePrompt = async (promptText: string, targetAIModel: string, settings: LLMSettings, modifiers: PromptModifiers = {}): Promise<string> => {
+    const isVideo = !!TARGET_VIDEO_AI_MODELS.find(m => m === targetAIModel);
+    const hasManualCamera = !!modifiers.cameraMovement;
+    const sys = AI_ROLES.REFINER(targetAIModel, isVideo, hasManualCamera);
     const raw = settings.activeLLM === 'ollama' 
         ? await refineSinglePromptOllama(promptText, settings, sys)
         : await refineSinglePromptGemini(promptText, '', settings, sys);
@@ -157,9 +178,12 @@ export const refineSinglePrompt = async (promptText: string, targetAIModel: stri
 export async function* refineSinglePromptStream(
     promptText: string,
     targetAIModel: string,
-    settings: LLMSettings
+    settings: LLMSettings,
+    modifiers: PromptModifiers = {}
 ): AsyncGenerator<string> {
-    const sys = AI_ROLES.REFINER(targetAIModel);
+    const isVideo = !!TARGET_VIDEO_AI_MODELS.find(m => m === targetAIModel);
+    const hasManualCamera = !!modifiers.cameraMovement;
+    const sys = AI_ROLES.REFINER(targetAIModel, isVideo, hasManualCamera);
     const stream = settings.activeLLM === 'ollama'
         ? refineSinglePromptOllamaStream(promptText, settings, sys)
         : refineSinglePromptGeminiStream(promptText, '', settings, sys);

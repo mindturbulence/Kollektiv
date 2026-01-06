@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect, useRef, useMemo } from 'react';
 import type { LLMSettings, ActiveSettingsTab, GalleryCategory, PromptCategory, SavedPrompt, FeatureSettings } from '../types';
 import { testOllamaConnection } from '../services/llmService';
@@ -54,7 +55,7 @@ export const SetupPage: React.FC<SetupPageProps> = ({
   
   const [resetTarget, setResetTarget] = useState<'all' | null>(null);
   const [isWorking, setIsWorking] = useState<boolean>(false);
-  const importAllRef = useRef<HTMLInputElement>(null);
+  const importAllRefRef = useRef<HTMLInputElement>(null);
   const importGalleryRef = useRef<HTMLInputElement>(null);
   const [promptCategories, setPromptCategories] = useState<PromptCategory[]>([]);
   const [isTxtImportModalOpen, setIsTxtImportModalOpen] = useState(false);
@@ -353,9 +354,10 @@ export const SetupPage: React.FC<SetupPageProps> = ({
       setActiveSubTab(subTab);
   };
   
+  // FIX: API Key logic updated to rely exclusively on process.env.API_KEY
   const isGeminiKeyMissing = useMemo(() => {
-    return settings.activeLLM === 'gemini' && !settings.apiKeyOverride?.trim();
-  }, [settings.activeLLM, settings.apiKeyOverride]);
+    return settings.activeLLM === 'gemini' && !process.env.API_KEY;
+  }, [settings.activeLLM]);
 
     
     const renderAppSettings = () => {
@@ -419,8 +421,8 @@ export const SetupPage: React.FC<SetupPageProps> = ({
                             <p className="text-sm text-base-content/70 mt-1">Export all your data into a single zip file for backup, or import a backup to restore your data.</p>
                             <div className="flex gap-4 mt-4">
                                 <button onClick={handleExportAll} className="btn btn-sm btn-secondary" disabled={isWorking || isEnriching}>{isWorking ? 'Exporting...' : 'Export All Data'}</button>
-                                <button onClick={() => (importAllRef.current as any)?.click()} className="btn btn-sm btn-accent" disabled={isWorking || isEnriching}>{isWorking ? 'Importing...' : 'Import from Backup'}</button>
-                                <input type="file" ref={importAllRef} onChange={handleImportAll} className="hidden" accept=".zip"/>
+                                <button onClick={() => (importAllRefRef.current as any)?.click()} className="btn btn-sm btn-accent" disabled={isWorking || isEnriching}>{isWorking ? 'Importing...' : 'Import from Backup'}</button>
+                                <input type="file" ref={importAllRefRef} onChange={handleImportAll} className="hidden" accept=".zip"/>
                             </div>
                         </section>
                         <div className="divider"></div>
@@ -434,7 +436,7 @@ export const SetupPage: React.FC<SetupPageProps> = ({
                                         <progress className="progress progress-primary w-full" value={enrichmentProgress.current} max={enrichmentProgress.total}></progress>
                                     </div>
                                 ) : (
-                                    <div className="tooltip" data-tip={isGeminiKeyMissing ? "A Gemini API Key is required for this feature." : undefined}>
+                                    <div className="tooltip" data-tip={isGeminiKeyMissing ? "A Gemini API key is missing from environment." : undefined}>
                                         <button 
                                             onClick={handleEnrichArtistData} 
                                             className="btn btn-sm btn-secondary" 
@@ -474,17 +476,7 @@ export const SetupPage: React.FC<SetupPageProps> = ({
                 <section className="animate-fade-in">
                     <h3 className="text-lg font-semibold text-base-content">Gemini Settings</h3>
                     <div className="mt-4 space-y-4 max-w-xl">
-                        <div className="form-control">
-                            <label className="label"><span className="label-text">Gemini API Key</span></label>
-                            <input 
-                                type="password" 
-                                value={settings.apiKeyOverride || ''} 
-                                onChange={(e) => handleSettingsChange('apiKeyOverride', (e.currentTarget as any).value)} 
-                                className="input input-bordered input-sm w-full" 
-                                placeholder="Enter your API key"
-                            />
-                             <label className="label"><span className="label-text-alt">Stored locally in your browser.</span></label>
-                        </div>
+                        {/* FIX: Removed Gemini API Key input field to comply with guidelines */}
                         <div className="form-control"><label className="label"><span className="label-text">Gemini Model</span></label><select value={settings.llmModel} onChange={(e) => handleSettingsChange('llmModel', (e.currentTarget as any).value)} className="select select-bordered select-sm w-full">{AVAILABLE_LLM_MODELS.map(m => <option key={m.id} value={m.id}>{m.name}</option>)}</select></div>
                     </div>
                 </section>

@@ -1,4 +1,5 @@
 
+
 // --- Core App Types ---
 export type ActiveTab =
   | 'dashboard'
@@ -41,7 +42,7 @@ export interface FeatureSettings {
 export interface LLMSettings {
   // LLM Provider Settings
   llmModel: string;
-  apiKeyOverride?: string;
+  // FIX: Removed apiKeyOverride to comply with strict API key guidelines
   activeLLM: 'gemini' | 'ollama';
   ollamaBaseUrl: string;
   ollamaModel: string;

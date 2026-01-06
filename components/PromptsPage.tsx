@@ -10,12 +10,6 @@ import { fileToBase64 } from '../utils/fileUtils';
 import type { AppError, SavedPrompt, PromptCategory, EnhancementResult, PromptModifiers, CheatsheetCategory, Idea } from '../types';
 import { 
     PROMPT_DETAIL_LEVELS, 
-    TARGET_IMAGE_AI_MODELS, 
-    TARGET_VIDEO_AI_MODELS,
-    MIDJOURNEY_VERSIONS,
-    MIDJOURNEY_ASPECT_RATIOS,
-    Z_IMAGE_STYLES,
-    COMPOSITION_OPTIONS,
     CAMERA_ANGLES,
     CAMERA_PROXIMITY,
     CAMERA_SETTINGS,
@@ -28,7 +22,10 @@ import {
     LENS_TYPES,
     ANALOG_FILM_STOCKS,
     PHOTOGRAPHY_STYLES,
-} from '../constants';
+    COMPOSITION_OPTIONS
+} from '../constants/modifiers';
+import { TARGET_IMAGE_AI_MODELS, TARGET_VIDEO_AI_MODELS } from '../constants/models';
+import { MIDJOURNEY_VERSIONS, MIDJOURNEY_ASPECT_RATIOS, Z_IMAGE_STYLES } from '../constants/modifiers';
 
 import { SuggestionItem } from './SuggestionItem';
 import PromptEditorModal from './PromptEditorModal';
@@ -534,7 +531,7 @@ const PromptsPage: React.FC<PromptsPageProps> = ({
                             ))}
                         </div>
                         <div className="bg-info/10 p-3 rounded-md text-xs text-info flex gap-2">
-                             <SparklesIcon className="w-4 h-4 flex-shrink-0"/>
+                             <span className="w-4 h-4 flex-shrink-0"><SparklesIcon/></span>
                              <p>Add image references to guide the visual composition. Currently supported by <b>Nano Banana</b>.</p>
                         </div>
                     </div>

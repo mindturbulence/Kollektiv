@@ -1,3 +1,4 @@
+
 import { LLMSettings } from '../types';
 import { clearAllHandles } from './db';
 import { fileSystemManager } from './fileUtils';
@@ -6,7 +7,8 @@ const SETTINGS_KEY = 'kollektivSettingsV4';
 
 export const defaultLLMSettings: LLMSettings = {
   // LLM Provider Settings
-  llmModel: 'gemini-2.5-flash',
+  // FIX: Updated default model to gemini-3-flash-preview
+  llmModel: 'gemini-3-flash-preview',
   activeLLM: 'gemini',
   ollamaBaseUrl: 'http://localhost:11434',
   ollamaModel: 'llama3',

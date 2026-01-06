@@ -1,3 +1,4 @@
+
 export const handleGeminiError = (error: unknown, context: string): Error => {
   console.error(`Error during Gemini API call for ${context}:`, error);
 
@@ -7,7 +8,8 @@ export const handleGeminiError = (error: unknown, context: string): Error => {
     const lowerCaseMessage = error.message.toLowerCase();
 
     if (lowerCaseMessage.includes("api key not valid") || lowerCaseMessage.includes("api key is missing")) {
-      errorMessage = "The Gemini API key is invalid or missing. Please verify the key in Settings > LLM.";
+      // FIX: Compliant error message that does not prompt for UI entry
+      errorMessage = "The Gemini API key is invalid or missing. Please ensure your environment variable process.env.API_KEY is correctly configured.";
     } else if (lowerCaseMessage.includes("content is blocked") || lowerCaseMessage.includes("safety")) {
       errorMessage = `The request for ${context} was blocked due to safety settings. Please modify your input and try again.`;
     } else if (lowerCaseMessage.includes("quota")) {

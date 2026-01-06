@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { useSettings } from '../contexts/SettingsContext';
 import { AVAILABLE_LLM_MODELS } from '../constants';
@@ -6,12 +5,14 @@ import { ChevronDownIcon } from './icons';
 
 const LlmStatusSwitcher: React.FC = () => {
     const { settings, updateSettings } = useSettings();
+    // Added missing useState hook for Gemini key status
     const [isGeminiKeySet, setIsGeminiKeySet] = useState(false);
     
+    // Added missing useEffect hook to check for API key on mount
     useEffect(() => {
-        const envKey = (typeof process !== 'undefined' && process.env) ? process.env.API_KEY : undefined;
-        setIsGeminiKeySet(!!settings.apiKeyOverride || !!envKey);
-    }, [settings.apiKeyOverride]);
+        // FIX: Replaced check for settings override with exclusive reliance on process.env.API_KEY
+        setIsGeminiKeySet(!!process.env.API_KEY);
+    }, []);
 
     const handleProviderAndModelSelect = (provider: 'gemini' | 'ollama', modelId?: string) => {
         if (provider === 'gemini' && modelId) {
@@ -43,7 +44,7 @@ const LlmStatusSwitcher: React.FC = () => {
             tooltipText = `Using Gemini. Click to switch AI provider or model.`;
         } else {
             statusColor = 'bg-error';
-            tooltipText = "Gemini API key not set. Features will fail. Click to switch provider.";
+            tooltipText = "Gemini API key not found in environment.";
         }
     }
 

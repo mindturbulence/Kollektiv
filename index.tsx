@@ -1,20 +1,10 @@
+
 import React from 'react';
 import ReactDOM from 'react-dom/client';
 import './index.css';
-import { loadLLMSettings } from './utils/settingsStorage';
 import App from './components/App';
 import { SettingsProvider } from './contexts/SettingsContext';
 import { AuthProvider } from './contexts/AuthContext';
-
-// --- API Key Polyfill ---
-if (typeof window !== 'undefined') {
-  (window as any).process = (window as any).process || {};
-  (window as any).process.env = (window as any).process.env || {};
-  const settings = loadLLMSettings();
-  if (settings.apiKeyOverride) {
-    (window as any).process.env.API_KEY = settings.apiKeyOverride;
-  }
-}
 
 // --- Service Worker Registration ---
 if ('serviceWorker' in navigator) {
