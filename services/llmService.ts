@@ -27,8 +27,8 @@ const getModelSyntax = (model: string) => {
         };
     }
 
-    // High-End Textual Narrative Models (WAN, HunYuan, Flux, MJ, Grok, GPT, Luma, MiniMax, Seedance)
-    if (lower.includes('flux') || lower.includes('grok') || lower.includes('gpt') || lower.includes('seedance') || lower.includes('janus') || lower.includes('midjourney') || lower.includes('wan') || lower.includes('hunyuan') || lower.includes('luma') || lower.includes('minimax') || lower.includes('imagen') || lower.includes('hailuo')) {
+    // High-End Textual Narrative Models (WAN, HunYuan, Flux, MJ, Grok, GPT, Luma, MiniMax, Seedance, Z-Image)
+    if (lower.includes('flux') || lower.includes('z-image') || lower.includes('grok') || lower.includes('gpt') || lower.includes('seedance') || lower.includes('janus') || lower.includes('midjourney') || lower.includes('wan') || lower.includes('hunyuan') || lower.includes('luma') || lower.includes('minimax') || lower.includes('imagen') || lower.includes('hailuo')) {
         return {
             format: "Exquisite, high-utility natural language narrative.",
             prefix: "",
