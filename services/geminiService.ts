@@ -196,13 +196,13 @@ export const reconstructFromIntentGemini = async (intents: string[], settings: L
     } catch (err) { throw handleGeminiError(err, 'reconstructing'); }
 };
 
-export const generatePromptFormulaGemini = async (promptText: string, settings: LLMSettings): Promise<string> => {
+export const generatePromptFormulaGemini = async (promptText: string, settings: LLMSettings, systemInstruction: string): Promise<string> => {
     try {
         const ai = getGeminiClient(settings);
         const response = await ai.models.generateContent({
             model: DEFAULT_MODEL,
             contents: promptText,
-            config: { systemInstruction: "Task: Replace specifics with __placeholders__. Template only." }
+            config: { systemInstruction }
         });
         return (response.text || '').trim();
     } catch (err) { throw handleGeminiError(err, 'formula'); }

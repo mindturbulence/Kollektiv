@@ -20,6 +20,11 @@ export const enhancePromptOllama = async (
                 system: systemInstruction,
                 stream: false,
                 keep_alive: "15m",
+                options: {
+                    temperature: 0.4,
+                    top_p: 0.9,
+                    repeat_penalty: 1.2
+                }
             }),
         });
         if (!apiResponse.ok) throw new Error(`Ollama failed: ${apiResponse.status}`);
@@ -48,6 +53,10 @@ export async function* enhancePromptOllamaStream(
                 system: systemInstruction,
                 stream: true,
                 keep_alive: "15m",
+                options: {
+                    temperature: 0.4,
+                    top_p: 0.9
+                }
             }),
         });
         if (!apiResponse.ok || !apiResponse.body) throw new Error("Ollama stream error.");
@@ -85,6 +94,10 @@ export const refineSinglePromptOllama = async (promptText: string, settings: LLM
                 system: systemInstruction,
                 stream: false,
                 keep_alive: "15m",
+                options: {
+                    temperature: 0.3,
+                    repeat_penalty: 1.2
+                }
             }),
         });
         if (!apiResponse.ok) throw new Error("Ollama request failed.");
@@ -107,6 +120,9 @@ export async function* refineSinglePromptOllamaStream(promptText: string, settin
                 system: systemInstruction,
                 stream: true,
                 keep_alive: "15m",
+                options: {
+                    temperature: 0.3
+                }
             }),
         });
         if (!apiResponse.ok || !apiResponse.body) throw new Error("Ollama stream failed.");
@@ -239,6 +255,7 @@ export const reconstructPromptOllama = async (components: { [key: string]: strin
                 system: "Merge components into cohesive natural prose. No preamble.",
                 stream: false,
                 keep_alive: "15m",
+                options: { temperature: 0.5 }
             }),
         });
         if (!apiResponse.ok) throw new Error("Ollama failed.");
@@ -262,7 +279,7 @@ export const replaceComponentInPromptOllama = async (originalPrompt: string, com
                 system: "Swap value seamlessly. No preamble.",
                 stream: false,
                 keep_alive: "15m",
-                options: { temperature: 0.5 },
+                options: { temperature: 0.4 },
             }),
         });
         if (!apiResponse.ok) throw new Error("Ollama failed.");
@@ -285,6 +302,7 @@ export const reconstructFromIntentOllama = async (intents: string[], settings: L
                 system: "Merge intents into descriptive prose. No preamble.",
                 stream: false,
                 keep_alive: "15m",
+                options: { temperature: 0.5 }
             }),
         });
         if (!apiResponse.ok) throw new Error("Ollama failed.");
@@ -295,7 +313,7 @@ export const reconstructFromIntentOllama = async (intents: string[], settings: L
     }
 };
 
-export const generatePromptFormulaOllama = async (promptText: string, settings: LLMSettings): Promise<string> => {
+export const generatePromptFormulaOllama = async (promptText: string, settings: LLMSettings, systemInstruction: string): Promise<string> => {
     try {
         if (!settings.ollamaBaseUrl || !settings.ollamaModel) throw new Error("Ollama not configured.");
         const apiResponse = await fetch(`${settings.ollamaBaseUrl}/api/generate`, {
@@ -304,9 +322,10 @@ export const generatePromptFormulaOllama = async (promptText: string, settings: 
             body: JSON.stringify({
                 model: settings.ollamaModel,
                 prompt: promptText,
-                system: "Task: Replace specifics with __placeholders__. Template only. No preamble.",
+                system: systemInstruction,
                 stream: false,
                 keep_alive: "15m",
+                options: { temperature: 0.2 }
             }),
         });
         if (!apiResponse.ok) throw new Error("Ollama failed.");
@@ -359,11 +378,13 @@ export const abstractImageOllama = async (
                 images: [base64ImageData],
                 stream: false,
                 keep_alive: "15m",
+                options: { temperature: 0.4 }
             }),
         });
         if (!apiResponse.ok) throw new Error("Ollama failed.");
         const responseData = await apiResponse.json();
-        const suggestions = (responseData.response || '').split('\n').map(s => s.trim().replace(/^\s*\d+\.\s*/, '')).filter(Boolean);
+        const cleanedText = responseData.response || '';
+        const suggestions = cleanedText.split('\n').map(s => s.trim().replace(/^(\d+[\.\)]|\*|-|\+)\s+/, '')).filter(Boolean);
         return { suggestions };
     } catch (err) {
         throw handleGeminiError(err, 'describing image with Ollama');

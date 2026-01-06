@@ -2,7 +2,7 @@
 import React, { useState, useCallback, useEffect, useMemo, useRef } from 'react';
 import { useSettings } from '../contexts/SettingsContext';
 import { loadPromptCategories, addSavedPrompt } from '../utils/promptStorage';
-import { enhancePromptStream, buildMidjourneyParams, generateWithImagen, generateWithNanoBanana, generateWithVeo } from '../services/llmService';
+import { enhancePromptStream, buildMidjourneyParams, generateWithImagen, generateWithNanoBanana, generateWithVeo, cleanLLMResponse } from '../services/llmService';
 import { loadArtStyles } from '../utils/artstyleStorage';
 import { loadArtists } from '../utils/artistStorage';
 import { fileToBase64 } from '../utils/fileUtils';
@@ -158,12 +158,12 @@ const PromptsPage: React.FC<PromptsPageProps> = ({
           fullText += chunk;
       }
 
+      const cleanedText = cleanLLMResponse(fullText);
       const midjourneyParams = targetAIModel.toLowerCase().includes('midjourney') 
             ? buildMidjourneyParams(modifiers)
             : '';
       
-      const suggestions = fullText.split('\n')
-            .map(s => s.trim().replace(/^\s*\d+\.\s*/, ''))
+      const suggestions = cleanedText.split('\n')
             .filter(Boolean)
             .map(s => [s, midjourneyParams.trim()].filter(Boolean).join(' '));
         
@@ -527,7 +527,6 @@ const PromptsPage: React.FC<PromptsPageProps> = ({
                                         type="file" 
                                         accept="image/*" 
                                         className="hidden" 
-                                        /* --- FIX: Wrapped assignment in braces to return void and satisfy Ref type --- */
                                         ref={(el) => { refFileInputRefs.current[idx] = el; }}
                                         onChange={(e) => handleRefImageChange(idx, e)}
                                     />

@@ -5,13 +5,79 @@ import { enhancePromptGemini, analyzePaletteMood as analyzePaletteMoodGemini, ge
 import { enhancePromptOllama, analyzePaletteMoodOllama, generatePromptFormulaOllama, refineSinglePromptOllama, abstractImageOllama, generateColorNameOllama, dissectPromptOllama, generateFocusedVariationsOllama, reconstructPromptOllama, replaceComponentInPromptOllama, reconstructFromIntentOllama, generateArtistDescriptionOllama, enhancePromptOllamaStream, refineSinglePromptOllamaStream } from './ollamaService';
 import { TARGET_VIDEO_AI_MODELS } from "../constants";
 
-import { loadArtStyles } from '../utils/artstyleStorage';
-import { loadArtists } from '../utils/artistStorage';
-import { loadCheatsheet } from '../utils/cheatsheetStorage';
+// --- Centralized Roles (System Instructions) ---
 
-let artStylesCache: CheatsheetCategory[] | null = null;
-let artistsCache: CheatsheetCategory[] | null = null;
-let generalCheatsheetCache: CheatsheetCategory[] | null = null;
+const AI_ROLES = {
+    ENHANCER: (model: string, length: string) => `Role: Professional Prompt Engineer for ${model}.
+Task: Expand subject ideas into 3 high-quality, descriptive prompts.
+Constraints: 
+- Output EXACTLY 3 lines. One prompt per line.
+- DO NOT use reasoning tags like <think> or <thought>.
+- DO NOT use markdown code blocks (\`\`\`).
+- DO NOT use numbering or bullets.
+- DO NOT include conversational preamble.
+- Desired Length: ${length}.`,
+
+    REFINER: (model: string) => `Role: Creative Art Director & Rewrite Specialist.
+Task: Improve the vocabulary, structure, and artistic detail of the provided prompt for ${model}.
+Constraints:
+- Output ONLY the improved prompt text.
+- DO NOT use reasoning tags like <think> or <thought>.
+- DO NOT use markdown.
+- NO commentary or conversational filler.`,
+
+    ANALYST: "Role: Visual Data Analyst. Task: Dissect prompts into components. Output valid JSON only. NO thoughts.",
+    FORMULA_MAKER: (wildcardNames: string[]) => `Role: Template Architect.
+Task: Convert a prompt into a reusable template using placeholders.
+Constraints:
+- Use __wildcard_name__ syntax.
+- Available Categories: ${wildcardNames.join(', ')}.
+- Output ONLY the template text.
+- NO thoughts, NO markdown, NO preamble.`
+};
+
+// --- Utilities ---
+
+export const cleanLLMResponse = (text: string): string => {
+    let cleaned = text.trim();
+    
+    // Aggressively remove reasoning tags (often used by reasoning models)
+    cleaned = cleaned.replace(/<(thought|think)>[\s\S]*?<\/\1>/gi, '');
+    
+    // Remove standalone tags if the model didn't close them properly
+    cleaned = cleaned.replace(/<(thought|think)>[\s\S]*/gi, '');
+
+    // Remove markdown code blocks and backticks
+    cleaned = cleaned.replace(/```[a-z]*\n([\s\S]*?)\n```/gi, '$1');
+    cleaned = cleaned.replace(/`/g, '');
+
+    // Comprehensive list of conversational prefixes to strip
+    const prefixesToRemove = [
+        /^here are/i,
+        /^sure,/i,
+        /^certainly/i,
+        /^okay/i,
+        /^i have expanded/i,
+        /^expanded prompts:/i,
+        /^refined prompt:/i,
+        /^output:/i,
+        /^here is a/i
+    ];
+
+    let lines = cleaned.split('\n');
+    lines = lines.map(line => {
+        let l = line.trim();
+        // Remove leading numbers or bullets (e.g. "1. ", "- ")
+        l = l.replace(/^(\d+[\.\)]|\*|-|\+)\s+/, '');
+        return l;
+    }).filter(l => {
+        if (!l) return false;
+        // Filter out conversational lines
+        return !prefixesToRemove.some(regex => regex.test(l));
+    });
+
+    return lines.join('\n').trim();
+};
 
 export const testOllamaConnection = async (baseUrl: string): Promise<boolean> => {
   if (!baseUrl || !baseUrl.startsWith('http')) return false;
@@ -39,45 +105,21 @@ export const buildMidjourneyParams = (modifiers: PromptModifiers): string => {
     return params.join(' ');
 };
 
-export const buildSystemInstructionForEnhancer = (
-    promptLength: string,
-    targetAIModel: string,
-    modifiers: PromptModifiers
-): string => {
-    const isVideo = TARGET_VIDEO_AI_MODELS.includes(targetAIModel);
-    const target = targetAIModel.toLowerCase();
-
-    let base = `Prompt Expert. Output 3 vivid ${targetAIModel} prompts. No preamble. Newline-sep. Length: ${promptLength}. Preserve subject. Apply modifiers.\n`;
-
-    if (isVideo) {
-        if (target.includes('hunyuan')) {
-            base += "Hunyuan: [Subject]+[Environment]+[Camera]+[Style]+[Lighting]+[Motion]. Keywords: '8k', 'high detail', 'cinematography'. Detail action sequence and camera.\n";
-        } else if (target.includes('wan')) {
-            base += "WAN 2.5: Detailed motion + audio atmosphere/SFX description.\n";
-        } else {
-            base += "Video: Structure with camera, lighting, action in [].\n";
-        }
-    } else {
-        if (target.includes('flux')) base += "FLUX: Descriptive natural prose.\n";
-        else if (target.includes('pony')) base += "Pony: Start with 'score_9, score_8_up, source_anime'.\n";
-    }
-    
-    // Efficient modifier mapping
+export const buildContextForEnhancer = (modifiers: PromptModifiers): string => {
     const activeMods = [];
     if (modifiers.artStyle) activeMods.push(`Style:${modifiers.artStyle}`);
     if (modifiers.artist) activeMods.push(`Artist:${modifiers.artist}`);
     if (modifiers.zImageStyle) activeMods.push(`Visual:${modifiers.zImageStyle}`);
     if (modifiers.cameraAngle) activeMods.push(`Angle:${modifiers.cameraAngle}`);
     if (modifiers.cameraProximity) activeMods.push(`Distance:${modifiers.cameraProximity}`);
-    if (modifiers.cameraSettings) activeMods.push(`CamOpts:${modifiers.cameraSettings}`);
+    if (modifiers.cameraSettings) activeMods.push(`Options:${modifiers.cameraSettings}`);
     if (modifiers.cameraEffect) activeMods.push(`Effect:${modifiers.cameraEffect}`);
     if (modifiers.filmType) activeMods.push(`FilmType:${modifiers.filmType}`);
     if (modifiers.filmStock) activeMods.push(`FilmStock:${modifiers.filmStock}`);
     if (modifiers.motion) activeMods.push(`Motion:${modifiers.motion}`);
     if (modifiers.cameraMovement) activeMods.push(`CameraMov:${modifiers.cameraMovement}`);
     
-    if (activeMods.length) base += `Context: ${activeMods.join(', ')}.`;
-    return base;
+    return activeMods.length ? `Applied Modifiers: ${activeMods.join(', ')}.` : '';
 };
 
 export const enhancePrompt = async (
@@ -88,14 +130,19 @@ export const enhancePrompt = async (
     modifiers: PromptModifiers,
     settings: LLMSettings
 ): Promise<EnhancementResult> => {
-    const systemInstruction = buildSystemInstructionForEnhancer(promptLength, targetAIModel, modifiers);
-    const text = settings.activeLLM === 'ollama' 
-        ? await enhancePromptOllama(originalPrompt, constantModifier, settings, systemInstruction)
-        : await enhancePromptGemini(originalPrompt, constantModifier, settings, systemInstruction);
+    const systemInstruction = AI_ROLES.ENHANCER(targetAIModel, promptLength);
+    const context = buildContextForEnhancer(modifiers);
+    const fullInput = [context, originalPrompt].filter(Boolean).join('\n\n');
 
+    const rawText = settings.activeLLM === 'ollama' 
+        ? await enhancePromptOllama(fullInput, constantModifier, settings, systemInstruction)
+        : await enhancePromptGemini(fullInput, constantModifier, settings, systemInstruction);
+
+    const cleanedText = cleanLLMResponse(rawText);
     const midjourneyParams = targetAIModel.toLowerCase().includes('midjourney') ? buildMidjourneyParams(modifiers) : '';
-    const suggestions = text.split('\n').map(s => s.trim().replace(/^\d+\.\s*/, '')).filter(Boolean).map(s => [s, midjourneyParams.trim()].filter(Boolean).join(' '));
-    if (suggestions.length === 0) throw new Error("Empty response.");
+    const suggestions = cleanedText.split('\n').filter(Boolean).map(s => [s, midjourneyParams.trim()].filter(Boolean).join(' '));
+    
+    if (suggestions.length === 0) throw new Error("Empty response from AI.");
     return { suggestions };
 };
 
@@ -107,11 +154,23 @@ export async function* enhancePromptStream(
     modifiers: PromptModifiers,
     settings: LLMSettings
 ): AsyncGenerator<string> {
-    const systemInstruction = buildSystemInstructionForEnhancer(promptLength, targetAIModel, modifiers);
-    if (settings.activeLLM === 'ollama') {
-        for await (const chunk of enhancePromptOllamaStream(originalPrompt, constantModifier, settings, systemInstruction)) yield chunk;
-    } else {
-        for await (const chunk of enhancePromptGeminiStream(originalPrompt, constantModifier, settings, systemInstruction)) yield chunk;
+    const systemInstruction = AI_ROLES.ENHANCER(targetAIModel, promptLength);
+    const context = buildContextForEnhancer(modifiers);
+    const fullInput = [context, originalPrompt].filter(Boolean).join('\n\n');
+
+    const stream = settings.activeLLM === 'ollama'
+        ? enhancePromptOllamaStream(fullInput, constantModifier, settings, systemInstruction)
+        : enhancePromptGeminiStream(fullInput, constantModifier, settings, systemInstruction);
+
+    let inThought = false;
+    for await (const chunk of stream) {
+        // Simple heuristic to hide thoughts while streaming
+        if (chunk.includes('<think') || chunk.includes('<thought')) inThought = true;
+        if (chunk.includes('</think') || chunk.includes('</thought')) {
+            inThought = false;
+            continue;
+        }
+        if (!inThought) yield chunk;
     }
 }
 
@@ -162,12 +221,10 @@ export const generateWithImagen = async (prompt: string): Promise<string> => {
 export const generateWithVeo = async (prompt: string, onProgress?: (msg: string) => void): Promise<string> => {
     const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
     
-    // Safety check for environment
     if (typeof window !== 'undefined' && (window as any).aistudio) {
         const hasKey = await (window as any).aistudio.hasSelectedApiKey();
         if (!hasKey) {
             await (window as any).aistudio.openSelectKey();
-            // Proceed assuming success as per instructions
         }
     }
 
@@ -178,14 +235,7 @@ export const generateWithVeo = async (prompt: string, onProgress?: (msg: string)
             config: { numberOfVideos: 1, resolution: '720p', aspectRatio: '16:9' }
         });
 
-        const progressMessages = [
-            "Initializing neural engine...",
-            "Simulating particle dynamics...",
-            "Refining fluid motion...",
-            "Optimizing cinematic lighting...",
-            "Applying temporal consistency...",
-            "Almost there! Finalizing frames..."
-        ];
+        const progressMessages = ["Initializing...", "Simulating...", "Refining...", "Lighting...", "Finalizing..."];
         let msgIndex = 0;
 
         while (!operation.done) {
@@ -198,7 +248,7 @@ export const generateWithVeo = async (prompt: string, onProgress?: (msg: string)
         }
 
         const downloadLink = operation.response?.generatedVideos?.[0]?.video?.uri;
-        if (!downloadLink) throw new Error("Video generation failed or link missing.");
+        if (!downloadLink) throw new Error("Video generation failed.");
         
         const fetchResponse = await fetch(`${downloadLink}&key=${process.env.API_KEY}`);
         const blob = await fetchResponse.blob();
@@ -213,38 +263,13 @@ export const generateWithVeo = async (prompt: string, onProgress?: (msg: string)
     }
 };
 
-const buildSystemInstructionForRefiner = async (targetAIModel: string) => {
-    if (!artStylesCache || !artistsCache || !generalCheatsheetCache) {
-        const [artStyles, artists, generalCheatsheet] = await Promise.all([loadArtStyles(), loadArtists(), loadCheatsheet()]);
-        artStylesCache = artStyles; artistsCache = artists; generalCheatsheetCache = generalCheatsheet;
-    }
-    
-    // Reduced reference slice for token efficiency
-    const cheatsheetData = [
-        { n: 'Style', i: (artStylesCache || []).flatMap(c => c.items.map(i => i.name)).slice(0, 4) },
-        { n: 'Artist', i: (artistsCache || []).flatMap(c => c.items.map(i => i.name)).slice(0, 4) },
-        ...(generalCheatsheetCache || []).slice(0, 2).map(c => ({ n: c.category, i: c.items.map(i => i.name).slice(0, 4) }))
-    ];
-
-    let context = "Ref: " + cheatsheetData.map(s => `${s.n}[${s.i.join(',')}]`).join('; ') + "\n";
-    const target = targetAIModel.toLowerCase();
-    let targetInstr = `Model:${targetAIModel}. `;
-    
-    if (TARGET_VIDEO_AI_MODELS.includes(targetAIModel)) {
-        if (target.includes('hunyuan')) {
-            targetInstr += "Strict:[Subject]+[Env]+[Cam]+[Style]+[Light]+[Motion]. Use: '8k', 'high detail'.";
-        } else {
-            targetInstr += "Focus: Action continuity, camera work.";
-        }
-    }
-
-    return `Expert Rewrite for ${targetAIModel}. 1 result. No preamble.\n${targetInstr}\n${context}`;
-};
-
 export const refineSinglePrompt = async (promptText: string, targetAIModel: string, settings: LLMSettings): Promise<string> => {
-    const systemInstruction = await buildSystemInstructionForRefiner(targetAIModel);
-    if (settings.activeLLM === 'ollama') return refineSinglePromptOllama(promptText, settings, systemInstruction);
-    return refineSinglePromptGemini(promptText, '', settings, systemInstruction);
+    const systemInstruction = AI_ROLES.REFINER(targetAIModel);
+    const rawText = settings.activeLLM === 'ollama' 
+        ? await refineSinglePromptOllama(promptText, settings, systemInstruction)
+        : await refineSinglePromptGemini(promptText, '', settings, systemInstruction);
+    
+    return cleanLLMResponse(rawText);
 };
 
 export async function* refineSinglePromptStream(
@@ -252,11 +277,19 @@ export async function* refineSinglePromptStream(
     targetAIModel: string,
     settings: LLMSettings
 ): AsyncGenerator<string> {
-    const systemInstruction = await buildSystemInstructionForRefiner(targetAIModel);
-    if (settings.activeLLM === 'ollama') {
-        for await (const chunk of refineSinglePromptOllamaStream(promptText, settings, systemInstruction)) yield chunk;
-    } else {
-        for await (const chunk of refineSinglePromptGeminiStream(promptText, '', settings, systemInstruction)) yield chunk;
+    const systemInstruction = AI_ROLES.REFINER(targetAIModel);
+    const stream = settings.activeLLM === 'ollama'
+        ? refineSinglePromptOllamaStream(promptText, settings, systemInstruction)
+        : refineSinglePromptGeminiStream(promptText, '', settings, systemInstruction);
+
+    let inThought = false;
+    for await (const chunk of stream) {
+        if (chunk.includes('<think') || chunk.includes('<thought')) inThought = true;
+        if (chunk.includes('</think') || chunk.includes('</thought')) {
+            inThought = false;
+            continue;
+        }
+        if (!inThought) yield chunk;
     }
 }
 
@@ -295,9 +328,10 @@ export const reconstructFromIntent = async (intents: string[], settings: LLMSett
     return reconstructFromIntentGemini(intents, settings);
 };
 
-export const generatePromptFormulaWithAI = async (promptText: string, settings: LLMSettings): Promise<string> => {
-    if (settings.activeLLM === 'ollama') return generatePromptFormulaOllama(promptText, settings);
-    return generatePromptFormulaGemini(promptText, settings);
+export const generatePromptFormulaWithAI = async (promptText: string, wildcardNames: string[], settings: LLMSettings): Promise<string> => {
+    const systemInstruction = AI_ROLES.FORMULA_MAKER(wildcardNames);
+    if (settings.activeLLM === 'ollama') return generatePromptFormulaOllama(promptText, settings, systemInstruction);
+    return generatePromptFormulaGemini(promptText, settings, systemInstruction);
 };
 
 export const abstractImage = async (

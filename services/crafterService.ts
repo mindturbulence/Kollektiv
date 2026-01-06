@@ -1,5 +1,4 @@
 
-
 import { fileSystemManager } from '../utils/fileUtils';
 import type { CrafterData, WildcardFile, WildcardCategory, LLMSettings } from '../types';
 import { generatePromptFormulaWithAI } from './llmService';
@@ -7,7 +6,6 @@ import { generatePromptFormulaWithAI } from './llmService';
 const CRAFTER_DIR = 'crafter';
 const MANIFEST_NAME = 'crafter_manifest.json';
 
-// New interface for manifest structure
 interface CrafterTemplate {
     name: string;
     content: string;
@@ -23,7 +21,6 @@ class CrafterService {
         if (manifestContent) {
             try {
                 const parsed = JSON.parse(manifestContent);
-                // Basic validation
                 if (Array.isArray(parsed.templates)) {
                     return parsed;
                 }
@@ -31,8 +28,6 @@ class CrafterService {
                 console.error("Failed to parse crafter manifest, returning empty.", e);
             }
         }
-        // If it doesn't exist or is corrupt, return an empty manifest. 
-        // The integrity check is responsible for creation.
         return { templates: [] };
     }
 
@@ -40,11 +35,6 @@ class CrafterService {
         await fileSystemManager.saveFile(MANIFEST_NAME, new Blob([JSON.stringify(manifest, null, 2)], { type: 'application/json' }));
     }
     
-    /**
-     * A simple line-by-line YAML parser that handles nested keys and lists of strings.
-     * It builds a flat map of full_path -> values.
-     * E.g., `parent:\n  child:\n    - item1` becomes `{'parent/child': ['item1']}`.
-     */
     private parseSimpleYaml(content: string): Record<string, string[]> {
         const lines = content.split('\n');
         const result: Record<string, string[]> = {};
@@ -76,7 +66,6 @@ class CrafterService {
                 let value = trimmedLine.substring(1).trim();
 
                 if (value.match(/^>-$|^\|$|^>$/) || value.match(/^>-\s*$/) || value.match(/^\|\s*$/)) {
-                    // Multiline indicator. Assume content is on the next line(s) and more indented.
                     let multilineContent = '';
                     let firstLine = true;
                     while (i + 1 < lines.length) {
@@ -89,7 +78,7 @@ class CrafterService {
                             } else {
                                 multilineContent += ' ' + nextLine.trim();
                             }
-                            i++; // Consume the next line
+                            i++; 
                         } else {
                             break;
                         }
@@ -112,10 +101,6 @@ class CrafterService {
         return result;
     }
 
-    /**
-     * Converts the flat path map from `parseSimpleYaml` into a tree of WildcardCategory
-     * that can be displayed in the UI.
-     */
     private buildCategoryTreeFromParsedYaml(rootName: string, rootPath: string, parsedYaml: Record<string, string[]>): WildcardCategory {
         const rootCategory: WildcardCategory = { name: rootName, path: rootPath, files: [], subCategories: [] };
 
@@ -123,7 +108,6 @@ class CrafterService {
             const pathSegments = fullPath.split('/');
             let currentCategory = rootCategory;
 
-            // Create sub-category folders for nested keys
             for (let i = 0; i < pathSegments.length - 1; i++) {
                 const segment = pathSegments[i];
                 let subCategory = currentCategory.subCategories.find(c => c.name === segment);
@@ -140,11 +124,10 @@ class CrafterService {
                 currentCategory = subCategory;
             }
 
-            // The last segment is the filename
             const fileName = pathSegments[pathSegments.length - 1];
             currentCategory.files.push({
                 name: fileName,
-                path: fullPath, // The full path is the key for wildcard replacement
+                path: fullPath, 
                 content: content
             });
         }
@@ -202,11 +185,10 @@ class CrafterService {
             return { templates: [], wildcardCategories: [] };
         }
         
-        // Load templates from manifest
         const manifest = await this.getManifest();
         const templates: WildcardFile[] = manifest.templates.map(t => ({
             name: t.name,
-            path: `${t.name}.txt`, // Path is not a real file but kept for type consistency
+            path: `${t.name}.txt`, 
             content: [t.content]
         }));
 
@@ -214,7 +196,6 @@ class CrafterService {
         const rootWildcardFiles: WildcardFile[] = [];
 
         try {
-            // Scan for both root files and directories
             for await (const handle of fileSystemManager.listDirectoryContents(CRAFTER_DIR) as any) {
                 const lowerCaseName = handle.name.toLowerCase();
                 if (handle.kind === 'directory') {
@@ -252,11 +233,10 @@ class CrafterService {
             throw new Error("An error occurred while reading files from the Crafter directory.");
         }
         
-        // Group root files into a special category for display
         if (rootWildcardFiles.length > 0) {
             wildcardCategories.unshift({
                 name: 'Root Wildcards',
-                path: 'Root', // Path for UI key, not for processing
+                path: 'Root', 
                 files: rootWildcardFiles.sort((a, b) => a.name.localeCompare(b.name)),
                 subCategories: []
             });
@@ -272,18 +252,13 @@ class CrafterService {
         if (!fileSystemManager.isDirectorySelected()) {
             throw new Error("Application data directory not selected. Please configure it in Settings.");
         }
-        
         const manifest = await this.getManifest();
-        
         const existingIndex = manifest.templates.findIndex(t => t.name === templateName);
         if (existingIndex > -1) {
-            // Update existing
             manifest.templates[existingIndex].content = content;
         } else {
-            // Add new
             manifest.templates.push({ name: templateName, content });
         }
-
         await this.saveManifest(manifest);
     }
 
@@ -313,18 +288,13 @@ class CrafterService {
 
     public processCrafterPrompt(prompt: string, wildcardData: WildcardCategory[]): string {
         const wildcardRegex = /__([\w\-/.*]+)__/g;
-        
         const wildcardMap = new Map<string, string[]>();
 
         const buildMap = (categories: WildcardCategory[]) => {
             for (const category of categories) {
-                // For files, the `path` property is the unique key for the wildcard.
-                // For .txt files, this is the file path relative to `crafter/` (e.g., 'animals/cats.txt').
-                // For .yml files, this is the nested key path (e.g., 'cf-elf/color').
                 for (const file of category.files) {
                     const pathWithoutExt = file.path.replace(/\.(txt|yml|yaml)$/i, '');
                     wildcardMap.set(pathWithoutExt.toLowerCase(), file.content);
-                    // Also add simple name for convenience (can be overwritten, which is intended).
                     wildcardMap.set(file.name.toLowerCase(), file.content);
                 }
                 if (category.subCategories) {
@@ -335,7 +305,6 @@ class CrafterService {
         
         buildMap(wildcardData);
         
-        // Support for wildcard within wildcard, e.g. `__colors/light__` choosing from `__colors/*__`
         const expandedMap = new Map<string, string[]>(wildcardMap);
         for(const [key, values] of wildcardMap.entries()){
             const parts = key.split('/');
@@ -351,7 +320,7 @@ class CrafterService {
         let processedPrompt = prompt;
         let keepProcessing = true;
         let iterations = 0;
-        const MAX_ITERATIONS = 25; // Safety break for deep nesting
+        const MAX_ITERATIONS = 25; 
 
         while (keepProcessing && iterations < MAX_ITERATIONS) {
             let foundMatch = false;
@@ -362,7 +331,7 @@ class CrafterService {
                     foundMatch = true;
                     return options[Math.floor(Math.random() * options.length)] || '';
                 }
-                return match; // Not found, leave it
+                return match; 
             });
 
             keepProcessing = foundMatch;
@@ -373,47 +342,56 @@ class CrafterService {
     }
 
     public async generateFormulaFromPrompt(promptText: string, settings: LLMSettings): Promise<string> {
+        // Force reload to ensure we don't use removed wildcards
         const crafterData = await this.loadWildcardsAndTemplates();
-        const allWildcards: { value: string; placeholder: string }[] = [];
+        
+        const allPotentialMatches: { text: string; placeholder: string }[] = [];
+        const wildcardPathList: string[] = [];
 
-        const processCategory = (category: WildcardCategory) => {
+        const extractFromCategory = (category: WildcardCategory) => {
             for (const file of category.files) {
-                const placeholder = `__${file.path.replace(/\.(txt|yml|yaml)$/i, '')}__`;
-                // To fix "Invalid string length" errors, use file names as keywords instead of file content.
-                // e.g., "sci-fi_weapons.txt" becomes a searchable keyword "sci fi weapons".
-                const value = file.name.replace(/[-_]/g, ' ').toLowerCase();
-                allWildcards.push({ value, placeholder });
+                const cleanPath = file.path.replace(/\.(txt|yml|yaml)$/i, '');
+                const placeholder = `__${cleanPath}__`;
+                wildcardPathList.push(placeholder);
+                
+                for (const line of file.content) {
+                    const trimmedLine = line.trim().toLowerCase();
+                    if (trimmedLine.length > 2) {
+                        allPotentialMatches.push({ text: trimmedLine, placeholder });
+                    }
+                }
             }
             for (const subCat of category.subCategories) {
-                processCategory(subCat);
+                extractFromCategory(subCat);
             }
         };
 
-        crafterData.wildcardCategories.forEach(processCategory);
+        crafterData.wildcardCategories.forEach(extractFromCategory);
 
-        // Sort to replace longer, more specific names first (e.g., "sci fi weapon" before "sci fi").
-        allWildcards.sort((a, b) => b.value.length - a.value.length);
+        // Sort by text length descending so we match specific phrases before individual words
+        allPotentialMatches.sort((a, b) => b.text.length - a.text.length);
         
         let modifiedPrompt = promptText;
-        let replacementsMade = false;
+        let localReplacementsCount = 0;
 
-        for (const { value, placeholder } of allWildcards) {
-            const escapedValue = value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-            // Use word boundaries `\b` to avoid replacing "art" in "artist".
+        for (const { text, placeholder } of allPotentialMatches) {
+            // Only replace if the text exists as a whole word/phrase
+            const escapedValue = text.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
             const regex = new RegExp(`\\b${escapedValue}\\b`, 'gi');
             
             if (regex.test(modifiedPrompt)) {
                 modifiedPrompt = modifiedPrompt.replace(regex, placeholder);
-                replacementsMade = true;
+                localReplacementsCount++;
             }
         }
 
-        if (replacementsMade) {
+        // Return if we did enough local replacements, otherwise fall back to AI
+        if (localReplacementsCount > 2 || (localReplacementsCount > 0 && modifiedPrompt.includes('__'))) {
             return modifiedPrompt;
         }
 
-        // Fallback to AI if no local replacements were made
-        return generatePromptFormulaWithAI(promptText, settings);
+        // Pass the actual current list to AI so it doesn't hallucinate non-existent wildcards
+        return generatePromptFormulaWithAI(promptText, wildcardPathList, settings);
     }
 }
 
