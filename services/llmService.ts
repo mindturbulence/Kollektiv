@@ -18,8 +18,8 @@ const getModelSyntax = (model: string) => {
         };
     }
     
-    // Stable Diffusion Weighting
-    if (lower.includes('stable diffusion') || lower.includes('sd 1.5') || lower.includes('sdxl') || lower.includes('chroma')) {
+    // Stable Diffusion Weighting (SDXL, SD3.5, Chroma)
+    if (lower.includes('stable diffusion') || lower.includes('sdxl') || lower.includes('chroma')) {
         return {
             format: "Weighted keywords and descriptive phrases.",
             prefix: "masterpiece, best quality, ultra-detailed, ",
@@ -27,12 +27,12 @@ const getModelSyntax = (model: string) => {
         };
     }
 
-    // High-End Textual Narrative Models (WAN, HunYuan, Flux, MJ)
-    if (lower.includes('wan') || lower.includes('hunyuan') || lower.includes('flux') || lower.includes('midjourney') || lower.includes('imagen') || lower.includes('lumina') || lower.includes('playground')) {
+    // High-End Textual Narrative Models (WAN, HunYuan, Flux, MJ, Grok, GPT, Luma, MiniMax, Seedance)
+    if (lower.includes('flux') || lower.includes('grok') || lower.includes('gpt') || lower.includes('seedance') || lower.includes('janus') || lower.includes('midjourney') || lower.includes('wan') || lower.includes('hunyuan') || lower.includes('luma') || lower.includes('minimax') || lower.includes('imagen') || lower.includes('hailuo')) {
         return {
-            format: "Exquisite natural language narrative.",
+            format: "Exquisite, high-utility natural language narrative.",
             prefix: "",
-            rules: "Write a high-utility paragraph describing scene physics: how light interacts with skin/fabric, atmospheric density, and micro-textures. No buzzwords."
+            rules: "Write a cohesive paragraph (or more for 'Long' mode) describing the 'Visual Physics' of the scene: how light interacts with specific materials, atmospheric density, and micro-textures. Describe depth of field and spatial relationships naturally. Avoid generic adjectives; use technical descriptors."
         };
     }
 
@@ -49,15 +49,17 @@ const AI_ROLES = {
         const syntax = getModelSyntax(model);
         const lengthGuides = {
             'Short': 'approx 20 words. One punchy, evocative sentence.',
-            'Medium': 'approx 70-90 words. A detailed descriptive paragraph.',
-            'Long': 'MINIMUM 350 words. An exhaustive, multi-paragraph visual bible covering every technical detail, sensory element, and historical/artistic layer.'
+            'Medium': 'approx 70-100 words. A detailed descriptive paragraph.',
+            'Long': 'MINIMUM 400 words. A sprawling visual epic. Detail every surface, light bounce, artistic influence, and technical specification (ISO, Aperture, Sensor type if applicable).'
         };
         const guide = lengthGuides[length as keyof typeof lengthGuides] || lengthGuides['Medium'];
 
         const videoLogic = isVideo 
-            ? `VIDEO AI RULES: ${hasManualCamera 
-                ? "Strictly use the provided camera modifiers." 
-                : "USER HAS NOT SPECIFIED MOVEMENT: You MUST creatively invent a cinematic camera movement (e.g., sweeping orbit, slow-motion dolly zoom, handheld tracking) that matches the prompt's emotion."}` 
+            ? `[VIDEO AI MODE ACTIVE]
+Rules for Temporal Consistency:
+${hasManualCamera 
+    ? "A specific camera movement is selected in the Modifiers tab. Use it exactly: [Modifier provided in Context]." 
+    : "USER HAS OMITTED CAMERA MOVEMENT: You MUST autonomously and creatively invent a cinematic camera movement (e.g., 'A soaring drone shot descending into...', 'A slow, intimate dolly-in', 'An anamorphic tracking shot'). This movement must match the emotional weight of the subject."}` 
             : "";
 
         return `Role: Kollektiv Chief Prompt Architect for ${model}.
@@ -65,18 +67,18 @@ Target System Syntax: ${syntax.format}
 Official Reference Rules: ${syntax.rules}
 ${videoLogic}
 
-TASK: Generate 3 unique variations of the USER SUBJECT.
+TASK: Generate 3 unique, high-tier variations of the USER SUBJECT.
 MANDATORY: 
 - Prepend "${syntax.prefix}" to every result if applicable.
 - Detail Level [${length}]: Results MUST be ${guide}
 - Output EXACTLY 3 lines. One result per line. 
-- NO preamble, NO numbering, NO markdown, NO thinking.`;
+- NO preamble, NO numbering, NO markdown, NO thinking blocks.`;
     },
 
     REFINER: (model: string, isVideo: boolean, hasManualCamera: boolean) => {
         const syntax = getModelSyntax(model);
         const videoLogic = isVideo && !hasManualCamera 
-            ? "MANDATORY: Creatively inject a cinematic camera movement appropriate for this scene." 
+            ? "MANDATORY: Autonomously inject a creative cinematic camera movement that fits the scene's mood." 
             : "";
             
         return `Role: Art Director for ${model}. 
