@@ -21,7 +21,7 @@ export const enhancePromptOllama = async (
                 stream: false,
                 keep_alive: "15m",
                 options: {
-                    temperature: 0.4,
+                    temperature: 0.7, // Slightly higher for more creative/descriptive results
                     top_p: 0.9,
                     repeat_penalty: 1.2
                 }
@@ -54,8 +54,9 @@ export async function* enhancePromptOllamaStream(
                 stream: true,
                 keep_alive: "15m",
                 options: {
-                    temperature: 0.4,
-                    top_p: 0.9
+                    temperature: 0.7,
+                    top_p: 0.9,
+                    repeat_penalty: 1.2
                 }
             }),
         });
@@ -95,8 +96,9 @@ export const refineSinglePromptOllama = async (promptText: string, settings: LLM
                 stream: false,
                 keep_alive: "15m",
                 options: {
-                    temperature: 0.3,
-                    repeat_penalty: 1.2
+                    temperature: 0.5,
+                    top_p: 0.9,
+                    repeat_penalty: 1.1
                 }
             }),
         });
@@ -121,7 +123,8 @@ export async function* refineSinglePromptOllamaStream(promptText: string, settin
                 stream: true,
                 keep_alive: "15m",
                 options: {
-                    temperature: 0.3
+                    temperature: 0.5,
+                    top_p: 0.9
                 }
             }),
         });

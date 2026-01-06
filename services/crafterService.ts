@@ -342,9 +342,7 @@ class CrafterService {
     }
 
     public async generateFormulaFromPrompt(promptText: string, settings: LLMSettings): Promise<string> {
-        // Force reload to ensure we don't use removed wildcards
         const crafterData = await this.loadWildcardsAndTemplates();
-        
         const allPotentialMatches: { text: string; placeholder: string }[] = [];
         const wildcardPathList: string[] = [];
 
@@ -353,45 +351,42 @@ class CrafterService {
                 const cleanPath = file.path.replace(/\.(txt|yml|yaml)$/i, '');
                 const placeholder = `__${cleanPath}__`;
                 wildcardPathList.push(placeholder);
-                
                 for (const line of file.content) {
                     const trimmedLine = line.trim().toLowerCase();
-                    if (trimmedLine.length > 2) {
-                        allPotentialMatches.push({ text: trimmedLine, placeholder });
-                    }
+                    if (trimmedLine.length > 2) allPotentialMatches.push({ text: trimmedLine, placeholder });
                 }
             }
-            for (const subCat of category.subCategories) {
-                extractFromCategory(subCat);
-            }
+            for (const subCat of category.subCategories) extractFromCategory(subCat);
         };
 
         crafterData.wildcardCategories.forEach(extractFromCategory);
-
-        // Sort by text length descending so we match specific phrases before individual words
         allPotentialMatches.sort((a, b) => b.text.length - a.text.length);
         
         let modifiedPrompt = promptText;
         let localReplacementsCount = 0;
 
         for (const { text, placeholder } of allPotentialMatches) {
-            // Only replace if the text exists as a whole word/phrase
             const escapedValue = text.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
             const regex = new RegExp(`\\b${escapedValue}\\b`, 'gi');
-            
             if (regex.test(modifiedPrompt)) {
                 modifiedPrompt = modifiedPrompt.replace(regex, placeholder);
                 localReplacementsCount++;
             }
         }
 
-        // Return if we did enough local replacements, otherwise fall back to AI
         if (localReplacementsCount > 2 || (localReplacementsCount > 0 && modifiedPrompt.includes('__'))) {
             return modifiedPrompt;
         }
 
-        // Pass the actual current list to AI so it doesn't hallucinate non-existent wildcards
-        return generatePromptFormulaWithAI(promptText, wildcardPathList, settings);
+        // Token Optimization: Only send relevant wildcard names to the AI
+        const promptLower = promptText.toLowerCase();
+        const filteredWildcards = wildcardPathList.filter(wp => {
+            const parts = wp.replace(/__/g, '').split('/');
+            return parts.some(p => promptLower.includes(p.toLowerCase()));
+        });
+        const finalWildcardContext = filteredWildcards.length > 0 ? filteredWildcards : wildcardPathList.slice(0, 30);
+
+        return generatePromptFormulaWithAI(promptText, finalWildcardContext, settings);
     }
 }
 
