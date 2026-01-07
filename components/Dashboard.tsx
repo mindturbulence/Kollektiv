@@ -17,19 +17,14 @@ interface DashboardProps {
     onNavigate: (tab: ActiveTab) => void;
 }
 
-const StatCard: React.FC<{ label: string; value: number | string; icon: React.ReactNode }> = ({ label, value, icon }) => (
-    <div className="bg-base-100 border border-base-300 rounded-2xl p-4 flex items-center gap-4 shadow-sm hover:shadow-md transition-shadow">
-        <div className="w-12 h-12 rounded-xl bg-primary/10 flex items-center justify-center text-primary">
-            {icon}
-        </div>
-        <div>
-            <p className="text-2xl font-black tracking-tight">{value}</p>
-            <p className="text-[10px] uppercase font-bold text-base-content/50 tracking-widest">{label}</p>
-        </div>
+const StatItem: React.FC<{ label: string; value: number | string }> = ({ label, value }) => (
+    <div className="flex flex-col border-r border-base-300 px-6 last:border-r-0">
+        <span className="text-3xl font-black tracking-tighter leading-none">{value}</span>
+        <span className="text-[10px] uppercase font-bold text-base-content/40 tracking-[0.2em] mt-1">{label}</span>
     </div>
 );
 
-const HeroActionCard: React.FC<{ 
+const ActionBlock: React.FC<{ 
     title: string; 
     desc: string; 
     icon: React.ReactNode; 
@@ -38,28 +33,28 @@ const HeroActionCard: React.FC<{
 }> = ({ title, desc, icon, onClick, colorClass }) => (
     <button 
         onClick={onClick}
-        className={`group relative overflow-hidden rounded-3xl p-6 text-left transition-all duration-500 hover:scale-[1.02] active:scale-95 shadow-lg hover:shadow-2xl ${colorClass}`}
+        className={`group relative flex flex-col justify-between p-8 text-left border border-base-300 transition-all duration-300 hover:bg-base-200 overflow-hidden h-64`}
     >
-        <div className="relative z-10 flex flex-col h-full justify-between gap-8">
-            <div className="w-14 h-14 rounded-2xl bg-white/20 backdrop-blur-md flex items-center justify-center text-white shadow-inner">
+        <div className="relative z-10">
+            <div className="w-10 h-10 text-base-content/40 group-hover:text-primary transition-colors mb-4">
                 {icon}
             </div>
-            <div>
-                <h3 className="text-xl font-black text-white leading-tight">{title}</h3>
-                <p className="text-xs text-white/80 font-medium mt-1">{desc}</p>
-            </div>
+            <h3 className="text-2xl font-black tracking-tighter text-base-content leading-none group-hover:translate-x-1 transition-transform">{title}</h3>
+            <p className="text-xs text-base-content/50 font-medium mt-3 max-w-[180px]">{desc}</p>
         </div>
-        <div className="absolute -right-4 -bottom-4 w-32 h-32 bg-white/10 rounded-full blur-3xl group-hover:bg-white/20 transition-colors"></div>
+        <div className="mt-auto flex justify-between items-center relative z-10">
+            <span className="text-[10px] font-bold uppercase tracking-widest text-base-content/30 group-hover:text-primary transition-colors">Launch Module</span>
+            <ChevronRightIcon className="w-4 h-4 text-base-content/20 group-hover:translate-x-1 transition-all" />
+        </div>
     </button>
 );
 
-const RecentPromptItem: React.FC<{ prompt: SavedPrompt; onNavigate: () => void }> = ({ prompt, onNavigate }) => {
+const SpecimenRow: React.FC<{ prompt: SavedPrompt; onNavigate: () => void }> = ({ prompt, onNavigate }) => {
     const [copied, setCopied] = useState(false);
     const title = prompt.title || prompt.basePrompt || 'Untitled Idea';
     
     const handleCopy = (e: React.MouseEvent) => {
         e.stopPropagation();
-        // --- FIX: Safety check for window and navigator.clipboard to avoid WorkerNavigator type issues ---
         if (typeof window !== 'undefined' && (window as any).navigator?.clipboard) {
             (window as any).navigator.clipboard.writeText(prompt.text).then(() => {
                 setCopied(true);
@@ -71,39 +66,37 @@ const RecentPromptItem: React.FC<{ prompt: SavedPrompt; onNavigate: () => void }
     return (
         <div 
             onClick={onNavigate}
-            className="group flex items-center gap-4 p-4 rounded-2xl bg-base-100 border border-base-300 hover:border-primary/50 hover:bg-base-200/50 transition-all cursor-pointer"
+            className="group grid grid-cols-12 gap-4 p-6 border-b border-base-300 hover:bg-base-200/50 transition-all cursor-pointer items-center"
         >
-            <div className="w-10 h-10 rounded-xl bg-base-200 flex flex-shrink-0 items-center justify-center text-base-content/40 group-hover:bg-primary group-hover:text-primary-content transition-colors">
-                <PromptIcon className="w-5 h-5" />
+            <div className="col-span-12 md:col-span-7 flex flex-col">
+                <span className="text-xl font-bold tracking-tight text-base-content group-hover:text-primary transition-colors truncate">
+                    {title}
+                </span>
+                <p className="text-xs text-base-content/40 truncate mt-1 italic">"{prompt.text}"</p>
             </div>
-            <div className="flex-grow min-w-0">
-                <div className="flex justify-between items-start gap-2">
-                    <p className="font-bold text-sm truncate">{title}</p>
-                    <span className="text-[9px] font-mono text-base-content/40 flex items-center gap-1 whitespace-nowrap">
-                        <ClockIcon className="w-3 h-3" /> {new Date(prompt.createdAt).toLocaleDateString()}
-                    </span>
+            <div className="hidden md:flex col-span-3 items-center gap-4">
+                <div className="flex flex-col">
+                    <span className="text-[9px] uppercase font-black tracking-widest text-base-content/30">Target System</span>
+                    <span className="text-[10px] font-mono font-bold text-base-content/60">{prompt.targetAI || 'GENERAL'}</span>
                 </div>
-                <p className="text-xs text-base-content/60 truncate mt-0.5">{prompt.text}</p>
-                {prompt.tags && prompt.tags.length > 0 && (
-                    <div className="flex gap-1 mt-2">
-                        {prompt.tags.slice(0, 2).map(tag => (
-                            <span key={tag} className="px-1.5 py-0.5 rounded bg-base-300 text-[9px] font-bold text-base-content/60 uppercase">#{tag}</span>
-                        ))}
-                    </div>
-                )}
             </div>
-            <button 
-                onClick={handleCopy}
-                className={`btn btn-circle btn-xs ${copied ? 'btn-success' : 'btn-ghost'} opacity-0 group-hover:opacity-100 transition-opacity`}
-                title="Quick Copy"
-            >
-                {copied ? <div className="text-[8px] font-bold">OK</div> : <CopyIcon className="w-3 h-3" />}
-            </button>
+            <div className="col-span-12 md:col-span-2 flex justify-end items-center gap-4 mt-4 md:mt-0">
+                <span className="text-[10px] font-mono text-base-content/30 whitespace-nowrap">
+                    {new Date(prompt.createdAt).toLocaleDateString()}
+                </span>
+                <button 
+                    onClick={handleCopy}
+                    className={`btn btn-ghost btn-xs btn-square ${copied ? 'text-success' : 'text-base-content/20'}`}
+                    title="Copy Specimen"
+                >
+                    {copied ? <div className="text-[8px] font-bold">OK</div> : <CopyIcon className="w-4 h-4" />}
+                </button>
+            </div>
         </div>
     );
 };
 
-const RecentImageItem: React.FC<{ item: GalleryItem; onNavigate: () => void }> = ({ item, onNavigate }) => {
+const JournalTile: React.FC<{ item: GalleryItem; onNavigate: () => void }> = ({ item, onNavigate }) => {
     const [mediaUrl, setMediaUrl] = useState<string | null>(null);
 
     useEffect(() => {
@@ -125,23 +118,22 @@ const RecentImageItem: React.FC<{ item: GalleryItem; onNavigate: () => void }> =
         return () => { isMounted = false; if(objectUrl) URL.revokeObjectURL(objectUrl); }
     }, [item.urls]);
 
-    if (!mediaUrl) return <div className="w-full aspect-square bg-base-300 rounded-xl animate-pulse"></div>;
+    if (!mediaUrl) return <div className="w-full aspect-square bg-base-300 animate-pulse border border-base-300"></div>;
 
     return (
         <button 
             onClick={onNavigate} 
-            className="relative group w-full aspect-square bg-base-200 rounded-xl overflow-hidden shadow-sm hover:shadow-xl transition-all duration-500"
+            className="relative group w-full aspect-square bg-black border border-base-300 overflow-hidden"
         >
             {item.type === 'video' ? (
-                <video src={mediaUrl} className="w-full h-full object-cover" muted loop autoPlay />
+                <video src={mediaUrl} className="w-full h-full object-cover grayscale group-hover:grayscale-0 transition-all duration-700" muted loop autoPlay />
             ) : (
-                <img src={mediaUrl} alt={item.title} className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110" />
+                <img src={mediaUrl} alt={item.title} className="w-full h-full object-cover grayscale group-hover:grayscale-0 transition-all duration-700" />
             )}
-            <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity flex flex-col justify-end p-2 text-left">
-                <p className="text-white text-[10px] font-black uppercase tracking-tighter truncate">{item.title}</p>
-                <div className="flex gap-1 mt-1">
-                    <span className="badge badge-xs text-[8px] font-bold border-none bg-white/20 text-white uppercase">{item.type}</span>
-                </div>
+            <div className="absolute inset-0 bg-primary/20 opacity-0 group-hover:opacity-100 transition-opacity"></div>
+            <div className="absolute bottom-0 left-0 right-0 p-4 translate-y-full group-hover:translate-y-0 transition-transform duration-300 bg-base-100 border-t border-base-300 flex flex-col text-left">
+                <span className="text-[10px] font-black uppercase tracking-widest text-primary truncate">{item.title}</span>
+                <span className="text-[9px] font-mono text-base-content/40 mt-1 uppercase">{item.type} • {new Date(item.createdAt).toLocaleDateString()}</span>
             </div>
         </button>
     );
@@ -170,8 +162,8 @@ const Dashboard: React.FC<DashboardProps> = ({ onNavigate }) => {
                 ]);
         
                 setData({
-                    prompts: prompts.slice(0, 6),
-                    gallery: gallery.filter(item => !item.isNsfw).slice(0, 8),
+                    prompts: prompts.slice(0, 5),
+                    gallery: gallery.filter(item => !item.isNsfw).slice(0, 4),
                     promptCount: prompts.length,
                     galleryCount: gallery.length,
                     categoryCount: pCats.length + gCats.length
@@ -189,116 +181,128 @@ const Dashboard: React.FC<DashboardProps> = ({ onNavigate }) => {
     if (isLoading) return <div className="flex-grow flex items-center justify-center"><LoadingSpinner /></div>;
 
     return (
-        <div className="p-6 lg:p-10 space-y-10 animate-fade-in bg-base-200/30 min-h-full pb-20">
-            {/* Top Bar with Stats */}
-            <div className="flex flex-col md:flex-row md:items-end justify-between gap-6">
-                <div>
-                    <h1 className="text-4xl font-black tracking-tighter text-base-content">Creative Studio</h1>
-                    <p className="text-base-content/50 font-bold uppercase text-xs tracking-widest mt-1">Welcome back to Kollektiv</p>
+        <div className="animate-fade-in bg-base-100 min-h-full flex flex-col">
+            {/* Hero Section */}
+            <section className="p-10 lg:p-20 border-b border-base-300 bg-base-200/20">
+                <div className="max-w-screen-2xl mx-auto flex flex-col md:flex-row items-end justify-between gap-12">
+                    <div className="flex-1">
+                        <h1 className="text-7xl lg:text-9xl font-black tracking-tighter text-base-content leading-[0.8] mb-6">
+                            KOLLEK<br/>TIV.
+                        </h1>
+                        <p className="text-base font-bold text-base-content/50 uppercase tracking-[0.3em] max-w-md">
+                            The professional interface for high-fidelity prompt engineering and visual journaling.
+                        </p>
+                    </div>
+                    <div className="flex bg-base-100 p-8 border border-base-300 shadow-sm">
+                        <StatItem label="Inspirations" value={data.promptCount} />
+                        <StatItem label="Visual Works" value={data.galleryCount} />
+                        <StatItem label="Data Sets" value={data.categoryCount} />
+                    </div>
                 </div>
-                <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
-                    <StatCard label="Inspirations" value={data.promptCount} icon={<BookmarkIcon className="w-6 h-6"/>} />
-                    <StatCard label="Creations" value={data.galleryCount} icon={<PhotoIcon className="w-6 h-6"/>} />
-                    <StatCard label="Collections" value={data.categoryCount} icon={<FolderClosedIcon className="w-6 h-6"/>} />
-                </div>
-            </div>
+            </section>
             
-            {/* Major Action Area */}
-            <section className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-                <HeroActionCard 
-                    title="Prompt Refiner" 
-                    desc="Perfect your ideas with AI assistance" 
-                    icon={<SparklesIcon className="w-8 h-8"/>} 
+            {/* Module Grid */}
+            <section className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 border-b border-base-300">
+                <ActionBlock 
+                    title="Builder" 
+                    desc="Architect detailed prompts with model-aware logic and visual physics." 
+                    icon={<SparklesIcon className="w-full h-full"/>} 
                     onClick={() => onNavigate('prompts')} 
-                    colorClass="bg-gradient-to-br from-indigo-600 to-violet-700"
+                    colorClass="text-indigo-600"
                 />
-                <HeroActionCard 
+                <ActionBlock 
                     title="Library" 
-                    desc="Manage your collection of formulas" 
-                    icon={<PromptIcon className="w-8 h-8"/>} 
+                    desc="Maintain a curated repository of high-utility formulas and tokens." 
+                    icon={<PromptIcon className="w-full h-full"/>} 
                     onClick={() => onNavigate('prompt')} 
-                    colorClass="bg-gradient-to-br from-emerald-600 to-teal-700"
+                    colorClass="text-emerald-600"
                 />
-                <HeroActionCard 
-                    title="Visual Gallery" 
-                    desc="Showcase your generated results" 
-                    icon={<PhotoIcon className="w-8 h-8"/>} 
+                <ActionBlock 
+                    title="Gallery" 
+                    desc="A minimalist visual record of generated temporal and spatial results." 
+                    icon={<PhotoIcon className="w-full h-full"/>} 
                     onClick={() => onNavigate('gallery')} 
-                    colorClass="bg-gradient-to-br from-amber-500 to-orange-600"
+                    colorClass="text-amber-500"
                 />
-                <HeroActionCard 
-                    title="Pro Tools" 
-                    desc="Batch resizers and video frames" 
-                    icon={<AdjustmentsVerticalIcon className="w-8 h-8"/>} 
-                    onClick={() => onNavigate('resizer')} 
-                    colorClass="bg-gradient-to-br from-rose-600 to-pink-700"
+                <ActionBlock 
+                    title="Reference" 
+                    desc="Exploration modules for art styles, cinematography, and artists." 
+                    icon={<BookOpenIcon className="w-full h-full"/>} 
+                    onClick={() => onNavigate('cheatsheet')} 
+                    colorClass="text-rose-600"
                 />
             </section>
 
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-10">
-                {/* Left: Latest Prompts List */}
-                <div className="lg:col-span-2 space-y-6">
-                    <div className="flex justify-between items-center px-2">
-                        <h2 className="text-xl font-black uppercase tracking-tight flex items-center gap-2">
-                            <BookmarkIcon className="w-5 h-5 text-primary" /> Latest Inspirations
+            <div className="grid grid-cols-1 lg:grid-cols-12 max-w-full">
+                {/* Specimen Feed */}
+                <div className="lg:col-span-8 border-r border-base-300">
+                    <div className="p-6 border-b border-base-300 flex justify-between items-center bg-base-200/10">
+                        <h2 className="text-xs font-black uppercase tracking-[0.4em] text-base-content/40 flex items-center gap-3">
+                            <span className="w-2 h-2 rounded-full bg-primary animate-pulse"></span> Recent Specimens
                         </h2>
-                        <button onClick={() => onNavigate('prompt')} className="btn btn-ghost btn-sm text-xs font-bold text-primary group">
-                            Full Library <ChevronRightIcon className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
+                        <button onClick={() => onNavigate('prompt')} className="text-[10px] font-black uppercase tracking-widest text-primary hover:underline">
+                            Open Index
                         </button>
                     </div>
                     
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div className="flex flex-col">
                         {data.prompts.length > 0 ? (
-                            data.prompts.map(p => <RecentPromptItem key={p.id} prompt={p} onNavigate={() => onNavigate('prompt')} />)
+                            data.prompts.map(p => <SpecimenRow key={p.id} prompt={p} onNavigate={() => onNavigate('prompt')} />)
                         ) : (
-                            <div className="md:col-span-2 p-12 text-center bg-base-100 rounded-3xl border-2 border-dashed border-base-300 text-base-content/40">
-                                <BookmarkIcon className="w-12 h-12 mx-auto mb-2 opacity-20" />
-                                <p className="font-bold">Your library is waiting for its first spark.</p>
+                            <div className="p-20 text-center text-base-content/20 uppercase font-black tracking-widest">
+                                Repository Empty
                             </div>
                         )}
                     </div>
                 </div>
 
-                {/* Right: Gallery Grid Preview */}
-                <div className="space-y-6">
-                    <div className="flex justify-between items-center px-2">
-                        <h2 className="text-xl font-black uppercase tracking-tight flex items-center gap-2">
-                            <PhotoIcon className="w-5 h-5 text-accent" /> Recent Journal
-                        </h2>
-                        <button onClick={() => onNavigate('gallery')} className="btn btn-ghost btn-sm text-xs font-bold text-accent group">
-                            View All <ChevronRightIcon className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
+                {/* Journal View */}
+                <div className="lg:col-span-4 bg-base-200/10">
+                    <div className="p-6 border-b border-base-300 flex justify-between items-center">
+                        <h2 className="text-xs font-black uppercase tracking-[0.4em] text-base-content/40">Visual Journal</h2>
+                        <button onClick={() => onNavigate('gallery')} className="text-[10px] font-black uppercase tracking-widest text-base-content/60 hover:text-primary">
+                            Full View
                         </button>
                     </div>
                     
-                    <div className="bg-base-100 p-4 rounded-[2rem] border border-base-300 shadow-sm">
+                    <div className="grid grid-cols-2 gap-px bg-base-300">
                         {data.gallery.length > 0 ? (
-                            <div className="grid grid-cols-2 gap-3">
-                                {data.gallery.map(item => <RecentImageItem key={item.id} item={item} onNavigate={() => onNavigate('gallery')} />)}
-                            </div>
+                            data.gallery.map(item => <JournalTile key={item.id} item={item} onNavigate={() => onNavigate('gallery')} />)
                         ) : (
-                            <div className="p-10 text-center text-base-content/40">
-                                <PhotoIcon className="w-10 h-10 mx-auto mb-2 opacity-20" />
-                                <p className="text-xs font-bold">Gallery is empty.</p>
+                            <div className="col-span-2 p-20 text-center text-base-content/20 uppercase font-black tracking-widest bg-base-100">
+                                No Data
                             </div>
                         )}
                     </div>
 
-                    {/* Resources Shortcuts */}
-                    <div className="bg-neutral text-neutral-content rounded-3xl p-6 shadow-xl space-y-4">
-                        <h3 className="text-sm font-black uppercase tracking-widest text-white/50">Quick Reference</h3>
-                        <div className="space-y-2">
-                            <button onClick={() => onNavigate('cheatsheet')} className="w-full flex items-center gap-3 p-3 rounded-2xl hover:bg-white/10 transition-colors text-left group">
-                                <BookOpenIcon className="w-5 h-5" />
-                                <span className="text-sm font-bold flex-grow">Prompting Guide</span>
-                                <ChevronRightIcon className="w-4 h-4 opacity-0 group-hover:opacity-100 transition-all" />
-                            </button>
-                            <button onClick={() => onNavigate('artstyles')} className="w-full flex items-center gap-3 p-3 rounded-2xl hover:bg-white/10 transition-colors text-left group">
-                                <PaletteIcon className="w-5 h-5" />
-                                <span className="text-sm font-bold flex-grow">Art Styles</span>
-                                <ChevronRightIcon className="w-4 h-4 opacity-0 group-hover:opacity-100 transition-all" />
-                            </button>
+                    <div className="p-10">
+                        <div className="p-8 border border-base-300 rounded-none bg-base-100 space-y-6">
+                            <h3 className="text-xs font-black uppercase tracking-widest text-base-content/40">System Resources</h3>
+                            <div className="space-y-4">
+                                <button onClick={() => onNavigate('artstyles')} className="w-full flex items-center justify-between text-left group">
+                                    <span className="text-sm font-bold tracking-tight">Art Styles Index</span>
+                                    <ChevronRightIcon className="w-4 h-4 opacity-30 group-hover:opacity-100 transition-all" />
+                                </button>
+                                <button onClick={() => onNavigate('artists')} className="w-full flex items-center justify-between text-left group">
+                                    <span className="text-sm font-bold tracking-tight">Artist Specimens</span>
+                                    <ChevronRightIcon className="w-4 h-4 opacity-30 group-hover:opacity-100 transition-all" />
+                                </button>
+                                <button onClick={() => onNavigate('video_to_frames')} className="w-full flex items-center justify-between text-left group">
+                                    <span className="text-sm font-bold tracking-tight">Temporal Extractor</span>
+                                    <ChevronRightIcon className="w-4 h-4 opacity-30 group-hover:opacity-100 transition-all" />
+                                </button>
+                            </div>
                         </div>
                     </div>
+                </div>
+            </div>
+            
+            {/* Footer Specifications */}
+            <div className="mt-auto border-t border-base-300 p-4 px-10 flex justify-between items-center bg-base-200/50">
+                <span className="text-[9px] font-mono font-bold text-base-content/20 tracking-widest uppercase">Kollektiv Platform Interface • Version 1.0.0</span>
+                <div className="flex gap-6">
+                    <span className="text-[9px] font-mono font-bold text-base-content/20 tracking-widest uppercase">Encryption: Local Only</span>
+                    <span className="text-[9px] font-mono font-bold text-base-content/20 tracking-widest uppercase">Status: Connected</span>
                 </div>
             </div>
         </div>
