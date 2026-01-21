@@ -1,4 +1,3 @@
-
 import React, { useState, useCallback, useEffect } from 'react';
 import { useSettings } from '../contexts/SettingsContext';
 import { dissectPrompt, generateFocusedVariations } from '../services/llmService';
@@ -46,8 +45,8 @@ export const PromptAnatomyPanel: React.FC<PromptAnatomyPanelProps> = ({ promptTo
     try {
       const dissected = await dissectPrompt(promptToAnalyze, settings);
       setComponents(dissected);
-      setIsComponentsSectionExpanded(true); // Expand on new analysis
-      setIsVariationsSectionExpanded(true); // Expand on new analysis
+      setIsComponentsSectionExpanded(true); 
+      setIsVariationsSectionExpanded(true);
 
       if (Object.keys(dissected).length > 0) {
         setLoadingState('variating');
@@ -55,7 +54,7 @@ export const PromptAnatomyPanel: React.FC<PromptAnatomyPanelProps> = ({ promptTo
         setVariations(componentVariations);
         const initialExpanded: Record<string, boolean> = {};
         Object.keys(componentVariations).forEach(key => {
-            initialExpanded[key] = false; // Start with variation items collapsed
+            initialExpanded[key] = false; 
         });
         setExpandedVariations(initialExpanded);
       }
@@ -73,7 +72,6 @@ export const PromptAnatomyPanel: React.FC<PromptAnatomyPanelProps> = ({ promptTo
   }, [analysisTrigger, handleDissect]);
 
   useEffect(() => {
-    // Cleanup effect when the prompt is cleared from the parent
     if (!promptToAnalyze) {
         setComponents(null);
         setVariations(null);
@@ -110,135 +108,130 @@ export const PromptAnatomyPanel: React.FC<PromptAnatomyPanelProps> = ({ promptTo
   };
 
   return (
-    <div className="card bg-base-100 shadow-lg flex flex-col h-full">
-      <header className="card-title p-4 text-base justify-between flex-shrink-0 border-b border-base-300">
-        <span>Prompt Composer</span>
-        <button onClick={handleDissect} disabled={true} className="btn btn-sm btn-ghost btn-square opacity-0">
-            <RefreshIcon className={`w-4 h-4`} />
-        </button>
+    <div className="bg-base-100 flex flex-col h-full overflow-hidden">
+      <header className="p-6 border-b border-base-300 bg-base-200/10 flex justify-between items-center flex-shrink-0">
+        <h3 className="text-[10px] font-black uppercase tracking-[0.3em] text-primary">Prompt Analysis</h3>
       </header>
-      <main className="card-body p-4 overflow-y-auto space-y-4">
-        {error && <div className="alert alert-error text-sm p-2"><span>{error}</span></div>}
+      <main className="p-6 overflow-y-auto space-y-8 flex-grow custom-scrollbar">
+        {error && <div className="alert alert-error rounded-none text-xs p-2"><span>{error}</span></div>}
         
         {loadingState !== 'idle' && (
-            <div className="text-center">
-                <LoadingSpinner />
-                <p className="text-sm text-base-content/70 -mt-4">
-                    {loadingState === 'dissecting' && 'Analyzing components...'}
-                    {loadingState === 'variating' && 'Generating variations...'}
+            <div className="text-center py-12">
+                <LoadingSpinner size={48} />
+                <p className="text-[9px] font-black uppercase tracking-[0.4em] text-primary animate-pulse -mt-4">
+                    {loadingState === 'dissecting' && 'Analyzing prompt...'}
+                    {loadingState === 'variating' && 'Suggesting variations...'}
                 </p>
             </div>
         )}
 
         {loadingState === 'idle' && !components && (
-             <div className="text-center p-4 text-sm text-base-content/70">
-                Click "Analyze" on a generated result to see its components here.
+             <div className="text-center py-32 opacity-10 uppercase font-black tracking-widest text-xs">
+                Ready to analyze
             </div>
         )}
 
         {loadingState !== 'dissecting' && components && (
-            <>
-                <details open={isComponentsSectionExpanded}>
+            <div className="animate-fade-in space-y-12">
+                <section>
                     <summary 
-                        className="list-none flex items-center cursor-pointer font-semibold text-sm uppercase tracking-wider text-base-content/60 mb-2"
+                        className="list-none flex items-center cursor-pointer font-black text-[10px] uppercase tracking-widest text-base-content/30 mb-6"
                         onClick={(e) => { e.preventDefault(); setIsComponentsSectionExpanded(p => !p); }}
                     >
-                         <ChevronDownIcon className={`w-4 h-4 mr-1 transition-transform duration-200 ${!isComponentsSectionExpanded ? '-rotate-90' : ''}`} />
-                        Dissected Components
+                         <ChevronDownIcon className={`w-3.5 h-3.5 mr-2 transition-transform duration-200 ${!isComponentsSectionExpanded ? '-rotate-90' : ''}`} />
+                        Components Found
                     </summary>
-                    <div className="pl-5 space-y-2 text-sm">
-                     {Object.keys(components).length > 0 ? (
-                        <>
-                            {/* Fix: Added explicit type cast to Object.entries */}
-                            {(Object.entries(components) as [string, string][]).map(([key, value]) => (
-                                <div key={key} className="flex justify-between items-center group">
-                                    <div className="flex-grow">
-                                        <h4 className="text-xs font-semibold text-base-content/60 uppercase tracking-wider">{key}</h4>
-                                        {editingComponent?.key === key ? (
-                                             <input 
-                                                type="text" 
-                                                value={editingComponent.value}
-                                                onChange={(e) => setEditingComponent({...editingComponent, value: (e.currentTarget as any).value})}
-                                                onKeyDown={e => e.key === 'Enter' && handleComponentSave()}
-                                                onBlur={handleComponentSave}
-                                                className="input input-xs w-full"
-                                                autoFocus
-                                                disabled={isProcessing || isReconstructing}
-                                            />
-                                        ) : (
-                                            <p className="text-base-content">{value}</p>
-                                        )}
+                    {isComponentsSectionExpanded && (
+                        <div className="space-y-6">
+                        {Object.keys(components).length > 0 ? (
+                            <>
+                                {(Object.entries(components) as [string, string][]).map(([key, value]) => (
+                                    <div key={key} className="group relative border-b border-base-300/30 pb-4 last:border-0">
+                                        <h4 className="text-[9px] font-black uppercase tracking-[0.2em] text-primary/60 mb-2">{key}</h4>
+                                        <div className="flex justify-between items-start gap-4">
+                                            {editingComponent?.key === key ? (
+                                                <input 
+                                                    type="text" 
+                                                    value={editingComponent.value}
+                                                    onChange={(e) => setEditingComponent({...editingComponent, value: (e.currentTarget as any).value})}
+                                                    onKeyDown={e => e.key === 'Enter' && handleComponentSave()}
+                                                    onBlur={handleComponentSave}
+                                                    className="input input-xs w-full font-bold uppercase tracking-tighter rounded-none bg-base-200"
+                                                    autoFocus
+                                                    disabled={isProcessing || isReconstructing}
+                                                />
+                                            ) : (
+                                                <p className="text-sm font-medium leading-relaxed text-base-content/80">{value}</p>
+                                            )}
+                                            
+                                            <div className="flex-shrink-0 opacity-0 group-hover:opacity-100 transition-opacity">
+                                                {editingComponent?.key === key ? (
+                                                    <button onClick={handleComponentSave} disabled={isProcessing || isReconstructing} className="btn btn-xs btn-ghost btn-square">
+                                                        {isReconstructing ? <LoadingSpinner size={16} /> : <CheckIcon className="w-4 h-4 text-success"/>}
+                                                    </button>
+                                                ) : (
+                                                    <button onClick={() => handleComponentEdit(key, value)} disabled={isProcessing || isReconstructing || !!processingVariation} className="btn btn-xs btn-ghost btn-square"><EditIcon className="w-3.5 h-3.5"/></button>
+                                                )}
+                                            </div>
+                                        </div>
                                     </div>
-                                    <div className="flex items-center">
-                                        {editingComponent?.key === key ? (
-                                            <button onClick={handleComponentSave} disabled={isProcessing || isReconstructing} className="btn btn-xs btn-ghost btn-square">
-                                                {isReconstructing ? <span className="loading loading-spinner loading-xs" /> : <CheckIcon className="w-4 h-4 text-success"/>}
-                                            </button>
-                                        ) : (
-                                            <button onClick={() => handleComponentEdit(key, value)} disabled={isProcessing || isReconstructing || !!processingVariation} className="btn btn-xs btn-ghost btn-square opacity-0 group-hover:opacity-100"><EditIcon className="w-4 h-4"/></button>
-                                        )}
-                                    </div>
-                                </div>
-                            ))}
-                        </>
-                    ) : (
-                        <p className="text-sm text-base-content/70">No distinct components were identified.</p>
+                                ))}
+                            </>
+                        ) : (
+                            <p className="text-[10px] font-black uppercase tracking-widest text-base-content/20 text-center py-12">No components mapped.</p>
+                        )}
+                        </div>
                     )}
-                    </div>
-                </details>
+                </section>
                 
                 {variations && Object.keys(variations).length > 0 && (
-                    <div className="border-t border-base-300 pt-4">
-                        <details open={isVariationsSectionExpanded}>
-                            <summary 
-                                className="list-none flex items-center cursor-pointer font-semibold text-sm uppercase tracking-wider text-base-content/60 mb-2"
-                                onClick={(e) => { e.preventDefault(); setIsVariationsSectionExpanded(p => !p); }}
-                            >
-                                <ChevronDownIcon className={`w-4 h-4 mr-1 transition-transform duration-200 ${!isVariationsSectionExpanded ? '-rotate-90' : ''}`} />
-                                Variations
-                            </summary>
-                            <div className="pl-5 space-y-2">
-                                {/* Fix: Added explicit type cast to Object.entries */}
+                    <section className="border-t border-base-300 pt-8">
+                        <summary 
+                            className="list-none flex items-center cursor-pointer font-black text-[10px] uppercase tracking-widest text-base-content/30 mb-6"
+                            onClick={(e) => { e.preventDefault(); setIsVariationsSectionExpanded(p => !p); }}
+                        >
+                            <ChevronDownIcon className={`w-3.5 h-3.5 mr-2 transition-transform duration-200 ${!isVariationsSectionExpanded ? '-rotate-90' : ''}`} />
+                            Alternative Suggestions
+                        </summary>
+                        {isVariationsSectionExpanded && (
+                            <div className="space-y-6">
                                 {(Object.entries(variations) as [string, string[]][]).map(([key, values]) => {
                                     const isAnyVariationProcessing = !!processingVariation;
 
                                     return (
-                                        <details key={key} open={expandedVariations[key]} className="group">
-                                            <summary 
-                                                className="list-none flex items-center cursor-pointer p-1 -ml-1 rounded-md hover:bg-base-200"
-                                                onClick={(e) => {
-                                                    e.preventDefault();
-                                                    setExpandedVariations(prev => ({ ...prev, [key]: !prev[key] }));
-                                                }}
+                                        <div key={key} className="space-y-3">
+                                            <div 
+                                                className="flex items-center gap-2 cursor-pointer"
+                                                onClick={() => setExpandedVariations(prev => ({ ...prev, [key]: !prev[key] }))}
                                             >
-                                                <ChevronDownIcon className={`w-4 h-4 mr-1 transition-transform duration-200 ${!expandedVariations[key] ? '-rotate-90' : ''}`} />
-                                                <h4 className="text-xs font-semibold text-base-content/60 uppercase tracking-wider">{key}</h4>
-                                            </summary>
-                                            <div className="flex flex-wrap gap-1.5 mt-2 pl-4 items-start">
-                                                {/* Fix: values is now typed as string[] */}
-                                                {values.map((v, i) => {
-                                                    const isThisOneProcessing = processingVariation?.key === key && processingVariation?.value === v;
-                                                    return (
-                                                        <button 
-                                                            key={i} 
-                                                            onClick={() => handleVariationClick(key, v)}
-                                                            className="badge badge-outline h-auto py-1 text-left whitespace-normal hover:badge-primary cursor-pointer disabled:cursor-not-allowed disabled:bg-base-200 disabled:border-base-300"
-                                                            title={`Replace "${components ? components[key] : ''}" with "${v}" in your result`}
-                                                            disabled={isProcessing || isReconstructing || isAnyVariationProcessing}
-                                                        >
-                                                            {isThisOneProcessing ? <span className="loading loading-spinner loading-xs" /> : v}
-                                                        </button>
-                                                    )
-                                                })}
+                                                <ChevronDownIcon className={`w-3 h-3 transition-transform duration-200 ${!expandedVariations[key] ? '-rotate-90' : ''} text-base-content/20`} />
+                                                <h4 className="text-[9px] font-black uppercase tracking-[0.2em] text-base-content/40">{key}</h4>
                                             </div>
-                                        </details>
+                                            {expandedVariations[key] && (
+                                                <div className="flex flex-wrap gap-2 pl-5">
+                                                    {values.map((v, i) => {
+                                                        const isThisOneProcessing = processingVariation?.key === key && processingVariation?.value === v;
+                                                        return (
+                                                            <button 
+                                                                key={i} 
+                                                                onClick={() => handleVariationClick(key, v)}
+                                                                className="badge badge-outline rounded-none border-base-300/50 hover:border-primary hover:text-primary transition-all cursor-pointer h-auto py-1.5 px-3 text-left whitespace-normal text-[11px] font-bold tracking-tight disabled:opacity-30"
+                                                                disabled={isProcessing || isReconstructing || isAnyVariationProcessing}
+                                                            >
+                                                                {isThisOneProcessing ? <LoadingSpinner size={12} /> : v}
+                                                            </button>
+                                                        )
+                                                    })}
+                                                </div>
+                                            )}
+                                        </div>
                                     )
                                 })}
                             </div>
-                        </details>
-                    </div>
+                        )}
+                    </section>
                 )}
-            </>
+            </div>
         )}
       </main>
     </div>

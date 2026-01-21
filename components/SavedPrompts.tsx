@@ -4,10 +4,11 @@ import {
     deleteSavedPrompt,
     addSavedPrompt,
     updateSavedPrompt,
-    loadPromptCategories
+    loadPromptCategories,
+    savePromptCategoriesOrder
 } from '../utils/promptStorage';
 import type { SavedPrompt, PromptCategory, Idea } from '../types';
-import { PromptIcon, ArrowsUpDownIcon } from './icons';
+import { PromptIcon, ArrowsUpDownIcon, FolderClosedIcon } from './icons';
 import ConfirmationModal from './ConfirmationModal';
 import SavedPromptCard from './SavedPromptCard';
 import TreeView, { TreeViewItem } from './TreeView';
@@ -15,7 +16,6 @@ import CategoryPanelToggle from './CategoryPanelToggle';
 import PromptEditorModal from './PromptEditorModal';
 import LoadingSpinner from './LoadingSpinner';
 import PromptDetailView from './PromptDetailView';
-
 
 interface SavedPromptsProps {
   onSendToEnhancer: (prompt: string) => void;
@@ -29,20 +29,16 @@ type SortOrder = 'newest' | 'oldest' | 'title';
 
 const getColumnCount = () => {
     if (typeof window === 'undefined') return 1;
-    if ((window as any).matchMedia('(min-width: 1536px)').matches) return 4; // 2xl - adjusted for text cards
-    if ((window as any).matchMedia('(min-width: 1280px)').matches) return 3; // xl
-    if ((window as any).matchMedia('(min-width: 1024px)').matches) return 3; // lg
-    if ((window as any).matchMedia('(min-width: 768px)').matches) return 2; // md
-    if ((window as any).matchMedia('(min-width: 640px)').matches) return 1; // sm
+    if ((window as any).matchMedia('(min-width: 1536px)').matches) return 4;
+    if ((window as any).matchMedia('(min-width: 1280px)').matches) return 3;
+    if ((window as any).matchMedia('(min-width: 768px)').matches) return 2;
     return 1;
 };
-
 
 const SavedPrompts: React.FC<SavedPromptsProps> = ({ onSendToEnhancer, isCategoryPanelCollapsed, onToggleCategoryPanel, showGlobalFeedback, onClipIdea }) => {
   const [prompts, setPrompts] = useState<SavedPrompt[]>([]);
   const [categories, setCategories] = useState<PromptCategory[]>([]);
   const [isLoading, setIsLoading] = useState(true);
-  const [loadError, setLoadError] = useState<string | null>(null);
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
   const [isEditorModalOpen, setIsEditorModalOpen] = useState(false);
   const [promptToDelete, setPromptToDelete] = useState<SavedPrompt | null>(null);
@@ -54,9 +50,7 @@ const SavedPrompts: React.FC<SavedPromptsProps> = ({ onSendToEnhancer, isCategor
   const [detailViewPromptId, setDetailViewPromptId] = useState<string | null>(null);
 
   useEffect(() => {
-    const handleResize = () => {
-        setColumnCount(getColumnCount());
-    };
+    const handleResize = () => setColumnCount(getColumnCount());
     if (typeof window !== 'undefined') {
         (window as any).addEventListener('resize', handleResize);
         return () => (window as any).removeEventListener('resize', handleResize);
@@ -65,69 +59,33 @@ const SavedPrompts: React.FC<SavedPromptsProps> = ({ onSendToEnhancer, isCategor
 
   const refreshData = useCallback(async () => {
       setIsLoading(true);
-      setLoadError(null);
       try {
-        const [loadedPrompts, loadedCategories] = await Promise.all([
-            loadSavedPrompts(),
-            loadPromptCategories()
-        ]);
+        const [loadedPrompts, loadedCategories] = await Promise.all([loadSavedPrompts(), loadPromptCategories()]);
         setPrompts(loadedPrompts);
         setCategories(loadedCategories);
       } catch (error) {
-          const errorMessage = "Failed to load prompt library. Please try refreshing the page.";
-          console.error(errorMessage, error);
-          setLoadError(errorMessage);
+          console.error("Failed to load prompts", error);
       } finally {
           setIsLoading(false);
       }
   }, []);
 
-  const handleAddNewClick = () => {
-    setPromptToEdit(null);
-    setIsEditorModalOpen(true);
-  };
-
-  useEffect(() => {
-    refreshData();
-  }, [refreshData]);
+  useEffect(() => { refreshData(); }, [refreshData]);
 
   const handleSavePrompt = async (promptData: Omit<SavedPrompt, 'id' | 'createdAt'>): Promise<void> => {
-    if (promptToEdit && 'id' in promptToEdit) {
-      await updateSavedPrompt(promptToEdit.id as string, promptData);
-    } else {
-      await addSavedPrompt(promptData);
-    }
+    if (promptToEdit && 'id' in promptToEdit) await updateSavedPrompt(promptToEdit.id as string, promptData);
+    else await addSavedPrompt(promptData);
     await refreshData();
-    // After saving, if detail view was open, find the new index of the item
-    if (detailViewPromptId !== null && promptToEdit && 'id' in promptToEdit) {
-        // This is complex, for now we just refresh. A better implementation might find the new item.
-    }
-    setSelectedCategoryId(promptData.categoryId || 'uncategorized');
   };
   
   const handleUpdatePrompt = async (promptId: string, updates: Partial<Omit<SavedPrompt, 'id' | 'createdAt'>>) => {
       const originalPrompt = prompts.find(p => p.id === promptId);
       if (!originalPrompt) return;
-
-      const { id, createdAt, ...rest } = originalPrompt;
-      const promptDataToSave = { ...rest, ...updates };
-
-      await updateSavedPrompt(promptId, promptDataToSave);
+      await updateSavedPrompt(promptId, { ...originalPrompt, ...updates });
       await refreshData();
-      showGlobalFeedback('Prompt updated successfully!');
+      showGlobalFeedback('Registry updated.');
   };
 
-
-  const handleDeleteClick = (prompt: SavedPrompt) => {
-    setPromptToDelete(prompt);
-    setIsDeleteModalOpen(true);
-  };
-
-  const handleEditClick = (prompt: SavedPrompt) => {
-    setPromptToEdit(prompt);
-    setIsEditorModalOpen(true);
-  };
-  
   const handleConfirmDelete = async () => {
     if (promptToDelete) {
       await deleteSavedPrompt(promptToDelete.id);
@@ -137,45 +95,24 @@ const SavedPrompts: React.FC<SavedPromptsProps> = ({ onSendToEnhancer, isCategor
     }
   };
 
-  const handleClipPrompt = (prompt: SavedPrompt) => {
-    const newIdea: Idea = {
-        id: `clipped-prompt-${prompt.id}-${Date.now()}`,
-        lens: 'Prompt Library',
-        title: prompt.title || `${prompt.text.substring(0, 30)}...`,
-        prompt: prompt.text,
-        source: 'Prompt Library'
-    };
-    onClipIdea(newIdea);
-  };
-
-  const handleClipString = (text: string, title: string) => {
-    const newIdea: Idea = {
-        id: `clipped-string-${Date.now()}`,
-        lens: 'Refinement',
-        title: title,
-        prompt: text,
-        source: 'Prompt Detail View'
-    };
-    onClipIdea(newIdea);
-  };
-
   const treeItems = useMemo<TreeViewItem[]>(() => {
-    const allPromptsCount = prompts.length;
-    const uncategorizedCount = prompts.filter(p => !p.categoryId).length;
-
-    const allPromptsNode: TreeViewItem = { id: 'all', name: 'All Prompts', icon: 'prompt', count: allPromptsCount };
-    const uncategorizedNode: TreeViewItem = { id: 'uncategorized', name: 'Uncategorized', icon: 'inbox', count: uncategorizedCount };
-
-    const sortedCategoryItems: TreeViewItem[] = [...categories]
-      .sort((a, b) => a.name.localeCompare(b.name, undefined, { sensitivity: 'base' }))
-      .map(cat => ({
-        id: cat.id,
-        name: cat.name,
-        icon: 'folder',
-        count: prompts.filter(p => p.categoryId === cat.id).length
-      }));
-      
-    return [allPromptsNode, ...sortedCategoryItems, uncategorizedNode];
+    const buildTree = (parentId?: string): TreeViewItem[] => {
+        return categories
+            .filter(cat => cat.parentId === parentId)
+            .map(cat => ({
+                id: cat.id,
+                name: cat.name,
+                icon: 'folder',
+                count: prompts.filter(p => p.categoryId === cat.id).length,
+                children: buildTree(cat.id)
+            }));
+    };
+    
+    return [
+      { id: 'all', name: 'Global Repository', icon: 'prompt' as const, count: prompts.length },
+      ...buildTree(undefined),
+      { id: 'uncategorized', name: 'Uncategorized', icon: 'inbox' as const, count: prompts.filter(p => !p.categoryId).length }
+    ];
   }, [categories, prompts]);
 
   const sortedAndFilteredPrompts = useMemo(() => {
@@ -186,211 +123,93 @@ const SavedPrompts: React.FC<SavedPromptsProps> = ({ onSendToEnhancer, isCategor
           : prompts.filter(p => p.categoryId === selectedCategoryId);
 
       if (searchQuery.trim()) {
-        const lowerCaseQuery = searchQuery.toLowerCase();
-        filtered = filtered.filter(prompt => 
-          (prompt.title || '').toLowerCase().includes(lowerCaseQuery) ||
-          prompt.text.toLowerCase().includes(lowerCaseQuery)
-        );
+        const q = searchQuery.toLowerCase();
+        filtered = filtered.filter(p => (p.title || '').toLowerCase().includes(q) || p.text.toLowerCase().includes(q));
       }
       
-      let sorted = [...filtered];
-      switch (sortOrder) {
-          case 'oldest':
-              sorted.sort((a, b) => a.createdAt - b.createdAt);
-              break;
-          case 'title':
-              sorted.sort((a, b) => {
-                  const titleA = (a.title || a.text).toLowerCase();
-                  const titleB = (b.title || b.text).toLowerCase();
-                  return titleA.localeCompare(titleB, undefined, { sensitivity: 'base' });
-              });
-              break;
-          case 'newest':
-          default:
-              sorted.sort((a, b) => b.createdAt - a.createdAt);
-              break;
-      }
+      const sorted = [...filtered];
+      if (sortOrder === 'oldest') sorted.sort((a, b) => a.createdAt - b.createdAt);
+      else if (sortOrder === 'title') sorted.sort((a, b) => (a.title || '').localeCompare(b.title || ''));
+      else sorted.sort((a, b) => b.createdAt - a.createdAt);
       return sorted;
   }, [prompts, selectedCategoryId, sortOrder, searchQuery]);
 
   const columns = useMemo(() => {
     const cols: SavedPrompt[][] = Array.from({ length: columnCount }, () => []);
-    sortedAndFilteredPrompts.forEach((item, index) => {
-        cols[index % columnCount].push(item);
-    });
+    sortedAndFilteredPrompts.forEach((item, index) => cols[index % columnCount].push(item));
     return cols;
   }, [sortedAndFilteredPrompts, columnCount]);
 
-  const currentCategoryName = useMemo(() => {
-      if (selectedCategoryId === 'all') return 'All Prompts';
-      if (selectedCategoryId === 'uncategorized') return 'Uncategorized';
-      return categories.find(c => c.id === selectedCategoryId)?.name || 'Category';
-  }, [selectedCategoryId, categories]);
-
-  const detailViewIndex = useMemo(() => {
-    if (!detailViewPromptId) return null;
-    const index = sortedAndFilteredPrompts.findIndex(p => p.id === detailViewPromptId);
-    return index !== -1 ? index : null;
-  }, [detailViewPromptId, sortedAndFilteredPrompts]);
-
   if (isLoading) return <div className="flex-grow flex items-center justify-center"><LoadingSpinner /></div>;
-
-  if(loadError) {
-      return (
-          <div className="flex flex-col items-center justify-center text-center p-4">
-              <h2 className="text-xl font-bold text-error mb-2">Error</h2>
-              <p className="text-base-content/70 max-w-md">{loadError}</p>
-          </div>
-      );
-  }
-
-  const renderGridView = () => (
-      <div className="p-6">
-          {sortedAndFilteredPrompts.length > 0 ? (
-            <div className="flex gap-4">
-                {columns.map((columnItems, colIndex) => (
-                    <div key={colIndex} className="flex flex-1 flex-col gap-4 min-w-0">
-                        {columnItems.map(prompt => (
-                            <SavedPromptCard
-                                key={prompt.id}
-                                prompt={prompt}
-                                onDeleteClick={handleDeleteClick}
-                                onEditClick={handleEditClick}
-                                onSendToEnhancer={onSendToEnhancer}
-                                onOpenDetailView={() => setDetailViewPromptId(prompt.id)}
-                                onClip={handleClipPrompt}
-                            />
-                        ))}
-                    </div>
-                ))}
-            </div>
-          ) : (
-              <div className="text-center py-16 px-6 flex flex-col justify-center">
-                  <svg xmlns="http://www.w3.org/2000/svg" className="mx-auto h-12 w-12 text-base-content/40" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" /></svg>
-                  <h3 className="mt-2 text-xl font-medium text-base-content">No prompts found</h3>
-                  <p className="mt-1 text-base-content/70">There are no prompts matching your search in the "{currentCategoryName}" category.</p>
-              </div>
-          )}
-        </div>
-  );
-  
-  const renderDetailView = () => (
-      <div className="overflow-hidden h-full">
-          <PromptDetailView
-              prompts={sortedAndFilteredPrompts}
-              currentIndex={detailViewIndex!}
-              onClose={() => setDetailViewPromptId(null)}
-              onNavigate={(newIndex) => {
-                  const newPrompt = sortedAndFilteredPrompts[newIndex];
-                  if (newPrompt) setDetailViewPromptId(newPrompt.id);
-              }}
-              onDelete={(prompt) => {
-                  setDetailViewPromptId(null);
-                  handleDeleteClick(prompt);
-              }}
-              onUpdate={handleUpdatePrompt}
-              onSendToEnhancer={(text) => {
-                  setDetailViewPromptId(null);
-                  onSendToEnhancer(text);
-              }}
-              showGlobalFeedback={showGlobalFeedback}
-              onClip={handleClipPrompt}
-              onClipString={handleClipString}
-          />
-      </div>
-  );
 
   return (
     <>
-      <section className="flex flex-row h-full">
-        <aside className={`relative flex-shrink-0 bg-base-100 transition-all duration-300 ease-in-out ${isCategoryPanelCollapsed ? 'w-0' : 'w-80'}`}>
+      <section className="flex flex-row h-full bg-base-100 overflow-hidden">
+        <aside className={`relative flex-shrink-0 bg-base-100 border-r border-base-300 transition-all duration-300 ease-in-out ${isCategoryPanelCollapsed ? 'w-0' : 'w-96'}`}>
           <CategoryPanelToggle isCollapsed={isCategoryPanelCollapsed} onToggle={onToggleCategoryPanel} />
-          <div className={`h-full overflow-y-auto p-4 transition-opacity duration-200 ${isCategoryPanelCollapsed ? 'opacity-0' : 'opacity-100'}`}>
-              <h2 className="px-3 pt-2 pb-2 text-xs font-semibold text-base-content/60 uppercase tracking-wider">
-                Categories
-              </h2>
-              <TreeView
-                  items={treeItems}
-                  selectedId={selectedCategoryId}
-                  onSelect={setSelectedCategoryId}
-              />
+          <div className={`h-full overflow-hidden transition-opacity duration-200 ${isCategoryPanelCollapsed ? 'opacity-0 invisible' : 'opacity-100 visible'}`}>
+            <div className="h-full overflow-y-auto p-6 w-96 custom-scrollbar">
+              <h2 className="text-[10px] font-black uppercase tracking-[0.3em] text-base-content/30 mb-6 px-3">Registry Index</h2>
+              <TreeView items={treeItems} selectedId={selectedCategoryId} onSelect={setSelectedCategoryId} />
+            </div>
           </div>
         </aside>
 
-        <main className="relative flex-grow flex flex-col h-full overflow-hidden">
-            {prompts.length === 0 ? (
-                <div className="text-center py-16 px-6 flex flex-col items-center justify-center h-full">
-                    <PromptIcon className="mx-auto h-12 w-12 text-base-content/40" />
-                    <h3 className="mt-2 text-xl font-medium text-base-content">Your Prompt Library is Empty</h3>
-                    <p className="mt-1 text-base-content/70">
-                        Add your first prompt to get started, or save prompts from the 'Refiner' tab.
-                    </p>
-                    <div className="mt-6">
-                        <button
-                            onClick={handleAddNewClick}
-                            className="btn btn-primary btn-sm"
-                        >
-                            Add New Prompt
-                        </button>
+        <main className="relative flex-grow flex flex-col h-full overflow-y-auto overflow-x-hidden bg-base-100 scroll-smooth custom-scrollbar">
+            <section className="p-10 lg:p-16 border-b border-base-300 bg-base-200/20">
+                <div className="max-w-screen-2xl mx-auto flex flex-col md:flex-row items-end justify-between gap-12">
+                    <div className="flex-1">
+                        <h1 className="text-4xl lg:text-5xl font-black tracking-tighter text-base-content leading-tight mb-6">TOKENS<span className="text-primary">.</span></h1>
+                        <p className="text-base font-bold text-base-content/40 uppercase tracking-[0.3em] max-w-md">Archival repository for high-fidelity generative formulas.</p>
                     </div>
                 </div>
-            ) : (
-                <>
-                    {/* Controls Bar */}
-                    <div className="flex-shrink-0 bg-base-100 px-6 py-4 border-b border-l border-base-300 flex items-center gap-4">
-                        <div className="flex-grow">
-                             <input
-                                type="text"
-                                value={searchQuery}
-                                onChange={(e) => setSearchQuery((e.currentTarget as any).value)}
-                                placeholder={`Search in ${currentCategoryName}...`}
-                                className="input input-bordered w-full input-sm"
-                            />
-                        </div>
+            </section>
 
-                        <div className="flex items-center gap-4 flex-shrink-0">
-                             <div className="relative">
-                                <select 
-                                    value={sortOrder}
-                                    onChange={(e) => setSortOrder((e.currentTarget as any).value as SortOrder)}
-                                    className="select select-bordered select-sm"
-                                >
-                                    <option value="newest">Newest</option>
-                                    <option value="oldest">Oldest</option>
-                                    <option value="title">Title</option>
-                                </select>
-                                <ArrowsUpDownIcon className="w-4 h-4 text-base-content/40 absolute right-2 top-1/2 -translate-y-1/2 pointer-events-none" />
+            <div className="flex-shrink-0 bg-base-100 px-10 py-6 border-b border-base-300 sticky top-0 z-20 backdrop-blur-md bg-base-100/80">
+                <div className="max-w-screen-2xl mx-auto flex flex-wrap items-center justify-between gap-6">
+                    <div className="flex items-center gap-4 flex-grow max-w-xl">
+                        <div className="w-1.5 h-1.5 rounded-full bg-primary animate-pulse"></div>
+                        <input type="text" value={searchQuery} onChange={(e) => setSearchQuery((e.currentTarget as any).value)} placeholder="Filter sequence..." className="input input-ghost w-full focus:bg-transparent border-none px-0 font-bold text-xl tracking-tight placeholder:opacity-10" />
+                    </div>
+                    <div className="flex items-center gap-4">
+                        <select value={sortOrder} onChange={(e) => setSortOrder((e.currentTarget as any).value as SortOrder)} className="select select-bordered select-sm rounded-none text-[10px] font-black uppercase tracking-widest"><option value="newest">Recent</option><option value="oldest">Oldest</option><option value="title">A-Z</option></select>
+                        <button onClick={() => { setPromptToEdit(null); setIsEditorModalOpen(true); }} className="btn btn-primary btn-sm rounded-none font-black text-[10px] tracking-widest px-6 shadow-lg">ARCHIVE NEW</button>
+                    </div>
+                </div>
+            </div>
+
+            <div className="flex-grow p-0 bg-base-200/5 min-h-[400px]">
+                {prompts.length === 0 ? (
+                    <div className="text-center py-32 flex flex-col items-center opacity-10">
+                        <PromptIcon className="mx-auto h-20 w-20" />
+                        <h3 className="mt-6 text-2xl font-black uppercase tracking-tighter">Vault Empty</h3>
+                    </div>
+                ) : sortedAndFilteredPrompts.length > 0 ? (
+                    <div className="flex border-r border-base-300">
+                        {columns.map((columnItems, colIndex) => (
+                            <div key={colIndex} className="flex flex-1 flex-col gap-0 min-w-0 border-l border-base-300 first:border-l-0">
+                                {columnItems.map(prompt => (
+                                    <SavedPromptCard key={prompt.id} prompt={prompt} categoryName={categories.find(c => c.id === prompt.categoryId)?.name} onDeleteClick={(p) => { setPromptToDelete(p); setIsDeleteModalOpen(true); }} onEditClick={(p) => { setPromptToEdit(p); setIsEditorModalOpen(true); }} onSendToEnhancer={onSendToEnhancer} onOpenDetailView={() => setDetailViewPromptId(prompt.id)} onClip={(p) => onClipIdea({ id: `clipped-${p.id}`, lens: 'Library', title: p.title || 'Artifact', prompt: p.text, source: 'Library' })} />
+                                ))}
                             </div>
-                            <button 
-                                onClick={handleAddNewClick} 
-                                className="btn btn-primary btn-sm"
-                            >
-                                Add New Prompt
-                            </button>
-                        </div>
+                        ))}
                     </div>
-                    <div className="flex-grow overflow-y-auto">
-                        {detailViewIndex !== null && sortedAndFilteredPrompts[detailViewIndex] ? renderDetailView() : renderGridView()}
+                ) : (
+                    <div className="text-center py-32 flex flex-col items-center opacity-10"><h3 className="text-xl font-black uppercase tracking-tighter">No Matches</h3></div>
+                )}
+            </div>
+
+            {detailViewPromptId && (
+                <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm animate-fade-in flex items-center justify-center p-1 lg:p-2 overflow-hidden">
+                    <div className="w-full h-full bg-base-300 rounded-none border border-base-300 shadow-2xl flex flex-col overflow-hidden relative">
+                         <PromptDetailView prompts={sortedAndFilteredPrompts} currentIndex={sortedAndFilteredPrompts.findIndex(i => i.id === detailViewPromptId)} onClose={() => setDetailViewPromptId(null)} onNavigate={(idx) => setDetailViewPromptId(sortedAndFilteredPrompts[idx].id)} onDelete={(p) => { setDetailViewPromptId(null); setPromptToDelete(p); setIsDeleteModalOpen(true); }} onUpdate={handleUpdatePrompt} onSendToEnhancer={(text) => { setDetailViewPromptId(null); onSendToEnhancer(text); }} showGlobalFeedback={showGlobalFeedback} onClip={(p) => onClipIdea({ id: `clipped-${p.id}`, lens: 'Library', title: p.title || 'Artifact', prompt: p.text, source: 'Library' })} />
                     </div>
-                </>
+                </div>
             )}
         </main>
       </section>
-      
-      <PromptEditorModal
-        isOpen={isEditorModalOpen}
-        onClose={() => setIsEditorModalOpen(false)}
-        onSave={handleSavePrompt}
-        categories={categories}
-        editingPrompt={promptToEdit}
-      />
-      <ConfirmationModal
-        isOpen={isDeleteModalOpen}
-        onClose={() => setIsDeleteModalOpen(false)}
-        onConfirm={handleConfirmDelete}
-        title="Delete Saved Prompt"
-        message={`Are you sure you want to permanently delete this prompt? This action cannot be undone.`}
-      />
+      <PromptEditorModal isOpen={isEditorModalOpen} onClose={() => setIsEditorModalOpen(false)} onSave={handleSavePrompt} categories={categories} editingPrompt={promptToEdit} />
+      <ConfirmationModal isOpen={isDeleteModalOpen} onClose={() => setIsDeleteModalOpen(false)} onConfirm={handleConfirmDelete} title="Purge Token" message="Permanently erase this generative formula from the vault?" />
     </>
   );
 };

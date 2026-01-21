@@ -35,13 +35,12 @@ const _loadPromptsWithText = async (prompts: SavedPrompt[]): Promise<SavedPrompt
         const textContent = await fileSystemManager.readFile(`${PROMPTS_DIR}/${prompt.id}.txt`);
         return {
             ...prompt,
-            text: textContent || prompt.text, // Fallback to manifest text if file is missing
+            text: textContent || prompt.text,
         };
     }));
     return promptsWithText.sort((a, b) => b.createdAt - a.createdAt);
 };
 
-// --- Prompts ---
 export const loadSavedPrompts = async (): Promise<SavedPrompt[]> => {
     const manifest = await getManifest();
     return _loadPromptsWithText(manifest.prompts);
@@ -76,17 +75,10 @@ export const addMultipleSavedPrompts = async (promptsData: Omit<SavedPrompt, 'id
             ...promptData,
         };
         newPrompts.push(newPrompt);
-        
-        savePromises.push(
-            fileSystemManager.saveFile(
-                `${PROMPTS_DIR}/${newPrompt.id}.txt`,
-                new Blob([newPrompt.text], { type: 'text/plain;charset=utf-8' })
-            )
-        );
+        savePromises.push(fileSystemManager.saveFile(`${PROMPTS_DIR}/${newPrompt.id}.txt`, new Blob([newPrompt.text], { type: 'text/plain;charset=utf-8' })));
     }
     
     await Promise.all(savePromises);
-    
     manifest.prompts.unshift(...newPrompts);
     await saveManifest(manifest);
 };
@@ -94,18 +86,9 @@ export const addMultipleSavedPrompts = async (promptsData: Omit<SavedPrompt, 'id
 export const updateSavedPrompt = async (id: string, promptData: Omit<SavedPrompt, 'id' | 'createdAt'>): Promise<void> => {
     const manifest = await getManifest();
     const promptIndex = manifest.prompts.findIndex(p => p.id === id);
-
     if (promptIndex > -1) {
-        manifest.prompts[promptIndex] = {
-            ...manifest.prompts[promptIndex],
-            ...promptData,
-        };
-
-        await fileSystemManager.saveFile(
-            `${PROMPTS_DIR}/${id}.txt`,
-            new Blob([promptData.text], { type: 'text/plain;charset=utf-8' })
-        );
-        
+        manifest.prompts[promptIndex] = { ...manifest.prompts[promptIndex], ...promptData };
+        await fileSystemManager.saveFile(`${PROMPTS_DIR}/${id}.txt`, new Blob([promptData.text], { type: 'text/plain;charset=utf-8' }));
         await saveManifest(manifest);
     }
 };
@@ -113,50 +96,50 @@ export const updateSavedPrompt = async (id: string, promptData: Omit<SavedPrompt
 export const deleteSavedPrompt = async (id: string): Promise<void> => {
     const manifest = await getManifest();
     manifest.prompts = manifest.prompts.filter(p => p.id !== id);
-    
     await fileSystemManager.deleteFile(`${PROMPTS_DIR}/${id}.txt`);
-
     await saveManifest(manifest);
 };
 
-
-// --- Categories ---
 export const loadPromptCategories = async (): Promise<PromptCategory[]> => {
     const manifest = await getManifest();
-    return manifest.categories;
+    return manifest.categories.sort((a, b) => (a.order || 0) - (b.order || 0));
 };
 
-export const addPromptCategory = async (name: string): Promise<PromptCategory[]> => {
+export const addPromptCategory = async (name: string, parentId?: string): Promise<PromptCategory[]> => {
     const manifest = await getManifest();
     const newCategory: PromptCategory = {
         id: `pcat_${Date.now()}`,
-        name: name
+        name: name,
+        parentId: parentId,
+        order: manifest.categories.length
     };
     manifest.categories.push(newCategory);
     await saveManifest(manifest);
-    return manifest.categories;
+    return manifest.categories.sort((a, b) => a.order - b.order);
 };
 
-export const updatePromptCategory = async (id: string, newName: string): Promise<PromptCategory[]> => {
+export const updatePromptCategory = async (id: string, updates: Partial<Omit<PromptCategory, 'id'>>): Promise<PromptCategory[]> => {
     const manifest = await getManifest();
     const catIndex = manifest.categories.findIndex(c => c.id === id);
     if (catIndex > -1) {
-        manifest.categories[catIndex].name = newName;
+        manifest.categories[catIndex] = { ...manifest.categories[catIndex], ...updates };
     }
     await saveManifest(manifest);
-    return manifest.categories;
+    return manifest.categories.sort((a, b) => a.order - b.order);
+};
+
+export const savePromptCategoriesOrder = async (categories: PromptCategory[]): Promise<void> => {
+    const manifest = await getManifest();
+    manifest.categories = categories;
+    await saveManifest(manifest);
 };
 
 export const deletePromptCategory = async (id: string): Promise<PromptCategory[]> => {
     const manifest = await getManifest();
     manifest.categories = manifest.categories.filter(cat => cat.id !== id);
-
     manifest.prompts.forEach(prompt => {
-        if (prompt.categoryId === id) {
-            prompt.categoryId = undefined;
-        }
+        if (prompt.categoryId === id) prompt.categoryId = undefined;
     });
-
     await saveManifest(manifest);
-    return manifest.categories;
+    return manifest.categories.sort((a, b) => a.order - b.order);
 };

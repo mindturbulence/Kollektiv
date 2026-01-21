@@ -1,5 +1,3 @@
-
-
 import React, { useState, useEffect } from 'react';
 import { PhotoIcon } from './icons';
 import { fileSystemManager } from '../utils/fileUtils';
@@ -81,7 +79,7 @@ const ImageSlider: React.FC<ImageSliderProps> = ({ imageUrls, name }) => {
 
     if (imageUrls.length === 0) {
         return (
-            <div className="w-full aspect-square bg-slate-800 flex flex-col items-center justify-center text-center p-2">
+            <div className="w-full h-full bg-slate-800 flex flex-col items-center justify-center text-center p-2">
                 <PhotoIcon className="w-10 h-10 text-slate-600" />
                 <p className="text-slate-500 text-xs mt-2">No image samples</p>
             </div>
@@ -89,7 +87,7 @@ const ImageSlider: React.FC<ImageSliderProps> = ({ imageUrls, name }) => {
     }
 
     return (
-        <div className="relative w-full aspect-square bg-slate-800">
+        <div className="relative w-full h-full bg-slate-800">
             {isLoading ? (
                  <div className="w-full h-full flex items-center justify-center animate-pulse">
                     <PhotoIcon className="w-10 h-10 text-slate-700" />

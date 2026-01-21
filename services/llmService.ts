@@ -1,144 +1,118 @@
-
 import { GoogleGenAI, GenerateContentResponse, Type } from "@google/genai";
 import type { EnhancementResult, LLMSettings, PromptModifiers, PromptAnatomy, CheatsheetCategory } from '../types';
-import { enhancePromptGemini, analyzePaletteMood as analyzePaletteMoodGemini, generatePromptFormulaGemini, refineSinglePromptGemini, abstractImageGemini, generateColorNameGemini, dissectPromptGemini, generateFocusedVariationsGemini, reconstructPromptGemini, reconstructFromIntentGemini, replaceComponentInPromptGemini, detectSalientRegionGemini, generateArtistDescriptionGemini, enhancePromptGeminiStream, refineSinglePromptGeminiStream } from './geminiService';
-import { enhancePromptOllama, analyzePaletteMoodOllama, generatePromptFormulaOllama, refineSinglePromptOllama, abstractImageOllama, generateColorNameOllama, dissectPromptOllama, generateFocusedVariationsOllama, reconstructPromptOllama, replaceComponentInPromptOllama, reconstructFromIntentOllama, generateArtistDescriptionOllama, enhancePromptOllamaStream, refineSinglePromptOllamaStream } from './ollamaService';
-import { TARGET_VIDEO_AI_MODELS } from '../constants/models';
+import { enhancePromptGemini, analyzePaletteMood as analyzePaletteMoodGemini, generatePromptFormulaGemini, refineSinglePromptGemini, abstractImageGemini, generateColorNameGemini, dissectPromptGemini, generateFocusedVariationsGemini, reconstructPromptGemini, reconstructFromIntentGemini, replaceComponentInPromptGemini, detectSalientRegionGemini, generateArtistDescriptionGemini, reconcileDescriptionsGemini, enhancePromptGeminiStream, refineSinglePromptGeminiStream } from './geminiService';
+import { enhancePromptOllama, analyzePaletteMoodOllama, generatePromptFormulaOllama, refineSinglePromptOllama, abstractImageOllama, generateColorNameOllama, dissectPromptOllama, generateFocusedVariationsOllama, reconstructPromptOllama, replaceComponentInPromptOllama, reconcileDescriptionsOllama, reconstructFromIntentOllama, generateArtistDescriptionOllama, enhancePromptOllamaStream, refineSinglePromptOllamaStream } from './ollamaService';
+import { TARGET_VIDEO_AI_MODELS, TARGET_AUDIO_AI_MODELS } from '../constants/models';
 
-// --- Model-Specific Reference Logic ---
+// --- Model-Specific Syntax (Engine Tuning) ---
 const getModelSyntax = (model: string) => {
     const lower = model.toLowerCase();
+    if (lower.includes('ltx-2')) return { format: "Cinematic Narrative.", rules: "Describe sequence of action with physical verbs. Continuous movement focus. High temporal consistency." };
+    if (lower.includes('flux')) return { format: "Dense Descriptive.", rules: "Natural language paragraph. High visual physics detail. Focus on micro-textures, lighting interaction, and realistic skin/material rendering." };
+    if (lower.includes('midjourney')) return { format: "Stylized Tags.", rules: "Focus on style, medium, and lighting. Do NOT output Midjourney --params (ar, stylize, etc) in the AI text; they are appended programmatically." };
+    if (lower.includes('pony')) return { format: "Structured Tags.", rules: "Start with: score_9, score_8_up, masterpiece, followed by descriptive tags. Source tokens are mandatory." };
+    if (lower.includes('veo')) return { format: "Cinematic Flow.", rules: "Fluid action, light interaction, and atmospheric density. Focus on camera motion verbs." };
     
-    // Pony/Illustrious Scoring System
-    if (lower.includes('pony') || lower.includes('illustrious')) {
-        return {
-            format: "Comma-separated tags + Scoring system.",
-            prefix: "score_9, score_8_up, score_7_up, rating_safe, source_anime, ",
-            rules: "Start with quality scores. Use specific descriptive tags with underscores (e.g., cyber_armor). Focus on character traits and artist names as tags."
-        };
-    }
-    
-    // Stable Diffusion Weighting (SDXL, SD3.5, Chroma)
-    if (lower.includes('stable diffusion') || lower.includes('sdxl') || lower.includes('chroma')) {
-        return {
-            format: "Weighted keywords and descriptive phrases.",
-            prefix: "masterpiece, best quality, ultra-detailed, ",
-            rules: "Use (parentheses:1.2) for emphasis. Focus on: Subject > Style > Environment > Lighting > Technical specs."
-        };
-    }
+    if (lower.includes('elevenlabs')) return { format: "Scripted Dialogue.", rules: "Include stage directions in [brackets] for emotional delivery." };
+    if (lower.includes('mmaudio')) return { format: "Sonic Textures.", rules: "Describe layers of sound, materials clashing, and reverberation." };
 
-    // High-End Textual Narrative Models (WAN, HunYuan, Flux, MJ, Grok, GPT, Luma, MiniMax, Seedance, Z-Image)
-    if (lower.includes('flux') || lower.includes('z-image') || lower.includes('grok') || lower.includes('gpt') || lower.includes('seedance') || lower.includes('janus') || lower.includes('midjourney') || lower.includes('wan') || lower.includes('hunyuan') || lower.includes('luma') || lower.includes('minimax') || lower.includes('imagen') || lower.includes('hailuo')) {
-        return {
-            format: "Exquisite, high-utility natural language narrative.",
-            prefix: "",
-            rules: "Write a cohesive paragraph (or more for 'Long' mode) describing the 'Visual Physics' of the scene: how light interacts with specific materials, atmospheric density, and micro-textures. Describe depth of field and spatial relationships naturally. Avoid generic adjectives; use technical descriptors."
-        };
-    }
-
-    return {
-        format: "Natural language descriptive prose.",
-        prefix: "",
-        rules: "Clearly describe visual elements in cohesive sentences."
-    };
+    return { format: "Natural Language.", rules: "Cohesive visual description." };
 };
 
-// --- Token-Efficient & Model-Aware Roles ---
+// --- AI Roles ---
 const AI_ROLES = {
-    ENHANCER: (model: string, length: string, isVideo: boolean, hasManualCamera: boolean) => {
+    ENHANCER: (model: string, length: string, isVideo: boolean, isAudio: boolean, hasManualCamera: boolean, inputType?: string) => {
         const syntax = getModelSyntax(model);
-        const lengthGuides = {
-            'Short': 'approx 20 words. One punchy, evocative sentence.',
-            'Medium': 'approx 70-100 words. A detailed descriptive paragraph.',
-            'Long': 'MINIMUM 400 words. A sprawling visual epic. Detail every surface, light bounce, artistic influence, and technical specification (ISO, Aperture, Sensor type if applicable).'
-        };
-        const guide = lengthGuides[length as keyof typeof lengthGuides] || lengthGuides['Medium'];
+        const l = length === 'Short' ? '30 words' : length === 'Long' ? '550+ words' : '180 words';
+        const isI2V = isVideo && inputType === 'i2v';
 
-        const videoLogic = isVideo 
-            ? `[VIDEO AI MODE ACTIVE]
-Rules for Temporal Consistency:
-${hasManualCamera 
-    ? "A specific camera movement is selected in the Modifiers tab. Use it exactly: [Modifier provided in Context]." 
-    : "USER HAS OMITTED CAMERA MOVEMENT: You MUST autonomously and creatively invent a cinematic camera movement (e.g., 'A soaring drone shot descending into...', 'A slow, intimate dolly-in', 'An anamorphic tracking shot'). This movement must match the emotional weight of the subject."}` 
-            : "";
-
-        return `Role: Kollektiv Chief Prompt Architect for ${model}.
-Target System Syntax: ${syntax.format}
-Official Reference Rules: ${syntax.rules}
-${videoLogic}
-
-TASK: Generate 3 unique, high-tier variations of the USER SUBJECT.
-MANDATORY: 
-- Prepend "${syntax.prefix}" to every result if applicable.
-- Detail Level [${length}]: Results MUST be ${guide}
-- Output EXACTLY 3 lines. One result per line. 
-- NO preamble, NO numbering, NO markdown, NO thinking blocks.`;
+        return `Role: Professional Prompt Architect for ${model}.
+Goal: Generate ${isAudio ? '1 script/formula' : '3 unique visual formulas'}.
+Syntax: ${syntax.format}. Rules: ${syntax.rules}. Target Len: ${l}.
+${isAudio ? 'Acoustic focus.' : isVideo ? (isI2V ? "I2V mode: Animate frame. Kinetic focus." : "T2V mode: High energy.") : "Visual focus."}
+Output: ${isAudio ? 'Single script' : '3 distinct lines'}. NO INTROS.`;
     },
 
-    REFINER: (model: string, isVideo: boolean, hasManualCamera: boolean) => {
+    REFINER: (model: string, isVideo: boolean, isAudio: boolean, hasManualCamera: boolean, inputType?: string) => {
         const syntax = getModelSyntax(model);
-        const videoLogic = isVideo && !hasManualCamera 
-            ? "MANDATORY: Autonomously inject a creative cinematic camera movement that fits the scene's mood." 
-            : "";
-            
-        return `Role: Art Director for ${model}. 
-Task: Convert input into optimized ${syntax.format} based on these rules: ${syntax.rules}.
-${videoLogic}
-Requirement: Prepend "${syntax.prefix}" if necessary. Output ONLY the refined prompt text.`;
-    },
-
-    ANALYST: "Task: JSON dissect prompt into keys: subject, action, style, mood, composition, lighting, details. Output JSON only.",
-    FORMULA_MAKER: (wildcardNames: string[]) => `Task: Replace terms with __wildcard__ placeholders. 
-Available: ${wildcardNames.slice(0, 50).join(', ')}. 
-Constraint: Output template ONLY.`
+        return `Role: Expert Prompt Refiner for ${model}. Rewrite concept into perfect ${syntax.format} formula. Rules: ${syntax.rules}. Output text ONLY.`;
+    }
 };
 
 export const cleanLLMResponse = (text: string): string => {
     let cleaned = text.replace(/<(think|thought)>[\s\S]*?(<\/\1>|$)/gi, '').trim();
     cleaned = cleaned.replace(/```[a-z]*\n([\s\S]*?)\n```/gi, '$1').replace(/`/g, '');
-    
-    const stopWords = [/^here/i, /^sure/i, /^certainly/i, /^expanded/i, /^refined/i, /^output/i, /^okay/i, /^suggestion/i, /^the following/i, /^result/i, /^1\.\s/i];
+    const stopWords = [/^here/i, /^sure/i, /^certainly/i, /^okay/i, /^1\.\s/i];
     return cleaned.split('\n')
         .map(l => l.trim().replace(/^(\d+[\.\)]|\*|-|\+)\s+/, ''))
         .filter(l => l && !stopWords.some(r => r.test(l)))
         .join('\n').trim();
 };
 
-export const testOllamaConnection = async (baseUrl: string): Promise<boolean> => {
-  if (!baseUrl || !baseUrl.startsWith('http')) return false;
-  try {
-    const response = await fetch(baseUrl, { method: 'HEAD', signal: AbortSignal.timeout(2000) });
-    return response.ok;
-  } catch { return false; }
+export const buildContextForEnhancer = (modifiers: PromptModifiers): string => {
+    const ctx = [];
+    
+    if (modifiers.artStyle) ctx.push(`Movement: ${modifiers.artStyle}`);
+    if (modifiers.artist) ctx.push(`Creator: ${modifiers.artist}`);
+    if (modifiers.aestheticLook) ctx.push(`Cinematic Look: ${modifiers.aestheticLook}`);
+    if (modifiers.digitalAesthetic) ctx.push(`Aesthetic: ${modifiers.digitalAesthetic}`);
+    if (modifiers.zImageStyle) ctx.push(`Z-Image Variant: ${modifiers.zImageStyle}`);
+    
+    if (modifiers.cameraType) ctx.push(`Body: ${modifiers.cameraType}`);
+    if (modifiers.cameraModel) ctx.push(`Model: ${modifiers.cameraModel}`);
+    
+    // Chainable Film Stock Logic
+    if (modifiers.filmStock) {
+        if (modifiers.cameraType === 'Analog Film Camera') {
+            ctx.push(`Authentic Analog Load: ${modifiers.filmStock} film stock`);
+        } else if (modifiers.cameraType && modifiers.cameraType !== 'Analog Film Camera') {
+            ctx.push(`Digital Capture Post-Processed to Emulate: ${modifiers.filmStock} aesthetic`);
+        } else {
+            ctx.push(`Film Reference: ${modifiers.filmStock}`);
+        }
+    }
+
+    if (modifiers.lensType) ctx.push(`Lens: ${modifiers.lensType}`);
+    if (modifiers.cameraAngle) ctx.push(`Angle: ${modifiers.cameraAngle}`);
+    if (modifiers.cameraProximity) ctx.push(`Framing: ${modifiers.cameraProximity}`);
+    if (modifiers.cameraSettings) ctx.push(`Settings: ${modifiers.cameraSettings}`);
+    if (modifiers.cameraEffect) ctx.push(`Effect: ${modifiers.cameraEffect}`);
+    
+    if (modifiers.lighting) ctx.push(`Lighting: ${modifiers.lighting}`);
+    if (modifiers.composition) ctx.push(`Composition: ${modifiers.composition}`);
+    if (modifiers.photographyStyle) ctx.push(`Genre: ${modifiers.photographyStyle}`);
+    if (modifiers.filmType) ctx.push(`Medium: ${modifiers.filmType}`);
+    if (modifiers.aspectRatio) ctx.push(`Aspect Ratio: ${modifiers.aspectRatio}`);
+
+    if (modifiers.motion) ctx.push(`Dynamics: ${modifiers.motion}`);
+    if (modifiers.cameraMovement) ctx.push(`Camera Path: ${modifiers.cameraMovement}`);
+
+    if (modifiers.audioType) ctx.push(`Type: ${modifiers.audioType}`);
+    if (modifiers.voiceGender) ctx.push(`Voice: ${modifiers.voiceGender}`);
+    if (modifiers.voiceTone) ctx.push(`Tone: ${modifiers.voiceTone}`);
+    if (modifiers.audioEnvironment) ctx.push(`Acoustics: ${modifiers.audioEnvironment}`);
+    if (modifiers.audioMood) ctx.push(`Mood: ${modifiers.audioMood}`);
+    if (modifiers.audioDuration) ctx.push(`Duration: ${modifiers.audioDuration}s`);
+
+    return ctx.length ? `[Architectural Constraints]\n${ctx.join('\n')}` : '';
 };
 
 export const buildMidjourneyParams = (modifiers: PromptModifiers): string => {
-    const p = [];
-    if (modifiers.mjNo) p.push(`--no ${modifiers.mjNo}`);
-    if (modifiers.mjAspectRatio) p.push(`--ar ${modifiers.mjAspectRatio}`);
-    if (modifiers.mjChaos) p.push(`--chaos ${modifiers.mjChaos}`);
-    if (modifiers.mjQuality) p.push(`--q ${modifiers.mjQuality}`);
-    if (modifiers.mjStylize) p.push(`--stylize ${modifiers.mjStylize}`);
-    if (modifiers.mjTile) p.push(`--tile`);
-    if (modifiers.mjNiji) p.push(`--niji ${modifiers.mjNiji}`);
-    else if (modifiers.mjVersion) p.push(`--v ${modifiers.mjVersion}`);
-    return p.join(' ');
-};
-
-export const buildContextForEnhancer = (modifiers: PromptModifiers): string => {
-    const ctx = [];
-    if (modifiers.artStyle) ctx.push(`Art Style: ${modifiers.artStyle}`);
-    if (modifiers.artist) ctx.push(`Artist: ${modifiers.artist}`);
-    if (modifiers.zImageStyle) ctx.push(`Aesthetic: ${modifiers.zImageStyle}`);
-    if (modifiers.photographyStyle) ctx.push(`Photography: ${modifiers.photographyStyle}`);
-    if (modifiers.cameraAngle) ctx.push(`Angle: ${modifiers.cameraAngle}`);
-    if (modifiers.cameraProximity) ctx.push(`Distance: ${modifiers.cameraProximity}`);
-    if (modifiers.lighting) ctx.push(`Lighting: ${modifiers.lighting}`);
-    if (modifiers.composition) ctx.push(`Composition: ${modifiers.composition}`);
-    if (modifiers.cameraMovement) ctx.push(`Camera Movement: ${modifiers.cameraMovement}`);
-    if (modifiers.motion) ctx.push(`Action/Motion: ${modifiers.motion}`);
-    
-    return ctx.length ? `[MANDATORY CONTEXT]\n${ctx.join('\n')}` : '';
+    const params: string[] = [];
+    if (modifiers.mjAspectRatio) params.push(`--ar ${modifiers.mjAspectRatio}`);
+    if (modifiers.mjChaos && modifiers.mjChaos !== '0') params.push(`--c ${modifiers.mjChaos}`);
+    if (modifiers.mjStylize && modifiers.mjStylize !== '100') params.push(`--s ${modifiers.mjStylize}`);
+    if (modifiers.mjWeird && modifiers.mjWeird !== '0') params.push(`--weird ${modifiers.mjWeird}`);
+    if (modifiers.mjVersion) params.push(`--v ${modifiers.mjVersion}`);
+    if (modifiers.mjNiji) params.push(`--niji ${modifiers.mjNiji}`);
+    if (modifiers.mjStyle) params.push(`--style ${modifiers.mjStyle}`);
+    if (modifiers.mjTile) params.push(`--tile`);
+    if (modifiers.mjNo) params.push(`--no ${modifiers.mjNo}`);
+    if (modifiers.mjQuality) params.push(`--q ${modifiers.mjQuality}`);
+    if (modifiers.mjSeed) params.push(`--seed ${modifiers.mjSeed}`);
+    if (modifiers.mjStop) params.push(`--stop ${modifiers.mjStop}`);
+    if (modifiers.mjRepeat) params.push(`--repeat ${modifiers.mjRepeat}`);
+    return params.join(' ');
 };
 
 export async function* enhancePromptStream(
@@ -147,17 +121,19 @@ export async function* enhancePromptStream(
     promptLength: string,
     targetAIModel: string,
     modifiers: PromptModifiers,
-    settings: LLMSettings
+    settings: LLMSettings,
+    referenceImages?: string[]
 ): AsyncGenerator<string> {
     const isVideo = !!TARGET_VIDEO_AI_MODELS.find(m => m === targetAIModel);
+    const isAudio = !!TARGET_AUDIO_AI_MODELS.find(m => m === targetAIModel);
     const hasManualCamera = !!modifiers.cameraMovement;
-    const systemInstruction = AI_ROLES.ENHANCER(targetAIModel, promptLength, isVideo, hasManualCamera);
+    const systemInstruction = AI_ROLES.ENHANCER(targetAIModel, promptLength, isVideo, isAudio, hasManualCamera, modifiers.videoInputType);
     const context = buildContextForEnhancer(modifiers);
-    const input = `${context}\n\n[USER SUBJECT]\n${originalPrompt}`;
+    const input = `${context}\n\n[Primary Concept]\n${originalPrompt}`;
 
     const stream = settings.activeLLM === 'ollama'
         ? enhancePromptOllamaStream(input, constantModifier, settings, systemInstruction)
-        : enhancePromptGeminiStream(input, constantModifier, settings, systemInstruction, promptLength);
+        : enhancePromptGeminiStream(input, constantModifier, settings, systemInstruction, promptLength, referenceImages);
 
     let inThought = false;
     for await (const chunk of stream) {
@@ -169,8 +145,9 @@ export async function* enhancePromptStream(
 
 export const refineSinglePrompt = async (promptText: string, targetAIModel: string, settings: LLMSettings, modifiers: PromptModifiers = {}): Promise<string> => {
     const isVideo = !!TARGET_VIDEO_AI_MODELS.find(m => m === targetAIModel);
+    const isAudio = !!TARGET_AUDIO_AI_MODELS.find(m => m === targetAIModel);
     const hasManualCamera = !!modifiers.cameraMovement;
-    const sys = AI_ROLES.REFINER(targetAIModel, isVideo, hasManualCamera);
+    const sys = AI_ROLES.REFINER(targetAIModel, isVideo, isAudio, hasManualCamera, modifiers.videoInputType);
     const raw = settings.activeLLM === 'ollama' 
         ? await refineSinglePromptOllama(promptText, settings, sys)
         : await refineSinglePromptGemini(promptText, '', settings, sys);
@@ -184,8 +161,9 @@ export async function* refineSinglePromptStream(
     modifiers: PromptModifiers = {}
 ): AsyncGenerator<string> {
     const isVideo = !!TARGET_VIDEO_AI_MODELS.find(m => m === targetAIModel);
+    const isAudio = !!TARGET_AUDIO_AI_MODELS.find(m => m === targetAIModel);
     const hasManualCamera = !!modifiers.cameraMovement;
-    const sys = AI_ROLES.REFINER(targetAIModel, isVideo, hasManualCamera);
+    const sys = AI_ROLES.REFINER(targetAIModel, isVideo, isAudio, hasManualCamera, modifiers.videoInputType);
     const stream = settings.activeLLM === 'ollama'
         ? refineSinglePromptOllamaStream(promptText, settings, sys)
         : refineSinglePromptGeminiStream(promptText, '', settings, sys);
@@ -198,22 +176,135 @@ export async function* refineSinglePromptStream(
     }
 }
 
-export const generatePromptFormulaWithAI = async (promptText: string, wildcardNames: string[], settings: LLMSettings): Promise<string> => {
-    const sys = AI_ROLES.FORMULA_MAKER(wildcardNames);
-    if (settings.activeLLM === 'ollama') return generatePromptFormulaOllama(promptText, settings, sys);
-    return generatePromptFormulaGemini(promptText, settings, sys);
+export const generateArtistDescription = async (artistName: string, settings: LLMSettings): Promise<string> => {
+    return settings.activeLLM === 'ollama'
+        ? generateArtistDescriptionOllama(artistName, settings)
+        : generateArtistDescriptionGemini(artistName, settings);
 };
 
-// Passthroughs
-export const analyzePaletteMood = (hex: string[], s: LLMSettings) => s.activeLLM === 'ollama' ? analyzePaletteMoodOllama(hex, s) : analyzePaletteMoodGemini(hex, s);
-export const generateColorName = (hex: string, mood: string, s: LLMSettings) => s.activeLLM === 'ollama' ? generateColorNameOllama(hex, mood, s) : generateColorNameGemini(hex, mood, s);
-export const dissectPrompt = (t: string, s: LLMSettings) => s.activeLLM === 'ollama' ? dissectPromptOllama(t, s) : dissectPromptGemini(t, s);
-export const generateFocusedVariations = (t: string, c: any, s: LLMSettings) => s.activeLLM === 'ollama' ? generateFocusedVariationsOllama(t, c, s) : generateFocusedVariationsGemini(t, c, s);
-export const reconstructPrompt = (c: any, s: LLMSettings) => s.activeLLM === 'ollama' ? reconstructPromptOllama(c, s) : reconstructPromptGemini(c, s);
-export const replaceComponentInPrompt = (o: string, k: string, n: string, s: LLMSettings) => s.activeLLM === 'ollama' ? replaceComponentInPromptOllama(o, k, n, s) : replaceComponentInPromptGemini(o, k, n, s);
-export const reconstructFromIntent = (i: string[], s: LLMSettings) => s.activeLLM === 'ollama' ? reconstructFromIntentOllama(i, s) : reconstructFromIntentGemini(i, s);
-export const abstractImage = (b64: string, len: string, target: string, s: LLMSettings) => s.activeLLM === 'ollama' ? abstractImageOllama(b64, len, target, s) : abstractImageGemini(b64, len, target, s);
-export const generateArtistDescription = (name: string, s: LLMSettings) => s.activeLLM === 'ollama' ? generateArtistDescriptionOllama(name, s) : generateArtistDescriptionGemini(name, s);
-export const detectSalientRegion = (b64: string, s: LLMSettings) => detectSalientRegionGemini(b64, s);
-// Direct Google Media Functions
-export { generateWithNanoBanana, generateWithImagen, generateWithVeo } from './geminiService';
+export const reconcileDescriptions = async (existing: string, incoming: string, settings: LLMSettings): Promise<string> => {
+    return settings.activeLLM === 'ollama'
+        ? reconcileDescriptionsOllama(existing, incoming, settings)
+        : reconcileDescriptionsGemini(existing, incoming, settings);
+};
+
+export const analyzePaletteMood = async (hexColors: string[], settings: LLMSettings): Promise<string> => {
+    return settings.activeLLM === 'ollama'
+        ? analyzePaletteMoodOllama(hexColors, settings)
+        : analyzePaletteMoodGemini(hexColors, settings);
+};
+
+export const generateColorName = async (hexColor: string, mood: string, settings: LLMSettings): Promise<string> => {
+    return settings.activeLLM === 'ollama'
+        ? generateColorNameOllama(hexColor, mood, settings)
+        : generateColorNameGemini(hexColor, mood, settings);
+};
+
+export const dissectPrompt = async (promptText: string, settings: LLMSettings): Promise<{ [key: string]: string }> => {
+    return settings.activeLLM === 'ollama'
+        ? dissectPromptOllama(promptText, settings)
+        : dissectPromptGemini(promptText, settings);
+};
+
+export const generateFocusedVariations = async (promptText: string, components: { [key: string]: string }, settings: LLMSettings): Promise<{ [key: string]: string[] }> => {
+    return settings.activeLLM === 'ollama'
+        ? generateFocusedVariationsOllama(promptText, components, settings)
+        : generateFocusedVariationsGemini(promptText, components, settings);
+};
+
+export const reconstructPrompt = async (components: { [key: string]: string }, settings: LLMSettings): Promise<string> => {
+    return settings.activeLLM === 'ollama'
+        ? reconstructPromptOllama(components, settings)
+        : reconstructPromptGemini(components, settings);
+};
+
+export const replaceComponentInPrompt = async (originalPrompt: string, componentKey: string, newValue: string, settings: LLMSettings): Promise<string> => {
+    return settings.activeLLM === 'ollama'
+        ? replaceComponentInPromptOllama(originalPrompt, componentKey, newValue, settings)
+        : replaceComponentInPromptGemini(originalPrompt, componentKey, newValue, settings);
+};
+
+export const reconstructFromIntent = async (intents: string[], settings: LLMSettings): Promise<string> => {
+    return settings.activeLLM === 'ollama'
+        ? reconstructFromIntentOllama(intents, settings)
+        : reconstructFromIntentGemini(intents, settings);
+};
+
+export const abstractImage = async (base64ImageData: string, promptLength: string, targetAIModel: string, settings: LLMSettings): Promise<EnhancementResult> => {
+    return settings.activeLLM === 'ollama'
+        ? abstractImageOllama(base64ImageData, promptLength, targetAIModel, settings)
+        : abstractImageGemini(base64ImageData, promptLength, targetAIModel, settings);
+};
+
+export const generatePromptFormulaWithAI = async (promptText: string, wildcards: string[], settings: LLMSettings): Promise<string> => {
+    const sys = `Role: Prompt Deconstructor. Formula construction. Placeholders: ${wildcards.join(', ')}. Output template only.`;
+    return settings.activeLLM === 'ollama'
+        ? generatePromptFormulaOllama(promptText, settings, sys)
+        : generatePromptFormulaGemini(promptText, settings, sys);
+};
+
+export const generateWithImagen = async (prompt: string, aspectRatio: string = '1:1'): Promise<string> => {
+    const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
+    const response = await ai.models.generateImages({
+        model: 'imagen-4.0-generate-001',
+        prompt: prompt,
+        config: {
+            numberOfImages: 1,
+            outputMimeType: 'image/jpeg',
+            aspectRatio: aspectRatio as any,
+        },
+    });
+    const base64EncodeString: string = response.generatedImages[0].image.imageBytes;
+    return `data:image/png;base64,${base64EncodeString}`;
+};
+
+export const generateWithNanoBanana = async (prompt: string, referenceImages: string[] = [], aspectRatio: string = '1:1'): Promise<string> => {
+    const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
+    const parts: any[] = [{ text: prompt }];
+    for (const imgBase64 of referenceImages) {
+        parts.push({ inlineData: { mimeType: 'image/jpeg', data: imgBase64.split(',')[1] || imgBase64 } });
+    }
+    const response = await ai.models.generateContent({
+        model: 'gemini-2.5-flash-image',
+        contents: { parts },
+        config: { imageConfig: { aspectRatio: aspectRatio as any } }
+    });
+    if (response.candidates?.[0]?.content?.parts) {
+        for (const part of response.candidates[0].content.parts) {
+            if (part.inlineData) return `data:image/png;base64,${part.inlineData.data}`;
+        }
+    }
+    throw new Error("Render sequence failed.");
+};
+
+export const generateWithVeo = async (prompt: string, onStatusUpdate?: (msg: string) => void, aspectRatio: string = '16:9'): Promise<string> => {
+    const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
+    let finalAspectRatio = aspectRatio;
+    if (finalAspectRatio !== '16:9' && finalAspectRatio !== '9:16') finalAspectRatio = '16:9';
+    onStatusUpdate?.('Initializing...');
+    let operation = await ai.models.generateVideos({
+        model: 'veo-3.1-fast-generate-preview',
+        prompt: prompt,
+        config: { numberOfVideos: 1, resolution: '720p', aspectRatio: finalAspectRatio as any }
+    });
+    while (!operation.done) {
+        onStatusUpdate?.('Processing...');
+        await new Promise(resolve => setTimeout(resolve, 8000));
+        operation = await ai.operations.getVideosOperation({ operation: operation });
+    }
+    const downloadLink = operation.response?.generatedVideos?.[0]?.video?.uri;
+    if (!downloadLink) throw new Error("Output lost.");
+    onStatusUpdate?.('Downloading...');
+    const response = await fetch(`${downloadLink}&key=${process.env.API_KEY}`);
+    const blob = await response.blob();
+    return URL.createObjectURL(blob);
+};
+
+export const testOllamaConnection = async (baseUrl: string): Promise<boolean> => {
+    try {
+        const response = await fetch(`${baseUrl}/api/tags`);
+        return response.ok;
+    } catch (e) {
+        return false;
+    }
+};

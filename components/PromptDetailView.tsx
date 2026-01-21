@@ -1,13 +1,11 @@
-
 import React, { useState, useEffect, useCallback } from 'react';
 import { useSettings } from '../contexts/SettingsContext';
-import { dissectPrompt, refineSinglePromptStream } from '../services/llmService';
+import { dissectPrompt } from '../services/llmService';
 import type { SavedPrompt, PromptCategory } from '../types';
 import { loadPromptCategories } from '../utils/promptStorage';
 import {
-  ChevronLeftIcon, ChevronRightIcon, CloseIcon, RefreshIcon, DeleteIcon, EditIcon, SparklesIcon, CheckIcon, BookmarkIcon
+  ChevronLeftIcon, ChevronRightIcon, CloseIcon, RefreshIcon, SparklesIcon
 } from './icons';
-import CopyIcon from './CopyIcon';
 import LoadingSpinner from './LoadingSpinner';
 import PromptEditorModal from './PromptEditorModal';
 import PromptFormulaPanel from './PromptFormulaPanel';
@@ -26,47 +24,42 @@ interface PromptDetailViewProps {
   onClipString?: (text: string, title: string) => void;
 }
 
-interface PromptAnatomyDisplayProps {
+const PromptAnatomyDisplay: React.FC<{
   anatomy: { [key: string]: string } | null;
   isLoading: boolean;
   error: string | null;
   onRefresh: () => void;
   hasPrompt: boolean;
-}
-
-const PromptAnatomyDisplay: React.FC<PromptAnatomyDisplayProps> = ({ anatomy, isLoading, error, onRefresh, hasPrompt }) => {
+}> = ({ anatomy, isLoading, error, onRefresh, hasPrompt }) => {
     return (
-        <div className="card bg-base-100 shadow-lg flex flex-col flex-grow min-h-0">
-            <header className="card-title p-4 text-base justify-between flex-shrink-0 border-b border-base-300">
-                <span>
-                    Prompt Anatomy
-                </span>
-                <button onClick={onRefresh} disabled={isLoading || !hasPrompt} className="btn btn-sm btn-ghost btn-square" aria-label="Re-analyze prompt">
+        <div className="flex flex-col h-full bg-base-100 overflow-hidden">
+            <header className="p-4 border-b border-base-300 bg-base-200/10 flex justify-between items-center">
+                <h3 className="text-[10px] font-black uppercase tracking-[0.3em] text-primary">Prompt Components</h3>
+                <button onClick={onRefresh} disabled={isLoading || !hasPrompt} className="btn btn-xs btn-ghost opacity-40 hover:opacity-100">
                     <RefreshIcon className={`w-4 h-4 ${isLoading ? 'animate-spin' : ''}`} />
                 </button>
             </header>
-            <main className="card-body p-4 overflow-y-auto">
-                {isLoading ? <LoadingSpinner/> :
-                 error ? <div className="alert alert-error text-sm p-2"><span>{error}</span></div> :
-                 anatomy && Object.keys(anatomy).length > 0 ? (
-                    <div className="space-y-3">
-                        {Object.entries(anatomy).map(([key, value]) => (
-                            <div key={key}>
-                                <h4 className="text-xs font-semibold text-base-content/60 uppercase tracking-wider">{key}</h4>
-                                <p className="text-sm text-base-content">{value}</p>
+            <div className="flex-grow p-5 overflow-y-auto custom-scrollbar bg-base-100">
+                {isLoading ? <div className="py-12"><LoadingSpinner/></div> :
+                 error ? <div className="alert alert-error rounded-none text-xs"><span>{error}</span></div> :
+                 anatomy && typeof anatomy === 'object' && Object.keys(anatomy).length > 0 ? (
+                    <div className="space-y-6">
+                        {(Object.entries(anatomy) as [string, string][]).map(([key, value]) => (
+                            <div key={key} className="animate-fade-in">
+                                <h4 className="text-[9px] font-black uppercase tracking-widest text-base-content/20 mb-1 border-b border-base-300/30 pb-0.5">{key}</h4>
+                                <p className="text-sm font-medium leading-relaxed text-base-content/80">{String(value)}</p>
                             </div>
                         ))}
                     </div>
                  ) : (
-                    <div className="p-4 text-center text-sm text-base-content/70">
-                        { anatomy ? "No specific components were identified in this prompt." : "Click the refresh icon to analyze the prompt's structure." }
+                    <div className="py-24 text-center text-[10px] font-black uppercase tracking-[0.2em] text-base-content/20">
+                        { anatomy ? "No components found in analysis." : "Run component analysis to map prompt parts." }
                     </div>
                  )}
-            </main>
+            </div>
         </div>
     );
 };
-
 
 const PromptDetailView: React.FC<PromptDetailViewProps> = ({
   prompts,
@@ -94,19 +87,20 @@ const PromptDetailView: React.FC<PromptDetailViewProps> = ({
   const [errorAnatomy, setErrorAnatomy] = useState<string | null>(null);
 
   const analyzePromptText = useCallback(async (text: string) => {
-      if (!text || !text.trim()) {
-          setAnatomy(null);
-          setErrorAnatomy(null);
-          return;
-      }
+      if (!text || !text.trim()) { setAnatomy(null); return; }
       setIsLoadingAnatomy(true);
       setErrorAnatomy(null);
-      setAnatomy(null);
       try {
           const result = await dissectPrompt(text, settings);
-          setAnatomy(result);
-      } catch (e) {
-          setErrorAnatomy(e instanceof Error ? e.message : "An unknown error occurred.");
+          if (result && typeof result === 'object') {
+              setAnatomy(result);
+          } else {
+              setAnatomy({});
+              setErrorAnatomy("AI returned an unrecognized format.");
+          }
+      } catch (e: any) {
+          setErrorAnatomy(e.message || "Component analysis failed.");
+          setAnatomy(null);
       } finally {
           setIsLoadingAnatomy(false);
       }
@@ -122,9 +116,11 @@ const PromptDetailView: React.FC<PromptDetailViewProps> = ({
         setCopied(false);
         setIsRefinePanelCollapsed(true);
         setIsFormulaPanelCollapsed(true);
-        analyzePromptText(prompt.text);
+        setAnatomy(null);
+        setErrorAnatomy(null);
+        setIsLoadingAnatomy(false);
     }
-  }, [prompt, analyzePromptText]);
+  }, [prompt]);
 
   const handleNavigation = useCallback((direction: 'next' | 'prev') => {
     const newIndex = direction === 'next'
@@ -133,135 +129,123 @@ const PromptDetailView: React.FC<PromptDetailViewProps> = ({
     onNavigate(newIndex);
   }, [currentIndex, prompts.length, onNavigate]);
 
-  useEffect(() => {
-    const handleKeyDown = (e: any) => {
-      const target = e.target as any;
-      if (target && ['TEXTAREA', 'INPUT'].includes(target.tagName)) {
-          return;
-      }
-      if (e.key === 'ArrowRight') handleNavigation('next');
-      if (e.key === 'ArrowLeft') handleNavigation('prev');
-    };
-    if (typeof window !== 'undefined') {
-        (window as any).document.addEventListener('keydown', handleKeyDown);
-        return () => (window as any).document.removeEventListener('keydown', handleKeyDown);
-    }
-  }, [handleNavigation]);
-
   const handleCopyToClipboard = (text: string) => {
       if(typeof (window as any).navigator !== 'undefined') {
           (window as any).navigator.clipboard.writeText(text).then(() => {
             setCopied(true);
-            showGlobalFeedback("Copied to clipboard!");
+            showGlobalFeedback("Prompt copied.");
             setTimeout(() => setCopied(false), 2000);
           });
       }
   };
 
   const handleSaveChanges = () => {
-      if (isDirty) {
+      if (prompt && editedText.trim() !== prompt.text.trim()) {
           onUpdate(prompt.id, { text: editedText });
-          showGlobalFeedback("Changes saved!");
+          showGlobalFeedback("Changes saved to library.");
       }
-  };
-  
-  const handleApplyRefinement = (newPrompt: string) => {
-    setEditedText(newPrompt);
-    setIsRefinePanelCollapsed(true);
-    showGlobalFeedback("Refinement applied to editor. Click 'Save Changes' to commit.");
-  };
-
-  const handleClipRefinement = (refinedText: string) => {
-    if (onClipString) {
-        onClipString(refinedText, `Refined: ${prompt.title || 'Prompt'}`);
-    }
   };
   
   const isDirty = prompt && editedText.trim() !== prompt.text.trim();
   
-  if (!prompt) {
-    return (
-      <div className="flex h-full items-center justify-center text-base-content/70">
-        <p>Prompt not found.</p>
-      </div>
-    );
-  }
+  if (!prompt) return <div className="h-full flex items-center justify-center font-black uppercase text-base-content/20 tracking-tighter text-4xl">Item Not Found.</div>;
 
   return (
-    <>
-    <div className="flex flex-col lg:flex-row h-full animate-fade-in bg-base-200 p-6 gap-6">
-        {/* Left Column (Main Content) */}
-        <div className="w-full lg:w-2/3 flex flex-col gap-6 min-h-0">
-            <div className="card bg-base-100 shadow-lg flex flex-col flex-grow min-h-0">
-                <header className="flex-shrink-0 p-4 flex justify-between items-center border-b border-base-300">
-                    <div className="flex items-center gap-2">
-                        <h2 className="text-lg font-semibold truncate" title={prompt.title || 'Untitled Prompt'}>{prompt.title || 'Untitled Prompt'}</h2>
+    <div className="flex flex-col h-full bg-base-100">
+        <header className="flex-shrink-0 p-6 lg:px-8 lg:py-6 border-b border-base-300 bg-base-100 flex flex-wrap justify-between items-end gap-6">
+            <div className="min-w-0">
+                <span className="text-[10px] font-black uppercase tracking-[0.4em] text-primary mb-1 block">LIBRARY ID : {prompt.id.slice(-8)}</span>
+                <h2 className="text-xl lg:text-2xl font-black tracking-tighter text-base-content leading-none truncate max-w-2xl uppercase" title={prompt.title || 'Untitled Prompt'}>
+                    {prompt.title || 'Untitled Prompt'}
+                </h2>
+            </div>
+             <div className="flex items-center gap-4">
+                <div className="join bg-base-200 border border-base-300 shadow-sm">
+                    <button onClick={() => handleNavigation('prev')} className="btn btn-sm btn-ghost join-item"><ChevronLeftIcon className="w-4 h-4" /></button>
+                    <span className="join-item flex items-center px-6 font-mono text-[10px] font-black text-base-content/40 uppercase tracking-widest border-x border-base-300/30">{currentIndex + 1} / {prompts.length}</span>
+                    <button onClick={() => handleNavigation('next')} className="btn btn-sm btn-ghost join-item"><ChevronRightIcon className="w-4 h-4" /></button>
+                </div>
+                <button onClick={onClose} className="btn btn-sm btn-ghost btn-square opacity-40 hover:opacity-100 ml-4">
+                    <CloseIcon className="w-6 h-6"/>
+                </button>
+            </div>
+        </header>
+
+        <div className="flex-grow flex flex-col lg:flex-row overflow-hidden">
+            <main className="flex-1 flex flex-col overflow-hidden bg-base-100">
+                <div className={`flex flex-col overflow-hidden transition-all duration-500 ease-in-out ${!isRefinePanelCollapsed ? 'h-1/2' : 'flex-grow'}`}>
+                    <div className="flex-grow p-5 lg:p-5 relative overflow-hidden flex flex-col">
+                        <span className="text-[9px] font-black uppercase tracking-widest text-primary/40 mb-3 flex items-center gap-3">
+                            <span className="w-1.5 h-1.5 rounded-full bg-primary animate-pulse"></span> Original Prompt Text
+                        </span>
+                        <textarea 
+                            value={editedText}
+                            onChange={(e) => setEditedText((e.currentTarget as any).value)}
+                            className="textarea flex-grow w-full bg-transparent text-sm font-medium leading-relaxed resize-none focus:outline-none p-0 custom-scrollbar border-none shadow-none"
+                            placeholder="Type prompt here..."
+                        ></textarea>
                     </div>
-                     <div className="flex items-center gap-2">
-                        <button onClick={() => handleNavigation('prev')} className="btn btn-sm btn-ghost"><ChevronLeftIcon className="w-4 h-4" /></button>
-                        <span className="text-sm font-mono text-base-content/70 hidden sm:inline">{currentIndex + 1} / {prompts.length}</span>
-                        <button onClick={() => handleNavigation('next')} className="btn btn-sm btn-ghost"><ChevronRightIcon className="w-4 h-4" /></button>
-                        <button onClick={onClose} className="btn btn-sm btn-ghost"><CloseIcon className="w-5 h-5"/></button>
+                </div>
+                
+                <div className={`overflow-hidden transition-all duration-500 ease-in-out ${!isRefinePanelCollapsed ? 'h-1/2 border-t border-base-300' : 'h-0 opacity-0'}`}>
+                    <PromptRefinePanel 
+                        promptText={editedText} 
+                        onApplyRefinement={(res) => { setEditedText(res); setIsRefinePanelCollapsed(true); showGlobalFeedback("Applied refinement."); }}
+                        isCollapsed={isRefinePanelCollapsed}
+                        setIsCollapsed={setIsRefinePanelCollapsed}
+                        onClip={onClipString ? (res) => onClipString(res, `Refinement: ${prompt.title}`) : undefined}
+                    />
+                </div>
+
+                <footer className="p-4 bg-base-200/20 border-t border-base-300 flex flex-wrap justify-between items-center gap-4">
+                    <div className="flex items-center gap-1">
+                        <button onClick={() => setIsEditorModalOpen(true)} className="btn btn-sm btn-ghost rounded-none uppercase font-black text-[10px] tracking-widest px-4 hover:bg-base-300">Edit Details</button>
+                        <button onClick={() => setIsRefinePanelCollapsed(!isRefinePanelCollapsed)} className={`btn btn-sm rounded-none uppercase font-black text-[10px] tracking-widest px-4 ${!isRefinePanelCollapsed ? 'btn-primary' : 'btn-ghost text-primary hover:bg-primary/10'}`}>AI Refine</button>
+                        <button onClick={() => onClip(prompt)} className="btn btn-sm btn-ghost rounded-none uppercase font-black text-[10px] tracking-widest px-4 hover:bg-base-300">Clip</button>
+                        <button onClick={() => onDelete(prompt)} className="btn btn-sm btn-ghost rounded-none uppercase font-black text-[10px] tracking-widest px-4 text-error/40 hover:text-error hover:bg-error/10">Delete</button>
                     </div>
-                </header>
-                <main className="flex-grow p-4">
-                    <textarea 
-                        value={editedText}
-                        onChange={(e) => setEditedText((e.currentTarget as any).value)}
-                        className="textarea w-full h-full bg-transparent text-base resize-none focus:outline-none"
-                    ></textarea>
-                </main>
-                <footer className="card-actions justify-between items-center p-4 border-t border-base-300">
-                    <div className="flex items-center gap-2">
-                        <button onClick={() => setIsEditorModalOpen(true)} className="btn btn-sm btn-ghost" title="Edit Metadata"><EditIcon className="w-4 h-4 mr-1"/> Edit</button>
-                        <button onClick={() => onSendToEnhancer(editedText)} className="btn btn-sm btn-ghost" title="Send to Refine"><SparklesIcon className="w-4 h-4 mr-1"/> Refine</button>
-                        <button onClick={() => onClip(prompt)} className="btn btn-sm btn-ghost" title="Clip to Clipboard"><BookmarkIcon className="w-4 h-4 mr-1"/> Clip</button>
-                        <button onClick={() => onDelete(prompt)} className="btn btn-sm btn-ghost text-error" title="Delete"><DeleteIcon className="w-4 h-4 mr-1"/> Delete</button>
-                    </div>
-                     <div className="flex items-center gap-2">
-                        {isDirty && <button onClick={handleSaveChanges} className="btn btn-sm btn-success">Save Changes</button>}
-                        <button onClick={() => handleCopyToClipboard(editedText)} className="btn btn-sm btn-ghost" title={copied ? 'Copied!' : 'Copy to Clipboard'}>
-                            {copied ? <><CheckIcon className="w-4 h-4 mr-1"/>Copied!</> : <><CopyIcon className="w-4 h-4 mr-1"/>Copy</>}
+                    <div className="flex items-center gap-3">
+                        {isDirty && (
+                            <button onClick={handleSaveChanges} className="btn btn-sm btn-primary rounded-none uppercase font-black text-[10px] tracking-widest px-8 shadow-lg">Save Changes</button>
+                        )}
+                        <button onClick={() => handleCopyToClipboard(editedText)} className="btn btn-sm btn-ghost rounded-none border border-base-300 bg-base-100 uppercase font-black text-[10px] tracking-widest px-8 hover:bg-base-200">
+                            {copied ? 'Copied' : 'Copy Prompt'}
                         </button>
                     </div>
                 </footer>
-            </div>
-             <PromptRefinePanel 
-                promptText={editedText} 
-                onApplyRefinement={handleApplyRefinement}
-                isCollapsed={isRefinePanelCollapsed}
-                setIsCollapsed={setIsRefinePanelCollapsed}
-                onClip={onClipString ? handleClipRefinement : undefined}
-            />
+            </main>
+
+            <aside className="w-full lg:w-[420px] flex-shrink-0 bg-base-100 flex flex-col overflow-hidden border-l border-base-300">
+                <div className="flex-grow flex flex-col min-h-0 divide-y divide-base-300">
+                    <div className="flex-grow min-h-0">
+                        <PromptAnatomyDisplay
+                            anatomy={anatomy}
+                            isLoading={isLoadingAnatomy}
+                            error={errorAnatomy}
+                            onRefresh={() => analyzePromptText(editedText)}
+                            hasPrompt={!!editedText}
+                        />
+                    </div>
+                    <div className="flex-shrink-0">
+                        <PromptFormulaPanel 
+                            promptText={editedText}
+                            showGlobalFeedback={showGlobalFeedback}
+                            isCollapsed={isFormulaPanelCollapsed}
+                            setIsCollapsed={setIsFormulaPanelCollapsed}
+                        />
+                    </div>
+                </div>
+            </aside>
         </div>
-        {/* Right Column (Analysis Panels) */}
-        <div className="w-full lg:w-1/3 flex flex-col gap-6 min-h-0">
-            <PromptAnatomyDisplay
-                anatomy={anatomy}
-                isLoading={isLoadingAnatomy}
-                error={errorAnatomy}
-                onRefresh={() => analyzePromptText(editedText)}
-                hasPrompt={!!editedText}
-            />
-            <PromptFormulaPanel 
-                promptText={editedText}
-                showGlobalFeedback={showGlobalFeedback}
-                isCollapsed={isFormulaPanelCollapsed}
-                setIsCollapsed={setIsFormulaPanelCollapsed}
-            />
-        </div>
+
+        <PromptEditorModal
+            isOpen={isEditorModalOpen}
+            onClose={() => setIsEditorModalOpen(false)}
+            onSave={async (data) => { onUpdate(prompt.id, data); showGlobalFeedback("Details saved."); }}
+            categories={categories}
+            editingPrompt={prompt}
+        />
     </div>
-    <PromptEditorModal
-        isOpen={isEditorModalOpen}
-        onClose={() => setIsEditorModalOpen(false)}
-        onSave={async (data) => {
-            onUpdate(prompt.id, data);
-            showGlobalFeedback("Metadata updated!");
-        }}
-        categories={categories}
-        editingPrompt={prompt}
-    />
-    </>
   );
 };
 

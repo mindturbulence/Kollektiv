@@ -1,7 +1,8 @@
-
 import React, { useState, useCallback, useMemo } from 'react';
-import { DownloadIcon, SparklesIcon, PhotoIcon, FilmIcon } from './icons';
+import { DownloadIcon, SparklesIcon, PhotoIcon, FilmIcon, BookmarkIcon, RefreshIcon, CheckIcon, ArchiveIcon, BracesIcon } from './icons';
 import { generateWithImagen, generateWithNanoBanana, generateWithVeo } from '../services/llmService';
+import CopyIcon from './CopyIcon';
+import LoadingSpinner from './LoadingSpinner';
 
 interface SuggestionItemProps {
   suggestionText: string;
@@ -9,6 +10,7 @@ interface SuggestionItemProps {
   onSave: (suggestionText: string) => void;
   onRefine?: (suggestionText: string) => void;
   onClip?: (suggestionText: string) => void;
+  isAbstraction?: boolean;
 }
 
 export const SuggestionItem: React.FC<SuggestionItemProps> = ({ 
@@ -16,7 +18,8 @@ export const SuggestionItem: React.FC<SuggestionItemProps> = ({
     targetAI = '', 
     onSave, 
     onRefine, 
-    onClip 
+    onClip,
+    isAbstraction = false
 }) => {
   const [copied, setCopied] = useState<boolean>(false);
   const [saved, setSaved] = useState<boolean>(false);
@@ -99,7 +102,7 @@ export const SuggestionItem: React.FC<SuggestionItemProps> = ({
             setLoadingMsg('Imaging your prompt...');
             resultUrl = await generateWithImagen(suggestionText);
         } else if (target.includes('nano banana')) {
-            setLoadingMsg('Simulating snapshot...');
+            setLoadingMsg('Snapshot sequence...');
             resultUrl = await generateWithNanoBanana(suggestionText);
         } else if (target.includes('veo')) {
             resultUrl = await generateWithVeo(suggestionText, (msg) => setLoadingMsg(msg));
@@ -119,87 +122,98 @@ export const SuggestionItem: React.FC<SuggestionItemProps> = ({
   const isVideo = targetAI.toLowerCase().includes('veo');
 
   return (
-    <div className={`card bg-base-200 shadow-xl rounded-xl transition-all duration-500 ${isGenerating ? 'animate-pulse ring-2 ring-primary ring-offset-2 ring-offset-base-100' : ''}`}>
-        <div className="card-body p-4">
+    <div className={`w-full transition-all duration-300 hover:bg-base-200/30 ${isGenerating ? 'bg-primary/5' : ''}`}>
+        <div className="p-4 md:p-6 flex flex-col h-full relative">
             {isGenerating ? (
-                <div className="flex flex-col items-center justify-center py-8 text-center space-y-4">
-                    <span className="loading loading-spinner loading-lg text-primary"></span>
-                    <div className="space-y-1">
-                        <p className="font-bold text-sm uppercase tracking-widest text-primary animate-bounce">{loadingMsg}</p>
-                        <p className="text-xs text-base-content/50 italic px-4">Wait a moment, Google AI is crafting your creation...</p>
-                    </div>
+                <div className="flex flex-col items-center justify-center py-12 text-center space-y-6">
+                    <LoadingSpinner size={48} />
+                    <p className="font-black text-[10px] uppercase tracking-[0.2em] text-primary animate-pulse">{loadingMsg}</p>
                 </div>
             ) : mediaUrl ? (
-                <div className="space-y-4">
-                    <div className="relative rounded-lg overflow-hidden bg-black aspect-video sm:aspect-square flex items-center justify-center group">
+                <div className="space-y-4 animate-fade-in">
+                    <div className="relative group bg-black border border-base-300 aspect-video flex items-center justify-center overflow-hidden">
                         {isVideo ? (
                             <video src={mediaUrl} controls autoPlay loop className="w-full h-full object-contain" />
                         ) : (
                             <img src={mediaUrl} alt="Generated result" className="w-full h-full object-contain" />
                         )}
-                        <div className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity">
-                             <a href={mediaUrl} download={`kollektiv_${targetAI.replace(/\s+/g, '_')}_${Date.now()}.${isVideo ? 'mp4' : 'jpg'}`} className="btn btn-xs btn-primary">
-                                <DownloadIcon className="w-3 h-3 mr-1"/> Download
+                        <div className="absolute top-4 right-4 opacity-0 group-hover:opacity-100 transition-opacity">
+                             <a href={mediaUrl} download={`kollektiv_${targetAI.replace(/\s+/g, '_')}_${Date.now()}.${isVideo ? 'mp4' : 'jpg'}`} className="btn btn-sm btn-primary rounded-none shadow-2xl font-black text-[10px] tracking-widest px-4">
+                                <DownloadIcon className="w-4 h-4 mr-2"/> EXPORT
                             </a>
                         </div>
                     </div>
-                    <div className="flex justify-between items-center text-xs">
-                         <span className="badge badge-primary badge-outline font-bold">{targetAI} Result</span>
-                         <button onClick={() => setMediaUrl(null)} className="btn btn-link btn-xs no-underline">View Text Prompt</button>
+                    <div className="flex justify-between items-center">
+                         <span className="text-[9px] font-black uppercase tracking-[0.2em] text-primary/60">{targetAI} Result Archive</span>
+                         <button onClick={() => setMediaUrl(null)} className="text-[9px] font-bold uppercase tracking-widest text-base-content/30 hover:text-primary transition-colors">Close Archive</button>
                     </div>
                 </div>
             ) : (
                 <>
-                    <p className="text-base-content/90 text-sm flex-grow">{suggestionText}</p>
-                    {generationError && (
-                        <div className="alert alert-error text-[10px] p-2 mt-2">
-                             <span>{generationError}</span>
+                    {!isAbstraction && (
+                        <div className="flex justify-between items-start gap-4 mb-2">
+                            <div className="flex items-center gap-3">
+                                <span className="text-xs font-black uppercase tracking-[0.2em] text-primary/40">Refined Variant</span>
+                            </div>
                         </div>
                     )}
-                    <div className="card-actions justify-end mt-2">
-                        {isGoogleProduct && !mediaUrl && (
-                            <button 
-                                onClick={handleTryGenerate} 
-                                className="btn btn-sm btn-primary gap-1"
-                                title={`Generate with ${targetAI}`}
+
+                    <div className="flex-grow">
+                        <p className="text-base font-medium leading-relaxed text-base-content/80 italic border-l-2 border-primary/10 pl-4 py-1">
+                            "{suggestionText}"
+                        </p>
+                    </div>
+
+                    {generationError && (
+                        <div className="p-2 bg-error/10 border border-error/20 mt-4 animate-fade-in">
+                             <p className="text-error font-bold text-[9px] uppercase tracking-widest">{generationError}</p>
+                        </div>
+                    )}
+
+                    <div className="flex flex-wrap items-center justify-between gap-4 mt-4 pt-4 border-t border-base-300">
+                        <div className="flex items-center gap-1">
+                            {isGoogleProduct && !mediaUrl && (
+                                <button 
+                                    onClick={handleTryGenerate} 
+                                    className="btn btn-xs btn-primary rounded-none font-black text-[9px] tracking-widest px-4 shadow-sm"
+                                >
+                                    <SparklesIcon className="w-3 h-3 mr-1.5" />
+                                    RENDER
+                                </button>
+                            )}
+                            {onClip && (
+                                <button onClick={handleClip} className="btn btn-xs btn-ghost rounded-none font-black text-[9px] tracking-widest px-3 hover:bg-base-300" disabled={clipped}>
+                                    <BookmarkIcon className="w-3 h-3 mr-1.5 opacity-40"/> {clipped ? 'CLIPPED' : 'CLIP'}
+                                </button>
+                            )}
+                            {onRefine && (
+                                 <button onClick={handleRefine} className="btn btn-xs btn-ghost rounded-none font-black text-[9px] tracking-widest px-3 hover:bg-base-300">
+                                    <RefreshIcon className="w-3 h-3 mr-1.5 opacity-40"/> RE-REFINE
+                                </button>
+                            )}
+                        </div>
+
+                        <div className="flex items-center gap-1">
+                            <button
+                                onClick={handleSave}
+                                disabled={saved}
+                                className="btn btn-xs btn-ghost rounded-none font-black text-[9px] tracking-widest px-3 hover:bg-base-300"
                             >
-                                <SparklesIcon className="w-4 h-4" />
-                                Try Generate
+                                {saved ? <><CheckIcon className="w-3 h-3 mr-1.5 text-success"/> OK</> : <><ArchiveIcon className="w-3 h-3 mr-1.5 opacity-40"/> SAVE</>}
                             </button>
-                        )}
-                        {onClip && (
-                            <button onClick={handleClip} className="btn btn-sm btn-ghost" disabled={clipped}>
-                                {clipped ? 'Clipped' : 'Clip'}
+                            <button
+                                onClick={handleDownloadJson}
+                                className="btn btn-xs btn-ghost rounded-none font-black text-[9px] tracking-widest px-3 hover:bg-base-300"
+                            >
+                                <BracesIcon className="w-3 h-3 mr-1.5 opacity-40"/> JSON
                             </button>
-                        )}
-                        {onRefine && (
-                             <button onClick={handleRefine} className="btn btn-sm btn-ghost">
-                                Refine
+                            <button
+                                onClick={handleCopy}
+                                className="btn btn-xs btn-ghost rounded-none font-black text-[9px] tracking-widest px-3 hover:bg-base-300"
+                            >
+                                {copied ? <><CheckIcon className="w-3 h-3 mr-1.5 text-success" /> OK</> : <><CopyIcon className="w-3 h-3 mr-1.5 opacity-40" /> COPY</>}
                             </button>
-                        )}
-                        <button
-                            onClick={handleSave}
-                            disabled={saved}
-                            className="btn btn-sm btn-ghost"
-                            title={saved ? "Saved to Library" : "Save to Library"}
-                        >
-                            {saved ? 'Saved' : 'Save'}
-                        </button>
-                        <button
-                            onClick={handleDownloadJson}
-                            className="btn btn-sm btn-ghost gap-1"
-                            title="Download raw JSON"
-                        >
-                            <DownloadIcon className="w-4 h-4" />
-                            JSON
-                        </button>
-                        <button
-                            onClick={handleCopy}
-                            className="btn btn-sm btn-ghost"
-                            title={copied ? "Copied!" : "Copy prompt"}
-                        >
-                            {copied ? 'Copied' : 'Copy'}
-                        </button>
+                        </div>
                     </div>
                 </>
             )}

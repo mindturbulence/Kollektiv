@@ -3,9 +3,8 @@ import JSZip from 'jszip';
 import { UploadIcon, CropIcon, LinkIcon, LinkOffIcon, PhotoIcon, RefreshIcon, DownloadIcon, CloseIcon } from './icons';
 import { COMPOSER_PRESETS } from '../constants';
 
-// --- TYPES ---
 type ImageStatus = 'pending' | 'processing' | 'done' | 'error';
-type CropData = { x: number; y: number; width: number; height: number; }; // in percentages
+type CropData = { x: number; y: number; width: number; height: number; }; 
 
 interface ImageItem {
   id: string;
@@ -36,11 +35,10 @@ interface ProcessSettings {
     renameSequentially: boolean;
 }
 
-// --- ASYNC IMAGE PROCESSING ---
 const processImage = (item: ImageItem, settings: ProcessSettings): Promise<ImageItem> => {
     return new Promise((resolve, reject) => {
         if (typeof window === 'undefined' || !(window as any).Image || !(window as any).document?.createElement) {
-            return reject(new Error("Browser environment not supported."));
+            return reject(new Error("Environment not supported."));
         }
         const img = new (window as any).Image();
         
@@ -48,66 +46,49 @@ const processImage = (item: ImageItem, settings: ProcessSettings): Promise<Image
             try {
                 const canvas = (window as any).document.createElement('canvas');
                 const ctx = canvas.getContext('2d');
-                if (!ctx) return reject(new Error("Could not create canvas context."));
+                if (!ctx) return reject(new Error("Canvas error."));
 
-                // --- REVISED DIMENSION CALCULATION ---
                 let targetWidth = settings.width ? Number(settings.width) : 0;
                 let targetHeight = settings.height ? Number(settings.height) : 0;
                 const imgAspect = img.naturalWidth / img.naturalHeight;
                 
-                // Case 1: Only one dimension is provided, calculate the other to maintain aspect ratio.
                 if (targetWidth && !targetHeight) {
                     targetHeight = targetWidth / imgAspect;
                 } else if (!targetWidth && targetHeight) {
                     targetWidth = targetHeight * imgAspect;
                 } else if (!targetWidth && !targetHeight) {
-                    // Case 2: No dimensions provided, use original.
                     targetWidth = item.originalWidth;
                     targetHeight = item.originalHeight;
                 } else if (!settings.enableCropping && settings.lockAspectRatio && targetWidth && targetHeight) {
-                    // Case 3: Resize without crop, with aspect lock on.
-                    // Prioritize width and recalculate height to match aspect ratio.
-                    // This prevents letterboxing by making the canvas match the image aspect.
                     targetHeight = targetWidth / imgAspect;
                 }
-                // Case 4 (implicit): Cropping is enabled, or aspect lock is off.
-                // Use the user-provided targetWidth and targetHeight as is. The crop/contain logic will handle fitting.
 
                 if (targetWidth <= 0 || targetHeight <= 0) {
-                    return reject(new Error(`Invalid output dimensions: ${targetWidth}x${targetHeight}`));
+                    return reject(new Error(`Invalid dimensions: ${targetWidth}x${targetHeight}`));
                 }
 
                 canvas.width = Math.round(targetWidth);
                 canvas.height = Math.round(targetHeight);
                 
-                if (canvas.width <= 0 || canvas.height <= 0 || canvas.width > 16384 || canvas.height > 16384) {
-                    return reject(new Error(`Invalid output dimensions: ${canvas.width}x${canvas.height}`));
-                }
-
                 ctx.imageSmoothingQuality = 'high';
                 
                 if(settings.enableCropping) {
-                    // --- CROP & FILL LOGIC ---
                     const sx = Math.round((item.crop.x / 100) * img.naturalWidth);
                     const sy = Math.round((item.crop.y / 100) * img.naturalHeight);
                     const sWidth = Math.round((item.crop.width / 100) * img.naturalWidth);
                     const sHeight = Math.round((item.crop.height / 100) * img.naturalHeight);
-                    if (sWidth <= 0 || sHeight <= 0) return reject(new Error(`Invalid crop dimensions: ${sWidth}x${sHeight}`));
                     ctx.drawImage(img, sx, sy, sWidth, sHeight, 0, 0, canvas.width, canvas.height);
                 } else {
-                    // --- CONTAIN LOGIC ---
-                    // With the new targetWidth/targetHeight logic, this part now works for both letterboxing and direct resize.
-                    // If canvas matches aspect, it will fill perfectly. If not, it will be contained with letterboxing.
                     const canvasAspect = canvas.width / canvas.height;
                     let dWidth = canvas.width;
                     let dHeight = canvas.height;
                     let dx = 0;
                     let dy = 0;
 
-                    if (imgAspect > canvasAspect) { // image is wider than canvas
+                    if (imgAspect > canvasAspect) { 
                         dHeight = canvas.width / imgAspect;
                         dy = (canvas.height - dHeight) / 2;
-                    } else { // image is taller or same aspect
+                    } else { 
                         dWidth = canvas.height * imgAspect;
                         dx = (canvas.width - dWidth) / 2;
                     }
@@ -118,7 +99,7 @@ const processImage = (item: ImageItem, settings: ProcessSettings): Promise<Image
 
                 canvas.toBlob(
                     (blob: Blob | null) => {
-                        if (!blob) return reject(new Error("Canvas toBlob failed. The image might be too large."));
+                        if (!blob) return reject(new Error("Export failed."));
                         const processedData = {
                             url: URL.createObjectURL(blob),
                             blob,
@@ -132,16 +113,13 @@ const processImage = (item: ImageItem, settings: ProcessSettings): Promise<Image
                     qualityArg
                 );
             } catch (e) {
-                reject(e instanceof Error ? e : new Error("An unknown error occurred during image processing."));
+                reject(e instanceof Error ? e : new Error("An error occurred."));
             }
         };
-        img.onerror = () => reject(new Error("Image failed to load. It might be corrupt or an unsupported format."));
+        img.onerror = () => reject(new Error("Image error."));
         img.src = item.originalUrl;
     });
 };
-
-
-// --- UI SUB-COMPONENTS ---
 
 const formatBytes = (bytes: number, decimals = 2) => {
     if (!+bytes) return '0 Bytes'
@@ -159,17 +137,17 @@ const DropZone: React.FC<{ onFilesAdded: (files: File[]) => void }> = ({ onFiles
     const handleDrop = (e: React.DragEvent) => { e.preventDefault(); setIsDragging(false); onFilesAdded(Array.from((e.dataTransfer as any).files || [])); };
     return (
       <div 
-        className="w-full h-full p-6 flex flex-col items-center justify-center"
+        className="w-full h-full p-12 flex flex-col items-center justify-center bg-base-200/20"
         onDragEnter={() => setIsDragging(true)} onDragOver={(e) => e.preventDefault()} onDragLeave={() => setIsDragging(false)} onDrop={handleDrop}
       >
         <div 
-          className={`w-full h-full rounded-2xl border-4 border-dashed flex flex-col items-center justify-center cursor-pointer transition-all ${isDragging ? 'border-primary bg-primary/10' : 'border-base-content/20'}`}
+          className={`w-full max-w-2xl aspect-video rounded-none border-4 border-dashed flex flex-col items-center justify-center cursor-pointer transition-all ${isDragging ? 'border-primary bg-primary/10' : 'border-base-300 hover:border-primary/50'}`}
           onClick={() => (fileInputRef.current as any)?.click()}
         >
             <input type="file" ref={fileInputRef} multiple accept="image/*" className="hidden" onChange={handleFileChange} />
-            <UploadIcon className="w-24 h-24 text-base-content/30" />
-            <h2 className="text-2xl font-bold mt-4">Drop Your Images Here</h2>
-            <p className="text-base-content/70">or click to browse</p>
+            <UploadIcon className="w-16 h-16 text-base-content/20 mb-6" />
+            <h2 className="text-2xl font-black uppercase tracking-tighter">UPLOAD IMAGES</h2>
+            <p className="text-[10px] font-bold uppercase tracking-[0.3em] text-base-content/40 mt-2">Drop images or click to select files</p>
         </div>
       </div>
     );
@@ -183,14 +161,14 @@ const ImageCard: React.FC<{
     imageRef: (el: HTMLDivElement | null) => void,
 }> = ({ item, settings, onRemove, onCropMouseDown, imageRef }) => {
     return (
-        <div className="card card-compact bg-base-200 shadow-lg">
-            <figure ref={imageRef} className="relative aspect-square bg-base-300">
+        <div className="flex flex-col bg-base-100 border border-base-300 group">
+            <figure ref={imageRef} className="relative aspect-square bg-base-300 overflow-hidden">
                 <img src={item.originalUrl} alt={item.file.name} className="w-full h-full object-contain" />
                 {settings.enableCropping && (
                     <div 
                         className="absolute pointer-events-auto cursor-move border-2 border-dashed border-primary"
                         style={{
-                            boxShadow: `0 0 0 9999px oklch(var(--b1)/0.6)`,
+                            boxShadow: `0 0 0 9999px oklch(var(--b1)/0.7)`,
                             left: `${item.crop.x}%`,
                             top: `${item.crop.y}%`,
                             width: `${item.crop.width}%`,
@@ -199,38 +177,30 @@ const ImageCard: React.FC<{
                         onMouseDown={(e) => onCropMouseDown(e, item.id)}
                     ></div>
                 )}
+                <button onClick={onRemove} className="absolute top-2 right-2 btn btn-xs btn-square btn-error rounded-none opacity-0 group-hover:opacity-100 shadow-xl transition-all">✕</button>
             </figure>
-            <div className="card-body p-3 text-xs">
-                <div className="flex justify-between items-start">
-                    <div className="min-w-0">
-                        <p className="font-semibold truncate" title={item.file.name}>{item.file.name}</p>
-                        <p className="text-base-content/70">{item.originalWidth}x{item.originalHeight}</p>
-                    </div>
-                    <button onClick={onRemove} className="btn btn-xs btn-ghost btn-square text-error/70 hover:text-error"><CloseIcon className="w-4 h-4"/></button>
-                </div>
-                {item.status === 'error' && <p className="text-error truncate">{item.errorMessage}</p>}
-                {item.status === 'done' && item.processed && <p className="text-success">{item.processed.width}x{item.processed.height} ({formatBytes(item.processed.size)})</p>}
+            <div className="p-4 space-y-1">
+                <p className="text-[10px] font-black uppercase tracking-widest text-base-content truncate" title={item.file.name}>{item.file.name}</p>
+                <p className="text-[9px] font-mono text-base-content/40">{item.originalWidth}×{item.originalHeight}</p>
+                {item.status === 'error' && <p className="text-[9px] text-error font-black uppercase">{item.errorMessage}</p>}
+                {item.status === 'done' && item.processed && <p className="text-[9px] text-success font-black uppercase">{item.processed.width}×{item.processed.height} • {formatBytes(item.processed.size)}</p>}
             </div>
         </div>
     )
 }
 
-// --- MAIN COMPONENT ---
 const ImageResizer: React.FC = () => {
     const [images, setImages] = useState<ImageItem[]>([]);
     const [isDownloading, setIsDownloading] = useState(false);
     
-    // Settings
     const [settings, setSettings] = useState<ProcessSettings>({
         width: 1024, height: 1024, lockAspectRatio: true, enableCropping: true,
         format: 'jpeg', quality: 0.9, renamePrefix: '', renameSequentially: false,
     });
     
-    // Dragging state for crop box
     const [dragState, setDragState] = useState<{ id: string; startMouseX: number; startMouseY: number; startCropX: number; startCropY: number; imageWidth: number; imageHeight: number } | null>(null);
     const imageRefs = useRef(new Map<string, HTMLDivElement>());
 
-    // --- CROP CALCULATION LOGIC ---
     const calculateCrop = useCallback((image: ImageItem, targetWidth: number, targetHeight: number): ImageItem => {
         if (!targetWidth || !targetHeight) return { ...image };
     
@@ -238,15 +208,14 @@ const ImageResizer: React.FC = () => {
         const imgAspect = image.originalWidth / image.originalHeight;
         let newCrop: CropData = { x: 0, y: 0, width: 100, height: 100 };
     
-        if (imgAspect > targetAspect) { // Image is wider than target
+        if (imgAspect > targetAspect) { 
             newCrop.width = (targetAspect / imgAspect) * 100;
             newCrop.height = 100;
-        } else { // Image is taller or same aspect
+        } else { 
             newCrop.width = 100;
             newCrop.height = (imgAspect / targetAspect) * 100;
         }
         
-        // Always center initially
         newCrop.x = (100 - newCrop.width) / 2;
         newCrop.y = (100 - newCrop.height) / 2;
 
@@ -262,14 +231,12 @@ const ImageResizer: React.FC = () => {
         setImages(prev => prev.map(item => calculateCrop(item, targetW, targetH)));
     }, [settings.width, settings.height, calculateCrop]);
 
-    // --- Effects ---
     useEffect(() => {
         if (settings.enableCropping) {
             updateAllCrops();
         }
     }, [settings.width, settings.height, settings.enableCropping, updateAllCrops]);
 
-    // Effect for handling crop box dragging
     useEffect(() => {
         const handleMouseMove = (e: MouseEvent) => {
             if (!dragState) return;
@@ -303,7 +270,6 @@ const ImageResizer: React.FC = () => {
         };
     }, [dragState]);
 
-    // Cleanup object URLs on unmount
     useEffect(() => {
         const currentImages = images;
         return () => {
@@ -314,7 +280,6 @@ const ImageResizer: React.FC = () => {
         };
     }, []);
 
-    // --- Handlers ---
     const handleAddFiles = useCallback((files: File[]) => {
         const imageFiles = files.filter(f => f.type.startsWith('image/'));
         if (imageFiles.length === 0) return;
@@ -349,15 +314,12 @@ const ImageResizer: React.FC = () => {
     
     const handleSettingsChange = <K extends keyof ProcessSettings>(key: K, value: ProcessSettings[K]) => {
         setSettings(s => ({ ...s, [key]: value }));
-        // Invalidate previous results when settings change
         setImages(imgs => imgs.map(i => ({...i, status: 'pending', processed: undefined})));
     };
 
     const handleDownload = async () => {
         if (images.length === 0) return;
         setIsDownloading(true);
-    
-        // Reset status of all images before starting
         setImages(prev => prev.map(i => ({ ...i, status: 'processing', errorMessage: undefined })));
     
         const processingPromises = images.map(item =>
@@ -436,21 +398,22 @@ const ImageResizer: React.FC = () => {
     };
     
     return (
-        <div className="p-6 flex flex-col gap-6 bg-base-200 h-full">
-            <div className="grid grid-cols-1 lg:grid-cols-4 gap-6 flex-grow min-h-0">
-                {/* Left Column */}
-                <aside className="lg:col-span-1 bg-base-100 rounded-xl shadow-xl flex flex-col">
-                    <div className="p-4 border-b border-base-300"><h2 className="text-lg font-bold">Settings</h2></div>
-                    <div className="flex-grow p-4 space-y-4 overflow-y-auto text-sm">
-                        {/* Dimensions */}
-                         <div className="form-control"><label className="label-text pb-1 font-semibold">Dimensions</label>
+        <div className="h-full bg-base-100 flex flex-col overflow-hidden">
+            <div className="flex-grow flex flex-col lg:flex-row overflow-hidden">
+                <aside className="w-full lg:w-96 flex-shrink-0 bg-base-100 flex flex-col border-r border-base-300 overflow-hidden">
+                    <header className="p-6 border-b border-base-300 bg-base-200/10">
+                        <h3 className="text-[10px] font-black uppercase tracking-[0.4em] text-primary">Resize Settings</h3>
+                    </header>
+                    <div className="flex-grow p-6 space-y-8 overflow-y-auto custom-scrollbar">
+                        <div className="space-y-4">
+                            <label className="text-[10px] font-black uppercase tracking-widest text-base-content/40">Target Resolution</label>
                             <div className="flex items-center gap-2">
-                                <input type="number" value={settings.width} onChange={e => handleSettingsChange('width', (e.currentTarget as any).value ? parseInt((e.currentTarget as any).value) : '')} className="input input-sm input-bordered w-full" placeholder="Width" />
-                                <button onClick={() => handleSettingsChange('lockAspectRatio', !settings.lockAspectRatio)} className="btn btn-sm btn-ghost btn-square">{settings.lockAspectRatio ? <LinkIcon/> : <LinkOffIcon/>}</button>
-                                <input type="number" value={settings.height} onChange={e => handleSettingsChange('height', (e.currentTarget as any).value ? parseInt((e.currentTarget as any).value) : '')} className="input input-sm input-bordered w-full" placeholder="Height" />
+                                <input type="number" value={settings.width} onChange={e => handleSettingsChange('width', (e.currentTarget as any).value ? parseInt((e.currentTarget as any).value) : '')} className="input input-sm input-bordered rounded-none w-full font-mono text-xs" placeholder="W" />
+                                <button onClick={() => handleSettingsChange('lockAspectRatio', !settings.lockAspectRatio)} className={`btn btn-xs btn-ghost rounded-none ${settings.lockAspectRatio ? 'text-primary' : 'opacity-20'}`}>{settings.lockAspectRatio ? <LinkIcon className="w-4 h-4"/> : <LinkOffIcon className="w-4 h-4"/>}</button>
+                                <input type="number" value={settings.height} onChange={e => handleSettingsChange('height', (e.currentTarget as any).value ? parseInt((e.currentTarget as any).value) : '')} className="input input-sm input-bordered rounded-none w-full font-mono text-xs" placeholder="H" />
                             </div>
                              <select 
-                                className="select select-sm select-bordered w-full mt-2"
+                                className="select select-xs select-bordered rounded-none w-full mt-2 font-bold uppercase tracking-tight"
                                 onChange={e => {
                                     const value = (e.currentTarget as any).value;
                                     if (value) {
@@ -460,47 +423,57 @@ const ImageResizer: React.FC = () => {
                                 }}
                                 value={settings.width && settings.height ? `${settings.width}x${settings.height}` : ""}
                              >
-                                <option value="" disabled>Or select a preset...</option>
+                                <option value="" disabled>Standard Presets</option>
                                 {COMPOSER_PRESETS.map(cat => (
                                     <optgroup key={cat.category} label={cat.category}>
-                                        {cat.presets.map(p => <option key={p.name} value={`${p.width}x${p.height}`}>{p.name} ({p.width}x{p.height})</option>)}
+                                        {cat.presets.map(p => <option key={p.name} value={`${p.width}x${p.height}`}>{p.name}</option>)}
                                     </optgroup>
                                 ))}
                             </select>
                         </div>
-                        {/* Cropping */}
-                        <div className="form-control"><label className="cursor-pointer label p-0"><span className="label-text font-semibold flex items-center gap-2"><CropIcon/> Enable Crop</span><input type="checkbox" checked={settings.enableCropping} onChange={e => handleSettingsChange('enableCropping', (e.currentTarget as any).checked)} className="toggle toggle-sm toggle-primary" /></label></div>
-                        {/* Output */}
-                        <div className="form-control"><label className="label-text pb-1 font-semibold">Output</label>
-                            <div className="flex items-center gap-2">
-                                <select value={settings.format} onChange={e => handleSettingsChange('format', (e.currentTarget as any).value as 'jpeg' | 'png' | 'webp')} className="select select-sm select-bordered w-full">
-                                    <option value="jpeg">JPEG</option>
-                                    <option value="png">PNG</option>
-                                    <option value="webp">WEBP</option>
-                                </select>
-                                {(settings.format === 'jpeg' || settings.format === 'webp') &&
-                                    <input type="range" min={0.1} max={1} step={0.05} value={settings.quality} onChange={e => handleSettingsChange('quality', parseFloat((e.currentTarget as any).value))} className="range range-xs" title={`Quality: ${settings.quality}`} />
-                                }
+
+                        <div className="space-y-4">
+                            <label className="text-[10px] font-black uppercase tracking-widest text-base-content/40">Cropping</label>
+                            <div className="form-control">
+                                <label className="cursor-pointer label p-0 gap-4">
+                                    <span className="text-[10px] font-black uppercase text-base-content/40 tracking-widest flex items-center gap-2"><CropIcon className="w-3.5 h-3.5"/> Enable Smart Crop</span>
+                                    <input type="checkbox" checked={settings.enableCropping} onChange={e => handleSettingsChange('enableCropping', (e.currentTarget as any).checked)} className="toggle toggle-xs toggle-primary" />
+                                </label>
                             </div>
-                            <input type="text" value={settings.renamePrefix} onChange={e => handleSettingsChange('renamePrefix', (e.currentTarget as any).value)} className="input input-sm input-bordered w-full mt-2" placeholder="File Prefix (optional)" />
-                            <label className="cursor-pointer label p-0 mt-2"><span className="label-text">Add number sequence (e.g., prefix-001)</span><input type="checkbox" checked={settings.renameSequentially} onChange={e => handleSettingsChange('renameSequentially', (e.currentTarget as any).checked)} className="checkbox checkbox-sm" /></label>
+                        </div>
+
+                        <div className="space-y-6">
+                            <label className="text-[10px] font-black uppercase tracking-widest text-base-content/40">Output Files</label>
+                            <div className="space-y-4">
+                                <div className="flex items-center gap-2">
+                                    <select value={settings.format} onChange={e => handleSettingsChange('format', (e.currentTarget as any).value as 'jpeg' | 'png' | 'webp')} className="select select-xs select-bordered rounded-none w-full font-bold uppercase tracking-tight">
+                                        <option value="jpeg">JPEG</option>
+                                        <option value="png">PNG</option>
+                                        <option value="webp">WEBP</option>
+                                    </select>
+                                    {(settings.format === 'jpeg' || settings.format === 'webp') &&
+                                        <input type="range" min={0.1} max={1} step={0.05} value={settings.quality} onChange={e => handleSettingsChange('quality', parseFloat((e.currentTarget as any).value))} className="range range-xs range-primary w-24" />
+                                    }
+                                </div>
+                                <input type="text" value={settings.renamePrefix} onChange={e => handleSettingsChange('renamePrefix', (e.currentTarget as any).value)} className="input input-sm input-bordered rounded-none w-full font-bold text-xs" placeholder="FILE_PREFIX_" />
+                                <label className="cursor-pointer label p-0 gap-4">
+                                    <span className="text-[10px] font-black uppercase text-base-content/40 tracking-widest">Sequential Naming</span>
+                                    <input type="checkbox" checked={settings.renameSequentially} onChange={e => handleSettingsChange('renameSequentially', (e.currentTarget as any).checked)} className="checkbox checkbox-xs checkbox-primary rounded-none" />
+                                </label>
+                            </div>
                         </div>
                     </div>
-                    <div className="p-4 border-t border-base-300 grid grid-cols-2 gap-2">
-                        <button onClick={handleReset} disabled={isDownloading || images.length === 0} className="btn btn-sm btn-error btn-outline">
-                            Reset
+                    <footer className="p-4 border-t border-base-300 grid grid-cols-2 gap-2 bg-base-200/20">
+                        <button onClick={handleReset} disabled={isDownloading || images.length === 0} className="btn btn-sm btn-ghost rounded-none font-black text-[9px] tracking-widest text-error/40 hover:text-error">CLEAR ALL</button>
+                        <button onClick={handleDownload} disabled={isDownloading || images.length === 0} className="btn btn-sm btn-primary rounded-none font-black text-[9px] tracking-widest shadow-lg">
+                           {isDownloading ? 'PROCESSING...' : 'DOWNLOAD ZIP'}
                         </button>
-                        <button onClick={handleDownload} disabled={isDownloading || images.length === 0} className="btn btn-sm btn-primary">
-                           {isDownloading ? <span className="loading loading-spinner loading-xs"></span> : <DownloadIcon className="w-4 h-4 mr-2"/>}
-                           {isDownloading ? 'Processing...' : 'Download'}
-                        </button>
-                    </div>
+                    </footer>
                 </aside>
 
-                {/* Main Area */}
-                <main className="lg:col-span-3 bg-base-100 rounded-xl shadow-xl flex flex-col min-h-0">
+                <main className="flex-grow bg-base-200/20 overflow-hidden relative flex flex-col">
                     {images.length > 0 ? (
-                        <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 gap-4 p-4 overflow-y-auto">
+                        <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 gap-px bg-base-300 border-r border-base-300 overflow-y-auto custom-scrollbar">
                            {images.map(img => (
                                <ImageCard 
                                     key={img.id}

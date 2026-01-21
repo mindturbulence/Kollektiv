@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { GenericCheatsheetPage } from './GenericCheatsheetPage';
 import CheatsheetCard from './CheatsheetCard';
@@ -14,8 +13,9 @@ interface CheatsheetProps {
 
 const Cheatsheet: React.FC<CheatsheetProps> = ({ isCategoryPanelCollapsed, onToggleCategoryPanel, isSidebarPinned }) => {
   // A dummy function as this cheatsheet doesn't have image management
-  const handleUpdate = async (itemId: string, newImageUrls: string[]): Promise<CheatsheetCategory[]> => {
-    console.log(`Update called for ${itemId}, but not implemented for this cheatsheet.`);
+  // FIX: Updated parameter type from string[] to Partial<CheatsheetItem> to match GenericCheatsheetPageProps
+  const handleUpdate = async (itemId: string, updates: Partial<CheatsheetItem>): Promise<CheatsheetCategory[]> => {
+    console.log(`Update called for ${itemId}, but not implemented for this cheatsheet.`, updates);
     // Return the existing data to avoid breaking state
     return await loadCheatsheet();
   };
@@ -23,6 +23,8 @@ const Cheatsheet: React.FC<CheatsheetProps> = ({ isCategoryPanelCollapsed, onTog
   return (
     <GenericCheatsheetPage
       title="Prompting Cheatsheet"
+      // Fix: Added missing required heroText prop as per GenericCheatsheetPageProps
+      heroText="PROMPTING"
       searchPlaceholder="Search topics (e.g., 'role-playing', 'midjourney')..."
       loadDataFn={loadCheatsheet}
       updateDataFn={handleUpdate}

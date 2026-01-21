@@ -1,7 +1,6 @@
-
 import React, { useState, useRef, useEffect } from 'react';
 import type { GalleryItem } from '../types';
-import { ImageBrokenIcon, ThumbTackIcon, EllipsisVerticalIcon, EditIcon, DeleteIcon, PhotoIcon, ChevronLeftIcon, ChevronRightIcon } from './icons';
+import { ImageBrokenIcon, ThumbTackIcon, EllipsisVerticalIcon, EditIcon, DeleteIcon, PhotoIcon, ChevronLeftIcon, ChevronRightIcon, PlayIcon } from './icons';
 import { fileSystemManager } from '../utils/fileUtils';
 
 interface ImageCardProps {
@@ -66,10 +65,13 @@ const Media: React.FC<{
             </div>
         );
     }
+    
+    const mediaClasses = `w-full h-auto object-cover block grayscale group-hover:grayscale-0 transition-all duration-700 ${className}`;
+
     return type === 'video' ? (
-        <video src={displayUrl} className={`w-full h-auto object-cover block ${className}`} autoPlay loop muted playsInline />
+        <video src={displayUrl} className={mediaClasses} autoPlay loop muted playsInline />
     ) : (
-        <img src={displayUrl} alt={title} className={`w-full h-auto object-cover block ${className}`} />
+        <img src={displayUrl} alt={title} className={mediaClasses} />
     );
 });
 
@@ -162,51 +164,57 @@ const ImageCard: React.FC<ImageCardProps> = ({ item, onOpenDetailView, onDeleteI
   return (
     <div 
       onClick={() => onOpenDetailView()}
-      className="relative group bg-base-100 shadow-lg transition-all duration-300 ease-in-out transform hover:-translate-y-1 hover:shadow-2xl cursor-pointer"
+      className="relative group bg-base-100 transition-all duration-300 ease-in-out transform hover:z-10 cursor-pointer overflow-hidden"
     >
-      {isPinned && (
-        <div className="absolute top-2 left-2 z-30">
-          <span title="Pinned">
-            <ThumbTackIcon className="w-5 h-5 drop-shadow-lg" />
-          </span>
-        </div>
-      )}
+      <div className="absolute top-2 left-2 z-30 flex flex-col gap-1.5">
+          {isPinned && (
+              <span title="Pinned">
+                <ThumbTackIcon className="w-5 h-5 drop-shadow-lg text-primary" />
+              </span>
+          )}
+          {item.youtubeUrl && (
+              <span title="Published to YouTube" className="bg-error text-error-content p-1 shadow-lg">
+                <PlayIcon className="w-3.5 h-3.5 fill-current" />
+              </span>
+          )}
+      </div>
+
       {item.isNsfw && (
         <div
           className={`absolute top-2 z-30 opacity-0 group-hover:opacity-100 transition-opacity ${isPinned ? 'left-9' : 'left-2'}`}
         >
-          <div className="badge badge-warning badge-xs" title="NSFW">NSFW</div>
+          <div className="badge badge-warning badge-xs rounded-none font-black text-[8px]" title="NSFW">NSFW</div>
         </div>
       )}
 
       <div className="absolute top-2 right-2 z-30" ref={menuRef}>
         <button
           onClick={(e: React.MouseEvent) => { e.stopPropagation(); setIsMenuOpen(!isMenuOpen); }}
-          className="btn btn-sm btn-circle border-none bg-black/50 text-white/80 hover:bg-black/80 transition-all opacity-0 group-hover:opacity-100 focus:opacity-100"
+          className="btn btn-xs btn-circle border-none bg-black/50 text-white/80 hover:bg-black/80 transition-all opacity-0 group-hover:opacity-100 focus:opacity-100"
           title="More options"
         >
-          <EllipsisVerticalIcon className="w-5 h-5" />
+          <EllipsisVerticalIcon className="w-4 h-4" />
         </button>
         {isMenuOpen && (
           <div
             onClick={(e: React.MouseEvent) => e.stopPropagation()}
-            className="absolute right-0 mt-2 w-48 bg-base-200/95 backdrop-blur-sm rounded-md shadow-lg py-1 z-20 animate-fade-in-up"
+            className="absolute right-0 mt-2 w-48 bg-base-200/95 backdrop-blur-sm rounded-none shadow-2xl py-1 z-20 animate-fade-in-up border border-base-300"
           >
-            <button onClick={(e: React.MouseEvent) => { e.stopPropagation(); onOpenDetailView(); setIsMenuOpen(false); }} className="w-full text-left flex items-center px-4 py-2 text-sm text-base-content hover:bg-base-300 rounded-md">
+            <button onClick={(e: React.MouseEvent) => { e.stopPropagation(); onOpenDetailView(); setIsMenuOpen(false); }} className="w-full text-left flex items-center px-4 py-2 text-xs font-black uppercase tracking-widest text-base-content hover:bg-base-300">
               <EditIcon className="w-4 h-4 mr-3" /> View & Edit
             </button>
-            <button onClick={(e: React.MouseEvent) => { e.stopPropagation(); onTogglePin(item.id); setIsMenuOpen(false); }} className="w-full text-left flex items-center px-4 py-2 text-sm text-base-content hover:bg-base-300 rounded-md">
+            <button onClick={(e: React.MouseEvent) => { e.stopPropagation(); onTogglePin(item.id); setIsMenuOpen(false); }} className="w-full text-left flex items-center px-4 py-2 text-xs font-black uppercase tracking-widest text-base-content hover:bg-base-300">
               <ThumbTackIcon className="w-4 h-4 mr-3" /> {isPinned ? 'Unpin Item' : 'Pin Item'}
             </button>
             <div className="my-1 h-px bg-base-300"></div>
-            <button onClick={(e: React.MouseEvent) => { e.stopPropagation(); onDeleteItem(item); setIsMenuOpen(false); }} className="w-full text-left flex items-center px-4 py-2 text-sm text-error hover:bg-base-300 hover:text-error-focus rounded-md">
+            <button onClick={(e: React.MouseEvent) => { e.stopPropagation(); onDeleteItem(item); setIsMenuOpen(false); }} className="w-full text-left flex items-center px-4 py-2 text-xs font-black uppercase tracking-widest text-error hover:bg-base-300">
               <DeleteIcon className="w-4 h-4 mr-3" /> Delete Item
             </button>
           </div>
         )}
       </div>
 
-      <div className="relative w-full bg-base-300 overflow-hidden">
+      <div className="relative w-full bg-black overflow-hidden">
         <Media
           url={blobUrls[item.urls[currentIndex]] || null}
           type={item.type}
@@ -237,17 +245,16 @@ const ImageCard: React.FC<ImageCardProps> = ({ item, onOpenDetailView, onDeleteI
       )}
 
       <div className="absolute bottom-0 left-0 right-0 p-3 z-20 opacity-0 group-hover:opacity-100 transform translate-y-4 group-hover:translate-y-0 transition-all duration-300 ease-in-out pointer-events-none bg-gradient-to-t from-black/90 via-black/50 to-transparent">
-        <p className="text-white font-semibold truncate" title={item.title}>{item.title}</p>
-        <p className="text-xs text-white/80 mt-0.5">
+        <p className="text-white text-xs font-black uppercase tracking-widest truncate" title={item.title}>{item.title}</p>
+        <p className="text-[9px] font-mono text-white/50 mt-0.5 uppercase">
           {new Date(item.createdAt).toLocaleDateString(undefined, {
             year: 'numeric',
-            month: 'long',
+            month: 'short',
             day: 'numeric',
           })}
         </p>
-        {item.notes && <p className="text-xs text-white/70 truncate mt-0.5" title={item.notes}>{item.notes}</p>}
         {item.urls.length > 1 && (
-          <p className="text-xs text-base-content/40 mt-1">{currentIndex + 1} / {item.urls.length}</p>
+          <p className="text-[9px] font-mono text-white/30 mt-1 uppercase">{currentIndex + 1} / {item.urls.length} SAMPLES</p>
         )}
       </div>
     </div>

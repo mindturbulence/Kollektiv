@@ -1,4 +1,3 @@
-
 import React, { useState, useCallback, useRef, useEffect } from 'react';
 import type { SavedPrompt } from '../types';
 import CopyIcon from './CopyIcon';
@@ -6,6 +5,7 @@ import { DeleteIcon, CheckIcon, EditIcon, EllipsisVerticalIcon, SparklesIcon, Bo
 
 interface SavedPromptCardProps {
   prompt: SavedPrompt;
+  categoryName?: string;
   onDeleteClick: (prompt: SavedPrompt) => void;
   onEditClick: (prompt: SavedPrompt) => void;
   onSendToEnhancer: (text: string) => void;
@@ -13,7 +13,7 @@ interface SavedPromptCardProps {
   onClip: (prompt: SavedPrompt) => void;
 }
 
-const SavedPromptCard: React.FC<SavedPromptCardProps> = ({ prompt, onDeleteClick, onEditClick, onSendToEnhancer, onOpenDetailView, onClip }) => {
+const SavedPromptCard: React.FC<SavedPromptCardProps> = ({ prompt, categoryName, onDeleteClick, onEditClick, onSendToEnhancer, onOpenDetailView, onClip }) => {
   const [copied, setCopied] = useState(false);
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
@@ -36,20 +36,12 @@ const SavedPromptCard: React.FC<SavedPromptCardProps> = ({ prompt, onDeleteClick
   }, []);
   
   useEffect(() => {
-    // Reset expansion state when the prompt changes
     setIsExpanded(false);
-
     const checkOverflow = () => {
         const element = textRef.current;
-        if (element) {
-            // In its default clamped state, does the text overflow?
-            setCanExpand((element as any).scrollHeight > (element as any).clientHeight);
-        }
+        if (element) setCanExpand((element as any).scrollHeight > (element as any).clientHeight);
     };
-    
-    // We check after a very short delay to let the DOM render with the new text.
-    const timer = setTimeout(checkOverflow, 50);
-
+    const timer = setTimeout(checkOverflow, 100);
     return () => clearTimeout(timer);
   }, [prompt.text]);
 
@@ -63,96 +55,74 @@ const SavedPromptCard: React.FC<SavedPromptCardProps> = ({ prompt, onDeleteClick
     }
   }, [prompt.text]);
   
-  const title = prompt.title?.trim() || prompt.basePrompt?.trim() || 'Untitled Prompt';
+  const title = prompt.title?.trim() || prompt.basePrompt?.trim() || 'UNTITLED_IDEA';
+  const displayCategory = categoryName || 'Uncategorized';
 
   return (
-    <div className="card bg-base-100 shadow-xl border border-base-300 h-full flex flex-col">
-      <div className="card-body p-4 flex flex-col">
+    <div className="flex flex-col group bg-base-100 transition-all duration-300 hover:bg-base-200/30 border-b border-base-300 last:border-b-0">
+      <div className="p-8 flex flex-col h-full">
         {/* Header */}
-        <div className="flex justify-between items-start gap-2">
+        <div className="flex justify-between items-start gap-4 mb-4">
           <div className="flex-grow min-w-0 cursor-pointer" onClick={onOpenDetailView}>
-            <h2 className="card-title text-base font-semibold truncate" title={title}>
+            <div className="flex items-center gap-3 mb-2">
+                 <span className="text-[9px] font-black uppercase tracking-[0.2em] text-primary/60 truncate">
+                  {displayCategory}
+                </span>
+                <span className="text-[9px] font-mono text-base-content/20 truncate uppercase">ID: {prompt.id.slice(-6)}</span>
+            </div>
+            <h2 className="text-2xl font-black tracking-tighter text-base-content leading-tight truncate group-hover:text-primary transition-colors" title={title}>
               {title}
             </h2>
-            {prompt.targetAI && (
-                <div className="text-xs text-base-content/60 mt-1">
-                    <span className="font-semibold uppercase tracking-wider">
-                        {prompt.targetAI}
-                    </span>
-                </div>
-            )}
           </div>
           <div className="relative flex-shrink-0" ref={menuRef}>
             <button
-              onClick={(e) => {
-                e.stopPropagation();
-                setIsMenuOpen(!isMenuOpen);
-              }}
-              className="btn btn-sm btn-ghost btn-square"
-              title="More options"
+              onClick={(e) => { e.stopPropagation(); setIsMenuOpen(!isMenuOpen); }}
+              className="btn btn-sm btn-ghost btn-square opacity-20 hover:opacity-100"
             >
               <EllipsisVerticalIcon className="w-5 h-5" />
             </button>
             {isMenuOpen && (
-              <ul
-                onClick={(e) => e.stopPropagation()}
-                className="absolute right-0 mt-2 w-48 menu menu-sm dropdown-content bg-base-200 rounded-box shadow-xl z-10 animate-fade-in-up"
-              >
-                <li><a onClick={() => { onEditClick(prompt); setIsMenuOpen(false); }}><EditIcon className="w-4 h-4" /> Edit</a></li>
-                <li><a onClick={() => { onDeleteClick(prompt); setIsMenuOpen(false); }} className="text-error"><DeleteIcon className="w-4 h-4" /> Delete</a></li>
+              <ul onClick={(e) => e.stopPropagation()} className="absolute right-0 mt-2 w-48 menu menu-sm bg-base-200 border border-base-300 shadow-2xl z-20 animate-fade-in">
+                <li><a onClick={() => { onEditClick(prompt); setIsMenuOpen(false); }} className="font-bold"><EditIcon className="w-4 h-4" /> Rename / Tag</a></li>
+                <li><a onClick={() => { onDeleteClick(prompt); setIsMenuOpen(false); }} className="text-error font-bold"><DeleteIcon className="w-4 h-4" /> Purge Entry</a></li>
               </ul>
             )}
           </div>
         </div>
 
         {/* Body */}
-        <div className="flex-grow my-2">
+        <div className="flex-grow mb-6">
           <p
             ref={textRef}
-            className={`text-sm text-base-content/80 break-words ${!isExpanded ? 'line-clamp-5' : ''}`}
+            className={`text-sm font-medium leading-relaxed text-base-content/60 break-words italic ${!isExpanded ? 'line-clamp-4' : ''}`}
           >
-            {prompt.text}
+            "{prompt.text}"
           </p>
            {canExpand && (
-            <button
-              onClick={() => setIsExpanded(!isExpanded)}
-              className="text-primary text-xs font-semibold mt-2 hover:underline"
-            >
-              {isExpanded ? 'Read less' : 'Read more'}
+            <button onClick={(e) => { e.stopPropagation(); setIsExpanded(!isExpanded); }} className="text-primary text-[10px] font-black uppercase tracking-widest mt-3 hover:underline">
+              {isExpanded ? 'Collapse' : 'Expand'}
             </button>
           )}
         </div>
 
         {/* Footer */}
-        <div className="card-actions justify-between items-center mt-auto pt-2">
-            <time dateTime={new Date(prompt.createdAt).toISOString()} className="text-xs text-base-content/60">
-                {new Date(prompt.createdAt).toLocaleDateString(undefined, {
-                    day: 'numeric',
-                    month: 'long',
-                    year: 'numeric',
-                })}
-            </time>
-            <div className="flex items-center">
-                <button
-                    onClick={(e) => { e.stopPropagation(); onClip(prompt); }}
-                    title="Clip to Clipboard"
-                    className="btn btn-sm btn-ghost btn-square"
-                >
-                    <BookmarkIcon className="w-5 h-5" />
+        <div className="pt-6 flex justify-between items-center mt-auto">
+            <div className="flex flex-col">
+                <span className="text-[8px] font-black uppercase tracking-widest text-base-content/20 mb-1">Archival Date</span>
+                <time className="text-[10px] font-mono text-base-content/40">
+                    {new Date(prompt.createdAt).toLocaleDateString()}
+                </time>
+            </div>
+            
+            <div className="flex items-center gap-1">
+                <button onClick={(e) => { e.stopPropagation(); onClip(prompt); }} title="Clip to Notebook" className="btn btn-sm btn-ghost btn-square text-base-content/20 hover:text-primary">
+                    <BookmarkIcon className="w-4 h-4" />
                 </button>
-                <button
-                    onClick={(e) => { e.stopPropagation(); onSendToEnhancer(prompt.text); }}
-                    title="Send to Refine"
-                    className="btn btn-sm btn-ghost btn-square"
-                >
-                    <SparklesIcon className="w-5 h-5" />
+                <button onClick={(e) => { e.stopPropagation(); onSendToEnhancer(prompt.text); }} title="Analyze Artifact" className="btn btn-sm btn-ghost btn-square text-base-content/20 hover:text-primary">
+                    <SparklesIcon className="w-4 h-4" />
                 </button>
-                <button
-                    onClick={handleCopy}
-                    title={copied ? "Copied!" : "Copy prompt"}
-                    className="btn btn-sm btn-ghost btn-square"
-                >
-                    {copied ? <CheckIcon className="w-5 h-5 text-success" /> : <CopyIcon className="w-5 h-5" />}
+                <button onClick={handleCopy} title="Copy Token Stream" className="btn btn-sm btn-ghost btn-square text-base-content/20 hover:text-success">
+                    {copied ? <CheckIcon className="w-4 h-4" /> : <CopyIcon className="w-4 h-4" />}
                 </button>
             </div>
         </div>

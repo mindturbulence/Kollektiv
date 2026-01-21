@@ -21,7 +21,7 @@ export const enhancePromptOllama = async (
                 stream: false,
                 keep_alive: "15m",
                 options: {
-                    temperature: 0.7, // Slightly higher for more creative/descriptive results
+                    temperature: 0.7, 
                     top_p: 0.9,
                     repeat_penalty: 1.2
                 }
@@ -206,7 +206,7 @@ export const dissectPromptOllama = async (promptText: string, settings: LLMSetti
             body: JSON.stringify({
                 model: settings.ollamaModel,
                 prompt: promptText,
-                system: "Task: JSON dissect prompt into keys (subject, action, style, mood, composition, lighting, details).",
+                system: "Task: JSON dissect prompt into keys (subject, action, style, mood, composition, lighting, details). Output EXACT JSON ONLY.",
                 stream: false,
                 format: 'json',
                 keep_alive: "15m",
@@ -214,8 +214,16 @@ export const dissectPromptOllama = async (promptText: string, settings: LLMSetti
         });
         if (!response.ok) throw new Error("Ollama failed.");
         const data = await response.json();
+        
+        if (!data.response) return {};
+
         const jsonText = data.response.replace(/```json/g, '').replace(/```/g, '').trim();
-        return JSON.parse(jsonText);
+        try {
+            return JSON.parse(jsonText);
+        } catch (parseErr) {
+            console.warn("Ollama dissection returned non-JSON response:", jsonText);
+            return {};
+        }
     } catch (err) {
         throw handleGeminiError(err, 'dissecting with Ollama');
     }
@@ -239,7 +247,11 @@ export const generateFocusedVariationsOllama = async (promptText: string, compon
         if (!response.ok) throw new Error("Ollama failed.");
         const data = await response.json();
         const jsonText = data.response.replace(/```json/g, '').replace(/```/g, '').trim();
-        return JSON.parse(jsonText);
+        try {
+            return JSON.parse(jsonText);
+        } catch (e) {
+            return {};
+        }
     } catch (err) {
         throw handleGeminiError(err, 'variations with Ollama');
     }
@@ -290,6 +302,29 @@ export const replaceComponentInPromptOllama = async (originalPrompt: string, com
         return (responseData.response || '').trim();
     } catch (err) {
         throw handleGeminiError(err, 'replacing with Ollama');
+    }
+};
+
+export const reconcileDescriptionsOllama = async (existing: string, incoming: string, settings: LLMSettings): Promise<string> => {
+    try {
+        if (!settings.ollamaBaseUrl || !settings.ollamaModel) throw new Error("Ollama not configured.");
+        const apiResponse = await fetch(`${settings.ollamaBaseUrl}/api/generate`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                model: settings.ollamaModel,
+                prompt: `EXISTING DESCRIPTION:\n${existing}\n\nNEW INFORMATION:\n${incoming}`,
+                system: "Task: Rewrite the provided text segments into a single, cohesive, high-utility descriptive paragraph for an artist or art style guide. Remove redundant sentences, ensure logical flow, and prioritize clarity. Keep the tone professional and artistic. Output text only. No preamble.",
+                stream: false,
+                keep_alive: "15m",
+                options: { temperature: 0.4 },
+            }),
+        });
+        if (!apiResponse.ok) throw new Error("Ollama failed.");
+        const responseData = await apiResponse.json();
+        return (responseData.response || '').trim();
+    } catch (err) {
+        throw handleGeminiError(err, 'reconciling descriptions');
     }
 };
 

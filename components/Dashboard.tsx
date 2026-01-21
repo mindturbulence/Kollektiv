@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect, useMemo } from 'react';
 import { loadSavedPrompts, loadPromptCategories } from '../utils/promptStorage';
 import { loadGalleryItems, loadCategories as loadGalleryCategories } from '../utils/galleryStorage';
@@ -20,7 +19,7 @@ interface DashboardProps {
 const StatItem: React.FC<{ label: string; value: number | string }> = ({ label, value }) => (
     <div className="flex flex-col border-r border-base-300 px-6 last:border-r-0">
         <span className="text-3xl font-black tracking-tighter leading-none">{value}</span>
-        <span className="text-[10px] uppercase font-bold text-base-content/40 tracking-[0.2em] mt-1">{label}</span>
+        <span className="text-[10px] uppercase font-black text-base-content/30 tracking-[0.2em] mt-1">{label}</span>
     </div>
 );
 
@@ -29,29 +28,28 @@ const ActionBlock: React.FC<{
     desc: string; 
     icon: React.ReactNode; 
     onClick: () => void; 
-    colorClass: string 
-}> = ({ title, desc, icon, onClick, colorClass }) => (
+}> = ({ title, desc, icon, onClick }) => (
     <button 
         onClick={onClick}
         className={`group relative flex flex-col justify-between p-8 text-left border border-base-300 transition-all duration-300 hover:bg-base-200 overflow-hidden h-64`}
     >
         <div className="relative z-10">
-            <div className="w-10 h-10 text-base-content/40 group-hover:text-primary transition-colors mb-4">
+            <div className="w-10 h-10 text-base-content/20 group-hover:text-primary transition-colors mb-4">
                 {icon}
             </div>
-            <h3 className="text-2xl font-black tracking-tighter text-base-content leading-none group-hover:translate-x-1 transition-transform">{title}</h3>
-            <p className="text-xs text-base-content/50 font-medium mt-3 max-w-[180px]">{desc}</p>
+            <h3 className="text-2xl font-black tracking-tighter text-base-content leading-none group-hover:translate-x-1 transition-transform uppercase">{title}</h3>
+            <p className="text-xs text-base-content/50 font-medium mt-3 max-w-[180px] leading-relaxed">{desc}</p>
         </div>
         <div className="mt-auto flex justify-between items-center relative z-10">
-            <span className="text-[10px] font-bold uppercase tracking-widest text-base-content/30 group-hover:text-primary transition-colors">Launch Module</span>
-            <ChevronRightIcon className="w-4 h-4 text-base-content/20 group-hover:translate-x-1 transition-all" />
+            <span className="text-[10px] font-black uppercase tracking-widest text-base-content/20 group-hover:text-primary transition-colors">Open</span>
+            <ChevronRightIcon className="w-4 h-4 text-base-content/10 group-hover:translate-x-1 transition-all" />
         </div>
     </button>
 );
 
-const SpecimenRow: React.FC<{ prompt: SavedPrompt; onNavigate: () => void }> = ({ prompt, onNavigate }) => {
+const PromptRow: React.FC<{ prompt: SavedPrompt; onNavigate: () => void }> = ({ prompt, onNavigate }) => {
     const [copied, setCopied] = useState(false);
-    const title = prompt.title || prompt.basePrompt || 'Untitled Idea';
+    const title = prompt.title || prompt.basePrompt || 'Untitled Prompt';
     
     const handleCopy = (e: React.MouseEvent) => {
         e.stopPropagation();
@@ -69,34 +67,34 @@ const SpecimenRow: React.FC<{ prompt: SavedPrompt; onNavigate: () => void }> = (
             className="group grid grid-cols-12 gap-4 p-6 border-b border-base-300 hover:bg-base-200/50 transition-all cursor-pointer items-center"
         >
             <div className="col-span-12 md:col-span-7 flex flex-col">
-                <span className="text-xl font-bold tracking-tight text-base-content group-hover:text-primary transition-colors truncate">
+                <span className="text-xl font-bold tracking-tight text-base-content group-hover:text-primary transition-colors truncate uppercase">
                     {title}
                 </span>
-                <p className="text-xs text-base-content/40 truncate mt-1 italic">"{prompt.text}"</p>
+                <p className="text-xs text-base-content/40 truncate mt-1 italic leading-relaxed">"{prompt.text}"</p>
             </div>
             <div className="hidden md:flex col-span-3 items-center gap-4">
                 <div className="flex flex-col">
-                    <span className="text-[9px] uppercase font-black tracking-widest text-base-content/30">Target System</span>
-                    <span className="text-[10px] font-mono font-bold text-base-content/60">{prompt.targetAI || 'GENERAL'}</span>
+                    <span className="text-[9px] uppercase font-black tracking-widest text-base-content/20">Target Engine</span>
+                    <span className="text-[10px] font-mono font-bold text-base-content/50 uppercase">{prompt.targetAI || 'GENERAL'}</span>
                 </div>
             </div>
             <div className="col-span-12 md:col-span-2 flex justify-end items-center gap-4 mt-4 md:mt-0">
-                <span className="text-[10px] font-mono text-base-content/30 whitespace-nowrap">
+                <span className="text-[10px] font-mono text-base-content/20 whitespace-nowrap uppercase">
                     {new Date(prompt.createdAt).toLocaleDateString()}
                 </span>
                 <button 
                     onClick={handleCopy}
-                    className={`btn btn-ghost btn-xs btn-square ${copied ? 'text-success' : 'text-base-content/20'}`}
-                    title="Copy Specimen"
+                    className={`btn btn-ghost btn-xs btn-square rounded-none ${copied ? 'text-success' : 'text-base-content/10'}`}
+                    title="Copy Prompt"
                 >
-                    {copied ? <div className="text-[8px] font-bold">OK</div> : <CopyIcon className="w-4 h-4" />}
+                    {copied ? <div className="text-[8px] font-black">OK</div> : <CopyIcon className="w-4 h-4" />}
                 </button>
             </div>
         </div>
     );
 };
 
-const JournalTile: React.FC<{ item: GalleryItem; onNavigate: () => void }> = ({ item, onNavigate }) => {
+const ImageTile: React.FC<{ item: GalleryItem; onNavigate: () => void }> = ({ item, onNavigate }) => {
     const [mediaUrl, setMediaUrl] = useState<string | null>(null);
 
     useEffect(() => {
@@ -133,7 +131,7 @@ const JournalTile: React.FC<{ item: GalleryItem; onNavigate: () => void }> = ({ 
             <div className="absolute inset-0 bg-primary/20 opacity-0 group-hover:opacity-100 transition-opacity"></div>
             <div className="absolute bottom-0 left-0 right-0 p-4 translate-y-full group-hover:translate-y-0 transition-transform duration-300 bg-base-100 border-t border-base-300 flex flex-col text-left">
                 <span className="text-[10px] font-black uppercase tracking-widest text-primary truncate">{item.title}</span>
-                <span className="text-[9px] font-mono text-base-content/40 mt-1 uppercase">{item.type} • {new Date(item.createdAt).toLocaleDateString()}</span>
+                <span className="text-[9px] font-mono font-bold text-base-content/40 mt-1 uppercase">{item.type} • {new Date(item.createdAt).toLocaleDateString()}</span>
             </div>
         </button>
     );
@@ -178,131 +176,99 @@ const Dashboard: React.FC<DashboardProps> = ({ onNavigate }) => {
         fetchData();
     }, [settings.features]);
 
-    if (isLoading) return <div className="flex-grow flex items-center justify-center"><LoadingSpinner /></div>;
+    if (isLoading) return (
+        <div className="flex-grow flex items-center justify-center w-full h-full">
+            <LoadingSpinner />
+        </div>
+    );
 
     return (
         <div className="animate-fade-in bg-base-100 min-h-full flex flex-col">
-            {/* Hero Section */}
-            <section className="p-10 lg:p-20 border-b border-base-300 bg-base-200/20">
+            <section className="p-10 border-b border-base-300 bg-base-200/20">
                 <div className="max-w-screen-2xl mx-auto flex flex-col md:flex-row items-end justify-between gap-12">
                     <div className="flex-1">
-                        <h1 className="text-7xl lg:text-9xl font-black tracking-tighter text-base-content leading-[0.8] mb-6">
-                            KOLLEK<br/>TIV.
+                        <h1 className="text-4xl lg:text-5xl font-black tracking-tighter text-base-content leading-tight mb-6 uppercase">
+                            Home<span className="text-primary">.</span>
                         </h1>
-                        <p className="text-base font-bold text-base-content/50 uppercase tracking-[0.3em] max-w-md">
-                            The professional interface for high-fidelity prompt engineering and visual journaling.
+                        <p className="text-base font-bold text-base-content/30 uppercase tracking-[0.3em] max-w-md">
+                            Your local workspace for high-fidelity prompt construction and media archival.
                         </p>
                     </div>
                     <div className="flex bg-base-100 p-8 border border-base-300 shadow-sm">
-                        <StatItem label="Inspirations" value={data.promptCount} />
-                        <StatItem label="Visual Works" value={data.galleryCount} />
-                        <StatItem label="Data Sets" value={data.categoryCount} />
+                        <StatItem label="Prompts" value={data.promptCount} />
+                        <StatItem label="Items" value={data.galleryCount} />
+                        <StatItem label="Folders" value={data.categoryCount} />
                     </div>
                 </div>
             </section>
             
-            {/* Module Grid */}
             <section className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 border-b border-base-300">
                 <ActionBlock 
                     title="Builder" 
-                    desc="Architect detailed prompts with model-aware logic and visual physics." 
+                    desc="Construct and refine complex generative formulas with AI assistance." 
                     icon={<SparklesIcon className="w-full h-full"/>} 
                     onClick={() => onNavigate('prompts')} 
-                    colorClass="text-indigo-600"
                 />
                 <ActionBlock 
                     title="Library" 
-                    desc="Maintain a curated repository of high-utility formulas and tokens." 
+                    desc="Manage your curated collection of saved prompts and formulas." 
                     icon={<PromptIcon className="w-full h-full"/>} 
                     onClick={() => onNavigate('prompt')} 
-                    colorClass="text-emerald-600"
                 />
                 <ActionBlock 
                     title="Gallery" 
-                    desc="A minimalist visual record of generated temporal and spatial results." 
+                    desc="Explore and manage your local visual media repository." 
                     icon={<PhotoIcon className="w-full h-full"/>} 
                     onClick={() => onNavigate('gallery')} 
-                    colorClass="text-amber-500"
                 />
                 <ActionBlock 
-                    title="Reference" 
-                    desc="Exploration modules for art styles, cinematography, and artists." 
+                    title="Guides" 
+                    desc="Access archival reference data for styles, artists, and techniques." 
                     icon={<BookOpenIcon className="w-full h-full"/>} 
                     onClick={() => onNavigate('cheatsheet')} 
-                    colorClass="text-rose-600"
                 />
             </section>
 
-            <div className="grid grid-cols-1 lg:grid-cols-12 max-w-full">
-                {/* Specimen Feed */}
+            <div className="grid grid-cols-1 lg:grid-cols-12 max-w-full flex-grow">
                 <div className="lg:col-span-8 border-r border-base-300">
                     <div className="p-6 border-b border-base-300 flex justify-between items-center bg-base-200/10">
                         <h2 className="text-xs font-black uppercase tracking-[0.4em] text-base-content/40 flex items-center gap-3">
-                            <span className="w-2 h-2 rounded-full bg-primary animate-pulse"></span> Recent Specimens
+                            <span className="w-2 h-2 rounded-full bg-primary animate-pulse"></span> Recent Activity
                         </h2>
-                        <button onClick={() => onNavigate('prompt')} className="text-[10px] font-black uppercase tracking-widest text-primary hover:underline">
-                            Open Index
+                        <button onClick={() => onNavigate('prompt')} className="btn btn-sm btn-ghost rounded-none font-black uppercase tracking-widest text-[10px]">
+                            View All
                         </button>
                     </div>
                     
                     <div className="flex flex-col">
                         {data.prompts.length > 0 ? (
-                            data.prompts.map(p => <SpecimenRow key={p.id} prompt={p} onNavigate={() => onNavigate('prompt')} />)
+                            data.prompts.map(p => <PromptRow key={p.id} prompt={p} onNavigate={() => onNavigate('prompt')} />)
                         ) : (
-                            <div className="p-20 text-center text-base-content/20 uppercase font-black tracking-widest">
-                                Repository Empty
+                            <div className="p-20 text-center text-base-content/10 uppercase font-black tracking-widest text-center">
+                                Repository empty
                             </div>
                         )}
                     </div>
                 </div>
 
-                {/* Journal View */}
                 <div className="lg:col-span-4 bg-base-200/10">
                     <div className="p-6 border-b border-base-300 flex justify-between items-center">
-                        <h2 className="text-xs font-black uppercase tracking-[0.4em] text-base-content/40">Visual Journal</h2>
-                        <button onClick={() => onNavigate('gallery')} className="text-[10px] font-black uppercase tracking-widest text-base-content/60 hover:text-primary">
-                            Full View
+                        <h2 className="text-xs font-black uppercase tracking-[0.4em] text-base-content/40">Media Feed</h2>
+                        <button onClick={() => onNavigate('gallery')} className="btn btn-sm btn-ghost rounded-none font-black uppercase tracking-widest text-[10px]">
+                            Gallery
                         </button>
                     </div>
                     
                     <div className="grid grid-cols-2 gap-px bg-base-300">
                         {data.gallery.length > 0 ? (
-                            data.gallery.map(item => <JournalTile key={item.id} item={item} onNavigate={() => onNavigate('gallery')} />)
+                            data.gallery.map(item => <ImageTile key={item.id} item={item} onNavigate={() => onNavigate('gallery')} />)
                         ) : (
-                            <div className="col-span-2 p-20 text-center text-base-content/20 uppercase font-black tracking-widest bg-base-100">
-                                No Data
+                            <div className="col-span-2 p-20 text-center text-base-content/10 uppercase font-black tracking-widest bg-base-100">
+                                No media
                             </div>
                         )}
                     </div>
 
-                    <div className="p-10">
-                        <div className="p-8 border border-base-300 rounded-none bg-base-100 space-y-6">
-                            <h3 className="text-xs font-black uppercase tracking-widest text-base-content/40">System Resources</h3>
-                            <div className="space-y-4">
-                                <button onClick={() => onNavigate('artstyles')} className="w-full flex items-center justify-between text-left group">
-                                    <span className="text-sm font-bold tracking-tight">Art Styles Index</span>
-                                    <ChevronRightIcon className="w-4 h-4 opacity-30 group-hover:opacity-100 transition-all" />
-                                </button>
-                                <button onClick={() => onNavigate('artists')} className="w-full flex items-center justify-between text-left group">
-                                    <span className="text-sm font-bold tracking-tight">Artist Specimens</span>
-                                    <ChevronRightIcon className="w-4 h-4 opacity-30 group-hover:opacity-100 transition-all" />
-                                </button>
-                                <button onClick={() => onNavigate('video_to_frames')} className="w-full flex items-center justify-between text-left group">
-                                    <span className="text-sm font-bold tracking-tight">Temporal Extractor</span>
-                                    <ChevronRightIcon className="w-4 h-4 opacity-30 group-hover:opacity-100 transition-all" />
-                                </button>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-            
-            {/* Footer Specifications */}
-            <div className="mt-auto border-t border-base-300 p-4 px-10 flex justify-between items-center bg-base-200/50">
-                <span className="text-[9px] font-mono font-bold text-base-content/20 tracking-widest uppercase">Kollektiv Platform Interface • Version 1.0.0</span>
-                <div className="flex gap-6">
-                    <span className="text-[9px] font-mono font-bold text-base-content/20 tracking-widest uppercase">Encryption: Local Only</span>
-                    <span className="text-[9px] font-mono font-bold text-base-content/20 tracking-widest uppercase">Status: Connected</span>
                 </div>
             </div>
         </div>

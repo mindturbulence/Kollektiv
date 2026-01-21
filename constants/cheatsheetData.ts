@@ -62,7 +62,7 @@ export const ART_STYLES_DATA: CheatsheetCategory[] = [
       { id: 'pm-6', name: 'Surrealism', description: 'Dream-like, bizarre, and illogical scenes from the subconscious mind.', imageUrls: [] },
       { id: 'pm-7', name: 'Abstract Expressionism', description: 'Non-representational art emphasizing spontaneous and emotional application of paint.', imageUrls: [] },
       { id: 'pm-8', name: 'Pop Art', description: 'Bright, bold style inspired by comic books, advertising, and popular culture.', imageUrls: [] },
-      { id: 'pm-9', name: 'Art Nouveau', description: 'Elegant, decorative style with long, flowing, organic lines.', imageUrls: [] },
+      { id: ' pm-9', name: 'Art Nouveau', description: 'Elegant, decorative style with long, flowing, organic lines.', imageUrls: [] },
       { id: 'pm-10', name: 'Art Deco', description: 'Sleek, geometric, and glamorous style from the 1920s-30s.', imageUrls: [] },
       { id: 'pm-11', name: 'Bauhaus', description: 'A German school of art focusing on functionalism, geometric purity, and minimalism.', imageUrls: [] },
       { id: 'pm-12', name: 'Futurism', description: 'Early 20th-century movement emphasizing dynamism, scale, and technology.', imageUrls: [] },
@@ -97,7 +97,7 @@ export const ART_STYLES_DATA: CheatsheetCategory[] = [
 
 export const ARTIST_CHEATSHEET_DATA: CheatsheetCategory[] = [
   {
-    category: "A",
+    category: "Artist Section A",
     items: [
       { id: "artist-slim-aarons", name: "Slim Aarons", description: "", imageUrls: [] },
       { id: "artist-edwin-austin-abbey", name: "Edwin Austin Abbey", description: "", imageUrls: [] },
@@ -169,7 +169,7 @@ export const ARTIST_CHEATSHEET_DATA: CheatsheetCategory[] = [
     ]
   },
   {
-    category: "B",
+    category: "Artist Section B",
     items: [
       { id: "artist-chris-bachalo", name: "Chris Bachalo", description: "", imageUrls: [] },
       { id: "artist-anne-bachelier", name: "Anne Bachelier", description: "", imageUrls: [] },
@@ -185,7 +185,7 @@ export const ARTIST_CHEATSHEET_DATA: CheatsheetCategory[] = [
       { id: "artist-clive-barker", name: "Clive Barker", description: "", imageUrls: [] },
       { id: "artist-wayne-barlowe", name: "Wayne Barlowe", description: "", imageUrls: [] },
       { id: "artist-ernie-barnes", name: "Ernie Barnes", description: "", imageUrls: [] },
-      { id: "artist-will-barnet", name: "Will Barnet", description: "", imageUrls: [] },
+      { id: "artist-willis-barnet", name: "Will Barnet", description: "", imageUrls: [] },
       { id: "artist-angela-barrett", name: "Angela Barrett", description: "", imageUrls: [] },
       { id: "artist-paul-barson", name: "Paul Barson", description: "", imageUrls: [] },
       { id: "artist-bo-bartlett", name: "Bo Bartlett", description: "", imageUrls: [] },
@@ -255,7 +255,7 @@ export const ARTIST_CHEATSHEET_DATA: CheatsheetCategory[] = [
     ]
   },
   {
-    category: "C",
+    category: "Artist Section C",
     items: [
       { id: "artist-francis-cadell", name: "Francis Cadell", description: "", imageUrls: [] },
       { id: "artist-paul-cadmus", name: "Paul Cadmus", description: "", imageUrls: [] },
@@ -318,7 +318,7 @@ export const ARTIST_CHEATSHEET_DATA: CheatsheetCategory[] = [
     ]
   },
   {
-    category: "D",
+    category: "Artist Section D",
     items: [
       { id: "artist-leonardo-da-vinci", name: "Leonardo da Vinci", description: "", imageUrls: [] },
       { id: "artist-steven-daluz", name: "Steven DaLuz", description: "", imageUrls: [] },
@@ -338,6 +338,7 @@ export const ARTIST_CHEATSHEET_DATA: CheatsheetCategory[] = [
       { id: "artist-dan-decarlo", name: "Dan DeCarlo", description: "", imageUrls: [] },
       { id: "artist-kelly-sue-deconnick", name: "Kelly Sue DeConnick", description: "", imageUrls: [] },
       { id: "artist-michael-deforge", name: "Michael DeForge", description: "", imageUrls: [] },
+      { id: "artist-kelly-de-vos", name: "Kelly DeVos", description: "", imageUrls: [] },
       { id: "artist-edwin-deakin", name: "Edwin Deakin", description: "", imageUrls: [] },
       { id: "artist-roger-dean", name: "Roger Dean", description: "", imageUrls: [] },
       { id: "artist-edgar-degas", name: "Edgar Degas", description: "", imageUrls: [] },
@@ -368,7 +369,7 @@ export const ARTIST_CHEATSHEET_DATA: CheatsheetCategory[] = [
     ]
   },
   {
-    category: "E",
+    category: "Artist Section E",
     items: [
       { id: "artist-edmund-dulac", name: "Edmund Dulac", description: "", imageUrls: [] },
       { id: "artist-asher-brown-durand", name: "Asher Brown Durand", description: "", imageUrls: [] },
@@ -397,7 +398,7 @@ export const ARTIST_CHEATSHEET_DATA: CheatsheetCategory[] = [
     ]
   },
   {
-    category: "F",
+    category: "Artist Section F",
     items: [
       { id: "artist-delphin-enjolras", name: "Delphin Enjolras", description: "", imageUrls: [] },
       { id: "artist-hans-erni", name: "Hans Erni", description: "", imageUrls: [] },
@@ -447,7 +448,7 @@ export const ARTIST_CHEATSHEET_DATA: CheatsheetCategory[] = [
     ]
   },
   {
-    category: "G",
+    category: "Artist Section G",
     items: [
       { id: "artist-ellen-gallagher", name: "Ellen Gallagher", description: "", imageUrls: [] },
       { id: "artist-stephen-gammell", name: "Stephen Gammell", description: "", imageUrls: [] },
@@ -502,7 +503,7 @@ export const ARTIST_CHEATSHEET_DATA: CheatsheetCategory[] = [
     ]
   },
   {
-    category: "H",
+    category: "Artist Section H",
     items: [
       { id: "artist-arthur-hacker", name: "Arthur Hacker", description: "", imageUrls: [] },
       { id: "artist-ernst-haeckel", name: "Ernst Haeckel", description: "", imageUrls: [] },
@@ -552,7 +553,7 @@ export const ARTIST_CHEATSHEET_DATA: CheatsheetCategory[] = [
     ]
   },
   {
-    category: "I",
+    category: "Artist Section I",
     items: [
       { id: "artist-louis-icart", name: "Louis Icart", description: "", imageUrls: [] },
       { id: "artist-stuart-immonen", name: "Stuart Immonen", description: "", imageUrls: [] },
@@ -567,7 +568,7 @@ export const ARTIST_CHEATSHEET_DATA: CheatsheetCategory[] = [
     ]
   },
   {
-    category: "J",
+    category: "Artist Section J",
     items: [
       { id: "artist-jorge-jacinto", name: "Jorge Jacinto", description: "", imageUrls: [] },
       { id: "artist-bill-jacklin", name: "Bill Jacklin", description: "", imageUrls: [] },
@@ -589,7 +590,7 @@ export const ARTIST_CHEATSHEET_DATA: CheatsheetCategory[] = [
     ]
   },
   {
-    category: "K",
+    category: "Artist Section K",
     items: [
       { id: "artist-shintaro-kago", name: "Shintaro Kago", description: "", imageUrls: [] },
       { id: "artist-hayv-kahraman", name: "Hayv Kahraman", description: "", imageUrls: [] },
@@ -646,7 +647,7 @@ export const ARTIST_CHEATSHEET_DATA: CheatsheetCategory[] = [
     ]
   },
   {
-    category: "L",
+    category: "Artist Section L",
     items: [
       { id: "artist-david-lachapelle", name: "David LaChapelle", description: "", imageUrls: [] },
       { id: "artist-raphael-lacoste", name: "Raphael Lacoste", description: "", imageUrls: [] },
@@ -685,7 +686,7 @@ export const ARTIST_CHEATSHEET_DATA: CheatsheetCategory[] = [
     ]
   },
   {
-    category: "M",
+    category: "Artist Section M",
     items: [
       { id: "artist-tom-lovell", name: "Tom Lovell", description: "", imageUrls: [] },
       { id: "artist-maximilien-luce", name: "Maximilien Luce", description: "", imageUrls: [] },
@@ -782,7 +783,7 @@ export const ARTIST_CHEATSHEET_DATA: CheatsheetCategory[] = [
     ]
   },
   {
-    category: "N",
+    category: "Artist Section N",
     items: [
       { id: "artist-hiroshi-nagai", name: "Hiroshi Nagai", description: "", imageUrls: [] },
       { id: "artist-kazumasa-nagai", name: "Kazumasa Nagai", description: "", imageUrls: [] },
@@ -808,7 +809,7 @@ export const ARTIST_CHEATSHEET_DATA: CheatsheetCategory[] = [
     ]
   },
   {
-    category: "O",
+    category: "Artist Section O",
     items: [
       { id: "artist-thornton-oakley", name: "Thornton Oakley", description: "", imageUrls: [] },
       { id: "artist-chris-ofili", name: "Chris Ofili", description: "", imageUrls: [] },
@@ -823,7 +824,7 @@ export const ARTIST_CHEATSHEET_DATA: CheatsheetCategory[] = [
     ]
   },
   {
-    category: "P",
+    category: "Artist Section P",
     items: [
       { id: "artist-p-a--works", name: "P.A. Works", description: "", imageUrls: [] },
       { id: "artist-gary-panter", name: "Gary Panter", description: "", imageUrls: [] },
@@ -863,14 +864,14 @@ export const ARTIST_CHEATSHEET_DATA: CheatsheetCategory[] = [
     ]
   },
   {
-    category: "Q",
+    category: "Artist Section Q",
     items: [
       { id: "artist-q-hayashida", name: "Q Hayashida", description: "", imageUrls: [] },
       { id: "artist-frank-quitely", name: "Frank Quitely", description: "", imageUrls: [] }
     ]
   },
   {
-    category: "R",
+    category: "Artist Section R",
     items: [
       { id: "artist-arthur-rackham", name: "Arthur Rackham", description: "", imageUrls: [] },
       { id: "artist-henry-raleigh", name: "Henry Raleigh", description: "", imageUrls: [] },
@@ -912,7 +913,7 @@ export const ARTIST_CHEATSHEET_DATA: CheatsheetCategory[] = [
     ]
   },
   {
-    category: "S",
+    category: "Artist Section S",
     items: [
       { id: "artist-joao-ruas", name: "Joao Ruas", description: "", imageUrls: [] },
       { id: "artist-peter-paul-rubens", name: "Peter Paul Rubens", description: "", imageUrls: [] },
@@ -997,7 +998,7 @@ export const ARTIST_CHEATSHEET_DATA: CheatsheetCategory[] = [
     ]
   },
   {
-    category: "T",
+    category: "Artist Section T",
     items: [
       { id: "artist-hiroyuki-mitsume-takahashi", name: "Hiroyuki-Mitsume Takahashi", description: "", imageUrls: [] },
       { id: "artist-kazuya-takahashi", name: "Kazuya Takahashi", description: "", imageUrls: [] },
@@ -1030,7 +1031,7 @@ export const ARTIST_CHEATSHEET_DATA: CheatsheetCategory[] = [
     ]
   },
   {
-    category: "U",
+    category: "Artist Section U",
     items: [
       { id: "artist-william-turner", name: "William Turner", description: "", imageUrls: [] },
       { id: "artist-chris-turnham", name: "Chris Turnham", description: "", imageUrls: [] },
@@ -1044,7 +1045,7 @@ export const ARTIST_CHEATSHEET_DATA: CheatsheetCategory[] = [
     ]
   },
   {
-    category: "V",
+    category: "Artist Section V",
     items: [
       { id: "artist-boris-vallejo", name: "Boris Vallejo", description: "", imageUrls: [] },
       { id: "artist-vincent-van-gogh", name: "Vincent van Gogh", description: "", imageUrls: [] },
@@ -1061,7 +1062,7 @@ export const ARTIST_CHEATSHEET_DATA: CheatsheetCategory[] = [
     ]
   },
   {
-    category: "W",
+    category: "Artist Section W",
     items: [
       { id: "artist-louis-wain", name: "Louis Wain", description: "", imageUrls: [] },
       { id: "artist-camille-walala", name: "Camille Walala", description: "", imageUrls: [] },
@@ -1097,7 +1098,7 @@ export const ARTIST_CHEATSHEET_DATA: CheatsheetCategory[] = [
     ]
   },
   {
-    category: "X",
+    category: "Artist Section X",
     items: [
       { id: "artist-zao-wou-ki", name: "Zao Wou-Ki", description: "", imageUrls: [] },
       { id: "artist-bernie-wrightson", name: "Bernie Wrightson", description: "", imageUrls: [] },
@@ -1106,7 +1107,7 @@ export const ARTIST_CHEATSHEET_DATA: CheatsheetCategory[] = [
     ]
   },
   {
-    category: "Y",
+    category: "Artist Section Y",
     items: [
       { id: "artist-hannah-yata", name: "Hannah Yata", description: "", imageUrls: [] },
       { id: "artist-liu-ye", name: "Liu Ye", description: "", imageUrls: [] },
@@ -1120,7 +1121,7 @@ export const ARTIST_CHEATSHEET_DATA: CheatsheetCategory[] = [
     ]
   },
   {
-    category: "Z",
+    category: "Artist Section Z",
     items: [
       { id: "artist-darek-zabrocki", name: "Darek Zabrocki", description: "", imageUrls: [] },
       { id: "artist-ossip-zadkine", name: "Ossip Zadkine", description: "", imageUrls: [] },
@@ -1196,6 +1197,29 @@ export const CHEATSHEET_DATA: CheatsheetCategory[] = [
     ]
   },
   {
+    category: 'Platform Guide: LTX-2 (Video AI)',
+    items: [
+      { id: 'ltx2-1', name: 'Narrative Cinematography', description: 'LTX-2 excels when given a clear narrative flow. Avoid lists; use sequences of action.', example: 'A wide cinematic shot of a stone temple; ancient vines begin to shiver as the camera executes a slow push-in.', imageUrls: [] },
+      { id: 'ltx2-2', name: 'Motion Verbs', description: 'Use precise verbs to dictate physics and temporal motion.', keywords: ['cascading', 'receding', 'shivering', 'igniting', 'undulating', 'billowing'], imageUrls: [] },
+      { id: 'ltx2-3', name: 'Physics & Atmosphere', description: 'Describe light behavior and physical interactions naturally.', example: 'Moonlight ignites the mist rolling over the lake, creating long dancing shadows on the grass.', imageUrls: [] },
+    ]
+  },
+  {
+    category: 'Platform Guide: FLUX 2',
+    items: [
+      { id: 'flux2-1', name: 'Natural Language Precision', description: 'FLUX 2 ignores short tags. It requires descriptive sentences that map the Visual Physics of a scene.', example: 'A high-detail portrait of an old woman. The soft morning light highlights the fine pores and deep lines of her face, with motes of dust visible in the atmospheric haze behind her.', imageUrls: [] },
+      { id: 'flux2-2', name: 'Texture & Detail Hierarchy', description: 'Structure your prompt: Subject > Action > Environment > Micro-textures > Lighting.', keywords: ['fine pores', 'weathered textures', 'subsurface scattering', 'atmospheric density'], imageUrls: [] },
+    ]
+  },
+  {
+    category: 'Video AI Strategy: T2V vs I2V',
+    items: [
+      { id: 'vidstr-1', name: 'Text-to-Video (T2V)', description: 'World-building from scratch. Define the environment, character, and action clearly.', example: 'T2V Prompt: An epic volcano eruption under a purple sky, lava cascading down the slopes into a boiling ocean.', imageUrls: [] },
+      { id: 'vidstr-2', name: 'Image-to-Video (I2V)', description: 'Animating a specific reference. Focus on how the static elements of the image begin to move.', example: 'I2V Prompt: The character in the image begins to smile and turns their head slowly toward the camera.', imageUrls: [] },
+      { id: 'vidstr-3', name: 'Motion Consistency', description: 'Specify how speed or direction changes throughout the shot.', keywords: ['gradual acceleration', 'constant velocity', 'chaotic turbulence', 'smooth panning'], imageUrls: [] },
+    ]
+  },
+  {
     category: 'Platform Guide: Midjourney',
     items: [
       { id: 'mj-ar', name: 'Aspect Ratio (--ar)', description: "Sets the image's width-to-height ratio. Common values are 1:1, 4:5, 2:3, 9:16, 16:9.", example: 'a cat in a spaceship --ar 16:9', imageUrls: [] },
@@ -1236,13 +1260,6 @@ export const CHEATSHEET_DATA: CheatsheetCategory[] = [
     items: [
        { id: 'goo-1', name: 'Natural Language is Key', description: "For Imagen, use clear, descriptive, and natural sentences.", example: 'A photorealistic image of a majestic lion with a golden mane, resting on a rocky outcrop overlooking the Serengeti plains during a dramatic sunset.', imageUrls: [] },
        { id: 'goo-2', name: 'Negative Prompting', description: "Use negative prompts to exclude unwanted elements.", example: 'Positive: A beautiful garden. Negative: no weeds, blurry', imageUrls: [] },
-    ]
-  },
-  {
-    category: 'Platform Guide: FLUX',
-    items: [
-      { id: 'flux-1', name: 'Core Structure', description: 'Structure: [Shot Type] of a [Subject] [Doing an Action] in a [Setting], [Style].', example: 'A cinematic close-up shot of a golden retriever puppy yawning in a sunlit garden, hyperrealistic style.', imageUrls: [] },
-      { id: 'flux-2', name: 'Camera & Action', description: 'Evocative action verbs and specific camera movements.', keywords: ['sprinting', 'leaping', 'cascading', 'drone shot', 'tracking shot', 'point-of-view shot'], imageUrls: [] },
     ]
   },
   {

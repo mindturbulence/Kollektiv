@@ -378,13 +378,13 @@ class CrafterService {
             return modifiedPrompt;
         }
 
-        // Token Optimization: Only send relevant wildcard names to the AI
+        // Token Optimization: Only send a smaller subset of relevant wildcard names to the AI
         const promptLower = promptText.toLowerCase();
         const filteredWildcards = wildcardPathList.filter(wp => {
             const parts = wp.replace(/__/g, '').split('/');
             return parts.some(p => promptLower.includes(p.toLowerCase()));
         });
-        const finalWildcardContext = filteredWildcards.length > 0 ? filteredWildcards : wildcardPathList.slice(0, 30);
+        const finalWildcardContext = filteredWildcards.length > 0 ? filteredWildcards : wildcardPathList.slice(0, 15);
 
         return generatePromptFormulaWithAI(promptText, finalWildcardContext, settings);
     }

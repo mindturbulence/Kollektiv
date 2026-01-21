@@ -1,13 +1,47 @@
-
 export const PROMPT_DETAIL_LEVELS = {
   SHORT: 'Short',
   MEDIUM: 'Medium',
   LONG: 'Long',
 };
 
+// --- Standard Aspect Ratios ---
+export const GENERAL_ASPECT_RATIOS = ["1:1", "3:4", "4:3", "9:16", "16:9"];
+
 // --- Midjourney Specific Modifiers ---
-export const MIDJOURNEY_VERSIONS = ["6", "5.2", "5.1", "5", "4"];
+export const MIDJOURNEY_VERSIONS = ["6.1", "6", "5.2", "5.1", "5", "4"];
+export const MIDJOURNEY_NIJI_VERSIONS = ["6", "5", "4"];
 export const MIDJOURNEY_ASPECT_RATIOS = ["1:1", "2:3", "3:2", "4:5", "5:4", "9:16", "16:9"];
+
+// --- Audio Specific Modifiers ---
+export const AUDIO_TYPES = [
+    'Dialogue / Speech',
+    'Narration / Voiceover',
+    'Ambient Background',
+    'Sound Effects (SFX)',
+    'Musical Composition',
+    'Foley Recording',
+    'Binaural / 3D Audio',
+    'Podcast Segment'
+];
+
+export const VOICE_GENDERS = ['Masculine', 'Feminine', 'Androgynous', 'Child', 'Elderly'];
+
+export const VOICE_TONES = [
+    'Deep / Bass', 'Smooth / Silk', 'Raspy / Gravelly', 'Energetic / Bright',
+    'Monotone / Robotic', 'Whispering / Soft', 'Commanding / Authoritative',
+    'Sarcastic / Playful', 'Melancholic / Sad', 'Terrified / Shaky'
+];
+
+export const AUDIO_ENVIRONMENTS = [
+    'Studio / Dry', 'Large Cathedral Hall', 'Tiled Bathroom', 'Outdoor Forest',
+    'Crowded City Street', 'Under water', 'Empty Warehouse', 'Small Cozy Room',
+    'Telephone / Radio Filter', 'Space Vacuum'
+];
+
+export const AUDIO_MOODS = [
+    'Cinematic', 'Suspenseful', 'Hopeful', 'Dark & Gritty',
+    'Upbeat & Fun', 'Ethereal / Dreamy', 'Aggressive', 'Calm / Zen'
+];
 
 // --- Z-Image Specific Styles ---
 export const Z_IMAGE_STYLES = [
@@ -26,6 +60,88 @@ export const Z_IMAGE_STYLES = [
     'Minimalist Sketchwash',
     'Retro Pixel Art',
     'Vintage VGA Monitor'
+];
+
+// --- Digital Trends & Social Aesthetics ---
+export const DIGITAL_AESTHETICS = [
+    'Wes Anderson Trend (Symmetry, Pastel, Static)',
+    'Coquette Aesthetic (Pink, Ribbons, Vintage Soft)',
+    'Dark Academia (Tweed, Libraries, Moody Lighting)',
+    'Cottagecore (Rural, Floral, Nostalgic)',
+    'Barbiecore (Hot Pink, High-Gloss, Plastic)',
+    'Y2K Aesthetic (Cyber, Metallic, Futuristic 2000s)',
+    '90s Grunge (Lo-fi, Gritty, Oversized, Grainy)',
+    'Indie Sleaze (Flash Photography, Messy, 2010s Retro)',
+    'E-Girl / E-Boy (Neon, High Contrast, Digital)',
+    'Vibe-core (Abstract, Ethereal, Lighting-focused)',
+    'Clean Girl Aesthetic (Minimalist, Beige, De-puffed)',
+    'Soft Girl (Pastel, Ethereal, Gentle Lighting)',
+    'Baddie Aesthetic (Sharp, High-Glamour, Urban)',
+    'Scandi Minimalist (Clean Lines, Natural Wood, Bright)',
+    'Moody Tones (Crushed Blacks, Deep Greens, Melancholic)',
+    'That Girl (Wellness, Productivity, Bright, Organized)',
+    'Disposable Camera (Flash, Red-eye, High Grain)',
+    'Paparazzi Candid (Motion Blur, Flash, Staged-Realism)',
+    'Old Money / Quiet Luxury (Classic, Rich Textures)',
+    'Gorpcore (Outdoor, Tech-utility, Tactical)',
+    'Techwear (Cyberpunk Fashion, Straps, All-Black)',
+    'Streetwear High-Fashion (Graffiti, Bold Logos)',
+    'Balletcore (Tulle, Silk, Graceful, Soft Lighting)',
+    'Stealth Wealth (Understated, High-Quality Fabric)',
+    'Cyber-Street (Neon-accented, Urban Futuristic)',
+    'Dreamcore (Uncanny, Surreal, liminal space)',
+    'Weirdcore (Low-res, Glitchy, Nonsensical)',
+    'Vaporwave (80s Cyan/Magenta, Retro-Digital)',
+    'Cyber-Y2K (Glitch, Chrome, Fisheye Lens)',
+    'Lo-fi Hip Hop (Anime Style, Warm, Cozy)',
+    'Backrooms Aesthetic (Yellowed, Fluorescent, Liminal)',
+    'Frutiger Aero (Glossy, Water, Bubbles, 2000s Tech)'
+];
+
+// --- Movie Aesthetics / Cinematic Looks ---
+export const AESTHETIC_LOOKS = [
+    'Wes Anderson (Symmetrical, Pastel, Whimsical)',
+    'Christopher Nolan (High Contrast, Cold Blue, Crisp)',
+    'Denis Villeneuve (Brutalist, Scale, Atmospheric Haze)',
+    'Wong Kar-wai (Saturated, Motion Blur, Melancholic)',
+    'Quentin Tarantino (Gritty 70s, Saturated, Retro)',
+    'Stanley Kubrick (Clinical, One-Point Perspective)',
+    'Tim Burton (Gothic, Dark Whimsy, German Expressionism)',
+    'Michael Bay (High Saturation, Anamorphic Flare)',
+    'Zack Snyder (Desaturated, High Contrast, Crushed Blacks)',
+    'Guillermo del Toro (Fairy Tale, Amber/Teal, Organic)',
+    'David Lynch (Surreal, High Contrast Shadows, Dreamlike)',
+    'Akira Kurosawa (High Contrast B&W, Epic Composition)',
+    'Blade Runner (Cyberpunk, Neon Noir, Rainy)',
+    'Mad Max (Orange/Teal, Gritty, Post-Apocalyptic)',
+    'The Matrix (Green-Tinted, Urban Decay, Digital)',
+    'Sin City (High Contrast B&W, Selective Red)',
+    'Studio Ghibli (Lush Nature, Painterly, Nostalgic)',
+    'Film Noir (Chiaroscuro, Smokey, Dramatic Shadows)',
+    'Barbiecore (Hot Pink, High-Key, Plasticity)',
+    'Dune Aesthetic (Epic Scale, Minimalist, Sand-swept)',
+    'Arcane Style (Painterly 3D, Stylized Lighting)',
+    'Succession (Corporate Realism, Handheld, Quiet Luxury)',
+    'Euphoria Look (Neon Purple, Glitter, Dreamy Haze)',
+    'Spaghetti Western (Gritty, Extreme Close-ups, Heat Haze)',
+    'Folk Horror (Overexposed, Ritualistic, Midsommar Style)',
+    'Giallo (Primary Colors, Stylized Horror, 70s Italian)',
+    'Slasher Horror (Low-key, Gritty Grain, Suspenseful)',
+    'Found Footage (VHS Glitch, Low-res, Handheld)',
+    'CCTV / Security Cam (Grainy, High-Angle, Wide-Angle)',
+    'Bridgerton (Period Drama, Saturated Floral, Soft Glow)',
+    'Avatar (Bioluminescent, Vibrant Cyan, Exotic Flora)',
+    'Interstellar (Cosmic Realism, NASA Aesthetic)',
+    'Cyberpunk 2077 (High-Tech Night, Glitchy Neon)',
+    'Disney/Pixar 3D (High Polish, Expressive, Clean)',
+    'Spider-Verse (Comic-Book Halftone, Multiversal)',
+    'A24 Horror (Minimalist, Eerie Naturalism)',
+    'Vaporwave (80s Neon, Surreal Pink/Cyan)',
+    'Dreamcore / Weirdcore (Uncanny, Nostalgic)',
+    '90s Sitcom (Low Contrast, Soft Lighting, Set-Look)',
+    'Technicolor Classic (Vibrant 1950s Look)',
+    'War Cinema (Gritty, Desaturated, Saving Private Ryan Style)',
+    'Space Opera (Epic, Lived-in Future, Star Wars Look)'
 ];
 
 // --- Refiner Dropdown Options ---
@@ -178,9 +294,75 @@ export const PHOTOGRAPHY_STYLES = [
 ];
 
 export const CAMERA_TYPES = [
-    'DSLR', 'Mirrorless Camera', 'Film Camera', 'Action Camera (GoPro)', 'Drone Footage',
-    'Security Camera Footage', 'Smartphone Camera', 'Analog Film', 'Pinhole Camera', 'Vintage Camera'
+    'Cinema Camera',
+    'Mirrorless Camera',
+    'Medium Format Camera',
+    'DSLR',
+    'Analog Film Camera',
+    'Rangefinder Camera',
+    'Action Camera',
+    'Drone / Aerial Camera',
+    'Smartphone Camera'
 ];
+
+export const CAMERA_MODELS_BY_TYPE: Record<string, string[]> = {
+    'Cinema Camera': [
+        'ARRI Alexa 35',
+        'ARRI Alexa Mini LF',
+        'ARRI Alexa 65',
+        'RED V-RAPTOR XL',
+        'RED KOMODO-X',
+        'Sony Venice 2',
+        'Sony FX9',
+        'Sony FX6',
+        'Blackmagic URSA Mini Pro 12K',
+        'Panavision Millennium DXL2',
+        'Canon EOS C500 Mark II'
+    ],
+    'Mirrorless Camera': [
+        'Sony A7R V',
+        'Sony A1',
+        'Sony A7S III',
+        'Canon EOS R3',
+        'Canon EOS R5 II',
+        'Nikon Z9',
+        'Nikon Z8',
+        'Fujifilm X-H2S',
+        'Fujifilm X-T5',
+        'Panasonic Lumix S1H',
+        'Leica SL3'
+    ],
+    'Medium Format Camera': [
+        'Fujifilm GFX 100 II',
+        'Fujifilm GFX 100S II',
+        'Hasselblad X2D 100C',
+        'Hasselblad H6D-100c',
+        'Phase One XF IQ4',
+        'Leica S3'
+    ],
+    'DSLR': [
+        'Canon EOS-1D X Mark III',
+        'Canon EOS 5D Mark IV',
+        'Nikon D6',
+        'Nikon D850'
+    ],
+    'Analog Film Camera': [
+        'Hasselblad 500C/M',
+        'Leica M6',
+        'Contax T2',
+        'Mamiya RZ67',
+        'Pentax 67',
+        'Nikon F6'
+    ],
+    'Rangefinder Camera': [
+        'Leica M11',
+        'Leica M11-P',
+        'Leica M10-R',
+        'Fujifilm X-Pro3'
+    ]
+};
+
+export const ALL_PROFESSIONAL_CAMERA_MODELS = Object.values(CAMERA_MODELS_BY_TYPE).flat();
 
 export const CAMERA_MOVEMENT_OPTIONS = [
     'Static Camera', 'Panning Shot', 'Tilting Shot', 'Dolly Zoom', 'Tracking Shot',
@@ -200,103 +382,7 @@ export const LENS_TYPES = [
 ];
 
 export const ANALOG_FILM_STOCKS = [
-    // Kodak
-    'Kodak Portra 160',
-    'Kodak Portra 400',
-    'Kodak Portra 800',
-    'Kodak Ektar 100',
-    'Kodak Gold 200',
-    'Kodak ColorPlus 200',
-    'Kodak UltraMax 400',
-    'Kodak Pro Image 100',
-    'Kodak Ektachrome E100',
-    'Kodak Tri-X 400 (TX)',
-    'Kodak T-Max 100 (TMX)',
-    'Kodak T-Max 400 (TMY)',
-    'Kodak T-Max P3200 (TMZ)',
-    'Kodak Vision3 50D',
-    'Kodak Vision3 250D',
-    'Kodak Vision3 200T',
-    'Kodak Vision3 500T',
-    'Kodak Aerochrome',
-    'Kodak Verichrome Pan',
-    // Fujifilm
-    'Fujifilm Superia X-TRA 400',
-    'Fujifilm Superia Premium 400',
-    'Fujifilm Pro 400H',
-    'Fujifilm Fujicolor C200',
-    'Fujifilm Industrial 100',
-    'Fujifilm Industrial 400',
-    'Fujifilm Velvia 50',
-    'Fujifilm Velvia 100',
-    'Fujifilm Provia 100F',
-    'Fujifilm Neopan Acros 100II',
-    'Fujifilm Natura 1600',
-    'Fujifilm Fortia SP',
-    // CineStill
-    'CineStill 50D (Daylight)',
-    'CineStill 400D (Dynamic)',
-    'CineStill 800T (Tungsten)',
-    'CineStill BwXX (Double-X)',
-    // Ilford
-    'Ilford HP5 Plus 400',
-    'Ilford FP4 Plus 125',
-    'Ilford Delta 100 Professional',
-    'Ilford Delta 400 Professional',
-    'Ilford Delta 3200 Professional',
-    'Ilford Pan F Plus 50',
-    'Ilford XP2 Super 400',
-    'Ilford SFX 200',
-    'Ilford Ortho Plus 80',
-    'Kentmere Pan 100',
-    'Kentmere Pan 400',
-    // Lomography
-    'Lomography Color Negative 100',
-    'Lomography Color Negative 400',
-    'Lomography Color Negative 800',
-    'Lomography LomoChrome Metropolis',
-    'Lomography LomoChrome Purple',
-    'Lomography LomoChrome Turquoise',
-    'Lomography Potsdam Kino 100',
-    'Lomography Berlin Kino 400',
-    'Lomography Earl Grey B&W 100',
-    'Lomography Lady Grey B&W 400',
-    // Agfa / AgfaPhoto
-    'Agfa Vista 200',
-    'Agfa Vista 400',
-    'Agfa APX 100 Professional',
-    'Agfa APX 400 Professional',
-    'Agfa Precisa CT 100',
-    'Agfacolor Neu',
-    // Rollei
-    'Rollei Retro 80S',
-    'Rollei Retro 400S',
-    'Rollei RPX 25',
-    'Rollei RPX 100',
-    'Rollei RPX 400',
-    'Rollei Superpan 200',
-    'Rollei Infrared 400S',
-    // Foma / Fomapan
-    'Fomapan 100 Classic',
-    'Fomapan 200 Creative',
-    'Fomapan 400 Action',
-    'Fomapan R100 (Reversal)',
-    // Adox
-    'Adox CMS 20 II',
-    'Adox HR-50',
-    'Adox Silvermax 100',
-    'Adox CHS 100 II',
-    // Other Manufacturers
-    'Ferrania P30 Alpha',
-    'Bergger Pancro 400',
-    'Kosmo Foto Mono',
-    'Street Candy ATM400',
-    'Silberra Pan 50',
-    'Silberra Pan 160',
-    'Oriental Seagull 100',
-    'Oriental Seagull 400',
-    'Polaroid 600 Color',
-    'Polaroid 600 B&W',
-    'Fujifilm Instax Mini Film',
-    'Technicolor Process 4',
+    'Kodak Portra 160', 'Kodak Portra 400', 'Kodak Ektar 100', 'Kodak Gold 200', 'Kodak Tri-X 400',
+    'Fujifilm Velvia 50', 'Fujifilm Provia 100F', 'Fujifilm Superia 400', 'CineStill 800T',
+    'Ilford HP5 Plus 400', 'Lomography Color Negative 400', 'Polaroid 600', 'Agfa Vista 400'
 ];

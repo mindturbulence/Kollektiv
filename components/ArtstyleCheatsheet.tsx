@@ -1,5 +1,3 @@
-
-
 import React from 'react';
 import type { CheatsheetItem } from '../types';
 import { GenericCheatsheetPage } from './GenericCheatsheetPage';
@@ -18,7 +16,9 @@ const ArtstyleCheatsheet: React.FC<ArtstyleCheatsheetProps> = ({ isCategoryPanel
   return (
     <GenericCheatsheetPage
       title="Art Styles"
-      searchPlaceholder="Search art styles..."
+      heroText="STYLES"
+      subtitle="A curated catalog of visual aesthetics, from traditional movements to digital frontiers."
+      searchPlaceholder="Filter styles..."
       loadDataFn={loadArtStyles}
       updateDataFn={updateArtStyle}
       CardComponent={ArtstyleCard}

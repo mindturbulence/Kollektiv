@@ -7,7 +7,6 @@ const SETTINGS_KEY = 'kollektivSettingsV4';
 
 export const defaultLLMSettings: LLMSettings = {
   // LLM Provider Settings
-  // FIX: Updated default model to gemini-3-flash-preview
   llmModel: 'gemini-3-flash-preview',
   activeLLM: 'gemini',
   ollamaBaseUrl: 'http://localhost:11434',
@@ -26,6 +25,11 @@ export const defaultLLMSettings: LLMSettings = {
     isCheatsheetsEnabled: true,
     isToolsEnabled: true,
   },
+
+  // Integrations
+  youtube: {
+    isConnected: false
+  }
 };
 
 
@@ -53,6 +57,10 @@ export const loadLLMSettings = (): LLMSettings => {
                 ...defaultLLMSettings.features,
                 ...(parsed.features || {})
             },
+            youtube: {
+              ...defaultLLMSettings.youtube,
+              ...(parsed.youtube || {})
+            }
         };
         }
     }

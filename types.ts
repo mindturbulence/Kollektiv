@@ -1,5 +1,3 @@
-
-
 // --- Core App Types ---
 export type ActiveTab =
   | 'dashboard'
@@ -39,10 +37,19 @@ export interface FeatureSettings {
   isToolsEnabled: boolean;
 }
 
+export interface YouTubeConnection {
+  isConnected: boolean;
+  channelName?: string;
+  accessToken?: string;
+  subscriberCount?: string;
+  videoCount?: number;
+  thumbnailUrl?: string;
+  connectedAt?: number;
+}
+
 export interface LLMSettings {
   // LLM Provider Settings
   llmModel: string;
-  // FIX: Removed apiKeyOverride to comply with strict API key guidelines
   activeLLM: 'gemini' | 'ollama';
   ollamaBaseUrl: string;
   ollamaModel: string;
@@ -55,6 +62,9 @@ export interface LLMSettings {
   
   // Feature Toggles
   features: FeatureSettings;
+  
+  // Integrations
+  youtube?: YouTubeConnection;
 }
 
 // --- Prompt Generation & Library ---
@@ -62,7 +72,11 @@ export interface PromptModifiers {
   artStyle?: string;
   artist?: string;
   photographyStyle?: string;
+  aestheticLook?: string;
+  digitalAesthetic?: string;
+  aspectRatio?: string; 
   cameraType?: string;
+  cameraModel?: string;
   cameraAngle?: string;
   cameraProximity?: string;
   cameraSettings?: string;
@@ -77,6 +91,14 @@ export interface PromptModifiers {
   // Video specific
   motion?: string;
   cameraMovement?: string;
+  videoInputType?: 't2v' | 'i2v'; 
+  // Audio specific
+  audioType?: string;
+  voiceGender?: string;
+  voiceTone?: string;
+  audioEnvironment?: string;
+  audioMood?: string;
+  audioDuration?: string;
   // Midjourney specific
   mjAspectRatio?: string;
   mjChaos?: string;
@@ -112,6 +134,8 @@ export interface SavedPrompt {
 export interface PromptCategory {
   id: string;
   name: string;
+  parentId?: string;
+  order: number;
 }
 
 export interface PromptAnatomyComponent {
@@ -119,10 +143,8 @@ export interface PromptAnatomyComponent {
   value: string;
 }
 export interface PromptAnatomy {
-    // For Gemini
     components?: { [key: string]: string };
     variations?: { [key: string]: string[] };
-    // For Ollama
     subject?: string;
     setting?: string;
     identified_components?: PromptAnatomyComponent[];
@@ -144,12 +166,17 @@ export interface GalleryItem {
   tags?: string[];
   categoryId?: string;
   isNsfw?: boolean;
+  // YouTube Publication tracking
+  youtubeUrl?: string;
+  publishedAt?: number;
 }
 
 export interface GalleryCategory {
   id: string;
   name: string;
   isNsfw?: boolean;
+  parentId?: string;
+  order: number;
 }
 
 // --- Cheatsheets ---

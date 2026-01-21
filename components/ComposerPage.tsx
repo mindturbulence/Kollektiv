@@ -1,12 +1,14 @@
-
 import React, { useState, useEffect, useCallback, useRef, useMemo, useLayoutEffect } from 'react';
-import { UploadIcon, CloseIcon, LinkIcon, LinkOffIcon, ViewGridIcon, RefreshIcon, DownloadIcon } from './icons';
+import { UploadIcon, CloseIcon, LinkIcon, LinkOffIcon, ViewGridIcon, RefreshIcon, DownloadIcon, FolderClosedIcon } from './icons';
 import useLocalStorage from '../utils/useLocalStorage';
 import { COMPOSER_PRESETS, Preset } from '../constants';
+import GalleryPickerModal from './GalleryPickerModal';
+import type { GalleryItem } from '../types';
+import { fileSystemManager } from '../utils/fileUtils';
 
 // --- TYPES AND INTERFACES ---
 type ImageItem = {
-  file: File;
+  file: File | null;
   id: string;
   originalUrl: string;
   width: number;
@@ -15,9 +17,6 @@ type ImageItem = {
   posX: number; // Percent -0.5 to 0.5
   posY: number; // Percent -0.5 to 0.5
 }
-
-// --- HELPER FUNCTIONS ---
-const gcd = (a: number, b: number): number => b === 0 ? a : gcd(b, a % b);
 
 // --- SUB-COMPONENTS ---
 
@@ -103,7 +102,7 @@ const GridCell: React.FC<{
                     height: '100%',
                     transform: `translate(${item.posX * 100}%, ${item.posY * 100}%) scale(${item.scale})`
                 }}
-                alt={item.file.name} 
+                alt={item.file?.name || 'Library Image'} 
                 draggable="false"
             />
             {isHovered && imageFit === 'contain' && (
@@ -139,6 +138,9 @@ const ComposerPage: React.FC = () => {
     const [isDownloading, setIsDownloading] = useState(false);
     const dragItemIndex = useRef<number | null>(null);
     const [dragOverIndex, setDragOverIndex] = useState<number | null>(null);
+    
+    const [isPickerOpen, setIsPickerOpen] = useState(false);
+    const [pickerTargetIndex, setPickerTargetIndex] = useState<number | null>(null);
 
     // Settings State
     const [columns, setColumns] = useLocalStorage('composerCols', 3);
@@ -255,7 +257,35 @@ const ComposerPage: React.FC = () => {
         });
     }, []);
 
-    // --- FIX: Added handleRemoveImage ---
+    const handleGallerySelect = async (selectedItems: GalleryItem[]) => {
+        const newItems = await Promise.all(selectedItems.map(async (gItem) => {
+            const blob = await fileSystemManager.getFileAsBlob(gItem.urls[0]);
+            if (!blob) return null;
+            const url = URL.createObjectURL(blob);
+            const img = new (window as any).Image();
+            await new Promise(res => { img.onload = res; img.src = url; });
+            return {
+                file: null, id: gItem.id + Math.random().toString(36).substr(2, 5),
+                originalUrl: url, width: img.naturalWidth, height: img.naturalHeight,
+                scale: 1, posX: 0, posY: 0
+            } as ImageItem;
+        }));
+
+        const validItems = newItems.filter((i): i is ImageItem => i !== null);
+        setGridItems(current => {
+            const updated = [...current];
+            let added = 0;
+            const start = pickerTargetIndex !== null ? pickerTargetIndex : 0;
+            for (let i = start; i < updated.length && added < validItems.length; i++) {
+                if (!updated[i]) updated[i] = validItems[added++];
+            }
+            for (let i = 0; i < updated.length && added < validItems.length; i++) {
+                if (!updated[i]) updated[i] = validItems[added++];
+            }
+            return updated;
+        });
+    };
+
     const handleRemoveImage = (index: number) => {
         setGridItems(current => {
             const next = [...current];
@@ -266,7 +296,6 @@ const ComposerPage: React.FC = () => {
         });
     };
 
-    // --- FIX: Added handleItemTransform ---
     const handleItemTransform = (index: number, transform: { scale?: number; posX?: number; posY?: number }) => {
         setGridItems(current => {
             const next = [...current];
@@ -362,79 +391,78 @@ const ComposerPage: React.FC = () => {
     };
 
     return (
-        <div className="p-6 bg-base-200 h-full flex flex-col gap-6 overflow-hidden">
-            <div className="grid grid-cols-1 lg:grid-cols-4 gap-6 h-full min-h-0">
-                <aside className="lg:col-span-1 bg-base-100 rounded-xl shadow-xl flex flex-col min-h-0 text-sm border border-base-300">
-                    <div className="p-4 border-b border-base-300 font-bold text-lg flex items-center gap-2">
-                        <ViewGridIcon className="w-5 h-5 text-primary"/> Grid Composer
-                    </div>
-                    <div className="flex-grow p-4 space-y-5 overflow-y-auto">
-                        <div className="form-control">
-                            <label className="label-text pb-2 font-semibold">Grid Layout</label>
-                            <div className="flex items-center gap-3">
-                                <input type="number" value={columns} onChange={(e) => setColumns(Math.max(1, parseInt((e.currentTarget as any).value) || 1))} className="input input-sm input-bordered w-full text-center" placeholder="Cols"/>
-                                <span className="opacity-40">×</span>
-                                <input type="number" value={rows} onChange={(e) => setRows(Math.max(1, parseInt((e.currentTarget as any).value) || 1))} className="input input-sm input-bordered w-full text-center" placeholder="Rows"/>
+        <div className="h-full bg-base-100 flex flex-col overflow-hidden">
+            <div className="flex-grow flex flex-col lg:flex-row overflow-hidden">
+                <aside className="w-full lg:w-96 flex-shrink-0 bg-base-100 flex flex-col border-r border-base-300 overflow-hidden">
+                    <header className="p-6 border-b border-base-300 bg-base-200/10">
+                        <h3 className="text-[10px] font-black uppercase tracking-[0.4em] text-primary">System Config</h3>
+                    </header>
+                    <div className="flex-grow p-6 space-y-8 overflow-y-auto custom-scrollbar">
+                        <div className="space-y-4">
+                            <label className="text-[10px] font-black uppercase tracking-widest text-base-content/40">Grid Geometry</label>
+                            <div className="flex items-center gap-4">
+                                <input type="number" value={columns} onChange={(e) => setColumns(Math.max(1, parseInt((e.currentTarget as any).value) || 1))} className="input input-sm input-bordered rounded-none w-full text-center font-bold" placeholder="Cols"/>
+                                <span className="text-base-content/20 font-black">×</span>
+                                <input type="number" value={rows} onChange={(e) => setRows(Math.max(1, parseInt((e.currentTarget as any).value) || 1))} className="input input-sm input-bordered rounded-none w-full text-center font-bold" placeholder="Rows"/>
                             </div>
                         </div>
 
-                        <div className="form-control">
-                            <label className="label-text pb-2 font-semibold">Resolution</label>
+                        <div className="space-y-4">
+                            <label className="text-[10px] font-black uppercase tracking-widest text-base-content/40">Output Matrix</label>
                             <div className="flex items-center gap-2">
-                                <input type="text" value={width} onChange={(e) => handleWidthChange((e.currentTarget as any).value)} className="input input-sm input-bordered w-full" placeholder="W"/>
-                                <button onClick={() => setIsLocked(!isLocked)} className={`btn btn-xs btn-ghost ${isLocked ? 'text-primary' : 'opacity-30'}`}>{isLocked ? <LinkIcon className="w-4 h-4"/> : <LinkOffIcon className="w-4 h-4"/>}</button>
-                                <input type="text" value={height} onChange={(e) => handleHeightChange((e.currentTarget as any).value)} className="input input-sm input-bordered w-full" placeholder="H"/>
+                                <input type="text" value={width} onChange={(e) => handleWidthChange((e.currentTarget as any).value)} className="input input-sm input-bordered rounded-none w-full font-mono text-xs" placeholder="W"/>
+                                <button onClick={() => setIsLocked(!isLocked)} className={`btn btn-xs btn-ghost rounded-none ${isLocked ? 'text-primary' : 'opacity-20'}`}>{isLocked ? <LinkIcon className="w-4 h-4"/> : <LinkOffIcon className="w-4 h-4"/>}</button>
+                                <input type="text" value={height} onChange={(e) => handleHeightChange((e.currentTarget as any).value)} className="input input-sm input-bordered rounded-none w-full font-mono text-xs" placeholder="H"/>
                             </div>
-                             <select className="select select-xs select-bordered w-full mt-2" onChange={e => { const [w, h] = (e.currentTarget as any).value.split('x'); setWidth(w); setHeight(h); }} value={`${width}x${height}`}>
-                                <option value="" disabled>Presets...</option>
+                             <select className="select select-xs select-bordered rounded-none w-full font-bold uppercase tracking-tight" onChange={e => { const [w, h] = (e.currentTarget as any).value.split('x'); setWidth(w); setHeight(h); }} value={`${width}x${height}`}>
+                                <option value="" disabled>Resolution Presets</option>
                                 {COMPOSER_PRESETS.flatMap(c => c.presets).map(p => <option key={p.name} value={`${p.width}x${p.height}`}>{p.name}</option>)}
                             </select>
                         </div>
                         
-                        <div className="form-control">
-                            <label className="label-text pb-2 font-semibold">Appearance</label>
-                            <div className="space-y-3">
+                        <div className="space-y-6">
+                            <label className="text-[10px] font-black uppercase tracking-widest text-base-content/40">Visual Params</label>
+                            <div className="space-y-4">
                                 <div>
-                                    <div className="flex justify-between mb-1"><span className="text-[10px] uppercase opacity-60">Spacing</span><span className="text-[10px] font-mono">{spacing}px</span></div>
+                                    <div className="flex justify-between mb-2"><span className="text-[10px] font-black uppercase text-base-content/30">Gap Spacing</span><span className="text-[10px] font-mono font-bold">{spacing}PX</span></div>
                                     <input type="range" min="0" max="100" value={spacing} onChange={(e) => setSpacing(parseInt((e.currentTarget as any).value))} className="range range-xs range-primary" />
                                 </div>
                                 <div className="flex items-center justify-between">
-                                    <span className="text-[10px] uppercase opacity-60">Background</span>
-                                    <input type="color" value={bgColor} onChange={(e) => setBgColor((e.currentTarget as any).value)} className="w-8 h-8 rounded cursor-pointer border-none p-0 overflow-hidden" />
+                                    <span className="text-[10px] font-black uppercase text-base-content/30">Background</span>
+                                    <input type="color" value={bgColor} onChange={(e) => setBgColor((e.currentTarget as any).value)} className="w-8 h-8 rounded-none cursor-pointer border border-base-300 p-0 overflow-hidden" />
                                 </div>
                             </div>
                         </div>
 
-                        <div className="form-control">
-                            <label className="label-text pb-2 font-semibold">Image Fitting</label>
+                        <div className="space-y-4">
+                            <label className="text-[10px] font-black uppercase tracking-widest text-base-content/40">Scaling Logic</label>
                             <div className="join w-full">
-                                <button onClick={() => setStoredImageFit('cover')} className={`join-item btn btn-xs flex-1 ${imageFit === 'cover' ? 'btn-active' : ''}`}>Cover</button>
-                                <button onClick={() => setStoredImageFit('contain')} className={`join-item btn btn-xs flex-1 ${imageFit === 'contain' ? 'btn-active' : ''}`}>Contain</button>
+                                <button onClick={() => setStoredImageFit('cover')} className={`join-item btn btn-xs flex-1 rounded-none font-black text-[9px] tracking-widest ${imageFit === 'cover' ? 'btn-active' : ''}`}>COVER</button>
+                                <button onClick={() => setStoredImageFit('contain')} className={`join-item btn btn-xs flex-1 rounded-none font-black text-[9px] tracking-widest ${imageFit === 'contain' ? 'btn-active' : ''}`}>CONTAIN</button>
                             </div>
                         </div>
 
-                        <div className="form-control">
-                            <label className="label-text pb-2 font-semibold">Format</label>
-                            <select value={outputFormat} onChange={(e) => setOutputFormat((e.currentTarget as any).value as any)} className="select select-sm select-bordered w-full">
+                        <div className="space-y-4">
+                            <label className="text-[10px] font-black uppercase tracking-widest text-base-content/40">Export Format</label>
+                            <select value={outputFormat} onChange={(e) => setOutputFormat((e.currentTarget as any).value as any)} className="select select-sm select-bordered rounded-none w-full font-bold uppercase tracking-tight">
                                 <option value="jpeg">JPEG (High Quality)</option>
                                 <option value="png">PNG (Lossless)</option>
                             </select>
                         </div>
                     </div>
                     
-                    <div className="p-4 border-t border-base-300 grid grid-cols-2 gap-2 bg-base-200/30">
-                        <button onClick={() => setGridItems(Array(columns * rows).fill(null))} className="btn btn-sm btn-outline btn-error">Clear</button>
-                        <button onClick={handleDownload} disabled={isDownloading || !gridItems.some(Boolean)} className="btn btn-sm btn-primary">
-                            {isDownloading ? <span className="loading loading-spinner loading-xs"></span> : <DownloadIcon className="w-4 h-4 mr-1"/>}
-                            Export
+                    <footer className="p-4 border-t border-base-300 grid grid-cols-2 gap-2 bg-base-200/20">
+                        <button onClick={() => setGridItems(Array(columns * rows).fill(null))} className="btn btn-sm btn-ghost rounded-none font-black text-[9px] tracking-widest text-error/40 hover:text-error">PURGE</button>
+                        <button onClick={handleDownload} disabled={isDownloading || !gridItems.some(Boolean)} className="btn btn-sm btn-primary rounded-none font-black text-[9px] tracking-widest">
+                            {isDownloading ? 'EXPORTING...' : 'DOWNLOAD'}
                         </button>
-                    </div>
+                    </footer>
                 </aside>
 
-                <main ref={previewContainerRef} className="lg:col-span-3 bg-base-300 rounded-xl shadow-inner flex items-center justify-center p-8 relative overflow-hidden">
+                <main ref={previewContainerRef} className="flex-grow bg-base-200/20 flex items-center justify-center p-12 relative overflow-hidden">
                     {gridPixelDimensions.width > 0 && (
                         <div 
-                            className="shadow-2xl transition-all duration-200 ease-in-out relative"
+                            className="shadow-2xl transition-all duration-300 ease-in-out relative border border-base-300"
                             style={{
                                 width: gridPixelDimensions.width,
                                 height: gridPixelDimensions.height,
@@ -477,7 +505,6 @@ const ComposerPage: React.FC = () => {
                                         }
                                     }}
                                     draggable={!!item}
-                                    onClick={() => !item && (fileInputRef.current as any).click()}
                                 >
                                     {item ? (
                                         <GridCell 
@@ -487,7 +514,26 @@ const ComposerPage: React.FC = () => {
                                             onTransform={t => handleItemTransform(idx, t)}
                                         />
                                     ) : (
-                                        <UploadIcon className="w-6 h-6 opacity-10" />
+                                        <div className="flex flex-col items-center gap-2 group/slot">
+                                            <div className="flex gap-2 opacity-0 group-hover/slot:opacity-100 transition-opacity">
+                                                <button 
+                                                    onClick={() => (fileInputRef.current as any).click()}
+                                                    className="btn btn-xs btn-ghost border border-base-300 rounded-none font-black text-[8px] tracking-widest"
+                                                >
+                                                    UPLOAD
+                                                </button>
+                                                <button 
+                                                    onClick={() => { setPickerTargetIndex(idx); setIsPickerOpen(true); }}
+                                                    className="btn btn-xs btn-primary rounded-none font-black text-[8px] tracking-widest"
+                                                >
+                                                    LIBRARY
+                                                </button>
+                                            </div>
+                                            <div className="flex flex-col items-center opacity-10">
+                                                <UploadIcon className="w-8 h-8 mb-1" />
+                                                <span className="text-[8px] font-black uppercase tracking-widest">SLOT {idx + 1}</span>
+                                            </div>
+                                        </div>
                                     )}
                                 </div>
                             ))}
@@ -496,6 +542,15 @@ const ComposerPage: React.FC = () => {
                     <input type="file" ref={fileInputRef} onChange={e => handleAddFiles(Array.from((e.currentTarget as any).files))} multiple accept="image/*" className="hidden" />
                 </main>
             </div>
+            
+            <GalleryPickerModal 
+                isOpen={isPickerOpen}
+                onClose={() => setIsPickerOpen(false)}
+                onSelect={handleGallerySelect}
+                selectionMode="multiple"
+                typeFilter="image"
+                title="Select images for grid"
+            />
         </div>
     );
 };

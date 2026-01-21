@@ -2,6 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { createPortal } from 'react-dom';
 import type { SavedPrompt, PromptCategory } from '../types';
 import useAutosizeTextArea from '../utils/useAutosizeTextArea';
+import { CloseIcon } from './icons';
 
 interface PromptEditorModalProps {
   isOpen: boolean;
@@ -30,14 +31,13 @@ const PromptEditorModal: React.FC<PromptEditorModalProps> = ({ isOpen, onClose, 
           setCategoryId(editingPrompt.categoryId || '');
           setTags(editingPrompt.tags || []);
         } else {
-          // Reset for new prompt
           setTitle('');
           setText('');
           setCategoryId('');
           setTags([]);
         }
         setTagInput('');
-        setIsSaving(false); // Reset saving state when modal opens/content changes
+        setIsSaving(false);
     }
   }, [editingPrompt, isOpen]);
   
@@ -66,15 +66,12 @@ const PromptEditorModal: React.FC<PromptEditorModalProps> = ({ isOpen, onClose, 
             text: text.trim(),
             categoryId: categoryId || undefined,
             tags: tags,
-            // Carry over existing metadata if editing/saving suggestion
             basePrompt: editingPrompt?.basePrompt,
             targetAI: editingPrompt?.targetAI
           });
           onClose();
       } catch(e) {
-          console.error("Failed to save prompt from modal", e);
-          // Optional: Show an error to the user within the modal
-          // For now, we just ensure the saving state is reset.
+          console.error("Failed to save prompt", e);
       } finally {
           setIsSaving(false);
       }
@@ -86,59 +83,63 @@ const PromptEditorModal: React.FC<PromptEditorModalProps> = ({ isOpen, onClose, 
   const modalContent = (
     <div className="fixed inset-0 bg-black/80 z-50 flex items-center justify-center p-4 animate-fade-in" onClick={onClose}>
       <div 
-        className="bg-base-100 rounded-lg shadow-2xl w-full max-w-2xl mx-auto flex flex-col max-h-[90vh]" 
+        className="bg-base-100 rounded-none border border-base-300 shadow-2xl w-full max-w-3xl mx-auto flex flex-col max-h-[90vh] overflow-hidden" 
         onClick={(e) => e.stopPropagation()}
       >
-        <h3 className="text-xl font-semibold text-primary mb-4 p-6 pb-0 flex-shrink-0">
-          {editingPrompt?.id ? 'Edit Prompt' : 'Save New Prompt'}
-        </h3>
+        <header className="p-10 border-b border-base-300 bg-base-200/20 relative">
+            <button onClick={onClose} className="absolute top-6 right-6 btn btn-ghost btn-sm btn-square opacity-40 hover:opacity-100">
+                <CloseIcon className="w-6 h-6" />
+            </button>
+            <h3 className="text-3xl font-black tracking-tighter text-base-content leading-none">
+                {editingPrompt?.id ? 'EDIT' : 'ADD'}<span className="text-primary">.</span>
+            </h3>
+            <p className="text-[10px] font-black uppercase tracking-[0.4em] text-base-content/30 mt-2">Modify prompt details and tags</p>
+        </header>
         
-        <div className="space-y-4 flex-grow overflow-y-auto px-6 py-4">
-          <div>
-            <label htmlFor="manual-prompt-title" className="block text-sm font-medium text-base-content/80 mb-1">Title (Optional):</label>
-            <input
-              id="manual-prompt-title"
-              type="text"
-              value={title}
-              onChange={(e) => setTitle((e.currentTarget as any).value)}
-              className="input input-bordered input-sm w-full"
-              placeholder="A short, memorable title..."
-            />
+        <div className="p-10 space-y-6 flex-grow overflow-y-auto">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div className="form-control">
+                <label className="text-[10px] font-black uppercase tracking-[0.2em] text-base-content/40 mb-2">Prompt Title</label>
+                <input
+                  type="text"
+                  value={title}
+                  onChange={(e) => setTitle((e.currentTarget as any).value)}
+                  className="input input-bordered rounded-none w-full font-bold tracking-tight"
+                  placeholder="E.g. Portrait Concept #1"
+                />
+              </div>
+              <div className="form-control">
+                <label className="text-[10px] font-black uppercase tracking-[0.2em] text-base-content/40 mb-2">Select Category</label>
+                <select
+                  value={categoryId}
+                  onChange={(e) => setCategoryId((e.currentTarget as any).value)}
+                  className="select select-bordered rounded-none w-full font-bold tracking-tight"
+                >
+                  <option value="">Uncategorized</option>
+                  {categories.map(cat => <option key={cat.id} value={cat.id}>{cat.name}</option>)}
+                </select>
+              </div>
           </div>
-          <div>
-            <label htmlFor="manual-prompt-text" className="block text-sm font-medium text-base-content/80 mb-1">Prompt Text:</label>
+
+          <div className="form-control">
+            <label className="text-[10px] font-black uppercase tracking-[0.2em] text-base-content/40 mb-2">Prompt Text</label>
             <textarea
-              id="manual-prompt-text"
               ref={textAreaRef}
               value={text}
               onChange={(e) => setText((e.currentTarget as any).value)}
-              className="textarea textarea-bordered textarea-sm w-full"
-              placeholder="Paste or type your prompt..."
-              rows={5}
+              className="textarea textarea-bordered rounded-none w-full min-h-[120px] font-medium leading-relaxed"
+              placeholder="Paste or type your prompt here..."
               required
             />
           </div>
-          <div>
-            <label htmlFor="manual-prompt-category" className="block text-sm font-medium text-base-content/80 mb-1">Category (Optional):</label>
-            <select
-              id="manual-prompt-category"
-              value={categoryId}
-              onChange={(e) => setCategoryId((e.currentTarget as any).value)}
-              className="select select-bordered select-sm w-full"
-            >
-              <option value="">Uncategorized</option>
-              {categories.map(cat => (
-                <option key={cat.id} value={cat.id}>{cat.name}</option>
-              ))}
-            </select>
-          </div>
-          <div>
-            <label className="block text-sm font-medium text-base-content/80 mb-1">Tags (Optional):</label>
-            <div className="flex flex-wrap items-center gap-2 p-2 bg-base-200 rounded-md min-h-[40px]">
+
+          <div className="form-control">
+            <label className="text-[10px] font-black uppercase tracking-[0.2em] text-base-content/40 mb-2">Tags</label>
+            <div className="flex flex-wrap items-center gap-2 p-4 bg-base-200/50 border border-base-300 rounded-none min-h-[60px]">
                 {tags.map(tag => (
-                    <div key={tag} className="flex items-center gap-1 bg-primary text-primary-content text-xs font-semibold px-2 py-1 rounded-full">
+                    <div key={tag} className="flex items-center gap-2 bg-base-100 border border-base-300 text-[10px] font-black uppercase tracking-widest px-3 py-1.5 shadow-sm">
                         <span>{tag}</span>
-                        <button type="button" onClick={() => handleRemoveTag(tag)} className="text-primary-content/70 hover:text-primary-content font-bold">&times;</button>
+                        <button type="button" onClick={() => handleRemoveTag(tag)} className="text-error hover:text-error-focus">&times;</button>
                     </div>
                 ))}
                 <input
@@ -146,19 +147,19 @@ const PromptEditorModal: React.FC<PromptEditorModalProps> = ({ isOpen, onClose, 
                     value={tagInput}
                     onChange={(e) => setTagInput((e.currentTarget as any).value)}
                     onKeyDown={handleTagInputKeyDown}
-                    className="flex-grow bg-transparent outline-none text-sm text-base-content"
-                    placeholder={tags.length === 0 ? "Add tags (press Enter)..." : ""}
+                    className="flex-grow bg-transparent outline-none text-xs font-bold uppercase tracking-widest p-1"
+                    placeholder="ADD TAG..."
                 />
             </div>
           </div>
         </div>
         
-        <div className="flex justify-end gap-4 mt-auto p-6 pt-2 flex-shrink-0">
-          <button onClick={onClose} className="btn btn-neutral btn-sm">Cancel</button>
-          <button onClick={handleSave} disabled={!text.trim() || isSaving} className="btn btn-primary btn-sm">
-            {isSaving ? 'Saving...' : (editingPrompt?.id ? 'Save Changes' : 'Save Prompt')}
+        <footer className="border-t border-base-300 flex bg-base-200/5 p-0 overflow-hidden flex-shrink-0">
+          <button onClick={onClose} className="btn flex-1 rounded-none uppercase font-black text-[10px] tracking-widest border-r border-base-300 transition-colors">Cancel</button>
+          <button onClick={handleSave} disabled={!text.trim() || isSaving} className="btn btn-primary flex-1 rounded-none uppercase font-black text-[10px] tracking-widest shadow-lg transition-colors">
+            {isSaving ? 'Saving...' : 'Save Changes'}
           </button>
-        </div>
+        </footer>
       </div>
     </div>
   );

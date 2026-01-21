@@ -1,4 +1,3 @@
-
 import React, { useEffect } from 'react';
 import { createPortal } from 'react-dom';
 import { CheckIcon, InformationCircleIcon } from './icons';
@@ -32,40 +31,37 @@ const FeedbackModal: React.FC<FeedbackModalProps> = ({ isOpen, onClose, message,
           bgColor: 'bg-success',
           borderColor: 'border-success',
           iconColor: 'text-success-content',
-          iconBg: 'bg-success-content/20',
-          IconComponent: CheckIcon,
-          textColor: 'text-success-content'
+          headerText: 'SUCCESS.'
       },
       error: {
           bgColor: 'bg-error',
           borderColor: 'border-error',
           iconColor: 'text-error-content',
-          iconBg: 'bg-error-content/20',
-          IconComponent: InformationCircleIcon,
-          textColor: 'text-error-content'
+          headerText: 'ERROR.'
       }
   };
   
   const currentTheme = theme[type];
-  const { IconComponent } = currentTheme;
   
   const modalContent = (
     <div 
-        className="fixed inset-0 bg-black/60 z-[100] flex items-center justify-center p-4 animate-fade-in" 
+        className="fixed inset-0 bg-black/40 z-[100] flex items-center justify-center p-4 animate-fade-in" 
         onClick={onClose}
         role="alertdialog"
         aria-modal="true"
-        aria-labelledby="feedback-message"
     >
       <div 
-        className={`relative p-8 rounded-xl shadow-2xl w-full max-w-md mx-auto border ${currentTheme.borderColor} ${currentTheme.bgColor}`}
+        className="bg-base-100 rounded-none border border-base-300 shadow-2xl w-full max-w-md overflow-hidden"
         onClick={(e) => e.stopPropagation()}
       >
-        <div className="text-center">
-            <div className={`mx-auto flex items-center justify-center h-12 w-12 rounded-full ${currentTheme.iconBg}`}>
-               <IconComponent className={`h-8 w-8 ${currentTheme.iconColor}`} />
-            </div>
-            <p id="feedback-message" className={`text-lg font-medium ${currentTheme.textColor} mt-4`}>{message}</p>
+        <div className={`h-1.5 w-full ${currentTheme.bgColor}`}></div>
+        <div className="p-8">
+            <h3 className={`text-4xl font-black tracking-tighter ${isError ? 'text-error' : 'text-success'} leading-none mb-4`}>
+                {currentTheme.headerText}
+            </h3>
+            <p className="text-xs font-black uppercase tracking-[0.2em] text-base-content/60 leading-relaxed">
+                {message}
+            </p>
         </div>
       </div>
     </div>

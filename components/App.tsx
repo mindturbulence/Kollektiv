@@ -29,15 +29,18 @@ import ComposerPage from './ComposerPage';
 import ImageResizer from './ImageResizer';
 import { VideoToFrames } from './VideoToFrames';
 import { useAuth } from '../contexts/AuthContext';
+import LoadingSpinner from './LoadingSpinner';
 
 type PromptsPageState = { prompt?: string, artStyle?: string, artist?: string, view?: 'enhancer' | 'composer' | 'create', id?: string } | null;
 
 const InitialLoader: React.FC = () => (
-    <div id="initial-loader">
-      <div className="loader-spinner"></div>
-      <p id="loading-status" className="mt-4 text-sm">Bootstrapping application...</p>
-      <div id="loading-progress-container" className="w-64 h-2 bg-base-content/10 rounded-full mt-4 overflow-hidden" style={{ display: 'none' }}>
-        <div id="loading-progress-bar" className="h-full bg-primary rounded-full transition-all duration-300" style={{ width: '0%' }}></div>
+    <div id="initial-loader" className="flex flex-col items-center justify-center w-full h-full bg-base-300">
+      <div className="flex flex-col items-center gap-6">
+        <LoadingSpinner size={80} />
+        <p id="loading-status" className="text-sm font-bold uppercase tracking-[0.3em] opacity-50 animate-pulse">Initializing System Registry</p>
+        <div id="loading-progress-container" className="w-64 h-1 bg-base-content/10 rounded-full overflow-hidden" style={{ display: 'none' }}>
+          <div id="loading-progress-bar" className="h-full bg-primary rounded-full transition-all duration-300" style={{ width: '0%' }}></div>
+        </div>
       </div>
     </div>
 );
@@ -72,13 +75,14 @@ const App: React.FC = () => {
     // --- App Initialization Effect ---
     const initializeApp = useCallback(async () => {
         setIsLoading(true);
+        setShowWelcome(false);
 
         const onProgress = (message: string, progress?: number) => {
              if (typeof (window as any).document === 'undefined') return;
 
              const statusEl = (window as any).document.getElementById('loading-status');
              if (statusEl) {
-                (statusEl as any).textContent = message;
+                (statusEl as any).textContent = message.toUpperCase();
              }
              
              const progressContainer = (window as any).document.getElementById('loading-progress-container');
@@ -95,17 +99,20 @@ const App: React.FC = () => {
         
         onProgress('Initializing local file system...');
         
-        const hasHandle = await fileSystemManager.initialize(settings, auth);
-        if (!hasHandle) {
+        // Non-interactive check first
+        const hasHandleAndPermission = await fileSystemManager.initialize(settings, auth);
+        
+        if (!hasHandleAndPermission) {
+            // Either handle is missing OR permission is 'prompt'/'denied'
             setShowWelcome(true);
             setIsLoading(false);
             return;
         }
 
-        setShowWelcome(false);
+        // Repair and verify
         const repairSuccess = await verifyAndRepairFiles(onProgress, settings);
         if (!repairSuccess) {
-            console.error("File integrity check failed. Some features might not work.");
+            console.error("File integrity check failed. Some features might be degraded.");
         }
 
         setIsInitialized(true);
@@ -123,7 +130,7 @@ const App: React.FC = () => {
         if (isPinned && isLg) {
             setIsSidebarOpen(true);
         } else if (!isLg) {
-            setIsSidebarOpen(false); // Auto-close on smaller screens
+            setIsSidebarOpen(false); 
         }
     }, [isPinned]);
 
@@ -134,7 +141,7 @@ const App: React.FC = () => {
         (window as any).document.documentElement.style.fontSize = `${settings.fontSize}px`;
     }, [settings.activeThemeMode, settings.lightTheme, settings.darkTheme, settings.fontSize]);
 
-    // Ensure component availability matches feature settings
+    // Feature guard
     const { features } = settings;
     useEffect(() => {
         let isTabAllowed = true;
@@ -157,7 +164,6 @@ const App: React.FC = () => {
             case 'video_to_frames':
                 isTabAllowed = features.isToolsEnabled;
                 break;
-            // 'dashboard', 'prompts' (the builder), and 'settings' are always allowed.
         }
         
         if (!isTabAllowed) {
@@ -192,7 +198,6 @@ const App: React.FC = () => {
         showGlobalFeedback('Sent to Prompt Builder!');
     }, [showGlobalFeedback]);
 
-    // --- Clipping Panel Handlers ---
     const handleClipIdea = (idea: Idea) => {
         setClippedIdeas(prev => [idea, ...prev]);
         showGlobalFeedback(`Clipped "${idea.title}"`);
@@ -257,8 +262,7 @@ const App: React.FC = () => {
     }
 
     if (!isInitialized) {
-        // This case handles if initialization fails for a reason other than needing the welcome screen.
-        return <div className="p-8 text-center text-error">Fatal Error: Application could not be initialized. Please check console for details.</div>;
+        return <div className="p-8 text-center text-error font-black uppercase tracking-tighter text-4xl">System Initialization Failure.</div>;
     }
 
     return (
@@ -273,14 +277,17 @@ const App: React.FC = () => {
             />
             {isSidebarOpen && !isPinned && <div onClick={() => setIsSidebarOpen(false)} className="fixed inset-0 bg-black/50 z-30" />}
 
-            <div className={`flex flex-col h-full transition-colors duration-300 ease-in-out ${isSidebarOpen && isPinned ? 'lg:ml-64' : ''}`}>
+            <div className={`flex flex-col h-full transition-all duration-300 ease-in-out ${isSidebarOpen && isPinned ? 'lg:ml-80' : ''}`}>
                 <Header
                     onMenuClick={handleMenuClick}
                     activeTab={activeTab}
                     clippedIdeasCount={clippedIdeas.length}
                     onToggleClippingPanel={() => setIsClippingPanelOpen(p => !p)}
                 />
-                <main className={`flex-grow ${activeTab === 'dashboard' ? 'overflow-y-auto' : 'overflow-hidden'}`}>
+                <main 
+                    key={activeTab}
+                    className={`flex-grow animate-tab-switch ${activeTab === 'dashboard' ? 'overflow-y-auto' : 'overflow-hidden'}`}
+                >
                     {renderContent()}
                 </main>
                 <Footer onAboutClick={() => setIsAboutModalOpen(true)} />

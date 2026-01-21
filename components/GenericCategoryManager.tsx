@@ -47,7 +47,7 @@ const GenericCategoryManager: React.FC<GenericCategoryManagerProps> = ({
       const updated = await addFn(newCategoryName.trim());
       setCategories(updated);
       setNewCategoryName('');
-      showFeedback(`Category "${newCategoryName.trim()}" added.`);
+      showFeedback(`Folder "${newCategoryName.trim()}" added.`);
     }
   };
 
@@ -66,7 +66,7 @@ const GenericCategoryManager: React.FC<GenericCategoryManagerProps> = ({
       const updated = await updateFn(id, editingCategoryName.trim());
       setCategories(updated);
       handleEditCancel();
-      showFeedback(`Category renamed to "${editingCategoryName.trim()}".`);
+      showFeedback(`Folder renamed to "${editingCategoryName.trim()}".`);
     }
   };
 
@@ -79,71 +79,80 @@ const GenericCategoryManager: React.FC<GenericCategoryManagerProps> = ({
     if (categoryToDelete) {
       const updated = await deleteFn(categoryToDelete.id);
       setCategories(updated);
-      showFeedback(`Category "${categoryToDelete.name}" deleted.`);
+      showFeedback(`Folder "${categoryToDelete.name}" deleted.`);
     }
   };
 
   return (
     <>
-      <div className="bg-base-100 p-6 sm:p-8 rounded-xl shadow-2xl h-full flex flex-col">
-        <h3 className="text-xl font-semibold text-primary mb-4 flex-shrink-0">{title}</h3>
+      <div className="flex flex-col h-full bg-base-100">
+        <header className="p-6 border-b border-base-300 bg-base-200/10">
+            <h3 className="text-xs font-black uppercase tracking-[0.4em] text-primary">{title}</h3>
+        </header>
 
-        <form onSubmit={handleAddCategory} className="flex gap-4 mb-6 flex-shrink-0">
+        <form onSubmit={handleAddCategory} className="p-6 border-b border-base-300 bg-base-200/5 flex gap-4">
           <input
             type="text"
             value={newCategoryName}
             onChange={(e) => setNewCategoryName((e.currentTarget as any).value)}
-            placeholder="New category name"
-            className="input input-bordered input-sm flex-grow"
+            placeholder="Enter new folder name..."
+            className="input input-bordered rounded-none input-sm flex-grow font-bold tracking-tight"
           />
           <button
             type="submit"
-            className="btn btn-primary btn-sm"
+            className="btn btn-primary btn-sm rounded-none font-black text-[10px] tracking-widest px-6"
           >
-            Add
+            CREATE
           </button>
         </form>
 
-        <div className="space-y-3 flex-grow overflow-y-auto pr-2">
+        <div className="flex-grow overflow-y-auto">
           {categories.length > 0 ? (
-            categories.map((cat) => (
-              <div key={cat.id} className="p-3 rounded-lg flex items-center justify-between hover:bg-base-200 transition-colors">
-                {editingCategoryId === cat.id ? (
-                  <input
-                    type="text"
-                    value={editingCategoryName}
-                    onChange={(e) => setEditingCategoryName((e.currentTarget as any).value)}
-                    onKeyDown={(e) => e.key === 'Enter' && handleEditSave(cat.id)}
-                    onBlur={() => handleEditSave(cat.id)}
-                    autoFocus
-                    className="flex-grow p-1 bg-base-300 text-base-content border border-primary rounded-md outline-none"
-                  />
-                ) : (
-                  <span className="text-base-content flex-grow">{cat.name}</span>
-                )}
-                <div className="flex items-center gap-2 ml-4">
-                  {editingCategoryId === cat.id ? (
-                    <button onClick={() => handleEditSave(cat.id)} title="Save" className="btn btn-sm btn-ghost btn-square text-success">
-                      <CheckIcon className="w-5 h-5" />
+            <div className="flex flex-col">
+                {categories.map((cat) => (
+                <div key={cat.id} className="p-6 flex items-center justify-between hover:bg-base-200/30 transition-all border-b border-base-300">
+                    {editingCategoryId === cat.id ? (
+                    <input
+                        type="text"
+                        value={editingCategoryName}
+                        onChange={(e) => setEditingCategoryName((e.currentTarget as any).value)}
+                        onKeyDown={(e) => e.key === 'Enter' && handleEditSave(cat.id)}
+                        onBlur={() => handleEditSave(cat.id)}
+                        autoFocus
+                        className="flex-grow p-1 bg-transparent text-base-content border-b-2 border-primary outline-none font-bold text-lg tracking-tight"
+                    />
+                    ) : (
+                    <div className="flex flex-col min-w-0">
+                         <span className="text-[9px] font-black uppercase tracking-widest text-base-content/20 mb-1">ID: {cat.id.slice(-6)}</span>
+                         <span className="text-xl font-bold text-base-content truncate">{cat.name}</span>
+                    </div>
+                    )}
+                    <div className="flex items-center gap-2 ml-4">
+                    {editingCategoryId === cat.id ? (
+                        <button onClick={() => handleEditSave(cat.id)} title="Save" className="btn btn-sm btn-ghost btn-square text-success">
+                        <CheckIcon className="w-5 h-5" />
+                        </button>
+                    ) : (
+                        <button onClick={() => handleEditStart(cat)} title="Rename" className="btn btn-sm btn-ghost btn-square opacity-20 hover:opacity-100">
+                        <EditIcon className="w-5 h-5" />
+                        </button>
+                    )}
+                    <button onClick={() => handleDeleteClick(cat)} title="Delete" className="btn btn-sm btn-ghost btn-square opacity-20 hover:opacity-100 text-error">
+                        <DeleteIcon className="w-5 h-5" />
                     </button>
-                  ) : (
-                    <button onClick={() => handleEditStart(cat)} title="Rename" className="btn btn-sm btn-ghost btn-square text-primary">
-                      <EditIcon className="w-5 h-5" />
-                    </button>
-                  )}
-                  <button onClick={() => handleDeleteClick(cat)} title="Delete" className="btn btn-sm btn-ghost btn-square text-error">
-                    <DeleteIcon className="w-5 h-5" />
-                  </button>
+                    </div>
                 </div>
-              </div>
-            ))
+                ))}
+            </div>
           ) : (
-            <p className="text-base-content/70 text-center py-4">No categories created yet. Add one above to get started.</p>
+            <div className="p-20 text-center">
+                <p className="text-xs font-bold uppercase tracking-[0.2em] text-base-content/20">No folders created yet.</p>
+            </div>
           )}
         </div>
 
         {feedback && (
-          <div className="mt-4 p-3 bg-success/20 border border-success/30 text-success rounded-lg text-center text-sm flex-shrink-0">
+          <div className="p-4 bg-success/10 border-t border-success/20 text-success text-[10px] font-black uppercase tracking-widest text-center">
             {feedback}
           </div>
         )}
@@ -152,7 +161,7 @@ const GenericCategoryManager: React.FC<GenericCategoryManagerProps> = ({
         isOpen={isModalOpen}
         onClose={() => setIsModalOpen(false)}
         onConfirm={handleConfirmDelete}
-        title="Delete Category"
+        title="Delete Folder"
         message={categoryToDelete ? deleteConfirmationMessage(categoryToDelete.name) : ''}
       />
     </>

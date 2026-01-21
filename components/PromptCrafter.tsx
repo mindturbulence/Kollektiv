@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect, useCallback, useRef, useMemo } from 'react';
 import { crafterService } from '../services/crafterService';
 import type { WildcardFile, WildcardCategory, CrafterData } from '../types';
@@ -57,7 +56,7 @@ const PromptCrafter = ({ onSaveToLibrary, onSendToEnhancer, promptToInsert, head
 
     useEffect(() => {
         if (!fileSystemManager.isDirectorySelected()) {
-            setError("Crafter requires a local data folder. Please select one in Settings > Application > Storage.");
+            setError("Crafter requires a storage folder. Please select one in Settings > General > Storage Folder.");
             setIsLoading(false);
             return;
         }
@@ -75,7 +74,7 @@ const PromptCrafter = ({ onSaveToLibrary, onSendToEnhancer, promptToInsert, head
         if (!promptText.trim() || !crafterData) return;
         const newPrompt = crafterService.processCrafterPrompt(promptText, crafterData.wildcardCategories);
         setGeneratedPrompt(newPrompt);
-        setAnalysisTrigger(0); // Reset analysis on new generation
+        setAnalysisTrigger(0);
     };
 
     const handleAnalyze = () => {
@@ -86,14 +85,14 @@ const PromptCrafter = ({ onSaveToLibrary, onSendToEnhancer, promptToInsert, head
     
     const handleReconstruct = async () => {
         if (!generatedPrompt) return;
-        setAiAction('Reconstructing with AI...');
+        setAiAction('Rewriting prompt...');
         setError(null);
         try {
             const newPrompt = await reconstructFromIntent([generatedPrompt], settings);
             setGeneratedPrompt(newPrompt);
         } catch (e) {
-            console.error("Failed to reconstruct from result:", e);
-            setError(e instanceof Error ? e.message : 'An unknown error occurred during reconstruction.');
+            console.error("Failed to rewrite result:", e);
+            setError(e instanceof Error ? e.message : 'Failed to rewrite prompt.');
         } finally {
             setAiAction(null);
         }
@@ -101,30 +100,30 @@ const PromptCrafter = ({ onSaveToLibrary, onSendToEnhancer, promptToInsert, head
 
     const handleReplaceVariation = async (key: string, value: string) => {
         if (!generatedPrompt) return;
-        setAiAction('Replacing variation...');
+        setAiAction('Replacing component...');
         setError(null);
         try {
             const newPrompt = await replaceComponentInPrompt(generatedPrompt, key, value, settings);
             setGeneratedPrompt(newPrompt);
-            setAnalysisTrigger(t => t + 1); // Re-analyze after replacement
+            setAnalysisTrigger(t => t + 1);
         } catch (e) {
             console.error("Failed to replace variation:", e);
-            setError(e instanceof Error ? e.message : 'An unknown error occurred during replacement.');
+            setError(e instanceof Error ? e.message : 'An error occurred during replacement.');
         } finally {
             setAiAction(null);
         }
     };
 
     const handleReconstructFromComponents = async (newComponents: { [key: string]: string }) => {
-        setAiAction('Reconstructing from components...');
+        setAiAction('Rebuilding from details...');
         setError(null);
         try {
             const newPrompt = await reconstructPrompt(newComponents, settings);
             setGeneratedPrompt(newPrompt);
-            setAnalysisTrigger(t => t + 1); // Re-analyze after reconstruction
+            setAnalysisTrigger(t => t + 1);
         } catch (e) {
-            console.error("Failed to reconstruct from components:", e);
-            setError(e instanceof Error ? e.message : 'An unknown error occurred during reconstruction.');
+            console.error("Failed to rebuild from components:", e);
+            setError(e instanceof Error ? e.message : 'An error occurred during rebuilding.');
         } finally {
             setAiAction(null);
         }
@@ -177,7 +176,6 @@ const PromptCrafter = ({ onSaveToLibrary, onSendToEnhancer, promptToInsert, head
         
         setPromptText(newText);
     
-        // After updating the state, focus the textarea and move the cursor to the end
         const textarea = textareaRef.current;
         if (textarea) {
             setTimeout(() => {
@@ -225,28 +223,28 @@ const PromptCrafter = ({ onSaveToLibrary, onSendToEnhancer, promptToInsert, head
     if (error) return <div className="p-4 text-error">{error}</div>;
 
     return (
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 p-6 overflow-hidden h-full">
-            <aside className="lg:col-span-3 bg-base-100 rounded-lg shadow-lg flex flex-col overflow-hidden min-h-0">
+        <div className="grid grid-cols-1 lg:grid-cols-12 overflow-hidden h-full">
+            <aside className="lg:col-span-3 bg-base-100 flex flex-col overflow-hidden border-r border-base-300">
                 {header}
-                <div className="p-4 border-b border-base-300">
-                    <h3 className="font-bold text-lg">Wildcards</h3>
-                </div>
-                <div className="flex-grow p-4 overflow-y-auto">
+                <header className="p-6 border-b border-base-300 bg-base-200/10">
+                    <h3 className="text-[10px] font-black uppercase tracking-[0.4em] text-primary">Wildcards</h3>
+                </header>
+                <div className="flex-grow p-6 overflow-y-auto custom-scrollbar">
                     <WildcardTree categories={crafterData?.wildcardCategories || []} onWildcardClick={handleWildcardClick} />
                 </div>
-                <div className="flex-shrink-0 p-4 border-t border-base-300">
-                    <button onClick={loadData} className="btn btn-sm btn-ghost w-full"><RefreshIcon className="w-4 h-4"/> Refresh Wildcards</button>
+                <div className="flex-shrink-0 p-4 border-t border-base-300 bg-base-200/5">
+                    <button onClick={loadData} className="btn btn-xs btn-ghost w-full font-black uppercase tracking-widest text-[9px]"><RefreshIcon className="w-3.5 h-3.5 mr-2 opacity-40"/> Refresh Files</button>
                 </div>
             </aside>
-            <main className="lg:col-span-5 bg-base-100 rounded-lg shadow-lg flex flex-col overflow-hidden min-h-0">
-                <div className="p-4 border-b border-base-300 flex-shrink-0">
+            <main className="lg:col-span-5 bg-base-100 flex flex-col overflow-hidden border-r border-base-300">
+                <div className="p-4 border-b border-base-300 flex-shrink-0 bg-base-200/5">
                     <div className="flex items-center gap-2">
                         <div className="dropdown flex-grow">
                             <input
                                 type="text"
                                 tabIndex={0}
-                                className="input input-bordered input-sm w-full"
-                                placeholder="Search and select a template..."
+                                className="input input-bordered rounded-none input-sm w-full font-bold uppercase tracking-tighter"
+                                placeholder="SELECT TEMPLATE..."
                                 value={templateSearchText}
                                 onChange={(e) => {
                                     setTemplateSearchText((e.currentTarget as any).value);
@@ -256,84 +254,72 @@ const PromptCrafter = ({ onSaveToLibrary, onSendToEnhancer, promptToInsert, head
                                 }}
                             />
                             {filteredTemplates.length > 0 && (
-                                <ul tabIndex={0} className="dropdown-content z-[1] menu p-2 shadow bg-base-200 rounded-box w-full max-h-60 overflow-y-auto">
+                                <ul tabIndex={0} className="dropdown-content z-[1] menu p-1 shadow-2xl bg-base-200 rounded-none w-full max-h-60 overflow-y-auto border border-base-300">
                                     {filteredTemplates.map(t => (
-                                        <li key={t.name}><a onClick={() => handleSelectTemplateFromDropdown(t)}>{t.name}</a></li>
+                                        <li key={t.name}><a onClick={() => handleSelectTemplateFromDropdown(t)} className="font-bold text-xs uppercase">{t.name}</a></li>
                                     ))}
                                 </ul>
                             )}
                         </div>
-                        <button className="btn btn-sm" onClick={handleUseTemplate} disabled={!selectedTemplate}>Use</button>
-                        <button className="btn btn-sm btn-error btn-outline" onClick={handleDeleteTemplateClick} disabled={!selectedTemplate}>Delete</button>
+                        <button className="btn btn-sm btn-ghost rounded-none font-black text-[9px] tracking-widest" onClick={handleUseTemplate} disabled={!selectedTemplate}>USE</button>
+                        <button className="btn btn-sm btn-ghost rounded-none text-error/40 hover:text-error font-black text-[9px] tracking-widest" onClick={handleDeleteTemplateClick} disabled={!selectedTemplate}>DELETE</button>
                     </div>
                 </div>
 
-                <div className="p-4 h-56 flex-shrink-0">
+                <div className="p-6 h-64 flex-shrink-0">
                     <textarea 
                         ref={textareaRef}
                         value={promptText}
                         onChange={(e) => setPromptText((e.currentTarget as any).value)}
-                        placeholder="Enter your prompt template here... Use __wildcard__ syntax."
-                        className="textarea textarea-bordered w-full h-full resize-none"
+                        placeholder="Type your prompt here... Use __wildcard__ for random selection."
+                        className="textarea textarea-bordered rounded-none w-full h-full resize-none font-medium leading-relaxed bg-base-200/20"
                     ></textarea>
                 </div>
 
-                <div className="px-4 py-4 border-t border-base-300">
+                <div className="px-6 py-4 border-t border-base-300 bg-base-200/5">
                     <div className="flex items-center gap-2">
-                        <button onClick={() => setPromptText('')} className="btn btn-sm btn-ghost flex-1">
-                            Clear Prompt
-                        </button>
-                        <button onClick={handleSaveTemplateClick} className="btn btn-sm btn-ghost flex-1">
-                            Save as Template
-                        </button>
-                        <button onClick={handleGenerate} className="btn btn-sm btn-ghost flex-1">
-                            Generate
-                        </button>
+                        <button onClick={() => setPromptText('')} className="btn btn-xs btn-ghost flex-1 font-black uppercase tracking-widest text-[9px]">Clear</button>
+                        <button onClick={handleSaveTemplateClick} className="btn btn-xs btn-ghost flex-1 font-black uppercase tracking-widest text-[9px]">Save Template</button>
+                        <button onClick={handleGenerate} className="btn btn-sm btn-primary rounded-none flex-1 font-black uppercase tracking-widest text-[10px] shadow-lg">Generate Prompt</button>
                     </div>
                 </div>
 
-                <div className="flex-grow p-4 overflow-y-auto relative border-t border-base-300">
+                <div className="flex-grow p-6 overflow-y-auto relative border-t border-base-300 bg-base-100">
                     {aiAction && (
                         <div className="absolute inset-0 bg-base-100/80 backdrop-blur-sm flex flex-col items-center justify-center z-10">
                             <LoadingSpinner />
-                            <p className="text-sm text-base-content/70 -mt-4">{aiAction}</p>
+                            <p className="text-[10px] font-black uppercase tracking-[0.4em] text-primary animate-pulse -mt-4">{aiAction}</p>
                         </div>
                     )}
                     {generatedPrompt ? (
-                        <div className="space-y-2">
-                             <div className="flex justify-between items-center mb-2">
-                                <span className="text-xs font-semibold text-base-content/70 uppercase">Generated Result</span>
+                        <div className="space-y-4">
+                             <div className="flex justify-between items-center">
+                                <span className="text-[10px] font-black uppercase tracking-[0.2em] text-primary/60 flex items-center gap-3">
+                                    <div className="w-1.5 h-1.5 rounded-full bg-primary animate-pulse"></div> Resulting Prompt
+                                </span>
                             </div>
-                            <div className="p-3 bg-base-200 rounded-lg text-base text-base-content">
-                                {generatedPrompt}
+                            <div className="p-6 bg-base-200/50 border border-base-300 text-base font-medium leading-relaxed italic text-base-content/80">
+                                "{generatedPrompt}"
                             </div>
                         </div>
                     ) : (
-                        <div className="text-center p-8 text-base-content/60 h-full flex flex-col items-center justify-center">
-                            <SparklesIcon className="w-12 h-12 mx-auto mb-4"/>
-                            <p className="font-semibold">Your generated prompt will appear here</p>
-                            <p className="text-sm mt-1">Click <span className="kbd kbd-xs">Generate</span> to create a result.</p>
+                        <div className="h-full flex flex-col items-center justify-center text-center py-24 opacity-10">
+                            <SparklesIcon className="w-16 h-16 mx-auto mb-4"/>
+                            <p className="text-xl font-black uppercase tracking-widest">Awaiting generated prompt</p>
                         </div>
                     )}
                 </div>
-                <div className="p-4 border-t border-base-300 flex-shrink-0">
-                    <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
-                        <button onClick={handleAnalyze} disabled={!generatedPrompt || !!aiAction} className="btn btn-sm btn-ghost">Analyze</button>
-                        <button onClick={handleReconstruct} disabled={!generatedPrompt || !!aiAction} className="btn btn-sm btn-ghost">
-                            {!!aiAction ? <span className="loading loading-spinner loading-xs"></span> : null}
-                            {!!aiAction ? 'Working...' : 'Reconstruct'}
-                        </button>
-                        <button onClick={() => onSendToEnhancer(generatedPrompt!)} disabled={!generatedPrompt || !!aiAction} className="btn btn-sm btn-ghost">
-                            Send to Refiner
-                        </button>
-                        <button onClick={handleCopy} disabled={!generatedPrompt || copied} className="btn btn-sm btn-ghost" title={copied ? 'Copied!' : 'Copy Result'}>
-                            {copied ? 'Copied' : 'Copy'}
-                        </button>
-                    </div>
+                <div className="p-4 border-t border-base-300 bg-base-200/20 flex gap-2">
+                    <button onClick={handleAnalyze} disabled={!generatedPrompt || !!aiAction} className="btn btn-xs btn-ghost flex-1 font-black uppercase text-[9px] tracking-widest">ANALYZE</button>
+                    <button onClick={handleReconstruct} disabled={!generatedPrompt || !!aiAction} className="btn btn-xs btn-ghost flex-1 font-black uppercase text-[9px] tracking-widest">REWRITE</button>
+                    <button onClick={() => onSendToEnhancer(generatedPrompt!)} disabled={!generatedPrompt || !!aiAction} className="btn btn-xs btn-ghost flex-1 font-black uppercase text-[9px] tracking-widest">REFINER</button>
+                    <button onClick={handleCopy} disabled={!generatedPrompt || copied} className="btn btn-xs btn-ghost font-black uppercase text-[9px] tracking-widest" title={copied ? 'Copied!' : 'Copy Result'}>
+                        {copied ? 'OK' : <CopyIcon className="w-3.5 h-3.5"/>}
+                    </button>
                 </div>
             </main>
             
-            <aside className="lg:col-span-4 flex flex-col min-h-0">
+            <aside className="lg:col-span-4 bg-base-100 flex flex-col min-h-0">
                 <PromptAnatomyPanel 
                     promptToAnalyze={generatedPrompt}
                     onReconstructFromComponents={handleReconstructFromComponents}
@@ -344,21 +330,24 @@ const PromptCrafter = ({ onSaveToLibrary, onSendToEnhancer, promptToInsert, head
             </aside>
 
             {isSaveModalOpen && (
-                <div className="fixed inset-0 bg-black/60 z-50 flex items-center justify-center" onClick={() => setIsSaveModalOpen(false)}>
-                    <div className="modal-box" onClick={(e) => e.stopPropagation()}>
-                        <h3 className="font-bold text-lg">Save Template</h3>
-                        <div className="py-4">
+                <div className="fixed inset-0 bg-black/80 z-50 flex items-center justify-center p-4 animate-fade-in" onClick={() => setIsSaveModalOpen(false)}>
+                    <div className="bg-base-100 rounded-none border border-base-300 shadow-2xl w-full max-w-lg overflow-hidden" onClick={(e) => e.stopPropagation()}>
+                        <header className="p-8 border-b border-base-300 bg-base-200/20">
+                            <h3 className="text-2xl font-black tracking-tighter text-base-content leading-none">SAVE TEMPLATE<span className="text-primary">.</span></h3>
+                        </header>
+                        <div className="p-8">
                             <input
                                 type="text"
                                 value={templateName}
                                 onChange={(e) => setTemplateName((e.currentTarget as any).value)}
-                                placeholder="Enter template name"
-                                className="input input-bordered w-full"
+                                placeholder="ENTER NAME..."
+                                className="input input-bordered rounded-none w-full font-bold tracking-tight uppercase"
+                                autoFocus
                             />
                         </div>
-                        <div className="modal-action">
-                             <button onClick={() => setIsSaveModalOpen(false)} className="btn btn-sm btn-ghost">Cancel</button>
-                             <button onClick={handleConfirmSaveTemplate} disabled={isSavingTemplate || !templateName.trim()} className="btn btn-sm btn-primary">
+                        <div className="p-4 border-t border-base-300 flex justify-end gap-2 bg-base-200/10">
+                             <button onClick={() => setIsSaveModalOpen(false)} className="btn btn-ghost rounded-none uppercase font-black text-[10px] tracking-widest px-8">Cancel</button>
+                             <button onClick={handleConfirmSaveTemplate} disabled={isSavingTemplate || !templateName.trim()} className="btn btn-primary rounded-none uppercase font-black text-[10px] tracking-widest px-8 shadow-lg">
                                 {isSavingTemplate ? "Saving..." : "Save"}
                             </button>
                         </div>
@@ -369,8 +358,8 @@ const PromptCrafter = ({ onSaveToLibrary, onSendToEnhancer, promptToInsert, head
                 isOpen={isDeleteModalOpen}
                 onClose={() => setIsDeleteModalOpen(false)}
                 onConfirm={handleConfirmDelete}
-                title={`Delete Template "${templateToDelete?.name}"`}
-                message="Are you sure you want to permanently delete this template? This action cannot be undone."
+                title={`DELETE TEMPLATE`}
+                message={`Permanently remove "${templateToDelete?.name}"?`}
             />
         </div>
     );

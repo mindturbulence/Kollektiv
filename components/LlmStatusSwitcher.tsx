@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { useSettings } from '../contexts/SettingsContext';
 import { AVAILABLE_LLM_MODELS } from '../constants';
@@ -5,12 +6,9 @@ import { ChevronDownIcon } from './icons';
 
 const LlmStatusSwitcher: React.FC = () => {
     const { settings, updateSettings } = useSettings();
-    // Added missing useState hook for Gemini key status
     const [isGeminiKeySet, setIsGeminiKeySet] = useState(false);
     
-    // Added missing useEffect hook to check for API key on mount
     useEffect(() => {
-        // FIX: Replaced check for settings override with exclusive reliance on process.env.API_KEY
         setIsGeminiKeySet(!!process.env.API_KEY);
     }, []);
 
@@ -20,6 +18,7 @@ const LlmStatusSwitcher: React.FC = () => {
         } else if (provider === 'ollama') {
             updateSettings({ ...settings, activeLLM: 'ollama' });
         }
+        
         // Lose focus to close dropdown
         if (typeof (window as any).document !== 'undefined' && (window as any).document.activeElement) {
             ((window as any).document.activeElement as any).blur();
@@ -58,7 +57,7 @@ const LlmStatusSwitcher: React.FC = () => {
                 <ChevronDownIcon className={`w-4 h-4 text-base-content/70 flex-shrink-0`} />
             </div>
 
-            <ul tabIndex={0} className="dropdown-content menu p-1 shadow bg-base-200 rounded-box w-full mt-2 z-[1]">
+            <ul tabIndex={0} className="dropdown-content menu p-1 shadow-2xl bg-base-200 rounded-box w-full mt-2 z-[50] border border-base-300">
                 <li className="menu-title px-2 pt-1 pb-2 text-xs"><span>Gemini</span></li>
                 {AVAILABLE_LLM_MODELS.map(model => (
                     <li key={model.id}>

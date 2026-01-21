@@ -1,8 +1,7 @@
-
 import React, { useState, useCallback } from 'react';
 import { useSettings } from '../contexts/SettingsContext';
 import { refineSinglePromptStream } from '../services/llmService';
-import { SparklesIcon, CheckIcon, ChevronDownIcon, BookmarkIcon } from './icons';
+import { SparklesIcon, CheckIcon, ChevronDownIcon, BookmarkIcon, RefreshIcon, CloseIcon } from './icons';
 import { TARGET_IMAGE_AI_MODELS, TARGET_VIDEO_AI_MODELS } from '../constants';
 import LoadingSpinner from './LoadingSpinner';
 import CopyIcon from './CopyIcon';
@@ -26,12 +25,9 @@ const PromptRefinePanel: React.FC<PromptRefinePanelProps> = ({ promptText, onApp
     const [targetAIModel, setTargetAIModel] = useState<string>(TARGET_IMAGE_AI_MODELS[0]);
 
     const handleRefine = useCallback(async () => {
-        if (isCollapsed) {
-            setIsCollapsed(false);
-        }
         setIsLoading(true);
         setError(null);
-        setRefinedPrompt(''); // Start with empty for streaming
+        setRefinedPrompt(''); 
         setClipped(false);
         try {
             const stream = refineSinglePromptStream(promptText, targetAIModel, settings);
@@ -39,12 +35,12 @@ const PromptRefinePanel: React.FC<PromptRefinePanelProps> = ({ promptText, onApp
                 setRefinedPrompt(prev => (prev || '') + chunk);
             }
         } catch (e) {
-            setError(e instanceof Error ? e.message : "An unknown error occurred.");
+            setError(e instanceof Error ? e.message : "An error occurred.");
             setRefinedPrompt(null);
         } finally {
             setIsLoading(false);
         }
-    }, [promptText, targetAIModel, settings, isCollapsed, setIsCollapsed]);
+    }, [promptText, targetAIModel, settings]);
 
     const handleCopy = () => {
         if (!refinedPrompt) return;
@@ -60,7 +56,7 @@ const PromptRefinePanel: React.FC<PromptRefinePanelProps> = ({ promptText, onApp
     const handleApply = () => {
         if(refinedPrompt) {
             onApplyRefinement(refinedPrompt);
-            setRefinedPrompt(null); // Clear after applying
+            setRefinedPrompt(null); 
         }
     };
     
@@ -71,60 +67,78 @@ const PromptRefinePanel: React.FC<PromptRefinePanelProps> = ({ promptText, onApp
         setTimeout(() => setClipped(false), 2000);
     };
 
-    return (
-        <div className="card bg-base-100 shadow-lg flex flex-col">
-            <header className="card-title p-4 text-base justify-between flex-shrink-0 border-b border-base-300 items-center">
-                <span>
-                    Refine with AI
-                </span>
-                <button onClick={() => setIsCollapsed(!isCollapsed)} className="btn btn-sm btn-ghost btn-square" aria-label={isCollapsed ? "Expand panel" : "Collapse panel"}>
-                    <ChevronDownIcon className={`w-5 h-5 transition-transform duration-300 ${isCollapsed ? '' : 'rotate-180'}`} />
+    if (isCollapsed) {
+        return (
+            <div className="bg-base-100">
+                <button onClick={() => setIsCollapsed(false)} className="w-full p-4 flex items-center justify-between hover:bg-base-200 transition-colors">
+                    <span className="text-[10px] font-black uppercase tracking-[0.3em] text-primary">Open Refiner</span>
+                    <ChevronDownIcon className="w-4 h-4" />
                 </button>
-            </header>
-            {!isCollapsed && (
-            <>
-                <main className="card-body p-4 overflow-y-auto">
-                    {isLoading && !refinedPrompt ? <LoadingSpinner/> :
-                     error ? <div className="alert alert-error text-sm p-2"><span>{error}</span></div> :
-                     refinedPrompt !== null ? (
-                        <p className="text-base text-base-content whitespace-pre-wrap">{refinedPrompt}</p>
-                     ) : (
-                        <div className="p-4 text-center text-sm text-base-content/70">
-                            Refined prompt will appear here.
-                        </div>
-                     )}
-                </main>
-                <footer className="card-actions p-4 border-t border-base-300 items-center gap-2 justify-between">
-                    <div className="form-control flex-grow">
-                         <select value={targetAIModel} onChange={(e) => setTargetAIModel((e.currentTarget as any).value)} className="select select-bordered select-sm w-full">
-                            <optgroup label="Image AI Models">
+            </div>
+        );
+    }
+
+    return (
+        <div className="flex flex-col h-full bg-base-100 overflow-hidden">
+            <header className="p-4 border-b border-base-300 bg-base-200/10 flex justify-between items-center">
+                <div className="flex items-center gap-4">
+                    <span className="text-[10px] font-black uppercase tracking-[0.3em] text-primary">AI Refinement</span>
+                    <div className="form-control max-w-[140px]">
+                         <select value={targetAIModel} onChange={(e) => setTargetAIModel((e.currentTarget as any).value)} className="select select-ghost select-xs rounded-none font-bold w-full uppercase tracking-tighter text-[9px] h-6 min-h-0 border-none focus:outline-none">
+                            <optgroup label="Image">
                                 {TARGET_IMAGE_AI_MODELS.map(model => <option key={model} value={model}>{model}</option>)}
                             </optgroup>
-                            <optgroup label="Video AI Models">
+                            <optgroup label="Video">
                                 {TARGET_VIDEO_AI_MODELS.map(model => <option key={model} value={model}>{model}</option>)}
                             </optgroup>
                         </select>
                     </div>
-                    <div className="flex items-center gap-2">
-                        <button onClick={handleApply} disabled={!refinedPrompt || isLoading} className="btn btn-sm btn-ghost" title="Apply Refinement">
-                            <CheckIcon className="w-4 h-4 mr-1" /> Apply
-                        </button>
-                        <button onClick={handleCopy} disabled={!refinedPrompt || isLoading} className="btn btn-sm btn-ghost" title={copied ? "Copied!" : "Copy Refinement"}>
-                            {copied ? <><CheckIcon className="w-4 h-4 mr-1 text-success" />Copied</> : <><CopyIcon className="w-4 h-4 mr-1" />Copy</>}
-                        </button>
-                        {onClip && refinedPrompt && (
-                             <button onClick={handleClip} disabled={clipped} className="btn btn-sm btn-ghost" title="Clip Refinement">
-                                <BookmarkIcon className="w-4 h-4 mr-1" />
-                                {clipped ? 'Clipped' : 'Clip'}
-                            </button>
-                        )}
-                        <button onClick={handleRefine} disabled={isLoading || !promptText} className="btn btn-sm btn-ghost" title="Refine">
-                            <SparklesIcon className={`w-4 h-4 mr-1 ${isLoading ? 'animate-spin' : ''}`} /> Refine
-                        </button>
+                </div>
+                <div className="flex items-center gap-1">
+                    <button onClick={handleRefine} disabled={isLoading || !promptText} className="btn btn-xs btn-ghost btn-square" aria-label="Run AI refiner">
+                        <RefreshIcon className={`w-3.5 h-3.5 ${isLoading ? 'animate-spin' : ''}`} />
+                    </button>
+                    <button onClick={() => setIsCollapsed(true)} className="btn btn-xs btn-ghost btn-square" aria-label="Collapse panel">
+                        <CloseIcon className="w-4 h-4" />
+                    </button>
+                </div>
+            </header>
+            
+            <main className="flex-grow p-5 lg:p-5 bg-base-100 overflow-y-auto custom-scrollbar flex flex-col relative">
+                <span className="text-[9px] font-black uppercase tracking-widest text-primary/40 mb-3 flex items-center gap-3">
+                    <span className="w-1.5 h-1.5 rounded-full bg-primary animate-pulse"></span> Generated Text
+                </span>
+                
+                {isLoading && !refinedPrompt ? <div className="flex-grow flex items-center justify-center"><LoadingSpinner size={48} /></div> :
+                 error ? <div className="alert alert-error rounded-none text-xs"><span>{error}</span></div> :
+                 refinedPrompt !== null ? (
+                    <div className="text-sm font-medium leading-relaxed text-base-content/80 whitespace-pre-wrap flex-grow">
+                        {refinedPrompt}
                     </div>
-                </footer>
-            </>
-            )}
+                 ) : (
+                    <div className="flex-grow flex flex-col items-center justify-center text-center py-12">
+                        <SparklesIcon className="w-8 h-8 text-base-content/10 mb-4" />
+                        <span className="text-[10px] font-black uppercase tracking-[0.2em] text-base-content/20">
+                            Ready to refine prompt
+                        </span>
+                    </div>
+                 )}
+            </main>
+            
+            <footer className="p-4 border-t border-base-300 flex justify-end gap-2 bg-base-200/5">
+                {onClip && refinedPrompt && (
+                        <button onClick={handleClip} disabled={clipped} className="btn btn-xs btn-ghost rounded-none font-black text-[9px] tracking-widest px-4">
+                        <BookmarkIcon className="w-3.5 h-3.5 mr-1.5" />
+                        {clipped ? 'Ok' : 'Clip'}
+                    </button>
+                )}
+                <button onClick={handleCopy} disabled={!refinedPrompt || isLoading} className="btn btn-xs btn-ghost rounded-none font-black text-[9px] tracking-widest px-4">
+                    {copied ? <><CheckIcon className="w-3.5 h-3.5 mr-1.5 text-success" />Copied</> : <><CopyIcon className="w-3.5 h-3.5 mr-1.5" />Copy Text</>}
+                </button>
+                <button onClick={handleApply} disabled={!refinedPrompt || isLoading} className="btn btn-xs btn-ghost rounded-none font-black text-[9px] tracking-widest px-4 border border-base-300 bg-base-100">
+                    <CheckIcon className="w-3.5 h-3.5 mr-1.5" /> Apply Prompt
+                </button>
+            </footer>
         </div>
     );
 };
