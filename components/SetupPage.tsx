@@ -38,22 +38,57 @@ interface SetupPageProps {
 
 const subMenuConfig: Record<string, { id: string; label: string, icon: React.ReactNode, description: string }[]> = {
     app: [
-        { id: 'general', label: 'General', icon: <Cog6ToothIcon className="w-5 h-5" />, description: "Storage and system scale." },
-        { id: 'features', label: 'Features', icon: <AdjustmentsVerticalIcon className="w-5 h-5" />, description: "Toggle available modules." },
-        { id: 'integrations', label: 'Integrations', icon: <LinkIcon className="w-5 h-5" />, description: "Connect to third-party services." },
-        { id: 'appearance', label: 'Appearance', icon: <PaintBrushIcon className="w-5 h-5" />, description: "Themes and visual styling." },
-        { id: 'data', label: 'Backup & Restore', icon: <FolderClosedIcon className="w-5 h-5" />, description: "System data management." }
+        { id: 'general', label: 'General', icon: <Cog6ToothIcon className="w-4 h-4" />, description: "Storage and system scale." },
+        { id: 'features', label: 'Features', icon: <AdjustmentsVerticalIcon className="w-4 h-4" />, description: "Toggle available modules." },
+        { id: 'integrations', label: 'Integrations', icon: <LinkIcon className="w-4 h-4" />, description: "Connect to third-party services." },
+        { id: 'appearance', label: 'Appearance', icon: <PaintBrushIcon className="w-4 h-4" />, description: "Themes and visual styling." },
+        { id: 'data', label: 'Backup & Restore', icon: <FolderClosedIcon className="w-4 h-4" />, description: "System data management." }
     ],
-    llm: [ { id: 'provider', label: 'AI Settings', icon: <CpuChipIcon className="w-5 h-5" />, description: "AI models and API connections." } ],
+    llm: [ { id: 'provider', label: 'AI Settings', icon: <CpuChipIcon className="w-4 h-4" />, description: "AI models and API connections." } ],
     prompt: [
-        { id: 'categories', label: 'Prompt Folders', icon: <FolderClosedIcon className="w-5 h-5" />, description: "Organize prompt hierarchies." },
-        { id: 'data', label: 'Prompt Data', icon: <FolderClosedIcon className="w-5 h-5" />, description: "Import and export prompt text." }
+        { id: 'categories', label: 'Prompt Folders', icon: <FolderClosedIcon className="w-4 h-4" />, description: "Organize prompt hierarchies." },
+        { id: 'data', label: 'Prompt Data', icon: <FolderClosedIcon className="w-4 h-4" />, description: "Import and export prompt text." }
     ],
     gallery: [
-        { id: 'categories', label: 'Gallery Folders', icon: <FolderClosedIcon className="w-5 h-5" />, description: "Organize image hierarchies." },
-        { id: 'data', label: 'Gallery Data', icon: <FolderClosedIcon className="w-5 h-5" />, description: "Export and manage gallery files." }
+        { id: 'categories', label: 'Gallery Folders', icon: <FolderClosedIcon className="w-4 h-4" />, description: "Organize image hierarchies." },
+        { id: 'data', label: 'Gallery Data', icon: <FolderClosedIcon className="w-4 h-4" />, description: "Export and manage gallery files." }
     ],
 };
+
+const SetupNavItem: React.FC<{
+  id: string;
+  label: string;
+  icon: React.ReactNode;
+  isActive: boolean;
+  onClick: () => void;
+  registerRef: (el: HTMLAnchorElement | null) => void;
+}> = ({ label, icon, isActive, onClick, registerRef }) => (
+    <li>
+        <a
+          ref={registerRef}
+          onClick={onClick}
+          className={`flex items-center p-2.5 rounded-lg text-base font-medium transition-colors cursor-pointer relative z-10 ${
+            isActive
+              ? 'text-primary-content font-bold'
+              : 'text-base-content/70 hover:bg-base-200'
+          }`}
+        >
+          <div className="mr-3">{icon}</div>
+          <span className="uppercase text-[10px] font-black tracking-widest">{label}</span>
+        </a>
+    </li>
+);
+
+const SetupSection: React.FC<{ title: string, children: React.ReactNode }> = ({ title, children }) => (
+    <div className="mb-4">
+        <h2 className="px-3 pb-2 text-[10px] font-black uppercase tracking-[0.3em] text-base-content/30">
+            {title}
+        </h2>
+        <ul className="menu menu-sm p-0 gap-0.5 relative">
+            {children}
+        </ul>
+    </div>
+);
 
 const SettingRow: React.FC<{ label: string, desc?: string, children: React.ReactNode }> = ({ label, desc, children }) => (
     <div className="p-8 border-b border-base-300 last:border-b-0 flex flex-col md:flex-row md:items-center justify-between gap-6 group hover:bg-base-200/30 transition-all">
@@ -96,7 +131,6 @@ export const SetupPage: React.FC<SetupPageProps> = ({
   const tokenClientRef = useRef<any>(null);
 
   useEffect(() => {
-    // Access the build-injected environment variable
     const clientId = process.env.YOUTUBE_CLIENT_ID;
     
     const initGsi = () => {
@@ -550,12 +584,12 @@ export const SetupPage: React.FC<SetupPageProps> = ({
                 return (
                     <div className="flex flex-col">
                         <SettingRow label="Chroma: Bright" desc="Primary theme for illuminated environments.">
-                            <select value={settings.lightTheme} onChange={(e) => handleSettingsChange('lightTheme', (e.currentTarget as any).value)} className="select select-bordered select-sm rounded-none font-bold tracking-tight w-48">
+                            <select value={settings.lightTheme} onChange={(e) => handleSettingsChange('lightTheme', (e.currentTarget as any).value)} className="select select-bordered select-sm rounded-none font-bold tracking-tight w-64 uppercase text-[10px] tracking-widest">
                                 {DAISYUI_LIGHT_THEMES.map(t => <option key={t} value={t}>{t.toUpperCase()}</option>)}
                             </select>
                         </SettingRow>
                         <SettingRow label="Chroma: Obscure" desc="Primary theme for low-light environments.">
-                            <select value={settings.darkTheme} onChange={(e) => handleSettingsChange('darkTheme', (e.currentTarget as any).value)} className="select select-bordered select-sm rounded-none font-bold tracking-tight w-48">
+                            <select value={settings.darkTheme} onChange={(e) => handleSettingsChange('darkTheme', (e.currentTarget as any).value)} className="select select-bordered select-sm rounded-none font-bold tracking-tight w-64 uppercase text-[10px] tracking-widest">
                                 {DAISYUI_DARK_THEMES.map(t => <option key={t} value={t}>{t.toUpperCase()}</option>)}
                             </select>
                         </SettingRow>
@@ -610,7 +644,7 @@ export const SetupPage: React.FC<SetupPageProps> = ({
             {settings.activeLLM === 'gemini' && (
                 <div className="animate-fade-in flex flex-col">
                     <SettingRow label="Gemini Tier" desc="Specific model variant for complex reasoning.">
-                        <select value={settings.llmModel} onChange={(e) => handleSettingsChange('llmModel', (e.currentTarget as any).value)} className="select select-bordered select-sm rounded-none font-bold tracking-tight w-64">
+                        <select value={settings.llmModel} onChange={(e) => handleSettingsChange('llmModel', (e.currentTarget as any).value)} className="select select-bordered select-sm rounded-none font-bold tracking-tight w-64 uppercase text-[10px] tracking-widest">
                             {AVAILABLE_LLM_MODELS.map(m => <option key={m.id} value={m.id}>{m.name.toUpperCase()}</option>)}
                         </select>
                     </SettingRow>
@@ -625,7 +659,7 @@ export const SetupPage: React.FC<SetupPageProps> = ({
                         </div>
                     </SettingRow>
                     <SettingRow label="Model Identifier" desc="Exact name of the local weights to utilize.">
-                        <input type="text" value={settings.ollamaModel} onChange={(e) => handleSettingsChange('ollamaModel', (e.currentTarget as any).value)} className="input input-bordered input-sm rounded-none font-bold tracking-tight w-64" placeholder="llama3.2"/>
+                        <input type="text" value={settings.ollamaModel} onChange={(e) => handleSettingsChange('ollamaModel', (e.currentTarget as any).value)} className="input input-bordered input-sm rounded-none font-bold tracking-tight w-64 text-[10px] tracking-widest" placeholder="llama3.2"/>
                     </SettingRow>
                 </div>
             )}
@@ -706,35 +740,31 @@ export const SetupPage: React.FC<SetupPageProps> = ({
   return (
     <>
     <section className="flex flex-row bg-base-100 text-base-content h-full overflow-hidden">
-        <aside className="w-80 flex-shrink-0 bg-base-100 p-6 flex flex-col">
-            <h1 className="text-[10px] font-black uppercase tracking-[0.4em] text-base-content/30 mb-8 px-3">System Navigation</h1>
-            <nav className="flex-grow overflow-y-auto custom-scrollbar relative">
-                <div className="absolute bg-primary rounded-lg shadow-lg pointer-events-none transition-all duration-300 ease-in-out" style={pillStyle} />
-                <ul className="menu p-0 gap-8 relative z-10">
+        <aside className="w-80 flex-shrink-0 bg-base-100 border-r border-base-300 flex flex-col">
+            <h1 className="h-16 flex items-center px-6 border-b border-base-300 text-[10px] font-black uppercase tracking-[0.4em] text-base-content/30">System Navigation</h1>
+            <nav className="flex-grow px-4 py-6 overflow-y-auto custom-scrollbar relative">
+                <div className="absolute bg-primary rounded-lg shadow-lg pointer-events-none transition-all duration-300 ease-[cubic-bezier(0.4,0,0.2,1)]" style={pillStyle} />
+                <div className="relative z-10 space-y-4">
                    {mainCategories.map(mainCat => (
-                       <li key={mainCat.id}>
-                           <h2 className="text-[10px] font-black uppercase tracking-[0.2em] text-primary/60 mb-2 px-3">{mainCat.label}</h2>
-                           <ul className="gap-0.5">
+                       <SetupSection key={mainCat.id} title={mainCat.label}>
                             {(subMenuConfig[mainCat.id as ActiveSettingsTab] || []).map(subCat => (
-                                <li key={subCat.id} className="p-0">
-                                    <a ref={(el) => { navRefs.current[`${mainCat.id}-${subCat.id}`] = el; }} onClick={() => handleSubCategoryClick(mainCat.id as ActiveSettingsTab, subCat.id)}
-                                        className={`flex items-center p-2.5 rounded-lg text-base font-medium transition-colors cursor-pointer relative z-10 ${
-                                            activeSettingsTab === mainCat.id && activeSubTab === subCat.id ? 'text-primary-content font-bold' : 'text-base-content/70 hover:bg-base-200'
-                                        }`}
-                                    >
-                                        <div className="mr-3 opacity-40">{subCat.icon}</div>
-                                        <div className="flex flex-col"><span className="text-[11px] font-black uppercase tracking-widest">{subCat.label}</span></div>
-                                    </a>
-                                </li>
+                                <SetupNavItem 
+                                    key={subCat.id}
+                                    id={`${mainCat.id}-${subCat.id}`}
+                                    label={subCat.label}
+                                    icon={subCat.icon}
+                                    isActive={activeSettingsTab === mainCat.id && activeSubTab === subCat.id}
+                                    onClick={() => handleSubCategoryClick(mainCat.id as ActiveSettingsTab, subCat.id)}
+                                    registerRef={(el) => { navRefs.current[`${mainCat.id}-${subCat.id}`] = el; }}
+                                />
                             ))}
-                           </ul>
-                       </li>
+                       </SetupSection>
                    ))}
-                </ul>
+                </div>
             </nav>
         </aside>
 
-        <main className="flex-grow flex flex-col overflow-hidden bg-base-100 border-l border-base-300">
+        <main className="flex-grow flex flex-col overflow-hidden bg-base-100">
             <div className="flex-grow overflow-y-auto overflow-x-hidden custom-scrollbar">
                 <section className="p-10 lg:p-16 border-b border-base-300 bg-base-200/20">
                     <div className="max-w-screen-2xl mx-auto flex flex-col md:flex-row items-end justify-between gap-12">

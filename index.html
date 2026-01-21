@@ -6,6 +6,20 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Kollektiv</title>
     <link rel="stylesheet" href="https://fonts.bunny.net/css?family=urbanist:100,200,300,400,500,600,700,800,900,100i,200i,300i,400i,500i,600i,700i,800i,900i&display=swap" />
+    <script type="text/javascript">
+      // Critical: Load theme immediately to support "use current themes" during integrity check
+      (function() {
+        try {
+          const settings = JSON.parse(localStorage.getItem('kollektivSettingsV4'));
+          if (settings) {
+            const theme = settings.activeThemeMode === 'light' ? settings.lightTheme : settings.darkTheme;
+            if (theme) {
+              document.documentElement.setAttribute('data-theme', theme);
+            }
+          }
+        } catch (e) {}
+      })();
+    </script>
     <style type="text/css">
       html, body, #root {
         height: 100%;
@@ -18,8 +32,8 @@
         align-items: center;
         justify-content: center;
         height: 100%;
-        background-color: oklch(20% 0.08 209);
-        color: oklch(90% 0.076 70.697);
+        background-color: canvas; /* Fallback to system canvas */
+        color: currentColor;
         font-family: 'Urbanist', sans-serif;
       }
       
@@ -211,8 +225,8 @@
             <circle class="box5631" cx="25" cy="25" r="5"/>
           </g>
         </svg>
-        <p id="loading-status" class="mt-4 text-sm">Loading application...</p>
-        <div id="loading-progress-container" class="w-64 h-2 bg-base-content/10 rounded-full mt-4 overflow-hidden" style="display: none;">
+        <p id="loading-status" class="mt-4 text-sm font-bold uppercase tracking-[0.2em] opacity-40">Loading System...</p>
+        <div id="loading-progress-container" class="w-64 h-1.5 bg-base-content/5 rounded-full mt-4 overflow-hidden" style="display: none;">
           <div id="loading-progress-bar" class="h-full bg-primary rounded-full transition-all duration-300" style="width: 0%;"></div>
         </div>
       </div>

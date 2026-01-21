@@ -34,11 +34,11 @@ import LoadingSpinner from './LoadingSpinner';
 type PromptsPageState = { prompt?: string, artStyle?: string, artist?: string, view?: 'enhancer' | 'composer' | 'create', id?: string } | null;
 
 const InitialLoader: React.FC = () => (
-    <div id="initial-loader" className="flex flex-col items-center justify-center w-full h-full bg-base-300">
+    <div id="initial-loader" className="flex flex-col items-center justify-center w-full h-full bg-base-100 text-base-content transition-colors duration-300">
       <div className="flex flex-col items-center gap-6">
         <LoadingSpinner size={80} />
         <p id="loading-status" className="text-sm font-bold uppercase tracking-[0.3em] opacity-50 animate-pulse">Initializing System Registry</p>
-        <div id="loading-progress-container" className="w-64 h-1 bg-base-content/10 rounded-full overflow-hidden" style={{ display: 'none' }}>
+        <div id="loading-progress-container" className="w-64 h-1.5 bg-base-content/5 rounded-full overflow-hidden" style={{ display: 'none' }}>
           <div id="loading-progress-bar" className="h-full bg-primary rounded-full transition-all duration-300" style={{ width: '0%' }}></div>
         </div>
       </div>
