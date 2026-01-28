@@ -257,16 +257,26 @@ export const ColorPaletteExtractor: React.FC<ColorPaletteExtractorProps> = ({ on
                 </div>
             </aside>
 
-            <main className="flex-grow bg-base-200/20 overflow-hidden flex flex-col">
-                <header className="p-6 border-b border-base-300 bg-base-100 flex justify-between items-center">
-                    <h2 className="text-[10px] font-black uppercase tracking-[0.4em] text-base-content/40">Extraction Output</h2>
+            <main className="flex-grow bg-base-100 overflow-y-auto overflow-x-hidden scroll-smooth custom-scrollbar flex flex-col">
+                <section className="p-10 border-b border-base-300 bg-base-200/20">
+                    <div className="max-w-screen-2xl mx-auto flex flex-col gap-1">
+                        <div className="flex flex-col md:flex-row md:items-stretch justify-between gap-6">
+                            <h1 className="text-2xl lg:text-3xl font-black tracking-tighter text-base-content leading-none flex items-center uppercase">Palette Extractor<span className="text-primary">.</span></h1>
+                        </div>
+                        <p className="text-[11px] font-bold text-base-content/30 uppercase tracking-[0.3em] w-full">Deconstruct visual artifacts into precise chromatic tokens and atmospheric mood data.</p>
+                    </div>
+                </section>
+
+                <div className="flex-shrink-0 bg-base-100 px-6 py-4 border-b border-base-300 flex justify-between items-center sticky top-0 z-20 backdrop-blur-md bg-base-100/80">
+                    <h2 className="text-xs font-black uppercase tracking-[0.4em] text-base-content/40">Extraction Output</h2>
                     {palette.length > 0 && (
                         <button onClick={handleClipPalette} className="btn btn-xs btn-ghost rounded-none font-black text-[9px] tracking-widest uppercase">
                             <BookmarkIcon className="w-3.5 h-3.5 mr-2 opacity-40"/> CLIP TO ARCHIVE
                         </button>
                     )}
-                </header>
-                <div className="flex-grow p-8 lg:p-12 overflow-y-auto custom-scrollbar">
+                </div>
+
+                <div className="flex-grow p-8 lg:p-12 bg-base-200/5">
                     {isLoading ? <div className="py-24"><LoadingSpinner/></div> :
                      error ? <div className="alert alert-error rounded-none border-2"><span>{error}</span></div> :
                      palette.length > 0 ? (

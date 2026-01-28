@@ -2,7 +2,7 @@ import React, { useState, useEffect, useCallback, useRef, useMemo } from 'react'
 import { crafterService } from '../services/crafterService';
 import type { WildcardFile, WildcardCategory, CrafterData } from '../types';
 import LoadingSpinner from './LoadingSpinner';
-import { SparklesIcon, FolderClosedIcon, DeleteIcon, RefreshIcon, BookmarkIcon, Atom2Icon, FunctionIcon, CheckIcon } from './icons';
+import { SparklesIcon, FolderClosedIcon, DeleteIcon, RefreshIcon, BookmarkIcon, Atom2Icon, FunctionIcon, CheckIcon, PlusIcon } from './icons';
 import CopyIcon from './CopyIcon';
 import { fileSystemManager } from '../utils/fileUtils';
 import { PromptAnatomyPanel } from './PromptAnatomyPanel';
@@ -13,12 +13,13 @@ import WildcardTree from './WildcardTree';
 
 interface PromptCrafterProps {
   onSaveToLibrary: (generatedText: string, baseText: string) => void;
+  onClip?: (prompt: string) => void;
   onSendToEnhancer: (prompt: string) => void;
   promptToInsert: { content: string, id: string } | null;
   header: React.ReactNode;
 }
 
-const PromptCrafter = ({ onSaveToLibrary, onSendToEnhancer, promptToInsert, header }: PromptCrafterProps) => {
+const PromptCrafter = ({ onSaveToLibrary, onClip, onSendToEnhancer, promptToInsert, header }: PromptCrafterProps) => {
     const { settings } = useSettings();
     const [crafterData, setCrafterData] = useState<CrafterData | null>(null);
     const [isLoading, setIsLoading] = useState(true);
@@ -31,6 +32,7 @@ const PromptCrafter = ({ onSaveToLibrary, onSendToEnhancer, promptToInsert, head
     const lastInsertedId = useRef<string | null>(null);
     const [aiAction, setAiAction] = useState<string | null>(null);
     const [copied, setCopied] = useState(false);
+    const [clipped, setClipped] = useState(false);
     
     // --- Template Management State ---
     const [selectedTemplate, setSelectedTemplate] = useState<WildcardFile | null>(null);
@@ -75,6 +77,7 @@ const PromptCrafter = ({ onSaveToLibrary, onSendToEnhancer, promptToInsert, head
         const newPrompt = crafterService.processCrafterPrompt(promptText, crafterData.wildcardCategories);
         setGeneratedPrompt(newPrompt);
         setAnalysisTrigger(0);
+        setClipped(false);
     };
 
     const handleAnalyze = () => {
@@ -142,6 +145,13 @@ const PromptCrafter = ({ onSaveToLibrary, onSendToEnhancer, promptToInsert, head
                 });
         }
     }, [generatedPrompt]);
+
+    const handleClip = useCallback(() => {
+        if (!generatedPrompt || !onClip) return;
+        onClip(generatedPrompt);
+        setClipped(true);
+        setTimeout(() => setClipped(false), 2000);
+    }, [generatedPrompt, onClip]);
     
     const handleSaveTemplateClick = () => {
         if (selectedTemplate) {
@@ -219,7 +229,11 @@ const PromptCrafter = ({ onSaveToLibrary, onSendToEnhancer, promptToInsert, head
         }
     };
     
-    if (isLoading) return <LoadingSpinner />;
+    if (isLoading) return (
+        <div className="h-full w-full flex items-center justify-center bg-base-100">
+            <LoadingSpinner />
+        </div>
+    );
     if (error) return <div className="p-4 text-error">{error}</div>;
 
     return (
@@ -233,7 +247,13 @@ const PromptCrafter = ({ onSaveToLibrary, onSendToEnhancer, promptToInsert, head
                     <WildcardTree categories={crafterData?.wildcardCategories || []} onWildcardClick={handleWildcardClick} />
                 </div>
                 <div className="flex-shrink-0 p-4 border-t border-base-300 bg-base-200/5">
-                    <button onClick={loadData} className="btn btn-xs btn-ghost w-full font-black uppercase tracking-widest text-[9px]"><RefreshIcon className="w-3.5 h-3.5 mr-2 opacity-40"/> Refresh Files</button>
+                    <button 
+                        onClick={loadData} 
+                        className="btn btn-sm btn-ghost border border-base-300 w-full rounded-none font-black text-[9px] tracking-widest uppercase hover:bg-base-200"
+                    >
+                        <RefreshIcon className="w-3.5 h-3.5 mr-2 opacity-40"/>
+                        Refresh Files
+                    </button>
                 </div>
             </aside>
             <main className="lg:col-span-5 bg-base-100 flex flex-col overflow-hidden border-r border-base-300">
@@ -261,8 +281,22 @@ const PromptCrafter = ({ onSaveToLibrary, onSendToEnhancer, promptToInsert, head
                                 </ul>
                             )}
                         </div>
-                        <button className="btn btn-sm btn-ghost rounded-none font-black text-[9px] tracking-widest" onClick={handleUseTemplate} disabled={!selectedTemplate}>USE</button>
-                        <button className="btn btn-sm btn-ghost rounded-none text-error/40 hover:text-error font-black text-[9px] tracking-widest" onClick={handleDeleteTemplateClick} disabled={!selectedTemplate}>DELETE</button>
+                        <button 
+                            className="btn btn-sm btn-ghost border border-base-300 rounded-none font-black text-[9px] tracking-widest uppercase hover:bg-base-200" 
+                            onClick={handleUseTemplate} 
+                            disabled={!selectedTemplate}
+                        >
+                            <CheckIcon className="w-3.5 h-3.5 mr-1.5 opacity-40"/>
+                            USE
+                        </button>
+                        <button 
+                            className="btn btn-sm btn-ghost rounded-none text-error/40 hover:text-error font-black text-[9px] tracking-widest uppercase" 
+                            onClick={handleDeleteTemplateClick} 
+                            disabled={!selectedTemplate}
+                        >
+                            <DeleteIcon className="w-3.5 h-3.5 mr-1.5"/>
+                            DELETE
+                        </button>
                     </div>
                 </div>
 
@@ -276,11 +310,29 @@ const PromptCrafter = ({ onSaveToLibrary, onSendToEnhancer, promptToInsert, head
                     ></textarea>
                 </div>
 
-                <div className="px-6 py-4 border-t border-base-300 bg-base-200/5">
-                    <div className="flex items-center gap-2">
-                        <button onClick={() => setPromptText('')} className="btn btn-xs btn-ghost flex-1 font-black uppercase tracking-widest text-[9px]">Clear</button>
-                        <button onClick={handleSaveTemplateClick} className="btn btn-xs btn-ghost flex-1 font-black uppercase tracking-widest text-[9px]">Save Template</button>
-                        <button onClick={handleGenerate} className="btn btn-sm btn-primary rounded-none flex-1 font-black uppercase tracking-widest text-[10px] shadow-lg">Generate Prompt</button>
+                <div className="px-6 py-4 border-t border-base-300 bg-base-200/5 flex flex-col gap-2">
+                    <div className="grid grid-cols-3 gap-2">
+                        <button 
+                            onClick={() => setPromptText('')} 
+                            className="btn btn-sm btn-ghost rounded-none font-black text-[9px] tracking-widest text-error/40 hover:text-error uppercase w-full"
+                        >
+                            <DeleteIcon className="w-3.5 h-3.5 mr-1.5"/>
+                            CLEAR
+                        </button>
+                        <button 
+                            onClick={handleSaveTemplateClick} 
+                            className="btn btn-sm btn-ghost border border-base-300 rounded-none font-black text-[9px] tracking-widest uppercase hover:bg-base-200 w-full"
+                        >
+                            <BookmarkIcon className="w-3.5 h-3.5 mr-1.5 opacity-40"/>
+                            SAVE
+                        </button>
+                        <button 
+                            onClick={handleGenerate} 
+                            className="btn btn-sm btn-primary rounded-none font-black text-[9px] tracking-widest uppercase shadow-lg w-full"
+                        >
+                            <SparklesIcon className="w-3.5 h-3.5 mr-1.5"/>
+                            GENERATE
+                        </button>
                     </div>
                 </div>
 
@@ -309,13 +361,55 @@ const PromptCrafter = ({ onSaveToLibrary, onSendToEnhancer, promptToInsert, head
                         </div>
                     )}
                 </div>
-                <div className="p-4 border-t border-base-300 bg-base-200/20 flex gap-2">
-                    <button onClick={handleAnalyze} disabled={!generatedPrompt || !!aiAction} className="btn btn-xs btn-ghost flex-1 font-black uppercase text-[9px] tracking-widest">ANALYZE</button>
-                    <button onClick={handleReconstruct} disabled={!generatedPrompt || !!aiAction} className="btn btn-xs btn-ghost flex-1 font-black uppercase text-[9px] tracking-widest">REWRITE</button>
-                    <button onClick={() => onSendToEnhancer(generatedPrompt!)} disabled={!generatedPrompt || !!aiAction} className="btn btn-xs btn-ghost flex-1 font-black uppercase text-[9px] tracking-widest">REFINER</button>
-                    <button onClick={handleCopy} disabled={!generatedPrompt || copied} className="btn btn-xs btn-ghost font-black uppercase text-[9px] tracking-widest" title={copied ? 'Copied!' : 'Copy Result'}>
-                        {copied ? 'OK' : <CopyIcon className="w-3.5 h-3.5"/>}
-                    </button>
+                <div className="p-4 border-t border-base-300 bg-base-200/20">
+                    <div className="grid grid-cols-5 gap-2">
+                        <button 
+                            onClick={handleAnalyze} 
+                            disabled={!generatedPrompt || !!aiAction} 
+                            className="btn btn-sm btn-ghost border border-base-300 rounded-none font-black text-[9px] tracking-widest uppercase hover:bg-base-200 w-full px-1 truncate"
+                        >
+                            <Atom2Icon className="w-3.5 h-3.5 mr-1.5 opacity-40"/>
+                            ANALYZE
+                        </button>
+                        <button 
+                            onClick={handleReconstruct} 
+                            disabled={!generatedPrompt || !!aiAction} 
+                            className="btn btn-sm btn-ghost border border-base-300 rounded-none font-black text-[9px] tracking-widest uppercase hover:bg-base-200 w-full px-1 truncate"
+                        >
+                            <RefreshIcon className="w-3.5 h-3.5 mr-1.5 opacity-40"/>
+                            REWRITE
+                        </button>
+                        <button 
+                            onClick={() => onSendToEnhancer(generatedPrompt!)} 
+                            disabled={!generatedPrompt || !!aiAction} 
+                            className="btn btn-sm btn-primary rounded-none font-black text-[9px] tracking-widest uppercase shadow-lg w-full px-1 truncate"
+                        >
+                            <SparklesIcon className="w-3.5 h-3.5 mr-1.5"/>
+                            REFINE
+                        </button>
+                        <button 
+                            onClick={handleClip} 
+                            disabled={!generatedPrompt} 
+                            className="btn btn-sm btn-ghost border border-base-300 rounded-none font-black text-[9px] tracking-widest uppercase hover:bg-base-200 w-full px-1 truncate"
+                        >
+                            {clipped ? (
+                                <><CheckIcon className="w-3.5 h-3.5 mr-1.5 text-success"/> OK</>
+                            ) : (
+                                <><BookmarkIcon className="w-3.5 h-3.5 mr-1.5 opacity-40"/> CLIP</>
+                            )}
+                        </button>
+                        <button 
+                            onClick={handleCopy} 
+                            disabled={!generatedPrompt} 
+                            className="btn btn-sm btn-ghost border border-base-300 rounded-none font-black text-[9px] tracking-widest uppercase hover:bg-base-200 w-full px-1 truncate"
+                        >
+                            {copied ? (
+                                <><CheckIcon className="w-3.5 h-3.5 mr-1.5 text-success"/> OK</>
+                            ) : (
+                                <><CopyIcon className="w-3.5 h-3.5 mr-1.5 opacity-40"/> COPY</>
+                            )}
+                        </button>
+                    </div>
                 </div>
             </main>
             

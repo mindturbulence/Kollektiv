@@ -43,11 +43,13 @@ const PickerItem: React.FC<{
             className={`relative aspect-square bg-base-300 cursor-pointer overflow-hidden group border-2 transition-all ${isSelected ? 'border-primary ring-2 ring-primary/20' : 'border-transparent hover:border-primary/50'}`}
         >
             {thumbUrl ? (
-                item.type === 'video' ? (
-                    <video src={thumbUrl} className="w-full h-full object-cover grayscale group-hover:grayscale-0" />
-                ) : (
-                    <img src={thumbUrl} className="w-full h-full object-cover grayscale group-hover:grayscale-0" alt={item.title} />
-                )
+                <div className="w-full h-full relative">
+                    {item.type === 'video' ? (
+                        <video src={thumbUrl} className="w-full h-full object-cover media-monochrome group-hover:filter-none" />
+                    ) : (
+                        <img src={thumbUrl} className="w-full h-full object-cover media-monochrome group-hover:filter-none" alt={item.title} />
+                    )}
+                </div>
             ) : (
                 <div className="w-full h-full flex items-center justify-center animate-pulse">
                     <PhotoIcon className="w-8 h-8 opacity-10" />
@@ -55,20 +57,20 @@ const PickerItem: React.FC<{
             )}
             
             {item.type === 'video' && (
-                <div className="absolute top-2 left-2 bg-black/60 p-1 backdrop-blur-md">
+                <div className="absolute top-2 left-2 bg-black/60 p-1 backdrop-blur-md z-10">
                     <FilmIcon className="w-3 h-3 text-white" />
                 </div>
             )}
 
             {isSelected && (
-                <div className="absolute inset-0 bg-primary/20 flex items-center justify-center">
+                <div className="absolute inset-0 bg-primary/20 flex items-center justify-center z-10">
                     <div className="w-8 h-8 bg-primary rounded-full flex items-center justify-center shadow-lg animate-fade-in">
                         <CheckIcon className="w-5 h-5 text-primary-content" />
                     </div>
                 </div>
             )}
             
-            <div className="absolute bottom-0 left-0 right-0 p-2 bg-gradient-to-t from-black/80 to-transparent translate-y-full group-hover:translate-y-0 transition-transform">
+            <div className="absolute bottom-0 left-0 right-0 p-2 bg-gradient-to-t from-black/80 to-transparent translate-y-full group-hover:translate-y-0 transition-transform z-10">
                 <p className="text-[9px] font-black uppercase text-white truncate">{item.title}</p>
             </div>
         </div>

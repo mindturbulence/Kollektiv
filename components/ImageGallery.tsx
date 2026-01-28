@@ -1,15 +1,15 @@
-import React, { useState, useEffect, useRef, useMemo, useCallback } from 'react';
+import React, { useState, useEffect, useRef, useMemo, useCallback, useLayoutEffect } from 'react';
 import type { GalleryItem, GalleryCategory } from '../types';
 import { loadGalleryItems, addItemToGallery, updateItemInGallery, deleteItemFromGallery, loadPinnedItemIds, savePinnedItemIds, loadCategories } from '../utils/galleryStorage';
-import { fileSystemManager } from '../utils/fileUtils';
 import ImageCard from './ImageCard';
 import TreeView, { TreeViewItem } from './TreeView';
-import { ArrowsUpDownIcon, PhotoIcon } from './icons';
+import { ArrowsUpDownIcon, PhotoIcon, LayoutGridSmIcon, LayoutGridMdIcon, LayoutGridLgIcon, SearchIcon, CloseIcon, FilmIcon } from './icons';
 import CategoryPanelToggle from './CategoryPanelToggle';
 import ItemDetailView from './ItemDetailView';
 import ConfirmationModal from './ConfirmationModal';
 import LoadingSpinner from './LoadingSpinner';
 import AddItemModal from './AddItemModal';
+import useLocalStorage from '../utils/useLocalStorage';
 
 interface ImageGalleryProps {
   isCategoryPanelCollapsed: boolean;
@@ -18,45 +18,89 @@ interface ImageGalleryProps {
   showGlobalFeedback: (message: string, isError?: boolean) => void;
 }
 
-const getColumnCount = (isSidebarPinned: boolean) => {
-    if (typeof window === 'undefined') return 2;
-    const sidebarWidth = 384; // Corresponding to w-96
-    const isDesktop = (window as any).innerWidth >= 1024;
-    const effectiveWidth = isSidebarPinned && isDesktop ? (window as any).innerWidth - sidebarWidth : (window as any).innerWidth;
-    if (effectiveWidth >= 1536) return 6;
-    if (effectiveWidth >= 1280) return 5;
-    if (effectiveWidth >= 1024) return 4;
-    if (effectiveWidth >= 768) return 3;
-    return 2;
-};
+type GalleryViewMode = 'compact' | 'default' | 'focus';
 
 const ImageGallery: React.FC<ImageGalleryProps> = ({ isCategoryPanelCollapsed, onToggleCategoryPanel, isSidebarPinned, showGlobalFeedback }) => {
   const [items, setItems] = useState<GalleryItem[]>([]);
   const [categories, setCategories] = useState<GalleryCategory[]>([]);
   const [pinnedItemIds, setPinnedItemIds] = useState<string[]>([]);
   const [isLoading, setIsLoading] = useState(true);
-  const [loadError, setLoadError] = useState<string | null>(null);
   const [sortOrder, setSortOrder] = useState<'newest' | 'oldest' | 'title'>('newest');
   const [searchQuery, setSearchQuery] = useState('');
+  const [categorySearchQuery, setCategorySearchQuery] = useState('');
   const [mediaTypeFilter, setMediaTypeFilter] = useState<'all' | 'image' | 'video'>('all');
-  const [columnCount, setColumnCount] = useState(() => getColumnCount(isSidebarPinned));
+  const [showNsfw, setShowNsfw] = useLocalStorage<boolean>('galleryShowNsfw', false);
   const [selectedCategoryId, setSelectedCategoryId] = useState<string>('all');
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [detailViewItemId, setDetailViewItemId] = useState<string | null>(null);
   const [itemToDelete, setItemToDelete] = useState<GalleryItem | null>(null);
+  const [viewMode, setViewMode] = useLocalStorage<GalleryViewMode>('galleryViewMode', 'default');
 
-  // --- Pagination / Lazy Load State ---
-  const [displayCount, setDisplayCount] = useState(20);
-  const observer = useRef<IntersectionObserver | null>(null);
+  // --- Layout State ---
+  const [columnCount, setColumnCount] = useState(6);
+  const gridRef = useRef<HTMLDivElement>(null);
+  const scrollerRef = useRef<HTMLDivElement>(null);
+
+  // --- Dynamic Column Calculation ---
+  const getColumnCountForView = useCallback(() => {
+    if (typeof window === 'undefined') return 6;
+    const w = window.innerWidth;
+    if (viewMode === 'compact') {
+        if (w >= 1536) return 12;
+        if (w >= 1280) return 10;
+        if (w >= 1024) return 8;
+        if (w >= 768) return 6;
+        return 4;
+    } else if (viewMode === 'focus') {
+        if (w >= 1024) return 3;
+        if (w >= 640) return 2;
+        return 1;
+    } else {
+        if (w >= 1536) return 6;
+        if (w >= 1280) return 5;
+        if (w >= 1024) return 4;
+        if (w >= 768) return 3;
+        return 2;
+    }
+  }, [viewMode]);
 
   useEffect(() => {
-    const handleResize = () => setColumnCount(getColumnCount(isSidebarPinned));
-    if (typeof window !== 'undefined') {
-        (window as any).addEventListener('resize', handleResize);
-        handleResize();
-        return () => (window as any).removeEventListener('resize', handleResize);
-    }
-  }, [isSidebarPinned]);
+    const handleResize = () => setColumnCount(getColumnCountForView());
+    handleResize();
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, [getColumnCountForView]);
+
+  // --- Elastic Scroll Logic ---
+  useEffect(() => {
+    const scroller = scrollerRef.current;
+    if (!scroller) return;
+
+    let lastScrollY = scroller.scrollTop;
+    let velocity = 0;
+    let rafId: number;
+
+    const updateVelocity = () => {
+      const currentScrollY = scroller.scrollTop;
+      const diff = currentScrollY - lastScrollY;
+      velocity += (diff - velocity) * 0.15;
+      lastScrollY = currentScrollY;
+      const skew = Math.max(-7, Math.min(7, velocity * 0.1));
+      const scale = 1 - Math.min(0.05, Math.abs(velocity) * 0.0005);
+      if (gridRef.current) {
+        gridRef.current.style.setProperty('--scroll-velocity', `${skew}deg`);
+        gridRef.current.style.setProperty('--scroll-scale', `${scale}`);
+      }
+      if (Math.abs(velocity) > 0.01) { velocity *= 0.85; } else { velocity = 0; }
+      rafId = requestAnimationFrame(updateVelocity);
+    };
+
+    rafId = requestAnimationFrame(updateVelocity);
+    return () => cancelAnimationFrame(rafId);
+  }, []);
+
+  const [displayCount, setDisplayCount] = useState(30);
+  const observer = useRef<IntersectionObserver | null>(null);
 
   const refreshData = useCallback(async () => {
       setIsLoading(true);
@@ -66,7 +110,7 @@ const ImageGallery: React.FC<ImageGalleryProps> = ({ isCategoryPanelCollapsed, o
         setCategories(loadedCategories);
         setPinnedItemIds(loadedPinnedIds);
       } catch (error) {
-          setLoadError("Ensure storage is selected in Settings.");
+          console.error("Gallery Refresh Error:", error);
       } finally {
           setIsLoading(false);
       }
@@ -74,13 +118,18 @@ const ImageGallery: React.FC<ImageGalleryProps> = ({ isCategoryPanelCollapsed, o
 
   useEffect(() => { refreshData(); }, [refreshData]);
 
-  // Reset pagination when filters change
-  useEffect(() => {
-      setDisplayCount(20);
-  }, [selectedCategoryId, searchQuery, sortOrder, mediaTypeFilter]);
-  
-  const handleAddItem = async (type: 'image' | 'video', urls: string[], sources: string[], categoryId?: string, title?: string, tags?: string[], notes?: string) => {
-    await addItemToGallery(type, urls, sources, categoryId, title, tags, notes);
+  const handleAddItem = async (
+    type: 'image' | 'video', 
+    urls: string[], 
+    sources: string[], 
+    categoryId?: string, 
+    title?: string, 
+    tags?: string[], 
+    notes?: string,
+    prompt?: string,
+    isNsfw?: boolean
+  ) => {
+    await addItemToGallery(type, urls, sources, categoryId, title, tags, notes, prompt, isNsfw);
     await refreshData();
   };
 
@@ -95,32 +144,14 @@ const ImageGallery: React.FC<ImageGalleryProps> = ({ isCategoryPanelCollapsed, o
       await refreshData();
   };
 
-  const treeItems = useMemo<TreeViewItem[]>(() => {
-    const buildTree = (parentId?: string): TreeViewItem[] => {
-        return categories
-            .filter(cat => cat.parentId === parentId)
-            .map(cat => ({
-                id: cat.id,
-                name: cat.name,
-                icon: 'folder',
-                count: items.filter(i => i.categoryId === cat.id).length,
-                children: buildTree(cat.id)
-            }));
-    };
-    
-    return [
-        { id: 'all', name: 'Global Archive', icon: 'app', count: items.filter(i => !i.isNsfw).length },
-        ...buildTree(undefined),
-        { id: 'uncategorized', name: 'Uncategorized', icon: 'inbox', count: items.filter(i => !i.categoryId && !i.isNsfw).length },
-    ];
-  }, [items, categories]);
-  
+  // --- Filtered and Sorted Items ---
   const sortedAndFilteredItems = useMemo(() => {
-    let filtered;
-    if (selectedCategoryId === 'all') filtered = items.filter(i => !i.isNsfw);
-    else if (selectedCategoryId === 'uncategorized') filtered = items.filter(i => !i.categoryId && !i.isNsfw);
-    else filtered = items.filter(i => i.categoryId === selectedCategoryId);
-    
+    let filtered = [...items];
+    if (selectedCategoryId !== 'all') {
+      if (selectedCategoryId === 'uncategorized') filtered = items.filter(i => !i.categoryId);
+      else filtered = items.filter(i => i.categoryId === selectedCategoryId);
+    }
+    if (!showNsfw) { filtered = filtered.filter(i => !i.isNsfw); }
     if (mediaTypeFilter !== 'all') filtered = filtered.filter(i => i.type === mediaTypeFilter);
     if (searchQuery.trim()) {
         const q = searchQuery.toLowerCase();
@@ -128,108 +159,251 @@ const ImageGallery: React.FC<ImageGalleryProps> = ({ isCategoryPanelCollapsed, o
     }
     const isPinned = (item: GalleryItem) => pinnedItemIds.includes(item.id);
     filtered.sort((a, b) => {
-        if (selectedCategoryId === 'all') {
-            if (isPinned(a) && !isPinned(b)) return -1;
-            if (!isPinned(a) && isPinned(b)) return 1;
-        }
-        if (sortOrder === 'oldest') return a.createdAt - b.createdAt;
-        if (sortOrder === 'title') return a.title.localeCompare(b.title);
-        return b.createdAt - a.createdAt;
+      if (selectedCategoryId === 'all') {
+          if (isPinned(a) && !isPinned(b)) return -1;
+          if (!isPinned(a) && isPinned(b)) return 1;
+      }
+      if (sortOrder === 'oldest') return a.createdAt - b.createdAt;
+      if (sortOrder === 'title') return a.title.localeCompare(b.title);
+      return b.createdAt - a.createdAt;
     });
     return filtered;
-  }, [items, selectedCategoryId, searchQuery, sortOrder, pinnedItemIds, mediaTypeFilter]);
+  }, [items, selectedCategoryId, searchQuery, sortOrder, pinnedItemIds, mediaTypeFilter, showNsfw]);
 
-  const displayedItems = useMemo(() => {
-      return sortedAndFilteredItems.slice(0, displayCount);
-  }, [sortedAndFilteredItems, displayCount]);
+  const displayedItems = useMemo(() => sortedAndFilteredItems.slice(0, displayCount), [sortedAndFilteredItems, displayCount]);
 
-  const columns = useMemo(() => {
+  // --- Masonry Distribution ---
+  const masonryColumns = useMemo(() => {
     const cols: GalleryItem[][] = Array.from({ length: columnCount }, () => []);
-    displayedItems.forEach((item, index) => cols[index % columnCount].push(item));
+    displayedItems.forEach((item, index) => {
+        cols[index % columnCount].push(item);
+    });
     return cols;
   }, [displayedItems, columnCount]);
+
+  // --- Recursive Tree Item Filtering ---
+  const treeItems = useMemo<TreeViewItem[]>(() => {
+    const q = categorySearchQuery.toLowerCase().trim();
+
+    const buildTree = (parentId?: string): TreeViewItem[] => {
+      const children = categories.filter(cat => cat.parentId === parentId);
+      const results: TreeViewItem[] = [];
+
+      for (const cat of children) {
+        const subTree = buildTree(cat.id);
+        const nameMatches = cat.name.toLowerCase().includes(q);
+        
+        // Include if name matches OR any child matches
+        if (!q || nameMatches || subTree.length > 0) {
+          results.push({
+            id: cat.id,
+            name: cat.name,
+            icon: 'folder' as const,
+            count: items.filter(i => i.categoryId === cat.id).length,
+            children: subTree
+          });
+        }
+      }
+      return results;
+    };
+    
+    const rootItems = buildTree(undefined);
+
+    // Filter static global nodes only if they match search or search is empty
+    const globalVaultMatches = !q || 'Global Vault'.toLowerCase().includes(q);
+    const uncategorizedMatches = !q || 'Uncategorized'.toLowerCase().includes(q);
+
+    const tree: TreeViewItem[] = [];
+    if (globalVaultMatches) tree.push({ id: 'all', name: 'Global Vault', icon: 'app' as const, count: items.length });
+    tree.push(...rootItems);
+    if (uncategorizedMatches) tree.push({ id: 'uncategorized', name: 'Uncategorized', icon: 'inbox' as const, count: items.filter(i => !i.categoryId).length });
+
+    return tree;
+  }, [categories, items, categorySearchQuery]);
 
   const lastElementRef = useCallback((node: HTMLDivElement | null) => {
     if (isLoading) return;
     if (observer.current) observer.current.disconnect();
-    
     observer.current = new IntersectionObserver(entries => {
       if (entries[0].isIntersecting && displayCount < sortedAndFilteredItems.length) {
         setDisplayCount(prevCount => prevCount + 20);
       }
     });
-    
     if (node) observer.current.observe(node);
   }, [isLoading, sortedAndFilteredItems.length, displayCount]);
 
-  if (isLoading && items.length === 0) return <div className="flex-grow flex items-center justify-center"><LoadingSpinner /></div>;
+  const currentCategoryName = useMemo(() => {
+    if (selectedCategoryId === 'all') return 'Media Vault';
+    if (selectedCategoryId === 'uncategorized') return 'Uncategorized';
+    return categories.find(c => c.id === selectedCategoryId)?.name || 'Media Vault';
+  }, [selectedCategoryId, categories]);
+
+  if (isLoading && items.length === 0) {
+    return <div className="h-full w-full flex items-center justify-center bg-base-100"><LoadingSpinner /></div>;
+  }
 
   return (
-    <>
-      <section className="flex flex-row h-full">
-        <aside className={`relative flex-shrink-0 bg-base-100 border-r border-base-300 transition-all duration-300 ease-in-out ${isCategoryPanelCollapsed ? 'w-0' : 'w-96'}`}>
-          <CategoryPanelToggle isCollapsed={isCategoryPanelCollapsed} onToggle={onToggleCategoryPanel} />
-          <div className={`h-full overflow-y-auto p-4 transition-opacity duration-200 ${isCategoryPanelCollapsed ? 'opacity-0' : 'opacity-100'}`}>
-              <h2 className="px-3 pt-2 pb-2 text-[10px] font-black text-base-content/30 uppercase tracking-widest">Navigation</h2>
-              <TreeView items={treeItems} selectedId={selectedCategoryId} onSelect={setSelectedCategoryId} />
+    <section className="flex flex-row h-full bg-base-100 overflow-hidden">
+      <aside className={`relative flex-shrink-0 bg-base-100 border-r border-base-300 transition-all duration-300 ease-in-out flex flex-col ${isCategoryPanelCollapsed ? 'w-0' : 'w-96'}`}>
+        <CategoryPanelToggle isCollapsed={isCategoryPanelCollapsed} onToggle={onToggleCategoryPanel} />
+        <div className={`flex flex-col h-full overflow-hidden transition-opacity duration-200 ${isCategoryPanelCollapsed ? 'opacity-0 invisible' : 'opacity-100 visible'}`}>
+          <div className="flex-shrink-0 bg-base-100 border-b border-base-300 h-14">
+            <div className="flex items-center h-full relative">
+              <SearchIcon className="absolute left-6 w-4 h-4 opacity-20 pointer-events-none" />
+              <input 
+                type="text" 
+                value={categorySearchQuery}
+                onChange={(e) => setCategorySearchQuery(e.target.value)}
+                placeholder="FIND FOLDER..." 
+                className="w-full h-full bg-transparent border-none focus:outline-none focus:ring-0 pl-14 pr-12 font-bold uppercase tracking-tight text-[10px] placeholder:text-base-content/10"
+              />
+              {categorySearchQuery && (
+                <button 
+                  onClick={() => setCategorySearchQuery('')} 
+                  className="absolute right-4 btn btn-xs btn-ghost btn-circle opacity-40 hover:opacity-100 transition-opacity"
+                  title="Clear search"
+                >
+                  <CloseIcon className="w-4 h-4" />
+                </button>
+              )}
+            </div>
           </div>
-        </aside>
+          <div className="flex-grow overflow-y-auto p-6 w-96 custom-scrollbar">
+            <h2 className="text-[10px] font-black uppercase tracking-[0.3em] text-base-content/30 mb-6 px-3">Gallery Index</h2>
+            <TreeView 
+              items={treeItems} 
+              selectedId={selectedCategoryId} 
+              onSelect={setSelectedCategoryId} 
+              searchActive={!!categorySearchQuery}
+            />
+          </div>
+        </div>
+      </aside>
 
-        <main className="relative flex-grow flex flex-col h-full overflow-hidden">
-          {items.length === 0 ? (
-              <div className="text-center py-16 px-6 flex flex-col items-center justify-center h-full opacity-20">
-                  <PhotoIcon className="mx-auto h-20 w-20 text-base-content" />
-                  <h3 className="mt-6 text-2xl font-black uppercase tracking-tighter">Repository Empty</h3>
-                  <div className="mt-8">
-                      <button onClick={() => setIsAddModalOpen(true)} className="btn btn-primary btn-sm rounded-none font-black tracking-widest">IMPORT RELIC</button>
-                  </div>
-              </div>
-          ) : (
-              <>
-                  <div className="flex-shrink-0 bg-base-100 px-6 py-4 border-b border-base-300 flex flex-wrap items-center gap-4">
-                      <div className="flex-grow flex items-center gap-3">
-                          <div className="w-1.5 h-1.5 rounded-full bg-primary animate-pulse"></div>
-                          <input type="text" value={searchQuery} onChange={(e) => setSearchQuery((e.currentTarget as any).value)} placeholder="Filter sequence..." className="input input-ghost w-full input-sm font-bold uppercase tracking-tight placeholder:opacity-20" />
-                      </div>
-                      <div className="flex items-center gap-4 flex-shrink-0">
-                          <select value={sortOrder} onChange={(e) => setSortOrder((e.currentTarget as any).value as any)} className="select select-bordered select-sm rounded-none text-[10px] font-black uppercase tracking-widest"><option value="newest">Recent</option><option value="oldest">Oldest</option><option value="title">A-Z</option></select>
-                           <div className="join">
-                              <button onClick={() => setMediaTypeFilter('all')} className={`btn btn-xs join-item rounded-none px-4 font-black text-[9px] ${mediaTypeFilter === 'all' ? 'btn-active' : ''}`}>ALL</button>
-                              <button onClick={() => setMediaTypeFilter('image')} className={`btn btn-xs join-item rounded-none px-4 font-black text-[9px] ${mediaTypeFilter === 'image' ? 'btn-active' : ''}`}>IMG</button>
-                              <button onClick={() => setMediaTypeFilter('video')} className={`btn btn-xs join-item rounded-none px-4 font-black text-[9px] ${mediaTypeFilter === 'video' ? 'btn-active' : ''}`}>VID</button>
-                          </div>
-                          <button onClick={() => setIsAddModalOpen(true)} className="btn btn-primary btn-sm rounded-none font-black tracking-widest text-[10px]">IMPORT</button>
-                      </div>
-                  </div>
-                  <div className="flex-grow overflow-y-auto custom-scrollbar bg-base-300">
-                    <div className={`transition-all duration-300 ${detailViewItemId ? 'blur-sm pointer-events-none' : ''}`}>
-                        <div className="flex gap-px">
-                            {columns.map((columnItems, colIndex) => (
-                                <div key={colIndex} className="flex flex-1 flex-col gap-px">
-                                    {columnItems.map(item => (
-                                        <ImageCard key={item.id} item={item} onOpenDetailView={() => setDetailViewItemId(item.id)} onDeleteItem={() => setItemToDelete(item)} onTogglePin={(id) => { const n = pinnedItemIds.includes(id) ? pinnedItemIds.filter(p=>p!==id) : [...pinnedItemIds, id]; setPinnedItemIds(n); savePinnedItemIds(n); }} isPinned={pinnedItemIds.includes(item.id)} />
-                                    ))}
-                                </div>
-                            ))}
-                        </div>
-                        {/* Sentinel element for infinite scroll */}
-                        {displayedItems.length < sortedAndFilteredItems.length && (
-                            <div ref={lastElementRef} className="py-20 flex justify-center">
-                                <span className="loading loading-spinner loading-md opacity-20"></span>
+      <main className="relative flex-grow flex flex-col h-full overflow-hidden bg-base-100">
+        {detailViewItemId && (
+          <ItemDetailView 
+            items={sortedAndFilteredItems}
+            currentIndex={sortedAndFilteredItems.findIndex(i => i.id === detailViewItemId)}
+            isPinned={pinnedItemIds.includes(detailViewItemId)}
+            categories={categories}
+            onClose={() => setDetailViewItemId(null)}
+            onUpdate={handleUpdateItem}
+            onDelete={(i) => { setItemToDelete(i); }}
+            onTogglePin={(id) => { const n = pinnedItemIds.includes(id) ? pinnedItemIds.filter(pid=>pid!==id) : [id, ...pinnedItemIds]; setPinnedItemIds(n); savePinnedItemIds(n); }}
+            onNavigate={(idx) => setDetailViewItemId(sortedAndFilteredItems[idx].id)}
+            showGlobalFeedback={showGlobalFeedback}
+          />
+        )}
+
+        <div className={`flex flex-col h-full overflow-hidden transition-all duration-300 ${detailViewItemId ? 'blur-sm pointer-events-none' : ''}`}>
+            <section className="flex-shrink-0 p-10 border-b border-base-300 bg-base-200/20">
+                <div className="w-full flex flex-col gap-1">
+                    <div className="flex flex-col md:flex-row md:items-stretch justify-between gap-6">
+                        <h1 className="text-2xl lg:text-3xl font-black tracking-tighter text-base-content leading-none flex items-center uppercase">{currentCategoryName}<span className="text-primary">.</span></h1>
+                        <div className="flex bg-base-100 px-6 py-2 border border-base-300 shadow-sm self-start md:self-auto min-h-full">
+                            <div className="flex flex-col border-r border-base-300 px-6 last:border-r-0 justify-center">
+                                <span className="text-2xl font-black tracking-tighter leading-none">{sortedAndFilteredItems.length}</span>
+                                <span className="text-[8px] uppercase font-black text-base-content/30 tracking-[0.2em] mt-0.5">Artifacts</span>
                             </div>
-                        )}
+                        </div>
                     </div>
-                    {detailViewItemId && (
-                        <ItemDetailView items={sortedAndFilteredItems} currentIndex={sortedAndFilteredItems.findIndex(i => i.id === detailViewItemId)} isPinned={pinnedItemIds.includes(detailViewItemId)} categories={categories} onClose={() => setDetailViewItemId(null)} onUpdate={handleUpdateItem} onDelete={(item) => setItemToDelete(item)} onTogglePin={(id) => { const n = pinnedItemIds.includes(id) ? pinnedItemIds.filter(p=>p!==id) : [...pinnedItemIds, id]; setPinnedItemIds(n); savePinnedItemIds(n); }} onNavigate={(idx) => setDetailViewItemId(sortedAndFilteredItems[idx].id)} showGlobalFeedback={showGlobalFeedback} />
-                    )}
-                  </div>
-              </>
-          )}
-        </main>
-      </section>
+                    <p className="text-[11px] font-bold text-base-content/30 uppercase tracking-[0.3em] w-full">Local visual media repository and processed generative outcomes.</p>
+                </div>
+            </section>
+
+            <div className="flex-shrink-0 bg-base-100 border-b border-base-300 sticky top-0 z-20 h-14">
+                <div className="flex items-stretch h-full w-full">
+                    <div className="flex-grow flex items-center relative border-r border-base-300">
+                        <SearchIcon className="absolute left-6 w-4 h-4 opacity-20 pointer-events-none" />
+                        <input
+                            type="text"
+                            value={searchQuery}
+                            onChange={(e) => setSearchQuery(e.target.value)}
+                            placeholder="SEARCH VAULT..."
+                            className="w-full h-full bg-transparent border-none focus:outline-none focus:ring-0 pl-14 pr-6 font-bold uppercase tracking-tight text-sm placeholder:text-base-content/10"
+                        />
+                    </div>
+                    <div className="flex items-stretch border-r border-base-300">
+                        <div className="join h-full rounded-none bg-base-100">
+                            <button onClick={() => setMediaTypeFilter('all')} className={`join-item btn btn-ghost h-full border-none rounded-none px-6 font-black uppercase text-[9px] tracking-widest ${mediaTypeFilter === 'all' ? 'bg-primary/10 text-primary' : 'opacity-40'}`}>ALL</button>
+                            <button onClick={() => setMediaTypeFilter('image')} className={`join-item btn btn-ghost h-full border-none rounded-none px-6 font-black uppercase text-[9px] tracking-widest ${mediaTypeFilter === 'image' ? 'bg-primary/10 text-primary' : 'opacity-40'}`}>IMG</button>
+                            <button onClick={() => setMediaTypeFilter('video')} className={`join-item btn btn-ghost h-full border-none rounded-none px-6 font-black uppercase text-[9px] tracking-widest ${mediaTypeFilter === 'video' ? 'bg-primary/10 text-primary' : 'opacity-40'}`}>VID</button>
+                        </div>
+                    </div>
+                    <div className="flex items-center px-6 border-r border-base-300 gap-4">
+                        <label className="flex items-center gap-3 cursor-pointer">
+                            <span className="text-[10px] font-black uppercase text-base-content/40 tracking-widest">NSFW</span>
+                            <input type="checkbox" checked={showNsfw} onChange={(e) => setShowNsfw(e.target.checked)} className="toggle toggle-xs toggle-primary" />
+                        </label>
+                    </div>
+                    <select
+                        value={sortOrder}
+                        onChange={(e) => setSortOrder(e.target.value as any)}
+                        className="select select-ghost rounded-none border-none border-r border-base-300 focus:outline-none h-full px-8 text-[10px] font-black uppercase tracking-widest bg-base-100 hover:bg-base-200"
+                    >
+                        <option value="newest">Recent</option>
+                        <option value="oldest">Oldest</option>
+                        <option value="title">A-Z</option>
+                    </select>
+                    <div className="join h-full border-r border-base-300 rounded-none bg-base-100">
+                        <button onClick={() => setViewMode('compact')} className={`join-item btn btn-ghost h-full border-none rounded-none px-4 ${viewMode === 'compact' ? 'bg-primary/10 text-primary' : 'opacity-40'}`} title="Compact"><LayoutGridSmIcon className="w-4 h-4" /></button>
+                        <button onClick={() => setViewMode('default')} className={`join-item btn btn-ghost h-full border-none rounded-none px-4 ${viewMode === 'default' ? 'bg-primary/10 text-primary' : 'opacity-40'}`} title="Default"><LayoutGridMdIcon className="w-4 h-4" /></button>
+                        <button onClick={() => setViewMode('focus')} className={`join-item btn btn-ghost h-full border-none rounded-none px-4 ${viewMode === 'focus' ? 'bg-primary/10 text-primary' : 'opacity-40'}`} title="Detailed"><LayoutGridLgIcon className="w-4 h-4" /></button>
+                    </div>
+                    <button onClick={() => setIsAddModalOpen(true)} className="btn btn-primary rounded-none h-full border-none px-10 font-black text-[10px] tracking-[0.2em] shadow-none uppercase">IMPORT</button>
+                </div>
+            </div>
+
+            <div ref={scrollerRef} className="flex-grow overflow-y-auto scroll-smooth custom-scrollbar bg-base-300">
+                {items.length === 0 ? (
+                    <div className="text-center py-32 flex flex-col items-center opacity-10">
+                        <PhotoIcon className="mx-auto h-20 w-20" />
+                        <h3 className="text-2xl font-black uppercase tracking-tighter">Vault Empty</h3>
+                    </div>
+                ) : sortedAndFilteredItems.length > 0 ? (
+                    <div ref={gridRef} className="flex bg-base-300 border-r border-base-300 elastic-grid-container" style={{ '--scroll-velocity': '0deg', '--scroll-scale': '1' } as any}>
+                        {masonryColumns.map((col, colIdx) => (
+                            <div key={colIdx} className="flex-1 flex flex-col gap-px border-l border-base-300 first:border-l-0">
+                                {col.map(item => (
+                                    <div key={item.id} data-item-id={item.id} className="elastic-grid-item">
+                                        <ImageCard 
+                                            item={item} 
+                                            isPinned={pinnedItemIds.includes(item.id)}
+                                            onOpenDetailView={() => setDetailViewItemId(item.id)}
+                                            onDeleteItem={(i) => setItemToDelete(i)}
+                                            onTogglePin={(id) => { const n = pinnedItemIds.includes(id) ? pinnedItemIds.filter(pid=>pid!==id) : [id, ...pinnedItemIds]; setPinnedItemIds(n); savePinnedItemIds(n); }}
+                                            categoryName={categories.find(c => c.id === item.categoryId)?.name || 'Uncategorized'}
+                                            showCategory={selectedCategoryId === 'all'}
+                                        />
+                                    </div>
+                                ))}
+                            </div>
+                        ))}
+                    </div>
+                ) : (
+                    <div className="text-center py-32 flex flex-col items-center opacity-10"><h3 className="text-xl font-black uppercase tracking-tighter">No matches in sequence</h3></div>
+                )}
+                {displayedItems.length < sortedAndFilteredItems.length && (
+                    <div ref={lastElementRef} className="py-20 flex justify-center bg-base-100">
+                        <span className="loading loading-spinner loading-md opacity-20"></span>
+                    </div>
+                )}
+            </div>
+        </div>
+      </main>
+
       <AddItemModal isOpen={isAddModalOpen} onClose={() => setIsAddModalOpen(false)} onAddItem={handleAddItem} categories={categories} />
-      {itemToDelete && <ConfirmationModal isOpen={!!itemToDelete} onClose={() => setItemToDelete(null)} onConfirm={() => { handleDeleteItem(itemToDelete); setItemToDelete(null); }} title={`Purge sequence`} message={`Permanently erase artifact "${itemToDelete.title}"?`} />}
-    </>
+      {itemToDelete && (
+          <ConfirmationModal 
+            isOpen={!!itemToDelete} 
+            onClose={() => setDetailViewItemId(null)} 
+            onConfirm={() => { handleDeleteItem(itemToDelete); setItemToDelete(null); }} 
+            title="PURGE ARTIFACT" 
+            message={`Permanently erase artifact "${itemToDelete.title}"? Local files will be deleted.`} 
+          />
+      )}
+    </section>
   );
 };
 

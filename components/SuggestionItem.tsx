@@ -122,7 +122,7 @@ export const SuggestionItem: React.FC<SuggestionItemProps> = ({
   const isVideo = targetAI.toLowerCase().includes('veo');
 
   return (
-    <div className={`w-full transition-all duration-300 hover:bg-base-200/30 ${isGenerating ? 'bg-primary/5' : ''}`}>
+    <div className={`w-full transition-all duration-300 bg-base-100 border border-base-300 mb-[1px] last:mb-0 ${isGenerating ? 'bg-primary/5' : ''}`}>
         <div className="p-4 md:p-6 flex flex-col h-full relative">
             {isGenerating ? (
                 <div className="flex flex-col items-center justify-center py-12 text-center space-y-6">
@@ -211,7 +211,7 @@ export const SuggestionItem: React.FC<SuggestionItemProps> = ({
                                 onClick={handleCopy}
                                 className="btn btn-xs btn-ghost rounded-none font-black text-[9px] tracking-widest px-3 hover:bg-base-300"
                             >
-                                {copied ? <><CheckIcon className="w-3 h-3 mr-1.5 text-success" /> OK</> : <><CopyIcon className="w-3 h-3 mr-1.5 opacity-40" /> COPY</>}
+                                {copied ? <><CheckIcon className="w-3 h-3 mr-1.5 text-success" /> OK</> : <><CopyIcon className="w-3.5 h-3.5 mr-1.5 opacity-40" /> COPY</>}
                             </button>
                         </div>
                     </div>

@@ -1,3 +1,4 @@
+
 import { GoogleGenAI, GenerateContentResponse, Type } from "@google/genai";
 import type { EnhancementResult, LLMSettings, PromptModifiers, PromptAnatomy, CheatsheetCategory } from '../types';
 import { enhancePromptGemini, analyzePaletteMood as analyzePaletteMoodGemini, generatePromptFormulaGemini, refineSinglePromptGemini, abstractImageGemini, generateColorNameGemini, dissectPromptGemini, generateFocusedVariationsGemini, reconstructPromptGemini, reconstructFromIntentGemini, replaceComponentInPromptGemini, detectSalientRegionGemini, generateArtistDescriptionGemini, reconcileDescriptionsGemini, enhancePromptGeminiStream, refineSinglePromptGeminiStream } from './geminiService';
@@ -36,6 +37,18 @@ Output: ${isAudio ? 'Single script' : '3 distinct lines'}. NO INTROS.`;
     REFINER: (model: string, isVideo: boolean, isAudio: boolean, hasManualCamera: boolean, inputType?: string) => {
         const syntax = getModelSyntax(model);
         return `Role: Expert Prompt Refiner for ${model}. Rewrite concept into perfect ${syntax.format} formula. Rules: ${syntax.rules}. Output text ONLY.`;
+    },
+    
+    DECONSTRUCTOR: (wildcards: string[]) => {
+        return `Role: Prompt Deconstructor & Template Architect. 
+Task: Convert the user's prompt into a reusable template.
+Constraint: You MUST replace specific descriptive words or phrases with placeholders from the provided list.
+Placeholders available: ${wildcards.join(', ')}.
+Rules: 
+1. Placeholders must be wrapped in double underscores: __name__.
+2. If a word matches the theme of a placeholder but not the exact text, use the placeholder.
+3. Keep the prompt's overall structure and non-replaceable descriptive terms intact.
+4. Output the TEMPLATE ONLY. No explanation.`;
     }
 };
 
@@ -61,7 +74,6 @@ export const buildContextForEnhancer = (modifiers: PromptModifiers): string => {
     if (modifiers.cameraType) ctx.push(`Body: ${modifiers.cameraType}`);
     if (modifiers.cameraModel) ctx.push(`Model: ${modifiers.cameraModel}`);
     
-    // Chainable Film Stock Logic
     if (modifiers.filmStock) {
         if (modifiers.cameraType === 'Analog Film Camera') {
             ctx.push(`Authentic Analog Load: ${modifiers.filmStock} film stock`);
@@ -131,7 +143,8 @@ export async function* enhancePromptStream(
     const context = buildContextForEnhancer(modifiers);
     const input = `${context}\n\n[Primary Concept]\n${originalPrompt}`;
 
-    const stream = settings.activeLLM === 'ollama'
+    const isOllama = settings.activeLLM === 'ollama' || settings.activeLLM === 'ollama_cloud';
+    const stream = isOllama
         ? enhancePromptOllamaStream(input, constantModifier, settings, systemInstruction)
         : enhancePromptGeminiStream(input, constantModifier, settings, systemInstruction, promptLength, referenceImages);
 
@@ -148,7 +161,9 @@ export const refineSinglePrompt = async (promptText: string, targetAIModel: stri
     const isAudio = !!TARGET_AUDIO_AI_MODELS.find(m => m === targetAIModel);
     const hasManualCamera = !!modifiers.cameraMovement;
     const sys = AI_ROLES.REFINER(targetAIModel, isVideo, isAudio, hasManualCamera, modifiers.videoInputType);
-    const raw = settings.activeLLM === 'ollama' 
+    
+    const isOllama = settings.activeLLM === 'ollama' || settings.activeLLM === 'ollama_cloud';
+    const raw = isOllama 
         ? await refineSinglePromptOllama(promptText, settings, sys)
         : await refineSinglePromptGemini(promptText, '', settings, sys);
     return cleanLLMResponse(raw);
@@ -164,7 +179,9 @@ export async function* refineSinglePromptStream(
     const isAudio = !!TARGET_AUDIO_AI_MODELS.find(m => m === targetAIModel);
     const hasManualCamera = !!modifiers.cameraMovement;
     const sys = AI_ROLES.REFINER(targetAIModel, isVideo, isAudio, hasManualCamera, modifiers.videoInputType);
-    const stream = settings.activeLLM === 'ollama'
+    
+    const isOllama = settings.activeLLM === 'ollama' || settings.activeLLM === 'ollama_cloud';
+    const stream = isOllama
         ? refineSinglePromptOllamaStream(promptText, settings, sys)
         : refineSinglePromptGeminiStream(promptText, '', settings, sys);
 
@@ -177,68 +194,79 @@ export async function* refineSinglePromptStream(
 }
 
 export const generateArtistDescription = async (artistName: string, settings: LLMSettings): Promise<string> => {
-    return settings.activeLLM === 'ollama'
+    const isOllama = settings.activeLLM === 'ollama' || settings.activeLLM === 'ollama_cloud';
+    return isOllama
         ? generateArtistDescriptionOllama(artistName, settings)
         : generateArtistDescriptionGemini(artistName, settings);
 };
 
 export const reconcileDescriptions = async (existing: string, incoming: string, settings: LLMSettings): Promise<string> => {
-    return settings.activeLLM === 'ollama'
+    const isOllama = settings.activeLLM === 'ollama' || settings.activeLLM === 'ollama_cloud';
+    return isOllama
         ? reconcileDescriptionsOllama(existing, incoming, settings)
         : reconcileDescriptionsGemini(existing, incoming, settings);
 };
 
 export const analyzePaletteMood = async (hexColors: string[], settings: LLMSettings): Promise<string> => {
-    return settings.activeLLM === 'ollama'
+    const isOllama = settings.activeLLM === 'ollama' || settings.activeLLM === 'ollama_cloud';
+    return isOllama
         ? analyzePaletteMoodOllama(hexColors, settings)
         : analyzePaletteMoodGemini(hexColors, settings);
 };
 
 export const generateColorName = async (hexColor: string, mood: string, settings: LLMSettings): Promise<string> => {
-    return settings.activeLLM === 'ollama'
+    const isOllama = settings.activeLLM === 'ollama' || settings.activeLLM === 'ollama_cloud';
+    return isOllama
         ? generateColorNameOllama(hexColor, mood, settings)
         : generateColorNameGemini(hexColor, mood, settings);
 };
 
 export const dissectPrompt = async (promptText: string, settings: LLMSettings): Promise<{ [key: string]: string }> => {
-    return settings.activeLLM === 'ollama'
+    const isOllama = settings.activeLLM === 'ollama' || settings.activeLLM === 'ollama_cloud';
+    return isOllama
         ? dissectPromptOllama(promptText, settings)
         : dissectPromptGemini(promptText, settings);
 };
 
 export const generateFocusedVariations = async (promptText: string, components: { [key: string]: string }, settings: LLMSettings): Promise<{ [key: string]: string[] }> => {
-    return settings.activeLLM === 'ollama'
+    const isOllama = settings.activeLLM === 'ollama' || settings.activeLLM === 'ollama_cloud';
+    return isOllama
         ? generateFocusedVariationsOllama(promptText, components, settings)
         : generateFocusedVariationsGemini(promptText, components, settings);
 };
 
 export const reconstructPrompt = async (components: { [key: string]: string }, settings: LLMSettings): Promise<string> => {
-    return settings.activeLLM === 'ollama'
+    const isOllama = settings.activeLLM === 'ollama' || settings.activeLLM === 'ollama_cloud';
+    return isOllama
         ? reconstructPromptOllama(components, settings)
         : reconstructPromptGemini(components, settings);
 };
 
 export const replaceComponentInPrompt = async (originalPrompt: string, componentKey: string, newValue: string, settings: LLMSettings): Promise<string> => {
-    return settings.activeLLM === 'ollama'
+    const isOllama = settings.activeLLM === 'ollama' || settings.activeLLM === 'ollama_cloud';
+    return isOllama
         ? replaceComponentInPromptOllama(originalPrompt, componentKey, newValue, settings)
         : replaceComponentInPromptGemini(originalPrompt, componentKey, newValue, settings);
 };
 
 export const reconstructFromIntent = async (intents: string[], settings: LLMSettings): Promise<string> => {
-    return settings.activeLLM === 'ollama'
+    const isOllama = settings.activeLLM === 'ollama' || settings.activeLLM === 'ollama_cloud';
+    return isOllama
         ? reconstructFromIntentOllama(intents, settings)
         : reconstructFromIntentGemini(intents, settings);
 };
 
 export const abstractImage = async (base64ImageData: string, promptLength: string, targetAIModel: string, settings: LLMSettings): Promise<EnhancementResult> => {
-    return settings.activeLLM === 'ollama'
+    const isOllama = settings.activeLLM === 'ollama' || settings.activeLLM === 'ollama_cloud';
+    return isOllama
         ? abstractImageOllama(base64ImageData, promptLength, targetAIModel, settings)
         : abstractImageGemini(base64ImageData, promptLength, targetAIModel, settings);
 };
 
 export const generatePromptFormulaWithAI = async (promptText: string, wildcards: string[], settings: LLMSettings): Promise<string> => {
-    const sys = `Role: Prompt Deconstructor. Formula construction. Placeholders: ${wildcards.join(', ')}. Output template only.`;
-    return settings.activeLLM === 'ollama'
+    const sys = AI_ROLES.DECONSTRUCTOR(wildcards);
+    const isOllama = settings.activeLLM === 'ollama' || settings.activeLLM === 'ollama_cloud';
+    return isOllama
         ? generatePromptFormulaOllama(promptText, settings, sys)
         : generatePromptFormulaGemini(promptText, settings, sys);
 };
@@ -300,11 +328,47 @@ export const generateWithVeo = async (prompt: string, onStatusUpdate?: (msg: str
     return URL.createObjectURL(blob);
 };
 
-export const testOllamaConnection = async (baseUrl: string): Promise<boolean> => {
+export interface OllamaTestResult {
+    success: boolean;
+    status?: number;
+    message: string;
+}
+
+export const testOllamaConnection = async (baseUrl: string): Promise<OllamaTestResult> => {
+    // Sanitize input: Remove trailing slashes AND accidental path segments
+    const cleanUrl = baseUrl.replace(/\/+$/, '').replace(/\/api\/tags\/?$/, '').replace(/\/api\/?$/, '');
+    let targetUrl = cleanUrl;
+    let headers: Record<string, string> = {};
+    
+    if (window.location.protocol === 'https:') {
+        if (cleanUrl.includes('localhost:11434') || cleanUrl.includes('127.0.0.1:11434')) {
+            targetUrl = '/ollama-local';
+        } else if (cleanUrl.startsWith('http')) {
+            targetUrl = '/proxy-remote';
+            headers['x-target-url'] = cleanUrl;
+        }
+    }
+
     try {
-        const response = await fetch(`${baseUrl}/api/tags`);
-        return response.ok;
-    } catch (e) {
-        return false;
+        const response = await fetch(`${targetUrl}/api/tags`, { headers });
+        if (response.ok) {
+            return { success: true, status: response.status, message: "CONNECTION ESTABLISHED (200 OK)" };
+        }
+        
+        // Handle explicit proxy 500s or target 500s
+        const msg = response.status === 500 
+            ? "TARGET UNREACHABLE (500). ENSURE OLLAMA IS RUNNING."
+            : `HTTP ERROR ${response.status}: ${response.statusText}`;
+            
+        return { success: false, status: response.status, message: msg };
+    } catch (e: any) {
+        // Detailed error mapping for ECONNREFUSED scenarios
+        if (e.name === 'TypeError' && e.message === 'Failed to fetch') {
+            if (window.location.protocol === 'https:' && cleanUrl.startsWith('http:') && !headers['x-target-url']) {
+                return { success: false, message: "PROTOCOL MISMATCH (HTTPS -> HTTP BLOCKED). USE PROXY." };
+            }
+            return { success: false, message: "SERVICE REFUSED CONNECTION. CHECK OLLAMA_ORIGINS." };
+        }
+        return { success: false, message: e.message || "CONNECTION REFUSED" };
     }
 };

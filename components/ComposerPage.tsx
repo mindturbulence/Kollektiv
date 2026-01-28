@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect, useCallback, useRef, useMemo, useLayoutEffect } from 'react';
 import { UploadIcon, CloseIcon, LinkIcon, LinkOffIcon, ViewGridIcon, RefreshIcon, DownloadIcon, FolderClosedIcon } from './icons';
 import useLocalStorage from '../utils/useLocalStorage';
@@ -155,6 +156,8 @@ const ComposerPage: React.FC = () => {
     
     const [gridItems, setGridItems] = useState<(ImageItem | null)[]>([]);
     const [gridPixelDimensions, setGridPixelDimensions] = useState({ width: 0, height: 0 });
+
+    const activeImageCount = useMemo(() => gridItems.filter(Boolean).length, [gridItems]);
 
     // SyncFit
     const imageFit = useMemo(() => storedImageFit, [storedImageFit]);
@@ -414,7 +417,7 @@ const ComposerPage: React.FC = () => {
                                 <button onClick={() => setIsLocked(!isLocked)} className={`btn btn-xs btn-ghost rounded-none ${isLocked ? 'text-primary' : 'opacity-20'}`}>{isLocked ? <LinkIcon className="w-4 h-4"/> : <LinkOffIcon className="w-4 h-4"/>}</button>
                                 <input type="text" value={height} onChange={(e) => handleHeightChange((e.currentTarget as any).value)} className="input input-sm input-bordered rounded-none w-full font-mono text-xs" placeholder="H"/>
                             </div>
-                             <select className="select select-xs select-bordered rounded-none w-full font-bold uppercase tracking-tight" onChange={e => { const [w, h] = (e.currentTarget as any).value.split('x'); setWidth(w); setHeight(h); }} value={`${width}x${height}`}>
+                             <select className="select select-xs select-bordered rounded-none w-full mt-2 font-bold uppercase tracking-tight" onChange={e => { const [w, h] = (e.currentTarget as any).value.split('x'); setWidth(w); setHeight(h); }} value={`${width}x${height}`}>
                                 <option value="" disabled>Resolution Presets</option>
                                 {COMPOSER_PRESETS.flatMap(c => c.presets).map(p => <option key={p.name} value={`${p.width}x${p.height}`}>{p.name}</option>)}
                             </select>
@@ -459,87 +462,101 @@ const ComposerPage: React.FC = () => {
                     </footer>
                 </aside>
 
-                <main ref={previewContainerRef} className="flex-grow bg-base-200/20 flex items-center justify-center p-12 relative overflow-hidden">
-                    {gridPixelDimensions.width > 0 && (
-                        <div 
-                            className="shadow-2xl transition-all duration-300 ease-in-out relative border border-base-300"
-                            style={{
-                                width: gridPixelDimensions.width,
-                                height: gridPixelDimensions.height,
-                                display: 'grid',
-                                gridTemplateColumns: `repeat(${columns}, 1fr)`,
-                                gridTemplateRows: `repeat(${rows}, 1fr)`,
-                                gap: `${spacing * previewScale}px`,
-                                padding: `${spacing * previewScale}px`,
-                                backgroundColor: bgColor,
-                            }}
-                            onDragOver={e => e.preventDefault()}
-                            onDrop={e => {
-                                e.preventDefault();
-                                if ((e.dataTransfer as any).files.length) handleAddFiles(Array.from((e.dataTransfer as any).files));
-                            }}
-                        >
-                            {gridItems.map((item, idx) => (
-                                <div 
-                                    key={idx}
-                                    className={`relative bg-base-100/30 border border-dashed border-base-content/10 flex items-center justify-center overflow-hidden
-                                        ${dragOverIndex === idx ? 'ring-2 ring-primary ring-inset' : ''}
-                                        ${item ? 'border-none' : 'hover:bg-base-100/50 transition-colors cursor-pointer'}
-                                    `}
-                                    onDragStart={e => { if (item) { dragItemIndex.current = idx; (e.dataTransfer as any).effectAllowed = 'move'; } }}
-                                    onDragOver={e => { e.preventDefault(); setDragOverIndex(idx); }}
-                                    onDragLeave={() => setDragOverIndex(null)}
-                                    onDrop={e => {
-                                        e.preventDefault();
-                                        setDragOverIndex(null);
-                                        if ((e.dataTransfer as any).files.length) {
-                                            handleAddFiles(Array.from((e.dataTransfer as any).files), idx);
-                                        } else if (dragItemIndex.current !== null) {
-                                            const from = dragItemIndex.current;
-                                            setGridItems(prev => {
-                                                const next = [...prev];
-                                                [next[from], next[idx]] = [next[idx], next[from]];
-                                                return next;
-                                            });
-                                            dragItemIndex.current = null;
-                                        }
-                                    }}
-                                    draggable={!!item}
-                                >
-                                    {item ? (
-                                        <GridCell 
-                                            item={item} 
-                                            imageFit={imageFit} 
-                                            onRemove={() => handleRemoveImage(idx)}
-                                            onTransform={t => handleItemTransform(idx, t)}
-                                        />
-                                    ) : (
-                                        <div className="flex flex-col items-center gap-2 group/slot">
-                                            <div className="flex gap-2 opacity-0 group-hover/slot:opacity-100 transition-opacity">
-                                                <button 
-                                                    onClick={() => (fileInputRef.current as any).click()}
-                                                    className="btn btn-xs btn-ghost border border-base-300 rounded-none font-black text-[8px] tracking-widest"
-                                                >
-                                                    UPLOAD
-                                                </button>
-                                                <button 
-                                                    onClick={() => { setPickerTargetIndex(idx); setIsPickerOpen(true); }}
-                                                    className="btn btn-xs btn-primary rounded-none font-black text-[8px] tracking-widest"
-                                                >
-                                                    LIBRARY
-                                                </button>
-                                            </div>
-                                            <div className="flex flex-col items-center opacity-10">
-                                                <UploadIcon className="w-8 h-8 mb-1" />
-                                                <span className="text-[8px] font-black uppercase tracking-widest">SLOT {idx + 1}</span>
-                                            </div>
-                                        </div>
-                                    )}
-                                </div>
-                            ))}
+                <main className="flex-grow flex flex-col overflow-y-auto overflow-x-hidden bg-base-100 scroll-smooth custom-scrollbar">
+                    <section className="p-10 border-b border-base-300 bg-base-200/20">
+                        <div className="max-w-screen-2xl mx-auto flex flex-col gap-1">
+                            <div className="flex flex-col md:flex-row md:items-stretch justify-between gap-6">
+                                <h1 className="text-2xl lg:text-3xl font-black tracking-tighter text-base-content leading-none flex items-center uppercase">Composer<span className="text-primary">.</span></h1>
+                            </div>
+                            <p className="text-[11px] font-bold text-base-content/30 uppercase tracking-[0.3em] w-full">Arrange and synthesize multiple visual fragments into a unified grid structure.</p>
                         </div>
-                    )}
-                    <input type="file" ref={fileInputRef} onChange={e => handleAddFiles(Array.from((e.currentTarget as any).files))} multiple accept="image/*" className="hidden" />
+                    </section>
+
+                    <div ref={previewContainerRef} className="flex-grow bg-base-200/20 flex items-center justify-center p-12 relative overflow-hidden">
+                        {gridPixelDimensions.width > 0 && (
+                            <div 
+                                className="shadow-2xl transition-all duration-300 ease-in-out relative border border-base-300"
+                                style={{
+                                    width: gridPixelDimensions.width,
+                                    height: gridPixelDimensions.height,
+                                    display: 'grid',
+                                    gridTemplateColumns: `repeat(${columns}, 1fr)`,
+                                    gridTemplateRows: `repeat(${rows}, 1fr)`,
+                                    gap: `${spacing * previewScale}px`,
+                                    padding: `${spacing * previewScale}px`,
+                                    backgroundColor: bgColor,
+                                }}
+                                onDragOver={e => e.preventDefault()}
+                                onDrop={e => {
+                                    e.preventDefault();
+                                    if ((e.dataTransfer as any).files.length) handleAddFiles(Array.from((e.dataTransfer as any).files));
+                                }}
+                            >
+                                {gridItems.map((item, idx) => (
+                                    <div 
+                                        key={idx}
+                                        className={`relative bg-base-100/30 border border-dashed border-base-content/10 flex items-center justify-center overflow-hidden
+                                            ${dragOverIndex === idx ? 'ring-2 ring-primary ring-inset' : ''}
+                                            ${item ? 'border-none' : 'hover:bg-base-100/50 transition-colors cursor-pointer'}
+                                        `}
+                                        onDragStart={e => { if (item) { dragItemIndex.current = idx; (e.dataTransfer as any).effectAllowed = 'move'; } }}
+                                        onDragOver={e => { e.preventDefault(); setDragOverIndex(idx); }}
+                                        onDragLeave={() => setDragOverIndex(null)}
+                                        onDrop={e => {
+                                            e.preventDefault();
+                                            setDragOverIndex(null);
+                                            if ((e.dataTransfer as any).files.length) {
+                                                handleAddFiles(Array.from((e.dataTransfer as any).files), idx);
+                                            } else if (dragItemIndex.current !== null) {
+                                                const from = dragItemIndex.current;
+                                                setGridItems(prev => {
+                                                    const next = [...prev];
+                                                    // Swap logic
+                                                    const temp = next[from];
+                                                    next[from] = next[idx];
+                                                    next[idx] = temp;
+                                                    return next;
+                                                });
+                                                dragItemIndex.current = null;
+                                            }
+                                        }}
+                                        draggable={!!item}
+                                    >
+                                        {item ? (
+                                            <GridCell 
+                                                item={item} 
+                                                imageFit={imageFit} 
+                                                onRemove={() => handleRemoveImage(idx)}
+                                                onTransform={t => handleItemTransform(idx, t)}
+                                            />
+                                        ) : (
+                                            <div className="flex flex-col items-center gap-2 group/slot">
+                                                <div className="flex gap-2 opacity-0 group-hover/slot:opacity-100 transition-opacity">
+                                                    <button 
+                                                        onClick={() => (fileInputRef.current as any).click()}
+                                                        className="btn btn-xs btn-ghost border border-base-300 rounded-none font-black text-[8px] tracking-widest"
+                                                    >
+                                                        UPLOAD
+                                                    </button>
+                                                    <button 
+                                                        onClick={() => { setPickerTargetIndex(idx); setIsPickerOpen(true); }}
+                                                        className="btn btn-xs btn-primary rounded-none font-black text-[8px] tracking-widest"
+                                                    >
+                                                        LIBRARY
+                                                    </button>
+                                                </div>
+                                                <div className="flex flex-col items-center opacity-10">
+                                                    <UploadIcon className="w-8 h-8 mb-1" />
+                                                    <span className="text-[8px] font-black uppercase tracking-widest">SLOT {idx + 1}</span>
+                                                </div>
+                                            </div>
+                                        )}
+                                    </div>
+                                ))}
+                            </div>
+                        )}
+                        <input type="file" ref={fileInputRef} onChange={e => handleAddFiles(Array.from((e.currentTarget as any).files))} multiple accept="image/*" className="hidden" />
+                    </div>
                 </main>
             </div>
             

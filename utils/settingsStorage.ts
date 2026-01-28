@@ -12,6 +12,12 @@ export const defaultLLMSettings: LLMSettings = {
   ollamaBaseUrl: 'http://localhost:11434',
   ollamaModel: 'llama3',
   
+  // Ollama Cloud Settings
+  ollamaCloudBaseUrl: 'https://your-remote-ollama.com',
+  ollamaCloudModel: 'llama3',
+  ollamaCloudApiKey: '',
+  ollamaCloudUseGoogleAuth: false,
+  
   // Theme Settings
   activeThemeMode: 'light',
   lightTheme: 'light',
@@ -28,6 +34,12 @@ export const defaultLLMSettings: LLMSettings = {
 
   // Integrations
   youtube: {
+    isConnected: false
+  },
+  tiktok: {
+    isConnected: false
+  },
+  googleIdentity: {
     isConnected: false
   }
 };
@@ -60,6 +72,14 @@ export const loadLLMSettings = (): LLMSettings => {
             youtube: {
               ...defaultLLMSettings.youtube,
               ...(parsed.youtube || {})
+            },
+            tiktok: {
+              ...defaultLLMSettings.tiktok,
+              ...(parsed.tiktok || {})
+            },
+            googleIdentity: {
+                ...defaultLLMSettings.googleIdentity,
+                ...(parsed.googleIdentity || {})
             }
         };
         }

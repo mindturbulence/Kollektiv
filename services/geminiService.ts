@@ -24,7 +24,7 @@ export const detectSalientRegionGemini = async (
                 systemInstruction: "Task: [ymin,xmin,ymax,xmax] (0-1) for subject. JSON only.",
                 responseMimeType: 'application/json',
                 maxOutputTokens: 30,
-                thinkingConfig: { thinkingBudget: 0 }
+                // FIX: Removed thinkingConfig for gemini-flash-lite-latest as it is not in the 3 or 2.5 series
             }
         }).then(res => {
             try { return JSON.parse(res.text || '{"box":[0,0,1,1]}'); } 
@@ -33,13 +33,11 @@ export const detectSalientRegionGemini = async (
     } catch (err) { throw handleGeminiError(err, 'analysis'); }
 };
 
-// FIX: Added referenceImages parameter to support multimodal prompt enhancement
 export const enhancePromptGemini = async (prompt: string, constantModifier: string, settings: LLMSettings, systemInstruction: string, length: string = 'Medium', referenceImages?: string[]): Promise<string> => {
     try {
         const ai = getGeminiClient(settings);
         const input = [prompt.trim(), constantModifier.trim()].filter(Boolean).join('\n\n');
         
-        // Handle optional reference images
         let contents: any = input;
         if (referenceImages && referenceImages.length > 0) {
             const parts: any[] = [{ text: input }];
@@ -64,13 +62,11 @@ export const enhancePromptGemini = async (prompt: string, constantModifier: stri
     } catch (err) { throw handleGeminiError(err, 'refining'); }
 };
 
-// FIX: Added referenceImages parameter to support multimodal prompt enhancement streaming
 export async function* enhancePromptGeminiStream(prompt: string, constantModifier: string, settings: LLMSettings, systemInstruction: string, length: string = 'Medium', referenceImages?: string[]): AsyncGenerator<string> {
     try {
         const ai = getGeminiClient(settings);
         const input = [prompt.trim(), constantModifier.trim()].filter(Boolean).join('\n\n');
         
-        // Handle optional reference images
         let contents: any = input;
         if (referenceImages && referenceImages.length > 0) {
             const parts: any[] = [{ text: input }];
@@ -137,7 +133,7 @@ export const analyzePaletteMood = async (hexColors: string[], settings: LLMSetti
           systemInstruction: "Task: mood in 3 words max.", 
           temperature: 0.3, 
           maxOutputTokens: 15,
-          thinkingConfig: { thinkingBudget: 0 }
+          // FIX: Removed thinkingConfig for gemini-flash-lite-latest as it is not in the 3 or 2.5 series
       }
     });
     return (response.text || '').trim();
@@ -154,7 +150,7 @@ export const generateColorNameGemini = async (hexColor: string, mood: string, se
                 systemInstruction: "Task: Poetic 2-word name.", 
                 temperature: 0.6, 
                 maxOutputTokens: 10,
-                thinkingConfig: { thinkingBudget: 0 }
+                // FIX: Removed thinkingConfig for gemini-flash-lite-latest as it is not in the 3 or 2.5 series
             }
         });
         return (response.text || '').trim().replace(/"/g, '');
@@ -171,7 +167,7 @@ export const dissectPromptGemini = async (promptText: string, settings: LLMSetti
                 systemInstruction: "Task: JSON dissect prompt (subject, style, mood, lighting). Output JSON.",
                 responseMimeType: 'application/json',
                 maxOutputTokens: 400,
-                thinkingConfig: { thinkingBudget: 0 }
+                // FIX: Removed thinkingConfig for gemini-flash-lite-latest as it is not in the 3 or 2.5 series
             }
         });
         try { return JSON.parse(response.text || '{}'); } catch (e) { return {}; }
@@ -204,7 +200,7 @@ export const reconstructPromptGemini = async (components: { [key: string]: strin
             config: { 
                 systemInstruction: "Merge into prose. Text only.", 
                 maxOutputTokens: 600,
-                thinkingConfig: { thinkingBudget: 0 }
+                // FIX: Removed thinkingConfig for gemini-flash-lite-latest as it is not in the 3 or 2.5 series
             }
         });
         return (response.text || '').trim();
@@ -220,7 +216,7 @@ export const replaceComponentInPromptGemini = async (originalPrompt: string, com
             config: { 
                 systemInstruction: "Swap value. Text only.", 
                 maxOutputTokens: 600,
-                thinkingConfig: { thinkingBudget: 0 }
+                // FIX: Removed thinkingConfig for gemini-flash-lite-latest as it is not in the 3 or 2.5 series
             }
         });
         return (response.text || '').trim();
@@ -252,7 +248,7 @@ export const reconstructFromIntentGemini = async (intents: string[], settings: L
             config: { 
                 systemInstruction: "Merge into prose. Text only.", 
                 maxOutputTokens: 800,
-                thinkingConfig: { thinkingBudget: 0 }
+                // FIX: Removed thinkingConfig for gemini-flash-lite-latest as it is not in the 3 or 2.5 series
             }
         });
         return (response.text || '').trim();
@@ -285,7 +281,7 @@ export const generateArtistDescriptionGemini = async (artistName: string, settin
                 systemInstruction: "Brief style summary. Text only.", 
                 temperature: 0.3, 
                 maxOutputTokens: 100,
-                thinkingConfig: { thinkingBudget: 0 }
+                // FIX: Removed thinkingConfig for gemini-flash-lite-latest as it is not in the 3 or 2.5 series
             }
         });
         return (response.text || '').trim();
@@ -298,10 +294,10 @@ export const abstractImageGemini = async (base64ImageData: string, promptLength:
         const imagePart = { inlineData: { mimeType: 'image/jpeg', data: base64ImageData } };
         const response = await ai.models.generateContent({
             model: DEFAULT_MODEL,
-            contents: { parts: [imagePart, { text: `Engine:${targetAIModel}, Complexity:${promptLength}` }] },
+            contents: [imagePart],
             config: { 
-                systemInstruction: "Extract formula. 2 unique variations. Newline-sep.", 
-                maxOutputTokens: 1000,
+                systemInstruction: "Role: Visual Archeologist. Task: Deconstruct this image into a comprehensive, high-fidelity descriptive prompt. Provide 3 distinct variations of the prompt, separated by newlines. Focus on micro-textures, lighting interaction, physical materials, and atmospheric density. Output the variations ONLY. No preamble.", 
+                maxOutputTokens: 1500,
                 thinkingConfig: { thinkingBudget: 0 }
             }
         });

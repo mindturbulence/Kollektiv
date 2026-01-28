@@ -137,9 +137,12 @@ export const MetadataReader: React.FC<MetadataReaderProps> = ({
         <div className="grid grid-cols-1 lg:grid-cols-3 overflow-hidden h-full bg-base-100">
             <div className="lg:col-span-1 bg-base-100 flex flex-col min-h-0 border-r border-base-300">
                 {header}
-                <div className="p-6 flex flex-col gap-6 flex-grow min-h-0 overflow-y-auto custom-scrollbar">
+                <header className="p-6 border-b border-base-300 bg-base-200/10">
+                    <h3 className="text-[10px] font-black uppercase tracking-[0.4em] text-primary">Source Image</h3>
+                </header>
+                <div className="p-6 flex flex-col gap-6 flex-grow min-h-0 overflow-hidden">
                     <div 
-                        className={`relative flex-grow w-full border-2 border-dashed rounded-none flex flex-col items-center justify-center cursor-pointer transition-colors group ${isDragging ? 'border-primary bg-primary/10' : 'border-base-300 hover:border-primary/50'}`}
+                        className={`relative flex-grow w-full border-2 border-dashed rounded-none flex flex-col items-center justify-center cursor-pointer transition-colors group overflow-hidden ${isDragging ? 'border-primary bg-primary/10' : 'border-base-300 hover:border-primary/50'}`}
                         onDrop={(e) => { e.preventDefault(); setIsDragging(false); if (e.dataTransfer.files?.[0]) handleFileSelect(e.dataTransfer.files[0]); }}
                         onDragOver={(e) => { e.preventDefault(); setIsDragging(true); }}
                         onDragLeave={() => setIsDragging(false)}
@@ -160,14 +163,14 @@ export const MetadataReader: React.FC<MetadataReaderProps> = ({
                                 <p className="text-[9px] font-bold text-base-content/20 mt-2 uppercase">PNG / JPG WITH DATA</p>
                             </div>
                         ) : (
-                            <div className="w-full h-full relative flex items-center justify-center bg-black/5" onClick={e => e.stopPropagation()}>
+                            <div className="w-full h-full relative bg-black" onClick={e => e.stopPropagation()}>
                                 <img 
                                     src={previewUrl} 
-                                    className="max-w-full max-h-full object-contain" 
+                                    className="w-full h-full object-cover" 
                                     alt="Source" 
                                 />
-                                <button onClick={handleRemoveMedia} className="btn btn-sm btn-square btn-error absolute top-4 right-4 opacity-0 group-hover:opacity-100 shadow-2xl z-10 rounded-none">
-                                    <CloseIcon className="w-4 h-4"/>
+                                <button onClick={handleRemoveMedia} className="btn btn-xs btn-square btn-error absolute top-2 right-2 opacity-0 group-hover:opacity-100 shadow-2xl z-10 rounded-none">
+                                    <CloseIcon className="w-3 h-3"/>
                                 </button>
                             </div>
                         )}
@@ -185,61 +188,69 @@ export const MetadataReader: React.FC<MetadataReaderProps> = ({
                         </div>
                     )}
                 </div>
+                <footer className="p-4 border-t border-base-300 bg-base-200/20">
+                    <button onClick={() => handleRemoveMedia(null as any)} disabled={!previewUrl || isLoading} className="btn btn-sm btn-ghost w-full rounded-none font-black text-[9px] tracking-widest text-error/40 hover:text-error uppercase">PURGE BUFFER</button>
+                </footer>
             </div>
 
             <div className="lg:col-span-2 bg-base-100 flex flex-col min-h-0">
                 <header className="p-6 border-b border-base-300 bg-base-200/10 flex justify-between items-center">
                     <h2 className="text-xs font-black uppercase tracking-[0.4em] text-primary flex items-center gap-3">
-                        <div className="w-2 h-2 rounded-full bg-primary animate-pulse"></div> EXTRACTED DATA
+                        <div className="w-2 h-2 rounded-full bg-primary animate-pulse"></div> METADATA STREAM
                     </h2>
                 </header>
                 
-                <div className="flex-grow p-8 overflow-y-auto custom-scrollbar bg-base-200/5">
+                <div className="flex-grow p-8 overflow-y-auto custom-scrollbar bg-base-200/5 flex flex-col">
                     {isLoading ? (
-                        <div className="flex flex-col items-center justify-center py-24 text-center space-y-6">
+                        <div className="flex-grow flex flex-col items-center justify-center text-center space-y-6">
                             <LoadingSpinner />
                             <p className="text-[10px] font-black uppercase tracking-[0.4em] text-primary animate-pulse uppercase">Scanning...</p>
                         </div>
                     ) : error ? (
-                        <div className="alert alert-error rounded-none border-2">
-                            <span className="font-black uppercase text-[10px] tracking-widest">{error}</span>
+                        <div className="p-8">
+                            <div className="alert alert-error rounded-none border-2">
+                                <span className="font-black uppercase text-[10px] tracking-widest">{error}</span>
+                            </div>
                         </div>
                     ) : metadata ? (
                         <div className="space-y-10 animate-fade-in">
                             <section className="space-y-6">
                                 <div className="flex justify-between items-center">
-                                    <h4 className="text-[10px] font-black uppercase tracking-widest text-primary/40">ACTIONS</h4>
-                                    <div className="flex gap-1">
+                                    <h4 className="text-[10px] font-black uppercase tracking-widest text-primary/40">IDENTIFIED ARTIFACTS</h4>
+                                    <div className="flex gap-2">
                                         <button 
                                             onClick={() => onSendToRefiner(metadata.prompt)}
                                             disabled={!hasPrompt}
-                                            className="btn btn-sm btn-ghost text-primary font-black text-[9px] tracking-widest disabled:opacity-20 uppercase rounded-none"
+                                            className="btn btn-sm btn-ghost border border-base-300 rounded-none text-primary font-black text-[9px] tracking-widest uppercase"
                                         >
+                                            <SparklesIcon className="w-3.5 h-3.5 mr-1.5 opacity-40"/>
                                             REFINE
                                         </button>
                                         <button 
                                             onClick={() => onClipIdea(metadata.prompt, `Info: ${sourceFile?.name}`)}
                                             disabled={!hasPrompt}
-                                            className="btn btn-sm btn-ghost font-black text-[9px] tracking-widest disabled:opacity-20 uppercase rounded-none"
+                                            className="btn btn-sm btn-ghost border border-base-300 rounded-none font-black text-[9px] tracking-widest uppercase"
                                         >
+                                            <BookmarkIcon className="w-3.5 h-3.5 mr-1.5 opacity-40"/>
                                             CLIP
                                         </button>
                                         <button 
                                             onClick={() => onSaveToLibrary(metadata.prompt, `Saved: ${sourceFile?.name}`)}
                                             disabled={!hasPrompt}
-                                            className="btn btn-sm btn-ghost font-black text-[9px] tracking-widest disabled:opacity-20 uppercase rounded-none"
+                                            className="btn btn-sm btn-primary rounded-none font-black text-[9px] tracking-widest shadow-lg uppercase"
                                         >
+                                            <ArchiveIcon className="w-3.5 h-3.5 mr-1.5"/>
                                             SAVE
                                         </button>
                                     </div>
                                 </div>
-                                <FieldRow label="Prompt" value={hasPrompt ? metadata.prompt : (metadata.workflow ? 'GRAPH FOUND. USE EXPORT BUTTON.' : 'NO READABLE DATA.')} />
+                                <FieldRow label="Positive Prompt" value={hasPrompt ? metadata.prompt : (metadata.workflow ? 'GRAPH FOUND. USE EXPORT BUTTON.' : 'NO READABLE DATA.')} />
                                 <FieldRow label="Negative Prompt" value={metadata.negativePrompt} />
                             </section>
 
                             {filteredParams.length > 0 && (
                                 <section className="space-y-6 pt-8 border-t border-base-300">
-                                    <h4 className="text-[10px] font-black uppercase tracking-widest text-primary/40">DETAILS</h4>
+                                    <h4 className="text-[10px] font-black uppercase tracking-widest text-primary/40">TECH SPECIFICATIONS</h4>
                                     <div className="grid grid-cols-2 sm:grid-cols-3 xl:grid-cols-4 gap-x-4 gap-y-6">
                                         {filteredParams.map(([key, val]) => (
                                             <div key={key} className="flex flex-col border-b border-base-300/30 pb-3">
@@ -254,14 +265,14 @@ export const MetadataReader: React.FC<MetadataReaderProps> = ({
                             <section className="space-y-4 pt-8 border-t border-base-300">
                                 <div className="flex justify-between items-center">
                                     <div className="flex items-center gap-2">
-                                        <h4 className="text-[10px] font-black uppercase tracking-widest text-base-content/20">RAW</h4>
+                                        <h4 className="text-[10px] font-black uppercase tracking-widest text-base-content/20">RAW STREAM</h4>
                                     </div>
                                     <button 
                                         onClick={handleCopyRaw}
                                         disabled={!metadata.raw && !metadata.workflow}
-                                        className="btn btn-sm btn-ghost font-black text-[8px] tracking-widest disabled:opacity-20 uppercase rounded-none"
+                                        className="btn btn-sm btn-ghost border border-base-300 rounded-none font-black text-[9px] tracking-widest uppercase"
                                     >
-                                        {copiedRaw ? <><CheckIcon className="w-3 h-3 mr-1"/> OK</> : 'COPY RAW'}
+                                        {copiedRaw ? <><CheckIcon className="w-3 h-3 mr-1.5 text-success"/> OK</> : <><BracesIcon className="w-3.5 h-3.5 mr-1.5 opacity-40"/> COPY RAW</>}
                                     </button>
                                 </div>
                                 <div className="p-4 bg-black/5 border border-base-300 text-[10px] font-mono text-base-content/30 break-words leading-relaxed max-h-48 overflow-y-auto custom-scrollbar">
@@ -270,7 +281,7 @@ export const MetadataReader: React.FC<MetadataReaderProps> = ({
                             </section>
                         </div>
                     ) : (
-                        <div className="h-full flex flex-col items-center justify-center text-center py-32 opacity-10">
+                        <div className="flex-grow flex flex-col items-center justify-center text-center py-32 opacity-10">
                             <ArchiveIcon className="w-24 h-24 mb-6" />
                             <p className="text-xl font-black uppercase tracking-widest">AWAITING SOURCE INPUT</p>
                         </div>

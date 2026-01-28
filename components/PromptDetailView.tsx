@@ -42,9 +42,9 @@ const PromptAnatomyDisplay: React.FC<{
             <div className="flex-grow p-5 overflow-y-auto custom-scrollbar bg-base-100">
                 {isLoading ? <div className="py-12"><LoadingSpinner/></div> :
                  error ? <div className="alert alert-error rounded-none text-xs"><span>{error}</span></div> :
-                 anatomy && typeof anatomy === 'object' && Object.keys(anatomy).length > 0 ? (
+                 anatomy && Object.keys(anatomy).length > 0 ? (
                     <div className="space-y-6">
-                        {(Object.entries(anatomy) as [string, string][]).map(([key, value]) => (
+                        {Object.entries(anatomy).map(([key, value]) => (
                             <div key={key} className="animate-fade-in">
                                 <h4 className="text-[9px] font-black uppercase tracking-widest text-base-content/20 mb-1 border-b border-base-300/30 pb-0.5">{key}</h4>
                                 <p className="text-sm font-medium leading-relaxed text-base-content/80">{String(value)}</p>
@@ -74,7 +74,7 @@ const PromptDetailView: React.FC<PromptDetailViewProps> = ({
   onClipString
 }) => {
   const { settings } = useSettings();
-  const prompt = prompts[currentIndex];
+  const prompt = prompts[currentIndex] || null;
   const [isEditorModalOpen, setIsEditorModalOpen] = useState(false);
   const [editedText, setEditedText] = useState(prompt ? prompt.text : '');
   const [categories, setCategories] = useState<PromptCategory[]>([]);
@@ -87,17 +87,12 @@ const PromptDetailView: React.FC<PromptDetailViewProps> = ({
   const [errorAnatomy, setErrorAnatomy] = useState<string | null>(null);
 
   const analyzePromptText = useCallback(async (text: string) => {
-      if (!text || !text.trim()) { setAnatomy(null); return; }
+      if (!text?.trim()) { setAnatomy(null); return; }
       setIsLoadingAnatomy(true);
       setErrorAnatomy(null);
       try {
           const result = await dissectPrompt(text, settings);
-          if (result && typeof result === 'object') {
-              setAnatomy(result);
-          } else {
-              setAnatomy({});
-              setErrorAnatomy("AI returned an unrecognized format.");
-          }
+          setAnatomy(result || {});
       } catch (e: any) {
           setErrorAnatomy(e.message || "Component analysis failed.");
           setAnatomy(null);
@@ -106,9 +101,7 @@ const PromptDetailView: React.FC<PromptDetailViewProps> = ({
       }
   }, [settings]);
   
-  useEffect(() => {
-    loadPromptCategories().then(setCategories);
-  }, []);
+  useEffect(() => { loadPromptCategories().then(setCategories); }, []);
   
   useEffect(() => {
     if (prompt) {
@@ -117,8 +110,6 @@ const PromptDetailView: React.FC<PromptDetailViewProps> = ({
         setIsRefinePanelCollapsed(true);
         setIsFormulaPanelCollapsed(true);
         setAnatomy(null);
-        setErrorAnatomy(null);
-        setIsLoadingAnatomy(false);
     }
   }, [prompt]);
 
@@ -130,13 +121,11 @@ const PromptDetailView: React.FC<PromptDetailViewProps> = ({
   }, [currentIndex, prompts.length, onNavigate]);
 
   const handleCopyToClipboard = (text: string) => {
-      if(typeof (window as any).navigator !== 'undefined') {
-          (window as any).navigator.clipboard.writeText(text).then(() => {
-            setCopied(true);
-            showGlobalFeedback("Prompt copied.");
-            setTimeout(() => setCopied(false), 2000);
-          });
-      }
+      navigator.clipboard.writeText(text).then(() => {
+        setCopied(true);
+        showGlobalFeedback("Prompt copied.");
+        setTimeout(() => setCopied(false), 2000);
+      });
   };
 
   const handleSaveChanges = () => {
@@ -146,105 +135,80 @@ const PromptDetailView: React.FC<PromptDetailViewProps> = ({
       }
   };
   
-  const isDirty = prompt && editedText.trim() !== prompt.text.trim();
-  
-  if (!prompt) return <div className="h-full flex items-center justify-center font-black uppercase text-base-content/20 tracking-tighter text-4xl">Item Not Found.</div>;
+  if (!prompt) return null;
 
   return (
-    <div className="flex flex-col h-full bg-base-100">
-        <header className="flex-shrink-0 p-6 lg:px-8 lg:py-6 border-b border-base-300 bg-base-100 flex flex-wrap justify-between items-end gap-6">
-            <div className="min-w-0">
-                <span className="text-[10px] font-black uppercase tracking-[0.4em] text-primary mb-1 block">LIBRARY ID : {prompt.id.slice(-8)}</span>
-                <h2 className="text-xl lg:text-2xl font-black tracking-tighter text-base-content leading-none truncate max-w-2xl uppercase" title={prompt.title || 'Untitled Prompt'}>
-                    {prompt.title || 'Untitled Prompt'}
-                </h2>
-            </div>
-             <div className="flex items-center gap-4">
-                <div className="join bg-base-200 border border-base-300 shadow-sm">
-                    <button onClick={() => handleNavigation('prev')} className="btn btn-sm btn-ghost join-item"><ChevronLeftIcon className="w-4 h-4" /></button>
-                    <span className="join-item flex items-center px-6 font-mono text-[10px] font-black text-base-content/40 uppercase tracking-widest border-x border-base-300/30">{currentIndex + 1} / {prompts.length}</span>
-                    <button onClick={() => handleNavigation('next')} className="btn btn-sm btn-ghost join-item"><ChevronRightIcon className="w-4 h-4" /></button>
+    <div className="absolute inset-0 z-40 bg-black/60 backdrop-blur-sm animate-fade-in flex items-center justify-center p-2 lg:p-4 overflow-hidden" onClick={onClose}>
+        <div className="w-full h-full bg-base-100 rounded-none border border-base-300 shadow-2xl flex flex-col overflow-hidden relative" onClick={e => e.stopPropagation()}>
+            <header className="flex-shrink-0 p-6 lg:px-8 lg:py-6 border-b border-base-300 bg-base-100 flex flex-wrap justify-between items-end gap-6">
+                <div className="min-w-0">
+                    <span className="text-[10px] font-black uppercase tracking-[0.4em] text-primary mb-1 block">LIBRARY ID : {prompt.id.slice(-8)}</span>
+                    <h2 className="text-xl lg:text-2xl font-black tracking-tighter text-base-content leading-none truncate max-w-2xl uppercase">
+                        {prompt.title || 'Untitled Prompt'}
+                    </h2>
                 </div>
-                <button onClick={onClose} className="btn btn-sm btn-ghost btn-square opacity-40 hover:opacity-100 ml-4">
-                    <CloseIcon className="w-6 h-6"/>
-                </button>
-            </div>
-        </header>
-
-        <div className="flex-grow flex flex-col lg:flex-row overflow-hidden">
-            <main className="flex-1 flex flex-col overflow-hidden bg-base-100">
-                <div className={`flex flex-col overflow-hidden transition-all duration-500 ease-in-out ${!isRefinePanelCollapsed ? 'h-1/2' : 'flex-grow'}`}>
-                    <div className="flex-grow p-5 lg:p-5 relative overflow-hidden flex flex-col">
-                        <span className="text-[9px] font-black uppercase tracking-widest text-primary/40 mb-3 flex items-center gap-3">
-                            <span className="w-1.5 h-1.5 rounded-full bg-primary animate-pulse"></span> Original Prompt Text
-                        </span>
-                        <textarea 
-                            value={editedText}
-                            onChange={(e) => setEditedText((e.currentTarget as any).value)}
-                            className="textarea flex-grow w-full bg-transparent text-sm font-medium leading-relaxed resize-none focus:outline-none p-0 custom-scrollbar border-none shadow-none"
-                            placeholder="Type prompt here..."
-                        ></textarea>
+                <div className="flex items-center gap-4">
+                    <div className="join bg-base-200 border border-base-300 shadow-sm">
+                        <button onClick={() => handleNavigation('prev')} className="btn btn-sm btn-ghost join-item"><ChevronLeftIcon className="w-4 h-4" /></button>
+                        <span className="join-item flex items-center px-6 font-mono text-[10px] font-black text-base-content/40 uppercase tracking-widest border-x border-base-300/30">{currentIndex + 1} / {prompts.length}</span>
+                        <button onClick={() => handleNavigation('next')} className="btn btn-sm btn-ghost join-item"><ChevronRightIcon className="w-4 h-4" /></button>
                     </div>
+                    <button onClick={onClose} className="btn btn-sm btn-ghost btn-square opacity-40 hover:opacity-100 ml-4">
+                        <CloseIcon className="w-6 h-6"/>
+                    </button>
                 </div>
-                
-                <div className={`overflow-hidden transition-all duration-500 ease-in-out ${!isRefinePanelCollapsed ? 'h-1/2 border-t border-base-300' : 'h-0 opacity-0'}`}>
-                    <PromptRefinePanel 
-                        promptText={editedText} 
-                        onApplyRefinement={(res) => { setEditedText(res); setIsRefinePanelCollapsed(true); showGlobalFeedback("Applied refinement."); }}
-                        isCollapsed={isRefinePanelCollapsed}
-                        setIsCollapsed={setIsRefinePanelCollapsed}
-                        onClip={onClipString ? (res) => onClipString(res, `Refinement: ${prompt.title}`) : undefined}
-                    />
-                </div>
+            </header>
 
-                <footer className="p-4 bg-base-200/20 border-t border-base-300 flex flex-wrap justify-between items-center gap-4">
-                    <div className="flex items-center gap-1">
-                        <button onClick={() => setIsEditorModalOpen(true)} className="btn btn-sm btn-ghost rounded-none uppercase font-black text-[10px] tracking-widest px-4 hover:bg-base-300">Edit Details</button>
-                        <button onClick={() => setIsRefinePanelCollapsed(!isRefinePanelCollapsed)} className={`btn btn-sm rounded-none uppercase font-black text-[10px] tracking-widest px-4 ${!isRefinePanelCollapsed ? 'btn-primary' : 'btn-ghost text-primary hover:bg-primary/10'}`}>AI Refine</button>
-                        <button onClick={() => onClip(prompt)} className="btn btn-sm btn-ghost rounded-none uppercase font-black text-[10px] tracking-widest px-4 hover:bg-base-300">Clip</button>
-                        <button onClick={() => onDelete(prompt)} className="btn btn-sm btn-ghost rounded-none uppercase font-black text-[10px] tracking-widest px-4 text-error/40 hover:text-error hover:bg-error/10">Delete</button>
+            <div className="flex-grow flex flex-col lg:flex-row overflow-hidden">
+                <main className="flex-1 flex flex-col overflow-hidden bg-base-100">
+                    <div className={`flex flex-col overflow-hidden transition-all duration-500 ease-in-out ${!isRefinePanelCollapsed ? 'h-1/2' : 'flex-grow'}`}>
+                        <div className="flex-grow p-5 lg:p-5 relative overflow-hidden flex flex-col">
+                            <span className="text-[9px] font-black uppercase tracking-widest text-primary/40 mb-3 flex items-center gap-3">
+                                <span className="w-1.5 h-1.5 rounded-full bg-primary animate-pulse"></span> Original Prompt Text
+                            </span>
+                            <textarea 
+                                value={editedText}
+                                onChange={(e) => setEditedText(e.target.value)}
+                                className="textarea flex-grow w-full bg-transparent text-sm font-medium leading-relaxed resize-none focus:outline-none p-0 custom-scrollbar border-none shadow-none"
+                                placeholder="Type prompt here..."
+                            ></textarea>
+                        </div>
                     </div>
-                    <div className="flex items-center gap-3">
-                        {isDirty && (
-                            <button onClick={handleSaveChanges} className="btn btn-sm btn-primary rounded-none uppercase font-black text-[10px] tracking-widest px-8 shadow-lg">Save Changes</button>
-                        )}
-                        <button onClick={() => handleCopyToClipboard(editedText)} className="btn btn-sm btn-ghost rounded-none border border-base-300 bg-base-100 uppercase font-black text-[10px] tracking-widest px-8 hover:bg-base-200">
-                            {copied ? 'Copied' : 'Copy Prompt'}
-                        </button>
-                    </div>
-                </footer>
-            </main>
-
-            <aside className="w-full lg:w-[420px] flex-shrink-0 bg-base-100 flex flex-col overflow-hidden border-l border-base-300">
-                <div className="flex-grow flex flex-col min-h-0 divide-y divide-base-300">
-                    <div className="flex-grow min-h-0">
-                        <PromptAnatomyDisplay
-                            anatomy={anatomy}
-                            isLoading={isLoadingAnatomy}
-                            error={errorAnatomy}
-                            onRefresh={() => analyzePromptText(editedText)}
-                            hasPrompt={!!editedText}
+                    <div className={`overflow-hidden transition-all duration-500 ease-in-out ${!isRefinePanelCollapsed ? 'h-1/2 border-t border-base-300' : 'h-0 opacity-0'}`}>
+                        <PromptRefinePanel 
+                            promptText={editedText} 
+                            onApplyRefinement={(res) => { setEditedText(res); setIsRefinePanelCollapsed(true); showGlobalFeedback("Applied refinement."); }}
+                            isCollapsed={isRefinePanelCollapsed}
+                            setIsCollapsed={setIsRefinePanelCollapsed}
+                            onClip={onClipString ? (res) => onClipString(res, `Refinement: ${prompt.title}`) : undefined}
                         />
                     </div>
-                    <div className="flex-shrink-0">
-                        <PromptFormulaPanel 
-                            promptText={editedText}
-                            showGlobalFeedback={showGlobalFeedback}
-                            isCollapsed={isFormulaPanelCollapsed}
-                            setIsCollapsed={setIsFormulaPanelCollapsed}
-                        />
+                    <footer className="p-4 bg-base-200/20 border-t border-base-300 flex flex-wrap justify-between items-center gap-4">
+                        <div className="flex items-center gap-1">
+                            <button onClick={() => setIsEditorModalOpen(true)} className="btn btn-sm btn-ghost rounded-none uppercase font-black text-[10px] tracking-widest px-4 hover:bg-base-300">Edit Details</button>
+                            <button onClick={() => setIsRefinePanelCollapsed(!isRefinePanelCollapsed)} className={`btn btn-sm rounded-none uppercase font-black text-[10px] tracking-widest px-4 ${!isRefinePanelCollapsed ? 'btn-primary' : 'btn-ghost text-primary hover:bg-primary/10'}`}>AI Refine</button>
+                            <button onClick={() => onClip(prompt)} className="btn btn-sm btn-ghost rounded-none uppercase font-black text-[10px] tracking-widest px-4 hover:bg-base-300">Clip</button>
+                            <button onClick={() => onDelete(prompt)} className="btn btn-sm btn-ghost rounded-none uppercase font-black text-[10px] tracking-widest px-4 text-error/40 hover:text-error hover:bg-error/10">Delete</button>
+                        </div>
+                        <div className="flex items-center gap-3">
+                            {editedText.trim() !== prompt.text.trim() && (
+                                <button onClick={handleSaveChanges} className="btn btn-sm btn-primary rounded-none uppercase font-black text-[10px] tracking-widest px-8 shadow-lg">Save Changes</button>
+                            )}
+                            <button onClick={() => handleCopyToClipboard(editedText)} className="btn btn-sm btn-ghost rounded-none border border-base-300 bg-base-100 uppercase font-black text-[10px] tracking-widest px-8 hover:bg-base-200">
+                                {copied ? 'Copied' : 'Copy Prompt'}
+                            </button>
+                        </div>
+                    </footer>
+                </main>
+                <aside className="w-full lg:w-[420px] flex-shrink-0 bg-base-100 flex flex-col overflow-hidden border-l border-base-300">
+                    <div className="flex-grow flex flex-col min-h-0 divide-y divide-base-300">
+                        <PromptAnatomyDisplay anatomy={anatomy} isLoading={isLoadingAnatomy} error={errorAnatomy} onRefresh={() => analyzePromptText(editedText)} hasPrompt={!!editedText} />
+                        <PromptFormulaPanel promptText={editedText} showGlobalFeedback={showGlobalFeedback} isCollapsed={isFormulaPanelCollapsed} setIsCollapsed={setIsFormulaPanelCollapsed} />
                     </div>
-                </div>
-            </aside>
+                </aside>
+            </div>
+            <PromptEditorModal isOpen={isEditorModalOpen} onClose={() => setIsEditorModalOpen(false)} onSave={async (data) => { onUpdate(prompt.id, data); showGlobalFeedback("Details saved."); }} categories={categories} editingPrompt={prompt} />
         </div>
-
-        <PromptEditorModal
-            isOpen={isEditorModalOpen}
-            onClose={() => setIsEditorModalOpen(false)}
-            onSave={async (data) => { onUpdate(prompt.id, data); showGlobalFeedback("Details saved."); }}
-            categories={categories}
-            editingPrompt={prompt}
-        />
     </div>
   );
 };

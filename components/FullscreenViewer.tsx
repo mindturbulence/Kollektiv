@@ -1,4 +1,3 @@
-
 import React, { useState, useRef, useEffect, useCallback, useMemo } from 'react';
 import { createPortal } from 'react-dom';
 import type { GalleryItem } from '../types';
@@ -21,6 +20,7 @@ const FullscreenViewer: React.FC<FullscreenViewerProps> = ({ items, currentIndex
     const [isLoading, setIsLoading] = useState(true);
     const [hasError, setHasError] = useState(false);
     const objectUrlRef = useRef<string|null>(null);
+    const imgRef = useRef<HTMLImageElement>(null);
 
     const [zoom, setZoom] = useState(1);
     const [position, setPosition] = useState({ x: 0, y: 0 });
@@ -76,7 +76,6 @@ const FullscreenViewer: React.FC<FullscreenViewerProps> = ({ items, currentIndex
     }, [itemGroup, currentImageIndex]);
 
     useEffect(() => {
-        // Cleanup on unmount
         return () => {
             if (objectUrlRef.current) {
                 URL.revokeObjectURL(objectUrlRef.current);
@@ -111,8 +110,8 @@ const FullscreenViewer: React.FC<FullscreenViewerProps> = ({ items, currentIndex
             if ((e as any).key === 'ArrowLeft') handleNavigation('prev-image');
         };
         if(typeof window !== 'undefined') {
-            (window as any).addEventListener('keydown', handleKeyDown);
-            return () => (window as any).removeEventListener('keydown', handleKeyDown);
+            (window as any).document.addEventListener('keydown', handleKeyDown);
+            return () => (window as any).document.removeEventListener('keydown', handleKeyDown);
         }
     }, [handleClose, handleNavigation]);
 
@@ -145,6 +144,26 @@ const FullscreenViewer: React.FC<FullscreenViewerProps> = ({ items, currentIndex
 
     const handleMouseUp = () => setIsPanning(false);
 
+    const handleDoubleClick = (e: React.MouseEvent) => {
+        e.stopPropagation();
+        if (zoom > 1) {
+            setZoom(1);
+            setPosition({ x: 0, y: 0 });
+        } else {
+            const img = imgRef.current;
+            if (img) {
+                const naturalWidth = img.naturalWidth;
+                const clientWidth = img.clientWidth;
+                if (naturalWidth && clientWidth) {
+                    const targetZoom = naturalWidth / clientWidth;
+                    setZoom(Math.max(2, targetZoom));
+                } else {
+                    setZoom(3);
+                }
+            }
+        }
+    };
+
     const handleDownload = async () => {
         if(mediaBlobUrl && typeof (window as any).document !== 'undefined') {
             const a = (window as any).document.createElement('a');
@@ -153,49 +172,65 @@ const FullscreenViewer: React.FC<FullscreenViewerProps> = ({ items, currentIndex
             (window as any).document.body.appendChild(a);
             a.click();
             (window as any).document.body.removeChild(a);
-            URL.revokeObjectURL(a.href);
         }
     };
 
     const modalContent = (
         <div 
-          className="fixed inset-0 bg-black/90 z-50 flex flex-col animate-fade-in"
+          className="fixed inset-0 bg-black/90 z-[150] flex flex-col animate-fade-in group"
           onClick={handleClose}
           onMouseMove={handleMouseMove}
           onMouseUp={handleMouseUp}
         >
             <div className="flex-grow flex items-center justify-center p-4 relative overflow-hidden" onWheel={handleWheel}>
-                {isLoading ? <div className="loading loading-spinner loading-lg text-primary"></div> :
-                 hasError || !mediaBlobUrl ? <ImageBrokenIcon className="w-24 h-24 text-warning" /> :
-                 itemGroup.type === 'video' ? 
-                    <video src={mediaBlobUrl} controls autoPlay className="max-w-full max-h-full" onClick={e => e.stopPropagation()} /> :
+                {isLoading ? (
+                    <div className="loading loading-spinner loading-lg text-primary"></div>
+                ) : hasError || !mediaBlobUrl ? (
+                    <ImageBrokenIcon className="w-24 h-24 text-warning" />
+                ) : itemGroup.type === 'video' ? (
+                    <video src={mediaBlobUrl} controls autoPlay className="max-w-full max-h-full" onClick={e => e.stopPropagation()} />
+                ) : (
                     <img 
+                        ref={imgRef}
                         src={mediaBlobUrl} 
                         alt={itemGroup.title} 
-                        className="max-w-full max-h-full transition-transform duration-100" 
+                        className="max-w-full max-h-full transition-transform duration-200 ease-out" 
                         style={{ transform: `scale(${zoom}) translate(${position.x}px, ${position.y}px)`, cursor: isPanning ? 'grabbing' : zoom > 1 ? 'grab' : 'default' }}
                         onClick={e => e.stopPropagation()}
                         onMouseDown={handleMouseDown}
+                        onDoubleClick={handleDoubleClick}
                     />
-                }
+                )}
             </div>
 
             {itemGroup && itemGroup.urls.length > 1 && (
                  <>
-                    <button onClick={(e) => { e.stopPropagation(); handleNavigation('prev-image'); }} className="absolute left-6 top-1/2 -translate-y-1/2 p-3 bg-black/50 hover:bg-black/80 text-white rounded-full transition-colors z-20" aria-label="Previous image"><ChevronLeftIcon className="w-8 h-8" /></button>
-                    <button onClick={(e) => { e.stopPropagation(); handleNavigation('next-image'); }} className="absolute right-6 top-1/2 -translate-y-1/2 p-3 bg-black/50 hover:bg-black/80 text-white rounded-full transition-colors z-20" aria-label="Next image"><ChevronRightIcon className="w-8 h-8" /></button>
+                    <button 
+                        onClick={(e) => { e.stopPropagation(); handleNavigation('prev-image'); }} 
+                        className="absolute left-6 top-1/2 -translate-y-1/2 p-4 bg-black/50 hover:bg-black/80 text-white rounded-full transition-all duration-500 ease-[cubic-bezier(0.23,1,0.32,1)] opacity-0 -translate-x-8 group-hover:opacity-100 group-hover:translate-x-0 z-20" 
+                        aria-label="Previous image"
+                    >
+                        <ChevronLeftIcon className="w-8 h-8" />
+                    </button>
+                    <button 
+                        onClick={(e) => { e.stopPropagation(); handleNavigation('next-image'); }} 
+                        className="absolute right-6 top-1/2 -translate-y-1/2 p-4 bg-black/50 hover:bg-black/80 text-white rounded-full transition-all duration-500 ease-[cubic-bezier(0.23,1,0.32,1)] opacity-0 translate-x-8 group-hover:opacity-100 group-hover:translate-x-0 z-20" 
+                        aria-label="Next image"
+                    >
+                        <ChevronRightIcon className="w-8 h-8" />
+                    </button>
                 </>
             )}
 
              <div className="absolute top-4 right-4 z-20 flex gap-2">
-                <button onClick={(e) => { e.stopPropagation(); handleDownload() }} className="btn btn-sm btn-ghost btn-circle" title="Download"><DownloadIcon className="w-6 h-6"/></button>
-                <button onClick={(e) => { e.stopPropagation(); setZoom(1); setPosition({x:0, y:0}); }} className="btn btn-sm btn-ghost btn-circle" title="Reset view"><CenterIcon className="w-6 h-6"/></button>
-                <button onClick={handleClose} className="btn btn-sm btn-ghost btn-circle" title="Close"><CloseIcon className="w-6 h-6"/></button>
+                <button onClick={(e) => { e.stopPropagation(); handleDownload() }} className="btn btn-sm btn-ghost btn-circle text-white/40 hover:text-white" title="Download"><DownloadIcon className="w-6 h-6"/></button>
+                <button onClick={(e) => { e.stopPropagation(); setZoom(1); setPosition({x:0, y:0}); }} className="btn btn-sm btn-ghost btn-circle text-white/40 hover:text-white" title="Reset view"><CenterIcon className="w-6 h-6"/></button>
+                <button onClick={handleClose} className="btn btn-sm btn-ghost btn-circle text-white/40 hover:text-white" title="Close"><CloseIcon className="w-6 h-6"/></button>
             </div>
             
-            <div className="absolute bottom-4 left-1/2 -translate-x-1/2 z-20 p-2 bg-black/50 text-white rounded-full text-sm">
+            <div className="absolute bottom-4 left-1/2 -translate-x-1/2 z-20 p-2 bg-black/50 text-white rounded-full text-xs font-black uppercase tracking-widest px-6 backdrop-blur-md border border-white/10">
                 <span>{itemGroup.title}</span>
-                {itemGroup.urls.length > 1 && <span className="ml-2 font-mono">({currentImageIndex + 1}/{itemGroup.urls.length})</span>}
+                {itemGroup.urls.length > 1 && <span className="ml-3 font-mono text-primary">({currentImageIndex + 1}/{itemGroup.urls.length})</span>}
             </div>
         </div>
     );

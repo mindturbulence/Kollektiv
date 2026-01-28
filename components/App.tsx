@@ -1,8 +1,9 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { useSettings } from '../contexts/SettingsContext';
 import useLocalStorage from '../utils/useLocalStorage';
 import { fileSystemManager } from '../utils/fileUtils';
 import { verifyAndRepairFiles } from '../utils/integrity';
+import { addSavedPrompt } from '../utils/promptStorage';
 import type { ActiveTab, Idea, ActiveSettingsTab } from '../types';
 
 // Layout & Global Components
@@ -33,29 +34,43 @@ import LoadingSpinner from './LoadingSpinner';
 
 type PromptsPageState = { prompt?: string, artStyle?: string, artist?: string, view?: 'enhancer' | 'composer' | 'create', id?: string } | null;
 
-const InitialLoader: React.FC = () => (
-    <div id="initial-loader" className="flex flex-col items-center justify-center w-full h-full bg-base-100 text-base-content transition-colors duration-300">
-      <div className="flex flex-col items-center gap-6">
-        <LoadingSpinner size={80} />
-        <p id="loading-status" className="text-sm font-bold uppercase tracking-[0.3em] opacity-50 animate-pulse">Initializing System Registry</p>
-        <div id="loading-progress-container" className="w-64 h-1.5 bg-base-content/5 rounded-full overflow-hidden" style={{ display: 'none' }}>
-          <div id="loading-progress-bar" className="h-full bg-primary rounded-full transition-all duration-300" style={{ width: '0%' }}></div>
+/**
+ * Unified System Loader.
+ * Matches index.html exactly for a seamless transition.
+ */
+const InitialLoader: React.FC<{ status: string; progress: number | null }> = ({ status, progress }) => {
+    return (
+        <div id="initial-loader" className="flex flex-col items-center justify-center w-full h-full bg-base-100 text-white transition-colors duration-300">
+            <div className="flex flex-col items-center">
+                <LoadingSpinner size={120} />
+                <div className="flex flex-col items-center mt-8 relative z-10">
+                    <p className="text-[10px] font-black uppercase tracking-[0.5em] text-white opacity-40 animate-pulse">
+                        {status}
+                    </p>
+                    {progress !== null && (
+                        <div className="w-48 h-0.5 bg-white/5 rounded-full mt-4 overflow-hidden">
+                            <div 
+                                className="h-full bg-white rounded-full transition-all duration-300" 
+                                style={{ width: `${progress * 100}%` }} 
+                            />
+                        </div>
+                    )}
+                </div>
+            </div>
         </div>
-      </div>
-    </div>
-);
+    );
+};
 
 const App: React.FC = () => {
-    // --- App Initialization State ---
     const [isInitialized, setIsInitialized] = useState(false);
     const [isLoading, setIsLoading] = useState(true);
     const [showWelcome, setShowWelcome] = useState(false);
+    const [initStatus, setInitStatus] = useState('Initializing System Registry');
+    const [initProgress, setInitProgress] = useState<number | null>(null);
 
-    // --- Global Contexts ---
     const { settings } = useSettings();
     const auth = useAuth();
 
-    // --- UI & Navigation State ---
     const [activeTab, setActiveTab] = useLocalStorage<ActiveTab>('activeTab', 'dashboard');
     const [isPinned, setIsPinned] = useLocalStorage('sidebarPinned', true);
     const [isSidebarOpen, setIsSidebarOpen] = useState(isPinned);
@@ -64,59 +79,46 @@ const App: React.FC = () => {
     const [collapsedPanels, setCollapsedPanels] = useLocalStorage<Record<string, boolean>>('collapsedPanels', {});
     const [globalFeedback, setGlobalFeedback] = useState<{ message: string; type: 'success' | 'error' } | null>(null);
 
-    // --- Page-specific State ---
     const [promptsPageState, setPromptsPageState] = useState<PromptsPageState>(null);
     const [activeSettingsTab, setActiveSettingsTab] = useLocalStorage<ActiveSettingsTab>('activeSettingsTab', 'app');
     const [activeSettingsSubTab, setActiveSettingsSubTabSetter] = useLocalStorage<string>('activeSettingsSubTab', 'general');
 
-    // --- Data State ---
     const [clippedIdeas, setClippedIdeas] = useLocalStorage<Idea[]>('clippedIdeas', []);
 
-    // --- App Initialization Effect ---
     const initializeApp = useCallback(async () => {
         setIsLoading(true);
         setShowWelcome(false);
+        setInitStatus('Preparing Neural Buffers');
 
         const onProgress = (message: string, progress?: number) => {
-             if (typeof (window as any).document === 'undefined') return;
-
-             const statusEl = (window as any).document.getElementById('loading-status');
-             if (statusEl) {
-                (statusEl as any).textContent = message.toUpperCase();
-             }
-             
-             const progressContainer = (window as any).document.getElementById('loading-progress-container');
-             const progressBar = (window as any).document.getElementById('loading-progress-bar');
-             if (progressContainer && progressBar) {
-                if (progress !== undefined) {
-                    (progressContainer as any).style.display = 'block';
-                    (progressBar as any).style.width = `${progress * 100}%`;
-                } else {
-                    (progressContainer as any).style.display = 'none';
-                }
-            }
+             setInitStatus(message.toUpperCase());
+             if (progress !== undefined) setInitProgress(progress);
+             else setInitProgress(null);
         };
         
-        onProgress('Initializing local file system...');
-        
-        // Non-interactive check first
-        const hasHandleAndPermission = await fileSystemManager.initialize(settings, auth);
-        
-        if (!hasHandleAndPermission) {
-            // Either handle is missing OR permission is 'prompt'/'denied'
-            setShowWelcome(true);
+        try {
+            onProgress('Initializing local file system...');
+            const hasHandleAndPermission = await fileSystemManager.initialize(settings, auth);
+            
+            if (!hasHandleAndPermission) {
+                setShowWelcome(true);
+                setIsLoading(false);
+                return;
+            }
+
+            const repairSuccess = await verifyAndRepairFiles(onProgress, settings);
+            if (!repairSuccess) console.error("Integrity check encountered issues, but proceeding to boot.");
+
+            setIsInitialized(true);
+        } catch (err) {
+            console.error("Initialization Critical Failure:", err);
+            setGlobalFeedback({ 
+                message: "System failed to initialize. Please check console or try a fresh folder.", 
+                type: 'error' 
+            });
+        } finally {
             setIsLoading(false);
-            return;
         }
-
-        // Repair and verify
-        const repairSuccess = await verifyAndRepairFiles(onProgress, settings);
-        if (!repairSuccess) {
-            console.error("File integrity check failed. Some features might be degraded.");
-        }
-
-        setIsInitialized(true);
-        setIsLoading(false);
         
     }, [settings, auth]);
 
@@ -124,68 +126,46 @@ const App: React.FC = () => {
         initializeApp();
     }, [initializeApp]);
     
-    // --- UI Effects ---
     useEffect(() => {
-        const isLg = typeof window !== 'undefined' && (window as any).innerWidth >= 1024;
-        if (isPinned && isLg) {
-            setIsSidebarOpen(true);
-        } else if (!isLg) {
-            setIsSidebarOpen(false); 
-        }
+        const isLg = window.innerWidth >= 1024;
+        if (isPinned && isLg) setIsSidebarOpen(true);
+        else if (!isLg) setIsSidebarOpen(false); 
     }, [isPinned]);
 
     useEffect(() => {
-        if (typeof (window as any).document === 'undefined') return;
         const currentTheme = settings.activeThemeMode === 'light' ? settings.lightTheme : settings.darkTheme;
-        (window as any).document.documentElement.setAttribute('data-theme', currentTheme);
-        (window as any).document.documentElement.style.fontSize = `${settings.fontSize}px`;
+        document.documentElement.setAttribute('data-theme', currentTheme);
+        document.documentElement.style.fontSize = `${settings.fontSize}px`;
     }, [settings.activeThemeMode, settings.lightTheme, settings.darkTheme, settings.fontSize]);
 
-    // Feature guard
     const { features } = settings;
     useEffect(() => {
         let isTabAllowed = true;
         switch (activeTab) {
-            case 'prompt':
-                isTabAllowed = features.isPromptLibraryEnabled;
-                break;
-            case 'gallery':
-                isTabAllowed = features.isGalleryEnabled;
-                break;
+            case 'prompt': isTabAllowed = features.isPromptLibraryEnabled; break;
+            case 'gallery': isTabAllowed = features.isGalleryEnabled; break;
             case 'cheatsheet':
             case 'artstyles':
-            case 'artists':
-                isTabAllowed = features.isCheatsheetsEnabled;
-                break;
+            case 'artists': isTabAllowed = features.isCheatsheetsEnabled; break;
             case 'composer':
             case 'image_compare':
             case 'color_palette_extractor':
             case 'resizer':
-            case 'video_to_frames':
-                isTabAllowed = features.isToolsEnabled;
-                break;
+            case 'video_to_frames': isTabAllowed = features.isToolsEnabled; break;
         }
-        
-        if (!isTabAllowed) {
-            setActiveTab('dashboard');
-        }
+        if (!isTabAllowed) setActiveTab('dashboard');
     }, [activeTab, features, setActiveTab]);
 
-    // --- Handlers ---
     const handleMenuClick = () => {
-        const isLg = typeof window !== 'undefined' && (window as any).innerWidth >= 1024;
-        if (isLg && isPinned) {
-            setIsPinned(false);
-        }
+        const isLg = window.innerWidth >= 1024;
+        if (isLg && isPinned) setIsPinned(false);
         setIsSidebarOpen(p => !p);
     };
 
     const handleNavigate = (tab: ActiveTab) => {
         setActiveTab(tab);
-        const isLg = typeof window !== 'undefined' && (window as any).innerWidth >= 1024;
-        if (!isPinned && !isLg) {
-            setIsSidebarOpen(false);
-        }
+        const isLg = window.innerWidth >= 1024;
+        if (!isPinned && !isLg) setIsSidebarOpen(false);
     };
     
     const showGlobalFeedback = useCallback((message: string, isError = false) => {
@@ -198,10 +178,10 @@ const App: React.FC = () => {
         showGlobalFeedback('Sent to Prompt Builder!');
     }, [showGlobalFeedback]);
 
-    const handleClipIdea = (idea: Idea) => {
+    const handleClipIdea = useCallback((idea: Idea) => {
         setClippedIdeas(prev => [idea, ...prev]);
         showGlobalFeedback(`Clipped "${idea.title}"`);
-    };
+    }, [setClippedIdeas, showGlobalFeedback]);
 
     const handleRemoveIdea = (id: string) => setClippedIdeas(prev => prev.filter(idea => idea.id !== id));
     const handleClearAllIdeas = () => setClippedIdeas([]);
@@ -214,7 +194,19 @@ const App: React.FC = () => {
         setIsClippingPanelOpen(false);
     };
 
-    // --- Render Logic ---
+    const handleSaveClippedIdea = async (idea: Idea) => {
+        try {
+            await addSavedPrompt({
+                text: idea.prompt,
+                title: idea.title,
+                tags: [idea.lens]
+            });
+            showGlobalFeedback(`"${idea.title}" archived to Library.`);
+        } catch (e) {
+            showGlobalFeedback("Failed to archive idea.", true);
+        }
+    };
+
     const renderContent = () => {
         const categoryPanelProps = {
             isCategoryPanelCollapsed: !!collapsedPanels[activeTab],
@@ -222,48 +214,33 @@ const App: React.FC = () => {
         };
 
         switch (activeTab) {
-            case 'dashboard':
-                return <Dashboard onNavigate={handleNavigate} />;
-            case 'prompts':
-                return <PromptsPage onClipIdea={handleClipIdea} initialState={promptsPageState} onStateHandled={() => setPromptsPageState(null)} showGlobalFeedback={showGlobalFeedback} />;
-            case 'prompt':
-                return <SavedPrompts {...categoryPanelProps} onSendToEnhancer={(prompt) => handleSendToPromptsPage({ prompt, view: 'enhancer' })} showGlobalFeedback={showGlobalFeedback} onClipIdea={handleClipIdea} />;
-            case 'gallery':
-                return <ImageGallery {...categoryPanelProps} isSidebarPinned={isPinned && isSidebarOpen} showGlobalFeedback={showGlobalFeedback} />;
-            case 'cheatsheet':
-                return <Cheatsheet {...categoryPanelProps} isSidebarPinned={isPinned && isSidebarOpen} />;
-            case 'artstyles':
-                return <ArtstyleCheatsheet {...categoryPanelProps} isSidebarPinned={isPinned && isSidebarOpen} onSendToPromptsPage={(state) => handleSendToPromptsPage({ ...state, view: 'enhancer' })} />;
-            case 'artists':
-                return <ArtistCheatsheet {...categoryPanelProps} isSidebarPinned={isPinned && isSidebarOpen} onSendToPromptsPage={(state) => handleSendToPromptsPage({ ...state, view: 'enhancer' })} />;
-            case 'settings':
-                return <SetupPage activeSettingsTab={activeSettingsTab} setActiveSettingsTab={setActiveSettingsTab} activeSubTab={activeSettingsSubTab} setActiveSubTab={setActiveSettingsSubTabSetter} showGlobalFeedback={showGlobalFeedback} />;
-            case 'composer':
-                return <ComposerPage />;
-            case 'image_compare':
-                return <ImageCompare />;
-            case 'color_palette_extractor':
-                return <ColorPaletteExtractor onClipIdea={handleClipIdea} />;
-            case 'resizer':
-                return <ImageResizer />;
-            case 'video_to_frames':
-                return <VideoToFrames />;
-            default:
-                return <Dashboard onNavigate={handleNavigate} />;
+            // FIX: Pass onClipIdea to Dashboard component
+            case 'dashboard': return <Dashboard onNavigate={handleNavigate} onClipIdea={handleClipIdea} />;
+            case 'prompts': return <PromptsPage onClipIdea={handleClipIdea} initialState={promptsPageState} onStateHandled={() => setPromptsPageState(null)} showGlobalFeedback={showGlobalFeedback} />;
+            case 'prompt': return <SavedPrompts {...categoryPanelProps} onSendToEnhancer={(prompt) => handleSendToPromptsPage({ prompt, view: 'enhancer' })} showGlobalFeedback={showGlobalFeedback} onClipIdea={handleClipIdea} />;
+            case 'gallery': return <ImageGallery {...categoryPanelProps} isSidebarPinned={isPinned && isSidebarOpen} showGlobalFeedback={showGlobalFeedback} />;
+            case 'cheatsheet': return <Cheatsheet {...categoryPanelProps} isSidebarPinned={isPinned && isSidebarOpen} />;
+            case 'artstyles': return <ArtstyleCheatsheet {...categoryPanelProps} isSidebarPinned={isPinned && isSidebarOpen} onSendToPromptsPage={(state) => handleSendToPromptsPage({ ...state, view: 'enhancer' })} />;
+            case 'artists': return <ArtistCheatsheet {...categoryPanelProps} isSidebarPinned={isPinned && isSidebarOpen} onSendToPromptsPage={(state) => handleSendToPromptsPage({ ...state, view: 'enhancer' })} />;
+            case 'settings': return <SetupPage activeSettingsTab={activeSettingsTab} setActiveSettingsTab={setActiveSettingsTab} activeSubTab={activeSettingsSubTab} setActiveSubTab={setActiveSettingsSubTabSetter} showGlobalFeedback={showGlobalFeedback} />;
+            case 'composer': return <ComposerPage />;
+            case 'image_compare': return <ImageCompare />;
+            case 'color_palette_extractor': return <ColorPaletteExtractor onClipIdea={handleClipIdea} />;
+            case 'resizer': return <ImageResizer />;
+            case 'video_to_frames': return <VideoToFrames />;
+            // FIX: Pass onClipIdea to Dashboard component in default case
+            default: return <Dashboard onNavigate={handleNavigate} onClipIdea={handleClipIdea} />;
         }
     };
     
-    if (isLoading) {
-        return <InitialLoader />;
-    }
-
-    if (showWelcome) {
-        return <Welcome onSetupComplete={initializeApp} />;
-    }
-
-    if (!isInitialized) {
-        return <div className="p-8 text-center text-error font-black uppercase tracking-tighter text-4xl">System Initialization Failure.</div>;
-    }
+    if (isLoading) return <InitialLoader status={initStatus} progress={initProgress} />;
+    if (showWelcome) return <Welcome onSetupComplete={initializeApp} />;
+    if (!isInitialized) return (
+        <div className="p-8 h-full w-full flex flex-col items-center justify-center bg-base-100">
+            <p className="text-error font-black uppercase tracking-tighter text-4xl mb-4 text-center">Neural Link Failure.</p>
+            <button onClick={() => window.location.reload()} className="btn btn-primary rounded-none font-black text-xs tracking-widest uppercase">Retry Uplink</button>
+        </div>
+    );
 
     return (
         <div className="h-full bg-base-300">
@@ -301,6 +278,8 @@ const App: React.FC = () => {
                 onClearAll={handleClearAllIdeas}
                 onInsertIdea={handleInsertIdea}
                 onRefineIdea={handleRefineIdea}
+                onAddIdea={handleClipIdea}
+                onSaveToLibrary={handleSaveClippedIdea}
             />
             
             <AboutModal isOpen={isAboutModalOpen} onClose={() => setIsAboutModalOpen(false)} />

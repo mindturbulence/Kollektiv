@@ -83,7 +83,7 @@ const ImageSlot: React.FC<{
       </div>
       <div className="flex gap-2">
         <button onClick={(e) => { e.stopPropagation(); (inputRef.current as any)?.click(); }} className="btn btn-xs btn-ghost border border-base-300 rounded-none font-black text-[8px] tracking-widest uppercase">UPLOAD</button>
-        <button onClick={(e) => { e.stopPropagation(); onLibraryOpen(); }} className="btn btn-xs btn-primary rounded-none font-black text-[8px] tracking-widest uppercase">LIBRARY</button>
+        <button onClick={(e) => { e.stopPropagation(); onLibraryOpen(); }} className="btn btn-xs btn-xs btn-primary rounded-none font-black text-[8px] tracking-widest uppercase">LIBRARY</button>
       </div>
     </div>
   );
@@ -313,25 +313,38 @@ const ImageCompare: React.FC = () => {
                 </aside>
 
                 <main 
-                    ref={viewerRef}
-                    className="flex-grow bg-base-200/20 overflow-hidden relative"
-                    style={{ cursor: transform.zoom > 1 ? (isPanning ? 'grabbing' : 'grab') : 'default' }}
-                    onWheel={handleWheel}
-                    onMouseDown={handleMouseDown}
-                    onMouseMove={handleMouseMove}
-                    onMouseUp={handleMouseUpOrLeave}
-                    onMouseLeave={handleMouseUpOrLeave}
+                    className="flex-grow bg-base-100 overflow-y-auto overflow-x-hidden scroll-smooth custom-scrollbar flex flex-col"
                 >
-                    {!imageA || !imageB ? (
-                        <div className="w-full h-full flex flex-col items-center justify-center text-center p-12 opacity-10">
-                            <RefreshIcon className="w-24 h-24 mb-6" />
-                            <p className="text-xl font-black uppercase tracking-widest">Awaiting Dual Input Sequence</p>
+                    <section className="p-10 border-b border-base-300 bg-base-200/20">
+                        <div className="max-w-screen-2xl mx-auto flex flex-col gap-1">
+                            <div className="flex flex-col md:flex-row md:items-stretch justify-between gap-6">
+                                <h1 className="text-2xl lg:text-3xl font-black tracking-tighter text-base-content leading-none flex items-center uppercase">Image Compare<span className="text-primary">.</span></h1>
+                            </div>
+                            <p className="text-[11px] font-bold text-base-content/30 uppercase tracking-[0.3em] w-full">Synchronized viewport for pixel-accurate evaluation and side-by-side comparison.</p>
                         </div>
-                    ) : viewMode === 'split' ? (
-                        <SplitView key="split" imageA={imageA} imageB={imageB} transform={transform} viewerRef={viewerRef} />
-                    ) : (
-                        <SideBySideView key="sideBySide" imageA={imageA} imageB={imageB} transform={transform} />
-                    )}
+                    </section>
+
+                    <div 
+                        ref={viewerRef}
+                        className="flex-grow bg-base-200/20 overflow-hidden relative"
+                        style={{ cursor: transform.zoom > 1 ? (isPanning ? 'grabbing' : 'grab') : 'default' }}
+                        onWheel={handleWheel}
+                        onMouseDown={handleMouseDown}
+                        onMouseMove={handleMouseMove}
+                        onMouseUp={handleMouseUpOrLeave}
+                        onMouseLeave={handleMouseUpOrLeave}
+                    >
+                        {!imageA || !imageB ? (
+                            <div className="w-full h-full flex flex-col items-center justify-center text-center p-12 opacity-10">
+                                <RefreshIcon className="w-24 h-24 mb-6" />
+                                <p className="text-xl font-black uppercase tracking-widest">Awaiting Dual Input Sequence</p>
+                            </div>
+                        ) : viewMode === 'split' ? (
+                            <SplitView key="split" imageA={imageA} imageB={imageB} transform={transform} viewerRef={viewerRef} />
+                        ) : (
+                            <SideBySideView key="sideBySide" imageA={imageA} imageB={imageB} transform={transform} />
+                        )}
+                    </div>
                 </main>
             </div>
 

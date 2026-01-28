@@ -471,26 +471,37 @@ const ImageResizer: React.FC = () => {
                     </footer>
                 </aside>
 
-                <main className="flex-grow bg-base-200/20 overflow-hidden relative flex flex-col">
-                    {images.length > 0 ? (
-                        <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 gap-px bg-base-300 border-r border-base-300 overflow-y-auto custom-scrollbar">
-                           {images.map(img => (
-                               <ImageCard 
-                                    key={img.id}
-                                    item={img}
-                                    settings={settings}
-                                    onRemove={() => handleRemoveImage(img.id)}
-                                    onCropMouseDown={handleCropMouseDown}
-                                    imageRef={(el) => {
-                                        if (el) imageRefs.current.set(img.id, el);
-                                        else imageRefs.current.delete(img.id);
-                                    }}
-                               />
-                           ))}
+                <main className="flex-grow bg-base-100 overflow-y-auto overflow-x-hidden scroll-smooth custom-scrollbar flex flex-col">
+                    <section className="p-10 border-b border-base-300 bg-base-200/20">
+                        <div className="max-w-screen-2xl mx-auto flex flex-col gap-1">
+                            <div className="flex flex-col md:flex-row md:items-stretch justify-between gap-6">
+                                <h1 className="text-2xl lg:text-3xl font-black tracking-tighter text-base-content leading-none flex items-center uppercase">Image Resizer<span className="text-primary">.</span></h1>
+                            </div>
+                            <p className="text-[11px] font-bold text-base-content/30 uppercase tracking-[0.3em] w-full">Batch processing utility for spatial optimization and visual format conversion.</p>
                         </div>
-                    ) : (
-                        <DropZone onFilesAdded={handleAddFiles} />
-                    )}
+                    </section>
+
+                    <div className="flex-grow bg-base-200/20 relative flex flex-col">
+                        {images.length > 0 ? (
+                            <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 gap-px bg-base-300 border-r border-base-300 overflow-y-auto custom-scrollbar">
+                               {images.map(img => (
+                                   <ImageCard 
+                                        key={img.id}
+                                        item={img}
+                                        settings={settings}
+                                        onRemove={() => handleRemoveImage(img.id)}
+                                        onCropMouseDown={handleCropMouseDown}
+                                        imageRef={(el) => {
+                                            if (el) imageRefs.current.set(img.id, el);
+                                            else imageRefs.current.delete(img.id);
+                                        }}
+                                   />
+                               ))}
+                            </div>
+                        ) : (
+                            <DropZone onFilesAdded={handleAddFiles} />
+                        )}
+                    </div>
                 </main>
             </div>
         </div>

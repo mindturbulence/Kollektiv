@@ -2,7 +2,7 @@ import React from 'react';
 
 const LoadingSpinner: React.FC<{ size?: string | number }> = ({ size = 64 }) => {
   return (
-    <div className="flex justify-center items-center" aria-label="Loading content...">
+    <div className="flex justify-center items-center text-white" aria-label="Loading content...">
       <svg 
         style={{ width: size, height: size }}
         version="1.1" 
@@ -115,7 +115,7 @@ const LoadingSpinner: React.FC<{ size?: string | number }> = ({ size = 64 }) => 
             27.2727272727% { transform: translate(12px, 0); }
             36.3636363636% { transform: translate(0px, 0); }
             45.4545454545% { transform: translate(0px, -12px); }
-            54.5454545455% { transform: translate(12px, -12px); }
+            54.5454545455% { transform: translate(0px, -12px); }
             63.6363636364% { transform: translate(0px, -12px); }
             72.7272727273% { transform: translate(0px, -12px); }
             81.8181818182% { transform: translate(0px, 0px); }

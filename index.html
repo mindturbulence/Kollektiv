@@ -5,6 +5,7 @@
     <link rel="icon" type="image/svg+xml" href="/vite.svg" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Kollektiv</title>
+    <link rel="stylesheet" href="/index.css" />
     <link rel="stylesheet" href="https://fonts.bunny.net/css?family=urbanist:100,200,300,400,500,600,700,800,900,100i,200i,300i,400i,500i,600i,700i,800i,900i&display=swap" />
     <script type="text/javascript">
       // Critical: Load theme immediately to support "use current themes" during integrity check
@@ -25,6 +26,7 @@
         height: 100%;
         margin: 0;
         padding: 0;
+        overflow: hidden;
       }
       #initial-loader {
         display: flex;
@@ -32,19 +34,23 @@
         align-items: center;
         justify-content: center;
         height: 100%;
-        background-color: canvas; /* Fallback to system canvas */
-        color: currentColor;
+        /* Use theme background variable, fallback to dark if not loaded yet */
+        background-color: oklch(var(--b1, 0.1 0 0)); 
+        color: white;
         font-family: 'Urbanist', sans-serif;
+        transition: background-color 0.3s ease;
       }
       
-      .custom-loader-svg {
-        width: 64px;
-        height: 64px;
+      .loader-wrapper {
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        color: white;
       }
 
       .box5631 {
         transform-origin: 50% 50%;
-        fill: currentColor;
+        fill: white;
       }
 
       @keyframes moveBox5631-1 {
@@ -143,7 +149,7 @@
         27.2727272727% { transform: translate(12px, 0); }
         36.3636363636% { transform: translate(0px, 0); }
         45.4545454545% { transform: translate(0px, -12px); }
-        54.5454545455% { transform: translate(12px, -12px); }
+        54.5454545455% { transform: translate(0px, -12px); }
         63.6363636364% { transform: translate(0px, -12px); }
         72.7272727273% { transform: translate(0px, -12px); }
         81.8181818182% { transform: translate(0px, 0px); }
@@ -202,7 +208,9 @@
     "url": "https://esm.sh/url@^0.11.4?corp",
     "react/": "https://esm.sh/react@^19.1.1/",
     "react-dom/": "https://esm.sh/react-dom@^19.1.1/",
-    "daisyui": "https://esm.sh/daisyui@^5.0.50"
+    "daisyui": "https://esm.sh/daisyui@^5.0.50",
+    "lottie-web": "https://esm.sh/lottie-web@^5.12.2",
+    "@vitejs/plugin-basic-ssl": "https://esm.sh/@vitejs/plugin-basic-ssl@^2.1.4"
   }
 }
 </script>
@@ -212,22 +220,26 @@
   <body>
     <div id="root">
       <div id="initial-loader">
-        <svg class="custom-loader-svg" version="1.1" id="cog9_1_" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" x="0px" y="0px" viewBox="-13 -13 45 45" enable-background="new 0 0 96 96" xml:space="preserve">
-          <g>
-            <circle class="box5631" cx="13" cy="1" r="5"/>
-            <circle class="box5631" cx="13" cy="1" r="5"/>
-            <circle class="box5631" cx="25" cy="25" r="5"/>
-            <circle class="box5631" cx="13" cy="13" r="5"/>
-            <circle class="box5631" cx="13" cy="13" r="5"/>
-            <circle class="box5631" cx="25" cy="13" r="5"/>
-            <circle class="box5631" cx="1" cy="25" r="5"/>
-            <circle class="box5631" cx="13" cy="25" r="5"/>
-            <circle class="box5631" cx="25" cy="25" r="5"/>
-          </g>
-        </svg>
-        <p id="loading-status" class="mt-4 text-sm font-bold uppercase tracking-[0.2em] opacity-40">Loading System...</p>
-        <div id="loading-progress-container" class="w-64 h-1.5 bg-base-content/5 rounded-full mt-4 overflow-hidden" style="display: none;">
-          <div id="loading-progress-bar" class="h-full bg-primary rounded-full transition-all duration-300" style="width: 0%;"></div>
+        <div class="loader-wrapper">
+          <svg style="width: 120px; height: 120px" viewBox="-13 -13 45 45">
+            <g>
+              <circle class="box5631" cx="13" cy="1" r="5"/>
+              <circle class="box5631" cx="13" cy="1" r="5"/>
+              <circle class="box5631" cx="25" cy="25" r="5"/>
+              <circle class="box5631" cx="13" cy="13" r="5"/>
+              <circle class="box5631" cx="13" cy="13" r="5"/>
+              <circle class="box5631" cx="25" cy="13" r="5"/>
+              <circle class="box5631" cx="1" cy="25" r="5"/>
+              <circle class="box5631" cx="13" cy="25" r="5"/>
+              <circle class="box5631" cx="25" cy="25" r="5"/>
+            </g>
+          </svg>
+        </div>
+        <div class="flex flex-col items-center mt-8 relative z-10">
+          <p id="loading-status" class="text-[10px] font-black uppercase tracking-[0.5em] text-white opacity-40">Initializing System...</p>
+          <div id="loading-progress-container" class="w-48 h-0.5 bg-white/5 rounded-full mt-4 overflow-hidden" style="display: none;">
+            <div id="loading-progress-bar" class="h-full bg-white rounded-full transition-all duration-300" style="width: 0%;"></div>
+          </div>
         </div>
       </div>
     </div>

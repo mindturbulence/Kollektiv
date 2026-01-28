@@ -1,8 +1,9 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { createPortal } from 'react-dom';
 import type { SavedPrompt, PromptCategory } from '../types';
 import useAutosizeTextArea from '../utils/useAutosizeTextArea';
 import { CloseIcon } from './icons';
+import AutocompleteSelect from './AutocompleteSelect';
 
 interface PromptEditorModalProps {
   isOpen: boolean;
@@ -41,6 +42,11 @@ const PromptEditorModal: React.FC<PromptEditorModalProps> = ({ isOpen, onClose, 
     }
   }, [editingPrompt, isOpen]);
   
+  const categoryOptions = useMemo(() => [
+    { label: 'UNCATEGORIZED', value: '' },
+    ...categories.map(cat => ({ label: cat.name.toUpperCase(), value: cat.id }))
+  ], [categories]);
+
   const handleTagInputKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
     if (e.key === 'Enter' || e.key === ',') {
         e.preventDefault();
@@ -104,20 +110,18 @@ const PromptEditorModal: React.FC<PromptEditorModalProps> = ({ isOpen, onClose, 
                   type="text"
                   value={title}
                   onChange={(e) => setTitle((e.currentTarget as any).value)}
-                  className="input input-bordered rounded-none w-full font-bold tracking-tight"
+                  className="input input-bordered rounded-none w-full font-bold tracking-tight h-10"
                   placeholder="E.g. Portrait Concept #1"
                 />
               </div>
               <div className="form-control">
                 <label className="text-[10px] font-black uppercase tracking-[0.2em] text-base-content/40 mb-2">Select Category</label>
-                <select
-                  value={categoryId}
-                  onChange={(e) => setCategoryId((e.currentTarget as any).value)}
-                  className="select select-bordered rounded-none w-full font-bold tracking-tight"
-                >
-                  <option value="">Uncategorized</option>
-                  {categories.map(cat => <option key={cat.id} value={cat.id}>{cat.name}</option>)}
-                </select>
+                <AutocompleteSelect 
+                  value={categoryId} 
+                  onChange={setCategoryId} 
+                  options={categoryOptions} 
+                  placeholder="SELECT REGISTRY FOLDER..." 
+                />
               </div>
           </div>
 

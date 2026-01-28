@@ -1,114 +1,107 @@
-
 import React, { useState, useEffect, useRef, useMemo } from 'react';
+import { ChevronDownIcon, SearchIcon } from './icons';
+
+export interface AutocompleteOption {
+  label: string;
+  value: string;
+}
 
 interface AutocompleteSelectProps {
-  options: string[];
+  options: AutocompleteOption[];
   value: string;
   onChange: (value: string) => void;
   placeholder?: string;
+  className?: string;
 }
 
-const AutocompleteSelect: React.FC<AutocompleteSelectProps> = ({ options, value, onChange, placeholder }) => {
-  const [inputValue, setInputValue] = useState(value || '');
+const AutocompleteSelect: React.FC<AutocompleteSelectProps> = ({ options, value, onChange, placeholder, className = "" }) => {
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
+  const [searchQuery, setSearchQuery] = useState('');
   const wrapperRef = useRef<HTMLDivElement>(null);
 
-  useEffect(() => {
-    setInputValue(value || '');
-  }, [value]);
+  const selectedOption = useMemo(() => 
+    options.find(opt => opt.value === value), 
+  [options, value]);
 
   const filteredOptions = useMemo(() => {
-    if (!inputValue) {
-      return options;
-    }
-    const lowerInputValue = inputValue.toLowerCase();
+    if (!searchQuery) return options;
+    const lowerQuery = searchQuery.toLowerCase();
     return options.filter(option =>
-      option.toLowerCase().includes(lowerInputValue)
+      option.label.toLowerCase().includes(lowerQuery)
     );
-  }, [inputValue, options]);
+  }, [searchQuery, options]);
 
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
-      if (wrapperRef.current && !(wrapperRef.current as any).contains(event.target as any)) {
+      if (wrapperRef.current && !wrapperRef.current.contains(event.target as Node)) {
         setIsDropdownOpen(false);
-        if (!options.includes(inputValue) && inputValue !== '') {
-             setInputValue(value || '');
-        }
+        setSearchQuery('');
       }
     };
 
-    if (typeof window !== 'undefined' && (window as any).document) {
-        (window as any).document.addEventListener('mousedown', handleClickOutside);
-    }
-    return () => {
-        if (typeof window !== 'undefined' && (window as any).document) {
-            (window as any).document.removeEventListener('mousedown', handleClickOutside);
-        }
-    };
-  }, [wrapperRef, value, inputValue, options]);
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
 
-  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    setInputValue((e.currentTarget as any).value);
+  const handleToggle = () => {
+    setIsDropdownOpen(!isDropdownOpen);
     if (!isDropdownOpen) {
-      setIsDropdownOpen(true);
+      setSearchQuery('');
     }
   };
 
-  const handleOptionClick = (option: string) => {
-    onChange(option);
-    setInputValue(option);
+  const handleOptionClick = (optionValue: string) => {
+    onChange(optionValue);
     setIsDropdownOpen(false);
-  };
-  
-  const handleInputFocus = () => {
-      setIsDropdownOpen(true);
-  };
-  
-  const handleClear = (e: React.MouseEvent) => {
-      e.stopPropagation();
-      onChange('');
-      setInputValue('');
-      setIsDropdownOpen(false);
+    setSearchQuery('');
   };
 
   return (
-    <div className="relative" ref={wrapperRef}>
-      <div className="join w-full">
-        <input
-            type="text"
-            value={inputValue}
-            onChange={handleInputChange}
-            onFocus={handleInputFocus}
-            placeholder={placeholder || 'Select...'}
-            className="input input-sm input-bordered join-item w-full"
-        />
-         {value && (
-            <button
-                onClick={handleClear}
-                className="btn btn-sm btn-ghost join-item"
-                title="Clear selection"
-            >
-                ✕
-            </button>
-        )}
+    <div className={`relative w-full ${className}`} ref={wrapperRef}>
+      <div 
+        onClick={handleToggle}
+        className="flex items-center justify-between px-3 py-2 bg-base-100 border border-base-300 rounded-none cursor-pointer hover:border-primary transition-colors h-10"
+      >
+        <span className={`text-sm font-bold truncate uppercase tracking-tight ${!selectedOption ? 'text-base-content/30' : 'text-base-content'}`}>
+          {selectedOption ? selectedOption.label : placeholder || 'Select option...'}
+        </span>
+        <ChevronDownIcon className={`w-4 h-4 text-base-content/40 transition-transform ${isDropdownOpen ? 'rotate-180' : ''}`} />
       </div>
+
       {isDropdownOpen && (
-        <ul className="absolute z-10 w-full mt-1 bg-base-200 shadow-lg rounded-box max-h-60 overflow-y-auto">
-          {filteredOptions.length > 0 ? (
-            filteredOptions.map(option => (
-              <li key={option}>
-                <a
-                  onClick={() => handleOptionClick(option)}
-                  className={`block px-4 py-2 text-sm hover:bg-base-300 cursor-pointer ${value === option ? 'bg-primary text-primary-content' : ''}`}
-                >
-                  {option}
-                </a>
+        <div className="absolute z-[100] w-full mt-1 bg-base-200 border border-base-300 shadow-2xl rounded-none flex flex-col overflow-hidden animate-fade-in">
+          <div className="p-2 border-b border-base-300 bg-base-100 flex items-center gap-2">
+            <SearchIcon className="w-3.5 h-3.5 opacity-30" />
+            <input
+              autoFocus
+              type="text"
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              placeholder="Filter list..."
+              className="bg-transparent border-none outline-none text-xs font-bold uppercase tracking-widest w-full py-1"
+              onClick={(e) => e.stopPropagation()}
+            />
+          </div>
+          <ul className="max-h-60 overflow-y-auto custom-scrollbar p-1">
+            {filteredOptions.length > 0 ? (
+              filteredOptions.map(option => (
+                <li key={option.value}>
+                  <button
+                    type="button"
+                    onClick={() => handleOptionClick(option.value)}
+                    className={`w-full text-left px-3 py-2.5 text-xs font-bold uppercase tracking-tight hover:bg-primary hover:text-primary-content transition-colors ${value === option.value ? 'bg-primary/10 text-primary' : ''}`}
+                  >
+                    {option.label}
+                  </button>
+                </li>
+              ))
+            ) : (
+              <li className="px-4 py-4 text-[10px] font-black uppercase tracking-widest text-base-content/30 text-center">
+                No matches found
               </li>
-            ))
-          ) : (
-            <li className="px-4 py-2 text-sm text-base-content/60">No options found</li>
-          )}
-        </ul>
+            )}
+          </ul>
+        </div>
       )}
     </div>
   );

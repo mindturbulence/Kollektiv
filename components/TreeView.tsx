@@ -1,6 +1,4 @@
-
-
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback, useEffect } from 'react';
 import { FolderOpenIcon, FolderClosedIcon, ChevronRightIcon } from './icons';
 
 export interface TreeViewItem {
@@ -15,6 +13,7 @@ interface TreeViewProps {
   items: TreeViewItem[];
   selectedId: string;
   onSelect: (id: string) => void;
+  searchActive?: boolean;
 }
 
 const TreeViewNode: React.FC<{ 
@@ -24,11 +23,13 @@ const TreeViewNode: React.FC<{
     level: number;
     expandedIds: Set<string>;
     onToggleExpand: (id: string) => void;
-}> = ({ item, selectedId, onSelect, level, expandedIds, onToggleExpand }) => {
+    searchActive?: boolean;
+}> = ({ item, selectedId, onSelect, level, expandedIds, onToggleExpand, searchActive }) => {
   
   const isSelected = item.id === selectedId;
   const hasChildren = item.children && item.children.length > 0;
-  const isExpanded = hasChildren && expandedIds.has(item.id);
+  // If search is active, always expand if it has children
+  const isExpanded = hasChildren && (searchActive || expandedIds.has(item.id));
 
   const getIcon = () => {
     return isSelected
@@ -38,7 +39,7 @@ const TreeViewNode: React.FC<{
   
   const handleNodeClick = () => {
       onSelect(item.id);
-      if (hasChildren) {
+      if (hasChildren && !searchActive) {
           onToggleExpand(item.id);
       }
   };
@@ -74,6 +75,7 @@ const TreeViewNode: React.FC<{
                 level={level + 1}
                 expandedIds={expandedIds}
                 onToggleExpand={onToggleExpand}
+                searchActive={searchActive}
             />
           ))}
         </ul>
@@ -83,7 +85,7 @@ const TreeViewNode: React.FC<{
 };
 
 
-const TreeView: React.FC<TreeViewProps> = ({ items, selectedId, onSelect }) => {
+const TreeView: React.FC<TreeViewProps> = ({ items, selectedId, onSelect, searchActive }) => {
     const [expandedIds, setExpandedIds] = useState<Set<string>>(new Set(['all']));
 
     const handleToggleExpand = useCallback((id: string) => {
@@ -110,6 +112,7 @@ const TreeView: React.FC<TreeViewProps> = ({ items, selectedId, onSelect }) => {
                 level={0}
                 expandedIds={expandedIds}
                 onToggleExpand={handleToggleExpand}
+                searchActive={searchActive}
             />
             ))}
         </ul>

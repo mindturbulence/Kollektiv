@@ -16,6 +16,7 @@ interface CrafterManifest {
 }
 
 class CrafterService {
+    // FIX: Changed return type from 'PresetsManifest' (not defined in this file) to 'CrafterManifest'.
     private async getManifest(): Promise<CrafterManifest> {
         const manifestContent = await fileSystemManager.readFile(MANIFEST_NAME);
         if (manifestContent) {
@@ -348,11 +349,13 @@ class CrafterService {
 
         const extractFromCategory = (category: WildcardCategory) => {
             for (const file of category.files) {
+                // Ensure paths are handled consistently for placeholder naming
                 const cleanPath = file.path.replace(/\.(txt|yml|yaml)$/i, '');
                 const placeholder = `__${cleanPath}__`;
                 wildcardPathList.push(placeholder);
                 for (const line of file.content) {
                     const trimmedLine = line.trim().toLowerCase();
+                    // Longer phrases first to ensure correct greedy matching
                     if (trimmedLine.length > 2) allPotentialMatches.push({ text: trimmedLine, placeholder });
                 }
             }
@@ -360,6 +363,8 @@ class CrafterService {
         };
 
         crafterData.wildcardCategories.forEach(extractFromCategory);
+        
+        // Sort by length descending to match full phrases before individual words
         allPotentialMatches.sort((a, b) => b.text.length - a.text.length);
         
         let modifiedPrompt = promptText;
@@ -367,24 +372,36 @@ class CrafterService {
 
         for (const { text, placeholder } of allPotentialMatches) {
             const escapedValue = text.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-            const regex = new RegExp(`\\b${escapedValue}\\b`, 'gi');
+            // Use a smarter regex that allows for common punctuation around words
+            const regex = new RegExp(`(?<=^|[\\s,\\.\\(])(${escapedValue})(?=[\\s,\\.\\)]|$)`, 'gi');
             if (regex.test(modifiedPrompt)) {
                 modifiedPrompt = modifiedPrompt.replace(regex, placeholder);
                 localReplacementsCount++;
             }
         }
 
-        if (localReplacementsCount > 2 || (localReplacementsCount > 0 && modifiedPrompt.includes('__'))) {
+        // Only fallback to AI if local matching was sparse
+        if (localReplacementsCount > 3 && modifiedPrompt.includes('__')) {
             return modifiedPrompt;
         }
 
-        // Token Optimization: Only send a smaller subset of relevant wildcard names to the AI
+        // Logic for AI context: Send ALL wildcard names if list is short, otherwise filter
         const promptLower = promptText.toLowerCase();
-        const filteredWildcards = wildcardPathList.filter(wp => {
-            const parts = wp.replace(/__/g, '').split('/');
-            return parts.some(p => promptLower.includes(p.toLowerCase()));
-        });
-        const finalWildcardContext = filteredWildcards.length > 0 ? filteredWildcards : wildcardPathList.slice(0, 15);
+        let finalWildcardContext: string[] = [];
+        
+        if (wildcardPathList.length <= 40) {
+            finalWildcardContext = wildcardPathList;
+        } else {
+            // Include wildcards where the name or path segments match words in the prompt
+            finalWildcardContext = wildcardPathList.filter(wp => {
+                const parts = wp.replace(/__/g, '').split('/');
+                return parts.some(p => promptLower.includes(p.toLowerCase()));
+            });
+            // If still too few, add some default high-level categories
+            if (finalWildcardContext.length < 10) {
+                finalWildcardContext = Array.from(new Set([...finalWildcardContext, ...wildcardPathList.slice(0, 20)]));
+            }
+        }
 
         return generatePromptFormulaWithAI(promptText, finalWildcardContext, settings);
     }

@@ -8,7 +8,7 @@ import {
     savePromptCategoriesOrder
 } from '../utils/promptStorage';
 import type { SavedPrompt, PromptCategory, Idea } from '../types';
-import { PromptIcon, ArrowsUpDownIcon, FolderClosedIcon } from './icons';
+import { PromptIcon, ArrowsUpDownIcon, FolderClosedIcon, SearchIcon, CloseIcon } from './icons';
 import ConfirmationModal from './ConfirmationModal';
 import SavedPromptCard from './SavedPromptCard';
 import TreeView, { TreeViewItem } from './TreeView';
@@ -46,8 +46,40 @@ const SavedPrompts: React.FC<SavedPromptsProps> = ({ onSendToEnhancer, isCategor
   const [selectedCategoryId, setSelectedCategoryId] = useState<string>('all');
   const [sortOrder, setSortOrder] = useState<SortOrder>('newest');
   const [searchQuery, setSearchQuery] = useState('');
+  const [categorySearchQuery, setCategorySearchQuery] = useState('');
   const [columnCount, setColumnCount] = useState(() => getColumnCount());
   const [detailViewPromptId, setDetailViewPromptId] = useState<string | null>(null);
+
+  const scrollerRef = useRef<HTMLDivElement>(null);
+  const gridRef = useRef<HTMLDivElement>(null);
+
+  // --- Elastic Scroll Logic ---
+  useEffect(() => {
+    const scroller = scrollerRef.current;
+    if (!scroller) return;
+
+    let lastScrollY = scroller.scrollTop;
+    let velocity = 0;
+    let rafId: number;
+
+    const updateVelocity = () => {
+      const currentScrollY = scroller.scrollTop;
+      const diff = currentScrollY - lastScrollY;
+      velocity += (diff - velocity) * 0.15;
+      lastScrollY = currentScrollY;
+      const skew = Math.max(-7, Math.min(7, velocity * 0.1));
+      const scale = 1 - Math.min(0.05, Math.abs(velocity) * 0.0005);
+      if (gridRef.current) {
+        gridRef.current.style.setProperty('--scroll-velocity', `${skew}deg`);
+        gridRef.current.style.setProperty('--scroll-scale', `${scale}`);
+      }
+      if (Math.abs(velocity) > 0.01) { velocity *= 0.85; } else { velocity = 0; }
+      rafId = requestAnimationFrame(updateVelocity);
+    };
+
+    rafId = requestAnimationFrame(updateVelocity);
+    return () => cancelAnimationFrame(rafId);
+  }, []);
 
   useEffect(() => {
     const handleResize = () => setColumnCount(getColumnCount());
@@ -95,25 +127,49 @@ const SavedPrompts: React.FC<SavedPromptsProps> = ({ onSendToEnhancer, isCategor
     }
   };
 
+  // --- Recursive Tree Filtering ---
   const treeItems = useMemo<TreeViewItem[]>(() => {
+    const q = categorySearchQuery.toLowerCase().trim();
+
     const buildTree = (parentId?: string): TreeViewItem[] => {
-        return categories
-            .filter(cat => cat.parentId === parentId)
-            .map(cat => ({
-                id: cat.id,
-                name: cat.name,
-                icon: 'folder',
-                count: prompts.filter(p => p.categoryId === cat.id).length,
-                children: buildTree(cat.id)
-            }));
+      const children = categories.filter(cat => cat.parentId === parentId);
+      const results: TreeViewItem[] = [];
+
+      for (const cat of children) {
+        const subTree = buildTree(cat.id);
+        const nameMatches = cat.name.toLowerCase().includes(q);
+        
+        if (!q || nameMatches || subTree.length > 0) {
+          results.push({
+            id: cat.id,
+            name: cat.name,
+            icon: 'folder' as const,
+            count: prompts.filter(p => p.categoryId === cat.id).length,
+            children: subTree
+          });
+        }
+      }
+      return results;
     };
     
-    return [
-      { id: 'all', name: 'Global Repository', icon: 'prompt' as const, count: prompts.length },
-      ...buildTree(undefined),
-      { id: 'uncategorized', name: 'Uncategorized', icon: 'inbox' as const, count: prompts.filter(p => !p.categoryId).length }
-    ];
-  }, [categories, prompts]);
+    const rootNodes = buildTree(undefined);
+    const globalRepoMatches = !q || 'Global Repository'.toLowerCase().includes(q);
+    const uncategorizedMatches = !q || 'Uncategorized'.toLowerCase().includes(q);
+
+    const tree: TreeViewItem[] = [];
+    if (globalRepoMatches) tree.push({ id: 'all', name: 'Global Repository', icon: 'prompt' as const, count: prompts.length });
+    tree.push(...rootNodes);
+    if (uncategorizedMatches) tree.push({ id: 'uncategorized', name: 'Uncategorized', icon: 'inbox' as const, count: prompts.filter(p => !p.categoryId).length });
+
+    return tree;
+  }, [categories, prompts, categorySearchQuery]);
+
+  const displayHeroTitle = useMemo(() => {
+    if (selectedCategoryId === 'all') return 'Prompt Library';
+    if (selectedCategoryId === 'uncategorized') return 'Uncategorized';
+    const selectedCat = categories.find(c => c.id === selectedCategoryId);
+    return selectedCat ? selectedCat.name : 'Prompt Library';
+  }, [selectedCategoryId, categories]);
 
   const sortedAndFilteredPrompts = useMemo(() => {
       let filtered = (selectedCategoryId === 'all')
@@ -134,78 +190,159 @@ const SavedPrompts: React.FC<SavedPromptsProps> = ({ onSendToEnhancer, isCategor
       return sorted;
   }, [prompts, selectedCategoryId, sortOrder, searchQuery]);
 
+  const activeDetailViewIndex = useMemo(() => {
+      if (!detailViewPromptId) return -1;
+      return sortedAndFilteredPrompts.findIndex(p => p.id === detailViewPromptId);
+  }, [detailViewPromptId, sortedAndFilteredPrompts]);
+
+  const isDetailViewVisible = activeDetailViewIndex !== -1;
+
   const columns = useMemo(() => {
     const cols: SavedPrompt[][] = Array.from({ length: columnCount }, () => []);
     sortedAndFilteredPrompts.forEach((item, index) => cols[index % columnCount].push(item));
     return cols;
   }, [sortedAndFilteredPrompts, columnCount]);
 
-  if (isLoading) return <div className="flex-grow flex items-center justify-center"><LoadingSpinner /></div>;
+  if (isLoading) return (
+    <div className="h-full w-full flex items-center justify-center bg-base-100">
+        <LoadingSpinner />
+    </div>
+  );
 
   return (
     <>
       <section className="flex flex-row h-full bg-base-100 overflow-hidden">
-        <aside className={`relative flex-shrink-0 bg-base-100 border-r border-base-300 transition-all duration-300 ease-in-out ${isCategoryPanelCollapsed ? 'w-0' : 'w-96'}`}>
+        <aside className={`relative flex-shrink-0 bg-base-100 border-r border-base-300 transition-all duration-300 ease-in-out flex flex-col ${isCategoryPanelCollapsed ? 'w-0' : 'w-96'}`}>
           <CategoryPanelToggle isCollapsed={isCategoryPanelCollapsed} onToggle={onToggleCategoryPanel} />
-          <div className={`h-full overflow-hidden transition-opacity duration-200 ${isCategoryPanelCollapsed ? 'opacity-0 invisible' : 'opacity-100 visible'}`}>
-            <div className="h-full overflow-y-auto p-6 w-96 custom-scrollbar">
+          
+          <div className={`flex flex-col h-full overflow-hidden transition-opacity duration-200 ${isCategoryPanelCollapsed ? 'opacity-0 invisible' : 'opacity-100 visible'}`}>
+            <div className="flex-shrink-0 bg-base-100 border-b border-base-300 h-14">
+                <div className="flex items-center h-full relative">
+                    <SearchIcon className="absolute left-6 w-4 h-4 opacity-20 pointer-events-none" />
+                    <input 
+                        type="text" 
+                        value={categorySearchQuery}
+                        onChange={(e) => setCategorySearchQuery(e.target.value)}
+                        placeholder="FIND FOLDER..." 
+                        className="w-full h-full bg-transparent border-none focus:outline-none focus:ring-0 pl-14 pr-12 font-bold uppercase tracking-tight text-[10px] placeholder:text-base-content/10"
+                    />
+                    {categorySearchQuery && (
+                        <button 
+                            onClick={() => setCategorySearchQuery('')} 
+                            className="absolute right-4 btn btn-xs btn-ghost btn-circle opacity-40 hover:opacity-100 transition-opacity"
+                            title="Clear search"
+                        >
+                            <CloseIcon className="w-4 h-4" />
+                        </button>
+                    )}
+                </div>
+            </div>
+
+            <div className="flex-grow overflow-y-auto p-6 w-96 custom-scrollbar">
               <h2 className="text-[10px] font-black uppercase tracking-[0.3em] text-base-content/30 mb-6 px-3">Registry Index</h2>
-              <TreeView items={treeItems} selectedId={selectedCategoryId} onSelect={setSelectedCategoryId} />
+              <TreeView 
+                items={treeItems} 
+                selectedId={selectedCategoryId} 
+                onSelect={setSelectedCategoryId} 
+                searchActive={!!categorySearchQuery}
+              />
             </div>
           </div>
         </aside>
 
-        <main className="relative flex-grow flex flex-col h-full overflow-y-auto overflow-x-hidden bg-base-100 scroll-smooth custom-scrollbar">
-            <section className="p-10 lg:p-16 border-b border-base-300 bg-base-200/20">
-                <div className="max-w-screen-2xl mx-auto flex flex-col md:flex-row items-end justify-between gap-12">
-                    <div className="flex-1">
-                        <h1 className="text-4xl lg:text-5xl font-black tracking-tighter text-base-content leading-tight mb-6">TOKENS<span className="text-primary">.</span></h1>
-                        <p className="text-base font-bold text-base-content/40 uppercase tracking-[0.3em] max-w-md">Archival repository for high-fidelity generative formulas.</p>
-                    </div>
-                </div>
-            </section>
-
-            <div className="flex-shrink-0 bg-base-100 px-10 py-6 border-b border-base-300 sticky top-0 z-20 backdrop-blur-md bg-base-100/80">
-                <div className="max-w-screen-2xl mx-auto flex flex-wrap items-center justify-between gap-6">
-                    <div className="flex items-center gap-4 flex-grow max-w-xl">
-                        <div className="w-1.5 h-1.5 rounded-full bg-primary animate-pulse"></div>
-                        <input type="text" value={searchQuery} onChange={(e) => setSearchQuery((e.currentTarget as any).value)} placeholder="Filter sequence..." className="input input-ghost w-full focus:bg-transparent border-none px-0 font-bold text-xl tracking-tight placeholder:opacity-10" />
-                    </div>
-                    <div className="flex items-center gap-4">
-                        <select value={sortOrder} onChange={(e) => setSortOrder((e.currentTarget as any).value as SortOrder)} className="select select-bordered select-sm rounded-none text-[10px] font-black uppercase tracking-widest"><option value="newest">Recent</option><option value="oldest">Oldest</option><option value="title">A-Z</option></select>
-                        <button onClick={() => { setPromptToEdit(null); setIsEditorModalOpen(true); }} className="btn btn-primary btn-sm rounded-none font-black text-[10px] tracking-widest px-6 shadow-lg">ARCHIVE NEW</button>
-                    </div>
-                </div>
-            </div>
-
-            <div className="flex-grow p-0 bg-base-200/5 min-h-[400px]">
-                {prompts.length === 0 ? (
-                    <div className="text-center py-32 flex flex-col items-center opacity-10">
-                        <PromptIcon className="mx-auto h-20 w-20" />
-                        <h3 className="mt-6 text-2xl font-black uppercase tracking-tighter">Vault Empty</h3>
-                    </div>
-                ) : sortedAndFilteredPrompts.length > 0 ? (
-                    <div className="flex border-r border-base-300">
-                        {columns.map((columnItems, colIndex) => (
-                            <div key={colIndex} className="flex flex-1 flex-col gap-0 min-w-0 border-l border-base-300 first:border-l-0">
-                                {columnItems.map(prompt => (
-                                    <SavedPromptCard key={prompt.id} prompt={prompt} categoryName={categories.find(c => c.id === prompt.categoryId)?.name} onDeleteClick={(p) => { setPromptToDelete(p); setIsDeleteModalOpen(true); }} onEditClick={(p) => { setPromptToEdit(p); setIsEditorModalOpen(true); }} onSendToEnhancer={onSendToEnhancer} onOpenDetailView={() => setDetailViewPromptId(prompt.id)} onClip={(p) => onClipIdea({ id: `clipped-${p.id}`, lens: 'Library', title: p.title || 'Artifact', prompt: p.text, source: 'Library' })} />
-                                ))}
-                            </div>
-                        ))}
-                    </div>
-                ) : (
-                    <div className="text-center py-32 flex flex-col items-center opacity-10"><h3 className="text-xl font-black uppercase tracking-tighter">No Matches</h3></div>
-                )}
-            </div>
-
-            {detailViewPromptId && (
-                <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm animate-fade-in flex items-center justify-center p-1 lg:p-2 overflow-hidden">
-                    <div className="w-full h-full bg-base-300 rounded-none border border-base-300 shadow-2xl flex flex-col overflow-hidden relative">
-                         <PromptDetailView prompts={sortedAndFilteredPrompts} currentIndex={sortedAndFilteredPrompts.findIndex(i => i.id === detailViewPromptId)} onClose={() => setDetailViewPromptId(null)} onNavigate={(idx) => setDetailViewPromptId(sortedAndFilteredPrompts[idx].id)} onDelete={(p) => { setDetailViewPromptId(null); setPromptToDelete(p); setIsDeleteModalOpen(true); }} onUpdate={handleUpdatePrompt} onSendToEnhancer={(text) => { setDetailViewPromptId(null); onSendToEnhancer(text); }} showGlobalFeedback={showGlobalFeedback} onClip={(p) => onClipIdea({ id: `clipped-${p.id}`, lens: 'Library', title: p.title || 'Artifact', prompt: p.text, source: 'Library' })} />
-                    </div>
-                </div>
+        <main className="relative flex-grow flex flex-col h-full overflow-hidden bg-base-100">
+            {isDetailViewVisible && (
+                <PromptDetailView 
+                    prompts={sortedAndFilteredPrompts} 
+                    currentIndex={activeDetailViewIndex} 
+                    onClose={() => setDetailViewPromptId(null)} 
+                    onNavigate={(idx) => setDetailViewPromptId(sortedAndFilteredPrompts[idx].id)} 
+                    onDelete={(p) => { setDetailViewPromptId(null); setPromptToDelete(p); setIsDeleteModalOpen(true); }} 
+                    onUpdate={handleUpdatePrompt} 
+                    onSendToEnhancer={(text) => { setDetailViewPromptId(null); onSendToEnhancer(text); }} 
+                    showGlobalFeedback={showGlobalFeedback} 
+                    onClip={(p) => onClipIdea({ id: `clipped-${p.id}`, lens: 'Library', title: p.title || 'Artifact', prompt: p.text, source: 'Library' })} 
+                />
             )}
+
+            <div className={`flex flex-col h-full overflow-hidden transition-all duration-300 ${isDetailViewVisible ? 'blur-sm pointer-events-none' : ''}`}>
+                <section className="flex-shrink-0 p-10 border-b border-base-300 bg-base-200/20">
+                    <div className="w-full flex flex-col gap-1">
+                        <div className="flex flex-col md:flex-row md:items-stretch justify-between gap-6">
+                            <h1 className="text-2xl lg:text-3xl font-black tracking-tighter text-base-content leading-none flex items-center uppercase">{displayHeroTitle}<span className="text-primary">.</span></h1>
+                            <div className="flex bg-base-100 px-6 py-2 border border-base-300 shadow-sm self-start md:self-auto min-h-full">
+                                <div className="flex flex-col border-r border-base-300 px-6 last:border-r-0 justify-center">
+                                    <span className="text-2xl font-black tracking-tighter leading-none">{sortedAndFilteredPrompts.length}</span>
+                                    <span className="text-[8px] uppercase font-black text-base-content/30 tracking-[0.2em] mt-0.5">Tokens</span>
+                                </div>
+                            </div>
+                        </div>
+                        <p className="text-[11px] font-bold text-base-content/30 uppercase tracking-[0.3em] w-full">Archival repository for high-fidelity generative formulas.</p>
+                    </div>
+                </section>
+
+                <div className="flex-shrink-0 bg-base-100 border-b border-base-300 sticky top-0 z-20 h-14">
+                    <div className="flex items-stretch h-full w-full">
+                        <div className="flex-grow flex items-center relative border-r border-base-300">
+                            <SearchIcon className="absolute left-6 w-4 h-4 opacity-20 pointer-events-none" />
+                            <input
+                                type="text"
+                                value={searchQuery}
+                                onChange={(e) => setSearchQuery(e.target.value)}
+                                placeholder="FILTER SEQUENCE..."
+                                className="w-full h-full bg-transparent border-none focus:outline-none focus:ring-0 pl-14 pr-6 font-bold uppercase tracking-tight text-sm placeholder:text-base-content/10"
+                            />
+                        </div>
+                        <div className="flex items-stretch">
+                            <select
+                                value={sortOrder}
+                                onChange={(e) => setSortOrder(e.target.value as SortOrder)}
+                                className="select select-ghost rounded-none border-none border-r border-base-300 focus:outline-none h-full px-8 text-[10px] font-black uppercase tracking-widest bg-base-100 hover:bg-base-200"
+                            >
+                                <option value="newest">Recent</option>
+                                <option value="oldest">Oldest</option>
+                                <option value="title">A-Z</option>
+                            </select>
+                            <button
+                                onClick={() => { setPromptToEdit(null); setIsEditorModalOpen(true); }}
+                                className="btn btn-primary rounded-none h-full border-none px-10 font-black text-[10px] tracking-[0.2em] shadow-none uppercase"
+                            >
+                                ARCHIVE NEW
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                <div ref={scrollerRef} className="flex-grow overflow-y-auto scroll-smooth custom-scrollbar bg-base-200/5">
+                    {prompts.length === 0 ? (
+                        <div className="text-center py-32 flex flex-col items-center opacity-10">
+                            <PromptIcon className="mx-auto h-20 w-20" />
+                            <h3 className="text-2xl font-black uppercase tracking-tighter">Vault Empty</h3>
+                        </div>
+                    ) : sortedAndFilteredPrompts.length > 0 ? (
+                        <div 
+                            ref={gridRef}
+                            className="flex border-r border-base-300 elastic-grid-container"
+                            style={{ 
+                                '--scroll-velocity': '0deg',
+                                '--scroll-scale': '1'
+                            } as any}
+                        >
+                            {columns.map((columnItems, colIndex) => (
+                                <div key={colIndex} className="flex flex-1 flex-col gap-0 min-w-0 border-l border-base-300 first:border-l-0">
+                                    {columnItems.map(prompt => (
+                                        <div key={prompt.id} className="elastic-grid-item">
+                                            <SavedPromptCard prompt={prompt} categoryName={categories.find(c => c.id === prompt.categoryId)?.name} onDeleteClick={(p) => { setPromptToDelete(p); setIsDeleteModalOpen(true); }} onEditClick={(p) => { setPromptToEdit(p); setIsEditorModalOpen(true); }} onSendToEnhancer={onSendToEnhancer} onOpenDetailView={() => setDetailViewPromptId(prompt.id)} onClip={(p) => onClipIdea({ id: `clipped-${p.id}`, lens: 'Library', title: p.title || 'Artifact', prompt: p.text, source: 'Library' })} />
+                                        </div>
+                                    ))}
+                                </div>
+                            ))}
+                        </div>
+                    ) : (
+                        <div className="text-center py-32 flex flex-col items-center opacity-10"><h3 className="text-xl font-black uppercase tracking-tighter">No Matches</h3></div>
+                    )}
+                </div>
+            </div>
         </main>
       </section>
       <PromptEditorModal isOpen={isEditorModalOpen} onClose={() => setIsEditorModalOpen(false)} onSave={handleSavePrompt} categories={categories} editingPrompt={promptToEdit} />

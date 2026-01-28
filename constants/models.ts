@@ -1,5 +1,5 @@
 export const TARGET_IMAGE_AI_MODELS = [
-  'FLUX 2.0 (Next-Gen)',
+  'Flux 2 Klein',
   'FLUX.1.1 [pro]',
   'FLUX.1 [dev/schnell]',
   'Midjourney v6.1',

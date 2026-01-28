@@ -58,8 +58,14 @@ const SavedPromptCard: React.FC<SavedPromptCardProps> = ({ prompt, categoryName,
   const title = prompt.title?.trim() || prompt.basePrompt?.trim() || 'UNTITLED_IDEA';
   const displayCategory = categoryName || 'Uncategorized';
 
+  const fullDate = new Date(prompt.createdAt).toLocaleDateString('en-US', { 
+    year: 'numeric', 
+    month: 'long', 
+    day: 'numeric' 
+  });
+
   return (
-    <div className="flex flex-col group bg-base-100 transition-all duration-300 hover:bg-base-200/30 border-b border-base-300 last:border-b-0">
+    <div className="flex flex-col group bg-base-100 transition-all duration-300 hover:bg-base-200/30 border-b border-base-300">
       <div className="p-8 flex flex-col h-full">
         {/* Header */}
         <div className="flex justify-between items-start gap-4 mb-4">
@@ -106,11 +112,11 @@ const SavedPromptCard: React.FC<SavedPromptCardProps> = ({ prompt, categoryName,
         </div>
 
         {/* Footer */}
-        <div className="pt-6 flex justify-between items-center mt-auto">
+        <div className="pt-6 flex justify-between items-center mt-auto border-t border-base-300/50">
             <div className="flex flex-col">
                 <span className="text-[8px] font-black uppercase tracking-widest text-base-content/20 mb-1">Archival Date</span>
-                <time className="text-[10px] font-mono text-base-content/40">
-                    {new Date(prompt.createdAt).toLocaleDateString()}
+                <time className="text-[10px] font-mono font-bold text-base-content/40 uppercase">
+                    {fullDate}
                 </time>
             </div>
             

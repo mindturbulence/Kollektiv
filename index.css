@@ -49,4 +49,32 @@
   .floating-scrollbar:hover::-webkit-scrollbar-thumb:hover {
     background: oklch(var(--p) / 0.5);
   }
+
+  /* Neutral Black and White effect */
+  .media-monochrome {
+    filter: grayscale(1) opacity(0.9);
+    transition: filter 0.5s ease, opacity 0.5s ease;
+  }
+
+  /* Layout Transition Utilities */
+  .grid-layout-transition-item {
+    will-change: transform, width, height;
+  }
+
+  /* Elastic Grid Scroll Effect */
+  .elastic-grid-container {
+    perspective: 1000px;
+  }
+
+  .elastic-grid-item {
+    transform: skewY(var(--scroll-velocity, 0deg)) scaleY(var(--scroll-scale, 1));
+    will-change: transform;
+    transition: transform 0.2s cubic-bezier(0.23, 1, 0.32, 1);
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .elastic-grid-item {
+      transform: none !important;
+    }
+  }
 }

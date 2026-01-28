@@ -1,4 +1,3 @@
-
 import React from 'react';
 
 // Icons from Tabler Icons (tabler.io) & custom icons
@@ -18,6 +17,48 @@ export const SearchIcon: React.FC<React.SVGProps<SVGSVGElement>> = (props) => (
     <path stroke="none" d="M0 0h24v24H0z" fill="none"/>
     <path d="M10 10m-7 0a7 7 0 1 0 14 0a7 7 0 1 0 -14 0" />
     <path d="M21 21l-6 -6" />
+  </svg>
+);
+
+export const LayoutGridSmIcon: React.FC<React.SVGProps<SVGSVGElement>> = (props) => (
+  <svg {...commonProps} {...props}>
+    <path stroke="none" d="M0 0h24v24H0z" fill="none"/>
+    <path d="M4 4m0 1a1 1 0 0 1 1 -1h2a1 1 0 0 1 1 1v2a1 1 0 0 1 -1 1h-2a1 1 0 0 1 -1 -1z" />
+    <path d="M10 4m0 1a1 1 0 0 1 1 -1h2a1 1 0 0 1 1 1v2a1 1 0 0 1 -1 1h-2a1 1 0 0 1 -1 -1z" />
+    <path d="M16 4m0 1a1 1 0 0 1 1 -1h2a1 1 0 0 1 1 1v2a1 1 0 0 1 -1 1h-2a1 1 0 0 1 -1 -1z" />
+    <path d="M4 10m0 1a1 1 0 0 1 1 -1h2a1 1 0 0 1 1 1v2a1 1 0 0 1 -1 1h-2a1 1 0 0 1 -1 -1z" />
+    <path d="M10 10m0 1a1 1 0 0 1 1 -1h2a1 1 0 0 1 1 1v2a1 1 0 0 1 -1 1h-2a1 1 0 0 1 -1 -1z" />
+    <path d="M16 10m0 1a1 1 0 0 1 1 -1h2a1 1 0 0 1 1 1v2a1 1 0 0 1 -1 1h-2a1 1 0 0 1 -1 -1z" />
+    <path d="M4 16m0 1a1 1 0 0 1 1 -1h2a1 1 0 0 1 1 1v2a1 1 0 0 1 -1 1h-2a1 1 0 0 1 -1 -1z" />
+    <path d="M10 16m0 1a1 1 0 0 1 1 -1h2a1 1 0 0 1 1 1v2a1 1 0 0 1 -1 1h-2a1 1 0 0 1 -1 -1z" />
+    <path d="M16 16m0 1a1 1 0 0 1 1 -1h2a1 1 0 0 1 1 1v2a1 1 0 0 1 -1 1h-2a1 1 0 0 1 -1 -1z" />
+  </svg>
+);
+
+export const LayoutGridMdIcon: React.FC<React.SVGProps<SVGSVGElement>> = (props) => (
+  <svg {...commonProps} {...props}>
+    <path stroke="none" d="M0 0h24v24H0z" fill="none"/>
+    <path d="M4 4m0 1a1 1 0 0 1 1 -1h6a1 1 0 0 1 1 1v6a1 1 0 0 1 -1 1h-6a1 1 0 0 1 -1 -1z" />
+    <path d="M13 4m0 1a1 1 0 0 1 1 -1h6a1 1 0 0 1 1 1v6a1 1 0 0 1 -1 1h-6a1 1 0 0 1 -1 -1z" />
+    <path d="M4 13m0 1a1 1 0 0 1 1 -1h6a1 1 0 0 1 1 1v6a1 1 0 0 1 -1 1h-6a1 1 0 0 1 -1 -1z" />
+    <path d="M13 13m0 1a1 1 0 0 1 1 -1h6a1 1 0 0 1 1 1v6a1 1 0 0 1 -1 1h-6a1 1 0 0 1 -1 -1z" />
+  </svg>
+);
+
+export const LayoutGridLgIcon: React.FC<React.SVGProps<SVGSVGElement>> = (props) => (
+  <svg {...commonProps} {...props}>
+    <path stroke="none" d="M0 0h24v24H0z" fill="none"/>
+    <path d="M4 4m0 2a2 2 0 0 1 2 -2h12a2 2 0 0 1 2 2v12a2 2 0 0 1 -2 2h-12a2 2 0 0 1 -2 -2z" />
+  </svg>
+);
+
+export const LayoutDashboardIcon: React.FC<React.SVGProps<SVGSVGElement>> = (props) => (
+  <svg {...commonProps} {...props}>
+    <path stroke="none" d="M0 0h24v24H0z" fill="none"/>
+    <path d="M5 4h4a1 1 0 0 1 1 1v6a1 1 0 0 1 -1 1h-4a1 1 0 0 1 -1 -1v-6a1 1 0 0 1 1 -1" />
+    <path d="M5 16h4a1 1 0 0 1 1 1v2a1 1 0 0 1 -1 1h-4a1 1 0 0 1 -1 -1v-2a1 1 0 0 1 1 -1" />
+    <path d="M15 12h4a1 1 0 0 1 1 1v6a1 1 0 0 1 -1 1h-4a1 1 0 0 1 -1 -1v-6a1 1 0 0 1 1 -1" />
+    <path d="M15 4h4a1 1 0 0 1 1 1v2a1 1 0 0 1 -1 1h-4a1 1 0 0 1 -1 -1v-2a1 1 0 0 1 1 -1" />
   </svg>
 );
 
@@ -94,7 +135,7 @@ export const GitBranchIcon: React.FC<React.SVGProps<SVGSVGElement>> = (props) =>
     <svg {...commonProps} {...props}>
         <path stroke="none" d="M0 0h24v24H0z" fill="none"/>
         <path d="M7 18m-2 0a2 2 0 1 0 4 0a2 2 0 1 0 -4 0" />
-        <path d="M7 6m-2 0a2 2 0 1 0 4 0a2 2 0 1 0 -4 0" />
+        <path d="M7 6m-2 0a2 2 0 1 0 4 0a2 2 0 1 0 -2 0" />
         <path d="M17 6m-2 0a2 2 0 1 0 4 0a2 2 0 1 0 -4 0" />
         <path d="M7 8v8" />
         <path d="M9 18h6a2 2 0 0 0 2 -2v-5" />
@@ -324,6 +365,18 @@ export const ArrowsUpDownIcon: React.FC<React.SVGProps<SVGSVGElement>> = (props)
   </svg>
 );
 
+export const GripVerticalIcon: React.FC<React.SVGProps<SVGSVGElement>> = (props) => (
+  <svg {...commonProps} {...props}>
+    <path stroke="none" d="M0 0h24v24H0z" fill="none"/>
+    <path d="M9 5m-1 0a1 1 0 1 0 2 0a1 1 0 1 0 -2 0" />
+    <path d="M9 12m-1 0a1 1 0 1 0 2 0a1 1 0 1 0 -2 0" />
+    <path d="M9 19m-1 0a1 1 0 1 0 2 0a1 1 0 1 0 -2 0" />
+    <path d="M15 5m-1 0a1 1 0 1 0 2 0a1 1 0 1 0 -2 0" />
+    <path d="M15 12m-1 0a1 1 0 1 0 2 0a1 1 0 1 0 -2 0" />
+    <path d="M15 19m-1 0a1 1 0 1 0 2 0a1 1 0 1 0 -2 0" />
+  </svg>
+);
+
 export const ImageBrokenIcon: React.FC<React.SVGProps<SVGSVGElement>> = (props) => (
   <svg {...commonProps} {...props}>
     <path stroke="none" d="M0 0h24v24H0z" fill="none"/>
@@ -341,14 +394,15 @@ export const ImageBrokenIcon: React.FC<React.SVGProps<SVGSVGElement>> = (props) 
 );
 
 export const ThumbTackIcon: React.FC<React.SVGProps<SVGSVGElement>> = (props) => (
-  <svg {...commonProps} {...props}>
+  <svg 
+    xmlns="http://www.w3.org/2000/svg" 
+    viewBox="0 0 24 24" 
+    fill="currentColor" 
+    className="w-5 h-5"
+    {...props}
+  >
     <path stroke="none" d="M0 0h24v24H0z" fill="none"/>
-    <path d="M4 20l4 -4" />
-    <path d="M10 14l4 -4" />
-    <path d="M4 10l6 6" />
-    <path d="M15 4l5 5" />
-    <path d="M9 4.5l7 7" />
-    <path d="M14.5 9l7 -7" />
+    <path d="M15.113 3.21l.094 .083l5.5 5.5a1 1 0 0 1 -1.175 1.59l-3.172 3.171l-1.424 3.797a1 1 0 0 1 -.158 .277l-.07 .08l-1.5 1.5a1 1 0 0 1 -1.32 .082l-.095 -.083l-2.793 -2.792l-3.793 3.792a1 1 0 0 1 -1.497 -1.32l.083 -.094l3.792 -3.793l-2.792 -2.793a1 1 0 0 1 -.083 -1.32l.083 -.094l1.5 -1.5a1 1 0 0 1 .258 -.187l.098 -.042l3.796 -1.425l3.171 -3.17a1 1 0 0 1 1.497 -1.26z" />
   </svg>
 );
 
@@ -404,7 +458,7 @@ export const PaletteIcon: React.FC<React.SVGProps<SVGSVGElement>> = (props) => (
   <svg {...commonProps} {...props}>
     <path stroke="none" d="M0 0h24v24H0z" fill="none"/>
     <path d="M12 21a9 9 0 0 1 0 -18c4.97 0 9 3.582 9 8c0 1.06 -.474 2.078 -1.318 2.828c-.844 .75 -1.982 1.172 -3.182 1.172h-2.5a2 2 0 0 0 -1 3.75a1.3 1.3 0 0 1 -1 2.25" />
-    <path d="M8.5 10.5m-1 0a1 1 0 1 0 2 0a1 1 0 1 0 -2 0" />
+    <path d="M8.5 10.5m-1 0a1 1 0 1 0 2 0 a1 1 0 1 0 -2 0" />
     <path d="M12.5 7.5m-1 0a1 1 0 1 0 2 0a1 1 0 1 0 -2 0" />
     <path d="M16.5 10.5m-1 0a1 1 0 1 0 2 0a1 1 0 1 0 -2 0" />
   </svg>
@@ -557,11 +611,25 @@ export const BracesIcon: React.FC<React.SVGProps<SVGSVGElement>> = (props) => (
   </svg>
 );
 
-// FIX: Added missing PlusIcon export used in NestedCategoryManager.
 export const PlusIcon: React.FC<React.SVGProps<SVGSVGElement>> = (props) => (
   <svg {...commonProps} {...props}>
     <path stroke="none" d="M0 0h24v24H0z" fill="none"/>
     <path d="M12 5l0 14" />
     <path d="M5 12l14 0" />
+  </svg>
+);
+
+export const TikTokIcon: React.FC<React.SVGProps<SVGSVGElement>> = (props) => (
+  <svg {...commonProps} {...props}>
+    <path stroke="none" d="M0 0h24v24H0z" fill="none"/>
+    <path d="M21 7.917v4.034a9.948 9.948 0 0 1 -5.951 -1.958v4.51a6.5 6.5 0 1 1 -2.5 -5.106v4.031a2.5 2.5 0 1 0 2.5 2.5v-8.011a9.922 9.922 0 0 0 5.951 1.958z" />
+  </svg>
+);
+
+export const YouTubeIcon: React.FC<React.SVGProps<SVGSVGElement>> = (props) => (
+  <svg {...commonProps} {...props}>
+    <path stroke="none" d="M0 0h24v24H0z" fill="none"/>
+    <path d="M2 8a4 4 0 0 1 4 -4h12a4 4 0 0 1 4 4v8a4 4 0 0 1 -4 4h-12a4 4 0 0 1 -4 -4z" />
+    <path d="M10 9l5 3l-5 3z" />
   </svg>
 );

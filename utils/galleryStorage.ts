@@ -39,11 +39,10 @@ export const loadGalleryItems = async (): Promise<GalleryItem[]> => {
     return manifest.galleryItems.sort((a, b) => b.createdAt - a.createdAt);
 };
 
-export const addItemToGallery = async (type: 'image' | 'video', urls: string[], sources: string[], categoryId?: string, defaultTitle?: string, tags?: string[], notes?: string, prompt?: string): Promise<GalleryItem> => {
+export const addItemToGallery = async (type: 'image' | 'video', urls: string[], sources: string[], categoryId?: string, defaultTitle?: string, tags?: string[], notes?: string, prompt?: string, isNsfw?: boolean): Promise<GalleryItem> => {
     const manifest = await getManifest();
     const category = manifest.categories.find(c => c.id === categoryId);
     const categoryName = category?.name;
-    const itemIsNsfw = category ? !!category.isNsfw : false;
 
     const newItemId = `item_${Date.now()}_${uuidv4().substring(0, 6)}`;
 
@@ -51,7 +50,7 @@ export const addItemToGallery = async (type: 'image' | 'video', urls: string[], 
         try {
             const response = await fetch(url);
             const blob = await response.blob();
-            const extension = blob.type.split('/')[1] || (type === 'image' ? 'png' : 'mp4');
+            const extension = blob.type.split('/')[1]?.split('+')[0] || (type === 'image' ? 'png' : 'mp4');
             const fileName = `${newItemId}_${index}.${extension}`;
             
             const pathSegments = ['gallery'];
@@ -81,7 +80,7 @@ export const addItemToGallery = async (type: 'image' | 'video', urls: string[], 
         categoryId: categoryId || undefined,
         tags: tags || [],
         notes: notes || undefined,
-        isNsfw: itemIsNsfw,
+        isNsfw: !!isNsfw,
     };
 
     manifest.galleryItems.unshift(newItem);
@@ -95,18 +94,18 @@ export const updateItemInGallery = async (id: string, updates: Partial<Omit<Gall
     if (itemIndex === -1) return;
 
     const originalItem = manifest.galleryItems[itemIndex];
-    let finalUrls = originalItem.urls;
-    let finalSources = originalItem.sources || [];
+    let finalUrls = [...originalItem.urls];
+    let finalSources = [...(originalItem.sources || [])];
     
-    const { isNsfw, ...otherUpdates } = updates;
-    const newCategory = otherUpdates.categoryId ? manifest.categories.find(c => c.id === otherUpdates.categoryId) :
-                         originalItem.categoryId ? manifest.categories.find(c => c.id === originalItem.categoryId) : null;
-    const newItemIsNsfw = newCategory ? !!newCategory.isNsfw : false;
+    const categoryChanged = updates.categoryId !== undefined && updates.categoryId !== originalItem.categoryId;
+    const newCatId = updates.categoryId !== undefined ? updates.categoryId : originalItem.categoryId;
+    const newCategory = newCatId ? manifest.categories.find(c => c.id === newCatId) : null;
+    const newCategoryName = newCategory?.name || '';
 
+    // 1. Handle actual image data updates
     if (updates.urls && Array.isArray(updates.urls)) {
         const newUrlList = updates.urls;
         const oldUrlList = originalItem.urls;
-        const categoryName = newCategory?.name || '';
         
         const processedUrls = await Promise.all(newUrlList.map(async (urlOrData, index) => {
             if (urlOrData.startsWith('data:')) {
@@ -116,7 +115,7 @@ export const updateItemInGallery = async (id: string, updates: Partial<Omit<Gall
                     const extension = blob.type.split('/')[1]?.split('+')[0] || (originalItem.type === 'image' ? 'png' : 'mp4');
                     const fileName = `${originalItem.id}_${Date.now()}_${index}.${extension}`;
                     const pathSegments = ['gallery'];
-                    if (categoryName) pathSegments.push(categoryName);
+                    if (newCategoryName) pathSegments.push(newCategoryName);
                     
                     const savedPath = await fileSystemManager.saveFile([...pathSegments, fileName].join('/'), blob);
                     return { savedPath, sourceName: `New File ${index+1}` };
@@ -124,9 +123,7 @@ export const updateItemInGallery = async (id: string, updates: Partial<Omit<Gall
                     return null;
                 }
             }
-             const originalIndex = originalItem.urls.indexOf(urlOrData);
-             const sourceName = (originalIndex !== -1 && originalItem.sources) ? originalItem.sources[originalIndex] : urlOrData;
-            return { savedPath: urlOrData, sourceName };
+            return { savedPath: urlOrData, sourceName: originalItem.sources?.[oldUrlList.indexOf(urlOrData)] || urlOrData };
         }));
 
         const successfullyProcessed = processedUrls.filter(Boolean) as { savedPath: string, sourceName: string }[];
@@ -139,12 +136,40 @@ export const updateItemInGallery = async (id: string, updates: Partial<Omit<Gall
         }
     }
 
+    // 2. Handle File Relocation if the category changed
+    if (categoryChanged) {
+        const relocatedUrls: string[] = [];
+        for (const url of finalUrls) {
+            if (!url.startsWith('data:') && !url.startsWith('http')) {
+                const blob = await fileSystemManager.getFileAsBlob(url);
+                if (blob) {
+                    const fileName = url.split('/').pop() || `${originalItem.id}_media`;
+                    const pathSegments = ['gallery'];
+                    if (newCategoryName) pathSegments.push(newCategoryName);
+                    const newPath = [...pathSegments, fileName].join('/');
+                    
+                    if (newPath !== url) {
+                        await fileSystemManager.saveFile(newPath, blob);
+                        await fileSystemManager.deleteFile(url);
+                        relocatedUrls.push(newPath);
+                    } else {
+                        relocatedUrls.push(url);
+                    }
+                } else {
+                    relocatedUrls.push(url);
+                }
+            } else {
+                relocatedUrls.push(url);
+            }
+        }
+        finalUrls = relocatedUrls;
+    }
+
     manifest.galleryItems[itemIndex] = {
         ...originalItem,
-        ...otherUpdates,
+        ...updates,
         urls: finalUrls,
         sources: finalSources,
-        isNsfw: newItemIsNsfw,
     };
 
     await saveManifest(manifest);
@@ -168,12 +193,11 @@ export const loadCategories = async (): Promise<GalleryCategory[]> => {
     return manifest.categories.sort((a, b) => (a.order || 0) - (b.order || 0));
 };
 
-export const addCategory = async (name: string, isNsfw: boolean, parentId?: string): Promise<GalleryCategory[]> => {
+export const addCategory = async (name: string, parentId?: string): Promise<GalleryCategory[]> => {
     const manifest = await getManifest();
     const newCategory: GalleryCategory = {
         id: `cat_${Date.now()}`,
         name: name,
-        isNsfw: isNsfw,
         parentId: parentId,
         order: manifest.categories.length
     };
@@ -186,11 +210,35 @@ export const updateCategory = async (id: string, updates: Partial<Omit<GalleryCa
     const manifest = await getManifest();
     const catIndex = manifest.categories.findIndex(c => c.id === id);
     if (catIndex > -1) {
-        manifest.categories[catIndex] = { ...manifest.categories[catIndex], ...updates };
-        if (updates.isNsfw !== undefined) {
-            manifest.galleryItems.forEach(item => {
-                if (item.categoryId === id) item.isNsfw = updates.isNsfw;
-            });
+        const oldCategory = manifest.categories[catIndex];
+        const nameChanged = updates.name && updates.name !== oldCategory.name;
+        
+        manifest.categories[catIndex] = { ...oldCategory, ...updates };
+
+        if (nameChanged) {
+            const newName = updates.name!;
+            for (const item of manifest.galleryItems) {
+                if (item.categoryId === id) {
+                    const newUrls: string[] = [];
+                    for (const url of item.urls) {
+                        const blob = await fileSystemManager.getFileAsBlob(url);
+                        if (blob) {
+                            const fileName = url.split('/').pop() || `${item.id}_media`;
+                            const newPath = `gallery/${newName}/${fileName}`;
+                            if (newPath !== url) {
+                                await fileSystemManager.saveFile(newPath, blob);
+                                await fileSystemManager.deleteFile(url);
+                                newUrls.push(newPath);
+                            } else {
+                                newUrls.push(url);
+                            }
+                        } else {
+                            newUrls.push(url);
+                        }
+                    }
+                    item.urls = newUrls;
+                }
+            }
         }
     }
     await saveManifest(manifest);
@@ -205,13 +253,35 @@ export const saveCategoriesOrder = async (categories: GalleryCategory[]): Promis
 
 export const deleteCategory = async (id: string): Promise<GalleryCategory[]> => {
     const manifest = await getManifest();
-    manifest.categories = manifest.categories.filter(cat => cat.id !== id);
-    manifest.galleryItems.forEach(item => {
-        if (item.categoryId === id) {
-            item.categoryId = undefined;
-            item.isNsfw = false;
+    const categoryToDelete = manifest.categories.find(cat => cat.id === id);
+    
+    if (categoryToDelete) {
+        for (const item of manifest.galleryItems) {
+            if (item.categoryId === id) {
+                const newUrls: string[] = [];
+                for (const url of item.urls) {
+                    const blob = await fileSystemManager.getFileAsBlob(url);
+                    if (blob) {
+                        const fileName = url.split('/').pop() || `${item.id}_media`;
+                        const newPath = `gallery/${fileName}`;
+                        if (newPath !== url) {
+                            await fileSystemManager.saveFile(newPath, blob);
+                            await fileSystemManager.deleteFile(url);
+                            newUrls.push(newPath);
+                        } else {
+                            newUrls.push(url);
+                        }
+                    } else {
+                        newUrls.push(url);
+                    }
+                }
+                item.urls = newUrls;
+                item.categoryId = undefined;
+            }
         }
-    });
+    }
+
+    manifest.categories = manifest.categories.filter(cat => cat.id !== id);
     await saveManifest(manifest);
     return manifest.categories.sort((a, b) => a.order - b.order);
 };

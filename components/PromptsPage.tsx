@@ -1,4 +1,3 @@
-
 import React, { useState, useCallback, useEffect, useMemo, useRef } from 'react';
 import { useSettings } from '../contexts/SettingsContext';
 import { enhancePromptStream, buildMidjourneyParams, generateWithImagen, generateWithNanoBanana, generateWithVeo, cleanLLMResponse } from '../services/llmService';
@@ -6,6 +5,7 @@ import { loadPromptCategories, addSavedPrompt } from '../utils/promptStorage';
 import { loadArtStyles } from '../utils/artstyleStorage';
 import { loadArtists } from '../utils/artistStorage';
 import { fileToBase64 } from '../utils/fileUtils';
+import { refinerPresetService, type RefinerPreset } from '../services/refinerPresetService';
 
 import type { AppError, SavedPrompt, PromptCategory, EnhancementResult, PromptModifiers, CheatsheetCategory, Idea } from '../types';
 import { 
@@ -47,7 +47,8 @@ import { ImageAbstractor } from './ImageAbstractor';
 import { MetadataReader } from './MetadataReader';
 import LoadingSpinner from './LoadingSpinner';
 import AutocompleteSelect from './AutocompleteSelect';
-import { PhotoIcon, FilmIcon, RefreshIcon, SparklesIcon, UploadIcon, CloseIcon, ChevronDownIcon, Cog6ToothIcon, ArchiveIcon } from './icons';
+import { PhotoIcon, FilmIcon, RefreshIcon, SparklesIcon, UploadIcon, CloseIcon, ChevronDownIcon, Cog6ToothIcon, ArchiveIcon, BookmarkIcon, CheckIcon, DeleteIcon } from './icons';
+import ConfirmationModal from './ConfirmationModal';
 
 interface PromptsPageProps {
   initialState?: { prompt?: string, artStyle?: string, artist?: string, view?: 'enhancer' | 'composer' | 'create', id?: string } | null;
@@ -68,7 +69,7 @@ const PropertyCard: React.FC<{
 }> = ({ label, value, onClear, onClick, active }) => (
     <div 
         onClick={onClick}
-        className={`group relative p-3 border transition-all cursor-pointer select-none flex flex-col justify-center min-h-[4.5rem] animate-fade-in ${active ? 'bg-primary border-primary' : 'bg-base-200/50 border-base-300 hover:border-primary/50'}`}
+        className={`group relative p-3 border transition-all duration-300 cursor-pointer select-none flex flex-col justify-center min-h-[4.5rem] animate-fade-in ${active ? 'bg-primary border-primary' : 'bg-base-200/50 border-base-300 hover:border-primary/50'}`}
     >
         <div className="flex items-center justify-between gap-2 mb-1.5">
             <span className={`text-[10px] font-black uppercase tracking-widest ${active ? 'text-primary-content/60' : 'text-base-content/30'}`}>{label}</span>
@@ -81,7 +82,7 @@ const PropertyCard: React.FC<{
                 </button>
             )}
         </div>
-        <span className={`text-sm font-bold uppercase leading-tight break-words ${active ? 'text-primary-content' : 'text-base-content/80'}`}>
+        <span className={`text-sm font-bold leading-tight break-words first-letter:uppercase ${active ? 'text-primary-content' : 'text-base-content/80'}`}>
             {value || 'Default'}
         </span>
     </div>
@@ -147,6 +148,16 @@ const PromptsPage: React.FC<PromptsPageProps> = ({
     mjSeed: "", mjStop: "", mjRepeat: ""
   });
   
+  // --- Preset Management ---
+  const [presets, setPresets] = useState<RefinerPreset[]>([]);
+  const [selectedPreset, setSelectedPreset] = useState<RefinerPreset | null>(null);
+  const [presetSearchText, setPresetSearchText] = useState('');
+  const [isSavePresetModalOpen, setIsSavePresetModalOpen] = useState(false);
+  const [newPresetName, setNewPresetName] = useState('');
+  const [isSavingPreset, setIsSavingPreset] = useState(false);
+  const [presetToDelete, setPresetToDelete] = useState<RefinerPreset | null>(null);
+  const [isDeletePresetModalOpen, setIsDeletePresetModalOpen] = useState(false);
+
   const [artStyles, setArtStyles] = useState<CheatsheetCategory[]>([]);
   const [artists, setArtists] = useState<CheatsheetCategory[]>([]);
   const [isLoadingRefine, setIsLoadingRefine] = useState(false);
@@ -168,20 +179,69 @@ const PromptsPage: React.FC<PromptsPageProps> = ({
 
   const isMidjourney = useMemo(() => targetAIModel.toLowerCase().includes('midjourney'), [targetAIModel]);
   const isZImage = useMemo(() => targetAIModel === 'Z-Image', [targetAIModel]);
-  const hasPlatformSettings = useMemo(() => isGoogleProduct || isMidjourney, [isGoogleProduct, isMidjourney]);
+  
+  // Tabs visibility logic
+  const tabs = useMemo(() => {
+    const list: { id: RefineSubTab, label: string }[] = [{ id: 'basic', label: 'BASIC' }];
+    
+    if (mediaMode !== 'audio') {
+        list.push({ id: 'styling', label: 'STYLING' });
+        list.push({ id: 'photography', label: 'PHOTO' });
+    }
+    
+    if (mediaMode === 'video') {
+        list.push({ id: 'motion', label: 'MOTION' });
+    }
+    
+    if (mediaMode === 'audio') {
+        list.push({ id: 'audio', label: 'AUDIO' });
+    }
+    
+    if (isMidjourney || isGoogleProduct) {
+        let platformLabel = 'PLATFORM';
+        const target = targetAIModel.toLowerCase();
+        if (target.includes('midjourney')) platformLabel = 'MIDJOURNEY';
+        else if (target.includes('imagen')) platformLabel = 'IMAGEN';
+        else if (target.includes('veo')) platformLabel = 'VEO';
+        else if (target.includes('nano banana')) platformLabel = 'BANANA';
+        
+        list.push({ id: 'platform', label: platformLabel });
+    }
+    
+    return list;
+  }, [mediaMode, isMidjourney, isGoogleProduct, targetAIModel]);
 
+  // Load Presets
+  const loadPresets = useCallback(async () => {
+      try {
+          const loaded = await refinerPresetService.loadPresets();
+          setPresets(loaded);
+      } catch (e) {
+          console.error("Failed to load presets", e);
+      }
+  }, []);
+
+  useEffect(() => {
+      loadPresets();
+  }, [loadPresets]);
+
+  // Fix selection bug: Reset model default ONLY when media mode actually changes
   useEffect(() => {
       if (mediaMode === 'image') {
           setTargetAIModel(TARGET_IMAGE_AI_MODELS[0]);
-          if (activeRefineSubTab === 'motion' || activeRefineSubTab === 'audio') setActiveRefineSubTab('basic');
       } else if (mediaMode === 'video') {
           setTargetAIModel(TARGET_VIDEO_AI_MODELS[0]);
-          if (activeRefineSubTab === 'audio') setActiveRefineSubTab('basic');
       } else {
           setTargetAIModel(TARGET_AUDIO_AI_MODELS[0]);
-          setActiveRefineSubTab('basic');
       }
   }, [mediaMode]);
+
+  // Handle active tab fallback if it disappears from visibility
+  useEffect(() => {
+    if (!tabs.some(t => t.id === activeRefineSubTab)) {
+        setActiveRefineSubTab('basic');
+    }
+  }, [tabs, activeRefineSubTab]);
 
   useEffect(() => {
     const loadData = async () => {
@@ -321,12 +381,18 @@ const PromptsPage: React.FC<PromptsPageProps> = ({
     setIsSaveSuggestionModalOpen(true);
   };
 
-  const handleClipSuggestion = (suggestionText: string, title?: string) => {
+  /**
+   * Universal clip handler that supports custom labeling for different sources.
+   */
+  const handleClipSuggestion = useCallback((suggestionText: string, title?: string, lens: string = 'Refined Formula', source: string = 'Refiner') => {
       onClipIdea({
-          id: `clipped-${Date.now()}`, lens: 'Refined Formula', title: title || `Refined Token`,
-          prompt: suggestionText, source: 'Refiner'
+          id: `clipped-${Date.now()}`, 
+          lens, 
+          title: title || `Refined Token`,
+          prompt: suggestionText, 
+          source
       });
-  };
+  }, [onClipIdea]);
 
   const handlePasteRefineText = async () => {
     try {
@@ -341,7 +407,7 @@ const PromptsPage: React.FC<PromptsPageProps> = ({
   };
 
   const renderTabsHeader = (currentView: typeof activeView) => {
-    const tabs = [
+    const viewTabs = [
         { id: 'composer', label: 'CRAFTER' },
         { id: 'refine', label: 'REFINE' },
         { id: 'abstract', label: 'ANALYZE' },
@@ -351,7 +417,7 @@ const PromptsPage: React.FC<PromptsPageProps> = ({
     return (
         <div className="flex-shrink-0 bg-base-100 border-b border-base-300 sticky top-0 z-20 backdrop-blur-md bg-base-100/80 h-16">
             <div className="flex w-full h-full">
-                {tabs.map((tab) => (
+                {viewTabs.map((tab) => (
                     <button 
                         key={tab.id} 
                         onClick={() => setActiveView(tab.id as any)} 
@@ -488,11 +554,11 @@ const PromptsPage: React.FC<PromptsPageProps> = ({
                       <div className="grid grid-cols-2 gap-4">
                           <div className="form-control">
                             <label className="text-[10px] font-black uppercase text-base-content/40 tracking-widest mb-2 block">Visual Discipline</label>
-                            <AutocompleteSelect value={modifiers.artStyle || ''} onChange={(v) => setModifiers({...modifiers, artStyle: v})} options={artStyles.flatMap(c => c.items.map(i => i.name))} placeholder="Discipline..." />
+                            <AutocompleteSelect value={modifiers.artStyle || ''} onChange={(v) => setModifiers({...modifiers, artStyle: v})} options={artStyles.flatMap(c => c.items.map(i => ({ label: i.name.toUpperCase(), value: i.name })))} placeholder="Discipline..." />
                           </div>
                           <div className="form-control">
                             <label className="text-[10px] font-black uppercase text-base-content/40 tracking-widest mb-2 block">Styling Trends</label>
-                            <AutocompleteSelect value={modifiers.artist || ''} onChange={(v) => setModifiers({...modifiers, artist: v})} options={artists.flatMap(c => c.items.map(i => i.name))} placeholder="Creator influence..." />
+                            <AutocompleteSelect value={modifiers.artist || ''} onChange={(v) => setModifiers({...modifiers, artist: v})} options={artists.flatMap(c => c.items.map(i => ({ label: i.name.toUpperCase(), value: i.name })))} placeholder="Creator influence..." />
                           </div>
                       </div>
                       
@@ -508,24 +574,24 @@ const PromptsPage: React.FC<PromptsPageProps> = ({
                       
                       <div className="form-control">
                           <label className="text-[10px] font-black uppercase text-base-content/40 tracking-widest mb-2 block">Aesthetics Look</label>
-                          <AutocompleteSelect value={modifiers.aestheticLook || ''} onChange={(v) => setModifiers({...modifiers, aestheticLook: v})} options={AESTHETIC_LOOKS} placeholder="Look..." />
+                          <AutocompleteSelect value={modifiers.aestheticLook || ''} onChange={(v) => setModifiers({...modifiers, aestheticLook: v})} options={AESTHETIC_LOOKS.map(l => ({ label: l.toUpperCase(), value: l }))} placeholder="Look..." />
                       </div>
                       <div className="form-control">
                           <label className="text-[10px] font-black uppercase text-base-content/40 tracking-widest mb-2 block">Digital Trend</label>
-                          <AutocompleteSelect value={modifiers.digitalAesthetic || ''} onChange={(v) => setModifiers({...modifiers, digitalAesthetic: v})} options={DIGITAL_AESTHETICS} placeholder="Trend..." />
+                          <AutocompleteSelect value={modifiers.digitalAesthetic || ''} onChange={(v) => setModifiers({...modifiers, digitalAesthetic: v})} options={DIGITAL_AESTHETICS.map(t => ({ label: t.toUpperCase(), value: t }))} placeholder="Trend..." />
                       </div>
                   </div>
               );
           case 'photography':
-              const modelOptions = modifiers.cameraType && CAMERA_MODELS_BY_TYPE[modifiers.cameraType] 
+              const modelOptions = (modifiers.cameraType && CAMERA_MODELS_BY_TYPE[modifiers.cameraType] 
                   ? CAMERA_MODELS_BY_TYPE[modifiers.cameraType] 
-                  : ALL_PROFESSIONAL_CAMERA_MODELS;
+                  : ALL_PROFESSIONAL_CAMERA_MODELS).map(m => ({ label: m.toUpperCase(), value: m }));
 
               return (
                 <div className="space-y-6 animate-fade-in">
                     <div className="form-control">
                         <label className="text-[10px] font-black uppercase text-base-content/40 tracking-widest mb-2 block">Photo Genre</label>
-                        <AutocompleteSelect value={modifiers.photographyStyle || ''} onChange={(v) => setModifiers({...modifiers, photographyStyle: v})} options={PHOTOGRAPHY_STYLES} placeholder="Genre..." />
+                        <AutocompleteSelect value={modifiers.photographyStyle || ''} onChange={(v) => setModifiers({...modifiers, photographyStyle: v})} options={PHOTOGRAPHY_STYLES.map(s => ({ label: s.toUpperCase(), value: s }))} placeholder="Genre..." />
                     </div>
 
                     <div className="form-control">
@@ -552,40 +618,40 @@ const PromptsPage: React.FC<PromptsPageProps> = ({
                         </div>
                         <div className="form-control">
                             <label className="text-[10px] font-black uppercase text-base-content/40 tracking-widest mb-2 block">Film Stock</label>
-                            <AutocompleteSelect value={modifiers.filmStock || ''} onChange={(v) => setModifiers({...modifiers, filmStock: v})} options={ANALOG_FILM_STOCKS} placeholder="Stock..." />
+                            <AutocompleteSelect value={modifiers.filmStock || ''} onChange={(v) => setModifiers({...modifiers, filmStock: v})} options={ANALOG_FILM_STOCKS.map(s => ({ label: s.toUpperCase(), value: s }))} placeholder="Stock..." />
                         </div>
                     </div>
 
                     <div className="grid grid-cols-2 gap-4">
                         <div className="form-control">
                             <label className="text-[10px] font-black uppercase text-base-content/40 tracking-widest mb-2 block">Lens Type</label>
-                            <AutocompleteSelect value={modifiers.lensType || ''} onChange={(v) => setModifiers({...modifiers, lensType: v})} options={LENS_TYPES} placeholder="Glass..." />
+                            <AutocompleteSelect value={modifiers.lensType || ''} onChange={(v) => setModifiers({...modifiers, lensType: v})} options={LENS_TYPES.map(l => ({ label: l.toUpperCase(), value: l }))} placeholder="Glass..." />
                         </div>
                         <div className="form-control">
                             <label className="text-[10px] font-black uppercase text-base-content/40 tracking-widest mb-2 block">Shot Angle</label>
-                            <AutocompleteSelect value={modifiers.cameraAngle || ''} onChange={(v) => setModifiers({...modifiers, cameraAngle: v})} options={CAMERA_ANGLES} placeholder="Angle..." />
+                            <AutocompleteSelect value={modifiers.cameraAngle || ''} onChange={(v) => setModifiers({...modifiers, cameraAngle: v})} options={CAMERA_ANGLES.map(a => ({ label: a.toUpperCase(), value: a }))} placeholder="Angle..." />
                         </div>
                     </div>
 
                     <div className="grid grid-cols-2 gap-4">
                         <div className="form-control">
                             <label className="text-[10px] font-black uppercase text-base-content/40 tracking-widest mb-2 block">Shot Proximity</label>
-                            <AutocompleteSelect value={modifiers.cameraProximity || ''} onChange={(v) => setModifiers({...modifiers, cameraProximity: v})} options={CAMERA_PROXIMITY} placeholder="Distance..." />
+                            <AutocompleteSelect value={modifiers.cameraProximity || ''} onChange={(v) => setModifiers({...modifiers, cameraProximity: v})} options={CAMERA_PROXIMITY.map(p => ({ label: p.toUpperCase(), value: p }))} placeholder="Distance..." />
                         </div>
                         <div className="form-control">
                             <label className="text-[10px] font-black uppercase text-base-content/40 tracking-widest mb-2 block">Technical Settings</label>
-                            <AutocompleteSelect value={modifiers.cameraSettings || ''} onChange={(v) => setModifiers({...modifiers, cameraSettings: v})} options={CAMERA_SETTINGS} placeholder="Technical..." />
+                            <AutocompleteSelect value={modifiers.cameraSettings || ''} onChange={(v) => setModifiers({...modifiers, cameraSettings: v})} options={CAMERA_SETTINGS.map(s => ({ label: s.toUpperCase(), value: s }))} placeholder="Technical..." />
                         </div>
                     </div>
 
                     <div className="grid grid-cols-2 gap-4">
                         <div className="form-control">
                             <label className="text-[10px] font-black uppercase text-base-content/40 tracking-widest mb-2 block">Lighting Rig</label>
-                            <AutocompleteSelect value={modifiers.lighting || ''} onChange={(v) => setModifiers({...modifiers, lighting: v})} options={LIGHTING_OPTIONS} placeholder="Lighting..." />
+                            <AutocompleteSelect value={modifiers.lighting || ''} onChange={(v) => setModifiers({...modifiers, lighting: v})} options={LIGHTING_OPTIONS.map(l => ({ label: l.toUpperCase(), value: l }))} placeholder="Lighting..." />
                         </div>
                         <div className="form-control">
                             <label className="text-[10px] font-black uppercase text-base-content/40 tracking-widest mb-2 block">Composition Layout</label>
-                            <AutocompleteSelect value={modifiers.composition || ''} onChange={(v) => setModifiers({...modifiers, composition: v})} options={COMPOSITION_OPTIONS} placeholder="Layout..." />
+                            <AutocompleteSelect value={modifiers.composition || ''} onChange={(v) => setModifiers({...modifiers, composition: v})} options={COMPOSITION_OPTIONS.map(c => ({ label: c.toUpperCase(), value: c }))} placeholder="Layout..." />
                         </div>
                     </div>
                 </div>
@@ -600,11 +666,11 @@ const PromptsPage: React.FC<PromptsPageProps> = ({
                     </div>
                     <div className="form-control">
                         <label className="text-[10px] font-black uppercase text-base-content/40 tracking-widest mb-2 block">Motion Energy</label>
-                        <AutocompleteSelect value={modifiers.motion || ''} onChange={(v) => setModifiers({...modifiers, motion: v})} options={MOTION_OPTIONS} placeholder="Motion..." />
+                        <AutocompleteSelect value={modifiers.motion || ''} onChange={(v) => setModifiers({...modifiers, motion: v})} options={MOTION_OPTIONS.map(m => ({ label: m.toUpperCase(), value: m }))} placeholder="Motion..." />
                     </div>
                     <div className="form-control">
                         <label className="text-[10px] font-black uppercase text-base-content/40 tracking-widest mb-2 block">Camera Pathing</label>
-                        <AutocompleteSelect value={modifiers.cameraMovement || ''} onChange={(v) => setModifiers({...modifiers, cameraMovement: v})} options={CAMERA_MOVEMENT_OPTIONS} placeholder="Cam-Path..." />
+                        <AutocompleteSelect value={modifiers.cameraMovement || ''} onChange={(v) => setModifiers({...modifiers, cameraMovement: v})} options={CAMERA_MOVEMENT_OPTIONS.map(m => ({ label: m.toUpperCase(), value: m }))} placeholder="Cam-Path..." />
                     </div>
                 </div>
               );
@@ -613,15 +679,15 @@ const PromptsPage: React.FC<PromptsPageProps> = ({
                   <div className="grid grid-cols-1 gap-6 animate-fade-in">
                        <div className="form-control">
                           <label className="text-[10px] font-black uppercase text-base-content/40 tracking-widest mb-2 block">Audio Category</label>
-                          <AutocompleteSelect value={modifiers.audioType || ''} onChange={(v) => setModifiers({...modifiers, audioType: v})} options={AUDIO_TYPES} placeholder="Type..." />
+                          <AutocompleteSelect value={modifiers.audioType || ''} onChange={(v) => setModifiers({...modifiers, audioType: v})} options={AUDIO_TYPES.map(t => ({ label: t.toUpperCase(), value: t }))} placeholder="Type..." />
                       </div>
                       <div className="form-control">
                           <label className="text-[10px] font-black uppercase text-base-content/40 tracking-widest mb-2 block">Voice Profile</label>
-                          <AutocompleteSelect value={modifiers.voiceGender || ''} onChange={(v) => setModifiers({...modifiers, voiceGender: v})} options={VOICE_GENDERS} placeholder="Gender..." />
+                          <AutocompleteSelect value={modifiers.voiceGender || ''} onChange={(v) => setModifiers({...modifiers, voiceGender: v})} options={VOICE_GENDERS.map(g => ({ label: g.toUpperCase(), value: g }))} placeholder="Gender..." />
                       </div>
                       <div className="form-control">
                           <label className="text-[10px] font-black uppercase text-base-content/40 tracking-widest mb-2 block">Voice Tone</label>
-                          <AutocompleteSelect value={modifiers.voiceTone || ''} onChange={(v) => setModifiers({...modifiers, voiceTone: v})} options={VOICE_TONES} placeholder="Tone..." />
+                          <AutocompleteSelect value={modifiers.voiceTone || ''} onChange={(v) => setModifiers({...modifiers, voiceTone: v})} options={VOICE_TONES.map(t => ({ label: t.toUpperCase(), value: t }))} placeholder="Tone..." />
                       </div>
                       <div className="form-control">
                           <div className="flex justify-between items-center mb-2">
@@ -639,11 +705,11 @@ const PromptsPage: React.FC<PromptsPageProps> = ({
                       </div>
                       <div className="form-control">
                           <label className="text-[10px] font-black uppercase text-base-content/40 tracking-widest mb-2 block">Acoustic Environment</label>
-                          <AutocompleteSelect value={modifiers.audioEnvironment || ''} onChange={(v) => setModifiers({...modifiers, audioEnvironment: v})} options={AUDIO_ENVIRONMENTS} placeholder="Environment..." />
+                          <AutocompleteSelect value={modifiers.audioEnvironment || ''} onChange={(v) => setModifiers({...modifiers, audioEnvironment: v})} options={AUDIO_ENVIRONMENTS.map(e => ({ label: e.toUpperCase(), value: e }))} placeholder="Environment..." />
                       </div>
                       <div className="form-control">
                           <label className="text-[10px] font-black uppercase text-base-content/40 tracking-widest mb-2 block">Audio Mood</label>
-                          <AutocompleteSelect value={modifiers.audioMood || ''} onChange={(v) => setModifiers({...modifiers, audioMood: v})} options={AUDIO_MOODS} placeholder="Mood..." />
+                          <AutocompleteSelect value={modifiers.audioMood || ''} onChange={(v) => setModifiers({...modifiers, audioMood: v})} options={AUDIO_MOODS.map(m => ({ label: m.toUpperCase(), value: m }))} placeholder="Mood..." />
                       </div>
                   </div>
               );
@@ -752,185 +818,346 @@ const PromptsPage: React.FC<PromptsPageProps> = ({
       }
   };
 
-  const renderRefine = () => (
-    <div className="flex flex-col h-full overflow-hidden bg-base-100">
-        {renderTabsHeader('refine')}
+  const handleClearModifier = (key: string) => {
+      if (key === 'refineText') setRefineText('');
+      else if (key === 'constantModifier') setConstantModifier('');
+      else setModifiers(m => ({ ...m, [key]: "" }));
+  };
 
-        <div className="flex-grow grid grid-cols-1 lg:grid-cols-12 overflow-hidden">
-            {/* Left Panel: Configuration */}
-            <div className="lg:col-span-4 bg-base-100 flex flex-col min-h-0 border-r border-base-300">
-                <div className="border-b border-base-300 bg-base-200/5 h-16 flex-shrink-0">
-                     <div className="flex w-full h-full overflow-x-auto custom-scrollbar no-scrollbar">
-                        <button onClick={() => setActiveRefineSubTab('basic')} className={`flex-1 h-full rounded-none font-black text-xs tracking-widest transition-colors border-r border-base-300 last:border-r-0 ${activeRefineSubTab === 'basic' ? 'bg-primary text-primary-content' : 'hover:bg-base-200 text-base-content/40'}`}>BASIC</button>
-                        {mediaMode !== 'audio' && (
-                            <>
-                                <button onClick={() => setActiveRefineSubTab('styling')} className={`flex-1 h-full rounded-none font-black text-xs tracking-widest transition-colors border-r border-base-300 last:border-r-0 ${activeRefineSubTab === 'styling' ? 'bg-primary text-primary-content' : 'hover:bg-base-200 text-base-content/40'}`}>STYLING</button>
-                                <button onClick={() => setActiveRefineSubTab('photography')} className={`flex-1 h-full rounded-none font-black text-xs tracking-widest transition-colors border-r border-base-300 last:border-r-0 ${activeRefineSubTab === 'photography' ? 'bg-primary text-primary-content' : 'hover:bg-base-200 text-base-content/40'}`}>PHOTOGRAPHY</button>
-                            </>
-                        )}
-                        {mediaMode === 'video' && <button onClick={() => setActiveRefineSubTab('motion')} className={`flex-1 h-full rounded-none font-black text-xs tracking-widest transition-colors border-r border-base-300 last:border-r-0 ${activeRefineSubTab === 'motion' ? 'bg-primary text-primary-content' : 'hover:bg-base-200 text-base-content/40'}`}>MOTION</button>}
-                        {mediaMode === 'audio' && <button onClick={() => setActiveRefineSubTab('audio')} className={`flex-1 h-full rounded-none font-black text-xs tracking-widest transition-colors border-r border-base-300 last:border-r-0 ${activeRefineSubTab === 'audio' ? 'bg-primary text-primary-content' : 'hover:bg-base-200 text-base-content/40'}`}>AUDIO</button>}
-                        {hasPlatformSettings && mediaMode !== 'audio' && (
-                            <button onClick={() => setActiveRefineSubTab('platform')} className={`flex-1 h-full rounded-none font-black text-xs tracking-widest transition-colors border-r border-base-300 last:border-r-0 ${activeRefineSubTab === 'platform' ? 'bg-primary text-primary-content' : 'hover:bg-base-200 text-base-content/40'}`}>{targetAIModel.toUpperCase().split(' ')[0]}</button>
-                        )}
-                     </div>
-                </div>
+  const handleModifierClick = (tab: RefineSubTab) => {
+      setActiveRefineSubTab(tab);
+  };
 
-                <div className="flex-grow flex flex-col overflow-hidden">
-                    <div className="p-6 overflow-y-auto custom-scrollbar flex-grow flex flex-col h-full">
-                         {renderRefineSubContent()}
-                    </div>
-                </div>
+  // --- Preset Handlers ---
+  const handleSavePresetClick = () => {
+      setNewPresetName('');
+      setIsSavePresetModalOpen(true);
+  };
 
-                <div className="border-t border-base-300 bg-base-200/20 flex-shrink-0 p-0 overflow-hidden">
-                    <div className="flex w-full">
-                        <button onClick={handleResetRefiner} className="btn flex-1 rounded-none border-r border-base-300 font-black text-[10px] tracking-widest hover:bg-base-300 transition-colors uppercase">RESET</button>
-                        <button onClick={handleEnhance} disabled={isLoadingRefine || !refineText.trim()} className={`btn flex-1 rounded-none font-black text-[10px] tracking-widest transition-colors shadow-lg border-r border-base-300 last:border-r-0 ${isGoogleProduct && mediaMode !== 'audio' ? 'btn-ghost' : 'btn-primary text-primary-content'}`}>
-                            {isLoadingRefine && !loadingMsg ? 'EXTRACTING...' : 'IMPROVE'}
-                        </button>
-                        {isGoogleProduct && mediaMode !== 'audio' && (
-                            <button onClick={handleDirectGenerate} disabled={isLoadingRefine || !refineText.trim()} className="btn flex-1 btn-primary text-primary-content rounded-none font-black text-[10px] tracking-widest shadow-lg transition-colors hover:brightness-110 uppercase">
-                                {isLoadingRefine && loadingMsg ? 'STREAMING...' : 'GENERATE'}
-                            </button>
-                        )}
-                    </div>
-                </div>
-            </div>
+  const handleConfirmSavePreset = async () => {
+      if (!newPresetName.trim()) return;
+      setIsSavingPreset(true);
+      try {
+          const preset: RefinerPreset = {
+              name: newPresetName.trim(),
+              modifiers: { ...modifiers },
+              targetAIModel,
+              mediaMode,
+              promptLength
+          };
+          await refinerPresetService.savePreset(preset);
+          await loadPresets();
+          setIsSavePresetModalOpen(false);
+          showGlobalFeedback('Preset saved to registry.');
+      } catch (e) {
+          showGlobalFeedback('Failed to save preset.', true);
+      } finally {
+          setIsSavingPreset(false);
+      }
+  };
 
-            {/* Center Panel: Results */}
-            <div className="lg:col-span-5 bg-base-100 flex flex-col min-h-0 overflow-hidden border-r border-base-300">
-                <div className="px-6 h-16 border-b border-base-300 bg-base-200/10 flex justify-between items-center">
-                    <h2 className="text-xs font-black uppercase tracking-[0.4em] text-primary flex items-center gap-3">
-                        <div className="w-2 h-2 rounded-full bg-primary animate-pulse"></div> Improved Results
-                    </h2>
-                </div>
-                <div className="flex-grow overflow-y-auto floating-scrollbar bg-base-200/5 p-0">
-                    {isLoadingRefine ? (
-                        <div className="flex flex-col items-center justify-center py-32 text-center space-y-8">
-                            <LoadingSpinner />
-                            {loadingMsg && <p className="text-[11px] font-black uppercase tracking-[0.4em] text-primary animate-pulse">{loadingMsg}</p>}
-                        </div>
-                    ) : errorRefine ? <div className="alert alert-error rounded-none border-2 m-6"><span className="uppercase text-xs font-bold">{errorRefine.message}</span></div> :
-                    directMediaResult ? (
-                        <div className="max-w-4xl mx-auto space-y-8 animate-fade-in p-10 pb-20">
-                            <div className="relative group bg-black shadow-2xl border border-base-300">
-                                {directMediaResult.type === 'video' ? (
-                                    <video src={directMediaResult.url} controls autoPlay loop className="w-full h-auto aspect-video object-contain" />
-                                ) : (
-                                    <img src={directMediaResult.url} alt="Result" className="w-full h-auto aspect-square object-contain" />
-                                )}
-                            </div>
-                            <div className="flex justify-between items-center bg-base-100 p-4 border border-base-300">
-                                <div className="flex flex-col">
-                                    <span className="text-[10px] font-black uppercase tracking-widest text-primary/60">{directMediaResult.target} Render</span>
-                                    <span className="text-[8px] font-mono text-base-content/30 mt-1 uppercase">ID: {Date.now()}</span>
-                                </div>
-                                <button onClick={() => setDirectMediaResult(null)} className="btn btn-xs btn-ghost uppercase tracking-widest font-black">Close Archive</button>
-                            </div>
-                        </div>
-                    ) : resultsRefine ? (
-                        <div className="flex flex-col animate-fade-in w-full pb-20">
-                            {resultsRefine.suggestions.map((suggestion, index) => ( 
-                                <div key={index} className="border-b border-base-300 last:border-b-0 w-full bg-base-100">
-                                    <SuggestionItem 
-                                        suggestionText={suggestion} 
-                                        targetAI={targetAIModel}
-                                        onSave={handleSaveSuggestion}
-                                        onClip={handleClipSuggestion}
-                                        onRefine={handleSendToRefine}
-                                    />
-                                </div>
-                            ))}
-                        </div>
-                    ) : (
-                        <div className="h-full flex flex-col items-center justify-center text-center py-32 opacity-10">
-                            {mediaMode === 'image' ? <PhotoIcon className="w-32 h-32 mb-8" /> : mediaMode === 'video' ? <FilmIcon className="w-32 h-32 mb-8" /> : <RefreshIcon className="w-32 h-32 mb-8" />}
-                            <p className="text-2xl font-black uppercase tracking-[0.2em]">Awaiting Generation</p>
-                        </div>
-                    )}
-                </div>
-            </div>
+  const handleUsePreset = () => {
+      if (selectedPreset) {
+          setModifiers({ ...selectedPreset.modifiers });
+          setTargetAIModel(selectedPreset.targetAIModel);
+          setMediaMode(selectedPreset.mediaMode);
+          setPromptLength(selectedPreset.promptLength);
+          showGlobalFeedback(`Preset "${selectedPreset.name}" applied.`);
+      }
+  };
 
-            {/* Right Panel: Active Construction */}
-            <aside className="lg:col-span-3 bg-base-100 flex flex-col min-h-0 overflow-hidden">
-                <header className="px-6 h-16 border-b border-base-300 bg-base-200/10 flex items-center justify-between">
-                    <h3 className="text-[10px] font-black uppercase tracking-[0.4em] text-primary">Active Construction</h3>
-                    <span className="badge badge-primary badge-xs rounded-none font-black text-[9px]">{activeConstructionItems.length}</span>
-                </header>
-                <div className="flex-grow p-4 overflow-y-auto floating-scrollbar bg-base-200/5">
-                    {activeConstructionItems.length > 0 ? (
-                        <div className="grid grid-cols-1 gap-2">
-                            {activeConstructionItems.map((item) => (
-                                <PropertyCard 
-                                    key={item.key}
-                                    label={item.label}
-                                    value={item.value}
-                                    active={activeRefineSubTab === item.tab}
-                                    onClick={() => setActiveRefineSubTab(item.tab)}
-                                    onClear={() => {
-                                        if (item.key === 'refineText') setRefineText('');
-                                        else if (item.key === 'constantModifier') setConstantModifier('');
-                                        else setModifiers(prev => ({ ...prev, [item.key]: '' }));
-                                    }}
-                                />
-                            ))}
-                        </div>
-                    ) : (
-                        <div className="h-full flex flex-col items-center justify-center text-center opacity-10 p-6">
-                            <ArchiveIcon className="w-12 h-12 mb-4" />
-                            <p className="text-xs font-black uppercase tracking-widest">No active modifiers selected</p>
-                        </div>
-                    )}
-                </div>
-            </aside>
-        </div>
-    </div>
-  );
+  const handleDeletePresetClick = () => {
+      if (selectedPreset) {
+          setPresetToDelete(selectedPreset);
+          setIsDeletePresetModalOpen(true);
+      }
+  };
+
+  const handleConfirmDeletePreset = async () => {
+      if (presetToDelete) {
+          try {
+              await refinerPresetService.deletePreset(presetToDelete.name);
+              await loadPresets();
+              setSelectedPreset(null);
+              setPresetSearchText('');
+              showGlobalFeedback('Preset purged.');
+          } catch (e) {
+              showGlobalFeedback('Deletion failed.', true);
+          }
+      }
+      setIsDeletePresetModalOpen(false);
+      setPresetToDelete(null);
+  };
+
+  const filteredPresets = useMemo(() => {
+      if (!presetSearchText) return presets;
+      return presets.filter(p => p.name.toLowerCase().includes(presetSearchText.toLowerCase()));
+  }, [presetSearchText, presets]);
+
+  const handleSelectPresetFromDropdown = (preset: RefinerPreset) => {
+      setSelectedPreset(preset);
+      setPresetSearchText(preset.name);
+      if (typeof (window as any).document !== 'undefined' && (window as any).document.activeElement instanceof (window as any).HTMLElement) {
+          ((window as any).document.activeElement as any).blur();
+      }
+  };
 
   return (
-      <div className="h-full bg-base-100">
-          {activeView === 'refine' && renderRefine()}
-          {activeView === 'composer' && (
-              <div className="flex flex-col h-full">
-                  {renderTabsHeader('composer')}
-                  <PromptCrafter 
-                      onSaveToLibrary={handleSaveSuggestion}
-                      onSendToEnhancer={handleSendToRefine}
-                      promptToInsert={composerPromptToInsert}
-                      header={null}
-                  />
-              </div>
-          )}
-          {activeView === 'abstract' && (
-              <div className="flex flex-col h-full">
-                  {renderTabsHeader('abstract')}
-                  <ImageAbstractor 
-                      onSaveSuggestion={handleSaveSuggestion}
-                      header={null}
-                      onRefine={handleSendToRefine}
-                      onClip={handleClipSuggestion}
-                  />
-              </div>
-          )}
-          {activeView === 'reader' && (
-              <div className="flex flex-col h-full">
-                  {renderTabsHeader('reader')}
-                  <MetadataReader 
-                      onSendToRefiner={handleSendToRefine}
-                      onClipIdea={handleClipSuggestion}
-                      onSaveToLibrary={handleSaveSuggestion}
-                      header={null}
-                  />
-              </div>
-          )}
-          <PromptEditorModal
-            isOpen={isSaveSuggestionModalOpen}
-            onClose={() => setIsSaveSuggestionModalOpen(false)}
-            onSave={handleConfirmSaveSuggestion}
-            categories={promptCategories}
-            editingPrompt={suggestionToSave}
+    <div className="flex flex-col h-full overflow-hidden bg-base-100">
+      {renderTabsHeader(activeView)}
+
+      <div className="flex-grow overflow-hidden relative">
+        {activeView === 'composer' && (
+          <PromptCrafter 
+            onSaveToLibrary={(gen) => handleSaveSuggestion(gen)}
+            onClip={(gen) => handleClipSuggestion(gen, 'Crafted Prompt', 'Crafter Formula', 'Crafter')}
+            onSendToEnhancer={handleSendToRefine}
+            promptToInsert={composerPromptToInsert}
+            header={null}
           />
+        )}
+
+        {activeView === 'refine' && (
+          <div className="grid grid-cols-1 lg:grid-cols-12 overflow-hidden h-full">
+            {/* Left Sidebar: Controls & Tabs - Increased to col-span-4 */}
+            <aside className="lg:col-span-4 bg-base-100 flex flex-col border-r border-base-300 overflow-hidden">
+              <div className="p-4 border-b border-base-300 bg-base-200/10">
+                <div className="tabs tabs-boxed rounded-none bg-transparent gap-1 p-0 flex flex-wrap">
+                  {tabs.map(tab => (
+                    <button 
+                      key={tab.id} 
+                      onClick={() => setActiveRefineSubTab(tab.id)} 
+                      className={`tab flex-grow rounded-none font-black text-[9px] tracking-widest uppercase ${activeRefineSubTab === tab.id ? 'tab-active' : ''}`}
+                    >
+                      {tab.label}
+                    </button>
+                  ))}
+                </div>
+              </div>
+              <div className="flex-grow p-6 overflow-y-auto custom-scrollbar">
+                {renderRefineSubContent()}
+              </div>
+              <footer className={`p-4 border-t border-base-300 bg-base-200/20 grid ${isGoogleProduct ? 'grid-cols-3' : 'grid-cols-2'} gap-2`}>
+                <button onClick={handleResetRefiner} className="btn btn-sm btn-ghost rounded-none font-black text-[9px] tracking-widest text-error/40 hover:text-error uppercase">PURGE</button>
+                <button 
+                  onClick={handleEnhance} 
+                  disabled={isLoadingRefine || !refineText.trim()} 
+                  className="btn btn-sm btn-ghost border border-base-300 rounded-none font-black text-[9px] tracking-widest uppercase hover:bg-base-200"
+                >
+                  {isLoadingRefine ? '...' : 'REFINE'}
+                </button>
+                {isGoogleProduct && (
+                  <button 
+                    onClick={handleDirectGenerate} 
+                    disabled={isLoadingRefine || !refineText.trim()} 
+                    className="btn btn-sm btn-primary rounded-none font-black text-[9px] tracking-widest uppercase shadow-lg"
+                  >
+                    {isLoadingRefine ? '...' : 'RENDER'}
+                  </button>
+                )}
+              </footer>
+            </aside>
+
+            {/* Center: Main Neural Output - Reduced to col-span-5 to accommodate larger sidebar */}
+            <main className="lg:col-span-5 bg-base-100 flex flex-col min-h-0 border-r border-base-300">
+              <header className="p-6 border-b border-base-300 bg-base-200/10 flex justify-between items-center">
+                <h2 className="text-xs font-black uppercase tracking-[0.4em] text-primary flex items-center gap-3">
+                  <div className="w-2 h-2 rounded-full bg-primary animate-pulse"></div> NEURAL OUTPUT
+                </h2>
+              </header>
+              <div className="flex-grow overflow-y-auto custom-scrollbar bg-base-200/5 flex flex-col">
+                {isLoadingRefine ? (
+                  <div className="flex-grow flex flex-col items-center justify-center text-center space-y-6">
+                    <LoadingSpinner size={48} />
+                    <p className="text-[10px] font-black uppercase tracking-[0.4em] text-primary animate-pulse -mt-4">{loadingMsg || 'Refining formula...'}</p>
+                  </div>
+                ) : errorRefine ? (
+                  <div className="p-8">
+                    <div className="alert alert-error rounded-none border-2">
+                        <span className="font-black uppercase text-[10px] tracking-widest">{errorRefine.message}</span>
+                    </div>
+                  </div>
+                ) : resultsRefine ? (
+                  <div className="p-[1px] bg-base-300">
+                    {resultsRefine.suggestions.map((suggestion, index) => (
+                      <SuggestionItem 
+                        key={index} 
+                        suggestionText={suggestion} 
+                        targetAI={targetAIModel}
+                        onSave={handleSaveSuggestion}
+                        onClip={handleClipSuggestion}
+                      />
+                    ))}
+                  </div>
+                ) : directMediaResult ? (
+                  <div className="p-8 space-y-4 animate-fade-in">
+                    <div className="relative group bg-black border border-base-300 aspect-video flex items-center justify-center overflow-hidden">
+                      {directMediaResult.type === 'video' ? (
+                        <video src={directMediaResult.url} controls autoPlay loop className="w-full h-full object-contain" />
+                      ) : (
+                        <img src={directMediaResult.url} alt="Generated result" className="w-full h-full object-contain" />
+                      )}
+                    </div>
+                  </div>
+                ) : (
+                  <div className="flex-grow flex flex-col items-center justify-center text-center py-32 opacity-10">
+                    <span className="p-8"><SparklesIcon className="w-24 h-24 mb-6" /></span>
+                    <p className="text-xl font-black uppercase tracking-widest">Awaiting sequence initiation</p>
+                  </div>
+                )}
+              </div>
+            </main>
+
+            {/* Right Sidebar: Active Modifiers */}
+            <aside className="lg:col-span-3 bg-base-100 flex flex-col overflow-hidden">
+              <header className="p-6 border-b border-base-300 bg-base-200/10">
+                  <h3 className="text-xs font-black uppercase tracking-[0.4em] text-base-content/40">Active Construction</h3>
+              </header>
+              
+              {/* Presets Management UI */}
+              <div className="p-4 border-b border-base-300 flex-shrink-0 bg-base-200/5">
+                <div className="flex items-center gap-2">
+                  <div className="dropdown flex-grow">
+                    <input 
+                      type="text"
+                      tabIndex={0}
+                      className="input input-bordered rounded-none input-sm w-full font-bold uppercase tracking-tighter"
+                      placeholder="SELECT PRESET..."
+                      value={presetSearchText}
+                      onChange={(e) => {
+                          setPresetSearchText((e.currentTarget as any).value);
+                          if(selectedPreset && (e.currentTarget as any).value !== selectedPreset.name) {
+                              setSelectedPreset(null);
+                          }
+                      }}
+                    />
+                    {filteredPresets.length > 0 && (
+                      <ul tabIndex={0} className="dropdown-content z-[30] menu p-1 shadow-2xl bg-base-200 rounded-box w-full mt-2 z-[50] border border-base-300">
+                        {filteredPresets.map(p => (
+                          <li key={p.name}><a onClick={() => handleSelectPresetFromDropdown(p)} className="font-bold text-xs uppercase">{p.name}</a></li>
+                        ))}
+                      </ul>
+                    )}
+                  </div>
+                  <button 
+                      className="btn btn-sm btn-ghost border border-base-300 rounded-none font-black text-[9px] tracking-widest uppercase hover:bg-base-200" 
+                      onClick={handleUsePreset} 
+                      disabled={!selectedPreset}
+                  >
+                      <CheckIcon className="w-3.5 h-3.5 mr-1.5 opacity-40"/>
+                      USE
+                  </button>
+                  <button 
+                      className="btn btn-sm btn-ghost rounded-none text-error/40 hover:text-error font-black text-[9px] tracking-widest uppercase" 
+                      onClick={handleDeletePresetClick} 
+                      disabled={!selectedPreset}
+                  >
+                      <DeleteIcon className="w-3.5 h-3.5 mr-1.5"/>
+                      DELETE
+                  </button>
+                </div>
+              </div>
+
+              <div className="flex-grow p-6 overflow-y-auto custom-scrollbar">
+                {activeConstructionItems.length > 0 ? (
+                  <div className="space-y-2">
+                    {activeConstructionItems.map((item) => (
+                      <PropertyCard 
+                        key={item.key}
+                        label={item.label}
+                        value={item.value}
+                        onClear={() => handleClearModifier(item.key)}
+                        onClick={() => handleModifierClick(item.tab)}
+                        active={activeRefineSubTab === item.tab}
+                      />
+                    ))}
+                  </div>
+                ) : (
+                    <div className="h-full flex flex-col items-center justify-center text-center opacity-10">
+                        <ArchiveIcon className="w-12 h-12 mb-4" />
+                        <p className="text-[10px] font-black uppercase tracking-widest">No active parameters</p>
+                    </div>
+                )}
+              </div>
+
+              <footer className="p-4 border-t border-base-300 bg-base-200/20">
+                <button 
+                    onClick={handleSavePresetClick} 
+                    disabled={activeConstructionItems.length === 0}
+                    className="btn btn-sm btn-ghost border border-base-300 w-full rounded-none font-black text-[9px] tracking-widest uppercase hover:bg-base-200"
+                >
+                    <BookmarkIcon className="w-3.5 h-3.5 mr-1.5 opacity-40"/>
+                    SAVE AS PRESET
+                </button>
+              </footer>
+            </aside>
+          </div>
+        )}
+
+        {activeView === 'abstract' && (
+          <ImageAbstractor 
+            onSaveSuggestion={handleSaveSuggestion} 
+            onRefine={handleSendToRefine}
+            onClip={handleClipSuggestion}
+            header={null} 
+          />
+        )}
+
+        {activeView === 'reader' && (
+            <MetadataReader 
+                onSendToRefiner={handleSendToRefine}
+                onClipIdea={(text, title) => onClipIdea({ id: `clipped-${Date.now()}`, lens: 'Metadata', title: title, prompt: text, source: 'Reader' })}
+                onSaveToLibrary={(text, title) => handleSaveSuggestion(text, title)}
+                header={null}
+            />
+        )}
       </div>
+
+      {/* Save Preset Modal */}
+      {isSavePresetModalOpen && (
+          <div className="fixed inset-0 bg-black/80 z-50 flex items-center justify-center p-4 animate-fade-in" onClick={() => setIsSavePresetModalOpen(false)}>
+              <div className="bg-base-100 rounded-none border border-base-300 shadow-2xl w-full max-w-lg overflow-hidden" onClick={(e) => e.stopPropagation()}>
+                  <header className="p-8 border-b border-base-300 bg-base-200/20">
+                      <h3 className="text-2xl font-black tracking-tighter text-base-content leading-none uppercase">Save Presets<span className="text-primary">.</span></h3>
+                  </header>
+                  <div className="p-8">
+                      <input
+                          type="text"
+                          value={newPresetName}
+                          onChange={(e) => setNewPresetName((e.currentTarget as any).value)}
+                          placeholder="ENTER PRESET NAME..."
+                          className="input input-bordered rounded-none w-full font-bold tracking-tight uppercase"
+                          autoFocus
+                          onKeyDown={(e) => e.key === 'Enter' && handleConfirmSavePreset()}
+                      />
+                  </div>
+                  <div className="p-4 border-t border-base-300 flex justify-end gap-2 bg-base-200/10">
+                        <button onClick={() => setIsSavePresetModalOpen(false)} className="btn btn-ghost rounded-none uppercase font-black text-[10px] tracking-widest px-8">Cancel</button>
+                        <button onClick={handleConfirmSavePreset} disabled={isSavingPreset || !newPresetName.trim()} className="btn btn-primary rounded-none uppercase font-black text-[10px] tracking-widest px-8 shadow-lg">
+                          {isSavingPreset ? "Saving..." : "Confirm"}
+                      </button>
+                  </div>
+              </div>
+          </div>
+      )}
+
+      {/* Delete Preset Confirmation */}
+      <ConfirmationModal
+          isOpen={isDeletePresetModalOpen}
+          onClose={() => setIsDeletePresetModalOpen(false)}
+          onConfirm={handleConfirmDeletePreset}
+          title={`PURGE PRESET`}
+          message={`Permanently remove preset "${presetToDelete?.name}"?`}
+      />
+
+      <PromptEditorModal 
+        isOpen={isSaveSuggestionModalOpen} 
+        onClose={() => setIsSaveSuggestionModalOpen(false)} 
+        onSave={handleConfirmSaveSuggestion} 
+        categories={promptCategories} 
+        editingPrompt={suggestionToSave} 
+      />
+    </div>
   );
 };
 

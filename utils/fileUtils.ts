@@ -1,3 +1,4 @@
+
 import JSZip from 'jszip';
 import { getHandle, setHandle } from './db';
 import type { AuthContextType } from '../contexts/AuthContext';
@@ -15,6 +16,7 @@ interface IFileSystemManager {
     isDirectorySelected(): boolean;
     selectAndSetAppDataDirectory(): Promise<FileSystemDirectoryHandle | null>;
     requestExistingPermission(): Promise<boolean>;
+    calculateTotalSize(): Promise<number>;
 }
 
 // --- Local File System Implementation ---
@@ -22,18 +24,23 @@ class LocalFileSystemManager implements IFileSystemManager {
     private appDirHandle: FileSystemDirectoryHandle | null = null;
     public appDirectoryName: string | null = null;
     private isInitialized: boolean = false;
+    private initPromise: Promise<boolean> | null = null;
 
     private async verifyPermission(handle: FileSystemDirectoryHandle, interactive: boolean = false): Promise<boolean> {
         const options = { mode: 'readwrite' as const };
         
-        if ((await (handle as any).queryPermission(options)) === 'granted') {
-            return true;
-        }
-        
-        if (interactive) {
-            if ((await (handle as any).requestPermission(options)) === 'granted') {
+        try {
+            if ((await (handle as any).queryPermission(options)) === 'granted') {
                 return true;
             }
+            
+            if (interactive) {
+                if ((await (handle as any).requestPermission(options)) === 'granted') {
+                    return true;
+                }
+            }
+        } catch (e) {
+            console.warn("Permission verification failure:", e);
         }
         
         return false;
@@ -41,21 +48,28 @@ class LocalFileSystemManager implements IFileSystemManager {
 
     async initialize(settings: LLMSettings, auth: AuthContextType): Promise<boolean> {
         if (this.isInitialized) return true;
-        
-        try {
-            const handle = await getHandle<FileSystemDirectoryHandle>('app-data-dir');
-            if (handle && (await this.verifyPermission(handle, false))) {
-                this.appDirHandle = handle;
-                this.appDirectoryName = handle.name;
-                this.isInitialized = true;
-                return true;
+        if (this.initPromise) return this.initPromise;
+
+        this.initPromise = (async () => {
+            try {
+                const handle = await getHandle<FileSystemDirectoryHandle>('app-data-dir');
+                if (handle && (await this.verifyPermission(handle, false))) {
+                    this.appDirHandle = handle;
+                    this.appDirectoryName = handle.name;
+                    this.isInitialized = true;
+                    return true;
+                }
+            } catch (error) {
+                console.error("Error during LocalFileSystemManager init:", error);
+            } finally {
+                this.initPromise = null;
             }
-        } catch (error) {
-            console.error("Error during LocalFileSystemManager check:", error);
-        }
-        
-        this.isInitialized = false;
-        return false;
+            
+            this.isInitialized = false;
+            return false;
+        })();
+
+        return this.initPromise;
     }
 
     public async requestExistingPermission(): Promise<boolean> {
@@ -146,8 +160,8 @@ class LocalFileSystemManager implements IFileSystemManager {
     }
     
     public async getFileAsBlob(filePath: string): Promise<Blob | null> {
-        const rootHandle = await this.getHandle();
         try {
+            const rootHandle = await this.getHandle();
             const segments = filePath.replace(/\\/g, '/').split('/');
             const fileName = segments.pop();
             if (!fileName) return null;
@@ -165,8 +179,8 @@ class LocalFileSystemManager implements IFileSystemManager {
     }
     
     public async deleteFile(filePath: string): Promise<void> {
-        const rootHandle = await this.getHandle();
         try {
+            const rootHandle = await this.getHandle();
             const segments = filePath.replace(/\\/g, '/').split('/');
             const fileName = segments.pop();
             if (!fileName) return;
@@ -201,6 +215,30 @@ class LocalFileSystemManager implements IFileSystemManager {
         }
         for await (const handle of (currentHandle as any).values()) {
             yield handle;
+        }
+    }
+
+    public async calculateTotalSize(): Promise<number> {
+        if (!this.appDirHandle) return 0;
+        
+        const getSizeRecursive = async (handle: FileSystemDirectoryHandle): Promise<number> => {
+            let size = 0;
+            for await (const entry of (handle as any).values()) {
+                if (entry.kind === 'file') {
+                    const file = await entry.getFile();
+                    size += file.size;
+                } else if (entry.kind === 'directory') {
+                    size += await getSizeRecursive(entry);
+                }
+            }
+            return size;
+        };
+
+        try {
+            return await getSizeRecursive(this.appDirHandle);
+        } catch (e) {
+            console.error("Error calculating storage size:", e);
+            return 0;
         }
     }
 }

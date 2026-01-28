@@ -1,8 +1,9 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { createPortal } from 'react-dom';
 import type { GalleryCategory } from '../types';
 import { loadCategories } from '../utils/galleryStorage';
 import { CloseIcon } from './icons';
+import AutocompleteSelect from './AutocompleteSelect';
 
 interface SaveToGalleryModalProps {
   isOpen: boolean;
@@ -26,6 +27,11 @@ const SaveToGalleryModal: React.FC<SaveToGalleryModalProps> = ({
       if (prompt) setTitle(prompt.split(',')[0].trim().substring(0, 100));
     }
   }, [isOpen, prompt]);
+
+  const categoryOptions = useMemo(() => [
+    { label: 'MAIN COLLECTION', value: '' },
+    ...categories.map(cat => ({ label: cat.name.toUpperCase(), value: cat.id }))
+  ], [categories]);
 
   if (!isOpen) return null;
   
@@ -56,14 +62,16 @@ const SaveToGalleryModal: React.FC<SaveToGalleryModalProps> = ({
                     <div className="space-y-6">
                         <div className="form-control">
                             <label className="text-[10px] font-black uppercase tracking-[0.2em] text-base-content/40 mb-2">Title</label>
-                            <input type="text" value={title} onChange={(e) => setTitle((e.currentTarget as any).value)} className="input input-bordered rounded-none font-bold tracking-tight" required />
+                            <input type="text" value={title} onChange={(e) => setTitle((e.currentTarget as any).value)} className="input input-bordered rounded-none font-bold tracking-tight h-10" required />
                         </div>
                         <div className="form-control">
                             <label className="text-[10px] font-black uppercase tracking-[0.2em] text-base-content/40 mb-2">Gallery Folder</label>
-                            <select value={categoryId} onChange={(e) => setCategoryId((e.currentTarget as any).value)} className="select select-bordered rounded-none font-bold tracking-tight">
-                                <option value="">Main Collection</option>
-                                {categories.map(cat => <option key={cat.id} value={cat.id}>{cat.name}</option>)}
-                            </select>
+                            <AutocompleteSelect 
+                              value={categoryId} 
+                              onChange={setCategoryId} 
+                              options={categoryOptions} 
+                              placeholder="SELECT REGISTRY FOLDER..." 
+                            />
                         </div>
                     </div>
                     <div className="form-control">

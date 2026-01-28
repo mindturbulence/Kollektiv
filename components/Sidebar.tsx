@@ -1,10 +1,11 @@
+
 import React, { useRef, useState, useEffect } from 'react';
 import type { ActiveTab } from '../types';
 import { useSettings } from '../contexts/SettingsContext';
 import {
   HomeIcon, Cog6ToothIcon, AppLogoIcon, SparklesIcon,
   PromptIcon, PhotoIcon,
-  AdjustmentsVerticalIcon, PaletteIcon, AspectRatioIcon, CropIcon, FilmIcon, ViewColumnsIcon,
+  AdjustmentsVerticalIcon, PaletteIcon, LayoutDashboardIcon, CropIcon, FilmIcon, ViewColumnsIcon,
   BookOpenIcon, UsersIcon, ThumbTackIcon, InformationCircleIcon
 } from './icons';
 import LlmStatusSwitcher from './LlmStatusSwitcher';
@@ -58,13 +59,16 @@ const Section: React.FC<{ title: string, children: React.ReactNode }> = ({ title
 const Sidebar: React.FC<SidebarProps> = ({ activeTab, onNavigate, isSidebarOpen, isPinned, setIsPinned, onAboutClick }) => {
     const { settings } = useSettings();
     const { features } = settings;
+    // FIX: Corrected import at line 1 ensures useRef is defined
     const navRefs = useRef<Record<string, HTMLAnchorElement | null>>({});
+    // FIX: Corrected import at line 1 ensures useState is defined
     const [pillStyle, setPillStyle] = useState<React.CSSProperties>({ display: 'none' });
 
     const registerRef = (id: ActiveTab, el: HTMLAnchorElement | null) => {
         navRefs.current[id] = el;
     };
 
+    // FIX: Corrected import at line 1 ensures useEffect is defined
     useEffect(() => {
         const activeEl = navRefs.current[activeTab];
         const container = activeEl?.closest('nav');
@@ -127,7 +131,7 @@ const Sidebar: React.FC<SidebarProps> = ({ activeTab, onNavigate, isSidebarOpen,
 
         {features.isCheatsheetsEnabled && (
             <Section title="Guides">
-                <NavItem id="cheatsheet" label="Writing References" icon={<BookOpenIcon className="w-5 h-5" />} activeTab={activeTab} onClick={onNavigate} registerRef={registerRef} />
+                <NavItem id="cheatsheet" label="Prompting" icon={<BookOpenIcon className="w-5 h-5" />} activeTab={activeTab} onClick={onNavigate} registerRef={registerRef} />
                 <NavItem id="artstyles" label="Art Styles" icon={<PaletteIcon className="w-5 h-5" />} activeTab={activeTab} onClick={onNavigate} registerRef={registerRef} />
                 <NavItem id="artists" label="Artists" icon={<UsersIcon className="w-5 h-5" />} activeTab={activeTab} onClick={onNavigate} registerRef={registerRef} />
             </Section>
@@ -135,7 +139,7 @@ const Sidebar: React.FC<SidebarProps> = ({ activeTab, onNavigate, isSidebarOpen,
 
          {features.isToolsEnabled && (
             <Section title="Utilities">
-                <NavItem id="composer" label="Composer" icon={<AspectRatioIcon className="w-5 h-5" />} activeTab={activeTab} onClick={onNavigate} registerRef={registerRef} />
+                <NavItem id="composer" label="Composer" icon={<LayoutDashboardIcon className="w-5 h-5" />} activeTab={activeTab} onClick={onNavigate} registerRef={registerRef} />
                 <NavItem id="image_compare" label="Compare" icon={<ViewColumnsIcon className="w-5 h-5" />} activeTab={activeTab} onClick={onNavigate} registerRef={registerRef} />
                 <NavItem id="color_palette_extractor" label="Palette" icon={<PaletteIcon className="w-5 h-5" />} activeTab={activeTab} onClick={onNavigate} registerRef={registerRef} />
                 <NavItem id="resizer" label="Resizer" icon={<CropIcon className="w-5 h-5" />} activeTab={activeTab} onClick={onNavigate} registerRef={registerRef} />

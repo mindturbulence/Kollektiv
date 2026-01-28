@@ -1,3 +1,4 @@
+
 // --- Core App Types ---
 export type ActiveTab =
   | 'dashboard'
@@ -14,7 +15,7 @@ export type ActiveTab =
   | 'composer'
   | 'settings';
 
-export type ActiveSettingsTab = 'app' | 'llm' | 'prompt' | 'gallery';
+export type ActiveSettingsTab = 'app' | 'integrations' | 'llm' | 'prompt' | 'gallery';
 
 export interface AppError {
   message: string;
@@ -45,14 +46,37 @@ export interface YouTubeConnection {
   videoCount?: number;
   thumbnailUrl?: string;
   connectedAt?: number;
+  customClientId?: string;
+}
+
+export interface TikTokConnection {
+  isConnected: boolean;
+  clientKey?: string;
+  clientSecret?: string;
+  connectedAt?: number;
+}
+
+export interface GoogleIdentityConnection {
+  isConnected: boolean;
+  email?: string;
+  name?: string;
+  picture?: string;
+  accessToken?: string;
+  connectedAt?: number;
 }
 
 export interface LLMSettings {
   // LLM Provider Settings
   llmModel: string;
-  activeLLM: 'gemini' | 'ollama';
+  activeLLM: 'gemini' | 'ollama' | 'ollama_cloud';
   ollamaBaseUrl: string;
   ollamaModel: string;
+  
+  // Ollama Cloud Settings
+  ollamaCloudBaseUrl: string;
+  ollamaCloudModel: string;
+  ollamaCloudApiKey: string;
+  ollamaCloudUseGoogleAuth: boolean;
 
   // Theme Settings
   activeThemeMode: 'light' | 'dark';
@@ -65,6 +89,8 @@ export interface LLMSettings {
   
   // Integrations
   youtube?: YouTubeConnection;
+  tiktok?: TikTokConnection;
+  googleIdentity?: GoogleIdentityConnection;
 }
 
 // --- Prompt Generation & Library ---
@@ -174,7 +200,6 @@ export interface GalleryItem {
 export interface GalleryCategory {
   id: string;
   name: string;
-  isNsfw?: boolean;
   parentId?: string;
   order: number;
 }

@@ -1,22 +1,18 @@
-
 import React from 'react';
 import ReactDOM from 'react-dom/client';
-import './index.css';
 import App from './components/App';
 import { SettingsProvider } from './contexts/SettingsContext';
 import { AuthProvider } from './contexts/AuthContext';
 
-// --- Service Worker Registration ---
-if ('serviceWorker' in navigator) {
-  (window as any).addEventListener('load', () => {
-    navigator.serviceWorker.register('/sw.js')
-      .then(registration => {
-        console.log('ServiceWorker registration successful with scope: ', registration.scope);
-      })
-      .catch(error => {
-        console.log('ServiceWorker registration failed: ', error);
-      });
-  });
+// --- Environment Shims ---
+// Ensure 'process' is defined for libraries that expect a Node-like environment
+if (typeof (window as any).process === 'undefined') {
+  (window as any).process = {
+    env: {
+      API_KEY: (window as any).API_KEY || '',
+      GEMINI_API_KEY: (window as any).API_KEY || ''
+    }
+  };
 }
 
 // --- App Bootstrap ---
@@ -42,4 +38,9 @@ function startApp() {
   );
 }
 
-startApp();
+// Wrap bootstrap in a try-catch to log issues if the module graph fails
+try {
+    startApp();
+} catch (err) {
+    console.error("Application Boot Failure:", err);
+}
