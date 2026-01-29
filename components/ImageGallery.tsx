@@ -41,14 +41,38 @@ const ImageGallery: React.FC<ImageGalleryProps> = ({ isCategoryPanelCollapsed, o
   const [columnCount, setColumnCount] = useState(6);
   const gridRef = useRef<HTMLDivElement>(null);
   const scrollerRef = useRef<HTMLDivElement>(null);
-  const columnRefs = useRef<HTMLDivElement[]>([]);
+  const columnRefs = useRef<(HTMLDivElement | null)[]>([]);
+
+  // --- Incremental "Streaming" Loading Engine ---
+  const [displayCount, setDisplayCount] = useState(120);
+  const [targetDisplayCount, setTargetDisplayCount] = useState(120);
+  const streamRafRef = useRef<number | null>(null);
+
+  // Smoothly increment displayCount to target without blocking the main thread
+  useEffect(() => {
+    if (displayCount < targetDisplayCount) {
+        const step = () => {
+            setDisplayCount(prev => {
+                const next = prev + 1; // Add exactly 1 item per frame for absolute smoothness
+                if (next >= targetDisplayCount) return targetDisplayCount;
+                streamRafRef.current = requestAnimationFrame(step);
+                return next;
+            });
+        };
+        streamRafRef.current = requestAnimationFrame(step);
+    }
+    return () => { if (streamRafRef.current) cancelAnimationFrame(streamRafRef.current); };
+  }, [targetDisplayCount, displayCount]);
 
   // Force close detail view when category changes to prevent UI blocking
   useEffect(() => {
     setDetailViewItemId(null);
+    // Reset streaming when switching context
+    setTargetDisplayCount(120);
+    setDisplayCount(120);
   }, [selectedCategoryId]);
 
-  // --- GSAP Scroll Smoothing Engine ---
+  // --- Premium Liquid Momentum Engine ---
   useEffect(() => {
     const scroller = scrollerRef.current;
     const grid = gridRef.current;
@@ -57,7 +81,6 @@ const ImageGallery: React.FC<ImageGalleryProps> = ({ isCategoryPanelCollapsed, o
     let lastY = scroller.scrollTop;
     let vel = 0;
     
-    // Quick setters for performance
     const skewSetter = gsap.quickSetter(grid, "skewY", "deg");
     const scaleSetter = gsap.quickSetter(grid, "scaleY");
 
@@ -65,27 +88,28 @@ const ImageGallery: React.FC<ImageGalleryProps> = ({ isCategoryPanelCollapsed, o
         const currentY = scroller.scrollTop;
         const diff = currentY - lastY;
         
-        // Smooth out the velocity calculation
-        vel += (diff - vel) * 0.15;
+        // Liquid LERP
+        vel += (diff - vel) * 0.15; 
         lastY = currentY;
 
-        // Apply skew and scale based on momentum
-        const skewValue = gsap.utils.clamp(-10, 10, vel * 0.12);
-        const scaleValue = 1 - Math.min(0.08, Math.abs(vel) * 0.0006);
+        // Visual constraints for premium look
+        const clampedVel = gsap.utils.clamp(-40, 40, vel);
+        const skewValue = clampedVel * 0.07;
+        const scaleValue = 1 - Math.min(0.015, Math.abs(clampedVel) * 0.00015);
 
         skewSetter(skewValue);
         scaleSetter(scaleValue);
 
-        // Apply parallax to columns
+        // Individual Column Parallax Drift
         columnRefs.current.forEach((col, idx) => {
             if (!col) return;
-            const factor = (idx % 3 - 1) * 0.15; // Alternating speeds per column
-            const offset = vel * factor;
+            const factor = ((idx % 3) - 1) * 0.15;
+            const offset = clampedVel * factor;
             gsap.set(col, { y: offset, force3D: true });
         });
 
         if (Math.abs(vel) > 0.01) {
-            vel *= 0.92; // Friction
+            vel *= 0.93; // Liquid friction
         } else {
             vel = 0;
             skewSetter(0);
@@ -96,9 +120,8 @@ const ImageGallery: React.FC<ImageGalleryProps> = ({ isCategoryPanelCollapsed, o
 
     gsap.ticker.add(updateMotion);
     return () => gsap.ticker.remove(updateMotion);
-  }, [columnCount]);
+  }, [columnCount, viewMode, selectedCategoryId]);
 
-  // --- Dynamic Column Calculation ---
   const getColumnCountForView = useCallback(() => {
     if (typeof window === 'undefined') return 6;
     const w = window.innerWidth;
@@ -128,7 +151,6 @@ const ImageGallery: React.FC<ImageGalleryProps> = ({ isCategoryPanelCollapsed, o
     return () => window.removeEventListener('resize', handleResize);
   }, [getColumnCountForView]);
 
-  const [displayCount, setDisplayCount] = useState(30);
   const observer = useRef<IntersectionObserver | null>(null);
 
   const refreshData = useCallback(async () => {
@@ -208,6 +230,20 @@ const ImageGallery: React.FC<ImageGalleryProps> = ({ isCategoryPanelCollapsed, o
     return cols;
   }, [displayedItems, columnCount]);
 
+  const lastElementRef = useCallback((node: HTMLDivElement | null) => {
+    if (isLoading) return;
+    if (observer.current) observer.current.disconnect();
+    
+    observer.current = new IntersectionObserver(entries => {
+      if (entries[0].isIntersecting && targetDisplayCount < sortedAndFilteredItems.length) {
+          // Set a new target - the streaming effect will catch up frame-by-frame
+          setTargetDisplayCount(prev => prev + 60);
+      }
+    }, { rootMargin: '0px 0px 2500px 0px' }); // Extra wide predictive buffer
+    
+    if (node) observer.current.observe(node);
+  }, [isLoading, sortedAndFilteredItems.length, targetDisplayCount]);
+
   const treeItems = useMemo<TreeViewItem[]>(() => {
     const q = categorySearchQuery.toLowerCase().trim();
 
@@ -243,17 +279,6 @@ const ImageGallery: React.FC<ImageGalleryProps> = ({ isCategoryPanelCollapsed, o
 
     return tree;
   }, [categories, items, categorySearchQuery]);
-
-  const lastElementRef = useCallback((node: HTMLDivElement | null) => {
-    if (isLoading) return;
-    if (observer.current) observer.current.disconnect();
-    observer.current = new IntersectionObserver(entries => {
-      if (entries[0].isIntersecting && displayCount < sortedAndFilteredItems.length) {
-        setDisplayCount(prevCount => prevCount + 20);
-      }
-    });
-    if (node) observer.current.observe(node);
-  }, [isLoading, sortedAndFilteredItems.length, displayCount]);
 
   const currentCategoryName = useMemo(() => {
     if (selectedCategoryId === 'all') return 'Media Vault';
@@ -385,12 +410,19 @@ const ImageGallery: React.FC<ImageGalleryProps> = ({ isCategoryPanelCollapsed, o
                         <h3 className="text-2xl font-black uppercase tracking-tighter">Vault Empty</h3>
                     </div>
                 ) : sortedAndFilteredItems.length > 0 ? (
-                    <div ref={gridRef} className="flex bg-base-300 border-r border-base-300 elastic-grid-container" style={{ willChange: 'transform' }}>
+                    // BUG FIX: bind key to layout specific variables to force clean re-mount
+                    <div 
+                        key={`grid-${viewMode}-${columnCount}-${selectedCategoryId}`}
+                        ref={gridRef} 
+                        className="flex bg-base-300 border-r border-base-300 elastic-grid-container" 
+                        style={{ willChange: 'transform' }}
+                    >
                         {masonryColumns.map((col, colIdx) => (
                             <div 
-                                key={colIdx} 
-                                ref={el => { if (el) columnRefs.current[colIdx] = el; }}
+                                key={`col-${colIdx}`} 
+                                ref={el => { columnRefs.current[colIdx] = el; }}
                                 className="flex-1 flex flex-col gap-px border-l border-base-300 first:border-l-0"
+                                style={{ contain: 'layout paint' }}
                             >
                                 {col.map(item => (
                                     <div key={item.id} data-item-id={item.id} className="elastic-grid-item">
@@ -411,7 +443,7 @@ const ImageGallery: React.FC<ImageGalleryProps> = ({ isCategoryPanelCollapsed, o
                 ) : (
                     <div className="text-center py-32 flex flex-col items-center opacity-10"><h3 className="text-xl font-black uppercase tracking-tighter">No matches in sequence</h3></div>
                 )}
-                {displayedItems.length < sortedAndFilteredItems.length && (
+                {targetDisplayCount < sortedAndFilteredItems.length && (
                     <div ref={lastElementRef} className="py-20 flex justify-center bg-base-100">
                         <span className="loading loading-spinner loading-md opacity-20"></span>
                     </div>

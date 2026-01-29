@@ -24,6 +24,15 @@
     background: oklch(var(--p) / 0.5);
   }
 
+  /* Hide scrollbar utility */
+  .no-scrollbar::-webkit-scrollbar {
+    display: none;
+  }
+  .no-scrollbar {
+    -ms-overflow-style: none;  /* IE and Edge */
+    scrollbar-width: none;  /* Firefox */
+  }
+
   /* Specific floating behavior: only show thumb on hover of the container */
   .floating-scrollbar::-webkit-scrollbar-thumb {
     background: transparent;
@@ -53,8 +62,12 @@
 
   .elastic-grid-item {
     transform: skewY(var(--scroll-velocity, 0deg)) scaleY(var(--scroll-scale, 1));
-    will-change: transform;
-    transition: transform 0.2s cubic-bezier(0.23, 1, 0.32, 1);
+    will-change: transform, opacity;
+    transition: transform 0.2s cubic-bezier(0.23, 1, 0.32, 1), opacity 0.4s ease-out;
+    /* CRITICAL PERFORMANCE OPTIMIZATION: */
+    /* Only render what is near the viewport */
+    content-visibility: auto;
+    contain-intrinsic-size: 1px 300px; /* Placeholder size for layout calculation before render */
   }
 
   @media (prefers-reduced-motion: reduce) {

@@ -153,20 +153,27 @@ const Thumbnail: React.FC<{
     }, [url]);
 
     return (
-        <div className="relative flex-shrink-0 w-20 h-20 aspect-square">
+        <div className="carousel-item-infinite flex-shrink-0 w-24 h-24 mx-3">
             <button
                 onClick={onClick}
-                className={`relative w-full h-full rounded-none overflow-hidden transition-all duration-300 focus:outline-none ring-1 ${isActive ? 'ring-primary z-10 scale-[1.1] shadow-xl' : 'ring-base-300/50 hover:ring-primary/40 opacity-40 hover:opacity-100'}`}
+                className={`relative w-full h-full overflow-hidden transition-all duration-500 ease-out focus:outline-none border-2 ${isActive ? 'border-primary shadow-2xl scale-110 z-20' : 'border-transparent opacity-30 hover:opacity-100 hover:scale-105'}`}
             >
                 {blobUrl ? (
                     type === 'video' ? <video src={blobUrl} className="w-full h-full object-cover bg-black" /> : <img src={blobUrl} alt="Thumb" className="w-full h-full object-cover bg-black" />
                 ) : <div className="w-full h-full bg-base-200 animate-pulse" />}
-                {isActive && <div className="absolute inset-0 bg-primary/5"></div>}
+                
+                {type === 'video' && !isActive && (
+                    <div className="absolute inset-0 flex items-center justify-center bg-black/20 pointer-events-none">
+                        <div className="p-1.5 bg-black/40 rounded-full border border-white/10">
+                            <PlusIcon className="w-3 h-3 text-white rotate-45" />
+                        </div>
+                    </div>
+                )}
             </button>
             {isRemovable && (
                 <button 
                     onClick={(e) => { e.stopPropagation(); onRemove?.(); }}
-                    className="absolute -top-1 -right-1 z-20 btn btn-xs btn-circle btn-error shadow-lg scale-75"
+                    className="absolute -top-1 -right-1 z-30 btn btn-xs btn-circle btn-error shadow-lg scale-75"
                 >
                     <CloseIcon className="w-3 h-3" />
                 </button>
@@ -174,6 +181,78 @@ const Thumbnail: React.FC<{
         </div>
     );
 };
+
+/**
+ * GSAP Horizontal Loop Helper (Optimized for programatic indexing)
+ */
+function horizontalLoop(items: HTMLElement[], config: any) {
+	items = gsap.utils.toArray(items);
+	config = config || {};
+	let tl = gsap.timeline({
+        repeat: config.repeat, 
+        paused: config.paused, 
+        defaults: {ease: "none"}, 
+        onReverseComplete: () => tl.totalTime(tl.rawTime() + tl.duration() * 100)
+    }),
+    length = items.length,
+    startX = items[0].offsetLeft,
+    times: number[] = [],
+    widths: number[] = [],
+    xPercents: number[] = [],
+    curIndex = 0,
+    pixelsPerSecond = (config.speed || 1) * 100,
+    snap = config.snap === false ? (v: any) => v : gsap.utils.snap(config.snap || 1),
+    totalWidth, curX, distanceToStart, distanceToLoop, item, i;
+	
+    gsap.set(items, { xPercent: 0 });
+
+	for (i = 0; i < length; i++) {
+		item = items[i];
+		widths[i] = parseFloat(gsap.getProperty(item, "width", "px") as string);
+		xPercents[i] = snap(parseFloat(gsap.getProperty(item, "x", "px") as string) / widths[i] * 100 + (gsap.getProperty(item, "xPercent") as number));
+	}
+	
+    gsap.set(items, {x: 0});
+	totalWidth = items[length-1].offsetLeft + xPercents[length-1] / 100 * widths[length-1] - startX + items[length-1].offsetWidth * (gsap.getProperty(items[length-1], "scaleX") as number) + (parseFloat(config.paddingRight) || 0);
+	
+    for (i = 0; i < length; i++) {
+		item = items[i];
+		curX = xPercents[i] / 100 * widths[i];
+		distanceToStart = item.offsetLeft + curX - startX;
+		distanceToLoop = distanceToStart + widths[i] * (gsap.getProperty(item, "scaleX") as number);
+		tl.to(item, {xPercent: snap((curX - distanceToLoop) / widths[i] * 100), duration: distanceToLoop / pixelsPerSecond}, 0)
+		  .fromTo(item, {xPercent: snap((curX - distanceToLoop + totalWidth) / widths[i] * 100)}, {xPercent: xPercents[i], duration: (curX - distanceToLoop + totalWidth) / pixelsPerSecond, immediateRender: false}, distanceToLoop / pixelsPerSecond)
+		  .add("label" + i, distanceToStart / pixelsPerSecond);
+		times[i] = distanceToStart / pixelsPerSecond;
+	}
+
+	function toIndex(index: number, vars: any) {
+		vars = vars || {};
+		(Math.abs(index - curIndex) > length / 2) && (index += index > curIndex ? -length : length);
+		let newIndex = gsap.utils.wrap(0, length, index),
+			time = times[newIndex];
+		if (time > tl.time() !== index > curIndex) {
+			vars.modifiers = {time: gsap.utils.wrap(0, tl.duration())};
+			time += tl.duration() * (index > curIndex ? 1 : -1);
+		}
+		curIndex = newIndex;
+		vars.overwrite = true;
+		return tl.tweenTo(time, vars);
+	}
+
+	(tl as any).next = (vars: any) => toIndex(curIndex + 1, vars);
+	(tl as any).prev = (vars: any) => toIndex(curIndex - 1, vars);
+	(tl as any).current = () => curIndex;
+	(tl as any).toIndex = (index: number, vars: any) => toIndex(index, vars);
+	(tl as any).times = times;
+
+	tl.progress(1, true).progress(0, true);
+	if (config.reversed) {
+	  (tl.vars as any).onReverseComplete();
+	  tl.reverse();
+	}
+	return tl;
+}
 
 const ItemDetailView: React.FC<ItemDetailViewProps> = ({ items, currentIndex, isPinned, categories, onClose, onUpdate, onDelete, onTogglePin, onNavigate, showGlobalFeedback }) => {
   const item = useMemo(() => items[currentIndex] || null, [items, currentIndex]);
@@ -193,7 +272,9 @@ const ItemDetailView: React.FC<ItemDetailViewProps> = ({ items, currentIndex, is
   const [editableUrls, setEditableUrls] = useState<string[]>([]);
   const [editableSources, setEditableSources] = useState<string[]>([]);
   
-  const thumbnailScrollRef = useRef<HTMLDivElement>(null);
+  const carouselTrackRef = useRef<HTMLDivElement>(null);
+  const carouselContainerRef = useRef<HTMLDivElement>(null);
+  const loopRef = useRef<any>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const [isPublishModalOpen, setIsPublishModalOpen] = useState(false);
@@ -214,6 +295,49 @@ const ItemDetailView: React.FC<ItemDetailViewProps> = ({ items, currentIndex, is
         setIsEditing(false);
     }
   }, [item]);
+
+  // --- Core Lifecycle: Setup Loop with Left Alignment ---
+  useLayoutEffect(() => {
+    const track = carouselTrackRef.current;
+    const container = carouselContainerRef.current;
+    if (!track || !container) return;
+    
+    const mediaItems = gsap.utils.toArray<HTMLElement>('.carousel-item-infinite');
+    if (mediaItems.length === 0) return;
+
+    const ctx = gsap.context(() => {
+        // 1. Initialize Loop
+        loopRef.current = horizontalLoop(mediaItems, {
+            speed: 1,
+            repeat: -1,
+            paused: true,
+            paddingRight: 24,
+        });
+
+        // 2. Set Left Anchor
+        // Instead of centering, we align the start of the track to a standard margin
+        // so the active item appears on the left side of the viewport.
+        gsap.set(track, { x: 32 });
+
+        // 3. Sync
+        loopRef.current.toIndex(activeImageIndex, { duration: 0 });
+    }, track);
+
+    return () => {
+        ctx.revert();
+        loopRef.current = null;
+    };
+  }, [item?.urls.length, editableUrls.length, isEditing]);
+
+  // --- Interaction Layer ---
+  useLayoutEffect(() => {
+    if (!loopRef.current) return;
+    
+    loopRef.current.toIndex(activeImageIndex, {
+        duration: 0.8,
+        ease: "power4.inOut"
+    });
+  }, [activeImageIndex]);
 
   const handleSave = () => {
     if (item) {
@@ -248,7 +372,6 @@ const ItemDetailView: React.FC<ItemDetailViewProps> = ({ items, currentIndex, is
       setEditableUrls(prev => [...prev, ...newUrls]);
       setEditableSources(prev => [...prev, ...newSources]);
       
-      // Select the first newly added sample
       if (newUrls.length > 0) {
           setActiveImageIndex(editableUrls.length);
       }
@@ -268,7 +391,7 @@ const ItemDetailView: React.FC<ItemDetailViewProps> = ({ items, currentIndex, is
 
   const handleInnerNavigate = (dir: 'next' | 'prev') => {
       setNavDirection(dir);
-      const len = item?.urls.length || 0;
+      const len = (isEditing ? editableUrls : item?.urls || []).length;
       const nextIdx = dir === 'next' ? (activeImageIndex + 1) % len : (activeImageIndex - 1 + len) % len;
       setActiveImageIndex(nextIdx);
   };
@@ -283,13 +406,6 @@ const ItemDetailView: React.FC<ItemDetailViewProps> = ({ items, currentIndex, is
       if (idx === activeImageIndex) return;
       setNavDirection(idx > activeImageIndex ? 'next' : 'prev');
       setActiveImageIndex(idx);
-  };
-
-  const scrollDeck = (dir: 'left' | 'right') => {
-      if (thumbnailScrollRef.current) {
-          const move = dir === 'left' ? -200 : 200;
-          thumbnailScrollRef.current.scrollBy({ left: move, behavior: 'smooth' });
-      }
   };
 
   const handlePublishClick = async () => {
@@ -308,9 +424,11 @@ const ItemDetailView: React.FC<ItemDetailViewProps> = ({ items, currentIndex, is
       ...categories.map(c => ({ label: c.name.toUpperCase(), value: c.id }))
   ];
 
+  const currentMediaUrls = isEditing ? editableUrls : item.urls;
+
   return (
     <div className="absolute inset-0 z-40 bg-black/60 backdrop-blur-sm animate-fade-in flex items-center justify-center p-2 lg:p-4 overflow-hidden" onClick={onClose}>
-        <div className="w-full h-full bg-base-100 rounded-none border border-base-300 shadow-2xl flex flex-col lg:flex-row overflow-hidden relative" onClick={e => e.stopPropagation()}>
+        <div className="w-full h-full bg-base-100 rounded-none border border-base-300 shadow-2xl w-full h-full flex flex-col lg:flex-row overflow-hidden relative" onClick={e => e.stopPropagation()}>
             
             {/* Viewport & Deck Side */}
             <main className="flex-1 bg-black flex flex-col overflow-hidden relative group">
@@ -326,7 +444,7 @@ const ItemDetailView: React.FC<ItemDetailViewProps> = ({ items, currentIndex, is
                     />
 
                     {/* Navigation Arrows */}
-                    {(isEditing ? editableUrls.length : item.urls.length) > 1 && (
+                    {currentMediaUrls.length > 1 && (
                         <>
                             <button 
                                 onClick={(e) => { e.stopPropagation(); handleInnerNavigate('prev'); }}
@@ -355,34 +473,49 @@ const ItemDetailView: React.FC<ItemDetailViewProps> = ({ items, currentIndex, is
                     </div>
                 </div>
 
-                {/* Thumbnail Deck (Horizontal Strip) */}
-                {(isEditing ? editableUrls.length : item.urls.length) > 1 && (
-                    <div className="h-32 flex-shrink-0 bg-base-200/30 border-t border-white/5 relative flex items-center px-2">
-                        <button onClick={() => scrollDeck('left')} className="btn btn-sm btn-ghost btn-square rounded-none z-10 hover:bg-black/20"><ChevronLeftIcon className="w-5 h-5"/></button>
-                        
-                        <div 
-                            ref={thumbnailScrollRef}
-                            className="flex-grow flex items-center gap-3 overflow-x-auto no-scrollbar px-4 h-full scroll-smooth"
+                {/* Left-Aligned Deck */}
+                {currentMediaUrls.length > 1 && (
+                    <div className="h-40 flex-shrink-0 bg-base-200/30 border-t border-white/5 relative flex items-center overflow-hidden group/deck">
+                        {/* Thumbnail Navigation Arrows */}
+                        <button 
+                            onClick={(e) => { e.stopPropagation(); handleInnerNavigate('prev'); }}
+                            className="absolute left-4 z-40 btn btn-circle btn-sm btn-ghost bg-black/60 text-white opacity-0 group-hover/deck:opacity-100 transition-opacity border border-white/10"
                         >
-                            {(isEditing ? editableUrls : item.urls).map((url, idx) => (
-                                <Thumbnail 
-                                    key={idx}
-                                    url={url}
-                                    type={item.type}
-                                    isActive={idx === activeImageIndex}
-                                    onClick={() => handleThumbSelect(idx)}
-                                    isRemovable={isEditing}
-                                    onRemove={() => handleRemoveSample(idx)}
-                                />
-                            ))}
+                            <ChevronLeftIcon className="w-4 h-4" />
+                        </button>
+
+                        <div 
+                            ref={carouselContainerRef}
+                            className="w-full h-full relative overflow-hidden"
+                        >
+                            <div 
+                                ref={carouselTrackRef}
+                                className="flex items-center h-full relative"
+                            >
+                                {currentMediaUrls.map((url, idx) => (
+                                    <Thumbnail 
+                                        key={idx}
+                                        url={url}
+                                        type={item.type}
+                                        isActive={idx === activeImageIndex}
+                                        onClick={() => handleThumbSelect(idx)}
+                                        isRemovable={isEditing}
+                                        onRemove={() => handleRemoveSample(idx)}
+                                    />
+                                ))}
+                            </div>
                         </div>
 
-                        <button onClick={() => scrollDeck('right')} className="btn btn-sm btn-ghost btn-square rounded-none z-10 hover:bg-black/20"><ChevronRightIcon className="w-5 h-5"/></button>
+                        <button 
+                            onClick={(e) => { e.stopPropagation(); handleInnerNavigate('next'); }}
+                            className="absolute right-4 z-40 btn btn-circle btn-sm btn-ghost bg-black/60 text-white opacity-0 group-hover/deck:opacity-100 transition-opacity border border-white/10"
+                        >
+                            <ChevronRightIcon className="w-4 h-4" />
+                        </button>
                         
-                        {/* Position Indicator */}
-                        <div className="absolute top-1 right-4">
-                            <span className="text-[8px] font-black text-primary/40 uppercase tracking-widest">Sequence Segment: {activeImageIndex + 1}/{(isEditing ? editableUrls : item.urls).length}</span>
-                        </div>
+                        {/* Gradient Viewport Masks (Adjusted for Left Alignment) */}
+                        <div className="absolute inset-y-0 left-0 w-24 bg-gradient-to-r from-black/60 to-transparent pointer-events-none z-30"></div>
+                        <div className="absolute inset-y-0 right-0 w-48 bg-gradient-to-l from-black/90 via-black/40 to-transparent pointer-events-none z-30"></div>
                     </div>
                 )}
             </main>

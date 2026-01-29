@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef, useEffect, memo } from 'react';
 import type { GalleryItem } from '../types';
 import { ImageBrokenIcon, ThumbTackIcon, EllipsisVerticalIcon, EditIcon, DeleteIcon, PlayIcon } from './icons';
 import { fileSystemManager } from '../utils/fileUtils';
@@ -18,18 +18,24 @@ const Media: React.FC<{
     type: 'image' | 'video';
     title: string;
     className?: string;
-}> = React.memo(({ url, type, title, className }) => {
+}> = memo(({ url, type, title, className }) => {
     const [displayUrl, setDisplayUrl] = useState<string | null>(null);
     const [hasError, setHasError] = useState(false);
     const [isVisible, setIsVisible] = useState(false);
     const [isLoaded, setIsLoaded] = useState(false);
     const containerRef = useRef<HTMLDivElement>(null);
     const objectUrlRef = useRef<string | null>(null);
+    const idleHandleRef = useRef<number | null>(null);
 
     const cleanup = () => {
         if (objectUrlRef.current) {
             URL.revokeObjectURL(objectUrlRef.current);
             objectUrlRef.current = null;
+        }
+        if (idleHandleRef.current) {
+            if ('cancelIdleCallback' in window) (window as any).cancelIdleCallback(idleHandleRef.current);
+            else clearTimeout(idleHandleRef.current);
+            idleHandleRef.current = null;
         }
     };
 
@@ -45,7 +51,7 @@ const Media: React.FC<{
                     cleanup();
                 }
             }
-        }, { rootMargin: '600px' });
+        }, { rootMargin: '2500px' }); // Matched with Gallery predictive margin
 
         if (containerRef.current) observer.observe(containerRef.current);
         return () => {
@@ -64,25 +70,34 @@ const Media: React.FC<{
                 if (isActive) setDisplayUrl(url);
                 return;
             }
-            try {
-                const blob = await fileSystemManager.getFileAsBlob(url);
-                if (isActive && blob) {
-                    cleanup();
-                    const newUrl = URL.createObjectURL(blob);
-                    objectUrlRef.current = newUrl;
-                    setDisplayUrl(newUrl);
-                } else if (isActive) {
-                    setHasError(true);
+
+            const startLoading = async () => {
+                try {
+                    const blob = await fileSystemManager.getFileAsBlob(url);
+                    if (isActive && blob) {
+                        cleanup();
+                        const newUrl = URL.createObjectURL(blob);
+                        objectUrlRef.current = newUrl;
+                        setDisplayUrl(newUrl);
+                    } else if (isActive) {
+                        setHasError(true);
+                    }
+                } catch {
+                     if (isActive) setHasError(true);
                 }
-            } catch {
-                 if (isActive) setHasError(true);
+            };
+
+            if ('requestIdleCallback' in window) {
+                idleHandleRef.current = (window as any).requestIdleCallback(() => startLoading(), { timeout: 1500 });
+            } else {
+                idleHandleRef.current = (window as any).setTimeout(() => startLoading(), 50) as any;
             }
         };
         loadMedia();
-        return () => { isActive = false; };
+        return () => { isActive = false; cleanup(); };
     }, [url, isVisible]);
 
-    const mediaClasses = `w-full h-auto block transition-all duration-700 ${isLoaded ? 'opacity-100' : 'opacity-0'} media-monochrome group-hover:filter-none group-hover:opacity-100 ${className}`;
+    const mediaClasses = `w-full h-auto block transition-opacity duration-700 will-change-transform ${isLoaded ? 'opacity-100' : 'opacity-0'} media-monochrome group-hover:filter-none group-hover:opacity-100 ${className}`;
 
     return (
         <div ref={containerRef} className="relative w-full bg-base-300 min-h-[120px] flex items-center justify-center overflow-hidden">
@@ -116,6 +131,7 @@ const Media: React.FC<{
                         alt={title} 
                         className={mediaClasses} 
                         loading="lazy" 
+                        decoding="async"
                         onLoad={() => setIsLoaded(true)}
                     />
                 </div>
@@ -129,7 +145,7 @@ const Media: React.FC<{
     );
 });
 
-const ImageCard: React.FC<ImageCardProps> = ({ item, onOpenDetailView, onDeleteItem, onTogglePin, isPinned, categoryName, showCategory }) => {
+const ImageCard: React.FC<ImageCardProps> = memo(({ item, onOpenDetailView, onDeleteItem, onTogglePin, isPinned, categoryName, showCategory }) => {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
 
@@ -225,6 +241,6 @@ const ImageCard: React.FC<ImageCardProps> = ({ item, onOpenDetailView, onDeleteI
       </div>
     </div>
   );
-};
+});
 
 export default ImageCard;
