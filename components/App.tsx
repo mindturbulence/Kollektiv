@@ -68,15 +68,15 @@ const InitialLoader: React.FC<{ status: string; progress: number | null }> = ({ 
     const displayPercent = String(percentage).padStart(3, '0');
 
     return (
-        <div id="initial-loader" className="fixed inset-0 z-[300] flex flex-col items-center justify-center bg-base-100 text-white overflow-hidden select-none">
+        <div id="initial-loader" className="fixed inset-0 z-[300] flex flex-col items-center justify-center bg-base-100 text-base-content overflow-hidden select-none">
             <div className="absolute inset-0 bg-grid-texture opacity-[0.05] pointer-events-none"></div>
             
             <div className="relative z-10 flex flex-col items-center text-center">
                 <div className="mb-16 flex flex-col items-center">
                     <span className="text-[120px] md:text-[200px] font-black tracking-tighter leading-none font-mono tabular-nums text-primary/90">
-                        {displayPercent}<span className="text-white/5">%</span>
+                        {displayPercent}<span className="opacity-10">%</span>
                     </span>
-                    <div className="w-80 h-px bg-white/5 relative overflow-hidden mt-6">
+                    <div className="w-80 h-px bg-base-content/5 relative overflow-hidden mt-6">
                          <div 
                             className="absolute inset-y-0 left-0 bg-primary transition-all duration-700 ease-out shadow-[0_0_10px_oklch(var(--p))]" 
                             style={{ width: `${percentage}%` }}
@@ -87,7 +87,7 @@ const InitialLoader: React.FC<{ status: string; progress: number | null }> = ({ 
                 <div className="space-y-4">
                     <div className="flex items-center justify-center gap-6 mb-4">
                         <div className="w-1.5 h-1.5 bg-primary animate-ping"></div>
-                        <p className="text-[11px] font-black uppercase tracking-[0.8em] text-white/50">
+                        <p className="text-[11px] font-black uppercase tracking-[0.8em] text-base-content/50">
                             {displayStatus}
                         </p>
                     </div>
@@ -95,8 +95,8 @@ const InitialLoader: React.FC<{ status: string; progress: number | null }> = ({ 
             </div>
 
             <div className="absolute bottom-16 left-16 hidden md:flex flex-col gap-2">
-                <span className="text-[9px] font-black uppercase tracking-[0.4em] text-white/10">Kernel Access</span>
-                <span className="text-[11px] font-mono font-bold text-white/20">VAULT_STABILITY_OK</span>
+                <span className="text-[9px] font-black uppercase tracking-[0.4em] text-base-content/10">Kernel Access</span>
+                <span className="text-[11px] font-mono font-bold text-base-content/20">VAULT_STABILITY_OK</span>
             </div>
         </div>
     );
@@ -208,7 +208,7 @@ const App: React.FC = () => {
             gsap.set(unusedShutters, { autoAlpha: 0, pointerEvents: 'none' });
 
             const tl = gsap.timeline({
-                defaults: { ease: "expo.inOut", duration: 1.0 }, // Snappier 1s duration
+                defaults: { ease: "expo.inOut", duration: 1.0 }, // Fast 1.0s transition
                 onComplete: () => {
                     isFirstLoad.current = false;
                     // Reset visibility and disable interactions with shutters
@@ -403,8 +403,8 @@ const App: React.FC = () => {
                 
                 <main className="flex-grow relative overflow-hidden bg-base-100">
                     {/* 2. Navigation Shutter (Phase 2 - Strictly inside <main>) - Behind Sidebar Shadow */}
-                    <div ref={navShutterTopRef} className="absolute inset-x-0 top-0 h-1/2 z-[30] bg-base-100 border-b border-base-300/30 pointer-events-none will-change-transform" />
-                    <div ref={navShutterBottomRef} className="absolute inset-x-0 bottom-0 h-1/2 z-[30] bg-base-100 border-t border-base-300/30 pointer-events-none will-change-transform" />
+                    <div ref={navShutterTopRef} className="absolute inset-x-0 top-0 h-1/2 z-[30] bg-base-100 border-b border-base-content/10 pointer-events-none will-change-transform" />
+                    <div ref={navShutterBottomRef} className="absolute inset-x-0 bottom-0 h-1/2 z-[30] bg-base-100 border-t border-base-content/10 pointer-events-none will-change-transform" />
 
                     <div ref={pageContentRef} className="h-full w-full will-change-transform z-10 relative">
                         {renderContent()}

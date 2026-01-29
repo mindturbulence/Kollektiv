@@ -1,4 +1,4 @@
-import React, { useRef, useState, useEffect } from 'react';
+import React, { useRef, useState, useEffect, useCallback } from 'react';
 import type { ActiveTab } from '../types';
 import { useSettings } from '../contexts/SettingsContext';
 import {
@@ -18,6 +18,47 @@ interface SidebarProps {
   onAboutClick: () => void;
 }
 
+/**
+ * Technical Scramble Component.
+ * Animates text characters randomly on hover.
+ */
+const ScrambledText: React.FC<{ text: string; isHovered: boolean }> = ({ text, isHovered }) => {
+    const [display, setDisplay] = useState(text);
+    const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789!@#$%^&*()_+';
+    const originalText = useRef(text);
+    const iterationRef = useRef(0);
+    const intervalRef = useRef<number | null>(null);
+
+    const startScramble = useCallback(() => {
+        if (intervalRef.current) clearInterval(intervalRef.current);
+        iterationRef.current = 0;
+        
+        intervalRef.current = window.setInterval(() => {
+            setDisplay(originalText.current.split('').map((char, index) => {
+                if (index < iterationRef.current) return originalText.current[index];
+                if (char === ' ') return ' ';
+                return chars[Math.floor(Math.random() * chars.length)];
+            }).join(''));
+            
+            if (iterationRef.current >= originalText.current.length) {
+                if (intervalRef.current) clearInterval(intervalRef.current);
+            }
+            iterationRef.current += 1 / 3;
+        }, 25); // Snappy speed
+    }, []);
+
+    useEffect(() => {
+        if (isHovered) {
+            startScramble();
+        } else {
+            if (intervalRef.current) clearInterval(intervalRef.current);
+            setDisplay(text);
+        }
+    }, [isHovered, text, startScramble]);
+
+    return <span className={isHovered ? 'font-mono' : ''}>{display}</span>;
+};
+
 const NavItem: React.FC<{
   id: ActiveTab;
   label: string;
@@ -25,23 +66,31 @@ const NavItem: React.FC<{
   activeTab: ActiveTab;
   onClick: (tab: ActiveTab) => void;
   registerRef: (id: ActiveTab, el: HTMLAnchorElement | null) => void;
-}> = ({ id, label, icon, activeTab, onClick, registerRef }) => (
-    <li>
-        <a
-          ref={(el) => registerRef(id, el)}
-          onClick={() => onClick(id)}
-          className={`flex items-center p-2.5 rounded-lg text-base font-medium transition-colors cursor-pointer relative z-10 ${
-            activeTab === id
-              ? 'text-primary-content font-bold'
-              : 'text-base-content/70 hover:bg-base-200'
-          }`}
-          aria-current={activeTab === id ? 'page' : undefined}
-        >
-          <div className="mr-3">{icon}</div>
-          <span className="uppercase text-[10px] font-black tracking-widest">{label}</span>
-        </a>
-    </li>
-);
+}> = ({ id, label, icon, activeTab, onClick, registerRef }) => {
+    const [isHovered, setIsHovered] = useState(false);
+
+    return (
+        <li>
+            <a
+              ref={(el) => registerRef(id, el)}
+              onClick={() => onClick(id)}
+              onMouseEnter={() => setIsHovered(true)}
+              onMouseLeave={() => setIsHovered(false)}
+              className={`flex items-center p-2.5 rounded-lg text-base font-medium transition-colors cursor-pointer relative z-10 ${
+                activeTab === id
+                  ? 'text-primary-content font-bold'
+                  : 'text-base-content/70 hover:bg-base-200'
+              }`}
+              aria-current={activeTab === id ? 'page' : undefined}
+            >
+              <div className="mr-3">{icon}</div>
+              <span className="uppercase text-[10px] font-black tracking-widest min-w-[120px]">
+                <ScrambledText text={label} isHovered={isHovered} />
+              </span>
+            </a>
+        </li>
+    );
+};
 
 const Section: React.FC<{ title: string, children: React.ReactNode }> = ({ title, children }) => (
     <div className="mb-4">
@@ -58,16 +107,13 @@ const Section: React.FC<{ title: string, children: React.ReactNode }> = ({ title
 const Sidebar: React.FC<SidebarProps> = ({ activeTab, onNavigate, isSidebarOpen, isPinned, setIsPinned, onAboutClick }) => {
     const { settings } = useSettings();
     const { features } = settings;
-    // FIX: Corrected import at line 1 ensures useRef is defined
     const navRefs = useRef<Record<string, HTMLAnchorElement | null>>({});
-    // FIX: Corrected import at line 1 ensures useState is defined
     const [pillStyle, setPillStyle] = useState<React.CSSProperties>({ display: 'none' });
 
     const registerRef = (id: ActiveTab, el: HTMLAnchorElement | null) => {
         navRefs.current[id] = el;
     };
 
-    // FIX: Corrected import at line 1 ensures useEffect is defined
     useEffect(() => {
         const activeEl = navRefs.current[activeTab];
         const container = activeEl?.closest('nav');
