@@ -3,21 +3,6 @@
 @tailwind utilities;
 
 @layer utilities {
-  .animate-tab-switch {
-    animation: tab-switch 0.4s cubic-bezier(0.4, 0, 0.2, 1) forwards;
-  }
-
-  @keyframes tab-switch {
-    from {
-      opacity: 0;
-      transform: translateY(8px);
-    }
-    to {
-      opacity: 1;
-      transform: translateY(0);
-    }
-  }
-
   /* Thin, floating scrollbar style */
   .custom-scrollbar::-webkit-scrollbar,
   .floating-scrollbar::-webkit-scrollbar {

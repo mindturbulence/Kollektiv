@@ -29,19 +29,37 @@ export default defineConfig(({ mode }) => {
             secure: false,
             rewrite: (path) => path.replace(/^\/ollama-local/, '')
           },
+          // Proxy for Google APIs to bypass COEP restrictions
+          '/google-api': {
+            target: 'https://www.googleapis.com',
+            changeOrigin: true,
+            secure: true,
+            rewrite: (path) => path.replace(/^\/google-api/, ''),
+            configure: (proxy, _options) => {
+              // Crucial: Rewrite the 'Location' header for resumable uploads
+              proxy.on('proxyRes', (proxyRes, req, _res) => {
+                if (proxyRes.headers.location) {
+                  const origin = req.headers.referer || req.headers.origin || 'https://localhost:5173';
+                  const originBase = new URL(origin).origin;
+                  proxyRes.headers.location = proxyRes.headers.location.replace(
+                    'https://www.googleapis.com',
+                    originBase + '/google-api'
+                  );
+                }
+              });
+            }
+          },
           // Robust Dynamic Proxy for Ollama Cloud
           '/proxy-remote': {
             target: 'http://127.0.0.1:11434', // Fallback to local IPv4
             changeOrigin: true,
             secure: false,
             ws: true,
-            timeout: 600000, // 10 minutes for long AI generations
+            timeout: 600000, 
             proxyTimeout: 600000,
             router: (req) => {
                 let target = req.headers['x-target-url'];
                 if (!target || typeof target !== 'string') return 'http://127.0.0.1:11434';
-                
-                // Normalize localhost to 127.0.0.1 for the proxy engine
                 return target.replace('localhost', '127.0.0.1');
             },
             rewrite: (path) => path.replace(/^\/proxy-remote/, ''),

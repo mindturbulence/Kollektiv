@@ -20,6 +20,7 @@ const SavedPromptCard: React.FC<SavedPromptCardProps> = ({ prompt, categoryName,
   const [isExpanded, setIsExpanded] = useState(false);
   const [canExpand, setCanExpand] = useState(false);
   const textRef = useRef<HTMLParagraphElement>(null);
+  const contentRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
@@ -36,12 +37,18 @@ const SavedPromptCard: React.FC<SavedPromptCardProps> = ({ prompt, categoryName,
   }, []);
   
   useEffect(() => {
+    // Reset expansion state when prompt changes
     setIsExpanded(false);
+    
+    // Small delay to allow layout to settle before calculating scrollHeight
     const checkOverflow = () => {
         const element = textRef.current;
-        if (element) setCanExpand((element as any).scrollHeight > (element as any).clientHeight);
+        if (element) {
+            // Check if text exceeds approx 4 lines (baseline for line-clamp-4 is usually around 80-96px depending on line-height)
+            setCanExpand(element.scrollHeight > 96);
+        }
     };
-    const timer = setTimeout(checkOverflow, 100);
+    const timer = setTimeout(checkOverflow, 150);
     return () => clearTimeout(timer);
   }, [prompt.text]);
 
@@ -96,17 +103,43 @@ const SavedPromptCard: React.FC<SavedPromptCardProps> = ({ prompt, categoryName,
           </div>
         </div>
 
-        {/* Body */}
+        {/* Body with Animated Expansion */}
         <div className="flex-grow mb-6">
-          <p
-            ref={textRef}
-            className={`text-sm font-medium leading-relaxed text-base-content/60 break-words italic ${!isExpanded ? 'line-clamp-4' : ''}`}
+          <div 
+            ref={contentRef}
+            className={`relative overflow-hidden transition-all duration-500 ease-[cubic-bezier(0.4,0,0.2,1)] ${isExpanded ? 'max-h-[2000px]' : 'max-h-24'}`}
           >
-            "{prompt.text}"
-          </p>
+            <p
+              ref={textRef}
+              className={`text-sm font-medium leading-relaxed text-base-content/60 break-words italic`}
+            >
+              "{prompt.text}"
+            </p>
+            
+            {/* Subtle fade overlay for collapsed state */}
+            {!isExpanded && canExpand && (
+              <div className="absolute bottom-0 left-0 right-0 h-8 bg-gradient-to-t from-base-100 to-transparent pointer-events-none transition-opacity duration-300 group-hover:from-base-200/30"></div>
+            )}
+          </div>
+
            {canExpand && (
-            <button onClick={(e) => { e.stopPropagation(); setIsExpanded(!isExpanded); }} className="text-primary text-[10px] font-black uppercase tracking-widest mt-3 hover:underline">
-              {isExpanded ? 'Collapse' : 'Expand'}
+            <button 
+                onClick={(e) => { e.stopPropagation(); setIsExpanded(!isExpanded); }} 
+                className="text-primary text-[10px] font-black uppercase tracking-[0.2em] mt-4 hover:underline flex items-center gap-1.5 transition-all active:scale-95"
+            >
+              {isExpanded ? 'COLLAPSE SEQUENCE' : 'EXPAND SEQUENCE'}
+              <svg 
+                xmlns="http://www.w3.org/2000/svg" 
+                viewBox="0 0 24 24" 
+                fill="none" 
+                stroke="currentColor" 
+                strokeWidth="3" 
+                strokeLinecap="round" 
+                strokeLinejoin="round" 
+                className={`w-3 h-3 transition-transform duration-500 ${isExpanded ? 'rotate-180' : ''}`}
+              >
+                <path d="M6 9l6 6 6-6" />
+              </svg>
             </button>
           )}
         </div>

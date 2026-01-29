@@ -50,8 +50,17 @@ const SavedPrompts: React.FC<SavedPromptsProps> = ({ onSendToEnhancer, isCategor
   const [columnCount, setColumnCount] = useState(() => getColumnCount());
   const [detailViewPromptId, setDetailViewPromptId] = useState<string | null>(null);
 
+  // Pagination State
+  const [displayCount, setDisplayCount] = useState(30);
+  const observer = useRef<IntersectionObserver | null>(null);
   const scrollerRef = useRef<HTMLDivElement>(null);
   const gridRef = useRef<HTMLDivElement>(null);
+
+  // Force close detail view when category changes to prevent UI blocking
+  useEffect(() => {
+    setDetailViewPromptId(null);
+    setDisplayCount(30); // Reset scroll position when category changes
+  }, [selectedCategoryId]);
 
   // --- Elastic Scroll Logic ---
   useEffect(() => {
@@ -190,6 +199,11 @@ const SavedPrompts: React.FC<SavedPromptsProps> = ({ onSendToEnhancer, isCategor
       return sorted;
   }, [prompts, selectedCategoryId, sortOrder, searchQuery]);
 
+  // Derived displayed items based on pagination
+  const displayedPrompts = useMemo(() => {
+    return sortedAndFilteredPrompts.slice(0, displayCount);
+  }, [sortedAndFilteredPrompts, displayCount]);
+
   const activeDetailViewIndex = useMemo(() => {
       if (!detailViewPromptId) return -1;
       return sortedAndFilteredPrompts.findIndex(p => p.id === detailViewPromptId);
@@ -197,11 +211,26 @@ const SavedPrompts: React.FC<SavedPromptsProps> = ({ onSendToEnhancer, isCategor
 
   const isDetailViewVisible = activeDetailViewIndex !== -1;
 
+  // Distribute displayed prompts into columns
   const columns = useMemo(() => {
     const cols: SavedPrompt[][] = Array.from({ length: columnCount }, () => []);
-    sortedAndFilteredPrompts.forEach((item, index) => cols[index % columnCount].push(item));
+    displayedPrompts.forEach((item, index) => cols[index % columnCount].push(item));
     return cols;
-  }, [sortedAndFilteredPrompts, columnCount]);
+  }, [displayedPrompts, columnCount]);
+
+  // Infinite Scroll Observer
+  const lastElementRef = useCallback((node: HTMLDivElement | null) => {
+    if (isLoading) return;
+    if (observer.current) observer.current.disconnect();
+    
+    observer.current = new IntersectionObserver(entries => {
+      if (entries[0].isIntersecting && displayCount < sortedAndFilteredPrompts.length) {
+        setDisplayCount(prevCount => prevCount + 20);
+      }
+    });
+    
+    if (node) observer.current.observe(node);
+  }, [isLoading, sortedAndFilteredPrompts.length, displayCount]);
 
   if (isLoading) return (
     <div className="h-full w-full flex items-center justify-center bg-base-100">
@@ -273,7 +302,7 @@ const SavedPrompts: React.FC<SavedPromptsProps> = ({ onSendToEnhancer, isCategor
                             <div className="flex bg-base-100 px-6 py-2 border border-base-300 shadow-sm self-start md:self-auto min-h-full">
                                 <div className="flex flex-col border-r border-base-300 px-6 last:border-r-0 justify-center">
                                     <span className="text-2xl font-black tracking-tighter leading-none">{sortedAndFilteredPrompts.length}</span>
-                                    <span className="text-[8px] uppercase font-black text-base-content/30 tracking-[0.2em] mt-0.5">Tokens</span>
+                                    <span className="text-[8px] uppercase font-black text-base-content/40 tracking-[0.2em] mt-0.5">Tokens</span>
                                 </div>
                             </div>
                         </div>
@@ -319,7 +348,7 @@ const SavedPrompts: React.FC<SavedPromptsProps> = ({ onSendToEnhancer, isCategor
                             <PromptIcon className="mx-auto h-20 w-20" />
                             <h3 className="text-2xl font-black uppercase tracking-tighter">Vault Empty</h3>
                         </div>
-                    ) : sortedAndFilteredPrompts.length > 0 ? (
+                    ) : displayedPrompts.length > 0 ? (
                         <div 
                             ref={gridRef}
                             className="flex border-r border-base-300 elastic-grid-container"
@@ -340,6 +369,13 @@ const SavedPrompts: React.FC<SavedPromptsProps> = ({ onSendToEnhancer, isCategor
                         </div>
                     ) : (
                         <div className="text-center py-32 flex flex-col items-center opacity-10"><h3 className="text-xl font-black uppercase tracking-tighter">No Matches</h3></div>
+                    )}
+
+                    {/* Infinite Scroll Sentinel */}
+                    {displayedPrompts.length < sortedAndFilteredPrompts.length && (
+                        <div ref={lastElementRef} className="py-20 flex justify-center bg-base-100">
+                            <span className="loading loading-spinner loading-md opacity-20"></span>
+                        </div>
                     )}
                 </div>
             </div>

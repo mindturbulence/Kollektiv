@@ -1,4 +1,5 @@
-import React, { useState, useEffect, useRef, useMemo, useCallback, useLayoutEffect } from 'react';
+import React, { useState, useEffect, useRef, useMemo, useCallback } from 'react';
+import { gsap } from 'gsap';
 import type { GalleryItem, GalleryCategory } from '../types';
 import { loadGalleryItems, addItemToGallery, updateItemInGallery, deleteItemFromGallery, loadPinnedItemIds, savePinnedItemIds, loadCategories } from '../utils/galleryStorage';
 import ImageCard from './ImageCard';
@@ -40,6 +41,62 @@ const ImageGallery: React.FC<ImageGalleryProps> = ({ isCategoryPanelCollapsed, o
   const [columnCount, setColumnCount] = useState(6);
   const gridRef = useRef<HTMLDivElement>(null);
   const scrollerRef = useRef<HTMLDivElement>(null);
+  const columnRefs = useRef<HTMLDivElement[]>([]);
+
+  // Force close detail view when category changes to prevent UI blocking
+  useEffect(() => {
+    setDetailViewItemId(null);
+  }, [selectedCategoryId]);
+
+  // --- GSAP Scroll Smoothing Engine ---
+  useEffect(() => {
+    const scroller = scrollerRef.current;
+    const grid = gridRef.current;
+    if (!scroller || !grid) return;
+
+    let lastY = scroller.scrollTop;
+    let vel = 0;
+    
+    // Quick setters for performance
+    const skewSetter = gsap.quickSetter(grid, "skewY", "deg");
+    const scaleSetter = gsap.quickSetter(grid, "scaleY");
+
+    const updateMotion = () => {
+        const currentY = scroller.scrollTop;
+        const diff = currentY - lastY;
+        
+        // Smooth out the velocity calculation
+        vel += (diff - vel) * 0.15;
+        lastY = currentY;
+
+        // Apply skew and scale based on momentum
+        const skewValue = gsap.utils.clamp(-10, 10, vel * 0.12);
+        const scaleValue = 1 - Math.min(0.08, Math.abs(vel) * 0.0006);
+
+        skewSetter(skewValue);
+        scaleSetter(scaleValue);
+
+        // Apply parallax to columns
+        columnRefs.current.forEach((col, idx) => {
+            if (!col) return;
+            const factor = (idx % 3 - 1) * 0.15; // Alternating speeds per column
+            const offset = vel * factor;
+            gsap.set(col, { y: offset, force3D: true });
+        });
+
+        if (Math.abs(vel) > 0.01) {
+            vel *= 0.92; // Friction
+        } else {
+            vel = 0;
+            skewSetter(0);
+            scaleSetter(1);
+            columnRefs.current.forEach(col => col && gsap.set(col, { y: 0 }));
+        }
+    };
+
+    gsap.ticker.add(updateMotion);
+    return () => gsap.ticker.remove(updateMotion);
+  }, [columnCount]);
 
   // --- Dynamic Column Calculation ---
   const getColumnCountForView = useCallback(() => {
@@ -70,34 +127,6 @@ const ImageGallery: React.FC<ImageGalleryProps> = ({ isCategoryPanelCollapsed, o
     window.addEventListener('resize', handleResize);
     return () => window.removeEventListener('resize', handleResize);
   }, [getColumnCountForView]);
-
-  // --- Elastic Scroll Logic ---
-  useEffect(() => {
-    const scroller = scrollerRef.current;
-    if (!scroller) return;
-
-    let lastScrollY = scroller.scrollTop;
-    let velocity = 0;
-    let rafId: number;
-
-    const updateVelocity = () => {
-      const currentScrollY = scroller.scrollTop;
-      const diff = currentScrollY - lastScrollY;
-      velocity += (diff - velocity) * 0.15;
-      lastScrollY = currentScrollY;
-      const skew = Math.max(-7, Math.min(7, velocity * 0.1));
-      const scale = 1 - Math.min(0.05, Math.abs(velocity) * 0.0005);
-      if (gridRef.current) {
-        gridRef.current.style.setProperty('--scroll-velocity', `${skew}deg`);
-        gridRef.current.style.setProperty('--scroll-scale', `${scale}`);
-      }
-      if (Math.abs(velocity) > 0.01) { velocity *= 0.85; } else { velocity = 0; }
-      rafId = requestAnimationFrame(updateVelocity);
-    };
-
-    rafId = requestAnimationFrame(updateVelocity);
-    return () => cancelAnimationFrame(rafId);
-  }, []);
 
   const [displayCount, setDisplayCount] = useState(30);
   const observer = useRef<IntersectionObserver | null>(null);
@@ -144,7 +173,6 @@ const ImageGallery: React.FC<ImageGalleryProps> = ({ isCategoryPanelCollapsed, o
       await refreshData();
   };
 
-  // --- Filtered and Sorted Items ---
   const sortedAndFilteredItems = useMemo(() => {
     let filtered = [...items];
     if (selectedCategoryId !== 'all') {
@@ -172,7 +200,6 @@ const ImageGallery: React.FC<ImageGalleryProps> = ({ isCategoryPanelCollapsed, o
 
   const displayedItems = useMemo(() => sortedAndFilteredItems.slice(0, displayCount), [sortedAndFilteredItems, displayCount]);
 
-  // --- Masonry Distribution ---
   const masonryColumns = useMemo(() => {
     const cols: GalleryItem[][] = Array.from({ length: columnCount }, () => []);
     displayedItems.forEach((item, index) => {
@@ -181,7 +208,6 @@ const ImageGallery: React.FC<ImageGalleryProps> = ({ isCategoryPanelCollapsed, o
     return cols;
   }, [displayedItems, columnCount]);
 
-  // --- Recursive Tree Item Filtering ---
   const treeItems = useMemo<TreeViewItem[]>(() => {
     const q = categorySearchQuery.toLowerCase().trim();
 
@@ -193,7 +219,6 @@ const ImageGallery: React.FC<ImageGalleryProps> = ({ isCategoryPanelCollapsed, o
         const subTree = buildTree(cat.id);
         const nameMatches = cat.name.toLowerCase().includes(q);
         
-        // Include if name matches OR any child matches
         if (!q || nameMatches || subTree.length > 0) {
           results.push({
             id: cat.id,
@@ -208,8 +233,6 @@ const ImageGallery: React.FC<ImageGalleryProps> = ({ isCategoryPanelCollapsed, o
     };
     
     const rootItems = buildTree(undefined);
-
-    // Filter static global nodes only if they match search or search is empty
     const globalVaultMatches = !q || 'Global Vault'.toLowerCase().includes(q);
     const uncategorizedMatches = !q || 'Uncategorized'.toLowerCase().includes(q);
 
@@ -362,9 +385,13 @@ const ImageGallery: React.FC<ImageGalleryProps> = ({ isCategoryPanelCollapsed, o
                         <h3 className="text-2xl font-black uppercase tracking-tighter">Vault Empty</h3>
                     </div>
                 ) : sortedAndFilteredItems.length > 0 ? (
-                    <div ref={gridRef} className="flex bg-base-300 border-r border-base-300 elastic-grid-container" style={{ '--scroll-velocity': '0deg', '--scroll-scale': '1' } as any}>
+                    <div ref={gridRef} className="flex bg-base-300 border-r border-base-300 elastic-grid-container" style={{ willChange: 'transform' }}>
                         {masonryColumns.map((col, colIdx) => (
-                            <div key={colIdx} className="flex-1 flex flex-col gap-px border-l border-base-300 first:border-l-0">
+                            <div 
+                                key={colIdx} 
+                                ref={el => { if (el) columnRefs.current[colIdx] = el; }}
+                                className="flex-1 flex flex-col gap-px border-l border-base-300 first:border-l-0"
+                            >
                                 {col.map(item => (
                                     <div key={item.id} data-item-id={item.id} className="elastic-grid-item">
                                         <ImageCard 
@@ -399,7 +426,7 @@ const ImageGallery: React.FC<ImageGalleryProps> = ({ isCategoryPanelCollapsed, o
             isOpen={!!itemToDelete} 
             onClose={() => setDetailViewItemId(null)} 
             onConfirm={() => { handleDeleteItem(itemToDelete); setItemToDelete(null); }} 
-            title="PURGE ARTIFACT" 
+            title="DELETE ARTIFACT" 
             message={`Permanently erase artifact "${itemToDelete.title}"? Local files will be deleted.`} 
           />
       )}

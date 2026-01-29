@@ -1,17 +1,26 @@
+
 export interface YouTubeMetadata {
   title: string;
   description: string;
   privacyStatus: 'public' | 'private' | 'unlisted';
 }
 
+/**
+ * Publishes video to YouTube using the local Vite proxy.
+ * Proxying is required to bypass COEP (Cross-Origin Embedder Policy) 
+ * which blocks requests to Google APIs from a 'require-corp' environment.
+ */
 export const publishToYouTube = async (
     videoBlob: Blob,
     metadata: YouTubeMetadata,
     accessToken: string,
     onProgress?: (progress: number) => void
 ) => {
+    // Route through our local proxy defined in vite.config.ts
+    const PROXY_BASE = '/google-api';
+
     // 1. Initialize resumable upload
-    const initResponse = await fetch('https://www.googleapis.com/upload/youtube/v3/videos?uploadType=resumable&part=snippet,status', {
+    const initResponse = await fetch(`${PROXY_BASE}/upload/youtube/v3/videos?uploadType=resumable&part=snippet,status`, {
         method: 'POST',
         headers: {
             'Authorization': `Bearer ${accessToken}`,
@@ -33,17 +42,23 @@ export const publishToYouTube = async (
     });
 
     if (!initResponse.ok) {
-        const error = await initResponse.json();
-        throw new Error(error.error?.message || "Upload initialization failed.");
+        let errorMsg = "Upload initialization failed.";
+        try {
+            const error = await initResponse.json();
+            errorMsg = error.error?.message || errorMsg;
+        } catch (e) {}
+        throw new Error(errorMsg);
     }
 
+    // The vite proxy rewrites this Location header to point back to /google-api/...
     const uploadUrl = initResponse.headers.get('Location');
-    if (!uploadUrl) throw new Error("Upload location not received.");
+    if (!uploadUrl) throw new Error("Upload location not received from gateway.");
 
-    // 2. Perform the actual upload with XHR to track progress (fetch doesn't support upload progress yet)
+    // 2. Perform the actual upload with XHR to track progress
     return new Promise<{ id: string, url: string }>((resolve, reject) => {
         const xhr = new XMLHttpRequest();
         xhr.open('PUT', uploadUrl);
+        xhr.setRequestHeader('Authorization', `Bearer ${accessToken}`);
         xhr.setRequestHeader('Content-Type', videoBlob.type);
         
         if (onProgress) {
@@ -63,14 +78,14 @@ export const publishToYouTube = async (
                         url: `https://www.youtube.com/watch?v=${result.id}`
                     });
                 } catch (e) {
-                    reject(new Error("Failed to parse YouTube response."));
+                    reject(new Error("Failed to parse registry response."));
                 }
             } else {
-                reject(new Error(`YouTube upload failed with status ${xhr.status}: ${xhr.statusText}`));
+                reject(new Error(`Transmission failed (${xhr.status}): ${xhr.statusText}`));
             }
         };
 
-        xhr.onerror = () => reject(new Error("Network error during YouTube upload."));
+        xhr.onerror = () => reject(new Error("Neural link interrupted during transmission."));
         xhr.send(videoBlob);
     });
 };

@@ -1,10 +1,10 @@
-import React, { useState, useEffect, useMemo, useCallback, useRef } from 'react';
+import React, { useState, useEffect, useMemo, useCallback, useRef, useLayoutEffect } from 'react';
+import { gsap } from 'gsap';
 import type { GalleryItem, GalleryCategory } from '../types';
-import { ChevronLeftIcon, EditIcon, DeleteIcon, CheckIcon, ThumbTackIcon, ChevronRightIcon, CloseIcon, PhotoIcon, UploadIcon, ChevronDownIcon, PlayIcon, SparklesIcon, LinkIcon, ArrowsUpDownIcon, YouTubeIcon } from './icons';
+import { ChevronLeftIcon, EditIcon, DeleteIcon, CheckIcon, ThumbTackIcon, ChevronRightIcon, CloseIcon, PhotoIcon, UploadIcon, YouTubeIcon, RefreshIcon, PlusIcon } from './icons';
 import FullscreenViewer from './FullscreenViewer';
-import { fileSystemManager, extractPositivePrompt, fileToBase64 } from '../utils/fileUtils';
+import { fileSystemManager, fileToBase64 } from '../utils/fileUtils';
 import { useSettings } from '../contexts/SettingsContext';
-import { GoogleGenAI } from '@google/genai';
 import LoadingSpinner from './LoadingSpinner';
 import AutocompleteSelect from './AutocompleteSelect';
 import YouTubePublishModal from './YouTubePublishModal';
@@ -23,33 +23,125 @@ interface ItemDetailViewProps {
 }
 
 const InfoRow: React.FC<{ label: string, children: React.ReactNode }> = ({ label, children }) => (
-    <div>
-        <h4 className="text-[10px] font-black text-base-content/40 uppercase tracking-widest mb-1">{label}</h4>
+    <div className="space-y-1">
+        <h4 className="text-[10px] font-black text-base-content/40 uppercase tracking-widest">{label}</h4>
         {children}
     </div>
 );
+
+/**
+ * TransitionalMedia Component
+ * Manages the high-fidelity transition between images in the gallery sequence.
+ */
+const TransitionalMedia: React.FC<{
+    url: string | null;
+    type: 'image' | 'video';
+    title: string;
+    onClick: () => void;
+    direction: 'next' | 'prev' | 'none';
+}> = React.memo(({ url, type, title, onClick, direction }) => {
+    const [displayUrl, setDisplayUrl] = useState<string | null>(null);
+    const [prevUrl, setPrevUrl] = useState<string | null>(null);
+    const [isLoading, setIsLoading] = useState(true);
+    
+    const containerRef = useRef<HTMLDivElement>(null);
+    const currentLayerRef = useRef<HTMLDivElement>(null);
+    const outgoingLayerRef = useRef<HTMLDivElement>(null);
+    const objectUrls = useRef<Set<string>>(new Set());
+
+    useEffect(() => {
+        let isMounted = true;
+        const load = async () => {
+            if (!url) { setIsLoading(false); return; }
+            setIsLoading(true);
+
+            let finalUrl = url;
+            if (!url.startsWith('data:') && !url.startsWith('http') && !url.startsWith('blob:')) {
+                try {
+                    const blob = await fileSystemManager.getFileAsBlob(url);
+                    if (blob && isMounted) {
+                        const newUrl = URL.createObjectURL(blob);
+                        objectUrls.current.add(newUrl);
+                        finalUrl = newUrl;
+                    }
+                } catch (e) { console.error("Buffer load failed", e); }
+            }
+
+            if (isMounted) {
+                setPrevUrl(displayUrl);
+                setDisplayUrl(finalUrl);
+                setIsLoading(false);
+            }
+        };
+        load();
+        return () => { isMounted = false; };
+    }, [url]);
+
+    useEffect(() => {
+        return () => {
+            objectUrls.current.forEach(u => URL.revokeObjectURL(u));
+            objectUrls.current.clear();
+        };
+    }, []);
+
+    useLayoutEffect(() => {
+        if (!containerRef.current || direction === 'none' || !prevUrl) return;
+
+        const ctx = gsap.context(() => {
+            const tl = gsap.timeline({ defaults: { ease: "power4.inOut", duration: 0.8 } });
+            const moveX = direction === 'next' ? 100 : -100;
+
+            tl.fromTo(outgoingLayerRef.current, 
+                { xPercent: 0, scale: 1, autoAlpha: 1 },
+                { xPercent: -moveX * 0.3, scale: 0.9, autoAlpha: 0, clearProps: "all" }, 0
+            );
+
+            tl.fromTo(currentLayerRef.current, 
+                { xPercent: moveX, scale: 1.1, autoAlpha: 0 },
+                { xPercent: 0, scale: 1, autoAlpha: 1 }, 0
+            );
+        }, containerRef);
+
+        return () => ctx.revert();
+    }, [displayUrl, direction]);
+
+    if (isLoading && !displayUrl) {
+        return <div className="w-full h-full flex items-center justify-center bg-base-300/10"><LoadingSpinner size={48} /></div>;
+    }
+
+    return (
+        <div ref={containerRef} className="relative w-full h-full overflow-hidden bg-black flex items-center justify-center">
+            {prevUrl && (
+                <div ref={outgoingLayerRef} className="absolute inset-0 z-0 flex items-center justify-center pointer-events-none opacity-0">
+                    {type === 'video' ? <video src={prevUrl} muted className="max-w-full max-h-full object-contain" /> : <img src={prevUrl} className="max-w-full max-h-full object-contain" alt="outgoing" />}
+                </div>
+            )}
+            <div ref={currentLayerRef} className="absolute inset-0 z-10 flex items-center justify-center">
+                {type === 'video' ? (
+                    <video src={displayUrl || ''} controls autoPlay loop onClick={onClick} className="max-w-full max-h-full object-contain shadow-2xl cursor-pointer" />
+                ) : (
+                    <img src={displayUrl || ''} alt={title} onClick={onClick} className="max-w-full max-h-full object-contain shadow-2xl cursor-pointer" />
+                )}
+            </div>
+        </div>
+    );
+});
 
 const Thumbnail: React.FC<{ 
     url: string; 
     type: 'image' | 'video', 
     onClick: () => void, 
-    isActive: boolean,
-    draggable?: boolean,
-    onDragStart?: (e: React.DragEvent) => void,
-    onDragOver?: (e: React.DragEvent) => void,
-    onDragEnd?: (e: React.DragEvent) => void,
-    isDragging?: boolean
-}> = ({ url, type, onClick, isActive, draggable, onDragStart, onDragOver, onDragEnd, isDragging }) => {
+    isActive: boolean;
+    onRemove?: () => void;
+    isRemovable?: boolean;
+}> = ({ url, type, onClick, isActive, onRemove, isRemovable }) => {
     const [blobUrl, setBlobUrl] = useState<string | null>(null);
 
     useEffect(() => {
         let isActiveThumb = true;
         let objectUrl: string | null = null;
         const loadMedia = async () => {
-            if (url.startsWith('data:')) {
-                setBlobUrl(url);
-                return;
-            }
+            if (url.startsWith('data:')) { setBlobUrl(url); return; }
             const blob = await fileSystemManager.getFileAsBlob(url);
             if (blob && isActiveThumb) {
                 objectUrl = URL.createObjectURL(blob);
@@ -57,109 +149,40 @@ const Thumbnail: React.FC<{
             }
         };
         loadMedia();
-        return () => {
-            isActiveThumb = false;
-            if (objectUrl) URL.revokeObjectURL(objectUrl);
-        };
+        return () => { isActiveThumb = false; if (objectUrl) URL.revokeObjectURL(objectUrl); };
     }, [url]);
-
-    if (!blobUrl) {
-        return <div className={`relative aspect-square rounded-none overflow-hidden bg-base-200 animate-pulse`}></div>;
-    }
 
     return (
-        <button
-            onClick={onClick}
-            draggable={draggable}
-            onDragStart={onDragStart}
-            onDragOver={onDragOver}
-            onDragEnd={onDragEnd}
-            className={`relative aspect-square rounded-none overflow-hidden transition-all duration-200 focus:outline-none ring-2 ${isActive ? 'ring-primary' : 'ring-transparent hover:ring-primary/70'} ${isDragging ? 'opacity-30' : 'opacity-100'} ${draggable ? 'cursor-move' : 'cursor-pointer'}`}
-            aria-label={`View sample`}
-        >
-            {type === 'video' ? (
-                <video src={blobUrl} className="w-full h-full object-cover bg-base-200 pointer-events-none" />
-            ) : (
-                <img src={blobUrl} alt={`Thumbnail`} className="w-full h-full object-cover bg-base-200 pointer-events-none" />
+        <div className="relative flex-shrink-0 w-20 h-20 aspect-square">
+            <button
+                onClick={onClick}
+                className={`relative w-full h-full rounded-none overflow-hidden transition-all duration-300 focus:outline-none ring-1 ${isActive ? 'ring-primary z-10 scale-[1.1] shadow-xl' : 'ring-base-300/50 hover:ring-primary/40 opacity-40 hover:opacity-100'}`}
+            >
+                {blobUrl ? (
+                    type === 'video' ? <video src={blobUrl} className="w-full h-full object-cover bg-black" /> : <img src={blobUrl} alt="Thumb" className="w-full h-full object-cover bg-black" />
+                ) : <div className="w-full h-full bg-base-200 animate-pulse" />}
+                {isActive && <div className="absolute inset-0 bg-primary/5"></div>}
+            </button>
+            {isRemovable && (
+                <button 
+                    onClick={(e) => { e.stopPropagation(); onRemove?.(); }}
+                    className="absolute -top-1 -right-1 z-20 btn btn-xs btn-circle btn-error shadow-lg scale-75"
+                >
+                    <CloseIcon className="w-3 h-3" />
+                </button>
             )}
-            {isActive && (
-                <div className="absolute inset-0 bg-primary/20 border border-primary"></div>
-            )}
-        </button>
+        </div>
     );
 };
-
-const Media: React.FC<{
-    url: string | null;
-    type: 'image' | 'video';
-    title: string;
-    onClick: (e: React.MouseEvent) => void;
-}> = React.memo(({ url, type, title, onClick }) => {
-    const [displayUrl, setDisplayUrl] = useState<string | null>(null);
-    const [isLoading, setIsLoading] = useState(true);
-    const [hasError, setHasError] = useState(false);
-    const objectUrlRef = useRef<string|null>(null);
-
-    useEffect(() => {
-        let isActive = true;
-        const loadMedia = async () => {
-            if (objectUrlRef.current) {
-                URL.revokeObjectURL(objectUrlRef.current);
-                objectUrlRef.current = null;
-            }
-            if (!url) { setIsLoading(false); setHasError(true); return; }
-            setIsLoading(true);
-            setHasError(false);
-            if (url.startsWith('data:') || url.startsWith('http') || url.startsWith('blob:')) {
-                if (isActive) setDisplayUrl(url);
-                setIsLoading(false);
-                return;
-            }
-            try {
-                const blob = await fileSystemManager.getFileAsBlob(url);
-                if (isActive && blob) {
-                    const newUrl = URL.createObjectURL(blob);
-                    objectUrlRef.current = newUrl;
-                    setDisplayUrl(newUrl);
-                } else if (isActive) {
-                    setHasError(true);
-                }
-            } catch {
-                 if (isActive) setHasError(true);
-            } finally {
-                 if (isActive) setIsLoading(false);
-            }
-        };
-        loadMedia();
-        return () => { isActive = false; };
-    }, [url]);
-
-    useEffect(() => {
-        return () => { if (objectUrlRef.current) URL.revokeObjectURL(objectUrlRef.current); }
-    }, []);
-
-    if (isLoading) {
-        return <div className="w-full h-full flex items-center justify-center bg-base-200"><LoadingSpinner size={48} /></div>;
-    }
-    if (hasError || !displayUrl) {
-        return <div className="text-center opacity-20"><PhotoIcon className="w-24 h-24 mx-auto"/><p className="mt-2 text-xs font-black uppercase">Loading Error</p></div>;
-    }
-
-    return type === 'video' ? (
-        <video src={displayUrl} controls autoPlay loop onClick={onClick} className="max-w-full max-h-full object-contain shadow-2xl" />
-    ) : (
-        <img src={displayUrl} alt={title} onClick={onClick} className="max-w-full max-h-full object-contain shadow-2xl cursor-pointer" />
-    );
-});
 
 const ItemDetailView: React.FC<ItemDetailViewProps> = ({ items, currentIndex, isPinned, categories, onClose, onUpdate, onDelete, onTogglePin, onNavigate, showGlobalFeedback }) => {
   const item = useMemo(() => items[currentIndex] || null, [items, currentIndex]);
   const { settings } = useSettings();
   
   const [isEditing, setIsEditing] = useState(false);
-  const [isRearranging, setIsRearranging] = useState(false);
   const [isViewerOpen, setIsViewerOpen] = useState(false);
   const [activeImageIndex, setActiveImageIndex] = useState(0);
+  const [navDirection, setNavDirection] = useState<'next' | 'prev' | 'none'>('none');
 
   const [title, setTitle] = useState('');
   const [notes, setNotes] = useState('');
@@ -167,13 +190,14 @@ const ItemDetailView: React.FC<ItemDetailViewProps> = ({ items, currentIndex, is
   const [categoryId, setCategoryId] = useState('');
   const [isNsfw, setIsNsfw] = useState(false);
   const [tags, setTags] = useState<string[]>([]);
-  const [tagInput, setTagInput] = useState('');
-  const [imageUrls, setImageUrls] = useState<string[]>([]);
-  const [sources, setSources] = useState<string[]>([]);
-  const newFileInputRef = useRef<HTMLInputElement>(null);
+  const [editableUrls, setEditableUrls] = useState<string[]>([]);
+  const [editableSources, setEditableSources] = useState<string[]>([]);
+  
+  const thumbnailScrollRef = useRef<HTMLDivElement>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   const [isPublishModalOpen, setIsPublishModalOpen] = useState(false);
-  const [currentVideoBlob, setCurrentVideoBlob] = useState<Blob | null>(null);
+  const [videoBlob, setVideoBlob] = useState<Blob | null>(null);
 
   useEffect(() => {
     if (item) {
@@ -181,304 +205,322 @@ const ItemDetailView: React.FC<ItemDetailViewProps> = ({ items, currentIndex, is
         setNotes(item.notes || '');
         setPrompt(item.prompt || '');
         setCategoryId(item.categoryId || '');
-        setIsNsfw(!!item.isNsfw);
+        setIsNsfw(item.isNsfw || false);
         setTags(item.tags || []);
-        setImageUrls(item.urls || []);
-        setSources(item.sources || []);
+        setEditableUrls([...item.urls]);
+        setEditableSources([...item.sources]);
         setActiveImageIndex(0);
+        setNavDirection('none');
         setIsEditing(false);
-        setIsRearranging(false);
     }
   }, [item]);
-  
-  const displayPrompt = useMemo(() => {
-    if (!item) return '';
-    const rawPrompt = (item.prompt || '').trim();
-    if (!rawPrompt) return 'No prompt archived.';
-    try {
-        const parsed = JSON.parse(rawPrompt);
-        if (parsed?.prompt?.trim()) return parsed.prompt.trim();
-    } catch (e) {}
-    return rawPrompt;
-  }, [item]);
-
-  const categoryOptions = useMemo(() => [
-    { label: 'GENERAL ARCHIVE', value: '' },
-    ...categories.map(cat => ({ label: cat.name.toUpperCase(), value: cat.id }))
-  ], [categories]);
-
-  const handlePostNavigation = useCallback((direction: 'next' | 'prev') => {
-    const newIndex = direction === 'next'
-      ? (currentIndex + 1) % items.length
-      : (currentIndex - 1 + items.length) % items.length;
-    onNavigate(newIndex);
-  }, [currentIndex, items.length, onNavigate]);
-
-  const handleImageNavigation = useCallback((direction: 'next' | 'prev') => {
-    const newIndex = direction === 'next'
-        ? (activeImageIndex + 1) % imageUrls.length
-        : (activeImageIndex - 1 + imageUrls.length) % imageUrls.length;
-    setActiveImageIndex(newIndex);
-  }, [activeImageIndex, imageUrls.length]);
-
-  useEffect(() => {
-    if (isViewerOpen) return;
-    const handleKeyDown = (e: KeyboardEvent) => {
-        if (e.key === 'Escape') onClose();
-        const target = e.target as HTMLElement;
-        if (target && ['TEXTAREA', 'INPUT'].includes(target.tagName)) return;
-        if (e.key === 'ArrowRight') {
-            if (imageUrls.length > 1) handleImageNavigation('next');
-            else handlePostNavigation('next');
-        }
-        if (e.key === 'ArrowLeft') {
-            if (imageUrls.length > 1) handleImageNavigation('prev');
-            else handlePostNavigation('prev');
-        }
-    };
-    document.addEventListener('keydown', handleKeyDown);
-    return () => document.removeEventListener('keydown', handleKeyDown);
-  }, [onClose, isViewerOpen, handleImageNavigation, handlePostNavigation, imageUrls.length]);
 
   const handleSave = () => {
     if (item) {
-        onUpdate(item.id, { title, notes, prompt, categoryId: categoryId || undefined, isNsfw, tags, urls: imageUrls, sources });
+        onUpdate(item.id, { 
+            title, 
+            notes, 
+            prompt, 
+            categoryId: categoryId || undefined, 
+            isNsfw, 
+            tags,
+            urls: editableUrls,
+            sources: editableSources
+        });
         setIsEditing(false);
-        setIsRearranging(false);
+        showGlobalFeedback("Artifact committed.");
     }
   };
-  
-  const handleCancel = () => {
-      if (item) {
-          setTitle(item.title);
-          setNotes(item.notes || '');
-          setPrompt(item.prompt || '');
-          setCategoryId(item.categoryId || '');
-          setIsNsfw(!!item.isNsfw);
-          setTags(item.tags || []);
-          setImageUrls(item.urls || []);
-          setSources(item.sources || []);
-          setIsEditing(false);
-          setIsRearranging(false);
+
+  const handleAddSample = async (e: React.ChangeEvent<HTMLInputElement>) => {
+      const files = e.target.files;
+      if (!files) return;
+
+      const newUrls: string[] = [];
+      const newSources: string[] = [];
+
+      for (const file of Array.from(files)) {
+          const base64 = await fileToBase64(file);
+          newUrls.push(base64);
+          newSources.push(file.name);
+      }
+
+      setEditableUrls(prev => [...prev, ...newUrls]);
+      setEditableSources(prev => [...prev, ...newSources]);
+      
+      // Select the first newly added sample
+      if (newUrls.length > 0) {
+          setActiveImageIndex(editableUrls.length);
       }
   };
-  
-  const handleTagInputKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
-    if (e.key === 'Enter' || e.key === ',') {
-        e.preventDefault();
-        const newTag = tagInput.trim();
-        if (newTag && !tags.includes(newTag)) setTags([...tags, newTag]);
-        setTagInput('');
-    }
+
+  const handleRemoveSample = (idx: number) => {
+      if (editableUrls.length <= 1) {
+          showGlobalFeedback("Artifact requires at least one media sample.", true);
+          return;
+      }
+      setEditableUrls(prev => prev.filter((_, i) => i !== idx));
+      setEditableSources(prev => prev.filter((_, i) => i !== idx));
+      if (activeImageIndex >= idx && activeImageIndex > 0) {
+          setActiveImageIndex(prev => prev - 1);
+      }
   };
 
-  const handleAddImages = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const files = e.target.files;
-    if (!files) return;
-    const filesArray = Array.from(files) as File[];
-    const base64Urls = await Promise.all(filesArray.map(file => fileToBase64(file)));
-    const fileNames = filesArray.map(f => f.name);
-    setImageUrls(prev => [...prev, ...base64Urls]);
-    setSources(prev => [...prev, ...fileNames]);
+  const handleInnerNavigate = (dir: 'next' | 'prev') => {
+      setNavDirection(dir);
+      const len = item?.urls.length || 0;
+      const nextIdx = dir === 'next' ? (activeImageIndex + 1) % len : (activeImageIndex - 1 + len) % len;
+      setActiveImageIndex(nextIdx);
   };
 
-  const handleOpenPublishModal = async () => {
-    if (!item || !item.urls[0]) return;
-    try {
-        const blob = await fileSystemManager.getFileAsBlob(item.urls[0]);
-        if (blob) {
-            setCurrentVideoBlob(blob);
-            setIsPublishModalOpen(true);
-        } else {
-            showGlobalFeedback("Failed to access local video binary.", true);
-        }
-    } catch (e) {
-        showGlobalFeedback("Vault access error.", true);
-    }
+  const handleGlobalNavigate = (dir: 'next' | 'prev') => {
+      setNavDirection(dir);
+      const nextIdx = dir === 'next' ? (currentIndex + 1) % items.length : (currentIndex - 1 + items.length) % items.length;
+      onNavigate(nextIdx);
   };
 
-  const handlePublishSuccess = (videoUrl: string) => {
-    if (item) {
-        onUpdate(item.id, { youtubeUrl: videoUrl, publishedAt: Date.now() });
-        showGlobalFeedback("Artifact transmitted and linked to YouTube.");
-    }
+  const handleThumbSelect = (idx: number) => {
+      if (idx === activeImageIndex) return;
+      setNavDirection(idx > activeImageIndex ? 'next' : 'prev');
+      setActiveImageIndex(idx);
+  };
+
+  const scrollDeck = (dir: 'left' | 'right') => {
+      if (thumbnailScrollRef.current) {
+          const move = dir === 'left' ? -200 : 200;
+          thumbnailScrollRef.current.scrollBy({ left: move, behavior: 'smooth' });
+      }
+  };
+
+  const handlePublishClick = async () => {
+      if (!item || item.type !== 'video') return;
+      const blob = await fileSystemManager.getFileAsBlob(item.urls[activeImageIndex]);
+      if (blob) {
+          setVideoBlob(blob);
+          setIsPublishModalOpen(true);
+      }
   };
 
   if (!item) return null;
 
+  const categoryOptions = [
+      { label: 'GENERAL ARCHIVE', value: '' },
+      ...categories.map(c => ({ label: c.name.toUpperCase(), value: c.id }))
+  ];
+
   return (
     <div className="absolute inset-0 z-40 bg-black/60 backdrop-blur-sm animate-fade-in flex items-center justify-center p-2 lg:p-4 overflow-hidden" onClick={onClose}>
-        <div className="w-full h-full bg-base-300 rounded-none border border-base-300 shadow-2xl flex flex-col lg:flex-row overflow-hidden relative" onClick={e => e.stopPropagation()}>
-            <main className="flex-1 flex flex-col overflow-hidden" onClick={(e) => e.stopPropagation()}>
-                <div className="relative flex-grow flex items-center justify-center min-h-0 group bg-black/50" onClick={onClose}>
-                    <Media 
-                        url={imageUrls[activeImageIndex] || null} 
+        <div className="w-full h-full bg-base-100 rounded-none border border-base-300 shadow-2xl flex flex-col lg:flex-row overflow-hidden relative" onClick={e => e.stopPropagation()}>
+            
+            {/* Viewport & Deck Side */}
+            <main className="flex-1 bg-black flex flex-col overflow-hidden relative group">
+                
+                {/* Media Viewport */}
+                <div className="flex-grow relative flex items-center justify-center overflow-hidden">
+                    <TransitionalMedia 
+                        url={isEditing ? editableUrls[activeImageIndex] : item.urls[activeImageIndex]} 
                         type={item.type} 
-                        title={title} 
-                        onClick={(e) => { e.stopPropagation(); setIsViewerOpen(true); }}
+                        title={item.title} 
+                        onClick={() => setIsViewerOpen(true)}
+                        direction={navDirection}
                     />
-                    
-                    {imageUrls.length > 1 && (
+
+                    {/* Navigation Arrows */}
+                    {(isEditing ? editableUrls.length : item.urls.length) > 1 && (
                         <>
                             <button 
-                                onClick={(e) => { e.stopPropagation(); handleImageNavigation('prev'); }} 
-                                className="absolute left-6 top-1/2 -translate-y-1/2 p-4 bg-black/40 hover:bg-black/80 text-white rounded-none transition-all duration-500 ease-[cubic-bezier(0.23,1,0.32,1)] opacity-0 -translate-x-8 group-hover:opacity-100 group-hover:translate-x-0 z-20"
+                                onClick={(e) => { e.stopPropagation(); handleInnerNavigate('prev'); }}
+                                className="absolute left-6 top-1/2 -translate-y-1/2 p-6 bg-black/40 hover:bg-primary text-white rounded-none transition-all duration-500 opacity-0 -translate-x-12 group-hover:opacity-100 group-hover:translate-x-0 z-20"
                             >
-                                <ChevronLeftIcon className="w-8 h-8"/>
+                                <ChevronLeftIcon className="w-8 h-8" />
                             </button>
                             <button 
-                                onClick={(e) => { e.stopPropagation(); handleImageNavigation('next'); }} 
-                                className="absolute right-6 top-1/2 -translate-y-1/2 p-4 bg-black/40 hover:bg-black/80 text-white rounded-none transition-all duration-500 ease-[cubic-bezier(0.23,1,0.32,1)] opacity-0 translate-x-8 group-hover:opacity-100 group-hover:translate-x-0 z-20"
+                                onClick={(e) => { e.stopPropagation(); handleInnerNavigate('next'); }}
+                                className="absolute right-6 top-1/2 -translate-y-1/2 p-6 bg-black/40 hover:bg-primary text-white rounded-none transition-all duration-500 opacity-0 translate-x-12 group-hover:opacity-100 group-hover:translate-x-0 z-20"
                             >
-                                <ChevronRightIcon className="w-8 h-8"/>
+                                <ChevronRightIcon className="w-8 h-8" />
                             </button>
                         </>
                     )}
 
-                    <div className="absolute top-6 right-6 z-20 flex items-center">
-                        <div className="join bg-black/40 backdrop-blur-md border border-white/10">
-                            <button onClick={(e) => { e.stopPropagation(); handlePostNavigation('prev'); }} className="btn btn-sm btn-ghost join-item text-white"><ChevronLeftIcon className="w-4 h-4" /></button>
-                            <span className="join-item flex items-center px-6 font-mono text-[10px] font-black text-white uppercase tracking-widest border-x border-white/10">{currentIndex + 1} / {items.length}</span>
-                            <button onClick={(e) => { e.stopPropagation(); handlePostNavigation('next'); }} className="btn btn-sm btn-ghost join-item text-white"><ChevronRightIcon className="w-4 h-4" /></button>
+                    {/* Top Stats Overlay */}
+                    <div className="absolute top-6 left-6 right-6 flex justify-between items-center pointer-events-none z-30">
+                        <div className="pointer-events-auto flex items-center gap-4">
+                            <div className="join bg-base-200/40 backdrop-blur-md border border-white/5 rounded-none">
+                                <button onClick={() => handleGlobalNavigate('prev')} className="btn btn-sm btn-ghost join-item rounded-none"><ChevronLeftIcon className="w-4 h-4" /></button>
+                                <span className="join-item flex items-center px-4 font-mono text-[10px] font-black text-white">{currentIndex + 1} / {items.length}</span>
+                                <button onClick={() => handleGlobalNavigate('next')} className="btn btn-sm btn-ghost join-item rounded-none"><ChevronRightIcon className="w-4 h-4" /></button>
+                            </div>
                         </div>
                     </div>
                 </div>
+
+                {/* Thumbnail Deck (Horizontal Strip) */}
+                {(isEditing ? editableUrls.length : item.urls.length) > 1 && (
+                    <div className="h-32 flex-shrink-0 bg-base-200/30 border-t border-white/5 relative flex items-center px-2">
+                        <button onClick={() => scrollDeck('left')} className="btn btn-sm btn-ghost btn-square rounded-none z-10 hover:bg-black/20"><ChevronLeftIcon className="w-5 h-5"/></button>
+                        
+                        <div 
+                            ref={thumbnailScrollRef}
+                            className="flex-grow flex items-center gap-3 overflow-x-auto no-scrollbar px-4 h-full scroll-smooth"
+                        >
+                            {(isEditing ? editableUrls : item.urls).map((url, idx) => (
+                                <Thumbnail 
+                                    key={idx}
+                                    url={url}
+                                    type={item.type}
+                                    isActive={idx === activeImageIndex}
+                                    onClick={() => handleThumbSelect(idx)}
+                                    isRemovable={isEditing}
+                                    onRemove={() => handleRemoveSample(idx)}
+                                />
+                            ))}
+                        </div>
+
+                        <button onClick={() => scrollDeck('right')} className="btn btn-sm btn-ghost btn-square rounded-none z-10 hover:bg-black/20"><ChevronRightIcon className="w-5 h-5"/></button>
+                        
+                        {/* Position Indicator */}
+                        <div className="absolute top-1 right-4">
+                            <span className="text-[8px] font-black text-primary/40 uppercase tracking-widest">Sequence Segment: {activeImageIndex + 1}/{(isEditing ? editableUrls : item.urls).length}</span>
+                        </div>
+                    </div>
+                )}
             </main>
-            
-            <aside className="w-full lg:w-96 bg-base-100 flex-shrink-0 flex flex-col border-l border-base-300" onClick={(e) => e.stopPropagation()}>
-                <header className="px-4 h-16 flex justify-between items-center border-b border-base-300 flex-shrink-0 bg-base-200/20">
-                    <button onClick={() => onTogglePin(item.id)} className={`btn btn-sm btn-ghost btn-square rounded-none ${isPinned ? 'text-primary' : 'opacity-20'}`} title="Pin Artifact">
-                        <ThumbTackIcon className="w-5 h-5"/>
+
+            {/* Information Sidebar */}
+            <aside className="w-full lg:w-96 bg-base-100 border-l border-base-300 flex flex-col overflow-hidden">
+                <header className="flex-shrink-0 h-16 px-6 border-b border-base-300 flex items-center justify-between bg-base-200/20">
+                    <div className="flex items-center gap-3">
+                        <button onClick={() => onTogglePin(item.id)} className={`btn btn-sm btn-ghost btn-square rounded-none ${isPinned ? 'text-primary' : 'opacity-20'}`}>
+                            <ThumbTackIcon className="w-5 h-5" />
+                        </button>
+                        <span className="text-[10px] font-black uppercase tracking-[0.2em] text-base-content/20">Registry Data</span>
+                    </div>
+                    <button onClick={onClose} className="btn btn-sm btn-ghost btn-square rounded-none opacity-40 hover:opacity-100">
+                        <CloseIcon className="w-6 h-6" />
                     </button>
-                    <button onClick={onClose} className="btn btn-sm btn-ghost btn-square rounded-none opacity-40 hover:opacity-100 ml-4" title="Close"><CloseIcon className="w-6 h-6"/></button>
                 </header>
 
-                <div className="p-6 space-y-8 overflow-y-auto flex-grow custom-scrollbar">
-                    <InfoRow label="Artifact Identity">
-                        {isEditing ? <input type="text" value={title} onChange={e => setTitle(e.target.value)} className="input input-bordered input-sm w-full font-bold uppercase rounded-none"/> : <p className="font-black text-2xl tracking-tighter uppercase leading-none">{title}</p>}
-                    </InfoRow>
-
-                    {imageUrls.length > 0 && (
-                        <InfoRow label={isRearranging ? "Drag to Rearrange" : `Samples Archive (${activeImageIndex + 1}/${imageUrls.length})`}>
-                            <div className="grid grid-cols-4 gap-px bg-base-300 border border-base-300">
-                                {imageUrls.map((url, index) => (
-                                <div key={`${item.id}-${index}`} className="relative aspect-square bg-base-100">
-                                        <Thumbnail 
-                                            url={url} 
-                                            type={item.type} 
-                                            onClick={() => !isRearranging && setActiveImageIndex(index)} 
-                                            isActive={index === activeImageIndex}
-                                            draggable={isRearranging}
-                                            onDragStart={() => setIsRearranging(true)}
-                                            onDragOver={(e) => e.preventDefault()}
-                                            onDragEnd={() => setIsRearranging(false)}
-                                        />
-                                        {isEditing && (
-                                            <button onClick={() => setImageUrls(prev => prev.filter((_, i) => i !== index))} className="btn btn-xs btn-square btn-error absolute top-1 right-1 z-10">✕</button>
-                                        )}
-                                </div>
-                                ))}
-                                {isEditing && (
-                                    <button onClick={() => (newFileInputRef.current as any)?.click()} className="aspect-square bg-base-200 flex items-center justify-center text-base-content/20 hover:text-primary transition-colors">
-                                        <UploadIcon className="w-6 h-6"/>
+                <div className="flex-grow p-6 space-y-8 overflow-y-auto custom-scrollbar">
+                    {isEditing ? (
+                        <div className="space-y-6 animate-fade-in">
+                            <InfoRow label="Identity Title">
+                                <input value={title} onChange={e => setTitle(e.target.value)} className="input input-bordered rounded-none input-sm w-full font-bold uppercase tracking-tight" />
+                            </InfoRow>
+                            <InfoRow label="Sector Mapping">
+                                <AutocompleteSelect value={categoryId} onChange={setCategoryId} options={categoryOptions} />
+                            </InfoRow>
+                            <InfoRow label="Media Archive (Samples)">
+                                <div className="flex flex-wrap gap-2 p-3 bg-base-200/50 border border-base-300 rounded-none">
+                                    {editableUrls.map((url, idx) => (
+                                        <div key={idx} className="relative group/thumb w-12 h-12 bg-black border border-base-300">
+                                            <img src={url.startsWith('data:') ? url : ''} alt="" className="w-full h-full object-cover opacity-60" />
+                                            {!url.startsWith('data:') && <div className="absolute inset-0 flex items-center justify-center"><PhotoIcon className="w-4 h-4 opacity-20"/></div>}
+                                            <button 
+                                                onClick={() => handleRemoveSample(idx)}
+                                                className="absolute -top-1 -right-1 btn btn-xs btn-circle btn-error scale-50 opacity-0 group-hover/thumb:opacity-100"
+                                            >✕</button>
+                                        </div>
+                                    ))}
+                                    <button 
+                                        onClick={() => fileInputRef.current?.click()}
+                                        className="w-12 h-12 flex items-center justify-center border-2 border-dashed border-base-300 hover:border-primary hover:text-primary transition-all opacity-40 hover:opacity-100"
+                                    >
+                                        <PlusIcon className="w-5 h-5" />
                                     </button>
-                                )}
-                            </div>
-                        </InfoRow>
-                    )}
-
-                    <InfoRow label="Vault Notes">
-                        {isEditing ? <textarea value={notes} onChange={e => setNotes(e.target.value)} className="textarea textarea-bordered rounded-none w-full h-32 leading-relaxed" placeholder="Archive documentation..."></textarea> : <p className="text-sm font-medium leading-relaxed text-base-content/70 whitespace-pre-wrap italic">"{notes || 'No description archived.'}"</p>}
-                    </InfoRow>
-
-                    <InfoRow label="Sensitive Status">
-                        <div className="flex items-center gap-4">
-                            {isEditing ? (
-                                <label className="label cursor-pointer justify-start gap-4 p-0">
-                                    <span className="text-[10px] font-black uppercase tracking-widest text-base-content/40">NSFW Warning</span>
-                                    <input type="checkbox" checked={isNsfw} onChange={e => setIsNsfw((e.currentTarget as any).checked)} className="checkbox checkbox-primary rounded-none" />
+                                    <input type="file" ref={fileInputRef} className="hidden" multiple accept="image/*,video/*" onChange={handleAddSample} />
+                                </div>
+                            </InfoRow>
+                            <InfoRow label="Archive Notes">
+                                <textarea value={notes} onChange={e => setNotes(e.target.value)} className="textarea textarea-bordered rounded-none w-full min-h-[120px] text-sm leading-relaxed" />
+                            </InfoRow>
+                            <div className="p-4 bg-base-200/50 border border-base-300 space-y-4">
+                                <label className="flex items-center gap-3 cursor-pointer">
+                                    <input type="checkbox" checked={isNsfw} onChange={e => setIsNsfw(e.target.checked)} className="checkbox checkbox-primary checkbox-sm rounded-none" />
+                                    <span className="text-[10px] font-black uppercase text-base-content/40">Sensitive Fragment</span>
                                 </label>
-                            ) : (
-                                <p className={`font-black uppercase text-[10px] tracking-widest ${isNsfw ? 'text-warning' : 'text-base-content/20'}`}>
-                                    {isNsfw ? 'SENSITIVE CONTENT' : 'GENERAL ACCESS'}
-                                </p>
-                            )}
+                            </div>
                         </div>
-                    </InfoRow>
+                    ) : (
+                        <div className="space-y-8 animate-fade-in">
+                            <InfoRow label="Fragment Identity">
+                                <h2 className="text-2xl font-black tracking-tighter uppercase leading-tight">{title}</h2>
+                            </InfoRow>
 
-                    <InfoRow label="Registry Folder">
-                        {isEditing ? (
-                            <AutocompleteSelect 
-                              value={categoryId} 
-                              onChange={setCategoryId} 
-                              options={categoryOptions} 
-                              placeholder="SELECT REGISTRY FOLDER..." 
-                            />
-                        ) : <p className="font-black uppercase text-[10px] tracking-widest text-primary/40">{categories.find(c => c.id === categoryId)?.name || 'General Archive'}</p>}
-                    </InfoRow>
+                            <InfoRow label="Neural Foundation">
+                                <div className="p-4 bg-base-200/50 border border-base-300 italic text-sm leading-relaxed text-base-content/70">
+                                    "{item.prompt || 'No blueprint archived.'}"
+                                </div>
+                            </InfoRow>
 
-                    <InfoRow label="Neural Blueprint">
-                         <p className="text-sm font-medium leading-relaxed text-base-content/60 break-words italic">"{displayPrompt}"</p>
-                    </InfoRow>
+                            {notes && (
+                                <InfoRow label="Registry Documentation">
+                                    <p className="text-sm text-base-content/60 leading-relaxed font-medium">"{notes}"</p>
+                                </InfoRow>
+                            )}
+
+                            <div className="pt-4 border-t border-base-300 flex flex-col gap-4">
+                                 <div className="flex items-center justify-between">
+                                    <span className="text-[8px] font-black uppercase text-base-content/20">Artifact Hash</span>
+                                    <span className="text-[8px] font-mono opacity-20">{item.id}</span>
+                                 </div>
+                                 <div className="flex items-center justify-between">
+                                    <span className="text-[8px] font-black uppercase text-base-content/20">Creation Stamp</span>
+                                    <span className="text-[8px] font-mono opacity-20">{new Date(item.createdAt).toLocaleString()}</span>
+                                 </div>
+                            </div>
+                        </div>
+                    )}
                 </div>
 
-                <footer className="border-t border-base-300 flex bg-base-200/5 p-0 overflow-hidden flex-shrink-0">
-                    <button onClick={() => onDelete(item)} className="btn flex-none w-16 h-full flex items-center justify-center text-error/20 hover:text-error hover:bg-error/5 border-r border-base-300 transition-colors" title="Purge Sequence">
-                            <DeleteIcon className="w-5 h-5"/>
-                    </button>
-                    
-                    <div className="flex-1 flex h-full">
-                        {isEditing ? (
-                            <>
-                                <button onClick={handleCancel} className="btn flex-1 rounded-none uppercase font-black text-[10px] tracking-widest hover:bg-base-200 border-r border-base-300 transition-colors">Abort</button>
-                                <button onClick={handleSave} className="btn btn-primary flex-1 rounded-none uppercase font-black text-[10px] tracking-widest shadow-lg transition-colors">Commit</button>
-                            </>
-                        ) : (
-                            <>
-                                {item.type === 'video' && settings.youtube?.isConnected && (
-                                    item.youtubeUrl ? (
-                                        <a 
-                                            href={item.youtubeUrl} 
-                                            target="_blank" 
-                                            rel="noopener noreferrer"
-                                            className="btn btn-sm btn-ghost flex-1 h-full rounded-none uppercase font-black text-[10px] tracking-widest px-4 text-success hover:bg-success/10 border-r border-base-300 flex items-center justify-center"
-                                        >
-                                            <YouTubeIcon className="w-4 h-4 mr-2" />
-                                            Live
-                                        </a>
-                                    ) : (
-                                        <button 
-                                            onClick={handleOpenPublishModal}
-                                            className="btn btn-sm btn-ghost flex-1 h-full rounded-none uppercase font-black text-[10px] tracking-widest px-4 text-primary hover:bg-primary/10 border-r border-base-300 flex items-center justify-center"
-                                        >
-                                            <YouTubeIcon className="w-4 h-4 mr-2" />
-                                            Publish
-                                        </button>
-                                    )
-                                )}
-                                <button onClick={() => setIsEditing(true)} className="btn btn-secondary flex-1 rounded-none text-secondary-content uppercase font-black text-[10px] tracking-widest transition-colors hover:brightness-110">
-                                    <EditIcon className="w-3.5 h-3.5 mr-2 inline-block"/> Modify
+                <footer className="flex-shrink-0 p-4 border-t border-base-300 bg-base-200/20">
+                    {isEditing ? (
+                        <div className="grid grid-cols-2 gap-2">
+                            <button onClick={() => setIsEditing(false)} className="btn btn-sm btn-ghost rounded-none font-black text-[10px] tracking-widest uppercase">Abort</button>
+                            <button onClick={handleSave} className="btn btn-sm btn-primary rounded-none font-black text-[10px] tracking-widest uppercase shadow-lg">Commit</button>
+                        </div>
+                    ) : (
+                        <div className="flex flex-col gap-2">
+                            <div className="grid grid-cols-2 gap-2">
+                                <button onClick={() => setIsEditing(true)} className="btn btn-sm btn-ghost border border-base-300 rounded-none font-black text-[10px] tracking-widest uppercase">Modify</button>
+                                <button onClick={() => onDelete(item)} className="btn btn-sm btn-ghost border border-base-300 text-error/60 rounded-none font-black text-[10px] tracking-widest uppercase">Delete</button>
+                            </div>
+                            {item.type === 'video' && settings.youtube?.isConnected && (
+                                <button onClick={handlePublishClick} className="btn btn-sm btn-error rounded-none font-black text-[9px] tracking-[0.2em] uppercase">
+                                    <YouTubeIcon className="w-4 h-4 mr-2" /> PUBLISH TO YOUTUBE
                                 </button>
-                            </>
-                        )}
-                    </div>
+                            )}
+                        </div>
+                    )}
                 </footer>
-                <input type="file" ref={newFileInputRef} multiple accept="image/*,video/*" onChange={handleAddImages} className="hidden" />
             </aside>
-            {isViewerOpen && <FullscreenViewer items={items} currentIndex={currentIndex} initialImageIndex={activeImageIndex} onClose={() => setIsViewerOpen(false)} />}
         </div>
-        
-        {item.type === 'video' && currentVideoBlob && (
+
+        {isViewerOpen && (
+            <FullscreenViewer 
+                items={items} 
+                currentIndex={currentIndex} 
+                initialImageIndex={activeImageIndex}
+                onClose={() => setIsViewerOpen(false)}
+                onNavigate={(idx) => onNavigate(idx)}
+            />
+        )}
+
+        {isPublishModalOpen && videoBlob && (
             <YouTubePublishModal 
                 isOpen={isPublishModalOpen}
-                onClose={() => { setIsPublishModalOpen(false); setCurrentVideoBlob(null); }}
-                videoBlob={currentVideoBlob}
-                initialTitle={item.title}
-                initialDescription={`${item.notes || ''}\n\nGenerated with Kollektiv.\nPrompt: ${displayPrompt}`}
-                onSuccess={handlePublishSuccess}
+                onClose={() => setIsPublishModalOpen(false)}
+                videoBlob={videoBlob}
+                initialTitle={title}
+                initialDescription={notes || prompt || ""}
+                onSuccess={(url) => {
+                    onUpdate(item.id, { youtubeUrl: url, publishedAt: Date.now() });
+                    showGlobalFeedback("Archival successful.");
+                }}
             />
         )}
     </div>
   );
 };
+
 export default ItemDetailView;

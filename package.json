@@ -17,7 +17,8 @@
     "jszip": "^3.10.1",
     "idb": "^8.0.0",
     "@ffmpeg/ffmpeg": "^0.12.6",
-    "@ffmpeg/util": "^0.12.1"
+    "@ffmpeg/util": "^0.12.1",
+    "gsap": "^3.12.5"
   },
   "devDependencies": {
     "@types/node": "^20.12.12",

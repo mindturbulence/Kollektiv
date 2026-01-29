@@ -163,6 +163,7 @@ export const GenericCheatsheetPage: React.FC<GenericCheatsheetPageProps> = ({
   
   const handleSelectCategory = (id: string) => {
     setSelectedCategoryId(id);
+    setDetailViewItemId(null); // Force close detail view when switching categories
     if(mainContentRef.current) {
         mainContentRef.current.scrollTop = 0;
     }

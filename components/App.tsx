@@ -1,4 +1,5 @@
-import React, { useState, useEffect, useCallback, useRef } from 'react';
+import React, { useState, useEffect, useCallback, useRef, useLayoutEffect } from 'react';
+import { gsap } from 'gsap';
 import { useSettings } from '../contexts/SettingsContext';
 import useLocalStorage from '../utils/useLocalStorage';
 import { fileSystemManager } from '../utils/fileUtils';
@@ -36,7 +37,6 @@ type PromptsPageState = { prompt?: string, artStyle?: string, artist?: string, v
 
 /**
  * Unified System Loader.
- * Matches index.html exactly for a seamless transition.
  */
 const InitialLoader: React.FC<{ status: string; progress: number | null }> = ({ status, progress }) => {
     return (
@@ -85,6 +85,12 @@ const App: React.FC = () => {
 
     const [clippedIdeas, setClippedIdeas] = useLocalStorage<Idea[]>('clippedIdeas', []);
 
+    // --- Transition State ---
+    const pageContentRef = useRef<HTMLDivElement>(null);
+    const shutterRef = useRef<HTMLDivElement>(null);
+    const shutterSecondaryRef = useRef<HTMLDivElement>(null);
+    const isTransitioning = useRef(false);
+
     const initializeApp = useCallback(async () => {
         setIsLoading(true);
         setShowWelcome(false);
@@ -97,7 +103,7 @@ const App: React.FC = () => {
         };
         
         try {
-            onProgress('Initializing local file system...');
+            onProgress('Establishing File Link...');
             const hasHandleAndPermission = await fileSystemManager.initialize(settings, auth);
             
             if (!hasHandleAndPermission) {
@@ -106,17 +112,21 @@ const App: React.FC = () => {
                 return;
             }
 
-            const repairSuccess = await verifyAndRepairFiles(onProgress, settings);
-            if (!repairSuccess) console.error("Integrity check encountered issues, but proceeding to boot.");
+            await verifyAndRepairFiles(onProgress, settings);
+            
+            onProgress('Stabilizing Neural Sync...');
+            await new Promise(resolve => setTimeout(resolve, 300));
 
-            setIsInitialized(true);
+            requestAnimationFrame(() => {
+                setIsInitialized(true);
+                setIsLoading(false);
+            });
         } catch (err) {
             console.error("Initialization Critical Failure:", err);
             setGlobalFeedback({ 
-                message: "System failed to initialize. Please check console or try a fresh folder.", 
+                message: "System failed to initialize. Access interrupted.", 
                 type: 'error' 
             });
-        } finally {
             setIsLoading(false);
         }
         
@@ -125,6 +135,72 @@ const App: React.FC = () => {
     useEffect(() => {
         initializeApp();
     }, [initializeApp]);
+
+    // --- Optimized GSAP Transition Logic ---
+    useLayoutEffect(() => {
+        if (!isInitialized || !pageContentRef.current) return;
+
+        const ctx = gsap.context(() => {
+            isTransitioning.current = true;
+            
+            const tl = gsap.timeline({
+                defaults: { ease: "power4.inOut", duration: 0.7 },
+                onComplete: () => {
+                    isTransitioning.current = false;
+                    // Fully clear state after reveal to ensure no layout issues
+                    gsap.set([shutterRef.current, shutterSecondaryRef.current], { 
+                        autoAlpha: 0, 
+                        pointerEvents: 'none' 
+                    });
+                    gsap.set(pageContentRef.current, { clearProps: "all" });
+                }
+            });
+
+            // 1. Initial State: BLANK CONTENT IMMEDIATELY
+            // Use autoAlpha 0 to hide container and all children
+            gsap.set(pageContentRef.current, { autoAlpha: 0 });
+            
+            // 2. Prepare Shutters at the BOTTOM
+            gsap.set([shutterRef.current, shutterSecondaryRef.current], { 
+                yPercent: 100, 
+                autoAlpha: 1,
+                pointerEvents: 'auto',
+                force3D: true
+            });
+
+            // 3. The Wipe: Move shutters UP
+            tl.to(shutterSecondaryRef.current, { yPercent: -100, duration: 0.75 }, 0);
+            tl.to(shutterRef.current, { yPercent: -100, duration: 0.8 }, 0.05);
+
+            // 4. Reveal Phase
+            // CRITICAL: First, we MUST set the container to visible so its contents can be seen
+            tl.set(pageContentRef.current, { autoAlpha: 1 }, 0.4);
+
+            // Try to find specific elements for high-fidelity staggered entrance
+            const revealElements = pageContentRef.current.querySelectorAll('section, h1, .elastic-grid-container, footer');
+            
+            if (revealElements.length > 0) {
+                 tl.fromTo(revealElements, 
+                    { autoAlpha: 0, y: 15 }, 
+                    { autoAlpha: 1, y: 0, duration: 0.5, stagger: 0.04, ease: "power2.out", clearProps: "all" }, 
+                    0.4 // Synchronized with container reveal
+                );
+            } else {
+                // Graceful fallback for simpler pages
+                tl.fromTo(pageContentRef.current, 
+                    { autoAlpha: 0, y: 10 }, 
+                    { autoAlpha: 1, y: 0, duration: 0.4, ease: "power2.out", clearProps: "all" }, 
+                    0.4
+                );
+            }
+
+            // Safety catch to unlock input if animation fails
+            const timer = setTimeout(() => { isTransitioning.current = false; }, 1200);
+            return () => clearTimeout(timer);
+        });
+
+        return () => ctx.revert();
+    }, [activeTab, isInitialized]);
     
     useEffect(() => {
         const isLg = window.innerWidth >= 1024;
@@ -163,6 +239,7 @@ const App: React.FC = () => {
     };
 
     const handleNavigate = (tab: ActiveTab) => {
+        if (tab === activeTab || isTransitioning.current) return;
         setActiveTab(tab);
         const isLg = window.innerWidth >= 1024;
         if (!isPinned && !isLg) setIsSidebarOpen(false);
@@ -176,7 +253,7 @@ const App: React.FC = () => {
         setPromptsPageState(state);
         handleNavigate('prompts');
         showGlobalFeedback('Sent to Prompt Builder!');
-    }, [showGlobalFeedback]);
+    }, [showGlobalFeedback, handleNavigate]);
 
     const handleClipIdea = useCallback((idea: Idea) => {
         setClippedIdeas(prev => [idea, ...prev]);
@@ -214,7 +291,6 @@ const App: React.FC = () => {
         };
 
         switch (activeTab) {
-            // FIX: Pass onClipIdea to Dashboard component
             case 'dashboard': return <Dashboard onNavigate={handleNavigate} onClipIdea={handleClipIdea} />;
             case 'prompts': return <PromptsPage onClipIdea={handleClipIdea} initialState={promptsPageState} onStateHandled={() => setPromptsPageState(null)} showGlobalFeedback={showGlobalFeedback} />;
             case 'prompt': return <SavedPrompts {...categoryPanelProps} onSendToEnhancer={(prompt) => handleSendToPromptsPage({ prompt, view: 'enhancer' })} showGlobalFeedback={showGlobalFeedback} onClipIdea={handleClipIdea} />;
@@ -228,7 +304,6 @@ const App: React.FC = () => {
             case 'color_palette_extractor': return <ColorPaletteExtractor onClipIdea={handleClipIdea} />;
             case 'resizer': return <ImageResizer />;
             case 'video_to_frames': return <VideoToFrames />;
-            // FIX: Pass onClipIdea to Dashboard component in default case
             default: return <Dashboard onNavigate={handleNavigate} onClipIdea={handleClipIdea} />;
         }
     };
@@ -261,12 +336,28 @@ const App: React.FC = () => {
                     clippedIdeasCount={clippedIdeas.length}
                     onToggleClippingPanel={() => setIsClippingPanelOpen(p => !p)}
                 />
-                <main 
-                    key={activeTab}
-                    className={`flex-grow animate-tab-switch ${activeTab === 'dashboard' ? 'overflow-y-auto' : 'overflow-hidden'}`}
-                >
-                    {renderContent()}
+                
+                <main className="flex-grow relative overflow-hidden bg-base-100">
+                    {/* High-Fidelity Shutter Layers */}
+                    <div 
+                        ref={shutterRef} 
+                        className="absolute inset-0 z-[60] bg-base-100 opacity-0 pointer-events-none will-change-transform" 
+                        style={{ backfaceVisibility: 'hidden' }}
+                    />
+                    <div 
+                        ref={shutterSecondaryRef} 
+                        className="absolute inset-0 z-[59] bg-base-200 opacity-0 pointer-events-none will-change-transform" 
+                        style={{ backfaceVisibility: 'hidden' }}
+                    />
+
+                    <div 
+                        ref={pageContentRef}
+                        className="h-full w-full will-change-transform"
+                    >
+                        {renderContent()}
+                    </div>
                 </main>
+                
                 <Footer onAboutClick={() => setIsAboutModalOpen(true)} />
             </div>
             
