@@ -31,31 +31,72 @@ import ComposerPage from './ComposerPage';
 import ImageResizer from './ImageResizer';
 import { VideoToFrames } from './VideoToFrames';
 import { useAuth } from '../contexts/AuthContext';
-import LoadingSpinner from './LoadingSpinner';
 
 type PromptsPageState = { prompt?: string, artStyle?: string, artist?: string, view?: 'enhancer' | 'composer' | 'create', id?: string } | null;
 
 /**
- * Unified System Loader.
+ * Character Shuffle Hook for technical portfolio aesthetic.
+ */
+const useCharacterShuffle = (text: string, active: boolean) => {
+    const [display, setDisplay] = useState('');
+    const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789!@#$%^&*()_+';
+    
+    useEffect(() => {
+        if (!active) return;
+        let iteration = 0;
+        const interval = setInterval(() => {
+            setDisplay(text.split('').map((char, index) => {
+                if (index < iteration) return text[index];
+                return chars[Math.floor(Math.random() * chars.length)];
+            }).join(''));
+            
+            if (iteration >= text.length) clearInterval(interval);
+            iteration += 1 / 3;
+        }, 30);
+        return () => clearInterval(interval);
+    }, [text, active]);
+    
+    return display;
+};
+
+/**
+ * Technical Portfolio Initializer.
  */
 const InitialLoader: React.FC<{ status: string; progress: number | null }> = ({ status, progress }) => {
+    const displayStatus = useCharacterShuffle(status, true);
+    const percentage = Math.round((progress || 0) * 100);
+    const displayPercent = String(percentage).padStart(3, '0');
+
     return (
-        <div id="initial-loader" className="flex flex-col items-center justify-center w-full h-full bg-base-100 text-white transition-colors duration-300">
-            <div className="flex flex-col items-center">
-                <LoadingSpinner size={120} />
-                <div className="flex flex-col items-center mt-8 relative z-10">
-                    <p className="text-[10px] font-black uppercase tracking-[0.5em] text-white opacity-40 animate-pulse">
-                        {status}
-                    </p>
-                    {progress !== null && (
-                        <div className="w-48 h-0.5 bg-white/5 rounded-full mt-4 overflow-hidden">
-                            <div 
-                                className="h-full bg-white rounded-full transition-all duration-300" 
-                                style={{ width: `${progress * 100}%` }} 
-                            />
-                        </div>
-                    )}
+        <div id="initial-loader" className="fixed inset-0 z-[300] flex flex-col items-center justify-center bg-base-100 text-white overflow-hidden select-none">
+            <div className="absolute inset-0 bg-grid-texture opacity-[0.05] pointer-events-none"></div>
+            
+            <div className="relative z-10 flex flex-col items-center text-center">
+                <div className="mb-16 flex flex-col items-center">
+                    <span className="text-[120px] md:text-[200px] font-black tracking-tighter leading-none font-mono tabular-nums text-primary/90">
+                        {displayPercent}<span className="text-white/5">%</span>
+                    </span>
+                    <div className="w-80 h-px bg-white/5 relative overflow-hidden mt-6">
+                         <div 
+                            className="absolute inset-y-0 left-0 bg-primary transition-all duration-700 ease-out shadow-[0_0_10px_oklch(var(--p))]" 
+                            style={{ width: `${percentage}%` }}
+                         />
+                    </div>
                 </div>
+
+                <div className="space-y-4">
+                    <div className="flex items-center justify-center gap-6 mb-4">
+                        <div className="w-1.5 h-1.5 bg-primary animate-ping"></div>
+                        <p className="text-[11px] font-black uppercase tracking-[0.8em] text-white/50">
+                            {displayStatus}
+                        </p>
+                    </div>
+                </div>
+            </div>
+
+            <div className="absolute bottom-16 left-16 hidden md:flex flex-col gap-2">
+                <span className="text-[9px] font-black uppercase tracking-[0.4em] text-white/10">Kernel Access</span>
+                <span className="text-[11px] font-mono font-bold text-white/20">VAULT_STABILITY_OK</span>
             </div>
         </div>
     );
@@ -65,8 +106,9 @@ const App: React.FC = () => {
     const [isInitialized, setIsInitialized] = useState(false);
     const [isLoading, setIsLoading] = useState(true);
     const [showWelcome, setShowWelcome] = useState(false);
-    const [initStatus, setInitStatus] = useState('Initializing System Registry');
-    const [initProgress, setInitProgress] = useState<number | null>(null);
+    const [initStatus, setInitStatus] = useState('Initializing Registry');
+    const [initProgress, setInitProgress] = useState<number | null>(0);
+    const isFirstLoad = useRef(true);
 
     const { settings } = useSettings();
     const auth = useAuth();
@@ -85,25 +127,32 @@ const App: React.FC = () => {
 
     const [clippedIdeas, setClippedIdeas] = useLocalStorage<Idea[]>('clippedIdeas', []);
 
-    // --- Transition State ---
+    // --- Transition Refs ---
     const pageContentRef = useRef<HTMLDivElement>(null);
-    const shutterRef = useRef<HTMLDivElement>(null);
-    const shutterSecondaryRef = useRef<HTMLDivElement>(null);
-    const isTransitioning = useRef(false);
+    
+    // Phase 2: Navigation shutters (Constrained to <main>)
+    const navShutterTopRef = useRef<HTMLDivElement>(null);
+    const navShutterBottomRef = useRef<HTMLDivElement>(null);
+    
+    // Phase 1: Global shutters (Full screen)
+    const globalShutterTopRef = useRef<HTMLDivElement>(null);
+    const globalShutterBottomRef = useRef<HTMLDivElement>(null);
+    
+    const activeTimeline = useRef<gsap.core.Timeline | null>(null);
 
     const initializeApp = useCallback(async () => {
         setIsLoading(true);
         setShowWelcome(false);
-        setInitStatus('Preparing Neural Buffers');
+        setInitStatus('Negotiating Link');
+        setInitProgress(0.1);
 
         const onProgress = (message: string, progress?: number) => {
              setInitStatus(message.toUpperCase());
              if (progress !== undefined) setInitProgress(progress);
-             else setInitProgress(null);
         };
         
         try {
-            onProgress('Establishing File Link...');
+            await new Promise(r => setTimeout(r, 400)); 
             const hasHandleAndPermission = await fileSystemManager.initialize(settings, auth);
             
             if (!hasHandleAndPermission) {
@@ -112,95 +161,110 @@ const App: React.FC = () => {
                 return;
             }
 
+            onProgress('Verifying Folders...', 0.35);
             await verifyAndRepairFiles(onProgress, settings);
             
-            onProgress('Stabilizing Neural Sync...');
-            await new Promise(resolve => setTimeout(resolve, 300));
+            onProgress('Stabilizing Neural Node...', 0.8);
+            await new Promise(resolve => setTimeout(resolve, 500));
 
-            requestAnimationFrame(() => {
-                setIsInitialized(true);
-                setIsLoading(false);
-            });
+            onProgress('Registry Healthy', 1.0);
+            await new Promise(r => setTimeout(r, 300));
+
+            setIsInitialized(true);
+            setIsLoading(false);
         } catch (err) {
             console.error("Initialization Critical Failure:", err);
-            setGlobalFeedback({ 
-                message: "System failed to initialize. Access interrupted.", 
-                type: 'error' 
-            });
+            setGlobalFeedback({ message: "System failed to initialize.", type: 'error' });
             setIsLoading(false);
         }
-        
     }, [settings, auth]);
 
     useEffect(() => {
         initializeApp();
     }, [initializeApp]);
 
-    // --- Optimized GSAP Transition Logic ---
+    /**
+     * Specialized Shutter Engine.
+     * Manages global reveal (init) and local reveal (navigation).
+     */
     useLayoutEffect(() => {
         if (!isInitialized || !pageContentRef.current) return;
 
+        if (activeTimeline.current) {
+            activeTimeline.current.kill();
+        }
+
         const ctx = gsap.context(() => {
-            isTransitioning.current = true;
+            const isFirst = isFirstLoad.current;
             
+            // Choose correct shutters based on phase
+            const topShutter = isFirst ? globalShutterTopRef.current : navShutterTopRef.current;
+            const bottomShutter = isFirst ? globalShutterBottomRef.current : navShutterBottomRef.current;
+            
+            // Safety: Ensure all other shutters are hidden
+            const unusedShutters = isFirst 
+                ? [navShutterTopRef.current, navShutterBottomRef.current] 
+                : [globalShutterTopRef.current, globalShutterBottomRef.current];
+            gsap.set(unusedShutters, { autoAlpha: 0, pointerEvents: 'none' });
+
             const tl = gsap.timeline({
-                defaults: { ease: "power4.inOut", duration: 0.7 },
+                defaults: { ease: "expo.inOut", duration: 1.0 }, // Snappier 1s duration
                 onComplete: () => {
-                    isTransitioning.current = false;
-                    // Fully clear state after reveal to ensure no layout issues
-                    gsap.set([shutterRef.current, shutterSecondaryRef.current], { 
-                        autoAlpha: 0, 
-                        pointerEvents: 'none' 
+                    isFirstLoad.current = false;
+                    // Reset visibility and disable interactions with shutters
+                    gsap.set([globalShutterTopRef.current, globalShutterBottomRef.current, navShutterTopRef.current, navShutterBottomRef.current], { 
+                        autoAlpha: 0,
+                        pointerEvents: 'none'
                     });
-                    gsap.set(pageContentRef.current, { clearProps: "all" });
+                    // Final state ensure for content - prevents blank page bug
+                    gsap.set(pageContentRef.current, { autoAlpha: 1, filter: 'none', scale: 1 });
+                    activeTimeline.current = null;
                 }
             });
 
-            // 1. Initial State: BLANK CONTENT IMMEDIATELY
-            // Use autoAlpha 0 to hide container and all children
-            gsap.set(pageContentRef.current, { autoAlpha: 0 });
+            activeTimeline.current = tl;
+
+            // 1. Initial State Setup (Reset to closed state)
+            gsap.set([topShutter, bottomShutter], { 
+                yPercent: 0, 
+                autoAlpha: 1, 
+                pointerEvents: 'auto' 
+            });
             
-            // 2. Prepare Shutters at the BOTTOM
-            gsap.set([shutterRef.current, shutterSecondaryRef.current], { 
-                yPercent: 100, 
-                autoAlpha: 1,
-                pointerEvents: 'auto',
-                force3D: true
+            gsap.set(pageContentRef.current, { 
+                autoAlpha: 0, 
+                scale: isFirst ? 1.02 : 0.98,
+                filter: 'blur(10px)'
             });
 
-            // 3. The Wipe: Move shutters UP
-            tl.to(shutterSecondaryRef.current, { yPercent: -100, duration: 0.75 }, 0);
-            tl.to(shutterRef.current, { yPercent: -100, duration: 0.8 }, 0.05);
+            // 2. The Reveal (Snap movement)
+            tl.to(topShutter, { yPercent: -100 }, 0);
+            tl.to(bottomShutter, { yPercent: 100 }, 0);
 
-            // 4. Reveal Phase
-            // CRITICAL: First, we MUST set the container to visible so its contents can be seen
-            tl.set(pageContentRef.current, { autoAlpha: 1 }, 0.4);
+            // 3. Content Focus (Simultaneous with shutters)
+            tl.to(pageContentRef.current, { 
+                autoAlpha: 1, 
+                scale: 1, 
+                filter: 'blur(0px)',
+                duration: 0.8
+            }, 0.1);
 
-            // Try to find specific elements for high-fidelity staggered entrance
-            const revealElements = pageContentRef.current.querySelectorAll('section, h1, .elastic-grid-container, footer');
-            
+            // 4. Staggered Interior Entrance
+            const revealElements = pageContentRef.current.querySelectorAll('h1, h2, section, .reveal-on-scroll');
             if (revealElements.length > 0) {
-                 tl.fromTo(revealElements, 
-                    { autoAlpha: 0, y: 15 }, 
-                    { autoAlpha: 1, y: 0, duration: 0.5, stagger: 0.04, ease: "power2.out", clearProps: "all" }, 
-                    0.4 // Synchronized with container reveal
-                );
-            } else {
-                // Graceful fallback for simpler pages
-                tl.fromTo(pageContentRef.current, 
-                    { autoAlpha: 0, y: 10 }, 
-                    { autoAlpha: 1, y: 0, duration: 0.4, ease: "power2.out", clearProps: "all" }, 
-                    0.4
-                );
+                tl.from(revealElements, {
+                    y: 20,
+                    autoAlpha: 0,
+                    stagger: 0.05,
+                    duration: 0.7,
+                    ease: "power3.out",
+                    clearProps: "all"
+                }, 0.3);
             }
-
-            // Safety catch to unlock input if animation fails
-            const timer = setTimeout(() => { isTransitioning.current = false; }, 1200);
-            return () => clearTimeout(timer);
         });
 
         return () => ctx.revert();
-    }, [activeTab, isInitialized]);
+    }, [isInitialized, activeTab]);
     
     useEffect(() => {
         const isLg = window.innerWidth >= 1024;
@@ -239,7 +303,7 @@ const App: React.FC = () => {
     };
 
     const handleNavigate = (tab: ActiveTab) => {
-        if (tab === activeTab || isTransitioning.current) return;
+        if (tab === activeTab) return;
         setActiveTab(tab);
         const isLg = window.innerWidth >= 1024;
         if (!isPinned && !isLg) setIsSidebarOpen(false);
@@ -278,9 +342,9 @@ const App: React.FC = () => {
                 title: idea.title,
                 tags: [idea.lens]
             });
-            showGlobalFeedback(`"${idea.title}" archived to Library.`);
+            showGlobalFeedback(`"${idea.title}" archived.`);
         } catch (e) {
-            showGlobalFeedback("Failed to archive idea.", true);
+            showGlobalFeedback("Failed to archive.", true);
         }
     };
 
@@ -310,15 +374,14 @@ const App: React.FC = () => {
     
     if (isLoading) return <InitialLoader status={initStatus} progress={initProgress} />;
     if (showWelcome) return <Welcome onSetupComplete={initializeApp} />;
-    if (!isInitialized) return (
-        <div className="p-8 h-full w-full flex flex-col items-center justify-center bg-base-100">
-            <p className="text-error font-black uppercase tracking-tighter text-4xl mb-4 text-center">Neural Link Failure.</p>
-            <button onClick={() => window.location.reload()} className="btn btn-primary rounded-none font-black text-xs tracking-widest uppercase">Retry Uplink</button>
-        </div>
-    );
+    if (!isInitialized) return null;
 
     return (
         <div className="h-full bg-base-300">
+            {/* 1. Global Shutter (First Load - Entire Window) */}
+            <div ref={globalShutterTopRef} className="fixed inset-x-0 top-0 h-1/2 z-[500] bg-base-100 border-b border-base-300/30 pointer-events-none will-change-transform" />
+            <div ref={globalShutterBottomRef} className="fixed inset-x-0 bottom-0 h-1/2 z-[500] bg-base-100 border-t border-base-300/30 pointer-events-none will-change-transform" />
+
             <Sidebar
                 activeTab={activeTab}
                 onNavigate={handleNavigate}
@@ -327,6 +390,7 @@ const App: React.FC = () => {
                 setIsPinned={setIsPinned}
                 onAboutClick={() => setIsAboutModalOpen(true)}
             />
+            
             {isSidebarOpen && !isPinned && <div onClick={() => setIsSidebarOpen(false)} className="fixed inset-0 bg-black/50 z-30" />}
 
             <div className={`flex flex-col h-full transition-all duration-300 ease-in-out ${isSidebarOpen && isPinned ? 'lg:ml-80' : ''}`}>
@@ -338,22 +402,11 @@ const App: React.FC = () => {
                 />
                 
                 <main className="flex-grow relative overflow-hidden bg-base-100">
-                    {/* High-Fidelity Shutter Layers */}
-                    <div 
-                        ref={shutterRef} 
-                        className="absolute inset-0 z-[60] bg-base-100 opacity-0 pointer-events-none will-change-transform" 
-                        style={{ backfaceVisibility: 'hidden' }}
-                    />
-                    <div 
-                        ref={shutterSecondaryRef} 
-                        className="absolute inset-0 z-[59] bg-base-200 opacity-0 pointer-events-none will-change-transform" 
-                        style={{ backfaceVisibility: 'hidden' }}
-                    />
+                    {/* 2. Navigation Shutter (Phase 2 - Strictly inside <main>) - Behind Sidebar Shadow */}
+                    <div ref={navShutterTopRef} className="absolute inset-x-0 top-0 h-1/2 z-[30] bg-base-100 border-b border-base-300/30 pointer-events-none will-change-transform" />
+                    <div ref={navShutterBottomRef} className="absolute inset-x-0 bottom-0 h-1/2 z-[30] bg-base-100 border-t border-base-300/30 pointer-events-none will-change-transform" />
 
-                    <div 
-                        ref={pageContentRef}
-                        className="h-full w-full will-change-transform"
-                    >
+                    <div ref={pageContentRef} className="h-full w-full will-change-transform z-10 relative">
                         {renderContent()}
                     </div>
                 </main>

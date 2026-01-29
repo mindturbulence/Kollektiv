@@ -1,4 +1,3 @@
-
 import React, { useRef, useState, useEffect } from 'react';
 import type { ActiveTab } from '../types';
 import { useSettings } from '../contexts/SettingsContext';
@@ -90,7 +89,7 @@ const Sidebar: React.FC<SidebarProps> = ({ activeTab, onNavigate, isSidebarOpen,
 
   return (
     <aside
-      className={`fixed top-0 left-0 h-full w-80 bg-base-100 text-base-content z-40 transition-transform duration-300 ease-in-out flex flex-col border-r border-base-300 shadow-2xl
+      className={`fixed top-0 left-0 h-full w-80 bg-base-100 text-base-content z-[100] transition-transform duration-300 ease-in-out flex flex-col border-r border-base-300 shadow-2xl
         ${isSidebarOpen ? 'translate-x-0' : '-translate-x-full'}`}
       aria-label="Main Navigation"
     >

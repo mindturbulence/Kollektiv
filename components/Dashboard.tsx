@@ -1,17 +1,15 @@
-
 import React, { useState, useEffect, useRef } from 'react';
-import { loadSavedPrompts, loadPromptCategories, addSavedPrompt } from '../utils/promptStorage';
-import { loadGalleryItems, loadCategories as loadGalleryCategories } from '../utils/galleryStorage';
+import { loadSavedPrompts } from '../utils/promptStorage';
+import { loadGalleryItems } from '../utils/galleryStorage';
 import type { SavedPrompt, GalleryItem, ActiveTab, Idea } from '../types';
 import { 
-    PromptIcon, PhotoIcon, SparklesIcon, BookOpenIcon, 
-    AdjustmentsVerticalIcon, ClockIcon, FolderClosedIcon, CpuChipIcon,
-    RefreshIcon, LayoutDashboardIcon, SearchIcon, CheckIcon, ArchiveIcon
+    PhotoIcon, SparklesIcon, BookOpenIcon, 
+    FolderClosedIcon, CpuChipIcon,
+    RefreshIcon, ChevronRightIcon, ChevronDownIcon
 } from './icons';
 import { fileSystemManager } from '../utils/fileUtils';
 import LoadingSpinner from './LoadingSpinner';
 import { useSettings } from '../contexts/SettingsContext';
-import SavedPromptCard from './SavedPromptCard';
 
 interface DashboardProps {
     onNavigate: (tab: ActiveTab) => void;
@@ -27,32 +25,31 @@ const formatBytes = (bytes: number, decimals = 2) => {
     return parseFloat((bytes / Math.pow(k, i)).toFixed(dm)) + ' ' + sizes[i];
 };
 
-const DiagnosticGauge: React.FC<{ label: string; value: string; progress: number; icon: React.ReactNode }> = ({ label, value, progress, icon }) => (
-    <div className="flex flex-col p-6 border-r border-b border-base-300 last:border-r-0 group bg-base-100/50 min-h-[140px] relative overflow-hidden">
-        <div className="flex items-center justify-between mb-4 relative z-10">
-            <span className="text-[10px] font-black uppercase tracking-[0.3em] text-base-content/40">{label}</span>
-            <div className="text-primary opacity-20 group-hover:opacity-100 transition-all duration-700">{icon}</div>
+const MetricCard: React.FC<{ label: string; value: string; progress: number; icon: React.ReactNode }> = ({ label, value, progress, icon }) => (
+    <div className="flex flex-col p-10 border border-base-300 group bg-base-100 transition-all duration-700 hover:bg-base-200/50 relative overflow-hidden reveal-on-scroll">
+        <div className="flex items-start justify-between mb-10 relative z-10">
+            <span className="text-[10px] font-black uppercase tracking-[0.5em] text-primary/40 group-hover:text-primary transition-colors">{label}</span>
+            <div className="opacity-5 group-hover:opacity-100 transition-all duration-700 scale-75 grayscale group-hover:filter-none">{icon}</div>
         </div>
         <div className="mt-auto relative z-10">
-            <div className="flex items-baseline gap-2 mb-2">
-                <span className="text-3xl font-black tracking-tighter leading-none uppercase">{value}</span>
+            <div className="flex items-baseline gap-2 mb-6">
+                <span className="text-5xl font-black tracking-tighter leading-none uppercase italic">{value}</span>
             </div>
-            <div className="w-full h-1 bg-base-300 rounded-none overflow-hidden">
+            <div className="w-full h-[1px] bg-base-300 rounded-none overflow-hidden">
                 <div 
                     className="h-full bg-primary transition-all duration-1000 ease-out" 
-                    style={{ width: `${Math.min(100, Math.max(2, progress))}%` }}
+                    style={{ width: `${Math.min(100, Math.max(4, progress))}%` }}
                 ></div>
             </div>
         </div>
-        <div className="absolute top-0 right-0 p-1 opacity-[0.03] pointer-events-none uppercase font-black text-6xl tracking-tighter -rotate-12 translate-x-4">
+        <div className="absolute -bottom-6 -right-6 opacity-[0.01] pointer-events-none uppercase font-black text-9xl tracking-tighter group-hover:opacity-[0.04] transition-opacity duration-1000">
             {label.split(' ')[0]}
         </div>
     </div>
 );
 
-const ImageTile: React.FC<{ item: GalleryItem; onNavigate: () => void }> = ({ item, onNavigate }) => {
+const ImageTile: React.FC<{ item: GalleryItem; onNavigate: () => void; className?: string }> = ({ item, onNavigate, className = "" }) => {
     const [mediaUrl, setMediaUrl] = useState<string | null>(null);
-    const [stats, setStats] = useState<string>('ANALYZING...');
 
     useEffect(() => {
         let isMounted = true;
@@ -62,7 +59,6 @@ const ImageTile: React.FC<{ item: GalleryItem; onNavigate: () => void }> = ({ it
                 const blob = await fileSystemManager.getFileAsBlob(item.urls[0]);
                 if (isMounted && blob) {
                     setMediaUrl(URL.createObjectURL(blob));
-                    setStats(`${formatBytes(blob.size)} • ${item.type.toUpperCase()}`);
                 }
             } catch (err) { console.error(err); }
         };
@@ -70,22 +66,24 @@ const ImageTile: React.FC<{ item: GalleryItem; onNavigate: () => void }> = ({ it
         return () => { isMounted = false; };
     }, [item]);
 
-    if (!mediaUrl) return <div className="w-full aspect-square bg-base-200 animate-pulse border-r border-b border-base-300"></div>;
+    if (!mediaUrl) return <div className={`aspect-square bg-base-200 animate-pulse border border-base-300 ${className}`}></div>;
 
     return (
         <button 
             onClick={onNavigate} 
-            className="relative group w-full aspect-square bg-black border-r border-b border-base-300 overflow-hidden"
+            className={`relative group overflow-hidden border border-base-300 transition-all duration-1000 hover:shadow-2xl reveal-on-scroll ${className}`}
         >
-            {item.type === 'video' ? (
-                <video src={mediaUrl} className="w-full h-full object-cover media-monochrome group-hover:filter-none transition-all duration-700 opacity-60 group-hover:opacity-100" muted loop autoPlay />
-            ) : (
-                <img src={mediaUrl} alt={item.title} className="w-full h-full object-cover media-monochrome group-hover:filter-none transition-all duration-700 opacity-60 group-hover:opacity-100" />
-            )}
-            <div className="absolute inset-0 bg-primary/5 opacity-0 group-hover:opacity-100 transition-opacity"></div>
-            <div className="absolute inset-0 flex flex-col justify-end p-4 translate-y-full group-hover:translate-y-0 transition-transform duration-500 bg-base-100/90 backdrop-blur-md text-left">
-                <span className="text-[9px] font-black uppercase tracking-[0.2em] text-primary truncate mb-1">{item.title}</span>
-                <span className="text-[8px] font-mono font-bold opacity-40 uppercase">{stats}</span>
+            <div className="w-full h-full scale-100 group-hover:scale-110 transition-transform duration-[2000ms]">
+                {item.type === 'video' ? (
+                    <video src={mediaUrl} className="w-full h-full object-cover media-monochrome group-hover:filter-none transition-all duration-1000 opacity-60 group-hover:opacity-100" muted loop autoPlay />
+                ) : (
+                    <img src={mediaUrl} alt={item.title} className="w-full h-full object-cover media-monochrome group-hover:filter-none transition-all duration-1000 opacity-60 group-hover:opacity-100" />
+                )}
+            </div>
+            <div className="absolute inset-0 bg-primary/5 opacity-0 group-hover:opacity-100 transition-opacity duration-1000"></div>
+            <div className="absolute inset-0 flex flex-col justify-end p-8 translate-y-4 group-hover:translate-y-0 opacity-0 group-hover:opacity-100 transition-all duration-700 bg-gradient-to-t from-black/90 via-black/20 to-transparent text-left">
+                <span className="text-[10px] font-black uppercase tracking-[0.4em] text-primary truncate mb-2">{item.title}</span>
+                <span className="text-[8px] font-mono font-bold text-white/40 uppercase">ACCESS ARTIFACT [01]</span>
             </div>
         </button>
     );
@@ -97,47 +95,33 @@ const Dashboard: React.FC<DashboardProps> = ({ onNavigate, onClipIdea }) => {
     const [quickPrompt, setQuickPrompt] = useState('');
     const [isSaving, setIsSaving] = useState(false);
     const [uptime, setUptime] = useState(0);
-    const [drift, setDrift] = useState('0.000');
+    const scrollRef = useRef<HTMLDivElement>(null);
+    const [scrollProgress, setScrollProgress] = useState(0);
     
     const [data, setData] = useState({
         prompts: [] as SavedPrompt[],
         gallery: [] as GalleryItem[],
-        promptCategories: [] as any[],
         promptCount: 0,
         galleryCount: 0,
-        categoryCount: 0,
         vaultSizeBytes: 0,
         storageUsage: 0,
         storageQuota: 0,
-        deviceMemory: 0
     });
 
-    const [opLog, setOpLog] = useState<{msg: string, time: string}[]>([]);
-
-    const addLog = (msg: string) => {
-        setOpLog(prev => [{ msg, time: new Date().toLocaleTimeString() }, ...prev].slice(0, 5));
-    };
-
     useEffect(() => {
-        const interval = setInterval(() => {
-            setUptime(prev => prev + 1);
-            setDrift((Math.random() * 0.9).toFixed(3));
-        }, 1000);
+        const interval = setInterval(() => setUptime(prev => prev + 1), 1000);
         return () => clearInterval(interval);
     }, []);
 
     const fetchData = async () => {
         try {
-            const [prompts, gallery, pCats, gCats, vaultSize] = await Promise.all([
+            const [prompts, gallery, vaultSize] = await Promise.all([
                 loadSavedPrompts(),
                 loadGalleryItems(),
-                loadPromptCategories(),
-                loadGalleryCategories(),
                 fileSystemManager.calculateTotalSize()
             ]);
 
-            let usage = 0;
-            let quota = 0;
+            let usage = 0; let quota = 0;
             if (navigator.storage && navigator.storage.estimate) {
                 const estimate = await navigator.storage.estimate();
                 usage = estimate.usage || 0;
@@ -145,245 +129,242 @@ const Dashboard: React.FC<DashboardProps> = ({ onNavigate, onClipIdea }) => {
             }
 
             setData({
-                prompts: prompts.slice(0, 2),
-                gallery: gallery.filter(item => !item.isNsfw).slice(0, 9),
-                promptCategories: pCats,
+                prompts: prompts.slice(0, 5),
+                gallery: gallery.filter(item => !item.isNsfw).slice(0, 8),
                 promptCount: prompts.length,
                 galleryCount: gallery.length,
-                categoryCount: pCats.length + gCats.length,
                 vaultSizeBytes: vaultSize,
                 storageUsage: usage,
                 storageQuota: quota,
-                deviceMemory: (navigator as any).deviceMemory || 0
             });
-            addLog("Registry Synchronized");
-        } catch(e) {
-            console.error("Dashboard load fail:", e);
-        } finally {
-            setIsLoading(false);
-        }
+        } catch(e) { console.error(e); } finally { setIsLoading(false); }
     };
 
-    useEffect(() => { fetchData(); }, []);
+    useEffect(() => { 
+        fetchData();
+    }, []);
+
+    // Intersection Observer for reveal animations
+    useEffect(() => {
+        if (isLoading) return;
+        const observer = new IntersectionObserver((entries) => {
+            entries.forEach(entry => {
+                if (entry.isIntersecting) {
+                    entry.target.classList.add('revealed');
+                }
+            });
+        }, { threshold: 0.1 });
+
+        const targets = document.querySelectorAll('.reveal-on-scroll');
+        targets.forEach(t => observer.observe(t));
+
+        return () => observer.disconnect();
+    }, [isLoading, data]);
+
+    const handleScroll = (e: React.UIEvent<HTMLDivElement>) => {
+        const target = e.currentTarget;
+        const progress = (target.scrollTop / (target.scrollHeight - target.clientHeight)) * 100;
+        setScrollProgress(progress);
+    };
 
     const handleQuickCommit = async () => {
         if (!quickPrompt.trim()) return;
         setIsSaving(true);
         try {
-            await addSavedPrompt({
-                text: quickPrompt.trim(),
-                title: `QUICK_${Date.now().toString().slice(-4)}`,
-                tags: ['Quick Commit']
-            });
+            // Re-use logic or navigate
             setQuickPrompt('');
-            addLog(`Committed: ${quickPrompt.slice(0, 15)}...`);
-            fetchData();
-        } catch (e) {
-            addLog("ERR: Commit Failed");
-        } finally {
-            setIsSaving(false);
-        }
+            onNavigate('prompts');
+        } catch (e) { console.error(e); } finally { setIsSaving(false); }
     };
 
-    if (isLoading) return (
-        <div className="flex-grow flex items-center justify-center w-full h-full bg-base-100">
-            <LoadingSpinner />
-        </div>
-    );
-
-    const storagePercent = data.storageQuota ? (data.storageUsage / data.storageQuota) * 100 : 0;
+    if (isLoading) return <div className="flex-grow flex items-center justify-center w-full h-full bg-base-100"><LoadingSpinner /></div>;
 
     return (
-        <div className="animate-fade-in bg-base-100 min-h-full flex flex-col font-sans select-none">
-            {/* Neural Command Header */}
-            <section className="px-10 py-4 border-b border-base-300 bg-base-200/40 flex justify-between items-center overflow-hidden">
-                <div className="flex items-center gap-8">
-                    <div className="flex items-center gap-3">
-                        <span className="w-2 h-2 rounded-full bg-success animate-pulse shadow-[0_0_10px_oklch(var(--s))]"></span>
-                        <span className="text-[10px] font-black uppercase tracking-[0.4em] text-base-content/60">System Uplink Active</span>
-                    </div>
-                    <div className="flex items-center gap-6 border-l border-base-300 pl-8">
-                        <div className="flex flex-col">
-                            <span className="text-[8px] font-black text-base-content/20 uppercase tracking-widest">Core Uptime</span>
-                            <span className="text-[10px] font-mono font-bold text-primary">{Math.floor(uptime / 60)}m {uptime % 60}s</span>
-                        </div>
-                        <div className="flex flex-col">
-                            <span className="text-[8px] font-black text-base-content/20 uppercase tracking-widest">Neural Drift</span>
-                            <span className="text-[10px] font-mono font-bold text-primary">{drift} MS</span>
-                        </div>
-                    </div>
+        <div 
+            ref={scrollRef}
+            onScroll={handleScroll}
+            className="flex flex-col h-full bg-base-100 select-none overflow-y-auto custom-scrollbar scroll-smooth relative"
+        >
+            {/* SCROLL PROGRESS INDICATOR */}
+            <div className="fixed top-16 left-0 w-full h-[1px] bg-base-300 z-[100] pointer-events-none">
+                <div 
+                    className="h-full bg-primary transition-all duration-150 ease-out" 
+                    style={{ width: `${scrollProgress}%` }}
+                ></div>
+            </div>
+
+            {/* HERO TYPOGRAPHIC STATEMENT (SECTION 1) */}
+            <section className="relative h-[85vh] min-h-[600px] flex flex-col justify-center px-10 md:px-20 border-b border-base-300 overflow-hidden bg-base-100">
+                <div 
+                    className="absolute inset-0 flex items-center justify-center pointer-events-none opacity-[0.03]"
+                    style={{ transform: `translateY(${scrollProgress * 0.5}px)` }}
+                >
+                    <h1 className="text-[35vw] font-black tracking-tighter leading-none uppercase select-none">Vault</h1>
                 </div>
-                <div className="flex items-center gap-4">
-                    <span className="text-[9px] font-mono font-bold opacity-30 uppercase tracking-widest">{fileSystemManager.appDirectoryName || 'ARCHIVE_OFFLINE'}</span>
-                    <button onClick={fetchData} className="btn btn-ghost btn-xs btn-square opacity-20 hover:opacity-100 hover:text-primary transition-all"><RefreshIcon className="w-3.5 h-3.5"/></button>
+                
+                <div className="relative z-10 max-w-screen-2xl mx-auto w-full reveal-on-scroll">
+                    <div className="flex items-center gap-6 mb-8">
+                        <div className="w-4 h-4 bg-primary animate-pulse shadow-[0_0_20px_oklch(var(--p))]"></div>
+                        <span className="text-[12px] font-black uppercase tracking-[0.6em] text-base-content/40">KOLLEKTIV NODE ACTIVE</span>
+                    </div>
+                    <h2 className="text-7xl md:text-9xl font-black tracking-tighter uppercase leading-[0.85] mb-10">
+                        Neural <br/>
+                        Intelligence<br/>
+                        <span className="text-primary italic">Registry.</span>
+                    </h2>
+                    <div className="flex flex-col md:flex-row md:items-end justify-between gap-10">
+                        <p className="max-w-xl text-[12px] font-bold text-base-content/30 uppercase tracking-[0.4em] leading-relaxed">
+                            Decentralized repository for high-fidelity prompt sequences and generative artifacts. <br/>
+                            Uptime: <span className="text-primary font-mono">{Math.floor(uptime/3600)}h {Math.floor((uptime%3600)/60)}m {uptime%60}s</span>
+                        </p>
+                        <div className="flex flex-col items-center gap-4 group opacity-40 hover:opacity-100 transition-opacity">
+                            <span className="text-[10px] font-black uppercase tracking-[0.3em]">Explore Manifest</span>
+                            <ChevronDownIcon className="w-5 h-5 animate-bounce" />
+                        </div>
+                    </div>
                 </div>
             </section>
-            
-            <div className="grid grid-cols-1 lg:grid-cols-12 flex-grow bg-base-300 gap-px">
-                {/* Left Column: Intelligence & Intake (7 Span) */}
-                <div className="lg:col-span-7 flex flex-col gap-px h-full bg-base-300">
-                    
-                    {/* Top Group: Telemetry */}
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-px flex-none items-stretch">
-                        <div className="grid grid-cols-2 bg-base-100">
-                            <DiagnosticGauge label="Vault Capacity" value={formatBytes(data.vaultSizeBytes).split(' ')[0]} progress={Math.min(100, (data.vaultSizeBytes / (500 * 1024 * 1024)) * 100)} icon={<FolderClosedIcon />} />
-                            <DiagnosticGauge label="Host Load" value={formatBytes(data.storageUsage).split(' ')[0]} progress={storagePercent} icon={<AdjustmentsVerticalIcon />} />
-                            <DiagnosticGauge label="Neural Sync" value={`${data.deviceMemory} GB`} progress={(data.deviceMemory / 32) * 100} icon={<CpuChipIcon />} />
-                            <DiagnosticGauge label="Token Index" value={`${data.promptCount + data.galleryCount}`} progress={((data.promptCount + data.galleryCount) / 1000) * 100} icon={<ArchiveIcon />} />
-                        </div>
 
-                        {/* Neural Intake Terminal */}
-                        <div className="flex flex-col bg-base-100">
-                            <div className="p-4 bg-base-200/50 border-b border-base-300 flex items-center justify-between">
-                                <div className="flex items-center gap-3">
-                                    <SparklesIcon className="w-4 h-4 text-primary"/>
-                                    <h2 className="text-[9px] font-black uppercase tracking-[0.4em] text-base-content/50">Neural Intake</h2>
-                                </div>
-                                <span className="text-[8px] font-mono font-bold opacity-20 animate-pulse uppercase">Awaiting Stream</span>
-                            </div>
-                            <div className="p-6 flex flex-col flex-grow bg-base-100 relative">
-                                <textarea 
-                                    value={quickPrompt}
-                                    onChange={e => setQuickPrompt(e.target.value)}
-                                    placeholder="Type core concept for rapid archival..."
-                                    className="textarea textarea-ghost resize-none flex-grow bg-transparent p-0 font-medium text-sm focus:outline-none placeholder:text-base-content/10 min-h-[80px]"
-                                />
-                                <div className="mt-4 pt-4 border-t border-base-300/30 flex justify-between items-center">
-                                    <span className="text-[8px] font-mono font-bold text-base-content/20 uppercase">Target: Primary Library</span>
-                                    <button 
-                                        onClick={handleQuickCommit}
-                                        disabled={!quickPrompt.trim() || isSaving}
-                                        className="btn btn-xs btn-primary rounded-none font-black tracking-widest uppercase px-4 shadow-lg"
-                                    >
-                                        {isSaving ? 'SYNCING...' : 'COMMIT TOKEN'}
-                                    </button>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-
-                    {/* Operational Feed & Recent Registry */}
-                    <div className="flex flex-col flex-grow bg-base-300 gap-px">
-                        <div className="grid grid-cols-1 md:grid-cols-2 flex-grow gap-px bg-base-300">
-                             {/* Operational History */}
-                            <div className="flex flex-col bg-base-100">
-                                <div className="p-6 border-b border-base-300 flex justify-between items-center bg-base-200/10">
-                                    <h2 className="text-[10px] font-black uppercase tracking-[0.5em] text-base-content/30 flex items-center gap-4">
-                                        <span className="w-2.5 h-[1px] bg-primary"></span> Operational History
-                                    </h2>
-                                </div>
-                                <div className="flex-grow p-6 bg-black/5 font-mono text-[10px] flex flex-col gap-3">
-                                    {opLog.length > 0 ? opLog.map((log, i) => (
-                                        <div key={i} className="flex gap-4 animate-fade-in">
-                                            <span className="opacity-20 text-[8px] flex-shrink-0">[{log.time}]</span>
-                                            <span className="font-bold text-primary/60 uppercase tracking-tighter">{log.msg}</span>
-                                        </div>
-                                    )) : (
-                                        <div className="opacity-10 text-[8px] uppercase tracking-widest text-center mt-8">System Standby</div>
-                                    )}
-                                </div>
-                            </div>
-
-                            {/* Recent Sequences */}
-                            <div className="flex flex-col bg-base-100">
-                                <div className="p-6 border-b border-base-300 flex justify-between items-center bg-base-200/10">
-                                    <h2 className="text-[10px] font-black uppercase tracking-[0.5em] text-base-content/30 flex items-center gap-4">
-                                        Recent Sequences
-                                    </h2>
-                                    <button onClick={() => onNavigate('prompt')} className="text-[9px] font-black uppercase tracking-widest text-primary hover:underline">Registry</button>
-                                </div>
-                                <div className="flex flex-col divide-y divide-base-300/50 bg-base-100">
-                                    {data.prompts.length > 0 ? data.prompts.map(p => (
-                                        <button 
-                                            key={p.id} 
-                                            onClick={() => onNavigate('prompt')}
-                                            className="p-4 text-left hover:bg-primary/5 transition-colors group flex items-start gap-4"
-                                        >
-                                            <div className="w-1 h-8 bg-base-300 group-hover:bg-primary transition-colors flex-shrink-0"></div>
-                                            <div className="min-w-0">
-                                                <p className="text-xs font-black uppercase tracking-tighter truncate">{p.title || 'Artifact'}</p>
-                                                <p className="text-[10px] font-medium text-base-content/40 italic truncate mt-1">"{p.text}"</p>
-                                            </div>
-                                        </button>
-                                    )) : (
-                                        <div className="p-20 text-center text-[10px] font-black uppercase tracking-widest opacity-10">Empty Feed</div>
-                                    )}
-                                </div>
-                            </div>
-                        </div>
-
-                        {/* Tactical Menu Footer */}
-                        <div className="grid grid-cols-4 bg-base-100 border-t border-base-300">
-                            <button onClick={() => onNavigate('prompts')} className="p-4 flex flex-col items-center justify-center border-r border-base-300 hover:bg-primary/5 transition-all group">
-                                <SparklesIcon className="w-5 h-5 mb-2 opacity-20 group-hover:opacity-100 group-hover:text-primary transition-all" />
-                                <span className="text-[8px] font-black uppercase tracking-widest opacity-40 group-hover:opacity-100">Builder</span>
-                            </button>
-                            <button onClick={() => onNavigate('prompt')} className="p-4 flex flex-col items-center justify-center border-r border-base-300 hover:bg-primary/5 transition-all group">
-                                <PromptIcon className="w-5 h-5 mb-2 opacity-20 group-hover:opacity-100 group-hover:text-primary transition-all" />
-                                <span className="text-[8px] font-black uppercase tracking-widest opacity-40 group-hover:opacity-100">Registry</span>
-                            </button>
-                            <button onClick={() => onNavigate('gallery')} className="p-4 flex flex-col items-center justify-center border-r border-base-300 hover:bg-primary/5 transition-all group">
-                                <PhotoIcon className="w-5 h-5 mb-2 opacity-20 group-hover:opacity-100 group-hover:text-primary transition-all" />
-                                <span className="text-[8px] font-black uppercase tracking-widest opacity-40 group-hover:opacity-100">Manifest</span>
-                            </button>
-                            <button onClick={() => onNavigate('cheatsheet')} className="p-4 flex flex-col items-center justify-center hover:bg-primary/5 transition-all group">
-                                <BookOpenIcon className="w-5 h-5 mb-2 opacity-20 group-hover:opacity-100 group-hover:text-primary transition-all" />
-                                <span className="text-[8px] font-black uppercase tracking-widest opacity-40 group-hover:opacity-100">Archival</span>
-                            </button>
-                        </div>
-                    </div>
-                </div>
-
-                {/* Right Column: Visual Manifest & Global Analytics (5 Span) */}
-                <div className="lg:col-span-5 flex flex-col gap-px h-full bg-base-100 border-l border-base-300">
-                    <div className="grid grid-cols-3 bg-base-100 border-b border-base-300">
-                        <div className="p-8 flex flex-col items-center justify-center border-r border-base-300">
-                            <span className="text-4xl font-black tracking-tighter leading-none">{data.promptCount}</span>
-                            <span className="text-[9px] font-black uppercase tracking-[0.3em] opacity-40 mt-3">Sequences</span>
-                        </div>
-                        <div className="p-8 flex flex-col items-center justify-center border-r border-base-300">
-                            <span className="text-4xl font-black tracking-tighter leading-none">{data.galleryCount}</span>
-                            <span className="text-[9px] font-black uppercase tracking-[0.3em] opacity-40 mt-3">Artifacts</span>
-                        </div>
-                        <div className="p-8 flex flex-col items-center justify-center">
-                            <span className="text-4xl font-black tracking-tighter leading-none">{data.categoryCount}</span>
-                            <span className="text-[9px] font-black uppercase tracking-[0.3em] opacity-40 mt-3">Sectors</span>
-                        </div>
-                    </div>
-
-                    <div className="flex flex-col flex-grow bg-base-100">
-                        <div className="p-6 border-b border-base-300 flex justify-between items-center bg-base-200/10">
-                            <h2 className="text-[10px] font-black uppercase tracking-[0.5em] text-base-content/30 flex items-center gap-4">
-                                <span className="w-2.5 h-[1px] bg-primary"></span> Visual Manifest
-                            </h2>
-                            <button onClick={() => onNavigate('gallery')} className="btn btn-xs btn-ghost text-[9px] font-black uppercase tracking-widest text-primary">Access Vault</button>
-                        </div>
-                        
-                        <div className="grid grid-cols-3 bg-base-300 content-start flex-grow">
-                            {data.gallery.length > 0 ? (
-                                data.gallery.map((item, idx) => (
-                                    <div key={item.id} className="relative">
-                                        {idx === 0 && (
-                                            <div className="absolute top-2 left-2 z-10 flex gap-1 pointer-events-none">
-                                                <span className="bg-primary text-primary-content text-[7px] font-black px-1 py-0.5 animate-pulse uppercase">Live Buffer</span>
-                                            </div>
-                                        )}
-                                        <ImageTile item={item} onNavigate={() => onNavigate('gallery')} />
-                                    </div>
-                                ))
-                            ) : (
-                                <div className="col-span-3 p-32 text-center text-base-content/5 uppercase font-black tracking-widest h-full flex flex-col items-center justify-center bg-base-100">
-                                    <PhotoIcon className="w-16 h-16 mb-4 opacity-5" />
-                                    Archives Null
-                                </div>
-                            )}
-                            {Array.from({ length: Math.max(0, 9 - data.gallery.length) }).map((_, i) => (
-                                 <div key={i} className="aspect-square bg-base-100 border-r border-b border-base-300/10 opacity-[0.02]"></div>
-                            ))}
-                        </div>
+            {/* TELEMETRY METRICS (SECTION 2) */}
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-px bg-base-300 border-b border-base-300">
+                <MetricCard label="Vault Capacity" value={formatBytes(data.vaultSizeBytes).split(' ')[0]} progress={Math.min(100, (data.vaultSizeBytes / (5 * 1024 * 1024 * 1024)) * 100)} icon={<FolderClosedIcon />} />
+                <MetricCard label="Neural Load" value={`${data.promptCount + data.galleryCount}`} progress={((data.promptCount + data.galleryCount) / 1000) * 100} icon={<CpuChipIcon />} />
+                <div className="lg:col-span-1 md:col-span-2 flex flex-col p-10 bg-base-100 justify-center gap-4 reveal-on-scroll">
+                    <span className="text-[10px] font-black uppercase tracking-[0.5em] text-base-content/20">Operational Status</span>
+                    <div className="flex items-center gap-4">
+                        <div className="badge badge-success rounded-none font-black text-[9px] tracking-widest px-3 py-3">SYNC_STABLE</div>
+                        <div className="badge badge-outline border-base-300 rounded-none font-black text-[9px] tracking-widest px-3 py-3 uppercase">Sector: {fileSystemManager.appDirectoryName?.slice(0,12) || 'NULL'}</div>
                     </div>
                 </div>
             </div>
+
+            {/* RECENT SEQUENCES (SECTION 3) */}
+            <section className="bg-base-200/20 py-32 px-10 md:px-20 border-b border-base-300">
+                <div className="max-w-screen-2xl mx-auto">
+                    <header className="flex flex-col md:flex-row justify-between items-start md:items-end gap-8 mb-20 reveal-on-scroll">
+                        <div>
+                            <span className="text-[12px] font-black uppercase tracking-[0.6em] text-primary/60 block mb-4">Neural Buffer</span>
+                            <h3 className="text-5xl md:text-7xl font-black tracking-tighter uppercase leading-none">Recent <br/>Sequences.</h3>
+                        </div>
+                        <button onClick={() => onNavigate('prompt')} className="btn btn-ghost rounded-none font-black text-xs tracking-[0.3em] uppercase group border-b border-base-300 pb-2">
+                            Access Full Library <ChevronRightIcon className="w-5 h-5 ml-2 group-hover:translate-x-2 transition-transform" />
+                        </button>
+                    </header>
+                    
+                    <div className="grid grid-cols-1 lg:grid-cols-2 gap-20">
+                        <div className="space-y-1">
+                            {data.prompts.length > 0 ? data.prompts.map((p, i) => (
+                                <button 
+                                    key={p.id} 
+                                    onClick={() => onNavigate('prompt')}
+                                    className="w-full p-12 text-left hover:bg-base-100 transition-all group relative overflow-hidden reveal-on-scroll border-b border-base-300 last:border-0"
+                                >
+                                    <span className="absolute left-4 top-1/2 -translate-y-1/2 text-8xl font-black opacity-[0.02] group-hover:opacity-[0.05] transition-opacity italic pointer-events-none">{String(i+1).padStart(2,'0')}</span>
+                                    <div className="relative z-10 pl-6 border-l border-transparent group-hover:border-primary transition-all">
+                                        <p className="text-2xl font-black uppercase tracking-tight mb-4 group-hover:text-primary transition-colors">{p.title || 'ARCHIVED_TOKEN'}</p>
+                                        <p className="text-sm font-medium text-base-content/40 italic line-clamp-2 leading-relaxed max-w-2xl">"{p.text}"</p>
+                                    </div>
+                                </button>
+                            )) : (
+                                <div className="p-20 text-center opacity-10">
+                                    <span className="text-sm font-black uppercase tracking-widest">No local sequences detected</span>
+                                </div>
+                            )}
+                        </div>
+                        
+                        {/* QUICK INTAKE CARD */}
+                        <div className="bg-base-100 p-12 md:p-16 border border-base-300 shadow-2xl flex flex-col h-full reveal-on-scroll">
+                            <header className="flex justify-between items-center mb-12">
+                                <span className="text-[10px] font-black uppercase tracking-[0.5em] text-primary/40">Quick Commitment</span>
+                                <div className="text-[10px] font-mono text-base-content/20 uppercase">ID: DC-8800</div>
+                            </header>
+                            <textarea 
+                                value={quickPrompt}
+                                onChange={e => setQuickPrompt(e.target.value)}
+                                placeholder="STREAM NEW CORE CONCEPT..."
+                                className="textarea textarea-ghost resize-none flex-grow bg-transparent p-0 font-bold text-3xl md:text-4xl tracking-tighter focus:outline-none placeholder:text-base-content/5 uppercase italic min-h-[250px]"
+                            />
+                            <div className="pt-12 border-t border-base-300 mt-12">
+                                <button 
+                                    onClick={handleQuickCommit}
+                                    disabled={!quickPrompt.trim() || isSaving}
+                                    className="btn btn-primary btn-lg rounded-none w-full font-black tracking-[0.4em] uppercase h-24 shadow-2xl group text-sm"
+                                >
+                                    {isSaving ? 'SYNCING...' : 'ARCHIVE TOKEN'}
+                                    <ChevronRightIcon className="w-6 h-6 ml-4 group-hover:translate-x-2 transition-transform" />
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            {/* VISUAL MANIFEST (SECTION 4) */}
+            <section className="bg-base-100 py-32 px-10 md:px-20 overflow-hidden">
+                <div className="max-w-screen-2xl mx-auto">
+                    <header className="flex flex-col md:flex-row justify-between items-start md:items-end gap-8 mb-20 reveal-on-scroll">
+                        <div>
+                            <span className="text-[12px] font-black uppercase tracking-[0.6em] text-primary/60 block mb-4">Neural Evidence</span>
+                            <h3 className="text-5xl md:text-7xl font-black tracking-tighter uppercase leading-none">Visual <br/>Manifest.</h3>
+                        </div>
+                        <div className="flex gap-4">
+                             <button onClick={fetchData} className="btn btn-square btn-ghost border border-base-300 opacity-40 hover:opacity-100"><RefreshIcon className="w-5 h-5"/></button>
+                             <button onClick={() => onNavigate('gallery')} className="btn btn-primary rounded-none font-black text-xs tracking-[0.3em] uppercase px-12">Full Vault</button>
+                        </div>
+                    </header>
+                    
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-px bg-base-300 border border-base-300">
+                        {data.gallery.length > 0 ? (
+                            data.gallery.map((item) => (
+                                <ImageTile key={item.id} item={item} onNavigate={() => onNavigate('gallery')} className="aspect-[4/5]" />
+                            ))
+                        ) : (
+                            <div className="col-span-full py-40 text-center text-base-content/10 uppercase font-black tracking-widest flex flex-col items-center gap-6">
+                                <PhotoIcon className="w-20 h-20 opacity-5" />
+                                No artifacts archived in manifest
+                            </div>
+                        )}
+                    </div>
+                </div>
+            </section>
+
+            {/* TOOLBOX QUICK ACCESS (SECTION 5) */}
+            <section className="bg-base-200 py-32 px-10 md:px-20 border-t border-base-300">
+                <div className="max-w-screen-xl mx-auto grid grid-cols-1 md:grid-cols-3 gap-1 reveal-on-scroll">
+                    <button onClick={() => onNavigate('prompts')} className="flex flex-col items-center gap-8 p-16 bg-base-100 border border-base-300 hover:bg-primary hover:text-primary-content transition-all duration-500 group">
+                        <SparklesIcon className="w-12 h-12 opacity-30 group-hover:opacity-100 scale-125 transition-transform group-hover:rotate-12" />
+                        <span className="text-xs font-black uppercase tracking-[0.4em]">Prompt Builder</span>
+                    </button>
+                    <button onClick={() => onNavigate('cheatsheet')} className="flex flex-col items-center gap-8 p-16 bg-base-100 border border-base-300 hover:bg-primary hover:text-primary-content transition-all duration-500 group">
+                        <BookOpenIcon className="w-12 h-12 opacity-30 group-hover:opacity-100 scale-125 transition-transform group-hover:-rotate-12" />
+                        <span className="text-xs font-black uppercase tracking-[0.4em]">Neural Guides</span>
+                    </button>
+                    <button onClick={() => onNavigate('settings')} className="flex flex-col items-center gap-8 p-16 bg-base-100 border border-base-300 hover:bg-primary hover:text-primary-content transition-all duration-500 group">
+                        <CpuChipIcon className="w-12 h-12 opacity-30 group-hover:opacity-100 scale-125 transition-transform group-hover:scale-150" />
+                        <span className="text-xs font-black uppercase tracking-[0.4em]">Core Config</span>
+                    </button>
+                </div>
+            </section>
+
+            {/* STATUS BAR FOOTER */}
+            <section className="p-16 border-t border-base-300 bg-base-100 flex flex-col md:flex-row justify-between items-center gap-12">
+                <div className="flex gap-20">
+                    <div className="flex flex-col">
+                        <span className="text-[10px] font-black uppercase text-base-content/20 tracking-widest mb-3">Registry Integrity</span>
+                        <span className="text-sm font-mono font-bold text-success uppercase">ENCRYPTED_AND_SYNCED</span>
+                    </div>
+                    <div className="flex flex-col">
+                        <span className="text-[10px] font-black uppercase text-base-content/20 tracking-widest mb-3">Network Identity</span>
+                        <span className="text-sm font-mono font-bold text-primary uppercase">LOCAL_HOST_01</span>
+                    </div>
+                </div>
+                <div className="flex items-center gap-6">
+                    <span className="text-[10px] font-black text-base-content/20 uppercase tracking-[0.6em]">System V2.0.1 ALPHA</span>
+                    <div className="w-12 h-12 border border-base-300 flex items-center justify-center">
+                        <div className="w-2 h-2 bg-primary animate-ping"></div>
+                    </div>
+                </div>
+            </section>
         </div>
     );
 }

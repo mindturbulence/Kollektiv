@@ -2,60 +2,53 @@
 @tailwind components;
 @tailwind utilities;
 
+@layer base {
+  html {
+    letter-spacing: -0.01em;
+    scroll-behavior: smooth;
+  }
+}
+
 @layer utilities {
-  /* Thin, floating scrollbar style */
-  .custom-scrollbar::-webkit-scrollbar,
-  .floating-scrollbar::-webkit-scrollbar {
+  .custom-scrollbar::-webkit-scrollbar {
     width: 4px;
     height: 4px;
   }
-  .custom-scrollbar::-webkit-scrollbar-track,
-  .floating-scrollbar::-webkit-scrollbar-track {
+  .custom-scrollbar::-webkit-scrollbar-track {
     background: transparent;
   }
-  .custom-scrollbar::-webkit-scrollbar-thumb,
-  .floating-scrollbar::-webkit-scrollbar-thumb {
+  .custom-scrollbar::-webkit-scrollbar-thumb {
     background: oklch(var(--bc) / 0.1);
     border-radius: 10px;
     transition: background 0.2s ease;
   }
-  .custom-scrollbar::-webkit-scrollbar-thumb:hover,
-  .floating-scrollbar::-webkit-scrollbar-thumb:hover {
+  .custom-scrollbar::-webkit-scrollbar-thumb:hover {
     background: oklch(var(--p) / 0.5);
   }
 
-  /* Hide scrollbar utility */
-  .no-scrollbar::-webkit-scrollbar {
-    display: none;
-  }
-  .no-scrollbar {
-    -ms-overflow-style: none;  /* IE and Edge */
-    scrollbar-width: none;  /* Firefox */
-  }
-
-  /* Specific floating behavior: only show thumb on hover of the container */
-  .floating-scrollbar::-webkit-scrollbar-thumb {
-    background: transparent;
-  }
-  .floating-scrollbar:hover::-webkit-scrollbar-thumb {
-    background: oklch(var(--bc) / 0.1);
-  }
-  .floating-scrollbar:hover::-webkit-scrollbar-thumb:hover {
-    background: oklch(var(--p) / 0.5);
-  }
-
-  /* Neutral Black and White effect */
   .media-monochrome {
-    filter: grayscale(1) opacity(0.9);
-    transition: filter 0.5s ease, opacity 0.5s ease;
+    filter: grayscale(1) contrast(1.1) brightness(0.9);
+    transition: filter 0.8s cubic-bezier(0.4, 0, 0.2, 1), opacity 0.8s ease;
   }
 
-  /* Layout Transition Utilities */
-  .grid-layout-transition-item {
-    will-change: transform, width, height;
+  .bg-grid-texture {
+    background-size: 40px 40px;
+    background-image: 
+      linear-gradient(to right, oklch(var(--bc) / 0.03) 1px, transparent 1px),
+      linear-gradient(to bottom, oklch(var(--bc) / 0.03) 1px, transparent 1px);
   }
 
-  /* Elastic Grid Scroll Effect */
+  .reveal-on-scroll {
+    opacity: 0;
+    transform: translateY(30px);
+    transition: all 1s cubic-bezier(0.2, 1, 0.3, 1);
+  }
+
+  .reveal-on-scroll.revealed {
+    opacity: 1;
+    transform: translateY(0);
+  }
+
   .elastic-grid-container {
     perspective: 1000px;
   }
@@ -64,15 +57,7 @@
     transform: skewY(var(--scroll-velocity, 0deg)) scaleY(var(--scroll-scale, 1));
     will-change: transform, opacity;
     transition: transform 0.2s cubic-bezier(0.23, 1, 0.32, 1), opacity 0.4s ease-out;
-    /* CRITICAL PERFORMANCE OPTIMIZATION: */
-    /* Only render what is near the viewport */
     content-visibility: auto;
-    contain-intrinsic-size: 1px 300px; /* Placeholder size for layout calculation before render */
-  }
-
-  @media (prefers-reduced-motion: reduce) {
-    .elastic-grid-item {
-      transform: none !important;
-    }
+    contain-intrinsic-size: 1px 300px;
   }
 }
