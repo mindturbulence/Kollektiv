@@ -2,10 +2,11 @@
 import React, { useState, useEffect, ComponentType, useRef, useLayoutEffect } from 'react';
 import { gsap } from 'gsap';
 import { Observer } from 'gsap/Observer';
-import type { CheatsheetCategory, CheatsheetItem } from '../types';
+import type { CheatsheetCategory, CheatsheetItem, GalleryItem } from '../types';
 import LoadingSpinner from './LoadingSpinner';
 import { CloseIcon } from './icons';
 import { fileSystemManager } from '../utils/fileUtils';
+import { loadGalleryItems } from '../utils/galleryStorage';
 
 // Register Observer plugin
 gsap.registerPlugin(Observer);
@@ -13,10 +14,12 @@ gsap.registerPlugin(Observer);
 interface CategoryCardProps {
     category: CheatsheetCategory;
     onClick: (cat: CheatsheetCategory) => void;
+    onUpdateCategory: (name: string, updates: Partial<CheatsheetCategory>) => Promise<void>;
     index: number;
+    globalGallery: GalleryItem[];
 }
 
-const CategoryCard: React.FC<CategoryCardProps> = ({ category, onClick, index }) => {
+const CategoryCard: React.FC<CategoryCardProps> = ({ category, onClick, onUpdateCategory, index, globalGallery }) => {
     const cardRef = useRef<HTMLDivElement>(null);
     const titleContainerRef = useRef<HTMLDivElement>(null);
     const bgContainerRef = useRef<HTMLDivElement>(null);
@@ -25,35 +28,65 @@ const CategoryCard: React.FC<CategoryCardProps> = ({ category, onClick, index })
     const [hasEntered, setHasEntered] = useState(false);
     const rotationIntervalRef = useRef<number | null>(null);
 
-    // Load all available images for this category
+    // Load static background or fallback rotation
     useEffect(() => {
         let active = true;
         const load = async () => {
-            const urls: string[] = [];
-            for (const item of category.items) {
-                if (item.imageUrls && item.imageUrls.length > 0) {
-                    const url = item.imageUrls[0];
-                    if (url.startsWith('http') || url.startsWith('data:')) {
-                        urls.push(url);
-                    } else {
-                        const blob = await fileSystemManager.getFileAsBlob(url);
-                        if (blob) urls.push(URL.createObjectURL(blob));
+            // Priority 1: Specific background image set by user (Manual Choice)
+            if (category.backgroundImageUrl) {
+                const url = category.backgroundImageUrl;
+                if (url.startsWith('http') || url.startsWith('data:')) {
+                    setCurrentImage(url);
+                } else {
+                    const blob = await fileSystemManager.getFileAsBlob(url);
+                    if (blob && active) setCurrentImage(URL.createObjectURL(blob));
+                }
+                setAllImageUrls([]); 
+                return;
+            }
+
+            // Priority 2: Use random SFW images from the media vault gallery
+            // CRITICAL: NEVER use NSFW marked images.
+            let urls: string[] = [];
+            const sfwVaultItems = globalGallery.filter(item => !item.isNsfw);
+            
+            if (sfwVaultItems.length > 0) {
+                // Pick up to 10 random SFW images from the vault for rotation
+                const shuffled = [...sfwVaultItems].sort(() => 0.5 - Math.random());
+                urls = shuffled.slice(0, 10).map(item => item.urls[0]);
+            } else {
+                // Priority 3: Fallback to curated item images if vault is empty/NSFW-only
+                for (const item of category.items) {
+                    if (item.imageUrls && item.imageUrls.length > 0) {
+                        urls.push(item.imageUrls[0]);
                     }
                 }
             }
-            
+
             if (active && urls.length > 0) {
-                setAllImageUrls(urls);
-                setCurrentImage(urls[Math.floor(Math.random() * urls.length)]);
+                const processedUrls: string[] = [];
+                for (const url of urls) {
+                    if (url.startsWith('http') || url.startsWith('data:')) {
+                        processedUrls.push(url);
+                    } else {
+                        const blob = await fileSystemManager.getFileAsBlob(url);
+                        if (blob && active) processedUrls.push(URL.createObjectURL(blob));
+                    }
+                }
+
+                if (active && processedUrls.length > 0) {
+                    setAllImageUrls(processedUrls);
+                    setCurrentImage(processedUrls[Math.floor(Math.random() * processedUrls.length)]);
+                }
             }
         };
         load();
         return () => { active = false; };
-    }, [category]);
+    }, [category, globalGallery]);
 
     // Periodic rotation logic
     useEffect(() => {
-        if (allImageUrls.length <= 1) return;
+        if (allImageUrls.length <= 1 || category.backgroundImageUrl) return;
 
         rotationIntervalRef.current = window.setInterval(() => {
             if (!bgContainerRef.current) return;
@@ -82,7 +115,7 @@ const CategoryCard: React.FC<CategoryCardProps> = ({ category, onClick, index })
         return () => {
             if (rotationIntervalRef.current) clearInterval(rotationIntervalRef.current);
         };
-    }, [allImageUrls]);
+    }, [allImageUrls, category.backgroundImageUrl]);
 
     useEffect(() => {
         const observer = new IntersectionObserver(
@@ -128,17 +161,15 @@ const CategoryCard: React.FC<CategoryCardProps> = ({ category, onClick, index })
                 {currentImage && (
                     <img 
                         src={currentImage} 
-                        className="absolute inset-0 w-full h-full object-cover grayscale opacity-10 scale-110 transition-all duration-[2500ms] group-hover:grayscale-0 group-hover:scale-100 group-hover:opacity-100" 
+                        className={`absolute inset-0 w-full h-full object-cover transition-all duration-[2500ms] group-hover:scale-100 group-hover:opacity-100 ${category.backgroundImageUrl ? 'grayscale-0 opacity-50 group-hover:opacity-100' : 'grayscale opacity-40 group-hover:grayscale-0'}`} 
                         alt="" 
                     />
                 )}
-                {/* Overlay to ensure text readability */}
-                <div className="absolute inset-0 bg-gradient-to-t from-base-100 via-base-100/90 to-transparent opacity-95 group-hover:opacity-40 transition-opacity duration-1000"></div>
+                <div className="absolute inset-0 bg-gradient-to-t from-base-100 via-base-100/80 to-transparent opacity-80 group-hover:opacity-40 transition-opacity duration-1000"></div>
             </div>
 
             {/* Content Layer */}
             <div className="relative z-10 flex flex-col h-full p-10 lg:p-14">
-                {/* Top ID Badge */}
                 <div className="flex items-center justify-between gap-4 mb-6 opacity-40 group-hover:opacity-100 transition-opacity duration-500">
                     <div className="flex-grow h-px bg-primary/20"></div>
                     <span className="text-sm font-mono font-black text-primary tracking-[0.3em] uppercase">
@@ -147,26 +178,22 @@ const CategoryCard: React.FC<CategoryCardProps> = ({ category, onClick, index })
                 </div>
 
                 <div className="flex-grow flex flex-col justify-end overflow-hidden">
-                    {/* Animated Text Block */}
                     <div 
                         ref={titleContainerRef} 
                         className="opacity-0 will-change-transform w-full"
                     >
-                        {/* Capitalized Title - Optimized sizing */}
-                        <h3 className="text-4xl md:text-5xl lg:text-6xl font-black tracking-tighter capitalize leading-[0.8] text-base-content break-words w-full transition-colors duration-500 group-hover:text-primary">
+                        <h3 className="text-4xl md:text-5xl lg:text-6xl font-black tracking-tighter capitalize leading-[0.8] text-base-content break-words w-full transition-colors duration-500 group-hover:text-primary drop-shadow-sm">
                             {category.category.toLowerCase()}
                         </h3>
                         
-                        {/* Sliding Reveal Description - Pushes the title up via Grid height expansion */}
                         <div className="grid grid-rows-[0fr] group-hover:grid-rows-[1fr] transition-[grid-template-rows] duration-700 ease-[cubic-bezier(0.23,1,0.32,1)]">
                             <div className="overflow-hidden">
-                                <p className="pt-4 text-[11px] font-bold uppercase tracking-[0.25em] text-base-content/50 max-w-sm leading-relaxed opacity-0 group-hover:opacity-100 transition-opacity duration-700 delay-100">
+                                <p className="pt-4 text-[11px] font-bold uppercase tracking-[0.25em] text-base-content/60 max-w-sm leading-relaxed opacity-0 group-hover:opacity-100 transition-opacity duration-700 delay-100">
                                     {category.description || `A comprehensive archival study of ${category.category.toLowerCase()} visual logic and neural aesthetic mapping.`}
                                 </p>
                             </div>
                         </div>
 
-                        {/* Status Footer */}
                         <div className="mt-8 flex items-center gap-6 opacity-40 group-hover:opacity-100 transition-opacity duration-500">
                             <span className="text-[8px] font-black uppercase tracking-[0.3em] bg-primary/10 text-primary px-4 py-2 border border-primary/20 backdrop-blur-md">
                                 {category.items.length} ENTRIES
@@ -179,7 +206,6 @@ const CategoryCard: React.FC<CategoryCardProps> = ({ category, onClick, index })
                 </div>
             </div>
 
-            {/* Hover Accent */}
             <div className="absolute bottom-0 left-0 w-0 h-1.5 bg-primary group-hover:w-full transition-all duration-1000 ease-in-out"></div>
         </div>
     );
@@ -192,6 +218,7 @@ interface GenericCheatsheetPageProps {
   searchPlaceholder: string;
   loadDataFn: () => Promise<CheatsheetCategory[]>;
   updateDataFn: (itemId: string, updates: Partial<CheatsheetItem>) => Promise<CheatsheetCategory[]>;
+  updateCategoryFn?: (categoryName: string, updates: Partial<CheatsheetCategory>) => Promise<CheatsheetCategory[]>;
   CardComponent: ComponentType<{ 
     item: CheatsheetItem; 
     onUpdateImages: (newImageUrls: string[]) => void;
@@ -210,10 +237,12 @@ export const GenericCheatsheetPage: React.FC<GenericCheatsheetPageProps> = ({
   subtitle,
   loadDataFn,
   updateDataFn,
+  updateCategoryFn,
   CardComponent,
   onSendToPromptsPage,
 }) => {
   const [data, setData] = useState<CheatsheetCategory[]>([]);
+  const [globalGallery, setGlobalGallery] = useState<GalleryItem[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [activeCategory, setActiveCategory] = useState<CheatsheetCategory | null>(null);
 
@@ -228,8 +257,12 @@ export const GenericCheatsheetPage: React.FC<GenericCheatsheetPageProps> = ({
     const fetchData = async () => {
       setIsLoading(true);
       try {
-        const loadedData = await loadDataFn();
+        const [loadedData, gallery] = await Promise.all([
+            loadDataFn(),
+            loadGalleryItems()
+        ]);
         setData(loadedData);
+        setGlobalGallery(gallery);
       } catch (e) { console.error(e); } finally { setIsLoading(false); }
     };
     fetchData();
@@ -284,61 +317,76 @@ export const GenericCheatsheetPage: React.FC<GenericCheatsheetPageProps> = ({
 
     window.addEventListener('resize', resizeHandler);
     return () => {
-        obs.kill();
+        if (obs) obs.kill();
         window.removeEventListener('resize', resizeHandler);
     };
   }, [isLoading, activeCategory, data]);
 
   const handleCategoryClick = (cat: CheatsheetCategory) => {
       const tl = gsap.timeline({
-          defaults: { ease: "expo.inOut", duration: 0.8 }
+          defaults: { ease: "expo.inOut", duration: 1.2 }
       });
       
       tl.to(carouselRef.current, {
-          x: -150,
+          y: -150,
           autoAlpha: 0,
-          scale: 0.98
+          scale: 0.95,
+          pointerEvents: 'none'
       });
       
-      tl.call(() => setActiveCategory(cat));
+      tl.call(() => setActiveCategory(cat), undefined, ">-0.2");
       
       tl.fromTo(detailViewRef.current, {
-          x: 100,
-          autoAlpha: 0
+          y: 200,
+          autoAlpha: 0,
+          scale: 1.02
       }, {
-          x: 0,
+          y: 0,
           autoAlpha: 1,
-          duration: 0.8,
+          scale: 1,
+          duration: 1.2,
+          ease: "expo.out",
           clearProps: "all"
-      }, "-=0.6");
+      }, ">");
   };
 
   const handleBackToCarousel = () => {
       const tl = gsap.timeline({
-          defaults: { ease: "expo.inOut", duration: 0.8 },
-          onComplete: () => setActiveCategory(null)
+          defaults: { ease: "expo.inOut", duration: 1.2 }
       });
       
       tl.to(detailViewRef.current, {
-          x: 80,
-          autoAlpha: 0
+          y: 150,
+          autoAlpha: 0,
+          scale: 0.98,
+          pointerEvents: 'none'
       });
       
+      tl.call(() => setActiveCategory(null), undefined, ">-0.2");
+      
       tl.fromTo(carouselRef.current, {
-          x: -100,
+          y: -100,
           autoAlpha: 0,
-          scale: 0.98
+          scale: 0.95
       }, {
-          x: 0,
+          y: 0,
           autoAlpha: 1,
           scale: 1,
-          duration: 0.8,
+          duration: 1.2,
+          ease: "expo.out",
           clearProps: "all"
-      }, "-=0.6");
+      }, ">");
   };
 
   const handleInject = (item: CheatsheetItem) => {
       onSendToPromptsPage?.(item, activeCategory?.category || '');
+  };
+
+  const handleUpdateCategory = async (name: string, updates: Partial<CheatsheetCategory>) => {
+      if (updateCategoryFn) {
+          const updatedData = await updateCategoryFn(name, updates);
+          setData(updatedData);
+      }
   };
 
   if (isLoading) {
@@ -351,7 +399,6 @@ export const GenericCheatsheetPage: React.FC<GenericCheatsheetPageProps> = ({
         ref={carouselRef} 
         className={`flex h-full overflow-hidden no-scrollbar ${activeCategory ? 'hidden' : 'flex'}`}
       >
-          {/* Architectural Static Sidebar */}
           <div className="flex-shrink-0 h-full w-min min-w-[360px] flex flex-col justify-end p-16 md:pb-40 lg:pb-40 border-r border-base-300 bg-base-200/5 relative z-10">
               <div className="space-y-8">
                   <div className="flex items-center gap-4">
@@ -377,7 +424,14 @@ export const GenericCheatsheetPage: React.FC<GenericCheatsheetPageProps> = ({
           >
               <div ref={trackRef} className="flex h-full will-change-transform">
                 {data.map((cat, i) => (
-                    <CategoryCard key={cat.category} category={cat} index={i} onClick={handleCategoryClick} />
+                    <CategoryCard 
+                      key={cat.category} 
+                      category={cat} 
+                      index={i} 
+                      onClick={handleCategoryClick} 
+                      onUpdateCategory={handleUpdateCategory}
+                      globalGallery={globalGallery}
+                    />
                 ))}
               </div>
           </div>
@@ -413,7 +467,7 @@ export const GenericCheatsheetPage: React.FC<GenericCheatsheetPageProps> = ({
                                     <div className="transition-transform duration-1000 group-hover/item:scale-[1.03]">
                                         <CardComponent 
                                           item={item}
-                                          onUpdateImages={(newUrls) => updateDataFn(item.id, { imageUrls: newUrls })}
+                                          onUpdateImages={(newImageUrls) => updateDataFn(item.id, { imageUrls: newImageUrls })}
                                           onInject={handleInject}
                                         />
                                     </div>

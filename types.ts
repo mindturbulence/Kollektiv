@@ -217,6 +217,7 @@ export interface CheatsheetItem {
 export interface CheatsheetCategory {
   category: string;
   description?: string;
+  backgroundImageUrl?: string;
   items: CheatsheetItem[];
 }
 

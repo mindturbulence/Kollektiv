@@ -1,8 +1,9 @@
+
 import React from 'react';
 import type { CheatsheetItem } from '../types';
 import { GenericCheatsheetPage } from './GenericCheatsheetPage';
 import ArtstyleCard from './ArtstyleCard';
-import { loadArtStyles, updateArtStyle } from '../utils/artstyleStorage';
+import { loadArtStyles, updateArtStyle, updateCategory } from '../utils/artstyleStorage';
 import { PaintBrushIcon } from './icons';
 
 interface ArtstyleCheatsheetProps {
@@ -21,6 +22,7 @@ const ArtstyleCheatsheet: React.FC<ArtstyleCheatsheetProps> = ({ isCategoryPanel
       searchPlaceholder="Filter styles..."
       loadDataFn={loadArtStyles}
       updateDataFn={updateArtStyle}
+      updateCategoryFn={updateCategory}
       CardComponent={ArtstyleCard}
       onSendToPromptsPage={(item: CheatsheetItem, _category: string) => onSendToPromptsPage({ artStyle: item.name })}
       isCategoryPanelCollapsed={isCategoryPanelCollapsed}

@@ -6,6 +6,7 @@ import { generateArtistDescription } from '../services/llmService';
 
 const MANIFEST_NAME = 'artists_cheatsheet.json';
 const IMG_FOLDER = 'artists';
+const BG_FOLDER = 'backgrounds';
 
 const delay = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
 
@@ -86,6 +87,33 @@ export const updateArtist = async (itemId: string, updates: Partial<CheatsheetIt
         await saveArtists(updatedData);
     }
 
+    return updatedData;
+};
+
+export const updateCategory = async (categoryName: string, updates: Partial<CheatsheetCategory>): Promise<CheatsheetCategory[]> => {
+    const data = await getManifest();
+    let finalBgUrl = updates.backgroundImageUrl;
+
+    if (finalBgUrl && finalBgUrl.startsWith('data:')) {
+        try {
+            const response = await fetch(finalBgUrl);
+            const blob = await response.blob();
+            const extension = blob.type.split('/')[1] || 'png';
+            const fileName = `bg_${categoryName.replace(/[^a-zA-Z0-9]/g, '_')}_${Date.now()}.${extension}`;
+            finalBgUrl = await fileSystemManager.saveFile(`${BG_FOLDER}/${fileName}`, blob);
+        } catch (e) {
+            console.error(`Failed to save background for ${categoryName}:`, e);
+        }
+    }
+
+    const updatedData = data.map(cat => {
+        if (cat.category === categoryName) {
+            return { ...cat, ...updates, backgroundImageUrl: finalBgUrl };
+        }
+        return cat;
+    });
+
+    await saveArtists(updatedData);
     return updatedData;
 };
 

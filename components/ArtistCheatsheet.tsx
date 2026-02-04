@@ -1,8 +1,9 @@
+
 import React from 'react';
 import type { CheatsheetItem } from '../types';
 import { GenericCheatsheetPage } from './GenericCheatsheetPage';
 import ArtistCard from './ArtistCard';
-import { loadArtists, updateArtist } from '../utils/artistStorage';
+import { loadArtists, updateArtist, updateCategory } from '../utils/artistStorage';
 import { UsersIcon } from './icons';
 
 interface ArtistCheatsheetProps {
@@ -22,6 +23,7 @@ const ArtistCheatsheet: React.FC<ArtistCheatsheetProps> = ({ isCategoryPanelColl
             searchPlaceholder="Search artist registry..."
             loadDataFn={loadArtists}
             updateDataFn={updateArtist}
+            updateCategoryFn={updateCategory}
             CardComponent={ArtistCard}
             onSendToPromptsPage={(item: CheatsheetItem, category: string) => onSendToPromptsPage({ artist: item.name, artStyle: category })}
             isCategoryPanelCollapsed={isCategoryPanelCollapsed}

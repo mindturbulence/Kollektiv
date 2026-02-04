@@ -5,6 +5,7 @@ import { fileSystemManager } from './fileUtils';
 
 const MANIFEST_NAME = 'artstyles_cheatsheet.json';
 const IMG_FOLDER = 'artstyles';
+const BG_FOLDER = 'backgrounds';
 
 const getManifest = async (): Promise<CheatsheetCategory[]> => {
     try {
@@ -41,7 +42,6 @@ export const updateArtStyle = async (itemId: string, updates: Partial<Cheatsheet
     
     let finalUrls: string[] | undefined = undefined;
 
-    // Handle image updates if present
     if (updates.imageUrls) {
         const savedImageUrls = await Promise.all(updates.imageUrls.map(async (url, index) => {
             if (url.startsWith('data:')) {
@@ -85,5 +85,32 @@ export const updateArtStyle = async (itemId: string, updates: Partial<Cheatsheet
         await saveArtStyles(updatedData);
     }
 
+    return updatedData;
+};
+
+export const updateCategory = async (categoryName: string, updates: Partial<CheatsheetCategory>): Promise<CheatsheetCategory[]> => {
+    const data = await getManifest();
+    let finalBgUrl = updates.backgroundImageUrl;
+
+    if (finalBgUrl && finalBgUrl.startsWith('data:')) {
+        try {
+            const response = await fetch(finalBgUrl);
+            const blob = await response.blob();
+            const extension = blob.type.split('/')[1] || 'png';
+            const fileName = `bg_${categoryName.replace(/[^a-zA-Z0-9]/g, '_')}_${Date.now()}.${extension}`;
+            finalBgUrl = await fileSystemManager.saveFile(`${BG_FOLDER}/${fileName}`, blob);
+        } catch (e) {
+            console.error(`Failed to save background for ${categoryName}:`, e);
+        }
+    }
+
+    const updatedData = data.map(cat => {
+        if (cat.category === categoryName) {
+            return { ...cat, ...updates, backgroundImageUrl: finalBgUrl };
+        }
+        return cat;
+    });
+
+    await saveArtStyles(updatedData);
     return updatedData;
 };

@@ -24,7 +24,6 @@ export const detectSalientRegionGemini = async (
                 systemInstruction: "Task: [ymin,xmin,ymax,xmax] (0-1) for subject. JSON only.",
                 responseMimeType: 'application/json',
                 maxOutputTokens: 30,
-                // FIX: Removed thinkingConfig for gemini-flash-lite-latest as it is not in the 3 or 2.5 series
             }
         }).then(res => {
             try { return JSON.parse(res.text || '{"box":[0,0,1,1]}'); } 
@@ -133,7 +132,6 @@ export const analyzePaletteMood = async (hexColors: string[], settings: LLMSetti
           systemInstruction: "Task: mood in 3 words max.", 
           temperature: 0.3, 
           maxOutputTokens: 15,
-          // FIX: Removed thinkingConfig for gemini-flash-lite-latest as it is not in the 3 or 2.5 series
       }
     });
     return (response.text || '').trim();
@@ -150,7 +148,6 @@ export const generateColorNameGemini = async (hexColor: string, mood: string, se
                 systemInstruction: "Task: Poetic 2-word name.", 
                 temperature: 0.6, 
                 maxOutputTokens: 10,
-                // FIX: Removed thinkingConfig for gemini-flash-lite-latest as it is not in the 3 or 2.5 series
             }
         });
         return (response.text || '').trim().replace(/"/g, '');
@@ -167,7 +164,6 @@ export const dissectPromptGemini = async (promptText: string, settings: LLMSetti
                 systemInstruction: "Task: JSON dissect prompt (subject, style, mood, lighting). Output JSON.",
                 responseMimeType: 'application/json',
                 maxOutputTokens: 400,
-                // FIX: Removed thinkingConfig for gemini-flash-lite-latest as it is not in the 3 or 2.5 series
             }
         });
         try { return JSON.parse(response.text || '{}'); } catch (e) { return {}; }
@@ -200,7 +196,6 @@ export const reconstructPromptGemini = async (components: { [key: string]: strin
             config: { 
                 systemInstruction: "Merge into prose. Text only.", 
                 maxOutputTokens: 600,
-                // FIX: Removed thinkingConfig for gemini-flash-lite-latest as it is not in the 3 or 2.5 series
             }
         });
         return (response.text || '').trim();
@@ -216,7 +211,6 @@ export const replaceComponentInPromptGemini = async (originalPrompt: string, com
             config: { 
                 systemInstruction: "Swap value. Text only.", 
                 maxOutputTokens: 600,
-                // FIX: Removed thinkingConfig for gemini-flash-lite-latest as it is not in the 3 or 2.5 series
             }
         });
         return (response.text || '').trim();
@@ -248,7 +242,6 @@ export const reconstructFromIntentGemini = async (intents: string[], settings: L
             config: { 
                 systemInstruction: "Merge into prose. Text only.", 
                 maxOutputTokens: 800,
-                // FIX: Removed thinkingConfig for gemini-flash-lite-latest as it is not in the 3 or 2.5 series
             }
         });
         return (response.text || '').trim();
@@ -281,7 +274,6 @@ export const generateArtistDescriptionGemini = async (artistName: string, settin
                 systemInstruction: "Brief style summary. Text only.", 
                 temperature: 0.3, 
                 maxOutputTokens: 100,
-                // FIX: Removed thinkingConfig for gemini-flash-lite-latest as it is not in the 3 or 2.5 series
             }
         });
         return (response.text || '').trim();

@@ -16,6 +16,7 @@ import AboutModal from './AboutModal';
 import ClippingPanel from './ClippingPanel';
 import FeedbackModal from './FeedbackModal';
 import Footer from './Footer';
+import MouseTrail from './MouseTrail'; // Imported new effect
 
 // Page Components
 import Dashboard from './Dashboard';
@@ -395,6 +396,7 @@ const App: React.FC = () => {
 
     return (
         <div className="h-full bg-base-300">
+            <MouseTrail />
             {/* 1. GLOBAL REVEAL GRID - Covers everything on first load */}
             <div 
                 ref={globalGridRef} 

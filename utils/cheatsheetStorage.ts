@@ -1,13 +1,11 @@
 
-
 import type { CheatsheetCategory, CheatsheetItem } from '../types';
 import { CHEATSHEET_DATA } from '../constants';
 import { fileSystemManager } from './fileUtils';
 
 const MANIFEST_NAME = 'cheatsheet.json';
+const IMG_FOLDER = 'backgrounds';
 
-// The data migration logic is removed from this read path.
-// The `verifyAndRepairFiles` in `integrity.ts` is now the single source of truth for file creation and updates.
 const getManifest = async (): Promise<CheatsheetCategory[]> => {
     try {
         const manifestContent = await fileSystemManager.readFile(MANIFEST_NAME);
@@ -18,8 +16,6 @@ const getManifest = async (): Promise<CheatsheetCategory[]> => {
             }
         }
     } catch (e) {
-        // Silently fail if the file is missing, corrupt, or locked.
-        // The integrity check is responsible for creating/repairing it on the next load.
         console.error(`Error reading ${MANIFEST_NAME}, returning empty.`, e);
     }
     return [];
@@ -37,4 +33,31 @@ const saveCheatsheet = async (data: CheatsheetCategory[]): Promise<void> => {
 
 export const loadCheatsheet = async (): Promise<CheatsheetCategory[]> => {
     return await getManifest();
+};
+
+export const updateCategory = async (categoryName: string, updates: Partial<CheatsheetCategory>): Promise<CheatsheetCategory[]> => {
+    const data = await getManifest();
+    let finalBgUrl = updates.backgroundImageUrl;
+
+    if (finalBgUrl && finalBgUrl.startsWith('data:')) {
+        try {
+            const response = await fetch(finalBgUrl);
+            const blob = await response.blob();
+            const extension = blob.type.split('/')[1] || 'png';
+            const fileName = `bg_${categoryName.replace(/[^a-zA-Z0-9]/g, '_')}_${Date.now()}.${extension}`;
+            finalBgUrl = await fileSystemManager.saveFile(`${IMG_FOLDER}/${fileName}`, blob);
+        } catch (e) {
+            console.error(`Failed to save background for ${categoryName}:`, e);
+        }
+    }
+
+    const updatedData = data.map(cat => {
+        if (cat.category === categoryName) {
+            return { ...cat, ...updates, backgroundImageUrl: finalBgUrl };
+        }
+        return cat;
+    });
+
+    await saveCheatsheet(updatedData);
+    return updatedData;
 };
