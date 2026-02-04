@@ -16,7 +16,7 @@ import AboutModal from './AboutModal';
 import ClippingPanel from './ClippingPanel';
 import FeedbackModal from './FeedbackModal';
 import Footer from './Footer';
-import MouseTrail from './MouseTrail'; // Imported new effect
+import MouseTrail from './MouseTrail';
 
 // Page Components
 import Dashboard from './Dashboard';
@@ -36,15 +36,10 @@ import { useAuth } from '../contexts/AuthContext';
 
 type PromptsPageState = { prompt?: string, artStyle?: string, artist?: string, view?: 'enhancer' | 'composer' | 'create', id?: string } | null;
 
-/**
- * Technical Portfolio Initializer.
- * Theme-aware staggered typographic mask.
- */
 const InitialLoader: React.FC<{ status: string; progress: number | null }> = ({ status, progress }) => {
     const textWrapperRef = useRef<HTMLDivElement>(null);
     const percentage = Math.round((progress || 0) * 100);
 
-    // Initial Entrance
     useLayoutEffect(() => {
         if (!textWrapperRef.current) return;
         gsap.fromTo(textWrapperRef.current, 
@@ -53,7 +48,6 @@ const InitialLoader: React.FC<{ status: string; progress: number | null }> = ({ 
         );
     }, []);
 
-    // Exit Sequence: Slide up and fade when finished
     useEffect(() => {
         if (percentage >= 100 && textWrapperRef.current) {
             gsap.to(textWrapperRef.current, {
@@ -73,10 +67,7 @@ const InitialLoader: React.FC<{ status: string; progress: number | null }> = ({ 
             <div className="relative z-10 flex flex-col items-center">
                 <div className="overflow-hidden mb-4 px-2">
                     <div ref={textWrapperRef} className="grid grid-cols-1 grid-rows-1 text-2xl md:text-3xl font-black tracking-tighter uppercase select-none italic">
-                        {/* Ghost Layer: Picks up text-base-content at low opacity */}
                         <span className="text-base-content/10 block leading-none py-1 row-start-1 col-start-1">Kollektiv.</span>
-                        
-                        {/* Fill Layer: Picks up text-base-content at full opacity */}
                         <div 
                             className="row-start-1 col-start-1 h-full overflow-hidden transition-all duration-700 ease-out border-r border-base-content/20"
                             style={{ width: `${percentage}%` }}
@@ -136,7 +127,6 @@ const App: React.FC = () => {
     const globalGridRef = useRef<HTMLDivElement>(null);
     const contentRef = useRef<HTMLDivElement>(null);
 
-    // Grid config
     const gridRows = 10;
     const gridCols = 12;
 
@@ -174,7 +164,6 @@ const App: React.FC = () => {
             onProgress('Finalizing System...', 0.9);
             onProgress('System Ready', 1.0);
             
-            // Wait for the loader's exit animation (slide up text)
             await new Promise(r => setTimeout(r, 1100));
 
             hasInitializedRef.current = true;
@@ -193,14 +182,12 @@ const App: React.FC = () => {
         }
     }, [initializeApp]);
 
-    // --- INITIAL GLOBAL REVEAL ---
     useLayoutEffect(() => {
         if (!isInitialized || !globalGridRef.current || !isFirstRevealRef.current) return;
         isFirstRevealRef.current = false;
 
         const cells = globalGridRef.current.querySelectorAll('.transition-cell');
         
-        // Ensure cells are visible and covering before starting
         gsap.set(globalGridRef.current, { autoAlpha: 1, visibility: 'visible' });
         gsap.set(cells, { scaleY: 1.01, autoAlpha: 1 });
 
@@ -222,14 +209,12 @@ const App: React.FC = () => {
         });
     }, [isInitialized]);
 
-    // --- SCOPED NAVIGATION TRANSITION ---
     const runScopedTransition = useCallback(async (targetTab: ActiveTab) => {
         if (isTransitioningRef.current || !mainGridRef.current) return;
         isTransitioningRef.current = true;
 
         const cells = mainGridRef.current.querySelectorAll('.transition-cell');
         
-        // 1. LEAVING (DOWN): Cover the workspace
         gsap.set(mainGridRef.current, { autoAlpha: 1, visibility: 'visible' });
         await gsap.fromTo(cells, 
             { scaleY: 0, autoAlpha: 0, transformOrigin: "top" },
@@ -247,11 +232,9 @@ const App: React.FC = () => {
             }
         );
 
-        // 2. STATE SWITCH: Change tab while covered
         setActiveTab(targetTab);
-        await new Promise(r => requestAnimationFrame(r)); // Frame for React render
+        await new Promise(r => requestAnimationFrame(r)); 
 
-        // 3. ENTERING (UP): Reveal the new workspace
         const tl = gsap.timeline({
             onComplete: () => {
                 gsap.set(mainGridRef.current, { autoAlpha: 0, visibility: 'hidden' });
@@ -284,10 +267,8 @@ const App: React.FC = () => {
 
     const handleNavigate = (tab: ActiveTab) => {
         if (tab === activeTab) return;
-        
         const isLg = window.innerWidth >= 1024;
         if (!isPinned && !isLg) setIsSidebarOpen(false);
-
         runScopedTransition(tab);
     };
 
@@ -395,9 +376,8 @@ const App: React.FC = () => {
     if (!isInitialized) return null;
 
     return (
-        <div className="h-full bg-base-300">
+        <div className="h-full bg-base-100 flex overflow-hidden relative">
             <MouseTrail />
-            {/* 1. GLOBAL REVEAL GRID - Covers everything on first load */}
             <div 
                 ref={globalGridRef} 
                 className="fixed inset-0 z-[700] pointer-events-none grid"
@@ -421,9 +401,9 @@ const App: React.FC = () => {
                 onAboutClick={() => setIsAboutModalOpen(true)}
             />
             
-            {isSidebarOpen && !isPinned && <div onClick={() => setIsSidebarOpen(false)} className="fixed inset-0 bg-black/50 z-30" />}
+            {isSidebarOpen && !isPinned && <div onClick={() => setIsSidebarOpen(false)} className="fixed inset-0 bg-black/50 z-[90]" />}
 
-            <div className={`flex flex-col h-full transition-all duration-300 ease-in-out ${isSidebarOpen && isPinned ? 'lg:ml-80' : ''}`}>
+            <div className="flex-1 flex flex-col min-w-0 h-full relative z-0">
                 <Header
                     onMenuClick={handleMenuClick}
                     activeTab={activeTab}
@@ -432,7 +412,6 @@ const App: React.FC = () => {
                 />
                 
                 <main className="flex-grow relative overflow-hidden bg-base-100">
-                    {/* 2. SCOPED NAVIGATION GRID - Restrained to main content area */}
                     <div 
                         ref={mainGridRef} 
                         className="absolute inset-0 z-[600] pointer-events-none grid"

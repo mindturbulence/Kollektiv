@@ -1,5 +1,7 @@
-import React, { useRef, useEffect, useState, useCallback } from 'react';
+
+import React, { useRef, useEffect, useState, useCallback, useLayoutEffect } from 'react';
 import { createPortal } from 'react-dom';
+import { gsap } from 'gsap';
 import type { Idea } from '../types';
 import { CloseIcon, DeleteIcon, SparklesIcon, BookmarkIcon, RefreshIcon, CheckIcon, PlusIcon, ArchiveIcon } from './icons';
 import CopyIcon from './CopyIcon';
@@ -121,7 +123,6 @@ const ClippedIdeaItem: React.FC<{
         <div className="bg-base-200/50 border border-base-300 p-4 rounded-none flex flex-col gap-3 transition-all hover:bg-base-200 group">
             <div className="flex justify-between items-start">
                 <div className="flex items-center gap-0 min-w-0">
-                    {/* Large Index Number floating left - Color synced to title */}
                     <span className="text-3xl font-black text-base-content flex-shrink-0 font-mono leading-none tracking-tighter tabular-nums">
                         {displayNum}
                     </span>
@@ -200,6 +201,40 @@ const ClippingPanel: React.FC<ClippingPanelProps> = ({
     const panelRef = useRef<HTMLDivElement>(null);
     const [isModalOpen, setIsModalOpen] = useState(false);
 
+    // GSAP Animation for the panel
+    useLayoutEffect(() => {
+        if (!panelRef.current) return;
+
+        if (isOpen) {
+            // Cancel any current animation
+            gsap.killTweensOf(panelRef.current);
+            gsap.to(panelRef.current, {
+                x: 0,
+                duration: 1.2,
+                ease: "elastic.out(1, 0.75)",
+                visibility: 'visible',
+                pointerEvents: 'auto',
+                opacity: 1
+            });
+        } else {
+            // Cancel any current animation
+            gsap.killTweensOf(panelRef.current);
+            gsap.to(panelRef.current, {
+                x: '100%',
+                duration: 0.8,
+                ease: "elastic.in(1, 0.75)",
+                pointerEvents: 'none',
+                opacity: 0,
+                onComplete: () => {
+                    // Set visibility to hidden only after the bounce animation is fully done
+                    if (panelRef.current && !isOpen) {
+                        panelRef.current.style.visibility = 'hidden';
+                    }
+                }
+            });
+        }
+    }, [isOpen]);
+
     useEffect(() => {
         const handleClickOutside = (event: MouseEvent) => {
             if (panelRef.current && !(panelRef.current as any).contains(event.target as any)) {
@@ -229,13 +264,12 @@ const ClippingPanel: React.FC<ClippingPanelProps> = ({
         onAddIdea(newIdea);
     };
 
-    const panelAnimationClass = isOpen ? 'translate-x-0' : 'translate-x-full pointer-events-none';
-
     return (
         <>
             <div
                 ref={panelRef}
-                className={`fixed top-0 right-0 bottom-0 w-full md:w-[512px] bg-base-100 shadow-2xl z-[100] flex flex-col border-l border-base-300 transition-transform duration-500 ease-[cubic-bezier(0.4,0,0.2,1)] ${panelAnimationClass}`}
+                className="fixed top-0 right-0 bottom-0 w-full md:w-[512px] bg-base-100 shadow-2xl z-[100] flex flex-col border-l border-base-300 translate-x-full"
+                style={{ visibility: 'hidden' }}
                 aria-hidden={!isOpen}
             >
                 {/* Header */}

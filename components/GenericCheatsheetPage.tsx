@@ -11,28 +11,30 @@ import { loadGalleryItems } from '../utils/galleryStorage';
 // Register Observer plugin
 gsap.registerPlugin(Observer);
 
+// Constant placeholder for categories without images
+const CATEGORY_PLACEHOLDER = "https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?q=80&w=1000&auto=format&fit=crop";
+
 interface CategoryCardProps {
     category: CheatsheetCategory;
     onClick: (cat: CheatsheetCategory) => void;
     onUpdateCategory: (name: string, updates: Partial<CheatsheetCategory>) => Promise<void>;
     index: number;
     globalGallery: GalleryItem[];
+    pageType: 'prompting' | 'curated';
 }
 
-const CategoryCard: React.FC<CategoryCardProps> = ({ category, onClick, onUpdateCategory, index, globalGallery }) => {
+const CategoryCard: React.FC<CategoryCardProps> = ({ category, onClick, onUpdateCategory, index, globalGallery, pageType }) => {
     const cardRef = useRef<HTMLDivElement>(null);
     const titleContainerRef = useRef<HTMLDivElement>(null);
     const bgContainerRef = useRef<HTMLDivElement>(null);
-    const [allImageUrls, setAllImageUrls] = useState<string[]>([]);
     const [currentImage, setCurrentImage] = useState<string | null>(null);
     const [hasEntered, setHasEntered] = useState(false);
-    const rotationIntervalRef = useRef<number | null>(null);
 
     // Load static background or fallback rotation
     useEffect(() => {
         let active = true;
         const load = async () => {
-            // Priority 1: Specific background image set by user (Manual Choice)
+            // Priority 1: Specific background image set by user (Manual override)
             if (category.backgroundImageUrl) {
                 const url = category.backgroundImageUrl;
                 if (url.startsWith('http') || url.startsWith('data:')) {
@@ -41,81 +43,75 @@ const CategoryCard: React.FC<CategoryCardProps> = ({ category, onClick, onUpdate
                     const blob = await fileSystemManager.getFileAsBlob(url);
                     if (blob && active) setCurrentImage(URL.createObjectURL(blob));
                 }
-                setAllImageUrls([]); 
                 return;
             }
 
-            // Priority 2: Use random SFW images from the media vault gallery
-            // CRITICAL: NEVER use NSFW marked images.
-            let urls: string[] = [];
-            const sfwVaultItems = globalGallery.filter(item => !item.isNsfw);
-            
-            if (sfwVaultItems.length > 0) {
-                // Pick up to 10 random SFW images from the vault for rotation
-                const shuffled = [...sfwVaultItems].sort(() => 0.5 - Math.random());
-                urls = shuffled.slice(0, 10).map(item => item.urls[0]);
+            if (pageType === 'prompting') {
+                /** 
+                 * Logic for Prompting Cheatsheet:
+                 * Pick a random SFW image from the global gallery once per day.
+                 */
+                const sfwVault = globalGallery.filter(item => !item.isNsfw);
+                if (sfwVault.length > 0) {
+                    const todayStr = new Date().toDateString();
+                    const storageKey = `daily_bg_prompting_${category.category}_${todayStr}`;
+                    let pickedUrl = localStorage.getItem(storageKey);
+
+                    if (!pickedUrl) {
+                        const randomItem = sfwVault[Math.floor(Math.random() * sfwVault.length)];
+                        pickedUrl = randomItem.urls[0];
+                        // Cleanup old keys if any (simple approach)
+                        for (let i = 0; i < localStorage.length; i++) {
+                            const key = localStorage.key(i);
+                            if (key?.startsWith(`daily_bg_prompting_${category.category}_`) && key !== storageKey) {
+                                localStorage.removeItem(key);
+                            }
+                        }
+                        localStorage.setItem(storageKey, pickedUrl);
+                    }
+
+                    if (active) {
+                        if (pickedUrl.startsWith('http') || pickedUrl.startsWith('data:')) {
+                            setCurrentImage(pickedUrl);
+                        } else {
+                            const blob = await fileSystemManager.getFileAsBlob(pickedUrl);
+                            if (blob && active) setCurrentImage(URL.createObjectURL(blob));
+                        }
+                    }
+                } else {
+                    setCurrentImage(CATEGORY_PLACEHOLDER);
+                }
             } else {
-                // Priority 3: Fallback to curated item images if vault is empty/NSFW-only
+                /** 
+                 * Logic for Artist/Artstyle Cheatsheets:
+                 * Pick from images inside the category. Fallback to placeholder.
+                 */
+                const categoryImages: string[] = [];
                 for (const item of category.items) {
                     if (item.imageUrls && item.imageUrls.length > 0) {
-                        urls.push(item.imageUrls[0]);
-                    }
-                }
-            }
-
-            if (active && urls.length > 0) {
-                const processedUrls: string[] = [];
-                for (const url of urls) {
-                    if (url.startsWith('http') || url.startsWith('data:')) {
-                        processedUrls.push(url);
-                    } else {
-                        const blob = await fileSystemManager.getFileAsBlob(url);
-                        if (blob && active) processedUrls.push(URL.createObjectURL(blob));
+                        categoryImages.push(item.imageUrls[0]);
                     }
                 }
 
-                if (active && processedUrls.length > 0) {
-                    setAllImageUrls(processedUrls);
-                    setCurrentImage(processedUrls[Math.floor(Math.random() * processedUrls.length)]);
+                if (categoryImages.length > 0) {
+                    // Pick the first one or a stable choice for consistency
+                    const pickedUrl = categoryImages[0];
+                    if (active) {
+                        if (pickedUrl.startsWith('http') || pickedUrl.startsWith('data:')) {
+                            setCurrentImage(pickedUrl);
+                        } else {
+                            const blob = await fileSystemManager.getFileAsBlob(pickedUrl);
+                            if (blob && active) setCurrentImage(URL.createObjectURL(blob));
+                        }
+                    }
+                } else {
+                    setCurrentImage(CATEGORY_PLACEHOLDER);
                 }
             }
         };
         load();
         return () => { active = false; };
-    }, [category, globalGallery]);
-
-    // Periodic rotation logic
-    useEffect(() => {
-        if (allImageUrls.length <= 1 || category.backgroundImageUrl) return;
-
-        rotationIntervalRef.current = window.setInterval(() => {
-            if (!bgContainerRef.current) return;
-            
-            let nextIndex = Math.floor(Math.random() * allImageUrls.length);
-            const nextUrl = allImageUrls[nextIndex];
-
-            const currentImgEl = bgContainerRef.current.querySelector('img');
-            const newImgEl = document.createElement('img');
-            newImgEl.src = nextUrl;
-            newImgEl.className = "absolute inset-0 w-full h-full object-cover grayscale opacity-0 scale-110 transition-all duration-1000 group-hover:grayscale-0 group-hover:scale-100";
-            bgContainerRef.current.appendChild(newImgEl);
-
-            gsap.to(newImgEl, {
-                opacity: 0.2,
-                scale: 1,
-                duration: 2,
-                ease: "power2.inOut",
-                onComplete: () => {
-                    if (currentImgEl) currentImgEl.remove();
-                    setCurrentImage(nextUrl);
-                }
-            });
-        }, 5000 + Math.random() * 2000);
-
-        return () => {
-            if (rotationIntervalRef.current) clearInterval(rotationIntervalRef.current);
-        };
-    }, [allImageUrls, category.backgroundImageUrl]);
+    }, [category, globalGallery, pageType]);
 
     useEffect(() => {
         const observer = new IntersectionObserver(
@@ -161,7 +157,7 @@ const CategoryCard: React.FC<CategoryCardProps> = ({ category, onClick, onUpdate
                 {currentImage && (
                     <img 
                         src={currentImage} 
-                        className={`absolute inset-0 w-full h-full object-cover transition-all duration-[2500ms] group-hover:scale-100 group-hover:opacity-100 ${category.backgroundImageUrl ? 'grayscale-0 opacity-50 group-hover:opacity-100' : 'grayscale opacity-40 group-hover:grayscale-0'}`} 
+                        className={`absolute inset-0 w-full h-full object-cover transition-all duration-[2500ms] group-hover:scale-100 group-hover:opacity-100 grayscale opacity-40 group-hover:grayscale-0`} 
                         alt="" 
                     />
                 )}
@@ -233,6 +229,7 @@ interface GenericCheatsheetPageProps {
 }
 
 export const GenericCheatsheetPage: React.FC<GenericCheatsheetPageProps> = ({
+  title,
   heroText,
   subtitle,
   loadDataFn,
@@ -252,6 +249,9 @@ export const GenericCheatsheetPage: React.FC<GenericCheatsheetPageProps> = ({
   const detailViewRef = useRef<HTMLDivElement>(null);
   
   const xPosRef = useRef(0);
+
+  // Determine if this is the 'prompting' cheatsheet based on the title
+  const pageType = title.toLowerCase().includes('prompting') ? 'prompting' : 'curated';
 
   useEffect(() => {
     const fetchData = async () => {
@@ -431,6 +431,7 @@ export const GenericCheatsheetPage: React.FC<GenericCheatsheetPageProps> = ({
                       onClick={handleCategoryClick} 
                       onUpdateCategory={handleUpdateCategory}
                       globalGallery={globalGallery}
+                      pageType={pageType}
                     />
                 ))}
               </div>

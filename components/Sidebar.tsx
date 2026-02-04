@@ -1,5 +1,6 @@
 
-import React, { useRef, useState, useEffect, useCallback } from 'react';
+import React, { useRef, useState, useEffect, useCallback, useLayoutEffect } from 'react';
+import { gsap } from 'gsap';
 import type { ActiveTab } from '../types';
 import { useSettings } from '../contexts/SettingsContext';
 import {
@@ -19,10 +20,6 @@ interface SidebarProps {
   onAboutClick: () => void;
 }
 
-/**
- * Technical Scramble Component.
- * Animates text characters randomly on hover.
- */
 const ScrambledText: React.FC<{ text: string; isHovered: boolean }> = ({ text, isHovered }) => {
     const [display, setDisplay] = useState(text);
     const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789!@#$%^&*()_+';
@@ -45,7 +42,7 @@ const ScrambledText: React.FC<{ text: string; isHovered: boolean }> = ({ text, i
                 if (intervalRef.current) clearInterval(intervalRef.current);
             }
             iterationRef.current += 1 / 3;
-        }, 25); // Snappy speed
+        }, 25);
     }, []);
 
     useEffect(() => {
@@ -60,10 +57,6 @@ const ScrambledText: React.FC<{ text: string; isHovered: boolean }> = ({ text, i
     return <span className={isHovered ? 'font-mono' : ''}>{display}</span>;
 };
 
-/**
- * Timed Scramble Component for App Title.
- * Runs once on initialization/refresh, then recurringly.
- */
 const TimedScrambledText: React.FC<{ text: string; intervalMs: number }> = ({ text, intervalMs }) => {
     const [display, setDisplay] = useState(text);
     const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789!@#$%^&*()_+';
@@ -85,16 +78,12 @@ const TimedScrambledText: React.FC<{ text: string; intervalMs: number }> = ({ te
             if (iterationRef.current >= originalText.current.length) {
                 if (intervalRef.current) clearInterval(intervalRef.current);
             }
-            // Slower resolution speed: resolving 1 character every 10 frames @ 50ms = 500ms per char
             iterationRef.current += 1 / 10;
-        }, 50); // Slower frame rate for more deliberate glitch effect
+        }, 50);
     }, []);
 
     useEffect(() => {
-        // Trigger 1: On system load / page refresh
         startScramble();
-        
-        // Trigger 2: Sequential recurrence
         const timer = setInterval(() => {
             startScramble();
         }, intervalMs);
@@ -156,12 +145,53 @@ const Section: React.FC<{ title: string, children: React.ReactNode }> = ({ title
 const Sidebar: React.FC<SidebarProps> = ({ activeTab, onNavigate, isSidebarOpen, isPinned, setIsPinned, onAboutClick }) => {
     const { settings } = useSettings();
     const { features } = settings;
+    const sidebarRef = useRef<HTMLElement>(null);
     const navRefs = useRef<Record<string, HTMLAnchorElement | null>>({});
     const [pillStyle, setPillStyle] = useState<React.CSSProperties>({ display: 'none' });
+    const isFirstRender = useRef(true);
 
     const registerRef = (id: ActiveTab, el: HTMLAnchorElement | null) => {
         navRefs.current[id] = el;
     };
+
+    // Smooth Slide with Physical Layout Awareness
+    useLayoutEffect(() => {
+        if (!sidebarRef.current) return;
+        
+        if (isFirstRender.current) {
+            isFirstRender.current = false;
+            if (isSidebarOpen) {
+                gsap.set(sidebarRef.current, { marginLeft: 0, opacity: 1, visibility: 'visible' });
+            } else {
+                gsap.set(sidebarRef.current, { marginLeft: -320, opacity: 0, visibility: 'hidden' });
+            }
+            return;
+        }
+
+        gsap.killTweensOf(sidebarRef.current);
+        
+        if (isSidebarOpen) {
+            gsap.to(sidebarRef.current, {
+                marginLeft: 0,
+                duration: 1.2,
+                ease: "expo.out",
+                visibility: 'visible',
+                opacity: 1
+            });
+        } else {
+            gsap.to(sidebarRef.current, {
+                marginLeft: -320,
+                duration: 0.8,
+                ease: "expo.inOut",
+                opacity: 0,
+                onComplete: () => {
+                    if (sidebarRef.current && !isSidebarOpen) {
+                        sidebarRef.current.style.visibility = 'hidden';
+                    }
+                }
+            });
+        }
+    }, [isSidebarOpen]);
 
     useEffect(() => {
         const activeEl = navRefs.current[activeTab];
@@ -182,10 +212,17 @@ const Sidebar: React.FC<SidebarProps> = ({ activeTab, onNavigate, isSidebarOpen,
         }
     }, [activeTab, isSidebarOpen, isPinned]);
 
+  // Classes for the sidebar vary based on whether it is an overlay (mobile/unpinned) or a flow element (pinned)
+  const sidebarClasses = [
+    "h-full w-80 bg-base-100 text-base-content z-[100] flex flex-col border-r border-base-300",
+    isPinned ? "relative" : "fixed top-0 left-0 shadow-2xl"
+  ].join(" ");
+
   return (
     <aside
-      className={`fixed top-0 left-0 h-full w-80 bg-base-100 text-base-content z-[100] transition-transform duration-300 ease-in-out flex flex-col border-r border-base-300 shadow-2xl
-        ${isSidebarOpen ? 'translate-x-0' : '-translate-x-full'}`}
+      ref={sidebarRef}
+      className={sidebarClasses}
+      style={{ visibility: 'hidden' }}
       aria-label="Main Navigation"
     >
       <div className="flex-shrink-0 flex items-center justify-between h-16 px-6 border-b border-base-300">
@@ -200,7 +237,9 @@ const Sidebar: React.FC<SidebarProps> = ({ activeTab, onNavigate, isSidebarOpen,
           className="btn btn-ghost btn-circle btn-sm hidden lg:inline-flex"
           title={isPinned ? 'Unpin Sidebar' : 'Pin Sidebar'}
         >
-          <ThumbTackIcon className={`w-5 h-5 transition-all ${isPinned ? 'rotate-0 text-primary' : '-rotate-45 text-base-content/20'}`} />
+          {/* Straight (rotate-45) indicates "STUCK IN" (Pinned).
+              Angled (rotate-0) indicates "LOOSE/PULLABLE" (Unpinned). */}
+          <ThumbTackIcon className={`w-5 h-5 transition-all ${isPinned ? 'text-primary rotate-45' : 'text-base-content/20 rotate-0'}`} />
         </button>
       </div>
 

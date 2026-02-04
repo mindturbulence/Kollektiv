@@ -37,7 +37,7 @@
         height: 100%;
         /* Use theme background variable, fallback to dark if not loaded yet */
         background-color: oklch(var(--b1, 0.1 0 0)); 
-        color: white;
+        color: oklch(var(--bc, 1 1 1));
         font-family: 'Hind', sans-serif;
         transition: background-color 0.3s ease;
       }
@@ -46,12 +46,12 @@
         display: flex;
         justify-content: center;
         align-items: center;
-        color: white;
       }
 
       .box5631 {
         transform-origin: 50% 50%;
-        fill: white;
+        /* Adapt to primary theme color */
+        fill: oklch(var(--p, 0.6 0.2 260));
       }
 
       @keyframes moveBox5631-1 {
@@ -239,9 +239,9 @@
           </svg>
         </div>
         <div class="flex flex-col items-center mt-8 relative z-10">
-          <p id="loading-status" class="text-[10px] font-black uppercase tracking-[0.5em] text-white opacity-40">Initializing System...</p>
-          <div id="loading-progress-container" class="w-48 h-0.5 bg-white/5 rounded-full mt-4 overflow-hidden" style="display: none;">
-            <div id="loading-progress-bar" class="h-full bg-white rounded-full transition-all duration-300" style="width: 0%;"></div>
+          <p id="loading-status" class="text-[10px] font-black uppercase tracking-[0.5em] text-base-content opacity-40">Initializing System...</p>
+          <div id="loading-progress-container" class="w-48 h-0.5 bg-base-content/5 rounded-full mt-4 overflow-hidden" style="display: none;">
+            <div id="loading-progress-bar" class="h-full bg-primary rounded-full transition-all duration-300" style="width: 0%;"></div>
           </div>
         </div>
       </div>
