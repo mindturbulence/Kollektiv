@@ -1,15 +1,40 @@
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
 @layer base {
   html {
+    font-family: 'Hind', sans-serif;
     letter-spacing: -0.01em;
     scroll-behavior: smooth;
+  }
+
+  h1, h2, h3, h4, h5, h6, .font-display, button, .tab, .btn {
+    font-family: 'Pilcrow Rounded', 'Plus Jakarta Sans', 'Urbanist', sans-serif;
+    font-weight: 600; /* Semibold mapping */
+  }
+
+  /* Force Pilcrow Rounded for bold caps UI elements */
+  .uppercase, .tracking-widest, .tracking-[0.4em], .font-black {
+    font-family: 'Pilcrow Rounded', 'Plus Jakarta Sans', sans-serif;
   }
 }
 
 @layer utilities {
+  :root {
+    --easing-function: cubic-bezier(0.2, 1, 0.3, 1);
+    --easing-timing: 0.8s;
+  }
+
+  .no-scrollbar {
+    -ms-overflow-style: none;  /* IE and Edge */
+    scrollbar-width: none;  /* Firefox */
+  }
+  .no-scrollbar::-webkit-scrollbar {
+    display: none; /* Chrome, Safari and Opera */
+  }
+
   .custom-scrollbar::-webkit-scrollbar {
     width: 4px;
     height: 4px;
@@ -26,9 +51,24 @@
     background: oklch(var(--p) / 0.5);
   }
 
+  /* Simple Fade Reveal Logic */
+  .reveal-artifact {
+    opacity: 0;
+    transform: translateY(20px);
+    will-change: transform, opacity;
+  }
+
+  .reveal-artifact-active {
+    opacity: 1;
+    transform: translateY(0);
+    transition: 
+      opacity var(--easing-timing) var(--easing-function),
+      transform var(--easing-timing) var(--easing-function);
+  }
+
   .media-monochrome {
     filter: grayscale(1) contrast(1.1) brightness(0.9);
-    transition: filter 0.8s cubic-bezier(0.4, 0, 0.2, 1), opacity 0.8s ease;
+    transition: filter 0.8s cubic-bezier(0.4, 0, 0.2, 1);
   }
 
   .bg-grid-texture {

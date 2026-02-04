@@ -1,9 +1,10 @@
 import React, { useState, useEffect, useRef, useMemo } from 'react';
-import { ChevronDownIcon, SearchIcon } from './icons';
+import { ChevronDownIcon, SearchIcon, CloseIcon } from './icons';
 
 export interface AutocompleteOption {
   label: string;
   value: string;
+  description?: string;
 }
 
 interface AutocompleteSelectProps {
@@ -27,7 +28,8 @@ const AutocompleteSelect: React.FC<AutocompleteSelectProps> = ({ options, value,
     if (!searchQuery) return options;
     const lowerQuery = searchQuery.toLowerCase();
     return options.filter(option =>
-      option.label.toLowerCase().includes(lowerQuery)
+      option.label.toLowerCase().includes(lowerQuery) || 
+      (option.description && option.description.toLowerCase().includes(lowerQuery))
     );
   }, [searchQuery, options]);
 
@@ -56,6 +58,13 @@ const AutocompleteSelect: React.FC<AutocompleteSelectProps> = ({ options, value,
     setSearchQuery('');
   };
 
+  const handleClear = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    onChange('');
+    setSearchQuery('');
+    setIsDropdownOpen(false);
+  };
+
   return (
     <div className={`relative w-full ${className}`} ref={wrapperRef}>
       <div 
@@ -65,7 +74,18 @@ const AutocompleteSelect: React.FC<AutocompleteSelectProps> = ({ options, value,
         <span className={`text-sm font-bold truncate uppercase tracking-tight ${!selectedOption ? 'text-base-content/30' : 'text-base-content'}`}>
           {selectedOption ? selectedOption.label : placeholder || 'Select option...'}
         </span>
-        <ChevronDownIcon className={`w-4 h-4 text-base-content/40 transition-transform ${isDropdownOpen ? 'rotate-180' : ''}`} />
+        <div className="flex items-center gap-1.5 ml-2">
+            {value && (
+                <button 
+                    onClick={handleClear}
+                    className="p-1 -mr-1 hover:text-error opacity-20 hover:opacity-100 transition-all"
+                    title="Clear Selection"
+                >
+                    <CloseIcon className="w-3.5 h-3.5" />
+                </button>
+            )}
+            <ChevronDownIcon className={`w-4 h-4 text-base-content/40 transition-transform ${isDropdownOpen ? 'rotate-180' : ''}`} />
+        </div>
       </div>
 
       {isDropdownOpen && (
@@ -89,9 +109,14 @@ const AutocompleteSelect: React.FC<AutocompleteSelectProps> = ({ options, value,
                   <button
                     type="button"
                     onClick={() => handleOptionClick(option.value)}
-                    className={`w-full text-left px-3 py-2.5 text-xs font-bold uppercase tracking-tight hover:bg-primary hover:text-primary-content transition-colors ${value === option.value ? 'bg-primary/10 text-primary' : ''}`}
+                    className={`w-full text-left px-3 py-2 text-xs font-bold uppercase tracking-tight hover:bg-primary hover:text-primary-content transition-colors flex flex-col gap-0.5 ${value === option.value ? 'bg-primary/10 text-primary' : ''}`}
                   >
-                    {option.label}
+                    <span>{option.label}</span>
+                    {option.description && (
+                      <span className={`text-[11px] font-mono opacity-60 lowercase tracking-normal leading-tight ${value === option.value ? 'opacity-90' : ''}`}>
+                        {option.description}
+                      </span>
+                    )}
                   </button>
                 </li>
               ))

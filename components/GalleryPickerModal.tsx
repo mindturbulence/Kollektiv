@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect, useMemo } from 'react';
 import { createPortal } from 'react-dom';
 import type { GalleryItem, GalleryCategory } from '../types';
@@ -5,6 +6,8 @@ import { loadGalleryItems, loadCategories } from '../utils/galleryStorage';
 import { fileSystemManager } from '../utils/fileUtils';
 import { CloseIcon, PhotoIcon, FilmIcon, CheckIcon, SearchIcon, FolderClosedIcon } from './icons';
 import LoadingSpinner from './LoadingSpinner';
+import TreeView, { TreeViewItem } from './TreeView';
+import useLocalStorage from '../utils/useLocalStorage';
 
 interface GalleryPickerModalProps {
   isOpen: boolean;
@@ -84,6 +87,8 @@ const GalleryPickerModal: React.FC<GalleryPickerModalProps> = ({
     const [categories, setCategories] = useState<GalleryCategory[]>([]);
     const [isLoading, setIsLoading] = useState(true);
     const [searchQuery, setSearchQuery] = useState('');
+    const [folderSearchQuery, setFolderSearchQuery] = useState('');
+    const [showNsfw, setShowNsfw] = useLocalStorage<boolean>('galleryShowNsfw', false);
     const [selectedCategoryId, setSelectedCategoryId] = useState('all');
     const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
 
@@ -100,7 +105,11 @@ const GalleryPickerModal: React.FC<GalleryPickerModalProps> = ({
     }, [isOpen]);
 
     const filteredItems = useMemo(() => {
-        let filtered = items.filter(i => !i.isNsfw);
+        let filtered = items;
+        
+        if (!showNsfw) {
+            filtered = filtered.filter(i => !i.isNsfw);
+        }
         
         if (typeFilter !== 'all') {
             filtered = filtered.filter(i => i.type === typeFilter);
@@ -123,7 +132,43 @@ const GalleryPickerModal: React.FC<GalleryPickerModalProps> = ({
         }
 
         return filtered;
-    }, [items, typeFilter, selectedCategoryId, searchQuery]);
+    }, [items, typeFilter, selectedCategoryId, searchQuery, showNsfw]);
+
+    const treeItems = useMemo<TreeViewItem[]>(() => {
+        const q = folderSearchQuery.toLowerCase().trim();
+
+        const buildTree = (parentId?: string): TreeViewItem[] => {
+            const children = categories.filter(cat => cat.parentId === parentId);
+            const results: TreeViewItem[] = [];
+
+            for (const cat of children) {
+                const subTree = buildTree(cat.id);
+                const nameMatches = cat.name.toLowerCase().includes(q);
+                
+                if (!q || nameMatches || subTree.length > 0) {
+                    results.push({
+                        id: cat.id,
+                        name: cat.name,
+                        icon: 'folder' as const,
+                        count: items.filter(i => i.categoryId === cat.id).length,
+                        children: subTree
+                    });
+                }
+            }
+            return results;
+        };
+        
+        const rootItems = buildTree(undefined);
+        const globalVaultMatches = !q || 'All Folders'.toLowerCase().includes(q);
+        const uncategorizedMatches = !q || 'Uncategorized'.toLowerCase().includes(q);
+
+        const tree: TreeViewItem[] = [];
+        if (globalVaultMatches) tree.push({ id: 'all', name: 'All Folders', icon: 'app' as const, count: items.length });
+        tree.push(...rootItems);
+        if (uncategorizedMatches) tree.push({ id: 'uncategorized', name: 'Uncategorized', icon: 'inbox' as const, count: items.filter(i => !i.categoryId).length });
+
+        return tree;
+    }, [categories, items, folderSearchQuery]);
 
     const handleToggle = (id: string) => {
         if (selectionMode === 'single') {
@@ -162,48 +207,64 @@ const GalleryPickerModal: React.FC<GalleryPickerModalProps> = ({
                 </header>
 
                 <div className="flex-grow flex flex-col lg:flex-row overflow-hidden">
-                    <aside className="w-full lg:w-64 border-b lg:border-b-0 lg:border-r border-base-300 flex-shrink-0 flex flex-col bg-base-200/10">
-                        <div className="p-4 space-y-6 overflow-y-auto custom-scrollbar">
-                            <div className="space-y-2">
-                                <label className="text-[10px] font-black uppercase tracking-widest text-base-content/40 ml-2">Folders</label>
-                                <div className="flex flex-col gap-1">
-                                    <button 
-                                        onClick={() => setSelectedCategoryId('all')}
-                                        className={`flex items-center gap-3 px-3 py-2 rounded-md text-xs font-bold uppercase tracking-tight transition-colors ${selectedCategoryId === 'all' ? 'bg-primary text-primary-content' : 'hover:bg-base-300'}`}
-                                    >
-                                        <FolderClosedIcon className="w-4 h-4 opacity-40" />
-                                        All Files
+                    <aside className="w-full lg:w-72 border-b lg:border-b-0 lg:border-r border-base-300 flex-shrink-0 flex flex-col bg-base-200/10">
+                        <div className="flex-shrink-0 bg-base-100 border-b border-base-300 h-14">
+                            <div className="flex items-center h-full relative">
+                                <SearchIcon className="absolute left-6 w-4 h-4 opacity-20 pointer-events-none" />
+                                <input 
+                                    type="text" 
+                                    value={folderSearchQuery}
+                                    onChange={(e) => setFolderSearchQuery(e.target.value)}
+                                    placeholder="FIND FOLDER..."
+                                    className="w-full h-full bg-transparent border-none focus:outline-none focus:ring-0 pl-14 pr-12 font-bold uppercase tracking-tight text-sm placeholder:text-base-content/10"
+                                />
+                                {folderSearchQuery && (
+                                    <button onClick={() => setFolderSearchQuery('')} className="absolute right-4 top-1/2 -translate-y-1/2 btn btn-xs btn-ghost btn-circle opacity-40 hover:opacity-100 transition-opacity">
+                                        <CloseIcon className="w-3.5 h-3.5" />
                                     </button>
-                                    {categories.map(cat => (
-                                        <button 
-                                            key={cat.id}
-                                            onClick={() => setSelectedCategoryId(cat.id)}
-                                            className={`flex items-center gap-3 px-3 py-2 rounded-md text-xs font-bold uppercase tracking-tight transition-colors ${selectedCategoryId === cat.id ? 'bg-primary text-primary-content' : 'hover:bg-base-300'}`}
-                                        >
-                                            <FolderClosedIcon className="w-4 h-4 opacity-40" />
-                                            {cat.name}
-                                        </button>
-                                    ))}
-                                </div>
+                                )}
                             </div>
+                        </div>
+                        <div className="flex-grow overflow-y-auto p-4 custom-scrollbar">
+                            <h2 className="text-[10px] font-black uppercase tracking-[0.3em] text-base-content/30 mb-6 px-3">Library Folders</h2>
+                            <TreeView 
+                                items={treeItems} 
+                                selectedId={selectedCategoryId} 
+                                onSelect={setSelectedCategoryId} 
+                                searchActive={!!folderSearchQuery}
+                            />
                         </div>
                     </aside>
 
                     <main className="flex-grow flex flex-col overflow-hidden bg-base-100">
-                        <div className="p-4 border-b border-base-300 bg-base-200/5 flex gap-4">
-                            <div className="relative flex-grow">
-                                <SearchIcon className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 opacity-20" />
+                        <div className="flex-shrink-0 bg-base-100 border-b border-base-300 h-14 flex items-center">
+                            <div className="flex items-center h-full relative flex-grow border-r border-base-300">
+                                <SearchIcon className="absolute left-6 w-4 h-4 opacity-20 pointer-events-none" />
                                 <input 
                                     type="text" 
                                     value={searchQuery}
                                     onChange={(e) => setSearchQuery(e.target.value)}
-                                    placeholder="Search library..."
-                                    className="input input-sm input-bordered rounded-none w-full pl-10 font-bold tracking-tight uppercase placeholder:text-base-content/10"
+                                    placeholder="SEARCH IMAGES..."
+                                    className="w-full h-full bg-transparent border-none focus:outline-none focus:ring-0 pl-14 pr-12 font-bold uppercase tracking-tight text-sm placeholder:text-base-content/10"
+                                />
+                                {searchQuery && (
+                                    <button onClick={() => setSearchQuery('')} className="absolute right-4 top-1/2 -translate-y-1/2 btn btn-xs btn-ghost btn-circle opacity-40 hover:opacity-100 transition-opacity">
+                                        <CloseIcon className="w-4 h-4" />
+                                    </button>
+                                )}
+                            </div>
+                            <div className="flex items-center h-full gap-3 bg-base-100 px-6">
+                                <span className="text-[10px] font-black uppercase text-base-content/40 tracking-widest">NSFW</span>
+                                <input 
+                                    type="checkbox" 
+                                    checked={showNsfw} 
+                                    onChange={(e) => setShowNsfw(e.target.checked)} 
+                                    className="toggle toggle-xs toggle-primary" 
                                 />
                             </div>
                         </div>
 
-                        <div className="flex-grow overflow-y-auto p-4 custom-scrollbar">
+                        <div className="flex-grow overflow-y-auto p-6 custom-scrollbar bg-base-200/5">
                             {isLoading ? (
                                 <div className="h-full w-full flex items-center justify-center">
                                     <LoadingSpinner />
@@ -231,16 +292,16 @@ const GalleryPickerModal: React.FC<GalleryPickerModalProps> = ({
 
                 <footer className="flex-shrink-0 p-6 border-t border-base-300 bg-base-200/20 flex justify-between items-center">
                     <span className="text-[10px] font-mono font-bold text-base-content/30 uppercase">
-                        {selectedIds.size} File{selectedIds.size !== 1 ? 's' : ''} Selected
+                        {selectedIds.size} Item{selectedIds.size !== 1 ? 's' : ''} Identified
                     </span>
                     <div className="flex gap-2">
-                        <button onClick={onClose} className="btn btn-ghost rounded-none uppercase font-black text-[10px] tracking-widest px-8">Cancel</button>
+                        <button onClick={onClose} className="btn btn-ghost rounded-none uppercase font-black text-[10px] tracking-widest px-8">Abort</button>
                         <button 
                             onClick={handleConfirm}
                             disabled={selectedIds.size === 0}
                             className="btn btn-primary rounded-none uppercase font-black text-[10px] tracking-widest px-12 shadow-lg"
                         >
-                            Select
+                            Select Items
                         </button>
                     </div>
                 </footer>

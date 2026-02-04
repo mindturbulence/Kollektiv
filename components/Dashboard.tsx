@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect, useRef } from 'react';
 import { loadSavedPrompts } from '../utils/promptStorage';
 import { loadGalleryItems } from '../utils/galleryStorage';
@@ -75,15 +76,15 @@ const ImageTile: React.FC<{ item: GalleryItem; onNavigate: () => void; className
         >
             <div className="w-full h-full scale-100 group-hover:scale-110 transition-transform duration-[2000ms]">
                 {item.type === 'video' ? (
-                    <video src={mediaUrl} className="w-full h-full object-cover media-monochrome group-hover:filter-none transition-all duration-1000 opacity-60 group-hover:opacity-100" muted loop autoPlay />
+                    <video src={mediaUrl} className="w-full h-full object-cover group-hover:filter-none transition-all duration-1000 opacity-60 group-hover:opacity-100" muted loop autoPlay />
                 ) : (
-                    <img src={mediaUrl} alt={item.title} className="w-full h-full object-cover media-monochrome group-hover:filter-none transition-all duration-1000 opacity-60 group-hover:opacity-100" />
+                    <img src={mediaUrl} alt={item.title} className="w-full h-full object-cover group-hover:filter-none transition-all duration-1000 opacity-60 group-hover:opacity-100" />
                 )}
             </div>
             <div className="absolute inset-0 bg-primary/5 opacity-0 group-hover:opacity-100 transition-opacity duration-1000"></div>
             <div className="absolute inset-0 flex flex-col justify-end p-8 translate-y-4 group-hover:translate-y-0 opacity-0 group-hover:opacity-100 transition-all duration-700 bg-gradient-to-t from-black/90 via-black/20 to-transparent text-left">
                 <span className="text-[10px] font-black uppercase tracking-[0.4em] text-primary truncate mb-2">{item.title}</span>
-                <span className="text-[8px] font-mono font-bold text-white/40 uppercase">ACCESS ARTIFACT [01]</span>
+                <span className="text-[8px] font-mono font-bold text-white/40 uppercase">VIEW IMAGE [01]</span>
             </div>
         </button>
     );
@@ -193,61 +194,61 @@ const Dashboard: React.FC<DashboardProps> = ({ onNavigate, onClipIdea }) => {
                 ></div>
             </div>
 
-            {/* HERO TYPOGRAPHIC STATEMENT (SECTION 1) */}
+            {/* HERO SECTION 1 */}
             <section className="relative h-[85vh] min-h-[600px] flex flex-col justify-center px-10 md:px-20 border-b border-base-300 overflow-hidden bg-base-100">
                 <div 
                     className="absolute inset-0 flex items-center justify-center pointer-events-none opacity-[0.03]"
                     style={{ transform: `translateY(${scrollProgress * 0.5}px)` }}
                 >
-                    <h1 className="text-[35vw] font-black tracking-tighter leading-none uppercase select-none">Vault</h1>
+                    <h1 className="text-[35vw] font-black tracking-tighter leading-none uppercase select-none">Home</h1>
                 </div>
                 
                 <div className="relative z-10 max-w-screen-2xl mx-auto w-full reveal-on-scroll">
                     <div className="flex items-center gap-6 mb-8">
                         <div className="w-4 h-4 bg-primary animate-pulse shadow-[0_0_20px_oklch(var(--p))]"></div>
-                        <span className="text-[12px] font-black uppercase tracking-[0.6em] text-base-content/40">KOLLEKTIV NODE ACTIVE</span>
+                        <span className="text-[12px] font-black uppercase tracking-[0.6em] text-base-content/40">SYSTEM ONLINE</span>
                     </div>
                     <h2 className="text-7xl md:text-9xl font-black tracking-tighter uppercase leading-[0.85] mb-10">
-                        Neural <br/>
-                        Intelligence<br/>
-                        <span className="text-primary italic">Registry.</span>
+                        Your Creative<br/>
+                        Dashboard<br/>
+                        <span className="text-primary italic">Library.</span>
                     </h2>
                     <div className="flex flex-col md:flex-row md:items-end justify-between gap-10">
                         <p className="max-w-xl text-[12px] font-bold text-base-content/30 uppercase tracking-[0.4em] leading-relaxed">
-                            Decentralized repository for high-fidelity prompt sequences and generative artifacts. <br/>
+                            Private space for your prompts and images. <br/>
                             Uptime: <span className="text-primary font-mono">{Math.floor(uptime/3600)}h {Math.floor((uptime%3600)/60)}m {uptime%60}s</span>
                         </p>
-                        <div className="flex flex-col items-center gap-4 group opacity-40 hover:opacity-100 transition-opacity">
-                            <span className="text-[10px] font-black uppercase tracking-[0.3em]">Explore Manifest</span>
+                        <div className="flex flex-col items-center gap-4 group opacity-40 hover:opacity-100 transition-opacity text-center">
+                            <span className="text-[10px] font-black uppercase tracking-[0.3em]">Scroll for details</span>
                             <ChevronDownIcon className="w-5 h-5 animate-bounce" />
                         </div>
                     </div>
                 </div>
             </section>
 
-            {/* TELEMETRY METRICS (SECTION 2) */}
+            {/* METRICS SECTION 2 */}
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-px bg-base-300 border-b border-base-300">
-                <MetricCard label="Vault Capacity" value={formatBytes(data.vaultSizeBytes).split(' ')[0]} progress={Math.min(100, (data.vaultSizeBytes / (5 * 1024 * 1024 * 1024)) * 100)} icon={<FolderClosedIcon />} />
-                <MetricCard label="Neural Load" value={`${data.promptCount + data.galleryCount}`} progress={((data.promptCount + data.galleryCount) / 1000) * 100} icon={<CpuChipIcon />} />
+                <MetricCard label="Storage Size" value={formatBytes(data.vaultSizeBytes).split(' ')[0]} progress={Math.min(100, (data.vaultSizeBytes / (5 * 1024 * 1024 * 1024)) * 100)} icon={<FolderClosedIcon />} />
+                <MetricCard label="Total Items" value={`${data.promptCount + data.galleryCount}`} progress={((data.promptCount + data.galleryCount) / 1000) * 100} icon={<CpuChipIcon />} />
                 <div className="lg:col-span-1 md:col-span-2 flex flex-col p-10 bg-base-100 justify-center gap-4 reveal-on-scroll">
-                    <span className="text-[10px] font-black uppercase tracking-[0.5em] text-base-content/20">Operational Status</span>
+                    <span className="text-[10px] font-black uppercase tracking-[0.5em] text-base-content/20">Sync Status</span>
                     <div className="flex items-center gap-4">
-                        <div className="badge badge-success rounded-none font-black text-[9px] tracking-widest px-3 py-3">SYNC_STABLE</div>
-                        <div className="badge badge-outline border-base-300 rounded-none font-black text-[9px] tracking-widest px-3 py-3 uppercase">Sector: {fileSystemManager.appDirectoryName?.slice(0,12) || 'NULL'}</div>
+                        <div className="badge badge-success rounded-none font-black text-[9px] tracking-widest px-3 py-3">STABLE</div>
+                        <div className="badge badge-outline border-base-300 rounded-none font-black text-[9px] tracking-widest px-3 py-3 uppercase">Folder: {fileSystemManager.appDirectoryName?.slice(0,12) || 'NONE'}</div>
                     </div>
                 </div>
             </div>
 
-            {/* RECENT SEQUENCES (SECTION 3) */}
+            {/* RECENT PROMPTS SECTION 3 */}
             <section className="bg-base-200/20 py-32 px-10 md:px-20 border-b border-base-300">
                 <div className="max-w-screen-2xl mx-auto">
                     <header className="flex flex-col md:flex-row justify-between items-start md:items-end gap-8 mb-20 reveal-on-scroll">
                         <div>
-                            <span className="text-[12px] font-black uppercase tracking-[0.6em] text-primary/60 block mb-4">Neural Buffer</span>
-                            <h3 className="text-5xl md:text-7xl font-black tracking-tighter uppercase leading-none">Recent <br/>Sequences.</h3>
+                            <span className="text-[12px] font-black uppercase tracking-[0.6em] text-primary/60 block mb-4">Saved Content</span>
+                            <h3 className="text-5xl md:text-7xl font-black tracking-tighter uppercase leading-none">Recent <br/>Prompts.</h3>
                         </div>
                         <button onClick={() => onNavigate('prompt')} className="btn btn-ghost rounded-none font-black text-xs tracking-[0.3em] uppercase group border-b border-base-300 pb-2">
-                            Access Full Library <ChevronRightIcon className="w-5 h-5 ml-2 group-hover:translate-x-2 transition-transform" />
+                            Go to Library <ChevronRightIcon className="w-5 h-5 ml-2 group-hover:translate-x-2 transition-transform" />
                         </button>
                     </header>
                     
@@ -261,27 +262,26 @@ const Dashboard: React.FC<DashboardProps> = ({ onNavigate, onClipIdea }) => {
                                 >
                                     <span className="absolute left-4 top-1/2 -translate-y-1/2 text-8xl font-black opacity-[0.02] group-hover:opacity-[0.05] transition-opacity italic pointer-events-none">{String(i+1).padStart(2,'0')}</span>
                                     <div className="relative z-10 pl-6 border-l border-transparent group-hover:border-primary transition-all">
-                                        <p className="text-2xl font-black uppercase tracking-tight mb-4 group-hover:text-primary transition-colors">{p.title || 'ARCHIVED_TOKEN'}</p>
+                                        <p className="text-2xl font-black uppercase tracking-tight mb-4 group-hover:text-primary transition-colors">{p.title || 'SAVED_ITEM'}</p>
                                         <p className="text-sm font-medium text-base-content/40 italic line-clamp-2 leading-relaxed max-w-2xl">"{p.text}"</p>
                                     </div>
                                 </button>
                             )) : (
                                 <div className="p-20 text-center opacity-10">
-                                    <span className="text-sm font-black uppercase tracking-widest">No local sequences detected</span>
+                                    <span className="text-sm font-black uppercase tracking-widest">No prompts saved yet</span>
                                 </div>
                             )}
                         </div>
                         
-                        {/* QUICK INTAKE CARD */}
+                        {/* QUICK SAVE CARD */}
                         <div className="bg-base-100 p-12 md:p-16 border border-base-300 shadow-2xl flex flex-col h-full reveal-on-scroll">
                             <header className="flex justify-between items-center mb-12">
-                                <span className="text-[10px] font-black uppercase tracking-[0.5em] text-primary/40">Quick Commitment</span>
-                                <div className="text-[10px] font-mono text-base-content/20 uppercase">ID: DC-8800</div>
+                                <span className="text-[10px] font-black uppercase tracking-[0.5em] text-primary/40">Quick Save</span>
                             </header>
                             <textarea 
                                 value={quickPrompt}
                                 onChange={e => setQuickPrompt(e.target.value)}
-                                placeholder="STREAM NEW CORE CONCEPT..."
+                                placeholder="TYPE A NEW IDEA HERE..."
                                 className="textarea textarea-ghost resize-none flex-grow bg-transparent p-0 font-bold text-3xl md:text-4xl tracking-tighter focus:outline-none placeholder:text-base-content/5 uppercase italic min-h-[250px]"
                             />
                             <div className="pt-12 border-t border-base-300 mt-12">
@@ -290,7 +290,7 @@ const Dashboard: React.FC<DashboardProps> = ({ onNavigate, onClipIdea }) => {
                                     disabled={!quickPrompt.trim() || isSaving}
                                     className="btn btn-primary btn-lg rounded-none w-full font-black tracking-[0.4em] uppercase h-24 shadow-2xl group text-sm"
                                 >
-                                    {isSaving ? 'SYNCING...' : 'ARCHIVE TOKEN'}
+                                    {isSaving ? 'SAVING...' : 'SAVE PROMPT'}
                                     <ChevronRightIcon className="w-6 h-6 ml-4 group-hover:translate-x-2 transition-transform" />
                                 </button>
                             </div>
@@ -299,17 +299,17 @@ const Dashboard: React.FC<DashboardProps> = ({ onNavigate, onClipIdea }) => {
                 </div>
             </section>
 
-            {/* VISUAL MANIFEST (SECTION 4) */}
+            {/* IMAGES SECTION 4 */}
             <section className="bg-base-100 py-32 px-10 md:px-20 overflow-hidden">
                 <div className="max-w-screen-2xl mx-auto">
                     <header className="flex flex-col md:flex-row justify-between items-start md:items-end gap-8 mb-20 reveal-on-scroll">
                         <div>
-                            <span className="text-[12px] font-black uppercase tracking-[0.6em] text-primary/60 block mb-4">Neural Evidence</span>
-                            <h3 className="text-5xl md:text-7xl font-black tracking-tighter uppercase leading-none">Visual <br/>Manifest.</h3>
+                            <span className="text-[12px] font-black uppercase tracking-[0.6em] text-primary/60 block mb-4">Saved Images</span>
+                            <h3 className="text-5xl md:text-7xl font-black tracking-tighter uppercase leading-none">Recent <br/>Images.</h3>
                         </div>
                         <div className="flex gap-4">
                              <button onClick={fetchData} className="btn btn-square btn-ghost border border-base-300 opacity-40 hover:opacity-100"><RefreshIcon className="w-5 h-5"/></button>
-                             <button onClick={() => onNavigate('gallery')} className="btn btn-primary rounded-none font-black text-xs tracking-[0.3em] uppercase px-12">Full Vault</button>
+                             <button onClick={() => onNavigate('gallery')} className="btn btn-primary rounded-none font-black text-xs tracking-[0.3em] uppercase px-12">View Library</button>
                         </div>
                     </header>
                     
@@ -321,28 +321,10 @@ const Dashboard: React.FC<DashboardProps> = ({ onNavigate, onClipIdea }) => {
                         ) : (
                             <div className="col-span-full py-40 text-center text-base-content/10 uppercase font-black tracking-widest flex flex-col items-center gap-6">
                                 <PhotoIcon className="w-20 h-20 opacity-5" />
-                                No artifacts archived in manifest
+                                No images saved yet
                             </div>
                         )}
                     </div>
-                </div>
-            </section>
-
-            {/* TOOLBOX QUICK ACCESS (SECTION 5) */}
-            <section className="bg-base-200 py-32 px-10 md:px-20 border-t border-base-300">
-                <div className="max-w-screen-xl mx-auto grid grid-cols-1 md:grid-cols-3 gap-1 reveal-on-scroll">
-                    <button onClick={() => onNavigate('prompts')} className="flex flex-col items-center gap-8 p-16 bg-base-100 border border-base-300 hover:bg-primary hover:text-primary-content transition-all duration-500 group">
-                        <SparklesIcon className="w-12 h-12 opacity-30 group-hover:opacity-100 scale-125 transition-transform group-hover:rotate-12" />
-                        <span className="text-xs font-black uppercase tracking-[0.4em]">Prompt Builder</span>
-                    </button>
-                    <button onClick={() => onNavigate('cheatsheet')} className="flex flex-col items-center gap-8 p-16 bg-base-100 border border-base-300 hover:bg-primary hover:text-primary-content transition-all duration-500 group">
-                        <BookOpenIcon className="w-12 h-12 opacity-30 group-hover:opacity-100 scale-125 transition-transform group-hover:-rotate-12" />
-                        <span className="text-xs font-black uppercase tracking-[0.4em]">Neural Guides</span>
-                    </button>
-                    <button onClick={() => onNavigate('settings')} className="flex flex-col items-center gap-8 p-16 bg-base-100 border border-base-300 hover:bg-primary hover:text-primary-content transition-all duration-500 group">
-                        <CpuChipIcon className="w-12 h-12 opacity-30 group-hover:opacity-100 scale-125 transition-transform group-hover:scale-150" />
-                        <span className="text-xs font-black uppercase tracking-[0.4em]">Core Config</span>
-                    </button>
                 </div>
             </section>
 
@@ -350,16 +332,16 @@ const Dashboard: React.FC<DashboardProps> = ({ onNavigate, onClipIdea }) => {
             <section className="p-16 border-t border-base-300 bg-base-100 flex flex-col md:flex-row justify-between items-center gap-12">
                 <div className="flex gap-20">
                     <div className="flex flex-col">
-                        <span className="text-[10px] font-black uppercase text-base-content/20 tracking-widest mb-3">Registry Integrity</span>
-                        <span className="text-sm font-mono font-bold text-success uppercase">ENCRYPTED_AND_SYNCED</span>
+                        <span className="text-[10px] font-black uppercase text-base-content/20 tracking-widest mb-3">Library Status</span>
+                        <span className="text-sm font-mono font-bold text-success uppercase">CONNECTED_AND_SYNCED</span>
                     </div>
                     <div className="flex flex-col">
-                        <span className="text-[10px] font-black uppercase text-base-content/20 tracking-widest mb-3">Network Identity</span>
-                        <span className="text-sm font-mono font-bold text-primary uppercase">LOCAL_HOST_01</span>
+                        <span className="text-[10px] font-black uppercase text-base-content/20 tracking-widest mb-3">Identity</span>
+                        <span className="text-sm font-mono font-bold text-primary uppercase">LOCAL_USER</span>
                     </div>
                 </div>
                 <div className="flex items-center gap-6">
-                    <span className="text-[10px] font-black text-base-content/20 uppercase tracking-[0.6em]">System V2.0.1 ALPHA</span>
+                    <span className="text-[10px] font-black text-base-content/20 uppercase tracking-[0.6em]">System V2.0.1</span>
                     <div className="w-12 h-12 border border-base-300 flex items-center justify-center">
                         <div className="w-2 h-2 bg-primary animate-ping"></div>
                     </div>

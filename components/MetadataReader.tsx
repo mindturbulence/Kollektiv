@@ -1,7 +1,6 @@
 import React, { useState, useRef, useCallback, useMemo } from 'react';
 import { extractFullMetadata, type ParsedMetadata } from '../utils/fileUtils';
-import { UploadIcon, PhotoIcon, CloseIcon, SparklesIcon, BookmarkIcon, ArchiveIcon, DownloadIcon, CheckIcon, BracesIcon } from './icons';
-import CopyIcon from './CopyIcon';
+import { PhotoIcon, CloseIcon, ArchiveIcon } from './icons';
 import LoadingSpinner from './LoadingSpinner';
 
 interface MetadataReaderProps {
@@ -87,8 +86,8 @@ export const MetadataReader: React.FC<MetadataReaderProps> = ({
         }
     };
 
-    const handleRemoveMedia = (e: React.MouseEvent) => {
-        e.stopPropagation();
+    const handleRemoveMedia = (e: React.MouseEvent | null) => {
+        if (e) e.stopPropagation();
         if (previewUrl) URL.revokeObjectURL(previewUrl);
         setSourceFile(null);
         setPreviewUrl(null);
@@ -137,7 +136,7 @@ export const MetadataReader: React.FC<MetadataReaderProps> = ({
         <div className="grid grid-cols-1 lg:grid-cols-3 overflow-hidden h-full bg-base-100">
             <div className="lg:col-span-1 bg-base-100 flex flex-col min-h-0 border-r border-base-300">
                 {header}
-                <header className="p-6 border-b border-base-300 bg-base-200/10">
+                <header className="p-6 border-b border-base-300 bg-base-200/10 h-16 flex items-center">
                     <h3 className="text-[10px] font-black uppercase tracking-[0.4em] text-primary">Source Image</h3>
                 </header>
                 <div className="p-6 flex flex-col gap-6 flex-grow min-h-0 overflow-hidden">
@@ -169,7 +168,7 @@ export const MetadataReader: React.FC<MetadataReaderProps> = ({
                                     className="w-full h-full object-cover" 
                                     alt="Source" 
                                 />
-                                <button onClick={handleRemoveMedia} className="btn btn-xs btn-square btn-error absolute top-2 right-2 opacity-0 group-hover:opacity-100 shadow-2xl z-10 rounded-none">
+                                <button onClick={() => handleRemoveMedia(null)} className="btn btn-xs btn-square btn-error absolute top-2 right-2 opacity-0 group-hover:opacity-100 shadow-2xl z-10 rounded-none">
                                     <CloseIcon className="w-3 h-3"/>
                                 </button>
                             </div>
@@ -182,19 +181,24 @@ export const MetadataReader: React.FC<MetadataReaderProps> = ({
                                 onClick={handleSaveWorkflow}
                                 className="btn btn-sm btn-outline btn-secondary rounded-none font-black text-[10px] tracking-widest uppercase w-full"
                             >
-                                <DownloadIcon className="w-4 h-4 mr-2" />
                                 EXPORT JSON
                             </button>
                         </div>
                     )}
                 </div>
-                <footer className="p-4 border-t border-base-300 bg-base-200/20">
-                    <button onClick={() => handleRemoveMedia(null as any)} disabled={!previewUrl || isLoading} className="btn btn-sm btn-ghost w-full rounded-none font-black text-[9px] tracking-widest text-error/40 hover:text-error uppercase">PURGE BUFFER</button>
+                <footer className="h-14 border-t border-base-300 bg-base-100 flex items-stretch flex-shrink-0">
+                    <button 
+                        onClick={() => handleRemoveMedia(null)} 
+                        disabled={!previewUrl || isLoading} 
+                        className="btn btn-ghost h-full w-full rounded-none border-none font-black text-[10px] tracking-widest text-error/40 hover:text-error uppercase"
+                    >
+                        RESET
+                    </button>
                 </footer>
             </div>
 
             <div className="lg:col-span-2 bg-base-100 flex flex-col min-h-0">
-                <header className="p-6 border-b border-base-300 bg-base-200/10 flex justify-between items-center">
+                <header className="p-6 border-b border-base-300 bg-base-200/10 h-16 flex items-center justify-between">
                     <h2 className="text-xs font-black uppercase tracking-[0.4em] text-primary flex items-center gap-3">
                         <div className="w-2 h-2 rounded-full bg-primary animate-pulse"></div> METADATA STREAM
                     </h2>
@@ -217,29 +221,26 @@ export const MetadataReader: React.FC<MetadataReaderProps> = ({
                             <section className="space-y-6">
                                 <div className="flex justify-between items-center">
                                     <h4 className="text-[10px] font-black uppercase tracking-widest text-primary/40">IDENTIFIED ARTIFACTS</h4>
-                                    <div className="flex gap-2">
+                                    <div className="flex gap-1 h-8">
                                         <button 
                                             onClick={() => onSendToRefiner(metadata.prompt)}
                                             disabled={!hasPrompt}
-                                            className="btn btn-sm btn-ghost border border-base-300 rounded-none text-primary font-black text-[9px] tracking-widest uppercase"
+                                            className="btn btn-xs btn-ghost border border-base-300 rounded-none text-primary font-black text-[9px] tracking-widest uppercase px-4"
                                         >
-                                            <SparklesIcon className="w-3.5 h-3.5 mr-1.5 opacity-40"/>
-                                            REFINE
+                                            IMPROVE
                                         </button>
                                         <button 
                                             onClick={() => onClipIdea(metadata.prompt, `Info: ${sourceFile?.name}`)}
                                             disabled={!hasPrompt}
-                                            className="btn btn-sm btn-ghost border border-base-300 rounded-none font-black text-[9px] tracking-widest uppercase"
+                                            className="btn btn-xs btn-ghost border border-base-300 rounded-none font-black text-[9px] tracking-widest uppercase px-4"
                                         >
-                                            <BookmarkIcon className="w-3.5 h-3.5 mr-1.5 opacity-40"/>
                                             CLIP
                                         </button>
                                         <button 
                                             onClick={() => onSaveToLibrary(metadata.prompt, `Saved: ${sourceFile?.name}`)}
                                             disabled={!hasPrompt}
-                                            className="btn btn-sm btn-primary rounded-none font-black text-[9px] tracking-widest shadow-lg uppercase"
+                                            className="btn btn-xs btn-primary rounded-none font-black text-[9px] tracking-widest shadow-lg uppercase px-4"
                                         >
-                                            <ArchiveIcon className="w-3.5 h-3.5 mr-1.5"/>
                                             SAVE
                                         </button>
                                     </div>
@@ -272,7 +273,7 @@ export const MetadataReader: React.FC<MetadataReaderProps> = ({
                                         disabled={!metadata.raw && !metadata.workflow}
                                         className="btn btn-sm btn-ghost border border-base-300 rounded-none font-black text-[9px] tracking-widest uppercase"
                                     >
-                                        {copiedRaw ? <><CheckIcon className="w-3 h-3 mr-1.5 text-success"/> OK</> : <><BracesIcon className="w-3.5 h-3.5 mr-1.5 opacity-40"/> COPY RAW</>}
+                                        {copiedRaw ? 'OK' : 'COPY RAW'}
                                     </button>
                                 </div>
                                 <div className="p-4 bg-black/5 border border-base-300 text-[10px] font-mono text-base-content/30 break-words leading-relaxed max-h-48 overflow-y-auto custom-scrollbar">

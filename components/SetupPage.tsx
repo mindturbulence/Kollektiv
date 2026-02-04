@@ -1,5 +1,6 @@
 
-import React, { useState, useEffect, useRef, useMemo, useCallback } from 'react';
+import React, { useState, useEffect, useLayoutEffect, useRef, useMemo, useCallback } from 'react';
+import { gsap } from 'gsap';
 import type { LLMSettings, ActiveSettingsTab, GalleryCategory, PromptCategory, SavedPrompt, FeatureSettings, YouTubeConnection, TikTokConnection, GoogleIdentityConnection } from '../types';
 import { testOllamaConnection, type OllamaTestResult } from '../services/llmService';
 import { fileSystemManager, createZipAndDownload } from '../utils/fileUtils';
@@ -8,7 +9,7 @@ import { NestedCategoryManager } from './NestedCategoryManager';
 import { 
     loadCategories as loadGalleryCategoriesFS, 
     addCategory as addGalleryCategoryFS, 
-    updateCategory as updateGalleryCategoryFS, 
+    updateCategory as updateCategoryFS, 
     deleteCategory as deleteGalleryCategoryFS,
     saveCategoriesOrder as saveGalleryCategoriesOrderFS
 } from '../utils/galleryStorage';
@@ -58,6 +59,73 @@ const subMenuConfig: Record<string, { id: string; label: string, icon: React.Rea
         { id: 'categories', label: 'Gallery Folders', icon: <FolderClosedIcon className="w-4 h-4" />, description: "Organize image hierarchies." },
         { id: 'data', label: 'Gallery Data', icon: <FolderClosedIcon className="w-4 h-4" />, description: "Export and manage gallery files." }
     ],
+};
+
+const MaintenanceOverlay: React.FC<{ progress: number, message: string }> = ({ progress, message }) => {
+    const textWrapperRef = useRef<HTMLDivElement>(null);
+    
+    useLayoutEffect(() => {
+        if (!textWrapperRef.current) return;
+        gsap.fromTo(textWrapperRef.current, 
+            { yPercent: 100, autoAlpha: 0 }, 
+            { yPercent: 0, autoAlpha: 1, duration: 1.2, ease: "expo.out" }
+        );
+    }, []);
+
+    // Exit Sequence
+    useEffect(() => {
+        if (progress >= 100 && textWrapperRef.current) {
+            gsap.to(textWrapperRef.current, {
+                y: -80,
+                autoAlpha: 0,
+                duration: 0.8,
+                ease: "expo.inOut",
+                delay: 0.2
+            });
+        }
+    }, [progress]);
+
+    return (
+        <div className="fixed inset-0 bg-base-100 z-[500] flex flex-col items-center justify-center overflow-hidden">
+            <div className="absolute inset-0 bg-grid-texture opacity-[0.03] pointer-events-none"></div>
+            
+            <div className="relative z-10 flex flex-col items-center">
+                {/* Brand Text Wrapper with Masking */}
+                <div className="overflow-hidden mb-4 px-2">
+                    <div ref={textWrapperRef} className="grid grid-cols-1 grid-rows-1 text-2xl md:text-3xl font-black tracking-tighter uppercase select-none italic">
+                        {/* Layer 1: Background Ghost Text - Picks up theme automatically */}
+                        <span className="text-base-content/10 block leading-none py-1 row-start-1 col-start-1">
+                            Kollektiv.
+                        </span>
+                        
+                        {/* Layer 2: Theme-Aware Fill Masked Text */}
+                        <div 
+                            className="row-start-1 col-start-1 h-full overflow-hidden transition-all duration-700 ease-out border-r border-base-content/20"
+                            style={{ width: `${progress}%` }}
+                        >
+                            <span className="text-base-content block whitespace-nowrap leading-none py-1 drop-shadow-[0_0_15px_rgba(var(--bc),0.1)]">
+                                Kollektiv.
+                            </span>
+                        </div>
+                    </div>
+                </div>
+
+                {/* Sub-label */}
+                <div className={`flex flex-col items-center gap-3 transition-all duration-500 ${progress >= 100 ? 'opacity-0 translate-y-4' : 'opacity-100 translate-y-0'}`}>
+                    <div className="flex items-center gap-3">
+                        <p className="text-[8px] font-mono font-bold uppercase tracking-[0.5em] text-center text-base-content/40">
+                            {message || 'DIAGNOSTIC_ACTIVE'}
+                        </p>
+                    </div>
+                </div>
+            </div>
+
+            {/* Corner Metadata */}
+            <div className="absolute bottom-12 left-12 hidden md:block">
+                <span className="text-[8px] font-mono font-bold text-base-content/10 uppercase tracking-widest">Protocol: Integrity_Check_Alpha</span>
+            </div>
+        </div>
+    );
 };
 
 const SetupNavItem: React.FC<{
@@ -111,6 +179,7 @@ export const SetupPage: React.FC<SetupPageProps> = ({
   const [resetTarget, setResetTarget] = useState<'all' | null>(null);
   const [isWorking, setIsWorking] = useState<boolean>(false);
   const [maintenanceMsg, setMaintenanceMsg] = useState<string>('');
+  const [maintenanceProgress, setMaintenanceProgress] = useState<number>(0);
   
   const [isRestartModalOpen, setIsRestartModalOpen] = useState(false);
   const [isResetModalOpen, setIsResetModalOpen] = useState(false);
@@ -125,13 +194,13 @@ export const SetupPage: React.FC<SetupPageProps> = ({
   const authTimeoutRef = useRef<number | null>(null);
 
   const handleAuthResponse = useCallback(async (accessToken: string, mode: 'youtube' | 'google') => {
-    // Clear timeout if response is received
     if (authTimeoutRef.current) {
         window.clearTimeout(authTimeoutRef.current);
         authTimeoutRef.current = null;
     }
 
     setIsWorking(true);
+    setMaintenanceProgress(20);
     setMaintenanceMsg(`ESTABLISHING ${mode.toUpperCase()} UPLINK...`);
     try {
       if (mode === 'youtube') {
@@ -142,8 +211,9 @@ export const SetupPage: React.FC<SetupPageProps> = ({
           if (!response.ok) throw new Error("YouTube metadata acquisition failed.");
           const data = await response.json();
           if (data.items && data.items.length > 0) {
+            setMaintenanceProgress(80);
             const channel = data.items[0];
-            const updatedYoutube: YouTubeConnection = {
+            const updatedYouTube: YouTubeConnection = {
               ...settings.youtube,
               isConnected: true,
               channelName: channel.snippet.title,
@@ -153,7 +223,7 @@ export const SetupPage: React.FC<SetupPageProps> = ({
               thumbnailUrl: channel.snippet.thumbnails.default.url,
               connectedAt: Date.now()
             };
-            const updatedSettings = { ...settings, youtube: updatedYoutube };
+            const updatedSettings = { ...settings, youtube: updatedYouTube };
             setSettings(updatedSettings);
             updateSettings(updatedSettings);
             showGlobalFeedback(`YouTube Linked: ${channel.snippet.title}`);
@@ -164,6 +234,7 @@ export const SetupPage: React.FC<SetupPageProps> = ({
           });
           if (!response.ok) throw new Error("Cloud Identity fetch failed.");
           const user = await response.json();
+          setMaintenanceProgress(80);
           const updatedGoogle: GoogleIdentityConnection = {
             isConnected: true,
             email: user.email,
@@ -177,12 +248,14 @@ export const SetupPage: React.FC<SetupPageProps> = ({
           updateSettings(updatedSettings);
           showGlobalFeedback(`Uplink confirmed for ${user.email}`);
       }
+      setMaintenanceProgress(100);
     } catch (error: any) {
       console.error("Auth Fetch Error:", error);
       showGlobalFeedback(`Integration Error: ${error.message}`, true);
     } finally {
       setIsWorking(false);
       setMaintenanceMsg("");
+      setMaintenanceProgress(0);
     }
   }, [settings, updateSettings, showGlobalFeedback]);
 
@@ -195,7 +268,6 @@ export const SetupPage: React.FC<SetupPageProps> = ({
                   client_id: clientId,
                   scope: 'https://www.googleapis.com/auth/youtube.upload https://www.googleapis.com/auth/youtube.readonly https://www.googleapis.com/auth/userinfo.email https://www.googleapis.com/auth/userinfo.profile openid',
                   callback: (response: any) => {
-                      // Safety clear
                       if (authTimeoutRef.current) {
                         window.clearTimeout(authTimeoutRef.current);
                         authTimeoutRef.current = null;
@@ -204,9 +276,9 @@ export const SetupPage: React.FC<SetupPageProps> = ({
                       if (response.error) {
                           setIsWorking(false);
                           setMaintenanceMsg("");
+                          setMaintenanceProgress(0);
                           if (response.error !== 'popup_closed') {
                               showGlobalFeedback(`Authentication failed: ${response.error}`, true);
-                              console.error("Google Auth Error:", response);
                           }
                           return;
                       }
@@ -214,7 +286,6 @@ export const SetupPage: React.FC<SetupPageProps> = ({
                       if (response.access_token) {
                           handleAuthResponse(response.access_token, authModeRef.current);
                       } else {
-                          // No token, reset UI
                           setIsWorking(false);
                           setMaintenanceMsg("");
                       }
@@ -236,10 +307,7 @@ export const SetupPage: React.FC<SetupPageProps> = ({
         else setTimeout(checkGsi, 500);
     };
     checkGsi();
-
-    return () => {
-        if (authTimeoutRef.current) window.clearTimeout(authTimeoutRef.current);
-    }
+    return () => { if (authTimeoutRef.current) window.clearTimeout(authTimeoutRef.current); }
   }, [settings.youtube?.customClientId, initGsi]);
 
   const handleAuthConnect = (mode: 'youtube' | 'google') => {
@@ -250,33 +318,33 @@ export const SetupPage: React.FC<SetupPageProps> = ({
     }
     
     authModeRef.current = mode;
-
     if (!tokenClientRef.current) initGsi(clientId);
     if (!tokenClientRef.current) {
-        showGlobalFeedback("System Error: Google Auth library failed to load. Check console for COOP/CORS issues.", true);
+        showGlobalFeedback("System Error: Google Auth library failed to load.", true);
         return;
     }
 
     setIsWorking(true);
-    setMaintenanceMsg("NEGOTIATING CLOUD HANDSHAKE...");
+    setMaintenanceProgress(10);
+    setMaintenanceMsg("NEGOTIATING HANDSHAKE...");
 
-    // Safety timeout: If user closes popup or it fails without triggering callback
     authTimeoutRef.current = window.setTimeout(() => {
         if (isWorking) {
             setIsWorking(false);
             setMaintenanceMsg("");
-            showGlobalFeedback("Authentication timed out or was interrupted.", true);
+            setMaintenanceProgress(0);
+            showGlobalFeedback("Authentication timed out.", true);
         }
-    }, 60000); // 1 minute timeout
+    }, 60000);
     
     try {
         tokenClientRef.current.requestAccessToken({ prompt: 'consent' });
     } catch (e) {
-        console.error("Token Request Exception:", e);
         if (authTimeoutRef.current) window.clearTimeout(authTimeoutRef.current);
         setIsWorking(false);
         setMaintenanceMsg("");
-        showGlobalFeedback("Popup blocked or initialization error.", true);
+        setMaintenanceProgress(0);
+        showGlobalFeedback("Popup blocked or init error.", true);
     }
   };
 
@@ -350,9 +418,7 @@ export const SetupPage: React.FC<SetupPageProps> = ({
         const url = isCloud ? settings.ollamaCloudBaseUrl : settings.ollamaBaseUrl;
         const result = await testOllamaConnection(url);
         setOllamaTestResult(result);
-        if (result.success) {
-            refreshOllamaModels();
-        }
+        if (result.success) refreshOllamaModels();
     } catch(e) {
         setOllamaTestResult({ success: false, message: "CRITICAL PING FAILURE" });
     }
@@ -361,19 +427,55 @@ export const SetupPage: React.FC<SetupPageProps> = ({
 
   const handleIntegrityCheck = async () => {
     setIsWorking(true);
-    setMaintenanceMsg("EXECUTING FULL SYSTEM SCAN...");
+    setMaintenanceProgress(0);
+    setMaintenanceMsg("INITIATING SCAN...");
+    
+    // Snappy delay for better UX
+    const artificialDelay = (ms: number) => new Promise(r => setTimeout(r, ms));
+
     try {
-        const onProgress = (msg: string) => setMaintenanceMsg(msg.toUpperCase());
-        await verifyAndRepairFiles(onProgress, globalSettings);
-        await rebuildGalleryDatabase(onProgress);
-        await rebuildPromptDatabase(onProgress);
-        await optimizeManifests(onProgress);
-        showGlobalFeedback("Integrity check complete. Folders reorganized.");
+        const onProgress = (msg: string, p?: number) => {
+            setMaintenanceMsg(msg.toUpperCase());
+            if (p !== undefined) setMaintenanceProgress(p * 100);
+        };
+        
+        await artificialDelay(400);
+
+        // Phase 1: File Check (0-25%)
+        onProgress("Verifying Registry Files...", 0);
+        await verifyAndRepairFiles((m, p) => onProgress(m, (p || 0) * 0.25), globalSettings);
+        await artificialDelay(400);
+        
+        // Phase 2: Gallery Sync (25-50%)
+        setMaintenanceProgress(25);
+        onProgress("Synchronizing Media Vault...", 0.25);
+        await rebuildGalleryDatabase(m => onProgress(m, 0.25 + 0.25));
+        await artificialDelay(400);
+        
+        // Phase 3: Prompt Sync (50-75%)
+        setMaintenanceProgress(50);
+        onProgress("Indexing Neural Library...", 0.5);
+        await rebuildPromptDatabase(m => onProgress(m, 0.5 + 0.25));
+        await artificialDelay(400);
+        
+        // Phase 4: Optimization (75-100%)
+        setMaintenanceProgress(75);
+        onProgress("Optimizing Performance...", 0.75);
+        await optimizeManifests(m => onProgress(m, 0.75 + 0.25));
+        await artificialDelay(400);
+        
+        setMaintenanceProgress(100);
+        
+        // Allow time for the slide-up exit animation in overlay
+        await artificialDelay(1000);
+        
+        showGlobalFeedback("Integrity check complete.");
     } catch (error: any) {
         showGlobalFeedback(`Maintenance Error: ${error.message}`, true);
     } finally {
         setIsWorking(false);
         setMaintenanceMsg("");
+        setMaintenanceProgress(0);
     }
   };
 
@@ -382,6 +484,7 @@ export const SetupPage: React.FC<SetupPageProps> = ({
     if (resetTarget === 'all') {
         setIsWorking(true);
         setMaintenanceMsg("WIPING LOCAL DATA...");
+        setMaintenanceProgress(50);
         try {
             await resetAllSettings();
             window.location.reload();
@@ -393,12 +496,9 @@ export const SetupPage: React.FC<SetupPageProps> = ({
     }
   };
 
-  const handleMainTabClick = (tab: ActiveSettingsTab) => {
-    setActiveSettingsTab(tab);
-  };
+  const handleMainTabClick = (tab: ActiveSettingsTab) => setActiveSettingsTab(tab);
 
   const currentOrigin = typeof window !== 'undefined' ? window.location.origin : 'unknown';
-
   const localModelOptions = useMemo(() => availableOllamaModels.map(m => ({ label: m, value: m })), [availableOllamaModels]);
   const cloudModelOptions = useMemo(() => availableOllamaCloudModels.map(m => ({ label: m, value: m })), [availableOllamaCloudModels]);
 
@@ -520,7 +620,7 @@ export const SetupPage: React.FC<SetupPageProps> = ({
                                             <p className="text-[10px] font-mono opacity-40 uppercase">{settings.youtube.subscriberCount} Subscribers</p>
                                         </div>
                                     </div>
-                                    <button onClick={() => handleSettingsChange('youtube', { ...settings.youtube, isConnected: false })} className="btn btn-xs btn-ghost text-error font-black uppercase tracking-widest">Unlink Channel</button>
+                                    <button onClick={(e) => handleSettingsChange('youtube', { ...settings.youtube, isConnected: false })} className="btn btn-xs btn-ghost text-error font-black uppercase tracking-widest">Unlink Channel</button>
                                 </div>
                             ) : (
                                 <button onClick={() => handleAuthConnect('youtube')} className="btn btn-sm btn-outline rounded-none font-black text-[10px] tracking-widest uppercase px-6">LINK CHANNEL</button>
@@ -621,7 +721,7 @@ export const SetupPage: React.FC<SetupPageProps> = ({
                                     <InformationCircleIcon className="w-3.5 h-3.5" /> CORS POLICY GUIDE
                                 </h5>
                                 <p className="text-[10px] font-bold uppercase tracking-tight text-base-content/60 leading-relaxed">
-                                    For local access, set <code className="text-primary px-1 bg-base-100">OLLAMA_ORIGINS</code> to <code className="text-primary">*</code> or <code className="text-primary">{currentOrigin}</code> in your system variables and restart Ollama.
+                                    For local access, set <code className="text-primary px-1 bg-base-100">OLLAMA_ORIGINS</code> to <code className="text-primary">*</code> or <code className="text-primary">{currentOrigin}</code> in your system variables.
                                 </p>
                             </div>
                         </div>
@@ -652,7 +752,7 @@ export const SetupPage: React.FC<SetupPageProps> = ({
                         updateFn={updatePromptCategory}
                         deleteFn={deletePromptCategory}
                         saveOrderFn={savePromptCategoriesOrderFS}
-                        deleteConfirmationMessage={(name) => `Permanently remove prompt folder "${name}"? Token contents will be unassigned but not deleted.`}
+                        deleteConfirmationMessage={(name) => `Permanently remove prompt folder "${name}"?`}
                     />
                 );
             case 'data':
@@ -679,10 +779,10 @@ export const SetupPage: React.FC<SetupPageProps> = ({
                         type="gallery"
                         loadFn={loadGalleryCategoriesFS}
                         addFn={addGalleryCategoryFS}
-                        updateFn={updateGalleryCategoryFS}
+                        updateFn={updateCategoryFS}
                         deleteFn={deleteGalleryCategoryFS}
                         saveOrderFn={saveGalleryCategoriesOrderFS}
-                        deleteConfirmationMessage={(name) => `Permanently remove gallery folder "${name}"? Artifacts will move to general archive.`}
+                        deleteConfirmationMessage={(name) => `Permanently remove gallery folder "${name}"?`}
                     />
                 );
             case 'data':
@@ -718,11 +818,7 @@ export const SetupPage: React.FC<SetupPageProps> = ({
     <>
     <section className="flex flex-row bg-base-100 h-full overflow-hidden relative">
         {isWorking && (
-            <div className="absolute inset-0 bg-base-100/80 backdrop-blur-sm z-50 flex flex-col items-center justify-center text-center animate-fade-in">
-                <LoadingSpinner size={64} />
-                <p className="mt-8 font-black text-xs uppercase tracking-[0.4em] text-primary animate-pulse">{maintenanceMsg || 'PROVISIONING...'}</p>
-                <button onClick={() => setIsWorking(false)} className="btn btn-xs btn-ghost mt-4 font-black uppercase text-[8px] opacity-40 hover:opacity-100">Cancel Wait</button>
-            </div>
+            <MaintenanceOverlay progress={maintenanceProgress} message={maintenanceMsg} />
         )}
 
         <aside className="w-80 flex-shrink-0 bg-base-100 border-r border-base-300 flex flex-col">
@@ -766,7 +862,7 @@ export const SetupPage: React.FC<SetupPageProps> = ({
         onClose={() => setIsResetModalOpen(false)} 
         onConfirm={handleConfirmReset} 
         title="VAULT RESET" 
-        message="Permanently erase all local artifacts and configuration? This action is absolute." 
+        message="Permanently erase all local artifacts and configuration?" 
       />
       <PromptTxtImportModal 
           isOpen={isTxtImportModalOpen} 

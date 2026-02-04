@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import type { CheatsheetItem } from '../types';
 import { PhotoIcon, ChevronRightIcon } from './icons';
@@ -7,21 +8,18 @@ import { ImageManagementModal } from './ImageManagementModal';
 interface ArtstyleCardProps {
   item: CheatsheetItem;
   onUpdateImages: (newImageUrls: string[]) => void;
-  onSelectItem: (item: CheatsheetItem) => void;
   onInject: (item: CheatsheetItem) => void;
 }
 
-const ArtstyleCard: React.FC<ArtstyleCardProps> = ({ item, onUpdateImages, onSelectItem, onInject }) => {
+const ArtstyleCard: React.FC<ArtstyleCardProps> = ({ item, onUpdateImages, onInject }) => {
     const [isManageModalOpen, setIsManageModalOpen] = useState(false);
 
   return (
     <>
-      <div 
-        onClick={() => onSelectItem(item)}
-        className="flex flex-col group bg-base-100 transition-all duration-300 hover:bg-base-200/30 border-b border-base-300 last:border-b-0 cursor-pointer h-[520px]"
-      >
-        <figure className="relative w-full h-[280px] bg-base-300 overflow-hidden border-b border-base-300 flex-shrink-0">
+      <div className="flex flex-col group bg-base-100 transition-all duration-500 hover:bg-base-200/50 h-full border-b border-base-300 last:border-b-0">
+        <figure className="relative w-full aspect-[4/3] bg-base-300 overflow-hidden border-b border-base-300 flex-shrink-0">
           <ImageSlider imageUrls={item.imageUrls} name={item.name} />
+          <div className="absolute inset-0 bg-primary/5 opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none"></div>
           <button
             onClick={(e) => { e.stopPropagation(); setIsManageModalOpen(true); }}
             className="absolute top-4 right-4 z-10 p-2 bg-black/60 hover:bg-primary rounded-none text-white backdrop-blur-sm transition-all opacity-0 group-hover:opacity-100 focus:opacity-100"
@@ -41,7 +39,7 @@ const ArtstyleCard: React.FC<ArtstyleCardProps> = ({ item, onUpdateImages, onSel
                     {item.name}
                 </h2>
                 {item.description && (
-                    <p className="text-sm font-medium leading-relaxed text-base-content/60 italic line-clamp-3">
+                    <p className="text-xs font-medium leading-relaxed text-base-content/40 italic line-clamp-2">
                         "{item.description}"
                     </p>
                 )}
@@ -49,9 +47,9 @@ const ArtstyleCard: React.FC<ArtstyleCardProps> = ({ item, onUpdateImages, onSel
             
             <button 
                 onClick={(e) => { e.stopPropagation(); onInject(item); }}
-                className="mt-4 pt-6 border-t border-base-300 flex justify-between items-center opacity-40 group-hover:opacity-100 transition-all w-full text-left"
+                className="mt-6 pt-6 border-t border-base-300 flex justify-between items-center opacity-40 group-hover:opacity-100 transition-all w-full text-left"
             >
-                <span className="text-[10px] font-black uppercase tracking-[0.2em] text-primary">Inject Visual Formula</span>
+                <span className="text-[10px] font-black uppercase tracking-[0.2em] text-primary">Inject Token</span>
                 <ChevronRightIcon className="w-4 h-4 text-primary" />
             </button>
         </div>

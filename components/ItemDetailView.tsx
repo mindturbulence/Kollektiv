@@ -1,7 +1,12 @@
+
 import React, { useState, useEffect, useMemo, useCallback, useRef, useLayoutEffect } from 'react';
 import { gsap } from 'gsap';
 import type { GalleryItem, GalleryCategory } from '../types';
-import { ChevronLeftIcon, EditIcon, DeleteIcon, CheckIcon, ThumbTackIcon, ChevronRightIcon, CloseIcon, PhotoIcon, UploadIcon, YouTubeIcon, RefreshIcon, PlusIcon } from './icons';
+import { 
+    ChevronLeftIcon, EditIcon, DeleteIcon, CheckIcon, ThumbTackIcon, 
+    ChevronRightIcon, CloseIcon, PhotoIcon, UploadIcon, YouTubeIcon, 
+    RefreshIcon, PlusIcon, ArrowsUpDownIcon, LinkIcon
+} from './icons';
 import FullscreenViewer from './FullscreenViewer';
 import { fileSystemManager, fileToBase64 } from '../utils/fileUtils';
 import { useSettings } from '../contexts/SettingsContext';
@@ -29,10 +34,6 @@ const InfoRow: React.FC<{ label: string, children: React.ReactNode }> = ({ label
     </div>
 );
 
-/**
- * TransitionalMedia Component
- * Manages the high-fidelity transition between images in the gallery sequence.
- */
 const TransitionalMedia: React.FC<{
     url: string | null;
     type: 'image' | 'video';
@@ -88,17 +89,14 @@ const TransitionalMedia: React.FC<{
         if (!containerRef.current || direction === 'none' || !prevUrl) return;
 
         const ctx = gsap.context(() => {
-            const tl = gsap.timeline({ defaults: { ease: "power4.inOut", duration: 0.8 } });
-            const moveX = direction === 'next' ? 100 : -100;
-
+            const tl = gsap.timeline({ defaults: { ease: "power4.out", duration: 0.8 } });
             tl.fromTo(outgoingLayerRef.current, 
-                { xPercent: 0, scale: 1, autoAlpha: 1 },
-                { xPercent: -moveX * 0.3, scale: 0.9, autoAlpha: 0, clearProps: "all" }, 0
+                { scale: 1, autoAlpha: 1, filter: 'blur(0px)' },
+                { scale: 0.98, autoAlpha: 0, filter: 'blur(10px)', duration: 0.6, clearProps: "all" }, 0
             );
-
             tl.fromTo(currentLayerRef.current, 
-                { xPercent: moveX, scale: 1.1, autoAlpha: 0 },
-                { xPercent: 0, scale: 1, autoAlpha: 1 }, 0
+                { scale: 1.1, autoAlpha: 0, filter: 'blur(20px)' },
+                { scale: 1, autoAlpha: 1, filter: 'blur(0px)' }, 0
             );
         }, containerRef);
 
@@ -132,9 +130,12 @@ const Thumbnail: React.FC<{
     type: 'image' | 'video', 
     onClick: () => void, 
     isActive: boolean;
+    isEditing: boolean;
     onRemove?: () => void;
-    isRemovable?: boolean;
-}> = ({ url, type, onClick, isActive, onRemove, isRemovable }) => {
+    onMove?: (dir: 'left' | 'right') => void;
+    canMoveLeft?: boolean;
+    canMoveRight?: boolean;
+}> = ({ url, type, onClick, isActive, isEditing, onRemove, onMove, canMoveLeft, canMoveRight }) => {
     const [blobUrl, setBlobUrl] = useState<string | null>(null);
 
     useEffect(() => {
@@ -153,106 +154,25 @@ const Thumbnail: React.FC<{
     }, [url]);
 
     return (
-        <div className="carousel-item-infinite flex-shrink-0 w-24 h-24 mx-3">
-            <button
-                onClick={onClick}
-                className={`relative w-full h-full overflow-hidden transition-all duration-500 ease-out focus:outline-none border-2 ${isActive ? 'border-primary shadow-2xl scale-110 z-20' : 'border-transparent opacity-30 hover:opacity-100 hover:scale-105'}`}
-            >
-                {blobUrl ? (
-                    type === 'video' ? <video src={blobUrl} className="w-full h-full object-cover bg-black" /> : <img src={blobUrl} alt="Thumb" className="w-full h-full object-cover bg-black" />
-                ) : <div className="w-full h-full bg-base-200 animate-pulse" />}
-                
-                {type === 'video' && !isActive && (
-                    <div className="absolute inset-0 flex items-center justify-center bg-black/20 pointer-events-none">
-                        <div className="p-1.5 bg-black/40 rounded-full border border-white/10">
-                            <PlusIcon className="w-3 h-3 text-white rotate-45" />
-                        </div>
-                    </div>
-                )}
+        <div className="flex-shrink-0 w-24 h-24 mx-2 relative group/thumb">
+            <button onClick={onClick} className={`relative w-full h-full overflow-hidden transition-all duration-500 ease-out focus:outline-none border-2 ${isActive ? 'border-primary shadow-2xl scale-105 z-20 opacity-100' : 'border-transparent opacity-20 hover:opacity-100 hover:scale-105'}`}>
+                {blobUrl ? (type === 'video' ? <video src={blobUrl} className="w-full h-full object-cover bg-black" /> : <img src={blobUrl} alt="Thumb" className="w-full h-full object-cover bg-black" />) : <div className="w-full h-full bg-base-200 animate-pulse" />}
             </button>
-            {isRemovable && (
-                <button 
-                    onClick={(e) => { e.stopPropagation(); onRemove?.(); }}
-                    className="absolute -top-1 -right-1 z-30 btn btn-xs btn-circle btn-error shadow-lg scale-75"
-                >
-                    <CloseIcon className="w-3 h-3" />
-                </button>
+            
+            {isEditing && (
+                <div className="absolute inset-0 z-30 flex flex-col justify-between p-1 pointer-events-none opacity-0 group-hover/thumb:opacity-100 transition-opacity bg-black/40">
+                    <div className="flex justify-end w-full pointer-events-auto">
+                        <button onClick={(e) => { e.stopPropagation(); onRemove?.(); }} className="btn btn-xs btn-square btn-error shadow-lg">✕</button>
+                    </div>
+                    <div className="flex justify-between w-full pointer-events-auto pb-1 px-1">
+                        <button disabled={!canMoveLeft} onClick={(e) => { e.stopPropagation(); onMove?.('left'); }} className="btn btn-xs btn-square bg-black/60 border-none hover:bg-primary disabled:opacity-0">←</button>
+                        <button disabled={!canMoveRight} onClick={(e) => { e.stopPropagation(); onMove?.('right'); }} className="btn btn-xs btn-square bg-black/60 border-none hover:bg-primary disabled:opacity-0">→</button>
+                    </div>
+                </div>
             )}
         </div>
     );
 };
-
-/**
- * GSAP Horizontal Loop Helper (Optimized for programatic indexing)
- */
-function horizontalLoop(items: HTMLElement[], config: any) {
-	items = gsap.utils.toArray(items);
-	config = config || {};
-	let tl = gsap.timeline({
-        repeat: config.repeat, 
-        paused: config.paused, 
-        defaults: {ease: "none"}, 
-        onReverseComplete: () => tl.totalTime(tl.rawTime() + tl.duration() * 100)
-    }),
-    length = items.length,
-    startX = items[0].offsetLeft,
-    times: number[] = [],
-    widths: number[] = [],
-    xPercents: number[] = [],
-    curIndex = 0,
-    pixelsPerSecond = (config.speed || 1) * 100,
-    snap = config.snap === false ? (v: any) => v : gsap.utils.snap(config.snap || 1),
-    totalWidth, curX, distanceToStart, distanceToLoop, item, i;
-	
-    gsap.set(items, { xPercent: 0 });
-
-	for (i = 0; i < length; i++) {
-		item = items[i];
-		widths[i] = parseFloat(gsap.getProperty(item, "width", "px") as string);
-		xPercents[i] = snap(parseFloat(gsap.getProperty(item, "x", "px") as string) / widths[i] * 100 + (gsap.getProperty(item, "xPercent") as number));
-	}
-	
-    gsap.set(items, {x: 0});
-	totalWidth = items[length-1].offsetLeft + xPercents[length-1] / 100 * widths[length-1] - startX + items[length-1].offsetWidth * (gsap.getProperty(items[length-1], "scaleX") as number) + (parseFloat(config.paddingRight) || 0);
-	
-    for (i = 0; i < length; i++) {
-		item = items[i];
-		curX = xPercents[i] / 100 * widths[i];
-		distanceToStart = item.offsetLeft + curX - startX;
-		distanceToLoop = distanceToStart + widths[i] * (gsap.getProperty(item, "scaleX") as number);
-		tl.to(item, {xPercent: snap((curX - distanceToLoop) / widths[i] * 100), duration: distanceToLoop / pixelsPerSecond}, 0)
-		  .fromTo(item, {xPercent: snap((curX - distanceToLoop + totalWidth) / widths[i] * 100)}, {xPercent: xPercents[i], duration: (curX - distanceToLoop + totalWidth) / pixelsPerSecond, immediateRender: false}, distanceToLoop / pixelsPerSecond)
-		  .add("label" + i, distanceToStart / pixelsPerSecond);
-		times[i] = distanceToStart / pixelsPerSecond;
-	}
-
-	function toIndex(index: number, vars: any) {
-		vars = vars || {};
-		(Math.abs(index - curIndex) > length / 2) && (index += index > curIndex ? -length : length);
-		let newIndex = gsap.utils.wrap(0, length, index),
-			time = times[newIndex];
-		if (time > tl.time() !== index > curIndex) {
-			vars.modifiers = {time: gsap.utils.wrap(0, tl.duration())};
-			time += tl.duration() * (index > curIndex ? 1 : -1);
-		}
-		curIndex = newIndex;
-		vars.overwrite = true;
-		return tl.tweenTo(time, vars);
-	}
-
-	(tl as any).next = (vars: any) => toIndex(curIndex + 1, vars);
-	(tl as any).prev = (vars: any) => toIndex(curIndex - 1, vars);
-	(tl as any).current = () => curIndex;
-	(tl as any).toIndex = (index: number, vars: any) => toIndex(index, vars);
-	(tl as any).times = times;
-
-	tl.progress(1, true).progress(0, true);
-	if (config.reversed) {
-	  (tl.vars as any).onReverseComplete();
-	  tl.reverse();
-	}
-	return tl;
-}
 
 const ItemDetailView: React.FC<ItemDetailViewProps> = ({ items, currentIndex, isPinned, categories, onClose, onUpdate, onDelete, onTogglePin, onNavigate, showGlobalFeedback }) => {
   const item = useMemo(() => items[currentIndex] || null, [items, currentIndex]);
@@ -272,9 +192,8 @@ const ItemDetailView: React.FC<ItemDetailViewProps> = ({ items, currentIndex, is
   const [editableUrls, setEditableUrls] = useState<string[]>([]);
   const [editableSources, setEditableSources] = useState<string[]>([]);
   
+  const carouselViewportRef = useRef<HTMLDivElement>(null);
   const carouselTrackRef = useRef<HTMLDivElement>(null);
-  const carouselContainerRef = useRef<HTMLDivElement>(null);
-  const loopRef = useRef<any>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const [isPublishModalOpen, setIsPublishModalOpen] = useState(false);
@@ -296,172 +215,118 @@ const ItemDetailView: React.FC<ItemDetailViewProps> = ({ items, currentIndex, is
     }
   }, [item]);
 
-  // --- Core Lifecycle: Setup Loop with Left Alignment ---
   useLayoutEffect(() => {
+    if (!carouselTrackRef.current || !carouselViewportRef.current) return;
+    const viewportWidth = carouselViewportRef.current.offsetWidth;
     const track = carouselTrackRef.current;
-    const container = carouselContainerRef.current;
-    if (!track || !container) return;
-    
-    const mediaItems = gsap.utils.toArray<HTMLElement>('.carousel-item-infinite');
-    if (mediaItems.length === 0) return;
-
-    const ctx = gsap.context(() => {
-        // 1. Initialize Loop
-        loopRef.current = horizontalLoop(mediaItems, {
-            speed: 1,
-            repeat: -1,
-            paused: true,
-            paddingRight: 24,
-        });
-
-        // 2. Set Left Anchor
-        // Instead of centering, we align the start of the track to a standard margin
-        // so the active item appears on the left side of the viewport.
-        gsap.set(track, { x: 32 });
-
-        // 3. Sync
-        loopRef.current.toIndex(activeImageIndex, { duration: 0 });
-    }, track);
-
-    return () => {
-        ctx.revert();
-        loopRef.current = null;
-    };
-  }, [item?.urls.length, editableUrls.length, isEditing]);
-
-  // --- Interaction Layer ---
-  useLayoutEffect(() => {
-    if (!loopRef.current) return;
-    
-    loopRef.current.toIndex(activeImageIndex, {
-        duration: 0.8,
-        ease: "power4.inOut"
-    });
-  }, [activeImageIndex]);
+    const itemWidth = 112; // 24px width + 16px margins
+    const viewportCenter = viewportWidth / 2;
+    const itemCenter = (activeImageIndex * itemWidth) + (itemWidth / 2);
+    const targetX = viewportCenter - itemCenter;
+    gsap.killTweensOf(track);
+    gsap.to(track, { x: targetX, duration: 0.7, ease: "expo.out" });
+  }, [activeImageIndex, editableUrls.length, item?.urls.length, isEditing]);
 
   const handleSave = () => {
     if (item) {
         onUpdate(item.id, { 
-            title, 
-            notes, 
-            prompt, 
+            title, notes, prompt, 
             categoryId: categoryId || undefined, 
-            isNsfw, 
-            tags,
-            urls: editableUrls,
-            sources: editableSources
+            isNsfw, tags, 
+            urls: editableUrls, 
+            sources: editableSources 
         });
         setIsEditing(false);
-        showGlobalFeedback("Artifact committed.");
+        showGlobalFeedback("Changes saved.");
     }
   };
 
   const handleAddSample = async (e: React.ChangeEvent<HTMLInputElement>) => {
-      const files = e.target.files;
-      if (!files) return;
-
-      const newUrls: string[] = [];
-      const newSources: string[] = [];
-
-      for (const file of Array.from(files)) {
-          const base64 = await fileToBase64(file);
-          newUrls.push(base64);
-          newSources.push(file.name);
+      const files = e.target.files; if (!files) return;
+      const newUrls: string[] = []; const newSources: string[] = [];
+      for (const file of Array.from(files)) { 
+          const base64 = await fileToBase64(file); 
+          newUrls.push(base64); 
+          newSources.push(file.name); 
       }
-
-      setEditableUrls(prev => [...prev, ...newUrls]);
+      const prevLen = editableUrls.length;
+      setEditableUrls(prev => [...prev, ...newUrls]); 
       setEditableSources(prev => [...prev, ...newSources]);
-      
-      if (newUrls.length > 0) {
-          setActiveImageIndex(editableUrls.length);
-      }
+      if (newUrls.length > 0) setActiveImageIndex(prevLen);
   };
 
   const handleRemoveSample = (idx: number) => {
-      if (editableUrls.length <= 1) {
-          showGlobalFeedback("Artifact requires at least one media sample.", true);
-          return;
-      }
-      setEditableUrls(prev => prev.filter((_, i) => i !== idx));
-      setEditableSources(prev => prev.filter((_, i) => i !== idx));
-      if (activeImageIndex >= idx && activeImageIndex > 0) {
-          setActiveImageIndex(prev => prev - 1);
-      }
+      if (editableUrls.length <= 1) { showGlobalFeedback("At least one image is required.", true); return; }
+      const newUrls = editableUrls.filter((_, i) => i !== idx);
+      const newSources = editableSources.filter((_, i) => i !== idx);
+      setEditableUrls(newUrls); 
+      setEditableSources(newSources);
+      if (activeImageIndex >= idx && activeImageIndex > 0) setActiveImageIndex(prev => prev - 1);
+  };
+
+  const handleMoveMedia = (idx: number, dir: 'left' | 'right') => {
+      const targetIdx = dir === 'left' ? idx - 1 : idx + 1;
+      if (targetIdx < 0 || targetIdx >= editableUrls.length) return;
+      
+      const newUrls = [...editableUrls];
+      const newSources = [...editableSources];
+      
+      [newUrls[idx], newUrls[targetIdx]] = [newUrls[targetIdx], newUrls[idx]];
+      [newSources[idx], newSources[targetIdx]] = [newSources[targetIdx], newUrls[idx]];
+      
+      setEditableUrls(newUrls);
+      setEditableSources(newSources);
+      setActiveImageIndex(targetIdx);
   };
 
   const handleInnerNavigate = (dir: 'next' | 'prev') => {
-      setNavDirection(dir);
-      const len = (isEditing ? editableUrls : item?.urls || []).length;
+      const list = (isEditing ? editableUrls : item?.urls || []); 
+      const len = list.length; 
+      if (len <= 1) return;
+      setNavDirection(dir); 
       const nextIdx = dir === 'next' ? (activeImageIndex + 1) % len : (activeImageIndex - 1 + len) % len;
       setActiveImageIndex(nextIdx);
   };
 
   const handleGlobalNavigate = (dir: 'next' | 'prev') => {
-      setNavDirection(dir);
+      setNavDirection(dir); 
       const nextIdx = dir === 'next' ? (currentIndex + 1) % items.length : (currentIndex - 1 + items.length) % items.length;
       onNavigate(nextIdx);
   };
 
-  const handleThumbSelect = (idx: number) => {
-      if (idx === activeImageIndex) return;
-      setNavDirection(idx > activeImageIndex ? 'next' : 'prev');
-      setActiveImageIndex(idx);
-  };
-
   const handlePublishClick = async () => {
       if (!item || item.type !== 'video') return;
-      const blob = await fileSystemManager.getFileAsBlob(item.urls[activeImageIndex]);
-      if (blob) {
-          setVideoBlob(blob);
-          setIsPublishModalOpen(true);
+      try {
+          const blob = await fileSystemManager.getFileAsBlob(item.urls[activeImageIndex]);
+          if (blob) {
+              setVideoBlob(blob);
+              setIsPublishModalOpen(true);
+          }
+      } catch (e) {
+          showGlobalFeedback("Failed to load binary data for publishing.", true);
       }
   };
 
   if (!item) return null;
 
-  const categoryOptions = [
-      { label: 'GENERAL ARCHIVE', value: '' },
-      ...categories.map(c => ({ label: c.name.toUpperCase(), value: c.id }))
-  ];
-
+  const categoryOptions = [ { label: 'ALL FOLDERS', value: '' }, ...categories.map(c => ({ label: c.name.toUpperCase(), value: c.id })) ];
   const currentMediaUrls = isEditing ? editableUrls : item.urls;
+  const isPublishable = item.type === 'video' && (settings.youtube?.isConnected || settings.tiktok?.isConnected);
 
   return (
-    <div className="absolute inset-0 z-40 bg-black/60 backdrop-blur-sm animate-fade-in flex items-center justify-center p-2 lg:p-4 overflow-hidden" onClick={onClose}>
-        <div className="w-full h-full bg-base-100 rounded-none border border-base-300 shadow-2xl w-full h-full flex flex-col lg:flex-row overflow-hidden relative" onClick={e => e.stopPropagation()}>
-            
-            {/* Viewport & Deck Side */}
+    <div className="absolute inset-0 z-40 bg-black/95 backdrop-blur-sm animate-fade-in flex items-center justify-center p-2 lg:p-4 overflow-hidden" onClick={onClose}>
+        <div className="w-full h-full bg-base-100 rounded-none border border-base-300 shadow-2xl flex flex-col lg:flex-row overflow-hidden relative" onClick={e => e.stopPropagation()}>
             <main className="flex-1 bg-black flex flex-col overflow-hidden relative group">
-                
-                {/* Media Viewport */}
                 <div className="flex-grow relative flex items-center justify-center overflow-hidden">
-                    <TransitionalMedia 
-                        url={isEditing ? editableUrls[activeImageIndex] : item.urls[activeImageIndex]} 
-                        type={item.type} 
-                        title={item.title} 
-                        onClick={() => setIsViewerOpen(true)}
-                        direction={navDirection}
-                    />
-
-                    {/* Navigation Arrows */}
+                    <TransitionalMedia url={isEditing ? editableUrls[activeImageIndex] : item.urls[activeImageIndex]} type={item.type} title={item.title} onClick={() => setIsViewerOpen(true)} direction={navDirection} />
+                    
                     {currentMediaUrls.length > 1 && (
                         <>
-                            <button 
-                                onClick={(e) => { e.stopPropagation(); handleInnerNavigate('prev'); }}
-                                className="absolute left-6 top-1/2 -translate-y-1/2 p-6 bg-black/40 hover:bg-primary text-white rounded-none transition-all duration-500 opacity-0 -translate-x-12 group-hover:opacity-100 group-hover:translate-x-0 z-20"
-                            >
-                                <ChevronLeftIcon className="w-8 h-8" />
-                            </button>
-                            <button 
-                                onClick={(e) => { e.stopPropagation(); handleInnerNavigate('next'); }}
-                                className="absolute right-6 top-1/2 -translate-y-1/2 p-6 bg-black/40 hover:bg-primary text-white rounded-none transition-all duration-500 opacity-0 translate-x-12 group-hover:opacity-100 group-hover:translate-x-0 z-20"
-                            >
-                                <ChevronRightIcon className="w-8 h-8" />
-                            </button>
+                            <button onClick={(e) => { e.stopPropagation(); handleInnerNavigate('prev'); }} className="absolute left-6 top-1/2 -translate-y-1/2 p-6 bg-black/40 hover:bg-primary text-white rounded-none transition-all duration-500 opacity-0 -translate-x-12 group-hover:opacity-100 group-hover:translate-x-0 z-20"><ChevronLeftIcon className="w-8 h-8" /></button>
+                            <button onClick={(e) => { e.stopPropagation(); handleInnerNavigate('next'); }} className="absolute right-6 top-1/2 -translate-y-1/2 p-6 bg-black/40 hover:bg-primary text-white rounded-none transition-all duration-500 opacity-0 translate-x-12 group-hover:opacity-100 group-hover:translate-x-0 z-20"><ChevronRightIcon className="w-8 h-8" /></button>
                         </>
                     )}
-
-                    {/* Top Stats Overlay */}
+                    
                     <div className="absolute top-6 left-6 right-6 flex justify-between items-center pointer-events-none z-30">
                         <div className="pointer-events-auto flex items-center gap-4">
                             <div className="join bg-base-200/40 backdrop-blur-md border border-white/5 rounded-none">
@@ -473,61 +338,59 @@ const ItemDetailView: React.FC<ItemDetailViewProps> = ({ items, currentIndex, is
                     </div>
                 </div>
 
-                {/* Left-Aligned Deck */}
-                {currentMediaUrls.length > 1 && (
-                    <div className="h-40 flex-shrink-0 bg-base-200/30 border-t border-white/5 relative flex items-center overflow-hidden group/deck">
-                        {/* Thumbnail Navigation Arrows */}
-                        <button 
-                            onClick={(e) => { e.stopPropagation(); handleInnerNavigate('prev'); }}
-                            className="absolute left-4 z-40 btn btn-circle btn-sm btn-ghost bg-black/60 text-white opacity-0 group-hover/deck:opacity-100 transition-opacity border border-white/10"
-                        >
-                            <ChevronLeftIcon className="w-4 h-4" />
-                        </button>
-
-                        <div 
-                            ref={carouselContainerRef}
-                            className="w-full h-full relative overflow-hidden"
-                        >
-                            <div 
-                                ref={carouselTrackRef}
-                                className="flex items-center h-full relative"
-                            >
-                                {currentMediaUrls.map((url, idx) => (
-                                    <Thumbnail 
-                                        key={idx}
-                                        url={url}
-                                        type={item.type}
-                                        isActive={idx === activeImageIndex}
-                                        onClick={() => handleThumbSelect(idx)}
-                                        isRemovable={isEditing}
-                                        onRemove={() => handleRemoveSample(idx)}
-                                    />
-                                ))}
-                            </div>
+                <div className="h-44 flex-shrink-0 bg-base-200/10 border-t border-white/5 relative flex flex-col items-center justify-center group/deck">
+                    <button onClick={(e) => { e.stopPropagation(); handleInnerNavigate('prev'); }} className="absolute left-10 z-50 btn btn-circle btn-sm btn-ghost bg-black/80 text-white opacity-0 group-hover/deck:opacity-100 border border-white/10 hover:bg-primary top-1/2 -translate-y-1/2 active:scale-100"><ChevronLeftIcon className="w-5 h-5" /></button>
+                    
+                    <div ref={carouselViewportRef} className="w-[calc(100%-12rem)] h-32 relative overflow-hidden flex items-center z-10">
+                        <div ref={carouselTrackRef} className="flex items-center absolute h-full will-change-transform">
+                            {currentMediaUrls.map((url, idx) => (
+                                <Thumbnail 
+                                    key={`strip-${idx}-${url.slice(-8)}`} 
+                                    url={url} 
+                                    type={item.type} 
+                                    isActive={idx === activeImageIndex} 
+                                    isEditing={isEditing}
+                                    onRemove={() => handleRemoveSample(idx)}
+                                    onMove={(dir) => handleMoveMedia(idx, dir)}
+                                    canMoveLeft={idx > 0}
+                                    canMoveRight={idx < currentMediaUrls.length - 1}
+                                    onClick={() => { if (idx === activeImageIndex) return; setNavDirection(idx > activeImageIndex ? 'next' : 'prev'); setActiveImageIndex(idx); }} 
+                                />
+                            ))}
+                            {isEditing && (
+                                <button 
+                                    onClick={() => fileInputRef.current?.click()}
+                                    className="flex-shrink-0 w-24 h-24 mx-2 border-2 border-dashed border-primary/40 flex flex-col items-center justify-center gap-2 hover:bg-primary/10 transition-colors group/add relative z-20"
+                                >
+                                    <PlusIcon className="w-6 h-6 text-primary group-hover/add:scale-110 transition-transform" />
+                                    <span className="text-[8px] font-black uppercase text-primary/60">Add Media</span>
+                                </button>
+                            )}
                         </div>
-
-                        <button 
-                            onClick={(e) => { e.stopPropagation(); handleInnerNavigate('next'); }}
-                            className="absolute right-4 z-40 btn btn-circle btn-sm btn-ghost bg-black/60 text-white opacity-0 group-hover/deck:opacity-100 transition-opacity border border-white/10"
-                        >
-                            <ChevronRightIcon className="w-4 h-4" />
-                        </button>
-                        
-                        {/* Gradient Viewport Masks (Adjusted for Left Alignment) */}
-                        <div className="absolute inset-y-0 left-0 w-24 bg-gradient-to-r from-black/60 to-transparent pointer-events-none z-30"></div>
-                        <div className="absolute inset-y-0 right-0 w-48 bg-gradient-to-l from-black/90 via-black/40 to-transparent pointer-events-none z-30"></div>
                     </div>
-                )}
+
+                    <div className="absolute inset-0 pointer-events-none z-30">
+                        <div className="absolute inset-y-0 left-0 w-32 bg-gradient-to-r from-black via-black/80 to-transparent"></div>
+                        <div className="absolute inset-y-0 right-0 w-32 bg-gradient-to-l from-black via-black/80 to-transparent"></div>
+                    </div>
+
+                    <div className="mt-1 z-40">
+                        <span className="text-[9px] font-mono font-black text-primary bg-black/90 px-4 py-1.5 border border-white/5 shadow-2xl uppercase tracking-[0.6em] inline-block">
+                            [ {String(activeImageIndex + 1).padStart(2, '0')} / {String(currentMediaUrls.length).padStart(2, '0')} ]
+                        </span>
+                    </div>
+
+                    <button onClick={(e) => { e.stopPropagation(); handleInnerNavigate('next'); }} className="absolute right-10 z-50 btn btn-circle btn-sm btn-ghost bg-black/80 text-white opacity-0 group-hover/deck:opacity-100 border border-white/10 hover:bg-primary top-1/2 -translate-y-1/2 active:scale-100"><ChevronRightIcon className="w-5 h-5" /></button>
+                </div>
             </main>
 
-            {/* Information Sidebar */}
             <aside className="w-full lg:w-96 bg-base-100 border-l border-base-300 flex flex-col overflow-hidden">
                 <header className="flex-shrink-0 h-16 px-6 border-b border-base-300 flex items-center justify-between bg-base-200/20">
                     <div className="flex items-center gap-3">
                         <button onClick={() => onTogglePin(item.id)} className={`btn btn-sm btn-ghost btn-square rounded-none ${isPinned ? 'text-primary' : 'opacity-20'}`}>
                             <ThumbTackIcon className="w-5 h-5" />
                         </button>
-                        <span className="text-[10px] font-black uppercase tracking-[0.2em] text-base-content/20">Registry Data</span>
+                        <span className="text-[10px] font-black uppercase tracking-[0.2em] text-base-content/20">Item Info</span>
                     </div>
                     <button onClick={onClose} className="btn btn-sm btn-ghost btn-square rounded-none opacity-40 hover:opacity-100">
                         <CloseIcon className="w-6 h-6" />
@@ -537,121 +400,92 @@ const ItemDetailView: React.FC<ItemDetailViewProps> = ({ items, currentIndex, is
                 <div className="flex-grow p-6 space-y-8 overflow-y-auto custom-scrollbar">
                     {isEditing ? (
                         <div className="space-y-6 animate-fade-in">
-                            <InfoRow label="Identity Title">
+                            <InfoRow label="Title">
                                 <input value={title} onChange={e => setTitle(e.target.value)} className="input input-bordered rounded-none input-sm w-full font-bold uppercase tracking-tight" />
                             </InfoRow>
-                            <InfoRow label="Sector Mapping">
+                            <InfoRow label="Folder">
                                 <AutocompleteSelect value={categoryId} onChange={setCategoryId} options={categoryOptions} />
                             </InfoRow>
-                            <InfoRow label="Media Archive (Samples)">
-                                <div className="flex flex-wrap gap-2 p-3 bg-base-200/50 border border-base-300 rounded-none">
-                                    {editableUrls.map((url, idx) => (
-                                        <div key={idx} className="relative group/thumb w-12 h-12 bg-black border border-base-300">
-                                            <img src={url.startsWith('data:') ? url : ''} alt="" className="w-full h-full object-cover opacity-60" />
-                                            {!url.startsWith('data:') && <div className="absolute inset-0 flex items-center justify-center"><PhotoIcon className="w-4 h-4 opacity-20"/></div>}
-                                            <button 
-                                                onClick={() => handleRemoveSample(idx)}
-                                                className="absolute -top-1 -right-1 btn btn-xs btn-circle btn-error scale-50 opacity-0 group-hover/thumb:opacity-100"
-                                            >✕</button>
-                                        </div>
-                                    ))}
-                                    <button 
-                                        onClick={() => fileInputRef.current?.click()}
-                                        className="w-12 h-12 flex items-center justify-center border-2 border-dashed border-base-300 hover:border-primary hover:text-primary transition-all opacity-40 hover:opacity-100"
-                                    >
-                                        <PlusIcon className="w-5 h-5" />
-                                    </button>
-                                    <input type="file" ref={fileInputRef} className="hidden" multiple accept="image/*,video/*" onChange={handleAddSample} />
-                                </div>
-                            </InfoRow>
-                            <InfoRow label="Archive Notes">
+                            <InfoRow label="Notes">
                                 <textarea value={notes} onChange={e => setNotes(e.target.value)} className="textarea textarea-bordered rounded-none w-full min-h-[120px] text-sm leading-relaxed" />
                             </InfoRow>
-                            <div className="p-4 bg-base-200/50 border border-base-300 space-y-4">
-                                <label className="flex items-center gap-3 cursor-pointer">
-                                    <input type="checkbox" checked={isNsfw} onChange={e => setIsNsfw(e.target.checked)} className="checkbox checkbox-primary checkbox-sm rounded-none" />
-                                    <span className="text-[10px] font-black uppercase text-base-content/40">Sensitive Fragment</span>
-                                </label>
-                            </div>
                         </div>
                     ) : (
                         <div className="space-y-8 animate-fade-in">
-                            <InfoRow label="Fragment Identity">
+                            <InfoRow label="Title">
                                 <h2 className="text-2xl font-black tracking-tighter uppercase leading-tight">{title}</h2>
                             </InfoRow>
-
-                            <InfoRow label="Neural Foundation">
-                                <div className="p-4 bg-base-200/50 border border-base-300 italic text-sm leading-relaxed text-base-content/70">
-                                    "{item.prompt || 'No blueprint archived.'}"
+                            <InfoRow label="Prompt">
+                                <div className="p-4 bg-base-200/50 border border-base-300 italic text-sm leading-relaxed text-base-content/70 group/prompt">
+                                    "{item.prompt || 'None.'}"
+                                    <button 
+                                        onClick={() => navigator.clipboard.writeText(item.prompt || '')}
+                                        className="mt-4 btn btn-xs btn-ghost w-full rounded-none font-black text-[8px] tracking-widest opacity-0 group-hover/prompt:opacity-40 transition-opacity"
+                                    >COPY TOKEN</button>
                                 </div>
                             </InfoRow>
-
                             {notes && (
-                                <InfoRow label="Registry Documentation">
+                                <InfoRow label="Vault Documentation">
                                     <p className="text-sm text-base-content/60 leading-relaxed font-medium">"{notes}"</p>
                                 </InfoRow>
                             )}
-
-                            <div className="pt-4 border-t border-base-300 flex flex-col gap-4">
-                                 <div className="flex items-center justify-between">
-                                    <span className="text-[8px] font-black uppercase text-base-content/20">Artifact Hash</span>
-                                    <span className="text-[8px] font-mono opacity-20">{item.id}</span>
-                                 </div>
-                                 <div className="flex items-center justify-between">
-                                    <span className="text-[8px] font-black uppercase text-base-content/20">Creation Stamp</span>
-                                    <span className="text-[8px] font-mono opacity-20">{new Date(item.createdAt).toLocaleString()}</span>
-                                 </div>
-                            </div>
+                            {item.youtubeUrl && (
+                                <InfoRow label="External Uplink">
+                                    <a href={item.youtubeUrl} target="_blank" rel="noopener noreferrer" className="flex items-center gap-3 p-3 bg-error/5 border border-error/20 text-error hover:bg-error/10 transition-colors">
+                                        <YouTubeIcon className="w-5 h-5" />
+                                        <span className="text-[10px] font-black uppercase tracking-widest">View on YouTube</span>
+                                    </a>
+                                </InfoRow>
+                            )}
                         </div>
                     )}
                 </div>
 
-                <footer className="flex-shrink-0 p-4 border-t border-base-300 bg-base-200/20">
-                    {isEditing ? (
-                        <div className="grid grid-cols-2 gap-2">
-                            <button onClick={() => setIsEditing(false)} className="btn btn-sm btn-ghost rounded-none font-black text-[10px] tracking-widest uppercase">Abort</button>
-                            <button onClick={handleSave} className="btn btn-sm btn-primary rounded-none font-black text-[10px] tracking-widest uppercase shadow-lg">Commit</button>
-                        </div>
-                    ) : (
-                        <div className="flex flex-col gap-2">
-                            <div className="grid grid-cols-2 gap-2">
-                                <button onClick={() => setIsEditing(true)} className="btn btn-sm btn-ghost border border-base-300 rounded-none font-black text-[10px] tracking-widest uppercase">Modify</button>
-                                <button onClick={() => onDelete(item)} className="btn btn-sm btn-ghost border border-base-300 text-error/60 rounded-none font-black text-[10px] tracking-widest uppercase">Delete</button>
-                            </div>
-                            {item.type === 'video' && settings.youtube?.isConnected && (
-                                <button onClick={handlePublishClick} className="btn btn-sm btn-error rounded-none font-black text-[9px] tracking-[0.2em] uppercase">
-                                    <YouTubeIcon className="w-4 h-4 mr-2" /> PUBLISH TO YOUTUBE
-                                </button>
-                            )}
-                        </div>
+                <footer className="border-t border-base-300 flex flex-col bg-base-200/5 p-0 overflow-hidden flex-shrink-0">
+                    {isPublishable && !isEditing && (
+                        <button onClick={handlePublishClick} className="btn btn-primary h-14 w-full rounded-none font-black text-[9px] tracking-[0.2em] uppercase shadow-none border-none border-b border-white/5">
+                            <YouTubeIcon className="w-5 h-5 mr-3" /> PUBLISH TO CLOUD
+                        </button>
                     )}
+                    <div className="flex w-full h-14">
+                        <button onClick={() => setIsEditing(!isEditing)} className="btn btn-ghost flex-1 h-full rounded-none font-black text-[9px] tracking-widest uppercase border-r border-base-300 opacity-40 hover:opacity-100">
+                            {isEditing ? 'CANCEL' : 'EDIT'}
+                        </button>
+                        {isEditing ? (
+                            <button onClick={handleSave} className="btn btn-primary flex-1 h-full rounded-none font-black text-[9px] tracking-widest uppercase shadow-lg">SAVE</button>
+                        ) : (
+                            <button onClick={() => onDelete(item)} className="btn btn-ghost flex-1 h-full rounded-none font-black text-[9px] tracking-widest uppercase text-error/40 hover:text-error">DELETE</button>
+                        )}
+                    </div>
                 </footer>
             </aside>
+
+            <input type="file" ref={fileInputRef} onChange={handleAddSample} multiple className="hidden" />
+
+            {isViewerOpen && (
+                <FullscreenViewer 
+                    items={items} 
+                    currentIndex={currentIndex} 
+                    initialImageIndex={activeImageIndex} 
+                    onClose={() => setIsViewerOpen(false)} 
+                    onNavigate={(idx) => onNavigate(idx)} 
+                />
+            )}
+
+            {isPublishModalOpen && videoBlob && (
+                <YouTubePublishModal 
+                    isOpen={isPublishModalOpen}
+                    onClose={() => setIsPublishModalOpen(false)}
+                    videoBlob={videoBlob}
+                    initialTitle={title}
+                    initialDescription={`Artifact: ${title}\n\nPrompt: ${item.prompt || ''}`}
+                    onSuccess={(url) => {
+                        onUpdate(item.id, { youtubeUrl: url, publishedAt: Date.now() });
+                        showGlobalFeedback("Published successfully.");
+                    }}
+                />
+            )}
         </div>
-
-        {isViewerOpen && (
-            <FullscreenViewer 
-                items={items} 
-                currentIndex={currentIndex} 
-                initialImageIndex={activeImageIndex}
-                onClose={() => setIsViewerOpen(false)}
-                onNavigate={(idx) => onNavigate(idx)}
-            />
-        )}
-
-        {isPublishModalOpen && videoBlob && (
-            <YouTubePublishModal 
-                isOpen={isPublishModalOpen}
-                onClose={() => setIsPublishModalOpen(false)}
-                videoBlob={videoBlob}
-                initialTitle={title}
-                initialDescription={notes || prompt || ""}
-                onSuccess={(url) => {
-                    onUpdate(item.id, { youtubeUrl: url, publishedAt: Date.now() });
-                    showGlobalFeedback("Archival successful.");
-                }}
-            />
-        )}
     </div>
   );
 };

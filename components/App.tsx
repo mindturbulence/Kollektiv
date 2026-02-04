@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect, useCallback, useRef, useLayoutEffect } from 'react';
 import { gsap } from 'gsap';
 import { useSettings } from '../contexts/SettingsContext';
@@ -35,68 +36,68 @@ import { useAuth } from '../contexts/AuthContext';
 type PromptsPageState = { prompt?: string, artStyle?: string, artist?: string, view?: 'enhancer' | 'composer' | 'create', id?: string } | null;
 
 /**
- * Character Shuffle Hook for technical portfolio aesthetic.
- */
-const useCharacterShuffle = (text: string, active: boolean) => {
-    const [display, setDisplay] = useState('');
-    const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789!@#$%^&*()_+';
-    
-    useEffect(() => {
-        if (!active) return;
-        let iteration = 0;
-        const interval = setInterval(() => {
-            setDisplay(text.split('').map((char, index) => {
-                if (index < iteration) return text[index];
-                return chars[Math.floor(Math.random() * chars.length)];
-            }).join(''));
-            
-            if (iteration >= text.length) clearInterval(interval);
-            iteration += 1 / 3;
-        }, 30);
-        return () => clearInterval(interval);
-    }, [text, active]);
-    
-    return display;
-};
-
-/**
  * Technical Portfolio Initializer.
+ * Theme-aware staggered typographic mask.
  */
 const InitialLoader: React.FC<{ status: string; progress: number | null }> = ({ status, progress }) => {
-    const displayStatus = useCharacterShuffle(status, true);
+    const textWrapperRef = useRef<HTMLDivElement>(null);
     const percentage = Math.round((progress || 0) * 100);
-    const displayPercent = String(percentage).padStart(3, '0');
+
+    // Initial Entrance
+    useLayoutEffect(() => {
+        if (!textWrapperRef.current) return;
+        gsap.fromTo(textWrapperRef.current, 
+            { yPercent: 100, autoAlpha: 0 }, 
+            { yPercent: 0, autoAlpha: 1, duration: 1.2, ease: "expo.out" }
+        );
+    }, []);
+
+    // Exit Sequence: Slide up and fade when finished
+    useEffect(() => {
+        if (percentage >= 100 && textWrapperRef.current) {
+            gsap.to(textWrapperRef.current, {
+                y: -80,
+                autoAlpha: 0,
+                duration: 0.8,
+                ease: "expo.inOut",
+                delay: 0.2
+            });
+        }
+    }, [percentage]);
 
     return (
-        <div id="initial-loader" className="fixed inset-0 z-[300] flex flex-col items-center justify-center bg-base-100 text-base-content overflow-hidden select-none">
-            <div className="absolute inset-0 bg-grid-texture opacity-[0.05] pointer-events-none"></div>
+        <div id="initial-loader" className="fixed inset-0 z-[500] flex flex-col items-center justify-center bg-base-100 text-base-content overflow-hidden select-none">
+            <div className="absolute inset-0 bg-grid-texture opacity-[0.03] pointer-events-none"></div>
             
-            <div className="relative z-10 flex flex-col items-center text-center">
-                <div className="mb-16 flex flex-col items-center">
-                    <span className="text-[120px] md:text-[200px] font-black tracking-tighter leading-none font-mono tabular-nums text-primary/90">
-                        {displayPercent}<span className="opacity-10">%</span>
-                    </span>
-                    <div className="w-80 h-px bg-base-content/5 relative overflow-hidden mt-6">
-                         <div 
-                            className="absolute inset-y-0 left-0 bg-primary transition-all duration-700 ease-out shadow-[0_0_10px_oklch(var(--p))]" 
+            <div className="relative z-10 flex flex-col items-center">
+                <div className="overflow-hidden mb-4 px-2">
+                    <div ref={textWrapperRef} className="grid grid-cols-1 grid-rows-1 text-2xl md:text-3xl font-black tracking-tighter uppercase select-none italic">
+                        {/* Ghost Layer: Picks up text-base-content at low opacity */}
+                        <span className="text-base-content/10 block leading-none py-1 row-start-1 col-start-1">Kollektiv.</span>
+                        
+                        {/* Fill Layer: Picks up text-base-content at full opacity */}
+                        <div 
+                            className="row-start-1 col-start-1 h-full overflow-hidden transition-all duration-700 ease-out border-r border-base-content/20"
                             style={{ width: `${percentage}%` }}
-                         />
+                        >
+                            <span className="text-base-content block whitespace-nowrap leading-none py-1 drop-shadow-[0_0_15px_rgba(var(--bc),0.1)]">
+                                Kollektiv.
+                            </span>
+                        </div>
                     </div>
                 </div>
 
-                <div className="space-y-4">
-                    <div className="flex items-center justify-center gap-6 mb-4">
-                        <div className="w-1.5 h-1.5 bg-primary animate-ping"></div>
-                        <p className="text-[11px] font-black uppercase tracking-[0.8em] text-base-content/50">
-                            {displayStatus}
+                <div className={`flex flex-col items-center gap-3 transition-all duration-500 ${percentage >= 100 ? 'opacity-0 translate-y-4' : 'opacity-100 translate-y-0'}`}>
+                    <div className="flex items-center gap-3">
+                        <p className="text-[8px] font-mono font-bold uppercase tracking-[0.5em] text-center text-base-content/40">
+                            {status.toUpperCase()}
                         </p>
                     </div>
                 </div>
             </div>
 
-            <div className="absolute bottom-16 left-16 hidden md:flex flex-col gap-2">
-                <span className="text-[9px] font-black uppercase tracking-[0.4em] text-base-content/10">Kernel Access</span>
-                <span className="text-[11px] font-mono font-bold text-base-content/20">VAULT_STABILITY_OK</span>
+            <div className="absolute bottom-12 left-12 hidden md:block">
+                <span className="text-[8px] font-mono font-bold text-base-content/10 uppercase tracking-widest">Protocol: Master_Load_Sequence</span>
             </div>
         </div>
     );
@@ -106,9 +107,12 @@ const App: React.FC = () => {
     const [isInitialized, setIsInitialized] = useState(false);
     const [isLoading, setIsLoading] = useState(true);
     const [showWelcome, setShowWelcome] = useState(false);
-    const [initStatus, setInitStatus] = useState('Initializing Registry');
+    const [initStatus, setInitStatus] = useState('Starting App');
     const [initProgress, setInitProgress] = useState<number | null>(0);
-    const isFirstLoad = useRef(true);
+    
+    const hasInitializedRef = useRef(false);
+    const isTransitioningRef = useRef(false);
+    const isFirstRevealRef = useRef(true);
 
     const { settings } = useSettings();
     const auth = useAuth();
@@ -127,23 +131,20 @@ const App: React.FC = () => {
 
     const [clippedIdeas, setClippedIdeas] = useLocalStorage<Idea[]>('clippedIdeas', []);
 
-    // --- Transition Refs ---
-    const pageContentRef = useRef<HTMLDivElement>(null);
-    
-    // Phase 2: Navigation shutters (Constrained to <main>)
-    const navShutterTopRef = useRef<HTMLDivElement>(null);
-    const navShutterBottomRef = useRef<HTMLDivElement>(null);
-    
-    // Phase 1: Global shutters (Full screen)
-    const globalShutterTopRef = useRef<HTMLDivElement>(null);
-    const globalShutterBottomRef = useRef<HTMLDivElement>(null);
-    
-    const activeTimeline = useRef<gsap.core.Timeline | null>(null);
+    const mainGridRef = useRef<HTMLDivElement>(null);
+    const globalGridRef = useRef<HTMLDivElement>(null);
+    const contentRef = useRef<HTMLDivElement>(null);
+
+    // Grid config
+    const gridRows = 10;
+    const gridCols = 12;
 
     const initializeApp = useCallback(async () => {
+        if (hasInitializedRef.current && isInitialized) return;
+        
         setIsLoading(true);
         setShowWelcome(false);
-        setInitStatus('Negotiating Link');
+        setInitStatus('Connecting...');
         setInitProgress(0.1);
 
         const onProgress = (message: string, progress?: number) => {
@@ -152,7 +153,7 @@ const App: React.FC = () => {
         };
         
         try {
-            await new Promise(r => setTimeout(r, 400)); 
+            await new Promise(r => setTimeout(r, 1000)); 
             const hasHandleAndPermission = await fileSystemManager.initialize(settings, auth);
             
             if (!hasHandleAndPermission) {
@@ -161,111 +162,134 @@ const App: React.FC = () => {
                 return;
             }
 
-            onProgress('Verifying Folders...', 0.35);
+            onProgress('Loading Folders...', 0.35);
             await verifyAndRepairFiles(onProgress, settings);
             
-            onProgress('Stabilizing Neural Node...', 0.8);
-            await new Promise(resolve => setTimeout(resolve, 500));
+            onProgress('Syncing Styles...', 0.7);
+            if ('fonts' in document) {
+                await (document as any).fonts.ready;
+            }
 
-            onProgress('Registry Healthy', 1.0);
-            await new Promise(r => setTimeout(r, 300));
+            onProgress('Finalizing System...', 0.9);
+            onProgress('System Ready', 1.0);
+            
+            // Wait for the loader's exit animation (slide up text)
+            await new Promise(r => setTimeout(r, 1100));
 
+            hasInitializedRef.current = true;
             setIsInitialized(true);
             setIsLoading(false);
         } catch (err) {
-            console.error("Initialization Critical Failure:", err);
-            setGlobalFeedback({ message: "System failed to initialize.", type: 'error' });
+            console.error("Initialization Failure:", err);
+            setGlobalFeedback({ message: "Failed to initialize system.", type: 'error' });
             setIsLoading(false);
         }
-    }, [settings, auth]);
+    }, [settings, auth, isInitialized]);
 
     useEffect(() => {
-        initializeApp();
+        if (!hasInitializedRef.current) {
+            initializeApp();
+        }
     }, [initializeApp]);
 
-    /**
-     * Specialized Shutter Engine.
-     * Manages global reveal (init) and local reveal (navigation).
-     */
+    // --- INITIAL GLOBAL REVEAL ---
     useLayoutEffect(() => {
-        if (!isInitialized || !pageContentRef.current) return;
+        if (!isInitialized || !globalGridRef.current || !isFirstRevealRef.current) return;
+        isFirstRevealRef.current = false;
 
-        if (activeTimeline.current) {
-            activeTimeline.current.kill();
-        }
+        const cells = globalGridRef.current.querySelectorAll('.transition-cell');
+        
+        // Ensure cells are visible and covering before starting
+        gsap.set(globalGridRef.current, { autoAlpha: 1, visibility: 'visible' });
+        gsap.set(cells, { scaleY: 1.01, autoAlpha: 1 });
 
-        const ctx = gsap.context(() => {
-            const isFirst = isFirstLoad.current;
-            
-            // Choose correct shutters based on phase
-            const topShutter = isFirst ? globalShutterTopRef.current : navShutterTopRef.current;
-            const bottomShutter = isFirst ? globalShutterBottomRef.current : navShutterBottomRef.current;
-            
-            // Safety: Ensure all other shutters are hidden
-            const unusedShutters = isFirst 
-                ? [navShutterTopRef.current, navShutterBottomRef.current] 
-                : [globalShutterTopRef.current, globalShutterBottomRef.current];
-            gsap.set(unusedShutters, { autoAlpha: 0, pointerEvents: 'none' });
+        gsap.to(cells, {
+            scaleY: 0,
+            autoAlpha: 0,
+            transformOrigin: "top",
+            duration: 0.9,
+            ease: "power4.inOut",
+            stagger: {
+                grid: [gridRows, gridCols],
+                from: "end",
+                axis: "y",
+                amount: 0.6
+            },
+            onComplete: () => {
+                gsap.set(globalGridRef.current, { autoAlpha: 0, visibility: 'hidden' });
+            }
+        });
+    }, [isInitialized]);
 
-            const tl = gsap.timeline({
-                defaults: { ease: "expo.inOut", duration: 1.0 }, // Fast 1.0s transition
-                onComplete: () => {
-                    isFirstLoad.current = false;
-                    // Reset visibility and disable interactions with shutters
-                    gsap.set([globalShutterTopRef.current, globalShutterBottomRef.current, navShutterTopRef.current, navShutterBottomRef.current], { 
-                        autoAlpha: 0,
-                        pointerEvents: 'none'
-                    });
-                    // Final state ensure for content - prevents blank page bug
-                    gsap.set(pageContentRef.current, { autoAlpha: 1, filter: 'none', scale: 1 });
-                    activeTimeline.current = null;
+    // --- SCOPED NAVIGATION TRANSITION ---
+    const runScopedTransition = useCallback(async (targetTab: ActiveTab) => {
+        if (isTransitioningRef.current || !mainGridRef.current) return;
+        isTransitioningRef.current = true;
+
+        const cells = mainGridRef.current.querySelectorAll('.transition-cell');
+        
+        // 1. LEAVING (DOWN): Cover the workspace
+        gsap.set(mainGridRef.current, { autoAlpha: 1, visibility: 'visible' });
+        await gsap.fromTo(cells, 
+            { scaleY: 0, autoAlpha: 0, transformOrigin: "top" },
+            { 
+                scaleY: 1.01, 
+                autoAlpha: 1, 
+                duration: 0.45, 
+                ease: "power2.inOut",
+                stagger: {
+                    grid: [gridRows, gridCols],
+                    from: "start",
+                    axis: "y",
+                    amount: 0.3
                 }
-            });
+            }
+        );
 
-            activeTimeline.current = tl;
+        // 2. STATE SWITCH: Change tab while covered
+        setActiveTab(targetTab);
+        await new Promise(r => requestAnimationFrame(r)); // Frame for React render
 
-            // 1. Initial State Setup (Reset to closed state)
-            gsap.set([topShutter, bottomShutter], { 
-                yPercent: 0, 
-                autoAlpha: 1, 
-                pointerEvents: 'auto' 
-            });
-            
-            gsap.set(pageContentRef.current, { 
-                autoAlpha: 0, 
-                scale: isFirst ? 1.02 : 0.98,
-                filter: 'blur(10px)'
-            });
-
-            // 2. The Reveal (Snap movement)
-            tl.to(topShutter, { yPercent: -100 }, 0);
-            tl.to(bottomShutter, { yPercent: 100 }, 0);
-
-            // 3. Content Focus (Simultaneous with shutters)
-            tl.to(pageContentRef.current, { 
-                autoAlpha: 1, 
-                scale: 1, 
-                filter: 'blur(0px)',
-                duration: 0.8
-            }, 0.1);
-
-            // 4. Staggered Interior Entrance
-            const revealElements = pageContentRef.current.querySelectorAll('h1, h2, section, .reveal-on-scroll');
-            if (revealElements.length > 0) {
-                tl.from(revealElements, {
-                    y: 20,
-                    autoAlpha: 0,
-                    stagger: 0.05,
-                    duration: 0.7,
-                    ease: "power3.out",
-                    clearProps: "all"
-                }, 0.3);
+        // 3. ENTERING (UP): Reveal the new workspace
+        const tl = gsap.timeline({
+            onComplete: () => {
+                gsap.set(mainGridRef.current, { autoAlpha: 0, visibility: 'hidden' });
+                isTransitioningRef.current = false;
             }
         });
 
-        return () => ctx.revert();
-    }, [isInitialized, activeTab]);
-    
+        tl.to(cells, {
+            scaleY: 0,
+            autoAlpha: 0,
+            transformOrigin: "top",
+            duration: 0.45,
+            ease: "power2.inOut",
+            stagger: {
+                grid: [gridRows, gridCols],
+                from: "end",
+                axis: "y",
+                amount: 0.3
+            }
+        });
+
+        if (contentRef.current) {
+            tl.fromTo(contentRef.current, 
+                { autoAlpha: 0, y: 15 },
+                { autoAlpha: 1, y: 0, duration: 0.6, ease: "power3.out" },
+                "-=0.4"
+            );
+        }
+    }, [setActiveTab]);
+
+    const handleNavigate = (tab: ActiveTab) => {
+        if (tab === activeTab) return;
+        
+        const isLg = window.innerWidth >= 1024;
+        if (!isPinned && !isLg) setIsSidebarOpen(false);
+
+        runScopedTransition(tab);
+    };
+
     useEffect(() => {
         const isLg = window.innerWidth >= 1024;
         if (isPinned && isLg) setIsSidebarOpen(true);
@@ -301,13 +325,6 @@ const App: React.FC = () => {
         if (isLg && isPinned) setIsPinned(false);
         setIsSidebarOpen(p => !p);
     };
-
-    const handleNavigate = (tab: ActiveTab) => {
-        if (tab === activeTab) return;
-        setActiveTab(tab);
-        const isLg = window.innerWidth >= 1024;
-        if (!isPinned && !isLg) setIsSidebarOpen(false);
-    };
     
     const showGlobalFeedback = useCallback((message: string, isError = false) => {
         setGlobalFeedback({ message, type: isError ? 'error' : 'success' });
@@ -316,7 +333,7 @@ const App: React.FC = () => {
     const handleSendToPromptsPage = useCallback((state: PromptsPageState) => {
         setPromptsPageState(state);
         handleNavigate('prompts');
-        showGlobalFeedback('Sent to Prompt Builder!');
+        showGlobalFeedback('Sent to Builder!');
     }, [showGlobalFeedback, handleNavigate]);
 
     const handleClipIdea = useCallback((idea: Idea) => {
@@ -342,9 +359,9 @@ const App: React.FC = () => {
                 title: idea.title,
                 tags: [idea.lens]
             });
-            showGlobalFeedback(`"${idea.title}" archived.`);
+            showGlobalFeedback(`"${idea.title}" saved.`);
         } catch (e) {
-            showGlobalFeedback("Failed to archive.", true);
+            showGlobalFeedback("Failed to save.", true);
         }
     };
 
@@ -363,7 +380,7 @@ const App: React.FC = () => {
             case 'artstyles': return <ArtstyleCheatsheet {...categoryPanelProps} isSidebarPinned={isPinned && isSidebarOpen} onSendToPromptsPage={(state) => handleSendToPromptsPage({ ...state, view: 'enhancer' })} />;
             case 'artists': return <ArtistCheatsheet {...categoryPanelProps} isSidebarPinned={isPinned && isSidebarOpen} onSendToPromptsPage={(state) => handleSendToPromptsPage({ ...state, view: 'enhancer' })} />;
             case 'settings': return <SetupPage activeSettingsTab={activeSettingsTab} setActiveSettingsTab={setActiveSettingsTab} activeSubTab={activeSettingsSubTab} setActiveSubTab={setActiveSettingsSubTabSetter} showGlobalFeedback={showGlobalFeedback} />;
-            case 'composer': return <ComposerPage />;
+            case 'composer': return <ComposerPage showGlobalFeedback={showGlobalFeedback} />;
             case 'image_compare': return <ImageCompare />;
             case 'color_palette_extractor': return <ColorPaletteExtractor onClipIdea={handleClipIdea} />;
             case 'resizer': return <ImageResizer />;
@@ -378,9 +395,20 @@ const App: React.FC = () => {
 
     return (
         <div className="h-full bg-base-300">
-            {/* 1. Global Shutter (First Load - Entire Window) */}
-            <div ref={globalShutterTopRef} className="fixed inset-x-0 top-0 h-1/2 z-[500] bg-base-100 border-b border-base-300/30 pointer-events-none will-change-transform" />
-            <div ref={globalShutterBottomRef} className="fixed inset-x-0 bottom-0 h-1/2 z-[500] bg-base-100 border-t border-base-300/30 pointer-events-none will-change-transform" />
+            {/* 1. GLOBAL REVEAL GRID - Covers everything on first load */}
+            <div 
+                ref={globalGridRef} 
+                className="fixed inset-0 z-[700] pointer-events-none grid"
+                style={{ 
+                    gridTemplateColumns: `repeat(${gridCols}, 1fr)`,
+                    gridTemplateRows: `repeat(${gridRows}, 1fr)`,
+                    visibility: 'hidden'
+                }}
+            >
+                {Array.from({ length: gridRows * gridCols }).map((_, i) => (
+                    <div key={i} className="transition-cell bg-base-100 will-change-transform" />
+                ))}
+            </div>
 
             <Sidebar
                 activeTab={activeTab}
@@ -402,11 +430,22 @@ const App: React.FC = () => {
                 />
                 
                 <main className="flex-grow relative overflow-hidden bg-base-100">
-                    {/* 2. Navigation Shutter (Phase 2 - Strictly inside <main>) - Behind Sidebar Shadow */}
-                    <div ref={navShutterTopRef} className="absolute inset-x-0 top-0 h-1/2 z-[30] bg-base-100 border-b border-base-content/10 pointer-events-none will-change-transform" />
-                    <div ref={navShutterBottomRef} className="absolute inset-x-0 bottom-0 h-1/2 z-[30] bg-base-100 border-t border-base-content/10 pointer-events-none will-change-transform" />
+                    {/* 2. SCOPED NAVIGATION GRID - Restrained to main content area */}
+                    <div 
+                        ref={mainGridRef} 
+                        className="absolute inset-0 z-[600] pointer-events-none grid"
+                        style={{ 
+                            gridTemplateColumns: `repeat(${gridCols}, 1fr)`,
+                            gridTemplateRows: `repeat(${gridRows}, 1fr)`,
+                            visibility: 'hidden'
+                        }}
+                    >
+                        {Array.from({ length: gridRows * gridCols }).map((_, i) => (
+                            <div key={i} className="transition-cell bg-base-100 will-change-transform" />
+                        ))}
+                    </div>
 
-                    <div ref={pageContentRef} className="h-full w-full will-change-transform z-10 relative">
+                    <div ref={contentRef} className="h-full w-full will-change-transform z-10 relative">
                         {renderContent()}
                     </div>
                 </main>

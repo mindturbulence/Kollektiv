@@ -1,10 +1,189 @@
-import React, { useState, useMemo, useEffect, ComponentType, useRef } from 'react';
+
+import React, { useState, useEffect, ComponentType, useRef, useLayoutEffect } from 'react';
+import { gsap } from 'gsap';
+import { Observer } from 'gsap/Observer';
 import type { CheatsheetCategory, CheatsheetItem } from '../types';
-import TreeView, { TreeViewItem } from './TreeView';
-import CategoryPanelToggle from './CategoryPanelToggle';
 import LoadingSpinner from './LoadingSpinner';
-import CheatsheetDetailView from './CheatsheetDetailView';
-import { SearchIcon, CloseIcon } from './icons';
+import { CloseIcon } from './icons';
+import { fileSystemManager } from '../utils/fileUtils';
+
+// Register Observer plugin
+gsap.registerPlugin(Observer);
+
+interface CategoryCardProps {
+    category: CheatsheetCategory;
+    onClick: (cat: CheatsheetCategory) => void;
+    index: number;
+}
+
+const CategoryCard: React.FC<CategoryCardProps> = ({ category, onClick, index }) => {
+    const cardRef = useRef<HTMLDivElement>(null);
+    const titleContainerRef = useRef<HTMLDivElement>(null);
+    const bgContainerRef = useRef<HTMLDivElement>(null);
+    const [allImageUrls, setAllImageUrls] = useState<string[]>([]);
+    const [currentImage, setCurrentImage] = useState<string | null>(null);
+    const [hasEntered, setHasEntered] = useState(false);
+    const rotationIntervalRef = useRef<number | null>(null);
+
+    // Load all available images for this category
+    useEffect(() => {
+        let active = true;
+        const load = async () => {
+            const urls: string[] = [];
+            for (const item of category.items) {
+                if (item.imageUrls && item.imageUrls.length > 0) {
+                    const url = item.imageUrls[0];
+                    if (url.startsWith('http') || url.startsWith('data:')) {
+                        urls.push(url);
+                    } else {
+                        const blob = await fileSystemManager.getFileAsBlob(url);
+                        if (blob) urls.push(URL.createObjectURL(blob));
+                    }
+                }
+            }
+            
+            if (active && urls.length > 0) {
+                setAllImageUrls(urls);
+                setCurrentImage(urls[Math.floor(Math.random() * urls.length)]);
+            }
+        };
+        load();
+        return () => { active = false; };
+    }, [category]);
+
+    // Periodic rotation logic
+    useEffect(() => {
+        if (allImageUrls.length <= 1) return;
+
+        rotationIntervalRef.current = window.setInterval(() => {
+            if (!bgContainerRef.current) return;
+            
+            let nextIndex = Math.floor(Math.random() * allImageUrls.length);
+            const nextUrl = allImageUrls[nextIndex];
+
+            const currentImgEl = bgContainerRef.current.querySelector('img');
+            const newImgEl = document.createElement('img');
+            newImgEl.src = nextUrl;
+            newImgEl.className = "absolute inset-0 w-full h-full object-cover grayscale opacity-0 scale-110 transition-all duration-1000 group-hover:grayscale-0 group-hover:scale-100";
+            bgContainerRef.current.appendChild(newImgEl);
+
+            gsap.to(newImgEl, {
+                opacity: 0.2,
+                scale: 1,
+                duration: 2,
+                ease: "power2.inOut",
+                onComplete: () => {
+                    if (currentImgEl) currentImgEl.remove();
+                    setCurrentImage(nextUrl);
+                }
+            });
+        }, 5000 + Math.random() * 2000);
+
+        return () => {
+            if (rotationIntervalRef.current) clearInterval(rotationIntervalRef.current);
+        };
+    }, [allImageUrls]);
+
+    useEffect(() => {
+        const observer = new IntersectionObserver(
+            ([entry]) => {
+                if (entry.isIntersecting) {
+                    setHasEntered(true);
+                    observer.unobserve(entry.target);
+                }
+            },
+            { threshold: 0.05 }
+        );
+        if (cardRef.current) observer.observe(cardRef.current);
+        return () => observer.disconnect();
+    }, []);
+
+    useLayoutEffect(() => {
+        if (hasEntered && titleContainerRef.current && bgContainerRef.current) {
+            const tl = gsap.timeline({ defaults: { ease: "expo.out", duration: 1.4 } });
+            
+            tl.fromTo(bgContainerRef.current,
+                { opacity: 0, scale: 1.1 },
+                { opacity: 1, scale: 1 }, 0
+            );
+
+            tl.fromTo(titleContainerRef.current, 
+                { y: 40, opacity: 0 },
+                { y: 0, opacity: 1 }, 0.2
+            );
+        }
+    }, [hasEntered]);
+
+    return (
+        <div 
+            ref={cardRef}
+            onClick={() => onClick(category)}
+            className="flex-shrink-0 w-[80vw] md:w-[45vw] lg:w-[30vw] h-full relative group cursor-pointer select-none bg-base-100 flex flex-col border-r border-base-300 first:border-l overflow-hidden"
+        >
+            {/* Dynamic Background Image */}
+            <div 
+                ref={bgContainerRef}
+                className="absolute inset-0 z-0 bg-base-200 overflow-hidden"
+            >
+                {currentImage && (
+                    <img 
+                        src={currentImage} 
+                        className="absolute inset-0 w-full h-full object-cover grayscale opacity-10 scale-110 transition-all duration-[2500ms] group-hover:grayscale-0 group-hover:scale-100 group-hover:opacity-100" 
+                        alt="" 
+                    />
+                )}
+                {/* Overlay to ensure text readability */}
+                <div className="absolute inset-0 bg-gradient-to-t from-base-100 via-base-100/90 to-transparent opacity-95 group-hover:opacity-40 transition-opacity duration-1000"></div>
+            </div>
+
+            {/* Content Layer */}
+            <div className="relative z-10 flex flex-col h-full p-10 lg:p-14">
+                {/* Top ID Badge */}
+                <div className="flex items-center justify-between gap-4 mb-6 opacity-40 group-hover:opacity-100 transition-opacity duration-500">
+                    <div className="flex-grow h-px bg-primary/20"></div>
+                    <span className="text-sm font-mono font-black text-primary tracking-[0.3em] uppercase">
+                        ID_{String(index + 1).padStart(2, '0')}
+                    </span>
+                </div>
+
+                <div className="flex-grow flex flex-col justify-end overflow-hidden">
+                    {/* Animated Text Block */}
+                    <div 
+                        ref={titleContainerRef} 
+                        className="opacity-0 will-change-transform w-full"
+                    >
+                        {/* Capitalized Title - Optimized sizing */}
+                        <h3 className="text-4xl md:text-5xl lg:text-6xl font-black tracking-tighter capitalize leading-[0.8] text-base-content break-words w-full transition-colors duration-500 group-hover:text-primary">
+                            {category.category.toLowerCase()}
+                        </h3>
+                        
+                        {/* Sliding Reveal Description - Pushes the title up via Grid height expansion */}
+                        <div className="grid grid-rows-[0fr] group-hover:grid-rows-[1fr] transition-[grid-template-rows] duration-700 ease-[cubic-bezier(0.23,1,0.32,1)]">
+                            <div className="overflow-hidden">
+                                <p className="pt-4 text-[11px] font-bold uppercase tracking-[0.25em] text-base-content/50 max-w-sm leading-relaxed opacity-0 group-hover:opacity-100 transition-opacity duration-700 delay-100">
+                                    {category.description || `A comprehensive archival study of ${category.category.toLowerCase()} visual logic and neural aesthetic mapping.`}
+                                </p>
+                            </div>
+                        </div>
+
+                        {/* Status Footer */}
+                        <div className="mt-8 flex items-center gap-6 opacity-40 group-hover:opacity-100 transition-opacity duration-500">
+                            <span className="text-[8px] font-black uppercase tracking-[0.3em] bg-primary/10 text-primary px-4 py-2 border border-primary/20 backdrop-blur-md">
+                                {category.items.length} ENTRIES
+                            </span>
+                            <span className="text-[8px] font-mono font-bold uppercase tracking-widest animate-pulse">
+                                SYSTEM_READY
+                            </span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            {/* Hover Accent */}
+            <div className="absolute bottom-0 left-0 w-0 h-1.5 bg-primary group-hover:w-full transition-all duration-1000 ease-in-out"></div>
+        </div>
+    );
+};
 
 interface GenericCheatsheetPageProps {
   title: string;
@@ -16,7 +195,6 @@ interface GenericCheatsheetPageProps {
   CardComponent: ComponentType<{ 
     item: CheatsheetItem; 
     onUpdateImages: (newImageUrls: string[]) => void;
-    onSelectItem: (item: CheatsheetItem) => void;
     onInject: (item: CheatsheetItem) => void;
   }>;
   onSendToPromptsPage?: (item: CheatsheetItem, category: string) => void;
@@ -27,301 +205,226 @@ interface GenericCheatsheetPageProps {
   layout?: 'grid' | 'article';
 }
 
-const getColumnCount = () => {
-    if (typeof window === 'undefined') return 1;
-    const w = window.innerWidth;
-    if (w >= 1536) return 4;
-    if (w >= 1280) return 3;
-    if (w >= 1024) return 3;
-    if (w >= 768) return 2;
-    return 1;
-};
-
 export const GenericCheatsheetPage: React.FC<GenericCheatsheetPageProps> = ({
-  title,
   heroText,
   subtitle,
-  searchPlaceholder,
   loadDataFn,
   updateDataFn,
   CardComponent,
   onSendToPromptsPage,
-  isCategoryPanelCollapsed,
-  onToggleCategoryPanel,
-  isSidebarPinned,
-  EmptyIcon,
-  layout = 'grid',
 }) => {
   const [data, setData] = useState<CheatsheetCategory[]>([]);
   const [isLoading, setIsLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-  const [searchQuery, setSearchQuery] = useState('');
-  const [categorySearchQuery, setCategorySearchQuery] = useState('');
-  const [selectedCategoryId, setSelectedCategoryId] = useState<string>('all');
-  const [columnCount, setColumnCount] = useState(() => getColumnCount());
-  const [detailViewItemId, setDetailViewItemId] = useState<string | null>(null);
-  const mainContentRef = useRef<HTMLElement>(null);
+  const [activeCategory, setActiveCategory] = useState<CheatsheetCategory | null>(null);
 
-  useEffect(() => {
-    const handleResize = () => setColumnCount(getColumnCount());
-    window.addEventListener('resize', handleResize);
-    return () => window.removeEventListener('resize', handleResize);
-  }, []);
+  const carouselRef = useRef<HTMLDivElement>(null);
+  const trackRef = useRef<HTMLDivElement>(null);
+  const scrollWrapperRef = useRef<HTMLDivElement>(null);
+  const detailViewRef = useRef<HTMLDivElement>(null);
+  
+  const xPosRef = useRef(0);
 
   useEffect(() => {
     const fetchData = async () => {
       setIsLoading(true);
-      setError(null);
       try {
         const loadedData = await loadDataFn();
         setData(loadedData);
-      } catch (e) {
-        setError("Failed to load cheatsheet data.");
-        console.error(e);
-      } finally {
-        setIsLoading(false);
-      }
+      } catch (e) { console.error(e); } finally { setIsLoading(false); }
     };
     fetchData();
   }, [loadDataFn]);
 
-  // --- Recursive Tree Filtering for Cheatsheets ---
-  const treeItems = useMemo<TreeViewItem[]>(() => {
-    const totalItems = data.reduce((acc, cat) => acc + cat.items.length, 0);
-    const q = categorySearchQuery.toLowerCase().trim();
+  useLayoutEffect(() => {
+    if (isLoading || activeCategory || !trackRef.current || !scrollWrapperRef.current) return;
 
-    const categoryNodes: TreeViewItem[] = data
-      .filter(cat => !q || cat.category.toLowerCase().includes(q))
-      .map(cat => ({
-        id: cat.category,
-        name: cat.category,
-        icon: 'folder' as const,
-        count: cat.items.length,
-      }));
-
-    const tree: TreeViewItem[] = [];
+    const track = trackRef.current;
+    const wrapper = scrollWrapperRef.current;
     
-    // Always include Global Archive if it matches or search is empty
-    if (!q || 'Global Archive'.toLowerCase().includes(q)) {
-        tree.push({ id: 'all', name: 'Global Archive', icon: 'app' as const, count: totalItems });
-    }
-    
-    tree.push(...categoryNodes.sort((a, b) => a.name.localeCompare(b.name)));
-    return tree;
-  }, [data, categorySearchQuery]);
+    const updateBounds = () => {
+        return track.scrollWidth - wrapper.offsetWidth;
+    };
 
-  const displayHeroTitle = useMemo(() => {
-    if (selectedCategoryId === 'all') return heroText;
-    const selectedCat = data.find(c => c.category === selectedCategoryId);
-    return selectedCat ? selectedCat.category : heroText;
-  }, [selectedCategoryId, data, heroText]);
+    let maxScroll = updateBounds();
 
-  const filteredData = useMemo(() => {
-    let categoriesToShow = data;
-    if (selectedCategoryId !== 'all') {
-      categoriesToShow = data.filter(cat => cat.category === selectedCategoryId);
-    }
+    const applyTranslation = (velocity: number = 0.8) => {
+        maxScroll = updateBounds();
+        xPosRef.current = Math.max(-maxScroll, Math.min(0, xPosRef.current));
+        
+        gsap.to(track, {
+            x: xPosRef.current,
+            duration: velocity,
+            ease: "power3.out",
+            overwrite: "auto"
+        });
+    };
 
-    if (searchQuery.trim() === '') {
-      return categoriesToShow;
-    }
+    const obs = Observer.create({
+        target: wrapper,
+        type: "wheel,touch,pointer",
+        onWheel: (self) => {
+            xPosRef.current -= self.deltaY * 0.8;
+            applyTranslation(1.2);
+        },
+        onDrag: (self) => {
+            xPosRef.current += self.deltaX;
+            applyTranslation(0.5);
+        },
+        onDragEnd: () => {
+            applyTranslation(0.8);
+        },
+        tolerance: 5,
+        preventDefault: true
+    });
 
-    const lowerCaseQuery = searchQuery.toLowerCase();
-    return categoriesToShow
-      .map(category => ({
-        ...category,
-        items: category.items.filter(item =>
-          item.name.toLowerCase().includes(lowerCaseQuery) ||
-          item.description?.toLowerCase().includes(lowerCaseQuery) ||
-          item.keywords?.some(k => k.toLowerCase().includes(lowerCaseQuery))
-        ),
-      }))
-      .filter(category => category.items.length > 0);
-  }, [data, selectedCategoryId, searchQuery]);
+    const resizeHandler = () => {
+        maxScroll = updateBounds();
+        applyTranslation(0.2);
+    };
 
-  const allItems = useMemo(() => {
-    return filteredData.flatMap(category => category.items);
-  }, [filteredData]);
+    window.addEventListener('resize', resizeHandler);
+    return () => {
+        obs.kill();
+        window.removeEventListener('resize', resizeHandler);
+    };
+  }, [isLoading, activeCategory, data]);
 
-  const columns = useMemo(() => {
-    const cols: CheatsheetItem[][] = Array.from({ length: columnCount }, () => []);
-    allItems.forEach((item, index) => cols[index % columnCount].push(item));
-    return cols;
-  }, [allItems, columnCount]);
-
-  const activeDetailViewIndex = useMemo(() => {
-    if (!detailViewItemId) return -1;
-    return allItems.findIndex(item => item.id === detailViewItemId);
-  }, [detailViewItemId, allItems]);
-
-  const isDetailViewVisible = activeDetailViewIndex !== -1;
-
-  const handleUpdateItem = async (itemId: string, updates: Partial<CheatsheetItem>) => {
-    const updatedData = await updateDataFn(itemId, updates);
-    setData(updatedData);
+  const handleCategoryClick = (cat: CheatsheetCategory) => {
+      const tl = gsap.timeline({
+          defaults: { ease: "expo.inOut", duration: 0.8 }
+      });
+      
+      tl.to(carouselRef.current, {
+          x: -150,
+          autoAlpha: 0,
+          scale: 0.98
+      });
+      
+      tl.call(() => setActiveCategory(cat));
+      
+      tl.fromTo(detailViewRef.current, {
+          x: 100,
+          autoAlpha: 0
+      }, {
+          x: 0,
+          autoAlpha: 1,
+          duration: 0.8,
+          clearProps: "all"
+      }, "-=0.6");
   };
-  
-  const handleSelectCategory = (id: string) => {
-    setSelectedCategoryId(id);
-    setDetailViewItemId(null); // Force close detail view when switching categories
-    if(mainContentRef.current) {
-        mainContentRef.current.scrollTop = 0;
-    }
+
+  const handleBackToCarousel = () => {
+      const tl = gsap.timeline({
+          defaults: { ease: "expo.inOut", duration: 0.8 },
+          onComplete: () => setActiveCategory(null)
+      });
+      
+      tl.to(detailViewRef.current, {
+          x: 80,
+          autoAlpha: 0
+      });
+      
+      tl.fromTo(carouselRef.current, {
+          x: -100,
+          autoAlpha: 0,
+          scale: 0.98
+      }, {
+          x: 0,
+          autoAlpha: 1,
+          scale: 1,
+          duration: 0.8,
+          clearProps: "all"
+      }, "-=0.6");
   };
 
   const handleInject = (item: CheatsheetItem) => {
-      const category = data.find(c => c.items.some(i => i.id === item.id))?.category || 'Uncategorized';
-      onSendToPromptsPage?.(item, category);
+      onSendToPromptsPage?.(item, activeCategory?.category || '');
   };
 
+  if (isLoading) {
+    return <div className="h-full w-full flex items-center justify-center bg-base-100"><LoadingSpinner /></div>;
+  }
+
   return (
-    <section className="flex flex-row h-full bg-base-100 overflow-hidden">
-      <aside className={`relative flex-shrink-0 bg-base-100 border-r border-base-300 transition-all duration-300 ease-in-out flex flex-col ${isCategoryPanelCollapsed ? 'w-0' : 'w-96'}`}>
-        <CategoryPanelToggle isCollapsed={isCategoryPanelCollapsed} onToggle={onToggleCategoryPanel} />
-        
-        <div className={`flex flex-col h-full overflow-hidden transition-opacity duration-200 ${isCategoryPanelCollapsed ? 'opacity-0 invisible' : 'opacity-100 visible'}`}>
-            <div className="flex-shrink-0 bg-base-100 border-b border-base-300 h-14">
-                <div className="flex items-center h-full relative">
-                    <SearchIcon className="absolute left-6 w-4 h-4 opacity-20 pointer-events-none" />
-                    <input 
-                        type="text" 
-                        value={categorySearchQuery}
-                        onChange={(e) => setCategorySearchQuery(e.target.value)}
-                        placeholder="FIND DATASET..." 
-                        className="w-full h-full bg-transparent border-none focus:outline-none focus:ring-0 pl-14 pr-12 font-bold uppercase tracking-tight text-[10px] placeholder:text-base-content/10"
-                    />
-                    {categorySearchQuery && (
-                        <button 
-                            onClick={() => setCategorySearchQuery('')} 
-                            className="absolute right-4 btn btn-xs btn-ghost btn-circle opacity-40 hover:opacity-100 transition-opacity"
-                            title="Clear search"
-                        >
-                            <CloseIcon className="w-4 h-4" />
-                        </button>
-                    )}
-                </div>
-            </div>
+    <section className="h-full bg-base-100 flex flex-col overflow-hidden relative select-none no-scrollbar">
+      <div 
+        ref={carouselRef} 
+        className={`flex h-full overflow-hidden no-scrollbar ${activeCategory ? 'hidden' : 'flex'}`}
+      >
+          {/* Architectural Static Sidebar */}
+          <div className="flex-shrink-0 h-full w-min min-w-[360px] flex flex-col justify-end p-16 md:pb-40 lg:pb-40 border-r border-base-300 bg-base-200/5 relative z-10">
+              <div className="space-y-8">
+                  <div className="flex items-center gap-4">
+                      <span className="text-[11px] font-black uppercase tracking-[0.6em] text-primary block">ARCHIVE_V2</span>
+                      <div className="w-12 h-1 bg-primary"></div>
+                  </div>
+                  <h1 className="text-5xl md:text-6xl lg:text-7xl font-black tracking-tighter uppercase leading-[0.8] text-base-content whitespace-nowrap">
+                      {heroText}<span className="text-primary opacity-40">.</span>
+                  </h1>
+                  <p className="text-[10px] font-bold text-base-content/20 uppercase tracking-[0.5em] leading-relaxed break-words max-w-xs">
+                      {subtitle || "DECENTRALIZED ARCHIVE"}
+                  </p>
+              </div>
+              <div className="absolute top-20 left-16 flex items-center gap-4 opacity-5">
+                  <span className="text-[8px] font-mono font-black uppercase tracking-widest">DRIVEN_BY_MOTION</span>
+                  <div className="w-16 h-px bg-base-content"></div>
+              </div>
+          </div>
 
-            <div className="flex-grow overflow-y-auto p-6 w-96 custom-scrollbar">
-                <h2 className="text-[10px] font-black uppercase tracking-[0.3em] text-base-content/30 mb-6 px-3">Registry Index</h2>
-                <TreeView 
-                    items={treeItems} 
-                    selectedId={selectedCategoryId} 
-                    onSelect={handleSelectCategory} 
-                    searchActive={!!categorySearchQuery}
-                />
-            </div>
-        </div>
-      </aside>
+          <div 
+              ref={scrollWrapperRef}
+              className="flex-grow flex overflow-hidden bg-base-100 h-full touch-none"
+          >
+              <div ref={trackRef} className="flex h-full will-change-transform">
+                {data.map((cat, i) => (
+                    <CategoryCard key={cat.category} category={cat} index={i} onClick={handleCategoryClick} />
+                ))}
+              </div>
+          </div>
+      </div>
 
-      <main ref={mainContentRef} className={`relative flex-grow flex flex-col h-full overflow-x-hidden bg-base-100 scroll-smooth custom-scrollbar ${isDetailViewVisible ? 'overflow-y-hidden' : 'overflow-y-auto'}`}>
-        {isDetailViewVisible && (
-            <CheatsheetDetailView 
-                items={allItems}
-                currentIndex={activeDetailViewIndex}
-                onClose={() => setDetailViewItemId(null)}
-                onNavigate={(idx) => setDetailViewItemId(allItems[idx].id)}
-                onInject={handleInject}
-                onUpdateItem={handleUpdateItem}
-            />
-        )}
-
-        {isLoading ? (
-            <div className="flex-grow flex items-center justify-center bg-base-100">
-                <LoadingSpinner />
-            </div>
-        ) : error ? (
-            <div className="p-8">
-                <div className="alert alert-error rounded-none border-2"><span>{error}</span></div>
-            </div>
-        ) : (
+      <div 
+        ref={detailViewRef}
+        className={`flex-col h-full bg-base-100 z-50 overflow-hidden ${activeCategory ? 'flex' : 'hidden'}`}
+      >
+          {activeCategory && (
             <>
-                <section className="p-10 border-b border-base-300 bg-base-200/20">
-                    <div className="w-full flex flex-col gap-1">
-                        <div className="flex flex-col md:flex-row md:items-stretch justify-between gap-6">
-                            <h1 className="text-2xl lg:text-3xl font-black tracking-tighter text-base-content leading-none flex items-center uppercase">
-                                {displayHeroTitle}<span className="text-primary">.</span>
-                            </h1>
-                            <div className="flex bg-base-100 px-6 py-2 border border-base-300 shadow-sm self-start md:self-auto min-h-full">
-                                <div className="flex flex-col px-6 border-r border-base-300 last:border-r-0 justify-center">
-                                    <span className="text-2xl font-black tracking-tighter leading-none">{allItems.length}</span>
-                                    <span className="text-[8px] uppercase font-bold text-base-content/40 tracking-[0.2em] mt-0.5">Artifacts</span>
-                                </div>
-                            </div>
+                <header className="flex-shrink-0 h-28 border-b border-base-300 bg-base-100 px-16 flex items-center justify-between sticky top-0 z-[60] backdrop-blur-md bg-base-100/90">
+                    <div className="flex items-center gap-8">
+                        <div className="flex flex-col">
+                             <span className="text-[11px] font-black uppercase tracking-[0.4em] text-primary/60 mb-1">COLLECTION</span>
+                             <h2 className="text-4xl lg:text-5xl font-black tracking-tighter uppercase leading-none">{activeCategory.category}</h2>
                         </div>
-                        <p className="text-[11px] font-bold text-base-content/30 uppercase tracking-[0.3em] w-full">
-                            {subtitle || "Curated repository of high-utility visual formulas and creative tokens."}
-                        </p>
                     </div>
-                </section>
+                    <div className="flex items-center gap-10">
+                        <div className="flex flex-col items-end">
+                            <span className="text-[10px] font-mono font-black text-base-content/20 uppercase tracking-widest">NODES_INDEX</span>
+                            <span className="text-lg font-black text-base-content/60">{activeCategory.items.length}</span>
+                        </div>
+                        <button onClick={handleBackToCarousel} className="btn btn-ghost btn-lg btn-square opacity-40 hover:opacity-100 hover:rotate-90 transition-all duration-500"><CloseIcon className="w-8 h-8"/></button>
+                    </div>
+                </header>
 
-                <div className="flex-shrink-0 bg-base-100 border-b border-base-300 sticky top-0 z-20 h-14">
-                    <div className="flex items-stretch h-full w-full">
-                        <div className="flex-grow flex items-center relative">
-                            <SearchIcon className="absolute left-6 w-4 h-4 opacity-20 pointer-events-none" />
-                            <input
-                                type="text"
-                                value={searchQuery}
-                                onChange={(e) => setSearchQuery(e.target.value)}
-                                placeholder={searchPlaceholder.toUpperCase()}
-                                className="w-full h-full bg-transparent border-none focus:outline-none focus:ring-0 pl-14 pr-6 font-bold uppercase tracking-tight text-sm placeholder:text-base-content/10"
-                            />
-                        </div>
-                    </div>
-                </div>
-                
-                <div className="flex-grow p-0 bg-base-200/5 min-h-[400px] relative">
-                  {allItems.length > 0 ? (
-                    layout === 'grid' ? (
-                        <div className={`flex border-r border-base-300 transition-all duration-300 ${isDetailViewVisible ? 'blur-sm pointer-events-none' : ''}`}>
-                            {columns.map((columnItems, colIndex) => (
-                                <div key={colIndex} className="flex flex-1 flex-col gap-0 min-w-0 border-l border-base-300 first:border-l-0">
-                                    {columnItems.map(item => (
-                                        <div key={item.id}>
-                                            <CardComponent 
-                                                item={item} 
-                                                onUpdateImages={(newImageUrls: string[]) => handleUpdateItem(item.id, { imageUrls: newImageUrls })} 
-                                                onSelectItem={(i) => setDetailViewItemId(i.id)}
-                                                onInject={handleInject}
-                                            />
-                                        </div>
-                                    ))}
+                <div className="flex-grow overflow-y-auto custom-scrollbar bg-base-100">
+                    <div className="max-w-screen-2xl mx-auto py-24 px-16">
+                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-px bg-base-300 border border-base-300 shadow-2xl">
+                            {activeCategory.items.map((item) => (
+                                <div key={item.id} className="bg-base-100 group/item overflow-hidden">
+                                    <div className="transition-transform duration-1000 group-hover/item:scale-[1.03]">
+                                        <CardComponent 
+                                          item={item}
+                                          onUpdateImages={(newUrls) => updateDataFn(item.id, { imageUrls: newUrls })}
+                                          onInject={handleInject}
+                                        />
+                                    </div>
                                 </div>
                             ))}
                         </div>
-                    ) : (
-                        <div className={`space-y-12 py-10 px-10 transition-all duration-300 ${isDetailViewVisible ? 'blur-sm pointer-events-none' : ''}`}>
-                        {filteredData.map(category => (
-                            <section key={category.category} id={category.category}>
-                            <h2 className="text-xs font-black uppercase tracking-[0.4em] text-base-content/40 mb-10 flex items-center gap-4">
-                                <span className="w-10 h-[1px] bg-base-300"></span> {category.category}
-                            </h2>
-                            <div className="space-y-12 divide-y divide-base-300">
-                                {category.items.map(item => (
-                                <div key={item.id} className={'pt-12 first:pt-0'}>
-                                    <CardComponent 
-                                        item={item} 
-                                        onUpdateImages={(newUrls) => handleUpdateItem(item.id, { imageUrls: newUrls })} 
-                                        onSelectItem={(i) => setDetailViewItemId(i.id)}
-                                        onInject={handleInject}
-                                    />
-                                </div>
-                                ))}
-                            </div>
-                            </section>
-                        ))}
-                        </div>
-                    )
-                  ) : (
-                    <div className="text-center py-32 px-6 flex flex-col items-center">
-                      <EmptyIcon className="mx-auto h-20 w-20 text-base-content/10" />
-                      <h3 className="mt-6 text-2xl font-black uppercase tracking-tighter text-base-content/30">Registry Empty</h3>
                     </div>
-                  )}
                 </div>
             </>
-        )}
-      </main>
+          )}
+      </div>
     </section>
   );
 };

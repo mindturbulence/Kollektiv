@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect, useCallback } from 'react';
 import { useSettings } from '../contexts/SettingsContext';
 import { dissectPrompt } from '../services/llmService';
@@ -24,17 +25,17 @@ interface PromptDetailViewProps {
   onClipString?: (text: string, title: string) => void;
 }
 
-const PromptAnatomyDisplay: React.FC<{
-  anatomy: { [key: string]: string } | null;
+const PromptComponentsDisplay: React.FC<{
+  components: { [key: string]: string } | null;
   isLoading: boolean;
   error: string | null;
   onRefresh: () => void;
   hasPrompt: boolean;
-}> = ({ anatomy, isLoading, error, onRefresh, hasPrompt }) => {
+}> = ({ components, isLoading, error, onRefresh, hasPrompt }) => {
     return (
         <div className="flex flex-col h-full bg-base-100 overflow-hidden">
             <header className="p-4 border-b border-base-300 bg-base-200/10 flex justify-between items-center">
-                <h3 className="text-[10px] font-black uppercase tracking-[0.3em] text-primary">Prompt Components</h3>
+                <h3 className="text-[10px] font-black uppercase tracking-[0.3em] text-primary">Prompt Parts</h3>
                 <button onClick={onRefresh} disabled={isLoading || !hasPrompt} className="btn btn-xs btn-ghost opacity-40 hover:opacity-100">
                     <RefreshIcon className={`w-4 h-4 ${isLoading ? 'animate-spin' : ''}`} />
                 </button>
@@ -42,9 +43,9 @@ const PromptAnatomyDisplay: React.FC<{
             <div className="flex-grow p-5 overflow-y-auto custom-scrollbar bg-base-100">
                 {isLoading ? <div className="py-12"><LoadingSpinner/></div> :
                  error ? <div className="alert alert-error rounded-none text-xs"><span>{error}</span></div> :
-                 anatomy && Object.keys(anatomy).length > 0 ? (
+                 components && Object.keys(components).length > 0 ? (
                     <div className="space-y-6">
-                        {Object.entries(anatomy).map(([key, value]) => (
+                        {Object.entries(components).map(([key, value]) => (
                             <div key={key} className="animate-fade-in">
                                 <h4 className="text-[9px] font-black uppercase tracking-widest text-base-content/20 mb-1 border-b border-base-300/30 pb-0.5">{key}</h4>
                                 <p className="text-sm font-medium leading-relaxed text-base-content/80">{String(value)}</p>
@@ -53,7 +54,7 @@ const PromptAnatomyDisplay: React.FC<{
                     </div>
                  ) : (
                     <div className="py-24 text-center text-[10px] font-black uppercase tracking-[0.2em] text-base-content/20">
-                        { anatomy ? "No components found in analysis." : "Run component analysis to map prompt parts." }
+                        { components ? "No parts found." : "Run analysis to see prompt parts." }
                     </div>
                  )}
             </div>
@@ -82,22 +83,22 @@ const PromptDetailView: React.FC<PromptDetailViewProps> = ({
   const [isRefinePanelCollapsed, setIsRefinePanelCollapsed] = useState(true);
   const [isFormulaPanelCollapsed, setIsFormulaPanelCollapsed] = useState(true);
 
-  const [anatomy, setAnatomy] = useState<{ [key: string]: string } | null>(null);
-  const [isLoadingAnatomy, setIsLoadingAnatomy] = useState(false);
-  const [errorAnatomy, setErrorAnatomy] = useState<string | null>(null);
+  const [components, setComponents] = useState<{ [key: string]: string } | null>(null);
+  const [isLoadingParts, setIsLoadingParts] = useState(false);
+  const [errorParts, setErrorParts] = useState<string | null>(null);
 
   const analyzePromptText = useCallback(async (text: string) => {
-      if (!text?.trim()) { setAnatomy(null); return; }
-      setIsLoadingAnatomy(true);
-      setErrorAnatomy(null);
+      if (!text?.trim()) { setComponents(null); return; }
+      setIsLoadingParts(true);
+      setErrorParts(null);
       try {
           const result = await dissectPrompt(text, settings);
-          setAnatomy(result || {});
+          setComponents(result || {});
       } catch (e: any) {
-          setErrorAnatomy(e.message || "Component analysis failed.");
-          setAnatomy(null);
+          setErrorParts(e.message || "Analysis failed.");
+          setComponents(null);
       } finally {
-          setIsLoadingAnatomy(false);
+          setIsLoadingParts(false);
       }
   }, [settings]);
   
@@ -109,7 +110,7 @@ const PromptDetailView: React.FC<PromptDetailViewProps> = ({
         setCopied(false);
         setIsRefinePanelCollapsed(true);
         setIsFormulaPanelCollapsed(true);
-        setAnatomy(null);
+        setComponents(null);
     }
   }, [prompt]);
 
@@ -123,7 +124,7 @@ const PromptDetailView: React.FC<PromptDetailViewProps> = ({
   const handleCopyToClipboard = (text: string) => {
       navigator.clipboard.writeText(text).then(() => {
         setCopied(true);
-        showGlobalFeedback("Prompt copied.");
+        showGlobalFeedback("Copied.");
         setTimeout(() => setCopied(false), 2000);
       });
   };
@@ -131,7 +132,7 @@ const PromptDetailView: React.FC<PromptDetailViewProps> = ({
   const handleSaveChanges = () => {
       if (prompt && editedText.trim() !== prompt.text.trim()) {
           onUpdate(prompt.id, { text: editedText });
-          showGlobalFeedback("Changes saved to library.");
+          showGlobalFeedback("Changes saved.");
       }
   };
   
@@ -142,7 +143,7 @@ const PromptDetailView: React.FC<PromptDetailViewProps> = ({
         <div className="w-full h-full bg-base-100 rounded-none border border-base-300 shadow-2xl flex flex-col overflow-hidden relative" onClick={e => e.stopPropagation()}>
             <header className="flex-shrink-0 p-6 lg:px-8 lg:py-6 border-b border-base-300 bg-base-100 flex flex-wrap justify-between items-end gap-6">
                 <div className="min-w-0">
-                    <span className="text-[10px] font-black uppercase tracking-[0.4em] text-primary mb-1 block">LIBRARY ID : {prompt.id.slice(-8)}</span>
+                    <span className="text-[10px] font-black uppercase tracking-[0.4em] text-primary mb-1 block">ITEM ID : {prompt.id.slice(-8)}</span>
                     <h2 className="text-xl lg:text-2xl font-black tracking-tighter text-base-content leading-none truncate max-w-2xl uppercase">
                         {prompt.title || 'Untitled Prompt'}
                     </h2>
@@ -162,9 +163,9 @@ const PromptDetailView: React.FC<PromptDetailViewProps> = ({
             <div className="flex-grow flex flex-col lg:flex-row overflow-hidden">
                 <main className="flex-1 flex flex-col overflow-hidden bg-base-100">
                     <div className={`flex flex-col overflow-hidden transition-all duration-500 ease-in-out ${!isRefinePanelCollapsed ? 'h-1/2' : 'flex-grow'}`}>
-                        <div className="flex-grow p-5 lg:p-5 relative overflow-hidden flex flex-col">
+                        <div className="flex-grow p-5 relative overflow-hidden flex flex-col">
                             <span className="text-[9px] font-black uppercase tracking-widest text-primary/40 mb-3 flex items-center gap-3">
-                                <span className="w-1.5 h-1.5 rounded-full bg-primary animate-pulse"></span> Original Prompt Text
+                                <span className="w-1.5 h-1.5 rounded-full bg-primary animate-pulse"></span> Prompt Text
                             </span>
                             <textarea 
                                 value={editedText}
@@ -185,24 +186,24 @@ const PromptDetailView: React.FC<PromptDetailViewProps> = ({
                     </div>
                     <footer className="p-4 bg-base-200/20 border-t border-base-300 flex flex-wrap justify-between items-center gap-4">
                         <div className="flex items-center gap-1">
-                            <button onClick={() => setIsEditorModalOpen(true)} className="btn btn-sm btn-ghost rounded-none uppercase font-black text-[10px] tracking-widest px-4 hover:bg-base-300">Edit Details</button>
-                            <button onClick={() => setIsRefinePanelCollapsed(!isRefinePanelCollapsed)} className={`btn btn-sm rounded-none uppercase font-black text-[10px] tracking-widest px-4 ${!isRefinePanelCollapsed ? 'btn-primary' : 'btn-ghost text-primary hover:bg-primary/10'}`}>AI Refine</button>
+                            <button onClick={() => setIsEditorModalOpen(true)} className="btn btn-sm btn-ghost rounded-none uppercase font-black text-[10px] tracking-widest px-4 hover:bg-base-300">Edit</button>
+                            <button onClick={() => setIsRefinePanelCollapsed(!isRefinePanelCollapsed)} className={`btn btn-sm rounded-none uppercase font-black text-[10px] tracking-widest px-4 ${!isRefinePanelCollapsed ? 'btn-primary' : 'btn-ghost text-primary hover:bg-primary/10'}`}>Refine</button>
                             <button onClick={() => onClip(prompt)} className="btn btn-sm btn-ghost rounded-none uppercase font-black text-[10px] tracking-widest px-4 hover:bg-base-300">Clip</button>
-                            <button onClick={() => onDelete(prompt)} className="btn btn-sm btn-ghost rounded-none uppercase font-black text-[10px] tracking-widest px-4 text-error/40 hover:text-error hover:bg-error/10">Delete</button>
+                            <button onClick={() => onDelete(prompt)} className="btn btn-sm btn-ghost rounded-none uppercase font-black text-[10px] tracking-widest px-4 text-error/40 hover:text-error">Delete</button>
                         </div>
                         <div className="flex items-center gap-3">
                             {editedText.trim() !== prompt.text.trim() && (
                                 <button onClick={handleSaveChanges} className="btn btn-sm btn-primary rounded-none uppercase font-black text-[10px] tracking-widest px-8 shadow-lg">Save Changes</button>
                             )}
                             <button onClick={() => handleCopyToClipboard(editedText)} className="btn btn-sm btn-ghost rounded-none border border-base-300 bg-base-100 uppercase font-black text-[10px] tracking-widest px-8 hover:bg-base-200">
-                                {copied ? 'Copied' : 'Copy Prompt'}
+                                {copied ? 'Copied' : 'Copy Text'}
                             </button>
                         </div>
                     </footer>
                 </main>
                 <aside className="w-full lg:w-[420px] flex-shrink-0 bg-base-100 flex flex-col overflow-hidden border-l border-base-300">
                     <div className="flex-grow flex flex-col min-h-0 divide-y divide-base-300">
-                        <PromptAnatomyDisplay anatomy={anatomy} isLoading={isLoadingAnatomy} error={errorAnatomy} onRefresh={() => analyzePromptText(editedText)} hasPrompt={!!editedText} />
+                        <PromptComponentsDisplay components={components} isLoading={isLoadingParts} error={errorParts} onRefresh={() => analyzePromptText(editedText)} hasPrompt={!!editedText} />
                         <PromptFormulaPanel promptText={editedText} showGlobalFeedback={showGlobalFeedback} isCollapsed={isFormulaPanelCollapsed} setIsCollapsed={setIsFormulaPanelCollapsed} />
                     </div>
                 </aside>

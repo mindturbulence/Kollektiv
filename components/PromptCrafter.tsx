@@ -2,8 +2,7 @@ import React, { useState, useEffect, useCallback, useRef, useMemo } from 'react'
 import { crafterService } from '../services/crafterService';
 import type { WildcardFile, WildcardCategory, CrafterData } from '../types';
 import LoadingSpinner from './LoadingSpinner';
-import { SparklesIcon, FolderClosedIcon, DeleteIcon, RefreshIcon, BookmarkIcon, Atom2Icon, FunctionIcon, CheckIcon, PlusIcon } from './icons';
-import CopyIcon from './CopyIcon';
+import { SparklesIcon, CheckIcon, CloseIcon, DeleteIcon } from './icons';
 import { fileSystemManager } from '../utils/fileUtils';
 import { PromptAnatomyPanel } from './PromptAnatomyPanel';
 import { useSettings } from '../contexts/SettingsContext';
@@ -179,6 +178,14 @@ const PromptCrafter = ({ onSaveToLibrary, onClip, onSendToEnhancer, promptToInse
         await loadData();
     };
 
+    const handleConfirmDelete = async () => {
+        if (templateToDelete) {
+            await handleDeleteTemplate(templateToDelete);
+            setIsDeleteModalOpen(false);
+            setTemplateToDelete(null);
+        }
+    };
+
     const handleWildcardClick = (wildcardName: string) => {
         const textToInsert = `__${wildcardName}__`;
         const prefix = promptText.trim().length > 0 && !promptText.endsWith(' ') ? ' ' : '';
@@ -208,14 +215,6 @@ const PromptCrafter = ({ onSaveToLibrary, onClip, onSendToEnhancer, promptToInse
         }
     };
 
-    const handleConfirmDelete = async () => {
-        if (templateToDelete) {
-            await handleDeleteTemplate(templateToDelete);
-        }
-        setIsDeleteModalOpen(false);
-        setTemplateToDelete(null);
-    };
-
     const filteredTemplates = useMemo(() => {
         if (!templateSearchText) return crafterData?.templates || [];
         return crafterData?.templates.filter(t => t.name.toLowerCase().includes(templateSearchText.toLowerCase())) || [];
@@ -240,176 +239,174 @@ const PromptCrafter = ({ onSaveToLibrary, onClip, onSendToEnhancer, promptToInse
         <div className="grid grid-cols-1 lg:grid-cols-12 overflow-hidden h-full">
             <aside className="lg:col-span-3 bg-base-100 flex flex-col overflow-hidden border-r border-base-300">
                 {header}
-                <header className="p-6 border-b border-base-300 bg-base-200/10">
+                <header className="p-6 border-b border-base-300 bg-base-200/10 h-16 flex items-center">
                     <h3 className="text-[10px] font-black uppercase tracking-[0.4em] text-primary">Wildcards</h3>
                 </header>
                 <div className="flex-grow p-6 overflow-y-auto custom-scrollbar">
                     <WildcardTree categories={crafterData?.wildcardCategories || []} onWildcardClick={handleWildcardClick} />
                 </div>
-                <div className="flex-shrink-0 p-4 border-t border-base-300 bg-base-200/5">
+                <footer className="h-14 flex-shrink-0 border-t border-base-300 bg-base-100">
                     <button 
                         onClick={loadData} 
-                        className="btn btn-sm btn-ghost border border-base-300 w-full rounded-none font-black text-[9px] tracking-widest uppercase hover:bg-base-200"
+                        className="btn btn-ghost h-full w-full rounded-none border-none font-black text-[10px] tracking-widest uppercase hover:bg-base-200"
                     >
-                        <RefreshIcon className="w-3.5 h-3.5 mr-2 opacity-40"/>
-                        Refresh Files
+                        REFRESH FILES
                     </button>
-                </div>
+                </footer>
             </aside>
             <main className="lg:col-span-5 bg-base-100 flex flex-col overflow-hidden border-r border-base-300">
-                <div className="p-4 border-b border-base-300 flex-shrink-0 bg-base-200/5">
-                    <div className="flex items-center gap-2">
-                        <div className="dropdown flex-grow">
-                            <input
-                                type="text"
-                                tabIndex={0}
-                                className="input input-bordered rounded-none input-sm w-full font-bold uppercase tracking-tighter"
-                                placeholder="SELECT TEMPLATE..."
-                                value={templateSearchText}
-                                onChange={(e) => {
-                                    setTemplateSearchText((e.currentTarget as any).value);
-                                    if(selectedTemplate && (e.currentTarget as any).value !== selectedTemplate.name) {
-                                        setSelectedTemplate(null);
-                                    }
-                                }}
-                            />
-                            {filteredTemplates.length > 0 && (
-                                <ul tabIndex={0} className="dropdown-content z-[1] menu p-1 shadow-2xl bg-base-200 rounded-none w-full max-h-60 overflow-y-auto border border-base-300">
-                                    {filteredTemplates.map(t => (
-                                        <li key={t.name}><a onClick={() => handleSelectTemplateFromDropdown(t)} className="font-bold text-xs uppercase">{t.name}</a></li>
-                                    ))}
-                                </ul>
-                            )}
-                        </div>
-                        <button 
-                            className="btn btn-sm btn-ghost border border-base-300 rounded-none font-black text-[9px] tracking-widest uppercase hover:bg-base-200" 
-                            onClick={handleUseTemplate} 
-                            disabled={!selectedTemplate}
-                        >
-                            <CheckIcon className="w-3.5 h-3.5 mr-1.5 opacity-40"/>
-                            USE
-                        </button>
-                        <button 
-                            className="btn btn-sm btn-ghost rounded-none text-error/40 hover:text-error font-black text-[9px] tracking-widest uppercase" 
-                            onClick={handleDeleteTemplateClick} 
-                            disabled={!selectedTemplate}
-                        >
-                            <DeleteIcon className="w-3.5 h-3.5 mr-1.5"/>
-                            DELETE
-                        </button>
+                {/* Template Selection Bar - h-16 to match panel headers */}
+                <div className="h-16 border-b border-base-300 flex-shrink-0 bg-base-100 flex items-stretch">
+                  <div className="dropdown flex-grow h-full">
+                    <div className="relative h-full border-r border-base-300">
+                        <input 
+                          type="text"
+                          tabIndex={0}
+                          className="w-full h-full bg-transparent border-none focus:outline-none focus:ring-0 pl-6 pr-8 font-black text-[10px] uppercase tracking-widest placeholder:text-base-content/10"
+                          placeholder="SELECT TEMPLATE..."
+                          value={templateSearchText}
+                          onChange={(e) => {
+                              const val = (e.currentTarget as any).value;
+                              setTemplateSearchText(val);
+                              if (!val) {
+                                  setSelectedTemplate(null);
+                              } else if (selectedTemplate && val !== selectedTemplate.name) {
+                                  setSelectedTemplate(null);
+                              }
+                          }}
+                        />
+                        {templateSearchText && (
+                            <button 
+                                onClick={() => { setTemplateSearchText(''); setSelectedTemplate(null); }}
+                                className="absolute right-2 top-1/2 -translate-y-1/2 text-base-content/20 hover:text-error transition-colors"
+                            >
+                                <CloseIcon className="w-3.5 h-3.5" />
+                            </button>
+                        )}
                     </div>
+                    {filteredTemplates.length > 0 && (
+                        <ul tabIndex={0} className="dropdown-content z-[1] menu p-1 shadow-2xl bg-base-200 rounded-none w-full max-h-60 overflow-y-auto border border-base-300">
+                            {filteredTemplates.map(t => (
+                                <li key={t.name}><a onClick={() => handleSelectTemplateFromDropdown(t)} className={`font-bold text-[10px] uppercase ${selectedTemplate?.name === t.name ? 'bg-primary/20 text-primary' : ''}`}>{t.name}</a></li>
+                            ))}
+                        </ul>
+                    )}
+                  </div>
+                  <button 
+                      className="btn btn-ghost h-full rounded-none border-none border-r border-base-300 px-4 text-primary disabled:opacity-20 transition-all hover:bg-base-200" 
+                      onClick={handleUseTemplate} 
+                      disabled={!selectedTemplate}
+                      title="Apply Template"
+                  >
+                      <CheckIcon className="w-4 h-4"/>
+                  </button>
+                  <button 
+                      className="btn btn-ghost h-full rounded-none border-none px-4 text-error/60 disabled:opacity-20 transition-all hover:bg-error/5" 
+                      onClick={handleDeleteTemplateClick} 
+                      disabled={!selectedTemplate}
+                      title="Delete Template"
+                  >
+                      <DeleteIcon className="w-4 h-4"/>
+                  </button>
                 </div>
 
-                <div className="p-6 h-64 flex-shrink-0">
-                    <textarea 
-                        ref={textareaRef}
-                        value={promptText}
-                        onChange={(e) => setPromptText((e.currentTarget as any).value)}
-                        placeholder="Type your prompt here... Use __wildcard__ for random selection."
-                        className="textarea textarea-bordered rounded-none w-full h-full resize-none font-medium leading-relaxed bg-base-200/20"
-                    ></textarea>
-                </div>
-
-                <div className="px-6 py-4 border-t border-base-300 bg-base-200/5 flex flex-col gap-2">
-                    <div className="grid grid-cols-3 gap-2">
+                <div className="flex-grow flex flex-col min-h-0 bg-base-200/5">
+                    <div className="flex-grow p-6 flex flex-col">
+                        <textarea 
+                            ref={textareaRef}
+                            value={promptText}
+                            onChange={(e) => setPromptText((e.currentTarget as any).value)}
+                            placeholder="STREAM NEW CORE CONCEPT... Use __wildcard__ for selection."
+                            className="textarea textarea-bordered rounded-none w-full flex-grow resize-none font-medium leading-relaxed bg-base-200/20 custom-scrollbar border-none focus:outline-none focus:ring-0 p-0 text-sm"
+                        ></textarea>
+                    </div>
+                    
+                    {/* Middle Action Bar - Library Style */}
+                    <div className="h-14 border-t border-b border-base-300 bg-base-100 flex items-stretch flex-shrink-0">
                         <button 
                             onClick={() => setPromptText('')} 
-                            className="btn btn-sm btn-ghost rounded-none font-black text-[9px] tracking-widest text-error/40 hover:text-error uppercase w-full"
+                            className="btn btn-ghost h-full rounded-none border-none border-r border-base-300 flex-1 font-black text-[10px] tracking-widest text-error/40 hover:text-error uppercase"
                         >
-                            <DeleteIcon className="w-3.5 h-3.5 mr-1.5"/>
                             CLEAR
                         </button>
                         <button 
                             onClick={handleSaveTemplateClick} 
-                            className="btn btn-sm btn-ghost border border-base-300 rounded-none font-black text-[9px] tracking-widest uppercase hover:bg-base-200 w-full"
+                            className="btn btn-ghost h-full rounded-none border-none border-r border-base-300 flex-1 font-black text-[10px] tracking-widest uppercase hover:bg-base-200"
                         >
-                            <BookmarkIcon className="w-3.5 h-3.5 mr-1.5 opacity-40"/>
                             SAVE
                         </button>
                         <button 
                             onClick={handleGenerate} 
-                            className="btn btn-sm btn-primary rounded-none font-black text-[9px] tracking-widest uppercase shadow-lg w-full"
+                            className="btn btn-primary h-full rounded-none border-none flex-1 font-black text-[10px] tracking-widest uppercase shadow-none"
                         >
-                            <SparklesIcon className="w-3.5 h-3.5 mr-1.5"/>
                             GENERATE
                         </button>
                     </div>
+
+                    <div className="flex-grow p-6 overflow-y-auto relative bg-base-100">
+                        {aiAction && (
+                            <div className="absolute inset-0 bg-base-100/80 backdrop-blur-sm flex flex-col items-center justify-center z-10">
+                                <LoadingSpinner />
+                                <p className="text-[10px] font-black uppercase tracking-[0.4em] text-primary animate-pulse -mt-4">{aiAction}</p>
+                            </div>
+                        )}
+                        {generatedPrompt ? (
+                            <div className="space-y-4 animate-fade-in">
+                                 <div className="flex justify-between items-center">
+                                    <span className="text-[10px] font-black uppercase tracking-[0.2em] text-primary/60 flex items-center gap-3">
+                                        <div className="w-1.5 h-1.5 rounded-full bg-primary animate-pulse"></div> Resulting Prompt
+                                    </span>
+                                </div>
+                                <div className="p-6 bg-base-200/50 border border-base-300 text-base font-medium leading-relaxed italic text-base-content/80">
+                                    "{generatedPrompt}"
+                                </div>
+                            </div>
+                        ) : (
+                            <div className="h-full flex flex-col items-center justify-center text-center py-24 opacity-10">
+                                <SparklesIcon className="w-16 h-16 mx-auto mb-4"/>
+                                <p className="text-xl font-black uppercase tracking-widest">Awaiting generated prompt</p>
+                            </div>
+                        )}
+                    </div>
                 </div>
 
-                <div className="flex-grow p-6 overflow-y-auto relative border-t border-base-300 bg-base-100">
-                    {aiAction && (
-                        <div className="absolute inset-0 bg-base-100/80 backdrop-blur-sm flex flex-col items-center justify-center z-10">
-                            <LoadingSpinner />
-                            <p className="text-[10px] font-black uppercase tracking-[0.4em] text-primary animate-pulse -mt-4">{aiAction}</p>
-                        </div>
-                    )}
-                    {generatedPrompt ? (
-                        <div className="space-y-4">
-                             <div className="flex justify-between items-center">
-                                <span className="text-[10px] font-black uppercase tracking-[0.2em] text-primary/60 flex items-center gap-3">
-                                    <div className="w-1.5 h-1.5 rounded-full bg-primary animate-pulse"></div> Resulting Prompt
-                                </span>
-                            </div>
-                            <div className="p-6 bg-base-200/50 border border-base-300 text-base font-medium leading-relaxed italic text-base-content/80">
-                                "{generatedPrompt}"
-                            </div>
-                        </div>
-                    ) : (
-                        <div className="h-full flex flex-col items-center justify-center text-center py-24 opacity-10">
-                            <SparklesIcon className="w-16 h-16 mx-auto mb-4"/>
-                            <p className="text-xl font-black uppercase tracking-widest">Awaiting generated prompt</p>
-                        </div>
-                    )}
-                </div>
-                <div className="p-4 border-t border-base-300 bg-base-200/20">
-                    <div className="grid grid-cols-5 gap-2">
-                        <button 
-                            onClick={handleAnalyze} 
-                            disabled={!generatedPrompt || !!aiAction} 
-                            className="btn btn-sm btn-ghost border border-base-300 rounded-none font-black text-[9px] tracking-widest uppercase hover:bg-base-200 w-full px-1 truncate"
-                        >
-                            <Atom2Icon className="w-3.5 h-3.5 mr-1.5 opacity-40"/>
-                            ANALYZE
-                        </button>
-                        <button 
-                            onClick={handleReconstruct} 
-                            disabled={!generatedPrompt || !!aiAction} 
-                            className="btn btn-sm btn-ghost border border-base-300 rounded-none font-black text-[9px] tracking-widest uppercase hover:bg-base-200 w-full px-1 truncate"
-                        >
-                            <RefreshIcon className="w-3.5 h-3.5 mr-1.5 opacity-40"/>
-                            REWRITE
-                        </button>
-                        <button 
-                            onClick={() => onSendToEnhancer(generatedPrompt!)} 
-                            disabled={!generatedPrompt || !!aiAction} 
-                            className="btn btn-sm btn-primary rounded-none font-black text-[9px] tracking-widest uppercase shadow-lg w-full px-1 truncate"
-                        >
-                            <SparklesIcon className="w-3.5 h-3.5 mr-1.5"/>
-                            REFINE
-                        </button>
-                        <button 
-                            onClick={handleClip} 
-                            disabled={!generatedPrompt} 
-                            className="btn btn-sm btn-ghost border border-base-300 rounded-none font-black text-[9px] tracking-widest uppercase hover:bg-base-200 w-full px-1 truncate"
-                        >
-                            {clipped ? (
-                                <><CheckIcon className="w-3.5 h-3.5 mr-1.5 text-success"/> OK</>
-                            ) : (
-                                <><BookmarkIcon className="w-3.5 h-3.5 mr-1.5 opacity-40"/> CLIP</>
-                            )}
-                        </button>
-                        <button 
-                            onClick={handleCopy} 
-                            disabled={!generatedPrompt} 
-                            className="btn btn-sm btn-ghost border border-base-300 rounded-none font-black text-[9px] tracking-widest uppercase hover:bg-base-200 w-full px-1 truncate"
-                        >
-                            {copied ? (
-                                <><CheckIcon className="w-3.5 h-3.5 mr-1.5 text-success"/> OK</>
-                            ) : (
-                                <><CopyIcon className="w-3.5 h-3.5 mr-1.5 opacity-40"/> COPY</>
-                            )}
-                        </button>
-                    </div>
+                {/* Bottom Action Bar - Library Style */}
+                <div className="h-14 border-t border-base-300 bg-base-100 flex items-stretch flex-shrink-0">
+                    <button 
+                        onClick={handleAnalyze} 
+                        disabled={!generatedPrompt || !!aiAction} 
+                        className="btn btn-ghost h-full rounded-none border-none border-r border-base-300 flex-1 font-black text-[10px] tracking-widest uppercase hover:bg-base-200 px-1 truncate"
+                    >
+                        ANALYZE
+                    </button>
+                    <button 
+                        onClick={handleReconstruct} 
+                        disabled={!generatedPrompt || !!aiAction} 
+                        className="btn btn-ghost h-full rounded-none border-none border-r border-base-300 flex-1 font-black text-[10px] tracking-widest uppercase hover:bg-base-200 px-1 truncate"
+                    >
+                        REWRITE
+                    </button>
+                    <button 
+                        onClick={() => onSendToEnhancer(generatedPrompt!)} 
+                        disabled={!generatedPrompt || !!aiAction} 
+                        className="btn btn-ghost h-full rounded-none border-none border-r border-base-300 flex-1 font-black text-[10px] tracking-widest text-primary uppercase hover:bg-primary/10 px-1 truncate"
+                    >
+                        IMPROVE
+                    </button>
+                    <button 
+                        onClick={handleClip} 
+                        disabled={!generatedPrompt} 
+                        className="btn btn-ghost h-full rounded-none border-none border-r border-base-300 flex-1 font-black text-[10px] tracking-widest uppercase hover:bg-base-200 px-1 truncate"
+                    >
+                        {clipped ? 'OK' : 'CLIP'}
+                    </button>
+                    <button 
+                        onClick={handleCopy} 
+                        disabled={!generatedPrompt} 
+                        className="btn btn-ghost h-full rounded-none border-none flex-1 font-black text-[10px] tracking-widest uppercase hover:bg-base-200 px-1 truncate"
+                    >
+                        {copied ? 'OK' : 'COPY'}
+                    </button>
                 </div>
             </main>
             
@@ -427,7 +424,7 @@ const PromptCrafter = ({ onSaveToLibrary, onClip, onSendToEnhancer, promptToInse
                 <div className="fixed inset-0 bg-black/80 z-50 flex items-center justify-center p-4 animate-fade-in" onClick={() => setIsSaveModalOpen(false)}>
                     <div className="bg-base-100 rounded-none border border-base-300 shadow-2xl w-full max-w-lg overflow-hidden" onClick={(e) => e.stopPropagation()}>
                         <header className="p-8 border-b border-base-300 bg-base-200/20">
-                            <h3 className="text-2xl font-black tracking-tighter text-base-content leading-none">SAVE TEMPLATE<span className="text-primary">.</span></h3>
+                            <h3 className="text-2xl font-black tracking-tighter text-base-content leading-none uppercase">SAVE TEMPLATE<span className="text-primary">.</span></h3>
                         </header>
                         <div className="p-8">
                             <input
@@ -437,6 +434,7 @@ const PromptCrafter = ({ onSaveToLibrary, onClip, onSendToEnhancer, promptToInse
                                 placeholder="ENTER NAME..."
                                 className="input input-bordered rounded-none w-full font-bold tracking-tight uppercase"
                                 autoFocus
+                                onKeyDown={(e) => e.key === 'Enter' && handleConfirmSaveTemplate()}
                             />
                         </div>
                         <div className="p-4 border-t border-base-300 flex justify-end gap-2 bg-base-200/10">

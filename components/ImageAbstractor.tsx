@@ -1,10 +1,9 @@
-
 import React, { useState, useRef, useCallback, useEffect } from 'react';
 import { useSettings } from '../contexts/SettingsContext';
 import { abstractImage } from '../services/llmService';
 import type { AppError, EnhancementResult } from '../types';
-import { PROMPT_DETAIL_LEVELS, TARGET_IMAGE_AI_MODELS } from '../constants';
-import { UploadIcon, PhotoIcon, CloseIcon, SparklesIcon, FilmIcon } from './icons';
+import { PROMPT_DETAIL_LEVELS } from '../constants';
+import { PhotoIcon, CloseIcon, SparklesIcon, FilmIcon } from './icons';
 import LoadingSpinner from './LoadingSpinner';
 import { SuggestionItem } from './SuggestionItem';
 import { fileToBase64 } from '../utils/fileUtils';
@@ -56,8 +55,8 @@ export const ImageAbstractor: React.FC<ImageAbstractorProps> = ({ onSaveSuggesti
         }
     };
 
-    const handleRemoveMedia = (e: React.MouseEvent) => {
-        e.stopPropagation();
+    const handleRemoveMedia = (e: React.MouseEvent | null) => {
+        if (e) e.stopPropagation();
         if (previewUrl && typeof window !== 'undefined') URL.revokeObjectURL(previewUrl);
         setSourceFile(null);
         setPreviewUrl(null);
@@ -122,7 +121,7 @@ export const ImageAbstractor: React.FC<ImageAbstractorProps> = ({ onSaveSuggesti
             {/* Left Sidebar: Form */}
             <div className="lg:col-span-1 bg-base-100 flex flex-col min-h-0 border-r border-base-300">
                 {header}
-                <header className="p-6 border-b border-base-300 bg-base-200/10">
+                <header className="p-6 border-b border-base-300 bg-base-200/10 h-16 flex items-center">
                     <h3 className="text-[10px] font-black uppercase tracking-[0.4em] text-primary">Source Material</h3>
                 </header>
                 <div className="p-6 flex flex-col gap-6 flex-grow min-h-0 overflow-hidden">
@@ -166,7 +165,7 @@ export const ImageAbstractor: React.FC<ImageAbstractorProps> = ({ onSaveSuggesti
                                         alt="Source material" 
                                     />
                                 )}
-                                <button onClick={handleRemoveMedia} className="btn btn-xs btn-square btn-error absolute top-2 right-2 opacity-0 group-hover:opacity-100 shadow-2xl z-10 rounded-none">
+                                <button onClick={() => handleRemoveMedia(null)} className="btn btn-xs btn-square btn-error absolute top-2 right-2 opacity-0 group-hover:opacity-100 shadow-2xl z-10 rounded-none">
                                     <CloseIcon className="w-3 h-3"/>
                                 </button>
                                 {fileType === 'video' && (
@@ -179,19 +178,28 @@ export const ImageAbstractor: React.FC<ImageAbstractorProps> = ({ onSaveSuggesti
                     </div>
 
                     <p className="text-[9px] font-bold text-base-content/30 uppercase leading-relaxed text-center">
-                        Deconstruct visual data into raw descriptive tokens. Use the Refiner after extraction for model-specific tuning.
+                        Deconstruct visual data into raw descriptive tokens. Use the IMPROVE tool after extraction for model-specific tuning.
                     </p>
                 </div>
-                <div className="p-4 border-t border-base-300 bg-base-200/20 grid grid-cols-2 gap-2">
-                    <button onClick={() => !isLoading && handleRemoveMedia(null as any)} className="btn btn-sm btn-ghost rounded-none font-black text-[9px] tracking-widest text-error/40 hover:text-error uppercase">PURGE</button>
-                    <button onClick={handleAbstract} disabled={isLoading || !sourceFile} className="btn btn-sm btn-primary rounded-none font-black text-[9px] tracking-widest uppercase shadow-lg">
-                        {isLoading ? 'WORKING...' : 'ANALYZE'}
+                <footer className="h-14 border-t border-base-300 bg-base-100 flex items-stretch flex-shrink-0">
+                    <button 
+                        onClick={() => !isLoading && handleRemoveMedia(null)} 
+                        className="btn btn-ghost h-full rounded-none border-none border-r border-base-300 flex-1 font-black text-[10px] tracking-widest text-error/40 hover:text-error uppercase"
+                    >
+                        RESET
                     </button>
-                </div>
+                    <button 
+                        onClick={handleAbstract} 
+                        disabled={isLoading || !sourceFile} 
+                        className="btn btn-primary h-full rounded-none border-none flex-1 font-black text-[10px] tracking-widest uppercase shadow-none"
+                    >
+                        {isLoading ? '...' : 'ANALYZE'}
+                    </button>
+                </footer>
             </div>
             {/* Main Output Column: Results */}
             <div className="lg:col-span-2 bg-base-100 flex flex-col min-h-0">
-                 <header className="p-6 border-b border-base-300 bg-base-200/10">
+                 <header className="p-6 border-b border-base-300 bg-base-200/10 h-16 flex items-center">
                     <h2 className="text-xs font-black uppercase tracking-[0.4em] text-primary flex items-center gap-3">
                         <div className="w-2 h-2 rounded-full bg-primary animate-pulse"></div> NEURAL ABSTRACTION
                     </h2>

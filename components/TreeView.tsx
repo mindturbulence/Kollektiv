@@ -1,3 +1,4 @@
+
 import React, { useState, useCallback, useEffect } from 'react';
 import { FolderOpenIcon, FolderClosedIcon, ChevronRightIcon } from './icons';
 
@@ -56,7 +57,7 @@ const TreeViewNode: React.FC<{
             <ChevronRightIcon className={`w-4 h-4 mr-1 flex-shrink-0 transition-transform duration-150 ${isExpanded ? 'rotate-90' : 'rotate-0'}`} />
           )}
           <div className="mr-2 flex-shrink-0" style={{ paddingLeft: hasChildren ? '0' : '1.25rem' }}>{getIcon()}</div>
-          <span className="truncate" title={item.name}>{item.name}</span>
+          <span className="truncate font-display" title={item.name}>{item.name}</span>
         </div>
         {typeof item.count !== 'undefined' && (
           <span className="ml-2 flex-shrink-0 text-xs font-mono bg-base-300/50 text-base-content/70 rounded-full px-2 py-0.5">
@@ -86,7 +87,8 @@ const TreeViewNode: React.FC<{
 
 
 const TreeView: React.FC<TreeViewProps> = ({ items, selectedId, onSelect, searchActive }) => {
-    const [expandedIds, setExpandedIds] = useState<Set<string>>(new Set(['all']));
+    // Modified: Initial set is empty so nodes are collapsed by default
+    const [expandedIds, setExpandedIds] = useState<Set<string>>(new Set([]));
 
     const handleToggleExpand = useCallback((id: string) => {
         setExpandedIds(prev => {

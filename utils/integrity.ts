@@ -1,4 +1,3 @@
-
 import { fileSystemManager } from './fileUtils';
 import { ART_STYLES_DATA } from '../constants/cheatsheetData';
 import { ARTIST_CHEATSHEET_DATA } from '../constants/cheatsheetData';
@@ -40,6 +39,11 @@ const fileManifest: FileManifestEntry[] = [
     },
     {
         path: 'refiner_presets_manifest.json',
+        type: 'json',
+        getDefaultContent: () => ({ presets: [] }),
+    },
+    {
+        path: 'composer_presets_manifest.json',
         type: 'json',
         getDefaultContent: () => ({ presets: [] }),
     },
@@ -188,7 +192,7 @@ export const rebuildPromptDatabase = async (onProgress: (msg: string) => void): 
  */
 export const optimizeManifests = async (onProgress: (msg: string) => void): Promise<void> => {
     onProgress('Compressing System Registries...');
-    const files = ['kollektiv_gallery_manifest.json', 'prompts_manifest.json', 'crafter_manifest.json', 'refiner_presets_manifest.json'];
+    const files = ['kollektiv_gallery_manifest.json', 'prompts_manifest.json', 'crafter_manifest.json', 'refiner_presets_manifest.json', 'composer_presets_manifest.json'];
     
     for (const file of files) {
         const content = await fileSystemManager.readFile(file);

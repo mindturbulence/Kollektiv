@@ -50,15 +50,16 @@ import AutocompleteSelect from './AutocompleteSelect';
 import { PhotoIcon, FilmIcon, RefreshIcon, SparklesIcon, UploadIcon, CloseIcon, ChevronDownIcon, Cog6ToothIcon, ArchiveIcon, BookmarkIcon, CheckIcon, DeleteIcon } from './icons';
 import ConfirmationModal from './ConfirmationModal';
 
+// --- Types ---
+type MediaMode = 'image' | 'video' | 'audio';
+type RefineSubTab = 'basic' | 'styling' | 'photography' | 'motion' | 'audio' | 'platform';
+
 interface PromptsPageProps {
   initialState?: { prompt?: string, artStyle?: string, artist?: string, view?: 'enhancer' | 'composer' | 'create', id?: string } | null;
   onStateHandled: () => void;
   showGlobalFeedback: (message: string, isError?: boolean) => void;
   onClipIdea: (idea: Idea) => void;
 }
-
-type RefineSubTab = 'basic' | 'styling' | 'photography' | 'motion' | 'platform' | 'audio';
-type MediaMode = 'image' | 'video' | 'audio';
 
 const PropertyCard: React.FC<{
     label: string;
@@ -231,7 +232,7 @@ const PromptsPage: React.FC<PromptsPageProps> = ({
           setTargetAIModel(TARGET_IMAGE_AI_MODELS[0]);
       } else if (mediaMode === 'video') {
           setTargetAIModel(TARGET_VIDEO_AI_MODELS[0]);
-      } else {
+      } else if (mediaMode === 'audio') {
           setTargetAIModel(TARGET_AUDIO_AI_MODELS[0]);
       }
   }, [mediaMode]);
@@ -368,6 +369,8 @@ const PromptsPage: React.FC<PromptsPageProps> = ({
     setResultsRefine(null);
     setDirectMediaResult(null);
     setErrorRefine(null);
+    setSelectedPreset(null);
+    setPresetSearchText('');
     showGlobalFeedback('Workspace purge.');
   };
 
@@ -378,7 +381,7 @@ const PromptsPage: React.FC<PromptsPageProps> = ({
       targetAI: targetAIModel,
       title: title || `Token_${Date.now().toString().slice(-4)}`
     });
-    setIsSaveSuggestionModalOpen(true);
+    setIsSaveSuggestionModalOpen(false);
   };
 
   /**
@@ -463,7 +466,7 @@ const PromptsPage: React.FC<PromptsPageProps> = ({
         filmStock: { label: 'Film Stock', tab: 'photography' },
         filmType: { label: 'Medium Format', tab: 'photography' },
         cameraAngle: { label: 'Angle', tab: 'photography' },
-        cameraProximity: { label: 'Proximity', tab: 'photography' },
+        cameraProximity: { label: 'Distance', tab: 'photography' },
         cameraSettings: { label: 'Technical', tab: 'photography' },
         cameraEffect: { label: 'Aberration', tab: 'photography' },
         lighting: { label: 'Lighting', tab: 'photography' },
@@ -574,11 +577,21 @@ const PromptsPage: React.FC<PromptsPageProps> = ({
                       
                       <div className="form-control">
                           <label className="text-[10px] font-black uppercase text-base-content/40 tracking-widest mb-2 block">Aesthetics Look</label>
-                          <AutocompleteSelect value={modifiers.aestheticLook || ''} onChange={(v) => setModifiers({...modifiers, aestheticLook: v})} options={AESTHETIC_LOOKS.map(l => ({ label: l.toUpperCase(), value: l }))} placeholder="Look..." />
+                          <AutocompleteSelect 
+                            value={modifiers.aestheticLook || ''} 
+                            onChange={(v) => setModifiers({...modifiers, aestheticLook: v})} 
+                            options={AESTHETIC_LOOKS.map(l => ({ label: l.name.toUpperCase(), value: l.name, description: l.description }))} 
+                            placeholder="Look..." 
+                          />
                       </div>
                       <div className="form-control">
                           <label className="text-[10px] font-black uppercase text-base-content/40 tracking-widest mb-2 block">Digital Trend</label>
-                          <AutocompleteSelect value={modifiers.digitalAesthetic || ''} onChange={(v) => setModifiers({...modifiers, digitalAesthetic: v})} options={DIGITAL_AESTHETICS.map(t => ({ label: t.toUpperCase(), value: t }))} placeholder="Trend..." />
+                          <AutocompleteSelect 
+                            value={modifiers.digitalAesthetic || ''} 
+                            onChange={(v) => setModifiers({...modifiers, digitalAesthetic: v})} 
+                            options={DIGITAL_AESTHETICS.map(t => ({ label: t.name.toUpperCase(), value: t.name, description: t.description }))} 
+                            placeholder="Trend..." 
+                          />
                       </div>
                   </div>
               );
@@ -659,18 +672,28 @@ const PromptsPage: React.FC<PromptsPageProps> = ({
           case 'motion':
               return (
                 <div className="space-y-6 animate-fade-in">
-                    <label className="text-[10px] font-black uppercase text-base-content/40 tracking-widest block">Kinetic Energy</label>
+                    <label className="text-[10px] font-black uppercase text-base-content/40 tracking-widest block">Generation Method</label>
                     <div className="join w-full">
                         <button onClick={() => setModifiers({...modifiers, videoInputType: 't2v'})} className={`join-item btn btn-xs flex-1 rounded-none font-black text-[9px] ${modifiers.videoInputType === 't2v' ? 'btn-active' : ''}`}>TEXT-2-VID</button>
                         <button onClick={() => setModifiers({...modifiers, videoInputType: 'i2v'})} className={`join-item btn btn-xs flex-1 rounded-none font-black text-[9px] ${modifiers.videoInputType === 'i2v' ? 'btn-active' : ''}`}>IMG-2-VID</button>
                     </div>
                     <div className="form-control">
-                        <label className="text-[10px] font-black uppercase text-base-content/40 tracking-widest mb-2 block">Motion Energy</label>
-                        <AutocompleteSelect value={modifiers.motion || ''} onChange={(v) => setModifiers({...modifiers, motion: v})} options={MOTION_OPTIONS.map(m => ({ label: m.toUpperCase(), value: m }))} placeholder="Motion..." />
+                        <label className="text-[10px] font-black uppercase text-base-content/40 tracking-widest mb-2 block">Motion</label>
+                        <AutocompleteSelect 
+                          value={modifiers.motion || ''} 
+                          onChange={(v) => setModifiers({...modifiers, motion: v})} 
+                          options={MOTION_OPTIONS.map(m => ({ label: m.name.toUpperCase(), value: m.name, description: m.description }))} 
+                          placeholder="Motion..." 
+                        />
                     </div>
                     <div className="form-control">
-                        <label className="text-[10px] font-black uppercase text-base-content/40 tracking-widest mb-2 block">Camera Pathing</label>
-                        <AutocompleteSelect value={modifiers.cameraMovement || ''} onChange={(v) => setModifiers({...modifiers, cameraMovement: v})} options={CAMERA_MOVEMENT_OPTIONS.map(m => ({ label: m.toUpperCase(), value: m }))} placeholder="Cam-Path..." />
+                        <label className="text-[10px] font-black uppercase text-base-content/40 tracking-widest mb-2 block">Pathing</label>
+                        <AutocompleteSelect 
+                          value={modifiers.cameraMovement || ''} 
+                          onChange={(v) => setModifiers({...modifiers, cameraMovement: v})} 
+                          options={CAMERA_MOVEMENT_OPTIONS.map(m => ({ label: m.name.toUpperCase(), value: m.name, description: m.description }))} 
+                          placeholder="Pathing..." 
+                        />
                     </div>
                 </div>
               );
@@ -780,7 +803,7 @@ const PromptsPage: React.FC<PromptsPageProps> = ({
                                 </div>
                             </div>
                         </>
-                    ) : isGoogleProduct ? (
+                     ) : isGoogleProduct ? (
                         <>
                             <div className="space-y-4 h-full flex flex-col">
                                 <label className="text-[10px] font-black uppercase text-primary/60 tracking-[0.2em] block">Reference Materials</label>
@@ -897,9 +920,6 @@ const PromptsPage: React.FC<PromptsPageProps> = ({
   const handleSelectPresetFromDropdown = (preset: RefinerPreset) => {
       setSelectedPreset(preset);
       setPresetSearchText(preset.name);
-      if (typeof (window as any).document !== 'undefined' && (window as any).document.activeElement instanceof (window as any).HTMLElement) {
-          ((window as any).document.activeElement as any).blur();
-      }
   };
 
   return (
@@ -919,7 +939,7 @@ const PromptsPage: React.FC<PromptsPageProps> = ({
 
         {activeView === 'refine' && (
           <div className="grid grid-cols-1 lg:grid-cols-12 overflow-hidden h-full">
-            {/* Left Sidebar: Controls & Tabs - Increased to col-span-4 */}
+            {/* Left Sidebar: Controls & Tabs */}
             <aside className="lg:col-span-4 bg-base-100 flex flex-col border-r border-base-300 overflow-hidden">
               <div className="p-4 border-b border-base-300 bg-base-200/10">
                 <div className="tabs tabs-boxed rounded-none bg-transparent gap-1 p-0 flex flex-wrap">
@@ -937,20 +957,25 @@ const PromptsPage: React.FC<PromptsPageProps> = ({
               <div className="flex-grow p-6 overflow-y-auto custom-scrollbar">
                 {renderRefineSubContent()}
               </div>
-              <footer className={`p-4 border-t border-base-300 bg-base-200/20 grid ${isGoogleProduct ? 'grid-cols-3' : 'grid-cols-2'} gap-2`}>
-                <button onClick={handleResetRefiner} className="btn btn-sm btn-ghost rounded-none font-black text-[9px] tracking-widest text-error/40 hover:text-error uppercase">PURGE</button>
+              <footer className="h-14 border-t border-base-300 bg-base-100 flex items-stretch flex-shrink-0">
+                <button 
+                  onClick={handleResetRefiner} 
+                  className="btn btn-ghost h-full rounded-none border-none border-r border-base-300 flex-1 font-black text-[10px] tracking-widest text-error/40 hover:text-error uppercase"
+                >
+                  RESET
+                </button>
                 <button 
                   onClick={handleEnhance} 
                   disabled={isLoadingRefine || !refineText.trim()} 
-                  className="btn btn-sm btn-ghost border border-base-300 rounded-none font-black text-[9px] tracking-widest uppercase hover:bg-base-200"
+                  className="btn btn-ghost h-full rounded-none border-none border-r border-base-300 flex-1 font-black text-[10px] tracking-widest uppercase hover:bg-base-200"
                 >
-                  {isLoadingRefine ? '...' : 'REFINE'}
+                  {isLoadingRefine ? '...' : 'IMPROVE'}
                 </button>
                 {isGoogleProduct && (
                   <button 
                     onClick={handleDirectGenerate} 
                     disabled={isLoadingRefine || !refineText.trim()} 
-                    className="btn btn-sm btn-primary rounded-none font-black text-[9px] tracking-widest uppercase shadow-lg"
+                    className="btn btn-primary h-full rounded-none border-none flex-1 font-black text-[10px] tracking-widest uppercase shadow-none"
                   >
                     {isLoadingRefine ? '...' : 'RENDER'}
                   </button>
@@ -958,7 +983,7 @@ const PromptsPage: React.FC<PromptsPageProps> = ({
               </footer>
             </aside>
 
-            {/* Center: Main Neural Output - Reduced to col-span-5 to accommodate larger sidebar */}
+            {/* Center: Main Neural Output */}
             <main className="lg:col-span-5 bg-base-100 flex flex-col min-h-0 border-r border-base-300">
               <header className="p-6 border-b border-base-300 bg-base-200/10 flex justify-between items-center">
                 <h2 className="text-xs font-black uppercase tracking-[0.4em] text-primary flex items-center gap-3">
@@ -1014,48 +1039,61 @@ const PromptsPage: React.FC<PromptsPageProps> = ({
                   <h3 className="text-xs font-black uppercase tracking-[0.4em] text-base-content/40">Active Construction</h3>
               </header>
               
-              {/* Presets Management UI */}
-              <div className="p-4 border-b border-base-300 flex-shrink-0 bg-base-200/5">
-                <div className="flex items-center gap-2">
-                  <div className="dropdown flex-grow">
-                    <input 
-                      type="text"
-                      tabIndex={0}
-                      className="input input-bordered rounded-none input-sm w-full font-bold uppercase tracking-tighter"
-                      placeholder="SELECT PRESET..."
-                      value={presetSearchText}
-                      onChange={(e) => {
-                          setPresetSearchText((e.currentTarget as any).value);
-                          if(selectedPreset && (e.currentTarget as any).value !== selectedPreset.name) {
-                              setSelectedPreset(null);
-                          }
-                      }}
-                    />
-                    {filteredPresets.length > 0 && (
-                      <ul tabIndex={0} className="dropdown-content z-[30] menu p-1 shadow-2xl bg-base-200 rounded-box w-full mt-2 z-[50] border border-base-300">
-                        {filteredPresets.map(p => (
-                          <li key={p.name}><a onClick={() => handleSelectPresetFromDropdown(p)} className="font-bold text-xs uppercase">{p.name}</a></li>
-                        ))}
-                      </ul>
-                    )}
+              {/* Presets Management UI - Library Filter Look */}
+              <div className="h-14 border-b border-base-300 flex-shrink-0 bg-base-100 flex items-stretch">
+                  <div className="dropdown flex-grow h-full">
+                    <div className="relative h-full border-r border-base-300">
+                        <input 
+                          type="text"
+                          tabIndex={0}
+                          className="w-full h-full bg-transparent border-none focus:outline-none focus:ring-0 pl-4 pr-8 font-black text-[10px] uppercase tracking-widest placeholder:text-base-content/10"
+                          placeholder="SELECT PRESET..."
+                          value={presetSearchText}
+                          onChange={(e) => {
+                              const val = (e.currentTarget as any).value;
+                              setPresetSearchText(val);
+                              if (!val) {
+                                  setSelectedPreset(null);
+                              } else if (selectedPreset && val !== selectedPreset.name) {
+                                  setSelectedPreset(null);
+                              }
+                          }}
+                        />
+                        {presetSearchText && (
+                            <button 
+                                onClick={() => { setPresetSearchText(''); setSelectedPreset(null); }}
+                                className="absolute right-2 top-1/2 -translate-y-1/2 text-base-content/20 hover:text-error transition-colors"
+                            >
+                                <CloseIcon className="w-3.5 h-3.5" />
+                            </button>
+                        )}
+                    </div>
+                    <ul tabIndex={0} className="dropdown-content z-[30] menu p-1 shadow-2xl bg-base-200 rounded-none w-full mt-2 z-[50] border border-base-300 max-h-60 overflow-y-auto">
+                      {filteredPresets.length > 0 ? (
+                        filteredPresets.map(p => (
+                          <li key={p.name}><a onClick={() => handleSelectPresetFromDropdown(p)} className={`font-bold text-[10px] uppercase ${selectedPreset?.name === p.name ? 'bg-primary/20 text-primary' : ''}`}>{p.name}</a></li>
+                        ))
+                      ) : (
+                          <li className="disabled p-2 text-center text-[10px] font-black uppercase opacity-20">No matching presets</li>
+                      )}
+                    </ul>
                   </div>
                   <button 
-                      className="btn btn-sm btn-ghost border border-base-300 rounded-none font-black text-[9px] tracking-widest uppercase hover:bg-base-200" 
+                      className="btn btn-ghost h-full rounded-none border-none border-r border-base-300 px-4 text-primary disabled:opacity-20 transition-all hover:bg-base-200" 
                       onClick={handleUsePreset} 
                       disabled={!selectedPreset}
+                      title="Apply Preset"
                   >
-                      <CheckIcon className="w-3.5 h-3.5 mr-1.5 opacity-40"/>
-                      USE
+                      <CheckIcon className="w-4 h-4"/>
                   </button>
                   <button 
-                      className="btn btn-sm btn-ghost rounded-none text-error/40 hover:text-error font-black text-[9px] tracking-widest uppercase" 
+                      className="btn btn-ghost h-full rounded-none border-none px-4 text-error/60 disabled:opacity-20 transition-all hover:bg-error/5" 
                       onClick={handleDeletePresetClick} 
                       disabled={!selectedPreset}
+                      title="Delete Preset"
                   >
-                      <DeleteIcon className="w-3.5 h-3.5 mr-1.5"/>
-                      DELETE
+                      <DeleteIcon className="w-4 h-4"/>
                   </button>
-                </div>
               </div>
 
               <div className="flex-grow p-6 overflow-y-auto custom-scrollbar">
@@ -1080,13 +1118,12 @@ const PromptsPage: React.FC<PromptsPageProps> = ({
                 )}
               </div>
 
-              <footer className="p-4 border-t border-base-300 bg-base-200/20">
+              <footer className="h-14 border-t border-base-300 bg-base-100 flex items-stretch flex-shrink-0">
                 <button 
                     onClick={handleSavePresetClick} 
                     disabled={activeConstructionItems.length === 0}
-                    className="btn btn-sm btn-ghost border border-base-300 w-full rounded-none font-black text-[9px] tracking-widest uppercase hover:bg-base-200"
+                    className="btn btn-primary h-full w-full rounded-none border-none font-black text-[10px] tracking-[0.2em] uppercase shadow-none"
                 >
-                    <BookmarkIcon className="w-3.5 h-3.5 mr-1.5 opacity-40"/>
                     SAVE AS PRESET
                 </button>
               </footer>

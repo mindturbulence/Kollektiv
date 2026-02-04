@@ -1,3 +1,4 @@
+
 import React, { useRef, useState, useEffect, useCallback } from 'react';
 import type { ActiveTab } from '../types';
 import { useSettings } from '../contexts/SettingsContext';
@@ -57,6 +58,54 @@ const ScrambledText: React.FC<{ text: string; isHovered: boolean }> = ({ text, i
     }, [isHovered, text, startScramble]);
 
     return <span className={isHovered ? 'font-mono' : ''}>{display}</span>;
+};
+
+/**
+ * Timed Scramble Component for App Title.
+ * Runs once on initialization/refresh, then recurringly.
+ */
+const TimedScrambledText: React.FC<{ text: string; intervalMs: number }> = ({ text, intervalMs }) => {
+    const [display, setDisplay] = useState(text);
+    const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789!@#$%^&*()_+';
+    const originalText = useRef(text);
+    const iterationRef = useRef(0);
+    const intervalRef = useRef<number | null>(null);
+
+    const startScramble = useCallback(() => {
+        if (intervalRef.current) clearInterval(intervalRef.current);
+        iterationRef.current = 0;
+        
+        intervalRef.current = window.setInterval(() => {
+            setDisplay(originalText.current.split('').map((char, index) => {
+                if (index < iterationRef.current) return originalText.current[index];
+                if (char === ' ') return ' ';
+                return chars[Math.floor(Math.random() * chars.length)];
+            }).join(''));
+            
+            if (iterationRef.current >= originalText.current.length) {
+                if (intervalRef.current) clearInterval(intervalRef.current);
+            }
+            // Slower resolution speed: resolving 1 character every 10 frames @ 50ms = 500ms per char
+            iterationRef.current += 1 / 10;
+        }, 50); // Slower frame rate for more deliberate glitch effect
+    }, []);
+
+    useEffect(() => {
+        // Trigger 1: On system load / page refresh
+        startScramble();
+        
+        // Trigger 2: Sequential recurrence
+        const timer = setInterval(() => {
+            startScramble();
+        }, intervalMs);
+
+        return () => {
+            if (intervalRef.current) clearInterval(intervalRef.current);
+            clearInterval(timer);
+        };
+    }, [intervalMs, startScramble]);
+
+    return <span>{display}</span>;
 };
 
 const NavItem: React.FC<{
@@ -142,7 +191,8 @@ const Sidebar: React.FC<SidebarProps> = ({ activeTab, onNavigate, isSidebarOpen,
       <div className="flex-shrink-0 flex items-center justify-between h-16 px-6 border-b border-base-300">
         <button onClick={() => onNavigate('dashboard')} className="flex items-center gap-3 group">
           <h1 className="text-xl font-black tracking-tighter text-base-content uppercase">
-            Kollektiv<span className="text-primary">.</span>
+            <TimedScrambledText text="Kollektiv" intervalMs={300000} />
+            <span className="text-primary animate-pulse drop-shadow-[0_0_10px_oklch(var(--p))] transition-all inline-block">.</span>
           </h1>
         </button>
         <button
@@ -171,7 +221,7 @@ const Sidebar: React.FC<SidebarProps> = ({ activeTab, onNavigate, isSidebarOpen,
         <Section title="Workspace">
             <NavItem id="prompts" label="Prompt Builder" icon={<SparklesIcon className="w-5 h-5" />} activeTab={activeTab} onClick={onNavigate} registerRef={registerRef} />
             {features.isPromptLibraryEnabled && <NavItem id="prompt" label="Prompt Library" icon={<PromptIcon className="w-5 h-5" />} activeTab={activeTab} onClick={onNavigate} registerRef={registerRef} />}
-            {features.isGalleryEnabled && <NavItem id="gallery" label="Media Vault" icon={<PhotoIcon className="w-5 h-5" />} activeTab={activeTab} onClick={onNavigate} registerRef={registerRef} />}
+            {features.isGalleryEnabled && <NavItem id="gallery" label="Image Library" icon={<PhotoIcon className="w-5 h-5" />} activeTab={activeTab} onClick={onNavigate} registerRef={registerRef} />}
         </Section>
 
         {features.isCheatsheetsEnabled && (
@@ -184,7 +234,7 @@ const Sidebar: React.FC<SidebarProps> = ({ activeTab, onNavigate, isSidebarOpen,
 
          {features.isToolsEnabled && (
             <Section title="Utilities">
-                <NavItem id="composer" label="Composer" icon={<LayoutDashboardIcon className="w-5 h-5" />} activeTab={activeTab} onClick={onNavigate} registerRef={registerRef} />
+                <NavItem id="composer" label="Builder" icon={<LayoutDashboardIcon className="w-5 h-5" />} activeTab={activeTab} onClick={onNavigate} registerRef={registerRef} />
                 <NavItem id="image_compare" label="Compare" icon={<ViewColumnsIcon className="w-5 h-5" />} activeTab={activeTab} onClick={onNavigate} registerRef={registerRef} />
                 <NavItem id="color_palette_extractor" label="Palette" icon={<PaletteIcon className="w-5 h-5" />} activeTab={activeTab} onClick={onNavigate} registerRef={registerRef} />
                 <NavItem id="resizer" label="Resizer" icon={<CropIcon className="w-5 h-5" />} activeTab={activeTab} onClick={onNavigate} registerRef={registerRef} />

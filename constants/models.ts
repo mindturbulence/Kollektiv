@@ -1,4 +1,10 @@
-export const TARGET_IMAGE_AI_MODELS = [
+const sortModels = (models: string[]) => {
+  const defaultItem = models.find(m => m.startsWith('Default'));
+  const others = models.filter(m => !m.startsWith('Default')).sort((a, b) => a.localeCompare(b));
+  return defaultItem ? [defaultItem, ...others] : others;
+};
+
+export const TARGET_IMAGE_AI_MODELS = sortModels([
   'Flux 2 Klein',
   'FLUX.1.1 [pro]',
   'FLUX.1 [dev/schnell]',
@@ -19,9 +25,9 @@ export const TARGET_IMAGE_AI_MODELS = [
   'WAN Image (T2I)',
   'Z-Image',
   'Default (General Purpose)',
-];
+]);
 
-export const TARGET_VIDEO_AI_MODELS = [
+export const TARGET_VIDEO_AI_MODELS = sortModels([
   'LTX-2 (Narrative Video)',
   'Google Veo 2',
   'Luma Ray (v2)',
@@ -37,9 +43,9 @@ export const TARGET_VIDEO_AI_MODELS = [
   'CogVideoX-5B',
   'Higgsfield (Alaya)',
   'Default (General Video)',
-];
+]);
 
-export const TARGET_AUDIO_AI_MODELS = [
+export const TARGET_AUDIO_AI_MODELS = sortModels([
   'ElevenLabs (TTS)',
   'MMAudio (Sound FX)',
   'Vibe Voice',
@@ -51,7 +57,7 @@ export const TARGET_AUDIO_AI_MODELS = [
   'OpenAI Voice Engine',
   'Bark (Suno)',
   'Default (General Audio)',
-];
+]);
 
 export const AVAILABLE_LLM_MODELS = [
     { id: 'gemini-3-flash-preview', name: 'Gemini 3 Flash (Fastest)' },

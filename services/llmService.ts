@@ -1,4 +1,3 @@
-
 import { GoogleGenAI, GenerateContentResponse, Type } from "@google/genai";
 import type { EnhancementResult, LLMSettings, PromptModifiers, PromptAnatomy, CheatsheetCategory } from '../types';
 import { enhancePromptGemini, analyzePaletteMood as analyzePaletteMoodGemini, generatePromptFormulaGemini, refineSinglePromptGemini, abstractImageGemini, generateColorNameGemini, dissectPromptGemini, generateFocusedVariationsGemini, reconstructPromptGemini, reconstructFromIntentGemini, replaceComponentInPromptGemini, detectSalientRegionGemini, generateArtistDescriptionGemini, reconcileDescriptionsGemini, enhancePromptGeminiStream, refineSinglePromptGeminiStream } from './geminiService';
@@ -27,16 +26,29 @@ const AI_ROLES = {
         const l = length === 'Short' ? '30 words' : length === 'Long' ? '550+ words' : '180 words';
         const isI2V = isVideo && inputType === 'i2v';
 
+        let specificInstruction = isAudio ? 'Acoustic focus.' : isVideo ? (isI2V ? "I2V mode: High energy." : "T2V mode: High energy.") : "Visual focus.";
+        
+        if (isI2V) {
+            specificInstruction = `I2V Protocol: The user is providing an image reference. DO NOT describe visual details (colors, textures, objects) present in the image. Focus EXCLUSIVELY on animating the scene. Describe the motion, pathing, and temporal shifts. STRIP all unnecessary static descriptive adjectives from the base concept and constant modifiers. Output should be purely kinetic and efficient.`;
+        }
+
         return `Role: Professional Prompt Architect for ${model}.
 Goal: Generate ${isAudio ? '1 script/formula' : '3 unique visual formulas'}.
 Syntax: ${syntax.format}. Rules: ${syntax.rules}. Target Len: ${l}.
-${isAudio ? 'Acoustic focus.' : isVideo ? (isI2V ? "I2V mode: Animate frame. Kinetic focus." : "T2V mode: High energy.") : "Visual focus."}
+${specificInstruction}
 Output: ${isAudio ? 'Single script' : '3 distinct lines'}. NO INTROS.`;
     },
 
     REFINER: (model: string, isVideo: boolean, isAudio: boolean, hasManualCamera: boolean, inputType?: string) => {
         const syntax = getModelSyntax(model);
-        return `Role: Expert Prompt Refiner for ${model}. Rewrite concept into perfect ${syntax.format} formula. Rules: ${syntax.rules}. Output text ONLY.`;
+        const isI2V = isVideo && inputType === 'i2v';
+        
+        let protocol = "";
+        if (isI2V) {
+            protocol = "I2V Protocol: Focus ONLY on motion, pathing, and temporal action. Strip all visual/static descriptions of the subject as they are in the source image. Keep it extremely simple and token-efficient.";
+        }
+
+        return `Role: Expert Prompt Refiner for ${model}. Rewrite concept into perfect ${syntax.format} formula. Rules: ${syntax.rules}. ${protocol} Output text ONLY.`;
     },
     
     DECONSTRUCTOR: (wildcards: string[]) => {
@@ -143,9 +155,10 @@ export async function* enhancePromptStream(
     const context = buildContextForEnhancer(modifiers);
     const input = `${context}\n\n[Primary Concept]\n${originalPrompt}`;
 
+    const tokenBudget = promptLength === 'Long' ? 2500 : 1024;
     const isOllama = settings.activeLLM === 'ollama' || settings.activeLLM === 'ollama_cloud';
     const stream = isOllama
-        ? enhancePromptOllamaStream(input, constantModifier, settings, systemInstruction)
+        ? enhancePromptOllamaStream(input, constantModifier, settings, systemInstruction, tokenBudget)
         : enhancePromptGeminiStream(input, constantModifier, settings, systemInstruction, promptLength, referenceImages);
 
     let inThought = false;
@@ -164,7 +177,7 @@ export const refineSinglePrompt = async (promptText: string, targetAIModel: stri
     
     const isOllama = settings.activeLLM === 'ollama' || settings.activeLLM === 'ollama_cloud';
     const raw = isOllama 
-        ? await refineSinglePromptOllama(promptText, settings, sys)
+        ? await refineSinglePromptOllama(promptText, settings, sys, 1024)
         : await refineSinglePromptGemini(promptText, '', settings, sys);
     return cleanLLMResponse(raw);
 };
@@ -182,7 +195,7 @@ export async function* refineSinglePromptStream(
     
     const isOllama = settings.activeLLM === 'ollama' || settings.activeLLM === 'ollama_cloud';
     const stream = isOllama
-        ? refineSinglePromptOllamaStream(promptText, settings, sys)
+        ? refineSinglePromptOllamaStream(promptText, settings, sys, 1024)
         : refineSinglePromptGeminiStream(promptText, '', settings, sys);
 
     let inThought = false;

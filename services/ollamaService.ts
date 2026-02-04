@@ -1,4 +1,3 @@
-
 import { handleGeminiError } from '../utils/errorHandler'; 
 import type { LLMSettings, EnhancementResult } from '../types';
 
@@ -18,20 +17,17 @@ const sanitizeUrl = (url: string) => {
 };
 
 /**
- * FAST_CONFIG provides optimized parameters for Ollama to reduce latency:
- * - num_ctx: Smaller context reduces prompt processing time.
- * - keep_alive: Keeps model in memory for 30 mins to avoid reload lag.
- * - temperature: Slightly lower for more decisive, faster sampling.
+ * BASE_CONFIG provides optimized parameters for Ollama.
+ * num_predict is now handled dynamically per request to prevent cut-offs.
  */
-const FAST_CONFIG = {
+const BASE_CONFIG = {
     keep_alive: "30m",
     options: {
-        num_ctx: 4096,
-        temperature: 0.6,
+        num_ctx: 8192, // Increased context window for longer prompt histories
+        temperature: 0.7,
         top_p: 0.9,
         top_k: 40,
-        num_predict: 1024,
-        repeat_penalty: 1.1
+        repeat_penalty: 1.05 // Relaxed slightly to prevent early stopping in descriptive texts
     }
 };
 
@@ -116,6 +112,7 @@ export const enhancePromptOllama = async (
     constantModifier: string,
     settings: LLMSettings,
     systemInstruction: string,
+    maxTokens: number = 2048
 ): Promise<string> => {
     try {
         const config = getOllamaConfig(settings);
@@ -129,7 +126,11 @@ export const enhancePromptOllama = async (
                 prompt: fullPrompt,
                 system: systemInstruction,
                 stream: false,
-                ...FAST_CONFIG
+                ...BASE_CONFIG,
+                options: {
+                    ...BASE_CONFIG.options,
+                    num_predict: maxTokens
+                }
             }),
         });
         if (!apiResponse.ok) {
@@ -148,6 +149,7 @@ export async function* enhancePromptOllamaStream(
     constantModifier: string,
     settings: LLMSettings,
     systemInstruction: string,
+    maxTokens: number = 2048
 ): AsyncGenerator<string> {
     try {
         const config = getOllamaConfig(settings);
@@ -161,7 +163,11 @@ export async function* enhancePromptOllamaStream(
                 prompt: fullPrompt,
                 system: systemInstruction,
                 stream: true,
-                ...FAST_CONFIG
+                ...BASE_CONFIG,
+                options: {
+                    ...BASE_CONFIG.options,
+                    num_predict: maxTokens
+                }
             }),
         });
 
@@ -196,7 +202,7 @@ export async function* enhancePromptOllamaStream(
     }
 }
 
-export const refineSinglePromptOllama = async (promptText: string, settings: LLMSettings, systemInstruction: string): Promise<string> => {
+export const refineSinglePromptOllama = async (promptText: string, settings: LLMSettings, systemInstruction: string, maxTokens: number = 1024): Promise<string> => {
     try {
         const config = getOllamaConfig(settings);
         if (!config.baseUrl || !config.model) throw new Error("Ollama configuration missing.");
@@ -208,7 +214,11 @@ export const refineSinglePromptOllama = async (promptText: string, settings: LLM
                 prompt: promptText,
                 system: systemInstruction,
                 stream: false,
-                ...FAST_CONFIG
+                ...BASE_CONFIG,
+                options: {
+                    ...BASE_CONFIG.options,
+                    num_predict: maxTokens
+                }
             }),
         });
         if (!apiResponse.ok) throw new Error(`Ollama status: ${apiResponse.status}`);
@@ -219,7 +229,7 @@ export const refineSinglePromptOllama = async (promptText: string, settings: LLM
     }
 };
 
-export async function* refineSinglePromptOllamaStream(promptText: string, settings: LLMSettings, systemInstruction: string): AsyncGenerator<string> {
+export async function* refineSinglePromptOllamaStream(promptText: string, settings: LLMSettings, systemInstruction: string, maxTokens: number = 1024): AsyncGenerator<string> {
     try {
         const config = getOllamaConfig(settings);
         if (!config.baseUrl || !config.model) throw new Error("Ollama configuration missing.");
@@ -231,7 +241,11 @@ export async function* refineSinglePromptOllamaStream(promptText: string, settin
                 prompt: promptText,
                 system: systemInstruction,
                 stream: true,
-                ...FAST_CONFIG
+                ...BASE_CONFIG,
+                options: {
+                    ...BASE_CONFIG.options,
+                    num_predict: maxTokens
+                }
             }),
         });
         
@@ -276,7 +290,11 @@ export const analyzePaletteMoodOllama = async (hexColors: string[], settings: LL
                 prompt: `Colors: ${hexColors.join(', ')}`,
                 system: "Task: mood in 3 words max. Text only.",
                 stream: false,
-                ...FAST_CONFIG
+                ...BASE_CONFIG,
+                options: {
+                    ...BASE_CONFIG.options,
+                    num_predict: 64
+                }
             }),
         });
         const data = await apiResponse.json();
@@ -295,7 +313,11 @@ export const generateColorNameOllama = async (hexColor: string, mood: string, se
                 prompt: `Hex:${hexColor}, Mood:${mood}`,
                 system: "Task: Poetic 2-word name. Text only.",
                 stream: false,
-                ...FAST_CONFIG
+                ...BASE_CONFIG,
+                options: {
+                    ...BASE_CONFIG.options,
+                    num_predict: 32
+                }
             }),
         });
         const data = await apiResponse.json();
@@ -315,7 +337,11 @@ export const dissectPromptOllama = async (promptText: string, settings: LLMSetti
                 system: "Task: JSON dissect prompt (subject, style, mood, lighting). Output valid JSON object only.",
                 stream: false,
                 format: "json",
-                ...FAST_CONFIG
+                ...BASE_CONFIG,
+                options: {
+                    ...BASE_CONFIG.options,
+                    num_predict: 1024
+                }
             }),
         });
         const data = await apiResponse.json();
@@ -335,7 +361,11 @@ export const generateFocusedVariationsOllama = async (promptText: string, compon
                 system: "Task: 2 variations per key. Output valid JSON only.",
                 stream: false,
                 format: "json",
-                ...FAST_CONFIG
+                ...BASE_CONFIG,
+                options: {
+                    ...BASE_CONFIG.options,
+                    num_predict: 2048
+                }
             }),
         });
         const data = await apiResponse.json();
@@ -354,7 +384,11 @@ export const reconstructPromptOllama = async (components: { [key: string]: strin
                 prompt: JSON.stringify(components),
                 system: "Merge into prose. Text only.",
                 stream: false,
-                ...FAST_CONFIG
+                ...BASE_CONFIG,
+                options: {
+                    ...BASE_CONFIG.options,
+                    num_predict: 1024
+                }
             }),
         });
         const data = await apiResponse.json();
@@ -373,7 +407,11 @@ export const replaceComponentInPromptOllama = async (originalPrompt: string, com
                 prompt: `Orig:${originalPrompt}\nKey:${componentKey}\nNew:${newValue}`,
                 system: "Swap value. Text only.",
                 stream: false,
-                ...FAST_CONFIG
+                ...BASE_CONFIG,
+                options: {
+                    ...BASE_CONFIG.options,
+                    num_predict: 1024
+                }
             }),
         });
         const data = await apiResponse.json();
@@ -392,7 +430,11 @@ export const reconcileDescriptionsOllama = async (existing: string, incoming: st
                 prompt: `OLD:\n${existing}\n\nNEW:\n${incoming}`,
                 system: "Merge into cohesive paragraph. Remove redundancy. Text only.",
                 stream: false,
-                ...FAST_CONFIG
+                ...BASE_CONFIG,
+                options: {
+                    ...BASE_CONFIG.options,
+                    num_predict: 1500
+                }
             }),
         });
         const data = await apiResponse.json();
@@ -411,7 +453,11 @@ export const reconstructFromIntentOllama = async (intents: string[], settings: L
                 prompt: intents.join(', '),
                 system: "Merge into prose. Text only.",
                 stream: false,
-                ...FAST_CONFIG
+                ...BASE_CONFIG,
+                options: {
+                    ...BASE_CONFIG.options,
+                    num_predict: 1500
+                }
             }),
         });
         const data = await apiResponse.json();
@@ -422,6 +468,7 @@ export const reconstructFromIntentOllama = async (intents: string[], settings: L
 export const abstractImageOllama = async (base64ImageData: string, promptLength: string, targetAIModel: string, settings: LLMSettings): Promise<EnhancementResult> => {
     try {
         const config = getOllamaConfig(settings);
+        const tokenLimit = promptLength === 'Long' ? 2048 : 1024;
         const apiResponse = await fetch(`${config.baseUrl}/api/generate`, {
             method: 'POST',
             headers: config.headers,
@@ -430,7 +477,11 @@ export const abstractImageOllama = async (base64ImageData: string, promptLength:
                 images: [base64ImageData],
                 prompt: "Deconstruct this image into a comprehensive, high-fidelity descriptive prompt. Provide 3 distinct variations of the prompt, separated by newlines. Focus on micro-textures, lighting interaction, physical materials, and atmospheric density. Output the variations ONLY. No preamble.",
                 stream: false,
-                ...FAST_CONFIG
+                ...BASE_CONFIG,
+                options: {
+                    ...BASE_CONFIG.options,
+                    num_predict: tokenLimit
+                }
             }),
         });
         const data = await apiResponse.json();
@@ -450,7 +501,11 @@ export const generatePromptFormulaOllama = async (promptText: string, settings: 
                 prompt: promptText,
                 system: systemInstruction,
                 stream: false,
-                ...FAST_CONFIG
+                ...BASE_CONFIG,
+                options: {
+                    ...BASE_CONFIG.options,
+                    num_predict: 1024
+                }
             }),
         });
         const data = await apiResponse.json();
@@ -469,7 +524,11 @@ export const generateArtistDescriptionOllama = async (artistName: string, settin
                 prompt: artistName,
                 system: "Brief style summary. Text only.",
                 stream: false,
-                ...FAST_CONFIG
+                ...BASE_CONFIG,
+                options: {
+                    ...BASE_CONFIG.options,
+                    num_predict: 512
+                }
             }),
         });
         const data = await apiResponse.json();

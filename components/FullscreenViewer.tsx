@@ -251,9 +251,13 @@ const FullscreenViewer: React.FC<FullscreenViewerProps> = ({ items, currentIndex
                 <button onClick={handleClose} className="btn btn-ghost btn-circle bg-black/40 text-white/60 hover:text-white" title="Close"><CloseIcon className="w-6 h-6"/></button>
             </div>
             
-            <div className="absolute bottom-8 left-1/2 -translate-x-1/2 z-40 p-4 bg-black/60 text-white rounded-none text-xs font-black uppercase tracking-widest px-12 backdrop-blur-xl border border-white/5 shadow-2xl pointer-events-none">
-                <span>{itemGroup.title}</span>
-                {itemGroup.urls.length > 1 && <span className="ml-6 font-mono text-primary">[{currentImageIndex + 1} / {itemGroup.urls.length}]</span>}
+            <div className="absolute bottom-8 left-1/2 -translate-x-1/2 z-40 p-4 bg-black/60 text-white rounded-none backdrop-blur-xl border border-white/5 shadow-2xl pointer-events-none flex flex-col items-center gap-2 px-12">
+                <span className="text-xs font-black uppercase tracking-widest">{itemGroup.title}</span>
+                {itemGroup.urls.length > 1 && (
+                    <span className="font-mono text-[10px] text-primary tracking-[0.3em] font-bold">
+                        [ {String(currentImageIndex + 1).padStart(2, '0')} / {String(itemGroup.urls.length).padStart(2, '0')} ]
+                    </span>
+                )}
             </div>
         </div>
     );

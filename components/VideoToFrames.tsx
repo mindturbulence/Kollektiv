@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect, useCallback } from 'react';
-import { FilmIcon, UploadIcon, DownloadIcon, CloseIcon, PlayIcon, ScissorsIcon, PhotoIcon, RefreshIcon, InformationCircleIcon, ViewGridIcon, FolderClosedIcon } from './icons';
+import { FilmIcon, UploadIcon, DownloadIcon, CloseIcon, PlayIcon, ScissorsIcon, PhotoIcon, RefreshIcon, InformationCircleIcon, ViewGridIcon, FolderClosedIcon, PlusIcon } from './icons';
 import LoadingSpinner from './LoadingSpinner';
 import JSZip from 'jszip';
 import { COMPOSER_PRESETS } from '../constants';
@@ -24,6 +24,8 @@ interface JoinableVideo {
     url: string;
     duration: number;
     title: string;
+    width: number;
+    height: number;
 }
 
 const formatTime = (seconds: number) => {
@@ -51,6 +53,7 @@ export const VideoToFrames: React.FC = () => {
     const [joinedVideoUrl, setJoinedVideoUrl] = useState<string | null>(null);
     const [joinRes, setJoinRes] = useState({ width: 1920, height: 1080 });
     const [joinFit, setJoinFit] = useState<FitMode>('contain');
+    const [keepOriginalRatio, setKeepOriginalRatio] = useState(true);
     
     const joinVideoRef = useRef<HTMLVideoElement>(null);
     const joinCanvasRef = useRef<HTMLCanvasElement>(null);
@@ -59,6 +62,14 @@ export const VideoToFrames: React.FC = () => {
     const animationFrameRef = useRef<number | null>(null);
     
     const [isPickerOpen, setIsPickerOpen] = useState(false);
+
+    // Sync Join Resolution if Keep Ratio is enabled
+    useEffect(() => {
+        if (keepOriginalRatio && joinFiles.length > 0) {
+            const first = joinFiles[0];
+            setJoinRes({ width: first.width, height: first.height });
+        }
+    }, [keepOriginalRatio, joinFiles]);
 
     const handleExtractorFileSelect = (file: File) => {
         if (!file.type.startsWith('video/')) return;
@@ -85,16 +96,22 @@ export const VideoToFrames: React.FC = () => {
                 const blob = await fileSystemManager.getFileAsBlob(gItem.urls[0]);
                 if (!blob) return null;
                 const url = URL.createObjectURL(blob);
-                const duration = await new Promise<number>((res) => {
+                const metadata = await new Promise<{duration: number, width: number, height: number}>((res) => {
                     const v = (window as any).document.createElement('video');
                     v.src = url;
-                    v.onloadedmetadata = () => res(v.duration);
+                    v.onloadedmetadata = () => res({
+                        duration: v.duration,
+                        width: v.videoWidth,
+                        height: v.videoHeight
+                    });
                 });
                 return { 
                     id: gItem.id + Math.random().toString(36).substr(2, 5), 
                     file: null, 
                     url, 
-                    duration,
+                    duration: metadata.duration,
+                    width: metadata.width,
+                    height: metadata.height,
                     title: gItem.title
                 };
             }));
@@ -176,18 +193,30 @@ export const VideoToFrames: React.FC = () => {
         if (!files) return;
         const newVideos = await Promise.all(Array.from(files).map(async (file) => {
             const url = URL.createObjectURL(file);
-            const duration = await new Promise<number>((res) => {
+            const metadata = await new Promise<{duration: number, width: number, height: number}>((res) => {
                 const v = (window as any).document.createElement('video');
                 v.src = url;
-                v.onloadedmetadata = () => res(v.duration);
+                v.onloadedmetadata = () => res({
+                    duration: v.duration,
+                    width: v.videoWidth,
+                    height: v.videoHeight
+                });
             });
-            return { id: Math.random().toString(36).substr(2, 9), file, url, duration, title: file.name };
+            return { 
+                id: Math.random().toString(36).substr(2, 9), 
+                file, 
+                url, 
+                duration: metadata.duration,
+                width: metadata.width,
+                height: metadata.height,
+                title: file.name 
+            };
         }));
         setJoinFiles(prev => [...prev, ...newVideos]);
     };
 
     const handleJoinVideos = async () => {
-        if (joinFiles.length < 2 || isJoining) return;
+        if (joinFiles.length < 1 || isJoining) return;
         setIsJoining(true); setJoiningProgress(0); recordedChunksRef.current = [];
         const streamVideo = joinVideoRef.current; const streamCanvas = joinCanvasRef.current;
         if (!streamVideo || !streamCanvas) { setIsJoining(false); return; }
@@ -265,7 +294,24 @@ export const VideoToFrames: React.FC = () => {
                                  <div>
                                     <label className="text-[10px] font-black uppercase text-base-content/40 tracking-widest mb-4 block">Output Format</label>
                                     <div className="form-control mb-4">
-                                        <select className="select select-bordered select-sm rounded-none w-full font-bold uppercase text-xs" onChange={(e) => { const [w, h] = (e.currentTarget as any).value.split('x').map(Number); setJoinRes({ width: w, height: h }); }} value={`${joinRes.width}x${joinRes.height}`}>
+                                        <label className="cursor-pointer label p-0 gap-4 mb-3">
+                                            <span className="text-[10px] font-black uppercase text-base-content/40 tracking-widest">Keep Original Ratio</span>
+                                            <input 
+                                                type="checkbox" 
+                                                checked={keepOriginalRatio} 
+                                                onChange={e => setKeepOriginalRatio(e.target.checked)} 
+                                                className="toggle toggle-xs toggle-primary" 
+                                            />
+                                        </label>
+                                        <select 
+                                            disabled={keepOriginalRatio}
+                                            className="select select-bordered select-sm rounded-none w-full font-bold uppercase text-xs disabled:opacity-40" 
+                                            onChange={(e) => { const [w, h] = (e.currentTarget as any).value.split('x').map(Number); setJoinRes({ width: w, height: h }); }} 
+                                            value={`${joinRes.width}x${joinRes.height}`}
+                                        >
+                                            {keepOriginalRatio && joinFiles.length > 0 && (
+                                                <option value={`${joinRes.width}x${joinRes.height}`}>AUTO: {joinRes.width}x{joinRes.height}</option>
+                                            )}
                                             {COMPOSER_PRESETS.flatMap(group => group.presets.map(p => <option key={p.name} value={`${p.width}x${p.height}`}>{p.name}</option>))}
                                         </select>
                                     </div>
@@ -286,17 +332,23 @@ export const VideoToFrames: React.FC = () => {
                                     
                                     <div className="space-y-2">
                                         {joinFiles.map((v, i) => (
-                                            <div key={v.id} className="p-2 bg-base-100 border border-base-300 rounded-none flex items-center gap-3 group">
-                                                <div className="w-8 h-8 bg-black rounded-none flex-shrink-0 overflow-hidden relative">
+                                            <div key={v.id} className="p-3 bg-base-100 border border-base-300 rounded-none flex items-center gap-4 group">
+                                                <div className="w-12 h-12 bg-black rounded-none flex-shrink-0 overflow-hidden relative">
                                                     <video src={v.url} className="w-full h-full object-cover media-monochrome group-hover:filter-none" />
                                                 </div>
                                                 <div className="flex-grow min-w-0">
-                                                    <p className="text-[9px] font-black truncate uppercase">{v.title}</p>
-                                                    <p className="text-[8px] opacity-30 font-mono">{formatTime(v.duration)}</p>
+                                                    <div className="flex items-center gap-2 min-w-0">
+                                                        <p className="text-[11px] font-black truncate uppercase flex-grow leading-tight">{v.title}</p>
+                                                        {i === 0 && keepOriginalRatio && <div className="badge badge-primary rounded-none font-black text-[9px] tracking-widest px-2 py-0.5">SOURCE RATIO</div>}
+                                                    </div>
+                                                    <p className="text-[10px] opacity-40 font-mono mt-1">{formatTime(v.duration)} • {v.width}x{v.height}</p>
                                                 </div>
-                                                <button onClick={() => removeJoinItem(v.id)} className="opacity-0 group-hover:opacity-100 transition-opacity text-error/40 hover:text-error">✕</button>
+                                                <button onClick={() => removeJoinItem(v.id)} className="opacity-0 group-hover:opacity-100 transition-opacity text-error/40 hover:text-error px-2">✕</button>
                                             </div>
                                         ))}
+                                        {joinFiles.length === 0 && (
+                                            <div className="py-12 text-center opacity-10 uppercase font-black tracking-widest text-[9px]">Awaiting sequence</div>
+                                        )}
                                     </div>
                                 </div>
                             </div>
@@ -320,7 +372,7 @@ export const VideoToFrames: React.FC = () => {
                                 )}
                             </>
                         ) : (
-                            <button onClick={handleJoinVideos} disabled={joinFiles.length < 2 || isJoining} className="btn btn-primary btn-sm w-full rounded-none font-black text-[9px] tracking-widest shadow-lg">
+                            <button onClick={handleJoinVideos} disabled={joinFiles.length < 1 || isJoining} className="btn btn-primary btn-sm w-full rounded-none font-black text-[9px] tracking-widest shadow-lg">
                                 {isJoining ? 'PROCESSING...' : 'JOIN VIDEOS'}
                             </button>
                         )}

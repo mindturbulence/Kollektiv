@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import type { WildcardCategory } from '../types';
-import { FolderClosedIcon, ChevronRightIcon } from './icons';
+import { FolderClosedIcon } from './icons';
 
 interface WildcardCategoryNodeProps {
     category: WildcardCategory;
@@ -26,10 +26,10 @@ const WildcardCategoryNode: React.FC<WildcardCategoryNodeProps> = ({ category, o
                 >
                     <svg xmlns="http://www.w3.org/2000/svg" className={`h-4 w-4 transform transition-transform duration-200 ${isExpanded ? 'rotate-90' : ''}`} fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 5l7 7-7 7" /></svg>
                     <FolderClosedIcon className="w-4 h-4 inline-block"/>
-                    <span>{category.name}</span>
+                    <span className="text-sm font-medium">{category.name}</span>
                 </summary>
                 <div className="pl-4 border-l-2 border-base-300/50 ml-2 mt-1">
-                    <div className="flex flex-wrap gap-1.5 py-2">
+                    <div className="flex flex-wrap gap-1 py-2">
                         {category.files.map(file => {
                             const displayName = file.name;
                             const wildcardPath = file.path.replace(/\.txt$/i, '');
@@ -37,7 +37,7 @@ const WildcardCategoryNode: React.FC<WildcardCategoryNodeProps> = ({ category, o
                                 <button 
                                     key={file.path} 
                                     onClick={() => onWildcardClick(wildcardPath)} 
-                                    className="badge badge-outline hover:badge-primary cursor-pointer text-xs"
+                                    className="border border-base-300 hover:border-primary hover:text-primary transition-colors cursor-pointer text-sm py-0.5 px-2 h-auto rounded-[3px] bg-base-200/50 font-bold lowercase tracking-tight"
                                     title={`Insert __${wildcardPath}__`}
                                 >
                                     {displayName}

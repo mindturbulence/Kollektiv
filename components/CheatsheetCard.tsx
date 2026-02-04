@@ -6,6 +6,7 @@ import { CheckIcon } from './icons';
 
 interface CheatsheetCardProps {
   item: CheatsheetItem;
+  onInject: (item: CheatsheetItem) => void;
 }
 
 const CopyButton: React.FC<{ text: string }> = ({ text }) => {
@@ -24,7 +25,7 @@ const CopyButton: React.FC<{ text: string }> = ({ text }) => {
         <button
             onClick={handleCopy}
             title={copied ? "Copied!" : "Copy"}
-            className="btn btn-sm btn-ghost btn-square"
+            className="btn btn-xs btn-ghost btn-square"
         >
             {copied ? <CheckIcon className="w-4 h-4 text-success" /> : <CopyIcon className="w-4 h-4" />}
         </button>
@@ -47,10 +48,10 @@ const KeywordTag: React.FC<{ keyword: string }> = ({ keyword }) => {
         <button
             onClick={handleCopy}
             title={copied ? "Copied!" : `Copy "${keyword}"`}
-            className="bg-base-300 text-base-content text-xs font-mono py-1 pl-2 pr-1 rounded-md hover:bg-primary hover:text-primary-content transition-colors flex items-center gap-1.5"
+            className="bg-base-300 text-base-content text-[10px] font-black uppercase tracking-widest py-1.5 pl-3 pr-2 rounded-none hover:bg-primary hover:text-primary-content transition-all flex items-center gap-2"
         >
             {keyword}
-            {copied ? <CheckIcon className="w-3 h-3 text-success-content ml-1" /> : null}
+            {copied ? <CheckIcon className="w-3 h-3 text-success-content" /> : null}
         </button>
     );
 };
@@ -58,31 +59,40 @@ const KeywordTag: React.FC<{ keyword: string }> = ({ keyword }) => {
 
 const CheatsheetCard: React.FC<CheatsheetCardProps> = ({ item }) => {
   return (
-    <article className="space-y-4 flex flex-col">
-        <h3 className="text-xl font-semibold text-primary">{item.name}</h3>
-        {item.description && <p className="text-base-content/80 text-base">{item.description}</p>}
+    <div className="p-8 md:p-12 space-y-6 flex flex-col h-full bg-base-100 group transition-all duration-500 hover:bg-base-200/50 border-b border-base-300 last:border-0">
+        <div className="space-y-2">
+            <span className="text-[9px] font-black uppercase tracking-[0.3em] text-primary/60">CONCEPT_NODE</span>
+            <h3 className="text-3xl font-black tracking-tighter text-base-content uppercase leading-none group-hover:text-primary transition-colors">
+                {item.name}
+            </h3>
+        </div>
+
+        {item.description && (
+            <p className="text-lg font-medium leading-relaxed text-base-content/70 italic">
+                "{item.description}"
+            </p>
+        )}
 
         {item.example && (
-            <div className="mt-auto">
-            <p className="text-xs font-semibold text-base-content/60 mb-1 uppercase">Example</p>
-            <div className="bg-base-200 p-2 rounded-md flex justify-between items-start gap-2">
-                <pre className="text-sm text-base-content whitespace-pre-wrap font-mono my-auto"><code>{item.example}</code></pre>
-                <CopyButton text={item.example} />
-            </div>
+            <div className="bg-base-200/50 border border-base-300 p-6 rounded-none relative">
+                <div className="flex justify-between items-center mb-4">
+                    <span className="text-[9px] font-black uppercase tracking-[0.2em] text-base-content/30">Execution Sample</span>
+                    <CopyButton text={item.example} />
+                </div>
+                <code className="text-sm text-base-content/80 font-medium leading-relaxed block pr-8">
+                    {item.example}
+                </code>
             </div>
         )}
 
         {item.keywords && item.keywords.length > 0 && (
-            <div className="mt-auto">
-            <p className="text-xs font-semibold text-base-content/60 mb-2 uppercase">Keywords</p>
-            <div className="flex flex-wrap gap-2">
+            <div className="pt-4 flex flex-wrap gap-2">
                 {item.keywords.map(keyword => (
-                <KeywordTag key={keyword} keyword={keyword} />
+                    <KeywordTag key={keyword} keyword={keyword} />
                 ))}
             </div>
-            </div>
         )}
-    </article>
+    </div>
   );
 };
 

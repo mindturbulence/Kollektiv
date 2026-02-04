@@ -1,3 +1,4 @@
+
 import daisyui from 'daisyui';
 
 /** @type {import('tailwindcss').Config} */
@@ -15,7 +16,9 @@ export default {
   theme: {
     extend: {
       fontFamily: {
-        sans: ['Urbanist', 'sans-serif'],
+        sans: ['Hind', 'Inter', 'system-ui', 'sans-serif'],
+        display: ['Pilcrow Rounded', 'Plus Jakarta Sans', 'system-ui', 'sans-serif'],
+        mono: ['Space Mono', 'ui-monospace', 'monospace'],
       },
       keyframes: {
         'fade-in': {
