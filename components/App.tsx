@@ -37,7 +37,7 @@ import { useAuth } from '../contexts/AuthContext';
 type PromptsPageState = { prompt?: string, artStyle?: string, artist?: string, view?: 'enhancer' | 'composer' | 'create', id?: string } | null;
 
 const InitialLoader: React.FC<{ status: string; progress: number | null }> = ({ status, progress }) => {
-    const textWrapperRef = useRef<HTMLDivElement>(null);
+    const textWrapperRef = useRef<HTMLHeadingElement>(null);
     const percentage = Math.round((progress || 0) * 100);
 
     useLayoutEffect(() => {
@@ -65,23 +65,28 @@ const InitialLoader: React.FC<{ status: string; progress: number | null }> = ({ 
             <div className="absolute inset-0 bg-grid-texture opacity-[0.03] pointer-events-none"></div>
             
             <div className="relative z-10 flex flex-col items-center">
-                <div className="overflow-hidden mb-4 px-2">
-                    <div ref={textWrapperRef} className="grid grid-cols-1 grid-rows-1 text-2xl md:text-3xl font-black tracking-tighter uppercase select-none italic">
-                        <span className="text-base-content/10 block leading-none py-1 row-start-1 col-start-1">Kollektiv.</span>
+                <div className="overflow-hidden mb-8 px-4">
+                    <h1 ref={textWrapperRef} className="grid grid-cols-1 grid-rows-1 text-xl md:text-3xl font-black tracking-tighter uppercase select-none items-center">
+                        {/* Layer 1: Ghost Text */}
+                        <span className="text-base-content/10 block leading-none py-2 row-start-1 col-start-1">
+                            Kollektiv<span className="text-primary/10 italic">.</span>
+                        </span>
+                        
+                        {/* Layer 2: Fill Masked Text */}
                         <div 
                             className="row-start-1 col-start-1 h-full overflow-hidden transition-all duration-700 ease-out border-r border-base-content/20"
                             style={{ width: `${percentage}%` }}
                         >
-                            <span className="text-base-content block whitespace-nowrap leading-none py-1 drop-shadow-[0_0_15px_rgba(var(--bc),0.1)]">
-                                Kollektiv.
+                            <span className="text-base-content block whitespace-nowrap leading-none py-2 drop-shadow-[0_0_20px_rgba(var(--bc),0.15)]">
+                                Kollektiv<span className="text-primary italic">.</span>
                             </span>
                         </div>
-                    </div>
+                    </h1>
                 </div>
 
                 <div className={`flex flex-col items-center gap-3 transition-all duration-500 ${percentage >= 100 ? 'opacity-0 translate-y-4' : 'opacity-100 translate-y-0'}`}>
                     <div className="flex items-center gap-3">
-                        <p className="text-[8px] font-mono font-bold uppercase tracking-[0.5em] text-center text-base-content/40">
+                        <p className="text-[10px] font-mono font-bold uppercase tracking-[0.5em] text-center text-base-content/40">
                             {status.toUpperCase()}
                         </p>
                     </div>

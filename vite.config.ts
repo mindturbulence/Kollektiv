@@ -19,7 +19,7 @@ export default defineConfig(({ mode }) => {
         host: true,  
         headers: {
           'Cross-Origin-Opener-Policy': 'same-origin-allow-popups',
-          'Cross-Origin-Embedder-Policy': 'require-corp',
+          'Cross-Origin-Embedder-Policy': 'credentialless',
         },
         proxy: {
           // Proxy for local Ollama - Force IPv4 127.0.0.1 to avoid ECONNREFUSED

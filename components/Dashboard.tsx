@@ -28,22 +28,18 @@ const NeuralTrail: React.FC<{ images: GalleryItem[] }> = ({ images }) => {
         const url = URL.createObjectURL(blob);
         const img = document.createElement('img');
         
-        // Setup initial hidden state
         img.className = "absolute pointer-events-none z-10 border border-white/20 shadow-[0_25px_60px_rgba(0,0,0,0.6)] opacity-0 will-change-transform";
         
         img.onload = () => {
             if (!trailRef.current) return;
 
-            // PRESERVE ORIGINAL ASPECT RATIO
             const aspect = img.naturalWidth / img.naturalHeight;
             const baseSize = 160 + Math.random() * 100;
             
             if (aspect > 1) {
-                // Landscape
                 img.style.width = `${baseSize}px`;
                 img.style.height = `${baseSize / aspect}px`;
             } else {
-                // Portrait or Square
                 img.style.height = `${baseSize}px`;
                 img.style.width = `${baseSize * aspect}px`;
             }
@@ -61,7 +57,6 @@ const NeuralTrail: React.FC<{ images: GalleryItem[] }> = ({ images }) => {
                 }
             });
 
-            // POP-OUT: Fast materialization
             tl.to(img, {
                 opacity: 1,
                 scale: 1,
@@ -69,7 +64,6 @@ const NeuralTrail: React.FC<{ images: GalleryItem[] }> = ({ images }) => {
                 ease: "expo.out"
             });
 
-            // POP-IN: Digital collapse
             tl.to(img, {
                 opacity: 0,
                 scale: 0.4,
@@ -151,21 +145,18 @@ const Dashboard: React.FC<DashboardProps> = ({ onNavigate }) => {
         });
 
         // SLIDE DOWN EXIT - MASKED STAGGER
-        // Header first
         tl.to(headerTextRef.current, {
             yPercent: 100,
             duration: 0.6,
             ease: "power4.in"
         });
 
-        // Title follows
         tl.to(titleRef.current, {
             yPercent: 100,
             duration: 0.7,
             ease: "power4.in"
         }, "-=0.45");
 
-        // Tagline last
         tl.to(taglineRef.current, {
             yPercent: 100,
             duration: 0.6,
@@ -191,10 +182,7 @@ const Dashboard: React.FC<DashboardProps> = ({ onNavigate }) => {
                         crossOrigin="anonymous"
                         className="w-full h-full object-cover grayscale brightness-[0.6] contrast-125 opacity-30 transition-opacity duration-1000"
                         style={{ filter: 'grayscale(1) brightness(0.6) contrast(1.1)' }}
-                        onError={() => {
-                            console.warn("Background video load failed. Likely CORS/COEP restriction.");
-                            setVideoError(true);
-                        }}
+                        onError={() => setVideoError(true)}
                     />
                 ) : (
                     <div className="w-full h-full bg-base-300 opacity-20"></div>
@@ -226,9 +214,10 @@ const Dashboard: React.FC<DashboardProps> = ({ onNavigate }) => {
                 </div>
                 <div className="overflow-hidden py-1">
                     <p ref={taglineRef} className="text-[9px] md:text-[11px] font-black uppercase tracking-[0.5em] text-base-content/40 max-w-2xl leading-loose">
-                        Where idea becomes media
+                         Your creative intern, except never asks for coffee breaks
                     </p>
                 </div>
+
                 <div className="w-12 h-px bg-base-content/10 mt-10"></div>
             </div>
 

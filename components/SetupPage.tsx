@@ -91,11 +91,11 @@ const MaintenanceOverlay: React.FC<{ progress: number, message: string }> = ({ p
             
             <div className="relative z-10 flex flex-col items-center">
                 {/* Brand Text Wrapper with Masking */}
-                <div className="overflow-hidden mb-4 px-2">
-                    <div ref={textWrapperRef} className="grid grid-cols-1 grid-rows-1 text-2xl md:text-3xl font-black tracking-tighter uppercase select-none italic">
-                        {/* Layer 1: Background Ghost Text - Picks up theme automatically */}
-                        <span className="text-base-content/10 block leading-none py-1 row-start-1 col-start-1">
-                            Kollektiv.
+                <div className="overflow-hidden mb-8 px-4">
+                    <h1 ref={textWrapperRef} className="grid grid-cols-1 grid-rows-1 text-xl md:text-3xl font-black tracking-tighter uppercase select-none items-center">
+                        {/* Layer 1: Ghost Text */}
+                        <span className="text-base-content/10 block leading-none py-2 row-start-1 col-start-1">
+                            Kollektiv<span className="text-primary/10 italic">.</span>
                         </span>
                         
                         {/* Layer 2: Theme-Aware Fill Masked Text */}
@@ -103,17 +103,17 @@ const MaintenanceOverlay: React.FC<{ progress: number, message: string }> = ({ p
                             className="row-start-1 col-start-1 h-full overflow-hidden transition-all duration-700 ease-out border-r border-base-content/20"
                             style={{ width: `${progress}%` }}
                         >
-                            <span className="text-base-content block whitespace-nowrap leading-none py-1 drop-shadow-[0_0_15px_rgba(var(--bc),0.1)]">
-                                Kollektiv.
+                            <span className="text-base-content block whitespace-nowrap leading-none py-2 drop-shadow-[0_0_20px_rgba(var(--bc),0.15)]">
+                                Kollektiv<span className="text-primary italic">.</span>
                             </span>
                         </div>
-                    </div>
+                    </h1>
                 </div>
 
                 {/* Sub-label */}
                 <div className={`flex flex-col items-center gap-3 transition-all duration-500 ${progress >= 100 ? 'opacity-0 translate-y-4' : 'opacity-100 translate-y-0'}`}>
                     <div className="flex items-center gap-3">
-                        <p className="text-[8px] font-mono font-bold uppercase tracking-[0.5em] text-center text-base-content/40">
+                        <p className="text-[10px] font-mono font-bold uppercase tracking-[0.5em] text-center text-base-content/40">
                             {message || 'DIAGNOSTIC_ACTIVE'}
                         </p>
                     </div>
@@ -846,7 +846,7 @@ export const SetupPage: React.FC<SetupPageProps> = ({
             </nav>
         </aside>
 
-        <main className="flex-grow flex flex-col overflow-hidden bg-base-100">
+        <main className="flex-grow flex-grow flex flex-col overflow-hidden bg-base-100">
             <section className="p-10 border-b border-base-300 bg-base-200/20 flex-shrink-0">
                 <h1 className="text-2xl lg:text-3xl font-black tracking-tighter uppercase leading-none">{mainCategories.find(c => c.id === activeSettingsTab)?.label}<span className="text-primary">.</span></h1>
                 <p className="text-[11px] font-bold text-base-content/30 uppercase tracking-[0.3em] mt-1">{currentSubTab?.description}</p>
@@ -861,7 +861,7 @@ export const SetupPage: React.FC<SetupPageProps> = ({
                 </div>
             )}
             <div className="flex-grow overflow-hidden bg-base-100">{renderActiveTabContent()}</div>
-            <footer className="border-t border-base-300 flex bg-base-200/5 p-0 overflow-hidden flex-shrink-0"><button onClick={handleCancel} className="btn flex-1 rounded-none uppercase font-black text-[10px] tracking-widest hover:bg-base-300 border-r border-base-300">Abort</button><button onClick={saveSettings} className="btn btn-primary flex-1 rounded-none uppercase font-black text-[10px] tracking-widest shadow-lg">Confirm</button></footer>
+            <footer className="border-t border-base-300 flex flex-col bg-base-200/5 p-0 overflow-hidden flex-shrink-0"><button onClick={handleCancel} className="btn flex-1 rounded-none uppercase font-black text-[10px] tracking-widest hover:bg-base-300 border-r border-base-300">Abort</button><button onClick={saveSettings} className="btn btn-primary flex-1 rounded-none uppercase font-black text-[10px] tracking-widest shadow-lg">Confirm</button></footer>
         </main>
       </section>
       {modalFeedback && <FeedbackModal isOpen={!!modalFeedback} onClose={() => setModalFeedback(null)} message={modalFeedback.message} type={modalFeedback.type} />}
