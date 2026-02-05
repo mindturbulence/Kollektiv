@@ -1,6 +1,7 @@
+
 import React, { useState, useEffect } from 'react';
 import { createPortal } from 'react-dom';
-import { CloseIcon, YouTubeIcon, TikTokIcon } from './icons';
+import { CloseIcon, YouTubeIcon, InstagramIcon } from './icons';
 import LoadingSpinner from './LoadingSpinner';
 import { publishToYouTube, type YouTubeMetadata } from '../services/youtubeService';
 import { useSettings } from '../contexts/SettingsContext';
@@ -18,7 +19,7 @@ const YouTubePublishModal: React.FC<YouTubePublishModalProps> = ({
   isOpen, onClose, videoBlob, initialTitle, initialDescription, onSuccess
 }) => {
   const { settings } = useSettings();
-  const [platform, setPlatform] = useState<'youtube' | 'tiktok'>('youtube');
+  const [platform, setPlatform] = useState<'youtube' | 'instagram'>('youtube');
   const [title, setTitle] = useState(initialTitle);
   const [description, setDescription] = useState(initialDescription);
   const [privacy, setPrivacy] = useState<YouTubeMetadata['privacyStatus']>('private');
@@ -66,7 +67,7 @@ const YouTubePublishModal: React.FC<YouTubePublishModalProps> = ({
             setIsUploading(false);
         }
     } else {
-        setError("INTEGRATION_LOCKED: TikTok publishing protocol is currently in evaluation.");
+        setError("INTEGRATION_LOCKED: Instagram publishing protocol is currently in evaluation.");
     }
   };
 
@@ -80,7 +81,7 @@ const YouTubePublishModal: React.FC<YouTubePublishModalProps> = ({
                 <CloseIcon className="w-6 h-6" />
             </button>
             <div className="flex items-center gap-4 mb-2">
-                {platform === 'youtube' ? <YouTubeIcon className="w-8 h-8 text-error" /> : <TikTokIcon className="w-8 h-8 text-primary" />}
+                {platform === 'youtube' ? <YouTubeIcon className="w-8 h-8 text-error" /> : <InstagramIcon className="w-8 h-8 text-primary" />}
                 <h3 className="text-3xl font-black tracking-tighter text-base-content leading-none">
                     PUBLISH<span className="text-primary">.</span>
                 </h3>
@@ -104,7 +105,7 @@ const YouTubePublishModal: React.FC<YouTubePublishModalProps> = ({
                 <label className="text-[10px] font-black uppercase tracking-[0.2em] text-base-content/40 mb-3">Destination Platform</label>
                 <div className="join w-full h-10 bg-base-100 border border-base-300 rounded-none overflow-hidden">
                     <button onClick={() => setPlatform('youtube')} className={`join-item btn btn-ghost h-full flex-1 border-none rounded-none font-black text-[9px] tracking-widest uppercase transition-all ${platform === 'youtube' ? 'bg-primary/10 text-primary' : 'opacity-40 hover:bg-base-200'}`}>YOUTUBE</button>
-                    <button onClick={() => setPlatform('tiktok')} className={`join-item btn btn-ghost h-full flex-1 border-l border-base-300 rounded-none font-black text-[9px] tracking-widest uppercase transition-all ${platform === 'tiktok' ? 'bg-primary/10 text-primary' : 'opacity-40 hover:bg-base-200'}`}>TIKTOK</button>
+                    <button onClick={() => setPlatform('instagram')} className={`join-item btn btn-ghost h-full flex-1 border-l border-base-300 rounded-none font-black text-[9px] tracking-widest uppercase transition-all ${platform === 'instagram' ? 'bg-primary/10 text-primary' : 'opacity-40 hover:bg-base-200'}`}>INSTAGRAM</button>
                 </div>
               </div>
               <div className="form-control"><label className="text-[10px] font-black uppercase tracking-[0.2em] text-base-content/40 mb-3">Transmission ID</label><input type="text" value={title} onChange={e => setTitle(e.target.value)} className="input input-bordered rounded-none font-bold tracking-tight h-10 w-full uppercase" placeholder="ENTER TITLE..." /></div>
@@ -123,7 +124,7 @@ const YouTubePublishModal: React.FC<YouTubePublishModalProps> = ({
                         <label className="text-[10px] font-black uppercase tracking-[0.2em] text-base-content/40 mb-3">Protocol Format</label>
                         <div className="join w-full h-10 bg-base-100 border border-base-300 rounded-none overflow-hidden">
                             <button onClick={() => setPublishAsShorts(false)} className={`join-item btn btn-ghost btn-xs h-full flex-1 border-none rounded-none font-black text-[9px] tracking-widest uppercase transition-all ${!publishAsShorts ? 'bg-primary/10 text-primary' : 'opacity-40 hover:bg-base-200'}`}>STANDARD</button>
-                            <button onClick={() => setPublishAsShorts(true)} className={`join-item btn btn-ghost btn-xs h-full flex-1 border-l border-base-300 rounded-none font-black text-[9px] tracking-widest uppercase transition-all ${publishAsShorts ? 'bg-primary/10 text-primary' : 'opacity-40 hover:bg-base-200'}`}>SHORTS</button>
+                            <button onClick={() => setPublishAsShorts(true)} className={`join-item btn btn-ghost btn-xs h-full flex-1 border-l border-base-300 rounded-none font-black text-[9px] tracking-widest uppercase transition-all ${publishAsShorts ? 'bg-primary/10 text-primary' : 'opacity-40 hover:bg-base-200'}`}>REEL</button>
                         </div>
                     </div>
                 </div>

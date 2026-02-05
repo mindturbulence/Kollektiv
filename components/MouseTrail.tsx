@@ -5,7 +5,6 @@ import { gsap } from 'gsap';
 const MouseTrail: React.FC = () => {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const cursorRef = useRef<HTMLDivElement>(null);
-  const ringRef = useRef<HTMLDivElement>(null);
   
   const mouse = useRef({ x: 0, y: 0 });
   const ringPos = useRef({ x: 0, y: 0 });
@@ -13,35 +12,32 @@ const MouseTrail: React.FC = () => {
   const isHovering = useRef(false);
 
   // Configuration
-  const nodeCount = 18; 
-  const trailLerp = 0.18;    
+  const nodeCount = 12; // Trail nodes
+  const trailLerp = 0.2;    
   const ringLerp = 0.15;   
-  const jitterIntensity = 2.5;
-  const pulseSpeed = 0.008; // Radians per frame
-  const pulseMagnitude = 0.12; // 12% scale variation
+  
+  // Frequency Ring Config
+  const ringSegments = 128; // Increased for smoother circularity
+  const baseRadius = 20;
+  const hoverRadius = 26;
+  const currentRadius = useRef(baseRadius);
   
   useEffect(() => {
     const canvas = canvasRef.current;
     const cursor = cursorRef.current;
-    const ring = ringRef.current;
-    if (!canvas || !cursor || !ring) return;
+    if (!canvas || !cursor) return;
 
     const ctx = canvas.getContext('2d');
     if (!ctx) return;
 
-    // Set initial positions
     const initX = window.innerWidth / 2;
     const initY = window.innerHeight / 2;
     mouse.current = { x: initX, y: initY };
     ringPos.current = { x: initX, y: initY };
     points.current = Array.from({ length: nodeCount }, () => ({ x: initX, y: initY }));
 
-    // GSAP QuickSetters for high-performance frame updates
     const setCursorX = gsap.quickSetter(cursor, "x", "px");
     const setCursorY = gsap.quickSetter(cursor, "y", "px");
-    const setRingX = gsap.quickSetter(ring, "x", "px");
-    const setRingY = gsap.quickSetter(ring, "y", "px");
-    const setRingScale = gsap.quickSetter(ring, "scale");
 
     const handleResize = () => {
       canvas.width = window.innerWidth;
@@ -58,88 +54,77 @@ const MouseTrail: React.FC = () => {
         
         if (isInteractive && !isHovering.current) {
             isHovering.current = true;
-            gsap.to([cursor, ring, canvas], {
-                autoAlpha: 1,
-                scale: 1,
-                duration: 0.5,
-                ease: "elastic.out(1, 0.5)",
-                overwrite: true
-            });
+            gsap.to(currentRadius, { current: hoverRadius, duration: 0.4, ease: "power3.out" });
+            gsap.to(cursor, { scale: 1.5, duration: 0.3 });
         } else if (!isInteractive && isHovering.current) {
             isHovering.current = false;
-            gsap.to([cursor, ring, canvas], {
-                autoAlpha: 0,
-                scale: 0.2,
-                duration: 0.4,
-                ease: "power2.in",
-                overwrite: true
-            });
+            gsap.to(currentRadius, { current: baseRadius, duration: 0.6, ease: "elastic.out(1, 0.5)" });
+            gsap.to(cursor, { scale: 1, duration: 0.3 });
         }
     };
 
     const update = (time: number) => {
-      // 1. Move Inner Dot (Snappy follower)
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      
+      // Get theme primary color dynamically
+      const rootStyle = getComputedStyle(document.documentElement);
+      const primaryColorStr = rootStyle.getPropertyValue('--p').trim();
+      const primaryColor = primaryColorStr ? `oklch(${primaryColorStr})` : '#641ae6';
+
+      // 1. Move Inner Dot
       setCursorX(mouse.current.x);
       setCursorY(mouse.current.y);
 
-      // 2. Move Outer Ring (Delayed follower)
+      // 2. Move Ring Position (Lerped)
       ringPos.current.x += (mouse.current.x - ringPos.current.x) * ringLerp;
       ringPos.current.y += (mouse.current.y - ringPos.current.y) * ringLerp;
 
-      // Apply Neural Jitter & Pulse Effect
-      let jitterX = 0;
-      let jitterY = 0;
-      let currentPulse = 1;
+      // 3. Draw Frequency Ring
+      ctx.beginPath();
+      ctx.strokeStyle = primaryColor;
+      ctx.lineWidth = isHovering.current ? 1.2 : 1;
+      ctx.globalAlpha = isHovering.current ? 0.6 : 0.15;
 
-      if (isHovering.current) {
-          // Pulse scale based on time
-          currentPulse = 1 + (Math.sin(time * pulseSpeed) * pulseMagnitude);
+      for (let i = 0; i <= ringSegments; i++) {
+          const angle = (i / ringSegments) * Math.PI * 2;
           
-          // Neural Jitter
-          jitterX = (Math.random() - 0.5) * jitterIntensity;
-          jitterY = (Math.random() - 0.5) * jitterIntensity;
+          // Improved Neural Frequency Logic:
+          // We use higher frequencies (16, 32, 64) so the shape stays circular
+          // but the "texture" of the line vibrates.
+          const timeScale = time * 0.004;
+          const rippleA = Math.sin(angle * 16 + timeScale) * (isHovering.current ? 1.5 : 0.8);
+          const rippleB = Math.sin(angle * 32 - timeScale * 1.5) * (isHovering.current ? 1.0 : 0.4);
           
-          setRingScale(currentPulse);
+          // Subtle random micro-jitter for that "electric" feel
+          const microJitter = (Math.random() - 0.5) * (isHovering.current ? 1.2 : 0.4);
+          
+          const r = currentRadius.current + rippleA + rippleB + microJitter;
+          
+          const x = ringPos.current.x + Math.cos(angle) * r;
+          const y = ringPos.current.y + Math.sin(angle) * r;
+          
+          if (i === 0) ctx.moveTo(x, y);
+          else ctx.lineTo(x, y);
       }
+      ctx.stroke();
 
-      setRingX(ringPos.current.x + jitterX);
-      setRingY(ringPos.current.y + jitterY);
-
-      // 3. Update Trail Physics (Follows the RING position)
-      ctx.clearRect(0, 0, canvas.width, canvas.height);
-      
+      // 4. Update and Draw Trail
+      ctx.globalAlpha = isHovering.current ? 0.2 : 0.08;
+      ctx.lineWidth = 1;
       let leader = { x: ringPos.current.x, y: ringPos.current.y };
       
       points.current.forEach((p, i) => {
         p.x += (leader.x - p.x) * trailLerp;
         p.y += (leader.y - p.y) * trailLerp;
+        
+        if (i > 0) {
+            ctx.beginPath();
+            ctx.moveTo(points.current[i-1].x, points.current[i-1].y);
+            ctx.lineTo(p.x, p.y);
+            ctx.stroke();
+        }
         leader = { ...p };
       });
-
-      // 4. Draw Trail
-      if (isHovering.current) {
-          const rootStyle = getComputedStyle(document.documentElement);
-          const primaryColor = rootStyle.getPropertyValue('--p').trim();
-          
-          ctx.strokeStyle = primaryColor ? `oklch(${primaryColor})` : '#641ae6';
-          ctx.lineCap = 'round';
-          ctx.lineJoin = 'round';
-
-          for (let i = 1; i < points.current.length; i++) {
-            const p1 = points.current[i - 1];
-            const p2 = points.current[i];
-            
-            const opacity = (1 - (i / points.current.length)) * 0.4;
-            const width = (points.current.length - i) * 0.8;
-
-            ctx.beginPath();
-            ctx.globalAlpha = opacity;
-            ctx.lineWidth = Math.max(0.5, width);
-            ctx.moveTo(p1.x, p1.y);
-            ctx.lineTo(p2.x, p2.y);
-            ctx.stroke();
-          }
-      }
     };
 
     window.addEventListener('resize', handleResize);
@@ -147,10 +132,6 @@ const MouseTrail: React.FC = () => {
     window.addEventListener('mouseover', handleMouseOver);
     handleResize();
     
-    // Set initial state
-    gsap.set([cursor, ring, canvas], { autoAlpha: 0, scale: 0.5 });
-    
-    // Use GSAP ticker with time for smooth modulation
     const tickerHandler = () => update(performance.now());
     gsap.ticker.add(tickerHandler);
 
@@ -164,23 +145,15 @@ const MouseTrail: React.FC = () => {
 
   return (
     <>
-      {/* Visual Canvas for the trailing segment */}
       <canvas
         ref={canvasRef}
         className="fixed inset-0 z-[9990] pointer-events-none select-none"
       />
       
-      {/* The Pulsating/Jittery Outer Ring */}
-      <div 
-        ref={ringRef}
-        className="fixed top-0 left-0 w-12 h-12 -ml-6 -mt-6 border border-primary/30 rounded-full z-[9991] pointer-events-none bg-primary/5 shadow-[0_0_20px_oklch(var(--p)/0.1)]"
-        style={{ willChange: 'transform' }}
-      />
-
-      {/* The Core Dot */}
+      {/* Precision Core Dot */}
       <div 
         ref={cursorRef}
-        className="fixed top-0 left-0 w-1.5 h-1.5 -ml-0.75 -mt-0.75 bg-primary rounded-full z-[9992] pointer-events-none shadow-[0_0_12px_oklch(var(--p))]"
+        className="fixed top-0 left-0 w-1.5 h-1.5 -ml-0.75 -mt-0.75 bg-primary rounded-full z-[9992] pointer-events-none shadow-[0_0_10px_oklch(var(--p))]"
         style={{ willChange: 'transform' }}
       />
     </>

@@ -265,7 +265,7 @@ const Sidebar: React.FC<SidebarProps> = ({ activeTab, onNavigate, isSidebarOpen,
 
         {features.isCheatsheetsEnabled && (
             <Section title="Guides">
-                <NavItem id="cheatsheet" label="Prompting" icon={<BookOpenIcon className="w-5 h-5" />} activeTab={activeTab} onClick={onNavigate} registerRef={registerRef} />
+                <NavItem id="cheatsheet" label="Guides" icon={<BookOpenIcon className="w-5 h-5" />} activeTab={activeTab} onClick={onNavigate} registerRef={registerRef} />
                 <NavItem id="artstyles" label="Art Styles" icon={<PaletteIcon className="w-5 h-5" />} activeTab={activeTab} onClick={onNavigate} registerRef={registerRef} />
                 <NavItem id="artists" label="Artists" icon={<UsersIcon className="w-5 h-5" />} activeTab={activeTab} onClick={onNavigate} registerRef={registerRef} />
             </Section>

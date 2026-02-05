@@ -311,7 +311,8 @@ const ItemDetailView: React.FC<ItemDetailViewProps> = ({ items, currentIndex, is
 
   const categoryOptions = [ { label: 'ALL FOLDERS', value: '' }, ...categories.map(c => ({ label: c.name.toUpperCase(), value: c.id })) ];
   const currentMediaUrls = isEditing ? editableUrls : item.urls;
-  const isPublishable = item.type === 'video' && (settings.youtube?.isConnected || settings.tiktok?.isConnected);
+  // FIX: removed non-existent 'settings.tiktok' property from isPublishable condition
+  const isPublishable = item.type === 'video' && !!settings.youtube?.isConnected;
 
   return (
     <div className="absolute inset-0 z-40 bg-black/95 backdrop-blur-sm animate-fade-in flex items-center justify-center p-2 lg:p-4 overflow-hidden" onClick={onClose}>

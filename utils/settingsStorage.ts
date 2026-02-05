@@ -24,6 +24,9 @@ export const defaultLLMSettings: LLMSettings = {
   darkTheme: 'abyss',
   fontSize: 14,
 
+  // Dashboard Settings
+  dashboardVideoUrl: 'https://videos.pexels.com/video-files/3129671/3129671-uhd_3840_2160_30fps.mp4',
+
   // Feature Toggles
   features: {
     isPromptLibraryEnabled: true,
@@ -36,7 +39,7 @@ export const defaultLLMSettings: LLMSettings = {
   youtube: {
     isConnected: false
   },
-  tiktok: {
+  instagram: {
     isConnected: false
   },
   googleIdentity: {
@@ -73,9 +76,9 @@ export const loadLLMSettings = (): LLMSettings => {
               ...defaultLLMSettings.youtube,
               ...(parsed.youtube || {})
             },
-            tiktok: {
-              ...defaultLLMSettings.tiktok,
-              ...(parsed.tiktok || {})
+            instagram: {
+              ...defaultLLMSettings.instagram,
+              ...(parsed.instagram || {})
             },
             googleIdentity: {
                 ...defaultLLMSettings.googleIdentity,

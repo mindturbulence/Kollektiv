@@ -21,8 +21,8 @@ const Cheatsheet: React.FC<CheatsheetProps> = ({ isCategoryPanelCollapsed, onTog
 
   return (
     <GenericCheatsheetPage
-      title="Prompting Cheatsheet"
-      heroText="PROMPTING"
+      title="Guides"
+      heroText="GUIDES"
       searchPlaceholder="Search topics (e.g., 'role-playing', 'midjourney')..."
       loadDataFn={loadCheatsheet}
       updateDataFn={handleUpdate}

@@ -1,7 +1,7 @@
 
 import React, { useState, useEffect, useLayoutEffect, useRef, useMemo, useCallback } from 'react';
 import { gsap } from 'gsap';
-import type { LLMSettings, ActiveSettingsTab, GalleryCategory, PromptCategory, SavedPrompt, FeatureSettings, YouTubeConnection, TikTokConnection, GoogleIdentityConnection } from '../types';
+import type { LLMSettings, ActiveSettingsTab, GalleryCategory, PromptCategory, SavedPrompt, FeatureSettings, YouTubeConnection, InstagramConnection, GoogleIdentityConnection } from '../types';
 import { testOllamaConnection, type OllamaTestResult } from '../services/llmService';
 import { fileSystemManager, createZipAndDownload } from '../utils/fileUtils';
 import { useSettings } from '../contexts/SettingsContext';
@@ -23,7 +23,7 @@ import {
 import { resetAllSettings } from '../utils/settingsStorage';
 import { AVAILABLE_LLM_MODELS, DAISYUI_LIGHT_THEMES, DAISYUI_DARK_THEMES } from '../constants';
 import ConfirmationModal from './ConfirmationModal';
-import { Cog6ToothIcon, CpuChipIcon, AppIcon, PromptIcon, PhotoIcon, FolderClosedIcon, PaintBrushIcon, DeleteIcon, CheckIcon, EditIcon, AdjustmentsVerticalIcon, DownloadIcon, LinkIcon, PlayIcon, RefreshIcon, TikTokIcon, InformationCircleIcon, UploadIcon } from './icons';
+import { Cog6ToothIcon, CpuChipIcon, AppIcon, PromptIcon, PhotoIcon, FolderClosedIcon, PaintBrushIcon, DeleteIcon, CheckIcon, EditIcon, AdjustmentsVerticalIcon, DownloadIcon, LinkIcon, PlayIcon, RefreshIcon, InstagramIcon, InformationCircleIcon, UploadIcon } from './icons';
 import FeedbackModal from './FeedbackModal';
 import { PromptTxtImportModal } from './PromptTxtImportModal';
 import LoadingSpinner from './LoadingSpinner';
@@ -48,7 +48,7 @@ const subMenuConfig: Record<string, { id: string; label: string, icon: React.Rea
     integrations: [
         { id: 'google', label: 'Cloud Identity', icon: <LinkIcon className="w-4 h-4" />, description: "Link your Google account for Cloud AI." },
         { id: 'youtube', label: 'YouTube', icon: <PlayIcon className="w-4 h-4" />, description: "Manage YouTube API credentials." },
-        { id: 'tiktok', label: 'TikTok', icon: <TikTokIcon className="w-4 h-4" />, description: "Manage TikTok API credentials." }
+        { id: 'instagram', label: 'Instagram', icon: <InstagramIcon className="w-4 h-4" />, description: "Manage Instagram API credentials." }
     ],
     llm: [ { id: 'provider', label: 'AI Settings', icon: <CpuChipIcon className="w-4 h-4" />, description: "AI models and API connections." } ],
     prompt: [
@@ -229,7 +229,7 @@ export const SetupPage: React.FC<SetupPageProps> = ({
             showGlobalFeedback(`YouTube Linked: ${channel.snippet.title}`);
           }
       } else {
-          const response = await fetch('https://www.googleapis.com/oauth2/v3/userinfo', {
+          const response = await fetch('https://www.oauth2.googleapis.com/oauth2/v3/userinfo', {
             headers: { 'Authorization': `Bearer ${accessToken}` }
           });
           if (!response.ok) throw new Error("Cloud Identity fetch failed.");
@@ -400,7 +400,7 @@ export const SetupPage: React.FC<SetupPageProps> = ({
   const handleSettingsChange = (field: keyof LLMSettings, value: any) => {
     const updated = { ...settings, [field]: value };
     setSettings(updated);
-    if (['youtube', 'tiktok', 'googleIdentity'].includes(field)) updateSettings(updated);
+    if (['youtube', 'instagram', 'googleIdentity'].includes(field)) updateSettings(updated);
     if (field === 'fontSize' && typeof window !== 'undefined') (window as any).document.documentElement.style.fontSize = `${value}px`;
   };
 
@@ -511,6 +511,15 @@ export const SetupPage: React.FC<SetupPageProps> = ({
                              <button onClick={() => fileSystemManager.selectAndSetAppDataDirectory().then(h => h && showFeedback('Vault Connected'))} className="btn btn-secondary btn-sm rounded-none font-black text-[10px] tracking-widest px-6">
                                 {appDataDirectory ? `PATH: ${appDataDirectory}` : 'CONNECT DIRECTORY'}
                              </button>
+                        </SettingRow>
+                        <SettingRow label="Dashboard Video" desc="Direct MP4 URL for the cinematic dashboard background.">
+                            <input 
+                                type="text" 
+                                value={settings.dashboardVideoUrl} 
+                                onChange={(e) => handleSettingsChange('dashboardVideoUrl', e.target.value)} 
+                                className="input input-bordered input-sm rounded-none w-full md:w-96 font-mono text-xs" 
+                                placeholder="https://..."
+                            />
                         </SettingRow>
                         <SettingRow label="Interface Scale" desc="Global font sizing for the dashboard and workspaces.">
                              <div className="flex items-center gap-4 w-48">
@@ -628,16 +637,16 @@ export const SetupPage: React.FC<SetupPageProps> = ({
                         </SettingRow>
                     </div>
                 );
-            case 'tiktok':
+            case 'instagram':
                 return (
                     <div className="flex flex-col h-full overflow-y-auto custom-scrollbar animate-fade-in">
-                        <SettingRow label="Developer Key" desc="TikTok for Developers Client Key.">
-                            <input type="text" value={settings.tiktok?.clientKey || ''} onChange={(e) => handleSettingsChange('tiktok', { ...settings.tiktok, clientKey: e.target.value })} className="input input-bordered input-sm rounded-none w-full font-mono text-xs max-w-md" placeholder="CLIENT_KEY" />
+                        <SettingRow label="Developer Key" desc="Meta for Developers Client Key.">
+                            <input type="text" value={settings.instagram?.clientKey || ''} onChange={(e) => handleSettingsChange('instagram', { ...settings.instagram, clientKey: e.target.value })} className="input input-bordered input-sm rounded-none w-full font-mono text-xs max-w-md" placeholder="CLIENT_KEY" />
                         </SettingRow>
-                        <SettingRow label="Secret Fragment" desc="TikTok for Developers Client Secret.">
-                            <input type="password" value={settings.tiktok?.clientSecret || ''} onChange={(e) => handleSettingsChange('tiktok', { ...settings.tiktok, clientSecret: e.target.value })} className="input input-bordered input-sm rounded-none w-full font-mono text-xs max-w-md" placeholder="CLIENT_SECRET" />
+                        <SettingRow label="Secret Fragment" desc="Meta for Developers Client Secret.">
+                            <input type="password" value={settings.instagram?.clientSecret || ''} onChange={(e) => handleSettingsChange('instagram', { ...settings.instagram, clientSecret: e.target.value })} className="input input-bordered input-sm rounded-none w-full font-mono text-xs max-w-md" placeholder="CLIENT_SECRET" />
                         </SettingRow>
-                        <SettingRow label="TikTok Link" desc="Authenticate with TikTok for artifact distribution.">
+                        <SettingRow label="Instagram Link" desc="Authenticate with Instagram for artifact distribution.">
                              <button className="btn btn-sm btn-outline rounded-none font-black text-[10px] tracking-widest uppercase px-6" disabled>UNAVAILABLE IN ALPHA</button>
                         </SettingRow>
                     </div>

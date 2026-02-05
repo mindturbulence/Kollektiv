@@ -49,7 +49,7 @@ export interface YouTubeConnection {
   customClientId?: string;
 }
 
-export interface TikTokConnection {
+export interface InstagramConnection {
   isConnected: boolean;
   clientKey?: string;
   clientSecret?: string;
@@ -83,13 +83,16 @@ export interface LLMSettings {
   lightTheme: string;
   darkTheme: string;
   fontSize: number;
+
+  // Dashboard Settings
+  dashboardVideoUrl: string;
   
   // Feature Toggles
   features: FeatureSettings;
   
   // Integrations
   youtube?: YouTubeConnection;
-  tiktok?: TikTokConnection;
+  instagram?: InstagramConnection;
   googleIdentity?: GoogleIdentityConnection;
 }
 

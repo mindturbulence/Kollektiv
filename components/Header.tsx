@@ -18,7 +18,7 @@ const Header: React.FC<HeaderProps> = ({ onMenuClick, activeTab, clippedIdeasCou
     prompts: 'Prompt Builder',
     prompt: 'Prompt Library',
     gallery: 'Gallery',
-    cheatsheet: 'Prompting Cheatsheet',
+    cheatsheet: 'Guides',
     artstyles: 'Art Style Cheatsheet',
     artists: 'Artist Cheatsheet',
     settings: 'Settings',

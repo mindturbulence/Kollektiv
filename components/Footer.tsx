@@ -2,7 +2,7 @@
 import React, { useMemo } from 'react';
 import { useSettings } from '../contexts/SettingsContext';
 import { fileSystemManager } from '../utils/fileUtils';
-import { PlayIcon, TikTokIcon, CpuChipIcon, FolderClosedIcon } from './icons';
+import { PlayIcon, InstagramIcon, CpuChipIcon, FolderClosedIcon } from './icons';
 
 interface FooterProps {
   onAboutClick: () => void;
@@ -37,7 +37,7 @@ const Footer: React.FC<FooterProps> = ({ onAboutClick }) => {
         ai: aiLabel,
         aiActive: isGeminiActive || isOllamaActive || isOllamaCloudActive,
         youtube: !!settings.youtube?.isConnected,
-        tiktok: !!settings.tiktok?.isConnected
+        instagram: !!settings.instagram?.isConnected
     };
   }, [settings, fileSystemManager.appDirectoryName]);
 
@@ -67,9 +67,9 @@ const Footer: React.FC<FooterProps> = ({ onAboutClick }) => {
                     icon={<PlayIcon className="w-3 h-3 fill-current" />} 
                 />
                 <StatusIndicator 
-                    label="TT" 
-                    active={systemStatus.tiktok} 
-                    icon={<TikTokIcon className="w-3 h-3" />} 
+                    label="IG" 
+                    active={systemStatus.instagram} 
+                    icon={<InstagramIcon className="w-3 h-3" />} 
                 />
             </div>
         </div>
