@@ -2,46 +2,112 @@
 import React, { useMemo, useState, useEffect, useRef, useCallback, useLayoutEffect } from 'react';
 import { useSettings } from '../contexts/SettingsContext';
 import { fileSystemManager } from '../utils/fileUtils';
-import { PlayIcon, InstagramIcon, CpuChipIcon, FolderClosedIcon, WaveSineIcon } from './icons';
+import { PlayIcon, InstagramIcon, CpuChipIcon, FolderClosedIcon } from './icons';
 import { gsap } from 'gsap';
 
 interface FooterProps {
   onAboutClick: () => void;
 }
 
-const StatusIndicator: React.FC<{ 
+const LedStatus: React.FC<{ 
     label: string, 
     active: boolean, 
-    icon?: React.ReactNode,
     color?: string 
-}> = ({ label, active, icon, color = 'bg-success' }) => (
-    <div className={`flex items-center gap-1.5 px-2 py-0.5 border border-base-300 transition-all duration-500 ${active ? 'opacity-100' : 'opacity-20 grayscale'}`}>
-        {icon && <div className="w-3 h-3 flex items-center justify-center">{icon}</div>}
-        <span className="text-[9px] font-mono font-black text-base-content/50 tracking-widest uppercase">{label}</span>
-        <span className={`w-1 h-1 rounded-full ${active ? color : 'bg-base-content/20'}`}></span>
+}> = ({ label, active, color = 'bg-success' }) => (
+    <div className={`flex items-center gap-1.5 transition-all duration-700 ${active ? 'opacity-100' : 'opacity-10'}`}>
+        <span className={`w-1.5 h-1.5 rounded-full ${active ? `${color} shadow-[0_0_5px_rgba(var(--p),0.5)] animate-pulse` : 'bg-base-content/20'}`}></span>
+        {/* Unified typeface for status labels */}
+        <span className="text-[10px] font-sans font-black text-base-content tracking-tighter uppercase whitespace-nowrap">{label}</span>
     </div>
 );
 
-// Animated Soundwave Component - Uses currentColor for bars
-const SoundWaveActive = () => (
-    <div className="flex items-end justify-center gap-[3px] h-4 w-6">
-        {[0.6, 1.2, 0.8, 1.4, 0.5].map((val, i) => (
-            <div 
-                key={i}
-                className="w-1 bg-current origin-bottom"
-                style={{ 
-                    animation: `neural-pulse ${0.4 + (i * 0.15)}s ease-in-out infinite alternate`,
-                }}
-            />
-        ))}
-        <style>{`
-            @keyframes neural-pulse {
-                0% { height: 20%; opacity: 0.4; }
-                100% { height: 100%; opacity: 1; }
-            }
-        `}</style>
-    </div>
-);
+/**
+ * Digital Oscilloscope Animation
+ * Simulates a real-time signal readout with distinct behaviors for different engine states.
+ */
+const DigitalOscillator = ({ state = 'idle' }: { state: 'idle' | 'syncing' | 'playing' | 'error' }) => {
+    return (
+        <div className="flex items-center justify-center h-4 w-12 overflow-hidden relative">
+            <svg viewBox="0 0 100 40" preserveAspectRatio="none" className="w-full h-full overflow-visible">
+                {/* Harmonic Layer 1 (Slow/Deep) */}
+                <path
+                    d="M0 20 Q 25 5, 50 20 T 100 20 T 150 20"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="0.5"
+                    className={`transition-all duration-1000 ${
+                        state === 'playing' ? 'opacity-20 animate-osc-slow' : 
+                        state === 'syncing' ? 'opacity-10 animate-osc-erratic' : 'opacity-0'
+                    }`}
+                />
+                {/* Harmonic Layer 2 (Secondary) */}
+                <path
+                    d="M0 20 Q 15 35, 30 20 T 60 20 T 90 20 T 120 20"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="1"
+                    className={`transition-all duration-1000 ${
+                        state === 'playing' ? 'opacity-40 animate-osc-mid' : 
+                        state === 'syncing' ? 'opacity-20 animate-osc-erratic-reverse' : 'opacity-0'
+                    }`}
+                />
+                {/* Primary Signal Line */}
+                <path
+                    d="M0 20 Q 10 10, 20 20 T 40 20 T 60 20 T 80 20 T 100 20 T 120 20"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="1.5"
+                    strokeLinecap="round"
+                    className={`transition-all duration-700 ${
+                        state === 'playing' ? 'text-primary drop-shadow-[0_0_3px_oklch(var(--p))] animate-osc-fast' : 
+                        state === 'syncing' ? 'text-warning animate-osc-glitch' : 
+                        'text-base-content/20 animate-osc-idle'
+                    }`}
+                />
+            </svg>
+            <style>{`
+                @keyframes osc-scroll {
+                    0% { transform: translateX(0); }
+                    100% { transform: translateX(-40px); }
+                }
+                @keyframes osc-jitter {
+                    0%, 100% { transform: translateY(0); }
+                    50% { transform: translateY(-1px); }
+                }
+                @keyframes osc-glitch-step {
+                    0% { transform: translateX(0) scaleY(1); }
+                    20% { transform: translateX(-5px) scaleY(2); }
+                    40% { transform: translateX(-15px) scaleY(0.5); }
+                    60% { transform: translateX(-2px) scaleY(3); }
+                    80% { transform: translateX(-10px) scaleY(1); }
+                    100% { transform: translateX(0) scaleY(1); }
+                }
+                .animate-osc-slow {
+                    animation: osc-scroll 4s linear infinite;
+                }
+                .animate-osc-mid {
+                    animation: osc-scroll 2.5s linear infinite reverse;
+                }
+                .animate-osc-fast {
+                    animation: osc-scroll 1.2s linear infinite;
+                }
+                .animate-osc-idle {
+                    animation: osc-scroll 10s linear infinite, osc-jitter 0.2s step-end infinite;
+                    scale: 1 0.1;
+                }
+                .animate-osc-glitch {
+                    animation: osc-glitch-step 0.4s step-end infinite;
+                }
+                .animate-osc-erratic {
+                    animation: osc-glitch-step 0.8s linear infinite;
+                }
+                .animate-osc-erratic-reverse {
+                    animation: osc-glitch-step 1.2s linear infinite reverse;
+                }
+            `}</style>
+        </div>
+    );
+};
 
 const Footer: React.FC<FooterProps> = ({ onAboutClick }) => {
   const { settings } = useSettings();
@@ -56,7 +122,6 @@ const Footer: React.FC<FooterProps> = ({ onAboutClick }) => {
 
   // --- NATIVE AUDIO ENGINE ---
   const handleToggle = useCallback(() => {
-    // 1. Construct Engine on first interaction
     if (!audioRef.current) {
         const audio = new Audio('https://stream.nightride.fm/nightride.m4a');
         audio.crossOrigin = "anonymous";
@@ -78,7 +143,6 @@ const Footer: React.FC<FooterProps> = ({ onAboutClick }) => {
         };
     }
 
-    // 2. Playback Modulation
     if (playerState === 'playing') {
         audioRef.current.pause();
         audioRef.current.src = "";
@@ -106,12 +170,11 @@ const Footer: React.FC<FooterProps> = ({ onAboutClick }) => {
     };
   }, []);
 
-  // --- DYNAMIC UI ANIMATIONS (TRANSITIONS ONLY, NO BACKGROUNDS) ---
+  // --- DYNAMIC UI ANIMATIONS ---
   useLayoutEffect(() => {
     if (!containerRef.current) return;
     gsap.killTweensOf(containerRef.current);
     
-    // Scale slightly when active
     if (playerState === 'playing') {
         gsap.to(containerRef.current, {
             scale: 1.05,
@@ -129,7 +192,7 @@ const Footer: React.FC<FooterProps> = ({ onAboutClick }) => {
   const systemStatus = useMemo(() => {
     const isStorageLinked = fileSystemManager.isDirectorySelected();
     const isGeminiActive = settings.activeLLM === 'gemini' && !!process.env.API_KEY;
-    const aiLabel = settings.activeLLM === 'ollama_cloud' ? 'OLLAMA_CL' : settings.activeLLM.toUpperCase();
+    const aiLabel = settings.activeLLM === 'ollama_cloud' ? 'OLLAMA_CLOUD' : settings.activeLLM.toUpperCase();
     return {
         storage: isStorageLinked,
         ai: aiLabel,
@@ -142,13 +205,12 @@ const Footer: React.FC<FooterProps> = ({ onAboutClick }) => {
   const statusLabel = useMemo(() => {
       switch(playerState) {
           case 'playing': return 'MUSIC: ON';
-          case 'syncing': return 'UPLINKING...';
-          case 'error': return 'FAIL';
-          default: return 'MUSIC: OFF';
+          case 'syncing': return 'SYNCING...';
+          case 'error': return 'MUSIC: OFF';
+          default: return 'MUSIC: IDLE';
       }
   }, [playerState]);
 
-  // Color logic for text and icon
   const stateColorClass = useMemo(() => {
     switch(playerState) {
         case 'playing': return 'text-primary';
@@ -165,64 +227,52 @@ const Footer: React.FC<FooterProps> = ({ onAboutClick }) => {
             <div className="bg-base-100 border border-primary/40 px-6 py-3 shadow-[0_20px_60px_rgba(0,0,0,0.8)] flex items-center gap-4 backdrop-blur-3xl">
                 <div className="w-2.5 h-2.5 rounded-full bg-primary animate-pulse shadow-[0_0_10px_oklch(var(--p))]"></div>
                 <div className="flex flex-col">
-                    <span className="text-[7px] font-black uppercase tracking-[0.5em] text-primary">Neural Stream Active</span>
+                    <span className="text-[7px] font-black uppercase tracking-[0.5em] text-primary">Stream Activated</span>
                     <span className="text-[10px] font-bold uppercase tracking-widest text-base-content truncate max-w-[280px]">NIGHTRIDE FM // SYNTHWAVE RADIO</span>
                 </div>
             </div>
         </div>
 
-        <footer className="flex-shrink-0 px-6 py-2 bg-base-100 border-t border-base-300 z-10 flex flex-wrap items-center justify-between gap-4 select-none">
-            <div className="flex items-center gap-4">
-                <div className="flex items-center gap-2 border-r border-base-300 pr-4">
-                    <span className="text-[9px] font-mono font-black text-primary tracking-widest uppercase">KOLLEKTIV V2.0</span>
+        <footer className="flex-shrink-0 px-6 h-12 bg-base-100 border-t border-base-300 z-10 flex flex-row items-center justify-between overflow-hidden select-none whitespace-nowrap">
+            {/* --- LEFT MODULE: ENGINE STATUS --- */}
+            <div className="flex items-center h-full px-6 gap-6 bg-transparent">
+                <div className="flex flex-row items-center gap-3">
+                    {/* Corrected branding typeface (inheriting font-black overrides) */}
+                    <span className="text-[14px] font-black uppercase tracking-tighter text-primary">
+                        KOLLEKTIV
+                    </span>
                 </div>
-                <div className="flex gap-1">
-                    <StatusIndicator label="VAULT" active={systemStatus.storage} icon={<FolderClosedIcon className="w-3 h-3" />} />
-                    <StatusIndicator label={systemStatus.ai} active={systemStatus.aiActive} icon={<CpuChipIcon className="w-3 h-3" />} />
-                    <StatusIndicator label="YT" active={systemStatus.youtube} icon={<PlayIcon className="w-3 h-3 fill-current" />} />
-                    <StatusIndicator label="IG" active={systemStatus.instagram} icon={<InstagramIcon className="w-3 h-3" />} />
+                
+                <div className="relative flex items-center justify-center border-l border-base-300/30 pl-6 h-full py-2">
+                    <div className="flex flex-row gap-4 items-center">
+                        <LedStatus label="VAULT" active={systemStatus.storage} />
+                        <LedStatus label={systemStatus.ai} active={systemStatus.aiActive} />
+                        <LedStatus label="YOUTUBE" active={systemStatus.youtube} color="bg-error" />
+                        <LedStatus label="INSTAGRAM" active={systemStatus.instagram} color="bg-primary" />
+                    </div>
                 </div>
             </div>
 
-            <div className="flex items-center gap-4">
-                {/* UNIFIED NEURAL SIGNAL CONTROL (TRANSPARENT BACKGROUND) */}
-                <button 
-                    ref={containerRef}
-                    onClick={handleToggle}
-                    disabled={playerState === 'syncing'}
-                    className={`group relative flex items-center h-12 px-6 gap-6 transition-all duration-300 rounded-none overflow-hidden bg-transparent border-none outline-none ${stateColorClass}`}
-                >
-                    {/* Status Text Stack */}
-                    <div className="flex flex-col items-start">
-                        <span className={`text-[10px] font-black uppercase tracking-widest leading-none transition-colors ${playerState === 'syncing' ? 'animate-pulse' : ''}`}>
-                            {statusLabel}
-                        </span>
+            {/* --- RIGHT MODULE: AUDIO SIGNAL --- */}
+            <button 
+                ref={containerRef}
+                onClick={handleToggle}
+                disabled={playerState === 'syncing'}
+                className={`group relative flex items-center h-full px-6 gap-6 transition-all duration-300 rounded-none overflow-hidden bg-transparent border-none outline-none ${stateColorClass}`}
+            >
+                <div className="flex flex-row items-center gap-2 text-right">
+                    {/* Unified typeface for status messaging */}
+                    <span className={`text-[10px] font-sans font-black uppercase tracking-tighter transition-colors ${playerState === 'syncing' ? 'animate-pulse' : ''}`}>
+                        {statusLabel}
+                    </span>
+                </div>
+                
+                <div className="relative flex items-center justify-center border-l border-base-300/30 pl-6 h-full py-2">
+                    <div className="relative">
+                        <DigitalOscillator state={playerState} />
                     </div>
-                    
-                    {/* Integrated Wave Module */}
-                    <div className="relative flex items-center justify-center border-l border-base-300/30 pl-6 h-full py-2">
-                        <div className="relative">
-                            {playerState === 'playing' ? (
-                                <SoundWaveActive />
-                            ) : (
-                                <WaveSineIcon className={`w-6 h-6 transition-all duration-700 ${
-                                    playerState === 'syncing' ? 'animate-pulse' : ''
-                                }`} />
-                            )}
-                            
-                            {/* Pulse Rings for Active State (Stays primary for that tech look) */}
-                            {playerState === 'playing' && (
-                                <span className="absolute inset-0 border border-current rounded-full animate-ping opacity-20 pointer-events-none scale-150"></span>
-                            )}
-                        </div>
-                    </div>
-
-                    {/* Minimalist Syncing Indicator (No background fill) */}
-                    {playerState === 'syncing' && (
-                        <div className="absolute inset-x-0 bottom-0 h-0.5 bg-warning/20 animate-pulse pointer-events-none"></div>
-                    )}
-                </button>
-            </div>
+                </div>
+            </button>
         </footer>
     </>
   );

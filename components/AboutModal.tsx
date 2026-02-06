@@ -11,7 +11,7 @@ const AboutModal: React.FC<AboutModalProps> = ({ isOpen, onClose }) => {
   if (!isOpen) return null;
 
   const modalContent = (
-    <div className="fixed inset-0 bg-black/90 z-50 flex items-center justify-center p-4 animate-fade-in" onClick={onClose} role="dialog" aria-modal="true">
+    <div className="fixed inset-0 bg-black/90 z-[1000] flex items-center justify-center p-4 animate-fade-in" onClick={onClose} role="dialog" aria-modal="true">
       <div className="bg-base-100 rounded-none shadow-2xl w-full max-w-2xl mx-auto border border-base-300 overflow-hidden" onClick={(e) => e.stopPropagation()}>
         <header className="p-10 border-b border-base-300 bg-base-200/10 relative">
           <button onClick={onClose} className="absolute top-6 right-6 btn btn-ghost btn-sm btn-square opacity-40 hover:opacity-100" aria-label="Close modal">

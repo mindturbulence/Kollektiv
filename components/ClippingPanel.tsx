@@ -1,4 +1,3 @@
-
 import React, { useRef, useEffect, useState, useCallback, useLayoutEffect } from 'react';
 import { createPortal } from 'react-dom';
 import { gsap } from 'gsap';
@@ -268,7 +267,7 @@ const ClippingPanel: React.FC<ClippingPanelProps> = ({
         <>
             <div
                 ref={panelRef}
-                className="fixed top-0 right-0 bottom-0 w-full md:w-[512px] bg-base-100 shadow-2xl z-[100] flex flex-col border-l border-base-300 translate-x-full"
+                className="absolute top-0 right-0 bottom-0 w-full md:w-[512px] bg-base-100 shadow-2xl z-[100] flex flex-col border-l border-base-300 translate-x-full"
                 style={{ visibility: 'hidden' }}
                 aria-hidden={!isOpen}
             >

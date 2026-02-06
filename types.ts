@@ -1,4 +1,3 @@
-
 // --- Core App Types ---
 export type ActiveTab =
   | 'dashboard'
@@ -15,7 +14,7 @@ export type ActiveTab =
   | 'composer'
   | 'settings';
 
-export type ActiveSettingsTab = 'app' | 'integrations' | 'llm' | 'prompt' | 'gallery';
+export type ActiveSettingsTab = 'app' | 'appearance' | 'integrations' | 'prompt' | 'gallery';
 
 export interface AppError {
   message: string;

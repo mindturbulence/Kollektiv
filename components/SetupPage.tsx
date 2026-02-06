@@ -20,7 +20,7 @@ import {
     deletePromptCategory, 
     savePromptCategoriesOrder as savePromptCategoriesOrderFS
 } from '../utils/promptStorage';
-import { resetAllSettings } from '../utils/settingsStorage';
+import { resetAllSettings, defaultLLMSettings } from '../utils/settingsStorage';
 import { AVAILABLE_LLM_MODELS, DAISYUI_LIGHT_THEMES, DAISYUI_DARK_THEMES } from '../constants';
 import ConfirmationModal from './ConfirmationModal';
 import { Cog6ToothIcon, CpuChipIcon, AppIcon, PromptIcon, PhotoIcon, FolderClosedIcon, PaintBrushIcon, DeleteIcon, CheckIcon, EditIcon, AdjustmentsVerticalIcon, DownloadIcon, LinkIcon, PlayIcon, RefreshIcon, InstagramIcon, InformationCircleIcon, UploadIcon } from './icons';
@@ -40,17 +40,19 @@ interface SetupPageProps {
 
 const subMenuConfig: Record<string, { id: string; label: string, icon: React.ReactNode, description: string }[]> = {
     app: [
-        { id: 'general', label: 'General', icon: <Cog6ToothIcon className="w-4 h-4" />, description: "Storage and system scale." },
+        { id: 'general', label: 'General', icon: <Cog6ToothIcon className="w-4 h-4" />, description: "Storage and engine lifecycle." },
         { id: 'features', label: 'Features', icon: <AdjustmentsVerticalIcon className="w-4 h-4" />, description: "Toggle available modules." },
-        { id: 'appearance', label: 'Appearance', icon: <PaintBrushIcon className="w-4 h-4" />, description: "Themes and visual styling." },
         { id: 'data', label: 'Backup & Restore', icon: <FolderClosedIcon className="w-4 h-4" />, description: "System data management." }
     ],
+    appearance: [
+        { id: 'styling', label: 'Visual Interface', icon: <PaintBrushIcon className="w-4 h-4" />, description: "Themes, scales, and dashboard cinematic assets." }
+    ],
     integrations: [
+        { id: 'llm', label: 'AI Engine', icon: <CpuChipIcon className="w-4 h-4" />, description: "AI models and local/cloud API connections." },
         { id: 'google', label: 'Cloud Identity', icon: <LinkIcon className="w-4 h-4" />, description: "Link your Google account for Cloud AI." },
         { id: 'youtube', label: 'YouTube', icon: <PlayIcon className="w-4 h-4" />, description: "Manage YouTube API credentials." },
         { id: 'instagram', label: 'Instagram', icon: <InstagramIcon className="w-4 h-4" />, description: "Manage Instagram API credentials." }
     ],
-    llm: [ { id: 'provider', label: 'AI Settings', icon: <CpuChipIcon className="w-4 h-4" />, description: "AI models and API connections." } ],
     prompt: [
         { id: 'categories', label: 'Prompt Folders', icon: <FolderClosedIcon className="w-4 h-4" />, description: "Organize prompt hierarchies." },
         { id: 'data', label: 'Prompt Data', icon: <FolderClosedIcon className="w-4 h-4" />, description: "Import and export prompt text." }
@@ -192,6 +194,66 @@ export const SetupPage: React.FC<SetupPageProps> = ({
   const lastClientIdRef = useRef<string | null>(null);
   const authModeRef = useRef<'youtube' | 'google'>('google');
   const authTimeoutRef = useRef<number | null>(null);
+
+  // --- AUDIO ENGINE: SUCCESS CHIME (IMPROVED Audibility) ---
+  const playSuccessChime = useCallback(() => {
+    try {
+        const AudioCtx = window.AudioContext || (window as any).webkitAudioContext;
+        if (!AudioCtx) return;
+        const ctx = new AudioCtx();
+        const master = ctx.createGain();
+        master.connect(ctx.destination);
+        master.gain.value = 0.5; // Sufficiently audible
+        
+        const now = ctx.currentTime;
+        
+        // Osc 1: The Mechanical Impact
+        const osc1 = ctx.createOscillator();
+        const g1 = ctx.createGain();
+        osc1.type = 'sine';
+        osc1.frequency.setValueAtTime(150, now);
+        osc1.frequency.exponentialRampToValueAtTime(40, now + 0.15);
+        g1.gain.setValueAtTime(0.6, now);
+        g1.gain.linearRampToValueAtTime(0, now + 0.15);
+        osc1.connect(g1);
+        g1.connect(master);
+        
+        // Osc 2: The Digital Ascent
+        const osc2 = ctx.createOscillator();
+        const g2 = ctx.createGain();
+        osc2.type = 'triangle';
+        osc2.frequency.setValueAtTime(880, now + 0.05);
+        osc2.frequency.exponentialRampToValueAtTime(1760, now + 0.3);
+        g2.gain.setValueAtTime(0, now + 0.05);
+        g2.gain.linearRampToValueAtTime(0.4, now + 0.1);
+        g2.gain.exponentialRampToValueAtTime(0.001, now + 1.2);
+        osc2.connect(g2);
+        g2.connect(master);
+
+        // Osc 3: The Polish Shimmer
+        const osc3 = ctx.createOscillator();
+        const g3 = ctx.createGain();
+        osc3.type = 'sine';
+        osc3.frequency.setValueAtTime(3520, now + 0.1);
+        g3.gain.setValueAtTime(0, now + 0.1);
+        g3.gain.linearRampToValueAtTime(0.15, now + 0.15);
+        g3.gain.exponentialRampToValueAtTime(0.001, now + 0.8);
+        osc3.connect(g3);
+        g3.connect(master);
+
+        osc1.start(now);
+        osc1.stop(now + 0.15);
+        osc2.start(now + 0.05);
+        osc2.stop(now + 1.2);
+        osc3.start(now + 0.1);
+        osc3.stop(now + 0.8);
+
+        // Forced context resumption for browser compliance
+        if (ctx.state === 'suspended') ctx.resume();
+    } catch (e) {
+        console.warn("Audio logic failed - likely interaction block.");
+    }
+  }, []);
 
   const handleAuthResponse = useCallback(async (accessToken: string, mode: 'youtube' | 'google') => {
     if (authTimeoutRef.current) {
@@ -359,8 +421,8 @@ export const SetupPage: React.FC<SetupPageProps> = ({
   const mainCategories = useMemo(() => {
     const categories: {id: ActiveSettingsTab, label: string, icon: React.ReactNode}[] = [
         { id: 'app', label: 'APPLICATION', icon: <AppIcon className="w-5 h-5"/> },
+        { id: 'appearance', label: 'APPEARANCE', icon: <PaintBrushIcon className="w-5 h-5"/> },
         { id: 'integrations', label: 'INTEGRATIONS', icon: <LinkIcon className="w-5 h-5"/> },
-        { id: 'llm', label: 'AI MODELS', icon: <CpuChipIcon className="w-5 h-5"/> },
     ];
     if (features.isPromptLibraryEnabled) categories.push({ id: 'prompt', label: 'PROMPTS', icon: <PromptIcon className="w-5 h-5"/> });
     if (features.isGalleryEnabled) categories.push({ id: 'gallery', label: 'GALLERY', icon: <PhotoIcon className="w-5 h-5"/> });
@@ -466,6 +528,9 @@ export const SetupPage: React.FC<SetupPageProps> = ({
         
         setMaintenanceProgress(100);
         
+        // --- ACOUSTIC CONFIRMATION ---
+        playSuccessChime();
+        
         // Allow time for the slide-up exit animation in overlay
         await artificialDelay(1000);
         
@@ -512,21 +577,6 @@ export const SetupPage: React.FC<SetupPageProps> = ({
                                 {appDataDirectory ? `PATH: ${appDataDirectory}` : 'CONNECT DIRECTORY'}
                              </button>
                         </SettingRow>
-                        <SettingRow label="Dashboard Video" desc="Direct MP4 URL for the cinematic dashboard background.">
-                            <input 
-                                type="text" 
-                                value={settings.dashboardVideoUrl} 
-                                onChange={(e) => handleSettingsChange('dashboardVideoUrl', e.target.value)} 
-                                className="input input-bordered input-sm rounded-none w-full md:w-96 font-mono text-xs" 
-                                placeholder="https://..."
-                            />
-                        </SettingRow>
-                        <SettingRow label="Interface Scale" desc="Global font sizing for the dashboard and workspaces.">
-                             <div className="flex items-center gap-4 w-48">
-                                <input type="range" min={10} max={18} value={settings.fontSize} onChange={(e) => handleSettingsChange('fontSize', Number((e.currentTarget as any).value))} className="range range-xs range-primary" />
-                                <span className="text-[10px] font-mono font-bold text-primary">{settings.fontSize}PX</span>
-                             </div>
-                        </SettingRow>
                         <SettingRow label="Cold Reboot" desc="Clear application cache and force-reload the interface.">
                              <button onClick={() => setIsRestartModalOpen(true)} className="btn btn-warning btn-sm rounded-none font-black text-[10px] tracking-widest px-6">RELOAD ENGINE</button>
                         </SettingRow>
@@ -549,21 +599,6 @@ export const SetupPage: React.FC<SetupPageProps> = ({
                         </SettingRow>
                     </div>
                 );
-            case 'appearance':
-                return (
-                    <div className="flex flex-col h-full overflow-y-auto custom-scrollbar animate-fade-in">
-                        <SettingRow label="Light Cycle Theme" desc="Visual palette used when in illuminated mode.">
-                            <select value={settings.lightTheme} onChange={(e) => handleSettingsChange('lightTheme', (e.currentTarget as any).value)} className="select select-bordered select-sm rounded-none font-bold w-64 uppercase text-[10px] tracking-widest">
-                                {DAISYUI_LIGHT_THEMES.map(t => <option key={t} value={t}>{t.toUpperCase()}</option>)}
-                            </select>
-                        </SettingRow>
-                        <SettingRow label="Obscure Cycle Theme" desc="Visual palette used when in dark mode.">
-                            <select value={settings.darkTheme} onChange={(e) => handleSettingsChange('darkTheme', (e.currentTarget as any).value)} className="select select-bordered select-sm rounded-none font-bold w-64 uppercase text-[10px] tracking-widest">
-                                {DAISYUI_DARK_THEMES.map(t => <option key={t} value={t}>{t.toUpperCase()}</option>)}
-                            </select>
-                        </SettingRow>
-                    </div>
-                );
             case 'data':
                  return (
                      <div className="flex flex-col h-full overflow-y-auto custom-scrollbar animate-fade-in">
@@ -582,8 +617,143 @@ export const SetupPage: React.FC<SetupPageProps> = ({
         }
     };
 
+    const renderAppearanceSettings = () => {
+        return (
+            <div className="flex flex-col h-full overflow-y-auto custom-scrollbar animate-fade-in">
+                <SettingRow label="Light Cycle Theme" desc="Visual palette used when in illuminated mode.">
+                    <select value={settings.lightTheme} onChange={(e) => handleSettingsChange('lightTheme', (e.currentTarget as any).value)} className="select select-bordered select-sm rounded-none font-bold w-64 uppercase text-[10px] tracking-widest">
+                        {DAISYUI_LIGHT_THEMES.map(t => <option key={t} value={t}>{t.toUpperCase()}</option>)}
+                    </select>
+                </SettingRow>
+                <SettingRow label="Obscure Cycle Theme" desc="Visual palette used when in dark mode.">
+                    <select value={settings.darkTheme} onChange={(e) => handleSettingsChange('darkTheme', (e.currentTarget as any).value)} className="select select-bordered select-sm rounded-none font-bold w-64 uppercase text-[10px] tracking-widest">
+                        {DAISYUI_DARK_THEMES.map(t => <option key={t} value={t}>{t.toUpperCase()}</option>)}
+                    </select>
+                </SettingRow>
+                <SettingRow label="Dashboard Video" desc="Direct MP4 URL for the cinematic dashboard background.">
+                    <div className="join w-full md:w-96">
+                        <input 
+                            type="text" 
+                            value={settings.dashboardVideoUrl} 
+                            onChange={(e) => handleSettingsChange('dashboardVideoUrl', e.target.value)} 
+                            className="input input-bordered input-sm rounded-none join-item w-full font-mono text-xs" 
+                            placeholder="https://..."
+                        />
+                        <button 
+                            onClick={() => handleSettingsChange('dashboardVideoUrl', defaultLLMSettings.dashboardVideoUrl)}
+                            className="btn btn-sm btn-ghost border border-base-300 join-item text-[10px] font-black"
+                            title="Reset to Default"
+                        >
+                            <RefreshIcon className="w-3.5 h-3.5" />
+                        </button>
+                    </div>
+                </SettingRow>
+                <SettingRow label="Interface Scale" desc="Global font sizing for the dashboard and workspaces.">
+                     <div className="flex items-center gap-4 w-48">
+                        <input type="range" min={10} max={18} value={settings.fontSize} onChange={(e) => handleSettingsChange('fontSize', Number((e.currentTarget as any).value))} className="range range-xs range-primary" />
+                        <span className="text-[10px] font-mono font-bold text-primary">{settings.fontSize}PX</span>
+                     </div>
+                </SettingRow>
+            </div>
+        );
+    };
+
     const renderIntegrationSettings = () => {
         switch(activeSubTab) {
+            case 'llm':
+                return (
+                    <div className="flex flex-col h-full overflow-y-auto custom-scrollbar animate-fade-in">
+                        <SettingRow label="Neural Intelligence Core" desc="Choose the primary processing engine for prompt construction.">
+                             <div className="flex flex-row flex-wrap gap-6">
+                                <label className="label cursor-pointer justify-start gap-3 p-0">
+                                    <input type="radio" name="llm-provider" className="radio radio-primary radio-sm" checked={settings.activeLLM === 'gemini'} onChange={() => handleSettingsChange('activeLLM', 'gemini')} />
+                                    <span className="text-[10px] font-black uppercase tracking-widest">Gemini</span>
+                                </label>
+                                <label className="label cursor-pointer justify-start gap-3 p-0">
+                                    <input type="radio" name="llm-provider" className="radio radio-primary radio-sm" checked={settings.activeLLM === 'ollama'} onChange={() => handleSettingsChange('activeLLM', 'ollama')} />
+                                    <span className="text-[10px] font-black uppercase tracking-widest">Ollama</span>
+                                </label>
+                                <label className="label cursor-pointer justify-start gap-3 p-0">
+                                    <input type="radio" name="llm-provider" className="radio radio-primary radio-sm" checked={settings.activeLLM === 'ollama_cloud'} onChange={() => handleSettingsChange('activeLLM', 'ollama_cloud')} />
+                                    <span className="text-[10px] font-black uppercase tracking-widest">Cloud Ollama</span>
+                                </label>
+                             </div>
+                        </SettingRow>
+                        {settings.activeLLM === 'ollama_cloud' && (
+                             <div className="animate-fade-in flex flex-col bg-base-200/20">
+                                <SettingRow label="Remote Endpoint" desc="HTTPS URL of your hosted Ollama server.">
+                                    <div className="space-y-4">
+                                        <div className="join w-full md:w-[620px]">
+                                            <input type="text" value={settings.ollamaCloudBaseUrl} onChange={(e) => handleSettingsChange('ollamaCloudBaseUrl', (e.currentTarget as any).value)} className="input input-bordered input-sm join-item w-full font-mono text-xs" placeholder="https://api.ollama-host.com" />
+                                            <button onClick={() => handleTestOllamaConnection(true)} disabled={isTestingOllama} className="btn btn-sm btn-ghost border border-base-300 join-item text-[10px] font-black">{isTestingOllama ? '...' : 'PING'}</button>
+                                        </div>
+                                        {ollamaTestResult && (
+                                            <div className={`flex items-center gap-2 text-[9px] font-black uppercase tracking-widest px-3 py-1.5 border ${ollamaTestResult.success ? 'bg-success/5 border-success/30 text-success' : 'bg-error/5 border-error/30 text-error'} animate-fade-in md:w-[620px]`}>
+                                                <span className={`w-1.5 h-1.5 rounded-full ${ollamaTestResult.success ? 'bg-success' : 'bg-error'} animate-pulse`}></span>
+                                                {ollamaTestResult.message}
+                                            </div>
+                                        )}
+                                    </div>
+                                </SettingRow>
+                                <SettingRow label="Cloud Model" desc="The exact model tag to invoke on the remote server.">
+                                    <AutocompleteSelect 
+                                        value={settings.ollamaCloudModel} 
+                                        onChange={(v) => handleSettingsChange('ollamaCloudModel', v)} 
+                                        options={cloudModelOptions} 
+                                        placeholder="SELECT CLOUD MODEL..." 
+                                        className="w-full md:w-[620px]"
+                                    />
+                                </SettingRow>
+                                <SettingRow label="Remote Authorization" desc="Inject a Bearer token automatically via Google Identity or manual key.">
+                                    <div className="flex flex-col gap-4">
+                                        <label className="label cursor-pointer justify-start gap-4 p-0">
+                                            <input type="checkbox" checked={settings.ollamaCloudUseGoogleAuth} onChange={e => handleSettingsChange('ollamaCloudUseGoogleAuth', e.target.checked)} className="toggle toggle-primary toggle-xs" />
+                                            <span className="text-[10px] font-black uppercase tracking-widest">Use Linked Google Token</span>
+                                        </label>
+                                        {!settings.ollamaCloudUseGoogleAuth && (
+                                            <input type="password" value={settings.ollamaCloudApiKey} onChange={(e) => handleSettingsChange('ollamaCloudApiKey', (e.currentTarget as any).value)} className="input input-bordered input-sm rounded-none font-mono text-xs w-full md:w-[620px]" placeholder="SECRET_API_TOKEN"/>
+                                        )}
+                                    </div>
+                                </SettingRow>
+                            </div>
+                        )}
+                        {settings.activeLLM === 'ollama' && (
+                            <div className="animate-fade-in flex flex-col bg-base-200/20">
+                                <SettingRow label="Host Address" desc="Local server URL (Default: http://localhost:11434).">
+                                     <div className="space-y-4">
+                                        <div className="join w-full md:w-[620px]">
+                                            <input type="text" value={settings.ollamaBaseUrl} onChange={(e) => handleSettingsChange('ollamaBaseUrl', (e.currentTarget as any).value)} className="input input-bordered input-sm join-item w-full font-mono text-xs" />
+                                            <button onClick={() => handleTestOllamaConnection(false)} disabled={isTestingOllama} className="btn btn-sm btn-ghost border border-base-300 join-item text-[10px] font-black">PING</button>
+                                        </div>
+                                        {ollamaTestResult && (
+                                            <div className={`flex items-center gap-2 text-[9px] font-black uppercase tracking-widest px-3 py-1.5 border ${ollamaTestResult.success ? 'bg-success/5 border-success/30 text-success' : 'bg-error/5 border-error/30 text-error'} animate-fade-in md:w-[620px]`}>
+                                                <span className={`w-1.5 h-1.5 rounded-full ${ollamaTestResult.success ? 'bg-success' : 'bg-error'} animate-pulse`}></span>
+                                                {ollamaTestResult.message}
+                                            </div>
+                                        )}
+                                         <div className="p-4 bg-info/5 border border-info/20 rounded-none space-y-3 md:w-[620px]">
+                                            <h5 className="text-[10px] font-black uppercase tracking-widest text-info flex items-center gap-2">
+                                                <InformationCircleIcon className="w-3.5 h-3.5" /> CORS POLICY GUIDE
+                                            </h5>
+                                            <p className="text-[10px] font-bold uppercase tracking-tight text-base-content/60 leading-relaxed">
+                                                For local access, set <code className="text-primary px-1 bg-base-100">OLLAMA_ORIGINS</code> to <code className="text-primary">*</code> or <code className="text-primary">{currentOrigin}</code> in your system variables.
+                                            </p>
+                                        </div>
+                                    </div>
+                                </SettingRow>
+                                <SettingRow label="Local Model Tag" desc="The model tag currently downloaded to your machine.">
+                                    <AutocompleteSelect 
+                                        value={settings.ollamaModel} 
+                                        onChange={(v) => handleSettingsChange('ollamaModel', v)} 
+                                        options={localModelOptions} 
+                                        placeholder="SELECT LOCAL MODEL..." 
+                                        className="w-full md:w-[620px]"
+                                    />
+                                </SettingRow>
+                            </div>
+                        )}
+                    </div>
+                );
             case 'google':
                 return (
                     <div className="flex flex-col h-full overflow-y-auto custom-scrollbar animate-fade-in">
@@ -655,100 +825,6 @@ export const SetupPage: React.FC<SetupPageProps> = ({
         }
     };
 
-    const renderLLMSettings = () => (
-        <div className="flex flex-col h-full overflow-y-auto custom-scrollbar animate-fade-in">
-            <SettingRow label="Neural Intelligence Core" desc="Choose the primary processing engine for prompt construction.">
-                 <div className="flex flex-row flex-wrap gap-6">
-                    <label className="label cursor-pointer justify-start gap-3 p-0">
-                        <input type="radio" name="llm-provider" className="radio radio-primary radio-sm" checked={settings.activeLLM === 'gemini'} onChange={() => handleSettingsChange('activeLLM', 'gemini')} />
-                        <span className="text-[10px] font-black uppercase tracking-widest">Gemini</span>
-                    </label>
-                    <label className="label cursor-pointer justify-start gap-3 p-0">
-                        <input type="radio" name="llm-provider" className="radio radio-primary radio-sm" checked={settings.activeLLM === 'ollama'} onChange={() => handleSettingsChange('activeLLM', 'ollama')} />
-                        <span className="text-[10px] font-black uppercase tracking-widest">Ollama</span>
-                    </label>
-                    <label className="label cursor-pointer justify-start gap-3 p-0">
-                        <input type="radio" name="llm-provider" className="radio radio-primary radio-sm" checked={settings.activeLLM === 'ollama_cloud'} onChange={() => handleSettingsChange('activeLLM', 'ollama_cloud')} />
-                        <span className="text-[10px] font-black uppercase tracking-widest">Cloud Ollama</span>
-                    </label>
-                 </div>
-            </SettingRow>
-            {settings.activeLLM === 'ollama_cloud' && (
-                 <div className="animate-fade-in flex flex-col bg-base-200/20">
-                    <SettingRow label="Remote Endpoint" desc="HTTPS URL of your hosted Ollama server.">
-                        <div className="space-y-4">
-                            <div className="join w-full md:w-[620px]">
-                                <input type="text" value={settings.ollamaCloudBaseUrl} onChange={(e) => handleSettingsChange('ollamaCloudBaseUrl', (e.currentTarget as any).value)} className="input input-bordered input-sm join-item w-full font-mono text-xs" placeholder="https://api.ollama-host.com" />
-                                <button onClick={() => handleTestOllamaConnection(true)} disabled={isTestingOllama} className="btn btn-sm btn-ghost border border-base-300 join-item text-[10px] font-black">{isTestingOllama ? '...' : 'PING'}</button>
-                            </div>
-                            {ollamaTestResult && (
-                                <div className={`flex items-center gap-2 text-[9px] font-black uppercase tracking-widest px-3 py-1.5 border ${ollamaTestResult.success ? 'bg-success/5 border-success/30 text-success' : 'bg-error/5 border-error/30 text-error'} animate-fade-in md:w-[620px]`}>
-                                    <span className={`w-1.5 h-1.5 rounded-full ${ollamaTestResult.success ? 'bg-success' : 'bg-error'} animate-pulse`}></span>
-                                    {ollamaTestResult.message}
-                                </div>
-                            )}
-                        </div>
-                    </SettingRow>
-                    <SettingRow label="Cloud Model" desc="The exact model tag to invoke on the remote server.">
-                        <AutocompleteSelect 
-                            value={settings.ollamaCloudModel} 
-                            onChange={(v) => handleSettingsChange('ollamaCloudModel', v)} 
-                            options={cloudModelOptions} 
-                            placeholder="SELECT CLOUD MODEL..." 
-                            className="w-full md:w-[620px]"
-                        />
-                    </SettingRow>
-                    <SettingRow label="Remote Authorization" desc="Inject a Bearer token automatically via Google Identity or manual key.">
-                        <div className="flex flex-col gap-4">
-                            <label className="label cursor-pointer justify-start gap-4 p-0">
-                                <input type="checkbox" checked={settings.ollamaCloudUseGoogleAuth} onChange={e => handleSettingsChange('ollamaCloudUseGoogleAuth', e.target.checked)} className="toggle toggle-primary toggle-xs" />
-                                <span className="text-[10px] font-black uppercase tracking-widest">Use Linked Google Token</span>
-                            </label>
-                            {!settings.ollamaCloudUseGoogleAuth && (
-                                <input type="password" value={settings.ollamaCloudApiKey} onChange={(e) => handleSettingsChange('ollamaCloudApiKey', (e.currentTarget as any).value)} className="input input-bordered input-sm rounded-none font-mono text-xs w-full md:w-[620px]" placeholder="SECRET_API_TOKEN"/>
-                            )}
-                        </div>
-                    </SettingRow>
-                </div>
-            )}
-            {settings.activeLLM === 'ollama' && (
-                <div className="animate-fade-in flex flex-col bg-base-200/20">
-                    <SettingRow label="Host Address" desc="Local server URL (Default: http://localhost:11434).">
-                         <div className="space-y-4">
-                            <div className="join w-full md:w-[620px]">
-                                <input type="text" value={settings.ollamaBaseUrl} onChange={(e) => handleSettingsChange('ollamaBaseUrl', (e.currentTarget as any).value)} className="input input-bordered input-sm join-item w-full font-mono text-xs" />
-                                <button onClick={() => handleTestOllamaConnection(false)} disabled={isTestingOllama} className="btn btn-sm btn-ghost border border-base-300 join-item text-[10px] font-black">PING</button>
-                            </div>
-                            {ollamaTestResult && (
-                                <div className={`flex items-center gap-2 text-[9px] font-black uppercase tracking-widest px-3 py-1.5 border ${ollamaTestResult.success ? 'bg-success/5 border-success/30 text-success' : 'bg-error/5 border-error/30 text-error'} animate-fade-in md:w-[620px]`}>
-                                    <span className={`w-1.5 h-1.5 rounded-full ${ollamaTestResult.success ? 'bg-success' : 'bg-error'} animate-pulse`}></span>
-                                    {ollamaTestResult.message}
-                                </div>
-                            )}
-                             <div className="p-4 bg-info/5 border border-info/20 rounded-none space-y-3 md:w-[620px]">
-                                <h5 className="text-[10px] font-black uppercase tracking-widest text-info flex items-center gap-2">
-                                    <InformationCircleIcon className="w-3.5 h-3.5" /> CORS POLICY GUIDE
-                                </h5>
-                                <p className="text-[10px] font-bold uppercase tracking-tight text-base-content/60 leading-relaxed">
-                                    For local access, set <code className="text-primary px-1 bg-base-100">OLLAMA_ORIGINS</code> to <code className="text-primary">*</code> or <code className="text-primary">{currentOrigin}</code> in your system variables.
-                                </p>
-                            </div>
-                        </div>
-                    </SettingRow>
-                    <SettingRow label="Local Model Tag" desc="The model tag currently downloaded to your machine.">
-                        <AutocompleteSelect 
-                            value={settings.ollamaModel} 
-                            onChange={(v) => handleSettingsChange('ollamaModel', v)} 
-                            options={localModelOptions} 
-                            placeholder="SELECT LOCAL MODEL..." 
-                            className="w-full md:w-[620px]"
-                        />
-                    </SettingRow>
-                </div>
-            )}
-        </div>
-    );
-
     const renderPromptSettings = () => {
         switch(activeSubTab) {
             case 'categories':
@@ -812,8 +888,8 @@ export const SetupPage: React.FC<SetupPageProps> = ({
     const renderActiveTabContent = () => {
         switch(activeSettingsTab) {
             case 'app': return renderAppSettings();
+            case 'appearance': return renderAppearanceSettings();
             case 'integrations': return renderIntegrationSettings();
-            case 'llm': return renderLLMSettings();
             case 'prompt': return renderPromptSettings();
             case 'gallery': return renderGallerySettings();
             default: return null;
@@ -846,7 +922,7 @@ export const SetupPage: React.FC<SetupPageProps> = ({
             </nav>
         </aside>
 
-        <main className="flex-grow flex-grow flex flex-col overflow-hidden bg-base-100">
+        <main className="flex-grow flex flex-col overflow-hidden bg-base-100">
             <section className="p-10 border-b border-base-300 bg-base-200/20 flex-shrink-0">
                 <h1 className="text-2xl lg:text-3xl font-black tracking-tighter uppercase leading-none">{mainCategories.find(c => c.id === activeSettingsTab)?.label}<span className="text-primary">.</span></h1>
                 <p className="text-[11px] font-bold text-base-content/30 uppercase tracking-[0.3em] mt-1">{currentSubTab?.description}</p>

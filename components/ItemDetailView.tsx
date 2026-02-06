@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect, useMemo, useCallback, useRef, useLayoutEffect } from 'react';
 import { gsap } from 'gsap';
 import type { GalleryItem, GalleryCategory } from '../types';
@@ -189,6 +188,7 @@ const ItemDetailView: React.FC<ItemDetailViewProps> = ({ items, currentIndex, is
   const [categoryId, setCategoryId] = useState('');
   const [isNsfw, setIsNsfw] = useState(false);
   const [tags, setTags] = useState<string[]>([]);
+  const [tagInput, setTagInput] = useState('');
   const [editableUrls, setEditableUrls] = useState<string[]>([]);
   const [editableSources, setEditableSources] = useState<string[]>([]);
   
@@ -212,6 +212,7 @@ const ItemDetailView: React.FC<ItemDetailViewProps> = ({ items, currentIndex, is
         setActiveImageIndex(0);
         setNavDirection('none');
         setIsEditing(false);
+        setTagInput('');
     }
   }, [item]);
 
@@ -307,11 +308,21 @@ const ItemDetailView: React.FC<ItemDetailViewProps> = ({ items, currentIndex, is
       }
   };
 
+  const handleTagInputKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === 'Enter' || e.key === ',') {
+        e.preventDefault();
+        const val = tagInput.trim();
+        if (val && !tags.includes(val)) {
+            setTags([...tags, val]);
+        }
+        setTagInput('');
+    }
+  };
+
   if (!item) return null;
 
   const categoryOptions = [ { label: 'ALL FOLDERS', value: '' }, ...categories.map(c => ({ label: c.name.toUpperCase(), value: c.id })) ];
   const currentMediaUrls = isEditing ? editableUrls : item.urls;
-  // FIX: removed non-existent 'settings.tiktok' property from isPublishable condition
   const isPublishable = item.type === 'video' && !!settings.youtube?.isConnected;
 
   return (
@@ -407,6 +418,35 @@ const ItemDetailView: React.FC<ItemDetailViewProps> = ({ items, currentIndex, is
                             <InfoRow label="Folder">
                                 <AutocompleteSelect value={categoryId} onChange={setCategoryId} options={categoryOptions} />
                             </InfoRow>
+                            <InfoRow label="Access Policy">
+                                <label className="label cursor-pointer justify-start gap-4 p-4 bg-base-200/50 border border-base-300 rounded-none hover:bg-base-200 transition-colors">
+                                    <input 
+                                        type="checkbox" 
+                                        checked={isNsfw} 
+                                        onChange={e => setIsNsfw(e.target.checked)} 
+                                        className="toggle toggle-primary toggle-xs" 
+                                    />
+                                    <span className="text-[10px] font-black uppercase tracking-widest text-base-content/60">Restricted Content (NSFW)</span>
+                                </label>
+                            </InfoRow>
+                            <InfoRow label="Neural Tags">
+                                <div className="flex flex-wrap items-center gap-2 p-3 bg-base-200/30 border border-base-300 rounded-none min-h-[52px]">
+                                    {tags.map(tag => (
+                                        <div key={tag} className="flex items-center gap-2 bg-base-100 border border-base-300 text-[10px] font-black uppercase tracking-widest px-2.5 py-1.5 shadow-sm">
+                                            <span>{tag}</span>
+                                            <button type="button" onClick={() => setTags(tags.filter(t => t !== tag))} className="text-error hover:text-error-content transition-colors">&times;</button>
+                                        </div>
+                                    ))}
+                                    <input 
+                                        type="text" 
+                                        value={tagInput} 
+                                        onChange={(e) => setTagInput(e.target.value)} 
+                                        onKeyDown={handleTagInputKeyDown} 
+                                        className="flex-grow bg-transparent outline-none text-[10px] font-bold uppercase tracking-widest px-1 h-8" 
+                                        placeholder="ADD TOKEN..."
+                                    />
+                                </div>
+                            </InfoRow>
                             <InfoRow label="Notes">
                                 <textarea value={notes} onChange={e => setNotes(e.target.value)} className="textarea textarea-bordered rounded-none w-full min-h-[120px] text-sm leading-relaxed" />
                             </InfoRow>
@@ -414,7 +454,15 @@ const ItemDetailView: React.FC<ItemDetailViewProps> = ({ items, currentIndex, is
                     ) : (
                         <div className="space-y-8 animate-fade-in">
                             <InfoRow label="Title">
-                                <h2 className="text-2xl font-black tracking-tighter uppercase leading-tight">{title}</h2>
+                                <div className="flex flex-col gap-2">
+                                    <h2 className="text-2xl font-black tracking-tighter uppercase leading-tight">{title}</h2>
+                                    {item.isNsfw && (
+                                        <div className="flex items-center gap-2">
+                                            <span className="w-1.5 h-1.5 rounded-full bg-warning animate-pulse"></span>
+                                            <span className="text-[8px] font-black uppercase tracking-widest text-warning">Restricted Artifact</span>
+                                        </div>
+                                    )}
+                                </div>
                             </InfoRow>
                             <InfoRow label="Prompt">
                                 <div className="p-4 bg-base-200/50 border border-base-300 italic text-sm leading-relaxed text-base-content/70 group/prompt">
@@ -425,6 +473,15 @@ const ItemDetailView: React.FC<ItemDetailViewProps> = ({ items, currentIndex, is
                                     >COPY TOKEN</button>
                                 </div>
                             </InfoRow>
+                            {tags.length > 0 && (
+                                <InfoRow label="Neural Tags">
+                                    <div className="flex flex-wrap gap-2 pt-2">
+                                        {tags.map(tag => (
+                                            <span key={tag} className="text-[9px] font-black uppercase tracking-widest bg-base-200 border border-base-300 px-3 py-1.5 text-base-content/40">{tag}</span>
+                                        ))}
+                                    </div>
+                                </InfoRow>
+                            )}
                             {notes && (
                                 <InfoRow label="Vault Documentation">
                                     <p className="text-sm text-base-content/60 leading-relaxed font-medium">"{notes}"</p>

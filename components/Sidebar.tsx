@@ -1,4 +1,3 @@
-
 import React, { useRef, useState, useEffect, useCallback, useLayoutEffect } from 'react';
 import { gsap } from 'gsap';
 import type { ActiveTab } from '../types';
@@ -20,70 +19,90 @@ interface SidebarProps {
   onAboutClick: () => void;
 }
 
-const ScrambledText: React.FC<{ text: string; isHovered: boolean }> = ({ text, isHovered }) => {
-    const [display, setDisplay] = useState(text);
-    const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789!@#$%^&*()_+';
-    const originalText = useRef(text);
-    const iterationRef = useRef(0);
-    const intervalRef = useRef<number | null>(null);
-
-    const startScramble = useCallback(() => {
-        if (intervalRef.current) clearInterval(intervalRef.current);
-        iterationRef.current = 0;
-        
-        intervalRef.current = window.setInterval(() => {
-            setDisplay(originalText.current.split('').map((char, index) => {
-                if (index < iterationRef.current) return originalText.current[index];
-                if (char === ' ') return ' ';
-                return chars[Math.floor(Math.random() * chars.length)];
-            }).join(''));
-            
-            if (iterationRef.current >= originalText.current.length) {
-                if (intervalRef.current) clearInterval(intervalRef.current);
-            }
-            iterationRef.current += 1 / 3;
-        }, 25);
-    }, []);
+const ScrambleLetter: React.FC<{ char: string; isHovered: boolean; index: number }> = ({ char, isHovered, index }) => {
+    const [displayChar, setDisplayChar] = useState(char);
+    const [opacity, setOpacity] = useState(1);
+    const symbols = '01_[]{}//\\*^!#%&?X+$@';
+    const timerRef = useRef<number | null>(null);
 
     useEffect(() => {
         if (isHovered) {
-            startScramble();
-        } else {
-            if (intervalRef.current) clearInterval(intervalRef.current);
-            setDisplay(text);
-        }
-    }, [isHovered, text, startScramble]);
+            let iteration = 0;
+            // Balanced duration: long enough to see the glitch, short enough to be snappy
+            const maxIterations = 12 + Math.floor(Math.random() * 10);
+            
+            if (timerRef.current) window.clearInterval(timerRef.current);
+            
+            timerRef.current = window.setInterval(() => {
+                const isFinalStretch = iteration > maxIterations * 0.7;
+                const shouldShowCorrect = isFinalStretch && Math.random() > 0.5;
 
-    return <span className={isHovered ? 'font-mono' : ''}>{display}</span>;
+                if (shouldShowCorrect || iteration >= maxIterations) {
+                    setDisplayChar(char);
+                    setOpacity(1);
+                    window.clearInterval(timerRef.current!);
+                } else {
+                    setDisplayChar(symbols[Math.floor(Math.random() * symbols.length)]);
+                    // Fade out symbols during the scramble phase
+                    setOpacity(0.25 + Math.random() * 0.5);
+                }
+                
+                iteration++;
+                // Balanced interval: ~55-100ms per character switch
+            }, 55 + Math.random() * 45);
+        } else {
+            if (timerRef.current) window.clearInterval(timerRef.current);
+            setDisplayChar(char);
+            setOpacity(1);
+        }
+        return () => { if (timerRef.current) window.clearInterval(timerRef.current); };
+    }, [isHovered, char]);
+
+    return (
+        <span 
+            className="inline-block transition-all duration-200 ease-out"
+            style={{ opacity, filter: opacity < 1 ? 'blur(0.3px)' : 'none' }}
+        >
+            {displayChar === ' ' ? '\u00A0' : displayChar}
+        </span>
+    );
+};
+
+const ScrambledText: React.FC<{ text: string; isHovered: boolean }> = ({ text, isHovered }) => {
+    return (
+        <span className={`inline-flex transition-colors duration-400 ${isHovered ? 'font-mono text-primary' : 'font-display'}`}>
+            {text.split('').map((char, idx) => (
+                <ScrambleLetter key={`${text}-${idx}`} char={char} isHovered={isHovered} index={idx} />
+            ))}
+        </span>
+    );
 };
 
 const TimedScrambledText: React.FC<{ text: string; intervalMs: number }> = ({ text, intervalMs }) => {
     const [display, setDisplay] = useState(text);
-    const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789!@#$%^&*()_+';
-    const originalText = useRef(text);
-    const iterationRef = useRef(0);
+    const chars = '0123456789ABCDEF!@#%^&*';
     const intervalRef = useRef<number | null>(null);
 
     const startScramble = useCallback(() => {
         if (intervalRef.current) clearInterval(intervalRef.current);
-        iterationRef.current = 0;
+        let iteration = 0;
+        const maxIterations = 15;
         
         intervalRef.current = window.setInterval(() => {
-            setDisplay(originalText.current.split('').map((char, index) => {
-                if (index < iterationRef.current) return originalText.current[index];
+            setDisplay(text.split('').map((char, index) => {
                 if (char === ' ') return ' ';
+                if (Math.random() < iteration / maxIterations) return text[index];
                 return chars[Math.floor(Math.random() * chars.length)];
             }).join(''));
             
-            if (iterationRef.current >= originalText.current.length) {
+            iteration++;
+            if (iteration >= maxIterations) {
                 if (intervalRef.current) clearInterval(intervalRef.current);
             }
-            iterationRef.current += 1 / 10;
         }, 50);
-    }, []);
+    }, [text]);
 
     useEffect(() => {
-        startScramble();
         const timer = setInterval(() => {
             startScramble();
         }, intervalMs);
@@ -114,7 +133,7 @@ const NavItem: React.FC<{
               onClick={() => onClick(id)}
               onMouseEnter={() => setIsHovered(true)}
               onMouseLeave={() => setIsHovered(false)}
-              className={`flex items-center p-2.5 rounded-lg text-base font-medium transition-colors cursor-pointer relative z-10 ${
+              className={`flex items-center py-1.5 px-3 rounded-lg text-base font-medium transition-colors cursor-pointer relative z-10 ${
                 activeTab === id
                   ? 'text-primary-content font-bold'
                   : 'text-base-content/70 hover:bg-base-200'
@@ -122,7 +141,7 @@ const NavItem: React.FC<{
               aria-current={activeTab === id ? 'page' : undefined}
             >
               <div className="mr-3">{icon}</div>
-              <span className="uppercase text-[10px] font-black tracking-widest min-w-[120px]">
+              <span className="uppercase text-[10px] font-black tracking-widest min-w-0 inline-block overflow-hidden">
                 <ScrambledText text={label} isHovered={isHovered} />
               </span>
             </a>
@@ -131,11 +150,11 @@ const NavItem: React.FC<{
 };
 
 const Section: React.FC<{ title: string, children: React.ReactNode }> = ({ title, children }) => (
-    <div className="mb-4">
-        <h2 className="px-3 pb-2 text-[10px] font-black uppercase tracking-[0.3em] text-base-content/30">
+    <div className="mb-3">
+        <h2 className="px-3 pb-1.5 text-[10px] font-black uppercase tracking-[0.3em] text-base-content/30">
             {title}
         </h2>
-        <ul className="menu menu-sm p-0 gap-0.5 relative">
+        <ul className="menu menu-sm p-0 gap-px relative">
             {children}
         </ul>
     </div>
@@ -215,7 +234,7 @@ const Sidebar: React.FC<SidebarProps> = ({ activeTab, onNavigate, isSidebarOpen,
   // Classes for the sidebar vary based on whether it is an overlay (mobile/unpinned) or a flow element (pinned)
   const sidebarClasses = [
     "h-full w-80 bg-base-100 text-base-content z-[100] flex flex-col border-r border-base-300",
-    isPinned ? "relative" : "fixed top-0 left-0 shadow-2xl"
+    isPinned ? "relative" : "absolute top-0 left-0 shadow-2xl"
   ].join(" ");
 
   return (
@@ -227,9 +246,9 @@ const Sidebar: React.FC<SidebarProps> = ({ activeTab, onNavigate, isSidebarOpen,
     >
       <div className="flex-shrink-0 flex items-center justify-between h-16 px-6 border-b border-base-300">
         <button onClick={() => onNavigate('dashboard')} className="flex items-center gap-3 group">
-          <h1 className="text-xl font-black tracking-tighter text-base-content uppercase">
+          <h1 className="text-xl font-black tracking-tighter text-base-content uppercase flex items-center">
             <TimedScrambledText text="Kollektiv" intervalMs={300000} />
-            <span className="text-primary animate-pulse drop-shadow-[0_0_10px_oklch(var(--p))] transition-all inline-block">.</span>
+            <span className="text-primary italic animate-pulse drop-shadow-[0_0_10px_oklch(var(--p))] transition-all inline-block ml-0.5">.</span>
           </h1>
         </button>
         <button
@@ -237,13 +256,11 @@ const Sidebar: React.FC<SidebarProps> = ({ activeTab, onNavigate, isSidebarOpen,
           className="btn btn-ghost btn-circle btn-sm hidden lg:inline-flex"
           title={isPinned ? 'Unpin Sidebar' : 'Pin Sidebar'}
         >
-          {/* Straight (rotate-45) indicates "STUCK IN" (Pinned).
-              Angled (rotate-0) indicates "LOOSE/PULLABLE" (Unpinned). */}
-          <ThumbTackIcon className={`w-5 h-5 transition-all ${isPinned ? 'text-primary rotate-45' : 'text-base-content/20 rotate-0'}`} />
+          <ThumbTackIcon className={`w-5 h-5 transition-all duration-300 ease-out ${isPinned ? 'text-primary -rotate-45' : 'text-base-content/20 rotate-0'}`} />
         </button>
       </div>
 
-      <nav className="flex-grow px-4 py-6 overflow-y-auto relative scroll-smooth custom-scrollbar">
+      <nav className="flex-grow px-4 py-4 overflow-y-auto relative scroll-smooth custom-scrollbar">
         <div 
             className="absolute bg-primary rounded-lg shadow-lg pointer-events-none transition-all duration-300 ease-[cubic-bezier(0.4,0,0.2,1)]"
             style={pillStyle}

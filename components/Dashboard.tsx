@@ -7,10 +7,60 @@ import { fileSystemManager } from '../utils/fileUtils';
 import LoadingSpinner from './LoadingSpinner';
 import { useSettings } from '../contexts/SettingsContext';
 
-interface DashboardProps {
-    onNavigate: (tab: ActiveTab) => void;
-    onClipIdea: (idea: Idea) => void;
-}
+// --- CHROMATIC JITTER COMPONENT ---
+const ChromaticText: React.FC<{ text: string; enabled?: boolean }> = ({ text, enabled = true }) => {
+    const [offsets, setOffsets] = useState({ x1: 0, y1: 0, x2: 0, y2: 0, opacity: 1 });
+    const requestRef = useRef<number>(0);
+    const lastUpdate = useRef<number>(0);
+
+    const update = (time: number) => {
+        // Only update every ~60ms to create a "steppy" digital flicker rather than smooth motion
+        if (time - lastUpdate.current > 60) {
+            if (enabled) {
+                const jitter = Math.random() > 0.1; // 90% chance of jittering when enabled
+                
+                if (jitter) {
+                    setOffsets({
+                        x1: (Math.random() - 0.5) * 4,
+                        y1: (Math.random() - 0.5) * 2,
+                        x2: (Math.random() - 0.5) * -4,
+                        y2: (Math.random() - 0.5) * -2,
+                        opacity: 0.8 + Math.random() * 0.2
+                    });
+                } else {
+                    setOffsets({ x1: 0, y1: 0, x2: 0, y2: 0, opacity: 1 });
+                }
+            } else {
+                // If disabled, snap back to clean state
+                setOffsets({ x1: 0, y1: 0, x2: 0, y2: 0, opacity: 1 });
+            }
+            lastUpdate.current = time;
+        }
+        requestRef.current = requestAnimationFrame(update);
+    };
+
+    useEffect(() => {
+        requestRef.current = requestAnimationFrame(update);
+        return () => cancelAnimationFrame(requestRef.current);
+    }, [enabled]);
+
+    return (
+        <span 
+            className="relative inline-block transition-opacity duration-75"
+            style={{ 
+                opacity: offsets.opacity,
+                // Red Shadow + Cyan Shadow = Chromatic Aberration
+                textShadow: enabled ? `
+                    ${offsets.x1}px ${offsets.y1}px 0px rgba(255, 0, 80, 0.7), 
+                    ${offsets.x2}px ${offsets.y2}px 0px rgba(0, 255, 255, 0.7)
+                ` : 'none',
+                filter: (enabled && Math.random() > 0.95) ? 'contrast(1.5) brightness(1.2)' : 'none'
+            }}
+        >
+            {text}
+        </span>
+    );
+};
 
 // --- NEURAL EXPOSURE TRAIL ---
 const NeuralTrail: React.FC<{ images: GalleryItem[] }> = ({ images }) => {
@@ -91,19 +141,26 @@ const NeuralTrail: React.FC<{ images: GalleryItem[] }> = ({ images }) => {
     return <div ref={trailRef} className="fixed inset-0 pointer-events-none overflow-hidden z-[5]" />;
 };
 
-const NavNode: React.FC<{ label: string; num: string; onClick: () => void }> = ({ label, num, onClick }) => (
-    <button 
-        onClick={onClick}
-        className="group flex items-center gap-6 p-4 transition-all hover:bg-primary/5"
-    >
-        <span className="text-[10px] font-mono font-black text-primary/40 group-hover:text-primary transition-colors tracking-widest">
-            [ {num} ]
-        </span>
-        <span className="text-xs font-black uppercase tracking-[0.4em] text-base-content/40 group-hover:text-base-content group-hover:tracking-[0.6em] transition-all duration-500">
-            {label}
-        </span>
-    </button>
-);
+const NavNode: React.FC<{ label: string; num: string; onClick: () => void }> = ({ label, num, onClick }) => {
+    const [isHovered, setIsHovered] = useState(false);
+
+    return (
+        <button 
+            onClick={onClick}
+            onMouseEnter={() => setIsHovered(true)}
+            onMouseLeave={() => setIsHovered(false)}
+            className="group flex items-center gap-4 p-4 transition-all"
+        >
+            <span className="text-[9px] font-mono font-medium text-primary/30 group-hover:text-primary transition-colors tracking-[0.2em]">
+                {num}
+            </span>
+            {/* Unified typeface for menu links with thin weight and expanded tracking */}
+            <span className="text-[11px] font-sans font-light uppercase tracking-[0.5em] text-base-content/40 group-hover:text-base-content transition-all duration-500">
+                <ChromaticText text={label} enabled={isHovered} />
+            </span>
+        </button>
+    );
+};
 
 const MetadataCorner: React.FC<{ label: string; value: string; position: string }> = ({ label, value, position }) => (
     <div className={`absolute ${position} p-10 flex flex-col gap-1 pointer-events-none z-20`}>
@@ -111,6 +168,11 @@ const MetadataCorner: React.FC<{ label: string; value: string; position: string 
         <span className="text-[10px] font-mono font-bold uppercase tracking-widest text-base-content/20">{value}</span>
     </div>
 );
+
+interface DashboardProps {
+    onNavigate: (tab: ActiveTab) => void;
+    onClipIdea: (idea: Idea) => void;
+}
 
 const Dashboard: React.FC<DashboardProps> = ({ onNavigate }) => {
     const { settings } = useSettings();
@@ -144,7 +206,6 @@ const Dashboard: React.FC<DashboardProps> = ({ onNavigate }) => {
             onComplete: () => onNavigate(tab)
         });
 
-        // SLIDE DOWN EXIT - MASKED STAGGER
         tl.to(headerTextRef.current, {
             yPercent: 100,
             duration: 0.6,
@@ -191,16 +252,13 @@ const Dashboard: React.FC<DashboardProps> = ({ onNavigate }) => {
                 <div className="absolute inset-0 bg-gradient-to-t from-base-100 via-transparent to-base-100 opacity-60 z-10"></div>
             </div>
             
-            {/* Image Exposure Layer */}
             <NeuralTrail images={gallery} />
 
-            {/* UI CHASSIS - Metadata Corners */}
             <MetadataCorner label="System_Status" value="Core_Engine_Active" position="top-0 left-0" />
             <MetadataCorner label="Vault_Index" value={`${gallery.length} Arifacts_Identified`} position="top-0 right-0" />
             <MetadataCorner label="Local_Sequence" value={time} position="bottom-0 left-0" />
             <MetadataCorner label="Protocol" value="Kollektive_Engine_v2" position="bottom-0 right-0" />
 
-            {/* CENTRAL BRANDING WITH MASKED TEXT REVEAL */}
             <div className="absolute inset-0 flex flex-col items-center justify-center z-10 pointer-events-none px-6 text-center">
                 <div className="overflow-hidden py-1 mb-2">
                     <p ref={headerTextRef} className="text-[9px] md:text-[11px] font-black uppercase tracking-[0.5em] text-primary/60">
@@ -208,21 +266,22 @@ const Dashboard: React.FC<DashboardProps> = ({ onNavigate }) => {
                     </p>
                 </div>
                 <div className="overflow-hidden mb-4 py-2">
+                    {/* Unified branding typeface (inheriting font-black overrides from index.css) */}
                     <h1 ref={titleRef} className="text-6xl md:text-8xl font-black tracking-tighter uppercase text-base-content flex items-center">
-                        Kollektiv<span className="text-primary italic animate-pulse">.</span>
+                        <ChromaticText text="Kollektiv" />
+                        <span className="text-primary italic animate-pulse">.</span>
                     </h1>
                 </div>
                 <div className="overflow-hidden py-1">
                     <p ref={taglineRef} className="text-[9px] md:text-[11px] font-black uppercase tracking-[0.5em] text-base-content/40 max-w-2xl leading-loose">
-                         Your creative intern, except never asks for coffee breaks
+                         Creativity, organized… unlike your desktop
                     </p>
                 </div>
 
                 <div className="w-12 h-px bg-base-content/10 mt-10"></div>
             </div>
 
-            {/* NAVIGATION NODES - Positioned as an Interface */}
-            <div className="absolute inset-x-0 bottom-32 flex flex-wrap justify-center gap-8 md:gap-16 z-20">
+            <div className="absolute inset-x-0 bottom-32 flex flex-wrap justify-center gap-6 md:gap-12 z-20">
                 <NavNode num="01" label="Builder" onClick={() => handleNodeClick('prompts')} />
                 <NavNode num="02" label="Library" onClick={() => handleNodeClick('prompt')} />
                 <NavNode num="03" label="Gallery" onClick={() => handleNodeClick('gallery')} />

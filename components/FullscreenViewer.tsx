@@ -181,7 +181,7 @@ const FullscreenViewer: React.FC<FullscreenViewerProps> = ({ items, currentIndex
     const modalContent = (
         <div 
           ref={containerRef}
-          className="fixed inset-0 bg-black/95 z-[150] flex flex-col animate-fade-in group select-none overflow-hidden"
+          className="fixed inset-0 bg-black/95 z-[1000] flex flex-col animate-fade-in group select-none overflow-hidden"
           onClick={handleClose}
           onMouseMove={handleMouseMove}
           onMouseUp={handleMouseUp}

@@ -67,12 +67,10 @@ const InitialLoader: React.FC<{ status: string; progress: number | null }> = ({ 
             <div className="relative z-10 flex flex-col items-center">
                 <div className="overflow-hidden mb-8 px-4">
                     <h1 ref={textWrapperRef} className="grid grid-cols-1 grid-rows-1 text-xl md:text-3xl font-black tracking-tighter uppercase select-none items-center">
-                        {/* Layer 1: Ghost Text */}
                         <span className="text-base-content/10 block leading-none py-2 row-start-1 col-start-1">
                             Kollektiv<span className="text-primary/10 italic">.</span>
                         </span>
                         
-                        {/* Layer 2: Fill Masked Text */}
                         <div 
                             className="row-start-1 col-start-1 h-full overflow-hidden transition-all duration-700 ease-out border-r border-base-content/20"
                             style={{ width: `${percentage}%` }}
@@ -129,11 +127,53 @@ const App: React.FC = () => {
     const [clippedIdeas, setClippedIdeas] = useLocalStorage<Idea[]>('clippedIdeas', []);
 
     const mainGridRef = useRef<HTMLDivElement>(null);
-    const globalGridRef = useRef<HTMLDivElement>(null);
+    const apertureRef = useRef<HTMLDivElement>(null);
+    const curtainTopRef = useRef<HTMLDivElement>(null);
+    const curtainBottomRef = useRef<HTMLDivElement>(null);
+    const appWrapperRef = useRef<HTMLDivElement>(null);
     const contentRef = useRef<HTMLDivElement>(null);
 
     const gridRows = 10;
     const gridCols = 12;
+
+    const playSuccessChime = useCallback(() => {
+        try {
+            const AudioCtx = window.AudioContext || (window as any).webkitAudioContext;
+            if (!AudioCtx) return;
+            const ctx = new AudioCtx();
+            const master = ctx.createGain();
+            master.connect(ctx.destination);
+            master.gain.value = 0.4;
+            
+            const now = ctx.currentTime;
+            
+            const osc1 = ctx.createOscillator();
+            const g1 = ctx.createGain();
+            osc1.type = 'sine';
+            osc1.frequency.setValueAtTime(150, now);
+            osc1.frequency.exponentialRampToValueAtTime(40, now + 0.1);
+            g1.gain.setValueAtTime(0.5, now);
+            g1.gain.linearRampToValueAtTime(0, now + 0.1);
+            osc1.connect(g1); g1.connect(master);
+
+            const osc2 = ctx.createOscillator();
+            const g2 = ctx.createGain();
+            osc2.type = 'triangle';
+            osc2.frequency.setValueAtTime(880, now + 0.05);
+            osc2.frequency.exponentialRampToValueAtTime(1760, now + 0.2);
+            g2.gain.setValueAtTime(0, now + 0.05);
+            g2.gain.linearRampToValueAtTime(0.3, now + 0.1);
+            g2.gain.exponentialRampToValueAtTime(0.001, now + 1.0);
+            osc2.connect(g2); g2.connect(master);
+
+            osc1.start(now);
+            osc1.stop(now + 0.1);
+            osc2.start(now + 0.05);
+            osc2.stop(now + 1.0);
+
+            if (ctx.state === 'suspended') ctx.resume();
+        } catch (e) {}
+    }, []);
 
     const initializeApp = useCallback(async () => {
         if (hasInitializedRef.current && isInitialized) return;
@@ -169,6 +209,9 @@ const App: React.FC = () => {
             onProgress('Finalizing System...', 0.9);
             onProgress('System Ready', 1.0);
             
+            // Trigger acoustic feedback
+            playSuccessChime();
+
             await new Promise(r => setTimeout(r, 1100));
 
             hasInitializedRef.current = true;
@@ -179,7 +222,7 @@ const App: React.FC = () => {
             setGlobalFeedback({ message: "Failed to initialize system.", type: 'error' });
             setIsLoading(false);
         }
-    }, [settings, auth, isInitialized]);
+    }, [settings, auth, isInitialized, playSuccessChime]);
 
     useEffect(() => {
         if (!hasInitializedRef.current) {
@@ -187,31 +230,38 @@ const App: React.FC = () => {
         }
     }, [initializeApp]);
 
+    // NEW REVEAL ANIMATION (LEDGER STYLE)
     useLayoutEffect(() => {
-        if (!isInitialized || !globalGridRef.current || !isFirstRevealRef.current) return;
+        if (!isInitialized || !apertureRef.current || !isFirstRevealRef.current) return;
         isFirstRevealRef.current = false;
 
-        const cells = globalGridRef.current.querySelectorAll('.transition-cell');
-        
-        gsap.set(globalGridRef.current, { autoAlpha: 1, visibility: 'visible' });
-        gsap.set(cells, { scaleY: 1.01, autoAlpha: 1 });
-
-        gsap.to(cells, {
-            scaleY: 0,
-            autoAlpha: 0,
-            transformOrigin: "top",
-            duration: 0.9,
-            ease: "power4.inOut",
-            stagger: {
-                grid: [gridRows, gridCols],
-                from: "end",
-                axis: "y",
-                amount: 0.6
-            },
-            onComplete: () => {
-                gsap.set(globalGridRef.current, { autoAlpha: 0, visibility: 'hidden' });
-            }
+        const tl = gsap.timeline({
+            defaults: { ease: "expo.inOut", duration: 1.4 }
         });
+
+        // Set initial state
+        gsap.set(apertureRef.current, { visibility: 'visible', autoAlpha: 1 });
+        gsap.set(appWrapperRef.current, { scale: 0.96, autoAlpha: 0 });
+
+        // Execute split reveal
+        tl.to(curtainTopRef.current, {
+            yPercent: -100,
+        }, 0);
+
+        tl.to(curtainBottomRef.current, {
+            yPercent: 100,
+        }, 0);
+
+        // App container scales in
+        tl.to(appWrapperRef.current, {
+            scale: 1,
+            autoAlpha: 1,
+            duration: 1.2,
+            ease: "expo.out"
+        }, 0.2);
+
+        // Cleanup
+        tl.set(apertureRef.current, { visibility: 'hidden', autoAlpha: 0 });
     }, [isInitialized]);
 
     const runScopedTransition = useCallback(async (targetTab: ActiveTab) => {
@@ -381,75 +431,79 @@ const App: React.FC = () => {
     if (!isInitialized) return null;
 
     return (
-        <div className="h-full bg-base-100 flex overflow-hidden relative">
+        <div className="h-full flex overflow-hidden relative p-1.5 md:p-3 bg-transparent">
             <MouseTrail />
+            
+            {/* BRAND APERTURE REVEAL */}
             <div 
-                ref={globalGridRef} 
-                className="fixed inset-0 z-[700] pointer-events-none grid"
-                style={{ 
-                    gridTemplateColumns: `repeat(${gridCols}, 1fr)`,
-                    gridTemplateRows: `repeat(${gridRows}, 1fr)`,
-                    visibility: 'hidden'
-                }}
+                ref={apertureRef} 
+                className="fixed inset-0 z-[700] pointer-events-none flex flex-col"
+                style={{ visibility: 'hidden' }}
             >
-                {Array.from({ length: gridRows * gridCols }).map((_, i) => (
-                    <div key={i} className="transition-cell bg-base-100 will-change-transform" />
-                ))}
+                <div ref={curtainTopRef} className="flex-1 bg-base-100 border-b border-base-300" />
+                <div ref={curtainBottomRef} className="flex-1 bg-base-100" />
             </div>
 
-            <Sidebar
-                activeTab={activeTab}
-                onNavigate={handleNavigate}
-                isSidebarOpen={isSidebarOpen}
-                isPinned={isPinned}
-                setIsPinned={setIsPinned}
-                onAboutClick={() => setIsAboutModalOpen(true)}
-            />
-            
-            {isSidebarOpen && !isPinned && <div onClick={() => setIsSidebarOpen(false)} className="fixed inset-0 bg-black/50 z-[90]" />}
-
-            <div className="flex-1 flex flex-col min-w-0 h-full relative z-0">
-                <Header
-                    onMenuClick={handleMenuClick}
+            {/* Main Application Window Wrapper */}
+            <div 
+                ref={appWrapperRef}
+                className="flex-1 flex overflow-hidden relative z-0 border border-base-content/10 shadow-2xl rounded bg-base-100"
+            >
+                
+                <Sidebar
                     activeTab={activeTab}
-                    clippedIdeasCount={clippedIdeas.length}
-                    onToggleClippingPanel={() => setIsClippingPanelOpen(p => !p)}
+                    onNavigate={handleNavigate}
+                    isSidebarOpen={isSidebarOpen}
+                    isPinned={isPinned}
+                    setIsPinned={setIsPinned}
+                    onAboutClick={() => setIsAboutModalOpen(true)}
                 />
                 
-                <main className="flex-grow relative overflow-hidden bg-base-100">
-                    <div 
-                        ref={mainGridRef} 
-                        className="absolute inset-0 z-[600] pointer-events-none grid"
-                        style={{ 
-                            gridTemplateColumns: `repeat(${gridCols}, 1fr)`,
-                            gridTemplateRows: `repeat(${gridRows}, 1fr)`,
-                            visibility: 'hidden'
-                        }}
-                    >
-                        {Array.from({ length: gridRows * gridCols }).map((_, i) => (
-                            <div key={i} className="transition-cell bg-base-100 will-change-transform" />
-                        ))}
-                    </div>
+                {isSidebarOpen && !isPinned && <div onClick={() => setIsSidebarOpen(false)} className="absolute inset-0 bg-black/50 z-[90]" />}
 
-                    <div ref={contentRef} className="h-full w-full will-change-transform z-10 relative">
-                        {renderContent()}
-                    </div>
-                </main>
-                
-                <Footer onAboutClick={() => setIsAboutModalOpen(true)} />
+                <div className="flex-1 flex flex-col min-w-0 h-full relative z-0">
+                    <Header
+                        onMenuClick={handleMenuClick}
+                        activeTab={activeTab}
+                        clippedIdeasCount={clippedIdeas.length}
+                        onToggleClippingPanel={() => setIsClippingPanelOpen(p => !p)}
+                    />
+                    
+                    <main className="flex-grow relative overflow-hidden bg-base-100">
+                        <div 
+                            ref={mainGridRef} 
+                            className="absolute inset-0 z-[600] pointer-events-none grid"
+                            style={{ 
+                                gridTemplateColumns: `repeat(${gridCols}, 1fr)`,
+                                gridTemplateRows: `repeat(${gridRows}, 1fr)`,
+                                visibility: 'hidden'
+                            }}
+                        >
+                            {Array.from({ length: gridRows * gridCols }).map((_, i) => (
+                                <div key={i} className="transition-cell bg-base-100 will-change-transform" />
+                            ))}
+                        </div>
+
+                        <div ref={contentRef} className="h-full w-full will-change-transform z-10 relative">
+                            {renderContent()}
+                        </div>
+                    </main>
+                    
+                    <Footer onAboutClick={() => setIsAboutModalOpen(true)} />
+                </div>
+
+                <ClippingPanel 
+                    isOpen={isClippingPanelOpen}
+                    onClose={() => setIsClippingPanelOpen(false)}
+                    clippedIdeas={clippedIdeas}
+                    onRemoveIdea={handleRemoveIdea}
+                    onClearAll={handleClearAllIdeas}
+                    onInsertIdea={handleInsertIdea}
+                    onRefineIdea={handleRefineIdea}
+                    onAddIdea={handleClipIdea}
+                    onSaveToLibrary={handleSaveClippedIdea}
+                />
             </div>
-            
-            <ClippingPanel 
-                isOpen={isClippingPanelOpen}
-                onClose={() => setIsClippingPanelOpen(false)}
-                clippedIdeas={clippedIdeas}
-                onRemoveIdea={handleRemoveIdea}
-                onClearAll={handleClearAllIdeas}
-                onInsertIdea={handleInsertIdea}
-                onRefineIdea={handleRefineIdea}
-                onAddIdea={handleClipIdea}
-                onSaveToLibrary={handleSaveClippedIdea}
-            />
             
             <AboutModal isOpen={isAboutModalOpen} onClose={() => setIsAboutModalOpen(false)} />
             

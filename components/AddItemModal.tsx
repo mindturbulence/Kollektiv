@@ -143,7 +143,7 @@ const AddItemModal: React.FC<AddItemModalProps> = ({ isOpen, onClose, onAddItem,
 
   const modalContent = (
     <div 
-        className="fixed inset-0 bg-black/80 z-50 flex items-center justify-center p-4 animate-fade-in" 
+        className="fixed inset-0 bg-black/80 z-[1000] flex items-center justify-center p-4 animate-fade-in" 
         onClick={onClose}
         onDrop={handleDrop}
         onDragOver={(e) => { e.preventDefault(); setIsDragging(true); }}

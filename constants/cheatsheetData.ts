@@ -41,7 +41,7 @@ export const ART_STYLES_DATA: CheatsheetCategory[] = [
     ]
   },
   {
-    category: 'Photographic Styles',
+    category: 'Photographic',
     description: 'Capturing the evolution of light, optics, and technical imagery in the physical world.',
     items: [
       { id: 'photo-1', name: 'Photorealistic', description: 'Images that are as realistic as a photograph.', imageUrls: [] },
@@ -74,7 +74,7 @@ export const ART_STYLES_DATA: CheatsheetCategory[] = [
     ]
   },
   {
-    category: 'Sci-Fi & Fantasy Genres',
+    category: 'Science Fiction & Fantasy',
     description: 'Imagining speculative worlds, technological futures, and ancient mythological archetypes.',
     items: [
       { id: 'sf-1', name: 'Cyberpunk', description: 'High-tech, low-life futuristic setting, often with neon lights, rain, and cybernetics.', imageUrls: [] },

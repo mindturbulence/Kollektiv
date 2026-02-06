@@ -45,7 +45,7 @@ const FeedbackModal: React.FC<FeedbackModalProps> = ({ isOpen, onClose, message,
   
   const modalContent = (
     <div 
-        className="fixed inset-0 bg-black/40 z-[100] flex items-center justify-center p-4 animate-fade-in" 
+        className="fixed inset-0 bg-black/40 z-[2000] flex items-center justify-center p-4 animate-fade-in" 
         onClick={onClose}
         role="alertdialog"
         aria-modal="true"
