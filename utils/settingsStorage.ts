@@ -21,7 +21,7 @@ export const defaultLLMSettings: LLMSettings = {
   // Theme Settings
   activeThemeMode: 'light',
   lightTheme: 'light',
-  darkTheme: 'abyss',
+  darkTheme: 'pipboy',
   fontSize: 14,
 
   // Dashboard Settings

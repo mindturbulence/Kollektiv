@@ -237,9 +237,23 @@ const ItemDetailView: React.FC<ItemDetailViewProps> = ({ items, currentIndex, is
             urls: editableUrls, 
             sources: editableSources 
         });
-        setIsEditing(false);
         showGlobalFeedback("Changes saved.");
+        onClose(); // BUG FIX: Return to list after saving
     }
+  };
+
+  const handleCancel = () => {
+      if (item) {
+          setTitle(item.title);
+          setNotes(item.notes || '');
+          setPrompt(item.prompt || '');
+          setCategoryId(item.categoryId || '');
+          setIsNsfw(item.isNsfw || false);
+          setTags(item.tags || []);
+          setEditableUrls([...item.urls]);
+          setEditableSources([...item.sources]);
+      }
+      setIsEditing(false);
   };
 
   const handleAddSample = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -506,7 +520,7 @@ const ItemDetailView: React.FC<ItemDetailViewProps> = ({ items, currentIndex, is
                         </button>
                     )}
                     <div className="flex w-full h-14">
-                        <button onClick={() => setIsEditing(!isEditing)} className="btn btn-ghost flex-1 h-full rounded-none font-black text-[9px] tracking-widest uppercase border-r border-base-300 opacity-40 hover:opacity-100">
+                        <button onClick={isEditing ? handleCancel : () => setIsEditing(true)} className="btn btn-ghost flex-1 h-full rounded-none font-black text-[9px] tracking-widest uppercase border-r border-base-300 opacity-40 hover:opacity-100">
                             {isEditing ? 'CANCEL' : 'EDIT'}
                         </button>
                         {isEditing ? (

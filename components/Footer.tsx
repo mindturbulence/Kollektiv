@@ -16,7 +16,6 @@ const LedStatus: React.FC<{
 }> = ({ label, active, color = 'bg-success' }) => (
     <div className={`flex items-center gap-1.5 transition-all duration-700 ${active ? 'opacity-100' : 'opacity-10'}`}>
         <span className={`w-1.5 h-1.5 rounded-full ${active ? `${color} shadow-[0_0_5px_rgba(var(--p),0.5)] animate-pulse` : 'bg-base-content/20'}`}></span>
-        {/* Unified typeface for status labels */}
         <span className="text-[10px] font-sans font-black text-base-content tracking-tighter uppercase whitespace-nowrap">{label}</span>
     </div>
 );
@@ -192,7 +191,7 @@ const Footer: React.FC<FooterProps> = ({ onAboutClick }) => {
   const systemStatus = useMemo(() => {
     const isStorageLinked = fileSystemManager.isDirectorySelected();
     const isGeminiActive = settings.activeLLM === 'gemini' && !!process.env.API_KEY;
-    const aiLabel = settings.activeLLM === 'ollama_cloud' ? 'OLLAMA_CLOUD' : settings.activeLLM.toUpperCase();
+    const aiLabel = settings.activeLLM === 'ollama_cloud' ? 'OLLAMA' : settings.activeLLM.toUpperCase();
     return {
         storage: isStorageLinked,
         ai: aiLabel,
@@ -220,6 +219,8 @@ const Footer: React.FC<FooterProps> = ({ onAboutClick }) => {
     }
   }, [playerState]);
 
+  const isActive = playerState === 'playing' || playerState === 'syncing';
+
   return (
     <>
         {/* HUD OVERLAY TOAST */}
@@ -233,13 +234,12 @@ const Footer: React.FC<FooterProps> = ({ onAboutClick }) => {
             </div>
         </div>
 
-        <footer className="flex-shrink-0 px-6 h-12 bg-base-100 border-t border-base-300 z-10 flex flex-row items-center justify-between overflow-hidden select-none whitespace-nowrap">
+        <footer className="flex-shrink-0 px-0 h-12 bg-base-100 border-t border-base-300 z-10 flex flex-row items-center justify-between overflow-hidden select-none whitespace-nowrap">
             {/* --- LEFT MODULE: ENGINE STATUS --- */}
             <div className="flex items-center h-full px-6 gap-6 bg-transparent">
                 <div className="flex flex-row items-center gap-3">
-                    {/* Corrected branding typeface (inheriting font-black overrides) */}
                     <span className="text-[14px] font-black uppercase tracking-tighter text-primary">
-                        KOLLEKTIV
+                        KOLLEKTIV. V2
                     </span>
                 </div>
                 
@@ -258,18 +258,21 @@ const Footer: React.FC<FooterProps> = ({ onAboutClick }) => {
                 ref={containerRef}
                 onClick={handleToggle}
                 disabled={playerState === 'syncing'}
-                className={`group relative flex items-center h-full px-6 gap-6 transition-all duration-300 rounded-none overflow-hidden bg-transparent border-none outline-none ${stateColorClass}`}
+                className={`group relative flex items-center h-full px-6 transition-all duration-300 rounded-none overflow-hidden bg-transparent border-none outline-none ${stateColorClass}`}
             >
-                <div className="flex flex-row items-center gap-2 text-right">
-                    {/* Unified typeface for status messaging */}
-                    <span className={`text-[10px] font-sans font-black uppercase tracking-tighter transition-colors ${playerState === 'syncing' ? 'animate-pulse' : ''}`}>
-                        {statusLabel}
-                    </span>
-                </div>
-                
-                <div className="relative flex items-center justify-center border-l border-base-300/30 pl-6 h-full py-2">
-                    <div className="relative">
-                        <DigitalOscillator state={playerState} />
+                <div className="flex flex-row items-center h-full">
+                    {/* Status Text Module */}
+                    <div className={`flex flex-row items-center transition-all duration-500 ease-out ${isActive ? '-translate-x-2' : 'translate-x-0'}`}>
+                        <span className={`text-[10px] font-sans font-black uppercase tracking-tighter transition-colors ${playerState === 'syncing' ? 'animate-pulse' : ''}`}>
+                            {statusLabel}
+                        </span>
+                    </div>
+                    
+                    {/* Waveform Module: Hidden by default, slides in when active */}
+                    <div className={`flex items-center transition-all duration-500 ease-in-out border-l border-base-300/30 ${isActive ? 'w-16 opacity-100 ml-4 pl-4' : 'w-0 opacity-0 pointer-events-none ml-0 pl-0'}`}>
+                        <div className="relative">
+                            <DigitalOscillator state={playerState} />
+                        </div>
                     </div>
                 </div>
             </button>

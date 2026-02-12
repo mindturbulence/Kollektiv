@@ -636,3 +636,11 @@ export const InstagramIcon: React.FC<React.SVGProps<SVGSVGElement>> = (props) =>
     <path d="M16.5 7.5l0 .01" />
   </svg>
 );
+
+export const PowerIcon: React.FC<React.SVGProps<SVGSVGElement>> = (props) => (
+  <svg {...commonProps} {...props}>
+    <path stroke="none" d="M0 0h24v24H0z" fill="none"/>
+    <path d="M7 6a7.75 7.75 0 1 0 10 0" />
+    <path d="M12 4l0 8" />
+  </svg>
+);

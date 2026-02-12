@@ -1096,7 +1096,7 @@ const PromptsPage: React.FC<PromptsPageProps> = ({
                   </button>
               </div>
 
-              <div className="flex-grow p-6 overflow-y-auto custom-scrollbar">
+              <div className="flex-grow p-4 overflow-y-auto custom-scrollbar">
                 {activeConstructionItems.length > 0 ? (
                   <div className="space-y-2">
                     {activeConstructionItems.map((item) => (

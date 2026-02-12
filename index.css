@@ -1,3 +1,4 @@
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
@@ -45,6 +46,63 @@
   .uppercase, .tracking-widest, .tracking-[0.4em], .font-black {
     font-family: 'Pilcrow Rounded', 'Plus Jakarta Sans', sans-serif;
   }
+}
+
+/* --- PIP-BOY 3000 SPECIAL PROCESSING --- */
+[data-theme='pipboy'] {
+  --pip-glow: 0 0 8px rgba(26, 255, 26, 0.4);
+  --pip-glow-intense: 0 0 12px rgba(26, 255, 26, 0.8);
+}
+
+[data-theme='pipboy'] body::before {
+  content: " ";
+  display: block;
+  position: absolute;
+  top: 0;
+  left: 0;
+  bottom: 0;
+  right: 0;
+  background: linear-gradient(rgba(18, 16, 16, 0) 50%, rgba(0, 0, 0, 0.25) 50%), linear-gradient(90deg, rgba(255, 0, 0, 0.06), rgba(0, 255, 0, 0.02), rgba(0, 0, 255, 0.06));
+  z-index: 9999;
+  background-size: 100% 4px, 3px 100%;
+  pointer-events: none;
+  opacity: 0.3;
+}
+
+[data-theme='pipboy'] body::after {
+  content: " ";
+  display: block;
+  position: absolute;
+  top: 0;
+  left: 0;
+  bottom: 0;
+  right: 0;
+  background: radial-gradient(circle, transparent 60%, rgba(0, 0, 0, 0.4) 100%);
+  z-index: 10000;
+  pointer-events: none;
+}
+
+[data-theme='pipboy'] h1, 
+[data-theme='pipboy'] h2, 
+[data-theme='pipboy'] h3, 
+[data-theme='pipboy'] .btn-primary,
+[data-theme='pipboy'] .text-primary {
+  text-shadow: var(--pip-glow);
+}
+
+[data-theme='pipboy'] .font-mono,
+[data-theme='pipboy'] code {
+  color: #1aff1a !important;
+  text-shadow: 0 0 5px #1aff1a;
+}
+
+[data-theme='pipboy'] .card,
+[data-theme='pipboy'] .border-base-300 {
+  border-color: rgba(26, 255, 26, 0.2) !important;
+}
+
+[data-theme='pipboy'] .bg-base-200 {
+  background-color: #051105 !important;
 }
 
 @layer utilities {

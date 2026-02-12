@@ -1,17 +1,18 @@
 
 import React from 'react';
-import { MenuIcon, BookmarkIcon } from './icons';
+import { MenuIcon, BookmarkIcon, PowerIcon } from './icons';
 import type { ActiveTab } from '../types';
 import ThemeSwitcher from './ThemeSwitcher';
 
 interface HeaderProps {
   onMenuClick: () => void;
+  onStandbyClick: (e: React.MouseEvent) => void;
   activeTab: ActiveTab;
   clippedIdeasCount: number;
   onToggleClippingPanel: () => void;
 }
 
-const Header: React.FC<HeaderProps> = ({ onMenuClick, activeTab, clippedIdeasCount, onToggleClippingPanel }) => {
+const Header: React.FC<HeaderProps> = ({ onMenuClick, onStandbyClick, activeTab, clippedIdeasCount, onToggleClippingPanel }) => {
 
   const pageTitleMap: Record<ActiveTab, string> = {
     dashboard: 'Dashboard',
@@ -44,11 +45,25 @@ const Header: React.FC<HeaderProps> = ({ onMenuClick, activeTab, clippedIdeasCou
         <h2 className="text-lg font-semibold hidden sm:block">{pageTitle}</h2>
       </div>
       <div className="flex items-center gap-2">
-        <button onClick={onToggleClippingPanel} className="btn btn-ghost btn-circle btn-sm indicator">
-            <BookmarkIcon className="w-6 h-6"/>
-            {clippedIdeasCount > 0 && <span className="indicator-item badge badge-primary badge-xs">{clippedIdeasCount}</span>}
-        </button>
-        <ThemeSwitcher />
+        {/* Fix: Replaced non-standard 'theme-toggle' with standard 'div' and 'class' with 'className' to resolve JSX validation errors */}
+        <div className="contents">
+          <button onClick={onToggleClippingPanel} className="btn btn-ghost btn-circle btn-sm indicator">
+              <BookmarkIcon className="w-6 h-6"/>
+              {clippedIdeasCount > 0 && <span className="indicator-item badge badge-primary badge-xs">{clippedIdeasCount}</span>}
+          </button>
+          <ThemeSwitcher />
+          <button 
+            onClick={(e) => {
+                e.stopPropagation();
+                onStandbyClick(e);
+            }} 
+            onMouseDown={(e) => e.stopPropagation()}
+            className="btn btn-sm btn-ghost btn-circle opacity-60 hover:opacity-100 hover:text-primary transition-all"
+            title="Manual Standby"
+          >
+              <PowerIcon className="w-5 h-5"/>
+          </button>
+        </div>
       </div>
     </header>
   );

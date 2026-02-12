@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect, useCallback } from 'react';
 import { useSettings } from '../contexts/SettingsContext';
 import { dissectPrompt } from '../services/llmService';
@@ -133,6 +132,7 @@ const PromptDetailView: React.FC<PromptDetailViewProps> = ({
       if (prompt && editedText.trim() !== prompt.text.trim()) {
           onUpdate(prompt.id, { text: editedText });
           showGlobalFeedback("Changes saved.");
+          onClose(); // BUG FIX: Return to list after saving
       }
   };
   

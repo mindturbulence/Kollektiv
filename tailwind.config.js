@@ -65,7 +65,28 @@ export default {
       "valentine", "garden", "aqua", "lofi", "pastel", "fantasy", "wireframe", 
       "cmyk", "autumn", "acid", "lemonade", "winter", "dark", "synthwave", 
       "halloween", "forest", "black", "luxury", "dracula", "business", "night", 
-      "coffee", "dim", "sunset", "abyss"
+      "coffee", "dim", "sunset", "abyss",
+      {
+        pipboy: {
+          "primary": "#1aff1a",
+          "primary-content": "#002200",
+          "secondary": "#0a2e0a",
+          "accent": "#3df23d",
+          "neutral": "#051105",
+          "base-100": "#020502",
+          "base-200": "#051105",
+          "base-300": "#081a08",
+          "base-content": "#1aff1a",
+          "info": "#1aff1a",
+          "success": "#1aff1a",
+          "warning": "#ffff00",
+          "error": "#ff0000",
+          "--rounded-box": "0rem",
+          "--rounded-btn": "0rem",
+          "--rounded-badge": "0rem",
+          "--tab-radius": "0rem",
+        },
+      }
     ],
   },
 };

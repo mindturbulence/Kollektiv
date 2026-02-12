@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { gsap } from 'gsap';
 import { loadGalleryItems } from '../utils/galleryStorage';
@@ -257,7 +256,7 @@ const Dashboard: React.FC<DashboardProps> = ({ onNavigate }) => {
             <MetadataCorner label="System_Status" value="Core_Engine_Active" position="top-0 left-0" />
             <MetadataCorner label="Vault_Index" value={`${gallery.length} Arifacts_Identified`} position="top-0 right-0" />
             <MetadataCorner label="Local_Sequence" value={time} position="bottom-0 left-0" />
-            <MetadataCorner label="Protocol" value="Kollektive_Engine_v2" position="bottom-0 right-0" />
+            <MetadataCorner label="Protocol" value="Kollektiv_Engine_v2" position="bottom-0 right-0" />
 
             <div className="absolute inset-0 flex flex-col items-center justify-center z-10 pointer-events-none px-6 text-center">
                 <div className="overflow-hidden py-1 mb-2">

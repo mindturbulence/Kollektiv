@@ -2,6 +2,7 @@
 import React, { useState, useEffect, useCallback, useRef, useLayoutEffect } from 'react';
 import { gsap } from 'gsap';
 import { useSettings } from '../contexts/SettingsContext';
+import { useAuth } from '../contexts/AuthContext';
 import useLocalStorage from '../utils/useLocalStorage';
 import { fileSystemManager } from '../utils/fileUtils';
 import { verifyAndRepairFiles } from '../utils/integrity';
@@ -17,8 +18,9 @@ import ClippingPanel from './ClippingPanel';
 import FeedbackModal from './FeedbackModal';
 import Footer from './Footer';
 import MouseTrail from './MouseTrail';
+import IdleOverlay from './IdleOverlay'; 
 
-// Page Components
+// Page components
 import Dashboard from './Dashboard';
 import PromptsPage from './PromptsPage';
 import SavedPrompts from './SavedPrompts';
@@ -27,12 +29,11 @@ import Cheatsheet from './Cheatsheet';
 import ArtstyleCheatsheet from './ArtstyleCheatsheet';
 import ArtistCheatsheet from './ArtistCheatsheet';
 import { SetupPage } from './SetupPage';
-import ImageCompare from './ImageCompare';
-import { ColorPaletteExtractor } from './ColorPaletteExtractor';
 import ComposerPage from './ComposerPage';
+import ImageCompare from './ImageCompare';
+import ColorPaletteExtractor from './ColorPaletteExtractor';
 import ImageResizer from './ImageResizer';
 import { VideoToFrames } from './VideoToFrames';
-import { useAuth } from '../contexts/AuthContext';
 
 type PromptsPageState = { prompt?: string, artStyle?: string, artist?: string, view?: 'enhancer' | 'composer' | 'create', id?: string } | null;
 
@@ -104,10 +105,15 @@ const App: React.FC = () => {
     const [showWelcome, setShowWelcome] = useState(false);
     const [initStatus, setInitStatus] = useState('Starting App');
     const [initProgress, setInitProgress] = useState<number | null>(0);
+    const [isIdle, setIsIdle] = useState(false); 
     
     const hasInitializedRef = useRef(false);
     const isTransitioningRef = useRef(false);
     const isFirstRevealRef = useRef(true);
+    
+    // --- IDLE STATE REFS ---
+    const idleTimerRef = useRef<number | null>(null); 
+    const isIdleRef = useRef(false); // Persistent ref to track state without closure issues
 
     const { settings } = useSettings();
     const auth = useAuth();
@@ -135,6 +141,51 @@ const App: React.FC = () => {
 
     const gridRows = 10;
     const gridCols = 12;
+
+    // --- IDLE DETECTION ENGINE ---
+    const resetIdleTimer = useCallback((forceWake: boolean = true) => {
+        // Only trigger React state update if we are transitioning from idle back to active
+        if (forceWake && isIdleRef.current) {
+            setIsIdle(false);
+            isIdleRef.current = false;
+        }
+
+        if (idleTimerRef.current) {
+            window.clearTimeout(idleTimerRef.current);
+        }
+
+        // Set idle threshold to 60 seconds for a better snappier feel
+        idleTimerRef.current = window.setTimeout(() => {
+            setIsIdle(true);
+            isIdleRef.current = true;
+        }, 60000);
+    }, []);
+
+    useEffect(() => {
+        const handleUserActivity = () => resetIdleTimer(true);
+        const handleVisibilityChange = () => {
+            if (document.visibilityState === 'visible') {
+                // When user returns to tab, only force wake if it was idle
+                // This prevents resetting the 60s timer just because the tab was backgrounded/foregrounded
+                resetIdleTimer(isIdleRef.current);
+            }
+        };
+
+        const events = ['mousedown', 'mousemove', 'keypress', 'scroll', 'touchstart', 'click'];
+        
+        events.forEach(name => window.addEventListener(name, handleUserActivity, { passive: true }));
+        document.addEventListener('visibilitychange', handleVisibilityChange);
+        window.addEventListener('focus', handleUserActivity);
+
+        resetIdleTimer(false); // Initial start
+
+        return () => {
+            events.forEach(name => window.removeEventListener(name, handleUserActivity));
+            document.removeEventListener('visibilitychange', handleVisibilityChange);
+            window.removeEventListener('focus', handleUserActivity);
+            if (idleTimerRef.current) window.clearTimeout(idleTimerRef.current);
+        };
+    }, [resetIdleTimer]);
 
     const playSuccessChime = useCallback(() => {
         try {
@@ -209,7 +260,6 @@ const App: React.FC = () => {
             onProgress('Finalizing System...', 0.9);
             onProgress('System Ready', 1.0);
             
-            // Trigger acoustic feedback
             playSuccessChime();
 
             await new Promise(r => setTimeout(r, 1100));
@@ -230,7 +280,6 @@ const App: React.FC = () => {
         }
     }, [initializeApp]);
 
-    // NEW REVEAL ANIMATION (LEDGER STYLE)
     useLayoutEffect(() => {
         if (!isInitialized || !apertureRef.current || !isFirstRevealRef.current) return;
         isFirstRevealRef.current = false;
@@ -239,11 +288,9 @@ const App: React.FC = () => {
             defaults: { ease: "expo.inOut", duration: 1.4 }
         });
 
-        // Set initial state
         gsap.set(apertureRef.current, { visibility: 'visible', autoAlpha: 1 });
         gsap.set(appWrapperRef.current, { scale: 0.96, autoAlpha: 0 });
 
-        // Execute split reveal
         tl.to(curtainTopRef.current, {
             yPercent: -100,
         }, 0);
@@ -252,7 +299,6 @@ const App: React.FC = () => {
             yPercent: 100,
         }, 0);
 
-        // App container scales in
         tl.to(appWrapperRef.current, {
             scale: 1,
             autoAlpha: 1,
@@ -260,7 +306,6 @@ const App: React.FC = () => {
             ease: "expo.out"
         }, 0.2);
 
-        // Cleanup
         tl.set(apertureRef.current, { visibility: 'hidden', autoAlpha: 0 });
     }, [isInitialized]);
 
@@ -434,7 +479,8 @@ const App: React.FC = () => {
         <div className="h-full flex overflow-hidden relative p-1.5 md:p-3 bg-transparent">
             <MouseTrail />
             
-            {/* BRAND APERTURE REVEAL */}
+            <IdleOverlay isVisible={isIdle} onInteraction={() => resetIdleTimer(true)} />
+
             <div 
                 ref={apertureRef} 
                 className="fixed inset-0 z-[700] pointer-events-none flex flex-col"
@@ -444,7 +490,6 @@ const App: React.FC = () => {
                 <div ref={curtainBottomRef} className="flex-1 bg-base-100" />
             </div>
 
-            {/* Main Application Window Wrapper */}
             <div 
                 ref={appWrapperRef}
                 className="flex-1 flex overflow-hidden relative z-0 border border-base-content/10 shadow-2xl rounded bg-base-100"
@@ -464,6 +509,7 @@ const App: React.FC = () => {
                 <div className="flex-1 flex flex-col min-w-0 h-full relative z-0">
                     <Header
                         onMenuClick={handleMenuClick}
+                        onStandbyClick={() => { setIsIdle(true); isIdleRef.current = true; }}
                         activeTab={activeTab}
                         clippedIdeasCount={clippedIdeas.length}
                         onToggleClippingPanel={() => setIsClippingPanelOpen(p => !p)}
