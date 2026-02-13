@@ -1,3 +1,4 @@
+
 import { GoogleGenAI, GenerateContentResponse, Type } from "@google/genai";
 import type { EnhancementResult, LLMSettings, PromptModifiers, PromptAnatomy, CheatsheetCategory } from '../types';
 import { enhancePromptGemini, analyzePaletteMood as analyzePaletteMoodGemini, generatePromptFormulaGemini, refineSinglePromptGemini, abstractImageGemini, generateColorNameGemini, dissectPromptGemini, generateFocusedVariationsGemini, reconstructPromptGemini, reconstructFromIntentGemini, replaceComponentInPromptGemini, detectSalientRegionGemini, generateArtistDescriptionGemini, reconcileDescriptionsGemini, enhancePromptGeminiStream, refineSinglePromptGeminiStream } from './geminiService';
@@ -12,6 +13,8 @@ const getModelSyntax = (model: string) => {
     if (lower.includes('midjourney')) return { format: "Stylized Tags.", rules: "Focus on style, medium, and lighting. Do NOT output Midjourney --params (ar, stylize, etc) in the AI text; they are appended programmatically." };
     if (lower.includes('pony')) return { format: "Structured Tags.", rules: "Start with: score_9, score_8_up, masterpiece, followed by descriptive tags. Source tokens are mandatory." };
     if (lower.includes('veo')) return { format: "Cinematic Flow.", rules: "Fluid action, light interaction, and atmospheric density. Focus on camera motion verbs." };
+    if (lower.includes('kling')) return { format: "Technical Tags & Narrative.", rules: "Mix natural language with technical lighting and physics tags. High detail on fluid dynamics and material properties." };
+    if (lower.includes('runway')) return { format: "Simplified Prose.", rules: "Direct, high-impact descriptive sentences. Focus on material consistency and global illumination." };
     
     if (lower.includes('elevenlabs')) return { format: "Scripted Dialogue.", rules: "Include stage directions in [brackets] for emotional delivery." };
     if (lower.includes('mmaudio')) return { format: "Sonic Textures.", rules: "Describe layers of sound, materials clashing, and reverberation." };
@@ -21,6 +24,14 @@ const getModelSyntax = (model: string) => {
 
 // --- AI Roles ---
 const AI_ROLES = {
+    STORYBOARD_TRANSLATOR: (model: string) => {
+        const syntax = getModelSyntax(model);
+        return `Role: Professional Storyboard Translator for ${model}.
+Task: Transform a raw scene description into a perfect prompt optimized for ${model}.
+Syntax: ${syntax.format}. Rules: ${syntax.rules}.
+Strategy: Analyze the user's intent, motion, and visual references. Output the translated prompt ONLY. No intros or meta-commentary.`;
+    },
+
     ENHANCER: (model: string, length: string, isVideo: boolean, isAudio: boolean, hasManualCamera: boolean, inputType?: string) => {
         const syntax = getModelSyntax(model);
         const l = length === 'Short' ? '30 words' : length === 'Long' ? '550+ words' : '180 words';
@@ -72,6 +83,15 @@ export const cleanLLMResponse = (text: string): string => {
         .map(l => l.trim().replace(/^(\d+[\.\)]|\*|-|\+)\s+/, ''))
         .filter(l => l && !stopWords.some(r => r.test(l)))
         .join('\n').trim();
+};
+
+export const translateStoryboardScene = async (sceneText: string, model: string, settings: LLMSettings): Promise<string> => {
+    const sys = AI_ROLES.STORYBOARD_TRANSLATOR(model);
+    const isOllama = settings.activeLLM === 'ollama' || settings.activeLLM === 'ollama_cloud';
+    const raw = isOllama 
+        ? await refineSinglePromptOllama(sceneText, settings, sys, 1024)
+        : await refineSinglePromptGemini(sceneText, '', settings, sys);
+    return cleanLLMResponse(raw);
 };
 
 export const buildContextForEnhancer = (modifiers: PromptModifiers): string => {
@@ -348,7 +368,6 @@ export interface OllamaTestResult {
 }
 
 export const testOllamaConnection = async (baseUrl: string): Promise<OllamaTestResult> => {
-    // Sanitize input: Remove trailing slashes AND accidental path segments
     const cleanUrl = baseUrl.replace(/\/+$/, '').replace(/\/api\/tags\/?$/, '').replace(/\/api\/?$/, '');
     let targetUrl = cleanUrl;
     let headers: Record<string, string> = {};
@@ -368,14 +387,12 @@ export const testOllamaConnection = async (baseUrl: string): Promise<OllamaTestR
             return { success: true, status: response.status, message: "CONNECTION ESTABLISHED (200 OK)" };
         }
         
-        // Handle explicit proxy 500s or target 500s
         const msg = response.status === 500 
             ? "TARGET UNREACHABLE (500). ENSURE OLLAMA IS RUNNING."
             : `HTTP ERROR ${response.status}: ${response.statusText}`;
             
         return { success: false, status: response.status, message: msg };
     } catch (e: any) {
-        // Detailed error mapping for ECONNREFUSED scenarios
         if (e.name === 'TypeError' && e.message === 'Failed to fetch') {
             if (window.location.protocol === 'https:' && cleanUrl.startsWith('http:') && !headers['x-target-url']) {
                 return { success: false, message: "PROTOCOL MISMATCH (HTTPS -> HTTP BLOCKED). USE PROXY." };

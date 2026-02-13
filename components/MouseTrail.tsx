@@ -1,4 +1,3 @@
-
 import React, { useEffect, useRef } from 'react';
 import { gsap } from 'gsap';
 
@@ -47,6 +46,9 @@ const MouseTrail: React.FC = () => {
     };
 
     const showCursor = (instant = false) => {
+      // If we are in text mode (mouse over an input), don't show the custom cursor container
+      if (isTextMode.current) return;
+
       lastMoveTime.current = Date.now();
       if (!isVisible.current) {
         isVisible.current = true;
@@ -60,13 +62,13 @@ const MouseTrail: React.FC = () => {
       }
     };
 
-    const hideCursor = () => {
-      if (isVisible.current) {
+    const hideCursor = (force = false) => {
+      if (isVisible.current || force) {
         isVisible.current = false;
         gsap.killTweensOf(container);
         gsap.to(container, { 
           opacity: 0, 
-          duration: 0.8, 
+          duration: force ? 0.2 : 0.8, 
           ease: "power2.inOut",
           onComplete: () => {
             if (!isVisible.current) container.style.visibility = 'hidden';
@@ -77,7 +79,6 @@ const MouseTrail: React.FC = () => {
 
     const handleMouseMove = (e: MouseEvent) => {
       mouse.current = { x: e.clientX, y: e.clientY };
-      showCursor();
       
       // Precision dot using percentage translation for absolute centering
       gsap.set(cursor, { 
@@ -86,6 +87,8 @@ const MouseTrail: React.FC = () => {
         xPercent: -50,
         yPercent: -50
       });
+
+      showCursor();
     };
 
     const checkTextElement = (el: Element | null): boolean => {
@@ -97,54 +100,24 @@ const MouseTrail: React.FC = () => {
     };
 
     const updateCursorState = (target: HTMLElement | null) => {
+      // Focus doesn't prevent the custom cursor from showing if the mouse is outside the box.
+      // We rely solely on hovering to enter 'Text Mode' (system beam revealed).
       const isHoveringText = checkTextElement(target);
-      const isFocusingText = checkTextElement(document.activeElement);
       
-      const isText = isHoveringText || isFocusingText;
+      const isText = isHoveringText;
       const isInteractive = isText || !!target?.closest('button, a, select, [role="button"], .cursor-pointer, .tab');
       
       if (isText) {
         if (!isTextMode.current) {
-            isHovering.current = true;
             isTextMode.current = true;
-            
-            // Trail shrinks
-            gsap.to(hoverScale.current, { val: 0.3, duration: 0.4, ease: "expo.out" });
-            
-            // Morph dot into vertical I-Beam
-            gsap.to(cursor, { 
-                scaleX: 0.5, 
-                scaleY: 2.5, 
-                borderRadius: "0px", 
-                duration: 0.3, 
-                ease: "expo.out" 
-            });
-
-            // Morph rings to small vertical bars and start pulsation
-            gsap.killTweensOf([ringRed, ringCyan]);
-            gsap.set([ringRed, ringCyan], { borderRadius: "0px" });
-            
-            gsap.to(ringRed, {
-                scaleX: 2.5,
-                scaleY: 1.1,
-                duration: 0.4,
-                ease: "sine.inOut",
-                repeat: -1,
-                yoyo: true
-            });
-            gsap.to(ringCyan, {
-                scaleX: 2.5,
-                scaleY: 1.1,
-                delay: 0.2,
-                duration: 0.4,
-                ease: "sine.inOut",
-                repeat: -1,
-                yoyo: true
-            });
+            hideCursor(true); // Hide custom cursor immediately when hovering text
         }
       } else if (isInteractive) {
+        if (isTextMode.current) {
+            isTextMode.current = false;
+            showCursor();
+        }
         isHovering.current = true;
-        isTextMode.current = false;
         
         // Kill existing animations
         gsap.killTweensOf([ringRed, ringCyan]);
@@ -181,8 +154,11 @@ const MouseTrail: React.FC = () => {
             yoyo: true
         });
       } else {
+        if (isTextMode.current) {
+            isTextMode.current = false;
+            showCursor();
+        }
         isHovering.current = false;
-        isTextMode.current = false;
         
         // Return to neutral state
         gsap.killTweensOf([ringRed, ringCyan]);
@@ -211,6 +187,7 @@ const MouseTrail: React.FC = () => {
     };
 
     const handleFocusChange = () => {
+      // Re-evaluate current mouse position target when focus shifts
       const target = document.elementFromPoint(mouse.current.x, mouse.current.y) as HTMLElement;
       updateCursorState(target);
     };
@@ -235,12 +212,12 @@ const MouseTrail: React.FC = () => {
       if (now - lastJitterTime.current > 60) {
         lastJitterTime.current = now;
         
-        const intensity = isTextMode.current ? 1.5 : 4;
+        const intensity = 4;
         const rx = (Math.random() - 0.5) * intensity;
-        const ry = (Math.random() - 0.5) * (isTextMode.current ? 0.5 : intensity);
+        const ry = (Math.random() - 0.5) * intensity;
         const cx = (Math.random() - 0.5) * -intensity;
-        const cy = (Math.random() - 0.5) * -(isTextMode.current ? 0.5 : intensity);
-        const op = isTextMode.current ? (0.6 + Math.random() * 0.4) : (0.3 + Math.random() * 0.4);
+        const cy = (Math.random() - 0.5) * -intensity;
+        const op = (0.3 + Math.random() * 0.4);
 
         gsap.set(ringRed, { x: rx, y: ry, opacity: op });
         gsap.set(ringCyan, { x: cx, y: cy, opacity: op });
@@ -267,22 +244,17 @@ const MouseTrail: React.FC = () => {
 
       const baseRadius = 12;
       const stretchFactor = Math.min(velocity.current / 80, 1.5);
-      const scaleX = isTextMode.current ? 1 : 1 + stretchFactor;
-      const scaleY = isTextMode.current ? 1 : 1 - (stretchFactor * 0.4);
+      const scaleX = 1 + stretchFactor;
+      const scaleY = 1 - (stretchFactor * 0.4);
       const currentRadius = baseRadius * hoverScale.current.val;
 
       ctx.save();
       ctx.translate(trail.current.x, trail.current.y);
-      if (!isTextMode.current) ctx.rotate(angle.current);
+      ctx.rotate(angle.current);
       ctx.scale(scaleX, scaleY);
       
       ctx.beginPath();
-      if (isTextMode.current) {
-        // Vertical indicator trail
-        ctx.rect(-0.5, -currentRadius, 1, currentRadius * 2);
-      } else {
-        ctx.arc(0, 0, currentRadius, 0, Math.PI * 2);
-      }
+      ctx.arc(0, 0, currentRadius, 0, Math.PI * 2);
       ctx.fillStyle = primaryColor;
       
       const alpha = isHovering.current ? 0.12 : 0.22;
@@ -292,7 +264,7 @@ const MouseTrail: React.FC = () => {
       ctx.strokeStyle = primaryColor;
       ctx.lineWidth = 1;
       ctx.globalAlpha = isHovering.current ? 0.2 : 0.05;
-      if (!isTextMode.current) ctx.stroke();
+      ctx.stroke();
 
       ctx.restore();
     };

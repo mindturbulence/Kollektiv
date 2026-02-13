@@ -23,6 +23,7 @@ import IdleOverlay from './IdleOverlay';
 // Page components
 import Dashboard from './Dashboard';
 import PromptsPage from './PromptsPage';
+import { StoryboardPage } from './StoryboardPage';
 import SavedPrompts from './SavedPrompts';
 import ImageGallery from './ImageGallery';
 import Cheatsheet from './Cheatsheet';
@@ -113,7 +114,7 @@ const App: React.FC = () => {
     
     // --- IDLE STATE REFS ---
     const idleTimerRef = useRef<number | null>(null); 
-    const isIdleRef = useRef(false); // Persistent ref to track state without closure issues
+    const isIdleRef = useRef(false); 
 
     const { settings } = useSettings();
     const auth = useAuth();
@@ -142,9 +143,7 @@ const App: React.FC = () => {
     const gridRows = 10;
     const gridCols = 12;
 
-    // --- IDLE DETECTION ENGINE ---
     const resetIdleTimer = useCallback((forceWake: boolean = true) => {
-        // Only trigger React state update if we are transitioning from idle back to active
         if (forceWake && isIdleRef.current) {
             setIsIdle(false);
             isIdleRef.current = false;
@@ -154,7 +153,6 @@ const App: React.FC = () => {
             window.clearTimeout(idleTimerRef.current);
         }
 
-        // Set idle threshold to 60 seconds for a better snappier feel
         idleTimerRef.current = window.setTimeout(() => {
             setIsIdle(true);
             isIdleRef.current = true;
@@ -165,8 +163,6 @@ const App: React.FC = () => {
         const handleUserActivity = () => resetIdleTimer(true);
         const handleVisibilityChange = () => {
             if (document.visibilityState === 'visible') {
-                // When user returns to tab, only force wake if it was idle
-                // This prevents resetting the 60s timer just because the tab was backgrounded/foregrounded
                 resetIdleTimer(isIdleRef.current);
             }
         };
@@ -177,7 +173,7 @@ const App: React.FC = () => {
         document.addEventListener('visibilitychange', handleVisibilityChange);
         window.addEventListener('focus', handleUserActivity);
 
-        resetIdleTimer(false); // Initial start
+        resetIdleTimer(false); 
 
         return () => {
             events.forEach(name => window.removeEventListener(name, handleUserActivity));
@@ -456,6 +452,7 @@ const App: React.FC = () => {
         switch (activeTab) {
             case 'dashboard': return <Dashboard onNavigate={handleNavigate} onClipIdea={handleClipIdea} />;
             case 'prompts': return <PromptsPage onClipIdea={handleClipIdea} initialState={promptsPageState} onStateHandled={() => setPromptsPageState(null)} showGlobalFeedback={showGlobalFeedback} />;
+            case 'storyboard': return <StoryboardPage showGlobalFeedback={showGlobalFeedback} />;
             case 'prompt': return <SavedPrompts {...categoryPanelProps} onSendToEnhancer={(prompt) => handleSendToPromptsPage({ prompt, view: 'enhancer' })} showGlobalFeedback={showGlobalFeedback} onClipIdea={handleClipIdea} />;
             case 'gallery': return <ImageGallery {...categoryPanelProps} isSidebarPinned={isPinned && isSidebarOpen} showGlobalFeedback={showGlobalFeedback} />;
             case 'cheatsheet': return <Cheatsheet {...categoryPanelProps} isSidebarPinned={isPinned && isSidebarOpen} />;

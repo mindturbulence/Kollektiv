@@ -1,7 +1,9 @@
+
 // --- Core App Types ---
 export type ActiveTab =
   | 'dashboard'
   | 'prompts'
+  | 'storyboard'
   | 'prompt'
   | 'gallery'
   | 'cheatsheet'
@@ -93,6 +95,27 @@ export interface LLMSettings {
   youtube?: YouTubeConnection;
   instagram?: InstagramConnection;
   googleIdentity?: GoogleIdentityConnection;
+}
+
+// --- Storyboard Types ---
+export interface Scene {
+  id: string;
+  text: string;
+  referenceImages: string[]; // Base64 or local paths
+  duration: number;
+  motion: string;
+  camera: string;
+  style: string;
+  order: number;
+}
+
+export interface Storyboard {
+  id: string;
+  title: string;
+  targetModel: string;
+  scenes: Scene[];
+  createdAt: number;
+  updatedAt: number;
 }
 
 // --- Prompt Generation & Library ---

@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { MenuIcon, BookmarkIcon, PowerIcon } from './icons';
 import type { ActiveTab } from '../types';
@@ -17,6 +16,8 @@ const Header: React.FC<HeaderProps> = ({ onMenuClick, onStandbyClick, activeTab,
   const pageTitleMap: Record<ActiveTab, string> = {
     dashboard: 'Dashboard',
     prompts: 'Prompt Builder',
+    // Added storyboard title to satisfy ActiveTab record requirement
+    storyboard: 'Storyboard AI',
     prompt: 'Prompt Library',
     gallery: 'Gallery',
     cheatsheet: 'Guides',

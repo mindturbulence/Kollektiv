@@ -1,3 +1,4 @@
+
 import React, { useRef, useState, useEffect, useCallback, useLayoutEffect } from 'react';
 import { gsap } from 'gsap';
 import type { ActiveTab } from '../types';
@@ -6,7 +7,7 @@ import {
   HomeIcon, Cog6ToothIcon, AppLogoIcon, SparklesIcon,
   PromptIcon, PhotoIcon,
   AdjustmentsVerticalIcon, PaletteIcon, LayoutDashboardIcon, CropIcon, FilmIcon, ViewColumnsIcon,
-  BookOpenIcon, UsersIcon, ThumbTackIcon, InformationCircleIcon
+  BookOpenIcon, UsersIcon, ThumbTackIcon, InformationCircleIcon, ViewGridIcon
 } from './icons';
 import LlmStatusSwitcher from './LlmStatusSwitcher';
 
@@ -28,7 +29,6 @@ const ScrambleLetter: React.FC<{ char: string; isHovered: boolean; index: number
     useEffect(() => {
         if (isHovered) {
             let iteration = 0;
-            // Balanced duration: long enough to see the glitch, short enough to be snappy
             const maxIterations = 12 + Math.floor(Math.random() * 10);
             
             if (timerRef.current) window.clearInterval(timerRef.current);
@@ -43,12 +43,10 @@ const ScrambleLetter: React.FC<{ char: string; isHovered: boolean; index: number
                     window.clearInterval(timerRef.current!);
                 } else {
                     setDisplayChar(symbols[Math.floor(Math.random() * symbols.length)]);
-                    // Fade out symbols during the scramble phase
                     setOpacity(0.25 + Math.random() * 0.5);
                 }
                 
                 iteration++;
-                // Balanced interval: ~55-100ms per character switch
             }, 55 + Math.random() * 45);
         } else {
             if (timerRef.current) window.clearInterval(timerRef.current);
@@ -173,7 +171,6 @@ const Sidebar: React.FC<SidebarProps> = ({ activeTab, onNavigate, isSidebarOpen,
         navRefs.current[id] = el;
     };
 
-    // Smooth Slide with Physical Layout Awareness
     useLayoutEffect(() => {
         if (!sidebarRef.current) return;
         
@@ -231,7 +228,6 @@ const Sidebar: React.FC<SidebarProps> = ({ activeTab, onNavigate, isSidebarOpen,
         }
     }, [activeTab, isSidebarOpen, isPinned]);
 
-  // Classes for the sidebar vary based on whether it is an overlay (mobile/unpinned) or a flow element (pinned)
   const sidebarClasses = [
     "h-full w-80 bg-base-100 text-base-content z-[100] flex flex-col border-r border-base-300",
     isPinned ? "relative" : "absolute top-0 left-0 shadow-2xl"
@@ -276,6 +272,7 @@ const Sidebar: React.FC<SidebarProps> = ({ activeTab, onNavigate, isSidebarOpen,
         
         <Section title="Workspace">
             <NavItem id="prompts" label="Prompt Builder" icon={<SparklesIcon className="w-5 h-5" />} activeTab={activeTab} onClick={onNavigate} registerRef={registerRef} />
+            <NavItem id="storyboard" label="Storyboard" icon={<ViewGridIcon className="w-5 h-5" />} activeTab={activeTab} onClick={onNavigate} registerRef={registerRef} />
             {features.isPromptLibraryEnabled && <NavItem id="prompt" label="Prompt Library" icon={<PromptIcon className="w-5 h-5" />} activeTab={activeTab} onClick={onNavigate} registerRef={registerRef} />}
             {features.isGalleryEnabled && <NavItem id="gallery" label="Image Library" icon={<PhotoIcon className="w-5 h-5" />} activeTab={activeTab} onClick={onNavigate} registerRef={registerRef} />}
         </Section>
