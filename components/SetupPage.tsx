@@ -937,7 +937,10 @@ export const SetupPage: React.FC<SetupPageProps> = ({
                 </div>
             )}
             <div className="flex-grow overflow-hidden bg-base-100">{renderActiveTabContent()}</div>
-            <footer className="border-t border-base-300 flex flex-col bg-base-200/5 p-0 overflow-hidden flex-shrink-0"><button onClick={handleCancel} className="btn flex-1 rounded-none uppercase font-black text-[10px] tracking-widest hover:bg-base-300 border-r border-base-300">Abort</button><button onClick={saveSettings} className="btn btn-primary flex-1 rounded-none uppercase font-black text-[10px] tracking-widest shadow-lg">Confirm</button></footer>
+            <footer className="border-t border-base-300 flex flex-row bg-base-200/5 p-0 overflow-hidden flex-shrink-0">
+                <button onClick={handleCancel} className="btn flex-1 rounded-none uppercase font-black text-[10px] tracking-widest hover:bg-base-300 border-r border-base-300">Abort</button>
+                <button onClick={saveSettings} className="btn btn-primary flex-1 rounded-none uppercase font-black text-[10px] tracking-widest shadow-lg">Confirm</button>
+            </footer>
         </main>
       </section>
       {modalFeedback && <FeedbackModal isOpen={!!modalFeedback} onClose={() => setModalFeedback(null)} message={modalFeedback.message} type={modalFeedback.type} />}

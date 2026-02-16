@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect, useCallback, useRef, useLayoutEffect } from 'react';
 import { gsap } from 'gsap';
 import { useSettings } from '../contexts/SettingsContext';
@@ -52,7 +53,7 @@ const InitialLoader: React.FC<{ status: string; progress: number | null }> = ({ 
 
     useEffect(() => {
         if (percentage >= 100 && textWrapperRef.current) {
-            gsap.to(textWrapperRef.current, {
+            gsap.to(percentage >= 100 && textWrapperRef.current, {
                 y: -80,
                 autoAlpha: 0,
                 duration: 0.8,
@@ -475,7 +476,8 @@ const App: React.FC = () => {
                 
                 {isSidebarOpen && !isPinned && <div onClick={() => setIsSidebarOpen(false)} className="absolute inset-0 bg-black/50 z-[90]" />}
 
-                <div className="flex-1 flex flex-col min-0 h-full relative z-0">
+                {/* Fix: changed non-existent min-0 to standard min-w-0 flexbox fix */}
+                <div className="flex-1 flex flex-col min-w-0 h-full relative z-0">
                     <Header
                         onMenuClick={handleMenuClick}
                         onStandbyClick={() => { setIsIdle(true); isIdleRef.current = true; }}
@@ -518,7 +520,6 @@ const App: React.FC = () => {
                     onClose={() => setIsClippingPanelOpen(false)}
                     clippedIdeas={clippedIdeas}
                     onRemoveIdea={handleRemoveIdea}
-                    /* Fix: Corrected variable name from onClearAllIdeas to handleClearAllIdeas */
                     onClearAll={handleClearAllIdeas}
                     onInsertIdea={handleInsertIdea}
                     onRefineIdea={handleRefineIdea}

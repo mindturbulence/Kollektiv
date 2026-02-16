@@ -1,3 +1,4 @@
+
 import React, { useState, useCallback, useRef, useEffect, memo } from 'react';
 import type { SavedPrompt } from '../types';
 import CopyIcon from './CopyIcon';
@@ -79,34 +80,37 @@ const SavedPromptCard: React.FC<SavedPromptCardProps> = memo(({
   return (
     <div className="flex flex-col group bg-base-100 transition-all duration-500 hover:bg-base-200/50 w-full overflow-hidden select-none h-fit">
       <div className="p-8 md:p-10 flex flex-col w-full h-full">
-        {/* Header Section - Category Label and Menu */}
-        <div className="flex justify-between items-start gap-4 mb-6">
-          <div className="space-y-3 min-w-0 cursor-pointer flex-grow" onClick={onOpenDetailView}>
-            <div className="flex items-center gap-3">
-                 <span className="text-[10px] font-black uppercase tracking-[0.4em] text-primary/60">{displayCategory}</span>
-                 <div className="flex-grow h-px bg-base-300/50"></div>
-            </div>
+        {/* Header Section - Category Label and Menu Button Aligned */}
+        <div className="mb-6 space-y-3">
+          <div className="flex items-center gap-3">
+             <span className="text-[10px] font-black uppercase tracking-[0.4em] text-primary/60">{displayCategory}</span>
+             <div className="flex-grow h-px bg-base-300/50"></div>
+             
+             <div className="relative flex-shrink-0" ref={menuRef}>
+                <button
+                  onClick={(e) => { e.stopPropagation(); setIsMenuOpen(!isMenuOpen); }}
+                  className={`btn btn-xs btn-ghost btn-square transition-all ${isMenuOpen ? 'bg-base-300' : 'opacity-20 group-hover:opacity-100'}`}
+                  title="Prompt options"
+                >
+                  <EllipsisVerticalIcon className="w-4 h-4" />
+                </button>
+                {isMenuOpen && (
+                  <ul onClick={(e) => e.stopPropagation()} className="absolute right-0 mt-2 w-48 menu menu-sm bg-base-100 border border-base-300 shadow-2xl z-20 animate-fade-in p-1 rounded-none">
+                    <li><button onClick={() => { onEditClick(prompt); setIsMenuOpen(false); }} className="w-full text-left font-bold py-2 flex items-center gap-2"><EditIcon className="w-4 h-4" /> Edit Details</button></li>
+                    <div className="divider my-0 opacity-10"></div>
+                    <li><button onClick={() => { onDeleteClick(prompt); setIsMenuOpen(false); }} className="w-full text-left text-error font-bold py-2 flex items-center gap-2"><DeleteIcon className="w-4 h-4" /> Delete Prompt</button></li>
+                  </ul>
+                )}
+              </div>
+          </div>
+          
+          <div className="space-y-3 cursor-pointer" onClick={onOpenDetailView}>
             <h2 className="text-3xl font-black tracking-tighter text-base-content leading-[0.9] capitalize group-hover:text-primary transition-colors break-words">
               {title}
             </h2>
             <div className="flex items-center gap-4 opacity-40">
-                <span className="text-[9px] font-mono font-bold uppercase tracking-widest border-l border-base-300 pl-4 first:border-l-0 first:pl-0">ID: {prompt.id.slice(-6)}</span>
+                <span className="text-[9px] font-mono font-bold uppercase tracking-widest">ID: {prompt.id.slice(-6)}</span>
             </div>
-          </div>
-          <div className="relative flex-shrink-0" ref={menuRef}>
-            <button
-              onClick={(e) => { e.stopPropagation(); setIsMenuOpen(!isMenuOpen); }}
-              className={`btn btn-sm btn-ghost btn-square transition-all ${isMenuOpen ? 'bg-base-300' : 'opacity-20 group-hover:opacity-100'}`}
-            >
-              <EllipsisVerticalIcon className="w-5 h-5" />
-            </button>
-            {isMenuOpen && (
-              <ul onClick={(e) => e.stopPropagation()} className="absolute right-0 mt-2 w-48 menu menu-sm bg-base-100 border border-base-300 shadow-2xl z-20 animate-fade-in p-1 rounded-none">
-                <li><button onClick={() => { onEditClick(prompt); setIsMenuOpen(false); }} className="w-full text-left font-bold py-2 flex items-center gap-2"><EditIcon className="w-4 h-4" /> Edit Details</button></li>
-                <div className="divider my-0 opacity-10"></div>
-                <li><button onClick={() => { onDeleteClick(prompt); setIsMenuOpen(false); }} className="w-full text-left text-error font-bold py-2 flex items-center gap-2"><DeleteIcon className="w-4 h-4" /> Delete Prompt</button></li>
-              </ul>
-            )}
           </div>
         </div>
 

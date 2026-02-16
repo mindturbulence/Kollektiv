@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect, useRef, useMemo, useCallback } from 'react';
 import { gsap } from 'gsap';
 import type { GalleryItem, GalleryCategory } from '../types';
@@ -20,7 +19,7 @@ interface ImageGalleryProps {
   showGlobalFeedback: (message: string, isError?: boolean) => void;
 }
 
-type GalleryViewMode = 'compact' | 'default' | 'focus';
+export type GalleryViewMode = 'compact' | 'default' | 'focus';
 
 const ImageGallery: React.FC<ImageGalleryProps> = ({ isCategoryPanelCollapsed, onToggleCategoryPanel, isSidebarPinned, showGlobalFeedback }) => {
   const [items, setItems] = useState<GalleryItem[]>([]);
@@ -378,7 +377,16 @@ const ImageGallery: React.FC<ImageGalleryProps> = ({ isCategoryPanelCollapsed, o
                             <div key={`col-${colIdx}`} ref={el => { columnRefs.current[colIdx] = el; }} className="flex-1 flex flex-col gap-px border-l border-base-300 first:border-l-0" style={{ contain: 'layout paint' }}>
                                 {col.map(item => (
                                     <div key={item.id} data-item-id={item.id} className="elastic-grid-item">
-                                        <ImageCard item={item} isPinned={pinnedItemIds.includes(item.id)} onOpenDetailView={() => setDetailViewItemId(item.id)} onDeleteItem={(i) => setItemToDelete(i)} onTogglePin={(id) => { const n = pinnedItemIds.includes(id) ? pinnedItemIds.filter(pid=>pid!==id) : [id, ...pinnedItemIds]; setPinnedItemIds(n); savePinnedItemIds(n); }} categoryName={categories.find(c => c.id === item.categoryId)?.name || 'Uncategorized'} showCategory={selectedCategoryId === 'all'} />
+                                        <ImageCard 
+                                          item={item} 
+                                          viewMode={viewMode}
+                                          isPinned={pinnedItemIds.includes(item.id)} 
+                                          onOpenDetailView={() => setDetailViewItemId(item.id)} 
+                                          onDeleteItem={(i) => setItemToDelete(i)} 
+                                          onTogglePin={(id) => { const n = pinnedItemIds.includes(id) ? pinnedItemIds.filter(pid=>pid!==id) : [id, ...pinnedItemIds]; setPinnedItemIds(n); savePinnedItemIds(n); }} 
+                                          categoryName={categories.find(c => c.id === item.categoryId)?.name || 'Uncategorized'} 
+                                          showCategory={selectedCategoryId === 'all'} 
+                                        />
                                     </div>
                                 ))}
                             </div>
