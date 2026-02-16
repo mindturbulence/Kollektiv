@@ -362,7 +362,7 @@ export const GenericCheatsheetPage: React.FC<GenericCheatsheetPageProps> = ({
                         </div>
                     </div>
 
-                    <div ref={scrollWrapperRef} className="flex-grow flex overflow-hidden bg-base-100 h-full touch-none" style={{ touchAction: 'pan-y' }}>
+                    <div ref={scrollWrapperRef} className="flex-grow flex overflow-x-hidden overflow-y-hidden bg-base-100 h-full touch-none">
                         <div ref={trackRef} className="flex flex-nowrap h-full will-change-transform">
                             {data.map((cat, i) => (
                                 <CategoryCard
