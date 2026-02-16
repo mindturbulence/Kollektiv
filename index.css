@@ -116,6 +116,107 @@
   background-color: #051105 !important;
 }
 
+/* --- STARFIELD THEME (NASAPUNK) --- */
+[data-theme='starfield'] body {
+  background-color: #0b0e14;
+  background-image: 
+    radial-gradient(circle at 50% 50%, rgba(243, 160, 28, 0.02) 0%, transparent 80%),
+    linear-gradient(rgba(11, 14, 20, 0.1) 50%, rgba(0, 0, 0, 0.2) 50%);
+  background-size: 100% 100%, 100% 4px;
+}
+
+[data-theme='starfield'] body::before {
+    content: "";
+    position: fixed;
+    inset: 0;
+    background: url("https://www.transparenttextures.com/patterns/stardust.png");
+    opacity: 0.05;
+    pointer-events: none;
+    z-index: 1;
+}
+
+[data-theme='starfield'] .btn-primary {
+    background: #f3a01c;
+    border: none;
+    color: #0b0e14;
+    font-weight: 900;
+    letter-spacing: 0.1em;
+}
+
+[data-theme='starfield'] .btn-primary:hover {
+    background: #ffb13b;
+    box-shadow: 0 0 15px rgba(243, 160, 28, 0.3);
+}
+
+[data-theme='starfield'] .card,
+[data-theme='starfield'] .bg-base-100 {
+    background-color: rgba(21, 25, 33, 0.8) !important;
+    backdrop-filter: blur(12px);
+    border: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+[data-theme='starfield'] .text-primary {
+    color: #f3a01c !important;
+}
+
+[data-theme='starfield'] .border-base-300 {
+    border-color: rgba(209, 213, 219, 0.1) !important;
+}
+
+/* --- EXPLORER THEME (TECHNICAL RESEARCH) --- */
+[data-theme='explorer'] body {
+  background-image: 
+    linear-gradient(to right, rgba(138, 180, 248, 0.05) 1px, transparent 1px),
+    linear-gradient(to bottom, rgba(138, 180, 248, 0.05) 1px, transparent 1px);
+  background-size: 20px 20px;
+}
+
+[data-theme='explorer'] .btn-primary {
+  box-shadow: 0 0 0 1px rgba(138, 180, 248, 0.3);
+  text-transform: uppercase;
+}
+
+[data-theme='explorer'] .card {
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  background: #1e1e1f;
+}
+
+/* --- PROMPT THEME (GLOW / DIGITALISTS) --- */
+[data-theme='prompt'] body {
+  background-color: #020617;
+  background-image: 
+    radial-gradient(circle at 10% 10%, rgba(0, 255, 163, 0.12) 0%, transparent 40%),
+    radial-gradient(circle at 90% 90%, rgba(0, 209, 255, 0.08) 0%, transparent 40%);
+}
+
+[data-theme='prompt'] .btn-primary {
+  background: #00ffa3;
+  color: #000;
+  box-shadow: 0 0 20px -5px rgba(0, 255, 163, 0.5);
+  border: none;
+}
+
+[data-theme='prompt'] .btn-primary:hover {
+  background: #00e692;
+  box-shadow: 0 0 30px -5px rgba(0, 255, 163, 0.7);
+}
+
+[data-theme='prompt'] .card, 
+[data-theme='prompt'] .bg-base-100 {
+  background: rgba(15, 23, 42, 0.6) !important;
+  backdrop-filter: blur(24px);
+  border: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+[data-theme='prompt'] .border-base-300 {
+  border-color: rgba(255, 255, 255, 0.08) !important;
+}
+
+[data-theme='prompt'] .text-primary {
+  color: #00ffa3 !important;
+  filter: drop-shadow(0 0 8px rgba(0, 255, 163, 0.3));
+}
+
 @layer utilities {
   :root {
     --easing-function: cubic-bezier(0.2, 1, 0.3, 1);
@@ -195,14 +296,13 @@
   }
 
   .elastic-grid-container {
-    perspective: 1000px;
+    perspective: 1500px;
   }
 
   .elastic-grid-item {
-    transform: skewY(var(--scroll-velocity, 0deg)) scaleY(var(--scroll-scale, 1));
-    will-change: transform, opacity;
-    transition: transform 0.2s cubic-bezier(0.23, 1, 0.32, 1), opacity 0.4s ease-out;
-    content-visibility: auto;
-    contain-intrinsic-size: 1px 300px;
+    transform-origin: 50% 50%;
+    will-change: transform;
+    /* content-visibility: auto; removed to fix height jumping during elastic transforms */
+    transition: opacity 0.4s ease-out;
   }
 }

@@ -6,5 +6,5 @@ export const DAISYUI_LIGHT_THEMES = [
 
 export const DAISYUI_DARK_THEMES = [
   "dark", "synthwave", "halloween", "forest", "black", "luxury", "dracula", 
-  "business", "night", "coffee", "dim", "sunset", "abyss", "pipboy", "explorer", "prompt"
+  "business", "night", "coffee", "dim", "sunset", "abyss", "pipboy", "starfield", "explorer", "prompt"
 ];
