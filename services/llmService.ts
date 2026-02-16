@@ -1,4 +1,3 @@
-
 import { GoogleGenAI, GenerateContentResponse, Type } from "@google/genai";
 import type { EnhancementResult, LLMSettings, PromptModifiers, PromptAnatomy, CheatsheetCategory } from '../types';
 import { enhancePromptGemini, analyzePaletteMood as analyzePaletteMoodGemini, generatePromptFormulaGemini, refineSinglePromptGemini, abstractImageGemini, generateColorNameGemini, dissectPromptGemini, generateFocusedVariationsGemini, reconstructPromptGemini, reconstructFromIntentGemini, replaceComponentInPromptGemini, detectSalientRegionGemini, generateArtistDescriptionGemini, reconcileDescriptionsGemini, enhancePromptGeminiStream, refineSinglePromptGeminiStream } from './geminiService';
@@ -116,6 +115,7 @@ export const buildContextForEnhancer = (modifiers: PromptModifiers): string => {
         }
     }
 
+    if (modifiers.specialtyLens) ctx.push(`Specialty Lens Characteristic: ${modifiers.specialtyLens}`);
     if (modifiers.lensType) ctx.push(`Lens: ${modifiers.lensType}`);
     if (modifiers.cameraAngle) ctx.push(`Angle: ${modifiers.cameraAngle}`);
     if (modifiers.cameraProximity) ctx.push(`Framing: ${modifiers.cameraProximity}`);

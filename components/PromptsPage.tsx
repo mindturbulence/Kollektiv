@@ -20,6 +20,7 @@ import {
     ALL_PROFESSIONAL_CAMERA_MODELS,
     CAMERA_SETTINGS,
     CAMERA_EFFECTS,
+    SPECIALTY_LENS_EFFECTS,
     LENS_TYPES,
     FILM_TYPES,
     ANALOG_FILM_STOCKS,
@@ -141,7 +142,7 @@ const PromptsPage: React.FC<PromptsPageProps> = ({
   const [modifiers, setModifiers] = useState<PromptModifiers>({ 
     aspectRatio: "", videoInputType: "t2v", artStyle: "", artist: "", photographyStyle: "",
     aestheticLook: "", digitalAesthetic: "", cameraType: "", cameraModel: "", cameraAngle: "", cameraProximity: "",
-    cameraSettings: "", cameraEffect: "", lensType: "", filmType: "", filmStock: "",
+    cameraSettings: "", cameraEffect: "", specialtyLens: "", lensType: "", filmType: "", filmStock: "",
     lighting: "", composition: "", motion: "", cameraMovement: "", zImageStyle: "",
     audioType: "", voiceGender: "", voiceTone: "", audioEnvironment: "", audioMood: "", audioDuration: "10",
     mjAspectRatio: "", mjChaos: "0", mjStylize: "100", mjVersion: MIDJOURNEY_VERSIONS[0],
@@ -359,7 +360,7 @@ const PromptsPage: React.FC<PromptsPageProps> = ({
     setModifiers({ 
         aspectRatio: "", videoInputType: "t2v", artStyle: "", artist: "", photographyStyle: "",
         aestheticLook: "", digitalAesthetic: "", cameraType: "", cameraModel: "", cameraAngle: "", cameraProximity: "",
-        cameraSettings: "", cameraEffect: "", lensType: "", filmType: "", filmStock: "",
+        cameraSettings: "", cameraEffect: "", specialtyLens: "", lensType: "", filmType: "", filmStock: "",
         lighting: "", composition: "", motion: "", cameraMovement: "", zImageStyle: "",
         audioType: "", voiceGender: "", voiceTone: "", audioEnvironment: "", audioMood: "", audioDuration: "10",
         mjAspectRatio: "", mjChaos: "0", mjStylize: "100", mjVersion: MIDJOURNEY_VERSIONS[0],
@@ -463,6 +464,7 @@ const PromptsPage: React.FC<PromptsPageProps> = ({
         cameraType: { label: 'Camera Body', tab: 'photography' },
         cameraModel: { label: 'Camera Model', tab: 'photography' },
         lensType: { label: 'Lens Type', tab: 'photography' },
+        specialtyLens: { label: 'Specialty Optics', tab: 'photography' },
         filmStock: { label: 'Film Stock', tab: 'photography' },
         filmType: { label: 'Medium Format', tab: 'photography' },
         cameraAngle: { label: 'Angle', tab: 'photography' },
@@ -635,6 +637,11 @@ const PromptsPage: React.FC<PromptsPageProps> = ({
                         </div>
                     </div>
 
+                    <div className="form-control">
+                        <label className="text-[10px] font-black uppercase text-base-content/40 tracking-widest mb-2 block">Specialty Optics</label>
+                        <AutocompleteSelect value={modifiers.specialtyLens || ''} onChange={(v) => setModifiers({...modifiers, specialtyLens: v})} options={SPECIALTY_LENS_EFFECTS.map(l => ({ label: l.name.toUpperCase(), value: l.name, description: l.description }))} placeholder="Informative Vintage/Unique optics..." />
+                    </div>
+
                     <div className="grid grid-cols-2 gap-4">
                         <div className="form-control">
                             <label className="text-[10px] font-black uppercase text-base-content/40 tracking-widest mb-2 block">Lens Type</label>
@@ -659,13 +666,18 @@ const PromptsPage: React.FC<PromptsPageProps> = ({
 
                     <div className="grid grid-cols-2 gap-4">
                         <div className="form-control">
+                            <label className="text-[10px] font-black uppercase text-base-content/40 tracking-widest mb-2 block">Camera Distortion</label>
+                            <AutocompleteSelect value={modifiers.cameraEffect || ''} onChange={(v) => setModifiers({...modifiers, cameraEffect: v})} options={CAMERA_EFFECTS.map(s => ({ label: s.toUpperCase(), value: s }))} placeholder="Aberration..." />
+                        </div>
+                        <div className="form-control">
                             <label className="text-[10px] font-black uppercase text-base-content/40 tracking-widest mb-2 block">Lighting Rig</label>
                             <AutocompleteSelect value={modifiers.lighting || ''} onChange={(v) => setModifiers({...modifiers, lighting: v})} options={LIGHTING_OPTIONS.map(l => ({ label: l.toUpperCase(), value: l }))} placeholder="Lighting..." />
                         </div>
-                        <div className="form-control">
-                            <label className="text-[10px] font-black uppercase text-base-content/40 tracking-widest mb-2 block">Composition Layout</label>
-                            <AutocompleteSelect value={modifiers.composition || ''} onChange={(v) => setModifiers({...modifiers, composition: v})} options={COMPOSITION_OPTIONS.map(c => ({ label: c.toUpperCase(), value: c }))} placeholder="Layout..." />
-                        </div>
+                    </div>
+
+                    <div className="form-control">
+                        <label className="text-[10px] font-black uppercase text-base-content/40 tracking-widest mb-2 block">Composition Layout</label>
+                        <AutocompleteSelect value={modifiers.composition || ''} onChange={(v) => setModifiers({...modifiers, composition: v})} options={COMPOSITION_OPTIONS.map(c => ({ label: c.toUpperCase(), value: c }))} placeholder="Layout..." />
                     </div>
                 </div>
               );
@@ -1053,6 +1065,7 @@ const PromptsPage: React.FC<PromptsPageProps> = ({
                               const val = (e.currentTarget as any).value;
                               setPresetSearchText(val);
                               if (!val) {
+                                  // Fix: changed setSelectedTemplate to setSelectedPreset
                                   setSelectedPreset(null);
                               } else if (selectedPreset && val !== selectedPreset.name) {
                                   setSelectedPreset(null);

@@ -1,4 +1,3 @@
-
 // --- Core App Types ---
 export type ActiveTab =
   | 'dashboard'
@@ -132,6 +131,7 @@ export interface PromptModifiers {
   cameraProximity?: string;
   cameraSettings?: string;
   cameraEffect?: string;
+  specialtyLens?: string;
   lensType?: string;
   filmType?: string;
   filmStock?: string;

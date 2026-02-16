@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect, useCallback, useRef, useLayoutEffect } from 'react';
 import { gsap } from 'gsap';
 import { useSettings } from '../contexts/SettingsContext';
@@ -7,6 +6,7 @@ import useLocalStorage from '../utils/useLocalStorage';
 import { fileSystemManager } from '../utils/fileUtils';
 import { verifyAndRepairFiles } from '../utils/integrity';
 import { addSavedPrompt } from '../utils/promptStorage';
+import { audioService } from '../services/audioService';
 import type { ActiveTab, Idea, ActiveSettingsTab } from '../types';
 
 // Layout & Global Components
@@ -183,45 +183,6 @@ const App: React.FC = () => {
         };
     }, [resetIdleTimer]);
 
-    const playSuccessChime = useCallback(() => {
-        try {
-            const AudioCtx = window.AudioContext || (window as any).webkitAudioContext;
-            if (!AudioCtx) return;
-            const ctx = new AudioCtx();
-            const master = ctx.createGain();
-            master.connect(ctx.destination);
-            master.gain.value = 0.4;
-            
-            const now = ctx.currentTime;
-            
-            const osc1 = ctx.createOscillator();
-            const g1 = ctx.createGain();
-            osc1.type = 'sine';
-            osc1.frequency.setValueAtTime(150, now);
-            osc1.frequency.exponentialRampToValueAtTime(40, now + 0.1);
-            g1.gain.setValueAtTime(0.5, now);
-            g1.gain.linearRampToValueAtTime(0, now + 0.1);
-            osc1.connect(g1); g1.connect(master);
-
-            const osc2 = ctx.createOscillator();
-            const g2 = ctx.createGain();
-            osc2.type = 'triangle';
-            osc2.frequency.setValueAtTime(880, now + 0.05);
-            osc2.frequency.exponentialRampToValueAtTime(1760, now + 0.2);
-            g2.gain.setValueAtTime(0, now + 0.05);
-            g2.gain.linearRampToValueAtTime(0.3, now + 0.1);
-            g2.gain.exponentialRampToValueAtTime(0.001, now + 1.0);
-            osc2.connect(g2); g2.connect(master);
-
-            osc1.start(now);
-            osc1.stop(now + 0.1);
-            osc2.start(now + 0.05);
-            osc2.stop(now + 1.0);
-
-            if (ctx.state === 'suspended') ctx.resume();
-        } catch (e) {}
-    }, []);
-
     const initializeApp = useCallback(async () => {
         if (hasInitializedRef.current && isInitialized) return;
         
@@ -256,7 +217,7 @@ const App: React.FC = () => {
             onProgress('Finalizing System...', 0.9);
             onProgress('System Ready', 1.0);
             
-            playSuccessChime();
+            audioService.playModalOpen(); // Chime for system ready
 
             await new Promise(r => setTimeout(r, 1100));
 
@@ -268,7 +229,7 @@ const App: React.FC = () => {
             setGlobalFeedback({ message: "Failed to initialize system.", type: 'error' });
             setIsLoading(false);
         }
-    }, [settings, auth, isInitialized, playSuccessChime]);
+    }, [settings, auth, isInitialized]);
 
     useEffect(() => {
         if (!hasInitializedRef.current) {
@@ -308,6 +269,7 @@ const App: React.FC = () => {
     const runScopedTransition = useCallback(async (targetTab: ActiveTab) => {
         if (isTransitioningRef.current || !mainGridRef.current) return;
         isTransitioningRef.current = true;
+        audioService.playClick();
 
         const cells = mainGridRef.current.querySelectorAll('.transition-cell');
         
@@ -399,6 +361,7 @@ const App: React.FC = () => {
     }, [activeTab, features, setActiveTab]);
 
     const handleMenuClick = () => {
+        audioService.playClick();
         const isLg = window.innerWidth >= 1024;
         if (isLg && isPinned) setIsPinned(false);
         setIsSidebarOpen(p => !p);
@@ -446,7 +409,10 @@ const App: React.FC = () => {
     const renderContent = () => {
         const categoryPanelProps = {
             isCategoryPanelCollapsed: !!collapsedPanels[activeTab],
-            onToggleCategoryPanel: () => setCollapsedPanels(p => ({ ...p, [activeTab]: !p[activeTab] })),
+            onToggleCategoryPanel: () => {
+                audioService.playClick();
+                setCollapsedPanels(p => ({ ...p, [activeTab]: !p[activeTab] }));
+            },
         };
 
         switch (activeTab) {
@@ -497,19 +463,28 @@ const App: React.FC = () => {
                     onNavigate={handleNavigate}
                     isSidebarOpen={isSidebarOpen}
                     isPinned={isPinned}
-                    setIsPinned={setIsPinned}
-                    onAboutClick={() => setIsAboutModalOpen(true)}
+                    setIsPinned={(val) => {
+                        audioService.playClick();
+                        setIsPinned(val);
+                    }}
+                    onAboutClick={() => {
+                        audioService.playModalOpen();
+                        setIsAboutModalOpen(true);
+                    }}
                 />
                 
                 {isSidebarOpen && !isPinned && <div onClick={() => setIsSidebarOpen(false)} className="absolute inset-0 bg-black/50 z-[90]" />}
 
-                <div className="flex-1 flex flex-col min-w-0 h-full relative z-0">
+                <div className="flex-1 flex flex-col min-0 h-full relative z-0">
                     <Header
                         onMenuClick={handleMenuClick}
                         onStandbyClick={() => { setIsIdle(true); isIdleRef.current = true; }}
                         activeTab={activeTab}
                         clippedIdeasCount={clippedIdeas.length}
-                        onToggleClippingPanel={() => setIsClippingPanelOpen(p => !p)}
+                        onToggleClippingPanel={() => {
+                            audioService.playClick();
+                            setIsClippingPanelOpen(p => !p);
+                        }}
                     />
                     
                     <main className="flex-grow relative overflow-hidden bg-base-100">
@@ -532,7 +507,10 @@ const App: React.FC = () => {
                         </div>
                     </main>
                     
-                    <Footer onAboutClick={() => setIsAboutModalOpen(true)} />
+                    <Footer onAboutClick={() => {
+                        audioService.playModalOpen();
+                        setIsAboutModalOpen(true);
+                    }} />
                 </div>
 
                 <ClippingPanel 
@@ -540,6 +518,7 @@ const App: React.FC = () => {
                     onClose={() => setIsClippingPanelOpen(false)}
                     clippedIdeas={clippedIdeas}
                     onRemoveIdea={handleRemoveIdea}
+                    /* Fix: Corrected variable name from onClearAllIdeas to handleClearAllIdeas */
                     onClearAll={handleClearAllIdeas}
                     onInsertIdea={handleInsertIdea}
                     onRefineIdea={handleRefineIdea}
@@ -548,7 +527,13 @@ const App: React.FC = () => {
                 />
             </div>
             
-            <AboutModal isOpen={isAboutModalOpen} onClose={() => setIsAboutModalOpen(false)} />
+            <AboutModal 
+                isOpen={isAboutModalOpen} 
+                onClose={() => {
+                    audioService.playModalClose();
+                    setIsAboutModalOpen(false);
+                }} 
+            />
             
             {globalFeedback && (
                 <FeedbackModal

@@ -1,8 +1,8 @@
-
 import React, { useRef, useState, useEffect, useCallback, useLayoutEffect } from 'react';
 import { gsap } from 'gsap';
 import type { ActiveTab } from '../types';
 import { useSettings } from '../contexts/SettingsContext';
+import { audioService } from '../services/audioService';
 import {
   HomeIcon, Cog6ToothIcon, AppLogoIcon, SparklesIcon,
   PromptIcon, PhotoIcon,
@@ -129,7 +129,10 @@ const NavItem: React.FC<{
             <a
               ref={(el) => registerRef(id, el)}
               onClick={() => onClick(id)}
-              onMouseEnter={() => setIsHovered(true)}
+              onMouseEnter={() => {
+                setIsHovered(true);
+                audioService.playHover();
+              }}
               onMouseLeave={() => setIsHovered(false)}
               className={`flex items-center py-1.5 px-3 rounded-lg text-base font-medium transition-colors cursor-pointer relative z-10 ${
                 activeTab === id
@@ -249,6 +252,7 @@ const Sidebar: React.FC<SidebarProps> = ({ activeTab, onNavigate, isSidebarOpen,
         </button>
         <button
           onClick={() => setIsPinned(p => !p)}
+          onMouseEnter={() => audioService.playHover()}
           className="btn btn-ghost btn-circle btn-sm hidden lg:inline-flex"
           title={isPinned ? 'Unpin Sidebar' : 'Pin Sidebar'}
         >
@@ -303,6 +307,7 @@ const Sidebar: React.FC<SidebarProps> = ({ activeTab, onNavigate, isSidebarOpen,
             <li>
                 <a
                   onClick={onAboutClick}
+                  onMouseEnter={() => audioService.playHover()}
                   className="flex items-center p-2.5 rounded-lg text-base font-medium transition-colors cursor-pointer text-base-content/50 hover:bg-base-200"
                 >
                     <InformationCircleIcon className="w-5 h-5 mr-3" />

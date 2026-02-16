@@ -176,23 +176,57 @@ export const GenericCheatsheetPage: React.FC<GenericCheatsheetPageProps> = ({
 
   useLayoutEffect(() => {
     if (isLoading || activeCategory || !trackRef.current || !scrollWrapperRef.current) return;
+    
     const track = trackRef.current;
     const wrapper = scrollWrapperRef.current;
+
     const applyTranslation = (velocity: number = 0.8) => {
-        const maxScroll = track.scrollWidth - wrapper.offsetWidth;
+        if (!wrapper || !track) return;
+        const maxScroll = Math.max(0, track.scrollWidth - wrapper.offsetWidth);
         xPosRef.current = Math.max(-maxScroll, Math.min(0, xPosRef.current));
-        gsap.to(track, { x: xPosRef.current, duration: velocity, ease: "power3.out", overwrite: "auto" });
+        
+        gsap.to(track, { 
+            x: xPosRef.current, 
+            duration: velocity, 
+            ease: "power3.out", 
+            overwrite: "auto" 
+        });
     };
+
+    const handleResize = () => {
+        applyTranslation(0.4);
+    };
+
     const obs = Observer.create({
         target: wrapper,
         type: "wheel,touch,pointer",
-        onWheel: (self) => { xPosRef.current -= self.deltaY * 0.8; applyTranslation(1.2); },
-        onDrag: (self) => { xPosRef.current += self.deltaX; applyTranslation(0.5); },
-        onDragEnd: () => { applyTranslation(0.8); },
+        onWheel: (self) => { 
+            // Handle both vertical and horizontal scroll for the carousel
+            const delta = Math.abs(self.deltaY) > Math.abs(self.deltaX) ? self.deltaY : self.deltaX;
+            xPosRef.current -= delta * 0.8; 
+            applyTranslation(1.2); 
+        },
+        onDrag: (self) => { 
+            xPosRef.current += self.deltaX; 
+            applyTranslation(0.5); 
+        },
+        onDragEnd: () => { 
+            applyTranslation(0.8); 
+        },
         tolerance: 5,
-        preventDefault: true
+        preventDefault: false 
     });
-    return () => obs.kill();
+
+    window.addEventListener('resize', handleResize);
+    
+    // Initial sync
+    const timer = setTimeout(() => applyTranslation(0), 100);
+
+    return () => {
+        obs.kill();
+        clearTimeout(timer);
+        window.removeEventListener('resize', handleResize);
+    };
   }, [isLoading, activeCategory, data]);
 
   // Entrance of Detail View
@@ -296,7 +330,7 @@ export const GenericCheatsheetPage: React.FC<GenericCheatsheetPageProps> = ({
   }
 
   return (
-    <section className="h-full bg-base-100 flex flex-col overflow-hidden relative select-none no-scrollbar">
+    <section className={`h-full bg-base-100 flex flex-col overflow-hidden relative ${!activeCategory ? 'select-none' : ''}`}>
       {!activeCategory ? (
         <div ref={carouselRef} className="flex h-full overflow-hidden no-scrollbar animate-fade-in">
             <div 
@@ -317,8 +351,8 @@ export const GenericCheatsheetPage: React.FC<GenericCheatsheetPageProps> = ({
                 </div>
             </div>
 
-            <div ref={scrollWrapperRef} className="flex-grow flex overflow-hidden bg-base-100 h-full touch-none">
-                <div ref={trackRef} className="flex h-full will-change-transform">
+            <div ref={scrollWrapperRef} className="flex-grow flex overflow-hidden bg-base-100 h-full touch-none" style={{ touchAction: 'pan-y' }}>
+                <div ref={trackRef} className="flex flex-nowrap h-full will-change-transform">
                   {data.map((cat, i) => (
                       <CategoryCard 
                         key={cat.category} 
@@ -367,7 +401,7 @@ export const GenericCheatsheetPage: React.FC<GenericCheatsheetPageProps> = ({
                 </div>
             </header>
 
-            <div className="flex-grow overflow-y-auto custom-scrollbar bg-base-100">
+            <div className="flex-grow overflow-y-auto custom-scrollbar bg-base-100 select-auto">
                 <div className={`mx-auto py-16 px-10 ${layout === 'article' ? 'max-w-4xl' : 'max-w-screen-2xl'}`}>
                     <div className={layout === 'grid' 
                         ? "grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-px bg-base-300 border border-base-300 shadow-2xl"

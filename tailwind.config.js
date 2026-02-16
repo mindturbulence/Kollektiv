@@ -1,4 +1,3 @@
-
 import daisyui from 'daisyui';
 
 /** @type {import('tailwindcss').Config} */
@@ -86,6 +85,44 @@ export default {
           "--rounded-badge": "0rem",
           "--tab-radius": "0rem",
         },
+        explorer: {
+          "primary": "#8ab4f8",
+          "primary-content": "#131314",
+          "secondary": "#3c4043",
+          "accent": "#c2e7ff",
+          "neutral": "#202124",
+          "base-100": "#131314",
+          "base-200": "#1e1e1f",
+          "base-300": "#2b2d31",
+          "base-content": "#e3e3e3",
+          "info": "#8ab4f8",
+          "success": "#34a853",
+          "warning": "#fbbc04",
+          "error": "#ea4335",
+          "--rounded-box": "0.5rem",
+          "--rounded-btn": "0.25rem",
+          "--rounded-badge": "0.5rem",
+          "--tab-radius": "0.25rem",
+        },
+        prompt: {
+          "primary": "#00ffa3",
+          "primary-content": "#000000",
+          "secondary": "#111827",
+          "accent": "#00d1ff",
+          "neutral": "#1f2937",
+          "base-100": "#030712",
+          "base-200": "#0f172a",
+          "base-300": "#1e293b",
+          "base-content": "#f9fafb",
+          "info": "#00ffa3",
+          "success": "#10b981",
+          "warning": "#f59e0b",
+          "error": "#ef4444",
+          "--rounded-box": "2rem",
+          "--rounded-btn": "9999px",
+          "--rounded-badge": "9999px",
+          "--tab-radius": "9999px",
+        }
       }
     ],
   },
