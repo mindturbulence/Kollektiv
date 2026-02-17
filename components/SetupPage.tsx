@@ -23,7 +23,7 @@ import {
 import { resetAllSettings, defaultLLMSettings } from '../utils/settingsStorage';
 import { AVAILABLE_LLM_MODELS, DAISYUI_LIGHT_THEMES, DAISYUI_DARK_THEMES } from '../constants';
 import ConfirmationModal from './ConfirmationModal';
-import { Cog6ToothIcon, CpuChipIcon, AppIcon, PromptIcon, PhotoIcon, FolderClosedIcon, PaintBrushIcon, DeleteIcon, CheckIcon, EditIcon, AdjustmentsVerticalIcon, DownloadIcon, LinkIcon, PlayIcon, RefreshIcon, InstagramIcon, InformationCircleIcon, UploadIcon } from './icons';
+import { Cog6ToothIcon, CpuChipIcon, AppIcon, PromptIcon, PhotoIcon, FolderClosedIcon, PaintBrushIcon, DeleteIcon, CheckIcon, EditIcon, AdjustmentsVerticalIcon, DownloadIcon, LinkIcon, PlayIcon, RefreshIcon, InstagramIcon, InformationCircleIcon, UploadIcon, WaveSineIcon } from './icons';
 import FeedbackModal from './FeedbackModal';
 import { PromptTxtImportModal } from './PromptTxtImportModal';
 import LoadingSpinner from './LoadingSpinner';
@@ -641,6 +641,24 @@ export const SetupPage: React.FC<SetupPageProps> = ({
                         />
                         <button 
                             onClick={() => handleSettingsChange('dashboardVideoUrl', defaultLLMSettings.dashboardVideoUrl)}
+                            className="btn btn-sm btn-ghost border border-base-300 join-item text-[10px] font-black"
+                            title="Reset to Default"
+                        >
+                            <RefreshIcon className="w-3.5 h-3.5" />
+                        </button>
+                    </div>
+                </SettingRow>
+                <SettingRow label="Atmospheric Music" desc="YouTube URL for the background streaming module.">
+                    <div className="join w-full md:w-96">
+                        <input 
+                            type="text" 
+                            value={settings.musicYoutubeUrl} 
+                            onChange={(e) => handleSettingsChange('musicYoutubeUrl', e.target.value)} 
+                            className="input input-bordered input-sm rounded-none join-item w-full font-mono text-xs" 
+                            placeholder="https://www.youtube.com/watch?v=..."
+                        />
+                        <button 
+                            onClick={() => handleSettingsChange('musicYoutubeUrl', defaultLLMSettings.musicYoutubeUrl)}
                             className="btn btn-sm btn-ghost border border-base-300 join-item text-[10px] font-black"
                             title="Reset to Default"
                         >

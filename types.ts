@@ -1,3 +1,4 @@
+
 // --- Core App Types ---
 export type ActiveTab =
   | 'dashboard'
@@ -86,6 +87,9 @@ export interface LLMSettings {
 
   // Dashboard Settings
   dashboardVideoUrl: string;
+  
+  // Audio Settings
+  musicYoutubeUrl: string;
   
   // Feature Toggles
   features: FeatureSettings;
