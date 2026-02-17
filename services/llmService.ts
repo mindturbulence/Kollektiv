@@ -7,25 +7,33 @@ import { TARGET_VIDEO_AI_MODELS, TARGET_AUDIO_AI_MODELS } from '../constants/mod
 // --- Model-Specific Syntax (Engine Tuning) ---
 const getModelSyntax = (model: string) => {
     const lower = model.toLowerCase();
-    if (lower.includes('ltx-2')) return { format: "Cinematic Narrative.", rules: "Describe sequence of action with physical verbs. Continuous movement focus. High temporal consistency." };
-    if (lower.includes('flux')) return { format: "Dense Descriptive.", rules: "Natural language paragraph. High visual physics detail. Focus on micro-textures, lighting interaction, and realistic skin/material rendering." };
-    if (lower.includes('midjourney')) return { format: "Stylized Tags.", rules: "Focus on style, medium, and lighting. Do NOT output Midjourney --params (ar, stylize, etc) in the AI text; they are appended programmatically." };
-    if (lower.includes('pony')) return { format: "Structured Tags.", rules: "Start with: score_9, score_8_up, masterpiece, followed by descriptive tags. Source tokens are mandatory." };
-    if (lower.includes('veo')) return { format: "Cinematic Flow.", rules: "Fluid action, light interaction, and atmospheric density. Focus on camera motion verbs." };
-    if (lower.includes('kling')) return { format: "Technical Tags & Narrative.", rules: "Mix natural language with technical lighting and physics tags. High detail on fluid dynamics and material properties." };
-    if (lower.includes('runway')) return { format: "Simplified Prose.", rules: "Direct, high-impact descriptive sentences. Focus on material consistency and global illumination." };
     
-    if (lower.includes('elevenlabs')) return { format: "Scripted Dialogue.", rules: "Include stage directions in [brackets] for emotional delivery." };
-    if (lower.includes('mmaudio')) return { format: "Sonic Textures.", rules: "Describe layers of sound, materials clashing, and reverberation." };
+    // Video Architectures
+    if (lower.includes('ltx-2')) return { format: "Temporal Narrative.", rules: "Describe sequence of action with physical verbs. Focus on physics-based motion and high temporal consistency." };
+    if (lower.includes('veo')) return { format: "Cinematic Flow.", rules: "Describe lighting interactions, atmospheric density, and camera motion verbs. Focus on high-fidelity fluid action." };
+    if (lower.includes('kling')) return { format: "Technical Cinematic Tags.", rules: "Mix natural language with technical lighting and physics descriptors. High detail on fluid dynamics and material properties." };
+    if (lower.includes('runway')) return { format: "High-Impact Prose.", rules: "Direct, descriptive sentences focusing on material consistency and global illumination." };
+    if (lower.includes('luma')) return { format: "Dynamic Keyframes.", rules: "Focus on the transition between the start and end of the motion. Highly descriptive of speed and direction changes." };
 
-    return { format: "Natural Language.", rules: "Cohesive visual description." };
+    // Image Architectures
+    if (lower.includes('flux')) return { format: "Dense Descriptive Paragraph.", rules: "Natural language focusing on micro-textures, lighting interaction, and realistic material rendering. Avoid tag-lists." };
+    if (lower.includes('imagen')) return { format: "Clear Semantic Prose.", rules: "High semantic accuracy. Describe relationships between objects and environmental lighting clearly." };
+    if (lower.includes('midjourney')) return { format: "Stylized Aesthetic Tags.", rules: "Focus on style, medium, and lighting mood. Do NOT output params like --ar; they are handled via modifiers." };
+    if (lower.includes('pony') || lower.includes('illustrious')) return { format: "Weighted Tags.", rules: "Start with quality scores (score_9, etc). Use descriptive tags for subjects and specific stylistic triggers." };
+    
+    // Audio Architectures
+    if (lower.includes('elevenlabs')) return { format: "Dialogue Script.", rules: "Include [emotional cues] or [breath sounds] for natural delivery. Focus on cadence." };
+    if (lower.includes('suno') || lower.includes('udio')) return { format: "Musical Structure.", rules: "Define [Genre], [Instruments], [Mood], and structure (Verse, Chorus, Drop). Use descriptive musical terms." };
+    if (lower.includes('mmaudio')) return { format: "Layered Sonic Textures.", rules: "Describe the layers of sound, material impact, and acoustic environment (reverb, echo)." };
+
+    return { format: "Natural Language.", rules: "Cohesive visual or conceptual description." };
 };
 
-// --- AI Roles ---
+// --- AI Roles (Persona System) ---
 const AI_ROLES = {
     STORYBOARD_TRANSLATOR: (model: string) => {
         const syntax = getModelSyntax(model);
-        return `Role: Professional Storyboard Translator for ${model}.
+        return `Role: Professional Storyboard Director for ${model}.
 Task: Transform a raw scene description into a perfect prompt optimized for ${model}.
 Syntax: ${syntax.format}. Rules: ${syntax.rules}.
 Strategy: Analyze the user's intent, motion, and visual references. Output the translated prompt ONLY. No intros or meta-commentary.`;
@@ -36,17 +44,27 @@ Strategy: Analyze the user's intent, motion, and visual references. Output the t
         const l = length === 'Short' ? '30 words' : length === 'Long' ? '550+ words' : '180 words';
         const isI2V = isVideo && inputType === 'i2v';
 
-        let specificInstruction = isAudio ? 'Acoustic focus.' : isVideo ? (isI2V ? "I2V mode: High energy." : "T2V mode: High energy.") : "Visual focus.";
-        
-        if (isI2V) {
-            specificInstruction = `I2V Protocol: The user is providing an image reference. DO NOT describe visual details (colors, textures, objects) present in the image. Focus EXCLUSIVELY on animating the scene. Describe the motion, pathing, and temporal shifts. STRIP all unnecessary static descriptive adjectives from the base concept and constant modifiers. Output should be purely kinetic and efficient.`;
+        let persona = "Role: Professional Visual Storyteller.";
+        let modeProtocol = "Focus on descriptive textures and atmospheric storytelling.";
+
+        if (isVideo) {
+            persona = "Role: Expert Cinematic Director.";
+            if (isI2V) {
+                modeProtocol = `I2V PROTOCOL (DIRECTING AN IMAGE): The user is providing a reference image. Assume the subject, colors, and static details are already set. DO NOT describe colors or objects in the image. Focus EXCLUSIVELY on directing movement, camera paths, and temporal shifts. Strip all static adjectives. Output must be purely kinetic and efficient.`;
+            } else {
+                modeProtocol = `T2V PROTOCOL (WORLD BUILDING): Build the world from scratch. Focus on composition, blocking, character action, and lighting that establishes the scene from the concept.`;
+            }
+        } else if (isAudio) {
+            persona = "Role: Senior Audio Producer and Sound Engineer.";
+            modeProtocol = "Acoustic focus. Map the frequency, rhythm, and sonic textures. If dialogue, focus on delivery. If music, focus on instrumentation and structure.";
         }
 
-        return `Role: Professional Prompt Architect for ${model}.
-Goal: Generate ${isAudio ? '1 script/formula' : '3 unique visual formulas'}.
+        return `${persona}
+Goal: Generate ${isAudio ? '1 production-ready script/formula' : '3 unique variations'}.
+Target Architecture: ${model}.
 Syntax: ${syntax.format}. Rules: ${syntax.rules}. Target Len: ${l}.
-${specificInstruction}
-Output: ${isAudio ? 'Single script' : '3 distinct lines'}. NO INTROS.`;
+${modeProtocol}
+Output: ${isAudio ? 'Single optimized string' : '3 distinct lines, each on a new line'}. NO INTROS.`;
     },
 
     REFINER: (model: string, isVideo: boolean, isAudio: boolean, hasManualCamera: boolean, inputType?: string) => {
@@ -54,11 +72,24 @@ Output: ${isAudio ? 'Single script' : '3 distinct lines'}. NO INTROS.`;
         const isI2V = isVideo && inputType === 'i2v';
         
         let protocol = "";
-        if (isI2V) {
-            protocol = "I2V Protocol: Focus ONLY on motion, pathing, and temporal action. Strip all visual/static descriptions of the subject as they are in the source image. Keep it extremely simple and token-efficient.";
+        let role = "Expert Prompt Refiner.";
+        
+        if (isVideo) {
+            role = "Expert Cinematic Director.";
+            if (isI2V) {
+                protocol = "I2V PROTOCOL: You are animating a fixed image. Strip all static descriptions of the subject (color, appearance). Focus ONLY on the physics of motion, camera pathing, and scene evolution.";
+            } else {
+                protocol = "T2V PROTOCOL: Direct the scene from text. Establish subject, environment, and motion sequence clearly.";
+            }
+        } else if (isAudio) {
+            role = "Senior Sound Engineer.";
+            protocol = "Focus on acoustics, material sounds, and rhythmic structure.";
         }
 
-        return `Role: Expert Prompt Refiner for ${model}. Rewrite concept into perfect ${syntax.format} formula. Rules: ${syntax.rules}. ${protocol} Output text ONLY.`;
+        return `Role: ${role} Optimized for ${model}.
+Rewrite the user's concept into a perfect ${syntax.format} formula.
+Rules: ${syntax.rules}. ${protocol}
+Output the refined prompt text ONLY.`;
     },
     
     DECONSTRUCTOR: (wildcards: string[]) => {

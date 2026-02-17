@@ -1,3 +1,4 @@
+
 import React, { useState, useCallback, useEffect, useMemo, useRef } from 'react';
 import { useSettings } from '../contexts/SettingsContext';
 import { enhancePromptStream, buildMidjourneyParams, generateWithImagen, generateWithNanoBanana, generateWithVeo, cleanLLMResponse } from '../services/llmService';
@@ -150,7 +151,7 @@ const PromptsPage: React.FC<PromptsPageProps> = ({
     mjSeed: "", mjStop: "", mjRepeat: ""
   });
   
-  // --- Preset Management ---
+  // --- Preset Management State ---
   const [presets, setPresets] = useState<RefinerPreset[]>([]);
   const [selectedPreset, setSelectedPreset] = useState<RefinerPreset | null>(null);
   const [presetSearchText, setPresetSearchText] = useState('');
@@ -385,9 +386,6 @@ const PromptsPage: React.FC<PromptsPageProps> = ({
     setIsSaveSuggestionModalOpen(false);
   };
 
-  /**
-   * Universal clip handler that supports custom labeling for different sources.
-   */
   const handleClipSuggestion = useCallback((suggestionText: string, title?: string, lens: string = 'Refined Formula', source: string = 'Refiner') => {
       onClipIdea({
           id: `clipped-${Date.now()}`, 
@@ -891,15 +889,15 @@ const PromptsPage: React.FC<PromptsPageProps> = ({
       }
   };
 
-  const handleUsePreset = () => {
-      if (selectedPreset) {
-          setModifiers({ ...selectedPreset.modifiers });
-          setTargetAIModel(selectedPreset.targetAIModel);
-          setMediaMode(selectedPreset.mediaMode);
-          setPromptLength(selectedPreset.promptLength);
-          showGlobalFeedback(`Preset "${selectedPreset.name}" applied.`);
+  const handleUsePreset = useCallback((presetToUse: RefinerPreset | null = selectedPreset) => {
+      if (presetToUse) {
+          setModifiers({ ...presetToUse.modifiers });
+          setTargetAIModel(presetToUse.targetAIModel);
+          setMediaMode(presetToUse.mediaMode);
+          setPromptLength(presetToUse.promptLength);
+          showGlobalFeedback(`Preset "${presetToUse.name}" applied.`);
       }
-  };
+  }, [selectedPreset, showGlobalFeedback]);
 
   const handleDeletePresetClick = () => {
       if (selectedPreset) {
@@ -932,6 +930,12 @@ const PromptsPage: React.FC<PromptsPageProps> = ({
   const handleSelectPresetFromDropdown = (preset: RefinerPreset) => {
       setSelectedPreset(preset);
       setPresetSearchText(preset.name);
+      // BUG FIX: Apply immediately on selection
+      handleUsePreset(preset);
+      // Close dropdown by blurring active element
+      if (typeof document !== 'undefined' && document.activeElement instanceof HTMLElement) {
+          document.activeElement.blur();
+      }
   };
 
   return (
@@ -1052,12 +1056,11 @@ const PromptsPage: React.FC<PromptsPageProps> = ({
               </header>
               
               {/* Presets Management UI - Library Filter Look */}
-              <div className="h-14 border-b border-base-300 flex-shrink-0 bg-base-100 flex items-stretch">
-                  <div className="dropdown flex-grow h-full">
-                    <div className="relative h-full border-r border-base-300">
+              <div className="h-14 border-b border-base-300 flex-shrink-0 bg-base-100 flex items-stretch relative z-20">
+                  <div className="dropdown dropdown-bottom flex-grow h-full">
+                    <div className="relative h-full border-r border-base-300" tabIndex={0} role="button">
                         <input 
                           type="text"
-                          tabIndex={0}
                           className="w-full h-full bg-transparent border-none focus:outline-none focus:ring-0 pl-4 pr-8 font-black text-[10px] uppercase tracking-widest placeholder:text-base-content/10"
                           placeholder="SELECT PRESET..."
                           value={presetSearchText}
@@ -1065,7 +1068,6 @@ const PromptsPage: React.FC<PromptsPageProps> = ({
                               const val = (e.currentTarget as any).value;
                               setPresetSearchText(val);
                               if (!val) {
-                                  // Fix: changed setSelectedTemplate to setSelectedPreset
                                   setSelectedPreset(null);
                               } else if (selectedPreset && val !== selectedPreset.name) {
                                   setSelectedPreset(null);
@@ -1081,19 +1083,27 @@ const PromptsPage: React.FC<PromptsPageProps> = ({
                             </button>
                         )}
                     </div>
-                    <ul tabIndex={0} className="dropdown-content z-[30] menu p-1 shadow-2xl bg-base-200 rounded-none w-full mt-2 z-[50] border border-base-300 max-h-60 overflow-y-auto">
-                      {filteredPresets.length > 0 ? (
-                        filteredPresets.map(p => (
-                          <li key={p.name}><a onClick={() => handleSelectPresetFromDropdown(p)} className={`font-bold text-[10px] uppercase ${selectedPreset?.name === p.name ? 'bg-primary/20 text-primary' : ''}`}>{p.name}</a></li>
-                        ))
-                      ) : (
-                          <li className="disabled p-2 text-center text-[10px] font-black uppercase opacity-20">No matching presets</li>
-                      )}
-                    </ul>
+                    {filteredPresets.length > 0 && (
+                        <ul tabIndex={0} className="dropdown-content z-[100] menu p-1 shadow-2xl bg-base-200 rounded-none w-full mt-2 border border-base-300 max-h-60 overflow-y-auto">
+                            {filteredPresets.map(p => (
+                                <li key={p.name}>
+                                    <a 
+                                        onMouseDown={(e) => {
+                                            e.preventDefault();
+                                            handleSelectPresetFromDropdown(p);
+                                        }} 
+                                        className={`font-bold text-[10px] uppercase ${selectedPreset?.name === p.name ? 'bg-primary/20 text-primary' : ''}`}
+                                    >
+                                        {p.name}
+                                    </a>
+                                </li>
+                            ))}
+                        </ul>
+                    )}
                   </div>
                   <button 
                       className="btn btn-ghost h-full rounded-none border-none border-r border-base-300 px-4 text-primary disabled:opacity-20 transition-all hover:bg-base-200" 
-                      onClick={handleUsePreset} 
+                      onClick={() => handleUsePreset()} 
                       disabled={!selectedPreset}
                       title="Apply Preset"
                   >
@@ -1109,7 +1119,7 @@ const PromptsPage: React.FC<PromptsPageProps> = ({
                   </button>
               </div>
 
-              <div className="flex-grow p-4 overflow-y-auto custom-scrollbar">
+              <div className="flex-grow p-4 overflow-y-auto custom-scrollbar relative z-10">
                 {activeConstructionItems.length > 0 ? (
                   <div className="space-y-2">
                     {activeConstructionItems.map((item) => (

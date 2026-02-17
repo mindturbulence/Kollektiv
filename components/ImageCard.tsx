@@ -21,8 +21,9 @@ const Media: React.FC<{
     type: 'image' | 'video';
     title: string;
     viewMode: GalleryViewMode;
+    isHovered: boolean;
     className?: string;
-}> = memo(({ url, type, title, viewMode, className }) => {
+}> = memo(({ url, type, title, viewMode, isHovered, className }) => {
     const [displayUrl, setDisplayUrl] = useState<string | null>(null);
     const [hasError, setHasError] = useState(false);
     const [isInView, setIsInView] = useState(false);
@@ -30,6 +31,7 @@ const Media: React.FC<{
     const [isRevealed, setIsRevealed] = useState(false);
     
     const containerRef = useRef<HTMLDivElement>(null);
+    const videoRef = useRef<HTMLVideoElement>(null);
     const objectUrlRef = useRef<string | null>(null);
     const idleHandleRef = useRef<number | null>(null);
 
@@ -99,6 +101,20 @@ const Media: React.FC<{
         return () => { isActive = false; cleanup(); };
     }, [url, isInView]);
 
+    // Manual video playback control based on hover
+    useEffect(() => {
+        if (type === 'video' && videoRef.current) {
+            if (isHovered) {
+                videoRef.current.play().catch(() => {
+                    // Handle potential play() interruption/rejection (e.g. user hasn't interacted yet)
+                });
+            } else {
+                videoRef.current.pause();
+                videoRef.current.currentTime = 0;
+            }
+        }
+    }, [isHovered, type]);
+
     useEffect(() => {
         if (isLoaded && isInView && !isRevealed) {
             requestAnimationFrame(() => {
@@ -109,11 +125,6 @@ const Media: React.FC<{
         }
     }, [isLoaded, isInView, isRevealed]);
 
-    /**
-     * Cinematic Kinetic Config:
-     * - The wrapper div handles the 3-second zoom.
-     * - The media itself handles the monochrome-to-color transition.
-     */
     const wrapperClasses = `w-full h-full transition-transform duration-[3000ms] ease-[cubic-bezier(0.65,0,0.35,1)] group-hover:scale-110 will-change-transform`;
     const mediaClasses = `w-full h-full object-cover transition-all duration-700 media-monochrome group-hover:filter-none ${className}`;
     
@@ -135,18 +146,18 @@ const Media: React.FC<{
             ) : type === 'video' ? (
                 <div className={wrapperClasses}>
                     <video 
+                        ref={videoRef}
                         src={displayUrl} 
                         className={mediaClasses} 
                         muted 
                         playsInline 
-                        autoPlay
                         loop
                         preload="metadata"
                         onLoadedData={() => setIsLoaded(true)}
                     />
                     {isRevealed && (
                         <div className="absolute inset-0 flex items-center justify-center pointer-events-none z-10">
-                            <div className="bg-black/40 backdrop-blur-sm p-2 rounded-full border border-white/10 shadow-2xl transition-transform group-hover:scale-110">
+                            <div className={`bg-black/40 backdrop-blur-sm p-2 rounded-full border border-white/10 shadow-2xl transition-all duration-500 ${isHovered ? 'scale-0 opacity-0' : 'scale-100 opacity-100'}`}>
                                 <PlayIcon className="w-4 h-4 text-white fill-current" />
                             </div>
                         </div>
@@ -168,6 +179,7 @@ const Media: React.FC<{
 });
 
 const ImageCard: React.FC<ImageCardProps> = memo(({ item, viewMode, onOpenDetailView, onDeleteItem, onTogglePin, isPinned, categoryName, showCategory }) => {
+  const [isHovered, setIsHovered] = useState(false);
   
   const styles = {
     title: viewMode === 'focus' ? 'text-2xl md:text-3xl tracking-tighter' : viewMode === 'compact' ? 'text-[10px]' : 'text-xl tracking-tight',
@@ -181,23 +193,22 @@ const ImageCard: React.FC<ImageCardProps> = memo(({ item, viewMode, onOpenDetail
   return (
     <div 
       onClick={() => onOpenDetailView()}
+      onMouseEnter={() => setIsHovered(true)}
+      onMouseLeave={() => setIsHovered(false)}
       className="relative group bg-base-100 cursor-pointer overflow-hidden select-none transition-all duration-300 border-b border-base-300 last:border-b-0"
     >
-      {/* Media Background Layer */}
       <Media
         url={item.urls[0]}
         type={item.type}
         title={item.title}
         viewMode={viewMode}
+        isHovered={isHovered}
       />
 
-      {/* Cinematic Scrim Overlay - Persistent to ensure text readability, lightens on hover */}
       <div className="absolute inset-0 bg-gradient-to-t from-base-100 via-base-100/30 to-transparent opacity-90 group-hover:opacity-40 transition-opacity duration-1000 z-10 pointer-events-none"></div>
 
-      {/* UI Content Layer */}
       <div className={`absolute inset-0 flex flex-col ${styles.padding} z-30 pointer-events-none`}>
         
-        {/* Header: ID + Line + Pin Icon (Right Aligned, Always Visible) */}
         <div className="flex items-center gap-4 mb-auto opacity-70 group-hover:opacity-100 transition-opacity duration-500">
             <span className={`${styles.label} font-mono font-black text-primary tracking-[0.3em] uppercase whitespace-nowrap drop-shadow-sm`}>
                 ID#{item.id.slice(-4).toUpperCase()}
@@ -210,7 +221,6 @@ const ImageCard: React.FC<ImageCardProps> = memo(({ item, viewMode, onOpenDetail
             )}
         </div>
 
-        {/* Content Block: Smoothly Growing Fade-In Reveal on Hover */}
         <div className={styles.gap}>
             <div className="group-hover:translate-y-0 transition-all duration-1000 ease-[cubic-bezier(0.65,0,0.35,1)] translate-y-2">
                 {(showCategory && categoryName) && (
@@ -234,7 +244,6 @@ const ImageCard: React.FC<ImageCardProps> = memo(({ item, viewMode, onOpenDetail
                 )}
             </div>
 
-            {/* Metrics Footer (Always Visible for Utility) */}
             <div className="flex items-center pt-4 opacity-70 group-hover:opacity-100 transition-opacity duration-500 pointer-events-auto">
                 <span className={`font-black uppercase tracking-[0.3em] bg-primary/10 text-primary border border-primary/20 backdrop-blur-md shadow-lg ${styles.badge}`}>
                     {item.urls.length} {item.type.toUpperCase()}{item.urls.length > 1 ? 'S' : ''}
