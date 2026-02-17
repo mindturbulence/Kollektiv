@@ -18,7 +18,9 @@ const ArtstyleCard: React.FC<ArtstyleCardProps> = ({ item, onUpdateImages, onInj
     <>
       <div className="flex flex-col group bg-base-100 transition-all duration-500 hover:bg-base-200/50 h-full border-b border-base-300 last:border-b-0">
         <figure className="relative w-full aspect-[4/3] bg-base-300 overflow-hidden border-b border-base-300 flex-shrink-0">
-          <ImageSlider imageUrls={item.imageUrls} name={item.name} />
+          <div className="w-full h-full transition-transform duration-[3000ms] ease-[cubic-bezier(0.65,0,0.35,1)] group-hover:scale-110 will-change-transform">
+            <ImageSlider imageUrls={item.imageUrls} name={item.name} />
+          </div>
           <div className="absolute inset-0 bg-primary/5 opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none"></div>
           <button
             onClick={(e) => { e.stopPropagation(); setIsManageModalOpen(true); }}

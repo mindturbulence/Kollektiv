@@ -88,6 +88,9 @@ export interface LLMSettings {
   // Dashboard Settings
   dashboardVideoUrl: string;
   
+  // Audio Settings
+  musicYoutubeUrl: string;
+  
   // Feature Toggles
   features: FeatureSettings;
   
@@ -132,6 +135,7 @@ export interface PromptModifiers {
   cameraProximity?: string;
   cameraSettings?: string;
   cameraEffect?: string;
+  specialtyLens?: string;
   lensType?: string;
   filmType?: string;
   filmStock?: string;

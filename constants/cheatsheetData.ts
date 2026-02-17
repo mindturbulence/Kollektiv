@@ -1,4 +1,3 @@
-
 import type { CheatsheetCategory } from '../types';
 
 export const ART_STYLES_DATA: CheatsheetCategory[] = [
@@ -241,6 +240,24 @@ export const CHEATSHEET_DATA: CheatsheetCategory[] = [
     ]
   },
   {
+    category: 'Video AI: T2V vs I2V Directing',
+    description: "Developing specialized strategies for world-building from scratch versus animating static image references.",
+    items: [
+      { id: 'vidstr-1', name: 'Text-to-Video (T2V) Direction', description: 'Act as a World Architect. You are responsible for subject, lighting, environment, and motion. Describe the scene as it unfolds.', example: 'A wide cinematic shot of an ancient forest where trees slowly begin to glow with bioluminescent sap as night falls.', imageUrls: [] },
+      { id: 'vidstr-2', name: 'Image-to-Video (I2V) Direction', description: 'Act as a Kinetic Director. Assume the subject and colors are fixed by the user image. Focus EXCLUSIVELY on directing how the elements MOVE.', example: 'The camera executes a smooth orbital rotation around the subject. The wind begins to pick up, rustling the fabric of the character\'s coat.', imageUrls: [] },
+      { id: 'vidstr-3', name: 'Motion Pacing', description: 'Specify how speed or direction changes throughout the sequence for temporal realism.', keywords: ['gradual acceleration', 'constant velocity', 'chaotic turbulence', 'smooth deceleration', 'rhythmic pulsing'], imageUrls: [] },
+    ]
+  },
+  {
+    category: 'Neural Audio Production',
+    description: "Synthesizing professional sound engineering and music production techniques for AI models.",
+    items: [
+      { id: 'audio-1', name: 'Dialogue Production (TTS)', description: 'Directing voice delivery. Use descriptive tags for cadence, tone, and emotional subtext.', example: 'ElevenLabs: [Sarcastic and weary tone] "Of course we have more paperwork. Why wouldn\'t we?" [Long exhale].', imageUrls: [] },
+      { id: 'audio-2', name: 'Sound FX Design (MMAudio)', description: 'Building sonic textures. Focus on the materials clashing, reverberation, and spatial depth.', example: 'Heavy footsteps on broken glass in a large empty warehouse with metallic echoes and high-frequency debris hits.', imageUrls: [] },
+      { id: 'audio-3', name: 'Musical Arrangement (Suno)', description: 'Structuring neural music. Define genre, tempo (BPM), instrumentation, and song architecture.', keywords: ['Lofi chill hop', '808 bass', 'analog synthesizers', 'crescendo', 'verse-chorus-drop'], imageUrls: [] },
+    ]
+  },
+  {
     category: 'Platform Guide: LTX-2 (Video AI)',
     description: "Mastering the narrative flow and physical action verbs required for the LTX-2 temporal model.",
     items: [
@@ -255,15 +272,6 @@ export const CHEATSHEET_DATA: CheatsheetCategory[] = [
     items: [
       { id: 'flux2-1', name: 'Natural Language Precision', description: 'FLUX 2 ignores short tags. It requires descriptive sentences that map the Visual Physics of a scene.', example: 'A high-detail portrait of an old woman. The soft morning light highlights the fine pores and deep lines of her face, with motes of dust visible in the atmospheric haze behind her.', imageUrls: [] },
       { id: 'flux2-2', name: 'Texture & Detail Hierarchy', description: 'Structure your prompt: Subject > Action > Environment > Micro-textures > Lighting.', keywords: ['fine pores', 'weathered textures', 'subsurface scattering', 'atmospheric density'], imageUrls: [] },
-    ]
-  },
-  {
-    category: 'Video AI Strategy: T2V vs I2V',
-    description: "Developing specialized strategies for world-building from scratch versus animating static image references.",
-    items: [
-      { id: 'vidstr-1', name: 'Text-to-Video (T2V)', description: 'World-building from scratch. Define the environment, character, and action clearly.', example: 'T2V Prompt: An epic volcano eruption under a purple sky, lava cascading down the slopes into a boiling ocean.', imageUrls: [] },
-      { id: 'vidstr-2', name: 'Image-to-Video (I2V)', description: 'Animating a specific reference. Focus on how the static elements of the image begin to move.', example: 'I2V Prompt: The character in the image begins to smile and turns their head slowly toward the camera.', imageUrls: [] },
-      { id: 'vidstr-3', name: 'Motion Consistency', description: 'Specify how speed or direction changes throughout the shot.', keywords: ['gradual acceleration', 'constant velocity', 'chaotic turbulence', 'smooth panning'], imageUrls: [] },
     ]
   },
   {

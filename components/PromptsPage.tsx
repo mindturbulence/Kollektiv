@@ -1,3 +1,4 @@
+
 import React, { useState, useCallback, useEffect, useMemo, useRef } from 'react';
 import { useSettings } from '../contexts/SettingsContext';
 import { enhancePromptStream, buildMidjourneyParams, generateWithImagen, generateWithNanoBanana, generateWithVeo, cleanLLMResponse } from '../services/llmService';
@@ -20,6 +21,7 @@ import {
     ALL_PROFESSIONAL_CAMERA_MODELS,
     CAMERA_SETTINGS,
     CAMERA_EFFECTS,
+    SPECIALTY_LENS_EFFECTS,
     LENS_TYPES,
     FILM_TYPES,
     ANALOG_FILM_STOCKS,
@@ -141,7 +143,7 @@ const PromptsPage: React.FC<PromptsPageProps> = ({
   const [modifiers, setModifiers] = useState<PromptModifiers>({ 
     aspectRatio: "", videoInputType: "t2v", artStyle: "", artist: "", photographyStyle: "",
     aestheticLook: "", digitalAesthetic: "", cameraType: "", cameraModel: "", cameraAngle: "", cameraProximity: "",
-    cameraSettings: "", cameraEffect: "", lensType: "", filmType: "", filmStock: "",
+    cameraSettings: "", cameraEffect: "", specialtyLens: "", lensType: "", filmType: "", filmStock: "",
     lighting: "", composition: "", motion: "", cameraMovement: "", zImageStyle: "",
     audioType: "", voiceGender: "", voiceTone: "", audioEnvironment: "", audioMood: "", audioDuration: "10",
     mjAspectRatio: "", mjChaos: "0", mjStylize: "100", mjVersion: MIDJOURNEY_VERSIONS[0],
@@ -149,7 +151,7 @@ const PromptsPage: React.FC<PromptsPageProps> = ({
     mjSeed: "", mjStop: "", mjRepeat: ""
   });
   
-  // --- Preset Management ---
+  // --- Preset Management State ---
   const [presets, setPresets] = useState<RefinerPreset[]>([]);
   const [selectedPreset, setSelectedPreset] = useState<RefinerPreset | null>(null);
   const [presetSearchText, setPresetSearchText] = useState('');
@@ -359,7 +361,7 @@ const PromptsPage: React.FC<PromptsPageProps> = ({
     setModifiers({ 
         aspectRatio: "", videoInputType: "t2v", artStyle: "", artist: "", photographyStyle: "",
         aestheticLook: "", digitalAesthetic: "", cameraType: "", cameraModel: "", cameraAngle: "", cameraProximity: "",
-        cameraSettings: "", cameraEffect: "", lensType: "", filmType: "", filmStock: "",
+        cameraSettings: "", cameraEffect: "", specialtyLens: "", lensType: "", filmType: "", filmStock: "",
         lighting: "", composition: "", motion: "", cameraMovement: "", zImageStyle: "",
         audioType: "", voiceGender: "", voiceTone: "", audioEnvironment: "", audioMood: "", audioDuration: "10",
         mjAspectRatio: "", mjChaos: "0", mjStylize: "100", mjVersion: MIDJOURNEY_VERSIONS[0],
@@ -384,9 +386,6 @@ const PromptsPage: React.FC<PromptsPageProps> = ({
     setIsSaveSuggestionModalOpen(false);
   };
 
-  /**
-   * Universal clip handler that supports custom labeling for different sources.
-   */
   const handleClipSuggestion = useCallback((suggestionText: string, title?: string, lens: string = 'Refined Formula', source: string = 'Refiner') => {
       onClipIdea({
           id: `clipped-${Date.now()}`, 
@@ -463,6 +462,7 @@ const PromptsPage: React.FC<PromptsPageProps> = ({
         cameraType: { label: 'Camera Body', tab: 'photography' },
         cameraModel: { label: 'Camera Model', tab: 'photography' },
         lensType: { label: 'Lens Type', tab: 'photography' },
+        specialtyLens: { label: 'Specialty Optics', tab: 'photography' },
         filmStock: { label: 'Film Stock', tab: 'photography' },
         filmType: { label: 'Medium Format', tab: 'photography' },
         cameraAngle: { label: 'Angle', tab: 'photography' },
@@ -635,6 +635,11 @@ const PromptsPage: React.FC<PromptsPageProps> = ({
                         </div>
                     </div>
 
+                    <div className="form-control">
+                        <label className="text-[10px] font-black uppercase text-base-content/40 tracking-widest mb-2 block">Specialty Optics</label>
+                        <AutocompleteSelect value={modifiers.specialtyLens || ''} onChange={(v) => setModifiers({...modifiers, specialtyLens: v})} options={SPECIALTY_LENS_EFFECTS.map(l => ({ label: l.name.toUpperCase(), value: l.name, description: l.description }))} placeholder="Informative Vintage/Unique optics..." />
+                    </div>
+
                     <div className="grid grid-cols-2 gap-4">
                         <div className="form-control">
                             <label className="text-[10px] font-black uppercase text-base-content/40 tracking-widest mb-2 block">Lens Type</label>
@@ -659,13 +664,18 @@ const PromptsPage: React.FC<PromptsPageProps> = ({
 
                     <div className="grid grid-cols-2 gap-4">
                         <div className="form-control">
+                            <label className="text-[10px] font-black uppercase text-base-content/40 tracking-widest mb-2 block">Camera Distortion</label>
+                            <AutocompleteSelect value={modifiers.cameraEffect || ''} onChange={(v) => setModifiers({...modifiers, cameraEffect: v})} options={CAMERA_EFFECTS.map(s => ({ label: s.toUpperCase(), value: s }))} placeholder="Aberration..." />
+                        </div>
+                        <div className="form-control">
                             <label className="text-[10px] font-black uppercase text-base-content/40 tracking-widest mb-2 block">Lighting Rig</label>
                             <AutocompleteSelect value={modifiers.lighting || ''} onChange={(v) => setModifiers({...modifiers, lighting: v})} options={LIGHTING_OPTIONS.map(l => ({ label: l.toUpperCase(), value: l }))} placeholder="Lighting..." />
                         </div>
-                        <div className="form-control">
-                            <label className="text-[10px] font-black uppercase text-base-content/40 tracking-widest mb-2 block">Composition Layout</label>
-                            <AutocompleteSelect value={modifiers.composition || ''} onChange={(v) => setModifiers({...modifiers, composition: v})} options={COMPOSITION_OPTIONS.map(c => ({ label: c.toUpperCase(), value: c }))} placeholder="Layout..." />
-                        </div>
+                    </div>
+
+                    <div className="form-control">
+                        <label className="text-[10px] font-black uppercase text-base-content/40 tracking-widest mb-2 block">Composition Layout</label>
+                        <AutocompleteSelect value={modifiers.composition || ''} onChange={(v) => setModifiers({...modifiers, composition: v})} options={COMPOSITION_OPTIONS.map(c => ({ label: c.toUpperCase(), value: c }))} placeholder="Layout..." />
                     </div>
                 </div>
               );
@@ -879,15 +889,15 @@ const PromptsPage: React.FC<PromptsPageProps> = ({
       }
   };
 
-  const handleUsePreset = () => {
-      if (selectedPreset) {
-          setModifiers({ ...selectedPreset.modifiers });
-          setTargetAIModel(selectedPreset.targetAIModel);
-          setMediaMode(selectedPreset.mediaMode);
-          setPromptLength(selectedPreset.promptLength);
-          showGlobalFeedback(`Preset "${selectedPreset.name}" applied.`);
+  const handleUsePreset = useCallback((presetToUse: RefinerPreset | null = selectedPreset) => {
+      if (presetToUse) {
+          setModifiers({ ...presetToUse.modifiers });
+          setTargetAIModel(presetToUse.targetAIModel);
+          setMediaMode(presetToUse.mediaMode);
+          setPromptLength(presetToUse.promptLength);
+          showGlobalFeedback(`Preset "${presetToUse.name}" applied.`);
       }
-  };
+  }, [selectedPreset, showGlobalFeedback]);
 
   const handleDeletePresetClick = () => {
       if (selectedPreset) {
@@ -920,6 +930,12 @@ const PromptsPage: React.FC<PromptsPageProps> = ({
   const handleSelectPresetFromDropdown = (preset: RefinerPreset) => {
       setSelectedPreset(preset);
       setPresetSearchText(preset.name);
+      // BUG FIX: Apply immediately on selection
+      handleUsePreset(preset);
+      // Close dropdown by blurring active element
+      if (typeof document !== 'undefined' && document.activeElement instanceof HTMLElement) {
+          document.activeElement.blur();
+      }
   };
 
   return (
@@ -1040,12 +1056,11 @@ const PromptsPage: React.FC<PromptsPageProps> = ({
               </header>
               
               {/* Presets Management UI - Library Filter Look */}
-              <div className="h-14 border-b border-base-300 flex-shrink-0 bg-base-100 flex items-stretch">
-                  <div className="dropdown flex-grow h-full">
-                    <div className="relative h-full border-r border-base-300">
+              <div className="h-14 border-b border-base-300 flex-shrink-0 bg-base-100 flex items-stretch relative z-20">
+                  <div className="dropdown dropdown-bottom flex-grow h-full">
+                    <div className="relative h-full border-r border-base-300" tabIndex={0} role="button">
                         <input 
                           type="text"
-                          tabIndex={0}
                           className="w-full h-full bg-transparent border-none focus:outline-none focus:ring-0 pl-4 pr-8 font-black text-[10px] uppercase tracking-widest placeholder:text-base-content/10"
                           placeholder="SELECT PRESET..."
                           value={presetSearchText}
@@ -1068,19 +1083,27 @@ const PromptsPage: React.FC<PromptsPageProps> = ({
                             </button>
                         )}
                     </div>
-                    <ul tabIndex={0} className="dropdown-content z-[30] menu p-1 shadow-2xl bg-base-200 rounded-none w-full mt-2 z-[50] border border-base-300 max-h-60 overflow-y-auto">
-                      {filteredPresets.length > 0 ? (
-                        filteredPresets.map(p => (
-                          <li key={p.name}><a onClick={() => handleSelectPresetFromDropdown(p)} className={`font-bold text-[10px] uppercase ${selectedPreset?.name === p.name ? 'bg-primary/20 text-primary' : ''}`}>{p.name}</a></li>
-                        ))
-                      ) : (
-                          <li className="disabled p-2 text-center text-[10px] font-black uppercase opacity-20">No matching presets</li>
-                      )}
-                    </ul>
+                    {filteredPresets.length > 0 && (
+                        <ul tabIndex={0} className="dropdown-content z-[100] menu p-1 shadow-2xl bg-base-200 rounded-none w-full mt-2 border border-base-300 max-h-60 overflow-y-auto">
+                            {filteredPresets.map(p => (
+                                <li key={p.name}>
+                                    <a 
+                                        onMouseDown={(e) => {
+                                            e.preventDefault();
+                                            handleSelectPresetFromDropdown(p);
+                                        }} 
+                                        className={`font-bold text-[10px] uppercase ${selectedPreset?.name === p.name ? 'bg-primary/20 text-primary' : ''}`}
+                                    >
+                                        {p.name}
+                                    </a>
+                                </li>
+                            ))}
+                        </ul>
+                    )}
                   </div>
                   <button 
                       className="btn btn-ghost h-full rounded-none border-none border-r border-base-300 px-4 text-primary disabled:opacity-20 transition-all hover:bg-base-200" 
-                      onClick={handleUsePreset} 
+                      onClick={() => handleUsePreset()} 
                       disabled={!selectedPreset}
                       title="Apply Preset"
                   >
@@ -1096,7 +1119,7 @@ const PromptsPage: React.FC<PromptsPageProps> = ({
                   </button>
               </div>
 
-              <div className="flex-grow p-4 overflow-y-auto custom-scrollbar">
+              <div className="flex-grow p-4 overflow-y-auto custom-scrollbar relative z-10">
                 {activeConstructionItems.length > 0 ? (
                   <div className="space-y-2">
                     {activeConstructionItems.map((item) => (

@@ -4,6 +4,7 @@ import type { SavedPrompt, PromptCategory } from '../types';
 import useAutosizeTextArea from '../utils/useAutosizeTextArea';
 import { CloseIcon } from './icons';
 import AutocompleteSelect from './AutocompleteSelect';
+import { audioService } from '../services/audioService';
 
 interface PromptEditorModalProps {
   isOpen: boolean;
@@ -26,6 +27,7 @@ const PromptEditorModal: React.FC<PromptEditorModalProps> = ({ isOpen, onClose, 
 
   useEffect(() => {
     if (isOpen) {
+        audioService.playModalOpen();
         if (editingPrompt) {
           setTitle(editingPrompt.title || '');
           setText(editingPrompt.text || '');
@@ -53,6 +55,7 @@ const PromptEditorModal: React.FC<PromptEditorModalProps> = ({ isOpen, onClose, 
         const newTag = tagInput.trim();
         if (newTag && !tags.includes(newTag)) {
             setTags([...tags, newTag]);
+            audioService.playClick();
         }
         setTagInput('');
     }
@@ -60,6 +63,7 @@ const PromptEditorModal: React.FC<PromptEditorModalProps> = ({ isOpen, onClose, 
 
   const handleRemoveTag = (tagToRemove: string) => {
     setTags(tags.filter(tag => tag !== tagToRemove));
+    audioService.playClick();
   };
 
 
@@ -75,6 +79,7 @@ const PromptEditorModal: React.FC<PromptEditorModalProps> = ({ isOpen, onClose, 
             basePrompt: editingPrompt?.basePrompt,
             targetAI: editingPrompt?.targetAI
           });
+          audioService.playClick();
           onClose();
       } catch(e) {
           console.error("Failed to save prompt", e);
@@ -84,16 +89,21 @@ const PromptEditorModal: React.FC<PromptEditorModalProps> = ({ isOpen, onClose, 
     }
   };
 
+  const handleClose = () => {
+    audioService.playModalClose();
+    onClose();
+  };
+
   if (!isOpen) return null;
 
   const modalContent = (
-    <div className="fixed inset-0 bg-black/80 z-[1000] flex items-center justify-center p-4 animate-fade-in" onClick={onClose}>
+    <div className="fixed inset-0 bg-black/80 z-[1000] flex items-center justify-center p-4 animate-fade-in" onClick={handleClose}>
       <div 
         className="bg-base-100 rounded-none border border-base-300 shadow-2xl w-full max-w-3xl mx-auto flex flex-col max-h-[90vh] overflow-hidden" 
         onClick={(e) => e.stopPropagation()}
       >
         <header className="p-10 border-b border-base-300 bg-base-200/20 relative">
-            <button onClick={onClose} className="absolute top-6 right-6 btn btn-ghost btn-sm btn-square opacity-40 hover:opacity-100">
+            <button onClick={handleClose} className="absolute top-6 right-6 btn btn-ghost btn-sm btn-square opacity-40 hover:opacity-100">
                 <CloseIcon className="w-6 h-6" />
             </button>
             <h3 className="text-3xl font-black tracking-tighter text-base-content leading-none">
@@ -159,7 +169,7 @@ const PromptEditorModal: React.FC<PromptEditorModalProps> = ({ isOpen, onClose, 
         </div>
         
         <footer className="border-t border-base-300 flex bg-base-200/5 p-0 overflow-hidden flex-shrink-0">
-          <button onClick={onClose} className="btn flex-1 rounded-none uppercase font-black text-[10px] tracking-widest border-r border-base-300 transition-colors">Cancel</button>
+          <button onClick={handleClose} className="btn flex-1 rounded-none uppercase font-black text-[10px] tracking-widest border-r border-base-300 transition-colors">Cancel</button>
           <button onClick={handleSave} disabled={!text.trim() || isSaving} className="btn btn-primary flex-1 rounded-none uppercase font-black text-[10px] tracking-widest shadow-lg transition-colors">
             {isSaving ? 'Saving...' : 'Save Changes'}
           </button>

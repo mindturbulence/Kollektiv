@@ -1,10 +1,13 @@
+
 import React, { useState, useRef, useEffect, memo } from 'react';
 import type { GalleryItem } from '../types';
-import { ImageBrokenIcon, ThumbTackIcon, EllipsisVerticalIcon, EditIcon, DeleteIcon, PlayIcon } from './icons';
+import { ImageBrokenIcon, ThumbTackIcon, PlayIcon } from './icons';
 import { fileSystemManager } from '../utils/fileUtils';
+import type { GalleryViewMode } from './ImageGallery';
 
 interface ImageCardProps {
   item: GalleryItem;
+  viewMode: GalleryViewMode;
   onOpenDetailView: () => void;
   onDeleteItem: (item: GalleryItem) => void;
   onTogglePin: (id: string) => void;
@@ -17,8 +20,10 @@ const Media: React.FC<{
     url: string | null;
     type: 'image' | 'video';
     title: string;
+    viewMode: GalleryViewMode;
+    isHovered: boolean;
     className?: string;
-}> = memo(({ url, type, title, className }) => {
+}> = memo(({ url, type, title, viewMode, isHovered, className }) => {
     const [displayUrl, setDisplayUrl] = useState<string | null>(null);
     const [hasError, setHasError] = useState(false);
     const [isInView, setIsInView] = useState(false);
@@ -26,6 +31,7 @@ const Media: React.FC<{
     const [isRevealed, setIsRevealed] = useState(false);
     
     const containerRef = useRef<HTMLDivElement>(null);
+    const videoRef = useRef<HTMLVideoElement>(null);
     const objectUrlRef = useRef<string | null>(null);
     const idleHandleRef = useRef<number | null>(null);
 
@@ -41,7 +47,6 @@ const Media: React.FC<{
         }
     };
 
-    // Intersection Observer to detect scroll-into-view
     useEffect(() => {
         const observer = new IntersectionObserver(([entry]) => {
             if (entry.isIntersecting) {
@@ -59,7 +64,6 @@ const Media: React.FC<{
         };
     }, []);
 
-    // Load media logic
     useEffect(() => {
         if (!isInView || !url) return;
         let isActive = true;
@@ -97,10 +101,22 @@ const Media: React.FC<{
         return () => { isActive = false; cleanup(); };
     }, [url, isInView]);
 
-    // Trigger reveal only when BOTH loaded and in view
+    // Manual video playback control based on hover
+    useEffect(() => {
+        if (type === 'video' && videoRef.current) {
+            if (isHovered) {
+                videoRef.current.play().catch(() => {
+                    // Handle potential play() interruption/rejection (e.g. user hasn't interacted yet)
+                });
+            } else {
+                videoRef.current.pause();
+                videoRef.current.currentTime = 0;
+            }
+        }
+    }, [isHovered, type]);
+
     useEffect(() => {
         if (isLoaded && isInView && !isRevealed) {
-            // Handshake to ensure the initial hidden state is painted
             requestAnimationFrame(() => {
                 requestAnimationFrame(() => {
                     setIsRevealed(true);
@@ -109,13 +125,16 @@ const Media: React.FC<{
         }
     }, [isLoaded, isInView, isRevealed]);
 
-    // Apply the fade-in-up classes (reveal-artifact is defined in index.css)
-    const mediaClasses = `w-full h-auto block reveal-artifact ${isRevealed ? 'reveal-artifact-active' : ''} media-monochrome group-hover:filter-none ${className}`;
+    const wrapperClasses = `w-full h-full transition-transform duration-[3000ms] ease-[cubic-bezier(0.65,0,0.35,1)] group-hover:scale-110 will-change-transform`;
+    const mediaClasses = `w-full h-full object-cover transition-all duration-700 media-monochrome group-hover:filter-none ${className}`;
+    
+    const minH = viewMode === 'compact' ? '80px' : viewMode === 'focus' ? '300px' : '160px';
 
     return (
         <div 
             ref={containerRef} 
-            className="relative w-full bg-base-300 overflow-hidden flex items-center justify-center min-h-[160px]"
+            className="relative w-full bg-base-300 overflow-hidden flex items-center justify-center"
+            style={{ minHeight: minH }}
         >
             {!displayUrl ? (
                  <div className="w-full h-48 bg-base-200/50 animate-pulse"></div>
@@ -125,25 +144,27 @@ const Media: React.FC<{
                     <p className="text-warning/30 text-[10px] font-black uppercase mt-2">Buffer Corrupt</p>
                 </div>
             ) : type === 'video' ? (
-                <div className="w-full h-auto relative overflow-hidden">
+                <div className={wrapperClasses}>
                     <video 
+                        ref={videoRef}
                         src={displayUrl} 
                         className={mediaClasses} 
                         muted 
                         playsInline 
+                        loop
                         preload="metadata"
                         onLoadedData={() => setIsLoaded(true)}
                     />
                     {isRevealed && (
-                        <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
-                            <div className="bg-black/40 backdrop-blur-sm p-3 rounded-full border border-white/10 shadow-2xl transition-transform group-hover:scale-110">
-                                <PlayIcon className="w-5 h-5 text-white fill-current" />
+                        <div className="absolute inset-0 flex items-center justify-center pointer-events-none z-10">
+                            <div className={`bg-black/40 backdrop-blur-sm p-2 rounded-full border border-white/10 shadow-2xl transition-all duration-500 ${isHovered ? 'scale-0 opacity-0' : 'scale-100 opacity-100'}`}>
+                                <PlayIcon className="w-4 h-4 text-white fill-current" />
                             </div>
                         </div>
                     )}
                 </div>
             ) : (
-                <div className="w-full h-auto relative overflow-hidden">
+                <div className={wrapperClasses}>
                     <img 
                         src={displayUrl} 
                         alt={title} 
@@ -157,80 +178,82 @@ const Media: React.FC<{
     );
 });
 
-const ImageCard: React.FC<ImageCardProps> = memo(({ item, onOpenDetailView, onDeleteItem, onTogglePin, isPinned, categoryName, showCategory }) => {
-  const [isMenuOpen, setIsMenuOpen] = useState(false);
-  const menuRef = useRef<HTMLDivElement>(null);
-
-  useEffect(() => {
-    const handleClickOutside = (event: MouseEvent) => {
-      if (menuRef.current && !(menuRef.current as any).contains(event.target as any)) {
-        setIsMenuOpen(false);
-      }
-    };
-    if (typeof (window as any).document !== 'undefined') {
-        (window as any).document.addEventListener('mousedown', handleClickOutside);
-        return () => (window as any).document.removeEventListener('mousedown', handleClickOutside);
-    }
-  }, []);
-
-  const fullDate = new Date(item.createdAt).toLocaleDateString('en-US', { 
-    year: 'numeric', 
-    month: 'short', 
-    day: 'numeric' 
-  });
+const ImageCard: React.FC<ImageCardProps> = memo(({ item, viewMode, onOpenDetailView, onDeleteItem, onTogglePin, isPinned, categoryName, showCategory }) => {
+  const [isHovered, setIsHovered] = useState(false);
+  
+  const styles = {
+    title: viewMode === 'focus' ? 'text-2xl md:text-3xl tracking-tighter' : viewMode === 'compact' ? 'text-[10px]' : 'text-xl tracking-tight',
+    label: viewMode === 'focus' ? 'text-[9px]' : viewMode === 'compact' ? 'text-[7px]' : 'text-[8px]',
+    padding: viewMode === 'focus' ? 'p-8 lg:p-10' : viewMode === 'compact' ? 'p-3' : 'p-6',
+    badge: viewMode === 'focus' ? 'px-3 py-1.5 text-[9px]' : 'px-2 py-1 text-[8px]',
+    iconSize: viewMode === 'focus' ? 'w-5 h-5' : 'w-3.5 h-3.5',
+    gap: viewMode === 'focus' ? 'space-y-4' : 'space-y-2'
+  };
 
   return (
     <div 
       onClick={() => onOpenDetailView()}
-      className={`relative group bg-base-100 transition-all duration-300 ease-in-out cursor-pointer border-b border-base-300 ${isMenuOpen ? 'z-50 overflow-visible' : 'overflow-hidden'}`}
+      onMouseEnter={() => setIsHovered(true)}
+      onMouseLeave={() => setIsHovered(false)}
+      className="relative group bg-base-100 cursor-pointer overflow-hidden select-none transition-all duration-300 border-b border-base-300 last:border-b-0"
     >
-      <div className="absolute top-3 left-3 z-20 flex flex-col gap-1.5 pointer-events-none">
-          {isPinned && <ThumbTackIcon className="w-4 h-4 drop-shadow-lg text-primary" />}
-          {item.isNsfw && <div className="badge badge-warning badge-xs rounded-none font-black text-[8px] uppercase">Restricted</div>}
-      </div>
-
-      <div className="absolute top-2 right-2 z-30" ref={menuRef}>
-        <button
-          onClick={(e: React.MouseEvent) => { e.stopPropagation(); setIsMenuOpen(!isMenuOpen); }}
-          className={`btn btn-xs btn-square btn-ghost text-white hover:bg-black/40 transition-all opacity-0 group-hover:opacity-100 focus:opacity-100 ${isMenuOpen ? 'opacity-100 bg-black/40' : ''}`}
-        >
-          <EllipsisVerticalIcon className="w-5 h-5" />
-        </button>
-        {isMenuOpen && (
-          <div
-            onClick={(e: React.MouseEvent) => e.stopPropagation()}
-            className="absolute right-0 mt-2 w-44 bg-base-200/95 backdrop-blur-md rounded-none shadow-2xl py-1 z-40 animate-fade-in border border-base-300"
-          >
-            <button onClick={(e: React.MouseEvent) => { e.stopPropagation(); onOpenDetailView(); setIsMenuOpen(false); }} className="w-full text-left flex items-center px-4 py-2 text-[10px] font-black uppercase tracking-widest text-base-content hover:bg-base-300">
-              <EditIcon className="w-3.5 h-3.5 mr-3" /> Inspect Artifact
-            </button>
-            <button onClick={(e: React.MouseEvent) => { e.stopPropagation(); onTogglePin(item.id); setIsMenuOpen(false); }} className="w-full text-left flex items-center px-4 py-2 text-[10px] font-black uppercase tracking-widest text-base-content hover:bg-base-300">
-              <ThumbTackIcon className="w-3.5 h-3.5 mr-3" /> {isPinned ? 'Unpin' : 'Pin'}
-            </button>
-            <div className="my-1 h-px bg-base-300"></div>
-            <button onClick={(e: React.MouseEvent) => { e.stopPropagation(); onDeleteItem(item); setIsMenuOpen(false); }} className="w-full text-left flex items-center px-4 py-2 text-[10px] font-black uppercase tracking-widest text-error hover:bg-base-300">
-              <DeleteIcon className="w-3.5 h-3.5 mr-3" /> Purge
-            </button>
-          </div>
-        )}
-      </div>
-
       <Media
         url={item.urls[0]}
         type={item.type}
         title={item.title}
+        viewMode={viewMode}
+        isHovered={isHovered}
       />
 
-      <div className="absolute bottom-0 left-0 right-0 p-6 z-20 opacity-0 group-hover:opacity-100 transform translate-y-2 group-hover:translate-y-0 transition-all duration-500 ease-out pointer-events-none bg-gradient-to-t from-black/95 via-black/40 to-transparent">
-        {showCategory && categoryName && (
-            <p className="text-primary text-[9px] font-black uppercase tracking-[0.2em] mb-1 truncate opacity-90">
-                {categoryName}
-            </p>
-        )}
-        <p className="text-white text-[16px] font-black uppercase tracking-widest truncate leading-tight mb-1">
-            {item.title}
-        </p>
-        <p className="text-[10px] font-mono font-bold text-white/30 uppercase mt-2 pt-2 border-t border-white/5">{fullDate}</p>
+      <div className="absolute inset-0 bg-gradient-to-t from-base-100 via-base-100/30 to-transparent opacity-90 group-hover:opacity-40 transition-opacity duration-1000 z-10 pointer-events-none"></div>
+
+      <div className={`absolute inset-0 flex flex-col ${styles.padding} z-30 pointer-events-none`}>
+        
+        <div className="flex items-center gap-4 mb-auto opacity-70 group-hover:opacity-100 transition-opacity duration-500">
+            <span className={`${styles.label} font-mono font-black text-primary tracking-[0.3em] uppercase whitespace-nowrap drop-shadow-sm`}>
+                ID#{item.id.slice(-4).toUpperCase()}
+            </span>
+            <div className="flex-grow h-px bg-primary/30"></div>
+            {isPinned && (
+                <div className="text-primary drop-shadow-md flex-shrink-0">
+                    <ThumbTackIcon className={styles.iconSize} />
+                </div>
+            )}
+        </div>
+
+        <div className={styles.gap}>
+            <div className="group-hover:translate-y-0 transition-all duration-1000 ease-[cubic-bezier(0.65,0,0.35,1)] translate-y-2">
+                {(showCategory && categoryName) && (
+                    <span className={`${styles.label} font-black uppercase tracking-[0.3em] text-primary/60 block mb-1 opacity-0 group-hover:opacity-100 transition-opacity duration-700`}>
+                        {categoryName}
+                    </span>
+                )}
+                
+                <h3 className={`${styles.title} font-black text-white uppercase leading-[1] line-clamp-2 transition-colors duration-700 group-hover:text-primary opacity-0 group-hover:opacity-100 drop-shadow-md`}>
+                    {item.title}
+                </h3>
+
+                {viewMode !== 'compact' && (
+                    <div className="grid transition-[grid-template-rows] duration-1000 ease-[cubic-bezier(0.65,0,0.35,1)] grid-rows-[0fr] group-hover:grid-rows-[1fr]">
+                        <div className="overflow-hidden">
+                            <p className="text-[10px] font-bold uppercase tracking-[0.25em] text-white/50 leading-relaxed pt-4 opacity-0 group-hover:opacity-100 transition-opacity duration-1000">
+                                {item.notes ? `"${item.notes}"` : "NO NOTES ARCHIVED"}
+                            </p>
+                        </div>
+                    </div>
+                )}
+            </div>
+
+            <div className="flex items-center pt-4 opacity-70 group-hover:opacity-100 transition-opacity duration-500 pointer-events-auto">
+                <span className={`font-black uppercase tracking-[0.3em] bg-primary/10 text-primary border border-primary/20 backdrop-blur-md shadow-lg ${styles.badge}`}>
+                    {item.urls.length} {item.type.toUpperCase()}{item.urls.length > 1 ? 'S' : ''}
+                </span>
+                
+                {item.isNsfw && (
+                    <div className="ml-3 badge badge-warning badge-xs rounded-none font-black text-[7px] uppercase h-4 px-2 border-none">Restricted</div>
+                )}
+            </div>
+        </div>
       </div>
     </div>
   );

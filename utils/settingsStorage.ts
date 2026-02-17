@@ -27,6 +27,9 @@ export const defaultLLMSettings: LLMSettings = {
   // Dashboard Settings
   dashboardVideoUrl: 'https://videos.pexels.com/video-files/3129671/3129671-uhd_3840_2160_30fps.mp4',
 
+  // Audio Settings
+  musicYoutubeUrl: 'https://www.youtube.com/watch?v=jY3A06qWwfw',
+
   // Feature Toggles
   features: {
     isPromptLibraryEnabled: true,

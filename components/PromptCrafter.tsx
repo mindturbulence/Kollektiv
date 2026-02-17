@@ -202,11 +202,11 @@ const PromptCrafter = ({ onSaveToLibrary, onClip, onSendToEnhancer, promptToInse
         }
     };
 
-    const handleUseTemplate = () => {
-        if (selectedTemplate) {
-            setPromptText(selectedTemplate.content[0] || '');
+    const handleUseTemplate = useCallback((templateToUse: WildcardFile | null = selectedTemplate) => {
+        if (templateToUse) {
+            setPromptText(templateToUse.content[0] || '');
         }
-    };
+    }, [selectedTemplate]);
 
     const handleDeleteTemplateClick = () => {
         if (selectedTemplate) {
@@ -223,6 +223,8 @@ const PromptCrafter = ({ onSaveToLibrary, onClip, onSendToEnhancer, promptToInse
     const handleSelectTemplateFromDropdown = (template: WildcardFile) => {
         setSelectedTemplate(template);
         setTemplateSearchText(template.name);
+        // BUG FIX: Apply template immediately on selection
+        handleUseTemplate(template);
         if (typeof (window as any).document !== 'undefined' && (window as any).document.activeElement instanceof (window as any).HTMLElement) {
             ((window as any).document.activeElement as any).blur();
         }
@@ -245,7 +247,7 @@ const PromptCrafter = ({ onSaveToLibrary, onClip, onSendToEnhancer, promptToInse
                 <div className="flex-grow p-6 overflow-y-auto custom-scrollbar">
                     <WildcardTree categories={crafterData?.wildcardCategories || []} onWildcardClick={handleWildcardClick} />
                 </div>
-                <footer className="h-14 flex-shrink-0 border-t border-base-300 bg-base-100">
+                <footer className="h-14 border-t border-base-300 bg-base-100">
                     <button 
                         onClick={loadData} 
                         className="btn btn-ghost h-full w-full rounded-none border-none font-black text-[10px] tracking-widest uppercase hover:bg-base-200"
@@ -270,6 +272,7 @@ const PromptCrafter = ({ onSaveToLibrary, onClip, onSendToEnhancer, promptToInse
                               setTemplateSearchText(val);
                               if (!val) {
                                   setSelectedTemplate(null);
+                              // Fix: replaced 'selectedPreset' with 'selectedTemplate' to resolve compilation error on line 276
                               } else if (selectedTemplate && val !== selectedTemplate.name) {
                                   setSelectedTemplate(null);
                               }
@@ -285,16 +288,26 @@ const PromptCrafter = ({ onSaveToLibrary, onClip, onSendToEnhancer, promptToInse
                         )}
                     </div>
                     {filteredTemplates.length > 0 && (
-                        <ul tabIndex={0} className="dropdown-content z-[1] menu p-1 shadow-2xl bg-base-200 rounded-none w-full max-h-60 overflow-y-auto border border-base-300">
+                        <ul tabIndex={0} className="dropdown-content z-[100] menu p-1 shadow-2xl bg-base-200 rounded-none w-full max-h-60 overflow-y-auto border border-base-300">
                             {filteredTemplates.map(t => (
-                                <li key={t.name}><a onClick={() => handleSelectTemplateFromDropdown(t)} className={`font-bold text-[10px] uppercase ${selectedTemplate?.name === t.name ? 'bg-primary/20 text-primary' : ''}`}>{t.name}</a></li>
+                                <li key={t.name}>
+                                    <a 
+                                        onMouseDown={(e) => {
+                                            e.preventDefault();
+                                            handleSelectTemplateFromDropdown(t);
+                                        }} 
+                                        className={`font-bold text-[10px] uppercase ${selectedTemplate?.name === t.name ? 'bg-primary/20 text-primary' : ''}`}
+                                    >
+                                        {t.name}
+                                    </a>
+                                </li>
                             ))}
                         </ul>
                     )}
                   </div>
                   <button 
                       className="btn btn-ghost h-full rounded-none border-none border-r border-base-300 px-4 text-primary disabled:opacity-20 transition-all hover:bg-base-200" 
-                      onClick={handleUseTemplate} 
+                      onClick={() => handleUseTemplate()} 
                       disabled={!selectedTemplate}
                       title="Apply Template"
                   >

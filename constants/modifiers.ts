@@ -248,6 +248,25 @@ export const CAMERA_EFFECTS = [
     'Zoom Burst Blur'
 ];
 
+export const SPECIALTY_LENS_EFFECTS: DescriptiveOption[] = [
+    { name: 'Helios 44-2 Swirly Bokeh', description: 'Vintage Soviet lens known for a distinct circular "swirling" background blur.' },
+    { name: 'Petzval Spiral Bokeh', description: 'Classical 19th-century look with sharp centers and extreme spiral bokeh.' },
+    { name: 'Meyer Optik Trioplan Soap Bubble Bokeh', description: 'Famous for "soap bubble" bokeh, where highlights have sharp, thin edges.' },
+    { name: 'Anamorphic Oval Bokeh & Blue Streak', description: 'Cinematic widescreen look with oval bokeh and horizontal blue light flares.' },
+    { name: 'Leica Noctilux Soft Focus Glow', description: 'Creamy, dreamlike "glow" with extremely shallow depth of field.' },
+    { name: 'Canon 50mm f/0.95 Dream Lens Bloom', description: 'The "Dream Lens" known for massive light bloom and ethereal soft focus.' },
+    { name: 'Minolta STF Smooth Trans Focus', description: 'Smooth Trans Focus for perfectly creamy, distraction-free backgrounds.' },
+    { name: 'Lensbaby Sweet Spot Selective Blur', description: 'Selectively sharp center with dramatic, smeared blur towards edges.' },
+    { name: 'Industar-61 Star-shaped Bokeh', description: 'Soviet macro lens known for producing unique star-shaped bokeh highlights.' },
+    { name: 'Zenitar 50mm f/1.7 Gritty Sharpness', description: 'Gritty, vintage sharpness with a specific micro-contrast character.' },
+    { name: 'Jupiter-9 Silky Portrait Rendering', description: 'Legendary portrait lens with a silky, painting-like rendering of skin.' },
+    { name: 'Takumar Flare & Warmth', description: 'Vintage warmth and beautiful orange/gold multi-layered lens flares.' },
+    { name: 'Cine-Nikkor Retro Vignetting', description: 'Retro cinema lens look with heavy vignetting and soft edge falloff.' },
+    { name: 'Wollensak Raptar Soft Rendering', description: 'Mid-century soft-rendering lens used for classic glamor portraits.' },
+    { name: 'Aerochrome Lens Filter Aesthetic', description: 'Mimics infrared film, turning greens into vibrant pinks and reds.' },
+    { name: 'Infrared Wood Effect Optics', description: 'Captures heat signatures, making foliage appear snowy white and skies black.' }
+];
+
 export const FILM_TYPES = [
     'Black and White',
     'Monochromatic',

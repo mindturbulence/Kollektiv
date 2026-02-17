@@ -23,7 +23,7 @@ import {
 import { resetAllSettings, defaultLLMSettings } from '../utils/settingsStorage';
 import { AVAILABLE_LLM_MODELS, DAISYUI_LIGHT_THEMES, DAISYUI_DARK_THEMES } from '../constants';
 import ConfirmationModal from './ConfirmationModal';
-import { Cog6ToothIcon, CpuChipIcon, AppIcon, PromptIcon, PhotoIcon, FolderClosedIcon, PaintBrushIcon, DeleteIcon, CheckIcon, EditIcon, AdjustmentsVerticalIcon, DownloadIcon, LinkIcon, PlayIcon, RefreshIcon, InstagramIcon, InformationCircleIcon, UploadIcon } from './icons';
+import { Cog6ToothIcon, CpuChipIcon, AppIcon, PromptIcon, PhotoIcon, FolderClosedIcon, PaintBrushIcon, DeleteIcon, CheckIcon, EditIcon, AdjustmentsVerticalIcon, DownloadIcon, LinkIcon, PlayIcon, RefreshIcon, InstagramIcon, InformationCircleIcon, UploadIcon, WaveSineIcon } from './icons';
 import FeedbackModal from './FeedbackModal';
 import { PromptTxtImportModal } from './PromptTxtImportModal';
 import LoadingSpinner from './LoadingSpinner';
@@ -648,6 +648,24 @@ export const SetupPage: React.FC<SetupPageProps> = ({
                         </button>
                     </div>
                 </SettingRow>
+                <SettingRow label="Atmospheric Music" desc="YouTube URL for the background streaming module.">
+                    <div className="join w-full md:w-96">
+                        <input 
+                            type="text" 
+                            value={settings.musicYoutubeUrl} 
+                            onChange={(e) => handleSettingsChange('musicYoutubeUrl', e.target.value)} 
+                            className="input input-bordered input-sm rounded-none join-item w-full font-mono text-xs" 
+                            placeholder="https://www.youtube.com/watch?v=..."
+                        />
+                        <button 
+                            onClick={() => handleSettingsChange('musicYoutubeUrl', defaultLLMSettings.musicYoutubeUrl)}
+                            className="btn btn-sm btn-ghost border border-base-300 join-item text-[10px] font-black"
+                            title="Reset to Default"
+                        >
+                            <RefreshIcon className="w-3.5 h-3.5" />
+                        </button>
+                    </div>
+                </SettingRow>
                 <SettingRow label="Interface Scale" desc="Global font sizing for the dashboard and workspaces.">
                      <div className="flex items-center gap-4 w-48">
                         <input type="range" min={10} max={18} value={settings.fontSize} onChange={(e) => handleSettingsChange('fontSize', Number((e.currentTarget as any).value))} className="range range-xs range-primary" />
@@ -937,7 +955,10 @@ export const SetupPage: React.FC<SetupPageProps> = ({
                 </div>
             )}
             <div className="flex-grow overflow-hidden bg-base-100">{renderActiveTabContent()}</div>
-            <footer className="border-t border-base-300 flex flex-col bg-base-200/5 p-0 overflow-hidden flex-shrink-0"><button onClick={handleCancel} className="btn flex-1 rounded-none uppercase font-black text-[10px] tracking-widest hover:bg-base-300 border-r border-base-300">Abort</button><button onClick={saveSettings} className="btn btn-primary flex-1 rounded-none uppercase font-black text-[10px] tracking-widest shadow-lg">Confirm</button></footer>
+            <footer className="border-t border-base-300 flex flex-row bg-base-200/5 p-0 overflow-hidden flex-shrink-0">
+                <button onClick={handleCancel} className="btn flex-1 rounded-none uppercase font-black text-[10px] tracking-widest hover:bg-base-300 border-r border-base-300">Abort</button>
+                <button onClick={saveSettings} className="btn btn-primary flex-1 rounded-none uppercase font-black text-[10px] tracking-widest shadow-lg">Confirm</button>
+            </footer>
         </main>
       </section>
       {modalFeedback && <FeedbackModal isOpen={!!modalFeedback} onClose={() => setModalFeedback(null)} message={modalFeedback.message} type={modalFeedback.type} />}
