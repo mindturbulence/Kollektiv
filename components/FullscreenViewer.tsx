@@ -14,7 +14,7 @@ interface FullscreenViewerProps {
     onNavigate?: (newIndex: number) => void;
 }
 
-const FullscreenViewer: React.FC<FullscreenViewerProps> = ({ items, currentIndex, initialImageIndex = 0, onClose, onNavigate }) => {
+const FullscreenViewer: React.FC<FullscreenViewerProps> = ({ items, currentIndex, initialImageIndex = 0, onClose }) => {
     const itemGroup = useMemo(() => items[currentIndex], [items, currentIndex]);
     
     const [currentImageIndex, setCurrentImageIndex] = useState(initialImageIndex);

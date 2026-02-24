@@ -1,7 +1,7 @@
-import { GoogleGenAI, GenerateContentResponse, Type } from "@google/genai";
-import type { EnhancementResult, LLMSettings, PromptModifiers, PromptAnatomy, CheatsheetCategory } from '../types';
-import { enhancePromptGemini, analyzePaletteMood as analyzePaletteMoodGemini, generatePromptFormulaGemini, refineSinglePromptGemini, abstractImageGemini, generateColorNameGemini, dissectPromptGemini, generateFocusedVariationsGemini, reconstructPromptGemini, reconstructFromIntentGemini, replaceComponentInPromptGemini, detectSalientRegionGemini, generateArtistDescriptionGemini, reconcileDescriptionsGemini, enhancePromptGeminiStream, refineSinglePromptGeminiStream } from './geminiService';
-import { enhancePromptOllama, analyzePaletteMoodOllama, generatePromptFormulaOllama, refineSinglePromptOllama, abstractImageOllama, generateColorNameOllama, dissectPromptOllama, generateFocusedVariationsOllama, reconstructPromptOllama, replaceComponentInPromptOllama, reconcileDescriptionsOllama, reconstructFromIntentOllama, generateArtistDescriptionOllama, enhancePromptOllamaStream, refineSinglePromptOllamaStream } from './ollamaService';
+
+import type { EnhancementResult, LLMSettings, PromptModifiers } from '../types';
+import { analyzePaletteMood as analyzePaletteMoodGemini, generatePromptFormulaGemini, refineSinglePromptGemini, abstractImageGemini, generateColorNameGemini, dissectPromptGemini, generateFocusedVariationsGemini, reconstructPromptGemini, reconstructFromIntentGemini, replaceComponentInPromptGemini, generateArtistDescriptionGemini, reconcileDescriptionsGemini, enhancePromptGeminiStream, refineSinglePromptGeminiStream } from './geminiService';
+import { analyzePaletteMoodOllama, generatePromptFormulaOllama, refineSinglePromptOllama, abstractImageOllama, generateColorNameOllama, dissectPromptOllama, generateFocusedVariationsOllama, reconstructPromptOllama, replaceComponentInPromptOllama, reconcileDescriptionsOllama, reconstructFromIntentOllama, generateArtistDescriptionOllama, enhancePromptOllamaStream, refineSinglePromptOllamaStream } from './ollamaService';
 import { TARGET_VIDEO_AI_MODELS, TARGET_AUDIO_AI_MODELS } from '../constants/models';
 
 // --- Model-Specific Syntax (Engine Tuning) ---
@@ -31,15 +31,7 @@ const getModelSyntax = (model: string) => {
 
 // --- AI Roles (Persona System) ---
 const AI_ROLES = {
-    STORYBOARD_TRANSLATOR: (model: string) => {
-        const syntax = getModelSyntax(model);
-        return `Role: Professional Storyboard Director for ${model}.
-Task: Transform a raw scene description into a perfect prompt optimized for ${model}.
-Syntax: ${syntax.format}. Rules: ${syntax.rules}.
-Strategy: Analyze the user's intent, motion, and visual references. Output the translated prompt ONLY. No intros or meta-commentary.`;
-    },
-
-    ENHANCER: (model: string, length: string, isVideo: boolean, isAudio: boolean, hasManualCamera: boolean, inputType?: string) => {
+    ENHANCER: (model: string, length: string, isVideo: boolean, isAudio: boolean, _hasManualCamera: boolean, inputType?: string) => {
         const syntax = getModelSyntax(model);
         const l = length === 'Short' ? '30 words' : length === 'Long' ? '550+ words' : '180 words';
         const isI2V = isVideo && inputType === 'i2v';
@@ -67,7 +59,7 @@ ${modeProtocol}
 Output: ${isAudio ? 'Single optimized string' : '3 distinct lines, each on a new line'}. NO INTROS.`;
     },
 
-    REFINER: (model: string, isVideo: boolean, isAudio: boolean, hasManualCamera: boolean, inputType?: string) => {
+    REFINER: (model: string, isVideo: boolean, isAudio: boolean, _hasManualCamera: boolean, inputType?: string) => {
         const syntax = getModelSyntax(model);
         const isI2V = isVideo && inputType === 'i2v';
         
@@ -113,15 +105,6 @@ export const cleanLLMResponse = (text: string): string => {
         .map(l => l.trim().replace(/^(\d+[\.\)]|\*|-|\+)\s+/, ''))
         .filter(l => l && !stopWords.some(r => r.test(l)))
         .join('\n').trim();
-};
-
-export const translateStoryboardScene = async (sceneText: string, model: string, settings: LLMSettings): Promise<string> => {
-    const sys = AI_ROLES.STORYBOARD_TRANSLATOR(model);
-    const isOllama = settings.activeLLM === 'ollama' || settings.activeLLM === 'ollama_cloud';
-    const raw = isOllama 
-        ? await refineSinglePromptOllama(sceneText, settings, sys, 1024)
-        : await refineSinglePromptGemini(sceneText, '', settings, sys);
-    return cleanLLMResponse(raw);
 };
 
 export const buildContextForEnhancer = (modifiers: PromptModifiers): string => {
@@ -335,61 +318,20 @@ export const generatePromptFormulaWithAI = async (promptText: string, wildcards:
         : generatePromptFormulaGemini(promptText, settings, sys);
 };
 
-export const generateWithImagen = async (prompt: string, aspectRatio: string = '1:1'): Promise<string> => {
-    const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
-    const response = await ai.models.generateImages({
-        model: 'imagen-4.0-generate-001',
-        prompt: prompt,
-        config: {
-            numberOfImages: 1,
-            outputMimeType: 'image/jpeg',
-            aspectRatio: aspectRatio as any,
-        },
-    });
-    const base64EncodeString: string = response.generatedImages[0].image.imageBytes;
-    return `data:image/png;base64,${base64EncodeString}`;
-};
+export { generateWithImagen, generateWithNanoBanana, generateWithVeo } from './geminiService';
 
-export const generateWithNanoBanana = async (prompt: string, referenceImages: string[] = [], aspectRatio: string = '1:1'): Promise<string> => {
-    const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
-    const parts: any[] = [{ text: prompt }];
-    for (const imgBase64 of referenceImages) {
-        parts.push({ inlineData: { mimeType: 'image/jpeg', data: imgBase64.split(',')[1] || imgBase64 } });
-    }
-    const response = await ai.models.generateContent({
-        model: 'gemini-2.5-flash-image',
-        contents: { parts },
-        config: { imageConfig: { aspectRatio: aspectRatio as any } }
-    });
-    if (response.candidates?.[0]?.content?.parts) {
-        for (const part of response.candidates[0].content.parts) {
-            if (part.inlineData) return `data:image/png;base64,${part.inlineData.data}`;
-        }
-    }
-    throw new Error("Render sequence failed.");
-};
+// --- Translator for storyboarding feature ---
+export const translateStoryboardScene = async (text: string, model: string, settings: LLMSettings): Promise<string> => {
+    const isOllama = settings.activeLLM === 'ollama' || settings.activeLLM === 'ollama_cloud';
+    const sys = `Role: Cinematic Translator for ${model}. 
+Task: Convert this scene description into a high-fidelity visual prompt. 
+Focus on: camera movement, lighting, atmospheric density, and temporal flow. 
+Output the translated prompt ONLY. No intros.`;
 
-export const generateWithVeo = async (prompt: string, onStatusUpdate?: (msg: string) => void, aspectRatio: string = '16:9'): Promise<string> => {
-    const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
-    let finalAspectRatio = aspectRatio;
-    if (finalAspectRatio !== '16:9' && finalAspectRatio !== '9:16') finalAspectRatio = '16:9';
-    onStatusUpdate?.('Initializing...');
-    let operation = await ai.models.generateVideos({
-        model: 'veo-3.1-fast-generate-preview',
-        prompt: prompt,
-        config: { numberOfVideos: 1, resolution: '720p', aspectRatio: finalAspectRatio as any }
-    });
-    while (!operation.done) {
-        onStatusUpdate?.('Processing...');
-        await new Promise(resolve => setTimeout(resolve, 8000));
-        operation = await ai.operations.getVideosOperation({ operation: operation });
-    }
-    const downloadLink = operation.response?.generatedVideos?.[0]?.video?.uri;
-    if (!downloadLink) throw new Error("Output lost.");
-    onStatusUpdate?.('Downloading...');
-    const response = await fetch(`${downloadLink}&key=${process.env.API_KEY}`);
-    const blob = await response.blob();
-    return URL.createObjectURL(blob);
+    const raw = isOllama
+        ? await refineSinglePromptOllama(text, settings, sys, 1024)
+        : await refineSinglePromptGemini(text, '', settings, sys);
+    return cleanLLMResponse(raw);
 };
 
 export interface OllamaTestResult {

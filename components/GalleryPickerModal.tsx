@@ -4,7 +4,7 @@ import { createPortal } from 'react-dom';
 import type { GalleryItem, GalleryCategory } from '../types';
 import { loadGalleryItems, loadCategories } from '../utils/galleryStorage';
 import { fileSystemManager } from '../utils/fileUtils';
-import { CloseIcon, PhotoIcon, FilmIcon, CheckIcon, SearchIcon, FolderClosedIcon } from './icons';
+import { CloseIcon, PhotoIcon, FilmIcon, CheckIcon, SearchIcon } from './icons';
 import LoadingSpinner from './LoadingSpinner';
 import TreeView, { TreeViewItem } from './TreeView';
 import useLocalStorage from '../utils/useLocalStorage';

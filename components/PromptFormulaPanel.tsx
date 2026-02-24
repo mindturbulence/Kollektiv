@@ -1,7 +1,7 @@
 import React, { useState, useCallback } from 'react';
 import { useSettings } from '../contexts/SettingsContext';
 import { crafterService } from '../services/crafterService';
-import { RefreshIcon, CheckIcon, BookmarkIcon, ChevronDownIcon, CloseIcon } from './icons';
+import { RefreshIcon, CheckIcon, BookmarkIcon, ChevronDownIcon } from './icons';
 import LoadingSpinner from './LoadingSpinner';
 import CopyIcon from './CopyIcon';
 

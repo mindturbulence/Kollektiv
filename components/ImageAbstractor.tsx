@@ -1,4 +1,4 @@
-import React, { useState, useRef, useCallback, useEffect } from 'react';
+import React, { useState, useRef, useCallback } from 'react';
 import { useSettings } from '../contexts/SettingsContext';
 import { abstractImage } from '../services/llmService';
 import type { AppError, EnhancementResult } from '../types';

@@ -1,6 +1,5 @@
 
 import type { CheatsheetCategory, CheatsheetItem } from '../types';
-import { ART_STYLES_DATA } from '../constants';
 import { fileSystemManager } from './fileUtils';
 
 const MANIFEST_NAME = 'artstyles_cheatsheet.json';

@@ -1,4 +1,4 @@
-import React, { useState, useRef, useCallback, useMemo } from 'react';
+import React, { useState, useRef, useMemo } from 'react';
 import { extractFullMetadata, type ParsedMetadata } from '../utils/fileUtils';
 import { PhotoIcon, CloseIcon, ArchiveIcon } from './icons';
 import LoadingSpinner from './LoadingSpinner';

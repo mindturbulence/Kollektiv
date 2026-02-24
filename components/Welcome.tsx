@@ -15,10 +15,14 @@ const Welcome: React.FC<WelcomeProps> = ({ onSetupComplete }) => {
 
   useEffect(() => {
     const checkHandle = async () => {
-        const handle = await getHandle<FileSystemDirectoryHandle>('app-data-dir');
-        if (handle) {
-            setHasExistingHandle(true);
-            setExistingDirName(handle.name);
+        try {
+            const handle = await getHandle<FileSystemDirectoryHandle>('app-data-dir');
+            if (handle && typeof handle.name === 'string') {
+                setHasExistingHandle(true);
+                setExistingDirName(handle.name);
+            }
+        } catch (e) {
+            console.warn("Failed to check existing storage handle:", e);
         }
     };
     checkHandle();

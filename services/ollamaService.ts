@@ -465,7 +465,7 @@ export const reconstructFromIntentOllama = async (intents: string[], settings: L
     } catch (err) { throw handleGeminiError(err, 'reconstruction'); }
 };
 
-export const abstractImageOllama = async (base64ImageData: string, promptLength: string, targetAIModel: string, settings: LLMSettings): Promise<EnhancementResult> => {
+export const abstractImageOllama = async (base64ImageData: string, promptLength: string, _targetAIModel: string, settings: LLMSettings): Promise<EnhancementResult> => {
     try {
         const config = getOllamaConfig(settings);
         const tokenLimit = promptLength === 'Long' ? 2048 : 1024;

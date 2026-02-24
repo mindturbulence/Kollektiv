@@ -1,5 +1,5 @@
 
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useRef } from 'react';
 import { gsap } from 'gsap';
 
 const IdleOverlay: React.FC<{ isVisible: boolean; onInteraction: () => void }> = ({ isVisible, onInteraction }) => {

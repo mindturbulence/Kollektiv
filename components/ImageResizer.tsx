@@ -1,6 +1,6 @@
-import React, { useState, useRef, useCallback, useEffect, useMemo } from 'react';
+import React, { useState, useRef, useCallback, useEffect } from 'react';
 import JSZip from 'jszip';
-import { UploadIcon, CropIcon, LinkIcon, LinkOffIcon, PhotoIcon, RefreshIcon, DownloadIcon, CloseIcon } from './icons';
+import { UploadIcon, CropIcon, LinkIcon, LinkOffIcon } from './icons';
 import { COMPOSER_PRESETS } from '../constants';
 
 type ImageStatus = 'pending' | 'processing' | 'done' | 'error';

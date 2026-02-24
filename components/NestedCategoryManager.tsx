@@ -1,7 +1,7 @@
-import React, { useState, useEffect, useMemo, useRef } from 'react';
+import React, { useState, useEffect } from 'react';
 import { 
-    EditIcon, DeleteIcon, CheckIcon, ChevronDownIcon, 
-    ArrowsUpDownIcon, FolderClosedIcon, GitBranchIcon, PlusIcon,
+    DeleteIcon, ChevronDownIcon, 
+    FolderClosedIcon, PlusIcon,
     SearchIcon, RefreshIcon, CloseIcon, GripVerticalIcon
 } from './icons';
 import ConfirmationModal from './ConfirmationModal';

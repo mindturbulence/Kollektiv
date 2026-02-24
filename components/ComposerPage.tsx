@@ -1,18 +1,15 @@
 
-import React, { useState, useEffect, useCallback, useRef, useMemo, useLayoutEffect } from 'react';
+import React, { useState, useEffect, useRef, useMemo, useLayoutEffect } from 'react';
 import { gsap } from 'gsap';
 import { 
-    UploadIcon, CloseIcon, LinkIcon, LinkOffIcon, RefreshIcon, 
-    DownloadIcon, FolderClosedIcon, PlusIcon, GripVerticalIcon, 
-    DeleteIcon, CheckIcon, ArchiveIcon, SparklesIcon, ChevronDownIcon,
-    CenterIcon, PhotoIcon, ViewColumnsIcon
+    UploadIcon, LinkIcon, LinkOffIcon, 
+    FolderClosedIcon, PlusIcon
 } from './icons';
 import useLocalStorage from '../utils/useLocalStorage';
 import GalleryPickerModal from './GalleryPickerModal';
 import type { GalleryItem } from '../types';
 import { fileSystemManager, fileToBase64 } from '../utils/fileUtils';
 import { addItemToGallery } from '../utils/galleryStorage';
-import LoadingSpinner from './LoadingSpinner';
 import ConfirmationModal from './ConfirmationModal';
 
 // --- TYPES ---
@@ -210,7 +207,6 @@ const LayerRenderer: React.FC<{
 // --- MAIN PAGE ---
 
 const ComposerPage: React.FC<ComposerPageProps> = ({ showGlobalFeedback }) => {
-    const fileInputRef = useRef<HTMLInputElement>(null);
     const layerImageInputRef = useRef<HTMLInputElement>(null);
     const previewContainerRef = useRef<HTMLDivElement>(null);
     const framePaddingRef = useRef<HTMLDivElement>(null);
@@ -229,7 +225,7 @@ const ComposerPage: React.FC<ComposerPageProps> = ({ showGlobalFeedback }) => {
     const [frameMatting, setFrameMatting] = useLocalStorage('composerFrameMatting', 60);
     
     const [bgColor, setBgColor] = useLocalStorage('composerBgColor', '#FFFFFF');
-    const [outputFormat, setOutputFormat] = useLocalStorage<'png' | 'jpeg'>('composerFormat', 'jpeg');
+    const [outputFormat] = useLocalStorage<'png' | 'jpeg'>('composerFormat', 'jpeg');
 
     const [gridItems, setGridItems] = useState<(ImageItem | null)[]>([]);
     const [frameItem, setFrameItem] = useState<ImageItem | null>(null);

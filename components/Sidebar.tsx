@@ -4,10 +4,10 @@ import type { ActiveTab } from '../types';
 import { useSettings } from '../contexts/SettingsContext';
 import { audioService } from '../services/audioService';
 import {
-  HomeIcon, Cog6ToothIcon, AppLogoIcon, SparklesIcon,
+  HomeIcon, Cog6ToothIcon, SparklesIcon,
   PromptIcon, PhotoIcon,
-  AdjustmentsVerticalIcon, PaletteIcon, LayoutDashboardIcon, CropIcon, FilmIcon, ViewColumnsIcon,
-  BookOpenIcon, UsersIcon, ThumbTackIcon, InformationCircleIcon, ViewGridIcon
+  PaletteIcon, LayoutDashboardIcon, CropIcon, FilmIcon, ViewColumnsIcon,
+  BookOpenIcon, UsersIcon, ThumbTackIcon, InformationCircleIcon
 } from './icons';
 import LlmStatusSwitcher from './LlmStatusSwitcher';
 
@@ -20,7 +20,7 @@ interface SidebarProps {
   onAboutClick: () => void;
 }
 
-const ScrambleLetter: React.FC<{ char: string; isHovered: boolean; index: number }> = ({ char, isHovered, index }) => {
+const ScrambleLetter: React.FC<{ char: string; isHovered: boolean }> = ({ char, isHovered }) => {
     const [displayChar, setDisplayChar] = useState(char);
     const [opacity, setOpacity] = useState(1);
     const symbols = '01_[]{}//\\*^!#%&?X+$@';
@@ -70,7 +70,7 @@ const ScrambledText: React.FC<{ text: string; isHovered: boolean }> = ({ text, i
     return (
         <span className={`inline-flex transition-colors duration-400 ${isHovered ? 'font-mono text-primary' : 'font-display'}`}>
             {text.split('').map((char, idx) => (
-                <ScrambleLetter key={`${text}-${idx}`} char={char} isHovered={isHovered} index={idx} />
+                <ScrambleLetter key={`${text}-${idx}`} char={char} isHovered={isHovered} />
             ))}
         </span>
     );
@@ -276,7 +276,6 @@ const Sidebar: React.FC<SidebarProps> = ({ activeTab, onNavigate, isSidebarOpen,
         
         <Section title="Workspace">
             <NavItem id="prompts" label="Prompt Builder" icon={<SparklesIcon className="w-5 h-5" />} activeTab={activeTab} onClick={onNavigate} registerRef={registerRef} />
-            <NavItem id="storyboard" label="Storyboard" icon={<ViewGridIcon className="w-5 h-5" />} activeTab={activeTab} onClick={onNavigate} registerRef={registerRef} />
             {features.isPromptLibraryEnabled && <NavItem id="prompt" label="Prompt Library" icon={<PromptIcon className="w-5 h-5" />} activeTab={activeTab} onClick={onNavigate} registerRef={registerRef} />}
             {features.isGalleryEnabled && <NavItem id="gallery" label="Image Library" icon={<PhotoIcon className="w-5 h-5" />} activeTab={activeTab} onClick={onNavigate} registerRef={registerRef} />}
         </Section>

@@ -1,9 +1,9 @@
 
-import { GoogleGenAI, GenerateContentResponse, Type } from "@google/genai";
+import { GoogleGenAI } from "@google/genai";
 import { handleGeminiError } from '../utils/errorHandler';
-import type { EnhancementResult, LLMSettings, PromptModifiers, PromptAnatomy } from '../types';
+import type { EnhancementResult, LLMSettings } from '../types';
 
-const getGeminiClient = (settings: LLMSettings): GoogleGenAI => {
+const getGeminiClient = (_settings: LLMSettings): GoogleGenAI => {
     return new GoogleGenAI({ apiKey: process.env.API_KEY });
 };
 
@@ -90,7 +90,7 @@ export async function* enhancePromptGeminiStream(prompt: string, constantModifie
     } catch (err) { throw handleGeminiError(err, 'refining'); }
 }
 
-export const refineSinglePromptGemini = async (promptText: string, cheatsheetContext: string, settings: LLMSettings, systemInstruction: string): Promise<string> => {
+export const refineSinglePromptGemini = async (promptText: string, _cheatsheetContext: string, settings: LLMSettings, systemInstruction: string): Promise<string> => {
     try {
         const ai = getGeminiClient(settings);
         const response = await ai.models.generateContent({
@@ -106,7 +106,7 @@ export const refineSinglePromptGemini = async (promptText: string, cheatsheetCon
     } catch (err) { throw handleGeminiError(err, 'processing'); }
 };
 
-export async function* refineSinglePromptGeminiStream(promptText: string, cheatsheetContext: string, settings: LLMSettings, systemInstruction: string): AsyncGenerator<string> {
+export async function* refineSinglePromptGeminiStream(promptText: string, _cheatsheetContext: string, settings: LLMSettings, systemInstruction: string): AsyncGenerator<string> {
     try {
         const ai = getGeminiClient(settings);
         const response = await ai.models.generateContentStream({
@@ -280,7 +280,7 @@ export const generateArtistDescriptionGemini = async (artistName: string, settin
     } catch (err) { throw handleGeminiError(err, 'description'); }
 };
 
-export const abstractImageGemini = async (base64ImageData: string, promptLength: string, targetAIModel: string, settings: LLMSettings): Promise<EnhancementResult> => {
+export const abstractImageGemini = async (base64ImageData: string, _promptLength: string, _targetAIModel: string, settings: LLMSettings): Promise<EnhancementResult> => {
     try {
         const ai = getGeminiClient(settings);
         const imagePart = { inlineData: { mimeType: 'image/jpeg', data: base64ImageData } };
@@ -310,7 +310,8 @@ export const generateWithImagen = async (prompt: string, aspectRatio: string = '
                 aspectRatio: aspectRatio as any,
             },
         });
-        const base64EncodeString: string = response.generatedImages[0].image.imageBytes;
+        const base64EncodeString = response.generatedImages?.[0]?.image?.imageBytes;
+        if (!base64EncodeString) throw new Error("Image generation failed: No image data returned.");
         return `data:image/png;base64,${base64EncodeString}`;
     } catch (err) { throw handleGeminiError(err, 'rendering'); }
 };
@@ -327,7 +328,7 @@ export const generateWithNanoBanana = async (prompt: string, referenceImages: st
             contents: { parts },
             config: { imageConfig: { aspectRatio: aspectRatio as any } }
         });
-        if (response.candidates && response.candidates[0] && response.candidates[0].content) {
+        if (response.candidates?.[0]?.content?.parts) {
             for (const part of response.candidates[0].content.parts) {
                 if (part.inlineData) {
                     return `data:image/png;base64,${part.inlineData.data}`;

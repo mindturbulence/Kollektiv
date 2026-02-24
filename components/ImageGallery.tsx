@@ -4,7 +4,7 @@ import type { GalleryItem, GalleryCategory } from '../types';
 import { loadGalleryItems, addItemToGallery, updateItemInGallery, deleteItemFromGallery, loadPinnedItemIds, savePinnedItemIds, loadCategories } from '../utils/galleryStorage';
 import ImageCard from './ImageCard';
 import TreeView, { TreeViewItem } from './TreeView';
-import { ArrowsUpDownIcon, PhotoIcon, SearchIcon, CloseIcon, FilmIcon } from './icons';
+import { SearchIcon, CloseIcon } from './icons';
 import CategoryPanelToggle from './CategoryPanelToggle';
 import ItemDetailView from './ItemDetailView';
 import ConfirmationModal from './ConfirmationModal';
@@ -21,12 +21,12 @@ interface ImageGalleryProps {
 
 export type GalleryViewMode = 'compact' | 'default' | 'focus';
 
-const ImageGallery: React.FC<ImageGalleryProps> = ({ isCategoryPanelCollapsed, onToggleCategoryPanel, isSidebarPinned, showGlobalFeedback }) => {
+const ImageGallery: React.FC<ImageGalleryProps> = ({ isCategoryPanelCollapsed, onToggleCategoryPanel, showGlobalFeedback }) => {
   const [items, setItems] = useState<GalleryItem[]>([]);
   const [categories, setCategories] = useState<GalleryCategory[]>([]);
   const [pinnedItemIds, setPinnedItemIds] = useState<string[]>([]);
   const [isLoading, setIsLoading] = useState(true);
-  const [sortOrder, setSortOrder] = useState<'newest' | 'oldest' | 'title'>('newest');
+  const [sortOrder] = useState<'newest' | 'oldest' | 'title'>('newest');
   const [searchQuery, setSearchQuery] = useState('');
   const [categorySearchQuery, setCategorySearchQuery] = useState('');
   const [mediaTypeFilter, setMediaTypeFilter] = useState<'all' | 'image' | 'video'>('all');
@@ -202,6 +202,29 @@ const ImageGallery: React.FC<ImageGalleryProps> = ({ isCategoryPanelCollapsed, o
 
   const displayedItems = useMemo(() => sortedAndFilteredItems.slice(0, displayCount), [sortedAndFilteredItems, displayCount]);
 
+  useEffect(() => {
+    if (displayedItems.length > 0 && gridRef.current) {
+        // Find all items that are not yet animated
+        const items = gridRef.current.querySelectorAll('.elastic-grid-item:not(.animated)');
+        if (items.length > 0) {
+            gsap.fromTo(items, 
+                { opacity: 0, y: 50, scale: 0.9 },
+                { 
+                    opacity: 1, 
+                    y: 0, 
+                    scale: 1, 
+                    duration: 0.8, 
+                    stagger: 0.05, 
+                    ease: "power3.out",
+                    onComplete: () => {
+                        items.forEach(el => el.classList.add('animated'));
+                    }
+                }
+            );
+        }
+    }
+  }, [displayedItems]);
+
   const masonryColumns = useMemo(() => {
     const cols: GalleryItem[][] = Array.from({ length: columnCount }, () => []);
     displayedItems.forEach((item, index) => {
@@ -372,18 +395,16 @@ const ImageGallery: React.FC<ImageGalleryProps> = ({ isCategoryPanelCollapsed, o
 
             <div ref={scrollerRef} className="flex-grow overflow-y-auto scroll-smooth custom-scrollbar bg-base-300">
                 {sortedAndFilteredItems.length > 0 ? (
-                    <div key={`grid-${viewMode}-${columnCount}-${selectedCategoryId}`} ref={gridRef} className="flex bg-base-300 border-r border-base-300 elastic-grid-container" style={{ willChange: 'transform' }}>
+                    <div key={`grid-${viewMode}-${columnCount}-${selectedCategoryId}`} ref={gridRef} className="flex bg-base-300 gap-px elastic-grid-container" style={{ willChange: 'transform' }}>
                         {masonryColumns.map((col, colIdx) => (
-                            <div key={`col-${colIdx}`} ref={el => { columnRefs.current[colIdx] = el; }} className="flex-1 flex flex-col gap-px border-l border-base-300 first:border-l-0" style={{ contain: 'layout paint' }}>
+                            <div key={`col-${colIdx}`} ref={el => { columnRefs.current[colIdx] = el; }} className="flex-1 flex flex-col gap-px" style={{ contain: 'layout paint' }}>
                                 {col.map(item => (
-                                    <div key={item.id} data-item-id={item.id} className="elastic-grid-item">
+                                    <div key={item.id} data-item-id={item.id} className={`elastic-grid-item`}>
                                         <ImageCard 
                                           item={item} 
                                           viewMode={viewMode}
                                           isPinned={pinnedItemIds.includes(item.id)} 
                                           onOpenDetailView={() => setDetailViewItemId(item.id)} 
-                                          onDeleteItem={(i) => setItemToDelete(i)} 
-                                          onTogglePin={(id) => { const n = pinnedItemIds.includes(id) ? pinnedItemIds.filter(pid=>pid!==id) : [id, ...pinnedItemIds]; setPinnedItemIds(n); savePinnedItemIds(n); }} 
                                           categoryName={categories.find(c => c.id === item.categoryId)?.name || 'Uncategorized'} 
                                           showCategory={selectedCategoryId === 'all'} 
                                         />

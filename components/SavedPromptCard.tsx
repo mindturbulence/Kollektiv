@@ -71,11 +71,14 @@ const SavedPromptCard: React.FC<SavedPromptCardProps> = memo(({
   const title = prompt.title?.trim() || prompt.basePrompt?.trim() || 'Untitled Prompt';
   const displayCategory = categoryName || 'Uncategorized';
 
-  const fullDate = new Date(prompt.createdAt).toLocaleDateString('en-US', { 
-    year: 'numeric', 
-    month: 'short', 
-    day: 'numeric' 
-  });
+  const dateObj = new Date(prompt.createdAt);
+  const fullDate = isNaN(dateObj.getTime()) 
+    ? 'Unknown Date' 
+    : dateObj.toLocaleDateString('en-US', { 
+        year: 'numeric', 
+        month: 'short', 
+        day: 'numeric' 
+      });
 
   return (
     <div className="flex flex-col group bg-base-100 transition-all duration-500 hover:bg-base-200/50 w-full overflow-hidden select-none h-fit">
@@ -109,7 +112,7 @@ const SavedPromptCard: React.FC<SavedPromptCardProps> = memo(({
               {title}
             </h2>
             <div className="flex items-center gap-4 opacity-40">
-                <span className="text-[9px] font-mono font-bold uppercase tracking-widest">ID: {prompt.id.slice(-6)}</span>
+                <span className="text-[9px] font-mono font-bold uppercase tracking-widest">ID: {prompt.id ? prompt.id.slice(-6) : 'N/A'}</span>
             </div>
           </div>
         </div>

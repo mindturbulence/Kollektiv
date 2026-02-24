@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback, useRef, useMemo } from 'react';
 import { crafterService } from '../services/crafterService';
-import type { WildcardFile, WildcardCategory, CrafterData } from '../types';
+import type { WildcardFile, CrafterData } from '../types';
 import LoadingSpinner from './LoadingSpinner';
 import { SparklesIcon, CheckIcon, CloseIcon, DeleteIcon } from './icons';
 import { fileSystemManager } from '../utils/fileUtils';
@@ -18,7 +18,7 @@ interface PromptCrafterProps {
   header: React.ReactNode;
 }
 
-const PromptCrafter = ({ onSaveToLibrary, onClip, onSendToEnhancer, promptToInsert, header }: PromptCrafterProps) => {
+const PromptCrafter = ({ onClip, onSendToEnhancer, promptToInsert, header }: PromptCrafterProps) => {
     const { settings } = useSettings();
     const [crafterData, setCrafterData] = useState<CrafterData | null>(null);
     const [isLoading, setIsLoading] = useState(true);

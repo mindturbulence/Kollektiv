@@ -1,5 +1,5 @@
 import React, { useState, useCallback, useMemo } from 'react';
-import { DownloadIcon, SparklesIcon, PhotoIcon, FilmIcon, BookmarkIcon, RefreshIcon, CheckIcon, ArchiveIcon, BracesIcon } from './icons';
+import { DownloadIcon, SparklesIcon, BookmarkIcon, RefreshIcon, CheckIcon, ArchiveIcon, BracesIcon } from './icons';
 import { generateWithImagen, generateWithNanoBanana, generateWithVeo } from '../services/llmService';
 import CopyIcon from './CopyIcon';
 import LoadingSpinner from './LoadingSpinner';

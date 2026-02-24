@@ -1,4 +1,5 @@
 
+// PromptsPage.tsx - Core component for prompt management
 import React, { useState, useCallback, useEffect, useMemo, useRef } from 'react';
 import { useSettings } from '../contexts/SettingsContext';
 import { enhancePromptStream, buildMidjourneyParams, generateWithImagen, generateWithNanoBanana, generateWithVeo, cleanLLMResponse } from '../services/llmService';
@@ -15,7 +16,6 @@ import {
     CAMERA_PROXIMITY,
     LIGHTING_OPTIONS,
     COMPOSITION_OPTIONS,
-    GENERAL_ASPECT_RATIOS,
     CAMERA_TYPES,
     CAMERA_MODELS_BY_TYPE,
     ALL_PROFESSIONAL_CAMERA_MODELS,
@@ -23,7 +23,6 @@ import {
     CAMERA_EFFECTS,
     SPECIALTY_LENS_EFFECTS,
     LENS_TYPES,
-    FILM_TYPES,
     ANALOG_FILM_STOCKS,
     PHOTOGRAPHY_STYLES,
     DIGITAL_AESTHETICS,
@@ -49,7 +48,7 @@ import { ImageAbstractor } from './ImageAbstractor';
 import { MetadataReader } from './MetadataReader';
 import LoadingSpinner from './LoadingSpinner';
 import AutocompleteSelect from './AutocompleteSelect';
-import { PhotoIcon, FilmIcon, RefreshIcon, SparklesIcon, UploadIcon, CloseIcon, ChevronDownIcon, Cog6ToothIcon, ArchiveIcon, BookmarkIcon, CheckIcon, DeleteIcon } from './icons';
+import { SparklesIcon, UploadIcon, CloseIcon, Cog6ToothIcon, ArchiveIcon, CheckIcon, DeleteIcon } from './icons';
 import ConfirmationModal from './ConfirmationModal';
 
 // --- Types ---
@@ -383,7 +382,7 @@ const PromptsPage: React.FC<PromptsPageProps> = ({
       targetAI: targetAIModel,
       title: title || `Token_${Date.now().toString().slice(-4)}`
     });
-    setIsSaveSuggestionModalOpen(false);
+    setIsSaveSuggestionModalOpen(true);
   };
 
   const handleClipSuggestion = useCallback((suggestionText: string, title?: string, lens: string = 'Refined Formula', source: string = 'Refiner') => {

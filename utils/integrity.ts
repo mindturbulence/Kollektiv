@@ -207,7 +207,7 @@ export const optimizeManifests = async (onProgress: (msg: string) => void): Prom
 };
 
 // --- Main Verification Logic ---
-export const verifyAndRepairFiles = async (onProgress: (message: string, progress?: number) => void, settings: LLMSettings): Promise<boolean> => {
+export const verifyAndRepairFiles = async (onProgress: (message: string, progress?: number) => void, _settings: LLMSettings): Promise<boolean> => {
     onProgress('Verifying application files...');
     await delay(100);
 

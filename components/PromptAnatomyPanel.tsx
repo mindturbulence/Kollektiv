@@ -1,7 +1,7 @@
 import React, { useState, useCallback, useEffect } from 'react';
 import { useSettings } from '../contexts/SettingsContext';
 import { dissectPrompt, generateFocusedVariations } from '../services/llmService';
-import { Atom2Icon, GitBranchIcon, RefreshIcon, EditIcon, CheckIcon, ChevronDownIcon } from './icons';
+import { EditIcon, CheckIcon, ChevronDownIcon } from './icons';
 import LoadingSpinner from './LoadingSpinner';
 
 interface PromptAnatomyPanelProps {

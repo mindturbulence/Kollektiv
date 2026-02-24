@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect, useCallback } from 'react';
-import { FilmIcon, UploadIcon, DownloadIcon, CloseIcon, PlayIcon, ScissorsIcon, PhotoIcon, RefreshIcon, InformationCircleIcon, ViewGridIcon, FolderClosedIcon, PlusIcon } from './icons';
+import { FilmIcon, DownloadIcon, PlayIcon, ScissorsIcon, PhotoIcon } from './icons';
 import LoadingSpinner from './LoadingSpinner';
 import JSZip from 'jszip';
 import { COMPOSER_PRESETS } from '../constants';
@@ -92,7 +92,7 @@ export const VideoToFrames: React.FC = () => {
             setFrames([]);
         } else {
             // Joiner Mode
-            const newVideos = await Promise.all(items.map(async (gItem) => {
+            const newVideos = await Promise.all(items.map(async (gItem): Promise<JoinableVideo | null> => {
                 const blob = await fileSystemManager.getFileAsBlob(gItem.urls[0]);
                 if (!blob) return null;
                 const url = URL.createObjectURL(blob);

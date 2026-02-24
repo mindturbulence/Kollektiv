@@ -1,5 +1,6 @@
 
-import React, { useState, useRef, useEffect, memo } from 'react';
+import React, { useState, useRef, useEffect, memo, useLayoutEffect } from 'react';
+import { gsap } from 'gsap';
 import type { GalleryItem } from '../types';
 import { ImageBrokenIcon, ThumbTackIcon, PlayIcon } from './icons';
 import { fileSystemManager } from '../utils/fileUtils';
@@ -9,8 +10,6 @@ interface ImageCardProps {
   item: GalleryItem;
   viewMode: GalleryViewMode;
   onOpenDetailView: () => void;
-  onDeleteItem: (item: GalleryItem) => void;
-  onTogglePin: (id: string) => void;
   isPinned: boolean;
   categoryName?: string;
   showCategory?: boolean;
@@ -22,18 +21,22 @@ const Media: React.FC<{
     title: string;
     viewMode: GalleryViewMode;
     isHovered: boolean;
-    className?: string;
-}> = memo(({ url, type, title, viewMode, isHovered, className }) => {
+}> = memo(({ url, type, title, viewMode, isHovered }) => {
     const [displayUrl, setDisplayUrl] = useState<string | null>(null);
     const [hasError, setHasError] = useState(false);
     const [isInView, setIsInView] = useState(false);
     const [isLoaded, setIsLoaded] = useState(false);
-    const [isRevealed, setIsRevealed] = useState(false);
     
     const containerRef = useRef<HTMLDivElement>(null);
-    const videoRef = useRef<HTMLVideoElement>(null);
+    const mediaRef = useRef<HTMLImageElement | HTMLVideoElement | null>(null);
+    const shutterRef = useRef<HTMLDivElement>(null);
+    const videoRef = useRef<HTMLVideoElement | null>(null);
     const objectUrlRef = useRef<string | null>(null);
     const idleHandleRef = useRef<number | null>(null);
+
+    const handleLoad = () => {
+        setIsLoaded(true);
+    };
 
     const cleanup = () => {
         if (objectUrlRef.current) {
@@ -101,13 +104,48 @@ const Media: React.FC<{
         return () => { isActive = false; cleanup(); };
     }, [url, isInView]);
 
+    // GSAP Reveal Animation
+    useLayoutEffect(() => {
+        if (isLoaded && isInView && mediaRef.current && shutterRef.current) {
+            const tl = gsap.timeline({
+                defaults: { ease: "expo.inOut", duration: 1.6 }
+            });
+
+            tl.fromTo(shutterRef.current, 
+                { clipPath: 'inset(0% 0% 0% 0%)' },
+                { clipPath: 'inset(0% 0% 100% 0%)', duration: 1.4 }
+            )
+            .fromTo(mediaRef.current, 
+                { scale: 1.4, filter: 'grayscale(100%) brightness(0.5)' },
+                { scale: 1, filter: 'grayscale(0%) brightness(1)', duration: 2 },
+                "-=1.2"
+            );
+        }
+    }, [isLoaded, isInView]);
+
+    // Hover Animation
+    useEffect(() => {
+        if (!mediaRef.current) return;
+        if (isHovered) {
+            gsap.to(mediaRef.current, {
+                scale: 1.1,
+                duration: 2.5,
+                ease: "power2.out"
+            });
+        } else {
+            gsap.to(mediaRef.current, {
+                scale: 1,
+                duration: 1.5,
+                ease: "power2.inOut"
+            });
+        }
+    }, [isHovered]);
+
     // Manual video playback control based on hover
     useEffect(() => {
         if (type === 'video' && videoRef.current) {
             if (isHovered) {
-                videoRef.current.play().catch(() => {
-                    // Handle potential play() interruption/rejection (e.g. user hasn't interacted yet)
-                });
+                videoRef.current.play().catch(() => {});
             } else {
                 videoRef.current.pause();
                 videoRef.current.currentTime = 0;
@@ -115,27 +153,20 @@ const Media: React.FC<{
         }
     }, [isHovered, type]);
 
-    useEffect(() => {
-        if (isLoaded && isInView && !isRevealed) {
-            requestAnimationFrame(() => {
-                requestAnimationFrame(() => {
-                    setIsRevealed(true);
-                });
-            });
-        }
-    }, [isLoaded, isInView, isRevealed]);
-
-    const wrapperClasses = `w-full h-full transition-transform duration-[3000ms] ease-[cubic-bezier(0.65,0,0.35,1)] group-hover:scale-110 will-change-transform`;
-    const mediaClasses = `w-full h-full object-cover transition-all duration-700 media-monochrome group-hover:filter-none ${className}`;
-    
     const minH = viewMode === 'compact' ? '80px' : viewMode === 'focus' ? '300px' : '160px';
 
     return (
         <div 
             ref={containerRef} 
-            className="relative w-full bg-base-300 overflow-hidden flex items-center justify-center"
+            className="relative w-full bg-base-300 overflow-hidden flex items-center justify-center group/media"
             style={{ minHeight: minH }}
         >
+            {/* Shutter Overlay */}
+            <div 
+                ref={shutterRef}
+                className="absolute inset-0 bg-base-300 z-20 pointer-events-none"
+            />
+
             {!displayUrl ? (
                  <div className="w-full h-48 bg-base-200/50 animate-pulse"></div>
             ) : hasError ? (
@@ -144,33 +175,35 @@ const Media: React.FC<{
                     <p className="text-warning/30 text-[10px] font-black uppercase mt-2">Buffer Corrupt</p>
                 </div>
             ) : type === 'video' ? (
-                <div className={wrapperClasses}>
+                <div className="w-full h-full relative overflow-hidden">
                     <video 
-                        ref={videoRef}
+                        ref={(el) => {
+                            videoRef.current = el;
+                            mediaRef.current = el;
+                        }}
                         src={displayUrl} 
-                        className={mediaClasses} 
+                        className="w-full h-full object-cover will-change-transform" 
                         muted 
                         playsInline 
                         loop
                         preload="metadata"
-                        onLoadedData={() => setIsLoaded(true)}
+                        onLoadedData={handleLoad}
                     />
-                    {isRevealed && (
-                        <div className="absolute inset-0 flex items-center justify-center pointer-events-none z-10">
-                            <div className={`bg-black/40 backdrop-blur-sm p-2 rounded-full border border-white/10 shadow-2xl transition-all duration-500 ${isHovered ? 'scale-0 opacity-0' : 'scale-100 opacity-100'}`}>
-                                <PlayIcon className="w-4 h-4 text-white fill-current" />
-                            </div>
+                    <div className={`absolute inset-0 flex items-center justify-center pointer-events-none z-10 transition-opacity duration-500 ${isHovered ? 'opacity-0' : 'opacity-100'}`}>
+                        <div className="bg-black/40 backdrop-blur-sm p-2 rounded-full border border-white/10 shadow-2xl">
+                            <PlayIcon className="w-4 h-4 text-white fill-current" />
                         </div>
-                    )}
+                    </div>
                 </div>
             ) : (
-                <div className={wrapperClasses}>
+                <div className="w-full h-full relative overflow-hidden">
                     <img 
+                        ref={mediaRef as React.RefObject<HTMLImageElement>}
                         src={displayUrl} 
                         alt={title} 
-                        className={mediaClasses} 
+                        className="w-full h-full object-cover will-change-transform" 
                         loading="lazy" 
-                        onLoad={() => setIsLoaded(true)}
+                        onLoad={handleLoad}
                     />
                 </div>
             )}
@@ -178,7 +211,7 @@ const Media: React.FC<{
     );
 });
 
-const ImageCard: React.FC<ImageCardProps> = memo(({ item, viewMode, onOpenDetailView, onDeleteItem, onTogglePin, isPinned, categoryName, showCategory }) => {
+const ImageCard: React.FC<ImageCardProps> = memo(({ item, viewMode, onOpenDetailView, isPinned, categoryName, showCategory }) => {
   const [isHovered, setIsHovered] = useState(false);
   
   const styles = {
@@ -195,7 +228,7 @@ const ImageCard: React.FC<ImageCardProps> = memo(({ item, viewMode, onOpenDetail
       onClick={() => onOpenDetailView()}
       onMouseEnter={() => setIsHovered(true)}
       onMouseLeave={() => setIsHovered(false)}
-      className="relative group bg-base-100 cursor-pointer overflow-hidden select-none transition-all duration-300 border-b border-base-300 last:border-b-0"
+      className={`relative group bg-base-100 cursor-pointer overflow-hidden select-none transition-all duration-700`}
     >
       <Media
         url={item.urls[0]}

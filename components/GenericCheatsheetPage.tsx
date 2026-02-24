@@ -3,7 +3,7 @@ import React, { useState, useEffect, ComponentType, useRef, useLayoutEffect, use
 import { gsap } from 'gsap';
 import type { CheatsheetCategory, CheatsheetItem } from '../types';
 import LoadingSpinner from './LoadingSpinner';
-import { CloseIcon, ChevronLeftIcon, SearchIcon } from './icons';
+import { ChevronLeftIcon, SearchIcon } from './icons';
 import { fileSystemManager } from '../utils/fileUtils';
 import CheatsheetDetailView from './CheatsheetDetailView';
 import { audioService } from '../services/audioService';
@@ -339,7 +339,6 @@ export const GenericCheatsheetPage: React.FC<GenericCheatsheetPageProps> = ({
                             onClick={handleCategoryClick} 
                         />
                     ))}
-                    <div className="w-20 flex-shrink-0"></div>
                 </div>
             </div>
         </>
@@ -380,7 +379,7 @@ export const GenericCheatsheetPage: React.FC<GenericCheatsheetPageProps> = ({
             </header>
 
             <div className="flex-grow overflow-y-auto custom-scrollbar bg-base-100">
-                <div className={`mx-auto py-16 px-10 ${layout === 'article' ? 'max-w-4xl' : 'max-w-screen-2xl'}`}>
+                <div className={`mx-auto pt-16 pb-0 px-10 ${layout === 'article' ? 'max-w-4xl' : 'max-w-screen-2xl'}`}>
                     <div className={layout === 'grid' 
                         ? "grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-px bg-base-300 border border-base-300 shadow-2xl"
                         : "flex flex-col gap-px bg-base-300 border border-base-300 shadow-2xl"

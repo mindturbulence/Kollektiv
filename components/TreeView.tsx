@@ -1,5 +1,5 @@
 
-import React, { useState, useCallback, useEffect } from 'react';
+import React, { useState, useCallback } from 'react';
 import { FolderOpenIcon, FolderClosedIcon, ChevronRightIcon } from './icons';
 
 export interface TreeViewItem {

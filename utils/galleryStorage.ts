@@ -16,9 +16,11 @@ const getManifest = async (): Promise<GalleryManifest> => {
     if (manifestContent) {
         try {
             const parsed = JSON.parse(manifestContent);
-            if (Array.isArray(parsed.galleryItems) && Array.isArray(parsed.categories) && Array.isArray(parsed.pinnedIds)) {
-                return parsed;
-            }
+            return {
+                galleryItems: Array.isArray(parsed.galleryItems) ? parsed.galleryItems.filter((i: any) => i && typeof i === 'object' && i.id) : [],
+                categories: Array.isArray(parsed.categories) ? parsed.categories.filter((c: any) => c && typeof c === 'object' && c.id) : [],
+                pinnedIds: Array.isArray(parsed.pinnedIds) ? parsed.pinnedIds : [],
+            };
         } catch (e) {
             console.error("Failed to parse gallery manifest, starting fresh.", e);
         }
@@ -36,7 +38,9 @@ const saveManifest = async (manifest: GalleryManifest) => {
 
 export const loadGalleryItems = async (): Promise<GalleryItem[]> => {
     const manifest = await getManifest();
-    return manifest.galleryItems.sort((a, b) => b.createdAt - a.createdAt);
+    return manifest.galleryItems
+        .filter(item => item && item.id)
+        .sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0));
 };
 
 export const addItemToGallery = async (type: 'image' | 'video', urls: string[], sources: string[], categoryId?: string, defaultTitle?: string, tags?: string[], notes?: string, prompt?: string, isNsfw?: boolean): Promise<GalleryItem> => {

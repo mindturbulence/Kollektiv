@@ -1,7 +1,7 @@
 import React, { useState, useRef, useCallback, useEffect } from 'react';
 import { useSettings } from '../contexts/SettingsContext';
 import { analyzePaletteMood, generateColorName } from '../services/llmService';
-import { UploadIcon, PhotoIcon, PaletteIcon, RefreshIcon, BookmarkIcon, CloseIcon, FolderClosedIcon } from './icons';
+import { UploadIcon, PaletteIcon, BookmarkIcon } from './icons';
 import LoadingSpinner from './LoadingSpinner';
 import type { Idea, GalleryItem } from '../types';
 import { fileSystemManager } from '../utils/fileUtils';

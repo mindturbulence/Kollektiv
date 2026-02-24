@@ -1,5 +1,5 @@
 
-import type { Storyboard, Scene } from '../types';
+import type { Storyboard } from '../types';
 import { fileSystemManager } from './fileUtils';
 import { v4 as uuidv4 } from 'uuid';
 

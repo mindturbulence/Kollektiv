@@ -39,6 +39,41 @@ import { VideoToFrames } from './VideoToFrames';
 
 type PromptsPageState = { prompt?: string, artStyle?: string, artist?: string, view?: 'enhancer' | 'composer' | 'create', id?: string } | null;
 
+class ErrorBoundary extends React.Component<{ children: React.ReactNode }, { hasError: boolean }> {
+    constructor(props: { children: React.ReactNode }) {
+        super(props);
+        this.state = { hasError: false };
+    }
+    static getDerivedStateFromError() { return { hasError: true }; }
+    componentDidCatch(error: any, errorInfo: any) { console.error("App Crash:", error, errorInfo); }
+    render() {
+        if (this.state.hasError) {
+            return (
+                <div className="h-screen w-screen flex flex-col items-center justify-center bg-base-100 p-10 text-center">
+                    <h1 className="text-4xl font-black uppercase tracking-tighter mb-4">CRITICAL ERROR</h1>
+                    <p className="text-base-content/60 font-bold uppercase tracking-widest mb-8">The application encountered an unrecoverable state.</p>
+                    <div className="flex flex-col gap-4">
+                        <button onClick={() => window.location.reload()} className="btn btn-primary rounded-none font-black tracking-widest uppercase">Restart Application</button>
+                        <button 
+                            onClick={async () => {
+                                if (confirm("This will clear all local settings and storage handles. Your actual files will NOT be deleted. Proceed?")) {
+                                    const { resetAllSettings } = await import('../utils/settingsStorage');
+                                    await resetAllSettings();
+                                    window.location.reload();
+                                }
+                            }}
+                            className="btn btn-error btn-outline btn-sm rounded-none font-bold tracking-widest uppercase opacity-60 hover:opacity-100"
+                        >
+                            Emergency Reset
+                        </button>
+                    </div>
+                </div>
+            );
+        }
+        return this.props.children;
+    }
+}
+
 const InitialLoader: React.FC<{ status: string; progress: number | null }> = ({ status, progress }) => {
     const textWrapperRef = useRef<HTMLHeadingElement>(null);
     const percentage = Math.round((progress || 0) * 100);
@@ -53,7 +88,7 @@ const InitialLoader: React.FC<{ status: string; progress: number | null }> = ({ 
 
     useEffect(() => {
         if (percentage >= 100 && textWrapperRef.current) {
-            gsap.to(percentage >= 100 && textWrapperRef.current, {
+            gsap.to(textWrapperRef.current, {
                 y: -80,
                 autoAlpha: 0,
                 duration: 0.8,
@@ -102,6 +137,14 @@ const InitialLoader: React.FC<{ status: string; progress: number | null }> = ({ 
 };
 
 const App: React.FC = () => {
+    return (
+        <ErrorBoundary>
+            <AppContent />
+        </ErrorBoundary>
+    );
+};
+
+const AppContent: React.FC = () => {
     const [isInitialized, setIsInitialized] = useState(false);
     const [isLoading, setIsLoading] = useState(true);
     const [showWelcome, setShowWelcome] = useState(false);
@@ -204,6 +247,7 @@ const App: React.FC = () => {
             if (!hasHandleAndPermission) {
                 setShowWelcome(true);
                 setIsLoading(false);
+                hasInitializedRef.current = true; // Mark as "attempted" to prevent loop
                 return;
             }
 
@@ -227,6 +271,7 @@ const App: React.FC = () => {
             setIsLoading(false);
         } catch (err) {
             console.error("Initialization Failure:", err);
+            hasInitializedRef.current = true; // Mark as "attempted" to prevent loop
             setGlobalFeedback({ message: "Failed to initialize system.", type: 'error' });
             setIsLoading(false);
         }
@@ -265,6 +310,16 @@ const App: React.FC = () => {
         }, 0.2);
 
         tl.set(apertureRef.current, { visibility: 'hidden', autoAlpha: 0 });
+
+        // Safety timeout to ensure curtains are hidden even if GSAP fails
+        const timer = setTimeout(() => {
+            if (apertureRef.current) {
+                apertureRef.current.style.visibility = 'hidden';
+                apertureRef.current.style.opacity = '0';
+            }
+        }, 3000);
+
+        return () => clearTimeout(timer);
     }, [isInitialized]);
 
     const runScopedTransition = useCallback(async (targetTab: ActiveTab) => {
@@ -437,7 +492,6 @@ const App: React.FC = () => {
     
     if (isLoading) return <InitialLoader status={initStatus} progress={initProgress} />;
     if (showWelcome) return <Welcome onSetupComplete={initializeApp} />;
-    if (!isInitialized) return null;
 
     return (
         <div className="h-full flex overflow-hidden relative p-1.5 md:p-3 bg-transparent">
@@ -445,88 +499,132 @@ const App: React.FC = () => {
             
             <IdleOverlay isVisible={isIdle} onInteraction={() => resetIdleTimer(true)} />
 
-            <div 
-                ref={apertureRef} 
-                className="fixed inset-0 z-[700] pointer-events-none flex flex-col"
-                style={{ visibility: 'hidden' }}
-            >
-                <div ref={curtainTopRef} className="flex-1 bg-base-100 border-b border-base-300" />
-                <div ref={curtainBottomRef} className="flex-1 bg-base-100" />
-            </div>
+            {!isInitialized ? (
+                <div className="flex-1 flex flex-col items-center justify-center bg-base-100 border border-base-content/10 rounded shadow-2xl">
+                    <div className="text-center space-y-4 max-w-md px-6">
+                        <h2 className="text-2xl font-black uppercase tracking-tighter">System Offline</h2>
+                        <p className="text-xs font-mono opacity-40 uppercase tracking-widest">Initialization failed or interrupted</p>
+                        
+                        <div className="flex flex-col gap-3 pt-4">
+                            <button 
+                                onClick={() => {
+                                    hasInitializedRef.current = false;
+                                    initializeApp();
+                                }}
+                                className="btn btn-primary btn-sm rounded-none font-black tracking-widest uppercase"
+                            >
+                                Retry Initialization
+                            </button>
+                            
+                            <button 
+                                onClick={() => window.location.reload()}
+                                className="btn btn-ghost btn-sm rounded-none font-bold tracking-widest uppercase opacity-60"
+                            >
+                                Reboot System
+                            </button>
 
-            <div 
-                ref={appWrapperRef}
-                className="flex-1 flex overflow-hidden relative z-0 border border-base-content/10 shadow-2xl rounded bg-base-100"
-            >
-                
-                <Sidebar
-                    activeTab={activeTab}
-                    onNavigate={handleNavigate}
-                    isSidebarOpen={isSidebarOpen}
-                    isPinned={isPinned}
-                    setIsPinned={(val) => {
-                        audioService.playClick();
-                        setIsPinned(val);
-                    }}
-                    onAboutClick={() => {
-                        audioService.playModalOpen();
-                        setIsAboutModalOpen(true);
-                    }}
-                />
-                
-                {isSidebarOpen && !isPinned && <div onClick={() => setIsSidebarOpen(false)} className="absolute inset-0 bg-black/50 z-[90]" />}
+                            <div className="divider opacity-10">OR</div>
 
-                {/* Fix: changed non-existent min-0 to standard min-w-0 flexbox fix */}
-                <div className="flex-1 flex flex-col min-w-0 h-full relative z-0">
-                    <Header
-                        onMenuClick={handleMenuClick}
-                        onStandbyClick={() => { setIsIdle(true); isIdleRef.current = true; }}
-                        activeTab={activeTab}
-                        clippedIdeasCount={clippedIdeas.length}
-                        onToggleClippingPanel={() => {
-                            audioService.playClick();
-                            setIsClippingPanelOpen(p => !p);
-                        }}
-                    />
-                    
-                    <main className="flex-grow relative overflow-hidden bg-base-100">
-                        <div 
-                            ref={mainGridRef} 
-                            className="absolute inset-0 z-[600] pointer-events-none grid"
-                            style={{ 
-                                gridTemplateColumns: `repeat(${gridCols}, 1fr)`,
-                                gridTemplateRows: `repeat(${gridRows}, 1fr)`,
-                                visibility: 'hidden'
-                            }}
-                        >
-                            {Array.from({ length: gridRows * gridCols }).map((_, i) => (
-                                <div key={i} className="transition-cell bg-base-100 will-change-transform" />
-                            ))}
+                            <button 
+                                onClick={async () => {
+                                    if (confirm("This will clear all local settings and storage handles. Your actual files will NOT be deleted. Proceed?")) {
+                                        const { resetAllSettings } = await import('../utils/settingsStorage');
+                                        await resetAllSettings();
+                                        window.location.reload();
+                                    }
+                                }}
+                                className="btn btn-error btn-outline btn-xs rounded-none font-bold tracking-widest uppercase opacity-60 hover:opacity-100"
+                            >
+                                Reset Storage Config
+                            </button>
                         </div>
-
-                        <div ref={contentRef} className="h-full w-full will-change-transform z-10 relative">
-                            {renderContent()}
-                        </div>
-                    </main>
-                    
-                    <Footer onAboutClick={() => {
-                        audioService.playModalOpen();
-                        setIsAboutModalOpen(true);
-                    }} />
+                    </div>
                 </div>
+            ) : (
+                <>
+                    <div 
+                        ref={apertureRef} 
+                        className="fixed inset-0 z-[700] pointer-events-none flex flex-col"
+                        style={{ visibility: 'hidden' }}
+                    >
+                        <div ref={curtainTopRef} className="flex-1 bg-base-100 border-b border-base-300" />
+                        <div ref={curtainBottomRef} className="flex-1 bg-base-100" />
+                    </div>
 
-                <ClippingPanel 
-                    isOpen={isClippingPanelOpen}
-                    onClose={() => setIsClippingPanelOpen(false)}
-                    clippedIdeas={clippedIdeas}
-                    onRemoveIdea={handleRemoveIdea}
-                    onClearAll={handleClearAllIdeas}
-                    onInsertIdea={handleInsertIdea}
-                    onRefineIdea={handleRefineIdea}
-                    onAddIdea={handleClipIdea}
-                    onSaveToLibrary={handleSaveClippedIdea}
-                />
-            </div>
+                    <div 
+                        ref={appWrapperRef}
+                        className="flex-1 flex overflow-hidden relative z-0 border border-base-content/10 shadow-2xl rounded bg-base-100"
+                    >
+                        
+                        <Sidebar
+                            activeTab={activeTab}
+                            onNavigate={handleNavigate}
+                            isSidebarOpen={isSidebarOpen}
+                            isPinned={isPinned}
+                            setIsPinned={(val) => {
+                                audioService.playClick();
+                                setIsPinned(val);
+                            }}
+                            onAboutClick={() => {
+                                audioService.playModalOpen();
+                                setIsAboutModalOpen(true);
+                            }}
+                        />
+                        
+                        {isSidebarOpen && !isPinned && <div onClick={() => setIsSidebarOpen(false)} className="absolute inset-0 bg-black/50 z-[90]" />}
+
+                        <div className="flex-1 flex flex-col min-w-0 h-full relative z-0">
+                            <Header
+                                onMenuClick={handleMenuClick}
+                                onStandbyClick={() => { setIsIdle(true); isIdleRef.current = true; }}
+                                activeTab={activeTab}
+                                clippedIdeasCount={clippedIdeas.length}
+                                onToggleClippingPanel={() => {
+                                    audioService.playClick();
+                                    setIsClippingPanelOpen(p => !p);
+                                }}
+                            />
+                            
+                            <main className="flex-grow relative overflow-hidden bg-base-100">
+                                <div 
+                                    ref={mainGridRef} 
+                                    className="absolute inset-0 z-[600] pointer-events-none grid"
+                                    style={{ 
+                                        gridTemplateColumns: `repeat(${gridCols}, 1fr)`,
+                                        gridTemplateRows: `repeat(${gridRows}, 1fr)`,
+                                        visibility: 'hidden'
+                                    }}
+                                >
+                                    {Array.from({ length: gridRows * gridCols }).map((_, i) => (
+                                        <div key={i} className="transition-cell bg-base-100 will-change-transform" />
+                                    ))}
+                                </div>
+
+                                <div ref={contentRef} className="h-full w-full will-change-transform z-10 relative">
+                                    {renderContent()}
+                                </div>
+                            </main>
+                            
+                            <Footer onAboutClick={() => {
+                                audioService.playModalOpen();
+                                setIsAboutModalOpen(true);
+                            }} />
+                        </div>
+
+                        <ClippingPanel 
+                            isOpen={isClippingPanelOpen}
+                            onClose={() => setIsClippingPanelOpen(false)}
+                            clippedIdeas={clippedIdeas}
+                            onRemoveIdea={handleRemoveIdea}
+                            onClearAll={handleClearAllIdeas}
+                            onInsertIdea={handleInsertIdea}
+                            onRefineIdea={handleRefineIdea}
+                            onAddIdea={handleClipIdea}
+                            onSaveToLibrary={handleSaveClippedIdea}
+                        />
+                    </div>
+                </>
+            )}
             
             <AboutModal 
                 isOpen={isAboutModalOpen} 

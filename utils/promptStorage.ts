@@ -16,9 +16,10 @@ const getManifest = async (): Promise<PromptManifest> => {
     if (manifestContent) {
         try {
             const parsed = JSON.parse(manifestContent);
-            if (Array.isArray(parsed.prompts) && Array.isArray(parsed.categories)) {
-                return parsed;
-            }
+            return {
+                prompts: Array.isArray(parsed.prompts) ? parsed.prompts.filter((p: any) => p && typeof p === 'object' && p.id) : [],
+                categories: Array.isArray(parsed.categories) ? parsed.categories.filter((c: any) => c && typeof c === 'object' && c.id) : []
+            };
         } catch (e) {
             console.error("Failed to parse prompts manifest, starting fresh.", e);
         }
@@ -32,13 +33,26 @@ const saveManifest = async (manifest: PromptManifest) => {
 
 const _loadPromptsWithText = async (prompts: SavedPrompt[]): Promise<SavedPrompt[]> => {
     const promptsWithText = await Promise.all(prompts.map(async (prompt) => {
-        const textContent = await fileSystemManager.readFile(`${PROMPTS_DIR}/${prompt.id}.txt`);
-        return {
-            ...prompt,
-            text: textContent || prompt.text,
-        };
+        if (!prompt || !prompt.id) return null;
+        try {
+            const textContent = await fileSystemManager.readFile(`${PROMPTS_DIR}/${prompt.id}.txt`);
+            return {
+                ...prompt,
+                text: textContent || prompt.text || '',
+                tags: Array.isArray(prompt.tags) ? prompt.tags : [],
+                createdAt: typeof prompt.createdAt === 'number' ? prompt.createdAt : Date.now()
+            };
+        } catch (e) {
+            console.error(`Failed to read text for prompt ${prompt.id}:`, e);
+            return {
+                ...prompt,
+                text: prompt.text || '',
+                tags: Array.isArray(prompt.tags) ? prompt.tags : [],
+                createdAt: typeof prompt.createdAt === 'number' ? prompt.createdAt : Date.now()
+            };
+        }
     }));
-    return promptsWithText.sort((a, b) => b.createdAt - a.createdAt);
+    return (promptsWithText.filter(Boolean) as SavedPrompt[]).sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0));
 };
 
 export const loadSavedPrompts = async (): Promise<SavedPrompt[]> => {
@@ -47,9 +61,21 @@ export const loadSavedPrompts = async (): Promise<SavedPrompt[]> => {
 };
 
 export const addSavedPrompt = async (promptData: Omit<SavedPrompt, 'id' | 'createdAt'>): Promise<void> => {
+    if (!promptData.text) {
+        throw new Error('Cannot save a prompt without text content.');
+    }
+
     const manifest = await getManifest();
+    
+    let newId = '';
+    try {
+        newId = `prompt_${Date.now()}_${uuidv4().substring(0, 6)}`;
+    } catch (e) {
+        newId = `prompt_${Date.now()}_${Math.random().toString(36).substring(2, 8)}`;
+    }
+
     const newPrompt: SavedPrompt = {
-        id: `prompt_${Date.now()}_${uuidv4().substring(0, 6)}`,
+        id: newId,
         createdAt: Date.now(),
         ...promptData,
     };
@@ -69,8 +95,17 @@ export const addMultipleSavedPrompts = async (promptsData: Omit<SavedPrompt, 'id
     const savePromises: Promise<any>[] = [];
 
     for (const promptData of promptsData) {
+        if (!promptData.text) continue;
+
+        let newId = '';
+        try {
+            newId = `prompt_${Date.now()}_${uuidv4().substring(0, 6)}_${Math.random().toString(36).substring(2, 5)}`;
+        } catch (e) {
+            newId = `prompt_${Date.now()}_${Math.random().toString(36).substring(2, 8)}`;
+        }
+
         const newPrompt: SavedPrompt = {
-            id: `prompt_${Date.now()}_${uuidv4().substring(0, 6)}`,
+            id: newId,
             createdAt: Date.now(),
             ...promptData,
         };
@@ -88,7 +123,9 @@ export const updateSavedPrompt = async (id: string, promptData: Omit<SavedPrompt
     const promptIndex = manifest.prompts.findIndex(p => p.id === id);
     if (promptIndex > -1) {
         manifest.prompts[promptIndex] = { ...manifest.prompts[promptIndex], ...promptData };
-        await fileSystemManager.saveFile(`${PROMPTS_DIR}/${id}.txt`, new Blob([promptData.text], { type: 'text/plain;charset=utf-8' }));
+        if (promptData.text) {
+            await fileSystemManager.saveFile(`${PROMPTS_DIR}/${id}.txt`, new Blob([promptData.text], { type: 'text/plain;charset=utf-8' }));
+        }
         await saveManifest(manifest);
     }
 };

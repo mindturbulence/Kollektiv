@@ -1,9 +1,9 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect } from 'react';
 import type { CheatsheetItem } from '../types';
 import { ChevronLeftIcon, ChevronRightIcon, CloseIcon, PhotoIcon, SparklesIcon, RefreshIcon } from './icons';
 import { fileSystemManager } from '../utils/fileUtils';
 import { ImageManagementModal } from './ImageManagementModal';
-import { generateArtistDescription, reconcileDescriptions } from '../services/llmService';
+import { generateArtistDescription } from '../services/llmService';
 import { useSettings } from '../contexts/SettingsContext';
 import LoadingSpinner from './LoadingSpinner';
 
@@ -45,8 +45,6 @@ const CheatsheetDetailView: React.FC<CheatsheetDetailViewProps> = ({
   const { settings } = useSettings();
   const [isManageModalOpen, setIsManageModalOpen] = useState(false);
   const [isSyncingDescription, setIsSyncingDescription] = useState(false);
-  const [llmResult, setLlmResult] = useState<string | null>(null);
-  const [isLlmModalOpen, setIsLlmModalOpen] = useState(false);
 
   const handleNavigate = (direction: 'next' | 'prev') => {
     const nextIdx = direction === 'next' ? (currentIndex + 1) % items.length : (currentIndex - 1 + items.length) % items.length;
@@ -57,7 +55,9 @@ const CheatsheetDetailView: React.FC<CheatsheetDetailViewProps> = ({
       setIsSyncingDescription(true);
       try {
           const desc = await generateArtistDescription(item.name, settings);
-          if (desc) { setLlmResult(desc); setIsLlmModalOpen(true); }
+          if (desc) { 
+              onUpdateItem(item.id, { description: desc });
+          }
       } catch (e) { console.error("AI Sync failed", e); } finally { setIsSyncingDescription(false); }
   };
 

@@ -1,10 +1,10 @@
-import React, { useState, useEffect, useMemo, useCallback, useRef, useLayoutEffect } from 'react';
+import React, { useState, useEffect, useMemo, useRef, useLayoutEffect } from 'react';
 import { gsap } from 'gsap';
 import type { GalleryItem, GalleryCategory } from '../types';
 import { 
-    ChevronLeftIcon, EditIcon, DeleteIcon, CheckIcon, ThumbTackIcon, 
-    ChevronRightIcon, CloseIcon, PhotoIcon, UploadIcon, YouTubeIcon, 
-    RefreshIcon, PlusIcon, ArrowsUpDownIcon, LinkIcon
+    ChevronLeftIcon, ThumbTackIcon, 
+    ChevronRightIcon, CloseIcon, YouTubeIcon, 
+    PlusIcon
 } from './icons';
 import FullscreenViewer from './FullscreenViewer';
 import { fileSystemManager, fileToBase64 } from '../utils/fileUtils';

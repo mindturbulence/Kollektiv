@@ -46,7 +46,7 @@ class LocalFileSystemManager implements IFileSystemManager {
         return false;
     }
 
-    async initialize(settings: LLMSettings, auth: AuthContextType): Promise<boolean> {
+    async initialize(_settings: LLMSettings, _auth: AuthContextType): Promise<boolean> {
         if (this.isInitialized) return true;
         if (this.initPromise) return this.initPromise;
 
@@ -105,10 +105,13 @@ class LocalFileSystemManager implements IFileSystemManager {
             return null;
         }
 
+        /* 
+        // Removed for AI Studio Preview compatibility
         if ((window as any).self !== (window as any).top) {
             (window as any).alert("This application must be opened in its own browser tab to access the local file system.");
             return null;
         }
+        */
         
         try {
             const handle = await (window as any).showDirectoryPicker({ id: 'kollektiv-app-data-dir', mode: 'readwrite' });

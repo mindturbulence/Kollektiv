@@ -4,7 +4,7 @@ import { dissectPrompt } from '../services/llmService';
 import type { SavedPrompt, PromptCategory } from '../types';
 import { loadPromptCategories } from '../utils/promptStorage';
 import {
-  ChevronLeftIcon, ChevronRightIcon, CloseIcon, RefreshIcon, SparklesIcon
+  ChevronLeftIcon, ChevronRightIcon, CloseIcon, RefreshIcon
 } from './icons';
 import LoadingSpinner from './LoadingSpinner';
 import PromptEditorModal from './PromptEditorModal';
@@ -68,7 +68,6 @@ const PromptDetailView: React.FC<PromptDetailViewProps> = ({
   onNavigate,
   onDelete,
   onUpdate,
-  onSendToEnhancer,
   showGlobalFeedback,
   onClip,
   onClipString
@@ -114,6 +113,7 @@ const PromptDetailView: React.FC<PromptDetailViewProps> = ({
   }, [prompt]);
 
   const handleNavigation = useCallback((direction: 'next' | 'prev') => {
+    if (!prompts.length) return;
     const newIndex = direction === 'next'
       ? (currentIndex + 1) % prompts.length
       : (currentIndex - 1 + prompts.length) % prompts.length;

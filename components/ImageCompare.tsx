@@ -1,5 +1,5 @@
 import React, { useState, useRef, useCallback, useEffect, useMemo } from 'react';
-import { UploadIcon, ViewColumnsIcon, RefreshIcon, EyeIcon, ViewSplitHorizontalIcon, FolderClosedIcon } from './icons';
+import { ViewColumnsIcon, RefreshIcon, EyeIcon, ViewSplitHorizontalIcon } from './icons';
 import GalleryPickerModal from './GalleryPickerModal';
 import type { GalleryItem } from '../types';
 import { fileSystemManager } from '../utils/fileUtils';

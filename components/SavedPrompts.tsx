@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useMemo, useCallback, useRef } from 'react';
+import { gsap } from 'gsap';
 import {
     loadSavedPrompts,
     deleteSavedPrompt,
@@ -111,27 +112,56 @@ const SavedPrompts: React.FC<SavedPromptsProps> = ({
         const q = searchQuery.toLowerCase();
         filtered = filtered.filter(p => 
             (p.title || '').toLowerCase().includes(q) || 
-            p.text.toLowerCase().includes(q) ||
+            (p.text || '').toLowerCase().includes(q) ||
             p.tags?.some(t => t.toLowerCase().includes(q))
         );
       }
 
       const sorted = [...filtered];
-      if (sortOrder === 'oldest') sorted.sort((a, b) => a.createdAt - b.createdAt);
+      if (sortOrder === 'oldest') sorted.sort((a, b) => (a.createdAt || 0) - (b.createdAt || 0));
       else if (sortOrder === 'title') sorted.sort((a, b) => (a.title || '').localeCompare(b.title || ''));
-      else sorted.sort((a, b) => b.createdAt - a.createdAt);
+      else sorted.sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0));
       return sorted;
   }, [prompts, selectedCategoryId, sortOrder, searchQuery]);
 
   // Masonry Split Logic with Pagination Slicing
   const masonryColumns = useMemo(() => {
-    const visiblePrompts = sortedAndFilteredPrompts.slice(0, displayCount);
+    if (!columnCount || columnCount <= 0) return [];
+    const visiblePrompts = (sortedAndFilteredPrompts || []).slice(0, displayCount);
     const cols: SavedPrompt[][] = Array.from({ length: columnCount }, () => []);
     visiblePrompts.forEach((item, index) => {
-        cols[index % columnCount].push(item);
+        if (item) {
+            cols[index % columnCount].push(item);
+        }
     });
     return cols;
   }, [sortedAndFilteredPrompts, columnCount, displayCount]);
+
+  const gridRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (masonryColumns.length > 0 && gridRef.current) {
+        const items = gridRef.current.querySelectorAll('.prompt-card-item:not(.animated)');
+        if (items && items.length > 0) {
+            gsap.fromTo(items, 
+                { opacity: 0, y: 40, scale: 0.95 },
+                { 
+                    opacity: 1, 
+                    y: 0, 
+                    scale: 1, 
+                    duration: 0.7, 
+                    stagger: 0.04, 
+                    ease: "power2.out",
+                    onComplete: () => {
+                        items.forEach(el => {
+                            if (el && el.classList) el.classList.add('animated');
+                        });
+                    }
+                }
+            );
+        }
+    }
+  }, [masonryColumns]);
 
   const handleClip = (p: SavedPrompt) => {
       onClipIdea({
@@ -219,7 +249,13 @@ const SavedPrompts: React.FC<SavedPromptsProps> = ({
             prompts={sortedAndFilteredPrompts} currentIndex={sortedAndFilteredPrompts.findIndex(p => p.id === detailViewPromptId)} 
             onClose={() => setDetailViewPromptId(null)} onNavigate={(idx) => setDetailViewPromptId(sortedAndFilteredPrompts[idx].id)}
             onDelete={(p) => { setPromptToDelete(p); setIsDeleteModalOpen(true); }}
-            onUpdate={async (id, u) => { await updateSavedPrompt(id, { ...prompts.find(p=>p.id===id)!, ...u }); await refreshData(); }}
+            onUpdate={async (id, u) => { 
+              const existing = prompts.find(p => p.id === id);
+              if (existing) {
+                await updateSavedPrompt(id, { ...existing, ...u }); 
+                await refreshData(); 
+              }
+            }}
             onSendToEnhancer={onSendToEnhancer} showGlobalFeedback={showGlobalFeedback} onClip={handleClip}
           />
         )}
@@ -273,22 +309,23 @@ const SavedPrompts: React.FC<SavedPromptsProps> = ({
                 </div>
             </header>
 
-            <div className="flex-grow overflow-y-auto overflow-x-hidden custom-scrollbar bg-base-100">
+            <div className="flex-grow overflow-y-auto overflow-x-hidden custom-scrollbar bg-base-300">
                 {sortedAndFilteredPrompts.length > 0 ? (
-                    <div className="flex bg-base-300 border-b border-base-300 min-h-full">
+                    <div ref={gridRef} className="flex bg-base-300 gap-px min-h-full">
                         {masonryColumns.map((col, colIdx) => (
-                            <div key={colIdx} className="flex-1 flex flex-col gap-px border-r border-base-300 last:border-r-0">
+                            <div key={colIdx} className="flex-1 flex flex-col gap-px">
                                 {col.map(p => (
-                                    <SavedPromptCard 
-                                        key={p.id} 
-                                        prompt={p} 
-                                        categoryName={categories.find(c => c.id === p.categoryId)?.name}
-                                        onDeleteClick={(p) => { setPromptToDelete(p); setIsDeleteModalOpen(true); }}
-                                        onEditClick={(p) => { setPromptToEdit(p); setIsEditorModalOpen(true); }}
-                                        onSendToEnhancer={onSendToEnhancer}
-                                        onOpenDetailView={() => setDetailViewPromptId(p.id)}
-                                        onClip={handleClip}
-                                    />
+                                    <div key={p.id} className={`prompt-card-item`}>
+                                        <SavedPromptCard 
+                                            prompt={p} 
+                                            categoryName={categories.find(c => c.id === p.categoryId)?.name}
+                                            onDeleteClick={(p) => { setPromptToDelete(p); setIsDeleteModalOpen(true); }}
+                                            onEditClick={(p) => { setPromptToEdit(p); setIsEditorModalOpen(true); }}
+                                            onSendToEnhancer={onSendToEnhancer}
+                                            onOpenDetailView={() => setDetailViewPromptId(p.id)}
+                                            onClip={handleClip}
+                                        />
+                                    </div>
                                 ))}
                             </div>
                         ))}

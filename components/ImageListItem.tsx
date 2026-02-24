@@ -1,5 +1,5 @@
 
-import React, { useState, useMemo, useRef, useEffect } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import type { GalleryItem } from '../types';
 import { EllipsisVerticalIcon, EditIcon, DeleteIcon, ThumbTackIcon, PhotoIcon } from './icons';
 import { fileSystemManager } from '../utils/fileUtils';

@@ -1,14 +1,13 @@
 
-import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';
-import { gsap } from 'gsap';
+import React, { useState, useEffect, useCallback } from 'react';
 import type { Storyboard, Scene, GalleryItem } from '../types';
 import { loadStoryboards, createStoryboard, updateStoryboard, deleteStoryboard } from '../utils/storyboardStorage';
 import { translateStoryboardScene } from '../services/llmService';
 import { useSettings } from '../contexts/SettingsContext';
 import { 
-    PlusIcon, DeleteIcon, ChevronLeftIcon, ChevronRightIcon, 
-    RefreshIcon, SparklesIcon, PhotoIcon, FilmIcon, 
-    DownloadIcon, ViewGridIcon, CheckIcon, CloseIcon
+    PlusIcon, ChevronLeftIcon, 
+    SparklesIcon, PhotoIcon, 
+    ViewGridIcon
 } from './icons';
 import LoadingSpinner from './LoadingSpinner';
 import ConfirmationModal from './ConfirmationModal';

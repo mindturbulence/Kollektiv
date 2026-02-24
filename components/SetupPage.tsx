@@ -1,7 +1,6 @@
 
 import React, { useState, useEffect, useLayoutEffect, useRef, useMemo, useCallback } from 'react';
-import { gsap } from 'gsap';
-import type { LLMSettings, ActiveSettingsTab, GalleryCategory, PromptCategory, SavedPrompt, FeatureSettings, YouTubeConnection, InstagramConnection, GoogleIdentityConnection } from '../types';
+import type { LLMSettings, ActiveSettingsTab, PromptCategory, FeatureSettings, YouTubeConnection, GoogleIdentityConnection } from '../types';
 import { testOllamaConnection, type OllamaTestResult } from '../services/llmService';
 import { fileSystemManager, createZipAndDownload } from '../utils/fileUtils';
 import { useSettings } from '../contexts/SettingsContext';
@@ -21,12 +20,11 @@ import {
     savePromptCategoriesOrder as savePromptCategoriesOrderFS
 } from '../utils/promptStorage';
 import { resetAllSettings, defaultLLMSettings } from '../utils/settingsStorage';
-import { AVAILABLE_LLM_MODELS, DAISYUI_LIGHT_THEMES, DAISYUI_DARK_THEMES } from '../constants';
+import { DAISYUI_LIGHT_THEMES, DAISYUI_DARK_THEMES } from '../constants';
 import ConfirmationModal from './ConfirmationModal';
-import { Cog6ToothIcon, CpuChipIcon, AppIcon, PromptIcon, PhotoIcon, FolderClosedIcon, PaintBrushIcon, DeleteIcon, CheckIcon, EditIcon, AdjustmentsVerticalIcon, DownloadIcon, LinkIcon, PlayIcon, RefreshIcon, InstagramIcon, InformationCircleIcon, UploadIcon, WaveSineIcon } from './icons';
+import { Cog6ToothIcon, CpuChipIcon, AppIcon, PromptIcon, PhotoIcon, FolderClosedIcon, PaintBrushIcon, AdjustmentsVerticalIcon, DownloadIcon, LinkIcon, PlayIcon, RefreshIcon, InformationCircleIcon, UploadIcon, InstagramIcon } from './icons';
 import FeedbackModal from './FeedbackModal';
 import { PromptTxtImportModal } from './PromptTxtImportModal';
-import LoadingSpinner from './LoadingSpinner';
 import { rebuildGalleryDatabase, rebuildPromptDatabase, optimizeManifests, verifyAndRepairFiles } from '../utils/integrity';
 import AutocompleteSelect from './AutocompleteSelect';
 
@@ -176,7 +174,7 @@ export const SetupPage: React.FC<SetupPageProps> = ({
 
   const [isTestingOllama, setIsTestingOllama] = useState(false);
   const [ollamaTestResult, setOllamaTestResult] = useState<OllamaTestResult | null>(null);
-  const [appDataDirectory, setAppDataDirectory] = useState<string | null>(fileSystemManager.appDirectoryName);
+  const [appDataDirectory] = useState<string | null>(fileSystemManager.appDirectoryName);
   
   const [resetTarget, setResetTarget] = useState<'all' | null>(null);
   const [isWorking, setIsWorking] = useState<boolean>(false);
@@ -804,7 +802,7 @@ export const SetupPage: React.FC<SetupPageProps> = ({
                         <SettingRow label="Client ID" desc="Your Google OAuth 2.0 Client ID for the YouTube API.">
                             <div className="flex flex-col gap-2 w-full max-w-md">
                                 <input type="text" value={settings.youtube?.customClientId || ''} onChange={(e) => handleSettingsChange('youtube', { ...settings.youtube, customClientId: e.target.value })} className="input input-bordered input-sm rounded-none w-full font-mono text-xs" placeholder="407408718192-..." />
-                                <p className="text-[8px] font-mono text-base-content/20 uppercase">REQUIRED: Ensure 'https://localhost:5173' is in authorized origins in GCP Console.</p>
+                                <p className="text-[8px] font-mono text-base-content/20 uppercase">REQUIRED: Ensure your App URL (from AI Studio) is in authorized origins in GCP Console.</p>
                             </div>
                         </SettingRow>
                         <SettingRow label="Channel Integration" desc="Connect to your YouTube account for direct artifact publishing.">
@@ -817,7 +815,7 @@ export const SetupPage: React.FC<SetupPageProps> = ({
                                             <p className="text-[10px] font-mono opacity-40 uppercase">{settings.youtube.subscriberCount} Subscribers</p>
                                         </div>
                                     </div>
-                                    <button onClick={(e) => handleSettingsChange('youtube', { ...settings.youtube, isConnected: false })} className="btn btn-xs btn-ghost text-error font-black uppercase tracking-widest">Unlink Channel</button>
+                                    <button onClick={() => handleSettingsChange('youtube', { ...settings.youtube, isConnected: false })} className="btn btn-xs btn-ghost text-error font-black uppercase tracking-widest">Unlink Channel</button>
                                 </div>
                             ) : (
                                 <button onClick={() => handleAuthConnect('youtube')} className="btn btn-sm btn-outline rounded-none font-black text-[10px] tracking-widest uppercase px-6">LINK CHANNEL</button>
