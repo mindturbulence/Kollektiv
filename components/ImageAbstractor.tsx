@@ -117,9 +117,9 @@ export const ImageAbstractor: React.FC<ImageAbstractorProps> = ({ onSaveSuggesti
     }, [sourceFile, fileType, settings]);
     
     return (
-        <div className="grid grid-cols-1 lg:grid-cols-3 overflow-hidden h-full bg-base-100">
+        <div className="grid grid-cols-1 lg:grid-cols-3 overflow-hidden h-full p-4 gap-4 bg-base-300/20">
             {/* Left Sidebar: Form */}
-            <div className="lg:col-span-1 bg-base-100 flex flex-col min-h-0 border-r border-base-300">
+            <div className="lg:col-span-1 bg-base-100 flex flex-col min-h-0 corner-frame shadow-sm">
                 {header}
                 <header className="p-6 border-b border-base-300 bg-base-200/10 h-16 flex items-center">
                     <h3 className="text-[10px] font-black uppercase tracking-[0.4em] text-primary">Source Material</h3>
@@ -198,7 +198,7 @@ export const ImageAbstractor: React.FC<ImageAbstractorProps> = ({ onSaveSuggesti
                 </footer>
             </div>
             {/* Main Output Column: Results */}
-            <div className="lg:col-span-2 bg-base-100 flex flex-col min-h-0">
+            <div className="lg:col-span-2 bg-base-100 flex flex-col min-h-0 corner-frame shadow-sm">
                  <header className="p-6 border-b border-base-300 bg-base-200/10 h-16 flex items-center">
                     <h2 className="text-xs font-black uppercase tracking-[0.4em] text-primary flex items-center gap-3">
                         <div className="w-2 h-2 rounded-full bg-primary animate-pulse"></div> NEURAL ABSTRACTION

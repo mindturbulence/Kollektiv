@@ -82,7 +82,7 @@ const SavedPromptCard: React.FC<SavedPromptCardProps> = memo(({
 
   return (
     <div className="flex flex-col group bg-base-100 transition-all duration-500 hover:bg-base-200/50 w-full overflow-hidden select-none h-fit">
-      <div className="p-8 md:p-10 flex flex-col w-full h-full">
+      <div className="p-6 md:p-8 flex flex-col w-full h-full">
         {/* Header Section - Category Label and Menu Button Aligned */}
         <div className="mb-6 space-y-3">
           <div className="flex items-center gap-3">

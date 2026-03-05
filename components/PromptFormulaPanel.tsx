@@ -69,7 +69,7 @@ const PromptFormulaPanel: React.FC<PromptFormulaPanelProps> = ({ promptText, sho
 
     return (
         <>
-        <div className="flex flex-col bg-base-100 overflow-hidden">
+        <div className="flex flex-col bg-base-100 overflow-hidden corner-frame shadow-sm">
             <header className="p-6 border-b border-base-300 bg-base-200/10 flex justify-between items-center">
                 <span className="text-[10px] font-black uppercase tracking-[0.3em] text-base-content/40">
                     Prompt Template

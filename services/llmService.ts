@@ -9,54 +9,117 @@ const getModelSyntax = (model: string) => {
     const lower = model.toLowerCase();
     
     // Video Architectures
-    if (lower.includes('ltx-2')) return { format: "Temporal Narrative.", rules: "Describe sequence of action with physical verbs. Focus on physics-based motion and high temporal consistency." };
-    if (lower.includes('veo')) return { format: "Cinematic Flow.", rules: "Describe lighting interactions, atmospheric density, and camera motion verbs. Focus on high-fidelity fluid action." };
-    if (lower.includes('kling')) return { format: "Technical Cinematic Tags.", rules: "Mix natural language with technical lighting and physics descriptors. High detail on fluid dynamics and material properties." };
-    if (lower.includes('runway')) return { format: "High-Impact Prose.", rules: "Direct, descriptive sentences focusing on material consistency and global illumination." };
-    if (lower.includes('luma')) return { format: "Dynamic Keyframes.", rules: "Focus on the transition between the start and end of the motion. Highly descriptive of speed and direction changes." };
+    if (lower.includes('ltx-2')) return { 
+        format: "Temporal Narrative.", 
+        rules: "Describe sequence of action with physical verbs. Focus on physics-based motion, high temporal consistency, and realistic material deformation. Use natural language prose." 
+    };
+    if (lower.includes('veo')) return { 
+        format: "Cinematic Flow.", 
+        rules: "Describe lighting interactions, atmospheric density, and camera motion verbs. Focus on high-fidelity fluid action and cinematic color grading. Use evocative, descriptive prose." 
+    };
+    if (lower.includes('kling')) return { 
+        format: "Technical Cinematic Tags.", 
+        rules: "Mix natural language with technical lighting and physics descriptors. High detail on fluid dynamics, material properties, and complex human interactions." 
+    };
+    if (lower.includes('runway')) return { 
+        format: "High-Impact Prose.", 
+        rules: "Direct, descriptive sentences focusing on material consistency, global illumination, and specific motion vectors. Avoid fluff; be visually precise." 
+    };
+    if (lower.includes('luma')) return { 
+        format: "Dynamic Keyframes.", 
+        rules: "Focus on the transition between the start and end of the motion. Highly descriptive of speed, direction changes, and dramatic camera shifts." 
+    };
+    if (lower.includes('sora')) return {
+        format: "Hyper-Realistic Narrative.",
+        rules: "Extremely detailed descriptions of complex scenes with multiple characters, specific types of motion, and precise background details. Focus on physical realism."
+    };
+    if (lower.includes('wan video') || lower.includes('hunyuan video')) return {
+        format: "Dense Visual Script.",
+        rules: "Describe the scene with a focus on spatial relationships, character expressions, and environmental changes over time. High emphasis on consistent character features."
+    };
 
     // Image Architectures
-    if (lower.includes('flux')) return { format: "Dense Descriptive Paragraph.", rules: "Natural language focusing on micro-textures, lighting interaction, and realistic material rendering. Avoid tag-lists." };
-    if (lower.includes('imagen')) return { format: "Clear Semantic Prose.", rules: "High semantic accuracy. Describe relationships between objects and environmental lighting clearly." };
-    if (lower.includes('midjourney')) return { format: "Stylized Aesthetic Tags.", rules: "Focus on style, medium, and lighting mood. Do NOT output params like --ar; they are handled via modifiers." };
-    if (lower.includes('pony') || lower.includes('illustrious')) return { format: "Weighted Tags.", rules: "Start with quality scores (score_9, etc). Use descriptive tags for subjects and specific stylistic triggers." };
+    if (lower.includes('flux')) return { 
+        format: "Dense Descriptive Paragraph.", 
+        rules: "Natural language focusing on micro-textures, lighting interaction, and realistic material rendering. Describe the scene as if explaining it to a master painter. Avoid tag-lists. Mention 'hyper-realistic' or 'raw' if appropriate." 
+    };
+    if (lower.includes('imagen')) return { 
+        format: "Clear Semantic Prose.", 
+        rules: "High semantic accuracy. Describe relationships between objects and environmental lighting clearly. Focus on composition and clear subject-background separation." 
+    };
+    if (lower.includes('midjourney')) return { 
+        format: "Stylized Aesthetic Tags.", 
+        rules: "Focus on style, medium, lighting mood, and artistic influence. Use evocative adjectives. Do NOT output params like --ar; they are handled via modifiers. Use 'v6.1 style' cues." 
+    };
+    if (lower.includes('stable diffusion 3.5') || lower.includes('sdxl')) return {
+        format: "Structured Descriptive Tags.",
+        rules: "Mix of descriptive phrases and specific keywords. Focus on lighting (e.g., 'volumetric lighting'), quality (e.g., 'highly detailed'), and style (e.g., 'digital art')."
+    };
+    if (lower.includes('pony') || lower.includes('illustrious')) return { 
+        format: "Weighted Tags.", 
+        rules: "Start with quality scores (score_9, score_8_up, etc). Use descriptive tags for subjects, specific stylistic triggers, and Danbooru-style tagging conventions." 
+    };
+    if (lower.includes('gpt-4o') || lower.includes('dall-e')) return {
+        format: "Rich Narrative Prose.",
+        rules: "Highly descriptive, imaginative, and literal. DALL-E 3 follows instructions perfectly, so describe exactly what should be in the frame, including text if requested."
+    };
+    if (lower.includes('ideogram')) return {
+        format: "Graphic Design Focus.",
+        rules: "Focus on typography, layout, and clean graphic elements. Describe text placement and font styles clearly if applicable."
+    };
+    if (lower.includes('janus') || lower.includes('deepseek')) return {
+        format: "Balanced Semantic Tags.",
+        rules: "Focus on subject clarity and environmental context. Use a mix of natural language and descriptive keywords."
+    };
     
     // Audio Architectures
-    if (lower.includes('elevenlabs')) return { format: "Dialogue Script.", rules: "Include [emotional cues] or [breath sounds] for natural delivery. Focus on cadence." };
-    if (lower.includes('suno') || lower.includes('udio')) return { format: "Musical Structure.", rules: "Define [Genre], [Instruments], [Mood], and structure (Verse, Chorus, Drop). Use descriptive musical terms." };
-    if (lower.includes('mmaudio')) return { format: "Layered Sonic Textures.", rules: "Describe the layers of sound, material impact, and acoustic environment (reverb, echo)." };
+    if (lower.includes('elevenlabs')) return { 
+        format: "Dialogue Script.", 
+        rules: "Include [emotional cues] or [breath sounds] for natural delivery. Focus on cadence, emphasis, and character-specific vocal quirks." 
+    };
+    if (lower.includes('suno') || lower.includes('udio')) return { 
+        format: "Musical Structure.", 
+        rules: "Define [Genre], [Instruments], [Mood], [Tempo], and structure (Verse, Chorus, Bridge, Drop). Use descriptive musical terms and production style cues." 
+    };
+    if (lower.includes('mmaudio')) return { 
+        format: "Layered Sonic Textures.", 
+        rules: "Describe the layers of sound, material impact, and acoustic environment (reverb, echo, spatial positioning). Focus on foley-style detail." 
+    };
 
-    return { format: "Natural Language.", rules: "Cohesive visual or conceptual description." };
+    return { format: "Natural Language.", rules: "Cohesive visual or conceptual description with high attention to detail and unique stylistic flair." };
 };
 
 // --- AI Roles (Persona System) ---
 const AI_ROLES = {
     ENHANCER: (model: string, length: string, isVideo: boolean, isAudio: boolean, _hasManualCamera: boolean, inputType?: string) => {
         const syntax = getModelSyntax(model);
-        const l = length === 'Short' ? '30 words' : length === 'Long' ? '550+ words' : '180 words';
+        const l = length === 'Short' ? '40 words' : length === 'Long' ? '600+ words' : '220 words';
         const isI2V = isVideo && inputType === 'i2v';
 
-        let persona = "Role: Professional Visual Storyteller.";
-        let modeProtocol = "Focus on descriptive textures and atmospheric storytelling.";
+        let persona = "Role: World-Class Visual Strategist and Prompt Architect.";
+        let modeProtocol = "Focus on unique, high-fidelity textures, atmospheric depth, and sophisticated storytelling. CRITICAL: Camera specifications (Body/Model) are technical metadata for the capture device. Do NOT describe a person holding the camera or the camera appearing in the scene.";
 
         if (isVideo) {
-            persona = "Role: Expert Cinematic Director.";
+            persona = "Role: Visionary Cinematic Director.";
             if (isI2V) {
-                modeProtocol = `I2V PROTOCOL (DIRECTING AN IMAGE): The user is providing a reference image. Assume the subject, colors, and static details are already set. DO NOT describe colors or objects in the image. Focus EXCLUSIVELY on directing movement, camera paths, and temporal shifts. Strip all static adjectives. Output must be purely kinetic and efficient.`;
+                modeProtocol = `I2V PROTOCOL (DIRECTING AN IMAGE): The user is providing a reference image. Assume the subject, colors, and static details are already set. DO NOT describe colors or objects in the image. Focus EXCLUSIVELY on directing movement, camera paths, and temporal shifts. Strip all static adjectives. Output must be purely kinetic, efficient, and physically plausible.`;
             } else {
-                modeProtocol = `T2V PROTOCOL (WORLD BUILDING): Build the world from scratch. Focus on composition, blocking, character action, and lighting that establishes the scene from the concept.`;
+                modeProtocol = `T2V PROTOCOL (WORLD BUILDING): Build a cinematic world from scratch. Focus on composition, blocking, character action, and lighting that establishes a powerful narrative scene.`;
             }
         } else if (isAudio) {
-            persona = "Role: Senior Audio Producer and Sound Engineer.";
-            modeProtocol = "Acoustic focus. Map the frequency, rhythm, and sonic textures. If dialogue, focus on delivery. If music, focus on instrumentation and structure.";
+            persona = "Role: Master Audio Producer and Sound Architect.";
+            modeProtocol = "Acoustic focus. Map the frequency, rhythm, and sonic textures with extreme precision. If dialogue, focus on emotional delivery. If music, focus on instrumentation, production quality, and structural complexity.";
+        } else {
+            modeProtocol += " IMAGE PROTOCOL: This is for a STATIC image. Do NOT include temporal descriptions, durations, or motion verbs unless they describe a frozen moment in time. Focus on 'the decisive moment'.";
         }
 
         return `${persona}
-Goal: Generate ${isAudio ? '1 production-ready script/formula' : '3 unique variations'}.
+Goal: Generate ${isAudio ? '1 production-ready script/formula' : '3 unique, highly accurate variations'}.
 Target Architecture: ${model}.
 Syntax: ${syntax.format}. Rules: ${syntax.rules}. Target Len: ${l}.
 ${modeProtocol}
-Output: ${isAudio ? 'Single optimized string' : '3 distinct lines, each on a new line'}. NO INTROS.`;
+CRITICAL: Even for short inputs, expand with creative, model-specific details that maximize the output quality of ${model}. Be unique, avoid generic descriptions.
+Output: ${isAudio ? 'Single optimized string' : '3 distinct lines, each on a new line'}. NO INTROS, NO EXPLANATIONS.`;
     },
 
     REFINER: (model: string, isVideo: boolean, isAudio: boolean, _hasManualCamera: boolean, inputType?: string) => {
@@ -64,23 +127,27 @@ Output: ${isAudio ? 'Single optimized string' : '3 distinct lines, each on a new
         const isI2V = isVideo && inputType === 'i2v';
         
         let protocol = "";
-        let role = "Expert Prompt Refiner.";
+        let role = "Elite Prompt Refiner and Model Specialist.";
         
         if (isVideo) {
-            role = "Expert Cinematic Director.";
+            role = "Visionary Cinematic Director.";
             if (isI2V) {
-                protocol = "I2V PROTOCOL: You are animating a fixed image. Strip all static descriptions of the subject (color, appearance). Focus ONLY on the physics of motion, camera pathing, and scene evolution.";
+                protocol = "I2V PROTOCOL: You are animating a fixed image. Strip all static descriptions of the subject. Focus ONLY on the physics of motion, camera pathing, and scene evolution.";
             } else {
-                protocol = "T2V PROTOCOL: Direct the scene from text. Establish subject, environment, and motion sequence clearly.";
+                protocol = "T2V PROTOCOL: Direct the scene from text. Establish subject, environment, and motion sequence with cinematic precision.";
             }
         } else if (isAudio) {
-            role = "Senior Sound Engineer.";
-            protocol = "Focus on acoustics, material sounds, and rhythmic structure.";
+            role = "Master Sound Engineer.";
+            protocol = "Focus on acoustics, material sounds, and rhythmic structure. Maximize sonic fidelity.";
+        } else {
+            protocol = "IMAGE PROTOCOL: This is for a STATIC image. Do NOT include temporal descriptions or motion verbs. Focus on composition, lighting, and texture.";
         }
 
         return `Role: ${role} Optimized for ${model}.
-Rewrite the user's concept into a perfect ${syntax.format} formula.
+Task: Rewrite the user's concept into the absolute best possible ${syntax.format} formula for ${model}.
 Rules: ${syntax.rules}. ${protocol}
+CRITICAL: Camera specifications (Body/Model) are technical metadata. Do NOT suggest a person holding the camera.
+Goal: Maximize accuracy to the user's intent while injecting unique, high-quality stylistic details that ${model} excels at.
 Output the refined prompt text ONLY.`;
     },
     
@@ -107,7 +174,7 @@ export const cleanLLMResponse = (text: string): string => {
         .join('\n').trim();
 };
 
-export const buildContextForEnhancer = (modifiers: PromptModifiers): string => {
+export const buildContextForEnhancer = (modifiers: PromptModifiers, isAudio: boolean = false): string => {
     const ctx = [];
     
     if (modifiers.artStyle) ctx.push(`Movement: ${modifiers.artStyle}`);
@@ -116,8 +183,8 @@ export const buildContextForEnhancer = (modifiers: PromptModifiers): string => {
     if (modifiers.digitalAesthetic) ctx.push(`Aesthetic: ${modifiers.digitalAesthetic}`);
     if (modifiers.zImageStyle) ctx.push(`Z-Image Variant: ${modifiers.zImageStyle}`);
     
-    if (modifiers.cameraType) ctx.push(`Body: ${modifiers.cameraType}`);
-    if (modifiers.cameraModel) ctx.push(`Model: ${modifiers.cameraModel}`);
+    if (modifiers.cameraType) ctx.push(`Camera Body: ${modifiers.cameraType}`);
+    if (modifiers.cameraModel) ctx.push(`Camera Model: ${modifiers.cameraModel}`);
     
     if (modifiers.filmStock) {
         if (modifiers.cameraType === 'Analog Film Camera') {
@@ -150,7 +217,7 @@ export const buildContextForEnhancer = (modifiers: PromptModifiers): string => {
     if (modifiers.voiceTone) ctx.push(`Tone: ${modifiers.voiceTone}`);
     if (modifiers.audioEnvironment) ctx.push(`Acoustics: ${modifiers.audioEnvironment}`);
     if (modifiers.audioMood) ctx.push(`Mood: ${modifiers.audioMood}`);
-    if (modifiers.audioDuration) ctx.push(`Duration: ${modifiers.audioDuration}s`);
+    if (isAudio && modifiers.audioDuration) ctx.push(`Duration: ${modifiers.audioDuration}s`);
 
     return ctx.length ? `[Architectural Constraints]\n${ctx.join('\n')}` : '';
 };
@@ -186,14 +253,16 @@ export async function* enhancePromptStream(
     const isAudio = !!TARGET_AUDIO_AI_MODELS.find(m => m === targetAIModel);
     const hasManualCamera = !!modifiers.cameraMovement;
     const systemInstruction = AI_ROLES.ENHANCER(targetAIModel, promptLength, isVideo, isAudio, hasManualCamera, modifiers.videoInputType);
-    const context = buildContextForEnhancer(modifiers);
+    const context = buildContextForEnhancer(modifiers, isAudio);
     const input = `${context}\n\n[Primary Concept]\n${originalPrompt}`;
 
     const tokenBudget = promptLength === 'Long' ? 2500 : 1024;
     const isOllama = settings.activeLLM === 'ollama' || settings.activeLLM === 'ollama_cloud';
+    const temperature = modifiers.creativity !== undefined ? modifiers.creativity / 100 : 0.7;
+
     const stream = isOllama
         ? enhancePromptOllamaStream(input, constantModifier, settings, systemInstruction, tokenBudget)
-        : enhancePromptGeminiStream(input, constantModifier, settings, systemInstruction, promptLength, referenceImages);
+        : enhancePromptGeminiStream(input, constantModifier, settings, systemInstruction, promptLength, referenceImages, temperature);
 
     let inThought = false;
     for await (const chunk of stream) {
@@ -347,7 +416,8 @@ export const testOllamaConnection = async (baseUrl: string): Promise<OllamaTestR
     
     if (window.location.protocol === 'https:') {
         if (cleanUrl.includes('localhost:11434') || cleanUrl.includes('127.0.0.1:11434')) {
-            targetUrl = '/ollama-local';
+            // Optimization: Skip local fetch in cloud to avoid proxy noise
+            return { success: false, message: "LOCAL OLLAMA UNREACHABLE IN CLOUD. USE REMOTE ENDPOINT." };
         } else if (cleanUrl.startsWith('http')) {
             targetUrl = '/proxy-remote';
             headers['x-target-url'] = cleanUrl;

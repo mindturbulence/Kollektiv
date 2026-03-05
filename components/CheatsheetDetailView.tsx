@@ -64,7 +64,7 @@ const CheatsheetDetailView: React.FC<CheatsheetDetailViewProps> = ({
   if (!item) return null;
 
   return (
-    <div className="absolute inset-0 z-40 bg-black/60 backdrop-blur-sm animate-fade-in flex items-center justify-center p-2 lg:p-4 overflow-hidden" onClick={onClose}>
+    <div className="absolute inset-0 z-[100] bg-black/60 backdrop-blur-sm animate-fade-in flex items-center justify-center p-2 lg:p-4 overflow-hidden" onClick={onClose}>
         <div className="w-full h-full bg-base-100 rounded-none border border-base-300 shadow-2xl flex flex-col overflow-hidden relative" onClick={e => e.stopPropagation()}>
             <header className="flex-shrink-0 px-8 h-16 border-b border-base-300 bg-base-100 flex justify-between items-center gap-6">
                 <div className="min-w-0"><h2 className="text-xl lg:text-2xl font-black tracking-tighter text-base-content leading-none truncate max-w-2xl uppercase">{item.name}</h2></div>

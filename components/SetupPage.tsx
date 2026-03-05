@@ -24,6 +24,7 @@ import { DAISYUI_LIGHT_THEMES, DAISYUI_DARK_THEMES } from '../constants';
 import ConfirmationModal from './ConfirmationModal';
 import { Cog6ToothIcon, CpuChipIcon, AppIcon, PromptIcon, PhotoIcon, FolderClosedIcon, PaintBrushIcon, AdjustmentsVerticalIcon, DownloadIcon, LinkIcon, PlayIcon, RefreshIcon, InformationCircleIcon, UploadIcon, InstagramIcon } from './icons';
 import FeedbackModal from './FeedbackModal';
+import { audioService } from '../services/audioService';
 import { PromptTxtImportModal } from './PromptTxtImportModal';
 import { rebuildGalleryDatabase, rebuildPromptDatabase, optimizeManifests, verifyAndRepairFiles } from '../utils/integrity';
 import AutocompleteSelect from './AutocompleteSelect';
@@ -88,6 +89,8 @@ const MaintenanceOverlay: React.FC<{ progress: number, message: string }> = ({ p
     return (
         <div className="fixed inset-0 bg-base-100 z-[500] flex flex-col items-center justify-center overflow-hidden">
             <div className="absolute inset-0 bg-grid-texture opacity-[0.03] pointer-events-none"></div>
+            <div className="absolute inset-0 bg-gradient-to-br from-primary/5 via-transparent to-secondary/5 pointer-events-none"></div>
+            <div className="absolute inset-0 bg-gradient-to-t from-base-100 via-transparent to-base-100 opacity-60 pointer-events-none"></div>
             
             <div className="relative z-10 flex flex-col items-center">
                 {/* Brand Text Wrapper with Masking */}
@@ -139,7 +142,11 @@ const SetupNavItem: React.FC<{
     <li>
         <a
           ref={registerRef}
-          onClick={onClick}
+          onClick={() => {
+            audioService.playClick();
+            onClick();
+          }}
+          onMouseEnter={() => audioService.playHover()}
           className={`flex items-center p-2.5 rounded-lg text-base font-medium transition-colors cursor-pointer relative z-10 ${
             isActive
               ? 'text-primary-content font-bold'
@@ -193,64 +200,9 @@ export const SetupPage: React.FC<SetupPageProps> = ({
   const authModeRef = useRef<'youtube' | 'google'>('google');
   const authTimeoutRef = useRef<number | null>(null);
 
-  // --- AUDIO ENGINE: SUCCESS CHIME (IMPROVED Audibility) ---
+  // --- AUDIO ENGINE: SUCCESS CHIME ---
   const playSuccessChime = useCallback(() => {
-    try {
-        const AudioCtx = window.AudioContext || (window as any).webkitAudioContext;
-        if (!AudioCtx) return;
-        const ctx = new AudioCtx();
-        const master = ctx.createGain();
-        master.connect(ctx.destination);
-        master.gain.value = 0.5; // Sufficiently audible
-        
-        const now = ctx.currentTime;
-        
-        // Osc 1: The Mechanical Impact
-        const osc1 = ctx.createOscillator();
-        const g1 = ctx.createGain();
-        osc1.type = 'sine';
-        osc1.frequency.setValueAtTime(150, now);
-        osc1.frequency.exponentialRampToValueAtTime(40, now + 0.15);
-        g1.gain.setValueAtTime(0.6, now);
-        g1.gain.linearRampToValueAtTime(0, now + 0.15);
-        osc1.connect(g1);
-        g1.connect(master);
-        
-        // Osc 2: The Digital Ascent
-        const osc2 = ctx.createOscillator();
-        const g2 = ctx.createGain();
-        osc2.type = 'triangle';
-        osc2.frequency.setValueAtTime(880, now + 0.05);
-        osc2.frequency.exponentialRampToValueAtTime(1760, now + 0.3);
-        g2.gain.setValueAtTime(0, now + 0.05);
-        g2.gain.linearRampToValueAtTime(0.4, now + 0.1);
-        g2.gain.exponentialRampToValueAtTime(0.001, now + 1.2);
-        osc2.connect(g2);
-        g2.connect(master);
-
-        // Osc 3: The Polish Shimmer
-        const osc3 = ctx.createOscillator();
-        const g3 = ctx.createGain();
-        osc3.type = 'sine';
-        osc3.frequency.setValueAtTime(3520, now + 0.1);
-        g3.gain.setValueAtTime(0, now + 0.1);
-        g3.gain.linearRampToValueAtTime(0.15, now + 0.15);
-        g3.gain.exponentialRampToValueAtTime(0.001, now + 0.8);
-        osc3.connect(g3);
-        g3.connect(master);
-
-        osc1.start(now);
-        osc1.stop(now + 0.15);
-        osc2.start(now + 0.05);
-        osc2.stop(now + 1.2);
-        osc3.start(now + 0.1);
-        osc3.stop(now + 0.8);
-
-        // Forced context resumption for browser compliance
-        if (ctx.state === 'suspended') ctx.resume();
-    } catch (e) {
-        console.warn("Audio logic failed - likely interaction block.");
-    }
+    audioService.playSuccess();
   }, []);
 
   const handleAuthResponse = useCallback(async (accessToken: string, mode: 'youtube' | 'google') => {

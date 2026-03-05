@@ -9,6 +9,7 @@ export interface RefinerPreset {
   targetAIModel: string;
   mediaMode: 'image' | 'video' | 'audio';
   promptLength: string;
+  constantModifier?: string;
 }
 
 interface PresetsManifest {

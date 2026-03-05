@@ -61,8 +61,8 @@ const ChromaticText: React.FC<{ text: string; enabled?: boolean }> = ({ text, en
     );
 };
 
-// --- NEURAL EXPOSURE TRAIL ---
-const NeuralTrail: React.FC<{ images: GalleryItem[] }> = ({ images }) => {
+// --- ORAGE-STYLE IMAGE TRAIL ---
+const ImageTrail: React.FC<{ images: GalleryItem[] }> = ({ images }) => {
     const trailRef = useRef<HTMLDivElement>(null);
     const lastPos = useRef({ x: 0, y: 0 });
     const imageIndex = useRef(0);
@@ -77,13 +77,14 @@ const NeuralTrail: React.FC<{ images: GalleryItem[] }> = ({ images }) => {
         const url = URL.createObjectURL(blob);
         const img = document.createElement('img');
         
-        img.className = "absolute pointer-events-none z-10 border border-white/20 shadow-[0_25px_60px_rgba(0,0,0,0.6)] opacity-0 will-change-transform";
+        // Orage style: Grayscale, no shadow, clean borders, difference blend
+        img.className = "absolute pointer-events-none z-10 border border-white/5 opacity-0 will-change-transform grayscale brightness-125 mix-blend-difference";
         
         img.onload = () => {
             if (!trailRef.current) return;
 
             const aspect = img.naturalWidth / img.naturalHeight;
-            const baseSize = 160 + Math.random() * 100;
+            const baseSize = 120 + Math.random() * 80; // Slightly smaller than before
             
             if (aspect > 1) {
                 img.style.width = `${baseSize}px`;
@@ -95,7 +96,7 @@ const NeuralTrail: React.FC<{ images: GalleryItem[] }> = ({ images }) => {
 
             img.style.left = `${x}px`;
             img.style.top = `${y}px`;
-            img.style.transform = `translate(-50%, -50%) scale(0.1) rotate(${(Math.random() - 0.5) * 15}deg)`;
+            img.style.transform = `translate(-50%, -50%) scale(0.8) rotate(${(Math.random() - 0.5) * 10}deg)`;
             
             trailRef.current.appendChild(img);
 
@@ -106,19 +107,20 @@ const NeuralTrail: React.FC<{ images: GalleryItem[] }> = ({ images }) => {
                 }
             });
 
+            // Fast, snappy reveal and fade
             tl.to(img, {
                 opacity: 1,
                 scale: 1,
-                duration: 0.6,
-                ease: "expo.out"
+                duration: 0.4,
+                ease: "power2.out"
             });
 
             tl.to(img, {
                 opacity: 0,
-                scale: 0.4,
-                duration: 0.5,
-                ease: "power4.in"
-            }, "+=0.3");
+                scale: 1.1,
+                duration: 0.8,
+                ease: "power2.inOut"
+            }, "+=0.1");
         };
 
         img.src = url;
@@ -128,7 +130,8 @@ const NeuralTrail: React.FC<{ images: GalleryItem[] }> = ({ images }) => {
     useEffect(() => {
         const handleMove = (e: MouseEvent) => {
             const dist = Math.hypot(e.clientX - lastPos.current.x, e.clientY - lastPos.current.y);
-            if (dist > 180) { 
+            // Denser trail: spawn every 100px instead of 180px
+            if (dist > 100) { 
                 spawnArtifact(e.clientX, e.clientY);
                 lastPos.current = { x: e.clientX, y: e.clientY };
             }
@@ -162,7 +165,7 @@ const NavNode: React.FC<{ label: string; num: string; onClick: () => void }> = (
 };
 
 const MetadataCorner: React.FC<{ label: string; value: string; position: string }> = ({ label, value, position }) => (
-    <div className={`absolute ${position} p-10 flex flex-col gap-1 pointer-events-none z-20`}>
+    <div className={`absolute ${position} p-6 flex flex-col gap-1 pointer-events-none z-20`}>
         <span className="text-[8px] font-black uppercase tracking-[0.4em] text-primary/40">{label}</span>
         <span className="text-[10px] font-mono font-bold uppercase tracking-widest text-base-content/20">{value}</span>
     </div>
@@ -228,7 +231,7 @@ const Dashboard: React.FC<DashboardProps> = ({ onNavigate }) => {
     if (isLoading) return <div className="h-full w-full flex items-center justify-center bg-base-100"><LoadingSpinner /></div>;
 
     return (
-        <div className="h-full w-full bg-base-100 overflow-hidden relative select-none">
+        <div className="h-full w-full bg-base-100 overflow-hidden relative select-none border-none p-0">
             {/* AMBIENT BACKGROUND LAYER */}
             <div className="absolute inset-0 z-0 overflow-hidden pointer-events-none">
                 {!videoError && settings.dashboardVideoUrl ? (
@@ -251,14 +254,14 @@ const Dashboard: React.FC<DashboardProps> = ({ onNavigate }) => {
                 <div className="absolute inset-0 bg-gradient-to-t from-base-100 via-transparent to-base-100 opacity-60 z-10"></div>
             </div>
             
-            <NeuralTrail images={gallery} />
+            <ImageTrail images={gallery} />
 
             <MetadataCorner label="System_Status" value="Core_Engine_Active" position="top-0 left-0" />
             <MetadataCorner label="Vault_Index" value={`${gallery.length} Arifacts_Identified`} position="top-0 right-0" />
             <MetadataCorner label="Local_Sequence" value={time} position="bottom-0 left-0" />
             <MetadataCorner label="Protocol" value="Kollektiv_Engine_v2" position="bottom-0 right-0" />
 
-            <div className="absolute inset-0 flex flex-col items-center justify-center z-10 pointer-events-none px-6 text-center">
+            <div className="absolute inset-0 flex flex-col items-center justify-center z-10 pointer-events-none text-center">
                 <div className="overflow-hidden py-1 mb-2">
                     <p ref={headerTextRef} className="text-[9px] md:text-[11px] font-black uppercase tracking-[0.5em] text-primary/60">
                         MINDTURBULENCE'S

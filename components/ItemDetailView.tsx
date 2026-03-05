@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo, useRef, useLayoutEffect } from 'react';
+import React, { useState, useEffect, useMemo, useRef, useLayoutEffect, useCallback } from 'react';
 import { gsap } from 'gsap';
 import type { GalleryItem, GalleryCategory } from '../types';
 import { 
@@ -196,6 +196,13 @@ const ItemDetailView: React.FC<ItemDetailViewProps> = ({ items, currentIndex, is
   const carouselTrackRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
+  const overlayRef = useRef<HTMLDivElement>(null);
+  const modalRef = useRef<HTMLDivElement>(null);
+  const leftPanelRef = useRef<HTMLDivElement>(null);
+  const rightPanelRef = useRef<HTMLDivElement>(null);
+  const headerRef = useRef<HTMLElement>(null);
+  const timelineRef = useRef<gsap.core.Timeline | null>(null);
+
   const [isPublishModalOpen, setIsPublishModalOpen] = useState(false);
   const [videoBlob, setVideoBlob] = useState<Blob | null>(null);
 
@@ -228,6 +235,62 @@ const ItemDetailView: React.FC<ItemDetailViewProps> = ({ items, currentIndex, is
     gsap.to(track, { x: targetX, duration: 0.7, ease: "expo.out" });
   }, [activeImageIndex, editableUrls.length, item?.urls.length, isEditing]);
 
+  useLayoutEffect(() => {
+    if (!overlayRef.current || !modalRef.current || !leftPanelRef.current || !rightPanelRef.current || !headerRef.current) return;
+
+    const ctx = gsap.context(() => {
+        const tl = gsap.timeline({ defaults: { ease: "expo.out", duration: 1.4 } });
+        timelineRef.current = tl;
+        
+        // Initial state
+        gsap.set(overlayRef.current, { opacity: 0 });
+        gsap.set(modalRef.current, { 
+            scale: 0, 
+            transformOrigin: "bottom right",
+            opacity: 0
+        });
+        gsap.set(leftPanelRef.current, { x: -150, opacity: 0 });
+        gsap.set(rightPanelRef.current, { x: 150, opacity: 0 });
+        gsap.set(headerRef.current, { y: -100, opacity: 0 });
+
+        // Animation sequence
+        tl.to(overlayRef.current, { opacity: 1, duration: 0.8 })
+          .to(modalRef.current, { 
+              scale: 1, 
+              opacity: 1, 
+              duration: 1.2,
+              ease: "expo.out"
+          }, "-=0.4")
+          .to(headerRef.current, { 
+              y: 0, 
+              opacity: 1, 
+              duration: 1.2 
+          }, "-=0.6")
+          .to(leftPanelRef.current, { 
+              x: 0, 
+              opacity: 1, 
+              duration: 1.6 
+          }, "-=0.8")
+          .to(rightPanelRef.current, { 
+              x: 0, 
+              opacity: 1, 
+              duration: 1.6 
+          }, "-=1.1");
+    });
+
+    return () => ctx.revert();
+  }, []);
+
+  const handleClose = useCallback(() => {
+    if (timelineRef.current) {
+        timelineRef.current.reverse().eventCallback("onReverseComplete", () => {
+            onClose();
+        });
+    } else {
+        onClose();
+    }
+  }, [onClose]);
+
   const handleSave = () => {
     if (item) {
         onUpdate(item.id, { 
@@ -238,7 +301,7 @@ const ItemDetailView: React.FC<ItemDetailViewProps> = ({ items, currentIndex, is
             sources: editableSources 
         });
         showGlobalFeedback("Changes saved.");
-        onClose(); // BUG FIX: Return to list after saving
+        handleClose();
     }
   };
 
@@ -340,9 +403,9 @@ const ItemDetailView: React.FC<ItemDetailViewProps> = ({ items, currentIndex, is
   const isPublishable = item.type === 'video' && !!settings.youtube?.isConnected;
 
   return (
-    <div className="absolute inset-0 z-40 bg-black/95 backdrop-blur-sm animate-fade-in flex items-center justify-center p-2 lg:p-4 overflow-hidden" onClick={onClose}>
-        <div className="w-full h-full bg-base-100 rounded-none border border-base-300 shadow-2xl flex flex-col lg:flex-row overflow-hidden relative" onClick={e => e.stopPropagation()}>
-            <main className="flex-1 bg-black flex flex-col overflow-hidden relative group">
+    <div ref={overlayRef} className="absolute inset-0 z-40 bg-black/95 backdrop-blur-sm flex items-center justify-center p-4 lg:p-8 overflow-hidden" onClick={handleClose}>
+        <div ref={modalRef} className="w-full h-full bg-base-100 rounded-2xl border border-base-300 shadow-2xl flex flex-col lg:flex-row overflow-hidden relative" onClick={e => e.stopPropagation()}>
+            <main ref={leftPanelRef} className="flex-1 bg-black flex flex-col overflow-hidden relative group">
                 <div className="flex-grow relative flex items-center justify-center overflow-hidden">
                     <TransitionalMedia url={isEditing ? editableUrls[activeImageIndex] : item.urls[activeImageIndex]} type={item.type} title={item.title} onClick={() => setIsViewerOpen(true)} direction={navDirection} />
                     
@@ -410,15 +473,15 @@ const ItemDetailView: React.FC<ItemDetailViewProps> = ({ items, currentIndex, is
                 </div>
             </main>
 
-            <aside className="w-full lg:w-96 bg-base-100 border-l border-base-300 flex flex-col overflow-hidden">
-                <header className="flex-shrink-0 h-16 px-6 border-b border-base-300 flex items-center justify-between bg-base-200/20">
+            <aside ref={rightPanelRef} className="w-full lg:w-96 bg-base-100 border-l border-base-300 flex flex-col overflow-hidden">
+                <header ref={headerRef} className="flex-shrink-0 h-16 px-6 border-b border-base-300 flex items-center justify-between bg-base-200/20">
                     <div className="flex items-center gap-3">
                         <button onClick={() => onTogglePin(item.id)} className={`btn btn-sm btn-ghost btn-square rounded-none ${isPinned ? 'text-primary' : 'opacity-20'}`}>
                             <ThumbTackIcon className="w-5 h-5" />
                         </button>
                         <span className="text-[10px] font-black uppercase tracking-[0.2em] text-base-content/20">Item Info</span>
                     </div>
-                    <button onClick={onClose} className="btn btn-sm btn-ghost btn-square rounded-none opacity-40 hover:opacity-100">
+                    <button onClick={handleClose} className="btn btn-sm btn-ghost btn-square rounded-none opacity-40 hover:opacity-100">
                         <CloseIcon className="w-6 h-6" />
                     </button>
                 </header>

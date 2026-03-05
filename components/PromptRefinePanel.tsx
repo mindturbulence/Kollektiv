@@ -79,7 +79,7 @@ const PromptRefinePanel: React.FC<PromptRefinePanelProps> = ({ promptText, onApp
     }
 
     return (
-        <div className="flex flex-col h-full bg-base-100 overflow-hidden">
+        <div className="flex flex-col h-full bg-base-100 overflow-hidden corner-frame shadow-sm">
             <header className="p-4 border-b border-base-300 bg-base-200/10 flex justify-between items-center">
                 <div className="flex items-center gap-4">
                     <span className="text-[10px] font-black uppercase tracking-[0.3em] text-primary">AI Refinement</span>

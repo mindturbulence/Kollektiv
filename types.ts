@@ -168,6 +168,8 @@ export interface PromptModifiers {
   mjSeed?: string;
   mjStop?: string;
   mjRepeat?: string;
+  // Refiner specific
+  creativity?: number; 
 }
 
 export interface EnhancementResult {

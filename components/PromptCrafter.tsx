@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useCallback, useRef, useMemo } from 'react';
+import JSZip from 'jszip';
 import { crafterService } from '../services/crafterService';
 import type { WildcardFile, CrafterData } from '../types';
 import LoadingSpinner from './LoadingSpinner';
@@ -41,6 +42,8 @@ const PromptCrafter = ({ onClip, onSendToEnhancer, promptToInsert, header }: Pro
     const [isSavingTemplate, setIsSavingTemplate] = useState(false);
     const [templateName, setTemplateName] = useState('');
     const [isSaveModalOpen, setIsSaveModalOpen] = useState(false);
+    const [isImporting, setIsImporting] = useState(false);
+    const importInputRef = useRef<HTMLInputElement>(null);
     
     const loadData = useCallback(async () => {
         setIsLoading(true);
@@ -230,6 +233,49 @@ const PromptCrafter = ({ onClip, onSendToEnhancer, promptToInsert, header }: Pro
         }
     };
     
+    const handleImportClick = () => {
+        importInputRef.current?.click();
+    };
+
+    const handleImportFile = async (e: React.ChangeEvent<HTMLInputElement>) => {
+        const files = e.target.files;
+        if (!files || files.length === 0) return;
+
+        setIsImporting(true);
+        setError(null);
+
+        try {
+            for (let i = 0; i < files.length; i++) {
+                const file = files[i];
+                const lowerName = file.name.toLowerCase();
+
+                if (lowerName.endsWith('.txt') || lowerName.endsWith('.yml') || lowerName.endsWith('.yaml')) {
+                    const content = await file.text();
+                    await crafterService.saveWildcardFile(file.name, content);
+                } else if (lowerName.endsWith('.zip')) {
+                    const zip = await JSZip.loadAsync(file);
+                    const entries = Object.entries(zip.files);
+                    for (const [relativePath, zipEntry] of entries) {
+                        if (!zipEntry.dir) {
+                            const entryLower = relativePath.toLowerCase();
+                            if (entryLower.endsWith('.txt') || entryLower.endsWith('.yml') || entryLower.endsWith('.yaml')) {
+                                const content = await zipEntry.async('string');
+                                await crafterService.saveWildcardFile(relativePath, content);
+                            }
+                        }
+                    }
+                }
+            }
+            await loadData();
+        } catch (err: any) {
+            console.error("Import failed:", err);
+            setError(`Import failed: ${err.message}`);
+        } finally {
+            setIsImporting(false);
+            if (importInputRef.current) importInputRef.current.value = '';
+        }
+    };
+
     if (isLoading) return (
         <div className="h-full w-full flex items-center justify-center bg-base-100">
             <LoadingSpinner />
@@ -238,8 +284,8 @@ const PromptCrafter = ({ onClip, onSendToEnhancer, promptToInsert, header }: Pro
     if (error) return <div className="p-4 text-error">{error}</div>;
 
     return (
-        <div className="grid grid-cols-1 lg:grid-cols-12 overflow-hidden h-full">
-            <aside className="lg:col-span-3 bg-base-100 flex flex-col overflow-hidden border-r border-base-300">
+        <div className="grid grid-cols-1 lg:grid-cols-12 overflow-hidden h-full p-4 gap-4 bg-base-300/20">
+            <aside className="lg:col-span-3 bg-base-100 flex flex-col overflow-hidden corner-frame shadow-sm">
                 {header}
                 <header className="p-6 border-b border-base-300 bg-base-200/10 h-16 flex items-center">
                     <h3 className="text-[10px] font-black uppercase tracking-[0.4em] text-primary">Wildcards</h3>
@@ -247,16 +293,33 @@ const PromptCrafter = ({ onClip, onSendToEnhancer, promptToInsert, header }: Pro
                 <div className="flex-grow p-6 overflow-y-auto custom-scrollbar">
                     <WildcardTree categories={crafterData?.wildcardCategories || []} onWildcardClick={handleWildcardClick} />
                 </div>
-                <footer className="h-14 border-t border-base-300 bg-base-100">
+                <footer className="h-14 border-t border-base-300 bg-base-100 flex items-stretch">
                     <button 
                         onClick={loadData} 
-                        className="btn btn-ghost h-full w-full rounded-none border-none font-black text-[10px] tracking-widest uppercase hover:bg-base-200"
+                        disabled={isImporting}
+                        className="btn btn-ghost h-full flex-1 rounded-none border-none font-black text-[10px] tracking-widest uppercase hover:bg-base-200"
                     >
-                        REFRESH FILES
+                        {isImporting ? '...' : 'REFRESH'}
                     </button>
+                    <div className="w-px bg-base-300 h-full"></div>
+                    <button 
+                        onClick={handleImportClick} 
+                        disabled={isImporting}
+                        className="btn btn-ghost h-full flex-1 rounded-none border-none font-black text-[10px] tracking-widest uppercase hover:bg-base-200"
+                    >
+                        IMPORT
+                    </button>
+                    <input 
+                        type="file" 
+                        ref={importInputRef} 
+                        onChange={handleImportFile} 
+                        accept=".txt,.yml,.yaml,.zip" 
+                        multiple 
+                        className="hidden" 
+                    />
                 </footer>
             </aside>
-            <main className="lg:col-span-5 bg-base-100 flex flex-col overflow-hidden border-r border-base-300">
+            <main className="lg:col-span-5 bg-base-100 flex flex-col overflow-hidden corner-frame shadow-sm">
                 {/* Template Selection Bar - h-16 to match panel headers */}
                 <div className="h-16 border-b border-base-300 flex-shrink-0 bg-base-100 flex items-stretch">
                   <div className="dropdown flex-grow h-full">
@@ -324,7 +387,7 @@ const PromptCrafter = ({ onClip, onSendToEnhancer, promptToInsert, header }: Pro
                 </div>
 
                 <div className="flex-grow flex flex-col min-h-0 bg-base-200/5">
-                    <div className="flex-grow p-6 flex flex-col">
+                    <div className="h-1/3 p-6 flex flex-col flex-shrink-0">
                         <textarea 
                             ref={textareaRef}
                             value={promptText}
@@ -423,7 +486,7 @@ const PromptCrafter = ({ onClip, onSendToEnhancer, promptToInsert, header }: Pro
                 </div>
             </main>
             
-            <aside className="lg:col-span-4 bg-base-100 flex flex-col min-h-0">
+            <aside className="lg:col-span-4 bg-base-100 flex flex-col min-h-0 corner-frame shadow-sm">
                 <PromptAnatomyPanel 
                     promptToAnalyze={generatedPrompt}
                     onReconstructFromComponents={handleReconstructFromComponents}

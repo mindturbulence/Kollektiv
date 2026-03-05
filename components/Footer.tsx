@@ -208,7 +208,7 @@ const Footer: React.FC<FooterProps> = ({ }) => {
             </div>
         </div>
 
-        <footer className="flex-shrink-0 px-0 h-12 bg-base-100 border-t border-base-300 z-10 flex flex-row items-center justify-between overflow-hidden select-none whitespace-nowrap">
+        <footer className="flex-shrink-0 px-0 h-12 bg-base-100 z-10 flex flex-row items-center justify-between overflow-hidden select-none whitespace-nowrap border-t border-base-300">
             <div className="flex items-center h-full px-6 gap-6 bg-transparent">
                 <span className="text-[14px] font-black uppercase tracking-tighter text-primary">KOLLEKTIV. V2</span>
                 <div className="relative flex items-center justify-center border-l border-base-300/30 pl-6 h-full py-2">

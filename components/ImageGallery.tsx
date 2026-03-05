@@ -332,68 +332,68 @@ const ImageGallery: React.FC<ImageGalleryProps> = ({ isCategoryPanelCollapsed, o
         )}
 
         <div className={`flex flex-col h-full overflow-hidden transition-all duration-300 ${detailViewItemId ? 'blur-sm pointer-events-none' : ''}`}>
-            <section className="flex-shrink-0 p-10 border-b border-base-300 bg-base-200/20">
-                <div className="w-full flex flex-col gap-1">
-                    <div className="flex flex-col md:flex-row md:items-stretch justify-between gap-6">
-                        <h1 className="text-2xl lg:text-3xl font-black tracking-tighter text-base-content leading-none flex items-center uppercase">{currentCategoryName}<span className="text-primary">.</span></h1>
-                        <div className="flex bg-base-100 px-6 py-2 border border-base-300 shadow-sm self-start md:self-auto min-h-full">
-                            <div className="flex flex-col border-r border-base-300 px-6 last:border-r-0 justify-center">
-                                <span className="text-2xl font-black tracking-tighter leading-none">{sortedAndFilteredItems.length}</span>
-                                <span className="text-[8px] uppercase font-black text-base-content/30 tracking-[0.2em] mt-0.5">Images</span>
+            <div ref={scrollerRef} className="flex-grow overflow-y-auto scroll-smooth custom-scrollbar bg-base-300">
+                <section className="p-10 border-b border-base-300 bg-base-200/20">
+                    <div className="w-full flex flex-col gap-1">
+                        <div className="flex flex-col md:flex-row md:items-stretch justify-between gap-6">
+                            <h1 className="text-2xl lg:text-3xl font-black tracking-tighter text-base-content leading-none flex items-center uppercase">{currentCategoryName}<span className="text-primary">.</span></h1>
+                            <div className="flex bg-base-100 px-6 py-2 border border-base-300 shadow-sm self-start md:self-auto min-h-full">
+                                <div className="flex flex-col border-r border-base-300 px-6 last:border-r-0 justify-center">
+                                    <span className="text-2xl font-black tracking-tighter leading-none">{sortedAndFilteredItems.length}</span>
+                                    <span className="text-[8px] uppercase font-black text-base-content/30 tracking-[0.2em] mt-0.5">Images</span>
+                                </div>
                             </div>
                         </div>
                     </div>
-                </div>
-            </section>
+                </section>
 
-            <div className="flex-shrink-0 bg-base-100 border-b border-base-300 sticky top-0 z-20 h-14">
-                <div className="flex items-stretch h-full w-full">
-                    <div className="flex-grow flex items-center relative border-r border-base-300">
-                        <SearchIcon className="absolute left-6 w-4 h-4 opacity-20 pointer-events-none" />
-                        <input type="text" value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} placeholder="SEARCH IMAGES..." className="w-full h-full bg-transparent border-none focus:outline-none focus:ring-0 pl-14 pr-12 font-bold uppercase tracking-tight text-sm placeholder:text-base-content/10" />
-                        {searchQuery && (
-                          <button 
-                            onClick={() => setSearchQuery('')}
-                            className="absolute right-4 btn btn-xs btn-ghost btn-circle opacity-40 hover:opacity-100 transition-opacity"
-                          >
-                            <CloseIcon className="w-4 h-4" />
-                          </button>
-                        )}
-                    </div>
-                    
-                    {/* NSFW Toggle */}
-                    <div className="flex items-center gap-3 bg-base-100 px-6 border-r border-base-300">
-                        <span className="text-[10px] font-black uppercase text-base-content/40 tracking-widest">NSFW</span>
-                        <input 
-                            type="checkbox" 
-                            checked={showNsfw} 
-                            onChange={(e) => setShowNsfw(e.target.checked)} 
-                            className="toggle toggle-xs toggle-primary" 
-                        />
-                    </div>
-
-                    {/* View Modes and Media Filters */}
-                    <div className="flex items-stretch">
-                        {/* View Modes */}
-                        <div className="join h-full rounded-none bg-base-100 border-r border-base-300">
-                            <button onClick={() => setViewMode('compact')} className={`join-item btn btn-ghost h-full border-none rounded-none px-6 font-black uppercase text-[9px] tracking-widest ${viewMode === 'compact' ? 'bg-primary/10 text-primary' : 'opacity-40'}`}>CMP</button>
-                            <button onClick={() => setViewMode('default')} className={`join-item btn btn-ghost h-full border-none rounded-none px-6 font-black uppercase text-[9px] tracking-widest ${viewMode === 'default' ? 'bg-primary/10 text-primary' : 'opacity-40'}`}>DFT</button>
-                            <button onClick={() => setViewMode('focus')} className={`join-item btn btn-ghost h-full border-none rounded-none px-6 font-black uppercase text-[9px] tracking-widest ${viewMode === 'focus' ? 'bg-primary/10 text-primary' : 'opacity-40'}`}>FOC</button>
+                <div className="sticky top-0 z-30 bg-base-100 border-b border-base-300 h-14">
+                    <div className="flex items-stretch h-full w-full">
+                        <div className="flex-grow flex items-center relative border-r border-base-300">
+                            <SearchIcon className="absolute left-6 w-4 h-4 opacity-20 pointer-events-none" />
+                            <input type="text" value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} placeholder="SEARCH IMAGES..." className="w-full h-full bg-transparent border-none focus:outline-none focus:ring-0 pl-14 pr-12 font-bold uppercase tracking-tight text-sm placeholder:text-base-content/10" />
+                            {searchQuery && (
+                              <button 
+                                onClick={() => setSearchQuery('')}
+                                className="absolute right-4 btn btn-xs btn-ghost btn-circle opacity-40 hover:opacity-100 transition-opacity"
+                              >
+                                <CloseIcon className="w-4 h-4" />
+                              </button>
+                            )}
                         </div>
                         
-                        {/* Media Type Filters */}
-                        <div className="join h-full rounded-none bg-base-100 border-r border-base-300">
-                            <button onClick={() => setMediaTypeFilter('all')} className={`join-item btn btn-ghost h-full border-none rounded-none px-6 font-black uppercase text-[9px] tracking-widest ${mediaTypeFilter === 'all' ? 'bg-primary/10 text-primary' : 'opacity-40'}`}>ALL</button>
-                            <button onClick={() => setMediaTypeFilter('image')} className={`join-item btn btn-ghost h-full border-none rounded-none px-6 font-black uppercase text-[9px] tracking-widest ${mediaTypeFilter === 'image' ? 'bg-primary/10 text-primary' : 'opacity-40'}`}>IMG</button>
-                            <button onClick={() => setMediaTypeFilter('video')} className={`join-item btn btn-ghost h-full border-none rounded-none px-6 font-black uppercase text-[9px] tracking-widest ${mediaTypeFilter === 'video' ? 'bg-primary/10 text-primary' : 'opacity-40'}`}>VID</button>
+                        {/* NSFW Toggle */}
+                        <div className="flex items-center gap-3 bg-base-100 px-6 border-r border-base-300">
+                            <span className="text-[10px] font-black uppercase text-base-content/40 tracking-widest">NSFW</span>
+                            <input 
+                                type="checkbox" 
+                                checked={showNsfw} 
+                                onChange={(e) => setShowNsfw(e.target.checked)} 
+                                className="toggle toggle-xs toggle-primary" 
+                            />
                         </div>
+
+                        {/* View Modes and Media Filters */}
+                        <div className="flex items-stretch">
+                            {/* View Modes */}
+                            <div className="join h-full rounded-none bg-base-100 border-r border-base-300">
+                                <button onClick={() => setViewMode('compact')} className={`join-item btn btn-ghost h-full border-none rounded-none px-6 font-black uppercase text-[9px] tracking-widest ${viewMode === 'compact' ? 'bg-primary/10 text-primary' : 'opacity-40'}`}>CMP</button>
+                                <button onClick={() => setViewMode('default')} className={`join-item btn btn-ghost h-full border-none rounded-none px-6 font-black uppercase text-[9px] tracking-widest ${viewMode === 'default' ? 'bg-primary/10 text-primary' : 'opacity-40'}`}>DFT</button>
+                                <button onClick={() => setViewMode('focus')} className={`join-item btn btn-ghost h-full border-none rounded-none px-6 font-black uppercase text-[9px] tracking-widest ${viewMode === 'focus' ? 'bg-primary/10 text-primary' : 'opacity-40'}`}>FOC</button>
+                            </div>
+                            
+                            {/* Media Type Filters */}
+                            <div className="join h-full rounded-none bg-base-100 border-r border-base-300">
+                                <button onClick={() => setMediaTypeFilter('all')} className={`join-item btn btn-ghost h-full border-none rounded-none px-6 font-black uppercase text-[9px] tracking-widest ${mediaTypeFilter === 'all' ? 'bg-primary/10 text-primary' : 'opacity-40'}`}>ALL</button>
+                                <button onClick={() => setMediaTypeFilter('image')} className={`join-item btn btn-ghost h-full border-none rounded-none px-6 font-black uppercase text-[9px] tracking-widest ${mediaTypeFilter === 'image' ? 'bg-primary/10 text-primary' : 'opacity-40'}`}>IMG</button>
+                                <button onClick={() => setMediaTypeFilter('video')} className={`join-item btn btn-ghost h-full border-none rounded-none px-6 font-black uppercase text-[9px] tracking-widest ${mediaTypeFilter === 'video' ? 'bg-primary/10 text-primary' : 'opacity-40'}`}>VID</button>
+                            </div>
+                        </div>
+
+                        <button onClick={() => setIsAddModalOpen(true)} className="btn btn-primary rounded-none h-full border-none px-10 font-black text-[10px] tracking-[0.2em] shadow-none uppercase">IMPORT</button>
                     </div>
-
-                    <button onClick={() => setIsAddModalOpen(true)} className="btn btn-primary rounded-none h-full border-none px-10 font-black text-[10px] tracking-[0.2em] shadow-none uppercase">IMPORT</button>
                 </div>
-            </div>
 
-            <div ref={scrollerRef} className="flex-grow overflow-y-auto scroll-smooth custom-scrollbar bg-base-300">
                 {sortedAndFilteredItems.length > 0 ? (
                     <div key={`grid-${viewMode}-${columnCount}-${selectedCategoryId}`} ref={gridRef} className="flex bg-base-300 gap-px elastic-grid-container" style={{ willChange: 'transform' }}>
                         {masonryColumns.map((col, colIdx) => (

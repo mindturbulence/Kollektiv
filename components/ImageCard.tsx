@@ -246,6 +246,9 @@ const ImageCard: React.FC<ImageCardProps> = memo(({ item, viewMode, onOpenDetail
             <span className={`${styles.label} font-mono font-black text-primary tracking-[0.3em] uppercase whitespace-nowrap drop-shadow-sm`}>
                 ID#{item.id.slice(-4).toUpperCase()}
             </span>
+            {item.isNsfw && (
+                <div className="badge badge-warning badge-xs rounded-none font-black text-[7px] uppercase h-4 px-2 border-none">NSFW</div>
+            )}
             <div className="flex-grow h-px bg-primary/30"></div>
             {isPinned && (
                 <div className="text-primary drop-shadow-md flex-shrink-0">
@@ -281,10 +284,6 @@ const ImageCard: React.FC<ImageCardProps> = memo(({ item, viewMode, onOpenDetail
                 <span className={`font-black uppercase tracking-[0.3em] bg-primary/10 text-primary border border-primary/20 backdrop-blur-md shadow-lg ${styles.badge}`}>
                     {item.urls.length} {item.type.toUpperCase()}{item.urls.length > 1 ? 'S' : ''}
                 </span>
-                
-                {item.isNsfw && (
-                    <div className="ml-3 badge badge-warning badge-xs rounded-none font-black text-[7px] uppercase h-4 px-2 border-none">Restricted</div>
-                )}
             </div>
         </div>
       </div>

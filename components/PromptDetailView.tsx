@@ -1,4 +1,5 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef, useLayoutEffect } from 'react';
+import { gsap } from 'gsap';
 import { useSettings } from '../contexts/SettingsContext';
 import { dissectPrompt } from '../services/llmService';
 import type { SavedPrompt, PromptCategory } from '../types';
@@ -32,7 +33,7 @@ const PromptComponentsDisplay: React.FC<{
   hasPrompt: boolean;
 }> = ({ components, isLoading, error, onRefresh, hasPrompt }) => {
     return (
-        <div className="flex flex-col h-full bg-base-100 overflow-hidden">
+        <div className="flex flex-col h-full bg-base-100 overflow-hidden corner-frame shadow-sm">
             <header className="p-4 border-b border-base-300 bg-base-200/10 flex justify-between items-center">
                 <h3 className="text-[10px] font-black uppercase tracking-[0.3em] text-primary">Prompt Parts</h3>
                 <button onClick={onRefresh} disabled={isLoading || !hasPrompt} className="btn btn-xs btn-ghost opacity-40 hover:opacity-100">
@@ -81,6 +82,13 @@ const PromptDetailView: React.FC<PromptDetailViewProps> = ({
   const [isRefinePanelCollapsed, setIsRefinePanelCollapsed] = useState(true);
   const [isFormulaPanelCollapsed, setIsFormulaPanelCollapsed] = useState(true);
 
+  const overlayRef = useRef<HTMLDivElement>(null);
+  const modalRef = useRef<HTMLDivElement>(null);
+  const leftPanelRef = useRef<HTMLDivElement>(null);
+  const rightPanelRef = useRef<HTMLDivElement>(null);
+  const headerRef = useRef<HTMLElement>(null);
+  const timelineRef = useRef<gsap.core.Timeline | null>(null);
+
   const [components, setComponents] = useState<{ [key: string]: string } | null>(null);
   const [isLoadingParts, setIsLoadingParts] = useState(false);
   const [errorParts, setErrorParts] = useState<string | null>(null);
@@ -112,6 +120,62 @@ const PromptDetailView: React.FC<PromptDetailViewProps> = ({
     }
   }, [prompt]);
 
+  useLayoutEffect(() => {
+    if (!overlayRef.current || !modalRef.current || !leftPanelRef.current || !rightPanelRef.current || !headerRef.current) return;
+
+    const ctx = gsap.context(() => {
+        const tl = gsap.timeline({ defaults: { ease: "expo.out", duration: 1.4 } });
+        timelineRef.current = tl;
+        
+        // Initial state
+        gsap.set(overlayRef.current, { opacity: 0 });
+        gsap.set(modalRef.current, { 
+            scale: 0, 
+            transformOrigin: "bottom right",
+            opacity: 0
+        });
+        gsap.set(leftPanelRef.current, { x: -150, opacity: 0 });
+        gsap.set(rightPanelRef.current, { x: 150, opacity: 0 });
+        gsap.set(headerRef.current, { y: -100, opacity: 0 });
+
+        // Animation sequence
+        tl.to(overlayRef.current, { opacity: 1, duration: 0.8 })
+          .to(modalRef.current, { 
+              scale: 1, 
+              opacity: 1, 
+              duration: 1.2,
+              ease: "expo.out"
+          }, "-=0.4")
+          .to(headerRef.current, { 
+              y: 0, 
+              opacity: 1, 
+              duration: 1.2 
+          }, "-=0.6")
+          .to(leftPanelRef.current, { 
+              x: 0, 
+              opacity: 1, 
+              duration: 1.6 
+          }, "-=0.8")
+          .to(rightPanelRef.current, { 
+              x: 0, 
+              opacity: 1, 
+              duration: 1.6 
+          }, "-=1.1");
+    });
+
+    return () => ctx.revert();
+  }, []);
+
+  const handleClose = useCallback(() => {
+    if (timelineRef.current) {
+        timelineRef.current.reverse().eventCallback("onReverseComplete", () => {
+            onClose();
+        });
+    } else {
+        onClose();
+    }
+  }, [onClose]);
+
   const handleNavigation = useCallback((direction: 'next' | 'prev') => {
     if (!prompts.length) return;
     const newIndex = direction === 'next'
@@ -132,16 +196,16 @@ const PromptDetailView: React.FC<PromptDetailViewProps> = ({
       if (prompt && editedText.trim() !== prompt.text.trim()) {
           onUpdate(prompt.id, { text: editedText });
           showGlobalFeedback("Changes saved.");
-          onClose(); // BUG FIX: Return to list after saving
+          handleClose();
       }
   };
   
   if (!prompt) return null;
 
   return (
-    <div className="absolute inset-0 z-40 bg-black/60 backdrop-blur-sm animate-fade-in flex items-center justify-center p-2 lg:p-4 overflow-hidden" onClick={onClose}>
-        <div className="w-full h-full bg-base-100 rounded-none border border-base-300 shadow-2xl flex flex-col overflow-hidden relative" onClick={e => e.stopPropagation()}>
-            <header className="flex-shrink-0 p-6 lg:px-8 lg:py-6 border-b border-base-300 bg-base-100 flex flex-wrap justify-between items-end gap-6">
+    <div ref={overlayRef} className="absolute inset-0 z-40 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4 lg:p-8 overflow-hidden" onClick={handleClose}>
+        <div ref={modalRef} className="w-full h-full bg-base-100 rounded-2xl border border-base-300 shadow-2xl flex flex-col overflow-hidden relative" onClick={e => e.stopPropagation()}>
+            <header ref={headerRef} className="flex-shrink-0 p-6 lg:px-8 lg:py-6 border-b border-base-300 bg-base-100 flex flex-wrap justify-between items-end gap-6">
                 <div className="min-w-0">
                     <span className="text-[10px] font-black uppercase tracking-[0.4em] text-primary mb-1 block">ITEM ID : {prompt.id.slice(-8)}</span>
                     <h2 className="text-xl lg:text-2xl font-black tracking-tighter text-base-content leading-none truncate max-w-2xl uppercase">
@@ -154,14 +218,14 @@ const PromptDetailView: React.FC<PromptDetailViewProps> = ({
                         <span className="join-item flex items-center px-6 font-mono text-[10px] font-black text-base-content/40 uppercase tracking-widest border-x border-base-300/30">{currentIndex + 1} / {prompts.length}</span>
                         <button onClick={() => handleNavigation('next')} className="btn btn-sm btn-ghost join-item"><ChevronRightIcon className="w-4 h-4" /></button>
                     </div>
-                    <button onClick={onClose} className="btn btn-sm btn-ghost btn-square opacity-40 hover:opacity-100 ml-4">
+                    <button onClick={handleClose} className="btn btn-sm btn-ghost btn-square opacity-40 hover:opacity-100 ml-4">
                         <CloseIcon className="w-6 h-6"/>
                     </button>
                 </div>
             </header>
 
-            <div className="flex-grow flex flex-col lg:flex-row overflow-hidden">
-                <main className="flex-1 flex flex-col overflow-hidden bg-base-100">
+            <div className="flex-grow flex flex-col lg:flex-row overflow-hidden p-4 gap-4 bg-base-300/20">
+                <main ref={leftPanelRef} className="flex-1 flex flex-col overflow-hidden bg-base-100 corner-frame shadow-sm">
                     <div className={`flex flex-col overflow-hidden transition-all duration-500 ease-in-out ${!isRefinePanelCollapsed ? 'h-1/2' : 'flex-grow'}`}>
                         <div className="flex-grow p-5 relative overflow-hidden flex flex-col">
                             <span className="text-[9px] font-black uppercase tracking-widest text-primary/40 mb-3 flex items-center gap-3">
@@ -201,8 +265,8 @@ const PromptDetailView: React.FC<PromptDetailViewProps> = ({
                         </div>
                     </footer>
                 </main>
-                <aside className="w-full lg:w-[420px] flex-shrink-0 bg-base-100 flex flex-col overflow-hidden border-l border-base-300">
-                    <div className="flex-grow flex flex-col min-h-0 divide-y divide-base-300">
+                <aside ref={rightPanelRef} className="w-full lg:w-[420px] flex-shrink-0 flex flex-col overflow-hidden">
+                    <div className="flex-grow flex flex-col min-h-0 gap-4">
                         <PromptComponentsDisplay components={components} isLoading={isLoadingParts} error={errorParts} onRefresh={() => analyzePromptText(editedText)} hasPrompt={!!editedText} />
                         <PromptFormulaPanel promptText={editedText} showGlobalFeedback={showGlobalFeedback} isCollapsed={isFormulaPanelCollapsed} setIsCollapsed={setIsFormulaPanelCollapsed} />
                     </div>

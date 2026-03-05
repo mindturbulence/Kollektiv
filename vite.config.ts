@@ -12,6 +12,41 @@ export default defineConfig(({ mode }) => {
       base: '/',
       plugins: [
         react(),
+        {
+          name: 'silence-ollama-proxy-errors',
+          configureServer(server) {
+            server.middlewares.use((req, res, next) => {
+              const host = req.headers.host || '';
+              const isCloud = !host.includes('localhost') && !host.includes('127.0.0.1');
+              if (!isCloud) return next();
+
+              const url = req.url || '';
+              
+              // Intercept local Ollama requests
+              if (url.startsWith('/ollama-local')) {
+                res.statusCode = 502;
+                res.setHeader('Content-Type', 'application/json');
+                res.end(JSON.stringify({ error: 'Local Ollama unreachable in cloud', code: 'ECONNREFUSED_SILENT' }));
+                return;
+              }
+
+              // Intercept remote proxy requests targeting local addresses
+              if (url.startsWith('/proxy-remote')) {
+                const target = req.headers['x-target-url'];
+                const isLocal = !target || (typeof target === 'string' && (target.includes('localhost') || target.includes('127.0.0.1')));
+                
+                if (isLocal) {
+                    res.statusCode = 502;
+                    res.setHeader('Content-Type', 'application/json');
+                    res.end(JSON.stringify({ error: 'Local target unreachable in cloud', code: 'ECONNREFUSED_SILENT' }));
+                    return;
+                }
+              }
+              
+              next();
+            });
+          }
+        }
       ],
       server: {
         host: true,  
@@ -25,7 +60,22 @@ export default defineConfig(({ mode }) => {
             target: 'http://127.0.0.1:11434',
             changeOrigin: true,
             secure: false,
-            rewrite: (path) => path.replace(/^\/ollama-local/, '')
+            rewrite: (path) => path.replace(/^\/ollama-local/, ''),
+            configure: (proxy, _options) => {
+                process.nextTick(() => {
+                    proxy.removeAllListeners('error');
+                    proxy.on('error', (err, _req: any, res: any) => {
+                        if ((err as any).code === 'ECONNREFUSED') {
+                            if (res && !res.writableEnded && typeof res.writeHead === 'function') {
+                                res.writeHead(502, { 'Content-Type': 'application/json' });
+                                res.end(JSON.stringify({ error: 'Local Ollama unreachable', code: 'ECONNREFUSED' }));
+                            }
+                            return;
+                        }
+                        console.error('[Proxy Error: Local]', err.message);
+                    });
+                });
+            }
           },
           '/google-api': {
             target: 'https://www.googleapis.com',
@@ -59,11 +109,17 @@ export default defineConfig(({ mode }) => {
             },
             rewrite: (path) => path.replace(/^\/proxy-remote/, ''),
             configure: (proxy, _options) => {
-                proxy.on('error', (err, req: any, _res) => {
-                    console.error('[Vite Proxy Error]', {
-                        message: err.message,
-                        code: (err as any).code,
-                        target: req.headers['x-target-url'] || 'local-ollama'
+                process.nextTick(() => {
+                    proxy.removeAllListeners('error');
+                    proxy.on('error', (err, _req: any, res: any) => {
+                        if ((err as any).code === 'ECONNREFUSED') {
+                            if (res && !res.writableEnded && typeof res.writeHead === 'function') {
+                                res.writeHead(502, { 'Content-Type': 'application/json' });
+                                res.end(JSON.stringify({ error: 'Service Unavailable', code: 'ECONNREFUSED' }));
+                            }
+                            return;
+                        }
+                        console.error('[Proxy Error]', err.message);
                     });
                 });
             }

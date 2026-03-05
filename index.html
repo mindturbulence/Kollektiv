@@ -6,7 +6,7 @@
     <link rel="icon" type="image/svg+xml" href="/vite.svg" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Kollektiv</title>
-    <link rel="stylesheet" href="https://fonts.bunny.net/css?family=hind:400,500,600,700&display=swap" />
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=Plus+Jakarta+Sans:ital,wght@0,300;0,400;0,500;0,600;0,700;0,800;1,800&display=swap" />
     <script type="text/javascript">
       // Critical: Load theme immediately to support "use current themes" during integrity check
       (function() {
@@ -16,64 +16,251 @@
             const theme = settings.activeThemeMode === 'light' ? settings.lightTheme : settings.darkTheme;
             if (theme) {
               document.documentElement.setAttribute('data-theme', theme);
+              
+              // Simple heuristic for light/dark
+              const isLight = ['light', 'cupcake', 'bumblebee', 'emerald', 'corporate', 'retro', 'cyberpunk', 'valentine', 'garden', 'lofi', 'pastel', 'fantasy', 'wireframe', 'cmyk', 'autumn', 'acid', 'lemonade', 'winter', 'nord'].includes(theme);
+              if (isLight) {
+                document.documentElement.classList.add('is-light-theme');
+              }
             }
           }
         } catch (e) {}
       })();
     </script>
-    <!-- Loader styles moved to index.css -->
-<script type="importmap">
-{
-  "imports": {
-    "react": "https://esm.sh/react@^19.1.1?corp",
-    "react/jsx-runtime": "https://esm.sh/react@^19.1.1/jsx-runtime?corp",
-    "react/jsx-dev-runtime": "https://esm.sh/react@^19.1.1/jsx-dev-runtime?corp",
-    "react-dom/client": "https://esm.sh/react-dom@^19.1.1/client?corp",
-    "react-dom": "https://esm.sh/react-dom@^19.1.1?corp",
-    "@google/genai": "https://esm.sh/@google/genai@^1.12.0?corp",
-    "uuid": "https://esm.sh/uuid@^11.1.0?corp",
-    "jszip": "https://esm.sh/jszip@^3.10.1?corp",
-    "idb": "https://esm.sh/idb@^8.0.3?corp",
-    "@ffmpeg/ffmpeg": "https://esm.sh/@ffmpeg/ffmpeg@^0.12.6?corp",
-    "@ffmpeg/util": "https://esm.sh/@ffmpeg/util@^0.12.1?corp",
-    "@vitejs/plugin-react": "https://esm.sh/@vitejs/plugin-react@^5.0.0?corp",
-    "vite": "https://esm.sh/vite@^7.1.1?corp",
-    "path": "https://esm.sh/path@^0.12.7?corp",
-    "url": "https://esm.sh/url@^0.11.4?corp",
-    "react/": "https://esm.sh/react@^19.1.1/",
-    "react-dom/": "https://esm.sh/react-dom@^19.1.1/",
-    "daisyui": "https://esm.sh/daisyui@^5.0.50",
-    "lottie-web": "https://esm.sh/lottie-web@^5.12.2",
-    "@vitejs/plugin-basic-ssl": "https://esm.sh/@vitejs/plugin-basic-ssl@^2.1.4",
-    "gsap": "https://esm.sh/gsap@^3.14.2",
-    "gsap/": "https://esm.sh/gsap@^3.14.2/"
-  }
-}
-</script>
-<script src="https://accounts.google.com/gsi/client" async defer></script>
-</head>
+    <style>
+      :root {
+        --bg: #020617;
+        --bc: 255 255 255;
+        --p: 0 255 163;
+      }
+      .is-light-theme {
+        --bg: #ffffff;
+        --bc: 0 0 0;
+        --p: 0 255 163;
+      }
+      body, html {
+        margin: 0;
+        padding: 0;
+        width: 100%;
+        height: 100%;
+        background-color: oklch(var(--b1, 2.6% 0.019 237.69)); /* Fallback to abyss base-100 */
+        overflow: hidden;
+      }
+      #initial-loader {
+        position: fixed;
+        inset: 0;
+        z-index: 500;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        background-color: oklch(var(--b1, 2.6% 0.019 237.69));
+        color: oklch(var(--bc));
+        font-family: 'Inter', 'Plus Jakarta Sans', sans-serif;
+        user-select: none;
+      }
+      .loader-frame-top, .loader-frame-bottom {
+        position: absolute;
+        left: 0;
+        right: 0;
+        height: 1px;
+        background-color: rgba(var(--bc), 0.1);
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        padding: 0 2rem;
+        font-family: monospace;
+        font-size: 9px;
+        font-weight: bold;
+        letter-spacing: 0.2em;
+        text-transform: uppercase;
+        color: rgba(var(--bc), 0.3);
+      }
+      .loader-frame-top > div, .loader-frame-bottom > div {
+        background-color: oklch(var(--b1, 2.6% 0.019 237.69));
+        padding: 0 1.5rem;
+        display: flex;
+        align-items: center;
+      }
+      .loader-frame-top {
+        top: 3rem;
+      }
+      .loader-frame-bottom {
+        bottom: 3rem;
+      }
+      .loader-frame-text {
+        display: flex;
+        align-items: center;
+        gap: 1.5rem;
+      }
+      .loader-frame-text span {
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+      }
+      .loader-frame-text span::before {
+        content: "";
+        width: 4px;
+        height: 4px;
+        background-color: rgb(var(--p));
+        border-radius: 50%;
+      }
+      .grid-texture {
+        position: absolute;
+        inset: 0;
+        background-image: radial-gradient(circle, rgba(var(--bc), 0.05) 1px, transparent 1px);
+        background-size: 20px 20px;
+        opacity: 0.3;
+        pointer-events: none;
+      }
+      .ambient-bg {
+        display: none;
+      }
+      .loader-content {
+        position: relative;
+        z-index: 10;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+      }
+      .brand-wrapper {
+        overflow: hidden;
+        margin-bottom: 2rem;
+        padding: 0 1rem;
+      }
+      .brand-text {
+        display: grid;
+        grid-template-columns: 1fr;
+        grid-template-rows: 1fr;
+        font-size: 1.875rem;
+        font-weight: 800;
+        font-style: italic;
+        letter-spacing: -0.05em;
+        text-transform: uppercase;
+        align-items: center;
+        font-family: 'Plus Jakarta Sans', sans-serif;
+      }
+      .ghost-text {
+        grid-column: 1;
+        grid-row: 1;
+        color: rgba(var(--bc), 0.1);
+        line-height: 1;
+        padding: 0.5rem 0;
+      }
+      .fill-mask {
+        grid-column: 1;
+        grid-row: 1;
+        height: 100%;
+        overflow: hidden;
+        border-right: 1px solid rgba(var(--bc), 0.2);
+        width: 10%;
+        transition: width 0.7s ease-out;
+      }
+      .fill-text {
+        display: block;
+        white-space: nowrap;
+        line-height: 1;
+        padding: 0.5rem 0;
+        color: rgb(var(--bc));
+      }
+      .dot { color: rgb(var(--p)); font-style: italic; }
+      .status-text {
+        font-family: monospace;
+        font-size: 10px;
+        font-weight: bold;
+        text-transform: uppercase;
+        letter-spacing: 0.5em;
+        color: rgba(var(--bc), 0.4);
+        margin-top: 0.75rem;
+      }
+      .metadata {
+        position: absolute;
+        bottom: 3rem;
+        left: 3rem;
+        font-family: monospace;
+        font-size: 8px;
+        font-weight: bold;
+        color: rgba(var(--bc), 0.1);
+        text-transform: uppercase;
+        letter-spacing: 0.1em;
+      }
+    </style>
+    <script type="importmap">
+    {
+      "imports": {
+        "react": "https://esm.sh/react@^19.1.1?corp",
+        "react/jsx-runtime": "https://esm.sh/react@^19.1.1/jsx-runtime?corp",
+        "react/jsx-dev-runtime": "https://esm.sh/react@^19.1.1/jsx-dev-runtime?corp",
+        "react-dom/client": "https://esm.sh/react-dom@^19.1.1/client?corp",
+        "react-dom": "https://esm.sh/react-dom@^19.1.1?corp",
+        "@google/genai": "https://esm.sh/@google/genai@^1.12.0?corp",
+        "uuid": "https://esm.sh/uuid@^11.1.0?corp",
+        "jszip": "https://esm.sh/jszip@^3.10.1?corp",
+        "idb": "https://esm.sh/idb@^8.0.3?corp",
+        "@ffmpeg/ffmpeg": "https://esm.sh/@ffmpeg/ffmpeg@^0.12.6?corp",
+        "@ffmpeg/util": "https://esm.sh/@ffmpeg/util@^0.12.1?corp",
+        "@vitejs/plugin-react": "https://esm.sh/@vitejs/plugin-react@^5.0.0?corp",
+        "vite": "https://esm.sh/vite@^7.1.1?corp",
+        "path": "https://esm.sh/path@^0.12.7?corp",
+        "url": "https://esm.sh/url@^0.11.4?corp",
+        "react/": "https://esm.sh/react@^19.1.1/",
+        "react-dom/": "https://esm.sh/react-dom@^19.1.1/",
+        "daisyui": "https://esm.sh/daisyui@^5.0.50",
+        "lottie-web": "https://esm.sh/lottie-web@^5.12.2",
+        "@vitejs/plugin-basic-ssl": "https://esm.sh/@vitejs/plugin-basic-ssl@^2.1.4",
+        "gsap": "https://esm.sh/gsap@^3.14.2",
+        "gsap/": "https://esm.sh/gsap@^3.14.2/"
+      }
+    }
+    </script>
+    <script src="https://accounts.google.com/gsi/client" async defer></script>
+    <script type="text/javascript">
+      // Animate loader mask slightly while waiting for React
+      (function() {
+        document.addEventListener('DOMContentLoaded', () => {
+          let width = 10;
+          const mask = document.getElementById('loader-mask');
+          if (!mask) return;
+          const interval = setInterval(() => {
+            width += Math.random() * 5;
+            if (width > 60) clearInterval(interval);
+            mask.style.width = width + '%';
+          }, 150);
+        });
+      })();
+    </script>
+  </head>
   <body>
     <div id="root">
       <div id="initial-loader">
-        <div class="loader-wrapper">
-          <svg style="width: 120px; height: 120px" viewBox="-13 -13 45 45">
-            <g>
-              <circle class="box5631" cx="13" cy="1" r="5"/>
-              <circle class="box5631" cx="13" cy="1" r="5"/>
-              <circle class="box5631" cx="25" cy="25" r="5"/>
-              <circle class="box5631" cx="13" cy="13" r="5"/>
-              <circle class="box5631" cx="13" cy="13" r="5"/>
-              <circle class="box5631" cx="25" cy="13" r="5"/>
-              <circle class="box5631" cx="1" cy="25" r="5"/>
-              <circle class="box5631" cx="13" cy="25" r="5"/>
-              <circle class="box5631" cx="25" cy="25" r="5"/>
-            </g>
-          </svg>
+        <div class="ambient-bg"></div>
+        <div class="grid-texture"></div>
+        
+        <div class="loader-frame-top">
+          <div class="loader-frame-text">
+            <span>System Integrity Check</span>
+            <span>Protocol: Master_Load</span>
+          </div>
+          <div>Ver: 2.5.0_BETA</div>
         </div>
-        <div class="flex flex-col items-center mt-8 relative z-10">
-          <p id="loading-status" class="text-[10px] font-black uppercase tracking-[0.5em] text-base-content opacity-40">Initializing System...</p>
-          <div id="loading-progress-container" class="w-48 h-0.5 bg-base-content/5 rounded-full mt-4 overflow-hidden" style="display: none;">
-            <div id="loading-progress-bar" class="h-full bg-primary rounded-full transition-all duration-300" style="width: 0%;"></div>
+
+        <div class="loader-content">
+          <div class="brand-wrapper">
+            <h1 class="brand-text">
+              <span class="ghost-text">Kollektiv<span class="dot">.</span></span>
+              <div class="fill-mask" id="loader-mask">
+                <span class="fill-text">Kollektiv<span class="dot">.</span></span>
+              </div>
+            </h1>
+          </div>
+          <p id="loading-status" class="status-text">Initializing System...</p>
+        </div>
+
+        <div class="loader-frame-bottom">
+          <div>© 2026 Kollektiv Neural Systems</div>
+          <div class="loader-frame-text">
+            <span>Status: Operational</span>
+            <span>Region: ASIA-SE-1</span>
           </div>
         </div>
       </div>

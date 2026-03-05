@@ -486,6 +486,7 @@ const PromptsPage: React.FC<PromptsPageProps> = ({
         mjNo: { label: 'MJ Exclude', tab: 'platform' },
         mjQuality: { label: 'MJ Quality', tab: 'platform' },
         mjTile: { label: 'MJ Tile', tab: 'platform' },
+        creativity: { label: 'Creativity', tab: 'basic' },
     };
 
     Object.entries(modifiers).forEach(([key, val]) => {
@@ -495,6 +496,7 @@ const PromptsPage: React.FC<PromptsPageProps> = ({
             if (key === 'mjWeird' && val === '0') return;
             if (key === 'mjVersion' && val === MIDJOURNEY_VERSIONS[0]) return;
             if (key === 'audioDuration' && val === '10') return;
+            if (key === 'creativity' && val === 70) return;
             
             const tab = defs[key].tab;
             if (mediaMode === 'audio' && ['styling', 'photography', 'motion', 'platform'].includes(tab)) return;
@@ -546,6 +548,24 @@ const PromptsPage: React.FC<PromptsPageProps> = ({
                             <select value={promptLength} onChange={(e) => setPromptLength((e.currentTarget as any).value)} className="select select-bordered select-sm rounded-none font-bold uppercase tracking-tighter w-full">
                                 {Object.entries(PROMPT_DETAIL_LEVELS).map(([k, v]) => <option key={k} value={v}>{v}</option>)}
                             </select>
+                        </div>
+                    </div>
+                    <div className="form-control">
+                        <div className="flex justify-between items-center mb-2">
+                            <label className="text-[10px] font-black uppercase tracking-widest text-base-content/40">Refiner Creativity / Uniqueness</label>
+                            <span className="text-[10px] font-mono font-bold text-primary">{modifiers.creativity ?? 70}%</span>
+                        </div>
+                        <input 
+                            type="range" 
+                            min="0" 
+                            max="100" 
+                            value={modifiers.creativity ?? 70} 
+                            onChange={e => setModifiers({...modifiers, creativity: parseInt(e.target.value)})} 
+                            className="range range-xs range-primary" 
+                        />
+                        <div className="flex justify-between px-1 mt-1">
+                            <span className="text-[8px] font-black opacity-20 uppercase">Accurate</span>
+                            <span className="text-[8px] font-black opacity-20 uppercase">Creative</span>
                         </div>
                     </div>
                 </div>
@@ -875,7 +895,8 @@ const PromptsPage: React.FC<PromptsPageProps> = ({
               modifiers: { ...modifiers },
               targetAIModel,
               mediaMode,
-              promptLength
+              promptLength,
+              constantModifier
           };
           await refinerPresetService.savePreset(preset);
           await loadPresets();
@@ -894,6 +915,9 @@ const PromptsPage: React.FC<PromptsPageProps> = ({
           setTargetAIModel(presetToUse.targetAIModel);
           setMediaMode(presetToUse.mediaMode);
           setPromptLength(presetToUse.promptLength);
+          if (presetToUse.constantModifier !== undefined) {
+              setConstantModifier(presetToUse.constantModifier);
+          }
           showGlobalFeedback(`Preset "${presetToUse.name}" applied.`);
       }
   }, [selectedPreset, showGlobalFeedback]);
@@ -953,9 +977,9 @@ const PromptsPage: React.FC<PromptsPageProps> = ({
         )}
 
         {activeView === 'refine' && (
-          <div className="grid grid-cols-1 lg:grid-cols-12 overflow-hidden h-full">
+          <div className="grid grid-cols-1 lg:grid-cols-12 overflow-hidden h-full p-4 gap-4 bg-base-300/20">
             {/* Left Sidebar: Controls & Tabs */}
-            <aside className="lg:col-span-4 bg-base-100 flex flex-col border-r border-base-300 overflow-hidden">
+            <aside className="lg:col-span-4 bg-base-100 flex flex-col overflow-hidden corner-frame shadow-sm">
               <div className="p-4 border-b border-base-300 bg-base-200/10">
                 <div className="tabs tabs-boxed rounded-none bg-transparent gap-1 p-0 flex flex-wrap">
                   {tabs.map(tab => (
@@ -999,7 +1023,7 @@ const PromptsPage: React.FC<PromptsPageProps> = ({
             </aside>
 
             {/* Center: Main Neural Output */}
-            <main className="lg:col-span-5 bg-base-100 flex flex-col min-h-0 border-r border-base-300">
+            <main className="lg:col-span-5 bg-base-100 flex flex-col min-h-0 corner-frame shadow-sm">
               <header className="p-6 border-b border-base-300 bg-base-200/10 flex justify-between items-center">
                 <h2 className="text-xs font-black uppercase tracking-[0.4em] text-primary flex items-center gap-3">
                   <div className="w-2 h-2 rounded-full bg-primary animate-pulse"></div> NEURAL OUTPUT
@@ -1049,7 +1073,7 @@ const PromptsPage: React.FC<PromptsPageProps> = ({
             </main>
 
             {/* Right Sidebar: Active Modifiers */}
-            <aside className="lg:col-span-3 bg-base-100 flex flex-col overflow-hidden">
+            <aside className="lg:col-span-3 bg-base-100 flex flex-col overflow-hidden corner-frame shadow-sm">
               <header className="p-6 border-b border-base-300 bg-base-200/10">
                   <h3 className="text-xs font-black uppercase tracking-[0.4em] text-base-content/40">Active Construction</h3>
               </header>

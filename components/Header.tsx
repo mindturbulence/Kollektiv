@@ -2,6 +2,7 @@ import React from 'react';
 import { MenuIcon, BookmarkIcon, PowerIcon } from './icons';
 import type { ActiveTab } from '../types';
 import ThemeSwitcher from './ThemeSwitcher';
+import { audioService } from '../services/audioService';
 
 interface HeaderProps {
   onMenuClick: () => void;
@@ -34,21 +35,31 @@ const Header: React.FC<HeaderProps> = ({ onMenuClick, onStandbyClick, activeTab,
   const pageTitle = pageTitleMap[activeTab] || 'Kollektiv';
 
   return (
-    <header className="flex-shrink-0 flex items-center justify-between h-16 px-4 bg-base-100 border-b border-base-300 z-10">
+    <header className="flex-shrink-0 flex items-center justify-between h-16 px-4 bg-base-100 z-10 border-b border-base-300">
       <div className="flex items-center gap-2">
         <button
-          onClick={onMenuClick}
+          onClick={() => {
+            audioService.playClick();
+            onMenuClick();
+          }}
+          onMouseEnter={() => audioService.playHover()}
           className="btn btn-sm btn-ghost btn-circle"
           aria-label="Toggle navigation menu"
         >
           <MenuIcon className="w-6 h-6" />
         </button>
-        <h2 className="text-lg font-semibold hidden sm:block">{pageTitle}</h2>
+        <h2 className="text-lg font-black hidden sm:block">{pageTitle}</h2>
       </div>
       <div className="flex items-center gap-2">
-        {/* Fix: Replaced non-standard 'theme-toggle' with standard 'div' and 'class' with 'className' to resolve JSX validation errors */}
         <div className="contents">
-          <button onClick={onToggleClippingPanel} className="btn btn-ghost btn-circle btn-sm indicator">
+          <button 
+            onClick={() => {
+              audioService.playClick();
+              onToggleClippingPanel();
+            }} 
+            onMouseEnter={() => audioService.playHover()}
+            className="btn btn-ghost btn-circle btn-sm indicator"
+          >
               <BookmarkIcon className="w-6 h-6"/>
               {clippedIdeasCount > 0 && <span className="indicator-item badge badge-primary badge-xs">{clippedIdeasCount}</span>}
           </button>
@@ -56,8 +67,10 @@ const Header: React.FC<HeaderProps> = ({ onMenuClick, onStandbyClick, activeTab,
           <button 
             onClick={(e) => {
                 e.stopPropagation();
+                audioService.playClick();
                 onStandbyClick(e);
             }} 
+            onMouseEnter={() => audioService.playHover()}
             onMouseDown={(e) => e.stopPropagation()}
             className="btn btn-sm btn-ghost btn-circle opacity-60 hover:opacity-100 hover:text-primary transition-all"
             title="Manual Standby"

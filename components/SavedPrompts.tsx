@@ -47,59 +47,7 @@ const SavedPrompts: React.FC<SavedPromptsProps> = ({
   const [categorySearchQuery, setCategorySearchQuery] = useState('');
   const [detailViewPromptId, setDetailViewPromptId] = useState<string | null>(null);
   const [columnCount, setColumnCount] = useState(3);
-
-  // Pagination/Memory Management
-  const [displayCount, setDisplayCount] = useState(30);
-  const loadMoreRef = useRef<HTMLDivElement>(null);
-  const observer = useRef<IntersectionObserver | null>(null);
-
-  const refreshData = useCallback(async () => {
-      setIsLoading(true);
-      try {
-        const [loadedPrompts, loadedCategories] = await Promise.all([
-            loadSavedPrompts(), 
-            loadPromptCategories()
-        ]);
-        setPrompts(loadedPrompts);
-        setCategories(loadedCategories);
-      } catch (error) {
-          console.error("Registry load failure:", error);
-      } finally {
-          setIsLoading(false);
-      }
-  }, []);
-
-  useEffect(() => { refreshData(); }, [refreshData]);
-
-  // Responsive column count logic
-  useEffect(() => {
-    const handleResize = () => {
-        const w = window.innerWidth;
-        if (w >= 1280) setColumnCount(3);
-        else if (w >= 768) setColumnCount(2);
-        else setColumnCount(1);
-    };
-    handleResize();
-    window.addEventListener('resize', handleResize);
-    return () => window.removeEventListener('resize', handleResize);
-  }, []);
-
-  // Intersection Observer for Infinite Scroll
-  useEffect(() => {
-    if (observer.current) observer.current.disconnect();
-
-    observer.current = new IntersectionObserver((entries) => {
-        if (entries[0].isIntersecting && !isLoading && displayCount < sortedAndFilteredPrompts.length) {
-            setDisplayCount(prev => prev + 30);
-        }
-    }, { threshold: 0.1, rootMargin: '400px' });
-
-    if (loadMoreRef.current) {
-        observer.current.observe(loadMoreRef.current);
-    }
-
-    return () => observer.current?.disconnect();
-  }, [isLoading, displayCount, prompts.length, searchQuery, selectedCategoryId]);
+  const gridRef = useRef<HTMLDivElement | null>(null);
 
   const sortedAndFilteredPrompts = useMemo(() => {
       let filtered = (selectedCategoryId === 'all') 
@@ -124,6 +72,65 @@ const SavedPrompts: React.FC<SavedPromptsProps> = ({
       return sorted;
   }, [prompts, selectedCategoryId, sortOrder, searchQuery]);
 
+  useEffect(() => {
+    const node = gridRef.current;
+    if (!node) return;
+
+    const observer = new ResizeObserver((entries) => {
+        for (const entry of entries) {
+            const w = entry.contentRect.width;
+            if (w >= 1600) setColumnCount(5);
+            else if (w >= 1200) setColumnCount(4);
+            else if (w >= 800) setColumnCount(3);
+            else if (w >= 500) setColumnCount(2);
+            else setColumnCount(1);
+        }
+    });
+
+    observer.observe(node);
+    return () => observer.disconnect();
+  }, [isLoading, sortedAndFilteredPrompts.length]);
+
+  // Pagination/Memory Management
+  const [displayCount, setDisplayCount] = useState(30);
+  const loadMoreRef = useRef<HTMLDivElement>(null);
+  const observer = useRef<IntersectionObserver | null>(null);
+
+  const refreshData = useCallback(async () => {
+      setIsLoading(true);
+      try {
+        const [loadedPrompts, loadedCategories] = await Promise.all([
+            loadSavedPrompts(), 
+            loadPromptCategories()
+        ]);
+        setPrompts(loadedPrompts);
+        setCategories(loadedCategories);
+      } catch (error) {
+          console.error("Registry load failure:", error);
+      } finally {
+          setIsLoading(false);
+      }
+  }, []);
+
+  useEffect(() => { refreshData(); }, [refreshData]);
+
+  // Intersection Observer for Infinite Scroll
+  useEffect(() => {
+    if (observer.current) observer.current.disconnect();
+
+    observer.current = new IntersectionObserver((entries) => {
+        if (entries[0].isIntersecting && !isLoading && displayCount < sortedAndFilteredPrompts.length) {
+            setDisplayCount(prev => prev + 30);
+        }
+    }, { threshold: 0.1, rootMargin: '400px' });
+
+    if (loadMoreRef.current) {
+        observer.current.observe(loadMoreRef.current);
+    }
+
+    return () => observer.current?.disconnect();
+  }, [isLoading, displayCount, prompts.length, searchQuery, selectedCategoryId]);
+
   // Masonry Split Logic with Pagination Slicing
   const masonryColumns = useMemo(() => {
     if (!columnCount || columnCount <= 0) return [];
@@ -136,8 +143,6 @@ const SavedPrompts: React.FC<SavedPromptsProps> = ({
     });
     return cols;
   }, [sortedAndFilteredPrompts, columnCount, displayCount]);
-
-  const gridRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     if (masonryColumns.length > 0 && gridRef.current) {
@@ -261,25 +266,27 @@ const SavedPrompts: React.FC<SavedPromptsProps> = ({
         )}
 
         <div className={`flex flex-col h-full overflow-hidden transition-all duration-300 ${detailViewPromptId ? 'blur-sm pointer-events-none' : ''}`}>
-            <header className="flex-shrink-0 bg-base-200/20 border-b border-base-300">
-                <div className="p-10">
-                    <div className="flex flex-col md:flex-row md:items-end justify-between gap-6">
-                        <div className="space-y-2">
-                            <span className="text-[10px] font-black uppercase tracking-[0.6em] text-primary/60 block">LIBRARY INDEX</span>
-                            <h1 className="text-4xl lg:text-5xl font-black tracking-tighter text-base-content leading-none uppercase">
-                                {currentCategoryName}<span className="text-primary">.</span>
-                            </h1>
-                        </div>
-                        <div className="flex bg-base-100 border border-base-300 shadow-sm">
-                            <div className="px-8 py-3 flex flex-col items-center justify-center">
-                                <span className="text-3xl font-black tracking-tighter leading-none">{sortedAndFilteredPrompts.length}</span>
-                                <span className="text-[8px] uppercase font-black text-base-content/30 tracking-[0.2em] mt-1">Saved Prompts</span>
+            <div className="flex-grow overflow-y-auto overflow-x-hidden custom-scrollbar bg-base-300">
+                <header className="bg-base-200/20 border-b border-base-300">
+                    <div className="p-6 md:p-10">
+                        <div className="flex flex-col md:flex-row md:items-end justify-between gap-6">
+                            <div className="space-y-2">
+                                <span className="text-[10px] font-black uppercase tracking-[0.6em] text-primary/60 block">LIBRARY INDEX</span>
+                                <h1 className="text-4xl lg:text-5xl font-black tracking-tighter text-base-content leading-none uppercase">
+                                    {currentCategoryName}<span className="text-primary">.</span>
+                                </h1>
+                            </div>
+                            <div className="flex bg-base-100 border border-base-300 shadow-sm">
+                                <div className="px-8 py-3 flex flex-col items-center justify-center">
+                                    <span className="text-3xl font-black tracking-tighter leading-none">{sortedAndFilteredPrompts.length}</span>
+                                    <span className="text-[8px] uppercase font-black text-base-content/30 tracking-[0.2em] mt-1">Saved Prompts</span>
+                                </div>
                             </div>
                         </div>
                     </div>
-                </div>
+                </header>
 
-                <div className="h-16 border-t border-base-300 bg-base-100 flex items-stretch overflow-hidden">
+                <div className="h-16 border-b border-base-300 bg-base-100 flex items-stretch overflow-hidden sticky top-0 z-30">
                     <div className="flex-grow flex items-center relative border-r border-base-300 min-w-0">
                         <SearchIcon className="absolute left-8 w-4 h-4 opacity-20 pointer-events-none" />
                         <input 
@@ -307,9 +314,7 @@ const SavedPrompts: React.FC<SavedPromptsProps> = ({
                         </button>
                     </div>
                 </div>
-            </header>
 
-            <div className="flex-grow overflow-y-auto overflow-x-hidden custom-scrollbar bg-base-300">
                 {sortedAndFilteredPrompts.length > 0 ? (
                     <div ref={gridRef} className="flex bg-base-300 gap-px min-h-full">
                         {masonryColumns.map((col, colIdx) => (
@@ -339,7 +344,7 @@ const SavedPrompts: React.FC<SavedPromptsProps> = ({
                 )}
                 
                 {/* Scroll Target for Infinite Loading */}
-                <div ref={loadMoreRef} className="h-20 w-full flex items-center justify-center">
+                <div ref={loadMoreRef} className={`${displayCount < sortedAndFilteredPrompts.length ? 'h-20' : 'h-0'} w-full flex items-center justify-center overflow-hidden`}>
                     {displayCount < sortedAndFilteredPrompts.length && <LoadingSpinner size={24} />}
                 </div>
             </div>

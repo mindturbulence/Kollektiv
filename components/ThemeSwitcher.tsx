@@ -2,6 +2,7 @@
 import React from 'react';
 import { useSettings } from '../contexts/SettingsContext';
 import { SunIcon, MoonIcon } from './icons';
+import { audioService } from '../services/audioService';
 
 const ThemeSwitcher: React.FC = () => {
   const { settings, updateSettings } = useSettings();
@@ -9,6 +10,7 @@ const ThemeSwitcher: React.FC = () => {
   const isDarkMode = settings.activeThemeMode === 'dark';
 
   const toggleTheme = () => {
+    audioService.playClick();
     const newMode = isDarkMode ? 'light' : 'dark';
     updateSettings({ ...settings, activeThemeMode: newMode });
   };
@@ -16,6 +18,7 @@ const ThemeSwitcher: React.FC = () => {
   return (
     <button
       onClick={toggleTheme}
+      onMouseEnter={() => audioService.playHover()}
       className="btn btn-ghost btn-circle btn-sm"
       aria-label={isDarkMode ? 'Switch to light mode' : 'Switch to dark mode'}
       title={isDarkMode ? `Switch to ${settings.lightTheme} theme` : `Switch to ${settings.darkTheme} theme`}

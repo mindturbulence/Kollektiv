@@ -14,6 +14,7 @@ import type { ActiveTab, Idea, ActiveSettingsTab } from '../types';
 import Sidebar from './Sidebar';
 import Header from './Header';
 import Welcome from './Welcome';
+import CustomCursor from './CustomCursor';
 import AboutModal from './AboutModal';
 import ClippingPanel from './ClippingPanel';
 import FeedbackModal from './FeedbackModal';
@@ -49,7 +50,7 @@ class ErrorBoundary extends React.Component<{ children: React.ReactNode }, { has
     render() {
         if (this.state.hasError) {
             return (
-                <div className="h-screen w-screen flex flex-col items-center justify-center bg-base-100 p-10 text-center">
+                <div className="h-screen w-screen flex flex-col items-center justify-center bg-base-100 p-5 text-center">
                     <h1 className="text-4xl font-black uppercase tracking-tighter mb-4">CRITICAL ERROR</h1>
                     <p className="text-base-content/60 font-bold uppercase tracking-widest mb-8">The application encountered an unrecoverable state.</p>
                     <div className="flex flex-col gap-4">
@@ -99,12 +100,21 @@ const InitialLoader: React.FC<{ status: string; progress: number | null }> = ({ 
     }, [percentage]);
 
     return (
-        <div id="initial-loader" className="fixed inset-0 z-[500] flex flex-col items-center justify-center bg-base-100 text-base-content overflow-hidden select-none">
+        <div id="initial-loader" className="fixed inset-0 z-[500] flex flex-col items-center justify-center bg-base-100 text-base-content overflow-hidden select-none font-sans">
             <div className="absolute inset-0 bg-grid-texture opacity-[0.03] pointer-events-none"></div>
             
+            {/* Top Frame */}
+            <div className="absolute top-12 left-0 right-0 h-[1px] bg-base-content/10 flex items-center justify-between px-8 md:px-12 font-mono text-[9px] font-bold tracking-[0.2em] uppercase text-base-content/30">
+                <div className="flex items-center gap-6 bg-base-100 px-6">
+                    <span className="flex items-center gap-2 before:content-[''] before:w-1 before:h-1 before:bg-primary before:rounded-full">System Integrity Check</span>
+                    <span className="flex items-center gap-2 before:content-[''] before:w-1 before:h-1 before:bg-primary before:rounded-full">Protocol: Master_Load</span>
+                </div>
+                <div className="hidden sm:block bg-base-100 px-6">Ver: 2.5.0_BETA</div>
+            </div>
+
             <div className="relative z-10 flex flex-col items-center">
                 <div className="overflow-hidden mb-8 px-4">
-                    <h1 ref={textWrapperRef} className="grid grid-cols-1 grid-rows-1 text-xl md:text-3xl font-black tracking-tighter uppercase select-none items-center">
+                    <h1 ref={textWrapperRef} className="grid grid-cols-1 grid-rows-1 text-xl md:text-3xl font-black tracking-tighter uppercase select-none items-center font-display">
                         <span className="text-base-content/10 block leading-none py-2 row-start-1 col-start-1">
                             Kollektiv<span className="text-primary/10 italic">.</span>
                         </span>
@@ -129,8 +139,13 @@ const InitialLoader: React.FC<{ status: string; progress: number | null }> = ({ 
                 </div>
             </div>
 
-            <div className="absolute bottom-12 left-12 hidden md:block">
-                <span className="text-[8px] font-mono font-bold text-base-content/10 uppercase tracking-widest">Protocol: Master_Load_Sequence</span>
+            {/* Bottom Frame */}
+            <div className="absolute bottom-12 left-0 right-0 h-[1px] bg-base-content/10 flex items-center justify-between px-8 md:px-12 font-mono text-[9px] font-bold tracking-[0.2em] uppercase text-base-content/30">
+                <div className="hidden sm:block bg-base-100 px-6">© 2026 Kollektiv Neural Systems</div>
+                <div className="flex items-center gap-6 bg-base-100 px-6">
+                    <span className="flex items-center gap-2 before:content-[''] before:w-1 before:h-1 before:bg-primary before:rounded-full">Status: Operational</span>
+                    <span className="flex items-center gap-2 before:content-[''] before:w-1 before:h-1 before:bg-primary before:rounded-full">Region: ASIA-SE-1</span>
+                </div>
             </div>
         </div>
     );
@@ -494,13 +509,13 @@ const AppContent: React.FC = () => {
     if (showWelcome) return <Welcome onSetupComplete={initializeApp} />;
 
     return (
-        <div className="h-full flex overflow-hidden relative p-1.5 md:p-3 bg-transparent">
+        <div className="h-full w-full flex overflow-hidden relative bg-base-300 p-1 md:p-3 lg:p-5">
             <MouseTrail />
             
             <IdleOverlay isVisible={isIdle} onInteraction={() => resetIdleTimer(true)} />
 
             {!isInitialized ? (
-                <div className="flex-1 flex flex-col items-center justify-center bg-base-100 border border-base-content/10 rounded shadow-2xl">
+                <div className="flex-1 flex flex-col items-center justify-center bg-base-100 rounded shadow-2xl">
                     <div className="text-center space-y-4 max-w-md px-6">
                         <h2 className="text-2xl font-black uppercase tracking-tighter">System Offline</h2>
                         <p className="text-xs font-mono opacity-40 uppercase tracking-widest">Initialization failed or interrupted</p>
@@ -553,7 +568,7 @@ const AppContent: React.FC = () => {
 
                     <div 
                         ref={appWrapperRef}
-                        className="flex-1 flex overflow-hidden relative z-0 border border-base-content/10 shadow-2xl rounded bg-base-100"
+                        className="flex-1 flex overflow-hidden relative z-0 bg-base-100 rounded-2xl border border-base-300 shadow-2xl"
                     >
                         
                         <Sidebar
@@ -585,7 +600,7 @@ const AppContent: React.FC = () => {
                                 }}
                             />
                             
-                            <main className="flex-grow relative overflow-hidden bg-base-100">
+                            <main className={`flex-grow relative overflow-hidden bg-base-100 ${activeTab !== 'dashboard' && activeTab !== 'prompt' ? 'p-2.5' : ''}`}>
                                 <div 
                                     ref={mainGridRef} 
                                     className="absolute inset-0 z-[600] pointer-events-none grid"
@@ -642,6 +657,7 @@ const AppContent: React.FC = () => {
                     type={globalFeedback.type}
                 />
             )}
+            <CustomCursor />
         </div>
     );
 };

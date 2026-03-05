@@ -85,6 +85,16 @@ export const fetchOllamaModels = async (settings: LLMSettings, useCloud: boolean
             return [];
         }
 
+        // Optimization: If we are in a cloud environment (HTTPS) and targeting a local proxy, 
+        // skip the automatic fetch to avoid console/terminal noise if Ollama isn't running.
+        // Users can still manually refresh or test connection in settings.
+        const isTargetingLocal = config.baseUrl === '/ollama-local' || 
+                               (config.baseUrl === '/proxy-remote' && (config.headers as any)['x-target-url'] && isLocalOllama((config.headers as any)['x-target-url']));
+
+        if (window.location.protocol === 'https:' && isTargetingLocal) {
+            return [];
+        }
+
         const controller = new AbortController();
         const timeoutId = setTimeout(() => controller.abort(), 5000);
 

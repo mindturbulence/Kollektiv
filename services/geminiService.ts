@@ -61,7 +61,7 @@ export const enhancePromptGemini = async (prompt: string, constantModifier: stri
     } catch (err) { throw handleGeminiError(err, 'refining'); }
 };
 
-export async function* enhancePromptGeminiStream(prompt: string, constantModifier: string, settings: LLMSettings, systemInstruction: string, length: string = 'Medium', referenceImages?: string[]): AsyncGenerator<string> {
+export async function* enhancePromptGeminiStream(prompt: string, constantModifier: string, settings: LLMSettings, systemInstruction: string, length: string = 'Medium', referenceImages?: string[], temperature: number = 0.7): AsyncGenerator<string> {
     try {
         const ai = getGeminiClient(settings);
         const input = [prompt.trim(), constantModifier.trim()].filter(Boolean).join('\n\n');
@@ -75,7 +75,7 @@ export async function* enhancePromptGeminiStream(prompt: string, constantModifie
             }
             contents = { parts };
         }
-
+ 
         const tokenBudget = length === 'Long' ? 1800 : 800;
         const response = await ai.models.generateContentStream({
             model: settings.llmModel || DEFAULT_MODEL,
@@ -83,6 +83,7 @@ export async function* enhancePromptGeminiStream(prompt: string, constantModifie
             config: { 
                 systemInstruction, 
                 maxOutputTokens: tokenBudget,
+                temperature,
                 thinkingConfig: { thinkingBudget: 0 }
             }
         });

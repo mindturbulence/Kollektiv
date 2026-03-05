@@ -81,7 +81,7 @@ const ImageListItem: React.FC<ImageListItemProps> = ({ item, onOpenDetailView, o
         <div className="flex-grow min-w-0">
            <div className="flex items-center gap-2">
             {isPinned && <span title="Pinned"><ThumbTackIcon className="w-4 h-4 text-primary flex-shrink-0" /></span>}
-            <h4 className="text-primary font-semibold truncate" title={item.title}>
+            <h4 className="text-primary font-black truncate" title={item.title}>
               {item.title}
             </h4>
         </div>

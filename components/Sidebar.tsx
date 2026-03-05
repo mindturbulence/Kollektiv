@@ -243,7 +243,7 @@ const Sidebar: React.FC<SidebarProps> = ({ activeTab, onNavigate, isSidebarOpen,
       style={{ visibility: 'hidden' }}
       aria-label="Main Navigation"
     >
-      <div className="flex-shrink-0 flex items-center justify-between h-16 px-6 border-b border-base-300">
+      <div className="flex-shrink-0 flex items-center justify-between h-16 px-6">
         <button onClick={() => onNavigate('dashboard')} className="flex items-center gap-3 group">
           <h1 className="text-xl font-black tracking-tighter text-base-content uppercase flex items-center">
             <TimedScrambledText text="Kollektiv" intervalMs={300000} />
@@ -300,7 +300,7 @@ const Sidebar: React.FC<SidebarProps> = ({ activeTab, onNavigate, isSidebarOpen,
 
       </nav>
       
-      <div className="flex-shrink-0 p-4 border-t border-base-300 bg-base-200/20">
+      <div className="flex-shrink-0 p-4 bg-base-200/20">
          <ul className="menu menu-sm p-0 gap-1">
             <NavItem id="settings" label="Settings" icon={<Cog6ToothIcon className="w-5 h-5" />} activeTab={activeTab} onClick={onNavigate} registerRef={registerRef} />
             <li>

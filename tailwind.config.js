@@ -8,8 +8,8 @@ export default {
   theme: {
     extend: {
       fontFamily: {
-        sans: ['Hind', 'sans-serif'],
-        display: ['Pilcrow Rounded', 'Plus Jakarta Sans', 'Urbanist', 'sans-serif'],
+        sans: ['Inter', 'Plus Jakarta Sans', 'sans-serif'],
+        display: ['Inter', 'Plus Jakarta Sans', 'sans-serif'],
         mono: ['JetBrains Mono', 'monospace'],
       },
       colors: {
@@ -35,6 +35,22 @@ export default {
           "success": "#22c55e",
           "warning": "#f59e0b",
           "error": "#ef4444",
+        },
+      },
+      {
+        futurismo: {
+          "primary": "#f27d26",
+          "secondary": "#00ffa3",
+          "accent": "#ffffff",
+          "neutral": "#1a1a1a",
+          "base-100": "#050505",
+          "base-200": "#0f0f0f",
+          "base-300": "#1a1a1a",
+          "base-content": "#e5e5e5",
+          "info": "#3abff8",
+          "success": "#36d399",
+          "warning": "#fbbd23",
+          "error": "#f87272",
         },
       },
       "light",
