@@ -235,8 +235,8 @@ const Sidebar: React.FC<SidebarProps> = ({ activeTab, onNavigate, isSidebarOpen,
     }, [activeTab, isSidebarOpen, isPinned]);
 
   const sidebarClasses = [
-    "h-full bg-transparent text-base-content z-[100] flex flex-col border-r border-base-300 overflow-hidden",
-    isPinned ? "relative" : "absolute top-0 left-0"
+    "h-full text-base-content z-[100] flex flex-col overflow-hidden",
+    isPinned ? "bg-transparent relative" : "bg-base-100/40 backdrop-blur-xl absolute top-0 left-0"
   ].join(" ");
 
   return (

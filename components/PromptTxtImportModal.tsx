@@ -32,8 +32,8 @@ export const PromptTxtImportModal: React.FC<PromptTxtImportModalProps> = ({ isOp
   if (!isOpen) return null;
   
   const modalContent = (
-    <div className="fixed inset-0 bg-black/80 z-[1000] flex items-center justify-center p-4 animate-fade-in" onClick={handleClose}>
-        <div className="bg-transparent rounded-none border border-base-300 w-full max-w-2xl mx-auto flex flex-col overflow-hidden" onClick={(e) => e.stopPropagation()}>
+    <div className="fixed inset-0 bg-black/40 backdrop-blur-xl z-[1000] flex items-center justify-center p-4 animate-fade-in" onClick={handleClose}>
+        <div className="bg-base-100/40 rounded-none w-full max-w-2xl mx-auto flex flex-col overflow-hidden" onClick={(e) => e.stopPropagation()}>
             <header className="p-10 border-b border-base-300 bg-transparent relative">
                 <button onClick={handleClose} className="absolute top-6 right-6 btn btn-ghost btn-sm btn-square opacity-40 hover:opacity-100">
                     <CloseIcon className="w-6 h-6" />

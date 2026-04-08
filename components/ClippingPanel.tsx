@@ -267,12 +267,12 @@ const ClippingPanel: React.FC<ClippingPanelProps> = ({
         <>
             <div
                 ref={panelRef}
-                className="absolute top-0 right-0 bottom-0 w-full md:w-[512px] bg-transparent shadow-none z-[100] flex flex-col border-l border-base-300 translate-x-full"
+                className="absolute top-0 right-0 bottom-0 w-full md:w-[512px] bg-base-100/40 shadow-none z-[100] flex flex-col backdrop-blur-xl translate-x-full"
                 style={{ visibility: 'hidden' }}
                 aria-hidden={!isOpen}
             >
                 {/* Header */}
-                <div className="flex justify-between items-center h-16 px-6 border-b border-base-300 bg-base-200/20 flex-shrink-0">
+                <div className="flex justify-between items-center h-16 px-6 bg-base-100/20 flex-shrink-0">
                     <div className="flex items-center gap-3">
                         <BookmarkIcon className="w-5 h-5 text-primary"/>
                         <h3 className="font-black text-sm uppercase tracking-[0.3em]">Clipboard <span className="text-base-content/20 font-mono text-xs ml-2">[{clippedIdeas.length}]</span></h3>

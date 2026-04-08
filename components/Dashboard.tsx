@@ -3,7 +3,6 @@ import { gsap } from 'gsap';
 import { loadGalleryItems } from '../utils/galleryStorage';
 import type { GalleryItem, ActiveTab, Idea } from '../types';
 import LoadingSpinner from './LoadingSpinner';
-import { useSettings } from '../contexts/SettingsContext';
 
 // --- CHROMATIC JITTER COMPONENT ---
 const ChromaticText: React.FC<{ text: string; enabled?: boolean }> = ({ text, enabled = true }) => {
@@ -97,11 +96,9 @@ interface DashboardProps {
 }
 
 const Dashboard: React.FC<DashboardProps> = ({ onNavigate }) => {
-    const { settings } = useSettings();
     const [isLoading, setIsLoading] = useState(true);
     const [gallery, setGallery] = useState<GalleryItem[]>([]);
     const [time, setTime] = useState(new Date().toLocaleTimeString());
-    const [videoError, setVideoError] = useState(false);
 
     const headerTextRef = useRef<HTMLParagraphElement>(null);
     const titleRef = useRef<HTMLHeadingElement>(null);
@@ -152,27 +149,6 @@ const Dashboard: React.FC<DashboardProps> = ({ onNavigate }) => {
 
     return (
         <div className="h-full w-full bg-transparent overflow-hidden relative select-none border-none p-0">
-            {/* AMBIENT BACKGROUND LAYER */}
-            <div className="absolute inset-0 z-0 overflow-hidden pointer-events-none">
-                {!videoError && settings.dashboardVideoUrl ? (
-                    <video 
-                        key={settings.dashboardVideoUrl}
-                        src={settings.dashboardVideoUrl}
-                        autoPlay 
-                        muted 
-                        loop 
-                        playsInline 
-                        crossOrigin="anonymous"
-                        className="w-full h-full object-cover grayscale brightness-[0.6] contrast-125 opacity-30 transition-opacity duration-1000"
-                        style={{ filter: 'grayscale(1) brightness(0.6) contrast(1.1)' }}
-                        onError={() => setVideoError(true)}
-                    />
-                ) : (
-                    <div className="w-full h-full bg-transparent opacity-20"></div>
-                )}
-                <div className="absolute inset-0 bg-grid-texture opacity-[0.03] z-10"></div>
-                <div className="absolute inset-0 bg-gradient-to-t from-transparent via-transparent to-transparent opacity-60 z-10"></div>
-            </div>
             
             <MetadataCorner label="System_Status" value="Core_Engine_Active" position="top-0 left-0" />
             <MetadataCorner label="Vault_Index" value={`${gallery.length} Arifacts_Identified`} position="top-0 right-0" />

@@ -172,7 +172,8 @@ const AppContent: React.FC = () => {
     const [showWelcome, setShowWelcome] = useState(false);
     const [initStatus, setInitStatus] = useState('Starting App');
     const [initProgress, setInitProgress] = useState<number | null>(0);
-    const [isIdle, setIsIdle] = useState(false); 
+    const [isIdle, setIsIdle] = useState(false);
+    const [videoError, setVideoError] = useState(false); 
     
     const hasInitializedRef = useRef(false);
     const isTransitioningRef = useRef(false);
@@ -516,9 +517,27 @@ const AppContent: React.FC = () => {
     if (showWelcome) return <Welcome onSetupComplete={initializeApp} />;
 
     return (
-        <div className="h-full w-full flex overflow-hidden relative bg-transparent p-1 md:p-3 lg:p-5 font-sans">
-            {/* Technical Grid Background */}
-            <div className="absolute inset-0 pointer-events-none opacity-[0.03] bg-[linear-gradient(to_right,#808080_1px,transparent_1px),linear-gradient(to_bottom,#808080_1px,transparent_1px)] bg-[size:40px_40px]"></div>
+        <div className="h-full w-full flex overflow-hidden relative font-sans">
+            {/* AMBIENT VIDEO BACKGROUND */}
+            <div className="absolute inset-0 z-0 overflow-hidden pointer-events-none">
+                {!videoError && settings.dashboardVideoUrl ? (
+                    <video 
+                        key={settings.dashboardVideoUrl}
+                        src={settings.dashboardVideoUrl}
+                        autoPlay 
+                        muted 
+                        loop 
+                        playsInline 
+                        crossOrigin="anonymous"
+                        className="w-full h-full object-cover grayscale brightness-[0.6] contrast-125 opacity-30 transition-opacity duration-1000"
+                        style={{ filter: 'grayscale(1) brightness(0.6) contrast(1.1)' }}
+                        onError={() => setVideoError(true)}
+                    />
+                ) : (
+                    <div className="w-full h-full bg-transparent"></div>
+                )}
+                <div className="absolute inset-0 bg-grid-texture opacity-[0.03] z-10"></div>
+            </div>
             
             <IdleOverlay isVisible={isIdle} onInteraction={() => resetIdleTimer(true)} />
 
@@ -608,7 +627,7 @@ const AppContent: React.FC = () => {
                                 }}
                             />
                             
-                            <main className={`flex-grow relative overflow-hidden bg-transparent ${activeTab !== 'dashboard' && activeTab !== 'prompt' ? 'p-2.5' : ''}`}>
+                            <main className="flex-grow relative overflow-hidden bg-transparent">
                                 <div 
                                     ref={mainGridRef} 
                                     className="absolute inset-0 z-[600] pointer-events-none grid"

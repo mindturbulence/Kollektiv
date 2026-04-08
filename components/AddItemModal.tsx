@@ -158,16 +158,10 @@ const AddItemModal: React.FC<AddItemModalProps> = ({ isOpen, onClose, onAddItem,
 
   const hasFiles = previews.length > 0;
 
-  const modalContent = (
-    <div 
-        className="fixed inset-0 bg-black/80 z-[1000] flex items-center justify-center p-4 animate-fade-in" 
-        onClick={onClose}
-        onDrop={handleDrop}
-        onDragOver={(e) => { e.preventDefault(); setIsDragging(true); }}
-        onDragLeave={() => setIsDragging(false)}
-    >
+const modalContent = (
+    <div className="fixed inset-0 bg-black/40 backdrop-blur-xl z-[1000] flex items-center justify-center p-4 animate-fade-in" onClick={handleClose}>
       <div 
-        className={`bg-transparent rounded-none border border-base-300 w-full max-w-5xl mx-auto flex flex-col max-h-[95vh] overflow-hidden transition-all duration-300 ${isDragging ? 'ring-2 ring-primary' : ''}`} 
+        className={`bg-base-100/40 rounded-none w-full max-w-5xl mx-auto flex flex-col max-h-[95vh] overflow-hidden transition-all duration-300 ${isDragging ? 'ring-2 ring-primary' : ''}`} 
         onClick={e => e.stopPropagation()}
       >
         <header className="p-8 border-b border-base-300 bg-transparent relative">

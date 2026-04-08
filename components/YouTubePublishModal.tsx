@@ -73,8 +73,8 @@ const YouTubePublishModal: React.FC<YouTubePublishModalProps> = ({
   if (!isOpen) return null;
 
   const modalContent = (
-    <div className="fixed inset-0 bg-black/95 z-[1000] flex items-center justify-center p-4 animate-fade-in" onClick={onClose}>
-      <div className="bg-transparent rounded-none border border-base-300 w-full max-w-2xl mx-auto flex flex-col max-h-[90vh] overflow-hidden" onClick={e => e.stopPropagation()}>
+    <div className="fixed inset-0 bg-black/40 backdrop-blur-xl z-[1000] flex items-center justify-center p-4 animate-fade-in" onClick={onClose}>
+      <div className="bg-base-100/40 rounded-none w-full max-w-2xl mx-auto flex flex-col max-h-[90vh] overflow-hidden" onClick={e => e.stopPropagation()}>
         <header className="p-8 border-b border-base-300 bg-transparent relative">
             <button onClick={onClose} className="absolute top-6 right-6 btn btn-ghost btn-sm btn-square opacity-40 hover:opacity-100">
                 <CloseIcon className="w-6 h-6" />
