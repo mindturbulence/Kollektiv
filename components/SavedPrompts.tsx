@@ -219,16 +219,16 @@ const SavedPrompts: React.FC<SavedPromptsProps> = ({
 
   return (
     <section className="flex flex-row h-full bg-transparent overflow-hidden w-full">
-      <aside className={`relative flex-shrink-0 bg-transparent border-r border-base-300 transition-all duration-300 ease-in-out flex flex-col ${isCategoryPanelCollapsed ? 'w-0' : 'w-80'}`}>
+      <aside className={`relative flex-shrink-0 bg-base-100/40 backdrop-blur-xl transition-all duration-300 ease-in-out flex flex-col ${isCategoryPanelCollapsed ? 'w-0' : 'w-80'}`}>
         <CategoryPanelToggle isCollapsed={isCategoryPanelCollapsed} onToggle={onToggleCategoryPanel} position="right" />
         <div className={`flex flex-col h-full overflow-hidden transition-opacity duration-200 ${isCategoryPanelCollapsed ? 'opacity-0 invisible' : 'opacity-100 visible'}`}>
-          <div className="flex-shrink-0 bg-transparent border-b border-base-300 h-16 flex items-center px-4">
+          <div className="flex-shrink-0 h-16 flex items-center px-4">
              <div className="flex items-center gap-3">
                 <FolderClosedIcon className="w-5 h-5 text-primary/40" />
                 <span className="text-[10px] font-black uppercase tracking-[0.3em]">Folders</span>
              </div>
           </div>
-          <div className="flex-shrink-0 bg-transparent border-b border-base-300 h-12">
+          <div className="flex-shrink-0 h-12">
             <div className="flex items-center h-full relative">
               <SearchIcon className="absolute left-4 w-3.5 h-3.5 opacity-20 pointer-events-none" />
               <input 
@@ -270,7 +270,7 @@ const SavedPrompts: React.FC<SavedPromptsProps> = ({
 
         <div className={`flex flex-col h-full overflow-hidden transition-all duration-300 ${detailViewPromptId ? 'blur-sm pointer-events-none' : ''}`}>
             <div className="flex-grow overflow-y-auto overflow-x-hidden custom-scrollbar bg-transparent">
-                <header className="bg-transparent border-b border-base-300">
+                <header className="bg-base-100/40 backdrop-blur-xl">
                     <div className="p-6 md:p-10">
                         <div className="flex flex-col md:flex-row md:items-end justify-between gap-6">
                             <div className="space-y-2">
@@ -279,7 +279,7 @@ const SavedPrompts: React.FC<SavedPromptsProps> = ({
                                     {currentCategoryName}<span className="text-primary">.</span>
                                 </h1>
                             </div>
-                            <div className="flex bg-transparent border border-base-300">
+                            <div className="flex">
                                 <div className="px-8 py-3 flex flex-col items-center justify-center">
                                     <span className="text-3xl font-black tracking-tighter leading-none">{sortedAndFilteredPrompts.length}</span>
                                     <span className="text-[8px] uppercase font-black text-base-content/30 tracking-[0.2em] mt-1">Saved Prompts</span>
@@ -289,8 +289,8 @@ const SavedPrompts: React.FC<SavedPromptsProps> = ({
                     </div>
                 </header>
 
-                <div className="h-16 border-b border-base-300 bg-transparent flex items-stretch overflow-hidden sticky top-0 z-30">
-                    <div className="flex-grow flex items-center relative border-r border-base-300 min-w-0">
+                <div className="h-16 bg-base-100/40 backdrop-blur-xl flex items-stretch overflow-hidden sticky top-0 z-30">
+                    <div className="flex-grow flex items-center relative min-w-0">
                         <SearchIcon className="absolute left-8 w-4 h-4 opacity-20 pointer-events-none" />
                         <input 
                             type="text" 
@@ -306,12 +306,12 @@ const SavedPrompts: React.FC<SavedPromptsProps> = ({
                         )}
                     </div>
                     
-                    <div className="flex items-stretch flex-shrink-0 bg-transparent">
+                    <div className="flex items-stretch flex-shrink-0">
                         <div className="join h-full rounded-none">
-                            <button onClick={() => { setSortOrder('newest'); setDisplayCount(30); }} className={`join-item btn btn-ghost h-full border-none border-l border-base-300 rounded-none px-8 font-black uppercase text-[10px] tracking-widest ${sortOrder === 'newest' ? 'bg-primary/5 text-primary' : 'opacity-40'}`}>BY DATE</button>
-                            <button onClick={() => { setSortOrder('title'); setDisplayCount(30); }} className={`join-item btn btn-ghost h-full border-none border-l border-base-300 rounded-none px-8 font-black uppercase text-[10px] tracking-widest ${sortOrder === 'title' ? 'bg-primary/5 text-primary' : 'opacity-40'}`}>BY NAME</button>
+                            <button onClick={() => { setSortOrder('newest'); setDisplayCount(30); }} className={`join-item btn btn-ghost h-full border-none rounded-none px-8 font-black uppercase text-[10px] tracking-widest ${sortOrder === 'newest' ? 'text-primary' : 'opacity-40'}`}>BY DATE</button>
+                            <button onClick={() => { setSortOrder('title'); setDisplayCount(30); }} className={`join-item btn btn-ghost h-full border-none rounded-none px-8 font-black uppercase text-[10px] tracking-widest ${sortOrder === 'title' ? 'text-primary' : 'opacity-40'}`}>BY NAME</button>
                         </div>
-                        <button onClick={() => { setPromptToEdit(null); setIsEditorModalOpen(true); }} className="btn btn-primary h-full rounded-none border-none border-l border-base-300 px-8 font-black text-[10px] tracking-widest uppercase flex items-center gap-2">
+                        <button onClick={() => { setPromptToEdit(null); setIsEditorModalOpen(true); }} className="btn btn-primary h-full rounded-none border-none px-8 font-black text-[10px] tracking-widest uppercase flex items-center gap-2">
                             <PlusIcon className="w-4 h-4" />
                             <span>Add Prompt</span>
                         </button>

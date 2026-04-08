@@ -352,7 +352,7 @@ const PromptCrafter = ({ onClip, onSendToEnhancer, onSavePresetSuccess, promptTo
                         )}
                     </div>
                     {filteredTemplates.length > 0 && (
-                        <ul tabIndex={0} className="dropdown-content z-[100] menu p-1 bg-transparent rounded-none w-full max-h-60 overflow-y-auto border border-base-300">
+                        <ul tabIndex={0} className="dropdown-content z-[100] menu p-1 bg-base-100/40 backdrop-blur-xl rounded-none w-full max-h-60 overflow-y-auto">
                             {filteredTemplates.map(t => (
                                 <li key={t.name}>
                                     <a 
@@ -360,7 +360,7 @@ const PromptCrafter = ({ onClip, onSendToEnhancer, onSavePresetSuccess, promptTo
                                             e.preventDefault();
                                             handleSelectTemplateFromDropdown(t);
                                         }} 
-                                        className={`font-bold text-[10px] uppercase ${selectedTemplate?.name === t.name ? 'bg-primary/20 text-primary' : ''}`}
+                                        className={`font-bold text-[10px] uppercase ${selectedTemplate?.name === t.name ? 'text-primary' : 'text-base-content/70 hover:text-base-content'}`}
                                     >
                                         {t.name}
                                     </a>

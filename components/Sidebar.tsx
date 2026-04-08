@@ -135,10 +135,12 @@ const NavItem: React.FC<{
                 audioService.playHover();
               }}
               onMouseLeave={() => setIsHovered(false)}
-              className={`flex items-center py-1.5 px-3 rounded-lg text-base font-medium transition-colors cursor-pointer relative z-10 ${
+              className={`flex items-center py-1.5 px-3 text-base font-medium transition-colors cursor-pointer relative z-10 ${
                 activeTab === id
-                  ? 'text-primary-content font-bold'
-                  : 'text-base-content/70 hover:bg-base-200/30'
+                  ? 'text-primary'
+                  : isHovered
+                    ? 'text-base-content'
+                    : 'text-base-content/70'
               }`}
               aria-current={activeTab === id ? 'page' : undefined}
             >
@@ -168,7 +170,6 @@ const Sidebar: React.FC<SidebarProps> = ({ activeTab, onNavigate, isSidebarOpen,
     const { features } = settings;
     const sidebarRef = useRef<HTMLElement>(null);
     const navRefs = useRef<Record<string, HTMLAnchorElement | null>>({});
-    const [pillStyle, setPillStyle] = useState<React.CSSProperties>({ display: 'none' });
     const isFirstRender = useRef(true);
 
     const registerRef = (id: ActiveTab, el: HTMLAnchorElement | null) => {
@@ -214,25 +215,6 @@ const Sidebar: React.FC<SidebarProps> = ({ activeTab, onNavigate, isSidebarOpen,
             });
         }
     }, [isSidebarOpen, isPinned]);
-
-    useEffect(() => {
-        const activeEl = navRefs.current[activeTab];
-        const container = activeEl?.closest('nav');
-        if (activeEl && container) {
-            const rect = activeEl.getBoundingClientRect();
-            const containerRect = container.getBoundingClientRect();
-            
-            setPillStyle({
-                top: rect.top - containerRect.top + container.scrollTop,
-                height: rect.height,
-                width: rect.width,
-                left: rect.left - containerRect.left,
-                opacity: 1,
-            });
-        } else {
-            setPillStyle({ opacity: 0 });
-        }
-    }, [activeTab, isSidebarOpen, isPinned]);
 
   const sidebarClasses = [
     "h-full text-base-content z-[100] flex flex-col overflow-hidden",
@@ -283,10 +265,6 @@ const Sidebar: React.FC<SidebarProps> = ({ activeTab, onNavigate, isSidebarOpen,
       </div>
 
       <nav className="flex-grow px-4 py-4 overflow-y-auto relative scroll-smooth custom-scrollbar flex flex-col">
-        <div 
-            className="absolute bg-primary rounded-lg pointer-events-none transition-all duration-300 ease-[cubic-bezier(0.4,0,0.2,1)]"
-            style={pillStyle}
-        />
 
         <div className="mb-6 px-2 relative z-20">
             <LlmStatusSwitcher />

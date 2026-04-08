@@ -1206,7 +1206,7 @@ const PromptsPage: React.FC<PromptsPageProps> = ({
                         )}
                     </div>
                     {filteredPresets.length > 0 && (
-                        <ul tabIndex={0} className="dropdown-content z-[100] menu p-1 bg-transparent rounded-none w-full mt-2 border border-base-300 max-h-60 overflow-y-auto flex flex-col flex-nowrap">
+                        <ul tabIndex={0} className="dropdown-content z-[100] menu p-1 bg-base-100/40 backdrop-blur-xl rounded-none w-full mt-2 max-h-60 overflow-y-auto flex flex-col flex-nowrap">
                             {filteredPresets.map(p => (
                                 <li key={p.name} className="w-full">
                                     <a 
@@ -1214,7 +1214,7 @@ const PromptsPage: React.FC<PromptsPageProps> = ({
                                             e.preventDefault();
                                             handleSelectPresetFromDropdown(p);
                                         }} 
-                                        className={`font-bold text-[10px] uppercase block w-full truncate ${selectedPreset?.name === p.name ? 'bg-primary/20 text-primary' : ''}`}
+                                        className={`font-bold text-[10px] uppercase block w-full truncate ${selectedPreset?.name === p.name ? 'text-primary' : 'text-base-content/70 hover:text-base-content'}`}
                                     >
                                         {p.name}
                                     </a>

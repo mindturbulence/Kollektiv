@@ -89,7 +89,7 @@ const AutocompleteSelect: React.FC<AutocompleteSelectProps> = ({ options, value,
       </div>
 
       {isDropdownOpen && (
-        <div className="absolute z-[100] w-full mt-1 bg-transparent border border-base-300 shadow-2xl rounded-none flex flex-col overflow-hidden animate-fade-in">
+        <div className="absolute z-[100] w-full mt-1 bg-base-100/40 backdrop-blur-xl shadow-2xl rounded-none flex flex-col overflow-hidden animate-fade-in">
           <div className="p-2 border-b border-base-300 bg-transparent flex items-center gap-2">
             <SearchIcon className="w-3.5 h-3.5 opacity-30" />
             <input
@@ -109,7 +109,7 @@ const AutocompleteSelect: React.FC<AutocompleteSelectProps> = ({ options, value,
                   <button
                     type="button"
                     onClick={() => handleOptionClick(option.value)}
-                    className={`w-full text-left px-3 py-2 text-xs font-bold uppercase tracking-tight hover:bg-primary hover:text-primary-content transition-colors flex flex-col gap-0.5 ${value === option.value ? 'bg-primary/10 text-primary' : ''}`}
+                    className={`w-full text-left px-3 py-2 text-xs font-bold uppercase tracking-tight transition-colors flex flex-col gap-0.5 ${value === option.value ? 'text-primary' : 'text-base-content/70 hover:text-base-content'}`}
                   >
                     <span>{option.label}</span>
                     {option.description && (

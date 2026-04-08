@@ -294,10 +294,10 @@ const ImageGallery: React.FC<ImageGalleryProps> = ({ isCategoryPanelCollapsed, o
 
   return (
     <section className="flex flex-row h-full bg-transparent overflow-hidden">
-      <aside className={`relative flex-shrink-0 bg-transparent border-r border-base-300 transition-all duration-300 ease-in-out flex flex-col ${isCategoryPanelCollapsed ? 'w-0' : 'w-96'}`}>
+      <aside className={`relative flex-shrink-0 bg-base-100/40 backdrop-blur-xl transition-all duration-300 ease-in-out flex flex-col ${isCategoryPanelCollapsed ? 'w-0' : 'w-96'}`}>
         <CategoryPanelToggle isCollapsed={isCategoryPanelCollapsed} onToggle={onToggleCategoryPanel} position="right" />
         <div className={`flex flex-col h-full overflow-hidden transition-opacity duration-200 ${isCategoryPanelCollapsed ? 'opacity-0 invisible' : 'opacity-100 visible'}`}>
-          <div className="flex-shrink-0 bg-transparent border-b border-base-300 h-14">
+          <div className="flex-shrink-0 h-14">
             <div className="flex items-center h-full relative">
               <SearchIcon className="absolute left-6 w-4 h-4 opacity-20 pointer-events-none" />
               <input 
@@ -333,12 +333,12 @@ const ImageGallery: React.FC<ImageGalleryProps> = ({ isCategoryPanelCollapsed, o
 
         <div className={`flex flex-col h-full overflow-hidden transition-all duration-300 ${detailViewItemId ? 'blur-sm pointer-events-none' : ''}`}>
             <div ref={scrollerRef} className="flex-grow overflow-y-auto scroll-smooth custom-scrollbar bg-transparent">
-                <section className="p-10 border-b border-base-300 bg-transparent">
+                <section className="p-10 bg-base-100/40 backdrop-blur-xl">
                     <div className="w-full flex flex-col gap-1">
                         <div className="flex flex-col md:flex-row md:items-stretch justify-between gap-6">
                             <h1 className="text-2xl lg:text-3xl font-black tracking-tighter text-base-content leading-none flex items-center uppercase">{currentCategoryName}<span className="text-primary">.</span></h1>
-                            <div className="flex bg-transparent px-6 py-2 border border-base-300 shadow-sm self-start md:self-auto min-h-full">
-                                <div className="flex flex-col border-r border-base-300 px-6 last:border-r-0 justify-center">
+                            <div className="flex px-6 py-2 self-start md:self-auto min-h-full">
+                                <div className="flex flex-col px-6 justify-center">
                                     <span className="text-2xl font-black tracking-tighter leading-none">{sortedAndFilteredItems.length}</span>
                                     <span className="text-[8px] uppercase font-black text-base-content/30 tracking-[0.2em] mt-0.5">Images</span>
                                 </div>
@@ -347,9 +347,9 @@ const ImageGallery: React.FC<ImageGalleryProps> = ({ isCategoryPanelCollapsed, o
                     </div>
                 </section>
 
-                <div className="sticky top-0 z-30 bg-transparent border-b border-base-300 h-14">
+                <div className="sticky top-0 z-30 bg-base-100/40 backdrop-blur-xl h-14">
                     <div className="flex items-stretch h-full w-full">
-                        <div className="flex-grow flex items-center relative border-r border-base-300">
+                        <div className="flex-grow flex items-center relative">
                             <SearchIcon className="absolute left-6 w-4 h-4 opacity-20 pointer-events-none" />
                             <input type="text" value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} placeholder="SEARCH IMAGES..." className="w-full h-full bg-transparent border-none focus:outline-none focus:ring-0 pl-14 pr-12 font-bold uppercase tracking-tight text-sm placeholder:text-base-content/10" />
                             {searchQuery && (
@@ -363,7 +363,7 @@ const ImageGallery: React.FC<ImageGalleryProps> = ({ isCategoryPanelCollapsed, o
                         </div>
                         
                         {/* NSFW Toggle */}
-                        <div className="flex items-center gap-3 bg-transparent px-6 border-r border-base-300">
+                        <div className="flex items-center gap-3 px-6">
                             <span className="text-[10px] font-black uppercase text-base-content/40 tracking-widest">NSFW</span>
                             <input 
                                 type="checkbox" 
