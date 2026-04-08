@@ -14,7 +14,7 @@ const LedStatus: React.FC<{
     color?: string 
 }> = ({ label, active, color = 'bg-success' }) => (
     <div className={`flex items-center gap-1.5 transition-all duration-700 ${active ? 'opacity-100' : 'opacity-10'}`}>
-        <span className={`w-1.5 h-1.5 rounded-full ${active ? `${color} shadow-[0_0_5px_rgba(var(--p),0.5)] animate-pulse` : 'bg-base-content/20'}`}></span>
+        <span className={`w-1.5 h-1.5 rounded-full ${active ? `${color} shadow-[0_0_5px_rgba(var(--p),0.5)] animate-pulse` : 'bg-transparent'}`}></span>
         <span className="text-[10px] font-sans font-black text-base-content tracking-tighter uppercase whitespace-nowrap">{label}</span>
     </div>
 );
@@ -190,7 +190,7 @@ const Footer: React.FC<FooterProps> = ({ }) => {
         </div>
 
         <div className={`fixed bottom-20 right-6 z-[200] transition-all duration-1000 ease-out pointer-events-none ${showMonitor ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-12'}`}>
-            <div className="bg-base-100 border border-primary/40 p-4 shadow-[0_30px_90px_rgba(0,0,0,0.9)] flex items-center gap-4 backdrop-blur-3xl min-w-[320px] overflow-hidden">
+            <div className="bg-transparent border border-primary/40 p-4 flex items-center gap-4 backdrop-blur-3xl min-w-[320px] overflow-hidden">
                 <div className={`w-2 h-2 rounded-full flex-shrink-0 ${playerState === 'playing' ? 'bg-primary animate-pulse shadow-[0_0_8px_rgba(var(--p),0.8)]' : 'bg-warning animate-ping'}`}></div>
                 
                 <div className="flex flex-col min-w-0">
@@ -208,9 +208,12 @@ const Footer: React.FC<FooterProps> = ({ }) => {
             </div>
         </div>
 
-        <footer className="flex-shrink-0 px-0 h-12 bg-base-100 z-10 flex flex-row items-center justify-between overflow-hidden select-none whitespace-nowrap border-t border-base-300">
-            <div className="flex items-center h-full px-6 gap-6 bg-transparent">
-                <span className="text-[14px] font-black uppercase tracking-tighter text-primary">KOLLEKTIV. V2</span>
+        <footer className="flex-shrink-0 px-0 h-12 bg-transparent z-10 flex flex-row items-center justify-between overflow-hidden select-none whitespace-nowrap border-t border-base-300 relative">
+            {/* Background Technical Noise */}
+            <div className="absolute inset-0 pointer-events-none opacity-[0.03] bg-[url('https://www.transparenttextures.com/patterns/stardust.png')]"></div>
+            
+            <div className="flex items-center h-full px-6 gap-6 bg-transparent relative z-10">
+                <span className="text-[11px] font-black uppercase tracking-[0.2em] text-primary">KOLLEKTIV // NEURAL_SYS</span>
                 <div className="relative flex items-center justify-center border-l border-base-300/30 pl-6 h-full py-2">
                     <div className="flex flex-row gap-4 items-center">
                         <LedStatus label="VAULT" active={fileSystemManager.isDirectorySelected()} />

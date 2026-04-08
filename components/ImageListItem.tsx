@@ -51,13 +51,13 @@ const ImageListItem: React.FC<ImageListItemProps> = ({ item, onOpenDetailView, o
   }, []);
 
   return (
-    <div className="w-full bg-base-100 rounded-lg flex items-center justify-between gap-4 p-3 transition-colors hover:bg-base-200">
+    <div className="w-full bg-transparent rounded-lg flex items-center justify-between gap-4 p-3 transition-colors hover:bg-base-200/30">
       <div onClick={onOpenDetailView} className="flex items-center gap-4 flex-grow min-w-0 cursor-pointer">
         <div 
-          className="relative w-20 h-20 bg-base-300 rounded-md flex-shrink-0 overflow-hidden flex items-center justify-center"
+          className="relative w-20 h-20 bg-transparent rounded-md flex-shrink-0 overflow-hidden flex items-center justify-center"
         >
           {isLoading ? (
-             <div className="w-full h-full animate-pulse bg-base-300"></div>
+             <div className="w-full h-full animate-pulse bg-transparent"></div>
           ) : !mediaBlobUrl ? (
             <PhotoIcon className="w-8 h-8 text-base-content/40"/>
           ) : item.type === 'video' ? (
@@ -105,7 +105,7 @@ const ImageListItem: React.FC<ImageListItemProps> = ({ item, onOpenDetailView, o
         {isMenuOpen && (
           <div
             onClick={(e: React.MouseEvent) => e.stopPropagation()}
-            className="absolute right-0 bottom-full mb-2 w-48 bg-base-200 backdrop-blur-sm rounded-md shadow-lg py-1 z-20 animate-fade-in-up menu menu-sm"
+            className="absolute right-0 bottom-full mb-2 w-48 bg-transparent backdrop-blur-sm rounded-md shadow-lg py-1 z-20 animate-fade-in-up menu menu-sm"
           >
             <li><a onClick={() => { onOpenDetailView(); setIsMenuOpen(false); }}><EditIcon className="w-4 h-4 mr-3" /> View & Edit</a></li>
             <li><a onClick={() => { onTogglePin(item.id); setIsMenuOpen(false); }}><ThumbTackIcon className="w-4 h-4 mr-3" /> {isPinned ? 'Unpin Item' : 'Pin Item'}</a></li>

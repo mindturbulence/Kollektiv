@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import { createPortal } from 'react-dom';
 import type { GalleryCategory } from '../types';
-import { UploadIcon, CloseIcon } from './icons';
+import { UploadIcon, CloseIcon, ChevronLeftIcon, ChevronRightIcon } from './icons';
 import { fileToBase64 } from '../utils/fileUtils';
 import AutocompleteSelect from './AutocompleteSelect';
 
@@ -104,6 +104,23 @@ const AddItemModal: React.FC<AddItemModalProps> = ({ isOpen, onClose, onAddItem,
     });
   };
 
+  const handleMoveFile = (index: number, direction: 'left' | 'right') => {
+    const newIndex = direction === 'left' ? index - 1 : index + 1;
+    if (newIndex < 0 || newIndex >= files.length) return;
+
+    const newFiles = [...files];
+    const tempFile = newFiles[index];
+    newFiles[index] = newFiles[newIndex];
+    newFiles[newIndex] = tempFile;
+    setFiles(newFiles);
+
+    const newPreviews = [...previews];
+    const tempPreview = newPreviews[index];
+    newPreviews[index] = newPreviews[newIndex];
+    newPreviews[newIndex] = tempPreview;
+    setPreviews(newPreviews);
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (files.length === 0 || isProcessing) return;
@@ -150,10 +167,10 @@ const AddItemModal: React.FC<AddItemModalProps> = ({ isOpen, onClose, onAddItem,
         onDragLeave={() => setIsDragging(false)}
     >
       <div 
-        className={`bg-base-100 rounded-none border border-base-300 shadow-2xl w-full max-w-5xl mx-auto flex flex-col max-h-[95vh] overflow-hidden transition-all duration-300 ${isDragging ? 'ring-2 ring-primary' : ''}`} 
+        className={`bg-transparent rounded-none border border-base-300 w-full max-w-5xl mx-auto flex flex-col max-h-[95vh] overflow-hidden transition-all duration-300 ${isDragging ? 'ring-2 ring-primary' : ''}`} 
         onClick={e => e.stopPropagation()}
       >
-        <header className="p-8 border-b border-base-300 bg-base-200/20 relative">
+        <header className="p-8 border-b border-base-300 bg-transparent relative">
             <button onClick={onClose} className="absolute top-6 right-6 btn btn-ghost btn-sm btn-square opacity-40 hover:opacity-100">
                 <CloseIcon className="w-6 h-6" />
             </button>
@@ -168,29 +185,57 @@ const AddItemModal: React.FC<AddItemModalProps> = ({ isOpen, onClose, onAddItem,
                 {!hasFiles ? (
                     <div 
                         onClick={() => (fileInputRef.current as any)?.click()}
-                        className={`p-20 border-4 border-dashed rounded-none text-center cursor-pointer transition-all ${isDragging ? 'border-primary bg-primary/10' : 'border-base-300 hover:border-primary/50 bg-base-200/20'}`}
+                        className={`p-20 border-4 border-dashed rounded-none text-center cursor-pointer transition-all ${isDragging ? 'border-primary bg-primary/10' : 'border-base-300 hover:border-primary/50 bg-transparent'}`}
                     >
                         <UploadIcon className="w-16 h-16 mx-auto text-base-content/20 mb-4"/>
                         <p className="text-sm font-black uppercase tracking-[0.2em] text-base-content/40">Drop artifacts here or click to browse</p>
                         <p className="text-[9px] font-bold text-base-content/20 mt-4 uppercase">Batch processing enabled for image sequences</p>
                     </div>
                 ) : (
-                    <div className="grid grid-cols-2 sm:grid-cols-4 md:grid-cols-6 lg:grid-cols-8 gap-px bg-base-300 border border-base-300">
+                    <div className="grid grid-cols-2 sm:grid-cols-4 md:grid-cols-6 lg:grid-cols-8 gap-px bg-transparent border border-base-300">
                         {previews.map((p, index) => (
-                            <div key={`${p.name}-${index}`} className="relative aspect-square bg-base-100 group overflow-hidden">
+                            <div key={`${p.name}-${index}`} className="relative aspect-square bg-transparent group overflow-hidden border border-base-300/50">
                                 {p.type === 'image' ? (
                                     <img src={p.url} alt={p.name} className="w-full h-full object-cover grayscale opacity-80 group-hover:grayscale-0 group-hover:opacity-100 transition-all duration-500" />
                                 ) : (
                                     <video src={p.url} className="w-full h-full object-cover grayscale group-hover:grayscale-0 transition-all duration-500" />
                                 )}
                                 <div className="absolute inset-0 bg-primary/10 opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none"></div>
-                                <button type="button" onClick={() => handleRemoveFile(index)} className="btn btn-xs btn-square btn-error absolute top-1 right-1 opacity-0 group-hover:opacity-100 shadow-2xl rounded-none">✕</button>
+                                
+                                {/* Controls Overlay */}
+                                <div className="absolute inset-0 flex flex-col justify-between p-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                                    <div className="flex justify-end">
+                                        <button type="button" onClick={() => handleRemoveFile(index)} className="btn btn-xs btn-square btn-error rounded-none h-6 w-6">✕</button>
+                                    </div>
+                                    
+                                    <div className="flex justify-between gap-1">
+                                        <button 
+                                            type="button" 
+                                            onClick={() => handleMoveFile(index, 'left')} 
+                                            disabled={index === 0}
+                                            className="btn btn-xs btn-square bg-transparent hover:bg-primary hover:text-primary-content border-none rounded-none h-6 w-6 disabled:opacity-0"
+                                        >
+                                            <ChevronLeftIcon className="w-4 h-4" />
+                                        </button>
+                                        <div className="bg-transparent px-1.5 flex items-center">
+                                            <span className="text-[9px] font-black">{index + 1}</span>
+                                        </div>
+                                        <button 
+                                            type="button" 
+                                            onClick={() => handleMoveFile(index, 'right')} 
+                                            disabled={index === previews.length - 1}
+                                            className="btn btn-xs btn-square bg-transparent hover:bg-primary hover:text-primary-content border-none rounded-none h-6 w-6 disabled:opacity-0"
+                                        >
+                                            <ChevronRightIcon className="w-4 h-4" />
+                                        </button>
+                                    </div>
+                                </div>
                             </div>
                         ))}
                         <button 
                             type="button" 
                             onClick={() => (fileInputRef.current as any)?.click()}
-                            className="aspect-square bg-base-200/50 flex flex-col items-center justify-center text-base-content/20 hover:text-primary hover:bg-base-200 transition-all group border-2 border-dashed border-transparent hover:border-primary/50"
+                            className="aspect-square bg-transparent flex flex-col items-center justify-center text-base-content/20 hover:text-primary hover:bg-primary/10 transition-all group border-2 border-dashed border-transparent hover:border-primary/50"
                         >
                             <UploadIcon className="w-8 h-8 mb-2 group-hover:scale-110 transition-transform"/>
                             <span className="text-[8px] font-black uppercase tracking-widest">Add more</span>
@@ -217,7 +262,7 @@ const AddItemModal: React.FC<AddItemModalProps> = ({ isOpen, onClose, onAddItem,
                             />
                         </div>
                         <div className="form-control flex-shrink-0 h-10 flex justify-center mb-0 md:mb-1">
-                            <label className="label cursor-pointer justify-start gap-3 p-0 hover:bg-base-200/50 transition-colors px-3 h-full border border-base-300">
+                            <label className="label cursor-pointer justify-start gap-3 p-0 hover:bg-primary/10 transition-colors px-3 h-full border border-base-300">
                                 <input type="checkbox" checked={isNsfw} onChange={(e) => setIsNsfw((e.currentTarget as any).checked)} className="checkbox checkbox-primary rounded-none checkbox-sm" />
                                 <span className="text-[10px] font-black uppercase tracking-[0.2em] text-base-content/40">NSFW</span>
                             </label>
@@ -227,9 +272,9 @@ const AddItemModal: React.FC<AddItemModalProps> = ({ isOpen, onClose, onAddItem,
                     {/* Row 2: Tags */}
                     <div className="form-control">
                         <label className="text-[10px] font-black uppercase tracking-[0.2em] text-base-content/40 mb-2">Neural Tags</label>
-                        <div className="flex flex-wrap items-center gap-2 p-3 bg-base-200/30 border border-base-300 rounded-none min-h-[52px]">
+                        <div className="flex flex-wrap items-center gap-2 p-3 bg-transparent border border-base-300 rounded-none min-h-[52px]">
                             {tags.map(tag => (
-                                <div key={tag} className="flex items-center gap-2 bg-base-100 border border-base-300 text-[10px] font-black uppercase tracking-widest px-2.5 py-1.5 shadow-sm">
+                                <div key={tag} className="flex items-center gap-2 bg-transparent border border-base-300 text-[10px] font-black uppercase tracking-widest px-2.5 py-1.5">
                                     <span>{tag}</span>
                                     <button type="button" onClick={() => setTags(tags.filter(t => t !== tag))} className="text-error hover:text-error-content transition-colors">&times;</button>
                                 </div>
@@ -241,7 +286,7 @@ const AddItemModal: React.FC<AddItemModalProps> = ({ isOpen, onClose, onAddItem,
                     {/* Row 3: Notes */}
                     <div className="form-control">
                         <label className="text-[10px] font-black uppercase tracking-[0.2em] text-base-content/40 mb-2">Vault Documentation</label>
-                        <textarea value={notes} onChange={(e) => setNotes((e.currentTarget as any).value)} className="textarea textarea-bordered rounded-none min-h-[120px] font-medium leading-relaxed bg-base-200/20" placeholder="Archive additional details or prompt context..." />
+                        <textarea value={notes} onChange={(e) => setNotes((e.currentTarget as any).value)} className="textarea textarea-bordered rounded-none min-h-[120px] font-medium leading-relaxed bg-transparent" placeholder="Archive additional details or prompt context..." />
                     </div>
                 </div>
 
@@ -252,9 +297,9 @@ const AddItemModal: React.FC<AddItemModalProps> = ({ isOpen, onClose, onAddItem,
                 )}
             </div>
             
-            <footer className="border-t border-base-300 flex bg-base-200/5 p-0 overflow-hidden flex-shrink-0">
+            <footer className="border-t border-base-300 flex bg-transparent p-0 overflow-hidden flex-shrink-0">
                 <button type="button" onClick={onClose} className="btn flex-1 h-14 rounded-none uppercase font-black text-[10px] tracking-widest border-r border-base-300 transition-colors">Abort</button>
-                <button type="submit" className="btn btn-primary flex-1 h-14 rounded-none uppercase font-black text-[10px] tracking-widest shadow-lg transition-colors" disabled={files.length === 0 || isProcessing}>
+                <button type="submit" className="btn btn-primary flex-1 h-14 rounded-none uppercase font-black text-[10px] tracking-widest transition-colors" disabled={files.length === 0 || isProcessing}>
                     {isProcessing ? (
                         <span className="flex items-center gap-3">
                             <span className="loading loading-spinner loading-xs"></span>

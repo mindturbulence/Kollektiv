@@ -87,21 +87,26 @@ const MaintenanceOverlay: React.FC<{ progress: number, message: string }> = ({ p
     }, [progress]);
 
     return (
-        <div className="fixed inset-0 bg-base-100 z-[500] flex flex-col items-center justify-center overflow-hidden">
+        <div className="fixed inset-0 bg-transparent z-[500] flex flex-col items-center justify-center overflow-hidden select-none">
             <div className="absolute inset-0 bg-grid-texture opacity-[0.03] pointer-events-none"></div>
-            <div className="absolute inset-0 bg-gradient-to-br from-primary/5 via-transparent to-secondary/5 pointer-events-none"></div>
-            <div className="absolute inset-0 bg-gradient-to-t from-base-100 via-transparent to-base-100 opacity-60 pointer-events-none"></div>
             
+            {/* Large Background Percentage (SR Seventy One Style) */}
+            <div className="absolute inset-0 flex items-center justify-center pointer-events-none overflow-hidden">
+                <span 
+                    className="text-[25vw] font-black opacity-[0.03] leading-none select-none transition-all duration-500 ease-out font-display"
+                    style={{ transform: `translateY(${(100 - progress) * 0.2}px)` }}
+                >
+                    {Math.round(progress).toString().padStart(2, '0')}
+                </span>
+            </div>
+
             <div className="relative z-10 flex flex-col items-center">
-                {/* Brand Text Wrapper with Masking */}
-                <div className="overflow-hidden mb-8 px-4">
-                    <h1 ref={textWrapperRef} className="grid grid-cols-1 grid-rows-1 text-xl md:text-3xl font-black tracking-tighter uppercase select-none items-center">
-                        {/* Layer 1: Ghost Text */}
+                <div className="overflow-hidden mb-6 px-4">
+                    <h1 ref={textWrapperRef} className="grid grid-cols-1 grid-rows-1 text-2xl md:text-4xl font-black tracking-tighter uppercase select-none items-center font-logo">
                         <span className="text-base-content/10 block leading-none py-2 row-start-1 col-start-1">
                             Kollektiv<span className="text-primary/10 italic">.</span>
                         </span>
                         
-                        {/* Layer 2: Theme-Aware Fill Masked Text */}
                         <div 
                             className="row-start-1 col-start-1 h-full overflow-hidden transition-all duration-700 ease-out border-r border-base-content/20"
                             style={{ width: `${progress}%` }}
@@ -113,19 +118,25 @@ const MaintenanceOverlay: React.FC<{ progress: number, message: string }> = ({ p
                     </h1>
                 </div>
 
-                {/* Sub-label */}
-                <div className={`flex flex-col items-center gap-3 transition-all duration-500 ${progress >= 100 ? 'opacity-0 translate-y-4' : 'opacity-100 translate-y-0'}`}>
-                    <div className="flex items-center gap-3">
+                <div className={`flex flex-col items-center gap-4 transition-all duration-500 ${progress >= 100 ? 'opacity-0 translate-y-4' : 'opacity-100 translate-y-0'}`}>
+                    <div className="flex flex-col items-center gap-2">
                         <p className="text-[10px] font-mono font-bold uppercase tracking-[0.5em] text-center text-base-content/40">
                             {message || 'DIAGNOSTIC_ACTIVE'}
                         </p>
+                        
+                        {/* Minimal Progress Bar */}
+                        <div className="w-32 h-[1px] bg-base-content/10 relative overflow-hidden">
+                            <div 
+                                className="absolute inset-y-0 left-0 bg-primary transition-all duration-500 ease-out"
+                                style={{ width: `${progress}%` }}
+                            />
+                        </div>
+                        
+                        <span className="text-[10px] font-mono font-bold text-primary/60">
+                            {Math.round(progress)}%
+                        </span>
                     </div>
                 </div>
-            </div>
-
-            {/* Corner Metadata */}
-            <div className="absolute bottom-12 left-12 hidden md:block">
-                <span className="text-[8px] font-mono font-bold text-base-content/10 uppercase tracking-widest">Protocol: Integrity_Check_Alpha</span>
             </div>
         </div>
     );
@@ -648,7 +659,7 @@ export const SetupPage: React.FC<SetupPageProps> = ({
                              </div>
                         </SettingRow>
                         {settings.activeLLM === 'ollama_cloud' && (
-                             <div className="animate-fade-in flex flex-col bg-base-200/20">
+                             <div className="animate-fade-in flex flex-col bg-transparent">
                                 <SettingRow label="Remote Endpoint" desc="HTTPS URL of your hosted Ollama server.">
                                     <div className="space-y-4">
                                         <div className="join w-full md:w-[620px]">
@@ -686,7 +697,7 @@ export const SetupPage: React.FC<SetupPageProps> = ({
                             </div>
                         )}
                         {settings.activeLLM === 'ollama' && (
-                            <div className="animate-fade-in flex flex-col bg-base-200/20">
+                            <div className="animate-fade-in flex flex-col bg-transparent">
                                 <SettingRow label="Host Address" desc="Local server URL (Default: http://localhost:11434).">
                                      <div className="space-y-4">
                                         <div className="join w-full md:w-[620px]">
@@ -728,7 +739,7 @@ export const SetupPage: React.FC<SetupPageProps> = ({
                         <SettingRow label="Cloud Identity Link" desc="Connect your account to enable Cloud AI and data sync features.">
                             {settings.googleIdentity?.isConnected ? (
                                 <div className="flex flex-col gap-4 w-full max-w-lg">
-                                    <div className="flex items-center gap-4 p-4 bg-base-200/50 border border-base-300">
+                                    <div className="flex items-center gap-4 p-4 bg-transparent border border-base-300">
                                         <img src={settings.googleIdentity.picture} className="w-12 h-12 rounded-full bg-black border border-white/10" alt="profile"/>
                                         <div className="min-w-0">
                                             <p className="text-sm font-black uppercase truncate">{settings.googleIdentity.name}</p>
@@ -760,7 +771,7 @@ export const SetupPage: React.FC<SetupPageProps> = ({
                         <SettingRow label="Channel Integration" desc="Connect to your YouTube account for direct artifact publishing.">
                             {settings.youtube?.isConnected ? (
                                 <div className="flex flex-col gap-4 w-full max-w-lg">
-                                    <div className="flex items-center gap-4 p-4 bg-base-200/50 border border-base-300">
+                                    <div className="flex items-center gap-4 p-4 bg-transparent border border-base-300">
                                         <img src={settings.youtube.thumbnailUrl} className="w-12 h-12 rounded-none bg-black" alt="channel"/>
                                         <div className="min-w-0">
                                             <p className="text-sm font-black uppercase truncate">{settings.youtube.channelName}</p>
@@ -869,12 +880,12 @@ export const SetupPage: React.FC<SetupPageProps> = ({
     
   return (
     <>
-    <section className="flex flex-row bg-base-100 h-full overflow-hidden relative">
+    <section className="flex flex-row bg-transparent h-full overflow-hidden relative">
         {isWorking && (
             <MaintenanceOverlay progress={maintenanceProgress} message={maintenanceMsg} />
         )}
 
-        <aside className="w-80 flex-shrink-0 bg-base-100 border-r border-base-300 flex flex-col">
+        <aside className="w-80 flex-shrink-0 bg-transparent border-r border-base-300 flex flex-col">
             <h1 className="h-16 flex items-center px-6 border-b border-base-300 text-[10px] font-black uppercase tracking-[0.4em] text-base-content/30">System Hub</h1>
             <nav className="flex-grow px-4 py-6 overflow-y-auto custom-scrollbar relative">
                 <div className="absolute bg-primary rounded-lg shadow-lg pointer-events-none transition-all duration-300" style={pillStyle} />
@@ -890,13 +901,13 @@ export const SetupPage: React.FC<SetupPageProps> = ({
             </nav>
         </aside>
 
-        <main className="flex-grow flex flex-col overflow-hidden bg-base-100">
-            <section className="p-10 border-b border-base-300 bg-base-200/20 flex-shrink-0">
+        <main className="flex-grow flex flex-col overflow-hidden bg-transparent">
+            <section className="p-10 border-b border-base-300 bg-transparent flex-shrink-0">
                 <h1 className="text-2xl lg:text-3xl font-black tracking-tighter uppercase leading-none">{mainCategories.find(c => c.id === activeSettingsTab)?.label}<span className="text-primary">.</span></h1>
                 <p className="text-[11px] font-bold text-base-content/30 uppercase tracking-[0.3em] mt-1">{currentSubTab?.description}</p>
             </section>
             {currentSubTabs.length > 0 && (
-                <div className="flex-shrink-0 bg-base-100 border-b border-base-300 px-6 py-2 overflow-x-auto no-scrollbar">
+                <div className="flex-shrink-0 bg-transparent border-b border-base-300 px-6 py-2 overflow-x-auto no-scrollbar">
                     <div className="tabs tabs-bordered">
                         {currentSubTabs.map(tab => (
                             <button key={tab.id} onClick={() => setActiveSubTab(tab.id)} className={`tab h-10 px-4 font-black uppercase text-[9px] tracking-widest ${activeSubTab === tab.id ? 'tab-active text-primary border-primary' : 'text-base-content/30'}`}>{tab.label}</button>
@@ -904,9 +915,9 @@ export const SetupPage: React.FC<SetupPageProps> = ({
                     </div>
                 </div>
             )}
-            <div className="flex-grow overflow-hidden bg-base-100">{renderActiveTabContent()}</div>
-            <footer className="border-t border-base-300 flex flex-row bg-base-200/5 p-0 overflow-hidden flex-shrink-0">
-                <button onClick={handleCancel} className="btn flex-1 rounded-none uppercase font-black text-[10px] tracking-widest hover:bg-base-300 border-r border-base-300">Abort</button>
+            <div className="flex-grow overflow-hidden bg-transparent">{renderActiveTabContent()}</div>
+            <footer className="border-t border-base-300 flex flex-row bg-transparent p-0 overflow-hidden flex-shrink-0">
+                <button onClick={handleCancel} className="btn flex-1 rounded-none uppercase font-black text-[10px] tracking-widest hover:bg-transparent border-r border-base-300">Abort</button>
                 <button onClick={saveSettings} className="btn btn-primary flex-1 rounded-none uppercase font-black text-[10px] tracking-widest shadow-lg">Confirm</button>
             </footer>
         </main>

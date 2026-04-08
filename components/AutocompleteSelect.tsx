@@ -69,7 +69,7 @@ const AutocompleteSelect: React.FC<AutocompleteSelectProps> = ({ options, value,
     <div className={`relative w-full ${className}`} ref={wrapperRef}>
       <div 
         onClick={handleToggle}
-        className="flex items-center justify-between px-3 py-2 bg-base-100 border border-base-300 rounded-none cursor-pointer hover:border-primary transition-colors h-10"
+        className="flex items-center justify-between px-3 py-2 bg-transparent border border-base-300 rounded-none cursor-pointer hover:border-primary transition-colors h-10"
       >
         <span className={`text-sm font-bold truncate uppercase tracking-tight ${!selectedOption ? 'text-base-content/30' : 'text-base-content'}`}>
           {selectedOption ? selectedOption.label : placeholder || 'Select option...'}
@@ -89,8 +89,8 @@ const AutocompleteSelect: React.FC<AutocompleteSelectProps> = ({ options, value,
       </div>
 
       {isDropdownOpen && (
-        <div className="absolute z-[100] w-full mt-1 bg-base-200 border border-base-300 shadow-2xl rounded-none flex flex-col overflow-hidden animate-fade-in">
-          <div className="p-2 border-b border-base-300 bg-base-100 flex items-center gap-2">
+        <div className="absolute z-[100] w-full mt-1 bg-transparent border border-base-300 shadow-2xl rounded-none flex flex-col overflow-hidden animate-fade-in">
+          <div className="p-2 border-b border-base-300 bg-transparent flex items-center gap-2">
             <SearchIcon className="w-3.5 h-3.5 opacity-30" />
             <input
               autoFocus

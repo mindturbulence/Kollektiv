@@ -1,5 +1,5 @@
 export const DAISYUI_LIGHT_THEMES = [
-  "light", "cupcake", "bumblebee", "emerald", "corporate", "retro", "cyberpunk", 
+  "light", "sanrita", "cupcake", "bumblebee", "emerald", "corporate", "retro", "cyberpunk", 
   "valentine", "garden", "aqua", "lofi", "pastel", "fantasy", "wireframe", 
   "cmyk", "autumn", "acid", "lemonade", "winter", "caramellatte", "nord"
 ];

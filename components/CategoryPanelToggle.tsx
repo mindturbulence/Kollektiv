@@ -16,7 +16,7 @@ const CategoryPanelToggle: React.FC<CategoryPanelToggleProps> = ({ isCollapsed, 
       <button
         onClick={onToggle}
         title={isCollapsed ? 'Expand Panel' : 'Collapse Panel'}
-        className={`w-6 h-12 bg-base-100 text-base-content flex items-center justify-center shadow-lg transition-colors focus:outline-none ${isRightOfPanel ? 'rounded-r-lg' : 'rounded-l-lg'}`}
+        className={`w-6 h-12 bg-transparent text-base-content flex items-center justify-center shadow-lg transition-colors focus:outline-none ${isRightOfPanel ? 'rounded-r-lg' : 'rounded-l-lg'}`}
         aria-label={isCollapsed ? 'Expand Panel' : 'Collapse Panel'}
       >
         <ChevronLeftIcon className={`w-4 h-4 transition-transform duration-300 ${

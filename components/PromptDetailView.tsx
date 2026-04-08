@@ -33,14 +33,14 @@ const PromptComponentsDisplay: React.FC<{
   hasPrompt: boolean;
 }> = ({ components, isLoading, error, onRefresh, hasPrompt }) => {
     return (
-        <div className="flex flex-col h-full bg-base-100 overflow-hidden corner-frame shadow-sm">
-            <header className="p-4 border-b border-base-300 bg-base-200/10 flex justify-between items-center">
+        <div className="flex flex-col h-full bg-transparent overflow-hidden corner-frame">
+            <header className="p-4 border-b border-base-300 bg-transparent flex justify-between items-center">
                 <h3 className="text-[10px] font-black uppercase tracking-[0.3em] text-primary">Prompt Parts</h3>
                 <button onClick={onRefresh} disabled={isLoading || !hasPrompt} className="btn btn-xs btn-ghost opacity-40 hover:opacity-100">
                     <RefreshIcon className={`w-4 h-4 ${isLoading ? 'animate-spin' : ''}`} />
                 </button>
             </header>
-            <div className="flex-grow p-5 overflow-y-auto custom-scrollbar bg-base-100">
+            <div className="flex-grow p-5 overflow-y-auto custom-scrollbar bg-transparent">
                 {isLoading ? <div className="py-12"><LoadingSpinner/></div> :
                  error ? <div className="alert alert-error rounded-none text-xs"><span>{error}</span></div> :
                  components && Object.keys(components).length > 0 ? (
@@ -204,8 +204,8 @@ const PromptDetailView: React.FC<PromptDetailViewProps> = ({
 
   return (
     <div ref={overlayRef} className="absolute inset-0 z-40 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4 lg:p-8 overflow-hidden" onClick={handleClose}>
-        <div ref={modalRef} className="w-full h-full bg-base-100 rounded-2xl border border-base-300 shadow-2xl flex flex-col overflow-hidden relative" onClick={e => e.stopPropagation()}>
-            <header ref={headerRef} className="flex-shrink-0 p-6 lg:px-8 lg:py-6 border-b border-base-300 bg-base-100 flex flex-wrap justify-between items-end gap-6">
+        <div ref={modalRef} className="w-full h-full bg-transparent rounded-2xl border border-base-300 flex flex-col overflow-hidden relative" onClick={e => e.stopPropagation()}>
+            <header ref={headerRef} className="flex-shrink-0 p-6 lg:px-8 lg:py-6 border-b border-base-300 bg-transparent flex flex-wrap justify-between items-end gap-6">
                 <div className="min-w-0">
                     <span className="text-[10px] font-black uppercase tracking-[0.4em] text-primary mb-1 block">ITEM ID : {prompt.id.slice(-8)}</span>
                     <h2 className="text-xl lg:text-2xl font-black tracking-tighter text-base-content leading-none truncate max-w-2xl uppercase">
@@ -213,7 +213,7 @@ const PromptDetailView: React.FC<PromptDetailViewProps> = ({
                     </h2>
                 </div>
                 <div className="flex items-center gap-4">
-                    <div className="join bg-base-200 border border-base-300 shadow-sm">
+                    <div className="join bg-transparent border border-base-300">
                         <button onClick={() => handleNavigation('prev')} className="btn btn-sm btn-ghost join-item"><ChevronLeftIcon className="w-4 h-4" /></button>
                         <span className="join-item flex items-center px-6 font-mono text-[10px] font-black text-base-content/40 uppercase tracking-widest border-x border-base-300/30">{currentIndex + 1} / {prompts.length}</span>
                         <button onClick={() => handleNavigation('next')} className="btn btn-sm btn-ghost join-item"><ChevronRightIcon className="w-4 h-4" /></button>
@@ -224,8 +224,8 @@ const PromptDetailView: React.FC<PromptDetailViewProps> = ({
                 </div>
             </header>
 
-            <div className="flex-grow flex flex-col lg:flex-row overflow-hidden p-4 gap-4 bg-base-300/20">
-                <main ref={leftPanelRef} className="flex-1 flex flex-col overflow-hidden bg-base-100 corner-frame shadow-sm">
+            <div className="flex-grow flex flex-col lg:flex-row overflow-hidden p-4 gap-4 bg-transparent">
+                <main ref={leftPanelRef} className="flex-1 flex flex-col overflow-hidden bg-transparent corner-frame">
                     <div className={`flex flex-col overflow-hidden transition-all duration-500 ease-in-out ${!isRefinePanelCollapsed ? 'h-1/2' : 'flex-grow'}`}>
                         <div className="flex-grow p-5 relative overflow-hidden flex flex-col">
                             <span className="text-[9px] font-black uppercase tracking-widest text-primary/40 mb-3 flex items-center gap-3">
@@ -248,7 +248,7 @@ const PromptDetailView: React.FC<PromptDetailViewProps> = ({
                             onClip={onClipString ? (res) => onClipString(res, `Refinement: ${prompt.title}`) : undefined}
                         />
                     </div>
-                    <footer className="p-4 bg-base-200/20 border-t border-base-300 flex flex-wrap justify-between items-center gap-4">
+                    <footer className="p-4 bg-transparent border-t border-base-300 flex flex-wrap justify-between items-center gap-4">
                         <div className="flex items-center gap-1">
                             <button onClick={() => setIsEditorModalOpen(true)} className="btn btn-sm btn-ghost rounded-none uppercase font-black text-[10px] tracking-widest px-4 hover:bg-base-300">Edit</button>
                             <button onClick={() => setIsRefinePanelCollapsed(!isRefinePanelCollapsed)} className={`btn btn-sm rounded-none uppercase font-black text-[10px] tracking-widest px-4 ${!isRefinePanelCollapsed ? 'btn-primary' : 'btn-ghost text-primary hover:bg-primary/10'}`}>Refine</button>
@@ -257,9 +257,9 @@ const PromptDetailView: React.FC<PromptDetailViewProps> = ({
                         </div>
                         <div className="flex items-center gap-3">
                             {editedText.trim() !== prompt.text.trim() && (
-                                <button onClick={handleSaveChanges} className="btn btn-sm btn-primary rounded-none uppercase font-black text-[10px] tracking-widest px-8 shadow-lg">Save Changes</button>
+                                <button onClick={handleSaveChanges} className="btn btn-sm btn-primary rounded-none uppercase font-black text-[10px] tracking-widest px-8">Save Changes</button>
                             )}
-                            <button onClick={() => handleCopyToClipboard(editedText)} className="btn btn-sm btn-ghost rounded-none border border-base-300 bg-base-100 uppercase font-black text-[10px] tracking-widest px-8 hover:bg-base-200">
+                            <button onClick={() => handleCopyToClipboard(editedText)} className="btn btn-sm btn-ghost rounded-none border border-base-300 bg-transparent uppercase font-black text-[10px] tracking-widest px-8 hover:bg-primary/10">
                                 {copied ? 'Copied' : 'Copy Text'}
                             </button>
                         </div>

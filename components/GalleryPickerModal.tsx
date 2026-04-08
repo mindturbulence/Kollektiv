@@ -43,7 +43,7 @@ const PickerItem: React.FC<{
     return (
         <div 
             onClick={onToggle}
-            className={`relative aspect-square bg-base-300 cursor-pointer overflow-hidden group border-2 transition-all ${isSelected ? 'border-primary ring-2 ring-primary/20' : 'border-transparent hover:border-primary/50'}`}
+            className={`relative aspect-square bg-transparent cursor-pointer overflow-hidden group border-2 transition-all ${isSelected ? 'border-primary ring-2 ring-primary/20' : 'border-transparent hover:border-primary/50'}`}
         >
             {thumbUrl ? (
                 <div className="w-full h-full relative">
@@ -67,13 +67,13 @@ const PickerItem: React.FC<{
 
             {isSelected && (
                 <div className="absolute inset-0 bg-primary/20 flex items-center justify-center z-10">
-                    <div className="w-8 h-8 bg-primary rounded-full flex items-center justify-center shadow-lg animate-fade-in">
+                    <div className="w-8 h-8 bg-primary rounded-full flex items-center justify-center animate-fade-in">
                         <CheckIcon className="w-5 h-5 text-primary-content" />
                     </div>
                 </div>
             )}
             
-            <div className="absolute bottom-0 left-0 right-0 p-2 bg-gradient-to-t from-black/80 to-transparent translate-y-full group-hover:translate-y-0 transition-transform z-10">
+            <div className="absolute bottom-0 left-0 right-0 p-2 bg-transparent translate-y-full group-hover:translate-y-0 transition-transform z-10">
                 <p className="text-[9px] font-black uppercase text-white truncate">{item.title}</p>
             </div>
         </div>
@@ -192,9 +192,9 @@ const GalleryPickerModal: React.FC<GalleryPickerModalProps> = ({
     if (!isOpen) return null;
 
     const modalContent = (
-        <div className="fixed inset-0 bg-black/90 z-[100] flex items-center justify-center p-4 lg:p-12 animate-fade-in" onClick={onClose}>
-            <div className="bg-base-100 rounded-none border border-base-300 shadow-2xl w-full max-w-6xl h-full flex flex-col overflow-hidden" onClick={e => e.stopPropagation()}>
-                <header className="flex-shrink-0 p-8 border-b border-base-300 bg-base-200/20 flex flex-wrap justify-between items-center gap-6">
+        <div className="fixed inset-0 bg-black/40 backdrop-blur-xl z-[100] flex items-center justify-center p-4 lg:p-12 animate-fade-in" onClick={onClose}>
+            <div className="bg-base-100/40 rounded-none w-full max-w-6xl h-full flex flex-col overflow-hidden" onClick={e => e.stopPropagation()}>
+                <header className="flex-shrink-0 p-8 bg-transparent flex flex-wrap justify-between items-center gap-6">
                     <div>
                         <h3 className="text-4xl font-black tracking-tighter text-base-content leading-none">
                             LIBRARY<span className="text-primary">.</span>
@@ -207,8 +207,8 @@ const GalleryPickerModal: React.FC<GalleryPickerModalProps> = ({
                 </header>
 
                 <div className="flex-grow flex flex-col lg:flex-row overflow-hidden">
-                    <aside className="w-full lg:w-72 border-b lg:border-b-0 lg:border-r border-base-300 flex-shrink-0 flex flex-col bg-base-200/10">
-                        <div className="flex-shrink-0 bg-base-100 border-b border-base-300 h-14">
+                    <aside className="w-full lg:w-72 border-b lg:border-b-0 lg:border-r border-base-300 flex-shrink-0 flex flex-col bg-transparent">
+                        <div className="flex-shrink-0 bg-transparent h-14">
                             <div className="flex items-center h-full relative">
                                 <SearchIcon className="absolute left-6 w-4 h-4 opacity-20 pointer-events-none" />
                                 <input 
@@ -236,8 +236,8 @@ const GalleryPickerModal: React.FC<GalleryPickerModalProps> = ({
                         </div>
                     </aside>
 
-                    <main className="flex-grow flex flex-col overflow-hidden bg-base-100">
-                        <div className="flex-shrink-0 bg-base-100 border-b border-base-300 h-14 flex items-center">
+                    <main className="flex-grow flex flex-col overflow-hidden bg-transparent">
+                        <div className="flex-shrink-0 bg-transparent h-14 flex items-center">
                             <div className="flex items-center h-full relative flex-grow border-r border-base-300">
                                 <SearchIcon className="absolute left-6 w-4 h-4 opacity-20 pointer-events-none" />
                                 <input 
@@ -253,7 +253,7 @@ const GalleryPickerModal: React.FC<GalleryPickerModalProps> = ({
                                     </button>
                                 )}
                             </div>
-                            <div className="flex items-center h-full gap-3 bg-base-100 px-6">
+                            <div className="flex items-center h-full gap-3 bg-transparent px-6">
                                 <span className="text-[10px] font-black uppercase text-base-content/40 tracking-widest">NSFW</span>
                                 <input 
                                     type="checkbox" 
@@ -264,7 +264,7 @@ const GalleryPickerModal: React.FC<GalleryPickerModalProps> = ({
                             </div>
                         </div>
 
-                        <div className="flex-grow overflow-y-auto p-6 custom-scrollbar bg-base-200/5">
+                        <div className="flex-grow overflow-y-auto p-6 custom-scrollbar bg-transparent">
                             {isLoading ? (
                                 <div className="h-full w-full flex items-center justify-center">
                                     <LoadingSpinner />
@@ -290,7 +290,7 @@ const GalleryPickerModal: React.FC<GalleryPickerModalProps> = ({
                     </main>
                 </div>
 
-                <footer className="flex-shrink-0 p-6 border-t border-base-300 bg-base-200/20 flex justify-between items-center">
+                <footer className="flex-shrink-0 p-6 bg-transparent flex justify-between items-center">
                     <span className="text-[10px] font-mono font-bold text-base-content/30 uppercase">
                         {selectedIds.size} Item{selectedIds.size !== 1 ? 's' : ''} Identified
                     </span>
@@ -299,7 +299,7 @@ const GalleryPickerModal: React.FC<GalleryPickerModalProps> = ({
                         <button 
                             onClick={handleConfirm}
                             disabled={selectedIds.size === 0}
-                            className="btn btn-primary rounded-none uppercase font-black text-[10px] tracking-widest px-12 shadow-lg"
+                            className="btn btn-primary rounded-none uppercase font-black text-[10px] tracking-widest px-12"
                         >
                             Select Items
                         </button>

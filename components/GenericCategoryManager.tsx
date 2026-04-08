@@ -85,12 +85,12 @@ const GenericCategoryManager: React.FC<GenericCategoryManagerProps> = ({
 
   return (
     <>
-      <div className="flex flex-col h-full bg-base-100">
-        <header className="p-6 border-b border-base-300 bg-base-200/10">
+      <div className="flex flex-col h-full bg-transparent">
+        <header className="p-6 border-b border-base-300 bg-transparent">
             <h3 className="text-xs font-black uppercase tracking-[0.4em] text-primary">{title}</h3>
         </header>
 
-        <form onSubmit={handleAddCategory} className="p-6 border-b border-base-300 bg-base-200/5 flex gap-4">
+        <form onSubmit={handleAddCategory} className="p-6 border-b border-base-300 bg-transparent flex gap-4">
           <input
             type="text"
             value={newCategoryName}

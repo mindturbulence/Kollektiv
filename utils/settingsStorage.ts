@@ -7,7 +7,7 @@ const SETTINGS_KEY = 'kollektivSettingsV4';
 
 export const defaultLLMSettings: LLMSettings = {
   // LLM Provider Settings
-  llmModel: 'gemini-3-flash-preview',
+  llmModel: 'gemini-3.5-flash',
   activeLLM: 'gemini',
   ollamaBaseUrl: 'http://localhost:11434',
   ollamaModel: 'llama3',
@@ -19,9 +19,9 @@ export const defaultLLMSettings: LLMSettings = {
   ollamaCloudUseGoogleAuth: false,
   
   // Theme Settings
-  activeThemeMode: 'light',
+  activeThemeMode: 'dark',
   lightTheme: 'light',
-  darkTheme: 'pipboy',
+  darkTheme: 'dich',
   fontSize: 14,
 
   // Dashboard Settings

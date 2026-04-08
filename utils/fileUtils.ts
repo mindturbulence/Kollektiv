@@ -272,15 +272,6 @@ export const createZipAndDownload = async (files: { name: string, content: strin
     link.click();
 };
 
-export const readZip = async (zipFile: File): Promise<JSZip> => {
-    return await JSZip.loadAsync(zipFile);
-};
-
-export async function extractPositivePrompt(imageBlob: Blob): Promise<string | null> {
-    const meta = await extractFullMetadata(imageBlob);
-    return meta?.prompt || null;
-}
-
 export interface ParsedMetadata {
     prompt: string;
     negativePrompt: string;

@@ -15,11 +15,12 @@ interface PromptCrafterProps {
   onSaveToLibrary: (generatedText: string, baseText: string) => void;
   onClip?: (prompt: string) => void;
   onSendToEnhancer: (prompt: string) => void;
+  onSavePresetSuccess?: (prompt: string, modifiers: any) => void;
   promptToInsert: { content: string, id: string } | null;
   header: React.ReactNode;
 }
 
-const PromptCrafter = ({ onClip, onSendToEnhancer, promptToInsert, header }: PromptCrafterProps) => {
+const PromptCrafter = ({ onClip, onSendToEnhancer, onSavePresetSuccess, promptToInsert, header }: PromptCrafterProps) => {
     const { settings } = useSettings();
     const [crafterData, setCrafterData] = useState<CrafterData | null>(null);
     const [isLoading, setIsLoading] = useState(true);
@@ -277,23 +278,23 @@ const PromptCrafter = ({ onClip, onSendToEnhancer, promptToInsert, header }: Pro
     };
 
     if (isLoading) return (
-        <div className="h-full w-full flex items-center justify-center bg-base-100">
+        <div className="h-full w-full flex items-center justify-center bg-transparent">
             <LoadingSpinner />
         </div>
     );
     if (error) return <div className="p-4 text-error">{error}</div>;
 
     return (
-        <div className="grid grid-cols-1 lg:grid-cols-12 overflow-hidden h-full p-4 gap-4 bg-base-300/20">
-            <aside className="lg:col-span-3 bg-base-100 flex flex-col overflow-hidden corner-frame shadow-sm">
+        <div className="grid grid-cols-1 lg:grid-cols-12 overflow-hidden h-full p-4 gap-4 bg-transparent">
+            <aside className="lg:col-span-3 bg-transparent flex flex-col overflow-hidden corner-frame">
                 {header}
-                <header className="p-6 border-b border-base-300 bg-base-200/10 h-16 flex items-center">
+                <header className="p-6 border-b border-base-300 bg-transparent h-16 flex items-center">
                     <h3 className="text-[10px] font-black uppercase tracking-[0.4em] text-primary">Wildcards</h3>
                 </header>
                 <div className="flex-grow p-6 overflow-y-auto custom-scrollbar">
                     <WildcardTree categories={crafterData?.wildcardCategories || []} onWildcardClick={handleWildcardClick} />
                 </div>
-                <footer className="h-14 border-t border-base-300 bg-base-100 flex items-stretch">
+                <footer className="h-14 border-t border-base-300 bg-transparent flex items-stretch">
                     <button 
                         onClick={loadData} 
                         disabled={isImporting}
@@ -319,9 +320,9 @@ const PromptCrafter = ({ onClip, onSendToEnhancer, promptToInsert, header }: Pro
                     />
                 </footer>
             </aside>
-            <main className="lg:col-span-5 bg-base-100 flex flex-col overflow-hidden corner-frame shadow-sm">
+            <main className="lg:col-span-6 bg-transparent flex flex-col overflow-hidden corner-frame">
                 {/* Template Selection Bar - h-16 to match panel headers */}
-                <div className="h-16 border-b border-base-300 flex-shrink-0 bg-base-100 flex items-stretch">
+                <div className="h-16 border-b border-base-300 flex-shrink-0 bg-transparent flex items-stretch">
                   <div className="dropdown flex-grow h-full">
                     <div className="relative h-full border-r border-base-300">
                         <input 
@@ -351,7 +352,7 @@ const PromptCrafter = ({ onClip, onSendToEnhancer, promptToInsert, header }: Pro
                         )}
                     </div>
                     {filteredTemplates.length > 0 && (
-                        <ul tabIndex={0} className="dropdown-content z-[100] menu p-1 shadow-2xl bg-base-200 rounded-none w-full max-h-60 overflow-y-auto border border-base-300">
+                        <ul tabIndex={0} className="dropdown-content z-[100] menu p-1 bg-transparent rounded-none w-full max-h-60 overflow-y-auto border border-base-300">
                             {filteredTemplates.map(t => (
                                 <li key={t.name}>
                                     <a 
@@ -369,7 +370,7 @@ const PromptCrafter = ({ onClip, onSendToEnhancer, promptToInsert, header }: Pro
                     )}
                   </div>
                   <button 
-                      className="btn btn-ghost h-full rounded-none border-none border-r border-base-300 px-4 text-primary disabled:opacity-20 transition-all hover:bg-base-200" 
+                      className="btn btn-ghost h-full rounded-none border-none border-r border-base-300 px-4 text-primary disabled:opacity-20 transition-all hover:bg-primary/10" 
                       onClick={() => handleUseTemplate()} 
                       disabled={!selectedTemplate}
                       title="Apply Template"
@@ -386,19 +387,19 @@ const PromptCrafter = ({ onClip, onSendToEnhancer, promptToInsert, header }: Pro
                   </button>
                 </div>
 
-                <div className="flex-grow flex flex-col min-h-0 bg-base-200/5">
+                <div className="flex-grow flex flex-col min-h-0 bg-transparent">
                     <div className="h-1/3 p-6 flex flex-col flex-shrink-0">
                         <textarea 
                             ref={textareaRef}
                             value={promptText}
                             onChange={(e) => setPromptText((e.currentTarget as any).value)}
                             placeholder="STREAM NEW CORE CONCEPT... Use __wildcard__ for selection."
-                            className="textarea textarea-bordered rounded-none w-full flex-grow resize-none font-medium leading-relaxed bg-base-200/20 custom-scrollbar border-none focus:outline-none focus:ring-0 p-0 text-sm"
+                            className="textarea textarea-bordered rounded-none w-full flex-grow resize-none font-medium leading-relaxed bg-transparent custom-scrollbar border-none focus:outline-none focus:ring-0 p-0 text-sm"
                         ></textarea>
                     </div>
                     
                     {/* Middle Action Bar - Library Style */}
-                    <div className="h-14 border-t border-b border-base-300 bg-base-100 flex items-stretch flex-shrink-0">
+                    <div className="h-14 border-t border-b border-base-300 bg-transparent flex items-stretch flex-shrink-0">
                         <button 
                             onClick={() => setPromptText('')} 
                             className="btn btn-ghost h-full rounded-none border-none border-r border-base-300 flex-1 font-black text-[10px] tracking-widest text-error/40 hover:text-error uppercase"
@@ -407,7 +408,7 @@ const PromptCrafter = ({ onClip, onSendToEnhancer, promptToInsert, header }: Pro
                         </button>
                         <button 
                             onClick={handleSaveTemplateClick} 
-                            className="btn btn-ghost h-full rounded-none border-none border-r border-base-300 flex-1 font-black text-[10px] tracking-widest uppercase hover:bg-base-200"
+                            className="btn btn-ghost h-full rounded-none border-none border-r border-base-300 flex-1 font-black text-[10px] tracking-widest uppercase hover:bg-primary/10"
                         >
                             SAVE
                         </button>
@@ -419,9 +420,9 @@ const PromptCrafter = ({ onClip, onSendToEnhancer, promptToInsert, header }: Pro
                         </button>
                     </div>
 
-                    <div className="flex-grow p-6 overflow-y-auto relative bg-base-100">
+                    <div className="flex-grow p-6 overflow-y-auto relative bg-transparent">
                         {aiAction && (
-                            <div className="absolute inset-0 bg-base-100/80 backdrop-blur-sm flex flex-col items-center justify-center z-10">
+                            <div className="absolute inset-0 bg-transparent backdrop-blur-sm flex flex-col items-center justify-center z-10">
                                 <LoadingSpinner />
                                 <p className="text-[10px] font-black uppercase tracking-[0.4em] text-primary animate-pulse -mt-4">{aiAction}</p>
                             </div>
@@ -433,7 +434,7 @@ const PromptCrafter = ({ onClip, onSendToEnhancer, promptToInsert, header }: Pro
                                         <div className="w-1.5 h-1.5 rounded-full bg-primary animate-pulse"></div> Resulting Prompt
                                     </span>
                                 </div>
-                                <div className="p-6 bg-base-200/50 border border-base-300 text-base font-medium leading-relaxed italic text-base-content/80">
+                                <div className="p-6 bg-transparent border border-base-300 text-base font-medium leading-relaxed italic text-base-content/80">
                                     "{generatedPrompt}"
                                 </div>
                             </div>
@@ -447,7 +448,7 @@ const PromptCrafter = ({ onClip, onSendToEnhancer, promptToInsert, header }: Pro
                 </div>
 
                 {/* Bottom Action Bar - Library Style */}
-                <div className="h-14 border-t border-base-300 bg-base-100 flex items-stretch flex-shrink-0">
+                <div className="h-14 border-t border-base-300 bg-transparent flex items-stretch flex-shrink-0">
                     <button 
                         onClick={handleAnalyze} 
                         disabled={!generatedPrompt || !!aiAction} 
@@ -486,11 +487,12 @@ const PromptCrafter = ({ onClip, onSendToEnhancer, promptToInsert, header }: Pro
                 </div>
             </main>
             
-            <aside className="lg:col-span-4 bg-base-100 flex flex-col min-h-0 corner-frame shadow-sm">
+            <aside className="lg:col-span-3 bg-transparent flex flex-col min-h-0 corner-frame">
                 <PromptAnatomyPanel 
                     promptToAnalyze={generatedPrompt}
                     onReconstructFromComponents={handleReconstructFromComponents}
                     onReplaceVariation={handleReplaceVariation}
+                    onSaveSuccess={onSavePresetSuccess}
                     analysisTrigger={analysisTrigger}
                     isProcessing={!!aiAction}
                 />
@@ -498,8 +500,8 @@ const PromptCrafter = ({ onClip, onSendToEnhancer, promptToInsert, header }: Pro
 
             {isSaveModalOpen && (
                 <div className="fixed inset-0 bg-black/80 z-50 flex items-center justify-center p-4 animate-fade-in" onClick={() => setIsSaveModalOpen(false)}>
-                    <div className="bg-base-100 rounded-none border border-base-300 shadow-2xl w-full max-w-lg overflow-hidden" onClick={(e) => e.stopPropagation()}>
-                        <header className="p-8 border-b border-base-300 bg-base-200/20">
+                    <div className="bg-transparent rounded-none border border-base-300 w-full max-w-lg overflow-hidden" onClick={(e) => e.stopPropagation()}>
+                        <header className="p-8 border-b border-base-300 bg-transparent">
                             <h3 className="text-2xl font-black tracking-tighter text-base-content leading-none uppercase">SAVE TEMPLATE<span className="text-primary">.</span></h3>
                         </header>
                         <div className="p-8">
@@ -513,9 +515,9 @@ const PromptCrafter = ({ onClip, onSendToEnhancer, promptToInsert, header }: Pro
                                 onKeyDown={(e) => e.key === 'Enter' && handleConfirmSaveTemplate()}
                             />
                         </div>
-                        <div className="p-4 border-t border-base-300 flex justify-end gap-2 bg-base-200/10">
+                        <div className="p-4 border-t border-base-300 flex justify-end gap-2 bg-transparent">
                              <button onClick={() => setIsSaveModalOpen(false)} className="btn btn-ghost rounded-none uppercase font-black text-[10px] tracking-widest px-8">Cancel</button>
-                             <button onClick={handleConfirmSaveTemplate} disabled={isSavingTemplate || !templateName.trim()} className="btn btn-primary rounded-none uppercase font-black text-[10px] tracking-widest px-8 shadow-lg">
+                             <button onClick={handleConfirmSaveTemplate} disabled={isSavingTemplate || !templateName.trim()} className="btn btn-primary rounded-none uppercase font-black text-[10px] tracking-widest px-8">
                                 {isSavingTemplate ? "Saving..." : "Save"}
                             </button>
                         </div>

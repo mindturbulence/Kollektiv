@@ -15,7 +15,7 @@ interface SavedPromptCardProps {
 }
 
 const KeywordTag: React.FC<{ text: string }> = ({ text }) => (
-    <span className="bg-base-300 text-base-content text-[9px] font-black uppercase tracking-widest py-1.5 px-3 rounded-none border border-base-300/50">
+    <span className="bg-transparent text-base-content text-[9px] font-black uppercase tracking-widest py-1.5 px-3 rounded-none border border-base-300/50">
         {text}
     </span>
 );
@@ -81,7 +81,7 @@ const SavedPromptCard: React.FC<SavedPromptCardProps> = memo(({
       });
 
   return (
-    <div className="flex flex-col group bg-base-100 transition-all duration-500 hover:bg-base-200/50 w-full overflow-hidden select-none h-fit">
+    <div className="flex flex-col group bg-transparent transition-all duration-500 hover:bg-primary/5 w-full overflow-hidden select-none h-fit">
       <div className="p-6 md:p-8 flex flex-col w-full h-full">
         {/* Header Section - Category Label and Menu Button Aligned */}
         <div className="mb-6 space-y-3">
@@ -92,13 +92,13 @@ const SavedPromptCard: React.FC<SavedPromptCardProps> = memo(({
              <div className="relative flex-shrink-0" ref={menuRef}>
                 <button
                   onClick={(e) => { e.stopPropagation(); setIsMenuOpen(!isMenuOpen); }}
-                  className={`btn btn-xs btn-ghost btn-square transition-all ${isMenuOpen ? 'bg-base-300' : 'opacity-20 group-hover:opacity-100'}`}
+                  className={`btn btn-xs btn-ghost btn-square transition-all ${isMenuOpen ? 'bg-transparent' : 'opacity-20 group-hover:opacity-100'}`}
                   title="Prompt options"
                 >
                   <EllipsisVerticalIcon className="w-4 h-4" />
                 </button>
                 {isMenuOpen && (
-                  <ul onClick={(e) => e.stopPropagation()} className="absolute right-0 mt-2 w-48 menu menu-sm bg-base-100 border border-base-300 shadow-2xl z-20 animate-fade-in p-1 rounded-none">
+                  <ul onClick={(e) => e.stopPropagation()} className="absolute right-0 mt-2 w-48 menu menu-sm bg-transparent border border-base-300 shadow-2xl z-20 animate-fade-in p-1 rounded-none">
                     <li><button onClick={() => { onEditClick(prompt); setIsMenuOpen(false); }} className="w-full text-left font-bold py-2 flex items-center gap-2"><EditIcon className="w-4 h-4" /> Edit Details</button></li>
                     <div className="divider my-0 opacity-10"></div>
                     <li><button onClick={() => { onDeleteClick(prompt); setIsMenuOpen(false); }} className="w-full text-left text-error font-bold py-2 flex items-center gap-2"><DeleteIcon className="w-4 h-4" /> Delete Prompt</button></li>
@@ -108,7 +108,7 @@ const SavedPromptCard: React.FC<SavedPromptCardProps> = memo(({
           </div>
           
           <div className="space-y-3 cursor-pointer" onClick={onOpenDetailView}>
-            <h2 className="text-3xl font-black tracking-tighter text-base-content leading-[0.9] capitalize group-hover:text-primary transition-colors break-words">
+            <h2 className="text-3xl font-black tracking-tighter text-base-content leading-tight capitalize group-hover:text-primary transition-colors break-words">
               {title}
             </h2>
             <div className="flex items-center gap-4 opacity-40">
@@ -123,7 +123,7 @@ const SavedPromptCard: React.FC<SavedPromptCardProps> = memo(({
                 <div className={`relative transition-all duration-700 ease-[cubic-bezier(0.23,1,0.32,1)] ${isExpanded ? 'max-h-[2000px]' : 'max-h-[78px] overflow-hidden'}`}>
                     <p 
                         ref={textRef} 
-                        className={`text-base font-medium leading-relaxed text-base-content/80 italic pr-4 ${!isExpanded ? 'line-clamp-3' : ''}`}
+                        className={`text-base font-medium leading-relaxed text-base-content/80 italic ${!isExpanded ? 'line-clamp-3' : ''}`}
                     >
                         "{prompt.text}"
                     </p>

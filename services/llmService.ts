@@ -1,7 +1,7 @@
 
 import type { EnhancementResult, LLMSettings, PromptModifiers } from '../types';
-import { analyzePaletteMood as analyzePaletteMoodGemini, generatePromptFormulaGemini, refineSinglePromptGemini, abstractImageGemini, generateColorNameGemini, dissectPromptGemini, generateFocusedVariationsGemini, reconstructPromptGemini, reconstructFromIntentGemini, replaceComponentInPromptGemini, generateArtistDescriptionGemini, reconcileDescriptionsGemini, enhancePromptGeminiStream, refineSinglePromptGeminiStream } from './geminiService';
-import { analyzePaletteMoodOllama, generatePromptFormulaOllama, refineSinglePromptOllama, abstractImageOllama, generateColorNameOllama, dissectPromptOllama, generateFocusedVariationsOllama, reconstructPromptOllama, replaceComponentInPromptOllama, reconcileDescriptionsOllama, reconstructFromIntentOllama, generateArtistDescriptionOllama, enhancePromptOllamaStream, refineSinglePromptOllamaStream } from './ollamaService';
+import { analyzePaletteMood as analyzePaletteMoodGemini, generatePromptFormulaGemini, refineSinglePromptGemini, abstractImageGemini, generateColorNameGemini, dissectPromptGemini, generateFocusedVariationsGemini, reconstructPromptGemini, reconstructFromIntentGemini, replaceComponentInPromptGemini, generateArtistDescriptionGemini, enhancePromptGeminiStream, refineSinglePromptGeminiStream, generateConstructorPresetGemini } from './geminiService';
+import { analyzePaletteMoodOllama, generatePromptFormulaOllama, refineSinglePromptOllama, abstractImageOllama, generateColorNameOllama, dissectPromptOllama, generateFocusedVariationsOllama, reconstructPromptOllama, replaceComponentInPromptOllama, reconstructFromIntentOllama, generateArtistDescriptionOllama, enhancePromptOllamaStream, refineSinglePromptOllamaStream } from './ollamaService';
 import { TARGET_VIDEO_AI_MODELS, TARGET_AUDIO_AI_MODELS } from '../constants/models';
 
 // --- Model-Specific Syntax (Engine Tuning) ---
@@ -9,7 +9,7 @@ const getModelSyntax = (model: string) => {
     const lower = model.toLowerCase();
     
     // Video Architectures
-    if (lower.includes('ltx-2')) return { 
+    if (lower.includes('ltx')) return { 
         format: "Temporal Narrative.", 
         rules: "Describe sequence of action with physical verbs. Focus on physics-based motion, high temporal consistency, and realistic material deformation. Use natural language prose." 
     };
@@ -41,35 +41,35 @@ const getModelSyntax = (model: string) => {
     // Image Architectures
     if (lower.includes('flux')) return { 
         format: "Dense Descriptive Paragraph.", 
-        rules: "Natural language focusing on micro-textures, lighting interaction, and realistic material rendering. Describe the scene as if explaining it to a master painter. Avoid tag-lists. Mention 'hyper-realistic' or 'raw' if appropriate." 
+        rules: "Natural language focusing on micro-textures, lighting interaction, and realistic material rendering. Describe the scene as if explaining it to a master painter. Avoid tag-lists. Mention 'hyper-realistic' or 'raw' if appropriate. Follow the STRICT IMAGE WORKFLOW for content structure." 
     };
     if (lower.includes('imagen')) return { 
         format: "Clear Semantic Prose.", 
-        rules: "High semantic accuracy. Describe relationships between objects and environmental lighting clearly. Focus on composition and clear subject-background separation." 
+        rules: "High semantic accuracy. Describe relationships between objects and environmental lighting clearly. Focus on composition and clear subject-background separation. Follow the STRICT IMAGE WORKFLOW." 
     };
     if (lower.includes('midjourney')) return { 
         format: "Stylized Aesthetic Tags.", 
-        rules: "Focus on style, medium, lighting mood, and artistic influence. Use evocative adjectives. Do NOT output params like --ar; they are handled via modifiers. Use 'v6.1 style' cues." 
+        rules: "Focus on style, medium, lighting mood, and artistic influence. Use evocative adjectives. Do NOT output params like --ar; they are handled via modifiers. Use latest style cues. Adapt the STRICT IMAGE WORKFLOW to this tag-based structure." 
     };
-    if (lower.includes('stable diffusion 3.5') || lower.includes('sdxl')) return {
+    if (lower.includes('stable diffusion') || lower.includes('sdxl')) return {
         format: "Structured Descriptive Tags.",
-        rules: "Mix of descriptive phrases and specific keywords. Focus on lighting (e.g., 'volumetric lighting'), quality (e.g., 'highly detailed'), and style (e.g., 'digital art')."
+        rules: "Mix of descriptive phrases and specific keywords. Focus on lighting (e.g., 'volumetric lighting'), quality (e.g., 'highly detailed'), and style (e.g., 'digital art'). Follow the STRICT IMAGE WORKFLOW."
     };
     if (lower.includes('pony') || lower.includes('illustrious')) return { 
         format: "Weighted Tags.", 
-        rules: "Start with quality scores (score_9, score_8_up, etc). Use descriptive tags for subjects, specific stylistic triggers, and Danbooru-style tagging conventions." 
+        rules: "Start with quality scores (score_9, score_8_up, etc). Use descriptive tags for subjects, specific stylistic triggers, and Danbooru-style tagging conventions. Follow the STRICT IMAGE WORKFLOW." 
     };
-    if (lower.includes('gpt-4o') || lower.includes('dall-e')) return {
+    if (lower.includes('gpt-') || lower.includes('dall-e')) return {
         format: "Rich Narrative Prose.",
-        rules: "Highly descriptive, imaginative, and literal. DALL-E 3 follows instructions perfectly, so describe exactly what should be in the frame, including text if requested."
+        rules: "Highly descriptive, imaginative, and literal. DALL-E follows instructions perfectly, so describe exactly what should be in the frame, including text if requested. Follow the STRICT IMAGE WORKFLOW."
     };
     if (lower.includes('ideogram')) return {
         format: "Graphic Design Focus.",
-        rules: "Focus on typography, layout, and clean graphic elements. Describe text placement and font styles clearly if applicable."
+        rules: "Focus on typography, layout, and clean graphic elements. Describe text placement and font styles clearly if applicable. Follow the STRICT IMAGE WORKFLOW."
     };
     if (lower.includes('janus') || lower.includes('deepseek')) return {
         format: "Balanced Semantic Tags.",
-        rules: "Focus on subject clarity and environmental context. Use a mix of natural language and descriptive keywords."
+        rules: "Focus on subject clarity and environmental context. Use a mix of natural language and descriptive keywords. Follow the STRICT IMAGE WORKFLOW."
     };
     
     // Audio Architectures
@@ -90,6 +90,28 @@ const getModelSyntax = (model: string) => {
 };
 
 // --- AI Roles (Persona System) ---
+const IMAGE_GENERATION_WORKFLOW = `
+STRICT IMAGE WORKFLOW:
+1. LOCK CORE ELEMENTS: Accurately identify and preserve non-negotiable components from the user input, including subject, count, action, state, named IP/character, key colors, and any specified text.
+2. CLASSIFY TASK TYPE:
+   - For DIRECT GENERATION (e.g., "draw a..."): Enhance the original intent with professional visual details: composition (centered, rule of thirds), lighting (backlit, softbox), materials (matte ceramic, reflective metal), color palette (pastel, neon high-contrast), and spatial depth (foreground/midground/background).
+   - For IMAGE EDITING (e.g., "add/replace/change..."): Apply editing logic: supplement minimal but sufficient attributes (category, color, size, orientation, position) for new objects; for humans, modify only the specified feature while preserving core identity (ethnicity, gender, hairstyle, expression, outfit); for style transfer, distill key visual traits (e.g., "1970s disco: disco ball, mirrored walls, strobe lights, vibrant palette"); for background changes, prioritize subject consistency.
+   - For GENERATIVE REASONING TASKS (e.g., "design a poster", "illustrate a solution"): First construct a complete, plausible, and visually coherent concept, then describe it.
+3. HANDLE TEXT WITH PRECISION:
+   - Only include text if explicitly requested in the base prompt. Do NOT infer or add decorative text (e.g., labels, signs, watermarks) unless the user specifically asks for it.
+   - All requested text must be reproduced EXACTLY and enclosed in English double quotes (e.g., "SALE 50% OFF").
+   - Specify text location (e.g., "top center", "bottom-right corner"), font style (e.g., "bold sans-serif", "handwritten script"), color, and physical medium (e.g., "neon sign", "chalkboard", "LCD screen").
+   - For text replacement, use fixed phrasing: Replace "original" to "new" or Replace the [region] bounding box to "new".
+   - Never include the camera/drone/light device itself, studio lights or stands, camera body, propellers, or quadcopter body within the frame, nor any text or camera model names referencing specific drone brands like DJI in your output. Use positive constraints to describe the aesthetic produced from the camera/drone/lighting like 'birds-eye view,' 'high-altitude aerial,' 'top-down perspective,' or 'soft studio illumination,' to ensure the model focuses on the visual style and angle rather than rendering the hardware.
+4. ENFORCE LOGICAL CONSISTENCY: Resolve ambiguities, contradictions, or unfeasible requests; infer missing details (e.g., default placement in visually balanced areas); ensure new elements align with scene logic and style.
+
+FINAL OUTPUT CONSTRAINTS:
+- Be in English.
+- Be objective, concrete, and free of metaphors or emotional language.
+- Exclude meta-tags like "8K", "masterpiece", or "ultra-detailed".
+- CONTAIN ONLY THE FINAL PROMPT—NO EXPLANATIONS, TITLES, OR FORMATTING.
+`;
+
 const AI_ROLES = {
     ENHANCER: (model: string, length: string, isVideo: boolean, isAudio: boolean, _hasManualCamera: boolean, inputType?: string) => {
         const syntax = getModelSyntax(model);
@@ -110,7 +132,7 @@ const AI_ROLES = {
             persona = "Role: Master Audio Producer and Sound Architect.";
             modeProtocol = "Acoustic focus. Map the frequency, rhythm, and sonic textures with extreme precision. If dialogue, focus on emotional delivery. If music, focus on instrumentation, production quality, and structural complexity.";
         } else {
-            modeProtocol += " IMAGE PROTOCOL: This is for a STATIC image. Do NOT include temporal descriptions, durations, or motion verbs unless they describe a frozen moment in time. Focus on 'the decisive moment'.";
+            modeProtocol += ` IMAGE PROTOCOL: This is for a STATIC image. Do NOT include temporal descriptions, durations, or motion verbs unless they describe a frozen moment in time. Focus on 'the decisive moment'. ${IMAGE_GENERATION_WORKFLOW}`;
         }
 
         return `${persona}
@@ -140,7 +162,7 @@ Output: ${isAudio ? 'Single optimized string' : '3 distinct lines, each on a new
             role = "Master Sound Engineer.";
             protocol = "Focus on acoustics, material sounds, and rhythmic structure. Maximize sonic fidelity.";
         } else {
-            protocol = "IMAGE PROTOCOL: This is for a STATIC image. Do NOT include temporal descriptions or motion verbs. Focus on composition, lighting, and texture.";
+            protocol = `IMAGE PROTOCOL: This is for a STATIC image. Do NOT include temporal descriptions or motion verbs. Focus on composition, lighting, and texture. ${IMAGE_GENERATION_WORKFLOW}`;
         }
 
         return `Role: ${role} Optimized for ${model}.
@@ -181,6 +203,11 @@ export const buildContextForEnhancer = (modifiers: PromptModifiers, isAudio: boo
     if (modifiers.artist) ctx.push(`Creator: ${modifiers.artist}`);
     if (modifiers.aestheticLook) ctx.push(`Cinematic Look: ${modifiers.aestheticLook}`);
     if (modifiers.digitalAesthetic) ctx.push(`Aesthetic: ${modifiers.digitalAesthetic}`);
+    if (modifiers.facialExpression) ctx.push(`Persona Expression: ${modifiers.facialExpression}`);
+    if (modifiers.hairStyle) ctx.push(`Hair Style: ${modifiers.hairStyle}`);
+    if (modifiers.eyeColor) ctx.push(`Eye Color: ${modifiers.eyeColor}`);
+    if (modifiers.skinTexture) ctx.push(`Skin Texture: ${modifiers.skinTexture}`);
+    if (modifiers.clothing) ctx.push(`Clothing/Outfit: ${modifiers.clothing}`);
     if (modifiers.zImageStyle) ctx.push(`Z-Image Variant: ${modifiers.zImageStyle}`);
     
     if (modifiers.cameraType) ctx.push(`Camera Body: ${modifiers.cameraType}`);
@@ -316,13 +343,6 @@ export const generateArtistDescription = async (artistName: string, settings: LL
         : generateArtistDescriptionGemini(artistName, settings);
 };
 
-export const reconcileDescriptions = async (existing: string, incoming: string, settings: LLMSettings): Promise<string> => {
-    const isOllama = settings.activeLLM === 'ollama' || settings.activeLLM === 'ollama_cloud';
-    return isOllama
-        ? reconcileDescriptionsOllama(existing, incoming, settings)
-        : reconcileDescriptionsGemini(existing, incoming, settings);
-};
-
 export const analyzePaletteMood = async (hexColors: string[], settings: LLMSettings): Promise<string> => {
     const isOllama = settings.activeLLM === 'ollama' || settings.activeLLM === 'ollama_cloud';
     return isOllama
@@ -385,6 +405,24 @@ export const generatePromptFormulaWithAI = async (promptText: string, wildcards:
     return isOllama
         ? generatePromptFormulaOllama(promptText, settings, sys)
         : generatePromptFormulaGemini(promptText, settings, sys);
+};
+
+export const generateConstructorPreset = async (components: { [key: string]: string }, settings: LLMSettings): Promise<{ prompt: string, modifiers: PromptModifiers }> => {
+    const isOllama = settings.activeLLM === 'ollama' || settings.activeLLM === 'ollama_cloud';
+    
+    if (isOllama) {
+        const sys = `Role: Prompt Constructor Architect. 
+Task: Take the dissected prompt components and refine them into a high-quality, reusable "Constructor Preset".
+Goal: Enhance the components by incorporating professional visual modifiers (lighting, composition, style, medium) that logically fit the subject.
+Output: A single, cohesive, and highly descriptive prompt string that combines the refined components and added modifiers. 
+Constraint: Output the REFINED PROMPT ONLY. No intros, no explanations.`;
+
+        const input = JSON.stringify(components, null, 2);
+        const raw = await refineSinglePromptOllama(input, settings, sys, 1024);
+        return { prompt: cleanLLMResponse(raw), modifiers: {} };
+    } else {
+        return generateConstructorPresetGemini(components, settings);
+    }
 };
 
 export { generateWithImagen, generateWithNanoBanana, generateWithVeo } from './geminiService';

@@ -13,15 +13,28 @@ export default {
         mono: ['JetBrains Mono', 'monospace'],
       },
       colors: {
-        primary: "#00ffa3",
-        secondary: "#00d1ff",
-        accent: "#f3a01c",
       }
     },
   },
   plugins: [require("daisyui")],
   daisyui: {
     themes: [
+      {
+        dich: {
+          "primary": "#ffffff",
+          "secondary": "#00ffa3",
+          "accent": "#00d1ff",
+          "neutral": "#1a1a1a",
+          "base-100": "#000000",
+          "base-200": "#0a0a0a",
+          "base-300": "#1a1a1a",
+          "base-content": "#ffffff",
+          "info": "#3abff8",
+          "success": "#36d399",
+          "warning": "#fbbd23",
+          "error": "#f87272",
+        },
+      },
       {
         abyss: {
           "primary": "#00ffa3",
@@ -47,6 +60,22 @@ export default {
           "base-200": "#0f0f0f",
           "base-300": "#1a1a1a",
           "base-content": "#e5e5e5",
+          "info": "#3abff8",
+          "success": "#36d399",
+          "warning": "#fbbd23",
+          "error": "#f87272",
+        },
+      },
+      {
+        sanrita: {
+          "primary": "#1a1a1a",
+          "secondary": "#c5a059",
+          "accent": "#8b7d6b",
+          "neutral": "#2a2a2a",
+          "base-100": "#fdfcf8",
+          "base-200": "#f7f5f0",
+          "base-300": "#efede7",
+          "base-content": "#1a1a1a",
           "info": "#3abff8",
           "success": "#36d399",
           "warning": "#fbbd23",

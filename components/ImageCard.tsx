@@ -158,19 +158,19 @@ const Media: React.FC<{
     return (
         <div 
             ref={containerRef} 
-            className="relative w-full bg-base-300 overflow-hidden flex items-center justify-center group/media"
+            className="relative w-full bg-transparent overflow-hidden flex items-center justify-center group/media"
             style={{ minHeight: minH }}
         >
             {/* Shutter Overlay */}
             <div 
                 ref={shutterRef}
-                className="absolute inset-0 bg-base-300 z-20 pointer-events-none"
+                className="absolute inset-0 bg-transparent z-20 pointer-events-none"
             />
 
             {!displayUrl ? (
-                 <div className="w-full h-48 bg-base-200/50 animate-pulse"></div>
+                 <div className="w-full h-48 bg-transparent animate-pulse"></div>
             ) : hasError ? (
-                <div className="flex flex-col items-center justify-center p-8 text-center bg-base-200 w-full aspect-square">
+                <div className="flex flex-col items-center justify-center p-8 text-center bg-transparent w-full aspect-square">
                     <ImageBrokenIcon className="w-8 h-8 text-warning/20" />
                     <p className="text-warning/30 text-[10px] font-black uppercase mt-2">Buffer Corrupt</p>
                 </div>
@@ -228,7 +228,7 @@ const ImageCard: React.FC<ImageCardProps> = memo(({ item, viewMode, onOpenDetail
       onClick={() => onOpenDetailView()}
       onMouseEnter={() => setIsHovered(true)}
       onMouseLeave={() => setIsHovered(false)}
-      className={`relative group bg-base-100 cursor-pointer overflow-hidden select-none transition-all duration-700`}
+      className={`relative group bg-transparent cursor-pointer overflow-hidden select-none transition-all duration-700`}
     >
       <Media
         url={item.urls[0]}
@@ -238,18 +238,18 @@ const ImageCard: React.FC<ImageCardProps> = memo(({ item, viewMode, onOpenDetail
         isHovered={isHovered}
       />
 
-      <div className="absolute inset-0 bg-gradient-to-t from-base-100 via-base-100/30 to-transparent opacity-90 group-hover:opacity-40 transition-opacity duration-1000 z-10 pointer-events-none"></div>
+      <div className="absolute inset-0 bg-gradient-to-t from-transparent via-transparent to-transparent opacity-90 group-hover:opacity-40 transition-opacity duration-1000 z-10 pointer-events-none"></div>
 
       <div className={`absolute inset-0 flex flex-col ${styles.padding} z-30 pointer-events-none`}>
         
         <div className="flex items-center gap-4 mb-auto opacity-70 group-hover:opacity-100 transition-opacity duration-500">
-            <span className={`${styles.label} font-mono font-black text-primary tracking-[0.3em] uppercase whitespace-nowrap drop-shadow-sm`}>
+            <span className={`${styles.label} font-mono font-black text-primary tracking-[0.3em] uppercase whitespace-nowrap drop-shadow-sm opacity-0 group-hover:opacity-100 transition-opacity duration-500`}>
                 ID#{item.id.slice(-4).toUpperCase()}
             </span>
+            <div className="flex-grow h-px bg-primary/30 opacity-0 group-hover:opacity-100 transition-opacity duration-500"></div>
             {item.isNsfw && (
-                <div className="badge badge-warning badge-xs rounded-none font-black text-[7px] uppercase h-4 px-2 border-none">NSFW</div>
+                <div className="badge badge-warning badge-xs rounded-none font-black text-[7px] uppercase h-4 px-2 border-none opacity-0 group-hover:opacity-100 transition-opacity duration-500">NSFW</div>
             )}
-            <div className="flex-grow h-px bg-primary/30"></div>
             {isPinned && (
                 <div className="text-primary drop-shadow-md flex-shrink-0">
                     <ThumbTackIcon className={styles.iconSize} />
@@ -281,7 +281,7 @@ const ImageCard: React.FC<ImageCardProps> = memo(({ item, viewMode, onOpenDetail
             </div>
 
             <div className="flex items-center pt-4 opacity-70 group-hover:opacity-100 transition-opacity duration-500 pointer-events-auto">
-                <span className={`font-black uppercase tracking-[0.3em] bg-primary/10 text-primary border border-primary/20 backdrop-blur-md shadow-lg ${styles.badge}`}>
+                <span className={`font-black uppercase tracking-[0.3em] bg-primary/10 text-primary border border-primary/20 backdrop-blur-md shadow-lg ${styles.badge} opacity-0 group-hover:opacity-100 transition-opacity duration-500`}>
                     {item.urls.length} {item.type.toUpperCase()}{item.urls.length > 1 ? 'S' : ''}
                 </span>
             </div>

@@ -55,12 +55,16 @@ const LlmStatusSwitcher: React.FC = () => {
 
     return (
         <div className="dropdown dropdown-bottom w-full group">
-            <div tabIndex={0} role="button" title={tooltipText} className="w-full flex items-center justify-between p-2 text-sm rounded-md bg-base-200/50 hover:bg-base-200 transition-colors border border-transparent group-hover:border-primary/20" aria-haspopup="listbox">
-                <div className="flex items-center min-w-0">
-                    <span className={`w-2 h-2 rounded-full mr-2.5 flex-shrink-0 ${statusColor} ${statusColor === 'bg-success' ? 'motion-safe:animate-pulse' : ''}`}></span>
-                    <span className="font-bold text-base-content truncate uppercase text-[10px] tracking-widest">{displayText}</span>
+            <div tabIndex={0} role="button" title={tooltipText} className="w-full flex items-center justify-between p-2 text-sm rounded-none bg-base-200/30 hover:bg-base-200 transition-all border border-primary/10 group-hover:border-primary/40 relative overflow-hidden" aria-haspopup="listbox">
+                {/* Technical Corner Accents */}
+                <div className="absolute top-0 left-0 w-1 h-1 border-t border-l border-primary/30"></div>
+                <div className="absolute bottom-0 right-0 w-1 h-1 border-b border-r border-primary/30"></div>
+                
+                <div className="flex items-center min-w-0 relative z-10">
+                    <span className={`w-1.5 h-1.5 rounded-full mr-2.5 flex-shrink-0 ${statusColor} ${statusColor === 'bg-success' ? 'motion-safe:animate-pulse shadow-[0_0_5px_rgba(var(--p),0.5)]' : ''}`}></span>
+                    <span className="font-black text-base-content/80 truncate uppercase text-[9px] tracking-[0.2em]">{displayText}</span>
                 </div>
-                <ChevronDownIcon className={`w-4 h-4 text-base-content/40 flex-shrink-0 transition-transform group-focus-within:rotate-180`} />
+                <ChevronDownIcon className={`w-3 h-3 text-base-content/40 flex-shrink-0 transition-transform group-focus-within:rotate-180 relative z-10`} />
             </div>
 
             <ul tabIndex={0} className="dropdown-content menu p-1 shadow-2xl bg-base-200 rounded-none w-full min-w-[240px] mt-2 z-[100] border border-base-300 max-h-[70vh] overflow-y-auto custom-scrollbar flex flex-col flex-nowrap">

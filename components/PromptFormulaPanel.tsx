@@ -69,8 +69,8 @@ const PromptFormulaPanel: React.FC<PromptFormulaPanelProps> = ({ promptText, sho
 
     return (
         <>
-        <div className="flex flex-col bg-base-100 overflow-hidden corner-frame shadow-sm">
-            <header className="p-6 border-b border-base-300 bg-base-200/10 flex justify-between items-center">
+        <div className="flex flex-col bg-transparent overflow-hidden corner-frame shadow-none">
+            <header className="p-6 border-b border-base-300 bg-transparent flex justify-between items-center">
                 <span className="text-[10px] font-black uppercase tracking-[0.3em] text-base-content/40">
                     Prompt Template
                 </span>
@@ -85,18 +85,18 @@ const PromptFormulaPanel: React.FC<PromptFormulaPanelProps> = ({ promptText, sho
             </header>
             {!isCollapsed && (
             <div className="animate-fade-in flex flex-col overflow-hidden max-h-[300px]">
-                <div className="flex-grow p-6 bg-base-100 overflow-y-auto custom-scrollbar">
+                <div className="flex-grow p-6 bg-transparent overflow-y-auto custom-scrollbar">
                     {isLoading ? <div className="py-6"><LoadingSpinner/></div> :
                      error ? <div className="alert alert-error rounded-none text-xs"><span>{error}</span></div> :
                      formula ? (
-                        <p className="text-sm font-mono whitespace-pre-wrap text-base-content/70 bg-base-200/30 p-4 border border-base-300/50">{formula}</p>
+                        <p className="text-sm font-mono whitespace-pre-wrap text-base-content/70 bg-transparent p-4 border border-base-300/50">{formula}</p>
                      ) : (
                         <div className="py-12 text-center text-[10px] font-black uppercase tracking-[0.2em] text-base-content/20">
                             Ready to extract template.
                         </div>
                      )}
                 </div>
-                <footer className="p-4 border-t border-base-300 flex justify-end gap-2 bg-base-200/5">
+                <footer className="p-4 border-t border-base-300 flex justify-end gap-2 bg-transparent">
                     <button onClick={() => setIsSaveModalOpen(true)} disabled={!formula || isLoading} className="btn btn-xs btn-ghost rounded-none font-black text-[9px] tracking-widest px-4" title="Save as Template">
                         <BookmarkIcon className="w-3.5 h-3.5 mr-1.5" /> Save Template
                     </button>
@@ -110,8 +110,8 @@ const PromptFormulaPanel: React.FC<PromptFormulaPanelProps> = ({ promptText, sho
 
         {isSaveModalOpen && (
             <div className="fixed inset-0 bg-black/80 z-50 flex items-center justify-center p-4 animate-fade-in" onClick={() => setIsSaveModalOpen(false)}>
-                <div className="bg-base-100 rounded-none border border-base-300 shadow-2xl w-full max-w-lg overflow-hidden" onClick={(e) => e.stopPropagation()}>
-                    <header className="p-8 border-b border-base-300 bg-base-200/20">
+                <div className="bg-transparent rounded-none border border-base-300 w-full max-w-lg overflow-hidden" onClick={(e) => e.stopPropagation()}>
+                    <header className="p-8 border-b border-base-300 bg-transparent">
                         <h3 className="text-4xl font-black tracking-tighter text-base-content leading-none">SAVE TEMPLATE<span className="text-primary">.</span></h3>
                     </header>
                     <div className="p-8">
@@ -124,7 +124,7 @@ const PromptFormulaPanel: React.FC<PromptFormulaPanelProps> = ({ promptText, sho
                             autoFocus
                         />
                     </div>
-                    <div className="p-4 border-t border-base-300 flex justify-end gap-2 bg-base-200/10">
+                    <div className="p-4 border-t border-base-300 flex justify-end gap-2 bg-transparent">
                              <button onClick={() => setIsSaveModalOpen(false)} className="btn btn-ghost rounded-none uppercase font-black text-[10px] tracking-widest px-8">Cancel</button>
                              <button onClick={handleSaveTemplate} disabled={isSaving || !templateName.trim()} className="btn btn-primary rounded-none uppercase font-black text-[10px] tracking-widest px-8">
                                 {isSaving ? 'Saving...' : 'Save'}

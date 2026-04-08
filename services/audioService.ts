@@ -45,7 +45,7 @@ class AudioService {
   }
 
   /**
-   * Minimalist mechanical click
+   * Minimalist mechanical click (Joseph San style)
    */
   playClick() {
     if (!this.isEnabled) return;
@@ -56,19 +56,37 @@ class AudioService {
     const now = this.ctx.currentTime;
     const osc = this.ctx.createOscillator();
     const gain = this.ctx.createGain();
+    const noise = this.ctx.createBufferSource();
+    const noiseGain = this.ctx.createGain();
+
+    // Create a tiny bit of white noise for the transient
+    const bufferSize = this.ctx.sampleRate * 0.01;
+    const buffer = this.ctx.createBuffer(1, bufferSize, this.ctx.sampleRate);
+    const data = buffer.getChannelData(0);
+    for (let i = 0; i < bufferSize; i++) {
+      data[i] = Math.random() * 2 - 1;
+    }
+    noise.buffer = buffer;
 
     osc.type = 'sine';
-    osc.frequency.setValueAtTime(1200, now);
-    osc.frequency.exponentialRampToValueAtTime(400, now + 0.05);
+    osc.frequency.setValueAtTime(3000, now);
+    osc.frequency.exponentialRampToValueAtTime(1000, now + 0.02);
 
-    gain.gain.setValueAtTime(0.5, now);
-    gain.gain.exponentialRampToValueAtTime(0.01, now + 0.05);
+    gain.gain.setValueAtTime(0.2, now);
+    gain.gain.exponentialRampToValueAtTime(0.001, now + 0.02);
+
+    noiseGain.gain.setValueAtTime(0.1, now);
+    noiseGain.gain.exponentialRampToValueAtTime(0.001, now + 0.01);
 
     osc.connect(gain);
+    noise.connect(noiseGain);
     gain.connect(this.masterGain);
+    noiseGain.connect(this.masterGain);
 
     osc.start(now);
-    osc.stop(now + 0.05);
+    osc.stop(now + 0.02);
+    noise.start(now);
+    noise.stop(now + 0.01);
   }
 
   /**
@@ -85,16 +103,16 @@ class AudioService {
     const gain = this.ctx.createGain();
 
     osc.type = 'sine';
-    osc.frequency.setValueAtTime(2400, now);
+    osc.frequency.setValueAtTime(4000, now);
     
-    gain.gain.setValueAtTime(0.1, now);
-    gain.gain.exponentialRampToValueAtTime(0.001, now + 0.02);
+    gain.gain.setValueAtTime(0.05, now);
+    gain.gain.exponentialRampToValueAtTime(0.001, now + 0.01);
 
     osc.connect(gain);
     gain.connect(this.masterGain);
 
     osc.start(now);
-    osc.stop(now + 0.02);
+    osc.stop(now + 0.01);
   }
 
   /**

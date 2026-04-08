@@ -2,7 +2,6 @@ import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { gsap } from 'gsap';
 import { loadGalleryItems } from '../utils/galleryStorage';
 import type { GalleryItem, ActiveTab, Idea } from '../types';
-import { fileSystemManager } from '../utils/fileUtils';
 import LoadingSpinner from './LoadingSpinner';
 import { useSettings } from '../contexts/SettingsContext';
 
@@ -62,86 +61,7 @@ const ChromaticText: React.FC<{ text: string; enabled?: boolean }> = ({ text, en
 };
 
 // --- ORAGE-STYLE IMAGE TRAIL ---
-const ImageTrail: React.FC<{ images: GalleryItem[] }> = ({ images }) => {
-    const trailRef = useRef<HTMLDivElement>(null);
-    const lastPos = useRef({ x: 0, y: 0 });
-    const imageIndex = useRef(0);
-
-    const spawnArtifact = useCallback(async (x: number, y: number) => {
-        if (!trailRef.current || images.length === 0) return;
-
-        const item = images[imageIndex.current];
-        const blob = await fileSystemManager.getFileAsBlob(item.urls[0]);
-        if (!blob) return;
-
-        const url = URL.createObjectURL(blob);
-        const img = document.createElement('img');
-        
-        // Orage style: Grayscale, no shadow, clean borders, difference blend
-        img.className = "absolute pointer-events-none z-10 border border-white/5 opacity-0 will-change-transform grayscale brightness-125 mix-blend-difference";
-        
-        img.onload = () => {
-            if (!trailRef.current) return;
-
-            const aspect = img.naturalWidth / img.naturalHeight;
-            const baseSize = 120 + Math.random() * 80; // Slightly smaller than before
-            
-            if (aspect > 1) {
-                img.style.width = `${baseSize}px`;
-                img.style.height = `${baseSize / aspect}px`;
-            } else {
-                img.style.height = `${baseSize}px`;
-                img.style.width = `${baseSize * aspect}px`;
-            }
-
-            img.style.left = `${x}px`;
-            img.style.top = `${y}px`;
-            img.style.transform = `translate(-50%, -50%) scale(0.8) rotate(${(Math.random() - 0.5) * 10}deg)`;
-            
-            trailRef.current.appendChild(img);
-
-            const tl = gsap.timeline({
-                onComplete: () => {
-                    img.remove();
-                    URL.revokeObjectURL(url);
-                }
-            });
-
-            // Fast, snappy reveal and fade
-            tl.to(img, {
-                opacity: 1,
-                scale: 1,
-                duration: 0.4,
-                ease: "power2.out"
-            });
-
-            tl.to(img, {
-                opacity: 0,
-                scale: 1.1,
-                duration: 0.8,
-                ease: "power2.inOut"
-            }, "+=0.1");
-        };
-
-        img.src = url;
-        imageIndex.current = (imageIndex.current + 1) % images.length;
-    }, [images]);
-
-    useEffect(() => {
-        const handleMove = (e: MouseEvent) => {
-            const dist = Math.hypot(e.clientX - lastPos.current.x, e.clientY - lastPos.current.y);
-            // Denser trail: spawn every 100px instead of 180px
-            if (dist > 100) { 
-                spawnArtifact(e.clientX, e.clientY);
-                lastPos.current = { x: e.clientX, y: e.clientY };
-            }
-        };
-        window.addEventListener('mousemove', handleMove);
-        return () => window.removeEventListener('mousemove', handleMove);
-    }, [spawnArtifact]);
-
-    return <div ref={trailRef} className="fixed inset-0 pointer-events-none overflow-hidden z-[5]" />;
-};
+// Removed as per user request
 
 const NavNode: React.FC<{ label: string; num: string; onClick: () => void }> = ({ label, num, onClick }) => {
     const [isHovered, setIsHovered] = useState(false);
@@ -228,10 +148,10 @@ const Dashboard: React.FC<DashboardProps> = ({ onNavigate }) => {
 
     }, [onNavigate]);
 
-    if (isLoading) return <div className="h-full w-full flex items-center justify-center bg-base-100"><LoadingSpinner /></div>;
+    if (isLoading) return <div className="h-full w-full flex items-center justify-center bg-transparent"><LoadingSpinner /></div>;
 
     return (
-        <div className="h-full w-full bg-base-100 overflow-hidden relative select-none border-none p-0">
+        <div className="h-full w-full bg-transparent overflow-hidden relative select-none border-none p-0">
             {/* AMBIENT BACKGROUND LAYER */}
             <div className="absolute inset-0 z-0 overflow-hidden pointer-events-none">
                 {!videoError && settings.dashboardVideoUrl ? (
@@ -248,14 +168,12 @@ const Dashboard: React.FC<DashboardProps> = ({ onNavigate }) => {
                         onError={() => setVideoError(true)}
                     />
                 ) : (
-                    <div className="w-full h-full bg-base-300 opacity-20"></div>
+                    <div className="w-full h-full bg-transparent opacity-20"></div>
                 )}
                 <div className="absolute inset-0 bg-grid-texture opacity-[0.03] z-10"></div>
-                <div className="absolute inset-0 bg-gradient-to-t from-base-100 via-transparent to-base-100 opacity-60 z-10"></div>
+                <div className="absolute inset-0 bg-gradient-to-t from-transparent via-transparent to-transparent opacity-60 z-10"></div>
             </div>
             
-            <ImageTrail images={gallery} />
-
             <MetadataCorner label="System_Status" value="Core_Engine_Active" position="top-0 left-0" />
             <MetadataCorner label="Vault_Index" value={`${gallery.length} Arifacts_Identified`} position="top-0 right-0" />
             <MetadataCorner label="Local_Sequence" value={time} position="bottom-0 left-0" />

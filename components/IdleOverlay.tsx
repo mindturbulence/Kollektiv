@@ -115,14 +115,14 @@ const IdleOverlay: React.FC<{ isVisible: boolean; onInteraction: () => void }> =
     return (
         <div 
             ref={containerRef}
-            className="fixed inset-0 z-[9999] bg-base-100/60 backdrop-blur-xl cursor-none pointer-events-auto"
+            className="fixed inset-0 z-[9999] bg-transparent backdrop-blur-xl cursor-none pointer-events-auto"
             style={{ opacity: 0, visibility: 'hidden' }}
             onClick={onInteraction}
             onMouseMove={onInteraction}
             onKeyDown={onInteraction}
         >
             <canvas ref={canvasRef} className="w-full h-full block" />
-            <div className="absolute inset-0 bg-gradient-to-b from-base-100 via-transparent to-base-100 pointer-events-none opacity-80"></div>
+            <div className="absolute inset-0 bg-gradient-to-b from-transparent via-transparent to-transparent pointer-events-none opacity-80"></div>
             <div className="absolute bottom-12 left-1/2 -translate-x-1/2 flex flex-col items-center gap-2 pointer-events-none">
                 <span className="text-[10px] font-black uppercase tracking-[0.6em] text-primary animate-pulse drop-shadow-[0_0_8px_oklch(var(--p))]">System Standby</span>
                 <span className="text-[8px] font-mono text-base-content/20 uppercase tracking-[0.4em]">Neural stream active // click to resume</span>

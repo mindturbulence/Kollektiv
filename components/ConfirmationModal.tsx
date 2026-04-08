@@ -32,17 +32,17 @@ const ConfirmationModal: React.FC<ConfirmationModalProps> = ({ isOpen, onClose, 
 
   const modalContent = (
     <div
-      className="fixed inset-0 bg-black/90 z-[1000] flex items-center justify-center p-4 animate-fade-in"
+      className="fixed inset-0 bg-black/40 backdrop-blur-xl z-[1000] flex items-center justify-center p-4 animate-fade-in"
       onClick={handleClose}
       role="dialog"
       aria-modal="true"
       aria-labelledby="confirmation-title"
     >
       <div
-        className="bg-base-100 rounded-none border border-base-300 shadow-2xl w-full max-w-lg overflow-hidden"
+        className="bg-base-100/40 rounded-none w-full max-w-lg overflow-hidden"
         onClick={(e) => e.stopPropagation()}
       >
-        <header className="p-8 border-b border-base-300 bg-base-200/20 relative">
+        <header className="p-8 bg-transparent relative">
             <h3 id="confirmation-title" className="text-2xl font-black tracking-tighter text-error leading-none">CONFIRM<span className="text-base-content/20">.</span></h3>
             <p className="text-[10px] font-black uppercase tracking-[0.3em] text-base-content/40 mt-2">{title}</p>
         </header>
@@ -51,7 +51,7 @@ const ConfirmationModal: React.FC<ConfirmationModalProps> = ({ isOpen, onClose, 
             <p className="text-base font-bold text-base-content/70 leading-relaxed uppercase tracking-tight">{message}</p>
         </div>
 
-        <footer className="border-t border-base-300 flex bg-base-200/5 p-0 overflow-hidden">
+        <footer className="flex bg-transparent p-0 overflow-hidden">
           <button
             onClick={handleClose}
             className="btn flex-1 rounded-none uppercase font-black text-[10px] tracking-widest border-r border-base-300 transition-colors"
@@ -61,7 +61,7 @@ const ConfirmationModal: React.FC<ConfirmationModalProps> = ({ isOpen, onClose, 
           </button>
           <button
             onClick={handleConfirm}
-            className={`btn ${btnClassName} flex-1 rounded-none uppercase font-black text-[10px] tracking-widest text-white transition-colors shadow-lg`}
+            className={`btn ${btnClassName} flex-1 rounded-none uppercase font-black text-[10px] tracking-widest text-white transition-colors`}
             aria-label="Confirm action"
           >
             Execute

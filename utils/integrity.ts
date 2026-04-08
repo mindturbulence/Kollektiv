@@ -135,6 +135,42 @@ export const rebuildGalleryDatabase = async (onProgress: (msg: string) => void):
         }
     }
 
+    // 2. Scan for orphans using metadata JSON files
+    onProgress('Scanning for Orphaned Artifacts...');
+    const scanFolder = async (path: string) => {
+        try {
+            for await (const handle of fileSystemManager.listDirectoryContents(path)) {
+                if (handle.kind === 'directory') {
+                    await scanFolder(`${path}/${handle.name}`);
+                } else if (handle.kind === 'file' && handle.name.endsWith('_metadata.json')) {
+                    const filePath = `${path}/${handle.name}`;
+                    const content = await fileSystemManager.readFile(filePath);
+                    if (content) {
+                        try {
+                            const item = JSON.parse(content) as GalleryItem;
+                            if (!updatedItems.some(i => i.id === item.id)) {
+                                // Verify at least one media file exists
+                                let mediaExists = false;
+                                for (const url of item.urls) {
+                                    if (url.startsWith('data:') || await fileSystemManager.getFileAsBlob(url)) {
+                                        mediaExists = true;
+                                        break;
+                                    }
+                                }
+                                if (mediaExists) {
+                                    onProgress(`Recovering: ${item.title || item.id}`);
+                                    updatedItems.push(item);
+                                }
+                            }
+                        } catch (e) {}
+                    }
+                }
+            }
+        } catch (e) {}
+    };
+
+    await scanFolder('gallery');
+
     manifest.galleryItems = updatedItems;
     await fileSystemManager.saveFile('kollektiv_gallery_manifest.json', new Blob([JSON.stringify(manifest, null, 2)], { type: 'application/json' }));
     onProgress('Media Vault Structure Optimized.');

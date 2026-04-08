@@ -8,6 +8,7 @@ interface SuggestionItemProps {
   suggestionText: string;
   targetAI?: string;
   onSave: (suggestionText: string) => void;
+  onSaveAsPreset?: (suggestionText: string) => void;
   onRefine?: (suggestionText: string) => void;
   onClip?: (suggestionText: string) => void;
   isAbstraction?: boolean;
@@ -17,6 +18,7 @@ export const SuggestionItem: React.FC<SuggestionItemProps> = ({
     suggestionText, 
     targetAI = '', 
     onSave, 
+    onSaveAsPreset,
     onRefine, 
     onClip,
     isAbstraction = false
@@ -24,6 +26,7 @@ export const SuggestionItem: React.FC<SuggestionItemProps> = ({
   const [copied, setCopied] = useState<boolean>(false);
   const [saved, setSaved] = useState<boolean>(false);
   const [clipped, setClipped] = useState<boolean>(false);
+  const [presetSaved, setPresetSaved] = useState<boolean>(false);
   
   // Generation State
   const [isGenerating, setIsGenerating] = useState(false);
@@ -56,6 +59,13 @@ export const SuggestionItem: React.FC<SuggestionItemProps> = ({
     onSave(suggestionText);
     setSaved(true);
   }, [suggestionText, onSave, saved]);
+
+  const handleSaveAsPreset = useCallback(() => {
+    if (presetSaved || !onSaveAsPreset) return;
+    onSaveAsPreset(suggestionText);
+    setPresetSaved(true);
+    setTimeout(() => setPresetSaved(false), 3000);
+  }, [suggestionText, onSaveAsPreset, presetSaved]);
 
   const handleClip = useCallback(() => {
     if (clipped || !onClip) return;
@@ -122,7 +132,11 @@ export const SuggestionItem: React.FC<SuggestionItemProps> = ({
   const isVideo = targetAI.toLowerCase().includes('veo');
 
   return (
-    <div className={`w-full transition-all duration-300 bg-base-100 border border-base-300 mb-[1px] last:mb-0 ${isGenerating ? 'bg-primary/5' : ''}`}>
+    <div className={`w-full transition-all duration-300 bg-transparent border border-base-300 mb-[1px] last:mb-0 relative overflow-hidden ${isGenerating ? 'bg-primary/5' : ''}`}>
+        {/* Technical Corner Accents */}
+        <div className="absolute top-0 left-0 w-2 h-2 border-t border-l border-primary/20"></div>
+        <div className="absolute bottom-0 right-0 w-2 h-2 border-b border-r border-primary/20"></div>
+        
         <div className="p-4 md:p-6 flex flex-col h-full relative">
             {isGenerating ? (
                 <div className="flex flex-col items-center justify-center py-12 text-center space-y-6">
@@ -159,8 +173,8 @@ export const SuggestionItem: React.FC<SuggestionItemProps> = ({
                     )}
 
                     <div className="flex-grow">
-                        <p className="text-base font-medium leading-relaxed text-base-content/80 italic border-l-2 border-primary/10 pl-4 py-1">
-                            "{suggestionText}"
+                        <p className="text-base font-medium leading-relaxed text-base-content/80 font-mono border-l-2 border-primary/20 pl-4 py-2 bg-transparent">
+                            {suggestionText}
                         </p>
                     </div>
 
@@ -172,6 +186,9 @@ export const SuggestionItem: React.FC<SuggestionItemProps> = ({
 
                     <div className="flex flex-wrap items-center justify-between gap-4 mt-4 pt-4 border-t border-base-300">
                         <div className="flex items-center gap-1">
+                            <div className="mr-2 hidden sm:block">
+                                <span className="text-[7px] font-black text-primary/30 uppercase tracking-widest">Action Sequence</span>
+                            </div>
                             {isGoogleProduct && !mediaUrl && (
                                 <button 
                                     onClick={handleTryGenerate} 
@@ -194,6 +211,15 @@ export const SuggestionItem: React.FC<SuggestionItemProps> = ({
                         </div>
 
                         <div className="flex items-center gap-1">
+                            {onSaveAsPreset && (
+                                <button
+                                    onClick={handleSaveAsPreset}
+                                    disabled={presetSaved}
+                                    className="btn btn-xs btn-ghost rounded-none font-black text-[9px] tracking-widest px-3 hover:bg-base-300 text-primary"
+                                >
+                                    {presetSaved ? <><CheckIcon className="w-3 h-3 mr-1.5 text-success"/> OK</> : <><SparklesIcon className="w-3 h-3 mr-1.5 opacity-40"/> PRESET</>}
+                                </button>
+                            )}
                             <button
                                 onClick={handleSave}
                                 disabled={saved}

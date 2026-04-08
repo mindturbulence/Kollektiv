@@ -8,6 +8,7 @@ import { fileSystemManager } from '../utils/fileUtils';
 import { verifyAndRepairFiles } from '../utils/integrity';
 import { addSavedPrompt } from '../utils/promptStorage';
 import { audioService } from '../services/audioService';
+import { BusyProvider } from '../contexts/BusyContext';
 import type { ActiveTab, Idea, ActiveSettingsTab } from '../types';
 
 // Layout & Global Components
@@ -19,7 +20,6 @@ import AboutModal from './AboutModal';
 import ClippingPanel from './ClippingPanel';
 import FeedbackModal from './FeedbackModal';
 import Footer from './Footer';
-import MouseTrail from './MouseTrail';
 import IdleOverlay from './IdleOverlay'; 
 
 // Page components
@@ -103,18 +103,19 @@ const InitialLoader: React.FC<{ status: string; progress: number | null }> = ({ 
         <div id="initial-loader" className="fixed inset-0 z-[500] flex flex-col items-center justify-center bg-base-100 text-base-content overflow-hidden select-none font-sans">
             <div className="absolute inset-0 bg-grid-texture opacity-[0.03] pointer-events-none"></div>
             
-            {/* Top Frame */}
-            <div className="absolute top-12 left-0 right-0 h-[1px] bg-base-content/10 flex items-center justify-between px-8 md:px-12 font-mono text-[9px] font-bold tracking-[0.2em] uppercase text-base-content/30">
-                <div className="flex items-center gap-6 bg-base-100 px-6">
-                    <span className="flex items-center gap-2 before:content-[''] before:w-1 before:h-1 before:bg-primary before:rounded-full">System Integrity Check</span>
-                    <span className="flex items-center gap-2 before:content-[''] before:w-1 before:h-1 before:bg-primary before:rounded-full">Protocol: Master_Load</span>
-                </div>
-                <div className="hidden sm:block bg-base-100 px-6">Ver: 2.5.0_BETA</div>
+            {/* Large Background Percentage (SR Seventy One Style) */}
+            <div className="absolute inset-0 flex items-center justify-center pointer-events-none overflow-hidden">
+                <span 
+                    className="text-[25vw] font-black opacity-[0.03] leading-none select-none transition-all duration-500 ease-out font-display"
+                    style={{ transform: `translateY(${(100 - percentage) * 0.2}px)` }}
+                >
+                    {percentage.toString().padStart(2, '0')}
+                </span>
             </div>
 
             <div className="relative z-10 flex flex-col items-center">
-                <div className="overflow-hidden mb-8 px-4">
-                    <h1 ref={textWrapperRef} className="grid grid-cols-1 grid-rows-1 text-xl md:text-3xl font-black tracking-tighter uppercase select-none items-center font-display">
+                <div className="overflow-hidden mb-6 px-4">
+                    <h1 ref={textWrapperRef} className="grid grid-cols-1 grid-rows-1 text-2xl md:text-4xl font-black tracking-tighter uppercase select-none items-center font-logo">
                         <span className="text-base-content/10 block leading-none py-2 row-start-1 col-start-1">
                             Kollektiv<span className="text-primary/10 italic">.</span>
                         </span>
@@ -130,31 +131,37 @@ const InitialLoader: React.FC<{ status: string; progress: number | null }> = ({ 
                     </h1>
                 </div>
 
-                <div className={`flex flex-col items-center gap-3 transition-all duration-500 ${percentage >= 100 ? 'opacity-0 translate-y-4' : 'opacity-100 translate-y-0'}`}>
-                    <div className="flex items-center gap-3">
+                <div className={`flex flex-col items-center gap-4 transition-all duration-500 ${percentage >= 100 ? 'opacity-0 translate-y-4' : 'opacity-100 translate-y-0'}`}>
+                    <div className="flex flex-col items-center gap-2">
                         <p className="text-[10px] font-mono font-bold uppercase tracking-[0.5em] text-center text-base-content/40">
                             {status.toUpperCase()}
                         </p>
+                        
+                        {/* Minimal Progress Bar */}
+                        <div className="w-32 h-[1px] bg-base-content/10 relative overflow-hidden">
+                            <div 
+                                className="absolute inset-y-0 left-0 bg-primary transition-all duration-500 ease-out"
+                                style={{ width: `${percentage}%` }}
+                            />
+                        </div>
+                        
+                        <span className="text-[10px] font-mono font-bold text-primary/60">
+                            {percentage}%
+                        </span>
                     </div>
-                </div>
-            </div>
-
-            {/* Bottom Frame */}
-            <div className="absolute bottom-12 left-0 right-0 h-[1px] bg-base-content/10 flex items-center justify-between px-8 md:px-12 font-mono text-[9px] font-bold tracking-[0.2em] uppercase text-base-content/30">
-                <div className="hidden sm:block bg-base-100 px-6">© 2026 Kollektiv Neural Systems</div>
-                <div className="flex items-center gap-6 bg-base-100 px-6">
-                    <span className="flex items-center gap-2 before:content-[''] before:w-1 before:h-1 before:bg-primary before:rounded-full">Status: Operational</span>
-                    <span className="flex items-center gap-2 before:content-[''] before:w-1 before:h-1 before:bg-primary before:rounded-full">Region: ASIA-SE-1</span>
                 </div>
             </div>
         </div>
     );
+
 };
 
 const App: React.FC = () => {
     return (
         <ErrorBoundary>
-            <AppContent />
+            <BusyProvider>
+                <AppContent />
+            </BusyProvider>
         </ErrorBoundary>
     );
 };
@@ -509,13 +516,14 @@ const AppContent: React.FC = () => {
     if (showWelcome) return <Welcome onSetupComplete={initializeApp} />;
 
     return (
-        <div className="h-full w-full flex overflow-hidden relative bg-base-300 p-1 md:p-3 lg:p-5">
-            <MouseTrail />
+        <div className="h-full w-full flex overflow-hidden relative bg-transparent p-1 md:p-3 lg:p-5 font-sans">
+            {/* Technical Grid Background */}
+            <div className="absolute inset-0 pointer-events-none opacity-[0.03] bg-[linear-gradient(to_right,#808080_1px,transparent_1px),linear-gradient(to_bottom,#808080_1px,transparent_1px)] bg-[size:40px_40px]"></div>
             
             <IdleOverlay isVisible={isIdle} onInteraction={() => resetIdleTimer(true)} />
 
             {!isInitialized ? (
-                <div className="flex-1 flex flex-col items-center justify-center bg-base-100 rounded shadow-2xl">
+                <div className="flex-1 flex flex-col items-center justify-center bg-transparent rounded">
                     <div className="text-center space-y-4 max-w-md px-6">
                         <h2 className="text-2xl font-black uppercase tracking-tighter">System Offline</h2>
                         <p className="text-xs font-mono opacity-40 uppercase tracking-widest">Initialization failed or interrupted</p>
@@ -562,15 +570,14 @@ const AppContent: React.FC = () => {
                         className="fixed inset-0 z-[700] pointer-events-none flex flex-col"
                         style={{ visibility: 'hidden' }}
                     >
-                        <div ref={curtainTopRef} className="flex-1 bg-base-100 border-b border-base-300" />
-                        <div ref={curtainBottomRef} className="flex-1 bg-base-100" />
+                        <div ref={curtainTopRef} className="flex-1 bg-transparent border-b border-base-300" />
+                        <div ref={curtainBottomRef} className="flex-1 bg-transparent" />
                     </div>
 
                     <div 
                         ref={appWrapperRef}
-                        className="flex-1 flex overflow-hidden relative z-0 bg-base-100 rounded-2xl border border-base-300 shadow-2xl"
+                        className="flex-1 flex overflow-hidden relative z-0 bg-transparent rounded-none"
                     >
-                        
                         <Sidebar
                             activeTab={activeTab}
                             onNavigate={handleNavigate}
@@ -580,6 +587,7 @@ const AppContent: React.FC = () => {
                                 audioService.playClick();
                                 setIsPinned(val);
                             }}
+                            onClose={() => setIsSidebarOpen(false)}
                             onAboutClick={() => {
                                 audioService.playModalOpen();
                                 setIsAboutModalOpen(true);
@@ -600,7 +608,7 @@ const AppContent: React.FC = () => {
                                 }}
                             />
                             
-                            <main className={`flex-grow relative overflow-hidden bg-base-100 ${activeTab !== 'dashboard' && activeTab !== 'prompt' ? 'p-2.5' : ''}`}>
+                            <main className={`flex-grow relative overflow-hidden bg-transparent ${activeTab !== 'dashboard' && activeTab !== 'prompt' ? 'p-2.5' : ''}`}>
                                 <div 
                                     ref={mainGridRef} 
                                     className="absolute inset-0 z-[600] pointer-events-none grid"
@@ -611,7 +619,7 @@ const AppContent: React.FC = () => {
                                     }}
                                 >
                                     {Array.from({ length: gridRows * gridCols }).map((_, i) => (
-                                        <div key={i} className="transition-cell bg-base-100 will-change-transform" />
+                                        <div key={i} className="transition-cell bg-transparent will-change-transform" />
                                     ))}
                                 </div>
 

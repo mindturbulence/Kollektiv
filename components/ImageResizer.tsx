@@ -137,7 +137,7 @@ const DropZone: React.FC<{ onFilesAdded: (files: File[]) => void }> = ({ onFiles
     const handleDrop = (e: React.DragEvent) => { e.preventDefault(); setIsDragging(false); onFilesAdded(Array.from((e.dataTransfer as any).files || [])); };
     return (
       <div 
-        className="w-full h-full p-12 flex flex-col items-center justify-center bg-base-200/20"
+        className="w-full h-full p-12 flex flex-col items-center justify-center bg-transparent"
         onDragEnter={() => setIsDragging(true)} onDragOver={(e) => e.preventDefault()} onDragLeave={() => setIsDragging(false)} onDrop={handleDrop}
       >
         <div 
@@ -161,8 +161,8 @@ const ImageCard: React.FC<{
     imageRef: (el: HTMLDivElement | null) => void,
 }> = ({ item, settings, onRemove, onCropMouseDown, imageRef }) => {
     return (
-        <div className="flex flex-col bg-base-100 border border-base-300 group">
-            <figure ref={imageRef} className="relative aspect-square bg-base-300 overflow-hidden">
+        <div className="flex flex-col bg-transparent border border-base-300 group">
+            <figure ref={imageRef} className="relative aspect-square bg-transparent overflow-hidden">
                 <img src={item.originalUrl} alt={item.file.name} className="w-full h-full object-contain" />
                 {settings.enableCropping && (
                     <div 
@@ -177,7 +177,7 @@ const ImageCard: React.FC<{
                         onMouseDown={(e) => onCropMouseDown(e, item.id)}
                     ></div>
                 )}
-                <button onClick={onRemove} className="absolute top-2 right-2 btn btn-xs btn-square btn-error rounded-none opacity-0 group-hover:opacity-100 shadow-xl transition-all">✕</button>
+                <button onClick={onRemove} className="absolute top-2 right-2 btn btn-xs btn-square btn-error rounded-none opacity-0 group-hover:opacity-100 transition-all">✕</button>
             </figure>
             <div className="p-4 space-y-1">
                 <p className="text-[10px] font-black uppercase tracking-widest text-base-content truncate" title={item.file.name}>{item.file.name}</p>
@@ -398,10 +398,10 @@ const ImageResizer: React.FC = () => {
     };
     
     return (
-        <div className="h-full bg-base-100 flex flex-col overflow-hidden">
+        <div className="h-full bg-transparent flex flex-col overflow-hidden">
             <div className="flex-grow flex flex-col lg:flex-row overflow-hidden">
-                <aside className="w-full lg:w-96 flex-shrink-0 bg-base-100 flex flex-col border-r border-base-300 overflow-hidden">
-                    <header className="p-6 border-b border-base-300 bg-base-200/10">
+                <aside className="w-full lg:w-96 flex-shrink-0 bg-transparent flex flex-col border-r border-base-300 overflow-hidden">
+                    <header className="p-6 border-b border-base-300 bg-transparent">
                         <h3 className="text-[10px] font-black uppercase tracking-[0.4em] text-primary">Resize Settings</h3>
                     </header>
                     <div className="flex-grow p-6 space-y-8 overflow-y-auto custom-scrollbar">
@@ -463,16 +463,16 @@ const ImageResizer: React.FC = () => {
                             </div>
                         </div>
                     </div>
-                    <footer className="p-4 border-t border-base-300 grid grid-cols-2 gap-2 bg-base-200/20">
+                    <footer className="p-4 border-t border-base-300 grid grid-cols-2 gap-2 bg-transparent">
                         <button onClick={handleReset} disabled={isDownloading || images.length === 0} className="btn btn-sm btn-ghost rounded-none font-black text-[9px] tracking-widest text-error/40 hover:text-error">CLEAR ALL</button>
-                        <button onClick={handleDownload} disabled={isDownloading || images.length === 0} className="btn btn-sm btn-primary rounded-none font-black text-[9px] tracking-widest shadow-lg">
+                        <button onClick={handleDownload} disabled={isDownloading || images.length === 0} className="btn btn-sm btn-primary rounded-none font-black text-[9px] tracking-widest">
                            {isDownloading ? 'PROCESSING...' : 'DOWNLOAD ZIP'}
                         </button>
                     </footer>
                 </aside>
 
-                <main className="flex-grow bg-base-100 overflow-y-auto overflow-x-hidden scroll-smooth custom-scrollbar flex flex-col">
-                    <section className="p-10 border-b border-base-300 bg-base-200/20">
+                <main className="flex-grow bg-transparent overflow-y-auto overflow-x-hidden scroll-smooth custom-scrollbar flex flex-col">
+                    <section className="p-10 border-b border-base-300 bg-transparent">
                         <div className="max-w-screen-2xl mx-auto flex flex-col gap-1">
                             <div className="flex flex-col md:flex-row md:items-stretch justify-between gap-6">
                                 <h1 className="text-2xl lg:text-3xl font-black tracking-tighter text-base-content leading-none flex items-center uppercase">Image Resizer<span className="text-primary">.</span></h1>
@@ -481,9 +481,9 @@ const ImageResizer: React.FC = () => {
                         </div>
                     </section>
 
-                    <div className="flex-grow bg-base-200/20 relative flex flex-col">
+                    <div className="flex-grow bg-transparent relative flex flex-col">
                         {images.length > 0 ? (
-                            <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 gap-px bg-base-300 border-r border-base-300 overflow-y-auto custom-scrollbar">
+                            <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 gap-px bg-transparent border-r border-base-300 overflow-y-auto custom-scrollbar">
                                {images.map(img => (
                                    <ImageCard 
                                         key={img.id}

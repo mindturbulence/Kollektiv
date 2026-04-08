@@ -1,9 +1,9 @@
 
 import React from 'react';
 
-const LoadingSpinner: React.FC<{ size?: string | number }> = ({ size = 64 }) => {
+const LoadingSpinner: React.FC<{ size?: string | number, className?: string }> = ({ size = 64, className = "" }) => {
   return (
-    <div className="flex justify-center items-center text-primary" aria-label="Loading content...">
+    <div className={`flex justify-center items-center text-primary ${className}`} aria-label="Loading content...">
       <svg 
         style={{ width: size, height: size }}
         version="1.1" 

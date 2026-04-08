@@ -322,8 +322,8 @@ export const NestedCategoryManager: React.FC<NestedCategoryManagerProps> = ({
   const rootCategories = categories.filter(c => !c.parentId).sort((a, b) => a.order - b.order);
 
   return (
-    <div className="flex flex-col h-full bg-base-100 overflow-hidden">
-        <header className="p-6 border-b border-base-300 bg-base-200/10 flex flex-col gap-6 flex-shrink-0">
+    <div className="flex flex-col h-full bg-transparent overflow-hidden">
+        <header className="p-6 border-b border-base-300 bg-transparent flex flex-col gap-6 flex-shrink-0">
             <div className="flex justify-between items-center">
                 <h3 className="text-xs font-black uppercase tracking-[0.4em] text-primary">{title}</h3>
                 <div className="flex gap-2">
@@ -360,7 +360,7 @@ export const NestedCategoryManager: React.FC<NestedCategoryManagerProps> = ({
             </div>
         </header>
 
-        <div className="flex-grow overflow-y-auto custom-scrollbar bg-base-100">
+        <div className="flex-grow overflow-y-auto custom-scrollbar bg-transparent">
             {categories.length > 0 ? (
                 <div className="flex flex-col pb-20">
                     {rootCategories.map(cat => (
@@ -390,8 +390,8 @@ export const NestedCategoryManager: React.FC<NestedCategoryManagerProps> = ({
 
         {isAddModalOpen && (
             <div className="fixed inset-0 bg-black/80 z-[60] flex items-center justify-center p-4 animate-fade-in" onClick={() => setIsAddModalOpen(false)}>
-                <div className="bg-base-100 rounded-none border border-base-300 shadow-2xl w-full max-w-lg overflow-hidden" onClick={e => e.stopPropagation()}>
-                    <header className="p-8 border-b border-base-300 bg-base-200/20">
+                <div className="bg-transparent rounded-none border border-base-300 w-full max-w-lg overflow-hidden" onClick={e => e.stopPropagation()}>
+                    <header className="p-8 border-b border-base-300 bg-transparent">
                         <h3 className="text-4xl font-black tracking-tighter text-base-content uppercase leading-none">New Folder</h3>
                         {addParentId && <p className="text-[10px] font-black uppercase tracking-widest text-primary mt-2">Nesting under: {categories.find(c => c.id === addParentId)?.name}</p>}
                     </header>
@@ -401,7 +401,7 @@ export const NestedCategoryManager: React.FC<NestedCategoryManagerProps> = ({
                             <input type="text" value={addName} onChange={e => setAddName((e.currentTarget as any).value)} className="input input-bordered rounded-none font-bold tracking-tight" autoFocus onKeyDown={e => e.key === 'Enter' && handleConfirmAdd()} />
                         </div>
                     </div>
-                    <footer className="p-4 border-t border-base-300 flex justify-end gap-2 bg-base-200/10">
+                    <footer className="p-4 border-t border-base-300 flex justify-end gap-2 bg-transparent">
                         <button onClick={() => setIsAddModalOpen(false)} className="btn btn-ghost rounded-none uppercase font-black text-[10px] tracking-widest px-8">Abort</button>
                         <button onClick={handleConfirmAdd} disabled={!addName.trim()} className="btn btn-primary rounded-none uppercase font-black text-[10px] tracking-widest px-8 shadow-lg">Create</button>
                     </footer>

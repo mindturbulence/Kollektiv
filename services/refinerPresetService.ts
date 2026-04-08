@@ -10,6 +10,7 @@ export interface RefinerPreset {
   mediaMode: 'image' | 'video' | 'audio';
   promptLength: string;
   constantModifier?: string;
+  refineText?: string;
 }
 
 interface PresetsManifest {

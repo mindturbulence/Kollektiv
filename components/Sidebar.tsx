@@ -7,7 +7,7 @@ import {
   HomeIcon, Cog6ToothIcon, SparklesIcon,
   PromptIcon, PhotoIcon,
   PaletteIcon, LayoutDashboardIcon, CropIcon, FilmIcon, ViewColumnsIcon,
-  BookOpenIcon, UsersIcon, ThumbTackIcon, InformationCircleIcon
+  BookOpenIcon, UsersIcon, ThumbTackIcon, InformationCircleIcon, CloseIcon
 } from './icons';
 import LlmStatusSwitcher from './LlmStatusSwitcher';
 
@@ -17,6 +17,7 @@ interface SidebarProps {
   isSidebarOpen: boolean;
   isPinned: boolean;
   setIsPinned: (isPinned: boolean | ((isPinned: boolean) => boolean)) => void;
+  onClose: () => void;
   onAboutClick: () => void;
 }
 
@@ -137,7 +138,7 @@ const NavItem: React.FC<{
               className={`flex items-center py-1.5 px-3 rounded-lg text-base font-medium transition-colors cursor-pointer relative z-10 ${
                 activeTab === id
                   ? 'text-primary-content font-bold'
-                  : 'text-base-content/70 hover:bg-base-200'
+                  : 'text-base-content/70 hover:bg-base-200/30'
               }`}
               aria-current={activeTab === id ? 'page' : undefined}
             >
@@ -162,7 +163,7 @@ const Section: React.FC<{ title: string, children: React.ReactNode }> = ({ title
 );
 
 
-const Sidebar: React.FC<SidebarProps> = ({ activeTab, onNavigate, isSidebarOpen, isPinned, setIsPinned, onAboutClick }) => {
+const Sidebar: React.FC<SidebarProps> = ({ activeTab, onNavigate, isSidebarOpen, isPinned, setIsPinned, onClose, onAboutClick }) => {
     const { settings } = useSettings();
     const { features } = settings;
     const sidebarRef = useRef<HTMLElement>(null);
@@ -180,9 +181,9 @@ const Sidebar: React.FC<SidebarProps> = ({ activeTab, onNavigate, isSidebarOpen,
         if (isFirstRender.current) {
             isFirstRender.current = false;
             if (isSidebarOpen) {
-                gsap.set(sidebarRef.current, { marginLeft: 0, opacity: 1, visibility: 'visible' });
+                gsap.set(sidebarRef.current, { marginLeft: 0, width: 320, opacity: 1, visibility: 'visible' });
             } else {
-                gsap.set(sidebarRef.current, { marginLeft: -320, opacity: 0, visibility: 'hidden' });
+                gsap.set(sidebarRef.current, { marginLeft: -320, width: isPinned ? 0 : 320, opacity: 0, visibility: 'hidden' });
             }
             return;
         }
@@ -192,6 +193,7 @@ const Sidebar: React.FC<SidebarProps> = ({ activeTab, onNavigate, isSidebarOpen,
         if (isSidebarOpen) {
             gsap.to(sidebarRef.current, {
                 marginLeft: 0,
+                width: 320,
                 duration: 1.2,
                 ease: "expo.out",
                 visibility: 'visible',
@@ -200,6 +202,7 @@ const Sidebar: React.FC<SidebarProps> = ({ activeTab, onNavigate, isSidebarOpen,
         } else {
             gsap.to(sidebarRef.current, {
                 marginLeft: -320,
+                width: isPinned ? 0 : 320,
                 duration: 0.8,
                 ease: "expo.inOut",
                 opacity: 0,
@@ -210,7 +213,7 @@ const Sidebar: React.FC<SidebarProps> = ({ activeTab, onNavigate, isSidebarOpen,
                 }
             });
         }
-    }, [isSidebarOpen]);
+    }, [isSidebarOpen, isPinned]);
 
     useEffect(() => {
         const activeEl = navRefs.current[activeTab];
@@ -232,8 +235,8 @@ const Sidebar: React.FC<SidebarProps> = ({ activeTab, onNavigate, isSidebarOpen,
     }, [activeTab, isSidebarOpen, isPinned]);
 
   const sidebarClasses = [
-    "h-full w-80 bg-base-100 text-base-content z-[100] flex flex-col border-r border-base-300",
-    isPinned ? "relative" : "absolute top-0 left-0 shadow-2xl"
+    "h-full bg-transparent text-base-content z-[100] flex flex-col border-r border-base-300 overflow-hidden",
+    isPinned ? "relative" : "absolute top-0 left-0"
   ].join(" ");
 
   return (
@@ -243,26 +246,45 @@ const Sidebar: React.FC<SidebarProps> = ({ activeTab, onNavigate, isSidebarOpen,
       style={{ visibility: 'hidden' }}
       aria-label="Main Navigation"
     >
-      <div className="flex-shrink-0 flex items-center justify-between h-16 px-6">
+      {/* Technical Background Details */}
+      <div className="absolute top-0 right-0 w-32 h-32 bg-primary/5 blur-3xl rounded-full -mr-16 -mt-16 pointer-events-none"></div>
+      <div className="absolute bottom-0 left-0 w-24 h-24 bg-primary/5 blur-2xl rounded-full -ml-12 -mb-12 pointer-events-none"></div>
+      
+      <div className="flex-shrink-0 flex items-center justify-between h-16 px-6 relative z-10">
         <button onClick={() => onNavigate('dashboard')} className="flex items-center gap-3 group">
-          <h1 className="text-xl font-black tracking-tighter text-base-content uppercase flex items-center">
+          <h1 className="text-xl font-black tracking-tighter text-base-content uppercase flex items-center font-logo">
             <TimedScrambledText text="Kollektiv" intervalMs={300000} />
             <span className="text-primary italic animate-pulse drop-shadow-[0_0_10px_oklch(var(--p))] transition-all inline-block ml-0.5">.</span>
           </h1>
         </button>
-        <button
-          onClick={() => setIsPinned(p => !p)}
-          onMouseEnter={() => audioService.playHover()}
-          className="btn btn-ghost btn-circle btn-sm hidden lg:inline-flex"
-          title={isPinned ? 'Unpin Sidebar' : 'Pin Sidebar'}
-        >
-          <ThumbTackIcon className={`w-5 h-5 transition-all duration-300 ease-out ${isPinned ? 'text-primary -rotate-45' : 'text-base-content/20 rotate-0'}`} />
-        </button>
+        <div className="flex items-center gap-1">
+          <button
+            onClick={() => setIsPinned(p => !p)}
+            onMouseEnter={() => audioService.playHover()}
+            className="btn btn-ghost btn-circle btn-sm hidden lg:inline-flex"
+            title={isPinned ? 'Unpin Sidebar' : 'Pin Sidebar'}
+          >
+            <ThumbTackIcon className={`w-5 h-5 transition-all duration-300 ease-out ${isPinned ? 'text-primary -rotate-45' : 'text-base-content/20 rotate-0'}`} />
+          </button>
+          {!isPinned && (
+            <button
+              onClick={() => {
+                audioService.playClick();
+                onClose();
+              }}
+              onMouseEnter={() => audioService.playHover()}
+              className="btn btn-ghost btn-circle btn-sm"
+              aria-label="Close sidebar"
+            >
+              <CloseIcon className="w-5 h-5" />
+            </button>
+          )}
+        </div>
       </div>
 
-      <nav className="flex-grow px-4 py-4 overflow-y-auto relative scroll-smooth custom-scrollbar">
+      <nav className="flex-grow px-4 py-4 overflow-y-auto relative scroll-smooth custom-scrollbar flex flex-col">
         <div 
-            className="absolute bg-primary rounded-lg shadow-lg pointer-events-none transition-all duration-300 ease-[cubic-bezier(0.4,0,0.2,1)]"
+            className="absolute bg-primary rounded-lg pointer-events-none transition-all duration-300 ease-[cubic-bezier(0.4,0,0.2,1)]"
             style={pillStyle}
         />
 
@@ -298,23 +320,22 @@ const Sidebar: React.FC<SidebarProps> = ({ activeTab, onNavigate, isSidebarOpen,
             </Section>
         )}
 
+        <div className="mt-auto pt-4 border-t border-base-300/20">
+            <Section title="System">
+                <NavItem id="settings" label="Settings" icon={<Cog6ToothIcon className="w-5 h-5" />} activeTab={activeTab} onClick={onNavigate} registerRef={registerRef} />
+                <li>
+                    <a
+                      onClick={onAboutClick}
+                      onMouseEnter={() => audioService.playHover()}
+                      className="flex items-center p-2.5 rounded-lg text-base font-medium transition-colors cursor-pointer text-base-content/50 hover:bg-base-200/30"
+                    >
+                        <InformationCircleIcon className="w-5 h-5 mr-3" />
+                        <span className="uppercase text-[10px] font-black tracking-widest">About</span>
+                    </a>
+                </li>
+            </Section>
+        </div>
       </nav>
-      
-      <div className="flex-shrink-0 p-4 bg-base-200/20">
-         <ul className="menu menu-sm p-0 gap-1">
-            <NavItem id="settings" label="Settings" icon={<Cog6ToothIcon className="w-5 h-5" />} activeTab={activeTab} onClick={onNavigate} registerRef={registerRef} />
-            <li>
-                <a
-                  onClick={onAboutClick}
-                  onMouseEnter={() => audioService.playHover()}
-                  className="flex items-center p-2.5 rounded-lg text-base font-medium transition-colors cursor-pointer text-base-content/50 hover:bg-base-200"
-                >
-                    <InformationCircleIcon className="w-5 h-5 mr-3" />
-                    <span className="uppercase text-[10px] font-black tracking-widest">About</span>
-                </a>
-            </li>
-         </ul>
-      </div>
     </aside>
   );
 };

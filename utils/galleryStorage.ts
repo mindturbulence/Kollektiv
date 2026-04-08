@@ -36,6 +36,32 @@ const saveManifest = async (manifest: GalleryManifest) => {
     await fileSystemManager.saveFile(MANIFEST_NAME, new Blob([JSON.stringify(manifest, null, 2)], { type: 'application/json' }));
 };
 
+const getItemMetadataPath = (item: GalleryItem, categories: GalleryCategory[]) => {
+    const category = categories.find(c => c.id === item.categoryId);
+    const categoryName = category?.name;
+    const pathSegments = ['gallery'];
+    if (categoryName) pathSegments.push(categoryName);
+    return [...pathSegments, `${item.id}_metadata.json`].join('/');
+};
+
+const saveItemMetadata = async (item: GalleryItem, categories: GalleryCategory[]) => {
+    try {
+        const metadataPath = getItemMetadataPath(item, categories);
+        await fileSystemManager.saveFile(metadataPath, new Blob([JSON.stringify(item, null, 2)], { type: 'application/json' }));
+    } catch (e) {
+        console.error(`Failed to save metadata for item ${item.id}:`, e);
+    }
+};
+
+const deleteItemMetadata = async (item: GalleryItem, categories: GalleryCategory[]) => {
+    try {
+        const metadataPath = getItemMetadataPath(item, categories);
+        await fileSystemManager.deleteFile(metadataPath).catch(() => {});
+    } catch (e) {
+        console.error(`Failed to delete metadata for item ${item.id}:`, e);
+    }
+};
+
 export const loadGalleryItems = async (): Promise<GalleryItem[]> => {
     const manifest = await getManifest();
     return manifest.galleryItems
@@ -89,6 +115,10 @@ export const addItemToGallery = async (type: 'image' | 'video', urls: string[], 
 
     manifest.galleryItems.unshift(newItem);
     await saveManifest(manifest);
+    
+    // Save metadata JSON for recovery
+    await saveItemMetadata(newItem, manifest.categories);
+    
     return newItem;
 };
 
@@ -166,17 +196,35 @@ export const updateItemInGallery = async (id: string, updates: Partial<Omit<Gall
                 relocatedUrls.push(url);
             }
         }
+        // Relocate metadata JSON
+        const oldCategory = originalItem.categoryId ? manifest.categories.find(c => c.id === originalItem.categoryId) : null;
+        const oldCategoryName = oldCategory?.name || '';
+        const oldMetadataPath = ['gallery', oldCategoryName, `${originalItem.id}_metadata.json`].filter(Boolean).join('/');
+        const newMetadataPath = ['gallery', newCategoryName, `${originalItem.id}_metadata.json`].filter(Boolean).join('/');
+        
+        if (oldMetadataPath !== newMetadataPath) {
+            const metadataBlob = await fileSystemManager.getFileAsBlob(oldMetadataPath);
+            if (metadataBlob) {
+                await fileSystemManager.saveFile(newMetadataPath, metadataBlob);
+                await fileSystemManager.deleteFile(oldMetadataPath);
+            }
+        }
+
         finalUrls = relocatedUrls;
     }
 
-    manifest.galleryItems[itemIndex] = {
+    const updatedItem: GalleryItem = {
         ...originalItem,
         ...updates,
         urls: finalUrls,
         sources: finalSources,
     };
-
+    
+    manifest.galleryItems[itemIndex] = updatedItem;
     await saveManifest(manifest);
+    
+    // Always update/save metadata JSON
+    await saveItemMetadata(updatedItem, manifest.categories);
 };
 
 export const deleteItemFromGallery = async (id: string): Promise<void> => {
@@ -186,6 +234,8 @@ export const deleteItemFromGallery = async (id: string): Promise<void> => {
         for (const path of itemToDelete.urls) {
             await fileSystemManager.deleteFile(path);
         }
+        // Also delete metadata JSON
+        await deleteItemMetadata(itemToDelete, manifest.categories);
     }
     manifest.galleryItems = manifest.galleryItems.filter(item => item.id !== id);
     manifest.pinnedIds = manifest.pinnedIds.filter(pid => pid !== id);
@@ -240,6 +290,16 @@ export const updateCategory = async (id: string, updates: Partial<Omit<GalleryCa
                             newUrls.push(url);
                         }
                     }
+                    
+                    // Move metadata JSON
+                    const oldMetadataPath = `gallery/${oldCategory.name}/${item.id}_metadata.json`;
+                    const newMetadataPath = `gallery/${newName}/${item.id}_metadata.json`;
+                    const metadataBlob = await fileSystemManager.getFileAsBlob(oldMetadataPath);
+                    if (metadataBlob) {
+                        await fileSystemManager.saveFile(newMetadataPath, metadataBlob);
+                        await fileSystemManager.deleteFile(oldMetadataPath);
+                    }
+                    
                     item.urls = newUrls;
                 }
             }
@@ -279,6 +339,16 @@ export const deleteCategory = async (id: string): Promise<GalleryCategory[]> => 
                         newUrls.push(url);
                     }
                 }
+                
+                // Move metadata JSON to root gallery
+                const oldMetadataPath = `gallery/${categoryToDelete.name}/${item.id}_metadata.json`;
+                const newMetadataPath = `gallery/${item.id}_metadata.json`;
+                const metadataBlob = await fileSystemManager.getFileAsBlob(oldMetadataPath);
+                if (metadataBlob) {
+                    await fileSystemManager.saveFile(newMetadataPath, metadataBlob);
+                    await fileSystemManager.deleteFile(oldMetadataPath);
+                }
+                
                 item.urls = newUrls;
                 item.categoryId = undefined;
             }

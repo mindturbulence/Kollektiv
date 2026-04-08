@@ -33,8 +33,8 @@ export const PromptTxtImportModal: React.FC<PromptTxtImportModalProps> = ({ isOp
   
   const modalContent = (
     <div className="fixed inset-0 bg-black/80 z-[1000] flex items-center justify-center p-4 animate-fade-in" onClick={handleClose}>
-        <div className="bg-base-100 rounded-none border border-base-300 shadow-2xl w-full max-w-2xl mx-auto flex flex-col overflow-hidden" onClick={(e) => e.stopPropagation()}>
-            <header className="p-10 border-b border-base-300 bg-base-200/20 relative">
+        <div className="bg-transparent rounded-none border border-base-300 w-full max-w-2xl mx-auto flex flex-col overflow-hidden" onClick={(e) => e.stopPropagation()}>
+            <header className="p-10 border-b border-base-300 bg-transparent relative">
                 <button onClick={handleClose} className="absolute top-6 right-6 btn btn-ghost btn-sm btn-square opacity-40 hover:opacity-100">
                     <CloseIcon className="w-6 h-6" />
                 </button>
@@ -50,7 +50,7 @@ export const PromptTxtImportModal: React.FC<PromptTxtImportModalProps> = ({ isOp
                     onDragOver={(e) => { e.preventDefault(); setIsDragging(true); }} 
                     onDragLeave={() => setIsDragging(false)}
                     onClick={() => (fileInputRef.current as any)?.click()}
-                    className={`p-16 border-4 border-dashed rounded-none text-center cursor-pointer transition-all ${isDragging ? 'border-primary bg-primary/10' : 'border-base-300 hover:border-primary/50 bg-base-200/20'}`}
+                    className={`p-16 border-4 border-dashed rounded-none text-center cursor-pointer transition-all ${isDragging ? 'border-primary bg-primary/10' : 'border-base-300 hover:border-primary/50 bg-transparent'}`}
                 >
                     <input type="file" ref={fileInputRef} onChange={(e) => { const file = (e.currentTarget as any).files?.[0]; if (file?.type === 'application/zip') { setSelectedFile(file); setError(null); } else setError("Valid .zip required."); }} className="hidden" accept=".zip"/>
                     <UploadIcon className="w-12 h-12 mx-auto text-base-content/20 mb-4"/>
@@ -68,9 +68,9 @@ export const PromptTxtImportModal: React.FC<PromptTxtImportModalProps> = ({ isOp
                 {error && <p className="text-error font-bold text-xs uppercase tracking-widest">{error}</p>}
             </div>
 
-            <footer className="border-t border-base-300 flex bg-base-200/5 p-0 overflow-hidden flex-shrink-0">
+            <footer className="border-t border-base-300 flex bg-transparent p-0 overflow-hidden flex-shrink-0">
                 <button onClick={handleClose} className="btn flex-1 rounded-none uppercase font-black text-[10px] tracking-widest border-r border-base-300 transition-colors">Abort</button>
-                <button onClick={handleSubmit} disabled={!selectedFile} className="btn btn-primary flex-1 rounded-none uppercase font-black text-[10px] tracking-widest shadow-lg transition-colors">Execute Ingestion</button>
+                <button onClick={handleSubmit} disabled={!selectedFile} className="btn btn-primary flex-1 rounded-none uppercase font-black text-[10px] tracking-widest transition-colors">Execute Ingestion</button>
             </footer>
         </div>
     </div>
