@@ -42,7 +42,7 @@ const ManualClipModal: React.FC<{
 
     const modalContent = (
         <div className="fixed inset-0 bg-black/80 z-[200] flex items-center justify-center p-4 animate-fade-in" onClick={onClose}>
-            <div className="bg-transparent rounded-none border border-base-300 shadow-2xl w-full max-w-lg overflow-hidden" onClick={e => e.stopPropagation()}>
+            <div className="bg-base-100/40 backdrop-blur-xl rounded-none shadow-2xl w-full max-w-lg overflow-hidden" onClick={e => e.stopPropagation()}>
                 <header className="p-8 border-b border-base-300 bg-base-200/20 relative">
                     <button onClick={onClose} className="absolute top-6 right-6 btn btn-ghost btn-sm btn-square opacity-40 hover:opacity-100">
                         <CloseIcon className="w-6 h-6" />
@@ -119,7 +119,7 @@ const ClippedIdeaItem: React.FC<{
     const displayNum = String(index + 1).padStart(2, '0');
 
     return (
-        <div className="bg-transparent border border-base-300 p-4 rounded-none flex flex-col gap-3 transition-all hover:bg-primary/5 group">
+        <div className="bg-base-100/40 backdrop-blur-xl p-4 rounded-none flex flex-col gap-3 transition-all hover:bg-primary/5 group">
             <div className="flex justify-between items-start">
                 <div className="flex items-center gap-0 min-w-0">
                     <span className="text-3xl font-black text-base-content flex-shrink-0 font-mono leading-none tracking-tighter tabular-nums">
@@ -159,7 +159,7 @@ const ClippedIdeaItem: React.FC<{
                 </button>
                 <button
                     onClick={() => onInsert(idea.prompt)}
-                    className="btn btn-xs btn-ghost border border-base-300 flex-1 h-8 min-h-0 font-black text-[9px] tracking-widest uppercase hover:bg-base-300"
+                    className="btn btn-xs btn-ghost flex-1 h-8 min-h-0 font-black text-[9px] tracking-widest uppercase hover:bg-base-300"
                     title="Send to Crafter"
                 >
                     <RefreshIcon className="w-3 h-3 mr-1.5 opacity-40" />
@@ -167,7 +167,7 @@ const ClippedIdeaItem: React.FC<{
                 </button>
                  <button
                     onClick={() => onRefine(idea.prompt)}
-                    className="btn btn-xs btn-ghost border border-base-300 flex-1 h-8 min-h-0 font-black text-[9px] tracking-widest uppercase hover:bg-base-300"
+                    className="btn btn-xs btn-ghost flex-1 h-8 min-h-0 font-black text-[9px] tracking-widest uppercase hover:bg-base-300"
                     title="Send back to Refiner"
                 >
                     <SparklesIcon className="w-3 h-3 mr-1.5 opacity-40" />

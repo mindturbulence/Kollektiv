@@ -100,7 +100,7 @@ export const ImageManagementModal: React.FC<ImageManagementModalProps> = ({ isOp
         </header>
 
         <div className="p-10 flex-grow overflow-y-auto">
-          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-px bg-transparent border border-base-300 mb-8">
+          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-px bg-base-100/40 backdrop-blur-xl mb-8">
             {imageUrls.map((url, index) => (
               <div key={index} className="bg-transparent">
                   <ImagePreview url={url} onRemove={() => setImageUrls(prev => prev.filter((_, i) => i !== index))} />

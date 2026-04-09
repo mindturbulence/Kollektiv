@@ -1,25 +1,14 @@
 
 import React, { useMemo, useState, useEffect, useRef, useCallback } from 'react';
 import { useSettings } from '../contexts/SettingsContext';
-import { fileSystemManager } from '../utils/fileUtils';
 import { audioService } from '../services/audioService';
+import LlmStatusSwitcher from './LlmStatusSwitcher';
 
 interface FooterProps {
     onAboutClick: () => void;
 }
 
-const LedStatus: React.FC<{
-    label: string,
-    active: boolean,
-    color?: string
-}> = ({ label, active, color = 'bg-success' }) => (
-    <div className={`flex items-center gap-1.5 transition-all duration-700 ${active ? 'opacity-100' : 'opacity-10'}`}>
-        <span className={`w-1.5 h-1.5 rounded-full ${active ? `${color} shadow-[0_0_5px_rgba(var(--p),0.5)] animate-pulse` : 'bg-transparent'}`}></span>
-        <span className="text-[10px] font-sans font-black text-base-content tracking-tighter uppercase whitespace-nowrap">{label}</span>
-    </div>
-);
-
-const DigitalOscillator = ({ state = 'idle' }: { state: string }) => {
+const DigitalOscillator = ({ state = 'idle', theme = 'light' }: { state: string, theme?: 'light' | 'dark' }) => {
     const canvasRef = useRef<HTMLCanvasElement>(null);
     const animationRef = useRef<number>(0);
     const phaseRef = useRef<number>(0);
@@ -39,7 +28,7 @@ const DigitalOscillator = ({ state = 'idle' }: { state: string }) => {
 
             const style = getComputedStyle(document.documentElement);
             const primary = style.getPropertyValue('--p').trim();
-            const color = primary ? `oklch(${primary})` : '#641ae6';
+            const color = theme === 'dark' ? '#ffffff' : (primary ? `oklch(${primary})` : '#641ae6');
 
             phaseRef.current += 0.05;
             const p = phaseRef.current;
@@ -104,7 +93,7 @@ const DigitalOscillator = ({ state = 'idle' }: { state: string }) => {
     );
 };
 
-const Footer: React.FC<FooterProps> = ({ }) => {
+const Footer: React.FC<FooterProps> = ({ onAboutClick }) => {
     const { settings } = useSettings();
     const [isUplinkActive, setIsUplinkActive] = useState(false);
     const [playerState, setPlayerState] = useState<'idle' | 'syncing' | 'playing' | 'error'>('idle');
@@ -203,40 +192,42 @@ const Footer: React.FC<FooterProps> = ({ }) => {
                     </div>
 
                     <div className="ml-auto">
-                        <DigitalOscillator state={playerState} />
+                        <DigitalOscillator state={playerState} theme={settings.activeThemeMode} />
                     </div>
                 </div>
             </div>
 
-            <footer className="flex-shrink-0 px-0 h-12 bg-transparent z-10 flex flex-row items-center justify-between overflow-hidden select-none whitespace-nowrap relative">
+            <footer className="flex-shrink-0 px-0 h-12 bg-transparent z-[500] flex flex-row items-center justify-between select-none whitespace-nowrap relative">
                 {/* Background Technical Noise */}
                 <div className="absolute inset-0 pointer-events-none opacity-[0.03] bg-[url('https://www.transparenttextures.com/patterns/stardust.png')]"></div>
 
-                <div className="flex items-center h-full px-6 gap-6 bg-transparent relative z-10">
-                    <span className="text-[11px] font-black uppercase tracking-[0.2em] text-primary">INTEGRATIONS</span>
-                    <div className="relative flex items-center justify-center border-l border-base-300/30 pl-6 h-full py-2">
-                        <div className="flex flex-row gap- items-center">
-                            <LedStatus label="VAULT" active={fileSystemManager.isDirectorySelected()} />
-                            <LedStatus label={settings.activeLLM === 'ollama_cloud' ? 'OLLAMA' : settings.activeLLM.toUpperCase()} active={!!process.env.API_KEY || settings.activeLLM.includes('ollama')} />
-                            <LedStatus label="STREAM" active={playerState === 'playing'} color="bg-primary" />
-                            <LedStatus label="YOUTUBE" active={!!settings.youtube?.isConnected} color="bg-error" />
-                        </div>
+                <div className="flex items-center h-full px-6 gap-4 bg-transparent relative z-10">
+                    <span className="text-[11px] font-black uppercase tracking-[0.2em] text-primary">ENGINE</span>
+                    <div className="relative flex items-center justify-center border-l border-base-300/30 pl-4 h-full py-2 min-w-[200px]">
+                        <LlmStatusSwitcher />
                     </div>
                 </div>
 
                 <div className="flex flex-row items-center h-full">
                     <button
                         onClick={handleToggle}
-                        className={`relative flex items-center h-full px-10 transition-all duration-300 bg-transparent border-l border-base-300/30 outline-none ${stateColorClass}`}
+                        className={`relative flex items-center h-full px-4 transition-all duration-300 bg-transparent border-l border-base-300/30 outline-none ${stateColorClass}`}
                     >
                         <div className="flex flex-row items-center h-full relative z-10 pointer-events-none">
                             <div className={`flex flex-row items-center transition-all duration-500 ease-out ${isActive ? '-translate-x-2' : 'translate-x-0'}`}>
                                 <span className={`text-[10px] font-sans font-black uppercase tracking-tighter ${playerState === 'syncing' ? 'animate-pulse' : ''}`}>{statusLabel}</span>
                             </div>
                             <div className={`flex items-center transition-all duration-500 ease-in-out border-l border-base-300/30 ${isActive ? 'w-16 opacity-100 ml-4 pl-4' : 'w-0 opacity-0 pointer-events-none ml-0 pl-0'}`}>
-                                <DigitalOscillator state={playerState} />
+                                <DigitalOscillator state={playerState} theme={settings.activeThemeMode} />
                             </div>
                         </div>
+                    </button>
+                    <button
+                        onClick={onAboutClick}
+                        onMouseEnter={() => audioService.playHover()}
+                        className="h-full px-4 flex items-center border-l border-base-300/30 text-base-content/40 hover:text-base-content hover:bg-base-200/30 transition-all duration-300"
+                    >
+                        <span className="uppercase text-[10px] font-black tracking-widest">About</span>
                     </button>
                 </div>
             </footer>

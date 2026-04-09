@@ -54,12 +54,8 @@ const LlmStatusSwitcher: React.FC = () => {
     }
 
     return (
-        <div className="dropdown dropdown-bottom w-full group">
-            <div tabIndex={0} role="button" title={tooltipText} className="w-full flex items-center justify-between p-2 text-sm rounded-none bg-base-200/30 hover:bg-base-200 transition-all border border-primary/10 group-hover:border-primary/40 relative overflow-hidden" aria-haspopup="listbox">
-                {/* Technical Corner Accents */}
-                <div className="absolute top-0 left-0 w-1 h-1 border-t border-l border-primary/30"></div>
-                <div className="absolute bottom-0 right-0 w-1 h-1 border-b border-r border-primary/30"></div>
-                
+        <div className="dropdown dropdown-top w-full group">
+            <div tabIndex={0} role="button" title={tooltipText} className="w-full flex items-center justify-between p-2 text-sm rounded-none bg-transparent hover:bg-base-200/20 transition-all relative overflow-hidden" aria-haspopup="listbox">
                 <div className="flex items-center min-w-0 relative z-10">
                     <span className={`w-1.5 h-1.5 rounded-full mr-2.5 flex-shrink-0 ${statusColor} ${statusColor === 'bg-success' ? 'motion-safe:animate-pulse shadow-[0_0_5px_rgba(var(--p),0.5)]' : ''}`}></span>
                     <span className="font-black text-base-content/80 truncate uppercase text-[9px] tracking-[0.2em]">{displayText}</span>
@@ -67,7 +63,7 @@ const LlmStatusSwitcher: React.FC = () => {
                 <ChevronDownIcon className={`w-3 h-3 text-base-content/40 flex-shrink-0 transition-transform group-focus-within:rotate-180 relative z-10`} />
             </div>
 
-            <ul tabIndex={0} className="dropdown-content menu p-1 shadow-2xl bg-base-100/40 backdrop-blur-xl rounded-none w-full min-w-[240px] mt-2 z-[100] max-h-[70vh] overflow-y-auto custom-scrollbar flex flex-col flex-nowrap">
+            <ul tabIndex={0} className="dropdown-content menu p-1 shadow-2xl bg-base-100/40 backdrop-blur-xl rounded-none w-full min-w-[240px] mb-2 z-[1000] max-h-[70vh] overflow-y-auto custom-scrollbar flex flex-col flex-nowrap">
                 {/* Google Gemini Section */}
                 <li className="menu-title px-2 pt-2 pb-1 text-[8px] uppercase tracking-[0.3em] opacity-40"><span>Google Gemini</span></li>
                 {AVAILABLE_LLM_MODELS.map(model => (

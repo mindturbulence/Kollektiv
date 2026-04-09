@@ -70,7 +70,7 @@ const CategoryCard: React.FC<CategoryCardProps> = ({
         <div 
             ref={cardRef}
             onClick={() => cardRef.current && onClick(category, cardRef.current)}
-            className="category-card flex-shrink-0 w-[300px] md:w-[380px] lg:w-[450px] h-full relative group cursor-pointer select-none bg-transparent flex flex-col border-r border-base-300 first:border-l overflow-hidden will-change-transform"
+            className="category-card flex-shrink-0 w-[300px] md:w-[380px] lg:w-[450px] h-full relative group cursor-pointer select-none flex flex-col overflow-hidden will-change-transform"
         >
             <div ref={bgContainerRef} className="absolute inset-0 z-0 bg-transparent overflow-hidden">
                 {currentImage && (
@@ -299,10 +299,10 @@ export const GenericCheatsheetPage: React.FC<GenericCheatsheetPageProps> = ({
   }
 
   return (
-    <section className="h-full w-full min-w-0 bg-transparent flex flex-col overflow-hidden relative">
+    <section className="h-full w-full min-w-0 flex flex-col overflow-hidden relative">
       {!activeCategory ? (
         <>
-            <header className="flex-shrink-0 bg-transparent border-b border-base-300">
+            <header className="flex-shrink-0 bg-base-100/40 backdrop-blur-xl">
                 <div className="p-10">
                     <div className="flex flex-col md:flex-row md:items-end justify-between gap-6">
                         <div className="space-y-2">
@@ -314,7 +314,7 @@ export const GenericCheatsheetPage: React.FC<GenericCheatsheetPageProps> = ({
                                 {subtitle || "Systematic visual logic and aesthetic repositories."}
                             </p>
                         </div>
-                        <div className="flex bg-transparent border border-base-300 shadow-none">
+                        <div className="flex">
                             <div className="px-8 py-3 flex flex-col items-center justify-center">
                                 <span className="text-3xl font-black tracking-tighter leading-none">{data.length}</span>
                                 <span className="text-[8px] uppercase font-black text-base-content/30 tracking-[0.2em] mt-1">Folders</span>
@@ -381,8 +381,8 @@ export const GenericCheatsheetPage: React.FC<GenericCheatsheetPageProps> = ({
             <div className="flex-grow overflow-y-auto custom-scrollbar bg-transparent">
                 <div className={`mx-auto pt-16 pb-0 px-10 ${layout === 'article' ? 'max-w-4xl' : 'max-w-screen-2xl'}`}>
                     <div className={layout === 'grid' 
-                        ? "grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-px bg-transparent border border-base-300 shadow-none"
-                        : "flex flex-col gap-px bg-transparent border border-base-300 shadow-none"
+                        ? "grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-px bg-base-100/40 backdrop-blur-xl shadow-none"
+                        : "flex flex-col gap-px bg-base-100/40 backdrop-blur-xl shadow-none"
                     }>
                         {filteredItems.map((item, idx) => (
                             <div 

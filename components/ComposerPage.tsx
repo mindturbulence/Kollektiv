@@ -393,7 +393,7 @@ const ComposerPage: React.FC<ComposerPageProps> = ({ showGlobalFeedback }) => {
     return (
         <div className="h-full bg-transparent flex flex-col overflow-hidden">
             <div className="flex-grow flex flex-col lg:flex-row overflow-hidden">
-                <aside className="w-full lg:w-96 flex-shrink-0 bg-transparent border-r border-base-300 flex flex-col overflow-hidden">
+                <aside className="w-full lg:w-96 flex-shrink-0 bg-base-100/40 backdrop-blur-xl flex flex-col overflow-hidden">
                     <div className="p-4 border-b border-base-300 bg-transparent">
                         <div className="tabs tabs-boxed rounded-none bg-transparent gap-1 p-0">
                             <button onClick={() => setMode('grid')} className={`tab flex-1 rounded-none font-black text-[9px] uppercase tracking-widest ${mode === 'grid' ? 'tab-active' : ''}`}>Grid Builder</button>
@@ -440,7 +440,7 @@ const ComposerPage: React.FC<ComposerPageProps> = ({ showGlobalFeedback }) => {
 
                         <div className="space-y-4 pt-6 border-t border-base-300">
                             <div className="flex justify-between items-center"><span className="text-[10px] font-black uppercase text-base-content/40 tracking-widest">Background</span><input type="color" value={bgColor} onChange={e => setBgColor(e.target.value)} className="w-8 h-8 rounded-none border-none cursor-pointer" /></div>
-                            <button onClick={() => { if(mode==='grid') setGridItems(prev => prev.map(i => i ? {...i, posX: 0, posY: 0, scale: 1} : null)); else { if(frameItem) setFrameItem({...frameItem, posX:0, posY:0, scale:1}); setLayers(prev => prev.map(s => ({...s, x:0.5, y:0.5}))); } }} className="btn btn-xs btn-ghost border border-base-300 rounded-none w-full font-black text-[9px] tracking-widest uppercase mt-4">Reset Viewport</button>
+                            <button onClick={() => { if(mode==='grid') setGridItems(prev => prev.map(i => i ? {...i, posX: 0, posY: 0, scale: 1} : null)); else { if(frameItem) setFrameItem({...frameItem, posX:0, posY:0, scale:1}); setLayers(prev => prev.map(s => ({...s, x:0.5, y:0.5}))); } }} className="btn btn-xs btn-ghost rounded-none w-full font-black text-[9px] tracking-widest uppercase mt-4">Reset Viewport</button>
                         </div>
                     </div>
 
@@ -472,7 +472,7 @@ const ComposerPage: React.FC<ComposerPageProps> = ({ showGlobalFeedback }) => {
                                         {frameItem ? <ItemRenderer animateEntry item={frameItem} w={previewMetrics.width - (getFrameInsets(frameStyle, frameMatting, parseInt(width))[1]+getFrameInsets(frameStyle, frameMatting, parseInt(width))[3])*previewMetrics.scale} h={previewMetrics.height - (getFrameInsets(frameStyle, frameMatting, parseInt(width))[0]+getFrameInsets(frameStyle, frameMatting, parseInt(width))[2])*previewMetrics.scale} onRemove={() => setFrameItem(null)} onTransform={t => setFrameItem({...frameItem!, ...t})} />
                                         : <div className="w-full h-full border-2 border-dashed border-base-content/10 flex flex-col items-center justify-center gap-4 opacity-40 hover:opacity-100 transition-opacity">
                                             <div className="flex gap-4">
-                                                <button onClick={() => setIsPickerOpen(true)} className="btn btn-ghost border border-base-300 rounded-none font-black text-[10px] tracking-widest px-8">LIBRARY</button>
+                                                <button onClick={() => setIsPickerOpen(true)} className="btn btn-ghost rounded-none font-black text-[10px] tracking-widest px-8">LIBRARY</button>
                                                 <button onClick={() => (window as any).document.getElementById('frame-file-upload')?.click()} className="btn btn-primary rounded-none font-black text-[10px] tracking-widest px-8">UPLOAD</button>
                                             </div>
                                         </div>}
@@ -488,7 +488,7 @@ const ComposerPage: React.FC<ComposerPageProps> = ({ showGlobalFeedback }) => {
 
                 {/* RIGHT SIDEBAR: LAYERS (IMAGE FRAMER ONLY) */}
                 {mode === 'frame' && (
-                    <aside className="w-full lg:w-80 flex-shrink-0 bg-transparent border-l border-base-300 flex flex-col overflow-hidden animate-slide-in-from-right">
+                    <aside className="w-full lg:w-80 flex-shrink-0 bg-base-100/40 backdrop-blur-xl flex flex-col overflow-hidden animate-slide-in-from-right">
                         <header className="p-6 border-b border-base-300 bg-transparent flex justify-between items-center h-16"><h3 className="text-[10px] font-black uppercase tracking-[0.4em] text-primary">Layers</h3><div className="flex gap-1"><button onClick={() => { const n: Layer = { id: Math.random().toString(36).substr(2,9), type: 'text', content: 'New Text', x: 0.5, y: 0.5, fontSize: 80, color: '#000000', fontFamily: FONTS[0].family, bold: true, italic: false }; setLayers([...layers, n]); setActiveLayerId(n.id); }} className="btn btn-xs btn-ghost btn-square" title="Add Text Layer"><PlusIcon className="w-4 h-4"/></button><button onClick={() => layerImageInputRef.current?.click()} className="btn btn-xs btn-ghost btn-square" title="Add Image Layer"><UploadIcon className="w-4 h-4"/></button></div></header>
                         <div className="flex-grow overflow-y-auto custom-scrollbar p-6 space-y-4">
                             {layers.map((layer, i) => (

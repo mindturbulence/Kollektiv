@@ -158,10 +158,10 @@ const SetupNavItem: React.FC<{
             onClick();
           }}
           onMouseEnter={() => audioService.playHover()}
-          className={`flex items-center p-2.5 rounded-lg text-base font-medium transition-colors cursor-pointer relative z-10 ${
+          className={`flex items-center p-2.5 text-base font-medium transition-colors cursor-pointer relative z-10 ${
             isActive
-              ? 'text-primary-content font-bold'
-              : 'text-base-content/70 hover:bg-base-200'
+              ? 'text-primary'
+              : 'text-base-content/70 hover:text-base-content'
           }`}
         >
           <div className="mr-3">{icon}</div>
@@ -171,7 +171,7 @@ const SetupNavItem: React.FC<{
 );
 
 const SettingRow: React.FC<{ label: string, desc?: string, children: React.ReactNode }> = ({ label, desc, children }) => (
-    <div className="p-8 border-b border-base-300 last:border-b-0 flex flex-col md:flex-row md:items-center justify-between gap-6 group hover:bg-base-200/30 transition-all">
+    <div className="p-8 flex flex-col md:flex-row md:items-center justify-between gap-6 group hover:bg-base-200/30 transition-all">
         <div className="max-w-md min-w-0">
             <h4 className="text-sm font-black uppercase tracking-widest text-base-content/70 group-hover:text-primary transition-colors">{label}</h4>
             {desc && <p className="text-[10px] font-medium text-base-content/40 mt-1 uppercase leading-relaxed">{desc}</p>}
@@ -205,7 +205,6 @@ export const SetupPage: React.FC<SetupPageProps> = ({
   const [promptCategories, setPromptCategories] = useState<PromptCategory[]>([]);
 
   const navRefs = useRef<Record<string, HTMLAnchorElement | null>>({});
-  const [pillStyle, setPillStyle] = useState<React.CSSProperties>({ display: 'none' });
   const tokenClientRef = useRef<any>(null);
   const lastClientIdRef = useRef<string | null>(null);
   const authModeRef = useRef<'youtube' | 'google'>('google');
@@ -390,20 +389,6 @@ export const SetupPage: React.FC<SetupPageProps> = ({
     return categories;
   }, [features]);
 
-  useEffect(() => {
-      const activeKey = activeSettingsTab;
-      const activeEl = navRefs.current[activeKey];
-      const container = activeEl?.closest('nav');
-      if (activeEl && container) {
-          const rect = activeEl.getBoundingClientRect();
-          const containerRect = container.getBoundingClientRect();
-          setPillStyle({
-              top: rect.top - containerRect.top + container.scrollTop,
-              height: rect.height, width: rect.width, left: rect.left - containerRect.left, opacity: 1,
-          });
-      } else { setPillStyle({ opacity: 0 }); }
-  }, [activeSettingsTab]);
-
   useEffect(() => { setSettings(globalSettings); }, [globalSettings]);
 
   useEffect(() => {
@@ -449,6 +434,11 @@ export const SetupPage: React.FC<SetupPageProps> = ({
   };
 
   const handleIntegrityCheck = async () => {
+    if (!fileSystemManager.isDirectorySelected()) {
+        showGlobalFeedback("Please select a storage directory first.", true);
+        return;
+    }
+
     setIsWorking(true);
     setMaintenanceProgress(0);
     setMaintenanceMsg("INITIATING SCAN...");
@@ -564,10 +554,22 @@ export const SetupPage: React.FC<SetupPageProps> = ({
                  return (
                      <div className="flex flex-col h-full overflow-y-auto custom-scrollbar animate-fade-in">
                         <SettingRow label="Sync & Reorganize" desc="Verify manifests and move files to correct category folders.">
-                            <button onClick={handleIntegrityCheck} className="btn btn-sm btn-outline rounded-none font-black text-[10px] tracking-widest px-6">SYNC VAULT</button>
+                            <button 
+                                onClick={handleIntegrityCheck} 
+                                disabled={isWorking}
+                                className="btn btn-sm btn-outline rounded-none font-black text-[10px] tracking-widest px-6"
+                            >
+                                {isWorking ? 'WORKING...' : 'SYNC VAULT'}
+                            </button>
                         </SettingRow>
                         <SettingRow label="Full Archival Export" desc="Generate a complete ZIP archive of all local data and files.">
-                             <button onClick={() => createZipAndDownload([], 'kollektiv_backup.zip')} className="btn btn-sm btn-secondary rounded-none font-black text-[10px] tracking-widest px-6">EXPORT ALL</button>
+                             <button 
+                                onClick={() => createZipAndDownload([], 'kollektiv_backup.zip')} 
+                                disabled={isWorking}
+                                className="btn btn-sm btn-secondary rounded-none font-black text-[10px] tracking-widest px-6"
+                            >
+                                EXPORT ALL
+                            </button>
                         </SettingRow>
                         <SettingRow label="Registry Purge" desc="Irreversible deletion of all settings, prompts, and media.">
                             <button onClick={() => { setResetTarget('all'); setIsResetModalOpen(true); }} className="btn btn-sm btn-error rounded-none font-black text-[10px] tracking-widest px-6">WIPE STORAGE</button>
@@ -602,7 +604,7 @@ export const SetupPage: React.FC<SetupPageProps> = ({
                         />
                         <button 
                             onClick={() => handleSettingsChange('dashboardVideoUrl', defaultLLMSettings.dashboardVideoUrl)}
-                            className="btn btn-sm btn-ghost border border-base-300 join-item text-[10px] font-black"
+                            className="btn btn-sm btn-ghost join-item text-[10px] font-black"
                             title="Reset to Default"
                         >
                             <RefreshIcon className="w-3.5 h-3.5" />
@@ -620,7 +622,7 @@ export const SetupPage: React.FC<SetupPageProps> = ({
                         />
                         <button 
                             onClick={() => handleSettingsChange('musicYoutubeUrl', defaultLLMSettings.musicYoutubeUrl)}
-                            className="btn btn-sm btn-ghost border border-base-300 join-item text-[10px] font-black"
+                            className="btn btn-sm btn-ghost join-item text-[10px] font-black"
                             title="Reset to Default"
                         >
                             <RefreshIcon className="w-3.5 h-3.5" />
@@ -664,7 +666,7 @@ export const SetupPage: React.FC<SetupPageProps> = ({
                                     <div className="space-y-4">
                                         <div className="join w-full md:w-[620px]">
                                             <input type="text" value={settings.ollamaCloudBaseUrl} onChange={(e) => handleSettingsChange('ollamaCloudBaseUrl', (e.currentTarget as any).value)} className="input input-bordered input-sm join-item w-full font-mono text-xs" placeholder="https://api.ollama-host.com" />
-                                            <button onClick={() => handleTestOllamaConnection(true)} disabled={isTestingOllama} className="btn btn-sm btn-ghost border border-base-300 join-item text-[10px] font-black">{isTestingOllama ? '...' : 'PING'}</button>
+                                            <button onClick={() => handleTestOllamaConnection(true)} disabled={isTestingOllama} className="btn btn-sm btn-ghost join-item text-[10px] font-black">{isTestingOllama ? '...' : 'PING'}</button>
                                         </div>
                                         {ollamaTestResult && (
                                             <div className={`flex items-center gap-2 text-[9px] font-black uppercase tracking-widest px-3 py-1.5 border ${ollamaTestResult.success ? 'bg-success/5 border-success/30 text-success' : 'bg-error/5 border-error/30 text-error'} animate-fade-in md:w-[620px]`}>
@@ -702,7 +704,7 @@ export const SetupPage: React.FC<SetupPageProps> = ({
                                      <div className="space-y-4">
                                         <div className="join w-full md:w-[620px]">
                                             <input type="text" value={settings.ollamaBaseUrl} onChange={(e) => handleSettingsChange('ollamaBaseUrl', (e.currentTarget as any).value)} className="input input-bordered input-sm join-item w-full font-mono text-xs" />
-                                            <button onClick={() => handleTestOllamaConnection(false)} disabled={isTestingOllama} className="btn btn-sm btn-ghost border border-base-300 join-item text-[10px] font-black">PING</button>
+                                            <button onClick={() => handleTestOllamaConnection(false)} disabled={isTestingOllama} className="btn btn-sm btn-ghost join-item text-[10px] font-black">PING</button>
                                         </div>
                                         {ollamaTestResult && (
                                             <div className={`flex items-center gap-2 text-[9px] font-black uppercase tracking-widest px-3 py-1.5 border ${ollamaTestResult.success ? 'bg-success/5 border-success/30 text-success' : 'bg-error/5 border-error/30 text-error'} animate-fade-in md:w-[620px]`}>
@@ -739,8 +741,8 @@ export const SetupPage: React.FC<SetupPageProps> = ({
                         <SettingRow label="Cloud Identity Link" desc="Connect your account to enable Cloud AI and data sync features.">
                             {settings.googleIdentity?.isConnected ? (
                                 <div className="flex flex-col gap-4 w-full max-w-lg">
-                                    <div className="flex items-center gap-4 p-4 bg-transparent border border-base-300">
-                                        <img src={settings.googleIdentity.picture} className="w-12 h-12 rounded-full bg-black border border-white/10" alt="profile"/>
+                                    <div className="flex items-center gap-4 p-4">
+                                        <img src={settings.googleIdentity.picture} className="w-12 h-12 rounded-full bg-black" alt="profile"/>
                                         <div className="min-w-0">
                                             <p className="text-sm font-black uppercase truncate">{settings.googleIdentity.name}</p>
                                             <p className="text-[10px] font-mono opacity-40 truncate">{settings.googleIdentity.email}</p>
@@ -771,7 +773,7 @@ export const SetupPage: React.FC<SetupPageProps> = ({
                         <SettingRow label="Channel Integration" desc="Connect to your YouTube account for direct artifact publishing.">
                             {settings.youtube?.isConnected ? (
                                 <div className="flex flex-col gap-4 w-full max-w-lg">
-                                    <div className="flex items-center gap-4 p-4 bg-transparent border border-base-300">
+                                    <div className="flex items-center gap-4 p-4">
                                         <img src={settings.youtube.thumbnailUrl} className="w-12 h-12 rounded-none bg-black" alt="channel"/>
                                         <div className="min-w-0">
                                             <p className="text-sm font-black uppercase truncate">{settings.youtube.channelName}</p>
@@ -880,15 +882,14 @@ export const SetupPage: React.FC<SetupPageProps> = ({
     
   return (
     <>
-    <section className="flex flex-row bg-transparent h-full overflow-hidden relative">
+    <section className="flex flex-row h-full overflow-hidden relative">
         {isWorking && (
             <MaintenanceOverlay progress={maintenanceProgress} message={maintenanceMsg} />
         )}
 
-        <aside className="w-80 flex-shrink-0 bg-transparent border-r border-base-300 flex flex-col">
-            <h1 className="h-16 flex items-center px-6 border-b border-base-300 text-[10px] font-black uppercase tracking-[0.4em] text-base-content/30">System Hub</h1>
+        <aside className="w-80 flex-shrink-0 bg-base-100/40 backdrop-blur-xl flex flex-col">
+            <h1 className="h-16 flex items-center px-6 text-[10px] font-black uppercase tracking-[0.4em] text-base-content/30">System Hub</h1>
             <nav className="flex-grow px-4 py-6 overflow-y-auto custom-scrollbar relative">
-                <div className="absolute bg-primary rounded-lg shadow-lg pointer-events-none transition-all duration-300" style={pillStyle} />
                 <ul className="menu menu-sm p-0 gap-1 relative z-10">
                    {mainCategories.map(mainCat => (
                        <SetupNavItem 
@@ -901,23 +902,23 @@ export const SetupPage: React.FC<SetupPageProps> = ({
             </nav>
         </aside>
 
-        <main className="flex-grow flex flex-col overflow-hidden bg-transparent">
-            <section className="p-10 border-b border-base-300 bg-transparent flex-shrink-0">
+        <main className="flex-grow flex flex-col overflow-hidden">
+            <section className="p-10 bg-base-100/40 backdrop-blur-xl flex-shrink-0">
                 <h1 className="text-2xl lg:text-3xl font-black tracking-tighter uppercase leading-none">{mainCategories.find(c => c.id === activeSettingsTab)?.label}<span className="text-primary">.</span></h1>
                 <p className="text-[11px] font-bold text-base-content/30 uppercase tracking-[0.3em] mt-1">{currentSubTab?.description}</p>
             </section>
             {currentSubTabs.length > 0 && (
-                <div className="flex-shrink-0 bg-transparent border-b border-base-300 px-6 py-2 overflow-x-auto no-scrollbar">
-                    <div className="tabs tabs-bordered">
+                <div className="flex-shrink-0 bg-base-100/40 backdrop-blur-xl px-6 py-2 overflow-x-auto no-scrollbar">
+                    <div className="tabs">
                         {currentSubTabs.map(tab => (
-                            <button key={tab.id} onClick={() => setActiveSubTab(tab.id)} className={`tab h-10 px-4 font-black uppercase text-[9px] tracking-widest ${activeSubTab === tab.id ? 'tab-active text-primary border-primary' : 'text-base-content/30'}`}>{tab.label}</button>
+                            <button key={tab.id} onClick={() => setActiveSubTab(tab.id)} className={`tab h-10 px-4 font-black uppercase text-[9px] tracking-widest ${activeSubTab === tab.id ? 'tab-active text-primary' : 'text-base-content/30'}`}>{tab.label}</button>
                         ))}
                     </div>
                 </div>
             )}
-            <div className="flex-grow overflow-hidden bg-transparent">{renderActiveTabContent()}</div>
-            <footer className="border-t border-base-300 flex flex-row bg-transparent p-0 overflow-hidden flex-shrink-0">
-                <button onClick={handleCancel} className="btn flex-1 rounded-none uppercase font-black text-[10px] tracking-widest hover:bg-transparent border-r border-base-300">Abort</button>
+            <div className="flex-grow overflow-hidden bg-base-100/40 backdrop-blur-xl">{renderActiveTabContent()}</div>
+            <footer className="flex flex-row p-0 overflow-hidden flex-shrink-0">
+                <button onClick={handleCancel} className="btn flex-1 rounded-none uppercase font-black text-[10px] tracking-widest">Abort</button>
                 <button onClick={saveSettings} className="btn btn-primary flex-1 rounded-none uppercase font-black text-[10px] tracking-widest shadow-lg">Confirm</button>
             </footer>
         </main>

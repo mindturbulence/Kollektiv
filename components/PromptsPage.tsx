@@ -76,20 +76,20 @@ const PropertyCard: React.FC<{
 }> = ({ label, value, onClear, onClick, active }) => (
     <div 
         onClick={onClick}
-        className={`group relative p-3 border transition-all duration-300 cursor-pointer select-none flex flex-col justify-center min-h-[4.5rem] animate-fade-in ${active ? 'bg-primary border-primary' : 'bg-transparent border-base-300 hover:border-primary/50'}`}
+        className={`group relative p-3 transition-all duration-300 cursor-pointer select-none flex flex-col justify-center min-h-[4.5rem] animate-fade-in ${active ? 'text-primary' : 'text-base-content/80 hover:text-primary'}`}
     >
         <div className="flex items-center justify-between gap-2 mb-1.5">
-            <span className={`text-[10px] font-black uppercase tracking-widest ${active ? 'text-primary-content/60' : 'text-base-content/30'}`}>{label}</span>
+            <span className={`text-[10px] font-black uppercase tracking-widest ${active ? 'text-primary' : 'text-base-content/30'}`}>{label}</span>
             {value && (
                 <button 
                     onClick={(e) => { e.stopPropagation(); onClear(); }} 
-                    className={`btn btn-ghost btn-xs btn-square h-5 w-5 min-h-0 ${active ? 'text-primary-content/40 hover:text-primary-content' : 'text-base-content/20 hover:text-error'}`}
+                    className={`btn btn-ghost btn-xs btn-square h-5 w-5 min-h-0 ${active ? 'text-primary' : 'text-base-content/20 hover:text-error'}`}
                 >
                     ✕
                 </button>
             )}
         </div>
-        <span className={`text-sm font-bold leading-tight break-words first-letter:uppercase ${active ? 'text-primary-content' : 'text-base-content/80'}`}>
+        <span className={`text-sm font-bold leading-tight break-words first-letter:uppercase ${active ? 'text-primary' : 'text-base-content/80'}`}>
             {value || 'Default'}
         </span>
     </div>
@@ -110,7 +110,7 @@ const ReferenceSlot: React.FC<{
         }
     };
     return (
-        <div className="aspect-square bg-transparent relative group overflow-hidden border border-base-300 w-full h-full">
+        <div className="aspect-square bg-base-100/40 backdrop-blur-xl relative group overflow-hidden w-full h-full">
             {url ? (
                 <>
                     <img src={url} className="w-full h-full object-cover" alt={`Ref ${index}`} />
@@ -569,9 +569,9 @@ const PromptsPage: React.FC<PromptsPageProps> = ({
                     <div className="form-control">
                         <label className="text-[10px] font-black uppercase tracking-widest text-base-content/40 mb-2">Media Output</label>
                         <div className="join w-full">
-                            <button onClick={() => setMediaMode('image')} className={`join-item btn btn-xs flex-1 rounded-none font-black text-[9px] ${mediaMode === 'image' ? 'btn-primary' : 'btn-ghost border border-base-300'}`}>IMAGE</button>
-                            <button onClick={() => setMediaMode('video')} className={`join-item btn btn-xs flex-1 rounded-none font-black text-[9px] ${mediaMode === 'video' ? 'btn-primary' : 'btn-ghost border border-base-300'}`}>VIDEO</button>
-                            <button onClick={() => setMediaMode('audio')} className={`join-item btn btn-xs flex-1 rounded-none font-black text-[9px] ${mediaMode === 'audio' ? 'btn-primary' : 'btn-ghost border border-base-300'}`}>AUDIO</button>
+                            <button onClick={() => setMediaMode('image')} className={`join-item btn btn-xs flex-1 rounded-none font-black text-[9px] ${mediaMode === 'image' ? 'btn-primary' : 'btn-ghost'}`}>IMAGE</button>
+                            <button onClick={() => setMediaMode('video')} className={`join-item btn btn-xs flex-1 rounded-none font-black text-[9px] ${mediaMode === 'video' ? 'btn-primary' : 'btn-ghost'}`}>VIDEO</button>
+                            <button onClick={() => setMediaMode('audio')} className={`join-item btn btn-xs flex-1 rounded-none font-black text-[9px] ${mediaMode === 'audio' ? 'btn-primary' : 'btn-ghost'}`}>AUDIO</button>
                         </div>
                     </div>
                     <div className="grid grid-cols-2 gap-4">
@@ -651,7 +651,7 @@ const PromptsPage: React.FC<PromptsPageProps> = ({
                           />
                       </div>
 
-                      <div className="pt-4 border-t border-base-300">
+                      <div className="pt-4">
                           <label className="text-[10px] font-black uppercase text-primary tracking-[0.3em] mb-4 block">Persona</label>
                           <div className="grid grid-cols-1 gap-4">
                               <div className="form-control">
@@ -1076,10 +1076,10 @@ const PromptsPage: React.FC<PromptsPageProps> = ({
         )}
 
         {activeView === 'refine' && (
-          <div className="grid grid-cols-1 lg:grid-cols-12 overflow-hidden h-full p-4 gap-4 bg-transparent">
+          <div className="grid grid-cols-1 lg:grid-cols-12 overflow-hidden h-full p-4 gap-4">
             {/* Left Sidebar: Controls & Tabs */}
-            <aside className="lg:col-span-3 bg-transparent flex flex-col overflow-hidden corner-frame">
-              <div className="p-4 border-b border-base-300 bg-transparent h-16 flex items-center">
+            <aside className="lg:col-span-3 flex flex-col overflow-hidden bg-base-100/40 backdrop-blur-xl">
+              <div className="p-4 h-16 flex items-center">
                 <div className="tabs tabs-boxed rounded-none bg-transparent gap-1 p-0 flex flex-wrap w-full">
                   {tabs.map(tab => (
                     <button 
@@ -1095,17 +1095,17 @@ const PromptsPage: React.FC<PromptsPageProps> = ({
               <div className="flex-grow p-6 overflow-y-auto custom-scrollbar">
                 {renderRefineSubContent()}
               </div>
-              <footer className="h-14 border-t border-base-300 bg-transparent flex items-stretch flex-shrink-0">
+              <footer className="h-14 flex items-stretch flex-shrink-0">
                 <button 
                   onClick={handleResetRefiner} 
-                  className="btn btn-ghost h-full rounded-none border-none border-r border-base-300 flex-1 font-black text-[10px] tracking-widest text-error/40 hover:text-error uppercase"
+                  className="btn btn-ghost h-full rounded-none border-none flex-1 font-black text-[10px] tracking-widest text-error/40 hover:text-error uppercase"
                 >
                   RESET
                 </button>
                 <button 
                   onClick={handleEnhance} 
                   disabled={isLoadingRefine || !refineText.trim()} 
-                  className="btn btn-ghost h-full rounded-none border-none border-r border-base-300 flex-1 font-black text-[10px] tracking-widest uppercase hover:bg-primary/10"
+                  className="btn btn-ghost h-full rounded-none border-none flex-1 font-black text-[10px] tracking-widest uppercase hover:bg-primary/10"
                 >
                   {isLoadingRefine ? '...' : 'IMPROVE'}
                 </button>
@@ -1122,13 +1122,13 @@ const PromptsPage: React.FC<PromptsPageProps> = ({
             </aside>
 
             {/* Center: Main Neural Output */}
-            <main className="lg:col-span-6 bg-transparent flex flex-col min-h-0 corner-frame">
-              <header className="p-6 border-b border-base-300 bg-transparent h-16 flex justify-between items-center">
+            <main className="lg:col-span-6 flex flex-col min-h-0 bg-base-100/40 backdrop-blur-xl">
+              <header className="p-6 h-16 flex justify-between items-center">
                 <h2 className="text-xs font-black uppercase tracking-[0.4em] text-primary flex items-center gap-3">
                   <div className="w-2 h-2 rounded-full bg-primary animate-pulse"></div> NEURAL OUTPUT
                 </h2>
               </header>
-              <div className="flex-grow overflow-y-auto custom-scrollbar bg-transparent flex flex-col">
+              <div className="flex-grow overflow-y-auto custom-scrollbar flex flex-col">
                 {isLoadingRefine ? (
                   <div className="flex-grow flex flex-col items-center justify-center text-center space-y-6">
                     <LoadingSpinner size={48} />
@@ -1141,7 +1141,7 @@ const PromptsPage: React.FC<PromptsPageProps> = ({
                     </div>
                   </div>
                 ) : resultsRefine ? (
-                  <div className="p-[1px] bg-transparent">
+                  <div className="p-[1px]">
                     {resultsRefine.suggestions.map((suggestion, index) => (
                       <SuggestionItem 
                         key={index} 
@@ -1154,7 +1154,7 @@ const PromptsPage: React.FC<PromptsPageProps> = ({
                   </div>
                 ) : directMediaResult ? (
                   <div className="p-8 space-y-4 animate-fade-in">
-                    <div className="relative group bg-black border border-base-300 aspect-video flex items-center justify-center overflow-hidden">
+                    <div className="relative group bg-black aspect-video flex items-center justify-center overflow-hidden">
                       {directMediaResult.type === 'video' ? (
                         <video src={directMediaResult.url} controls autoPlay loop className="w-full h-full object-contain" />
                       ) : (
@@ -1172,15 +1172,15 @@ const PromptsPage: React.FC<PromptsPageProps> = ({
             </main>
 
             {/* Right Sidebar: Active Modifiers */}
-            <aside className="lg:col-span-3 bg-transparent flex flex-col overflow-hidden corner-frame">
-              <header className="p-6 border-b border-base-300 bg-transparent h-16 flex items-center">
+            <aside className="lg:col-span-3 flex flex-col overflow-hidden bg-base-100/40 backdrop-blur-xl">
+              <header className="p-6 h-16 flex items-center">
                   <h3 className="text-xs font-black uppercase tracking-[0.4em] text-base-content/40">Active Construction</h3>
               </header>
               
               {/* Presets Management UI - Library Filter Look */}
-              <div className="h-14 border-b border-base-300 flex-shrink-0 bg-transparent flex items-stretch relative z-20">
+              <div className="h-14 flex-shrink-0 flex items-stretch relative z-20">
                   <div className="dropdown dropdown-bottom flex-grow h-full">
-                    <div className="relative h-full border-r border-base-300" tabIndex={0} role="button">
+                    <div className="relative h-full" tabIndex={0} role="button">
                         <input 
                           type="text"
                           className="w-full h-full bg-transparent border-none focus:outline-none focus:ring-0 pl-4 pr-8 font-black text-[10px] uppercase tracking-widest placeholder:text-base-content/10"
@@ -1224,7 +1224,7 @@ const PromptsPage: React.FC<PromptsPageProps> = ({
                     )}
                   </div>
                   <button 
-                      className="btn btn-ghost h-full rounded-none border-none border-r border-base-300 px-4 text-primary disabled:opacity-20 transition-all hover:bg-primary/10" 
+                      className="btn btn-ghost h-full rounded-none border-none px-4 text-primary disabled:opacity-20 transition-all" 
                       onClick={() => handleUsePreset()} 
                       disabled={!selectedPreset}
                       title="Apply Preset"
@@ -1232,7 +1232,7 @@ const PromptsPage: React.FC<PromptsPageProps> = ({
                       <CheckIcon className="w-4 h-4"/>
                   </button>
                   <button 
-                      className="btn btn-ghost h-full rounded-none border-none px-4 text-error/60 disabled:opacity-20 transition-all hover:bg-error/5" 
+                      className="btn btn-ghost h-full rounded-none border-none px-4 text-error/60 disabled:opacity-20 transition-all" 
                       onClick={handleDeletePresetClick} 
                       disabled={!selectedPreset}
                       title="Delete Preset"
@@ -1263,7 +1263,7 @@ const PromptsPage: React.FC<PromptsPageProps> = ({
                 )}
               </div>
 
-              <footer className="h-14 border-t border-base-300 bg-transparent flex items-stretch flex-shrink-0">
+              <footer className="h-14 flex items-stretch flex-shrink-0">
                 <button 
                     onClick={handleSavePresetClick} 
                     disabled={activeConstructionItems.length === 0}
@@ -1289,9 +1289,9 @@ const PromptsPage: React.FC<PromptsPageProps> = ({
 
       {/* Save Preset Modal */}
       {isSavePresetModalOpen && (
-          <div className="fixed inset-0 bg-black/80 z-50 flex items-center justify-center p-4 animate-fade-in" onClick={() => setIsSavePresetModalOpen(false)}>
-              <div className="bg-transparent rounded-none border border-base-300 w-full max-w-lg overflow-hidden" onClick={(e) => e.stopPropagation()}>
-                  <header className="p-8 border-b border-base-300 bg-transparent">
+          <div className="fixed inset-0 bg-black/40 backdrop-blur-xl z-50 flex items-center justify-center p-4 animate-fade-in" onClick={() => setIsSavePresetModalOpen(false)}>
+              <div className="bg-base-100/40 w-full max-w-lg overflow-hidden" onClick={(e) => e.stopPropagation()}>
+                  <header className="p-8">
                       <h3 className="text-2xl font-black tracking-tighter text-base-content leading-none uppercase">Save Presets<span className="text-primary">.</span></h3>
                   </header>
                   <div className="p-8">
@@ -1305,7 +1305,7 @@ const PromptsPage: React.FC<PromptsPageProps> = ({
                           onKeyDown={(e) => e.key === 'Enter' && handleConfirmSavePreset()}
                       />
                   </div>
-                  <div className="p-4 border-t border-base-300 flex justify-end gap-2 bg-transparent">
+                  <div className="p-4 flex justify-end gap-2">
                         <button onClick={() => setIsSavePresetModalOpen(false)} className="btn btn-ghost rounded-none uppercase font-black text-[10px] tracking-widest px-8">Cancel</button>
                         <button onClick={handleConfirmSavePreset} disabled={isSavingPreset || !newPresetName.trim()} className="btn btn-primary rounded-none uppercase font-black text-[10px] tracking-widest px-8">
                           {isSavingPreset ? "Saving..." : "Confirm"}

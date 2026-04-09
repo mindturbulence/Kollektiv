@@ -403,9 +403,9 @@ const ItemDetailView: React.FC<ItemDetailViewProps> = ({ items, currentIndex, is
   const isPublishable = item.type === 'video' && !!settings.youtube?.isConnected;
 
   return (
-    <div ref={overlayRef} className="absolute inset-0 z-40 bg-black/95 backdrop-blur-sm flex items-center justify-center p-4 lg:p-8 overflow-hidden" onClick={handleClose}>
-        <div ref={modalRef} className="w-full h-full bg-transparent rounded-2xl border border-base-300 flex flex-col lg:flex-row overflow-hidden relative" onClick={e => e.stopPropagation()}>
-            <main ref={leftPanelRef} className="flex-1 bg-black flex flex-col overflow-hidden relative group">
+    <div ref={overlayRef} className="absolute inset-0 z-40 bg-black/40 backdrop-blur-xl flex items-center justify-center p-4 lg:p-8 overflow-hidden" onClick={handleClose}>
+        <div ref={modalRef} className="w-full h-full bg-base-100/40 flex flex-col lg:flex-row overflow-hidden relative" onClick={e => e.stopPropagation()}>
+            <main ref={leftPanelRef} className="flex-1 flex flex-col overflow-hidden relative group">
                 <div className="flex-grow relative flex items-center justify-center overflow-hidden">
                     <TransitionalMedia url={isEditing ? editableUrls[activeImageIndex] : item.urls[activeImageIndex]} type={item.type} title={item.title} onClick={() => setIsViewerOpen(true)} direction={navDirection} />
                     
@@ -473,8 +473,8 @@ const ItemDetailView: React.FC<ItemDetailViewProps> = ({ items, currentIndex, is
                 </div>
             </main>
 
-            <aside ref={rightPanelRef} className="w-full lg:w-96 bg-transparent border-l border-base-300 flex flex-col overflow-hidden">
-                <header ref={headerRef} className="flex-shrink-0 h-16 px-6 border-b border-base-300 flex items-center justify-between bg-transparent">
+            <aside ref={rightPanelRef} className="w-full lg:w-96 flex flex-col overflow-hidden">
+                <header ref={headerRef} className="flex-shrink-0 h-16 px-6 flex items-center justify-between">
                     <div className="flex items-center gap-3">
                         <button onClick={() => onTogglePin(item.id)} className={`btn btn-sm btn-ghost btn-square rounded-none ${isPinned ? 'text-primary' : 'opacity-20'}`}>
                             <ThumbTackIcon className="w-5 h-5" />
@@ -496,7 +496,7 @@ const ItemDetailView: React.FC<ItemDetailViewProps> = ({ items, currentIndex, is
                                 <AutocompleteSelect value={categoryId} onChange={setCategoryId} options={categoryOptions} />
                             </InfoRow>
                             <InfoRow label="Access Policy">
-                                <label className="label cursor-pointer justify-start gap-4 p-4 bg-transparent border border-base-300 rounded-none hover:bg-primary/10 transition-colors">
+                                <label className="label cursor-pointer justify-start gap-4 p-4 hover:bg-primary/10 transition-colors">
                                     <input 
                                         type="checkbox" 
                                         checked={isNsfw} 
@@ -507,9 +507,9 @@ const ItemDetailView: React.FC<ItemDetailViewProps> = ({ items, currentIndex, is
                                 </label>
                             </InfoRow>
                             <InfoRow label="Neural Tags">
-                                <div className="flex flex-wrap items-center gap-2 p-3 bg-transparent border border-base-300 rounded-none min-h-[52px]">
+                                <div className="flex flex-wrap items-center gap-2 p-3 bg-base-100/40 backdrop-blur-xl rounded-none min-h-[52px]">
                                     {tags.map(tag => (
-                                        <div key={tag} className="flex items-center gap-2 bg-transparent border border-base-300 text-[10px] font-black uppercase tracking-widest px-2.5 py-1.5">
+                                        <div key={tag} className="flex items-center gap-2 bg-base-100/40 backdrop-blur-xl text-[10px] font-black uppercase tracking-widest px-2.5 py-1.5">
                                             <span>{tag}</span>
                                             <button type="button" onClick={() => setTags(tags.filter(t => t !== tag))} className="text-error hover:text-error-content transition-colors">&times;</button>
                                         </div>
@@ -542,7 +542,7 @@ const ItemDetailView: React.FC<ItemDetailViewProps> = ({ items, currentIndex, is
                                 </div>
                             </InfoRow>
                             <InfoRow label="Prompt">
-                                <div className="p-4 bg-transparent border border-base-300 italic text-sm leading-relaxed text-base-content/70 group/prompt">
+                                <div className="p-4 bg-base-100/40 backdrop-blur-xl italic text-sm leading-relaxed text-base-content/70 group/prompt">
                                     "{item.prompt || 'None.'}"
                                     <button 
                                         onClick={() => navigator.clipboard.writeText(item.prompt || '')}
@@ -554,7 +554,7 @@ const ItemDetailView: React.FC<ItemDetailViewProps> = ({ items, currentIndex, is
                                 <InfoRow label="Neural Tags">
                                     <div className="flex flex-wrap gap-2 pt-2">
                                         {tags.map(tag => (
-                                            <span key={tag} className="text-[9px] font-black uppercase tracking-widest bg-transparent border border-base-300 px-3 py-1.5 text-base-content/40">{tag}</span>
+                                            <span key={tag} className="text-[9px] font-black uppercase tracking-widest bg-base-100/40 backdrop-blur-xl px-3 py-1.5 text-base-content/40">{tag}</span>
                                         ))}
                                     </div>
                                 </InfoRow>

@@ -159,8 +159,11 @@ const AddItemModal: React.FC<AddItemModalProps> = ({ isOpen, onClose, onAddItem,
   const hasFiles = previews.length > 0;
 
 const modalContent = (
-    <div className="fixed inset-0 bg-black/40 backdrop-blur-xl z-[1000] flex items-center justify-center p-4 animate-fade-in" onClick={handleClose}>
+    <div className="fixed inset-0 bg-black/40 backdrop-blur-xl z-[1000] flex items-center justify-center p-4 animate-fade-in" onClick={onClose}>
       <div 
+        onDragOver={(e) => { e.preventDefault(); setIsDragging(true); }}
+        onDragLeave={() => setIsDragging(false)}
+        onDrop={handleDrop}
         className={`bg-base-100/40 rounded-none w-full max-w-5xl mx-auto flex flex-col max-h-[95vh] overflow-hidden transition-all duration-300 ${isDragging ? 'ring-2 ring-primary' : ''}`} 
         onClick={e => e.stopPropagation()}
       >
@@ -186,9 +189,9 @@ const modalContent = (
                         <p className="text-[9px] font-bold text-base-content/20 mt-4 uppercase">Batch processing enabled for image sequences</p>
                     </div>
                 ) : (
-                    <div className="grid grid-cols-2 sm:grid-cols-4 md:grid-cols-6 lg:grid-cols-8 gap-px bg-transparent border border-base-300">
+                    <div className="grid grid-cols-2 sm:grid-cols-4 md:grid-cols-6 lg:grid-cols-8 gap-px bg-base-100/40 backdrop-blur-xl">
                         {previews.map((p, index) => (
-                            <div key={`${p.name}-${index}`} className="relative aspect-square bg-transparent group overflow-hidden border border-base-300/50">
+                            <div key={`${p.name}-${index}`} className="relative aspect-square bg-base-100/40 backdrop-blur-xl group overflow-hidden">
                                 {p.type === 'image' ? (
                                     <img src={p.url} alt={p.name} className="w-full h-full object-cover grayscale opacity-80 group-hover:grayscale-0 group-hover:opacity-100 transition-all duration-500" />
                                 ) : (
@@ -256,7 +259,7 @@ const modalContent = (
                             />
                         </div>
                         <div className="form-control flex-shrink-0 h-10 flex justify-center mb-0 md:mb-1">
-                            <label className="label cursor-pointer justify-start gap-3 p-0 hover:bg-primary/10 transition-colors px-3 h-full border border-base-300">
+                            <label className="label cursor-pointer justify-start gap-3 p-0 hover:bg-primary/10 transition-colors px-3 h-full bg-base-100/40 backdrop-blur-xl">
                                 <input type="checkbox" checked={isNsfw} onChange={(e) => setIsNsfw((e.currentTarget as any).checked)} className="checkbox checkbox-primary rounded-none checkbox-sm" />
                                 <span className="text-[10px] font-black uppercase tracking-[0.2em] text-base-content/40">NSFW</span>
                             </label>
@@ -266,9 +269,9 @@ const modalContent = (
                     {/* Row 2: Tags */}
                     <div className="form-control">
                         <label className="text-[10px] font-black uppercase tracking-[0.2em] text-base-content/40 mb-2">Neural Tags</label>
-                        <div className="flex flex-wrap items-center gap-2 p-3 bg-transparent border border-base-300 rounded-none min-h-[52px]">
+                        <div className="flex flex-wrap items-center gap-2 p-3 bg-base-100/40 backdrop-blur-xl rounded-none min-h-[52px]">
                             {tags.map(tag => (
-                                <div key={tag} className="flex items-center gap-2 bg-transparent border border-base-300 text-[10px] font-black uppercase tracking-widest px-2.5 py-1.5">
+                                <div key={tag} className="flex items-center gap-2 bg-base-100/40 backdrop-blur-xl text-[10px] font-black uppercase tracking-widest px-2.5 py-1.5">
                                     <span>{tag}</span>
                                     <button type="button" onClick={() => setTags(tags.filter(t => t !== tag))} className="text-error hover:text-error-content transition-colors">&times;</button>
                                 </div>

@@ -285,16 +285,16 @@ const PromptCrafter = ({ onClip, onSendToEnhancer, onSavePresetSuccess, promptTo
     if (error) return <div className="p-4 text-error">{error}</div>;
 
     return (
-        <div className="grid grid-cols-1 lg:grid-cols-12 overflow-hidden h-full p-4 gap-4 bg-transparent">
-            <aside className="lg:col-span-3 bg-transparent flex flex-col overflow-hidden corner-frame">
+        <div className="grid grid-cols-1 lg:grid-cols-12 overflow-hidden h-full p-4 gap-4 bg-base-100/40 backdrop-blur-xl">
+            <aside className="lg:col-span-3 flex flex-col overflow-hidden">
                 {header}
-                <header className="p-6 border-b border-base-300 bg-transparent h-16 flex items-center">
+                <header className="p-6 h-16 flex items-center">
                     <h3 className="text-[10px] font-black uppercase tracking-[0.4em] text-primary">Wildcards</h3>
                 </header>
                 <div className="flex-grow p-6 overflow-y-auto custom-scrollbar">
                     <WildcardTree categories={crafterData?.wildcardCategories || []} onWildcardClick={handleWildcardClick} />
                 </div>
-                <footer className="h-14 border-t border-base-300 bg-transparent flex items-stretch">
+                <footer className="h-14 flex items-stretch">
                     <button 
                         onClick={loadData} 
                         disabled={isImporting}
@@ -302,7 +302,6 @@ const PromptCrafter = ({ onClip, onSendToEnhancer, onSavePresetSuccess, promptTo
                     >
                         {isImporting ? '...' : 'REFRESH'}
                     </button>
-                    <div className="w-px bg-base-300 h-full"></div>
                     <button 
                         onClick={handleImportClick} 
                         disabled={isImporting}
@@ -320,11 +319,11 @@ const PromptCrafter = ({ onClip, onSendToEnhancer, onSavePresetSuccess, promptTo
                     />
                 </footer>
             </aside>
-            <main className="lg:col-span-6 bg-transparent flex flex-col overflow-hidden corner-frame">
+            <main className="lg:col-span-6 flex flex-col overflow-hidden">
                 {/* Template Selection Bar - h-16 to match panel headers */}
-                <div className="h-16 border-b border-base-300 flex-shrink-0 bg-transparent flex items-stretch">
+                <div className="h-16 flex-shrink-0 flex items-stretch">
                   <div className="dropdown flex-grow h-full">
-                    <div className="relative h-full border-r border-base-300">
+                    <div className="relative h-full">
                         <input 
                           type="text"
                           tabIndex={0}
@@ -370,7 +369,7 @@ const PromptCrafter = ({ onClip, onSendToEnhancer, onSavePresetSuccess, promptTo
                     )}
                   </div>
                   <button 
-                      className="btn btn-ghost h-full rounded-none border-none border-r border-base-300 px-4 text-primary disabled:opacity-20 transition-all hover:bg-primary/10" 
+                      className="btn btn-ghost h-full rounded-none border-none px-4 text-primary disabled:opacity-20 transition-all" 
                       onClick={() => handleUseTemplate()} 
                       disabled={!selectedTemplate}
                       title="Apply Template"
@@ -378,7 +377,7 @@ const PromptCrafter = ({ onClip, onSendToEnhancer, onSavePresetSuccess, promptTo
                       <CheckIcon className="w-4 h-4"/>
                   </button>
                   <button 
-                      className="btn btn-ghost h-full rounded-none border-none px-4 text-error/60 disabled:opacity-20 transition-all hover:bg-error/5" 
+                      className="btn btn-ghost h-full rounded-none border-none px-4 text-error/60 disabled:opacity-20 transition-all" 
                       onClick={handleDeleteTemplateClick} 
                       disabled={!selectedTemplate}
                       title="Delete Template"
@@ -387,28 +386,28 @@ const PromptCrafter = ({ onClip, onSendToEnhancer, onSavePresetSuccess, promptTo
                   </button>
                 </div>
 
-                <div className="flex-grow flex flex-col min-h-0 bg-transparent">
+                <div className="flex-grow flex flex-col min-h-0">
                     <div className="h-1/3 p-6 flex flex-col flex-shrink-0">
                         <textarea 
                             ref={textareaRef}
                             value={promptText}
                             onChange={(e) => setPromptText((e.currentTarget as any).value)}
                             placeholder="STREAM NEW CORE CONCEPT... Use __wildcard__ for selection."
-                            className="textarea textarea-bordered rounded-none w-full flex-grow resize-none font-medium leading-relaxed bg-transparent custom-scrollbar border-none focus:outline-none focus:ring-0 p-0 text-sm"
+                            className="w-full flex-grow resize-none font-medium leading-relaxed bg-transparent custom-scrollbar focus:outline-none p-0 text-sm"
                         ></textarea>
                     </div>
                     
                     {/* Middle Action Bar - Library Style */}
-                    <div className="h-14 border-t border-b border-base-300 bg-transparent flex items-stretch flex-shrink-0">
+                    <div className="h-14 flex items-stretch flex-shrink-0">
                         <button 
                             onClick={() => setPromptText('')} 
-                            className="btn btn-ghost h-full rounded-none border-none border-r border-base-300 flex-1 font-black text-[10px] tracking-widest text-error/40 hover:text-error uppercase"
+                            className="btn btn-ghost h-full rounded-none border-none flex-1 font-black text-[10px] tracking-widest text-error/40 hover:text-error uppercase"
                         >
                             CLEAR
                         </button>
                         <button 
                             onClick={handleSaveTemplateClick} 
-                            className="btn btn-ghost h-full rounded-none border-none border-r border-base-300 flex-1 font-black text-[10px] tracking-widest uppercase hover:bg-primary/10"
+                            className="btn btn-ghost h-full rounded-none border-none flex-1 font-black text-[10px] tracking-widest uppercase hover:bg-base-200"
                         >
                             SAVE
                         </button>
@@ -420,9 +419,9 @@ const PromptCrafter = ({ onClip, onSendToEnhancer, onSavePresetSuccess, promptTo
                         </button>
                     </div>
 
-                    <div className="flex-grow p-6 overflow-y-auto relative bg-transparent">
+                    <div className="flex-grow p-6 overflow-y-auto relative">
                         {aiAction && (
-                            <div className="absolute inset-0 bg-transparent backdrop-blur-sm flex flex-col items-center justify-center z-10">
+                            <div className="absolute inset-0 bg-base-100/40 backdrop-blur-sm flex flex-col items-center justify-center z-10">
                                 <LoadingSpinner />
                                 <p className="text-[10px] font-black uppercase tracking-[0.4em] text-primary animate-pulse -mt-4">{aiAction}</p>
                             </div>
@@ -434,7 +433,7 @@ const PromptCrafter = ({ onClip, onSendToEnhancer, onSavePresetSuccess, promptTo
                                         <div className="w-1.5 h-1.5 rounded-full bg-primary animate-pulse"></div> Resulting Prompt
                                     </span>
                                 </div>
-                                <div className="p-6 bg-transparent border border-base-300 text-base font-medium leading-relaxed italic text-base-content/80">
+                                <div className="p-6 text-base font-medium leading-relaxed italic text-base-content/80">
                                     "{generatedPrompt}"
                                 </div>
                             </div>
@@ -448,32 +447,32 @@ const PromptCrafter = ({ onClip, onSendToEnhancer, onSavePresetSuccess, promptTo
                 </div>
 
                 {/* Bottom Action Bar - Library Style */}
-                <div className="h-14 border-t border-base-300 bg-transparent flex items-stretch flex-shrink-0">
+                <div className="h-14 flex items-stretch flex-shrink-0">
                     <button 
                         onClick={handleAnalyze} 
                         disabled={!generatedPrompt || !!aiAction} 
-                        className="btn btn-ghost h-full rounded-none border-none border-r border-base-300 flex-1 font-black text-[10px] tracking-widest uppercase hover:bg-base-200 px-1 truncate"
+                        className="btn btn-ghost h-full rounded-none border-none flex-1 font-black text-[10px] tracking-widest uppercase hover:bg-base-200 px-1 truncate"
                     >
                         ANALYZE
                     </button>
                     <button 
                         onClick={handleReconstruct} 
                         disabled={!generatedPrompt || !!aiAction} 
-                        className="btn btn-ghost h-full rounded-none border-none border-r border-base-300 flex-1 font-black text-[10px] tracking-widest uppercase hover:bg-base-200 px-1 truncate"
+                        className="btn btn-ghost h-full rounded-none border-none flex-1 font-black text-[10px] tracking-widest uppercase hover:bg-base-200 px-1 truncate"
                     >
                         REWRITE
                     </button>
                     <button 
                         onClick={() => onSendToEnhancer(generatedPrompt!)} 
                         disabled={!generatedPrompt || !!aiAction} 
-                        className="btn btn-ghost h-full rounded-none border-none border-r border-base-300 flex-1 font-black text-[10px] tracking-widest text-primary uppercase hover:bg-primary/10 px-1 truncate"
+                        className="btn btn-ghost h-full rounded-none border-none flex-1 font-black text-[10px] tracking-widest text-primary uppercase hover:bg-primary/10 px-1 truncate"
                     >
                         IMPROVE
                     </button>
                     <button 
                         onClick={handleClip} 
                         disabled={!generatedPrompt} 
-                        className="btn btn-ghost h-full rounded-none border-none border-r border-base-300 flex-1 font-black text-[10px] tracking-widest uppercase hover:bg-base-200 px-1 truncate"
+                        className="btn btn-ghost h-full rounded-none border-none flex-1 font-black text-[10px] tracking-widest uppercase hover:bg-base-200 px-1 truncate"
                     >
                         {clipped ? 'OK' : 'CLIP'}
                     </button>
@@ -487,7 +486,7 @@ const PromptCrafter = ({ onClip, onSendToEnhancer, onSavePresetSuccess, promptTo
                 </div>
             </main>
             
-            <aside className="lg:col-span-3 bg-transparent flex flex-col min-h-0 corner-frame">
+            <aside className="lg:col-span-3 flex flex-col min-h-0">
                 <PromptAnatomyPanel 
                     promptToAnalyze={generatedPrompt}
                     onReconstructFromComponents={handleReconstructFromComponents}
@@ -499,9 +498,9 @@ const PromptCrafter = ({ onClip, onSendToEnhancer, onSavePresetSuccess, promptTo
             </aside>
 
             {isSaveModalOpen && (
-                <div className="fixed inset-0 bg-black/80 z-50 flex items-center justify-center p-4 animate-fade-in" onClick={() => setIsSaveModalOpen(false)}>
-                    <div className="bg-transparent rounded-none border border-base-300 w-full max-w-lg overflow-hidden" onClick={(e) => e.stopPropagation()}>
-                        <header className="p-8 border-b border-base-300 bg-transparent">
+                <div className="fixed inset-0 bg-black/40 backdrop-blur-xl z-50 flex items-center justify-center p-4 animate-fade-in" onClick={() => setIsSaveModalOpen(false)}>
+                    <div className="bg-base-100/40 w-full max-w-lg overflow-hidden" onClick={(e) => e.stopPropagation()}>
+                        <header className="p-8">
                             <h3 className="text-2xl font-black tracking-tighter text-base-content leading-none uppercase">SAVE TEMPLATE<span className="text-primary">.</span></h3>
                         </header>
                         <div className="p-8">
@@ -515,7 +514,7 @@ const PromptCrafter = ({ onClip, onSendToEnhancer, onSavePresetSuccess, promptTo
                                 onKeyDown={(e) => e.key === 'Enter' && handleConfirmSaveTemplate()}
                             />
                         </div>
-                        <div className="p-4 border-t border-base-300 flex justify-end gap-2 bg-transparent">
+                        <div className="p-4 flex justify-end gap-2">
                              <button onClick={() => setIsSaveModalOpen(false)} className="btn btn-ghost rounded-none uppercase font-black text-[10px] tracking-widest px-8">Cancel</button>
                              <button onClick={handleConfirmSaveTemplate} disabled={isSavingTemplate || !templateName.trim()} className="btn btn-primary rounded-none uppercase font-black text-[10px] tracking-widest px-8">
                                 {isSavingTemplate ? "Saving..." : "Save"}

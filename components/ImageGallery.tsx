@@ -295,7 +295,6 @@ const ImageGallery: React.FC<ImageGalleryProps> = ({ isCategoryPanelCollapsed, o
   return (
     <section className="flex flex-row h-full bg-transparent overflow-hidden">
       <aside className={`relative flex-shrink-0 bg-base-100/40 backdrop-blur-xl transition-all duration-300 ease-in-out flex flex-col ${isCategoryPanelCollapsed ? 'w-0' : 'w-96'}`}>
-        <CategoryPanelToggle isCollapsed={isCategoryPanelCollapsed} onToggle={onToggleCategoryPanel} position="right" />
         <div className={`flex flex-col h-full overflow-hidden transition-opacity duration-200 ${isCategoryPanelCollapsed ? 'opacity-0 invisible' : 'opacity-100 visible'}`}>
           <div className="flex-shrink-0 h-14">
             <div className="flex items-center h-full relative">
@@ -323,6 +322,7 @@ const ImageGallery: React.FC<ImageGalleryProps> = ({ isCategoryPanelCollapsed, o
           </div>
         </div>
       </aside>
+      <CategoryPanelToggle isCollapsed={isCategoryPanelCollapsed} onToggle={onToggleCategoryPanel} position="right" />
 
       <main className="relative flex-grow flex flex-col h-full overflow-hidden bg-transparent">
         {detailViewItemId && (
@@ -332,7 +332,7 @@ const ImageGallery: React.FC<ImageGalleryProps> = ({ isCategoryPanelCollapsed, o
         )}
 
         <div className={`flex flex-col h-full overflow-hidden transition-all duration-300 ${detailViewItemId ? 'blur-sm pointer-events-none' : ''}`}>
-            <div ref={scrollerRef} className="flex-grow overflow-y-auto scroll-smooth custom-scrollbar bg-transparent">
+            <div ref={scrollerRef} className="flex-grow overflow-y-auto scroll-smooth custom-scrollbar">
                 <section className="p-10 bg-base-100/40 backdrop-blur-xl">
                     <div className="w-full flex flex-col gap-1">
                         <div className="flex flex-col md:flex-row md:items-stretch justify-between gap-6">
@@ -376,14 +376,14 @@ const ImageGallery: React.FC<ImageGalleryProps> = ({ isCategoryPanelCollapsed, o
                         {/* View Modes and Media Filters */}
                         <div className="flex items-stretch">
                             {/* View Modes */}
-                            <div className="join h-full rounded-none bg-transparent border-r border-base-300">
+                            <div className="join h-full rounded-none bg-base-100/40 backdrop-blur-xl">
                                 <button onClick={() => setViewMode('compact')} className={`join-item btn btn-ghost h-full border-none rounded-none px-6 font-black uppercase text-[9px] tracking-widest ${viewMode === 'compact' ? 'bg-primary/10 text-primary' : 'opacity-40'}`}>CMP</button>
                                 <button onClick={() => setViewMode('default')} className={`join-item btn btn-ghost h-full border-none rounded-none px-6 font-black uppercase text-[9px] tracking-widest ${viewMode === 'default' ? 'bg-primary/10 text-primary' : 'opacity-40'}`}>DFT</button>
                                 <button onClick={() => setViewMode('focus')} className={`join-item btn btn-ghost h-full border-none rounded-none px-6 font-black uppercase text-[9px] tracking-widest ${viewMode === 'focus' ? 'bg-primary/10 text-primary' : 'opacity-40'}`}>FOC</button>
                             </div>
                             
                             {/* Media Type Filters */}
-                            <div className="join h-full rounded-none bg-transparent border-r border-base-300">
+                            <div className="join h-full rounded-none bg-base-100/40 backdrop-blur-xl">
                                 <button onClick={() => setMediaTypeFilter('all')} className={`join-item btn btn-ghost h-full border-none rounded-none px-6 font-black uppercase text-[9px] tracking-widest ${mediaTypeFilter === 'all' ? 'bg-primary/10 text-primary' : 'opacity-40'}`}>ALL</button>
                                 <button onClick={() => setMediaTypeFilter('image')} className={`join-item btn btn-ghost h-full border-none rounded-none px-6 font-black uppercase text-[9px] tracking-widest ${mediaTypeFilter === 'image' ? 'bg-primary/10 text-primary' : 'opacity-40'}`}>IMG</button>
                                 <button onClick={() => setMediaTypeFilter('video')} className={`join-item btn btn-ghost h-full border-none rounded-none px-6 font-black uppercase text-[9px] tracking-widest ${mediaTypeFilter === 'video' ? 'bg-primary/10 text-primary' : 'opacity-40'}`}>VID</button>
@@ -395,7 +395,7 @@ const ImageGallery: React.FC<ImageGalleryProps> = ({ isCategoryPanelCollapsed, o
                 </div>
 
                 {sortedAndFilteredItems.length > 0 ? (
-                    <div key={`grid-${viewMode}-${columnCount}-${selectedCategoryId}`} ref={gridRef} className="flex bg-transparent gap-px elastic-grid-container" style={{ willChange: 'transform' }}>
+                    <div key={`grid-${viewMode}-${columnCount}-${selectedCategoryId}`} ref={gridRef} className="flex gap-px elastic-grid-container bg-base-100/40 backdrop-blur-xl" style={{ willChange: 'transform' }}>
                         {masonryColumns.map((col, colIdx) => (
                             <div key={`col-${colIdx}`} ref={el => { columnRefs.current[colIdx] = el; }} className="flex-1 flex flex-col gap-px" style={{ contain: 'layout paint' }}>
                                 {col.map(item => (

@@ -149,9 +149,9 @@ const PromptEditorModal: React.FC<PromptEditorModalProps> = ({ isOpen, onClose, 
 
           <div className="form-control">
             <label className="text-[10px] font-black uppercase tracking-[0.2em] text-base-content/40 mb-2">Tags</label>
-            <div className="flex flex-wrap items-center gap-2 p-4 bg-transparent border border-base-300 rounded-none min-h-[60px]">
+            <div className="flex flex-wrap items-center gap-2 p-4 bg-base-100/40 backdrop-blur-xl rounded-none min-h-[60px]">
                 {tags.map(tag => (
-                    <div key={tag} className="flex items-center gap-2 bg-transparent border border-base-300 text-[10px] font-black uppercase tracking-widest px-3 py-1.5">
+                    <div key={tag} className="flex items-center gap-2 bg-base-100/40 backdrop-blur-xl text-[10px] font-black uppercase tracking-widest px-3 py-1.5">
                         <span>{tag}</span>
                         <button type="button" onClick={() => handleRemoveTag(tag)} className="text-error hover:text-error-focus">&times;</button>
                     </div>

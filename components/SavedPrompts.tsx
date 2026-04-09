@@ -220,7 +220,6 @@ const SavedPrompts: React.FC<SavedPromptsProps> = ({
   return (
     <section className="flex flex-row h-full bg-transparent overflow-hidden w-full">
       <aside className={`relative flex-shrink-0 bg-base-100/40 backdrop-blur-xl transition-all duration-300 ease-in-out flex flex-col ${isCategoryPanelCollapsed ? 'w-0' : 'w-80'}`}>
-        <CategoryPanelToggle isCollapsed={isCategoryPanelCollapsed} onToggle={onToggleCategoryPanel} position="right" />
         <div className={`flex flex-col h-full overflow-hidden transition-opacity duration-200 ${isCategoryPanelCollapsed ? 'opacity-0 invisible' : 'opacity-100 visible'}`}>
           <div className="flex-shrink-0 h-16 flex items-center px-4">
              <div className="flex items-center gap-3">
@@ -250,6 +249,7 @@ const SavedPrompts: React.FC<SavedPromptsProps> = ({
           </div>
         </div>
       </aside>
+      <CategoryPanelToggle isCollapsed={isCategoryPanelCollapsed} onToggle={onToggleCategoryPanel} position="right" />
 
       <main className="relative flex-1 flex flex-col h-full overflow-hidden bg-transparent min-w-0">
         {detailViewPromptId && (
@@ -319,7 +319,7 @@ const SavedPrompts: React.FC<SavedPromptsProps> = ({
                 </div>
 
                 {sortedAndFilteredPrompts.length > 0 ? (
-                    <div ref={gridRef} className="flex justify-center bg-transparent gap-px min-h-full w-full">
+                    <div ref={gridRef} className="flex justify-center gap-px min-h-full w-full bg-base-100/40 backdrop-blur-xl">
                         {masonryColumns.map((col, colIdx) => (
                             <div key={colIdx} className="flex-1 max-w-[450px] min-w-0 flex flex-col gap-px">
                                 {col.map(p => (

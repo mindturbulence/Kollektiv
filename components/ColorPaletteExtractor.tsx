@@ -33,13 +33,13 @@ const ColorCard: React.FC<{ color: ColorInfo }> = ({ color }) => {
         }
     };
     return (
-        <div className="border border-base-300 bg-base-100 group">
+        <div className="bg-base-100/40 backdrop-blur-xl group">
             <div className="h-32 w-full" style={{ backgroundColor: color.hex }}></div>
             <div className="p-4">
                 <p className="font-black tracking-tighter text-xl text-base-content mb-3">{color.name}</p>
                 <div className="text-[10px] space-y-2 font-mono font-bold uppercase tracking-widest text-base-content/40">
-                    <p className="flex justify-between items-center border-b border-base-300/30 pb-1"><span>HEX</span> <span className="cursor-pointer hover:text-primary transition-colors" onClick={() => handleCopy('HEX', color.hex)}>{copied && copiedValue === 'HEX' ? 'OK' : color.hex}</span></p>
-                    <p className="flex justify-between items-center border-b border-base-300/30 pb-1"><span>RGB</span> <span className="cursor-pointer hover:text-primary transition-colors" onClick={() => handleCopy('RGB', `${Math.round(color.rgb[0])},${Math.round(color.rgb[1])},${Math.round(color.rgb[2])}`)}>{copied && copiedValue === 'RGB' ? 'OK' : `${Math.round(color.rgb[0])}, ${Math.round(color.rgb[1])}, ${Math.round(color.rgb[2])}`}</span></p>
+                    <p className="flex justify-between items-center pb-1"><span>HEX</span> <span className="cursor-pointer hover:text-primary transition-colors" onClick={() => handleCopy('HEX', color.hex)}>{copied && copiedValue === 'HEX' ? 'OK' : color.hex}</span></p>
+                    <p className="flex justify-between items-center pb-1"><span>RGB</span> <span className="cursor-pointer hover:text-primary transition-colors" onClick={() => handleCopy('RGB', `${Math.round(color.rgb[0])},${Math.round(color.rgb[1])},${Math.round(color.rgb[2])}`)}>{copied && copiedValue === 'RGB' ? 'OK' : `${Math.round(color.rgb[0])}, ${Math.round(color.rgb[1])}, ${Math.round(color.rgb[2])}`}</span></p>
                     <p className="flex justify-between items-center"><span>HSL</span> <span className="cursor-pointer hover:text-primary transition-colors" onClick={() => handleCopy('HSL', color.hsl)}>{copied && copiedValue === 'HSL' ? 'OK' : color.hsl}</span></p>
                 </div>
             </div>
@@ -214,15 +214,15 @@ export const ColorPaletteExtractor: React.FC<ColorPaletteExtractorProps> = ({ on
   };
 
   return (
-    <div className="h-full bg-base-100 flex flex-col overflow-hidden">
+    <div className="h-full flex flex-col overflow-hidden">
         <div className="flex-grow flex flex-col lg:flex-row overflow-hidden">
-            <aside className="w-full lg:w-96 flex-shrink-0 bg-base-100 flex flex-col border-r border-base-300 overflow-hidden">
-                <header className="p-6 border-b border-base-300 bg-base-200/10">
+            <aside className="w-full lg:w-96 flex-shrink-0 flex flex-col overflow-hidden bg-base-100/40 backdrop-blur-xl">
+                <header className="p-6">
                     <h3 className="text-[10px] font-black uppercase tracking-[0.4em] text-primary">Chromic Source</h3>
                 </header>
                 <div className="flex-grow p-6 flex flex-col gap-6 overflow-y-auto custom-scrollbar">
                      <div 
-                        className={`relative flex-grow min-h-[200px] border-2 border-dashed rounded-none flex flex-col items-center justify-center cursor-pointer transition-all gap-4 group ${isDragging ? 'border-primary bg-primary/10' : 'border-base-300 hover:border-primary/50 bg-base-200/10'}`}
+                        className={`relative flex-grow min-h-[200px] border-2 border-dashed rounded-none flex flex-col items-center justify-center cursor-pointer transition-all gap-4 group ${isDragging ? 'border-primary bg-primary/10' : 'border-base-300 hover:border-primary/50'}`}
                         style={{ backgroundImage: imagePreviewUrl ? `url(${imagePreviewUrl})` : 'none', backgroundSize: 'contain', backgroundPosition: 'center', backgroundRepeat: 'no-repeat' }}
                         onDrop={(e) => { e.preventDefault(); setIsDragging(false); handleFileSelect((e.dataTransfer as any)?.files?.[0] || null); }}
                         onDragOver={(e) => { e.preventDefault(); setIsDragging(true); }}
@@ -236,7 +236,7 @@ export const ColorPaletteExtractor: React.FC<ColorPaletteExtractorProps> = ({ on
                                     <p className="text-[10px] font-black uppercase tracking-widest">Load Source</p>
                                 </div>
                                 <div className="flex gap-2">
-                                    <button onClick={(e) => { e.stopPropagation(); (fileInputRef.current as any).click(); }} className="btn btn-xs btn-ghost border border-base-300 rounded-none font-black text-[8px] tracking-widest uppercase">UPLOAD</button>
+                                    <button onClick={(e) => { e.stopPropagation(); (fileInputRef.current as any).click(); }} className="btn btn-xs btn-ghost rounded-none font-black text-[8px] tracking-widest uppercase">UPLOAD</button>
                                     <button onClick={(e) => { e.stopPropagation(); setIsPickerOpen(true); }} className="btn btn-xs btn-primary rounded-none font-black text-[8px] tracking-widest uppercase">LIBRARY</button>
                                 </div>
                             </>
@@ -257,8 +257,8 @@ export const ColorPaletteExtractor: React.FC<ColorPaletteExtractorProps> = ({ on
                 </div>
             </aside>
 
-            <main className="flex-grow bg-base-100 overflow-y-auto overflow-x-hidden scroll-smooth custom-scrollbar flex flex-col">
-                <section className="p-10 border-b border-base-300 bg-base-200/20">
+            <main className="flex-grow overflow-y-auto overflow-x-hidden scroll-smooth custom-scrollbar flex flex-col">
+                <section className="p-10 bg-base-100/40 backdrop-blur-xl">
                     <div className="max-w-screen-2xl mx-auto flex flex-col gap-1">
                         <div className="flex flex-col md:flex-row md:items-stretch justify-between gap-6">
                             <h1 className="text-2xl lg:text-3xl font-black tracking-tighter text-base-content leading-none flex items-center uppercase">Palette Extractor<span className="text-primary">.</span></h1>
@@ -267,7 +267,7 @@ export const ColorPaletteExtractor: React.FC<ColorPaletteExtractorProps> = ({ on
                     </div>
                 </section>
 
-                <div className="flex-shrink-0 bg-base-100 px-6 py-4 border-b border-base-300 flex justify-between items-center sticky top-0 z-20 backdrop-blur-md bg-base-100/80">
+                <div className="flex-shrink-0 px-6 py-4 flex justify-between items-center sticky top-0 z-20 backdrop-blur-xl bg-base-100/60">
                     <h2 className="text-xs font-black uppercase tracking-[0.4em] text-base-content/40">Extraction Output</h2>
                     {palette.length > 0 && (
                         <button onClick={handleClipPalette} className="btn btn-xs btn-ghost rounded-none font-black text-[9px] tracking-widest uppercase">
@@ -276,7 +276,7 @@ export const ColorPaletteExtractor: React.FC<ColorPaletteExtractorProps> = ({ on
                     )}
                 </div>
 
-                <div className="flex-grow p-8 lg:p-12 bg-base-200/5">
+                <div className="flex-grow p-8 lg:p-12">
                     {isLoading ? <div className="py-24"><LoadingSpinner/></div> :
                      error ? <div className="alert alert-error rounded-none border-2"><span>{error}</span></div> :
                      palette.length > 0 ? (
@@ -287,7 +287,7 @@ export const ColorPaletteExtractor: React.FC<ColorPaletteExtractorProps> = ({ on
                                     <p className="text-5xl font-black tracking-tighter text-base-content uppercase leading-none">{mood}</p>
                                 </div>
                             )}
-                            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-px bg-base-300 border border-base-300">
+                            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-px">
                                 {palette.map(color => (
                                     <ColorCard key={color.hex} color={color} />
                                 ))}

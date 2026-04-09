@@ -161,7 +161,7 @@ const ImageCard: React.FC<{
     imageRef: (el: HTMLDivElement | null) => void,
 }> = ({ item, settings, onRemove, onCropMouseDown, imageRef }) => {
     return (
-        <div className="flex flex-col bg-transparent border border-base-300 group">
+        <div className="flex flex-col bg-base-100/40 backdrop-blur-xl group">
             <figure ref={imageRef} className="relative aspect-square bg-transparent overflow-hidden">
                 <img src={item.originalUrl} alt={item.file.name} className="w-full h-full object-contain" />
                 {settings.enableCropping && (
@@ -400,7 +400,7 @@ const ImageResizer: React.FC = () => {
     return (
         <div className="h-full bg-transparent flex flex-col overflow-hidden">
             <div className="flex-grow flex flex-col lg:flex-row overflow-hidden">
-                <aside className="w-full lg:w-96 flex-shrink-0 bg-transparent flex flex-col border-r border-base-300 overflow-hidden">
+                <aside className="w-full lg:w-96 flex-shrink-0 bg-base-100/40 backdrop-blur-xl flex flex-col overflow-hidden">
                     <header className="p-6 border-b border-base-300 bg-transparent">
                         <h3 className="text-[10px] font-black uppercase tracking-[0.4em] text-primary">Resize Settings</h3>
                     </header>
@@ -472,7 +472,7 @@ const ImageResizer: React.FC = () => {
                 </aside>
 
                 <main className="flex-grow bg-transparent overflow-y-auto overflow-x-hidden scroll-smooth custom-scrollbar flex flex-col">
-                    <section className="p-10 border-b border-base-300 bg-transparent">
+                    <section className="p-10 bg-base-100/40 backdrop-blur-xl">
                         <div className="max-w-screen-2xl mx-auto flex flex-col gap-1">
                             <div className="flex flex-col md:flex-row md:items-stretch justify-between gap-6">
                                 <h1 className="text-2xl lg:text-3xl font-black tracking-tighter text-base-content leading-none flex items-center uppercase">Image Resizer<span className="text-primary">.</span></h1>
@@ -483,7 +483,7 @@ const ImageResizer: React.FC = () => {
 
                     <div className="flex-grow bg-transparent relative flex flex-col">
                         {images.length > 0 ? (
-                            <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 gap-px bg-transparent border-r border-base-300 overflow-y-auto custom-scrollbar">
+                            <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 gap-px bg-base-100/40 backdrop-blur-xl overflow-y-auto custom-scrollbar">
                                {images.map(img => (
                                    <ImageCard 
                                         key={img.id}

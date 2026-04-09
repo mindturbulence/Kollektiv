@@ -162,8 +162,8 @@ export const PromptAnatomyPanel: React.FC<PromptAnatomyPanelProps> = ({ promptTo
   };
 
   return (
-    <div className="bg-transparent flex flex-col h-full overflow-hidden relative">
-      <header className="p-6 border-b border-base-300 bg-transparent flex justify-between items-center flex-shrink-0">
+    <div className="bg-base-100/40 backdrop-blur-xl flex flex-col h-full overflow-hidden relative">
+      <header className="p-6 flex justify-between items-center flex-shrink-0">
         <h3 className="text-xs font-black uppercase tracking-[0.3em] text-primary">Prompt Analysis</h3>
       </header>
       <main className="p-6 overflow-y-auto space-y-8 flex-grow custom-scrollbar">
@@ -302,8 +302,8 @@ export const PromptAnatomyPanel: React.FC<PromptAnatomyPanelProps> = ({ promptTo
       )}
 
       {showSaveModal && (
-        <div className="fixed inset-0 z-[100] flex items-center justify-center p-6 bg-black/60 backdrop-blur-sm animate-fade-in" onClick={() => setShowSaveModal(false)}>
-          <div className="bg-transparent w-full max-w-sm p-8 shadow-2xl border border-base-300 space-y-6" onClick={(e) => e.stopPropagation()}>
+        <div className="fixed inset-0 z-[100] flex items-center justify-center p-6 bg-black/40 backdrop-blur-xl animate-fade-in" onClick={() => setShowSaveModal(false)}>
+          <div className="bg-base-100/40 w-full max-w-sm p-8 shadow-2xl space-y-6" onClick={(e) => e.stopPropagation()}>
             <div className="space-y-2">
               <h4 className="text-[10px] font-black uppercase tracking-[0.3em] text-primary">Save Constructor Preset</h4>
               <p className="text-xs text-base-content/60 leading-relaxed font-medium">This will be saved to your Refiner Presets registry.</p>

@@ -79,8 +79,8 @@ const PromptRefinePanel: React.FC<PromptRefinePanelProps> = ({ promptText, onApp
     }
 
     return (
-        <div className="flex flex-col h-full bg-transparent overflow-hidden corner-frame shadow-none">
-            <header className="p-4 border-b border-base-300 bg-transparent flex justify-between items-center">
+        <div className="flex flex-col h-full bg-base-100/40 backdrop-blur-xl overflow-hidden">
+            <header className="p-4 flex justify-between items-center">
                 <div className="flex items-center gap-4">
                     <span className="text-xs font-black uppercase tracking-[0.3em] text-primary">AI Refinement</span>
                     <div className="form-control max-w-[140px]">
@@ -104,7 +104,7 @@ const PromptRefinePanel: React.FC<PromptRefinePanelProps> = ({ promptText, onApp
                 </div>
             </header>
             
-            <main className="flex-grow p-5 lg:p-5 bg-transparent overflow-y-auto custom-scrollbar flex flex-col relative">
+            <main className="flex-grow p-5 lg:p-5 overflow-y-auto custom-scrollbar flex flex-col relative">
                 <span className="text-[10px] font-black uppercase tracking-widest text-primary/40 mb-3 flex items-center gap-3">
                     <span className="w-1.5 h-1.5 rounded-full bg-primary animate-pulse"></span> Generated Text
                 </span>
@@ -125,7 +125,7 @@ const PromptRefinePanel: React.FC<PromptRefinePanelProps> = ({ promptText, onApp
                  )}
             </main>
             
-            <footer className="p-4 border-t border-base-300 flex justify-end gap-2 bg-transparent">
+            <footer className="p-4 flex justify-end gap-2">
                 {onClip && refinedPrompt && (
                         <button onClick={handleClip} disabled={clipped} className="btn btn-xs btn-ghost rounded-none font-black text-[10px] tracking-widest px-4">
                         <BookmarkIcon className="w-3.5 h-3.5 mr-1.5" />
@@ -135,7 +135,7 @@ const PromptRefinePanel: React.FC<PromptRefinePanelProps> = ({ promptText, onApp
                 <button onClick={handleCopy} disabled={!refinedPrompt || isLoading} className="btn btn-xs btn-ghost rounded-none font-black text-[10px] tracking-widest px-4">
                     {copied ? <><CheckIcon className="w-3.5 h-3.5 mr-1.5 text-success" />Copied</> : <><CopyIcon className="w-3.5 h-3.5 mr-1.5" />Copy Text</>}
                 </button>
-                <button onClick={handleApply} disabled={!refinedPrompt || isLoading} className="btn btn-xs btn-ghost rounded-none font-black text-[10px] tracking-widest px-4 border border-base-300 bg-transparent">
+                <button onClick={handleApply} disabled={!refinedPrompt || isLoading} className="btn btn-xs btn-ghost rounded-none font-black text-[10px] tracking-widest px-4">
                     <CheckIcon className="w-3.5 h-3.5 mr-1.5" /> Apply Prompt
                 </button>
             </footer>

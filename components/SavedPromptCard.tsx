@@ -15,7 +15,7 @@ interface SavedPromptCardProps {
 }
 
 const KeywordTag: React.FC<{ text: string }> = ({ text }) => (
-    <span className="bg-transparent text-base-content text-[9px] font-black uppercase tracking-widest py-1.5 px-3 rounded-none border border-base-300/50">
+    <span className="bg-base-100/40 backdrop-blur-xl text-base-content text-[9px] font-black uppercase tracking-widest py-1.5 px-3 rounded-none">
         {text}
     </span>
 );
@@ -98,7 +98,7 @@ const SavedPromptCard: React.FC<SavedPromptCardProps> = memo(({
                   <EllipsisVerticalIcon className="w-4 h-4" />
                 </button>
                 {isMenuOpen && (
-                  <ul onClick={(e) => e.stopPropagation()} className="absolute right-0 mt-2 w-48 menu menu-sm bg-transparent border border-base-300 shadow-2xl z-20 animate-fade-in p-1 rounded-none">
+                  <ul onClick={(e) => e.stopPropagation()} className="absolute right-0 mt-2 w-48 menu menu-sm bg-base-100/40 backdrop-blur-xl shadow-2xl z-20 animate-fade-in p-1 rounded-none">
                     <li><button onClick={() => { onEditClick(prompt); setIsMenuOpen(false); }} className="w-full text-left font-bold py-2 flex items-center gap-2"><EditIcon className="w-4 h-4" /> Edit Details</button></li>
                     <div className="divider my-0 opacity-10"></div>
                     <li><button onClick={() => { onDeleteClick(prompt); setIsMenuOpen(false); }} className="w-full text-left text-error font-bold py-2 flex items-center gap-2"><DeleteIcon className="w-4 h-4" /> Delete Prompt</button></li>

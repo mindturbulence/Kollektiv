@@ -1,6 +1,7 @@
-import React, { useState, useEffect, useRef, useCallback } from 'react';
-import { gsap } from 'gsap';
+import React, { useState, useEffect, useRef } from 'react';
 import { loadGalleryItems } from '../utils/galleryStorage';
+import { useSettings } from '../contexts/SettingsContext';
+import { fileSystemManager } from '../utils/fileUtils';
 import type { GalleryItem, ActiveTab, Idea } from '../types';
 import LoadingSpinner from './LoadingSpinner';
 
@@ -62,27 +63,6 @@ const ChromaticText: React.FC<{ text: string; enabled?: boolean }> = ({ text, en
 // --- ORAGE-STYLE IMAGE TRAIL ---
 // Removed as per user request
 
-const NavNode: React.FC<{ label: string; num: string; onClick: () => void }> = ({ label, num, onClick }) => {
-    const [isHovered, setIsHovered] = useState(false);
-
-    return (
-        <button 
-            onClick={onClick}
-            onMouseEnter={() => setIsHovered(true)}
-            onMouseLeave={() => setIsHovered(false)}
-            className="group flex items-center gap-4 p-4 transition-all"
-        >
-            <span className="text-[9px] font-mono font-medium text-primary/30 group-hover:text-primary transition-colors tracking-[0.2em]">
-                {num}
-            </span>
-            {/* Unified typeface for menu links with thin weight and expanded tracking */}
-            <span className="text-[11px] font-sans font-light uppercase tracking-[0.5em] text-base-content/40 group-hover:text-base-content transition-all duration-500">
-                <ChromaticText text={label} enabled={isHovered} />
-            </span>
-        </button>
-    );
-};
-
 const MetadataCorner: React.FC<{ label: string; value: string; position: string }> = ({ label, value, position }) => (
     <div className={`absolute ${position} p-6 flex flex-col gap-1 pointer-events-none z-20`}>
         <span className="text-[8px] font-black uppercase tracking-[0.4em] text-primary/40">{label}</span>
@@ -95,7 +75,19 @@ interface DashboardProps {
     onClipIdea: (idea: Idea) => void;
 }
 
-const Dashboard: React.FC<DashboardProps> = ({ onNavigate }) => {
+const LedStatus: React.FC<{
+    label: string,
+    active: boolean,
+    color?: string
+}> = ({ label, active, color = 'bg-success' }) => (
+    <div className={`flex items-center gap-1.5 transition-all duration-700 ${active ? 'opacity-100' : 'opacity-10'}`}>
+        <span className={`w-1.5 h-1.5 rounded-full ${active ? `${color} shadow-[0_0_5px_rgba(var(--p),0.5)] animate-pulse` : 'bg-transparent'}`}></span>
+        <span className="text-[8px] font-sans font-black text-base-content tracking-tighter uppercase whitespace-nowrap">{label}</span>
+    </div>
+);
+
+const Dashboard: React.FC<DashboardProps> = () => {
+    const { settings } = useSettings();
     const [isLoading, setIsLoading] = useState(true);
     const [gallery, setGallery] = useState<GalleryItem[]>([]);
     const [time, setTime] = useState(new Date().toLocaleTimeString());
@@ -103,7 +95,6 @@ const Dashboard: React.FC<DashboardProps> = ({ onNavigate }) => {
     const headerTextRef = useRef<HTMLParagraphElement>(null);
     const titleRef = useRef<HTMLHeadingElement>(null);
     const taglineRef = useRef<HTMLParagraphElement>(null);
-    const isExitingRef = useRef(false);
 
     useEffect(() => {
         const fetch = async () => {
@@ -117,34 +108,6 @@ const Dashboard: React.FC<DashboardProps> = ({ onNavigate }) => {
         return () => clearInterval(timer);
     }, []);
 
-    const handleNodeClick = useCallback((tab: ActiveTab) => {
-        if (isExitingRef.current) return;
-        isExitingRef.current = true;
-
-        const tl = gsap.timeline({
-            onComplete: () => onNavigate(tab)
-        });
-
-        tl.to(headerTextRef.current, {
-            yPercent: 100,
-            duration: 0.6,
-            ease: "power4.in"
-        });
-
-        tl.to(titleRef.current, {
-            yPercent: 100,
-            duration: 0.7,
-            ease: "power4.in"
-        }, "-=0.45");
-
-        tl.to(taglineRef.current, {
-            yPercent: 100,
-            duration: 0.6,
-            ease: "power4.in"
-        }, "-=0.55");
-
-    }, [onNavigate]);
-
     if (isLoading) return <div className="h-full w-full flex items-center justify-center bg-transparent"><LoadingSpinner /></div>;
 
     return (
@@ -152,8 +115,17 @@ const Dashboard: React.FC<DashboardProps> = ({ onNavigate }) => {
             
             <MetadataCorner label="System_Status" value="Core_Engine_Active" position="top-0 left-0" />
             <MetadataCorner label="Vault_Index" value={`${gallery.length} Arifacts_Identified`} position="top-0 right-0" />
-            <MetadataCorner label="Local_Sequence" value={time} position="bottom-0 left-0" />
-            <MetadataCorner label="Protocol" value="Kollektiv_Engine_v2" position="bottom-0 right-0" />
+            
+            <div className="absolute bottom-0 left-0 p-6 flex flex-col gap-3 pointer-events-none z-20">
+                <span className="text-[8px] font-black uppercase tracking-[0.4em] text-primary/40">Integrations</span>
+                <div className="flex flex-row gap-4">
+                    <LedStatus label="VAULT" active={fileSystemManager.isDirectorySelected()} />
+                    <LedStatus label={settings.activeLLM === 'ollama_cloud' ? 'OLLAMA' : settings.activeLLM.toUpperCase()} active={!!process.env.API_KEY || settings.activeLLM.includes('ollama')} />
+                    <LedStatus label="YOUTUBE" active={!!settings.youtube?.isConnected} color="bg-error" />
+                </div>
+            </div>
+
+            <MetadataCorner label="Local_Sequence" value={time} position="bottom-0 right-0" />
 
             <div className="absolute inset-0 flex flex-col items-center justify-center z-10 pointer-events-none text-center">
                 <div className="overflow-hidden py-1 mb-2">
@@ -178,11 +150,6 @@ const Dashboard: React.FC<DashboardProps> = ({ onNavigate }) => {
             </div>
 
             <div className="absolute inset-x-0 bottom-32 flex flex-wrap justify-center gap-6 md:gap-12 z-20">
-                <NavNode num="01" label="Builder" onClick={() => handleNodeClick('prompts')} />
-                <NavNode num="02" label="Library" onClick={() => handleNodeClick('prompt')} />
-                <NavNode num="03" label="Gallery" onClick={() => handleNodeClick('gallery')} />
-                <NavNode num="04" label="Guides" onClick={() => handleNodeClick('cheatsheet')} />
-                <NavNode num="05" label="Utilities" onClick={() => handleNodeClick('composer')} />
             </div>
 
             {/* DECORATIVE ELEMENTS */}

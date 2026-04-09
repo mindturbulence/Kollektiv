@@ -94,44 +94,53 @@ const fileManifest: FileManifestEntry[] = [
 export const rebuildGalleryDatabase = async (onProgress: (msg: string) => void): Promise<void> => {
     onProgress('Accessing Media Vault...');
     const manifestStr = await fileSystemManager.readFile('kollektiv_gallery_manifest.json');
-    if (!manifestStr) return;
     
-    let manifest = JSON.parse(manifestStr);
-    const items: GalleryItem[] = manifest.galleryItems;
-    const categories: GalleryCategory[] = manifest.categories;
+    let manifest: any = { galleryItems: [], categories: [], pinnedIds: [] };
+    if (manifestStr) {
+        try {
+            manifest = JSON.parse(manifestStr);
+        } catch (e) {
+            console.error("Failed to parse gallery manifest during rebuild", e);
+        }
+    }
+    
+    const items: GalleryItem[] = manifest.galleryItems || [];
+    const categories: GalleryCategory[] = manifest.categories || [];
     const updatedItems: GalleryItem[] = [];
 
     // 1. Verify and Relocate existing items
-    onProgress('Synchronizing Artifact Paths...');
-    for (const item of items) {
-        const cat = categories.find(c => c.id === item.categoryId);
-        // Correct path is gallery/[CategoryName] (if it exists) or just gallery/
-        const expectedDir = cat ? `gallery/${cat.name}` : 'gallery';
-        const newUrls: string[] = [];
+    if (items.length > 0) {
+        onProgress('Synchronizing Artifact Paths...');
+        for (const item of items) {
+            const cat = categories.find(c => c.id === item.categoryId);
+            // Correct path is gallery/[CategoryName] (if it exists) or just gallery/
+            const expectedDir = cat ? `gallery/${cat.name}` : 'gallery';
+            const newUrls: string[] = [];
 
-        for (const url of item.urls) {
-            if (url.startsWith('data:')) {
-                newUrls.push(url);
-                continue;
-            }
-
-            const blob = await fileSystemManager.getFileAsBlob(url);
-            if (blob) {
-                const fileName = url.split('/').pop() || `${item.id}_media`;
-                const expectedPath = `${expectedDir}/${fileName}`;
-                
-                if (url !== expectedPath) {
-                    onProgress(`Moving to Folder: ${cat?.name || 'General'}`);
-                    await fileSystemManager.saveFile(expectedPath, blob);
-                    await fileSystemManager.deleteFile(url);
-                    newUrls.push(expectedPath);
-                } else {
+            for (const url of item.urls) {
+                if (url.startsWith('data:')) {
                     newUrls.push(url);
+                    continue;
+                }
+
+                const blob = await fileSystemManager.getFileAsBlob(url);
+                if (blob) {
+                    const fileName = url.split('/').pop() || `${item.id}_media`;
+                    const expectedPath = `${expectedDir}/${fileName}`;
+                    
+                    if (url !== expectedPath) {
+                        onProgress(`Moving: ${cat?.name || 'General'}/${fileName}`);
+                        await fileSystemManager.saveFile(expectedPath, blob);
+                        await fileSystemManager.deleteFile(url);
+                        newUrls.push(expectedPath);
+                    } else {
+                        newUrls.push(url);
+                    }
                 }
             }
-        }
-        if (newUrls.length > 0) {
-            updatedItems.push({ ...item, urls: newUrls });
+            if (newUrls.length > 0) {
+                updatedItems.push({ ...item, urls: newUrls });
+            }
         }
     }
 
@@ -182,16 +191,26 @@ export const rebuildGalleryDatabase = async (onProgress: (msg: string) => void):
 export const rebuildPromptDatabase = async (onProgress: (msg: string) => void): Promise<void> => {
     onProgress('Indexing Neural Library...');
     const manifestStr = await fileSystemManager.readFile('prompts_manifest.json');
-    if (!manifestStr) return;
     
-    let manifest = JSON.parse(manifestStr);
-    const existingPrompts: SavedPrompt[] = manifest.prompts;
+    let manifest: any = { prompts: [], categories: [] };
+    if (manifestStr) {
+        try {
+            manifest = JSON.parse(manifestStr);
+        } catch (e) {
+            console.error("Failed to parse prompts manifest during rebuild", e);
+        }
+    }
+    
+    const existingPrompts: SavedPrompt[] = manifest.prompts || [];
     const updatedPrompts: SavedPrompt[] = [];
 
     // 1. Prune dead entries
-    for (const p of existingPrompts) {
-        const text = await fileSystemManager.readFile(`prompts/${p.id}.txt`);
-        if (text) updatedPrompts.push(p);
+    if (existingPrompts.length > 0) {
+        onProgress('Pruning Dead Tokens...');
+        for (const p of existingPrompts) {
+            const text = await fileSystemManager.readFile(`prompts/${p.id}.txt`);
+            if (text) updatedPrompts.push(p);
+        }
     }
 
     // 2. Add orphan .txt files

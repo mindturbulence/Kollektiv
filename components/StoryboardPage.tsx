@@ -127,7 +127,7 @@ export const StoryboardPage: React.FC<{ showGlobalFeedback: (m: string, e?: bool
                         <button onClick={handleCreate} className="btn btn-primary w-full rounded-none font-black tracking-[0.2em] uppercase">Create New Storyboard</button>
                         <div className="grid grid-cols-1 gap-2">
                             {storyboards.map(s => (
-                                <button key={s.id} onClick={() => setActiveStoryboard(s)} className="btn btn-ghost border border-base-300 rounded-none w-full text-left justify-between group">
+                                <button key={s.id} onClick={() => setActiveStoryboard(s)} className="btn btn-ghost rounded-none w-full text-left justify-between group">
                                     <span className="font-black text-[10px] tracking-widest truncate">{s.title.toUpperCase()}</span>
                                     <span className="text-[8px] font-mono opacity-20">{s.scenes.length} SCENES</span>
                                 </button>
@@ -140,10 +140,10 @@ export const StoryboardPage: React.FC<{ showGlobalFeedback: (m: string, e?: bool
     }
 
     return (
-        <div className="h-full grid grid-cols-1 lg:grid-cols-12 overflow-hidden bg-transparent animate-fade-in">
+        <div className="h-full grid grid-cols-1 lg:grid-cols-12 overflow-hidden animate-fade-in">
             {/* LEFT: SCENE LIST */}
-            <aside className="lg:col-span-3 border-r border-base-300 flex flex-col overflow-hidden bg-transparent">
-                <header className="h-16 px-6 border-b border-base-300 flex items-center justify-between">
+            <aside className="lg:col-span-3 flex flex-col overflow-hidden bg-base-100/40 backdrop-blur-xl">
+                <header className="h-16 px-6 flex items-center justify-between">
                     <button onClick={() => setActiveStoryboard(null)} className="btn btn-xs btn-ghost gap-2 opacity-40 hover:opacity-100"><ChevronLeftIcon className="w-4 h-4"/> BACK</button>
                     <span className="text-[10px] font-black uppercase tracking-[0.3em] text-primary/40">Scenes</span>
                 </header>
@@ -152,7 +152,7 @@ export const StoryboardPage: React.FC<{ showGlobalFeedback: (m: string, e?: bool
                         <button 
                             key={s.id} 
                             onClick={() => setActiveSceneIndex(i)}
-                            className={`w-full p-4 flex gap-4 items-center border transition-all duration-300 text-left group ${activeSceneIndex === i ? 'bg-primary border-primary text-primary-content scale-[1.02]' : 'bg-transparent border-base-300 hover:border-primary/50'}`}
+                            className={`w-full p-4 flex gap-4 items-center transition-all duration-300 text-left group ${activeSceneIndex === i ? 'text-primary scale-[1.02]' : 'hover:text-primary'}`}
                         >
                             <div className="w-12 h-12 flex-shrink-0 border border-current/10 overflow-hidden">
                                 <SceneThumbnail url={s.referenceImages[0] || null} />
@@ -163,7 +163,7 @@ export const StoryboardPage: React.FC<{ showGlobalFeedback: (m: string, e?: bool
                             </div>
                         </button>
                     ))}
-                    <button onClick={handleAddScene} className="btn btn-ghost border-2 border-dashed border-base-300 w-full py-8 h-auto rounded-none opacity-40 hover:opacity-100 transition-all flex flex-col gap-2">
+                    <button onClick={handleAddScene} className="btn btn-ghost border-2 border-dashed w-full py-8 h-auto rounded-none opacity-40 hover:opacity-100 transition-all flex flex-col gap-2">
                         <PlusIcon className="w-6 h-6" />
                         <span className="text-[9px] font-black tracking-widest uppercase">Append Node</span>
                     </button>
@@ -171,8 +171,8 @@ export const StoryboardPage: React.FC<{ showGlobalFeedback: (m: string, e?: bool
             </aside>
 
             {/* CENTER: EDITOR */}
-            <main className="lg:col-span-6 flex flex-col overflow-hidden border-r border-base-300 bg-transparent">
-                <header className="h-16 px-10 border-b border-base-300 flex items-center justify-between bg-transparent">
+            <main className="lg:col-span-6 flex flex-col overflow-hidden bg-base-100/40 backdrop-blur-xl">
+                <header className="h-16 px-10 flex items-center justify-between">
                     <input 
                         value={activeStoryboard.title} 
                         onChange={e => updateStoryboard(activeStoryboard.id, { title: e.target.value }).then(refresh)}
@@ -195,7 +195,7 @@ export const StoryboardPage: React.FC<{ showGlobalFeedback: (m: string, e?: bool
 
                             <div className="space-y-6">
                                 <div className="flex justify-between items-center"><span className="text-[10px] font-black uppercase tracking-[0.2em] text-base-content/30">Reference Materials</span><button onClick={() => setIsPickerOpen(true)} className="btn btn-xs btn-ghost text-[9px] font-black uppercase tracking-widest">Add From Library</button></div>
-                                <div className="grid grid-cols-4 gap-px bg-transparent border border-base-300">
+                                <div className="grid grid-cols-4 gap-px bg-base-100/40 backdrop-blur-xl">
                                     {activeScene.referenceImages.map((url, idx) => (
                                         <div key={idx} className="aspect-video bg-transparent relative group overflow-hidden">
                                             <SceneThumbnail url={url} />
@@ -229,10 +229,10 @@ export const StoryboardPage: React.FC<{ showGlobalFeedback: (m: string, e?: bool
                     )}
                 </div>
 
-                <footer className="h-20 bg-transparent border-t border-base-300 p-6 flex items-center justify-between">
+                <footer className="h-20 bg-base-100/40 backdrop-blur-xl p-6 flex items-center justify-between">
                     <div className="flex gap-6 overflow-hidden max-w-lg">
                         {activeStoryboard.scenes.map((s, i) => (
-                            <div key={s.id} className={`w-12 h-8 flex-shrink-0 border ${activeSceneIndex === i ? 'border-primary ring-2 ring-primary/20' : 'border-base-300 opacity-20'} overflow-hidden`}>
+                            <div key={s.id} className={`w-12 h-8 flex-shrink-0 border ${activeSceneIndex === i ? 'border-primary' : 'border-base-300 opacity-20'} overflow-hidden`}>
                                 <SceneThumbnail url={s.referenceImages[0] || null} />
                             </div>
                         ))}
@@ -244,8 +244,8 @@ export const StoryboardPage: React.FC<{ showGlobalFeedback: (m: string, e?: bool
             </main>
 
             {/* RIGHT: INSPECTOR */}
-            <aside className="lg:col-span-3 flex flex-col overflow-hidden">
-                <header className="h-16 px-6 border-b border-base-300 flex items-center justify-between bg-transparent">
+            <aside className="lg:col-span-3 flex flex-col overflow-hidden bg-base-100/40 backdrop-blur-xl">
+                <header className="h-16 px-6 flex items-center justify-between">
                     <span className="text-[10px] font-black uppercase tracking-[0.3em] text-primary">Neural Translaton</span>
                 </header>
                 <div className="flex-grow p-6 space-y-8 overflow-y-auto custom-scrollbar">
@@ -262,14 +262,14 @@ export const StoryboardPage: React.FC<{ showGlobalFeedback: (m: string, e?: bool
 
                     <div className="space-y-4">
                         <div className="flex justify-between items-center"><span className="text-[10px] font-black uppercase tracking-widest text-primary/40">Engine Optimized Prompt</span><button onClick={handleTranslate} disabled={isTranslating || !activeScene} className="btn btn-xs btn-ghost gap-1">{isTranslating ? <LoadingSpinner size={12}/> : <SparklesIcon className="w-3.5 h-3.5"/>} Translate</button></div>
-                        <div className="p-4 bg-transparent border border-base-300 text-xs font-mono leading-relaxed text-base-content/60 min-h-[200px] break-words">
+                        <div className="p-4 text-xs font-mono leading-relaxed text-base-content/60 min-h-[200px] break-words">
                             {isTranslating ? 'Synthesizing syntactic dialect...' : translatedPrompt || 'Translation queue empty.'}
                         </div>
                     </div>
 
                     <p className="text-[9px] font-bold text-base-content/30 uppercase leading-relaxed">This translator adapts your narrative intent to the specific visual physics and semantic weight expected by the {activeStoryboard.targetModel} architecture.</p>
                 </div>
-                <footer className="h-14 border-t border-base-300 bg-transparent flex items-stretch">
+                <footer className="h-14 bg-base-100/40 backdrop-blur-xl flex items-stretch">
                     <button 
                         onClick={() => { navigator.clipboard.writeText(translatedPrompt); showGlobalFeedback("Token Copied"); }} 
                         disabled={!translatedPrompt} 

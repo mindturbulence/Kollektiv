@@ -1,15 +1,14 @@
-import React, { useRef, useState, useEffect, useCallback, useLayoutEffect } from 'react';
+import React, { useRef, useState, useEffect, useLayoutEffect } from 'react';
 import { gsap } from 'gsap';
 import type { ActiveTab } from '../types';
 import { useSettings } from '../contexts/SettingsContext';
 import { audioService } from '../services/audioService';
 import {
-  HomeIcon, Cog6ToothIcon, SparklesIcon,
+  HomeIcon, SparklesIcon,
   PromptIcon, PhotoIcon,
   PaletteIcon, LayoutDashboardIcon, CropIcon, FilmIcon, ViewColumnsIcon,
-  BookOpenIcon, UsersIcon, ThumbTackIcon, InformationCircleIcon, CloseIcon
+  BookOpenIcon, UsersIcon, ThumbTackIcon, CloseIcon
 } from './icons';
-import LlmStatusSwitcher from './LlmStatusSwitcher';
 
 interface SidebarProps {
   activeTab: ActiveTab;
@@ -18,7 +17,6 @@ interface SidebarProps {
   isPinned: boolean;
   setIsPinned: (isPinned: boolean | ((isPinned: boolean) => boolean)) => void;
   onClose: () => void;
-  onAboutClick: () => void;
 }
 
 const ScrambleLetter: React.FC<{ char: string; isHovered: boolean }> = ({ char, isHovered }) => {
@@ -30,7 +28,7 @@ const ScrambleLetter: React.FC<{ char: string; isHovered: boolean }> = ({ char, 
     useEffect(() => {
         if (isHovered) {
             let iteration = 0;
-            const maxIterations = 12 + Math.floor(Math.random() * 10);
+            const maxIterations = 8 + Math.floor(Math.random() * 6);
             
             if (timerRef.current) window.clearInterval(timerRef.current);
             
@@ -48,7 +46,7 @@ const ScrambleLetter: React.FC<{ char: string; isHovered: boolean }> = ({ char, 
                 }
                 
                 iteration++;
-            }, 55 + Math.random() * 45);
+            }, 30 + Math.random() * 30);
         } else {
             if (timerRef.current) window.clearInterval(timerRef.current);
             setDisplayChar(char);
@@ -75,44 +73,6 @@ const ScrambledText: React.FC<{ text: string; isHovered: boolean }> = ({ text, i
             ))}
         </span>
     );
-};
-
-const TimedScrambledText: React.FC<{ text: string; intervalMs: number }> = ({ text, intervalMs }) => {
-    const [display, setDisplay] = useState(text);
-    const chars = '0123456789ABCDEF!@#%^&*';
-    const intervalRef = useRef<number | null>(null);
-
-    const startScramble = useCallback(() => {
-        if (intervalRef.current) clearInterval(intervalRef.current);
-        let iteration = 0;
-        const maxIterations = 15;
-        
-        intervalRef.current = window.setInterval(() => {
-            setDisplay(text.split('').map((char, index) => {
-                if (char === ' ') return ' ';
-                if (Math.random() < iteration / maxIterations) return text[index];
-                return chars[Math.floor(Math.random() * chars.length)];
-            }).join(''));
-            
-            iteration++;
-            if (iteration >= maxIterations) {
-                if (intervalRef.current) clearInterval(intervalRef.current);
-            }
-        }, 50);
-    }, [text]);
-
-    useEffect(() => {
-        const timer = setInterval(() => {
-            startScramble();
-        }, intervalMs);
-
-        return () => {
-            if (intervalRef.current) clearInterval(intervalRef.current);
-            clearInterval(timer);
-        };
-    }, [intervalMs, startScramble]);
-
-    return <span>{display}</span>;
 };
 
 const NavItem: React.FC<{
@@ -153,11 +113,14 @@ const NavItem: React.FC<{
     );
 };
 
-const Section: React.FC<{ title: string, children: React.ReactNode }> = ({ title, children }) => (
+const Section: React.FC<{ title: string, children: React.ReactNode, action?: React.ReactNode }> = ({ title, children, action }) => (
     <div className="mb-3">
-        <h2 className="px-3 pb-1.5 text-[10px] font-black uppercase tracking-[0.3em] text-base-content/30">
-            {title}
-        </h2>
+        <div className="flex items-center justify-between px-3 pb-1.5">
+            <h2 className="text-[10px] font-black uppercase tracking-[0.3em] text-base-content/30">
+                {title}
+            </h2>
+            {action}
+        </div>
         <ul className="menu menu-sm p-0 gap-px relative">
             {children}
         </ul>
@@ -165,7 +128,7 @@ const Section: React.FC<{ title: string, children: React.ReactNode }> = ({ title
 );
 
 
-const Sidebar: React.FC<SidebarProps> = ({ activeTab, onNavigate, isSidebarOpen, isPinned, setIsPinned, onClose, onAboutClick }) => {
+const Sidebar: React.FC<SidebarProps> = ({ activeTab, onNavigate, isSidebarOpen, isPinned, setIsPinned, onClose }) => {
     const { settings } = useSettings();
     const { features } = settings;
     const sidebarRef = useRef<HTMLElement>(null);
@@ -217,8 +180,8 @@ const Sidebar: React.FC<SidebarProps> = ({ activeTab, onNavigate, isSidebarOpen,
     }, [isSidebarOpen, isPinned]);
 
   const sidebarClasses = [
-    "h-full text-base-content z-[100] flex flex-col overflow-hidden",
-    isPinned ? "bg-transparent relative" : "bg-base-100/40 backdrop-blur-xl absolute top-0 left-0"
+    "h-full text-base-content z-[600] flex flex-col overflow-hidden flex-shrink-0",
+    isPinned ? "bg-transparent relative" : "bg-base-100/40 backdrop-blur-xl fixed top-0 left-0"
   ].join(" ");
 
   return (
@@ -232,45 +195,37 @@ const Sidebar: React.FC<SidebarProps> = ({ activeTab, onNavigate, isSidebarOpen,
       <div className="absolute top-0 right-0 w-32 h-32 bg-primary/5 blur-3xl rounded-full -mr-16 -mt-16 pointer-events-none"></div>
       <div className="absolute bottom-0 left-0 w-24 h-24 bg-primary/5 blur-2xl rounded-full -ml-12 -mb-12 pointer-events-none"></div>
       
-      <div className="flex-shrink-0 flex items-center justify-between h-16 px-6 relative z-10">
-        <button onClick={() => onNavigate('dashboard')} className="flex items-center gap-3 group">
-          <h1 className="text-xl font-black tracking-tighter text-base-content uppercase flex items-center font-logo">
-            <TimedScrambledText text="Kollektiv" intervalMs={300000} />
-            <span className="text-primary italic animate-pulse drop-shadow-[0_0_10px_oklch(var(--p))] transition-all inline-block ml-0.5">.</span>
-          </h1>
-        </button>
-        <div className="flex items-center gap-1">
-          <button
-            onClick={() => setIsPinned(p => !p)}
-            onMouseEnter={() => audioService.playHover()}
-            className="btn btn-ghost btn-circle btn-sm hidden lg:inline-flex"
-            title={isPinned ? 'Unpin Sidebar' : 'Pin Sidebar'}
-          >
-            <ThumbTackIcon className={`w-5 h-5 transition-all duration-300 ease-out ${isPinned ? 'text-primary -rotate-45' : 'text-base-content/20 rotate-0'}`} />
-          </button>
-          {!isPinned && (
-            <button
-              onClick={() => {
-                audioService.playClick();
-                onClose();
-              }}
-              onMouseEnter={() => audioService.playHover()}
-              className="btn btn-ghost btn-circle btn-sm"
-              aria-label="Close sidebar"
-            >
-              <CloseIcon className="w-5 h-5" />
-            </button>
-          )}
-        </div>
-      </div>
 
       <nav className="flex-grow px-4 py-4 overflow-y-auto relative scroll-smooth custom-scrollbar flex flex-col">
-
-        <div className="mb-6 px-2 relative z-20">
-            <LlmStatusSwitcher />
-        </div>
         
-        <Section title="Overview">
+        <Section 
+            title="Overview"
+            action={
+                <div className="flex items-center gap-1">
+                    <button
+                        onClick={() => setIsPinned(p => !p)}
+                        onMouseEnter={() => audioService.playHover()}
+                        className="btn btn-ghost btn-circle btn-xs hidden lg:inline-flex opacity-40 hover:opacity-100"
+                        title={isPinned ? 'Unpin Sidebar' : 'Pin Sidebar'}
+                    >
+                        <ThumbTackIcon className={`w-3 h-3 transition-all duration-300 ease-out ${isPinned ? 'text-primary -rotate-45' : 'text-base-content/20 rotate-0'}`} />
+                    </button>
+                    {!isPinned && (
+                        <button
+                            onClick={() => {
+                                audioService.playClick();
+                                onClose();
+                            }}
+                            onMouseEnter={() => audioService.playHover()}
+                            className="btn btn-ghost btn-circle btn-xs opacity-40 hover:opacity-100"
+                            aria-label="Close sidebar"
+                        >
+                            <CloseIcon className="w-3 h-3" />
+                        </button>
+                    )}
+                </div>
+            }
+        >
              <NavItem id="dashboard" label="Home" icon={<HomeIcon className="w-5 h-5" />} activeTab={activeTab} onClick={onNavigate} registerRef={registerRef} />
         </Section>
         
@@ -299,19 +254,6 @@ const Sidebar: React.FC<SidebarProps> = ({ activeTab, onNavigate, isSidebarOpen,
         )}
 
         <div className="mt-auto pt-4 border-t border-base-300/20">
-            <Section title="System">
-                <NavItem id="settings" label="Settings" icon={<Cog6ToothIcon className="w-5 h-5" />} activeTab={activeTab} onClick={onNavigate} registerRef={registerRef} />
-                <li>
-                    <a
-                      onClick={onAboutClick}
-                      onMouseEnter={() => audioService.playHover()}
-                      className="flex items-center p-2.5 rounded-lg text-base font-medium transition-colors cursor-pointer text-base-content/50 hover:bg-base-200/30"
-                    >
-                        <InformationCircleIcon className="w-5 h-5 mr-3" />
-                        <span className="uppercase text-[10px] font-black tracking-widest">About</span>
-                    </a>
-                </li>
-            </Section>
         </div>
       </nav>
     </aside>

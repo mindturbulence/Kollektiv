@@ -69,7 +69,7 @@ const AutocompleteSelect: React.FC<AutocompleteSelectProps> = ({ options, value,
     <div className={`relative w-full ${className}`} ref={wrapperRef}>
       <div 
         onClick={handleToggle}
-        className="flex items-center justify-between px-3 py-2 bg-transparent border border-base-300 rounded-none cursor-pointer hover:border-primary transition-colors h-10"
+        className="flex items-center justify-between px-3 py-2 bg-base-100/40 backdrop-blur-xl rounded-none cursor-pointer hover:border-primary transition-colors h-10"
       >
         <span className={`text-sm font-bold truncate uppercase tracking-tight ${!selectedOption ? 'text-base-content/30' : 'text-base-content'}`}>
           {selectedOption ? selectedOption.label : placeholder || 'Select option...'}

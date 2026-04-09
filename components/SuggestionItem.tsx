@@ -132,10 +132,7 @@ export const SuggestionItem: React.FC<SuggestionItemProps> = ({
   const isVideo = targetAI.toLowerCase().includes('veo');
 
   return (
-    <div className={`w-full transition-all duration-300 bg-transparent border border-base-300 mb-[1px] last:mb-0 relative overflow-hidden ${isGenerating ? 'bg-primary/5' : ''}`}>
-        {/* Technical Corner Accents */}
-        <div className="absolute top-0 left-0 w-2 h-2 border-t border-l border-primary/20"></div>
-        <div className="absolute bottom-0 right-0 w-2 h-2 border-b border-r border-primary/20"></div>
+    <div className={`w-full transition-all duration-300 bg-base-100/40 backdrop-blur-xl mb-[1px] last:mb-0 relative overflow-hidden ${isGenerating ? 'bg-primary/5' : ''}`}>
         
         <div className="p-4 md:p-6 flex flex-col h-full relative">
             {isGenerating ? (
@@ -145,7 +142,7 @@ export const SuggestionItem: React.FC<SuggestionItemProps> = ({
                 </div>
             ) : mediaUrl ? (
                 <div className="space-y-4 animate-fade-in">
-                    <div className="relative group bg-black border border-base-300 aspect-video flex items-center justify-center overflow-hidden">
+                    <div className="relative group bg-black aspect-video flex items-center justify-center overflow-hidden">
                         {isVideo ? (
                             <video src={mediaUrl} controls autoPlay loop className="w-full h-full object-contain" />
                         ) : (
@@ -173,7 +170,7 @@ export const SuggestionItem: React.FC<SuggestionItemProps> = ({
                     )}
 
                     <div className="flex-grow">
-                        <p className="text-base font-medium leading-relaxed text-base-content/80 font-mono border-l-2 border-primary/20 pl-4 py-2 bg-transparent">
+                        <p className="text-base font-medium leading-relaxed text-base-content/80 font-mono pl-4 py-2">
                             {suggestionText}
                         </p>
                     </div>

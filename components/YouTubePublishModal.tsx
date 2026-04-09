@@ -102,7 +102,7 @@ const YouTubePublishModal: React.FC<YouTubePublishModalProps> = ({
             <>
               <div className="form-control">
                 <label className="text-[10px] font-black uppercase tracking-[0.2em] text-base-content/40 mb-3">Destination Platform</label>
-                <div className="join w-full h-10 bg-transparent border border-base-300 rounded-none overflow-hidden">
+                <div className="join w-full h-10 bg-base-100/40 backdrop-blur-xl rounded-none overflow-hidden">
                     <button onClick={() => setPlatform('youtube')} className={`join-item btn btn-ghost h-full flex-1 border-none rounded-none font-black text-[9px] tracking-widest uppercase transition-all ${platform === 'youtube' ? 'bg-primary/10 text-primary' : 'opacity-40 hover:bg-primary/10'}`}>YOUTUBE</button>
                     <button onClick={() => setPlatform('instagram')} className={`join-item btn btn-ghost h-full flex-1 border-l border-base-300 rounded-none font-black text-[9px] tracking-widest uppercase transition-all ${platform === 'instagram' ? 'bg-primary/10 text-primary' : 'opacity-40 hover:bg-primary/10'}`}>INSTAGRAM</button>
                 </div>
@@ -113,7 +113,7 @@ const YouTubePublishModal: React.FC<YouTubePublishModalProps> = ({
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6 animate-fade-in">
                     <div className="form-control">
                         <label className="text-[10px] font-black uppercase tracking-[0.2em] text-base-content/40 mb-3">Signal Visibility</label>
-                        <div className="join w-full h-10 bg-transparent border border-base-300 rounded-none overflow-hidden">
+                        <div className="join w-full h-10 bg-base-100/40 backdrop-blur-xl rounded-none overflow-hidden">
                             <button onClick={() => setPrivacy('public')} className={`join-item btn btn-ghost btn-xs h-full flex-1 border-none rounded-none font-black text-[9px] tracking-widest uppercase transition-all ${privacy === 'public' ? 'bg-primary/10 text-primary' : 'opacity-40 hover:bg-primary/10'}`}>PUBLIC</button>
                             <button onClick={() => setPrivacy('unlisted')} className={`join-item btn btn-ghost btn-xs h-full flex-1 border-x border-base-300 rounded-none font-black text-[9px] tracking-widest uppercase transition-all ${privacy === 'unlisted' ? 'bg-primary/10 text-primary' : 'opacity-40 hover:bg-primary/10'}`}>UNLISTED</button>
                             <button onClick={() => setPrivacy('private')} className={`join-item btn btn-ghost btn-xs h-full flex-1 border-none rounded-none font-black text-[9px] tracking-widest uppercase transition-all ${privacy === 'private' ? 'bg-primary/10 text-primary' : 'opacity-40 hover:bg-primary/10'}`}>PRIVATE</button>
@@ -121,7 +121,7 @@ const YouTubePublishModal: React.FC<YouTubePublishModalProps> = ({
                     </div>
                     <div className="form-control">
                         <label className="text-[10px] font-black uppercase tracking-[0.2em] text-base-content/40 mb-3">Protocol Format</label>
-                        <div className="join w-full h-10 bg-transparent border border-base-300 rounded-none overflow-hidden">
+                        <div className="join w-full h-10 bg-base-100/40 backdrop-blur-xl rounded-none overflow-hidden">
                             <button onClick={() => setPublishAsShorts(false)} className={`join-item btn btn-ghost btn-xs h-full flex-1 border-none rounded-none font-black text-[9px] tracking-widest uppercase transition-all ${!publishAsShorts ? 'bg-primary/10 text-primary' : 'opacity-40 hover:bg-primary/10'}`}>STANDARD</button>
                             <button onClick={() => setPublishAsShorts(true)} className={`join-item btn btn-ghost btn-xs h-full flex-1 border-l border-base-300 rounded-none font-black text-[9px] tracking-widest uppercase transition-all ${publishAsShorts ? 'bg-primary/10 text-primary' : 'opacity-40 hover:bg-primary/10'}`}>REEL</button>
                         </div>

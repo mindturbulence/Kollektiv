@@ -55,9 +55,9 @@ const ImageSlot: React.FC<{
 
   if (image) {
     return (
-        <div className="p-4 bg-transparent border border-base-300 group">
+        <div className="p-4 group">
             <div className="flex items-center gap-4">
-                <img src={image.url} alt={image.file?.name || 'Library File'} className="w-16 h-16 object-cover rounded-none flex-shrink-0 bg-transparent border border-base-300"/>
+                <img src={image.url} alt={image.file?.name || 'Library File'} className="w-16 h-16 object-cover rounded-none flex-shrink-0 bg-transparent"/>
                 <div className="text-[10px] flex-grow min-w-0">
                     <p className="font-black uppercase tracking-widest text-primary mb-1">{title}</p>
                     <p className="truncate font-bold text-base-content/60" title={image.file?.name || 'Library Image'}>{image.file?.name || 'Library Item'}</p>
@@ -71,7 +71,7 @@ const ImageSlot: React.FC<{
 
   return (
     <div
-      className={`p-6 border-2 border-dashed transition-all flex flex-col items-center justify-center text-center cursor-pointer gap-4 ${isDragging ? 'border-primary bg-primary/10' : 'border-base-300 hover:border-primary/50 bg-transparent'}`}
+      className={`p-6 border-2 border-dashed transition-all flex flex-col items-center justify-center text-center cursor-pointer gap-4 ${isDragging ? 'border-primary bg-primary/10' : 'border-base-300 hover:border-primary/50'}`}
       onDragOver={(e) => { e.preventDefault(); setIsDragging(true); }}
       onDragLeave={() => setIsDragging(false)}
       onDrop={handleDrop}
@@ -82,8 +82,8 @@ const ImageSlot: React.FC<{
           <p className="text-[9px] font-bold uppercase tracking-widest text-base-content/20">Source Input</p>
       </div>
       <div className="flex gap-2">
-        <button onClick={(e) => { e.stopPropagation(); (inputRef.current as any)?.click(); }} className="btn btn-xs btn-ghost border border-base-300 rounded-none font-black text-[8px] tracking-widest uppercase">UPLOAD</button>
-        <button onClick={(e) => { e.stopPropagation(); onLibraryOpen(); }} className="btn btn-xs btn-xs btn-primary rounded-none font-black text-[8px] tracking-widest uppercase">LIBRARY</button>
+        <button onClick={(e) => { e.stopPropagation(); (inputRef.current as any)?.click(); }} className="btn btn-xs btn-ghost rounded-none font-black text-[8px] tracking-widest uppercase">UPLOAD</button>
+        <button onClick={(e) => { e.stopPropagation(); onLibraryOpen(); }} className="btn btn-xs btn-primary rounded-none font-black text-[8px] tracking-widest uppercase">LIBRARY</button>
       </div>
     </div>
   );
@@ -271,10 +271,10 @@ const ImageCompare: React.FC = () => {
     const handleMouseUpOrLeave = () => setIsPanning(false);
     
     return (
-        <div className="h-full bg-transparent flex flex-col overflow-hidden">
+        <div className="h-full flex flex-col overflow-hidden">
             <div className="flex-grow flex flex-col lg:flex-row overflow-hidden">
-                <aside className="w-full lg:w-96 flex-shrink-0 bg-transparent flex flex-col border-r border-base-300 overflow-hidden">
-                    <header className="p-6 border-b border-base-300 bg-transparent">
+                <aside className="w-full lg:w-96 flex-shrink-0 flex flex-col overflow-hidden bg-base-100/40 backdrop-blur-xl">
+                    <header className="p-6">
                         <h3 className="text-[10px] font-black uppercase tracking-[0.4em] text-primary">Artifact Inputs</h3>
                     </header>
                     <div className="flex-grow p-6 space-y-6 overflow-y-auto custom-scrollbar">
@@ -295,7 +295,7 @@ const ImageCompare: React.FC = () => {
                            />
                         </div>
 
-                        <div className="space-y-4 pt-4 border-t border-base-300/50">
+                        <div className="space-y-4 pt-4">
                            <label className="text-[10px] font-black uppercase tracking-widest text-base-content/40">Visual Matrix</label>
                            <div className="join w-full">
                                 <button onClick={() => setViewMode('split')} className={`join-item btn btn-xs flex-1 rounded-none font-black text-[9px] tracking-widest ${viewMode === 'split' ? 'btn-active' : ''}`}><ViewSplitHorizontalIcon className="w-4 h-4 mr-2"/>SPLIT</button>
@@ -303,19 +303,19 @@ const ImageCompare: React.FC = () => {
                            </div>
                         </div>
 
-                         <div className="pt-4 border-t border-base-300/50">
+                         <div className="pt-4">
                             <button onClick={handleResetView} className="btn btn-xs btn-ghost w-full justify-start rounded-none font-black text-[9px] tracking-widest uppercase"><EyeIcon className="w-4 h-4 mr-2 text-primary"/> RE-CENTER OPTICS</button>
-                        </div>
+                         </div>
                     </div>
-                     <footer className="p-4 border-t border-base-300 bg-transparent">
+                     <footer className="p-4">
                         <button onClick={handleResetAll} className="btn btn-sm btn-ghost w-full rounded-none font-black text-[9px] tracking-widest uppercase text-error/40 hover:text-error hover:bg-error/10">PURGE BUFFERS</button>
                     </footer>
                 </aside>
 
                 <main 
-                    className="flex-grow bg-transparent overflow-y-auto overflow-x-hidden scroll-smooth custom-scrollbar flex flex-col"
+                    className="flex-grow overflow-y-auto overflow-x-hidden scroll-smooth custom-scrollbar flex flex-col"
                 >
-                    <section className="p-10 border-b border-base-300 bg-transparent">
+                    <section className="p-10 bg-base-100/40 backdrop-blur-xl">
                         <div className="max-w-screen-2xl mx-auto flex flex-col gap-1">
                             <div className="flex flex-col md:flex-row md:items-stretch justify-between gap-6">
                                 <h1 className="text-2xl lg:text-3xl font-black tracking-tighter text-base-content leading-none flex items-center uppercase">Image Compare<span className="text-primary">.</span></h1>

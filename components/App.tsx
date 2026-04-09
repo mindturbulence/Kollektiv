@@ -595,39 +595,40 @@ const AppContent: React.FC = () => {
 
                     <div 
                         ref={appWrapperRef}
-                        className="flex-1 flex overflow-hidden relative z-0 bg-transparent rounded-none"
+                        className="flex-1 flex flex-col overflow-hidden relative z-0 bg-transparent rounded-none"
                     >
-                        <Sidebar
+                        <Header
+                            onMenuClick={handleMenuClick}
+                            onStandbyClick={() => { setIsIdle(true); isIdleRef.current = true; }}
                             activeTab={activeTab}
-                            onNavigate={handleNavigate}
-                            isSidebarOpen={isSidebarOpen}
-                            isPinned={isPinned}
-                            setIsPinned={(val) => {
+                            clippedIdeasCount={clippedIdeas.length}
+                            onToggleClippingPanel={() => {
                                 audioService.playClick();
-                                setIsPinned(val);
+                                setIsClippingPanelOpen(p => !p);
                             }}
-                            onClose={() => setIsSidebarOpen(false)}
-                            onAboutClick={() => {
-                                audioService.playModalOpen();
-                                setIsAboutModalOpen(true);
-                            }}
+                            onNavigate={handleNavigate}
                         />
-                        
-                        {isSidebarOpen && !isPinned && <div onClick={() => setIsSidebarOpen(false)} className="absolute inset-0 bg-black/50 z-[90]" />}
 
-                        <div className="flex-1 flex flex-col min-w-0 h-full relative z-0">
-                            <Header
-                                onMenuClick={handleMenuClick}
-                                onStandbyClick={() => { setIsIdle(true); isIdleRef.current = true; }}
+                        <div className="flex-1 flex overflow-hidden relative p-4 gap-4">
+                            {isSidebarOpen && !isPinned && (
+                                <div 
+                                    onClick={() => setIsSidebarOpen(false)} 
+                                    className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[550] transition-all duration-500" 
+                                />
+                            )}
+                            <Sidebar
                                 activeTab={activeTab}
-                                clippedIdeasCount={clippedIdeas.length}
-                                onToggleClippingPanel={() => {
+                                onNavigate={handleNavigate}
+                                isSidebarOpen={isSidebarOpen}
+                                isPinned={isPinned}
+                                setIsPinned={(val) => {
                                     audioService.playClick();
-                                    setIsClippingPanelOpen(p => !p);
+                                    setIsPinned(val);
                                 }}
+                                onClose={() => setIsSidebarOpen(false)}
                             />
                             
-                            <main className="flex-grow relative overflow-hidden bg-transparent">
+                            <main className="flex-grow min-w-0 relative overflow-hidden bg-transparent rounded-xl border border-base-300/20">
                                 <div 
                                     ref={mainGridRef} 
                                     className="absolute inset-0 z-[600] pointer-events-none grid"
@@ -646,12 +647,12 @@ const AppContent: React.FC = () => {
                                     {renderContent()}
                                 </div>
                             </main>
-                            
-                            <Footer onAboutClick={() => {
-                                audioService.playModalOpen();
-                                setIsAboutModalOpen(true);
-                            }} />
                         </div>
+                        
+                        <Footer onAboutClick={() => {
+                            audioService.playModalOpen();
+                            setIsAboutModalOpen(true);
+                        }} />
 
                         <ClippingPanel 
                             isOpen={isClippingPanelOpen}

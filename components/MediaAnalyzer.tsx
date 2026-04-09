@@ -202,14 +202,12 @@ export const MediaAnalyzer: React.FC<MediaAnalyzerProps> = ({ onSaveSuggestion, 
     const hasPrompt = !!metadataResults?.prompt && !metadataResults.prompt.includes('extraction failed') && !metadataResults.prompt.includes('No text nodes');
     
     return (
-        <div className="grid grid-cols-1 lg:grid-cols-12 overflow-hidden h-full p-4 gap-4 bg-transparent relative">
-            {/* Background Grid Decoration */}
-            <div className="absolute inset-0 pointer-events-none opacity-[0.03] grid-texture"></div>
+        <div className="grid grid-cols-1 lg:grid-cols-12 overflow-hidden h-full p-4 gap-4 relative">
             
             {/* Media Input Area */}
-            <aside className="lg:col-span-3 bg-transparent flex flex-col min-h-0 corner-frame relative z-10">
+            <aside className="lg:col-span-3 flex flex-col min-h-0 bg-base-100/40 backdrop-blur-xl relative z-10">
                 {header}
-                <header className="p-6 border-b border-base-300 bg-transparent h-16 flex items-center justify-between">
+                <header className="p-6 h-16 flex items-center justify-between">
                     <h3 className="text-[10px] font-black uppercase tracking-[0.4em] text-primary">Media Input</h3>
                     <div className="flex gap-1">
                         <div className="w-1 h-1 bg-primary/30"></div>
@@ -286,10 +284,10 @@ export const MediaAnalyzer: React.FC<MediaAnalyzerProps> = ({ onSaveSuggestion, 
                         Extract neural tokens via ANALYZE or technical parameters via READ.
                     </p>
                 </div>
-                <footer className="h-14 border-t border-base-300 bg-transparent flex items-stretch flex-shrink-0">
+                <footer className="h-14 flex items-stretch flex-shrink-0">
                     <button 
                         onClick={() => !isLoading && handleReset(null)} 
-                        className="btn btn-ghost h-full rounded-none border-none border-r border-base-300 flex-1 flex flex-col gap-1 items-center justify-center font-black text-[9px] tracking-widest text-error/40 hover:text-error uppercase"
+                        className="btn btn-ghost h-full rounded-none border-none flex-1 flex flex-col gap-1 items-center justify-center font-black text-[9px] tracking-widest text-error/40 hover:text-error uppercase"
                     >
                         <CloseIcon className="w-4 h-4" />
                         <span>RESET</span>
@@ -297,7 +295,7 @@ export const MediaAnalyzer: React.FC<MediaAnalyzerProps> = ({ onSaveSuggestion, 
                     <button 
                         onClick={handleAnalyze} 
                         disabled={isLoading || !sourceFile} 
-                        className={`btn btn-ghost h-full rounded-none border-none border-r border-base-300 flex-1 flex flex-col gap-1 items-center justify-center font-black text-[9px] tracking-widest uppercase hover:bg-primary/10 ${activeResultType === 'abstraction' ? 'text-primary' : ''}`}
+                        className={`btn btn-ghost h-full rounded-none border-none flex-1 flex flex-col gap-1 items-center justify-center font-black text-[9px] tracking-widest uppercase hover:bg-primary/10 ${activeResultType === 'abstraction' ? 'text-primary' : ''}`}
                     >
                         <SparklesIcon className="w-4 h-4" />
                         <span>{isLoading && activeResultType === 'abstraction' ? '...' : 'ANALYZE'}</span>
@@ -313,9 +311,9 @@ export const MediaAnalyzer: React.FC<MediaAnalyzerProps> = ({ onSaveSuggestion, 
                 </footer>
             </aside>
 
-            {/* Center Column: Results (Merged) */}
-            <main className="lg:col-span-9 bg-transparent flex flex-col min-h-0 corner-frame relative z-10">
-                <header className="p-6 border-b border-base-300 bg-transparent h-16 flex items-center justify-between">
+            {/* center Column: Results (Merged) */}
+            <main className="lg:col-span-9 flex flex-col min-h-0 bg-base-100/40 backdrop-blur-xl relative z-10">
+                <header className="p-6 h-16 flex items-center justify-between">
                     <div className="flex items-center gap-6">
                         <h2 className={`text-xs font-black uppercase tracking-[0.4em] flex items-center gap-3 transition-colors cursor-pointer ${activeResultType === 'abstraction' ? 'text-primary' : 'text-base-content/20 hover:text-base-content/40'}`} onClick={() => abstractionResults && setActiveResultType('abstraction')}>
                             <div className={`w-2 h-2 rounded-full ${activeResultType === 'abstraction' ? 'bg-primary animate-pulse' : 'bg-base-content/10'}`}></div> 
@@ -327,7 +325,7 @@ export const MediaAnalyzer: React.FC<MediaAnalyzerProps> = ({ onSaveSuggestion, 
                         </h2>
                     </div>
                 </header>
-                <div className="flex-grow overflow-y-auto custom-scrollbar bg-transparent flex flex-col">
+                <div className="flex-grow overflow-y-auto custom-scrollbar flex flex-col">
                     {error && (
                         <div className="p-6 animate-fade-in">
                             <div className="alert alert-error rounded-none border-2 border-error/20 bg-transparent">
@@ -367,20 +365,20 @@ export const MediaAnalyzer: React.FC<MediaAnalyzerProps> = ({ onSaveSuggestion, 
                                         <button 
                                             onClick={() => onRefine(metadataResults.prompt)}
                                             disabled={!hasPrompt}
-                                            className="btn btn-xs btn-ghost border border-base-300 rounded-none text-primary font-black text-[8px] tracking-widest uppercase px-2"
+                                            className="btn btn-xs btn-ghost rounded-none text-primary font-black text-[8px] tracking-widest uppercase px-2"
                                         >
                                             IMPROVE
                                         </button>
                                         <button 
                                             onClick={() => onClip(metadataResults.prompt, `Info: ${sourceFile?.name}`)}
                                             disabled={!hasPrompt}
-                                            className="btn btn-xs btn-ghost border border-base-300 rounded-none font-black text-[8px] tracking-widest uppercase px-2"
+                                            className="btn btn-xs btn-ghost rounded-none font-black text-[8px] tracking-widest uppercase px-2"
                                         >
                                             CLIP
                                         </button>
                                     </div>
                                 </div>
-                                <p className="text-sm font-medium leading-relaxed text-base-content/80 font-mono bg-transparent p-3 border border-base-300/50">
+                                <p className="text-sm font-medium leading-relaxed text-base-content/80 font-mono bg-base-100/40 backdrop-blur-xl p-3">
                                     {hasPrompt ? metadataResults.prompt : 'NO READABLE DATA.'}
                                 </p>
                             </section>
@@ -405,12 +403,12 @@ export const MediaAnalyzer: React.FC<MediaAnalyzerProps> = ({ onSaveSuggestion, 
                                     <button 
                                         onClick={handleCopyRaw}
                                         disabled={!metadataResults.raw && !metadataResults.workflow}
-                                        className="btn btn-xs btn-ghost border border-base-300 rounded-none font-black text-[8px] tracking-widest uppercase"
+                                        className="btn btn-xs btn-ghost rounded-none font-black text-[8px] tracking-widest uppercase"
                                     >
                                         {copiedRaw ? 'OK' : 'COPY'}
                                     </button>
                                 </div>
-                                <div className="p-3 bg-transparent border border-base-300 text-[9px] font-mono text-base-content/30 break-words leading-relaxed max-h-32 overflow-y-auto custom-scrollbar">
+                                <div className="p-3 bg-base-100/40 backdrop-blur-xl text-[9px] font-mono text-base-content/30 break-words leading-relaxed max-h-32 overflow-y-auto custom-scrollbar">
                                     {metadataResults.raw || 'EMPTY STREAM.'}
                                 </div>
                             </section>

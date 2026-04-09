@@ -74,7 +74,7 @@ const CheatsheetCard: React.FC<CheatsheetCardProps> = ({ item }) => {
         )}
 
         {item.example && (
-            <div className="bg-base-200/50 border border-base-300 p-6 rounded-none relative">
+            <div className="bg-base-100/40 backdrop-blur-xl p-6 rounded-none relative">
                 <div className="flex justify-between items-center mb-4">
                     <span className="text-[9px] font-black uppercase tracking-[0.2em] text-base-content/30">Execution Sample</span>
                     <CopyButton text={item.example} />
