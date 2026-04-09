@@ -145,9 +145,15 @@ const Sidebar: React.FC<SidebarProps> = ({ activeTab, onNavigate, isSidebarOpen,
         if (isFirstRender.current) {
             isFirstRender.current = false;
             if (isSidebarOpen) {
-                gsap.set(sidebarRef.current, { marginLeft: 0, width: 320, opacity: 1, visibility: 'visible' });
+                gsap.set(sidebarRef.current, { x: 0, marginLeft: 0, width: 320, opacity: 1, visibility: 'visible' });
             } else {
-                gsap.set(sidebarRef.current, { marginLeft: -320, width: isPinned ? 0 : 320, opacity: 0, visibility: 'hidden' });
+                gsap.set(sidebarRef.current, { 
+                    x: isPinned ? 0 : '-100%', 
+                    marginLeft: isPinned ? -320 : 0, 
+                    width: isPinned ? 0 : 320, 
+                    opacity: 0, 
+                    visibility: 'hidden' 
+                });
             }
             return;
         }
@@ -155,35 +161,84 @@ const Sidebar: React.FC<SidebarProps> = ({ activeTab, onNavigate, isSidebarOpen,
         gsap.killTweensOf(sidebarRef.current);
         
         if (isSidebarOpen) {
-            gsap.to(sidebarRef.current, {
-                marginLeft: 0,
-                width: 320,
-                duration: 0.4,
-                ease: "power3.out",
-                visibility: 'visible',
-                opacity: 1
-            });
+            if (isPinned) {
+                gsap.to(sidebarRef.current, {
+                    marginLeft: 0,
+                    width: 320,
+                    x: 0,
+                    duration: 0.4,
+                    ease: "power3.out",
+                    visibility: 'visible',
+                    opacity: 1
+                });
+            } else {
+                gsap.to(sidebarRef.current, {
+                    x: 0,
+                    duration: 1.2,
+                    ease: "elastic.out(1, 0.75)",
+                    visibility: 'visible',
+                    pointerEvents: 'auto',
+                    opacity: 1,
+                    // Reset pinned properties
+                    marginLeft: 0,
+                    width: 320
+                });
+            }
         } else {
-            gsap.to(sidebarRef.current, {
-                marginLeft: -320,
-                width: isPinned ? 0 : 320,
-                duration: 0.3,
-                ease: "power3.inOut",
-                opacity: 0,
-                onComplete: () => {
-                    if (sidebarRef.current && !isSidebarOpen) {
-                        sidebarRef.current.style.visibility = 'hidden';
+            if (isPinned) {
+                gsap.to(sidebarRef.current, {
+                    marginLeft: -320,
+                    width: 0,
+                    x: 0,
+                    duration: 0.3,
+                    ease: "power3.inOut",
+                    opacity: 0,
+                    onComplete: () => {
+                        if (sidebarRef.current && !isSidebarOpen) {
+                            sidebarRef.current.style.visibility = 'hidden';
+                        }
                     }
-                }
-            });
+                });
+            } else {
+                gsap.to(sidebarRef.current, {
+                    x: '-100%',
+                    duration: 0.8,
+                    ease: "elastic.in(1, 0.75)",
+                    pointerEvents: 'none',
+                    opacity: 0,
+                    onComplete: () => {
+                        if (sidebarRef.current && !isSidebarOpen) {
+                            sidebarRef.current.style.visibility = 'hidden';
+                        }
+                    }
+                });
+            }
         }
     }, [isSidebarOpen, isPinned]);
 
+    useEffect(() => {
+        const handleClickOutside = (event: MouseEvent) => {
+            if (!isPinned && isSidebarOpen && sidebarRef.current && !sidebarRef.current.contains(event.target as Node)) {
+                onClose();
+            }
+        };
+
+        if (!isPinned && isSidebarOpen && typeof document !== 'undefined') {
+            document.addEventListener('mousedown', handleClickOutside);
+        }
+
+        return () => {
+            if (typeof document !== 'undefined') {
+                document.removeEventListener('mousedown', handleClickOutside);
+            }
+        };
+    }, [isSidebarOpen, isPinned, onClose]);
+
   const sidebarClasses = [
-    "text-base-content z-[600] flex flex-col overflow-hidden flex-shrink-0 transition-all duration-300",
+    "text-base-content z-[600] flex flex-col overflow-hidden flex-shrink-0",
     isPinned 
-      ? "h-full bg-transparent relative" 
-      : "fixed top-4 left-4 bottom-4 bg-base-100/40 backdrop-blur-xl rounded-xl border border-base-300/20 shadow-2xl"
+      ? "h-full bg-transparent relative transition-all duration-300" 
+      : "fixed top-0 left-0 bottom-0 bg-base-100/40 backdrop-blur-xl border-r border-base-300/20 shadow-none -translate-x-full"
   ].join(" ");
 
   return (
