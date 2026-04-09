@@ -158,8 +158,8 @@ const Sidebar: React.FC<SidebarProps> = ({ activeTab, onNavigate, isSidebarOpen,
             gsap.to(sidebarRef.current, {
                 marginLeft: 0,
                 width: 320,
-                duration: 1.2,
-                ease: "expo.out",
+                duration: 0.4,
+                ease: "power3.out",
                 visibility: 'visible',
                 opacity: 1
             });
@@ -167,8 +167,8 @@ const Sidebar: React.FC<SidebarProps> = ({ activeTab, onNavigate, isSidebarOpen,
             gsap.to(sidebarRef.current, {
                 marginLeft: -320,
                 width: isPinned ? 0 : 320,
-                duration: 0.8,
-                ease: "expo.inOut",
+                duration: 0.3,
+                ease: "power3.inOut",
                 opacity: 0,
                 onComplete: () => {
                     if (sidebarRef.current && !isSidebarOpen) {
@@ -180,8 +180,10 @@ const Sidebar: React.FC<SidebarProps> = ({ activeTab, onNavigate, isSidebarOpen,
     }, [isSidebarOpen, isPinned]);
 
   const sidebarClasses = [
-    "h-full text-base-content z-[600] flex flex-col overflow-hidden flex-shrink-0",
-    isPinned ? "bg-transparent relative" : "bg-base-100/40 backdrop-blur-xl fixed top-0 left-0"
+    "text-base-content z-[600] flex flex-col overflow-hidden flex-shrink-0 transition-all duration-300",
+    isPinned 
+      ? "h-full bg-transparent relative" 
+      : "fixed top-4 left-4 bottom-4 bg-base-100/40 backdrop-blur-xl rounded-xl border border-base-300/20 shadow-2xl"
   ].join(" ");
 
   return (

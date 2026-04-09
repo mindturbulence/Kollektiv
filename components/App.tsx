@@ -403,9 +403,8 @@ const AppContent: React.FC = () => {
     }, [setActiveTab]);
 
     const handleNavigate = (tab: ActiveTab) => {
+        if (!isPinned) setIsSidebarOpen(false);
         if (tab === activeTab) return;
-        const isLg = window.innerWidth >= 1024;
-        if (!isPinned && !isLg) setIsSidebarOpen(false);
         runScopedTransition(tab);
     };
 
@@ -613,7 +612,7 @@ const AppContent: React.FC = () => {
                             {isSidebarOpen && !isPinned && (
                                 <div 
                                     onClick={() => setIsSidebarOpen(false)} 
-                                    className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[550] transition-all duration-500" 
+                                    className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[550] transition-all duration-300" 
                                 />
                             )}
                             <Sidebar

@@ -378,143 +378,55 @@
     background-color: rgba(2, 6, 23, 0.9) !important;
 }
 
-/* --- SANRITA THEME (ATELIER MINIMALISM) --- */
+/* --- SANRITA THEME (INVERTED PROMPT / LIGHT DIGITALISTS) --- */
 [data-theme='sanrita'] {
-    --bc: 26 26 26;
-    --p: 0 0 10%;
-    --pc: 253 252 248;
+    --p: 166 100% 40%;
+    --pc: 255 255 255;
+    --bc: 2 6 23;
 }
 
 [data-theme='sanrita'] body {
-    background-color: #fdfcf8;
-    color: #1a1a1a;
-    background-image: url("https://www.transparenttextures.com/patterns/natural-paper.png");
-}
-
-[data-theme='sanrita'] h1, 
-[data-theme='sanrita'] h2, 
-[data-theme='sanrita'] h3, 
-[data-theme='sanrita'] .font-display {
-    font-family: 'Playfair Display', serif;
-    font-weight: 400;
-    letter-spacing: -0.02em;
-    text-transform: none;
+  background-color: #f8fafc;
+  color: #0f172a;
+  background-image: 
+    radial-gradient(circle at 10% 10%, rgba(0, 255, 163, 0.15) 0%, transparent 40%),
+    radial-gradient(circle at 90% 90%, rgba(0, 209, 255, 0.1) 0%, transparent 40%);
 }
 
 [data-theme='sanrita'] .btn-primary {
-    background: oklch(var(--p)) !important;
-    color: oklch(var(--pc)) !important;
-    border-radius: 0;
-    font-family: 'Inter', sans-serif;
-    font-weight: 500;
-    letter-spacing: 0.2em;
-    border: 1px solid oklch(var(--p));
-    transition: all 0.5s cubic-bezier(0.19, 1, 0.22, 1);
+  background: oklch(var(--p)) !important;
+  color: oklch(var(--pc)) !important;
+  box-shadow: 0 10px 20px -5px oklch(var(--p) / 0.3);
+  border: none;
 }
 
 [data-theme='sanrita'] .btn-primary:hover {
-    background: transparent !important;
-    color: oklch(var(--p)) !important;
+  background: oklch(var(--p) / 0.9) !important;
+  box-shadow: 0 15px 25px -5px oklch(var(--p) / 0.4);
 }
 
 [data-theme='sanrita'] .card, 
 [data-theme='sanrita'] .bg-base-100 {
-    background: #ffffff !important;
-    border: 1px solid rgba(26, 26, 26, 0.05);
-    box-shadow: 0 10px 30px -10px rgba(0, 0, 0, 0.05);
+  background: rgba(255, 255, 255, 0.7) !important;
+  backdrop-filter: blur(24px);
+  border: 1px solid rgba(0, 0, 0, 0.05);
 }
 
 [data-theme='sanrita'] .border-base-300 {
-    border-color: rgba(26, 26, 26, 0.08) !important;
+  border-color: rgba(0, 0, 0, 0.06) !important;
 }
 
 [data-theme='sanrita'] .text-primary {
-    color: oklch(var(--p)) !important;
+  color: oklch(var(--p)) !important;
+  filter: drop-shadow(0 0 4px oklch(var(--p) / 0.2));
 }
 
 [data-theme='sanrita'] .bg-base-200 {
-    background-color: #f7f5f0 !important;
+    background-color: rgba(241, 245, 249, 0.8) !important;
 }
 
 [data-theme='sanrita'] .bg-base-300 {
-    background-color: #efede7 !important;
-}
-
-/* Sidebar Overrides */
-[data-theme='sanrita'] aside {
-    border-right: 1px solid rgba(26, 26, 26, 0.05) !important;
-    background-color: #ffffff !important;
-}
-
-[data-theme='sanrita'] .menu li > a:hover {
-    background-color: #f7f5f0 !important;
-}
-
-[data-theme='sanrita'] .text-primary-content {
-    color: #ffffff !important;
-}
-
-/* Disable glitchy text for Sanrita */
-[data-theme='sanrita'] .font-mono {
-    font-family: 'Inter', sans-serif !important;
-    letter-spacing: 0.05em !important;
-}
-
-/* Header Overrides */
-[data-theme='sanrita'] header {
-    background-color: rgba(255, 255, 255, 0.8) !important;
-    backdrop-filter: blur(20px);
-    border-bottom: 1px solid rgba(26, 26, 26, 0.05) !important;
-}
-
-/* Custom Cursor Overrides */
-[data-theme='sanrita'] #custom-cursor .glitch-ring {
-    display: none !important;
-}
-
-[data-theme='sanrita'] #custom-cursor .bg-primary {
-    opacity: 0.1 !important;
-    scale: 3 !important;
-}
-
-/* Remove scanline effects for Sanrita */
-[data-theme='sanrita'] header .absolute.inset-0.pointer-events-none,
-[data-theme='sanrita'] .w-full.h-full.flex.items-center.justify-center.p-4.bg-base-200.relative.overflow-hidden > .absolute.inset-0.pointer-events-none {
-    display: none !important;
-}
-
-/* Header Title Override */
-[data-theme='sanrita'] header h2 {
-    font-family: 'Playfair Display', serif !important;
-    text-transform: none !important;
-    letter-spacing: 0.05em !important;
-    font-weight: 700 !important;
-    font-size: 0.85rem !important;
-}
-
-/* Sidebar Logo Override */
-[data-theme='sanrita'] aside h1 {
-    font-family: 'Playfair Display', serif !important;
-    text-transform: none !important;
-    letter-spacing: 0.02em !important;
-    font-weight: 700 !important;
-}
-
-[data-theme='sanrita'] aside h1 span {
-    font-family: 'Playfair Display', serif !important;
-}
-
-/* Card and Badge Refinements */
-[data-theme='sanrita'] .badge {
-    border-radius: 0 !important;
-    font-family: 'Inter', sans-serif !important;
-    text-transform: uppercase !important;
-    letter-spacing: 0.1em !important;
-    font-weight: 600 !important;
-}
-
-[data-theme='sanrita'] .card {
-    border-radius: 0 !important;
+    background-color: rgba(226, 232, 240, 0.8) !important;
 }
 
 @layer utilities {
