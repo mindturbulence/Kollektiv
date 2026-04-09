@@ -143,6 +143,11 @@ export interface PromptModifiers {
   composition?: string;
   // Specific model styles
   zImageStyle?: string;
+  facialExpression?: string;
+  hairStyle?: string;
+  eyeColor?: string;
+  skinTexture?: string;
+  clothing?: string;
   // Video specific
   motion?: string;
   cameraMovement?: string;
@@ -168,6 +173,8 @@ export interface PromptModifiers {
   mjSeed?: string;
   mjStop?: string;
   mjRepeat?: string;
+  // Refiner specific
+  creativity?: number; 
 }
 
 export interface EnhancementResult {

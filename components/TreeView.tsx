@@ -1,5 +1,5 @@
 
-import React, { useState, useCallback, useEffect } from 'react';
+import React, { useState, useCallback } from 'react';
 import { FolderOpenIcon, FolderClosedIcon, ChevronRightIcon } from './icons';
 
 export interface TreeViewItem {
@@ -50,7 +50,7 @@ const TreeViewNode: React.FC<{
       <button
         onClick={handleNodeClick}
         style={{ paddingLeft: `${level * 1}rem` }}
-        className={`w-full text-left p-2.5 rounded-md text-sm transition-colors flex items-center justify-between ${isSelected ? 'bg-primary text-primary-content font-semibold shadow-md' : 'hover:bg-base-200'}`}
+        className={`w-full text-left p-2.5 text-sm transition-colors flex items-center justify-between ${isSelected ? 'text-primary' : 'text-base-content/70 hover:text-base-content'}`}
       >
         <div className="flex items-center min-w-0">
           {hasChildren && (

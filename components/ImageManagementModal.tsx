@@ -41,7 +41,7 @@ const ImagePreview: React.FC<ImagePreviewProps> = ({ url, onRemove }) => {
     }, [url]);
 
     return (
-        <div className="relative group aspect-square bg-base-200 overflow-hidden">
+        <div className="relative group aspect-square bg-transparent overflow-hidden">
             {hasError || !blobUrl ? (
                  <div className="w-full h-full flex items-center justify-center">
                     <ImageBrokenIcon className="w-8 h-8 text-error"/>
@@ -49,7 +49,7 @@ const ImagePreview: React.FC<ImagePreviewProps> = ({ url, onRemove }) => {
             ) : (
                 <img src={blobUrl} className="w-full h-full object-cover" alt="preview"/>
             )}
-            <button onClick={onRemove} className="btn btn-sm btn-square btn-error absolute top-2 right-2 opacity-0 group-hover:opacity-100 shadow-lg">
+            <button onClick={onRemove} className="btn btn-sm btn-square btn-error absolute top-2 right-2 opacity-0 group-hover:opacity-100">
                 <DeleteIcon className="w-4 h-4"/>
             </button>
         </div>
@@ -87,9 +87,9 @@ export const ImageManagementModal: React.FC<ImageManagementModalProps> = ({ isOp
   if (!isOpen) return null;
 
   const modalContent = (
-    <div className="fixed inset-0 bg-black/80 z-50 flex items-center justify-center p-4 animate-fade-in" onClick={onClose}>
-      <div className="bg-base-100 rounded-none border border-base-300 shadow-2xl w-full max-w-4xl mx-auto flex flex-col max-h-[90vh] overflow-hidden" onClick={e => e.stopPropagation()}>
-        <header className="p-10 border-b border-base-300 bg-base-200/20 relative">
+    <div className="fixed inset-0 bg-black/40 backdrop-blur-xl z-[110] flex items-center justify-center p-4 animate-fade-in" onClick={onClose}>
+      <div className="bg-base-100/40 rounded-none w-full max-w-4xl mx-auto flex flex-col max-h-[90vh] overflow-hidden" onClick={e => e.stopPropagation()}>
+        <header className="p-10 border-b border-base-300 bg-transparent relative">
             <button onClick={onClose} className="absolute top-6 right-6 btn btn-ghost btn-sm btn-square opacity-40 hover:opacity-100">
                 <CloseIcon className="w-6 h-6" />
             </button>
@@ -100,15 +100,15 @@ export const ImageManagementModal: React.FC<ImageManagementModalProps> = ({ isOp
         </header>
 
         <div className="p-10 flex-grow overflow-y-auto">
-          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-px bg-base-300 border border-base-300 mb-8">
+          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-px bg-base-100/40 backdrop-blur-xl mb-8">
             {imageUrls.map((url, index) => (
-              <div key={index} className="bg-base-100">
+              <div key={index} className="bg-transparent">
                   <ImagePreview url={url} onRemove={() => setImageUrls(prev => prev.filter((_, i) => i !== index))} />
               </div>
             ))}
             <button 
                 onClick={() => (fileInputRef.current as any)?.click()} 
-                className="aspect-square bg-base-200/30 flex flex-col items-center justify-center text-base-content/40 hover:text-primary hover:bg-base-200 transition-all group"
+                className="aspect-square bg-transparent flex flex-col items-center justify-center text-base-content/40 hover:text-primary hover:bg-primary/10 transition-all group"
             >
               <UploadIcon className="w-10 h-10 mb-2 group-hover:scale-110 transition-transform"/>
               <span className="text-[10px] font-black uppercase tracking-widest">Add Sample</span>
@@ -117,9 +117,9 @@ export const ImageManagementModal: React.FC<ImageManagementModalProps> = ({ isOp
           </div>
         </div>
 
-        <footer className="p-4 border-t border-base-300 flex justify-end gap-2 bg-base-200/10">
+        <footer className="p-4 border-t border-base-300 flex justify-end gap-2 bg-transparent">
           <button onClick={onClose} className="btn btn-ghost rounded-none uppercase font-black text-[10px] tracking-widest px-8">Abort</button>
-          <button onClick={handleSave} className="btn btn-primary rounded-none uppercase font-black text-[10px] tracking-widest px-8 shadow-lg">Commit Artifacts</button>
+          <button onClick={handleSave} className="btn btn-primary rounded-none uppercase font-black text-[10px] tracking-widest px-8">Commit Artifacts</button>
         </footer>
       </div>
     </div>

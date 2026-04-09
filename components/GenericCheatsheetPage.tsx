@@ -3,7 +3,7 @@ import React, { useState, useEffect, ComponentType, useRef, useLayoutEffect, use
 import { gsap } from 'gsap';
 import type { CheatsheetCategory, CheatsheetItem } from '../types';
 import LoadingSpinner from './LoadingSpinner';
-import { CloseIcon, ChevronLeftIcon, SearchIcon } from './icons';
+import { ChevronLeftIcon, SearchIcon } from './icons';
 import { fileSystemManager } from '../utils/fileUtils';
 import CheatsheetDetailView from './CheatsheetDetailView';
 import { audioService } from '../services/audioService';
@@ -70,9 +70,9 @@ const CategoryCard: React.FC<CategoryCardProps> = ({
         <div 
             ref={cardRef}
             onClick={() => cardRef.current && onClick(category, cardRef.current)}
-            className="category-card flex-shrink-0 w-[300px] md:w-[380px] lg:w-[450px] h-full relative group cursor-pointer select-none bg-base-100 flex flex-col border-r border-base-300 first:border-l overflow-hidden will-change-transform"
+            className="category-card flex-shrink-0 w-[300px] md:w-[380px] lg:w-[450px] h-full relative group cursor-pointer select-none flex flex-col overflow-hidden will-change-transform"
         >
-            <div ref={bgContainerRef} className="absolute inset-0 z-0 bg-base-200 overflow-hidden">
+            <div ref={bgContainerRef} className="absolute inset-0 z-0 bg-transparent overflow-hidden">
                 {currentImage && (
                     <img 
                         src={currentImage} 
@@ -295,14 +295,14 @@ export const GenericCheatsheetPage: React.FC<GenericCheatsheetPageProps> = ({
   }, [activeCategory, searchQuery]);
 
   if (isLoading) {
-    return <div className="h-full w-full flex items-center justify-center bg-base-100"><LoadingSpinner /></div>;
+    return <div className="h-full w-full flex items-center justify-center bg-transparent"><LoadingSpinner /></div>;
   }
 
   return (
-    <section className="h-full w-full min-w-0 bg-base-100 flex flex-col overflow-hidden relative">
+    <section className="h-full w-full min-w-0 flex flex-col overflow-hidden relative">
       {!activeCategory ? (
         <>
-            <header className="flex-shrink-0 bg-base-200/20 border-b border-base-300">
+            <header className="flex-shrink-0 bg-base-100/40 backdrop-blur-xl">
                 <div className="p-10">
                     <div className="flex flex-col md:flex-row md:items-end justify-between gap-6">
                         <div className="space-y-2">
@@ -314,7 +314,7 @@ export const GenericCheatsheetPage: React.FC<GenericCheatsheetPageProps> = ({
                                 {subtitle || "Systematic visual logic and aesthetic repositories."}
                             </p>
                         </div>
-                        <div className="flex bg-base-100 border border-base-300 shadow-sm">
+                        <div className="flex">
                             <div className="px-8 py-3 flex flex-col items-center justify-center">
                                 <span className="text-3xl font-black tracking-tighter leading-none">{data.length}</span>
                                 <span className="text-[8px] uppercase font-black text-base-content/30 tracking-[0.2em] mt-1">Folders</span>
@@ -327,7 +327,7 @@ export const GenericCheatsheetPage: React.FC<GenericCheatsheetPageProps> = ({
             {/* SCROLLABLE TRACK */}
             <div 
                 ref={scrollWrapperRef} 
-                className="flex-grow min-h-0 w-full flex overflow-x-auto overflow-y-hidden bg-base-100 no-scrollbar relative animate-fade-in"
+                className="flex-grow min-h-0 w-full flex overflow-x-auto overflow-y-hidden bg-transparent no-scrollbar relative animate-fade-in"
                 style={{ WebkitOverflowScrolling: 'touch', touchAction: 'pan-x' }}
             >
                 <div className="flex flex-nowrap h-full min-w-max">
@@ -339,12 +339,11 @@ export const GenericCheatsheetPage: React.FC<GenericCheatsheetPageProps> = ({
                             onClick={handleCategoryClick} 
                         />
                     ))}
-                    <div className="w-20 flex-shrink-0"></div>
                 </div>
             </div>
         </>
       ) : (
-        <div className="flex flex-col h-full w-full min-w-0 bg-base-100 z-50 overflow-hidden relative animate-fade-in">
+        <div className="flex flex-col h-full w-full min-w-0 bg-transparent z-50 overflow-hidden relative animate-fade-in">
             {activeItemIndex !== null && (
                 <CheatsheetDetailView 
                     items={filteredItems}
@@ -356,9 +355,9 @@ export const GenericCheatsheetPage: React.FC<GenericCheatsheetPageProps> = ({
                 />
             )}
 
-            <header className="detail-header flex-shrink-0 border-b border-base-300 bg-base-200/10 p-8 flex flex-col md:flex-row md:items-center justify-between gap-6 z-[60]">
+            <header className="detail-header flex-shrink-0 border-b border-base-300 bg-transparent p-8 flex flex-col md:flex-row md:items-center justify-between gap-6 z-[60]">
                 <div className="flex items-center gap-6">
-                    <button onClick={handleBackToCarousel} className="btn btn-ghost btn-circle opacity-40 hover:opacity-100 hover:bg-base-300 transition-all">
+                    <button onClick={handleBackToCarousel} className="btn btn-ghost btn-circle opacity-40 hover:opacity-100 hover:bg-transparent transition-all">
                         <ChevronLeftIcon className="w-6 h-6" />
                     </button>
                     <div>
@@ -379,16 +378,16 @@ export const GenericCheatsheetPage: React.FC<GenericCheatsheetPageProps> = ({
                 </div>
             </header>
 
-            <div className="flex-grow overflow-y-auto custom-scrollbar bg-base-100">
-                <div className={`mx-auto py-16 px-10 ${layout === 'article' ? 'max-w-4xl' : 'max-w-screen-2xl'}`}>
+            <div className="flex-grow overflow-y-auto custom-scrollbar bg-transparent">
+                <div className={`mx-auto pt-16 pb-0 px-10 ${layout === 'article' ? 'max-w-4xl' : 'max-w-screen-2xl'}`}>
                     <div className={layout === 'grid' 
-                        ? "grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-px bg-base-300 border border-base-300 shadow-2xl"
-                        : "flex flex-col gap-px bg-base-300 border border-base-300 shadow-2xl"
+                        ? "grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-px bg-base-100/40 backdrop-blur-xl shadow-none"
+                        : "flex flex-col gap-px bg-base-100/40 backdrop-blur-xl shadow-none"
                     }>
                         {filteredItems.map((item, idx) => (
                             <div 
                                 key={item.id} 
-                                className="item-card-wrapper bg-base-100 group/item overflow-hidden will-change-transform cursor-pointer" 
+                                className="item-card-wrapper bg-transparent group/item overflow-hidden will-change-transform cursor-pointer" 
                                 onClick={() => setActiveItemIndex(idx)}
                             >
                                 <div className="transition-transform duration-1000 group-hover/item:scale-[1.01]">

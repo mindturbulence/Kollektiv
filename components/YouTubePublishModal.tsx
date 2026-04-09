@@ -73,9 +73,9 @@ const YouTubePublishModal: React.FC<YouTubePublishModalProps> = ({
   if (!isOpen) return null;
 
   const modalContent = (
-    <div className="fixed inset-0 bg-black/95 z-[1000] flex items-center justify-center p-4 animate-fade-in" onClick={onClose}>
-      <div className="bg-base-100 rounded-none border border-base-300 shadow-2xl w-full max-w-2xl mx-auto flex flex-col max-h-[90vh] overflow-hidden" onClick={e => e.stopPropagation()}>
-        <header className="p-8 border-b border-base-300 bg-base-200/20 relative">
+    <div className="fixed inset-0 bg-black/40 backdrop-blur-xl z-[1000] flex items-center justify-center p-4 animate-fade-in" onClick={onClose}>
+      <div className="bg-base-100/40 rounded-none w-full max-w-2xl mx-auto flex flex-col max-h-[90vh] overflow-hidden" onClick={e => e.stopPropagation()}>
+        <header className="p-8 border-b border-base-300 bg-transparent relative">
             <button onClick={onClose} className="absolute top-6 right-6 btn btn-ghost btn-sm btn-square opacity-40 hover:opacity-100">
                 <CloseIcon className="w-6 h-6" />
             </button>
@@ -102,28 +102,28 @@ const YouTubePublishModal: React.FC<YouTubePublishModalProps> = ({
             <>
               <div className="form-control">
                 <label className="text-[10px] font-black uppercase tracking-[0.2em] text-base-content/40 mb-3">Destination Platform</label>
-                <div className="join w-full h-10 bg-base-100 border border-base-300 rounded-none overflow-hidden">
-                    <button onClick={() => setPlatform('youtube')} className={`join-item btn btn-ghost h-full flex-1 border-none rounded-none font-black text-[9px] tracking-widest uppercase transition-all ${platform === 'youtube' ? 'bg-primary/10 text-primary' : 'opacity-40 hover:bg-base-200'}`}>YOUTUBE</button>
-                    <button onClick={() => setPlatform('instagram')} className={`join-item btn btn-ghost h-full flex-1 border-l border-base-300 rounded-none font-black text-[9px] tracking-widest uppercase transition-all ${platform === 'instagram' ? 'bg-primary/10 text-primary' : 'opacity-40 hover:bg-base-200'}`}>INSTAGRAM</button>
+                <div className="join w-full h-10 bg-base-100/40 backdrop-blur-xl rounded-none overflow-hidden">
+                    <button onClick={() => setPlatform('youtube')} className={`join-item btn btn-ghost h-full flex-1 border-none rounded-none font-black text-[9px] tracking-widest uppercase transition-all ${platform === 'youtube' ? 'bg-primary/10 text-primary' : 'opacity-40 hover:bg-primary/10'}`}>YOUTUBE</button>
+                    <button onClick={() => setPlatform('instagram')} className={`join-item btn btn-ghost h-full flex-1 border-l border-base-300 rounded-none font-black text-[9px] tracking-widest uppercase transition-all ${platform === 'instagram' ? 'bg-primary/10 text-primary' : 'opacity-40 hover:bg-primary/10'}`}>INSTAGRAM</button>
                 </div>
               </div>
               <div className="form-control"><label className="text-[10px] font-black uppercase tracking-[0.2em] text-base-content/40 mb-3">Transmission ID</label><input type="text" value={title} onChange={e => setTitle(e.target.value)} className="input input-bordered rounded-none font-bold tracking-tight h-10 w-full uppercase" placeholder="ENTER TITLE..." /></div>
-              <div className="form-control"><label className="text-[10px] font-black uppercase tracking-[0.2em] text-base-content/40 mb-3">Metadata Packet</label><textarea value={description} onChange={e => setDescription(e.target.value)} className="textarea textarea-bordered rounded-none min-h-[120px] font-medium leading-relaxed bg-base-200/20" placeholder="ENTER DESCRIPTION..." /></div>
+              <div className="form-control"><label className="text-[10px] font-black uppercase tracking-[0.2em] text-base-content/40 mb-3">Metadata Packet</label><textarea value={description} onChange={e => setDescription(e.target.value)} className="textarea textarea-bordered rounded-none min-h-[120px] font-medium leading-relaxed bg-transparent" placeholder="ENTER DESCRIPTION..." /></div>
               {platform === 'youtube' && (
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6 animate-fade-in">
                     <div className="form-control">
                         <label className="text-[10px] font-black uppercase tracking-[0.2em] text-base-content/40 mb-3">Signal Visibility</label>
-                        <div className="join w-full h-10 bg-base-100 border border-base-300 rounded-none overflow-hidden">
-                            <button onClick={() => setPrivacy('public')} className={`join-item btn btn-ghost btn-xs h-full flex-1 border-none rounded-none font-black text-[9px] tracking-widest uppercase transition-all ${privacy === 'public' ? 'bg-primary/10 text-primary' : 'opacity-40 hover:bg-base-200'}`}>PUBLIC</button>
-                            <button onClick={() => setPrivacy('unlisted')} className={`join-item btn btn-ghost btn-xs h-full flex-1 border-x border-base-300 rounded-none font-black text-[9px] tracking-widest uppercase transition-all ${privacy === 'unlisted' ? 'bg-primary/10 text-primary' : 'opacity-40 hover:bg-base-200'}`}>UNLISTED</button>
-                            <button onClick={() => setPrivacy('private')} className={`join-item btn btn-ghost btn-xs h-full flex-1 border-none rounded-none font-black text-[9px] tracking-widest uppercase transition-all ${privacy === 'private' ? 'bg-primary/10 text-primary' : 'opacity-40 hover:bg-base-200'}`}>PRIVATE</button>
+                        <div className="join w-full h-10 bg-base-100/40 backdrop-blur-xl rounded-none overflow-hidden">
+                            <button onClick={() => setPrivacy('public')} className={`join-item btn btn-ghost btn-xs h-full flex-1 border-none rounded-none font-black text-[9px] tracking-widest uppercase transition-all ${privacy === 'public' ? 'bg-primary/10 text-primary' : 'opacity-40 hover:bg-primary/10'}`}>PUBLIC</button>
+                            <button onClick={() => setPrivacy('unlisted')} className={`join-item btn btn-ghost btn-xs h-full flex-1 border-x border-base-300 rounded-none font-black text-[9px] tracking-widest uppercase transition-all ${privacy === 'unlisted' ? 'bg-primary/10 text-primary' : 'opacity-40 hover:bg-primary/10'}`}>UNLISTED</button>
+                            <button onClick={() => setPrivacy('private')} className={`join-item btn btn-ghost btn-xs h-full flex-1 border-none rounded-none font-black text-[9px] tracking-widest uppercase transition-all ${privacy === 'private' ? 'bg-primary/10 text-primary' : 'opacity-40 hover:bg-primary/10'}`}>PRIVATE</button>
                         </div>
                     </div>
                     <div className="form-control">
                         <label className="text-[10px] font-black uppercase tracking-[0.2em] text-base-content/40 mb-3">Protocol Format</label>
-                        <div className="join w-full h-10 bg-base-100 border border-base-300 rounded-none overflow-hidden">
-                            <button onClick={() => setPublishAsShorts(false)} className={`join-item btn btn-ghost btn-xs h-full flex-1 border-none rounded-none font-black text-[9px] tracking-widest uppercase transition-all ${!publishAsShorts ? 'bg-primary/10 text-primary' : 'opacity-40 hover:bg-base-200'}`}>STANDARD</button>
-                            <button onClick={() => setPublishAsShorts(true)} className={`join-item btn btn-ghost btn-xs h-full flex-1 border-l border-base-300 rounded-none font-black text-[9px] tracking-widest uppercase transition-all ${publishAsShorts ? 'bg-primary/10 text-primary' : 'opacity-40 hover:bg-base-200'}`}>REEL</button>
+                        <div className="join w-full h-10 bg-base-100/40 backdrop-blur-xl rounded-none overflow-hidden">
+                            <button onClick={() => setPublishAsShorts(false)} className={`join-item btn btn-ghost btn-xs h-full flex-1 border-none rounded-none font-black text-[9px] tracking-widest uppercase transition-all ${!publishAsShorts ? 'bg-primary/10 text-primary' : 'opacity-40 hover:bg-primary/10'}`}>STANDARD</button>
+                            <button onClick={() => setPublishAsShorts(true)} className={`join-item btn btn-ghost btn-xs h-full flex-1 border-l border-base-300 rounded-none font-black text-[9px] tracking-widest uppercase transition-all ${publishAsShorts ? 'bg-primary/10 text-primary' : 'opacity-40 hover:bg-primary/10'}`}>REEL</button>
                         </div>
                     </div>
                 </div>
@@ -134,9 +134,9 @@ const YouTubePublishModal: React.FC<YouTubePublishModalProps> = ({
           )}
         </div>
 
-        <footer className="border-t border-base-300 flex bg-base-200/5 p-0 overflow-hidden flex-shrink-0">
+        <footer className="border-t border-base-300 flex bg-transparent p-0 overflow-hidden flex-shrink-0">
             <button onClick={onClose} className="btn flex-1 h-16 rounded-none uppercase font-black text-[10px] tracking-widest border-r border-base-300 transition-colors" disabled={isUploading}>Abort Uplink</button>
-            <button onClick={handlePublish} className="btn btn-primary flex-1 h-16 rounded-none uppercase font-black text-[10px] tracking-widest shadow-lg transition-colors" disabled={isUploading || !title.trim()}>{isUploading ? 'SYNCING...' : 'INITIATE UPLINK'}</button>
+            <button onClick={handlePublish} className="btn btn-primary flex-1 h-16 rounded-none uppercase font-black text-[10px] tracking-widest transition-colors" disabled={isUploading || !title.trim()}>{isUploading ? 'SYNCING...' : 'INITIATE UPLINK'}</button>
         </footer>
       </div>
     </div>

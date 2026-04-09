@@ -54,23 +54,23 @@ const LlmStatusSwitcher: React.FC = () => {
     }
 
     return (
-        <div className="dropdown dropdown-bottom w-full group">
-            <div tabIndex={0} role="button" title={tooltipText} className="w-full flex items-center justify-between p-2 text-sm rounded-md bg-base-200/50 hover:bg-base-200 transition-colors border border-transparent group-hover:border-primary/20" aria-haspopup="listbox">
-                <div className="flex items-center min-w-0">
-                    <span className={`w-2 h-2 rounded-full mr-2.5 flex-shrink-0 ${statusColor} ${statusColor === 'bg-success' ? 'motion-safe:animate-pulse' : ''}`}></span>
-                    <span className="font-bold text-base-content truncate uppercase text-[10px] tracking-widest">{displayText}</span>
+        <div className="dropdown dropdown-top w-full group">
+            <div tabIndex={0} role="button" title={tooltipText} className="w-full flex items-center justify-between p-2 text-sm rounded-none bg-transparent hover:bg-base-200/20 transition-all relative overflow-hidden" aria-haspopup="listbox">
+                <div className="flex items-center min-w-0 relative z-10">
+                    <span className={`w-1.5 h-1.5 rounded-full mr-2.5 flex-shrink-0 ${statusColor} ${statusColor === 'bg-success' ? 'motion-safe:animate-pulse shadow-[0_0_5px_rgba(var(--p),0.5)]' : ''}`}></span>
+                    <span className="font-black text-base-content/80 truncate uppercase text-[9px] tracking-[0.2em]">{displayText}</span>
                 </div>
-                <ChevronDownIcon className={`w-4 h-4 text-base-content/40 flex-shrink-0 transition-transform group-focus-within:rotate-180`} />
+                <ChevronDownIcon className={`w-3 h-3 text-base-content/40 flex-shrink-0 transition-transform group-focus-within:rotate-180 relative z-10`} />
             </div>
 
-            <ul tabIndex={0} className="dropdown-content menu p-1 shadow-2xl bg-base-200 rounded-none w-full min-w-[240px] mt-2 z-[100] border border-base-300 max-h-[70vh] overflow-y-auto custom-scrollbar flex flex-col flex-nowrap">
+            <ul tabIndex={0} className="dropdown-content menu p-1 shadow-2xl bg-base-100/40 backdrop-blur-xl rounded-none w-full min-w-[240px] mb-2 z-[1000] max-h-[70vh] overflow-y-auto custom-scrollbar flex flex-col flex-nowrap">
                 {/* Google Gemini Section */}
                 <li className="menu-title px-2 pt-2 pb-1 text-[8px] uppercase tracking-[0.3em] opacity-40"><span>Google Gemini</span></li>
                 {AVAILABLE_LLM_MODELS.map(model => (
                     <li key={model.id} className="w-full">
                         <a 
                             onClick={() => handleProviderAndModelSelect('gemini', model.id)} 
-                            className={`rounded-none text-[10px] font-black uppercase tracking-tight py-2.5 w-full block ${settings.llmModel === model.id && settings.activeLLM === 'gemini' ? 'bg-primary/10 text-primary active' : ''}`}
+                            className={`rounded-none text-[10px] font-black uppercase tracking-tight py-2.5 w-full block ${settings.llmModel === model.id && settings.activeLLM === 'gemini' ? 'text-primary' : 'text-base-content/70 hover:text-base-content'}`}
                         >
                             {model.name}
                         </a>
@@ -89,7 +89,7 @@ const LlmStatusSwitcher: React.FC = () => {
                         <li key={`local-${model}`} className="w-full">
                             <a 
                                 onClick={() => handleProviderAndModelSelect('ollama', model)} 
-                                className={`rounded-none text-[10px] font-black uppercase tracking-tight py-2.5 w-full block ${settings.ollamaModel === model && settings.activeLLM === 'ollama' ? 'bg-primary/10 text-primary active' : ''}`}
+                                className={`rounded-none text-[10px] font-black uppercase tracking-tight py-2.5 w-full block ${settings.ollamaModel === model && settings.activeLLM === 'ollama' ? 'text-primary' : 'text-base-content/70 hover:text-base-content'}`}
                             >
                                 {model}
                             </a>
@@ -108,7 +108,7 @@ const LlmStatusSwitcher: React.FC = () => {
                         <li key={`cloud-${model}`} className="w-full">
                             <a 
                                 onClick={() => handleProviderAndModelSelect('ollama_cloud', model)} 
-                                className={`rounded-none text-[10px] font-black uppercase tracking-tight py-2.5 w-full block ${settings.ollamaCloudModel === model && settings.activeLLM === 'ollama_cloud' ? 'bg-primary/10 text-primary active' : ''}`}
+                                className={`rounded-none text-[10px] font-black uppercase tracking-tight py-2.5 w-full block ${settings.ollamaCloudModel === model && settings.activeLLM === 'ollama_cloud' ? 'text-primary' : 'text-base-content/70 hover:text-base-content'}`}
                             >
                                 {model}
                             </a>

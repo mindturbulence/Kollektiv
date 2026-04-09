@@ -297,7 +297,7 @@ const MouseTrail: React.FC = () => {
   }, []);
 
   return (
-    <div ref={containerRef} className="fixed inset-0 z-[10000] pointer-events-none select-none" style={{ opacity: 0, visibility: 'hidden' }}>
+    <div id="custom-cursor" ref={containerRef} className="fixed inset-0 z-[10000] pointer-events-none select-none" style={{ opacity: 0, visibility: 'hidden' }}>
       <canvas
         ref={canvasRef}
         className="fixed inset-0 pointer-events-none"
@@ -314,13 +314,13 @@ const MouseTrail: React.FC = () => {
           {/* Glitch Layer: Red */}
           <div 
             ref={ringRedRef}
-            className="absolute inset-0 bg-[#ff0050] rounded-full scale-[5] blur-[2px] mix-blend-screen"
+            className="glitch-ring absolute inset-0 bg-[#ff0050] rounded-full scale-[5] blur-[2px] mix-blend-screen"
           ></div>
           
           {/* Glitch Layer: Cyan */}
           <div 
             ref={ringCyanRef}
-            className="absolute inset-0 bg-[#00ffff] rounded-full scale-[5] blur-[2px] mix-blend-screen"
+            className="glitch-ring absolute inset-0 bg-[#00ffff] rounded-full scale-[5] blur-[2px] mix-blend-screen"
           ></div>
       </div>
     </div>

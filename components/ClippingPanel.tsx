@@ -42,7 +42,7 @@ const ManualClipModal: React.FC<{
 
     const modalContent = (
         <div className="fixed inset-0 bg-black/80 z-[200] flex items-center justify-center p-4 animate-fade-in" onClick={onClose}>
-            <div className="bg-base-100 rounded-none border border-base-300 shadow-2xl w-full max-w-lg overflow-hidden" onClick={e => e.stopPropagation()}>
+            <div className="bg-base-100/40 backdrop-blur-xl rounded-none shadow-2xl w-full max-w-lg overflow-hidden" onClick={e => e.stopPropagation()}>
                 <header className="p-8 border-b border-base-300 bg-base-200/20 relative">
                     <button onClick={onClose} className="absolute top-6 right-6 btn btn-ghost btn-sm btn-square opacity-40 hover:opacity-100">
                         <CloseIcon className="w-6 h-6" />
@@ -76,7 +76,7 @@ const ManualClipModal: React.FC<{
                     </div>
                 </div>
 
-                <footer className="border-t border-base-300 flex bg-base-200/5 p-0 overflow-hidden">
+                <footer className="border-t border-base-300 flex bg-transparent p-0 overflow-hidden">
                     <button onClick={onClose} className="btn flex-1 rounded-none uppercase font-black text-[10px] tracking-widest border-r border-base-300 transition-colors">Abort</button>
                     <button 
                         onClick={handleConfirm} 
@@ -119,7 +119,7 @@ const ClippedIdeaItem: React.FC<{
     const displayNum = String(index + 1).padStart(2, '0');
 
     return (
-        <div className="bg-base-200/50 border border-base-300 p-4 rounded-none flex flex-col gap-3 transition-all hover:bg-base-200 group">
+        <div className="bg-base-100/40 backdrop-blur-xl p-4 rounded-none flex flex-col gap-3 transition-all hover:bg-primary/5 group">
             <div className="flex justify-between items-start">
                 <div className="flex items-center gap-0 min-w-0">
                     <span className="text-3xl font-black text-base-content flex-shrink-0 font-mono leading-none tracking-tighter tabular-nums">
@@ -159,7 +159,7 @@ const ClippedIdeaItem: React.FC<{
                 </button>
                 <button
                     onClick={() => onInsert(idea.prompt)}
-                    className="btn btn-xs btn-ghost border border-base-300 flex-1 h-8 min-h-0 font-black text-[9px] tracking-widest uppercase hover:bg-base-300"
+                    className="btn btn-xs btn-ghost flex-1 h-8 min-h-0 font-black text-[9px] tracking-widest uppercase hover:bg-base-300"
                     title="Send to Crafter"
                 >
                     <RefreshIcon className="w-3 h-3 mr-1.5 opacity-40" />
@@ -167,7 +167,7 @@ const ClippedIdeaItem: React.FC<{
                 </button>
                  <button
                     onClick={() => onRefine(idea.prompt)}
-                    className="btn btn-xs btn-ghost border border-base-300 flex-1 h-8 min-h-0 font-black text-[9px] tracking-widest uppercase hover:bg-base-300"
+                    className="btn btn-xs btn-ghost flex-1 h-8 min-h-0 font-black text-[9px] tracking-widest uppercase hover:bg-base-300"
                     title="Send back to Refiner"
                 >
                     <SparklesIcon className="w-3 h-3 mr-1.5 opacity-40" />
@@ -267,12 +267,12 @@ const ClippingPanel: React.FC<ClippingPanelProps> = ({
         <>
             <div
                 ref={panelRef}
-                className="absolute top-0 right-0 bottom-0 w-full md:w-[512px] bg-base-100 shadow-2xl z-[100] flex flex-col border-l border-base-300 translate-x-full"
+                className="absolute top-0 right-0 bottom-0 w-full md:w-[512px] bg-base-100/40 shadow-none z-[100] flex flex-col backdrop-blur-xl translate-x-full"
                 style={{ visibility: 'hidden' }}
                 aria-hidden={!isOpen}
             >
                 {/* Header */}
-                <div className="flex justify-between items-center h-16 px-6 border-b border-base-300 bg-base-200/20 flex-shrink-0">
+                <div className="flex justify-between items-center h-16 px-6 bg-base-100/20 flex-shrink-0">
                     <div className="flex items-center gap-3">
                         <BookmarkIcon className="w-5 h-5 text-primary"/>
                         <h3 className="font-black text-sm uppercase tracking-[0.3em]">Clipboard <span className="text-base-content/20 font-mono text-xs ml-2">[{clippedIdeas.length}]</span></h3>
@@ -318,7 +318,7 @@ const ClippingPanel: React.FC<ClippingPanelProps> = ({
 
                 {/* Footer */}
                 {clippedIdeas.length > 0 && (
-                    <div className="p-6 border-t border-base-300 bg-base-200/20 flex-shrink-0">
+                    <div className="p-6 border-t border-base-300 bg-transparent flex-shrink-0">
                         <button
                             onClick={onClearAll}
                             className="btn btn-sm btn-ghost w-full rounded-none font-black text-[9px] tracking-[0.3em] uppercase text-error/40 hover:text-error hover:bg-error/5"

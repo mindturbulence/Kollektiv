@@ -1,4 +1,5 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef, useLayoutEffect } from 'react';
+import { gsap } from 'gsap';
 import { PhotoIcon } from './icons';
 import { fileSystemManager } from '../utils/fileUtils';
 
@@ -12,6 +13,10 @@ const ImageSlider: React.FC<ImageSliderProps> = ({ imageUrls, name }) => {
     const [currentBlobUrl, setCurrentBlobUrl] = useState<string | null>(null);
     const [isLoading, setIsLoading] = useState(false);
     const [errorIndices, setErrorIndices] = useState<Set<number>>(new Set());
+    
+    const imageRef = useRef<HTMLImageElement>(null);
+    const shutterRef = useRef<HTMLDivElement>(null);
+    const containerRef = useRef<HTMLDivElement>(null);
 
     const currentRelativeUrl = imageUrls[currentIndex];
 
@@ -65,6 +70,24 @@ const ImageSlider: React.FC<ImageSliderProps> = ({ imageUrls, name }) => {
         };
     }, [currentRelativeUrl, currentIndex]);
 
+    useLayoutEffect(() => {
+        if (currentBlobUrl && imageRef.current && shutterRef.current) {
+            const tl = gsap.timeline({
+                defaults: { ease: "expo.inOut", duration: 1.2 }
+            });
+
+            tl.fromTo(shutterRef.current, 
+                { clipPath: 'inset(0% 0% 0% 0%)' },
+                { clipPath: 'inset(0% 100% 0% 0%)' }
+            )
+            .fromTo(imageRef.current, 
+                { scale: 1.3, filter: 'grayscale(100%) brightness(0.5)' },
+                { scale: 1, filter: 'grayscale(0%) brightness(1)', duration: 1.6 },
+                "-=1"
+            );
+        }
+    }, [currentBlobUrl]);
+
     const handleNext = (e: React.MouseEvent) => {
         e.stopPropagation();
         setCurrentIndex((prev) => (prev + 1) % imageUrls.length);
@@ -87,7 +110,13 @@ const ImageSlider: React.FC<ImageSliderProps> = ({ imageUrls, name }) => {
     }
 
     return (
-        <div className="relative w-full h-full bg-slate-800">
+        <div ref={containerRef} className="relative w-full h-full bg-slate-800 overflow-hidden">
+            {/* Shutter Overlay */}
+            <div 
+                ref={shutterRef}
+                className="absolute inset-0 bg-base-300 z-20 pointer-events-none"
+            />
+
             {isLoading ? (
                  <div className="w-full h-full flex items-center justify-center animate-pulse">
                     <PhotoIcon className="w-10 h-10 text-slate-700" />
@@ -99,22 +128,23 @@ const ImageSlider: React.FC<ImageSliderProps> = ({ imageUrls, name }) => {
                 </div>
             ) : (
                 <img 
+                    ref={imageRef}
                     src={currentBlobUrl} 
                     alt={`Sample for ${name} ${currentIndex + 1}`}
-                    className="w-full h-full object-cover"
+                    className="w-full h-full object-cover will-change-transform"
                     loading="lazy"
                 />
             )}
             
             {imageUrls.length > 1 && (
                 <>
-                    <button onClick={handlePrev} className="absolute left-2 top-1/2 -translate-y-1/2 p-2 bg-black/50 hover:bg-black/80 text-white rounded-full transition-opacity opacity-0 group-hover:opacity-100 focus:opacity-100 disabled:opacity-0 disabled:cursor-not-allowed z-10" aria-label="Previous image">
+                    <button onClick={handlePrev} className="absolute left-2 top-1/2 -translate-y-1/2 p-2 bg-black/50 hover:bg-black/80 text-white rounded-full transition-opacity opacity-0 group-hover:opacity-100 focus:opacity-100 disabled:opacity-0 disabled:cursor-not-allowed z-30" aria-label="Previous image">
                         &#10094;
                     </button>
-                    <button onClick={handleNext} className="absolute right-2 top-1/2 -translate-y-1/2 p-2 bg-black/50 hover:bg-black/80 text-white rounded-full transition-opacity opacity-0 group-hover:opacity-100 focus:opacity-100 disabled:opacity-0 disabled:cursor-not-allowed z-10" aria-label="Next image">
+                    <button onClick={handleNext} className="absolute right-2 top-1/2 -translate-y-1/2 p-2 bg-black/50 hover:bg-black/80 text-white rounded-full transition-opacity opacity-0 group-hover:opacity-100 focus:opacity-100 disabled:opacity-0 disabled:cursor-not-allowed z-30" aria-label="Next image">
                         &#10095;
                     </button>
-                    <div className="absolute bottom-2 right-2 bg-black/60 text-white text-xs font-semibold py-1 px-2 rounded-full z-10">
+                    <div className="absolute bottom-2 right-2 bg-black/60 text-white text-[8px] font-black uppercase tracking-widest py-1 px-3 rounded-none z-30">
                         {currentIndex + 1} / {imageUrls.length}
                     </div>
                 </>

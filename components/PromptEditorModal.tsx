@@ -97,12 +97,12 @@ const PromptEditorModal: React.FC<PromptEditorModalProps> = ({ isOpen, onClose, 
   if (!isOpen) return null;
 
   const modalContent = (
-    <div className="fixed inset-0 bg-black/80 z-[1000] flex items-center justify-center p-4 animate-fade-in" onClick={handleClose}>
+    <div className="fixed inset-0 bg-black/40 backdrop-blur-xl z-[1000] flex items-center justify-center p-4 animate-fade-in" onClick={handleClose}>
       <div 
-        className="bg-base-100 rounded-none border border-base-300 shadow-2xl w-full max-w-3xl mx-auto flex flex-col max-h-[90vh] overflow-hidden" 
+        className="bg-base-100/40 rounded-none w-full max-w-3xl mx-auto flex flex-col max-h-[90vh] overflow-hidden" 
         onClick={(e) => e.stopPropagation()}
       >
-        <header className="p-10 border-b border-base-300 bg-base-200/20 relative">
+        <header className="p-10 border-b border-base-300 bg-transparent relative">
             <button onClick={handleClose} className="absolute top-6 right-6 btn btn-ghost btn-sm btn-square opacity-40 hover:opacity-100">
                 <CloseIcon className="w-6 h-6" />
             </button>
@@ -149,9 +149,9 @@ const PromptEditorModal: React.FC<PromptEditorModalProps> = ({ isOpen, onClose, 
 
           <div className="form-control">
             <label className="text-[10px] font-black uppercase tracking-[0.2em] text-base-content/40 mb-2">Tags</label>
-            <div className="flex flex-wrap items-center gap-2 p-4 bg-base-200/50 border border-base-300 rounded-none min-h-[60px]">
+            <div className="flex flex-wrap items-center gap-2 p-4 bg-base-100/40 backdrop-blur-xl rounded-none min-h-[60px]">
                 {tags.map(tag => (
-                    <div key={tag} className="flex items-center gap-2 bg-base-100 border border-base-300 text-[10px] font-black uppercase tracking-widest px-3 py-1.5 shadow-sm">
+                    <div key={tag} className="flex items-center gap-2 bg-base-100/40 backdrop-blur-xl text-[10px] font-black uppercase tracking-widest px-3 py-1.5">
                         <span>{tag}</span>
                         <button type="button" onClick={() => handleRemoveTag(tag)} className="text-error hover:text-error-focus">&times;</button>
                     </div>
@@ -168,9 +168,9 @@ const PromptEditorModal: React.FC<PromptEditorModalProps> = ({ isOpen, onClose, 
           </div>
         </div>
         
-        <footer className="border-t border-base-300 flex bg-base-200/5 p-0 overflow-hidden flex-shrink-0">
+        <footer className="border-t border-base-300 flex bg-transparent p-0 overflow-hidden flex-shrink-0">
           <button onClick={handleClose} className="btn flex-1 rounded-none uppercase font-black text-[10px] tracking-widest border-r border-base-300 transition-colors">Cancel</button>
-          <button onClick={handleSave} disabled={!text.trim() || isSaving} className="btn btn-primary flex-1 rounded-none uppercase font-black text-[10px] tracking-widest shadow-lg transition-colors">
+          <button onClick={handleSave} disabled={!text.trim() || isSaving} className="btn btn-primary flex-1 rounded-none uppercase font-black text-[10px] tracking-widest transition-colors">
             {isSaving ? 'Saving...' : 'Save Changes'}
           </button>
         </footer>

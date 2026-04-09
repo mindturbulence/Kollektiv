@@ -58,8 +58,7 @@ export const Z_IMAGE_STYLES = [
     'Anime',
     'Oil Painting',
     'Minimalist Sketchwash',
-    'Retro Pixel Art',
-    'Vintage VGA Monitor'
+    'Retro Pixel Art'
 ];
 
 export interface DescriptiveOption {
@@ -468,4 +467,96 @@ export const ANALOG_FILM_STOCKS = [
     'Kodak Portra 160', 'Kodak Portra 400', 'Kodak Ektar 100', 'Kodak Gold 200', 'Kodak Tri-X 400',
     'Fujifilm Velvia 50', 'Fujifilm Provia 100F', 'Fujifilm Superia 400', 'CineStill 800T',
     'Ilford HP5 Plus 400', 'Lomography Color Negative 400', 'Polaroid 600', 'Agfa Vista 400'
+];
+
+export const FACIAL_EXPRESSIONS = [
+    'Neutral / Calm',
+    'Joyful / Laughing',
+    'Slight Smile',
+    'Smirking / Playful',
+    'Surprised / Shocked',
+    'Angry / Furious',
+    'Sad / Tearful',
+    'Fearful / Terrified',
+    'Disgusted',
+    'Contemptuous',
+    'Pensive / Thoughtful',
+    'Determined / Intense',
+    'Confused / Puzzled',
+    'Bored / Disinterested',
+    'Sleepy / Yawning',
+    'Seductive / Sultry',
+    'Winking',
+    'Screaming',
+    'Grinning',
+    'Stoic / Expressionless'
+];
+
+export const HAIR_STYLES = [
+    'Buzz Cut',
+    'Pixie Cut',
+    ' Bob Cut',
+    'Shoulder Length',
+    'Long Flowing Hair',
+    'Braided / Cornrows',
+    'Dreadlocks',
+    'Afro',
+    'Mohawk',
+    'Undercut',
+    'Messy / Bedhead',
+    'Slicked Back',
+    'Ponytail',
+    'Pigtails',
+    'Bun / Top Knot',
+    'Bald / Shaved',
+    'Wavy',
+    'Curly',
+    'Straight',
+    'Frizzy'
+];
+
+export const EYE_COLORS = [
+    'Blue',
+    'Brown',
+    'Green',
+    'Hazel',
+    'Amber',
+    'Gray',
+    'Violet',
+    'Heterochromia (Two-toned)',
+    'Glowing / Luminous',
+    'Piercing Light Blue',
+    'Deep Dark Brown'
+];
+
+export const SKIN_TEXTURES = [
+    'Smooth / Flawless',
+    'Freckled',
+    'Weathered / Wrinkled',
+    'Pores / Realistic Texture',
+    'Tanned',
+    'Pale / Porcelain',
+    'Scarred',
+    'Tattooed',
+    'Sweaty / Glistening',
+    'Dirty / Gritty',
+    'Vitiligo Patterns'
+];
+
+export const CLOTHING_STYLES = [
+    'Casual / T-shirt & Jeans',
+    'Formal / Suit & Tie',
+    'Business Casual',
+    'Streetwear / Techwear',
+    'Cyberpunk / Futuristic',
+    'Victorian / Period Dress',
+    'Medieval / Fantasy Armor',
+    'Athletic / Gym Wear',
+    'Bohemian / Hippie',
+    'Minimalist / Monochromatic',
+    'High-Fashion / Avant-Garde',
+    'Traditional / Cultural Garb',
+    'Tactical / Military Gear',
+    'Summer / Beachwear',
+    'Winter / Heavy Coat'
 ];

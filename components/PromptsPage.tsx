@@ -1,13 +1,15 @@
 
+// PromptsPage.tsx - Core component for prompt management
 import React, { useState, useCallback, useEffect, useMemo, useRef } from 'react';
 import { useSettings } from '../contexts/SettingsContext';
-import { enhancePromptStream, buildMidjourneyParams, generateWithImagen, generateWithNanoBanana, generateWithVeo, cleanLLMResponse } from '../services/llmService';
+import { enhancePromptStream, buildMidjourneyParams, generateWithImagen, generateWithNanoBanana, generateWithVeo, cleanLLMResponse, dissectPrompt, generateConstructorPreset } from '../services/llmService';
 import { loadPromptCategories, addSavedPrompt } from '../utils/promptStorage';
 import { loadArtStyles } from '../utils/artstyleStorage';
 import { loadArtists } from '../utils/artistStorage';
 import { fileToBase64 } from '../utils/fileUtils';
 import { refinerPresetService, type RefinerPreset } from '../services/refinerPresetService';
 
+import { useBusy } from '../contexts/BusyContext';
 import type { AppError, SavedPrompt, PromptCategory, EnhancementResult, PromptModifiers, CheatsheetCategory, Idea } from '../types';
 import { 
     PROMPT_DETAIL_LEVELS, 
@@ -15,7 +17,6 @@ import {
     CAMERA_PROXIMITY,
     LIGHTING_OPTIONS,
     COMPOSITION_OPTIONS,
-    GENERAL_ASPECT_RATIOS,
     CAMERA_TYPES,
     CAMERA_MODELS_BY_TYPE,
     ALL_PROFESSIONAL_CAMERA_MODELS,
@@ -23,7 +24,6 @@ import {
     CAMERA_EFFECTS,
     SPECIALTY_LENS_EFFECTS,
     LENS_TYPES,
-    FILM_TYPES,
     ANALOG_FILM_STOCKS,
     PHOTOGRAPHY_STYLES,
     DIGITAL_AESTHETICS,
@@ -38,18 +38,22 @@ import {
     VOICE_GENDERS,
     VOICE_TONES,
     AUDIO_ENVIRONMENTS,
-    AUDIO_MOODS
+    AUDIO_MOODS,
+    FACIAL_EXPRESSIONS,
+    HAIR_STYLES,
+    EYE_COLORS,
+    SKIN_TEXTURES,
+    CLOTHING_STYLES
 } from '../constants/modifiers';
 import { TARGET_IMAGE_AI_MODELS, TARGET_VIDEO_AI_MODELS, TARGET_AUDIO_AI_MODELS } from '../constants/models';
 
 import { SuggestionItem } from './SuggestionItem';
 import PromptEditorModal from './PromptEditorModal';
 import PromptCrafter from './PromptCrafter';
-import { ImageAbstractor } from './ImageAbstractor';
-import { MetadataReader } from './MetadataReader';
+import { MediaAnalyzer } from './MediaAnalyzer';
 import LoadingSpinner from './LoadingSpinner';
 import AutocompleteSelect from './AutocompleteSelect';
-import { PhotoIcon, FilmIcon, RefreshIcon, SparklesIcon, UploadIcon, CloseIcon, ChevronDownIcon, Cog6ToothIcon, ArchiveIcon, BookmarkIcon, CheckIcon, DeleteIcon } from './icons';
+import { SparklesIcon, UploadIcon, CloseIcon, Cog6ToothIcon, ArchiveIcon, CheckIcon, DeleteIcon } from './icons';
 import ConfirmationModal from './ConfirmationModal';
 
 // --- Types ---
@@ -72,20 +76,20 @@ const PropertyCard: React.FC<{
 }> = ({ label, value, onClear, onClick, active }) => (
     <div 
         onClick={onClick}
-        className={`group relative p-3 border transition-all duration-300 cursor-pointer select-none flex flex-col justify-center min-h-[4.5rem] animate-fade-in ${active ? 'bg-primary border-primary' : 'bg-base-200/50 border-base-300 hover:border-primary/50'}`}
+        className={`group relative p-3 transition-all duration-300 cursor-pointer select-none flex flex-col justify-center min-h-[4.5rem] animate-fade-in ${active ? 'text-primary' : 'text-base-content/80 hover:text-primary'}`}
     >
         <div className="flex items-center justify-between gap-2 mb-1.5">
-            <span className={`text-[10px] font-black uppercase tracking-widest ${active ? 'text-primary-content/60' : 'text-base-content/30'}`}>{label}</span>
+            <span className={`text-[10px] font-black uppercase tracking-widest ${active ? 'text-primary' : 'text-base-content/30'}`}>{label}</span>
             {value && (
                 <button 
                     onClick={(e) => { e.stopPropagation(); onClear(); }} 
-                    className={`btn btn-ghost btn-xs btn-square h-5 w-5 min-h-0 ${active ? 'text-primary-content/40 hover:text-primary-content' : 'text-base-content/20 hover:text-error'}`}
+                    className={`btn btn-ghost btn-xs btn-square h-5 w-5 min-h-0 ${active ? 'text-primary' : 'text-base-content/20 hover:text-error'}`}
                 >
                     ✕
                 </button>
             )}
         </div>
-        <span className={`text-sm font-bold leading-tight break-words first-letter:uppercase ${active ? 'text-primary-content' : 'text-base-content/80'}`}>
+        <span className={`text-sm font-bold leading-tight break-words first-letter:uppercase ${active ? 'text-primary' : 'text-base-content/80'}`}>
             {value || 'Default'}
         </span>
     </div>
@@ -106,11 +110,11 @@ const ReferenceSlot: React.FC<{
         }
     };
     return (
-        <div className="aspect-square bg-base-300 relative group overflow-hidden border border-base-300 w-full h-full">
+        <div className="aspect-square bg-base-100/40 backdrop-blur-xl relative group overflow-hidden w-full h-full">
             {url ? (
                 <>
                     <img src={url} className="w-full h-full object-cover" alt={`Ref ${index}`} />
-                    <button onClick={onRemove} className="btn btn-xs btn-square btn-error absolute top-1 right-1 opacity-0 group-hover:opacity-100 shadow-xl">✕</button>
+                    <button onClick={onRemove} className="btn btn-xs btn-square btn-error absolute top-1 right-1 opacity-0 group-hover:opacity-100">✕</button>
                 </>
             ) : (
                 <button onClick={() => inputRef.current?.click()} className="w-full h-full flex flex-col items-center justify-center gap-1 opacity-20 hover:opacity-100 hover:bg-primary/10 transition-all">
@@ -123,6 +127,18 @@ const ReferenceSlot: React.FC<{
     );
 };
 
+const DEFAULT_MODIFIERS: PromptModifiers = {
+    aspectRatio: "", videoInputType: "t2v", artStyle: "", artist: "", photographyStyle: "",
+    aestheticLook: "", digitalAesthetic: "", cameraType: "", cameraModel: "", cameraAngle: "", cameraProximity: "",
+    cameraSettings: "", cameraEffect: "", specialtyLens: "", lensType: "", filmType: "", filmStock: "",
+    lighting: "", composition: "", motion: "", cameraMovement: "", zImageStyle: "", facialExpression: "",
+    hairStyle: "", eyeColor: "", skinTexture: "", clothing: "",
+    audioType: "", voiceGender: "", voiceTone: "", audioEnvironment: "", audioMood: "", audioDuration: "10",
+    mjAspectRatio: "", mjChaos: "0", mjStylize: "100", mjVersion: MIDJOURNEY_VERSIONS[0],
+    mjNiji: "", mjStyle: "", mjTile: false, mjWeird: "0", mjNo: "", mjQuality: "",
+    mjSeed: "", mjStop: "", mjRepeat: ""
+};
+
 const PromptsPage: React.FC<PromptsPageProps> = ({ 
     initialState,
     onStateHandled,
@@ -130,7 +146,8 @@ const PromptsPage: React.FC<PromptsPageProps> = ({
     onClipIdea,
 }) => {
   const { settings } = useSettings();
-  const [activeView, setActiveView] = useState<'refine' | 'composer' | 'abstract' | 'reader'>('composer');
+  const { setIsBusy } = useBusy();
+  const [activeView, setActiveView] = useState<'refine' | 'composer' | 'analyzer'>('composer');
 
   // --- Refiner State ---
   const [mediaMode, setMediaMode] = useState<MediaMode>('image');
@@ -140,16 +157,7 @@ const PromptsPage: React.FC<PromptsPageProps> = ({
   const [targetAIModel, setTargetAIModel] = useState<string>(TARGET_IMAGE_AI_MODELS[0]);
   const [referenceImages, setReferenceImages] = useState<(string | null)[]>([null, null, null, null]);
 
-  const [modifiers, setModifiers] = useState<PromptModifiers>({ 
-    aspectRatio: "", videoInputType: "t2v", artStyle: "", artist: "", photographyStyle: "",
-    aestheticLook: "", digitalAesthetic: "", cameraType: "", cameraModel: "", cameraAngle: "", cameraProximity: "",
-    cameraSettings: "", cameraEffect: "", specialtyLens: "", lensType: "", filmType: "", filmStock: "",
-    lighting: "", composition: "", motion: "", cameraMovement: "", zImageStyle: "",
-    audioType: "", voiceGender: "", voiceTone: "", audioEnvironment: "", audioMood: "", audioDuration: "10",
-    mjAspectRatio: "", mjChaos: "0", mjStylize: "100", mjVersion: MIDJOURNEY_VERSIONS[0],
-    mjNiji: "", mjStyle: "", mjTile: false, mjWeird: "0", mjNo: "", mjQuality: "",
-    mjSeed: "", mjStop: "", mjRepeat: ""
-  });
+  const [modifiers, setModifiers] = useState<PromptModifiers>(DEFAULT_MODIFIERS);
   
   // --- Preset Management State ---
   const [presets, setPresets] = useState<RefinerPreset[]>([]);
@@ -287,6 +295,7 @@ const PromptsPage: React.FC<PromptsPageProps> = ({
   };
 
   const handleEnhance = useCallback(async () => {
+    setIsBusy(true);
     setIsLoadingRefine(true);
     setErrorRefine(null);
     setResultsRefine(null);
@@ -315,10 +324,12 @@ const PromptsPage: React.FC<PromptsPageProps> = ({
       setErrorRefine({ message: err.message });
     } finally {
       setIsLoadingRefine(false);
+      setIsBusy(false);
     }
   }, [refineText, constantModifier, promptLength, targetAIModel, modifiers, settings, isMidjourney, referenceImages, mediaMode]);
 
   const handleDirectGenerate = async () => {
+    setIsBusy(true);
     setIsLoadingRefine(true);
     setErrorRefine(null);
     setResultsRefine(null);
@@ -351,6 +362,7 @@ const PromptsPage: React.FC<PromptsPageProps> = ({
         setErrorRefine({ message: err.message || "Engine failure." });
     } finally {
         setIsLoadingRefine(false);
+        setIsBusy(false);
     }
   };
 
@@ -362,7 +374,7 @@ const PromptsPage: React.FC<PromptsPageProps> = ({
         aspectRatio: "", videoInputType: "t2v", artStyle: "", artist: "", photographyStyle: "",
         aestheticLook: "", digitalAesthetic: "", cameraType: "", cameraModel: "", cameraAngle: "", cameraProximity: "",
         cameraSettings: "", cameraEffect: "", specialtyLens: "", lensType: "", filmType: "", filmStock: "",
-        lighting: "", composition: "", motion: "", cameraMovement: "", zImageStyle: "",
+        lighting: "", composition: "", motion: "", cameraMovement: "", zImageStyle: "", facialExpression: "",
         audioType: "", voiceGender: "", voiceTone: "", audioEnvironment: "", audioMood: "", audioDuration: "10",
         mjAspectRatio: "", mjChaos: "0", mjStylize: "100", mjVersion: MIDJOURNEY_VERSIONS[0],
         mjNiji: "", mjStyle: "", mjTile: false, mjWeird: "0", mjNo: "", mjQuality: "",
@@ -383,7 +395,28 @@ const PromptsPage: React.FC<PromptsPageProps> = ({
       targetAI: targetAIModel,
       title: title || `Token_${Date.now().toString().slice(-4)}`
     });
-    setIsSaveSuggestionModalOpen(false);
+    setIsSaveSuggestionModalOpen(true);
+  };
+
+  const handleSaveAsPreset = async (suggestionText: string) => {
+    showGlobalFeedback('Analyzing for Constructor...');
+    try {
+      const components = await dissectPrompt(suggestionText, settings);
+      const result = await generateConstructorPreset(components, settings);
+      
+      // Set as active in Refiner
+      setModifiers(result.modifiers);
+      setRefineText(result.prompt);
+      
+      // Open save modal
+      setNewPresetName(`Constructor: ${suggestionText.substring(0, 20)}...`);
+      setIsSavePresetModalOpen(true);
+      
+      showGlobalFeedback('Mapped to Refiner.');
+    } catch (e) {
+      console.error('Save as Preset failed:', e);
+      showGlobalFeedback('Analysis failed.', true);
+    }
   };
 
   const handleClipSuggestion = useCallback((suggestionText: string, title?: string, lens: string = 'Refined Formula', source: string = 'Refiner') => {
@@ -412,12 +445,11 @@ const PromptsPage: React.FC<PromptsPageProps> = ({
     const viewTabs = [
         { id: 'composer', label: 'CRAFTER' },
         { id: 'refine', label: 'REFINE' },
-        { id: 'abstract', label: 'ANALYZE' },
-        { id: 'reader', label: 'READER' }
+        { id: 'analyzer', label: 'ANALYZER' }
     ] as const;
 
     return (
-        <div className="flex-shrink-0 bg-base-100 border-b border-base-300 sticky top-0 z-20 backdrop-blur-md bg-base-100/80 h-16">
+        <div className="flex-shrink-0 bg-transparent border-b border-base-300 sticky top-0 z-20 backdrop-blur-md h-16">
             <div className="flex w-full h-full">
                 {viewTabs.map((tab) => (
                     <button 
@@ -426,7 +458,7 @@ const PromptsPage: React.FC<PromptsPageProps> = ({
                         className={`flex-1 h-full font-black uppercase text-xs tracking-widest transition-colors border-r border-base-300 last:border-r-0 ${
                             currentView === tab.id 
                                 ? 'bg-primary text-primary-content' 
-                                : 'hover:bg-base-200 text-base-content/40'
+                                : 'hover:bg-primary/10 text-base-content/40'
                         }`}
                     >
                         {tab.label}
@@ -457,6 +489,11 @@ const PromptsPage: React.FC<PromptsPageProps> = ({
         artist: { label: 'Styling Trends', tab: 'styling' },
         aestheticLook: { label: 'Look', tab: 'styling' },
         digitalAesthetic: { label: 'Digital Trend', tab: 'styling' },
+        facialExpression: { label: 'Facial Expression', tab: 'styling' },
+        hairStyle: { label: 'Hair Style', tab: 'styling' },
+        eyeColor: { label: 'Eye Color', tab: 'styling' },
+        skinTexture: { label: 'Skin Texture', tab: 'styling' },
+        clothing: { label: 'Clothing', tab: 'styling' },
         zImageStyle: { label: 'Z-Image', tab: 'styling' },
         aspectRatio: { label: 'Aspect Ratio', tab: 'photography' },
         cameraType: { label: 'Camera Body', tab: 'photography' },
@@ -487,6 +524,7 @@ const PromptsPage: React.FC<PromptsPageProps> = ({
         mjNo: { label: 'MJ Exclude', tab: 'platform' },
         mjQuality: { label: 'MJ Quality', tab: 'platform' },
         mjTile: { label: 'MJ Tile', tab: 'platform' },
+        creativity: { label: 'Creativity', tab: 'basic' },
     };
 
     Object.entries(modifiers).forEach(([key, val]) => {
@@ -496,6 +534,7 @@ const PromptsPage: React.FC<PromptsPageProps> = ({
             if (key === 'mjWeird' && val === '0') return;
             if (key === 'mjVersion' && val === MIDJOURNEY_VERSIONS[0]) return;
             if (key === 'audioDuration' && val === '10') return;
+            if (key === 'creativity' && val === 70) return;
             
             const tab = defs[key].tab;
             if (mediaMode === 'audio' && ['styling', 'photography', 'motion', 'platform'].includes(tab)) return;
@@ -521,7 +560,7 @@ const PromptsPage: React.FC<PromptsPageProps> = ({
                                 <button onClick={() => setRefineText('')} className="btn btn-ghost btn-xs opacity-20 hover:opacity-100 uppercase font-black text-[8px] tracking-widest">Clear</button>
                              </div>
                         </div>
-                        <textarea value={refineText} onChange={(e) => setRefineText((e.currentTarget as any).value)} className="textarea textarea-bordered rounded-none w-full flex-grow resize-none font-medium leading-relaxed bg-base-200/20" placeholder="Enter core concept..."></textarea>
+                        <textarea value={refineText} onChange={(e) => setRefineText((e.currentTarget as any).value)} className="textarea textarea-bordered rounded-none w-full flex-grow resize-none font-medium leading-relaxed bg-transparent" placeholder="Enter core concept..."></textarea>
                     </div>
                     <div className="form-control">
                         <label className="text-[10px] font-black uppercase tracking-widest text-base-content/40 mb-2">Constant Modifiers</label>
@@ -530,9 +569,9 @@ const PromptsPage: React.FC<PromptsPageProps> = ({
                     <div className="form-control">
                         <label className="text-[10px] font-black uppercase tracking-widest text-base-content/40 mb-2">Media Output</label>
                         <div className="join w-full">
-                            <button onClick={() => setMediaMode('image')} className={`join-item btn btn-xs flex-1 rounded-none font-black text-[9px] ${mediaMode === 'image' ? 'btn-primary' : 'btn-ghost border border-base-300'}`}>IMAGE</button>
-                            <button onClick={() => setMediaMode('video')} className={`join-item btn btn-xs flex-1 rounded-none font-black text-[9px] ${mediaMode === 'video' ? 'btn-primary' : 'btn-ghost border border-base-300'}`}>VIDEO</button>
-                            <button onClick={() => setMediaMode('audio')} className={`join-item btn btn-xs flex-1 rounded-none font-black text-[9px] ${mediaMode === 'audio' ? 'btn-primary' : 'btn-ghost border border-base-300'}`}>AUDIO</button>
+                            <button onClick={() => setMediaMode('image')} className={`join-item btn btn-xs flex-1 rounded-none font-black text-[9px] ${mediaMode === 'image' ? 'btn-primary' : 'btn-ghost'}`}>IMAGE</button>
+                            <button onClick={() => setMediaMode('video')} className={`join-item btn btn-xs flex-1 rounded-none font-black text-[9px] ${mediaMode === 'video' ? 'btn-primary' : 'btn-ghost'}`}>VIDEO</button>
+                            <button onClick={() => setMediaMode('audio')} className={`join-item btn btn-xs flex-1 rounded-none font-black text-[9px] ${mediaMode === 'audio' ? 'btn-primary' : 'btn-ghost'}`}>AUDIO</button>
                         </div>
                     </div>
                     <div className="grid grid-cols-2 gap-4">
@@ -547,6 +586,24 @@ const PromptsPage: React.FC<PromptsPageProps> = ({
                             <select value={promptLength} onChange={(e) => setPromptLength((e.currentTarget as any).value)} className="select select-bordered select-sm rounded-none font-bold uppercase tracking-tighter w-full">
                                 {Object.entries(PROMPT_DETAIL_LEVELS).map(([k, v]) => <option key={k} value={v}>{v}</option>)}
                             </select>
+                        </div>
+                    </div>
+                    <div className="form-control">
+                        <div className="flex justify-between items-center mb-2">
+                            <label className="text-[10px] font-black uppercase tracking-widest text-base-content/40">Refiner Creativity / Uniqueness</label>
+                            <span className="text-[10px] font-mono font-bold text-primary">{modifiers.creativity ?? 70}%</span>
+                        </div>
+                        <input 
+                            type="range" 
+                            min="0" 
+                            max="100" 
+                            value={modifiers.creativity ?? 70} 
+                            onChange={e => setModifiers({...modifiers, creativity: parseInt(e.target.value)})} 
+                            className="range range-xs range-primary" 
+                        />
+                        <div className="flex justify-between px-1 mt-1">
+                            <span className="text-[8px] font-black opacity-20 uppercase">Accurate</span>
+                            <span className="text-[8px] font-black opacity-20 uppercase">Creative</span>
                         </div>
                     </div>
                 </div>
@@ -592,6 +649,59 @@ const PromptsPage: React.FC<PromptsPageProps> = ({
                             options={DIGITAL_AESTHETICS.map(t => ({ label: t.name.toUpperCase(), value: t.name, description: t.description }))} 
                             placeholder="Trend..." 
                           />
+                      </div>
+
+                      <div className="pt-4">
+                          <label className="text-[10px] font-black uppercase text-primary tracking-[0.3em] mb-4 block">Persona</label>
+                          <div className="grid grid-cols-1 gap-4">
+                              <div className="form-control">
+                                  <label className="text-[10px] font-black uppercase text-base-content/40 tracking-widest mb-2 block">Facial Expressions</label>
+                                  <AutocompleteSelect 
+                                    value={modifiers.facialExpression || ''} 
+                                    onChange={(v) => setModifiers({...modifiers, facialExpression: v})} 
+                                    options={FACIAL_EXPRESSIONS.map(e => ({ label: e.toUpperCase(), value: e }))} 
+                                    placeholder="Expression..." 
+                                  />
+                              </div>
+                              <div className="form-control">
+                                  <label className="text-[10px] font-black uppercase text-base-content/40 tracking-widest mb-2 block">Hair Styles</label>
+                                  <AutocompleteSelect 
+                                    value={modifiers.hairStyle || ''} 
+                                    onChange={(v) => setModifiers({...modifiers, hairStyle: v})} 
+                                    options={HAIR_STYLES.map(h => ({ label: h.toUpperCase(), value: h }))} 
+                                    placeholder="Hair..." 
+                                  />
+                              </div>
+                              <div className="grid grid-cols-2 gap-4">
+                                  <div className="form-control">
+                                      <label className="text-[10px] font-black uppercase text-base-content/40 tracking-widest mb-2 block">Eye Color</label>
+                                      <AutocompleteSelect 
+                                        value={modifiers.eyeColor || ''} 
+                                        onChange={(v) => setModifiers({...modifiers, eyeColor: v})} 
+                                        options={EYE_COLORS.map(e => ({ label: e.toUpperCase(), value: e }))} 
+                                        placeholder="Eyes..." 
+                                      />
+                                  </div>
+                                  <div className="form-control">
+                                      <label className="text-[10px] font-black uppercase text-base-content/40 tracking-widest mb-2 block">Skin Texture</label>
+                                      <AutocompleteSelect 
+                                        value={modifiers.skinTexture || ''} 
+                                        onChange={(v) => setModifiers({...modifiers, skinTexture: v})} 
+                                        options={SKIN_TEXTURES.map(s => ({ label: s.toUpperCase(), value: s }))} 
+                                        placeholder="Skin..." 
+                                      />
+                                  </div>
+                              </div>
+                              <div className="form-control">
+                                  <label className="text-[10px] font-black uppercase text-base-content/40 tracking-widest mb-2 block">Clothing & Outfit</label>
+                                  <AutocompleteSelect 
+                                    value={modifiers.clothing || ''} 
+                                    onChange={(v) => setModifiers({...modifiers, clothing: v})} 
+                                    options={CLOTHING_STYLES.map(c => ({ label: c.toUpperCase(), value: c }))} 
+                                    placeholder="Outfit..." 
+                                  />
+                              </div>
+                          </div>
                       </div>
                   </div>
               );
@@ -876,7 +986,8 @@ const PromptsPage: React.FC<PromptsPageProps> = ({
               modifiers: { ...modifiers },
               targetAIModel,
               mediaMode,
-              promptLength
+              promptLength,
+              constantModifier
           };
           await refinerPresetService.savePreset(preset);
           await loadPresets();
@@ -891,10 +1002,16 @@ const PromptsPage: React.FC<PromptsPageProps> = ({
 
   const handleUsePreset = useCallback((presetToUse: RefinerPreset | null = selectedPreset) => {
       if (presetToUse) {
-          setModifiers({ ...presetToUse.modifiers });
+          setModifiers({ ...DEFAULT_MODIFIERS, ...presetToUse.modifiers });
           setTargetAIModel(presetToUse.targetAIModel);
           setMediaMode(presetToUse.mediaMode);
           setPromptLength(presetToUse.promptLength);
+          if (presetToUse.constantModifier !== undefined) {
+              setConstantModifier(presetToUse.constantModifier);
+          }
+          if (presetToUse.refineText !== undefined) {
+              setRefineText(presetToUse.refineText);
+          }
           showGlobalFeedback(`Preset "${presetToUse.name}" applied.`);
       }
   }, [selectedPreset, showGlobalFeedback]);
@@ -939,7 +1056,7 @@ const PromptsPage: React.FC<PromptsPageProps> = ({
   };
 
   return (
-    <div className="flex flex-col h-full overflow-hidden bg-base-100">
+    <div className="flex flex-col h-full overflow-hidden bg-transparent">
       {renderTabsHeader(activeView)}
 
       <div className="flex-grow overflow-hidden relative">
@@ -948,22 +1065,27 @@ const PromptsPage: React.FC<PromptsPageProps> = ({
             onSaveToLibrary={(gen) => handleSaveSuggestion(gen)}
             onClip={(gen) => handleClipSuggestion(gen, 'Crafted Prompt', 'Crafter Formula', 'Crafter')}
             onSendToEnhancer={handleSendToRefine}
+            onSavePresetSuccess={(prompt, mods) => {
+                setRefineText(prompt);
+                setModifiers(mods);
+                showGlobalFeedback('Mapped to Refiner.');
+            }}
             promptToInsert={composerPromptToInsert}
             header={null}
           />
         )}
 
         {activeView === 'refine' && (
-          <div className="grid grid-cols-1 lg:grid-cols-12 overflow-hidden h-full">
+          <div className="grid grid-cols-1 lg:grid-cols-12 overflow-hidden h-full p-4 gap-4">
             {/* Left Sidebar: Controls & Tabs */}
-            <aside className="lg:col-span-4 bg-base-100 flex flex-col border-r border-base-300 overflow-hidden">
-              <div className="p-4 border-b border-base-300 bg-base-200/10">
-                <div className="tabs tabs-boxed rounded-none bg-transparent gap-1 p-0 flex flex-wrap">
+            <aside className="lg:col-span-3 flex flex-col overflow-hidden bg-base-100/40 backdrop-blur-xl">
+              <div className="p-4 h-16 flex items-center">
+                <div className="tabs tabs-boxed rounded-none bg-transparent gap-1 p-0 flex flex-wrap w-full">
                   {tabs.map(tab => (
                     <button 
                       key={tab.id} 
                       onClick={() => setActiveRefineSubTab(tab.id)} 
-                      className={`tab flex-grow rounded-none font-black text-[9px] tracking-widest uppercase ${activeRefineSubTab === tab.id ? 'tab-active' : ''}`}
+                      className={`tab flex-grow rounded-none font-black text-[9px] tracking-widest uppercase h-8 ${activeRefineSubTab === tab.id ? 'tab-active' : ''}`}
                     >
                       {tab.label}
                     </button>
@@ -973,17 +1095,17 @@ const PromptsPage: React.FC<PromptsPageProps> = ({
               <div className="flex-grow p-6 overflow-y-auto custom-scrollbar">
                 {renderRefineSubContent()}
               </div>
-              <footer className="h-14 border-t border-base-300 bg-base-100 flex items-stretch flex-shrink-0">
+              <footer className="h-14 flex items-stretch flex-shrink-0">
                 <button 
                   onClick={handleResetRefiner} 
-                  className="btn btn-ghost h-full rounded-none border-none border-r border-base-300 flex-1 font-black text-[10px] tracking-widest text-error/40 hover:text-error uppercase"
+                  className="btn btn-ghost h-full rounded-none border-none flex-1 font-black text-[10px] tracking-widest text-error/40 hover:text-error uppercase"
                 >
                   RESET
                 </button>
                 <button 
                   onClick={handleEnhance} 
                   disabled={isLoadingRefine || !refineText.trim()} 
-                  className="btn btn-ghost h-full rounded-none border-none border-r border-base-300 flex-1 font-black text-[10px] tracking-widest uppercase hover:bg-base-200"
+                  className="btn btn-ghost h-full rounded-none border-none flex-1 font-black text-[10px] tracking-widest uppercase hover:bg-primary/10"
                 >
                   {isLoadingRefine ? '...' : 'IMPROVE'}
                 </button>
@@ -1000,13 +1122,13 @@ const PromptsPage: React.FC<PromptsPageProps> = ({
             </aside>
 
             {/* Center: Main Neural Output */}
-            <main className="lg:col-span-5 bg-base-100 flex flex-col min-h-0 border-r border-base-300">
-              <header className="p-6 border-b border-base-300 bg-base-200/10 flex justify-between items-center">
+            <main className="lg:col-span-6 flex flex-col min-h-0 bg-base-100/40 backdrop-blur-xl">
+              <header className="p-6 h-16 flex justify-between items-center">
                 <h2 className="text-xs font-black uppercase tracking-[0.4em] text-primary flex items-center gap-3">
                   <div className="w-2 h-2 rounded-full bg-primary animate-pulse"></div> NEURAL OUTPUT
                 </h2>
               </header>
-              <div className="flex-grow overflow-y-auto custom-scrollbar bg-base-200/5 flex flex-col">
+              <div className="flex-grow overflow-y-auto custom-scrollbar flex flex-col">
                 {isLoadingRefine ? (
                   <div className="flex-grow flex flex-col items-center justify-center text-center space-y-6">
                     <LoadingSpinner size={48} />
@@ -1019,7 +1141,7 @@ const PromptsPage: React.FC<PromptsPageProps> = ({
                     </div>
                   </div>
                 ) : resultsRefine ? (
-                  <div className="p-[1px] bg-base-300">
+                  <div className="p-[1px]">
                     {resultsRefine.suggestions.map((suggestion, index) => (
                       <SuggestionItem 
                         key={index} 
@@ -1032,7 +1154,7 @@ const PromptsPage: React.FC<PromptsPageProps> = ({
                   </div>
                 ) : directMediaResult ? (
                   <div className="p-8 space-y-4 animate-fade-in">
-                    <div className="relative group bg-black border border-base-300 aspect-video flex items-center justify-center overflow-hidden">
+                    <div className="relative group bg-black aspect-video flex items-center justify-center overflow-hidden">
                       {directMediaResult.type === 'video' ? (
                         <video src={directMediaResult.url} controls autoPlay loop className="w-full h-full object-contain" />
                       ) : (
@@ -1050,15 +1172,15 @@ const PromptsPage: React.FC<PromptsPageProps> = ({
             </main>
 
             {/* Right Sidebar: Active Modifiers */}
-            <aside className="lg:col-span-3 bg-base-100 flex flex-col overflow-hidden">
-              <header className="p-6 border-b border-base-300 bg-base-200/10">
+            <aside className="lg:col-span-3 flex flex-col overflow-hidden bg-base-100/40 backdrop-blur-xl">
+              <header className="p-6 h-16 flex items-center">
                   <h3 className="text-xs font-black uppercase tracking-[0.4em] text-base-content/40">Active Construction</h3>
               </header>
               
               {/* Presets Management UI - Library Filter Look */}
-              <div className="h-14 border-b border-base-300 flex-shrink-0 bg-base-100 flex items-stretch relative z-20">
+              <div className="h-14 flex-shrink-0 flex items-stretch relative z-20">
                   <div className="dropdown dropdown-bottom flex-grow h-full">
-                    <div className="relative h-full border-r border-base-300" tabIndex={0} role="button">
+                    <div className="relative h-full" tabIndex={0} role="button">
                         <input 
                           type="text"
                           className="w-full h-full bg-transparent border-none focus:outline-none focus:ring-0 pl-4 pr-8 font-black text-[10px] uppercase tracking-widest placeholder:text-base-content/10"
@@ -1084,15 +1206,15 @@ const PromptsPage: React.FC<PromptsPageProps> = ({
                         )}
                     </div>
                     {filteredPresets.length > 0 && (
-                        <ul tabIndex={0} className="dropdown-content z-[100] menu p-1 shadow-2xl bg-base-200 rounded-none w-full mt-2 border border-base-300 max-h-60 overflow-y-auto">
+                        <ul tabIndex={0} className="dropdown-content z-[100] menu p-1 bg-base-100/40 backdrop-blur-xl rounded-none w-full mt-2 max-h-60 overflow-y-auto flex flex-col flex-nowrap">
                             {filteredPresets.map(p => (
-                                <li key={p.name}>
+                                <li key={p.name} className="w-full">
                                     <a 
                                         onMouseDown={(e) => {
                                             e.preventDefault();
                                             handleSelectPresetFromDropdown(p);
                                         }} 
-                                        className={`font-bold text-[10px] uppercase ${selectedPreset?.name === p.name ? 'bg-primary/20 text-primary' : ''}`}
+                                        className={`font-bold text-[10px] uppercase block w-full truncate ${selectedPreset?.name === p.name ? 'text-primary' : 'text-base-content/70 hover:text-base-content'}`}
                                     >
                                         {p.name}
                                     </a>
@@ -1102,7 +1224,7 @@ const PromptsPage: React.FC<PromptsPageProps> = ({
                     )}
                   </div>
                   <button 
-                      className="btn btn-ghost h-full rounded-none border-none border-r border-base-300 px-4 text-primary disabled:opacity-20 transition-all hover:bg-base-200" 
+                      className="btn btn-ghost h-full rounded-none border-none px-4 text-primary disabled:opacity-20 transition-all" 
                       onClick={() => handleUsePreset()} 
                       disabled={!selectedPreset}
                       title="Apply Preset"
@@ -1110,7 +1232,7 @@ const PromptsPage: React.FC<PromptsPageProps> = ({
                       <CheckIcon className="w-4 h-4"/>
                   </button>
                   <button 
-                      className="btn btn-ghost h-full rounded-none border-none px-4 text-error/60 disabled:opacity-20 transition-all hover:bg-error/5" 
+                      className="btn btn-ghost h-full rounded-none border-none px-4 text-error/60 disabled:opacity-20 transition-all" 
                       onClick={handleDeletePresetClick} 
                       disabled={!selectedPreset}
                       title="Delete Preset"
@@ -1141,7 +1263,7 @@ const PromptsPage: React.FC<PromptsPageProps> = ({
                 )}
               </div>
 
-              <footer className="h-14 border-t border-base-300 bg-base-100 flex items-stretch flex-shrink-0">
+              <footer className="h-14 flex items-stretch flex-shrink-0">
                 <button 
                     onClick={handleSavePresetClick} 
                     disabled={activeConstructionItems.length === 0}
@@ -1154,30 +1276,22 @@ const PromptsPage: React.FC<PromptsPageProps> = ({
           </div>
         )}
 
-        {activeView === 'abstract' && (
-          <ImageAbstractor 
+        {activeView === 'analyzer' && (
+          <MediaAnalyzer 
             onSaveSuggestion={handleSaveSuggestion} 
+            onSaveAsPreset={handleSaveAsPreset}
             onRefine={handleSendToRefine}
             onClip={handleClipSuggestion}
             header={null} 
           />
         )}
-
-        {activeView === 'reader' && (
-            <MetadataReader 
-                onSendToRefiner={handleSendToRefine}
-                onClipIdea={(text, title) => onClipIdea({ id: `clipped-${Date.now()}`, lens: 'Metadata', title: title, prompt: text, source: 'Reader' })}
-                onSaveToLibrary={(text, title) => handleSaveSuggestion(text, title)}
-                header={null}
-            />
-        )}
       </div>
 
       {/* Save Preset Modal */}
       {isSavePresetModalOpen && (
-          <div className="fixed inset-0 bg-black/80 z-50 flex items-center justify-center p-4 animate-fade-in" onClick={() => setIsSavePresetModalOpen(false)}>
-              <div className="bg-base-100 rounded-none border border-base-300 shadow-2xl w-full max-w-lg overflow-hidden" onClick={(e) => e.stopPropagation()}>
-                  <header className="p-8 border-b border-base-300 bg-base-200/20">
+          <div className="fixed inset-0 bg-black/40 backdrop-blur-xl z-50 flex items-center justify-center p-4 animate-fade-in" onClick={() => setIsSavePresetModalOpen(false)}>
+              <div className="bg-base-100/40 w-full max-w-lg overflow-hidden" onClick={(e) => e.stopPropagation()}>
+                  <header className="p-8">
                       <h3 className="text-2xl font-black tracking-tighter text-base-content leading-none uppercase">Save Presets<span className="text-primary">.</span></h3>
                   </header>
                   <div className="p-8">
@@ -1191,9 +1305,9 @@ const PromptsPage: React.FC<PromptsPageProps> = ({
                           onKeyDown={(e) => e.key === 'Enter' && handleConfirmSavePreset()}
                       />
                   </div>
-                  <div className="p-4 border-t border-base-300 flex justify-end gap-2 bg-base-200/10">
+                  <div className="p-4 flex justify-end gap-2">
                         <button onClick={() => setIsSavePresetModalOpen(false)} className="btn btn-ghost rounded-none uppercase font-black text-[10px] tracking-widest px-8">Cancel</button>
-                        <button onClick={handleConfirmSavePreset} disabled={isSavingPreset || !newPresetName.trim()} className="btn btn-primary rounded-none uppercase font-black text-[10px] tracking-widest px-8 shadow-lg">
+                        <button onClick={handleConfirmSavePreset} disabled={isSavingPreset || !newPresetName.trim()} className="btn btn-primary rounded-none uppercase font-black text-[10px] tracking-widest px-8">
                           {isSavingPreset ? "Saving..." : "Confirm"}
                       </button>
                   </div>

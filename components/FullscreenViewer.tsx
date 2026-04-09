@@ -14,7 +14,7 @@ interface FullscreenViewerProps {
     onNavigate?: (newIndex: number) => void;
 }
 
-const FullscreenViewer: React.FC<FullscreenViewerProps> = ({ items, currentIndex, initialImageIndex = 0, onClose, onNavigate }) => {
+const FullscreenViewer: React.FC<FullscreenViewerProps> = ({ items, currentIndex, initialImageIndex = 0, onClose }) => {
     const itemGroup = useMemo(() => items[currentIndex], [items, currentIndex]);
     
     const [currentImageIndex, setCurrentImageIndex] = useState(initialImageIndex);
@@ -23,6 +23,7 @@ const FullscreenViewer: React.FC<FullscreenViewerProps> = ({ items, currentIndex
     const [isLoading, setIsLoading] = useState(true);
     const [hasError, setHasError] = useState(false);
     const [navDirection, setNavDirection] = useState<'next' | 'prev' | 'none'>('none');
+    const [metadata, setMetadata] = useState<{ width: number; height: number; size: number; ratio: string } | null>(null);
     
     const containerRef = useRef<HTMLDivElement>(null);
     const currentLayerRef = useRef<HTMLDivElement>(null);
@@ -52,14 +53,17 @@ const FullscreenViewer: React.FC<FullscreenViewerProps> = ({ items, currentIndex
             
             setIsLoading(true);
             setHasError(false);
+            setMetadata(null);
     
             const url = itemGroup.urls[currentImageIndex];
             let finalUrl = url;
+            let fileSize = 0;
 
             if (!url.startsWith('data:') && !url.startsWith('http')) {
                 try {
                     const blob = await fileSystemManager.getFileAsBlob(url);
                     if (blob && isMounted) {
+                        fileSize = blob.size;
                         const newUrl = URL.createObjectURL(blob);
                         objectUrls.current.add(newUrl);
                         finalUrl = newUrl;
@@ -72,6 +76,9 @@ const FullscreenViewer: React.FC<FullscreenViewerProps> = ({ items, currentIndex
             if (isMounted) {
                 setPrevMediaBlobUrl(mediaBlobUrl);
                 setMediaBlobUrl(finalUrl);
+                if (fileSize > 0) {
+                    setMetadata(prev => prev ? { ...prev, size: fileSize } : { width: 0, height: 0, size: fileSize, ratio: '' });
+                }
                 setIsLoading(false);
                 // Reset zoom on navigation
                 setZoom(1);
@@ -178,6 +185,33 @@ const FullscreenViewer: React.FC<FullscreenViewerProps> = ({ items, currentIndex
         }
     };
 
+    const handleImageLoad = (e: React.SyntheticEvent<HTMLImageElement>) => {
+        const img = e.currentTarget;
+        const w = img.naturalWidth;
+        const h = img.naturalHeight;
+        
+        // Calculate simplified ratio
+        const gcd = (a: number, b: number): number => b === 0 ? a : gcd(b, a % b);
+        const common = gcd(w, h);
+        const ratio = `${w / common}:${h / common}`;
+        
+        setMetadata(prev => ({
+            ...prev,
+            width: w,
+            height: h,
+            size: prev?.size || 0,
+            ratio
+        }));
+    };
+
+    const formatFileSize = (bytes: number) => {
+        if (bytes === 0) return '0 B';
+        const k = 1024;
+        const sizes = ['B', 'KB', 'MB', 'GB'];
+        const i = Math.floor(Math.log(bytes) / Math.log(k));
+        return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+    };
+
     const modalContent = (
         <div 
           ref={containerRef}
@@ -220,6 +254,7 @@ const FullscreenViewer: React.FC<FullscreenViewerProps> = ({ items, currentIndex
                             onClick={e => e.stopPropagation()}
                             onMouseDown={handleMouseDown}
                             onDoubleClick={handleDoubleClick}
+                            onLoad={handleImageLoad}
                             draggable={false}
                         />
                     )}
@@ -251,13 +286,43 @@ const FullscreenViewer: React.FC<FullscreenViewerProps> = ({ items, currentIndex
                 <button onClick={handleClose} className="btn btn-ghost btn-circle bg-black/40 text-white/60 hover:text-white" title="Close"><CloseIcon className="w-6 h-6"/></button>
             </div>
             
-            <div className="absolute bottom-8 left-1/2 -translate-x-1/2 z-40 p-4 bg-black/60 text-white rounded-none backdrop-blur-xl border border-white/5 shadow-2xl pointer-events-none flex flex-col items-center gap-2 px-12">
-                <span className="text-xs font-black uppercase tracking-widest">{itemGroup.title}</span>
-                {itemGroup.urls.length > 1 && (
-                    <span className="font-mono text-[10px] text-primary tracking-[0.3em] font-bold">
-                        [ {String(currentImageIndex + 1).padStart(2, '0')} / {String(itemGroup.urls.length).padStart(2, '0')} ]
-                    </span>
-                )}
+            <div className="absolute bottom-0 left-0 right-0 z-40 h-24 bg-gradient-to-t from-black/80 to-transparent pointer-events-none flex items-end px-10 pb-8">
+                <div className="w-full flex items-center justify-between pointer-events-auto">
+                    {/* Left: Title & Index */}
+                    <div className="flex flex-col gap-1">
+                        <div className="flex items-center gap-4">
+                            <span className="text-sm font-black uppercase tracking-[0.2em] text-white">{itemGroup.title}</span>
+                            {itemGroup.urls.length > 1 && (
+                                <span className="font-mono text-[10px] text-primary tracking-[0.3em] font-bold bg-primary/10 px-2 py-0.5 border border-primary/20">
+                                    {String(currentImageIndex + 1).padStart(2, '0')} / {String(itemGroup.urls.length).padStart(2, '0')}
+                                </span>
+                            )}
+                        </div>
+                        <div className="flex items-center gap-3 opacity-30">
+                            <span className="text-[8px] font-mono font-bold uppercase tracking-widest">Registry ID: {itemGroup.id}</span>
+                        </div>
+                    </div>
+
+                    {/* Right: Technical Specs (SR-71 Style) */}
+                    {metadata && (
+                        <div className="flex items-center gap-8">
+                            <div className="flex flex-col items-end">
+                                <span className="text-[8px] font-mono font-bold text-white/40 uppercase tracking-widest mb-0.5">Resolution</span>
+                                <span className="text-[10px] font-mono font-bold text-white tracking-tighter">{metadata.width} × {metadata.height}</span>
+                            </div>
+                            <div className="w-px h-6 bg-white/10" />
+                            <div className="flex flex-col items-end">
+                                <span className="text-[8px] font-mono font-bold text-white/40 uppercase tracking-widest mb-0.5">Aspect Ratio</span>
+                                <span className="text-[10px] font-mono font-bold text-white tracking-tighter">{metadata.ratio}</span>
+                            </div>
+                            <div className="w-px h-6 bg-white/10" />
+                            <div className="flex flex-col items-end">
+                                <span className="text-[8px] font-mono font-bold text-white/40 uppercase tracking-widest mb-0.5">File Size</span>
+                                <span className="text-[10px] font-mono font-bold text-white tracking-tighter">{formatFileSize(metadata.size)}</span>
+                            </div>
+                        </div>
+                    )}
+                </div>
             </div>
         </div>
     );

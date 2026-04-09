@@ -1,10 +1,9 @@
-import React, { useState, useEffect, useRef, useCallback } from 'react';
-import { gsap } from 'gsap';
+import React, { useState, useEffect, useRef } from 'react';
 import { loadGalleryItems } from '../utils/galleryStorage';
-import type { GalleryItem, ActiveTab, Idea } from '../types';
-import { fileSystemManager } from '../utils/fileUtils';
-import LoadingSpinner from './LoadingSpinner';
 import { useSettings } from '../contexts/SettingsContext';
+import { fileSystemManager } from '../utils/fileUtils';
+import type { GalleryItem, ActiveTab, Idea } from '../types';
+import LoadingSpinner from './LoadingSpinner';
 
 // --- CHROMATIC JITTER COMPONENT ---
 const ChromaticText: React.FC<{ text: string; enabled?: boolean }> = ({ text, enabled = true }) => {
@@ -61,108 +60,11 @@ const ChromaticText: React.FC<{ text: string; enabled?: boolean }> = ({ text, en
     );
 };
 
-// --- NEURAL EXPOSURE TRAIL ---
-const NeuralTrail: React.FC<{ images: GalleryItem[] }> = ({ images }) => {
-    const trailRef = useRef<HTMLDivElement>(null);
-    const lastPos = useRef({ x: 0, y: 0 });
-    const imageIndex = useRef(0);
-
-    const spawnArtifact = useCallback(async (x: number, y: number) => {
-        if (!trailRef.current || images.length === 0) return;
-
-        const item = images[imageIndex.current];
-        const blob = await fileSystemManager.getFileAsBlob(item.urls[0]);
-        if (!blob) return;
-
-        const url = URL.createObjectURL(blob);
-        const img = document.createElement('img');
-        
-        img.className = "absolute pointer-events-none z-10 border border-white/20 shadow-[0_25px_60px_rgba(0,0,0,0.6)] opacity-0 will-change-transform";
-        
-        img.onload = () => {
-            if (!trailRef.current) return;
-
-            const aspect = img.naturalWidth / img.naturalHeight;
-            const baseSize = 160 + Math.random() * 100;
-            
-            if (aspect > 1) {
-                img.style.width = `${baseSize}px`;
-                img.style.height = `${baseSize / aspect}px`;
-            } else {
-                img.style.height = `${baseSize}px`;
-                img.style.width = `${baseSize * aspect}px`;
-            }
-
-            img.style.left = `${x}px`;
-            img.style.top = `${y}px`;
-            img.style.transform = `translate(-50%, -50%) scale(0.1) rotate(${(Math.random() - 0.5) * 15}deg)`;
-            
-            trailRef.current.appendChild(img);
-
-            const tl = gsap.timeline({
-                onComplete: () => {
-                    img.remove();
-                    URL.revokeObjectURL(url);
-                }
-            });
-
-            tl.to(img, {
-                opacity: 1,
-                scale: 1,
-                duration: 0.6,
-                ease: "expo.out"
-            });
-
-            tl.to(img, {
-                opacity: 0,
-                scale: 0.4,
-                duration: 0.5,
-                ease: "power4.in"
-            }, "+=0.3");
-        };
-
-        img.src = url;
-        imageIndex.current = (imageIndex.current + 1) % images.length;
-    }, [images]);
-
-    useEffect(() => {
-        const handleMove = (e: MouseEvent) => {
-            const dist = Math.hypot(e.clientX - lastPos.current.x, e.clientY - lastPos.current.y);
-            if (dist > 180) { 
-                spawnArtifact(e.clientX, e.clientY);
-                lastPos.current = { x: e.clientX, y: e.clientY };
-            }
-        };
-        window.addEventListener('mousemove', handleMove);
-        return () => window.removeEventListener('mousemove', handleMove);
-    }, [spawnArtifact]);
-
-    return <div ref={trailRef} className="fixed inset-0 pointer-events-none overflow-hidden z-[5]" />;
-};
-
-const NavNode: React.FC<{ label: string; num: string; onClick: () => void }> = ({ label, num, onClick }) => {
-    const [isHovered, setIsHovered] = useState(false);
-
-    return (
-        <button 
-            onClick={onClick}
-            onMouseEnter={() => setIsHovered(true)}
-            onMouseLeave={() => setIsHovered(false)}
-            className="group flex items-center gap-4 p-4 transition-all"
-        >
-            <span className="text-[9px] font-mono font-medium text-primary/30 group-hover:text-primary transition-colors tracking-[0.2em]">
-                {num}
-            </span>
-            {/* Unified typeface for menu links with thin weight and expanded tracking */}
-            <span className="text-[11px] font-sans font-light uppercase tracking-[0.5em] text-base-content/40 group-hover:text-base-content transition-all duration-500">
-                <ChromaticText text={label} enabled={isHovered} />
-            </span>
-        </button>
-    );
-};
+// --- ORAGE-STYLE IMAGE TRAIL ---
+// Removed as per user request
 
 const MetadataCorner: React.FC<{ label: string; value: string; position: string }> = ({ label, value, position }) => (
-    <div className={`absolute ${position} p-10 flex flex-col gap-1 pointer-events-none z-20`}>
+    <div className={`absolute ${position} p-6 flex flex-col gap-1 pointer-events-none z-20`}>
         <span className="text-[8px] font-black uppercase tracking-[0.4em] text-primary/40">{label}</span>
         <span className="text-[10px] font-mono font-bold uppercase tracking-widest text-base-content/20">{value}</span>
     </div>
@@ -173,17 +75,26 @@ interface DashboardProps {
     onClipIdea: (idea: Idea) => void;
 }
 
-const Dashboard: React.FC<DashboardProps> = ({ onNavigate }) => {
+const LedStatus: React.FC<{
+    label: string,
+    active: boolean,
+    color?: string
+}> = ({ label, active, color = 'bg-success' }) => (
+    <div className={`flex items-center gap-1.5 transition-all duration-700 ${active ? 'opacity-100' : 'opacity-10'}`}>
+        <span className={`w-1.5 h-1.5 rounded-full ${active ? `${color} shadow-[0_0_5px_rgba(var(--p),0.5)] animate-pulse` : 'bg-transparent'}`}></span>
+        <span className="text-[8px] font-sans font-black text-base-content tracking-tighter uppercase whitespace-nowrap">{label}</span>
+    </div>
+);
+
+const Dashboard: React.FC<DashboardProps> = () => {
     const { settings } = useSettings();
     const [isLoading, setIsLoading] = useState(true);
     const [gallery, setGallery] = useState<GalleryItem[]>([]);
     const [time, setTime] = useState(new Date().toLocaleTimeString());
-    const [videoError, setVideoError] = useState(false);
 
     const headerTextRef = useRef<HTMLParagraphElement>(null);
     const titleRef = useRef<HTMLHeadingElement>(null);
     const taglineRef = useRef<HTMLParagraphElement>(null);
-    const isExitingRef = useRef(false);
 
     useEffect(() => {
         const fetch = async () => {
@@ -197,68 +108,26 @@ const Dashboard: React.FC<DashboardProps> = ({ onNavigate }) => {
         return () => clearInterval(timer);
     }, []);
 
-    const handleNodeClick = useCallback((tab: ActiveTab) => {
-        if (isExitingRef.current) return;
-        isExitingRef.current = true;
-
-        const tl = gsap.timeline({
-            onComplete: () => onNavigate(tab)
-        });
-
-        tl.to(headerTextRef.current, {
-            yPercent: 100,
-            duration: 0.6,
-            ease: "power4.in"
-        });
-
-        tl.to(titleRef.current, {
-            yPercent: 100,
-            duration: 0.7,
-            ease: "power4.in"
-        }, "-=0.45");
-
-        tl.to(taglineRef.current, {
-            yPercent: 100,
-            duration: 0.6,
-            ease: "power4.in"
-        }, "-=0.55");
-
-    }, [onNavigate]);
-
-    if (isLoading) return <div className="h-full w-full flex items-center justify-center bg-base-100"><LoadingSpinner /></div>;
+    if (isLoading) return <div className="h-full w-full flex items-center justify-center bg-transparent"><LoadingSpinner /></div>;
 
     return (
-        <div className="h-full w-full bg-base-100 overflow-hidden relative select-none">
-            {/* AMBIENT BACKGROUND LAYER */}
-            <div className="absolute inset-0 z-0 overflow-hidden pointer-events-none">
-                {!videoError && settings.dashboardVideoUrl ? (
-                    <video 
-                        key={settings.dashboardVideoUrl}
-                        src={settings.dashboardVideoUrl}
-                        autoPlay 
-                        muted 
-                        loop 
-                        playsInline 
-                        crossOrigin="anonymous"
-                        className="w-full h-full object-cover grayscale brightness-[0.6] contrast-125 opacity-30 transition-opacity duration-1000"
-                        style={{ filter: 'grayscale(1) brightness(0.6) contrast(1.1)' }}
-                        onError={() => setVideoError(true)}
-                    />
-                ) : (
-                    <div className="w-full h-full bg-base-300 opacity-20"></div>
-                )}
-                <div className="absolute inset-0 bg-grid-texture opacity-[0.03] z-10"></div>
-                <div className="absolute inset-0 bg-gradient-to-t from-base-100 via-transparent to-base-100 opacity-60 z-10"></div>
-            </div>
+        <div className="h-full w-full bg-transparent overflow-hidden relative select-none border-none p-0">
             
-            <NeuralTrail images={gallery} />
-
             <MetadataCorner label="System_Status" value="Core_Engine_Active" position="top-0 left-0" />
             <MetadataCorner label="Vault_Index" value={`${gallery.length} Arifacts_Identified`} position="top-0 right-0" />
-            <MetadataCorner label="Local_Sequence" value={time} position="bottom-0 left-0" />
-            <MetadataCorner label="Protocol" value="Kollektiv_Engine_v2" position="bottom-0 right-0" />
+            
+            <div className="absolute bottom-0 left-0 p-6 flex flex-col gap-3 pointer-events-none z-20">
+                <span className="text-[8px] font-black uppercase tracking-[0.4em] text-primary/40">Integrations</span>
+                <div className="flex flex-row gap-4">
+                    <LedStatus label="VAULT" active={fileSystemManager.isDirectorySelected()} />
+                    <LedStatus label={settings.activeLLM === 'ollama_cloud' ? 'OLLAMA' : settings.activeLLM.toUpperCase()} active={!!process.env.API_KEY || settings.activeLLM.includes('ollama')} />
+                    <LedStatus label="YOUTUBE" active={!!settings.youtube?.isConnected} color="bg-error" />
+                </div>
+            </div>
 
-            <div className="absolute inset-0 flex flex-col items-center justify-center z-10 pointer-events-none px-6 text-center">
+            <MetadataCorner label="Local_Sequence" value={time} position="bottom-0 right-0" />
+
+            <div className="absolute inset-0 flex flex-col items-center justify-center z-10 pointer-events-none text-center">
                 <div className="overflow-hidden py-1 mb-2">
                     <p ref={headerTextRef} className="text-[9px] md:text-[11px] font-black uppercase tracking-[0.5em] text-primary/60">
                         MINDTURBULENCE'S
@@ -281,11 +150,6 @@ const Dashboard: React.FC<DashboardProps> = ({ onNavigate }) => {
             </div>
 
             <div className="absolute inset-x-0 bottom-32 flex flex-wrap justify-center gap-6 md:gap-12 z-20">
-                <NavNode num="01" label="Builder" onClick={() => handleNodeClick('prompts')} />
-                <NavNode num="02" label="Library" onClick={() => handleNodeClick('prompt')} />
-                <NavNode num="03" label="Gallery" onClick={() => handleNodeClick('gallery')} />
-                <NavNode num="04" label="Guides" onClick={() => handleNodeClick('cheatsheet')} />
-                <NavNode num="05" label="Utilities" onClick={() => handleNodeClick('composer')} />
             </div>
 
             {/* DECORATIVE ELEMENTS */}

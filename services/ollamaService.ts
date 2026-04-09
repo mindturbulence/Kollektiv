@@ -85,6 +85,16 @@ export const fetchOllamaModels = async (settings: LLMSettings, useCloud: boolean
             return [];
         }
 
+        // Optimization: If we are in a cloud environment (HTTPS) and targeting a local proxy, 
+        // skip the automatic fetch to avoid console/terminal noise if Ollama isn't running.
+        // Users can still manually refresh or test connection in settings.
+        const isTargetingLocal = config.baseUrl === '/ollama-local' || 
+                               (config.baseUrl === '/proxy-remote' && (config.headers as any)['x-target-url'] && isLocalOllama((config.headers as any)['x-target-url']));
+
+        if (window.location.protocol === 'https:' && isTargetingLocal) {
+            return [];
+        }
+
         const controller = new AbortController();
         const timeoutId = setTimeout(() => controller.abort(), 5000);
 
@@ -104,43 +114,6 @@ export const fetchOllamaModels = async (settings: LLMSettings, useCloud: boolean
             console.warn("Ollama model list unavailable at:", useCloud ? settings.ollamaCloudBaseUrl : settings.ollamaBaseUrl);
         }
         return [];
-    }
-};
-
-export const enhancePromptOllama = async (
-    prompt: string,
-    constantModifier: string,
-    settings: LLMSettings,
-    systemInstruction: string,
-    maxTokens: number = 2048
-): Promise<string> => {
-    try {
-        const config = getOllamaConfig(settings);
-        if (!config.baseUrl || !config.model) throw new Error("Ollama configuration missing.");
-        const fullPrompt = [prompt.trim(), constantModifier.trim()].filter(Boolean).join('\n\n');
-        const apiResponse = await fetch(`${config.baseUrl}/api/generate`, {
-            method: 'POST',
-            headers: config.headers,
-            body: JSON.stringify({
-                model: config.model,
-                prompt: fullPrompt,
-                system: systemInstruction,
-                stream: false,
-                ...BASE_CONFIG,
-                options: {
-                    ...BASE_CONFIG.options,
-                    num_predict: maxTokens
-                }
-            }),
-        });
-        if (!apiResponse.ok) {
-            const errorData = await apiResponse.json().catch(() => ({ error: apiResponse.statusText }));
-            throw new Error(errorData.error || `Ollama returned status: ${apiResponse.status}`);
-        }
-        const responseData = await apiResponse.json();
-        return responseData.response || '';
-    } catch (err) {
-        throw handleGeminiError(err, 'enhancing with Ollama');
     }
 };
 
@@ -419,29 +392,6 @@ export const replaceComponentInPromptOllama = async (originalPrompt: string, com
     } catch (err) { throw handleGeminiError(err, 'updating'); }
 };
 
-export const reconcileDescriptionsOllama = async (existing: string, incoming: string, settings: LLMSettings): Promise<string> => {
-    try {
-        const config = getOllamaConfig(settings);
-        const apiResponse = await fetch(`${config.baseUrl}/api/generate`, {
-            method: 'POST',
-            headers: config.headers,
-            body: JSON.stringify({
-                model: config.model,
-                prompt: `OLD:\n${existing}\n\nNEW:\n${incoming}`,
-                system: "Merge into cohesive paragraph. Remove redundancy. Text only.",
-                stream: false,
-                ...BASE_CONFIG,
-                options: {
-                    ...BASE_CONFIG.options,
-                    num_predict: 1500
-                }
-            }),
-        });
-        const data = await apiResponse.json();
-        return (data.response || '').trim();
-    } catch (err) { throw handleGeminiError(err, 'syncing'); }
-};
-
 export const reconstructFromIntentOllama = async (intents: string[], settings: LLMSettings): Promise<string> => {
     try {
         const config = getOllamaConfig(settings);
@@ -465,7 +415,7 @@ export const reconstructFromIntentOllama = async (intents: string[], settings: L
     } catch (err) { throw handleGeminiError(err, 'reconstruction'); }
 };
 
-export const abstractImageOllama = async (base64ImageData: string, promptLength: string, targetAIModel: string, settings: LLMSettings): Promise<EnhancementResult> => {
+export const abstractImageOllama = async (base64ImageData: string, promptLength: string, _targetAIModel: string, settings: LLMSettings): Promise<EnhancementResult> => {
     try {
         const config = getOllamaConfig(settings);
         const tokenLimit = promptLength === 'Long' ? 2048 : 1024;

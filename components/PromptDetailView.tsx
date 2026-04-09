@@ -1,10 +1,11 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef, useLayoutEffect } from 'react';
+import { gsap } from 'gsap';
 import { useSettings } from '../contexts/SettingsContext';
 import { dissectPrompt } from '../services/llmService';
 import type { SavedPrompt, PromptCategory } from '../types';
 import { loadPromptCategories } from '../utils/promptStorage';
 import {
-  ChevronLeftIcon, ChevronRightIcon, CloseIcon, RefreshIcon, SparklesIcon
+  ChevronLeftIcon, ChevronRightIcon, CloseIcon, RefreshIcon
 } from './icons';
 import LoadingSpinner from './LoadingSpinner';
 import PromptEditorModal from './PromptEditorModal';
@@ -32,21 +33,21 @@ const PromptComponentsDisplay: React.FC<{
   hasPrompt: boolean;
 }> = ({ components, isLoading, error, onRefresh, hasPrompt }) => {
     return (
-        <div className="flex flex-col h-full bg-base-100 overflow-hidden">
-            <header className="p-4 border-b border-base-300 bg-base-200/10 flex justify-between items-center">
+        <div className="flex flex-col h-full overflow-hidden">
+            <header className="p-4 flex justify-between items-center">
                 <h3 className="text-[10px] font-black uppercase tracking-[0.3em] text-primary">Prompt Parts</h3>
                 <button onClick={onRefresh} disabled={isLoading || !hasPrompt} className="btn btn-xs btn-ghost opacity-40 hover:opacity-100">
                     <RefreshIcon className={`w-4 h-4 ${isLoading ? 'animate-spin' : ''}`} />
                 </button>
             </header>
-            <div className="flex-grow p-5 overflow-y-auto custom-scrollbar bg-base-100">
+            <div className="flex-grow p-5 overflow-y-auto custom-scrollbar">
                 {isLoading ? <div className="py-12"><LoadingSpinner/></div> :
                  error ? <div className="alert alert-error rounded-none text-xs"><span>{error}</span></div> :
                  components && Object.keys(components).length > 0 ? (
                     <div className="space-y-6">
                         {Object.entries(components).map(([key, value]) => (
                             <div key={key} className="animate-fade-in">
-                                <h4 className="text-[9px] font-black uppercase tracking-widest text-base-content/20 mb-1 border-b border-base-300/30 pb-0.5">{key}</h4>
+                                <h4 className="text-[9px] font-black uppercase tracking-widest text-base-content/20 mb-1 pb-0.5">{key}</h4>
                                 <p className="text-sm font-medium leading-relaxed text-base-content/80">{String(value)}</p>
                             </div>
                         ))}
@@ -68,7 +69,6 @@ const PromptDetailView: React.FC<PromptDetailViewProps> = ({
   onNavigate,
   onDelete,
   onUpdate,
-  onSendToEnhancer,
   showGlobalFeedback,
   onClip,
   onClipString
@@ -81,6 +81,13 @@ const PromptDetailView: React.FC<PromptDetailViewProps> = ({
   const [copied, setCopied] = useState(false);
   const [isRefinePanelCollapsed, setIsRefinePanelCollapsed] = useState(true);
   const [isFormulaPanelCollapsed, setIsFormulaPanelCollapsed] = useState(true);
+
+  const overlayRef = useRef<HTMLDivElement>(null);
+  const modalRef = useRef<HTMLDivElement>(null);
+  const leftPanelRef = useRef<HTMLDivElement>(null);
+  const rightPanelRef = useRef<HTMLDivElement>(null);
+  const headerRef = useRef<HTMLElement>(null);
+  const timelineRef = useRef<gsap.core.Timeline | null>(null);
 
   const [components, setComponents] = useState<{ [key: string]: string } | null>(null);
   const [isLoadingParts, setIsLoadingParts] = useState(false);
@@ -113,7 +120,64 @@ const PromptDetailView: React.FC<PromptDetailViewProps> = ({
     }
   }, [prompt]);
 
+  useLayoutEffect(() => {
+    if (!overlayRef.current || !modalRef.current || !leftPanelRef.current || !rightPanelRef.current || !headerRef.current) return;
+
+    const ctx = gsap.context(() => {
+        const tl = gsap.timeline({ defaults: { ease: "expo.out", duration: 1.4 } });
+        timelineRef.current = tl;
+        
+        // Initial state
+        gsap.set(overlayRef.current, { opacity: 0 });
+        gsap.set(modalRef.current, { 
+            scale: 0, 
+            transformOrigin: "bottom right",
+            opacity: 0
+        });
+        gsap.set(leftPanelRef.current, { x: -150, opacity: 0 });
+        gsap.set(rightPanelRef.current, { x: 150, opacity: 0 });
+        gsap.set(headerRef.current, { y: -100, opacity: 0 });
+
+        // Animation sequence
+        tl.to(overlayRef.current, { opacity: 1, duration: 0.8 })
+          .to(modalRef.current, { 
+              scale: 1, 
+              opacity: 1, 
+              duration: 1.2,
+              ease: "expo.out"
+          }, "-=0.4")
+          .to(headerRef.current, { 
+              y: 0, 
+              opacity: 1, 
+              duration: 1.2 
+          }, "-=0.6")
+          .to(leftPanelRef.current, { 
+              x: 0, 
+              opacity: 1, 
+              duration: 1.6 
+          }, "-=0.8")
+          .to(rightPanelRef.current, { 
+              x: 0, 
+              opacity: 1, 
+              duration: 1.6 
+          }, "-=1.1");
+    });
+
+    return () => ctx.revert();
+  }, []);
+
+  const handleClose = useCallback(() => {
+    if (timelineRef.current) {
+        timelineRef.current.reverse().eventCallback("onReverseComplete", () => {
+            onClose();
+        });
+    } else {
+        onClose();
+    }
+  }, [onClose]);
+
   const handleNavigation = useCallback((direction: 'next' | 'prev') => {
+    if (!prompts.length) return;
     const newIndex = direction === 'next'
       ? (currentIndex + 1) % prompts.length
       : (currentIndex - 1 + prompts.length) % prompts.length;
@@ -132,16 +196,16 @@ const PromptDetailView: React.FC<PromptDetailViewProps> = ({
       if (prompt && editedText.trim() !== prompt.text.trim()) {
           onUpdate(prompt.id, { text: editedText });
           showGlobalFeedback("Changes saved.");
-          onClose(); // BUG FIX: Return to list after saving
+          handleClose();
       }
   };
   
   if (!prompt) return null;
 
   return (
-    <div className="absolute inset-0 z-40 bg-black/60 backdrop-blur-sm animate-fade-in flex items-center justify-center p-2 lg:p-4 overflow-hidden" onClick={onClose}>
-        <div className="w-full h-full bg-base-100 rounded-none border border-base-300 shadow-2xl flex flex-col overflow-hidden relative" onClick={e => e.stopPropagation()}>
-            <header className="flex-shrink-0 p-6 lg:px-8 lg:py-6 border-b border-base-300 bg-base-100 flex flex-wrap justify-between items-end gap-6">
+    <div ref={overlayRef} className="absolute inset-0 z-40 bg-black/40 backdrop-blur-xl flex items-center justify-center p-4 lg:p-8 overflow-hidden" onClick={handleClose}>
+        <div ref={modalRef} className="w-full h-full bg-base-100/40 flex flex-col overflow-hidden relative" onClick={e => e.stopPropagation()}>
+            <header ref={headerRef} className="flex-shrink-0 p-6 lg:px-8 lg:py-6 flex flex-wrap justify-between items-end gap-6">
                 <div className="min-w-0">
                     <span className="text-[10px] font-black uppercase tracking-[0.4em] text-primary mb-1 block">ITEM ID : {prompt.id.slice(-8)}</span>
                     <h2 className="text-xl lg:text-2xl font-black tracking-tighter text-base-content leading-none truncate max-w-2xl uppercase">
@@ -149,19 +213,19 @@ const PromptDetailView: React.FC<PromptDetailViewProps> = ({
                     </h2>
                 </div>
                 <div className="flex items-center gap-4">
-                    <div className="join bg-base-200 border border-base-300 shadow-sm">
+                    <div className="join">
                         <button onClick={() => handleNavigation('prev')} className="btn btn-sm btn-ghost join-item"><ChevronLeftIcon className="w-4 h-4" /></button>
-                        <span className="join-item flex items-center px-6 font-mono text-[10px] font-black text-base-content/40 uppercase tracking-widest border-x border-base-300/30">{currentIndex + 1} / {prompts.length}</span>
+                        <span className="join-item flex items-center px-6 font-mono text-[10px] font-black text-base-content/40 uppercase tracking-widest">{currentIndex + 1} / {prompts.length}</span>
                         <button onClick={() => handleNavigation('next')} className="btn btn-sm btn-ghost join-item"><ChevronRightIcon className="w-4 h-4" /></button>
                     </div>
-                    <button onClick={onClose} className="btn btn-sm btn-ghost btn-square opacity-40 hover:opacity-100 ml-4">
+                    <button onClick={handleClose} className="btn btn-sm btn-ghost btn-square opacity-40 hover:opacity-100 ml-4">
                         <CloseIcon className="w-6 h-6"/>
                     </button>
                 </div>
             </header>
 
-            <div className="flex-grow flex flex-col lg:flex-row overflow-hidden">
-                <main className="flex-1 flex flex-col overflow-hidden bg-base-100">
+            <div className="flex-grow flex flex-col lg:flex-row overflow-hidden p-4 gap-4">
+                <main ref={leftPanelRef} className="flex-1 flex flex-col overflow-hidden">
                     <div className={`flex flex-col overflow-hidden transition-all duration-500 ease-in-out ${!isRefinePanelCollapsed ? 'h-1/2' : 'flex-grow'}`}>
                         <div className="flex-grow p-5 relative overflow-hidden flex flex-col">
                             <span className="text-[9px] font-black uppercase tracking-widest text-primary/40 mb-3 flex items-center gap-3">
@@ -175,7 +239,7 @@ const PromptDetailView: React.FC<PromptDetailViewProps> = ({
                             ></textarea>
                         </div>
                     </div>
-                    <div className={`overflow-hidden transition-all duration-500 ease-in-out ${!isRefinePanelCollapsed ? 'h-1/2 border-t border-base-300' : 'h-0 opacity-0'}`}>
+                    <div className={`overflow-hidden transition-all duration-500 ease-in-out ${!isRefinePanelCollapsed ? 'h-1/2' : 'h-0 opacity-0'}`}>
                         <PromptRefinePanel 
                             promptText={editedText} 
                             onApplyRefinement={(res) => { setEditedText(res); setIsRefinePanelCollapsed(true); showGlobalFeedback("Applied refinement."); }}
@@ -184,7 +248,7 @@ const PromptDetailView: React.FC<PromptDetailViewProps> = ({
                             onClip={onClipString ? (res) => onClipString(res, `Refinement: ${prompt.title}`) : undefined}
                         />
                     </div>
-                    <footer className="p-4 bg-base-200/20 border-t border-base-300 flex flex-wrap justify-between items-center gap-4">
+                    <footer className="p-4 flex flex-wrap justify-between items-center gap-4">
                         <div className="flex items-center gap-1">
                             <button onClick={() => setIsEditorModalOpen(true)} className="btn btn-sm btn-ghost rounded-none uppercase font-black text-[10px] tracking-widest px-4 hover:bg-base-300">Edit</button>
                             <button onClick={() => setIsRefinePanelCollapsed(!isRefinePanelCollapsed)} className={`btn btn-sm rounded-none uppercase font-black text-[10px] tracking-widest px-4 ${!isRefinePanelCollapsed ? 'btn-primary' : 'btn-ghost text-primary hover:bg-primary/10'}`}>Refine</button>
@@ -193,16 +257,16 @@ const PromptDetailView: React.FC<PromptDetailViewProps> = ({
                         </div>
                         <div className="flex items-center gap-3">
                             {editedText.trim() !== prompt.text.trim() && (
-                                <button onClick={handleSaveChanges} className="btn btn-sm btn-primary rounded-none uppercase font-black text-[10px] tracking-widest px-8 shadow-lg">Save Changes</button>
+                                <button onClick={handleSaveChanges} className="btn btn-sm btn-primary rounded-none uppercase font-black text-[10px] tracking-widest px-8">Save Changes</button>
                             )}
-                            <button onClick={() => handleCopyToClipboard(editedText)} className="btn btn-sm btn-ghost rounded-none border border-base-300 bg-base-100 uppercase font-black text-[10px] tracking-widest px-8 hover:bg-base-200">
+                            <button onClick={() => handleCopyToClipboard(editedText)} className="btn btn-sm btn-ghost rounded-none uppercase font-black text-[10px] tracking-widest px-8 hover:bg-primary/10">
                                 {copied ? 'Copied' : 'Copy Text'}
                             </button>
                         </div>
                     </footer>
                 </main>
-                <aside className="w-full lg:w-[420px] flex-shrink-0 bg-base-100 flex flex-col overflow-hidden border-l border-base-300">
-                    <div className="flex-grow flex flex-col min-h-0 divide-y divide-base-300">
+                <aside ref={rightPanelRef} className="w-full lg:w-[420px] flex-shrink-0 flex flex-col overflow-hidden">
+                    <div className="flex-grow flex flex-col min-h-0 gap-4">
                         <PromptComponentsDisplay components={components} isLoading={isLoadingParts} error={errorParts} onRefresh={() => analyzePromptText(editedText)} hasPrompt={!!editedText} />
                         <PromptFormulaPanel promptText={editedText} showGlobalFeedback={showGlobalFeedback} isCollapsed={isFormulaPanelCollapsed} setIsCollapsed={setIsFormulaPanelCollapsed} />
                     </div>

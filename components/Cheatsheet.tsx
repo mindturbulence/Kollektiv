@@ -28,7 +28,7 @@ const Cheatsheet: React.FC<CheatsheetProps> = ({ isCategoryPanelCollapsed, onTog
       updateDataFn={handleUpdate}
       updateCategoryFn={updateCategory}
       CardComponent={CheatsheetCard}
-      onSendToPromptsPage={(item: CheatsheetItem, _category: string) => {
+      onSendToPromptsPage={(_item: CheatsheetItem, _category: string) => {
       }}
       isCategoryPanelCollapsed={isCategoryPanelCollapsed}
       onToggleCategoryPanel={onToggleCategoryPanel}

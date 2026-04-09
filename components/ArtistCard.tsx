@@ -16,8 +16,8 @@ const ArtistCard: React.FC<ArtistCardProps> = ({ item, onUpdateImages, onInject 
 
   return (
     <>
-      <div className="flex flex-col group bg-base-100 transition-all duration-500 hover:bg-base-200/50 h-full border-b border-base-300 last:border-b-0">
-        <figure className="relative w-full aspect-[4/3] bg-base-300 overflow-hidden border-b border-base-300 flex-shrink-0">
+      <div className="flex flex-col group bg-transparent transition-all duration-500 hover:bg-base-200/50 h-full border-b border-base-300 last:border-b-0">
+        <figure className="relative w-full aspect-[4/3] bg-transparent overflow-hidden border-b border-base-300 flex-shrink-0">
           <div className="w-full h-full transition-transform duration-[3000ms] ease-[cubic-bezier(0.65,0,0.35,1)] group-hover:scale-110 will-change-transform">
             <ImageSlider imageUrls={item.imageUrls} name={item.name} />
           </div>

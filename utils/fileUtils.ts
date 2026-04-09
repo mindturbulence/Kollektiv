@@ -46,7 +46,7 @@ class LocalFileSystemManager implements IFileSystemManager {
         return false;
     }
 
-    async initialize(settings: LLMSettings, auth: AuthContextType): Promise<boolean> {
+    async initialize(_settings: LLMSettings, _auth: AuthContextType): Promise<boolean> {
         if (this.isInitialized) return true;
         if (this.initPromise) return this.initPromise;
 
@@ -105,10 +105,13 @@ class LocalFileSystemManager implements IFileSystemManager {
             return null;
         }
 
+        /* 
+        // Removed for AI Studio Preview compatibility
         if ((window as any).self !== (window as any).top) {
             (window as any).alert("This application must be opened in its own browser tab to access the local file system.");
             return null;
         }
+        */
         
         try {
             const handle = await (window as any).showDirectoryPicker({ id: 'kollektiv-app-data-dir', mode: 'readwrite' });
@@ -268,15 +271,6 @@ export const createZipAndDownload = async (files: { name: string, content: strin
     link.download = zipFileName;
     link.click();
 };
-
-export const readZip = async (zipFile: File): Promise<JSZip> => {
-    return await JSZip.loadAsync(zipFile);
-};
-
-export async function extractPositivePrompt(imageBlob: Blob): Promise<string | null> {
-    const meta = await extractFullMetadata(imageBlob);
-    return meta?.prompt || null;
-}
 
 export interface ParsedMetadata {
     prompt: string;

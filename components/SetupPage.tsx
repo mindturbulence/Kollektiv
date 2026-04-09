@@ -1,7 +1,6 @@
 
 import React, { useState, useEffect, useLayoutEffect, useRef, useMemo, useCallback } from 'react';
-import { gsap } from 'gsap';
-import type { LLMSettings, ActiveSettingsTab, GalleryCategory, PromptCategory, SavedPrompt, FeatureSettings, YouTubeConnection, InstagramConnection, GoogleIdentityConnection } from '../types';
+import type { LLMSettings, ActiveSettingsTab, PromptCategory, FeatureSettings, YouTubeConnection, GoogleIdentityConnection } from '../types';
 import { testOllamaConnection, type OllamaTestResult } from '../services/llmService';
 import { fileSystemManager, createZipAndDownload } from '../utils/fileUtils';
 import { useSettings } from '../contexts/SettingsContext';
@@ -21,12 +20,12 @@ import {
     savePromptCategoriesOrder as savePromptCategoriesOrderFS
 } from '../utils/promptStorage';
 import { resetAllSettings, defaultLLMSettings } from '../utils/settingsStorage';
-import { AVAILABLE_LLM_MODELS, DAISYUI_LIGHT_THEMES, DAISYUI_DARK_THEMES } from '../constants';
+import { DAISYUI_LIGHT_THEMES, DAISYUI_DARK_THEMES } from '../constants';
 import ConfirmationModal from './ConfirmationModal';
-import { Cog6ToothIcon, CpuChipIcon, AppIcon, PromptIcon, PhotoIcon, FolderClosedIcon, PaintBrushIcon, DeleteIcon, CheckIcon, EditIcon, AdjustmentsVerticalIcon, DownloadIcon, LinkIcon, PlayIcon, RefreshIcon, InstagramIcon, InformationCircleIcon, UploadIcon, WaveSineIcon } from './icons';
+import { Cog6ToothIcon, CpuChipIcon, AppIcon, PromptIcon, PhotoIcon, FolderClosedIcon, PaintBrushIcon, AdjustmentsVerticalIcon, DownloadIcon, LinkIcon, PlayIcon, RefreshIcon, InformationCircleIcon, UploadIcon, InstagramIcon } from './icons';
 import FeedbackModal from './FeedbackModal';
+import { audioService } from '../services/audioService';
 import { PromptTxtImportModal } from './PromptTxtImportModal';
-import LoadingSpinner from './LoadingSpinner';
 import { rebuildGalleryDatabase, rebuildPromptDatabase, optimizeManifests, verifyAndRepairFiles } from '../utils/integrity';
 import AutocompleteSelect from './AutocompleteSelect';
 
@@ -88,19 +87,26 @@ const MaintenanceOverlay: React.FC<{ progress: number, message: string }> = ({ p
     }, [progress]);
 
     return (
-        <div className="fixed inset-0 bg-base-100 z-[500] flex flex-col items-center justify-center overflow-hidden">
+        <div className="fixed inset-0 bg-transparent z-[500] flex flex-col items-center justify-center overflow-hidden select-none">
             <div className="absolute inset-0 bg-grid-texture opacity-[0.03] pointer-events-none"></div>
             
+            {/* Large Background Percentage (SR Seventy One Style) */}
+            <div className="absolute inset-0 flex items-center justify-center pointer-events-none overflow-hidden">
+                <span 
+                    className="text-[25vw] font-black opacity-[0.03] leading-none select-none transition-all duration-500 ease-out font-display"
+                    style={{ transform: `translateY(${(100 - progress) * 0.2}px)` }}
+                >
+                    {Math.round(progress).toString().padStart(2, '0')}
+                </span>
+            </div>
+
             <div className="relative z-10 flex flex-col items-center">
-                {/* Brand Text Wrapper with Masking */}
-                <div className="overflow-hidden mb-8 px-4">
-                    <h1 ref={textWrapperRef} className="grid grid-cols-1 grid-rows-1 text-xl md:text-3xl font-black tracking-tighter uppercase select-none items-center">
-                        {/* Layer 1: Ghost Text */}
+                <div className="overflow-hidden mb-6 px-4">
+                    <h1 ref={textWrapperRef} className="grid grid-cols-1 grid-rows-1 text-2xl md:text-4xl font-black tracking-tighter uppercase select-none items-center font-logo">
                         <span className="text-base-content/10 block leading-none py-2 row-start-1 col-start-1">
                             Kollektiv<span className="text-primary/10 italic">.</span>
                         </span>
                         
-                        {/* Layer 2: Theme-Aware Fill Masked Text */}
                         <div 
                             className="row-start-1 col-start-1 h-full overflow-hidden transition-all duration-700 ease-out border-r border-base-content/20"
                             style={{ width: `${progress}%` }}
@@ -112,19 +118,25 @@ const MaintenanceOverlay: React.FC<{ progress: number, message: string }> = ({ p
                     </h1>
                 </div>
 
-                {/* Sub-label */}
-                <div className={`flex flex-col items-center gap-3 transition-all duration-500 ${progress >= 100 ? 'opacity-0 translate-y-4' : 'opacity-100 translate-y-0'}`}>
-                    <div className="flex items-center gap-3">
+                <div className={`flex flex-col items-center gap-4 transition-all duration-500 ${progress >= 100 ? 'opacity-0 translate-y-4' : 'opacity-100 translate-y-0'}`}>
+                    <div className="flex flex-col items-center gap-2">
                         <p className="text-[10px] font-mono font-bold uppercase tracking-[0.5em] text-center text-base-content/40">
                             {message || 'DIAGNOSTIC_ACTIVE'}
                         </p>
+                        
+                        {/* Minimal Progress Bar */}
+                        <div className="w-32 h-[1px] bg-base-content/10 relative overflow-hidden">
+                            <div 
+                                className="absolute inset-y-0 left-0 bg-primary transition-all duration-500 ease-out"
+                                style={{ width: `${progress}%` }}
+                            />
+                        </div>
+                        
+                        <span className="text-[10px] font-mono font-bold text-primary/60">
+                            {Math.round(progress)}%
+                        </span>
                     </div>
                 </div>
-            </div>
-
-            {/* Corner Metadata */}
-            <div className="absolute bottom-12 left-12 hidden md:block">
-                <span className="text-[8px] font-mono font-bold text-base-content/10 uppercase tracking-widest">Protocol: Integrity_Check_Alpha</span>
             </div>
         </div>
     );
@@ -141,11 +153,15 @@ const SetupNavItem: React.FC<{
     <li>
         <a
           ref={registerRef}
-          onClick={onClick}
-          className={`flex items-center p-2.5 rounded-lg text-base font-medium transition-colors cursor-pointer relative z-10 ${
+          onClick={() => {
+            audioService.playClick();
+            onClick();
+          }}
+          onMouseEnter={() => audioService.playHover()}
+          className={`flex items-center p-2.5 text-base font-medium transition-colors cursor-pointer relative z-10 ${
             isActive
-              ? 'text-primary-content font-bold'
-              : 'text-base-content/70 hover:bg-base-200'
+              ? 'text-primary'
+              : 'text-base-content/70 hover:text-base-content'
           }`}
         >
           <div className="mr-3">{icon}</div>
@@ -155,7 +171,7 @@ const SetupNavItem: React.FC<{
 );
 
 const SettingRow: React.FC<{ label: string, desc?: string, children: React.ReactNode }> = ({ label, desc, children }) => (
-    <div className="p-8 border-b border-base-300 last:border-b-0 flex flex-col md:flex-row md:items-center justify-between gap-6 group hover:bg-base-200/30 transition-all">
+    <div className="p-8 flex flex-col md:flex-row md:items-center justify-between gap-6 group hover:bg-base-200/30 transition-all">
         <div className="max-w-md min-w-0">
             <h4 className="text-sm font-black uppercase tracking-widest text-base-content/70 group-hover:text-primary transition-colors">{label}</h4>
             {desc && <p className="text-[10px] font-medium text-base-content/40 mt-1 uppercase leading-relaxed">{desc}</p>}
@@ -176,7 +192,7 @@ export const SetupPage: React.FC<SetupPageProps> = ({
 
   const [isTestingOllama, setIsTestingOllama] = useState(false);
   const [ollamaTestResult, setOllamaTestResult] = useState<OllamaTestResult | null>(null);
-  const [appDataDirectory, setAppDataDirectory] = useState<string | null>(fileSystemManager.appDirectoryName);
+  const [appDataDirectory] = useState<string | null>(fileSystemManager.appDirectoryName);
   
   const [resetTarget, setResetTarget] = useState<'all' | null>(null);
   const [isWorking, setIsWorking] = useState<boolean>(false);
@@ -189,70 +205,14 @@ export const SetupPage: React.FC<SetupPageProps> = ({
   const [promptCategories, setPromptCategories] = useState<PromptCategory[]>([]);
 
   const navRefs = useRef<Record<string, HTMLAnchorElement | null>>({});
-  const [pillStyle, setPillStyle] = useState<React.CSSProperties>({ display: 'none' });
   const tokenClientRef = useRef<any>(null);
   const lastClientIdRef = useRef<string | null>(null);
   const authModeRef = useRef<'youtube' | 'google'>('google');
   const authTimeoutRef = useRef<number | null>(null);
 
-  // --- AUDIO ENGINE: SUCCESS CHIME (IMPROVED Audibility) ---
+  // --- AUDIO ENGINE: SUCCESS CHIME ---
   const playSuccessChime = useCallback(() => {
-    try {
-        const AudioCtx = window.AudioContext || (window as any).webkitAudioContext;
-        if (!AudioCtx) return;
-        const ctx = new AudioCtx();
-        const master = ctx.createGain();
-        master.connect(ctx.destination);
-        master.gain.value = 0.5; // Sufficiently audible
-        
-        const now = ctx.currentTime;
-        
-        // Osc 1: The Mechanical Impact
-        const osc1 = ctx.createOscillator();
-        const g1 = ctx.createGain();
-        osc1.type = 'sine';
-        osc1.frequency.setValueAtTime(150, now);
-        osc1.frequency.exponentialRampToValueAtTime(40, now + 0.15);
-        g1.gain.setValueAtTime(0.6, now);
-        g1.gain.linearRampToValueAtTime(0, now + 0.15);
-        osc1.connect(g1);
-        g1.connect(master);
-        
-        // Osc 2: The Digital Ascent
-        const osc2 = ctx.createOscillator();
-        const g2 = ctx.createGain();
-        osc2.type = 'triangle';
-        osc2.frequency.setValueAtTime(880, now + 0.05);
-        osc2.frequency.exponentialRampToValueAtTime(1760, now + 0.3);
-        g2.gain.setValueAtTime(0, now + 0.05);
-        g2.gain.linearRampToValueAtTime(0.4, now + 0.1);
-        g2.gain.exponentialRampToValueAtTime(0.001, now + 1.2);
-        osc2.connect(g2);
-        g2.connect(master);
-
-        // Osc 3: The Polish Shimmer
-        const osc3 = ctx.createOscillator();
-        const g3 = ctx.createGain();
-        osc3.type = 'sine';
-        osc3.frequency.setValueAtTime(3520, now + 0.1);
-        g3.gain.setValueAtTime(0, now + 0.1);
-        g3.gain.linearRampToValueAtTime(0.15, now + 0.15);
-        g3.gain.exponentialRampToValueAtTime(0.001, now + 0.8);
-        osc3.connect(g3);
-        g3.connect(master);
-
-        osc1.start(now);
-        osc1.stop(now + 0.15);
-        osc2.start(now + 0.05);
-        osc2.stop(now + 1.2);
-        osc3.start(now + 0.1);
-        osc3.stop(now + 0.8);
-
-        // Forced context resumption for browser compliance
-        if (ctx.state === 'suspended') ctx.resume();
-    } catch (e) {
-        console.warn("Audio logic failed - likely interaction block.");
-    }
+    audioService.playSuccess();
   }, []);
 
   const handleAuthResponse = useCallback(async (accessToken: string, mode: 'youtube' | 'google') => {
@@ -429,20 +389,6 @@ export const SetupPage: React.FC<SetupPageProps> = ({
     return categories;
   }, [features]);
 
-  useEffect(() => {
-      const activeKey = activeSettingsTab;
-      const activeEl = navRefs.current[activeKey];
-      const container = activeEl?.closest('nav');
-      if (activeEl && container) {
-          const rect = activeEl.getBoundingClientRect();
-          const containerRect = container.getBoundingClientRect();
-          setPillStyle({
-              top: rect.top - containerRect.top + container.scrollTop,
-              height: rect.height, width: rect.width, left: rect.left - containerRect.left, opacity: 1,
-          });
-      } else { setPillStyle({ opacity: 0 }); }
-  }, [activeSettingsTab]);
-
   useEffect(() => { setSettings(globalSettings); }, [globalSettings]);
 
   useEffect(() => {
@@ -488,6 +434,11 @@ export const SetupPage: React.FC<SetupPageProps> = ({
   };
 
   const handleIntegrityCheck = async () => {
+    if (!fileSystemManager.isDirectorySelected()) {
+        showGlobalFeedback("Please select a storage directory first.", true);
+        return;
+    }
+
     setIsWorking(true);
     setMaintenanceProgress(0);
     setMaintenanceMsg("INITIATING SCAN...");
@@ -603,10 +554,22 @@ export const SetupPage: React.FC<SetupPageProps> = ({
                  return (
                      <div className="flex flex-col h-full overflow-y-auto custom-scrollbar animate-fade-in">
                         <SettingRow label="Sync & Reorganize" desc="Verify manifests and move files to correct category folders.">
-                            <button onClick={handleIntegrityCheck} className="btn btn-sm btn-outline rounded-none font-black text-[10px] tracking-widest px-6">SYNC VAULT</button>
+                            <button 
+                                onClick={handleIntegrityCheck} 
+                                disabled={isWorking}
+                                className="btn btn-sm btn-outline rounded-none font-black text-[10px] tracking-widest px-6"
+                            >
+                                {isWorking ? 'WORKING...' : 'SYNC VAULT'}
+                            </button>
                         </SettingRow>
                         <SettingRow label="Full Archival Export" desc="Generate a complete ZIP archive of all local data and files.">
-                             <button onClick={() => createZipAndDownload([], 'kollektiv_backup.zip')} className="btn btn-sm btn-secondary rounded-none font-black text-[10px] tracking-widest px-6">EXPORT ALL</button>
+                             <button 
+                                onClick={() => createZipAndDownload([], 'kollektiv_backup.zip')} 
+                                disabled={isWorking}
+                                className="btn btn-sm btn-secondary rounded-none font-black text-[10px] tracking-widest px-6"
+                            >
+                                EXPORT ALL
+                            </button>
                         </SettingRow>
                         <SettingRow label="Registry Purge" desc="Irreversible deletion of all settings, prompts, and media.">
                             <button onClick={() => { setResetTarget('all'); setIsResetModalOpen(true); }} className="btn btn-sm btn-error rounded-none font-black text-[10px] tracking-widest px-6">WIPE STORAGE</button>
@@ -641,25 +604,7 @@ export const SetupPage: React.FC<SetupPageProps> = ({
                         />
                         <button 
                             onClick={() => handleSettingsChange('dashboardVideoUrl', defaultLLMSettings.dashboardVideoUrl)}
-                            className="btn btn-sm btn-ghost border border-base-300 join-item text-[10px] font-black"
-                            title="Reset to Default"
-                        >
-                            <RefreshIcon className="w-3.5 h-3.5" />
-                        </button>
-                    </div>
-                </SettingRow>
-                <SettingRow label="Atmospheric Music" desc="YouTube URL for the background streaming module.">
-                    <div className="join w-full md:w-96">
-                        <input 
-                            type="text" 
-                            value={settings.musicYoutubeUrl} 
-                            onChange={(e) => handleSettingsChange('musicYoutubeUrl', e.target.value)} 
-                            className="input input-bordered input-sm rounded-none join-item w-full font-mono text-xs" 
-                            placeholder="https://www.youtube.com/watch?v=..."
-                        />
-                        <button 
-                            onClick={() => handleSettingsChange('musicYoutubeUrl', defaultLLMSettings.musicYoutubeUrl)}
-                            className="btn btn-sm btn-ghost border border-base-300 join-item text-[10px] font-black"
+                            className="btn btn-sm btn-ghost join-item text-[10px] font-black"
                             title="Reset to Default"
                         >
                             <RefreshIcon className="w-3.5 h-3.5" />
@@ -698,12 +643,12 @@ export const SetupPage: React.FC<SetupPageProps> = ({
                              </div>
                         </SettingRow>
                         {settings.activeLLM === 'ollama_cloud' && (
-                             <div className="animate-fade-in flex flex-col bg-base-200/20">
+                             <div className="animate-fade-in flex flex-col bg-transparent">
                                 <SettingRow label="Remote Endpoint" desc="HTTPS URL of your hosted Ollama server.">
                                     <div className="space-y-4">
                                         <div className="join w-full md:w-[620px]">
                                             <input type="text" value={settings.ollamaCloudBaseUrl} onChange={(e) => handleSettingsChange('ollamaCloudBaseUrl', (e.currentTarget as any).value)} className="input input-bordered input-sm join-item w-full font-mono text-xs" placeholder="https://api.ollama-host.com" />
-                                            <button onClick={() => handleTestOllamaConnection(true)} disabled={isTestingOllama} className="btn btn-sm btn-ghost border border-base-300 join-item text-[10px] font-black">{isTestingOllama ? '...' : 'PING'}</button>
+                                            <button onClick={() => handleTestOllamaConnection(true)} disabled={isTestingOllama} className="btn btn-sm btn-ghost join-item text-[10px] font-black">{isTestingOllama ? '...' : 'PING'}</button>
                                         </div>
                                         {ollamaTestResult && (
                                             <div className={`flex items-center gap-2 text-[9px] font-black uppercase tracking-widest px-3 py-1.5 border ${ollamaTestResult.success ? 'bg-success/5 border-success/30 text-success' : 'bg-error/5 border-error/30 text-error'} animate-fade-in md:w-[620px]`}>
@@ -736,12 +681,12 @@ export const SetupPage: React.FC<SetupPageProps> = ({
                             </div>
                         )}
                         {settings.activeLLM === 'ollama' && (
-                            <div className="animate-fade-in flex flex-col bg-base-200/20">
+                            <div className="animate-fade-in flex flex-col bg-transparent">
                                 <SettingRow label="Host Address" desc="Local server URL (Default: http://localhost:11434).">
                                      <div className="space-y-4">
                                         <div className="join w-full md:w-[620px]">
                                             <input type="text" value={settings.ollamaBaseUrl} onChange={(e) => handleSettingsChange('ollamaBaseUrl', (e.currentTarget as any).value)} className="input input-bordered input-sm join-item w-full font-mono text-xs" />
-                                            <button onClick={() => handleTestOllamaConnection(false)} disabled={isTestingOllama} className="btn btn-sm btn-ghost border border-base-300 join-item text-[10px] font-black">PING</button>
+                                            <button onClick={() => handleTestOllamaConnection(false)} disabled={isTestingOllama} className="btn btn-sm btn-ghost join-item text-[10px] font-black">PING</button>
                                         </div>
                                         {ollamaTestResult && (
                                             <div className={`flex items-center gap-2 text-[9px] font-black uppercase tracking-widest px-3 py-1.5 border ${ollamaTestResult.success ? 'bg-success/5 border-success/30 text-success' : 'bg-error/5 border-error/30 text-error'} animate-fade-in md:w-[620px]`}>
@@ -778,8 +723,8 @@ export const SetupPage: React.FC<SetupPageProps> = ({
                         <SettingRow label="Cloud Identity Link" desc="Connect your account to enable Cloud AI and data sync features.">
                             {settings.googleIdentity?.isConnected ? (
                                 <div className="flex flex-col gap-4 w-full max-w-lg">
-                                    <div className="flex items-center gap-4 p-4 bg-base-200/50 border border-base-300">
-                                        <img src={settings.googleIdentity.picture} className="w-12 h-12 rounded-full bg-black border border-white/10" alt="profile"/>
+                                    <div className="flex items-center gap-4 p-4">
+                                        <img src={settings.googleIdentity.picture} className="w-12 h-12 rounded-full bg-black" alt="profile"/>
                                         <div className="min-w-0">
                                             <p className="text-sm font-black uppercase truncate">{settings.googleIdentity.name}</p>
                                             <p className="text-[10px] font-mono opacity-40 truncate">{settings.googleIdentity.email}</p>
@@ -804,20 +749,20 @@ export const SetupPage: React.FC<SetupPageProps> = ({
                         <SettingRow label="Client ID" desc="Your Google OAuth 2.0 Client ID for the YouTube API.">
                             <div className="flex flex-col gap-2 w-full max-w-md">
                                 <input type="text" value={settings.youtube?.customClientId || ''} onChange={(e) => handleSettingsChange('youtube', { ...settings.youtube, customClientId: e.target.value })} className="input input-bordered input-sm rounded-none w-full font-mono text-xs" placeholder="407408718192-..." />
-                                <p className="text-[8px] font-mono text-base-content/20 uppercase">REQUIRED: Ensure 'https://localhost:5173' is in authorized origins in GCP Console.</p>
+                                <p className="text-[8px] font-mono text-base-content/20 uppercase">REQUIRED: Ensure your App URL (from AI Studio) is in authorized origins in GCP Console.</p>
                             </div>
                         </SettingRow>
                         <SettingRow label="Channel Integration" desc="Connect to your YouTube account for direct artifact publishing.">
                             {settings.youtube?.isConnected ? (
                                 <div className="flex flex-col gap-4 w-full max-w-lg">
-                                    <div className="flex items-center gap-4 p-4 bg-base-200/50 border border-base-300">
+                                    <div className="flex items-center gap-4 p-4">
                                         <img src={settings.youtube.thumbnailUrl} className="w-12 h-12 rounded-none bg-black" alt="channel"/>
                                         <div className="min-w-0">
                                             <p className="text-sm font-black uppercase truncate">{settings.youtube.channelName}</p>
                                             <p className="text-[10px] font-mono opacity-40 uppercase">{settings.youtube.subscriberCount} Subscribers</p>
                                         </div>
                                     </div>
-                                    <button onClick={(e) => handleSettingsChange('youtube', { ...settings.youtube, isConnected: false })} className="btn btn-xs btn-ghost text-error font-black uppercase tracking-widest">Unlink Channel</button>
+                                    <button onClick={() => handleSettingsChange('youtube', { ...settings.youtube, isConnected: false })} className="btn btn-xs btn-ghost text-error font-black uppercase tracking-widest">Unlink Channel</button>
                                 </div>
                             ) : (
                                 <button onClick={() => handleAuthConnect('youtube')} className="btn btn-sm btn-outline rounded-none font-black text-[10px] tracking-widest uppercase px-6">LINK CHANNEL</button>
@@ -919,15 +864,14 @@ export const SetupPage: React.FC<SetupPageProps> = ({
     
   return (
     <>
-    <section className="flex flex-row bg-base-100 h-full overflow-hidden relative">
+    <section className="flex flex-row h-full overflow-hidden relative">
         {isWorking && (
             <MaintenanceOverlay progress={maintenanceProgress} message={maintenanceMsg} />
         )}
 
-        <aside className="w-80 flex-shrink-0 bg-base-100 border-r border-base-300 flex flex-col">
-            <h1 className="h-16 flex items-center px-6 border-b border-base-300 text-[10px] font-black uppercase tracking-[0.4em] text-base-content/30">System Hub</h1>
+        <aside className="w-80 flex-shrink-0 bg-base-100/40 backdrop-blur-xl flex flex-col">
+            <h1 className="h-16 flex items-center px-6 text-[10px] font-black uppercase tracking-[0.4em] text-base-content/30">System Hub</h1>
             <nav className="flex-grow px-4 py-6 overflow-y-auto custom-scrollbar relative">
-                <div className="absolute bg-primary rounded-lg shadow-lg pointer-events-none transition-all duration-300" style={pillStyle} />
                 <ul className="menu menu-sm p-0 gap-1 relative z-10">
                    {mainCategories.map(mainCat => (
                        <SetupNavItem 
@@ -940,23 +884,23 @@ export const SetupPage: React.FC<SetupPageProps> = ({
             </nav>
         </aside>
 
-        <main className="flex-grow flex flex-col overflow-hidden bg-base-100">
-            <section className="p-10 border-b border-base-300 bg-base-200/20 flex-shrink-0">
+        <main className="flex-grow flex flex-col overflow-hidden">
+            <section className="p-10 bg-base-100/40 backdrop-blur-xl flex-shrink-0">
                 <h1 className="text-2xl lg:text-3xl font-black tracking-tighter uppercase leading-none">{mainCategories.find(c => c.id === activeSettingsTab)?.label}<span className="text-primary">.</span></h1>
                 <p className="text-[11px] font-bold text-base-content/30 uppercase tracking-[0.3em] mt-1">{currentSubTab?.description}</p>
             </section>
             {currentSubTabs.length > 0 && (
-                <div className="flex-shrink-0 bg-base-100 border-b border-base-300 px-6 py-2 overflow-x-auto no-scrollbar">
-                    <div className="tabs tabs-bordered">
+                <div className="flex-shrink-0 bg-base-100/40 backdrop-blur-xl px-6 py-2 overflow-x-auto no-scrollbar">
+                    <div className="tabs">
                         {currentSubTabs.map(tab => (
-                            <button key={tab.id} onClick={() => setActiveSubTab(tab.id)} className={`tab h-10 px-4 font-black uppercase text-[9px] tracking-widest ${activeSubTab === tab.id ? 'tab-active text-primary border-primary' : 'text-base-content/30'}`}>{tab.label}</button>
+                            <button key={tab.id} onClick={() => setActiveSubTab(tab.id)} className={`tab h-10 px-4 font-black uppercase text-[9px] tracking-widest ${activeSubTab === tab.id ? 'tab-active text-primary' : 'text-base-content/30'}`}>{tab.label}</button>
                         ))}
                     </div>
                 </div>
             )}
-            <div className="flex-grow overflow-hidden bg-base-100">{renderActiveTabContent()}</div>
-            <footer className="border-t border-base-300 flex flex-row bg-base-200/5 p-0 overflow-hidden flex-shrink-0">
-                <button onClick={handleCancel} className="btn flex-1 rounded-none uppercase font-black text-[10px] tracking-widest hover:bg-base-300 border-r border-base-300">Abort</button>
+            <div className="flex-grow overflow-hidden bg-base-100/40 backdrop-blur-xl">{renderActiveTabContent()}</div>
+            <footer className="flex flex-row p-0 overflow-hidden flex-shrink-0">
+                <button onClick={handleCancel} className="btn flex-1 rounded-none uppercase font-black text-[10px] tracking-widest">Abort</button>
                 <button onClick={saveSettings} className="btn btn-primary flex-1 rounded-none uppercase font-black text-[10px] tracking-widest shadow-lg">Confirm</button>
             </footer>
         </main>

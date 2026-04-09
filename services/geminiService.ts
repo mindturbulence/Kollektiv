@@ -1,38 +1,16 @@
 
-import { GoogleGenAI, GenerateContentResponse, Type } from "@google/genai";
+import { GoogleGenAI } from "@google/genai";
 import { handleGeminiError } from '../utils/errorHandler';
-import type { EnhancementResult, LLMSettings, PromptModifiers, PromptAnatomy } from '../types';
+import type { EnhancementResult, LLMSettings } from '../types';
 
-const getGeminiClient = (settings: LLMSettings): GoogleGenAI => {
+const getGeminiClient = (_settings: LLMSettings): GoogleGenAI => {
     return new GoogleGenAI({ apiKey: process.env.API_KEY });
 };
 
-const DEFAULT_MODEL = 'gemini-3-flash-preview';
-const LITE_MODEL = 'gemini-flash-lite-latest'; 
+const DEFAULT_MODEL = 'gemini-3.5-flash';
+const LITE_MODEL = 'gemini-3.1-flash-lite-preview'; 
 
-export const detectSalientRegionGemini = async (
-    base64ImageData: string,
-    settings: LLMSettings
-): Promise<{ box: [number, number, number, number] }> => {
-    try {
-        const ai = getGeminiClient(settings);
-        const imagePart = { inlineData: { mimeType: 'image/jpeg', data: base64ImageData } };
-        return await ai.models.generateContent({
-            model: LITE_MODEL,
-            contents: { parts: [imagePart] },
-            config: {
-                systemInstruction: "Task: [ymin,xmin,ymax,xmax] (0-1) for subject. JSON only.",
-                responseMimeType: 'application/json',
-                maxOutputTokens: 30,
-            }
-        }).then(res => {
-            try { return JSON.parse(res.text || '{"box":[0,0,1,1]}'); } 
-            catch (e) { return {"box":[0,0,1,1]}; }
-        });
-    } catch (err) { throw handleGeminiError(err, 'analysis'); }
-};
-
-export const enhancePromptGemini = async (prompt: string, constantModifier: string, settings: LLMSettings, systemInstruction: string, length: string = 'Medium', referenceImages?: string[]): Promise<string> => {
+export async function* enhancePromptGeminiStream(prompt: string, constantModifier: string, settings: LLMSettings, systemInstruction: string, length: string = 'Medium', referenceImages?: string[], temperature: number = 0.7): AsyncGenerator<string> {
     try {
         const ai = getGeminiClient(settings);
         const input = [prompt.trim(), constantModifier.trim()].filter(Boolean).join('\n\n');
@@ -46,36 +24,7 @@ export const enhancePromptGemini = async (prompt: string, constantModifier: stri
             }
             contents = { parts };
         }
-
-        const tokenBudget = length === 'Long' ? 1500 : 600;
-        const response = await ai.models.generateContent({
-            model: settings.llmModel || DEFAULT_MODEL,
-            contents,
-            config: { 
-                systemInstruction, 
-                maxOutputTokens: tokenBudget,
-                thinkingConfig: { thinkingBudget: 0 }
-            }
-        });
-        return response.text || '';
-    } catch (err) { throw handleGeminiError(err, 'refining'); }
-};
-
-export async function* enhancePromptGeminiStream(prompt: string, constantModifier: string, settings: LLMSettings, systemInstruction: string, length: string = 'Medium', referenceImages?: string[]): AsyncGenerator<string> {
-    try {
-        const ai = getGeminiClient(settings);
-        const input = [prompt.trim(), constantModifier.trim()].filter(Boolean).join('\n\n');
-        
-        let contents: any = input;
-        if (referenceImages && referenceImages.length > 0) {
-            const parts: any[] = [{ text: input }];
-            for (const imgBase64 of referenceImages) {
-                const data = imgBase64.includes('base64,') ? imgBase64.split('base64,')[1] : imgBase64;
-                parts.push({ inlineData: { mimeType: 'image/jpeg', data } });
-            }
-            contents = { parts };
-        }
-
+ 
         const tokenBudget = length === 'Long' ? 1800 : 800;
         const response = await ai.models.generateContentStream({
             model: settings.llmModel || DEFAULT_MODEL,
@@ -83,6 +32,7 @@ export async function* enhancePromptGeminiStream(prompt: string, constantModifie
             config: { 
                 systemInstruction, 
                 maxOutputTokens: tokenBudget,
+                temperature,
                 thinkingConfig: { thinkingBudget: 0 }
             }
         });
@@ -90,7 +40,7 @@ export async function* enhancePromptGeminiStream(prompt: string, constantModifie
     } catch (err) { throw handleGeminiError(err, 'refining'); }
 }
 
-export const refineSinglePromptGemini = async (promptText: string, cheatsheetContext: string, settings: LLMSettings, systemInstruction: string): Promise<string> => {
+export const refineSinglePromptGemini = async (promptText: string, _cheatsheetContext: string, settings: LLMSettings, systemInstruction: string): Promise<string> => {
     try {
         const ai = getGeminiClient(settings);
         const response = await ai.models.generateContent({
@@ -106,7 +56,7 @@ export const refineSinglePromptGemini = async (promptText: string, cheatsheetCon
     } catch (err) { throw handleGeminiError(err, 'processing'); }
 };
 
-export async function* refineSinglePromptGeminiStream(promptText: string, cheatsheetContext: string, settings: LLMSettings, systemInstruction: string): AsyncGenerator<string> {
+export async function* refineSinglePromptGeminiStream(promptText: string, _cheatsheetContext: string, settings: LLMSettings, systemInstruction: string): AsyncGenerator<string> {
     try {
         const ai = getGeminiClient(settings);
         const response = await ai.models.generateContentStream({
@@ -217,22 +167,6 @@ export const replaceComponentInPromptGemini = async (originalPrompt: string, com
     } catch (err) { throw handleGeminiError(err, 'updating'); }
 };
 
-export const reconcileDescriptionsGemini = async (existing: string, incoming: string, settings: LLMSettings): Promise<string> => {
-    try {
-        const ai = getGeminiClient(settings);
-        const response = await ai.models.generateContent({
-            model: DEFAULT_MODEL,
-            contents: `OLD:\n${existing}\n\nNEW:\n${incoming}`,
-            config: { 
-                systemInstruction: "Merge into cohesive paragraph. Remove redundancy. Text only.", 
-                maxOutputTokens: 500,
-                thinkingConfig: { thinkingBudget: 0 }
-            }
-        });
-        return (response.text || '').trim();
-    } catch (err) { throw handleGeminiError(err, 'syncing'); }
-};
-
 export const reconstructFromIntentGemini = async (intents: string[], settings: LLMSettings): Promise<string> => {
     try {
         const ai = getGeminiClient(settings);
@@ -280,7 +214,7 @@ export const generateArtistDescriptionGemini = async (artistName: string, settin
     } catch (err) { throw handleGeminiError(err, 'description'); }
 };
 
-export const abstractImageGemini = async (base64ImageData: string, promptLength: string, targetAIModel: string, settings: LLMSettings): Promise<EnhancementResult> => {
+export const abstractImageGemini = async (base64ImageData: string, _promptLength: string, _targetAIModel: string, settings: LLMSettings): Promise<EnhancementResult> => {
     try {
         const ai = getGeminiClient(settings);
         const imagePart = { inlineData: { mimeType: 'image/jpeg', data: base64ImageData } };
@@ -310,7 +244,8 @@ export const generateWithImagen = async (prompt: string, aspectRatio: string = '
                 aspectRatio: aspectRatio as any,
             },
         });
-        const base64EncodeString: string = response.generatedImages[0].image.imageBytes;
+        const base64EncodeString = response.generatedImages?.[0]?.image?.imageBytes;
+        if (!base64EncodeString) throw new Error("Image generation failed: No image data returned.");
         return `data:image/png;base64,${base64EncodeString}`;
     } catch (err) { throw handleGeminiError(err, 'rendering'); }
 };
@@ -327,7 +262,7 @@ export const generateWithNanoBanana = async (prompt: string, referenceImages: st
             contents: { parts },
             config: { imageConfig: { aspectRatio: aspectRatio as any } }
         });
-        if (response.candidates && response.candidates[0] && response.candidates[0].content) {
+        if (response.candidates?.[0]?.content?.parts) {
             for (const part of response.candidates[0].content.parts) {
                 if (part.inlineData) {
                     return `data:image/png;base64,${part.inlineData.data}`;
@@ -361,4 +296,63 @@ export const generateWithVeo = async (prompt: string, onStatusUpdate?: (msg: str
         const blob = await response.blob();
         return URL.createObjectURL(blob);
     } catch (err) { throw handleGeminiError(err, 'rendering'); }
+};
+
+export const generateConstructorPresetGemini = async (components: { [key: string]: string }, settings: LLMSettings): Promise<{ prompt: string, modifiers: any }> => {
+    try {
+        const ai = getGeminiClient(settings);
+        const response = await ai.models.generateContent({
+            model: DEFAULT_MODEL,
+            contents: JSON.stringify(components),
+            config: {
+                systemInstruction: `Role: Prompt Constructor Architect. 
+Task: Deconstruct the analyzed prompt components into a "Prompt Idea" (base subject/intent) and a set of "Active Construction Items" (mapped modifiers).
+
+Mapping Protocol:
+1. Identify components that match or are highly similar to these Refiner categories:
+   - artStyle (Art movements like Surrealism, Cyberpunk, etc.)
+   - artist (Specific artist names)
+   - photographyStyle (Street, Portrait, Macro, etc.)
+   - aestheticLook (Cinematic looks like Wes Anderson, Blade Runner, etc.)
+   - digitalAesthetic (Wes Anderson Trend, Vaporwave, etc.)
+   - aspectRatio (1:1, 16:9, etc.)
+   - cameraType (Cinema, DSLR, Analog, etc.)
+   - cameraAngle (Low angle, Bird's eye, etc.)
+   - cameraProximity (Close-up, Wide shot, etc.)
+   - cameraSettings (Bokeh, Long exposure, etc.)
+   - cameraEffect (Fisheye, Film grain, etc.)
+   - specialtyLens (Helios 44-2, etc.)
+   - lensType (Wide-angle, Telephoto, etc.)
+   - filmType (Polaroid, Technicolor, etc.)
+   - filmStock (Kodak Portra, etc.)
+   - lighting (Cinematic, Volumetric, Neon, etc.)
+   - composition (Rule of thirds, Symmetry, etc.)
+   - facialExpression, hairStyle, eyeColor, skinTexture, clothing (Character details)
+   - motion, cameraMovement (Video-specific dynamics)
+
+2. Extraction Logic:
+   - If a component matches a category, add it to the "modifiers" object using the category key.
+   - If a component does NOT match any category (it's the core subject, action, or unique detail), keep it in the "prompt" (Prompt Idea).
+   - The "prompt" should be a clean, cohesive base description (the "Prompt Idea").
+
+Output: A JSON object:
+{
+  "prompt": "The core subject/intent (Prompt Idea)",
+  "modifiers": { "categoryKey": "Value", ... }
+}
+Only include relevant modifiers. Output JSON ONLY.`,
+                responseMimeType: 'application/json',
+                maxOutputTokens: 1000,
+            }
+        });
+        try { 
+            const result = JSON.parse(response.text || '{}');
+            return {
+                prompt: result.prompt || '',
+                modifiers: result.modifiers || {}
+            };
+        } catch (e) { 
+            return { prompt: '', modifiers: {} }; 
+        }
+    } catch (err) { throw handleGeminiError(err, 'processing'); }
 };

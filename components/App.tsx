@@ -8,17 +8,18 @@ import { fileSystemManager } from '../utils/fileUtils';
 import { verifyAndRepairFiles } from '../utils/integrity';
 import { addSavedPrompt } from '../utils/promptStorage';
 import { audioService } from '../services/audioService';
+import { BusyProvider } from '../contexts/BusyContext';
 import type { ActiveTab, Idea, ActiveSettingsTab } from '../types';
 
 // Layout & Global Components
 import Sidebar from './Sidebar';
 import Header from './Header';
 import Welcome from './Welcome';
+import CustomCursor from './CustomCursor';
 import AboutModal from './AboutModal';
 import ClippingPanel from './ClippingPanel';
 import FeedbackModal from './FeedbackModal';
 import Footer from './Footer';
-import MouseTrail from './MouseTrail';
 import IdleOverlay from './IdleOverlay'; 
 
 // Page components
@@ -39,6 +40,41 @@ import { VideoToFrames } from './VideoToFrames';
 
 type PromptsPageState = { prompt?: string, artStyle?: string, artist?: string, view?: 'enhancer' | 'composer' | 'create', id?: string } | null;
 
+class ErrorBoundary extends React.Component<{ children: React.ReactNode }, { hasError: boolean }> {
+    constructor(props: { children: React.ReactNode }) {
+        super(props);
+        this.state = { hasError: false };
+    }
+    static getDerivedStateFromError() { return { hasError: true }; }
+    componentDidCatch(error: any, errorInfo: any) { console.error("App Crash:", error, errorInfo); }
+    render() {
+        if (this.state.hasError) {
+            return (
+                <div className="h-screen w-screen flex flex-col items-center justify-center bg-base-100 p-5 text-center">
+                    <h1 className="text-4xl font-black uppercase tracking-tighter mb-4">CRITICAL ERROR</h1>
+                    <p className="text-base-content/60 font-bold uppercase tracking-widest mb-8">The application encountered an unrecoverable state.</p>
+                    <div className="flex flex-col gap-4">
+                        <button onClick={() => window.location.reload()} className="btn btn-primary rounded-none font-black tracking-widest uppercase">Restart Application</button>
+                        <button 
+                            onClick={async () => {
+                                if (confirm("This will clear all local settings and storage handles. Your actual files will NOT be deleted. Proceed?")) {
+                                    const { resetAllSettings } = await import('../utils/settingsStorage');
+                                    await resetAllSettings();
+                                    window.location.reload();
+                                }
+                            }}
+                            className="btn btn-error btn-outline btn-sm rounded-none font-bold tracking-widest uppercase opacity-60 hover:opacity-100"
+                        >
+                            Emergency Reset
+                        </button>
+                    </div>
+                </div>
+            );
+        }
+        return this.props.children;
+    }
+}
+
 const InitialLoader: React.FC<{ status: string; progress: number | null }> = ({ status, progress }) => {
     const textWrapperRef = useRef<HTMLHeadingElement>(null);
     const percentage = Math.round((progress || 0) * 100);
@@ -53,7 +89,7 @@ const InitialLoader: React.FC<{ status: string; progress: number | null }> = ({ 
 
     useEffect(() => {
         if (percentage >= 100 && textWrapperRef.current) {
-            gsap.to(percentage >= 100 && textWrapperRef.current, {
+            gsap.to(textWrapperRef.current, {
                 y: -80,
                 autoAlpha: 0,
                 duration: 0.8,
@@ -64,12 +100,22 @@ const InitialLoader: React.FC<{ status: string; progress: number | null }> = ({ 
     }, [percentage]);
 
     return (
-        <div id="initial-loader" className="fixed inset-0 z-[500] flex flex-col items-center justify-center bg-base-100 text-base-content overflow-hidden select-none">
+        <div id="initial-loader" className="fixed inset-0 z-[500] flex flex-col items-center justify-center bg-base-100 text-base-content overflow-hidden select-none font-sans">
             <div className="absolute inset-0 bg-grid-texture opacity-[0.03] pointer-events-none"></div>
             
+            {/* Large Background Percentage (SR Seventy One Style) */}
+            <div className="absolute inset-0 flex items-center justify-center pointer-events-none overflow-hidden">
+                <span 
+                    className="text-[25vw] font-black opacity-[0.03] leading-none select-none transition-all duration-500 ease-out font-display"
+                    style={{ transform: `translateY(${(100 - percentage) * 0.2}px)` }}
+                >
+                    {percentage.toString().padStart(2, '0')}
+                </span>
+            </div>
+
             <div className="relative z-10 flex flex-col items-center">
-                <div className="overflow-hidden mb-8 px-4">
-                    <h1 ref={textWrapperRef} className="grid grid-cols-1 grid-rows-1 text-xl md:text-3xl font-black tracking-tighter uppercase select-none items-center">
+                <div className="overflow-hidden mb-6 px-4">
+                    <h1 ref={textWrapperRef} className="grid grid-cols-1 grid-rows-1 text-2xl md:text-4xl font-black tracking-tighter uppercase select-none items-center font-logo">
                         <span className="text-base-content/10 block leading-none py-2 row-start-1 col-start-1">
                             Kollektiv<span className="text-primary/10 italic">.</span>
                         </span>
@@ -85,29 +131,49 @@ const InitialLoader: React.FC<{ status: string; progress: number | null }> = ({ 
                     </h1>
                 </div>
 
-                <div className={`flex flex-col items-center gap-3 transition-all duration-500 ${percentage >= 100 ? 'opacity-0 translate-y-4' : 'opacity-100 translate-y-0'}`}>
-                    <div className="flex items-center gap-3">
+                <div className={`flex flex-col items-center gap-4 transition-all duration-500 ${percentage >= 100 ? 'opacity-0 translate-y-4' : 'opacity-100 translate-y-0'}`}>
+                    <div className="flex flex-col items-center gap-2">
                         <p className="text-[10px] font-mono font-bold uppercase tracking-[0.5em] text-center text-base-content/40">
                             {status.toUpperCase()}
                         </p>
+                        
+                        {/* Minimal Progress Bar */}
+                        <div className="w-32 h-[1px] bg-base-content/10 relative overflow-hidden">
+                            <div 
+                                className="absolute inset-y-0 left-0 bg-primary transition-all duration-500 ease-out"
+                                style={{ width: `${percentage}%` }}
+                            />
+                        </div>
+                        
+                        <span className="text-[10px] font-mono font-bold text-primary/60">
+                            {percentage}%
+                        </span>
                     </div>
                 </div>
             </div>
-
-            <div className="absolute bottom-12 left-12 hidden md:block">
-                <span className="text-[8px] font-mono font-bold text-base-content/10 uppercase tracking-widest">Protocol: Master_Load_Sequence</span>
-            </div>
         </div>
     );
+
 };
 
 const App: React.FC = () => {
+    return (
+        <ErrorBoundary>
+            <BusyProvider>
+                <AppContent />
+            </BusyProvider>
+        </ErrorBoundary>
+    );
+};
+
+const AppContent: React.FC = () => {
     const [isInitialized, setIsInitialized] = useState(false);
     const [isLoading, setIsLoading] = useState(true);
     const [showWelcome, setShowWelcome] = useState(false);
     const [initStatus, setInitStatus] = useState('Starting App');
     const [initProgress, setInitProgress] = useState<number | null>(0);
-    const [isIdle, setIsIdle] = useState(false); 
+    const [isIdle, setIsIdle] = useState(false);
+    const [videoError, setVideoError] = useState(false); 
     
     const hasInitializedRef = useRef(false);
     const isTransitioningRef = useRef(false);
@@ -204,6 +270,7 @@ const App: React.FC = () => {
             if (!hasHandleAndPermission) {
                 setShowWelcome(true);
                 setIsLoading(false);
+                hasInitializedRef.current = true; // Mark as "attempted" to prevent loop
                 return;
             }
 
@@ -227,6 +294,7 @@ const App: React.FC = () => {
             setIsLoading(false);
         } catch (err) {
             console.error("Initialization Failure:", err);
+            hasInitializedRef.current = true; // Mark as "attempted" to prevent loop
             setGlobalFeedback({ message: "Failed to initialize system.", type: 'error' });
             setIsLoading(false);
         }
@@ -265,6 +333,16 @@ const App: React.FC = () => {
         }, 0.2);
 
         tl.set(apertureRef.current, { visibility: 'hidden', autoAlpha: 0 });
+
+        // Safety timeout to ensure curtains are hidden even if GSAP fails
+        const timer = setTimeout(() => {
+            if (apertureRef.current) {
+                apertureRef.current.style.visibility = 'hidden';
+                apertureRef.current.style.opacity = '0';
+            }
+        }, 3000);
+
+        return () => clearTimeout(timer);
     }, [isInitialized]);
 
     const runScopedTransition = useCallback(async (targetTab: ActiveTab) => {
@@ -325,9 +403,8 @@ const App: React.FC = () => {
     }, [setActiveTab]);
 
     const handleNavigate = (tab: ActiveTab) => {
+        if (!isPinned) setIsSidebarOpen(false);
         if (tab === activeTab) return;
-        const isLg = window.innerWidth >= 1024;
-        if (!isPinned && !isLg) setIsSidebarOpen(false);
         runScopedTransition(tab);
     };
 
@@ -437,96 +514,159 @@ const App: React.FC = () => {
     
     if (isLoading) return <InitialLoader status={initStatus} progress={initProgress} />;
     if (showWelcome) return <Welcome onSetupComplete={initializeApp} />;
-    if (!isInitialized) return null;
 
     return (
-        <div className="h-full flex overflow-hidden relative p-1.5 md:p-3 bg-transparent">
-            <MouseTrail />
+        <div className="h-full w-full flex overflow-hidden relative font-sans">
+            {/* AMBIENT VIDEO BACKGROUND */}
+            <div className="absolute inset-0 z-0 overflow-hidden pointer-events-none">
+                {!videoError && settings.dashboardVideoUrl ? (
+                    <video 
+                        key={settings.dashboardVideoUrl}
+                        src={settings.dashboardVideoUrl}
+                        autoPlay 
+                        muted 
+                        loop 
+                        playsInline 
+                        crossOrigin="anonymous"
+                        className="w-full h-full object-cover grayscale brightness-[0.6] contrast-125 opacity-30 transition-opacity duration-1000"
+                        style={{ filter: 'grayscale(1) brightness(0.6) contrast(1.1)' }}
+                        onError={() => setVideoError(true)}
+                    />
+                ) : (
+                    <div className="w-full h-full bg-transparent"></div>
+                )}
+                <div className="absolute inset-0 bg-grid-texture opacity-[0.03] z-10"></div>
+            </div>
             
             <IdleOverlay isVisible={isIdle} onInteraction={() => resetIdleTimer(true)} />
 
-            <div 
-                ref={apertureRef} 
-                className="fixed inset-0 z-[700] pointer-events-none flex flex-col"
-                style={{ visibility: 'hidden' }}
-            >
-                <div ref={curtainTopRef} className="flex-1 bg-base-100 border-b border-base-300" />
-                <div ref={curtainBottomRef} className="flex-1 bg-base-100" />
-            </div>
+            {!isInitialized ? (
+                <div className="flex-1 flex flex-col items-center justify-center bg-transparent rounded">
+                    <div className="text-center space-y-4 max-w-md px-6">
+                        <h2 className="text-2xl font-black uppercase tracking-tighter">System Offline</h2>
+                        <p className="text-xs font-mono opacity-40 uppercase tracking-widest">Initialization failed or interrupted</p>
+                        
+                        <div className="flex flex-col gap-3 pt-4">
+                            <button 
+                                onClick={() => {
+                                    hasInitializedRef.current = false;
+                                    initializeApp();
+                                }}
+                                className="btn btn-primary btn-sm rounded-none font-black tracking-widest uppercase"
+                            >
+                                Retry Initialization
+                            </button>
+                            
+                            <button 
+                                onClick={() => window.location.reload()}
+                                className="btn btn-ghost btn-sm rounded-none font-bold tracking-widest uppercase opacity-60"
+                            >
+                                Reboot System
+                            </button>
 
-            <div 
-                ref={appWrapperRef}
-                className="flex-1 flex overflow-hidden relative z-0 border border-base-content/10 shadow-2xl rounded bg-base-100"
-            >
-                
-                <Sidebar
-                    activeTab={activeTab}
-                    onNavigate={handleNavigate}
-                    isSidebarOpen={isSidebarOpen}
-                    isPinned={isPinned}
-                    setIsPinned={(val) => {
-                        audioService.playClick();
-                        setIsPinned(val);
-                    }}
-                    onAboutClick={() => {
-                        audioService.playModalOpen();
-                        setIsAboutModalOpen(true);
-                    }}
-                />
-                
-                {isSidebarOpen && !isPinned && <div onClick={() => setIsSidebarOpen(false)} className="absolute inset-0 bg-black/50 z-[90]" />}
+                            <div className="divider opacity-10">OR</div>
 
-                {/* Fix: changed non-existent min-0 to standard min-w-0 flexbox fix */}
-                <div className="flex-1 flex flex-col min-w-0 h-full relative z-0">
-                    <Header
-                        onMenuClick={handleMenuClick}
-                        onStandbyClick={() => { setIsIdle(true); isIdleRef.current = true; }}
-                        activeTab={activeTab}
-                        clippedIdeasCount={clippedIdeas.length}
-                        onToggleClippingPanel={() => {
-                            audioService.playClick();
-                            setIsClippingPanelOpen(p => !p);
-                        }}
-                    />
-                    
-                    <main className="flex-grow relative overflow-hidden bg-base-100">
-                        <div 
-                            ref={mainGridRef} 
-                            className="absolute inset-0 z-[600] pointer-events-none grid"
-                            style={{ 
-                                gridTemplateColumns: `repeat(${gridCols}, 1fr)`,
-                                gridTemplateRows: `repeat(${gridRows}, 1fr)`,
-                                visibility: 'hidden'
-                            }}
-                        >
-                            {Array.from({ length: gridRows * gridCols }).map((_, i) => (
-                                <div key={i} className="transition-cell bg-base-100 will-change-transform" />
-                            ))}
+                            <button 
+                                onClick={async () => {
+                                    if (confirm("This will clear all local settings and storage handles. Your actual files will NOT be deleted. Proceed?")) {
+                                        const { resetAllSettings } = await import('../utils/settingsStorage');
+                                        await resetAllSettings();
+                                        window.location.reload();
+                                    }
+                                }}
+                                className="btn btn-error btn-outline btn-xs rounded-none font-bold tracking-widest uppercase opacity-60 hover:opacity-100"
+                            >
+                                Reset Storage Config
+                            </button>
                         </div>
-
-                        <div ref={contentRef} className="h-full w-full will-change-transform z-10 relative">
-                            {renderContent()}
-                        </div>
-                    </main>
-                    
-                    <Footer onAboutClick={() => {
-                        audioService.playModalOpen();
-                        setIsAboutModalOpen(true);
-                    }} />
+                    </div>
                 </div>
+            ) : (
+                <>
+                    <div 
+                        ref={apertureRef} 
+                        className="fixed inset-0 z-[700] pointer-events-none flex flex-col"
+                        style={{ visibility: 'hidden' }}
+                    >
+                        <div ref={curtainTopRef} className="flex-1 bg-transparent border-b border-base-300" />
+                        <div ref={curtainBottomRef} className="flex-1 bg-transparent" />
+                    </div>
 
-                <ClippingPanel 
-                    isOpen={isClippingPanelOpen}
-                    onClose={() => setIsClippingPanelOpen(false)}
-                    clippedIdeas={clippedIdeas}
-                    onRemoveIdea={handleRemoveIdea}
-                    onClearAll={handleClearAllIdeas}
-                    onInsertIdea={handleInsertIdea}
-                    onRefineIdea={handleRefineIdea}
-                    onAddIdea={handleClipIdea}
-                    onSaveToLibrary={handleSaveClippedIdea}
-                />
-            </div>
+                    <div 
+                        ref={appWrapperRef}
+                        className="flex-1 flex flex-col overflow-hidden relative z-0 bg-transparent rounded-none"
+                    >
+                        <Header
+                            onMenuClick={handleMenuClick}
+                            onStandbyClick={() => { setIsIdle(true); isIdleRef.current = true; }}
+                            clippedIdeasCount={clippedIdeas.length}
+                            onToggleClippingPanel={() => {
+                                audioService.playClick();
+                                setIsClippingPanelOpen(p => !p);
+                            }}
+                            onNavigate={handleNavigate}
+                            onAboutClick={() => {
+                                audioService.playModalOpen();
+                                setIsAboutModalOpen(true);
+                            }}
+                        />
+
+                        <div className="flex-1 flex overflow-hidden relative p-4 gap-4">
+                            {isSidebarOpen && !isPinned && (
+                                <div 
+                                    onClick={() => setIsSidebarOpen(false)} 
+                                    className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[550] transition-all duration-300" 
+                                />
+                            )}
+                            <Sidebar
+                                activeTab={activeTab}
+                                onNavigate={handleNavigate}
+                                isSidebarOpen={isSidebarOpen}
+                                isPinned={isPinned}
+                                setIsPinned={(val) => {
+                                    audioService.playClick();
+                                    setIsPinned(val);
+                                }}
+                                onClose={() => setIsSidebarOpen(false)}
+                            />
+                            
+                            <main className="flex-grow min-w-0 relative overflow-hidden bg-transparent rounded-xl border border-base-300/20">
+                                <div 
+                                    ref={mainGridRef} 
+                                    className="absolute inset-0 z-[600] pointer-events-none grid"
+                                    style={{ 
+                                        gridTemplateColumns: `repeat(${gridCols}, 1fr)`,
+                                        gridTemplateRows: `repeat(${gridRows}, 1fr)`,
+                                        visibility: 'hidden'
+                                    }}
+                                >
+                                    {Array.from({ length: gridRows * gridCols }).map((_, i) => (
+                                        <div key={i} className="transition-cell bg-transparent will-change-transform" />
+                                    ))}
+                                </div>
+
+                                <div ref={contentRef} className="h-full w-full will-change-transform z-10 relative">
+                                    {renderContent()}
+                                </div>
+                            </main>
+                        </div>
+                        
+                        <Footer />
+
+                        <ClippingPanel 
+                            isOpen={isClippingPanelOpen}
+                            onClose={() => setIsClippingPanelOpen(false)}
+                            clippedIdeas={clippedIdeas}
+                            onRemoveIdea={handleRemoveIdea}
+                            onClearAll={handleClearAllIdeas}
+                            onInsertIdea={handleInsertIdea}
+                            onRefineIdea={handleRefineIdea}
+                            onAddIdea={handleClipIdea}
+                            onSaveToLibrary={handleSaveClippedIdea}
+                        />
+                    </div>
+                </>
+            )}
             
             <AboutModal 
                 isOpen={isAboutModalOpen} 
@@ -544,6 +684,7 @@ const App: React.FC = () => {
                     type={globalFeedback.type}
                 />
             )}
+            <CustomCursor />
         </div>
     );
 };

@@ -7,7 +7,7 @@ const SETTINGS_KEY = 'kollektivSettingsV4';
 
 export const defaultLLMSettings: LLMSettings = {
   // LLM Provider Settings
-  llmModel: 'gemini-3-flash-preview',
+  llmModel: 'gemini-3.5-flash',
   activeLLM: 'gemini',
   ollamaBaseUrl: 'http://localhost:11434',
   ollamaModel: 'llama3',
@@ -19,13 +19,13 @@ export const defaultLLMSettings: LLMSettings = {
   ollamaCloudUseGoogleAuth: false,
   
   // Theme Settings
-  activeThemeMode: 'light',
+  activeThemeMode: 'dark',
   lightTheme: 'light',
-  darkTheme: 'pipboy',
+  darkTheme: 'dich',
   fontSize: 14,
 
   // Dashboard Settings
-  dashboardVideoUrl: 'https://videos.pexels.com/video-files/3129671/3129671-uhd_3840_2160_30fps.mp4',
+  dashboardVideoUrl: 'https://videos.pexels.com/video-files/35977437/15254965_1920_1080_24fps.mp4',
 
   // Audio Settings
   musicYoutubeUrl: 'https://www.youtube.com/watch?v=jY3A06qWwfw',

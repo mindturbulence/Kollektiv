@@ -1,10 +1,10 @@
-import React, { useState, useEffect, useMemo, useCallback, useRef, useLayoutEffect } from 'react';
+import React, { useState, useEffect, useMemo, useRef, useLayoutEffect, useCallback } from 'react';
 import { gsap } from 'gsap';
 import type { GalleryItem, GalleryCategory } from '../types';
 import { 
-    ChevronLeftIcon, EditIcon, DeleteIcon, CheckIcon, ThumbTackIcon, 
-    ChevronRightIcon, CloseIcon, PhotoIcon, UploadIcon, YouTubeIcon, 
-    RefreshIcon, PlusIcon, ArrowsUpDownIcon, LinkIcon
+    ChevronLeftIcon, ThumbTackIcon, 
+    ChevronRightIcon, CloseIcon, YouTubeIcon, 
+    PlusIcon
 } from './icons';
 import FullscreenViewer from './FullscreenViewer';
 import { fileSystemManager, fileToBase64 } from '../utils/fileUtils';
@@ -103,7 +103,7 @@ const TransitionalMedia: React.FC<{
     }, [displayUrl, direction]);
 
     if (isLoading && !displayUrl) {
-        return <div className="w-full h-full flex items-center justify-center bg-base-300/10"><LoadingSpinner size={48} /></div>;
+        return <div className="w-full h-full flex items-center justify-center bg-transparent"><LoadingSpinner size={48} /></div>;
     }
 
     return (
@@ -115,9 +115,9 @@ const TransitionalMedia: React.FC<{
             )}
             <div ref={currentLayerRef} className="absolute inset-0 z-10 flex items-center justify-center">
                 {type === 'video' ? (
-                    <video src={displayUrl || ''} controls autoPlay loop onClick={onClick} className="max-w-full max-h-full object-contain shadow-2xl cursor-pointer" />
+                    <video src={displayUrl || ''} controls autoPlay loop onClick={onClick} className="max-w-full max-h-full object-contain cursor-pointer" />
                 ) : (
-                    <img src={displayUrl || ''} alt={title} onClick={onClick} className="max-w-full max-h-full object-contain shadow-2xl cursor-pointer" />
+                    <img src={displayUrl || ''} alt={title} onClick={onClick} className="max-w-full max-h-full object-contain cursor-pointer" />
                 )}
             </div>
         </div>
@@ -154,14 +154,14 @@ const Thumbnail: React.FC<{
 
     return (
         <div className="flex-shrink-0 w-24 h-24 mx-2 relative group/thumb">
-            <button onClick={onClick} className={`relative w-full h-full overflow-hidden transition-all duration-500 ease-out focus:outline-none border-2 ${isActive ? 'border-primary shadow-2xl scale-105 z-20 opacity-100' : 'border-transparent opacity-20 hover:opacity-100 hover:scale-105'}`}>
-                {blobUrl ? (type === 'video' ? <video src={blobUrl} className="w-full h-full object-cover bg-black" /> : <img src={blobUrl} alt="Thumb" className="w-full h-full object-cover bg-black" />) : <div className="w-full h-full bg-base-200 animate-pulse" />}
+            <button onClick={onClick} className={`relative w-full h-full overflow-hidden transition-all duration-500 ease-out focus:outline-none border-2 ${isActive ? 'border-primary scale-105 z-20 opacity-100' : 'border-transparent opacity-20 hover:opacity-100 hover:scale-105'}`}>
+                {blobUrl ? (type === 'video' ? <video src={blobUrl} className="w-full h-full object-cover bg-black" /> : <img src={blobUrl} alt="Thumb" className="w-full h-full object-cover bg-black" />) : <div className="w-full h-full bg-transparent animate-pulse" />}
             </button>
             
             {isEditing && (
                 <div className="absolute inset-0 z-30 flex flex-col justify-between p-1 pointer-events-none opacity-0 group-hover/thumb:opacity-100 transition-opacity bg-black/40">
                     <div className="flex justify-end w-full pointer-events-auto">
-                        <button onClick={(e) => { e.stopPropagation(); onRemove?.(); }} className="btn btn-xs btn-square btn-error shadow-lg">✕</button>
+                        <button onClick={(e) => { e.stopPropagation(); onRemove?.(); }} className="btn btn-xs btn-square btn-error">✕</button>
                     </div>
                     <div className="flex justify-between w-full pointer-events-auto pb-1 px-1">
                         <button disabled={!canMoveLeft} onClick={(e) => { e.stopPropagation(); onMove?.('left'); }} className="btn btn-xs btn-square bg-black/60 border-none hover:bg-primary disabled:opacity-0">←</button>
@@ -196,6 +196,13 @@ const ItemDetailView: React.FC<ItemDetailViewProps> = ({ items, currentIndex, is
   const carouselTrackRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
+  const overlayRef = useRef<HTMLDivElement>(null);
+  const modalRef = useRef<HTMLDivElement>(null);
+  const leftPanelRef = useRef<HTMLDivElement>(null);
+  const rightPanelRef = useRef<HTMLDivElement>(null);
+  const headerRef = useRef<HTMLElement>(null);
+  const timelineRef = useRef<gsap.core.Timeline | null>(null);
+
   const [isPublishModalOpen, setIsPublishModalOpen] = useState(false);
   const [videoBlob, setVideoBlob] = useState<Blob | null>(null);
 
@@ -228,6 +235,62 @@ const ItemDetailView: React.FC<ItemDetailViewProps> = ({ items, currentIndex, is
     gsap.to(track, { x: targetX, duration: 0.7, ease: "expo.out" });
   }, [activeImageIndex, editableUrls.length, item?.urls.length, isEditing]);
 
+  useLayoutEffect(() => {
+    if (!overlayRef.current || !modalRef.current || !leftPanelRef.current || !rightPanelRef.current || !headerRef.current) return;
+
+    const ctx = gsap.context(() => {
+        const tl = gsap.timeline({ defaults: { ease: "expo.out", duration: 1.4 } });
+        timelineRef.current = tl;
+        
+        // Initial state
+        gsap.set(overlayRef.current, { opacity: 0 });
+        gsap.set(modalRef.current, { 
+            scale: 0, 
+            transformOrigin: "bottom right",
+            opacity: 0
+        });
+        gsap.set(leftPanelRef.current, { x: -150, opacity: 0 });
+        gsap.set(rightPanelRef.current, { x: 150, opacity: 0 });
+        gsap.set(headerRef.current, { y: -100, opacity: 0 });
+
+        // Animation sequence
+        tl.to(overlayRef.current, { opacity: 1, duration: 0.8 })
+          .to(modalRef.current, { 
+              scale: 1, 
+              opacity: 1, 
+              duration: 1.2,
+              ease: "expo.out"
+          }, "-=0.4")
+          .to(headerRef.current, { 
+              y: 0, 
+              opacity: 1, 
+              duration: 1.2 
+          }, "-=0.6")
+          .to(leftPanelRef.current, { 
+              x: 0, 
+              opacity: 1, 
+              duration: 1.6 
+          }, "-=0.8")
+          .to(rightPanelRef.current, { 
+              x: 0, 
+              opacity: 1, 
+              duration: 1.6 
+          }, "-=1.1");
+    });
+
+    return () => ctx.revert();
+  }, []);
+
+  const handleClose = useCallback(() => {
+    if (timelineRef.current) {
+        timelineRef.current.reverse().eventCallback("onReverseComplete", () => {
+            onClose();
+        });
+    } else {
+        onClose();
+    }
+  }, [onClose]);
+
   const handleSave = () => {
     if (item) {
         onUpdate(item.id, { 
@@ -238,7 +301,7 @@ const ItemDetailView: React.FC<ItemDetailViewProps> = ({ items, currentIndex, is
             sources: editableSources 
         });
         showGlobalFeedback("Changes saved.");
-        onClose(); // BUG FIX: Return to list after saving
+        handleClose();
     }
   };
 
@@ -340,9 +403,9 @@ const ItemDetailView: React.FC<ItemDetailViewProps> = ({ items, currentIndex, is
   const isPublishable = item.type === 'video' && !!settings.youtube?.isConnected;
 
   return (
-    <div className="absolute inset-0 z-40 bg-black/95 backdrop-blur-sm animate-fade-in flex items-center justify-center p-2 lg:p-4 overflow-hidden" onClick={onClose}>
-        <div className="w-full h-full bg-base-100 rounded-none border border-base-300 shadow-2xl flex flex-col lg:flex-row overflow-hidden relative" onClick={e => e.stopPropagation()}>
-            <main className="flex-1 bg-black flex flex-col overflow-hidden relative group">
+    <div ref={overlayRef} className="absolute inset-0 z-40 bg-black/40 backdrop-blur-xl flex items-center justify-center p-4 lg:p-8 overflow-hidden" onClick={handleClose}>
+        <div ref={modalRef} className="w-full h-full bg-base-100/40 flex flex-col lg:flex-row overflow-hidden relative" onClick={e => e.stopPropagation()}>
+            <main ref={leftPanelRef} className="flex-1 flex flex-col overflow-hidden relative group">
                 <div className="flex-grow relative flex items-center justify-center overflow-hidden">
                     <TransitionalMedia url={isEditing ? editableUrls[activeImageIndex] : item.urls[activeImageIndex]} type={item.type} title={item.title} onClick={() => setIsViewerOpen(true)} direction={navDirection} />
                     
@@ -355,7 +418,7 @@ const ItemDetailView: React.FC<ItemDetailViewProps> = ({ items, currentIndex, is
                     
                     <div className="absolute top-6 left-6 right-6 flex justify-between items-center pointer-events-none z-30">
                         <div className="pointer-events-auto flex items-center gap-4">
-                            <div className="join bg-base-200/40 backdrop-blur-md border border-white/5 rounded-none">
+                            <div className="join bg-transparent backdrop-blur-md border border-white/5 rounded-none">
                                 <button onClick={() => handleGlobalNavigate('prev')} className="btn btn-sm btn-ghost join-item rounded-none"><ChevronLeftIcon className="w-4 h-4" /></button>
                                 <span className="join-item flex items-center px-4 font-mono text-[10px] font-black text-white">{currentIndex + 1} / {items.length}</span>
                                 <button onClick={() => handleGlobalNavigate('next')} className="btn btn-sm btn-ghost join-item rounded-none"><ChevronRightIcon className="w-4 h-4" /></button>
@@ -364,7 +427,7 @@ const ItemDetailView: React.FC<ItemDetailViewProps> = ({ items, currentIndex, is
                     </div>
                 </div>
 
-                <div className="h-44 flex-shrink-0 bg-base-200/10 border-t border-white/5 relative flex flex-col items-center justify-center group/deck">
+                <div className="h-44 flex-shrink-0 bg-transparent border-t border-white/5 relative flex flex-col items-center justify-center group/deck">
                     <button onClick={(e) => { e.stopPropagation(); handleInnerNavigate('prev'); }} className="absolute left-10 z-50 btn btn-circle btn-sm btn-ghost bg-black/80 text-white opacity-0 group-hover/deck:opacity-100 border border-white/10 hover:bg-primary top-1/2 -translate-y-1/2 active:scale-100"><ChevronLeftIcon className="w-5 h-5" /></button>
                     
                     <div ref={carouselViewportRef} className="w-[calc(100%-12rem)] h-32 relative overflow-hidden flex items-center z-10">
@@ -401,7 +464,7 @@ const ItemDetailView: React.FC<ItemDetailViewProps> = ({ items, currentIndex, is
                     </div>
 
                     <div className="mt-1 z-40">
-                        <span className="text-[9px] font-mono font-black text-primary bg-black/90 px-4 py-1.5 border border-white/5 shadow-2xl uppercase tracking-[0.6em] inline-block">
+                        <span className="text-[9px] font-mono font-black text-primary bg-black/90 px-4 py-1.5 border border-white/5 uppercase tracking-[0.6em] inline-block">
                             [ {String(activeImageIndex + 1).padStart(2, '0')} / {String(currentMediaUrls.length).padStart(2, '0')} ]
                         </span>
                     </div>
@@ -410,15 +473,15 @@ const ItemDetailView: React.FC<ItemDetailViewProps> = ({ items, currentIndex, is
                 </div>
             </main>
 
-            <aside className="w-full lg:w-96 bg-base-100 border-l border-base-300 flex flex-col overflow-hidden">
-                <header className="flex-shrink-0 h-16 px-6 border-b border-base-300 flex items-center justify-between bg-base-200/20">
+            <aside ref={rightPanelRef} className="w-full lg:w-96 flex flex-col overflow-hidden">
+                <header ref={headerRef} className="flex-shrink-0 h-16 px-6 flex items-center justify-between">
                     <div className="flex items-center gap-3">
                         <button onClick={() => onTogglePin(item.id)} className={`btn btn-sm btn-ghost btn-square rounded-none ${isPinned ? 'text-primary' : 'opacity-20'}`}>
                             <ThumbTackIcon className="w-5 h-5" />
                         </button>
                         <span className="text-[10px] font-black uppercase tracking-[0.2em] text-base-content/20">Item Info</span>
                     </div>
-                    <button onClick={onClose} className="btn btn-sm btn-ghost btn-square rounded-none opacity-40 hover:opacity-100">
+                    <button onClick={handleClose} className="btn btn-sm btn-ghost btn-square rounded-none opacity-40 hover:opacity-100">
                         <CloseIcon className="w-6 h-6" />
                     </button>
                 </header>
@@ -433,7 +496,7 @@ const ItemDetailView: React.FC<ItemDetailViewProps> = ({ items, currentIndex, is
                                 <AutocompleteSelect value={categoryId} onChange={setCategoryId} options={categoryOptions} />
                             </InfoRow>
                             <InfoRow label="Access Policy">
-                                <label className="label cursor-pointer justify-start gap-4 p-4 bg-base-200/50 border border-base-300 rounded-none hover:bg-base-200 transition-colors">
+                                <label className="label cursor-pointer justify-start gap-4 p-4 hover:bg-primary/10 transition-colors">
                                     <input 
                                         type="checkbox" 
                                         checked={isNsfw} 
@@ -444,9 +507,9 @@ const ItemDetailView: React.FC<ItemDetailViewProps> = ({ items, currentIndex, is
                                 </label>
                             </InfoRow>
                             <InfoRow label="Neural Tags">
-                                <div className="flex flex-wrap items-center gap-2 p-3 bg-base-200/30 border border-base-300 rounded-none min-h-[52px]">
+                                <div className="flex flex-wrap items-center gap-2 p-3 bg-base-100/40 backdrop-blur-xl rounded-none min-h-[52px]">
                                     {tags.map(tag => (
-                                        <div key={tag} className="flex items-center gap-2 bg-base-100 border border-base-300 text-[10px] font-black uppercase tracking-widest px-2.5 py-1.5 shadow-sm">
+                                        <div key={tag} className="flex items-center gap-2 bg-base-100/40 backdrop-blur-xl text-[10px] font-black uppercase tracking-widest px-2.5 py-1.5">
                                             <span>{tag}</span>
                                             <button type="button" onClick={() => setTags(tags.filter(t => t !== tag))} className="text-error hover:text-error-content transition-colors">&times;</button>
                                         </div>
@@ -479,7 +542,7 @@ const ItemDetailView: React.FC<ItemDetailViewProps> = ({ items, currentIndex, is
                                 </div>
                             </InfoRow>
                             <InfoRow label="Prompt">
-                                <div className="p-4 bg-base-200/50 border border-base-300 italic text-sm leading-relaxed text-base-content/70 group/prompt">
+                                <div className="p-4 bg-base-100/40 backdrop-blur-xl italic text-sm leading-relaxed text-base-content/70 group/prompt">
                                     "{item.prompt || 'None.'}"
                                     <button 
                                         onClick={() => navigator.clipboard.writeText(item.prompt || '')}
@@ -491,7 +554,7 @@ const ItemDetailView: React.FC<ItemDetailViewProps> = ({ items, currentIndex, is
                                 <InfoRow label="Neural Tags">
                                     <div className="flex flex-wrap gap-2 pt-2">
                                         {tags.map(tag => (
-                                            <span key={tag} className="text-[9px] font-black uppercase tracking-widest bg-base-200 border border-base-300 px-3 py-1.5 text-base-content/40">{tag}</span>
+                                            <span key={tag} className="text-[9px] font-black uppercase tracking-widest bg-base-100/40 backdrop-blur-xl px-3 py-1.5 text-base-content/40">{tag}</span>
                                         ))}
                                     </div>
                                 </InfoRow>
@@ -513,7 +576,7 @@ const ItemDetailView: React.FC<ItemDetailViewProps> = ({ items, currentIndex, is
                     )}
                 </div>
 
-                <footer className="border-t border-base-300 flex flex-col bg-base-200/5 p-0 overflow-hidden flex-shrink-0">
+                <footer className="border-t border-base-300 flex flex-col bg-transparent p-0 overflow-hidden flex-shrink-0">
                     {isPublishable && !isEditing && (
                         <button onClick={handlePublishClick} className="btn btn-primary h-14 w-full rounded-none font-black text-[9px] tracking-[0.2em] uppercase shadow-none border-none border-b border-white/5">
                             <YouTubeIcon className="w-5 h-5 mr-3" /> PUBLISH TO CLOUD
@@ -524,7 +587,7 @@ const ItemDetailView: React.FC<ItemDetailViewProps> = ({ items, currentIndex, is
                             {isEditing ? 'CANCEL' : 'EDIT'}
                         </button>
                         {isEditing ? (
-                            <button onClick={handleSave} className="btn btn-primary flex-1 h-full rounded-none font-black text-[9px] tracking-widest uppercase shadow-lg">SAVE</button>
+                            <button onClick={handleSave} className="btn btn-primary flex-1 h-full rounded-none font-black text-[9px] tracking-widest uppercase">SAVE</button>
                         ) : (
                             <button onClick={() => onDelete(item)} className="btn btn-ghost flex-1 h-full rounded-none font-black text-[9px] tracking-widest uppercase text-error/40 hover:text-error">DELETE</button>
                         )}

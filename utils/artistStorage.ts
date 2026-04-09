@@ -1,6 +1,5 @@
 
 import type { CheatsheetCategory, CheatsheetItem, LLMSettings } from '../types';
-import { ARTIST_CHEATSHEET_DATA } from '../constants';
 import { fileSystemManager } from './fileUtils';
 import { generateArtistDescription } from '../services/llmService';
 

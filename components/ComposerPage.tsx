@@ -1,18 +1,15 @@
 
-import React, { useState, useEffect, useCallback, useRef, useMemo, useLayoutEffect } from 'react';
+import React, { useState, useEffect, useRef, useMemo, useLayoutEffect } from 'react';
 import { gsap } from 'gsap';
 import { 
-    UploadIcon, CloseIcon, LinkIcon, LinkOffIcon, RefreshIcon, 
-    DownloadIcon, FolderClosedIcon, PlusIcon, GripVerticalIcon, 
-    DeleteIcon, CheckIcon, ArchiveIcon, SparklesIcon, ChevronDownIcon,
-    CenterIcon, PhotoIcon, ViewColumnsIcon
+    UploadIcon, LinkIcon, LinkOffIcon, 
+    FolderClosedIcon, PlusIcon
 } from './icons';
 import useLocalStorage from '../utils/useLocalStorage';
 import GalleryPickerModal from './GalleryPickerModal';
 import type { GalleryItem } from '../types';
 import { fileSystemManager, fileToBase64 } from '../utils/fileUtils';
 import { addItemToGallery } from '../utils/galleryStorage';
-import LoadingSpinner from './LoadingSpinner';
 import ConfirmationModal from './ConfirmationModal';
 
 // --- TYPES ---
@@ -143,7 +140,7 @@ const ItemRenderer: React.FC<{
     return (
         <div 
             ref={containerRef}
-            className="w-full h-full relative overflow-hidden group cursor-grab active:cursor-grabbing bg-base-300" 
+            className="w-full h-full relative overflow-hidden group cursor-grab active:cursor-grabbing bg-transparent" 
             onMouseDown={handleDown}
             onWheel={handleWheel}
         >
@@ -210,7 +207,6 @@ const LayerRenderer: React.FC<{
 // --- MAIN PAGE ---
 
 const ComposerPage: React.FC<ComposerPageProps> = ({ showGlobalFeedback }) => {
-    const fileInputRef = useRef<HTMLInputElement>(null);
     const layerImageInputRef = useRef<HTMLInputElement>(null);
     const previewContainerRef = useRef<HTMLDivElement>(null);
     const framePaddingRef = useRef<HTMLDivElement>(null);
@@ -229,7 +225,7 @@ const ComposerPage: React.FC<ComposerPageProps> = ({ showGlobalFeedback }) => {
     const [frameMatting, setFrameMatting] = useLocalStorage('composerFrameMatting', 60);
     
     const [bgColor, setBgColor] = useLocalStorage('composerBgColor', '#FFFFFF');
-    const [outputFormat, setOutputFormat] = useLocalStorage<'png' | 'jpeg'>('composerFormat', 'jpeg');
+    const [outputFormat] = useLocalStorage<'png' | 'jpeg'>('composerFormat', 'jpeg');
 
     const [gridItems, setGridItems] = useState<(ImageItem | null)[]>([]);
     const [frameItem, setFrameItem] = useState<ImageItem | null>(null);
@@ -395,10 +391,10 @@ const ComposerPage: React.FC<ComposerPageProps> = ({ showGlobalFeedback }) => {
     }, [mode, previewMetrics, gridCols, gridRows, gridGap]);
 
     return (
-        <div className="h-full bg-base-100 flex flex-col overflow-hidden">
+        <div className="h-full bg-transparent flex flex-col overflow-hidden">
             <div className="flex-grow flex flex-col lg:flex-row overflow-hidden">
-                <aside className="w-full lg:w-96 flex-shrink-0 bg-base-100 border-r border-base-300 flex flex-col overflow-hidden">
-                    <div className="p-4 border-b border-base-300 bg-base-200/10">
+                <aside className="w-full lg:w-96 flex-shrink-0 bg-base-100/40 backdrop-blur-xl flex flex-col overflow-hidden">
+                    <div className="p-4 border-b border-base-300 bg-transparent">
                         <div className="tabs tabs-boxed rounded-none bg-transparent gap-1 p-0">
                             <button onClick={() => setMode('grid')} className={`tab flex-1 rounded-none font-black text-[9px] uppercase tracking-widest ${mode === 'grid' ? 'tab-active' : ''}`}>Grid Builder</button>
                             <button onClick={() => setMode('frame')} className={`tab flex-1 rounded-none font-black text-[9px] uppercase tracking-widest ${mode === 'frame' ? 'tab-active' : ''}`}>Image Framer</button>
@@ -444,11 +440,11 @@ const ComposerPage: React.FC<ComposerPageProps> = ({ showGlobalFeedback }) => {
 
                         <div className="space-y-4 pt-6 border-t border-base-300">
                             <div className="flex justify-between items-center"><span className="text-[10px] font-black uppercase text-base-content/40 tracking-widest">Background</span><input type="color" value={bgColor} onChange={e => setBgColor(e.target.value)} className="w-8 h-8 rounded-none border-none cursor-pointer" /></div>
-                            <button onClick={() => { if(mode==='grid') setGridItems(prev => prev.map(i => i ? {...i, posX: 0, posY: 0, scale: 1} : null)); else { if(frameItem) setFrameItem({...frameItem, posX:0, posY:0, scale:1}); setLayers(prev => prev.map(s => ({...s, x:0.5, y:0.5}))); } }} className="btn btn-xs btn-ghost border border-base-300 rounded-none w-full font-black text-[9px] tracking-widest uppercase mt-4">Reset Viewport</button>
+                            <button onClick={() => { if(mode==='grid') setGridItems(prev => prev.map(i => i ? {...i, posX: 0, posY: 0, scale: 1} : null)); else { if(frameItem) setFrameItem({...frameItem, posX:0, posY:0, scale:1}); setLayers(prev => prev.map(s => ({...s, x:0.5, y:0.5}))); } }} className="btn btn-xs btn-ghost rounded-none w-full font-black text-[9px] tracking-widest uppercase mt-4">Reset Viewport</button>
                         </div>
                     </div>
 
-                    <footer className="border-t border-base-300 flex flex-col bg-base-200/5 p-0 overflow-hidden flex-shrink-0">
+                    <footer className="border-t border-base-300 flex flex-col bg-transparent p-0 overflow-hidden flex-shrink-0">
                          <div className="flex w-full h-14 border-b border-base-300">
                             <button onClick={() => { setGridItems(Array(gridCols*gridRows).fill(null)); setFrameItem(null); setLayers([]); }} className="btn btn-ghost flex-1 h-full rounded-none font-black text-[9px] tracking-widest uppercase text-error/40 hover:text-error">RESET</button>
                             <button onClick={handleDownload} disabled={isProcessing || (mode==='grid'?!gridItems.some(Boolean):!frameItem)} className="btn btn-ghost flex-1 h-full rounded-none font-black text-[9px] tracking-widest uppercase border-l border-base-300">DOWNLOAD</button>
@@ -457,12 +453,12 @@ const ComposerPage: React.FC<ComposerPageProps> = ({ showGlobalFeedback }) => {
                     </footer>
                 </aside>
 
-                <main className="flex-grow flex flex-col bg-base-100 overflow-hidden relative">
-                    <section className="p-8 border-b border-base-300 bg-base-200/10 flex justify-between items-center h-16"><h1 className="text-xl font-black uppercase tracking-tighter">{mode === 'grid' ? 'Grid Builder' : 'Image Framer'}<span className="text-primary">.</span></h1></section>
-                    <div ref={previewContainerRef} className="flex-grow bg-base-200/5 flex items-center justify-center p-12 overflow-hidden" onMouseDown={e => { if(e.target === e.currentTarget) setActiveLayerId(null); }}>
-                        <div id="framer-canvas-root" className="shadow-2xl relative transition-all duration-500 overflow-hidden" style={{ width: previewMetrics.width, height: previewMetrics.height, backgroundColor: bgColor }}>
+                <main className="flex-grow flex flex-col bg-transparent overflow-hidden relative">
+                    <section className="p-8 border-b border-base-300 bg-transparent flex justify-between items-center h-16"><h1 className="text-xl font-black uppercase tracking-tighter">{mode === 'grid' ? 'Grid Builder' : 'Image Framer'}<span className="text-primary">.</span></h1></section>
+                    <div ref={previewContainerRef} className="flex-grow bg-transparent flex items-center justify-center p-12 overflow-hidden" onMouseDown={e => { if(e.target === e.currentTarget) setActiveLayerId(null); }}>
+                        <div id="framer-canvas-root" className="relative transition-all duration-500 overflow-hidden" style={{ width: previewMetrics.width, height: previewMetrics.height, backgroundColor: bgColor }}>
                             {mode === 'grid' && gridLayout && gridItems.map((item, idx) => (
-                                <div key={idx} className="absolute bg-base-300 overflow-hidden" style={{ width: gridLayout.cw, height: gridLayout.ch, left: gridLayout.gap + (idx % gridCols) * (gridLayout.cw + gridLayout.gap), top: gridLayout.gap + Math.floor(idx / gridCols) * (gridLayout.ch + gridLayout.gap) }}>
+                                <div key={idx} className="absolute bg-transparent overflow-hidden" style={{ width: gridLayout.cw, height: gridLayout.ch, left: gridLayout.gap + (idx % gridCols) * (gridLayout.cw + gridLayout.gap), top: gridLayout.gap + Math.floor(idx / gridCols) * (gridLayout.ch + gridLayout.gap) }}>
                                     {item ? <ItemRenderer item={item} w={gridLayout.cw} h={gridLayout.ch} onRemove={() => setGridItems(prev => { const n = [...prev]; n[idx]=null; return n; })} onTransform={t => setGridItems(prev => { const n = [...prev]; n[idx]={...item, ...t}; return n; })} /> 
                                     : <div className="w-full h-full flex flex-col items-center justify-center gap-2 opacity-10 hover:opacity-40 transition-opacity">
                                         <button onClick={() => { setPickerTarget(idx); setIsPickerOpen(true); }} className="btn btn-circle btn-sm btn-ghost"><FolderClosedIcon className="w-8 h-8"/></button>
@@ -476,7 +472,7 @@ const ComposerPage: React.FC<ComposerPageProps> = ({ showGlobalFeedback }) => {
                                         {frameItem ? <ItemRenderer animateEntry item={frameItem} w={previewMetrics.width - (getFrameInsets(frameStyle, frameMatting, parseInt(width))[1]+getFrameInsets(frameStyle, frameMatting, parseInt(width))[3])*previewMetrics.scale} h={previewMetrics.height - (getFrameInsets(frameStyle, frameMatting, parseInt(width))[0]+getFrameInsets(frameStyle, frameMatting, parseInt(width))[2])*previewMetrics.scale} onRemove={() => setFrameItem(null)} onTransform={t => setFrameItem({...frameItem!, ...t})} />
                                         : <div className="w-full h-full border-2 border-dashed border-base-content/10 flex flex-col items-center justify-center gap-4 opacity-40 hover:opacity-100 transition-opacity">
                                             <div className="flex gap-4">
-                                                <button onClick={() => setIsPickerOpen(true)} className="btn btn-ghost border border-base-300 rounded-none font-black text-[10px] tracking-widest px-8">LIBRARY</button>
+                                                <button onClick={() => setIsPickerOpen(true)} className="btn btn-ghost rounded-none font-black text-[10px] tracking-widest px-8">LIBRARY</button>
                                                 <button onClick={() => (window as any).document.getElementById('frame-file-upload')?.click()} className="btn btn-primary rounded-none font-black text-[10px] tracking-widest px-8">UPLOAD</button>
                                             </div>
                                         </div>}
@@ -492,13 +488,13 @@ const ComposerPage: React.FC<ComposerPageProps> = ({ showGlobalFeedback }) => {
 
                 {/* RIGHT SIDEBAR: LAYERS (IMAGE FRAMER ONLY) */}
                 {mode === 'frame' && (
-                    <aside className="w-full lg:w-80 flex-shrink-0 bg-base-100 border-l border-base-300 flex flex-col overflow-hidden animate-slide-in-from-right">
-                        <header className="p-6 border-b border-base-300 bg-base-200/10 flex justify-between items-center h-16"><h3 className="text-[10px] font-black uppercase tracking-[0.4em] text-primary">Layers</h3><div className="flex gap-1"><button onClick={() => { const n: Layer = { id: Math.random().toString(36).substr(2,9), type: 'text', content: 'New Text', x: 0.5, y: 0.5, fontSize: 80, color: '#000000', fontFamily: FONTS[0].family, bold: true, italic: false }; setLayers([...layers, n]); setActiveLayerId(n.id); }} className="btn btn-xs btn-ghost btn-square" title="Add Text Layer"><PlusIcon className="w-4 h-4"/></button><button onClick={() => layerImageInputRef.current?.click()} className="btn btn-xs btn-ghost btn-square" title="Add Image Layer"><UploadIcon className="w-4 h-4"/></button></div></header>
+                    <aside className="w-full lg:w-80 flex-shrink-0 bg-base-100/40 backdrop-blur-xl flex flex-col overflow-hidden animate-slide-in-from-right">
+                        <header className="p-6 border-b border-base-300 bg-transparent flex justify-between items-center h-16"><h3 className="text-[10px] font-black uppercase tracking-[0.4em] text-primary">Layers</h3><div className="flex gap-1"><button onClick={() => { const n: Layer = { id: Math.random().toString(36).substr(2,9), type: 'text', content: 'New Text', x: 0.5, y: 0.5, fontSize: 80, color: '#000000', fontFamily: FONTS[0].family, bold: true, italic: false }; setLayers([...layers, n]); setActiveLayerId(n.id); }} className="btn btn-xs btn-ghost btn-square" title="Add Text Layer"><PlusIcon className="w-4 h-4"/></button><button onClick={() => layerImageInputRef.current?.click()} className="btn btn-xs btn-ghost btn-square" title="Add Image Layer"><UploadIcon className="w-4 h-4"/></button></div></header>
                         <div className="flex-grow overflow-y-auto custom-scrollbar p-6 space-y-4">
                             {layers.map((layer, i) => (
                                 <div key={layer.id} className={`p-4 border transition-all cursor-pointer ${activeLayerId === layer.id ? 'border-primary bg-primary/5' : 'border-base-300'}`} onClick={() => setActiveLayerId(layer.id)}>
                                     <div className="flex justify-between items-center mb-3"><span className="text-[9px] font-black uppercase tracking-widest opacity-40">Layer {String(i+1).padStart(2, '0')}</span><button onClick={e => { e.stopPropagation(); setLayers(prev => prev.filter(s => s.id !== layer.id)); }} className="text-error opacity-40 hover:opacity-100">✕</button></div>
-                                    {layer.type === 'text' ? <input value={layer.content} onChange={e => setLayers(prev => prev.map(s => s.id === layer.id ? {...s, content: e.target.value} : s))} className="input input-xs w-full bg-base-200 rounded-none border-none uppercase font-bold" /> : <span className="text-[10px] font-mono opacity-30 truncate block">Image Overlay</span>}
+                                    {layer.type === 'text' ? <input value={layer.content} onChange={e => setLayers(prev => prev.map(s => s.id === layer.id ? {...s, content: e.target.value} : s))} className="input input-xs w-full bg-transparent rounded-none border-none uppercase font-bold" /> : <span className="text-[10px] font-mono opacity-30 truncate block">Image Overlay</span>}
                                     {activeLayerId === layer.id && (
                                         <div className="mt-4 pt-4 border-t border-base-300/50 space-y-4">
                                             <div className="flex justify-between items-center"><span className="text-[9px] font-black uppercase opacity-40 text-primary">Size</span><span className="text-[10px] font-mono font-bold text-primary">{layer.fontSize}PX</span></div>

@@ -1,6 +1,5 @@
 import React, { useEffect } from 'react';
 import { createPortal } from 'react-dom';
-import { CheckIcon, InformationCircleIcon } from './icons';
 
 interface FeedbackModalProps {
   isOpen: boolean;
@@ -45,13 +44,13 @@ const FeedbackModal: React.FC<FeedbackModalProps> = ({ isOpen, onClose, message,
   
   const modalContent = (
     <div 
-        className="fixed inset-0 bg-black/40 z-[2000] flex items-center justify-center p-4 animate-fade-in" 
+        className="fixed inset-0 bg-black/40 backdrop-blur-xl z-[2000] flex items-center justify-center p-4 animate-fade-in" 
         onClick={onClose}
         role="alertdialog"
         aria-modal="true"
     >
       <div 
-        className="bg-base-100 rounded-none border border-base-300 shadow-2xl w-full max-w-md overflow-hidden"
+        className="bg-base-100/40 rounded-none w-full max-w-md overflow-hidden"
         onClick={(e) => e.stopPropagation()}
       >
         <div className={`h-1.5 w-full ${currentTheme.bgColor}`}></div>
