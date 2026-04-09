@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 
-const TimedScrambledText: React.FC<{ text: string; intervalMs: number }> = ({ text, intervalMs }) => {
+const TimedScrambledText: React.FC<{ text: string; intervalMs: number; trigger?: any }> = ({ text, intervalMs, trigger }) => {
     const [display, setDisplay] = useState(text);
     const chars = '0123456789ABCDEF!@#%^&*';
     const intervalRef = useRef<number | null>(null);
@@ -23,6 +23,12 @@ const TimedScrambledText: React.FC<{ text: string; intervalMs: number }> = ({ te
             }
         }, 50);
     }, [text]);
+
+    useEffect(() => {
+        if (trigger !== undefined) {
+            startScramble();
+        }
+    }, [trigger, startScramble]);
 
     useEffect(() => {
         const timer = setInterval(() => {

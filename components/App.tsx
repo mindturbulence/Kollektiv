@@ -599,13 +599,16 @@ const AppContent: React.FC = () => {
                         <Header
                             onMenuClick={handleMenuClick}
                             onStandbyClick={() => { setIsIdle(true); isIdleRef.current = true; }}
-                            activeTab={activeTab}
                             clippedIdeasCount={clippedIdeas.length}
                             onToggleClippingPanel={() => {
                                 audioService.playClick();
                                 setIsClippingPanelOpen(p => !p);
                             }}
                             onNavigate={handleNavigate}
+                            onAboutClick={() => {
+                                audioService.playModalOpen();
+                                setIsAboutModalOpen(true);
+                            }}
                         />
 
                         <div className="flex-1 flex overflow-hidden relative p-4 gap-4">
@@ -648,10 +651,7 @@ const AppContent: React.FC = () => {
                             </main>
                         </div>
                         
-                        <Footer onAboutClick={() => {
-                            audioService.playModalOpen();
-                            setIsAboutModalOpen(true);
-                        }} />
+                        <Footer />
 
                         <ClippingPanel 
                             isOpen={isClippingPanelOpen}

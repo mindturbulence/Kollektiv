@@ -611,24 +611,6 @@ export const SetupPage: React.FC<SetupPageProps> = ({
                         </button>
                     </div>
                 </SettingRow>
-                <SettingRow label="Atmospheric Music" desc="YouTube URL for the background streaming module.">
-                    <div className="join w-full md:w-96">
-                        <input 
-                            type="text" 
-                            value={settings.musicYoutubeUrl} 
-                            onChange={(e) => handleSettingsChange('musicYoutubeUrl', e.target.value)} 
-                            className="input input-bordered input-sm rounded-none join-item w-full font-mono text-xs" 
-                            placeholder="https://www.youtube.com/watch?v=..."
-                        />
-                        <button 
-                            onClick={() => handleSettingsChange('musicYoutubeUrl', defaultLLMSettings.musicYoutubeUrl)}
-                            className="btn btn-sm btn-ghost join-item text-[10px] font-black"
-                            title="Reset to Default"
-                        >
-                            <RefreshIcon className="w-3.5 h-3.5" />
-                        </button>
-                    </div>
-                </SettingRow>
                 <SettingRow label="Interface Scale" desc="Global font sizing for the dashboard and workspaces.">
                      <div className="flex items-center gap-4 w-48">
                         <input type="range" min={10} max={18} value={settings.fontSize} onChange={(e) => handleSettingsChange('fontSize', Number((e.currentTarget as any).value))} className="range range-xs range-primary" />

@@ -5,7 +5,6 @@ import { audioService } from '../services/audioService';
 import LlmStatusSwitcher from './LlmStatusSwitcher';
 
 interface FooterProps {
-    onAboutClick: () => void;
 }
 
 const DigitalOscillator = ({ state = 'idle', theme = 'light' }: { state: string, theme?: 'light' | 'dark' }) => {
@@ -93,7 +92,7 @@ const DigitalOscillator = ({ state = 'idle', theme = 'light' }: { state: string,
     );
 };
 
-const Footer: React.FC<FooterProps> = ({ onAboutClick }) => {
+const Footer: React.FC<FooterProps> = () => {
     const { settings } = useSettings();
     const [isUplinkActive, setIsUplinkActive] = useState(false);
     const [playerState, setPlayerState] = useState<'idle' | 'syncing' | 'playing' | 'error'>('idle');
@@ -197,11 +196,11 @@ const Footer: React.FC<FooterProps> = ({ onAboutClick }) => {
                 </div>
             </div>
 
-            <footer className="flex-shrink-0 px-0 h-12 bg-transparent z-[500] flex flex-row items-center justify-between select-none whitespace-nowrap relative">
+            <footer className="flex-shrink-0 px-8 pb-4 bg-transparent z-[500] flex flex-row items-center justify-between select-none whitespace-nowrap relative">
                 {/* Background Technical Noise */}
                 <div className="absolute inset-0 pointer-events-none opacity-[0.03] bg-[url('https://www.transparenttextures.com/patterns/stardust.png')]"></div>
 
-                <div className="flex items-center h-full px-6 gap-4 bg-transparent relative z-10">
+                <div className="flex items-center h-full gap-4 bg-transparent relative z-10">
                     <span className="text-[11px] font-black uppercase tracking-[0.2em] text-primary">ENGINE</span>
                     <div className="relative flex items-center justify-center border-l border-base-300/30 pl-4 h-full py-2 min-w-[200px]">
                         <LlmStatusSwitcher />
@@ -211,7 +210,7 @@ const Footer: React.FC<FooterProps> = ({ onAboutClick }) => {
                 <div className="flex flex-row items-center h-full">
                     <button
                         onClick={handleToggle}
-                        className={`relative flex items-center h-full px-4 transition-all duration-300 bg-transparent border-l border-base-300/30 outline-none ${stateColorClass}`}
+                        className={`relative flex items-center h-full px-8 transition-all duration-300 bg-transparent border-l border-base-300/30 outline-none ${stateColorClass}`}
                     >
                         <div className="flex flex-row items-center h-full relative z-10 pointer-events-none">
                             <div className={`flex flex-row items-center transition-all duration-500 ease-out ${isActive ? '-translate-x-2' : 'translate-x-0'}`}>
@@ -221,13 +220,6 @@ const Footer: React.FC<FooterProps> = ({ onAboutClick }) => {
                                 <DigitalOscillator state={playerState} theme={settings.activeThemeMode} />
                             </div>
                         </div>
-                    </button>
-                    <button
-                        onClick={onAboutClick}
-                        onMouseEnter={() => audioService.playHover()}
-                        className="h-full px-4 flex items-center border-l border-base-300/30 text-base-content/40 hover:text-base-content hover:bg-base-200/30 transition-all duration-300"
-                    >
-                        <span className="uppercase text-[10px] font-black tracking-widest">About</span>
                     </button>
                 </div>
             </footer>

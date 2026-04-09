@@ -25,7 +25,7 @@ export const defaultLLMSettings: LLMSettings = {
   fontSize: 14,
 
   // Dashboard Settings
-  dashboardVideoUrl: 'https://videos.pexels.com/video-files/3129671/3129671-uhd_3840_2160_30fps.mp4',
+  dashboardVideoUrl: 'https://videos.pexels.com/video-files/35977437/15254965_1920_1080_24fps.mp4',
 
   // Audio Settings
   musicYoutubeUrl: 'https://www.youtube.com/watch?v=jY3A06qWwfw',
