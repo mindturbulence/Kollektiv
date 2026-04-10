@@ -7,6 +7,7 @@ import { SparklesIcon, CheckIcon, CloseIcon, DeleteIcon } from './icons';
 import { fileSystemManager } from '../utils/fileUtils';
 import { PromptAnatomyPanel } from './PromptAnatomyPanel';
 import { useSettings } from '../contexts/SettingsContext';
+import { useBusy } from '../contexts/BusyContext';
 import { reconstructFromIntent, reconstructPrompt, replaceComponentInPrompt } from '../services/llmService';
 import ConfirmationModal from './ConfirmationModal';
 import WildcardTree from './WildcardTree';
@@ -15,13 +16,15 @@ interface PromptCrafterProps {
   onSaveToLibrary: (generatedText: string, baseText: string) => void;
   onClip?: (prompt: string) => void;
   onSendToEnhancer: (prompt: string) => void;
-  onSavePresetSuccess?: (prompt: string, modifiers: any) => void;
+  onSavePresetSuccess?: (prompt: string, modifiers: any, constantModifier?: string) => void;
   promptToInsert: { content: string, id: string } | null;
   header: React.ReactNode;
+  modifierCatalog?: string;
 }
 
-const PromptCrafter = ({ onClip, onSendToEnhancer, onSavePresetSuccess, promptToInsert, header }: PromptCrafterProps) => {
+const PromptCrafter = ({ onClip, onSendToEnhancer, onSavePresetSuccess, promptToInsert, header, modifierCatalog }: PromptCrafterProps) => {
     const { settings } = useSettings();
+    const { setIsBusy } = useBusy();
     const [crafterData, setCrafterData] = useState<CrafterData | null>(null);
     const [isLoading, setIsLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
@@ -92,6 +95,7 @@ const PromptCrafter = ({ onClip, onSendToEnhancer, onSavePresetSuccess, promptTo
     const handleReconstruct = async () => {
         if (!generatedPrompt) return;
         setAiAction('Rewriting prompt...');
+        setIsBusy(true);
         setError(null);
         try {
             const newPrompt = await reconstructFromIntent([generatedPrompt], settings);
@@ -101,12 +105,14 @@ const PromptCrafter = ({ onClip, onSendToEnhancer, onSavePresetSuccess, promptTo
             setError(e instanceof Error ? e.message : 'Failed to rewrite prompt.');
         } finally {
             setAiAction(null);
+            setIsBusy(false);
         }
     };
 
     const handleReplaceVariation = async (key: string, value: string) => {
         if (!generatedPrompt) return;
         setAiAction('Replacing component...');
+        setIsBusy(true);
         setError(null);
         try {
             const newPrompt = await replaceComponentInPrompt(generatedPrompt, key, value, settings);
@@ -117,11 +123,13 @@ const PromptCrafter = ({ onClip, onSendToEnhancer, onSavePresetSuccess, promptTo
             setError(e instanceof Error ? e.message : 'An error occurred during replacement.');
         } finally {
             setAiAction(null);
+            setIsBusy(false);
         }
     };
 
     const handleReconstructFromComponents = async (newComponents: { [key: string]: string }) => {
         setAiAction('Rebuilding from details...');
+        setIsBusy(true);
         setError(null);
         try {
             const newPrompt = await reconstructPrompt(newComponents, settings);
@@ -132,6 +140,7 @@ const PromptCrafter = ({ onClip, onSendToEnhancer, onSavePresetSuccess, promptTo
             setError(e instanceof Error ? e.message : 'An error occurred during rebuilding.');
         } finally {
             setAiAction(null);
+            setIsBusy(false);
         }
     };
 
@@ -494,9 +503,10 @@ const PromptCrafter = ({ onClip, onSendToEnhancer, onSavePresetSuccess, promptTo
                     onSaveSuccess={onSavePresetSuccess}
                     analysisTrigger={analysisTrigger}
                     isProcessing={!!aiAction}
+                    modifierCatalog={modifierCatalog}
                 />
             </aside>
-
+            
             {isSaveModalOpen && (
                 <div className="fixed inset-0 bg-black/40 backdrop-blur-xl z-50 flex items-center justify-center p-4 animate-fade-in" onClick={() => setIsSaveModalOpen(false)}>
                     <div className="bg-base-100/40 w-full max-w-lg overflow-hidden" onClick={(e) => e.stopPropagation()}>
@@ -511,7 +521,7 @@ const PromptCrafter = ({ onClip, onSendToEnhancer, onSavePresetSuccess, promptTo
                                 placeholder="ENTER NAME..."
                                 className="input input-bordered rounded-none w-full font-bold tracking-tight uppercase"
                                 autoFocus
-                                onKeyDown={(e) => e.key === 'Enter' && handleConfirmSaveTemplate()}
+                                onKeyDown={e => e.key === 'Enter' && handleConfirmSaveTemplate()}
                             />
                         </div>
                         <div className="p-4 flex justify-end gap-2">

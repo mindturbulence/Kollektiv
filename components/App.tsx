@@ -315,7 +315,7 @@ const AppContent: React.FC = () => {
         });
 
         gsap.set(apertureRef.current, { visibility: 'visible', autoAlpha: 1 });
-        gsap.set(appWrapperRef.current, { scale: 0.96, autoAlpha: 0 });
+        gsap.set(appWrapperRef.current, { y: 100, autoAlpha: 0 });
 
         tl.to(curtainTopRef.current, {
             yPercent: -100,
@@ -326,7 +326,7 @@ const AppContent: React.FC = () => {
         }, 0);
 
         tl.to(appWrapperRef.current, {
-            scale: 1,
+            y: 0,
             autoAlpha: 1,
             duration: 1.2,
             ease: "expo.out"
@@ -346,60 +346,80 @@ const AppContent: React.FC = () => {
     }, [isInitialized]);
 
     const runScopedTransition = useCallback(async (targetTab: ActiveTab) => {
-        if (isTransitioningRef.current || !mainGridRef.current) return;
+        if (isTransitioningRef.current || !mainGridRef.current || !contentRef.current) return;
         isTransitioningRef.current = true;
         audioService.playClick();
 
+        const tl = gsap.timeline();
+
+        // Phase 1: Current content slides down and fades out
+        tl.to(contentRef.current, {
+            y: 80,
+            autoAlpha: 0,
+            duration: 0.8,
+            ease: "power2.in"
+        });
+
+        // Show grid cover
+        tl.set(mainGridRef.current, { autoAlpha: 1, visibility: 'visible' });
+
+        // Phase 2: Grid slides down to cover
         const cells = mainGridRef.current.querySelectorAll('.transition-cell');
-        
-        gsap.set(mainGridRef.current, { autoAlpha: 1, visibility: 'visible' });
-        await gsap.fromTo(cells, 
-            { scaleY: 0, autoAlpha: 0, transformOrigin: "top" },
-            { 
-                scaleY: 1.01, 
-                autoAlpha: 1, 
-                duration: 0.45, 
-                ease: "power2.inOut",
+        tl.fromTo(cells,
+            { y: 0, scaleY: 1 },
+            {
+                y: 100,
+                scaleY: 0.5,
+                duration: 1,
+                ease: "power3.inOut",
                 stagger: {
                     grid: [gridRows, gridCols],
                     from: "start",
                     axis: "y",
                     amount: 0.3
                 }
-            }
+            },
+            "-=0.4"
         );
 
-        setActiveTab(targetTab);
-        await new Promise(r => requestAnimationFrame(r)); 
-
-        const tl = gsap.timeline({
-            onComplete: () => {
-                gsap.set(mainGridRef.current, { autoAlpha: 0, visibility: 'hidden' });
-                isTransitioningRef.current = false;
+        // Switch tab
+        tl.call(() => setActiveTab(targetTab));
+        tl.call(() => {
+            if (contentRef.current) {
+                gsap.set(contentRef.current, { y: -80, autoAlpha: 0 });
             }
         });
 
-        tl.to(cells, {
-            scaleY: 0,
-            autoAlpha: 0,
-            transformOrigin: "top",
-            duration: 0.45,
-            ease: "power2.inOut",
-            stagger: {
-                grid: [gridRows, gridCols],
-                from: "end",
-                axis: "y",
-                amount: 0.3
+        // Phase 3: New content slides up from below
+        tl.call(() => {
+            if (contentRef.current) {
+                gsap.fromTo(contentRef.current,
+                    { y: 80, autoAlpha: 0 },
+                    { y: 0, autoAlpha: 1, duration: 0.8, ease: "power3.out" }
+                );
             }
         });
 
-        if (contentRef.current) {
-            tl.fromTo(contentRef.current, 
-                { autoAlpha: 0, y: 15 },
-                { autoAlpha: 1, y: 0, duration: 0.6, ease: "power3.out" },
-                "-=0.4"
-            );
-        }
+        // Phase 4: Grid slides back up to reveal
+        tl.to(cells,
+            {
+                y: 0,
+                scaleY: 1,
+                duration: 1,
+                ease: "power3.inOut",
+                stagger: {
+                    grid: [gridRows, gridCols],
+                    from: "end",
+                    axis: "y",
+                    amount: 0.3
+                },
+                onComplete: () => {
+                    gsap.set(mainGridRef.current, { autoAlpha: 0, visibility: 'hidden' });
+                    isTransitioningRef.current = false;
+                }
+            },
+            "-=0.6"
+        );
     }, [setActiveTab]);
 
     const handleNavigate = (tab: ActiveTab) => {
@@ -612,12 +632,6 @@ const AppContent: React.FC = () => {
                         />
 
                         <div className="flex-1 flex overflow-hidden relative p-4 gap-4">
-                            {isSidebarOpen && !isPinned && (
-                                <div 
-                                    onClick={() => setIsSidebarOpen(false)} 
-                                    className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[550] transition-all duration-300" 
-                                />
-                            )}
                             <Sidebar
                                 activeTab={activeTab}
                                 onNavigate={handleNavigate}
@@ -630,7 +644,7 @@ const AppContent: React.FC = () => {
                                 onClose={() => setIsSidebarOpen(false)}
                             />
                             
-                            <main className="flex-grow min-w-0 relative overflow-hidden bg-transparent rounded-xl border border-base-300/20">
+                            <main className="flex-grow min-w-0 relative overflow-hidden bg-transparent rounded-xl border border-base-300/20 z-10">
                                 <div 
                                     ref={mainGridRef} 
                                     className="absolute inset-0 z-[600] pointer-events-none grid"
@@ -641,11 +655,11 @@ const AppContent: React.FC = () => {
                                     }}
                                 >
                                     {Array.from({ length: gridRows * gridCols }).map((_, i) => (
-                                        <div key={i} className="transition-cell bg-transparent will-change-transform" />
+                                        <div key={i} className="transition-cell bg-transparent" />
                                     ))}
                                 </div>
 
-                                <div ref={contentRef} className="h-full w-full will-change-transform z-10 relative">
+                                <div ref={contentRef} className="h-full w-full z-10 relative">
                                     {renderContent()}
                                 </div>
                             </main>

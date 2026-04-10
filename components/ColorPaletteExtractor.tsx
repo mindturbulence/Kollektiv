@@ -214,13 +214,13 @@ export const ColorPaletteExtractor: React.FC<ColorPaletteExtractorProps> = ({ on
   };
 
   return (
-    <div className="h-full flex flex-col overflow-hidden">
+    <div className="h-full bg-base-100/40 backdrop-blur-xl flex flex-col overflow-hidden">
         <div className="flex-grow flex flex-col lg:flex-row overflow-hidden">
-            <aside className="w-full lg:w-96 flex-shrink-0 flex flex-col overflow-hidden bg-base-100/40 backdrop-blur-xl">
-                <header className="p-6">
+            <aside className="w-full lg:w-96 flex-shrink-0 bg-transparent flex flex-col overflow-hidden">
+                <header className="p-6 bg-transparent">
                     <h3 className="text-[10px] font-black uppercase tracking-[0.4em] text-primary">Chromic Source</h3>
                 </header>
-                <div className="flex-grow p-6 flex flex-col gap-6 overflow-y-auto custom-scrollbar">
+                <div className="flex-grow p-6 flex flex-col gap-6 overflow-y-auto custom-scrollbar bg-transparent">
                      <div 
                         className={`relative flex-grow min-h-[200px] border-2 border-dashed rounded-none flex flex-col items-center justify-center cursor-pointer transition-all gap-4 group ${isDragging ? 'border-primary bg-primary/10' : 'border-base-300 hover:border-primary/50'}`}
                         style={{ backgroundImage: imagePreviewUrl ? `url(${imagePreviewUrl})` : 'none', backgroundSize: 'contain', backgroundPosition: 'center', backgroundRepeat: 'no-repeat' }}
@@ -258,7 +258,7 @@ export const ColorPaletteExtractor: React.FC<ColorPaletteExtractorProps> = ({ on
             </aside>
 
             <main className="flex-grow overflow-y-auto overflow-x-hidden scroll-smooth custom-scrollbar flex flex-col">
-                <section className="p-10 bg-base-100/40 backdrop-blur-xl">
+                <section className="p-10 bg-transparent">
                     <div className="max-w-screen-2xl mx-auto flex flex-col gap-1">
                         <div className="flex flex-col md:flex-row md:items-stretch justify-between gap-6">
                             <h1 className="text-2xl lg:text-3xl font-black tracking-tighter text-base-content leading-none flex items-center uppercase">Palette Extractor<span className="text-primary">.</span></h1>

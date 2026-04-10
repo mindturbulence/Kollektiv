@@ -235,10 +235,10 @@ const Sidebar: React.FC<SidebarProps> = ({ activeTab, onNavigate, isSidebarOpen,
     }, [isSidebarOpen, isPinned, onClose]);
 
   const sidebarClasses = [
-    "text-base-content z-[600] flex flex-col overflow-hidden flex-shrink-0",
+    "text-base-content flex flex-col overflow-hidden flex-shrink-0",
     isPinned 
-      ? "h-full bg-transparent relative transition-all duration-300" 
-      : "fixed top-0 left-0 bottom-0 bg-base-100/40 backdrop-blur-xl border-r border-base-300/20 shadow-none -translate-x-full"
+      ? "h-full bg-transparent relative transition-all duration-300 z-0" 
+      : "fixed top-0 left-0 bottom-0 bg-base-100/40 backdrop-blur-xl border-r border-base-300/20 shadow-none -translate-x-full z-[600]"
   ].join(" ");
 
   return (

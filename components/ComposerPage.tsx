@@ -391,17 +391,17 @@ const ComposerPage: React.FC<ComposerPageProps> = ({ showGlobalFeedback }) => {
     }, [mode, previewMetrics, gridCols, gridRows, gridGap]);
 
     return (
-        <div className="h-full bg-transparent flex flex-col overflow-hidden">
+        <div className="h-full bg-base-100/40 backdrop-blur-xl flex flex-col overflow-hidden">
             <div className="flex-grow flex flex-col lg:flex-row overflow-hidden">
-                <aside className="w-full lg:w-96 flex-shrink-0 bg-base-100/40 backdrop-blur-xl flex flex-col overflow-hidden">
-                    <div className="p-4 border-b border-base-300 bg-transparent">
+                <aside className="w-full lg:w-96 flex-shrink-0 bg-transparent flex flex-col overflow-hidden">
+                    <div className="p-4 bg-transparent">
                         <div className="tabs tabs-boxed rounded-none bg-transparent gap-1 p-0">
                             <button onClick={() => setMode('grid')} className={`tab flex-1 rounded-none font-black text-[9px] uppercase tracking-widest ${mode === 'grid' ? 'tab-active' : ''}`}>Grid Builder</button>
                             <button onClick={() => setMode('frame')} className={`tab flex-1 rounded-none font-black text-[9px] uppercase tracking-widest ${mode === 'frame' ? 'tab-active' : ''}`}>Image Framer</button>
                         </div>
                     </div>
                     
-                    <div className="flex-grow p-6 space-y-8 overflow-y-auto custom-scrollbar">
+                    <div className="flex-grow p-6 space-y-8 overflow-y-auto custom-scrollbar bg-transparent">
                         <div className="space-y-4">
                             <label className="text-[10px] font-black uppercase text-base-content/40 tracking-widest">Dimensions</label>
                             <select value={aspectRatio} onChange={e => { setAspectRatio(e.target.value); const ratio = RATIOS.find(r => r.value === e.target.value)?.ratio || 1; setWidth("1024"); setHeight(String(Math.round(1024 / ratio))); }} className="select select-sm select-bordered rounded-none w-full font-bold uppercase text-[10px] tracking-widest">
@@ -444,17 +444,17 @@ const ComposerPage: React.FC<ComposerPageProps> = ({ showGlobalFeedback }) => {
                         </div>
                     </div>
 
-                    <footer className="border-t border-base-300 flex flex-col bg-transparent p-0 overflow-hidden flex-shrink-0">
-                         <div className="flex w-full h-14 border-b border-base-300">
+                    <footer className="flex flex-col bg-transparent p-0 overflow-hidden flex-shrink-0">
+                         <div className="flex w-full h-14">
                             <button onClick={() => { setGridItems(Array(gridCols*gridRows).fill(null)); setFrameItem(null); setLayers([]); }} className="btn btn-ghost flex-1 h-full rounded-none font-black text-[9px] tracking-widest uppercase text-error/40 hover:text-error">RESET</button>
-                            <button onClick={handleDownload} disabled={isProcessing || (mode==='grid'?!gridItems.some(Boolean):!frameItem)} className="btn btn-ghost flex-1 h-full rounded-none font-black text-[9px] tracking-widest uppercase border-l border-base-300">DOWNLOAD</button>
+                            <button onClick={handleDownload} disabled={isProcessing || (mode==='grid'?!gridItems.some(Boolean):!frameItem)} className="btn btn-ghost flex-1 h-full rounded-none font-black text-[9px] tracking-widest uppercase">DOWNLOAD</button>
                         </div>
                         <button onClick={() => setIsVaultConfirmOpen(true)} disabled={isProcessing || (mode==='grid'?!gridItems.some(Boolean):!frameItem)} className="btn btn-primary h-14 w-full rounded-none font-black text-[9px] tracking-[0.2em] uppercase shadow-none border-none">SAVE TO LIBRARY</button>
                     </footer>
                 </aside>
 
                 <main className="flex-grow flex flex-col bg-transparent overflow-hidden relative">
-                    <section className="p-8 border-b border-base-300 bg-transparent flex justify-between items-center h-16"><h1 className="text-xl font-black uppercase tracking-tighter">{mode === 'grid' ? 'Grid Builder' : 'Image Framer'}<span className="text-primary">.</span></h1></section>
+                    <section className="p-8 bg-transparent flex justify-between items-center h-16"><h1 className="text-xl font-black uppercase tracking-tighter">{mode === 'grid' ? 'Grid Builder' : 'Image Framer'}<span className="text-primary">.</span></h1></section>
                     <div ref={previewContainerRef} className="flex-grow bg-transparent flex items-center justify-center p-12 overflow-hidden" onMouseDown={e => { if(e.target === e.currentTarget) setActiveLayerId(null); }}>
                         <div id="framer-canvas-root" className="relative transition-all duration-500 overflow-hidden" style={{ width: previewMetrics.width, height: previewMetrics.height, backgroundColor: bgColor }}>
                             {mode === 'grid' && gridLayout && gridItems.map((item, idx) => (
@@ -488,9 +488,9 @@ const ComposerPage: React.FC<ComposerPageProps> = ({ showGlobalFeedback }) => {
 
                 {/* RIGHT SIDEBAR: LAYERS (IMAGE FRAMER ONLY) */}
                 {mode === 'frame' && (
-                    <aside className="w-full lg:w-80 flex-shrink-0 bg-base-100/40 backdrop-blur-xl flex flex-col overflow-hidden animate-slide-in-from-right">
-                        <header className="p-6 border-b border-base-300 bg-transparent flex justify-between items-center h-16"><h3 className="text-[10px] font-black uppercase tracking-[0.4em] text-primary">Layers</h3><div className="flex gap-1"><button onClick={() => { const n: Layer = { id: Math.random().toString(36).substr(2,9), type: 'text', content: 'New Text', x: 0.5, y: 0.5, fontSize: 80, color: '#000000', fontFamily: FONTS[0].family, bold: true, italic: false }; setLayers([...layers, n]); setActiveLayerId(n.id); }} className="btn btn-xs btn-ghost btn-square" title="Add Text Layer"><PlusIcon className="w-4 h-4"/></button><button onClick={() => layerImageInputRef.current?.click()} className="btn btn-xs btn-ghost btn-square" title="Add Image Layer"><UploadIcon className="w-4 h-4"/></button></div></header>
-                        <div className="flex-grow overflow-y-auto custom-scrollbar p-6 space-y-4">
+                    <aside className="w-full lg:w-80 flex-shrink-0 bg-transparent flex flex-col overflow-hidden animate-slide-in-from-right">
+                        <header className="p-6 bg-transparent flex justify-between items-center h-16"><h3 className="text-[10px] font-black uppercase tracking-[0.4em] text-primary">Layers</h3><div className="flex gap-1"><button onClick={() => { const n: Layer = { id: Math.random().toString(36).substr(2,9), type: 'text', content: 'New Text', x: 0.5, y: 0.5, fontSize: 80, color: '#000000', fontFamily: FONTS[0].family, bold: true, italic: false }; setLayers([...layers, n]); setActiveLayerId(n.id); }} className="btn btn-xs btn-ghost btn-square" title="Add Text Layer"><PlusIcon className="w-4 h-4"/></button><button onClick={() => layerImageInputRef.current?.click()} className="btn btn-xs btn-ghost btn-square" title="Add Image Layer"><UploadIcon className="w-4 h-4"/></button></div></header>
+                        <div className="flex-grow overflow-y-auto custom-scrollbar p-6 space-y-4 bg-transparent">
                             {layers.map((layer, i) => (
                                 <div key={layer.id} className={`p-4 border transition-all cursor-pointer ${activeLayerId === layer.id ? 'border-primary bg-primary/5' : 'border-base-300'}`} onClick={() => setActiveLayerId(layer.id)}>
                                     <div className="flex justify-between items-center mb-3"><span className="text-[9px] font-black uppercase tracking-widest opacity-40">Layer {String(i+1).padStart(2, '0')}</span><button onClick={e => { e.stopPropagation(); setLayers(prev => prev.filter(s => s.id !== layer.id)); }} className="text-error opacity-40 hover:opacity-100">✕</button></div>

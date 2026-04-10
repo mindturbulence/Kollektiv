@@ -4,10 +4,14 @@ import { handleGeminiError } from '../utils/errorHandler';
 import type { EnhancementResult, LLMSettings } from '../types';
 
 const getGeminiClient = (_settings: LLMSettings): GoogleGenAI => {
-    return new GoogleGenAI({ apiKey: process.env.API_KEY });
+    const apiKey = process.env.GEMINI_API_KEY;
+    if (!apiKey) {
+        throw new Error("GEMINI_API_KEY is missing. Please ensure it is set in your environment.");
+    }
+    return new GoogleGenAI({ apiKey });
 };
 
-const DEFAULT_MODEL = 'gemini-3.5-flash';
+const DEFAULT_MODEL = 'gemini-3-flash-preview';
 const LITE_MODEL = 'gemini-3.1-flash-lite-preview'; 
 
 export async function* enhancePromptGeminiStream(prompt: string, constantModifier: string, settings: LLMSettings, systemInstruction: string, length: string = 'Medium', referenceImages?: string[], temperature: number = 0.7): AsyncGenerator<string> {
@@ -104,16 +108,22 @@ export const generateColorNameGemini = async (hexColor: string, mood: string, se
     } catch (err) { return "Archived Color"; }
 };
 
-export const dissectPromptGemini = async (promptText: string, settings: LLMSettings): Promise<{ [key: string]: string }> => {
+export const dissectPromptGemini = async (promptText: string, settings: LLMSettings, modifierCatalog?: string): Promise<{ [key: string]: string }> => {
     try {
         const ai = getGeminiClient(settings);
         const response = await ai.models.generateContent({
             model: LITE_MODEL,
             contents: promptText,
             config: {
-                systemInstruction: "Task: JSON dissect prompt (subject, style, mood, lighting). Output JSON.",
+                systemInstruction: `Task: JSON dissect prompt into descriptive components.
+${modifierCatalog ? `[AVAILABLE MODIFIERS CATALOG]\n${modifierCatalog}\n\nSTRICT RULE: You MUST prioritize mapping components to the categories and values provided in the catalog above if a match or close synonym is found.
+- Use the EXACT category name (the word before the colon in the catalog) as the JSON key.
+- Use the EXACT value from the catalog as the JSON value.
+- IMPORTANT: Be aggressive in splitting modifiers (like camera angles, lighting, styles) away from the core subject. The "Subject" or "Prompt Idea" field should ONLY contain the core entity and its primary action. All stylistic, technical, or environmental details MUST be moved to their respective categories or a new descriptive key.` : 'Identify subject, style, mood, lighting, etc.'}
+If a component does not fit an existing category, create a descriptive key for it.
+Output JSON ONLY.`,
                 responseMimeType: 'application/json',
-                maxOutputTokens: 400,
+                maxOutputTokens: 600,
             }
         });
         try { return JSON.parse(response.text || '{}'); } catch (e) { return {}; }
@@ -234,7 +244,9 @@ export const abstractImageGemini = async (base64ImageData: string, _promptLength
 
 export const generateWithImagen = async (prompt: string, aspectRatio: string = '1:1'): Promise<string> => {
     try {
-        const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
+        const apiKey = process.env.GEMINI_API_KEY;
+        if (!apiKey) throw new Error("GEMINI_API_KEY is missing.");
+        const ai = new GoogleGenAI({ apiKey });
         const response = await ai.models.generateImages({
             model: 'imagen-4.0-generate-001',
             prompt: prompt,
@@ -252,7 +264,9 @@ export const generateWithImagen = async (prompt: string, aspectRatio: string = '
 
 export const generateWithNanoBanana = async (prompt: string, referenceImages: string[] = [], aspectRatio: string = '1:1'): Promise<string> => {
     try {
-        const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
+        const apiKey = process.env.GEMINI_API_KEY;
+        if (!apiKey) throw new Error("GEMINI_API_KEY is missing.");
+        const ai = new GoogleGenAI({ apiKey });
         const parts: any[] = [{ text: prompt }];
         for (const imgBase64 of referenceImages) {
             parts.push({ inlineData: { mimeType: 'image/jpeg', data: imgBase64.split(',')[1] || imgBase64 } });
@@ -275,30 +289,32 @@ export const generateWithNanoBanana = async (prompt: string, referenceImages: st
 
 export const generateWithVeo = async (prompt: string, onStatusUpdate?: (msg: string) => void, aspectRatio: string = '16:9'): Promise<string> => {
     try {
-        const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
+        const apiKey = process.env.GEMINI_API_KEY;
+        if (!apiKey) throw new Error("GEMINI_API_KEY is missing.");
+        const ai = new GoogleGenAI({ apiKey });
         let finalAspectRatio = aspectRatio;
         if (finalAspectRatio !== '16:9' && finalAspectRatio !== '9:16') finalAspectRatio = '16:9';
         onStatusUpdate?.('Initializing...');
         let operation = await ai.models.generateVideos({
-            model: 'veo-3.1-fast-generate-preview',
+            model: 'veo-3.1-lite-generate-preview',
             prompt: prompt,
-            config: { numberOfVideos: 1, resolution: '720p', aspectRatio: finalAspectRatio as any }
+            config: { numberOfVideos: 1, resolution: '1080p', aspectRatio: finalAspectRatio as any }
         });
         while (!operation.done) {
             onStatusUpdate?.('Processing...');
-            await new Promise(resolve => setTimeout(resolve, 8000));
+            await new Promise(resolve => setTimeout(resolve, 10000));
             operation = await ai.operations.getVideosOperation({ operation: operation });
         }
         const downloadLink = operation.response?.generatedVideos?.[0]?.video?.uri;
         if (!downloadLink) throw new Error("Output stream lost.");
         onStatusUpdate?.('Downloading...');
-        const response = await fetch(`${downloadLink}&key=${process.env.API_KEY}`);
+        const response = await fetch(`${downloadLink}&key=${apiKey}`);
         const blob = await response.blob();
         return URL.createObjectURL(blob);
     } catch (err) { throw handleGeminiError(err, 'rendering'); }
 };
 
-export const generateConstructorPresetGemini = async (components: { [key: string]: string }, settings: LLMSettings): Promise<{ prompt: string, modifiers: any }> => {
+export const generateConstructorPresetGemini = async (components: { [key: string]: string }, settings: LLMSettings, modifierCatalog?: string): Promise<{ prompt: string, modifiers: any, constantModifier?: string }> => {
     try {
         const ai = getGeminiClient(settings);
         const response = await ai.models.generateContent({
@@ -306,39 +322,29 @@ export const generateConstructorPresetGemini = async (components: { [key: string
             contents: JSON.stringify(components),
             config: {
                 systemInstruction: `Role: Prompt Constructor Architect. 
-Task: Deconstruct the analyzed prompt components into a "Prompt Idea" (base subject/intent) and a set of "Active Construction Items" (mapped modifiers).
+Task: Deconstruct the analyzed prompt components into a "Prompt Idea" (base subject/intent), "Active Construction Items" (mapped modifiers), and "Constant Modifiers" (unmapped details).
 
 Mapping Protocol:
 1. Identify components that match or are highly similar to these Refiner categories:
-   - artStyle (Art movements like Surrealism, Cyberpunk, etc.)
-   - artist (Specific artist names)
-   - photographyStyle (Street, Portrait, Macro, etc.)
-   - aestheticLook (Cinematic looks like Wes Anderson, Blade Runner, etc.)
-   - digitalAesthetic (Wes Anderson Trend, Vaporwave, etc.)
-   - aspectRatio (1:1, 16:9, etc.)
-   - cameraType (Cinema, DSLR, Analog, etc.)
-   - cameraAngle (Low angle, Bird's eye, etc.)
-   - cameraProximity (Close-up, Wide shot, etc.)
-   - cameraSettings (Bokeh, Long exposure, etc.)
-   - cameraEffect (Fisheye, Film grain, etc.)
-   - specialtyLens (Helios 44-2, etc.)
-   - lensType (Wide-angle, Telephoto, etc.)
-   - filmType (Polaroid, Technicolor, etc.)
-   - filmStock (Kodak Portra, etc.)
-   - lighting (Cinematic, Volumetric, Neon, etc.)
-   - composition (Rule of thirds, Symmetry, etc.)
-   - facialExpression, hairStyle, eyeColor, skinTexture, clothing (Character details)
-   - motion, cameraMovement (Video-specific dynamics)
+   - artStyle, artist, photographyStyle, aestheticLook, digitalAesthetic, aspectRatio, cameraType, cameraAngle, cameraProximity, cameraSettings, cameraEffect, specialtyLens, lensType, filmType, filmStock, lighting, composition, facialExpression, hairStyle, eyeColor, skinTexture, clothing, motion, cameraMovement, mjVersion, mjNiji, mjAspectRatio, zImageStyle
+
+${modifierCatalog ? `[AVAILABLE MODIFIERS CATALOG]\n${modifierCatalog}\n\nSTRICT RULE: You MUST prioritize mapping to the values provided in the catalog above if a match or close synonym is found.` : ''}
 
 2. Extraction Logic:
-   - If a component matches a category, add it to the "modifiers" object using the category key.
-   - If a component does NOT match any category (it's the core subject, action, or unique detail), keep it in the "prompt" (Prompt Idea).
-   - The "prompt" should be a clean, cohesive base description (the "Prompt Idea").
+   - If a component key or value matches a category or value from the [AVAILABLE MODIFIERS CATALOG], it MUST be moved to the "modifiers" object.
+   - If a component matches both a category AND a specific value from the [AVAILABLE MODIFIERS CATALOG] (allow for minor variations in spacing or hyphens during matching), add it to the "modifiers" object using the category key and the EXACT value from the catalog.
+   - If a component matches a category but the specific value is NOT in the catalog, or if it's a stylistic/technical modifier that doesn't fit any category, add it to the "constantModifier" string.
+   - The core subject, action, or unique narrative detail goes into the "prompt" (Prompt Idea).
+   - IMPORTANT: The "prompt" (Prompt Idea) MUST NOT contain any information that is already captured in "modifiers" or "constantModifier". You MUST aggressively strip all stylistic, technical, and atmospheric modifiers from the "prompt" field. The "prompt" should be the pure subject and narrative intent ONLY.
+   - Example: If the input is {"Subject": "A cat in a garden", "cameraProximity": "Close-Up"}, the output MUST be {"prompt": "A cat in a garden", "modifiers": {"cameraProximity": "Close-Up"}}. 
+   - Example: If the input is {"Subject": "A portrait of a man, Close Up, cinematic lighting"}, the output MUST be {"prompt": "A portrait of a man", "modifiers": {"cameraProximity": "Close-Up", "lighting": "Cinematic Lighting"}}.
+   - The "prompt" should be a clean, cohesive base description.
 
 Output: A JSON object:
 {
   "prompt": "The core subject/intent (Prompt Idea)",
-  "modifiers": { "categoryKey": "Value", ... }
+  "modifiers": { "categoryKey": "Value", ... },
+  "constantModifier": "Comma-separated list of unmapped modifiers"
 }
 Only include relevant modifiers. Output JSON ONLY.`,
                 responseMimeType: 'application/json',
@@ -349,10 +355,11 @@ Only include relevant modifiers. Output JSON ONLY.`,
             const result = JSON.parse(response.text || '{}');
             return {
                 prompt: result.prompt || '',
-                modifiers: result.modifiers || {}
+                modifiers: result.modifiers || {},
+                constantModifier: result.constantModifier || ''
             };
         } catch (e) { 
-            return { prompt: '', modifiers: {} }; 
+            return { prompt: '', modifiers: {}, constantModifier: '' }; 
         }
     } catch (err) { throw handleGeminiError(err, 'processing'); }
 };

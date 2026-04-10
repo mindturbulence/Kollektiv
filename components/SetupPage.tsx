@@ -1,5 +1,6 @@
 
 import React, { useState, useEffect, useLayoutEffect, useRef, useMemo, useCallback } from 'react';
+import { gsap } from 'gsap';
 import type { LLMSettings, ActiveSettingsTab, PromptCategory, FeatureSettings, YouTubeConnection, GoogleIdentityConnection } from '../types';
 import { testOllamaConnection, type OllamaTestResult } from '../services/llmService';
 import { fileSystemManager, createZipAndDownload } from '../utils/fileUtils';
@@ -87,7 +88,7 @@ const MaintenanceOverlay: React.FC<{ progress: number, message: string }> = ({ p
     }, [progress]);
 
     return (
-        <div className="fixed inset-0 bg-transparent z-[500] flex flex-col items-center justify-center overflow-hidden select-none">
+        <div className="fixed inset-0 bg-base-100/95 backdrop-blur-xl z-[500] flex flex-col items-center justify-center overflow-hidden select-none">
             <div className="absolute inset-0 bg-grid-texture opacity-[0.03] pointer-events-none"></div>
             
             {/* Large Background Percentage (SR Seventy One Style) */}
@@ -192,12 +193,18 @@ export const SetupPage: React.FC<SetupPageProps> = ({
 
   const [isTestingOllama, setIsTestingOllama] = useState(false);
   const [ollamaTestResult, setOllamaTestResult] = useState<OllamaTestResult | null>(null);
-  const [appDataDirectory] = useState<string | null>(fileSystemManager.appDirectoryName);
+  const [appDataDirectory, setAppDataDirectory] = useState<string | null>(fileSystemManager.appDirectoryName);
   
   const [resetTarget, setResetTarget] = useState<'all' | null>(null);
-  const [isWorking, setIsWorking] = useState<boolean>(false);
-  const [maintenanceMsg, setMaintenanceMsg] = useState<string>('');
-  const [maintenanceProgress, setMaintenanceProgress] = useState<number>(0);
+  const [isSyncing, setIsSyncing] = useState(false);
+  const [isWorking, setIsWorking] = useState(false);
+  const [maintenanceProgress, setMaintenanceProgress] = useState(0);
+  const [maintenanceMsg, setMaintenanceMsg] = useState("");
+  
+  // Keep appDataDirectory in sync with fileSystemManager
+  useEffect(() => {
+    setAppDataDirectory(fileSystemManager.appDirectoryName);
+  }, [fileSystemManager.appDirectoryName]);
   
   const [isRestartModalOpen, setIsRestartModalOpen] = useState(false);
   const [isResetModalOpen, setIsResetModalOpen] = useState(false);
@@ -248,6 +255,7 @@ export const SetupPage: React.FC<SetupPageProps> = ({
             const updatedSettings = { ...settings, youtube: updatedYouTube };
             setSettings(updatedSettings);
             updateSettings(updatedSettings);
+            playSuccessChime();
             showGlobalFeedback(`YouTube Linked: ${channel.snippet.title}`);
           }
       } else {
@@ -268,6 +276,7 @@ export const SetupPage: React.FC<SetupPageProps> = ({
           const updatedSettings = { ...settings, googleIdentity: updatedGoogle };
           setSettings(updatedSettings);
           updateSettings(updatedSettings);
+          playSuccessChime();
           showGlobalFeedback(`Uplink confirmed for ${user.email}`);
       }
       setMaintenanceProgress(100);
@@ -439,59 +448,19 @@ export const SetupPage: React.FC<SetupPageProps> = ({
         return;
     }
 
-    setIsWorking(true);
-    setMaintenanceProgress(0);
-    setMaintenanceMsg("INITIATING SCAN...");
-    
-    // Snappy delay for better UX
-    const artificialDelay = (ms: number) => new Promise(r => setTimeout(r, ms));
-
+    setIsSyncing(true);
     try {
-        const onProgress = (msg: string, p?: number) => {
-            setMaintenanceMsg(msg.toUpperCase());
-            if (p !== undefined) setMaintenanceProgress(p * 100);
-        };
+        await verifyAndRepairFiles(() => {}, globalSettings);
+        await rebuildGalleryDatabase(() => {});
+        await rebuildPromptDatabase(() => {});
+        await optimizeManifests(() => {});
         
-        await artificialDelay(400);
-
-        // Phase 1: File Check (0-25%)
-        onProgress("Verifying Registry Files...", 0);
-        await verifyAndRepairFiles((m, p) => onProgress(m, (p || 0) * 0.25), globalSettings);
-        await artificialDelay(400);
-        
-        // Phase 2: Gallery Sync (25-50%)
-        setMaintenanceProgress(25);
-        onProgress("Synchronizing Media Vault...", 0.25);
-        await rebuildGalleryDatabase(m => onProgress(m, 0.25 + 0.25));
-        await artificialDelay(400);
-        
-        // Phase 3: Prompt Sync (50-75%)
-        setMaintenanceProgress(50);
-        onProgress("Indexing Neural Library...", 0.5);
-        await rebuildPromptDatabase(m => onProgress(m, 0.5 + 0.25));
-        await artificialDelay(400);
-        
-        // Phase 4: Optimization (75-100%)
-        setMaintenanceProgress(75);
-        onProgress("Optimizing Performance...", 0.75);
-        await optimizeManifests(m => onProgress(m, 0.75 + 0.25));
-        await artificialDelay(400);
-        
-        setMaintenanceProgress(100);
-        
-        // --- ACOUSTIC CONFIRMATION ---
-        playSuccessChime();
-        
-        // Allow time for the slide-up exit animation in overlay
-        await artificialDelay(1000);
-        
-        showGlobalFeedback("Integrity check complete.");
+        showGlobalFeedback("Vault synchronized successfully.");
     } catch (error: any) {
-        showGlobalFeedback(`Maintenance Error: ${error.message}`, true);
+        console.error("Sync Vault Error:", error);
+        showGlobalFeedback(`Sync Error: ${error.message || 'Unknown error'}`, true);
     } finally {
-        setIsWorking(false);
-        setMaintenanceMsg("");
-        setMaintenanceProgress(0);
+        setIsSyncing(false);
     }
   };
 
@@ -524,7 +493,13 @@ export const SetupPage: React.FC<SetupPageProps> = ({
                 return (
                     <div className="flex flex-col h-full overflow-y-auto custom-scrollbar animate-fade-in">
                         <SettingRow label="Storage Vault" desc="Current active directory for all local generative artifacts.">
-                             <button onClick={() => fileSystemManager.selectAndSetAppDataDirectory().then(h => h && showFeedback('Vault Connected'))} className="btn btn-secondary btn-sm rounded-none font-black text-[10px] tracking-widest px-6">
+                             <button onClick={async () => {
+                                 const handle = await fileSystemManager.selectAndSetAppDataDirectory();
+                                 if (handle) {
+                                     setAppDataDirectory(fileSystemManager.appDirectoryName);
+                                     showFeedback('Vault Connected');
+                                 }
+                             }} className="btn btn-secondary btn-sm rounded-none font-black text-[10px] tracking-widest px-6">
                                 {appDataDirectory ? `PATH: ${appDataDirectory}` : 'CONNECT DIRECTORY'}
                              </button>
                         </SettingRow>
@@ -553,13 +528,13 @@ export const SetupPage: React.FC<SetupPageProps> = ({
             case 'data':
                  return (
                      <div className="flex flex-col h-full overflow-y-auto custom-scrollbar animate-fade-in">
-                        <SettingRow label="Sync & Reorganize" desc="Verify manifests and move files to correct category folders.">
+                         <SettingRow label="Sync & Reorganize" desc="Verify manifests and move files to correct category folders.">
                             <button 
                                 onClick={handleIntegrityCheck} 
-                                disabled={isWorking}
+                                disabled={isSyncing}
                                 className="btn btn-sm btn-outline rounded-none font-black text-[10px] tracking-widest px-6"
                             >
-                                {isWorking ? 'WORKING...' : 'SYNC VAULT'}
+                                {isSyncing ? 'SYNCING...' : 'SYNC VAULT'}
                             </button>
                         </SettingRow>
                         <SettingRow label="Full Archival Export" desc="Generate a complete ZIP archive of all local data and files.">
@@ -865,9 +840,6 @@ export const SetupPage: React.FC<SetupPageProps> = ({
   return (
     <>
     <section className="flex flex-row h-full overflow-hidden relative">
-        {isWorking && (
-            <MaintenanceOverlay progress={maintenanceProgress} message={maintenanceMsg} />
-        )}
 
         <aside className="w-80 flex-shrink-0 bg-base-100/40 backdrop-blur-xl flex flex-col">
             <h1 className="h-16 flex items-center px-6 text-[10px] font-black uppercase tracking-[0.4em] text-base-content/30">System Hub</h1>
@@ -920,6 +892,7 @@ export const SetupPage: React.FC<SetupPageProps> = ({
           onImport={() => {}} 
           categories={promptCategories}
       />
+      {isWorking && <MaintenanceOverlay progress={maintenanceProgress} message={maintenanceMsg} />}
     </>
   );
 };

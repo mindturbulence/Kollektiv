@@ -29,6 +29,7 @@ interface ProcessSettings {
     height: number | '';
     lockAspectRatio: boolean;
     enableCropping: boolean;
+    preserveOriginal: boolean;
     format: 'jpeg' | 'png' | 'webp';
     quality: number;
     renamePrefix: string;
@@ -52,7 +53,10 @@ const processImage = (item: ImageItem, settings: ProcessSettings): Promise<Image
                 let targetHeight = settings.height ? Number(settings.height) : 0;
                 const imgAspect = img.naturalWidth / img.naturalHeight;
                 
-                if (targetWidth && !targetHeight) {
+                if (settings.preserveOriginal) {
+                    targetWidth = item.originalWidth;
+                    targetHeight = item.originalHeight;
+                } else if (targetWidth && !targetHeight) {
                     targetHeight = targetWidth / imgAspect;
                 } else if (!targetWidth && targetHeight) {
                     targetWidth = targetHeight * imgAspect;
@@ -63,36 +67,43 @@ const processImage = (item: ImageItem, settings: ProcessSettings): Promise<Image
                     targetHeight = targetWidth / imgAspect;
                 }
 
-                if (targetWidth <= 0 || targetHeight <= 0) {
-                    return reject(new Error(`Invalid dimensions: ${targetWidth}x${targetHeight}`));
-                }
-
-                canvas.width = Math.round(targetWidth);
-                canvas.height = Math.round(targetHeight);
-                
-                ctx.imageSmoothingQuality = 'high';
-                
-                if(settings.enableCropping) {
-                    const sx = Math.round((item.crop.x / 100) * img.naturalWidth);
-                    const sy = Math.round((item.crop.y / 100) * img.naturalHeight);
-                    const sWidth = Math.round((item.crop.width / 100) * img.naturalWidth);
-                    const sHeight = Math.round((item.crop.height / 100) * img.naturalHeight);
-                    ctx.drawImage(img, sx, sy, sWidth, sHeight, 0, 0, canvas.width, canvas.height);
+                if (settings.preserveOriginal) {
+                    // Force full image draw if preserving original
+                    canvas.width = item.originalWidth;
+                    canvas.height = item.originalHeight;
+                    ctx.drawImage(img, 0, 0);
                 } else {
-                    const canvasAspect = canvas.width / canvas.height;
-                    let dWidth = canvas.width;
-                    let dHeight = canvas.height;
-                    let dx = 0;
-                    let dy = 0;
-
-                    if (imgAspect > canvasAspect) { 
-                        dHeight = canvas.width / imgAspect;
-                        dy = (canvas.height - dHeight) / 2;
-                    } else { 
-                        dWidth = canvas.height * imgAspect;
-                        dx = (canvas.width - dWidth) / 2;
+                    if (targetWidth <= 0 || targetHeight <= 0) {
+                        return reject(new Error(`Invalid dimensions: ${targetWidth}x${targetHeight}`));
                     }
-                    ctx.drawImage(img, 0, 0, img.naturalWidth, img.naturalHeight, Math.round(dx), Math.round(dy), Math.round(dWidth), Math.round(dHeight));
+
+                    canvas.width = Math.round(targetWidth);
+                    canvas.height = Math.round(targetHeight);
+                    
+                    ctx.imageSmoothingQuality = 'high';
+                    
+                    if(settings.enableCropping) {
+                        const sx = Math.round((item.crop.x / 100) * img.naturalWidth);
+                        const sy = Math.round((item.crop.y / 100) * img.naturalHeight);
+                        const sWidth = Math.round((item.crop.width / 100) * img.naturalWidth);
+                        const sHeight = Math.round((item.crop.height / 100) * img.naturalHeight);
+                        ctx.drawImage(img, sx, sy, sWidth, sHeight, 0, 0, canvas.width, canvas.height);
+                    } else {
+                        const canvasAspect = canvas.width / canvas.height;
+                        let dWidth = canvas.width;
+                        let dHeight = canvas.height;
+                        let dx = 0;
+                        let dy = 0;
+
+                        if (imgAspect > canvasAspect) { 
+                            dHeight = canvas.width / imgAspect;
+                            dy = (canvas.height - dHeight) / 2;
+                        } else { 
+                            dWidth = canvas.height * imgAspect;
+                            dx = (canvas.width - dWidth) / 2;
+                        }
+                        ctx.drawImage(img, 0, 0, img.naturalWidth, img.naturalHeight, Math.round(dx), Math.round(dy), Math.round(dWidth), Math.round(dHeight));
+                    }
                 }
                 
                 const qualityArg = (settings.format === 'jpeg' || settings.format === 'webp') ? settings.quality : undefined;
@@ -161,7 +172,7 @@ const ImageCard: React.FC<{
     imageRef: (el: HTMLDivElement | null) => void,
 }> = ({ item, settings, onRemove, onCropMouseDown, imageRef }) => {
     return (
-        <div className="flex flex-col bg-base-100/40 backdrop-blur-xl group">
+        <div className="flex flex-col bg-transparent group">
             <figure ref={imageRef} className="relative aspect-square bg-transparent overflow-hidden">
                 <img src={item.originalUrl} alt={item.file.name} className="w-full h-full object-contain" />
                 {settings.enableCropping && (
@@ -195,6 +206,7 @@ const ImageResizer: React.FC = () => {
     
     const [settings, setSettings] = useState<ProcessSettings>({
         width: 1024, height: 1024, lockAspectRatio: true, enableCropping: true,
+        preserveOriginal: false,
         format: 'jpeg', quality: 0.9, renamePrefix: '', renameSequentially: false,
     });
     
@@ -398,22 +410,29 @@ const ImageResizer: React.FC = () => {
     };
     
     return (
-        <div className="h-full bg-transparent flex flex-col overflow-hidden">
+        <div className="h-full bg-base-100/40 backdrop-blur-xl flex flex-col overflow-hidden">
             <div className="flex-grow flex flex-col lg:flex-row overflow-hidden">
-                <aside className="w-full lg:w-96 flex-shrink-0 bg-base-100/40 backdrop-blur-xl flex flex-col overflow-hidden">
-                    <header className="p-6 border-b border-base-300 bg-transparent">
+                <aside className="w-full lg:w-96 flex-shrink-0 bg-transparent flex flex-col overflow-hidden">
+                    <header className="p-6 bg-transparent">
                         <h3 className="text-[10px] font-black uppercase tracking-[0.4em] text-primary">Resize Settings</h3>
                     </header>
-                    <div className="flex-grow p-6 space-y-8 overflow-y-auto custom-scrollbar">
+                    <div className="flex-grow p-6 space-y-8 overflow-y-auto custom-scrollbar bg-transparent">
                         <div className="space-y-4">
-                            <label className="text-[10px] font-black uppercase tracking-widest text-base-content/40">Target Resolution</label>
-                            <div className="flex items-center gap-2">
-                                <input type="number" value={settings.width} onChange={e => handleSettingsChange('width', (e.currentTarget as any).value ? parseInt((e.currentTarget as any).value) : '')} className="input input-sm input-bordered rounded-none w-full font-mono text-xs" placeholder="W" />
-                                <button onClick={() => handleSettingsChange('lockAspectRatio', !settings.lockAspectRatio)} className={`btn btn-xs btn-ghost rounded-none ${settings.lockAspectRatio ? 'text-primary' : 'opacity-20'}`}>{settings.lockAspectRatio ? <LinkIcon className="w-4 h-4"/> : <LinkOffIcon className="w-4 h-4"/>}</button>
-                                <input type="number" value={settings.height} onChange={e => handleSettingsChange('height', (e.currentTarget as any).value ? parseInt((e.currentTarget as any).value) : '')} className="input input-sm input-bordered rounded-none w-full font-mono text-xs" placeholder="H" />
+                            <div className="flex justify-between items-center">
+                                <label className="text-[10px] font-black uppercase tracking-widest text-base-content/40">Target Resolution</label>
+                                <label className="cursor-pointer label p-0 gap-2">
+                                    <span className="text-[9px] font-black uppercase text-base-content/40 tracking-widest">Original</span>
+                                    <input type="checkbox" checked={settings.preserveOriginal} onChange={e => handleSettingsChange('preserveOriginal', (e.currentTarget as any).checked)} className="checkbox checkbox-xs checkbox-primary rounded-none" />
+                                </label>
+                            </div>
+                            <div className={`flex items-center gap-2 transition-opacity ${settings.preserveOriginal ? 'opacity-30 pointer-events-none' : ''}`}>
+                                <input type="number" disabled={settings.preserveOriginal} value={settings.width} onChange={e => handleSettingsChange('width', (e.currentTarget as any).value ? parseInt((e.currentTarget as any).value) : '')} className="input input-sm input-bordered rounded-none w-full font-mono text-xs" placeholder="W" />
+                                <button disabled={settings.preserveOriginal} onClick={() => handleSettingsChange('lockAspectRatio', !settings.lockAspectRatio)} className={`btn btn-xs btn-ghost rounded-none ${settings.lockAspectRatio ? 'text-primary' : 'opacity-20'}`}>{settings.lockAspectRatio ? <LinkIcon className="w-4 h-4"/> : <LinkOffIcon className="w-4 h-4"/>}</button>
+                                <input type="number" disabled={settings.preserveOriginal} value={settings.height} onChange={e => handleSettingsChange('height', (e.currentTarget as any).value ? parseInt((e.currentTarget as any).value) : '')} className="input input-sm input-bordered rounded-none w-full font-mono text-xs" placeholder="H" />
                             </div>
                              <select 
-                                className="select select-xs select-bordered rounded-none w-full mt-2 font-bold uppercase tracking-tight"
+                                disabled={settings.preserveOriginal}
+                                className={`select select-xs select-bordered rounded-none w-full mt-2 font-bold uppercase tracking-tight transition-opacity ${settings.preserveOriginal ? 'opacity-30 pointer-events-none' : ''}`}
                                 onChange={e => {
                                     const value = (e.currentTarget as any).value;
                                     if (value) {
@@ -434,10 +453,10 @@ const ImageResizer: React.FC = () => {
 
                         <div className="space-y-4">
                             <label className="text-[10px] font-black uppercase tracking-widest text-base-content/40">Cropping</label>
-                            <div className="form-control">
+                            <div className={`form-control transition-opacity ${settings.preserveOriginal ? 'opacity-30 pointer-events-none' : ''}`}>
                                 <label className="cursor-pointer label p-0 gap-4">
                                     <span className="text-[10px] font-black uppercase text-base-content/40 tracking-widest flex items-center gap-2"><CropIcon className="w-3.5 h-3.5"/> Enable Smart Crop</span>
-                                    <input type="checkbox" checked={settings.enableCropping} onChange={e => handleSettingsChange('enableCropping', (e.currentTarget as any).checked)} className="toggle toggle-xs toggle-primary" />
+                                    <input type="checkbox" disabled={settings.preserveOriginal} checked={settings.enableCropping && !settings.preserveOriginal} onChange={e => handleSettingsChange('enableCropping', (e.currentTarget as any).checked)} className="toggle toggle-xs toggle-primary" />
                                 </label>
                             </div>
                         </div>
@@ -463,7 +482,7 @@ const ImageResizer: React.FC = () => {
                             </div>
                         </div>
                     </div>
-                    <footer className="p-4 border-t border-base-300 grid grid-cols-2 gap-2 bg-transparent">
+                    <footer className="p-4 grid grid-cols-2 gap-2 bg-transparent">
                         <button onClick={handleReset} disabled={isDownloading || images.length === 0} className="btn btn-sm btn-ghost rounded-none font-black text-[9px] tracking-widest text-error/40 hover:text-error">CLEAR ALL</button>
                         <button onClick={handleDownload} disabled={isDownloading || images.length === 0} className="btn btn-sm btn-primary rounded-none font-black text-[9px] tracking-widest">
                            {isDownloading ? 'PROCESSING...' : 'DOWNLOAD ZIP'}
@@ -472,7 +491,7 @@ const ImageResizer: React.FC = () => {
                 </aside>
 
                 <main className="flex-grow bg-transparent overflow-y-auto overflow-x-hidden scroll-smooth custom-scrollbar flex flex-col">
-                    <section className="p-10 bg-base-100/40 backdrop-blur-xl">
+                    <section className="p-10 bg-transparent">
                         <div className="max-w-screen-2xl mx-auto flex flex-col gap-1">
                             <div className="flex flex-col md:flex-row md:items-stretch justify-between gap-6">
                                 <h1 className="text-2xl lg:text-3xl font-black tracking-tighter text-base-content leading-none flex items-center uppercase">Image Resizer<span className="text-primary">.</span></h1>
@@ -483,7 +502,7 @@ const ImageResizer: React.FC = () => {
 
                     <div className="flex-grow bg-transparent relative flex flex-col">
                         {images.length > 0 ? (
-                            <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 gap-px bg-base-100/40 backdrop-blur-xl overflow-y-auto custom-scrollbar">
+                            <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 gap-px bg-transparent overflow-y-auto custom-scrollbar">
                                {images.map(img => (
                                    <ImageCard 
                                         key={img.id}

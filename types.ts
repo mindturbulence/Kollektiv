@@ -87,8 +87,6 @@ export interface LLMSettings {
 
   // Dashboard Settings
   dashboardVideoUrl: string;
-  
-  // Audio Settings
   musicYoutubeUrl: string;
   
   // Feature Toggles

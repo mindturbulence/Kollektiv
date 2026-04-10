@@ -9,7 +9,7 @@ export const handleGeminiError = (error: unknown, context: string): Error => {
     if (lowerCaseMessage.includes("failed to fetch") || lowerCaseMessage.includes("networkerror")) {
         errorMessage = `A network error occurred while ${context}. If using local Ollama, ensure OLLAMA_ORIGINS="*" is set and use HTTP if your site is not on HTTPS. If your site IS on HTTPS, browsers block local HTTP calls (Mixed Content).`;
     } else if (lowerCaseMessage.includes("api key not valid") || lowerCaseMessage.includes("api key is missing")) {
-      errorMessage = "The API key is invalid or missing. Please ensure your environment variable process.env.API_KEY is correctly configured.";
+      errorMessage = "The API key is invalid or missing. Please ensure your environment variable process.env.GEMINI_API_KEY is correctly configured.";
     } else if (lowerCaseMessage.includes("content is blocked") || lowerCaseMessage.includes("safety")) {
       errorMessage = `The request for ${context} was blocked due to safety settings. Please modify your input and try again.`;
     } else if (lowerCaseMessage.includes("quota")) {

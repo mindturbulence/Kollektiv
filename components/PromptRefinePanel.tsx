@@ -1,5 +1,6 @@
 import React, { useState, useCallback } from 'react';
 import { useSettings } from '../contexts/SettingsContext';
+import { useBusy } from '../contexts/BusyContext';
 import { refineSinglePromptStream } from '../services/llmService';
 import { SparklesIcon, CheckIcon, ChevronDownIcon, BookmarkIcon, RefreshIcon, CloseIcon } from './icons';
 import { TARGET_IMAGE_AI_MODELS, TARGET_VIDEO_AI_MODELS } from '../constants';
@@ -16,6 +17,7 @@ interface PromptRefinePanelProps {
 
 const PromptRefinePanel: React.FC<PromptRefinePanelProps> = ({ promptText, onApplyRefinement, isCollapsed, setIsCollapsed, onClip }) => {
     const { settings } = useSettings();
+    const { setIsBusy } = useBusy();
     const [refinedPrompt, setRefinedPrompt] = useState<string | null>(null);
     const [isLoading, setIsLoading] = useState(false);
     const [error, setError] = useState<string | null>(null);
@@ -26,6 +28,7 @@ const PromptRefinePanel: React.FC<PromptRefinePanelProps> = ({ promptText, onApp
 
     const handleRefine = useCallback(async () => {
         setIsLoading(true);
+        setIsBusy(true);
         setError(null);
         setRefinedPrompt(''); 
         setClipped(false);
@@ -39,8 +42,9 @@ const PromptRefinePanel: React.FC<PromptRefinePanelProps> = ({ promptText, onApp
             setRefinedPrompt(null);
         } finally {
             setIsLoading(false);
+            setIsBusy(false);
         }
-    }, [promptText, targetAIModel, settings]);
+    }, [promptText, targetAIModel, settings, setIsBusy]);
 
     const handleCopy = () => {
         if (!refinedPrompt) return;
@@ -112,7 +116,7 @@ const PromptRefinePanel: React.FC<PromptRefinePanelProps> = ({ promptText, onApp
                 {isLoading && !refinedPrompt ? <div className="flex-grow flex items-center justify-center"><LoadingSpinner size={48} /></div> :
                  error ? <div className="alert alert-error rounded-none text-xs"><span>{error}</span></div> :
                  refinedPrompt !== null ? (
-                    <div className="text-base font-medium leading-relaxed text-base-content/80 whitespace-pre-wrap flex-grow">
+                    <div className="text-sm font-medium leading-relaxed text-base-content/80 whitespace-pre-wrap flex-grow">
                         {refinedPrompt}
                     </div>
                  ) : (

@@ -72,8 +72,8 @@ export const TARGET_AUDIO_AI_MODELS = sortModels([
 ]);
 
 export const AVAILABLE_LLM_MODELS = [
-    { id: 'gemini-3.5-flash', name: 'Gemini 3.5 Flash (Fastest)' },
-    { id: 'gemini-3.5-pro', name: 'Gemini 3.5 Pro (Smarts)' },
-    { id: 'gemini-3.1-pro-preview', name: 'Gemini 3.1 Pro' },
+    { id: 'gemini-3-flash-preview', name: 'Gemini 3 Flash (Fastest)' },
+    { id: 'gemini-3.1-pro-preview', name: 'Gemini 3.1 Pro (Smarts)' },
+    { id: 'gemini-3.1-flash-lite-preview', name: 'Gemini 3.1 Flash Lite' },
     { id: 'gemini-3.1-flash-preview', name: 'Gemini 3.1 Flash' }
 ];

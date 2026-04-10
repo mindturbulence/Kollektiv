@@ -41,7 +41,7 @@ const ManualClipModal: React.FC<{
     };
 
     const modalContent = (
-        <div className="fixed inset-0 bg-black/80 z-[200] flex items-center justify-center p-4 animate-fade-in" onClick={onClose}>
+        <div className="fixed inset-0 bg-black/80 z-[1000] flex items-center justify-center p-4 animate-fade-in" onClick={onClose}>
             <div className="bg-base-100/40 backdrop-blur-xl rounded-none shadow-2xl w-full max-w-lg overflow-hidden" onClick={e => e.stopPropagation()}>
                 <header className="p-8 border-b border-base-300 bg-base-200/20 relative">
                     <button onClick={onClose} className="absolute top-6 right-6 btn btn-ghost btn-sm btn-square opacity-40 hover:opacity-100">
@@ -267,7 +267,7 @@ const ClippingPanel: React.FC<ClippingPanelProps> = ({
         <>
             <div
                 ref={panelRef}
-                className="absolute top-0 right-0 bottom-0 w-full md:w-[512px] bg-base-100/40 shadow-none z-[100] flex flex-col backdrop-blur-xl translate-x-full"
+                className="absolute top-0 right-0 bottom-0 w-full md:w-[512px] bg-base-100/40 shadow-none z-[800] flex flex-col backdrop-blur-xl translate-x-full"
                 style={{ visibility: 'hidden' }}
                 aria-hidden={!isOpen}
             >
