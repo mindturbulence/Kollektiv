@@ -10,12 +10,13 @@ interface PromptAnatomyPanelProps {
   promptToAnalyze: string | null;
   onReconstructFromComponents: (newComponents: { [key: string]: string }) => Promise<void>;
   onReplaceVariation: (key: string, value: string) => Promise<void>;
-  onSaveSuccess?: (prompt: string, modifiers: PromptModifiers) => void;
+  onSaveSuccess?: (prompt: string, modifiers: PromptModifiers, constantModifier?: string) => void;
   analysisTrigger: number;
   isProcessing: boolean;
+  modifierCatalog?: string;
 }
 
-export const PromptAnatomyPanel: React.FC<PromptAnatomyPanelProps> = ({ promptToAnalyze, onReconstructFromComponents, onReplaceVariation, onSaveSuccess, analysisTrigger, isProcessing }) => {
+export const PromptAnatomyPanel: React.FC<PromptAnatomyPanelProps> = ({ promptToAnalyze, onReconstructFromComponents, onReplaceVariation, onSaveSuccess, analysisTrigger, isProcessing, modifierCatalog }) => {
   const { settings } = useSettings();
   const [components, setComponents] = useState<{[key: string]: string} | null>(null);
   const [variations, setVariations] = useState<{[key: string]: string[]} | null>(null);
@@ -35,6 +36,7 @@ export const PromptAnatomyPanel: React.FC<PromptAnatomyPanelProps> = ({ promptTo
   const [pendingPresetName, setPendingPresetName] = useState('');
   const [pendingPresetContent, setPendingPresetContent] = useState('');
   const [pendingPresetModifiers, setPendingPresetModifiers] = useState<PromptModifiers>({});
+  const [pendingPresetConstantModifier, setPendingPresetConstantModifier] = useState('');
 
   const handleDissect = useCallback(async () => {
     if (!promptToAnalyze || !promptToAnalyze.trim()) {
@@ -51,7 +53,7 @@ export const PromptAnatomyPanel: React.FC<PromptAnatomyPanelProps> = ({ promptTo
     setProcessingVariation(null);
 
     try {
-      const dissected = await dissectPrompt(promptToAnalyze, settings);
+      const dissected = await dissectPrompt(promptToAnalyze, settings, modifierCatalog);
       setComponents(dissected);
       setIsComponentsSectionExpanded(true); 
       setIsVariationsSectionExpanded(true);
@@ -119,12 +121,13 @@ export const PromptAnatomyPanel: React.FC<PromptAnatomyPanelProps> = ({ promptTo
     if (!components || isSavingPreset) return;
     setIsSavingPreset(true);
     try {
-      const result = await generateConstructorPreset(components, settings);
-      const subject = components['Subject'] || components['subject'] || 'New Preset';
+      const result = await generateConstructorPreset(components, settings, modifierCatalog);
+      const subject = components['Subject'] || components['subject'] || components['Prompt Idea'] || components['prompt idea'] || 'New Preset';
       const defaultName = `Constructor: ${subject.substring(0, 20)}${subject.length > 20 ? '...' : ''}`;
       
       setPendingPresetContent(result.prompt);
       setPendingPresetModifiers(result.modifiers);
+      setPendingPresetConstantModifier(result.constantModifier || '');
       setPendingPresetName(defaultName);
       setShowSaveModal(true);
     } catch (e: any) {
@@ -144,16 +147,18 @@ export const PromptAnatomyPanel: React.FC<PromptAnatomyPanelProps> = ({ promptTo
         targetAIModel: 'Default (General Purpose)',
         mediaMode: 'image',
         promptLength: 'Medium',
-        refineText: pendingPresetContent
+        refineText: pendingPresetContent,
+        constantModifier: pendingPresetConstantModifier
       });
       
       // Call success callback to update Refiner state if needed
-      onSaveSuccess?.(pendingPresetContent, pendingPresetModifiers);
+      onSaveSuccess?.(pendingPresetContent, pendingPresetModifiers, pendingPresetConstantModifier);
       
       setShowSaveModal(false);
       setPendingPresetContent('');
       setPendingPresetName('');
       setPendingPresetModifiers({});
+      setPendingPresetConstantModifier('');
     } catch (e: any) {
       setError(e.message || "Failed to save preset.");
     } finally {

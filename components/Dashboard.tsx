@@ -120,7 +120,7 @@ const Dashboard: React.FC<DashboardProps> = () => {
                 <span className="text-[8px] font-black uppercase tracking-[0.4em] text-primary/40">Integrations</span>
                 <div className="flex flex-row gap-4">
                     <LedStatus label="VAULT" active={fileSystemManager.isDirectorySelected()} />
-                    <LedStatus label={settings.activeLLM === 'ollama_cloud' ? 'OLLAMA' : settings.activeLLM.toUpperCase()} active={!!process.env.API_KEY || settings.activeLLM.includes('ollama')} />
+                    <LedStatus label={settings.activeLLM === 'ollama_cloud' ? 'OLLAMA' : settings.activeLLM.toUpperCase()} active={!!process.env.GEMINI_API_KEY || settings.activeLLM.includes('ollama')} />
                     <LedStatus label="YOUTUBE" active={!!settings.youtube?.isConnected} color="bg-error" />
                 </div>
             </div>

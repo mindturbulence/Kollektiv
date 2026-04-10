@@ -56,7 +56,7 @@
   }
 
   /* Force Inter for bold caps UI elements */
-  .uppercase, .tracking-widest, .tracking-[0.4em], .font-black {
+  .uppercase, .tracking-widest, .tracking-\[0\.4em\], .font-black {
     font-family: 'Inter', sans-serif;
   }
 

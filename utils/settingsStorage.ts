@@ -7,7 +7,7 @@ const SETTINGS_KEY = 'kollektivSettingsV4';
 
 export const defaultLLMSettings: LLMSettings = {
   // LLM Provider Settings
-  llmModel: 'gemini-3.5-flash',
+  llmModel: 'gemini-3-flash-preview',
   activeLLM: 'gemini',
   ollamaBaseUrl: 'http://localhost:11434',
   ollamaModel: 'llama3',

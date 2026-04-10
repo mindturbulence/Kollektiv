@@ -12,6 +12,8 @@ import { refinerPresetService, type RefinerPreset } from '../services/refinerPre
 import { useBusy } from '../contexts/BusyContext';
 import type { AppError, SavedPrompt, PromptCategory, EnhancementResult, PromptModifiers, CheatsheetCategory, Idea } from '../types';
 import { 
+    FILM_TYPES,
+    GENERAL_ASPECT_RATIOS,
     PROMPT_DETAIL_LEVELS, 
     CAMERA_ANGLES,
     CAMERA_PROXIMITY,
@@ -110,7 +112,7 @@ const ReferenceSlot: React.FC<{
         }
     };
     return (
-        <div className="aspect-square bg-base-100/40 backdrop-blur-xl relative group overflow-hidden w-full h-full">
+        <div className="aspect-square bg-transparent relative group overflow-hidden w-full h-full">
             {url ? (
                 <>
                     <img src={url} className="w-full h-full object-cover" alt={`Ref ${index}`} />
@@ -398,15 +400,56 @@ const PromptsPage: React.FC<PromptsPageProps> = ({
     setIsSaveSuggestionModalOpen(true);
   };
 
+  const buildModifierCatalog = useCallback(() => {
+    const catalog: string[] = [];
+    
+    if (artStyles.length > 0) catalog.push(`artStyle: ${artStyles.flatMap(c => c.items.map(i => i.name)).join(', ')}`);
+    if (artists.length > 0) catalog.push(`artist: ${artists.flatMap(c => c.items.map(i => i.name)).join(', ')}`);
+    
+    catalog.push(`photographyStyle: ${PHOTOGRAPHY_STYLES.join(', ')}`);
+    catalog.push(`aestheticLook: ${AESTHETIC_LOOKS.map(l => l.name).join(', ')}`);
+    catalog.push(`digitalAesthetic: ${DIGITAL_AESTHETICS.map(a => a.name).join(', ')}`);
+    catalog.push(`aspectRatio: ${GENERAL_ASPECT_RATIOS.join(', ')}`);
+    catalog.push(`cameraType: ${CAMERA_TYPES.join(', ')}`);
+    catalog.push(`cameraAngle: ${CAMERA_ANGLES.join(', ')}`);
+    catalog.push(`cameraProximity: ${CAMERA_PROXIMITY.join(', ')}`);
+    catalog.push(`cameraSettings: ${CAMERA_SETTINGS.join(', ')}`);
+    catalog.push(`cameraEffect: ${CAMERA_EFFECTS.join(', ')}`);
+    catalog.push(`specialtyLens: ${SPECIALTY_LENS_EFFECTS.map(l => l.name).join(', ')}`);
+    catalog.push(`lensType: ${LENS_TYPES.join(', ')}`);
+    catalog.push(`filmType: ${FILM_TYPES.join(', ')}`);
+    catalog.push(`filmStock: ${ANALOG_FILM_STOCKS.join(', ')}`);
+    catalog.push(`lighting: ${LIGHTING_OPTIONS.join(', ')}`);
+    catalog.push(`composition: ${COMPOSITION_OPTIONS.join(', ')}`);
+    catalog.push(`facialExpression: ${FACIAL_EXPRESSIONS.join(', ')}`);
+    catalog.push(`hairStyle: ${HAIR_STYLES.join(', ')}`);
+    catalog.push(`eyeColor: ${EYE_COLORS.join(', ')}`);
+    catalog.push(`skinTexture: ${SKIN_TEXTURES.join(', ')}`);
+    catalog.push(`clothing: ${CLOTHING_STYLES.join(', ')}`);
+    catalog.push(`motion: ${MOTION_OPTIONS.map(o => o.name).join(', ')}`);
+    catalog.push(`cameraMovement: ${CAMERA_MOVEMENT_OPTIONS.map(o => o.name).join(', ')}`);
+    catalog.push(`mjVersion: ${MIDJOURNEY_VERSIONS.join(', ')}`);
+    catalog.push(`mjNiji: ${MIDJOURNEY_NIJI_VERSIONS.join(', ')}`);
+    catalog.push(`mjAspectRatio: ${MIDJOURNEY_ASPECT_RATIOS.join(', ')}`);
+    catalog.push(`zImageStyle: ${Z_IMAGE_STYLES.join(', ')}`);
+    
+    return catalog.join('\\n');
+  }, [artStyles, artists]);
+
   const handleSaveAsPreset = async (suggestionText: string) => {
     showGlobalFeedback('Analyzing for Constructor...');
+    setIsBusy(true);
     try {
-      const components = await dissectPrompt(suggestionText, settings);
-      const result = await generateConstructorPreset(components, settings);
+      const catalog = buildModifierCatalog();
+      const components = await dissectPrompt(suggestionText, settings, catalog);
+      const result = await generateConstructorPreset(components, settings, catalog);
       
       // Set as active in Refiner
-      setModifiers(result.modifiers);
+      setModifiers({ ...DEFAULT_MODIFIERS, ...result.modifiers });
       setRefineText(result.prompt);
+      if (result.constantModifier) {
+        setConstantModifier(result.constantModifier);
+      }
       
       // Open save modal
       setNewPresetName(`Constructor: ${suggestionText.substring(0, 20)}...`);
@@ -416,6 +459,8 @@ const PromptsPage: React.FC<PromptsPageProps> = ({
     } catch (e) {
       console.error('Save as Preset failed:', e);
       showGlobalFeedback('Analysis failed.', true);
+    } finally {
+      setIsBusy(false);
     }
   };
 
@@ -434,7 +479,6 @@ const PromptsPage: React.FC<PromptsPageProps> = ({
         const text = await navigator.clipboard.readText();
         if (text) {
             setRefineText(prev => prev ? `${prev} ${text}` : text);
-            showGlobalFeedback('Pasted from clipboard.');
         }
     } catch (err) {
         showGlobalFeedback('Clipboard access denied.', true);
@@ -449,7 +493,7 @@ const PromptsPage: React.FC<PromptsPageProps> = ({
     ] as const;
 
     return (
-        <div className="flex-shrink-0 bg-transparent border-b border-base-300 sticky top-0 z-20 backdrop-blur-md h-16">
+        <div className="flex-shrink-0 bg-transparent sticky top-0 z-20 h-16">
             <div className="flex w-full h-full">
                 {viewTabs.map((tab) => (
                     <button 
@@ -1056,7 +1100,7 @@ const PromptsPage: React.FC<PromptsPageProps> = ({
   };
 
   return (
-    <div className="flex flex-col h-full overflow-hidden bg-transparent">
+    <div className="flex flex-col h-full bg-base-100/40 backdrop-blur-xl overflow-hidden">
       {renderTabsHeader(activeView)}
 
       <div className="flex-grow overflow-hidden relative">
@@ -1065,20 +1109,22 @@ const PromptsPage: React.FC<PromptsPageProps> = ({
             onSaveToLibrary={(gen) => handleSaveSuggestion(gen)}
             onClip={(gen) => handleClipSuggestion(gen, 'Crafted Prompt', 'Crafter Formula', 'Crafter')}
             onSendToEnhancer={handleSendToRefine}
-            onSavePresetSuccess={(prompt, mods) => {
+            onSavePresetSuccess={(prompt, mods, constantMod) => {
                 setRefineText(prompt);
-                setModifiers(mods);
+                setModifiers({ ...DEFAULT_MODIFIERS, ...mods });
+                if (constantMod) setConstantModifier(constantMod);
                 showGlobalFeedback('Mapped to Refiner.');
             }}
             promptToInsert={composerPromptToInsert}
             header={null}
+            modifierCatalog={buildModifierCatalog()}
           />
         )}
 
         {activeView === 'refine' && (
           <div className="grid grid-cols-1 lg:grid-cols-12 overflow-hidden h-full p-4 gap-4">
             {/* Left Sidebar: Controls & Tabs */}
-            <aside className="lg:col-span-3 flex flex-col overflow-hidden bg-base-100/40 backdrop-blur-xl">
+            <aside className="lg:col-span-3 flex flex-col overflow-hidden bg-transparent">
               <div className="p-4 h-16 flex items-center">
                 <div className="tabs tabs-boxed rounded-none bg-transparent gap-1 p-0 flex flex-wrap w-full">
                   {tabs.map(tab => (
@@ -1122,7 +1168,7 @@ const PromptsPage: React.FC<PromptsPageProps> = ({
             </aside>
 
             {/* Center: Main Neural Output */}
-            <main className="lg:col-span-6 flex flex-col min-h-0 bg-base-100/40 backdrop-blur-xl">
+            <main className="lg:col-span-6 flex flex-col min-h-0 bg-transparent">
               <header className="p-6 h-16 flex justify-between items-center">
                 <h2 className="text-xs font-black uppercase tracking-[0.4em] text-primary flex items-center gap-3">
                   <div className="w-2 h-2 rounded-full bg-primary animate-pulse"></div> NEURAL OUTPUT
@@ -1172,7 +1218,7 @@ const PromptsPage: React.FC<PromptsPageProps> = ({
             </main>
 
             {/* Right Sidebar: Active Modifiers */}
-            <aside className="lg:col-span-3 flex flex-col overflow-hidden bg-base-100/40 backdrop-blur-xl">
+            <aside className="lg:col-span-3 flex flex-col overflow-hidden bg-transparent">
               <header className="p-6 h-16 flex items-center">
                   <h3 className="text-xs font-black uppercase tracking-[0.4em] text-base-content/40">Active Construction</h3>
               </header>
@@ -1290,7 +1336,7 @@ const PromptsPage: React.FC<PromptsPageProps> = ({
       {/* Save Preset Modal */}
       {isSavePresetModalOpen && (
           <div className="fixed inset-0 bg-black/40 backdrop-blur-xl z-50 flex items-center justify-center p-4 animate-fade-in" onClick={() => setIsSavePresetModalOpen(false)}>
-              <div className="bg-base-100/40 w-full max-w-lg overflow-hidden" onClick={(e) => e.stopPropagation()}>
+              <div className="bg-base-100/40 backdrop-blur-xl w-full max-w-lg overflow-hidden" onClick={(e) => e.stopPropagation()}>
                   <header className="p-8">
                       <h3 className="text-2xl font-black tracking-tighter text-base-content leading-none uppercase">Save Presets<span className="text-primary">.</span></h3>
                   </header>

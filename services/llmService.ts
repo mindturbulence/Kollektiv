@@ -357,11 +357,11 @@ export const generateColorName = async (hexColor: string, mood: string, settings
         : generateColorNameGemini(hexColor, mood, settings);
 };
 
-export const dissectPrompt = async (promptText: string, settings: LLMSettings): Promise<{ [key: string]: string }> => {
+export const dissectPrompt = async (promptText: string, settings: LLMSettings, modifierCatalog?: string): Promise<{ [key: string]: string }> => {
     const isOllama = settings.activeLLM === 'ollama' || settings.activeLLM === 'ollama_cloud';
     return isOllama
         ? dissectPromptOllama(promptText, settings)
-        : dissectPromptGemini(promptText, settings);
+        : dissectPromptGemini(promptText, settings, modifierCatalog);
 };
 
 export const generateFocusedVariations = async (promptText: string, components: { [key: string]: string }, settings: LLMSettings): Promise<{ [key: string]: string[] }> => {
@@ -407,21 +407,47 @@ export const generatePromptFormulaWithAI = async (promptText: string, wildcards:
         : generatePromptFormulaGemini(promptText, settings, sys);
 };
 
-export const generateConstructorPreset = async (components: { [key: string]: string }, settings: LLMSettings): Promise<{ prompt: string, modifiers: PromptModifiers }> => {
+export const generateConstructorPreset = async (components: { [key: string]: string }, settings: LLMSettings, modifierCatalog?: string): Promise<{ prompt: string, modifiers: PromptModifiers, constantModifier?: string }> => {
     const isOllama = settings.activeLLM === 'ollama' || settings.activeLLM === 'ollama_cloud';
     
     if (isOllama) {
         const sys = `Role: Prompt Constructor Architect. 
-Task: Take the dissected prompt components and refine them into a high-quality, reusable "Constructor Preset".
-Goal: Enhance the components by incorporating professional visual modifiers (lighting, composition, style, medium) that logically fit the subject.
-Output: A single, cohesive, and highly descriptive prompt string that combines the refined components and added modifiers. 
-Constraint: Output the REFINED PROMPT ONLY. No intros, no explanations.`;
+Task: Deconstruct the analyzed prompt components into a "Prompt Idea" (base subject/intent), "Active Construction Items" (mapped modifiers), and "Constant Modifiers" (unmapped details).
+
+Mapping Protocol:
+1. Identify components that match or are highly similar to these Refiner categories:
+   - artStyle, artist, photographyStyle, aestheticLook, digitalAesthetic, aspectRatio, cameraType, cameraAngle, cameraProximity, cameraSettings, cameraEffect, specialtyLens, lensType, filmType, filmStock, lighting, composition, facialExpression, hairStyle, eyeColor, skinTexture, clothing, motion, cameraMovement, mjVersion, mjNiji, mjAspectRatio, zImageStyle
+
+${modifierCatalog ? `[AVAILABLE MODIFIERS CATALOG]\n${modifierCatalog}\n\nSTRICT RULE: You MUST prioritize mapping to the values provided in the catalog above if a match or close synonym is found.` : ''}
+
+2. Extraction Logic:
+   - If a component matches both a category AND a specific value from the catalog, add it to the "modifiers" object.
+   - If a component matches a category but the value is NOT in the catalog, add it to the "constantModifier" string.
+   - The core subject goes into the "prompt" (Prompt Idea).
+   - IMPORTANT: Strip all modifiers from the "prompt" field.
+
+Output: A JSON object:
+{
+  "prompt": "The core subject/intent",
+  "modifiers": { "categoryKey": "Value", ... },
+  "constantModifier": "Unmapped modifiers"
+}
+Output JSON ONLY.`;
 
         const input = JSON.stringify(components, null, 2);
         const raw = await refineSinglePromptOllama(input, settings, sys, 1024);
-        return { prompt: cleanLLMResponse(raw), modifiers: {} };
+        try {
+            const result = JSON.parse(cleanLLMResponse(raw));
+            return {
+                prompt: result.prompt || '',
+                modifiers: result.modifiers || {},
+                constantModifier: result.constantModifier || ''
+            };
+        } catch (e) {
+            return { prompt: cleanLLMResponse(raw), modifiers: {}, constantModifier: '' };
+        }
     } else {
-        return generateConstructorPresetGemini(components, settings);
+        return generateConstructorPresetGemini(components, settings, modifierCatalog);
     }
 };
 

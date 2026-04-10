@@ -109,7 +109,7 @@ const CustomCursor: React.FC = () => {
             className="fixed top-1 left-1 pointer-events-none z-[9999] mix-blend-difference opacity-0 flex items-center"
             style={{ width: 'auto', height: '40px' }}
         >
-            <div className="relative flex items-center justify-center">
+            <div className={`relative flex items-center justify-center transition-opacity duration-300 ${isBusy ? 'opacity-0' : 'opacity-100'}`}>
                 <div 
                     ref={innerRef}
                     className="w-5 h-5 border border-white rounded-full flex items-center justify-center overflow-hidden"
@@ -141,7 +141,7 @@ const CustomCursor: React.FC = () => {
             </div>
             
             {isBusy && (
-                <div className="absolute flex items-center gap-2 animate-fade-in whitespace-nowrap left-full ml-8">
+                <div className="absolute flex items-center gap-2 animate-fade-in whitespace-nowrap left-0">
                     <div 
                         ref={spinnerRef}
                         className="w-3 h-3 border border-white/20 border-t-white rounded-full"

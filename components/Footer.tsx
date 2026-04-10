@@ -97,6 +97,7 @@ const Footer: React.FC<FooterProps> = () => {
     const [isUplinkActive, setIsUplinkActive] = useState(false);
     const [playerState, setPlayerState] = useState<'idle' | 'syncing' | 'playing' | 'error'>('idle');
     const [showMonitor, setShowMonitor] = useState(false);
+    const [audioEnabled, setAudioEnabled] = useState(audioService.getIsEnabled());
 
     const iframeRef = useRef<HTMLIFrameElement>(null);
 
@@ -130,24 +131,19 @@ const Footer: React.FC<FooterProps> = () => {
             setIsUplinkActive(false);
             setPlayerState('idle');
             setShowMonitor(false);
+            audioService.stopAmbient();
         } else {
             setPlayerState('syncing');
             setIsUplinkActive(true);
             setShowMonitor(true);
             setTimeout(() => {
                 setPlayerState('playing');
+                if (audioEnabled) {
+                    audioService.startAmbient(0.3);
+                }
             }, 2500);
         }
-    }, [videoId, isUplinkActive]);
-
-    const statusLabel = useMemo(() => {
-        switch (playerState) {
-            case 'playing': return 'AUDIO: ON';
-            case 'syncing': return 'SYNCING...';
-            case 'error': return 'AUDIO: ERR';
-            default: return 'AUDIO: IDLE';
-        }
-    }, [playerState]);
+    }, [videoId, isUplinkActive, audioEnabled]);
 
     const stateColorClass = useMemo(() => {
         switch (playerState) {
@@ -157,6 +153,11 @@ const Footer: React.FC<FooterProps> = () => {
             default: return 'text-base-content/40 hover:text-base-content/60';
         }
     }, [playerState]);
+
+    const handleAudioToggle = useCallback(() => {
+        const newState = audioService.toggle();
+        setAudioEnabled(newState);
+    }, []);
 
     const isActive = playerState === 'playing' || playerState === 'syncing';
 
@@ -177,7 +178,7 @@ const Footer: React.FC<FooterProps> = () => {
                 )}
             </div>
 
-            <div className={`fixed bottom-20 right-6 z-[200] transition-all duration-1000 ease-out pointer-events-none ${showMonitor ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-12'}`}>
+            <div className={`fixed bottom-20 right-6 z-[90] transition-all duration-1000 ease-out pointer-events-none ${showMonitor ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-12'}`}>
                 <div className="bg-transparent border border-primary/40 p-4 flex items-center gap-4 backdrop-blur-3xl min-w-[320px] overflow-hidden">
                     <div className={`w-2 h-2 rounded-full flex-shrink-0 ${playerState === 'playing' ? 'bg-primary animate-pulse shadow-[0_0_8px_rgba(var(--p),0.8)]' : 'bg-warning animate-ping'}`}></div>
 
@@ -196,27 +197,49 @@ const Footer: React.FC<FooterProps> = () => {
                 </div>
             </div>
 
-            <footer className="flex-shrink-0 px-8 pb-4 bg-transparent z-[500] flex flex-row items-center justify-between select-none whitespace-nowrap relative">
+            <footer className="flex-shrink-0 px-8 pb-4 bg-transparent z-[700] flex flex-row items-center justify-between select-none whitespace-nowrap relative pointer-events-auto">
                 {/* Background Technical Noise */}
                 <div className="absolute inset-0 pointer-events-none opacity-[0.03] bg-[url('https://www.transparenttextures.com/patterns/stardust.png')]"></div>
 
-                <div className="flex items-center h-full gap-4 bg-transparent relative z-10">
-                    <span className="text-[11px] font-black uppercase tracking-[0.2em] text-primary">ENGINE</span>
-                    <div className="relative flex items-center justify-center border-l border-base-300/30 pl-4 h-full py-2 min-w-[200px]">
+                <div className="flex items-center h-full gap-4 bg-transparent relative z-[710] pointer-events-auto">
+                    <span className="text-[9px] font-black uppercase tracking-[0.2em] text-primary">ENGINE</span>
+                    <div className="relative flex items-center justify-center border-l border-base-300/30 pl-4 h-full py-2 min-w-[200px] z-[720] pointer-events-auto">
                         <LlmStatusSwitcher />
                     </div>
                 </div>
 
-                <div className="flex flex-row items-center h-full">
+                <div className="flex flex-row items-center h-full border-l border-base-300/30">
+                    <button
+                        onClick={handleAudioToggle}
+                        className={`relative flex items-center h-full px-4 transition-all duration-300 bg-transparent outline-none ${audioEnabled ? 'text-primary' : 'text-base-content/40 hover:text-base-content/60'}`}
+                    >
+                        <div className="flex items-center gap-1.5">
+                            <span className="text-[9px] font-sans font-black uppercase tracking-tighter">SFX</span>
+                            <span className={`text-[9px] font-sans font-medium uppercase tracking-tighter ${audioEnabled ? 'animate-pulse' : ''}`}>
+                                {audioEnabled ? '- ON' : '- OFF'}
+                            </span>
+                        </div>
+                    </button>
                     <button
                         onClick={handleToggle}
-                        className={`relative flex items-center h-full px-8 transition-all duration-300 bg-transparent border-l border-base-300/30 outline-none ${stateColorClass}`}
+                        className={`relative flex items-center h-full px-4 transition-all duration-300 bg-transparent outline-none ${stateColorClass}`}
                     >
                         <div className="flex flex-row items-center h-full relative z-10 pointer-events-none">
                             <div className={`flex flex-row items-center transition-all duration-500 ease-out ${isActive ? '-translate-x-2' : 'translate-x-0'}`}>
-                                <span className={`text-[10px] font-sans font-black uppercase tracking-tighter ${playerState === 'syncing' ? 'animate-pulse' : ''}`}>{statusLabel}</span>
+                                <div className="flex items-center gap-1.5">
+                                    {playerState === 'syncing' ? (
+                                        <span className="text-[9px] font-sans font-black uppercase tracking-tighter animate-pulse">SYNCING...</span>
+                                    ) : (
+                                        <>
+                                            <span className="text-[9px] font-sans font-black uppercase tracking-tighter">AUDIO</span>
+                                            <span className="text-[9px] font-sans font-medium uppercase tracking-tighter">
+                                                {playerState === 'playing' ? ': ON' : playerState === 'error' ? ': ERR' : ': IDLE'}
+                                            </span>
+                                        </>
+                                    )}
+                                </div>
                             </div>
-                            <div className={`flex items-center transition-all duration-500 ease-in-out border-l border-base-300/30 ${isActive ? 'w-16 opacity-100 ml-4 pl-4' : 'w-0 opacity-0 pointer-events-none ml-0 pl-0'}`}>
+                            <div className={`flex items-center transition-all duration-500 ease-in-out border-l border-base-300/30 ${isActive ? 'w-12 opacity-100 ml-3 pl-3' : 'w-0 opacity-0 pointer-events-none ml-0 pl-0'}`}>
                                 <DigitalOscillator state={playerState} theme={settings.activeThemeMode} />
                             </div>
                         </div>

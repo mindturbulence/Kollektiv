@@ -27,6 +27,7 @@ export const SuggestionItem: React.FC<SuggestionItemProps> = ({
   const [saved, setSaved] = useState<boolean>(false);
   const [clipped, setClipped] = useState<boolean>(false);
   const [presetSaved, setPresetSaved] = useState<boolean>(false);
+  const [jsonCopied, setJsonCopied] = useState<boolean>(false);
   
   // Generation State
   const [isGenerating, setIsGenerating] = useState(false);
@@ -77,6 +78,26 @@ export const SuggestionItem: React.FC<SuggestionItemProps> = ({
   const handleRefine = useCallback(() => {
       onRefine?.(suggestionText);
   }, [onRefine, suggestionText]);
+
+  const handleCopyJson = useCallback(() => {
+    const data = {
+      prompt: suggestionText,
+      targetAI,
+      exportedAt: new Date().toISOString(),
+      generator: "Kollektiv Toolbox"
+    };
+    
+    if (typeof window !== 'undefined' && (window as any).navigator?.clipboard) {
+      (window as any).navigator.clipboard.writeText(JSON.stringify(data, null, 2))
+        .then(() => {
+          setJsonCopied(true);
+          setTimeout(() => setJsonCopied(false), 2000);
+        })
+        .catch((err: any) => {
+          console.error('Failed to copy JSON: ', err);
+        });
+    }
+  }, [suggestionText, targetAI]);
 
   const handleDownloadJson = useCallback(() => {
     if (typeof window === 'undefined') return;
@@ -170,7 +191,7 @@ export const SuggestionItem: React.FC<SuggestionItemProps> = ({
                     )}
 
                     <div className="flex-grow">
-                        <p className="text-base font-medium leading-relaxed text-base-content/80 font-mono pl-4 py-2">
+                        <p className="text-sm font-medium leading-relaxed text-base-content/80 pl-4 py-2">
                             {suggestionText}
                         </p>
                     </div>
@@ -183,9 +204,6 @@ export const SuggestionItem: React.FC<SuggestionItemProps> = ({
 
                     <div className="flex flex-wrap items-center justify-between gap-4 mt-4 pt-4 border-t border-base-300">
                         <div className="flex items-center gap-1">
-                            <div className="mr-2 hidden sm:block">
-                                <span className="text-[7px] font-black text-primary/30 uppercase tracking-widest">Action Sequence</span>
-                            </div>
                             {isGoogleProduct && !mediaUrl && (
                                 <button 
                                     onClick={handleTryGenerate} 
@@ -195,26 +213,35 @@ export const SuggestionItem: React.FC<SuggestionItemProps> = ({
                                     RENDER
                                 </button>
                             )}
-                            {onClip && (
-                                <button onClick={handleClip} className="btn btn-xs btn-ghost rounded-none font-black text-[9px] tracking-widest px-3 hover:bg-base-300" disabled={clipped}>
-                                    <BookmarkIcon className="w-3 h-3 mr-1.5 opacity-40"/> {clipped ? 'CLIPPED' : 'CLIP'}
-                                </button>
-                            )}
                             {onRefine && (
                                  <button onClick={handleRefine} className="btn btn-xs btn-ghost rounded-none font-black text-[9px] tracking-widest px-3 hover:bg-base-300">
                                     <RefreshIcon className="w-3 h-3 mr-1.5 opacity-40"/> RE-REFINE
                                 </button>
                             )}
+                            <button
+                                onClick={handleCopyJson}
+                                className="btn btn-xs btn-ghost rounded-none font-black text-[9px] tracking-widest px-3 hover:bg-base-300"
+                            >
+                                {jsonCopied ? <><CheckIcon className="w-3 h-3 mr-1.5 text-success" /> OK</> : <><BracesIcon className="w-3 h-3 mr-1.5 opacity-40" /> COPY JSON</>}
+                            </button>
+                            <button
+                                onClick={handleDownloadJson}
+                                className="btn btn-xs btn-ghost rounded-none font-black text-[9px] tracking-widest px-3 hover:bg-base-300"
+                            >
+                                <DownloadIcon className="w-3 h-3 mr-1.5 opacity-40"/> JSON
+                            </button>
                         </div>
 
                         <div className="flex items-center gap-1">
-                            {onSaveAsPreset && (
-                                <button
-                                    onClick={handleSaveAsPreset}
-                                    disabled={presetSaved}
-                                    className="btn btn-xs btn-ghost rounded-none font-black text-[9px] tracking-widest px-3 hover:bg-base-300 text-primary"
-                                >
-                                    {presetSaved ? <><CheckIcon className="w-3 h-3 mr-1.5 text-success"/> OK</> : <><SparklesIcon className="w-3 h-3 mr-1.5 opacity-40"/> PRESET</>}
+                            <button
+                                onClick={handleCopy}
+                                className="btn btn-xs btn-ghost rounded-none font-black text-[9px] tracking-widest px-3 hover:bg-base-300"
+                            >
+                                {copied ? <><CheckIcon className="w-3 h-3 mr-1.5 text-success" /> OK</> : <><CopyIcon className="w-3.5 h-3.5 mr-1.5 opacity-40" /> COPY</>}
+                            </button>
+                            {onClip && (
+                                <button onClick={handleClip} className="btn btn-xs btn-ghost rounded-none font-black text-[9px] tracking-widest px-3 hover:bg-base-300" disabled={clipped}>
+                                    <BookmarkIcon className="w-3 h-3 mr-1.5 opacity-40"/> {clipped ? 'CLIPPED' : 'CLIP'}
                                 </button>
                             )}
                             <button
@@ -224,18 +251,15 @@ export const SuggestionItem: React.FC<SuggestionItemProps> = ({
                             >
                                 {saved ? <><CheckIcon className="w-3 h-3 mr-1.5 text-success"/> OK</> : <><ArchiveIcon className="w-3 h-3 mr-1.5 opacity-40"/> SAVE</>}
                             </button>
-                            <button
-                                onClick={handleDownloadJson}
-                                className="btn btn-xs btn-ghost rounded-none font-black text-[9px] tracking-widest px-3 hover:bg-base-300"
-                            >
-                                <BracesIcon className="w-3 h-3 mr-1.5 opacity-40"/> JSON
-                            </button>
-                            <button
-                                onClick={handleCopy}
-                                className="btn btn-xs btn-ghost rounded-none font-black text-[9px] tracking-widest px-3 hover:bg-base-300"
-                            >
-                                {copied ? <><CheckIcon className="w-3 h-3 mr-1.5 text-success" /> OK</> : <><CopyIcon className="w-3.5 h-3.5 mr-1.5 opacity-40" /> COPY</>}
-                            </button>
+                            {onSaveAsPreset && (
+                                <button
+                                    onClick={handleSaveAsPreset}
+                                    disabled={presetSaved}
+                                    className="btn btn-xs btn-ghost rounded-none font-black text-[9px] tracking-widest px-3 hover:bg-base-300 text-primary"
+                                >
+                                    {presetSaved ? <><CheckIcon className="w-3 h-3 mr-1.5 text-success"/> OK</> : <><SparklesIcon className="w-3 h-3 mr-1.5 opacity-40"/> PRESET</>}
+                                </button>
+                            )}
                         </div>
                     </div>
                 </>

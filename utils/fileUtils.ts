@@ -138,28 +138,40 @@ class LocalFileSystemManager implements IFileSystemManager {
     }
     
     public async saveFile(filePath: string, content: Blob): Promise<string> {
-        const rootHandle = await this.getHandle();
-        const segments = filePath.replace(/\\/g, '/').split('/');
-        const fileName = segments.pop();
-        if (!fileName) throw new Error("Invalid file path provided.");
+        try {
+            const rootHandle = await this.getHandle();
+            const segments = filePath.replace(/\\/g, '/').split('/');
+            const fileName = segments.pop();
+            if (!fileName) throw new Error("Invalid file path provided.");
 
-        let currentHandle = rootHandle;
-        for (const segment of segments) {
-            if (segment === '') continue;
-            currentHandle = await currentHandle.getDirectoryHandle(segment, { create: true });
+            let currentHandle = rootHandle;
+            for (const segment of segments) {
+                if (segment === '') continue;
+                currentHandle = await currentHandle.getDirectoryHandle(segment, { create: true });
+            }
+
+            const fileHandle = await currentHandle.getFileHandle(fileName, { create: true });
+            const writable = await fileHandle.createWritable();
+            await writable.write(content);
+            await writable.close();
+            
+            return filePath;
+        } catch (error) {
+            console.error("Error saving file:", filePath, error);
+            throw error;
         }
-
-        const fileHandle = await currentHandle.getFileHandle(fileName, { create: true });
-        const writable = await fileHandle.createWritable();
-        await writable.write(content);
-        await writable.close();
-        
-        return filePath;
     }
 
-    public async readFile(filePath: string): Promise<string | null> {
-        const blob = await this.getFileAsBlob(filePath);
-        return blob ? await blob.text() : null;
+    public async readFile(filePath: string, timeoutMs: number = 5000): Promise<string | null> {
+        try {
+            const result = await Promise.race([
+                this.getFileAsBlob(filePath).then(blob => blob ? blob.text() : null),
+                new Promise<null>((_, reject) => setTimeout(() => reject(new Error('Read timeout')), timeoutMs))
+            ]);
+            return result;
+        } catch (e) {
+            return null;
+        }
     }
     
     public async getFileAsBlob(filePath: string): Promise<Blob | null> {
@@ -177,7 +189,7 @@ class LocalFileSystemManager implements IFileSystemManager {
             const fileHandle = await currentHandle.getFileHandle(fileName);
             return await fileHandle.getFile();
         } catch (error) {
-             return null;
+            return null;
         }
     }
     
@@ -205,19 +217,22 @@ class LocalFileSystemManager implements IFileSystemManager {
     }
     
     public async* listDirectoryContents(path: string): AsyncGenerator<FileSystemHandle> {
-        const rootHandle = await this.getHandle();
-        let currentHandle = rootHandle;
-        if (path) {
-            const segments = path.split('/');
-            try {
+        try {
+            const rootHandle = await this.getHandle();
+            let currentHandle = rootHandle;
+            if (path) {
+                const segments = path.split('/');
                 for (const segment of segments) {
                     if (segment === '') continue;
                     currentHandle = await currentHandle.getDirectoryHandle(segment);
                 }
-            } catch (e) { return; }
-        }
-        for await (const handle of (currentHandle as any).values()) {
-            yield handle;
+            }
+            for await (const handle of (currentHandle as any).values()) {
+                yield handle;
+            }
+        } catch (error) {
+            // Directory doesn't exist or can't be accessed - return empty
+            return;
         }
     }
 
