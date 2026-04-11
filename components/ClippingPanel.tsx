@@ -267,7 +267,7 @@ const ClippingPanel: React.FC<ClippingPanelProps> = ({
         <>
             <div
                 ref={panelRef}
-                className="absolute top-0 right-0 bottom-0 w-full md:w-[512px] bg-base-100/40 shadow-none z-[800] flex flex-col backdrop-blur-xl translate-x-full"
+                className="fixed top-4 right-4 bottom-4 md:top-10 md:right-10 md:bottom-10 w-[calc(100%-2rem)] md:w-[512px] bg-base-100/60 shadow-2xl z-[1100] flex flex-col backdrop-blur-3xl translate-x-full border-l border-base-content/10"
                 style={{ visibility: 'hidden' }}
                 aria-hidden={!isOpen}
             >

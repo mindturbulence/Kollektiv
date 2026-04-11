@@ -81,7 +81,7 @@ const SavedPromptCard: React.FC<SavedPromptCardProps> = memo(({
       });
 
   return (
-    <div className="flex flex-col group bg-transparent transition-all duration-500 hover:bg-primary/5 w-full overflow-hidden select-none h-fit">
+    <div className="flex flex-col group bg-transparent transition-all duration-700 hover:bg-primary/5 w-full overflow-hidden select-none h-fit border-b border-base-300/10 last:border-b-0">
       <div className="p-6 md:p-8 flex flex-col w-full h-full">
         {/* Header Section - Category Label and Menu Button Aligned */}
         <div className="mb-6 space-y-3">
@@ -147,7 +147,7 @@ const SavedPromptCard: React.FC<SavedPromptCardProps> = memo(({
         </div>
 
         {/* Footer Section - Date and Actions */}
-        <div className="pt-8 flex justify-between items-center mt-8 border-t border-base-300/50">
+        <div className="pt-8 flex justify-between items-center mt-8 border-t border-base-300/10">
             <div className="flex flex-col">
                 <time className="text-sm font-mono font-bold text-base-content/40 tabular-nums uppercase">
                     {fullDate}

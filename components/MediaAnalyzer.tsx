@@ -5,7 +5,7 @@ import { abstractImage } from '../services/llmService';
 import { extractFullMetadata, type ParsedMetadata } from '../utils/fileUtils';
 import type { EnhancementResult } from '../types';
 import { PROMPT_DETAIL_LEVELS } from '../constants';
-import { PhotoIcon, CloseIcon, SparklesIcon, FilmIcon, BookOpenIcon } from './icons';
+import { PhotoIcon, CloseIcon, SparklesIcon, FilmIcon } from './icons';
 import LoadingSpinner from './LoadingSpinner';
 import { SuggestionItem } from './SuggestionItem';
 import { fileToBase64 } from '../utils/fileUtils';
@@ -205,7 +205,7 @@ export const MediaAnalyzer: React.FC<MediaAnalyzerProps> = ({ onSaveSuggestion, 
         <div className="grid grid-cols-1 lg:grid-cols-12 overflow-hidden h-full p-4 gap-4 relative">
             
             {/* Media Input Area */}
-            <aside className="lg:col-span-3 flex flex-col min-h-0 bg-base-100/40 backdrop-blur-xl relative z-10">
+            <aside className="lg:col-span-3 flex flex-col min-h-0 bg-transparent relative z-10">
                 {header}
                 <header className="p-6 h-16 flex items-center justify-between">
                     <h3 className="text-[10px] font-black uppercase tracking-[0.4em] text-primary">Media Input</h3>
@@ -269,11 +269,10 @@ export const MediaAnalyzer: React.FC<MediaAnalyzerProps> = ({ onSaveSuggestion, 
                     </div>
 
                     {metadataResults?.workflow && (
-                        <div className="space-y-2 animate-fade-in">
-                            <div className="badge badge-secondary rounded-none font-black text-[9px] tracking-widest w-full py-3 mb-2 uppercase text-center">GRAPH DATA FOUND</div>
+                        <div className="h-14 flex items-stretch flex-shrink-0 animate-fade-in">
                             <button 
                                 onClick={handleSaveWorkflow}
-                                className="btn btn-sm btn-outline btn-secondary rounded-none font-black text-[10px] tracking-widest uppercase w-full"
+                                className="btn btn-ghost h-full rounded-none border-none flex-1 font-black text-[10px] tracking-widest uppercase hover:bg-base-200 px-1 truncate"
                             >
                                 EXPORT JSON
                             </button>
@@ -287,32 +286,29 @@ export const MediaAnalyzer: React.FC<MediaAnalyzerProps> = ({ onSaveSuggestion, 
                 <footer className="h-14 flex items-stretch flex-shrink-0">
                     <button 
                         onClick={() => !isLoading && handleReset(null)} 
-                        className="btn btn-ghost h-full rounded-none border-none flex-1 flex flex-col gap-1 items-center justify-center font-black text-[9px] tracking-widest text-error/40 hover:text-error uppercase"
+                        className="btn btn-ghost h-full rounded-none border-none flex-1 font-black text-[10px] tracking-widest text-error/40 hover:text-error uppercase px-1 truncate"
                     >
-                        <CloseIcon className="w-4 h-4" />
-                        <span>RESET</span>
+                        RESET
                     </button>
                     <button 
                         onClick={handleAnalyze} 
                         disabled={isLoading || !sourceFile} 
-                        className={`btn btn-ghost h-full rounded-none border-none flex-1 flex flex-col gap-1 items-center justify-center font-black text-[9px] tracking-widest uppercase hover:bg-primary/10 ${activeResultType === 'abstraction' ? 'text-primary' : ''}`}
+                        className={`btn btn-ghost h-full rounded-none border-none flex-1 font-black text-[10px] tracking-widest uppercase hover:bg-primary/10 px-1 truncate ${activeResultType === 'abstraction' ? 'text-primary' : ''}`}
                     >
-                        <SparklesIcon className="w-4 h-4" />
-                        <span>{isLoading && activeResultType === 'abstraction' ? '...' : 'ANALYZE'}</span>
+                        {isLoading && activeResultType === 'abstraction' ? '...' : 'ANALYZE'}
                     </button>
                     <button 
                         onClick={handleReadMetadata} 
                         disabled={isLoading || !sourceFile || fileType !== 'image'} 
-                        className={`btn btn-primary h-full rounded-none border-none flex-1 flex flex-col gap-1 items-center justify-center font-black text-[9px] tracking-widest uppercase shadow-none ${activeResultType === 'metadata' ? 'btn-active' : ''}`}
+                        className={`btn btn-primary h-full rounded-none border-none flex-1 font-black text-[10px] tracking-widest uppercase shadow-none px-1 truncate ${activeResultType === 'metadata' ? 'btn-active' : ''}`}
                     >
-                        <BookOpenIcon className="w-4 h-4" />
-                        <span>{isLoading && activeResultType === 'metadata' ? '...' : 'READ'}</span>
+                        {isLoading && activeResultType === 'metadata' ? '...' : 'READ'}
                     </button>
                 </footer>
             </aside>
 
             {/* center Column: Results (Merged) */}
-            <main className="lg:col-span-9 flex flex-col min-h-0 bg-base-100/40 backdrop-blur-xl relative z-10">
+            <main className="lg:col-span-9 flex flex-col min-h-0 bg-transparent relative z-10">
                 <header className="p-6 h-16 flex items-center justify-between">
                     <div className="flex items-center gap-6">
                         <h2 className={`text-xs font-black uppercase tracking-[0.4em] flex items-center gap-3 transition-colors cursor-pointer ${activeResultType === 'abstraction' ? 'text-primary' : 'text-base-content/20 hover:text-base-content/40'}`} onClick={() => abstractionResults && setActiveResultType('abstraction')}>
@@ -343,7 +339,7 @@ export const MediaAnalyzer: React.FC<MediaAnalyzerProps> = ({ onSaveSuggestion, 
                             </div>
                         </div>
                     ) : activeResultType === 'abstraction' && abstractionResults ? (
-                        <div className="p-[1px] bg-transparent">
+                        <div className="bg-transparent">
                             {abstractionResults.suggestions.map((suggestion, index) => (
                                 <SuggestionItem 
                                     key={index} 
@@ -361,24 +357,24 @@ export const MediaAnalyzer: React.FC<MediaAnalyzerProps> = ({ onSaveSuggestion, 
                             <section className="space-y-4">
                                 <div className="flex justify-between items-center">
                                     <h4 className="text-[9px] font-black uppercase tracking-widest text-primary/40">POSITIVE PROMPT</h4>
-                                    <div className="flex gap-1 h-6">
+                                    <div className="flex gap-1 h-8">
                                         <button 
                                             onClick={() => onRefine(metadataResults.prompt)}
                                             disabled={!hasPrompt}
-                                            className="btn btn-xs btn-ghost rounded-none text-primary font-black text-[8px] tracking-widest uppercase px-2"
+                                            className="btn btn-ghost h-full rounded-none text-primary font-black text-[10px] tracking-widest uppercase px-4 hover:bg-primary/10"
                                         >
                                             IMPROVE
                                         </button>
                                         <button 
                                             onClick={() => onClip(metadataResults.prompt, `Info: ${sourceFile?.name}`)}
                                             disabled={!hasPrompt}
-                                            className="btn btn-xs btn-ghost rounded-none font-black text-[8px] tracking-widest uppercase px-2"
+                                            className="btn btn-ghost h-full rounded-none font-black text-[10px] tracking-widest uppercase px-4 hover:bg-base-200"
                                         >
                                             CLIP
                                         </button>
                                     </div>
                                 </div>
-                                <p className="text-sm font-medium leading-relaxed text-base-content/80 font-mono bg-base-100/40 backdrop-blur-xl p-3">
+                                <p className="text-sm font-medium leading-relaxed text-base-content/80 font-mono bg-transparent p-3">
                                     {hasPrompt ? metadataResults.prompt : 'NO READABLE DATA.'}
                                 </p>
                             </section>
@@ -403,12 +399,12 @@ export const MediaAnalyzer: React.FC<MediaAnalyzerProps> = ({ onSaveSuggestion, 
                                     <button 
                                         onClick={handleCopyRaw}
                                         disabled={!metadataResults.raw && !metadataResults.workflow}
-                                        className="btn btn-xs btn-ghost rounded-none font-black text-[8px] tracking-widest uppercase"
+                                        className="btn btn-ghost h-8 rounded-none font-black text-[10px] tracking-widest uppercase px-4 hover:bg-base-200"
                                     >
                                         {copiedRaw ? 'OK' : 'COPY'}
                                     </button>
                                 </div>
-                                <div className="p-3 bg-base-100/40 backdrop-blur-xl text-[9px] font-mono text-base-content/30 break-words leading-relaxed max-h-32 overflow-y-auto custom-scrollbar">
+                                <div className="p-3 bg-transparent text-[9px] font-mono text-base-content/30 break-words leading-relaxed max-h-32 overflow-y-auto custom-scrollbar">
                                     {metadataResults.raw || 'EMPTY STREAM.'}
                                 </div>
                             </section>

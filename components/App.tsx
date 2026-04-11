@@ -1,5 +1,5 @@
 
-import React, { useState, useEffect, useCallback, useRef, useLayoutEffect } from 'react';
+import React, { useState, useEffect, useCallback, useRef, useLayoutEffect, useMemo } from 'react';
 import { gsap } from 'gsap';
 import { useSettings } from '../contexts/SettingsContext';
 import { useAuth } from '../contexts/AuthContext';
@@ -12,7 +12,6 @@ import { BusyProvider } from '../contexts/BusyContext';
 import type { ActiveTab, Idea, ActiveSettingsTab } from '../types';
 
 // Layout & Global Components
-import Sidebar from './Sidebar';
 import Header from './Header';
 import Welcome from './Welcome';
 import CustomCursor from './CustomCursor';
@@ -21,6 +20,7 @@ import ClippingPanel from './ClippingPanel';
 import FeedbackModal from './FeedbackModal';
 import Footer from './Footer';
 import IdleOverlay from './IdleOverlay'; 
+import LlmStatusSwitcher from './LlmStatusSwitcher';
 
 // Page components
 import Dashboard from './Dashboard';
@@ -156,6 +156,293 @@ const InitialLoader: React.FC<{ status: string; progress: number | null }> = ({ 
 
 };
 
+import { motion } from 'framer-motion';
+import RollingText from './RollingText';
+import TimedScrambledText from './TimedScrambledText';
+import ThemeSwitcher from './ThemeSwitcher';
+
+const Logo: React.FC<{ onNavigate: (tab: ActiveTab) => void }> = ({ onNavigate }) => {
+    const [scrambleTrigger, setScrambleTrigger] = useState(0);
+
+    return (
+        <button 
+            onClick={() => {
+                audioService.playClick();
+                onNavigate('dashboard');
+            }}
+            onMouseEnter={() => {
+                audioService.playHover();
+                setScrambleTrigger(prev => prev + 1);
+            }}
+            className="flex items-center gap-2 group pointer-events-auto"
+        >
+            <h1 className="text-3xl font-black tracking-tighter text-base-content uppercase flex items-center font-logo">
+                <span className="font-black">
+                    <TimedScrambledText text="Kollektiv" intervalMs={300000} trigger={scrambleTrigger} />
+                </span>
+                <span className="text-primary italic animate-pulse drop-shadow-[0_0_10px_oklch(var(--p))] transition-all inline-block ml-0.5 font-black">.</span>
+            </h1>
+        </button>
+    );
+};
+
+const DigitalOscillator = ({ state = 'idle', theme = 'light' }: { state: string, theme?: 'light' | 'dark' }) => {
+    const canvasRef = useRef<HTMLCanvasElement>(null);
+    const animationRef = useRef<number>(0);
+    const phaseRef = useRef<number>(0);
+
+    useEffect(() => {
+        const canvas = canvasRef.current;
+        if (!canvas) return;
+        const ctx = canvas.getContext('2d');
+        if (!ctx) return;
+
+        const draw = () => {
+            const w = canvas.width;
+            const h = canvas.height;
+            const centerY = h / 2;
+
+            ctx.clearRect(0, 0, w, h);
+
+            const color = '#ffffff';
+
+            phaseRef.current += 0.05;
+            const p = phaseRef.current;
+
+            const layers = [
+                { amp: 0.2, freq: 0.05, speed: 1.0, opacity: state === 'idle' ? 0.3 : 0.1 },
+                { amp: 0.4, freq: 0.08, speed: 1.5, opacity: state === 'idle' ? 0.5 : 0.3 },
+                { amp: 0.6, freq: 0.12, speed: 2.0, opacity: state === 'idle' ? 1.0 : 0.8 }
+            ];
+
+            layers.forEach((layer, i) => {
+                ctx.beginPath();
+                ctx.strokeStyle = color;
+                ctx.lineWidth = i === 2 ? 1.5 : 1;
+                ctx.globalAlpha = layer.opacity;
+
+                if (state === 'error') {
+                    ctx.strokeStyle = 'red';
+                    ctx.globalAlpha = Math.random() > 0.8 ? 0.8 : 0.2;
+                }
+
+                for (let x = 0; x < w; x++) {
+                    let y = centerY;
+                    if (state === 'playing') {
+                        const noise = Math.sin(p * layer.speed + x * layer.freq) *
+                            Math.cos(p * 0.5 + x * 0.02);
+                        const spikes = Math.random() > 0.98 ? (Math.random() - 0.5) * 20 : 0;
+                        y += (noise * (h * 0.4) * layer.amp) + spikes;
+                    } else if (state === 'syncing') {
+                        y += (Math.random() - 0.5) * (h * 0.8);
+                    } else if (state === 'idle') {
+                        // Flat line when idle
+                        y = centerY;
+                    } else if (state === 'error') {
+                        y += (Math.random() - 0.5) * 2;
+                    }
+
+                    if (x === 0) ctx.moveTo(x, y);
+                    else ctx.lineTo(x, y);
+                }
+                ctx.stroke();
+            });
+
+            animationRef.current = requestAnimationFrame(draw);
+        };
+
+        draw();
+        return () => cancelAnimationFrame(animationRef.current);
+    }, [state, theme]);
+
+    return (
+        <canvas
+            ref={canvasRef}
+            width={120}
+            height={40}
+            className="w-8 h-3 opacity-60"
+        />
+    );
+};
+
+const HUDNavItem: React.FC<{
+  children: string;
+  onClick?: (e: React.MouseEvent) => void;
+  onHover?: () => void;
+  title?: string;
+  badge?: number;
+}> = ({ children, onClick, onHover, title, badge }) => {
+  return (
+    <motion.button
+      onClick={onClick}
+      onMouseEnter={() => {
+          audioService.playHover();
+          onHover?.();
+      }}
+      initial="initial"
+      whileHover="hover"
+      className="group relative px-3 py-1 text-[10px] font-black tracking-[0.4em] uppercase text-base-content/60 hover:text-primary transition-colors duration-300 pointer-events-auto"
+      title={title}
+    >
+      <RollingText 
+        text={children} 
+        hoverClassName="text-primary"
+      />
+      
+      {badge !== undefined && badge > 0 && (
+        <span className="absolute top-0 right-0 flex h-2 w-2">
+          <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-primary opacity-75"></span>
+          <span className="relative inline-flex rounded-full h-2 w-2 bg-primary"></span>
+        </span>
+      )}
+    </motion.button>
+  );
+};
+
+interface PageFrameProps {
+    audioEnabled: boolean;
+    onAudioToggle: () => void;
+    playerState: 'idle' | 'syncing' | 'playing' | 'error';
+    onMusicToggle: () => void;
+    themeMode: 'light' | 'dark';
+    onNavigate: (tab: ActiveTab) => void;
+    onAboutClick: () => void;
+    onToggleClippingPanel: () => void;
+    onStandbyClick: (e: React.MouseEvent) => void;
+    clippedIdeasCount: number;
+}
+
+const PageFrame: React.FC<PageFrameProps> = ({ 
+    audioEnabled, 
+    onAudioToggle, 
+    playerState, 
+    onMusicToggle, 
+    themeMode,
+    onNavigate,
+    onAboutClick,
+    onToggleClippingPanel,
+    onStandbyClick,
+    clippedIdeasCount
+}) => {
+    return (
+        <div className="fixed inset-0 z-[1000] pointer-events-none p-4 md:p-10">
+            <div className="w-full h-full border border-base-content/5 relative">
+                {/* Corner Accents */}
+                <div className="absolute -top-[1px] -left-[1px] w-4 h-4 border-t border-l border-primary/20" />
+                <div className="absolute -top-[1px] -right-[1px] w-4 h-4 border-t border-r border-primary/20" />
+                <div className="absolute -bottom-[1px] -left-[1px] w-4 h-4 border-b border-l border-primary/20" />
+                <div className="absolute -bottom-[1px] -right-[1px] w-4 h-4 border-b border-r border-primary/20" />
+                
+                {/* Technical Labels - Top (Relocated Header Menus) */}
+                <div className="absolute top-0 left-12 -translate-y-1/2 flex gap-1 items-center pointer-events-auto">
+                    <HUDNavItem
+                        onClick={() => {
+                            audioService.playClick();
+                            onNavigate('dashboard');
+                        }}
+                    >
+                        HOME
+                    </HUDNavItem>
+                    <div className="w-px h-3 bg-base-content/10" />
+                    <HUDNavItem
+                        onClick={() => {
+                            audioService.playClick();
+                            onAboutClick();
+                        }}
+                    >
+                        ABOUT
+                    </HUDNavItem>
+                    <div className="w-px h-3 bg-base-content/10" />
+                    <div className="flex items-center">
+                        <ThemeSwitcher compact />
+                    </div>
+                </div>
+
+                {/* Center Logo */}
+                <div className="absolute top-0 left-1/2 -translate-x-1/2 -translate-y-1/2 flex items-center pointer-events-auto">
+                    <Logo onNavigate={onNavigate} />
+                </div>
+
+                <div className="absolute top-0 right-12 -translate-y-1/2 flex gap-1 items-center pointer-events-auto">
+                    <HUDNavItem
+                        onClick={() => {
+                            audioService.playClick();
+                            onToggleClippingPanel();
+                        }}
+                        badge={clippedIdeasCount}
+                    >
+                        CLIPBOARD
+                    </HUDNavItem>
+                    <div className="w-px h-3 bg-base-content/10" />
+                    <HUDNavItem
+                        onClick={() => {
+                            audioService.playClick();
+                            onNavigate('settings');
+                        }}
+                    >
+                        SETTINGS
+                    </HUDNavItem>
+                    <div className="w-px h-3 bg-base-content/10" />
+                    <HUDNavItem
+                        onClick={(e) => {
+                            e.stopPropagation();
+                            audioService.playClick();
+                            onStandbyClick(e);
+                        }}
+                    >
+                        STANDBY
+                    </HUDNavItem>
+                </div>
+                
+                {/* Technical Labels - Bottom (Relocated Controls) */}
+                <div className="absolute bottom-0 left-12 translate-y-1/2 flex gap-3 items-center pointer-events-auto">
+                    <span className="text-[8px] font-mono font-black uppercase tracking-[0.5em] text-primary/60">ENGINE</span>
+                    <div className="w-px h-3 bg-base-content/10 mx-1" />
+                    <div className="min-w-[120px] flex items-center">
+                        <LlmStatusSwitcher />
+                    </div>
+                </div>
+
+                <div className="absolute bottom-0 right-12 translate-y-1/2 flex items-center gap-4 pointer-events-auto">
+                    <button
+                        onClick={onAudioToggle}
+                        className="flex items-center gap-2 text-[8px] font-mono uppercase tracking-[0.5em] transition-all"
+                    >
+                        <span className="text-primary/60 font-black">SFX</span>
+                        <span className={`font-bold ${audioEnabled ? 'text-primary' : 'text-base-content/20'}`}>{audioEnabled ? 'ON' : 'OFF'}</span>
+                    </button>
+                    <div className="w-px h-3 bg-base-content/10" />
+                    <button
+                        onClick={onMusicToggle}
+                        className="flex items-center gap-2 text-[8px] font-mono uppercase tracking-[0.5em] transition-all"
+                    >
+                        <span className="text-primary/60 font-black">MUSIC</span>
+                        <span className={`font-bold ${playerState === 'playing' ? 'text-primary' : 'text-base-content/20'}`}>
+                            {playerState === 'playing' ? 'ON' : playerState === 'syncing' ? 'SYNC' : 'OFF'}
+                        </span>
+                        <div className="ml-4">
+                            <DigitalOscillator state={playerState} theme={themeMode} />
+                        </div>
+                    </button>
+                </div>
+
+                {/* Side Markers */}
+                <div className="absolute top-1/2 left-0 -translate-x-1/2 -translate-y-1/2 flex flex-col gap-2">
+                    <div className="w-[1px] h-4 bg-primary/10" />
+                    <div className="w-[1px] h-[1px] bg-primary/20" />
+                    <div className="w-[1px] h-4 bg-primary/10" />
+                </div>
+
+                <div className="absolute top-1/2 right-0 translate-x-1/2 -translate-y-1/2 flex flex-col gap-2">
+                    <div className="w-[1px] h-4 bg-primary/10" />
+                    <div className="w-[1px] h-[1px] bg-primary/20" />
+                    <div className="w-[1px] h-4 bg-primary/10" />
+                </div>
+            </div>
+        </div>
+    );
+};
+
 const App: React.FC = () => {
     return (
         <ErrorBoundary>
@@ -187,8 +474,6 @@ const AppContent: React.FC = () => {
     const auth = useAuth();
 
     const [activeTab, setActiveTab] = useLocalStorage<ActiveTab>('activeTab', 'dashboard');
-    const [isPinned, setIsPinned] = useLocalStorage('sidebarPinned', true);
-    const [isSidebarOpen, setIsSidebarOpen] = useState(isPinned);
     const [isAboutModalOpen, setIsAboutModalOpen] = useState(false);
     const [isClippingPanelOpen, setIsClippingPanelOpen] = useState(false);
     const [collapsedPanels, setCollapsedPanels] = useLocalStorage<Record<string, boolean>>('collapsedPanels', {});
@@ -227,7 +512,11 @@ const AppContent: React.FC = () => {
     }, []);
 
     useEffect(() => {
-        const handleUserActivity = () => resetIdleTimer(true);
+        const handleUserActivity = () => {
+            resetIdleTimer(true);
+            // One-time audio unlock
+            audioService.resume();
+        };
         const handleVisibilityChange = () => {
             if (document.visibilityState === 'visible') {
                 resetIdleTimer(isIdleRef.current);
@@ -423,22 +712,15 @@ const AppContent: React.FC = () => {
     }, [setActiveTab]);
 
     const handleNavigate = (tab: ActiveTab) => {
-        if (!isPinned) setIsSidebarOpen(false);
         if (tab === activeTab) return;
         runScopedTransition(tab);
     };
 
     useEffect(() => {
-        const isLg = window.innerWidth >= 1024;
-        if (isPinned && isLg) setIsSidebarOpen(true);
-        else if (!isLg) setIsSidebarOpen(false); 
-    }, [isPinned]);
-
-    useEffect(() => {
-        const currentTheme = settings.activeThemeMode === 'light' ? settings.lightTheme : settings.darkTheme;
+        const currentTheme = settings.darkTheme;
         document.documentElement.setAttribute('data-theme', currentTheme);
         document.documentElement.style.fontSize = `${settings.fontSize}px`;
-    }, [settings.activeThemeMode, settings.lightTheme, settings.darkTheme, settings.fontSize]);
+    }, [settings.darkTheme, settings.fontSize]);
 
     const { features } = settings;
     useEffect(() => {
@@ -458,13 +740,6 @@ const AppContent: React.FC = () => {
         if (!isTabAllowed) setActiveTab('dashboard');
     }, [activeTab, features, setActiveTab]);
 
-    const handleMenuClick = () => {
-        audioService.playClick();
-        const isLg = window.innerWidth >= 1024;
-        if (isLg && isPinned) setIsPinned(false);
-        setIsSidebarOpen(p => !p);
-    };
-    
     const showGlobalFeedback = useCallback((message: string, isError = false) => {
         setGlobalFeedback({ message, type: isError ? 'error' : 'success' });
     }, []);
@@ -518,10 +793,10 @@ const AppContent: React.FC = () => {
             case 'prompts': return <PromptsPage onClipIdea={handleClipIdea} initialState={promptsPageState} onStateHandled={() => setPromptsPageState(null)} showGlobalFeedback={showGlobalFeedback} />;
             case 'storyboard': return <StoryboardPage showGlobalFeedback={showGlobalFeedback} />;
             case 'prompt': return <SavedPrompts {...categoryPanelProps} onSendToEnhancer={(prompt) => handleSendToPromptsPage({ prompt, view: 'enhancer' })} showGlobalFeedback={showGlobalFeedback} onClipIdea={handleClipIdea} />;
-            case 'gallery': return <ImageGallery {...categoryPanelProps} isSidebarPinned={isPinned && isSidebarOpen} showGlobalFeedback={showGlobalFeedback} />;
-            case 'cheatsheet': return <Cheatsheet {...categoryPanelProps} isSidebarPinned={isPinned && isSidebarOpen} />;
-            case 'artstyles': return <ArtstyleCheatsheet {...categoryPanelProps} isSidebarPinned={isPinned && isSidebarOpen} onSendToPromptsPage={(state) => handleSendToPromptsPage({ ...state, view: 'enhancer' })} />;
-            case 'artists': return <ArtistCheatsheet {...categoryPanelProps} isSidebarPinned={isPinned && isSidebarOpen} onSendToPromptsPage={(state) => handleSendToPromptsPage({ ...state, view: 'enhancer' })} />;
+            case 'gallery': return <ImageGallery {...categoryPanelProps} isSidebarPinned={false} showGlobalFeedback={showGlobalFeedback} />;
+            case 'cheatsheet': return <Cheatsheet {...categoryPanelProps} isSidebarPinned={false} />;
+            case 'artstyles': return <ArtstyleCheatsheet {...categoryPanelProps} isSidebarPinned={false} onSendToPromptsPage={(state) => handleSendToPromptsPage({ ...state, view: 'enhancer' })} />;
+            case 'artists': return <ArtistCheatsheet {...categoryPanelProps} isSidebarPinned={false} onSendToPromptsPage={(state) => handleSendToPromptsPage({ ...state, view: 'enhancer' })} />;
             case 'settings': return <SetupPage activeSettingsTab={activeSettingsTab} setActiveSettingsTab={setActiveSettingsTab} activeSubTab={activeSettingsSubTab} setActiveSubTab={setActiveSettingsSubTabSetter} showGlobalFeedback={showGlobalFeedback} />;
             case 'composer': return <ComposerPage showGlobalFeedback={showGlobalFeedback} />;
             case 'image_compare': return <ImageCompare />;
@@ -532,6 +807,56 @@ const AppContent: React.FC = () => {
         }
     };
     
+    const [isUplinkActive, setIsUplinkActive] = useState(false);
+    const [playerState, setPlayerState] = useState<'idle' | 'syncing' | 'playing' | 'error'>('idle');
+    const [audioEnabled, setAudioEnabled] = useState(audioService.getIsEnabled());
+
+    const extractVideoId = useCallback((url: string) => {
+        if (!url) return null;
+        const regExp = /^.*(?:(?:youtu\.be\/|v\/|vi\/|u\/\w\/|embed\/|shorts\/)|(?:(?:watch)?\?v(?:i)?=|\&v(?:i)?=))([^#\&\?]*).*/;
+        const match = url.match(regExp);
+        return (match && match[1].length === 11) ? match[1] : null;
+    }, []);
+
+    const videoId = useMemo(() => extractVideoId(settings.musicYoutubeUrl), [settings.musicYoutubeUrl, extractVideoId]);
+
+    const handleMusicToggle = useCallback(() => {
+        if (!videoId) {
+            setPlayerState('error');
+            return;
+        }
+
+        audioService.playClick();
+
+        if (isUplinkActive) {
+            setIsUplinkActive(false);
+            setPlayerState('idle');
+            audioService.stopAmbient();
+        } else {
+            setPlayerState('syncing');
+            setIsUplinkActive(true);
+            setTimeout(() => {
+                setPlayerState('playing');
+                if (audioEnabled) {
+                    audioService.startAmbient(0.3);
+                }
+            }, 2500);
+        }
+    }, [videoId, isUplinkActive, audioEnabled]);
+
+    const handleAudioToggle = useCallback(() => {
+        audioService.playClick();
+        const newState = audioService.toggle();
+        setAudioEnabled(newState);
+    }, []);
+
+    const handleStandbyClick = (e: React.MouseEvent) => {
+        e.stopPropagation();
+        audioService.playClick();
+        setIsIdle(true);
+        isIdleRef.current = true;
+    };
+
     if (isLoading) return <InitialLoader status={initStatus} progress={initProgress} />;
     if (showWelcome) return <Welcome onSetupComplete={initializeApp} />;
 
@@ -614,36 +939,13 @@ const AppContent: React.FC = () => {
 
                     <div 
                         ref={appWrapperRef}
-                        className="flex-1 flex flex-col overflow-hidden relative z-0 bg-transparent rounded-none"
+                        className="flex-1 flex flex-col overflow-hidden relative z-0 bg-transparent rounded-none p-6 md:p-14"
                     >
                         <Header
-                            onMenuClick={handleMenuClick}
-                            onStandbyClick={() => { setIsIdle(true); isIdleRef.current = true; }}
-                            clippedIdeasCount={clippedIdeas.length}
-                            onToggleClippingPanel={() => {
-                                audioService.playClick();
-                                setIsClippingPanelOpen(p => !p);
-                            }}
                             onNavigate={handleNavigate}
-                            onAboutClick={() => {
-                                audioService.playModalOpen();
-                                setIsAboutModalOpen(true);
-                            }}
                         />
 
-                        <div className="flex-1 flex overflow-hidden relative p-4 gap-4">
-                            <Sidebar
-                                activeTab={activeTab}
-                                onNavigate={handleNavigate}
-                                isSidebarOpen={isSidebarOpen}
-                                isPinned={isPinned}
-                                setIsPinned={(val) => {
-                                    audioService.playClick();
-                                    setIsPinned(val);
-                                }}
-                                onClose={() => setIsSidebarOpen(false)}
-                            />
-                            
+                        <div className="flex-1 flex overflow-hidden relative p-4">
                             <main className="flex-grow min-w-0 relative overflow-hidden bg-transparent rounded-xl border border-base-300/20 z-10">
                                 <div 
                                     ref={mainGridRef} 
@@ -666,22 +968,22 @@ const AppContent: React.FC = () => {
                         </div>
                         
                         <Footer />
-
-                        <ClippingPanel 
-                            isOpen={isClippingPanelOpen}
-                            onClose={() => setIsClippingPanelOpen(false)}
-                            clippedIdeas={clippedIdeas}
-                            onRemoveIdea={handleRemoveIdea}
-                            onClearAll={handleClearAllIdeas}
-                            onInsertIdea={handleInsertIdea}
-                            onRefineIdea={handleRefineIdea}
-                            onAddIdea={handleClipIdea}
-                            onSaveToLibrary={handleSaveClippedIdea}
-                        />
                     </div>
                 </>
             )}
             
+            <ClippingPanel 
+                isOpen={isClippingPanelOpen}
+                onClose={() => setIsClippingPanelOpen(false)}
+                clippedIdeas={clippedIdeas}
+                onRemoveIdea={handleRemoveIdea}
+                onClearAll={handleClearAllIdeas}
+                onInsertIdea={handleInsertIdea}
+                onRefineIdea={handleRefineIdea}
+                onAddIdea={handleClipIdea}
+                onSaveToLibrary={handleSaveClippedIdea}
+            />
+
             <AboutModal 
                 isOpen={isAboutModalOpen} 
                 onClose={() => {
@@ -699,6 +1001,33 @@ const AppContent: React.FC = () => {
                 />
             )}
             <CustomCursor />
+            <PageFrame 
+                audioEnabled={audioEnabled}
+                onAudioToggle={handleAudioToggle}
+                playerState={playerState}
+                onMusicToggle={handleMusicToggle}
+                themeMode={settings.activeThemeMode}
+                onNavigate={handleNavigate}
+                onAboutClick={() => setIsAboutModalOpen(true)}
+                onToggleClippingPanel={() => setIsClippingPanelOpen(!isClippingPanelOpen)}
+                onStandbyClick={handleStandbyClick}
+                clippedIdeasCount={clippedIdeas.length}
+            />
+            
+            {/* Hidden Audio Engine */}
+            <div className="fixed top-0 left-0 w-1 h-1 pointer-events-none opacity-[0.001] z-[-1] overflow-hidden">
+                {isUplinkActive && videoId && (
+                    <iframe
+                        src={`https://www.youtube-nocookie.com/embed/${videoId}?autoplay=1&mute=0&controls=0&modestbranding=1&loop=1&playlist=${videoId}`}
+                        title="Hidden Audio Engine"
+                        frameBorder="0"
+                        allow="autoplay; encrypted-media"
+                        /* @ts-ignore */
+                        credentialless="true"
+                        referrerPolicy="no-referrer-when-downgrade"
+                    />
+                )}
+            </div>
         </div>
     );
 };

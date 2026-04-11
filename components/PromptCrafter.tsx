@@ -3,7 +3,7 @@ import JSZip from 'jszip';
 import { crafterService } from '../services/crafterService';
 import type { WildcardFile, CrafterData } from '../types';
 import LoadingSpinner from './LoadingSpinner';
-import { SparklesIcon, CheckIcon, CloseIcon, DeleteIcon } from './icons';
+import { SparklesIcon, CloseIcon } from './icons';
 import { fileSystemManager } from '../utils/fileUtils';
 import { PromptAnatomyPanel } from './PromptAnatomyPanel';
 import { useSettings } from '../contexts/SettingsContext';
@@ -294,7 +294,7 @@ const PromptCrafter = ({ onClip, onSendToEnhancer, onSavePresetSuccess, promptTo
     if (error) return <div className="p-4 text-error">{error}</div>;
 
     return (
-        <div className="grid grid-cols-1 lg:grid-cols-12 overflow-hidden h-full p-4 gap-4 bg-base-100/40 backdrop-blur-xl">
+        <div className="grid grid-cols-1 lg:grid-cols-12 overflow-hidden h-full p-4 gap-4">
             <aside className="lg:col-span-3 flex flex-col overflow-hidden">
                 {header}
                 <header className="p-6 h-16 flex items-center">
@@ -360,7 +360,7 @@ const PromptCrafter = ({ onClip, onSendToEnhancer, onSavePresetSuccess, promptTo
                         )}
                     </div>
                     {filteredTemplates.length > 0 && (
-                        <ul tabIndex={0} className="dropdown-content z-[100] menu p-1 bg-base-100/40 backdrop-blur-xl rounded-none w-full max-h-60 overflow-y-auto">
+                        <ul tabIndex={0} className="dropdown-content z-[100] menu p-1 bg-transparent rounded-none w-full max-h-60 overflow-y-auto">
                             {filteredTemplates.map(t => (
                                 <li key={t.name}>
                                     <a 
@@ -378,20 +378,18 @@ const PromptCrafter = ({ onClip, onSendToEnhancer, onSavePresetSuccess, promptTo
                     )}
                   </div>
                   <button 
-                      className="btn btn-ghost h-full rounded-none border-none px-4 text-primary disabled:opacity-20 transition-all" 
+                      className="btn btn-ghost h-full rounded-none border-none flex-1 font-black text-[10px] tracking-widest text-primary disabled:opacity-20 transition-all px-1 truncate" 
                       onClick={() => handleUseTemplate()} 
                       disabled={!selectedTemplate}
-                      title="Apply Template"
                   >
-                      <CheckIcon className="w-4 h-4"/>
+                      APPLY
                   </button>
                   <button 
-                      className="btn btn-ghost h-full rounded-none border-none px-4 text-error/60 disabled:opacity-20 transition-all" 
+                      className="btn btn-ghost h-full rounded-none border-none flex-1 font-black text-[10px] tracking-widest text-error/60 disabled:opacity-20 transition-all px-1 truncate" 
                       onClick={handleDeleteTemplateClick} 
                       disabled={!selectedTemplate}
-                      title="Delete Template"
                   >
-                      <DeleteIcon className="w-4 h-4"/>
+                      DELETE
                   </button>
                 </div>
 
@@ -410,19 +408,19 @@ const PromptCrafter = ({ onClip, onSendToEnhancer, onSavePresetSuccess, promptTo
                     <div className="h-14 flex items-stretch flex-shrink-0">
                         <button 
                             onClick={() => setPromptText('')} 
-                            className="btn btn-ghost h-full rounded-none border-none flex-1 font-black text-[10px] tracking-widest text-error/40 hover:text-error uppercase"
+                            className="btn btn-ghost h-full rounded-none border-none flex-1 font-black text-[10px] tracking-widest text-error/40 hover:text-error uppercase px-1 truncate"
                         >
                             CLEAR
                         </button>
                         <button 
                             onClick={handleSaveTemplateClick} 
-                            className="btn btn-ghost h-full rounded-none border-none flex-1 font-black text-[10px] tracking-widest uppercase hover:bg-base-200"
+                            className="btn btn-ghost h-full rounded-none border-none flex-1 font-black text-[10px] tracking-widest uppercase hover:bg-base-200 px-1 truncate"
                         >
                             SAVE
                         </button>
                         <button 
                             onClick={handleGenerate} 
-                            className="btn btn-primary h-full rounded-none border-none flex-1 font-black text-[10px] tracking-widest uppercase shadow-none"
+                            className="btn btn-primary h-full rounded-none border-none flex-1 font-black text-[10px] tracking-widest uppercase shadow-none px-1 truncate"
                         >
                             GENERATE
                         </button>
@@ -430,7 +428,7 @@ const PromptCrafter = ({ onClip, onSendToEnhancer, onSavePresetSuccess, promptTo
 
                     <div className="flex-grow p-6 overflow-y-auto relative">
                         {aiAction && (
-                            <div className="absolute inset-0 bg-base-100/40 backdrop-blur-sm flex flex-col items-center justify-center z-10">
+                            <div className="absolute inset-0 bg-transparent flex flex-col items-center justify-center z-10">
                                 <LoadingSpinner />
                                 <p className="text-[10px] font-black uppercase tracking-[0.4em] text-primary animate-pulse -mt-4">{aiAction}</p>
                             </div>

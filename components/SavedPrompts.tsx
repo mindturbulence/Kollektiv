@@ -219,7 +219,7 @@ const SavedPrompts: React.FC<SavedPromptsProps> = ({
 
   return (
     <section className="flex flex-row h-full bg-transparent w-full relative">
-      <aside className={`relative z-20 flex-shrink-0 bg-base-100/40 backdrop-blur-xl transition-all duration-300 ease-in-out flex flex-col ${isCategoryPanelCollapsed ? 'w-0' : 'w-80'}`}>
+      <aside className={`relative z-20 flex-shrink-0 bg-transparent transition-all duration-300 ease-in-out flex flex-col ${isCategoryPanelCollapsed ? 'w-0' : 'w-80'}`}>
         <CategoryPanelToggle isCollapsed={isCategoryPanelCollapsed} onToggle={onToggleCategoryPanel} position="right" />
         <div className={`flex flex-col h-full overflow-hidden transition-opacity duration-200 ${isCategoryPanelCollapsed ? 'opacity-0 invisible' : 'opacity-100 visible'}`}>
           <div className="flex-shrink-0 h-16 flex items-center px-4">
@@ -269,7 +269,7 @@ const SavedPrompts: React.FC<SavedPromptsProps> = ({
 
         <div className={`flex flex-col h-full overflow-hidden transition-all duration-300 ${detailViewPromptId ? 'blur-sm pointer-events-none' : ''}`}>
             <div className="flex-grow overflow-y-auto overflow-x-hidden custom-scrollbar bg-transparent">
-                <header className="bg-base-100/40 backdrop-blur-xl">
+                <header className="bg-transparent">
                     <div className="p-6 md:p-10">
                         <div className="flex flex-col md:flex-row md:items-end justify-between gap-6">
                             <div className="space-y-2">
@@ -318,7 +318,7 @@ const SavedPrompts: React.FC<SavedPromptsProps> = ({
                 </div>
 
                 {sortedAndFilteredPrompts.length > 0 ? (
-                    <div ref={gridRef} className="flex justify-center gap-px min-h-full w-full bg-base-100/40 backdrop-blur-xl">
+                    <div ref={gridRef} className="flex justify-center gap-px min-h-full w-full bg-transparent">
                         {masonryColumns.map((col, colIdx) => (
                             <div key={colIdx} className="flex-1 max-w-[450px] min-w-0 flex flex-col gap-px">
                                 {col.map(p => (

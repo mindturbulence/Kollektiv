@@ -4,7 +4,7 @@ import type { GalleryItem, GalleryCategory } from '../types';
 import { loadGalleryItems, addItemToGallery, updateItemInGallery, deleteItemFromGallery, loadPinnedItemIds, savePinnedItemIds, loadCategories } from '../utils/galleryStorage';
 import ImageCard from './ImageCard';
 import TreeView, { TreeViewItem } from './TreeView';
-import { SearchIcon, CloseIcon } from './icons';
+import { SearchIcon, CloseIcon, FolderClosedIcon } from './icons';
 import CategoryPanelToggle from './CategoryPanelToggle';
 import ItemDetailView from './ItemDetailView';
 import ConfirmationModal from './ConfirmationModal';
@@ -288,31 +288,44 @@ const ImageGallery: React.FC<ImageGalleryProps> = ({ isCategoryPanelCollapsed, o
     return categories.find(c => c.id === selectedCategoryId)?.name || 'Image Library';
   }, [selectedCategoryId, categories]);
 
+  const parentCategoryName = useMemo(() => {
+    if (selectedCategoryId === 'all' || selectedCategoryId === 'uncategorized') return 'Media Gallery';
+    const currentCat = categories.find(c => c.id === selectedCategoryId);
+    if (!currentCat || !currentCat.parentId) return 'Media Gallery';
+    return categories.find(c => c.id === currentCat.parentId)?.name || 'Media Gallery';
+  }, [selectedCategoryId, categories]);
+
   if (isLoading && items.length === 0) {
     return <div className="h-full w-full flex items-center justify-center bg-transparent"><LoadingSpinner /></div>;
   }
 
   return (
     <section className="flex flex-row h-full bg-transparent relative">
-      <aside className={`relative z-20 flex-shrink-0 bg-base-100/40 backdrop-blur-xl transition-all duration-300 ease-in-out flex flex-col ${isCategoryPanelCollapsed ? 'w-0' : 'w-96'}`}>
+      <aside className={`relative z-20 flex-shrink-0 bg-transparent transition-all duration-300 ease-in-out flex flex-col ${isCategoryPanelCollapsed ? 'w-0' : 'w-96'}`}>
         <CategoryPanelToggle isCollapsed={isCategoryPanelCollapsed} onToggle={onToggleCategoryPanel} position="right" />
         <div className={`flex flex-col h-full overflow-hidden transition-opacity duration-200 ${isCategoryPanelCollapsed ? 'opacity-0 invisible' : 'opacity-100 visible'}`}>
-          <div className="flex-shrink-0 h-14">
+          <div className="flex-shrink-0 h-16 flex items-center px-4">
+             <div className="flex items-center gap-3">
+                <FolderClosedIcon className="w-5 h-5 text-primary/40" />
+                <span className="text-[10px] font-black uppercase tracking-[0.3em]">Folders</span>
+             </div>
+          </div>
+          <div className="flex-shrink-0 h-12">
             <div className="flex items-center h-full relative">
-              <SearchIcon className="absolute left-6 w-4 h-4 opacity-20 pointer-events-none" />
+              <SearchIcon className="absolute left-4 w-3.5 h-3.5 opacity-20 pointer-events-none" />
               <input 
                 type="text" 
                 value={categorySearchQuery}
                 onChange={(e) => setCategorySearchQuery(e.target.value)}
                 placeholder="SEARCH FOLDERS..." 
-                className="w-full h-full bg-transparent border-none focus:outline-none focus:ring-0 pl-14 pr-12 font-bold uppercase tracking-tight text-[10px] placeholder:text-base-content/10"
+                className="w-full h-full bg-transparent border-none focus:outline-none focus:ring-0 pl-10 pr-10 font-bold uppercase tracking-tight text-[10px] placeholder:text-base-content/10"
               />
               {categorySearchQuery && (
                 <button 
                   onClick={() => setCategorySearchQuery('')}
-                  className="absolute right-4 btn btn-xs btn-ghost btn-circle opacity-40 hover:opacity-100 transition-opacity"
+                  className="absolute right-3 btn btn-xs btn-ghost btn-circle opacity-40 hover:opacity-100 transition-opacity"
                 >
-                  <CloseIcon className="w-3.5 h-3.5" />
+                  <CloseIcon className="w-3 h-3" />
                 </button>
               )}
             </div>
@@ -332,19 +345,24 @@ const ImageGallery: React.FC<ImageGalleryProps> = ({ isCategoryPanelCollapsed, o
 
         <div className={`flex flex-col h-full overflow-hidden transition-all duration-300 ${detailViewItemId ? 'blur-sm pointer-events-none' : ''}`}>
             <div ref={scrollerRef} className="flex-grow overflow-y-auto scroll-smooth custom-scrollbar">
-                <section className="p-10 bg-base-100/40 backdrop-blur-xl">
-                    <div className="w-full flex flex-col gap-1">
-                        <div className="flex flex-col md:flex-row md:items-stretch justify-between gap-6">
-                            <h1 className="text-2xl lg:text-3xl font-black tracking-tighter text-base-content leading-none flex items-center uppercase">{currentCategoryName}<span className="text-primary">.</span></h1>
-                            <div className="flex px-6 py-2 self-start md:self-auto min-h-full">
-                                <div className="flex flex-col px-6 justify-center">
-                                    <span className="text-2xl font-black tracking-tighter leading-none">{sortedAndFilteredItems.length}</span>
-                                    <span className="text-[8px] uppercase font-black text-base-content/30 tracking-[0.2em] mt-0.5">Images</span>
+                <header className="bg-transparent">
+                    <div className="p-6 md:p-10">
+                        <div className="flex flex-col md:flex-row md:items-end justify-between gap-6">
+                            <div className="space-y-2">
+                                <span className="text-[10px] font-black uppercase tracking-[0.6em] text-primary/60 block">{parentCategoryName}</span>
+                                <h1 className="text-4xl lg:text-5xl font-black tracking-tighter text-base-content leading-none uppercase">
+                                    {currentCategoryName}<span className="text-primary">.</span>
+                                </h1>
+                            </div>
+                            <div className="flex">
+                                <div className="px-8 py-3 flex flex-col items-center justify-center">
+                                    <span className="text-3xl font-black tracking-tighter leading-none">{sortedAndFilteredItems.length}</span>
+                                    <span className="text-[8px] uppercase font-black text-base-content/30 tracking-[0.2em] mt-1">Images</span>
                                 </div>
                             </div>
                         </div>
                     </div>
-                </section>
+                </header>
 
                 <div className="sticky top-0 z-30 bg-base-100/40 backdrop-blur-xl h-14">
                     <div className="flex items-stretch h-full w-full">
@@ -394,7 +412,7 @@ const ImageGallery: React.FC<ImageGalleryProps> = ({ isCategoryPanelCollapsed, o
                 </div>
 
                 {sortedAndFilteredItems.length > 0 ? (
-                    <div key={`grid-${viewMode}-${columnCount}-${selectedCategoryId}`} ref={gridRef} className="flex gap-px elastic-grid-container bg-base-100/40 backdrop-blur-xl" style={{ willChange: 'transform' }}>
+                    <div key={`grid-${viewMode}-${columnCount}-${selectedCategoryId}`} ref={gridRef} className="flex gap-px elastic-grid-container bg-transparent" style={{ willChange: 'transform' }}>
                         {masonryColumns.map((col, colIdx) => (
                             <div key={`col-${colIdx}`} ref={el => { columnRefs.current[colIdx] = el; }} className="flex-1 flex flex-col gap-px" style={{ contain: 'layout paint' }}>
                                 {col.map(item => (

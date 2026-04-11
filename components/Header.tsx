@@ -1,147 +1,114 @@
 import React, { useState } from 'react';
 import type { ActiveTab } from '../types';
-import ThemeSwitcher from './ThemeSwitcher';
 import { audioService } from '../services/audioService';
-import TimedScrambledText from './TimedScrambledText';
+import { useSettings } from '../contexts/SettingsContext';
 
-import { motion } from 'framer-motion';
+import { motion, AnimatePresence } from 'framer-motion';
 import RollingText from './RollingText';
+import { 
+  SparklesIcon, PromptIcon, PhotoIcon, 
+  BookOpenIcon, PaletteIcon, UsersIcon,
+  LayoutDashboardIcon, ViewColumnsIcon, CropIcon, FilmIcon
+} from './icons';
 
 interface HeaderProps {
-  onMenuClick: () => void;
-  onStandbyClick: (e: React.MouseEvent) => void;
-  clippedIdeasCount: number;
-  onToggleClippingPanel: () => void;
   onNavigate: (tab: ActiveTab) => void;
-  onAboutClick: () => void;
 }
 
-const NavItem: React.FC<{
-  children: string;
-  onClick?: (e: React.MouseEvent) => void;
-  onHover?: () => void;
-  title?: string;
-  badge?: number;
-}> = ({ children, onClick, onHover, title, badge }) => {
+const DropdownMenu: React.FC<{
+  label: string;
+  items: { id: ActiveTab; label: string; icon: React.ReactNode; enabled?: boolean }[];
+  onNavigate: (tab: ActiveTab) => void;
+}> = ({ label, items, onNavigate }) => {
+  const [isOpen, setIsOpen] = useState(false);
+
   return (
-    <motion.button
-      onClick={onClick}
-      onMouseEnter={onHover}
-      initial="initial"
-      whileHover="hover"
-      className="group relative px-4 py-2 text-[10px] font-black tracking-[0.4em] uppercase text-base-content/60 hover:text-primary transition-colors duration-300"
-      title={title}
+    <div 
+      className="relative"
+      onMouseEnter={() => {
+        audioService.playHover();
+        setIsOpen(true);
+      }}
+      onMouseLeave={() => setIsOpen(false)}
     >
-      <RollingText 
-        text={children} 
-        hoverClassName="text-primary"
-      />
-      
-      {badge !== undefined && badge > 0 && (
-        <span className="absolute top-1 right-1 flex h-2 w-2">
-          <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-primary opacity-75"></span>
-          <span className="relative inline-flex rounded-full h-2 w-2 bg-primary"></span>
-        </span>
-      )}
-    </motion.button>
+      <motion.button 
+        initial="initial"
+        whileHover="hover"
+        className="flex items-center gap-2 px-4 py-2 text-[10px] font-black tracking-[0.4em] uppercase text-base-content/60 hover:text-primary transition-colors duration-300"
+      >
+        <RollingText text={label} hoverClassName="text-primary" />
+      </motion.button>
+
+      <AnimatePresence>
+        {isOpen && (
+          <motion.div
+            initial={{ opacity: 0, y: -10 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -10 }}
+            transition={{ 
+              duration: 0.4, 
+              ease: [0.23, 1, 0.32, 1] 
+            }}
+            className="absolute top-full left-0 mt-1 w-56 bg-base-100/40 backdrop-blur-xl shadow-2xl z-[100] p-2"
+          >
+            <div className="flex flex-col gap-1">
+              {items.filter(item => item.enabled !== false).map((item) => (
+                <button
+                  key={item.id}
+                  onMouseEnter={() => audioService.playHover()}
+                  onClick={() => {
+                    audioService.playClick();
+                    onNavigate(item.id);
+                    setIsOpen(false);
+                  }}
+                  className="flex items-center px-3 py-2 hover:bg-primary/10 text-base-content/70 hover:text-primary transition-all group text-left"
+                >
+                  <span className="text-[9px] font-black uppercase tracking-widest">
+                    {item.label}
+                  </span>
+                </button>
+              ))}
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+    </div>
   );
 };
 
-const Header: React.FC<HeaderProps> = ({ onMenuClick, onStandbyClick, clippedIdeasCount, onToggleClippingPanel, onNavigate, onAboutClick }) => {
-  const [scrambleTrigger, setScrambleTrigger] = useState(0);
+const Header: React.FC<HeaderProps> = ({ onNavigate }) => {
+  const { settings } = useSettings();
+  const { features } = settings;
+
+  const workspaceItems = [
+    { id: 'prompts' as ActiveTab, label: 'Prompt Builder', icon: <SparklesIcon className="w-4 h-4" /> },
+    { id: 'prompt' as ActiveTab, label: 'Prompt Library', icon: <PromptIcon className="w-4 h-4" />, enabled: features.isPromptLibraryEnabled },
+    { id: 'gallery' as ActiveTab, label: 'Image Library', icon: <PhotoIcon className="w-4 h-4" />, enabled: features.isGalleryEnabled },
+  ];
+
+  const guideItems = [
+    { id: 'cheatsheet' as ActiveTab, label: 'Guides', icon: <BookOpenIcon className="w-4 h-4" /> },
+    { id: 'artstyles' as ActiveTab, label: 'Art Styles', icon: <PaletteIcon className="w-4 h-4" /> },
+    { id: 'artists' as ActiveTab, label: 'Artists', icon: <UsersIcon className="w-4 h-4" /> },
+  ];
+
+  const utilityItems = [
+    { id: 'composer' as ActiveTab, label: 'Builder', icon: <LayoutDashboardIcon className="w-4 h-4" /> },
+    { id: 'image_compare' as ActiveTab, label: 'Compare', icon: <ViewColumnsIcon className="w-4 h-4" /> },
+    { id: 'color_palette_extractor' as ActiveTab, label: 'Palette', icon: <PaletteIcon className="w-4 h-4" /> },
+    { id: 'resizer' as ActiveTab, label: 'Resizer', icon: <CropIcon className="w-4 h-4" /> },
+    { id: 'video_to_frames' as ActiveTab, label: 'Video', icon: <FilmIcon className="w-4 h-4" /> },
+  ];
 
   return (
-    <header className="flex-shrink-0 flex items-center justify-between h-16 px-8 bg-transparent z-50 relative overflow-hidden">
-      {/* Technical Scanline Effect */}
-      <div className="absolute inset-0 pointer-events-none opacity-[0.02] bg-[linear-gradient(rgba(18,16,16,0)_50%,rgba(0,0,0,0.25)_50%),linear-gradient(90deg,rgba(255,0,0,0.06),rgba(0,255,0,0.02),rgba(0,0,255,0.06))] bg-[length:100%_2px,3px_100%]"></div>
-      
-      <div className="flex items-center gap-1 relative z-50 w-1/3">
-        <NavItem
-          onClick={() => {
-            audioService.playClick();
-            onMenuClick();
-          }}
-          onHover={() => audioService.playHover()}
-          title="Toggle navigation menu"
-        >
-          Menu
-        </NavItem>
-
-        <div className="w-[1px] h-4 bg-base-300/20 mx-2"></div>
-
-        <NavItem
-          onClick={() => {
-            audioService.playClick();
-            onAboutClick();
-          }}
-          onHover={() => audioService.playHover()}
-          title="About"
-        >
-          About
-        </NavItem>
-
-        <div className="w-[1px] h-4 bg-base-300/20 mx-2"></div>
-
-        <ThemeSwitcher />
-      </div>
-
-      {/* Center: Logo */}
-      <div className="flex-1 flex justify-center items-center relative z-50 w-1/3">
-        <button 
-          onClick={() => onNavigate('dashboard')} 
-          onMouseEnter={() => {
-            audioService.playHover();
-            setScrambleTrigger(prev => prev + 1);
-          }}
-          className="flex items-center gap-3 group"
-        >
-          <h1 className="text-xl font-black tracking-tighter text-base-content uppercase flex items-center font-logo">
-            <span className="font-black">
-              <TimedScrambledText text="Kollektiv" intervalMs={300000} trigger={scrambleTrigger} />
-            </span>
-            <span className="text-primary italic animate-pulse drop-shadow-[0_0_10px_oklch(var(--p))] transition-all inline-block ml-0.5 font-black">.</span>
-          </h1>
-        </button>
-      </div>
-
-      <div className="flex items-center justify-end gap-1 relative z-50 w-1/3">
-        <NavItem
-          onClick={() => {
-            audioService.playClick();
-            onToggleClippingPanel();
-          }}
-          onHover={() => audioService.playHover()}
-          badge={clippedIdeasCount}
-        >
-          Clipboard
-        </NavItem>
-
-        <div className="w-[1px] h-4 bg-base-300/20 mx-2"></div>
-        
-        <NavItem
-          onClick={() => {
-            audioService.playClick();
-            onNavigate('settings');
-          }}
-          onHover={() => audioService.playHover()}
-          title="Settings"
-        >
-          Settings
-        </NavItem>
-
-        <div className="w-[1px] h-4 bg-base-300/20 mx-2"></div>
-
-        <NavItem
-          onClick={(e) => {
-            e.stopPropagation();
-            audioService.playClick();
-            onStandbyClick(e);
-          }}
-          onHover={() => audioService.playHover()}
-          title="Manual Standby"
-        >
-          Standby
-        </NavItem>
+    <header className="flex-shrink-0 flex flex-col h-12 bg-transparent z-50 relative">
+      {/* Bottom row: Navigation */}
+      <div className="flex justify-center items-center gap-4 py-2 relative z-50">
+        <DropdownMenu label="Workspaces" items={workspaceItems} onNavigate={onNavigate} />
+        <div className="w-[1px] h-3 bg-base-300/20"></div>
+        <DropdownMenu label="Guides" items={guideItems} onNavigate={onNavigate} />
+        <div className="w-[1px] h-3 bg-base-300/20"></div>
+        <DropdownMenu label="Utilities" items={utilityItems} onNavigate={onNavigate} />
       </div>
     </header>
   );

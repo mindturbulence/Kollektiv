@@ -108,17 +108,17 @@ const Media: React.FC<{
     useLayoutEffect(() => {
         if (isLoaded && isInView && mediaRef.current && shutterRef.current) {
             const tl = gsap.timeline({
-                defaults: { ease: "expo.inOut", duration: 1.6 }
+                defaults: { ease: "power4.inOut" }
             });
 
             tl.fromTo(shutterRef.current, 
                 { clipPath: 'inset(0% 0% 0% 0%)' },
-                { clipPath: 'inset(0% 0% 100% 0%)', duration: 1.4 }
+                { clipPath: 'inset(0% 0% 100% 0%)', duration: 1.8 }
             )
             .fromTo(mediaRef.current, 
-                { scale: 1.4, filter: 'grayscale(100%) brightness(0.5)' },
-                { scale: 1, filter: 'grayscale(0%) brightness(1)', duration: 2 },
-                "-=1.2"
+                { scale: 1.2, filter: 'grayscale(50%) brightness(0.3)' },
+                { scale: 1, filter: 'grayscale(0%) brightness(1)', duration: 2.4 },
+                "-=1.4"
             );
         }
     }, [isLoaded, isInView]);
