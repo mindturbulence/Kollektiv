@@ -71,6 +71,7 @@ export const loadLLMSettings = (): LLMSettings => {
         return { 
             ...defaultLLMSettings, 
             ...parsed,
+            activeThemeMode: 'dark',
             features: {
                 ...defaultLLMSettings.features,
                 ...(parsed.features || {})

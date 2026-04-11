@@ -21,7 +21,7 @@ import {
     savePromptCategoriesOrder as savePromptCategoriesOrderFS
 } from '../utils/promptStorage';
 import { resetAllSettings, defaultLLMSettings } from '../utils/settingsStorage';
-import { DAISYUI_LIGHT_THEMES, DAISYUI_DARK_THEMES } from '../constants';
+import { DAISYUI_DARK_THEMES } from '../constants';
 import ConfirmationModal from './ConfirmationModal';
 import { Cog6ToothIcon, CpuChipIcon, AppIcon, PromptIcon, PhotoIcon, FolderClosedIcon, PaintBrushIcon, AdjustmentsVerticalIcon, DownloadIcon, LinkIcon, PlayIcon, RefreshIcon, InformationCircleIcon, UploadIcon, InstagramIcon } from './icons';
 import FeedbackModal from './FeedbackModal';
@@ -558,11 +558,6 @@ export const SetupPage: React.FC<SetupPageProps> = ({
     const renderAppearanceSettings = () => {
         return (
             <div className="flex flex-col h-full overflow-y-auto custom-scrollbar animate-fade-in">
-                <SettingRow label="Light Cycle Theme" desc="Visual palette used when in illuminated mode.">
-                    <select value={settings.lightTheme} onChange={(e) => handleSettingsChange('lightTheme', (e.currentTarget as any).value)} className="select select-bordered select-sm rounded-none font-bold w-64 uppercase text-[10px] tracking-widest">
-                        {DAISYUI_LIGHT_THEMES.map(t => <option key={t} value={t}>{t.toUpperCase()}</option>)}
-                    </select>
-                </SettingRow>
                 <SettingRow label="Obscure Cycle Theme" desc="Visual palette used when in dark mode.">
                     <select value={settings.darkTheme} onChange={(e) => handleSettingsChange('darkTheme', (e.currentTarget as any).value)} className="select select-bordered select-sm rounded-none font-bold w-64 uppercase text-[10px] tracking-widest">
                         {DAISYUI_DARK_THEMES.map(t => <option key={t} value={t}>{t.toUpperCase()}</option>)}

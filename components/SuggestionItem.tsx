@@ -1,7 +1,6 @@
 import React, { useState, useCallback, useMemo } from 'react';
-import { DownloadIcon, SparklesIcon, BookmarkIcon, RefreshIcon, CheckIcon, ArchiveIcon, BracesIcon } from './icons';
+import { DownloadIcon } from './icons';
 import { generateWithImagen, generateWithNanoBanana, generateWithVeo } from '../services/llmService';
-import CopyIcon from './CopyIcon';
 import LoadingSpinner from './LoadingSpinner';
 
 interface SuggestionItemProps {
@@ -99,27 +98,6 @@ export const SuggestionItem: React.FC<SuggestionItemProps> = ({
     }
   }, [suggestionText, targetAI]);
 
-  const handleDownloadJson = useCallback(() => {
-    if (typeof window === 'undefined') return;
-
-    const data = {
-      prompt: suggestionText,
-      targetAI,
-      exportedAt: new Date().toISOString(),
-      generator: "Kollektiv Toolbox"
-    };
-
-    const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
-    const url = URL.createObjectURL(blob);
-    const link = (window as any).document.createElement('a');
-    link.href = url;
-    link.download = `kollektiv_prompt_${Date.now()}.json`;
-    (window as any).document.body.appendChild(link);
-    link.click();
-    (window as any).document.body.removeChild(link);
-    URL.revokeObjectURL(url);
-  }, [suggestionText, targetAI]);
-
   const handleTryGenerate = async () => {
     setIsGenerating(true);
     setGenerationError(null);
@@ -153,7 +131,7 @@ export const SuggestionItem: React.FC<SuggestionItemProps> = ({
   const isVideo = targetAI.toLowerCase().includes('veo');
 
   return (
-    <div className={`w-full transition-all duration-300 bg-base-100/40 backdrop-blur-xl mb-[1px] last:mb-0 relative overflow-hidden ${isGenerating ? 'bg-primary/5' : ''}`}>
+    <div className={`w-full transition-all duration-300 bg-transparent relative overflow-hidden`}>
         
         <div className="p-4 md:p-6 flex flex-col h-full relative">
             {isGenerating ? (
@@ -202,62 +180,55 @@ export const SuggestionItem: React.FC<SuggestionItemProps> = ({
                         </div>
                     )}
 
-                    <div className="flex flex-wrap items-center justify-between gap-4 mt-4 pt-4 border-t border-base-300">
-                        <div className="flex items-center gap-1">
+                    <div className="h-12 flex items-stretch gap-0 mt-4 border-t border-base-300 -mx-4 md:-mx-6 -mb-4 md:-mb-6">
+                        <div className="flex flex-1 items-stretch">
                             {isGoogleProduct && !mediaUrl && (
                                 <button 
                                     onClick={handleTryGenerate} 
-                                    className="btn btn-xs btn-primary rounded-none font-black text-[9px] tracking-widest px-4 shadow-sm"
+                                    className="btn btn-ghost h-full rounded-none border-none flex-1 font-black text-[10px] tracking-widest text-primary uppercase hover:bg-primary/10 px-1 truncate"
                                 >
-                                    <SparklesIcon className="w-3 h-3 mr-1.5" />
                                     RENDER
                                 </button>
                             )}
                             {onRefine && (
-                                 <button onClick={handleRefine} className="btn btn-xs btn-ghost rounded-none font-black text-[9px] tracking-widest px-3 hover:bg-base-300">
-                                    <RefreshIcon className="w-3 h-3 mr-1.5 opacity-40"/> RE-REFINE
+                                 <button onClick={handleRefine} className="btn btn-ghost h-full rounded-none border-none flex-1 font-black text-[10px] tracking-widest uppercase hover:bg-base-200 px-1 truncate">
+                                    RE-REFINE
                                 </button>
                             )}
                             <button
                                 onClick={handleCopyJson}
-                                className="btn btn-xs btn-ghost rounded-none font-black text-[9px] tracking-widest px-3 hover:bg-base-300"
+                                className="btn btn-ghost h-full rounded-none border-none flex-1 font-black text-[10px] tracking-widest uppercase hover:bg-base-200 px-1 truncate"
                             >
-                                {jsonCopied ? <><CheckIcon className="w-3 h-3 mr-1.5 text-success" /> OK</> : <><BracesIcon className="w-3 h-3 mr-1.5 opacity-40" /> COPY JSON</>}
-                            </button>
-                            <button
-                                onClick={handleDownloadJson}
-                                className="btn btn-xs btn-ghost rounded-none font-black text-[9px] tracking-widest px-3 hover:bg-base-300"
-                            >
-                                <DownloadIcon className="w-3 h-3 mr-1.5 opacity-40"/> JSON
+                                {jsonCopied ? 'OK' : 'JSON'}
                             </button>
                         </div>
 
-                        <div className="flex items-center gap-1">
+                        <div className="flex flex-1 items-stretch border-l border-base-300">
                             <button
                                 onClick={handleCopy}
-                                className="btn btn-xs btn-ghost rounded-none font-black text-[9px] tracking-widest px-3 hover:bg-base-300"
+                                className="btn btn-ghost h-full rounded-none border-none flex-1 font-black text-[10px] tracking-widest uppercase hover:bg-base-200 px-1 truncate"
                             >
-                                {copied ? <><CheckIcon className="w-3 h-3 mr-1.5 text-success" /> OK</> : <><CopyIcon className="w-3.5 h-3.5 mr-1.5 opacity-40" /> COPY</>}
+                                {copied ? 'OK' : 'COPY'}
                             </button>
                             {onClip && (
-                                <button onClick={handleClip} className="btn btn-xs btn-ghost rounded-none font-black text-[9px] tracking-widest px-3 hover:bg-base-300" disabled={clipped}>
-                                    <BookmarkIcon className="w-3 h-3 mr-1.5 opacity-40"/> {clipped ? 'CLIPPED' : 'CLIP'}
+                                <button onClick={handleClip} className="btn btn-ghost h-full rounded-none border-none flex-1 font-black text-[10px] tracking-widest uppercase hover:bg-base-200 px-1 truncate" disabled={clipped}>
+                                    {clipped ? 'OK' : 'CLIP'}
                                 </button>
                             )}
                             <button
                                 onClick={handleSave}
                                 disabled={saved}
-                                className="btn btn-xs btn-ghost rounded-none font-black text-[9px] tracking-widest px-3 hover:bg-base-300"
+                                className="btn btn-ghost h-full rounded-none border-none flex-1 font-black text-[10px] tracking-widest uppercase hover:bg-base-200 px-1 truncate"
                             >
-                                {saved ? <><CheckIcon className="w-3 h-3 mr-1.5 text-success"/> OK</> : <><ArchiveIcon className="w-3 h-3 mr-1.5 opacity-40"/> SAVE</>}
+                                {saved ? 'OK' : 'SAVE'}
                             </button>
                             {onSaveAsPreset && (
                                 <button
                                     onClick={handleSaveAsPreset}
                                     disabled={presetSaved}
-                                    className="btn btn-xs btn-ghost rounded-none font-black text-[9px] tracking-widest px-3 hover:bg-base-300 text-primary"
+                                    className="btn btn-ghost h-full rounded-none border-none flex-1 font-black text-[10px] tracking-widest text-primary uppercase hover:bg-primary/10 px-1 truncate"
                                 >
-                                    {presetSaved ? <><CheckIcon className="w-3 h-3 mr-1.5 text-success"/> OK</> : <><SparklesIcon className="w-3 h-3 mr-1.5 opacity-40"/> PRESET</>}
+                                    {presetSaved ? 'OK' : 'PRESET'}
                                 </button>
                             )}
                         </div>

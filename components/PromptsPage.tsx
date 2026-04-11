@@ -55,7 +55,7 @@ import PromptCrafter from './PromptCrafter';
 import { MediaAnalyzer } from './MediaAnalyzer';
 import LoadingSpinner from './LoadingSpinner';
 import AutocompleteSelect from './AutocompleteSelect';
-import { SparklesIcon, UploadIcon, CloseIcon, Cog6ToothIcon, ArchiveIcon, CheckIcon, DeleteIcon } from './icons';
+import { SparklesIcon, UploadIcon, CloseIcon, Cog6ToothIcon, ArchiveIcon } from './icons';
 import ConfirmationModal from './ConfirmationModal';
 
 // --- Types ---
@@ -499,10 +499,10 @@ const PromptsPage: React.FC<PromptsPageProps> = ({
                     <button 
                         key={tab.id} 
                         onClick={() => setActiveView(tab.id as any)} 
-                        className={`flex-1 h-full font-black uppercase text-xs tracking-widest transition-colors border-r border-base-300 last:border-r-0 ${
+                        className={`flex-1 h-full font-black uppercase text-xs tracking-widest transition-colors ${
                             currentView === tab.id 
-                                ? 'bg-primary text-primary-content' 
-                                : 'hover:bg-primary/10 text-base-content/40'
+                                ? 'text-primary' 
+                                : 'text-base-content/40 hover:text-primary/60'
                         }`}
                     >
                         {tab.label}
@@ -1144,14 +1144,14 @@ const PromptsPage: React.FC<PromptsPageProps> = ({
               <footer className="h-14 flex items-stretch flex-shrink-0">
                 <button 
                   onClick={handleResetRefiner} 
-                  className="btn btn-ghost h-full rounded-none border-none flex-1 font-black text-[10px] tracking-widest text-error/40 hover:text-error uppercase"
+                  className="btn btn-ghost h-full rounded-none border-none flex-1 font-black text-[10px] tracking-widest text-error/40 hover:text-error uppercase px-1 truncate"
                 >
                   RESET
                 </button>
                 <button 
                   onClick={handleEnhance} 
                   disabled={isLoadingRefine || !refineText.trim()} 
-                  className="btn btn-ghost h-full rounded-none border-none flex-1 font-black text-[10px] tracking-widest uppercase hover:bg-primary/10"
+                  className="btn btn-ghost h-full rounded-none border-none flex-1 font-black text-[10px] tracking-widest text-primary uppercase hover:bg-primary/10 px-1 truncate"
                 >
                   {isLoadingRefine ? '...' : 'IMPROVE'}
                 </button>
@@ -1159,7 +1159,7 @@ const PromptsPage: React.FC<PromptsPageProps> = ({
                   <button 
                     onClick={handleDirectGenerate} 
                     disabled={isLoadingRefine || !refineText.trim()} 
-                    className="btn btn-primary h-full rounded-none border-none flex-1 font-black text-[10px] tracking-widest uppercase shadow-none"
+                    className="btn btn-primary h-full rounded-none border-none flex-1 font-black text-[10px] tracking-widest uppercase shadow-none px-1 truncate"
                   >
                     {isLoadingRefine ? '...' : 'RENDER'}
                   </button>
@@ -1270,20 +1270,18 @@ const PromptsPage: React.FC<PromptsPageProps> = ({
                     )}
                   </div>
                   <button 
-                      className="btn btn-ghost h-full rounded-none border-none px-4 text-primary disabled:opacity-20 transition-all" 
+                      className="btn btn-ghost h-full rounded-none border-none flex-1 font-black text-[10px] tracking-widest text-primary disabled:opacity-20 transition-all px-1 truncate" 
                       onClick={() => handleUsePreset()} 
                       disabled={!selectedPreset}
-                      title="Apply Preset"
                   >
-                      <CheckIcon className="w-4 h-4"/>
+                      APPLY
                   </button>
                   <button 
-                      className="btn btn-ghost h-full rounded-none border-none px-4 text-error/60 disabled:opacity-20 transition-all" 
+                      className="btn btn-ghost h-full rounded-none border-none flex-1 font-black text-[10px] tracking-widest text-error/60 disabled:opacity-20 transition-all px-1 truncate" 
                       onClick={handleDeletePresetClick} 
                       disabled={!selectedPreset}
-                      title="Delete Preset"
                   >
-                      <DeleteIcon className="w-4 h-4"/>
+                      DELETE
                   </button>
               </div>
 
@@ -1313,7 +1311,7 @@ const PromptsPage: React.FC<PromptsPageProps> = ({
                 <button 
                     onClick={handleSavePresetClick} 
                     disabled={activeConstructionItems.length === 0}
-                    className="btn btn-primary h-full w-full rounded-none border-none font-black text-[10px] tracking-[0.2em] uppercase shadow-none"
+                    className="btn btn-primary h-full rounded-none border-none flex-1 font-black text-[10px] tracking-widest uppercase shadow-none px-1 truncate"
                 >
                     SAVE AS PRESET
                 </button>

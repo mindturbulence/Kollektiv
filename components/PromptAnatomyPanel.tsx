@@ -167,7 +167,7 @@ export const PromptAnatomyPanel: React.FC<PromptAnatomyPanelProps> = ({ promptTo
   };
 
   return (
-    <div className="bg-base-100/40 backdrop-blur-xl flex flex-col h-full overflow-hidden relative">
+    <div className="flex flex-col h-full overflow-hidden relative">
       <header className="p-6 flex justify-between items-center flex-shrink-0">
         <h3 className="text-xs font-black uppercase tracking-[0.3em] text-primary">Prompt Analysis</h3>
       </header>

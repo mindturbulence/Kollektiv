@@ -80,7 +80,7 @@ export interface LLMSettings {
   ollamaCloudUseGoogleAuth: boolean;
 
   // Theme Settings
-  activeThemeMode: 'light' | 'dark';
+  activeThemeMode: 'dark';
   lightTheme: string;
   darkTheme: string;
   fontSize: number;

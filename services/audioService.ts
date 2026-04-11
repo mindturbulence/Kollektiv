@@ -33,9 +33,12 @@ class AudioService {
 
   private async _initContextInternal(): Promise<void> {
     try {
+      if (this.ctx) return;
+
       const AudioCtx = window.AudioContext || (window as any).webkitAudioContext;
       if (!AudioCtx) return;
-      this.ctx = new AudioCtx();
+      this.ctx = new AudioCtx({ latencyHint: 'interactive' });
+      console.info("Kollektiv Audio Engine: Context created, state:", this.ctx.state);
       
       // Master gain
       this.masterGain = this.ctx.createGain();
@@ -72,6 +75,12 @@ class AudioService {
       this.ambientGain.connect(this.reverbNode);
       this.ambientGain.connect(this.reverbWet);
       
+      // Auto-resume if created in a gesture
+      if (this.ctx.state === 'suspended') {
+        await this.ctx.resume();
+        console.info("Kollektiv Audio Engine: Context resumed, state:", this.ctx.state);
+      }
+      console.info("Kollektiv Audio Engine: Initialized & Active");
     } catch (e) {
       console.warn("AudioContext initialization failed:", e);
     } finally {
@@ -99,9 +108,15 @@ class AudioService {
     this.reverbNode.buffer = impulse;
   }
 
-  private resume(): void {
-    if (this.ctx && this.ctx.state === 'suspended') {
-      this.ctx.resume();
+  public resume(): void {
+    if (!this.ctx) {
+      console.info("Kollektiv Audio Engine: Initializing on user gesture...");
+      this.initContext();
+      return;
+    }
+    if (this.ctx.state === 'suspended') {
+      console.info("Kollektiv Audio Engine: Resuming context...");
+      this.ctx.resume().catch(e => console.warn("Audio resume failed:", e));
     }
   }
 
@@ -150,10 +165,10 @@ class AudioService {
   setVolume(value: number): void {
     const ctx = this.ctx;
     const masterGain = this.masterGain;
-    if (masterGain) {
+    if (masterGain && ctx) {
       masterGain.gain.setTargetAtTime(
         Math.max(0, Math.min(1, value)),
-        ctx?.currentTime || 0,
+        ctx.currentTime,
         0.1
       );
     }
@@ -215,9 +230,17 @@ class AudioService {
    * Premium click sound (retro-futuristic: warm, cinematic)
    */
   playClick(): void {
+    if (!this.isEnabled) return;
+    console.debug("AudioService: playClick");
+    
+    if (!this.ctx) {
+      this.initContext().then(() => this.playClick());
+      return;
+    }
+    
     const ctx = this.ctx;
     const masterGain = this.masterGain;
-    if (!this.isEnabled || !ctx || !masterGain) return;
+    if (!ctx || !masterGain) return;
     this.resume();
 
     const now = ctx.currentTime;
@@ -291,9 +314,17 @@ class AudioService {
    * Subtle hover tick (retro: soft, warm)
    */
   playHover(): void {
+    if (!this.isEnabled) return;
+    console.debug("AudioService: playHover");
+    
+    if (!this.ctx) {
+      this.initContext();
+      return;
+    }
+
     const ctx = this.ctx;
     const masterGain = this.masterGain;
-    if (!this.isEnabled || !ctx || !masterGain) return;
+    if (!ctx || !masterGain) return;
     
     // Throttle hover sounds
     const now = Date.now();
@@ -672,17 +703,22 @@ class AudioService {
    * Ambient soundscape (retro-futuristic atmosphere)
    */
   startAmbient(intensity: number = 0.25): void {
-    const ctx = this.ctx;
-    const ambientGain = this.ambientGain;
-    const masterGain = this.masterGain;
     if (!this.isEnabled || this.isAmbientPlaying) return;
-    if (!ctx || !ambientGain || !masterGain) {
-      this.initContext(); // Fire and forget
+    
+    if (!this.ctx || !this.ambientGain || !this.masterGain) {
+      this.initContext().then(() => {
+        if (this.isEnabled && !this.isAmbientPlaying) {
+          this.startAmbient(intensity);
+        }
+      });
       return;
     }
+
     this.resume();
 
     this.isAmbientPlaying = true;
+    const ctx = this.ctx;
+    const ambientGain = this.ambientGain;
     const now = ctx.currentTime;
     
     // Layered ambient drones with warm analog character
