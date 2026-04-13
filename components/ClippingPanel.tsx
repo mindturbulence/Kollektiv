@@ -267,7 +267,7 @@ const ClippingPanel: React.FC<ClippingPanelProps> = ({
         <>
             <div
                 ref={panelRef}
-                className="fixed top-4 right-4 bottom-4 md:top-10 md:right-10 md:bottom-10 w-[calc(100%-2rem)] md:w-[512px] bg-base-100/60 shadow-2xl z-[1100] flex flex-col backdrop-blur-3xl translate-x-full border-l border-base-content/10"
+                className="fixed top-6 right-6 bottom-6 md:top-12 md:right-12 md:bottom-12 w-[calc(100%-3rem)] md:w-[480px] bg-base-100/60 shadow-2xl z-[1100] flex flex-col backdrop-blur-3xl translate-x-full border-l border-base-content/10"
                 style={{ visibility: 'hidden' }}
                 aria-hidden={!isOpen}
             >
@@ -285,6 +285,15 @@ const ClippingPanel: React.FC<ClippingPanelProps> = ({
                         >
                             <PlusIcon className="w-5 h-5" />
                         </button>
+                        {clippedIdeas.length > 0 && (
+                            <button 
+                                onClick={onClearAll} 
+                                className="btn btn-sm btn-ghost btn-square opacity-40 hover:opacity-100 hover:text-error transition-all"
+                                title="Purge All Clips"
+                            >
+                                <DeleteIcon className="w-5 h-5" />
+                            </button>
+                        )}
                         <button onClick={onClose} className="btn btn-sm btn-ghost btn-square opacity-40 hover:opacity-100" aria-label="Close clipping panel">
                             <CloseIcon className="w-5 h-5" />
                         </button>
@@ -315,18 +324,6 @@ const ClippingPanel: React.FC<ClippingPanelProps> = ({
                         </div>
                     )}
                 </div>
-
-                {/* Footer */}
-                {clippedIdeas.length > 0 && (
-                    <div className="p-6 border-t border-base-300 bg-transparent flex-shrink-0">
-                        <button
-                            onClick={onClearAll}
-                            className="btn btn-sm btn-ghost w-full rounded-none font-black text-[9px] tracking-[0.3em] uppercase text-error/40 hover:text-error hover:bg-error/5"
-                        >
-                            PURGE ALL CLIPS
-                        </button>
-                    </div>
-                )}
             </div>
 
             <ManualClipModal 

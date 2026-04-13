@@ -77,7 +77,48 @@ class ErrorBoundary extends React.Component<{ children: React.ReactNode }, { has
 
 const InitialLoader: React.FC<{ status: string; progress: number | null }> = ({ status, progress }) => {
     const textWrapperRef = useRef<HTMLHeadingElement>(null);
+    const [logs, setLogs] = useState<string[]>([]);
+    const logRef = useRef(0);
     const percentage = Math.round((progress || 0) * 100);
+    const displayPercentage = useRef(0);
+    const [smoothPercentage, setSmoothPercentage] = useState(0);
+
+    useEffect(() => {
+        const target = percentage;
+        const obj = { val: displayPercentage.current };
+        gsap.to(obj, {
+            val: target,
+            duration: 0.8,
+            ease: "power2.out",
+            onUpdate: () => {
+                displayPercentage.current = obj.val;
+                setSmoothPercentage(Math.round(obj.val));
+            }
+        });
+    }, [percentage]);
+
+    const bootLogs = [
+        '> BOOT_SEQUENCE_INIT...',
+        '> KERNEL_LOAD...',
+        '> MOUNT_VOLUMES...',
+        '> INIT_DAEMONS...',
+        '> SYNC_REGISTRIES...',
+        '> VERIFY_INTEGRITY...',
+        '> ACTIVATE_MODULES...',
+        '> SYSTEM_ONLINE'
+    ];
+
+    useEffect(() => {
+        if (percentage > 10 && logRef.current < bootLogs.length) {
+            const interval = setInterval(() => {
+                if (logRef.current < bootLogs.length) {
+                    setLogs(prev => [...prev, bootLogs[logRef.current]]);
+                    logRef.current++;
+                }
+            }, 200);
+            return () => clearInterval(interval);
+        }
+    }, [percentage]);
 
     useLayoutEffect(() => {
         if (!textWrapperRef.current) return;
@@ -106,11 +147,20 @@ const InitialLoader: React.FC<{ status: string; progress: number | null }> = ({ 
             {/* Large Background Percentage (SR Seventy One Style) */}
             <div className="absolute inset-0 flex items-center justify-center pointer-events-none overflow-hidden">
                 <span 
-                    className="text-[25vw] font-black opacity-[0.03] leading-none select-none transition-all duration-500 ease-out font-display"
-                    style={{ transform: `translateY(${(100 - percentage) * 0.2}px)` }}
+                    className="text-[25vw] font-black opacity-[0.03] leading-none select-none font-display will-change-transform"
+                    style={{ transform: `translateY(${(100 - smoothPercentage) * 0.2}px)` }}
                 >
-                    {percentage.toString().padStart(2, '0')}
+                    {smoothPercentage.toString().padStart(2, '0')}
                 </span>
+            </div>
+
+            {/* Terminal Logs - Left Side */}
+            <div className="absolute left-16 md:left-24 top-1/2 -translate-y-1/2 flex flex-col gap-1 pointer-events-none z-10">
+                {logs.slice(-6).map((log, i) => (
+                    <span key={i} className="text-[8px] font-mono tracking-widest text-primary/40 animate-fade-in">
+                        {log}
+                    </span>
+                ))}
             </div>
 
             <div className="relative z-10 flex flex-col items-center">
@@ -156,7 +206,7 @@ const InitialLoader: React.FC<{ status: string; progress: number | null }> = ({ 
 
 };
 
-import { motion } from 'framer-motion';
+import { motion, AnimatePresence } from 'framer-motion';
 import RollingText from './RollingText';
 import TimedScrambledText from './TimedScrambledText';
 import ThemeSwitcher from './ThemeSwitcher';
@@ -291,8 +341,8 @@ const HUDNavItem: React.FC<{
       
       {badge !== undefined && badge > 0 && (
         <span className="absolute top-0 right-0 flex h-2 w-2">
-          <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-primary opacity-75"></span>
-          <span className="relative inline-flex rounded-full h-2 w-2 bg-primary"></span>
+          <span className="animate-ping absolute inline-flex h-full w-full rounded-none bg-primary opacity-75"></span>
+          <span className="relative inline-flex rounded-none h-2 w-2 bg-primary"></span>
         </span>
       )}
     </motion.button>
@@ -310,6 +360,7 @@ interface PageFrameProps {
     onToggleClippingPanel: () => void;
     onStandbyClick: (e: React.MouseEvent) => void;
     clippedIdeasCount: number;
+    isInitialized: boolean;
 }
 
 const PageFrame: React.FC<PageFrameProps> = ({ 
@@ -322,8 +373,38 @@ const PageFrame: React.FC<PageFrameProps> = ({
     onAboutClick,
     onToggleClippingPanel,
     onStandbyClick,
-    clippedIdeasCount
+    clippedIdeasCount,
+    isInitialized
 }) => {
+    const topRef = useRef<HTMLDivElement>(null);
+    const bottomRef = useRef<HTMLDivElement>(null);
+    const logoRef = useRef<HTMLDivElement>(null);
+
+    useLayoutEffect(() => {
+        if (!isInitialized) return;
+
+        const tl = gsap.timeline({ delay: 2.2 }); // Start after blinds
+
+        gsap.set([topRef.current, logoRef.current], { yPercent: -50, y: -20, autoAlpha: 0 });
+        gsap.set(bottomRef.current, { yPercent: 50, y: 20, autoAlpha: 0 });
+
+        tl.to([topRef.current, logoRef.current], {
+            y: 0,
+            autoAlpha: 1,
+            duration: 1.2,
+            ease: "power3.out",
+            stagger: 0.1
+        });
+
+        tl.to(bottomRef.current, {
+            y: 0,
+            autoAlpha: 1,
+            duration: 1.2,
+            ease: "power3.out"
+        }, "-=0.8");
+
+    }, [isInitialized]);
+
     return (
         <div className="fixed inset-0 z-[1000] pointer-events-none p-4 md:p-10">
             <div className="w-full h-full border border-base-content/5 relative">
@@ -334,96 +415,111 @@ const PageFrame: React.FC<PageFrameProps> = ({
                 <div className="absolute -bottom-[1px] -right-[1px] w-4 h-4 border-b border-r border-primary/20" />
                 
                 {/* Technical Labels - Top (Relocated Header Menus) */}
-                <div className="absolute top-0 left-12 -translate-y-1/2 flex gap-1 items-center pointer-events-auto">
-                    <HUDNavItem
-                        onClick={() => {
-                            audioService.playClick();
-                            onNavigate('dashboard');
-                        }}
-                    >
-                        HOME
-                    </HUDNavItem>
-                    <div className="w-px h-3 bg-base-content/10" />
-                    <HUDNavItem
-                        onClick={() => {
-                            audioService.playClick();
-                            onAboutClick();
-                        }}
-                    >
-                        ABOUT
-                    </HUDNavItem>
-                    <div className="w-px h-3 bg-base-content/10" />
-                    <div className="flex items-center">
-                        <ThemeSwitcher compact />
+                <div ref={topRef} className="absolute top-0 left-12 right-12 flex justify-between items-center pointer-events-auto opacity-0">
+                    <div className="flex gap-1 items-center">
+                        <HUDNavItem
+                            onClick={() => {
+                                audioService.playClick();
+                                onNavigate('dashboard');
+                            }}
+                        >
+                            HOME
+                        </HUDNavItem>
+                        <div className="w-px h-3 bg-base-content/10" />
+                        <HUDNavItem
+                            onClick={() => {
+                                audioService.playClick();
+                                onAboutClick();
+                            }}
+                        >
+                            ABOUT
+                        </HUDNavItem>
+                        <div className="w-px h-3 bg-base-content/10" />
+                        <div className="flex items-center">
+                            <ThemeSwitcher compact />
+                        </div>
+                    </div>
+
+                    <div className="flex gap-1 items-center">
+                        <HUDNavItem
+                            onClick={() => {
+                                audioService.playClick();
+                                onToggleClippingPanel();
+                            }}
+                            badge={clippedIdeasCount}
+                        >
+                            CLIPBOARD
+                        </HUDNavItem>
+                        <div className="w-px h-3 bg-base-content/10" />
+                        <HUDNavItem
+                            onClick={() => {
+                                audioService.playClick();
+                                onNavigate('settings');
+                            }}
+                        >
+                            SETTINGS
+                        </HUDNavItem>
+                        <div className="w-px h-3 bg-base-content/10" />
+                        <HUDNavItem
+                            onClick={(e) => {
+                                e.stopPropagation();
+                                audioService.playClick();
+                                onStandbyClick(e);
+                            }}
+                        >
+                            STANDBY
+                        </HUDNavItem>
                     </div>
                 </div>
 
                 {/* Center Logo */}
-                <div className="absolute top-0 left-1/2 -translate-x-1/2 -translate-y-1/2 flex items-center pointer-events-auto">
+                <div ref={logoRef} className="absolute top-0 left-1/2 -translate-x-1/2 flex items-center pointer-events-auto opacity-0">
                     <Logo onNavigate={onNavigate} />
-                </div>
-
-                <div className="absolute top-0 right-12 -translate-y-1/2 flex gap-1 items-center pointer-events-auto">
-                    <HUDNavItem
-                        onClick={() => {
-                            audioService.playClick();
-                            onToggleClippingPanel();
-                        }}
-                        badge={clippedIdeasCount}
-                    >
-                        CLIPBOARD
-                    </HUDNavItem>
-                    <div className="w-px h-3 bg-base-content/10" />
-                    <HUDNavItem
-                        onClick={() => {
-                            audioService.playClick();
-                            onNavigate('settings');
-                        }}
-                    >
-                        SETTINGS
-                    </HUDNavItem>
-                    <div className="w-px h-3 bg-base-content/10" />
-                    <HUDNavItem
-                        onClick={(e) => {
-                            e.stopPropagation();
-                            audioService.playClick();
-                            onStandbyClick(e);
-                        }}
-                    >
-                        STANDBY
-                    </HUDNavItem>
                 </div>
                 
                 {/* Technical Labels - Bottom (Relocated Controls) */}
-                <div className="absolute bottom-0 left-12 translate-y-1/2 flex gap-3 items-center pointer-events-auto">
-                    <span className="text-[8px] font-mono font-black uppercase tracking-[0.5em] text-primary/60">ENGINE</span>
-                    <div className="w-px h-3 bg-base-content/10 mx-1" />
-                    <div className="min-w-[120px] flex items-center">
-                        <LlmStatusSwitcher />
-                    </div>
-                </div>
-
-                <div className="absolute bottom-0 right-12 translate-y-1/2 flex items-center gap-4 pointer-events-auto">
-                    <button
-                        onClick={onAudioToggle}
-                        className="flex items-center gap-2 text-[8px] font-mono uppercase tracking-[0.5em] transition-all"
-                    >
-                        <span className="text-primary/60 font-black">SFX</span>
-                        <span className={`font-bold ${audioEnabled ? 'text-primary' : 'text-base-content/20'}`}>{audioEnabled ? 'ON' : 'OFF'}</span>
-                    </button>
-                    <div className="w-px h-3 bg-base-content/10" />
-                    <button
-                        onClick={onMusicToggle}
-                        className="flex items-center gap-2 text-[8px] font-mono uppercase tracking-[0.5em] transition-all"
-                    >
-                        <span className="text-primary/60 font-black">MUSIC</span>
-                        <span className={`font-bold ${playerState === 'playing' ? 'text-primary' : 'text-base-content/20'}`}>
-                            {playerState === 'playing' ? 'ON' : playerState === 'syncing' ? 'SYNC' : 'OFF'}
-                        </span>
-                        <div className="ml-4">
-                            <DigitalOscillator state={playerState} theme={themeMode} />
+                <div ref={bottomRef} className="absolute bottom-0 left-12 right-12 flex justify-between items-center pointer-events-auto opacity-0">
+                    <div className="flex gap-3 items-center">
+                        <span className="text-[8px] font-mono font-black uppercase tracking-[0.5em] text-primary/60">ENGINE</span>
+                        <div className="w-px h-3 bg-base-content/10 mx-1" />
+                        <div className="min-w-[120px] flex items-center">
+                            <LlmStatusSwitcher />
                         </div>
-                    </button>
+                    </div>
+
+                    <div className="flex items-center gap-4">
+                        <button
+                            onClick={onAudioToggle}
+                            className="flex items-center gap-2 text-[8px] font-mono uppercase tracking-[0.5em] transition-all"
+                        >
+                            <span className="text-primary/60 font-black">SFX</span>
+                            <span className={`font-bold ${audioEnabled ? 'text-base-content/40' : 'text-base-content/20'}`}>{audioEnabled ? 'ON' : 'OFF'}</span>
+                        </button>
+                        <div className="w-px h-3 bg-base-content/10" />
+                        <button
+                            onClick={onMusicToggle}
+                            className="flex items-center gap-2 text-[8px] font-mono uppercase tracking-[0.5em] transition-all"
+                        >
+                            <span className="text-primary/60 font-black">MUSIC</span>
+                            <span className={`font-bold ${playerState === 'playing' ? 'text-base-content/40' : 'text-base-content/20'}`}>
+                                {playerState === 'playing' ? 'ON' : playerState === 'syncing' ? 'SYNC' : 'OFF'}
+                            </span>
+                            <AnimatePresence mode="wait">
+                                {playerState !== 'idle' && (
+                                    <motion.div 
+                                        key="oscillator"
+                                        initial={{ x: -10, opacity: 0 }}
+                                        animate={{ x: 0, opacity: 1 }}
+                                        exit={{ x: 10, opacity: 0 }}
+                                        transition={{ duration: 0.4, ease: [0.23, 1, 0.32, 1] }}
+                                        className="ml-4"
+                                    >
+                                        <DigitalOscillator state={playerState} theme={themeMode} />
+                                    </motion.div>
+                                )}
+                            </AnimatePresence>
+                        </button>
+                    </div>
                 </div>
 
                 {/* Side Markers */}
@@ -470,7 +566,7 @@ const AppContent: React.FC = () => {
     const idleTimerRef = useRef<number | null>(null); 
     const isIdleRef = useRef(false); 
 
-    const { settings } = useSettings();
+    const { settings, updateSettings } = useSettings();
     const auth = useAuth();
 
     const [activeTab, setActiveTab] = useLocalStorage<ActiveTab>('activeTab', 'dashboard');
@@ -487,8 +583,7 @@ const AppContent: React.FC = () => {
 
     const mainGridRef = useRef<HTMLDivElement>(null);
     const apertureRef = useRef<HTMLDivElement>(null);
-    const curtainTopRef = useRef<HTMLDivElement>(null);
-    const curtainBottomRef = useRef<HTMLDivElement>(null);
+    const blindsRef = useRef<HTMLDivElement>(null);
     const appWrapperRef = useRef<HTMLDivElement>(null);
     const contentRef = useRef<HTMLDivElement>(null);
 
@@ -576,10 +671,13 @@ const AppContent: React.FC = () => {
             
             audioService.playModalOpen(); // Chime for system ready
 
-            await new Promise(r => setTimeout(r, 1100));
+            await new Promise(r => setTimeout(r, 1500));
 
             hasInitializedRef.current = true;
             setIsInitialized(true);
+            
+            // Wait for blinds to start before hiding loader
+            await new Promise(r => setTimeout(r, 500));
             setIsLoading(false);
         } catch (err) {
             console.error("Initialization Failure:", err);
@@ -596,42 +694,51 @@ const AppContent: React.FC = () => {
     }, [initializeApp]);
 
     useLayoutEffect(() => {
-        if (!isInitialized || !apertureRef.current || !isFirstRevealRef.current) return;
+        if (!isInitialized || !apertureRef.current || !isFirstRevealRef.current || !blindsRef.current) return;
+        
         isFirstRevealRef.current = false;
 
         const tl = gsap.timeline({
-            defaults: { ease: "expo.inOut", duration: 1.4 }
+            defaults: { ease: "power3.inOut" }
         });
 
+        const blindItems = Array.from(blindsRef.current.children) as HTMLElement[];
+
+        // Ensure blinds are visible and covering everything
         gsap.set(apertureRef.current, { visibility: 'visible', autoAlpha: 1 });
-        gsap.set(appWrapperRef.current, { y: 100, autoAlpha: 0 });
+        
+        // Set alternating origins for vertical blinds
+        blindItems.forEach((item, i) => {
+            gsap.set(item, { 
+                scaleY: 1, 
+                scaleX: 1,
+                transformOrigin: i % 2 === 0 ? "top" : "bottom" 
+            });
+        });
 
-        tl.to(curtainTopRef.current, {
-            yPercent: -100,
-        }, 0);
+        gsap.set(appWrapperRef.current, { autoAlpha: 0, scale: 1.01 });
 
-        tl.to(curtainBottomRef.current, {
-            yPercent: 100,
-        }, 0);
+        // Vertical Blinds effect: Each strip scales down vertically
+        tl.to(blindItems, {
+            scaleY: 0,
+            duration: 2.0,
+            stagger: {
+                each: 0.12,
+                from: "start"
+            },
+            ease: "expo.inOut"
+        }, 0.2);
 
         tl.to(appWrapperRef.current, {
-            y: 0,
             autoAlpha: 1,
-            duration: 1.2,
-            ease: "expo.out"
-        }, 0.2);
+            scale: 1,
+            duration: 2.2,
+            ease: "power2.out"
+        }, 0.8);
 
         tl.set(apertureRef.current, { visibility: 'hidden', autoAlpha: 0 });
 
-        // Safety timeout to ensure curtains are hidden even if GSAP fails
-        const timer = setTimeout(() => {
-            if (apertureRef.current) {
-                apertureRef.current.style.visibility = 'hidden';
-                apertureRef.current.style.opacity = '0';
-            }
-        }, 3000);
-
-        return () => clearTimeout(timer);
+        return () => {};
     }, [isInitialized]);
 
     const runScopedTransition = useCallback(async (targetTab: ActiveTab) => {
@@ -794,9 +901,9 @@ const AppContent: React.FC = () => {
             case 'storyboard': return <StoryboardPage showGlobalFeedback={showGlobalFeedback} />;
             case 'prompt': return <SavedPrompts {...categoryPanelProps} onSendToEnhancer={(prompt) => handleSendToPromptsPage({ prompt, view: 'enhancer' })} showGlobalFeedback={showGlobalFeedback} onClipIdea={handleClipIdea} />;
             case 'gallery': return <ImageGallery {...categoryPanelProps} isSidebarPinned={false} showGlobalFeedback={showGlobalFeedback} />;
-            case 'cheatsheet': return <Cheatsheet {...categoryPanelProps} isSidebarPinned={false} />;
-            case 'artstyles': return <ArtstyleCheatsheet {...categoryPanelProps} isSidebarPinned={false} onSendToPromptsPage={(state) => handleSendToPromptsPage({ ...state, view: 'enhancer' })} />;
-            case 'artists': return <ArtistCheatsheet {...categoryPanelProps} isSidebarPinned={false} onSendToPromptsPage={(state) => handleSendToPromptsPage({ ...state, view: 'enhancer' })} />;
+            case 'cheatsheet': return <Cheatsheet />;
+            case 'artstyles': return <ArtstyleCheatsheet onSendToPromptsPage={(state) => handleSendToPromptsPage({ ...state, view: 'enhancer' })} />;
+            case 'artists': return <ArtistCheatsheet onSendToPromptsPage={(state) => handleSendToPromptsPage({ ...state, view: 'enhancer' })} />;
             case 'settings': return <SetupPage activeSettingsTab={activeSettingsTab} setActiveSettingsTab={setActiveSettingsTab} activeSubTab={activeSettingsSubTab} setActiveSubTab={setActiveSettingsSubTabSetter} showGlobalFeedback={showGlobalFeedback} />;
             case 'composer': return <ComposerPage showGlobalFeedback={showGlobalFeedback} />;
             case 'image_compare': return <ImageCompare />;
@@ -807,9 +914,17 @@ const AppContent: React.FC = () => {
         }
     };
     
-    const [isUplinkActive, setIsUplinkActive] = useState(false);
-    const [playerState, setPlayerState] = useState<'idle' | 'syncing' | 'playing' | 'error'>('idle');
-    const [audioEnabled, setAudioEnabled] = useState(audioService.getIsEnabled());
+    const [isUplinkActive, setIsUplinkActive] = useState(true);
+    const [playerState, setPlayerState] = useState<'idle' | 'syncing' | 'playing' | 'error'>('syncing');
+    const [audioEnabled, setAudioEnabled] = useState(true); // Default to true
+
+    useEffect(() => {
+        if (audioEnabled) {
+            audioService.enable();
+        } else {
+            audioService.disable();
+        }
+    }, [audioEnabled]);
 
     const extractVideoId = useCallback((url: string) => {
         if (!url) return null;
@@ -819,6 +934,18 @@ const AppContent: React.FC = () => {
     }, []);
 
     const videoId = useMemo(() => extractVideoId(settings.musicYoutubeUrl), [settings.musicYoutubeUrl, extractVideoId]);
+
+    useEffect(() => {
+        if (isUplinkActive && playerState === 'syncing' && videoId) {
+            const timer = setTimeout(() => {
+                setPlayerState('playing');
+                if (audioEnabled) {
+                    audioService.startAmbient(0.3);
+                }
+            }, 3000);
+            return () => clearTimeout(timer);
+        }
+    }, [videoId, isUplinkActive, playerState, audioEnabled]);
 
     const handleMusicToggle = useCallback(() => {
         if (!videoId) {
@@ -844,11 +971,14 @@ const AppContent: React.FC = () => {
         }
     }, [videoId, isUplinkActive, audioEnabled]);
 
+    const loaderRef = useRef<HTMLDivElement>(null);
+
     const handleAudioToggle = useCallback(() => {
         audioService.playClick();
         const newState = audioService.toggle();
         setAudioEnabled(newState);
-    }, []);
+        updateSettings({ ...settings, musicEnabled: newState });
+    }, [settings, updateSettings]);
 
     const handleStandbyClick = (e: React.MouseEvent) => {
         e.stopPropagation();
@@ -857,11 +987,15 @@ const AppContent: React.FC = () => {
         isIdleRef.current = true;
     };
 
-    if (isLoading) return <InitialLoader status={initStatus} progress={initProgress} />;
     if (showWelcome) return <Welcome onSetupComplete={initializeApp} />;
 
     return (
         <div className="h-full w-full flex overflow-hidden relative font-sans">
+            {isLoading && (
+                <div ref={loaderRef} className="fixed inset-0 z-[1000]">
+                    <InitialLoader status={initStatus} progress={initProgress} />
+                </div>
+            )}
             {/* AMBIENT VIDEO BACKGROUND */}
             <div className="absolute inset-0 z-0 overflow-hidden pointer-events-none">
                 {!videoError && settings.dashboardVideoUrl ? (
@@ -930,23 +1064,30 @@ const AppContent: React.FC = () => {
                 <>
                     <div 
                         ref={apertureRef} 
-                        className="fixed inset-0 z-[700] pointer-events-none flex flex-col"
+                        className="fixed inset-4 md:inset-10 z-[900] pointer-events-none"
                         style={{ visibility: 'hidden' }}
                     >
-                        <div ref={curtainTopRef} className="flex-1 bg-transparent border-b border-base-300" />
-                        <div ref={curtainBottomRef} className="flex-1 bg-transparent" />
+                        <div ref={blindsRef} className="absolute inset-0 flex flex-row">
+                            {Array.from({ length: 12 }).map((_, i) => (
+                                <div 
+                                    key={i} 
+                                    className="flex-1 bg-base-100/80 backdrop-blur-xl will-change-transform"
+                                />
+                            ))}
+                        </div>
                     </div>
 
                     <div 
                         ref={appWrapperRef}
-                        className="flex-1 flex flex-col overflow-hidden relative z-0 bg-transparent rounded-none p-6 md:p-14"
+                        className="flex-1 flex flex-col overflow-hidden relative z-0 bg-transparent rounded-none p-6 md:p-14 pt-12 md:pt-20"
                     >
                         <Header
                             onNavigate={handleNavigate}
+                            isInitialized={isInitialized}
                         />
 
-                        <div className="flex-1 flex overflow-hidden relative p-4">
-                            <main className="flex-grow min-w-0 relative overflow-hidden bg-transparent rounded-xl border border-base-300/20 z-10">
+                        <div className="flex-1 flex overflow-hidden relative p-4 bg-transparent">
+                            <main className={`flex-grow min-w-0 relative overflow-hidden bg-transparent rounded-none ${activeTab === 'dashboard' ? 'border-none shadow-none backdrop-blur-none' : 'border border-base-300/20'} z-10`}>
                                 <div 
                                     ref={mainGridRef} 
                                     className="absolute inset-0 z-[600] pointer-events-none grid"
@@ -1012,6 +1153,7 @@ const AppContent: React.FC = () => {
                 onToggleClippingPanel={() => setIsClippingPanelOpen(!isClippingPanelOpen)}
                 onStandbyClick={handleStandbyClick}
                 clippedIdeasCount={clippedIdeas.length}
+                isInitialized={isInitialized}
             />
             
             {/* Hidden Audio Engine */}

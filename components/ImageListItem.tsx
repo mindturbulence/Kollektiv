@@ -51,10 +51,10 @@ const ImageListItem: React.FC<ImageListItemProps> = ({ item, onOpenDetailView, o
   }, []);
 
   return (
-    <div className="w-full bg-transparent rounded-lg flex items-center justify-between gap-4 p-3 transition-colors hover:bg-base-200/30">
+    <div className="w-full bg-transparent rounded-none flex items-center justify-between gap-4 p-3 transition-colors hover:bg-base-200/30">
       <div onClick={onOpenDetailView} className="flex items-center gap-4 flex-grow min-w-0 cursor-pointer">
         <div 
-          className="relative w-20 h-20 bg-transparent rounded-md flex-shrink-0 overflow-hidden flex items-center justify-center"
+          className="relative w-20 h-20 bg-transparent rounded-none flex-shrink-0 overflow-hidden flex items-center justify-center"
         >
           {isLoading ? (
              <div className="w-full h-full animate-pulse bg-transparent"></div>

@@ -1,19 +1,15 @@
 
-import React, { useState } from 'react';
+import React from 'react';
 import type { CheatsheetItem } from '../types';
-import { PhotoIcon, ChevronRightIcon } from './icons';
+import { ChevronRightIcon } from './icons';
 import ImageSlider from './ImageSlider';
-import { ImageManagementModal } from './ImageManagementModal';
 
 interface ArtistCardProps {
   item: CheatsheetItem;
-  onUpdateImages: (newImageUrls: string[]) => void;
   onInject: (item: CheatsheetItem) => void;
 }
 
-const ArtistCard: React.FC<ArtistCardProps> = ({ item, onUpdateImages, onInject }) => {
-  const [isManageModalOpen, setIsManageModalOpen] = useState(false);
-
+const ArtistCard: React.FC<ArtistCardProps> = ({ item, onInject }) => {
   return (
     <>
       <div className="flex flex-col group bg-transparent transition-all duration-500 hover:bg-base-200/50 h-full border-b border-base-300 last:border-b-0">
@@ -22,13 +18,6 @@ const ArtistCard: React.FC<ArtistCardProps> = ({ item, onUpdateImages, onInject 
             <ImageSlider imageUrls={item.imageUrls} name={item.name} />
           </div>
           <div className="absolute inset-0 bg-primary/5 opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none"></div>
-          <button
-            onClick={(e) => { e.stopPropagation(); setIsManageModalOpen(true); }}
-            className="absolute top-4 right-4 z-10 p-2 bg-black/60 hover:bg-primary rounded-none text-white backdrop-blur-sm transition-all opacity-0 group-hover:opacity-100 focus:opacity-100"
-            title={`Manage artifacts for ${item.name}`}
-          >
-            <PhotoIcon className="w-4 h-4"/>
-          </button>
         </figure>
         
         <div className="p-8 flex flex-col justify-between flex-grow overflow-hidden">
@@ -56,13 +45,6 @@ const ArtistCard: React.FC<ArtistCardProps> = ({ item, onUpdateImages, onInject 
             </button>
         </div>
       </div>
-
-      <ImageManagementModal 
-        isOpen={isManageModalOpen}
-        onClose={() => setIsManageModalOpen(false)}
-        item={item}
-        onSave={onUpdateImages}
-      />
     </>
   );
 };

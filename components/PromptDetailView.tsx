@@ -229,7 +229,7 @@ const PromptDetailView: React.FC<PromptDetailViewProps> = ({
                     <div className={`flex flex-col overflow-hidden transition-all duration-500 ease-in-out ${!isRefinePanelCollapsed ? 'h-1/2' : 'flex-grow'}`}>
                         <div className="flex-grow p-5 relative overflow-hidden flex flex-col">
                             <span className="text-[9px] font-black uppercase tracking-widest text-primary/40 mb-3 flex items-center gap-3">
-                                <span className="w-1.5 h-1.5 rounded-full bg-primary animate-pulse"></span> Prompt Text
+                                <span className="w-1.5 h-1.5 rounded-none bg-primary animate-pulse"></span> Prompt Text
                             </span>
                             <textarea 
                                 value={editedText}

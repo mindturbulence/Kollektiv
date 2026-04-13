@@ -88,6 +88,7 @@ export interface LLMSettings {
   // Dashboard Settings
   dashboardVideoUrl: string;
   musicYoutubeUrl: string;
+  musicEnabled: boolean;
   
   // Feature Toggles
   features: FeatureSettings;

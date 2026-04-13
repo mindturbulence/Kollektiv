@@ -29,6 +29,7 @@ export const defaultLLMSettings: LLMSettings = {
 
   // Audio Settings
   musicYoutubeUrl: 'https://www.youtube.com/watch?v=jY3A06qWwfw',
+  musicEnabled: true,
 
   // Feature Toggles
   features: {
@@ -72,6 +73,7 @@ export const loadLLMSettings = (): LLMSettings => {
             ...defaultLLMSettings, 
             ...parsed,
             activeThemeMode: 'dark',
+            musicEnabled: parsed.musicEnabled ?? defaultLLMSettings.musicEnabled,
             features: {
                 ...defaultLLMSettings.features,
                 ...(parsed.features || {})

@@ -1,7 +1,8 @@
-import React, { useState } from 'react';
+import React, { useState, useRef, useLayoutEffect } from 'react';
 import type { ActiveTab } from '../types';
 import { audioService } from '../services/audioService';
 import { useSettings } from '../contexts/SettingsContext';
+import { gsap } from 'gsap';
 
 import { motion, AnimatePresence } from 'framer-motion';
 import RollingText from './RollingText';
@@ -13,6 +14,7 @@ import {
 
 interface HeaderProps {
   onNavigate: (tab: ActiveTab) => void;
+  isInitialized?: boolean;
 }
 
 const DropdownMenu: React.FC<{
@@ -76,9 +78,26 @@ const DropdownMenu: React.FC<{
   );
 };
 
-const Header: React.FC<HeaderProps> = ({ onNavigate }) => {
+const Header: React.FC<HeaderProps> = ({ onNavigate, isInitialized }) => {
   const { settings } = useSettings();
   const { features } = settings;
+  const navRef = useRef<HTMLDivElement>(null);
+
+  useLayoutEffect(() => {
+    if (!isInitialized || !navRef.current) return;
+
+    const navItems = navRef.current.children;
+    gsap.set(navItems, { y: -20, autoAlpha: 0 });
+
+    gsap.to(navItems, {
+      y: 0,
+      autoAlpha: 1,
+      duration: 1.2,
+      delay: 2.8, // Start slightly after the main HUD elements
+      stagger: 0.1,
+      ease: "power3.out"
+    });
+  }, [isInitialized]);
 
   const workspaceItems = [
     { id: 'prompts' as ActiveTab, label: 'Prompt Builder', icon: <SparklesIcon className="w-4 h-4" /> },
@@ -103,11 +122,11 @@ const Header: React.FC<HeaderProps> = ({ onNavigate }) => {
   return (
     <header className="flex-shrink-0 flex flex-col h-12 bg-transparent z-50 relative">
       {/* Bottom row: Navigation */}
-      <div className="flex justify-center items-center gap-4 py-2 relative z-50">
+      <div ref={navRef} className="flex justify-center items-center gap-4 py-2 relative z-50">
         <DropdownMenu label="Workspaces" items={workspaceItems} onNavigate={onNavigate} />
-        <div className="w-[1px] h-3 bg-base-300/20"></div>
+        <div className="w-[1px] h-3 bg-base-300/20 opacity-0"></div>
         <DropdownMenu label="Guides" items={guideItems} onNavigate={onNavigate} />
-        <div className="w-[1px] h-3 bg-base-300/20"></div>
+        <div className="w-[1px] h-3 bg-base-300/20 opacity-0"></div>
         <DropdownMenu label="Utilities" items={utilityItems} onNavigate={onNavigate} />
       </div>
     </header>

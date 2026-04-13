@@ -1,11 +1,11 @@
 
-import React, { useState, useEffect, ComponentType, useRef, useLayoutEffect, useMemo } from 'react';
+import React, { useState, useEffect, useRef, useLayoutEffect, useMemo } from 'react';
 import { gsap } from 'gsap';
 import type { CheatsheetCategory, CheatsheetItem } from '../types';
 import LoadingSpinner from './LoadingSpinner';
-import { ChevronLeftIcon, SearchIcon } from './icons';
+import { SearchIcon } from './icons';
 import { fileSystemManager } from '../utils/fileUtils';
-import CheatsheetDetailView from './CheatsheetDetailView';
+import LayeredCheatsheetDetail from './LayeredCheatsheetDetail';
 import { audioService } from '../services/audioService';
 
 const CATEGORY_PLACEHOLDER = "https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?q=80&w=1000&auto=format&fit=crop";
@@ -124,25 +124,13 @@ interface GenericCheatsheetPageProps {
   title: string;
   subtitle?: string;
   heroText: string;
-  searchPlaceholder: string;
   loadDataFn: () => Promise<CheatsheetCategory[]>;
   updateDataFn: (itemId: string, updates: Partial<CheatsheetItem>) => Promise<CheatsheetCategory[]>;
-  updateCategoryFn?: (categoryName: string, updates: Partial<CheatsheetCategory>) => Promise<CheatsheetCategory[]>;
-  CardComponent: ComponentType<{ 
-    item: CheatsheetItem; 
-    onUpdateImages: (newImageUrls: string[]) => void;
-    onInject: (item: CheatsheetItem) => void;
-  }>;
   onSendToPromptsPage?: (item: CheatsheetItem, category: string) => void;
-  isCategoryPanelCollapsed: boolean;
-  onToggleCategoryPanel: () => void;
-  isSidebarPinned: boolean;
-  EmptyIcon: ComponentType<React.SVGProps<SVGSVGElement>>;
-  layout?: 'grid' | 'article';
 }
 
 export const GenericCheatsheetPage: React.FC<GenericCheatsheetPageProps> = ({
-  title, heroText, subtitle, loadDataFn, updateDataFn, CardComponent, onSendToPromptsPage, layout = 'grid', searchPlaceholder
+  title, heroText, subtitle, loadDataFn, updateDataFn, onSendToPromptsPage
 }) => {
   const [data, setData] = useState<CheatsheetCategory[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -205,6 +193,9 @@ export const GenericCheatsheetPage: React.FC<GenericCheatsheetPageProps> = ({
       const tl = gsap.timeline({
           onComplete: () => {
               setActiveCategory(cat);
+              if (cat.items.length > 0) {
+                  setActiveItemIndex(0);
+              }
               setIsTransitioning(false);
           }
       });
@@ -240,35 +231,6 @@ export const GenericCheatsheetPage: React.FC<GenericCheatsheetPageProps> = ({
           duration: 0.4,
           ease: "power3.in"
       }, "-=0.3");
-  };
-
-  const handleBackToCarousel = () => {
-      if (isTransitioning) return;
-      setIsTransitioning(true);
-      audioService.playClick();
-
-      const items = gsap.utils.toArray('.item-card-wrapper');
-      const tl = gsap.timeline({
-          onComplete: () => {
-              setActiveCategory(null);
-              setIsTransitioning(false);
-          }
-      });
-      
-      tl.to(items, {
-          y: 40,
-          opacity: 0,
-          stagger: 0.05,
-          duration: 0.4,
-          ease: "power2.in"
-      }, 0);
-
-      tl.to('.detail-header', {
-          y: -20,
-          opacity: 0,
-          duration: 0.3,
-          ease: "power2.in"
-      }, 0);
   };
 
   const handleUpdateItem = async (itemId: string, updates: Partial<CheatsheetItem>) => {
@@ -314,10 +276,22 @@ export const GenericCheatsheetPage: React.FC<GenericCheatsheetPageProps> = ({
                                 {subtitle || "Systematic visual logic and aesthetic repositories."}
                             </p>
                         </div>
-                        <div className="flex">
-                            <div className="px-8 py-3 flex flex-col items-center justify-center">
-                                <span className="text-3xl font-black tracking-tighter leading-none">{data.length}</span>
-                                <span className="text-[8px] uppercase font-black text-base-content/30 tracking-[0.2em] mt-1">Folders</span>
+                        <div className="flex flex-col md:flex-row items-center gap-6">
+                            <div className="relative w-full md:w-64">
+                                <SearchIcon className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 opacity-20 pointer-events-none" />
+                                <input 
+                                    type="text" 
+                                    value={searchQuery}
+                                    onChange={(e) => setSearchQuery(e.target.value)}
+                                    placeholder="Search registry..."
+                                    className="input input-bordered rounded-none w-full pl-12 font-bold uppercase tracking-tight text-[10px] h-10 bg-transparent border-base-content/10"
+                                />
+                            </div>
+                            <div className="flex">
+                                <div className="px-8 py-3 flex flex-col items-center justify-center">
+                                    <span className="text-3xl font-black tracking-tighter leading-none">{data.length}</span>
+                                    <span className="text-[8px] uppercase font-black text-base-content/30 tracking-[0.2em] mt-1">Folders</span>
+                                </div>
                             </div>
                         </div>
                     </div>
@@ -344,64 +318,17 @@ export const GenericCheatsheetPage: React.FC<GenericCheatsheetPageProps> = ({
         </>
       ) : (
         <div className="flex flex-col h-full w-full min-w-0 bg-transparent z-50 overflow-hidden relative animate-fade-in">
-            {activeItemIndex !== null && (
-                <CheatsheetDetailView 
-                    items={filteredItems}
-                    currentIndex={activeItemIndex}
-                    onClose={() => setActiveItemIndex(null)}
-                    onNavigate={setActiveItemIndex}
-                    onInject={handleInject}
-                    onUpdateItem={handleUpdateItem}
-                />
-            )}
-
-            <header className="detail-header flex-shrink-0 border-b border-base-300 bg-transparent p-8 flex flex-col md:flex-row md:items-center justify-between gap-6 z-[60]">
-                <div className="flex items-center gap-6">
-                    <button onClick={handleBackToCarousel} className="btn btn-ghost btn-circle opacity-40 hover:opacity-100 hover:bg-transparent transition-all">
-                        <ChevronLeftIcon className="w-6 h-6" />
-                    </button>
-                    <div>
-                        <h2 className="text-3xl lg:text-4xl font-black tracking-tighter uppercase leading-none">{activeCategory.category}</h2>
-                        <p className="text-[10px] font-black uppercase tracking-[0.3em] text-primary/40 mt-1">{heroText} REPOSITORY</p>
-                    </div>
-                </div>
-                
-                <div className="relative w-full md:w-96">
-                    <SearchIcon className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 opacity-20 pointer-events-none" />
-                    <input 
-                        type="text" 
-                        value={searchQuery}
-                        onChange={(e) => setSearchQuery(e.target.value)}
-                        placeholder={searchPlaceholder}
-                        className="input input-bordered rounded-none w-full pl-12 font-bold uppercase tracking-tight text-sm h-12"
-                    />
-                </div>
-            </header>
-
-            <div className="flex-grow overflow-y-auto custom-scrollbar bg-transparent">
-                <div className={`mx-auto pt-16 pb-0 px-10 ${layout === 'article' ? 'max-w-4xl' : 'max-w-screen-2xl'}`}>
-                    <div className={layout === 'grid' 
-                        ? "grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-px bg-base-100/40 backdrop-blur-xl shadow-none"
-                        : "flex flex-col gap-px bg-base-100/40 backdrop-blur-xl shadow-none"
-                    }>
-                        {filteredItems.map((item, idx) => (
-                            <div 
-                                key={item.id} 
-                                className="item-card-wrapper bg-transparent group/item overflow-hidden will-change-transform cursor-pointer" 
-                                onClick={() => setActiveItemIndex(idx)}
-                            >
-                                <div className="transition-transform duration-1000 group-hover/item:scale-[1.01]">
-                                    <CardComponent 
-                                      item={item}
-                                      onUpdateImages={(newImageUrls) => handleUpdateItem(item.id, { imageUrls: newImageUrls })}
-                                      onInject={handleInject}
-                                    />
-                                </div>
-                            </div>
-                        ))}
-                    </div>
-                </div>
-            </div>
+            <LayeredCheatsheetDetail 
+                items={filteredItems}
+                currentIndex={activeItemIndex ?? 0}
+                onClose={() => {
+                    setActiveItemIndex(null);
+                    setActiveCategory(null);
+                }}
+                onNavigate={setActiveItemIndex}
+                onInject={handleInject}
+                onUpdateItem={handleUpdateItem}
+            />
         </div>
       )}
     </section>

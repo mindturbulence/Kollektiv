@@ -437,7 +437,7 @@ const PromptCrafter = ({ onClip, onSendToEnhancer, onSavePresetSuccess, promptTo
                             <div className="space-y-4 animate-fade-in">
                                  <div className="flex justify-between items-center">
                                     <span className="text-[10px] font-black uppercase tracking-[0.2em] text-primary/60 flex items-center gap-3">
-                                        <div className="w-1.5 h-1.5 rounded-full bg-primary animate-pulse"></div> Resulting Prompt
+                                        <div className="w-1.5 h-1.5 rounded-none bg-primary animate-pulse"></div> Resulting Prompt
                                     </span>
                                 </div>
                                 <div className="p-6 text-base font-medium leading-relaxed italic text-base-content/80">

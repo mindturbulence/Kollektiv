@@ -11,6 +11,7 @@ import ConfirmationModal from './ConfirmationModal';
 import LoadingSpinner from './LoadingSpinner';
 import AddItemModal from './AddItemModal';
 import useLocalStorage from '../utils/useLocalStorage';
+import CustomScrollbar from './CustomScrollbar';
 
 interface ImageGalleryProps {
   isCategoryPanelCollapsed: boolean;
@@ -81,25 +82,27 @@ const ImageGallery: React.FC<ImageGalleryProps> = ({ isCategoryPanelCollapsed, o
     const updateMotion = () => {
         const currentY = scroller.scrollTop;
         const diff = currentY - lastY;
-        vel += (diff - vel) * 0.15; 
+        
+        // Increase sensitivity and responsiveness
+        vel += (diff - vel) * 0.2; 
         lastY = currentY;
 
-        const clampedVel = gsap.utils.clamp(-40, 40, vel);
-        const skewValue = clampedVel * 0.07;
-        const scaleValue = 1 - Math.min(0.015, Math.abs(clampedVel) * 0.00015);
+        const clampedVel = gsap.utils.clamp(-60, 60, vel);
+        const skewValue = clampedVel * 0.12;
+        const scaleValue = 1 - Math.min(0.02, Math.abs(clampedVel) * 0.0002);
 
         skewSetter(skewValue);
         scaleSetter(scaleValue);
 
         columnRefs.current.forEach((col, idx) => {
             if (!col) return;
-            const factor = ((idx % 3) - 1) * 0.15;
+            const factor = ((idx % 3) - 1) * 0.25;
             const offset = clampedVel * factor;
             gsap.set(col, { y: offset, force3D: true });
         });
 
-        if (Math.abs(vel) > 0.01) {
-            vel *= 0.93;
+        if (Math.abs(vel) > 0.1) {
+            vel *= 0.95;
         } else {
             vel = 0;
             skewSetter(0);
@@ -344,8 +347,9 @@ const ImageGallery: React.FC<ImageGalleryProps> = ({ isCategoryPanelCollapsed, o
         )}
 
         <div className={`flex flex-col h-full overflow-hidden transition-all duration-300 ${detailViewItemId ? 'blur-sm pointer-events-none' : ''}`}>
-            <div ref={scrollerRef} className="flex-grow overflow-y-auto scroll-smooth custom-scrollbar">
-                <header className="bg-transparent">
+            <div className="relative flex-grow overflow-hidden">
+                <div ref={scrollerRef} className="h-full w-full overflow-y-auto no-scrollbar">
+                    <header className="bg-transparent">
                     <div className="p-6 md:p-10">
                         <div className="flex flex-col md:flex-row md:items-end justify-between gap-6">
                             <div className="space-y-2">
@@ -436,6 +440,8 @@ const ImageGallery: React.FC<ImageGalleryProps> = ({ isCategoryPanelCollapsed, o
                 {targetDisplayCount < sortedAndFilteredItems.length && (
                     <div ref={lastElementRef} className="py-20 flex justify-center bg-transparent"><span className="loading loading-spinner loading-md opacity-20"></span></div>
                 )}
+                </div>
+                <CustomScrollbar containerRef={scrollerRef} />
             </div>
         </div>
       </main>
