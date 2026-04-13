@@ -699,7 +699,7 @@ const AppContent: React.FC = () => {
         isFirstRevealRef.current = false;
 
         const tl = gsap.timeline({
-            defaults: { ease: "power3.inOut" }
+            defaults: { ease: "power4.inOut" }
         });
 
         const blindItems = Array.from(blindsRef.current.children) as HTMLElement[];
@@ -716,25 +716,24 @@ const AppContent: React.FC = () => {
             });
         });
 
-        gsap.set(appWrapperRef.current, { autoAlpha: 0, scale: 1.01 });
+        gsap.set(appWrapperRef.current, { autoAlpha: 0 });
 
         // Vertical Blinds effect: Each strip scales down vertically
         tl.to(blindItems, {
             scaleY: 0,
-            duration: 2.0,
+            duration: 1.8,
             stagger: {
-                each: 0.12,
+                each: 0.1,
                 from: "start"
             },
             ease: "expo.inOut"
-        }, 0.2);
+        }, 0);
 
         tl.to(appWrapperRef.current, {
             autoAlpha: 1,
-            scale: 1,
-            duration: 2.2,
+            duration: 2.0,
             ease: "power2.out"
-        }, 0.8);
+        }, 0.6);
 
         tl.set(apertureRef.current, { visibility: 'hidden', autoAlpha: 0 });
 

@@ -202,12 +202,12 @@ export const MediaAnalyzer: React.FC<MediaAnalyzerProps> = ({ onSaveSuggestion, 
     const hasPrompt = !!metadataResults?.prompt && !metadataResults.prompt.includes('extraction failed') && !metadataResults.prompt.includes('No text nodes');
     
     return (
-        <div className="grid grid-cols-1 lg:grid-cols-12 overflow-hidden h-full p-4 gap-4 relative">
+        <div className="grid grid-cols-1 lg:grid-cols-12 overflow-hidden h-full gap-4 relative">
             
             {/* Media Input Area */}
-            <aside className="lg:col-span-3 flex flex-col min-h-0 bg-transparent relative z-10">
+            <aside className="lg:col-span-3 flex flex-col min-h-0 bg-base-100/30 backdrop-blur-md relative z-10">
                 {header}
-                <header className="p-6 h-16 flex items-center justify-between">
+                <header className="p-6 h-16 flex items-center justify-between bg-base-100/80 backdrop-blur-md">
                     <h3 className="text-[10px] font-black uppercase tracking-[0.4em] text-primary">Media Input</h3>
                     <div className="flex gap-1">
                         <div className="w-1 h-1 bg-primary/30"></div>
@@ -278,12 +278,8 @@ export const MediaAnalyzer: React.FC<MediaAnalyzerProps> = ({ onSaveSuggestion, 
                             </button>
                         </div>
                     )}
-
-                    <p className="text-[9px] font-bold text-base-content/30 uppercase leading-relaxed text-center">
-                        Extract neural tokens via ANALYZE or technical parameters via READ.
-                    </p>
                 </div>
-                <footer className="h-14 flex items-stretch flex-shrink-0">
+                <footer className="h-14 flex items-stretch flex-shrink-0 bg-base-100/80 backdrop-blur-md">
                     <button 
                         onClick={() => !isLoading && handleReset(null)} 
                         className="btn btn-ghost h-full rounded-none border-none flex-1 font-black text-[10px] tracking-widest text-error/40 hover:text-error uppercase px-1 truncate"
@@ -308,8 +304,8 @@ export const MediaAnalyzer: React.FC<MediaAnalyzerProps> = ({ onSaveSuggestion, 
             </aside>
 
             {/* center Column: Results (Merged) */}
-            <main className="lg:col-span-9 flex flex-col min-h-0 bg-transparent relative z-10">
-                <header className="p-6 h-16 flex items-center justify-between">
+            <main className="lg:col-span-9 flex flex-col min-h-0 bg-base-100/30 backdrop-blur-md relative z-10">
+                <header className="p-6 h-16 flex items-center justify-between bg-base-100/80 backdrop-blur-md">
                     <div className="flex items-center gap-6">
                         <h2 className={`text-xs font-black uppercase tracking-[0.4em] flex items-center gap-3 transition-colors cursor-pointer ${activeResultType === 'abstraction' ? 'text-primary' : 'text-base-content/20 hover:text-base-content/40'}`} onClick={() => abstractionResults && setActiveResultType('abstraction')}>
                             <div className={`w-2 h-2 rounded-none ${activeResultType === 'abstraction' ? 'bg-primary animate-pulse' : 'bg-base-content/10'}`}></div> 

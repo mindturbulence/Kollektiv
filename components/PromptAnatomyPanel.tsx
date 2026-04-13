@@ -3,7 +3,7 @@ import { useSettings } from '../contexts/SettingsContext';
 import type { PromptModifiers } from '../types';
 import { dissectPrompt, generateFocusedVariations, generateConstructorPreset } from '../services/llmService';
 import { refinerPresetService } from '../services/refinerPresetService';
-import { EditIcon, CheckIcon, ChevronDownIcon, SparklesIcon } from './icons';
+import { EditIcon, CheckIcon, ChevronDownIcon } from './icons';
 import LoadingSpinner from './LoadingSpinner';
 
 interface PromptAnatomyPanelProps {
@@ -295,13 +295,13 @@ export const PromptAnatomyPanel: React.FC<PromptAnatomyPanelProps> = ({ promptTo
       </main>
       
       {components && (
-        <footer className="p-6 border-t border-base-300 bg-transparent">
+        <footer className="p-6 bg-base-100/80 backdrop-blur-md">
           <button 
             onClick={handleSavePreset} 
             disabled={isSavingPreset || loadingState !== 'idle'}
-            className="btn btn-primary btn-block rounded-none font-black text-[10px] uppercase tracking-[0.3em]"
+            className="btn btn-primary btn-block rounded-none font-black text-[10px] uppercase tracking-[0.3em] disabled:text-base-content/20 disabled:bg-transparent disabled:opacity-100"
           >
-            {isSavingPreset ? <LoadingSpinner size={16} /> : <><SparklesIcon className="w-4 h-4 mr-2" /> Save Constructor Preset</>}
+            {isSavingPreset ? <LoadingSpinner size={16} /> : "SAVE CONSTRUCTOR PRESET"}
           </button>
         </footer>
       )}

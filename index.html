@@ -1,200 +1,46 @@
-
 <!DOCTYPE html>
 <html lang="en">
-  <head>
-    <meta charset="UTF-8" />
-    <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Crect width='100' height='100' rx='20' fill='%2300ffa3'/%3E%3Ctext y='.9em' x='50%25' text-anchor='middle' font-family='serif' font-weight='bold' font-size='80' fill='%23000'%3EK%3C/text%3E%3C/svg%3E" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
-    <meta name="theme-color" id="theme-color-meta" content="#020617" />
-    <meta name="apple-mobile-web-app-capable" content="yes" />
-    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
-    <title>Kollektiv</title>
-    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=Plus+Jakarta+Sans:ital,wght@0,300;0,400;0,500;0,600;0,700;0,800;1,800&display=swap" />
-    <script type="text/javascript">
-      // Critical: Load theme immediately to support "use current themes" during integrity check
-      (function() {
-        try {
-          const settings = JSON.parse(localStorage.getItem('kollektivSettingsV4'));
-          if (settings) {
-            const theme = settings.activeThemeMode === 'light' ? settings.lightTheme : settings.darkTheme;
-            if (theme) {
-              document.documentElement.setAttribute('data-theme', theme);
-              
-              // Simple heuristic for light/dark
-              const isLight = ['light', 'cupcake', 'bumblebee', 'emerald', 'corporate', 'retro', 'cyberpunk', 'valentine', 'garden', 'lofi', 'pastel', 'fantasy', 'wireframe', 'cmyk', 'autumn', 'acid', 'lemonade', 'winter', 'nord'].includes(theme);
-              if (isLight) {
-                document.documentElement.classList.add('is-light-theme');
-              }
-              
-              // Update theme-color meta
-              const meta = document.getElementById('theme-color-meta');
-              if (meta) {
-                if (theme === 'pipboy') meta.setAttribute('content', '#051105');
-                else if (theme === 'abyss') meta.setAttribute('content', '#020617');
-                else if (isLight) meta.setAttribute('content', '#ffffff');
-              }
+
+<head>
+  <meta charset="UTF-8" />
+  <link rel="icon" type="image/svg+xml"
+    href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Crect width='100' height='100' rx='20' fill='%2300ffa3'/%3E%3Ctext y='.9em' x='50%25' text-anchor='middle' font-family='serif' font-weight='bold' font-size='80' fill='%23000'%3EK%3C/text%3E%3C/svg%3E" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <meta name="theme-color" id="theme-color-meta" content="#020617" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <title>Kollektiv</title>
+  <link rel="stylesheet"
+    href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=Plus+Jakarta+Sans:ital,wght@0,300;0,400;0,500;0,600;0,700;0,800;1,800&display=swap" />
+  <script type="text/javascript">
+    // Critical: Load theme immediately to support "use current themes" during integrity check
+    (function () {
+      try {
+        const settings = JSON.parse(localStorage.getItem('kollektivSettingsV4'));
+        if (settings) {
+          const theme = settings.activeThemeMode === 'light' ? settings.lightTheme : settings.darkTheme;
+          if (theme) {
+            document.documentElement.setAttribute('data-theme', theme);
+
+            // Simple heuristic for light/dark
+            const isLight = ['light', 'cupcake', 'bumblebee', 'emerald', 'corporate', 'retro', 'cyberpunk', 'valentine', 'garden', 'lofi', 'pastel', 'fantasy', 'wireframe', 'cmyk', 'autumn', 'acid', 'lemonade', 'winter', 'nord'].includes(theme);
+            if (isLight) {
+              document.documentElement.classList.add('is-light-theme');
+            }
+
+            // Update theme-color meta
+            const meta = document.getElementById('theme-color-meta');
+            if (meta) {
+              if (theme === 'pipboy') meta.setAttribute('content', '#051105');
+              else if (theme === 'abyss') meta.setAttribute('content', '#020617');
+              else if (isLight) meta.setAttribute('content', '#ffffff');
             }
           }
-        } catch (e) {}
-      })();
-    </script>
-    <style>
-      :root {
-        --bg: #020617;
-        --bc: 255 255 255;
-        --p: 0 255 163;
-      }
-      .is-light-theme {
-        --bg: #ffffff;
-        --bc: 0 0 0;
-        --p: 0 255 163;
-      }
-      body, html {
-        margin: 0;
-        padding: 0;
-        width: 100%;
-        height: 100%;
-        background-color: var(--bg);
-        overflow: hidden;
-        transition: background-color 0.5s ease;
-      }
-      #initial-loader {
-        position: fixed;
-        inset: 0;
-        z-index: 500;
-        display: flex;
-        flex-direction: column;
-        align-items: center;
-        justify-content: center;
-        background-color: var(--bg);
-        color: rgb(var(--bc));
-        font-family: 'Inter', 'Plus Jakarta Sans', sans-serif;
-        user-select: none;
-      }
-      .loader-frame-top, .loader-frame-bottom {
-        position: absolute;
-        left: 0;
-        right: 0;
-        height: 1px;
-        background-color: rgba(var(--bc), 0.1);
-        display: flex;
-        align-items: center;
-        justify-content: space-between;
-        padding: 0 2rem;
-        font-family: monospace;
-        font-size: 9px;
-        font-weight: bold;
-        letter-spacing: 0.2em;
-        text-transform: uppercase;
-        color: rgba(var(--bc), 0.3);
-      }
-      .loader-frame-top > div, .loader-frame-bottom > div {
-        background-color: var(--bg);
-        padding: 0 1.5rem;
-        display: flex;
-        align-items: center;
-      }
-      .loader-frame-top {
-        top: 3rem;
-      }
-      .loader-frame-bottom {
-        bottom: 3rem;
-      }
-      .loader-frame-text {
-        display: flex;
-        align-items: center;
-        gap: 1.5rem;
-      }
-      .loader-frame-text span {
-        display: flex;
-        align-items: center;
-        gap: 0.5rem;
-      }
-      .loader-frame-text span::before {
-        content: "";
-        width: 4px;
-        height: 4px;
-        background-color: rgb(var(--p));
-        border-radius: 50%;
-      }
-      .grid-texture {
-        position: absolute;
-        inset: 0;
-        background-image: radial-gradient(circle, rgba(var(--bc), 0.05) 1px, transparent 1px);
-        background-size: 20px 20px;
-        opacity: 0.3;
-        pointer-events: none;
-      }
-      .loader-content {
-        position: relative;
-        z-index: 10;
-        display: flex;
-        flex-direction: column;
-        align-items: center;
-      }
-      .brand-wrapper {
-        overflow: hidden;
-        margin-bottom: 2rem;
-        padding: 0 1rem;
-      }
-      .brand-text {
-        display: grid;
-        grid-template-columns: 1fr;
-        grid-template-rows: 1fr;
-        font-size: 2.25rem;
-        font-weight: 900;
-        font-style: italic;
-        letter-spacing: -0.05em;
-        text-transform: uppercase;
-        align-items: center;
-        font-family: 'Plus Jakarta Sans', sans-serif;
-      }
-      .ghost-text {
-        grid-column: 1;
-        grid-row: 1;
-        color: rgba(var(--bc), 0.1);
-        line-height: 1;
-        padding: 0.5rem 0;
-      }
-      .fill-mask {
-        grid-column: 1;
-        grid-row: 1;
-        height: 100%;
-        overflow: hidden;
-        border-right: 2px solid rgb(var(--p));
-        width: 10%;
-        transition: width 0.7s ease-out;
-      }
-      .fill-text {
-        display: block;
-        white-space: nowrap;
-        line-height: 1;
-        padding: 0.5rem 0;
-        color: rgb(var(--bc));
-      }
-      .dot { color: rgb(var(--p)); font-style: italic; }
-      .status-text {
-        font-family: monospace;
-        font-size: 10px;
-        font-weight: bold;
-        text-transform: uppercase;
-        letter-spacing: 0.5em;
-        color: rgba(var(--bc), 0.4);
-        margin-top: 0.75rem;
-      }
-      .metadata {
-        position: absolute;
-        bottom: 3rem;
-        left: 3rem;
-        font-family: monospace;
-        font-size: 8px;
-        font-weight: bold;
-        color: rgba(var(--bc), 0.1);
-        text-transform: uppercase;
-        letter-spacing: 0.1em;
-      }
-    </style>
-    <script type="importmap">
+        }
+      } catch (e) { }
+    })();
+  </script>
+  <script type="importmap">
     {
       "imports": {
         "react": "https://esm.sh/react@^19.1.1?corp",
@@ -222,57 +68,12 @@
       }
     }
     </script>
-    <script src="https://accounts.google.com/gsi/client" async defer></script>
-    <script type="text/javascript">
-      // Animate loader mask slightly while waiting for React
-      (function() {
-        document.addEventListener('DOMContentLoaded', () => {
-          let width = 10;
-          const mask = document.getElementById('loader-mask');
-          if (!mask) return;
-          const interval = setInterval(() => {
-            width += Math.random() * 5;
-            if (width > 60) clearInterval(interval);
-            mask.style.width = width + '%';
-          }, 150);
-        });
-      })();
-    </script>
-  </head>
-  <body>
-    <div id="root">
-      <div id="initial-loader">
-        <div class="grid-texture"></div>
-        
-        <div class="loader-frame-top">
-          <div class="loader-frame-text">
-            <span>Kollektiv Neural Systems</span>
-            <span>Protocol: Master_Load</span>
-          </div>
-          <div>Ver: 2.5.0_BETA</div>
-        </div>
+  <script src="https://accounts.google.com/gsi/client" async defer></script>
+</head>
 
-        <div class="loader-content">
-          <div class="brand-wrapper">
-            <h1 class="brand-text">
-              <span class="ghost-text">Kollektiv<span class="dot">.</span></span>
-              <div class="fill-mask" id="loader-mask">
-                <span class="fill-text">Kollektiv<span class="dot">.</span></span>
-              </div>
-            </h1>
-          </div>
-          <p id="loading-status" class="status-text">Initializing Neural Interface...</p>
-        </div>
+<body>
+  <div id="root"></div>
+  <script type="module" src="/index.tsx"></script>
+</body>
 
-        <div class="loader-frame-bottom">
-          <div>© 2026 Kollektiv</div>
-          <div class="loader-frame-text">
-            <span>Status: Operational</span>
-            <span>Region: ASIA-SE-1</span>
-          </div>
-        </div>
-      </div>
-    </div>
-    <script type="module" src="/index.tsx"></script>
-  </body>
 </html>

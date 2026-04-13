@@ -294,16 +294,16 @@ const PromptCrafter = ({ onClip, onSendToEnhancer, onSavePresetSuccess, promptTo
     if (error) return <div className="p-4 text-error">{error}</div>;
 
     return (
-        <div className="grid grid-cols-1 lg:grid-cols-12 overflow-hidden h-full p-4 gap-4">
-            <aside className="lg:col-span-3 flex flex-col overflow-hidden">
+        <div className="grid grid-cols-1 lg:grid-cols-12 overflow-hidden h-full gap-4">
+            <aside className="lg:col-span-3 flex flex-col overflow-hidden bg-base-100/30 backdrop-blur-md">
                 {header}
-                <header className="p-6 h-16 flex items-center">
+                <header className="p-6 h-16 flex items-center bg-base-100/80 backdrop-blur-md">
                     <h3 className="text-[10px] font-black uppercase tracking-[0.4em] text-primary">Wildcards</h3>
                 </header>
                 <div className="flex-grow p-6 overflow-y-auto custom-scrollbar">
                     <WildcardTree categories={crafterData?.wildcardCategories || []} onWildcardClick={handleWildcardClick} />
                 </div>
-                <footer className="h-14 flex items-stretch">
+                <footer className="h-14 flex items-stretch bg-base-100/80 backdrop-blur-md">
                     <button 
                         onClick={loadData} 
                         disabled={isImporting}
@@ -328,9 +328,9 @@ const PromptCrafter = ({ onClip, onSendToEnhancer, onSavePresetSuccess, promptTo
                     />
                 </footer>
             </aside>
-            <main className="lg:col-span-6 flex flex-col overflow-hidden">
+            <main className="lg:col-span-6 flex flex-col overflow-hidden bg-base-100/30 backdrop-blur-md">
                 {/* Template Selection Bar - h-16 to match panel headers */}
-                <div className="h-16 flex-shrink-0 flex items-stretch">
+                <div className="h-16 flex-shrink-0 flex items-stretch bg-base-100/80 backdrop-blur-md">
                   <div className="dropdown flex-grow h-full">
                     <div className="relative h-full">
                         <input 
@@ -405,16 +405,16 @@ const PromptCrafter = ({ onClip, onSendToEnhancer, onSavePresetSuccess, promptTo
                     </div>
                     
                     {/* Middle Action Bar - Library Style */}
-                    <div className="h-14 flex items-stretch flex-shrink-0">
+                    <div className="h-14 flex items-stretch flex-shrink-0 bg-base-100/80 backdrop-blur-md">
                         <button 
                             onClick={() => setPromptText('')} 
-                            className="btn btn-ghost h-full rounded-none border-none flex-1 font-black text-[10px] tracking-widest text-error/40 hover:text-error uppercase px-1 truncate"
+                            className="btn btn-ghost h-full rounded-none border-none flex-1 font-black text-[10px] tracking-widest text-error/40 hover:text-error uppercase px-1 truncate bg-transparent"
                         >
                             CLEAR
                         </button>
                         <button 
                             onClick={handleSaveTemplateClick} 
-                            className="btn btn-ghost h-full rounded-none border-none flex-1 font-black text-[10px] tracking-widest uppercase hover:bg-base-200 px-1 truncate"
+                            className="btn btn-ghost h-full rounded-none border-none flex-1 font-black text-[10px] tracking-widest uppercase hover:bg-base-200 px-1 truncate bg-transparent"
                         >
                             SAVE
                         </button>
@@ -454,46 +454,46 @@ const PromptCrafter = ({ onClip, onSendToEnhancer, onSavePresetSuccess, promptTo
                 </div>
 
                 {/* Bottom Action Bar - Library Style */}
-                <div className="h-14 flex items-stretch flex-shrink-0">
+                <div className="h-14 flex items-stretch flex-shrink-0 bg-base-100/80 backdrop-blur-md">
                     <button 
                         onClick={handleAnalyze} 
                         disabled={!generatedPrompt || !!aiAction} 
-                        className="btn btn-ghost h-full rounded-none border-none flex-1 font-black text-[10px] tracking-widest uppercase hover:bg-base-200 px-1 truncate"
+                        className="btn btn-ghost h-full rounded-none border-none flex-1 font-black text-[10px] tracking-widest uppercase hover:bg-base-200 px-1 truncate disabled:text-base-content/20 disabled:bg-transparent disabled:opacity-100"
                     >
                         ANALYZE
                     </button>
                     <button 
                         onClick={handleReconstruct} 
                         disabled={!generatedPrompt || !!aiAction} 
-                        className="btn btn-ghost h-full rounded-none border-none flex-1 font-black text-[10px] tracking-widest uppercase hover:bg-base-200 px-1 truncate"
+                        className="btn btn-ghost h-full rounded-none border-none flex-1 font-black text-[10px] tracking-widest uppercase hover:bg-base-200 px-1 truncate disabled:text-base-content/20 disabled:bg-transparent disabled:opacity-100"
                     >
                         REWRITE
                     </button>
                     <button 
                         onClick={() => onSendToEnhancer(generatedPrompt!)} 
                         disabled={!generatedPrompt || !!aiAction} 
-                        className="btn btn-ghost h-full rounded-none border-none flex-1 font-black text-[10px] tracking-widest text-primary uppercase hover:bg-primary/10 px-1 truncate"
+                        className="btn btn-ghost h-full rounded-none border-none flex-1 font-black text-[10px] tracking-widest text-primary uppercase hover:bg-primary/10 px-1 truncate disabled:text-base-content/20 disabled:bg-transparent disabled:opacity-100"
                     >
                         IMPROVE
                     </button>
                     <button 
                         onClick={handleClip} 
                         disabled={!generatedPrompt} 
-                        className="btn btn-ghost h-full rounded-none border-none flex-1 font-black text-[10px] tracking-widest uppercase hover:bg-base-200 px-1 truncate"
+                        className="btn btn-ghost h-full rounded-none border-none flex-1 font-black text-[10px] tracking-widest uppercase hover:bg-base-200 px-1 truncate disabled:text-base-content/20 disabled:bg-transparent disabled:opacity-100"
                     >
                         {clipped ? 'OK' : 'CLIP'}
                     </button>
                     <button 
                         onClick={handleCopy} 
                         disabled={!generatedPrompt} 
-                        className="btn btn-ghost h-full rounded-none border-none flex-1 font-black text-[10px] tracking-widest uppercase hover:bg-base-200 px-1 truncate"
+                        className="btn btn-ghost h-full rounded-none border-none flex-1 font-black text-[10px] tracking-widest uppercase hover:bg-base-200 px-1 truncate disabled:text-base-content/20 disabled:bg-transparent disabled:opacity-100"
                     >
                         {copied ? 'OK' : 'COPY'}
                     </button>
                 </div>
             </main>
             
-            <aside className="lg:col-span-3 flex flex-col min-h-0">
+            <aside className="lg:col-span-3 flex flex-col min-h-0 bg-base-100/30 backdrop-blur-md">
                 <PromptAnatomyPanel 
                     promptToAnalyze={generatedPrompt}
                     onReconstructFromComponents={handleReconstructFromComponents}
