@@ -9,18 +9,20 @@ interface RollingTextProps {
 
 const RollingText: React.FC<RollingTextProps> = ({ text, className = "", hoverClassName = "" }) => {
   const letters = text.split('');
+  const [isHovered, setIsHovered] = React.useState(false);
 
   return (
-    <span className={`relative inline-flex overflow-hidden ${className}`}>
+    <span 
+      className={`relative inline-flex overflow-hidden ${className}`}
+      onMouseEnter={() => setIsHovered(true)}
+      onMouseLeave={() => setIsHovered(false)}
+    >
       {letters.map((letter, i) => (
         <span key={i} className="relative inline-block overflow-hidden">
           {/* Top letter (original) */}
           <motion.span
             className="inline-block"
-            variants={{
-              initial: { y: 0 },
-              hover: { y: '-100%' }
-            }}
+            animate={isHovered ? { y: '-100%' } : { y: 0 }}
             transition={{
               duration: 0.5,
               ease: [0.6, 0.01, 0.05, 0.95],
@@ -33,10 +35,7 @@ const RollingText: React.FC<RollingTextProps> = ({ text, className = "", hoverCl
           {/* Bottom letter (revealed on hover) */}
           <motion.span
             className={`absolute left-0 top-full inline-block ${hoverClassName}`}
-            variants={{
-              initial: { y: 0 },
-              hover: { y: '-100%' }
-            }}
+            animate={isHovered ? { y: '-100%' } : { y: 0 }}
             transition={{
               duration: 0.5,
               ease: [0.6, 0.01, 0.05, 0.95],

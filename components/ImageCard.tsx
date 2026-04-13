@@ -190,7 +190,7 @@ const Media: React.FC<{
                         onLoadedData={handleLoad}
                     />
                     <div className={`absolute inset-0 flex items-center justify-center pointer-events-none z-10 transition-opacity duration-500 ${isHovered ? 'opacity-0' : 'opacity-100'}`}>
-                        <div className="bg-black/40 backdrop-blur-sm p-2 rounded-full border border-white/10 shadow-2xl">
+                        <div className="bg-black/40 backdrop-blur-sm p-2 rounded-none border border-white/10 shadow-2xl">
                             <PlayIcon className="w-4 h-4 text-white fill-current" />
                         </div>
                     </div>

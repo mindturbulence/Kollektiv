@@ -67,7 +67,10 @@ const fileManifest: FileManifestEntry[] = [
 export const rebuildGalleryDatabase = async (onProgress: (msg: string) => void): Promise<void> => {
     console.log('[Integrity] Starting gallery database rebuild');
     try {
-        onProgress('Accessing Media Vault...');
+        onProgress('> MOUNTING VAULT...');
+        await new Promise(r => setTimeout(r, 200));
+        onProgress('> SCANNING INDEX...');
+        await new Promise(r => setTimeout(r, 200));
         const manifestStr = await fileSystemManager.readFile('kollektiv_gallery_manifest.json');
         
         let manifest: any = { galleryItems: [], categories: [], pinnedIds: [] };
@@ -79,11 +82,9 @@ export const rebuildGalleryDatabase = async (onProgress: (msg: string) => void):
             }
         }
         
-        // Just verify the manifest is valid, don't scan all files
         const itemCount = manifest.galleryItems?.length || 0;
         console.log(`[Integrity] Gallery has ${itemCount} items`);
         
-        // Quick sanity check - verify a few items exist
         let validCount = 0;
         const checkItems = (manifest.galleryItems || []).slice(0, 5);
         for (const item of checkItems) {
@@ -91,7 +92,7 @@ export const rebuildGalleryDatabase = async (onProgress: (msg: string) => void):
         }
         
         console.log('[Integrity] Gallery rebuild complete');
-        onProgress('Media Vault Structure Optimized.');
+        onProgress(`> VAULT MOUNTED [${itemCount} ITEMS]`);
     } catch (error) {
         console.error("rebuildGalleryDatabase failed:", error);
     }
@@ -104,7 +105,10 @@ export const rebuildGalleryDatabase = async (onProgress: (msg: string) => void):
 export const rebuildPromptDatabase = async (onProgress: (msg: string) => void): Promise<void> => {
     console.log('[Integrity] Starting prompt database rebuild');
     try {
-        onProgress('Indexing Neural Library...');
+        onProgress('> INIT NEURAL INDEX...');
+        await new Promise(r => setTimeout(r, 200));
+        onProgress('> PARSING LIBRARY...');
+        await new Promise(r => setTimeout(r, 200));
         const manifestStr = await fileSystemManager.readFile('prompts_manifest.json');
         
         let manifest: any = { prompts: [], categories: [] };
@@ -120,7 +124,7 @@ export const rebuildPromptDatabase = async (onProgress: (msg: string) => void): 
         console.log(`[Integrity] Library has ${promptCount} prompts`);
         
         console.log('[Integrity] Prompt rebuild complete');
-        onProgress('Neural Library Synced.');
+        onProgress(`> INDEX SYNCED [${promptCount} ENTRIES]`);
     } catch (error) {
         console.error("rebuildPromptDatabase failed:", error);
     }
@@ -132,7 +136,8 @@ export const rebuildPromptDatabase = async (onProgress: (msg: string) => void): 
 export const optimizeManifests = async (onProgress: (msg: string) => void): Promise<void> => {
     console.log('[Integrity] Starting manifest optimization');
     try {
-        onProgress('Compressing System Registries...');
+        onProgress('> COMPRESSING REGISTRIES...');
+        await new Promise(r => setTimeout(r, 200));
         const files = ['kollektiv_gallery_manifest.json', 'prompts_manifest.json', 'crafter_manifest.json', 'refiner_presets_manifest.json', 'composer_presets_manifest.json'];
         
         for (const file of files) {
@@ -147,7 +152,7 @@ export const optimizeManifests = async (onProgress: (msg: string) => void): Prom
             }
         }
         console.log('[Integrity] Optimization complete');
-        onProgress('Optimization Complete.');
+        onProgress('> REGISTRIES COMPRESSED');
     } catch (error) {
         console.error("optimizeManifests failed:", error);
     }
@@ -157,37 +162,40 @@ export const optimizeManifests = async (onProgress: (msg: string) => void): Prom
 export const verifyAndRepairFiles = async (onProgress: (message: string, progress?: number) => void, _settings: LLMSettings): Promise<boolean> => {
     console.log('[Integrity] Starting file verification');
     try {
-        onProgress('Verifying application files...');
+        onProgress('> INITIATING SYSTEM CHECK...');
+        await new Promise(r => setTimeout(r, 300));
         
-        // Quick check - just verify files exist and are valid
         const totalSteps = fileManifest.length;
         
         for (let i = 0; i < totalSteps; i++) {
             const entry = fileManifest[i];
             try {
                 const progress = (i + 1) / totalSteps;
-                onProgress(`Checking: ${entry.path}`, progress);
+                const status = i % 2 === 0 ? '[CHECK]' : '[VERIFY]';
+                onProgress(`${status} ${entry.path.replace('.json', '').toUpperCase()}`, progress);
+                await new Promise(r => setTimeout(r, 150));
                 
                 const content = await fileSystemManager.readFile(entry.path);
                 
                 if (content === null) {
-                    // File doesn't exist - create with default content
                     console.log(`[Integrity] Creating ${entry.path}`);
+                    onProgress(`[CREATE] ${entry.path.replace('.json', '').toUpperCase()}`);
                     const defaultContent = entry.getDefaultContent();
                     const contentString = typeof defaultContent === 'string' ? defaultContent : JSON.stringify(defaultContent);
                     const blob = new Blob([contentString], { type: entry.type === 'json' ? 'application/json' : 'text/plain' });
                     await fileSystemManager.saveFile(entry.path, blob);
+                    await new Promise(r => setTimeout(r, 100));
                 } else if (entry.type === 'json') {
-                    // Verify it's valid JSON
                     try {
                         JSON.parse(content);
                     } catch (e) {
-                        // Invalid JSON - recreate
                         console.log(`[Integrity] Repairing ${entry.path}`);
+                        onProgress(`[REPAIR] ${entry.path.replace('.json', '').toUpperCase()}`);
                         const defaultContent = entry.getDefaultContent();
                         const contentString = typeof defaultContent === 'string' ? defaultContent : JSON.stringify(defaultContent);
                         const blob = new Blob([contentString], { type: 'application/json' });
                         await fileSystemManager.saveFile(entry.path, blob);
+                        await new Promise(r => setTimeout(r, 100));
                     }
                 }
             } catch (e) {
@@ -196,7 +204,7 @@ export const verifyAndRepairFiles = async (onProgress: (message: string, progres
         }
         
         console.log('[Integrity] File verification complete');
-        onProgress('Registry Healthy.', 1);
+        onProgress('> SYSTEM VERIFIED [OK]', 1);
         return true;
     } catch (error) {
         console.error("verifyAndRepairFiles failed:", error);

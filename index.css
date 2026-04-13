@@ -68,12 +68,6 @@
 }
 
 /* --- DICH THEME (FUTURISTIC BRUTALISM) --- */
-[data-theme='dich'] {
-    --bc: 255 255 255;
-    --p: 120 100% 50%;
-    --pc: 0 0 0;
-}
-
 [data-theme='dich'] body {
   background-color: #000000;
   color: #ffffff;
@@ -116,9 +110,6 @@
 }
 
 [data-theme='dich'] .btn-primary {
-    background: oklch(var(--p)) !important;
-    color: oklch(var(--pc)) !important;
-    border: none !important;
     font-family: 'Space Grotesk', sans-serif;
     font-weight: 900;
     letter-spacing: 0.2em;
@@ -130,8 +121,6 @@
 }
 
 [data-theme='dich'] .btn-primary:hover {
-    background: oklch(var(--bc)) !important;
-    color: oklch(var(--b1)) !important;
     transform: translateY(-2px);
     box-shadow: 0 10px 20px oklch(var(--p) / 0.2);
 }
@@ -151,16 +140,7 @@
     left: 100%;
 }
 
-[data-theme='dich'] .text-primary {
-  color: oklch(var(--p)) !important;
-}
-
-[data-theme='dich'] .border-base-300 {
-  border-color: rgba(255, 255, 255, 0.1) !important;
-}
-
 [data-theme='dich'] .bg-base-100 {
-    background: rgba(10, 10, 10, 0.8) !important;
     backdrop-filter: blur(10px);
 }
 
@@ -170,8 +150,6 @@
 
 /* --- PIP-BOY 3000 SPECIAL PROCESSING --- */
 [data-theme='pipboy'] {
-  --p: 120 100% 50%;
-  --pc: 0 0 0;
   --pip-glow: 0 0 8px rgba(26, 255, 26, 0.4);
   --pip-glow-intense: 0 0 12px rgba(26, 255, 26, 0.8);
 }
@@ -228,11 +206,6 @@
 }
 
 /* --- STARFIELD THEME (NASAPUNK) --- */
-[data-theme='starfield'] {
-    --p: 75 100% 60%;
-    --pc: 11 14 20;
-}
-
 [data-theme='starfield'] body {
   background-color: #0b0e14;
   background-image: 
@@ -252,15 +225,11 @@
 }
 
 [data-theme='starfield'] .btn-primary {
-    background: oklch(var(--p)) !important;
-    color: oklch(var(--pc)) !important;
-    border: none;
     font-weight: 900;
     letter-spacing: 0.1em;
 }
 
 [data-theme='starfield'] .btn-primary:hover {
-    background: oklch(var(--p) / 0.8) !important;
     box-shadow: 0 0 15px oklch(var(--p) / 0.3);
 }
 
@@ -285,11 +254,6 @@
 }
 
 /* --- EXPLORER THEME (TECHNICAL RESEARCH) --- */
-[data-theme='explorer'] {
-    --p: 220 90% 75%;
-    --pc: 255 255 255;
-}
-
 [data-theme='explorer'] body {
   background-image: 
     linear-gradient(to right, rgba(138, 180, 248, 0.05) 1px, transparent 1px),
@@ -298,9 +262,6 @@
 }
 
 [data-theme='explorer'] .btn-primary {
-  background: oklch(var(--p)) !important;
-  color: oklch(var(--pc)) !important;
-  border: none;
   text-transform: uppercase;
   box-shadow: 0 0 10px oklch(var(--p) / 0.3);
 }
@@ -334,11 +295,6 @@
 }
 
 /* --- PROMPT THEME (GLOW / DIGITALISTS) --- */
-[data-theme='prompt'] {
-    --p: 166 100% 50%;
-    --pc: 2 6 23;
-}
-
 [data-theme='prompt'] body {
   background-color: #020617;
   background-image: 
@@ -347,14 +303,10 @@
 }
 
 [data-theme='prompt'] .btn-primary {
-  background: oklch(var(--p)) !important;
-  color: oklch(var(--pc)) !important;
   box-shadow: 0 0 20px -5px oklch(var(--p) / 0.5);
-  border: none;
 }
 
 [data-theme='prompt'] .btn-primary:hover {
-  background: oklch(var(--p) / 0.9) !important;
   box-shadow: 0 0 30px -5px oklch(var(--p) / 0.7);
 }
 
@@ -379,12 +331,6 @@
 }
 
 /* --- SANRITA THEME (INVERTED PROMPT / LIGHT DIGITALISTS) --- */
-[data-theme='sanrita'] {
-    --p: 166 100% 40%;
-    --pc: 255 255 255;
-    --bc: 2 6 23;
-}
-
 [data-theme='sanrita'] body {
   background-color: #f8fafc;
   color: #0f172a;
@@ -394,14 +340,10 @@
 }
 
 [data-theme='sanrita'] .btn-primary {
-  background: oklch(var(--p)) !important;
-  color: oklch(var(--pc)) !important;
   box-shadow: 0 10px 20px -5px oklch(var(--p) / 0.3);
-  border: none;
 }
 
 [data-theme='sanrita'] .btn-primary:hover {
-  background: oklch(var(--p) / 0.9) !important;
   box-shadow: 0 15px 25px -5px oklch(var(--p) / 0.4);
 }
 

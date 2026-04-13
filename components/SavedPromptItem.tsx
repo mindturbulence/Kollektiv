@@ -44,7 +44,7 @@ const SavedPromptItem: React.FC<SavedPromptItemProps> = ({ prompt, onDeleteClick
   const title = prompt.title?.trim() || prompt.basePrompt?.trim() || 'Untitled Prompt';
 
   return (
-    <div className="bg-base-100 rounded-lg transition-all hover:bg-base-200/50">
+    <div className="bg-base-100 rounded-none transition-all hover:bg-base-200/50">
         <div className="p-3 flex justify-between items-center gap-2">
             <div className="flex-grow min-w-0 cursor-pointer" onClick={onOpenDetailView}>
                 <h4 className="font-black text-primary truncate" title={title}>

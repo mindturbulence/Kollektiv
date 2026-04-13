@@ -110,7 +110,7 @@ const PromptRefinePanel: React.FC<PromptRefinePanelProps> = ({ promptText, onApp
             
             <main className="flex-grow p-5 lg:p-5 overflow-y-auto custom-scrollbar flex flex-col relative">
                 <span className="text-[10px] font-black uppercase tracking-widest text-primary/40 mb-3 flex items-center gap-3">
-                    <span className="w-1.5 h-1.5 rounded-full bg-primary animate-pulse"></span> Generated Text
+                    <span className="w-1.5 h-1.5 rounded-none bg-primary animate-pulse"></span> Generated Text
                 </span>
                 
                 {isLoading && !refinedPrompt ? <div className="flex-grow flex items-center justify-center"><LoadingSpinner size={48} /></div> :

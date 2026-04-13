@@ -312,11 +312,11 @@ export const MediaAnalyzer: React.FC<MediaAnalyzerProps> = ({ onSaveSuggestion, 
                 <header className="p-6 h-16 flex items-center justify-between">
                     <div className="flex items-center gap-6">
                         <h2 className={`text-xs font-black uppercase tracking-[0.4em] flex items-center gap-3 transition-colors cursor-pointer ${activeResultType === 'abstraction' ? 'text-primary' : 'text-base-content/20 hover:text-base-content/40'}`} onClick={() => abstractionResults && setActiveResultType('abstraction')}>
-                            <div className={`w-2 h-2 rounded-full ${activeResultType === 'abstraction' ? 'bg-primary animate-pulse' : 'bg-base-content/10'}`}></div> 
+                            <div className={`w-2 h-2 rounded-none ${activeResultType === 'abstraction' ? 'bg-primary animate-pulse' : 'bg-base-content/10'}`}></div> 
                             NEURAL ABSTRACTION
                         </h2>
                         <h2 className={`text-xs font-black uppercase tracking-[0.4em] flex items-center gap-3 transition-colors cursor-pointer ${activeResultType === 'metadata' ? 'text-primary' : 'text-base-content/20 hover:text-base-content/40'}`} onClick={() => metadataResults && setActiveResultType('metadata')}>
-                            <div className={`w-2 h-2 rounded-full ${activeResultType === 'metadata' ? 'bg-primary animate-pulse' : 'bg-base-content/10'}`}></div> 
+                            <div className={`w-2 h-2 rounded-none ${activeResultType === 'metadata' ? 'bg-primary animate-pulse' : 'bg-base-content/10'}`}></div> 
                             TECH SPECS
                         </h2>
                     </div>

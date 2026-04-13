@@ -16,6 +16,7 @@ import CategoryPanelToggle from './CategoryPanelToggle';
 import PromptEditorModal from './PromptEditorModal';
 import LoadingSpinner from './LoadingSpinner';
 import PromptDetailView from './PromptDetailView';
+import CustomScrollbar from './CustomScrollbar';
 
 interface SavedPromptsProps {
   onSendToEnhancer: (prompt: string) => void;
@@ -48,6 +49,53 @@ const SavedPrompts: React.FC<SavedPromptsProps> = ({
   const [detailViewPromptId, setDetailViewPromptId] = useState<string | null>(null);
   const [columnCount, setColumnCount] = useState(3);
   const gridRef = useRef<HTMLDivElement | null>(null);
+  const scrollerRef = useRef<HTMLDivElement | null>(null);
+  const columnRefs = useRef<(HTMLDivElement | null)[]>([]);
+
+  useEffect(() => {
+    const scroller = scrollerRef.current;
+    const grid = gridRef.current;
+    if (!scroller || !grid) return;
+
+    let lastY = scroller.scrollTop;
+    let vel = 0;
+    
+    const skewSetter = gsap.quickSetter(grid, "skewY", "deg");
+    const scaleSetter = gsap.quickSetter(grid, "scaleY");
+
+    const updateMotion = () => {
+        const currentY = scroller.scrollTop;
+        const diff = currentY - lastY;
+        vel += (diff - vel) * 0.2; 
+        lastY = currentY;
+
+        const clampedVel = gsap.utils.clamp(-50, 50, vel);
+        const skewValue = clampedVel * 0.1;
+        const scaleValue = 1 - Math.min(0.015, Math.abs(clampedVel) * 0.00015);
+
+        skewSetter(skewValue);
+        scaleSetter(scaleValue);
+
+        columnRefs.current.forEach((col, idx) => {
+            if (!col) return;
+            const factor = ((idx % 3) - 1) * 0.2;
+            const offset = clampedVel * factor;
+            gsap.set(col, { y: offset, force3D: true });
+        });
+
+        if (Math.abs(vel) > 0.1) {
+            vel *= 0.95;
+        } else {
+            vel = 0;
+            skewSetter(0);
+            scaleSetter(1);
+            columnRefs.current.forEach(col => col && gsap.set(col, { y: 0 }));
+        }
+    };
+
+    gsap.ticker.add(updateMotion);
+    return () => gsap.ticker.remove(updateMotion);
+  }, [columnCount, selectedCategoryId]);
 
   const sortedAndFilteredPrompts = useMemo(() => {
       let filtered = (selectedCategoryId === 'all') 
@@ -268,8 +316,9 @@ const SavedPrompts: React.FC<SavedPromptsProps> = ({
         )}
 
         <div className={`flex flex-col h-full overflow-hidden transition-all duration-300 ${detailViewPromptId ? 'blur-sm pointer-events-none' : ''}`}>
-            <div className="flex-grow overflow-y-auto overflow-x-hidden custom-scrollbar bg-transparent">
-                <header className="bg-transparent">
+            <div className="relative flex-grow overflow-hidden">
+                <div ref={scrollerRef} className="h-full w-full overflow-y-auto overflow-x-hidden no-scrollbar bg-transparent">
+                    <header className="bg-transparent">
                     <div className="p-6 md:p-10">
                         <div className="flex flex-col md:flex-row md:items-end justify-between gap-6">
                             <div className="space-y-2">
@@ -318,9 +367,9 @@ const SavedPrompts: React.FC<SavedPromptsProps> = ({
                 </div>
 
                 {sortedAndFilteredPrompts.length > 0 ? (
-                    <div ref={gridRef} className="flex justify-center gap-px min-h-full w-full bg-transparent">
+                    <div ref={gridRef} className="flex justify-center gap-px min-h-full w-full bg-transparent" style={{ willChange: 'transform' }}>
                         {masonryColumns.map((col, colIdx) => (
-                            <div key={colIdx} className="flex-1 max-w-[450px] min-w-0 flex flex-col gap-px">
+                            <div key={colIdx} ref={el => { columnRefs.current[colIdx] = el; }} className="flex-1 max-w-[450px] min-w-0 flex flex-col gap-px">
                                 {col.map(p => (
                                     <div key={p.id} className={`prompt-card-item`}>
                                         <SavedPromptCard 
@@ -349,6 +398,8 @@ const SavedPrompts: React.FC<SavedPromptsProps> = ({
                 <div ref={loadMoreRef} className={`${displayCount < sortedAndFilteredPrompts.length ? 'h-20' : 'h-0'} w-full flex items-center justify-center overflow-hidden`}>
                     {displayCount < sortedAndFilteredPrompts.length && <LoadingSpinner size={24} />}
                 </div>
+                </div>
+                <CustomScrollbar containerRef={scrollerRef} />
             </div>
         </div>
       </main>
