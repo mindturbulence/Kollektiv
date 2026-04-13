@@ -206,7 +206,7 @@ const InitialLoader: React.FC<{ status: string; progress: number | null }> = ({ 
 
 };
 
-import { motion } from 'framer-motion';
+import { motion, AnimatePresence } from 'framer-motion';
 import RollingText from './RollingText';
 import TimedScrambledText from './TimedScrambledText';
 import ThemeSwitcher from './ThemeSwitcher';
@@ -504,11 +504,20 @@ const PageFrame: React.FC<PageFrameProps> = ({
                             <span className={`font-bold ${playerState === 'playing' ? 'text-base-content/40' : 'text-base-content/20'}`}>
                                 {playerState === 'playing' ? 'ON' : playerState === 'syncing' ? 'SYNC' : 'OFF'}
                             </span>
-                            {playerState !== 'idle' && (
-                                <div className="ml-4 animate-fade-in">
-                                    <DigitalOscillator state={playerState} theme={themeMode} />
-                                </div>
-                            )}
+                            <AnimatePresence mode="wait">
+                                {playerState !== 'idle' && (
+                                    <motion.div 
+                                        key="oscillator"
+                                        initial={{ x: -10, opacity: 0 }}
+                                        animate={{ x: 0, opacity: 1 }}
+                                        exit={{ x: 10, opacity: 0 }}
+                                        transition={{ duration: 0.4, ease: [0.23, 1, 0.32, 1] }}
+                                        className="ml-4"
+                                    >
+                                        <DigitalOscillator state={playerState} theme={themeMode} />
+                                    </motion.div>
+                                )}
+                            </AnimatePresence>
                         </button>
                     </div>
                 </div>
