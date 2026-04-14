@@ -78,6 +78,13 @@
   background-attachment: fixed;
 }
 
+[data-theme='dich'] *,
+[data-theme='pipboy'] *,
+[data-theme='explorer'] *,
+[data-theme='prompt'] * {
+    border-radius: 0 !important;
+}
+
 [data-theme='dich'] .corner-frame {
     position: relative;
     border: 1px solid rgba(255, 255, 255, 0.1) !important;
@@ -117,7 +124,6 @@
     position: relative;
     overflow: hidden;
     transition: all 0.3s cubic-bezier(0.23, 1, 0.32, 1);
-    border-radius: 0 !important;
 }
 
 [data-theme='dich'] .btn-primary:hover {
@@ -386,19 +392,19 @@
   }
 
   .custom-scrollbar::-webkit-scrollbar {
-    width: 6px;
-    height: 6px;
+    width: 4px;
+    height: 4px;
   }
   .custom-scrollbar::-webkit-scrollbar-track {
     background: transparent;
   }
   .custom-scrollbar::-webkit-scrollbar-thumb {
-    background: oklch(var(--bc) / 0.2);
-    border-radius: 0px;
+    background: oklch(var(--bc) / 0.5);
+    border-radius: 2px;
     transition: background 0.2s ease;
   }
   .custom-scrollbar::-webkit-scrollbar-thumb:hover {
-    background: oklch(var(--p) / 0.6);
+    background: oklch(var(--p) / 0.8);
   }
 
   @keyframes marquee {

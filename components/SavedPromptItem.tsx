@@ -67,7 +67,7 @@ const SavedPromptItem: React.FC<SavedPromptItemProps> = ({ prompt, onDeleteClick
                     {isMenuOpen && (
                         <ul 
                             onClick={(e) => e.stopPropagation()}
-                            className="absolute right-0 mt-2 w-48 menu menu-sm dropdown-content bg-base-200 rounded-box shadow-xl z-10 animate-fade-in-up"
+                            className="absolute right-0 mt-2 w-48 menu menu-sm dropdown-content bg-base-100 border border-base-300/50 rounded-box shadow-xl z-10 animate-fade-in-up"
                         >
                             <li><a onClick={() => { onEditClick(prompt); setIsMenuOpen(false); }}><EditIcon className="w-4 h-4" /> Edit</a></li>
                             <li><a onClick={(e) => { handleCopy(e); setIsMenuOpen(false); }}>

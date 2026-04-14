@@ -1085,7 +1085,7 @@ const AppContent: React.FC = () => {
                             isInitialized={isInitialized}
                         />
 
-                        <div className="flex-1 flex overflow-hidden relative p-4 bg-transparent">
+                        <div className="flex-1 flex overflow-hidden relative pt-0 px-4 pb-4 bg-transparent">
                             <main className={`flex-grow min-w-0 relative overflow-hidden bg-transparent rounded-none ${activeTab === 'dashboard' ? 'border-none shadow-none backdrop-blur-none' : 'border border-base-300/20'} z-10`}>
                                 <div 
                                     ref={mainGridRef} 

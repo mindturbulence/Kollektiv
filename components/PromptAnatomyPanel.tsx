@@ -1,10 +1,11 @@
-import React, { useState, useCallback, useEffect } from 'react';
+import React, { useState, useCallback, useEffect, useRef } from 'react';
 import { useSettings } from '../contexts/SettingsContext';
 import type { PromptModifiers } from '../types';
 import { dissectPrompt, generateFocusedVariations, generateConstructorPreset } from '../services/llmService';
 import { refinerPresetService } from '../services/refinerPresetService';
 import { EditIcon, CheckIcon, ChevronDownIcon } from './icons';
 import LoadingSpinner from './LoadingSpinner';
+import CustomScrollbar from './CustomScrollbar';
 
 interface PromptAnatomyPanelProps {
   promptToAnalyze: string | null;
@@ -28,6 +29,8 @@ export const PromptAnatomyPanel: React.FC<PromptAnatomyPanelProps> = ({ promptTo
   const [isReconstructing, setIsReconstructing] = useState(false);
   const [processingVariation, setProcessingVariation] = useState<{key: string, value: string} | null>(null);
   const [expandedVariations, setExpandedVariations] = useState<Record<string, boolean>>({});
+
+  const scrollerRef = useRef<HTMLDivElement>(null);
 
   const [isComponentsSectionExpanded, setIsComponentsSectionExpanded] = useState(true);
   const [isVariationsSectionExpanded, setIsVariationsSectionExpanded] = useState(true);
@@ -167,11 +170,11 @@ export const PromptAnatomyPanel: React.FC<PromptAnatomyPanelProps> = ({ promptTo
   };
 
   return (
-    <div className="flex flex-col h-full overflow-hidden relative">
-      <header className="p-6 flex justify-between items-center flex-shrink-0">
+    <div className="flex flex-col h-full overflow-hidden relative bg-base-100/30 backdrop-blur-xl">
+      <header className="p-6 flex justify-between items-center flex-shrink-0 bg-base-100/10 backdrop-blur-md">
         <h3 className="text-xs font-black uppercase tracking-[0.3em] text-primary">Prompt Analysis</h3>
       </header>
-      <main className="p-6 overflow-y-auto space-y-8 flex-grow custom-scrollbar">
+      <main ref={scrollerRef} className="p-6 overflow-y-auto space-y-8 flex-grow no-scrollbar">
         {error && <div className="alert alert-error rounded-none text-xs p-2"><span>{error}</span></div>}
         
         {loadingState !== 'idle' && (
@@ -293,6 +296,7 @@ export const PromptAnatomyPanel: React.FC<PromptAnatomyPanelProps> = ({ promptTo
             </div>
         )}
       </main>
+      <CustomScrollbar containerRef={scrollerRef} />
       
       {components && (
         <footer className="p-6 bg-base-100/80 backdrop-blur-md">

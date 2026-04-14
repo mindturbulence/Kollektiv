@@ -11,6 +11,7 @@ import { useBusy } from '../contexts/BusyContext';
 import { reconstructFromIntent, reconstructPrompt, replaceComponentInPrompt } from '../services/llmService';
 import ConfirmationModal from './ConfirmationModal';
 import WildcardTree from './WildcardTree';
+import CustomScrollbar from './CustomScrollbar';
 
 interface PromptCrafterProps {
   onSaveToLibrary: (generatedText: string, baseText: string) => void;
@@ -37,6 +38,9 @@ const PromptCrafter = ({ onClip, onSendToEnhancer, onSavePresetSuccess, promptTo
     const [aiAction, setAiAction] = useState<string | null>(null);
     const [copied, setCopied] = useState(false);
     const [clipped, setClipped] = useState(false);
+
+    const wildcardScrollerRef = useRef<HTMLDivElement>(null);
+    const mainScrollerRef = useRef<HTMLDivElement>(null);
     
     // --- Template Management State ---
     const [selectedTemplate, setSelectedTemplate] = useState<WildcardFile | null>(null);
@@ -295,15 +299,16 @@ const PromptCrafter = ({ onClip, onSendToEnhancer, onSavePresetSuccess, promptTo
 
     return (
         <div className="grid grid-cols-1 lg:grid-cols-12 overflow-hidden h-full gap-4">
-            <aside className="lg:col-span-3 flex flex-col overflow-hidden bg-base-100/30 backdrop-blur-md">
+            <aside className="lg:col-span-3 flex flex-col overflow-hidden bg-base-100/30 backdrop-blur-md border-r border-base-300/20 relative">
                 {header}
-                <header className="p-6 h-16 flex items-center bg-base-100/80 backdrop-blur-md">
+                <header className="p-6 h-16 flex items-center bg-base-100/10 backdrop-blur-md">
                     <h3 className="text-[10px] font-black uppercase tracking-[0.4em] text-primary">Wildcards</h3>
                 </header>
-                <div className="flex-grow p-6 overflow-y-auto custom-scrollbar">
+                <div ref={wildcardScrollerRef} className="flex-grow p-6 overflow-y-auto no-scrollbar">
                     <WildcardTree categories={crafterData?.wildcardCategories || []} onWildcardClick={handleWildcardClick} />
                 </div>
-                <footer className="h-14 flex items-stretch bg-base-100/80 backdrop-blur-md">
+                <CustomScrollbar containerRef={wildcardScrollerRef} />
+                <footer className="h-14 flex items-stretch bg-base-100/10 backdrop-blur-md">
                     <button 
                         onClick={loadData} 
                         disabled={isImporting}
@@ -328,9 +333,9 @@ const PromptCrafter = ({ onClip, onSendToEnhancer, onSavePresetSuccess, promptTo
                     />
                 </footer>
             </aside>
-            <main className="lg:col-span-6 flex flex-col overflow-hidden bg-base-100/30 backdrop-blur-md">
+            <main className="lg:col-span-6 flex flex-col overflow-hidden bg-base-100/30 backdrop-blur-md relative">
                 {/* Template Selection Bar - h-16 to match panel headers */}
-                <div className="h-16 flex-shrink-0 flex items-stretch bg-base-100/80 backdrop-blur-md">
+                <div className="h-16 flex-shrink-0 flex items-stretch bg-base-100/10 backdrop-blur-md">
                   <div className="dropdown flex-grow h-full">
                     <div className="relative h-full">
                         <input 
@@ -360,7 +365,7 @@ const PromptCrafter = ({ onClip, onSendToEnhancer, onSavePresetSuccess, promptTo
                         )}
                     </div>
                     {filteredTemplates.length > 0 && (
-                        <ul tabIndex={0} className="dropdown-content z-[100] menu p-1 bg-transparent rounded-none w-full max-h-60 overflow-y-auto">
+                        <ul tabIndex={0} className="dropdown-content z-[100] menu p-1 bg-base-100 border border-base-300/50 rounded-none w-full max-h-60 overflow-y-auto custom-scrollbar shadow-2xl">
                             {filteredTemplates.map(t => (
                                 <li key={t.name}>
                                     <a 
@@ -400,12 +405,12 @@ const PromptCrafter = ({ onClip, onSendToEnhancer, onSavePresetSuccess, promptTo
                             value={promptText}
                             onChange={(e) => setPromptText((e.currentTarget as any).value)}
                             placeholder="STREAM NEW CORE CONCEPT... Use __wildcard__ for selection."
-                            className="w-full flex-grow resize-none font-medium leading-relaxed bg-transparent custom-scrollbar focus:outline-none p-0 text-sm"
+                            className="w-full flex-grow resize-none font-medium leading-relaxed bg-transparent no-scrollbar focus:outline-none p-0 text-sm"
                         ></textarea>
                     </div>
                     
                     {/* Middle Action Bar - Library Style */}
-                    <div className="h-14 flex items-stretch flex-shrink-0 bg-base-100/80 backdrop-blur-md">
+                    <div className="h-14 flex items-stretch flex-shrink-0 bg-base-100/10 backdrop-blur-md">
                         <button 
                             onClick={() => setPromptText('')} 
                             className="btn btn-ghost h-full rounded-none border-none flex-1 font-black text-[10px] tracking-widest text-error/40 hover:text-error uppercase px-1 truncate bg-transparent"
@@ -426,7 +431,7 @@ const PromptCrafter = ({ onClip, onSendToEnhancer, onSavePresetSuccess, promptTo
                         </button>
                     </div>
 
-                    <div className="flex-grow p-6 overflow-y-auto relative">
+                    <div ref={mainScrollerRef} className="flex-grow p-6 overflow-y-auto relative no-scrollbar">
                         {aiAction && (
                             <div className="absolute inset-0 bg-transparent flex flex-col items-center justify-center z-10">
                                 <LoadingSpinner />
@@ -451,10 +456,11 @@ const PromptCrafter = ({ onClip, onSendToEnhancer, onSavePresetSuccess, promptTo
                             </div>
                         )}
                     </div>
+                    <CustomScrollbar containerRef={mainScrollerRef} />
                 </div>
 
                 {/* Bottom Action Bar - Library Style */}
-                <div className="h-14 flex items-stretch flex-shrink-0 bg-base-100/80 backdrop-blur-md">
+                <div className="h-14 flex items-stretch flex-shrink-0 bg-base-100/10 backdrop-blur-md">
                     <button 
                         onClick={handleAnalyze} 
                         disabled={!generatedPrompt || !!aiAction} 
@@ -493,7 +499,7 @@ const PromptCrafter = ({ onClip, onSendToEnhancer, onSavePresetSuccess, promptTo
                 </div>
             </main>
             
-            <aside className="lg:col-span-3 flex flex-col min-h-0 bg-base-100/30 backdrop-blur-md">
+            <aside className="lg:col-span-3 flex flex-col min-h-0 bg-base-100/30 backdrop-blur-md border-l border-base-300/20 relative">
                 <PromptAnatomyPanel 
                     promptToAnalyze={generatedPrompt}
                     onReconstructFromComponents={handleReconstructFromComponents}

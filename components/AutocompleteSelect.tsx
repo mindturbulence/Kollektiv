@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { ChevronDownIcon, SearchIcon, CloseIcon } from './icons';
+import CustomScrollbar from './CustomScrollbar';
 
 export interface AutocompleteOption {
   label: string;
@@ -19,6 +20,7 @@ const AutocompleteSelect: React.FC<AutocompleteSelectProps> = ({ options, value,
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const wrapperRef = useRef<HTMLDivElement>(null);
+  const scrollerRef = useRef<HTMLUListElement>(null);
 
   const selectedOption = useMemo(() => 
     options.find(opt => opt.value === value), 
@@ -69,7 +71,7 @@ const AutocompleteSelect: React.FC<AutocompleteSelectProps> = ({ options, value,
     <div className={`relative w-full ${className}`} ref={wrapperRef}>
       <div 
         onClick={handleToggle}
-        className="flex items-center justify-between px-3 py-2 bg-transparent rounded-none cursor-pointer hover:border-primary transition-colors h-10"
+        className="flex items-center justify-between px-3 py-2 bg-base-100 border border-base-300 rounded-none cursor-pointer hover:border-primary transition-colors h-10"
       >
         <span className={`text-sm font-bold truncate uppercase tracking-tight ${!selectedOption ? 'text-base-content/30' : 'text-base-content'}`}>
           {selectedOption ? selectedOption.label : placeholder || 'Select option...'}
@@ -89,8 +91,8 @@ const AutocompleteSelect: React.FC<AutocompleteSelectProps> = ({ options, value,
       </div>
 
       {isDropdownOpen && (
-        <div className="absolute z-[100] w-full mt-1 bg-transparent shadow-2xl rounded-none flex flex-col overflow-hidden animate-fade-in">
-          <div className="p-2 border-b border-base-300 bg-transparent flex items-center gap-2">
+        <div className="absolute z-[100] w-full mt-1 bg-base-100 border border-base-300 shadow-2xl rounded-none flex flex-col overflow-hidden animate-fade-in">
+          <div className="p-2 border-b border-base-300 bg-base-100 flex items-center gap-2">
             <SearchIcon className="w-3.5 h-3.5 opacity-30" />
             <input
               autoFocus
@@ -102,7 +104,7 @@ const AutocompleteSelect: React.FC<AutocompleteSelectProps> = ({ options, value,
               onClick={(e) => e.stopPropagation()}
             />
           </div>
-          <ul className="max-h-60 overflow-y-auto custom-scrollbar p-1">
+          <ul ref={scrollerRef} className="max-h-60 overflow-y-auto no-scrollbar p-1">
             {filteredOptions.length > 0 ? (
               filteredOptions.map(option => (
                 <li key={option.value}>
@@ -126,6 +128,7 @@ const AutocompleteSelect: React.FC<AutocompleteSelectProps> = ({ options, value,
               </li>
             )}
           </ul>
+          <CustomScrollbar containerRef={scrollerRef} />
         </div>
       )}
     </div>

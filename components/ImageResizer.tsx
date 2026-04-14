@@ -410,13 +410,13 @@ const ImageResizer: React.FC = () => {
     };
     
     return (
-        <div className="h-full bg-base-100/40 backdrop-blur-xl flex flex-col overflow-hidden">
+        <div className="h-full bg-transparent flex flex-col overflow-hidden p-0">
             <div className="flex-grow flex flex-col lg:flex-row overflow-hidden">
-                <aside className="w-full lg:w-96 flex-shrink-0 bg-transparent flex flex-col overflow-hidden">
-                    <header className="p-6 bg-transparent">
+                <aside className="w-full lg:w-96 flex-shrink-0 flex flex-col overflow-hidden bg-base-100/30 backdrop-blur-md">
+                    <header className="p-6 bg-base-100/80 backdrop-blur-md">
                         <h3 className="text-[10px] font-black uppercase tracking-[0.4em] text-primary">Resize Settings</h3>
                     </header>
-                    <div className="flex-grow p-6 space-y-8 overflow-y-auto custom-scrollbar bg-transparent">
+                    <div className="flex-grow p-6 space-y-8 overflow-y-auto custom-scrollbar bg-base-100/30 backdrop-blur-md">
                         <div className="space-y-4">
                             <div className="flex justify-between items-center">
                                 <label className="text-[10px] font-black uppercase tracking-widest text-base-content/40">Target Resolution</label>
@@ -482,7 +482,7 @@ const ImageResizer: React.FC = () => {
                             </div>
                         </div>
                     </div>
-                    <footer className="p-4 grid grid-cols-2 gap-2 bg-transparent">
+                    <footer className="p-4 grid grid-cols-2 gap-2 bg-base-100/80 backdrop-blur-md">
                         <button onClick={handleReset} disabled={isDownloading || images.length === 0} className="btn btn-sm btn-ghost rounded-none font-black text-[9px] tracking-widest text-error/40 hover:text-error">CLEAR ALL</button>
                         <button onClick={handleDownload} disabled={isDownloading || images.length === 0} className="btn btn-sm btn-primary rounded-none font-black text-[9px] tracking-widest">
                            {isDownloading ? 'PROCESSING...' : 'DOWNLOAD ZIP'}

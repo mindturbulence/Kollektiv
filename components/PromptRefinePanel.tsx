@@ -1,4 +1,4 @@
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback, useRef } from 'react';
 import { useSettings } from '../contexts/SettingsContext';
 import { useBusy } from '../contexts/BusyContext';
 import { refineSinglePromptStream } from '../services/llmService';
@@ -6,6 +6,7 @@ import { SparklesIcon, CheckIcon, ChevronDownIcon, BookmarkIcon, RefreshIcon, Cl
 import { TARGET_IMAGE_AI_MODELS, TARGET_VIDEO_AI_MODELS } from '../constants';
 import LoadingSpinner from './LoadingSpinner';
 import CopyIcon from './CopyIcon';
+import CustomScrollbar from './CustomScrollbar';
 
 interface PromptRefinePanelProps {
   promptText: string;
@@ -23,6 +24,8 @@ const PromptRefinePanel: React.FC<PromptRefinePanelProps> = ({ promptText, onApp
     const [error, setError] = useState<string | null>(null);
     const [copied, setCopied] = useState(false);
     const [clipped, setClipped] = useState(false);
+
+    const scrollerRef = useRef<HTMLDivElement>(null);
 
     const [targetAIModel, setTargetAIModel] = useState<string>(TARGET_IMAGE_AI_MODELS[0]);
 
@@ -83,12 +86,12 @@ const PromptRefinePanel: React.FC<PromptRefinePanelProps> = ({ promptText, onApp
     }
 
     return (
-        <div className="flex flex-col h-full bg-base-100/40 backdrop-blur-xl overflow-hidden">
-            <header className="p-4 flex justify-between items-center">
+        <div className="flex flex-col h-full bg-base-100/30 backdrop-blur-xl overflow-hidden border border-base-300/20 relative">
+            <header className="p-4 flex justify-between items-center bg-base-100/10 backdrop-blur-md">
                 <div className="flex items-center gap-4">
                     <span className="text-xs font-black uppercase tracking-[0.3em] text-primary">AI Refinement</span>
                     <div className="form-control max-w-[140px]">
-                         <select value={targetAIModel} onChange={(e) => setTargetAIModel((e.currentTarget as any).value)} className="select select-ghost select-xs rounded-none font-bold w-full uppercase tracking-tighter text-[10px] h-6 min-h-0 border-none focus:outline-none">
+                         <select value={targetAIModel} onChange={(e) => setTargetAIModel((e.currentTarget as any).value)} className="select select-bordered border-base-300 bg-base-100 select-xs rounded-none font-bold w-full uppercase tracking-tighter text-[10px] h-6 min-h-0 focus:outline-none">
                             <optgroup label="Image">
                                 {TARGET_IMAGE_AI_MODELS.map(model => <option key={model} value={model}>{model}</option>)}
                             </optgroup>
@@ -108,7 +111,7 @@ const PromptRefinePanel: React.FC<PromptRefinePanelProps> = ({ promptText, onApp
                 </div>
             </header>
             
-            <main className="flex-grow p-5 lg:p-5 overflow-y-auto custom-scrollbar flex flex-col relative">
+            <main ref={scrollerRef} className="flex-grow p-5 lg:p-5 overflow-y-auto no-scrollbar flex flex-col relative">
                 <span className="text-[10px] font-black uppercase tracking-widest text-primary/40 mb-3 flex items-center gap-3">
                     <span className="w-1.5 h-1.5 rounded-none bg-primary animate-pulse"></span> Generated Text
                 </span>
@@ -128,6 +131,7 @@ const PromptRefinePanel: React.FC<PromptRefinePanelProps> = ({ promptText, onApp
                     </div>
                  )}
             </main>
+            <CustomScrollbar containerRef={scrollerRef} />
             
             <footer className="p-4 flex justify-end gap-2">
                 {onClip && refinedPrompt && (

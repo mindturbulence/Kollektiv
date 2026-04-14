@@ -281,17 +281,17 @@ export const VideoToFrames: React.FC = () => {
         : 'Synthesize multiple temporal artifacts into a seamless cinematic sequence.';
 
     return (
-        <div className="h-full bg-base-100/40 backdrop-blur-xl flex flex-col overflow-hidden">
+        <div className="h-full bg-transparent flex flex-col overflow-hidden p-0">
             <div className="flex-grow flex flex-col lg:flex-row overflow-hidden">
-                <aside className="w-full lg:w-96 flex-shrink-0 bg-transparent flex flex-col overflow-hidden">
-                    <div className="p-4 bg-transparent">
-                        <div className="tabs tabs-boxed rounded-none bg-transparent gap-1 p-0">
-                            <button onClick={() => setActiveTab('extractor')} className={`tab flex-1 rounded-none font-black text-[9px] tracking-widest uppercase ${activeTab === 'extractor' ? 'tab-active' : ''}`}>FRAME EXTRACTOR</button>
-                            <button onClick={() => setActiveTab('joiner')} className={`tab flex-1 rounded-none font-black text-[9px] tracking-widest uppercase ${activeTab === 'joiner' ? 'tab-active' : ''}`}>VIDEO JOINER</button>
+                <aside className="w-full lg:w-96 flex-shrink-0 flex flex-col overflow-hidden bg-base-100/30 backdrop-blur-md">
+                    <div className="p-4 flex justify-center bg-transparent">
+                        <div className="flex gap-1">
+                            <button onClick={() => setActiveTab('extractor')} className={`font-black text-[9px] tracking-widest uppercase px-4 h-8 transition-all ${activeTab === 'extractor' ? 'bg-base-100/30 backdrop-blur-md text-primary' : 'bg-transparent text-base-content/40'}`}>FRAME EXTRACTOR</button>
+                            <button onClick={() => setActiveTab('joiner')} className={`font-black text-[9px] tracking-widest uppercase px-4 h-8 transition-all ${activeTab === 'joiner' ? 'bg-base-100/30 backdrop-blur-md text-primary' : 'bg-transparent text-base-content/40'}`}>VIDEO JOINER</button>
                         </div>
                     </div>
 
-                    <div className="flex-grow p-6 space-y-8 overflow-y-auto custom-scrollbar">
+                    <div className="flex-grow p-6 space-y-8 overflow-y-auto custom-scrollbar bg-base-100/30 backdrop-blur-md">
                         {activeTab === 'extractor' ? (
                             <div className="space-y-6">
                                 <div>

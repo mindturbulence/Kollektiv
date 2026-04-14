@@ -1,6 +1,6 @@
 
 // PromptsPage.tsx - Core component for prompt management
-import React, { useState, useCallback, useEffect, useMemo, useRef } from 'react';
+import React, { useState, useCallback, useEffect, useMemo, useRef, useLayoutEffect } from 'react';
 import { useSettings } from '../contexts/SettingsContext';
 import { enhancePromptStream, buildMidjourneyParams, generateWithImagen, generateWithNanoBanana, generateWithVeo, cleanLLMResponse, dissectPrompt, generateConstructorPreset } from '../services/llmService';
 import { loadPromptCategories, addSavedPrompt } from '../utils/promptStorage';
@@ -10,6 +10,10 @@ import { fileToBase64 } from '../utils/fileUtils';
 import { refinerPresetService, type RefinerPreset } from '../services/refinerPresetService';
 
 import { useBusy } from '../contexts/BusyContext';
+import { gsap } from 'gsap';
+import RollingText from './RollingText';
+import CustomScrollbar from './CustomScrollbar';
+import { audioService } from '../services/audioService';
 import type { AppError, SavedPrompt, PromptCategory, EnhancementResult, PromptModifiers, CheatsheetCategory, Idea } from '../types';
 import {
     FILM_TYPES,
@@ -150,6 +154,20 @@ const PromptsPage: React.FC<PromptsPageProps> = ({
     const { settings } = useSettings();
     const { setIsBusy } = useBusy();
     const [activeView, setActiveView] = useState<'refine' | 'composer' | 'analyzer'>('composer');
+    const tabsRef = useRef<HTMLDivElement>(null);
+
+    useLayoutEffect(() => {
+        if (!tabsRef.current) return;
+        const navItems = tabsRef.current.children;
+        gsap.set(navItems, { y: -20, autoAlpha: 0 });
+        gsap.to(navItems, {
+            y: 0,
+            autoAlpha: 1,
+            duration: 1.2,
+            stagger: 0.1,
+            ease: "power3.out"
+        });
+    }, []);
 
     // --- Refiner State ---
     const [mediaMode, setMediaMode] = useState<MediaMode>('image');
@@ -178,6 +196,10 @@ const PromptsPage: React.FC<PromptsPageProps> = ({
     const [resultsRefine, setResultsRefine] = useState<EnhancementResult | null>(null);
     const [directMediaResult, setDirectMediaResult] = useState<{ url: string, type: 'image' | 'video', target: string, prompt: string } | null>(null);
     const [activeRefineSubTab, setActiveRefineSubTab] = useState<RefineSubTab>('basic');
+    const refineScrollerRef = useRef<HTMLDivElement>(null);
+    const neuralOutputScrollerRef = useRef<HTMLDivElement>(null);
+    const activeConstructionScrollerRef = useRef<HTMLDivElement>(null);
+    const presetDropdownScrollerRef = useRef<HTMLUListElement>(null);
     const [loadingMsg, setLoadingMsg] = useState<string>('');
 
     const [composerPromptToInsert, setComposerPromptToInsert] = useState<{ content: string, id: string } | null>(null);
@@ -492,19 +514,23 @@ const PromptsPage: React.FC<PromptsPageProps> = ({
             { id: 'analyzer', label: 'MEDIA ANALYZER' }
         ] as const;
 
-    return (
-        <div className="flex-shrink-0 bg-transparent sticky top-0 z-20 h-12 flex justify-center items-center">
-                <div className="flex gap-8 h-full items-center">
+        return (
+            <div className="flex-shrink-0 bg-transparent sticky top-0 z-20 h-12 flex justify-center items-center">
+                <div ref={tabsRef} className="flex gap-4 h-full items-center">
                     {viewTabs.map((tab) => (
                         <button
                             key={tab.id}
-                            onClick={() => setActiveView(tab.id as any)}
+                            onMouseEnter={() => audioService.playHover()}
+                            onClick={() => {
+                                audioService.playClick();
+                                setActiveView(tab.id as any);
+                            }}
                             className={`relative px-4 py-2 text-[10px] font-black tracking-[0.4em] uppercase transition-colors duration-300 ${currentView === tab.id
                                     ? 'text-primary'
                                     : 'text-base-content/40 hover:text-primary/60'
                                 }`}
                         >
-                            {tab.label}
+                            <RollingText text={tab.label} hoverClassName="text-primary" />
                         </button>
                     ))}
                 </div>
@@ -620,13 +646,13 @@ const PromptsPage: React.FC<PromptsPageProps> = ({
                         <div className="grid grid-cols-2 gap-4">
                             <div className="form-control">
                                 <label className="text-[10px] font-black uppercase tracking-widest text-base-content/40 mb-2">Neural Engine</label>
-                                <select value={targetAIModel} onChange={(e) => setTargetAIModel((e.currentTarget as any).value)} className="select select-bordered select-sm rounded-none font-bold uppercase tracking-tighter w-full">
+                                <select value={targetAIModel} onChange={(e) => setTargetAIModel((e.currentTarget as any).value)} className="select select-bordered border-base-300 bg-base-100 select-sm rounded-none font-bold uppercase tracking-tighter w-full">
                                     {(mediaMode === 'image' ? TARGET_IMAGE_AI_MODELS : mediaMode === 'video' ? TARGET_VIDEO_AI_MODELS : TARGET_AUDIO_AI_MODELS).map(m => <option key={m} value={m}>{m}</option>)}
                                 </select>
                             </div>
                             <div className="form-control">
                                 <label className="text-[10px] font-black uppercase tracking-widest text-base-content/40 mb-2">Complexity</label>
-                                <select value={promptLength} onChange={(e) => setPromptLength((e.currentTarget as any).value)} className="select select-bordered select-sm rounded-none font-bold uppercase tracking-tighter w-full">
+                                <select value={promptLength} onChange={(e) => setPromptLength((e.currentTarget as any).value)} className="select select-bordered border-base-300 bg-base-100 select-sm rounded-none font-bold uppercase tracking-tighter w-full">
                                     {Object.entries(PROMPT_DETAIL_LEVELS).map(([k, v]) => <option key={k} value={v}>{v}</option>)}
                                 </select>
                             </div>
@@ -668,7 +694,7 @@ const PromptsPage: React.FC<PromptsPageProps> = ({
                         {isZImage && (
                             <div className="form-control">
                                 <label className="text-[10px] font-black uppercase text-base-content/40 tracking-widest mb-2 block">Z-Image Variant</label>
-                                <select value={modifiers.zImageStyle} onChange={e => setModifiers({ ...modifiers, zImageStyle: e.target.value })} className="select select-bordered select-sm rounded-none font-bold uppercase tracking-tight w-full animate-fade-in">
+                                <select value={modifiers.zImageStyle} onChange={e => setModifiers({ ...modifiers, zImageStyle: e.target.value })} className="select select-bordered border-base-300 bg-base-100 select-sm rounded-none font-bold uppercase tracking-tight w-full animate-fade-in">
                                     <option value="">NONE</option>
                                     {Z_IMAGE_STYLES.map(s => <option key={s} value={s}>{s}</option>)}
                                 </select>
@@ -1102,7 +1128,7 @@ const PromptsPage: React.FC<PromptsPageProps> = ({
         <div className="flex flex-col h-full bg-transparent overflow-hidden p-0">
             {renderTabsHeader(activeView)}
 
-            <div className="flex-grow overflow-hidden relative">
+            <div className="flex-grow overflow-hidden relative pt-4">
                 {activeView === 'composer' && (
                     <PromptCrafter
                         onSaveToLibrary={(gen) => handleSaveSuggestion(gen)}
@@ -1123,27 +1149,32 @@ const PromptsPage: React.FC<PromptsPageProps> = ({
                 {activeView === 'refine' && (
                     <div className="grid grid-cols-1 lg:grid-cols-12 overflow-hidden h-full gap-4">
                         {/* Left Sidebar: Controls & Tabs */}
-                        <aside className="lg:col-span-3 flex flex-col overflow-hidden bg-base-100/30 backdrop-blur-md">
-                            <div className="p-4 h-16 flex items-center bg-base-100/80 backdrop-blur-md">
-                                <div className="tabs tabs-boxed rounded-none bg-transparent gap-1 p-0 flex flex-wrap w-full">
+                        <aside className="lg:col-span-3 flex flex-col overflow-hidden bg-base-100/30 backdrop-blur-md border-r border-base-300/20 relative">
+                            <div className="h-16 flex items-center justify-center bg-base-100/10 backdrop-blur-md">
+                                <div className="flex gap-1 w-full h-full items-center">
                                     {tabs.map(tab => (
                                         <button
                                             key={tab.id}
                                             onClick={() => setActiveRefineSubTab(tab.id)}
-                                            className={`tab flex-grow rounded-none font-black text-[9px] tracking-widest uppercase h-8 ${activeRefineSubTab === tab.id ? 'tab-active' : ''}`}
+                                            className={`flex-1 font-black text-[9px] tracking-widest uppercase h-full transition-all duration-300 ${
+                                                activeRefineSubTab === tab.id 
+                                                    ? 'bg-base-100/30 backdrop-blur-md text-primary' 
+                                                    : 'bg-transparent text-base-content/40 hover:text-base-content/60'
+                                            }`}
                                         >
                                             {tab.label}
                                         </button>
                                     ))}
                                 </div>
                             </div>
-                            <div className="flex-grow p-6 overflow-y-auto custom-scrollbar">
+                            <div ref={refineScrollerRef} className="flex-grow p-6 overflow-y-auto no-scrollbar bg-transparent">
                                 {renderRefineSubContent()}
                             </div>
-                            <footer className="h-14 flex items-stretch flex-shrink-0 bg-base-100/80 backdrop-blur-md">
+                            <CustomScrollbar containerRef={refineScrollerRef} />
+                            <footer className="h-14 flex items-stretch flex-shrink-0 bg-base-100/10 backdrop-blur-md">
                                 <button
                                     onClick={handleResetRefiner}
-                                    className="btn btn-ghost h-full rounded-none border-none flex-1 font-black text-[10px] tracking-widest text-error/40 hover:text-error uppercase px-1 truncate"
+                                    className="btn btn-ghost h-full rounded-none border-none flex-1 font-black text-[10px] tracking-widest text-error/40 hover:text-error uppercase px-1 truncate bg-transparent"
                                 >
                                     RESET
                                 </button>
@@ -1173,7 +1204,7 @@ const PromptsPage: React.FC<PromptsPageProps> = ({
                                     <div className="w-2 h-2 rounded-full bg-primary animate-pulse"></div> NEURAL OUTPUT
                                 </h2>
                             </header>
-                            <div className="flex-grow overflow-y-auto custom-scrollbar flex flex-col">
+                            <div ref={neuralOutputScrollerRef} className="flex-grow overflow-y-auto no-scrollbar flex flex-col">
                                 {isLoadingRefine ? (
                                     <div className="flex-grow flex flex-col items-center justify-center text-center space-y-6">
                                         <LoadingSpinner size={48} />
@@ -1214,6 +1245,7 @@ const PromptsPage: React.FC<PromptsPageProps> = ({
                                     </div>
                                 )}
                             </div>
+                            <CustomScrollbar containerRef={neuralOutputScrollerRef} />
                         </main>
 
                         {/* Right Sidebar: Active Modifiers */}
@@ -1251,7 +1283,7 @@ const PromptsPage: React.FC<PromptsPageProps> = ({
                                         )}
                                     </div>
                                     {filteredPresets.length > 0 && (
-                                        <ul tabIndex={0} className="dropdown-content z-[100] menu p-1 bg-base-100/40 backdrop-blur-xl rounded-none w-full mt-2 max-h-60 overflow-y-auto flex flex-col flex-nowrap">
+                                        <ul ref={presetDropdownScrollerRef} tabIndex={0} className="dropdown-content z-[100] menu p-1 bg-base-100 border border-base-300/50 rounded-none w-full mt-2 max-h-60 overflow-y-auto flex flex-col flex-nowrap no-scrollbar shadow-2xl">
                                             {filteredPresets.map(p => (
                                                 <li key={p.name} className="w-full">
                                                     <a
@@ -1265,6 +1297,7 @@ const PromptsPage: React.FC<PromptsPageProps> = ({
                                                     </a>
                                                 </li>
                                             ))}
+                                            <CustomScrollbar containerRef={presetDropdownScrollerRef} />
                                         </ul>
                                     )}
                                 </div>
@@ -1284,7 +1317,7 @@ const PromptsPage: React.FC<PromptsPageProps> = ({
                                 </button>
                             </div>
 
-                            <div className="flex-grow p-4 overflow-y-auto custom-scrollbar relative z-10">
+                            <div ref={activeConstructionScrollerRef} className="flex-grow p-4 overflow-y-auto no-scrollbar relative z-10">
                                 {activeConstructionItems.length > 0 ? (
                                     <div className="space-y-2">
                                         {activeConstructionItems.map((item) => (
@@ -1305,6 +1338,7 @@ const PromptsPage: React.FC<PromptsPageProps> = ({
                                     </div>
                                 )}
                             </div>
+                            <CustomScrollbar containerRef={activeConstructionScrollerRef} />
 
                             <footer className="h-14 flex items-stretch flex-shrink-0">
                                 <button

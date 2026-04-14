@@ -391,17 +391,17 @@ const ComposerPage: React.FC<ComposerPageProps> = ({ showGlobalFeedback }) => {
     }, [mode, previewMetrics, gridCols, gridRows, gridGap]);
 
     return (
-        <div className="h-full bg-base-100/40 backdrop-blur-xl flex flex-col overflow-hidden">
+        <div className="h-full bg-transparent flex flex-col overflow-hidden p-0">
             <div className="flex-grow flex flex-col lg:flex-row overflow-hidden">
-                <aside className="w-full lg:w-96 flex-shrink-0 bg-transparent flex flex-col overflow-hidden">
-                    <div className="p-4 bg-transparent">
-                        <div className="tabs tabs-boxed rounded-none bg-transparent gap-1 p-0">
-                            <button onClick={() => setMode('grid')} className={`tab flex-1 rounded-none font-black text-[9px] uppercase tracking-widest ${mode === 'grid' ? 'tab-active' : ''}`}>Grid Builder</button>
-                            <button onClick={() => setMode('frame')} className={`tab flex-1 rounded-none font-black text-[9px] uppercase tracking-widest ${mode === 'frame' ? 'tab-active' : ''}`}>Image Framer</button>
+                <aside className="w-full lg:w-96 flex-shrink-0 flex flex-col overflow-hidden bg-base-100/30 backdrop-blur-md">
+                    <div className="p-4 bg-transparent flex justify-center">
+                        <div className="flex gap-1">
+                            <button onClick={() => setMode('grid')} className={`font-black text-[9px] uppercase tracking-widest px-4 h-8 transition-all ${mode === 'grid' ? 'bg-base-100/30 backdrop-blur-md text-primary' : 'bg-transparent text-base-content/40'}`}>Grid Builder</button>
+                            <button onClick={() => setMode('frame')} className={`font-black text-[9px] uppercase tracking-widest px-4 h-8 transition-all ${mode === 'frame' ? 'bg-base-100/30 backdrop-blur-md text-primary' : 'bg-transparent text-base-content/40'}`}>Image Framer</button>
                         </div>
                     </div>
                     
-                    <div className="flex-grow p-6 space-y-8 overflow-y-auto custom-scrollbar bg-transparent">
+                    <div className="flex-grow p-6 space-y-8 overflow-y-auto custom-scrollbar bg-base-100/30 backdrop-blur-md">
                         <div className="space-y-4">
                             <label className="text-[10px] font-black uppercase text-base-content/40 tracking-widest">Dimensions</label>
                             <select value={aspectRatio} onChange={e => { setAspectRatio(e.target.value); const ratio = RATIOS.find(r => r.value === e.target.value)?.ratio || 1; setWidth("1024"); setHeight(String(Math.round(1024 / ratio))); }} className="select select-sm select-bordered rounded-none w-full font-bold uppercase text-[10px] tracking-widest">

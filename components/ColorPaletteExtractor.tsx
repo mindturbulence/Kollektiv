@@ -214,13 +214,13 @@ export const ColorPaletteExtractor: React.FC<ColorPaletteExtractorProps> = ({ on
   };
 
   return (
-    <div className="h-full bg-base-100/40 backdrop-blur-xl flex flex-col overflow-hidden">
+    <div className="h-full bg-transparent flex flex-col overflow-hidden p-0">
         <div className="flex-grow flex flex-col lg:flex-row overflow-hidden">
-            <aside className="w-full lg:w-96 flex-shrink-0 bg-transparent flex flex-col overflow-hidden">
-                <header className="p-6 bg-transparent">
+            <aside className="w-full lg:w-96 flex-shrink-0 flex flex-col overflow-hidden bg-base-100/30 backdrop-blur-md">
+                <header className="p-6 bg-base-100/80 backdrop-blur-md">
                     <h3 className="text-[10px] font-black uppercase tracking-[0.4em] text-primary">Chromic Source</h3>
                 </header>
-                <div className="flex-grow p-6 flex flex-col gap-6 overflow-y-auto custom-scrollbar bg-transparent">
+                <div className="flex-grow p-6 flex flex-col gap-6 overflow-y-auto custom-scrollbar bg-base-100/30 backdrop-blur-md">
                      <div 
                         className={`relative flex-grow min-h-[200px] border-2 border-dashed rounded-none flex flex-col items-center justify-center cursor-pointer transition-all gap-4 group ${isDragging ? 'border-primary bg-primary/10' : 'border-base-300 hover:border-primary/50'}`}
                         style={{ backgroundImage: imagePreviewUrl ? `url(${imagePreviewUrl})` : 'none', backgroundSize: 'contain', backgroundPosition: 'center', backgroundRepeat: 'no-repeat' }}
