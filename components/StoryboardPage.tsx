@@ -124,10 +124,10 @@ export const StoryboardPage: React.FC<{ showGlobalFeedback: (m: string, e?: bool
                     <h1 className="text-4xl font-black tracking-tighter uppercase">STORYBOARD<span className="text-primary">.</span></h1>
                     <p className="text-sm font-bold uppercase tracking-widest text-base-content/40 leading-relaxed">Sequence temporal artifacts and synthesize narrative flow for high-fidelity video generation.</p>
                     <div className="space-y-4">
-                        <button onClick={handleCreate} className="btn btn-primary w-full rounded-none font-black tracking-[0.2em] uppercase">Create New Storyboard</button>
+                        <button onClick={handleCreate} className="form-btn form-btn-primary w-full rounded-none font-black tracking-[0.2em] uppercase">Create New Storyboard</button>
                         <div className="grid grid-cols-1 gap-2">
                             {storyboards.map(s => (
-                                <button key={s.id} onClick={() => setActiveStoryboard(s)} className="btn btn-ghost rounded-none w-full text-left justify-between group">
+                                <button key={s.id} onClick={() => setActiveStoryboard(s)} className="form-btn h-12 rounded-none w-full text-left justify-between group">
                                     <span className="font-black text-[10px] tracking-widest truncate">{s.title.toUpperCase()}</span>
                                     <span className="text-[8px] font-mono opacity-20">{s.scenes.length} SCENES</span>
                                 </button>
@@ -144,10 +144,10 @@ export const StoryboardPage: React.FC<{ showGlobalFeedback: (m: string, e?: bool
             {/* LEFT: SCENE LIST */}
             <aside className="lg:col-span-3 flex flex-col overflow-hidden bg-base-100/40 backdrop-blur-xl">
                 <header className="h-16 px-6 flex items-center justify-between">
-                    <button onClick={() => setActiveStoryboard(null)} className="btn btn-xs btn-ghost gap-2 opacity-40 hover:opacity-100"><ChevronLeftIcon className="w-4 h-4"/> BACK</button>
+                    <button onClick={() => setActiveStoryboard(null)} className="form-btn h-8 px-4 gap-2 opacity-40 hover:opacity-100"><ChevronLeftIcon className="w-4 h-4"/> BACK</button>
                     <span className="text-[10px] font-black uppercase tracking-[0.3em] text-primary/40">Scenes</span>
                 </header>
-                <div className="flex-grow p-4 overflow-y-auto custom-scrollbar space-y-2">
+                <div className="flex-grow p-4 overflow-y-auto space-y-2">
                     {activeStoryboard.scenes.map((s, i) => (
                         <button 
                             key={s.id} 
@@ -163,7 +163,7 @@ export const StoryboardPage: React.FC<{ showGlobalFeedback: (m: string, e?: bool
                             </div>
                         </button>
                     ))}
-                    <button onClick={handleAddScene} className="btn btn-ghost border-2 border-dashed w-full py-8 h-auto rounded-none opacity-40 hover:opacity-100 transition-all flex flex-col gap-2">
+                    <button onClick={handleAddScene} className="form-btn border-2 border-dashed w-full py-8 h-auto rounded-none opacity-40 hover:opacity-100 transition-all flex flex-col gap-2">
                         <PlusIcon className="w-6 h-6" />
                         <span className="text-[9px] font-black tracking-widest uppercase">Append Node</span>
                     </button>
@@ -176,11 +176,11 @@ export const StoryboardPage: React.FC<{ showGlobalFeedback: (m: string, e?: bool
                     <input 
                         value={activeStoryboard.title} 
                         onChange={e => updateStoryboard(activeStoryboard.id, { title: e.target.value }).then(refresh)}
-                        className="bg-transparent border-none focus:outline-none font-black text-xl uppercase tracking-tighter w-full"
+                        className="form-input bg-transparent border-none focus:outline-none font-black text-xl uppercase tracking-tighter w-full"
                     />
                 </header>
                 
-                <div className="flex-grow p-10 overflow-y-auto custom-scrollbar space-y-12">
+                <div className="flex-grow p-10 overflow-y-auto space-y-12">
                     {activeScene ? (
                         <>
                             <div className="space-y-4">
@@ -188,18 +188,18 @@ export const StoryboardPage: React.FC<{ showGlobalFeedback: (m: string, e?: bool
                                 <textarea 
                                     value={activeScene.text}
                                     onChange={e => handleUpdateActiveScene({ text: e.target.value })}
-                                    className="textarea textarea-bordered rounded-none w-full min-h-[120px] text-lg font-medium leading-relaxed bg-transparent italic"
+                                    className="form-textarea w-full min-h-[120px] text-lg font-medium leading-relaxed bg-transparent italic"
                                     placeholder="Describe the action sequence..."
                                 />
                             </div>
 
                             <div className="space-y-6">
-                                <div className="flex justify-between items-center"><span className="text-[10px] font-black uppercase tracking-[0.2em] text-base-content/30">Reference Materials</span><button onClick={() => setIsPickerOpen(true)} className="btn btn-xs btn-ghost text-[9px] font-black uppercase tracking-widest">Add From Library</button></div>
+                                <div className="flex justify-between items-center"><span className="text-[10px] font-black uppercase tracking-[0.2em] text-base-content/30">Reference Materials</span><button onClick={() => setIsPickerOpen(true)} className="form-btn h-8 px-4 text-[9px] font-black uppercase tracking-widest">Add From Library</button></div>
                                 <div className="grid grid-cols-4 gap-px bg-base-100/40 backdrop-blur-xl">
                                     {activeScene.referenceImages.map((url, idx) => (
                                         <div key={idx} className="aspect-video bg-transparent relative group overflow-hidden">
                                             <SceneThumbnail url={url} />
-                                            <button onClick={() => handleUpdateActiveScene({ referenceImages: activeScene.referenceImages.filter((_, i) => i !== idx) })} className="btn btn-xs btn-square btn-error absolute top-1 right-1 opacity-0 group-hover:opacity-100 rounded-none">✕</button>
+                                            <button onClick={() => handleUpdateActiveScene({ referenceImages: activeScene.referenceImages.filter((_, i) => i !== idx) })} className="form-btn h-6 w-6 text-error absolute top-1 right-1 opacity-0 group-hover:opacity-100">✕</button>
                                         </div>
                                     ))}
                                     {activeScene.referenceImages.length < 4 && (
@@ -218,7 +218,7 @@ export const StoryboardPage: React.FC<{ showGlobalFeedback: (m: string, e?: bool
                                 </div>
                                 <div className="form-control">
                                     <label className="text-[10px] font-black uppercase text-base-content/40 mb-2">Motion Energy</label>
-                                    <select value={activeScene.motion} onChange={e => handleUpdateActiveScene({ motion: e.target.value })} className="select select-bordered select-sm rounded-none font-bold uppercase text-[10px]">
+                                    <select value={activeScene.motion} onChange={e => handleUpdateActiveScene({ motion: e.target.value })} className="form-select w-full">
                                         <option>Standard</option><option>Aggressive</option><option>Slow Motion</option><option>Temporal Warp</option><option>Fluid</option>
                                     </select>
                                 </div>
@@ -238,7 +238,7 @@ export const StoryboardPage: React.FC<{ showGlobalFeedback: (m: string, e?: bool
                         ))}
                     </div>
                     <div className="flex gap-2">
-                        <button onClick={() => { setStbToDelete(activeStoryboard); setIsDeleteModalOpen(true); }} className="btn btn-sm btn-ghost text-error opacity-40 hover:opacity-100 font-black text-[9px] uppercase tracking-widest">Purge Story</button>
+                        <button onClick={() => { setStbToDelete(activeStoryboard); setIsDeleteModalOpen(true); }} className="form-btn h-10 px-6 text-error opacity-40 hover:opacity-100 font-black text-[9px] uppercase tracking-widest">Purge Story</button>
                     </div>
                 </footer>
             </main>
@@ -248,20 +248,20 @@ export const StoryboardPage: React.FC<{ showGlobalFeedback: (m: string, e?: bool
                 <header className="h-16 px-6 flex items-center justify-between">
                     <span className="text-[10px] font-black uppercase tracking-[0.3em] text-primary">Neural Translaton</span>
                 </header>
-                <div className="flex-grow p-6 space-y-8 overflow-y-auto custom-scrollbar">
+                <div className="flex-grow p-6 space-y-8 overflow-y-auto">
                     <div className="form-control">
                         <label className="text-[10px] font-black uppercase text-base-content/40 mb-2">Target Engine</label>
                         <select 
                             value={activeStoryboard.targetModel} 
                             onChange={e => updateStoryboard(activeStoryboard.id, { targetModel: e.target.value }).then(refresh)}
-                            className="select select-bordered select-sm rounded-none font-bold uppercase text-[10px] tracking-widest w-full"
+                            className="form-select w-full"
                         >
                             {TARGET_VIDEO_AI_MODELS.map(m => <option key={m} value={m}>{m.toUpperCase()}</option>)}
                         </select>
                     </div>
 
                     <div className="space-y-4">
-                        <div className="flex justify-between items-center"><span className="text-[10px] font-black uppercase tracking-widest text-primary/40">Engine Optimized Prompt</span><button onClick={handleTranslate} disabled={isTranslating || !activeScene} className="btn btn-xs btn-ghost gap-1">{isTranslating ? <LoadingSpinner size={12}/> : <SparklesIcon className="w-3.5 h-3.5"/>} Translate</button></div>
+                        <div className="flex justify-between items-center"><span className="text-[10px] font-black uppercase tracking-widest text-primary/40">Engine Optimized Prompt</span><button onClick={handleTranslate} disabled={isTranslating || !activeScene} className="form-btn h-8 px-4 gap-1">{isTranslating ? <LoadingSpinner size={12}/> : <SparklesIcon className="w-3.5 h-3.5"/>} Translate</button></div>
                         <div className="p-4 text-xs font-mono leading-relaxed text-base-content/60 min-h-[200px] break-words">
                             {isTranslating ? 'Synthesizing syntactic dialect...' : translatedPrompt || 'Translation queue empty.'}
                         </div>
@@ -273,9 +273,9 @@ export const StoryboardPage: React.FC<{ showGlobalFeedback: (m: string, e?: bool
                     <button 
                         onClick={() => { navigator.clipboard.writeText(translatedPrompt); showGlobalFeedback("Token Copied"); }} 
                         disabled={!translatedPrompt} 
-                        className="btn btn-ghost flex-1 rounded-none border-none border-r border-base-300 font-black text-[9px] tracking-widest uppercase"
+                        className="form-btn flex-1 rounded-none border-none border-r border-base-300 font-black text-[9px] tracking-widest uppercase"
                     >Copy Token</button>
-                    <button className="btn btn-primary flex-1 rounded-none border-none font-black text-[9px] tracking-widest uppercase">Export PDF</button>
+                    <button className="form-btn form-btn-primary flex-1 rounded-none border-none font-black text-[9px] tracking-widest uppercase">Export PDF</button>
                 </footer>
             </aside>
 

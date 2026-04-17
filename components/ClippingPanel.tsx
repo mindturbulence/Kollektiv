@@ -42,50 +42,57 @@ const ManualClipModal: React.FC<{
 
     const modalContent = (
         <div className="fixed inset-0 bg-black/80 z-[1000] flex items-center justify-center p-4 animate-fade-in" onClick={onClose}>
-            <div className="bg-base-100/40 backdrop-blur-xl rounded-none shadow-2xl w-full max-w-lg overflow-hidden" onClick={e => e.stopPropagation()}>
-                <header className="p-8 border-b border-base-300 bg-base-200/20 relative">
-                    <button onClick={onClose} className="absolute top-6 right-6 btn btn-ghost btn-sm btn-square opacity-40 hover:opacity-100">
-                        <CloseIcon className="w-6 h-6" />
-                    </button>
-                    <h3 className="text-3xl font-black tracking-tighter text-base-content leading-none">
-                        NEW CLIP<span className="text-primary">.</span>
-                    </h3>
-                    <p className="text-[10px] font-black uppercase tracking-[0.4em] text-base-content/30 mt-2">Manual Archival Record</p>
-                </header>
+            <div className="flex flex-col bg-transparent w-full max-w-lg mx-auto relative p-[3px] corner-frame overflow-visible" onClick={e => e.stopPropagation()}>
+                <div className="bg-base-100/40 backdrop-blur-xl rounded-none w-full flex flex-col overflow-hidden relative z-10">
+                    <header className="p-8 border-b border-base-300 bg-base-200/20 relative">
+                        <button onClick={onClose} className="absolute top-6 right-6 form-btn h-8 w-8 opacity-40 hover:opacity-100">
+                            <CloseIcon className="w-6 h-6" />
+                        </button>
+                        <h3 className="text-3xl font-black tracking-tighter text-base-content leading-none">
+                            NEW CLIP<span className="text-primary">.</span>
+                        </h3>
+                        <p className="text-[10px] font-black uppercase tracking-[0.4em] text-base-content/30 mt-2">Manual Archival Record</p>
+                    </header>
 
-                <div className="p-8 space-y-6">
-                    <div className="form-control">
-                        <label className="text-[10px] font-black uppercase tracking-[0.2em] text-base-content/40 mb-2">Entry Identity</label>
-                        <input 
-                            type="text" 
-                            placeholder="TITLE..." 
-                            value={title}
-                            onChange={e => setTitle(e.target.value)}
-                            className="input input-bordered rounded-none font-bold uppercase tracking-tight h-10 w-full"
-                            autoFocus
-                        />
+                    <div className="p-8 space-y-6">
+                        <div className="form-control">
+                            <label className="text-[10px] font-black uppercase tracking-[0.2em] text-base-content/40 mb-2">Entry Identity</label>
+                            <input 
+                                type="text" 
+                                placeholder="TITLE..." 
+                                value={title}
+                                onChange={e => setTitle(e.target.value)}
+                                className="form-input w-full"
+                                autoFocus
+                            />
+                        </div>
+                        <div className="form-control">
+                            <label className="text-[10px] font-black uppercase tracking-[0.2em] text-base-content/40 mb-2">Prompt Token Data</label>
+                            <textarea 
+                                placeholder="TOKEN STREAM..." 
+                                value={text}
+                                onChange={e => setText(e.target.value)}
+                                className="form-textarea w-full min-h-[120px]"
+                            />
+                        </div>
                     </div>
-                    <div className="form-control">
-                        <label className="text-[10px] font-black uppercase tracking-[0.2em] text-base-content/40 mb-2">Prompt Token Data</label>
-                        <textarea 
-                            placeholder="TOKEN STREAM..." 
-                            value={text}
-                            onChange={e => setText(e.target.value)}
-                            className="textarea textarea-bordered rounded-none w-full min-h-[120px] font-medium leading-relaxed"
-                        />
-                    </div>
+
+                    <footer className="border-t border-base-300 flex bg-transparent p-0 overflow-hidden">
+                        <button onClick={onClose} className="form-btn flex-1 h-14 rounded-none border-r border-base-300">Abort</button>
+                        <button 
+                            onClick={handleConfirm} 
+                            disabled={!text.trim()} 
+                            className="form-btn form-btn-primary flex-1 h-14 rounded-none"
+                        >
+                            Store Token
+                        </button>
+                    </footer>
                 </div>
-
-                <footer className="border-t border-base-300 flex bg-transparent p-0 overflow-hidden">
-                    <button onClick={onClose} className="btn flex-1 rounded-none uppercase font-black text-[10px] tracking-widest border-r border-base-300 transition-colors">Abort</button>
-                    <button 
-                        onClick={handleConfirm} 
-                        disabled={!text.trim()} 
-                        className="btn btn-primary flex-1 rounded-none uppercase font-black text-[10px] tracking-widest shadow-lg transition-colors"
-                    >
-                        Store Token
-                    </button>
-                </footer>
+                {/* Manual Corner Accents */}
+                <div className="absolute -top-[1px] -left-[1px] w-3 h-3 border-t border-l border-primary/15 z-20 pointer-events-none" />
+                <div className="absolute -top-[1px] -right-[1px] w-3 h-3 border-t border-r border-primary/15 z-20 pointer-events-none" />
+                <div className="absolute -bottom-[1px] -left-[1px] w-3 h-3 border-b border-l border-primary/15 z-20 pointer-events-none" />
+                <div className="absolute -bottom-[1px] -right-[1px] w-3 h-3 border-b border-r border-primary/15 z-20 pointer-events-none" />
             </div>
         </div>
     );
@@ -137,7 +144,7 @@ const ClippedIdeaItem: React.FC<{
                 </div>
                 <button
                     onClick={() => onRemove(idea.id)}
-                    className="btn btn-xs btn-square btn-ghost text-error/20 hover:text-error hover:bg-error/10 transition-colors"
+                    className="form-btn h-8 w-8 text-error/20 hover:text-error hover:bg-error/10 transition-colors"
                     title="Remove clip"
                 >
                     <DeleteIcon className="w-3.5 h-3.5" />
@@ -151,7 +158,7 @@ const ClippedIdeaItem: React.FC<{
             <div className="flex gap-1 mt-2 pt-3 border-t border-base-300">
                 <button
                     onClick={handleCopy}
-                    className="btn btn-xs btn-ghost flex-1 h-8 min-h-0 font-black text-[9px] tracking-widest uppercase"
+                    className="form-btn flex-1 h-8 px-2"
                     title={copied ? "Copied!" : "Copy prompt"}
                 >
                     {copied ? <CheckIcon className="w-3 h-3 mr-1.5 text-success" /> : <CopyIcon className="w-3.5 h-3.5 mr-1.5 opacity-40" />}
@@ -159,7 +166,7 @@ const ClippedIdeaItem: React.FC<{
                 </button>
                 <button
                     onClick={() => onInsert(idea.prompt)}
-                    className="btn btn-xs btn-ghost flex-1 h-8 min-h-0 font-black text-[9px] tracking-widest uppercase hover:bg-base-300"
+                    className="form-btn flex-1 h-8 px-2 hover:bg-base-300"
                     title="Send to Crafter"
                 >
                     <RefreshIcon className="w-3 h-3 mr-1.5 opacity-40" />
@@ -167,7 +174,7 @@ const ClippedIdeaItem: React.FC<{
                 </button>
                  <button
                     onClick={() => onRefine(idea.prompt)}
-                    className="btn btn-xs btn-ghost flex-1 h-8 min-h-0 font-black text-[9px] tracking-widest uppercase hover:bg-base-300"
+                    className="form-btn flex-1 h-8 px-2 hover:bg-base-300"
                     title="Send back to Refiner"
                 >
                     <SparklesIcon className="w-3 h-3 mr-1.5 opacity-40" />
@@ -175,7 +182,7 @@ const ClippedIdeaItem: React.FC<{
                 </button>
                 <button
                     onClick={() => onSave(idea)}
-                    className="btn btn-xs btn-primary flex-1 h-8 min-h-0 font-black text-[9px] tracking-widest uppercase shadow-lg"
+                    className="form-btn form-btn-primary flex-1 h-8 px-2"
                     title="Save to Prompt Library"
                 >
                     <ArchiveIcon className="w-3 h-3 mr-1.5" />
@@ -198,6 +205,7 @@ const ClippingPanel: React.FC<ClippingPanelProps> = ({
     onSaveToLibrary,
 }) => {
     const panelRef = useRef<HTMLDivElement>(null);
+    const scrollRef = useRef<HTMLDivElement>(null);
     const [isModalOpen, setIsModalOpen] = useState(false);
 
     // GSAP Animation for the panel
@@ -267,62 +275,71 @@ const ClippingPanel: React.FC<ClippingPanelProps> = ({
         <>
             <div
                 ref={panelRef}
-                className="fixed top-6 right-6 bottom-6 md:top-12 md:right-12 md:bottom-12 w-[calc(100%-3rem)] md:w-[480px] bg-base-100/60 shadow-2xl z-[1100] flex flex-col backdrop-blur-3xl translate-x-full border-l border-base-content/10"
+                className="fixed top-6 right-6 bottom-6 md:top-12 md:right-12 md:bottom-12 w-[calc(100%-3rem)] md:w-[480px] bg-transparent z-[1100] translate-x-full pointer-events-none"
                 style={{ visibility: 'hidden' }}
                 aria-hidden={!isOpen}
             >
-                {/* Header */}
-                <div className="flex justify-between items-center h-16 px-6 bg-base-100/20 flex-shrink-0">
-                    <div className="flex items-center gap-3">
-                        <BookmarkIcon className="w-5 h-5 text-primary"/>
-                        <h3 className="font-black text-sm uppercase tracking-[0.3em]">Clipboard <span className="text-base-content/20 font-mono text-xs ml-2">[{clippedIdeas.length}]</span></h3>
-                    </div>
-                    <div className="flex items-center gap-1">
-                        <button 
-                            onClick={() => setIsModalOpen(true)} 
-                            className="btn btn-sm btn-ghost btn-square opacity-40 hover:opacity-100 hover:text-primary transition-all"
-                            title="Manual Entry"
-                        >
-                            <PlusIcon className="w-5 h-5" />
-                        </button>
-                        {clippedIdeas.length > 0 && (
-                            <button 
-                                onClick={onClearAll} 
-                                className="btn btn-sm btn-ghost btn-square opacity-40 hover:opacity-100 hover:text-error transition-all"
-                                title="Purge All Clips"
-                            >
-                                <DeleteIcon className="w-5 h-5" />
-                            </button>
-                        )}
-                        <button onClick={onClose} className="btn btn-sm btn-ghost btn-square opacity-40 hover:opacity-100" aria-label="Close clipping panel">
-                            <CloseIcon className="w-5 h-5" />
-                        </button>
-                    </div>
-                </div>
+                <div className="w-full h-full relative corner-frame overflow-visible flex flex-col pointer-events-auto">
+                    <div className="bg-base-100/60 backdrop-blur-3xl rounded-none w-[calc(100%-6px)] h-[calc(100%-6px)] m-[3px] flex flex-col overflow-hidden relative z-10">
+                        {/* Header */}
+                        <div className="flex justify-between items-center h-16 px-6 bg-base-100/20 flex-shrink-0">
+                            <div className="flex items-center gap-3">
+                                <BookmarkIcon className="w-5 h-5 text-primary"/>
+                                <h3 className="font-black text-sm uppercase tracking-[0.3em]">Clipboard <span className="text-base-content/20 font-mono text-xs ml-2">[{clippedIdeas.length}]</span></h3>
+                            </div>
+                            <div className="flex items-center gap-1">
+                                <button 
+                                    onClick={() => setIsModalOpen(true)} 
+                                    className="form-btn h-8 w-8 opacity-40 hover:opacity-100 hover:text-primary transition-all"
+                                    title="Manual Entry"
+                                >
+                                    <PlusIcon className="w-5 h-5" />
+                                </button>
+                                {clippedIdeas.length > 0 && (
+                                    <button 
+                                        onClick={onClearAll} 
+                                        className="form-btn h-8 w-8 opacity-40 hover:opacity-100 hover:text-error transition-all"
+                                        title="Purge All Clips"
+                                    >
+                                        <DeleteIcon className="w-5 h-5" />
+                                    </button>
+                                )}
+                                <button onClick={onClose} className="form-btn h-8 w-8 opacity-40 hover:opacity-100" aria-label="Close clipping panel">
+                                    <CloseIcon className="w-5 h-5" />
+                                </button>
+                            </div>
+                        </div>
 
-                {/* Body */}
-                <div className="flex-grow p-6 overflow-y-auto custom-scrollbar">
-                    {clippedIdeas.length > 0 ? (
-                        <div className="flex flex-col gap-4">
-                            {clippedIdeas.map((idea, index) => (
-                                <ClippedIdeaItem
-                                    key={idea.id}
-                                    idea={idea}
-                                    index={index}
-                                    onRemove={onRemoveIdea}
-                                    onInsert={onInsertIdea}
-                                    onRefine={onRefineIdea}
-                                    onSave={onSaveToLibrary}
-                                />
-                            ))}
+                        {/* Body */}
+                        <div ref={scrollRef} className="flex-grow p-6 overflow-y-auto relative">
+                            {clippedIdeas.length > 0 ? (
+                                <div className="flex flex-col gap-4">
+                                    {clippedIdeas.map((idea, index) => (
+                                        <ClippedIdeaItem
+                                            key={idea.id}
+                                            idea={idea}
+                                            index={index}
+                                            onRemove={onRemoveIdea}
+                                            onInsert={onInsertIdea}
+                                            onRefine={onRefineIdea}
+                                            onSave={onSaveToLibrary}
+                                        />
+                                    ))}
+                                </div>
+                            ) : (
+                                <div className="h-full flex flex-col items-center justify-center text-center opacity-10 py-12">
+                                    <BookmarkIcon className="w-16 h-16 mb-6" />
+                                    <p className="text-xl font-black uppercase tracking-widest leading-none">Archives Empty</p>
+                                    <p className="text-[10px] font-bold uppercase tracking-[0.2em] mt-4">Clip tokens from the library or add manually</p>
+                                </div>
+                            )}
                         </div>
-                    ) : (
-                        <div className="h-full flex flex-col items-center justify-center text-center opacity-10 py-12">
-                             <BookmarkIcon className="w-16 h-16 mb-6" />
-                            <p className="text-xl font-black uppercase tracking-widest leading-none">Archives Empty</p>
-                            <p className="text-[10px] font-bold uppercase tracking-[0.2em] mt-4">Clip tokens from the library or add manually</p>
-                        </div>
-                    )}
+                    </div>
+                    {/* Manual Corner Accents */}
+                    <div className="absolute -top-[1px] -left-[1px] w-3 h-3 border-t border-l border-primary/15 z-20 pointer-events-none" />
+                    <div className="absolute -top-[1px] -right-[1px] w-3 h-3 border-t border-r border-primary/15 z-20 pointer-events-none" />
+                    <div className="absolute -bottom-[1px] -left-[1px] w-3 h-3 border-b border-l border-primary/15 z-20 pointer-events-none" />
+                    <div className="absolute -bottom-[1px] -right-[1px] w-3 h-3 border-b border-r border-primary/15 z-20 pointer-events-none" />
                 </div>
             </div>
 

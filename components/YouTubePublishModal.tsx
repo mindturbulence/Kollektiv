@@ -74,21 +74,24 @@ const YouTubePublishModal: React.FC<YouTubePublishModalProps> = ({
 
   const modalContent = (
     <div className="fixed inset-0 bg-black/40 backdrop-blur-xl z-[1000] flex items-center justify-center p-4 animate-fade-in" onClick={onClose}>
-      <div className="bg-base-100/40 rounded-none w-full max-w-2xl mx-auto flex flex-col max-h-[90vh] overflow-hidden" onClick={e => e.stopPropagation()}>
-        <header className="p-8 border-b border-base-300 bg-transparent relative">
-            <button onClick={onClose} className="absolute top-6 right-6 btn btn-ghost btn-sm btn-square opacity-40 hover:opacity-100">
-                <CloseIcon className="w-6 h-6" />
-            </button>
-            <div className="flex items-center gap-4 mb-2">
-                {platform === 'youtube' ? <YouTubeIcon className="w-8 h-8 text-error" /> : <InstagramIcon className="w-8 h-8 text-primary" />}
-                <h3 className="text-3xl font-black tracking-tighter text-base-content leading-none">
-                    PUBLISH<span className="text-primary">.</span>
-                </h3>
-            </div>
-            <p className="text-[10px] font-black uppercase tracking-[0.4em] text-base-content/30">External Repository Uplink</p>
-        </header>
+      <div className="w-full max-w-2xl mx-auto flex flex-col max-h-[90vh] relative p-[3px] corner-frame overflow-visible shadow-2xl" onClick={e => e.stopPropagation()}>
+        <div className="bg-base-100/40 backdrop-blur-xl rounded-none w-full flex flex-col overflow-hidden relative z-10">
+          <header className="px-8 py-4 border-b border-base-content/5 bg-transparent relative flex-shrink-0 flex items-center justify-between">
+              <div className="flex flex-col">
+                  <div className="flex items-center gap-3">
+                      {platform === 'youtube' ? <YouTubeIcon className="w-6 h-6 text-error" /> : <InstagramIcon className="w-6 h-6 text-primary" />}
+                      <h3 className="text-xl font-black tracking-tighter text-base-content leading-none">
+                          PUBLISH<span className="text-primary">.</span>
+                      </h3>
+                  </div>
+                  <p className="text-[10px] font-black uppercase tracking-[0.4em] text-base-content/30 mt-1.5">External Repository Uplink</p>
+              </div>
+              <button onClick={onClose} className="p-2 text-error/30 hover:text-error transition-all hover:scale-110">
+                  <CloseIcon className="w-5 h-5" />
+              </button>
+          </header>
 
-        <div className="p-8 space-y-8 flex-grow overflow-y-auto custom-scrollbar">
+        <div className="p-8 space-y-8 flex-grow overflow-y-auto">
           {isUploading ? (
             <div className="py-12 flex flex-col items-center justify-center space-y-8 animate-fade-in">
               <LoadingSpinner size={64} />
@@ -102,28 +105,28 @@ const YouTubePublishModal: React.FC<YouTubePublishModalProps> = ({
             <>
               <div className="form-control">
                 <label className="text-[10px] font-black uppercase tracking-[0.2em] text-base-content/40 mb-3">Destination Platform</label>
-                <div className="join w-full h-10 bg-base-100/40 backdrop-blur-xl rounded-none overflow-hidden">
-                    <button onClick={() => setPlatform('youtube')} className={`join-item btn btn-ghost h-full flex-1 border-none rounded-none font-black text-[9px] tracking-widest uppercase transition-all ${platform === 'youtube' ? 'bg-primary/10 text-primary' : 'opacity-40 hover:bg-primary/10'}`}>YOUTUBE</button>
-                    <button onClick={() => setPlatform('instagram')} className={`join-item btn btn-ghost h-full flex-1 border-l border-base-300 rounded-none font-black text-[9px] tracking-widest uppercase transition-all ${platform === 'instagram' ? 'bg-primary/10 text-primary' : 'opacity-40 hover:bg-primary/10'}`}>INSTAGRAM</button>
+                <div className="form-tab-group">
+                    <button onClick={() => setPlatform('youtube')} className={`form-tab-item ${platform === 'youtube' ? 'active' : ''}`}>YOUTUBE</button>
+                    <button onClick={() => setPlatform('instagram')} className={`form-tab-item border-l border-base-300 ${platform === 'instagram' ? 'active' : ''}`}>INSTAGRAM</button>
                 </div>
               </div>
-              <div className="form-control"><label className="text-[10px] font-black uppercase tracking-[0.2em] text-base-content/40 mb-3">Transmission ID</label><input type="text" value={title} onChange={e => setTitle(e.target.value)} className="input input-bordered rounded-none font-bold tracking-tight h-10 w-full uppercase" placeholder="ENTER TITLE..." /></div>
-              <div className="form-control"><label className="text-[10px] font-black uppercase tracking-[0.2em] text-base-content/40 mb-3">Metadata Packet</label><textarea value={description} onChange={e => setDescription(e.target.value)} className="textarea textarea-bordered rounded-none min-h-[120px] font-medium leading-relaxed bg-transparent" placeholder="ENTER DESCRIPTION..." /></div>
+              <div className="form-control"><label className="text-[10px] font-black uppercase tracking-[0.2em] text-base-content/40 mb-3">Transmission ID</label><input type="text" value={title} onChange={e => setTitle(e.target.value)} className="form-input w-full uppercase" placeholder="ENTER TITLE..." /></div>
+              <div className="form-control"><label className="text-[10px] font-black uppercase tracking-[0.2em] text-base-content/40 mb-3">Metadata Packet</label><textarea value={description} onChange={e => setDescription(e.target.value)} className="form-textarea w-full min-h-[120px]" placeholder="ENTER DESCRIPTION..." /></div>
               {platform === 'youtube' && (
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6 animate-fade-in">
                     <div className="form-control">
                         <label className="text-[10px] font-black uppercase tracking-[0.2em] text-base-content/40 mb-3">Signal Visibility</label>
-                        <div className="join w-full h-10 bg-base-100/40 backdrop-blur-xl rounded-none overflow-hidden">
-                            <button onClick={() => setPrivacy('public')} className={`join-item btn btn-ghost btn-xs h-full flex-1 border-none rounded-none font-black text-[9px] tracking-widest uppercase transition-all ${privacy === 'public' ? 'bg-primary/10 text-primary' : 'opacity-40 hover:bg-primary/10'}`}>PUBLIC</button>
-                            <button onClick={() => setPrivacy('unlisted')} className={`join-item btn btn-ghost btn-xs h-full flex-1 border-x border-base-300 rounded-none font-black text-[9px] tracking-widest uppercase transition-all ${privacy === 'unlisted' ? 'bg-primary/10 text-primary' : 'opacity-40 hover:bg-primary/10'}`}>UNLISTED</button>
-                            <button onClick={() => setPrivacy('private')} className={`join-item btn btn-ghost btn-xs h-full flex-1 border-none rounded-none font-black text-[9px] tracking-widest uppercase transition-all ${privacy === 'private' ? 'bg-primary/10 text-primary' : 'opacity-40 hover:bg-primary/10'}`}>PRIVATE</button>
+                        <div className="form-tab-group">
+                            <button onClick={() => setPrivacy('public')} className={`form-tab-item ${privacy === 'public' ? 'active' : ''}`}>PUBLIC</button>
+                            <button onClick={() => setPrivacy('unlisted')} className={`form-tab-item border-x border-base-300 ${privacy === 'unlisted' ? 'active' : ''}`}>UNLISTED</button>
+                            <button onClick={() => setPrivacy('private')} className={`form-tab-item ${privacy === 'private' ? 'active' : ''}`}>PRIVATE</button>
                         </div>
                     </div>
                     <div className="form-control">
                         <label className="text-[10px] font-black uppercase tracking-[0.2em] text-base-content/40 mb-3">Protocol Format</label>
-                        <div className="join w-full h-10 bg-base-100/40 backdrop-blur-xl rounded-none overflow-hidden">
-                            <button onClick={() => setPublishAsShorts(false)} className={`join-item btn btn-ghost btn-xs h-full flex-1 border-none rounded-none font-black text-[9px] tracking-widest uppercase transition-all ${!publishAsShorts ? 'bg-primary/10 text-primary' : 'opacity-40 hover:bg-primary/10'}`}>STANDARD</button>
-                            <button onClick={() => setPublishAsShorts(true)} className={`join-item btn btn-ghost btn-xs h-full flex-1 border-l border-base-300 rounded-none font-black text-[9px] tracking-widest uppercase transition-all ${publishAsShorts ? 'bg-primary/10 text-primary' : 'opacity-40 hover:bg-primary/10'}`}>REEL</button>
+                        <div className="form-tab-group">
+                            <button onClick={() => setPublishAsShorts(false)} className={`form-tab-item ${!publishAsShorts ? 'active' : ''}`}>STANDARD</button>
+                            <button onClick={() => setPublishAsShorts(true)} className={`form-tab-item border-l border-base-300 ${publishAsShorts ? 'active' : ''}`}>REEL</button>
                         </div>
                     </div>
                 </div>
@@ -134,10 +137,22 @@ const YouTubePublishModal: React.FC<YouTubePublishModalProps> = ({
           )}
         </div>
 
-        <footer className="border-t border-base-300 flex bg-transparent p-0 overflow-hidden flex-shrink-0">
-            <button onClick={onClose} className="btn flex-1 h-16 rounded-none uppercase font-black text-[10px] tracking-widest border-r border-base-300 transition-colors" disabled={isUploading}>Abort Uplink</button>
-            <button onClick={handlePublish} className="btn btn-primary flex-1 h-16 rounded-none uppercase font-black text-[10px] tracking-widest transition-colors" disabled={isUploading || !title.trim()}>{isUploading ? 'SYNCING...' : 'INITIATE UPLINK'}</button>
+        <footer className="h-14 flex items-stretch bg-base-100/10 backdrop-blur-md p-1.5 gap-1.5 overflow-hidden flex-shrink-0 border-t border-base-content/5">
+            <button onClick={onClose} className="btn btn-sm btn-ghost h-full flex-1 rounded-none font-normal text-[13px] tracking-wider uppercase btn-snake font-display" disabled={isUploading}>
+                <span/><span/><span/><span/>
+                ABORT
+            </button>
+            <button onClick={handlePublish} className="btn btn-sm btn-primary h-full flex-1 rounded-none font-normal text-[13px] tracking-wider uppercase btn-snake-primary font-display" disabled={isUploading || !title.trim()}>
+                <span/><span/><span/><span/>
+                {isUploading ? 'SYNCING...' : 'INITIATE UPLINK'}
+            </button>
         </footer>
+        </div>
+        {/* Manual Corner Accents */}
+        <div className="absolute -top-[1px] -left-[1px] w-3 h-3 border-t border-l border-primary/15 z-20 pointer-events-none" />
+        <div className="absolute -top-[1px] -right-[1px] w-3 h-3 border-t border-r border-primary/15 z-20 pointer-events-none" />
+        <div className="absolute -bottom-[1px] -left-[1px] w-3 h-3 border-b border-l border-primary/15 z-20 pointer-events-none" />
+        <div className="absolute -bottom-[1px] -right-[1px] w-3 h-3 border-b border-r border-primary/15 z-20 pointer-events-none" />
       </div>
     </div>
   );

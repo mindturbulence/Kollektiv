@@ -22,7 +22,7 @@ const ThemeSwitcher: React.FC<{ compact?: boolean }> = ({ compact }) => {
         whileHover="hover"
         onClick={cycleToNextTheme}
         onMouseEnter={() => audioService.playHover()}
-        className={`uppercase transition-colors duration-300 flex items-center gap-2 ${compact ? 'px-3 py-1 text-[10px] font-black tracking-[0.4em] text-base-content/60' : 'px-4 py-2 text-[10px] font-black tracking-[0.4em] text-base-content/60'}`}
+        className={`uppercase transition-colors duration-300 flex items-center gap-2 ${compact ? 'px-3 py-1 text-[12px] font-normal tracking-[0.2em] text-base-content/60' : 'px-4 py-2 text-[12px] font-normal tracking-[0.2em] text-base-content/60'}`}
         aria-label="Next Theme"
       >
         <RollingText 

@@ -2,7 +2,7 @@ import React, { useEffect, useRef, useState } from 'react';
 import { gsap } from 'gsap';
 
 interface CustomScrollbarProps {
-  containerRef: React.RefObject<HTMLElement>;
+  containerRef: React.RefObject<HTMLDivElement>;
 }
 
 const CustomScrollbar: React.FC<CustomScrollbarProps> = ({ containerRef }) => {

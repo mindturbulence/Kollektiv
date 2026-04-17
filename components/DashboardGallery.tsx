@@ -8,12 +8,12 @@ interface DashboardGalleryProps {
     items: GalleryItem[];
 }
 
-const GalleryCard: React.FC<{ url: string; id: string }> = memo(({ url, id }) => {
+const GalleryCard: React.FC<{ url: string }> = memo(({ url }) => {
     const [displayUrl, setDisplayUrl] = useState<string | null>(null);
     const objectUrlRef = useRef<string | null>(null);
     const containerRef = useRef<HTMLDivElement>(null);
     const imgRef = useRef<HTMLImageElement>(null);
-    const filterId = useMemo(() => `retro-shader-${id.replace(/[^a-zA-Z0-9]/g, '')}`, [id]);
+    const colorImgRef = useRef<HTMLImageElement>(null);
 
     useEffect(() => {
         let isActive = true;
@@ -44,112 +44,88 @@ const GalleryCard: React.FC<{ url: string; id: string }> = memo(({ url, id }) =>
         };
     }, [url]);
 
-    // Retro GSAP "Shader" Effect
+    // Retro GSAP "Shader" Effect - Median speed with performance optimizations
     useEffect(() => {
-        if (!imgRef.current || !displayUrl) return;
+        if (!imgRef.current || !colorImgRef.current || !displayUrl) return;
 
-        const turb = document.querySelector(`#${filterId} feTurbulence`);
-        const disp = document.querySelector(`#${filterId} feDisplacementMap`);
+        const turb = document.querySelector('#global-retro-shader feTurbulence');
+        const disp = document.querySelector('#global-retro-shader feDisplacementMap');
 
         if (!turb || !disp) return;
 
         const ctx = gsap.context(() => {
-            // Ambient "breathing" of the shader
-            gsap.to(turb, {
-                attr: { baseFrequency: "0.01 0.08" },
-                duration: 10,
-                repeat: -1,
-                yoyo: true,
-                ease: "sine.inOut"
-            });
-
-            // Occasional digital "glitch" spikes
             const triggerGlitch = () => {
                 const tl = gsap.timeline({ 
-                    onComplete: () => { setTimeout(triggerGlitch, Math.random() * 8000 + 2000); } 
+                    onComplete: () => { setTimeout(triggerGlitch, Math.random() * 9000 + 3000); } 
                 });
 
+                const attackTime = 0.4;
+                const releaseTime = 1.6;
+
                 tl.to(disp, {
-                    attr: { scale: Math.random() * 30 + 10 },
-                    duration: 0.05,
-                    ease: "power4.in"
+                    attr: { scale: Math.random() * 40 + 20 },
+                    duration: attackTime,
+                    ease: "sine.inOut"
                 })
-                .to(imgRef.current, {
-                    x: (Math.random() - 0.5) * 10,
-                    filter: `grayscale(1) contrast(3) brightness(2) url(#${filterId})`,
-                    duration: 0.05
+                .to(colorImgRef.current, {
+                    opacity: 1,
+                    x: (Math.random() - 0.5) * 15,
+                    filter: `contrast(1.5) brightness(1.2) url(#global-retro-shader)`,
+                    duration: attackTime,
+                    ease: "sine.inOut"
                 }, 0)
                 .to(disp, {
                     attr: { scale: 0 },
-                    duration: 0.1,
-                    ease: "power2.out"
+                    duration: releaseTime,
+                    delay: 0.2,
+                    ease: "expo.out"
                 })
-                .to(imgRef.current, {
+                .to(colorImgRef.current, {
+                    opacity: 0,
                     x: 0,
-                    filter: `grayscale(1) contrast(1) brightness(1) url(#${filterId})`,
-                    duration: 0.1
-                });
+                    filter: `contrast(1) brightness(1) url(#global-retro-shader)`,
+                    duration: releaseTime,
+                    ease: "expo.out"
+                }, "-=" + releaseTime);
             };
 
             triggerGlitch();
         });
 
         return () => ctx.revert();
-    }, [displayUrl, filterId]);
+    }, [displayUrl]);
 
-    // Position-based GSAP Blur Effect
+    // Cleanup object URL
     useEffect(() => {
-        if (!containerRef.current) return;
-
-        const updateBlur = () => {
-            if (!containerRef.current) return;
-            const rect = containerRef.current.getBoundingClientRect();
-            const vh = window.innerHeight;
-            
-            // Threshold for blur (25% of screen height)
-            const threshold = vh * 0.25;
-            let blur = 0;
-
-            // Calculate blur based on center position relative to edges
-            const centerY = rect.top + rect.height / 2;
-            
-            if (centerY < threshold) {
-                // Top edge blur
-                blur = gsap.utils.mapRange(0, threshold, 20, 0, Math.max(0, centerY));
-            } else if (centerY > vh - threshold) {
-                // Bottom edge blur
-                blur = gsap.utils.mapRange(vh - threshold, vh, 0, 20, Math.min(vh, centerY));
-            }
-
-            gsap.set(containerRef.current, { 
-                filter: `blur(${blur}px)`,
-                opacity: gsap.utils.mapRange(0, 20, 1, 0.3, blur) // Subtle opacity fade with blur
-            });
+        return () => {
+            if (objectUrlRef.current) URL.revokeObjectURL(objectUrlRef.current);
         };
-
-        gsap.ticker.add(updateBlur);
-        return () => gsap.ticker.remove(updateBlur);
     }, []);
 
     if (!displayUrl) return <div className="w-full aspect-[4/5] bg-base-content/5 animate-pulse" />;
 
     return (
-        <div ref={containerRef} className="w-full aspect-[4/5] bg-transparent overflow-hidden relative group">
-            <svg className="absolute w-0 h-0 overflow-hidden">
-                <filter id={filterId}>
-                    <feTurbulence type="fractalNoise" baseFrequency="0.001 0.01" numOctaves="2" result="noise" />
-                    <feDisplacementMap in="SourceGraphic" in2="noise" scale="0" xChannelSelector="R" yChannelSelector="G" />
-                </filter>
-            </svg>
-            
+        <div ref={containerRef} className="w-full aspect-[4/5] bg-transparent overflow-hidden relative group will-change-[filter,opacity]">
+            {/* Layer 1: Base Grayscale Image */}
             <img 
                 ref={imgRef}
                 src={displayUrl} 
                 alt="" 
-                className="w-full h-full object-cover grayscale opacity-20 transition-all duration-1000"
-                style={{ filter: `url(#${filterId})` }}
+                className="w-full h-full object-cover grayscale opacity-20 transition-all duration-1000 will-change-transform"
+                style={{ filter: 'grayscale(1)' }}
                 referrerPolicy="no-referrer"
             />
+            
+            {/* Layer 2: Color Image (Visible during active shader) */}
+            <img 
+                ref={colorImgRef}
+                src={displayUrl} 
+                alt="" 
+                className="absolute inset-0 w-full h-full object-cover opacity-0 transition-none will-change-[opacity,transform,filter]"
+                style={{ filter: `url(#global-retro-shader)` }}
+                referrerPolicy="no-referrer"
+            />
+
             {/* Subtle scanline overlay on each card */}
             <div className="absolute inset-0 bg-[linear-gradient(rgba(18,16,16,0)_50%,rgba(0,0,0,0.1)_50%)] bg-[length:100%_4px] pointer-events-none opacity-10" />
         </div>
@@ -157,6 +133,23 @@ const GalleryCard: React.FC<{ url: string; id: string }> = memo(({ url, id }) =>
 });
 
 const DashboardGallery: React.FC<DashboardGalleryProps> = ({ items }) => {
+    // Shared SVG Filter to reduce total SVG node count and avoid per-card re-paints
+    useEffect(() => {
+        const turb = document.querySelector('#global-retro-shader feTurbulence');
+        if (!turb) return;
+        
+        const ctx = gsap.context(() => {
+            gsap.to(turb, {
+                attr: { baseFrequency: "0.01 0.08" },
+                duration: 10,
+                repeat: -1,
+                yoyo: true,
+                ease: "sine.inOut"
+            });
+        });
+        return () => ctx.revert();
+    }, []);
+
     // Filter only images and extract URLs, excluding NSFW
     const imageUrls = useMemo(() => {
         const urls = items
@@ -191,9 +184,13 @@ const DashboardGallery: React.FC<DashboardGalleryProps> = ({ items }) => {
 
     return (
         <div className="absolute inset-0 overflow-hidden pointer-events-none bg-transparent">
-            {/* Dark Overlay removed as per user request */}
-            
-            {/* Fading Edges Mask removed as per user request */}
+            {/* Single Global SVG Filter to reduce total GPU pressure */}
+            <svg className="absolute w-0 h-0 overflow-hidden pointer-events-none">
+                <filter id="global-retro-shader">
+                    <feTurbulence type="fractalNoise" baseFrequency="0.001 0.01" numOctaves="2" result="noise" />
+                    <feDisplacementMap in="SourceGraphic" in2="noise" scale="0" xChannelSelector="R" yChannelSelector="G" />
+                </filter>
+            </svg>
             
             <div className="flex gap-12 h-[140%] -top-[20%] relative px-12">
                 {columns.map((colItems, colIndex) => {
@@ -216,7 +213,7 @@ const DashboardGallery: React.FC<DashboardGalleryProps> = ({ items }) => {
                             >
                                 {/* Duplicate images for seamless loop */}
                                 {[...colItems, ...colItems].map((item, imgIndex) => (
-                                    <GalleryCard key={`${colIndex}-${imgIndex}-${item.id}`} url={item.url} id={`${item.id}-${imgIndex}`} />
+                                    <GalleryCard key={`${colIndex}-${imgIndex}-${item.id}`} url={item.url} />
                                 ))}
                             </motion.div>
                         </div>

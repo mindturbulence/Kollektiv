@@ -215,12 +215,12 @@ const ImageCard: React.FC<ImageCardProps> = memo(({ item, viewMode, onOpenDetail
   const [isHovered, setIsHovered] = useState(false);
   
   const styles = {
-    title: viewMode === 'focus' ? 'text-2xl md:text-3xl tracking-tighter' : viewMode === 'compact' ? 'text-[10px]' : 'text-xl tracking-tight',
-    label: viewMode === 'focus' ? 'text-[9px]' : viewMode === 'compact' ? 'text-[7px]' : 'text-[8px]',
-    padding: viewMode === 'focus' ? 'p-8 lg:p-10' : viewMode === 'compact' ? 'p-3' : 'p-6',
-    badge: viewMode === 'focus' ? 'px-3 py-1.5 text-[9px]' : 'px-2 py-1 text-[8px]',
-    iconSize: viewMode === 'focus' ? 'w-5 h-5' : 'w-3.5 h-3.5',
-    gap: viewMode === 'focus' ? 'space-y-4' : 'space-y-2'
+    title: viewMode === 'focus' ? 'text-3xl md:text-5xl tracking-tighter' : viewMode === 'compact' ? 'text-[12px]' : 'text-xl tracking-tight',
+    label: viewMode === 'focus' ? 'text-[11px]' : viewMode === 'compact' ? 'text-[9px]' : 'text-[10px]',
+    padding: viewMode === 'focus' ? 'p-10 lg:p-14' : viewMode === 'compact' ? 'p-3' : 'p-6',
+    badge: viewMode === 'focus' ? 'px-4 py-2 text-[11px]' : viewMode === 'compact' ? 'px-2 py-1 text-[10px]' : 'px-2 py-1 text-[9px]',
+    iconSize: viewMode === 'focus' ? 'w-6 h-6' : 'w-4 h-4',
+    gap: viewMode === 'focus' ? 'space-y-6' : 'space-y-2'
   };
 
   return (
@@ -243,12 +243,14 @@ const ImageCard: React.FC<ImageCardProps> = memo(({ item, viewMode, onOpenDetail
       <div className={`absolute inset-0 flex flex-col ${styles.padding} z-30 pointer-events-none`}>
         
         <div className="flex items-center gap-4 mb-auto opacity-70 group-hover:opacity-100 transition-opacity duration-500">
-            <span className={`${styles.label} font-mono font-black text-primary tracking-[0.3em] uppercase whitespace-nowrap drop-shadow-sm opacity-0 group-hover:opacity-100 transition-opacity duration-500`}>
-                ID#{item.id.slice(-4).toUpperCase()}
-            </span>
-            <div className="flex-grow h-px bg-primary/30 opacity-0 group-hover:opacity-100 transition-opacity duration-500"></div>
+            {viewMode !== 'compact' && (
+                <span className={`${styles.label} font-mono font-black text-primary tracking-[0.3em] uppercase whitespace-nowrap drop-shadow-sm opacity-0 group-hover:opacity-100 transition-opacity duration-500`}>
+                    ID#{item.id.slice(-4).toUpperCase()}
+                </span>
+            )}
+            <div className={`flex-grow h-px bg-primary/30 opacity-0 group-hover:opacity-100 transition-opacity duration-500 ${viewMode === 'compact' ? 'opacity-40' : ''}`}></div>
             {item.isNsfw && (
-                <div className="badge badge-warning badge-xs rounded-none font-black text-[7px] uppercase h-4 px-2 border-none opacity-0 group-hover:opacity-100 transition-opacity duration-500">NSFW</div>
+                <div className={`${viewMode === 'focus' ? 'px-4 py-1.5 text-[11px]' : 'px-2 py-1 text-[10px]'} badge badge-warning rounded-none font-black uppercase h-auto border-none opacity-0 group-hover:opacity-100 transition-opacity duration-500`}>NSFW</div>
             )}
             {isPinned && (
                 <div className="text-primary drop-shadow-md flex-shrink-0">
@@ -259,20 +261,22 @@ const ImageCard: React.FC<ImageCardProps> = memo(({ item, viewMode, onOpenDetail
 
         <div className={styles.gap}>
             <div className="group-hover:translate-y-0 transition-all duration-1000 ease-[cubic-bezier(0.65,0,0.35,1)] translate-y-2">
-                {(showCategory && categoryName) && (
+                {viewMode === 'focus' && showCategory && categoryName && (
                     <span className={`${styles.label} font-black uppercase tracking-[0.3em] text-primary/60 block mb-1 opacity-0 group-hover:opacity-100 transition-opacity duration-700`}>
                         {categoryName}
                     </span>
                 )}
                 
-                <h3 className={`${styles.title} font-black text-white uppercase leading-[1] line-clamp-2 transition-colors duration-700 group-hover:text-primary opacity-0 group-hover:opacity-100 drop-shadow-md`}>
-                    {item.title}
-                </h3>
+                {viewMode === 'focus' && (
+                    <h3 className={`${styles.title} font-black text-white uppercase leading-[1] line-clamp-2 transition-colors duration-700 group-hover:text-primary opacity-0 group-hover:opacity-100 drop-shadow-md`}>
+                        {item.title}
+                    </h3>
+                )}
 
-                {viewMode !== 'compact' && (
+                {viewMode === 'focus' && (
                     <div className="grid transition-[grid-template-rows] duration-1000 ease-[cubic-bezier(0.65,0,0.35,1)] grid-rows-[0fr] group-hover:grid-rows-[1fr]">
                         <div className="overflow-hidden">
-                            <p className="text-[10px] font-bold uppercase tracking-[0.25em] text-white/50 leading-relaxed pt-4 opacity-0 group-hover:opacity-100 transition-opacity duration-1000">
+                            <p className="text-[14px] font-bold uppercase tracking-[0.2em] text-white/50 leading-relaxed pt-6 opacity-0 group-hover:opacity-100 transition-opacity duration-1000">
                                 {item.notes ? `"${item.notes}"` : "NO NOTES ARCHIVED"}
                             </p>
                         </div>
@@ -280,11 +284,13 @@ const ImageCard: React.FC<ImageCardProps> = memo(({ item, viewMode, onOpenDetail
                 )}
             </div>
 
-            <div className="flex items-center pt-4 opacity-70 group-hover:opacity-100 transition-opacity duration-500 pointer-events-auto">
-                <span className={`font-black uppercase tracking-[0.3em] bg-primary/10 text-primary border border-primary/20 backdrop-blur-md shadow-lg ${styles.badge} opacity-0 group-hover:opacity-100 transition-opacity duration-500`}>
-                    {item.urls.length} {item.type.toUpperCase()}{item.urls.length > 1 ? 'S' : ''}
-                </span>
-            </div>
+            {viewMode !== 'compact' && (
+                <div className="flex items-center pt-4 opacity-70 group-hover:opacity-100 transition-opacity duration-500 pointer-events-auto">
+                    <span className={`font-black uppercase tracking-[0.3em] bg-primary/10 text-primary border border-primary/20 backdrop-blur-md shadow-lg ${styles.badge} opacity-0 group-hover:opacity-100 transition-opacity duration-500`}>
+                        {item.urls.length} {item.type.toUpperCase()}{item.urls.length > 1 ? 'S' : ''}
+                    </span>
+                </div>
+            )}
         </div>
       </div>
     </div>

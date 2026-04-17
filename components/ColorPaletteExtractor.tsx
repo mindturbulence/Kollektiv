@@ -215,91 +215,105 @@ export const ColorPaletteExtractor: React.FC<ColorPaletteExtractorProps> = ({ on
 
   return (
     <div className="h-full bg-transparent flex flex-col overflow-hidden p-0">
-        <div className="flex-grow flex flex-col lg:flex-row overflow-hidden">
-            <aside className="w-full lg:w-96 flex-shrink-0 flex flex-col overflow-hidden bg-base-100/30 backdrop-blur-md">
-                <header className="p-6 bg-base-100/80 backdrop-blur-md">
-                    <h3 className="text-[10px] font-black uppercase tracking-[0.4em] text-primary">Chromic Source</h3>
-                </header>
-                <div className="flex-grow p-6 flex flex-col gap-6 overflow-y-auto custom-scrollbar bg-base-100/30 backdrop-blur-md">
-                     <div 
-                        className={`relative flex-grow min-h-[200px] border-2 border-dashed rounded-none flex flex-col items-center justify-center cursor-pointer transition-all gap-4 group ${isDragging ? 'border-primary bg-primary/10' : 'border-base-300 hover:border-primary/50'}`}
-                        style={{ backgroundImage: imagePreviewUrl ? `url(${imagePreviewUrl})` : 'none', backgroundSize: 'contain', backgroundPosition: 'center', backgroundRepeat: 'no-repeat' }}
-                        onDrop={(e) => { e.preventDefault(); setIsDragging(false); handleFileSelect((e.dataTransfer as any)?.files?.[0] || null); }}
-                        onDragOver={(e) => { e.preventDefault(); setIsDragging(true); }}
-                        onDragLeave={() => setIsDragging(false)}
-                    >
-                        <input type="file" ref={fileInputRef} onChange={(e) => handleFileSelect((e.currentTarget as any).files?.[0] || null)} className="hidden" accept="image/*" />
-                        {!imagePreviewUrl && (
-                            <>
-                                <div className="text-center p-6 opacity-20">
-                                    <UploadIcon className="w-10 h-10 mx-auto mb-2"/>
-                                    <p className="text-[10px] font-black uppercase tracking-widest">Load Source</p>
-                                </div>
-                                <div className="flex gap-2">
-                                    <button onClick={(e) => { e.stopPropagation(); (fileInputRef.current as any).click(); }} className="btn btn-xs btn-ghost rounded-none font-black text-[8px] tracking-widest uppercase">UPLOAD</button>
-                                    <button onClick={(e) => { e.stopPropagation(); setIsPickerOpen(true); }} className="btn btn-xs btn-primary rounded-none font-black text-[8px] tracking-widest uppercase">LIBRARY</button>
-                                </div>
-                            </>
-                        )}
-                        {imagePreviewUrl && (
-                            <button onClick={handleRemoveImage} className="btn btn-xs btn-square btn-error absolute top-2 right-2 opacity-0 group-hover:opacity-100 shadow-xl transition-all">✕</button>
-                        )}
-                    </div>
-                    <div className="space-y-4">
-                         <div className="space-y-4">
-                             <div className="flex justify-between items-end"><span className="text-[10px] font-black uppercase text-base-content/30">Nodes</span><span className="text-[10px] font-mono font-bold text-primary">{numClusters}</span></div>
-                             <input type="range" min="2" max="12" value={numClusters} onChange={(e) => setNumClusters(Number((e.currentTarget as any).value))} className="range range-xs range-primary" disabled={!imageFile || isLoading}/>
+        <div className="flex-grow flex flex-col lg:flex-row overflow-hidden gap-4">
+            <aside className="w-full lg:w-96 flex-shrink-0 flex flex-col relative p-[3px] corner-frame overflow-visible z-10">
+                <div className="flex flex-col h-full w-full overflow-hidden relative z-10 bg-base-100/40 backdrop-blur-xl">
+                    <header className="p-6 bg-base-100/10 backdrop-blur-md">
+                        <h3 className="text-[10px] font-black uppercase tracking-[0.4em] text-primary">Chromic Source</h3>
+                    </header>
+                    <div className="flex-grow p-6 flex flex-col gap-6 overflow-y-auto bg-transparent">
+                         <div 
+                            className={`relative flex-grow min-h-[200px] border-2 border-dashed rounded-none flex flex-col items-center justify-center cursor-pointer transition-all gap-4 group ${isDragging ? 'border-primary bg-primary/10' : 'border-base-300 hover:border-primary/50'}`}
+                            style={{ backgroundImage: imagePreviewUrl ? `url(${imagePreviewUrl})` : 'none', backgroundSize: 'contain', backgroundPosition: 'center', backgroundRepeat: 'no-repeat' }}
+                            onDrop={(e) => { e.preventDefault(); setIsDragging(false); handleFileSelect((e.dataTransfer as any)?.files?.[0] || null); }}
+                            onDragOver={(e) => { e.preventDefault(); setIsDragging(true); }}
+                            onDragLeave={() => setIsDragging(false)}
+                        >
+                            <input type="file" ref={fileInputRef} onChange={(e) => handleFileSelect((e.currentTarget as any).files?.[0] || null)} className="hidden" accept="image/*" />
+                            {!imagePreviewUrl && (
+                                <>
+                                    <div className="text-center p-6 opacity-20">
+                                        <UploadIcon className="w-10 h-10 mx-auto mb-2"/>
+                                        <p className="text-[10px] font-black uppercase tracking-widest">Load Source</p>
+                                    </div>
+                                    <div className="flex gap-2">
+                                        <button onClick={(e) => { e.stopPropagation(); (fileInputRef.current as any).click(); }} className="form-btn h-8 px-4">UPLOAD</button>
+                                        <button onClick={(e) => { e.stopPropagation(); setIsPickerOpen(true); }} className="form-btn form-btn-primary h-8 px-4">LIBRARY</button>
+                                    </div>
+                                </>
+                            )}
+                            {imagePreviewUrl && (
+                                <button onClick={handleRemoveImage} className="form-btn h-8 w-8 text-error absolute top-2 right-2 opacity-0 group-hover:opacity-100 shadow-xl transition-all">✕</button>
+                            )}
                         </div>
-                        <button onClick={() => imagePreviewUrl && extractPalette(imagePreviewUrl, numClusters)} disabled={!imageFile || isLoading} className="btn btn-sm btn-secondary w-full rounded-none font-black text-[9px] tracking-widest">
-                            {isLoading ? 'ANALYZING...' : 'RE-SCAN SPECTRUM'}
-                        </button>
+                        <div className="space-y-4">
+                             <div className="space-y-4">
+                                 <div className="flex justify-between items-end"><span className="text-[10px] font-black uppercase text-base-content/30">Nodes</span><span className="text-[10px] font-mono font-bold text-primary">{numClusters}</span></div>
+                                 <input type="range" min="2" max="12" value={numClusters} onChange={(e) => setNumClusters(Number((e.currentTarget as any).value))} className="range range-xs range-primary" disabled={!imageFile || isLoading}/>
+                            </div>
+                            <button onClick={() => imagePreviewUrl && extractPalette(imagePreviewUrl, numClusters)} disabled={!imageFile || isLoading} className="form-btn form-btn-secondary w-full h-10">
+                                {isLoading ? 'ANALYZING...' : 'RE-SCAN SPECTRUM'}
+                            </button>
+                        </div>
                     </div>
                 </div>
+                {/* Manual Corner Accents */}
+                <div className="absolute -top-[1px] -left-[1px] w-3 h-3 border-t border-l border-primary/15 z-20 pointer-events-none" />
+                <div className="absolute -top-[1px] -right-[1px] w-3 h-3 border-t border-r border-primary/15 z-20 pointer-events-none" />
+                <div className="absolute -bottom-[1px] -left-[1px] w-3 h-3 border-b border-l border-primary/15 z-20 pointer-events-none" />
+                <div className="absolute -bottom-[1px] -right-[1px] w-3 h-3 border-b border-r border-primary/15 z-20 pointer-events-none" />
             </aside>
 
-            <main className="flex-grow overflow-y-auto overflow-x-hidden scroll-smooth custom-scrollbar flex flex-col">
-                <section className="p-10 bg-transparent">
-                    <div className="max-w-screen-2xl mx-auto flex flex-col gap-1">
-                        <div className="flex flex-col md:flex-row md:items-stretch justify-between gap-6">
-                            <h1 className="text-2xl lg:text-3xl font-black tracking-tighter text-base-content leading-none flex items-center uppercase">Palette Extractor<span className="text-primary">.</span></h1>
-                        </div>
-                        <p className="text-[11px] font-bold text-base-content/30 uppercase tracking-[0.3em] w-full">Deconstruct visual artifacts into precise chromatic tokens and atmospheric mood data.</p>
-                    </div>
-                </section>
-
-                <div className="flex-shrink-0 px-6 py-4 flex justify-between items-center sticky top-0 z-20 backdrop-blur-xl bg-base-100/60">
-                    <h2 className="text-xs font-black uppercase tracking-[0.4em] text-base-content/40">Extraction Output</h2>
-                    {palette.length > 0 && (
-                        <button onClick={handleClipPalette} className="btn btn-xs btn-ghost rounded-none font-black text-[9px] tracking-widest uppercase">
-                            <BookmarkIcon className="w-3.5 h-3.5 mr-2 opacity-40"/> CLIP TO ARCHIVE
-                        </button>
-                    )}
-                </div>
-
-                <div className="flex-grow p-8 lg:p-12">
-                    {isLoading ? <div className="py-24"><LoadingSpinner/></div> :
-                     error ? <div className="alert alert-error rounded-none border-2"><span>{error}</span></div> :
-                     palette.length > 0 ? (
-                        <div className="space-y-12 animate-fade-in">
-                            {mood && (
-                                <div className="flex flex-col gap-2">
-                                    <span className="text-[10px] font-black uppercase tracking-widest text-primary/60">Identified Mood</span>
-                                    <p className="text-5xl font-black tracking-tighter text-base-content uppercase leading-none">{mood}</p>
-                                </div>
-                            )}
-                            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-px">
-                                {palette.map(color => (
-                                    <ColorCard key={color.hex} color={color} />
-                                ))}
+            <main className="flex-grow flex flex-col relative p-[3px] corner-frame overflow-visible z-10 ml-1">
+                <div className="flex flex-col h-full w-full overflow-hidden relative z-10 bg-base-100/40 backdrop-blur-xl">
+                    <section className="p-10 bg-transparent">
+                        <div className="max-w-screen-2xl mx-auto flex flex-col gap-1">
+                            <div className="flex flex-col md:flex-row md:items-stretch justify-between gap-6">
+                                <h1 className="text-2xl lg:text-3xl font-black tracking-tighter text-base-content leading-none flex items-center uppercase">Palette Extractor<span className="text-primary">.</span></h1>
                             </div>
+                            <p className="text-[11px] font-bold text-base-content/30 uppercase tracking-[0.3em] w-full">Deconstruct visual artifacts into precise chromatic tokens and atmospheric mood data.</p>
                         </div>
-                     ) : (
-                        <div className="h-full flex flex-col items-center justify-center text-center opacity-10 p-12">
-                            <PaletteIcon className="w-24 h-24 mb-6" />
-                            <p className="text-xl font-black uppercase tracking-widest">Awaiting Extraction Sequence</p>
-                        </div>
-                     )}
+                    </section>
+
+                    <div className="flex-shrink-0 px-6 py-4 flex justify-between items-center sticky top-0 z-20 backdrop-blur-xl bg-base-100/60">
+                        <h2 className="text-xs font-black uppercase tracking-[0.4em] text-base-content/40">Extraction Output</h2>
+                        {palette.length > 0 && (
+                            <button onClick={handleClipPalette} className="form-btn h-8 px-4">
+                                <BookmarkIcon className="w-3.5 h-3.5 mr-2 opacity-40"/> CLIP TO ARCHIVE
+                            </button>
+                        )}
+                    </div>
+
+                    <div className="flex-grow p-8 lg:p-12 overflow-y-auto">
+                        {isLoading ? <div className="py-24"><LoadingSpinner/></div> :
+                         error ? <div className="alert alert-error rounded-none border-2"><span>{error}</span></div> :
+                         palette.length > 0 ? (
+                            <div className="space-y-12 animate-fade-in">
+                                {mood && (
+                                    <div className="flex flex-col gap-2">
+                                        <span className="text-[10px] font-black uppercase tracking-widest text-primary/60">Identified Mood</span>
+                                        <p className="text-5xl font-black tracking-tighter text-base-content uppercase leading-none">{mood}</p>
+                                    </div>
+                                )}
+                                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-px">
+                                    {palette.map(color => (
+                                        <ColorCard key={color.hex} color={color} />
+                                    ))}
+                                </div>
+                            </div>
+                         ) : (
+                            <div className="h-full flex flex-col items-center justify-center text-center opacity-10 p-12">
+                                <PaletteIcon className="w-24 h-24 mb-6" />
+                                <p className="text-xl font-black uppercase tracking-widest">Awaiting Extraction Sequence</p>
+                            </div>
+                         )}
+                    </div>
                 </div>
+                {/* Manual Corner Accents */}
+                <div className="absolute -top-[1px] -left-[1px] w-3 h-3 border-t border-l border-primary/15 z-20 pointer-events-none" />
+                <div className="absolute -top-[1px] -right-[1px] w-3 h-3 border-t border-r border-primary/15 z-20 pointer-events-none" />
+                <div className="absolute -bottom-[1px] -left-[1px] w-3 h-3 border-b border-l border-primary/15 z-20 pointer-events-none" />
+                <div className="absolute -bottom-[1px] -right-[1px] w-3 h-3 border-b border-r border-primary/15 z-20 pointer-events-none" />
             </main>
         </div>
 

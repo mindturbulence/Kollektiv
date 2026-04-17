@@ -92,7 +92,7 @@ const Welcome: React.FC<WelcomeProps> = ({ onSetupComplete }) => {
                             <button
                               onClick={handleReconnect}
                               disabled={isLoading}
-                              className="btn btn-primary w-full rounded-none font-black text-xs tracking-[0.3em] h-14"
+                              className="form-btn form-btn-primary w-full h-14"
                             >
                               {isLoading ? <span className="loading loading-spinner"></span> : <RefreshIcon className="w-5 h-5 mr-2" />}
                               RECONNECT_VAULT
@@ -101,7 +101,7 @@ const Welcome: React.FC<WelcomeProps> = ({ onSetupComplete }) => {
                             <button
                               onClick={handleSelectDirectory}
                               disabled={isLoading}
-                              className="btn btn-ghost btn-sm w-full rounded-none font-black text-[9px] tracking-[0.4em] opacity-40 hover:opacity-100 uppercase"
+                              className="form-btn w-full h-10 opacity-40 hover:opacity-100"
                             >
                               CHOOSE_NEW_DIRECTORY
                             </button>
@@ -110,7 +110,7 @@ const Welcome: React.FC<WelcomeProps> = ({ onSetupComplete }) => {
                         <button
                           onClick={handleSelectDirectory}
                           disabled={isLoading}
-                          className="btn btn-primary w-full rounded-none font-black text-xs tracking-[0.3em] h-14"
+                          className="form-btn form-btn-primary w-full h-14"
                         >
                           {isLoading ? <span className="loading loading-spinner"></span> : <FolderClosedIcon className="w-5 h-5 mr-2" />}
                           SELECT_VAULT_FOLDER

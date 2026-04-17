@@ -50,14 +50,14 @@ const TreeViewNode: React.FC<{
       <button
         onClick={handleNodeClick}
         style={{ paddingLeft: `${level * 1}rem` }}
-        className={`w-full text-left p-2 text-[10px] transition-colors flex items-center justify-between ${isSelected ? 'text-primary' : 'text-base-content/70 hover:text-base-content'}`}
+        className={`w-full text-left p-2 text-[11px] font-nunito transition-colors flex items-center justify-between ${isSelected ? 'text-primary' : 'text-base-content/70 hover:text-base-content'}`}
       >
         <div className="flex items-center min-w-0">
           {hasChildren && (
             <ChevronRightIcon className={`w-4 h-4 mr-1 flex-shrink-0 transition-transform duration-150 ${isExpanded ? 'rotate-90' : 'rotate-0'}`} />
           )}
           <div className="mr-2 flex-shrink-0" style={{ paddingLeft: hasChildren ? '0' : '1.25rem' }}>{getIcon()}</div>
-          <span className="truncate font-medium uppercase tracking-widest" title={item.name}>{item.name}</span>
+          <span className="truncate font-bold uppercase tracking-widest" title={item.name}>{item.name}</span>
         </div>
         {typeof item.count !== 'undefined' && (
           <span className="ml-2 flex-shrink-0 text-xs font-mono bg-base-300/50 text-base-content/70 rounded-full px-2 py-0.5">

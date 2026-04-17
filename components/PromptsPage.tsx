@@ -12,7 +12,6 @@ import { refinerPresetService, type RefinerPreset } from '../services/refinerPre
 import { useBusy } from '../contexts/BusyContext';
 import { gsap } from 'gsap';
 import RollingText from './RollingText';
-import CustomScrollbar from './CustomScrollbar';
 import { audioService } from '../services/audioService';
 import type { AppError, SavedPrompt, PromptCategory, EnhancementResult, PromptModifiers, CheatsheetCategory, Idea } from '../types';
 import {
@@ -59,7 +58,7 @@ import PromptCrafter from './PromptCrafter';
 import { MediaAnalyzer } from './MediaAnalyzer';
 import LoadingSpinner from './LoadingSpinner';
 import AutocompleteSelect from './AutocompleteSelect';
-import { SparklesIcon, UploadIcon, CloseIcon, Cog6ToothIcon, ArchiveIcon } from './icons';
+import { SparklesIcon, UploadIcon, Cog6ToothIcon, ArchiveIcon, CloseIcon } from './icons';
 import ConfirmationModal from './ConfirmationModal';
 
 // --- Types ---
@@ -82,20 +81,20 @@ const PropertyCard: React.FC<{
 }> = ({ label, value, onClear, onClick, active }) => (
     <div
         onClick={onClick}
-        className={`group relative p-3 transition-all duration-300 cursor-pointer select-none flex flex-col justify-center min-h-[4.5rem] animate-fade-in ${active ? 'text-primary' : 'text-base-content/80 hover:text-primary'}`}
+        className={`group relative p-4 transition-all duration-300 cursor-pointer select-none flex flex-col justify-center min-h-[4.5rem] animate-fade-in border-b border-base-content/5 ${active ? 'bg-primary/5' : 'hover:bg-base-content/5'}`}
     >
-        <div className="flex items-center justify-between gap-2 mb-1.5">
-            <span className={`text-[10px] font-black uppercase tracking-widest ${active ? 'text-primary' : 'text-base-content/30'}`}>{label}</span>
+        <div className="flex items-center justify-between gap-2 mb-1">
+            <span className={`text-[9px] font-black uppercase tracking-[0.2em] ${active ? 'text-primary' : 'text-base-content/30'}`}>{label}</span>
             {value && (
                 <button
                     onClick={(e) => { e.stopPropagation(); onClear(); }}
-                    className={`btn btn-ghost btn-xs btn-square h-5 w-5 min-h-0 ${active ? 'text-primary' : 'text-base-content/20 hover:text-error'}`}
+                    className={`btn btn-ghost btn-xs btn-square h-5 w-5 min-h-0 opacity-0 group-hover:opacity-100 transition-opacity ${active ? 'text-primary' : 'text-base-content/20 hover:text-error'}`}
                 >
-                    ✕
+                    <CloseIcon className="w-4 h-4" />
                 </button>
             )}
         </div>
-        <span className={`text-sm font-bold leading-tight break-words first-letter:uppercase ${active ? 'text-primary' : 'text-base-content/80'}`}>
+        <span className={`text-sm font-bold leading-tight break-words first-letter:uppercase tracking-tight ${active ? 'text-primary' : 'text-base-content'}`}>
             {value || 'Default'}
         </span>
     </div>
@@ -155,6 +154,7 @@ const PromptsPage: React.FC<PromptsPageProps> = ({
     const { setIsBusy } = useBusy();
     const [activeView, setActiveView] = useState<'refine' | 'composer' | 'analyzer'>('composer');
     const tabsRef = useRef<HTMLDivElement>(null);
+    const tabsScanRef = useRef<HTMLDivElement>(null);
 
     useLayoutEffect(() => {
         if (!tabsRef.current) return;
@@ -167,6 +167,26 @@ const PromptsPage: React.FC<PromptsPageProps> = ({
             stagger: 0.1,
             ease: "power3.out"
         });
+
+        if (tabsScanRef.current) {
+            gsap.to(tabsScanRef.current, {
+                left: '120%',
+                opacity: 1,
+                duration: 2.5,
+                repeat: -1,
+                repeatDelay: 87.5, // 1.5 minutes (90s total - 2.5s animation)
+                delay: 20,
+                ease: "power2.inOut",
+                onRepeat: () => {
+                    gsap.set(tabsScanRef.current, { opacity: 1 });
+                }
+            });
+        }
+
+        return () => {
+            gsap.killTweensOf(navItems);
+            if (tabsScanRef.current) gsap.killTweensOf(tabsScanRef.current);
+        };
     }, []);
 
     // --- Refiner State ---
@@ -515,8 +535,13 @@ const PromptsPage: React.FC<PromptsPageProps> = ({
         ] as const;
 
         return (
-            <div className="flex-shrink-0 bg-transparent sticky top-0 z-20 h-12 flex justify-center items-center">
-                <div ref={tabsRef} className="flex gap-4 h-full items-center">
+            <div className="flex-shrink-0 bg-transparent sticky top-0 z-20 h-12 flex justify-center items-center relative overflow-hidden">
+                {/* Horizontal System Line */}
+                <div className="absolute top-[52%] left-0 right-0 h-px bg-base-content/5 -translate-y-1/2 z-0 pointer-events-none">
+                    <div ref={tabsScanRef} className="absolute inset-y-0 left-[-20%] w-[20%] bg-gradient-to-r from-transparent via-primary/40 to-transparent opacity-0" />
+                </div>
+                
+                <div ref={tabsRef} className="flex gap-4 h-full items-center relative z-10">
                     {viewTabs.map((tab) => (
                         <button
                             key={tab.id}
@@ -525,9 +550,9 @@ const PromptsPage: React.FC<PromptsPageProps> = ({
                                 audioService.playClick();
                                 setActiveView(tab.id as any);
                             }}
-                            className={`relative px-4 py-2 text-[10px] font-black tracking-[0.4em] uppercase transition-colors duration-300 ${currentView === tab.id
-                                    ? 'text-primary'
-                                    : 'text-base-content/40 hover:text-primary/60'
+                            className={`relative px-4 py-2 text-[13px] font-normal tracking-[0.2em] uppercase transition-colors duration-300 ${currentView === tab.id
+                                ? 'text-primary'
+                                : 'text-base-content/40 hover:text-primary/60'
                                 }`}
                         >
                             <RollingText text={tab.label} hoverClassName="text-primary" />
@@ -625,34 +650,34 @@ const PromptsPage: React.FC<PromptsPageProps> = ({
                             <div className="flex justify-between items-center mb-2">
                                 <label className="text-[10px] font-black uppercase tracking-widest text-base-content/40">Prompt Idea</label>
                                 <div className="flex gap-2">
-                                    <button onClick={handlePasteRefineText} className="btn btn-ghost btn-xs opacity-20 hover:opacity-100 uppercase font-black text-[8px] tracking-widest">Paste</button>
-                                    <button onClick={() => setRefineText('')} className="btn btn-ghost btn-xs opacity-20 hover:opacity-100 uppercase font-black text-[8px] tracking-widest">Clear</button>
+                                    <button onClick={handlePasteRefineText} className="form-btn h-6 px-2 opacity-20 hover:opacity-100 uppercase font-black text-[8px] tracking-widest">Paste</button>
+                                    <button onClick={() => setRefineText('')} className="form-btn h-6 px-2 opacity-20 hover:opacity-100 uppercase font-black text-[8px] tracking-widest">Clear</button>
                                 </div>
                             </div>
-                            <textarea value={refineText} onChange={(e) => setRefineText((e.currentTarget as any).value)} className="textarea textarea-bordered rounded-none w-full flex-grow resize-none font-medium leading-relaxed bg-transparent" placeholder="Enter core concept..."></textarea>
+                            <textarea value={refineText} onChange={(e) => setRefineText((e.currentTarget as any).value)} className="form-textarea w-full flex-grow resize-none font-medium leading-relaxed bg-transparent" placeholder="Enter core concept..."></textarea>
                         </div>
                         <div className="form-control">
                             <label className="text-[10px] font-black uppercase tracking-widest text-base-content/40 mb-2">Constant Modifiers</label>
-                            <input type="text" value={constantModifier} onChange={(e) => setConstantModifier((e.currentTarget as any).value)} className="input input-bordered rounded-none input-sm font-bold" placeholder="Tokens the AI must include..." />
+                            <input type="text" value={constantModifier} onChange={(e) => setConstantModifier((e.currentTarget as any).value)} className="form-input w-full" placeholder="Tokens the AI must include..." />
                         </div>
                         <div className="form-control">
                             <label className="text-[10px] font-black uppercase tracking-widest text-base-content/40 mb-2">Media Output</label>
-                            <div className="join w-full">
-                                <button onClick={() => setMediaMode('image')} className={`join-item btn btn-xs flex-1 rounded-none font-black text-[9px] ${mediaMode === 'image' ? 'btn-primary' : 'btn-ghost'}`}>IMAGE</button>
-                                <button onClick={() => setMediaMode('video')} className={`join-item btn btn-xs flex-1 rounded-none font-black text-[9px] ${mediaMode === 'video' ? 'btn-primary' : 'btn-ghost'}`}>VIDEO</button>
-                                <button onClick={() => setMediaMode('audio')} className={`join-item btn btn-xs flex-1 rounded-none font-black text-[9px] ${mediaMode === 'audio' ? 'btn-primary' : 'btn-ghost'}`}>AUDIO</button>
+                            <div className="form-tab-group">
+                                <button onClick={() => setMediaMode('image')} className={`form-tab-item ${mediaMode === 'image' ? 'active' : ''}`}>IMAGE</button>
+                                <button onClick={() => setMediaMode('video')} className={`form-tab-item ${mediaMode === 'video' ? 'active' : ''}`}>VIDEO</button>
+                                <button onClick={() => setMediaMode('audio')} className={`form-tab-item ${mediaMode === 'audio' ? 'active' : ''}`}>AUDIO</button>
                             </div>
                         </div>
                         <div className="grid grid-cols-2 gap-4">
                             <div className="form-control">
                                 <label className="text-[10px] font-black uppercase tracking-widest text-base-content/40 mb-2">Neural Engine</label>
-                                <select value={targetAIModel} onChange={(e) => setTargetAIModel((e.currentTarget as any).value)} className="select select-bordered border-base-300 bg-base-100 select-sm rounded-none font-bold uppercase tracking-tighter w-full">
+                                <select value={targetAIModel} onChange={(e) => setTargetAIModel((e.currentTarget as any).value)} className="form-select w-full">
                                     {(mediaMode === 'image' ? TARGET_IMAGE_AI_MODELS : mediaMode === 'video' ? TARGET_VIDEO_AI_MODELS : TARGET_AUDIO_AI_MODELS).map(m => <option key={m} value={m}>{m}</option>)}
                                 </select>
                             </div>
                             <div className="form-control">
                                 <label className="text-[10px] font-black uppercase tracking-widest text-base-content/40 mb-2">Complexity</label>
-                                <select value={promptLength} onChange={(e) => setPromptLength((e.currentTarget as any).value)} className="select select-bordered border-base-300 bg-base-100 select-sm rounded-none font-bold uppercase tracking-tighter w-full">
+                                <select value={promptLength} onChange={(e) => setPromptLength((e.currentTarget as any).value)} className="form-select w-full">
                                     {Object.entries(PROMPT_DETAIL_LEVELS).map(([k, v]) => <option key={k} value={v}>{v}</option>)}
                                 </select>
                             </div>
@@ -694,7 +719,7 @@ const PromptsPage: React.FC<PromptsPageProps> = ({
                         {isZImage && (
                             <div className="form-control">
                                 <label className="text-[10px] font-black uppercase text-base-content/40 tracking-widest mb-2 block">Z-Image Variant</label>
-                                <select value={modifiers.zImageStyle} onChange={e => setModifiers({ ...modifiers, zImageStyle: e.target.value })} className="select select-bordered border-base-300 bg-base-100 select-sm rounded-none font-bold uppercase tracking-tight w-full animate-fade-in">
+                                <select value={modifiers.zImageStyle} onChange={e => setModifiers({ ...modifiers, zImageStyle: e.target.value })} className="form-select w-full animate-fade-in">
                                     <option value="">NONE</option>
                                     {Z_IMAGE_STYLES.map(s => <option key={s} value={s}>{s}</option>)}
                                 </select>
@@ -791,7 +816,7 @@ const PromptsPage: React.FC<PromptsPageProps> = ({
                             <select
                                 value={modifiers.cameraType || ''}
                                 onChange={(e) => setModifiers({ ...modifiers, cameraType: (e.currentTarget as any).value, cameraModel: "" })}
-                                className="select select-bordered select-sm rounded-none font-bold"
+                                className="form-select w-full"
                             >
                                 <option value="">SELECT TYPE...</option>
                                 {CAMERA_TYPES.map(type => <option key={type} value={type}>{type.toUpperCase()}</option>)}
@@ -862,9 +887,9 @@ const PromptsPage: React.FC<PromptsPageProps> = ({
                 return (
                     <div className="space-y-6 animate-fade-in">
                         <label className="text-[10px] font-black uppercase text-base-content/40 tracking-widest block">Generation Method</label>
-                        <div className="join w-full">
-                            <button onClick={() => setModifiers({ ...modifiers, videoInputType: 't2v' })} className={`join-item btn btn-xs flex-1 rounded-none font-black text-[9px] ${modifiers.videoInputType === 't2v' ? 'btn-active' : ''}`}>TEXT-2-VID</button>
-                            <button onClick={() => setModifiers({ ...modifiers, videoInputType: 'i2v' })} className={`join-item btn btn-xs flex-1 rounded-none font-black text-[9px] ${modifiers.videoInputType === 'i2v' ? 'btn-active' : ''}`}>IMG-2-VID</button>
+                        <div className="form-tab-group">
+                            <button onClick={() => setModifiers({ ...modifiers, videoInputType: 't2v' })} className={`form-tab-item ${modifiers.videoInputType === 't2v' ? 'active' : ''}`}>TEXT-2-VID</button>
+                            <button onClick={() => setModifiers({ ...modifiers, videoInputType: 'i2v' })} className={`form-tab-item ${modifiers.videoInputType === 'i2v' ? 'active' : ''}`}>IMG-2-VID</button>
                         </div>
                         <div className="form-control">
                             <label className="text-[10px] font-black uppercase text-base-content/40 tracking-widest mb-2 block">Motion</label>
@@ -933,13 +958,13 @@ const PromptsPage: React.FC<PromptsPageProps> = ({
                                 <div className="grid grid-cols-2 gap-4">
                                     <div className="form-control">
                                         <label className="text-[10px] font-black uppercase text-base-content/40 mb-2">Standard</label>
-                                        <select value={modifiers.mjVersion} onChange={e => setModifiers({ ...modifiers, mjVersion: e.target.value, mjNiji: "" })} className="select select-bordered select-sm rounded-none font-bold w-full uppercase text-[10px] tracking-widest">
+                                        <select value={modifiers.mjVersion} onChange={e => setModifiers({ ...modifiers, mjVersion: e.target.value, mjNiji: "" })} className="form-select w-full">
                                             {MIDJOURNEY_VERSIONS.map(v => <option key={v} value={v}>V {v}</option>)}
                                         </select>
                                     </div>
                                     <div className="form-control">
                                         <label className="text-[10px] font-black uppercase text-base-content/40 mb-2">Niji (Anime)</label>
-                                        <select value={modifiers.mjNiji} onChange={e => setModifiers({ ...modifiers, mjNiji: e.target.value as any, mjVersion: "" })} className="select select-bordered select-sm rounded-none font-bold w-full uppercase text-[10px] tracking-widest">
+                                        <select value={modifiers.mjNiji} onChange={e => setModifiers({ ...modifiers, mjNiji: e.target.value as any, mjVersion: "" })} className="form-select w-full">
                                             <option value="">OFF</option>
                                             {MIDJOURNEY_NIJI_VERSIONS.map(v => <option key={v} value={v}>Niji {v}</option>)}
                                         </select>
@@ -947,7 +972,7 @@ const PromptsPage: React.FC<PromptsPageProps> = ({
                                 </div>
                                 <div className="form-control">
                                     <label className="text-[10px] font-black uppercase text-base-content/40 mb-2">Aspect Ratio (--ar)</label>
-                                    <select value={modifiers.mjAspectRatio} onChange={e => setModifiers({ ...modifiers, mjAspectRatio: e.target.value })} className="select select-bordered select-sm rounded-none font-bold w-full">
+                                    <select value={modifiers.mjAspectRatio} onChange={e => setModifiers({ ...modifiers, mjAspectRatio: e.target.value })} className="form-select w-full">
                                         <option value="">Default (1:1)</option>
                                         {MIDJOURNEY_ASPECT_RATIOS.map(ar => <option key={ar} value={ar}>{ar}</option>)}
                                     </select>
@@ -977,7 +1002,7 @@ const PromptsPage: React.FC<PromptsPageProps> = ({
                                 </div>
                                 <div className="form-control">
                                     <label className="text-[10px] font-black uppercase text-base-content/40 mb-2">Negative Constraints (--no)</label>
-                                    <input type="text" value={modifiers.mjNo} onChange={e => setModifiers({ ...modifiers, mjNo: e.target.value })} className="input input-bordered input-sm rounded-none font-bold w-full" placeholder="objects to exclude..." />
+                                    <input type="text" value={modifiers.mjNo} onChange={e => setModifiers({ ...modifiers, mjNo: e.target.value })} className="form-input w-full" placeholder="objects to exclude..." />
                                 </div>
                                 <div className="grid grid-cols-2 gap-4">
                                     <label className="label cursor-pointer justify-start gap-4">
@@ -985,7 +1010,7 @@ const PromptsPage: React.FC<PromptsPageProps> = ({
                                         <input type="checkbox" checked={modifiers.mjTile} onChange={e => setModifiers({ ...modifiers, mjTile: e.target.checked })} className="checkbox checkbox-primary rounded-none checkbox-xs" />
                                     </label>
                                     <div className="form-control">
-                                        <select value={modifiers.mjStyle} onChange={e => setModifiers({ ...modifiers, mjStyle: e.target.value as any })} className="select select-bordered select-xs rounded-none font-black uppercase tracking-widest">
+                                        <select value={modifiers.mjStyle} onChange={e => setModifiers({ ...modifiers, mjStyle: e.target.value as any })} className="form-select w-full">
                                             <option value="">Style: Auto</option>
                                             <option value="raw">Style: Raw</option>
                                         </select>
@@ -1128,7 +1153,7 @@ const PromptsPage: React.FC<PromptsPageProps> = ({
         <div className="flex flex-col h-full bg-transparent overflow-hidden p-0">
             {renderTabsHeader(activeView)}
 
-            <div className="flex-grow overflow-hidden relative pt-4">
+            <div className="flex-grow overflow-hidden relative pt-4 min-h-0">
                 {activeView === 'composer' && (
                     <PromptCrafter
                         onSaveToLibrary={(gen) => handleSaveSuggestion(gen)}
@@ -1147,208 +1172,218 @@ const PromptsPage: React.FC<PromptsPageProps> = ({
                 )}
 
                 {activeView === 'refine' && (
-                    <div className="grid grid-cols-1 lg:grid-cols-12 overflow-hidden h-full gap-4">
+                    <div className="grid grid-cols-1 lg:grid-cols-12 overflow-hidden h-full gap-4 min-h-0">
                         {/* Left Sidebar: Controls & Tabs */}
-                        <aside className="lg:col-span-3 flex flex-col overflow-hidden bg-base-100/30 backdrop-blur-md border-r border-base-300/20 relative">
-                            <div className="h-16 flex items-center justify-center bg-base-100/10 backdrop-blur-md">
-                                <div className="flex gap-1 w-full h-full items-center">
-                                    {tabs.map(tab => (
-                                        <button
-                                            key={tab.id}
-                                            onClick={() => setActiveRefineSubTab(tab.id)}
-                                            className={`flex-1 font-black text-[9px] tracking-widest uppercase h-full transition-all duration-300 ${
-                                                activeRefineSubTab === tab.id 
-                                                    ? 'bg-base-100/30 backdrop-blur-md text-primary' 
-                                                    : 'bg-transparent text-base-content/40 hover:text-base-content/60'
-                                            }`}
-                                        >
-                                            {tab.label}
-                                        </button>
-                                    ))}
+                        <aside className="lg:col-span-3 h-full min-h-0 flex flex-col relative p-[3px] corner-frame overflow-visible">
+                            <div className="flex flex-col h-full w-full overflow-hidden relative z-10 bg-base-100/40 backdrop-blur-xl">
+                                <header className="p-4 flex flex-shrink-0 justify-center bg-base-100/10 backdrop-blur-md">
+                                    <div className="form-tab-group">
+                                        {tabs.map(tab => (
+                                            <button
+                                                key={tab.id}
+                                                onClick={() => setActiveRefineSubTab(tab.id)}
+                                                className={`form-tab-item ${activeRefineSubTab === tab.id ? 'active' : ''}`}
+                                            >
+                                                {tab.label}
+                                            </button>
+                                        ))}
+                                    </div>
+                                </header>
+                                <div ref={refineScrollerRef} className="flex-grow p-6 overflow-y-auto bg-transparent modifiers-tabs-container">
+                                    {renderRefineSubContent()}
                                 </div>
-                            </div>
-                            <div ref={refineScrollerRef} className="flex-grow p-6 overflow-y-auto no-scrollbar bg-transparent">
-                                {renderRefineSubContent()}
-                            </div>
-                            <CustomScrollbar containerRef={refineScrollerRef} />
-                            <footer className="h-14 flex items-stretch flex-shrink-0 bg-base-100/10 backdrop-blur-md">
-                                <button
-                                    onClick={handleResetRefiner}
-                                    className="btn btn-ghost h-full rounded-none border-none flex-1 font-black text-[10px] tracking-widest text-error/40 hover:text-error uppercase px-1 truncate bg-transparent"
-                                >
-                                    RESET
-                                </button>
-                                <button
-                                    onClick={handleEnhance}
-                                    disabled={isLoadingRefine || !refineText.trim()}
-                                    className="btn btn-ghost h-full rounded-none border-none flex-1 font-black text-[10px] tracking-widest text-primary uppercase hover:bg-primary/10 px-1 truncate"
-                                >
-                                    {isLoadingRefine ? '...' : 'IMPROVE'}
-                                </button>
-                                {isGoogleProduct && (
+                                <footer className="h-14 flex items-stretch flex-shrink-0 bg-base-100/10 backdrop-blur-md p-1.5 gap-1.5">
                                     <button
-                                        onClick={handleDirectGenerate}
-                                        disabled={isLoadingRefine || !refineText.trim()}
-                                        className="btn btn-primary h-full rounded-none border-none flex-1 font-black text-[10px] tracking-widest uppercase shadow-none px-1 truncate"
+                                        onClick={handleResetRefiner}
+                                        className="btn btn-sm btn-ghost h-full rounded-none flex-1 font-normal text-[13px] tracking-wider text-error/40 hover:text-error uppercase px-1 truncate btn-snake font-display"
                                     >
-                                        {isLoadingRefine ? '...' : 'RENDER'}
+                                        <span /><span /><span /><span />
+                                        RESET
                                     </button>
-                                )}
-                            </footer>
+                                    <button
+                                        onClick={handleEnhance}
+                                        disabled={isLoadingRefine || !refineText.trim()}
+                                        className="btn btn-sm btn-ghost h-full rounded-none flex-1 font-normal text-[13px] tracking-wider text-primary uppercase px-1 truncate disabled:opacity-30 disabled:cursor-not-allowed btn-snake font-display"
+                                    >
+                                        <span /><span /><span /><span />
+                                        {isLoadingRefine ? '...' : 'IMPROVE'}
+                                    </button>
+                                    {isGoogleProduct && (
+                                        <button
+                                            onClick={handleDirectGenerate}
+                                            disabled={isLoadingRefine || !refineText.trim()}
+                                            className="btn btn-sm btn-primary h-full rounded-none flex-1 font-normal text-[13px] tracking-wider uppercase px-1 truncate disabled:opacity-30 disabled:cursor-not-allowed btn-snake-primary font-display"
+                                        >
+                                            <span /><span /><span /><span />
+                                            {isLoadingRefine ? '...' : 'RENDER'}
+                                        </button>
+                                    )}
+                                </footer>
+                            </div>
+                            {/* Manual Corner Accents */}
+                            <div className="absolute -top-[1px] -left-[1px] w-3 h-3 border-t border-l border-primary/15 z-20 pointer-events-none" />
+                            <div className="absolute -top-[1px] -right-[1px] w-3 h-3 border-t border-r border-primary/15 z-20 pointer-events-none" />
+                            <div className="absolute -bottom-[1px] -left-[1px] w-3 h-3 border-b border-l border-primary/15 z-20 pointer-events-none" />
+                            <div className="absolute -bottom-[1px] -right-[1px] w-3 h-3 border-b border-r border-primary/15 z-20 pointer-events-none" />
                         </aside>
 
                         {/* Center: Main Neural Output */}
-                        <main className="lg:col-span-6 flex flex-col min-h-0 bg-base-100/30 backdrop-blur-md">
-                            <header className="p-6 h-16 flex justify-between items-center bg-base-100/80 backdrop-blur-md">
-                                <h2 className="text-xs font-black uppercase tracking-[0.4em] text-primary flex items-center gap-3">
-                                    <div className="w-2 h-2 rounded-full bg-primary animate-pulse"></div> NEURAL OUTPUT
-                                </h2>
-                            </header>
-                            <div ref={neuralOutputScrollerRef} className="flex-grow overflow-y-auto no-scrollbar flex flex-col">
-                                {isLoadingRefine ? (
-                                    <div className="flex-grow flex flex-col items-center justify-center text-center space-y-6">
-                                        <LoadingSpinner size={48} />
-                                        <p className="text-[10px] font-black uppercase tracking-[0.4em] text-primary animate-pulse -mt-4">{loadingMsg || 'Refining formula...'}</p>
-                                    </div>
-                                ) : errorRefine ? (
-                                    <div className="p-8">
-                                        <div className="alert alert-error rounded-none border-2">
-                                            <span className="font-black uppercase text-[10px] tracking-widest">{errorRefine.message}</span>
+                        <main className="lg:col-span-6 h-full min-h-0 flex flex-col relative p-[3px] corner-frame overflow-visible">
+                            <div className="flex flex-col h-full w-full overflow-hidden relative z-10 bg-base-100/40 backdrop-blur-xl">
+                                <header className="p-6 h-16 flex justify-between items-center bg-base-100/80 backdrop-blur-md">
+                                    <h2 className="text-xs font-black uppercase tracking-[0.4em] text-primary flex items-center gap-3">
+                                        <div className="w-2 h-2 rounded-full bg-primary animate-pulse"></div> NEURAL OUTPUT
+                                    </h2>
+                                </header>
+                                <div ref={neuralOutputScrollerRef} className="flex-grow overflow-y-auto flex flex-col">
+                                    {isLoadingRefine ? (
+                                        <div className="flex-grow flex flex-col items-center justify-center text-center space-y-6">
+                                            <LoadingSpinner size={48} />
+                                            <p className="text-[10px] font-black uppercase tracking-[0.4em] text-primary animate-pulse -mt-4">{loadingMsg || 'Refining formula...'}</p>
                                         </div>
-                                    </div>
-                                ) : resultsRefine ? (
-                                    <div className="p-[1px]">
-                                        {resultsRefine.suggestions.map((suggestion, index) => (
-                                            <SuggestionItem
-                                                key={index}
-                                                suggestionText={suggestion}
-                                                targetAI={targetAIModel}
-                                                onSave={handleSaveSuggestion}
-                                                onClip={handleClipSuggestion}
-                                            />
-                                        ))}
-                                    </div>
-                                ) : directMediaResult ? (
-                                    <div className="p-8 space-y-4 animate-fade-in">
-                                        <div className="relative group bg-black aspect-video flex items-center justify-center overflow-hidden">
-                                            {directMediaResult.type === 'video' ? (
-                                                <video src={directMediaResult.url} controls autoPlay loop className="w-full h-full object-contain" />
-                                            ) : (
-                                                <img src={directMediaResult.url} alt="Generated result" className="w-full h-full object-contain" />
-                                            )}
+                                    ) : errorRefine ? (
+                                        <div className="p-8">
+                                            <div className="alert alert-error rounded-none border-2">
+                                                <span className="font-black uppercase text-[10px] tracking-widest">{errorRefine.message}</span>
+                                            </div>
                                         </div>
-                                    </div>
-                                ) : (
-                                    <div className="flex-grow flex flex-col items-center justify-center text-center py-32 opacity-10">
-                                        <span className="p-8"><SparklesIcon className="w-24 h-24 mb-6" /></span>
-                                        <p className="text-xl font-black uppercase tracking-widest">Awaiting sequence initiation</p>
-                                    </div>
-                                )}
-                            </div>
-                            <CustomScrollbar containerRef={neuralOutputScrollerRef} />
-                        </main>
-
-                        {/* Right Sidebar: Active Modifiers */}
-                        <aside className="lg:col-span-3 flex flex-col overflow-hidden bg-base-100/30 backdrop-blur-md">
-                            <header className="p-6 h-16 flex items-center bg-base-100/80 backdrop-blur-md">
-                                <h3 className="text-xs font-black uppercase tracking-[0.4em] text-base-content/40">Active Construction</h3>
-                            </header>
-
-                            {/* Presets Management UI - Library Filter Look */}
-                            <div className="h-14 flex-shrink-0 flex items-stretch relative z-20 bg-base-100/80 backdrop-blur-md">
-                                <div className="dropdown dropdown-bottom flex-grow h-full">
-                                    <div className="relative h-full" tabIndex={0} role="button">
-                                        <input
-                                            type="text"
-                                            className="w-full h-full bg-transparent border-none focus:outline-none focus:ring-0 pl-4 pr-8 font-black text-[10px] uppercase tracking-widest placeholder:text-base-content/10"
-                                            placeholder="SELECT PRESET..."
-                                            value={presetSearchText}
-                                            onChange={(e) => {
-                                                const val = (e.currentTarget as any).value;
-                                                setPresetSearchText(val);
-                                                if (!val) {
-                                                    setSelectedPreset(null);
-                                                } else if (selectedPreset && val !== selectedPreset.name) {
-                                                    setSelectedPreset(null);
-                                                }
-                                            }}
-                                        />
-                                        {presetSearchText && (
-                                            <button
-                                                onClick={() => { setPresetSearchText(''); setSelectedPreset(null); }}
-                                                className="absolute right-2 top-1/2 -translate-y-1/2 text-base-content/20 hover:text-error transition-colors"
-                                            >
-                                                <CloseIcon className="w-3.5 h-3.5" />
-                                            </button>
-                                        )}
-                                    </div>
-                                    {filteredPresets.length > 0 && (
-                                        <ul ref={presetDropdownScrollerRef} tabIndex={0} className="dropdown-content z-[100] menu p-1 bg-base-100 border border-base-300/50 rounded-none w-full mt-2 max-h-60 overflow-y-auto flex flex-col flex-nowrap no-scrollbar shadow-2xl">
-                                            {filteredPresets.map(p => (
-                                                <li key={p.name} className="w-full">
-                                                    <a
-                                                        onMouseDown={(e) => {
-                                                            e.preventDefault();
-                                                            handleSelectPresetFromDropdown(p);
-                                                        }}
-                                                        className={`font-bold text-[10px] uppercase block w-full truncate ${selectedPreset?.name === p.name ? 'text-primary' : 'text-base-content/70 hover:text-base-content'}`}
-                                                    >
-                                                        {p.name}
-                                                    </a>
-                                                </li>
+                                    ) : resultsRefine ? (
+                                        <div className="p-[1px]">
+                                            {resultsRefine.suggestions.map((suggestion, index) => (
+                                                <SuggestionItem
+                                                    key={index}
+                                                    suggestionText={suggestion}
+                                                    targetAI={targetAIModel}
+                                                    onSave={handleSaveSuggestion}
+                                                    onClip={handleClipSuggestion}
+                                                />
                                             ))}
-                                            <CustomScrollbar containerRef={presetDropdownScrollerRef} />
-                                        </ul>
+                                        </div>
+                                    ) : directMediaResult ? (
+                                        <div className="p-8 space-y-4 animate-fade-in">
+                                            <div className="relative group bg-black aspect-video flex items-center justify-center overflow-hidden">
+                                                {directMediaResult.type === 'video' ? (
+                                                    <video src={directMediaResult.url} controls autoPlay loop className="w-full h-full object-contain" />
+                                                ) : (
+                                                    <img src={directMediaResult.url} alt="Generated result" className="w-full h-full object-contain" />
+                                                )}
+                                            </div>
+                                        </div>
+                                    ) : (
+                                        <div className="flex-grow flex flex-col items-center justify-center text-center py-32 opacity-10">
+                                            <span className="p-8"><SparklesIcon className="w-24 h-24 mb-6" /></span>
+                                            <p className="text-xl font-black uppercase tracking-widest">Awaiting sequence initiation</p>
+                                        </div>
                                     )}
                                 </div>
-                                <button
-                                    className="btn btn-ghost h-full rounded-none border-none flex-1 font-black text-[10px] tracking-widest text-primary disabled:opacity-20 transition-all px-1 truncate"
-                                    onClick={() => handleUsePreset()}
-                                    disabled={!selectedPreset}
-                                >
-                                    APPLY
-                                </button>
-                                <button
-                                    className="btn btn-ghost h-full rounded-none border-none flex-1 font-black text-[10px] tracking-widest text-error/60 disabled:opacity-20 transition-all px-1 truncate"
-                                    onClick={handleDeletePresetClick}
-                                    disabled={!selectedPreset}
-                                >
-                                    DELETE
-                                </button>
                             </div>
+                            {/* Manual Corner Accents */}
+                            <div className="absolute -top-[1px] -left-[1px] w-3 h-3 border-t border-l border-primary/15 z-20 pointer-events-none" />
+                            <div className="absolute -top-[1px] -right-[1px] w-3 h-3 border-t border-r border-primary/15 z-20 pointer-events-none" />
+                            <div className="absolute -bottom-[1px] -left-[1px] w-3 h-3 border-b border-l border-primary/15 z-20 pointer-events-none" />
+                            <div className="absolute -bottom-[1px] -right-[1px] w-3 h-3 border-b border-r border-primary/15 z-20 pointer-events-none" />
+                        </main>
 
-                            <div ref={activeConstructionScrollerRef} className="flex-grow p-4 overflow-y-auto no-scrollbar relative z-10">
-                                {activeConstructionItems.length > 0 ? (
-                                    <div className="space-y-2">
-                                        {activeConstructionItems.map((item) => (
-                                            <PropertyCard
-                                                key={item.key}
-                                                label={item.label}
-                                                value={item.value}
-                                                onClear={() => handleClearModifier(item.key)}
-                                                onClick={() => handleModifierClick(item.tab)}
-                                                active={activeRefineSubTab === item.tab}
+                        {/* Right Sidebar: Refiner Preset */}
+                        <aside className="lg:col-span-3 h-full min-h-0 flex flex-col relative p-[3px] corner-frame overflow-visible">
+                            <div className="flex flex-col h-full w-full overflow-hidden relative z-10 bg-base-100/40 backdrop-blur-xl">
+                                <header className="h-16 flex items-stretch relative z-20 bg-base-100/80 backdrop-blur-md p-1.5 gap-1.5 border-b border-base-300/10">
+                                    <div className="dropdown dropdown-bottom flex-grow h-full">
+                                        <div className="relative h-full w-full flex items-center">
+                                            <input
+                                                type="text"
+                                                className="w-full h-full bg-transparent border-none focus:outline-none focus:ring-0 pl-4 pr-10 font-bold text-[11px] font-nunito tracking-normal placeholder:text-base-content/10"
+                                                placeholder="SELECT PRESET..."
+                                                value={presetSearchText}
+                                                onChange={(e) => {
+                                                    const val = (e.currentTarget as any).value;
+                                                    setPresetSearchText(val);
+                                                    if (!val) {
+                                                        setSelectedPreset(null);
+                                                    } else if (selectedPreset && val !== selectedPreset.name) {
+                                                        setSelectedPreset(null);
+                                                    }
+                                                }}
                                             />
-                                        ))}
+                                            <svg className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-base-content/20 pointer-events-none flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 9l-7 7-7-7" />
+                                            </svg>
+                                        </div>
+                                        {filteredPresets.length > 0 && (
+                                            <ul ref={presetDropdownScrollerRef} tabIndex={0} className="dropdown-content z-[100] menu p-1 bg-base-100 border border-base-300/50 rounded-none w-full mt-2 max-h-60 overflow-y-auto flex flex-col flex-nowrap shadow-2xl">
+                                                {filteredPresets.map(p => (
+                                                    <li key={p.name} className="w-full">
+                                                        <a
+                                                            onMouseDown={(e) => {
+                                                                e.preventDefault();
+                                                                handleSelectPresetFromDropdown(p);
+                                                            }}
+                                                            className={`font-bold text-[11px] font-nunito block w-full truncate ${selectedPreset?.name === p.name ? 'text-primary' : 'text-base-content/70 hover:text-base-content'}`}
+                                                        >
+                                                            {p.name}
+                                                        </a>
+                                                    </li>
+                                                ))}
+                                            </ul>
+                                        )}
                                     </div>
-                                ) : (
-                                    <div className="h-full flex flex-col items-center justify-center text-center opacity-10">
-                                        <ArchiveIcon className="w-12 h-12 mb-4" />
-                                        <p className="text-[10px] font-black uppercase tracking-widest">No active parameters</p>
-                                    </div>
-                                )}
-                            </div>
-                            <CustomScrollbar containerRef={activeConstructionScrollerRef} />
+                                    {(presetSearchText || selectedPreset) && (
+                                        <button
+                                            onClick={() => { setPresetSearchText(''); setSelectedPreset(null); }}
+                                            className="btn btn-ghost h-full rounded-none border-none flex-[0_0_80px] font-normal text-[13px] tracking-widest text-error/40 hover:text-error transition-all px-1 truncate btn-snake font-display"
+                                        >
+                                            <span /><span /><span /><span />
+                                            CLEAR
+                                        </button>
+                                    )}
+                                    <button
+                                        className="btn btn-ghost h-full rounded-none border-none flex-[0_0_80px] font-normal text-[13px] tracking-widest text-error/60 disabled:opacity-20 transition-all px-1 truncate btn-snake font-display"
+                                        onClick={handleDeletePresetClick}
+                                        disabled={!selectedPreset}
+                                    >
+                                        <span/><span/><span/><span/>
+                                        DELETE
+                                    </button>
+                                </header>
 
-                            <footer className="h-14 flex items-stretch flex-shrink-0">
-                                <button
-                                    onClick={handleSavePresetClick}
-                                    disabled={activeConstructionItems.length === 0}
-                                    className="btn btn-primary h-full rounded-none border-none flex-1 font-black text-[10px] tracking-widest uppercase shadow-none px-1 truncate"
-                                >
-                                    SAVE AS PRESET
-                                </button>
-                            </footer>
+                                <div ref={activeConstructionScrollerRef} className="flex-grow p-4 overflow-y-auto relative z-10">
+                                    {activeConstructionItems.length > 0 ? (
+                                        <div className="space-y-2">
+                                            {activeConstructionItems.map((item) => (
+                                                <PropertyCard
+                                                    key={item.key}
+                                                    label={item.label}
+                                                    value={item.value}
+                                                    onClear={() => handleClearModifier(item.key)}
+                                                    onClick={() => handleModifierClick(item.tab)}
+                                                    active={activeRefineSubTab === item.tab}
+                                                />
+                                            ))}
+                                        </div>
+                                    ) : (
+                                        <div className="h-full flex flex-col items-center justify-center text-center opacity-10">
+                                            <ArchiveIcon className="w-12 h-12 mb-4" />
+                                            <p className="text-[10px] font-black uppercase tracking-widest">No active parameters</p>
+                                        </div>
+                                    )}
+                                </div>
+
+                                <footer className="h-14 flex items-stretch flex-shrink-0 bg-base-100/10 backdrop-blur-md p-1.5 gap-1.5">
+                                    <button
+                                        onClick={handleSavePresetClick}
+                                        disabled={activeConstructionItems.length === 0}
+                                        className="btn btn-sm btn-ghost h-full rounded-none flex-1 font-normal text-[13px] tracking-wider text-primary uppercase px-1 truncate disabled:opacity-30 disabled:cursor-not-allowed btn-snake"
+                                    >
+                                        <span /><span /><span /><span />
+                                        SAVE AS PRESET
+                                    </button>
+                                </footer>
+                            </div>
+                            {/* Manual Corner Accents */}
+                            <div className="absolute -top-[1px] -left-[1px] w-3 h-3 border-t border-l border-primary/15 z-20 pointer-events-none" />
+                            <div className="absolute -top-[1px] -right-[1px] w-3 h-3 border-t border-r border-primary/15 z-20 pointer-events-none" />
+                            <div className="absolute -bottom-[1px] -left-[1px] w-3 h-3 border-b border-l border-primary/15 z-20 pointer-events-none" />
+                            <div className="absolute -bottom-[1px] -right-[1px] w-3 h-3 border-b border-r border-primary/15 z-20 pointer-events-none" />
                         </aside>
                     </div>
                 )}
@@ -1366,27 +1401,44 @@ const PromptsPage: React.FC<PromptsPageProps> = ({
 
             {/* Save Preset Modal */}
             {isSavePresetModalOpen && (
-                <div className="fixed inset-0 bg-black/40 backdrop-blur-xl z-50 flex items-center justify-center p-4 animate-fade-in" onClick={() => setIsSavePresetModalOpen(false)}>
-                    <div className="bg-base-100/40 backdrop-blur-xl w-full max-w-lg overflow-hidden" onClick={(e) => e.stopPropagation()}>
-                        <header className="p-8">
-                            <h3 className="text-2xl font-black tracking-tighter text-base-content leading-none uppercase">Save Presets<span className="text-primary">.</span></h3>
-                        </header>
-                        <div className="p-8">
-                            <input
-                                type="text"
-                                value={newPresetName}
-                                onChange={(e) => setNewPresetName((e.currentTarget as any).value)}
-                                placeholder="ENTER PRESET NAME..."
-                                className="input input-bordered rounded-none w-full font-bold tracking-tight uppercase"
-                                autoFocus
-                                onKeyDown={(e) => e.key === 'Enter' && handleConfirmSavePreset()}
-                            />
-                        </div>
-                        <div className="p-4 flex justify-end gap-2">
-                            <button onClick={() => setIsSavePresetModalOpen(false)} className="btn btn-ghost rounded-none uppercase font-black text-[10px] tracking-widest px-8">Cancel</button>
-                            <button onClick={handleConfirmSavePreset} disabled={isSavingPreset || !newPresetName.trim()} className="btn btn-primary rounded-none uppercase font-black text-[10px] tracking-widest px-8">
-                                {isSavingPreset ? "Saving..." : "Confirm"}
-                            </button>
+                <div className="fixed inset-0 bg-black/40 backdrop-blur-xl z-[1000] flex items-center justify-center p-4 animate-fade-in" onClick={() => setIsSavePresetModalOpen(false)}>
+                    <div className="flex flex-col bg-transparent w-full max-w-lg mx-auto relative p-[3px] corner-frame overflow-visible" onClick={(e) => e.stopPropagation()}>
+                        <div className="bg-base-100/40 backdrop-blur-xl rounded-none w-full flex flex-col overflow-hidden relative z-10">
+                            <header className="px-8 py-4 border-b border-base-content/5 bg-transparent relative flex-shrink-0 flex items-center justify-between">
+                                <div className="flex flex-col">
+                                    <h3 className="text-xl font-black tracking-tighter text-base-content leading-none uppercase">SAVE PRESET<span className="text-primary">.</span></h3>
+                                    <p className="text-[10px] font-black uppercase tracking-[0.4em] text-base-content/30 mt-1.5">Asset Indexing Interface</p>
+                                </div>
+                                <button onClick={() => setIsSavePresetModalOpen(false)} className="p-2 text-error/30 hover:text-error transition-all hover:scale-110">
+                                    <CloseIcon className="w-5 h-5" />
+                                </button>
+                            </header>
+                            
+                            <div className="p-10 space-y-8">
+                                <div className="form-control">
+                                    <label className="text-[10px] font-black uppercase tracking-[0.2em] text-base-content/40 mb-2">Preset Designation</label>
+                                    <input
+                                        type="text"
+                                        value={newPresetName}
+                                        onChange={(e) => setNewPresetName((e.currentTarget as any).value)}
+                                        placeholder="ENTER PRESET NAME..."
+                                        className="form-input w-full"
+                                        autoFocus
+                                        onKeyDown={(e) => e.key === 'Enter' && handleConfirmSavePreset()}
+                                    />
+                                </div>
+                            </div>
+                            
+                            <footer className="h-14 flex items-stretch bg-base-100/10 backdrop-blur-md p-1.5 gap-1.5 overflow-hidden flex-shrink-0 border-t border-base-content/5">
+                                <button onClick={() => setIsSavePresetModalOpen(false)} className="btn btn-sm btn-ghost h-full flex-1 rounded-none font-normal text-[13px] tracking-wider uppercase btn-snake font-display">
+                                    <span/><span/><span/><span/>
+                                    CANCEL
+                                </button>
+                                <button onClick={handleConfirmSavePreset} disabled={isSavingPreset || !newPresetName.trim()} className="btn btn-sm btn-primary h-full flex-[1.5] rounded-none font-normal text-[13px] tracking-wider uppercase btn-snake-primary font-display">
+                                    <span/><span/><span/><span/>
+                                    {isSavingPreset ? "SAVING..." : "COMMIT PRESET"}
+                                </button>
+                            </footer>
                         </div>
                     </div>
                 </div>

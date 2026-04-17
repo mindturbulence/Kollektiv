@@ -193,119 +193,144 @@ const GalleryPickerModal: React.FC<GalleryPickerModalProps> = ({
 
     const modalContent = (
         <div className="fixed inset-0 bg-black/40 backdrop-blur-xl z-[100] flex items-center justify-center p-4 lg:p-12 animate-fade-in" onClick={onClose}>
-            <div className="bg-base-100/40 rounded-none w-full max-w-6xl h-full flex flex-col overflow-hidden" onClick={e => e.stopPropagation()}>
-                <header className="flex-shrink-0 p-8 bg-transparent flex flex-wrap justify-between items-center gap-6">
-                    <div>
-                        <h3 className="text-4xl font-black tracking-tighter text-base-content leading-none">
+        <div className="w-full max-w-6xl h-[90vh] flex flex-col relative p-[3px] corner-frame overflow-visible shadow-2xl" onClick={e => e.stopPropagation()}>
+            <div className="bg-base-100/40 backdrop-blur-xl rounded-none w-full h-full flex flex-col overflow-hidden relative z-10">
+                <header className="px-8 py-4 border-b border-base-content/5 bg-transparent relative flex-shrink-0 flex items-center justify-between">
+                    <div className="flex flex-col">
+                        <h3 className="text-xl font-black tracking-tighter text-base-content leading-none uppercase">
                             LIBRARY<span className="text-primary">.</span>
                         </h3>
-                        <p className="text-[10px] font-black uppercase tracking-[0.4em] text-base-content/30 mt-2">{title}</p>
+                        <p className="text-[10px] font-black uppercase tracking-[0.4em] text-base-content/30 mt-1.5">{title}</p>
                     </div>
-                    <button onClick={onClose} className="btn btn-sm btn-ghost btn-square opacity-40 hover:opacity-100">
+                    <button onClick={onClose} className="p-2 text-error/30 hover:text-error transition-all hover:scale-110">
                         <CloseIcon className="w-6 h-6" />
                     </button>
                 </header>
 
-                <div className="flex-grow flex flex-col lg:flex-row overflow-hidden">
-                    <aside className="w-full lg:w-72 border-b lg:border-b-0 lg:border-r border-base-300 flex-shrink-0 flex flex-col bg-transparent">
-                        <div className="flex-shrink-0 bg-transparent h-14">
-                            <div className="flex items-center h-full relative">
-                                <SearchIcon className="absolute left-6 w-4 h-4 opacity-20 pointer-events-none" />
-                                <input 
-                                    type="text" 
-                                    value={folderSearchQuery}
-                                    onChange={(e) => setFolderSearchQuery(e.target.value)}
-                                    placeholder="FIND FOLDER..."
-                                    className="w-full h-full bg-transparent border-none focus:outline-none focus:ring-0 pl-14 pr-12 font-bold uppercase tracking-tight text-sm placeholder:text-base-content/10"
+                <div className="flex-grow flex flex-col lg:flex-row overflow-hidden p-8 lg:p-12 pt-0 lg:pt-0 gap-4">
+                    <aside className="w-full lg:w-72 flex-shrink-0 flex flex-col relative p-[3px] corner-frame overflow-visible">
+                        <div className="flex flex-col h-full w-full overflow-hidden relative z-10 bg-base-100/40 backdrop-blur-xl">
+                            <div className="flex-shrink-0 bg-transparent h-14">
+                                <div className="flex items-center h-full relative">
+                                    <SearchIcon className="absolute left-6 w-4 h-4 opacity-20 pointer-events-none" />
+                                    <input 
+                                        type="text" 
+                                        value={folderSearchQuery}
+                                        onChange={(e) => setFolderSearchQuery(e.target.value)}
+                                        placeholder="FIND FOLDER..."
+                                        className="form-input w-full h-full border-none pl-14 pr-12"
+                                    />
+                                    {folderSearchQuery && (
+                                        <button onClick={() => setFolderSearchQuery('')} className="absolute right-4 top-1/2 -translate-y-1/2 form-btn h-6 w-6 text-error opacity-40 hover:opacity-100 transition-opacity">
+                                            <CloseIcon className="w-3.5 h-3.5" />
+                                        </button>
+                                    )}
+                                </div>
+                            </div>
+                            <div className="flex-grow overflow-y-auto p-4">
+                                <h2 className="text-[10px] font-black uppercase tracking-[0.3em] text-base-content/30 mb-6 px-3">Library Folders</h2>
+                                <TreeView 
+                                    items={treeItems} 
+                                    selectedId={selectedCategoryId} 
+                                    onSelect={setSelectedCategoryId} 
+                                    searchActive={!!folderSearchQuery}
                                 />
-                                {folderSearchQuery && (
-                                    <button onClick={() => setFolderSearchQuery('')} className="absolute right-4 top-1/2 -translate-y-1/2 btn btn-xs btn-ghost btn-circle opacity-40 hover:opacity-100 transition-opacity">
-                                        <CloseIcon className="w-3.5 h-3.5" />
-                                    </button>
-                                )}
                             </div>
                         </div>
-                        <div className="flex-grow overflow-y-auto p-4 custom-scrollbar">
-                            <h2 className="text-[10px] font-black uppercase tracking-[0.3em] text-base-content/30 mb-6 px-3">Library Folders</h2>
-                            <TreeView 
-                                items={treeItems} 
-                                selectedId={selectedCategoryId} 
-                                onSelect={setSelectedCategoryId} 
-                                searchActive={!!folderSearchQuery}
-                            />
-                        </div>
+                        {/* Manual Corner Accents */}
+                        <div className="absolute -top-[1px] -left-[1px] w-3 h-3 border-t border-l border-primary/15 z-20 pointer-events-none" />
+                        <div className="absolute -top-[1px] -right-[1px] w-3 h-3 border-t border-r border-primary/15 z-20 pointer-events-none" />
+                        <div className="absolute -bottom-[1px] -left-[1px] w-3 h-3 border-b border-l border-primary/15 z-20 pointer-events-none" />
+                        <div className="absolute -bottom-[1px] -right-[1px] w-3 h-3 border-b border-r border-primary/15 z-20 pointer-events-none" />
                     </aside>
 
-                    <main className="flex-grow flex flex-col overflow-hidden bg-transparent">
-                        <div className="flex-shrink-0 bg-transparent h-14 flex items-center">
-                            <div className="flex items-center h-full relative flex-grow border-r border-base-300">
-                                <SearchIcon className="absolute left-6 w-4 h-4 opacity-20 pointer-events-none" />
-                                <input 
-                                    type="text" 
-                                    value={searchQuery}
-                                    onChange={(e) => setSearchQuery(e.target.value)}
-                                    placeholder="SEARCH IMAGES..."
-                                    className="w-full h-full bg-transparent border-none focus:outline-none focus:ring-0 pl-14 pr-12 font-bold uppercase tracking-tight text-sm placeholder:text-base-content/10"
-                                />
-                                {searchQuery && (
-                                    <button onClick={() => setSearchQuery('')} className="absolute right-4 top-1/2 -translate-y-1/2 btn btn-xs btn-ghost btn-circle opacity-40 hover:opacity-100 transition-opacity">
-                                        <CloseIcon className="w-4 h-4" />
-                                    </button>
+                    <main className="flex-grow flex flex-col relative p-[3px] corner-frame overflow-visible">
+                        <div className="flex flex-col h-full w-full overflow-hidden relative z-10 bg-base-100/40 backdrop-blur-xl">
+                            <div className="flex-shrink-0 bg-transparent h-14 flex items-center">
+                                <div className="flex items-center h-full relative flex-grow border-r border-base-300">
+                                    <SearchIcon className="absolute left-6 w-4 h-4 opacity-20 pointer-events-none" />
+                                    <input 
+                                        type="text" 
+                                        value={searchQuery}
+                                        onChange={(e) => setSearchQuery(e.target.value)}
+                                        placeholder="SEARCH IMAGES..."
+                                        className="form-input w-full h-full border-none pl-14 pr-12"
+                                    />
+                                    {searchQuery && (
+                                        <button onClick={() => setSearchQuery('')} className="absolute right-4 top-1/2 -translate-y-1/2 form-btn h-6 w-6 text-error opacity-40 hover:opacity-100 transition-opacity">
+                                            <CloseIcon className="w-4 h-4" />
+                                        </button>
+                                    )}
+                                </div>
+                                <div className="flex items-center h-full gap-3 bg-transparent px-6">
+                                    <span className="text-[10px] font-black uppercase text-base-content/40 tracking-widest">NSFW</span>
+                                    <input 
+                                        type="checkbox" 
+                                        checked={showNsfw} 
+                                        onChange={(e) => setShowNsfw(e.target.checked)} 
+                                        className="toggle toggle-xs toggle-primary" 
+                                    />
+                                </div>
+                            </div>
+
+                            <div className="flex-grow overflow-y-auto p-6 bg-transparent">
+                                {isLoading ? (
+                                    <div className="h-full w-full flex items-center justify-center">
+                                        <LoadingSpinner />
+                                    </div>
+                                ) : filteredItems.length > 0 ? (
+                                    <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 xl:grid-cols-5 gap-3">
+                                        {filteredItems.map(item => (
+                                            <PickerItem 
+                                                key={item.id} 
+                                                item={item} 
+                                                isSelected={selectedIds.has(item.id)}
+                                                onToggle={() => handleToggle(item.id)}
+                                            />
+                                        ))}
+                                    </div>
+                                ) : (
+                                    <div className="h-full flex flex-col items-center justify-center text-center opacity-10 py-12">
+                                        <PhotoIcon className="w-16 h-16 mb-4" />
+                                        <p className="text-xl font-black uppercase tracking-widest">No matching files found</p>
+                                    </div>
                                 )}
                             </div>
-                            <div className="flex items-center h-full gap-3 bg-transparent px-6">
-                                <span className="text-[10px] font-black uppercase text-base-content/40 tracking-widest">NSFW</span>
-                                <input 
-                                    type="checkbox" 
-                                    checked={showNsfw} 
-                                    onChange={(e) => setShowNsfw(e.target.checked)} 
-                                    className="toggle toggle-xs toggle-primary" 
-                                />
-                            </div>
                         </div>
-
-                        <div className="flex-grow overflow-y-auto p-6 custom-scrollbar bg-transparent">
-                            {isLoading ? (
-                                <div className="h-full w-full flex items-center justify-center">
-                                    <LoadingSpinner />
-                                </div>
-                            ) : filteredItems.length > 0 ? (
-                                <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 xl:grid-cols-5 gap-3">
-                                    {filteredItems.map(item => (
-                                        <PickerItem 
-                                            key={item.id} 
-                                            item={item} 
-                                            isSelected={selectedIds.has(item.id)}
-                                            onToggle={() => handleToggle(item.id)}
-                                        />
-                                    ))}
-                                </div>
-                            ) : (
-                                <div className="h-full flex flex-col items-center justify-center text-center opacity-10 py-12">
-                                    <PhotoIcon className="w-16 h-16 mb-4" />
-                                    <p className="text-xl font-black uppercase tracking-widest">No matching files found</p>
-                                </div>
-                            )}
-                        </div>
+                        {/* Manual Corner Accents */}
+                        <div className="absolute -top-[1px] -left-[1px] w-3 h-3 border-t border-l border-primary/15 z-20 pointer-events-none" />
+                        <div className="absolute -top-[1px] -right-[1px] w-3 h-3 border-t border-r border-primary/15 z-20 pointer-events-none" />
+                        <div className="absolute -bottom-[1px] -left-[1px] w-3 h-3 border-b border-l border-primary/15 z-20 pointer-events-none" />
+                        <div className="absolute -bottom-[1px] -right-[1px] w-3 h-3 border-b border-r border-primary/15 z-20 pointer-events-none" />
                     </main>
                 </div>
 
-                <footer className="flex-shrink-0 p-6 bg-transparent flex justify-between items-center">
-                    <span className="text-[10px] font-mono font-bold text-base-content/30 uppercase">
-                        {selectedIds.size} Item{selectedIds.size !== 1 ? 's' : ''} Identified
-                    </span>
-                    <div className="flex gap-2">
-                        <button onClick={onClose} className="btn btn-ghost rounded-none uppercase font-black text-[10px] tracking-widest px-8">Abort</button>
-                        <button 
-                            onClick={handleConfirm}
-                            disabled={selectedIds.size === 0}
-                            className="btn btn-primary rounded-none uppercase font-black text-[10px] tracking-widest px-12"
-                        >
-                            Select Items
-                        </button>
+                <footer className="h-14 flex items-stretch bg-base-100/10 backdrop-blur-md p-1.5 gap-1.5 flex-shrink-0 border-t border-base-content/5">
+                    <div className="flex items-center px-6 border-r border-base-content/5">
+                        <span className="text-[10px] font-mono font-bold text-base-content/30 uppercase tracking-widest leading-none">
+                            {selectedIds.size} SELECTED
+                        </span>
                     </div>
+                    <button onClick={onClose} className="btn btn-sm btn-ghost h-full flex-1 rounded-none font-normal text-[13px] tracking-wider uppercase btn-snake font-display">
+                        <span/><span/><span/><span/>
+                        ABORT
+                    </button>
+                    <button 
+                        onClick={handleConfirm}
+                        disabled={selectedIds.size === 0}
+                        className="btn btn-sm btn-primary h-full flex-[2] rounded-none font-normal text-[13px] tracking-wider uppercase btn-snake-primary font-display"
+                    >
+                        <span/><span/><span/><span/>
+                        SELECT ITEMS
+                    </button>
                 </footer>
             </div>
+            {/* Manual Corner Accents */}
+            <div className="absolute -top-[1px] -left-[1px] w-3 h-3 border-t border-l border-primary/15 z-20 pointer-events-none" />
+            <div className="absolute -top-[1px] -right-[1px] w-3 h-3 border-t border-r border-primary/15 z-20 pointer-events-none" />
+            <div className="absolute -bottom-[1px] -left-[1px] w-3 h-3 border-b border-l border-primary/15 z-20 pointer-events-none" />
+            <div className="absolute -bottom-[1px] -right-[1px] w-3 h-3 border-b border-r border-primary/15 z-20 pointer-events-none" />
+        </div>
         </div>
     );
 

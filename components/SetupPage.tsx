@@ -449,18 +449,40 @@ export const SetupPage: React.FC<SetupPageProps> = ({
     }
 
     setIsSyncing(true);
+    setIsWorking(true);
+    setMaintenanceProgress(10);
+    setMaintenanceMsg("INITIATING VAULT_INTEGRITY_CHECK...");
+
     try {
-        await verifyAndRepairFiles(() => {}, globalSettings);
-        await rebuildGalleryDatabase(() => {});
-        await rebuildPromptDatabase(() => {});
-        await optimizeManifests(() => {});
+        setMaintenanceProgress(20);
+        setMaintenanceMsg("VERIFYING_FILE_STRUCTURE...");
+        await verifyAndRepairFiles((msg, p) => {
+            setMaintenanceMsg(msg);
+            if (p !== undefined) setMaintenanceProgress(20 + p * 20);
+        }, globalSettings);
         
+        setMaintenanceProgress(40);
+        setMaintenanceMsg("REBUILDING_GALLERY_DATABASE...");
+        await rebuildGalleryDatabase((msg) => setMaintenanceMsg(msg));
+        setMaintenanceProgress(60);
+        
+        setMaintenanceMsg("REBUILDING_PROMPT_DATABASE...");
+        await rebuildPromptDatabase((msg) => setMaintenanceMsg(msg));
+        setMaintenanceProgress(80);
+        
+        setMaintenanceMsg("OPTIMIZING_MANIFESTS...");
+        await optimizeManifests((msg) => setMaintenanceMsg(msg));
+        
+        setMaintenanceProgress(100);
         showGlobalFeedback("Vault synchronized successfully.");
     } catch (error: any) {
         console.error("Sync Vault Error:", error);
         showGlobalFeedback(`Sync Error: ${error.message || 'Unknown error'}`, true);
     } finally {
         setIsSyncing(false);
+        setIsWorking(false);
+        setMaintenanceProgress(0);
+        setMaintenanceMsg("");
     }
   };
 
@@ -491,7 +513,7 @@ export const SetupPage: React.FC<SetupPageProps> = ({
         switch(activeSubTab) {
             case 'general':
                 return (
-                    <div className="flex flex-col h-full overflow-y-auto custom-scrollbar animate-fade-in">
+                    <div className="flex flex-col h-full overflow-y-auto animate-fade-in">
                         <SettingRow label="Storage Vault" desc="Current active directory for all local generative artifacts.">
                              <button onClick={async () => {
                                  const handle = await fileSystemManager.selectAndSetAppDataDirectory();
@@ -499,18 +521,18 @@ export const SetupPage: React.FC<SetupPageProps> = ({
                                      setAppDataDirectory(fileSystemManager.appDirectoryName);
                                      showFeedback('Vault Connected');
                                  }
-                             }} className="btn btn-secondary btn-sm rounded-none font-black text-[10px] tracking-widest px-6">
+                             }} className="form-btn px-6">
                                 {appDataDirectory ? `PATH: ${appDataDirectory}` : 'CONNECT DIRECTORY'}
                              </button>
                         </SettingRow>
                         <SettingRow label="Cold Reboot" desc="Clear application cache and force-reload the interface.">
-                             <button onClick={() => setIsRestartModalOpen(true)} className="btn btn-warning btn-sm rounded-none font-black text-[10px] tracking-widest px-6">RELOAD ENGINE</button>
+                             <button onClick={() => setIsRestartModalOpen(true)} className="form-btn bg-warning text-warning-content border-warning px-6">RELOAD ENGINE</button>
                         </SettingRow>
                     </div>
                 );
             case 'features':
                 return (
-                    <div className="flex flex-col h-full overflow-y-auto custom-scrollbar animate-fade-in">
+                    <div className="flex flex-col h-full overflow-y-auto animate-fade-in">
                         <SettingRow label="Token Archiver" desc="Toggle the specialized prompt library and folder management.">
                             <input type="checkbox" checked={settings.features.isPromptLibraryEnabled} onChange={(e) => handleFeatureToggle('isPromptLibraryEnabled', (e.currentTarget as any).checked)} className="toggle toggle-primary toggle-sm" />
                         </SettingRow>
@@ -527,12 +549,12 @@ export const SetupPage: React.FC<SetupPageProps> = ({
                 );
             case 'data':
                  return (
-                     <div className="flex flex-col h-full overflow-y-auto custom-scrollbar animate-fade-in">
+                     <div className="flex flex-col h-full overflow-y-auto animate-fade-in">
                          <SettingRow label="Sync & Reorganize" desc="Verify manifests and move files to correct category folders.">
                             <button 
                                 onClick={handleIntegrityCheck} 
                                 disabled={isSyncing}
-                                className="btn btn-sm btn-outline rounded-none font-black text-[10px] tracking-widest px-6"
+                                className="form-btn px-6"
                             >
                                 {isSyncing ? 'SYNCING...' : 'SYNC VAULT'}
                             </button>
@@ -541,13 +563,13 @@ export const SetupPage: React.FC<SetupPageProps> = ({
                              <button 
                                 onClick={() => createZipAndDownload([], 'kollektiv_backup.zip')} 
                                 disabled={isWorking}
-                                className="btn btn-sm btn-secondary rounded-none font-black text-[10px] tracking-widest px-6"
+                                className="form-btn form-btn-primary px-6"
                             >
                                 EXPORT ALL
                             </button>
                         </SettingRow>
                         <SettingRow label="Registry Purge" desc="Irreversible deletion of all settings, prompts, and media.">
-                            <button onClick={() => { setResetTarget('all'); setIsResetModalOpen(true); }} className="btn btn-sm btn-error rounded-none font-black text-[10px] tracking-widest px-6">WIPE STORAGE</button>
+                            <button onClick={() => { setResetTarget('all'); setIsResetModalOpen(true); }} className="form-btn bg-error text-error-content border-error px-6">WIPE STORAGE</button>
                         </SettingRow>
                      </div>
                  );
@@ -557,24 +579,24 @@ export const SetupPage: React.FC<SetupPageProps> = ({
 
     const renderAppearanceSettings = () => {
         return (
-            <div className="flex flex-col h-full overflow-y-auto custom-scrollbar animate-fade-in">
+            <div className="flex flex-col h-full overflow-y-auto animate-fade-in">
                 <SettingRow label="Obscure Cycle Theme" desc="Visual palette used when in dark mode.">
-                    <select value={settings.darkTheme} onChange={(e) => handleSettingsChange('darkTheme', (e.currentTarget as any).value)} className="select select-bordered select-sm rounded-none font-bold w-64 uppercase text-[10px] tracking-widest">
+                    <select value={settings.darkTheme} onChange={(e) => handleSettingsChange('darkTheme', (e.currentTarget as any).value)} className="form-select w-64">
                         {DAISYUI_DARK_THEMES.map(t => <option key={t} value={t}>{t.toUpperCase()}</option>)}
                     </select>
                 </SettingRow>
                 <SettingRow label="Dashboard Video" desc="Direct MP4 URL for the cinematic dashboard background.">
-                    <div className="join w-full md:w-96">
+                    <div className="flex w-full md:w-96">
                         <input 
                             type="text" 
                             value={settings.dashboardVideoUrl} 
                             onChange={(e) => handleSettingsChange('dashboardVideoUrl', e.target.value)} 
-                            className="input input-bordered input-sm rounded-none join-item w-full font-mono text-xs" 
+                            className="form-input flex-1" 
                             placeholder="https://..."
                         />
                         <button 
                             onClick={() => handleSettingsChange('dashboardVideoUrl', defaultLLMSettings.dashboardVideoUrl)}
-                            className="btn btn-sm btn-ghost join-item text-[10px] font-black"
+                            className="form-btn px-4 border-l-0"
                             title="Reset to Default"
                         >
                             <RefreshIcon className="w-3.5 h-3.5" />
@@ -595,30 +617,36 @@ export const SetupPage: React.FC<SetupPageProps> = ({
         switch(activeSubTab) {
             case 'llm':
                 return (
-                    <div className="flex flex-col h-full overflow-y-auto custom-scrollbar animate-fade-in">
+                    <div className="flex flex-col h-full overflow-y-auto animate-fade-in">
                         <SettingRow label="Neural Intelligence Core" desc="Choose the primary processing engine for prompt construction.">
-                             <div className="flex flex-row flex-wrap gap-6">
-                                <label className="label cursor-pointer justify-start gap-3 p-0">
-                                    <input type="radio" name="llm-provider" className="radio radio-primary radio-sm" checked={settings.activeLLM === 'gemini'} onChange={() => handleSettingsChange('activeLLM', 'gemini')} />
-                                    <span className="text-[10px] font-black uppercase tracking-widest">Gemini</span>
-                                </label>
-                                <label className="label cursor-pointer justify-start gap-3 p-0">
-                                    <input type="radio" name="llm-provider" className="radio radio-primary radio-sm" checked={settings.activeLLM === 'ollama'} onChange={() => handleSettingsChange('activeLLM', 'ollama')} />
-                                    <span className="text-[10px] font-black uppercase tracking-widest">Ollama</span>
-                                </label>
-                                <label className="label cursor-pointer justify-start gap-3 p-0">
-                                    <input type="radio" name="llm-provider" className="radio radio-primary radio-sm" checked={settings.activeLLM === 'ollama_cloud'} onChange={() => handleSettingsChange('activeLLM', 'ollama_cloud')} />
-                                    <span className="text-[10px] font-black uppercase tracking-widest">Cloud Ollama</span>
-                                </label>
+                             <div className="tab-group">
+                                <div 
+                                    className={`tab-item ${settings.activeLLM === 'gemini' ? 'tab-item-active' : ''}`}
+                                    onClick={() => { audioService.playClick(); handleSettingsChange('activeLLM', 'gemini'); }}
+                                >
+                                    Gemini
+                                </div>
+                                <div 
+                                    className={`tab-item ${settings.activeLLM === 'ollama' ? 'tab-item-active' : ''}`}
+                                    onClick={() => { audioService.playClick(); handleSettingsChange('activeLLM', 'ollama'); }}
+                                >
+                                    Ollama
+                                </div>
+                                <div 
+                                    className={`tab-item ${settings.activeLLM === 'ollama_cloud' ? 'tab-item-active' : ''}`}
+                                    onClick={() => { audioService.playClick(); handleSettingsChange('activeLLM', 'ollama_cloud'); }}
+                                >
+                                    Cloud Ollama
+                                </div>
                              </div>
                         </SettingRow>
                         {settings.activeLLM === 'ollama_cloud' && (
                              <div className="animate-fade-in flex flex-col bg-transparent">
                                 <SettingRow label="Remote Endpoint" desc="HTTPS URL of your hosted Ollama server.">
                                     <div className="space-y-4">
-                                        <div className="join w-full md:w-[620px]">
-                                            <input type="text" value={settings.ollamaCloudBaseUrl} onChange={(e) => handleSettingsChange('ollamaCloudBaseUrl', (e.currentTarget as any).value)} className="input input-bordered input-sm join-item w-full font-mono text-xs" placeholder="https://api.ollama-host.com" />
-                                            <button onClick={() => handleTestOllamaConnection(true)} disabled={isTestingOllama} className="btn btn-sm btn-ghost join-item text-[10px] font-black">{isTestingOllama ? '...' : 'PING'}</button>
+                                        <div className="flex w-full md:w-[620px]">
+                                            <input type="text" value={settings.ollamaCloudBaseUrl} onChange={(e) => handleSettingsChange('ollamaCloudBaseUrl', (e.currentTarget as any).value)} className="form-input flex-1" placeholder="https://api.ollama-host.com" />
+                                            <button onClick={() => handleTestOllamaConnection(true)} disabled={isTestingOllama} className="form-btn px-4 border-l-0">{isTestingOllama ? '...' : 'PING'}</button>
                                         </div>
                                         {ollamaTestResult && (
                                             <div className={`flex items-center gap-2 text-[9px] font-black uppercase tracking-widest px-3 py-1.5 border ${ollamaTestResult.success ? 'bg-success/5 border-success/30 text-success' : 'bg-error/5 border-error/30 text-error'} animate-fade-in md:w-[620px]`}>
@@ -644,7 +672,7 @@ export const SetupPage: React.FC<SetupPageProps> = ({
                                             <span className="text-[10px] font-black uppercase tracking-widest">Use Linked Google Token</span>
                                         </label>
                                         {!settings.ollamaCloudUseGoogleAuth && (
-                                            <input type="password" value={settings.ollamaCloudApiKey} onChange={(e) => handleSettingsChange('ollamaCloudApiKey', (e.currentTarget as any).value)} className="input input-bordered input-sm rounded-none font-mono text-xs w-full md:w-[620px]" placeholder="SECRET_API_TOKEN"/>
+                                            <input type="password" value={settings.ollamaCloudApiKey} onChange={(e) => handleSettingsChange('ollamaCloudApiKey', (e.currentTarget as any).value)} className="form-input w-full md:w-[620px]" placeholder="SECRET_API_TOKEN"/>
                                         )}
                                     </div>
                                 </SettingRow>
@@ -654,9 +682,9 @@ export const SetupPage: React.FC<SetupPageProps> = ({
                             <div className="animate-fade-in flex flex-col bg-transparent">
                                 <SettingRow label="Host Address" desc="Local server URL (Default: http://localhost:11434).">
                                      <div className="space-y-4">
-                                        <div className="join w-full md:w-[620px]">
-                                            <input type="text" value={settings.ollamaBaseUrl} onChange={(e) => handleSettingsChange('ollamaBaseUrl', (e.currentTarget as any).value)} className="input input-bordered input-sm join-item w-full font-mono text-xs" />
-                                            <button onClick={() => handleTestOllamaConnection(false)} disabled={isTestingOllama} className="btn btn-sm btn-ghost join-item text-[10px] font-black">PING</button>
+                                        <div className="flex w-full md:w-[620px]">
+                                            <input type="text" value={settings.ollamaBaseUrl} onChange={(e) => handleSettingsChange('ollamaBaseUrl', (e.currentTarget as any).value)} className="form-input flex-1" />
+                                            <button onClick={() => handleTestOllamaConnection(false)} disabled={isTestingOllama} className="form-btn px-4 border-l-0">PING</button>
                                         </div>
                                         {ollamaTestResult && (
                                             <div className={`flex items-center gap-2 text-[9px] font-black uppercase tracking-widest px-3 py-1.5 border ${ollamaTestResult.success ? 'bg-success/5 border-success/30 text-success' : 'bg-error/5 border-error/30 text-error'} animate-fade-in md:w-[620px]`}>
@@ -689,7 +717,7 @@ export const SetupPage: React.FC<SetupPageProps> = ({
                 );
             case 'google':
                 return (
-                    <div className="flex flex-col h-full overflow-y-auto custom-scrollbar animate-fade-in">
+                    <div className="flex flex-col h-full overflow-y-auto animate-fade-in">
                         <SettingRow label="Cloud Identity Link" desc="Connect your account to enable Cloud AI and data sync features.">
                             {settings.googleIdentity?.isConnected ? (
                                 <div className="flex flex-col gap-4 w-full max-w-lg">
@@ -700,10 +728,10 @@ export const SetupPage: React.FC<SetupPageProps> = ({
                                             <p className="text-[10px] font-mono opacity-40 truncate">{settings.googleIdentity.email}</p>
                                         </div>
                                     </div>
-                                    <button onClick={handleGoogleDisconnect} className="btn btn-xs btn-ghost text-error font-black uppercase tracking-widest">Revoke Access</button>
+                                    <button onClick={() => handleGoogleDisconnect} className="form-btn text-error px-4">Revoke Access</button>
                                 </div>
                             ) : (
-                                <button onClick={() => handleAuthConnect('google')} className="btn btn-sm btn-outline rounded-none font-black text-[10px] tracking-widest uppercase px-6">AUTHENTICATE WITH GOOGLE</button>
+                                <button onClick={() => handleAuthConnect('google')} className="form-btn px-6">AUTHENTICATE WITH GOOGLE</button>
                             )}
                         </SettingRow>
                         <SettingRow label="Session Status" desc="Current encryption status of the cloud identity link.">
@@ -715,10 +743,10 @@ export const SetupPage: React.FC<SetupPageProps> = ({
                 );
             case 'youtube':
                 return (
-                    <div className="flex flex-col h-full overflow-y-auto custom-scrollbar animate-fade-in">
+                    <div className="flex flex-col h-full overflow-y-auto animate-fade-in">
                         <SettingRow label="Client ID" desc="Your Google OAuth 2.0 Client ID for the YouTube API.">
                             <div className="flex flex-col gap-2 w-full max-w-md">
-                                <input type="text" value={settings.youtube?.customClientId || ''} onChange={(e) => handleSettingsChange('youtube', { ...settings.youtube, customClientId: e.target.value })} className="input input-bordered input-sm rounded-none w-full font-mono text-xs" placeholder="407408718192-..." />
+                                <input type="text" value={settings.youtube?.customClientId || ''} onChange={(e) => handleSettingsChange('youtube', { ...settings.youtube, customClientId: e.target.value })} className="form-input w-full" placeholder="407408718192-..." />
                                 <p className="text-[8px] font-mono text-base-content/20 uppercase">REQUIRED: Ensure your App URL (from AI Studio) is in authorized origins in GCP Console.</p>
                             </div>
                         </SettingRow>
@@ -732,25 +760,25 @@ export const SetupPage: React.FC<SetupPageProps> = ({
                                             <p className="text-[10px] font-mono opacity-40 uppercase">{settings.youtube.subscriberCount} Subscribers</p>
                                         </div>
                                     </div>
-                                    <button onClick={() => handleSettingsChange('youtube', { ...settings.youtube, isConnected: false })} className="btn btn-xs btn-ghost text-error font-black uppercase tracking-widest">Unlink Channel</button>
+                                    <button onClick={() => handleSettingsChange('youtube', { ...settings.youtube, isConnected: false })} className="form-btn text-error px-4">Unlink Channel</button>
                                 </div>
                             ) : (
-                                <button onClick={() => handleAuthConnect('youtube')} className="btn btn-sm btn-outline rounded-none font-black text-[10px] tracking-widest uppercase px-6">LINK CHANNEL</button>
+                                <button onClick={() => handleAuthConnect('youtube')} className="form-btn px-6">LINK CHANNEL</button>
                             )}
                         </SettingRow>
                     </div>
                 );
             case 'instagram':
                 return (
-                    <div className="flex flex-col h-full overflow-y-auto custom-scrollbar animate-fade-in">
+                    <div className="flex flex-col h-full overflow-y-auto animate-fade-in">
                         <SettingRow label="Developer Key" desc="Meta for Developers Client Key.">
-                            <input type="text" value={settings.instagram?.clientKey || ''} onChange={(e) => handleSettingsChange('instagram', { ...settings.instagram, clientKey: e.target.value })} className="input input-bordered input-sm rounded-none w-full font-mono text-xs max-w-md" placeholder="CLIENT_KEY" />
+                            <input type="text" value={settings.instagram?.clientKey || ''} onChange={(e) => handleSettingsChange('instagram', { ...settings.instagram, clientKey: e.target.value })} className="form-input w-full max-w-md" placeholder="CLIENT_KEY" />
                         </SettingRow>
                         <SettingRow label="Secret Fragment" desc="Meta for Developers Client Secret.">
-                            <input type="password" value={settings.instagram?.clientSecret || ''} onChange={(e) => handleSettingsChange('instagram', { ...settings.instagram, clientSecret: e.target.value })} className="input input-bordered input-sm rounded-none w-full font-mono text-xs max-w-md" placeholder="CLIENT_SECRET" />
+                            <input type="password" value={settings.instagram?.clientSecret || ''} onChange={(e) => handleSettingsChange('instagram', { ...settings.instagram, clientSecret: e.target.value })} className="form-input w-full max-w-md" placeholder="CLIENT_SECRET" />
                         </SettingRow>
                         <SettingRow label="Instagram Link" desc="Authenticate with Instagram for artifact distribution.">
-                             <button className="btn btn-sm btn-outline rounded-none font-black text-[10px] tracking-widest uppercase px-6" disabled>UNAVAILABLE IN ALPHA</button>
+                             <button className="form-btn px-6" disabled>UNAVAILABLE IN ALPHA</button>
                         </SettingRow>
                     </div>
                 );
@@ -775,9 +803,9 @@ export const SetupPage: React.FC<SetupPageProps> = ({
                 );
             case 'data':
                 return (
-                    <div className="flex flex-col h-full overflow-y-auto custom-scrollbar animate-fade-in">
+                    <div className="flex flex-col h-full overflow-y-auto animate-fade-in">
                         <SettingRow label="Batch Ingestion" desc="Import multiple prompts from a ZIP archive containing .txt files.">
-                            <button onClick={() => setIsTxtImportModalOpen(true)} className="btn btn-sm btn-outline rounded-none font-black text-[10px] tracking-widest uppercase px-6">
+                            <button onClick={() => setIsTxtImportModalOpen(true)} className="form-btn px-6">
                                 <UploadIcon className="w-4 h-4 mr-2" />
                                 OPEN IMPORT MODULE
                             </button>
@@ -805,9 +833,9 @@ export const SetupPage: React.FC<SetupPageProps> = ({
                 );
             case 'data':
                 return (
-                    <div className="flex flex-col h-full overflow-y-auto custom-scrollbar animate-fade-in">
+                    <div className="flex flex-col h-full overflow-y-auto animate-fade-in">
                         <SettingRow label="Bulk Export" desc="Package all gallery artifacts into a single ZIP archive for backup.">
-                            <button onClick={() => createZipAndDownload([], 'gallery_archive.zip')} className="btn btn-sm btn-secondary rounded-none font-black text-[10px] tracking-widest uppercase px-6">
+                            <button onClick={() => createZipAndDownload([], 'gallery_archive.zip')} className="form-btn form-btn-primary px-6">
                                 <DownloadIcon className="w-4 h-4 mr-2" />
                                 DOWNLOAD VAULT
                             </button>
@@ -832,13 +860,17 @@ export const SetupPage: React.FC<SetupPageProps> = ({
     const currentSubTabs = subMenuConfig[activeSettingsTab] || [];
     const currentSubTab = currentSubTabs.find(sub => sub.id === activeSubTab);
     
+  const navScrollRef = useRef<HTMLDivElement>(null);
+  const mainScrollRef = useRef<HTMLDivElement>(null);
+
   return (
     <>
-    <section className="flex flex-row h-full overflow-hidden relative">
+    <section className="flex flex-col h-full bg-transparent w-full relative p-[3px] corner-frame overflow-visible">
+      <div className="flex flex-row h-full w-full overflow-hidden relative z-10 bg-base-100/40 backdrop-blur-xl gap-4">
 
-        <aside className="w-80 flex-shrink-0 bg-base-100/40 backdrop-blur-xl flex flex-col">
-            <h1 className="h-16 flex items-center px-6 text-[10px] font-black uppercase tracking-[0.4em] text-base-content/30">System Hub</h1>
-            <nav className="flex-grow px-4 py-6 overflow-y-auto custom-scrollbar relative">
+        <aside className="w-80 flex-shrink-0 flex flex-col overflow-hidden relative">
+            <h1 className="h-16 flex-shrink-0 flex items-center px-6 text-[10px] font-black uppercase tracking-[0.4em] text-base-content/30">System Hub</h1>
+            <div ref={navScrollRef} className="flex-grow px-4 py-6 overflow-y-auto relative">
                 <ul className="menu menu-sm p-0 gap-1 relative z-10">
                    {mainCategories.map(mainCat => (
                        <SetupNavItem 
@@ -848,30 +880,36 @@ export const SetupPage: React.FC<SetupPageProps> = ({
                         />
                    ))}
                 </ul>
-            </nav>
+            </div>
         </aside>
 
-        <main className="flex-grow flex flex-col overflow-hidden">
-            <section className="p-10 bg-base-100/40 backdrop-blur-xl flex-shrink-0">
+        <main className="flex-grow flex flex-col overflow-hidden relative">
+            <section className="p-10 flex-shrink-0">
                 <h1 className="text-2xl lg:text-3xl font-black tracking-tighter uppercase leading-none">{mainCategories.find(c => c.id === activeSettingsTab)?.label}<span className="text-primary">.</span></h1>
                 <p className="text-[11px] font-bold text-base-content/30 uppercase tracking-[0.3em] mt-1">{currentSubTab?.description}</p>
             </section>
             {currentSubTabs.length > 0 && (
-                <div className="flex-shrink-0 bg-base-100/40 backdrop-blur-xl px-6 py-2 overflow-x-auto no-scrollbar">
-                    <div className="tabs">
+                <div className="flex-shrink-0 px-6 py-2 overflow-x-auto">
+                    <div className="form-tab-group">
                         {currentSubTabs.map(tab => (
-                            <button key={tab.id} onClick={() => setActiveSubTab(tab.id)} className={`tab h-10 px-4 font-black uppercase text-[9px] tracking-widest ${activeSubTab === tab.id ? 'tab-active text-primary' : 'text-base-content/30'}`}>{tab.label}</button>
+                            <button key={tab.id} onClick={() => setActiveSubTab(tab.id)} className={`form-tab-item ${activeSubTab === tab.id ? 'active' : ''}`}>{tab.label}</button>
                         ))}
                     </div>
                 </div>
             )}
-            <div className="flex-grow overflow-hidden bg-base-100/40 backdrop-blur-xl">{renderActiveTabContent()}</div>
+            <div ref={mainScrollRef} className="flex-grow overflow-y-auto">{renderActiveTabContent()}</div>
             <footer className="flex flex-row p-0 overflow-hidden flex-shrink-0">
-                <button onClick={handleCancel} className="btn flex-1 rounded-none uppercase font-black text-[10px] tracking-widest">Abort</button>
-                <button onClick={saveSettings} className="btn btn-primary flex-1 rounded-none uppercase font-black text-[10px] tracking-widest shadow-lg">Confirm</button>
+                <button onClick={handleCancel} className="form-btn flex-1">Abort</button>
+                <button onClick={saveSettings} className="form-btn form-btn-primary flex-1 shadow-lg">Confirm</button>
             </footer>
         </main>
-      </section>
+      </div>
+      {/* Manual Corner Accents */}
+      <div className="absolute -top-[1px] -left-[1px] w-3 h-3 border-t border-l border-primary/15 z-20 pointer-events-none" />
+      <div className="absolute -top-[1px] -right-[1px] w-3 h-3 border-t border-r border-primary/15 z-20 pointer-events-none" />
+      <div className="absolute -bottom-[1px] -left-[1px] w-3 h-3 border-b border-l border-primary/15 z-20 pointer-events-none" />
+      <div className="absolute -bottom-[1px] -right-[1px] w-3 h-3 border-b border-r border-primary/15 z-20 pointer-events-none" />
+    </section>
       {modalFeedback && <FeedbackModal isOpen={!!modalFeedback} onClose={() => setModalFeedback(null)} message={modalFeedback.message} type={modalFeedback.type} />}
       <ConfirmationModal isOpen={isRestartModalOpen} onClose={() => setIsRestartModalOpen(false)} onConfirm={() => window.location.reload()} title="RELOAD REQUEST" message="Purge neuronal state and restart interface?" btnClassName="btn-warning" />
       <ConfirmationModal 

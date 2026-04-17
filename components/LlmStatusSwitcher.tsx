@@ -114,7 +114,7 @@ const LlmStatusSwitcher: React.FC = () => {
                 className="w-full flex items-center justify-between py-0 px-1 rounded-none bg-transparent hover:bg-base-200/20 transition-all relative z-10 outline-none border-none cursor-pointer pointer-events-auto"
             >
                 <div className="flex items-center min-w-0 relative z-10">
-                    <span className="font-mono font-bold text-base-content/40 truncate uppercase text-[8px] tracking-[0.5em]">{displayText}</span>
+                    <span className="font-mono font-bold text-base-content/40 truncate uppercase text-[12px] tracking-[0.3em]">{displayText}</span>
                 </div>
                 <ChevronDownIcon className={`w-2.5 h-2.5 text-base-content/20 flex-shrink-0 transition-transform ${isOpen ? 'rotate-180' : ''} relative z-10`} />
             </button>
@@ -130,7 +130,7 @@ const LlmStatusSwitcher: React.FC = () => {
                             duration: 0.35,
                             ease: [0.22, 1, 0.36, 1]
                         }}
-                        className="fixed bottom-4 left-4 md:bottom-10 md:left-10 w-[calc(100%-2rem)] md:w-[360px] bg-base-100/60 backdrop-blur-3xl border border-base-content/10 shadow-2xl z-[2000] max-h-[50vh] overflow-y-auto custom-scrollbar"
+                        className="fixed bottom-4 left-4 md:bottom-10 md:left-10 w-[calc(100%-2rem)] md:w-[360px] bg-base-100/60 backdrop-blur-3xl border border-base-content/10 shadow-2xl z-[2000] max-h-[50vh] overflow-y-auto"
                     >
                         <ul className="menu p-1 flex flex-col flex-nowrap">
                             {/* Google Gemini Section */}
@@ -139,7 +139,7 @@ const LlmStatusSwitcher: React.FC = () => {
                                 <li key={model.id} className="w-full">
                                     <button
                                         onClick={() => handleProviderAndModelSelect('gemini', model.id)}
-                                        className={`rounded-none text-[11px] font-black uppercase tracking-tight py-3.5 w-full text-left px-4 ${settings.llmModel === model.id && settings.activeLLM === 'gemini' ? 'text-primary bg-primary/10' : 'text-base-content/80 hover:text-base-content hover:bg-base-200/50'}`}
+                                        className={`rounded-none text-[11px] font-bold font-nunito py-3.5 w-full text-left px-4 ${settings.llmModel === model.id && settings.activeLLM === 'gemini' ? 'text-primary bg-primary/10' : 'text-base-content/80 hover:text-base-content hover:bg-base-200/50'}`}
                                     >
                                         {model.name}
                                     </button>
@@ -159,7 +159,7 @@ const LlmStatusSwitcher: React.FC = () => {
                                     <li key={`local-${model}`} className="w-full">
                                         <button
                                             onClick={() => handleProviderAndModelSelect('ollama', model)}
-                                            className={`rounded-none text-[11px] font-black uppercase tracking-tight py-3.5 w-full text-left px-4 ${settings.ollamaModel === model && settings.activeLLM === 'ollama' ? 'text-primary bg-primary/10' : 'text-base-content/80 hover:text-base-content hover:bg-base-200/50'}`}
+                                            className={`rounded-none text-[11px] font-bold font-nunito py-3.5 w-full text-left px-4 ${settings.ollamaModel === model && settings.activeLLM === 'ollama' ? 'text-primary bg-primary/10' : 'text-base-content/80 hover:text-base-content hover:bg-base-200/50'}`}
                                         >
                                             {model}
                                         </button>
@@ -173,7 +173,7 @@ const LlmStatusSwitcher: React.FC = () => {
                                     <li key={`cloud-${model}`} className="w-full">
                                         <button
                                             onClick={() => handleProviderAndModelSelect('ollama_cloud', model)}
-                                            className={`rounded-none text-[11px] font-black uppercase tracking-tight py-3.5 w-full text-left px-4 ${settings.ollamaCloudModel === model && settings.activeLLM === 'ollama_cloud' ? 'text-primary bg-primary/10' : 'text-base-content/80 hover:text-base-content hover:bg-base-200/50'}`}
+                                            className={`rounded-none text-[11px] font-bold font-nunito py-3.5 w-full text-left px-4 ${settings.ollamaCloudModel === model && settings.activeLLM === 'ollama_cloud' ? 'text-primary bg-primary/10' : 'text-base-content/80 hover:text-base-content hover:bg-base-200/50'}`}
                                         >
                                             {model}
                                         </button>

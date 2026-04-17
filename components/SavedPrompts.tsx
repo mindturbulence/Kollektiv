@@ -8,7 +8,7 @@ import {
     loadPromptCategories,
 } from '../utils/promptStorage';
 import type { SavedPrompt, PromptCategory, Idea } from '../types';
-import { SearchIcon, CloseIcon, PlusIcon, FolderClosedIcon, ArchiveIcon } from './icons';
+import { SearchIcon, CloseIcon, PlusIcon, ArchiveIcon } from './icons';
 import ConfirmationModal from './ConfirmationModal';
 import SavedPromptCard from './SavedPromptCard';
 import TreeView, { TreeViewItem } from './TreeView';
@@ -16,7 +16,6 @@ import CategoryPanelToggle from './CategoryPanelToggle';
 import PromptEditorModal from './PromptEditorModal';
 import LoadingSpinner from './LoadingSpinner';
 import PromptDetailView from './PromptDetailView';
-import CustomScrollbar from './CustomScrollbar';
 
 interface SavedPromptsProps {
   onSendToEnhancer: (prompt: string) => void;
@@ -266,143 +265,157 @@ const SavedPrompts: React.FC<SavedPromptsProps> = ({
   }
 
   return (
-    <section className="flex flex-row h-full bg-transparent w-full relative">
-      <aside className={`relative z-20 flex-shrink-0 bg-transparent transition-all duration-300 ease-in-out flex flex-col ${isCategoryPanelCollapsed ? 'w-0' : 'w-80'}`}>
-        <CategoryPanelToggle isCollapsed={isCategoryPanelCollapsed} onToggle={onToggleCategoryPanel} position="right" />
-        <div className={`flex flex-col h-full overflow-hidden transition-opacity duration-200 ${isCategoryPanelCollapsed ? 'opacity-0 invisible' : 'opacity-100 visible'}`}>
-          <div className="flex-shrink-0 h-16 flex items-center px-4">
-             <div className="flex items-center gap-3">
-                <FolderClosedIcon className="w-5 h-5 text-primary/40" />
-                <span className="text-[10px] font-black uppercase tracking-[0.3em]">Folders</span>
-             </div>
-          </div>
-          <div className="flex-shrink-0 h-12">
-            <div className="flex items-center h-full relative">
-              <SearchIcon className="absolute left-4 w-3.5 h-3.5 opacity-20 pointer-events-none" />
-              <input 
-                type="text" 
-                value={categorySearchQuery}
-                onChange={(e) => setCategorySearchQuery(e.target.value)}
-                placeholder="SEARCH FOLDERS..." 
-                className="w-full h-full bg-transparent border-none focus:outline-none focus:ring-0 pl-10 pr-10 font-bold uppercase tracking-tight text-[10px] placeholder:text-base-content/10"
-              />
-              {categorySearchQuery && (
-                <button onClick={() => setCategorySearchQuery('')} className="absolute right-3 btn btn-xs btn-ghost btn-circle opacity-40">
-                  <CloseIcon className="w-3 h-3" />
-                </button>
-              )}
+    <>
+    <section className="flex flex-col h-full bg-transparent w-full relative p-[3px] corner-frame overflow-visible">
+      <div className="flex flex-row h-full w-full overflow-hidden relative z-10 bg-base-100/40 backdrop-blur-xl gap-0">
+        <aside className={`relative z-20 flex-shrink-0 bg-transparent border-r border-white/5 transition-all duration-300 ease-in-out flex flex-col overflow-visible ${isCategoryPanelCollapsed ? 'w-0' : 'w-80'}`}>
+          <CategoryPanelToggle isCollapsed={isCategoryPanelCollapsed} onToggle={onToggleCategoryPanel} position="right" />
+          <div className={`flex flex-col h-full w-full overflow-hidden relative z-10 transition-opacity duration-200 ${isCategoryPanelCollapsed ? 'opacity-0 invisible' : 'opacity-100 visible'}`}>
+            <div className="flex-shrink-0 h-14 px-6 flex items-center border-b border-white/5">
+              <h3 className="text-[11px] font-black uppercase tracking-[0.3em] text-primary">Category Folder</h3>
             </div>
-          </div>
-          <div className="flex-grow overflow-y-auto p-4 custom-scrollbar">
-            <TreeView items={treeItems} selectedId={selectedCategoryId} onSelect={(id) => { setSelectedCategoryId(id); setDisplayCount(30); }} searchActive={!!categorySearchQuery} />
-          </div>
-        </div>
-      </aside>
-      <main className="relative z-10 flex-1 flex flex-col h-full overflow-hidden bg-transparent min-w-0">
-        {detailViewPromptId && (
-          <PromptDetailView 
-            prompts={sortedAndFilteredPrompts} currentIndex={sortedAndFilteredPrompts.findIndex(p => p.id === detailViewPromptId)} 
-            onClose={() => setDetailViewPromptId(null)} onNavigate={(idx) => setDetailViewPromptId(sortedAndFilteredPrompts[idx].id)}
-            onDelete={(p) => { setPromptToDelete(p); setIsDeleteModalOpen(true); }}
-            onUpdate={async (id, u) => { 
-              const existing = prompts.find(p => p.id === id);
-              if (existing) {
-                await updateSavedPrompt(id, { ...existing, ...u }); 
-                await refreshData(); 
-              }
-            }}
-            onSendToEnhancer={onSendToEnhancer} showGlobalFeedback={showGlobalFeedback} onClip={handleClip}
-          />
-        )}
-
-        <div className={`flex flex-col h-full overflow-hidden transition-all duration-300 ${detailViewPromptId ? 'blur-sm pointer-events-none' : ''}`}>
-            <div className="relative flex-grow overflow-hidden">
-                <div ref={scrollerRef} className="h-full w-full overflow-y-auto overflow-x-hidden no-scrollbar bg-transparent">
-                    <header className="bg-transparent">
-                    <div className="p-6 md:p-10">
-                        <div className="flex flex-col md:flex-row md:items-end justify-between gap-6">
-                            <div className="space-y-2">
-                                <span className="text-[10px] font-black uppercase tracking-[0.6em] text-primary/60 block">LIBRARY INDEX</span>
-                                <h1 className="text-4xl lg:text-5xl font-black tracking-tighter text-base-content leading-none uppercase">
-                                    {currentCategoryName}<span className="text-primary">.</span>
-                                </h1>
-                            </div>
-                            <div className="flex">
-                                <div className="px-8 py-3 flex flex-col items-center justify-center">
-                                    <span className="text-3xl font-black tracking-tighter leading-none">{sortedAndFilteredPrompts.length}</span>
-                                    <span className="text-[8px] uppercase font-black text-base-content/30 tracking-[0.2em] mt-1">Saved Prompts</span>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                </header>
-
-                <div className="h-16 bg-base-100/40 backdrop-blur-xl flex items-stretch overflow-hidden sticky top-0 z-30">
-                    <div className="flex-grow flex items-center relative min-w-0">
-                        <SearchIcon className="absolute left-8 w-4 h-4 opacity-20 pointer-events-none" />
-                        <input 
-                            type="text" 
-                            value={searchQuery} 
-                            onChange={(e) => { setSearchQuery(e.target.value); setDisplayCount(30); }} 
-                            placeholder="SEARCH LIBRARY BY NAME OR TAG..." 
-                            className="w-full h-full bg-transparent border-none focus:outline-none focus:ring-0 pl-16 pr-12 font-bold uppercase tracking-tight text-sm placeholder:text-base-content/10" 
-                        />
-                        {searchQuery && (
-                          <button onClick={() => { setSearchQuery(''); setDisplayCount(30); }} className="absolute right-6 btn btn-xs btn-ghost btn-circle opacity-40">
-                            <CloseIcon className="w-4 h-4" />
-                          </button>
-                        )}
-                    </div>
-                    
-                    <div className="flex items-stretch flex-shrink-0">
-                        <div className="join h-full rounded-none">
-                            <button onClick={() => { setSortOrder('newest'); setDisplayCount(30); }} className={`join-item btn btn-ghost h-full border-none rounded-none px-8 font-black uppercase text-[10px] tracking-widest ${sortOrder === 'newest' ? 'text-primary' : 'opacity-40'}`}>BY DATE</button>
-                            <button onClick={() => { setSortOrder('title'); setDisplayCount(30); }} className={`join-item btn btn-ghost h-full border-none rounded-none px-8 font-black uppercase text-[10px] tracking-widest ${sortOrder === 'title' ? 'text-primary' : 'opacity-40'}`}>BY NAME</button>
-                        </div>
-                        <button onClick={() => { setPromptToEdit(null); setIsEditorModalOpen(true); }} className="btn btn-primary h-full rounded-none border-none px-8 font-black text-[10px] tracking-widest uppercase flex items-center gap-2">
-                            <PlusIcon className="w-4 h-4" />
-                            <span>Add Prompt</span>
-                        </button>
-                    </div>
-                </div>
-
-                {sortedAndFilteredPrompts.length > 0 ? (
-                    <div ref={gridRef} className="flex justify-center gap-px min-h-full w-full bg-transparent" style={{ willChange: 'transform' }}>
-                        {masonryColumns.map((col, colIdx) => (
-                            <div key={colIdx} ref={el => { columnRefs.current[colIdx] = el; }} className="flex-1 max-w-[450px] min-w-0 flex flex-col gap-px">
-                                {col.map(p => (
-                                    <div key={p.id} className={`prompt-card-item`}>
-                                        <SavedPromptCard 
-                                            prompt={p} 
-                                            categoryName={categories.find(c => c.id === p.categoryId)?.name}
-                                            onDeleteClick={(p) => { setPromptToDelete(p); setIsDeleteModalOpen(true); }}
-                                            onEditClick={(p) => { setPromptToEdit(p); setIsEditorModalOpen(true); }}
-                                            onSendToEnhancer={onSendToEnhancer}
-                                            onOpenDetailView={() => setDetailViewPromptId(p.id)}
-                                            onClip={handleClip}
-                                        />
-                                    </div>
-                                ))}
-                            </div>
-                        ))}
-                    </div>
-                ) : (
-                    <div className="h-full flex flex-col items-center justify-center text-center py-40 opacity-10">
-                        <ArchiveIcon className="w-20 h-20 mb-6" />
-                        <h3 className="text-3xl font-black uppercase tracking-widest">Library Empty</h3>
-                        <p className="text-[10px] font-bold uppercase tracking-[0.3em] mt-4">Awaiting content input</p>
-                    </div>
+            <div className="flex-shrink-0 h-14 px-2 mt-4">
+              <div className="flex items-center h-full relative px-4">
+                <SearchIcon className="absolute left-10 w-3.5 h-3.5 opacity-20 pointer-events-none" />
+                <input 
+                  type="text" 
+                  value={categorySearchQuery}
+                  onChange={(e) => setCategorySearchQuery(e.target.value)}
+                  placeholder="SEARCH FOLDERS..." 
+                  className="form-input w-full h-full bg-transparent border-none focus:outline-none focus:ring-0 pl-12 pr-10"
+                />
+                {categorySearchQuery && (
+                  <button onClick={() => setCategorySearchQuery('')} className="absolute right-3 btn btn-xs btn-ghost btn-circle opacity-40">
+                    <CloseIcon className="w-3 h-3" />
+                  </button>
                 )}
-                
-                {/* Scroll Target for Infinite Loading */}
-                <div ref={loadMoreRef} className={`${displayCount < sortedAndFilteredPrompts.length ? 'h-20' : 'h-0'} w-full flex items-center justify-center overflow-hidden`}>
-                    {displayCount < sortedAndFilteredPrompts.length && <LoadingSpinner size={24} />}
-                </div>
-                </div>
-                <CustomScrollbar containerRef={scrollerRef} />
+              </div>
             </div>
-        </div>
-      </main>
+            <div className="flex-grow overflow-y-auto p-4">
+              <TreeView items={treeItems} selectedId={selectedCategoryId} onSelect={(id) => { setSelectedCategoryId(id); setDisplayCount(30); }} searchActive={!!categorySearchQuery} />
+            </div>
+          </div>
+        </aside>
+        <main className="relative z-10 flex-1 flex flex-col h-full overflow-visible bg-transparent min-w-0">
+          <div className="flex flex-col h-full w-full overflow-hidden relative z-10">
+          {detailViewPromptId && (
+            <PromptDetailView 
+              prompts={sortedAndFilteredPrompts} currentIndex={sortedAndFilteredPrompts.findIndex(p => p.id === detailViewPromptId)} 
+              onClose={() => setDetailViewPromptId(null)} onNavigate={(idx: number) => setDetailViewPromptId(sortedAndFilteredPrompts[idx].id)}
+              onDelete={(p: SavedPrompt) => { setPromptToDelete(p); setIsDeleteModalOpen(true); }}
+              onUpdate={async (id: string, u: Partial<Omit<SavedPrompt, 'id' | 'createdAt'>>) => { 
+                const existing = prompts.find(p => p.id === id);
+                if (existing) {
+                  await updateSavedPrompt(id, { ...existing, ...u }); 
+                  await refreshData(); 
+                }
+              }}
+              showGlobalFeedback={showGlobalFeedback} onClip={handleClip}
+            />
+          )}
+
+          <div className={`flex flex-col h-full overflow-hidden transition-all duration-300 ${detailViewPromptId ? 'blur-sm pointer-events-none' : ''}`}>
+              <div className="relative flex-grow overflow-hidden">
+                  <div ref={scrollerRef} className="h-full w-full overflow-y-auto overflow-x-hidden bg-transparent">
+                      <header className="bg-transparent">
+                      <div className="p-4 md:p-6">
+                          <div className="flex flex-col md:flex-row md:items-end justify-between gap-4">
+                              <div className="space-y-1">
+                                  <span className="text-[10px] font-black uppercase tracking-[0.6em] text-primary/60 block">LIBRARY INDEX</span>
+                                  <h1 className="text-3xl lg:text-4xl font-black tracking-tighter text-base-content leading-none uppercase">
+                                      {currentCategoryName}<span className="text-primary">.</span>
+                                  </h1>
+                              </div>
+                              <div className="flex">
+                                  <div className="px-6 py-2 flex flex-col items-center justify-center">
+                                      <span className="text-3xl font-black tracking-tighter leading-none">{sortedAndFilteredPrompts.length}</span>
+                                      <span className="text-[8px] uppercase font-black text-base-content/30 tracking-[0.2em] mt-1">Saved Prompts</span>
+                                  </div>
+                              </div>
+                          </div>
+                      </div>
+                  </header>
+
+                  <div className="h-14 bg-base-100/40 backdrop-blur-xl flex items-stretch overflow-hidden sticky top-0 z-30">
+                      <div className="flex-grow flex items-center relative min-w-0">
+                          <SearchIcon className="absolute left-6 w-4 h-4 opacity-20 pointer-events-none" />
+                          <input 
+                              type="text" 
+                              value={searchQuery} 
+                              onChange={(e) => { setSearchQuery(e.target.value); setDisplayCount(30); }} 
+                              placeholder="SEARCH LIBRARY BY NAME OR TAG..." 
+                              className="form-input input-lg w-full h-full bg-transparent border-none focus:outline-none focus:ring-0 pl-14 pr-12" 
+                          />
+                          {searchQuery && (
+                            <button onClick={() => { setSearchQuery(''); setDisplayCount(30); }} className="absolute right-4 btn btn-xs btn-ghost btn-circle opacity-40">
+                              <CloseIcon className="w-4 h-4" />
+                            </button>
+                          )}
+                      </div>
+                      
+                      <div className="flex items-stretch flex-shrink-0">
+                          <div className="form-tab-group h-full rounded-none">
+                              <button onClick={() => { setSortOrder('newest'); setDisplayCount(30); }} className={`btn btn-xs btn-ghost h-full border-none rounded-none px-6 font-black text-[10px] tracking-widest uppercase btn-snake ${sortOrder === 'newest' ? 'active bg-primary/10 text-primary' : ''}`}>
+                                  <span/><span/><span/><span/>
+                                  BY DATE
+                              </button>
+                              <button onClick={() => { setSortOrder('title'); setDisplayCount(30); }} className={`btn btn-xs btn-ghost h-full border-none rounded-none px-6 font-black text-[10px] tracking-widest uppercase btn-snake ${sortOrder === 'title' ? 'active bg-primary/10 text-primary' : ''}`}>
+                                  <span/><span/><span/><span/>
+                                  BY NAME
+                              </button>
+                          </div>
+                          <button onClick={() => { setPromptToEdit(null); setIsEditorModalOpen(true); }} className="btn btn-sm btn-primary h-full rounded-none border-none px-8 font-black text-[10px] tracking-widest uppercase flex items-center gap-2 btn-snake-primary">
+                              <span/><span/><span/><span/>
+                              <PlusIcon className="w-4 h-4" />
+                              <span>Add Prompt</span>
+                          </button>
+                      </div>
+                  </div>
+
+                  {sortedAndFilteredPrompts.length > 0 ? (
+                      <div ref={gridRef} className="flex justify-center min-h-full w-full bg-transparent" style={{ willChange: 'transform' }}>
+                          {masonryColumns.map((col, colIdx) => (
+                              <div key={colIdx} ref={el => { columnRefs.current[colIdx] = el; }} className="flex-1 max-w-[450px] min-w-0 flex flex-col border-r border-base-content/5 last:border-r-0">
+                                  {col.map((p, pIdx) => (
+                                      <div key={p.id} className={`prompt-card-item ${pIdx !== col.length - 1 ? 'border-b border-base-content/5' : ''}`}>
+                                          <SavedPromptCard 
+                                              prompt={p} 
+                                              categoryName={categories.find(c => c.id === p.categoryId)?.name}
+                                              onDeleteClick={(p) => { setPromptToDelete(p); setIsDeleteModalOpen(true); }}
+                                              onEditClick={(p) => { setPromptToEdit(p); setIsEditorModalOpen(true); }}
+                                              onSendToEnhancer={onSendToEnhancer}
+                                              onOpenDetailView={() => setDetailViewPromptId(p.id)}
+                                              onClip={handleClip}
+                                          />
+                                      </div>
+                                  ))}
+                              </div>
+                          ))}
+                      </div>
+                  ) : (
+                      <div className="h-full flex flex-col items-center justify-center text-center py-40 opacity-10">
+                          <ArchiveIcon className="w-20 h-20 mb-6" />
+                          <h3 className="text-3xl font-black uppercase tracking-widest">Library Empty</h3>
+                          <p className="text-[10px] font-bold uppercase tracking-[0.3em] mt-4">Awaiting content input</p>
+                      </div>
+                  )}
+                  
+                  {/* Scroll Target for Infinite Loading */}
+                  <div ref={loadMoreRef} className={`${displayCount < sortedAndFilteredPrompts.length ? 'h-20' : 'h-0'} w-full flex items-center justify-center overflow-hidden`}>
+                      {displayCount < sortedAndFilteredPrompts.length && <LoadingSpinner size={24} />}
+                  </div>
+                  </div>
+              </div>
+          </div>
+          </div>
+        </main>
+      </div>
+      {/* Manual Corner Accents */}
+      <div className="absolute -top-[1px] -left-[1px] w-3 h-3 border-t border-l border-primary/15 z-20 pointer-events-none" />
+      <div className="absolute -top-[1px] -right-[1px] w-3 h-3 border-t border-r border-primary/15 z-20 pointer-events-none" />
+      <div className="absolute -bottom-[1px] -left-[1px] w-3 h-3 border-b border-l border-primary/15 z-20 pointer-events-none" />
+      <div className="absolute -bottom-[1px] -right-[1px] w-3 h-3 border-b border-r border-primary/15 z-20 pointer-events-none" />
+    </section>
 
       <PromptEditorModal 
           isOpen={isEditorModalOpen} onClose={() => setIsEditorModalOpen(false)} 
@@ -415,7 +428,7 @@ const SavedPrompts: React.FC<SavedPromptsProps> = ({
         onConfirm={async () => { if(promptToDelete) await deleteSavedPrompt(promptToDelete.id); await refreshData(); setIsDeleteModalOpen(false); }} 
         title="DELETE PROMPT" message={`Permanently remove "${promptToDelete?.title || 'Untitled'}"?`} 
       />
-    </section>
+    </>
   );
 };
 

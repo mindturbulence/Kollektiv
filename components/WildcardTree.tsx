@@ -21,12 +21,12 @@ const WildcardCategoryNode: React.FC<WildcardCategoryNodeProps> = ({ category, o
         <li key={category.path}>
             <details className="text-sm group" open={isExpanded}>
                 <summary 
-                    className="cursor-pointer list-none flex items-center gap-2 text-base-content/80 hover:text-base-content py-1"
+                    className="cursor-pointer list-none flex items-center gap-2 text-base-content/80 hover:text-base-content py-1 wildcard-folder-row"
                     onClick={handleSummaryClick}
                 >
                     <svg xmlns="http://www.w3.org/2000/svg" className={`h-4 w-4 transform transition-transform duration-200 ${isExpanded ? 'rotate-90' : ''}`} fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 5l7 7-7 7" /></svg>
                     <FolderClosedIcon className="w-4 h-4 inline-block"/>
-                    <span className="text-sm font-medium">{category.name}</span>
+                    <span className="text-sm font-medium wildcard-category-label">{category.name}</span>
                 </summary>
                 <div className="pl-4 border-l-2 border-base-300/50 ml-2 mt-1">
                     <div className="flex flex-wrap gap-1 py-2">
@@ -37,7 +37,7 @@ const WildcardCategoryNode: React.FC<WildcardCategoryNodeProps> = ({ category, o
                                 <button 
                                     key={file.path} 
                                     onClick={() => onWildcardClick(wildcardPath)} 
-                                    className="border border-base-content/10 hover:border-primary hover:text-primary transition-colors cursor-pointer text-sm py-0.5 px-2 h-auto rounded-[3px] bg-base-200/50 font-bold lowercase tracking-tight"
+                                    className="form-btn wildcard-tag-btn h-auto px-1 text-[10px] font-bold lowercase tracking-tight"
                                     title={`Insert __${wildcardPath}__`}
                                 >
                                     {displayName}
@@ -85,7 +85,7 @@ const WildcardTree: React.FC<WildcardTreeProps> = ({ categories, onWildcardClick
     };
 
     return (
-        <ul className="pl-2 space-y-1">
+        <ul className="pl-2 space-y-1 wildcard-tree-container">
             {categories.map(category => (
                 <WildcardCategoryNode 
                     key={category.path}

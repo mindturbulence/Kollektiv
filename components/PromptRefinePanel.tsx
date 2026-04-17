@@ -6,7 +6,6 @@ import { SparklesIcon, CheckIcon, ChevronDownIcon, BookmarkIcon, RefreshIcon, Cl
 import { TARGET_IMAGE_AI_MODELS, TARGET_VIDEO_AI_MODELS } from '../constants';
 import LoadingSpinner from './LoadingSpinner';
 import CopyIcon from './CopyIcon';
-import CustomScrollbar from './CustomScrollbar';
 
 interface PromptRefinePanelProps {
   promptText: string;
@@ -86,67 +85,78 @@ const PromptRefinePanel: React.FC<PromptRefinePanelProps> = ({ promptText, onApp
     }
 
     return (
-        <div className="flex flex-col h-full bg-base-100/30 backdrop-blur-xl overflow-hidden border border-base-300/20 relative">
-            <header className="p-4 flex justify-between items-center bg-base-100/10 backdrop-blur-md">
-                <div className="flex items-center gap-4">
-                    <span className="text-xs font-black uppercase tracking-[0.3em] text-primary">AI Refinement</span>
-                    <div className="form-control max-w-[140px]">
-                         <select value={targetAIModel} onChange={(e) => setTargetAIModel((e.currentTarget as any).value)} className="select select-bordered border-base-300 bg-base-100 select-xs rounded-none font-bold w-full uppercase tracking-tighter text-[10px] h-6 min-h-0 focus:outline-none">
-                            <optgroup label="Image">
-                                {TARGET_IMAGE_AI_MODELS.map(model => <option key={model} value={model}>{model}</option>)}
-                            </optgroup>
-                            <optgroup label="Video">
-                                {TARGET_VIDEO_AI_MODELS.map(model => <option key={model} value={model}>{model}</option>)}
-                            </optgroup>
-                        </select>
+        <div className="flex flex-col h-full relative p-[3px] corner-frame overflow-hidden">
+            <div className="flex flex-col h-full w-full bg-base-100/30 backdrop-blur-xl overflow-hidden relative z-10">
+                <header className="p-4 flex justify-between items-center bg-base-100/10 backdrop-blur-md">
+                    <div className="flex items-center gap-4">
+                        <span className="text-xs font-black uppercase tracking-[0.3em] text-primary">AI Refinement</span>
+                        <div className="form-control max-w-[140px]">
+                             <select value={targetAIModel} onChange={(e) => setTargetAIModel((e.currentTarget as any).value)} className="form-select h-8 text-[10px]">
+                                <optgroup label="Image">
+                                    {TARGET_IMAGE_AI_MODELS.map(model => <option key={model} value={model}>{model}</option>)}
+                                </optgroup>
+                                <optgroup label="Video">
+                                    {TARGET_VIDEO_AI_MODELS.map(model => <option key={model} value={model}>{model}</option>)}
+                                </optgroup>
+                            </select>
+                        </div>
                     </div>
-                </div>
-                <div className="flex items-center gap-1">
-                    <button onClick={handleRefine} disabled={isLoading || !promptText} className="btn btn-xs btn-ghost btn-square" aria-label="Run AI refiner">
-                        <RefreshIcon className={`w-3.5 h-3.5 ${isLoading ? 'animate-spin' : ''}`} />
-                    </button>
-                    <button onClick={() => setIsCollapsed(true)} className="btn btn-xs btn-ghost btn-square" aria-label="Collapse panel">
-                        <CloseIcon className="w-4 h-4" />
-                    </button>
-                </div>
-            </header>
-            
-            <main ref={scrollerRef} className="flex-grow p-5 lg:p-5 overflow-y-auto no-scrollbar flex flex-col relative">
-                <span className="text-[10px] font-black uppercase tracking-widest text-primary/40 mb-3 flex items-center gap-3">
-                    <span className="w-1.5 h-1.5 rounded-none bg-primary animate-pulse"></span> Generated Text
-                </span>
+                    <div className="flex items-center gap-1">
+                        <button onClick={handleRefine} disabled={isLoading || !promptText} className="btn btn-xs btn-ghost h-8 w-8 rounded-none p-0 btn-snake" aria-label="Run AI refiner">
+                            <span/><span/><span/><span/>
+                            <RefreshIcon className={`w-3.5 h-3.5 ${isLoading ? 'animate-spin' : ''}`} />
+                        </button>
+                        <button onClick={() => setIsCollapsed(true)} className="btn btn-xs btn-ghost h-8 w-8 rounded-none p-0 btn-snake" aria-label="Collapse panel">
+                            <span/><span/><span/><span/>
+                            <CloseIcon className="w-4 h-4" />
+                        </button>
+                    </div>
+                </header>
                 
-                {isLoading && !refinedPrompt ? <div className="flex-grow flex items-center justify-center"><LoadingSpinner size={48} /></div> :
-                 error ? <div className="alert alert-error rounded-none text-xs"><span>{error}</span></div> :
-                 refinedPrompt !== null ? (
-                    <div className="text-sm font-medium leading-relaxed text-base-content/80 whitespace-pre-wrap flex-grow">
-                        {refinedPrompt}
-                    </div>
-                 ) : (
-                    <div className="flex-grow flex flex-col items-center justify-center text-center py-12">
-                        <SparklesIcon className="w-8 h-8 text-base-content/10 mb-4" />
-                        <span className="text-xs font-black uppercase tracking-[0.2em] text-base-content/20">
-                            Ready to refine prompt
-                        </span>
-                    </div>
-                 )}
-            </main>
-            <CustomScrollbar containerRef={scrollerRef} />
-            
-            <footer className="p-4 flex justify-end gap-2">
-                {onClip && refinedPrompt && (
-                        <button onClick={handleClip} disabled={clipped} className="btn btn-xs btn-ghost rounded-none font-black text-[10px] tracking-widest px-4">
-                        <BookmarkIcon className="w-3.5 h-3.5 mr-1.5" />
-                        {clipped ? 'Ok' : 'Clip'}
+                <main ref={scrollerRef} className="flex-grow p-5 lg:p-5 overflow-y-auto flex flex-col relative">
+                    <span className="text-[10px] font-black uppercase tracking-widest text-primary/40 mb-3 flex items-center gap-3">
+                        <span className="w-1.5 h-1.5 rounded-none bg-primary animate-pulse"></span> Generated Text
+                    </span>
+                    
+                    {isLoading && !refinedPrompt ? <div className="flex-grow flex items-center justify-center"><LoadingSpinner size={48} /></div> :
+                     error ? <div className="alert alert-error rounded-none text-xs"><span>{error}</span></div> :
+                     refinedPrompt !== null ? (
+                        <div className="text-sm font-medium leading-relaxed text-base-content/80 whitespace-pre-wrap flex-grow">
+                            {refinedPrompt}
+                        </div>
+                     ) : (
+                        <div className="flex-grow flex flex-col items-center justify-center text-center py-12">
+                            <SparklesIcon className="w-8 h-8 text-base-content/10 mb-4" />
+                            <span className="text-xs font-black uppercase tracking-[0.2em] text-base-content/20">
+                                Ready to refine prompt
+                            </span>
+                        </div>
+                     )}
+                </main>
+                
+                <footer className="p-1.5 flex justify-end gap-1.5">
+                    {onClip && refinedPrompt && (
+                            <button onClick={handleClip} disabled={clipped} className="btn btn-sm btn-ghost h-10 rounded-none px-4 font-normal text-[13px] tracking-wider uppercase btn-snake">
+                            <span/><span/><span/><span/>
+                            <BookmarkIcon className="w-3.5 h-3.5 mr-1.5" />
+                            {clipped ? 'Ok' : 'Clip'}
+                        </button>
+                    )}
+                    <button onClick={handleCopy} disabled={!refinedPrompt || isLoading} className="btn btn-sm btn-ghost h-10 rounded-none px-4 font-normal text-[13px] tracking-wider uppercase btn-snake">
+                        <span/><span/><span/><span/>
+                        {copied ? <><CheckIcon className="w-3.5 h-3.5 mr-1.5 text-success" />Copied</> : <><CopyIcon className="w-3.5 h-3.5 mr-1.5" />Copy Text</>}
                     </button>
-                )}
-                <button onClick={handleCopy} disabled={!refinedPrompt || isLoading} className="btn btn-xs btn-ghost rounded-none font-black text-[10px] tracking-widest px-4">
-                    {copied ? <><CheckIcon className="w-3.5 h-3.5 mr-1.5 text-success" />Copied</> : <><CopyIcon className="w-3.5 h-3.5 mr-1.5" />Copy Text</>}
-                </button>
-                <button onClick={handleApply} disabled={!refinedPrompt || isLoading} className="btn btn-xs btn-ghost rounded-none font-black text-[10px] tracking-widest px-4">
-                    <CheckIcon className="w-3.5 h-3.5 mr-1.5" /> Apply Prompt
-                </button>
-            </footer>
+                    <button onClick={handleApply} disabled={!refinedPrompt || isLoading} className="btn btn-sm btn-primary h-10 rounded-none px-4 font-normal text-[13px] tracking-wider uppercase btn-snake-primary">
+                        <span/><span/><span/><span/>
+                        <CheckIcon className="w-3.5 h-3.5 mr-1.5" /> Apply Prompt
+                    </button>
+                </footer>
+            </div>
+            {/* Corner Accents */}
+            <div className="absolute -top-[1px] -left-[1px] w-3 h-3 border-t border-l border-primary/15 z-20 pointer-events-none" />
+            <div className="absolute -top-[1px] -right-[1px] w-3 h-3 border-t border-r border-primary/15 z-20 pointer-events-none" />
+            <div className="absolute -bottom-[1px] -left-[1px] w-3 h-3 border-b border-l border-primary/15 z-20 pointer-events-none" />
+            <div className="absolute -bottom-[1px] -right-[1px] w-3 h-3 border-b border-r border-primary/15 z-20 pointer-events-none" />
         </div>
     );
 };
