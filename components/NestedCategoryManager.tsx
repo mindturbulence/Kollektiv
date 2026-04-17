@@ -132,7 +132,7 @@ const CategoryItem: React.FC<{
 
                     <button 
                         onClick={() => setIsLocalExpanded(!isLocalExpanded)}
-                        className={`btn btn-xs btn-ghost btn-square transition-transform ${children.length === 0 ? 'opacity-0 pointer-events-none' : ''} ${isLocalExpanded ? 'rotate-0' : '-rotate-90'}`}
+                        className={`p-1 transition-transform text-base-content/40 hover:text-primary ${children.length === 0 ? 'opacity-0 pointer-events-none' : ''} ${isLocalExpanded ? 'rotate-0' : '-rotate-90'}`}
                     >
                         <ChevronDownIcon className="w-3.5 h-3.5" />
                     </button>
@@ -147,7 +147,7 @@ const CategoryItem: React.FC<{
                                 onChange={e => setEditValue(e.target.value)}
                                 onBlur={handleRename}
                                 onKeyDown={e => e.key === 'Enter' && handleRename()}
-                                className="input input-xs input-primary rounded-none font-bold uppercase tracking-tight w-full bg-base-100"
+                                className="form-input h-8 w-full"
                             />
                         ) : (
                             <span 
@@ -162,13 +162,13 @@ const CategoryItem: React.FC<{
                 </div>
 
                 <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                    <div className="join bg-base-200 mr-2">
-                        <button onClick={() => onMove(category.id, 'up')} disabled={index === 0} className="btn btn-xs btn-ghost join-item" title="Move Up"><ChevronDownIcon className="w-3 h-3 rotate-180"/></button>
-                        <button onClick={() => onMove(category.id, 'down')} disabled={index === siblings.length - 1} className="btn btn-xs btn-ghost join-item" title="Move Down"><ChevronDownIcon className="w-3 h-3"/></button>
+                    <div className="flex bg-base-200/50 mr-2">
+                        <button onClick={() => onMove(category.id, 'up')} disabled={index === 0} className="p-1 text-base-content/40 hover:text-primary disabled:opacity-10 transition-colors" title="Move Up"><ChevronDownIcon className="w-3 h-3 rotate-180"/></button>
+                        <button onClick={() => onMove(category.id, 'down')} disabled={index === siblings.length - 1} className="p-1 text-base-content/40 hover:text-primary disabled:opacity-10 transition-colors" title="Move Down"><ChevronDownIcon className="w-3 h-3"/></button>
                     </div>
 
-                    <button onClick={() => onAddSub(category.id)} className="btn btn-xs btn-ghost btn-square text-primary" title="Add Subfolder"><PlusIcon className="w-3.5 h-3.5"/></button>
-                    <button onClick={() => onDelete(category)} className="btn btn-xs btn-ghost btn-square text-error/40 hover:text-error" title="Delete"><DeleteIcon className="w-3.5 h-3.5"/></button>
+                    <button onClick={() => onAddSub(category.id)} className="p-1 text-primary/40 hover:text-primary transition-colors" title="Add Subfolder"><PlusIcon className="w-3.5 h-3.5"/></button>
+                    <button onClick={() => onDelete(category)} className="p-1 text-error/20 hover:text-error transition-colors" title="Delete"><DeleteIcon className="w-3.5 h-3.5"/></button>
                 </div>
             </div>
             
@@ -326,19 +326,19 @@ export const NestedCategoryManager: React.FC<NestedCategoryManagerProps> = ({
         <header className="p-6 flex flex-col gap-6 flex-shrink-0">
             <div className="flex justify-between items-center">
                 <h3 className="text-xs font-black uppercase tracking-[0.4em] text-primary">{title}</h3>
-                <div className="flex gap-2">
-                    <button onClick={() => setIsAllExpanded(!isAllExpanded)} className="btn btn-xs btn-ghost font-black text-[9px] tracking-widest uppercase">
-                        {isAllExpanded ? 'Collapse All' : 'Expand All'}
+                <div className="flex gap-1">
+                    <button onClick={() => setIsAllExpanded(!isAllExpanded)} className="p-2 text-primary/40 hover:text-primary transition-colors" title={isAllExpanded ? 'Collapse All' : 'Expand All'}>
+                        <ChevronDownIcon className={`w-5 h-5 transition-transform ${isAllExpanded ? 'rotate-0' : '-rotate-90'}`} />
                     </button>
-                    <button onClick={handleSortAZ} className="btn btn-xs btn-ghost font-black text-[9px] tracking-widest uppercase">
-                        <RefreshIcon className="w-3.5 h-3.5 mr-2" />
-                        Sort Recursive A-Z
+                    <button onClick={handleSortAZ} className="p-2 text-primary/40 hover:text-primary transition-colors" title="Sort Recursive A-Z">
+                        <RefreshIcon className="w-5 h-5" />
                     </button>
                     <button 
                         onClick={() => { setAddParentId(undefined); setIsAddModalOpen(true); }}
-                        className="btn btn-primary btn-sm rounded-none font-black text-[10px] tracking-widest px-6"
+                        className="p-2 text-primary hover:text-primary-focus transition-colors"
+                        title="New Folder"
                     >
-                        NEW FOLDER
+                        <PlusIcon className="w-6 h-6" />
                     </button>
                 </div>
             </div>
@@ -350,17 +350,17 @@ export const NestedCategoryManager: React.FC<NestedCategoryManagerProps> = ({
                     value={searchQuery}
                     onChange={e => setSearchQuery(e.target.value)}
                     placeholder="Search folder registry..."
-                    className="input input-sm input-bordered rounded-none w-full pl-10 font-bold uppercase tracking-tight placeholder:text-base-content/10"
+                    className="form-input w-full pl-10"
                 />
                 {searchQuery && (
-                    <button onClick={() => setSearchQuery('')} className="absolute right-3 top-1/2 -translate-y-1/2 btn btn-xs btn-ghost btn-circle">
+                    <button onClick={() => setSearchQuery('')} className="absolute right-3 top-1/2 -translate-y-1/2 form-btn h-6 w-6 text-error">
                         <CloseIcon className="w-3 h-3" />
                     </button>
                 )}
             </div>
         </header>
 
-        <div className="flex-grow overflow-y-auto custom-scrollbar bg-transparent">
+        <div className="flex-grow overflow-y-auto bg-transparent">
             {categories.length > 0 ? (
                 <div className="flex flex-col pb-20">
                     {rootCategories.map(cat => (
@@ -390,21 +390,28 @@ export const NestedCategoryManager: React.FC<NestedCategoryManagerProps> = ({
 
         {isAddModalOpen && (
             <div className="fixed inset-0 bg-black/80 z-[60] flex items-center justify-center p-4 animate-fade-in" onClick={() => setIsAddModalOpen(false)}>
-                <div className="bg-base-100/40 backdrop-blur-xl rounded-none w-full max-w-lg overflow-hidden" onClick={e => e.stopPropagation()}>
-                    <header className="p-8 border-b border-base-300 bg-transparent">
-                        <h3 className="text-4xl font-black tracking-tighter text-base-content uppercase leading-none">New Folder</h3>
-                        {addParentId && <p className="text-[10px] font-black uppercase tracking-widest text-primary mt-2">Nesting under: {categories.find(c => c.id === addParentId)?.name}</p>}
-                    </header>
-                    <div className="p-8 space-y-6">
-                        <div className="form-control">
-                            <label className="text-[10px] font-black uppercase tracking-widest text-base-content/40 mb-2">Folder Name</label>
-                            <input type="text" value={addName} onChange={e => setAddName((e.currentTarget as any).value)} className="input input-bordered rounded-none font-bold tracking-tight" autoFocus onKeyDown={e => e.key === 'Enter' && handleConfirmAdd()} />
+                <div className="flex flex-col bg-transparent w-full max-w-lg mx-auto relative p-[3px] corner-frame overflow-visible" onClick={e => e.stopPropagation()}>
+                    <div className="bg-base-100/40 backdrop-blur-xl rounded-none w-full overflow-hidden relative z-10">
+                        <header className="p-8 border-b border-base-300 bg-transparent">
+                            <h3 className="text-4xl font-black tracking-tighter text-base-content uppercase leading-none">New Folder</h3>
+                            {addParentId && <p className="text-[10px] font-black uppercase tracking-widest text-primary mt-2">Nesting under: {categories.find(c => c.id === addParentId)?.name}</p>}
+                        </header>
+                        <div className="p-8 space-y-6">
+                            <div className="form-control">
+                                <label className="text-[10px] font-black uppercase tracking-widest text-base-content/40 mb-2">Folder Name</label>
+                                <input type="text" value={addName} onChange={e => setAddName((e.currentTarget as any).value)} className="form-input w-full" autoFocus onKeyDown={e => e.key === 'Enter' && handleConfirmAdd()} />
+                            </div>
                         </div>
+                        <footer className="p-4 border-t border-base-300 flex justify-end gap-2 bg-transparent">
+                            <button onClick={() => setIsAddModalOpen(false)} className="form-btn px-8">Abort</button>
+                            <button onClick={handleConfirmAdd} disabled={!addName.trim()} className="form-btn form-btn-primary px-8 shadow-lg">Create</button>
+                        </footer>
                     </div>
-                    <footer className="p-4 border-t border-base-300 flex justify-end gap-2 bg-transparent">
-                        <button onClick={() => setIsAddModalOpen(false)} className="btn btn-ghost rounded-none uppercase font-black text-[10px] tracking-widest px-8">Abort</button>
-                        <button onClick={handleConfirmAdd} disabled={!addName.trim()} className="btn btn-primary rounded-none uppercase font-black text-[10px] tracking-widest px-8 shadow-lg">Create</button>
-                    </footer>
+                    {/* Manual Corner Accents */}
+                    <div className="absolute -top-[1px] -left-[1px] w-3 h-3 border-t border-l border-primary/15 z-20 pointer-events-none" />
+                    <div className="absolute -top-[1px] -right-[1px] w-3 h-3 border-t border-r border-primary/15 z-20 pointer-events-none" />
+                    <div className="absolute -bottom-[1px] -left-[1px] w-3 h-3 border-b border-l border-primary/15 z-20 pointer-events-none" />
+                    <div className="absolute -bottom-[1px] -right-[1px] w-3 h-3 border-b border-r border-primary/15 z-20 pointer-events-none" />
                 </div>
             </div>
         )}

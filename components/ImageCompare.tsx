@@ -63,13 +63,13 @@ const ImageSlot: React.FC<{
                     <p className="truncate font-bold text-base-content/60" title={image.file?.name || 'Library Image'}>{image.file?.name || 'Library Item'}</p>
                     <p className="text-[9px] font-mono text-base-content/30 mt-1 uppercase">{image.width}×{image.height} {image.file ? `• ${formatBytes(image.file.size)}` : ''}</p>
                 </div>
-                <button onClick={onRemove} className="btn btn-xs btn-ghost btn-square opacity-20 group-hover:opacity-100 transition-opacity">✕</button>
+                <button onClick={onRemove} className="form-btn h-6 w-6 text-error opacity-20 group-hover:opacity-100 transition-opacity">✕</button>
             </div>
         </div>
     );
-  }
+}
 
-  return (
+return (
     <div
       className={`p-6 border-2 border-dashed transition-all flex flex-col items-center justify-center text-center cursor-pointer gap-4 ${isDragging ? 'border-primary bg-primary/10' : 'border-base-300 hover:border-primary/50'}`}
       onDragOver={(e) => { e.preventDefault(); setIsDragging(true); }}
@@ -82,11 +82,11 @@ const ImageSlot: React.FC<{
           <p className="text-[9px] font-bold uppercase tracking-widest text-base-content/20">Source Input</p>
       </div>
       <div className="flex gap-2">
-        <button onClick={(e) => { e.stopPropagation(); (inputRef.current as any)?.click(); }} className="btn btn-xs btn-ghost rounded-none font-black text-[8px] tracking-widest uppercase">UPLOAD</button>
-        <button onClick={(e) => { e.stopPropagation(); onLibraryOpen(); }} className="btn btn-xs btn-primary rounded-none font-black text-[8px] tracking-widest uppercase">LIBRARY</button>
+        <button onClick={(e) => { e.stopPropagation(); (inputRef.current as any)?.click(); }} className="form-btn h-8 px-4">UPLOAD</button>
+        <button onClick={(e) => { e.stopPropagation(); onLibraryOpen(); }} className="form-btn form-btn-primary h-8 px-4">LIBRARY</button>
       </div>
     </div>
-  );
+);
 };
 
 interface ViewProps {
@@ -271,80 +271,95 @@ const ImageCompare: React.FC = () => {
     const handleMouseUpOrLeave = () => setIsPanning(false);
     
     return (
-        <div className="h-full bg-base-100/40 backdrop-blur-xl flex flex-col overflow-hidden">
-            <div className="flex-grow flex flex-col lg:flex-row overflow-hidden">
-                <aside className="w-full lg:w-96 flex-shrink-0 bg-transparent flex flex-col overflow-hidden">
-                    <header className="p-6 bg-transparent">
-                        <h3 className="text-[10px] font-black uppercase tracking-[0.4em] text-primary">Artifact Inputs</h3>
-                    </header>
-                    <div className="flex-grow p-6 space-y-6 overflow-y-auto custom-scrollbar bg-transparent">
-                        <div className="space-y-4">
-                           <ImageSlot 
-                                onFileSelect={(f) => handleFileSelect(f, 'A')} 
-                                onLibraryOpen={() => { setPickerTargetIndex('A'); setIsPickerOpen(true); }}
-                                onRemove={() => setImageA(null)} 
-                                image={imageA} 
-                                title="Primary Image" 
-                           />
-                           <ImageSlot 
-                                onFileSelect={(f) => handleFileSelect(f, 'B')} 
-                                onLibraryOpen={() => { setPickerTargetIndex('B'); setIsPickerOpen(true); }}
-                                onRemove={() => setImageB(null)} 
-                                image={imageB} 
-                                title="Secondary Image" 
-                           />
-                        </div>
+        <div className="h-full bg-transparent flex flex-col overflow-hidden p-0">
+            <div className="flex-grow flex flex-col lg:flex-row overflow-hidden gap-4">
+                <aside className="w-full lg:w-96 flex-shrink-0 flex flex-col relative p-[3px] corner-frame overflow-visible z-10">
+                    <div className="flex flex-col h-full w-full overflow-hidden relative z-10 bg-base-100/40 backdrop-blur-xl">
+                        <header className="p-6 bg-base-100/10 backdrop-blur-md">
+                            <h3 className="text-[10px] font-black uppercase tracking-[0.4em] text-primary">Artifact Inputs</h3>
+                        </header>
+                        <div className="flex-grow p-6 space-y-6 overflow-y-auto bg-transparent">
+                            <div className="space-y-4">
+                               <ImageSlot 
+                                    onFileSelect={(f) => handleFileSelect(f, 'A')} 
+                                    onLibraryOpen={() => { setPickerTargetIndex('A'); setIsPickerOpen(true); }}
+                                    onRemove={() => setImageA(null)} 
+                                    image={imageA} 
+                                    title="Primary Image" 
+                               />
+                               <ImageSlot 
+                                    onFileSelect={(f) => handleFileSelect(f, 'B')} 
+                                    onLibraryOpen={() => { setPickerTargetIndex('B'); setIsPickerOpen(true); }}
+                                    onRemove={() => setImageB(null)} 
+                                    image={imageB} 
+                                    title="Secondary Image" 
+                               />
+                            </div>
 
-                        <div className="space-y-4 pt-4">
-                           <label className="text-[10px] font-black uppercase tracking-widest text-base-content/40">Visual Matrix</label>
-                           <div className="join w-full">
-                                <button onClick={() => setViewMode('split')} className={`join-item btn btn-xs flex-1 rounded-none font-black text-[9px] tracking-widest ${viewMode === 'split' ? 'btn-active' : ''}`}><ViewSplitHorizontalIcon className="w-4 h-4 mr-2"/>SPLIT</button>
-                                <button onClick={() => setViewMode('sideBySide')} className={`join-item btn btn-xs flex-1 rounded-none font-black text-[9px] tracking-widest ${viewMode === 'sideBySide' ? 'btn-active' : ''}`}><ViewColumnsIcon className="w-4 h-4 mr-2"/>DUAL</button>
-                           </div>
-                        </div>
+                            <div className="space-y-4 pt-4">
+                               <label className="text-[10px] font-black uppercase tracking-widest text-base-content/40">Visual Matrix</label>
+                               <div className="form-tab-group w-full">
+                                    <button onClick={() => setViewMode('split')} className={`form-tab-item flex-1 ${viewMode === 'split' ? 'active' : ''}`}><ViewSplitHorizontalIcon className="w-4 h-4 mr-2"/>SPLIT</button>
+                                    <button onClick={() => setViewMode('sideBySide')} className={`form-tab-item flex-1 ${viewMode === 'sideBySide' ? 'active' : ''}`}><ViewColumnsIcon className="w-4 h-4 mr-2"/>DUAL</button>
+                               </div>
+                            </div>
 
-                         <div className="pt-4">
-                            <button onClick={handleResetView} className="btn btn-xs btn-ghost w-full justify-start rounded-none font-black text-[9px] tracking-widest uppercase"><EyeIcon className="w-4 h-4 mr-2 text-primary"/> RE-CENTER OPTICS</button>
-                         </div>
+                             <div className="pt-4">
+                                <button onClick={handleResetView} className="form-btn w-full justify-start h-8 px-4"><EyeIcon className="w-4 h-4 mr-2 text-primary"/> RE-CENTER OPTICS</button>
+                             </div>
+                        </div>
+                         <footer className="h-14 flex items-stretch flex-shrink-0 bg-base-100/10 backdrop-blur-md p-1.5 gap-1.5">
+                            <button onClick={handleResetAll} className="btn btn-sm btn-ghost h-full flex-1 rounded-none font-normal text-[13px] tracking-wider uppercase btn-snake text-error/40 hover:text-error font-display">
+                                <span/><span/><span/><span/>
+                                PURGE BUFFERS
+                            </button>
+                        </footer>
                     </div>
-                     <footer className="p-4 bg-transparent">
-                        <button onClick={handleResetAll} className="btn btn-sm btn-ghost w-full rounded-none font-black text-[9px] tracking-widest uppercase text-error/40 hover:text-error hover:bg-error/10">PURGE BUFFERS</button>
-                    </footer>
+                    {/* Manual Corner Accents */}
+                    <div className="absolute -top-[1px] -left-[1px] w-3 h-3 border-t border-l border-primary/15 z-20 pointer-events-none" />
+                    <div className="absolute -top-[1px] -right-[1px] w-3 h-3 border-t border-r border-primary/15 z-20 pointer-events-none" />
+                    <div className="absolute -bottom-[1px] -left-[1px] w-3 h-3 border-b border-l border-primary/15 z-20 pointer-events-none" />
+                    <div className="absolute -bottom-[1px] -right-[1px] w-3 h-3 border-b border-r border-primary/15 z-20 pointer-events-none" />
                 </aside>
 
-                <main 
-                    className="flex-grow overflow-y-auto overflow-x-hidden scroll-smooth custom-scrollbar flex flex-col"
-                >
-                    <section className="p-10 bg-transparent">
-                        <div className="max-w-screen-2xl mx-auto flex flex-col gap-1">
-                            <div className="flex flex-col md:flex-row md:items-stretch justify-between gap-6">
-                                <h1 className="text-2xl lg:text-3xl font-black tracking-tighter text-base-content leading-none flex items-center uppercase">Image Compare<span className="text-primary">.</span></h1>
+                <main className="flex-grow flex flex-col relative p-[3px] corner-frame overflow-visible z-10">
+                    <div className="flex flex-col h-full w-full overflow-hidden relative z-10 bg-base-100/40 backdrop-blur-xl">
+                        <section className="p-10 bg-transparent">
+                            <div className="max-w-screen-2xl mx-auto flex flex-col gap-1">
+                                <div className="flex flex-col md:flex-row md:items-stretch justify-between gap-6">
+                                    <h1 className="text-2xl lg:text-3xl font-black tracking-tighter text-base-content leading-none flex items-center uppercase">Image Compare<span className="text-primary">.</span></h1>
+                                </div>
+                                <p className="text-[11px] font-bold text-base-content/30 uppercase tracking-[0.3em] w-full">Synchronized viewport for pixel-accurate evaluation and side-by-side comparison.</p>
                             </div>
-                            <p className="text-[11px] font-bold text-base-content/30 uppercase tracking-[0.3em] w-full">Synchronized viewport for pixel-accurate evaluation and side-by-side comparison.</p>
-                        </div>
-                    </section>
+                        </section>
 
-                    <div 
-                        ref={viewerRef}
-                        className="flex-grow bg-base-200/20 overflow-hidden relative"
-                        style={{ cursor: transform.zoom > 1 ? (isPanning ? 'grabbing' : 'grab') : 'default' }}
-                        onWheel={handleWheel}
-                        onMouseDown={handleMouseDown}
-                        onMouseMove={handleMouseMove}
-                        onMouseUp={handleMouseUpOrLeave}
-                        onMouseLeave={handleMouseUpOrLeave}
-                    >
-                        {!imageA || !imageB ? (
-                            <div className="w-full h-full flex flex-col items-center justify-center text-center p-12 opacity-10">
-                                <RefreshIcon className="w-24 h-24 mb-6" />
-                                <p className="text-xl font-black uppercase tracking-widest">Awaiting Dual Input Sequence</p>
-                            </div>
-                        ) : viewMode === 'split' ? (
-                            <SplitView key="split" imageA={imageA} imageB={imageB} transform={transform} viewerRef={viewerRef} />
-                        ) : (
-                            <SideBySideView key="sideBySide" imageA={imageA} imageB={imageB} transform={transform} />
-                        )}
+                        <div 
+                            ref={viewerRef}
+                            className="flex-grow bg-base-200/20 overflow-hidden relative"
+                            style={{ cursor: transform.zoom > 1 ? (isPanning ? 'grabbing' : 'grab') : 'default' }}
+                            onWheel={handleWheel}
+                            onMouseDown={handleMouseDown}
+                            onMouseMove={handleMouseMove}
+                            onMouseUp={handleMouseUpOrLeave}
+                            onMouseLeave={handleMouseUpOrLeave}
+                        >
+                            {!imageA || !imageB ? (
+                                <div className="w-full h-full flex flex-col items-center justify-center text-center p-12 opacity-10">
+                                    <RefreshIcon className="w-24 h-24 mb-6" />
+                                    <p className="text-xl font-black uppercase tracking-widest">Awaiting Dual Input Sequence</p>
+                                </div>
+                            ) : viewMode === 'split' ? (
+                                <SplitView key="split" imageA={imageA} imageB={imageB} transform={transform} viewerRef={viewerRef} />
+                            ) : (
+                                <SideBySideView key="sideBySide" imageA={imageA} imageB={imageB} transform={transform} />
+                            )}
+                        </div>
                     </div>
+                    {/* Manual Corner Accents */}
+                    <div className="absolute -top-[1px] -left-[1px] w-3 h-3 border-t border-l border-primary/15 z-20 pointer-events-none" />
+                    <div className="absolute -top-[1px] -right-[1px] w-3 h-3 border-t border-r border-primary/15 z-20 pointer-events-none" />
+                    <div className="absolute -bottom-[1px] -left-[1px] w-3 h-3 border-b border-l border-primary/15 z-20 pointer-events-none" />
+                    <div className="absolute -bottom-[1px] -right-[1px] w-3 h-3 border-b border-r border-primary/15 z-20 pointer-events-none" />
                 </main>
             </div>
 

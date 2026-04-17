@@ -49,7 +49,7 @@ const ImageLayer: React.FC<{ url: string; className?: string; depth?: number; on
             {isEditable && onRemove && (
                 <button 
                     onClick={(e) => { e.stopPropagation(); onRemove(); }}
-                    className="absolute top-4 right-4 btn btn-xs btn-square btn-error opacity-0 group-hover:opacity-100 transition-opacity"
+                    className="absolute top-4 right-4 form-btn h-8 w-8 text-error opacity-0 group-hover:opacity-100 transition-opacity"
                 >
                     <DeleteIcon className="w-3 h-3" />
                 </button>
@@ -154,12 +154,14 @@ const LayeredCheatsheetDetail: React.FC<LayeredCheatsheetDetailProps> = ({
     tl.to(containerRef.current, { opacity: 0 }, 0.4);
   };
 
+  const scrollRef = useRef<HTMLDivElement>(null);
+
   if (!item) return null;
 
   const mainImage = item.imageUrls[0] || "";
 
   return (
-    <div ref={containerRef} className="absolute inset-0 z-[200] bg-base-100 flex flex-col overflow-hidden rounded-none">
+    <div ref={containerRef} className="absolute inset-0 z-[200] flex flex-col overflow-hidden">
         {/* Background Layer */}
         <div ref={bgRef} className="absolute inset-0 z-0">
             {mainImage && (
@@ -186,7 +188,7 @@ const LayeredCheatsheetDetail: React.FC<LayeredCheatsheetDetailProps> = ({
         </header>
 
         {/* Main Content */}
-        <div className="relative z-10 flex-grow flex flex-col lg:flex-row items-center px-8 lg:px-24 gap-8 lg:gap-24 overflow-y-auto lg:overflow-hidden py-12 lg:py-0">
+        <div ref={scrollRef} className="relative z-10 flex-grow flex flex-col lg:flex-row items-center px-8 lg:px-24 gap-8 lg:gap-24 overflow-y-auto lg:overflow-hidden py-12 lg:py-0">
             {/* Left Side: Text Content */}
             <div ref={contentRef} className="w-full lg:flex-1 max-w-2xl space-y-8 lg:space-y-12">
                 <div className="space-y-4">
@@ -240,7 +242,7 @@ const LayeredCheatsheetDetail: React.FC<LayeredCheatsheetDetailProps> = ({
                     <div className="flex flex-wrap items-center gap-4 lg:gap-6">
                         <button 
                             onClick={() => { onInject(item); handleClose(); }}
-                            className="btn btn-primary px-8 rounded-none font-black text-[10px] tracking-[0.2em] h-14 min-w-[160px]"
+                            className="form-btn form-btn-primary px-8 h-14 min-w-[160px]"
                         >
                             <SparklesIcon className="w-5 h-5 mr-3" />
                             INJECT_DATA
@@ -248,7 +250,7 @@ const LayeredCheatsheetDetail: React.FC<LayeredCheatsheetDetailProps> = ({
                         <button 
                             onClick={handleManualSync}
                             disabled={isSyncingDescription}
-                            className="btn btn-ghost border border-base-content/10 rounded-none font-black text-[10px] tracking-[0.2em] h-14 min-w-[160px]"
+                            className="form-btn px-8 h-14 min-w-[160px]"
                         >
                             {isSyncingDescription ? <LoadingSpinner size={16} /> : <RefreshIcon className="w-4 h-4 mr-3" />}
                             AI_SYNC
@@ -296,14 +298,14 @@ const LayeredCheatsheetDetail: React.FC<LayeredCheatsheetDetailProps> = ({
                     <div className="absolute bottom-0 right-0 flex gap-2">
                         <button 
                             onClick={() => setIsEditingImages(!isEditingImages)}
-                            className={`btn btn-xs rounded-none font-black tracking-widest ${isEditingImages ? 'btn-primary' : 'btn-ghost border border-base-content/10'}`}
+                            className={`form-btn h-8 px-4 ${isEditingImages ? 'form-btn-primary' : ''}`}
                         >
                             {isEditingImages ? 'EXIT_EDIT' : 'EDIT_ARTIFACTS'}
                         </button>
                         {isEditingImages && (
                             <button 
                                 onClick={() => fileInputRef.current?.click()}
-                                className="btn btn-xs btn-primary rounded-none font-black tracking-widest"
+                                className="form-btn form-btn-primary h-8 px-4"
                             >
                                 <UploadIcon className="w-3 h-3 mr-2" />
                                 ADD_SAMPLE
@@ -322,7 +324,7 @@ const LayeredCheatsheetDetail: React.FC<LayeredCheatsheetDetailProps> = ({
                 <div className="flex items-center gap-4">
                     <button 
                         onClick={() => handleNavigate('prev')}
-                        className="w-14 h-14 border border-base-content/10 flex items-center justify-center hover:bg-primary hover:text-primary-content hover:border-primary transition-all"
+                        className="form-btn h-14 w-14"
                     >
                         <ChevronLeftIcon className="w-6 h-6" />
                     </button>
@@ -333,7 +335,7 @@ const LayeredCheatsheetDetail: React.FC<LayeredCheatsheetDetailProps> = ({
                     </div>
                     <button 
                         onClick={() => handleNavigate('next')}
-                        className="w-14 h-14 border border-base-content/10 flex items-center justify-center hover:bg-primary hover:text-primary-content hover:border-primary transition-all"
+                        className="form-btn h-14 w-14"
                     >
                         <ChevronRightIcon className="w-6 h-6" />
                     </button>

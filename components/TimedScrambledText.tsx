@@ -11,16 +11,19 @@ const TimedScrambledText: React.FC<{ text: string; intervalMs: number; trigger?:
         const maxIterations = 15;
         
         intervalRef.current = window.setInterval(() => {
+            iteration++;
+            
+            if (iteration >= maxIterations) {
+                if (intervalRef.current) clearInterval(intervalRef.current);
+                setDisplay(text);
+                return;
+            }
+
             setDisplay(text.split('').map((char, index) => {
                 if (char === ' ') return ' ';
                 if (Math.random() < iteration / maxIterations) return text[index];
                 return chars[Math.floor(Math.random() * chars.length)];
             }).join(''));
-            
-            iteration++;
-            if (iteration >= maxIterations) {
-                if (intervalRef.current) clearInterval(intervalRef.current);
-            }
         }, 50);
     }, [text]);
 

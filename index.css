@@ -1,63 +1,254 @@
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=Plus+Jakarta+Sans:ital,wght@0,300;0,400;0,500;0,600;0,700;0,800;1,800&family=JetBrains+Mono:wght@400;500;700;800&family=Space+Grotesk:wght@300;400;500;600;700&family=Playfair+Display:ital,wght@0,400;0,700;1,400&display=swap');
+@import url(https://db.onlinewebfonts.com/c/69dbc1186412d7831b88d8a78a360360?family=DIN+Condensed+Web);
+@import url('https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700&family=Montserrat:wght@300;400;500;600;700;800;900&family=Inter:wght@300;400;500;600;700;800;900&family=Plus+Jakarta+Sans:ital,wght@0,300;0,400;0,500;0,600;0,700;0,800;1,800&family=JetBrains+Mono:wght@400;500;700;800&family=Space+Grotesk:wght@300;400;500;600;700&family=Playfair+Display:ital,wght@0,400;0,700;1,400&display=swap');
 
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
-@layer base {
-  html {
-    font-family: 'Inter', 'Plus Jakarta Sans', sans-serif;
-    letter-spacing: -0.01em;
-    scroll-behavior: smooth;
-    height: 100%;
+html {
+  font-family: 'Nunito', 'Inter', sans-serif;
+  letter-spacing: -0.01em;
+  scroll-behavior: smooth;
+  height: 100%;
+}
+
+body {
+  height: 100%;
+  margin: 0;
+  padding: 0;
+  background-color: oklch(var(--b1));
+}
+
+/* Custom Scrollbar Styles */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: oklch(var(--bc) / 0.2);
+  border-radius: 4px;
+  border: 2px solid transparent;
+  background-clip: padding-box;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: oklch(var(--bc) / 0.4);
+  background-clip: padding-box;
+}
+
+* {
+  scrollbar-width: thin;
+  scrollbar-color: oklch(var(--bc) / 0.2) transparent;
+}
+
+/* Firefox Support */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: oklch(var(--bc) / 0.1) transparent;
+}
+
+#root {
+  height: 100%;
+}
+
+a, button, select, [role="button"], .cursor-pointer, .tab {
+  /* cursor: none !important; */
+}
+
+input, textarea, select, .form-input, .form-select, .form-textarea, .form-search {
+  font-family: 'Nunito', sans-serif !important;
+}
+
+h1, h2, h3, h4, h5, h6, .font-display, .btn, .btn-sm, .btn-xs, .btn-lg, .panel-header {
+  font-family: 'DIN Condensed Web', sans-serif !important;
+}
+
+  button:not(.tab):not(.btn-sm):not(.dropdown):not(.font-normal) {
+    font-family: 'DIN Condensed Web', sans-serif;
+    font-weight: 600;
+    font-size: 12px;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    position: relative;
     overflow: hidden;
+    transition: all 0.3s ease;
+    z-index: 1;
   }
 
-  body {
-    height: 100%;
-    margin: 0;
-    padding: 0;
-    background-color: oklch(var(--b1));
-    overflow: hidden;
-  }
-
-  #root {
-    height: 100%;
-  }
-
-  /* Interactive elements hide system cursor to show custom one */
-  a, button, select, [role="button"], .cursor-pointer, .tab {
-    /* cursor: none !important; */
-  }
-
-  /* REVEAL system beam cursor for text entries */
-  input[type="text"], 
-  input[type="password"], 
-  input[type="number"], 
-  input[type="search"], 
-  input[type="email"], 
-  input[type="url"], 
-  input[type="tel"], 
-  textarea {
-    cursor: text !important;
-  }
-
-  h1, h2, h3, h4, h5, h6, .font-display {
-    font-family: 'Inter', 'Plus Jakarta Sans', sans-serif;
-    font-weight: 700;
-    letter-spacing: -0.02em;
-  }
-
-  button, .tab, .btn {
-    font-family: 'Inter', sans-serif;
+button {
+    font-family: 'DIN Condensed Web', sans-serif;
     font-weight: 600;
     text-transform: uppercase;
     letter-spacing: 0.05em;
   }
 
-  /* Force Inter for bold caps UI elements */
-  .uppercase, .tracking-widest, .tracking-\[0\.4em\], .font-black {
-    font-family: 'Inter', sans-serif;
+  button:active {
+    transform: scale(0.98);
+  }
+
+  /* Snake animated border effect - inspired by CodePen */
+  .btn-snake {
+    position: relative;
+    overflow: hidden;
+    transition: 0.5s;
+    border: 1px solid oklch(var(--bc) / 0.05) !important;
+    letter-spacing: 0.1em;
+  }
+
+  .btn-snake:hover {
+    background: oklch(var(--p) / 0.1);
+    color: oklch(var(--p));
+    border-color: transparent !important;
+  }
+
+  .btn-snake span {
+    position: absolute;
+    display: block;
+    pointer-events: none;
+  }
+
+  .btn-snake span:nth-child(1) {
+    top: 0;
+    left: -100%;
+    width: 100%;
+    height: 2px;
+    background: linear-gradient(90deg, transparent, oklch(var(--p)));
+  }
+
+  .btn-snake:hover span:nth-child(1) {
+    left: 100%;
+    transition: 0.5s;
+  }
+
+  .btn-snake span:nth-child(2) {
+    top: -100%;
+    right: 0;
+    width: 2px;
+    height: 100%;
+    background: linear-gradient(180deg, transparent, oklch(var(--p)));
+  }
+
+  .btn-snake:hover span:nth-child(2) {
+    top: 100%;
+    transition: 0.5s;
+    transition-delay: 0.125s;
+  }
+
+  .btn-snake span:nth-child(3) {
+    bottom: 0;
+    right: -100%;
+    width: 100%;
+    height: 2px;
+    background: linear-gradient(270deg, transparent, oklch(var(--p)));
+  }
+
+  .btn-snake:hover span:nth-child(3) {
+    right: 100%;
+    transition: 0.5s;
+    transition-delay: 0.25s;
+  }
+
+  .btn-snake span:nth-child(4) {
+    bottom: -100%;
+    left: 0;
+    width: 2px;
+    height: 100%;
+    background: linear-gradient(360deg, transparent, oklch(var(--p)));
+  }
+
+  .btn-snake:hover span:nth-child(4) {
+    bottom: 100%;
+    transition: 0.5s;
+    transition-delay: 0.375s;
+  }
+
+  /* Primary version of snake animation */
+  .btn-snake-primary {
+    position: relative;
+    overflow: hidden;
+    transition: 0.5s;
+    background-color: oklch(var(--p));
+    color: oklch(var(--pc));
+    border: none !important;
+  }
+
+  .btn-snake-primary:hover {
+    background: oklch(var(--p) / 0.8);
+  }
+
+  .btn-snake-primary span {
+    position: absolute;
+    display: block;
+    pointer-events: none;
+  }
+
+  .btn-snake-primary span:nth-child(1) {
+    top: 0;
+    left: -100%;
+    width: 100%;
+    height: 2px;
+    background: linear-gradient(90deg, transparent, oklch(var(--pc)));
+  }
+
+  .btn-snake-primary:hover span:nth-child(1) {
+    left: 100%;
+    transition: 0.5s;
+  }
+
+  .btn-snake-primary span:nth-child(2) {
+    top: -100%;
+    right: 0;
+    width: 2px;
+    height: 100%;
+    background: linear-gradient(180deg, transparent, oklch(var(--pc)));
+  }
+
+  .btn-snake-primary:hover span:nth-child(2) {
+    top: 100%;
+    transition: 0.5s;
+    transition-delay: 0.125s;
+  }
+
+  .btn-snake-primary span:nth-child(3) {
+    bottom: 0;
+    right: -100%;
+    width: 100%;
+    height: 2px;
+    background: linear-gradient(270deg, transparent, oklch(var(--pc)));
+  }
+
+  .btn-snake-primary:hover span:nth-child(3) {
+    right: 100%;
+    transition: 0.5s;
+    transition-delay: 0.25s;
+  }
+
+  .btn-snake-primary span:nth-child(4) {
+    bottom: -100%;
+    left: 0;
+    width: 2px;
+    height: 100%;
+    background: linear-gradient(360deg, transparent, oklch(var(--pc)));
+  }
+
+  .btn-snake-primary:hover span:nth-child(4) {
+    bottom: 100%;
+    transition: 0.5s;
+    transition-delay: 0.375s;
+  }
+
+  /* Force DIN Condensed Web for bold caps UI elements */
+  .uppercase, .tracking-widest, .tracking-\[0\.4em\], .font-black, .font-display {
+    font-family: 'DIN Condensed Web', sans-serif;
+  }
+
+  .font-nunito {
+    font-family: 'Nunito', sans-serif !important;
   }
 
   /* Logo Font Preservation */
@@ -65,7 +256,200 @@
     font-family: 'Space Grotesk', sans-serif !important;
     letter-spacing: -0.05em !important;
   }
-}
+
+  /* --- STANDARDIZED FORM COMPONENTS --- */
+  .form-input, .form-select, .form-textarea {
+    height: 2.5rem; /* 40px */
+    padding-left: 1rem;
+    padding-right: 1rem;
+    background-color: oklch(var(--b2) / 0.5);
+    border: 1px solid oklch(var(--bc) / 0.1);
+    border-radius: 0;
+    font-family: 'Nunito', sans-serif;
+    font-size: 13px;
+    font-weight: 400;
+    transition: all 0.2s ease;
+    color: oklch(var(--bc));
+  }
+
+  .form-input.input-lg, .form-select.input-lg {
+    height: 3.5rem; /* 56px - matches h-14 buttons */
+  }
+
+  .form-input:focus, .form-select:focus, .form-textarea:focus {
+    outline: none;
+    border-color: oklch(var(--p) / 0.5);
+    background-color: oklch(var(--b2));
+    box-shadow: 0 0 0 1px oklch(var(--p) / 0.2);
+  }
+
+  .form-textarea {
+    height: auto;
+    min-height: 100px;
+    padding-top: 0.75rem;
+    padding-bottom: 0.75rem;
+  }
+
+  .form-btn {
+    height: 2.5rem;
+    padding-left: 1.5rem;
+    padding-right: 1.5rem;
+    background-color: oklch(var(--b2));
+    border: 1px solid oklch(var(--bc) / 0.1);
+    border-radius: 0;
+    font-family: 'DIN Condensed Web', sans-serif;
+    font-size: 11px;
+    font-weight: 900;
+    text-transform: uppercase;
+    letter-spacing: 0.15em;
+    transition: all 0.2s cubic-bezier(0.23, 1, 0.32, 1);
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+    color: oklch(var(--bc));
+  }
+
+  .form-btn:hover:not(:disabled) {
+    background-color: oklch(var(--b3));
+    border-color: oklch(var(--bc) / 0.2);
+  }
+
+  .form-btn:disabled {
+    opacity: 0.3;
+    cursor: not-allowed;
+  }
+
+  .form-btn-primary {
+    background-color: oklch(var(--p));
+    color: oklch(var(--pc));
+    border-color: transparent;
+  }
+
+  .form-btn-primary:hover:not(:disabled) {
+    background-color: oklch(var(--p) / 0.8);
+  }
+
+  /* Checkbox Group as Tabs */
+  .form-tab-group {
+    display: flex;
+    background-color: oklch(var(--b2) / 0.5);
+    border: 1px solid oklch(var(--bc) / 0.1);
+    padding: 2px;
+    width: 100%;
+  }
+
+  .form-tab-item {
+    flex: 1;
+    height: 2.25rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-family: 'Nunito', sans-serif;
+    font-size: 12px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    border: none;
+    background: transparent;
+    color: oklch(var(--bc) / 0.4);
+    text-align: center;
+  }
+
+  .form-tab-item:hover:not(.active) {
+    color: oklch(var(--bc) / 0.8);
+    background-color: oklch(var(--bc) / 0.05);
+  }
+
+  .form-tab-item.active {
+    background-color: oklch(var(--p));
+    color: oklch(var(--pc));
+  }
+
+  .form-btn:hover {
+    background-color: oklch(var(--p));
+    color: oklch(var(--pc));
+    border-color: oklch(var(--p));
+  }
+
+  .form-btn:active {
+    transform: scale(0.98);
+  }
+
+  .form-btn:disabled {
+    opacity: 0.5;
+    pointer-events: none;
+  }
+
+  .form-btn-primary {
+    background-color: oklch(var(--p));
+    color: oklch(var(--pc));
+    border-color: oklch(var(--p));
+  }
+
+  .form-btn-primary:hover {
+    background-color: oklch(var(--p) / 0.8);
+  }
+
+  /* Refiner Modifiers Minimal Clear Buttons */
+  .modifiers-tabs-container .autocomplete-clear-btn {
+    background: transparent !important;
+    border: none !important;
+    box-shadow: none !important;
+  }
+
+  /* Scoped Wildcard Tree Styles */
+  .wildcard-tree-container .wildcard-category-label,
+  .wildcard-tree-container .wildcard-folder-row {
+    font-family: 'Nunito', sans-serif !important;
+  }
+
+  .wildcard-tree-container .wildcard-tag-btn {
+    font-family: 'Nunito', sans-serif !important;
+    padding-top: 0 !important;
+    padding-bottom: 0 !important;
+    min-height: 0 !important;
+    height: auto !important;
+    border-radius: 2px !important;
+  }
+
+  /* Tab-style Checkbox/Radio Group */
+  .tab-group {
+    display: flex;
+    background-color: oklch(var(--b3) / 0.3);
+    padding: 2px;
+    border: 1px solid oklch(var(--bc) / 0.05);
+    width: fit-content;
+  }
+
+  .tab-item {
+    height: 2rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding-left: 1rem;
+    padding-right: 1rem;
+    font-family: 'Nunito', sans-serif;
+    font-size: 12px;
+    font-weight: 600;
+    transition: all 0.2s ease;
+    cursor: pointer;
+    user-select: none;
+    border: 1px solid transparent;
+    color: oklch(var(--bc) / 0.4);
+  }
+
+  .tab-item:hover {
+    color: oklch(var(--bc));
+  }
+
+  .tab-item-active {
+    background-color: oklch(var(--b1));
+    color: oklch(var(--p));
+    border-color: oklch(var(--bc) / 0.1);
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+  }
 
 /* --- DICH THEME (FUTURISTIC BRUTALISM) --- */
 [data-theme='dich'] body {
@@ -76,6 +460,13 @@
     linear-gradient(90deg, rgba(255, 255, 255, 0.02) 1px, transparent 1px);
   background-size: 40px 40px;
   background-attachment: fixed;
+}
+
+[data-theme='dich'] *:not(.cursor-inner),
+[data-theme='pipboy'] *:not(.cursor-inner),
+[data-theme='explorer'] *:not(.cursor-inner),
+[data-theme='prompt'] *:not(.cursor-inner) {
+    border-radius: 0 !important;
 }
 
 [data-theme='dich'] .corner-frame {
@@ -117,7 +508,6 @@
     position: relative;
     overflow: hidden;
     transition: all 0.3s cubic-bezier(0.23, 1, 0.32, 1);
-    border-radius: 0 !important;
 }
 
 [data-theme='dich'] .btn-primary:hover {
@@ -377,30 +767,6 @@
     --easing-timing: 0.8s;
   }
 
-  .no-scrollbar {
-    -ms-overflow-style: none;  /* IE and Edge */
-    scrollbar-width: none;  /* Firefox */
-  }
-  .no-scrollbar::-webkit-scrollbar {
-    display: none; /* Chrome, Safari and Opera */
-  }
-
-  .custom-scrollbar::-webkit-scrollbar {
-    width: 6px;
-    height: 6px;
-  }
-  .custom-scrollbar::-webkit-scrollbar-track {
-    background: transparent;
-  }
-  .custom-scrollbar::-webkit-scrollbar-thumb {
-    background: oklch(var(--bc) / 0.2);
-    border-radius: 0px;
-    transition: background 0.2s ease;
-  }
-  .custom-scrollbar::-webkit-scrollbar-thumb:hover {
-    background: oklch(var(--p) / 0.6);
-  }
-
   @keyframes marquee {
     0% { transform: translateX(0); }
     100% { transform: translateX(-100%); }
@@ -451,7 +817,7 @@
 
   .corner-frame {
     position: relative;
-    border: 1px solid transparent !important;
+    border: 1px solid oklch(var(--bc) / 0.15) !important;
   }
 
   .corner-frame::before {
@@ -494,7 +860,7 @@
     width: 100vw;
     background-color: oklch(var(--b1)); 
     color: oklch(var(--bc));
-    font-family: 'Inter', sans-serif;
+    font-family: 'DIN Condensed Web', sans-serif;
     transition: background-color 0.3s ease;
     position: fixed;
     top: 0;

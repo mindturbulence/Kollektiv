@@ -1,16 +1,9 @@
 import React, { useState, useEffect, useCallback, useRef, useLayoutEffect } from 'react';
 import { gsap } from 'gsap';
-import { useSettings } from '../contexts/SettingsContext';
-import { dissectPrompt } from '../services/llmService';
-import type { SavedPrompt, PromptCategory } from '../types';
-import { loadPromptCategories } from '../utils/promptStorage';
+import type { SavedPrompt } from '../types';
 import {
-  ChevronLeftIcon, ChevronRightIcon, CloseIcon, RefreshIcon
+  ChevronLeftIcon, ChevronRightIcon, CloseIcon
 } from './icons';
-import LoadingSpinner from './LoadingSpinner';
-import PromptEditorModal from './PromptEditorModal';
-import PromptFormulaPanel from './PromptFormulaPanel';
-import PromptRefinePanel from './PromptRefinePanel';
 
 interface PromptDetailViewProps {
   prompts: SavedPrompt[];
@@ -19,45 +12,57 @@ interface PromptDetailViewProps {
   onNavigate: (index: number) => void;
   onDelete: (prompt: SavedPrompt) => void;
   onUpdate: (id: string, updates: Partial<Omit<SavedPrompt, 'id' | 'createdAt'>>) => void;
-  onSendToEnhancer: (text: string) => void;
   showGlobalFeedback: (message: string) => void;
   onClip: (prompt: SavedPrompt) => void;
-  onClipString?: (text: string, title: string) => void;
 }
 
-const PromptComponentsDisplay: React.FC<{
-  components: { [key: string]: string } | null;
-  isLoading: boolean;
-  error: string | null;
-  onRefresh: () => void;
-  hasPrompt: boolean;
-}> = ({ components, isLoading, error, onRefresh, hasPrompt }) => {
+const InfoRow: React.FC<{ label: string, children: React.ReactNode, action?: React.ReactNode }> = ({ label, children, action }) => (
+    <div className="space-y-2 group/info">
+        <div className="flex items-center justify-between">
+            <span className="text-[12px] font-black uppercase tracking-[0.3em] text-white/30">{label}</span>
+            {action && <div className="opacity-0 group-hover/info:opacity-100 transition-opacity">{action}</div>}
+        </div>
+        <div className="text-sm font-medium leading-relaxed text-white/80">
+            {children}
+        </div>
+    </div>
+);
+
+const PromptTemplatePanel: React.FC<{
+  prompt: SavedPrompt;
+}> = ({ prompt }) => {
     return (
-        <div className="flex flex-col h-full overflow-hidden">
-            <header className="p-4 flex justify-between items-center">
-                <h3 className="text-[10px] font-black uppercase tracking-[0.3em] text-primary">Prompt Parts</h3>
-                <button onClick={onRefresh} disabled={isLoading || !hasPrompt} className="btn btn-xs btn-ghost opacity-40 hover:opacity-100">
-                    <RefreshIcon className={`w-4 h-4 ${isLoading ? 'animate-spin' : ''}`} />
-                </button>
-            </header>
-            <div className="flex-grow p-5 overflow-y-auto custom-scrollbar">
-                {isLoading ? <div className="py-12"><LoadingSpinner/></div> :
-                 error ? <div className="alert alert-error rounded-none text-xs"><span>{error}</span></div> :
-                 components && Object.keys(components).length > 0 ? (
-                    <div className="space-y-6">
-                        {Object.entries(components).map(([key, value]) => (
-                            <div key={key} className="animate-fade-in">
-                                <h4 className="text-[9px] font-black uppercase tracking-widest text-base-content/20 mb-1 pb-0.5">{key}</h4>
-                                <p className="text-sm font-medium leading-relaxed text-base-content/80">{String(value)}</p>
-                            </div>
-                        ))}
+        <div className="space-y-8 animate-fade-in">
+            <InfoRow label="GENRE / STYLE">
+                <span className="text-primary font-black uppercase tracking-widest text-[11px] px-2 py-0.5 bg-primary/10 border border-primary/20">
+                    {prompt.tags?.find(t => t.toLowerCase() === 'style') || 'UNSPECIFIED'}
+                </span>
+            </InfoRow>
+
+            <InfoRow label="SUBJECT COMPOSITION">
+                <p className="text-white/70 italic leading-relaxed">
+                    {prompt.text.split(',').slice(0, 3).join(', ')}...
+                </p>
+            </InfoRow>
+
+            <InfoRow label="REGISTRY FOLDER">
+                <p className="text-white/60 font-black tracking-widest uppercase text-[11px]">
+                    /PROMPTS/{prompt.categoryId || 'ROOT'}
+                </p>
+            </InfoRow>
+
+            <InfoRow label="ARCHIVE DATA">
+                <div className="grid grid-cols-2 gap-4">
+                    <div>
+                        <span className="block text-[9px] font-black text-white/20 uppercase mb-1">Created At</span>
+                        <span className="text-[11px] font-mono whitespace-nowrap">{new Date(prompt.createdAt).toLocaleDateString()}</span>
                     </div>
-                 ) : (
-                    <div className="py-24 text-center text-[10px] font-black uppercase tracking-[0.2em] text-base-content/20">
-                        { components ? "No parts found." : "Run analysis to see prompt parts." }
+                    <div>
+                        <span className="block text-[9px] font-black text-white/20 uppercase mb-1">Word Count</span>
+                        <span className="text-[11px] font-mono">{prompt.text.split(' ').length} WORDS</span>
                     </div>
-                 )}
-            </div>
+                </div>
+            </InfoRow>
         </div>
     );
 };
@@ -70,58 +75,29 @@ const PromptDetailView: React.FC<PromptDetailViewProps> = ({
   onDelete,
   onUpdate,
   showGlobalFeedback,
-  onClip,
-  onClipString
+  onClip
 }) => {
-  const { settings } = useSettings();
   const prompt = prompts[currentIndex] || null;
-  const [isEditorModalOpen, setIsEditorModalOpen] = useState(false);
   const [editedText, setEditedText] = useState(prompt ? prompt.text : '');
-  const [categories, setCategories] = useState<PromptCategory[]>([]);
   const [copied, setCopied] = useState(false);
-  const [isRefinePanelCollapsed, setIsRefinePanelCollapsed] = useState(true);
-  const [isFormulaPanelCollapsed, setIsFormulaPanelCollapsed] = useState(true);
 
   const overlayRef = useRef<HTMLDivElement>(null);
   const modalRef = useRef<HTMLDivElement>(null);
   const leftPanelRef = useRef<HTMLDivElement>(null);
   const rightPanelRef = useRef<HTMLDivElement>(null);
   const headerRef = useRef<HTMLElement>(null);
+  const infoPanelRef = useRef<HTMLDivElement>(null);
   const timelineRef = useRef<gsap.core.Timeline | null>(null);
 
-  const [components, setComponents] = useState<{ [key: string]: string } | null>(null);
-  const [isLoadingParts, setIsLoadingParts] = useState(false);
-  const [errorParts, setErrorParts] = useState<string | null>(null);
-
-  const analyzePromptText = useCallback(async (text: string) => {
-      if (!text?.trim()) { setComponents(null); return; }
-      setIsLoadingParts(true);
-      setErrorParts(null);
-      try {
-          const result = await dissectPrompt(text, settings);
-          setComponents(result || {});
-      } catch (e: any) {
-          setErrorParts(e.message || "Analysis failed.");
-          setComponents(null);
-      } finally {
-          setIsLoadingParts(false);
-      }
-  }, [settings]);
-  
-  useEffect(() => { loadPromptCategories().then(setCategories); }, []);
-  
   useEffect(() => {
     if (prompt) {
         setEditedText(prompt.text);
         setCopied(false);
-        setIsRefinePanelCollapsed(true);
-        setIsFormulaPanelCollapsed(true);
-        setComponents(null);
     }
   }, [prompt]);
 
   useLayoutEffect(() => {
-    if (!overlayRef.current || !modalRef.current || !leftPanelRef.current || !rightPanelRef.current || !headerRef.current) return;
+    if (!overlayRef.current || !modalRef.current || !leftPanelRef.current || !rightPanelRef.current || !headerRef.current || !infoPanelRef.current) return;
 
     const ctx = gsap.context(() => {
         const tl = gsap.timeline({ defaults: { ease: "expo.out", duration: 1.4 } });
@@ -130,37 +106,44 @@ const PromptDetailView: React.FC<PromptDetailViewProps> = ({
         // Initial state
         gsap.set(overlayRef.current, { opacity: 0 });
         gsap.set(modalRef.current, { 
-            scale: 0, 
-            transformOrigin: "bottom right",
-            opacity: 0
+            scale: 0.95, 
+            transformOrigin: "center center",
+            opacity: 0,
+            y: 10
         });
-        gsap.set(leftPanelRef.current, { x: -150, opacity: 0 });
-        gsap.set(rightPanelRef.current, { x: 150, opacity: 0 });
-        gsap.set(headerRef.current, { y: -100, opacity: 0 });
+        gsap.set(leftPanelRef.current, { opacity: 0 });
+        gsap.set(rightPanelRef.current, { x: 40, opacity: 0 });
+        gsap.set(headerRef.current, { y: -10, opacity: 0 });
+        gsap.set(infoPanelRef.current, { opacity: 0, y: 10 });
 
         // Animation sequence
-        tl.to(overlayRef.current, { opacity: 1, duration: 0.8 })
+        tl.to(overlayRef.current, { opacity: 1, duration: 0.4 })
           .to(modalRef.current, { 
               scale: 1, 
               opacity: 1, 
-              duration: 1.2,
+              y: 0,
+              duration: 1.0,
               ease: "expo.out"
-          }, "-=0.4")
+          }, "-=0.2")
           .to(headerRef.current, { 
               y: 0, 
               opacity: 1, 
-              duration: 1.2 
+              duration: 0.5 
           }, "-=0.6")
           .to(leftPanelRef.current, { 
-              x: 0, 
               opacity: 1, 
-              duration: 1.6 
-          }, "-=0.8")
+              duration: 1.0 
+          }, "-=0.6")
           .to(rightPanelRef.current, { 
               x: 0, 
               opacity: 1, 
-              duration: 1.6 
-          }, "-=1.1");
+              duration: 0.8 
+          }, "-=0.7")
+          .to(infoPanelRef.current, {
+              opacity: 1,
+              y: 0,
+              duration: 0.6
+          }, "-=0.5");
     });
 
     return () => ctx.revert();
@@ -203,76 +186,75 @@ const PromptDetailView: React.FC<PromptDetailViewProps> = ({
   if (!prompt) return null;
 
   return (
-    <div ref={overlayRef} className="absolute inset-0 z-40 bg-black/40 backdrop-blur-xl flex items-center justify-center p-4 lg:p-8 overflow-hidden" onClick={handleClose}>
-        <div ref={modalRef} className="w-full h-full bg-base-100/40 flex flex-col overflow-hidden relative" onClick={e => e.stopPropagation()}>
-            <header ref={headerRef} className="flex-shrink-0 p-6 lg:px-8 lg:py-6 flex flex-wrap justify-between items-end gap-6">
-                <div className="min-w-0">
-                    <span className="text-[10px] font-black uppercase tracking-[0.4em] text-primary mb-1 block">ITEM ID : {prompt.id.slice(-8)}</span>
-                    <h2 className="text-xl lg:text-2xl font-black tracking-tighter text-base-content leading-none truncate max-w-2xl uppercase">
-                        {prompt.title || 'Untitled Prompt'}
-                    </h2>
-                </div>
-                <div className="flex items-center gap-4">
-                    <div className="join">
-                        <button onClick={() => handleNavigation('prev')} className="btn btn-sm btn-ghost join-item"><ChevronLeftIcon className="w-4 h-4" /></button>
-                        <span className="join-item flex items-center px-6 font-mono text-[10px] font-black text-base-content/40 uppercase tracking-widest">{currentIndex + 1} / {prompts.length}</span>
-                        <button onClick={() => handleNavigation('next')} className="btn btn-sm btn-ghost join-item"><ChevronRightIcon className="w-4 h-4" /></button>
-                    </div>
-                    <button onClick={handleClose} className="btn btn-sm btn-ghost btn-square opacity-40 hover:opacity-100 ml-4">
-                        <CloseIcon className="w-6 h-6"/>
-                    </button>
-                </div>
-            </header>
-
-            <div className="flex-grow flex flex-col lg:flex-row overflow-hidden p-4 gap-4">
-                <main ref={leftPanelRef} className="flex-1 flex flex-col overflow-hidden">
-                    <div className={`flex flex-col overflow-hidden transition-all duration-500 ease-in-out ${!isRefinePanelCollapsed ? 'h-1/2' : 'flex-grow'}`}>
-                        <div className="flex-grow p-5 relative overflow-hidden flex flex-col">
-                            <span className="text-[9px] font-black uppercase tracking-widest text-primary/40 mb-3 flex items-center gap-3">
-                                <span className="w-1.5 h-1.5 rounded-none bg-primary animate-pulse"></span> Prompt Text
-                            </span>
+    <div ref={overlayRef} className="absolute inset-0 z-40 bg-transparent flex items-center justify-center p-4 lg:p-8 overflow-hidden" onClick={handleClose}>
+        <div ref={modalRef} className="w-full h-full bg-transparent flex flex-col overflow-visible relative p-[3px] corner-frame" onClick={e => e.stopPropagation()}>
+            <div className="w-full h-full bg-base-100/40 backdrop-blur-xl flex flex-col overflow-hidden relative z-10 border border-white/5">
+                <div className="flex-grow flex flex-col lg:flex-row overflow-hidden p-0 gap-0">
+                    <main ref={leftPanelRef} className="flex-1 flex flex-col overflow-hidden bg-transparent border-r border-white/5">
+                        <div className="flex-grow p-10 relative overflow-hidden flex flex-col bg-transparent">
                             <textarea 
                                 value={editedText}
                                 onChange={(e) => setEditedText(e.target.value)}
-                                className="textarea flex-grow w-full bg-transparent text-sm font-medium leading-relaxed resize-none focus:outline-none p-0 custom-scrollbar border-none shadow-none"
+                                className="form-textarea flex-grow w-full bg-transparent text-lg font-medium leading-relaxed resize-none focus:outline-none p-0 border-none shadow-none text-white/90"
                                 placeholder="Type prompt here..."
                             ></textarea>
                         </div>
-                    </div>
-                    <div className={`overflow-hidden transition-all duration-500 ease-in-out ${!isRefinePanelCollapsed ? 'h-1/2' : 'h-0 opacity-0'}`}>
-                        <PromptRefinePanel 
-                            promptText={editedText} 
-                            onApplyRefinement={(res) => { setEditedText(res); setIsRefinePanelCollapsed(true); showGlobalFeedback("Applied refinement."); }}
-                            isCollapsed={isRefinePanelCollapsed}
-                            setIsCollapsed={setIsRefinePanelCollapsed}
-                            onClip={onClipString ? (res) => onClipString(res, `Refinement: ${prompt.title}`) : undefined}
-                        />
-                    </div>
-                    <footer className="p-4 flex flex-wrap justify-between items-center gap-4">
-                        <div className="flex items-center gap-1">
-                            <button onClick={() => setIsEditorModalOpen(true)} className="btn btn-sm btn-ghost rounded-none uppercase font-black text-[10px] tracking-widest px-4 hover:bg-base-300">Edit</button>
-                            <button onClick={() => setIsRefinePanelCollapsed(!isRefinePanelCollapsed)} className={`btn btn-sm rounded-none uppercase font-black text-[10px] tracking-widest px-4 ${!isRefinePanelCollapsed ? 'btn-primary' : 'btn-ghost text-primary hover:bg-primary/10'}`}>Refine</button>
-                            <button onClick={() => onClip(prompt)} className="btn btn-sm btn-ghost rounded-none uppercase font-black text-[10px] tracking-widest px-4 hover:bg-base-300">Clip</button>
-                            <button onClick={() => onDelete(prompt)} className="btn btn-sm btn-ghost rounded-none uppercase font-black text-[10px] tracking-widest px-4 text-error/40 hover:text-error">Delete</button>
-                        </div>
-                        <div className="flex items-center gap-3">
-                            {editedText.trim() !== prompt.text.trim() && (
-                                <button onClick={handleSaveChanges} className="btn btn-sm btn-primary rounded-none uppercase font-black text-[10px] tracking-widest px-8">Save Changes</button>
-                            )}
-                            <button onClick={() => handleCopyToClipboard(editedText)} className="btn btn-sm btn-ghost rounded-none uppercase font-black text-[10px] tracking-widest px-8 hover:bg-primary/10">
+                        
+                        <footer className="h-14 p-1.5 flex gap-1.5 bg-black/20 backdrop-blur-md items-stretch">
+                            <button onClick={() => onClip(prompt)} className="btn btn-sm btn-ghost h-full flex-1 rounded-none font-normal text-[13px] tracking-wider uppercase btn-snake font-display">
+                                <span/><span/><span/><span/>
+                                Clip
+                            </button>
+                            <button onClick={() => onDelete(prompt)} className="btn btn-sm btn-ghost h-full flex-1 rounded-none font-normal text-[13px] tracking-wider uppercase btn-snake text-error/60 hover:text-error font-display">
+                                <span/><span/><span/><span/>
+                                Delete
+                            </button>
+                            <button onClick={() => handleCopyToClipboard(editedText)} className="btn btn-sm btn-ghost h-full flex-1 rounded-none font-normal text-[13px] tracking-wider uppercase btn-snake font-display">
+                                <span/><span/><span/><span/>
                                 {copied ? 'Copied' : 'Copy Text'}
                             </button>
+                            <button 
+                                onClick={handleSaveChanges} 
+                                disabled={editedText.trim() === prompt.text.trim()}
+                                className={`btn btn-sm btn-ghost h-full flex-1 rounded-none font-normal text-[13px] tracking-wider uppercase btn-snake font-display ${editedText.trim() === prompt.text.trim() ? 'opacity-20 cursor-not-allowed' : 'opacity-100'}`}
+                            >
+                                <span/><span/><span/><span/>
+                                Save Changes
+                            </button>
+                        </footer>
+                    </main>
+                    <aside className="w-full lg:w-[480px] flex-shrink-0 flex flex-col overflow-hidden relative border-l border-white/5 bg-transparent">
+                        <header ref={headerRef} className="flex-shrink-0 p-6 flex flex-col gap-4 bg-white/5 backdrop-blur-md border-b border-white/10">
+                            <div className="flex items-center justify-between">
+                                <div className="form-tab-group !w-auto">
+                                    <button onClick={() => handleNavigation('prev')} className="form-tab-item px-4"><ChevronLeftIcon className="w-4 h-4" /></button>
+                                    <span className="flex items-center px-4 font-mono text-[10px] font-black text-white/40 uppercase tracking-widest border-x border-white/10">{currentIndex + 1} / {prompts.length}</span>
+                                    <button onClick={() => handleNavigation('next')} className="form-tab-item px-4"><ChevronRightIcon className="w-4 h-4" /></button>
+                                </div>
+                                <button onClick={handleClose} className="p-2 text-white/20 hover:text-white transition-all hover:scale-110">
+                                    <CloseIcon className="w-5 h-5 stroke-[2]"/>
+                                </button>
+                            </div>
+                            <div className="min-w-0">
+                                <span className="text-[10px] font-black uppercase tracking-[0.4em] text-primary mb-1.5 block">ITEM ID : {prompt.id.slice(-8)}</span>
+                                <h2 className="text-xl font-black tracking-tighter text-white leading-tight uppercase">
+                                    {prompt.title || 'Untitled Prompt'}
+                                </h2>
+                            </div>
+                        </header>
+                        <div ref={rightPanelRef} className="flex-grow flex flex-col min-h-0 overflow-hidden relative">
+                            <div ref={infoPanelRef} className="absolute inset-0 p-8 space-y-10 overflow-y-auto custom-scrollbar">
+                                <PromptTemplatePanel prompt={prompt} />
+                            </div>
                         </div>
-                    </footer>
-                </main>
-                <aside ref={rightPanelRef} className="w-full lg:w-[420px] flex-shrink-0 flex flex-col overflow-hidden">
-                    <div className="flex-grow flex flex-col min-h-0 gap-4">
-                        <PromptComponentsDisplay components={components} isLoading={isLoadingParts} error={errorParts} onRefresh={() => analyzePromptText(editedText)} hasPrompt={!!editedText} />
-                        <PromptFormulaPanel promptText={editedText} showGlobalFeedback={showGlobalFeedback} isCollapsed={isFormulaPanelCollapsed} setIsCollapsed={setIsFormulaPanelCollapsed} />
-                    </div>
-                </aside>
+                    </aside>
+                </div>
             </div>
-            <PromptEditorModal isOpen={isEditorModalOpen} onClose={() => setIsEditorModalOpen(false)} onSave={async (data) => { onUpdate(prompt.id, data); showGlobalFeedback("Details saved."); }} categories={categories} editingPrompt={prompt} />
+            {/* Manual Corner Accents */}
+            <div className="absolute -top-[1px] -left-[1px] w-3 h-3 border-t border-l border-primary/15 z-20 pointer-events-none" />
+            <div className="absolute -top-[1px] -right-[1px] w-3 h-3 border-t border-r border-primary/15 z-20 pointer-events-none" />
+            <div className="absolute -bottom-[1px] -left-[1px] w-3 h-3 border-b border-l border-primary/15 z-20 pointer-events-none" />
+            <div className="absolute -bottom-[1px] -right-[1px] w-3 h-3 border-b border-r border-primary/15 z-20 pointer-events-none" />
         </div>
     </div>
   );

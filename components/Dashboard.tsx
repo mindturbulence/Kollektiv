@@ -193,7 +193,7 @@ const Dashboard: React.FC<DashboardProps> = () => {
                 </div>
                 <div className="overflow-hidden mb-4 py-2">
                     {/* Unified branding typeface (inheriting font-black overrides from index.css) */}
-                    <h1 ref={titleRef} className="text-6xl md:text-8xl font-black tracking-tighter uppercase text-base-content flex items-center">
+                    <h1 ref={titleRef} className="text-6xl md:text-8xl font-black tracking-tighter uppercase text-base-content flex items-center font-logo">
                         <ChromaticText text="Kollektiv" />
                         <span className="text-primary italic animate-pulse">.</span>
                     </h1>

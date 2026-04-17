@@ -36,7 +36,7 @@ const DropdownMenu: React.FC<{
       <motion.button 
         initial="initial"
         whileHover="hover"
-        className="flex items-center gap-2 px-4 py-2 text-[10px] font-black tracking-[0.4em] uppercase text-base-content/60 hover:text-primary transition-colors duration-300"
+        className="flex items-center gap-2 px-4 py-2 text-[13px] font-normal tracking-[0.2em] uppercase text-base-content/60 hover:text-primary transition-colors duration-300"
       >
         <RollingText text={label} hoverClassName="text-primary" />
       </motion.button>
@@ -65,7 +65,7 @@ const DropdownMenu: React.FC<{
                   }}
                   className="flex items-center px-3 py-2 hover:bg-primary/10 text-base-content/70 hover:text-primary transition-all group text-left"
                 >
-                  <span className="text-[9px] font-black uppercase tracking-widest">
+                  <span className="text-[13px] font-normal uppercase tracking-wide">
                     {item.label}
                   </span>
                 </button>
@@ -97,6 +97,28 @@ const Header: React.FC<HeaderProps> = ({ onNavigate, isInitialized }) => {
       stagger: 0.1,
       ease: "power3.out"
     });
+
+    // Nav Scan Animation - Triggers every 2 minutes
+    const scanLine = navRef.current.querySelector('.nav-scan-line');
+    if (scanLine) {
+      gsap.to(scanLine, {
+        left: '120%',
+        opacity: 1,
+        duration: 3,
+        repeat: -1,
+        repeatDelay: 117, // 2 minutes (120s total - 3s animation)
+        delay: 30, // Start later
+        ease: "power1.inOut",
+        onRepeat: () => {
+          gsap.set(scanLine, { opacity: 1 });
+        }
+      });
+    }
+
+    return () => {
+      gsap.killTweensOf(navItems);
+      if (scanLine) gsap.killTweensOf(scanLine);
+    };
   }, [isInitialized]);
 
   const workspaceItems = [
@@ -122,11 +144,16 @@ const Header: React.FC<HeaderProps> = ({ onNavigate, isInitialized }) => {
   return (
     <header className="flex-shrink-0 flex flex-col h-12 bg-transparent z-50 relative">
       {/* Bottom row: Navigation */}
-      <div ref={navRef} className="flex justify-center items-center gap-4 py-2 relative z-50">
+      <div ref={navRef} className="flex flex-grow justify-center items-center gap-6 py-3 relative z-50">
+        {/* Horizontal System Line - Center-aligned to text */}
+        <div className="absolute top-[52%] left-0 right-0 h-px bg-base-content/5 -translate-y-1/2 z-0 pointer-events-none">
+          <div className="nav-scan-line absolute inset-y-0 left-[-20%] w-[20%] bg-gradient-to-r from-transparent via-primary/40 to-transparent opacity-0" />
+        </div>
+        
         <DropdownMenu label="Workspaces" items={workspaceItems} onNavigate={onNavigate} />
-        <div className="w-[1px] h-3 bg-base-300/20 opacity-0"></div>
+        <div className="w-[1px] h-2 bg-base-content/10"></div>
         <DropdownMenu label="Guides" items={guideItems} onNavigate={onNavigate} />
-        <div className="w-[1px] h-3 bg-base-300/20 opacity-0"></div>
+        <div className="w-[1px] h-2 bg-base-content/10"></div>
         <DropdownMenu label="Utilities" items={utilityItems} onNavigate={onNavigate} />
       </div>
     </header>

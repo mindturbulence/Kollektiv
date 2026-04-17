@@ -81,7 +81,7 @@ const SavedPromptCard: React.FC<SavedPromptCardProps> = memo(({
       });
 
   return (
-    <div className="flex flex-col group bg-transparent transition-all duration-700 hover:bg-primary/5 w-full overflow-hidden select-none h-fit border-b border-base-300/10 last:border-b-0">
+    <div className="flex flex-col group bg-transparent transition-all duration-700 hover:bg-primary/5 w-full overflow-hidden select-none h-fit">
       <div className="p-6 md:p-8 flex flex-col w-full h-full">
         {/* Header Section - Category Label and Menu Button Aligned */}
         <div className="mb-6 space-y-3">
@@ -89,12 +89,13 @@ const SavedPromptCard: React.FC<SavedPromptCardProps> = memo(({
              <span className="text-[10px] font-black uppercase tracking-[0.4em] text-primary/60">{displayCategory}</span>
              <div className="flex-grow h-px bg-base-300/50"></div>
              
-             <div className="relative flex-shrink-0" ref={menuRef}>
+              <div className="relative flex-shrink-0" ref={menuRef}>
                 <button
                   onClick={(e) => { e.stopPropagation(); setIsMenuOpen(!isMenuOpen); }}
-                  className={`btn btn-xs btn-ghost btn-square transition-all ${isMenuOpen ? 'bg-transparent' : 'opacity-20 group-hover:opacity-100'}`}
+                  className={`btn btn-xs btn-ghost h-8 w-8 rounded-none p-0 transition-all btn-snake ${isMenuOpen ? 'bg-transparent' : 'opacity-20 group-hover:opacity-100'}`}
                   title="Prompt options"
                 >
+                  <span/><span/><span/><span/>
                   <EllipsisVerticalIcon className="w-4 h-4" />
                 </button>
                 {isMenuOpen && (
@@ -155,13 +156,16 @@ const SavedPromptCard: React.FC<SavedPromptCardProps> = memo(({
             </div>
             
             <div className="flex items-center gap-1">
-                <button onClick={(e) => { e.stopPropagation(); onClip(prompt); }} title="Clip Idea" className="btn btn-sm btn-ghost btn-square text-base-content/20 hover:text-primary transition-colors">
+                <button onClick={(e) => { e.stopPropagation(); onClip(prompt); }} title="Clip Idea" className="btn btn-xs btn-ghost h-8 w-8 rounded-none p-0 text-base-content/20 hover:text-primary transition-colors btn-snake">
+                    <span/><span/><span/><span/>
                     <BookmarkIcon className="w-4 h-4" />
                 </button>
-                <button onClick={(e) => { e.stopPropagation(); onSendToEnhancer(prompt.text); }} title="Refine Prompt" className="btn btn-sm btn-ghost btn-square text-base-content/20 hover:text-primary transition-colors">
+                <button onClick={(e) => { e.stopPropagation(); onSendToEnhancer(prompt.text); }} title="Refine Prompt" className="btn btn-xs btn-ghost h-8 w-8 rounded-none p-0 text-base-content/20 hover:text-primary transition-colors btn-snake">
+                    <span/><span/><span/><span/>
                     <SparklesIcon className="w-4 h-4" />
                 </button>
-                <button onClick={handleCopy} title="Copy Text" className="btn btn-sm btn-ghost btn-square text-base-content/20 hover:text-success transition-colors">
+                <button onClick={handleCopy} title="Copy Text" className="btn btn-xs btn-ghost h-8 w-8 rounded-none p-0 text-base-content/20 hover:text-success transition-colors btn-snake">
+                    <span/><span/><span/><span/>
                     {copied ? <CheckIcon className="w-4 h-4" /> : <CopyIcon className="w-4 h-4" />}
                 </button>
             </div>

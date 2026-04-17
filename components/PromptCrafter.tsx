@@ -3,7 +3,7 @@ import JSZip from 'jszip';
 import { crafterService } from '../services/crafterService';
 import type { WildcardFile, CrafterData } from '../types';
 import LoadingSpinner from './LoadingSpinner';
-import { SparklesIcon, CloseIcon } from './icons';
+import { SparklesIcon } from './icons';
 import { fileSystemManager } from '../utils/fileUtils';
 import { PromptAnatomyPanel } from './PromptAnatomyPanel';
 import { useSettings } from '../contexts/SettingsContext';
@@ -37,6 +37,9 @@ const PromptCrafter = ({ onClip, onSendToEnhancer, onSavePresetSuccess, promptTo
     const [aiAction, setAiAction] = useState<string | null>(null);
     const [copied, setCopied] = useState(false);
     const [clipped, setClipped] = useState(false);
+
+    const wildcardScrollerRef = useRef<HTMLDivElement>(null);
+    const mainScrollerRef = useRef<HTMLDivElement>(null);
     
     // --- Template Management State ---
     const [selectedTemplate, setSelectedTemplate] = useState<WildcardFile | null>(null);
@@ -294,158 +297,162 @@ const PromptCrafter = ({ onClip, onSendToEnhancer, onSavePresetSuccess, promptTo
     if (error) return <div className="p-4 text-error">{error}</div>;
 
     return (
-        <div className="grid grid-cols-1 lg:grid-cols-12 overflow-hidden h-full p-4 gap-4">
-            <aside className="lg:col-span-3 flex flex-col overflow-hidden">
-                {header}
-                <header className="p-6 h-16 flex items-center">
-                    <h3 className="text-[10px] font-black uppercase tracking-[0.4em] text-primary">Wildcards</h3>
-                </header>
-                <div className="flex-grow p-6 overflow-y-auto custom-scrollbar">
-                    <WildcardTree categories={crafterData?.wildcardCategories || []} onWildcardClick={handleWildcardClick} />
-                </div>
-                <footer className="h-14 flex items-stretch">
-                    <button 
-                        onClick={loadData} 
-                        disabled={isImporting}
-                        className="btn btn-ghost h-full flex-1 rounded-none border-none font-black text-[10px] tracking-widest uppercase hover:bg-base-200"
-                    >
-                        {isImporting ? '...' : 'REFRESH'}
-                    </button>
-                    <button 
-                        onClick={handleImportClick} 
-                        disabled={isImporting}
-                        className="btn btn-ghost h-full flex-1 rounded-none border-none font-black text-[10px] tracking-widest uppercase hover:bg-base-200"
-                    >
-                        IMPORT
-                    </button>
-                    <input 
-                        type="file" 
-                        ref={importInputRef} 
-                        onChange={handleImportFile} 
-                        accept=".txt,.yml,.yaml,.zip" 
-                        multiple 
-                        className="hidden" 
-                    />
-                </footer>
-            </aside>
-            <main className="lg:col-span-6 flex flex-col overflow-hidden">
-                {/* Template Selection Bar - h-16 to match panel headers */}
-                <div className="h-16 flex-shrink-0 flex items-stretch">
-                  <div className="dropdown flex-grow h-full">
-                    <div className="relative h-full">
+        <div className="grid grid-cols-1 lg:grid-cols-12 overflow-hidden h-full gap-4 min-h-0">
+            <aside className="lg:col-span-3 h-full min-h-0 flex flex-col relative p-[3px] corner-frame overflow-visible">
+                <div className="flex flex-col h-full w-full overflow-hidden min-h-0 relative z-10 bg-base-100/40 backdrop-blur-xl">
+                    {header}
+                    <header className="p-6 h-16 flex items-center bg-base-100/10 backdrop-blur-md flex-shrink-0">
+                        <h3 className="text-[10px] font-black uppercase tracking-[0.4em] text-primary">Wildcards</h3>
+                    </header>
+                    <div ref={wildcardScrollerRef} className="flex-grow p-6 overflow-y-auto">
+                        <WildcardTree categories={crafterData?.wildcardCategories || []} onWildcardClick={handleWildcardClick} />
+                    </div>
+                    <footer className="h-14 flex items-stretch bg-base-100/10 backdrop-blur-md p-1.5 gap-1.5 flex-shrink-0">
+                        <button 
+                            onClick={loadData} 
+                            disabled={isImporting}
+                            className="btn btn-sm btn-ghost h-full flex-1 rounded-none font-normal text-[13px] tracking-wider uppercase btn-snake font-display"
+                        >
+                            <span/><span/><span/><span/>
+                            {isImporting ? '...' : 'REFRESH'}
+                        </button>
+                        <button 
+                            onClick={handleImportClick} 
+                            disabled={isImporting}
+                            className="btn btn-sm btn-ghost h-full flex-1 rounded-none font-normal text-[13px] tracking-wider uppercase btn-snake font-display"
+                        >
+                            <span/><span/><span/><span/>
+                            IMPORT
+                        </button>
                         <input 
-                          type="text"
-                          tabIndex={0}
-                          className="w-full h-full bg-transparent border-none focus:outline-none focus:ring-0 pl-6 pr-8 font-black text-[10px] uppercase tracking-widest placeholder:text-base-content/10"
-                          placeholder="SELECT TEMPLATE..."
-                          value={templateSearchText}
-                          onChange={(e) => {
-                              const val = (e.currentTarget as any).value;
-                              setTemplateSearchText(val);
-                              if (!val) {
-                                  setSelectedTemplate(null);
-                              // Fix: replaced 'selectedPreset' with 'selectedTemplate' to resolve compilation error on line 276
-                              } else if (selectedTemplate && val !== selectedTemplate.name) {
-                                  setSelectedTemplate(null);
-                              }
-                          }}
+                            type="file" 
+                            ref={importInputRef} 
+                            onChange={handleImportFile} 
+                            accept=".txt,.yml,.yaml,.zip" 
+                            multiple 
+                            className="hidden" 
                         />
-                        {templateSearchText && (
+                    </footer>
+                </div>
+                {/* Manual Corner Accents - Reduced contrast to match app style */}
+                <div className="absolute -top-[1px] -left-[1px] w-3 h-3 border-t border-l border-primary/15 z-20 pointer-events-none" />
+                <div className="absolute -top-[1px] -right-[1px] w-3 h-3 border-t border-r border-primary/15 z-20 pointer-events-none" />
+                <div className="absolute -bottom-[1px] -left-[1px] w-3 h-3 border-b border-l border-primary/15 z-20 pointer-events-none" />
+                <div className="absolute -bottom-[1px] -right-[1px] w-3 h-3 border-b border-r border-primary/15 z-20 pointer-events-none" />
+            </aside>
+            <main className="lg:col-span-6 h-full min-h-0 flex flex-col relative p-[3px] corner-frame overflow-visible">
+                <div className="flex flex-col h-full w-full overflow-hidden min-h-0 relative z-10 bg-base-100/40 backdrop-blur-xl">
+                    <header className="h-16 flex-shrink-0 flex items-stretch bg-base-100/10 backdrop-blur-md p-1.5 gap-1.5 border-b border-base-300/10">
+                        <div className="dropdown dropdown-bottom flex-grow h-full">
+                            <div className="relative h-full w-full flex items-center">
+                                <input 
+                                    type="text"
+                                    tabIndex={0}
+                                    className="w-full h-full bg-transparent border-none focus:outline-none focus:ring-0 pl-6 pr-10 font-bold text-[11px] font-nunito tracking-normal placeholder:text-base-content/10"
+                                    placeholder="SELECT TEMPLATE..."
+                                    value={templateSearchText}
+                                    onChange={(e) => {
+                                        const val = (e.currentTarget as any).value;
+                                        setTemplateSearchText(val);
+                                        if (!val) {
+                                            setSelectedTemplate(null);
+                                        } else if (selectedTemplate && val !== selectedTemplate.name) {
+                                            setSelectedTemplate(null);
+                                        }
+                                    }}
+                                />
+                                <svg className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-base-content/20 pointer-events-none flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 9l-7 7-7-7" />
+                                </svg>
+                            </div>
+                            {filteredTemplates.length > 0 && (
+                                <ul tabIndex={0} className="dropdown-content z-[100] menu p-1 bg-base-100 border border-base-300/50 rounded-none w-full max-h-60 overflow-y-auto flex flex-col flex-nowrap shadow-2xl mt-2">
+                                    {filteredTemplates.map(t => (
+                                        <li key={t.name} className="w-full">
+                                            <a 
+                                                onMouseDown={(e) => {
+                                                    e.preventDefault();
+                                                    handleSelectTemplateFromDropdown(t);
+                                                }} 
+                                                className={`font-bold text-[11px] font-nunito block w-full truncate ${selectedTemplate?.name === t.name ? 'text-primary' : 'text-base-content/70 hover:text-base-content'}`}
+                                            >
+                                                {t.name}
+                                            </a>
+                                        </li>
+                                    ))}
+                                </ul>
+                            )}
+                        </div>
+                        {(templateSearchText || selectedTemplate) && (
                             <button 
                                 onClick={() => { setTemplateSearchText(''); setSelectedTemplate(null); }}
-                                className="absolute right-2 top-1/2 -translate-y-1/2 text-base-content/20 hover:text-error transition-colors"
+                                className="btn btn-ghost h-full rounded-none border-none flex-[0_0_80px] font-normal text-[13px] tracking-widest text-error/40 hover:text-error transition-all px-1 truncate btn-snake font-display"
                             >
-                                <CloseIcon className="w-3.5 h-3.5" />
+                                <span/><span/><span/><span/>
+                                CLEAR
                             </button>
                         )}
-                    </div>
-                    {filteredTemplates.length > 0 && (
-                        <ul tabIndex={0} className="dropdown-content z-[100] menu p-1 bg-transparent rounded-none w-full max-h-60 overflow-y-auto">
-                            {filteredTemplates.map(t => (
-                                <li key={t.name}>
-                                    <a 
-                                        onMouseDown={(e) => {
-                                            e.preventDefault();
-                                            handleSelectTemplateFromDropdown(t);
-                                        }} 
-                                        className={`font-bold text-[10px] uppercase ${selectedTemplate?.name === t.name ? 'text-primary' : 'text-base-content/70 hover:text-base-content'}`}
-                                    >
-                                        {t.name}
-                                    </a>
-                                </li>
-                            ))}
-                        </ul>
-                    )}
-                  </div>
-                  <button 
-                      className="btn btn-ghost h-full rounded-none border-none flex-1 font-black text-[10px] tracking-widest text-primary disabled:opacity-20 transition-all px-1 truncate" 
-                      onClick={() => handleUseTemplate()} 
-                      disabled={!selectedTemplate}
-                  >
-                      APPLY
-                  </button>
-                  <button 
-                      className="btn btn-ghost h-full rounded-none border-none flex-1 font-black text-[10px] tracking-widest text-error/60 disabled:opacity-20 transition-all px-1 truncate" 
-                      onClick={handleDeleteTemplateClick} 
-                      disabled={!selectedTemplate}
-                  >
-                      DELETE
-                  </button>
-                </div>
+                        <button 
+                            className="btn btn-ghost h-full rounded-none border-none flex-[0_0_80px] font-normal text-[13px] tracking-widest text-error/60 disabled:opacity-20 transition-all px-1 truncate btn-snake font-display" 
+                            onClick={handleDeleteTemplateClick} 
+                            disabled={!selectedTemplate}
+                        >
+                            <span/><span/><span/><span/>
+                            DELETE
+                        </button>
+                    </header>
 
-                <div className="flex-grow flex flex-col min-h-0">
-                    <div className="h-1/3 p-6 flex flex-col flex-shrink-0">
+                <div className="flex-grow flex flex-col min-h-0 overflow-hidden">
+                    <div className="flex-1 min-h-0 p-6 flex flex-col overflow-hidden">
                         <textarea 
                             ref={textareaRef}
                             value={promptText}
                             onChange={(e) => setPromptText((e.currentTarget as any).value)}
                             placeholder="STREAM NEW CORE CONCEPT... Use __wildcard__ for selection."
-                            className="w-full flex-grow resize-none font-medium leading-relaxed bg-transparent custom-scrollbar focus:outline-none p-0 text-sm"
+                            className="w-full h-full flex-grow resize-none font-medium leading-relaxed bg-transparent focus:outline-none p-0 text-[15px] font-nunito"
                         ></textarea>
                     </div>
                     
                     {/* Middle Action Bar - Library Style */}
-                    <div className="h-14 flex items-stretch flex-shrink-0">
+                    <div className="h-14 flex items-stretch flex-shrink-0 bg-base-100/10 backdrop-blur-md p-1.5 gap-1.5 border-y border-base-300/10">
                         <button 
                             onClick={() => setPromptText('')} 
-                            className="btn btn-ghost h-full rounded-none border-none flex-1 font-black text-[10px] tracking-widest text-error/40 hover:text-error uppercase px-1 truncate"
+                            className="btn btn-sm btn-ghost h-full rounded-none flex-1 font-normal text-[13px] tracking-wider text-error/40 hover:text-error uppercase px-1 truncate btn-snake font-display"
                         >
+                            <span/><span/><span/><span/>
                             CLEAR
                         </button>
                         <button 
                             onClick={handleSaveTemplateClick} 
-                            className="btn btn-ghost h-full rounded-none border-none flex-1 font-black text-[10px] tracking-widest uppercase hover:bg-base-200 px-1 truncate"
+                            className="btn btn-sm btn-ghost h-full rounded-none flex-1 font-normal text-[13px] tracking-wider uppercase px-1 truncate btn-snake font-display"
                         >
+                            <span/><span/><span/><span/>
                             SAVE
                         </button>
                         <button 
                             onClick={handleGenerate} 
-                            className="btn btn-primary h-full rounded-none border-none flex-1 font-black text-[10px] tracking-widest uppercase shadow-none px-1 truncate"
+                            className="btn btn-sm btn-ghost h-full rounded-none flex-1 font-normal text-[13px] tracking-wider uppercase px-1 truncate btn-snake text-primary font-display"
                         >
+                            <span/><span/><span/><span/>
                             GENERATE
                         </button>
                     </div>
 
-                    <div className="flex-grow p-6 overflow-y-auto relative">
+                    <div ref={mainScrollerRef} className="flex-1 min-h-0 overflow-y-auto relative">
                         {aiAction && (
-                            <div className="absolute inset-0 bg-transparent flex flex-col items-center justify-center z-10">
+                            <div className="absolute inset-0 bg-base-100/20 backdrop-blur-sm flex flex-col items-center justify-center z-10 animate-fade-in">
                                 <LoadingSpinner />
-                                <p className="text-[10px] font-black uppercase tracking-[0.4em] text-primary animate-pulse -mt-4">{aiAction}</p>
+                                <p className="text-[10px] font-black uppercase tracking-[0.4em] text-primary animate-pulse mt-4">{aiAction}</p>
                             </div>
                         )}
                         {generatedPrompt ? (
-                            <div className="space-y-4 animate-fade-in">
-                                 <div className="flex justify-between items-center">
-                                    <span className="text-[10px] font-black uppercase tracking-[0.2em] text-primary/60 flex items-center gap-3">
-                                        <div className="w-1.5 h-1.5 rounded-none bg-primary animate-pulse"></div> Resulting Prompt
-                                    </span>
-                                </div>
-                                <div className="p-6 text-base font-medium leading-relaxed italic text-base-content/80">
+                            <div className="p-6 h-full animate-fade-in flex flex-col">
+                                <div className="text-base font-medium leading-relaxed italic text-base-content/80 flex-grow">
                                     "{generatedPrompt}"
                                 </div>
                             </div>
                         ) : (
-                            <div className="h-full flex flex-col items-center justify-center text-center py-24 opacity-10">
+                            <div className="h-full flex flex-col items-center justify-center text-center opacity-10">
                                 <SparklesIcon className="w-16 h-16 mx-auto mb-4"/>
                                 <p className="text-xl font-black uppercase tracking-widest">Awaiting generated prompt</p>
                             </div>
@@ -454,80 +461,113 @@ const PromptCrafter = ({ onClip, onSendToEnhancer, onSavePresetSuccess, promptTo
                 </div>
 
                 {/* Bottom Action Bar - Library Style */}
-                <div className="h-14 flex items-stretch flex-shrink-0">
+                <div className="h-14 flex items-stretch flex-shrink-0 bg-base-100/10 backdrop-blur-md p-1.5 gap-1.5">
                     <button 
                         onClick={handleAnalyze} 
                         disabled={!generatedPrompt || !!aiAction} 
-                        className="btn btn-ghost h-full rounded-none border-none flex-1 font-black text-[10px] tracking-widest uppercase hover:bg-base-200 px-1 truncate"
+                        className="btn btn-sm btn-ghost h-full rounded-none flex-1 font-normal text-[13px] tracking-wider uppercase px-1 truncate disabled:opacity-30 disabled:cursor-not-allowed btn-snake font-display"
                     >
+                        <span/><span/><span/><span/>
                         ANALYZE
                     </button>
                     <button 
                         onClick={handleReconstruct} 
                         disabled={!generatedPrompt || !!aiAction} 
-                        className="btn btn-ghost h-full rounded-none border-none flex-1 font-black text-[10px] tracking-widest uppercase hover:bg-base-200 px-1 truncate"
+                        className="btn btn-sm btn-ghost h-full rounded-none flex-1 font-normal text-[13px] tracking-wider uppercase px-1 truncate disabled:opacity-30 disabled:cursor-not-allowed btn-snake font-display"
                     >
+                        <span/><span/><span/><span/>
                         REWRITE
                     </button>
                     <button 
                         onClick={() => onSendToEnhancer(generatedPrompt!)} 
                         disabled={!generatedPrompt || !!aiAction} 
-                        className="btn btn-ghost h-full rounded-none border-none flex-1 font-black text-[10px] tracking-widest text-primary uppercase hover:bg-primary/10 px-1 truncate"
+                        className="btn btn-sm btn-primary h-full rounded-none flex-1 font-normal text-[13px] tracking-wider uppercase px-1 truncate disabled:opacity-30 disabled:cursor-not-allowed btn-snake-primary font-display"
                     >
+                        <span/><span/><span/><span/>
                         IMPROVE
                     </button>
                     <button 
                         onClick={handleClip} 
                         disabled={!generatedPrompt} 
-                        className="btn btn-ghost h-full rounded-none border-none flex-1 font-black text-[10px] tracking-widest uppercase hover:bg-base-200 px-1 truncate"
+                        className="btn btn-sm btn-ghost h-full rounded-none flex-1 font-normal text-[13px] tracking-wider uppercase px-1 truncate disabled:opacity-30 disabled:cursor-not-allowed btn-snake font-display"
                     >
+                        <span/><span/><span/><span/>
                         {clipped ? 'OK' : 'CLIP'}
                     </button>
                     <button 
                         onClick={handleCopy} 
                         disabled={!generatedPrompt} 
-                        className="btn btn-ghost h-full rounded-none border-none flex-1 font-black text-[10px] tracking-widest uppercase hover:bg-base-200 px-1 truncate"
+                        className="btn btn-sm btn-ghost h-full rounded-none flex-1 font-normal text-[13px] tracking-wider uppercase px-1 truncate disabled:opacity-30 disabled:cursor-not-allowed btn-snake font-display"
                     >
+                        <span/><span/><span/><span/>
                         {copied ? 'OK' : 'COPY'}
                     </button>
                 </div>
-            </main>
+            </div>
+            {/* Manual Corner Accents */}
+            <div className="absolute -top-[1px] -left-[1px] w-3 h-3 border-t border-l border-primary/15 z-20 pointer-events-none" />
+            <div className="absolute -top-[1px] -right-[1px] w-3 h-3 border-t border-r border-primary/15 z-20 pointer-events-none" />
+            <div className="absolute -bottom-[1px] -left-[1px] w-3 h-3 border-b border-l border-primary/15 z-20 pointer-events-none" />
+            <div className="absolute -bottom-[1px] -right-[1px] w-3 h-3 border-b border-r border-primary/15 z-20 pointer-events-none" />
+        </main>
             
-            <aside className="lg:col-span-3 flex flex-col min-h-0">
-                <PromptAnatomyPanel 
-                    promptToAnalyze={generatedPrompt}
-                    onReconstructFromComponents={handleReconstructFromComponents}
-                    onReplaceVariation={handleReplaceVariation}
-                    onSaveSuccess={onSavePresetSuccess}
-                    analysisTrigger={analysisTrigger}
-                    isProcessing={!!aiAction}
-                    modifierCatalog={modifierCatalog}
-                />
+            <aside className="lg:col-span-3 h-full min-h-0 flex flex-col relative p-[3px] corner-frame overflow-visible">
+                <div className="flex flex-col h-full w-full overflow-hidden min-h-0 relative z-10 bg-base-100/40 backdrop-blur-xl">
+                    <PromptAnatomyPanel 
+                        promptToAnalyze={generatedPrompt}
+                        onReconstructFromComponents={handleReconstructFromComponents}
+                        onReplaceVariation={handleReplaceVariation}
+                        onSaveSuccess={onSavePresetSuccess}
+                        analysisTrigger={analysisTrigger}
+                        isProcessing={!!aiAction}
+                        modifierCatalog={modifierCatalog}
+                    />
+                </div>
+                {/* Manual Corner Accents */}
+                <div className="absolute -top-[1px] -left-[1px] w-3 h-3 border-t border-l border-primary/15 z-20 pointer-events-none" />
+                <div className="absolute -top-[1px] -right-[1px] w-3 h-3 border-t border-r border-primary/15 z-20 pointer-events-none" />
+                <div className="absolute -bottom-[1px] -left-[1px] w-3 h-3 border-b border-l border-primary/15 z-20 pointer-events-none" />
+                <div className="absolute -bottom-[1px] -right-[1px] w-3 h-3 border-b border-r border-primary/15 z-20 pointer-events-none" />
             </aside>
             
             {isSaveModalOpen && (
                 <div className="fixed inset-0 bg-black/40 backdrop-blur-xl z-50 flex items-center justify-center p-4 animate-fade-in" onClick={() => setIsSaveModalOpen(false)}>
-                    <div className="bg-base-100/40 w-full max-w-lg overflow-hidden" onClick={(e) => e.stopPropagation()}>
-                        <header className="p-8">
-                            <h3 className="text-2xl font-black tracking-tighter text-base-content leading-none uppercase">SAVE TEMPLATE<span className="text-primary">.</span></h3>
-                        </header>
-                        <div className="p-8">
-                            <input
-                                type="text"
-                                value={templateName}
-                                onChange={(e) => setTemplateName((e.currentTarget as any).value)}
-                                placeholder="ENTER NAME..."
-                                className="input input-bordered rounded-none w-full font-bold tracking-tight uppercase"
-                                autoFocus
-                                onKeyDown={e => e.key === 'Enter' && handleConfirmSaveTemplate()}
-                            />
+                    <div className="w-full max-w-lg relative p-[3px] corner-frame overflow-visible shadow-2xl" onClick={e => e.stopPropagation()}>
+                        <div className="bg-base-100/40 backdrop-blur-xl rounded-none w-full overflow-hidden relative z-10">
+                            <header className="px-8 py-6 border-b border-base-content/5">
+                                <h3 className="text-2xl font-black tracking-tighter text-base-content leading-none uppercase">SAVE TEMPLATE<span className="text-primary">.</span></h3>
+                                <p className="text-[10px] font-black uppercase tracking-[0.4em] text-base-content/30 mt-1.5">Preset Registration</p>
+                            </header>
+                            <div className="p-8">
+                                <div className="form-control">
+                                    <label className="text-[10px] font-black uppercase tracking-[0.2em] text-base-content/40 mb-2">Template Identity</label>
+                                    <input
+                                        type="text"
+                                        value={templateName}
+                                        onChange={(e) => setTemplateName((e.currentTarget as any).value)}
+                                        placeholder="ENTER NAME..."
+                                        className="form-input w-full"
+                                        autoFocus
+                                        onKeyDown={e => e.key === 'Enter' && handleConfirmSaveTemplate()}
+                                    />
+                                </div>
+                            </div>
+                            <footer className="h-14 flex items-stretch bg-base-100/10 backdrop-blur-md p-1.5 gap-1.5 overflow-hidden flex-shrink-0 border-t border-base-content/5">
+                                <button onClick={() => setIsSaveModalOpen(false)} className="btn btn-sm btn-ghost h-full flex-1 rounded-none font-normal text-[13px] tracking-wider uppercase btn-snake font-display">
+                                    <span/><span/><span/><span/>
+                                    CANCEL
+                                </button>
+                                <button onClick={handleConfirmSaveTemplate} disabled={isSavingTemplate || !templateName.trim()} className="btn btn-sm btn-primary h-full flex-1 rounded-none font-normal text-[13px] tracking-wider uppercase btn-snake-primary font-display">
+                                    <span/><span/><span/><span/>
+                                    {isSavingTemplate ? "SAVING..." : "COMMIT"}
+                                </button>
+                            </footer>
                         </div>
-                        <div className="p-4 flex justify-end gap-2">
-                             <button onClick={() => setIsSaveModalOpen(false)} className="btn btn-ghost rounded-none uppercase font-black text-[10px] tracking-widest px-8">Cancel</button>
-                             <button onClick={handleConfirmSaveTemplate} disabled={isSavingTemplate || !templateName.trim()} className="btn btn-primary rounded-none uppercase font-black text-[10px] tracking-widest px-8">
-                                {isSavingTemplate ? "Saving..." : "Save"}
-                            </button>
-                        </div>
+                        {/* Manual Corner Accents */}
+                        <div className="absolute -top-[1px] -left-[1px] w-3 h-3 border-t border-l border-primary/15 z-20 pointer-events-none" />
+                        <div className="absolute -top-[1px] -right-[1px] w-3 h-3 border-t border-r border-primary/15 z-20 pointer-events-none" />
+                        <div className="absolute -bottom-[1px] -left-[1px] w-3 h-3 border-b border-l border-primary/15 z-20 pointer-events-none" />
+                        <div className="absolute -bottom-[1px] -right-[1px] w-3 h-3 border-b border-r border-primary/15 z-20 pointer-events-none" />
                     </div>
                 </div>
             )}

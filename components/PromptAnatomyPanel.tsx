@@ -1,9 +1,9 @@
-import React, { useState, useCallback, useEffect } from 'react';
+import React, { useState, useCallback, useEffect, useRef } from 'react';
 import { useSettings } from '../contexts/SettingsContext';
 import type { PromptModifiers } from '../types';
 import { dissectPrompt, generateFocusedVariations, generateConstructorPreset } from '../services/llmService';
 import { refinerPresetService } from '../services/refinerPresetService';
-import { EditIcon, CheckIcon, ChevronDownIcon, SparklesIcon } from './icons';
+import { EditIcon, CheckIcon, ChevronDownIcon } from './icons';
 import LoadingSpinner from './LoadingSpinner';
 
 interface PromptAnatomyPanelProps {
@@ -28,6 +28,8 @@ export const PromptAnatomyPanel: React.FC<PromptAnatomyPanelProps> = ({ promptTo
   const [isReconstructing, setIsReconstructing] = useState(false);
   const [processingVariation, setProcessingVariation] = useState<{key: string, value: string} | null>(null);
   const [expandedVariations, setExpandedVariations] = useState<Record<string, boolean>>({});
+
+  const scrollerRef = useRef<HTMLDivElement>(null);
 
   const [isComponentsSectionExpanded, setIsComponentsSectionExpanded] = useState(true);
   const [isVariationsSectionExpanded, setIsVariationsSectionExpanded] = useState(true);
@@ -167,11 +169,11 @@ export const PromptAnatomyPanel: React.FC<PromptAnatomyPanelProps> = ({ promptTo
   };
 
   return (
-    <div className="flex flex-col h-full overflow-hidden relative">
-      <header className="p-6 flex justify-between items-center flex-shrink-0">
+    <div className="flex flex-col h-full overflow-hidden min-h-0 relative bg-base-100/30 backdrop-blur-xl">
+      <header className="p-6 flex justify-between items-center flex-shrink-0 bg-base-100/10 backdrop-blur-md">
         <h3 className="text-xs font-black uppercase tracking-[0.3em] text-primary">Prompt Analysis</h3>
       </header>
-      <main className="p-6 overflow-y-auto space-y-8 flex-grow custom-scrollbar">
+      <main ref={scrollerRef} className="p-6 overflow-y-auto space-y-8 flex-grow min-h-0">
         {error && <div className="alert alert-error rounded-none text-xs p-2"><span>{error}</span></div>}
         
         {loadingState !== 'idle' && (
@@ -215,7 +217,7 @@ export const PromptAnatomyPanel: React.FC<PromptAnatomyPanelProps> = ({ promptTo
                                                     onChange={(e) => setEditingComponent({...editingComponent, value: (e.currentTarget as any).value})}
                                                     onKeyDown={e => e.key === 'Enter' && handleComponentSave()}
                                                     onBlur={handleComponentSave}
-                                                    className="input input-sm w-full font-bold uppercase tracking-tighter rounded-none bg-transparent"
+                                                    className="form-input w-full"
                                                     autoFocus
                                                     disabled={isProcessing || isReconstructing}
                                                 />
@@ -225,11 +227,15 @@ export const PromptAnatomyPanel: React.FC<PromptAnatomyPanelProps> = ({ promptTo
                                             
                                             <div className="flex-shrink-0 opacity-0 group-hover:opacity-100 transition-opacity">
                                                 {editingComponent?.key === key ? (
-                                                    <button onClick={handleComponentSave} disabled={isProcessing || isReconstructing} className="btn btn-xs btn-ghost btn-square">
+                                                    <button onClick={handleComponentSave} disabled={isProcessing || isReconstructing} className="btn btn-xs btn-ghost h-8 w-8 rounded-none p-0 btn-snake">
+                                                        <span/><span/><span/><span/>
                                                         {isReconstructing ? <LoadingSpinner size={16} /> : <CheckIcon className="w-4 h-4 text-success"/>}
                                                     </button>
                                                 ) : (
-                                                    <button onClick={() => handleComponentEdit(key, value)} disabled={isProcessing || isReconstructing || !!processingVariation} className="btn btn-xs btn-ghost btn-square"><EditIcon className="w-4 h-4"/></button>
+                                                    <button onClick={() => handleComponentEdit(key, value)} disabled={isProcessing || isReconstructing || !!processingVariation} className="btn btn-xs btn-ghost h-8 w-8 rounded-none p-0 btn-snake">
+                                                        <span/><span/><span/><span/>
+                                                        <EditIcon className="w-4 h-4"/>
+                                                    </button>
                                                 )}
                                             </div>
                                         </div>
@@ -271,12 +277,13 @@ export const PromptAnatomyPanel: React.FC<PromptAnatomyPanelProps> = ({ promptTo
                                                     {values.map((v, i) => {
                                                         const isThisOneProcessing = processingVariation?.key === key && processingVariation?.value === v;
                                                         return (
-                                                            <button 
+                                                    <button 
                                                                 key={i} 
                                                                 onClick={() => handleVariationClick(key, v)}
-                                                                className="badge badge-outline rounded-none border-base-300/50 hover:border-primary hover:text-primary transition-all cursor-pointer h-auto py-2 px-4 text-left whitespace-normal text-xs font-bold tracking-tight disabled:opacity-30"
+                                                                className="btn btn-xs btn-ghost h-auto py-2 px-4 text-left whitespace-normal text-xs font-bold tracking-tight disabled:opacity-30 rounded-none btn-snake"
                                                                 disabled={isProcessing || isReconstructing || isAnyVariationProcessing}
                                                             >
+                                                                <span/><span/><span/><span/>
                                                                 {isThisOneProcessing ? <LoadingSpinner size={14} /> : v}
                                                             </button>
                                                         )
@@ -295,13 +302,14 @@ export const PromptAnatomyPanel: React.FC<PromptAnatomyPanelProps> = ({ promptTo
       </main>
       
       {components && (
-        <footer className="p-6 border-t border-base-300 bg-transparent">
+        <footer className="p-1.5 bg-base-100/80 backdrop-blur-md flex-shrink-0">
           <button 
             onClick={handleSavePreset} 
             disabled={isSavingPreset || loadingState !== 'idle'}
-            className="btn btn-primary btn-block rounded-none font-black text-[10px] uppercase tracking-[0.3em]"
+            className="btn btn-sm btn-primary w-full h-12 rounded-none font-black text-[10px] tracking-widest uppercase disabled:text-base-content/20 disabled:bg-transparent disabled:opacity-100 btn-snake-primary"
           >
-            {isSavingPreset ? <LoadingSpinner size={16} /> : <><SparklesIcon className="w-4 h-4 mr-2" /> Save Constructor Preset</>}
+            <span/><span/><span/><span/>
+            {isSavingPreset ? <LoadingSpinner size={16} /> : "SAVE CONSTRUCTOR PRESET"}
           </button>
         </footer>
       )}
@@ -323,25 +331,27 @@ export const PromptAnatomyPanel: React.FC<PromptAnatomyPanelProps> = ({ promptTo
                   type="text" 
                   value={pendingPresetName}
                   onChange={(e) => setPendingPresetName(e.target.value)}
-                  className="input input-bordered w-full rounded-none font-bold text-sm focus:outline-none focus:border-primary"
+                  className="form-input w-full"
                   placeholder="ENTER NAME..."
                   autoFocus
                   onKeyDown={e => e.key === 'Enter' && confirmSavePreset()}
                 />
               </div>
 
-              <div className="flex gap-2 pt-2">
+              <div className="flex gap-1.5 pt-2">
                 <button 
                   onClick={() => setShowSaveModal(false)}
-                  className="btn btn-ghost flex-1 rounded-none font-black text-[10px] uppercase tracking-widest"
+                  className="btn btn-sm btn-ghost flex-1 h-10 rounded-none uppercase font-black text-[10px] tracking-widest btn-snake"
                 >
+                  <span/><span/><span/><span/>
                   Cancel
                 </button>
                 <button 
                   onClick={confirmSavePreset}
                   disabled={!pendingPresetName.trim() || isSavingPreset}
-                  className="btn btn-primary flex-1 rounded-none font-black text-[10px] uppercase tracking-widest"
+                  className="btn btn-sm btn-primary flex-1 h-10 rounded-none uppercase font-black text-[10px] tracking-widest btn-snake-primary"
                 >
+                  <span/><span/><span/><span/>
                   {isSavingPreset ? <LoadingSpinner size={16} /> : 'Save Preset'}
                 </button>
               </div>

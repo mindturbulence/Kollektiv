@@ -19,6 +19,7 @@ const AutocompleteSelect: React.FC<AutocompleteSelectProps> = ({ options, value,
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const wrapperRef = useRef<HTMLDivElement>(null);
+  const scrollerRef = useRef<HTMLUListElement>(null);
 
   const selectedOption = useMemo(() => 
     options.find(opt => opt.value === value), 
@@ -69,16 +70,16 @@ const AutocompleteSelect: React.FC<AutocompleteSelectProps> = ({ options, value,
     <div className={`relative w-full ${className}`} ref={wrapperRef}>
       <div 
         onClick={handleToggle}
-        className="flex items-center justify-between px-3 py-2 bg-transparent rounded-none cursor-pointer hover:border-primary transition-colors h-10"
+        className="form-select flex items-center justify-between cursor-pointer hover:border-primary"
       >
-        <span className={`text-sm font-bold truncate uppercase tracking-tight ${!selectedOption ? 'text-base-content/30' : 'text-base-content'}`}>
+        <span className={`truncate ${!selectedOption ? 'text-base-content/30' : 'text-base-content'}`}>
           {selectedOption ? selectedOption.label : placeholder || 'Select option...'}
         </span>
         <div className="flex items-center gap-1.5 ml-2">
             {value && (
                 <button 
                     onClick={handleClear}
-                    className="p-1 -mr-1 hover:text-error opacity-20 hover:opacity-100 transition-all"
+                    className="form-btn autocomplete-clear-btn p-1 -mr-1 hover:text-error opacity-20 hover:opacity-100 transition-all border-none bg-transparent h-auto w-auto min-h-0"
                     title="Clear Selection"
                 >
                     <CloseIcon className="w-3.5 h-3.5" />
@@ -89,8 +90,8 @@ const AutocompleteSelect: React.FC<AutocompleteSelectProps> = ({ options, value,
       </div>
 
       {isDropdownOpen && (
-        <div className="absolute z-[100] w-full mt-1 bg-transparent shadow-2xl rounded-none flex flex-col overflow-hidden animate-fade-in">
-          <div className="p-2 border-b border-base-300 bg-transparent flex items-center gap-2">
+        <div className="absolute z-[100] w-full mt-1 bg-base-100 border border-base-300 shadow-2xl rounded-none flex flex-col overflow-hidden animate-fade-in">
+          <div className="p-2 border-b border-base-300 bg-base-100 flex items-center gap-2">
             <SearchIcon className="w-3.5 h-3.5 opacity-30" />
             <input
               autoFocus
@@ -98,22 +99,22 @@ const AutocompleteSelect: React.FC<AutocompleteSelectProps> = ({ options, value,
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               placeholder="Filter list..."
-              className="bg-transparent border-none outline-none text-xs font-bold uppercase tracking-widest w-full py-1"
+              className="form-input w-full border-none bg-transparent"
               onClick={(e) => e.stopPropagation()}
             />
           </div>
-          <ul className="max-h-60 overflow-y-auto custom-scrollbar p-1">
+          <ul ref={scrollerRef} className="max-h-60 overflow-y-auto p-1">
             {filteredOptions.length > 0 ? (
               filteredOptions.map(option => (
                 <li key={option.value}>
                   <button
                     type="button"
                     onClick={() => handleOptionClick(option.value)}
-                    className={`w-full text-left px-3 py-2 text-xs font-bold uppercase tracking-tight transition-colors flex flex-col gap-0.5 ${value === option.value ? 'text-primary' : 'text-base-content/70 hover:text-base-content'}`}
+                    className={`w-full text-left px-3 py-2 text-xs font-bold font-nunito transition-colors flex flex-col gap-0.5 ${value === option.value ? 'text-primary' : 'text-base-content/70 hover:text-base-content'}`}
                   >
                     <span>{option.label}</span>
                     {option.description && (
-                      <span className={`text-[11px] font-mono opacity-60 lowercase tracking-normal leading-tight ${value === option.value ? 'opacity-90' : ''}`}>
+                      <span className={`text-[11px] opacity-60 font-nunito tracking-normal leading-tight ${value === option.value ? 'opacity-90' : ''}`}>
                         {option.description}
                       </span>
                     )}

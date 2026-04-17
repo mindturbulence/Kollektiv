@@ -188,7 +188,7 @@ const ImageCard: React.FC<{
                         onMouseDown={(e) => onCropMouseDown(e, item.id)}
                     ></div>
                 )}
-                <button onClick={onRemove} className="absolute top-2 right-2 btn btn-xs btn-square btn-error rounded-none opacity-0 group-hover:opacity-100 transition-all">✕</button>
+                <button onClick={onRemove} className="absolute top-2 right-2 form-btn h-6 w-6 text-error opacity-0 group-hover:opacity-100 transition-all">✕</button>
             </figure>
             <div className="p-4 space-y-1">
                 <p className="text-[10px] font-black uppercase tracking-widest text-base-content truncate" title={item.file.name}>{item.file.name}</p>
@@ -410,117 +410,143 @@ const ImageResizer: React.FC = () => {
     };
     
     return (
-        <div className="h-full bg-base-100/40 backdrop-blur-xl flex flex-col overflow-hidden">
-            <div className="flex-grow flex flex-col lg:flex-row overflow-hidden">
-                <aside className="w-full lg:w-96 flex-shrink-0 bg-transparent flex flex-col overflow-hidden">
-                    <header className="p-6 bg-transparent">
-                        <h3 className="text-[10px] font-black uppercase tracking-[0.4em] text-primary">Resize Settings</h3>
-                    </header>
-                    <div className="flex-grow p-6 space-y-8 overflow-y-auto custom-scrollbar bg-transparent">
-                        <div className="space-y-4">
-                            <div className="flex justify-between items-center">
-                                <label className="text-[10px] font-black uppercase tracking-widest text-base-content/40">Target Resolution</label>
-                                <label className="cursor-pointer label p-0 gap-2">
-                                    <span className="text-[9px] font-black uppercase text-base-content/40 tracking-widest">Original</span>
-                                    <input type="checkbox" checked={settings.preserveOriginal} onChange={e => handleSettingsChange('preserveOriginal', (e.currentTarget as any).checked)} className="checkbox checkbox-xs checkbox-primary rounded-none" />
-                                </label>
-                            </div>
-                            <div className={`flex items-center gap-2 transition-opacity ${settings.preserveOriginal ? 'opacity-30 pointer-events-none' : ''}`}>
-                                <input type="number" disabled={settings.preserveOriginal} value={settings.width} onChange={e => handleSettingsChange('width', (e.currentTarget as any).value ? parseInt((e.currentTarget as any).value) : '')} className="input input-sm input-bordered rounded-none w-full font-mono text-xs" placeholder="W" />
-                                <button disabled={settings.preserveOriginal} onClick={() => handleSettingsChange('lockAspectRatio', !settings.lockAspectRatio)} className={`btn btn-xs btn-ghost rounded-none ${settings.lockAspectRatio ? 'text-primary' : 'opacity-20'}`}>{settings.lockAspectRatio ? <LinkIcon className="w-4 h-4"/> : <LinkOffIcon className="w-4 h-4"/>}</button>
-                                <input type="number" disabled={settings.preserveOriginal} value={settings.height} onChange={e => handleSettingsChange('height', (e.currentTarget as any).value ? parseInt((e.currentTarget as any).value) : '')} className="input input-sm input-bordered rounded-none w-full font-mono text-xs" placeholder="H" />
-                            </div>
-                             <select 
-                                disabled={settings.preserveOriginal}
-                                className={`select select-xs select-bordered rounded-none w-full mt-2 font-bold uppercase tracking-tight transition-opacity ${settings.preserveOriginal ? 'opacity-30 pointer-events-none' : ''}`}
-                                onChange={e => {
-                                    const value = (e.currentTarget as any).value;
-                                    if (value) {
-                                        const [w, h] = value.split('x').map(Number);
-                                        setSettings(s => ({...s, width: w, height: h}));
-                                    }
-                                }}
-                                value={settings.width && settings.height ? `${settings.width}x${settings.height}` : ""}
-                             >
-                                <option value="" disabled>Standard Presets</option>
-                                {COMPOSER_PRESETS.map(cat => (
-                                    <optgroup key={cat.category} label={cat.category}>
-                                        {cat.presets.map(p => <option key={p.name} value={`${p.width}x${p.height}`}>{p.name}</option>)}
-                                    </optgroup>
-                                ))}
-                            </select>
-                        </div>
-
-                        <div className="space-y-4">
-                            <label className="text-[10px] font-black uppercase tracking-widest text-base-content/40">Cropping</label>
-                            <div className={`form-control transition-opacity ${settings.preserveOriginal ? 'opacity-30 pointer-events-none' : ''}`}>
-                                <label className="cursor-pointer label p-0 gap-4">
-                                    <span className="text-[10px] font-black uppercase text-base-content/40 tracking-widest flex items-center gap-2"><CropIcon className="w-3.5 h-3.5"/> Enable Smart Crop</span>
-                                    <input type="checkbox" disabled={settings.preserveOriginal} checked={settings.enableCropping && !settings.preserveOriginal} onChange={e => handleSettingsChange('enableCropping', (e.currentTarget as any).checked)} className="toggle toggle-xs toggle-primary" />
-                                </label>
-                            </div>
-                        </div>
-
-                        <div className="space-y-6">
-                            <label className="text-[10px] font-black uppercase tracking-widest text-base-content/40">Output Files</label>
+        <div className="h-full bg-transparent flex flex-col overflow-hidden p-0">
+            <div className="flex-grow flex flex-col lg:flex-row overflow-hidden gap-4">
+                <aside className="w-full lg:w-96 flex-shrink-0 flex flex-col relative p-[3px] corner-frame overflow-visible z-10">
+                    <div className="flex flex-col h-full w-full overflow-hidden relative z-10 bg-base-100/40 backdrop-blur-xl">
+                        <header className="p-6 bg-base-100/10 backdrop-blur-md">
+                            <h3 className="text-[10px] font-black uppercase tracking-[0.4em] text-primary">Resize Settings</h3>
+                        </header>
+                        <div className="flex-grow p-6 space-y-8 overflow-y-auto bg-transparent">
                             <div className="space-y-4">
-                                <div className="flex items-center gap-2">
-                                    <select value={settings.format} onChange={e => handleSettingsChange('format', (e.currentTarget as any).value as 'jpeg' | 'png' | 'webp')} className="select select-xs select-bordered rounded-none w-full font-bold uppercase tracking-tight">
-                                        <option value="jpeg">JPEG</option>
-                                        <option value="png">PNG</option>
-                                        <option value="webp">WEBP</option>
-                                    </select>
-                                    {(settings.format === 'jpeg' || settings.format === 'webp') &&
-                                        <input type="range" min={0.1} max={1} step={0.05} value={settings.quality} onChange={e => handleSettingsChange('quality', parseFloat((e.currentTarget as any).value))} className="range range-xs range-primary w-24" />
-                                    }
+                                <div className="flex justify-between items-center">
+                                    <label className="text-[10px] font-black uppercase tracking-widest text-base-content/40">Target Resolution</label>
+                                    <label className="cursor-pointer label p-0 gap-2">
+                                        <span className="text-[9px] font-black uppercase text-base-content/40 tracking-widest">Original</span>
+                                        <input type="checkbox" checked={settings.preserveOriginal} onChange={e => handleSettingsChange('preserveOriginal', (e.currentTarget as any).checked)} className="checkbox checkbox-xs checkbox-primary rounded-none" />
+                                    </label>
                                 </div>
-                                <input type="text" value={settings.renamePrefix} onChange={e => handleSettingsChange('renamePrefix', (e.currentTarget as any).value)} className="input input-sm input-bordered rounded-none w-full font-bold text-xs" placeholder="FILE_PREFIX_" />
-                                <label className="cursor-pointer label p-0 gap-4">
-                                    <span className="text-[10px] font-black uppercase text-base-content/40 tracking-widest">Sequential Naming</span>
-                                    <input type="checkbox" checked={settings.renameSequentially} onChange={e => handleSettingsChange('renameSequentially', (e.currentTarget as any).checked)} className="checkbox checkbox-xs checkbox-primary rounded-none" />
-                                </label>
+                                <div className={`flex items-center gap-2 transition-opacity ${settings.preserveOriginal ? 'opacity-30 pointer-events-none' : ''}`}>
+                                    <input type="number" disabled={settings.preserveOriginal} value={settings.width} onChange={e => handleSettingsChange('width', (e.currentTarget as any).value ? parseInt((e.currentTarget as any).value) : '')} className="form-input w-full font-mono text-xs" placeholder="W" />
+                                    <button disabled={settings.preserveOriginal} onClick={() => handleSettingsChange('lockAspectRatio', !settings.lockAspectRatio)} className={`form-btn h-8 w-8 ${settings.lockAspectRatio ? 'text-primary' : 'opacity-20'}`}>{settings.lockAspectRatio ? <LinkIcon className="w-4 h-4"/> : <LinkOffIcon className="w-4 h-4"/>}</button>
+                                    <input type="number" disabled={settings.preserveOriginal} value={settings.height} onChange={e => handleSettingsChange('height', (e.currentTarget as any).value ? parseInt((e.currentTarget as any).value) : '')} className="form-input w-full font-mono text-xs" placeholder="H" />
+                                </div>
+                                 <select 
+                                    disabled={settings.preserveOriginal}
+                                    className={`form-select w-full mt-2 transition-opacity ${settings.preserveOriginal ? 'opacity-30 pointer-events-none' : ''}`}
+                                    onChange={e => {
+                                        const value = (e.currentTarget as any).value;
+                                        if (value) {
+                                            const [w, h] = value.split('x').map(Number);
+                                            setSettings(s => ({...s, width: w, height: h}));
+                                        }
+                                    }}
+                                    value={settings.width && settings.height ? `${settings.width}x${settings.height}` : ""}
+                                 >
+                                    <option value="" disabled>Standard Presets</option>
+                                    {COMPOSER_PRESETS.map(cat => (
+                                        <optgroup key={cat.category} label={cat.category}>
+                                            {cat.presets.map(p => <option key={p.name} value={`${p.width}x${p.height}`}>{p.name}</option>)}
+                                        </optgroup>
+                                    ))}
+                                </select>
+                            </div>
+
+                            <div className="space-y-4">
+                                <label className="text-[10px] font-black uppercase tracking-widest text-base-content/40">Cropping</label>
+                                <div className={`form-control transition-opacity ${settings.preserveOriginal ? 'opacity-30 pointer-events-none' : ''}`}>
+                                    <label className="cursor-pointer label p-0 gap-4">
+                                        <span className="text-[10px] font-black uppercase text-base-content/40 tracking-widest flex items-center gap-2"><CropIcon className="w-3.5 h-3.5"/> Enable Smart Crop</span>
+                                        <input type="checkbox" disabled={settings.preserveOriginal} checked={settings.enableCropping && !settings.preserveOriginal} onChange={e => handleSettingsChange('enableCropping', (e.currentTarget as any).checked)} className="toggle toggle-xs toggle-primary" />
+                                    </label>
+                                </div>
+                            </div>
+
+                            <div className="space-y-6">
+                                <label className="text-[10px] font-black uppercase tracking-widest text-base-content/40">Output Files</label>
+                                <div className="space-y-4">
+                                    <div className="flex items-center gap-2">
+                                        <select value={settings.format} onChange={e => handleSettingsChange('format', (e.currentTarget as any).value as 'jpeg' | 'png' | 'webp')} className="form-select w-full">
+                                            <option value="jpeg">JPEG</option>
+                                            <option value="png">PNG</option>
+                                            <option value="webp">WEBP</option>
+                                        </select>
+                                        {(settings.format === 'jpeg' || settings.format === 'webp') &&
+                                            <input type="range" min={0.1} max={1} step={0.05} value={settings.quality} onChange={e => handleSettingsChange('quality', parseFloat((e.currentTarget as any).value))} className="range range-xs range-primary w-24" />
+                                        }
+                                    </div>
+                                    <input type="text" value={settings.renamePrefix} onChange={e => handleSettingsChange('renamePrefix', (e.currentTarget as any).value)} className="form-input w-full font-bold text-xs" placeholder="FILE_PREFIX_" />
+                                    <label className="cursor-pointer label p-0 gap-4">
+                                        <span className="text-[10px] font-black uppercase text-base-content/40 tracking-widest">Sequential Naming</span>
+                                        <input type="checkbox" checked={settings.renameSequentially} onChange={e => handleSettingsChange('renameSequentially', (e.currentTarget as any).checked)} className="checkbox checkbox-xs checkbox-primary rounded-none" />
+                                    </label>
+                                </div>
                             </div>
                         </div>
+                        <footer className="h-14 flex items-stretch flex-shrink-0 bg-base-100/10 backdrop-blur-md p-1.5 gap-1.5">
+                            <button 
+                                onClick={handleReset} 
+                                disabled={isDownloading || images.length === 0} 
+                                className="btn btn-sm btn-ghost h-full flex-1 rounded-none font-normal text-[13px] tracking-wider uppercase btn-snake text-error/40 hover:text-error font-display"
+                            >
+                                <span/><span/><span/><span/>
+                                CLEAR ALL
+                            </button>
+                            <button 
+                                onClick={handleDownload} 
+                                disabled={isDownloading || images.length === 0} 
+                                className="btn btn-sm btn-primary h-full flex-1 rounded-none font-normal text-[13px] tracking-wider uppercase btn-snake-primary font-display"
+                            >
+                                <span/><span/><span/><span/>
+                                {isDownloading ? '...' : 'ZIP DOWNLOAD'}
+                            </button>
+                        </footer>
                     </div>
-                    <footer className="p-4 grid grid-cols-2 gap-2 bg-transparent">
-                        <button onClick={handleReset} disabled={isDownloading || images.length === 0} className="btn btn-sm btn-ghost rounded-none font-black text-[9px] tracking-widest text-error/40 hover:text-error">CLEAR ALL</button>
-                        <button onClick={handleDownload} disabled={isDownloading || images.length === 0} className="btn btn-sm btn-primary rounded-none font-black text-[9px] tracking-widest">
-                           {isDownloading ? 'PROCESSING...' : 'DOWNLOAD ZIP'}
-                        </button>
-                    </footer>
+                    {/* Manual Corner Accents */}
+                    <div className="absolute -top-[1px] -left-[1px] w-3 h-3 border-t border-l border-primary/15 z-20 pointer-events-none" />
+                    <div className="absolute -top-[1px] -right-[1px] w-3 h-3 border-t border-r border-primary/15 z-20 pointer-events-none" />
+                    <div className="absolute -bottom-[1px] -left-[1px] w-3 h-3 border-b border-l border-primary/15 z-20 pointer-events-none" />
+                    <div className="absolute -bottom-[1px] -right-[1px] w-3 h-3 border-b border-r border-primary/15 z-20 pointer-events-none" />
                 </aside>
 
-                <main className="flex-grow bg-transparent overflow-y-auto overflow-x-hidden scroll-smooth custom-scrollbar flex flex-col">
-                    <section className="p-10 bg-transparent">
-                        <div className="max-w-screen-2xl mx-auto flex flex-col gap-1">
-                            <div className="flex flex-col md:flex-row md:items-stretch justify-between gap-6">
-                                <h1 className="text-2xl lg:text-3xl font-black tracking-tighter text-base-content leading-none flex items-center uppercase">Image Resizer<span className="text-primary">.</span></h1>
+                <main className="flex-grow flex flex-col relative p-[3px] corner-frame overflow-visible z-10 ml-1">
+                    <div className="flex flex-col h-full w-full overflow-hidden relative z-10 bg-base-100/40 backdrop-blur-xl">
+                        <section className="p-10 bg-transparent">
+                            <div className="max-w-screen-2xl mx-auto flex flex-col gap-1">
+                                <div className="flex flex-col md:flex-row md:items-stretch justify-between gap-6">
+                                    <h1 className="text-2xl lg:text-3xl font-black tracking-tighter text-base-content leading-none flex items-center uppercase">Image Resizer<span className="text-primary">.</span></h1>
+                                </div>
+                                <p className="text-[11px] font-bold text-base-content/30 uppercase tracking-[0.3em] w-full">Batch processing utility for spatial optimization and visual format conversion.</p>
                             </div>
-                            <p className="text-[11px] font-bold text-base-content/30 uppercase tracking-[0.3em] w-full">Batch processing utility for spatial optimization and visual format conversion.</p>
-                        </div>
-                    </section>
+                        </section>
 
-                    <div className="flex-grow bg-transparent relative flex flex-col">
-                        {images.length > 0 ? (
-                            <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 gap-px bg-transparent overflow-y-auto custom-scrollbar">
-                               {images.map(img => (
-                                   <ImageCard 
-                                        key={img.id}
-                                        item={img}
-                                        settings={settings}
-                                        onRemove={() => handleRemoveImage(img.id)}
-                                        onCropMouseDown={handleCropMouseDown}
-                                        imageRef={(el) => {
-                                            if (el) imageRefs.current.set(img.id, el);
-                                            else imageRefs.current.delete(img.id);
-                                        }}
-                                   />
-                               ))}
-                            </div>
-                        ) : (
-                            <DropZone onFilesAdded={handleAddFiles} />
-                        )}
+                        <div className="flex-grow bg-transparent relative flex flex-col overflow-hidden">
+                            {images.length > 0 ? (
+                                <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 gap-px bg-transparent overflow-y-auto">
+                                   {images.map(img => (
+                                       <ImageCard 
+                                            key={img.id}
+                                            item={img}
+                                            settings={settings}
+                                            onRemove={() => handleRemoveImage(img.id)}
+                                            onCropMouseDown={handleCropMouseDown}
+                                            imageRef={(el) => {
+                                                if (el) imageRefs.current.set(img.id, el);
+                                                else imageRefs.current.delete(img.id);
+                                            }}
+                                       />
+                                   ))}
+                                </div>
+                            ) : (
+                                <DropZone onFilesAdded={handleAddFiles} />
+                            )}
+                        </div>
                     </div>
+                    {/* Manual Corner Accents */}
+                    <div className="absolute -top-[1px] -left-[1px] w-3 h-3 border-t border-l border-primary/15 z-20 pointer-events-none" />
+                    <div className="absolute -top-[1px] -right-[1px] w-3 h-3 border-t border-r border-primary/15 z-20 pointer-events-none" />
+                    <div className="absolute -bottom-[1px] -left-[1px] w-3 h-3 border-b border-l border-primary/15 z-20 pointer-events-none" />
+                    <div className="absolute -bottom-[1px] -right-[1px] w-3 h-3 border-b border-r border-primary/15 z-20 pointer-events-none" />
                 </main>
             </div>
         </div>

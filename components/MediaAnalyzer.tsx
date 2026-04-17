@@ -38,6 +38,8 @@ export const MediaAnalyzer: React.FC<MediaAnalyzerProps> = ({ onSaveSuggestion, 
     const [activeResultType, setActiveResultType] = useState<'abstraction' | 'metadata' | null>(null);
     const [copiedRaw, setCopiedRaw] = useState(false);
 
+    const resultsScrollerRef = useRef<HTMLDivElement>(null);
+
     const handleFileSelect = (file: File | null) => {
         if (!file) return;
 
@@ -202,220 +204,236 @@ export const MediaAnalyzer: React.FC<MediaAnalyzerProps> = ({ onSaveSuggestion, 
     const hasPrompt = !!metadataResults?.prompt && !metadataResults.prompt.includes('extraction failed') && !metadataResults.prompt.includes('No text nodes');
     
     return (
-        <div className="grid grid-cols-1 lg:grid-cols-12 overflow-hidden h-full p-4 gap-4 relative">
+        <div className="grid grid-cols-1 lg:grid-cols-12 overflow-hidden h-full gap-4 relative auto-rows-fr">
             
             {/* Media Input Area */}
-            <aside className="lg:col-span-3 flex flex-col min-h-0 bg-transparent relative z-10">
-                {header}
-                <header className="p-6 h-16 flex items-center justify-between">
-                    <h3 className="text-[10px] font-black uppercase tracking-[0.4em] text-primary">Media Input</h3>
-                    <div className="flex gap-1">
-                        <div className="w-1 h-1 bg-primary/30"></div>
-                        <div className="w-1 h-1 bg-primary/30"></div>
-                        <div className="w-1 h-1 bg-primary/30"></div>
-                    </div>
-                </header>
-                <div className="p-6 flex flex-col gap-6 flex-grow min-h-0 overflow-hidden">
-                    <div 
-                        className={`relative flex-grow w-full border-2 border-dashed rounded-none flex flex-col items-center justify-center cursor-pointer transition-colors group overflow-hidden ${isDragging ? 'border-primary bg-primary/10' : 'border-base-content/10 hover:border-primary/50'}`}
-                        onDrop={handleDrop}
-                        onDragOver={(e) => { e.preventDefault(); setIsDragging(true); }}
-                        onDragLeave={() => setIsDragging(false)}
-                        onClick={() => !previewUrl && (fileInputRef.current as any)?.click()}
-                    >
-                        <input 
-                            type="file" 
-                            ref={fileInputRef} 
-                            onChange={(e) => handleFileSelect((e.currentTarget as any).files?.[0] || null)} 
-                            className="hidden" 
-                            accept="image/*,video/*"
-                        />
-                        
-                        {!previewUrl ? (
-                            <div className="text-center opacity-20 transition-opacity group-hover:opacity-40 p-12">
-                                <div className="flex justify-center gap-4 mb-4">
-                                    <PhotoIcon className="w-10 h-10" />
-                                    <FilmIcon className="w-10 h-10" />
-                                </div>
-                                <p className="text-[10px] font-black uppercase tracking-widest">Select Image or Video</p>
-                                <p className="text-[9px] font-bold text-base-content/40 mt-2 uppercase">MP4, WEBM, JPG, PNG</p>
-                            </div>
-                        ) : (
-                            <div className="w-full h-full relative bg-black" onClick={e => e.stopPropagation()}>
-                                {fileType === 'video' ? (
-                                    <video 
-                                        ref={videoRef}
-                                        src={previewUrl} 
-                                        controls 
-                                        className="w-full h-full object-cover"
-                                    />
-                                ) : (
-                                    <img 
-                                        src={previewUrl} 
-                                        className="w-full h-full object-cover" 
-                                        alt="Source material" 
-                                    />
-                                )}
-                                <button onClick={() => handleReset(null)} className="btn btn-xs btn-square btn-error absolute top-2 right-2 opacity-0 group-hover:opacity-100 shadow-2xl z-10 rounded-none">
-                                    <CloseIcon className="w-3 h-3"/>
-                                </button>
-                                {fileType === 'video' && (
-                                    <div className="absolute bottom-2 left-2 pointer-events-none">
-                                        <div className="badge badge-primary rounded-none font-black text-[7px] tracking-widest px-2 opacity-60">PAUSE ON FRAME</div>
+            <aside className="lg:col-span-3 h-full min-h-0 flex flex-col relative p-[3px] corner-frame overflow-visible z-10">
+                <div className="flex flex-col h-full w-full overflow-hidden relative z-10 bg-base-100/40 backdrop-blur-xl">
+                    {header}
+                    <header className="p-6 h-16 flex items-center justify-between bg-base-100/10 backdrop-blur-md">
+                        <h3 className="text-[10px] font-black uppercase tracking-[0.4em] text-primary">Media Input</h3>
+                        <div className="flex gap-1">
+                            <div className="w-1 h-1 bg-primary/30"></div>
+                            <div className="w-1 h-1 bg-primary/30"></div>
+                            <div className="w-1 h-1 bg-primary/30"></div>
+                        </div>
+                    </header>
+                    <div className="p-6 flex flex-col gap-6 flex-grow min-h-0 overflow-hidden">
+                        <div 
+                            className={`relative flex-grow w-full border-2 border-dashed rounded-none flex flex-col items-center justify-center cursor-pointer transition-colors group overflow-hidden ${isDragging ? 'border-primary bg-primary/10' : 'border-base-content/10 hover:border-primary/50'}`}
+                            onDrop={handleDrop}
+                            onDragOver={(e) => { e.preventDefault(); setIsDragging(true); }}
+                            onDragLeave={() => setIsDragging(false)}
+                            onClick={() => !previewUrl && (fileInputRef.current as any)?.click()}
+                        >
+                            <input 
+                                type="file" 
+                                ref={fileInputRef} 
+                                onChange={(e) => handleFileSelect((e.currentTarget as any).files?.[0] || null)} 
+                                className="hidden" 
+                                accept="image/*,video/*"
+                            />
+                            
+                            {!previewUrl ? (
+                                <div className="text-center opacity-20 transition-opacity group-hover:opacity-40 p-12">
+                                    <div className="flex justify-center gap-4 mb-4">
+                                        <PhotoIcon className="w-10 h-10" />
+                                        <FilmIcon className="w-10 h-10" />
                                     </div>
-                                )}
+                                    <p className="text-[10px] font-black uppercase tracking-widest">Select Image or Video</p>
+                                    <p className="text-[9px] font-bold text-base-content/40 mt-2 uppercase">MP4, WEBM, JPG, PNG</p>
+                                </div>
+                            ) : (
+                                <div className="w-full h-full relative bg-black" onClick={e => e.stopPropagation()}>
+                                    {fileType === 'video' ? (
+                                        <video 
+                                            ref={videoRef}
+                                            src={previewUrl} 
+                                            controls 
+                                            className="w-full h-full object-cover"
+                                        />
+                                    ) : (
+                                        <img 
+                                            src={previewUrl} 
+                                            className="w-full h-full object-cover" 
+                                            alt="Source material" 
+                                        />
+                                    )}
+                                    <button onClick={() => handleReset(null)} className="btn btn-xs btn-square btn-error absolute top-2 right-2 opacity-0 group-hover:opacity-100 shadow-2xl z-10 rounded-none">
+                                        <CloseIcon className="w-3 h-3"/>
+                                    </button>
+                                    {fileType === 'video' && (
+                                        <div className="absolute bottom-2 left-2 pointer-events-none">
+                                            <div className="badge badge-primary rounded-none font-black text-[7px] tracking-widest px-2 opacity-60">PAUSE ON FRAME</div>
+                                        </div>
+                                    )}
+                                </div>
+                            )}
+                        </div>
+
+                        {metadataResults?.workflow && (
+                            <div className="h-14 flex items-stretch flex-shrink-0 animate-fade-in">
+                                <button 
+                                    onClick={handleSaveWorkflow}
+                                    className="btn btn-ghost h-full rounded-none border-none flex-1 font-black text-[10px] tracking-widest uppercase hover:bg-base-200 px-1 truncate"
+                                >
+                                    EXPORT JSON
+                                </button>
                             </div>
                         )}
                     </div>
-
-                    {metadataResults?.workflow && (
-                        <div className="h-14 flex items-stretch flex-shrink-0 animate-fade-in">
-                            <button 
-                                onClick={handleSaveWorkflow}
-                                className="btn btn-ghost h-full rounded-none border-none flex-1 font-black text-[10px] tracking-widest uppercase hover:bg-base-200 px-1 truncate"
-                            >
-                                EXPORT JSON
-                            </button>
-                        </div>
-                    )}
-
-                    <p className="text-[9px] font-bold text-base-content/30 uppercase leading-relaxed text-center">
-                        Extract neural tokens via ANALYZE or technical parameters via READ.
-                    </p>
+                    <footer className="h-14 flex items-stretch flex-shrink-0 bg-base-100/10 backdrop-blur-md p-1.5 gap-1.5">
+                        <button 
+                            onClick={() => !isLoading && handleReset(null)} 
+                            className="btn btn-sm btn-ghost flex-1 h-full rounded-none font-normal text-[13px] tracking-wider text-error/40 hover:text-error btn-snake"
+                        >
+                            <span/><span/><span/><span/>
+                            RESET
+                        </button>
+                        <button 
+                            onClick={handleAnalyze} 
+                            disabled={isLoading || !sourceFile} 
+                            className={`btn btn-sm btn-ghost flex-1 h-full rounded-none font-normal text-[13px] tracking-wider ${activeResultType === 'abstraction' ? 'text-primary' : ''} disabled:opacity-30 disabled:cursor-not-allowed btn-snake`}
+                        >
+                            <span/><span/><span/><span/>
+                            {isLoading && activeResultType === 'abstraction' ? '...' : 'ANALYZE'}
+                        </button>
+                        <button 
+                            onClick={handleReadMetadata} 
+                            disabled={isLoading || !sourceFile || fileType !== 'image'} 
+                            className={`btn btn-sm btn-primary flex-1 h-full rounded-none font-normal text-[13px] tracking-wider ${activeResultType === 'metadata' ? 'btn-active' : ''} disabled:opacity-30 disabled:cursor-not-allowed btn-snake-primary`}
+                        >
+                            <span/><span/><span/><span/>
+                            {isLoading && activeResultType === 'metadata' ? '...' : 'READ'}
+                        </button>
+                    </footer>
                 </div>
-                <footer className="h-14 flex items-stretch flex-shrink-0">
-                    <button 
-                        onClick={() => !isLoading && handleReset(null)} 
-                        className="btn btn-ghost h-full rounded-none border-none flex-1 font-black text-[10px] tracking-widest text-error/40 hover:text-error uppercase px-1 truncate"
-                    >
-                        RESET
-                    </button>
-                    <button 
-                        onClick={handleAnalyze} 
-                        disabled={isLoading || !sourceFile} 
-                        className={`btn btn-ghost h-full rounded-none border-none flex-1 font-black text-[10px] tracking-widest uppercase hover:bg-primary/10 px-1 truncate ${activeResultType === 'abstraction' ? 'text-primary' : ''}`}
-                    >
-                        {isLoading && activeResultType === 'abstraction' ? '...' : 'ANALYZE'}
-                    </button>
-                    <button 
-                        onClick={handleReadMetadata} 
-                        disabled={isLoading || !sourceFile || fileType !== 'image'} 
-                        className={`btn btn-primary h-full rounded-none border-none flex-1 font-black text-[10px] tracking-widest uppercase shadow-none px-1 truncate ${activeResultType === 'metadata' ? 'btn-active' : ''}`}
-                    >
-                        {isLoading && activeResultType === 'metadata' ? '...' : 'READ'}
-                    </button>
-                </footer>
+                {/* Manual Corner Accents */}
+                <div className="absolute -top-[1px] -left-[1px] w-3 h-3 border-t border-l border-primary/15 z-20 pointer-events-none" />
+                <div className="absolute -top-[1px] -right-[1px] w-3 h-3 border-t border-r border-primary/15 z-20 pointer-events-none" />
+                <div className="absolute -bottom-[1px] -left-[1px] w-3 h-3 border-b border-l border-primary/15 z-20 pointer-events-none" />
+                <div className="absolute -bottom-[1px] -right-[1px] w-3 h-3 border-b border-r border-primary/15 z-20 pointer-events-none" />
             </aside>
 
             {/* center Column: Results (Merged) */}
-            <main className="lg:col-span-9 flex flex-col min-h-0 bg-transparent relative z-10">
-                <header className="p-6 h-16 flex items-center justify-between">
-                    <div className="flex items-center gap-6">
-                        <h2 className={`text-xs font-black uppercase tracking-[0.4em] flex items-center gap-3 transition-colors cursor-pointer ${activeResultType === 'abstraction' ? 'text-primary' : 'text-base-content/20 hover:text-base-content/40'}`} onClick={() => abstractionResults && setActiveResultType('abstraction')}>
-                            <div className={`w-2 h-2 rounded-none ${activeResultType === 'abstraction' ? 'bg-primary animate-pulse' : 'bg-base-content/10'}`}></div> 
-                            NEURAL ABSTRACTION
-                        </h2>
-                        <h2 className={`text-xs font-black uppercase tracking-[0.4em] flex items-center gap-3 transition-colors cursor-pointer ${activeResultType === 'metadata' ? 'text-primary' : 'text-base-content/20 hover:text-base-content/40'}`} onClick={() => metadataResults && setActiveResultType('metadata')}>
-                            <div className={`w-2 h-2 rounded-none ${activeResultType === 'metadata' ? 'bg-primary animate-pulse' : 'bg-base-content/10'}`}></div> 
-                            TECH SPECS
-                        </h2>
-                    </div>
-                </header>
-                <div className="flex-grow overflow-y-auto custom-scrollbar flex flex-col">
-                    {error && (
-                        <div className="p-6 animate-fade-in">
-                            <div className="alert alert-error rounded-none border-2 border-error/20 bg-transparent">
-                                <span className="font-black uppercase text-[10px] tracking-widest text-error">{error}</span>
-                            </div>
+            <main className="lg:col-span-9 h-full min-h-0 flex flex-col relative p-[3px] corner-frame overflow-visible z-10">
+                <div className="flex flex-col h-full w-full overflow-hidden relative z-10 bg-base-100/40 backdrop-blur-xl">
+                    <header className="p-6 h-16 flex items-center justify-between bg-base-100/10 backdrop-blur-md">
+                        <div className="flex items-center gap-6">
+                            <h2 className={`text-xs font-black uppercase tracking-[0.4em] flex items-center gap-3 transition-colors cursor-pointer ${activeResultType === 'abstraction' ? 'text-primary' : 'text-base-content/20 hover:text-base-content/40'}`} onClick={() => abstractionResults && setActiveResultType('abstraction')}>
+                                <div className={`w-2 h-2 rounded-none ${activeResultType === 'abstraction' ? 'bg-primary animate-pulse' : 'bg-base-content/10'}`}></div> 
+                                NEURAL ABSTRACTION
+                            </h2>
+                            <h2 className={`text-xs font-black uppercase tracking-[0.4em] flex items-center gap-3 transition-colors cursor-pointer ${activeResultType === 'metadata' ? 'text-primary' : 'text-base-content/20 hover:text-base-content/40'}`} onClick={() => metadataResults && setActiveResultType('metadata')}>
+                                <div className={`w-2 h-2 rounded-none ${activeResultType === 'metadata' ? 'bg-primary animate-pulse' : 'bg-base-content/10'}`}></div> 
+                                TECH SPECS
+                            </h2>
                         </div>
-                    )}
+                    </header>
+                    <div ref={resultsScrollerRef} className="flex-grow overflow-y-auto flex flex-col">
+                        {error && (
+                            <div className="p-6 animate-fade-in">
+                                <div className="alert alert-error rounded-none border-2 border-error/20 bg-transparent">
+                                    <span className="font-black uppercase text-[10px] tracking-widest text-error">{error}</span>
+                                </div>
+                            </div>
+                        )}
 
-                    {isLoading ? (
-                        <div className="flex-grow flex flex-col items-center justify-center text-center space-y-6 relative overflow-hidden">
-                            <div className="absolute inset-0 pointer-events-none opacity-[0.05] bg-[linear-gradient(rgba(18,16,16,0)_50%,rgba(0,0,0,0.25)_50%),linear-gradient(90deg,rgba(255,0,0,0.06),rgba(0,255,0,0.02),rgba(0,0,255,0.06))] bg-[length:100%_2px,3px_100%]"></div>
-                            <div className="relative z-10 flex flex-col items-center">
-                                <LoadingSpinner className="w-16 h-16 text-primary mb-8" />
-                                <h3 className="text-xs font-black uppercase tracking-[0.5em] text-primary animate-pulse mb-2">{loadingMessage}</h3>
+                        {isLoading ? (
+                            <div className="flex-grow flex flex-col items-center justify-center text-center space-y-6 relative overflow-hidden">
+                                <div className="absolute inset-0 pointer-events-none opacity-[0.05] bg-[linear-gradient(rgba(18,16,16,0)_50%,rgba(0,0,0,0.25)_50%),linear-gradient(90deg,rgba(255,0,0,0.06),rgba(0,255,0,0.02),rgba(0,0,255,0.06))] bg-[length:100%_2px,3px_100%]"></div>
+                                <div className="relative z-10 flex flex-col items-center">
+                                    <LoadingSpinner className="w-16 h-16 text-primary mb-8" />
+                                    <h3 className="text-xs font-black uppercase tracking-[0.5em] text-primary animate-pulse mb-2">{loadingMessage}</h3>
+                                </div>
                             </div>
-                        </div>
-                    ) : activeResultType === 'abstraction' && abstractionResults ? (
-                        <div className="bg-transparent">
-                            {abstractionResults.suggestions.map((suggestion, index) => (
-                                <SuggestionItem 
-                                    key={index} 
-                                    suggestionText={suggestion} 
-                                    onSave={onSaveSuggestion}
-                                    onSaveAsPreset={onSaveAsPreset}
-                                    onRefine={onRefine}
-                                    onClip={onClip}
-                                    isAbstraction={true}
-                                />
-                            ))}
-                        </div>
-                    ) : activeResultType === 'metadata' && metadataResults ? (
-                        <div className="p-6 space-y-8 animate-fade-in">
-                            <section className="space-y-4">
-                                <div className="flex justify-between items-center">
-                                    <h4 className="text-[9px] font-black uppercase tracking-widest text-primary/40">POSITIVE PROMPT</h4>
-                                    <div className="flex gap-1 h-8">
+                        ) : activeResultType === 'abstraction' && abstractionResults ? (
+                            <div className="bg-transparent">
+                                {abstractionResults.suggestions.map((suggestion, index) => (
+                                    <SuggestionItem 
+                                        key={index} 
+                                        suggestionText={suggestion} 
+                                        onSave={onSaveSuggestion}
+                                        onSaveAsPreset={onSaveAsPreset}
+                                        onRefine={onRefine}
+                                        onClip={onClip}
+                                        isAbstraction={true}
+                                    />
+                                ))}
+                            </div>
+                        ) : activeResultType === 'metadata' && metadataResults ? (
+                            <div className="p-6 space-y-8 animate-fade-in">
+                                <section className="space-y-4">
+                                    <div className="flex justify-between items-center">
+                                        <h4 className="text-[9px] font-black uppercase tracking-widest text-primary/40">POSITIVE PROMPT</h4>
+                                        <div className="flex gap-1.5 h-8">
+                                            <button 
+                                                onClick={() => onRefine(metadataResults.prompt)}
+                                                disabled={!hasPrompt}
+                                                className="btn btn-sm btn-ghost h-full rounded-none text-primary px-4 font-normal text-[12px] tracking-wider uppercase btn-snake"
+                                            >
+                                                <span/><span/><span/><span/>
+                                                IMPROVE
+                                            </button>
+                                            <button 
+                                                onClick={() => onClip(metadataResults.prompt, `Info: ${sourceFile?.name}`)}
+                                                disabled={!hasPrompt}
+                                                className="btn btn-sm btn-ghost h-full rounded-none px-4 font-normal text-[12px] tracking-wider uppercase btn-snake"
+                                            >
+                                                <span/><span/><span/><span/>
+                                                CLIP
+                                            </button>
+                                        </div>
+                                    </div>
+                                    <p className="text-sm font-medium leading-relaxed text-base-content/80 font-mono bg-transparent p-3">
+                                        {hasPrompt ? metadataResults.prompt : 'NO READABLE DATA.'}
+                                    </p>
+                                </section>
+
+                                {filteredParams.length > 0 && (
+                                    <section className="space-y-4 pt-6 border-t border-base-300">
+                                        <h4 className="text-[9px] font-black uppercase tracking-widest text-primary/40">TECHNICAL PARAMETERS</h4>
+                                        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-x-4 gap-y-4">
+                                            {filteredParams.map(([key, val]) => (
+                                                <div key={key} className="flex flex-col border-b border-base-300/30 pb-2">
+                                                    <span className="text-[8px] font-black uppercase text-base-content/20 tracking-widest mb-1 truncate" title={key}>{key}</span>
+                                                    <span className="text-xs font-mono font-bold text-base-content/60 break-words">{val}</span>
+                                                </div>
+                                            ))}
+                                        </div>
+                                    </section>
+                                )}
+
+                                <section className="space-y-4 pt-6 border-t border-base-300">
+                                    <div className="flex justify-between items-center">
+                                        <h4 className="text-[9px] font-black uppercase tracking-widest text-base-content/20">RAW STREAM</h4>
                                         <button 
-                                            onClick={() => onRefine(metadataResults.prompt)}
-                                            disabled={!hasPrompt}
-                                            className="btn btn-ghost h-full rounded-none text-primary font-black text-[10px] tracking-widest uppercase px-4 hover:bg-primary/10"
+                                            onClick={handleCopyRaw}
+                                            disabled={!metadataResults.raw && !metadataResults.workflow}
+                                            className="btn btn-sm btn-ghost h-8 rounded-none px-4 font-normal text-[12px] tracking-wider uppercase btn-snake"
                                         >
-                                            IMPROVE
-                                        </button>
-                                        <button 
-                                            onClick={() => onClip(metadataResults.prompt, `Info: ${sourceFile?.name}`)}
-                                            disabled={!hasPrompt}
-                                            className="btn btn-ghost h-full rounded-none font-black text-[10px] tracking-widest uppercase px-4 hover:bg-base-200"
-                                        >
-                                            CLIP
+                                            <span/><span/><span/><span/>
+                                            {copiedRaw ? 'OK' : 'COPY'}
                                         </button>
                                     </div>
-                                </div>
-                                <p className="text-sm font-medium leading-relaxed text-base-content/80 font-mono bg-transparent p-3">
-                                    {hasPrompt ? metadataResults.prompt : 'NO READABLE DATA.'}
-                                </p>
-                            </section>
-
-                            {filteredParams.length > 0 && (
-                                <section className="space-y-4 pt-6 border-t border-base-300">
-                                    <h4 className="text-[9px] font-black uppercase tracking-widest text-primary/40">TECHNICAL PARAMETERS</h4>
-                                    <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-x-4 gap-y-4">
-                                        {filteredParams.map(([key, val]) => (
-                                            <div key={key} className="flex flex-col border-b border-base-300/30 pb-2">
-                                                <span className="text-[8px] font-black uppercase text-base-content/20 tracking-widest mb-1 truncate" title={key}>{key}</span>
-                                                <span className="text-xs font-mono font-bold text-base-content/60 break-words">{val}</span>
-                                            </div>
-                                        ))}
+                                    <div className="p-3 bg-transparent text-[9px] font-mono text-base-content/30 break-words leading-relaxed max-h-32 overflow-y-auto">
+                                        {metadataResults.raw || 'EMPTY STREAM.'}
                                     </div>
                                 </section>
-                            )}
-
-                            <section className="space-y-4 pt-6 border-t border-base-300">
-                                <div className="flex justify-between items-center">
-                                    <h4 className="text-[9px] font-black uppercase tracking-widest text-base-content/20">RAW STREAM</h4>
-                                    <button 
-                                        onClick={handleCopyRaw}
-                                        disabled={!metadataResults.raw && !metadataResults.workflow}
-                                        className="btn btn-ghost h-8 rounded-none font-black text-[10px] tracking-widest uppercase px-4 hover:bg-base-200"
-                                    >
-                                        {copiedRaw ? 'OK' : 'COPY'}
-                                    </button>
-                                </div>
-                                <div className="p-3 bg-transparent text-[9px] font-mono text-base-content/30 break-words leading-relaxed max-h-32 overflow-y-auto custom-scrollbar">
-                                    {metadataResults.raw || 'EMPTY STREAM.'}
-                                </div>
-                            </section>
-                        </div>
-                    ) : (
-                        <div className="flex-grow flex flex-col items-center justify-center text-center py-32 opacity-10">
-                            <SparklesIcon className="w-16 h-16 mb-6" />
-                            <p className="text-[10px] font-black uppercase tracking-widest">Awaiting Neural Input</p>
-                        </div>
-                    )}
+                            </div>
+                        ) : (
+                            <div className="flex-grow flex flex-col items-center justify-center text-center py-32 opacity-10">
+                                <SparklesIcon className="w-16 h-16 mb-6" />
+                                <p className="text-[10px] font-black uppercase tracking-widest">Awaiting Neural Input</p>
+                            </div>
+                        )}
+                    </div>
                 </div>
+                {/* Manual Corner Accents */}
+                <div className="absolute -top-[1px] -left-[1px] w-3 h-3 border-t border-l border-primary/15 z-20 pointer-events-none" />
+                <div className="absolute -top-[1px] -right-[1px] w-3 h-3 border-t border-r border-primary/15 z-20 pointer-events-none" />
+                <div className="absolute -bottom-[1px] -left-[1px] w-3 h-3 border-b border-l border-primary/15 z-20 pointer-events-none" />
+                <div className="absolute -bottom-[1px] -right-[1px] w-3 h-3 border-b border-r border-primary/15 z-20 pointer-events-none" />
             </main>
         </div>
     );

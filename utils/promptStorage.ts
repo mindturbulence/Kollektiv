@@ -89,35 +89,6 @@ export const addSavedPrompt = async (promptData: Omit<SavedPrompt, 'id' | 'creat
     await saveManifest(manifest);
 };
 
-export const addMultipleSavedPrompts = async (promptsData: Omit<SavedPrompt, 'id' | 'createdAt'>[]): Promise<void> => {
-    const manifest = await getManifest();
-    const newPrompts: SavedPrompt[] = [];
-    const savePromises: Promise<any>[] = [];
-
-    for (const promptData of promptsData) {
-        if (!promptData.text) continue;
-
-        let newId = '';
-        try {
-            newId = `prompt_${Date.now()}_${uuidv4().substring(0, 6)}_${Math.random().toString(36).substring(2, 5)}`;
-        } catch (e) {
-            newId = `prompt_${Date.now()}_${Math.random().toString(36).substring(2, 8)}`;
-        }
-
-        const newPrompt: SavedPrompt = {
-            id: newId,
-            createdAt: Date.now(),
-            ...promptData,
-        };
-        newPrompts.push(newPrompt);
-        savePromises.push(fileSystemManager.saveFile(`${PROMPTS_DIR}/${newPrompt.id}.txt`, new Blob([newPrompt.text], { type: 'text/plain;charset=utf-8' })));
-    }
-    
-    await Promise.all(savePromises);
-    manifest.prompts.unshift(...newPrompts);
-    await saveManifest(manifest);
-};
-
 export const updateSavedPrompt = async (id: string, promptData: Omit<SavedPrompt, 'id' | 'createdAt'>): Promise<void> => {
     const manifest = await getManifest();
     const promptIndex = manifest.prompts.findIndex(p => p.id === id);

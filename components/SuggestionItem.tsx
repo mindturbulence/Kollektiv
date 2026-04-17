@@ -148,7 +148,7 @@ export const SuggestionItem: React.FC<SuggestionItemProps> = ({
                             <img src={mediaUrl} alt="Generated result" className="w-full h-full object-contain" />
                         )}
                         <div className="absolute top-4 right-4 opacity-0 group-hover:opacity-100 transition-opacity">
-                             <a href={mediaUrl} download={`kollektiv_${targetAI.replace(/\s+/g, '_')}_${Date.now()}.${isVideo ? 'mp4' : 'jpg'}`} className="btn btn-sm btn-primary rounded-none shadow-2xl font-black text-[10px] tracking-widest px-4">
+                             <a href={mediaUrl} download={`kollektiv_${targetAI.replace(/\s+/g, '_')}_${Date.now()}.${isVideo ? 'mp4' : 'jpg'}`} className="form-btn form-btn-primary h-8 px-4 font-black text-[10px] tracking-widest shadow-2xl">
                                 <DownloadIcon className="w-4 h-4 mr-2"/> EXPORT
                             </a>
                         </div>
@@ -185,19 +185,19 @@ export const SuggestionItem: React.FC<SuggestionItemProps> = ({
                             {isGoogleProduct && !mediaUrl && (
                                 <button 
                                     onClick={handleTryGenerate} 
-                                    className="btn btn-ghost h-full rounded-none border-none flex-1 font-black text-[10px] tracking-widest text-primary uppercase hover:bg-primary/10 px-1 truncate"
+                                    className="form-btn h-full rounded-none border-none flex-1 font-black text-[10px] tracking-widest text-primary uppercase px-1 truncate"
                                 >
                                     RENDER
                                 </button>
                             )}
                             {onRefine && (
-                                 <button onClick={handleRefine} className="btn btn-ghost h-full rounded-none border-none flex-1 font-black text-[10px] tracking-widest uppercase hover:bg-base-200 px-1 truncate">
+                                 <button onClick={handleRefine} className="form-btn h-full rounded-none border-none flex-1 font-black text-[10px] tracking-widest uppercase px-1 truncate">
                                     RE-REFINE
                                 </button>
                             )}
                             <button
                                 onClick={handleCopyJson}
-                                className="btn btn-ghost h-full rounded-none border-none flex-1 font-black text-[10px] tracking-widest uppercase hover:bg-base-200 px-1 truncate"
+                                className="form-btn h-full rounded-none border-none flex-1 font-black text-[10px] tracking-widest uppercase px-1 truncate"
                             >
                                 {jsonCopied ? 'OK' : 'JSON'}
                             </button>
@@ -206,19 +206,19 @@ export const SuggestionItem: React.FC<SuggestionItemProps> = ({
                         <div className="flex flex-1 items-stretch border-l border-base-300">
                             <button
                                 onClick={handleCopy}
-                                className="btn btn-ghost h-full rounded-none border-none flex-1 font-black text-[10px] tracking-widest uppercase hover:bg-base-200 px-1 truncate"
+                                className="form-btn h-full rounded-none border-none flex-1 font-black text-[10px] tracking-widest uppercase px-1 truncate"
                             >
                                 {copied ? 'OK' : 'COPY'}
                             </button>
                             {onClip && (
-                                <button onClick={handleClip} className="btn btn-ghost h-full rounded-none border-none flex-1 font-black text-[10px] tracking-widest uppercase hover:bg-base-200 px-1 truncate" disabled={clipped}>
+                                <button onClick={handleClip} className="form-btn h-full rounded-none border-none flex-1 font-black text-[10px] tracking-widest uppercase px-1 truncate" disabled={clipped}>
                                     {clipped ? 'OK' : 'CLIP'}
                                 </button>
                             )}
                             <button
                                 onClick={handleSave}
                                 disabled={saved}
-                                className="btn btn-ghost h-full rounded-none border-none flex-1 font-black text-[10px] tracking-widest uppercase hover:bg-base-200 px-1 truncate"
+                                className="form-btn h-full rounded-none border-none flex-1 font-black text-[10px] tracking-widest uppercase px-1 truncate"
                             >
                                 {saved ? 'OK' : 'SAVE'}
                             </button>
@@ -226,7 +226,7 @@ export const SuggestionItem: React.FC<SuggestionItemProps> = ({
                                 <button
                                     onClick={handleSaveAsPreset}
                                     disabled={presetSaved}
-                                    className="btn btn-ghost h-full rounded-none border-none flex-1 font-black text-[10px] tracking-widest text-primary uppercase hover:bg-primary/10 px-1 truncate"
+                                    className="form-btn h-full rounded-none border-none flex-1 font-black text-[10px] tracking-widest text-primary uppercase px-1 truncate"
                                 >
                                     {presetSaved ? 'OK' : 'PRESET'}
                                 </button>

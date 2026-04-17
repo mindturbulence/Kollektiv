@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { EditIcon, DeleteIcon, CheckIcon } from './icons';
+import { EditIcon, DeleteIcon, CheckIcon, PlusIcon } from './icons';
 import ConfirmationModal from './ConfirmationModal';
 
 interface Category {
@@ -90,19 +90,20 @@ const GenericCategoryManager: React.FC<GenericCategoryManagerProps> = ({
             <h3 className="text-xs font-black uppercase tracking-[0.4em] text-primary">{title}</h3>
         </header>
 
-        <form onSubmit={handleAddCategory} className="p-6 flex gap-4">
+        <form onSubmit={handleAddCategory} className="p-6 flex gap-4 items-center">
           <input
             type="text"
             value={newCategoryName}
             onChange={(e) => setNewCategoryName((e.currentTarget as any).value)}
             placeholder="Enter new folder name..."
-            className="input input-bordered rounded-none input-sm flex-grow font-bold tracking-tight"
+            className="form-input flex-grow"
           />
           <button
             type="submit"
-            className="btn btn-primary btn-sm rounded-none font-black text-[10px] tracking-widest px-6"
+            className="p-2 text-primary hover:text-primary-focus transition-colors"
+            title="Create Folder"
           >
-            CREATE
+            <PlusIcon className="w-6 h-6" />
           </button>
         </form>
 
@@ -119,7 +120,7 @@ const GenericCategoryManager: React.FC<GenericCategoryManagerProps> = ({
                         onKeyDown={(e) => e.key === 'Enter' && handleEditSave(cat.id)}
                         onBlur={() => handleEditSave(cat.id)}
                         autoFocus
-                        className="flex-grow p-1 bg-transparent text-base-content border-b-2 border-primary outline-none font-bold text-lg tracking-tight"
+                        className="form-input flex-grow"
                     />
                     ) : (
                     <div className="flex flex-col min-w-0">
@@ -129,15 +130,15 @@ const GenericCategoryManager: React.FC<GenericCategoryManagerProps> = ({
                     )}
                     <div className="flex items-center gap-2 ml-4">
                     {editingCategoryId === cat.id ? (
-                        <button onClick={() => handleEditSave(cat.id)} title="Save" className="btn btn-sm btn-ghost btn-square text-success">
+                        <button onClick={() => handleEditSave(cat.id)} title="Save" className="p-1.5 text-success/40 hover:text-success transition-colors">
                         <CheckIcon className="w-5 h-5" />
                         </button>
                     ) : (
-                        <button onClick={() => handleEditStart(cat)} title="Rename" className="btn btn-sm btn-ghost btn-square opacity-20 hover:opacity-100">
+                        <button onClick={() => handleEditStart(cat)} title="Rename" className="p-1.5 opacity-20 hover:opacity-100 transition-opacity">
                         <EditIcon className="w-5 h-5" />
                         </button>
                     )}
-                    <button onClick={() => handleDeleteClick(cat)} title="Delete" className="btn btn-sm btn-ghost btn-square opacity-20 hover:opacity-100 text-error">
+                    <button onClick={() => handleDeleteClick(cat)} title="Delete" className="p-1.5 text-error/20 hover:text-error transition-colors">
                         <DeleteIcon className="w-5 h-5" />
                     </button>
                     </div>

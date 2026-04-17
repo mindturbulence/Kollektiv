@@ -592,51 +592,6 @@ class AudioService {
   }
 
   /**
-   * Notification ping (retro-bling)
-   */
-  playPing(): void {
-    const ctx = this.ctx;
-    const masterGain = this.masterGain;
-    if (!this.isEnabled || !ctx || !masterGain) return;
-    this.resume();
-
-    const now = ctx.currentTime;
-    
-    // Bright bell-like tone
-    const osc = ctx.createOscillator();
-    const gain = ctx.createGain();
-    
-    osc.type = 'sine';
-    // Quick pitch wobble for bell character
-    osc.frequency.setValueAtTime(880, now);
-    osc.frequency.setValueAtTime(1100, now + 0.03);
-    osc.frequency.setValueAtTime(990, now + 0.06);
-    osc.frequency.setValueAtTime(880, now + 0.09);
-    
-    gain.gain.setValueAtTime(0, now);
-    gain.gain.linearRampToValueAtTime(0.15, now + 0.005);
-    gain.gain.setTargetAtTime(0.1, now + 0.05, 0.05);
-    gain.gain.setTargetAtTime(0.001, now + 0.4, 0.15);
-    
-    // Add subtle high harmonic
-    const harmonic = ctx.createOscillator();
-    const harmonicGain = ctx.createGain();
-    harmonic.type = 'sine';
-    harmonic.frequency.value = 1760;
-    harmonicGain.gain.setValueAtTime(0, now);
-    harmonicGain.gain.linearRampToValueAtTime(0.03, now + 0.005);
-    harmonicGain.gain.exponentialRampToValueAtTime(0.001, now + 0.2);
-    
-    osc.connect(gain);
-    gain.connect(masterGain);
-    harmonic.connect(harmonicGain);
-    harmonicGain.connect(masterGain);
-    
-    osc.start(now); osc.stop(now + 0.5);
-    harmonic.start(now); harmonic.stop(now + 0.25);
-  }
-
-  /**
    * Toggle switch sound (retro click)
    */
   playToggle(): void {
@@ -668,35 +623,6 @@ class AudioService {
     
     osc.start(now);
     osc.stop(now + 0.03);
-  }
-
-  /**
-   * Keyboard tick (retro typewriter)
-   */
-  playKeypress(): void {
-    const ctx = this.ctx;
-    const masterGain = this.masterGain;
-    if (!this.isEnabled || !ctx || !masterGain) return;
-    this.resume();
-
-    const now = ctx.currentTime;
-    const baseFreq = 1800 + Math.random() * 600;
-    
-    const osc = ctx.createOscillator();
-    const gain = ctx.createGain();
-    
-    osc.type = 'triangle';
-    osc.frequency.setValueAtTime(baseFreq, now);
-    osc.frequency.exponentialRampToValueAtTime(baseFreq * 0.7, now + 0.015);
-    
-    gain.gain.setValueAtTime(0.06, now);
-    gain.gain.exponentialRampToValueAtTime(0.001, now + 0.03);
-    
-    osc.connect(gain);
-    gain.connect(masterGain);
-    
-    osc.start(now);
-    osc.stop(now + 0.04);
   }
 
   /**

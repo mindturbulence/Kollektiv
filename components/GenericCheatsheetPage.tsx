@@ -261,10 +261,12 @@ export const GenericCheatsheetPage: React.FC<GenericCheatsheetPageProps> = ({
   }
 
   return (
-    <section className="h-full w-full min-w-0 flex flex-col overflow-hidden relative">
+    <>
+    <section className="flex flex-col h-full bg-transparent w-full relative p-[3px] corner-frame overflow-visible">
+      <div className="flex flex-col h-full w-full overflow-hidden relative z-10 bg-base-100/40 backdrop-blur-xl">
       {!activeCategory ? (
         <>
-            <header className="flex-shrink-0 bg-base-100/40 backdrop-blur-xl">
+            <header className="flex-shrink-0">
                 <div className="p-10">
                     <div className="flex flex-col md:flex-row md:items-end justify-between gap-6">
                         <div className="space-y-2">
@@ -284,7 +286,7 @@ export const GenericCheatsheetPage: React.FC<GenericCheatsheetPageProps> = ({
                                     value={searchQuery}
                                     onChange={(e) => setSearchQuery(e.target.value)}
                                     placeholder="Search registry..."
-                                    className="input input-bordered rounded-none w-full pl-12 font-bold uppercase tracking-tight text-[10px] h-10 bg-transparent border-base-content/10"
+                                    className="form-input w-full pl-12"
                                 />
                             </div>
                             <div className="flex">
@@ -301,7 +303,7 @@ export const GenericCheatsheetPage: React.FC<GenericCheatsheetPageProps> = ({
             {/* SCROLLABLE TRACK */}
             <div 
                 ref={scrollWrapperRef} 
-                className="flex-grow min-h-0 w-full flex overflow-x-auto overflow-y-hidden bg-transparent no-scrollbar relative animate-fade-in"
+                className="flex-grow min-h-0 w-full flex overflow-x-auto overflow-y-hidden bg-transparent relative animate-fade-in"
                 style={{ WebkitOverflowScrolling: 'touch', touchAction: 'pan-x' }}
             >
                 <div className="flex flex-nowrap h-full min-w-max">
@@ -331,6 +333,13 @@ export const GenericCheatsheetPage: React.FC<GenericCheatsheetPageProps> = ({
             />
         </div>
       )}
+      </div>
+      {/* Manual Corner Accents */}
+      <div className="absolute -top-[1px] -left-[1px] w-3 h-3 border-t border-l border-primary/15 z-20 pointer-events-none" />
+      <div className="absolute -top-[1px] -right-[1px] w-3 h-3 border-t border-r border-primary/15 z-20 pointer-events-none" />
+      <div className="absolute -bottom-[1px] -left-[1px] w-3 h-3 border-b border-l border-primary/15 z-20 pointer-events-none" />
+      <div className="absolute -bottom-[1px] -right-[1px] w-3 h-3 border-b border-r border-primary/15 z-20 pointer-events-none" />
     </section>
+    </>
   );
 };
