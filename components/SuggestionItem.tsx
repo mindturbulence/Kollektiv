@@ -1,5 +1,5 @@
 import React, { useState, useCallback, useMemo } from 'react';
-import { DownloadIcon } from './icons';
+import { DownloadIcon, BookmarkIcon, SparklesIcon, CopyIcon, BracesIcon, RefreshIcon, PlayIcon, ArchiveIcon } from './icons';
 import { generateWithImagen, generateWithNanoBanana, generateWithVeo } from '../services/llmService';
 import LoadingSpinner from './LoadingSpinner';
 
@@ -23,7 +23,6 @@ export const SuggestionItem: React.FC<SuggestionItemProps> = ({
     isAbstraction = false
 }) => {
   const [copied, setCopied] = useState<boolean>(false);
-  const [saved, setSaved] = useState<boolean>(false);
   const [clipped, setClipped] = useState<boolean>(false);
   const [presetSaved, setPresetSaved] = useState<boolean>(false);
   const [jsonCopied, setJsonCopied] = useState<boolean>(false);
@@ -55,10 +54,24 @@ export const SuggestionItem: React.FC<SuggestionItemProps> = ({
   }, [suggestionText]);
 
   const handleSave = useCallback(() => {
-    if (saved) return;
     onSave(suggestionText);
-    setSaved(true);
-  }, [suggestionText, onSave, saved]);
+  }, [suggestionText, onSave]);
+
+  const handleDownloadJson = useCallback(() => {
+    const data = {
+      prompt: suggestionText,
+      targetAI,
+      exportedAt: new Date().toISOString(),
+      generator: "Kollektiv Toolbox"
+    };
+    const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `prompt_${Date.now()}.json`;
+    a.click();
+    URL.revokeObjectURL(url);
+  }, [suggestionText, targetAI]);
 
   const handleSaveAsPreset = useCallback(() => {
     if (presetSaved || !onSaveAsPreset) return;
@@ -131,9 +144,8 @@ export const SuggestionItem: React.FC<SuggestionItemProps> = ({
   const isVideo = targetAI.toLowerCase().includes('veo');
 
   return (
-    <div className={`w-full transition-all duration-300 bg-transparent relative overflow-hidden`}>
-        
-        <div className="p-4 md:p-6 flex flex-col h-full relative">
+    <div className="flex flex-col group bg-transparent transition-all duration-700 hover:bg-primary/5 w-full overflow-hidden select-none h-fit">
+        <div className="p-6 md:p-8 flex flex-col w-full h-full">
             {isGenerating ? (
                 <div className="flex flex-col items-center justify-center py-12 text-center space-y-6">
                     <LoadingSpinner size={48} />
@@ -160,18 +172,23 @@ export const SuggestionItem: React.FC<SuggestionItemProps> = ({
                 </div>
             ) : (
                 <>
-                    {!isAbstraction && (
-                        <div className="flex justify-between items-start gap-4 mb-2">
-                            <div className="flex items-center gap-3">
-                                <span className="text-xs font-black uppercase tracking-[0.2em] text-primary/40">Refined Variant</span>
-                            </div>
+                    {/* Header Section */}
+                    <div className="mb-6 space-y-3">
+                        <div className="flex items-center gap-3">
+                            <span className="text-[10px] font-black uppercase tracking-[0.4em] text-primary/60">
+                                {isAbstraction ? 'ANALYZED MEDIA' : (targetAI || 'REFINED RESULT')}
+                            </span>
+                            <div className="flex-grow h-px bg-base-300/50"></div>
                         </div>
-                    )}
+                    </div>
 
-                    <div className="flex-grow">
-                        <p className="text-sm font-medium leading-relaxed text-base-content/80 pl-4 py-2">
-                            {suggestionText}
-                        </p>
+                    {/* Content Section */}
+                    <div className="flex-grow space-y-6">
+                        <div className="relative group/content">
+                            <p className="text-base font-medium leading-relaxed text-base-content/80 italic">
+                                "{suggestionText}"
+                            </p>
+                        </div>
                     </div>
 
                     {generationError && (
@@ -180,58 +197,89 @@ export const SuggestionItem: React.FC<SuggestionItemProps> = ({
                         </div>
                     )}
 
-                    <div className="h-12 flex items-stretch gap-0 mt-4 border-t border-base-300 -mx-4 md:-mx-6 -mb-4 md:-mb-6">
-                        <div className="flex flex-1 items-stretch">
-                            {isGoogleProduct && !mediaUrl && (
-                                <button 
-                                    onClick={handleTryGenerate} 
-                                    className="form-btn h-full rounded-none border-none flex-1 font-black text-[10px] tracking-widest text-primary uppercase px-1 truncate"
-                                >
-                                    RENDER
-                                </button>
-                            )}
-                            {onRefine && (
-                                 <button onClick={handleRefine} className="form-btn h-full rounded-none border-none flex-1 font-black text-[10px] tracking-widest uppercase px-1 truncate">
-                                    RE-REFINE
-                                </button>
-                            )}
-                            <button
-                                onClick={handleCopyJson}
-                                className="form-btn h-full rounded-none border-none flex-1 font-black text-[10px] tracking-widest uppercase px-1 truncate"
-                            >
-                                {jsonCopied ? 'OK' : 'JSON'}
-                            </button>
+                    {/* Footer Section - Actions */}
+                    <div className="mt-6 space-y-6">
+                        <div className="flex items-center gap-3">
+                            <div className="flex-grow h-px bg-base-300/50"></div>
                         </div>
 
-                        <div className="flex flex-1 items-stretch border-l border-base-300">
-                            <button
-                                onClick={handleCopy}
-                                className="form-btn h-full rounded-none border-none flex-1 font-black text-[10px] tracking-widest uppercase px-1 truncate"
-                            >
-                                {copied ? 'OK' : 'COPY'}
-                            </button>
-                            {onClip && (
-                                <button onClick={handleClip} className="form-btn h-full rounded-none border-none flex-1 font-black text-[10px] tracking-widest uppercase px-1 truncate" disabled={clipped}>
-                                    {clipped ? 'OK' : 'CLIP'}
-                                </button>
-                            )}
-                            <button
-                                onClick={handleSave}
-                                disabled={saved}
-                                className="form-btn h-full rounded-none border-none flex-1 font-black text-[10px] tracking-widest uppercase px-1 truncate"
-                            >
-                                {saved ? 'OK' : 'SAVE'}
-                            </button>
-                            {onSaveAsPreset && (
+                        <div className="flex justify-between items-center">
+                            <div className="flex items-center gap-6">
                                 <button
-                                    onClick={handleSaveAsPreset}
-                                    disabled={presetSaved}
-                                    className="form-btn h-full rounded-none border-none flex-1 font-black text-[10px] tracking-widest text-primary uppercase px-1 truncate"
+                                    onClick={handleCopyJson}
+                                    className="text-[10px] font-black uppercase tracking-widest text-base-content/30 hover:text-primary transition-colors flex items-center gap-2 group/btn"
                                 >
-                                    {presetSaved ? 'OK' : 'PRESET'}
+                                    <BracesIcon className="w-3.5 h-3.5 opacity-40 group-hover/btn:opacity-100" />
+                                    {jsonCopied ? 'COPIED' : 'COPY JSON'}
                                 </button>
-                            )}
+                                <button
+                                    onClick={handleDownloadJson}
+                                    className="text-[10px] font-black uppercase tracking-widest text-base-content/30 hover:text-primary transition-colors flex items-center gap-2 group/btn"
+                                >
+                                    <DownloadIcon className="w-3.5 h-3.5 opacity-40 group-hover/btn:opacity-100" />
+                                    DOWNLOAD JSON FILE
+                                </button>
+                                <button
+                                    onClick={handleSave}
+                                    className="text-[10px] font-black uppercase tracking-widest text-base-content/30 hover:text-primary transition-colors flex items-center gap-2 group/btn"
+                                >
+                                    <ArchiveIcon className="w-3.5 h-3.5 opacity-40 group-hover/btn:opacity-100" />
+                                    SAVE TO LIBRARY
+                                </button>
+                            </div>
+
+                            <div className="flex items-center gap-6">
+                                {onRefine && (
+                                    <button 
+                                        onClick={handleRefine} 
+                                        className="text-[10px] font-black uppercase tracking-widest text-base-content/30 hover:text-primary transition-colors flex items-center gap-2 group/btn"
+                                    >
+                                        <RefreshIcon className="w-3.5 h-3.5 opacity-40 group-hover/btn:opacity-100" />
+                                        REFINE
+                                    </button>
+                                )}
+                                {onSaveAsPreset && (
+                                    <button
+                                        onClick={handleSaveAsPreset}
+                                        disabled={presetSaved}
+                                        className="text-[10px] font-black uppercase tracking-widest text-base-content/30 hover:text-primary transition-colors flex items-center gap-2 group/btn"
+                                    >
+                                        <SparklesIcon className="w-3.5 h-3.5 opacity-40 group-hover/btn:opacity-100" />
+                                        {presetSaved ? 'PRESET SAVED' : 'MAP TO PRESET'}
+                                    </button>
+                                )}
+                                {onClip && (
+                                    <button
+                                        onClick={handleClip}
+                                        className="text-[10px] font-black uppercase tracking-widest text-base-content/30 hover:text-primary transition-colors flex items-center gap-2 group/btn"
+                                    >
+                                        <BookmarkIcon className="w-3.5 h-3.5 opacity-40 group-hover/btn:opacity-100" />
+                                        {clipped ? 'CLIPPED' : 'CLIP'}
+                                    </button>
+                                )}
+                                <button
+                                    onClick={handleCopy}
+                                    className="text-[10px] font-black uppercase tracking-widest text-base-content/30 hover:text-primary transition-colors flex items-center gap-2 group/btn"
+                                >
+                                    <CopyIcon className="w-3.5 h-3.5 opacity-40 group-hover/btn:opacity-100" />
+                                    {copied ? 'COPIED' : 'COPY'}
+                                </button>
+                            </div>
                         </div>
+
+                        {/* Rendering Row (Optional) */}
+                        {isGoogleProduct && !mediaUrl && (
+                            <div className="flex items-center gap-4 pt-4 border-t border-base-300/5">
+                                <button 
+                                    onClick={handleTryGenerate} 
+                                    className="btn btn-xs btn-ghost gap-2 h-8 px-4 rounded-none font-black text-[10px] tracking-widest text-primary uppercase btn-snake bg-primary/5"
+                                >
+                                    <span/><span/><span/><span/>
+                                    <PlayIcon className="w-3 h-3" />
+                                    RENDER
+                                </button>
+                            </div>
+                        )}
                     </div>
                 </>
             )}

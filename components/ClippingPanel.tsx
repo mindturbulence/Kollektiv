@@ -2,8 +2,7 @@ import React, { useRef, useEffect, useState, useCallback, useLayoutEffect } from
 import { createPortal } from 'react-dom';
 import { gsap } from 'gsap';
 import type { Idea } from '../types';
-import { CloseIcon, DeleteIcon, SparklesIcon, BookmarkIcon, RefreshIcon, CheckIcon, PlusIcon, ArchiveIcon } from './icons';
-import CopyIcon from './CopyIcon';
+import { CloseIcon, DeleteIcon, SparklesIcon, BookmarkIcon, RefreshIcon, PlusIcon, ArchiveIcon, CopyIcon } from './icons';
 
 interface ClippingPanelProps {
     isOpen: boolean;
@@ -126,69 +125,77 @@ const ClippedIdeaItem: React.FC<{
     const displayNum = String(index + 1).padStart(2, '0');
 
     return (
-        <div className="bg-base-100/40 backdrop-blur-xl p-4 rounded-none flex flex-col gap-3 transition-all hover:bg-primary/5 group">
-            <div className="flex justify-between items-start">
-                <div className="flex items-center gap-0 min-w-0">
-                    <span className="text-3xl font-black text-base-content flex-shrink-0 font-mono leading-none tracking-tighter tabular-nums">
-                        {displayNum}
-                    </span>
-                    
-                    <div className="flex flex-col min-w-0 border-l border-base-300 pl-4 h-full py-0.5">
-                        <span className="text-[8px] font-black uppercase tracking-widest text-primary/60 mb-0.5">
-                            {idea.lens}
-                        </span>
-                        <p className="font-black text-xs text-base-content truncate uppercase tracking-tight" title={idea.title}>
-                            {idea.title}
-                        </p>
+        <div className="flex flex-col group bg-transparent transition-all duration-700 hover:bg-primary/5 w-full overflow-hidden select-none h-fit border-b border-base-300/10 relative">
+            <div className="flex flex-col w-full h-full p-4 md:p-6">
+                {/* Header Section */}
+                <div className="mb-4">
+                    <div className="flex justify-between items-start">
+                        <div className="flex items-center gap-2 min-w-0">
+                            <span className="text-3xl font-black text-base-content flex-shrink-0 font-mono leading-none tracking-tighter tabular-nums opacity-20">
+                                {displayNum}
+                            </span>
+                            
+                            <div className="flex flex-col min-w-0 border-l border-base-300/30 pl-3">
+                                <span className="text-[9px] font-black uppercase tracking-[0.4em] text-primary/60 mb-1 leading-none">
+                                    {idea.lens}
+                                </span>
+                                <h2 className="font-black text-sm text-base-content truncate uppercase tracking-tight font-logo leading-tight" title={idea.title}>
+                                    {idea.title}
+                                </h2>
+                            </div>
+                        </div>
+                        <button
+                            onClick={() => onRemove(idea.id)}
+                            className="btn btn-xs btn-ghost h-8 w-8 rounded-none p-0 text-base-content/20 hover:text-error transition-colors btn-snake ml-4"
+                            title="Remove clip"
+                        >
+                            <span/><span/><span/><span/>
+                            <DeleteIcon className="w-4 h-4" />
+                        </button>
                     </div>
                 </div>
-                <button
-                    onClick={() => onRemove(idea.id)}
-                    className="form-btn h-8 w-8 text-error/20 hover:text-error hover:bg-error/10 transition-colors"
-                    title="Remove clip"
-                >
-                    <DeleteIcon className="w-3.5 h-3.5" />
-                </button>
+
+                {/* Content Section */}
+                <div className="flex-grow mb-4">
+                    <p className="text-sm font-medium leading-relaxed text-base-content/70 italic line-clamp-3" title={idea.prompt}>
+                        "{idea.prompt}"
+                    </p>
+                </div>
+
+                {/* Footer Section - Actions */}
+                <div className="flex justify-between items-center mt-2 pt-4 border-t border-base-300/10">
+                    <button
+                        onClick={handleCopy}
+                        className="text-[9px] font-black uppercase tracking-widest text-base-content/30 hover:text-primary transition-all flex items-center gap-1.5 group/btn"
+                    >
+                        <CopyIcon className="w-3 h-3 opacity-40 group-hover/btn:opacity-100" />
+                        {copied ? 'COPIED' : 'COPY'}
+                    </button>
+                    <button
+                        onClick={() => onInsert(idea.prompt)}
+                        className="text-[9px] font-black uppercase tracking-widest text-base-content/30 hover:text-primary transition-all flex items-center gap-1.5 group/btn"
+                    >
+                        <RefreshIcon className="w-3 h-3 opacity-40 group-hover/btn:opacity-100" />
+                        CRAFT
+                    </button>
+                     <button
+                        onClick={() => onRefine(idea.prompt)}
+                        className="text-[9px] font-black uppercase tracking-widest text-base-content/30 hover:text-primary transition-all flex items-center gap-1.5 group/btn"
+                    >
+                        <SparklesIcon className="w-3 h-3 opacity-40 group-hover/btn:opacity-100" />
+                        REFINE
+                    </button>
+                    <button
+                        onClick={() => onSave(idea)}
+                        className="text-[9px] font-black uppercase tracking-widest text-base-content/30 hover:text-primary transition-all flex items-center gap-1.5 group/btn"
+                    >
+                        <ArchiveIcon className="w-3 h-3 opacity-40 group-hover/btn:opacity-100" />
+                        SAVE
+                    </button>
+                </div>
             </div>
-            
-            <p className="text-[11px] font-medium text-base-content/60 line-clamp-2 italic leading-relaxed" title={idea.prompt}>
-                "{idea.prompt}"
-            </p>
-            
-            <div className="flex gap-1 mt-2 pt-3 border-t border-base-300">
-                <button
-                    onClick={handleCopy}
-                    className="form-btn flex-1 h-8 px-2"
-                    title={copied ? "Copied!" : "Copy prompt"}
-                >
-                    {copied ? <CheckIcon className="w-3 h-3 mr-1.5 text-success" /> : <CopyIcon className="w-3.5 h-3.5 mr-1.5 opacity-40" />}
-                    {copied ? 'OK' : 'COPY'}
-                </button>
-                <button
-                    onClick={() => onInsert(idea.prompt)}
-                    className="form-btn flex-1 h-8 px-2 hover:bg-base-300"
-                    title="Send to Crafter"
-                >
-                    <RefreshIcon className="w-3 h-3 mr-1.5 opacity-40" />
-                    CRAFT
-                </button>
-                 <button
-                    onClick={() => onRefine(idea.prompt)}
-                    className="form-btn flex-1 h-8 px-2 hover:bg-base-300"
-                    title="Send back to Refiner"
-                >
-                    <SparklesIcon className="w-3 h-3 mr-1.5 opacity-40" />
-                    REFINE
-                </button>
-                <button
-                    onClick={() => onSave(idea)}
-                    className="form-btn form-btn-primary flex-1 h-8 px-2"
-                    title="Save to Prompt Library"
-                >
-                    <ArchiveIcon className="w-3 h-3 mr-1.5" />
-                    SAVE
-                </button>
-            </div>
+            {/* Decorative Line (Frameline style) */}
+            <div className="absolute bottom-0 left-0 right-0 h-[1px] bg-gradient-to-r from-transparent via-primary/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
         </div>
     );
 };
@@ -282,38 +289,43 @@ const ClippingPanel: React.FC<ClippingPanelProps> = ({
                 <div className="w-full h-full relative corner-frame overflow-visible flex flex-col pointer-events-auto">
                     <div className="bg-base-100/60 backdrop-blur-3xl rounded-none w-[calc(100%-6px)] h-[calc(100%-6px)] m-[3px] flex flex-col overflow-hidden relative z-10">
                         {/* Header */}
-                        <div className="flex justify-between items-center h-16 px-6 bg-base-100/20 flex-shrink-0">
+        <div className="flex justify-between items-center h-16 px-6 bg-base-100/20 flex-shrink-0 border-b border-base-300/10 relative">
                             <div className="flex items-center gap-3">
                                 <BookmarkIcon className="w-5 h-5 text-primary"/>
-                                <h3 className="font-black text-sm uppercase tracking-[0.3em]">Clipboard <span className="text-base-content/20 font-mono text-xs ml-2">[{clippedIdeas.length}]</span></h3>
+                                <h3 className="font-black text-xs uppercase tracking-[0.3em] font-logo">Clipboard <span className="text-base-content/20 font-mono text-xs ml-2">[{clippedIdeas.length}]</span></h3>
                             </div>
-                            <div className="flex items-center gap-1">
+                            <div className="flex items-center gap-2">
                                 <button 
                                     onClick={() => setIsModalOpen(true)} 
-                                    className="form-btn h-8 w-8 opacity-40 hover:opacity-100 hover:text-primary transition-all"
+                                    className="btn btn-xs btn-ghost h-8 w-8 rounded-none p-0 opacity-40 hover:opacity-100 hover:text-primary transition-all btn-snake"
                                     title="Manual Entry"
                                 >
+                                    <span/><span/><span/><span/>
                                     <PlusIcon className="w-5 h-5" />
                                 </button>
                                 {clippedIdeas.length > 0 && (
                                     <button 
                                         onClick={onClearAll} 
-                                        className="form-btn h-8 w-8 opacity-40 hover:opacity-100 hover:text-error transition-all"
+                                        className="btn btn-xs btn-ghost h-8 w-8 rounded-none p-0 opacity-40 hover:opacity-100 hover:text-error transition-all btn-snake"
                                         title="Purge All Clips"
                                     >
+                                        <span/><span/><span/><span/>
                                         <DeleteIcon className="w-5 h-5" />
                                     </button>
                                 )}
-                                <button onClick={onClose} className="form-btn h-8 w-8 opacity-40 hover:opacity-100" aria-label="Close clipping panel">
+                                <button onClick={onClose} className="btn btn-xs btn-ghost h-8 w-8 rounded-none p-0 opacity-40 hover:opacity-100 btn-snake" aria-label="Close clipping panel">
+                                    <span/><span/><span/><span/>
                                     <CloseIcon className="w-5 h-5" />
                                 </button>
                             </div>
+                            {/* Decorative Line (Frameline style) */}
+                            <div className="absolute bottom-0 left-0 right-0 h-[1px] bg-gradient-to-r from-transparent via-primary/30 to-transparent" />
                         </div>
 
                         {/* Body */}
-                        <div ref={scrollRef} className="flex-grow p-6 overflow-y-auto relative">
+                        <div ref={scrollRef} className="flex-grow p-0 overflow-y-auto relative scrollbar-thin">
                             {clippedIdeas.length > 0 ? (
-                                <div className="flex flex-col gap-4">
+                                <div className="flex flex-col divide-y divide-base-300/10">
                                     {clippedIdeas.map((idea, index) => (
                                         <ClippedIdeaItem
                                             key={idea.id}

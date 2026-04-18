@@ -268,7 +268,7 @@ const ImageCard: React.FC<ImageCardProps> = memo(({ item, viewMode, onOpenDetail
                 )}
                 
                 {viewMode === 'focus' && (
-                    <h3 className={`${styles.title} font-black text-white uppercase leading-[1] line-clamp-2 transition-colors duration-700 group-hover:text-primary opacity-0 group-hover:opacity-100 drop-shadow-md`}>
+                    <h3 className={`${styles.title} font-black text-white uppercase leading-[1] line-clamp-2 transition-colors duration-700 group-hover:text-primary opacity-0 group-hover:opacity-100 drop-shadow-md font-logo`}>
                         {item.title}
                     </h3>
                 )}

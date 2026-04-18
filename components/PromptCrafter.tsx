@@ -5,24 +5,24 @@ import type { WildcardFile, CrafterData } from '../types';
 import LoadingSpinner from './LoadingSpinner';
 import { SparklesIcon } from './icons';
 import { fileSystemManager } from '../utils/fileUtils';
-import { PromptAnatomyPanel } from './PromptAnatomyPanel';
 import { useSettings } from '../contexts/SettingsContext';
 import { useBusy } from '../contexts/BusyContext';
-import { reconstructFromIntent, reconstructPrompt, replaceComponentInPrompt } from '../services/llmService';
+import { translateToEnglish, reconstructFromIntent } from '../services/llmService';
 import ConfirmationModal from './ConfirmationModal';
 import WildcardTree from './WildcardTree';
+import SavedResultItem from './SavedResultItem';
 
 interface PromptCrafterProps {
   onSaveToLibrary: (generatedText: string, baseText: string) => void;
   onClip?: (prompt: string) => void;
   onSendToEnhancer: (prompt: string) => void;
   onSavePresetSuccess?: (prompt: string, modifiers: any, constantModifier?: string) => void;
+  onSendToRefine?: (prompt: string) => void;
   promptToInsert: { content: string, id: string } | null;
   header: React.ReactNode;
-  modifierCatalog?: string;
 }
 
-const PromptCrafter = ({ onClip, onSendToEnhancer, onSavePresetSuccess, promptToInsert, header, modifierCatalog }: PromptCrafterProps) => {
+const PromptCrafter = ({ onSaveToLibrary, onClip, onSendToEnhancer, onSendToRefine, promptToInsert, header }: PromptCrafterProps) => {
     const { settings } = useSettings();
     const { setIsBusy } = useBusy();
     const [crafterData, setCrafterData] = useState<CrafterData | null>(null);
@@ -31,11 +31,11 @@ const PromptCrafter = ({ onClip, onSendToEnhancer, onSavePresetSuccess, promptTo
     
     const [promptText, setPromptText] = useState('');
     const [generatedPrompt, setGeneratedPrompt] = useState<string | null>(null);
-    const [analysisTrigger, setAnalysisTrigger] = useState(0);
+    const [savedResults, setSavedResults] = useState<string[]>([]);
     const textareaRef = useRef<HTMLTextAreaElement>(null);
     const lastInsertedId = useRef<string | null>(null);
     const [aiAction, setAiAction] = useState<string | null>(null);
-    const [copied, setCopied] = useState(false);
+    const [translated, setTranslated] = useState(false);
     const [clipped, setClipped] = useState(false);
 
     const wildcardScrollerRef = useRef<HTMLDivElement>(null);
@@ -58,6 +58,8 @@ const PromptCrafter = ({ onClip, onSendToEnhancer, onSavePresetSuccess, promptTo
         try {
             const data = await crafterService.loadWildcardsAndTemplates();
             setCrafterData(data);
+            const saved = await crafterService.loadSavedResults();
+            setSavedResults(saved);
         } catch (err: any) {
             setError(err.message);
         } finally {
@@ -85,13 +87,25 @@ const PromptCrafter = ({ onClip, onSendToEnhancer, onSavePresetSuccess, promptTo
         if (!promptText.trim() || !crafterData) return;
         const newPrompt = crafterService.processCrafterPrompt(promptText, crafterData.wildcardCategories);
         setGeneratedPrompt(newPrompt);
-        setAnalysisTrigger(0);
         setClipped(false);
+        setTranslated(false);
     };
 
-    const handleAnalyze = () => {
-        if (generatedPrompt) {
-            setAnalysisTrigger(t => t + 1);
+    const handleTranslate = async () => {
+        if (!generatedPrompt) return;
+        setAiAction('Translating to English...');
+        setIsBusy(true);
+        setError(null);
+        try {
+            const translatedText = await translateToEnglish(generatedPrompt, settings);
+            setGeneratedPrompt(translatedText);
+            setTranslated(true);
+        } catch (e) {
+            console.error("Translation failure:", e);
+            setError(e instanceof Error ? e.message : 'Translation relay failed.');
+        } finally {
+            setAiAction(null);
+            setIsBusy(false);
         }
     };
     
@@ -101,6 +115,7 @@ const PromptCrafter = ({ onClip, onSendToEnhancer, onSavePresetSuccess, promptTo
         setIsBusy(true);
         setError(null);
         try {
+            // Stronger rewrite by passing it through the reconstruction logic which cleans up and optimizes visual prose
             const newPrompt = await reconstructFromIntent([generatedPrompt], settings);
             setGeneratedPrompt(newPrompt);
         } catch (e) {
@@ -112,54 +127,19 @@ const PromptCrafter = ({ onClip, onSendToEnhancer, onSavePresetSuccess, promptTo
         }
     };
 
-    const handleReplaceVariation = async (key: string, value: string) => {
-        if (!generatedPrompt) return;
-        setAiAction('Replacing component...');
-        setIsBusy(true);
-        setError(null);
-        try {
-            const newPrompt = await replaceComponentInPrompt(generatedPrompt, key, value, settings);
-            setGeneratedPrompt(newPrompt);
-            setAnalysisTrigger(t => t + 1);
-        } catch (e) {
-            console.error("Failed to replace variation:", e);
-            setError(e instanceof Error ? e.message : 'An error occurred during replacement.');
-        } finally {
-            setAiAction(null);
-            setIsBusy(false);
+    const handleSaveResult = () => {
+        if (generatedPrompt && !savedResults.includes(generatedPrompt)) {
+            const newResults = [generatedPrompt, ...savedResults];
+            setSavedResults(newResults);
+            crafterService.saveSavedResults(newResults);
         }
     };
 
-    const handleReconstructFromComponents = async (newComponents: { [key: string]: string }) => {
-        setAiAction('Rebuilding from details...');
-        setIsBusy(true);
-        setError(null);
-        try {
-            const newPrompt = await reconstructPrompt(newComponents, settings);
-            setGeneratedPrompt(newPrompt);
-            setAnalysisTrigger(t => t + 1);
-        } catch (e) {
-            console.error("Failed to rebuild from components:", e);
-            setError(e instanceof Error ? e.message : 'An error occurred during rebuilding.');
-        } finally {
-            setAiAction(null);
-            setIsBusy(false);
-        }
+    const handleDeleteSavedResult = (index: number) => {
+        const newResults = savedResults.filter((_, i) => i !== index);
+        setSavedResults(newResults);
+        crafterService.saveSavedResults(newResults);
     };
-
-    const handleCopy = useCallback(() => {
-        if (!generatedPrompt) return;
-        if (typeof window !== 'undefined' && (window as any).navigator?.clipboard) {
-            (window as any).navigator.clipboard.writeText(generatedPrompt)
-                .then(() => {
-                    setCopied(true);
-                    setTimeout(() => setCopied(false), 2000);
-                })
-                .catch((err: any) => {
-                    console.error('Failed to copy text:', err);
-                });
-        }
-    }, [generatedPrompt]);
 
     const handleClip = useCallback(() => {
         if (!generatedPrompt || !onClip) return;
@@ -302,7 +282,7 @@ const PromptCrafter = ({ onClip, onSendToEnhancer, onSavePresetSuccess, promptTo
                 <div className="flex flex-col h-full w-full overflow-hidden min-h-0 relative z-10 bg-base-100/40 backdrop-blur-xl">
                     {header}
                     <header className="p-6 h-16 flex items-center bg-base-100/10 backdrop-blur-md flex-shrink-0">
-                        <h3 className="text-[10px] font-black uppercase tracking-[0.4em] text-primary">Wildcards</h3>
+                        <h3 className="text-xs font-bold uppercase tracking-widest text-primary font-nunito">Wildcards</h3>
                     </header>
                     <div ref={wildcardScrollerRef} className="flex-grow p-6 overflow-y-auto">
                         <WildcardTree categories={crafterData?.wildcardCategories || []} onWildcardClick={handleWildcardClick} />
@@ -348,7 +328,7 @@ const PromptCrafter = ({ onClip, onSendToEnhancer, onSavePresetSuccess, promptTo
                                 <input 
                                     type="text"
                                     tabIndex={0}
-                                    className="w-full h-full bg-transparent border-none focus:outline-none focus:ring-0 pl-6 pr-10 font-bold text-[11px] font-nunito tracking-normal placeholder:text-base-content/10"
+                                    className="w-full h-full bg-transparent border-none focus:outline-none focus:ring-0 pl-6 pr-10 font-bold text-sm font-nunito tracking-normal placeholder:text-base-content/40"
                                     placeholder="SELECT TEMPLATE..."
                                     value={templateSearchText}
                                     onChange={(e) => {
@@ -374,7 +354,7 @@ const PromptCrafter = ({ onClip, onSendToEnhancer, onSavePresetSuccess, promptTo
                                                     e.preventDefault();
                                                     handleSelectTemplateFromDropdown(t);
                                                 }} 
-                                                className={`font-bold text-[11px] font-nunito block w-full truncate ${selectedTemplate?.name === t.name ? 'text-primary' : 'text-base-content/70 hover:text-base-content'}`}
+                                                className={`font-bold text-sm font-nunito block w-full truncate ${selectedTemplate?.name === t.name ? 'text-primary' : 'text-base-content/70 hover:text-base-content'}`}
                                             >
                                                 {t.name}
                                             </a>
@@ -403,13 +383,13 @@ const PromptCrafter = ({ onClip, onSendToEnhancer, onSavePresetSuccess, promptTo
                     </header>
 
                 <div className="flex-grow flex flex-col min-h-0 overflow-hidden">
-                    <div className="flex-1 min-h-0 p-6 flex flex-col overflow-hidden">
+                    <div className="h-[15%] min-h-[120px] p-6 flex flex-col overflow-hidden border-b border-base-300/5">
                         <textarea 
                             ref={textareaRef}
                             value={promptText}
                             onChange={(e) => setPromptText((e.currentTarget as any).value)}
-                            placeholder="STREAM NEW CORE CONCEPT... Use __wildcard__ for selection."
-                            className="w-full h-full flex-grow resize-none font-medium leading-relaxed bg-transparent focus:outline-none p-0 text-[15px] font-nunito"
+                            placeholder="Define your vision... Inject creative possibilities with __wildcards__."
+                            className="w-full h-full resize-none font-medium leading-relaxed bg-transparent focus:outline-none p-0 text-[15px] font-nunito"
                         ></textarea>
                     </div>
                     
@@ -427,7 +407,7 @@ const PromptCrafter = ({ onClip, onSendToEnhancer, onSavePresetSuccess, promptTo
                             className="btn btn-sm btn-ghost h-full rounded-none flex-1 font-normal text-[13px] tracking-wider uppercase px-1 truncate btn-snake font-display"
                         >
                             <span/><span/><span/><span/>
-                            SAVE
+                            SAVE TEMPLATE
                         </button>
                         <button 
                             onClick={handleGenerate} 
@@ -447,7 +427,7 @@ const PromptCrafter = ({ onClip, onSendToEnhancer, onSavePresetSuccess, promptTo
                         )}
                         {generatedPrompt ? (
                             <div className="p-6 h-full animate-fade-in flex flex-col">
-                                <div className="text-base font-medium leading-relaxed italic text-base-content/80 flex-grow">
+                                <div className="text-base font-normal font-nunito leading-relaxed italic text-base-content/80 flex-grow">
                                     "{generatedPrompt}"
                                 </div>
                             </div>
@@ -463,17 +443,17 @@ const PromptCrafter = ({ onClip, onSendToEnhancer, onSavePresetSuccess, promptTo
                 {/* Bottom Action Bar - Library Style */}
                 <div className="h-14 flex items-stretch flex-shrink-0 bg-base-100/10 backdrop-blur-md p-1.5 gap-1.5">
                     <button 
-                        onClick={handleAnalyze} 
+                        onClick={handleTranslate} 
                         disabled={!generatedPrompt || !!aiAction} 
-                        className="btn btn-sm btn-ghost h-full rounded-none flex-1 font-normal text-[13px] tracking-wider uppercase px-1 truncate disabled:opacity-30 disabled:cursor-not-allowed btn-snake font-display"
+                        className="btn btn-sm btn-ghost h-full rounded-none flex-[1.5] font-normal text-[11px] tracking-wider uppercase px-1 truncate disabled:opacity-30 disabled:cursor-not-allowed btn-snake font-display"
                     >
                         <span/><span/><span/><span/>
-                        ANALYZE
+                        {translated ? 'RE-TRANSLATE' : 'TRANSLATE'}
                     </button>
                     <button 
                         onClick={handleReconstruct} 
                         disabled={!generatedPrompt || !!aiAction} 
-                        className="btn btn-sm btn-ghost h-full rounded-none flex-1 font-normal text-[13px] tracking-wider uppercase px-1 truncate disabled:opacity-30 disabled:cursor-not-allowed btn-snake font-display"
+                        className="btn btn-sm btn-ghost h-full rounded-none flex-1 font-normal text-[11px] tracking-wider uppercase px-1 truncate disabled:opacity-30 disabled:cursor-not-allowed btn-snake font-display"
                     >
                         <span/><span/><span/><span/>
                         REWRITE
@@ -481,7 +461,7 @@ const PromptCrafter = ({ onClip, onSendToEnhancer, onSavePresetSuccess, promptTo
                     <button 
                         onClick={() => onSendToEnhancer(generatedPrompt!)} 
                         disabled={!generatedPrompt || !!aiAction} 
-                        className="btn btn-sm btn-primary h-full rounded-none flex-1 font-normal text-[13px] tracking-wider uppercase px-1 truncate disabled:opacity-30 disabled:cursor-not-allowed btn-snake-primary font-display"
+                        className="btn btn-sm btn-ghost h-full rounded-none flex-1 font-normal text-[11px] tracking-wider uppercase px-1 truncate disabled:opacity-30 disabled:cursor-not-allowed btn-snake font-display text-primary/60"
                     >
                         <span/><span/><span/><span/>
                         IMPROVE
@@ -489,18 +469,18 @@ const PromptCrafter = ({ onClip, onSendToEnhancer, onSavePresetSuccess, promptTo
                     <button 
                         onClick={handleClip} 
                         disabled={!generatedPrompt} 
-                        className="btn btn-sm btn-ghost h-full rounded-none flex-1 font-normal text-[13px] tracking-wider uppercase px-1 truncate disabled:opacity-30 disabled:cursor-not-allowed btn-snake font-display"
+                        className="btn btn-sm btn-ghost h-full rounded-none flex-1 font-normal text-[11px] tracking-wider uppercase px-1 truncate disabled:opacity-30 disabled:cursor-not-allowed btn-snake font-display"
                     >
                         <span/><span/><span/><span/>
                         {clipped ? 'OK' : 'CLIP'}
                     </button>
                     <button 
-                        onClick={handleCopy} 
-                        disabled={!generatedPrompt} 
-                        className="btn btn-sm btn-ghost h-full rounded-none flex-1 font-normal text-[13px] tracking-wider uppercase px-1 truncate disabled:opacity-30 disabled:cursor-not-allowed btn-snake font-display"
+                        onClick={handleSaveResult} 
+                        disabled={!generatedPrompt || savedResults.includes(generatedPrompt)} 
+                        className="btn btn-sm btn-ghost h-full rounded-none flex-1 font-normal text-[11px] tracking-wider uppercase px-1 truncate disabled:opacity-30 disabled:cursor-not-allowed btn-snake font-display"
                     >
                         <span/><span/><span/><span/>
-                        {copied ? 'OK' : 'COPY'}
+                        {savedResults.includes(generatedPrompt!) ? 'SAVED' : 'SAVE RESULT'}
                     </button>
                 </div>
             </div>
@@ -513,15 +493,32 @@ const PromptCrafter = ({ onClip, onSendToEnhancer, onSavePresetSuccess, promptTo
             
             <aside className="lg:col-span-3 h-full min-h-0 flex flex-col relative p-[3px] corner-frame overflow-visible">
                 <div className="flex flex-col h-full w-full overflow-hidden min-h-0 relative z-10 bg-base-100/40 backdrop-blur-xl">
-                    <PromptAnatomyPanel 
-                        promptToAnalyze={generatedPrompt}
-                        onReconstructFromComponents={handleReconstructFromComponents}
-                        onReplaceVariation={handleReplaceVariation}
-                        onSaveSuccess={onSavePresetSuccess}
-                        analysisTrigger={analysisTrigger}
-                        isProcessing={!!aiAction}
-                        modifierCatalog={modifierCatalog}
-                    />
+                    <header className="px-6 py-4 flex-shrink-0 border-b border-base-content/5 bg-base-100/10 h-16 flex items-center">
+                        <h3 className="text-xs font-bold uppercase tracking-widest text-primary font-nunito flex items-center gap-3">
+                            <div className="w-1.5 h-1.5 rounded-full bg-primary animate-pulse"></div> CRAFTED RESULTS
+                        </h3>
+                    </header>
+                    <div className="flex-grow overflow-y-auto p-1.5 space-y-1.5 custom-scrollbar">
+                        {savedResults.length > 0 ? (
+                            savedResults.map((res, idx) => (
+                                <SavedResultItem 
+                                    key={`${idx}-${res.substring(0, 10)}`}
+                                    text={res}
+                                    onCopy={(txt) => {
+                                        if (navigator.clipboard) navigator.clipboard.writeText(txt);
+                                    }}
+                                    onSaveToLibrary={(txt) => onSaveToLibrary(txt, promptText)}
+                                    onDelete={() => handleDeleteSavedResult(idx)}
+                                    onRefine={onSendToRefine}
+                                />
+                            ))
+                        ) : (
+                            <div className="h-full flex flex-col items-center justify-center text-center opacity-10">
+                                <SparklesIcon className="w-12 h-12 mb-4" />
+                                <p className="text-[10px] font-black uppercase tracking-widest leading-relaxed">Generated prompts mapped to session index will appear here</p>
+                            </div>
+                        )}
+                    </div>
                 </div>
                 {/* Manual Corner Accents */}
                 <div className="absolute -top-[1px] -left-[1px] w-3 h-3 border-t border-l border-primary/15 z-20 pointer-events-none" />

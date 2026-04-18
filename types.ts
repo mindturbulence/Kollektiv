@@ -89,6 +89,7 @@ export interface LLMSettings {
   dashboardVideoUrl: string;
   musicYoutubeUrl: string;
   musicEnabled: boolean;
+  idleScreenType: 'matrix' | 'gallery';
   
   // Feature Toggles
   features: FeatureSettings;

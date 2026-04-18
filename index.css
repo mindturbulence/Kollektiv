@@ -1,9 +1,12 @@
-@import url(https://db.onlinewebfonts.com/c/69dbc1186412d7831b88d8a78a360360?family=DIN+Condensed+Web);
-@import url('https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700&family=Montserrat:wght@300;400;500;600;700;800;900&family=Inter:wght@300;400;500;600;700;800;900&family=Plus+Jakarta+Sans:ital,wght@0,300;0,400;0,500;0,600;0,700;0,800;1,800&family=JetBrains+Mono:wght@400;500;700;800&family=Space+Grotesk:wght@300;400;500;600;700&family=Playfair+Display:ital,wght@0,400;0,700;1,400&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800;900&family=Montserrat:wght@300;400;500;600;700;800;900&family=Inter:wght@300;400;500;600;700;800;900&family=Plus+Jakarta+Sans:ital,wght@0,300;0,400;0,500;0,600;0,700;0,800;1,800&family=JetBrains+Mono:wght@400;500;700;800&family=Space+Grotesk:wght@300;400;500;600;700&family=Playfair+Display:ital,wght@0,400;0,700;1,400&family=Monoton&display=swap');
 
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
+
+.font-monoton {
+  font-family: 'Monoton', cursive !important;
+}
 
 html {
   font-family: 'Nunito', 'Inter', sans-serif;
@@ -65,15 +68,15 @@ input, textarea, select, .form-input, .form-select, .form-textarea, .form-search
 }
 
 h1, h2, h3, h4, h5, h6, .font-display, .btn, .btn-sm, .btn-xs, .btn-lg, .panel-header {
-  font-family: 'DIN Condensed Web', sans-serif !important;
+  font-family: 'Nunito', sans-serif !important;
 }
 
   button:not(.tab):not(.btn-sm):not(.dropdown):not(.font-normal) {
-    font-family: 'DIN Condensed Web', sans-serif;
-    font-weight: 600;
+    font-family: 'Nunito', sans-serif;
+    font-weight: 700;
     font-size: 12px;
     text-transform: uppercase;
-    letter-spacing: 0.05em;
+    letter-spacing: 0.1em;
     position: relative;
     overflow: hidden;
     transition: all 0.3s ease;
@@ -81,10 +84,10 @@ h1, h2, h3, h4, h5, h6, .font-display, .btn, .btn-sm, .btn-xs, .btn-lg, .panel-h
   }
 
 button {
-    font-family: 'DIN Condensed Web', sans-serif;
-    font-weight: 600;
+    font-family: 'Nunito', sans-serif;
+    font-weight: 700;
     text-transform: uppercase;
-    letter-spacing: 0.05em;
+    letter-spacing: 0.1em;
   }
 
   button:active {
@@ -242,9 +245,9 @@ button {
     transition-delay: 0.375s;
   }
 
-  /* Force DIN Condensed Web for bold caps UI elements */
+  /* Force Nunito for bold caps UI elements */
   .uppercase, .tracking-widest, .tracking-\[0\.4em\], .font-black, .font-display {
-    font-family: 'DIN Condensed Web', sans-serif;
+    font-family: 'Nunito', sans-serif;
   }
 
   .font-nunito {
@@ -297,11 +300,11 @@ button {
     background-color: oklch(var(--b2));
     border: 1px solid oklch(var(--bc) / 0.1);
     border-radius: 0;
-    font-family: 'DIN Condensed Web', sans-serif;
-    font-size: 11px;
+    font-family: 'Nunito', sans-serif;
+    font-size: 10px;
     font-weight: 900;
     text-transform: uppercase;
-    letter-spacing: 0.15em;
+    letter-spacing: 0.2em;
     transition: all 0.2s cubic-bezier(0.23, 1, 0.32, 1);
     cursor: pointer;
     display: inline-flex;
@@ -337,7 +340,6 @@ button {
     background-color: oklch(var(--b2) / 0.5);
     border: 1px solid oklch(var(--bc) / 0.1);
     padding: 2px;
-    width: 100%;
   }
 
   .form-tab-item {
@@ -860,7 +862,7 @@ button {
     width: 100vw;
     background-color: oklch(var(--b1)); 
     color: oklch(var(--bc));
-    font-family: 'DIN Condensed Web', sans-serif;
+    font-family: 'Nunito', sans-serif;
     transition: background-color 0.3s ease;
     position: fixed;
     top: 0;

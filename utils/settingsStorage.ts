@@ -30,6 +30,7 @@ export const defaultLLMSettings: LLMSettings = {
   // Audio Settings
   musicYoutubeUrl: 'https://www.youtube.com/watch?v=jY3A06qWwfw',
   musicEnabled: true,
+  idleScreenType: 'matrix',
 
   // Feature Toggles
   features: {
@@ -74,6 +75,7 @@ export const loadLLMSettings = (): LLMSettings => {
             ...parsed,
             activeThemeMode: 'dark',
             musicEnabled: parsed.musicEnabled ?? defaultLLMSettings.musicEnabled,
+            idleScreenType: parsed.idleScreenType ?? defaultLLMSettings.idleScreenType,
             features: {
                 ...defaultLLMSettings.features,
                 ...(parsed.features || {})

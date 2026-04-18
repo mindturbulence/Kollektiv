@@ -301,7 +301,7 @@ export const MediaAnalyzer: React.FC<MediaAnalyzerProps> = ({ onSaveSuggestion, 
                         <button 
                             onClick={handleReadMetadata} 
                             disabled={isLoading || !sourceFile || fileType !== 'image'} 
-                            className={`btn btn-sm btn-primary flex-1 h-full rounded-none font-normal text-[13px] tracking-wider ${activeResultType === 'metadata' ? 'btn-active' : ''} disabled:opacity-30 disabled:cursor-not-allowed btn-snake-primary`}
+                            className={`btn btn-sm btn-ghost flex-1 h-full rounded-none font-normal text-[13px] tracking-wider ${activeResultType === 'metadata' ? 'text-primary' : ''} disabled:opacity-30 disabled:cursor-not-allowed btn-snake`}
                         >
                             <span/><span/><span/><span/>
                             {isLoading && activeResultType === 'metadata' ? '...' : 'READ'}
@@ -322,12 +322,14 @@ export const MediaAnalyzer: React.FC<MediaAnalyzerProps> = ({ onSaveSuggestion, 
                         <div className="flex items-center gap-6">
                             <h2 className={`text-xs font-black uppercase tracking-[0.4em] flex items-center gap-3 transition-colors cursor-pointer ${activeResultType === 'abstraction' ? 'text-primary' : 'text-base-content/20 hover:text-base-content/40'}`} onClick={() => abstractionResults && setActiveResultType('abstraction')}>
                                 <div className={`w-2 h-2 rounded-none ${activeResultType === 'abstraction' ? 'bg-primary animate-pulse' : 'bg-base-content/10'}`}></div> 
-                                NEURAL ABSTRACTION
+                                ANALYZED MEDIA
                             </h2>
-                            <h2 className={`text-xs font-black uppercase tracking-[0.4em] flex items-center gap-3 transition-colors cursor-pointer ${activeResultType === 'metadata' ? 'text-primary' : 'text-base-content/20 hover:text-base-content/40'}`} onClick={() => metadataResults && setActiveResultType('metadata')}>
-                                <div className={`w-2 h-2 rounded-none ${activeResultType === 'metadata' ? 'bg-primary animate-pulse' : 'bg-base-content/10'}`}></div> 
-                                TECH SPECS
-                            </h2>
+                            {metadataResults && (
+                                <h2 className={`text-xs font-black uppercase tracking-[0.4em] flex items-center gap-3 transition-colors cursor-pointer ${activeResultType === 'metadata' ? 'text-primary' : 'text-base-content/20 hover:text-base-content/40'}`} onClick={() => metadataResults && setActiveResultType('metadata')}>
+                                    <div className={`w-2 h-2 rounded-none ${activeResultType === 'metadata' ? 'bg-primary animate-pulse' : 'bg-base-content/10'}`}></div> 
+                                    METADATA
+                                </h2>
+                            )}
                         </div>
                     </header>
                     <div ref={resultsScrollerRef} className="flex-grow overflow-y-auto flex flex-col">

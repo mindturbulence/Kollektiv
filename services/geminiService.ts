@@ -182,14 +182,30 @@ export const reconstructFromIntentGemini = async (intents: string[], settings: L
         const ai = getGeminiClient(settings);
         const response = await ai.models.generateContent({
             model: LITE_MODEL,
-            contents: intents.join(', '),
+            contents: `Components: ${intents.join(' | ')}`,
             config: { 
-                systemInstruction: "Merge into prose. Text only.", 
-                maxOutputTokens: 800,
+                systemInstruction: "Task: Consolidate the provided visual components and descriptive intents into a single, cohesive, high-fidelity visual prompt. Remove redundancies. Ensure a logical flow from subject to environment to artistic style. Output the prompt text ONLY. No preamble.", 
+                maxOutputTokens: 1000,
             }
         });
         return (response.text || '').trim();
     } catch (err) { throw handleGeminiError(err, 'reconstruction'); }
+};
+
+export const translateToEnglishGemini = async (text: string, settings: LLMSettings): Promise<string> => {
+    try {
+        const ai = getGeminiClient(settings);
+        const response = await ai.models.generateContent({
+            model: LITE_MODEL,
+            contents: text,
+            config: { 
+                systemInstruction: "Role: Polyglot Translator. Task: Translate the input text into professional, clear English. If the text is already in English, refine its clarity and impact. Output the translated/refined English text ONLY. No explanations.", 
+                maxOutputTokens: 1200,
+                temperature: 0.3
+            }
+        });
+        return (response.text || '').trim();
+    } catch (err) { throw handleGeminiError(err, 'translation'); }
 };
 
 export const generatePromptFormulaGemini = async (promptText: string, settings: LLMSettings, systemInstruction: string): Promise<string> => {
