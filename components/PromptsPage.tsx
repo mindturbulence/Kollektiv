@@ -81,10 +81,10 @@ const PropertyCard: React.FC<{
 }> = ({ label, value, onClear, onClick, active }) => (
     <div
         onClick={onClick}
-        className={`group relative p-4 transition-all duration-300 cursor-pointer select-none flex flex-col justify-center min-h-[4.5rem] animate-fade-in border-b border-base-content/5 ${active ? 'bg-primary/5' : 'hover:bg-base-content/5'}`}
+        className={`group relative p-4 transition-all duration-300 cursor-pointer select-none flex flex-col justify-center min-h-[5rem] animate-fade-in last:border-b-0 border-b border-base-content/5 ${active ? 'bg-primary/5' : 'hover:bg-base-content/5'}`}
     >
-        <div className="flex items-center justify-between gap-2 mb-1">
-            <span className={`text-[9px] font-black uppercase tracking-[0.2em] ${active ? 'text-primary' : 'text-base-content/30'}`}>{label}</span>
+        <div className="flex items-center justify-between gap-2 mb-1.5">
+            <span className={`text-xs font-black uppercase tracking-[0.2em] ${active ? 'text-primary' : 'text-base-content/30'}`}>{label}</span>
             {value && (
                 <button
                     onClick={(e) => { e.stopPropagation(); onClear(); }}
@@ -94,7 +94,7 @@ const PropertyCard: React.FC<{
                 </button>
             )}
         </div>
-        <span className={`text-sm font-bold leading-tight break-words first-letter:uppercase tracking-tight ${active ? 'text-primary' : 'text-base-content'}`}>
+        <span className={`text-base font-bold font-nunito leading-tight break-words first-letter:uppercase tracking-tight ${active ? 'text-primary' : 'text-base-content'}`}>
             {value || 'Default'}
         </span>
     </div>
@@ -550,7 +550,7 @@ const PromptsPage: React.FC<PromptsPageProps> = ({
                                 audioService.playClick();
                                 setActiveView(tab.id as any);
                             }}
-                            className={`relative px-4 py-2 text-[13px] font-normal tracking-[0.2em] uppercase transition-colors duration-300 ${currentView === tab.id
+                            className={`relative px-4 py-2 text-[13px] font-bold tracking-[0.2em] uppercase transition-colors duration-300 font-nunito ${currentView === tab.id
                                 ? 'text-primary'
                                 : 'text-base-content/40 hover:text-primary/60'
                                 }`}
@@ -1165,9 +1165,9 @@ const PromptsPage: React.FC<PromptsPageProps> = ({
                             if (constantMod) setConstantModifier(constantMod);
                             showGlobalFeedback('Mapped to Refiner.');
                         }}
+                        onSendToRefine={handleSendToRefine}
                         promptToInsert={composerPromptToInsert}
                         header={null}
-                        modifierCatalog={buildModifierCatalog()}
                     />
                 )}
 
@@ -1176,18 +1176,17 @@ const PromptsPage: React.FC<PromptsPageProps> = ({
                         {/* Left Sidebar: Controls & Tabs */}
                         <aside className="lg:col-span-3 h-full min-h-0 flex flex-col relative p-[3px] corner-frame overflow-visible">
                             <div className="flex flex-col h-full w-full overflow-hidden relative z-10 bg-base-100/40 backdrop-blur-xl">
-                                <header className="p-4 flex flex-shrink-0 justify-center bg-base-100/10 backdrop-blur-md">
-                                    <div className="form-tab-group">
-                                        {tabs.map(tab => (
-                                            <button
-                                                key={tab.id}
-                                                onClick={() => setActiveRefineSubTab(tab.id)}
-                                                className={`form-tab-item ${activeRefineSubTab === tab.id ? 'active' : ''}`}
-                                            >
-                                                {tab.label}
-                                            </button>
-                                        ))}
-                                    </div>
+                                <header className="h-14 flex items-stretch flex-shrink-0 bg-base-100/10 backdrop-blur-md p-1.5 gap-1.5 border-b border-base-300/10">
+                                    {tabs.map(tab => (
+                                        <button
+                                            key={tab.id}
+                                            onClick={() => setActiveRefineSubTab(tab.id)}
+                                            className={`btn btn-sm h-full rounded-none flex-1 font-normal text-[11px] tracking-wider uppercase px-1 truncate btn-snake font-display ${activeRefineSubTab === tab.id ? 'btn-primary text-primary-content' : 'btn-ghost text-base-content/40 hover:text-primary'}`}
+                                        >
+                                            <span /><span /><span /><span />
+                                            {tab.label}
+                                        </button>
+                                    ))}
                                 </header>
                                 <div ref={refineScrollerRef} className="flex-grow p-6 overflow-y-auto bg-transparent modifiers-tabs-container">
                                     {renderRefineSubContent()}
@@ -1292,7 +1291,7 @@ const PromptsPage: React.FC<PromptsPageProps> = ({
                                         <div className="relative h-full w-full flex items-center">
                                             <input
                                                 type="text"
-                                                className="w-full h-full bg-transparent border-none focus:outline-none focus:ring-0 pl-4 pr-10 font-bold text-[11px] font-nunito tracking-normal placeholder:text-base-content/10"
+                                                className="w-full h-full bg-transparent border-none focus:outline-none focus:ring-0 pl-4 pr-10 font-bold text-sm font-nunito tracking-normal placeholder:text-base-content/40"
                                                 placeholder="SELECT PRESET..."
                                                 value={presetSearchText}
                                                 onChange={(e) => {
@@ -1318,7 +1317,7 @@ const PromptsPage: React.FC<PromptsPageProps> = ({
                                                                 e.preventDefault();
                                                                 handleSelectPresetFromDropdown(p);
                                                             }}
-                                                            className={`font-bold text-[11px] font-nunito block w-full truncate ${selectedPreset?.name === p.name ? 'text-primary' : 'text-base-content/70 hover:text-base-content'}`}
+                                                            className={`font-bold text-sm font-nunito block w-full truncate ${selectedPreset?.name === p.name ? 'text-primary' : 'text-base-content/70 hover:text-base-content'}`}
                                                         >
                                                             {p.name}
                                                         </a>
@@ -1346,9 +1345,9 @@ const PromptsPage: React.FC<PromptsPageProps> = ({
                                     </button>
                                 </header>
 
-                                <div ref={activeConstructionScrollerRef} className="flex-grow p-4 overflow-y-auto relative z-10">
+                                <div ref={activeConstructionScrollerRef} className="flex-grow p-0 overflow-y-auto relative z-10">
                                     {activeConstructionItems.length > 0 ? (
-                                        <div className="space-y-2">
+                                        <div className="flex flex-col">
                                             {activeConstructionItems.map((item) => (
                                                 <PropertyCard
                                                     key={item.key}

@@ -301,6 +301,7 @@ const SavedPrompts: React.FC<SavedPromptsProps> = ({
           {detailViewPromptId && (
             <PromptDetailView 
               prompts={sortedAndFilteredPrompts} currentIndex={sortedAndFilteredPrompts.findIndex(p => p.id === detailViewPromptId)} 
+              categories={categories}
               onClose={() => setDetailViewPromptId(null)} onNavigate={(idx: number) => setDetailViewPromptId(sortedAndFilteredPrompts[idx].id)}
               onDelete={(p: SavedPrompt) => { setPromptToDelete(p); setIsDeleteModalOpen(true); }}
               onUpdate={async (id: string, u: Partial<Omit<SavedPrompt, 'id' | 'createdAt'>>) => { 
@@ -322,7 +323,7 @@ const SavedPrompts: React.FC<SavedPromptsProps> = ({
                           <div className="flex flex-col md:flex-row md:items-end justify-between gap-4">
                               <div className="space-y-1">
                                   <span className="text-[10px] font-black uppercase tracking-[0.6em] text-primary/60 block">LIBRARY INDEX</span>
-                                  <h1 className="text-3xl lg:text-4xl font-black tracking-tighter text-base-content leading-none uppercase">
+                                  <h1 className="text-3xl lg:text-4xl font-black tracking-tighter text-base-content leading-none uppercase font-logo">
                                       {currentCategoryName}<span className="text-primary">.</span>
                                   </h1>
                               </div>
@@ -364,7 +365,7 @@ const SavedPrompts: React.FC<SavedPromptsProps> = ({
                                   BY NAME
                               </button>
                           </div>
-                          <button onClick={() => { setPromptToEdit(null); setIsEditorModalOpen(true); }} className="btn btn-sm btn-primary h-full rounded-none border-none px-8 font-black text-[10px] tracking-widest uppercase flex items-center gap-2 btn-snake-primary">
+                          <button onClick={() => { setPromptToEdit(null); setIsEditorModalOpen(true); }} className="btn btn-primary h-full rounded-none border-none w-[150px] font-black text-[10px] tracking-widest uppercase flex items-center justify-center gap-2 btn-snake-primary flex-shrink-0">
                               <span/><span/><span/><span/>
                               <PlusIcon className="w-4 h-4" />
                               <span>Add Prompt</span>

@@ -147,7 +147,7 @@ const InitialLoader: React.FC<{ status: string; progress: number | null }> = ({ 
             {/* Large Background Percentage (SR Seventy One Style) */}
             <div className="absolute inset-0 flex items-center justify-center pointer-events-none overflow-hidden">
                 <span 
-                    className="text-[25vw] font-black opacity-[0.03] leading-none select-none font-display will-change-transform"
+                    className="text-[25vw] font-normal opacity-[0.03] leading-none select-none font-monoton tracking-widest will-change-transform"
                     style={{ transform: `translateY(${(100 - smoothPercentage) * 0.2}px)` }}
                 >
                     {smoothPercentage.toString().padStart(2, '0')}
@@ -165,7 +165,7 @@ const InitialLoader: React.FC<{ status: string; progress: number | null }> = ({ 
 
             <div className="relative z-10 flex flex-col items-center">
                 <div className="overflow-hidden mb-6 px-4">
-                    <h1 ref={textWrapperRef} className="grid grid-cols-1 grid-rows-1 text-2xl md:text-4xl font-black tracking-tighter uppercase select-none items-center font-logo">
+                    <h1 ref={textWrapperRef} className="grid grid-cols-1 grid-rows-1 text-2xl md:text-4xl font-normal tracking-widest uppercase select-none items-center font-monoton">
                         <span className="text-base-content/10 block leading-none py-2 row-start-1 col-start-1">
                             Kollektiv<span className="text-primary/10 italic">.</span>
                         </span>
@@ -226,7 +226,7 @@ const Logo: React.FC<{ onNavigate: (tab: ActiveTab) => void }> = ({ onNavigate }
             }}
             className="flex items-center gap-2 group pointer-events-auto"
         >
-            <h1 className="text-3xl font-black tracking-tighter text-base-content uppercase flex items-center font-logo">
+            <h1 className="text-3xl font-normal tracking-widest text-base-content uppercase flex items-center font-monoton">
                 <TimedScrambledText text="Kollektiv" intervalMs={300000} trigger={scrambleTrigger} />
                 <span className="text-primary italic animate-pulse drop-shadow-[0_0_10px_oklch(var(--p))] transition-all inline-block ml-0.5 font-black">.</span>
             </h1>

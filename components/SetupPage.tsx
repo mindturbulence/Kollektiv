@@ -94,7 +94,7 @@ const MaintenanceOverlay: React.FC<{ progress: number, message: string }> = ({ p
             {/* Large Background Percentage (SR Seventy One Style) */}
             <div className="absolute inset-0 flex items-center justify-center pointer-events-none overflow-hidden">
                 <span 
-                    className="text-[25vw] font-black opacity-[0.03] leading-none select-none transition-all duration-500 ease-out font-display"
+                    className="text-[25vw] font-black opacity-[0.03] leading-none select-none transition-all duration-500 ease-out font-logo"
                     style={{ transform: `translateY(${(100 - progress) * 0.2}px)` }}
                 >
                     {Math.round(progress).toString().padStart(2, '0')}
@@ -600,6 +600,22 @@ export const SetupPage: React.FC<SetupPageProps> = ({
                             title="Reset to Default"
                         >
                             <RefreshIcon className="w-3.5 h-3.5" />
+                        </button>
+                    </div>
+                </SettingRow>
+                <SettingRow label="Standby Mode" desc="Choose the visual experience shown during system idle state.">
+                    <div className="flex bg-white/5 p-1 rounded-none border border-white/10">
+                        <button 
+                            onClick={() => handleSettingsChange('idleScreenType', 'matrix')}
+                            className={`px-4 py-2 text-[10px] font-black uppercase tracking-widest transition-all ${settings.idleScreenType === 'matrix' ? 'bg-primary text-primary-content shadow-lg' : 'text-white/40 hover:text-white'}`}
+                        >
+                            Falling Codes
+                        </button>
+                        <button 
+                            onClick={() => handleSettingsChange('idleScreenType', 'gallery')}
+                            className={`px-4 py-2 text-[10px] font-black uppercase tracking-widest transition-all ${settings.idleScreenType === 'gallery' ? 'bg-primary text-primary-content shadow-lg' : 'text-white/40 hover:text-white'}`}
+                        >
+                            Neural Gallery
                         </button>
                     </div>
                 </SettingRow>

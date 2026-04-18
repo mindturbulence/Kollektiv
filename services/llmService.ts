@@ -1,6 +1,6 @@
 
 import type { EnhancementResult, LLMSettings, PromptModifiers } from '../types';
-import { analyzePaletteMood as analyzePaletteMoodGemini, generatePromptFormulaGemini, refineSinglePromptGemini, abstractImageGemini, generateColorNameGemini, dissectPromptGemini, generateFocusedVariationsGemini, reconstructPromptGemini, reconstructFromIntentGemini, replaceComponentInPromptGemini, generateArtistDescriptionGemini, enhancePromptGeminiStream, refineSinglePromptGeminiStream, generateConstructorPresetGemini } from './geminiService';
+import { translateToEnglishGemini, analyzePaletteMood as analyzePaletteMoodGemini, generatePromptFormulaGemini, refineSinglePromptGemini, abstractImageGemini, generateColorNameGemini, dissectPromptGemini, generateFocusedVariationsGemini, reconstructPromptGemini, reconstructFromIntentGemini, replaceComponentInPromptGemini, generateArtistDescriptionGemini, enhancePromptGeminiStream, refineSinglePromptGeminiStream, generateConstructorPresetGemini } from './geminiService';
 import { analyzePaletteMoodOllama, generatePromptFormulaOllama, refineSinglePromptOllama, abstractImageOllama, generateColorNameOllama, dissectPromptOllama, generateFocusedVariationsOllama, reconstructPromptOllama, replaceComponentInPromptOllama, reconstructFromIntentOllama, generateArtistDescriptionOllama, enhancePromptOllamaStream, refineSinglePromptOllamaStream } from './ollamaService';
 import { TARGET_VIDEO_AI_MODELS, TARGET_AUDIO_AI_MODELS } from '../constants/models';
 
@@ -465,6 +465,15 @@ Output the translated prompt ONLY. No intros.`;
         ? await refineSinglePromptOllama(text, settings, sys, 1024)
         : await refineSinglePromptGemini(text, '', settings, sys);
     return cleanLLMResponse(raw);
+};
+
+export const translateToEnglish = async (text: string, settings: LLMSettings): Promise<string> => {
+    const isOllama = settings.activeLLM === 'ollama' || settings.activeLLM === 'ollama_cloud';
+    if (isOllama) {
+        // Fallback or Ollama specific translation if needed later, for now just Gemini
+        return refineSinglePromptOllama(text, settings, "Translate this to high-fidelity English visual prompt. Output translated text ONLY.", 1200);
+    }
+    return translateToEnglishGemini(text, settings);
 };
 
 export interface OllamaTestResult {

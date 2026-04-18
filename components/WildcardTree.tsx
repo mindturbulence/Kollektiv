@@ -29,7 +29,7 @@ const WildcardCategoryNode: React.FC<WildcardCategoryNodeProps> = ({ category, o
                     <span className="text-sm font-medium wildcard-category-label">{category.name}</span>
                 </summary>
                 <div className="pl-4 border-l-2 border-base-300/50 ml-2 mt-1">
-                    <div className="flex flex-wrap gap-1 py-2">
+                    <div className="flex flex-wrap gap-2 py-2">
                         {category.files.map(file => {
                             const displayName = file.name;
                             const wildcardPath = file.path.replace(/\.txt$/i, '');
@@ -37,7 +37,7 @@ const WildcardCategoryNode: React.FC<WildcardCategoryNodeProps> = ({ category, o
                                 <button 
                                     key={file.path} 
                                     onClick={() => onWildcardClick(wildcardPath)} 
-                                    className="form-btn wildcard-tag-btn h-auto px-1 text-[10px] font-bold lowercase tracking-tight"
+                                    className="inline-flex h-auto p-0 border-none bg-transparent hover:text-primary transition-colors text-[10px] font-bold lowercase tracking-tight text-base-content/60 font-nunito"
                                     title={`Insert __${wildcardPath}__`}
                                 >
                                     {displayName}

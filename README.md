@@ -12,6 +12,8 @@ Kollektiv is a high-performance, local-first application designed for prompt eng
 *   **AI Refinement**: Multi-engine support (Gemini 3, Ollama Local/Cloud) to transform raw ideas into model-specific formulas (Flux, Midjourney, Video AI, etc.).
 *   **Prompt Anatomy**: Real-time deconstruction of prompts into thematic components with AI-suggested variations.
 *   **Neural Abstractor**: Extract descriptive tokens directly from uploaded images or video frames.
+*   **Prompt Formula**: Transform raw ideas into structured prompt formulas with customizable presets.
+*   **Refine Panel**: AI-powered prompt refinement with configurable model presets and temperature settings.
 
 ### 2. The Vault (Local-First Storage)
 *   **File System Access**: Directly manages files on your local machine. No cloud storage, no privacy compromises.
@@ -24,10 +26,18 @@ Kollektiv is a high-performance, local-first application designed for prompt eng
 *   **Palette Extractor**: Deconstruct visual artifacts into precise chromatic tokens and atmospheric mood data.
 *   **Video-to-Frames**: Precision frame extraction and video joining for temporal consistency studies.
 *   **Image Compare**: Synchronized viewports for pixel-accurate evaluation of model outputs.
+*   **Image Resizer**: Batch resize and format conversion with aspect ratio presets.
+*   **Audio Analysis**: Extract descriptive metadata from audio files for AI prompt generation.
 
 ### 4. Storyboard AI
 *   Sequence narrative nodes for video generation.
 *   Translate narrative intent into cinematic prompts optimized for engines like Google Veo, Luma, and Kling.
+
+### 5. Cheatsheets & Reference
+*   **Artstyle Library**: Curated art styles, movements, and aesthetic references.
+*   **Artist Reference**: Database of artists with style descriptions for prompt enhancement.
+*   **Layered Cheatsheets**: Multi-level reference system with detailed parameter breakdowns.
+*   **Generic Categories**: Customizable reference categories for any prompt type.
 
 ---
 
@@ -35,10 +45,10 @@ Kollektiv is a high-performance, local-first application designed for prompt eng
 
 *   **Frontend**: React 19, TypeScript, Vite
 *   **Styling**: Tailwind CSS, DaisyUI
-*   **Animation**: GSAP (GreenSock) for high-fidelity cinematic transitions.
+*   **Animation**: GSAP (GreenSock), Framer Motion for high-fidelity cinematic transitions.
 *   **AI Engines**: Google Gemini API (@google/genai), Ollama (REST API)
 *   **Storage**: Browser File System Access API, IndexedDB (idb)
-*   **Utilities**: JSZip, FFmpeg (WASM), Lottie-web
+*   **Utilities**: JSZip, FFmpeg (WASM)
 
 ---
 
@@ -70,6 +80,16 @@ Kollektiv is a high-performance, local-first application designed for prompt eng
     npm run dev
     ```
 
+### Building for Production
+```bash
+npm run build
+```
+
+### Deployment
+```bash
+npm run deploy
+```
+
 ### 🔐 Storage Setup
 Upon first launch, Kollektiv will prompt you to **Select a Storage Folder**. 
 *   This folder acts as your **Vault**.
@@ -84,6 +104,20 @@ Kollektiv includes a range of specialized UI environments, including:
 *   **Pip-Boy**: Retro-futuristic CRT aesthetic with digital jitter.
 *   **Starfield**: NASAPUNK-inspired industrial interface.
 *   **Explorer**: Technical research grid layout.
+
+---
+
+## 📁 Project Structure
+```
+├── components/          # React components
+│   ├── prompts/        # Prompt-related components
+│   ├── gallery/       # Media gallery components
+│   └── utilities/     # Utility tools (resizer, compare, etc.)
+├── services/           # API and business logic services
+├── contexts/          # React context providers
+├── utils/             # Helper utilities
+└── types/             # TypeScript type definitions
+```
 
 ---
 

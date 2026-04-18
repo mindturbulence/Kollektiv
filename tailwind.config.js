@@ -8,8 +8,8 @@ export default {
   theme: {
     extend: {
       fontFamily: {
-        sans: ['DIN Condensed Web', 'Inter', 'Plus Jakarta Sans', 'sans-serif'],
-        display: ['DIN Condensed Web', 'Inter', 'Plus Jakarta Sans', 'sans-serif'],
+        sans: ['Nunito', 'Inter', 'Plus Jakarta Sans', 'sans-serif'],
+        display: ['Nunito', 'Inter', 'Plus Jakarta Sans', 'sans-serif'],
         mono: ['JetBrains Mono', 'monospace'],
       },
       colors: {

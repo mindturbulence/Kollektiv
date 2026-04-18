@@ -109,7 +109,7 @@ const SavedPromptCard: React.FC<SavedPromptCardProps> = memo(({
           </div>
           
           <div className="space-y-3 cursor-pointer" onClick={onOpenDetailView}>
-            <h2 className="text-3xl font-black tracking-tighter text-base-content leading-tight capitalize group-hover:text-primary transition-colors break-words">
+            <h2 className="text-3xl font-black tracking-tighter text-base-content leading-tight capitalize group-hover:text-primary transition-colors break-words font-logo">
               {title}
             </h2>
             <div className="flex items-center gap-4 opacity-40">

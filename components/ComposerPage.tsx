@@ -47,7 +47,7 @@ interface ComposerPageProps {
 
 // --- CONSTANTS ---
 const FONTS = [
-    { name: 'DIN Condensed Web', family: "'DIN Condensed Web', sans-serif" },
+    { name: 'Nunito', family: "'Nunito', sans-serif" },
     { name: 'Satoshi', family: "'Satoshi', sans-serif" },
     { name: 'General Sans', family: "'General Sans', sans-serif" },
     { name: 'Space Mono', family: "'Space Mono', monospace" },

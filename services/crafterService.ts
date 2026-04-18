@@ -5,6 +5,7 @@ import { generatePromptFormulaWithAI } from './llmService';
 
 const CRAFTER_DIR = 'crafter';
 const MANIFEST_NAME = 'crafter_manifest.json';
+const SAVED_RESULTS_NAME = 'saved_results.json';
 
 interface CrafterTemplate {
     name: string;
@@ -285,6 +286,25 @@ class CrafterService {
             throw new Error("Application data directory not selected.");
         }
         await fileSystemManager.deleteFile(`${CRAFTER_DIR}/${filePath}`);
+    }
+
+    public async loadSavedResults(): Promise<string[]> {
+        if (!fileSystemManager.isDirectorySelected()) return [];
+        const content = await fileSystemManager.readFile(SAVED_RESULTS_NAME);
+        if (content) {
+            try {
+                const parsed = JSON.parse(content);
+                if (Array.isArray(parsed)) return parsed;
+            } catch (e) {
+                console.error("Failed to parse saved results:", e);
+            }
+        }
+        return [];
+    }
+
+    public async saveSavedResults(results: string[]): Promise<void> {
+        if (!fileSystemManager.isDirectorySelected()) return;
+        await fileSystemManager.saveFile(SAVED_RESULTS_NAME, new Blob([JSON.stringify(results, null, 2)], { type: 'application/json' }));
     }
 
     public processCrafterPrompt(prompt: string, wildcardData: WildcardCategory[]): string {

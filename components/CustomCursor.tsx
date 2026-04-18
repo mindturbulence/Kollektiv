@@ -94,7 +94,23 @@ const CustomCursor: React.FC = () => {
     }, []);
 
     useEffect(() => {
-        if (!innerRef.current || !arrowRef.current) return;
+        if (!arrowRef.current) return;
+        
+        // Constant rotation for the half-circle
+        gsap.to(arrowRef.current, {
+            rotation: 360,
+            repeat: -1,
+            duration: 2,
+            ease: "none"
+        });
+        
+        return () => {
+            if (arrowRef.current) gsap.killTweensOf(arrowRef.current);
+        };
+    }, []);
+
+    useEffect(() => {
+        if (!innerRef.current) return;
         
         const getThemeColor = () => {
             if (typeof document !== 'undefined') {
@@ -115,14 +131,6 @@ const CustomCursor: React.FC = () => {
                 duration: 0.6,
                 ease: "power2.out"
             });
-            gsap.to(arrowRef.current, {
-                opacity: 1,
-                scale: 1,
-                rotation: 360,
-                repeat: -1,
-                duration: 1.5,
-                ease: "none"
-            });
         } else {
             gsap.to(innerRef.current, {
                 scale: 1,
@@ -132,14 +140,6 @@ const CustomCursor: React.FC = () => {
                 duration: 0.8,
                 ease: "power2.inOut"
             });
-            gsap.to(arrowRef.current, {
-                opacity: 0,
-                scale: 0.5,
-                rotation: 0,
-                duration: 0.5,
-                ease: "power2.inOut"
-            });
-            gsap.killTweensOf(arrowRef.current);
         }
     }, [isHovering]);
 
@@ -168,10 +168,10 @@ const CustomCursor: React.FC = () => {
                     className="w-5 h-5 border rounded-full flex items-center justify-center overflow-hidden cursor-inner"
                     style={{ borderRadius: '50%', borderStyle: 'solid' }}
                 >
-                    {/* Rotating Half-Circle on hover */}
+                    {/* Rotating Half-Circle */}
                     <svg 
                         ref={arrowRef}
-                        className="w-3 h-3 opacity-0 scale-50"
+                        className="w-3 h-3 opacity-40 scale-100"
                         style={{ color: 'inherit' }}
                         viewBox="0 0 24 24" 
                         fill="none" 
