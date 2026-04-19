@@ -228,19 +228,16 @@ export const SetupPage: React.FC<SetupPageProps> = ({
         authTimeoutRef.current = null;
     }
 
-    setIsWorking(true);
-    setMaintenanceProgress(20);
-    setMaintenanceMsg(`ESTABLISHING ${mode.toUpperCase()} UPLINK...`);
     try {
       if (mode === 'youtube') {
-          const response = await fetch('https://www.googleapis.com/youtube/v3/channels?part=snippet,statistics&mine=true', {
+          // Use proxy to bypass COEP/CORS
+          const response = await fetch('/google-api/youtube/v3/channels?part=snippet,statistics&mine=true', {
             headers: { 'Authorization': `Bearer ${accessToken}` }
           });
           
           if (!response.ok) throw new Error("YouTube metadata acquisition failed.");
           const data = await response.json();
           if (data.items && data.items.length > 0) {
-            setMaintenanceProgress(80);
             const channel = data.items[0];
             const updatedYouTube: YouTubeConnection = {
               ...settings.youtube,
@@ -259,12 +256,12 @@ export const SetupPage: React.FC<SetupPageProps> = ({
             showGlobalFeedback(`YouTube Linked: ${channel.snippet.title}`);
           }
       } else {
-          const response = await fetch('https://www.oauth2.googleapis.com/oauth2/v3/userinfo', {
+          // Use proxy to bypass COEP/CORS
+          const response = await fetch('/google-api/oauth2/v3/userinfo', {
             headers: { 'Authorization': `Bearer ${accessToken}` }
           });
           if (!response.ok) throw new Error("Cloud Identity fetch failed.");
           const user = await response.json();
-          setMaintenanceProgress(80);
           const updatedGoogle: GoogleIdentityConnection = {
             isConnected: true,
             email: user.email,
@@ -279,7 +276,6 @@ export const SetupPage: React.FC<SetupPageProps> = ({
           playSuccessChime();
           showGlobalFeedback(`Uplink confirmed for ${user.email}`);
       }
-      setMaintenanceProgress(100);
     } catch (error: any) {
       console.error("Auth Fetch Error:", error);
       showGlobalFeedback(`Integration Error: ${error.message}`, true);
@@ -288,7 +284,7 @@ export const SetupPage: React.FC<SetupPageProps> = ({
       setMaintenanceMsg("");
       setMaintenanceProgress(0);
     }
-  }, [settings, updateSettings, showGlobalFeedback]);
+  }, [settings, updateSettings, showGlobalFeedback, playSuccessChime]);
 
   const initGsi = useCallback((clientId: string) => {
       if (lastClientIdRef.current === clientId && tokenClientRef.current) return;
@@ -355,26 +351,12 @@ export const SetupPage: React.FC<SetupPageProps> = ({
         return;
     }
 
-    setIsWorking(true);
-    setMaintenanceProgress(10);
-    setMaintenanceMsg("NEGOTIATING HANDSHAKE...");
-
-    authTimeoutRef.current = window.setTimeout(() => {
-        if (isWorking) {
-            setIsWorking(false);
-            setMaintenanceMsg("");
-            setMaintenanceProgress(0);
-            showGlobalFeedback("Authentication timed out.", true);
-        }
-    }, 60000);
+    setIsWorking(false);
     
     try {
         tokenClientRef.current.requestAccessToken({ prompt: 'consent' });
     } catch (e) {
         if (authTimeoutRef.current) window.clearTimeout(authTimeoutRef.current);
-        setIsWorking(false);
-        setMaintenanceMsg("");
-        setMaintenanceProgress(0);
         showGlobalFeedback("Popup blocked or init error.", true);
     }
   };
@@ -734,6 +716,16 @@ export const SetupPage: React.FC<SetupPageProps> = ({
             case 'google':
                 return (
                     <div className="flex flex-col h-full overflow-y-auto animate-fade-in">
+                        <SettingRow label="Global Client ID" desc="Google Cloud OAuth 2.0 Identifier used for all Identity services.">
+                            <div className="flex flex-col gap-2 w-full max-w-md">
+                                <input type="text" value={settings.youtube?.customClientId || ''} onChange={(e) => handleSettingsChange('youtube', { ...settings.youtube, customClientId: e.target.value })} className="form-input w-full" placeholder="407408718192-..." />
+                                <div className="p-4 bg-primary/5 border border-primary/20 space-y-2">
+                                    <p className="text-[9px] font-black uppercase text-primary tracking-widest leading-tight">CRITICAL: AUTHORIZED ORIGIN</p>
+                                    <p className="text-[10px] font-mono text-base-content/60 break-all select-all py-1 bg-black/20 px-2">{currentOrigin}</p>
+                                    <p className="text-[8px] font-bold text-base-content/30 uppercase leading-relaxed">Add the above URL to 'Authorized JavaScript origins' in Google Cloud Console Credentials.</p>
+                                </div>
+                            </div>
+                        </SettingRow>
                         <SettingRow label="Cloud Identity Link" desc="Connect your account to enable Cloud AI and data sync features.">
                             {settings.googleIdentity?.isConnected ? (
                                 <div className="flex flex-col gap-4 w-full max-w-lg">
@@ -744,7 +736,7 @@ export const SetupPage: React.FC<SetupPageProps> = ({
                                             <p className="text-[10px] font-mono opacity-40 truncate">{settings.googleIdentity.email}</p>
                                         </div>
                                     </div>
-                                    <button onClick={() => handleGoogleDisconnect} className="form-btn text-error px-4">Revoke Access</button>
+                                    <button onClick={handleGoogleDisconnect} className="form-btn text-error px-4">Revoke Access</button>
                                 </div>
                             ) : (
                                 <button onClick={() => handleAuthConnect('google')} className="form-btn px-6">AUTHENTICATE WITH GOOGLE</button>
@@ -760,10 +752,14 @@ export const SetupPage: React.FC<SetupPageProps> = ({
             case 'youtube':
                 return (
                     <div className="flex flex-col h-full overflow-y-auto animate-fade-in">
-                        <SettingRow label="Client ID" desc="Your Google OAuth 2.0 Client ID for the YouTube API.">
+                        <SettingRow label="Global Client ID" desc="Google Cloud OAuth 2.0 Identifier used for all Identity services.">
                             <div className="flex flex-col gap-2 w-full max-w-md">
                                 <input type="text" value={settings.youtube?.customClientId || ''} onChange={(e) => handleSettingsChange('youtube', { ...settings.youtube, customClientId: e.target.value })} className="form-input w-full" placeholder="407408718192-..." />
-                                <p className="text-[8px] font-mono text-base-content/20 uppercase">REQUIRED: Ensure your App URL (from AI Studio) is in authorized origins in GCP Console.</p>
+                                <div className="p-4 bg-primary/5 border border-primary/20 space-y-2">
+                                    <p className="text-[9px] font-black uppercase text-primary tracking-widest leading-tight">CRITICAL: AUTHORIZED ORIGIN</p>
+                                    <p className="text-[10px] font-mono text-base-content/60 break-all select-all py-1 bg-black/20 px-2">{currentOrigin}</p>
+                                    <p className="text-[8px] font-bold text-base-content/30 uppercase leading-relaxed">Add the above URL to 'Authorized JavaScript origins' in Google Cloud Console Credentials.</p>
+                                </div>
                             </div>
                         </SettingRow>
                         <SettingRow label="Channel Integration" desc="Connect to your YouTube account for direct artifact publishing.">
@@ -881,43 +877,57 @@ export const SetupPage: React.FC<SetupPageProps> = ({
 
   return (
     <>
-    <section className="flex flex-col h-full bg-transparent w-full relative p-[3px] corner-frame overflow-visible">
-      <div className="flex flex-row h-full w-full overflow-hidden relative z-10 bg-base-100/40 backdrop-blur-xl gap-4">
+    <section className="flex flex-row h-full bg-transparent w-full relative overflow-visible">
+      <div className="flex flex-row h-full w-full overflow-hidden relative z-10 bg-transparent gap-4">
 
-        <aside className="w-80 flex-shrink-0 flex flex-col overflow-hidden relative">
-            <h1 className="h-16 flex-shrink-0 flex items-center px-6 text-[10px] font-black uppercase tracking-[0.4em] text-base-content/30">System Hub</h1>
-            <div ref={navScrollRef} className="flex-grow px-4 py-6 overflow-y-auto relative">
-                <ul className="menu menu-sm p-0 gap-1 relative z-10">
-                   {mainCategories.map(mainCat => (
-                       <SetupNavItem 
-                            key={mainCat.id} id={mainCat.id} label={mainCat.label} icon={mainCat.icon}
-                            isActive={activeSettingsTab === mainCat.id} onClick={() => handleMainTabClick(mainCat.id as ActiveSettingsTab)}
-                            registerRef={(el) => { navRefs.current[mainCat.id] = el; }}
-                        />
-                   ))}
-                </ul>
+        <aside className="w-80 flex-shrink-0 flex flex-col relative p-[3px] corner-frame overflow-visible h-full bg-transparent">
+            <div className="flex flex-col h-full w-full overflow-hidden relative z-10 bg-base-100/40 backdrop-blur-xl">
+                <h1 className="h-16 flex-shrink-0 flex items-center px-6 text-[10px] font-black uppercase tracking-[0.4em] text-base-content/30 border-b border-base-content/5">System Hub</h1>
+                <div ref={navScrollRef} className="flex-grow px-4 py-6 overflow-y-auto relative">
+                    <ul className="menu menu-sm p-0 gap-1 relative z-10">
+                    {mainCategories.map(mainCat => (
+                        <SetupNavItem 
+                                key={mainCat.id} id={mainCat.id} label={mainCat.label} icon={mainCat.icon}
+                                isActive={activeSettingsTab === mainCat.id} onClick={() => handleMainTabClick(mainCat.id as ActiveSettingsTab)}
+                                registerRef={(el) => { navRefs.current[mainCat.id] = el; }}
+                            />
+                    ))}
+                    </ul>
+                </div>
             </div>
+            {/* Manual Corner Accents */}
+            <div className="absolute -top-[1px] -left-[1px] w-3 h-3 border-t border-l border-primary/15 z-20 pointer-events-none" />
+            <div className="absolute -top-[1px] -right-[1px] w-3 h-3 border-t border-r border-primary/15 z-20 pointer-events-none" />
+            <div className="absolute -bottom-[1px] -left-[1px] w-3 h-3 border-b border-l border-primary/15 z-20 pointer-events-none" />
+            <div className="absolute -bottom-[1px] -right-[1px] w-3 h-3 border-b border-r border-primary/15 z-20 pointer-events-none" />
         </aside>
 
-        <main className="flex-grow flex flex-col overflow-hidden relative">
-            <section className="p-10 flex-shrink-0">
-                <h1 className="text-2xl lg:text-3xl font-black tracking-tighter uppercase leading-none">{mainCategories.find(c => c.id === activeSettingsTab)?.label}<span className="text-primary">.</span></h1>
-                <p className="text-[11px] font-bold text-base-content/30 uppercase tracking-[0.3em] mt-1">{currentSubTab?.description}</p>
-            </section>
-            {currentSubTabs.length > 0 && (
-                <div className="flex-shrink-0 px-6 py-2 overflow-x-auto">
-                    <div className="form-tab-group">
-                        {currentSubTabs.map(tab => (
-                            <button key={tab.id} onClick={() => setActiveSubTab(tab.id)} className={`form-tab-item ${activeSubTab === tab.id ? 'active' : ''}`}>{tab.label}</button>
-                        ))}
+        <main className="flex-grow flex flex-col h-full bg-transparent relative p-[3px] corner-frame overflow-visible">
+            <div className="flex flex-col h-full w-full overflow-hidden relative z-10 bg-base-100/40 backdrop-blur-xl">
+                <section className="p-10 flex-shrink-0">
+                    <h1 className="text-2xl lg:text-3xl font-black tracking-tighter uppercase leading-none">{mainCategories.find(c => c.id === activeSettingsTab)?.label}<span className="text-primary">.</span></h1>
+                    <p className="text-[11px] font-bold text-base-content/30 uppercase tracking-[0.3em] mt-1">{currentSubTab?.description}</p>
+                </section>
+                {currentSubTabs.length > 0 && (
+                    <div className="flex-shrink-0 px-6 py-2 overflow-x-auto">
+                        <div className="form-tab-group">
+                            {currentSubTabs.map(tab => (
+                                <button key={tab.id} onClick={() => setActiveSubTab(tab.id)} className={`form-tab-item ${activeSubTab === tab.id ? 'active' : ''}`}>{tab.label}</button>
+                            ))}
+                        </div>
                     </div>
-                </div>
-            )}
-            <div ref={mainScrollRef} className="flex-grow overflow-y-auto">{renderActiveTabContent()}</div>
-            <footer className="flex flex-row p-0 overflow-hidden flex-shrink-0">
-                <button onClick={handleCancel} className="form-btn flex-1">Abort</button>
-                <button onClick={saveSettings} className="form-btn form-btn-primary flex-1 shadow-lg">Confirm</button>
-            </footer>
+                )}
+                <div ref={mainScrollRef} className="flex-grow overflow-y-auto">{renderActiveTabContent()}</div>
+                <footer className="flex flex-row p-0 overflow-hidden flex-shrink-0 border-t border-base-content/5">
+                    <button onClick={handleCancel} className="form-btn flex-1">Abort</button>
+                    <button onClick={saveSettings} className="form-btn form-btn-primary flex-1 shadow-lg">Confirm</button>
+                </footer>
+            </div>
+            {/* Manual Corner Accents */}
+            <div className="absolute -top-[1px] -left-[1px] w-3 h-3 border-t border-l border-primary/15 z-20 pointer-events-none" />
+            <div className="absolute -top-[1px] -right-[1px] w-3 h-3 border-t border-r border-primary/15 z-20 pointer-events-none" />
+            <div className="absolute -bottom-[1px] -left-[1px] w-3 h-3 border-b border-l border-primary/15 z-20 pointer-events-none" />
+            <div className="absolute -bottom-[1px] -right-[1px] w-3 h-3 border-b border-r border-primary/15 z-20 pointer-events-none" />
         </main>
       </div>
       {/* Manual Corner Accents */}

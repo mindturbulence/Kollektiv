@@ -18,12 +18,12 @@ interface PromptDetailViewProps {
 }
 
 const InfoRow: React.FC<{ label: string, children: React.ReactNode, action?: React.ReactNode }> = ({ label, children, action }) => (
-    <div className="space-y-2 group/info">
-        <div className="flex items-center justify-between">
-            <span className="text-[11px] font-black uppercase tracking-[0.3em] text-white/30">{label}</span>
-            {action && <div className="opacity-0 group-hover/info:opacity-100 transition-opacity">{action}</div>}
+    <div className="space-y-1 group/info">
+        <div className="flex items-center gap-4">
+            <span className="text-xs font-bold uppercase tracking-widest text-[#a1a1aa] flex-grow">{label}</span>
+            {action && <div className="opacity-0 group-hover/info:opacity-100 transition-opacity -mt-2">{action}</div>}
         </div>
-        <div className="text-sm font-medium leading-relaxed text-white/80">
+        <div className="text-sm font-bold text-base-content/80">
             {children}
         </div>
     </div>
@@ -35,25 +35,25 @@ const PromptTemplatePanel: React.FC<{
     return (
         <div className="space-y-8 animate-fade-in">
             <InfoRow label="ITEM ID">
-                <span className="text-[11px] font-mono text-white/70 tracking-widest uppercase">
+                <span className="text-xs font-mono text-primary tracking-widest break-all">
                     {prompt.id}
                 </span>
             </InfoRow>
 
             <InfoRow label="REGISTRY FOLDER">
-                <p className="text-white/60 font-black tracking-widest uppercase text-[11px]">
+                <p className="text-base-content/60 font-medium tracking-wide">
                     /PROMPTS/{prompt.categoryId || 'ROOT'}
                 </p>
             </InfoRow>
 
             <InfoRow label="CREATION DATE">
-                <span className="text-[11px] font-mono whitespace-nowrap">
+                <span className="text-xs font-mono whitespace-nowrap tracking-wide text-base-content/60">
                     {new Date(prompt.createdAt).toLocaleDateString()}
                 </span>
             </InfoRow>
 
             <InfoRow label="WORD COUNT">
-                <span className="text-[11px] font-mono whitespace-nowrap uppercase">
+                <span className="text-xs font-mono whitespace-nowrap tracking-wide text-base-content/60">
                     {prompt.text.split(' ').length} WORDS
                 </span>
             </InfoRow>
@@ -217,43 +217,43 @@ const PromptDetailView: React.FC<PromptDetailViewProps> = ({
 
   return (
     <div ref={overlayRef} className="absolute inset-0 z-40 bg-black/40 flex items-center justify-center p-4 lg:p-8 overflow-hidden" onClick={handleClose}>
-        <div ref={modalRef} className="w-full h-full bg-transparent flex flex-col overflow-visible relative p-[3px] corner-frame" onClick={e => e.stopPropagation()}>
-            <div className="w-full h-full bg-[#0a0a0a]/95 backdrop-blur-md flex flex-col overflow-hidden relative z-10 border border-white/5">
+        <div ref={modalRef} className="w-full h-full bg-transparent flex flex-col overflow-visible relative p-1 corner-frame" onClick={e => e.stopPropagation()}>
+            <div className="w-full h-full bg-base-100/95 backdrop-blur-xl flex flex-col overflow-hidden relative z-10">
                 <div className="flex-grow flex flex-col lg:flex-row overflow-hidden p-0 gap-0">
-                    <main ref={leftPanelRef} className="flex-1 flex flex-col overflow-hidden bg-base-100/40 backdrop-blur-xl border-r border-white/5">
+                    <main ref={leftPanelRef} className="flex-1 flex flex-col overflow-hidden bg-base-200/30">
                         <div className="flex-grow p-1.5 relative overflow-hidden flex flex-col bg-transparent">
-                            <div className="flex flex-col gap-4 p-8">
-                                <div className="form-control w-full">
-                                    <label className="text-[10px] font-black uppercase tracking-[0.3em] text-white/20 mb-2">Prompt Title</label>
+                            <div className="flex flex-col gap-4 px-6 pt-6">
+                                <div className="form-control w-full space-y-2">
+                                    <label className="font-nunito font-semibold text-xs tracking-widest text-base-content/40 uppercase">Prompt Title</label>
                                     <input 
                                         type="text" 
                                         value={editedTitle}
                                         onChange={(e) => setEditedTitle(e.target.value)}
                                         placeholder="Enter prompt title..."
-                                        className="form-input w-full uppercase"
+                                        className="form-input text-lg font-nunito bg-base-300/50 border-none focus:bg-base-300/80"
                                     />
                                 </div>
-                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                    <div className="form-control w-full">
-                                        <label className="text-[10px] font-black uppercase tracking-[0.3em] text-white/20 mb-2">Category</label>
+                                <div className="grid grid-cols-1 xl:grid-cols-2 gap-4">
+                                    <div className="form-control w-full space-y-2">
+                                        <label className="font-nunito font-semibold text-xs tracking-widest text-base-content/40 uppercase">Category</label>
                                         <select 
                                             value={editedCategoryId}
                                             onChange={(e) => setEditedCategoryId(e.target.value)}
-                                            className="form-select w-full"
+                                            className="form-select w-full font-nunito bg-base-300/50 border-none focus:bg-base-300/80"
                                         >
                                             <option value="">UNCATEGORIZED</option>
                                             {categories.map(cat => (
-                                                <option key={cat.id} value={cat.id}>{cat.name.toUpperCase()}</option>
+                                                <option key={cat.id} value={cat.id}>{cat.name}</option>
                                             ))}
                                         </select>
                                     </div>
-                                    <div className="form-control w-full">
-                                        <label className="text-[10px] font-black uppercase tracking-[0.3em] text-white/20 mb-2">Neural Tags (Comma or Enter to add)</label>
-                                        <div className="flex flex-wrap items-center gap-2 px-4 py-1 bg-white/5 border border-white/10 rounded-none min-h-[44px] transition-all focus-within:border-primary/50">
+                                    <div className="form-control w-full space-y-2">
+                                        <label className="font-nunito font-semibold text-xs tracking-widest text-base-content/40 uppercase">Tags</label>
+                                        <div className="flex flex-wrap items-center gap-2 p-2 bg-base-300/50 focus-within:bg-base-300/80 border-none transition-colors min-h-[3rem] rounded-md">
                                             {editedTags.map(tag => (
-                                                <div key={tag} className="flex items-center gap-2 bg-primary/10 text-[9px] font-black uppercase tracking-widest px-2 py-0.5 text-primary border border-primary/20">
+                                                <div key={tag} className="flex items-center gap-1 bg-primary/20 text-xs font-semibold px-2 py-1 text-primary rounded-sm">
                                                     <span>{tag}</span>
-                                                    <button type="button" onClick={() => handleRemoveTag(tag)} className="text-white/30 hover:text-error transition-colors text-xs">&times;</button>
+                                                    <button type="button" onClick={() => handleRemoveTag(tag)} className="text-primary/60 hover:text-primary transition-colors">&times;</button>
                                                 </div>
                                             ))}
                                             <input 
@@ -261,24 +261,24 @@ const PromptDetailView: React.FC<PromptDetailViewProps> = ({
                                                 value={tagInput}
                                                 onChange={(e) => setTagInput(e.target.value)}
                                                 onKeyDown={handleTagInputKeyDown}
-                                                placeholder={editedTags.length === 0 ? "ADD TAGS..." : ""}
-                                                className="flex-grow bg-transparent outline-none text-[10px] font-bold uppercase tracking-widest h-8 text-white placeholder:text-white/10"
+                                                placeholder="Add tag..."
+                                                className="flex-grow bg-transparent outline-none text-sm p-1 text-base-content placeholder:text-base-content/30"
                                             />
                                         </div>
                                     </div>
                                 </div>
                             </div>
-                            <div className="flex-grow p-8 pt-0 relative overflow-hidden flex flex-col">
+                            <div className="flex-grow p-6 relative overflow-hidden flex flex-col">
                                 <textarea 
                                     value={editedText}
                                     onChange={(e) => setEditedText(e.target.value)}
-                                    className="form-textarea flex-grow w-full bg-transparent text-xl font-medium leading-relaxed resize-none focus:outline-none p-0 border-none shadow-none text-white/90"
+                                    className="form-textarea flex-grow w-full bg-base-100/50 hover:bg-base-100/80 focus:bg-base-100 transition-colors text-lg font-medium leading-relaxed resize-none focus:outline-none p-6 border-none shadow-none text-base-content/90"
                                     placeholder="Type prompt here..."
                                 ></textarea>
                             </div>
                         </div>
                         
-                        <footer className="h-14 p-1.5 flex gap-1.5 bg-black/20 backdrop-blur-md items-stretch">
+                        <footer className="h-14 p-1.5 flex gap-1.5 bg-base-300/30 backdrop-blur-md items-stretch">
                             <button onClick={() => onClip(prompt)} className="btn btn-sm btn-ghost h-full flex-1 rounded-none font-normal text-[13px] tracking-wider uppercase btn-snake font-display">
                                 <span/><span/><span/><span/>
                                 Clip
@@ -301,30 +301,25 @@ const PromptDetailView: React.FC<PromptDetailViewProps> = ({
                             </button>
                         </footer>
                     </main>
-                    <aside className="w-full lg:w-[480px] flex-shrink-0 flex flex-col overflow-hidden relative border-l border-white/5 bg-base-100/40 backdrop-blur-xl">
-                        <header ref={headerRef} className="flex-shrink-0 h-16 px-6 flex items-center justify-between border-b border-white/5 bg-white/5">
+                    <aside className="w-full lg:w-96 flex-shrink-0 flex flex-col overflow-hidden relative border-l border-base-300/30">
+                        <header ref={headerRef} className="flex-shrink-0 h-16 px-6 flex items-center justify-between border-b border-base-300/30 bg-base-200/20">
                             <div className="form-tab-group !w-auto">
                                 <button onClick={() => handleNavigation('prev')} className="form-tab-item px-4"><ChevronLeftIcon className="w-4 h-4" /></button>
-                                <span className="flex items-center px-4 font-mono text-[10px] font-black text-white/40 uppercase tracking-widest border-x border-white/10">{currentIndex + 1} / {prompts.length}</span>
+                                <span className="flex items-center px-4 font-mono text-xs font-bold text-base-content/40 border-x border-base-content/10">{currentIndex + 1} / {prompts.length}</span>
                                 <button onClick={() => handleNavigation('next')} className="form-tab-item px-4"><ChevronRightIcon className="w-4 h-4" /></button>
                             </div>
-                            <button onClick={handleClose} className="p-2 text-white/20 hover:text-white transition-all hover:scale-110">
+                            <button onClick={handleClose} className="p-2 text-base-content/40 hover:text-base-content transition-all hover:scale-110">
                                 <CloseIcon className="w-5 h-5 stroke-[2]"/>
                             </button>
                         </header>
                         <div ref={rightPanelRef} className="flex-grow flex flex-col min-h-0 overflow-hidden relative">
-                            <div ref={infoPanelRef} className="absolute inset-0 p-8 space-y-10 overflow-y-auto custom-scrollbar">
+                            <div ref={infoPanelRef} className="absolute inset-0 p-8 space-y-12 overflow-y-auto custom-scrollbar">
                                 <PromptTemplatePanel prompt={prompt} />
                             </div>
                         </div>
                     </aside>
                 </div>
             </div>
-            {/* Manual Corner Accents */}
-            <div className="absolute -top-[1px] -left-[1px] w-3 h-3 border-t border-l border-primary/15 z-20 pointer-events-none" />
-            <div className="absolute -top-[1px] -right-[1px] w-3 h-3 border-t border-r border-primary/15 z-20 pointer-events-none" />
-            <div className="absolute -bottom-[1px] -left-[1px] w-3 h-3 border-b border-l border-primary/15 z-20 pointer-events-none" />
-            <div className="absolute -bottom-[1px] -right-[1px] w-3 h-3 border-b border-r border-primary/15 z-20 pointer-events-none" />
         </div>
     </div>
   );

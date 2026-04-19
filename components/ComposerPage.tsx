@@ -2,8 +2,8 @@
 import React, { useState, useEffect, useRef, useMemo, useLayoutEffect } from 'react';
 import { gsap } from 'gsap';
 import { 
-    UploadIcon, LinkIcon, LinkOffIcon, 
-    FolderClosedIcon, PlusIcon
+    LinkIcon, LinkOffIcon, 
+    FolderClosedIcon, PlusIcon, TypeIcon, PhotoIcon
 } from './icons';
 import useLocalStorage from '../utils/useLocalStorage';
 import GalleryPickerModal from './GalleryPickerModal';
@@ -396,11 +396,15 @@ const ComposerPage: React.FC<ComposerPageProps> = ({ showGlobalFeedback }) => {
             <div className="flex-grow flex flex-col lg:flex-row overflow-hidden gap-4">
                 <aside className="w-full lg:w-96 flex-shrink-0 flex flex-col relative p-[3px] corner-frame overflow-visible z-10">
                     <div className="flex flex-col h-full w-full overflow-hidden relative z-10 bg-base-100/40 backdrop-blur-xl">
-                        <div className="p-4 flex justify-center bg-base-100/10 backdrop-blur-md">
-                            <div className="form-tab-group">
-                                <button onClick={() => setMode('grid')} className={`form-tab-item ${mode === 'grid' ? 'active' : ''}`}>GRID BUILDER</button>
-                                <button onClick={() => setMode('frame')} className={`form-tab-item ${mode === 'frame' ? 'active' : ''}`}>IMAGE FRAMER</button>
-                            </div>
+                        <div className="h-14 flex items-stretch flex-shrink-0 bg-base-100/10 backdrop-blur-md p-1.5 gap-1.5">
+                            <button onClick={() => setMode('grid')} className={`btn btn-sm h-full rounded-none flex-1 font-normal text-[11px] tracking-wider uppercase px-1 truncate btn-snake font-display ${mode === 'grid' ? 'btn-primary text-primary-content' : 'btn-ghost text-base-content/40 hover:text-primary'}`}>
+                                <span/><span/><span/><span/>
+                                GRID BUILDER
+                            </button>
+                            <button onClick={() => setMode('frame')} className={`btn btn-sm h-full rounded-none flex-1 font-normal text-[11px] tracking-wider uppercase px-1 truncate btn-snake font-display ${mode === 'frame' ? 'btn-primary text-primary-content' : 'btn-ghost text-base-content/40 hover:text-primary'}`}>
+                                <span/><span/><span/><span/>
+                                IMAGE FRAMER
+                            </button>
                         </div>
                         
                         <div className="flex-grow p-6 space-y-8 overflow-y-auto bg-transparent">
@@ -457,7 +461,7 @@ const ComposerPage: React.FC<ComposerPageProps> = ({ showGlobalFeedback }) => {
                             </button>
                             <button onClick={() => setIsVaultConfirmOpen(true)} disabled={isProcessing || (mode==='grid'?!gridItems.some(Boolean):!frameItem)} className="btn btn-sm btn-primary h-full flex-[1.5] rounded-none font-normal text-[13px] tracking-[0.2em] uppercase btn-snake-primary font-display">
                                 <span/><span/><span/><span/>
-                                SAVE TO LIBRARY
+                                SAVE
                             </button>
                         </footer>
                     </div>
@@ -470,7 +474,6 @@ const ComposerPage: React.FC<ComposerPageProps> = ({ showGlobalFeedback }) => {
 
                 <main className="flex-grow flex flex-col relative p-[3px] corner-frame overflow-visible z-10">
                     <div className="flex flex-col h-full w-full overflow-hidden relative z-10 bg-base-100/40 backdrop-blur-xl">
-                        <section className="p-8 bg-transparent flex justify-between items-center h-16"><h1 className="text-xl font-black uppercase tracking-tighter">{mode === 'grid' ? 'Grid Builder' : 'Image Framer'}<span className="text-primary">.</span></h1></section>
                         <div ref={previewContainerRef} className="flex-grow bg-transparent flex items-center justify-center p-12 overflow-hidden" onMouseDown={e => { if(e.target === e.currentTarget) setActiveLayerId(null); }}>
                             <div id="framer-canvas-root" className="relative transition-all duration-500 overflow-hidden" style={{ width: previewMetrics.width, height: previewMetrics.height, backgroundColor: bgColor }}>
                                 {mode === 'grid' && gridLayout && gridItems.map((item, idx) => (
@@ -512,7 +515,17 @@ const ComposerPage: React.FC<ComposerPageProps> = ({ showGlobalFeedback }) => {
                 {mode === 'frame' && (
                     <aside className="w-full lg:w-80 flex-shrink-0 flex flex-col relative p-[3px] corner-frame overflow-visible z-10 animate-slide-in-from-right">
                         <div className="flex flex-col h-full w-full overflow-hidden relative z-10 bg-base-100/40 backdrop-blur-xl">
-                            <header className="p-6 bg-base-100/10 backdrop-blur-md flex justify-between items-center h-16"><h3 className="text-[10px] font-black uppercase tracking-[0.4em] text-primary">Layers</h3><div className="flex gap-1"><button onClick={() => { const n: Layer = { id: Math.random().toString(36).substr(2,9), type: 'text', content: 'New Text', x: 0.5, y: 0.5, fontSize: 80, color: '#000000', fontFamily: FONTS[0].family, bold: true, italic: false }; setLayers([...layers, n]); setActiveLayerId(n.id); }} className="form-btn btn-xs btn-square bg-transparent border-none" title="Add Text Layer"><PlusIcon className="w-4 h-4"/></button><button onClick={() => layerImageInputRef.current?.click()} className="form-btn btn-xs btn-square bg-transparent border-none" title="Add Image Layer"><UploadIcon className="w-4 h-4"/></button></div></header>
+                            <header className="p-6 bg-base-100/10 backdrop-blur-md flex justify-between items-center h-16">
+                                <h3 className="text-[10px] font-black uppercase tracking-[0.4em] text-primary">Layers</h3>
+                                <div className="flex gap-2">
+                                    <button onClick={() => { const n: Layer = { id: Math.random().toString(36).substr(2,9), type: 'text', content: 'New Text', x: 0.5, y: 0.5, fontSize: 80, color: '#000000', fontFamily: FONTS[0].family, bold: true, italic: false }; setLayers([...layers, n]); setActiveLayerId(n.id); }} className="btn btn-xs btn-square bg-base-200/50 border border-primary/20 text-primary hover:bg-primary hover:text-primary-content transition-all" title="Add Text Layer">
+                                        <TypeIcon className="w-4 h-4"/>
+                                    </button>
+                                    <button onClick={() => layerImageInputRef.current?.click()} className="btn btn-xs btn-square bg-base-200/50 border border-primary/20 text-primary hover:bg-primary hover:text-primary-content transition-all" title="Add Image Layer">
+                                        <PhotoIcon className="w-4 h-4"/>
+                                    </button>
+                                </div>
+                            </header>
                             <div className="flex-grow overflow-y-auto p-6 space-y-4 bg-transparent">
                                 {layers.map((layer, i) => (
                                     <div key={layer.id} className={`p-4 border transition-all cursor-pointer ${activeLayerId === layer.id ? 'border-primary bg-primary/5' : 'border-base-300/20'}`} onClick={() => setActiveLayerId(layer.id)}>
@@ -546,7 +559,7 @@ const ComposerPage: React.FC<ComposerPageProps> = ({ showGlobalFeedback }) => {
             <input type="file" id="frame-file-upload" className="hidden" onChange={e => handleFiles(Array.from(e.target.files || []))} />
             <input type="file" ref={layerImageInputRef} className="hidden" onChange={async e => { if(e.target.files?.[0]) { const b64 = await fileToBase64(e.target.files[0]); const n: Layer = { id: Math.random().toString(36).substr(2,9), type: 'image', content: b64, x: 0.5, y: 0.5, fontSize: 100, color: '', fontFamily: '', bold: false, italic: false }; setLayers([...layers, n]); setActiveLayerId(n.id); } }} />
             <GalleryPickerModal isOpen={isPickerOpen} onClose={() => { setIsPickerOpen(false); setPickerTarget(null); }} onSelect={handleLibrarySelect} selectionMode={mode === 'frame' ? 'single' : 'multiple'} typeFilter="image" />
-            <ConfirmationModal isOpen={isVaultConfirmOpen} onClose={() => setIsVaultConfirmOpen(false)} onConfirm={async () => { setIsProcessing(true); const canvas = await generateFinalCanvas(); if(canvas) { await addItemToGallery('image', [canvas.toDataURL(`image/${outputFormat}`)], ['Composer'], undefined, `composition_${Date.now()}`); showGlobalFeedback?.("Saved to library."); } setIsProcessing(false); setIsVaultConfirmOpen(false); }} title="SAVE TO LIBRARY" message="Save this composition to your local folders?" btnClassName="btn-primary" />
+            <ConfirmationModal isOpen={isVaultConfirmOpen} onClose={() => setIsVaultConfirmOpen(false)} onConfirm={async () => { setIsProcessing(true); const canvas = await generateFinalCanvas(); if(canvas) { await addItemToGallery('image', [canvas.toDataURL(`image/${outputFormat}`)], ['Composer'], undefined, `composition_${Date.now()}`); showGlobalFeedback?.("Saved to library."); } setIsProcessing(false); setIsVaultConfirmOpen(false); }} title="SAVE COMPOSITION" message="Save this composition to your local folders?" btnClassName="btn-primary" />
         </div>
     );
 };
