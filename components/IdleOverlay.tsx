@@ -5,6 +5,7 @@ import { useSettings } from '../contexts/SettingsContext';
 import { loadGalleryItems } from '../utils/galleryStorage';
 import DashboardGallery from './DashboardGallery';
 import type { GalleryItem } from '../types';
+import ChromaticText from './ChromaticText';
 
 const IdleOverlay: React.FC<{ isVisible: boolean; onInteraction: () => void }> = ({ isVisible, onInteraction }) => {
     const { settings } = useSettings();
@@ -154,7 +155,7 @@ const IdleOverlay: React.FC<{ isVisible: boolean; onInteraction: () => void }> =
                         </div>
                         <div className="overflow-hidden mb-4 py-2">
                             <h1 className="text-6xl md:text-8xl uppercase text-base-content flex items-center font-monoton tracking-widest">
-                                Kollektiv
+                                <ChromaticText text="Kollektiv" />
                                 <span className="text-primary italic animate-pulse">.</span>
                             </h1>
                         </div>
@@ -169,8 +170,8 @@ const IdleOverlay: React.FC<{ isVisible: boolean; onInteraction: () => void }> =
             )}
             
             <div className="absolute bottom-12 left-1/2 -translate-x-1/2 flex flex-col items-center gap-2 pointer-events-none">
-                <span className="text-[10px] font-black uppercase tracking-[0.6em] text-primary animate-pulse drop-shadow-[0_0_8px_oklch(var(--p))]">System Standby</span>
-                <span className="text-[8px] font-mono text-base-content/20 uppercase tracking-[0.4em]">Neural stream active // click to resume</span>
+                <span className="text-[12px] font-black uppercase tracking-[0.6em] text-primary animate-pulse drop-shadow-[0_0_8px_oklch(var(--p))]">System Standby</span>
+                <span className="text-[10px] font-black text-base-content/20 uppercase tracking-[0.4em]">Hover your mouse to resume</span>
             </div>
         </div>
     );

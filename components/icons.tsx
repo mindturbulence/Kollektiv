@@ -153,6 +153,15 @@ export const InformationCircleIcon: React.FC<React.SVGProps<SVGSVGElement>> = (p
   </svg>
 );
 
+export const TypeIcon: React.FC<React.SVGProps<SVGSVGElement>> = (props) => (
+  <svg {...commonProps} {...props}>
+    <path stroke="none" d="M0 0h24v24H0z" fill="none"/>
+    <path d="M3 5h18" />
+    <path d="M12 19v-14" />
+    <path d="M7 19h10" />
+  </svg>
+);
+
 export const DownloadIcon: React.FC<React.SVGProps<SVGSVGElement>> = (props) => (
   <svg {...commonProps} {...props}>
     <path stroke="none" d="M0 0h24v24H0z" fill="none"/>

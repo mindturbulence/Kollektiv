@@ -1,5 +1,5 @@
 
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { createPortal } from 'react-dom';
 import type { GalleryItem, GalleryCategory } from '../types';
 import { loadGalleryItems, loadCategories } from '../utils/galleryStorage';
@@ -20,28 +20,67 @@ interface GalleryPickerModalProps {
 
 const PickerItem: React.FC<{
     item: GalleryItem;
+    url: string;
     isSelected: boolean;
     onToggle: () => void;
-}> = ({ item, isSelected, onToggle }) => {
+}> = ({ item, url, isSelected, onToggle }) => {
     const [thumbUrl, setThumbUrl] = useState<string | null>(null);
+    const [isInView, setIsInView] = useState(false);
+    const containerRef = useRef<HTMLDivElement>(null);
 
     useEffect(() => {
+        const observer = new IntersectionObserver(([entry]) => {
+            if (entry.isIntersecting) {
+                setIsInView(true);
+            }
+        }, { 
+            rootMargin: '100px', 
+            threshold: 0.01 
+        });
+
+        if (containerRef.current) observer.observe(containerRef.current);
+        return () => observer.disconnect();
+    }, []);
+
+    useEffect(() => {
+        if (!isInView) return;
         let isActive = true;
         let objectUrl: string | null = null;
+        
         const load = async () => {
-            if (!item.urls[0]) return;
-            const blob = await fileSystemManager.getFileAsBlob(item.urls[0]);
-            if (blob && isActive) {
-                objectUrl = URL.createObjectURL(blob);
-                setThumbUrl(objectUrl);
+            if (!url) return;
+            
+            if (url.startsWith('data:') || url.startsWith('http') || url.startsWith('blob:')) {
+                if (isActive) setThumbUrl(url);
+                return;
+            }
+
+            try {
+                const blob = await fileSystemManager.getFileAsBlob(url);
+                if (blob && isActive) {
+                    objectUrl = URL.createObjectURL(blob);
+                    setThumbUrl(objectUrl);
+                }
+            } catch (error) {
+                console.error("Error loading image blob:", error);
             }
         };
-        load();
-        return () => { isActive = false; if (objectUrl) URL.revokeObjectURL(objectUrl); };
-    }, [item.urls]);
+        
+        // Add minimal delay to prevent overwhelming OPFS
+        const timer = setTimeout(() => {
+            load();
+        }, 10 + Math.random() * 50);
+
+        return () => { 
+            isActive = false; 
+            clearTimeout(timer);
+            if (objectUrl) URL.revokeObjectURL(objectUrl); 
+        };
+    }, [url, isInView]);
 
     return (
         <div 
+            ref={containerRef}
             onClick={onToggle}
             className={`relative aspect-square bg-transparent cursor-pointer overflow-hidden group border-2 transition-all ${isSelected ? 'border-primary ring-2 ring-primary/20' : 'border-transparent hover:border-primary/50'}`}
         >
@@ -170,21 +209,38 @@ const GalleryPickerModal: React.FC<GalleryPickerModalProps> = ({
         return tree;
     }, [categories, items, folderSearchQuery]);
 
-    const handleToggle = (id: string) => {
+    const displayUnits = useMemo(() => {
+        return filteredItems.flatMap(item => 
+            item.urls.map((url, index) => ({
+                displayId: `${item.id}-${index}`,
+                item,
+                url,
+                index
+            }))
+        );
+    }, [filteredItems]);
+
+    const handleToggle = (displayId: string) => {
         if (selectionMode === 'single') {
-            setSelectedIds(new Set([id]));
+            setSelectedIds(new Set([displayId]));
         } else {
             setSelectedIds(prev => {
                 const next = new Set(prev);
-                if (next.has(id)) next.delete(id);
-                else next.add(id);
+                if (next.has(displayId)) next.delete(displayId);
+                else next.add(displayId);
                 return next;
             });
         }
     };
 
     const handleConfirm = () => {
-        const selectedItems = items.filter(i => selectedIds.has(i.id));
+        const selectedItems = displayUnits
+            .filter(u => selectedIds.has(u.displayId))
+            .map(u => ({
+                ...u.item,
+                urls: [u.url],
+                sources: [u.item.sources?.[u.index] || u.url]
+            }));
         onSelect(selectedItems);
         onClose();
     };
@@ -207,9 +263,9 @@ const GalleryPickerModal: React.FC<GalleryPickerModalProps> = ({
                     </button>
                 </header>
 
-                <div className="flex-grow flex flex-col lg:flex-row overflow-hidden p-8 lg:p-12 pt-0 lg:pt-0 gap-4">
-                    <aside className="w-full lg:w-72 flex-shrink-0 flex flex-col relative p-[3px] corner-frame overflow-visible">
-                        <div className="flex flex-col h-full w-full overflow-hidden relative z-10 bg-base-100/40 backdrop-blur-xl">
+                <div className="flex-grow flex flex-col lg:flex-row overflow-hidden p-6 gap-6">
+                    <aside className="w-full lg:w-72 flex-shrink-0 flex flex-col relative overflow-visible">
+                        <div className="flex flex-col h-full w-full overflow-hidden relative z-10 bg-transparent">
                             <div className="flex-shrink-0 bg-transparent h-14">
                                 <div className="flex items-center h-full relative">
                                     <SearchIcon className="absolute left-6 w-4 h-4 opacity-20 pointer-events-none" />
@@ -237,17 +293,12 @@ const GalleryPickerModal: React.FC<GalleryPickerModalProps> = ({
                                 />
                             </div>
                         </div>
-                        {/* Manual Corner Accents */}
-                        <div className="absolute -top-[1px] -left-[1px] w-3 h-3 border-t border-l border-primary/15 z-20 pointer-events-none" />
-                        <div className="absolute -top-[1px] -right-[1px] w-3 h-3 border-t border-r border-primary/15 z-20 pointer-events-none" />
-                        <div className="absolute -bottom-[1px] -left-[1px] w-3 h-3 border-b border-l border-primary/15 z-20 pointer-events-none" />
-                        <div className="absolute -bottom-[1px] -right-[1px] w-3 h-3 border-b border-r border-primary/15 z-20 pointer-events-none" />
                     </aside>
 
-                    <main className="flex-grow flex flex-col relative p-[3px] corner-frame overflow-visible">
-                        <div className="flex flex-col h-full w-full overflow-hidden relative z-10 bg-base-100/40 backdrop-blur-xl">
+                    <main className="flex-grow flex flex-col relative overflow-visible">
+                        <div className="flex flex-col h-full w-full overflow-hidden relative z-10 bg-transparent">
                             <div className="flex-shrink-0 bg-transparent h-14 flex items-center">
-                                <div className="flex items-center h-full relative flex-grow border-r border-base-300">
+                                <div className="flex items-center h-full relative flex-grow">
                                     <SearchIcon className="absolute left-6 w-4 h-4 opacity-20 pointer-events-none" />
                                     <input 
                                         type="text" 
@@ -278,14 +329,15 @@ const GalleryPickerModal: React.FC<GalleryPickerModalProps> = ({
                                     <div className="h-full w-full flex items-center justify-center">
                                         <LoadingSpinner />
                                     </div>
-                                ) : filteredItems.length > 0 ? (
+                                ) : displayUnits.length > 0 ? (
                                     <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 xl:grid-cols-5 gap-3">
-                                        {filteredItems.map(item => (
+                                        {displayUnits.map(unit => (
                                             <PickerItem 
-                                                key={item.id} 
-                                                item={item} 
-                                                isSelected={selectedIds.has(item.id)}
-                                                onToggle={() => handleToggle(item.id)}
+                                                key={unit.displayId} 
+                                                item={unit.item}
+                                                url={unit.url}
+                                                isSelected={selectedIds.has(unit.displayId)}
+                                                onToggle={() => handleToggle(unit.displayId)}
                                             />
                                         ))}
                                     </div>
@@ -297,11 +349,6 @@ const GalleryPickerModal: React.FC<GalleryPickerModalProps> = ({
                                 )}
                             </div>
                         </div>
-                        {/* Manual Corner Accents */}
-                        <div className="absolute -top-[1px] -left-[1px] w-3 h-3 border-t border-l border-primary/15 z-20 pointer-events-none" />
-                        <div className="absolute -top-[1px] -right-[1px] w-3 h-3 border-t border-r border-primary/15 z-20 pointer-events-none" />
-                        <div className="absolute -bottom-[1px] -left-[1px] w-3 h-3 border-b border-l border-primary/15 z-20 pointer-events-none" />
-                        <div className="absolute -bottom-[1px] -right-[1px] w-3 h-3 border-b border-r border-primary/15 z-20 pointer-events-none" />
                     </main>
                 </div>
 

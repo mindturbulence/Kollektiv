@@ -266,24 +266,6 @@ export const ColorPaletteExtractor: React.FC<ColorPaletteExtractorProps> = ({ on
 
             <main className="flex-grow flex flex-col relative p-[3px] corner-frame overflow-visible z-10 ml-1">
                 <div className="flex flex-col h-full w-full overflow-hidden relative z-10 bg-base-100/40 backdrop-blur-xl">
-                    <section className="p-10 bg-transparent">
-                        <div className="max-w-screen-2xl mx-auto flex flex-col gap-1">
-                            <div className="flex flex-col md:flex-row md:items-stretch justify-between gap-6">
-                                <h1 className="text-2xl lg:text-3xl font-black tracking-tighter text-base-content leading-none flex items-center uppercase">Palette Extractor<span className="text-primary">.</span></h1>
-                            </div>
-                            <p className="text-[11px] font-bold text-base-content/30 uppercase tracking-[0.3em] w-full">Deconstruct visual artifacts into precise chromatic tokens and atmospheric mood data.</p>
-                        </div>
-                    </section>
-
-                    <div className="flex-shrink-0 px-6 py-4 flex justify-between items-center sticky top-0 z-20 backdrop-blur-xl bg-base-100/60">
-                        <h2 className="text-xs font-black uppercase tracking-[0.4em] text-base-content/40">Extraction Output</h2>
-                        {palette.length > 0 && (
-                            <button onClick={handleClipPalette} className="form-btn h-8 px-4">
-                                <BookmarkIcon className="w-3.5 h-3.5 mr-2 opacity-40"/> CLIP TO ARCHIVE
-                            </button>
-                        )}
-                    </div>
-
                     <div className="flex-grow p-8 lg:p-12 overflow-y-auto">
                         {isLoading ? <div className="py-24"><LoadingSpinner/></div> :
                          error ? <div className="alert alert-error rounded-none border-2"><span>{error}</span></div> :
@@ -308,6 +290,14 @@ export const ColorPaletteExtractor: React.FC<ColorPaletteExtractorProps> = ({ on
                             </div>
                          )}
                     </div>
+                     {palette.length > 0 && (
+                        <footer className="h-14 flex items-stretch flex-shrink-0 bg-base-100/10 backdrop-blur-md p-1.5 gap-1.5">
+                            <button onClick={handleClipPalette} className="btn btn-sm btn-ghost h-full flex-1 rounded-none font-normal text-[13px] tracking-wider uppercase btn-snake text-primary/40 hover:text-primary font-display">
+                                <span/><span/><span/><span/>
+                                <BookmarkIcon className="w-3.5 h-3.5 mr-1.5" /> CLIP DATA TO ARCHIVE
+                            </button>
+                        </footer>
+                    )}
                 </div>
                 {/* Manual Corner Accents */}
                 <div className="absolute -top-[1px] -left-[1px] w-3 h-3 border-t border-l border-primary/15 z-20 pointer-events-none" />

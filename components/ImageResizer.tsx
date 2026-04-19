@@ -1,27 +1,27 @@
 import React, { useState, useRef, useCallback, useEffect } from 'react';
 import JSZip from 'jszip';
-import { UploadIcon, CropIcon, LinkIcon, LinkOffIcon } from './icons';
+import { UploadIcon, CropIcon, LinkIcon, LinkOffIcon, CloseIcon } from './icons';
 import { COMPOSER_PRESETS } from '../constants';
 
 type ImageStatus = 'pending' | 'processing' | 'done' | 'error';
-type CropData = { x: number; y: number; width: number; height: number; }; 
+type CropData = { x: number; y: number; width: number; height: number; };
 
 interface ImageItem {
-  id: string;
-  file: File;
-  originalUrl: string;
-  originalWidth: number;
-  originalHeight: number;
-  crop: CropData;
-  status: ImageStatus;
-  errorMessage?: string;
-  processed?: {
-    url: string;
-    blob: Blob;
-    width: number;
-    height: number;
-    size: number;
-  }
+    id: string;
+    file: File;
+    originalUrl: string;
+    originalWidth: number;
+    originalHeight: number;
+    crop: CropData;
+    status: ImageStatus;
+    errorMessage?: string;
+    processed?: {
+        url: string;
+        blob: Blob;
+        width: number;
+        height: number;
+        size: number;
+    }
 }
 
 interface ProcessSettings {
@@ -42,7 +42,7 @@ const processImage = (item: ImageItem, settings: ProcessSettings): Promise<Image
             return reject(new Error("Environment not supported."));
         }
         const img = new (window as any).Image();
-        
+
         img.onload = () => {
             try {
                 const canvas = (window as any).document.createElement('canvas');
@@ -52,7 +52,7 @@ const processImage = (item: ImageItem, settings: ProcessSettings): Promise<Image
                 let targetWidth = settings.width ? Number(settings.width) : 0;
                 let targetHeight = settings.height ? Number(settings.height) : 0;
                 const imgAspect = img.naturalWidth / img.naturalHeight;
-                
+
                 if (settings.preserveOriginal) {
                     targetWidth = item.originalWidth;
                     targetHeight = item.originalHeight;
@@ -79,10 +79,10 @@ const processImage = (item: ImageItem, settings: ProcessSettings): Promise<Image
 
                     canvas.width = Math.round(targetWidth);
                     canvas.height = Math.round(targetHeight);
-                    
+
                     ctx.imageSmoothingQuality = 'high';
-                    
-                    if(settings.enableCropping) {
+
+                    if (settings.enableCropping) {
                         const sx = Math.round((item.crop.x / 100) * img.naturalWidth);
                         const sy = Math.round((item.crop.y / 100) * img.naturalHeight);
                         const sWidth = Math.round((item.crop.width / 100) * img.naturalWidth);
@@ -95,17 +95,17 @@ const processImage = (item: ImageItem, settings: ProcessSettings): Promise<Image
                         let dx = 0;
                         let dy = 0;
 
-                        if (imgAspect > canvasAspect) { 
+                        if (imgAspect > canvasAspect) {
                             dHeight = canvas.width / imgAspect;
                             dy = (canvas.height - dHeight) / 2;
-                        } else { 
+                        } else {
                             dWidth = canvas.height * imgAspect;
                             dx = (canvas.width - dWidth) / 2;
                         }
                         ctx.drawImage(img, 0, 0, img.naturalWidth, img.naturalHeight, Math.round(dx), Math.round(dy), Math.round(dWidth), Math.round(dHeight));
                     }
                 }
-                
+
                 const qualityArg = (settings.format === 'jpeg' || settings.format === 'webp') ? settings.quality : undefined;
 
                 canvas.toBlob(
@@ -147,20 +147,20 @@ const DropZone: React.FC<{ onFilesAdded: (files: File[]) => void }> = ({ onFiles
     const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => onFilesAdded(Array.from((e.currentTarget as any).files || []));
     const handleDrop = (e: React.DragEvent) => { e.preventDefault(); setIsDragging(false); onFilesAdded(Array.from((e.dataTransfer as any).files || [])); };
     return (
-      <div 
-        className="w-full h-full p-12 flex flex-col items-center justify-center bg-transparent"
-        onDragEnter={() => setIsDragging(true)} onDragOver={(e) => e.preventDefault()} onDragLeave={() => setIsDragging(false)} onDrop={handleDrop}
-      >
-        <div 
-          className={`w-full max-w-2xl aspect-video rounded-none border-4 border-dashed flex flex-col items-center justify-center cursor-pointer transition-all ${isDragging ? 'border-primary bg-primary/10' : 'border-base-300 hover:border-primary/50'}`}
-          onClick={() => (fileInputRef.current as any)?.click()}
+        <div
+            className="w-full h-full flex flex-col items-center justify-center bg-transparent"
+            onDragEnter={() => setIsDragging(true)} onDragOver={(e) => e.preventDefault()} onDragLeave={() => setIsDragging(false)} onDrop={handleDrop}
         >
-            <input type="file" ref={fileInputRef} multiple accept="image/*" className="hidden" onChange={handleFileChange} />
-            <UploadIcon className="w-16 h-16 text-base-content/20 mb-6" />
-            <h2 className="text-2xl font-black uppercase tracking-tighter">UPLOAD IMAGES</h2>
-            <p className="text-[10px] font-bold uppercase tracking-[0.3em] text-base-content/40 mt-2">Drop images or click to select files</p>
+            <div
+                className={`w-full h-full rounded-none flex flex-col items-center justify-center cursor-pointer transition-all ${isDragging ? 'bg-primary/10' : 'hover:bg-base-200/20'}`}
+                onClick={() => (fileInputRef.current as any)?.click()}
+            >
+                <input type="file" ref={fileInputRef} multiple accept="image/*" className="hidden" onChange={handleFileChange} />
+                <UploadIcon className="w-16 h-16 text-base-content/20 mb-6" />
+                <h2 className="text-2xl font-black uppercase tracking-tighter">UPLOAD IMAGES</h2>
+                <p className="text-[10px] font-bold uppercase tracking-[0.3em] text-base-content/40 mt-2 px-4 text-center">Drop images or click to select files</p>
+            </div>
         </div>
-      </div>
     );
 };
 
@@ -172,29 +172,37 @@ const ImageCard: React.FC<{
     imageRef: (el: HTMLDivElement | null) => void,
 }> = ({ item, settings, onRemove, onCropMouseDown, imageRef }) => {
     return (
-        <div className="flex flex-col bg-transparent group">
-            <figure ref={imageRef} className="relative aspect-square bg-transparent overflow-hidden">
-                <img src={item.originalUrl} alt={item.file.name} className="w-full h-full object-contain" />
-                {settings.enableCropping && (
-                    <div 
-                        className="absolute pointer-events-auto cursor-move border-2 border-dashed border-primary"
-                        style={{
-                            boxShadow: `0 0 0 9999px oklch(var(--b1)/0.7)`,
-                            left: `${item.crop.x}%`,
-                            top: `${item.crop.y}%`,
-                            width: `${item.crop.width}%`,
-                            height: `${item.crop.height}%`
-                        }}
-                        onMouseDown={(e) => onCropMouseDown(e, item.id)}
-                    ></div>
-                )}
-                <button onClick={onRemove} className="absolute top-2 right-2 form-btn h-6 w-6 text-error opacity-0 group-hover:opacity-100 transition-all">✕</button>
-            </figure>
+        <div className="flex flex-col bg-transparent group relative">
+            <div className="relative aspect-square w-full">
+                <figure ref={imageRef} className="absolute inset-0 bg-transparent overflow-hidden border border-base-content/10">
+                    <img src={item.originalUrl} alt={item.file.name} className="w-full h-full object-contain" />
+                    {settings.enableCropping && (
+                        <div
+                            className="absolute pointer-events-auto cursor-move border-2 border-dashed border-primary"
+                            style={{
+                                boxShadow: `0 0 0 9999px oklch(var(--b1)/0.7)`,
+                                left: `${item.crop.x}%`,
+                                top: `${item.crop.y}%`,
+                                width: `${item.crop.width}%`,
+                                height: `${item.crop.height}%`
+                            }}
+                            onMouseDown={(e) => onCropMouseDown(e, item.id)}
+                        ></div>
+                    )}
+                </figure>
+                <button
+                    onClick={onRemove}
+                    className="absolute top-2 right-n5 btn btn-circle btn-xs bg-error border-none text-error-content hover:bg-error/80 transition-all z-50 shadow-lg pointer-events-auto flex items-center justify-center p-0 opacity-0 group-hover:opacity-100"
+                    title="Remove Image"
+                >
+                    <CloseIcon className="w-4 h-4 mx-auto" />
+                </button>
+            </div>
             <div className="p-4 space-y-1">
-                <p className="text-[10px] font-black uppercase tracking-widest text-base-content truncate" title={item.file.name}>{item.file.name}</p>
-                <p className="text-[9px] font-mono text-base-content/40">{item.originalWidth}×{item.originalHeight}</p>
-                {item.status === 'error' && <p className="text-[9px] text-error font-black uppercase">{item.errorMessage}</p>}
-                {item.status === 'done' && item.processed && <p className="text-[9px] text-success font-black uppercase">{item.processed.width}×{item.processed.height} • {formatBytes(item.processed.size)}</p>}
+                <p className="text-xs lg:text-sm font-black uppercase tracking-widest text-base-content truncate" title={item.file.name}>{item.file.name}</p>
+                <p className="text-[10px] lg:text-xs font-mono text-base-content/40">{item.originalWidth}×{item.originalHeight}</p>
+                {item.status === 'error' && <p className="text-[10px] lg:text-xs text-error font-black uppercase">{item.errorMessage}</p>}
+                {item.status === 'done' && item.processed && <p className="text-[10px] lg:text-xs text-success font-black uppercase">{item.processed.width}×{item.processed.height} • {formatBytes(item.processed.size)}</p>}
             </div>
         </div>
     )
@@ -203,36 +211,36 @@ const ImageCard: React.FC<{
 const ImageResizer: React.FC = () => {
     const [images, setImages] = useState<ImageItem[]>([]);
     const [isDownloading, setIsDownloading] = useState(false);
-    
+
     const [settings, setSettings] = useState<ProcessSettings>({
         width: 1024, height: 1024, lockAspectRatio: true, enableCropping: true,
         preserveOriginal: false,
         format: 'jpeg', quality: 0.9, renamePrefix: '', renameSequentially: false,
     });
-    
+
     const [dragState, setDragState] = useState<{ id: string; startMouseX: number; startMouseY: number; startCropX: number; startCropY: number; imageWidth: number; imageHeight: number } | null>(null);
     const imageRefs = useRef(new Map<string, HTMLDivElement>());
 
     const calculateCrop = useCallback((image: ImageItem, targetWidth: number, targetHeight: number): ImageItem => {
         if (!targetWidth || !targetHeight) return { ...image };
-    
+
         const targetAspect = targetWidth / targetHeight;
         const imgAspect = image.originalWidth / image.originalHeight;
         let newCrop: CropData = { x: 0, y: 0, width: 100, height: 100 };
-    
-        if (imgAspect > targetAspect) { 
+
+        if (imgAspect > targetAspect) {
             newCrop.width = (targetAspect / imgAspect) * 100;
             newCrop.height = 100;
-        } else { 
+        } else {
             newCrop.width = 100;
             newCrop.height = (imgAspect / targetAspect) * 100;
         }
-        
+
         newCrop.x = (100 - newCrop.width) / 2;
         newCrop.y = (100 - newCrop.height) / 2;
 
         return { ...image, crop: newCrop };
-    
+
     }, []);
 
     const updateAllCrops = useCallback(() => {
@@ -270,7 +278,7 @@ const ImageResizer: React.FC = () => {
         const handleMouseUp = () => {
             setDragState(null);
         };
-        
+
         if (dragState) {
             (window as any).addEventListener('mousemove', handleMouseMove);
             (window as any).addEventListener('mouseup', handleMouseUp);
@@ -312,38 +320,38 @@ const ImageResizer: React.FC = () => {
             const validItems = newItems.filter((i): i is ImageItem => i !== null);
             const targetW = settings.width ? Number(settings.width) : null;
             const targetH = settings.height ? Number(settings.height) : null;
-            
+
             const processedItems = validItems.map(item => {
                 if (settings.enableCropping && targetW && targetH) {
                     return calculateCrop(item, targetW, targetH);
                 }
                 return item;
             });
-            
+
             setImages(prev => [...prev, ...processedItems]);
         });
     }, [settings.enableCropping, settings.width, settings.height, calculateCrop]);
-    
+
     const handleSettingsChange = <K extends keyof ProcessSettings>(key: K, value: ProcessSettings[K]) => {
         setSettings(s => ({ ...s, [key]: value }));
-        setImages(imgs => imgs.map(i => ({...i, status: 'pending', processed: undefined})));
+        setImages(imgs => imgs.map(i => ({ ...i, status: 'pending', processed: undefined })));
     };
 
     const handleDownload = async () => {
         if (images.length === 0) return;
         setIsDownloading(true);
         setImages(prev => prev.map(i => ({ ...i, status: 'processing', errorMessage: undefined })));
-    
+
         const processingPromises = images.map(item =>
             processImage(item, settings)
                 .catch(err => ({ ...item, status: 'error', errorMessage: err.message }))
         );
-    
+
         const results = await Promise.all(processingPromises);
         setImages(results as ImageItem[]);
-    
+
         const successfulResults = results.filter((r): r is ImageItem & { processed: NonNullable<ImageItem['processed']> } => !!(r.status === 'done' && r.processed));
-    
+
         if (successfulResults.length > 0) {
             const zip = new JSZip();
             successfulResults.forEach((img, index) => {
@@ -355,7 +363,7 @@ const ImageResizer: React.FC = () => {
                 }
                 zip.file(`${newName}.${extension}`, img.processed.blob);
             });
-    
+
             const content = await zip.generateAsync({ type: "blob" });
             if (typeof window !== 'undefined') {
                 const link = (window as any).document.createElement("a");
@@ -365,10 +373,10 @@ const ImageResizer: React.FC = () => {
                 URL.revokeObjectURL(link.href);
             }
         }
-    
+
         setIsDownloading(false);
     };
-    
+
     const handleRemoveImage = (id: string) => {
         setImages(imgs => imgs.filter(i => {
             if (i.id === id) {
@@ -387,7 +395,7 @@ const ImageResizer: React.FC = () => {
         });
         setImages([]);
     };
-    
+
     const handleCropMouseDown = (e: React.MouseEvent, id: string) => {
         e.preventDefault();
         e.stopPropagation();
@@ -408,7 +416,7 @@ const ImageResizer: React.FC = () => {
             imageHeight: rect.height
         });
     };
-    
+
     return (
         <div className="h-full bg-transparent flex flex-col overflow-hidden p-0">
             <div className="flex-grow flex flex-col lg:flex-row overflow-hidden gap-4">
@@ -428,21 +436,21 @@ const ImageResizer: React.FC = () => {
                                 </div>
                                 <div className={`flex items-center gap-2 transition-opacity ${settings.preserveOriginal ? 'opacity-30 pointer-events-none' : ''}`}>
                                     <input type="number" disabled={settings.preserveOriginal} value={settings.width} onChange={e => handleSettingsChange('width', (e.currentTarget as any).value ? parseInt((e.currentTarget as any).value) : '')} className="form-input w-full font-mono text-xs" placeholder="W" />
-                                    <button disabled={settings.preserveOriginal} onClick={() => handleSettingsChange('lockAspectRatio', !settings.lockAspectRatio)} className={`form-btn h-8 w-8 ${settings.lockAspectRatio ? 'text-primary' : 'opacity-20'}`}>{settings.lockAspectRatio ? <LinkIcon className="w-4 h-4"/> : <LinkOffIcon className="w-4 h-4"/>}</button>
+                                    <button disabled={settings.preserveOriginal} onClick={() => handleSettingsChange('lockAspectRatio', !settings.lockAspectRatio)} className={`form-btn h-8 w-8 ${settings.lockAspectRatio ? 'text-primary' : 'opacity-20'}`}>{settings.lockAspectRatio ? <LinkIcon className="w-4 h-4" /> : <LinkOffIcon className="w-4 h-4" />}</button>
                                     <input type="number" disabled={settings.preserveOriginal} value={settings.height} onChange={e => handleSettingsChange('height', (e.currentTarget as any).value ? parseInt((e.currentTarget as any).value) : '')} className="form-input w-full font-mono text-xs" placeholder="H" />
                                 </div>
-                                 <select 
+                                <select
                                     disabled={settings.preserveOriginal}
                                     className={`form-select w-full mt-2 transition-opacity ${settings.preserveOriginal ? 'opacity-30 pointer-events-none' : ''}`}
                                     onChange={e => {
                                         const value = (e.currentTarget as any).value;
                                         if (value) {
                                             const [w, h] = value.split('x').map(Number);
-                                            setSettings(s => ({...s, width: w, height: h}));
+                                            setSettings(s => ({ ...s, width: w, height: h }));
                                         }
                                     }}
                                     value={settings.width && settings.height ? `${settings.width}x${settings.height}` : ""}
-                                 >
+                                >
                                     <option value="" disabled>Standard Presets</option>
                                     {COMPOSER_PRESETS.map(cat => (
                                         <optgroup key={cat.category} label={cat.category}>
@@ -456,7 +464,7 @@ const ImageResizer: React.FC = () => {
                                 <label className="text-[10px] font-black uppercase tracking-widest text-base-content/40">Cropping</label>
                                 <div className={`form-control transition-opacity ${settings.preserveOriginal ? 'opacity-30 pointer-events-none' : ''}`}>
                                     <label className="cursor-pointer label p-0 gap-4">
-                                        <span className="text-[10px] font-black uppercase text-base-content/40 tracking-widest flex items-center gap-2"><CropIcon className="w-3.5 h-3.5"/> Enable Smart Crop</span>
+                                        <span className="text-[10px] font-black uppercase text-base-content/40 tracking-widest flex items-center gap-2"><CropIcon className="w-3.5 h-3.5" /> Enable Smart Crop</span>
                                         <input type="checkbox" disabled={settings.preserveOriginal} checked={settings.enableCropping && !settings.preserveOriginal} onChange={e => handleSettingsChange('enableCropping', (e.currentTarget as any).checked)} className="toggle toggle-xs toggle-primary" />
                                     </label>
                                 </div>
@@ -484,20 +492,20 @@ const ImageResizer: React.FC = () => {
                             </div>
                         </div>
                         <footer className="h-14 flex items-stretch flex-shrink-0 bg-base-100/10 backdrop-blur-md p-1.5 gap-1.5">
-                            <button 
-                                onClick={handleReset} 
-                                disabled={isDownloading || images.length === 0} 
+                            <button
+                                onClick={handleReset}
+                                disabled={isDownloading || images.length === 0}
                                 className="btn btn-sm btn-ghost h-full flex-1 rounded-none font-normal text-[13px] tracking-wider uppercase btn-snake text-error/40 hover:text-error font-display"
                             >
-                                <span/><span/><span/><span/>
+                                <span /><span /><span /><span />
                                 CLEAR ALL
                             </button>
-                            <button 
-                                onClick={handleDownload} 
-                                disabled={isDownloading || images.length === 0} 
+                            <button
+                                onClick={handleDownload}
+                                disabled={isDownloading || images.length === 0}
                                 className="btn btn-sm btn-primary h-full flex-1 rounded-none font-normal text-[13px] tracking-wider uppercase btn-snake-primary font-display"
                             >
-                                <span/><span/><span/><span/>
+                                <span /><span /><span /><span />
                                 {isDownloading ? '...' : 'ZIP DOWNLOAD'}
                             </button>
                         </footer>
@@ -511,20 +519,11 @@ const ImageResizer: React.FC = () => {
 
                 <main className="flex-grow flex flex-col relative p-[3px] corner-frame overflow-visible z-10 ml-1">
                     <div className="flex flex-col h-full w-full overflow-hidden relative z-10 bg-base-100/40 backdrop-blur-xl">
-                        <section className="p-10 bg-transparent">
-                            <div className="max-w-screen-2xl mx-auto flex flex-col gap-1">
-                                <div className="flex flex-col md:flex-row md:items-stretch justify-between gap-6">
-                                    <h1 className="text-2xl lg:text-3xl font-black tracking-tighter text-base-content leading-none flex items-center uppercase">Image Resizer<span className="text-primary">.</span></h1>
-                                </div>
-                                <p className="text-[11px] font-bold text-base-content/30 uppercase tracking-[0.3em] w-full">Batch processing utility for spatial optimization and visual format conversion.</p>
-                            </div>
-                        </section>
-
-                        <div className="flex-grow bg-transparent relative flex flex-col overflow-hidden">
+                        <div className="flex-grow p-4 lg:p-6 bg-transparent relative flex flex-col overflow-hidden">
                             {images.length > 0 ? (
-                                <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 gap-px bg-transparent overflow-y-auto">
-                                   {images.map(img => (
-                                       <ImageCard 
+                                <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 gap-4 lg:gap-6 bg-transparent overflow-y-auto w-full">
+                                    {images.map(img => (
+                                        <ImageCard
                                             key={img.id}
                                             item={img}
                                             settings={settings}
@@ -534,8 +533,8 @@ const ImageResizer: React.FC = () => {
                                                 if (el) imageRefs.current.set(img.id, el);
                                                 else imageRefs.current.delete(img.id);
                                             }}
-                                       />
-                                   ))}
+                                        />
+                                    ))}
                                 </div>
                             ) : (
                                 <DropZone onFilesAdded={handleAddFiles} />

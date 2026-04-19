@@ -275,21 +275,20 @@ export const VideoToFrames: React.FC = () => {
 
     const removeJoinItem = (id: string) => { setJoinFiles(prev => prev.filter(v => { if (v.id === id) { URL.revokeObjectURL(v.url); return false; } return true; })); };
 
-    const heroTitle = activeTab === 'extractor' ? 'Frame Extractor' : 'Video Joiner';
-    const heroSubtitle = activeTab === 'extractor' 
-        ? 'Deconstruct temporal motion into high-fidelity visual fragments.' 
-        : 'Synthesize multiple temporal artifacts into a seamless cinematic sequence.';
-
     return (
         <div className="h-full bg-transparent flex flex-col overflow-hidden p-0">
             <div className="flex-grow flex flex-col lg:flex-row overflow-hidden gap-4">
                 <aside className="w-full lg:w-96 flex-shrink-0 flex flex-col relative p-[3px] corner-frame overflow-visible z-10">
                     <div className="flex flex-col h-full w-full overflow-hidden relative z-10 bg-base-100/40 backdrop-blur-xl">
-                        <div className="p-4 flex justify-center bg-base-100/10 backdrop-blur-md">
-                            <div className="form-tab-group">
-                                <button onClick={() => setActiveTab('extractor')} className={`form-tab-item ${activeTab === 'extractor' ? 'active' : ''}`}>FRAME EXTRACTOR</button>
-                                <button onClick={() => setActiveTab('joiner')} className={`form-tab-item ${activeTab === 'joiner' ? 'active' : ''}`}>VIDEO JOINER</button>
-                            </div>
+                        <div className="h-14 flex items-stretch flex-shrink-0 bg-base-100/10 backdrop-blur-md p-1.5 gap-1.5">
+                            <button onClick={() => setActiveTab('extractor')} className={`btn btn-sm h-full rounded-none flex-1 font-normal text-[11px] tracking-wider uppercase px-1 truncate btn-snake font-display ${activeTab === 'extractor' ? 'btn-primary text-primary-content' : 'btn-ghost text-base-content/40 hover:text-primary'}`}>
+                                <span/><span/><span/><span/>
+                                FRAME EXTRACTOR
+                            </button>
+                            <button onClick={() => setActiveTab('joiner')} className={`btn btn-sm h-full rounded-none flex-1 font-normal text-[11px] tracking-wider uppercase px-1 truncate btn-snake font-display ${activeTab === 'joiner' ? 'btn-primary text-primary-content' : 'btn-ghost text-base-content/40 hover:text-primary'}`}>
+                                <span/><span/><span/><span/>
+                                VIDEO JOINER
+                            </button>
                         </div>
 
                         <div className="flex-grow p-6 space-y-8 overflow-y-auto bg-transparent">
@@ -431,22 +430,13 @@ export const VideoToFrames: React.FC = () => {
                     <div className="absolute -bottom-[1px] -right-[1px] w-3 h-3 border-b border-r border-primary/15 z-20 pointer-events-none" />
                 </aside>
 
-                <main className="flex-grow flex flex-col relative p-[3px] corner-frame overflow-visible z-10">
+                <main className="flex-grow flex flex-col relative p-[3px] corner-frame overflow-visible z-10 ml-1">
                     <div className="flex flex-col h-full w-full overflow-hidden relative z-10 bg-base-100/40 backdrop-blur-xl">
-                        <section className="p-10 bg-transparent">
-                            <div className="max-w-screen-2xl mx-auto flex flex-col gap-1">
-                                <div className="flex flex-col md:flex-row md:items-stretch justify-between gap-6">
-                                    <h1 className="text-2xl lg:text-3xl font-black tracking-tighter text-base-content leading-none flex items-center uppercase">{heroTitle}<span className="text-primary">.</span></h1>
-                                </div>
-                                <p className="text-[11px] font-bold text-base-content/30 uppercase tracking-[0.3em] w-full">{heroSubtitle}</p>
-                            </div>
-                        </section>
-
                         {activeTab === 'extractor' ? (
-                            <div className="flex-grow flex flex-col p-8 lg:p-12 overflow-hidden bg-transparent">
-                                <div className="flex-grow bg-black relative flex items-center justify-center overflow-hidden">
+                            <div className="flex-grow flex flex-col p-4 lg:p-6 overflow-hidden bg-transparent">
+                                <div className="flex-grow bg-transparent relative flex items-center justify-center overflow-hidden">
                                     {extractorUrl ? (
-                                        <video ref={extractorVideoRef} src={extractorUrl} className="w-full h-full" controls />
+                                        <video ref={extractorVideoRef} src={extractorUrl} className="w-full h-full object-contain" controls />
                                     ) : (
                                         <div className="text-center">
                                             <div className="opacity-10 mb-8">
@@ -463,10 +453,10 @@ export const VideoToFrames: React.FC = () => {
                                 <input id="extractor-file" type="file" accept="video/*" className="hidden" onChange={(e) => (e.currentTarget as any).files?.[0] && handleExtractorFileSelect((e.currentTarget as any).files[0])}/>
                             </div>
                         ) : (
-                            <div className="flex-grow flex flex-col items-center justify-center p-12 lg:p-24 overflow-hidden bg-transparent">
-                                <div className="w-full max-w-5xl aspect-video bg-black relative flex items-center justify-center overflow-hidden">
+                            <div className="flex-grow flex flex-col items-center justify-center p-4 lg:p-6 overflow-hidden bg-transparent">
+                                <div className="flex-grow w-full bg-transparent relative flex items-center justify-center overflow-hidden">
                                     <canvas ref={joinCanvasRef} className="hidden" />
-                                    <video ref={joinVideoRef} className={`w-full h-full ${isJoining ? 'block' : 'hidden'}`} muted />
+                                    <video ref={joinVideoRef} className={`w-full h-full object-contain ${isJoining ? 'block' : 'hidden'}`} muted />
                                     {joinedVideoUrl && !isJoining ? (
                                         <div className="w-full h-full group">
                                             <video src={joinedVideoUrl} controls className="w-full h-full object-contain" />
