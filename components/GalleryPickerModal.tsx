@@ -365,7 +365,7 @@ const GalleryPickerModal: React.FC<GalleryPickerModalProps> = ({
                     <button 
                         onClick={handleConfirm}
                         disabled={selectedIds.size === 0}
-                        className="btn btn-sm btn-primary h-full flex-[2] rounded-none font-normal text-[13px] tracking-wider uppercase btn-snake-primary font-display"
+                        className="btn btn-sm btn-primary h-full flex-1 rounded-none font-normal text-[13px] tracking-wider uppercase btn-snake-primary font-display"
                     >
                         <span/><span/><span/><span/>
                         SELECT ITEMS

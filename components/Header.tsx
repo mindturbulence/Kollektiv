@@ -1,163 +1,255 @@
-import React, { useState, useRef, useLayoutEffect } from 'react';
+import React, { useState, useRef, useLayoutEffect, useCallback } from 'react';
 import type { ActiveTab } from '../types';
 import { audioService } from '../services/audioService';
 import { useSettings } from '../contexts/SettingsContext';
 import { gsap } from 'gsap';
 
-import { motion, AnimatePresence } from 'framer-motion';
-import RollingText from './RollingText';
-import { 
-  SparklesIcon, PromptIcon, PhotoIcon, 
-  BookOpenIcon, PaletteIcon, UsersIcon,
-  LayoutDashboardIcon, ViewColumnsIcon, CropIcon, FilmIcon
-} from './icons';
-
 interface HeaderProps {
   onNavigate: (tab: ActiveTab) => void;
+  activeTab: ActiveTab;
   isInitialized?: boolean;
 }
 
-const DropdownMenu: React.FC<{
+interface NavItemData {
+  id: ActiveTab;
   label: string;
-  items: { id: ActiveTab; label: string; icon: React.ReactNode; enabled?: boolean }[];
-  onNavigate: (tab: ActiveTab) => void;
-}> = ({ label, items, onNavigate }) => {
-  const [isOpen, setIsOpen] = useState(false);
+  enabled?: boolean;
+}
+
+const NavItem: React.FC<{
+  label: string;
+  onClick: () => void;
+  isActive: boolean;
+  isCurrent: boolean;
+}> = ({ label, onClick, isActive, isCurrent }) => {
+  const containerRef = useRef<HTMLButtonElement>(null);
+  const charsRef = useRef<HTMLSpanElement[]>([]);
+
+  const splitText = (text: string) => {
+    return text.split('').map((char, i) => (
+      <span 
+        key={i} 
+        ref={el => { if (el) charsRef.current[i] = el; }}
+        className="inline-block translate-y-[120%] opacity-0 leading-none"
+      >
+        {char === ' ' ? '\u00A0' : char}
+      </span>
+    ));
+  };
+
+  useLayoutEffect(() => {
+    if (isActive) {
+      gsap.to(charsRef.current, {
+        y: 0,
+        opacity: 1,
+        duration: 0.3,
+        stagger: 0.02,
+        ease: "expo.out",
+        overwrite: true
+      });
+    } else {
+      gsap.to(charsRef.current, {
+        y: "120%",
+        opacity: 0,
+        duration: 0.2,
+        stagger: {
+          each: 0.015,
+          from: "end"
+        },
+        ease: "expo.in",
+        overwrite: true
+      });
+    }
+  }, [isActive]);
 
   return (
-    <div 
-      className="relative"
-      onMouseEnter={() => {
-        audioService.playHover();
-        setIsOpen(true);
+    <button
+      ref={containerRef}
+      role="menuitem"
+      onMouseEnter={() => audioService.playHover()}
+      onClick={(e) => {
+        e.stopPropagation();
+        audioService.playClick();
+        onClick();
       }}
-      onMouseLeave={() => setIsOpen(false)}
+      className={`px-3 h-full flex items-center text-[13px] font-normal uppercase tracking-[0.25em] transition-all duration-300 whitespace-nowrap overflow-hidden ${isCurrent ? 'text-primary font-bold' : 'text-base-content/30 hover:text-primary'}`}
     >
-      <motion.button 
-        initial="initial"
-        whileHover="hover"
-        className="flex items-center gap-2 px-4 py-2 text-[13px] leading-none font-normal tracking-[0.2em] uppercase text-base-content/60 hover:text-primary transition-colors duration-300"
-      >
-        <RollingText text={label} hoverClassName="text-primary" />
-      </motion.button>
-
-      <AnimatePresence>
-        {isOpen && (
-          <motion.div
-            initial={{ opacity: 0, y: -10 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: -10 }}
-            transition={{ 
-              duration: 0.4, 
-              ease: [0.23, 1, 0.32, 1] 
-            }}
-            className="absolute top-full left-0 mt-1 w-56 bg-base-100/40 backdrop-blur-xl shadow-2xl z-[100] p-2"
-          >
-            <div className="flex flex-col gap-1">
-              {items.filter(item => item.enabled !== false).map((item) => (
-                <button
-                  key={item.id}
-                  onMouseEnter={() => audioService.playHover()}
-                  onClick={() => {
-                    audioService.playClick();
-                    onNavigate(item.id);
-                    setIsOpen(false);
-                  }}
-                  className="flex items-center px-3 py-2 hover:bg-primary/10 text-base-content/70 hover:text-primary transition-all group text-left"
-                >
-                  <span className="text-[13px] font-normal uppercase tracking-wide">
-                    {item.label}
-                  </span>
-                </button>
-              ))}
-            </div>
-          </motion.div>
-        )}
-      </AnimatePresence>
-    </div>
+      <span className="flex items-center gap-0">
+        {splitText(label)}
+      </span>
+    </button>
   );
 };
 
-const Header: React.FC<HeaderProps> = ({ onNavigate, isInitialized }) => {
+const Header: React.FC<HeaderProps> = ({ onNavigate, activeTab, isInitialized }) => {
   const { settings } = useSettings();
   const { features } = settings;
   const navRef = useRef<HTMLDivElement>(null);
+  const [activeMenu, setActiveMenu] = useState<string | null>(null);
+  const switchingRef = useRef(false);
+  const containerRefs = useRef<Record<string, HTMLDivElement | null>>({});
+
+  const workspaceItems: NavItemData[] = [
+    { id: 'prompts' as ActiveTab, label: 'Prompt Builder' },
+    { id: 'prompt' as ActiveTab, label: 'Prompt Library', enabled: features.isPromptLibraryEnabled },
+    { id: 'gallery' as ActiveTab, label: 'Image Library', enabled: features.isGalleryEnabled },
+  ];
+
+  const guideItems: NavItemData[] = [
+    { id: 'cheatsheet' as ActiveTab, label: 'Guides' },
+    { id: 'artstyles' as ActiveTab, label: 'Art Styles' },
+    { id: 'artists' as ActiveTab, label: 'Artists' },
+  ];
+
+  const utilityItems: NavItemData[] = [
+    { id: 'composer' as ActiveTab, label: 'Builder' },
+    { id: 'image_compare' as ActiveTab, label: 'Compare' },
+    { id: 'color_palette_extractor' as ActiveTab, label: 'Palette' },
+    { id: 'resizer' as ActiveTab, label: 'Resizer' },
+    { id: 'video_to_frames' as ActiveTab, label: 'Video' },
+  ];
+
+  const navGroups = [
+    { id: 'workspaces', label: 'Workspaces', items: workspaceItems },
+    { id: 'guides', label: 'References', items: guideItems },
+    { id: 'utilities', label: 'Utilities', items: utilityItems },
+  ];
+
+  // If activeTab changes, but no menu is open, expand the group containing the active tab
+  useLayoutEffect(() => {
+    if (!activeMenu) {
+      const activeGroup = navGroups.find(g => g.items.some(item => item.id === activeTab));
+      if (activeGroup) {
+        setActiveMenu(activeGroup.id);
+      }
+    }
+  }, [activeTab]);
+
+  const isGroupCurrent = (groupId: string) => {
+    const group = navGroups.find(g => g.id === groupId);
+    return group?.items.some(item => item.id === activeTab);
+  };
 
   useLayoutEffect(() => {
     if (!isInitialized || !navRef.current) return;
 
-    const navItems = navRef.current.children;
-    gsap.set(navItems, { y: -20, autoAlpha: 0 });
+    const navItems = navRef.current.querySelectorAll('.parent-nav-item');
+    const separators = navRef.current.querySelectorAll('.nav-separator');
+    
+    gsap.set([navItems, separators], { y: -20, autoAlpha: 0 });
 
-    gsap.to(navItems, {
+    gsap.to([navItems, separators], {
       y: 0,
       autoAlpha: 1,
       duration: 1.2,
-      delay: 2.8, // Start slightly after the main HUD elements
-      stagger: 0.1,
+      delay: 0.5,
+      stagger: 0.05,
       ease: "power3.out"
     });
 
-    // Nav Scan Animation - Triggers every 2 minutes
-    const scanLine = navRef.current.querySelector('.nav-scan-line');
-    if (scanLine) {
-      gsap.to(scanLine, {
-        left: '120%',
-        opacity: 1,
-        duration: 3,
-        repeat: -1,
-        repeatDelay: 117, // 2 minutes (120s total - 3s animation)
-        delay: 30, // Start later
-        ease: "power1.inOut",
-        onRepeat: () => {
-          gsap.set(scanLine, { opacity: 1 });
-        }
-      });
-    }
-
     return () => {
-      gsap.killTweensOf(navItems);
-      if (scanLine) gsap.killTweensOf(scanLine);
+      gsap.killTweensOf([navItems, separators]);
     };
   }, [isInitialized]);
 
-  const workspaceItems = [
-    { id: 'prompts' as ActiveTab, label: 'Prompt Builder', icon: <SparklesIcon className="w-4 h-4" /> },
-    { id: 'prompt' as ActiveTab, label: 'Prompt Library', icon: <PromptIcon className="w-4 h-4" />, enabled: features.isPromptLibraryEnabled },
-    { id: 'gallery' as ActiveTab, label: 'Image Library', icon: <PhotoIcon className="w-4 h-4" />, enabled: features.isGalleryEnabled },
-  ];
+  // Handle Container sliding via GSAP
+  useLayoutEffect(() => {
+    navGroups.forEach(group => {
+      const container = containerRefs.current[group.id];
+      if (!container) return;
 
-  const guideItems = [
-    { id: 'cheatsheet' as ActiveTab, label: 'Guides', icon: <BookOpenIcon className="w-4 h-4" /> },
-    { id: 'artstyles' as ActiveTab, label: 'Art Styles', icon: <PaletteIcon className="w-4 h-4" /> },
-    { id: 'artists' as ActiveTab, label: 'Artists', icon: <UsersIcon className="w-4 h-4" /> },
-  ];
+      if (activeMenu === group.id) {
+        gsap.to(container, {
+          width: 'auto',
+          opacity: 1,
+          duration: 0.6,
+          ease: "power2.out",
+          overwrite: true
+        });
+      } else {
+        // Delay container slide until letters have started sliding down
+        gsap.to(container, {
+          width: 0,
+          opacity: 0,
+          duration: 0.5,
+          delay: 0.3,
+          ease: "power2.inOut",
+          overwrite: true
+        });
+      }
+    });
+  }, [activeMenu]);
 
-  const utilityItems = [
-    { id: 'composer' as ActiveTab, label: 'Builder', icon: <LayoutDashboardIcon className="w-4 h-4" /> },
-    { id: 'image_compare' as ActiveTab, label: 'Compare', icon: <ViewColumnsIcon className="w-4 h-4" /> },
-    { id: 'color_palette_extractor' as ActiveTab, label: 'Palette', icon: <PaletteIcon className="w-4 h-4" /> },
-    { id: 'resizer' as ActiveTab, label: 'Resizer', icon: <CropIcon className="w-4 h-4" /> },
-    { id: 'video_to_frames' as ActiveTab, label: 'Video', icon: <FilmIcon className="w-4 h-4" /> },
-  ];
+  const handleParentClick = useCallback((menuId: string) => {
+    if (switchingRef.current) return;
+    
+    if (activeMenu === menuId) {
+      setActiveMenu(null);
+      return;
+    }
+
+    if (activeMenu) {
+      switchingRef.current = true;
+      setActiveMenu(null);
+      setTimeout(() => {
+        setActiveMenu(menuId);
+        switchingRef.current = false;
+      }, 900); 
+    } else {
+      setActiveMenu(menuId);
+    }
+    audioService.playClick();
+  }, [activeMenu]);
 
   return (
     <header className="flex-shrink-0 flex flex-col h-12 bg-transparent z-50 relative">
-      {/* Bottom row: Navigation */}
-      <div ref={navRef} className="flex flex-grow justify-center items-center gap-6 relative z-50">
-        {/* Horizontal System Line - Center-aligned to text */}
-        <div className="absolute top-1/2 left-0 right-0 h-px bg-base-content/5 -translate-y-1/2 z-0 pointer-events-none">
-          <div className="nav-scan-line absolute inset-y-0 left-[-20%] w-[20%] bg-gradient-to-r from-transparent via-primary/40 to-transparent opacity-0" />
-        </div>
+      <div ref={navRef} className="flex flex-grow justify-center items-center relative z-50 px-8 gap-1">
+        <div className="absolute top-1/2 left-0 right-0 h-px bg-base-content/5 -translate-y-1/2 z-0 pointer-events-none" />
         
-        <DropdownMenu label="Workspaces" items={workspaceItems} onNavigate={onNavigate} />
-        <div className="w-[1px] h-3 bg-base-content/10"></div>
-        <DropdownMenu label="Guides" items={guideItems} onNavigate={onNavigate} />
-        <div className="w-[1px] h-3 bg-base-content/10"></div>
-        <DropdownMenu label="Utilities" items={utilityItems} onNavigate={onNavigate} />
+        {navGroups.map((group, groupIdx) => {
+          const isExpanded = activeMenu === group.id;
+          const isCurrent = isGroupCurrent(group.id);
+          
+          return (
+            <React.Fragment key={group.id}>
+              <div className="flex items-center gap-1">
+                <button
+                  onClick={() => handleParentClick(group.id)}
+                  className={`parent-nav-item relative z-10 px-3 h-full flex items-center text-[13px] font-normal uppercase tracking-[0.25em] leading-none transition-all duration-500 hover:text-primary ${isExpanded || isCurrent ? 'text-base-content font-bold' : 'text-base-content/30'}`}
+                >
+                  {group.label}
+                </button>
+
+                {/* GSAP Managed Child Container */}
+                <div 
+                  ref={el => { if (el) containerRefs.current[group.id] = el; }}
+                  className="overflow-hidden opacity-0 w-0 flex items-center bg-transparent h-full pointer-events-auto"
+                >
+                  <div className="flex items-center px-0 h-full gap-1">
+                    {group.items.filter(item => item.enabled !== false).map((item) => (
+                      <NavItem 
+                        key={item.id}
+                        label={item.label}
+                        isActive={activeMenu === group.id}
+                        isCurrent={activeTab === item.id}
+                        onClick={() => onNavigate(item.id)}
+                      />
+                    ))}
+                  </div>
+                </div>
+              </div>
+
+              {groupIdx < navGroups.length - 1 && (
+                <div className="nav-separator w-[1px] h-3 bg-base-content/10 opacity-30 mx-1" />
+              )}
+            </React.Fragment>
+          );
+        })}
       </div>
     </header>
   );
 };
 
+
 export default Header;
+

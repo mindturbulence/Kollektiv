@@ -1147,6 +1147,7 @@ const AppContent: React.FC = () => {
                     >
                         <Header
                             onNavigate={handleNavigate}
+                            activeTab={activeTab}
                             isInitialized={isInitialized}
                         />
 
