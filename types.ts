@@ -179,6 +179,7 @@ export interface PromptModifiers {
 
 export interface EnhancementResult {
   suggestions: string[];
+  breakdown?: any;
   grounding_metadata?: any;
 }
 

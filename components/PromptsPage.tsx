@@ -351,19 +351,29 @@ const PromptsPage: React.FC<PromptsPageProps> = ({
             const stream = enhancePromptStream(refineText, constantModifier, promptLength, targetAIModel, modifiers, settings, activeRefImages);
             for await (const chunk of stream) fullText += chunk;
 
-            const cleanedText = cleanLLMResponse(fullText);
-            const mjParams = isMidjourney ? buildMidjourneyParams(modifiers) : '';
-            let suggestions = cleanedText.split('\n').filter(Boolean).map(s => {
-                const base = s.trim();
-                return isMidjourney ? `${base} ${mjParams}`.trim() : base;
-            });
+            let refinedPrompt = fullText;
+            let breakdown: any = null;
 
-            if (mediaMode === 'audio' && (modifiers.audioType?.toLowerCase().includes('dialogue') || modifiers.audioType?.toLowerCase().includes('narration'))) {
-                suggestions = suggestions.length > 0 ? [suggestions[0]] : [];
+            if (fullText.includes('---PROMPT_BREAKDOWN---')) {
+                const parts = fullText.split('---PROMPT_BREAKDOWN---');
+                refinedPrompt = parts[0].trim();
+                const jsonStr = parts[1].trim();
+                try {
+                    // Clean up any potential markdown code blocks around the JSON
+                    breakdown = JSON.parse(jsonStr.replace(/```json\n?|\n?```/g, '').trim());
+                } catch (e) {
+                    console.error('Failed to parse breakdown:', e);
+                }
             }
 
-            if (suggestions.length === 0) throw new Error("Processing failed.");
-            setResultsRefine({ suggestions });
+            const cleanedText = cleanLLMResponse(refinedPrompt);
+            const mjParams = isMidjourney ? buildMidjourneyParams(modifiers) : '';
+            const prompt = isMidjourney ? `${cleanedText} ${mjParams}`.trim() : cleanedText;
+
+            setResultsRefine({ 
+                suggestions: [prompt],
+                breakdown
+            });
         } catch (err: any) {
             setErrorRefine({ message: err.message });
         } finally {
@@ -1255,6 +1265,7 @@ const PromptsPage: React.FC<PromptsPageProps> = ({
                                                     targetAI={targetAIModel}
                                                     onSave={handleSaveSuggestion}
                                                     onClip={handleClipSuggestion}
+                                                    breakdown={resultsRefine.breakdown}
                                                 />
                                             ))}
                                         </div>
