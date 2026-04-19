@@ -136,12 +136,21 @@ const AI_ROLES = {
         }
 
         return `${persona}
-Goal: Generate ${isAudio ? '1 production-ready script/formula' : '3 unique, highly accurate variations'}.
+Goal: Generate 1 highly accurate, production-ready refined prompt.
 Target Architecture: ${model}.
 Syntax: ${syntax.format}. Rules: ${syntax.rules}. Target Len: ${l}.
 ${modeProtocol}
+
+BREAKDOWN PROTOCOL:
+At the end of your response, after a "---PROMPT_BREAKDOWN---" separator, provide a JSON object breaking down the prompt's anatomy.
+- If specific modifiers (like style, camera, lighting) were used or implied, list them as keys.
+- Always include at least: "subject", "lighting", "composition", "style/environment", and "location".
+- Ensure the JSON is well-formatted and valid.
+- CRITICAL: DO NOT include the full "refined prompt" string as a key/value inside this JSON object. Only include the analytical components.
+
 CRITICAL: Even for short inputs, expand with creative, model-specific details that maximize the output quality of ${model}. Be unique, avoid generic descriptions.
-Output: ${isAudio ? 'Single optimized string' : '3 distinct lines, each on a new line'}. NO INTROS, NO EXPLANATIONS.`;
+Output: The refined prompt text first, then the separator, then the JSON breakdown.
+NO INTROS, NO EXPLANATIONS.`;
     },
 
     REFINER: (model: string, isVideo: boolean, isAudio: boolean, _hasManualCamera: boolean, inputType?: string) => {
