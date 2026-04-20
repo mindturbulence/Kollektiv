@@ -189,7 +189,6 @@ const Header: React.FC<HeaderProps> = ({ onNavigate, activeTab, isInitialized })
   return (
     <header className="flex-shrink-0 flex flex-col h-12 bg-transparent z-50 relative">
       <div ref={navRef} className="flex flex-grow justify-center items-center relative z-50 px-8 gap-1">
-                <div className="absolute top-1/2 left-0 right-0 h-px nav-line-middle -translate-y-1/2 z-0 pointer-events-none" />
         
         {navGroups.map((group, groupIdx) => {
           const isExpanded = activeMenu === group.id;

@@ -32,7 +32,7 @@ const AboutModal: React.FC<AboutModalProps> = ({ isOpen, onClose }) => {
               onClick={(e) => e.stopPropagation()}
             >
               <div className="bg-base-100/40 backdrop-blur-xl rounded-none w-full overflow-hidden relative z-10">
-                <header className="px-8 py-4 border-b border-base-content/5 bg-transparent relative flex-shrink-0 flex items-center justify-between">
+                <header className="px-8 py-4 panel-header bg-transparent relative flex-shrink-0 flex items-center justify-between">
                   <div className="flex flex-col">
                       <div className="flex items-center gap-3">
                           <AppLogoIcon className="w-8 h-8 text-primary" />

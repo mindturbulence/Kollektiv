@@ -36,7 +36,7 @@ const JSONBreakdownModal: React.FC<JSONBreakdownModalProps> = ({
                         onClick={(e) => e.stopPropagation()}
                     >
                         <div className="bg-base-100/90 backdrop-blur-2xl rounded-none w-full h-[600px] max-h-[85vh] flex flex-col overflow-hidden relative z-10 border border-primary/10 shadow-3xl">
-                            <header className="px-8 py-6 border-b border-base-content/5 flex items-center justify-between bg-base-100/20">
+                            <header className="px-8 py-6 panel-header flex items-center justify-between bg-base-100/20">
                                 <div className="flex items-center gap-3">
                                     <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center text-primary">
                                         <BracesIcon className="w-4 h-4" />
@@ -68,7 +68,7 @@ const JSONBreakdownModal: React.FC<JSONBreakdownModalProps> = ({
                                 </div>
                             </div>
 
-                            <footer className="h-14 flex items-stretch bg-base-100/40 backdrop-blur-md p-1.5 gap-1.5 border-t border-base-content/5">
+                            <footer className="h-14 flex items-stretch bg-base-100/40 backdrop-blur-md p-1.5 gap-1.5 panel-footer">
                                 <button 
                                     onClick={onCopy}
                                     className="btn btn-sm btn-ghost h-full flex-1 rounded-none font-black text-[11px] tracking-[0.2em] uppercase btn-snake group"

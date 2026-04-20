@@ -373,7 +373,7 @@ const PromptsPage: React.FC<PromptsPageProps> = ({
             const mjParams = isMidjourney ? buildMidjourneyParams(modifiers) : '';
             const prompt = isMidjourney ? `${cleanedText} ${mjParams}`.trim() : cleanedText;
 
-            setResultsRefine({ 
+            setResultsRefine({
                 suggestions: [prompt],
                 breakdown
             });
@@ -511,7 +511,7 @@ const PromptsPage: React.FC<PromptsPageProps> = ({
             lighting: "Detected context",
             composition: "Inferred framing"
         };
-        
+
         return {
             ...baseBreakdown,
             targetAI: targetAIModel,
@@ -609,7 +609,7 @@ const PromptsPage: React.FC<PromptsPageProps> = ({
                 <div className="absolute top-[52%] left-0 right-0 h-px nav-line-middle -translate-y-1/2 z-0 pointer-events-none">
                     <div ref={tabsScanRef} className="absolute inset-y-0 left-[-20%] w-[20%] bg-gradient-to-r from-transparent via-primary/40 to-transparent opacity-0" />
                 </div>
-                
+
                 <div ref={tabsRef} className="flex gap-4 h-full items-center relative z-10">
                     {viewTabs.map((tab) => (
                         <button
@@ -1241,10 +1241,10 @@ const PromptsPage: React.FC<PromptsPageProps> = ({
                 )}
 
                 {activeView === 'refine' && (
-                    <div className="grid grid-cols-1 lg:grid-cols-12 overflow-hidden h-full gap-4 min-h-0">
+                    <div className="grid grid-cols-1 lg:grid-cols-12 overflow-visible h-full gap-4 min-h-0">
                         {/* Left Sidebar: Controls & Tabs */}
                         <aside className="lg:col-span-3 h-full min-h-0 flex flex-col relative p-[3px] corner-frame overflow-visible">
-                            <div className="flex flex-col h-full w-full overflow-hidden relative z-10 bg-base-100/40 backdrop-blur-xl panel-transparent">
+                            <div className="flex flex-col h-full w-full overflow-visible relative z-10 bg-base-100/40 backdrop-blur-xl panel-transparent">
                                 <header className="h-14 flex items-stretch flex-shrink-0 bg-base-100/10 backdrop-blur-md p-1.5 gap-1.5 panel-header">
                                     {tabs.map(tab => (
                                         <button
@@ -1297,7 +1297,7 @@ const PromptsPage: React.FC<PromptsPageProps> = ({
 
                         {/* Center: Main Neural Output */}
                         <main className="lg:col-span-6 h-full min-h-0 flex flex-col relative p-[3px] corner-frame overflow-visible">
-                            <div className="flex flex-col h-full w-full overflow-hidden relative z-10 bg-base-100/40 backdrop-blur-xl panel-transparent">
+                            <div className="flex flex-col h-full w-full overflow-visible relative z-10 bg-base-100/40 backdrop-blur-xl panel-transparent">
                                 <header className="p-6 h-16 flex justify-between items-center bg-base-100/80 backdrop-blur-md panel-header">
                                     <h2 className="text-xs font-black uppercase tracking-[0.4em] text-primary flex items-center gap-3">
                                         <div className="w-2 h-2 rounded-full bg-primary animate-pulse"></div> Refined Prompt : <span className="opacity-60">{targetAIModel}</span>
@@ -1336,7 +1336,7 @@ const PromptsPage: React.FC<PromptsPageProps> = ({
                                                 <div className="absolute top-4 right-4 opacity-0 group-hover:opacity-100 transition-opacity z-20">
                                                     <a href={directMediaResult.url} download={`kollektiv_${directMediaResult.target.replace(/\s+/g, '_')}_${Date.now()}.${directMediaResult.type === 'video' ? 'mp4' : 'jpg'}`} className="btn btn-sm btn-primary rounded-none font-black text-[10px] tracking-widest shadow-2xl btn-snake-primary">
                                                         <span /><span /><span /><span />
-                                                        <DownloadIcon className="w-4 h-4 mr-2"/> EXPORT
+                                                        <DownloadIcon className="w-4 h-4 mr-2" /> EXPORT
                                                     </a>
                                                 </div>
 
@@ -1357,46 +1357,46 @@ const PromptsPage: React.FC<PromptsPageProps> = ({
                                         </div>
                                     )}
                                 </div>
-                                
+
                                 {resultsRefine && !isLoadingRefine && (
                                     <footer className="h-14 flex items-stretch bg-base-100/10 backdrop-blur-md p-1.5 gap-1.5 panel-footer selection:bg-transparent">
                                         <div className="flex-[4] flex items-stretch gap-1.5">
-                                            <button 
+                                            <button
                                                 onClick={() => setIsJsonModalOpen(true)}
                                                 className="btn btn-sm btn-ghost h-full flex-1 rounded-none font-normal text-[11px] tracking-wider uppercase btn-snake font-display"
                                             >
-                                                <span/><span/><span/><span/>
+                                                <span /><span /><span /><span />
                                                 SHOW JSON
                                             </button>
-                                            <button 
+                                            <button
                                                 onClick={() => handleSaveSuggestion(resultsRefine.suggestions[0])}
                                                 className="btn btn-sm btn-ghost h-full flex-1 rounded-none font-normal text-[11px] tracking-wider uppercase btn-snake font-display"
                                             >
-                                                <span/><span/><span/><span/>
+                                                <span /><span /><span /><span />
                                                 SAVE
                                             </button>
                                         </div>
 
                                         <div className="flex-[6] flex items-stretch gap-1.5 justify-end">
-                                            <button 
+                                            <button
                                                 onClick={() => handleSendToRefine(resultsRefine.suggestions[0])}
                                                 className="btn btn-sm btn-ghost h-full flex-1 rounded-none font-normal text-[11px] tracking-wider uppercase btn-snake font-display"
                                             >
-                                                <span/><span/><span/><span/>
+                                                <span /><span /><span /><span />
                                                 REFINE
                                             </button>
-                                            <button 
+                                            <button
                                                 onClick={() => handleClipSuggestion(resultsRefine.suggestions[0])}
                                                 className="btn btn-sm btn-ghost h-full flex-1 rounded-none font-normal text-[11px] tracking-wider uppercase btn-snake font-display"
                                             >
-                                                <span/><span/><span/><span/>
+                                                <span /><span /><span /><span />
                                                 CLIP
                                             </button>
-                                            <button 
+                                            <button
                                                 onClick={() => handleCopySuggestionText(resultsRefine.suggestions[0])}
                                                 className="btn btn-sm btn-ghost h-full flex-1 rounded-none font-normal text-[11px] tracking-wider uppercase btn-snake font-display"
                                             >
-                                                <span/><span/><span/><span/>
+                                                <span /><span /><span /><span />
                                                 COPY
                                             </button>
                                         </div>
@@ -1412,8 +1412,8 @@ const PromptsPage: React.FC<PromptsPageProps> = ({
 
                         {/* Right Sidebar: Refiner Preset */}
                         <aside className="lg:col-span-3 h-full min-h-0 flex flex-col relative p-[3px] corner-frame overflow-visible">
-                            <div className="flex flex-col h-full w-full overflow-hidden relative z-10 bg-base-100/40 backdrop-blur-xl panel-transparent">
-                                <header className="h-16 flex items-stretch relative z-20 bg-base-100/80 backdrop-blur-md p-1.5 gap-1.5 panel-header">
+                            <div className="flex flex-col h-full w-full overflow-visible relative z-10 bg-base-100/40 backdrop-blur-xl panel-transparent">
+                                <header className="h-16 flex items-stretch relative z-30 bg-base-100/80 backdrop-blur-md p-1.5 gap-1.5 panel-header">
                                     <div className="dropdown dropdown-bottom flex-grow h-full">
                                         <div className="relative h-full w-full flex items-center">
                                             <input
@@ -1467,7 +1467,7 @@ const PromptsPage: React.FC<PromptsPageProps> = ({
                                         onClick={handleDeletePresetClick}
                                         disabled={!selectedPreset}
                                     >
-                                        <span/><span/><span/><span/>
+                                        <span /><span /><span /><span />
                                         DELETE
                                     </button>
                                 </header>
@@ -1539,7 +1539,7 @@ const PromptsPage: React.FC<PromptsPageProps> = ({
                                     <CloseIcon className="w-5 h-5" />
                                 </button>
                             </header>
-                            
+
                             <div className="p-10 space-y-8">
                                 <div className="form-control">
                                     <label className="text-[10px] font-black uppercase tracking-[0.2em] text-base-content/40 mb-2">Preset Designation</label>
@@ -1554,14 +1554,14 @@ const PromptsPage: React.FC<PromptsPageProps> = ({
                                     />
                                 </div>
                             </div>
-                            
+
                             <footer className="h-14 flex items-stretch bg-base-100/10 backdrop-blur-md p-1.5 gap-1.5 overflow-hidden flex-shrink-0 panel-footer">
                                 <button onClick={() => setIsSavePresetModalOpen(false)} className="btn btn-sm btn-ghost h-full flex-1 rounded-none font-normal text-[13px] tracking-wider uppercase btn-snake font-display">
-                                    <span/><span/><span/><span/>
+                                    <span /><span /><span /><span />
                                     CANCEL
                                 </button>
                                 <button onClick={handleConfirmSavePreset} disabled={isSavingPreset || !newPresetName.trim()} className="btn btn-sm btn-primary h-full flex-[1.5] rounded-none font-normal text-[13px] tracking-wider uppercase btn-snake-primary font-display">
-                                    <span/><span/><span/><span/>
+                                    <span /><span /><span /><span />
                                     {isSavingPreset ? "SAVING..." : "COMMIT PRESET"}
                                 </button>
                             </footer>

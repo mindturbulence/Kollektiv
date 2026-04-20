@@ -347,7 +347,7 @@ const HUDNavItem: React.FC<{
       }}
       initial="initial"
       whileHover="hover"
-      className="group relative px-3 py-1 text-[13px] font-normal tracking-[0.2em] uppercase text-base-content/60 hover:text-primary transition-colors duration-300 pointer-events-auto"
+      className="group relative px-3 py-1 text-[13px] font-normal tracking-[0.25em] uppercase text-base-content/60 hover:text-primary transition-colors duration-300 pointer-events-auto"
       title={title}
     >
       <RollingText 

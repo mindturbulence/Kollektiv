@@ -277,7 +277,7 @@ const PromptCrafter = ({ onSaveToLibrary, onClip, onSendToEnhancer, onSendToRefi
     if (error) return <div className="p-4 text-error">{error}</div>;
 
     return (
-        <div className="grid grid-cols-1 lg:grid-cols-12 overflow-hidden h-full gap-4 min-h-0">
+        <div className="grid grid-cols-1 lg:grid-cols-12 overflow-visible h-full gap-4 min-h-0">
             <aside className="lg:col-span-3 h-full min-h-0 flex flex-col relative p-[3px] corner-frame overflow-visible">
                 <div className="flex flex-col h-full w-full overflow-hidden min-h-0 relative z-10 bg-base-100/40 backdrop-blur-xl">
                     {header}
@@ -321,8 +321,8 @@ const PromptCrafter = ({ onSaveToLibrary, onClip, onSendToEnhancer, onSendToRefi
                 <div className="absolute -bottom-[1px] -right-[1px] w-3 h-3 border-b border-r border-primary/15 z-20 pointer-events-none" />
             </aside>
             <main className="lg:col-span-6 h-full min-h-0 flex flex-col relative p-[3px] corner-frame overflow-visible">
-                <div className="flex flex-col h-full w-full overflow-hidden min-h-0 relative z-10 bg-base-100/40 backdrop-blur-xl">
-                    <header className="h-16 flex-shrink-0 flex items-stretch bg-base-100/10 backdrop-blur-md p-1.5 gap-1.5 panel-header">
+                <div className="flex flex-col h-full w-full overflow-visible min-h-0 relative z-10 bg-base-100/40 backdrop-blur-xl">
+                    <header className="h-16 flex-shrink-0 flex items-stretch bg-base-100/10 backdrop-blur-md p-1.5 gap-1.5 panel-header relative z-30">
                         <div className="dropdown dropdown-bottom flex-grow h-full">
                             <div className="relative h-full w-full flex items-center">
                                 <input 
@@ -382,8 +382,8 @@ const PromptCrafter = ({ onSaveToLibrary, onClip, onSendToEnhancer, onSendToRefi
                         </button>
                     </header>
 
-                <div className="flex-grow flex flex-col min-h-0 overflow-hidden">
-                    <div className="h-[15%] min-h-[120px] p-6 flex flex-col overflow-hidden panel-header">
+                <div className="flex-grow flex flex-col min-h-0 overflow-visible relative z-10">
+                    <div className="h-[25%] min-h-[160px] p-6 flex flex-col overflow-hidden panel-header">
                         <textarea 
                             ref={textareaRef}
                             value={promptText}

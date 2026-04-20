@@ -47,6 +47,15 @@ body {
   scrollbar-color: oklch(var(--bc) / 0.2) transparent;
 }
 
+/* Scrollbar Hide Utility */
+.scrollbar-hide::-webkit-scrollbar {
+    display: none;
+}
+.scrollbar-hide {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+}
+
 /* Firefox Support */
 * {
   scrollbar-width: thin;
@@ -1047,35 +1056,41 @@ button {
 [data-theme='MindTurbulence'] .border-base-content\/10,
 [data-theme='MindTurbulence'] .border-white\/5,
 [data-theme='MindTurbulence'] .border-white\/10 {
-  border-color: rgba(230, 0, 18, 0.4) !important;
+  border-color: rgba(230, 0, 18, 0.15) !important;
 }
 
 [data-theme='MindTurbulence'] .panel-header, [data-theme='MindTurbulence'] header.panel-header, [data-theme='MindTurbulence'] .panel-transparent header {
-    border-bottom: 1px solid rgba(230, 0, 18, 0.4) !important;
+    border-bottom: 1px solid rgba(230, 0, 18, 0.15) !important;
+    box-shadow: 0 2px 8px rgba(230, 0, 18, 0.05) !important;
 }
 
 [data-theme='MindTurbulence'] .panel-footer, [data-theme='MindTurbulence'] footer.panel-footer, [data-theme='MindTurbulence'] .panel-transparent footer {
-    border-top: 1px solid rgba(230, 0, 18, 0.4) !important;
+    border-top: 1px solid rgba(230, 0, 18, 0.15) !important;
+    box-shadow: 0 -2px 8px rgba(230, 0, 18, 0.05) !important;
 }
 
 [data-theme='MindTurbulence'] header .absolute.top-1\/2.h-px {
     background-color: rgba(230, 0, 18, 0.2) !important;
+    box-shadow: 0 0 3px rgba(230, 0, 18, 0.2);
 }
 
 [data-theme='MindTurbulence'] .btn:not(.btn-primary):not(.form-btn-primary) {
   background-color: rgba(230, 0, 18, 0.05);
-  border-color: rgba(230, 0, 18, 0.4);
+  border-color: rgba(230, 0, 18, 0.15);
   color: #e60012;
 }
 
 [data-theme='MindTurbulence'] .btn:not(.btn-primary):not(.form-btn-primary):hover {
   background-color: rgba(230, 0, 18, 0.15);
-  border-color: rgba(230, 0, 18, 0.4);
+  border-color: rgba(230, 0, 18, 0.25);
 }
 
 [data-theme='MindTurbulence'] .input,
 [data-theme='MindTurbulence'] .select,
-[data-theme='MindTurbulence'] .textarea {
+[data-theme='MindTurbulence'] .textarea,
+[data-theme='MindTurbulence'] .form-input,
+[data-theme='MindTurbulence'] .form-select,
+[data-theme='MindTurbulence'] .form-textarea {
   background-color: rgba(0, 0, 0, 0.3) !important;
   border-color: rgba(230, 0, 18, 0.2) !important;
   color: #f3f4f6;
@@ -1083,7 +1098,10 @@ button {
 
 [data-theme='MindTurbulence'] .input:focus,
 [data-theme='MindTurbulence'] .select:focus,
-[data-theme='MindTurbulence'] .textarea:focus {
+[data-theme='MindTurbulence'] .textarea:focus,
+[data-theme='MindTurbulence'] .form-input:focus,
+[data-theme='MindTurbulence'] .form-select:focus,
+[data-theme='MindTurbulence'] .form-textarea:focus {
   border-color: #e60012 !important;
   box-shadow: 0 0 0 2px rgba(230, 0, 18, 0.1);
 }
@@ -1100,24 +1118,37 @@ button {
   animation: crt-flicker 0.15s infinite;
 }
 
+[data-theme='MindTurbulence'] .card {
+  position: relative;
+}
+
 [data-theme='MindTurbulence'] .card,
 [data-theme='MindTurbulence'] .bg-base-100 {
   border-width: 1px;
   border-style: solid;
-  box-shadow: 0 0 20px rgba(230, 0, 18, 0.05);
-  position: relative;
+  border-color: rgba(230, 0, 18, 0.15) !important;
+  box-shadow: 0 0 10px rgba(230, 0, 18, 0.05), inset 0 0 5px rgba(230, 0, 18, 0.02);
+  background: linear-gradient(180deg, rgba(26,16,60,0.85) 0%, rgba(37,23,86,0.95) 100%) !important;
+}
+
+[data-theme='MindTurbulence'] .dropdown-content {
+  opacity: 1 !important;
+  z-index: 100 !important;
 }
 
 [data-theme='MindTurbulence'] [class*='border-primary'] {
-  border-color: rgba(230, 0, 18, 0.4) !important;
+  border-color: rgba(230, 0, 18, 0.25) !important;
+  box-shadow: 0 0 5px rgba(230, 0, 18, 0.1);
 }
 
 [data-theme='MindTurbulence'] .form-btn-primary {
-  background: linear-gradient(135deg, #e60012 0%, #a3000d 100%) !important;
-  border: none !important;
-  box-shadow: 0 4px 15px rgba(230, 0, 18, 0.25);
+  background: linear-gradient(135deg, #e60012 0%, #ffc400 100%) !important;
+  border: 1px solid #ffc400 !important;
+  box-shadow: 0 0 20px rgba(230, 0, 18, 0.5), inset 0 0 10px rgba(255, 196, 0, 0.3);
   position: relative;
   overflow: hidden;
+  color: #1a103c !important;
+  font-weight: 900;
 }
 
 [data-theme='MindTurbulence'] .form-btn-primary::after {
@@ -1131,34 +1162,38 @@ button {
   pointer-events: none;
 }
 
-/* CRT Global Overlays for MindTurbulence */
+/* Synthwave Global Overlays for MindTurbulence */
 [data-theme='MindTurbulence']::before {
   content: "";
   position: fixed;
-  top: 0;
+  bottom: 0;
   left: 0;
   width: 100%;
-  height: 100%;
-  background: radial-gradient(rgba(18,16,16,0) 50%, rgba(0,0,0,0.25) 100%),
-              linear-gradient(rgba(18, 16, 16, 0) 50%, rgba(0, 0, 0, 0.1) 50%);
-  background-size: 100% 100%, 100% 4px;
-  z-index: 10000;
+  height: 60vh;
+  background: 
+    linear-gradient(rgba(230, 0, 18, 0.4) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(230, 0, 18, 0.4) 1px, transparent 1px);
+  background-size: 40px 40px;
+  background-position: center bottom;
+  transform: perspective(600px) rotateX(60deg) scale(2);
+  transform-origin: bottom center;
+  z-index: 0;
   pointer-events: none;
-  opacity: 0.3;
+  opacity: 0.15;
+  mask-image: linear-gradient(to top, rgba(0,0,0,1) 0%, rgba(0,0,0,0) 100%);
+  -webkit-mask-image: linear-gradient(to top, rgba(0,0,0,1) 0%, rgba(0,0,0,0) 100%);
 }
 
 [data-theme='MindTurbulence']::after {
   content: "";
   position: fixed;
-  top: 0;
+  bottom: 0;
   left: 0;
   width: 100%;
-  height: 100%;
-  background: linear-gradient(90deg, rgba(255,0,0,0.015), rgba(0,255,0,0.01), rgba(0,0,255,0.015));
-  background-size: 3px 100%;
+  height: 60%;
+  background: linear-gradient(0deg, rgba(230,0,18,0.15) 0%, transparent 100%);
   z-index: 10001;
   pointer-events: none;
-  opacity: 0.5;
 }
 
 @keyframes crt-flicker {

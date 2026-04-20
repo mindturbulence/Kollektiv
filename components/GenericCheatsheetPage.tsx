@@ -303,7 +303,7 @@ export const GenericCheatsheetPage: React.FC<GenericCheatsheetPageProps> = ({
             {/* SCROLLABLE TRACK */}
             <div 
                 ref={scrollWrapperRef} 
-                className="flex-grow min-h-0 w-full flex overflow-x-auto overflow-y-hidden bg-transparent relative animate-fade-in"
+                className="flex-grow min-h-0 w-full flex overflow-x-auto overflow-y-hidden scrollbar-hide bg-transparent relative animate-fade-in"
                 style={{ WebkitOverflowScrolling: 'touch', touchAction: 'pan-x' }}
             >
                 <div className="flex flex-nowrap h-full min-w-max">
