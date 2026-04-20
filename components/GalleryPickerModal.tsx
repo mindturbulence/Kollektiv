@@ -251,7 +251,7 @@ const GalleryPickerModal: React.FC<GalleryPickerModalProps> = ({
         <div className="fixed inset-0 bg-black/40 backdrop-blur-xl z-[100] flex items-center justify-center p-4 lg:p-12 animate-fade-in" onClick={onClose}>
         <div className="w-full max-w-6xl h-[90vh] flex flex-col relative p-[3px] corner-frame overflow-visible shadow-2xl" onClick={e => e.stopPropagation()}>
             <div className="bg-base-100/40 backdrop-blur-xl rounded-none w-full h-full flex flex-col overflow-hidden relative z-10">
-                <header className="px-8 py-4 border-b border-base-content/5 bg-transparent relative flex-shrink-0 flex items-center justify-between">
+                <header className="px-8 py-4 panel-header bg-transparent relative flex-shrink-0 flex items-center justify-between">
                     <div className="flex flex-col">
                         <h3 className="text-xl font-black tracking-tighter text-base-content leading-none uppercase">
                             LIBRARY<span className="text-primary">.</span>
@@ -352,7 +352,7 @@ const GalleryPickerModal: React.FC<GalleryPickerModalProps> = ({
                     </main>
                 </div>
 
-                <footer className="h-14 flex items-stretch bg-base-100/10 backdrop-blur-md p-1.5 gap-1.5 flex-shrink-0 border-t border-base-content/5">
+                <footer className="h-14 flex items-stretch bg-base-100/10 backdrop-blur-md p-1.5 gap-1.5 flex-shrink-0 panel-footer">
                     <div className="flex items-center px-6 border-r border-base-content/5">
                         <span className="text-[10px] font-mono font-bold text-base-content/30 uppercase tracking-widest leading-none">
                             {selectedIds.size} SELECTED

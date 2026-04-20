@@ -1,7 +1,7 @@
 /**
  * Audio Service for Kollektiv
- * Retro-futuristic sound design inspired by joseph-san.com
- * Features: warm analog tones, subtle saturation, cinematic reverb, lo-fi character
+ * High-tech, minimalist sound design inspired by briskgaurav.in
+ * Features: Sharp digital transients, high-frequency pips, mechanical definition
  */
 
 class AudioService {
@@ -38,51 +38,46 @@ class AudioService {
       const AudioCtx = window.AudioContext || (window as any).webkitAudioContext;
       if (!AudioCtx) return;
       this.ctx = new AudioCtx({ latencyHint: 'interactive' });
-      console.info("Kollektiv Audio Engine: Context created, state:", this.ctx.state);
       
-      // Master gain
+      // Master gain - clinical and clean
       this.masterGain = this.ctx.createGain();
-      this.masterGain.gain.value = 0.5;
+      this.masterGain.gain.value = 0.45;
       
-      // Compressor for glue and warmth
+      // Compressor for tightness
       this.compressor = this.ctx.createDynamicsCompressor();
-      this.compressor.threshold.value = -18;
-      this.compressor.knee.value = 12;
-      this.compressor.ratio.value = 4;
-      this.compressor.attack.value = 0.003;
-      this.compressor.release.value = 0.25;
+      this.compressor.threshold.value = -12;
+      this.compressor.knee.value = 6;
+      this.compressor.ratio.value = 8; // Tighter ratio
+      this.compressor.attack.value = 0.001; // Instant attack for transients
+      this.compressor.release.value = 0.15;
       
-      // Reverb wet/dry mix
+      // Reverb wet/dry mix - very subtle for clinical feel
       this.reverbWet = this.ctx.createGain();
-      this.reverbWet.gain.value = 0.3;
+      this.reverbWet.gain.value = 0.15;
       
       // Create reverb
       this.reverbNode = this.ctx.createConvolver();
       this.createReverbImpulse();
       
-      // Chain: master -> compressor -> destination
+      // Chain
       this.masterGain.connect(this.compressor);
       this.compressor.connect(this.ctx.destination);
       
-      // Reverb chain: master -> reverb -> wet -> compressor -> destination
       this.masterGain.connect(this.reverbNode);
       this.reverbNode.connect(this.reverbWet);
       this.reverbWet.connect(this.ctx.destination);
       
-      // Ambient gain (separate chain for ambient sounds)
+      // Ambient gain
       this.ambientGain = this.ctx.createGain();
       this.ambientGain.gain.value = 0;
       this.ambientGain.connect(this.reverbNode);
       this.ambientGain.connect(this.reverbWet);
       
-      // Auto-resume if created in a gesture
       if (this.ctx.state === 'suspended') {
         await this.ctx.resume();
-        console.info("Kollektiv Audio Engine: Context resumed, state:", this.ctx.state);
       }
-      console.info("Kollektiv Audio Engine: Initialized & Active");
     } catch (e) {
-      console.warn("AudioContext initialization failed:", e);
+      console.warn("AudioContext init failed:", e);
     } finally {
       this.initPromise = null;
     }
@@ -90,636 +85,285 @@ class AudioService {
 
   private createReverbImpulse(): void {
     if (!this.ctx || !this.reverbNode) return;
-    
-    // Create a cinematic reverb impulse response (shorter for performance)
     const sampleRate = this.ctx.sampleRate;
-    const length = sampleRate * 1.5; // 1.5 second reverb (reduced from 3s)
+    const length = sampleRate * 0.8; // Shorter room for precise feel
     const impulse = this.ctx.createBuffer(2, length, sampleRate);
     
     for (let channel = 0; channel < 2; channel++) {
       const channelData = impulse.getChannelData(channel);
       for (let i = 0; i < length; i++) {
-        // Exponential decay with slight randomness
-        const decay = Math.exp(-3 * i / length);
-        channelData[i] = (Math.random() * 2 - 1) * decay * 0.5;
+        const decay = Math.exp(-8 * i / length); // Faster decay
+        channelData[i] = (Math.random() * 2 - 1) * decay * 0.35;
       }
     }
-    
     this.reverbNode.buffer = impulse;
   }
 
   public resume(): void {
     if (!this.ctx) {
-      console.info("Kollektiv Audio Engine: Initializing on user gesture...");
       this.initContext();
       return;
     }
     if (this.ctx.state === 'suspended') {
-      console.info("Kollektiv Audio Engine: Resuming context...");
-      this.ctx.resume().catch(e => console.warn("Audio resume failed:", e));
+      this.ctx.resume().catch(() => {});
     }
   }
 
-  /**
-   * Enable audio service
-   */
   enable(): void {
     if (this.isEnabled) return;
     this.isEnabled = true;
-    // Initialize async in background, don't await
-    this.initContext().then(() => {
-      this.resume();
-    });
+    this.initContext().then(() => this.resume());
   }
 
-  /**
-   * Disable audio service
-   */
   disable(): void {
     this.isEnabled = false;
     this.stopAmbient();
   }
 
-  /**
-   * Toggle audio enabled state
-   */
   toggle(): boolean {
-    if (this.isEnabled) {
-      this.disable();
-    } else {
-      this.enable();
-    }
+    this.isEnabled ? this.disable() : this.enable();
     return this.isEnabled;
   }
 
-  /**
-   * Check if audio is enabled
-   */
   getIsEnabled(): boolean {
     return this.isEnabled;
   }
 
-  /**
-   * Set master volume (0-1)
-   */
   setVolume(value: number): void {
-    const ctx = this.ctx;
-    const masterGain = this.masterGain;
-    if (masterGain && ctx) {
-      masterGain.gain.setTargetAtTime(
-        Math.max(0, Math.min(1, value)),
-        ctx.currentTime,
-        0.1
-      );
+    if (this.masterGain && this.ctx) {
+      this.masterGain.gain.setTargetAtTime(Math.max(0, Math.min(1, value)), this.ctx.currentTime, 0.05);
     }
   }
 
   /**
-   * Create a warm analog-style oscillator with slight detune
+   * Technical Digital Pip
    */
-  private createWarmOsc(freq: number, type: OscillatorType = 'sine', detuneAmount: number = 3): OscillatorNode[] {
-    if (!this.ctx) return [];
-    
-    const oscs: OscillatorNode[] = [];
-    
-    // Main oscillator
-    const osc1 = this.ctx.createOscillator();
-    osc1.type = type;
-    osc1.frequency.value = freq;
-    oscs.push(osc1);
-    
-    // Detuned oscillator for chorus/width effect
-    const osc2 = this.ctx.createOscillator();
-    osc2.type = type;
-    osc2.frequency.value = freq;
-    osc2.detune.value = detuneAmount;
-    oscs.push(osc2);
-    
-    // Third oscillator slightly lower for warmth
-    const osc3 = this.ctx.createOscillator();
-    osc3.type = 'triangle';
-    osc3.frequency.value = freq * 0.998;
-    osc3.detune.value = -detuneAmount * 0.5;
-    oscs.push(osc3);
-    
-    return oscs;
+  private createDigitalOsc(freq: number, type: OscillatorType = 'sine'): OscillatorNode {
+    if (!this.ctx) throw new Error("No context");
+    const osc = this.ctx.createOscillator();
+    osc.type = type;
+    osc.frequency.value = freq;
+    return osc;
   }
 
   /**
-   * Add subtle tape saturation/overdrive
-   */
-  private createSaturation(amount: number = 0.5): WaveShaperNode | null {
-    if (!this.ctx) return null;
-    
-    const waveshaper = this.ctx.createWaveShaper();
-    const samples = 44100;
-    const curve = new Float32Array(samples);
-    
-    for (let i = 0; i < samples; i++) {
-      const x = (i * 2) / samples - 1;
-      // Soft clipping curve
-      curve[i] = Math.tanh(x * (1 + amount * 2)) / Math.tanh(1 + amount * 2);
-    }
-    
-    waveshaper.curve = curve;
-    waveshaper.oversample = '2x';
-    return waveshaper;
-  }
-
-  /**
-   * Premium click sound (retro-futuristic: warm, cinematic)
+   * Minimal Click (Mechanical Shutter feel)
    */
   playClick(): void {
-    if (!this.isEnabled) return;
-    console.debug("AudioService: playClick");
-    
-    if (!this.ctx) {
-      this.initContext().then(() => this.playClick());
-      return;
-    }
-    
-    const ctx = this.ctx;
-    const masterGain = this.masterGain;
-    if (!ctx || !masterGain) return;
+    if (!this.isEnabled || !this.ctx || !this.masterGain) return;
     this.resume();
-
-    const now = ctx.currentTime;
+    const now = this.ctx.currentTime;
     
-    // Warm tonal component
-    const oscs = this.createWarmOsc(800, 'sine', 5);
-    const oscGain = ctx.createGain();
+    // Low frequency definition
+    const body = this.createDigitalOsc(600);
+    const bodyGain = this.ctx.createGain();
+    body.frequency.setValueAtTime(600, now);
+    body.frequency.exponentialRampToValueAtTime(120, now + 0.03);
     
-    // Frequency sweep down (like a satisfying mechanical switch)
-    oscs.forEach(osc => {
-      const param = osc.frequency;
-      param.setValueAtTime(1200, now);
-      param.exponentialRampToValueAtTime(400, now + 0.04);
-      osc.connect(oscGain);
-    });
+    bodyGain.gain.setValueAtTime(0, now);
+    bodyGain.gain.linearRampToValueAtTime(0.25, now + 0.002);
+    bodyGain.gain.exponentialRampToValueAtTime(0.001, now + 0.04);
     
-    oscGain.gain.setValueAtTime(0, now);
-    oscGain.gain.linearRampToValueAtTime(0.18, now + 0.005);
-    oscGain.gain.exponentialRampToValueAtTime(0.001, now + 0.12);
+    body.connect(bodyGain);
+    bodyGain.connect(this.masterGain);
     
-    // Add subtle saturation
-    const sat = this.createSaturation(0.3);
-    if (sat) {
-      oscGain.connect(sat);
-      sat.connect(masterGain);
-    } else {
-      oscGain.connect(masterGain);
-    }
-    
-    // Low-end thump for weight
-    const subOsc = ctx.createOscillator();
-    const subGain = ctx.createGain();
-    subOsc.type = 'sine';
-    subOsc.frequency.setValueAtTime(120, now);
-    subOsc.frequency.exponentialRampToValueAtTime(50, now + 0.06);
-    subGain.gain.setValueAtTime(0.12, now);
-    subGain.gain.exponentialRampToValueAtTime(0.001, now + 0.08);
-    subOsc.connect(subGain);
-    subGain.connect(masterGain);
-    
-    // High-freq transient for definition
-    const noiseBuffer = ctx.createBuffer(1, ctx.sampleRate * 0.02, ctx.sampleRate);
-    const noiseData = noiseBuffer.getChannelData(0);
-    for (let i = 0; i < noiseData.length; i++) {
-      // Shaped noise with fast decay
-      noiseData[i] = (Math.random() * 2 - 1) * Math.exp(-i / (noiseData.length * 0.15));
-    }
-    
-    const noise = ctx.createBufferSource();
+    // High transient noise
+    const noise = this.ctx.createBufferSource();
+    const noiseBuffer = this.ctx.createBuffer(1, this.ctx.sampleRate * 0.01, this.ctx.sampleRate);
+    const data = noiseBuffer.getChannelData(0);
+    for (let i = 0; i < data.length; i++) data[i] = (Math.random() * 2 - 1) * Math.exp(-i / (data.length * 0.2));
     noise.buffer = noiseBuffer;
     
-    const noiseFilter = ctx.createBiquadFilter();
-    noiseFilter.type = 'highpass';
-    noiseFilter.frequency.value = 3000;
+    const noiseGain = this.ctx.createGain();
+    noiseGain.gain.setValueAtTime(0.08, now);
+    noiseGain.gain.exponentialRampToValueAtTime(0.001, now + 0.01);
     
-    const noiseGain = ctx.createGain();
-    noiseGain.gain.setValueAtTime(0.06, now);
-    noiseGain.gain.exponentialRampToValueAtTime(0.001, now + 0.015);
+    noise.connect(noiseGain);
+    noiseGain.connect(this.masterGain);
     
-    noise.connect(noiseFilter);
-    noiseFilter.connect(noiseGain);
-    noiseGain.connect(masterGain);
-    
-    // Start all
-    oscs.forEach(osc => { osc.start(now); osc.stop(now + 0.15); });
-    subOsc.start(now); subOsc.stop(now + 0.1);
-    noise.start(now); noise.stop(now + 0.02);
+    body.start(now); body.stop(now + 0.05);
+    noise.start(now); noise.stop(now + 0.015);
   }
 
   /**
-   * Subtle hover tick (retro: soft, warm)
+   * Precise Hover Pip (Ultra-short, high frequency)
    */
   playHover(): void {
-    if (!this.isEnabled) return;
-    console.debug("AudioService: playHover");
-    
-    if (!this.ctx) {
-      this.initContext();
-      return;
-    }
-
-    const ctx = this.ctx;
-    const masterGain = this.masterGain;
-    if (!ctx || !masterGain) return;
-    
-    // Throttle hover sounds
-    const now = Date.now();
-    if (now - this.lastHoverTime < 80) return;
-    this.lastHoverTime = now;
+    if (!this.isEnabled || !this.ctx || !this.masterGain) return;
+    const nowMs = Date.now();
+    if (nowMs - this.lastHoverTime < 50) return;
+    this.lastHoverTime = nowMs;
     
     this.resume();
-
-    const t = ctx.currentTime;
+    const now = this.ctx.currentTime;
     
-    // Soft, warm tick
-    const osc = ctx.createOscillator();
-    const gain = ctx.createGain();
-    
-    osc.type = 'sine';
-    osc.frequency.setValueAtTime(2200, t);
-    osc.frequency.exponentialRampToValueAtTime(1800, t + 0.008);
-    
-    gain.gain.setValueAtTime(0, t);
-    gain.gain.linearRampToValueAtTime(0.025, t + 0.002);
-    gain.gain.exponentialRampToValueAtTime(0.001, t + 0.015);
-    
-    // Gentle low-pass for warmth
-    const filter = ctx.createBiquadFilter();
-    filter.type = 'lowpass';
-    filter.frequency.value = 4000;
-    
-    osc.connect(filter);
-    filter.connect(gain);
-    gain.connect(masterGain);
-    
-    osc.start(t);
-    osc.stop(t + 0.02);
-  }
-
-  /**
-   * Success chime (cinematic, warm harmonics)
-   */
-  playSuccess(): void {
-    const ctx = this.ctx;
-    const masterGain = this.masterGain;
-    if (!this.isEnabled || !ctx || !masterGain) return;
-    this.resume();
-
-    const now = ctx.currentTime;
-    
-    // Initial click
-    this.playClick();
-
-    // Warm harmonic chord (C major 7 feel)
-    const frequencies = [523.25, 659.25, 783.99, 987.77]; // C5, E5, G5, B5
-    
-    frequencies.forEach((freq, i) => {
-      const oscs = this.createWarmOsc(freq, 'sine', 2);
-      const gain = ctx.createGain();
-      const delay = i * 0.06;
-      
-      oscs.forEach(osc => {
-        osc.frequency.setValueAtTime(freq * 1.02, now + delay);
-        osc.frequency.setTargetAtTime(freq, now + delay + 0.02, 0.1);
-        osc.connect(gain);
-      });
-      
-      gain.gain.setValueAtTime(0, now + delay);
-      gain.gain.linearRampToValueAtTime(0.12, now + delay + 0.01);
-      gain.gain.setTargetAtTime(0.08, now + delay + 0.15, 0.3);
-      gain.gain.setTargetAtTime(0.001, now + delay + 0.8, 0.4);
-      
-      gain.connect(masterGain);
-      
-      oscs.forEach(osc => {
-        osc.start(now + delay);
-        osc.stop(now + delay + 1.5);
-      });
-    });
-  }
-
-  /**
-   * Transition sweep (retro-futuristic: cosmic whoosh)
-   */
-  playTransition(): void {
-    const ctx = this.ctx;
-    const masterGain = this.masterGain;
-    if (!this.isEnabled || !ctx || !masterGain) return;
-    this.resume();
-
-    const now = ctx.currentTime;
-    
-    // Cosmic sweep with multiple layers
-    // Low rumble
-    const subOsc = ctx.createOscillator();
-    const subGain = ctx.createGain();
-    subOsc.type = 'sine';
-    subOsc.frequency.setValueAtTime(60, now);
-    subOsc.frequency.exponentialRampToValueAtTime(150, now + 0.4);
-    subGain.gain.setValueAtTime(0, now);
-    subGain.gain.linearRampToValueAtTime(0.1, now + 0.15);
-    subGain.gain.linearRampToValueAtTime(0, now + 0.5);
-    subOsc.connect(subGain);
-    subGain.connect(masterGain);
-    
-    // Mid sweep
-    const midOsc = ctx.createOscillator();
-    const midGain = ctx.createGain();
-    midOsc.type = 'sawtooth';
-    midOsc.frequency.setValueAtTime(200, now);
-    midOsc.frequency.exponentialRampToValueAtTime(800, now + 0.35);
-    midOsc.detune.value = 10;
-    
-    const midFilter = ctx.createBiquadFilter();
-    midFilter.type = 'bandpass';
-    midFilter.frequency.setValueAtTime(300, now);
-    midFilter.frequency.exponentialRampToValueAtTime(2000, now + 0.35);
-    midFilter.Q.value = 3;
-    
-    midGain.gain.setValueAtTime(0, now);
-    midGain.gain.linearRampToValueAtTime(0.06, now + 0.1);
-    midGain.gain.linearRampToValueAtTime(0, now + 0.4);
-    
-    midOsc.connect(midFilter);
-    midFilter.connect(midGain);
-    midGain.connect(masterGain);
-    
-    // High shimmer
-    const highOsc = ctx.createOscillator();
-    const highGain = ctx.createGain();
-    highOsc.type = 'sine';
-    highOsc.frequency.setValueAtTime(1500, now);
-    highOsc.frequency.exponentialRampToValueAtTime(3000, now + 0.3);
-    
-    highGain.gain.setValueAtTime(0, now);
-    highGain.gain.linearRampToValueAtTime(0.04, now + 0.15);
-    highGain.gain.linearRampToValueAtTime(0, now + 0.35);
-    
-    highOsc.connect(highGain);
-    highGain.connect(masterGain);
-    
-    subOsc.start(now); subOsc.stop(now + 0.6);
-    midOsc.start(now); midOsc.stop(now + 0.5);
-    highOsc.start(now); highOsc.stop(now + 0.4);
-  }
-
-  /**
-   * Modal open (retro-futuristic: cinematic reveal)
-   */
-  playModalOpen(): void {
-    const ctx = this.ctx;
-    const masterGain = this.masterGain;
-    if (!this.isEnabled || !ctx || !masterGain) return;
-    this.resume();
-
-    const now = ctx.currentTime;
-    
-    // Main tonal sweep (upward)
-    const osc = ctx.createOscillator();
-    const gain = ctx.createGain();
-    
-    osc.type = 'sine';
-    osc.frequency.setValueAtTime(300, now);
-    osc.frequency.exponentialRampToValueAtTime(600, now + 0.1);
-    osc.frequency.setTargetAtTime(500, now + 0.15, 0.1);
+    const osc = this.createDigitalOsc(3200); // Higher freq for "Brisk" feel
+    const gain = this.ctx.createGain();
     
     gain.gain.setValueAtTime(0, now);
-    gain.gain.linearRampToValueAtTime(0.15, now + 0.02);
-    gain.gain.setTargetAtTime(0.1, now + 0.1, 0.08);
-    gain.gain.setTargetAtTime(0.001, now + 0.3, 0.15);
+    gain.gain.linearRampToValueAtTime(0.04, now + 0.001);
+    gain.gain.exponentialRampToValueAtTime(0.001, now + 0.008);
     
-    // Warm filter
-    const filter = ctx.createBiquadFilter();
-    filter.type = 'lowpass';
-    filter.frequency.value = 1500;
-    filter.Q.value = 2;
-    
-    osc.connect(filter);
-    filter.connect(gain);
-    gain.connect(masterGain);
-    
-    // Subtle shimmer on top
-    const shimmer = ctx.createOscillator();
-    const shimmerGain = ctx.createGain();
-    shimmer.type = 'sine';
-    shimmer.frequency.setValueAtTime(1200, now);
-    shimmer.frequency.exponentialRampToValueAtTime(1800, now + 0.15);
-    shimmerGain.gain.setValueAtTime(0, now);
-    shimmerGain.gain.linearRampToValueAtTime(0.03, now + 0.05);
-    shimmerGain.gain.exponentialRampToValueAtTime(0.001, now + 0.25);
-    shimmer.connect(shimmerGain);
-    shimmerGain.connect(masterGain);
-    
-    osc.start(now); osc.stop(now + 0.4);
-    shimmer.start(now); shimmer.stop(now + 0.3);
-  }
-
-  /**
-   * Modal close (retro: descending, fading)
-   */
-  playModalClose(): void {
-    const ctx = this.ctx;
-    const masterGain = this.masterGain;
-    if (!this.isEnabled || !ctx || !masterGain) return;
-    this.resume();
-
-    const now = ctx.currentTime;
-    
-    const oscs = this.createWarmOsc(500, 'sine', 3);
-    const gain = ctx.createGain();
-    
-    oscs.forEach(osc => {
-      const param = osc.frequency;
-      param.setValueAtTime(600, now);
-      param.exponentialRampToValueAtTime(200, now + 0.15);
-      osc.connect(gain);
-    });
-    
-    gain.gain.setValueAtTime(0.1, now);
-    gain.gain.exponentialRampToValueAtTime(0.001, now + 0.18);
-    
-    gain.connect(masterGain);
-    
-    oscs.forEach(osc => {
-      osc.start(now);
-      osc.stop(now + 0.2);
-    });
-  }
-
-  /**
-   * Error sound (retro warning: analog alarm)
-   */
-  playError(): void {
-    const ctx = this.ctx;
-    const masterGain = this.masterGain;
-    if (!this.isEnabled || !ctx || !masterGain) return;
-    this.resume();
-
-    const now = ctx.currentTime;
-    
-    // Two oscillators creating beating/wah effect
-    [180, 185].forEach((freq, i) => {
-      const osc = ctx.createOscillator();
-      const gain = ctx.createGain();
-      const filter = ctx.createBiquadFilter();
-      
-      osc.type = 'sawtooth';
-      osc.frequency.value = freq;
-      osc.detune.value = i * 5;
-      
-      filter.type = 'bandpass';
-      filter.frequency.setValueAtTime(400, now);
-      filter.frequency.setValueAtTime(600, now + 0.05);
-      filter.frequency.setValueAtTime(400, now + 0.1);
-      filter.Q.value = 5;
-      
-      gain.gain.setValueAtTime(0, now);
-      gain.gain.linearRampToValueAtTime(0.06, now + 0.01);
-      gain.gain.setTargetAtTime(0.06, now + 0.05, 0.03);
-      gain.gain.setTargetAtTime(0.001, now + 0.2, 0.05);
-      
-      osc.connect(filter);
-      filter.connect(gain);
-      gain.connect(masterGain);
-      
-      osc.start(now);
-      osc.stop(now + 0.3);
-    });
-  }
-
-  /**
-   * Toggle switch sound (retro click)
-   */
-  playToggle(): void {
-    const ctx = this.ctx;
-    const masterGain = this.masterGain;
-    if (!this.isEnabled || !ctx || !masterGain) return;
-    this.resume();
-
-    const now = ctx.currentTime;
-    
-    // Sharp mechanical click
-    const osc = ctx.createOscillator();
-    const gain = ctx.createGain();
-    
-    osc.type = 'square';
-    osc.frequency.setValueAtTime(1000, now);
-    osc.frequency.exponentialRampToValueAtTime(400, now + 0.015);
-    
-    gain.gain.setValueAtTime(0.08, now);
-    gain.gain.exponentialRampToValueAtTime(0.001, now + 0.025);
-    
-    const filter = ctx.createBiquadFilter();
-    filter.type = 'lowpass';
-    filter.frequency.value = 2000;
-    
-    osc.connect(filter);
-    filter.connect(gain);
-    gain.connect(masterGain);
+    osc.connect(gain);
+    gain.connect(this.masterGain);
     
     osc.start(now);
-    osc.stop(now + 0.03);
+    osc.stop(now + 0.01);
   }
 
   /**
-   * Ambient soundscape (retro-futuristic atmosphere)
+   * Clinical Succession (Ascending digital notes)
    */
-  startAmbient(intensity: number = 0.25): void {
-    if (!this.isEnabled || this.isAmbientPlaying) return;
-    
-    if (!this.ctx || !this.ambientGain || !this.masterGain) {
-      this.initContext().then(() => {
-        if (this.isEnabled && !this.isAmbientPlaying) {
-          this.startAmbient(intensity);
-        }
-      });
-      return;
-    }
-
+  playSuccess(): void {
+    if (!this.isEnabled || !this.ctx || !this.masterGain) return;
     this.resume();
-
-    this.isAmbientPlaying = true;
-    const ctx = this.ctx;
-    const ambientGain = this.ambientGain;
-    const now = ctx.currentTime;
+    const now = this.ctx.currentTime;
+    const notes = [1200, 1600, 2400]; // Sharp upward movement
     
-    // Layered ambient drones with warm analog character
-    const droneConfigs = [
-      { freq: 55, type: 'sine' as OscillatorType, gain: 0.08 },      // A1 sub
-      { freq: 82.5, type: 'sine' as OscillatorType, gain: 0.06 },     // E2
-      { freq: 110, type: 'triangle' as OscillatorType, gain: 0.04 },  // A2
-      { freq: 165, type: 'sine' as OscillatorType, gain: 0.03 },     // E3
+    notes.forEach((freq, i) => {
+      if (!this.ctx || !this.masterGain) return;
+      const delay = i * 0.04;
+      const osc = this.createDigitalOsc(freq);
+      const gain = this.ctx.createGain();
+      
+      if (gain) {
+        gain.gain.setValueAtTime(0, now + delay);
+        gain.gain.linearRampToValueAtTime(0.08, now + delay + 0.002);
+        gain.gain.exponentialRampToValueAtTime(0.001, now + delay + 0.08);
+        
+        osc.connect(gain);
+        gain.connect(this.masterGain);
+        osc.start(now + delay);
+        osc.stop(now + delay + 0.1);
+      }
+    });
+  }
+
+  /**
+   * Minimalist Transition (Digital shuffle/glitch)
+   */
+  playTransition(): void {
+    if (!this.isEnabled || !this.ctx || !this.masterGain) return;
+    this.resume();
+    const now = this.ctx.currentTime;
+    
+    // Quick noise bursts
+    for (let i = 0; i < 4; i++) {
+      const delay = i * 0.02;
+      const noise = this.ctx.createBufferSource();
+      const buf = this.ctx.createBuffer(1, this.ctx.sampleRate * 0.005, this.ctx.sampleRate);
+      const d = buf.getChannelData(0);
+      for (let j = 0; j < d.length; j++) d[j] = Math.random() * 2 - 1;
+      noise.buffer = buf;
+      
+      const g = this.ctx.createGain();
+      g.gain.setValueAtTime(0.04, now + delay);
+      g.gain.linearRampToValueAtTime(0, now + delay + 0.005);
+      
+      noise.connect(g);
+      g.connect(this.masterGain);
+      noise.start(now + delay);
+    }
+  }
+
+  /**
+   * Modal Mechanics (Open)
+   */
+  playModalOpen(): void {
+    if (!this.isEnabled || !this.ctx || !this.masterGain) return;
+    this.resume();
+    const now = this.ctx.currentTime;
+    
+    const osc = this.createDigitalOsc(400);
+    const gain = this.ctx.createGain();
+    osc.frequency.exponentialRampToValueAtTime(1200, now + 0.08);
+    
+    gain.gain.setValueAtTime(0, now);
+    gain.gain.linearRampToValueAtTime(0.12, now + 0.005);
+    gain.gain.exponentialRampToValueAtTime(0.001, now + 0.2);
+    
+    osc.connect(gain);
+    gain.connect(this.masterGain);
+    osc.start(now); osc.stop(now + 0.25);
+  }
+
+  /**
+   * Modal Mechanics (Close)
+   */
+  playModalClose(): void {
+    if (!this.isEnabled || !this.ctx || !this.masterGain) return;
+    this.resume();
+    const now = this.ctx.currentTime;
+    
+    const osc = this.createDigitalOsc(1200);
+    const gain = this.ctx.createGain();
+    osc.frequency.exponentialRampToValueAtTime(400, now + 0.08);
+    
+    gain.gain.setValueAtTime(0, now);
+    gain.gain.linearRampToValueAtTime(0.12, now + 0.005);
+    gain.gain.exponentialRampToValueAtTime(0.001, now + 0.15);
+    
+    osc.connect(gain);
+    gain.connect(this.masterGain);
+    osc.start(now); osc.stop(now + 0.2);
+  }
+
+  playError(): void {
+    if (!this.isEnabled || !this.ctx || !this.masterGain) return;
+    this.resume();
+    const now = this.ctx.currentTime;
+    const osc = this.createDigitalOsc(220, 'square');
+    const gain = this.ctx.createGain();
+    
+    gain.gain.setValueAtTime(0.05, now);
+    gain.gain.linearRampToValueAtTime(0.05, now + 0.05);
+    gain.gain.linearRampToValueAtTime(0, now + 0.06);
+    
+    osc.connect(gain);
+    gain.connect(this.masterGain);
+    osc.start(now); osc.stop(now + 0.1);
+  }
+
+  playToggle(): void {
+    this.playClick();
+  }
+
+  startAmbient(intensity: number = 0.2): void {
+    if (!this.isEnabled || this.isAmbientPlaying || !this.ctx || !this.ambientGain) return;
+    this.resume();
+    this.isAmbientPlaying = true;
+    const now = this.ctx.currentTime;
+    
+    const drones = [
+      { freq: 40, gain: 0.05 },
+      { freq: 80, gain: 0.03 }
     ];
     
-    droneConfigs.forEach((config, index) => {
-      // Main oscillator
-      const osc = ctx.createOscillator();
-      osc.type = config.type;
-      osc.frequency.value = config.freq;
-      
-      // Slightly detuned for width
-      const osc2 = ctx.createOscillator();
-      osc2.type = config.type;
-      osc2.frequency.value = config.freq * 1.003;
-      osc2.detune.value = 3;
-      
-      // Gain node for this layer
-      const layerGain = ctx.createGain();
-      layerGain.gain.value = 0;
-      
-      // Low-pass filter for warmth
-      const filter = ctx.createBiquadFilter();
-      filter.type = 'lowpass';
-      filter.frequency.value = 400 + index * 150;
-      filter.Q.value = 0.5;
-      
-      // Connect
-      osc.connect(filter);
-      osc2.connect(filter);
-      filter.connect(layerGain);
-      layerGain.connect(ambientGain);
-      
-      // Start
+    drones.forEach(d => {
+      const osc = this.ctx!.createOscillator();
+      osc.type = 'sine';
+      osc.frequency.value = d.freq;
+      const g = this.ctx!.createGain();
+      g.gain.value = 0;
+      osc.connect(g);
+      g.connect(this.ambientGain!);
       osc.start(now);
-      osc2.start(now);
-      this.ambientOscillators.push(osc, osc2);
-      
-      // Fade in slowly
-      layerGain.gain.setTargetAtTime(config.gain * intensity, now + index * 0.3, 1);
+      this.ambientOscillators.push(osc);
+      g.gain.setTargetAtTime(d.gain * intensity, now, 2);
     });
     
-    // Fade in ambient gain
-    ambientGain.gain.setTargetAtTime(intensity * 0.4, now, 2);
+    this.ambientGain.gain.setTargetAtTime(intensity, now, 1);
   }
 
-  /**
-   * Stop ambient soundscape
-   */
   stopAmbient(): void {
-    const ctx = this.ctx;
-    const ambientGain = this.ambientGain;
-    if (!ctx || !ambientGain) return;
-    
-    const now = ctx.currentTime;
-    
-    // Fade out
-    if (ambientGain.gain) {
-      ambientGain.gain.setTargetAtTime(0, now, 0.5);
-    }
-    
-    // Stop oscillators
+    if (!this.ctx || !this.ambientGain) return;
+    const now = this.ctx.currentTime;
+    this.ambientGain.gain.setTargetAtTime(0, now, 0.5);
     setTimeout(() => {
-      this.ambientOscillators.forEach(osc => {
-        try { osc.stop(); } catch (e) {}
-      });
+      this.ambientOscillators.forEach(osc => { try { osc.stop(); } catch(e) {} });
       this.ambientOscillators = [];
-    }, 2000);
-    
-    this.isAmbientPlaying = false;
+      this.isAmbientPlaying = false;
+    }, 1000);
   }
 }
 

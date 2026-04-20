@@ -3,6 +3,7 @@ import type { ActiveTab } from '../types';
 import { audioService } from '../services/audioService';
 import { useSettings } from '../contexts/SettingsContext';
 import { gsap } from 'gsap';
+import RollingText from './RollingText';
 
 interface HeaderProps {
   onNavigate: (tab: ActiveTab) => void;
@@ -23,39 +24,25 @@ const NavItem: React.FC<{
   isCurrent: boolean;
 }> = ({ label, onClick, isActive, isCurrent }) => {
   const containerRef = useRef<HTMLButtonElement>(null);
-  const charsRef = useRef<HTMLSpanElement[]>([]);
-
-  const splitText = (text: string) => {
-    return text.split('').map((char, i) => (
-      <span 
-        key={i} 
-        ref={el => { if (el) charsRef.current[i] = el; }}
-        className="inline-block translate-y-[120%] opacity-0 leading-none"
-      >
-        {char === ' ' ? '\u00A0' : char}
-      </span>
-    ));
-  };
 
   useLayoutEffect(() => {
+    // Collect all elements from RollingText children if we want to animate entry with GSAP
+    // But since RollingText uses framer-motion, it might be better to let it handle it's own visibility
+    // Or just fade it in. The previous implementation used splitText for entry.
+    
     if (isActive) {
-      gsap.to(charsRef.current, {
-        y: 0,
+      gsap.to(containerRef.current, {
         opacity: 1,
-        duration: 0.3,
-        stagger: 0.02,
+        y: 0,
+        duration: 0.4,
         ease: "expo.out",
         overwrite: true
       });
     } else {
-      gsap.to(charsRef.current, {
-        y: "120%",
+      gsap.to(containerRef.current, {
         opacity: 0,
-        duration: 0.2,
-        stagger: {
-          each: 0.015,
-          from: "end"
-        },
+        y: 10,
+        duration: 0.3,
         ease: "expo.in",
         overwrite: true
       });
@@ -72,11 +59,9 @@ const NavItem: React.FC<{
         audioService.playClick();
         onClick();
       }}
-      className={`px-3 h-full flex items-center text-[13px] font-normal uppercase tracking-[0.25em] transition-all duration-300 whitespace-nowrap overflow-hidden ${isCurrent ? 'text-primary font-bold' : 'text-base-content/30 hover:text-primary'}`}
+      className={`px-3 h-full flex items-center text-[13px] font-normal uppercase tracking-[0.25em] transition-all duration-300 whitespace-nowrap overflow-hidden opacity-0 translate-y-[10px] ${isCurrent ? 'text-primary font-bold' : 'text-base-content/30 hover:text-primary'}`}
     >
-      <span className="flex items-center gap-0">
-        {splitText(label)}
-      </span>
+      <RollingText text={label} hoverClassName="text-primary" />
     </button>
   );
 };
@@ -90,19 +75,19 @@ const Header: React.FC<HeaderProps> = ({ onNavigate, activeTab, isInitialized })
   const containerRefs = useRef<Record<string, HTMLDivElement | null>>({});
 
   const workspaceItems: NavItemData[] = [
-    { id: 'prompts' as ActiveTab, label: 'Prompt Builder' },
-    { id: 'prompt' as ActiveTab, label: 'Prompt Library', enabled: features.isPromptLibraryEnabled },
-    { id: 'gallery' as ActiveTab, label: 'Image Library', enabled: features.isGalleryEnabled },
+    { id: 'prompts' as ActiveTab, label: 'Builder' },
+    { id: 'prompt' as ActiveTab, label: 'Library', enabled: features.isPromptLibraryEnabled },
+    { id: 'gallery' as ActiveTab, label: 'Vault', enabled: features.isGalleryEnabled },
   ];
 
   const guideItems: NavItemData[] = [
-    { id: 'cheatsheet' as ActiveTab, label: 'Guides' },
-    { id: 'artstyles' as ActiveTab, label: 'Art Styles' },
+    { id: 'cheatsheet' as ActiveTab, label: 'Cheatsheet' },
+    { id: 'artstyles' as ActiveTab, label: 'Styles' },
     { id: 'artists' as ActiveTab, label: 'Artists' },
   ];
 
   const utilityItems: NavItemData[] = [
-    { id: 'composer' as ActiveTab, label: 'Builder' },
+    { id: 'composer' as ActiveTab, label: 'Composer' },
     { id: 'image_compare' as ActiveTab, label: 'Compare' },
     { id: 'color_palette_extractor' as ActiveTab, label: 'Palette' },
     { id: 'resizer' as ActiveTab, label: 'Resizer' },
@@ -204,7 +189,7 @@ const Header: React.FC<HeaderProps> = ({ onNavigate, activeTab, isInitialized })
   return (
     <header className="flex-shrink-0 flex flex-col h-12 bg-transparent z-50 relative">
       <div ref={navRef} className="flex flex-grow justify-center items-center relative z-50 px-8 gap-1">
-        <div className="absolute top-1/2 left-0 right-0 h-px bg-base-content/5 -translate-y-1/2 z-0 pointer-events-none" />
+                <div className="absolute top-1/2 left-0 right-0 h-px nav-line-middle -translate-y-1/2 z-0 pointer-events-none" />
         
         {navGroups.map((group, groupIdx) => {
           const isExpanded = activeMenu === group.id;
@@ -217,7 +202,7 @@ const Header: React.FC<HeaderProps> = ({ onNavigate, activeTab, isInitialized })
                   onClick={() => handleParentClick(group.id)}
                   className={`parent-nav-item relative z-10 px-3 h-full flex items-center text-[13px] font-normal uppercase tracking-[0.25em] leading-none transition-all duration-500 hover:text-primary ${isExpanded || isCurrent ? 'text-base-content font-bold' : 'text-base-content/30'}`}
                 >
-                  {group.label}
+                  <RollingText text={group.label} hoverClassName="text-primary" />
                 </button>
 
                 {/* GSAP Managed Child Container */}
@@ -240,7 +225,7 @@ const Header: React.FC<HeaderProps> = ({ onNavigate, activeTab, isInitialized })
               </div>
 
               {groupIdx < navGroups.length - 1 && (
-                <div className="nav-separator w-[1px] h-3 bg-base-content/10 opacity-30 mx-1" />
+                <div className="nav-separator nav-separator-line w-[1px] h-3 opacity-30 mx-1" />
               )}
             </React.Fragment>
           );

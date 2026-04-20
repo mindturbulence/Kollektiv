@@ -140,7 +140,7 @@ const Dashboard: React.FC<DashboardProps> = () => {
                 <div className="overflow-hidden mb-4 py-2">
                     {/* Monoton Logo implementation for center dashboard */}
                     <h1 ref={titleRef} className="text-6xl md:text-8xl uppercase text-base-content flex items-center font-monoton tracking-widest">
-                        <ChromaticText text="Kollektiv" />
+                        <ChromaticText>Kollektiv</ChromaticText>
                         <span className="text-primary italic animate-pulse">.</span>
                     </h1>
                 </div>

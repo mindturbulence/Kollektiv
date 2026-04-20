@@ -21,7 +21,7 @@ export const defaultLLMSettings: LLMSettings = {
   // Theme Settings
   activeThemeMode: 'dark',
   lightTheme: 'light',
-  darkTheme: 'dich',
+  darkTheme: 'MindTurbulence',
   fontSize: 14,
 
   // Dashboard Settings

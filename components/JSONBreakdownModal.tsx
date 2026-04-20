@@ -32,10 +32,10 @@ const JSONBreakdownModal: React.FC<JSONBreakdownModalProps> = ({
                         animate={{ opacity: 1, scale: 1, y: 0 }}
                         exit={{ opacity: 0, scale: 0.9, y: 20 }}
                         transition={{ type: "spring", damping: 25, stiffness: 300 }}
-                        className="bg-transparent w-full max-w-2xl relative p-[3px] corner-frame overflow-visible"
+                        className="bg-transparent w-full max-w-2xl relative p-[3px] corner-frame"
                         onClick={(e) => e.stopPropagation()}
                     >
-                        <div className="bg-base-100/90 backdrop-blur-2xl rounded-none w-full flex flex-col overflow-hidden relative z-10 border border-primary/10 shadow-3xl">
+                        <div className="bg-base-100/90 backdrop-blur-2xl rounded-none w-full h-[600px] max-h-[85vh] flex flex-col overflow-hidden relative z-10 border border-primary/10 shadow-3xl">
                             <header className="px-8 py-6 border-b border-base-content/5 flex items-center justify-between bg-base-100/20">
                                 <div className="flex items-center gap-3">
                                     <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center text-primary">
@@ -54,9 +54,9 @@ const JSONBreakdownModal: React.FC<JSONBreakdownModalProps> = ({
                                 </button>
                             </header>
 
-                            <div className="p-8 pb-12">
-                                <div className="bg-black/20 rounded-none border border-primary/10 p-6 relative group">
-                                    <pre className="text-[12px] font-mono text-primary/80 leading-relaxed overflow-y-auto max-h-[60vh] custom-scrollbar whitespace-pre-wrap selection:bg-primary/20">
+                            <div className="p-8 flex-1 overflow-hidden min-h-0">
+                                <div className="bg-black/20 rounded-none border border-primary/10 p-6 relative group h-full flex flex-col">
+                                    <pre className="text-[12px] font-mono text-primary/80 leading-relaxed overflow-y-auto custom-scrollbar whitespace-pre-wrap selection:bg-primary/20 flex-1">
                                         {JSON.stringify(jsonData, null, 4)}
                                     </pre>
                                     

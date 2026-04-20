@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 
-const ChromaticText: React.FC<{ text: string; enabled?: boolean }> = ({ text, enabled = true }) => {
+const ChromaticText: React.FC<{ children: React.ReactNode; enabled?: boolean }> = ({ children, enabled = true }) => {
     const [offsets, setOffsets] = useState({ x1: 0, y1: 0, x2: 0, y2: 0, opacity: 1 });
     const requestRef = useRef<number>(0);
     const lastUpdate = useRef<number>(0);
@@ -49,7 +49,7 @@ const ChromaticText: React.FC<{ text: string; enabled?: boolean }> = ({ text, en
                 filter: (enabled && Math.random() > 0.95) ? 'contrast(1.5) brightness(1.2)' : 'none'
             }}
         >
-            {text}
+            {children}
         </span>
     );
 };
