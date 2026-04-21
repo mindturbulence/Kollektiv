@@ -59,7 +59,7 @@ const NavItem: React.FC<{
         audioService.playClick();
         onClick();
       }}
-      className={`px-3 h-full flex items-center text-[13px] font-normal uppercase tracking-[0.25em] transition-all duration-300 whitespace-nowrap overflow-hidden opacity-0 translate-y-[10px] ${isCurrent ? 'text-primary font-bold' : 'text-base-content/30 hover:text-primary'}`}
+      className={`px-3 h-full flex items-center text-[13px] font-normal uppercase tracking-[0.25em] transition-all duration-300 whitespace-nowrap overflow-hidden opacity-0 translate-y-[10px] ${isCurrent ? 'text-primary font-bold shadow-none drop-shadow-none [text-shadow:none] [filter:none]' : 'text-base-content/30 hover:text-primary'}`}
     >
       <RollingText text={label} hoverClassName="text-primary" />
     </button>

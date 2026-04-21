@@ -181,11 +181,15 @@ export const SuggestionItem: React.FC<SuggestionItemProps> = ({
                 <>
                     {/* Header Section */}
                     <div className="mb-6 space-y-3">
-                        <div className="flex items-center gap-3">
-                            <span className="text-[10px] font-black uppercase tracking-[0.4em] text-primary/60">
+                        <div className="flex items-center justify-between gap-3">
+                            <span className="text-[10px] font-black uppercase tracking-[0.4em] text-primary">
                                 {isAbstraction ? 'ANALYZED MEDIA' : (targetAI || 'REFINED RESULT')}
                             </span>
-                            <div className="flex-grow h-px bg-base-300/50"></div>
+                            <div className="flex gap-1">
+                                <div className="w-1 h-1 bg-primary/30"></div>
+                                <div className="w-1 h-1 bg-primary/30"></div>
+                                <div className="w-1 h-1 bg-primary/30"></div>
+                            </div>
                         </div>
                     </div>
 

@@ -88,7 +88,7 @@ const MaintenanceOverlay: React.FC<{ progress: number, message: string }> = ({ p
     }, [progress]);
 
     return (
-        <div className="fixed inset-0 bg-base-100/95 backdrop-blur-xl z-[500] flex flex-col items-center justify-center overflow-hidden select-none">
+        <div className="fixed inset-0 bg-base-100 z-[500] flex flex-col items-center justify-center overflow-hidden select-none">
             <div className="absolute inset-0 bg-grid-texture opacity-[0.03] pointer-events-none"></div>
             
             {/* Large Background Percentage (SR Seventy One Style) */}

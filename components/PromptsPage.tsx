@@ -774,7 +774,7 @@ const PromptsPage: React.FC<PromptsPageProps> = ({
             case 'styling':
                 return (
                     <div className="flex flex-col gap-6 animate-fade-in">
-                        <div className="grid grid-cols-2 gap-4">
+                        <div className="grid grid-cols-1 gap-4">
                             <div className="form-control">
                                 <label className="text-[10px] font-black uppercase text-base-content/40 tracking-widest mb-2 block">Visual Discipline</label>
                                 <AutocompleteSelect value={modifiers.artStyle || ''} onChange={(v) => setModifiers({ ...modifiers, artStyle: v })} options={artStyles.flatMap(c => c.items.map(i => ({ label: i.name.toUpperCase(), value: i.name })))} placeholder="Discipline..." />
@@ -835,7 +835,7 @@ const PromptsPage: React.FC<PromptsPageProps> = ({
                                         placeholder="Hair..."
                                     />
                                 </div>
-                                <div className="grid grid-cols-2 gap-4">
+                                <div className="grid grid-cols-1 gap-4">
                                     <div className="form-control">
                                         <label className="text-[10px] font-black uppercase text-base-content/40 tracking-widest mb-2 block">Eye Color</label>
                                         <AutocompleteSelect
@@ -892,7 +892,7 @@ const PromptsPage: React.FC<PromptsPageProps> = ({
                             </select>
                         </div>
 
-                        <div className="grid grid-cols-2 gap-4">
+                        <div className="grid grid-cols-1 gap-4">
                             <div className="form-control">
                                 <label className="text-[10px] font-black uppercase text-base-content/40 tracking-widest mb-2 block">Professional Camera Model</label>
                                 <AutocompleteSelect
@@ -913,7 +913,7 @@ const PromptsPage: React.FC<PromptsPageProps> = ({
                             <AutocompleteSelect value={modifiers.specialtyLens || ''} onChange={(v) => setModifiers({ ...modifiers, specialtyLens: v })} options={SPECIALTY_LENS_EFFECTS.map(l => ({ label: l.name.toUpperCase(), value: l.name, description: l.description }))} placeholder="Informative Vintage/Unique optics..." />
                         </div>
 
-                        <div className="grid grid-cols-2 gap-4">
+                        <div className="grid grid-cols-1 gap-4">
                             <div className="form-control">
                                 <label className="text-[10px] font-black uppercase text-base-content/40 tracking-widest mb-2 block">Lens Type</label>
                                 <AutocompleteSelect value={modifiers.lensType || ''} onChange={(v) => setModifiers({ ...modifiers, lensType: v })} options={LENS_TYPES.map(l => ({ label: l.toUpperCase(), value: l }))} placeholder="Glass..." />
@@ -924,7 +924,7 @@ const PromptsPage: React.FC<PromptsPageProps> = ({
                             </div>
                         </div>
 
-                        <div className="grid grid-cols-2 gap-4">
+                        <div className="grid grid-cols-1 gap-4">
                             <div className="form-control">
                                 <label className="text-[10px] font-black uppercase text-base-content/40 tracking-widest mb-2 block">Shot Proximity</label>
                                 <AutocompleteSelect value={modifiers.cameraProximity || ''} onChange={(v) => setModifiers({ ...modifiers, cameraProximity: v })} options={CAMERA_PROXIMITY.map(p => ({ label: p.toUpperCase(), value: p }))} placeholder="Distance..." />
@@ -935,7 +935,7 @@ const PromptsPage: React.FC<PromptsPageProps> = ({
                             </div>
                         </div>
 
-                        <div className="grid grid-cols-2 gap-4">
+                        <div className="grid grid-cols-1 gap-4">
                             <div className="form-control">
                                 <label className="text-[10px] font-black uppercase text-base-content/40 tracking-widest mb-2 block">Camera Distortion</label>
                                 <AutocompleteSelect value={modifiers.cameraEffect || ''} onChange={(v) => setModifiers({ ...modifiers, cameraEffect: v })} options={CAMERA_EFFECTS.map(s => ({ label: s.toUpperCase(), value: s }))} placeholder="Aberration..." />
@@ -1250,7 +1250,7 @@ const PromptsPage: React.FC<PromptsPageProps> = ({
                                         <button
                                             key={tab.id}
                                             onClick={() => setActiveRefineSubTab(tab.id)}
-                                            className={`btn btn-sm h-full rounded-none flex-1 font-normal text-[11px] tracking-wider uppercase px-1 truncate btn-snake font-display ${activeRefineSubTab === tab.id ? 'btn-primary text-primary-content' : 'btn-ghost text-base-content/40 hover:text-primary'}`}
+                                            className={`btn btn-sm h-full rounded-none flex-1 font-normal text-[13px] tracking-[0.2em] uppercase px-1 truncate btn-snake font-display ${activeRefineSubTab === tab.id ? 'btn-ghost text-primary font-black shadow-none drop-shadow-none [text-shadow:none] [filter:none]' : 'btn-ghost text-base-content/40 hover:text-primary'}`}
                                         >
                                             <span /><span /><span /><span />
                                             {tab.label}
