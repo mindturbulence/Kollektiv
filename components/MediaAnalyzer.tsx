@@ -210,7 +210,7 @@ export const MediaAnalyzer: React.FC<MediaAnalyzerProps> = ({ onSaveSuggestion, 
             <aside className="lg:col-span-3 h-full min-h-0 flex flex-col relative p-[3px] corner-frame overflow-visible z-10">
                 <div className="flex flex-col h-full w-full overflow-hidden relative z-10 bg-base-100/40 backdrop-blur-xl">
                     {header}
-                    <header className="p-6 h-16 flex items-center justify-between bg-base-100/10 backdrop-blur-md">
+                    <header className="p-6 h-16 flex items-center justify-between bg-base-100/10 backdrop-blur-md panel-header">
                         <h3 className="text-[10px] font-black uppercase tracking-[0.4em] text-primary">Media Input</h3>
                         <div className="flex gap-1">
                             <div className="w-1 h-1 bg-primary/30"></div>
@@ -282,7 +282,7 @@ export const MediaAnalyzer: React.FC<MediaAnalyzerProps> = ({ onSaveSuggestion, 
                             </div>
                         )}
                     </div>
-                    <footer className="h-14 flex items-stretch flex-shrink-0 bg-base-100/10 backdrop-blur-md p-1.5 gap-1.5">
+                    <footer className="h-14 flex items-stretch flex-shrink-0 bg-base-100/10 backdrop-blur-md p-1.5 gap-1.5 panel-footer">
                         <button 
                             onClick={() => !isLoading && handleReset(null)} 
                             className="btn btn-sm btn-ghost flex-1 h-full rounded-none font-normal text-[13px] tracking-wider text-error/40 hover:text-error btn-snake"
@@ -318,7 +318,7 @@ export const MediaAnalyzer: React.FC<MediaAnalyzerProps> = ({ onSaveSuggestion, 
             {/* center Column: Results (Merged) */}
             <main className="lg:col-span-9 h-full min-h-0 flex flex-col relative p-[3px] corner-frame overflow-visible z-10">
                 <div className="flex flex-col h-full w-full overflow-hidden relative z-10 bg-base-100/40 backdrop-blur-xl">
-                    <header className="p-6 h-16 flex items-center justify-between bg-base-100/10 backdrop-blur-md">
+                    <header className="p-6 h-16 flex items-center justify-between bg-base-100/10 backdrop-blur-md panel-header">
                         <div className="flex items-center gap-6">
                             <h2 className={`text-xs font-black uppercase tracking-[0.4em] flex items-center gap-3 transition-colors cursor-pointer ${activeResultType === 'abstraction' ? 'text-primary' : 'text-base-content/20 hover:text-base-content/40'}`} onClick={() => abstractionResults && setActiveResultType('abstraction')}>
                                 <div className={`w-2 h-2 rounded-none ${activeResultType === 'abstraction' ? 'bg-primary animate-pulse' : 'bg-base-content/10'}`}></div> 
@@ -393,7 +393,7 @@ export const MediaAnalyzer: React.FC<MediaAnalyzerProps> = ({ onSaveSuggestion, 
                                 </section>
 
                                 {filteredParams.length > 0 && (
-                                    <section className="space-y-4 pt-6 border-t border-base-300">
+                                    <section className="space-y-4 pt-6 panel-header">
                                         <h4 className="text-[9px] font-black uppercase tracking-widest text-primary/40">TECHNICAL PARAMETERS</h4>
                                         <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-x-4 gap-y-4">
                                             {filteredParams.map(([key, val]) => (
@@ -406,7 +406,7 @@ export const MediaAnalyzer: React.FC<MediaAnalyzerProps> = ({ onSaveSuggestion, 
                                     </section>
                                 )}
 
-                                <section className="space-y-4 pt-6 border-t border-base-300">
+                                <section className="space-y-4 pt-6 panel-header">
                                     <div className="flex justify-between items-center">
                                         <h4 className="text-[9px] font-black uppercase tracking-widest text-base-content/20">RAW STREAM</h4>
                                         <button 

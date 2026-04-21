@@ -10,7 +10,7 @@
   <meta name="apple-mobile-web-app-capable" content="yes" />
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
   <title>Kollektiv</title>
-  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Montserrat:wght@300;400;500;600;700;800;900&family=Inter:wght@300;400;500;600;700;800;900&family=Plus+Jakarta+Sans:ital,wght@0,300;0,400;0,500;0,600;0,700;0,800;1,800&display=swap" />
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800;900&family=Montserrat:wght@300;400;500;600;700;800;900&family=Inter:wght@300;400;500;600;700;800;900&family=Plus+Jakarta+Sans:ital,wght@0,300;0,400;0,500;0,600;0,700;0,800;1,800&family=JetBrains+Mono:wght@400;500;700;800&family=Space+Grotesk:wght@300;400;500;600;700&family=Playfair+Display:ital,wght@0,400;0,700;1,400&family=Monoton&display=swap" />
   <link rel="stylesheet" href="https://db.onlinewebfonts.com/c/69dbc1186412d7831b88d8a78a360360?family=DIN+Condensed+Web" />
   <script type="text/javascript">
     // Critical: Load theme immediately to support "use current themes" during integrity check
@@ -32,6 +32,7 @@
             const meta = document.getElementById('theme-color-meta');
             if (meta) {
               if (theme === 'pipboy') meta.setAttribute('content', '#051105');
+              else if (theme === 'MindTurbulence') meta.setAttribute('content', '#0a0a0a');
               else if (theme === 'abyss') meta.setAttribute('content', '#020617');
               else if (isLight) meta.setAttribute('content', '#ffffff');
             }
@@ -40,34 +41,6 @@
       } catch (e) { }
     })();
   </script>
-  <script type="importmap">
-    {
-      "imports": {
-        "react": "https://esm.sh/react@^19.1.1?corp",
-        "react/jsx-runtime": "https://esm.sh/react@^19.1.1/jsx-runtime?corp",
-        "react/jsx-dev-runtime": "https://esm.sh/react@^19.1.1/jsx-dev-runtime?corp",
-        "react-dom/client": "https://esm.sh/react-dom@^19.1.1/client?corp",
-        "react-dom": "https://esm.sh/react-dom@^19.1.1?corp",
-        "@google/genai": "https://esm.sh/@google/genai@^1.12.0?corp",
-        "uuid": "https://esm.sh/uuid@^11.1.0?corp",
-        "jszip": "https://esm.sh/jszip@^3.10.1?corp",
-        "idb": "https://esm.sh/idb@^8.0.3?corp",
-        "@ffmpeg/ffmpeg": "https://esm.sh/@ffmpeg/ffmpeg@^0.12.6?corp",
-        "@ffmpeg/util": "https://esm.sh/@ffmpeg/util@^0.12.1?corp",
-        "@vitejs/plugin-react": "https://esm.sh/@vitejs/plugin-react@^5.0.0?corp",
-        "vite": "https://esm.sh/vite@^7.1.1?corp",
-        "path": "https://esm.sh/path@^0.12.7?corp",
-        "url": "https://esm.sh/url@^0.11.4?corp",
-        "react/": "https://esm.sh/react@^19.1.1/",
-        "react-dom/": "https://esm.sh/react-dom@^19.1.1/",
-        "daisyui": "https://esm.sh/daisyui@^5.0.50",
-        "lottie-web": "https://esm.sh/lottie-web@^5.12.2",
-        "@vitejs/plugin-basic-ssl": "https://esm.sh/@vitejs/plugin-basic-ssl@^2.1.4",
-        "gsap": "https://esm.sh/gsap@^3.14.2",
-        "gsap/": "https://esm.sh/gsap@^3.14.2/"
-      }
-    }
-    </script>
   <script src="https://accounts.google.com/gsi/client" async defer></script>
 </head>
 

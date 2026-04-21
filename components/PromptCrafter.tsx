@@ -277,17 +277,17 @@ const PromptCrafter = ({ onSaveToLibrary, onClip, onSendToEnhancer, onSendToRefi
     if (error) return <div className="p-4 text-error">{error}</div>;
 
     return (
-        <div className="grid grid-cols-1 lg:grid-cols-12 overflow-hidden h-full gap-4 min-h-0">
+        <div className="grid grid-cols-1 lg:grid-cols-12 overflow-visible h-full gap-4 min-h-0">
             <aside className="lg:col-span-3 h-full min-h-0 flex flex-col relative p-[3px] corner-frame overflow-visible">
                 <div className="flex flex-col h-full w-full overflow-hidden min-h-0 relative z-10 bg-base-100/40 backdrop-blur-xl">
                     {header}
-                    <header className="p-6 h-16 flex items-center bg-base-100/10 backdrop-blur-md flex-shrink-0">
+                    <header className="p-6 h-16 flex items-center bg-base-100/10 backdrop-blur-md flex-shrink-0 panel-header">
                         <h3 className="text-xs font-bold uppercase tracking-widest text-primary font-nunito">Wildcards</h3>
                     </header>
                     <div ref={wildcardScrollerRef} className="flex-grow p-6 overflow-y-auto">
                         <WildcardTree categories={crafterData?.wildcardCategories || []} onWildcardClick={handleWildcardClick} />
                     </div>
-                    <footer className="h-14 flex items-stretch bg-base-100/10 backdrop-blur-md p-1.5 gap-1.5 flex-shrink-0">
+                    <footer className="h-14 flex items-stretch bg-base-100/10 backdrop-blur-md p-1.5 gap-1.5 flex-shrink-0 panel-footer">
                         <button 
                             onClick={loadData} 
                             disabled={isImporting}
@@ -321,8 +321,8 @@ const PromptCrafter = ({ onSaveToLibrary, onClip, onSendToEnhancer, onSendToRefi
                 <div className="absolute -bottom-[1px] -right-[1px] w-3 h-3 border-b border-r border-primary/15 z-20 pointer-events-none" />
             </aside>
             <main className="lg:col-span-6 h-full min-h-0 flex flex-col relative p-[3px] corner-frame overflow-visible">
-                <div className="flex flex-col h-full w-full overflow-hidden min-h-0 relative z-10 bg-base-100/40 backdrop-blur-xl">
-                    <header className="h-16 flex-shrink-0 flex items-stretch bg-base-100/10 backdrop-blur-md p-1.5 gap-1.5 border-b border-base-300/10">
+                <div className="flex flex-col h-full w-full overflow-visible min-h-0 relative z-10 bg-base-100/40 backdrop-blur-xl">
+                    <header className="h-16 flex-shrink-0 flex items-stretch bg-base-100/10 backdrop-blur-md p-1.5 gap-1.5 panel-header relative z-30">
                         <div className="dropdown dropdown-bottom flex-grow h-full">
                             <div className="relative h-full w-full flex items-center">
                                 <input 
@@ -382,8 +382,8 @@ const PromptCrafter = ({ onSaveToLibrary, onClip, onSendToEnhancer, onSendToRefi
                         </button>
                     </header>
 
-                <div className="flex-grow flex flex-col min-h-0 overflow-hidden">
-                    <div className="h-[15%] min-h-[120px] p-6 flex flex-col overflow-hidden border-b border-base-300/5">
+                <div className="flex-grow flex flex-col min-h-0 overflow-visible relative z-10">
+                    <div className="h-[25%] min-h-[160px] p-6 flex flex-col overflow-hidden panel-header">
                         <textarea 
                             ref={textareaRef}
                             value={promptText}
@@ -394,7 +394,7 @@ const PromptCrafter = ({ onSaveToLibrary, onClip, onSendToEnhancer, onSendToRefi
                     </div>
                     
                     {/* Middle Action Bar - Library Style */}
-                    <div className="h-14 flex items-stretch flex-shrink-0 bg-base-100/10 backdrop-blur-md p-1.5 gap-1.5 border-y border-base-300/10">
+                    <div className="h-14 flex items-stretch flex-shrink-0 bg-base-100/10 backdrop-blur-md p-1.5 gap-1.5 panel-y-accent">
                         <button 
                             onClick={() => setPromptText('')} 
                             className="btn btn-sm btn-ghost h-full rounded-none flex-1 font-normal text-[13px] tracking-wider text-error/40 hover:text-error uppercase px-1 truncate btn-snake font-display"
@@ -441,7 +441,7 @@ const PromptCrafter = ({ onSaveToLibrary, onClip, onSendToEnhancer, onSendToRefi
                 </div>
 
                 {/* Bottom Action Bar - Library Style */}
-                <div className="h-14 flex items-stretch flex-shrink-0 bg-base-100/10 backdrop-blur-md p-1.5 gap-1.5">
+                <div className="h-14 flex items-stretch flex-shrink-0 bg-base-100/10 backdrop-blur-md p-1.5 gap-1.5 panel-footer">
                     <button 
                         onClick={handleTranslate} 
                         disabled={!generatedPrompt || !!aiAction} 
@@ -493,7 +493,7 @@ const PromptCrafter = ({ onSaveToLibrary, onClip, onSendToEnhancer, onSendToRefi
             
             <aside className="lg:col-span-3 h-full min-h-0 flex flex-col relative p-[3px] corner-frame overflow-visible">
                 <div className="flex flex-col h-full w-full overflow-hidden min-h-0 relative z-10 bg-base-100/40 backdrop-blur-xl">
-                    <header className="px-6 py-4 flex-shrink-0 border-b border-base-content/5 bg-base-100/10 h-16 flex items-center">
+                    <header className="px-6 py-4 flex-shrink-0 bg-base-100/10 h-16 flex items-center panel-header">
                         <h3 className="text-xs font-bold uppercase tracking-widest text-primary font-nunito flex items-center gap-3">
                             <div className="w-1.5 h-1.5 rounded-full bg-primary animate-pulse"></div> CRAFTED RESULTS
                         </h3>
@@ -531,7 +531,7 @@ const PromptCrafter = ({ onSaveToLibrary, onClip, onSendToEnhancer, onSendToRefi
                 <div className="fixed inset-0 bg-black/40 backdrop-blur-xl z-50 flex items-center justify-center p-4 animate-fade-in" onClick={() => setIsSaveModalOpen(false)}>
                     <div className="w-full max-w-lg relative p-[3px] corner-frame overflow-visible shadow-2xl" onClick={e => e.stopPropagation()}>
                         <div className="bg-base-100/40 backdrop-blur-xl rounded-none w-full overflow-hidden relative z-10">
-                            <header className="px-8 py-6 border-b border-base-content/5">
+                            <header className="px-8 py-6 panel-header">
                                 <h3 className="text-2xl font-black tracking-tighter text-base-content leading-none uppercase">SAVE TEMPLATE<span className="text-primary">.</span></h3>
                                 <p className="text-[10px] font-black uppercase tracking-[0.4em] text-base-content/30 mt-1.5">Preset Registration</p>
                             </header>
@@ -549,7 +549,7 @@ const PromptCrafter = ({ onSaveToLibrary, onClip, onSendToEnhancer, onSendToRefi
                                     />
                                 </div>
                             </div>
-                            <footer className="h-14 flex items-stretch bg-base-100/10 backdrop-blur-md p-1.5 gap-1.5 overflow-hidden flex-shrink-0 border-t border-base-content/5">
+                            <footer className="h-14 flex items-stretch bg-base-100/10 backdrop-blur-md p-1.5 gap-1.5 overflow-hidden flex-shrink-0 panel-footer">
                                 <button onClick={() => setIsSaveModalOpen(false)} className="btn btn-sm btn-ghost h-full flex-1 rounded-none font-normal text-[13px] tracking-wider uppercase btn-snake font-display">
                                     <span/><span/><span/><span/>
                                     CANCEL

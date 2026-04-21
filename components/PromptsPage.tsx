@@ -52,14 +52,14 @@ import {
 } from '../constants/modifiers';
 import { TARGET_IMAGE_AI_MODELS, TARGET_VIDEO_AI_MODELS, TARGET_AUDIO_AI_MODELS } from '../constants/models';
 
-import { SuggestionItem } from './SuggestionItem';
 import PromptEditorModal from './PromptEditorModal';
 import PromptCrafter from './PromptCrafter';
 import { MediaAnalyzer } from './MediaAnalyzer';
 import LoadingSpinner from './LoadingSpinner';
 import AutocompleteSelect from './AutocompleteSelect';
-import { SparklesIcon, UploadIcon, Cog6ToothIcon, ArchiveIcon, CloseIcon } from './icons';
+import { SparklesIcon, UploadIcon, Cog6ToothIcon, ArchiveIcon, CloseIcon, DownloadIcon } from './icons';
 import ConfirmationModal from './ConfirmationModal';
+import JSONBreakdownModal from './JSONBreakdownModal';
 
 // --- Types ---
 type MediaMode = 'image' | 'video' | 'audio';
@@ -224,6 +224,8 @@ const PromptsPage: React.FC<PromptsPageProps> = ({
 
     const [composerPromptToInsert, setComposerPromptToInsert] = useState<{ content: string, id: string } | null>(null);
     const [isSaveSuggestionModalOpen, setIsSaveSuggestionModalOpen] = useState(false);
+    const [isJsonModalOpen, setIsJsonModalOpen] = useState(false);
+    const [jsonCopied, setJsonCopied] = useState(false);
     const [suggestionToSave, setSuggestionToSave] = useState<Partial<SavedPrompt> | null>(null);
     const [promptCategories, setPromptCategories] = useState<PromptCategory[]>([]);
 
@@ -348,7 +350,8 @@ const PromptsPage: React.FC<PromptsPageProps> = ({
 
         try {
             const activeRefImages = referenceImages.filter((img): img is string => img !== null);
-            const stream = enhancePromptStream(refineText, constantModifier, promptLength, targetAIModel, modifiers, settings, activeRefImages);
+            const catalog = buildModifierCatalog();
+            const stream = enhancePromptStream(refineText, constantModifier, promptLength, targetAIModel, modifiers, settings, activeRefImages, catalog);
             for await (const chunk of stream) fullText += chunk;
 
             let refinedPrompt = fullText;
@@ -370,7 +373,7 @@ const PromptsPage: React.FC<PromptsPageProps> = ({
             const mjParams = isMidjourney ? buildMidjourneyParams(modifiers) : '';
             const prompt = isMidjourney ? `${cleanedText} ${mjParams}`.trim() : cleanedText;
 
-            setResultsRefine({ 
+            setResultsRefine({
                 suggestions: [prompt],
                 breakdown
             });
@@ -488,12 +491,68 @@ const PromptsPage: React.FC<PromptsPageProps> = ({
         return catalog.join('\\n');
     }, [artStyles, artists]);
 
+    const handleCopySuggestionText = useCallback((suggestionText: string) => {
+        if (typeof window !== 'undefined' && (window as any).navigator?.clipboard) {
+            (window as any).navigator.clipboard.writeText(suggestionText)
+                .then(() => {
+                    showGlobalFeedback('Token copied to buffer.');
+                })
+                .catch((err: any) => {
+                    console.error('Failed to copy text: ', err);
+                });
+        }
+    }, [showGlobalFeedback]);
+
+    const jsonData = useMemo(() => {
+        if (!resultsRefine) return null;
+        const baseBreakdown = resultsRefine.breakdown || {
+            subject: "Analyzed Subject",
+            environment: "Analytical interpretation",
+            lighting: "Detected context",
+            composition: "Inferred framing"
+        };
+
+        return {
+            ...baseBreakdown,
+            targetAI: targetAIModel,
+            exportedAt: new Date().toISOString(),
+            generator: "Kollektiv Toolbox"
+        };
+    }, [resultsRefine, targetAIModel]);
+
+    const handleCopyJson = useCallback(() => {
+        if (!jsonData) return;
+        if (typeof window !== 'undefined' && (window as any).navigator?.clipboard) {
+            (window as any).navigator.clipboard.writeText(JSON.stringify(jsonData, null, 2))
+                .then(() => {
+                    setJsonCopied(true);
+                    setTimeout(() => setJsonCopied(false), 2000);
+                    showGlobalFeedback('JSON copied.');
+                })
+                .catch((err: any) => {
+                    console.error('Failed to copy JSON: ', err);
+                });
+        }
+    }, [jsonData, showGlobalFeedback]);
+
+    const handleDownloadJson = useCallback(() => {
+        if (!jsonData) return;
+        const blob = new Blob([JSON.stringify(jsonData, null, 2)], { type: 'application/json' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `breakdown_${Date.now()}.json`;
+        a.click();
+        URL.revokeObjectURL(url);
+        showGlobalFeedback('Breakdown exported.');
+    }, [jsonData, showGlobalFeedback]);
+
     const handleSaveAsPreset = async (suggestionText: string) => {
         showGlobalFeedback('Analyzing for Constructor...');
         setIsBusy(true);
         try {
             const catalog = buildModifierCatalog();
-            const components = await dissectPrompt(suggestionText, settings, catalog);
+            const components = await dissectPrompt(suggestionText, settings, catalog, targetAIModel);
             const result = await generateConstructorPreset(components, settings, catalog);
 
             // Set as active in Refiner
@@ -547,10 +606,10 @@ const PromptsPage: React.FC<PromptsPageProps> = ({
         return (
             <div className="flex-shrink-0 bg-transparent sticky top-0 z-20 h-12 flex justify-center items-center relative overflow-hidden">
                 {/* Horizontal System Line */}
-                <div className="absolute top-[52%] left-0 right-0 h-px bg-base-content/5 -translate-y-1/2 z-0 pointer-events-none">
+                <div className="absolute top-[52%] left-0 right-0 h-px nav-line-middle -translate-y-1/2 z-0 pointer-events-none">
                     <div ref={tabsScanRef} className="absolute inset-y-0 left-[-20%] w-[20%] bg-gradient-to-r from-transparent via-primary/40 to-transparent opacity-0" />
                 </div>
-                
+
                 <div ref={tabsRef} className="flex gap-4 h-full items-center relative z-10">
                     {viewTabs.map((tab) => (
                         <button
@@ -1182,11 +1241,11 @@ const PromptsPage: React.FC<PromptsPageProps> = ({
                 )}
 
                 {activeView === 'refine' && (
-                    <div className="grid grid-cols-1 lg:grid-cols-12 overflow-hidden h-full gap-4 min-h-0">
+                    <div className="grid grid-cols-1 lg:grid-cols-12 overflow-visible h-full gap-4 min-h-0">
                         {/* Left Sidebar: Controls & Tabs */}
                         <aside className="lg:col-span-3 h-full min-h-0 flex flex-col relative p-[3px] corner-frame overflow-visible">
-                            <div className="flex flex-col h-full w-full overflow-hidden relative z-10 bg-base-100/40 backdrop-blur-xl">
-                                <header className="h-14 flex items-stretch flex-shrink-0 bg-base-100/10 backdrop-blur-md p-1.5 gap-1.5 border-b border-base-300/10">
+                            <div className="flex flex-col h-full w-full overflow-visible relative z-10 bg-base-100/40 backdrop-blur-xl panel-transparent">
+                                <header className="h-14 flex items-stretch flex-shrink-0 bg-base-100/10 backdrop-blur-md p-1.5 gap-1.5 panel-header">
                                     {tabs.map(tab => (
                                         <button
                                             key={tab.id}
@@ -1201,7 +1260,7 @@ const PromptsPage: React.FC<PromptsPageProps> = ({
                                 <div ref={refineScrollerRef} className="flex-grow p-6 overflow-y-auto bg-transparent modifiers-tabs-container">
                                     {renderRefineSubContent()}
                                 </div>
-                                <footer className="h-14 flex items-stretch flex-shrink-0 bg-base-100/10 backdrop-blur-md p-1.5 gap-1.5">
+                                <footer className="h-14 flex items-stretch flex-shrink-0 bg-base-100/10 backdrop-blur-md p-1.5 gap-1.5 panel-footer">
                                     <button
                                         onClick={handleResetRefiner}
                                         className="btn btn-sm btn-ghost h-full rounded-none flex-1 font-normal text-[13px] tracking-wider text-error/40 hover:text-error uppercase px-1 truncate btn-snake font-display"
@@ -1238,45 +1297,57 @@ const PromptsPage: React.FC<PromptsPageProps> = ({
 
                         {/* Center: Main Neural Output */}
                         <main className="lg:col-span-6 h-full min-h-0 flex flex-col relative p-[3px] corner-frame overflow-visible">
-                            <div className="flex flex-col h-full w-full overflow-hidden relative z-10 bg-base-100/40 backdrop-blur-xl">
-                                <header className="p-6 h-16 flex justify-between items-center bg-base-100/80 backdrop-blur-md">
+                            <div className="flex flex-col h-full w-full overflow-visible relative z-10 bg-base-100/40 backdrop-blur-xl panel-transparent">
+                                <header className="p-6 h-16 flex justify-between items-center bg-base-100/80 backdrop-blur-md panel-header">
                                     <h2 className="text-xs font-black uppercase tracking-[0.4em] text-primary flex items-center gap-3">
-                                        <div className="w-2 h-2 rounded-full bg-primary animate-pulse"></div> NEURAL OUTPUT
+                                        <div className="w-2 h-2 rounded-full bg-primary animate-pulse"></div> Refined Prompt : <span className="opacity-60">{targetAIModel}</span>
                                     </h2>
                                 </header>
-                                <div ref={neuralOutputScrollerRef} className="flex-grow overflow-y-auto flex flex-col">
+                                <div ref={neuralOutputScrollerRef} className="flex-grow overflow-y-auto flex flex-col items-stretch justify-center">
                                     {isLoadingRefine ? (
                                         <div className="flex-grow flex flex-col items-center justify-center text-center space-y-6">
                                             <LoadingSpinner size={48} />
                                             <p className="text-[10px] font-black uppercase tracking-[0.4em] text-primary animate-pulse -mt-4">{loadingMsg || 'Refining formula...'}</p>
                                         </div>
                                     ) : errorRefine ? (
-                                        <div className="p-8">
-                                            <div className="alert alert-error rounded-none border-2">
+                                        <div className="p-8 w-full text-center">
+                                            <div className="alert alert-error rounded-none border-2 justify-center">
                                                 <span className="font-black uppercase text-[10px] tracking-widest">{errorRefine.message}</span>
                                             </div>
                                         </div>
                                     ) : resultsRefine ? (
-                                        <div className="p-[1px]">
-                                            {resultsRefine.suggestions.map((suggestion, index) => (
-                                                <SuggestionItem
-                                                    key={index}
-                                                    suggestionText={suggestion}
-                                                    targetAI={targetAIModel}
-                                                    onSave={handleSaveSuggestion}
-                                                    onClip={handleClipSuggestion}
-                                                    breakdown={resultsRefine.breakdown}
-                                                />
-                                            ))}
+                                        <div className="p-5 md:p-5 lg:p-5 w-full animate-fade-in group">
+                                            <div className="flex flex-col">
+                                                <p className="text-base font-medium leading-relaxed text-base-content italic selection:bg-primary/20">
+                                                    "{resultsRefine.suggestions[0]}"
+                                                </p>
+                                            </div>
                                         </div>
                                     ) : directMediaResult ? (
-                                        <div className="p-8 space-y-4 animate-fade-in">
-                                            <div className="relative group bg-black aspect-video flex items-center justify-center overflow-hidden">
-                                                {directMediaResult.type === 'video' ? (
-                                                    <video src={directMediaResult.url} controls autoPlay loop className="w-full h-full object-contain" />
-                                                ) : (
-                                                    <img src={directMediaResult.url} alt="Generated result" className="w-full h-full object-contain" />
-                                                )}
+                                        <div className="p-8 w-full max-w-4xl space-y-4 animate-fade-in">
+                                            <div className="relative group bg-black aspect-video flex items-center justify-center overflow-hidden corner-frame p-[1px]">
+                                                <div className="bg-black w-full h-full flex items-center justify-center relative z-10">
+                                                    {directMediaResult.type === 'video' ? (
+                                                        <video src={directMediaResult.url} controls autoPlay loop className="w-full h-full object-contain" />
+                                                    ) : (
+                                                        <img src={directMediaResult.url} alt="Generated result" className="w-full h-full object-contain" referrerPolicy="no-referrer" />
+                                                    )}
+                                                </div>
+                                                <div className="absolute top-4 right-4 opacity-0 group-hover:opacity-100 transition-opacity z-20">
+                                                    <a href={directMediaResult.url} download={`kollektiv_${directMediaResult.target.replace(/\s+/g, '_')}_${Date.now()}.${directMediaResult.type === 'video' ? 'mp4' : 'jpg'}`} className="btn btn-sm btn-primary rounded-none font-black text-[10px] tracking-widest shadow-2xl btn-snake-primary">
+                                                        <span /><span /><span /><span />
+                                                        <DownloadIcon className="w-4 h-4 mr-2" /> EXPORT
+                                                    </a>
+                                                </div>
+
+                                                <div className="absolute top-0 left-0 w-3 h-3 border-t border-l border-primary/40 z-30 pointer-events-none" />
+                                                <div className="absolute top-0 right-0 w-3 h-3 border-t border-r border-primary/40 z-30 pointer-events-none" />
+                                                <div className="absolute bottom-0 left-0 w-3 h-3 border-b border-l border-primary/40 z-30 pointer-events-none" />
+                                                <div className="absolute bottom-0 right-0 w-3 h-3 border-b border-r border-primary/40 z-30 pointer-events-none" />
+                                            </div>
+                                            <div className="flex justify-between items-center px-2">
+                                                <span className="text-[9px] font-black uppercase tracking-[0.3em] text-primary/40">{directMediaResult.target} Render Output</span>
+                                                <button onClick={() => setDirectMediaResult(null)} className="text-[9px] font-bold uppercase tracking-widest text-base-content/20 hover:text-primary transition-colors">Terminate Visual</button>
                                             </div>
                                         </div>
                                     ) : (
@@ -1286,6 +1357,51 @@ const PromptsPage: React.FC<PromptsPageProps> = ({
                                         </div>
                                     )}
                                 </div>
+
+                                {resultsRefine && !isLoadingRefine && (
+                                    <footer className="h-14 flex items-stretch bg-base-100/10 backdrop-blur-md p-1.5 gap-1.5 panel-footer selection:bg-transparent">
+                                        <div className="flex-[4] flex items-stretch gap-1.5">
+                                            <button
+                                                onClick={() => setIsJsonModalOpen(true)}
+                                                className="btn btn-sm btn-ghost h-full flex-1 rounded-none font-normal text-[11px] tracking-wider uppercase btn-snake font-display"
+                                            >
+                                                <span /><span /><span /><span />
+                                                SHOW JSON
+                                            </button>
+                                            <button
+                                                onClick={() => handleSaveSuggestion(resultsRefine.suggestions[0])}
+                                                className="btn btn-sm btn-ghost h-full flex-1 rounded-none font-normal text-[11px] tracking-wider uppercase btn-snake font-display"
+                                            >
+                                                <span /><span /><span /><span />
+                                                SAVE
+                                            </button>
+                                        </div>
+
+                                        <div className="flex-[6] flex items-stretch gap-1.5 justify-end">
+                                            <button
+                                                onClick={() => handleSendToRefine(resultsRefine.suggestions[0])}
+                                                className="btn btn-sm btn-ghost h-full flex-1 rounded-none font-normal text-[11px] tracking-wider uppercase btn-snake font-display"
+                                            >
+                                                <span /><span /><span /><span />
+                                                REFINE
+                                            </button>
+                                            <button
+                                                onClick={() => handleClipSuggestion(resultsRefine.suggestions[0])}
+                                                className="btn btn-sm btn-ghost h-full flex-1 rounded-none font-normal text-[11px] tracking-wider uppercase btn-snake font-display"
+                                            >
+                                                <span /><span /><span /><span />
+                                                CLIP
+                                            </button>
+                                            <button
+                                                onClick={() => handleCopySuggestionText(resultsRefine.suggestions[0])}
+                                                className="btn btn-sm btn-ghost h-full flex-1 rounded-none font-normal text-[11px] tracking-wider uppercase btn-snake font-display"
+                                            >
+                                                <span /><span /><span /><span />
+                                                COPY
+                                            </button>
+                                        </div>
+                                    </footer>
+                                )}
                             </div>
                             {/* Manual Corner Accents */}
                             <div className="absolute -top-[1px] -left-[1px] w-3 h-3 border-t border-l border-primary/15 z-20 pointer-events-none" />
@@ -1296,8 +1412,8 @@ const PromptsPage: React.FC<PromptsPageProps> = ({
 
                         {/* Right Sidebar: Refiner Preset */}
                         <aside className="lg:col-span-3 h-full min-h-0 flex flex-col relative p-[3px] corner-frame overflow-visible">
-                            <div className="flex flex-col h-full w-full overflow-hidden relative z-10 bg-base-100/40 backdrop-blur-xl">
-                                <header className="h-16 flex items-stretch relative z-20 bg-base-100/80 backdrop-blur-md p-1.5 gap-1.5 border-b border-base-300/10">
+                            <div className="flex flex-col h-full w-full overflow-visible relative z-10 bg-base-100/40 backdrop-blur-xl panel-transparent">
+                                <header className="h-16 flex items-stretch relative z-30 bg-base-100/80 backdrop-blur-md p-1.5 gap-1.5 panel-header">
                                     <div className="dropdown dropdown-bottom flex-grow h-full">
                                         <div className="relative h-full w-full flex items-center">
                                             <input
@@ -1351,7 +1467,7 @@ const PromptsPage: React.FC<PromptsPageProps> = ({
                                         onClick={handleDeletePresetClick}
                                         disabled={!selectedPreset}
                                     >
-                                        <span/><span/><span/><span/>
+                                        <span /><span /><span /><span />
                                         DELETE
                                     </button>
                                 </header>
@@ -1378,7 +1494,7 @@ const PromptsPage: React.FC<PromptsPageProps> = ({
                                     )}
                                 </div>
 
-                                <footer className="h-14 flex items-stretch flex-shrink-0 bg-base-100/10 backdrop-blur-md p-1.5 gap-1.5">
+                                <footer className="h-14 flex items-stretch flex-shrink-0 bg-base-100/10 backdrop-blur-md p-1.5 gap-1.5 panel-footer">
                                     <button
                                         onClick={handleSavePresetClick}
                                         disabled={activeConstructionItems.length === 0}
@@ -1414,7 +1530,7 @@ const PromptsPage: React.FC<PromptsPageProps> = ({
                 <div className="fixed inset-0 bg-black/40 backdrop-blur-xl z-[1000] flex items-center justify-center p-4 animate-fade-in" onClick={() => setIsSavePresetModalOpen(false)}>
                     <div className="flex flex-col bg-transparent w-full max-w-lg mx-auto relative p-[3px] corner-frame overflow-visible" onClick={(e) => e.stopPropagation()}>
                         <div className="bg-base-100/40 backdrop-blur-xl rounded-none w-full flex flex-col overflow-hidden relative z-10">
-                            <header className="px-8 py-4 border-b border-base-content/5 bg-transparent relative flex-shrink-0 flex items-center justify-between">
+                            <header className="px-8 py-4 panel-header bg-transparent relative flex-shrink-0 flex items-center justify-between">
                                 <div className="flex flex-col">
                                     <h3 className="text-xl font-black tracking-tighter text-base-content leading-none uppercase">SAVE PRESET<span className="text-primary">.</span></h3>
                                     <p className="text-[10px] font-black uppercase tracking-[0.4em] text-base-content/30 mt-1.5">Asset Indexing Interface</p>
@@ -1423,7 +1539,7 @@ const PromptsPage: React.FC<PromptsPageProps> = ({
                                     <CloseIcon className="w-5 h-5" />
                                 </button>
                             </header>
-                            
+
                             <div className="p-10 space-y-8">
                                 <div className="form-control">
                                     <label className="text-[10px] font-black uppercase tracking-[0.2em] text-base-content/40 mb-2">Preset Designation</label>
@@ -1438,14 +1554,14 @@ const PromptsPage: React.FC<PromptsPageProps> = ({
                                     />
                                 </div>
                             </div>
-                            
-                            <footer className="h-14 flex items-stretch bg-base-100/10 backdrop-blur-md p-1.5 gap-1.5 overflow-hidden flex-shrink-0 border-t border-base-content/5">
+
+                            <footer className="h-14 flex items-stretch bg-base-100/10 backdrop-blur-md p-1.5 gap-1.5 overflow-hidden flex-shrink-0 panel-footer">
                                 <button onClick={() => setIsSavePresetModalOpen(false)} className="btn btn-sm btn-ghost h-full flex-1 rounded-none font-normal text-[13px] tracking-wider uppercase btn-snake font-display">
-                                    <span/><span/><span/><span/>
+                                    <span /><span /><span /><span />
                                     CANCEL
                                 </button>
                                 <button onClick={handleConfirmSavePreset} disabled={isSavingPreset || !newPresetName.trim()} className="btn btn-sm btn-primary h-full flex-[1.5] rounded-none font-normal text-[13px] tracking-wider uppercase btn-snake-primary font-display">
-                                    <span/><span/><span/><span/>
+                                    <span /><span /><span /><span />
                                     {isSavingPreset ? "SAVING..." : "COMMIT PRESET"}
                                 </button>
                             </footer>
@@ -1469,6 +1585,15 @@ const PromptsPage: React.FC<PromptsPageProps> = ({
                 onSave={handleConfirmSaveSuggestion}
                 categories={promptCategories}
                 editingPrompt={suggestionToSave}
+            />
+
+            <JSONBreakdownModal
+                isOpen={isJsonModalOpen}
+                onClose={() => setIsJsonModalOpen(false)}
+                jsonData={jsonData}
+                onDownload={handleDownloadJson}
+                onCopy={handleCopyJson}
+                jsonCopied={jsonCopied}
             />
         </div>
     );

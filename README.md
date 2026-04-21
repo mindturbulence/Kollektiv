@@ -8,45 +8,31 @@ Kollektiv is a high-performance, local-first application designed for prompt eng
 ## ⚡ Core Features
 
 ### 1. Neural Workspace
-*   **Prompt Crafter**: Build dynamic prompt templates using wildcards, variable substitution, and recursive file scanning.
-*   **Prompt Anatomy**: Real-time deconstruction of prompts into thematic components with AI-suggested variations.
-*   **Prompt Formula**: Transform raw ideas into structured prompts with customizable presets.
-*   **AI Refinement**: Multi-engine support (Gemini 3, Ollama) with configurable temperature and model settings.
-*   **Wildcard Tree**: Browse and manage nested prompt templates with folder-based organization.
-*   **LLM Status**: Switch between AI engines (Gemini, Ollama cloud, Ollama local) with real-time status indicators.
+*   **Prompt Crafter**: Build dynamic prompt templates using a deep wildcard system. Features a high-performance workspace with adaptive layout (25% workspace focus) and template management.
+*   **AI Refinement & Formula Architecture**: Multi-engine support powered by Google Gemini and Ollama. Transform raw ideas into model-specific formulas for **Image** (Flux, Midjourney, SDXL, Pony), **Video** (Veo, Luma, Kling, Sora), and **Audio** (Udio, Suno).
+*   **Prompt Anatomy & Formula Deconstruction**: Real-time deconstruction of prompts into thematic components (Subject, Style, Technical, Lighting) with AI-suggested variations for targeted adjustments.
+*   **Neural Abstractor**: Extract descriptive tokens and visual metadata directly from uploaded images or video frames using multimodal vision models.
 
 ### 2. The Vault (Local-First Storage)
-*   **File System Access**: Direct local file management - no cloud storage, no privacy compromises.
-*   **Media Gallery**: Masonry grid for images and videos with metadata persistence.
-*   **Prompt Library**: Organize prompt tokens in nested folder hierarchies.
-*   **Dashboard Gallery**: Quick access to recent and saved media.
+*   **File System Access API**: Directly manages files on your local machine. Kollektiv operates as a thin client over your chosen local folder, ensuring 100% data sovereignty.
+*   **Media Gallery**: High-performance masonry grid for archiving images and videos with persistent metadata stored via IndexedDB and local JSON sidecars.
+*   **Prompt Library**: Organize prompt tokens and templates in a nested, searchable hierarchy.
+*   **Neural Integrity**: Advanced maintenance tools for manifest repair, database reconstruction, and file verification to maintain long-term archival health.
 
 ### 3. Creative Utilities
-*   **Color Palette Extractor**: Extract chromatic tokens from images.
-*   **Image Compare**: Synchronized viewports for pixel-accurate comparison.
-*   **Image Resizer**: Batch resize with aspect ratio presets.
-*   **Video-to-Frames**: Frame extraction for temporal consistency studies.
-
-### 4. Storyboard AI
-*   Sequence narrative nodes for video generation.
-*   Translate narrative intent into cinematic prompts for Veo, Luma, Kling.
-
-### 5. Cheatsheets & Reference
-*   **Artstyle Library**: Curated art movements and aesthetics.
-*   **Artist Reference**: Artists with style descriptions.
-*   **Layered Cheatsheets**: Multi-level parameter breakdowns.
-*   **Generic Categories**: Customizable reference categories.
-
----
+*   **Grid Composer**: Build professional image grids and contact sheets with custom matting, typography overlays, and ratio control (1:1, 4:5, 9:16).
+*   **Palette Extractor**: Deconstruct visual artifacts into precise chromatic tokens and atmospheric mood data.
+*   **Video Suite**: Precision frame extraction (via FFmpeg WASM) and a video joiner for temporal consistency studies and sequence merging.
+*   **Artifact Comparison**: Synchronized viewports for pixel-accurate, side-by-side evaluation of model outputs and prompt variations.
 
 ## 🛠 Tech Stack
 
 *   **Frontend**: React 19, TypeScript, Vite
-*   **Styling**: Tailwind CSS, DaisyUI
-*   **Animation**: GSAP, Framer Motion
-*   **AI**: Google Gemini API, Ollama (REST API)
-*   **Storage**: File System Access API, IndexedDB
-*   **Utilities**: JSZip, FFmpeg (WASM)
+*   **Styling**: Tailwind CSS 3, DaisyUI
+*   **Animation**: GSAP (GreenSock) & Framer Motion for cinematic UI transitions and micro-interactions.
+*   **AI Engines**: Google Gemini API (`@google/genai`), Ollama (Local/Remote)
+*   **Storage**: Browser File System Access API, IndexedDB (`idb`)
+*   **Utilities**: FFmpeg.wasm, JSZip, UUID, Lottie
 
 ---
 
@@ -54,53 +40,42 @@ Kollektiv is a high-performance, local-first application designed for prompt eng
 
 ### Prerequisites
 *   [Node.js](https://nodejs.org/) (Latest LTS)
-*   Google Gemini API Key (Optional)
-*   Ollama (Optional, for local AI)
+*   Google Gemini API Key (Required for Neural features)
+*   Ollama (Optional, for local LLM execution)
 
 ### Local Development
 
-```bash
-git clone https://github.com/mindturbulence/Kollektiv.git
-cd Kollektiv
-npm install
-npm run dev
-```
+1.  **Clone & Install**:
+    ```bash
+    git clone https://github.com/mindturbulence/Kollektiv.git
+    cd Kollektiv
+    npm install
+    ```
 
-### Environment Variables
-Create `.env.local`:
-```
-GEMINI_API_KEY=your_key
-YOUTUBE_CLIENT_ID=your_client_id
-```
+2.  **Environment Configuration**:
+    Create a `.env` file in the root directory:
+    ```env
+    GEMINI_API_KEY=your_gemini_api_key_here
+    ```
 
-### Build & Deploy
-```bash
-npm run build
-npm run deploy
-```
+3.  **Launch**:
+    ```bash
+    npm run dev
+    ```
 
----
-
-## 🎨 Themes
-*   **Abyss**: Deep dark mode for focus
-*   **Pip-Boy**: Retro-futuristic CRT
-*   **Starfield**: NASAPUNK industrial
-*   **Explorer**: Technical grid layout
+### 🔐 Storage Setup
+Upon first launch, Kollektiv will prompt you to **Establish Local Vault Connection**. 
+*   Select the folder where you want to store your creative assets.
+*   **Privacy Note**: Your data never leaves your machine. The app requires permission to write files to your local folder to maintain the Vault.
 
 ---
 
-## 📁 Project Structure
-```
-├── components/       # React components (60+ files)
-│   ├── prompts/     # Prompt tools (Crafter, Anatomy, Formula, Refine)
-│   ├── gallery/   # Media (Gallery, Card, Viewer)
-│   ├── utilities/ # Tools (Compare, Resizer, PaletteExtractor)
-│   ├── storyboard/# StoryboardPage
-│   └── cheatsheets/# Artstyle, Artist, Generic cheatsheets
-├── services/        # AI & business logic (8 services)
-├── contexts/       # React contexts (Settings, Auth, Busy)
-└── utils/          # Helper utilities
-```
+## 🎨 Theme Support
+Kollektiv includes specialized UI environments designed for high-focus creative sessions:
+*   **MindTurbulence**: Flagship high-contrast, neon-cyberpunk interface with sharp geometric accents.
+*   **Pip-Boy**: Retro-futuristic CRT aesthetic with digital jitter and terminal typography.
+*   **Abyss**: Deep dark mode for absolute focus.
+*   **Explorer**: NASAPUNK-inspired industrial interface for technical research.
 
 ---
 

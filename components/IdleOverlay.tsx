@@ -155,7 +155,7 @@ const IdleOverlay: React.FC<{ isVisible: boolean; onInteraction: () => void }> =
                         </div>
                         <div className="overflow-hidden mb-4 py-2">
                             <h1 className="text-6xl md:text-8xl uppercase text-base-content flex items-center font-monoton tracking-widest">
-                                <ChromaticText text="Kollektiv" />
+                                <ChromaticText>Kollektiv</ChromaticText>
                                 <span className="text-primary italic animate-pulse">.</span>
                             </h1>
                         </div>

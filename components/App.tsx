@@ -21,6 +21,7 @@ import FeedbackModal from './FeedbackModal';
 import Footer from './Footer';
 import IdleOverlay from './IdleOverlay'; 
 import LlmStatusSwitcher from './LlmStatusSwitcher';
+import { TabTitleManager } from './TabTitleManager';
 
 // Page components
 import Dashboard from './Dashboard';
@@ -141,7 +142,7 @@ const InitialLoader: React.FC<{ status: string; progress: number | null }> = ({ 
     }, [percentage]);
 
     return (
-        <div id="initial-loader" className="fixed inset-0 z-[500] flex flex-col items-center justify-center bg-base-100 text-base-content overflow-hidden select-none font-sans">
+        <div id="initial-loader" className="fixed inset-0 z-[500] flex flex-col items-center justify-center bg-base-100 text-base-content overflow-hidden select-none font-sans" style={{ background: 'oklch(var(--b1))', opacity: 1 }}>
             <div className="absolute inset-0 bg-grid-texture opacity-[0.03] pointer-events-none"></div>
             
             {/* Large Background Percentage (SR Seventy One Style) */}
@@ -210,6 +211,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import RollingText from './RollingText';
 import TimedScrambledText from './TimedScrambledText';
 import ThemeSwitcher from './ThemeSwitcher';
+import ChromaticText from './ChromaticText';
 
 const Logo: React.FC<{ onNavigate: (tab: ActiveTab) => void }> = ({ onNavigate }) => {
     const [scrambleTrigger, setScrambleTrigger] = useState(0);
@@ -227,7 +229,9 @@ const Logo: React.FC<{ onNavigate: (tab: ActiveTab) => void }> = ({ onNavigate }
             className="flex items-center gap-2 group pointer-events-auto"
         >
             <h1 className="text-3xl font-normal tracking-widest text-base-content uppercase flex items-center font-monoton">
-                <TimedScrambledText text="Kollektiv" intervalMs={300000} trigger={scrambleTrigger} />
+                <ChromaticText>
+                    <TimedScrambledText text="Kollektiv" intervalMs={300000} trigger={scrambleTrigger} />
+                </ChromaticText>
                 <span className="text-primary italic animate-pulse drop-shadow-[0_0_10px_oklch(var(--p))] transition-all inline-block ml-0.5 font-black">.</span>
             </h1>
         </button>
@@ -343,7 +347,7 @@ const HUDNavItem: React.FC<{
       }}
       initial="initial"
       whileHover="hover"
-      className="group relative px-3 py-1 text-[13px] font-normal tracking-[0.2em] uppercase text-base-content/60 hover:text-primary transition-colors duration-300 pointer-events-auto"
+      className="group relative px-3 py-1 text-[13px] font-normal tracking-[0.25em] uppercase text-base-content/60 hover:text-primary transition-colors duration-300 pointer-events-auto"
       title={title}
     >
       <RollingText 
@@ -463,7 +467,7 @@ const PageFrame: React.FC<PageFrameProps> = ({
 
     return (
         <div className="fixed inset-0 z-[1000] pointer-events-none p-4 md:p-10">
-            <div className="w-full h-full border border-base-content/5 relative">
+            <div className="w-full h-full border border-base-content/5 relative main-app-frame">
                 {/* Dedicated Clipping Container for Scan Lines */}
                 <div className="absolute inset-0 overflow-hidden pointer-events-none z-0">
                     <span ref={scanTopRef} className="absolute top-0 left-[-100%] w-full h-[2px] bg-gradient-to-r from-transparent via-primary to-transparent z-10 opacity-0" />
@@ -488,7 +492,7 @@ const PageFrame: React.FC<PageFrameProps> = ({
                                 onNavigate('dashboard');
                             }}
                         >
-                            HOME
+                            DASHBOARD
                         </HUDNavItem>
                         <div className="w-px h-2 bg-base-content/10 self-center" />
                         <HUDNavItem
@@ -646,6 +650,27 @@ const AppContent: React.FC = () => {
 
     const [clippedIdeas, setClippedIdeas] = useLocalStorage<Idea[]>('clippedIdeas', []);
 
+    const currentTitle = useMemo(() => {
+        const base = "KOLLEKTIV";
+        switch (activeTab) {
+            case 'dashboard': return `DASHBOARD | ${base}`;
+            case 'prompts': return `BUILDER | ${base}`;
+            case 'storyboard': return `STORYBOARD | ${base}`;
+            case 'gallery': return `VAULT | ${base}`;
+            case 'prompt': return `LIBRARY | ${base}`;
+            case 'settings': return `SETTINGS | ${base}`;
+            case 'composer': return `COMPOSER | ${base}`;
+            case 'cheatsheet': return `CHEATSHEET | ${base}`;
+            case 'artstyles': return `STYLES | ${base}`;
+            case 'artists': return `ARTISTS | ${base}`;
+            case 'image_compare': return `COMPARE | ${base}`;
+            case 'color_palette_extractor': return `PALETTE | ${base}`;
+            case 'resizer': return `RESIZER | ${base}`;
+            case 'video_to_frames': return `VIDEO | ${base}`;
+            default: return base;
+        }
+    }, [activeTab]);
+
     const mainGridRef = useRef<HTMLDivElement>(null);
     const apertureRef = useRef<HTMLDivElement>(null);
     const blindsRef = useRef<HTMLDivElement>(null);
@@ -714,7 +739,7 @@ const AppContent: React.FC = () => {
         
         try {
             await new Promise(r => setTimeout(r, 1000)); 
-            const hasHandleAndPermission = await fileSystemManager.initialize(settings, auth);
+            const hasHandleAndPermission = await (fileSystemManager as any).initialize(settings, auth);
             
             if (!hasHandleAndPermission) {
                 setShowWelcome(true);
@@ -750,7 +775,9 @@ const AppContent: React.FC = () => {
             setGlobalFeedback({ message: "Failed to initialize system.", type: 'error' });
             setIsLoading(false);
         }
-    }, [settings, auth, isInitialized]);
+        // Removed settings dependency to prevent re-init on theme switch
+        // settings are only needed for initial storage handle check
+    }, [auth, isInitialized]);
 
     useEffect(() => {
         if (!hasInitializedRef.current) {
@@ -1147,6 +1174,7 @@ const AppContent: React.FC = () => {
                     >
                         <Header
                             onNavigate={handleNavigate}
+                            activeTab={activeTab}
                             isInitialized={isInitialized}
                         />
 
@@ -1207,6 +1235,7 @@ const AppContent: React.FC = () => {
                     type={globalFeedback.type}
                 />
             )}
+            <TabTitleManager defaultTitle={currentTitle} />
             <CustomCursor />
             <PageFrame 
                 audioEnabled={audioEnabled}

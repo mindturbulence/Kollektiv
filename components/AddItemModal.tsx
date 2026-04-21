@@ -297,12 +297,12 @@ const modalContent = (
                   )}
               </div>
               
-          <footer className="h-14 flex items-stretch bg-base-100/10 backdrop-blur-md p-1.5 gap-1.5 overflow-hidden flex-shrink-0 border-t border-base-content/5">
+          <footer className="h-14 flex items-stretch bg-base-100/10 backdrop-blur-md p-1.5 gap-1.5 overflow-hidden flex-shrink-0 panel-footer">
               <button type="button" onClick={onClose} className="btn btn-sm btn-ghost h-full flex-1 rounded-none font-normal text-[13px] tracking-wider uppercase btn-snake font-display">
                   <span/><span/><span/><span/>
                   ABORT
               </button>
-              <button type="submit" className="btn btn-sm btn-primary h-full flex-[2] rounded-none font-normal text-[13px] tracking-wider uppercase btn-snake-primary font-display" disabled={files.length === 0 || isProcessing}>
+              <button type="submit" className="btn btn-sm btn-primary h-full flex-1 rounded-none font-normal text-[13px] tracking-wider uppercase btn-snake-primary font-display" disabled={files.length === 0 || isProcessing}>
                   <span/><span/><span/><span/>
                   {isProcessing ? 'INGESTING...' : 'COMMIT TO VAULT'}
               </button>

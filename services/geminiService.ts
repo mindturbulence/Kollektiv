@@ -108,7 +108,7 @@ export const generateColorNameGemini = async (hexColor: string, mood: string, se
     } catch (err) { return "Archived Color"; }
 };
 
-export const dissectPromptGemini = async (promptText: string, settings: LLMSettings, modifierCatalog?: string): Promise<{ [key: string]: string }> => {
+export const dissectPromptGemini = async (promptText: string, settings: LLMSettings, modifierCatalog?: string, modelName?: string): Promise<{ [key: string]: string }> => {
     try {
         const ai = getGeminiClient(settings);
         const response = await ai.models.generateContent({
@@ -116,10 +116,13 @@ export const dissectPromptGemini = async (promptText: string, settings: LLMSetti
             contents: promptText,
             config: {
                 systemInstruction: `Task: JSON dissect prompt into descriptive components.
+${modelName ? `Target Architecture: ${modelName}.` : ''}
 ${modifierCatalog ? `[AVAILABLE MODIFIERS CATALOG]\n${modifierCatalog}\n\nSTRICT RULE: You MUST prioritize mapping components to the categories and values provided in the catalog above if a match or close synonym is found.
 - Use the EXACT category name (the word before the colon in the catalog) as the JSON key.
 - Use the EXACT value from the catalog as the JSON value.
-- IMPORTANT: Be aggressive in splitting modifiers (like camera angles, lighting, styles) away from the core subject. The "Subject" or "Prompt Idea" field should ONLY contain the core entity and its primary action. All stylistic, technical, or environmental details MUST be moved to their respective categories or a new descriptive key.` : 'Identify subject, style, mood, lighting, etc.'}
+- COMBINE linked details: If the prompt has details similar or linked to a catalog parameter, combine them (e.g., "dim light" + "Studio Lighting" becomes "Lighting": "Studio Lighting, dim light").
+- SELECTIVE OUTPUT & RELEVANCE: ONLY include keys for which there is EXPLICIT information present in the source prompt AND that are relevant to the target model ${modelName || ''}. DO NOT include parameters with default values (like "1:1" for aspect ratio) if they are not explicitly mentioned in the input text. DO NOT include parameters specific to models other than ${modelName || 'the target model'} (e.g., if the model is not Midjourney, NEVER include "mjVersion" or Midjourney-style aspect ratios). 
+- NO HALLUCINATION: If a category (like orientation or aspect ratio) is not explicitly mentioned, omit the key entirely.` : `Identify subject, style, mood, lighting, etc. ONLY include parameters EXPLICITLY present in the text and relevant to the target model ${modelName || ''}. Omit everything else.`}
 If a component does not fit an existing category, create a descriptive key for it.
 Output JSON ONLY.`,
                 responseMimeType: 'application/json',
@@ -330,7 +333,7 @@ export const generateWithVeo = async (prompt: string, onStatusUpdate?: (msg: str
     } catch (err) { throw handleGeminiError(err, 'rendering'); }
 };
 
-export const generateConstructorPresetGemini = async (components: { [key: string]: string }, settings: LLMSettings, modifierCatalog?: string): Promise<{ prompt: string, modifiers: any, constantModifier?: string }> => {
+export const generateConstructorPresetGemini = async (components: { [key: string]: string }, settings: LLMSettings, modifierCatalog?: string, modelName?: string): Promise<{ prompt: string, modifiers: any, constantModifier?: string }> => {
     try {
         const ai = getGeminiClient(settings);
         const response = await ai.models.generateContent({
@@ -340,6 +343,8 @@ export const generateConstructorPresetGemini = async (components: { [key: string
                 systemInstruction: `Role: Prompt Constructor Architect. 
 Task: Deconstruct the analyzed prompt components into a "Prompt Idea" (base subject/intent), "Active Construction Items" (mapped modifiers), and "Constant Modifiers" (unmapped details).
 
+${modelName ? `Target Model Architecture: ${modelName}.` : ''}
+
 Mapping Protocol:
 1. Identify components that match or are highly similar to these Refiner categories:
    - artStyle, artist, photographyStyle, aestheticLook, digitalAesthetic, aspectRatio, cameraType, cameraAngle, cameraProximity, cameraSettings, cameraEffect, specialtyLens, lensType, filmType, filmStock, lighting, composition, facialExpression, hairStyle, eyeColor, skinTexture, clothing, motion, cameraMovement, mjVersion, mjNiji, mjAspectRatio, zImageStyle
@@ -347,10 +352,14 @@ Mapping Protocol:
 ${modifierCatalog ? `[AVAILABLE MODIFIERS CATALOG]\n${modifierCatalog}\n\nSTRICT RULE: You MUST prioritize mapping to the values provided in the catalog above if a match or close synonym is found.` : ''}
 
 2. Extraction Logic:
+   - SELECTIVE MAPPING & RELEVANCE: ONLY include architectural parameters (like mjVersion, aspect ratios) if they are EXPLICITLY relevant to ${modelName || 'the target model'}. If ${modelName || 'the target model'} is not Midjourney, ignore Midjourney-specific inputs and move them to "constantModifier" or discard if irrelevant.
+   - NO DEFAULTS: DO NOT include parameters with default values (like "1:1" for aspect ratio or "V6" for mjVersion) if they are not explicitly mentioned in the input data.
    - If a component key or value matches a category or value from the [AVAILABLE MODIFIERS CATALOG], it MUST be moved to the "modifiers" object.
    - If a component matches both a category AND a specific value from the [AVAILABLE MODIFIERS CATALOG] (allow for minor variations in spacing or hyphens during matching), add it to the "modifiers" object using the category key and the EXACT value from the catalog.
+   - If the source has multiple details belonging to the same category, COMBINE them (e.g., "Lighting": "Studio Lighting, moody shadows").
    - If a component matches a category but the specific value is NOT in the catalog, or if it's a stylistic/technical modifier that doesn't fit any category, add it to the "constantModifier" string.
    - The core subject, action, or unique narrative detail goes into the "prompt" (Prompt Idea).
+   - SELECTIVE OUTPUT: DO NOT include parameters or modifiers that are not EXPLICITLY present in the input data or source prompt.
    - IMPORTANT: The "prompt" (Prompt Idea) MUST NOT contain any information that is already captured in "modifiers" or "constantModifier". You MUST aggressively strip all stylistic, technical, and atmospheric modifiers from the "prompt" field. The "prompt" should be the pure subject and narrative intent ONLY.
    - Example: If the input is {"Subject": "A cat in a garden", "cameraProximity": "Close-Up"}, the output MUST be {"prompt": "A cat in a garden", "modifiers": {"cameraProximity": "Close-Up"}}. 
    - Example: If the input is {"Subject": "A portrait of a man, Close Up, cinematic lighting"}, the output MUST be {"prompt": "A portrait of a man", "modifiers": {"cameraProximity": "Close-Up", "lighting": "Cinematic Lighting"}}.

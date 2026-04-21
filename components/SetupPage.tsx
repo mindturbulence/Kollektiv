@@ -882,7 +882,7 @@ export const SetupPage: React.FC<SetupPageProps> = ({
 
         <aside className="w-80 flex-shrink-0 flex flex-col relative p-[3px] corner-frame overflow-visible h-full bg-transparent">
             <div className="flex flex-col h-full w-full overflow-hidden relative z-10 bg-base-100/40 backdrop-blur-xl">
-                <h1 className="h-16 flex-shrink-0 flex items-center px-6 text-[10px] font-black uppercase tracking-[0.4em] text-base-content/30 border-b border-base-content/5">System Hub</h1>
+                <h1 className="h-16 flex-shrink-0 flex items-center px-6 text-[10px] font-black uppercase tracking-[0.4em] text-base-content/30 panel-header">System Hub</h1>
                 <div ref={navScrollRef} className="flex-grow px-4 py-6 overflow-y-auto relative">
                     <ul className="menu menu-sm p-0 gap-1 relative z-10">
                     {mainCategories.map(mainCat => (
@@ -918,7 +918,7 @@ export const SetupPage: React.FC<SetupPageProps> = ({
                     </div>
                 )}
                 <div ref={mainScrollRef} className="flex-grow overflow-y-auto">{renderActiveTabContent()}</div>
-                <footer className="flex flex-row p-0 overflow-hidden flex-shrink-0 border-t border-base-content/5">
+                <footer className="flex flex-row p-0 overflow-hidden flex-shrink-0 panel-footer">
                     <button onClick={handleCancel} className="form-btn flex-1">Abort</button>
                     <button onClick={saveSettings} className="form-btn form-btn-primary flex-1 shadow-lg">Confirm</button>
                 </footer>

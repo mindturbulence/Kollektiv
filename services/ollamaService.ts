@@ -298,7 +298,7 @@ export const generateColorNameOllama = async (hexColor: string, mood: string, se
     } catch (err) { return "Archived Color"; }
 };
 
-export const dissectPromptOllama = async (promptText: string, settings: LLMSettings): Promise<{ [key: string]: string }> => {
+export const dissectPromptOllama = async (promptText: string, settings: LLMSettings, modelName?: string): Promise<{ [key: string]: string }> => {
     try {
         const config = getOllamaConfig(settings);
         const apiResponse = await fetch(`${config.baseUrl}/api/generate`, {
@@ -307,7 +307,10 @@ export const dissectPromptOllama = async (promptText: string, settings: LLMSetti
             body: JSON.stringify({
                 model: config.model,
                 prompt: promptText,
-                system: "Task: JSON dissect prompt (subject, style, mood, lighting). Output valid JSON object only.",
+                system: `Task: JSON dissect prompt into descriptive components (subject, style, mood, lighting, camera, etc).
+${modelName ? `Target Model: ${modelName}.` : ''}
+SELECTIVE OUTPUT: ONLY include keys for which there is EXPLICIT info in the prompt AND that are relevant to the target model ${modelName || ''}. DO NOT include default values (like 1:1) if not mentioned. DO NOT include parameters specific to models other than ${modelName || 'the target model'}. Omit any key that is not strictly represented by text in the prompt.
+Output valid JSON object only.`,
                 stream: false,
                 format: "json",
                 ...BASE_CONFIG,

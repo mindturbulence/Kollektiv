@@ -304,7 +304,7 @@ const ImageGallery: React.FC<ImageGalleryProps> = ({ isCategoryPanelCollapsed, o
   return (
     <>
       <section className="flex flex-col h-full bg-transparent relative p-[3px] corner-frame overflow-visible">
-        <div className="flex flex-row h-full w-full overflow-hidden relative z-10 bg-base-100/40 backdrop-blur-xl gap-0">
+        <div className="flex flex-row h-full w-full overflow-hidden relative z-10 bg-base-100/40 backdrop-blur-xl gap-0 panel-transparent">
           <aside className={`relative z-20 flex-shrink-0 bg-transparent border-r border-white/5 transition-all duration-300 ease-in-out flex flex-col overflow-visible ${isCategoryPanelCollapsed ? 'w-0' : 'w-96'}`}>
             <CategoryPanelToggle isCollapsed={isCategoryPanelCollapsed} onToggle={onToggleCategoryPanel} position="right" />
             <div className={`flex flex-col h-full w-full overflow-hidden relative z-10 transition-opacity duration-200 ${isCategoryPanelCollapsed ? 'opacity-0 invisible' : 'opacity-100 visible'}`}>
@@ -366,7 +366,7 @@ const ImageGallery: React.FC<ImageGalleryProps> = ({ isCategoryPanelCollapsed, o
                         </div>
                     </header>
 
-                    <div className="sticky top-0 z-30 bg-base-100/40 backdrop-blur-xl h-14">
+                    <div className="sticky top-0 z-30 bg-base-100/40 backdrop-blur-xl h-14 panel-transparent">
                         <div className="flex items-stretch h-full w-full">
                             <div className="flex-grow flex items-center relative">
                                 <SearchIcon className="absolute left-6 w-4 h-4 opacity-20 pointer-events-none" />

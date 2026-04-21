@@ -166,7 +166,7 @@ const PromptEditorModal: React.FC<PromptEditorModalProps> = ({ isOpen, onClose, 
         onClick={(e) => e.stopPropagation()}
       >
         <div className="flex flex-col h-full w-full overflow-hidden relative z-10 bg-base-100/40 backdrop-blur-xl">
-          <header ref={headerRef} className="px-8 py-4 border-b border-base-content/5 bg-transparent relative flex-shrink-0 flex items-center justify-between">
+          <header ref={headerRef} className="px-8 py-4 panel-header bg-transparent relative flex-shrink-0 flex items-center justify-between">
               <div className="flex flex-col">
                   <h3 className="text-xl font-black tracking-tighter text-base-content leading-none">
                       {editingPrompt?.id ? 'EDIT' : 'ADD'}<span className="text-primary">.</span>
@@ -234,7 +234,7 @@ const PromptEditorModal: React.FC<PromptEditorModalProps> = ({ isOpen, onClose, 
             </div>
           </div>
           
-          <footer ref={footerRef} className="h-14 flex items-stretch bg-base-100/10 backdrop-blur-md p-1.5 gap-1.5 overflow-hidden flex-shrink-0 border-t border-base-content/5">
+          <footer ref={footerRef} className="h-14 flex items-stretch bg-base-100/10 backdrop-blur-md p-1.5 gap-1.5 overflow-hidden flex-shrink-0 panel-footer">
             <button onClick={handleClose} className="btn btn-sm btn-ghost h-full flex-1 rounded-none font-normal text-[13px] tracking-wider uppercase btn-snake font-display">
               <span/><span/><span/><span/>
               CANCEL

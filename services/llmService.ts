@@ -113,7 +113,7 @@ FINAL OUTPUT CONSTRAINTS:
 `;
 
 const AI_ROLES = {
-    ENHANCER: (model: string, length: string, isVideo: boolean, isAudio: boolean, _hasManualCamera: boolean, inputType?: string) => {
+    ENHANCER: (model: string, length: string, isVideo: boolean, isAudio: boolean, _hasManualCamera: boolean, inputType?: string, modifierCatalog?: string) => {
         const syntax = getModelSyntax(model);
         const l = length === 'Short' ? '40 words' : length === 'Long' ? '600+ words' : '220 words';
         const isI2V = isVideo && inputType === 'i2v';
@@ -143,8 +143,20 @@ ${modeProtocol}
 
 BREAKDOWN PROTOCOL:
 At the end of your response, after a "---PROMPT_BREAKDOWN---" separator, provide a JSON object breaking down the prompt's anatomy.
-- If specific modifiers (like style, camera, lighting) were used or implied, list them as keys.
-- Always include at least: "subject", "lighting", "composition", "style/environment", and "location".
+${modifierCatalog ? `[AVAILABLE MODIFIERS CATALOG]
+${modifierCatalog}
+
+STRICT BREAKDOWN RULE:
+1. You MUST lookup the [AVAILABLE MODIFIERS CATALOG] first.
+2. If the refined prompt contains a value matching a value in the catalog (e.g., "Studio Lighting"), you MUST use the corresponding category (e.g., "lighting") as the JSON key and the exact value from the catalog as the JSON value.
+3. If the prompt contains sensory or technical details similar or linked to a catalog parameter, COMBINE them into that category (e.g., if you have "dim light" and "Studio Lighting", use "Lighting": "Studio Lighting, dim light").
+4. SELECTIVE OUTPUT: ONLY include keys for which there is EXPLICIT, non-default information present in the refined prompt. 
+5. NO HALLUCINATION: DO NOT include keys for categories that are not clearly represented in the text. (e.g., if there is no mention of orientation, size, or ratio, the "aspectRatio" key MUST be omitted).
+6. NO DEFAULTS: Zero-value, placeholder, or 'default' keys/values are Strictly Forbidden.
+7. ARCHITECTURE RELEVANCE: DO NOT include parameters specific to models other than ${model}. (e.g., if ${model} is not Midjourney, NEVER include "mjVersion" or "mjAspectRatio").
+8. Minimum required keys: "subject". All others are ONLY included if explicitly present in the generated prompt.` : `
+- ONLY include parameters EXPLICITLY present in the prompt. 
+- ALWAYS include "subject". Omit everything else if not specifically mentioned.`}
 - Ensure the JSON is well-formatted and valid.
 - CRITICAL: DO NOT include the full "refined prompt" string as a key/value inside this JSON object. Only include the analytical components.
 
@@ -283,12 +295,13 @@ export async function* enhancePromptStream(
     targetAIModel: string,
     modifiers: PromptModifiers,
     settings: LLMSettings,
-    referenceImages?: string[]
+    referenceImages?: string[],
+    modifierCatalog?: string
 ): AsyncGenerator<string> {
     const isVideo = !!TARGET_VIDEO_AI_MODELS.find(m => m === targetAIModel);
     const isAudio = !!TARGET_AUDIO_AI_MODELS.find(m => m === targetAIModel);
     const hasManualCamera = !!modifiers.cameraMovement;
-    const systemInstruction = AI_ROLES.ENHANCER(targetAIModel, promptLength, isVideo, isAudio, hasManualCamera, modifiers.videoInputType);
+    const systemInstruction = AI_ROLES.ENHANCER(targetAIModel, promptLength, isVideo, isAudio, hasManualCamera, modifiers.videoInputType, modifierCatalog);
     const context = buildContextForEnhancer(modifiers, isAudio);
     const input = `${context}\n\n[Primary Concept]\n${originalPrompt}`;
 
@@ -366,11 +379,11 @@ export const generateColorName = async (hexColor: string, mood: string, settings
         : generateColorNameGemini(hexColor, mood, settings);
 };
 
-export const dissectPrompt = async (promptText: string, settings: LLMSettings, modifierCatalog?: string): Promise<{ [key: string]: string }> => {
+export const dissectPrompt = async (promptText: string, settings: LLMSettings, modifierCatalog?: string, modelName?: string): Promise<{ [key: string]: string }> => {
     const isOllama = settings.activeLLM === 'ollama' || settings.activeLLM === 'ollama_cloud';
     return isOllama
-        ? dissectPromptOllama(promptText, settings)
-        : dissectPromptGemini(promptText, settings, modifierCatalog);
+        ? dissectPromptOllama(promptText, settings, modelName)
+        : dissectPromptGemini(promptText, settings, modifierCatalog, modelName);
 };
 
 export const generateFocusedVariations = async (promptText: string, components: { [key: string]: string }, settings: LLMSettings): Promise<{ [key: string]: string[] }> => {
@@ -416,7 +429,7 @@ export const generatePromptFormulaWithAI = async (promptText: string, wildcards:
         : generatePromptFormulaGemini(promptText, settings, sys);
 };
 
-export const generateConstructorPreset = async (components: { [key: string]: string }, settings: LLMSettings, modifierCatalog?: string): Promise<{ prompt: string, modifiers: PromptModifiers, constantModifier?: string }> => {
+export const generateConstructorPreset = async (components: { [key: string]: string }, settings: LLMSettings, modifierCatalog?: string, modelName?: string): Promise<{ prompt: string, modifiers: PromptModifiers, constantModifier?: string }> => {
     const isOllama = settings.activeLLM === 'ollama' || settings.activeLLM === 'ollama_cloud';
     
     if (isOllama) {
@@ -456,7 +469,7 @@ Output JSON ONLY.`;
             return { prompt: cleanLLMResponse(raw), modifiers: {}, constantModifier: '' };
         }
     } else {
-        return generateConstructorPresetGemini(components, settings, modifierCatalog);
+        return generateConstructorPresetGemini(components, settings, modifierCatalog, modelName);
     }
 };
 
