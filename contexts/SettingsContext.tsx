@@ -44,6 +44,16 @@ export const SettingsProvider: React.FC<{ children: ReactNode }> = ({ children }
       refreshOllamaModels();
   }, [refreshOllamaModels]);
 
+  useEffect(() => {
+    const handleTokenUpdate = () => {
+        setSettings(loadLLMSettings());
+    };
+    if (typeof window !== 'undefined') {
+        window.addEventListener('token-usage-updated', handleTokenUpdate);
+        return () => window.removeEventListener('token-usage-updated', handleTokenUpdate);
+    }
+  }, []);
+
   const value = useMemo(() => ({ 
       settings, 
       updateSettings, 

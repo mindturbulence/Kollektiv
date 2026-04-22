@@ -66,6 +66,11 @@ export interface GoogleIdentityConnection {
   connectedAt?: number;
 }
 
+export interface TokenUsage {
+  used: number;
+  limit: number;
+}
+
 export interface LLMSettings {
   // LLM Provider Settings
   llmModel: string;
@@ -78,6 +83,11 @@ export interface LLMSettings {
   ollamaCloudModel: string;
   ollamaCloudApiKey: string;
   ollamaCloudUseGoogleAuth: boolean;
+
+  // Prompt & Token Tracking
+  masterRolePrompt?: string;
+  geminiTokenUsage?: TokenUsage;
+  ollamaTokenUsage?: TokenUsage;
 
   // Theme Settings
   activeThemeMode: 'dark';

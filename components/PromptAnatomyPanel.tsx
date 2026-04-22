@@ -55,14 +55,17 @@ export const PromptAnatomyPanel: React.FC<PromptAnatomyPanelProps> = ({ promptTo
     setProcessingVariation(null);
 
     try {
-      const dissected = await dissectPrompt(promptToAnalyze, settings, modifierCatalog);
-      setComponents(dissected);
+      const { prompt, modifiers, constantModifier } = await dissectPrompt(promptToAnalyze, settings, modifierCatalog);
+      const flattened: Record<string, string> = { prompt, ...modifiers };
+      if (constantModifier) flattened.constantModifier = constantModifier;
+
+      setComponents(flattened);
       setIsComponentsSectionExpanded(true); 
       setIsVariationsSectionExpanded(true);
 
-      if (Object.keys(dissected).length > 0) {
+      if (Object.keys(flattened).length > 0) {
         setLoadingState('variating');
-        const componentVariations = await generateFocusedVariations(promptToAnalyze, dissected, settings);
+        const componentVariations = await generateFocusedVariations(promptToAnalyze, flattened, settings);
         setVariations(componentVariations);
         const initialExpanded: Record<string, boolean> = {};
         Object.keys(componentVariations).forEach(key => {

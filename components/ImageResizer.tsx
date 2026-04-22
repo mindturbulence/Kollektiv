@@ -1,6 +1,6 @@
 import React, { useState, useRef, useCallback, useEffect } from 'react';
 import JSZip from 'jszip';
-import { UploadIcon, CropIcon, LinkIcon, LinkOffIcon, CloseIcon } from './icons';
+import { UploadIcon, CropIcon, LinkIcon, LinkOffIcon } from './icons';
 import { COMPOSER_PRESETS } from '../constants';
 
 type ImageStatus = 'pending' | 'processing' | 'done' | 'error';
@@ -192,11 +192,12 @@ const ImageCard: React.FC<{
                 </figure>
                 <button
                     onClick={onRemove}
-                    className="absolute top-2 right-2 z-[100] btn btn-circle btn-xs bg-error border-none text-error-content hover:bg-error/80 transition-all shadow-lg pointer-events-auto flex items-center justify-center p-0 opacity-0 group-hover:opacity-100"
+                    className="absolute top-2 right-2 z-[999] bg-error text-error-content hover:bg-error/80 transition-all shadow-lg pointer-events-auto flex items-center justify-center w-6 h-6 rounded-full opacity-0 group-hover:opacity-100"
                     title="Remove Image"
-                    style={{ right: '0.5rem' }}
                 >
-                    <CloseIcon className="w-4 h-4 mx-auto" />
+                    <svg xmlns="http://www.w3.org/2000/svg" className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                    </svg>
                 </button>
             </div>
             <div className="p-4 space-y-1">
