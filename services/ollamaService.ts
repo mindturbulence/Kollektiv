@@ -1,5 +1,6 @@
 import { handleGeminiError } from '../utils/errorHandler'; 
 import type { LLMSettings, EnhancementResult } from '../types';
+import { trackTokenUsage } from '../utils/settingsStorage';
 
 /**
  * Checks if a URL is targeting the local machine's default Ollama port.
@@ -167,6 +168,10 @@ export async function* enhancePromptOllamaStream(
                 try {
                     const parsed = JSON.parse(line);
                     if (parsed.response) yield parsed.response;
+                    if (parsed.done) {
+                        const tokens = (parsed.prompt_eval_count || 0) + (parsed.eval_count || 0);
+                        if (tokens > 0) trackTokenUsage(settings.activeLLM === 'ollama_cloud' ? 'ollama_cloud' : 'ollama', tokens);
+                    }
                 } catch (e) {}
             }
         }
@@ -196,6 +201,10 @@ export const refineSinglePromptOllama = async (promptText: string, settings: LLM
         });
         if (!apiResponse.ok) throw new Error(`Ollama status: ${apiResponse.status}`);
         const responseData = await apiResponse.json();
+        
+        const tokens = (responseData.prompt_eval_count || 0) + (responseData.eval_count || 0);
+        if (tokens > 0) trackTokenUsage(settings.activeLLM === 'ollama_cloud' ? 'ollama_cloud' : 'ollama', tokens);
+
         return responseData.response || '';
     } catch (err) {
         throw handleGeminiError(err, 'refining with Ollama');
@@ -244,6 +253,10 @@ export async function* refineSinglePromptOllamaStream(promptText: string, settin
                 try {
                     const parsed = JSON.parse(line);
                     if (parsed.response) yield parsed.response;
+                    if (parsed.done) {
+                        const tokens = (parsed.prompt_eval_count || 0) + (parsed.eval_count || 0);
+                        if (tokens > 0) trackTokenUsage(settings.activeLLM === 'ollama_cloud' ? 'ollama_cloud' : 'ollama', tokens);
+                    }
                 } catch (e) {}
             }
         }
@@ -298,7 +311,7 @@ export const generateColorNameOllama = async (hexColor: string, mood: string, se
     } catch (err) { return "Archived Color"; }
 };
 
-export const dissectPromptOllama = async (promptText: string, settings: LLMSettings, modelName?: string): Promise<{ [key: string]: string }> => {
+export const convertPromptToNaturalLanguage = async (promptText: string, settings: LLMSettings): Promise<string> => {
     try {
         const config = getOllamaConfig(settings);
         const apiResponse = await fetch(`${config.baseUrl}/api/generate`, {
@@ -307,10 +320,79 @@ export const dissectPromptOllama = async (promptText: string, settings: LLMSetti
             body: JSON.stringify({
                 model: config.model,
                 prompt: promptText,
-                system: `Task: JSON dissect prompt into descriptive components (subject, style, mood, lighting, camera, etc).
+                system: `Task: Convert this Stable Diffusion/Midjourney prompt into clear, natural narrative language.
+
+RULES TO REMOVE/MAP:
+- REMOVE brackets: (), [], {}, :: (these are weight syntax - strip them)
+- REMOVE权重 syntax: ::weight, .5x, (tag:1.2), (tag1.5)
+- REMOVE scoring: --q 0.5, --iw 0.5, --s 250, --c 50, --p
+- REMOVE technical params: --ar 16:9, --v 6, --s 750, --no, --seed, --c, --q, --iw, --nij, --style
+- REMOVE LoRA references: <lora:name:0.8>, <lora:name>
+- REMOVE embeddings: <embedding:name>
+- REMOVE wildcard syntax: __wildcard__, {word1|word2}
+- REMOVE model tags: [model], (from:ckpt)
+- REMOVE step directives: "4k", "photorealistic", "masterpiece" (replace with actual description)
+- REMOVE separator syntax: ---, BREAK, AND
+
+REARRANGE INTO NARRATIVE:
+- Identify subject(s), action, setting/location
+- Identify visual style, medium, lighting, mood
+- Identify camera/shot composition details
+- Identify clothing, appearance details
+- Write as a flowing descriptive scene, not a keyword list
+- Keep artistic quality terms if they describe the actual style (e.g., "oil painting", "watercolor")
+- If subject is in parentheses with no weight, keep the subject
+
+Output ONLY the natural language narrative, no explanations, no JSON, no lists.`,
+                stream: false,
+                ...BASE_CONFIG,
+                options: {
+                    ...BASE_CONFIG.options,
+                    num_predict: 600
+                }
+            }),
+        });
+        const data = await apiResponse.json();
+        return (data.response || promptText).trim();
+    } catch (err) {
+        console.error('Natural language conversion failed:', err);
+        return promptText;
+    }
+};
+
+export const dissectPromptOllama = async (promptText: string, settings: LLMSettings, modifierCatalog?: string, modelName?: string): Promise<{ naturalLanguage: string, prompt: string, modifiers: { [key: string]: string }, constantModifier: string, categorizedParameters: { label: string, value: string }[] }> => {
+    try {
+        const config = getOllamaConfig(settings);
+        
+        const naturalLang = await convertPromptToNaturalLanguage(promptText, settings);
+        
+        const systemInstruction = `Task: Perform a deep neural breakdown of the provided natural language prompt into its atomic components and extract smart categorized parameters.
 ${modelName ? `Target Model: ${modelName}.` : ''}
-SELECTIVE OUTPUT: ONLY include keys for which there is EXPLICIT info in the prompt AND that are relevant to the target model ${modelName || ''}. DO NOT include default values (like 1:1) if not mentioned. DO NOT include parameters specific to models other than ${modelName || 'the target model'}. Omit any key that is not strictly represented by text in the prompt.
-Output valid JSON object only.`,
+
+First, interpret the natural language description above into what would be used in an image generation prompt.
+Then extract components following this Blueprint:
+1. "prompt": The pure subject matter, core action, or narrative intent. Strip all stylistic, technical, and atmospheric modifiers.
+2. "modifiers": A JSON object. Categorize as much as possible from the prompt into discrete system parameters (e.g., lighting, style, camera angle, etc.).
+3. "categorizedParameters": A JSON array of objects (maximum 10) with "label" (parameter name) and "value" (parameter content), extracted from remaining unmapped details (e.g., "Hair Style", "Location").
+4. "constantModifier": Remaining unmapped details that do not fit into standard modifiers or categorized parameters.
+
+Guidance for "modifiers":
+- PRIORITIZE mapping to these known keys: artStyle, artist, photographyStyle, aestheticLook, digitalAesthetic, aspectRatio, cameraType, cameraModel, cameraAngle, cameraProximity, cameraSettings, cameraEffect, specialtyLens, lensType, filmType, filmStock, lighting, composition, facialExpression, hairStyle, eyeColor, skinTexture, clothing, motion, cameraMovement, mjVersion, mjNiji, mjAspectRatio, zImageStyle.
+- If a value in the prompt matches the INTENT of a category but has custom detail, keep it as the value for that category.
+
+${modifierCatalog ? `[AVAILABLE MODIFIERS CATALOG]\n${modifierCatalog}\n\nSTRICT RULES:
+- NO DEFAULTS: Only include parameters explicitly present in the input text. NEVER include items with values like "Default", "Standard", "None", "N/A", or generic placeholders.
+- If a parameter is not explicitly mentioned, DO NOT include it in the JSON object at all.` : ''}
+
+Output JSON ONLY. Format: { "prompt": string, "modifiers": { [key: string]: string }, "categorizedParameters": [{ "label": string, "value": string }], "constantModifier": string }`;
+
+        const apiResponse = await fetch(`${config.baseUrl}/api/generate`, {
+            method: 'POST',
+            headers: config.headers,
+            body: JSON.stringify({
+                model: config.model,
+                prompt: naturalLang,
+                system: systemInstruction,
                 stream: false,
                 format: "json",
                 ...BASE_CONFIG,
@@ -321,7 +403,18 @@ Output valid JSON object only.`,
             }),
         });
         const data = await apiResponse.json();
-        return JSON.parse(data.response || '{}');
+        try {
+            const result = JSON.parse(data.response || '{}');
+            return {
+                naturalLanguage: naturalLang,
+                prompt: result.prompt || '',
+                modifiers: result.modifiers || {},
+                constantModifier: result.constantModifier || '',
+                categorizedParameters: (result.categorizedParameters || []).slice(0, 10)
+            };
+        } catch (e) {
+            return { naturalLanguage: naturalLang, prompt: promptText, modifiers: {}, constantModifier: '', categorizedParameters: [] };
+        }
     } catch (err) { throw handleGeminiError(err, 'extraction'); }
 };
 

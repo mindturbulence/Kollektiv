@@ -2,6 +2,7 @@
 import { GoogleGenAI } from "@google/genai";
 import { handleGeminiError } from '../utils/errorHandler';
 import type { EnhancementResult, LLMSettings } from '../types';
+import { trackTokenUsage } from '../utils/settingsStorage';
 
 const getGeminiClient = (_settings: LLMSettings): GoogleGenAI => {
     const apiKey = process.env.GEMINI_API_KEY;
@@ -40,7 +41,12 @@ export async function* enhancePromptGeminiStream(prompt: string, constantModifie
                 thinkingConfig: { thinkingBudget: 0 }
             }
         });
-        for await (const chunk of response) yield chunk.text || '';
+        for await (const chunk of response) {
+            if (chunk.usageMetadata?.totalTokenCount) {
+                trackTokenUsage('gemini', chunk.usageMetadata.totalTokenCount);
+            }
+            yield chunk.text || '';
+        }
     } catch (err) { throw handleGeminiError(err, 'refining'); }
 }
 
@@ -56,6 +62,9 @@ export const refineSinglePromptGemini = async (promptText: string, _cheatsheetCo
                 thinkingConfig: { thinkingBudget: 0 }
             }
         });
+        if (response.usageMetadata?.totalTokenCount) {
+             trackTokenUsage('gemini', response.usageMetadata.totalTokenCount);
+        }
         return (response.text || '').trim();
     } catch (err) { throw handleGeminiError(err, 'processing'); }
 };
@@ -72,7 +81,12 @@ export async function* refineSinglePromptGeminiStream(promptText: string, _cheat
                 thinkingConfig: { thinkingBudget: 0 }
             }
         });
-        for await (const chunk of response) yield chunk.text || '';
+        for await (const chunk of response) {
+            if (chunk.usageMetadata?.totalTokenCount) {
+                trackTokenUsage('gemini', chunk.usageMetadata.totalTokenCount);
+            }
+            yield chunk.text || '';
+        }
     } catch (err) { throw handleGeminiError(err, 'processing'); }
 }
 
@@ -108,28 +122,92 @@ export const generateColorNameGemini = async (hexColor: string, mood: string, se
     } catch (err) { return "Archived Color"; }
 };
 
-export const dissectPromptGemini = async (promptText: string, settings: LLMSettings, modifierCatalog?: string, modelName?: string): Promise<{ [key: string]: string }> => {
+export const convertPromptToNaturalLanguage = async (promptText: string, settings: LLMSettings): Promise<string> => {
     try {
         const ai = getGeminiClient(settings);
         const response = await ai.models.generateContent({
             model: LITE_MODEL,
             contents: promptText,
             config: {
-                systemInstruction: `Task: JSON dissect prompt into descriptive components.
-${modelName ? `Target Architecture: ${modelName}.` : ''}
-${modifierCatalog ? `[AVAILABLE MODIFIERS CATALOG]\n${modifierCatalog}\n\nSTRICT RULE: You MUST prioritize mapping components to the categories and values provided in the catalog above if a match or close synonym is found.
-- Use the EXACT category name (the word before the colon in the catalog) as the JSON key.
-- Use the EXACT value from the catalog as the JSON value.
-- COMBINE linked details: If the prompt has details similar or linked to a catalog parameter, combine them (e.g., "dim light" + "Studio Lighting" becomes "Lighting": "Studio Lighting, dim light").
-- SELECTIVE OUTPUT & RELEVANCE: ONLY include keys for which there is EXPLICIT information present in the source prompt AND that are relevant to the target model ${modelName || ''}. DO NOT include parameters with default values (like "1:1" for aspect ratio) if they are not explicitly mentioned in the input text. DO NOT include parameters specific to models other than ${modelName || 'the target model'} (e.g., if the model is not Midjourney, NEVER include "mjVersion" or Midjourney-style aspect ratios). 
-- NO HALLUCINATION: If a category (like orientation or aspect ratio) is not explicitly mentioned, omit the key entirely.` : `Identify subject, style, mood, lighting, etc. ONLY include parameters EXPLICITLY present in the text and relevant to the target model ${modelName || ''}. Omit everything else.`}
-If a component does not fit an existing category, create a descriptive key for it.
-Output JSON ONLY.`,
-                responseMimeType: 'application/json',
+                systemInstruction: `Task: Convert this Stable Diffusion/Midjourney prompt into clear, natural narrative language.
+
+RULES TO REMOVE/MAP:
+- REMOVE brackets: (), [], {}, :: (these are weight syntax - strip them)
+- REMOVE权重 syntax: ::weight, .5x, (tag:1.2), (tag1.5)
+- REMOVE scoring: --q 0.5, --iw 0.5, --s 250, --c 50, --p
+- REMOVE technical params: --ar 16:9, --v 6, --s 750, --no, --seed, --c, --q, --iw, --nij, --style
+- REMOVE LoRA references: <lora:name:0.8>, <lora:name>
+- REMOVE embeddings: <embedding:name>
+- REMOVE wildcard syntax: __wildcard__, {word1|word2}
+- REMOVE model tags: [model], (from:ckpt)
+- REMOVE step directives: "4k", "photorealistic", "masterpiece" (replace with actual description)
+- REMOVE separator syntax: ---, BREAK, AND
+
+REARRANGE INTO NARRATIVE:
+- Identify subject(s), action, setting/location
+- Identify visual style, medium, lighting, mood
+- Identify camera/shot composition details
+- Identify clothing, appearance details
+- Write as a flowing descriptive scene, not a keyword list
+- Keep artistic quality terms if they describe the actual style (e.g., "oil painting", "watercolor")
+- If subject is in parentheses with no weight, keep the subject
+
+Output ONLY the natural language narrative, no explanations, no JSON, no lists.`,
                 maxOutputTokens: 600,
             }
         });
-        try { return JSON.parse(response.text || '{}'); } catch (e) { return {}; }
+        return (response.text || promptText).trim();
+    } catch (err) { 
+        console.error('Natural language conversion failed:', err);
+        return promptText;
+    }
+};
+
+export const dissectPromptGemini = async (promptText: string, settings: LLMSettings, modifierCatalog?: string, modelName?: string): Promise<{ naturalLanguage: string, prompt: string, modifiers: { [key: string]: string }, constantModifier: string, categorizedParameters: { label: string, value: string }[] }> => {
+    try {
+        const ai = getGeminiClient(settings);
+        
+        const naturalLang = await convertPromptToNaturalLanguage(promptText, settings);
+        
+        const response = await ai.models.generateContent({
+            model: LITE_MODEL,
+            contents: naturalLang,
+            config: {
+                systemInstruction: `Task: Perform a deep neural breakdown of the provided natural language prompt into its atomic components and extract smart categorized parameters.
+${modelName ? `Target Model: ${modelName}.` : ''}
+
+First, interpret the natural language description above into what would be used in an image generation prompt.
+Then extract components following this Blueprint:
+1. "prompt": The pure subject matter, core action, or narrative intent. Strip all stylistic, technical, and atmospheric modifiers.
+2. "modifiers": A JSON object. Categorize as much as possible from the prompt into discrete system parameters (e.g., lighting, style, camera angle, etc.).
+3. "categorizedParameters": A JSON array of objects (maximum 10) with "label" (parameter name) and "value" (parameter content), extracted from remaining unmapped details (e.g., "Hair Style", "Location").
+4. "constantModifier": Remaining unmapped details that do not fit into standard modifiers or categorized parameters.
+
+Guidance for "modifiers":
+- PRIORITIZE mapping to these known keys: artStyle, artist, photographyStyle, aestheticLook, digitalAesthetic, aspectRatio, cameraType, cameraModel, cameraAngle, cameraProximity, cameraSettings, cameraEffect, specialtyLens, lensType, filmType, filmStock, lighting, composition, facialExpression, hairStyle, eyeColor, skinTexture, clothing, motion, cameraMovement, mjVersion, mjNiji, mjAspectRatio, zImageStyle.
+- If a value in the prompt matches the INTENT of a category but has custom detail, keep it as the value for that category.
+
+${modifierCatalog ? `[AVAILABLE MODIFIERS CATALOG]\n${modifierCatalog}\n\nSTRICT RULES:
+- NO DEFAULTS: Only include parameters explicitly present in the input text. NEVER include items with values like "Default", "Standard", "None", "N/A", or generic placeholders.
+- If a parameter is not explicitly mentioned, DO NOT include it in the JSON object at all.
+
+Output JSON ONLY. Format: { "prompt": string, "modifiers": { [key: string]: string }, "categorizedParameters": [{ "label": string, "value": string }], "constantModifier": string }` : `Output JSON ONLY. Format: { "prompt": string, "modifiers": { [key: string]: string }, "categorizedParameters": [{ "label": string, "value": string }], "constantModifier": string }`}`,
+                responseMimeType: 'application/json',
+                maxOutputTokens: 1000,
+            }
+        });
+        try { 
+            const result = JSON.parse(response.text || '{}'); 
+            return {
+                naturalLanguage: naturalLang,
+                prompt: result.prompt || '',
+                modifiers: result.modifiers || {},
+                constantModifier: result.constantModifier || '',
+                categorizedParameters: (result.categorizedParameters || []).slice(0, 10)
+            };
+        } catch (e) { 
+            return { naturalLanguage: naturalLang, prompt: promptText, modifiers: {}, constantModifier: '', categorizedParameters: [] }; 
+        }
     } catch (err) { throw handleGeminiError(err, 'extraction'); }
 };
 

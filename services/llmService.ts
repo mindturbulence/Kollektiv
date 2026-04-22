@@ -113,16 +113,16 @@ FINAL OUTPUT CONSTRAINTS:
 `;
 
 const AI_ROLES = {
-    ENHANCER: (model: string, length: string, isVideo: boolean, isAudio: boolean, _hasManualCamera: boolean, inputType?: string, modifierCatalog?: string) => {
+    ENHANCER: (model: string, length: string, isVideo: boolean, isAudio: boolean, _hasManualCamera: boolean, inputType?: string, modifierCatalog?: string, masterRole?: string) => {
         const syntax = getModelSyntax(model);
         const l = length === 'Short' ? '40 words' : length === 'Long' ? '600+ words' : '220 words';
         const isI2V = isVideo && inputType === 'i2v';
 
-        let persona = "Role: World-Class Visual Strategist and Prompt Architect.";
+        let persona = masterRole ? `Master Role: ${masterRole}\n\nTask Specific Role: World-Class Visual Strategist and Prompt Architect.` : "Role: World-Class Visual Strategist and Prompt Architect.";
         let modeProtocol = "Focus on unique, high-fidelity textures, atmospheric depth, and sophisticated storytelling. CRITICAL: Camera specifications (Body/Model) are technical metadata for the capture device. Do NOT describe a person holding the camera or the camera appearing in the scene.";
 
         if (isVideo) {
-            persona = "Role: Visionary Cinematic Director.";
+            persona = masterRole ? `Master Role: ${masterRole}\n\nTask Specific Role: Visionary Cinematic Director.` : "Role: Visionary Cinematic Director.";
             if (isI2V) {
                 modeProtocol = `I2V PROTOCOL (DIRECTING AN IMAGE): The user is providing a reference image. Assume the subject, colors, and static details are already set. DO NOT describe colors or objects in the image. Focus EXCLUSIVELY on directing movement, camera paths, and temporal shifts. Strip all static adjectives. Output must be purely kinetic, efficient, and physically plausible.`;
             } else {
@@ -165,15 +165,15 @@ Output: The refined prompt text first, then the separator, then the JSON breakdo
 NO INTROS, NO EXPLANATIONS.`;
     },
 
-    REFINER: (model: string, isVideo: boolean, isAudio: boolean, _hasManualCamera: boolean, inputType?: string) => {
+    REFINER: (model: string, isVideo: boolean, isAudio: boolean, _hasManualCamera: boolean, inputType?: string, masterRole?: string) => {
         const syntax = getModelSyntax(model);
         const isI2V = isVideo && inputType === 'i2v';
         
         let protocol = "";
-        let role = "Elite Prompt Refiner and Model Specialist.";
+        let role = masterRole ? `Master Role: ${masterRole}\nTask Role: Elite Prompt Refiner and Model Specialist.` : "Elite Prompt Refiner and Model Specialist.";
         
         if (isVideo) {
-            role = "Visionary Cinematic Director.";
+            role = masterRole ? `Master Role: ${masterRole}\nTask Role: Visionary Cinematic Director.` : "Visionary Cinematic Director.";
             if (isI2V) {
                 protocol = "I2V PROTOCOL: You are animating a fixed image. Strip all static descriptions of the subject. Focus ONLY on the physics of motion, camera pathing, and scene evolution.";
             } else {
@@ -301,7 +301,7 @@ export async function* enhancePromptStream(
     const isVideo = !!TARGET_VIDEO_AI_MODELS.find(m => m === targetAIModel);
     const isAudio = !!TARGET_AUDIO_AI_MODELS.find(m => m === targetAIModel);
     const hasManualCamera = !!modifiers.cameraMovement;
-    const systemInstruction = AI_ROLES.ENHANCER(targetAIModel, promptLength, isVideo, isAudio, hasManualCamera, modifiers.videoInputType, modifierCatalog);
+    const systemInstruction = AI_ROLES.ENHANCER(targetAIModel, promptLength, isVideo, isAudio, hasManualCamera, modifiers.videoInputType, modifierCatalog, settings.masterRolePrompt);
     const context = buildContextForEnhancer(modifiers, isAudio);
     const input = `${context}\n\n[Primary Concept]\n${originalPrompt}`;
 
@@ -317,7 +317,9 @@ export async function* enhancePromptStream(
     for await (const chunk of stream) {
         if (chunk.includes('<think') || chunk.includes('<thought')) { inThought = true; continue; }
         if (chunk.includes('</think') || chunk.includes('</thought')) { inThought = false; continue; }
-        if (!inThought) yield chunk;
+        if (!inThought) {
+            yield chunk;
+        }
     }
 }
 
@@ -325,13 +327,14 @@ export const refineSinglePrompt = async (promptText: string, targetAIModel: stri
     const isVideo = !!TARGET_VIDEO_AI_MODELS.find(m => m === targetAIModel);
     const isAudio = !!TARGET_AUDIO_AI_MODELS.find(m => m === targetAIModel);
     const hasManualCamera = !!modifiers.cameraMovement;
-    const sys = AI_ROLES.REFINER(targetAIModel, isVideo, isAudio, hasManualCamera, modifiers.videoInputType);
+    const sys = AI_ROLES.REFINER(targetAIModel, isVideo, isAudio, hasManualCamera, modifiers.videoInputType, settings.masterRolePrompt);
     
     const isOllama = settings.activeLLM === 'ollama' || settings.activeLLM === 'ollama_cloud';
     const raw = isOllama 
         ? await refineSinglePromptOllama(promptText, settings, sys, 1024)
         : await refineSinglePromptGemini(promptText, '', settings, sys);
-    return cleanLLMResponse(raw);
+    const cleaned = cleanLLMResponse(raw);
+    return cleaned;
 };
 
 export async function* refineSinglePromptStream(
@@ -343,7 +346,7 @@ export async function* refineSinglePromptStream(
     const isVideo = !!TARGET_VIDEO_AI_MODELS.find(m => m === targetAIModel);
     const isAudio = !!TARGET_AUDIO_AI_MODELS.find(m => m === targetAIModel);
     const hasManualCamera = !!modifiers.cameraMovement;
-    const sys = AI_ROLES.REFINER(targetAIModel, isVideo, isAudio, hasManualCamera, modifiers.videoInputType);
+    const sys = AI_ROLES.REFINER(targetAIModel, isVideo, isAudio, hasManualCamera, modifiers.videoInputType, settings.masterRolePrompt);
     
     const isOllama = settings.activeLLM === 'ollama' || settings.activeLLM === 'ollama_cloud';
     const stream = isOllama
@@ -354,7 +357,9 @@ export async function* refineSinglePromptStream(
     for await (const chunk of stream) {
         if (chunk.includes('<think') || chunk.includes('<thought')) { inThought = true; continue; }
         if (chunk.includes('</think') || chunk.includes('</thought')) { inThought = false; continue; }
-        if (!inThought) yield chunk;
+        if (!inThought) {
+            yield chunk;
+        }
     }
 }
 
@@ -379,10 +384,10 @@ export const generateColorName = async (hexColor: string, mood: string, settings
         : generateColorNameGemini(hexColor, mood, settings);
 };
 
-export const dissectPrompt = async (promptText: string, settings: LLMSettings, modifierCatalog?: string, modelName?: string): Promise<{ [key: string]: string }> => {
+export const dissectPrompt = async (promptText: string, settings: LLMSettings, modifierCatalog?: string, modelName?: string): Promise<{ naturalLanguage: string, prompt: string, modifiers: { [key: string]: string }, constantModifier: string, categorizedParameters: { label: string, value: string }[] }> => {
     const isOllama = settings.activeLLM === 'ollama' || settings.activeLLM === 'ollama_cloud';
     return isOllama
-        ? dissectPromptOllama(promptText, settings, modelName)
+        ? dissectPromptOllama(promptText, settings, modifierCatalog, modelName)
         : dissectPromptGemini(promptText, settings, modifierCatalog, modelName);
 };
 

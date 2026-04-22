@@ -1,4 +1,8 @@
 export const DAISYUI_DARK_THEMES = [
-  "dark", "synthwave", "halloween", "forest", "black", "luxury", "dracula", 
-  "business", "night", "coffee", "dim", "sunset", "abyss", "pipboy", "orange", "futurismo", "MindTurbulence"
+  "abyss", "acid", "aqua", "autumn", "black", "bumblebee", "business", "cmyk", 
+  "coffee", "corporate", "cupcake", "cyberpunk", "dark", "dim", "dracula", 
+  "emerald", "fantasy", "forest", "futurismo", "garden", "halloween", 
+  "lemonade", "light", "lofi", "luxury", "MindTurbulence", "night", "nord", 
+  "orange", "pastel", "pipboy", "retro", "sunset", "synthwave", "valentine", 
+  "Vanguard", "winter", "wireframe"
 ];

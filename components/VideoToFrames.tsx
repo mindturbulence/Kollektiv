@@ -281,11 +281,11 @@ export const VideoToFrames: React.FC = () => {
                 <aside className="w-full lg:w-96 flex-shrink-0 flex flex-col relative p-[3px] corner-frame overflow-visible z-10">
                     <div className="flex flex-col h-full w-full overflow-hidden relative z-10 bg-base-100/40 backdrop-blur-xl">
                         <div className="h-14 flex items-stretch flex-shrink-0 bg-base-100/10 backdrop-blur-md p-1.5 gap-1.5">
-                            <button onClick={() => setActiveTab('extractor')} className={`btn btn-sm h-full rounded-none flex-1 font-normal text-[11px] tracking-wider uppercase px-1 truncate btn-snake font-display ${activeTab === 'extractor' ? 'btn-primary text-primary-content' : 'btn-ghost text-base-content/40 hover:text-primary'}`}>
+                            <button onClick={() => setActiveTab('extractor')} className={`btn btn-sm h-full rounded-none flex-1 font-normal text-[11px] tracking-wider uppercase px-1 truncate btn-snake font-display ${activeTab === 'extractor' ? 'btn-ghost text-primary font-black shadow-none drop-shadow-none [text-shadow:none] [filter:none]' : 'btn-ghost text-base-content/40 hover:text-primary'}`}>
                                 <span/><span/><span/><span/>
                                 FRAME EXTRACTOR
                             </button>
-                            <button onClick={() => setActiveTab('joiner')} className={`btn btn-sm h-full rounded-none flex-1 font-normal text-[11px] tracking-wider uppercase px-1 truncate btn-snake font-display ${activeTab === 'joiner' ? 'btn-primary text-primary-content' : 'btn-ghost text-base-content/40 hover:text-primary'}`}>
+                            <button onClick={() => setActiveTab('joiner')} className={`btn btn-sm h-full rounded-none flex-1 font-normal text-[11px] tracking-wider uppercase px-1 truncate btn-snake font-display ${activeTab === 'joiner' ? 'btn-ghost text-primary font-black shadow-none drop-shadow-none [text-shadow:none] [filter:none]' : 'btn-ghost text-base-content/40 hover:text-primary'}`}>
                                 <span/><span/><span/><span/>
                                 VIDEO JOINER
                             </button>

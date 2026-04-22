@@ -320,16 +320,21 @@ export const MediaAnalyzer: React.FC<MediaAnalyzerProps> = ({ onSaveSuggestion, 
                 <div className="flex flex-col h-full w-full overflow-hidden relative z-10 bg-base-100/40 backdrop-blur-xl">
                     <header className="p-6 h-16 flex items-center justify-between bg-base-100/10 backdrop-blur-md panel-header">
                         <div className="flex items-center gap-6">
-                            <h2 className={`text-xs font-black uppercase tracking-[0.4em] flex items-center gap-3 transition-colors cursor-pointer ${activeResultType === 'abstraction' ? 'text-primary' : 'text-base-content/20 hover:text-base-content/40'}`} onClick={() => abstractionResults && setActiveResultType('abstraction')}>
-                                <div className={`w-2 h-2 rounded-none ${activeResultType === 'abstraction' ? 'bg-primary animate-pulse' : 'bg-base-content/10'}`}></div> 
+                            <h3 className={`text-[10px] font-black uppercase tracking-[0.4em] flex items-center gap-3 transition-colors cursor-pointer ${activeResultType === 'abstraction' ? 'text-primary' : 'text-primary/30 hover:text-primary/60'}`} onClick={() => abstractionResults && setActiveResultType('abstraction')}>
+                                <div className={`w-1.5 h-1.5 rounded-none ${activeResultType === 'abstraction' ? 'bg-primary animate-pulse' : 'bg-primary/10'}`}></div> 
                                 ANALYZED MEDIA
-                            </h2>
+                            </h3>
                             {metadataResults && (
-                                <h2 className={`text-xs font-black uppercase tracking-[0.4em] flex items-center gap-3 transition-colors cursor-pointer ${activeResultType === 'metadata' ? 'text-primary' : 'text-base-content/20 hover:text-base-content/40'}`} onClick={() => metadataResults && setActiveResultType('metadata')}>
-                                    <div className={`w-2 h-2 rounded-none ${activeResultType === 'metadata' ? 'bg-primary animate-pulse' : 'bg-base-content/10'}`}></div> 
+                                <h3 className={`text-[10px] font-black uppercase tracking-[0.4em] flex items-center gap-3 transition-colors cursor-pointer ${activeResultType === 'metadata' ? 'text-primary' : 'text-primary/30 hover:text-primary/60'}`} onClick={() => metadataResults && setActiveResultType('metadata')}>
+                                    <div className={`w-1.5 h-1.5 rounded-none ${activeResultType === 'metadata' ? 'bg-primary animate-pulse' : 'bg-primary/10'}`}></div> 
                                     METADATA
-                                </h2>
+                                </h3>
                             )}
+                        </div>
+                        <div className="flex gap-1">
+                            <div className="w-1 h-1 bg-primary/30"></div>
+                            <div className="w-1 h-1 bg-primary/30"></div>
+                            <div className="w-1 h-1 bg-primary/30"></div>
                         </div>
                     </header>
                     <div ref={resultsScrollerRef} className="flex-grow overflow-y-auto flex flex-col">
@@ -346,7 +351,7 @@ export const MediaAnalyzer: React.FC<MediaAnalyzerProps> = ({ onSaveSuggestion, 
                                 <div className="absolute inset-0 pointer-events-none opacity-[0.05] bg-[linear-gradient(rgba(18,16,16,0)_50%,rgba(0,0,0,0.25)_50%),linear-gradient(90deg,rgba(255,0,0,0.06),rgba(0,255,0,0.02),rgba(0,0,255,0.06))] bg-[length:100%_2px,3px_100%]"></div>
                                 <div className="relative z-10 flex flex-col items-center">
                                     <LoadingSpinner className="w-16 h-16 text-primary mb-8" />
-                                    <h3 className="text-xs font-black uppercase tracking-[0.5em] text-primary animate-pulse mb-2">{loadingMessage}</h3>
+                                    <h3 className="text-[10px] font-black uppercase tracking-[0.5em] text-primary animate-pulse mb-2">{loadingMessage}</h3>
                                 </div>
                             </div>
                         ) : activeResultType === 'abstraction' && abstractionResults ? (

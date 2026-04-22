@@ -1088,69 +1088,73 @@ const AppContent: React.FC = () => {
                 </div>
             )}
             {/* AMBIENT VIDEO BACKGROUND */}
-            <div className="absolute inset-0 z-0 overflow-hidden pointer-events-none">
-                {!videoError && settings.dashboardVideoUrl ? (
-                    <video 
-                        key={settings.dashboardVideoUrl}
-                        src={settings.dashboardVideoUrl}
-                        autoPlay 
-                        muted 
-                        loop 
-                        playsInline 
-                        crossOrigin="anonymous"
-                        className="w-full h-full object-cover grayscale brightness-[0.6] contrast-125 opacity-30 transition-opacity duration-1000"
-                        style={{ filter: 'grayscale(1) brightness(0.6) contrast(1.1)' }}
-                        onError={() => setVideoError(true)}
-                    />
-                ) : (
-                    <div className="w-full h-full bg-transparent"></div>
-                )}
-                <div className="absolute inset-0 bg-grid-texture opacity-[0.03] z-10"></div>
-            </div>
+            {isInitialized && (
+                <div className="absolute inset-0 z-0 overflow-hidden pointer-events-none">
+                    {!videoError && settings.dashboardVideoUrl ? (
+                        <video 
+                            key={settings.dashboardVideoUrl}
+                            src={settings.dashboardVideoUrl}
+                            autoPlay 
+                            muted 
+                            loop 
+                            playsInline 
+                            crossOrigin="anonymous"
+                            className="w-full h-full object-cover grayscale brightness-[0.6] contrast-125 opacity-30 transition-opacity duration-1000"
+                            style={{ filter: 'grayscale(1) brightness(0.6) contrast(1.1)' }}
+                            onError={() => setVideoError(true)}
+                        />
+                    ) : (
+                        <div className="w-full h-full bg-transparent"></div>
+                    )}
+                    <div className="absolute inset-0 bg-grid-texture opacity-[0.03] z-10"></div>
+                </div>
+            )}
             
             <IdleOverlay isVisible={isIdle} onInteraction={() => resetIdleTimer(true)} />
 
             {!isInitialized ? (
-                <div className="flex-1 flex flex-col items-center justify-center bg-transparent rounded">
-                    <div className="text-center space-y-4 max-w-md px-6">
-                        <h2 className="text-2xl font-black uppercase tracking-tighter">System Offline</h2>
-                        <p className="text-xs font-mono opacity-40 uppercase tracking-widest">Initialization failed or interrupted</p>
-                        
-                        <div className="flex flex-col gap-3 pt-4">
-                            <button 
-                                onClick={() => {
-                                    hasInitializedRef.current = false;
-                                    initializeApp();
-                                }}
-                                className="form-btn form-btn-primary h-10"
-                            >
-                                Retry Initialization
-                            </button>
+                !isLoading ? (
+                    <div className="flex-1 flex flex-col items-center justify-center bg-transparent rounded">
+                        <div className="text-center space-y-4 max-w-md px-6">
+                            <h2 className="text-2xl font-black uppercase tracking-tighter">System Offline</h2>
+                            <p className="text-xs font-mono opacity-40 uppercase tracking-widest">Initialization failed or interrupted</p>
                             
-                            <button 
-                                onClick={() => window.location.reload()}
-                                className="form-btn h-10 opacity-60"
-                            >
-                                Reboot System
-                            </button>
-
-                            <div className="divider opacity-10">OR</div>
-
-                            <button 
-                                onClick={async () => {
-                                    if (confirm("This will clear all local settings and storage handles. Your actual files will NOT be deleted. Proceed?")) {
-                                        const { resetAllSettings } = await import('../utils/settingsStorage');
-                                        await resetAllSettings();
-                                        window.location.reload();
-                                    }
-                                }}
-                                className="form-btn h-8 opacity-60 hover:opacity-100 text-error"
-                            >
-                                Reset Storage Config
-                            </button>
+                            <div className="flex flex-col gap-3 pt-4">
+                                <button 
+                                    onClick={() => {
+                                        hasInitializedRef.current = false;
+                                        initializeApp();
+                                    }}
+                                    className="form-btn form-btn-primary h-10"
+                                >
+                                    Retry Initialization
+                                </button>
+                                
+                                <button 
+                                    onClick={() => window.location.reload()}
+                                    className="form-btn h-10 opacity-60"
+                                >
+                                    Reboot System
+                                </button>
+    
+                                <div className="divider opacity-10">OR</div>
+    
+                                <button 
+                                    onClick={async () => {
+                                        if (confirm("This will clear all local settings and storage handles. Your actual files will NOT be deleted. Proceed?")) {
+                                            const { resetAllSettings } = await import('../utils/settingsStorage');
+                                            await resetAllSettings();
+                                            window.location.reload();
+                                        }
+                                    }}
+                                    className="form-btn h-8 opacity-60 hover:opacity-100 text-error"
+                                >
+                                    Reset Storage Config
+                                </button>
+                            </div>
                         </div>
                     </div>
-                </div>
+                ) : null
             ) : (
                 <>
                     <div 
@@ -1237,19 +1241,21 @@ const AppContent: React.FC = () => {
             )}
             <TabTitleManager defaultTitle={currentTitle} />
             <CustomCursor />
-            <PageFrame 
-                audioEnabled={audioEnabled}
-                onAudioToggle={handleAudioToggle}
-                playerState={playerState}
-                onMusicToggle={handleMusicToggle}
-                themeMode={settings.activeThemeMode}
-                onNavigate={handleNavigate}
-                onAboutClick={() => setIsAboutModalOpen(true)}
-                onToggleClippingPanel={() => setIsClippingPanelOpen(!isClippingPanelOpen)}
-                onStandbyClick={handleStandbyClick}
-                clippedIdeasCount={clippedIdeas.length}
-                isInitialized={isInitialized}
-            />
+            {isInitialized && (
+                <PageFrame 
+                    audioEnabled={audioEnabled}
+                    onAudioToggle={handleAudioToggle}
+                    playerState={playerState}
+                    onMusicToggle={handleMusicToggle}
+                    themeMode={settings.activeThemeMode}
+                    onNavigate={handleNavigate}
+                    onAboutClick={() => setIsAboutModalOpen(true)}
+                    onToggleClippingPanel={() => setIsClippingPanelOpen(!isClippingPanelOpen)}
+                    onStandbyClick={handleStandbyClick}
+                    clippedIdeasCount={clippedIdeas.length}
+                    isInitialized={isInitialized}
+                />
+            )}
             
             {/* Hidden Audio Engine */}
             <div className="fixed top-0 left-0 w-1 h-1 pointer-events-none opacity-[0.001] z-[-1] overflow-hidden">

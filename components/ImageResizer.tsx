@@ -192,8 +192,9 @@ const ImageCard: React.FC<{
                 </figure>
                 <button
                     onClick={onRemove}
-                    className="absolute top-2 right-n5 btn btn-circle btn-xs bg-error border-none text-error-content hover:bg-error/80 transition-all z-50 shadow-lg pointer-events-auto flex items-center justify-center p-0 opacity-0 group-hover:opacity-100"
+                    className="absolute top-2 right-2 z-[100] btn btn-circle btn-xs bg-error border-none text-error-content hover:bg-error/80 transition-all shadow-lg pointer-events-auto flex items-center justify-center p-0 opacity-0 group-hover:opacity-100"
                     title="Remove Image"
+                    style={{ right: '0.5rem' }}
                 >
                     <CloseIcon className="w-4 h-4 mx-auto" />
                 </button>
