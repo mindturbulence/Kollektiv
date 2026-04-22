@@ -19,7 +19,7 @@ import AboutModal from './AboutModal';
 import ClippingPanel from './ClippingPanel';
 import FeedbackModal from './FeedbackModal';
 import Footer from './Footer';
-import IdleOverlay from './IdleOverlay'; 
+import IdleOverlay from './IdleOverlay';
 import LlmStatusSwitcher from './LlmStatusSwitcher';
 import { TabTitleManager } from './TabTitleManager';
 
@@ -56,7 +56,7 @@ class ErrorBoundary extends React.Component<{ children: React.ReactNode }, { has
                     <p className="text-base-content/60 font-bold uppercase tracking-widest mb-8">The application encountered an unrecoverable state.</p>
                     <div className="flex flex-col gap-4">
                         <button onClick={() => window.location.reload()} className="form-btn form-btn-primary">Restart Application</button>
-                        <button 
+                        <button
                             onClick={async () => {
                                 if (confirm("This will clear all local settings and storage handles. Your actual files will NOT be deleted. Proceed?")) {
                                     const { resetAllSettings } = await import('../utils/settingsStorage');
@@ -123,8 +123,8 @@ const InitialLoader: React.FC<{ status: string; progress: number | null }> = ({ 
 
     useLayoutEffect(() => {
         if (!textWrapperRef.current) return;
-        gsap.fromTo(textWrapperRef.current, 
-            { yPercent: 100, autoAlpha: 0 }, 
+        gsap.fromTo(textWrapperRef.current,
+            { yPercent: 100, autoAlpha: 0 },
             { yPercent: 0, autoAlpha: 1, duration: 1.2, ease: "expo.out" }
         );
     }, []);
@@ -144,10 +144,10 @@ const InitialLoader: React.FC<{ status: string; progress: number | null }> = ({ 
     return (
         <div id="initial-loader" className="fixed inset-0 z-[500] flex flex-col items-center justify-center bg-base-100 text-base-content overflow-hidden select-none font-sans" style={{ background: 'oklch(var(--b1))', opacity: 1 }}>
             <div className="absolute inset-0 bg-grid-texture opacity-[0.03] pointer-events-none"></div>
-            
+
             {/* Large Background Percentage (SR Seventy One Style) */}
             <div className="absolute inset-0 flex items-center justify-center pointer-events-none overflow-hidden">
-                <span 
+                <span
                     className="text-[25vw] font-normal opacity-[0.03] leading-none select-none font-monoton tracking-widest will-change-transform"
                     style={{ transform: `translateY(${(100 - smoothPercentage) * 0.2}px)` }}
                 >
@@ -170,8 +170,8 @@ const InitialLoader: React.FC<{ status: string; progress: number | null }> = ({ 
                         <span className="text-base-content/10 block leading-none py-2 row-start-1 col-start-1">
                             Kollektiv<span className="text-primary/10 italic">.</span>
                         </span>
-                        
-                        <div 
+
+                        <div
                             className="row-start-1 col-start-1 h-full overflow-hidden transition-all duration-700 ease-out border-r border-base-content/20"
                             style={{ width: `${percentage}%` }}
                         >
@@ -187,15 +187,15 @@ const InitialLoader: React.FC<{ status: string; progress: number | null }> = ({ 
                         <p className="text-[10px] font-mono font-bold uppercase tracking-[0.5em] text-center text-base-content/40">
                             {status.toUpperCase()}
                         </p>
-                        
+
                         {/* Minimal Progress Bar */}
                         <div className="w-32 h-[1px] bg-base-content/10 relative overflow-hidden">
-                            <div 
+                            <div
                                 className="absolute inset-y-0 left-0 bg-primary transition-all duration-500 ease-out"
                                 style={{ width: `${percentage}%` }}
                             />
                         </div>
-                        
+
                         <span className="text-[10px] font-mono font-bold text-primary/60">
                             {percentage}%
                         </span>
@@ -217,7 +217,7 @@ const Logo: React.FC<{ onNavigate: (tab: ActiveTab) => void }> = ({ onNavigate }
     const [scrambleTrigger, setScrambleTrigger] = useState(0);
 
     return (
-        <button 
+        <button
             onClick={() => {
                 audioService.playClick();
                 onNavigate('dashboard');
@@ -283,12 +283,12 @@ const DigitalOscillator = ({ state = 'idle', theme = 'light' }: { state: string,
                     const barWidth = 1;
                     const gap = 2;
                     const barCount = Math.floor(w / (barWidth + gap));
-                    
+
                     for (let j = 0; j < barCount; j++) {
                         const x = j * (barWidth + gap);
                         const hFactor = Math.sin(p * (layer.speed * 0.5) + j * 0.3) * 0.5 + 0.5;
                         const barHeight = 2 + hFactor * (h * 0.6 * layer.amp);
-                        
+
                         ctx.moveTo(x, centerY - barHeight / 2);
                         ctx.lineTo(x, centerY + barHeight / 2);
                     }
@@ -332,37 +332,37 @@ const DigitalOscillator = ({ state = 'idle', theme = 'light' }: { state: string,
 };
 
 const HUDNavItem: React.FC<{
-  children: string;
-  onClick?: (e: React.MouseEvent) => void;
-  onHover?: () => void;
-  title?: string;
-  badge?: number;
+    children: string;
+    onClick?: (e: React.MouseEvent) => void;
+    onHover?: () => void;
+    title?: string;
+    badge?: number;
 }> = ({ children, onClick, onHover, title, badge }) => {
-  return (
-    <motion.button
-      onClick={onClick}
-      onMouseEnter={() => {
-          audioService.playHover();
-          onHover?.();
-      }}
-      initial="initial"
-      whileHover="hover"
-      className="group relative px-3 py-1 text-[13px] font-normal tracking-[0.25em] uppercase text-base-content/60 hover:text-primary transition-colors duration-300 pointer-events-auto"
-      title={title}
-    >
-      <RollingText 
-        text={children} 
-        hoverClassName="text-primary"
-      />
-      
-      {badge !== undefined && badge > 0 && (
-        <span className="absolute top-0 right-0 flex h-2 w-2">
-          <span className="animate-ping absolute inline-flex h-full w-full rounded-none bg-primary opacity-75"></span>
-          <span className="relative inline-flex rounded-none h-2 w-2 bg-primary"></span>
-        </span>
-      )}
-    </motion.button>
-  );
+    return (
+        <motion.button
+            onClick={onClick}
+            onMouseEnter={() => {
+                audioService.playHover();
+                onHover?.();
+            }}
+            initial="initial"
+            whileHover="hover"
+            className="group relative px-3 py-1 text-[13px] font-normal tracking-[0.25em] uppercase text-base-content/60 hover:text-primary transition-colors duration-300 pointer-events-auto"
+            title={title}
+        >
+            <RollingText
+                text={children}
+                hoverClassName="text-primary"
+            />
+
+            {badge !== undefined && badge > 0 && (
+                <span className="absolute top-0 right-0 flex h-2 w-2">
+                    <span className="animate-ping absolute inline-flex h-full w-full rounded-none bg-primary opacity-75"></span>
+                    <span className="relative inline-flex rounded-none h-2 w-2 bg-primary"></span>
+                </span>
+            )}
+        </motion.button>
+    );
 };
 
 interface PageFrameProps {
@@ -379,11 +379,11 @@ interface PageFrameProps {
     isInitialized: boolean;
 }
 
-const PageFrame: React.FC<PageFrameProps> = ({ 
-    audioEnabled, 
-    onAudioToggle, 
-    playerState, 
-    onMusicToggle, 
+const PageFrame: React.FC<PageFrameProps> = ({
+    audioEnabled,
+    onAudioToggle,
+    playerState,
+    onMusicToggle,
     themeMode,
     onNavigate,
     onAboutClick,
@@ -395,7 +395,7 @@ const PageFrame: React.FC<PageFrameProps> = ({
     const topRef = useRef<HTMLDivElement>(null);
     const bottomRef = useRef<HTMLDivElement>(null);
     const logoRef = useRef<HTMLDivElement>(null);
-    
+
     // Scan Line Refs
     const scanTopRef = useRef<HTMLSpanElement>(null);
     const scanRightRef = useRef<HTMLSpanElement>(null);
@@ -427,10 +427,10 @@ const PageFrame: React.FC<PageFrameProps> = ({
 
         // Periodic Frame Scan Animation (Snake effect)
         // Triggered every 1 minute (60 seconds)
-        const scanTl = gsap.timeline({ 
-            repeat: -1, 
+        const scanTl = gsap.timeline({
+            repeat: -1,
             repeatDelay: 52, // exactly 1 minute cycle (60s total - 8s animation)
-            delay: 15 
+            delay: 15
         });
 
         const scanDuration = 2;
@@ -439,23 +439,23 @@ const PageFrame: React.FC<PageFrameProps> = ({
         scanTl.set([scanTopRef.current, scanRightRef.current, scanBottomRef.current, scanLeftRef.current], { opacity: 0 });
 
         // Sequence: Top -> Right -> Bottom -> Left
-        scanTl.fromTo(scanTopRef.current, 
-            { left: "-100%", opacity: 0 }, 
+        scanTl.fromTo(scanTopRef.current,
+            { left: "-100%", opacity: 0 },
             { left: "100%", opacity: 1, duration: scanDuration, ease: scanEase }
         ).set(scanTopRef.current, { opacity: 0 });
 
-        scanTl.fromTo(scanRightRef.current, 
-            { top: "-100%", opacity: 0 }, 
+        scanTl.fromTo(scanRightRef.current,
+            { top: "-100%", opacity: 0 },
             { top: "100%", opacity: 1, duration: scanDuration, ease: scanEase }
         ).set(scanRightRef.current, { opacity: 0 });
 
-        scanTl.fromTo(scanBottomRef.current, 
-            { right: "-100%", opacity: 0 }, 
+        scanTl.fromTo(scanBottomRef.current,
+            { right: "-100%", opacity: 0 },
             { right: "100%", opacity: 1, duration: scanDuration, ease: scanEase }
         ).set(scanBottomRef.current, { opacity: 0 });
 
-        scanTl.fromTo(scanLeftRef.current, 
-            { bottom: "-100%", opacity: 0 }, 
+        scanTl.fromTo(scanLeftRef.current,
+            { bottom: "-100%", opacity: 0 },
             { bottom: "100%", opacity: 1, duration: scanDuration, ease: scanEase }
         ).set(scanLeftRef.current, { opacity: 0 });
 
@@ -481,10 +481,10 @@ const PageFrame: React.FC<PageFrameProps> = ({
                 <div className="absolute -top-[1px] -right-[1px] w-4 h-4 border-t border-r border-primary/20" />
                 <div className="absolute -bottom-[1px] -left-[1px] w-4 h-4 border-b border-l border-primary/20" />
                 <div className="absolute -bottom-[1px] -right-[1px] w-4 h-4 border-b border-r border-primary/20" />
-                
+
                 {/* Technical Labels - Top (Relocated Header Menus) */}
                 <div ref={topRef} className="absolute top-0 left-12 right-12 flex justify-between items-center pointer-events-auto opacity-0">
-                    
+
                     <div className="flex gap-1 items-center">
                         <HUDNavItem
                             onClick={() => {
@@ -545,13 +545,13 @@ const PageFrame: React.FC<PageFrameProps> = ({
                 <div ref={logoRef} className="absolute top-0 left-1/2 -translate-x-1/2 flex items-center pointer-events-auto opacity-0">
                     <Logo onNavigate={onNavigate} />
                 </div>
-                
+
                 {/* Technical Labels - Bottom (Relocated Controls) */}
                 <div ref={bottomRef} className="absolute bottom-0 left-12 right-12 flex justify-between items-center pointer-events-auto opacity-0">
                     <div className="flex gap-3 items-center">
                         <span className="text-[12px] font-mono uppercase tracking-[0.3em] text-primary/60">ENGINE</span>
-                        <div className="w-px h-2 bg-base-content/10 mx-1 self-center" />
-                        <div className="min-w-[120px] flex items-center">
+                        {/* <div className="w-px h-2 bg-base-content/10 mx-1 self-center" /> */}
+                        <div className="min-w-[120px] flex items-center self-center">
                             <LlmStatusSwitcher />
                         </div>
                     </div>
@@ -575,7 +575,7 @@ const PageFrame: React.FC<PageFrameProps> = ({
                             </span>
                             <AnimatePresence mode="wait">
                                 {playerState !== 'idle' && (
-                                    <motion.div 
+                                    <motion.div
                                         key="oscillator"
                                         initial={{ x: -10, opacity: 0 }}
                                         animate={{ x: 0, opacity: 1 }}
@@ -625,15 +625,15 @@ const AppContent: React.FC = () => {
     const [initStatus, setInitStatus] = useState('Starting App');
     const [initProgress, setInitProgress] = useState<number | null>(0);
     const [isIdle, setIsIdle] = useState(false);
-    const [videoError, setVideoError] = useState(false); 
-    
+    const [videoError, setVideoError] = useState(false);
+
     const hasInitializedRef = useRef(false);
     const isTransitioningRef = useRef(false);
     const isFirstRevealRef = useRef(true);
-    
+
     // --- IDLE STATE REFS ---
-    const idleTimerRef = useRef<number | null>(null); 
-    const isIdleRef = useRef(false); 
+    const idleTimerRef = useRef<number | null>(null);
+    const isIdleRef = useRef(false);
 
     const { settings, updateSettings } = useSettings();
     const auth = useAuth();
@@ -709,12 +709,12 @@ const AppContent: React.FC = () => {
         };
 
         const events = ['mousedown', 'mousemove', 'keypress', 'scroll', 'touchstart', 'click'];
-        
+
         events.forEach(name => window.addEventListener(name, handleUserActivity, { passive: true }));
         document.addEventListener('visibilitychange', handleVisibilityChange);
         window.addEventListener('focus', handleUserActivity);
 
-        resetIdleTimer(false); 
+        resetIdleTimer(false);
 
         return () => {
             events.forEach(name => window.removeEventListener(name, handleUserActivity));
@@ -726,21 +726,21 @@ const AppContent: React.FC = () => {
 
     const initializeApp = useCallback(async () => {
         if (hasInitializedRef.current && isInitialized) return;
-        
+
         setIsLoading(true);
         setShowWelcome(false);
         setInitStatus('Connecting...');
         setInitProgress(0.1);
 
         const onProgress = (message: string, progress?: number) => {
-             setInitStatus(message.toUpperCase());
-             if (progress !== undefined) setInitProgress(progress);
+            setInitStatus(message.toUpperCase());
+            if (progress !== undefined) setInitProgress(progress);
         };
-        
+
         try {
-            await new Promise(r => setTimeout(r, 1000)); 
+            await new Promise(r => setTimeout(r, 1000));
             const hasHandleAndPermission = await (fileSystemManager as any).initialize(settings, auth);
-            
+
             if (!hasHandleAndPermission) {
                 setShowWelcome(true);
                 setIsLoading(false);
@@ -750,7 +750,7 @@ const AppContent: React.FC = () => {
 
             onProgress('Loading Folders...', 0.35);
             await verifyAndRepairFiles(onProgress, settings);
-            
+
             onProgress('Syncing Styles...', 0.7);
             if ('fonts' in document) {
                 await (document as any).fonts.ready;
@@ -758,14 +758,14 @@ const AppContent: React.FC = () => {
 
             onProgress('Finalizing System...', 0.9);
             onProgress('System Ready', 1.0);
-            
+
             audioService.playModalOpen(); // Chime for system ready
 
             await new Promise(r => setTimeout(r, 1500));
 
             hasInitializedRef.current = true;
             setIsInitialized(true);
-            
+
             // Wait for blinds to start before hiding loader
             await new Promise(r => setTimeout(r, 500));
             setIsLoading(false);
@@ -787,7 +787,7 @@ const AppContent: React.FC = () => {
 
     useLayoutEffect(() => {
         if (!isInitialized || !apertureRef.current || !isFirstRevealRef.current || !blindsRef.current) return;
-        
+
         isFirstRevealRef.current = false;
 
         const tl = gsap.timeline({
@@ -798,13 +798,13 @@ const AppContent: React.FC = () => {
 
         // Ensure blinds are visible and covering everything
         gsap.set(apertureRef.current, { visibility: 'visible', autoAlpha: 1 });
-        
+
         // Set alternating origins for vertical blinds
         blindItems.forEach((item, i) => {
-            gsap.set(item, { 
-                scaleY: 1, 
+            gsap.set(item, {
+                scaleY: 1,
                 scaleX: 1,
-                transformOrigin: i % 2 === 0 ? "top" : "bottom" 
+                transformOrigin: i % 2 === 0 ? "top" : "bottom"
             });
         });
 
@@ -829,7 +829,7 @@ const AppContent: React.FC = () => {
 
         tl.set(apertureRef.current, { visibility: 'hidden', autoAlpha: 0 });
 
-        return () => {};
+        return () => { };
     }, [isInitialized]);
 
     const runScopedTransition = useCallback(async (targetTab: ActiveTab) => {
@@ -1004,7 +1004,7 @@ const AppContent: React.FC = () => {
             default: return <Dashboard onNavigate={handleNavigate} onClipIdea={handleClipIdea} />;
         }
     };
-    
+
     const [isUplinkActive, setIsUplinkActive] = useState(true);
     const [playerState, setPlayerState] = useState<'idle' | 'syncing' | 'playing' | 'error'>('syncing');
     const [audioEnabled, setAudioEnabled] = useState(true); // Default to true
@@ -1091,13 +1091,13 @@ const AppContent: React.FC = () => {
             {isInitialized && (
                 <div className="absolute inset-0 z-0 overflow-hidden pointer-events-none">
                     {!videoError && settings.dashboardVideoUrl ? (
-                        <video 
+                        <video
                             key={settings.dashboardVideoUrl}
                             src={settings.dashboardVideoUrl}
-                            autoPlay 
-                            muted 
-                            loop 
-                            playsInline 
+                            autoPlay
+                            muted
+                            loop
+                            playsInline
                             crossOrigin="anonymous"
                             className="w-full h-full object-cover grayscale brightness-[0.6] contrast-125 opacity-30 transition-opacity duration-1000"
                             style={{ filter: 'grayscale(1) brightness(0.6) contrast(1.1)' }}
@@ -1109,7 +1109,7 @@ const AppContent: React.FC = () => {
                     <div className="absolute inset-0 bg-grid-texture opacity-[0.03] z-10"></div>
                 </div>
             )}
-            
+
             <IdleOverlay isVisible={isIdle} onInteraction={() => resetIdleTimer(true)} />
 
             {!isInitialized ? (
@@ -1118,9 +1118,9 @@ const AppContent: React.FC = () => {
                         <div className="text-center space-y-4 max-w-md px-6">
                             <h2 className="text-2xl font-black uppercase tracking-tighter">System Offline</h2>
                             <p className="text-xs font-mono opacity-40 uppercase tracking-widest">Initialization failed or interrupted</p>
-                            
+
                             <div className="flex flex-col gap-3 pt-4">
-                                <button 
+                                <button
                                     onClick={() => {
                                         hasInitializedRef.current = false;
                                         initializeApp();
@@ -1129,17 +1129,17 @@ const AppContent: React.FC = () => {
                                 >
                                     Retry Initialization
                                 </button>
-                                
-                                <button 
+
+                                <button
                                     onClick={() => window.location.reload()}
                                     className="form-btn h-10 opacity-60"
                                 >
                                     Reboot System
                                 </button>
-    
+
                                 <div className="divider opacity-10">OR</div>
-    
-                                <button 
+
+                                <button
                                     onClick={async () => {
                                         if (confirm("This will clear all local settings and storage handles. Your actual files will NOT be deleted. Proceed?")) {
                                             const { resetAllSettings } = await import('../utils/settingsStorage');
@@ -1157,22 +1157,22 @@ const AppContent: React.FC = () => {
                 ) : null
             ) : (
                 <>
-                    <div 
-                        ref={apertureRef} 
+                    <div
+                        ref={apertureRef}
                         className="fixed inset-4 md:inset-10 z-[900] pointer-events-none"
                         style={{ visibility: 'hidden' }}
                     >
                         <div ref={blindsRef} className="absolute inset-0 flex flex-row">
                             {Array.from({ length: 12 }).map((_, i) => (
-                                <div 
-                                    key={i} 
+                                <div
+                                    key={i}
                                     className="flex-1 bg-base-100/80 backdrop-blur-xl will-change-transform"
                                 />
                             ))}
                         </div>
                     </div>
 
-                    <div 
+                    <div
                         ref={appWrapperRef}
                         className="w-full h-full flex flex-col overflow-hidden relative z-0 bg-transparent rounded-none p-6 md:p-14 pt-10 md:pt-16"
                     >
@@ -1182,12 +1182,12 @@ const AppContent: React.FC = () => {
                             isInitialized={isInitialized}
                         />
 
-                        <div className={`flex-1 flex overflow-hidden relative ${activeTab === 'prompts' ? 'pt-0' : 'pt-6'} px-4 pb-4 bg-transparent`}>
-                            <main className={`flex-grow min-w-0 relative overflow-hidden bg-transparent rounded-none ${activeTab === 'dashboard' ? 'border-none shadow-none backdrop-blur-none' : 'border border-base-300/20'} z-10`}>
-                                <div 
-                                    ref={mainGridRef} 
+                        <div className={`flex-1 flex overflow-hidden relative ${activeTab === 'prompts' ? 'pt-0' : 'pt-4'} px-4 pb-4 bg-transparent`}>
+                            <main className="flex-grow min-w-0 relative overflow-hidden rounded-none bg-transparent border-none shadow-none backdrop-blur-none z-10">
+                                <div
+                                    ref={mainGridRef}
                                     className="absolute inset-0 z-[600] pointer-events-none grid"
-                                    style={{ 
+                                    style={{
                                         gridTemplateColumns: `repeat(${gridCols}, 1fr)`,
                                         gridTemplateRows: `repeat(${gridRows}, 1fr)`,
                                         visibility: 'hidden'
@@ -1203,15 +1203,15 @@ const AppContent: React.FC = () => {
                                 </div>
                             </main>
                         </div>
-                        
+
                         <div className="absolute bottom-6 md:bottom-14 left-0 right-0 pointer-events-none z-[700]">
                             <Footer />
                         </div>
                     </div>
                 </>
             )}
-            
-            <ClippingPanel 
+
+            <ClippingPanel
                 isOpen={isClippingPanelOpen}
                 onClose={() => setIsClippingPanelOpen(false)}
                 clippedIdeas={clippedIdeas}
@@ -1223,14 +1223,14 @@ const AppContent: React.FC = () => {
                 onSaveToLibrary={handleSaveClippedIdea}
             />
 
-            <AboutModal 
-                isOpen={isAboutModalOpen} 
+            <AboutModal
+                isOpen={isAboutModalOpen}
                 onClose={() => {
                     audioService.playModalClose();
                     setIsAboutModalOpen(false);
-                }} 
+                }}
             />
-            
+
             {globalFeedback && (
                 <FeedbackModal
                     isOpen={!!globalFeedback}
@@ -1242,7 +1242,7 @@ const AppContent: React.FC = () => {
             <TabTitleManager defaultTitle={currentTitle} />
             <CustomCursor />
             {isInitialized && (
-                <PageFrame 
+                <PageFrame
                     audioEnabled={audioEnabled}
                     onAudioToggle={handleAudioToggle}
                     playerState={playerState}
@@ -1256,7 +1256,7 @@ const AppContent: React.FC = () => {
                     isInitialized={isInitialized}
                 />
             )}
-            
+
             {/* Hidden Audio Engine */}
             <div className="fixed top-0 left-0 w-1 h-1 pointer-events-none opacity-[0.001] z-[-1] overflow-hidden">
                 {isUplinkActive && videoId && (

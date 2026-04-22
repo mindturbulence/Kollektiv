@@ -92,10 +92,10 @@ const LlmStatusSwitcher: React.FC = () => {
     let tooltipText = '';
 
     if (settings.activeLLM === 'ollama') {
-        displayText = settings.ollamaModel;
+        displayText = settings.ollamaModel || 'Ollama';
         tooltipText = `Using Local Ollama.`;
     } else if (settings.activeLLM === 'ollama_cloud') {
-        displayText = settings.ollamaCloudModel;
+        displayText = settings.ollamaCloudModel || 'Ollama Cloud';
         tooltipText = `Using Cloud Ollama endpoint.`;
     } else { // Gemini
         displayText = geminiModelShortName;
@@ -113,8 +113,12 @@ const LlmStatusSwitcher: React.FC = () => {
                 title={tooltipText}
                 className="w-full flex items-center justify-between py-0 px-1 rounded-none bg-transparent hover:bg-base-200/20 transition-all relative z-10 outline-none border-none cursor-pointer pointer-events-auto"
             >
-                <div className="flex items-center min-w-0 relative z-10">
-                    <span className="font-mono font-bold text-base-content/40 truncate uppercase text-[12px] tracking-[0.3em]">{displayText}</span>
+                <div className="flex items-center min-w-0 relative z-10 mt-2 px-1">
+                    <div className="shine-container">
+                        <span className="font-mono font-black truncate uppercase text-[11px] tracking-[0.4em] shine-text">
+                            {displayText}
+                        </span>
+                    </div>
                 </div>
                 <ChevronDownIcon className={`w-2.5 h-2.5 text-base-content/20 flex-shrink-0 transition-transform ${isOpen ? 'rotate-180' : ''} relative z-10`} />
             </button>

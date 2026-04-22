@@ -616,7 +616,7 @@ export const SetupPage: React.FC<SetupPageProps> = ({
             case 'llm':
                 return (
                     <div className="flex flex-col h-full overflow-y-auto animate-fade-in">
-                        <SettingRow label="Neural Intelligence Core" desc="Choose the primary processing engine for prompt construction.">
+                        <SettingRow label="Neural Intelligence Core" desc="Choose the primary processing engine for prompt construction. Every engine is optimized with custom directives.">
                              <div className="tab-group">
                                 <div 
                                     className={`tab-item ${settings.activeLLM === 'gemini' ? 'tab-item-active' : ''}`}
@@ -637,6 +637,15 @@ export const SetupPage: React.FC<SetupPageProps> = ({
                                     Cloud Ollama
                                 </div>
                              </div>
+                        </SettingRow>
+
+                        <SettingRow label="Master Role Concept" desc="Global persona applied to every LLM request. Prevents repeating role instructions to save tokens and maintain consistent AI behavior.">
+                             <textarea 
+                                value={settings.masterRolePrompt || ''}
+                                onChange={(e) => handleSettingsChange('masterRolePrompt', e.target.value)}
+                                className="textarea textarea-bordered w-full md:w-[620px] min-h-[120px] leading-relaxed text-sm font-medium focus:outline-none focus:ring-1 focus:ring-primary/40 focus:border-primary/40 rounded-none bg-base-300/30 font-mono"
+                                placeholder="You are an expert AI prompt engineer and creative director. You excel at extracting precise visual, atmospheric, and conceptual details."
+                             />
                         </SettingRow>
                         {settings.activeLLM === 'ollama_cloud' && (
                              <div className="animate-fade-in flex flex-col bg-transparent">

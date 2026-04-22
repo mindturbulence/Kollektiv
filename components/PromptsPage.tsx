@@ -3,7 +3,7 @@
 import React, { useState, useCallback, useEffect, useMemo, useRef, useLayoutEffect } from 'react';
 import { useSettings } from '../contexts/SettingsContext';
 import { enhancePromptStream, buildMidjourneyParams, generateWithImagen, generateWithNanoBanana, generateWithVeo, cleanLLMResponse, dissectPrompt, generateConstructorPreset } from '../services/llmService';
-import { loadPromptCategories, addSavedPrompt } from '../utils/promptStorage';
+import { loadPromptCategories, addSavedPrompt, loadSavedPrompts } from '../utils/promptStorage';
 import { loadArtStyles } from '../utils/artstyleStorage';
 import { loadArtists } from '../utils/artistStorage';
 import { fileToBase64 } from '../utils/fileUtils';
@@ -55,6 +55,7 @@ import { TARGET_IMAGE_AI_MODELS, TARGET_VIDEO_AI_MODELS, TARGET_AUDIO_AI_MODELS 
 import PromptEditorModal from './PromptEditorModal';
 import PromptCrafter from './PromptCrafter';
 import { MediaAnalyzer } from './MediaAnalyzer';
+import { PromptAnalyzer } from './PromptAnalyzer';
 import LoadingSpinner from './LoadingSpinner';
 import AutocompleteSelect from './AutocompleteSelect';
 import { SparklesIcon, UploadIcon, Cog6ToothIcon, ArchiveIcon, CloseIcon, DownloadIcon } from './icons';
@@ -152,7 +153,7 @@ const PromptsPage: React.FC<PromptsPageProps> = ({
 }) => {
     const { settings } = useSettings();
     const { setIsBusy } = useBusy();
-    const [activeView, setActiveView] = useState<'refine' | 'composer' | 'analyzer'>('composer');
+    const [activeView, setActiveView] = useState<'refine' | 'composer' | 'analyzer' | 'prompt_analyzer'>('composer');
     const tabsRef = useRef<HTMLDivElement>(null);
     const tabsScanRef = useRef<HTMLDivElement>(null);
 
@@ -228,7 +229,17 @@ const PromptsPage: React.FC<PromptsPageProps> = ({
     const [jsonCopied, setJsonCopied] = useState(false);
     const [suggestionToSave, setSuggestionToSave] = useState<Partial<SavedPrompt> | null>(null);
     const [promptCategories, setPromptCategories] = useState<PromptCategory[]>([]);
+    const [savedPrompts, setSavedPrompts] = useState<SavedPrompt[]>([]);
 
+    useEffect(() => {
+        const loadInitialData = async () => {
+            const cats = await loadPromptCategories();
+            setPromptCategories(cats);
+            const prompts = await loadSavedPrompts();
+            setSavedPrompts(prompts);
+        };
+        loadInitialData();
+    }, []);
     const isGoogleProduct = useMemo(() => {
         const target = targetAIModel.toLowerCase();
         return target.includes('imagen') || target.includes('nano banana') || target.includes('veo');
@@ -552,8 +563,11 @@ const PromptsPage: React.FC<PromptsPageProps> = ({
         setIsBusy(true);
         try {
             const catalog = buildModifierCatalog();
-            const components = await dissectPrompt(suggestionText, settings, catalog, targetAIModel);
-            const result = await generateConstructorPreset(components, settings, catalog);
+            const { prompt, modifiers, constantModifier } = await dissectPrompt(suggestionText, settings, catalog, targetAIModel);
+            const flatComponents: Record<string, string> = { prompt, ...modifiers };
+            if (constantModifier) flatComponents.constantModifier = constantModifier;
+
+            const result = await generateConstructorPreset(flatComponents, settings, catalog);
 
             // Set as active in Refiner
             setModifiers({ ...DEFAULT_MODIFIERS, ...result.modifiers });
@@ -600,6 +614,7 @@ const PromptsPage: React.FC<PromptsPageProps> = ({
         const viewTabs = [
             { id: 'composer', label: 'PROMPT CRAFTER' },
             { id: 'refine', label: 'PROMPT REFINER' },
+            { id: 'prompt_analyzer', label: 'PROMPT ANALYZER' },
             { id: 'analyzer', label: 'MEDIA ANALYZER' }
         ] as const;
 
@@ -1222,7 +1237,7 @@ const PromptsPage: React.FC<PromptsPageProps> = ({
         <div className="flex flex-col h-full bg-transparent overflow-hidden p-0">
             {renderTabsHeader(activeView)}
 
-            <div className="flex-grow overflow-hidden relative pt-4 min-h-0">
+            <div className={`flex-grow overflow-hidden relative pt-4 min-h-0`}>
                 {activeView === 'composer' && (
                     <PromptCrafter
                         onSaveToLibrary={(gen) => handleSaveSuggestion(gen)}
@@ -1521,6 +1536,23 @@ const PromptsPage: React.FC<PromptsPageProps> = ({
                         onRefine={handleSendToRefine}
                         onClip={handleClipSuggestion}
                         header={null}
+                    />
+                )}
+
+                {activeView === 'prompt_analyzer' && (
+                    <PromptAnalyzer 
+                        header={null}
+                        libraryItems={savedPrompts}
+                        onSaveSuggestion={handleSaveSuggestion}
+                        onClip={(text) => handleClipSuggestion(text)}
+                        onSwitchView={(view) => setActiveView(view)}
+                        onMapToRefiner={(prompt, mods, constantMod) => {
+                            setRefineText(prompt);
+                            setModifiers({ ...DEFAULT_MODIFIERS, ...mods });
+                            if (constantMod) setConstantModifier(constantMod);
+                            setActiveView('refine');
+                        }}
+                        showGlobalFeedback={showGlobalFeedback}
                     />
                 )}
             </div>

@@ -348,6 +348,21 @@ export const ChevronDownIcon: React.FC<React.SVGProps<SVGSVGElement>> = (props) 
   </svg>
 );
 
+export const ChevronUpIcon: React.FC<React.SVGProps<SVGSVGElement>> = (props) => (
+  <svg {...commonProps} {...props}>
+    <path stroke="none" d="M0 0h24v24H0z" fill="none"/>
+    <path d="M6 15l6 -6l6 6" />
+  </svg>
+);
+
+export const ArrowRightIcon: React.FC<React.SVGProps<SVGSVGElement>> = (props) => (
+  <svg {...commonProps} {...props}>
+    <path stroke="none" d="M0 0h24v24H0z" fill="none"/>
+    <path d="M5 12l14 0" />
+    <path d="M13 18l6 -6l-6 -6" />
+  </svg>
+);
+
 export const HomeIcon: React.FC<React.SVGProps<SVGSVGElement>> = (props) => (
   <svg {...commonProps} {...props}>
     <path stroke="none" d="M0 0h24v24H0z" fill="none"/>

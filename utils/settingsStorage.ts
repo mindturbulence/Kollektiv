@@ -12,6 +12,11 @@ export const defaultLLMSettings: LLMSettings = {
   ollamaBaseUrl: 'http://localhost:11434',
   ollamaModel: 'llama3',
   
+  // Prompt & Token Tracking
+  masterRolePrompt: 'You are an expert AI prompt engineer and creative director. You excel at extracting precise visual, atmospheric, and conceptual details.',
+  geminiTokenUsage: { used: 0, limit: 1000000 },
+  ollamaTokenUsage: { used: 0, limit: 500000 },
+
   // Ollama Cloud Settings
   ollamaCloudBaseUrl: 'https://your-remote-ollama.com',
   ollamaCloudModel: 'llama3',
@@ -80,6 +85,14 @@ export const loadLLMSettings = (): LLMSettings => {
                 ...defaultLLMSettings.features,
                 ...(parsed.features || {})
             },
+            geminiTokenUsage: {
+                ...defaultLLMSettings.geminiTokenUsage!,
+                ...(parsed.geminiTokenUsage || {})
+            },
+            ollamaTokenUsage: {
+                ...defaultLLMSettings.ollamaTokenUsage!,
+                ...(parsed.ollamaTokenUsage || {})
+            },
             youtube: {
               ...defaultLLMSettings.youtube,
               ...(parsed.youtube || {})
@@ -110,4 +123,30 @@ export const resetAllSettings = async () => {
     }
     // Finally, clear the directory handles from IndexedDB
     await clearAllHandles();
+};
+
+export const trackTokenUsage = (provider: 'gemini' | 'ollama' | 'ollama_cloud', actualTokens: number): void => {
+    const settings = loadLLMSettings();
+
+    if (provider === 'gemini') {
+        if (settings.geminiTokenUsage) {
+            settings.geminiTokenUsage.used += actualTokens;
+            if (settings.geminiTokenUsage.used > settings.geminiTokenUsage.limit) {
+                 settings.geminiTokenUsage.used = settings.geminiTokenUsage.limit;
+            }
+        }
+    } else {
+        if (settings.ollamaTokenUsage) {
+            settings.ollamaTokenUsage.used += actualTokens;
+            if (settings.ollamaTokenUsage.used > settings.ollamaTokenUsage.limit) {
+                settings.ollamaTokenUsage.used = settings.ollamaTokenUsage.limit;
+           }
+        }
+    }
+
+    saveLLMSettings(settings);
+    // Dispatch event so the SettingsContext or UI can listen and refresh
+    if (typeof window !== 'undefined') {
+        window.dispatchEvent(new Event('token-usage-updated'));
+    }
 };

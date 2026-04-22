@@ -146,7 +146,7 @@ const Dashboard: React.FC<DashboardProps> = () => {
                 </div>
                 <div className="overflow-hidden py-1">
                     <p ref={taglineRef} className="text-[9px] md:text-[11px] font-black uppercase tracking-[0.5em] text-base-content/40 max-w-2xl leading-loose">
-                         Creativity, organized… unlike your desktop
+                         Precision tools for creative minds.
                     </p>
                 </div>
 

@@ -54,7 +54,13 @@ const PromptTemplatePanel: React.FC<{
 
             <InfoRow label="WORD COUNT">
                 <span className="text-xs font-mono whitespace-nowrap tracking-wide text-base-content/60">
-                    {prompt.text.split(' ').length} WORDS
+                    {prompt.text.split(/\s+/).filter(Boolean).length} WORDS
+                </span>
+            </InfoRow>
+
+            <InfoRow label="APPROX. TOKEN COUNT">
+                <span className="text-xs font-mono whitespace-nowrap tracking-wide text-base-content/60">
+                    {Math.ceil(prompt.text.length / 4)} TOKENS
                 </span>
             </InfoRow>
         </div>

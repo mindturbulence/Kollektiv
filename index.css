@@ -404,6 +404,35 @@ button {
     background-color: oklch(var(--p) / 0.8);
   }
 
+  /* --- SHINE TEXT EFFECT --- */
+  .shine-container {
+      position: relative;
+      display: inline-block;
+  }
+
+  .shine-text {
+      color: oklch(var(--bc) / 0.5);
+      background: linear-gradient(
+        120deg,
+        oklch(var(--bc) / 0.5) 30%,
+        oklch(var(--bc) / 0.8) 42%,
+        oklch(var(--bc)) 45%,
+        oklch(var(--bc) / 0.8) 48%,
+        oklch(var(--bc) / 0.5) 60%
+      );
+      background-size: 200% auto;
+      background-clip: text;
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      animation: shine-sweep 4s linear infinite;
+      display: inline-block;
+  }
+
+  @keyframes shine-sweep {
+      0% { background-position: -100% 0; }
+      100% { background-position: 100% 0; }
+  }
+
   /* Refiner Modifiers Minimal Clear Buttons */
   .modifiers-tabs-container .autocomplete-clear-btn {
     background: transparent !important;
@@ -1308,10 +1337,10 @@ button {
 [data-theme] footer.panel-footer,
 [data-theme] .panel-transparent header,
 [data-theme] .panel-transparent footer,
-[data-theme] .border-base-content/5,
-[data-theme] .border-base-content/10,
-[data-theme] .border-white/5,
-[data-theme] .border-white/10 {
+[data-theme] .border-base-content\/5,
+[data-theme] .border-base-content\/10,
+[data-theme] .border-white\/5,
+[data-theme] .border-white\/10 {
   border-color: oklch(var(--p) / 0.2) !important;
 }
 
