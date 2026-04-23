@@ -1,7 +1,7 @@
 import React, { useState, useMemo, useEffect, useRef, useCallback } from 'react';
 import { useSettings } from '../contexts/SettingsContext';
 import { useBusy } from '../contexts/BusyContext';
-import { dissectPrompt, reconstructPrompt, cleanLLMResponse, generateConstructorPreset } from '../services/llmService';
+import { dissectPrompt, reconstructPrompt, cleanLLMResponse } from '../services/llmService';
 import { audioService } from '../services/audioService';
 import useLocalStorage from '../utils/useLocalStorage';
 import LoadingSpinner from './LoadingSpinner';
@@ -69,7 +69,6 @@ export const PromptAnalyzer: React.FC<PromptAnalyzerProps> = ({
     const [constantModifier, setConstantModifier] = useLocalStorage('analyzer_constantModifier', '');
 
     const [isAnalyzing, setIsAnalyzing] = useState(false);
-    const [isMapping, setIsMapping] = useState(false);
     const [isRewriting, setIsRewriting] = useState(false);
     const [showAddDropdown, setShowAddDropdown] = useState(false);
 
@@ -297,7 +296,15 @@ export const PromptAnalyzer: React.FC<PromptAnalyzerProps> = ({
                 }
 
                 // Remove duplicate of Modifiers and Suggested Parameters (when have the same value)
-                if (seenValues.has(val)) {
+                // Normalize values for better deduplication
+                const normalizedVal = val.replace(/--ar\s+/g, '').replace(/--chaos\s+/g, '').trim();
+                const isDuplicateValue = Array.from(seenValues).some(v => 
+                    v === normalizedVal || 
+                    v.includes(normalizedVal) || 
+                    normalizedVal.includes(v)
+                );
+
+                if (isDuplicateValue) {
                     return;
                 }
                 
@@ -343,25 +350,21 @@ export const PromptAnalyzer: React.FC<PromptAnalyzerProps> = ({
 
     // --- Mapping Logic ---
     const handleMapToRefiner = async () => {
-        setIsMapping(true);
-        setIsBusy(true);
+        if (!modifiedPrompt) return;
         audioService.playClick();
-
+        
         try {
-            const components: Record<string, string> = { prompt: subjectPrompt };
-            modifierSegments.forEach(s => {
-                if (!components[s.key]) components[s.key] = '';
-                components[s.key] += (components[s.key] ? ', ' : '') + s.value;
-            });
-            if (constantModifier) components.constantModifier = constantModifier;
-
-            const result = await generateConstructorPreset(components, settings, modifierCatalog);
-            onMapToRefiner(result.prompt, result.modifiers, result.constantModifier);
+            // Copy to clipboard as per "only copy the modified prompt"
+            await navigator.clipboard.writeText(modifiedPrompt);
+            showGlobalFeedback('Prompt copied & mapped to refiner.');
+            
+            // Pass ONLY the modified prompt string, resetting other modifiers
+            // This satisfies "copy the modified prompt and paste it to prompt refiner page"
+            onMapToRefiner(modifiedPrompt, {}, '');
         } catch (err) {
-            showGlobalFeedback('Integration failed.', true);
-        } finally {
-            setIsMapping(false);
-            setIsBusy(false);
+            console.error('Copy/Map error:', err);
+            // Still try to map even if clipboard fails (some browsers might block clipboard in iframe)
+            onMapToRefiner(modifiedPrompt, {}, '');
         }
     };
 
@@ -418,7 +421,7 @@ export const PromptAnalyzer: React.FC<PromptAnalyzerProps> = ({
     const hasBreakdown = subjectPrompt || modifierSegments.length > 0;
 
     return (
-        <div className="flex flex-col h-full relative overflow-hidden animate-fade-in shadow-none">
+        <div className="flex flex-col h-full relative overflow-hidden shadow-none">
             {/* Header integration */}
             <div className="flex-shrink-0">
                 {header}
@@ -437,14 +440,14 @@ export const PromptAnalyzer: React.FC<PromptAnalyzerProps> = ({
 
                         <div className="flex-grow overflow-y-auto custom-scrollbar relative">
                             {/* Stable Body Container */}
-                            <div className="min-h-full flex flex-col animate-fade-in">
+                            <div className="min-h-full flex flex-col">
                                 {!hasBreakdown ? (
                                     <div className="flex-grow flex flex-col p-6 h-full">
                                         <textarea
                                             value={promptInput}
                                             onChange={(e) => setPromptInput(e.target.value)}
                                             placeholder="Enter complex prompt sequence to deconstruct into atomic nodes..."
-                                            className="flex-grow w-full bg-base-100/10 border border-base-content/10 focus:border-primary/50 focus:outline-none p-6 font-nunito font-bold text-lg leading-relaxed resize-none transition-all placeholder:text-base-content/10 rounded-none shadow-inner"
+                                            className="flex-grow w-full bg-base-100/10 border border-base-content/10 focus:border-primary/50 focus:outline-none p-6 font-nunito font-bold text-lg leading-relaxed resize-none transition-all placeholder:text-base-content/40 rounded-none shadow-inner"
                                         />
                                     </div>
                                 ) : (
@@ -464,7 +467,7 @@ export const PromptAnalyzer: React.FC<PromptAnalyzerProps> = ({
                                         <div className="space-y-4">
                                             <div className="grid grid-cols-1 md:grid-cols-2 gap-x-4 gap-y-6">
                                                 {modifierSegments.map(seg => (
-                                                    <div key={seg.id} className="flex flex-col space-y-2 group animate-fade-in">
+                                                    <div key={seg.id} className="flex flex-col space-y-2 group">
                                                         <div className="flex justify-between items-center px-1">
                                                             <label className="text-[12px] font-black uppercase tracking-widest text-base-content/40">{getModifierLabel(seg.key)}</label>
                                                             <button
@@ -661,39 +664,53 @@ export const PromptAnalyzer: React.FC<PromptAnalyzerProps> = ({
                             <div className="h-full flex flex-col overflow-hidden">
                                 {/* Source Tab Container */}
                                 <div className="flex-1 flex flex-col min-h-0 overflow-hidden border-b border-base-content/5">
-                                    <div className="flex items-center gap-1 mb-2">
-                                        <button
-                                            type="button"
-                                            onClick={() => setSourceTab('original')}
-                                            className={`text-[10px] font-black uppercase tracking-widest px-3 py-1.5 transition-all ${
-                                                sourceTab === 'original' 
-                                                ? 'text-primary' 
-                                                : 'text-base-content/40 hover:text-base-content/60'
-                                            }`}
-                                        >
-                                            ORIGINAL
-                                        </button>
-                                        {naturalLanguage && (
+                                    <div className="flex items-center justify-between mb-2">
+                                        <div className="flex items-center gap-1">
                                             <button
                                                 type="button"
-                                                onClick={() => setSourceTab('natural')}
+                                                onClick={() => setSourceTab('original')}
                                                 className={`text-[10px] font-black uppercase tracking-widest px-3 py-1.5 transition-all ${
-                                                    sourceTab === 'natural' 
-                                                    ? 'text-secondary' 
+                                                    sourceTab === 'original' 
+                                                    ? 'text-primary' 
                                                     : 'text-base-content/40 hover:text-base-content/60'
                                                 }`}
                                             >
-                                                NATURAL
+                                                ORIGINAL
                                             </button>
-                                        )}
+                                            {naturalLanguage && (
+                                                <button
+                                                    type="button"
+                                                    onClick={() => setSourceTab('natural')}
+                                                    className={`text-[10px] font-black uppercase tracking-widest px-3 py-1.5 transition-all ${
+                                                        sourceTab === 'natural' 
+                                                        ? 'text-secondary' 
+                                                        : 'text-base-content/40 hover:text-base-content/60'
+                                                    }`}
+                                                >
+                                                    NATURAL
+                                                </button>
+                                            )}
+                                        </div>
+                                        <button
+                                            onClick={() => {
+                                                const textToCopy = sourceTab === 'original' ? (promptInput || reconstructedPrompt) : naturalLanguage;
+                                                if (textToCopy) {
+                                                    navigator.clipboard.writeText(textToCopy);
+                                                    showGlobalFeedback('Source prompt copied');
+                                                }
+                                            }}
+                                            className="text-[9px] font-black uppercase tracking-[0.2em] text-primary/40 hover:text-primary transition-colors px-3 py-1.5"
+                                        >
+                                            COPY
+                                        </button>
                                     </div>
-                                    <div className="flex-1 relative group flex flex-col p-4 bg-base-100/5 border border-base-content/5 overflow-y-auto">
+                                    <div className="flex-1 relative group flex flex-col p-4 bg-base-100/5 border border-base-content/5 overflow-y-auto custom-scrollbar">
                                         {isAnalyzing ? (
                                             <div className="h-full flex items-center justify-center">
                                                 <LoadingSpinner size={32} />
                                             </div>
                                         ) : (promptInput || reconstructedPrompt || naturalLanguage) ? (
-                                            <blockquote className="text-base md:text-lg font-nunito font-bold italic leading-relaxed tracking-tight text-base-content selection-bg-primary/30">
+                                            <blockquote className="text-base md:text-lg font-nunito font-bold italic leading-relaxed tracking-tight text-base-content selection:bg-primary/20 pb-4">
                                                 "{sourceTab === 'original' 
                                                     ? (promptInput || reconstructedPrompt || '...') 
                                                     : (naturalLanguage || '...')}"
@@ -707,16 +724,16 @@ export const PromptAnalyzer: React.FC<PromptAnalyzerProps> = ({
                                 </div>
                                 {/* Modified Prompt Container */}
                                 <div className="flex-1 flex flex-col min-h-0 overflow-hidden pt-2">
-                                    <div className="flex items-center gap-1 mb-2">
-                                        <label className="text-[10px] font-black uppercase tracking-widest text-primary/60 px-3 py-1.5">Modified Prompt</label>
+                                    <div className="flex items-center justify-between mb-2">
+                                        <label className="text-[10px] font-black uppercase tracking-widest text-primary px-3 py-1.5">Result</label>
                                     </div>
-                                    <div className="flex-1 relative group flex flex-col p-4 bg-base-100/10 border border-primary/20 overflow-y-auto">
+                                    <div className="flex-1 relative group flex flex-col p-4 bg-base-100/10 border border-primary/20 overflow-y-auto custom-scrollbar">
                                         {isRewriting ? (
                                             <div className="h-full flex items-center justify-center">
                                                 <LoadingSpinner size={32} />
                                             </div>
                                         ) : modifiedPrompt ? (
-                                            <blockquote className="text-base md:text-lg font-nunito font-bold italic leading-relaxed tracking-tight text-base-content selection-bg-primary/30">
+                                            <blockquote className="text-base md:text-lg font-nunito font-bold italic leading-relaxed tracking-tight text-base-content selection:bg-primary/20 pb-4">
                                                 "{modifiedPrompt}"
                                             </blockquote>
                                         ) : (
@@ -729,7 +746,7 @@ export const PromptAnalyzer: React.FC<PromptAnalyzerProps> = ({
                             </div>
                         </div>
 
-                        <footer className="h-14 flex items-stretch border-t border-base-content/5 bg-base-100/10 backdrop-blur-md p-1.5 gap-1.5 panel-footer">
+                        <footer className="h-14 flex-shrink-0 flex items-stretch border-t border-base-content/5 bg-base-100/10 backdrop-blur-md p-1.5 gap-1.5 panel-footer">
                             <div className="flex flex-1 w-full h-full items-stretch gap-1.5">
                                 <button
                                     onClick={() => {
@@ -758,11 +775,11 @@ export const PromptAnalyzer: React.FC<PromptAnalyzerProps> = ({
                                 </button>
                                 <button
                                     onClick={handleMapToRefiner}
-                                    disabled={!modifiedPrompt || isRewriting || isMapping}
+                                    disabled={!modifiedPrompt || isRewriting}
                                     className="btn btn-sm btn-ghost h-full flex-1 rounded-none font-normal text-[11px] tracking-widest uppercase btn-snake font-display"
                                 >
                                     <span /><span /><span /><span />
-                                    {isMapping ? 'MAPPING...' : 'REFINE'}
+                                    REFINE
                                 </button>
                                 <button
                                     onClick={() => {

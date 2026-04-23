@@ -82,7 +82,7 @@ const PropertyCard: React.FC<{
 }> = ({ label, value, onClear, onClick, active }) => (
     <div
         onClick={onClick}
-        className={`group relative p-4 transition-all duration-300 cursor-pointer select-none flex flex-col justify-center min-h-[5rem] animate-fade-in last:border-b-0 border-b border-base-content/5 ${active ? 'bg-primary/5' : 'hover:bg-base-content/5'}`}
+        className={`group relative p-4 transition-all duration-300 cursor-pointer select-none flex flex-col justify-center min-h-[5rem] last:border-b-0 border-b border-base-content/5 ${active ? 'bg-primary/5' : 'hover:bg-base-content/5'}`}
     >
         <div className="flex items-center justify-between gap-2 mb-1.5">
             <span className={`text-xs font-black uppercase tracking-[0.2em] ${active ? 'text-primary' : 'text-base-content/30'}`}>{label}</span>
@@ -729,7 +729,7 @@ const PromptsPage: React.FC<PromptsPageProps> = ({
         switch (activeRefineSubTab) {
             case 'basic':
                 return (
-                    <div className="flex flex-col h-full space-y-6 animate-fade-in overflow-hidden">
+                    <div className="flex flex-col h-full space-y-6 overflow-hidden">
                         <div className="form-control flex-grow flex flex-col min-h-[120px]">
                             <div className="flex justify-between items-center mb-2">
                                 <label className="text-[10px] font-black uppercase tracking-widest text-base-content/40">Prompt Idea</label>
@@ -788,7 +788,7 @@ const PromptsPage: React.FC<PromptsPageProps> = ({
                 );
             case 'styling':
                 return (
-                    <div className="flex flex-col gap-6 animate-fade-in">
+                    <div className="flex flex-col gap-6">
                         <div className="grid grid-cols-1 gap-4">
                             <div className="form-control">
                                 <label className="text-[10px] font-black uppercase text-base-content/40 tracking-widest mb-2 block">Visual Discipline</label>
@@ -803,7 +803,7 @@ const PromptsPage: React.FC<PromptsPageProps> = ({
                         {isZImage && (
                             <div className="form-control">
                                 <label className="text-[10px] font-black uppercase text-base-content/40 tracking-widest mb-2 block">Z-Image Variant</label>
-                                <select value={modifiers.zImageStyle} onChange={e => setModifiers({ ...modifiers, zImageStyle: e.target.value })} className="form-select w-full animate-fade-in">
+                                <select value={modifiers.zImageStyle} onChange={e => setModifiers({ ...modifiers, zImageStyle: e.target.value })} className="form-select w-full">
                                     <option value="">NONE</option>
                                     {Z_IMAGE_STYLES.map(s => <option key={s} value={s}>{s}</option>)}
                                 </select>
@@ -1260,12 +1260,12 @@ const PromptsPage: React.FC<PromptsPageProps> = ({
                         {/* Left Sidebar: Controls & Tabs */}
                         <aside className="lg:col-span-3 h-full min-h-0 flex flex-col relative p-[3px] corner-frame overflow-visible">
                             <div className="flex flex-col h-full w-full overflow-visible relative z-10 bg-base-100/40 backdrop-blur-xl panel-transparent">
-                                <header className="h-14 flex items-stretch flex-shrink-0 bg-base-100/10 backdrop-blur-md p-1.5 gap-1.5 panel-header">
+                                <header className="h-16 flex items-stretch flex-shrink-0 bg-base-100/80 backdrop-blur-md p-2 gap-1.5 panel-header">
                                     {tabs.map(tab => (
                                         <button
                                             key={tab.id}
                                             onClick={() => setActiveRefineSubTab(tab.id)}
-                                            className={`btn btn-sm h-full rounded-none flex-1 font-normal text-[13px] tracking-[0.2em] uppercase px-1 truncate btn-snake font-display ${activeRefineSubTab === tab.id ? 'btn-ghost text-primary font-black shadow-none drop-shadow-none [text-shadow:none] [filter:none]' : 'btn-ghost text-base-content/40 hover:text-primary'}`}
+                                            className={`btn btn-sm h-full rounded-none flex-1 font-normal text-[11px] tracking-[0.2em] uppercase px-1 truncate btn-snake font-display ${activeRefineSubTab === tab.id ? 'btn-ghost text-primary font-black shadow-none drop-shadow-none [text-shadow:none] [filter:none]' : 'btn-ghost text-base-content/40 hover:text-primary'}`}
                                         >
                                             <span /><span /><span /><span />
                                             {tab.label}

@@ -168,7 +168,7 @@ const InitialLoader: React.FC<{ status: string; progress: number | null }> = ({ 
                 <div className="overflow-hidden mb-6 px-4">
                     <h1 ref={textWrapperRef} className="grid grid-cols-1 grid-rows-1 text-2xl md:text-4xl font-normal tracking-widest uppercase select-none items-center font-monoton">
                         <span className="text-base-content/10 block leading-none py-2 row-start-1 col-start-1">
-                            Kollektiv<span className="text-primary/10 italic">.</span>
+                            <ChromaticText enabled={false}>Kollektiv</ChromaticText><span className="text-primary/10 italic">.</span>
                         </span>
 
                         <div
@@ -176,7 +176,7 @@ const InitialLoader: React.FC<{ status: string; progress: number | null }> = ({ 
                             style={{ width: `${percentage}%` }}
                         >
                             <span className="text-base-content block whitespace-nowrap leading-none py-2 drop-shadow-[0_0_20px_rgba(var(--bc),0.15)]">
-                                Kollektiv<span className="text-primary italic">.</span>
+                                <ChromaticText>Kollektiv</ChromaticText><span className="text-primary italic">.</span>
                             </span>
                         </div>
                     </h1>
@@ -407,7 +407,8 @@ const PageFrame: React.FC<PageFrameProps> = ({
 
         const tl = gsap.timeline({ delay: 2.2 }); // Start after blinds
 
-        gsap.set([topRef.current, logoRef.current], { yPercent: -50, y: -20, autoAlpha: 0 });
+        gsap.set(topRef.current, { yPercent: -50, y: -20, autoAlpha: 0 });
+        gsap.set(logoRef.current, { xPercent: -50, yPercent: -50, y: -20, autoAlpha: 0, force3D: true });
         gsap.set(bottomRef.current, { yPercent: 50, y: 20, autoAlpha: 0 });
 
         tl.to([topRef.current, logoRef.current], {
@@ -415,7 +416,8 @@ const PageFrame: React.FC<PageFrameProps> = ({
             autoAlpha: 1,
             duration: 1.2,
             ease: "power3.out",
-            stagger: 0.1
+            stagger: 0.1,
+            force3D: true
         });
 
         tl.to(bottomRef.current, {
@@ -483,7 +485,7 @@ const PageFrame: React.FC<PageFrameProps> = ({
                 <div className="absolute -bottom-[1px] -right-[1px] w-4 h-4 border-b border-r border-primary/20" />
 
                 {/* Technical Labels - Top (Relocated Header Menus) */}
-                <div ref={topRef} className="absolute top-0 left-12 right-12 flex justify-between items-center pointer-events-auto opacity-0">
+                <div ref={topRef} className="absolute top-0 left-12 right-12 flex justify-between items-center pointer-events-auto opacity-0 -translate-y-1/2">
 
                     <div className="flex gap-1 items-center">
                         <HUDNavItem
@@ -542,12 +544,12 @@ const PageFrame: React.FC<PageFrameProps> = ({
                 </div>
 
                 {/* Center Logo */}
-                <div ref={logoRef} className="absolute top-0 left-1/2 -translate-x-1/2 flex items-center pointer-events-auto opacity-0">
+                <div ref={logoRef} className="absolute top-0 left-1/2 flex items-center pointer-events-auto opacity-0">
                     <Logo onNavigate={onNavigate} />
                 </div>
 
                 {/* Technical Labels - Bottom (Relocated Controls) */}
-                <div ref={bottomRef} className="absolute bottom-0 left-12 right-12 flex justify-between items-center pointer-events-auto opacity-0">
+                <div ref={bottomRef} className="absolute bottom-0 left-12 right-12 flex justify-between items-center pointer-events-auto opacity-0 translate-y-1/2">
                     <div className="flex gap-3 items-center">
                         <span className="text-[12px] font-mono uppercase tracking-[0.3em] text-primary/60">ENGINE</span>
                         {/* <div className="w-px h-2 bg-base-content/10 mx-1 self-center" /> */}
@@ -671,14 +673,14 @@ const AppContent: React.FC = () => {
         }
     }, [activeTab]);
 
-    const mainGridRef = useRef<HTMLDivElement>(null);
+    const transitionOverlayRef = useRef<HTMLDivElement>(null);
+    const transitionLogoRef = useRef<HTMLDivElement>(null);
+    const topOverlayPanelRef = useRef<HTMLDivElement>(null);
+    const bottomOverlayPanelRef = useRef<HTMLDivElement>(null);
     const apertureRef = useRef<HTMLDivElement>(null);
     const blindsRef = useRef<HTMLDivElement>(null);
     const appWrapperRef = useRef<HTMLDivElement>(null);
     const contentRef = useRef<HTMLDivElement>(null);
-
-    const gridRows = 10;
-    const gridCols = 12;
 
     const resetIdleTimer = useCallback((forceWake: boolean = true) => {
         if (forceWake && isIdleRef.current) {
@@ -833,80 +835,90 @@ const AppContent: React.FC = () => {
     }, [isInitialized]);
 
     const runScopedTransition = useCallback(async (targetTab: ActiveTab) => {
-        if (isTransitioningRef.current || !mainGridRef.current || !contentRef.current) return;
+        if (isTransitioningRef.current || !transitionOverlayRef.current || !contentRef.current) return;
         isTransitioningRef.current = true;
-        audioService.playClick();
+        audioService.playTransition();
 
         const tl = gsap.timeline();
 
-        // Phase 1: Current content slides down and fades out
-        tl.to(contentRef.current, {
-            y: 80,
-            autoAlpha: 0,
+        // Prepare overlay
+        gsap.set(transitionOverlayRef.current, { visibility: 'visible', autoAlpha: 1 });
+        gsap.set([topOverlayPanelRef.current, bottomOverlayPanelRef.current], { height: "0%" });
+        gsap.set(transitionLogoRef.current, { 
+            opacity: 0, 
+            scale: 0.8, 
+            y: 30,
+            xPercent: -50,
+            yPercent: -50,
+            force3D: true 
+        });
+
+        // Phase 1: Closing Shutter
+        tl.to([topOverlayPanelRef.current, bottomOverlayPanelRef.current], {
+            height: "50%",
             duration: 0.8,
+            ease: "expo.inOut",
+            stagger: 0,
+            force3D: true
+        });
+
+        // Current content slides slightly down before being covered
+        tl.to(contentRef.current, {
+            y: 40,
+            autoAlpha: 0,
+            duration: 0.6,
             ease: "power2.in"
-        });
+        }, 0);
 
-        // Show grid cover
-        tl.set(mainGridRef.current, { autoAlpha: 1, visibility: 'visible' });
+        // Phase 2: Show logo
+        tl.to(transitionLogoRef.current, {
+            opacity: 1,
+            scale: 1,
+            y: 0, // Slide to final position
+            duration: 0.8,
+            ease: "power3.out"
+        }, "-=0.2");
 
-        // Phase 2: Grid slides down to cover
-        const cells = mainGridRef.current.querySelectorAll('.transition-cell');
-        tl.fromTo(cells,
-            { y: 0, scaleY: 1 },
-            {
-                y: 100,
-                scaleY: 0.5,
-                duration: 1,
-                ease: "power3.inOut",
-                stagger: {
-                    grid: [gridRows, gridCols],
-                    from: "start",
-                    axis: "y",
-                    amount: 0.3
-                }
-            },
-            "-=0.4"
-        );
-
-        // Switch tab
-        tl.call(() => setActiveTab(targetTab));
+        // Switch Tab mid-transition
         tl.call(() => {
+            setActiveTab(targetTab);
+            // Prepare new content position - slide from bottom
             if (contentRef.current) {
-                gsap.set(contentRef.current, { y: -80, autoAlpha: 0 });
+                gsap.set(contentRef.current, { y: 60, autoAlpha: 0 });
             }
         });
 
-        // Phase 3: New content slides up from below
-        tl.call(() => {
-            if (contentRef.current) {
-                gsap.fromTo(contentRef.current,
-                    { y: 80, autoAlpha: 0 },
-                    { y: 0, autoAlpha: 1, duration: 0.8, ease: "power3.out" }
-                );
-            }
+        // Hold briefly
+        tl.to({}, { duration: 0.4 });
+
+        // Phase 3: Opening Shutter
+        tl.to(transitionLogoRef.current, {
+            opacity: 0,
+            y: -20, // Slide up further as it disappears
+            scale: 1.05,
+            duration: 0.6,
+            ease: "power3.in"
         });
 
-        // Phase 4: Grid slides back up to reveal
-        tl.to(cells,
-            {
-                y: 0,
-                scaleY: 1,
-                duration: 1,
-                ease: "power3.inOut",
-                stagger: {
-                    grid: [gridRows, gridCols],
-                    from: "end",
-                    axis: "y",
-                    amount: 0.3
-                },
-                onComplete: () => {
-                    gsap.set(mainGridRef.current, { autoAlpha: 0, visibility: 'hidden' });
-                    isTransitioningRef.current = false;
-                }
-            },
-            "-=0.6"
-        );
+        tl.to([topOverlayPanelRef.current, bottomOverlayPanelRef.current], {
+            height: "0%",
+            duration: 0.8,
+            ease: "expo.inOut"
+        }, "-=0.2");
+
+        // Phase 4: Reveal new content
+        tl.to(contentRef.current, {
+            y: 0,
+            autoAlpha: 1,
+            duration: 1.0,
+            ease: "power4.out"
+        }, "-=0.5");
+
+        // Cleanup
+        tl.call(() => {
+            gsap.set(transitionOverlayRef.current, { visibility: 'hidden', autoAlpha: 0 });
+            isTransitioningRef.current = false;
+        });
     }, [setActiveTab]);
 
     const handleNavigate = (tab: ActiveTab) => {
@@ -1184,18 +1196,30 @@ const AppContent: React.FC = () => {
 
                         <div className={`flex-1 flex overflow-hidden relative ${activeTab === 'prompts' ? 'pt-0' : 'pt-4'} px-4 pb-4 bg-transparent`}>
                             <main className="flex-grow min-w-0 relative overflow-hidden rounded-none bg-transparent border-none shadow-none backdrop-blur-none z-10">
+                                {/* Cinematic Transition Overlay (Tesoro Style) */}
                                 <div
-                                    ref={mainGridRef}
-                                    className="absolute inset-0 z-[600] pointer-events-none grid"
-                                    style={{
-                                        gridTemplateColumns: `repeat(${gridCols}, 1fr)`,
-                                        gridTemplateRows: `repeat(${gridRows}, 1fr)`,
-                                        visibility: 'hidden'
-                                    }}
+                                    ref={transitionOverlayRef}
+                                    className="absolute inset-0 z-[1000] pointer-events-none flex flex-col overflow-hidden"
+                                    style={{ visibility: 'hidden' }}
                                 >
-                                    {Array.from({ length: gridRows * gridCols }).map((_, i) => (
-                                        <div key={i} className="transition-cell bg-transparent" />
-                                    ))}
+                                    <div
+                                        ref={topOverlayPanelRef}
+                                        className="bg-base-100/98 flex-1 w-full h-0"
+                                        style={{ height: '0%' }}
+                                    />
+                                    <div
+                                        ref={bottomOverlayPanelRef}
+                                        className="bg-base-100/98 flex-1 w-full h-0"
+                                        style={{ height: '0%' }}
+                                    />
+                                    <div
+                                        ref={transitionLogoRef}
+                                        className="absolute top-1/2 left-1/2 opacity-0 scale-90"
+                                    >
+                                        <h1 className="text-3xl md:text-5xl font-normal tracking-[0.4em] text-base-content uppercase font-monoton whitespace-nowrap">
+                                            <ChromaticText>Kollektiv</ChromaticText><span className="text-primary italic">.</span>
+                                        </h1>
+                                    </div>
                                 </div>
 
                                 <div ref={contentRef} className="h-full w-full z-10 relative">

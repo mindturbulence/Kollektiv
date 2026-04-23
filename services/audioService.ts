@@ -16,11 +16,52 @@ class AudioService {
   private ambientOscillators: OscillatorNode[] = [];
   private lastHoverTime: number = 0;
   private initPromise: Promise<void> | null = null;
+  private bufferCache: Map<string, AudioBuffer> = new Map();
 
   constructor() {
     if (typeof window !== 'undefined') {
-      this.initContext();
+      this.initContext().then(() => {
+        this.preloadSounds();
+      });
     }
+  }
+
+  private async preloadSounds() {
+    try {
+      const sounds = [
+        { key: 'click', url: '/sfx/clicks.wav' },
+        { key: 'transition', url: '/sfx/page_transition.wav' }
+      ];
+
+      for (const sound of sounds) {
+        const response = await fetch(sound.url);
+        if (!response.ok) continue;
+        const arrayBuffer = await response.arrayBuffer();
+        if (this.ctx) {
+          const audioBuffer = await this.ctx.decodeAudioData(arrayBuffer);
+          this.bufferCache.set(sound.key, audioBuffer);
+        }
+      }
+    } catch (e) {
+      console.warn("Failed to preload sounds:", e);
+    }
+  }
+
+  private playBuffer(bufferKey: string, volume: number = 0.5): boolean {
+    const buffer = this.bufferCache.get(bufferKey);
+    if (!buffer || !this.ctx || !this.masterGain) return false;
+
+    const source = this.ctx.createBufferSource();
+    source.buffer = buffer;
+    
+    const gain = this.ctx.createGain();
+    gain.gain.value = volume;
+    
+    source.connect(gain);
+    gain.connect(this.masterGain);
+    
+    source.start(this.ctx.currentTime);
+    return true;
   }
 
   private async initContext(): Promise<void> {
@@ -152,6 +193,10 @@ class AudioService {
   playClick(): void {
     if (!this.isEnabled || !this.ctx || !this.masterGain) return;
     this.resume();
+
+    // Try to play the external click sound first
+    if (this.playBuffer('click', 0.6)) return;
+    
     const now = this.ctx.currentTime;
     
     // Low frequency definition
@@ -245,6 +290,10 @@ class AudioService {
   playTransition(): void {
     if (!this.isEnabled || !this.ctx || !this.masterGain) return;
     this.resume();
+    
+    // Try to play the external transition sound first
+    if (this.playBuffer('transition', 0.5)) return;
+
     const now = this.ctx.currentTime;
     
     // Quick noise bursts
