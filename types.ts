@@ -2,7 +2,12 @@
 // --- Core App Types ---
 export type ActiveTab =
   | 'dashboard'
+  | 'discovery'
   | 'prompts'
+  | 'crafter'
+  | 'refiner'
+  | 'prompt_analyzer'
+  | 'media_analyzer'
   | 'storyboard'
   | 'prompt'
   | 'gallery'
@@ -50,13 +55,6 @@ export interface YouTubeConnection {
   customClientId?: string;
 }
 
-export interface InstagramConnection {
-  isConnected: boolean;
-  clientKey?: string;
-  clientSecret?: string;
-  connectedAt?: number;
-}
-
 export interface GoogleIdentityConnection {
   isConnected: boolean;
   email?: string;
@@ -97,16 +95,18 @@ export interface LLMSettings {
 
   // Dashboard Settings
   dashboardVideoUrl: string;
+  isDashboardVideoEnabled: boolean;
   musicYoutubeUrl: string;
   musicEnabled: boolean;
   idleScreenType: 'matrix' | 'gallery';
+  isIdleEnabled: boolean;
+  idleTimeoutMinutes: number;
   
   // Feature Toggles
   features: FeatureSettings;
   
   // Integrations
   youtube?: YouTubeConnection;
-  instagram?: InstagramConnection;
   googleIdentity?: GoogleIdentityConnection;
 }
 

@@ -30,7 +30,9 @@ class AudioService {
     try {
       const sounds = [
         { key: 'click', url: '/sfx/clicks.wav' },
-        { key: 'transition', url: '/sfx/page_transition.wav' }
+        { key: 'transition', url: '/sfx/page_transition.wav' },
+        { key: 'hover', url: '/sfx/hover.wav' },
+        { key: 'slide', url: '/sfx/slide.mp3' }
       ];
 
       for (const sound of sounds) {
@@ -240,6 +242,10 @@ class AudioService {
     this.lastHoverTime = nowMs;
     
     this.resume();
+
+    // Try to play the external hover sound first
+    if (this.playBuffer('hover', 0.25)) return;
+
     const now = this.ctx.currentTime;
     
     const osc = this.createDigitalOsc(3200); // Higher freq for "Brisk" feel
@@ -375,6 +381,34 @@ class AudioService {
 
   playToggle(): void {
     this.playClick();
+  }
+
+  /**
+   * Sliding sound for parent menu expansion
+   */
+  playSlide(): void {
+    if (!this.isEnabled || !this.ctx || !this.masterGain) return;
+    this.resume();
+
+    // Try to play the external slide sound first
+    if (this.playBuffer('slide', 0.4)) return;
+
+    // Fallback if buffer not loaded
+    const now = this.ctx.currentTime;
+    const osc = this.createDigitalOsc(400, 'sine');
+    const gain = this.ctx.createGain();
+
+    osc.frequency.setValueAtTime(400, now);
+    osc.frequency.linearRampToValueAtTime(800, now + 0.3);
+
+    gain.gain.setValueAtTime(0, now);
+    gain.gain.linearRampToValueAtTime(0.05, now + 0.05);
+    gain.gain.linearRampToValueAtTime(0, now + 0.3);
+
+    osc.connect(gain);
+    gain.connect(this.masterGain);
+    osc.start(now);
+    osc.stop(now + 0.3);
   }
 
   startAmbient(intensity: number = 0.2): void {

@@ -2,6 +2,7 @@ import React from 'react';
 import { createPortal } from 'react-dom';
 import { CloseIcon, AppLogoIcon } from './icons';
 import { motion, AnimatePresence } from 'framer-motion';
+import { audioService } from '../services/audioService';
 
 interface AboutModalProps {
   isOpen: boolean;
@@ -66,9 +67,9 @@ const AboutModal: React.FC<AboutModalProps> = ({ isOpen, onClose }) => {
                     <div className="space-y-4">
                         <span className="text-[10px] font-black uppercase tracking-[0.2em] text-base-content/30">Links</span>
                         <div className="flex flex-wrap gap-4">
-                            <a href="https://civitai.com/user/mndtrblnc" target="_blank" rel="noopener noreferrer" className="form-btn h-8 px-4">Civitai</a>
-                            <a href="https://tensor.art/u/678345605994702141" target="_blank" rel="noopener noreferrer" className="form-btn h-8 px-4">Tensor.Art</a>
-                            <a href="https://ko-fi.com/mindturbulence" target="_blank" rel="noopener noreferrer" className="form-btn form-btn-primary h-8 px-4">Support on Ko-fi</a>
+                            <a href="https://civitai.com/user/mndtrblnc" target="_blank" rel="noopener noreferrer" onMouseEnter={() => audioService.playHover()} className="form-btn h-8 px-4">Civitai</a>
+                            <a href="https://tensor.art/u/678345605994702141" target="_blank" rel="noopener noreferrer" onMouseEnter={() => audioService.playHover()} className="form-btn h-8 px-4">Tensor.Art</a>
+                            <a href="https://ko-fi.com/mindturbulence" target="_blank" rel="noopener noreferrer" onMouseEnter={() => audioService.playHover()} className="form-btn form-btn-primary h-8 px-4">Support on Ko-fi</a>
                         </div>
                     </div>
                 </div>

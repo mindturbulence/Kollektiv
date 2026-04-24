@@ -1,151 +1,16 @@
-import React, { useState, useRef, useCallback, useMemo, useEffect } from 'react';
-import { motion, type Variants } from 'framer-motion';
+import React, { useState, useRef, useCallback, useMemo } from 'react';
+import { motion } from 'framer-motion';
 import { useSettings } from '../contexts/SettingsContext';
 import { useBusy } from '../contexts/BusyContext';
 import { abstractImage } from '../services/llmService';
-import { extractFullMetadata, type ParsedMetadata } from '../utils/fileUtils';
+import { extractFullMetadata, fileToBase64, type ParsedMetadata } from '../utils/fileUtils';
 import type { EnhancementResult } from '../types';
 import { PROMPT_DETAIL_LEVELS } from '../constants';
 import { PhotoIcon, CloseIcon, SparklesIcon } from './icons';
 import LoadingSpinner from './LoadingSpinner';
 import { SuggestionItem } from './SuggestionItem';
-import { fileToBase64 } from '../utils/fileUtils';
+import { TerminalText, PanelLine, ScanLine, panelVariants, sectionWipeVariants, contentVariants } from './AnimatedPanels';
 
-const TerminalText = ({ text, delay = 0, className = "", centered = false }: { text: string; delay?: number; className?: string; centered?: boolean }) => {
-    const [displayedText, setDisplayedText] = useState("");
-    const [isComplete, setIsComplete] = useState(false);
-
-    useEffect(() => {
-        const startTimeout = setTimeout(() => {
-            let i = 0;
-            const interval = setInterval(() => {
-                if (i < text.length) {
-                    setDisplayedText(text.slice(0, i + 1));
-                    i++;
-                } else {
-                    clearInterval(interval);
-                    setIsComplete(true);
-                }
-            }, 30);
-            return () => clearInterval(interval);
-        }, delay * 1000);
-
-        return () => {
-            clearTimeout(startTimeout);
-            setDisplayedText("");
-            setIsComplete(false);
-        };
-    }, [text, delay]);
-
-    return (
-        <span className={`${className} ${centered ? 'flex justify-center' : 'inline-flex'} items-center gap-1`}>
-            {displayedText}
-            {!isComplete && (
-                <motion.span 
-                    animate={{ opacity: [1, 0] }}
-                    transition={{ duration: 0.1, repeat: Infinity }}
-                    className="w-2 h-4 bg-primary inline-block shrink-0"
-                />
-            )}
-        </span>
-    );
-};
-
-const panelVariants: Variants = {
-    hidden: { 
-        opacity: 0,
-        scale: 0,
-        transformOrigin: "top left"
-    },
-    visible: { 
-        opacity: 1,
-        scale: 1,
-        transition: { 
-            duration: 1.2, 
-            ease: [0.16, 1, 0.3, 1] as any,
-        }
-    },
-    exit: {
-        opacity: 0,
-        scale: 0,
-        transformOrigin: "top left",
-        transition: {
-            duration: 0.8,
-            ease: [0.7, 0, 0.84, 0] as any,
-        }
-    }
-};
-
-const sectionWipeVariants: Variants = {
-    hidden: { 
-        clipPath: 'inset(0 100% 0 0)',
-        opacity: 0,
-    },
-    visible: (custom: number) => ({ 
-        clipPath: 'inset(0 0% 0 0)',
-        opacity: 1,
-        transition: { 
-            duration: 1.0, 
-            ease: [0.16, 1, 0.3, 1] as any,
-            delay: custom
-        }
-    }),
-    exit: {
-        clipPath: 'inset(0 100% 0 0)',
-        opacity: 0,
-        transition: {
-            duration: 0.5,
-            ease: [0.7, 0, 0.84, 0] as any,
-        }
-    }
-};
-
-const contentVariants: Variants = {
-    hidden: { opacity: 0, y: 5 },
-    visible: (custom: number) => ({ 
-        opacity: 1, 
-        y: 0,
-        transition: { duration: 0.4, ease: "easeOut" as any, delay: custom }
-    }),
-    exit: {
-        opacity: 0,
-        y: 5,
-        transition: { duration: 0.3, ease: "easeIn" as any }
-    }
-};
-
-const PanelLine = ({ position, delay = 0 }: { position: 'top' | 'bottom' | 'left' | 'right', delay?: number }) => {
-    const variants: Variants = {
-        hidden: { scaleX: 0, scaleY: 0, opacity: 0 },
-        visible: { 
-            scaleX: 1, scaleY: 1, opacity: 1,
-            transition: { duration: 1, ease: [0.16, 1, 0.3, 1] as any, delay }
-        }
-    };
-
-    const styles: React.CSSProperties = {
-        position: 'absolute',
-        backgroundColor: 'oklch(var(--bc) / 0.05)',
-        zIndex: 40,
-        pointerEvents: 'none',
-    };
-
-    if (position === 'top') { Object.assign(styles, { top: 0, left: 0, right: 0, height: '1px', originX: 0 }); }
-    if (position === 'bottom') { Object.assign(styles, { bottom: 0, left: 0, right: 0, height: '1px', originX: 1 }); }
-    if (position === 'left') { Object.assign(styles, { top: 0, bottom: 0, left: 0, width: '1px', originY: 1 }); }
-    if (position === 'right') { Object.assign(styles, { top: 0, bottom: 0, right: 0, width: '1px', originY: 0 }); }
-
-    return <motion.div initial="hidden" animate="visible" variants={variants} style={styles} />;
-};
-
-const ScanLine = ({ delay = 0 }: { delay?: number }) => (
-    <motion.div
-        className="absolute left-0 right-0 h-[2px] bg-primary/20 z-40 pointer-events-none"
-        initial={{ top: '0%', opacity: 0 }}
-        animate={{ top: ['0%', '100%'], opacity: [0, 0.5, 0] }}
-        transition={{ delay, duration: 1.5, ease: "linear", repeat: Infinity, repeatDelay: 5 }}
-    />
-);
 
 interface MediaAnalyzerProps {
   onSaveSuggestion: (suggestionText: string, title?: string) => void;

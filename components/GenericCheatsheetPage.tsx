@@ -1,5 +1,6 @@
 
 import React, { useState, useEffect, useRef, useLayoutEffect, useMemo } from 'react';
+import { motion } from 'framer-motion';
 import { gsap } from 'gsap';
 import type { CheatsheetCategory, CheatsheetItem } from '../types';
 import LoadingSpinner from './LoadingSpinner';
@@ -127,10 +128,11 @@ interface GenericCheatsheetPageProps {
   loadDataFn: () => Promise<CheatsheetCategory[]>;
   updateDataFn: (itemId: string, updates: Partial<CheatsheetItem>) => Promise<CheatsheetCategory[]>;
   onSendToPromptsPage?: (item: CheatsheetItem, category: string) => void;
+  isExiting?: boolean;
 }
 
 export const GenericCheatsheetPage: React.FC<GenericCheatsheetPageProps> = ({
-  title, heroText, subtitle, loadDataFn, updateDataFn, onSendToPromptsPage
+  title, heroText, subtitle, loadDataFn, updateDataFn, onSendToPromptsPage, isExiting = false
 }) => {
   const [data, setData] = useState<CheatsheetCategory[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -260,9 +262,38 @@ export const GenericCheatsheetPage: React.FC<GenericCheatsheetPageProps> = ({
     return <div className="h-full w-full flex items-center justify-center bg-transparent"><LoadingSpinner /></div>;
   }
 
+  const panelVariants = {
+    hidden: { 
+        clipPath: 'inset(100% 0 0 0)',
+        opacity: 0,
+    },
+    visible: { 
+        clipPath: 'inset(0% 0 0 0)',
+        opacity: 1,
+        transition: { 
+            duration: 1.0, 
+            ease: [0.16, 1, 0.3, 1] as any
+        }
+    },
+    exit: {
+        clipPath: 'inset(100% 0 0 0)',
+        opacity: 0,
+        transition: {
+            duration: 0.6,
+            ease: [0.7, 0, 0.84, 0] as any,
+        }
+    }
+  };
+
   return (
     <>
-    <section className="flex flex-col h-full bg-transparent w-full relative p-[3px] corner-frame overflow-visible">
+    <motion.section 
+        variants={panelVariants}
+        initial="hidden"
+        animate={isExiting ? "exit" : "visible"}
+        exit="exit"
+        className="flex flex-col h-full bg-transparent w-full relative p-[3px] corner-frame overflow-visible"
+    >
       <div className="flex flex-col h-full w-full overflow-hidden relative z-10 bg-base-100/40 backdrop-blur-xl">
       {!activeCategory ? (
         <>
@@ -339,7 +370,7 @@ export const GenericCheatsheetPage: React.FC<GenericCheatsheetPageProps> = ({
       <div className="absolute -top-[1px] -right-[1px] w-3 h-3 border-t border-r border-primary/15 z-20 pointer-events-none" />
       <div className="absolute -bottom-[1px] -left-[1px] w-3 h-3 border-b border-l border-primary/15 z-20 pointer-events-none" />
       <div className="absolute -bottom-[1px] -right-[1px] w-3 h-3 border-b border-r border-primary/15 z-20 pointer-events-none" />
-    </section>
+    </motion.section>
     </>
   );
 };

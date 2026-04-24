@@ -6,9 +6,10 @@ import { loadArtists, updateArtist } from '../utils/artistStorage';
 
 interface ArtistCheatsheetProps {
   onSendToPromptsPage: (state: { artist: string, artStyle?: string }) => void;
+  isExiting?: boolean;
 }
 
-const ArtistCheatsheet: React.FC<ArtistCheatsheetProps> = ({ onSendToPromptsPage }) => {
+const ArtistCheatsheet: React.FC<ArtistCheatsheetProps> = ({ onSendToPromptsPage, isExiting = false }) => {
   return (
     <div className="h-full w-full relative">
         <GenericCheatsheetPage
@@ -18,6 +19,7 @@ const ArtistCheatsheet: React.FC<ArtistCheatsheetProps> = ({ onSendToPromptsPage
             loadDataFn={loadArtists}
             updateDataFn={updateArtist}
             onSendToPromptsPage={(item: CheatsheetItem, category: string) => onSendToPromptsPage({ artist: item.name, artStyle: category })}
+            isExiting={isExiting}
         />
     </div>
   );

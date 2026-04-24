@@ -1,3 +1,4 @@
+@import url('https://fonts.googleapis.com/css2?family=Nunito:wght@200;300;400;500;600;700;800;900&family=Rajdhani:wght@300;400;500;600;700&family=Space+Grotesk:wght@300;400;500;600;700&family=Space+Mono:wght@400;700&display=swap');
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
@@ -8,6 +9,10 @@
 
 .font-sf-mono {
   font-family: 'Space Mono', monospace;
+}
+
+.font-rajdhani {
+  font-family: 'Rajdhani', sans-serif !important;
 }
 
 html {
@@ -277,12 +282,6 @@ button {
     letter-spacing: -0.05em !important;
   }
 
-  /* --- NO GLOW UTILITY --- */
-  .no-glow {
-    text-shadow: none !important;
-    filter: none !important;
-    box-shadow: none !important;
-  }
 
   /* --- STANDARDIZED FORM COMPONENTS --- */
   .form-input, .form-select, .form-textarea {
@@ -1725,4 +1724,11 @@ button {
     100% { transform: translate(0px, 0px); }
   }
   .box5631:nth-child(9) { animation: moveBox5631-9 4s infinite; }
+}
+
+/* --- NO GLOW UTILITY --- */
+.no-glow {
+  text-shadow: none !important;
+  filter: none !important;
+  box-shadow: none !important;
 }

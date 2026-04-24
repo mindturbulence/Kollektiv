@@ -1,6 +1,7 @@
 
 // PromptsPage.tsx - Core component for prompt management
-import React, { useState, useCallback, useEffect, useMemo, useRef, useLayoutEffect } from 'react';
+import React, { useState, useCallback, useEffect, useMemo, useRef } from 'react';
+import { audioService } from '../services/audioService';
 import { useSettings } from '../contexts/SettingsContext';
 import { enhancePromptStream, buildMidjourneyParams, generateWithImagen, generateWithNanoBanana, generateWithVeo, cleanLLMResponse, dissectPrompt, generateConstructorPreset } from '../services/llmService';
 import { loadPromptCategories, addSavedPrompt, loadSavedPrompts } from '../utils/promptStorage';
@@ -8,13 +9,10 @@ import { loadArtStyles } from '../utils/artstyleStorage';
 import { loadArtists } from '../utils/artistStorage';
 import { fileToBase64 } from '../utils/fileUtils';
 import { motion, AnimatePresence } from 'framer-motion';
-import { TerminalText, PanelLine, ScanLine, panelVariants, sectionWipeVariants, contentVariants } from './AnimatedPanels';
+import { TerminalText, PanelLine, ScanLine, panelVariants, pageHeaderVariants, pageBodyVariants, pageFooterVariants, reverseTextVariants, sectionWipeVariants, contentVariants } from './AnimatedPanels';
 import { refinerPresetService, type RefinerPreset } from '../services/refinerPresetService';
 
 import { useBusy } from '../contexts/BusyContext';
-import { gsap } from 'gsap';
-import RollingText from './RollingText';
-import { audioService } from '../services/audioService';
 import type { AppError, SavedPrompt, PromptCategory, EnhancementResult, PromptModifiers, CheatsheetCategory, Idea } from '../types';
 import {
     FILM_TYPES,
@@ -167,8 +165,6 @@ const PromptsPage: React.FC<PromptsPageProps> = ({
         }
     }, [forcedView]);
     const [isLocalExiting, setIsLocalExiting] = useState(false);
-    const tabsRef = useRef<HTMLDivElement>(null);
-    const tabsScanRef = useRef<HTMLDivElement>(null);
 
     const handleSwitchView = (newView: 'refine' | 'composer' | 'analyzer' | 'prompt_analyzer') => {
         if (newView === activeView) return;
@@ -180,38 +176,7 @@ const PromptsPage: React.FC<PromptsPageProps> = ({
         }, 800);
     };
 
-    useLayoutEffect(() => {
-        if (!tabsRef.current) return;
-        const navItems = tabsRef.current.children;
-        gsap.set(navItems, { y: -20, autoAlpha: 0 });
-        gsap.to(navItems, {
-            y: 0,
-            autoAlpha: 1,
-            duration: 1.2,
-            stagger: 0.1,
-            ease: "power3.out"
-        });
 
-        if (tabsScanRef.current) {
-            gsap.to(tabsScanRef.current, {
-                left: '120%',
-                opacity: 1,
-                duration: 2.5,
-                repeat: -1,
-                repeatDelay: 87.5, // 1.5 minutes (90s total - 2.5s animation)
-                delay: 20,
-                ease: "power2.inOut",
-                onRepeat: () => {
-                    gsap.set(tabsScanRef.current, { opacity: 1 });
-                }
-            });
-        }
-
-        return () => {
-            gsap.killTweensOf(navItems);
-            if (tabsScanRef.current) gsap.killTweensOf(tabsScanRef.current);
-        };
-    }, []);
 
     // --- Refiner State ---
     const [mediaMode, setMediaMode] = useState<MediaMode>('image');
@@ -226,7 +191,6 @@ const PromptsPage: React.FC<PromptsPageProps> = ({
     // --- Preset Management State ---
     const [presets, setPresets] = useState<RefinerPreset[]>([]);
     const [selectedPreset, setSelectedPreset] = useState<RefinerPreset | null>(null);
-    const [presetSearchText, setPresetSearchText] = useState('');
     const [isSavePresetModalOpen, setIsSavePresetModalOpen] = useState(false);
     const [newPresetName, setNewPresetName] = useState('');
     const [isSavingPreset, setIsSavingPreset] = useState(false);
@@ -474,7 +438,6 @@ const PromptsPage: React.FC<PromptsPageProps> = ({
         setDirectMediaResult(null);
         setErrorRefine(null);
         setSelectedPreset(null);
-        setPresetSearchText('');
         showGlobalFeedback('Workspace purge.');
     };
 
@@ -632,39 +595,7 @@ const PromptsPage: React.FC<PromptsPageProps> = ({
         }
     };
 
-    const renderTabsHeader = (currentView: typeof activeView) => {
-        const viewTabs = [
-            { id: 'composer', label: 'PROMPT CRAFTER' },
-            { id: 'refine', label: 'PROMPT REFINER' },
-            { id: 'prompt_analyzer', label: 'PROMPT ANALYZER' },
-            { id: 'analyzer', label: 'MEDIA ANALYZER' }
-        ] as const;
 
-        return (
-            <div className="flex-shrink-0 bg-transparent sticky top-0 z-20 h-12 flex justify-center items-center relative overflow-hidden">
-                {/* Horizontal System Line */}
-                <div className="absolute top-[52%] left-0 right-0 h-px nav-line-middle -translate-y-1/2 z-0 pointer-events-none">
-                    <div ref={tabsScanRef} className="absolute inset-y-0 left-[-20%] w-[20%] bg-gradient-to-r from-transparent via-primary/40 to-transparent opacity-0" />
-                </div>
-
-                <div ref={tabsRef} className="flex gap-4 h-full items-center relative z-10">
-                    {viewTabs.map((tab) => (
-                        <button
-                            key={tab.id}
-                            onMouseEnter={() => audioService.playHover()}
-                            onClick={() => handleSwitchView(tab.id as any)}
-                            className={`relative px-4 py-2 text-[12px] font-normal transition-colors duration-300 ${currentView === tab.id
-                                ? 'text-primary no-glow'
-                                : 'text-base-content/40 hover:text-primary/60 hover:no-glow'
-                                }`}
-                        >
-                            <RollingText text={tab.label} hoverClassName="text-primary" />
-                        </button>
-                    ))}
-                </div>
-            </div>
-        );
-    };
 
     const handleSendToRefine = (text: string) => {
         setRefineText(text);
@@ -766,9 +697,9 @@ const PromptsPage: React.FC<PromptsPageProps> = ({
                         <div className="form-control">
                             <label className="text-[10px] font-normal text-[12px] font-sf-mono uppercase tracking-widest text-base-content/40 mb-2">Media Output</label>
                             <div className="form-tab-group">
-                                <button onClick={() => setMediaMode('image')} className={`form-tab-item ${mediaMode === 'image' ? 'active' : ''}`}>IMAGE</button>
-                                <button onClick={() => setMediaMode('video')} className={`form-tab-item ${mediaMode === 'video' ? 'active' : ''}`}>VIDEO</button>
-                                <button onClick={() => setMediaMode('audio')} className={`form-tab-item ${mediaMode === 'audio' ? 'active' : ''}`}>AUDIO</button>
+                                <button onClick={() => { audioService.playClick(); setMediaMode('image'); }} className={`form-tab-item ${mediaMode === 'image' ? 'active' : ''}`}>IMAGE</button>
+                                <button onClick={() => { audioService.playClick(); setMediaMode('video'); }} className={`form-tab-item ${mediaMode === 'video' ? 'active' : ''}`}>VIDEO</button>
+                                <button onClick={() => { audioService.playClick(); setMediaMode('audio'); }} className={`form-tab-item ${mediaMode === 'audio' ? 'active' : ''}`}>AUDIO</button>
                             </div>
                         </div>
                         <div className="grid grid-cols-2 gap-4">
@@ -991,8 +922,8 @@ const PromptsPage: React.FC<PromptsPageProps> = ({
                     <div className="space-y-6 animate-fade-in">
                         <label className="text-[10px] font-black uppercase text-base-content/40 tracking-widest block">Generation Method</label>
                         <div className="form-tab-group">
-                            <button onClick={() => setModifiers({ ...modifiers, videoInputType: 't2v' })} className={`form-tab-item ${modifiers.videoInputType === 't2v' ? 'active' : ''}`}>TEXT-2-VID</button>
-                            <button onClick={() => setModifiers({ ...modifiers, videoInputType: 'i2v' })} className={`form-tab-item ${modifiers.videoInputType === 'i2v' ? 'active' : ''}`}>IMG-2-VID</button>
+                            <button onClick={() => { audioService.playClick(); setModifiers({ ...modifiers, videoInputType: 't2v' }); }} className={`form-tab-item ${modifiers.videoInputType === 't2v' ? 'active' : ''}`}>TEXT-2-VID</button>
+                            <button onClick={() => { audioService.playClick(); setModifiers({ ...modifiers, videoInputType: 'i2v' }); }} className={`form-tab-item ${modifiers.videoInputType === 'i2v' ? 'active' : ''}`}>IMG-2-VID</button>
                         </div>
                         <div className="form-control">
                             <label className="text-[10px] font-black uppercase text-base-content/40 tracking-widest mb-2 block">Motion</label>
@@ -1226,7 +1157,6 @@ const PromptsPage: React.FC<PromptsPageProps> = ({
                 await refinerPresetService.deletePreset(presetToDelete.name);
                 await loadPresets();
                 setSelectedPreset(null);
-                setPresetSearchText('');
                 showGlobalFeedback('Preset purged.');
             } catch (e) {
                 showGlobalFeedback('Deletion failed.', true);
@@ -1236,16 +1166,9 @@ const PromptsPage: React.FC<PromptsPageProps> = ({
         setPresetToDelete(null);
     };
 
-    const filteredPresets = useMemo(() => {
-        if (!presetSearchText) return presets;
-        return presets.filter(p => p.name.toLowerCase().includes(presetSearchText.toLowerCase()));
-    }, [presetSearchText, presets]);
-
     return (
         <div className="flex flex-col h-full bg-transparent overflow-hidden p-0">
-            {!forcedView && renderTabsHeader(activeView)}
-
-            <div className={`flex-grow overflow-hidden relative ${!forcedView ? 'pt-4' : ''} min-h-0`}>
+            <div className={`flex-grow overflow-hidden relative min-h-0`}>
                 {activeView === 'composer' && (
                     <PromptCrafter
                         isNavigating={isExiting}
@@ -1265,9 +1188,9 @@ const PromptsPage: React.FC<PromptsPageProps> = ({
                 )}
 
                 {activeView === 'refine' && (
-                    <div className="grid grid-cols-1 lg:grid-cols-12 overflow-visible h-full gap-4 min-h-0">
+                    <div className="grid grid-cols-1 lg:grid-cols-12 overflow-hidden h-full gap-4 min-h-0">
                         {/* Left Sidebar: Controls & Tabs */}
-                        <motion.aside 
+                        <motion.aside
                             variants={panelVariants}
                             initial="hidden"
                             animate={isExiting ? "exit" : "visible"}
@@ -1280,18 +1203,21 @@ const PromptsPage: React.FC<PromptsPageProps> = ({
                             <PanelLine position="right" delay={0.7} />
                             <ScanLine delay={3.5} />
                             <div className="flex flex-col h-full w-full overflow-visible relative z-10 bg-base-100/40 backdrop-blur-xl panel-transparent">
-                                <motion.header 
-                                    variants={sectionWipeVariants}
-                                    custom={1.2}
+                                <motion.header
+                                    variants={pageHeaderVariants}
                                     initial="hidden"
                                     animate="visible"
                                     exit="exit"
-                                    className="h-16 flex items-stretch flex-shrink-0 bg-base-100/80 backdrop-blur-md p-2 gap-1.5 panel-header"
+                                    className="h-16 flex items-stretch flex-shrink-0 bg-base-100/80 backdrop-blur-md p-2 gap-1.5 panel-header overflow-visible relative z-[800]"
                                 >
                                     {tabs.map(tab => (
                                         <button
                                             key={tab.id}
-                                            onClick={() => setActiveRefineSubTab(tab.id)}
+                                            onClick={() => {
+                                                audioService.playClick();
+                                                setActiveRefineSubTab(tab.id);
+                                            }}
+                                            onMouseEnter={() => audioService.playHover()}
                                             className={`btn btn-sm h-full rounded-none flex-1 font-normal text-[12px] tracking-widest uppercase px-1 truncate btn-snake font-display shadow-none drop-shadow-none ${activeRefineSubTab === tab.id ? 'btn-ghost text-primary no-glow' : 'btn-ghost text-base-content/40 hover:text-primary hover:no-glow'}`}
                                         >
                                             <span /><span /><span /><span />
@@ -1299,43 +1225,52 @@ const PromptsPage: React.FC<PromptsPageProps> = ({
                                         </button>
                                     ))}
                                 </motion.header>
-                                <motion.div 
-                                    variants={contentVariants}
-                                    custom={2.2}
+                                <motion.div
+                                    variants={pageBodyVariants}
                                     initial="hidden"
                                     animate="visible"
-                                    ref={refineScrollerRef} 
+                                    exit="exit"
+                                    ref={refineScrollerRef}
                                     className="flex-grow p-6 overflow-y-auto bg-transparent modifiers-tabs-container"
                                 >
                                     {renderRefineSubContent()}
                                 </motion.div>
-                                <motion.footer 
-                                    variants={contentVariants}
-                                    custom={2.4}
+                                <motion.footer
+                                    variants={pageFooterVariants}
                                     initial="hidden"
                                     animate="visible"
+                                    exit="exit"
                                     className="h-14 flex items-stretch flex-shrink-0 bg-base-100/10 backdrop-blur-md p-1.5 gap-1.5 panel-footer"
                                 >
                                     <button
-                                        onClick={handleResetRefiner}
-                                        className="btn btn-sm btn-ghost h-full rounded-none flex-1 font-normal text-[13px] tracking-wider text-error/40 hover:text-error border border-base-content/5 btn-snake"
+                                        onClick={() => {
+                                            audioService.playClick();
+                                            handleResetRefiner();
+                                        }}
+                                        className="btn btn-sm btn-ghost h-full rounded-none flex-1 fonr-jardhani font-normal text-[10px] tracking-wider text-error/40 hover:text-error border-1 btn-snake"
                                     >
                                         <span /><span /><span /><span />
                                         RESET
                                     </button>
                                     <button
-                                        onClick={handleEnhance}
+                                        onClick={() => {
+                                            audioService.playClick();
+                                            handleEnhance();
+                                        }}
                                         disabled={isLoadingRefine || !refineText.trim()}
-                                        className="btn btn-sm btn-ghost h-full rounded-none flex-1 font-normal text-[13px] tracking-wider text-primary border border-base-content/5 disabled:opacity-30 disabled:cursor-not-allowed btn-snake"
+                                        className="btn btn-sm btn-ghost h-full rounded-none flex-1 font-jardhani text-[10px] tracking-wider text-primary border-1 disabled:opacity-30 disabled:cursor-not-allowed btn-snake"
                                     >
                                         <span /><span /><span /><span />
                                         {isLoadingRefine ? '...' : 'IMPROVE'}
                                     </button>
                                     {isGoogleProduct && (
                                         <button
-                                            onClick={handleDirectGenerate}
+                                            onClick={() => {
+                                                audioService.playClick();
+                                                handleDirectGenerate();
+                                            }}
                                             disabled={isLoadingRefine || !refineText.trim()}
-                                            className="btn btn-sm btn-primary h-full rounded-none flex-1 font-normal text-[13px] tracking-wider border border-base-content/5 disabled:opacity-30 disabled:cursor-not-allowed btn-snake-primary"
+                                            className="btn btn-sm btn-ghost h-full rounded-none flex-1 font-jardhani text-[10px] tracking-wider text-primary border-0 disabled:opacity-30 disabled:cursor-not-allowed btn-snake"
                                         >
                                             <span /><span /><span /><span />
                                             {isLoadingRefine ? '...' : 'RENDER'}
@@ -1351,7 +1286,7 @@ const PromptsPage: React.FC<PromptsPageProps> = ({
                         </motion.aside>
 
                         {/* Center: Main Neural Output */}
-                        <motion.main 
+                        <motion.main
                             variants={panelVariants}
                             initial="hidden"
                             animate={isExiting ? "exit" : "visible"}
@@ -1364,22 +1299,23 @@ const PromptsPage: React.FC<PromptsPageProps> = ({
                             <PanelLine position="right" delay={0.7} />
                             <ScanLine delay={3.5} />
                             <div className="flex flex-col h-full w-full overflow-visible relative z-10 bg-base-100/40 backdrop-blur-xl panel-transparent">
-                                <motion.header 
-                                    variants={sectionWipeVariants}
-                                    custom={1.4}
+                                <motion.header
+                                    variants={pageHeaderVariants}
                                     initial="hidden"
                                     animate="visible"
                                     exit="exit"
-                                    className="p-6 h-16 flex justify-between items-center bg-base-100/80 backdrop-blur-md panel-header"
+                                    className="p-6 h-16 flex justify-between items-center bg-base-100/80 backdrop-blur-md panel-header overflow-visible relative z-[800]"
                                 >
-                                    <TerminalText text={`REFINED PROMPT : ${targetAIModel}`} delay={2.6} className="text-xs font-sf-mono uppercase text-primary" />
+                                    <motion.div variants={reverseTextVariants}>
+                                        <TerminalText text={`REFINED PROMPT : ${targetAIModel}`} delay={2.6} className="text-xs font-sf-mono uppercase text-primary" />
+                                    </motion.div>
                                 </motion.header>
-                                <motion.div 
-                                    variants={contentVariants}
-                                    custom={2.4}
+                                <motion.div
+                                    variants={pageBodyVariants}
                                     initial="hidden"
                                     animate="visible"
-                                    ref={neuralOutputScrollerRef} 
+                                    exit="exit"
+                                    ref={neuralOutputScrollerRef}
                                     className="flex-grow overflow-y-auto flex flex-col items-stretch justify-center"
                                 >
                                     {isLoadingRefine ? (
@@ -1430,30 +1366,36 @@ const PromptsPage: React.FC<PromptsPageProps> = ({
                                         </div>
                                     ) : (
                                         <div className="flex-grow flex flex-col items-center justify-center text-center py-32 opacity-10">
-                                            <span className="p-8"><SparklesIcon className="w-24 h-24 mb-6" /></span>
-                                            <p className="text-xl font-normal text-[12px] font-sf-mono uppercase tracking-widest">Awaiting sequence initiation</p>
+                                            <span className="p-8"><SparklesIcon className="w-14 h-14" /></span>
+                                            <p className="font-jardhani text-[12px] font-sf-mono uppercase tracking-widest">Awaiting sequence initiation</p>
                                         </div>
                                     )}
                                 </motion.div>
-                                
+
                                 {resultsRefine && !isLoadingRefine && (
-                                    <motion.footer 
-                                        variants={contentVariants}
-                                        custom={2.6}
+                                    <motion.footer
+                                        variants={pageFooterVariants}
                                         initial="hidden"
                                         animate="visible"
+                                        exit="exit"
                                         className="h-14 flex items-stretch bg-base-100/10 backdrop-blur-md p-1.5 gap-1.5 panel-footer selection:bg-transparent"
                                     >
                                         <div className="flex-[4] flex items-stretch gap-1.5">
                                             <button
-                                                onClick={() => setIsJsonModalOpen(true)}
+                                                onClick={() => {
+                                                    audioService.playClick();
+                                                    setIsJsonModalOpen(true);
+                                                }}
                                                 className="btn btn-sm btn-ghost h-full flex-1 rounded-none font-normal text-[11px] tracking-wider uppercase btn-snake font-display"
                                             >
                                                 <span /><span /><span /><span />
                                                 SHOW JSON
                                             </button>
                                             <button
-                                                onClick={() => handleSaveSuggestion(resultsRefine.suggestions[0])}
+                                                onClick={() => {
+                                                    audioService.playClick();
+                                                    handleSaveSuggestion(resultsRefine.suggestions[0]);
+                                                }}
                                                 className="btn btn-sm btn-ghost h-full flex-1 rounded-none font-normal text-[11px] tracking-wider uppercase btn-snake font-display"
                                             >
                                                 <span /><span /><span /><span />
@@ -1463,21 +1405,30 @@ const PromptsPage: React.FC<PromptsPageProps> = ({
 
                                         <div className="flex-[6] flex items-stretch gap-1.5 justify-end">
                                             <button
-                                                onClick={() => handleSendToRefine(resultsRefine.suggestions[0])}
+                                                onClick={() => {
+                                                    audioService.playClick();
+                                                    handleSendToRefine(resultsRefine.suggestions[0]);
+                                                }}
                                                 className="btn btn-sm btn-ghost h-full flex-1 rounded-none font-normal text-[11px] tracking-wider uppercase btn-snake font-display"
                                             >
                                                 <span /><span /><span /><span />
                                                 REFINE
                                             </button>
                                             <button
-                                                onClick={() => handleClipSuggestion(resultsRefine.suggestions[0])}
+                                                onClick={() => {
+                                                    audioService.playClick();
+                                                    handleClipSuggestion(resultsRefine.suggestions[0]);
+                                                }}
                                                 className="btn btn-sm btn-ghost h-full flex-1 rounded-none font-normal text-[11px] tracking-wider uppercase btn-snake font-display"
                                             >
                                                 <span /><span /><span /><span />
                                                 CLIP
                                             </button>
                                             <button
-                                                onClick={() => handleCopySuggestionText(resultsRefine.suggestions[0])}
+                                                onClick={() => {
+                                                    audioService.playClick();
+                                                    handleCopySuggestionText(resultsRefine.suggestions[0]);
+                                                }}
                                                 className="btn btn-sm btn-ghost h-full flex-1 rounded-none font-normal text-[11px] tracking-wider uppercase btn-snake font-display"
                                             >
                                                 <span /><span /><span /><span />
@@ -1493,9 +1444,9 @@ const PromptsPage: React.FC<PromptsPageProps> = ({
                             <div className="absolute -bottom-[1px] -left-[1px] w-3 h-3 border-b border-l border-primary/15 z-20 pointer-events-none" />
                             <div className="absolute -bottom-[1px] -right-[1px] w-3 h-3 border-b border-r border-primary/15 z-20 pointer-events-none" />
                         </motion.main>
-                        
+
                         {/* Right Sidebar: Refiner Preset */}
-                        <motion.aside 
+                        <motion.aside
                             variants={panelVariants}
                             initial="hidden"
                             animate={isLocalExiting || isExiting ? "exit" : "visible"}
@@ -1503,48 +1454,53 @@ const PromptsPage: React.FC<PromptsPageProps> = ({
                             className="lg:col-span-3 h-full min-h-0 flex flex-col relative p-[3px] corner-frame overflow-visible hidden lg:flex origin-top-left"
                         >
                             <div className="flex flex-col h-full w-full overflow-visible relative bg-base-100/40 backdrop-blur-xl panel-transparent">
-                                <motion.header 
+                                <motion.header
                                     variants={sectionWipeVariants}
                                     custom={1.6}
                                     initial="hidden"
                                     animate="visible"
                                     exit="exit"
-                                    className="h-16 flex items-stretch relative z-[100] bg-base-100/80 p-1.5 gap-1.5 panel-header overflow-visible"
+                                    className="h-16 flex items-stretch relative z-[800] bg-base-100/80 p-1.5 gap-1.5 panel-header overflow-visible"
                                 >
                                     <div className="flex-grow h-full relative overflow-visible">
-<div className="flex flex-col gap-3 h-full justify-center">
+                                        <div className="flex flex-col gap-3 h-full justify-center overflow-visible">
                                             <div className="flex gap-4 items-center">
-                                                <div className="flex-1 px-2 font-sf-mono text-sm">
-                                                    <select
-                                                        className="w-full bg-base-100/80 text-base-content outline-none cursor-pointer"
+                                                <div className="flex-1 px-0 text-sm h-full flex items-center border-0 overflow-visible">
+                                                    <AutocompleteSelect
+                                                        placeholder="SELECT PRESET..."
                                                         value={selectedPreset?.name || ''}
-                                                        onChange={(e) => {
-                                                            const preset = presets.find(p => p.name === e.target.value);
+                                                        onChange={(val) => {
+                                                            const preset = presets.find(p => p.name === val);
                                                             if (preset) {
                                                                 setSelectedPreset(preset);
-                                                                setPresetSearchText(preset.name);
                                                                 handleUsePreset(preset);
+                                                            } else if (val === '') {
+                                                                setSelectedPreset(null);
+                                                                setRefineText('');
+                                                                setModifiers({ ...DEFAULT_MODIFIERS });
                                                             }
                                                         }}
-                                                    >
-                                                        <option value="">SELECT PRESET...</option>
-                                                        {filteredPresets.map(p => (
-                                                            <option key={p.name} value={p.name}>
-                                                                {p.name}
-                                                            </option>
-                                                        ))}
-                                                    </select>
+                                                        options={presets.map(p => ({ label: p.name.toUpperCase(), value: p.name }))}
+                                                    />
                                                 </div>
                                                 <div className="flex gap-4 shrink-0">
-                                                    <button
-                                                        onClick={() => { setPresetSearchText(''); setSelectedPreset(null); setRefineText(''); setModifiers({ ...DEFAULT_MODIFIERS }); }}
+                                                    {/* <button
+                                                        onClick={() => {
+                                                            audioService.playClick();
+                                                            setSelectedPreset(null);
+                                                            setRefineText('');
+                                                            setModifiers({ ...DEFAULT_MODIFIERS });
+                                                        }}
                                                         className="font-sf-mono text-[9px] tracking-widest text-base-content/40 hover:text-base-content transition-all"
                                                     >
                                                         CLEAR
-                                                    </button>
+                                                    </button> */}
                                                     <button
-                                                        className="font-sf-mono text-[9px] tracking-widest text-error/40 hover:text-error transition-all mr-2"
-                                                        onClick={handleDeletePresetClick}
+                                                        className="font-jardhani text-[10px] tracking-widest text-error/40 hover:text-error transition-all mr-2 ms-2"
+                                                        onClick={() => {
+                                                            audioService.playClick();
+                                                            handleDeletePresetClick();
+                                                        }}
                                                     >
                                                         DELETE
                                                     </button>
@@ -1552,14 +1508,14 @@ const PromptsPage: React.FC<PromptsPageProps> = ({
                                             </div>
                                         </div>
                                     </div>
-                                    </motion.header>
+                                </motion.header>
 
                                 <motion.div
                                     variants={contentVariants}
                                     custom={2.8}
                                     initial="hidden"
                                     animate="visible"
-                                    ref={activeConstructionScrollerRef} 
+                                    ref={activeConstructionScrollerRef}
                                     className="flex-grow p-0 overflow-y-auto relative"
                                 >
                                     {activeConstructionItems.length > 0 ? (
@@ -1578,7 +1534,7 @@ const PromptsPage: React.FC<PromptsPageProps> = ({
                                     ) : null}
                                 </motion.div>
 
-                                <motion.footer 
+                                <motion.footer
                                     variants={contentVariants}
                                     custom={3.0}
                                     initial="hidden"
@@ -1586,9 +1542,12 @@ const PromptsPage: React.FC<PromptsPageProps> = ({
                                     className="h-14 flex items-stretch flex-shrink-0 bg-base-100/10 backdrop-blur-md p-1.5 gap-1.5 panel-footer"
                                 >
                                     <button
-                                        onClick={handleSavePresetClick}
+                                        onClick={() => {
+                                            audioService.playClick();
+                                            handleSavePresetClick();
+                                        }}
                                         disabled={activeConstructionItems.length === 0}
-                                        className="btn btn-sm btn-ghost h-full rounded-none flex-1 font-normal text-[13px] tracking-wider border border-base-content/5 text-primary disabled:opacity-30 disabled:cursor-not-allowed btn-snake"
+                                        className="btn btn-sm btn-ghost h-full rounded-none flex-1 font-jardhani text-[10px] tracking-wider text-primary border-1 disabled:opacity-30 disabled:cursor-not-allowed btn-snake"
                                     >
                                         <span /><span /><span /><span />
                                         SAVE AS PRESET
@@ -1617,7 +1576,7 @@ const PromptsPage: React.FC<PromptsPageProps> = ({
                     )}
 
                     {activeView === 'prompt_analyzer' && (
-                        <PromptAnalyzer 
+                        <PromptAnalyzer
                             header={null}
                             libraryItems={savedPrompts}
                             onSaveSuggestion={handleSaveSuggestion}

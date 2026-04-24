@@ -1,5 +1,6 @@
 
 import React, { useState, useEffect, useRef, useMemo, useLayoutEffect } from 'react';
+import { motion } from 'framer-motion';
 import { gsap } from 'gsap';
 import { 
     LinkIcon, LinkOffIcon, 
@@ -43,6 +44,7 @@ interface ImageItem {
 
 interface ComposerPageProps {
   showGlobalFeedback: (message: string, isError?: boolean) => void;
+  isExiting?: boolean;
 }
 
 // --- CONSTANTS ---
@@ -207,7 +209,7 @@ const LayerRenderer: React.FC<{
 
 // --- MAIN PAGE ---
 
-const ComposerPage: React.FC<ComposerPageProps> = ({ showGlobalFeedback }) => {
+const ComposerPage: React.FC<ComposerPageProps> = ({ showGlobalFeedback, isExiting = false }) => {
     const layerImageInputRef = useRef<HTMLInputElement>(null);
     const previewContainerRef = useRef<HTMLDivElement>(null);
     const framePaddingRef = useRef<HTMLDivElement>(null);
@@ -391,17 +393,29 @@ const ComposerPage: React.FC<ComposerPageProps> = ({ showGlobalFeedback }) => {
         return { cw, ch, gap };
     }, [mode, previewMetrics, gridCols, gridRows, gridGap]);
 
+    const panelVariants = {
+        hidden: { opacity: 0, scale: 0.98 },
+        visible: { opacity: 1, scale: 1, transition: { duration: 0.8, ease: [0.16, 1, 0.3, 1] as any } },
+        exit: { opacity: 0, scale: 0.98, transition: { duration: 0.4, ease: [0.7, 0, 0.84, 0] as any } }
+    };
+
     return (
-        <div className="h-full bg-transparent flex flex-col overflow-hidden p-0">
+        <motion.div 
+            initial="hidden"
+            animate={isExiting ? "exit" : "visible"}
+            exit="exit"
+            variants={panelVariants}
+            className="h-full bg-transparent flex flex-col overflow-hidden p-0 no-glow"
+        >
             <div className="flex-grow flex flex-col lg:flex-row overflow-hidden gap-4">
                 <aside className="w-full lg:w-96 flex-shrink-0 flex flex-col relative p-[3px] corner-frame overflow-visible z-10">
                     <div className="flex flex-col h-full w-full overflow-hidden relative z-10 bg-base-100/40 backdrop-blur-xl">
                         <div className="h-14 flex items-stretch flex-shrink-0 bg-base-100/10 backdrop-blur-md p-1.5 gap-1.5">
-                            <button onClick={() => setMode('grid')} className={`btn btn-sm h-full rounded-none flex-1 font-normal text-[11px] tracking-wider uppercase px-1 truncate btn-snake font-display ${mode === 'grid' ? 'btn-ghost text-primary font-black shadow-none drop-shadow-none [text-shadow:none] [filter:none]' : 'btn-ghost text-base-content/40 hover:text-primary'}`}>
+                            <button onClick={() => setMode('grid')} className={`btn btn-sm h-full rounded-none flex-1 font-normal text-[11px] tracking-wider uppercase px-1 truncate btn-snake font-display no-glow ${mode === 'grid' ? 'btn-ghost text-primary font-black active:no-glow' : 'btn-ghost text-base-content/40 hover:text-primary hover:no-glow'}`}>
                                 <span/><span/><span/><span/>
                                 GRID BUILDER
                             </button>
-                            <button onClick={() => setMode('frame')} className={`btn btn-sm h-full rounded-none flex-1 font-normal text-[11px] tracking-wider uppercase px-1 truncate btn-snake font-display ${mode === 'frame' ? 'btn-ghost text-primary font-black shadow-none drop-shadow-none [text-shadow:none] [filter:none]' : 'btn-ghost text-base-content/40 hover:text-primary'}`}>
+                            <button onClick={() => setMode('frame')} className={`btn btn-sm h-full rounded-none flex-1 font-normal text-[11px] tracking-wider uppercase px-1 truncate btn-snake font-display no-glow ${mode === 'frame' ? 'btn-ghost text-primary font-black active:no-glow' : 'btn-ghost text-base-content/40 hover:text-primary hover:no-glow'}`}>
                                 <span/><span/><span/><span/>
                                 IMAGE FRAMER
                             </button>
@@ -451,15 +465,15 @@ const ComposerPage: React.FC<ComposerPageProps> = ({ showGlobalFeedback }) => {
                         </div>
 
                         <footer className="h-14 flex items-stretch flex-shrink-0 bg-base-100/10 backdrop-blur-md p-1.5 gap-1.5">
-                            <button onClick={() => { setGridItems(Array(gridCols*gridRows).fill(null)); setFrameItem(null); setLayers([]); }} className="btn btn-sm btn-ghost h-full flex-1 rounded-none font-normal text-[13px] tracking-wider uppercase btn-snake text-error/40 hover:text-error font-display">
+                            <button onClick={() => { setGridItems(Array(gridCols*gridRows).fill(null)); setFrameItem(null); setLayers([]); }} className="btn btn-sm btn-ghost h-full flex-1 rounded-none font-normal text-[13px] tracking-wider uppercase btn-snake text-error/40 hover:text-error font-display no-glow active:no-glow">
                                 <span/><span/><span/><span/>
                                 RESET
                             </button>
-                            <button onClick={handleDownload} disabled={isProcessing || (mode==='grid'?!gridItems.some(Boolean):!frameItem)} className="btn btn-sm btn-ghost h-full flex-1 rounded-none font-normal text-[13px] tracking-wider uppercase btn-snake font-display">
+                            <button onClick={handleDownload} disabled={isProcessing || (mode==='grid'?!gridItems.some(Boolean):!frameItem)} className="btn btn-sm btn-ghost h-full flex-1 rounded-none font-normal text-[13px] tracking-wider uppercase btn-snake font-display no-glow active:no-glow">
                                 <span/><span/><span/><span/>
                                 DOWNLOAD
                             </button>
-                            <button onClick={() => setIsVaultConfirmOpen(true)} disabled={isProcessing || (mode==='grid'?!gridItems.some(Boolean):!frameItem)} className="btn btn-sm btn-primary h-full flex-[1.5] rounded-none font-normal text-[13px] tracking-[0.2em] uppercase btn-snake-primary font-display">
+                            <button onClick={() => setIsVaultConfirmOpen(true)} disabled={isProcessing || (mode==='grid'?!gridItems.some(Boolean):!frameItem)} className="btn btn-sm btn-primary h-full flex-[1.5] rounded-none font-normal text-[13px] tracking-[0.2em] uppercase btn-snake-primary font-display no-glow active:no-glow">
                                 <span/><span/><span/><span/>
                                 SAVE
                             </button>
@@ -560,7 +574,7 @@ const ComposerPage: React.FC<ComposerPageProps> = ({ showGlobalFeedback }) => {
             <input type="file" ref={layerImageInputRef} className="hidden" onChange={async e => { if(e.target.files?.[0]) { const b64 = await fileToBase64(e.target.files[0]); const n: Layer = { id: Math.random().toString(36).substr(2,9), type: 'image', content: b64, x: 0.5, y: 0.5, fontSize: 100, color: '', fontFamily: '', bold: false, italic: false }; setLayers([...layers, n]); setActiveLayerId(n.id); } }} />
             <GalleryPickerModal isOpen={isPickerOpen} onClose={() => { setIsPickerOpen(false); setPickerTarget(null); }} onSelect={handleLibrarySelect} selectionMode={mode === 'frame' ? 'single' : 'multiple'} typeFilter="image" />
             <ConfirmationModal isOpen={isVaultConfirmOpen} onClose={() => setIsVaultConfirmOpen(false)} onConfirm={async () => { setIsProcessing(true); const canvas = await generateFinalCanvas(); if(canvas) { await addItemToGallery('image', [canvas.toDataURL(`image/${outputFormat}`)], ['Composer'], undefined, `composition_${Date.now()}`); showGlobalFeedback?.("Saved to library."); } setIsProcessing(false); setIsVaultConfirmOpen(false); }} title="SAVE COMPOSITION" message="Save this composition to your local folders?" btnClassName="btn-primary" />
-        </div>
+        </motion.div>
     );
 };
 

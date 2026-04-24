@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useCallback, useRef, useMemo } from 'react';
 import { motion } from 'framer-motion';
+import { audioService } from '../services/audioService';
 import { TerminalText, PanelLine, ScanLine, panelVariants, sectionWipeVariants, contentVariants } from './AnimatedPanels';
 import JSZip from 'jszip';
 import { crafterService } from '../services/crafterService';
@@ -13,6 +14,7 @@ import { translateToEnglish, reconstructFromIntent } from '../services/llmServic
 import ConfirmationModal from './ConfirmationModal';
 import WildcardTree from './WildcardTree';
 import SavedResultItem from './SavedResultItem';
+import AutocompleteSelect from './AutocompleteSelect';
 
 interface PromptCrafterProps {
   onSaveToLibrary: (generatedText: string, baseText: string) => void;
@@ -270,7 +272,7 @@ const PromptCrafter = ({ onSaveToLibrary, onClip, onSendToEnhancer, onSendToRefi
     if (error) return <div className="p-4 text-error">{error}</div>;
 
     return (
-        <div className="grid grid-cols-1 lg:grid-cols-12 overflow-visible h-full gap-4 min-h-0">
+        <div className="grid grid-cols-1 lg:grid-cols-12 overflow-hidden h-full gap-4 min-h-0">
             <motion.aside 
                 variants={panelVariants}
                 initial="hidden"
@@ -313,7 +315,10 @@ const PromptCrafter = ({ onSaveToLibrary, onClip, onSendToEnhancer, onSendToRefi
                         className="h-14 flex items-stretch bg-base-100/10 backdrop-blur-md p-1.5 gap-1.5 flex-shrink-0 panel-footer"
                     >
                         <button 
-                            onClick={loadData} 
+                            onClick={() => {
+                                audioService.playClick();
+                                loadData();
+                            }} 
                             disabled={isImporting}
                             className="btn btn-sm btn-ghost h-full flex-1 rounded-none font-normal text-[13px] tracking-wider border border-base-content/5 btn-snake"
                         >
@@ -321,7 +326,10 @@ const PromptCrafter = ({ onSaveToLibrary, onClip, onSendToEnhancer, onSendToRefi
                             {isImporting ? '...' : 'REFRESH'}
                         </button>
                         <button 
-                            onClick={handleImportClick} 
+                            onClick={() => {
+                                audioService.playClick();
+                                handleImportClick();
+                            }} 
                             disabled={isImporting}
                             className="btn btn-sm btn-ghost h-full flex-1 rounded-none font-normal text-[13px] tracking-wider border border-base-content/5 btn-snake"
                         >
@@ -363,41 +371,49 @@ const PromptCrafter = ({ onSaveToLibrary, onClip, onSendToEnhancer, onSendToRefi
                         initial="hidden"
                         animate="visible"
                         exit="exit"
-                        className="h-16 flex-shrink-0 flex items-stretch bg-base-100/10 p-1.5 gap-1.5 panel-header relative z-[100]"
+                        className="h-16 flex-shrink-0 flex items-stretch bg-base-100/10 p-1.5 gap-1.5 panel-header relative z-[800] overflow-visible"
                     >
                         <div className="flex-grow h-full relative overflow-visible">
-                            <div className="flex gap-4 items-center h-full justify-center">
-                                            <div className="flex-1 px-2 font-sf-mono text-sm">
-                                                <select
-                                                    className="w-full bg-base-100/80 text-base-content outline-none cursor-pointer"
+                            <div className="flex gap-4 items-center h-full justify-center overflow-visible">
+                                            <div className="flex-1 px-0 text-sm h-full flex items-center overflow-visible">
+                                                <AutocompleteSelect
+                                                    placeholder="SELECT TEMPLATE..."
                                                     value={selectedTemplate?.name || ''}
-                                                    onChange={(e) => {
-                                                        const template = filteredTemplates.find(t => t.name === e.target.value);
+                                                    onChange={(val) => {
+                                                        const template = filteredTemplates.find(t => t.name === val);
                                                         if (template) {
                                                             setSelectedTemplate(template);
                                                             setTemplateSearchText(template.name);
                                                             handleUseTemplate(template);
+                                                        } else if (val === '') {
+                                                            setSelectedTemplate(null);
+                                                            setTemplateSearchText('');
+                                                            setPromptText('');
                                                         }
                                                     }}
-                                                >
-                                                    <option value="">SELECT TEMPLATE...</option>
-                                                    {filteredTemplates.map(t => (
-                                                        <option key={t.name} value={t.name}>
-                                                            {t.name}
-                                                        </option>
-                                                    ))}
-                                                </select>
+                                                    options={filteredTemplates.map(t => ({ label: t.name.toUpperCase(), value: t.name }))}
+                                                />
                                             </div>
                                             <div className="flex gap-4 shrink-0">
                                                 <button
-                                                    onClick={() => { setTemplateSearchText(''); setSelectedTemplate(null); setPromptText(''); }}
+                                                    onClick={() => { 
+                                                        audioService.playClick();
+                                                        setTemplateSearchText(''); 
+                                                        setSelectedTemplate(null); 
+                                                        setPromptText(''); 
+                                                    }}
+                                                    onMouseEnter={() => audioService.playHover()}
                                                     className="font-sf-mono text-[9px] tracking-widest text-base-content/40 hover:text-base-content transition-all"
                                                 >
                                                     CLEAR
                                                 </button>
                                                 <button
                                                     className="font-sf-mono text-[9px] tracking-widest text-error/40 hover:text-error transition-all mr-2"
-                                                    onClick={handleDeleteTemplateClick}
+                                                    onClick={() => {
+                                                        audioService.playClick();
+                                                        handleDeleteTemplateClick();
+                                                    }}
+                                                    onMouseEnter={() => audioService.playHover()}
                                                     disabled={!selectedTemplate}
                                                 >
                                                     DELETE
@@ -433,21 +449,33 @@ const PromptCrafter = ({ onSaveToLibrary, onClip, onSendToEnhancer, onSendToRefi
                         className="h-14 flex items-stretch flex-shrink-0 bg-base-100/10 backdrop-blur-md p-1.5 gap-1.5 panel-y-accent"
                     >
                         <button 
-                            onClick={() => setPromptText('')} 
+                            onClick={() => {
+                                audioService.playClick();
+                                setPromptText('');
+                            }} 
+                            onMouseEnter={() => audioService.playHover()}
                             className="btn btn-sm btn-ghost h-full rounded-none flex-1 font-normal text-[13px] tracking-wider border border-base-content/5 text-error/40 hover:text-error btn-snake"
                         >
                             <span/><span/><span/><span/>
                             CLEAR
                         </button>
                         <button 
-                            onClick={handleSaveTemplateClick} 
+                            onClick={() => {
+                                audioService.playClick();
+                                handleSaveTemplateClick();
+                            }} 
+                            onMouseEnter={() => audioService.playHover()}
                             className="btn btn-sm btn-ghost h-full rounded-none flex-1 font-normal text-[13px] tracking-wider border border-base-content/5 btn-snake"
                         >
                             <span/><span/><span/><span/>
                             SAVE TEMPLATE
                         </button>
                         <button 
-                            onClick={handleGenerate} 
+                            onClick={() => {
+                                audioService.playClick();
+                                handleGenerate();
+                            }} 
+                            onMouseEnter={() => audioService.playHover()}
                             className="btn btn-sm btn-ghost h-full rounded-none flex-1 font-normal text-[13px] tracking-wider border border-base-content/5 btn-snake text-primary"
                         >
                             <span/><span/><span/><span/>
@@ -493,7 +521,10 @@ const PromptCrafter = ({ onSaveToLibrary, onClip, onSendToEnhancer, onSendToRefi
                     className="h-14 flex items-stretch flex-shrink-0 bg-base-100/10 backdrop-blur-md p-1.5 gap-1.5 panel-footer"
                 >
                     <button 
-                        onClick={handleTranslate} 
+                        onClick={() => {
+                            audioService.playClick();
+                            handleTranslate();
+                        }} 
                         disabled={!generatedPrompt || !!aiAction} 
                         className="btn btn-sm btn-ghost h-full rounded-none flex-[1.5] font-normal text-[13px] tracking-wider border border-base-content/5 disabled:opacity-30 disabled:cursor-not-allowed btn-snake"
                     >
@@ -501,7 +532,10 @@ const PromptCrafter = ({ onSaveToLibrary, onClip, onSendToEnhancer, onSendToRefi
                         {translated ? 'RE-TRANSLATE' : 'TRANSLATE'}
                     </button>
                     <button 
-                        onClick={handleReconstruct} 
+                        onClick={() => {
+                            audioService.playClick();
+                            handleReconstruct();
+                        }} 
                         disabled={!generatedPrompt || !!aiAction} 
                         className="btn btn-sm btn-ghost h-full rounded-none flex-1 font-normal text-[13px] tracking-wider border border-base-content/5 disabled:opacity-30 disabled:cursor-not-allowed btn-snake"
                     >
@@ -509,7 +543,10 @@ const PromptCrafter = ({ onSaveToLibrary, onClip, onSendToEnhancer, onSendToRefi
                         REWRITE
                     </button>
                     <button 
-                        onClick={() => onSendToEnhancer(generatedPrompt!)} 
+                        onClick={() => {
+                            audioService.playClick();
+                            onSendToEnhancer(generatedPrompt!);
+                        }} 
                         disabled={!generatedPrompt || !!aiAction} 
                         className="btn btn-sm btn-ghost h-full rounded-none flex-1 font-normal text-[13px] tracking-wider border border-base-content/5 disabled:opacity-30 disabled:cursor-not-allowed btn-snake text-primary/60"
                     >
@@ -517,7 +554,10 @@ const PromptCrafter = ({ onSaveToLibrary, onClip, onSendToEnhancer, onSendToRefi
                         IMPROVE
                     </button>
                     <button 
-                        onClick={handleClip} 
+                        onClick={() => {
+                            audioService.playClick();
+                            handleClip();
+                        }} 
                         disabled={!generatedPrompt} 
                         className="btn btn-sm btn-ghost h-full rounded-none flex-1 font-normal text-[13px] tracking-wider border border-base-content/5 disabled:opacity-30 disabled:cursor-not-allowed btn-snake"
                     >
@@ -525,7 +565,10 @@ const PromptCrafter = ({ onSaveToLibrary, onClip, onSendToEnhancer, onSendToRefi
                         {clipped ? 'OK' : 'CLIP'}
                     </button>
                     <button 
-                        onClick={handleSaveResult} 
+                        onClick={() => {
+                            audioService.playClick();
+                            handleSaveResult();
+                        }} 
                         disabled={!generatedPrompt || savedResults.includes(generatedPrompt)} 
                         className="btn btn-sm btn-ghost h-full rounded-none flex-1 font-normal text-[13px] tracking-wider border border-base-content/5 disabled:opacity-30 disabled:cursor-not-allowed btn-snake"
                     >

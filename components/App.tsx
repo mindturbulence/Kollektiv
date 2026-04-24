@@ -17,6 +17,7 @@ import Welcome from './Welcome';
 import CustomCursor from './CustomCursor';
 import AboutModal from './AboutModal';
 import ClippingPanel from './ClippingPanel';
+import LlmStatusPanel from './LlmStatusPanel';
 import FeedbackModal from './FeedbackModal';
 import Footer from './Footer';
 import IdleOverlay from './IdleOverlay';
@@ -24,6 +25,7 @@ import { TabTitleManager } from './TabTitleManager';
 
 // Page components
 import Dashboard from './Dashboard';
+import DiscoveryPage from './DiscoveryPage';
 import PromptsPage from './PromptsPage';
 import { StoryboardPage } from './StoryboardPage';
 import SavedPrompts from './SavedPrompts';
@@ -37,22 +39,46 @@ import ImageCompare from './ImageCompare';
 import ColorPaletteExtractor from './ColorPaletteExtractor';
 import ImageResizer from './ImageResizer';
 import { VideoToFrames } from './VideoToFrames';
+import { motion, AnimatePresence } from 'framer-motion';
+import { pageVariants } from './AnimatedPanels';
+import ChromaticText from './ChromaticText';
+
 
 type PromptsPageState = { prompt?: string, artStyle?: string, artist?: string, view?: 'enhancer' | 'composer' | 'create', id?: string } | null;
 
-class ErrorBoundary extends React.Component<{ children: React.ReactNode }, { hasError: boolean }> {
+class ErrorBoundary extends React.Component<{ children: React.ReactNode }, { hasError: boolean, error: any, errorInfo: any }> {
     constructor(props: { children: React.ReactNode }) {
         super(props);
-        this.state = { hasError: false };
+        this.state = { hasError: false, error: null, errorInfo: null };
     }
-    static getDerivedStateFromError() { return { hasError: true }; }
-    componentDidCatch(error: any, errorInfo: any) { console.error("App Crash:", error, errorInfo); }
+    static getDerivedStateFromError(error: Error) { return { hasError: true, error }; }
+    componentDidCatch(error: any, errorInfo: any) { 
+        console.error("App Crash:", error, errorInfo); 
+        this.setState({ errorInfo });
+    }
     render() {
         if (this.state.hasError) {
             return (
                 <div className="h-screen w-screen flex flex-col items-center justify-center bg-base-100 p-5 text-center">
                     <h1 className="text-4xl font-black uppercase tracking-tighter mb-4">CRITICAL ERROR</h1>
-                    <p className="text-base-content/60 font-bold uppercase tracking-widest mb-8">The application encountered an unrecoverable state.</p>
+                    <p className="text-base-content/60 font-bold uppercase tracking-widest mb-4">The application encountered an unrecoverable state.</p>
+                    
+                    <div className="bg-error/10 border border-error/20 p-4 mb-8 max-w-4xl w-full overflow-auto transition-all animate-fade-in shadow-2xl">
+                        <div className="text-xs text-error font-mono font-black uppercase tracking-widest mb-2 border-b border-error/20 pb-1">Trace Summary</div>
+                        <code className="text-xs text-error font-mono break-words whitespace-pre-wrap text-left block max-h-[30vh]">
+                            {typeof this.state.error === 'object' ? (this.state.error.stack || this.state.error.message || JSON.stringify(this.state.error)) : String(this.state.error)}
+                        </code>
+                        
+                        {this.state.errorInfo && (
+                            <>
+                                <div className="text-xs text-error font-mono font-black uppercase tracking-widest mt-4 mb-2 border-b border-error/20 pb-1">Component Stack</div>
+                                <code className="text-xs text-error/60 font-mono break-words whitespace-pre-wrap text-left block max-h-[30vh]">
+                                    {this.state.errorInfo.componentStack}
+                                </code>
+                            </>
+                        )}
+                    </div>
+
                     <div className="flex flex-col gap-4">
                         <button onClick={() => window.location.reload()} className="form-btn form-btn-primary">Restart Application</button>
                         <button
@@ -165,7 +191,7 @@ const InitialLoader: React.FC<{ status: string; progress: number | null }> = ({ 
 
             <div className="relative z-10 flex flex-col items-center">
                 <div className="overflow-hidden mb-6 px-4">
-                    <h1 ref={textWrapperRef} className="grid grid-cols-1 grid-rows-1 text-2xl md:text-4xl font-normal tracking-widest uppercase select-none items-center font-monoton">
+                    <h1 ref={textWrapperRef} className="grid grid-cols-1 grid-rows-1 text-2xl md:text-4xl font-normal tracking-widest uppercase select-none items-center font-monoton leading-none translate-y-[2px]">
                         <span className="text-base-content/10 block leading-none py-2 row-start-1 col-start-1">
                             <ChromaticText enabled={false}>Kollektiv</ChromaticText><span className="text-primary/10 italic">.</span>
                         </span>
@@ -184,19 +210,19 @@ const InitialLoader: React.FC<{ status: string; progress: number | null }> = ({ 
                 <div className={`flex flex-col items-center gap-4 transition-all duration-500 ${percentage >= 100 ? 'opacity-0 translate-y-4' : 'opacity-100 translate-y-0'}`}>
                     <div className="flex flex-col items-center gap-2">
                         <p className="text-[10px] font-mono font-bold uppercase tracking-[0.5em] text-center text-base-content/40">
-                            {status.toUpperCase()}
+                            {(status || 'DIAGNOSTIC_ACTIVE').toUpperCase()}
                         </p>
 
                         {/* Minimal Progress Bar */}
                         <div className="w-32 h-[1px] bg-base-content/10 relative overflow-hidden">
                             <div
                                 className="absolute inset-y-0 left-0 bg-primary transition-all duration-500 ease-out"
-                                style={{ width: `${percentage}%` }}
+                                style={{ width: `${smoothPercentage}%` }}
                             />
                         </div>
 
                         <span className="text-[10px] font-mono font-bold text-primary/60">
-                            {percentage}%
+                            {smoothPercentage}%
                         </span>
                     </div>
                 </div>
@@ -205,8 +231,6 @@ const InitialLoader: React.FC<{ status: string; progress: number | null }> = ({ 
     );
 
 };
-
-import ChromaticText from './ChromaticText';
 
 interface PageFrameProps {
     isInitialized: boolean;
@@ -221,8 +245,59 @@ const PageFrame: React.FC<PageFrameProps> = ({
     const scanBottomRef = useRef<HTMLSpanElement>(null);
     const scanLeftRef = useRef<HTMLSpanElement>(null);
 
+    const frameWrapperRef = useRef<HTMLDivElement>(null);
+
     useLayoutEffect(() => {
-        if (!isInitialized) return;
+        if (!isInitialized || !frameWrapperRef.current) return;
+
+        // Entry animation for the main frame
+        // Slides in from all edges simultaneously
+        const frame = frameWrapperRef.current.querySelector('.main-app-frame');
+        const corners = frameWrapperRef.current.querySelectorAll('.corner-accent');
+        const markers = frameWrapperRef.current.querySelectorAll('.side-marker');
+
+        if (frame) {
+            const tl = gsap.timeline({ delay: 0.1 });
+            
+            tl.fromTo(frame, 
+                { 
+                    scale: 1.04,
+                    autoAlpha: 1 
+                },
+                { 
+                    scale: 1,
+                    duration: 2.4,
+                    ease: "expo.out"
+                }
+            );
+
+            if (corners.length > 0) {
+                tl.fromTo(corners,
+                    { 
+                        opacity: 0,
+                        x: (i) => (i % 2 === 0 ? -40 : 40), // contracting from edges
+                        y: (i) => (i < 2 ? -40 : 40)
+                    },
+                    {
+                        opacity: 1,
+                        x: 0,
+                        y: 0,
+                        duration: 1.8,
+                        stagger: 0.05,
+                        ease: "expo.out"
+                    },
+                    0.1
+                );
+            }
+
+            if (markers.length > 0) {
+                tl.fromTo(markers,
+                    { opacity: 0, scaleY: 0 },
+                    { opacity: 1, scaleY: 1, duration: 1.5, ease: "expo.out" },
+                    1.2
+                );
+            }
+        }
 
         // Periodic Frame Scan Animation (Snake effect)
         // Triggered every 1 minute (60 seconds)
@@ -264,7 +339,7 @@ const PageFrame: React.FC<PageFrameProps> = ({
     }, [isInitialized]);
 
     return (
-        <div className="fixed inset-0 z-[1000] pointer-events-none p-4 md:p-10">
+        <div ref={frameWrapperRef} className="fixed inset-0 z-[1000] pointer-events-none p-4 md:p-6">
             <div className="w-full h-full border border-base-content/5 relative main-app-frame">
                 {/* Dedicated Clipping Container for Scan Lines */}
                 <div className="absolute inset-0 overflow-hidden pointer-events-none z-0">
@@ -275,19 +350,19 @@ const PageFrame: React.FC<PageFrameProps> = ({
                 </div>
 
                 {/* Corner Accents */}
-                <div className="absolute -top-[1px] -left-[1px] w-4 h-4 border-t border-l border-primary/20" />
-                <div className="absolute -top-[1px] -right-[1px] w-4 h-4 border-t border-r border-primary/20" />
-                <div className="absolute -bottom-[1px] -left-[1px] w-4 h-4 border-b border-l border-primary/20" />
-                <div className="absolute -bottom-[1px] -right-[1px] w-4 h-4 border-b border-r border-primary/20" />
+                <div className="absolute -top-[1px] -left-[1px] w-4 h-4 border-t border-l border-primary/20 corner-accent" />
+                <div className="absolute -top-[1px] -right-[1px] w-4 h-4 border-t border-r border-primary/20 corner-accent" />
+                <div className="absolute -bottom-[1px] -left-[1px] w-4 h-4 border-b border-l border-primary/20 corner-accent" />
+                <div className="absolute -bottom-[1px] -right-[1px] w-4 h-4 border-b border-r border-primary/20 corner-accent" />
 
                 {/* Side Markers */}
-                <div className="absolute top-1/2 left-0 -translate-x-1/2 -translate-y-1/2 flex flex-col gap-2">
+                <div className="absolute top-1/2 left-0 -translate-x-1/2 -translate-y-1/2 flex flex-col gap-2 side-marker">
                     <div className="w-[1px] h-4 bg-primary/10" />
                     <div className="w-[1px] h-[1px] bg-primary/20" />
                     <div className="w-[1px] h-4 bg-primary/10" />
                 </div>
 
-                <div className="absolute top-1/2 right-0 translate-x-1/2 -translate-y-1/2 flex flex-col gap-2">
+                <div className="absolute top-1/2 right-0 translate-x-1/2 -translate-y-1/2 flex flex-col gap-2 side-marker">
                     <div className="w-[1px] h-4 bg-primary/10" />
                     <div className="w-[1px] h-[1px] bg-primary/20" />
                     <div className="w-[1px] h-4 bg-primary/10" />
@@ -329,6 +404,7 @@ const AppContent: React.FC = () => {
     const [activeTab, setActiveTab] = useLocalStorage<ActiveTab>('activeTab', 'dashboard');
     const [isAboutModalOpen, setIsAboutModalOpen] = useState(false);
     const [isClippingPanelOpen, setIsClippingPanelOpen] = useState(false);
+    const [isLlmPanelOpen, setIsLlmPanelOpen] = useState(false);
     const [collapsedPanels, setCollapsedPanels] = useLocalStorage<Record<string, boolean>>('collapsedPanels', {});
     const [globalFeedback, setGlobalFeedback] = useState<{ message: string; type: 'success' | 'error' } | null>(null);
 
@@ -342,7 +418,12 @@ const AppContent: React.FC = () => {
         const base = "KOLLEKTIV";
         switch (activeTab) {
             case 'dashboard': return `DASHBOARD | ${base}`;
+            case 'discovery': return `DISCOVERY | ${base}`;
             case 'prompts': return `BUILDER | ${base}`;
+            case 'crafter': return `CRAFTER | ${base}`;
+            case 'refiner': return `REFINER | ${base}`;
+            case 'prompt_analyzer': return `ANALYZER | ${base}`;
+            case 'media_analyzer': return `MEDIA | ${base}`;
             case 'storyboard': return `STORYBOARD | ${base}`;
             case 'gallery': return `VAULT | ${base}`;
             case 'prompt': return `LIBRARY | ${base}`;
@@ -378,11 +459,21 @@ const AppContent: React.FC = () => {
             window.clearTimeout(idleTimerRef.current);
         }
 
+        if (!settings.isIdleEnabled) return;
+
         idleTimerRef.current = window.setTimeout(() => {
             setIsIdle(true);
             isIdleRef.current = true;
-        }, 60000);
-    }, []);
+        }, settings.idleTimeoutMinutes * 60000);
+    }, [settings.isIdleEnabled, settings.idleTimeoutMinutes]);
+
+    useEffect(() => {
+        if (!settings.isIdleEnabled && isIdleRef.current) {
+            setIsIdle(false);
+            isIdleRef.current = false;
+        }
+        resetIdleTimer(false);
+    }, [settings.isIdleEnabled, resetIdleTimer]);
 
     useEffect(() => {
         const handleUserActivity = () => {
@@ -460,7 +551,8 @@ const AppContent: React.FC = () => {
         } catch (err) {
             console.error("Initialization Failure:", err);
             hasInitializedRef.current = true; // Mark as "attempted" to prevent loop
-            setGlobalFeedback({ message: "Failed to initialize system.", type: 'error' });
+            const errorMsg = err instanceof Error ? err.message : String(err);
+            setGlobalFeedback({ message: `System error: ${errorMsg}`, type: 'error' });
             setIsLoading(false);
         }
         // Removed settings dependency to prevent re-init on theme switch
@@ -474,50 +566,65 @@ const AppContent: React.FC = () => {
     }, [initializeApp]);
 
     useLayoutEffect(() => {
-        if (!isInitialized || !apertureRef.current || !isFirstRevealRef.current || !blindsRef.current) return;
+        if (!isInitialized || !apertureRef.current || !blindsRef.current || !isFirstRevealRef.current) return;
 
         isFirstRevealRef.current = false;
 
-        const tl = gsap.timeline({
-            defaults: { ease: "power4.inOut" }
-        });
-
-        const blindItems = Array.from(blindsRef.current.children) as HTMLElement[];
-
-        // Ensure blinds are visible and covering everything
-        gsap.set(apertureRef.current, { visibility: 'visible', autoAlpha: 1 });
-
-        // Set alternating origins for vertical blinds
-        blindItems.forEach((item, i) => {
-            gsap.set(item, {
-                scaleY: 1,
-                scaleX: 1,
-                transformOrigin: i % 2 === 0 ? "top" : "bottom"
+        const ctx = gsap.context(() => {
+            const tl = gsap.timeline({
+                defaults: { ease: "power4.inOut" }
             });
+
+            const blindItems = Array.from(blindsRef.current!.children) as HTMLElement[];
+
+            gsap.set(apertureRef.current, { visibility: 'visible', autoAlpha: 1 });
+
+            blindItems.forEach((item, i) => {
+                gsap.set(item, {
+                    scaleY: 1,
+                    scaleX: 1,
+                    transformOrigin: i % 2 === 0 ? "top" : "bottom"
+                });
+            });
+
+            gsap.set(appWrapperRef.current, { autoAlpha: 0 });
+            gsap.set(['.app-header', '.app-footer'], { opacity: 0 });
+
+            tl.to(blindItems, {
+                scaleY: 0,
+                duration: 1.8,
+                stagger: {
+                    each: 0.1,
+                    from: "start"
+                },
+                ease: "expo.inOut"
+            }, 0);
+
+            tl.fromTo(appWrapperRef.current, {
+                scale: 1.02,
+                autoAlpha: 1
+            }, {
+                scale: 1,
+                duration: 2.8,
+                ease: "power2.out"
+            }, 0.8);
+
+            tl.fromTo('.app-header', 
+                { y: -50, opacity: 0 },
+                { y: 0, opacity: 1, duration: 1.4, ease: "expo.out" },
+                2.8
+            );
+
+            tl.fromTo('.app-footer', 
+                { y: 50, opacity: 0 },
+                { y: 0, opacity: 1, duration: 1.4, ease: "expo.out" },
+                2.8
+            );
+
+            tl.set(apertureRef.current, { visibility: 'hidden', autoAlpha: 0 });
         });
 
-        gsap.set(appWrapperRef.current, { autoAlpha: 0 });
-
-        // Vertical Blinds effect: Each strip scales down vertically
-        tl.to(blindItems, {
-            scaleY: 0,
-            duration: 1.8,
-            stagger: {
-                each: 0.1,
-                from: "start"
-            },
-            ease: "expo.inOut"
-        }, 0);
-
-        tl.to(appWrapperRef.current, {
-            autoAlpha: 1,
-            duration: 2.0,
-            ease: "power2.out"
-        }, 0.6);
-
-        tl.set(apertureRef.current, { visibility: 'hidden', autoAlpha: 0 });
-
-        return () => { };
+        return () => ctx.revert();
     }, [isInitialized]);
 
 
@@ -561,7 +668,20 @@ const AppContent: React.FC = () => {
 
     const handleSendToPromptsPage = useCallback((state: PromptsPageState) => {
         setPromptsPageState(state);
-        handleNavigate('prompts');
+        
+        // Map internal views to top-level navigation tabs
+        let targetTab: ActiveTab = 'crafter';
+        if (state?.view === 'enhancer') {
+            targetTab = 'refiner';
+        } else if (state?.view === 'composer' || state?.view === 'create') {
+            targetTab = 'crafter';
+        } else {
+            // Fallback to generic prompts tab if needed, 
+            // but user wants them separate so we prefer the specific ones
+            targetTab = 'crafter'; 
+        }
+
+        handleNavigate(targetTab);
         showGlobalFeedback('Sent to Builder!');
     }, [showGlobalFeedback, handleNavigate]);
 
@@ -604,25 +724,26 @@ const AppContent: React.FC = () => {
         };
 
         switch (activeTab) {
-            case 'dashboard': return <Dashboard onNavigate={handleNavigate} onClipIdea={handleClipIdea} isExiting={false} />;
-            case 'prompts': return <PromptsPage onClipIdea={handleClipIdea} initialState={promptsPageState} onStateHandled={() => setPromptsPageState(null)} showGlobalFeedback={showGlobalFeedback} isExiting={false} />;
-            case 'crafter': return <PromptsPage forcedView="composer" onClipIdea={handleClipIdea} initialState={promptsPageState} onStateHandled={() => setPromptsPageState(null)} showGlobalFeedback={showGlobalFeedback} isExiting={false} />;
-            case 'refiner': return <PromptsPage forcedView="refine" onClipIdea={handleClipIdea} initialState={promptsPageState} onStateHandled={() => setPromptsPageState(null)} showGlobalFeedback={showGlobalFeedback} isExiting={false} />;
-            case 'prompt_analyzer': return <PromptsPage forcedView="prompt_analyzer" onClipIdea={handleClipIdea} initialState={promptsPageState} onStateHandled={() => setPromptsPageState(null)} showGlobalFeedback={showGlobalFeedback} isExiting={false} />;
-            case 'media_analyzer': return <PromptsPage forcedView="analyzer" onClipIdea={handleClipIdea} initialState={promptsPageState} onStateHandled={() => setPromptsPageState(null)} showGlobalFeedback={showGlobalFeedback} isExiting={false} />;
-            case 'storyboard': return <StoryboardPage showGlobalFeedback={showGlobalFeedback} isExiting={false} />;
-            case 'prompt': return <SavedPrompts {...categoryPanelProps} onSendToEnhancer={(prompt) => handleSendToPromptsPage({ prompt, view: 'enhancer' })} showGlobalFeedback={showGlobalFeedback} onClipIdea={handleClipIdea} isExiting={false} />;
-            case 'gallery': return <ImageGallery {...categoryPanelProps} isSidebarPinned={false} showGlobalFeedback={showGlobalFeedback} isExiting={false} />;
-            case 'cheatsheet': return <Cheatsheet isExiting={false} />;
-            case 'artstyles': return <ArtstyleCheatsheet onSendToPromptsPage={(state) => handleSendToPromptsPage({ ...state, view: 'enhancer' })} isExiting={false} />;
-            case 'artists': return <ArtistCheatsheet onSendToPromptsPage={(state) => handleSendToPromptsPage({ ...state, view: 'enhancer' })} isExiting={false} />;
-            case 'settings': return <SetupPage activeSettingsTab={activeSettingsTab} setActiveSettingsTab={setActiveSettingsTab} activeSubTab={activeSettingsSubTab} setActiveSubTab={setActiveSettingsSubTabSetter} showGlobalFeedback={showGlobalFeedback} isExiting={false} />;
-            case 'composer': return <ComposerPage showGlobalFeedback={showGlobalFeedback} isExiting={false} />;
-            case 'image_compare': return <ImageCompare isExiting={false} />;
-            case 'color_palette_extractor': return <ColorPaletteExtractor onClipIdea={handleClipIdea} isExiting={false} />;
-            case 'resizer': return <ImageResizer isExiting={false} />;
-            case 'video_to_frames': return <VideoToFrames isExiting={false} />;
-            default: return <Dashboard onNavigate={handleNavigate} onClipIdea={handleClipIdea} isExiting={false} />;
+            case 'dashboard': return <Dashboard key="dashboard" onNavigate={handleNavigate} onClipIdea={handleClipIdea} isExiting={false} />;
+            case 'discovery': return <DiscoveryPage key="discovery" isExiting={false} onSendToBuilder={handleSendToPromptsPage} showGlobalFeedback={showGlobalFeedback} />;
+            case 'prompts': return <PromptsPage key="prompts" onClipIdea={handleClipIdea} initialState={promptsPageState} onStateHandled={() => setPromptsPageState(null)} showGlobalFeedback={showGlobalFeedback} isExiting={false} />;
+            case 'crafter': return <PromptsPage key="crafter" forcedView="composer" onClipIdea={handleClipIdea} initialState={promptsPageState} onStateHandled={() => setPromptsPageState(null)} showGlobalFeedback={showGlobalFeedback} isExiting={false} />;
+            case 'refiner': return <PromptsPage key="refiner" forcedView="refine" onClipIdea={handleClipIdea} initialState={promptsPageState} onStateHandled={() => setPromptsPageState(null)} showGlobalFeedback={showGlobalFeedback} isExiting={false} />;
+            case 'prompt_analyzer': return <PromptsPage key="prompt_analyzer" forcedView="prompt_analyzer" onClipIdea={handleClipIdea} initialState={promptsPageState} onStateHandled={() => setPromptsPageState(null)} showGlobalFeedback={showGlobalFeedback} isExiting={false} />;
+            case 'media_analyzer': return <PromptsPage key="media_analyzer" forcedView="analyzer" onClipIdea={handleClipIdea} initialState={promptsPageState} onStateHandled={() => setPromptsPageState(null)} showGlobalFeedback={showGlobalFeedback} isExiting={false} />;
+            case 'storyboard': return <StoryboardPage key="storyboard" showGlobalFeedback={showGlobalFeedback} isExiting={false} />;
+            case 'prompt': return <SavedPrompts key="prompt" {...categoryPanelProps} onSendToEnhancer={(prompt) => handleSendToPromptsPage({ prompt, view: 'enhancer' })} showGlobalFeedback={showGlobalFeedback} onClipIdea={handleClipIdea} isExiting={false} />;
+            case 'gallery': return <ImageGallery key="gallery" {...categoryPanelProps} isSidebarPinned={false} showGlobalFeedback={showGlobalFeedback} isExiting={false} />;
+            case 'cheatsheet': return <Cheatsheet key="cheatsheet" isExiting={false} />;
+            case 'artstyles': return <ArtstyleCheatsheet key="artstyles" onSendToPromptsPage={(state) => handleSendToPromptsPage({ ...state, view: 'enhancer' })} isExiting={false} />;
+            case 'artists': return <ArtistCheatsheet key="artists" onSendToPromptsPage={(state) => handleSendToPromptsPage({ ...state, view: 'enhancer' })} isExiting={false} />;
+            case 'settings': return <SetupPage key="settings" activeSettingsTab={activeSettingsTab} setActiveSettingsTab={setActiveSettingsTab} activeSubTab={activeSettingsSubTab} setActiveSubTab={setActiveSettingsSubTabSetter} showGlobalFeedback={showGlobalFeedback} isExiting={false} />;
+            case 'composer': return <ComposerPage key="composer" showGlobalFeedback={showGlobalFeedback} isExiting={false} />;
+            case 'image_compare': return <ImageCompare key="image_compare" isExiting={false} />;
+            case 'color_palette_extractor': return <ColorPaletteExtractor key="color_palette_extractor" onClipIdea={handleClipIdea} isExiting={false} />;
+            case 'resizer': return <ImageResizer key="resizer" isExiting={false} />;
+            case 'video_to_frames': return <VideoToFrames key="video_to_frames" isExiting={false} />;
+            default: return <Dashboard key="default" onNavigate={handleNavigate} onClipIdea={handleClipIdea} isExiting={false} />;
         }
     };
 
@@ -780,7 +901,7 @@ const AppContent: React.FC = () => {
                 <>
                     <div
                         ref={apertureRef}
-                        className="fixed inset-4 md:inset-10 z-[900] pointer-events-none"
+                        className="fixed inset-4 md:inset-6 z-[900] pointer-events-none"
                         style={{ visibility: 'hidden' }}
                     >
                         <div ref={blindsRef} className="absolute inset-0 flex flex-row">
@@ -795,17 +916,19 @@ const AppContent: React.FC = () => {
 
                     <div
                         ref={appWrapperRef}
-                        className="w-full h-full flex flex-col overflow-hidden relative z-0 bg-transparent rounded-none p-4 md:p-10"
+                        className="w-full h-full flex flex-col overflow-hidden relative z-0 bg-transparent rounded-none p-4 md:p-6"
                     >
-                        <Header
-                            onNavigate={handleNavigate}
-                            activeTab={activeTab}
-                            isInitialized={isInitialized}
-                            onAboutClick={() => setIsAboutModalOpen(true)}
-                            onToggleClippingPanel={() => setIsClippingPanelOpen(!isClippingPanelOpen)}
-                            onStandbyClick={handleStandbyClick}
-                            clippedIdeasCount={clippedIdeas.length}
-                        />
+                        <div className="app-header flex-shrink-0">
+                            <Header
+                                onNavigate={handleNavigate}
+                                activeTab={activeTab}
+                                isInitialized={isInitialized}
+                                onAboutClick={() => setIsAboutModalOpen(true)}
+                                onToggleClippingPanel={() => setIsClippingPanelOpen(!isClippingPanelOpen)}
+                                onStandbyClick={handleStandbyClick}
+                                clippedIdeasCount={clippedIdeas.length}
+                            />
+                        </div>
 
                         <div className={`flex-1 flex flex-col overflow-hidden relative ${activeTab === 'prompts' ? 'pt-0' : 'pt-0'} p-0 bg-transparent min-h-0 gap-0`}>
                             <main className="flex-grow min-w-0 relative overflow-hidden rounded-none bg-transparent border-none shadow-none backdrop-blur-none z-10 p-4 md:p-6">
@@ -836,33 +959,56 @@ const AppContent: React.FC = () => {
                                 </div>
 
                                 <div ref={contentRef} className="h-full w-full z-10 relative">
-                                    {renderContent()}
+                                    <AnimatePresence mode="wait">
+                                        <motion.div
+                                            key={activeTab}
+                                            variants={pageVariants}
+                                            initial="hidden"
+                                            animate="visible"
+                                            exit="exit"
+                                            className="h-full w-full"
+                                        >
+                                            {renderContent()}
+                                        </motion.div>
+                                    </AnimatePresence>
+
+                                    <ClippingPanel
+                                        isOpen={isClippingPanelOpen}
+                                        onClose={() => setIsClippingPanelOpen(false)}
+                                        clippedIdeas={clippedIdeas}
+                                        onRemoveIdea={handleRemoveIdea}
+                                        onClearAll={handleClearAllIdeas}
+                                        onInsertIdea={handleInsertIdea}
+                                        onRefineIdea={handleRefineIdea}
+                                        onAddIdea={handleClipIdea}
+                                        onSaveToLibrary={handleSaveClippedIdea}
+                                    />
+
+                                    <LlmStatusPanel 
+                                        isOpen={isLlmPanelOpen}
+                                        onClose={() => setIsLlmPanelOpen(false)}
+                                    />
                                 </div>
                             </main>
 
-                            <Footer 
-                                audioEnabled={audioEnabled}
-                                onAudioToggle={handleAudioToggle}
-                                playerState={playerState}
-                                onMusicToggle={handleMusicToggle}
-                                themeMode={settings.activeThemeMode}
-                            />
+                            <div className="app-footer flex-shrink-0">
+                                <Footer 
+                                    audioEnabled={audioEnabled}
+                                    onAudioToggle={handleAudioToggle}
+                                    playerState={playerState}
+                                    onMusicToggle={handleMusicToggle}
+                                    themeMode={settings.activeThemeMode}
+                                    onToggleLlmPanel={() => {
+                                        audioService.playClick();
+                                        setIsLlmPanelOpen(!isLlmPanelOpen)
+                                    }}
+                                    isLlmPanelOpen={isLlmPanelOpen}
+                                />
+                            </div>
                         </div>
                     </div>
                 </>
             )}
-
-            <ClippingPanel
-                isOpen={isClippingPanelOpen}
-                onClose={() => setIsClippingPanelOpen(false)}
-                clippedIdeas={clippedIdeas}
-                onRemoveIdea={handleRemoveIdea}
-                onClearAll={handleClearAllIdeas}
-                onInsertIdea={handleInsertIdea}
-                onRefineIdea={handleRefineIdea}
-                onAddIdea={handleClipIdea}
-                onSaveToLibrary={handleSaveClippedIdea}
-            />
 
             <AboutModal
                 isOpen={isAboutModalOpen}

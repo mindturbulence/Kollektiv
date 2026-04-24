@@ -149,7 +149,7 @@ const IdleOverlay: React.FC<{ isVisible: boolean; onInteraction: () => void }> =
                     
                     <div className="absolute inset-0 flex flex-col items-center justify-center z-[30] pointer-events-none text-center">
                         <div className="overflow-hidden py-1 mb-2">
-                            <p className="text-[9px] md:text-[11px] font-black uppercase tracking-[0.5em] text-primary/60">
+                            <p className="text-[12px] font-normal uppercase text-primary/60">
                                 MINDTURBULENCE'S
                             </p>
                         </div>
@@ -160,8 +160,8 @@ const IdleOverlay: React.FC<{ isVisible: boolean; onInteraction: () => void }> =
                             </h1>
                         </div>
                         <div className="overflow-hidden py-1">
-                            <p className="text-[9px] md:text-[11px] font-black uppercase tracking-[0.5em] text-base-content/40 max-w-2xl leading-loose">
-                                 Creativity, organized… unlike your desktop
+                            <p className="text-[12px] font-normal uppercase text-base-content/40 max-w-2xl leading-relaxed tracking-[0.5em]">
+                                 Precision tools for Generative Media Creation
                             </p>
                         </div>
                         <div className="w-12 h-px bg-base-content/10 mt-10"></div>

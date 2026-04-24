@@ -314,7 +314,7 @@ export const ThumbTackIcon: React.FC<React.SVGProps<SVGSVGElement>> = (props) =>
     {...props}
   >
     <path stroke="none" d="M0 0h24v24H0z" fill="none"/>
-    <path d="M15.113 3.21l.094 .083l5.5 5.5a1 1 0 0 1 -1.175 1.59l-3.172 3.171l-1.424 3.797a1 1 0 0 1 -.158 .277l-.07 .08l-1.5 1.5a1 1 0 0 1 -1.32 .082l-.095 -.083l-2.793 -2.792l-3.793 3.792a1 1 0 0 1 -1.497 -1.32l.083 -.094l3.792 -3.793l-2.792 -2.793a1 1 0 0 1 -.083 -1.32l.083 -.094l1.5 -1.5a1 1 0 0 1 .258 -.187l.098 -.042l3.796 -1.425l3.171 -3.17a1 1 0 0 1 1.497 -1.26z" />
+    <path d="M15.113 3.21l.094 .083l5.5 5.5a1 1 0 0 1 -1.175 1.59l-3.172 3.171l-1.424 3.797a1 1 0 0 1 -.158 .277l-.07 .08l-1.5 1.5a1 1 0 0 1 -1.32 .082l-.095 -.083l-2.793 -2.792l-3.793 3.792a1 1 0 0 1 -1.497 -1.32l.083 -.094l3.792 -3.793l-3.792 -2.793a1 1 0 0 1 -.083 -1.32l.083 -.094l1.5 -1.5a1 1 0 0 1 .258 -.187l.098 -.042l3.796 -1.425l3.171 -3.17a1 1 0 0 1 1.497 -1.26z" />
   </svg>
 );
 
@@ -571,12 +571,12 @@ export const YouTubeIcon: React.FC<React.SVGProps<SVGSVGElement>> = (props) => (
 );
 
 export const InstagramIcon: React.FC<React.SVGProps<SVGSVGElement>> = (props) => (
-  <svg {...commonProps} {...props}>
-    <path stroke="none" d="M0 0h24v24H0z" fill="none"/>
-    <path d="M4 4m0 4a4 4 0 0 1 4 -4h8a4 4 0 0 1 4 4v8a4 4 0 0 1 -4 4h-8a4 4 0 0 1 -4 -4z" />
-    <path d="M12 12m-3 0a3 3 0 1 0 6 0a3 3 0 1 0 -6 0" />
-    <path d="M16.5 7.5l0 .01" />
-  </svg>
+    <svg {...commonProps} {...props}>
+        <path stroke="none" d="M0 0h24v24H0z" fill="none"/>
+        <path d="M4 4m0 4a4 4 0 0 1 4 -4h8a4 4 0 0 1 4 4v8a4 4 0 0 1 -4 4h-8a4 4 0 0 1 -4 -4z" />
+        <path d="M12 12m-3 0a3 3 0 1 0 6 0a3 3 0 1 0 -6 0" />
+        <path d="M16.5 7.5l0 .01" />
+    </svg>
 );
 
 export const PowerIcon: React.FC<React.SVGProps<SVGSVGElement>> = (props) => (
@@ -586,3 +586,16 @@ export const PowerIcon: React.FC<React.SVGProps<SVGSVGElement>> = (props) => (
     <path d="M12 4l0 8" />
   </svg>
 );
+
+export const CompassIcon: React.FC<React.SVGProps<SVGSVGElement>> = (props) => (
+  <svg {...commonProps} {...props}>
+    <path stroke="none" d="M0 0h24v24H0z" fill="none"/>
+    <path d="M8 16l2 -6l6 -2l-2 6l-6 2" />
+    <path d="M12 12m-9 0a9 9 0 1 0 18 0a9 9 0 1 0 -18 0" />
+    <path d="M12 3l0 2" />
+    <path d="M12 19l0 2" />
+    <path d="M3 12l2 0" />
+    <path d="M21 12l2 0" />
+  </svg>
+);
+

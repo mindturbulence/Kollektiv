@@ -2,6 +2,7 @@ import React, { useState, useRef } from 'react';
 import { createPortal } from 'react-dom';
 import type { PromptCategory } from '../types';
 import { UploadIcon, CloseIcon } from './icons';
+import { audioService } from '../services/audioService';
 
 interface PromptTxtImportModalProps {
   isOpen: boolean;
@@ -18,6 +19,7 @@ export const PromptTxtImportModal: React.FC<PromptTxtImportModalProps> = ({ isOp
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const handleClose = () => {
+    audioService.playClick();
     setSelectedFile(null);
     setCategoryId('');
     setError(null);
@@ -25,6 +27,7 @@ export const PromptTxtImportModal: React.FC<PromptTxtImportModalProps> = ({ isOp
   };
 
   const handleSubmit = () => {
+    audioService.playClick();
     if (!selectedFile) return;
     onImport(selectedFile, categoryId);
   };
@@ -52,7 +55,7 @@ export const PromptTxtImportModal: React.FC<PromptTxtImportModalProps> = ({ isOp
                         onDrop={(e) => { e.preventDefault(); setIsDragging(false); const file = (e.dataTransfer as any)?.files?.[0]; if (file?.type === 'application/zip') { setSelectedFile(file); setError(null); } else setError("Valid .zip required."); }} 
                         onDragOver={(e) => { e.preventDefault(); setIsDragging(true); }} 
                         onDragLeave={() => setIsDragging(false)}
-                        onClick={() => (fileInputRef.current as any)?.click()}
+                        onClick={() => { audioService.playClick(); (fileInputRef.current as any)?.click(); }}
                         className={`p-16 border-4 border-dashed rounded-none text-center cursor-pointer transition-all ${isDragging ? 'border-primary bg-primary/10' : 'border-base-300 hover:border-primary/50 bg-transparent'}`}
                     >
                         <input type="file" ref={fileInputRef} onChange={(e) => { const file = (e.currentTarget as any).files?.[0]; if (file?.type === 'application/zip') { setSelectedFile(file); setError(null); } else setError("Valid .zip required."); }} className="hidden" accept=".zip"/>

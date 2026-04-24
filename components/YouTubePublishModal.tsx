@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { createPortal } from 'react-dom';
-import { CloseIcon, YouTubeIcon, InstagramIcon } from './icons';
+import { CloseIcon, YouTubeIcon } from './icons';
 import LoadingSpinner from './LoadingSpinner';
 import { publishToYouTube, type YouTubeMetadata } from '../services/youtubeService';
 import { useSettings } from '../contexts/SettingsContext';
@@ -18,7 +18,6 @@ const YouTubePublishModal: React.FC<YouTubePublishModalProps> = ({
   isOpen, onClose, videoBlob, initialTitle, initialDescription, onSuccess
 }) => {
   const { settings } = useSettings();
-  const [platform, setPlatform] = useState<'youtube' | 'instagram'>('youtube');
   const [title, setTitle] = useState(initialTitle);
   const [description, setDescription] = useState(initialDescription);
   const [privacy, setPrivacy] = useState<YouTubeMetadata['privacyStatus']>('private');
@@ -29,7 +28,6 @@ const YouTubePublishModal: React.FC<YouTubePublishModalProps> = ({
 
   useEffect(() => {
     if (isOpen) {
-      setPlatform('youtube');
       setTitle(initialTitle);
       setDescription(initialDescription);
       setPrivacy('private');
@@ -41,32 +39,28 @@ const YouTubePublishModal: React.FC<YouTubePublishModalProps> = ({
   }, [isOpen, initialTitle, initialDescription]);
 
   const handlePublish = async () => {
-    if (platform === 'youtube') {
-        if (!settings.youtube?.accessToken) {
-            setError("AUTHENTICATION_NULL: Please re-link channel in Settings.");
-            return;
-        }
-        setIsUploading(true);
-        setError(null);
-        let finalDescription = description.trim();
-        if (publishAsShorts && !finalDescription.toLowerCase().includes('#shorts')) {
-            finalDescription = `${finalDescription}\n\n#Shorts`;
-        }
-        try {
-            const result = await publishToYouTube(
-                videoBlob,
-                { title, description: finalDescription, privacyStatus: privacy },
-                settings.youtube.accessToken,
-                (p) => setProgress(p)
-            );
-            onSuccess(result.url);
-            onClose();
-        } catch (err: any) {
-            setError(`TRANSMISSION_ERROR: ${err.message || "Unknown Failure"}`);
-            setIsUploading(false);
-        }
-    } else {
-        setError("INTEGRATION_LOCKED: Instagram publishing protocol is currently in evaluation.");
+    if (!settings.youtube?.accessToken) {
+        setError("AUTHENTICATION_NULL: Please re-link channel in Settings.");
+        return;
+    }
+    setIsUploading(true);
+    setError(null);
+    let finalDescription = description.trim();
+    if (publishAsShorts && !finalDescription.toLowerCase().includes('#shorts')) {
+        finalDescription = `${finalDescription}\n\n#Shorts`;
+    }
+    try {
+        const result = await publishToYouTube(
+            videoBlob,
+            { title, description: finalDescription, privacyStatus: privacy },
+            settings.youtube.accessToken,
+            (p) => setProgress(p)
+        );
+        onSuccess(result.url);
+        onClose();
+    } catch (err: any) {
+        setError(`TRANSMISSION_ERROR: ${err.message || "Unknown Failure"}`);
+        setIsUploading(false);
     }
   };
 
@@ -79,7 +73,7 @@ const YouTubePublishModal: React.FC<YouTubePublishModalProps> = ({
           <header className="px-8 py-4 panel-header bg-transparent relative flex-shrink-0 flex items-center justify-between">
               <div className="flex flex-col">
                   <div className="flex items-center gap-3">
-                      {platform === 'youtube' ? <YouTubeIcon className="w-6 h-6 text-error" /> : <InstagramIcon className="w-6 h-6 text-primary" />}
+                      <YouTubeIcon className="w-6 h-6 text-error" />
                       <h3 className="text-xl font-black tracking-tighter text-base-content leading-none">
                           PUBLISH<span className="text-primary">.</span>
                       </h3>
@@ -103,35 +97,26 @@ const YouTubePublishModal: React.FC<YouTubePublishModalProps> = ({
             </div>
           ) : (
             <>
-              <div className="form-control">
-                <label className="text-[10px] font-black uppercase tracking-[0.2em] text-base-content/40 mb-3">Destination Platform</label>
-                <div className="form-tab-group">
-                    <button onClick={() => setPlatform('youtube')} className={`form-tab-item ${platform === 'youtube' ? 'active' : ''}`}>YOUTUBE</button>
-                    <button onClick={() => setPlatform('instagram')} className={`form-tab-item border-l border-base-300 ${platform === 'instagram' ? 'active' : ''}`}>INSTAGRAM</button>
-                </div>
-              </div>
               <div className="form-control"><label className="text-[10px] font-black uppercase tracking-[0.2em] text-base-content/40 mb-3">Transmission ID</label><input type="text" value={title} onChange={e => setTitle(e.target.value)} className="form-input w-full uppercase" placeholder="ENTER TITLE..." /></div>
               <div className="form-control"><label className="text-[10px] font-black uppercase tracking-[0.2em] text-base-content/40 mb-3">Metadata Packet</label><textarea value={description} onChange={e => setDescription(e.target.value)} className="form-textarea w-full min-h-[120px]" placeholder="ENTER DESCRIPTION..." /></div>
-              {platform === 'youtube' && (
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6 animate-fade-in">
-                    <div className="form-control">
-                        <label className="text-[10px] font-black uppercase tracking-[0.2em] text-base-content/40 mb-3">Signal Visibility</label>
-                        <div className="form-tab-group">
-                            <button onClick={() => setPrivacy('public')} className={`form-tab-item ${privacy === 'public' ? 'active' : ''}`}>PUBLIC</button>
-                            <button onClick={() => setPrivacy('unlisted')} className={`form-tab-item border-x border-base-300 ${privacy === 'unlisted' ? 'active' : ''}`}>UNLISTED</button>
-                            <button onClick={() => setPrivacy('private')} className={`form-tab-item ${privacy === 'private' ? 'active' : ''}`}>PRIVATE</button>
-                        </div>
-                    </div>
-                    <div className="form-control">
-                        <label className="text-[10px] font-black uppercase tracking-[0.2em] text-base-content/40 mb-3">Protocol Format</label>
-                        <div className="form-tab-group">
-                            <button onClick={() => setPublishAsShorts(false)} className={`form-tab-item ${!publishAsShorts ? 'active' : ''}`}>STANDARD</button>
-                            <button onClick={() => setPublishAsShorts(true)} className={`form-tab-item border-l border-base-300 ${publishAsShorts ? 'active' : ''}`}>REEL</button>
-                        </div>
-                    </div>
-                </div>
-              )}
-              {platform === 'youtube' && publishAsShorts && (<div className="p-4 bg-primary/5 border border-primary/20 flex items-center gap-4 animate-fade-in"><span className="w-1.5 h-1.5 rounded-full bg-primary animate-pulse"></span><p className="text-[9px] font-bold text-primary uppercase tracking-widest">Protocol: System will append <span className="font-mono text-white">#Shorts</span> for algorithmic indexing.</p></div>)}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6 animate-fade-in">
+                  <div className="form-control">
+                      <label className="text-[10px] font-black uppercase tracking-[0.2em] text-base-content/40 mb-3">Signal Visibility</label>
+                      <div className="form-tab-group">
+                          <button onClick={() => setPrivacy('public')} className={`form-tab-item ${privacy === 'public' ? 'active' : ''}`}>PUBLIC</button>
+                          <button onClick={() => setPrivacy('unlisted')} className={`form-tab-item border-x border-base-300 ${privacy === 'unlisted' ? 'active' : ''}`}>UNLISTED</button>
+                          <button onClick={() => setPrivacy('private')} className={`form-tab-item ${privacy === 'private' ? 'active' : ''}`}>PRIVATE</button>
+                      </div>
+                  </div>
+                  <div className="form-control">
+                      <label className="text-[10px] font-black uppercase tracking-[0.2em] text-base-content/40 mb-3">Protocol Format</label>
+                      <div className="form-tab-group">
+                          <button onClick={() => setPublishAsShorts(false)} className={`form-tab-item ${!publishAsShorts ? 'active' : ''}`}>STANDARD</button>
+                          <button onClick={() => setPublishAsShorts(true)} className={`form-tab-item border-l border-base-300 ${publishAsShorts ? 'active' : ''}`}>REEL</button>
+                      </div>
+                  </div>
+              </div>
+              {publishAsShorts && (<div className="p-4 bg-primary/5 border border-primary/20 flex items-center gap-4 animate-fade-in"><span className="w-1.5 h-1.5 rounded-full bg-primary animate-pulse"></span><p className="text-[9px] font-bold text-primary uppercase tracking-widest">Protocol: System will append <span className="font-mono text-white">#Shorts</span> for algorithmic indexing.</p></div>)}
               {error && (<div className="p-4 bg-error/10 border border-error/20 text-error text-[10px] font-black uppercase tracking-widest text-center animate-shake">{error}</div>)}
             </>
           )}

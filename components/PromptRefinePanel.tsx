@@ -77,7 +77,7 @@ const PromptRefinePanel: React.FC<PromptRefinePanelProps> = ({ promptText, onApp
         return (
             <div className="bg-transparent">
                 <button onClick={() => setIsCollapsed(false)} className="w-full p-4 flex items-center justify-between hover:bg-primary/5 transition-colors">
-                    <span className="text-[10px] font-black uppercase tracking-[0.3em] text-primary">Open Refiner</span>
+                    <span className="text-xs font-sf-mono uppercase tracking-widest text-primary">Open Refiner</span>
                     <ChevronDownIcon className="w-4 h-4" />
                 </button>
             </div>
@@ -89,7 +89,7 @@ const PromptRefinePanel: React.FC<PromptRefinePanelProps> = ({ promptText, onApp
             <div className="flex flex-col h-full w-full bg-base-100/30 backdrop-blur-xl overflow-hidden relative z-10">
                 <header className="p-4 flex justify-between items-center bg-base-100/10 backdrop-blur-md">
                     <div className="flex items-center gap-4">
-                        <span className="text-xs font-black uppercase tracking-[0.3em] text-primary">AI Refinement</span>
+                        <span className="text-xs text-[12px] font-sf-mono uppercase tracking-widest text-primary">AI Refinement</span>
                         <div className="form-control max-w-[140px]">
                              <select value={targetAIModel} onChange={(e) => setTargetAIModel((e.currentTarget as any).value)} className="form-select h-8 text-[10px]">
                                 <optgroup label="Image">
@@ -114,7 +114,7 @@ const PromptRefinePanel: React.FC<PromptRefinePanelProps> = ({ promptText, onApp
                 </header>
                 
                 <main ref={scrollerRef} className="flex-grow p-5 lg:p-5 overflow-y-auto flex flex-col relative">
-                    <span className="text-[10px] font-black uppercase tracking-widest text-primary/40 mb-3 flex items-center gap-3">
+                    <span className="text-xs font-sf-mono uppercase tracking-widest text-primary/40 mb-3 flex items-center gap-3">
                         <span className="w-1.5 h-1.5 rounded-none bg-primary animate-pulse"></span> Generated Text
                     </span>
                     
@@ -136,17 +136,17 @@ const PromptRefinePanel: React.FC<PromptRefinePanelProps> = ({ promptText, onApp
                 
                 <footer className="p-1.5 flex justify-end gap-1.5">
                     {onClip && refinedPrompt && (
-                            <button onClick={handleClip} disabled={clipped} className="btn btn-sm btn-ghost h-10 rounded-none px-4 font-normal text-[13px] tracking-wider uppercase btn-snake">
+                            <button onClick={handleClip} disabled={clipped} className="btn btn-sm btn-ghost h-10 rounded-none px-4 font-normal text-[13px] tracking-wider border border-base-content/5 btn-snake">
                             <span/><span/><span/><span/>
                             <BookmarkIcon className="w-3.5 h-3.5 mr-1.5" />
                             {clipped ? 'Ok' : 'Clip'}
                         </button>
                     )}
-                    <button onClick={handleCopy} disabled={!refinedPrompt || isLoading} className="btn btn-sm btn-ghost h-10 rounded-none px-4 font-normal text-[13px] tracking-wider uppercase btn-snake">
+                    <button onClick={handleCopy} disabled={!refinedPrompt || isLoading} className="btn btn-sm btn-ghost h-10 rounded-none px-4 font-normal text-[13px] tracking-wider border border-base-content/5 btn-snake">
                         <span/><span/><span/><span/>
                         {copied ? <><CheckIcon className="w-3.5 h-3.5 mr-1.5 text-success" />Copied</> : <><CopyIcon className="w-3.5 h-3.5 mr-1.5" />Copy Text</>}
                     </button>
-                    <button onClick={handleApply} disabled={!refinedPrompt || isLoading} className="btn btn-sm btn-primary h-10 rounded-none px-4 font-normal text-[13px] tracking-wider uppercase btn-snake-primary">
+                    <button onClick={handleApply} disabled={!refinedPrompt || isLoading} className="btn btn-sm btn-primary h-10 rounded-none px-4 font-normal text-[13px] tracking-wider border border-base-content/5 btn-snake-primary">
                         <span/><span/><span/><span/>
                         <CheckIcon className="w-3.5 h-3.5 mr-1.5" /> Apply Prompt
                     </button>

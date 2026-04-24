@@ -41,7 +41,7 @@ const Logo: React.FC<{ onNavigate: (tab: ActiveTab) => void }> = ({ onNavigate }
             }}
             className="flex items-center justify-center gap-2 group pointer-events-auto w-[180px]"
         >
-            <h1 className="text-xl font-normal tracking-widest text-base-content uppercase flex items-center font-monoton leading-none translate-y-[1px]">
+            <h1 className="text-xl font-normal tracking-widest text-base-content uppercase flex items-center font-monoton leading-none translate-y-[2px]">
                 <ChromaticText>
                     <TimedScrambledText text="Kollektiv" intervalMs={300000} trigger={scrambleTrigger} />
                 </ChromaticText>
@@ -124,7 +124,7 @@ const NavItem: React.FC<{
         audioService.playClick();
         onClick();
       }}
-      className={`px-3 h-full flex items-center text-[12px] font-normal transition-all duration-300 whitespace-nowrap overflow-hidden opacity-0 translate-y-[10px] ${isCurrent ? 'text-primary font-bold no-glow' : 'text-base-content/30 hover:text-primary hover:no-glow'}`}
+      className={`px-3 h-full flex items-center text-[12px] font-rajdhani font-medium transition-all duration-300 whitespace-nowrap overflow-hidden opacity-0 translate-y-[10px] ${isCurrent ? 'text-primary font-bold no-glow' : 'text-base-content/30 hover:text-primary hover:no-glow'}`}
     >
       <RollingText text={label} hoverClassName="text-primary" />
     </button>
@@ -176,6 +176,7 @@ const Header: React.FC<HeaderProps> = ({
 
   const navGroups = [
     { id: 'home', label: 'Home', items: [], singleId: 'dashboard' as ActiveTab },
+    { id: 'discovery', label: 'Discovery', items: [], singleId: 'discovery' as ActiveTab },
     { id: 'workspaces', label: 'Workspaces', items: workspaceItems },
     { id: 'vault', label: 'Vault', items: vaultItems },
     { id: 'guides', label: 'References', items: guideItems },
@@ -200,26 +201,14 @@ const Header: React.FC<HeaderProps> = ({
     return group?.items.some(item => item.id === activeTab);
   };
 
+  // Removed internal entry animation as it is now coordinated from App.tsx
   useLayoutEffect(() => {
     if (!isInitialized || !navRef.current) return;
-
+    
+    // Set initial state to visible as parent handles the slide
     const navItems = navRef.current.querySelectorAll('.parent-nav-item');
     const separators = navRef.current.querySelectorAll('.nav-separator');
-    
-    gsap.set([navItems, separators], { y: -20, autoAlpha: 0 });
-
-    gsap.to([navItems, separators], {
-      y: 0,
-      autoAlpha: 1,
-      duration: 1.2,
-      delay: 0.5,
-      stagger: 0.05,
-      ease: "power3.out"
-    });
-
-    return () => {
-      gsap.killTweensOf([navItems, separators]);
-    };
+    gsap.set([navItems, separators], { y: 0, autoAlpha: 1 });
   }, [isInitialized]);
 
   // Handle Container sliding via GSAP
@@ -254,6 +243,7 @@ const Header: React.FC<HeaderProps> = ({
     if (switchingRef.current) return;
 
     if (group.singleId) {
+      if (activeMenu) audioService.playSlide();
       onNavigate(group.singleId);
       setActiveMenu(null);
       audioService.playClick();
@@ -261,19 +251,25 @@ const Header: React.FC<HeaderProps> = ({
     }
     
     if (activeMenu === group.id) {
+      audioService.playSlide();
       setActiveMenu(null);
+      audioService.playClick();
       return;
     }
 
     if (activeMenu) {
       switchingRef.current = true;
+      audioService.playSlide();
       setActiveMenu(null);
+      audioService.playClick();
       setTimeout(() => {
         setActiveMenu(group.id);
+        audioService.playSlide();
         switchingRef.current = false;
       }, 900); 
     } else {
       setActiveMenu(group.id);
+      audioService.playSlide();
     }
     audioService.playClick();
   }, [activeMenu, onNavigate]);
@@ -298,7 +294,8 @@ const Header: React.FC<HeaderProps> = ({
                 <div className="flex items-center gap-1">
                   <button
                     onClick={() => handleParentClick(group)}
-                    className={`parent-nav-item relative z-10 px-3 h-full flex items-center text-[12px] font-normal leading-none transition-all duration-500 hover:text-primary hover:no-glow ${isExpanded || isCurrent || (group.singleId === activeTab) ? 'text-base-content font-bold no-glow' : 'text-base-content/30'}`}
+                    onMouseEnter={() => audioService.playHover()}
+                    className={`parent-nav-item font-rajdhani font-medium relative z-10 px-3 h-full flex items-center text-[12px] leading-none transition-all duration-500 hover:text-primary hover:no-glow ${isExpanded || isCurrent || (group.singleId === activeTab) ? 'text-base-content font-bold no-glow' : 'text-base-content/30'}`}
                   >
                     <RollingText text={group.label} hoverClassName="text-primary" />
                   </button>
@@ -332,7 +329,8 @@ const Header: React.FC<HeaderProps> = ({
         {/* Right Side Controls */}
         <div className="ml-auto flex gap-1 items-center">
             <HUDNavItem
-                onClick={() => {
+                onClick={(e) => {
+                    e.stopPropagation();
                     audioService.playClick();
                     onAboutClick();
                 }}
@@ -344,7 +342,8 @@ const Header: React.FC<HeaderProps> = ({
             <ThemeSwitcher />
             <div className="w-px h-2 bg-base-content/10 self-center" />
             <HUDNavItem
-                onClick={() => {
+                onClick={(e) => {
+                    e.stopPropagation();
                     audioService.playClick();
                     onToggleClippingPanel();
                 }}
@@ -355,7 +354,8 @@ const Header: React.FC<HeaderProps> = ({
             </HUDNavItem>
             <div className="w-px h-2 bg-base-content/10 self-center" />
             <HUDNavItem
-                onClick={() => {
+                onClick={(e) => {
+                    e.stopPropagation();
                     audioService.playClick();
                     onNavigate('settings' as ActiveTab);
                 }}

@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef, useMemo, useCallback } from 'react';
+import { motion } from 'framer-motion';
 import { gsap } from 'gsap';
 import type { GalleryItem, GalleryCategory } from '../types';
 import { loadGalleryItems, addItemToGallery, updateItemInGallery, deleteItemFromGallery, loadPinnedItemIds, savePinnedItemIds, loadCategories } from '../utils/galleryStorage';
@@ -11,17 +12,24 @@ import ConfirmationModal from './ConfirmationModal';
 import LoadingSpinner from './LoadingSpinner';
 import AddItemModal from './AddItemModal';
 import useLocalStorage from '../utils/useLocalStorage';
+import { audioService } from '../services/audioService';
 
 interface ImageGalleryProps {
   isCategoryPanelCollapsed: boolean;
   onToggleCategoryPanel: () => void;
   isSidebarPinned: boolean;
   showGlobalFeedback: (message: string, isError?: boolean) => void;
+  isExiting?: boolean;
 }
 
 export type GalleryViewMode = 'compact' | 'default' | 'focus';
 
-const ImageGallery: React.FC<ImageGalleryProps> = ({ isCategoryPanelCollapsed, onToggleCategoryPanel, showGlobalFeedback }) => {
+const ImageGallery: React.FC<ImageGalleryProps> = ({
+  isCategoryPanelCollapsed,
+  onToggleCategoryPanel,
+  showGlobalFeedback,
+  isExiting = false
+}) => {
   const [items, setItems] = useState<GalleryItem[]>([]);
   const [categories, setCategories] = useState<GalleryCategory[]>([]);
   const [pinnedItemIds, setPinnedItemIds] = useState<string[]>([]);
@@ -48,15 +56,15 @@ const ImageGallery: React.FC<ImageGalleryProps> = ({ isCategoryPanelCollapsed, o
 
   useEffect(() => {
     if (displayCount < targetDisplayCount) {
-        const step = () => {
-            setDisplayCount(prev => {
-                const next = prev + 1;
-                if (next >= targetDisplayCount) return targetDisplayCount;
-                streamRafRef.current = requestAnimationFrame(step);
-                return next;
-            });
-        };
-        streamRafRef.current = requestAnimationFrame(step);
+      const step = () => {
+        setDisplayCount(prev => {
+          const next = prev + 1;
+          if (next >= targetDisplayCount) return targetDisplayCount;
+          streamRafRef.current = requestAnimationFrame(step);
+          return next;
+        });
+      };
+      streamRafRef.current = requestAnimationFrame(step);
     }
     return () => { if (streamRafRef.current) cancelAnimationFrame(streamRafRef.current); };
   }, [targetDisplayCount, displayCount]);
@@ -74,40 +82,40 @@ const ImageGallery: React.FC<ImageGalleryProps> = ({ isCategoryPanelCollapsed, o
 
     let lastY = scroller.scrollTop;
     let vel = 0;
-    
+
     const skewSetter = gsap.quickSetter(grid, "skewY", "deg");
     const scaleSetter = gsap.quickSetter(grid, "scaleY");
 
     const updateMotion = () => {
-        const currentY = scroller.scrollTop;
-        const diff = currentY - lastY;
-        
-        // Increase sensitivity and responsiveness
-        vel += (diff - vel) * 0.2; 
-        lastY = currentY;
+      const currentY = scroller.scrollTop;
+      const diff = currentY - lastY;
 
-        const clampedVel = gsap.utils.clamp(-60, 60, vel);
-        const skewValue = clampedVel * 0.12;
-        const scaleValue = 1 - Math.min(0.02, Math.abs(clampedVel) * 0.0002);
+      // Increase sensitivity and responsiveness
+      vel += (diff - vel) * 0.2;
+      lastY = currentY;
 
-        skewSetter(skewValue);
-        scaleSetter(scaleValue);
+      const clampedVel = gsap.utils.clamp(-60, 60, vel);
+      const skewValue = clampedVel * 0.12;
+      const scaleValue = 1 - Math.min(0.02, Math.abs(clampedVel) * 0.0002);
 
-        columnRefs.current.forEach((col, idx) => {
-            if (!col) return;
-            const factor = ((idx % 3) - 1) * 0.25;
-            const offset = clampedVel * factor;
-            gsap.set(col, { y: offset, force3D: true });
-        });
+      skewSetter(skewValue);
+      scaleSetter(scaleValue);
 
-        if (Math.abs(vel) > 0.1) {
-            vel *= 0.95;
-        } else {
-            vel = 0;
-            skewSetter(0);
-            scaleSetter(1);
-            columnRefs.current.forEach(col => col && gsap.set(col, { y: 0 }));
-        }
+      columnRefs.current.forEach((col, idx) => {
+        if (!col) return;
+        const factor = ((idx % 3) - 1) * 0.25;
+        const offset = clampedVel * factor;
+        gsap.set(col, { y: offset, force3D: true });
+      });
+
+      if (Math.abs(vel) > 0.1) {
+        vel *= 0.95;
+      } else {
+        vel = 0;
+        skewSetter(0);
+        scaleSetter(1);
+        columnRefs.current.forEach(col => col && gsap.set(col, { y: 0 }));
+      }
     };
 
     gsap.ticker.add(updateMotion);
@@ -118,21 +126,21 @@ const ImageGallery: React.FC<ImageGalleryProps> = ({ isCategoryPanelCollapsed, o
     if (typeof window === 'undefined') return 6;
     const w = window.innerWidth;
     if (viewMode === 'compact') {
-        if (w >= 1536) return 12;
-        if (w >= 1280) return 10;
-        if (w >= 1024) return 8;
-        if (w >= 768) return 6;
-        return 4;
+      if (w >= 1536) return 12;
+      if (w >= 1280) return 10;
+      if (w >= 1024) return 8;
+      if (w >= 768) return 6;
+      return 4;
     } else if (viewMode === 'focus') {
-        if (w >= 1024) return 3;
-        if (w >= 640) return 2;
-        return 1;
+      if (w >= 1024) return 3;
+      if (w >= 640) return 2;
+      return 1;
     } else {
-        if (w >= 1536) return 6;
-        if (w >= 1280) return 5;
-        if (w >= 1024) return 4;
-        if (w >= 768) return 3;
-        return 2;
+      if (w >= 1536) return 6;
+      if (w >= 1280) return 5;
+      if (w >= 1024) return 4;
+      if (w >= 768) return 3;
+      return 2;
     }
   }, [viewMode]);
 
@@ -146,17 +154,17 @@ const ImageGallery: React.FC<ImageGalleryProps> = ({ isCategoryPanelCollapsed, o
   const observer = useRef<IntersectionObserver | null>(null);
 
   const refreshData = useCallback(async () => {
-      setIsLoading(true);
-      try {
-        const [loadedItems, loadedCategories, loadedPinnedIds] = await Promise.all([loadGalleryItems(), loadCategories(), loadPinnedItemIds()]);
-        setItems(loadedItems);
-        setCategories(loadedCategories);
-        setPinnedItemIds(loadedPinnedIds);
-      } catch (error) {
-          console.error("Library load failure:", error);
-      } finally {
-          setIsLoading(false);
-      }
+    setIsLoading(true);
+    try {
+      const [loadedItems, loadedCategories, loadedPinnedIds] = await Promise.all([loadGalleryItems(), loadCategories(), loadPinnedItemIds()]);
+      setItems(loadedItems);
+      setCategories(loadedCategories);
+      setPinnedItemIds(loadedPinnedIds);
+    } catch (error) {
+      console.error("Library load failure:", error);
+    } finally {
+      setIsLoading(false);
+    }
   }, []);
 
   useEffect(() => { refreshData(); }, [refreshData]);
@@ -167,14 +175,14 @@ const ImageGallery: React.FC<ImageGalleryProps> = ({ isCategoryPanelCollapsed, o
   };
 
   const handleUpdateItem = async (id: string, updates: Partial<GalleryItem>) => {
-      await updateItemInGallery(id, updates);
-      await refreshData();
+    await updateItemInGallery(id, updates);
+    await refreshData();
   };
-  
+
   const handleDeleteItem = async (item: GalleryItem) => {
-      setDetailViewItemId(null);
-      await deleteItemFromGallery(item.id);
-      await refreshData();
+    setDetailViewItemId(null);
+    await deleteItemFromGallery(item.id);
+    await refreshData();
   };
 
   const sortedAndFilteredItems = useMemo(() => {
@@ -186,14 +194,14 @@ const ImageGallery: React.FC<ImageGalleryProps> = ({ isCategoryPanelCollapsed, o
     if (!showNsfw) { filtered = filtered.filter(i => !i.isNsfw); }
     if (mediaTypeFilter !== 'all') filtered = filtered.filter(i => i.type === mediaTypeFilter);
     if (searchQuery.trim()) {
-        const q = searchQuery.toLowerCase();
-        filtered = filtered.filter(item => item.title.toLowerCase().includes(q) || (item.notes && item.notes.toLowerCase().includes(q)) || (item.tags && item.tags.some(t => t.toLowerCase().includes(q))));
+      const q = searchQuery.toLowerCase();
+      filtered = filtered.filter(item => item.title.toLowerCase().includes(q) || (item.notes && item.notes.toLowerCase().includes(q)) || (item.tags && item.tags.some(t => t.toLowerCase().includes(q))));
     }
     const isPinned = (item: GalleryItem) => pinnedItemIds.includes(item.id);
     filtered.sort((a, b) => {
       if (selectedCategoryId === 'all') {
-          if (isPinned(a) && !isPinned(b)) return -1;
-          if (!isPinned(a) && isPinned(b)) return 1;
+        if (isPinned(a) && !isPinned(b)) return -1;
+        if (!isPinned(a) && isPinned(b)) return 1;
       }
       if (sortOrder === 'oldest') return a.createdAt - b.createdAt;
       if (sortOrder === 'title') return a.title.localeCompare(b.title);
@@ -206,31 +214,31 @@ const ImageGallery: React.FC<ImageGalleryProps> = ({ isCategoryPanelCollapsed, o
 
   useEffect(() => {
     if (displayedItems.length > 0 && gridRef.current) {
-        // Find all items that are not yet animated
-        const items = gridRef.current.querySelectorAll('.elastic-grid-item:not(.animated)');
-        if (items.length > 0) {
-            gsap.fromTo(items, 
-                { opacity: 0, y: 50, scale: 0.9 },
-                { 
-                    opacity: 1, 
-                    y: 0, 
-                    scale: 1, 
-                    duration: 0.8, 
-                    stagger: 0.05, 
-                    ease: "power3.out",
-                    onComplete: () => {
-                        items.forEach(el => el.classList.add('animated'));
-                    }
-                }
-            );
-        }
+      // Find all items that are not yet animated
+      const items = gridRef.current.querySelectorAll('.elastic-grid-item:not(.animated)');
+      if (items.length > 0) {
+        gsap.fromTo(items,
+          { opacity: 0, y: 50, scale: 0.9 },
+          {
+            opacity: 1,
+            y: 0,
+            scale: 1,
+            duration: 0.8,
+            stagger: 0.05,
+            ease: "power3.out",
+            onComplete: () => {
+              items.forEach(el => el.classList.add('animated'));
+            }
+          }
+        );
+      }
     }
   }, [displayedItems]);
 
   const masonryColumns = useMemo(() => {
     const cols: GalleryItem[][] = Array.from({ length: columnCount }, () => []);
     displayedItems.forEach((item, index) => {
-        cols[index % columnCount].push(item);
+      cols[index % columnCount].push(item);
     });
     return cols;
   }, [displayedItems, columnCount]);
@@ -238,13 +246,13 @@ const ImageGallery: React.FC<ImageGalleryProps> = ({ isCategoryPanelCollapsed, o
   const lastElementRef = useCallback((node: HTMLDivElement | null) => {
     if (isLoading) return;
     if (observer.current) observer.current.disconnect();
-    
+
     observer.current = new IntersectionObserver(entries => {
       if (entries[0].isIntersecting && targetDisplayCount < sortedAndFilteredItems.length) {
-          setTargetDisplayCount(prev => prev + 60);
+        setTargetDisplayCount(prev => prev + 60);
       }
     }, { rootMargin: '0px 0px 2500px 0px' });
-    
+
     if (node) observer.current.observe(node);
   }, [isLoading, sortedAndFilteredItems.length, targetDisplayCount]);
 
@@ -258,7 +266,7 @@ const ImageGallery: React.FC<ImageGalleryProps> = ({ isCategoryPanelCollapsed, o
       for (const cat of children) {
         const subTree = buildTree(cat.id);
         const nameMatches = cat.name.toLowerCase().includes(q);
-        
+
         if (!q || nameMatches || subTree.length > 0) {
           results.push({
             id: cat.id,
@@ -271,7 +279,7 @@ const ImageGallery: React.FC<ImageGalleryProps> = ({ isCategoryPanelCollapsed, o
       }
       return results;
     };
-    
+
     const rootItems = buildTree(undefined);
     const globalVaultMatches = !q || 'All Folders'.toLowerCase().includes(q);
     const uncategorizedMatches = !q || 'Uncategorized'.toLowerCase().includes(q);
@@ -301,11 +309,41 @@ const ImageGallery: React.FC<ImageGalleryProps> = ({ isCategoryPanelCollapsed, o
     return <div className="h-full w-full flex items-center justify-center bg-transparent"><LoadingSpinner /></div>;
   }
 
+  const panelVariants = {
+    hidden: {
+      clipPath: 'inset(100% 0 0 0)',
+      opacity: 0,
+    },
+    visible: (custom: number) => ({
+      clipPath: 'inset(0% 0 0 0)',
+      opacity: 1,
+      transition: {
+        duration: 1.0,
+        ease: [0.16, 1, 0.3, 1] as any,
+        delay: typeof custom === 'number' ? custom : 0
+      }
+    }),
+    exit: {
+      clipPath: 'inset(100% 0 0 0)',
+      opacity: 0,
+      transition: {
+        duration: 0.6,
+        ease: [0.7, 0, 0.84, 0] as any,
+      }
+    }
+  };
+
   return (
     <>
-      <section className="flex flex-col h-full bg-transparent relative p-[3px] corner-frame overflow-visible">
+      <motion.section
+        variants={panelVariants}
+        initial="hidden"
+        animate={isExiting ? "exit" : "visible"}
+        exit="exit"
+        className="flex flex-col h-full bg-transparent relative p-[3px] corner-frame overflow-hidden"
+      >
         <div className="flex flex-row h-full w-full overflow-hidden relative z-10 bg-base-100/40 backdrop-blur-xl gap-0 panel-transparent">
-          <aside className={`relative z-20 flex-shrink-0 bg-transparent border-r border-white/5 transition-all duration-300 ease-in-out flex flex-col overflow-visible ${isCategoryPanelCollapsed ? 'w-0' : 'w-96'}`}>
+          <aside className={`relative z-20 flex-shrink-0 bg-transparent border-r border-white/5 transition-all duration-300 ease-in-out flex flex-col overflow-hidden ${isCategoryPanelCollapsed ? 'w-0' : 'w-96'}`}>
             <CategoryPanelToggle isCollapsed={isCategoryPanelCollapsed} onToggle={onToggleCategoryPanel} position="right" />
             <div className={`flex flex-col h-full w-full overflow-hidden relative z-10 transition-opacity duration-200 ${isCategoryPanelCollapsed ? 'opacity-0 invisible' : 'opacity-100 visible'}`}>
               <div className="flex-shrink-0 h-14 px-6 flex items-center border-b border-white/5">
@@ -314,16 +352,16 @@ const ImageGallery: React.FC<ImageGalleryProps> = ({ isCategoryPanelCollapsed, o
               <div className="flex-shrink-0 h-14 px-2 mt-4">
                 <div className="flex items-center h-full relative px-4">
                   <SearchIcon className="absolute left-10 w-3.5 h-3.5 opacity-20 pointer-events-none" />
-                  <input 
-                    type="text" 
+                  <input
+                    type="text"
                     value={categorySearchQuery}
                     onChange={(e) => setCategorySearchQuery(e.target.value)}
-                    placeholder="SEARCH FOLDERS..." 
+                    placeholder="SEARCH FOLDERS..."
                     className="form-input w-full h-full bg-transparent border-none focus:outline-none focus:ring-0 pl-12 pr-10 text-[11px] tracking-widest"
                   />
                   {categorySearchQuery && (
-                    <button 
-                      onClick={() => setCategorySearchQuery('')}
+                    <button
+                      onClick={() => { audioService.playClick(); setCategorySearchQuery(''); }}
                       className="absolute right-7 btn btn-xs btn-ghost btn-circle text-error opacity-40 hover:opacity-100 transition-opacity"
                     >
                       <CloseIcon className="w-3 h-3" />
@@ -336,132 +374,132 @@ const ImageGallery: React.FC<ImageGalleryProps> = ({ isCategoryPanelCollapsed, o
               </div>
             </div>
           </aside>
-          <main className="relative z-10 flex-grow flex flex-col h-full overflow-visible bg-transparent">
+          <main className="relative z-10 flex-grow flex flex-col h-full overflow-hidden bg-transparent">
             <div className="flex flex-col h-full w-full overflow-hidden relative z-10">
-            {detailViewItemId && (
-              <ItemDetailView 
-                items={sortedAndFilteredItems} currentIndex={sortedAndFilteredItems.findIndex(i => i.id === detailViewItemId)} isPinned={pinnedItemIds.includes(detailViewItemId)} categories={categories} onClose={() => setDetailViewItemId(null)} onUpdate={handleUpdateItem} onDelete={(i) => setItemToDelete(i)} onTogglePin={(id) => { const n = pinnedItemIds.includes(id) ? pinnedItemIds.filter(pid=>pid!==id) : [id, ...pinnedItemIds]; setPinnedItemIds(n); savePinnedItemIds(n); }} onNavigate={(idx) => setDetailViewItemId(sortedAndFilteredItems[idx].id)} showGlobalFeedback={showGlobalFeedback}
-              />
-            )}
+              {detailViewItemId && (
+                <ItemDetailView
+                  items={sortedAndFilteredItems} currentIndex={sortedAndFilteredItems.findIndex(i => i.id === detailViewItemId)} isPinned={pinnedItemIds.includes(detailViewItemId)} categories={categories} onClose={() => setDetailViewItemId(null)} onUpdate={handleUpdateItem} onDelete={(i) => setItemToDelete(i)} onTogglePin={(id) => { const n = pinnedItemIds.includes(id) ? pinnedItemIds.filter(pid => pid !== id) : [id, ...pinnedItemIds]; setPinnedItemIds(n); savePinnedItemIds(n); }} onNavigate={(idx) => setDetailViewItemId(sortedAndFilteredItems[idx].id)} showGlobalFeedback={showGlobalFeedback}
+                />
+              )}
 
-            <div className={`flex flex-col h-full overflow-hidden transition-all duration-300 ${detailViewItemId ? 'blur-sm pointer-events-none' : ''}`}>
+              <div className={`flex flex-col h-full overflow-hidden transition-all duration-300 ${detailViewItemId ? 'blur-sm pointer-events-none' : ''}`}>
                 <div className="relative flex-grow overflow-hidden">
-                    <div ref={scrollerRef} className="h-full w-full overflow-y-auto">
-                        <header className="bg-transparent">
-                        <div className="p-4 md:p-6">
-                            <div className="flex flex-col md:flex-row md:items-end justify-between gap-4">
-                                <div className="space-y-1">
-                                    <span className="text-[10px] font-black uppercase tracking-[0.6em] text-primary/60 block">{parentCategoryName}</span>
-                                    <h1 className="text-3xl lg:text-4xl font-black tracking-tighter text-base-content leading-none uppercase font-logo">
-                                        {currentCategoryName}<span className="text-primary">.</span>
-                                    </h1>
-                                </div>
-                                <div className="flex">
-                                    <div className="px-6 py-2 flex flex-col items-center justify-center">
-                                        <span className="text-3xl font-black tracking-tighter leading-none">{sortedAndFilteredItems.length}</span>
-                                        <span className="text-[8px] uppercase font-black text-base-content/30 tracking-[0.2em] mt-1">Images</span>
-                                    </div>
-                                </div>
+                  <div ref={scrollerRef} className="h-full w-full overflow-y-auto">
+                    <header className="bg-transparent">
+                      <div className="p-4 md:p-6">
+                        <div className="flex flex-col md:flex-row md:items-end justify-between gap-4">
+                          <div className="space-y-1">
+                            <span className="text-[10px] font-black uppercase tracking-[0.6em] text-primary/60 block">{parentCategoryName}</span>
+                            <h1 className="text-3xl lg:text-4xl font-black tracking-tighter text-base-content leading-none uppercase font-sf-mono">
+                              {currentCategoryName}<span className="text-primary">.</span>
+                            </h1>
+                          </div>
+                          <div className="flex">
+                            <div className="px-6 py-2 flex flex-col items-center justify-center">
+                              <span className="text-3xl font-black tracking-tighter leading-none">{sortedAndFilteredItems.length}</span>
+                              <span className="text-[8px] uppercase font-black text-base-content/30 tracking-[0.2em] mt-1">Images</span>
                             </div>
+                          </div>
                         </div>
+                      </div>
                     </header>
 
                     <div className="sticky top-0 z-30 bg-base-100/40 backdrop-blur-xl h-14 panel-transparent">
-                        <div className="flex items-stretch h-full w-full">
-                            <div className="flex-grow flex items-center relative">
-                                <SearchIcon className="absolute left-6 w-4 h-4 opacity-20 pointer-events-none" />
-                                <input type="text" value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} placeholder="SEARCH IMAGES..." className="form-input input-lg w-full h-full bg-transparent border-none focus:outline-none focus:ring-0 pl-14 pr-12" />
-                                {searchQuery && (
-                                  <button 
-                                    onClick={() => setSearchQuery('')}
-                                    className="absolute right-4 btn btn-xs btn-ghost btn-circle text-error opacity-40 hover:opacity-100 transition-opacity"
-                                  >
-                                    <CloseIcon className="w-4 h-4" />
-                                  </button>
-                                )}
-                            </div>
-                            
-                            {/* NSFW Toggle */}
-                            <div className="flex items-center gap-3 px-6 border-x border-white/10 bg-white/5 mr-px">
-                                <span className="text-[10px] font-black uppercase text-base-content/40 tracking-widest">NSFW</span>
-                                <input 
-                                    type="checkbox" 
-                                    checked={showNsfw} 
-                                    onChange={(e) => setShowNsfw(e.target.checked)} 
-                                    className="toggle toggle-xs toggle-primary border border-white/20" 
-                                />
-                            </div>
-
-                            {/* View Modes and Media Filters */}
-                            <div className="flex items-stretch">
-                                {/* View Modes */}
-                                <div className="form-tab-group h-full rounded-none">
-                                    <button onClick={() => setViewMode('compact')} className={`btn btn-xs btn-ghost h-full border-none rounded-none px-6 font-black text-[10px] tracking-widest uppercase btn-snake ${viewMode === 'compact' ? 'active bg-primary/10 text-primary' : ''}`}>
-                                        <span/><span/><span/><span/>
-                                        CMP
-                                    </button>
-                                    <button onClick={() => setViewMode('default')} className={`btn btn-xs btn-ghost h-full border-none rounded-none px-6 font-black text-[10px] tracking-widest uppercase btn-snake ${viewMode === 'default' ? 'active bg-primary/10 text-primary' : ''}`}>
-                                        <span/><span/><span/><span/>
-                                        DFT
-                                    </button>
-                                    <button onClick={() => setViewMode('focus')} className={`btn btn-xs btn-ghost h-full border-none rounded-none px-6 font-black text-[10px] tracking-widest uppercase btn-snake ${viewMode === 'focus' ? 'active bg-primary/10 text-primary' : ''}`}>
-                                        <span/><span/><span/><span/>
-                                        FOC
-                                    </button>
-                                </div>
-                                
-                                {/* Media Type Filters */}
-                                <div className="form-tab-group h-full rounded-none">
-                                    <button onClick={() => setMediaTypeFilter('all')} className={`btn btn-xs btn-ghost h-full border-none rounded-none px-6 font-black text-[10px] tracking-widest uppercase btn-snake ${mediaTypeFilter === 'all' ? 'active bg-primary/10 text-primary' : ''}`}>
-                                        <span/><span/><span/><span/>
-                                        ALL
-                                    </button>
-                                    <button onClick={() => setMediaTypeFilter('image')} className={`btn btn-xs btn-ghost h-full border-none rounded-none px-6 font-black text-[10px] tracking-widest uppercase btn-snake ${mediaTypeFilter === 'image' ? 'active bg-primary/10 text-primary' : ''}`}>
-                                        <span/><span/><span/><span/>
-                                        IMG
-                                    </button>
-                                    <button onClick={() => setMediaTypeFilter('video')} className={`btn btn-xs btn-ghost h-full border-none rounded-none px-6 font-black text-[10px] tracking-widest uppercase btn-snake ${mediaTypeFilter === 'video' ? 'active bg-primary/10 text-primary' : ''}`}>
-                                        <span/><span/><span/><span/>
-                                        VID
-                                    </button>
-                                </div>
-                            </div>
-
-                            <button onClick={() => setIsAddModalOpen(true)} className="btn btn-sm btn-primary h-full rounded-none border-none px-8 font-black text-[10px] tracking-widest uppercase btn-snake-primary">
-                                <span/><span/><span/><span/>
-                                IMPORT
+                      <div className="flex items-stretch h-full w-full">
+                        <div className="flex-grow flex items-center relative">
+                          <SearchIcon className="absolute left-6 w-4 h-4 opacity-20 pointer-events-none" />
+                          <input type="text" value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} placeholder="SEARCH IMAGES..." className="form-input input-lg w-full h-full bg-transparent border-none focus:outline-none focus:ring-0 pl-14 pr-12" />
+                          {searchQuery && (
+                            <button
+                              onClick={() => { audioService.playClick(); setSearchQuery(''); }}
+                              className="absolute right-4 btn btn-xs btn-ghost btn-circle text-error opacity-40 hover:opacity-100 transition-opacity"
+                            >
+                              <CloseIcon className="w-4 h-4" />
                             </button>
+                          )}
                         </div>
+
+                        {/* NSFW Toggle */}
+                        <div className="flex items-center gap-3 px-6 border-x border-white/10 bg-white/5 mr-px">
+                          <span className="text-[10px] font-black uppercase text-base-content/40 tracking-widest">NSFW</span>
+                          <input
+                            type="checkbox"
+                            checked={showNsfw}
+                            onChange={(e) => { audioService.playClick(); setShowNsfw(e.target.checked); }}
+                            className="toggle toggle-xs toggle-primary border border-white/20"
+                          />
+                        </div>
+
+                        {/* View Modes and Media Filters */}
+                        <div className="flex items-stretch">
+                          {/* View Modes */}
+                          <div className="form-tab-group h-full rounded-none">
+                            <button onClick={() => { audioService.playClick(); setViewMode('compact'); }} className={`btn btn-xs btn-ghost h-full border-none rounded-none px-6 font-black text-[10px] tracking-widest uppercase btn-snake ${viewMode === 'compact' ? 'active bg-primary/10 text-primary no-glow' : 'hover:no-glow'}`}>
+                              <span /><span /><span /><span />
+                              SML
+                            </button>
+                            <button onClick={() => { audioService.playClick(); setViewMode('default'); }} className={`btn btn-xs btn-ghost h-full border-none rounded-none px-6 font-black text-[10px] tracking-widest uppercase btn-snake ${viewMode === 'default' ? 'active bg-primary/10 text-primary no-glow' : 'hover:no-glow'}`}>
+                              <span /><span /><span /><span />
+                              MED
+                            </button>
+                            <button onClick={() => { audioService.playClick(); setViewMode('focus'); }} className={`btn btn-xs btn-ghost h-full border-none rounded-none px-6 font-black text-[10px] tracking-widest uppercase btn-snake ${viewMode === 'focus' ? 'active bg-primary/10 text-primary no-glow' : 'hover:no-glow'}`}>
+                              <span /><span /><span /><span />
+                              LRG
+                            </button>
+                          </div>
+
+                          {/* Media Type Filters */}
+                          <div className="form-tab-group h-full rounded-none">
+                            <button onClick={() => { audioService.playClick(); setMediaTypeFilter('all'); }} className={`btn btn-xs btn-ghost h-full border-none rounded-none px-6 font-black text-[10px] tracking-widest uppercase btn-snake ${mediaTypeFilter === 'all' ? 'active bg-primary/10 text-primary no-glow' : 'hover:no-glow'}`}>
+                              <span /><span /><span /><span />
+                              ALL
+                            </button>
+                            <button onClick={() => { audioService.playClick(); setMediaTypeFilter('image'); }} className={`btn btn-xs btn-ghost h-full border-none rounded-none px-6 font-black text-[10px] tracking-widest uppercase btn-snake ${mediaTypeFilter === 'image' ? 'active bg-primary/10 text-primary no-glow' : 'hover:no-glow'}`}>
+                              <span /><span /><span /><span />
+                              IMG
+                            </button>
+                            <button onClick={() => { audioService.playClick(); setMediaTypeFilter('video'); }} className={`btn btn-xs btn-ghost h-full border-none rounded-none px-6 font-black text-[10px] tracking-widest uppercase btn-snake ${mediaTypeFilter === 'video' ? 'active bg-primary/10 text-primary no-glow' : 'hover:no-glow'}`}>
+                              <span /><span /><span /><span />
+                              VID
+                            </button>
+                          </div>
+                        </div>
+
+                        <button onClick={() => { audioService.playClick(); setIsAddModalOpen(true); }} className="btn btn-sm btn-primary h-full rounded-none border-none px-8 font-black text-[10px] tracking-widest uppercase btn-snake-primary">
+                          <span /><span /><span /><span />
+                          IMPORT
+                        </button>
+                      </div>
                     </div>
 
                     {sortedAndFilteredItems.length > 0 ? (
-                        <div key={`grid-${viewMode}-${columnCount}-${selectedCategoryId}`} ref={gridRef} className="flex gap-px elastic-grid-container bg-transparent" style={{ willChange: 'transform' }}>
-                            {masonryColumns.map((col, colIdx) => (
-                                <div key={`col-${colIdx}`} ref={el => { columnRefs.current[colIdx] = el; }} className="flex-1 flex flex-col gap-px" style={{ contain: 'layout paint' }}>
-                                    {col.map(item => (
-                                        <div key={item.id} data-item-id={item.id} className={`elastic-grid-item`}>
-                                            <ImageCard 
-                                              item={item} 
-                                              viewMode={viewMode}
-                                              isPinned={pinnedItemIds.includes(item.id)} 
-                                              onOpenDetailView={() => setDetailViewItemId(item.id)} 
-                                              categoryName={categories.find(c => c.id === item.categoryId)?.name || 'Uncategorized'} 
-                                              showCategory={selectedCategoryId === 'all'} 
-                                            />
-                                        </div>
-                                    ))}
-                                </div>
+                      <div key={`grid-${viewMode}-${columnCount}-${selectedCategoryId}`} ref={gridRef} className="flex gap-px elastic-grid-container bg-transparent" style={{ willChange: 'transform' }}>
+                        {masonryColumns.map((col, colIdx) => (
+                          <div key={`col-${colIdx}`} ref={el => { columnRefs.current[colIdx] = el; }} className="flex-1 flex flex-col gap-px" style={{ contain: 'layout paint' }}>
+                            {col.map(item => (
+                              <div key={item.id} data-item-id={item.id} className={`elastic-grid-item`}>
+                                <ImageCard
+                                  item={item}
+                                  viewMode={viewMode}
+                                  isPinned={pinnedItemIds.includes(item.id)}
+                                  onOpenDetailView={() => setDetailViewItemId(item.id)}
+                                  categoryName={categories.find(c => c.id === item.categoryId)?.name || 'Uncategorized'}
+                                  showCategory={selectedCategoryId === 'all'}
+                                />
+                              </div>
                             ))}
-                        </div>
+                          </div>
+                        ))}
+                      </div>
                     ) : (
-                        <div className="text-center py-32 flex flex-col items-center opacity-10"><h3 className="text-xl font-black uppercase tracking-tighter">No items found</h3></div>
+                      <div className="text-center py-32 flex flex-col items-center opacity-10"><h3 className="text-xl font-black uppercase tracking-tighter">No items found</h3></div>
                     )}
                     {targetDisplayCount < sortedAndFilteredItems.length && (
-                        <div ref={lastElementRef} className="py-20 flex justify-center bg-transparent"><span className="loading loading-spinner loading-md opacity-20"></span></div>
+                      <div ref={lastElementRef} className="py-20 flex justify-center bg-transparent"><span className="loading loading-spinner loading-md opacity-20"></span></div>
                     )}
-                    </div>
+                  </div>
                 </div>
-            </div>
+              </div>
             </div>
           </main>
         </div>
@@ -470,11 +508,11 @@ const ImageGallery: React.FC<ImageGalleryProps> = ({ isCategoryPanelCollapsed, o
         <div className="absolute -top-[1px] -right-[1px] w-3 h-3 border-t border-r border-primary/15 z-20 pointer-events-none" />
         <div className="absolute -bottom-[1px] -left-[1px] w-3 h-3 border-b border-l border-primary/15 z-20 pointer-events-none" />
         <div className="absolute -bottom-[1px] -right-[1px] w-3 h-3 border-b border-r border-primary/15 z-20 pointer-events-none" />
-      </section>
+      </motion.section>
 
       <AddItemModal isOpen={isAddModalOpen} onClose={() => setIsAddModalOpen(false)} onAddItem={handleAddItem} categories={categories} />
       {itemToDelete && (
-          <ConfirmationModal isOpen={!!itemToDelete} onClose={() => setItemToDelete(null)} onConfirm={() => { handleDeleteItem(itemToDelete); setItemToDelete(null); }} title="DELETE ITEM" message={`Permanently delete "${itemToDelete.title}"?`} />
+        <ConfirmationModal isOpen={!!itemToDelete} onClose={() => setItemToDelete(null)} onConfirm={() => { handleDeleteItem(itemToDelete); setItemToDelete(null); }} title="DELETE ITEM" message={`Permanently delete "${itemToDelete.title}"?`} />
       )}
     </>
   );
