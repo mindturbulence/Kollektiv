@@ -1,4 +1,6 @@
 import React, { useState, useRef, useCallback, useEffect, useMemo } from 'react';
+import { motion } from 'framer-motion';
+import { TerminalText, PanelLine, ScanLine, panelVariants, sectionWipeVariants, contentVariants } from './AnimatedPanels';
 import { ViewColumnsIcon, RefreshIcon, EyeIcon, ViewSplitHorizontalIcon } from './icons';
 import GalleryPickerModal from './GalleryPickerModal';
 import type { GalleryItem } from '../types';
@@ -177,7 +179,11 @@ const SideBySideView: React.FC<ViewProps> = ({ imageA, imageB, transform }) => {
     );
 };
 
-const ImageCompare: React.FC = () => {
+interface ImageCompareProps {
+    isExiting?: boolean;
+}
+
+const ImageCompare: React.FC<ImageCompareProps> = ({ isExiting = false }) => {
     const [imageA, setImageA] = useState<ImageState | null>(null);
     const [imageB, setImageB] = useState<ImageState | null>(null);
     const [viewMode, setViewMode] = useState<ViewMode>('split');
@@ -271,14 +277,38 @@ const ImageCompare: React.FC = () => {
     const handleMouseUpOrLeave = () => setIsPanning(false);
 
     return (
-        <div className="h-full bg-transparent flex flex-col overflow-hidden p-0">
+        <div className="h-full bg-transparent flex flex-col overflow-hidden p-0 relative z-0">
             <div className="flex-grow flex flex-col lg:flex-row overflow-hidden gap-4">
-                <aside className="w-full lg:w-96 flex-shrink-0 flex flex-col relative p-[3px] corner-frame overflow-visible z-10">
+                <motion.aside 
+                    variants={panelVariants}
+                    initial="hidden"
+                    animate={isExiting ? "exit" : "visible"}
+                    exit="exit"
+                    className="w-full lg:w-96 flex-shrink-0 flex flex-col relative p-[3px] corner-frame overflow-visible z-10"
+                >
+                    <PanelLine position="top" delay={0.4} />
+                    <PanelLine position="bottom" delay={0.5} />
+                    <PanelLine position="left" delay={0.6} />
+                    <PanelLine position="right" delay={0.7} />
+                    <ScanLine delay={3.5} />
                     <div className="flex flex-col h-full w-full overflow-hidden relative z-10 bg-base-100/40 backdrop-blur-xl">
-                        <header className="p-6 bg-base-100/10 backdrop-blur-md">
-                            <h3 className="text-[10px] font-black uppercase tracking-[0.4em] text-primary">Artifact Inputs</h3>
-                        </header>
-                        <div className="flex-grow p-6 space-y-6 overflow-y-auto bg-transparent">
+                        <motion.header 
+                            variants={sectionWipeVariants}
+                            custom={1.2}
+                            initial="hidden"
+                            animate="visible"
+                            exit="exit"
+                            className="p-6 bg-base-100/10 backdrop-blur-md"
+                        >
+                            <TerminalText text="ARTIFACT INPUTS" delay={2.0} className="text-[10px] font-black uppercase text-primary" />
+                        </motion.header>
+                        <motion.div 
+                            variants={contentVariants}
+                            custom={2.2}
+                            initial="hidden"
+                            animate="visible"
+                            className="flex-grow p-6 space-y-6 overflow-y-auto bg-transparent"
+                        >
                             <div className="space-y-4">
                                 <ImageSlot
                                     onFileSelect={(f) => handleFileSelect(f, 'A')}
@@ -307,24 +337,45 @@ const ImageCompare: React.FC = () => {
                             <div className="pt-4">
                                 <button onClick={handleResetView} className="form-btn w-full justify-start h-8 px-4"><EyeIcon className="w-4 h-4 mr-2 text-primary" /> RE-CENTER OPTICS</button>
                             </div>
-                        </div>
-                        <footer className="h-14 flex items-stretch flex-shrink-0 bg-base-100/10 backdrop-blur-md p-1.5 gap-1.5">
+                        </motion.div>
+                        <motion.footer 
+                            variants={contentVariants}
+                            custom={2.4}
+                            initial="hidden"
+                            animate="visible"
+                            className="h-14 flex items-stretch flex-shrink-0 bg-base-100/10 backdrop-blur-md p-1.5 gap-1.5"
+                        >
                             <button onClick={handleResetAll} className="btn btn-sm btn-ghost h-full flex-1 rounded-none font-normal text-[13px] tracking-wider uppercase btn-snake text-error/40 hover:text-error font-display">
                                 <span /><span /><span /><span />
                                 PURGE BUFFERS
                             </button>
-                        </footer>
+                        </motion.footer>
                     </div>
                     {/* Manual Corner Accents */}
                     <div className="absolute -top-[1px] -left-[1px] w-3 h-3 border-t border-l border-primary/15 z-20 pointer-events-none" />
                     <div className="absolute -top-[1px] -right-[1px] w-3 h-3 border-t border-r border-primary/15 z-20 pointer-events-none" />
                     <div className="absolute -bottom-[1px] -left-[1px] w-3 h-3 border-b border-l border-primary/15 z-20 pointer-events-none" />
                     <div className="absolute -bottom-[1px] -right-[1px] w-3 h-3 border-b border-r border-primary/15 z-20 pointer-events-none" />
-                </aside>
+                </motion.aside>
 
-                <main className="flex-grow flex flex-col relative p-[3px] corner-frame overflow-visible z-10">
+                <motion.main 
+                    variants={panelVariants}
+                    initial="hidden"
+                    animate={isExiting ? "exit" : "visible"}
+                    exit="exit"
+                    className="flex-grow flex flex-col relative p-[3px] corner-frame overflow-visible z-10"
+                >
+                    <PanelLine position="top" delay={0.4} />
+                    <PanelLine position="bottom" delay={0.5} />
+                    <PanelLine position="left" delay={0.6} />
+                    <PanelLine position="right" delay={0.7} />
+                    <ScanLine delay={3.5} />
                     <div className="flex flex-col h-full w-full overflow-hidden relative z-10 bg-base-100/40 backdrop-blur-xl p-1">
-                        <div
+                        <motion.div
+                            variants={sectionWipeVariants}
+                            custom={1.6}
+                            initial="hidden"
+                            animate="visible"
                             ref={viewerRef}
                             className="flex-grow bg-base-200/20 overflow-hidden relative"
                             style={{ cursor: transform.zoom > 1 ? (isPanning ? 'grabbing' : 'grab') : 'default' }}
@@ -344,14 +395,14 @@ const ImageCompare: React.FC = () => {
                             ) : (
                                 <SideBySideView key="sideBySide" imageA={imageA} imageB={imageB} transform={transform} />
                             )}
-                        </div>
+                        </motion.div>
                     </div>
                     {/* Manual Corner Accents */}
                     <div className="absolute -top-[1px] -left-[1px] w-3 h-3 border-t border-l border-primary/15 z-20 pointer-events-none" />
                     <div className="absolute -top-[1px] -right-[1px] w-3 h-3 border-t border-r border-primary/15 z-20 pointer-events-none" />
                     <div className="absolute -bottom-[1px] -left-[1px] w-3 h-3 border-b border-l border-primary/15 z-20 pointer-events-none" />
                     <div className="absolute -bottom-[1px] -right-[1px] w-3 h-3 border-b border-r border-primary/15 z-20 pointer-events-none" />
-                </main>
+                </motion.main>
             </div>
 
             <GalleryPickerModal

@@ -20,7 +20,6 @@ import ClippingPanel from './ClippingPanel';
 import FeedbackModal from './FeedbackModal';
 import Footer from './Footer';
 import IdleOverlay from './IdleOverlay';
-import LlmStatusSwitcher from './LlmStatusSwitcher';
 import { TabTitleManager } from './TabTitleManager';
 
 // Page components
@@ -207,195 +206,15 @@ const InitialLoader: React.FC<{ status: string; progress: number | null }> = ({ 
 
 };
 
-import { motion, AnimatePresence } from 'framer-motion';
-import RollingText from './RollingText';
-import TimedScrambledText from './TimedScrambledText';
-import ThemeSwitcher from './ThemeSwitcher';
 import ChromaticText from './ChromaticText';
 
-const Logo: React.FC<{ onNavigate: (tab: ActiveTab) => void }> = ({ onNavigate }) => {
-    const [scrambleTrigger, setScrambleTrigger] = useState(0);
-
-    return (
-        <button
-            onClick={() => {
-                audioService.playClick();
-                onNavigate('dashboard');
-            }}
-            onMouseEnter={() => {
-                audioService.playHover();
-                setScrambleTrigger(prev => prev + 1);
-            }}
-            className="flex items-center gap-2 group pointer-events-auto"
-        >
-            <h1 className="text-3xl font-normal tracking-widest text-base-content uppercase flex items-center font-monoton">
-                <ChromaticText>
-                    <TimedScrambledText text="Kollektiv" intervalMs={300000} trigger={scrambleTrigger} />
-                </ChromaticText>
-                <span className="text-primary italic animate-pulse drop-shadow-[0_0_10px_oklch(var(--p))] transition-all inline-block ml-0.5 font-black">.</span>
-            </h1>
-        </button>
-    );
-};
-
-const DigitalOscillator = ({ state = 'idle', theme = 'light' }: { state: string, theme?: 'light' | 'dark' }) => {
-    const canvasRef = useRef<HTMLCanvasElement>(null);
-    const animationRef = useRef<number>(0);
-    const phaseRef = useRef<number>(0);
-
-    useEffect(() => {
-        const canvas = canvasRef.current;
-        if (!canvas) return;
-        const ctx = canvas.getContext('2d');
-        if (!ctx) return;
-
-        const draw = () => {
-            const w = canvas.width;
-            const h = canvas.height;
-            const centerY = h / 2;
-
-            ctx.clearRect(0, 0, w, h);
-
-            const color = '#ffffff';
-
-            phaseRef.current += 0.05;
-            const p = phaseRef.current;
-
-            const layers = [
-                { amp: 0.2, freq: 0.05, speed: 1.0, opacity: state === 'idle' ? 0.3 : 0.1 },
-                { amp: 0.4, freq: 0.08, speed: 1.5, opacity: state === 'idle' ? 0.5 : 0.3 },
-                { amp: 0.6, freq: 0.12, speed: 2.0, opacity: state === 'idle' ? 1.0 : 0.8 }
-            ];
-
-            layers.forEach((layer, i) => {
-                ctx.beginPath();
-                ctx.strokeStyle = color;
-                ctx.lineWidth = i === 2 ? 1.5 : 1;
-                ctx.globalAlpha = layer.opacity;
-
-                if (state === 'error') {
-                    ctx.strokeStyle = 'red';
-                    ctx.globalAlpha = Math.random() > 0.8 ? 0.8 : 0.2;
-                }
-
-                if (state === 'playing') {
-                    // Sterling style vertical bars
-                    const barWidth = 1;
-                    const gap = 2;
-                    const barCount = Math.floor(w / (barWidth + gap));
-
-                    for (let j = 0; j < barCount; j++) {
-                        const x = j * (barWidth + gap);
-                        const hFactor = Math.sin(p * (layer.speed * 0.5) + j * 0.3) * 0.5 + 0.5;
-                        const barHeight = 2 + hFactor * (h * 0.6 * layer.amp);
-
-                        ctx.moveTo(x, centerY - barHeight / 2);
-                        ctx.lineTo(x, centerY + barHeight / 2);
-                    }
-                } else {
-                    for (let x = 0; x < w; x++) {
-                        let y = centerY;
-                        if (state === 'syncing') {
-                            // Use the old 'playing' waveform for 'syncing'
-                            const noise = Math.sin(p * layer.speed + x * layer.freq) *
-                                Math.cos(p * 0.5 + x * 0.02);
-                            const spikes = Math.random() > 0.98 ? (Math.random() - 0.5) * 20 : 0;
-                            y += (noise * (h * 0.4) * layer.amp) + spikes;
-                        } else if (state === 'idle') {
-                            y = centerY;
-                        } else if (state === 'error') {
-                            y += (Math.random() - 0.5) * 2;
-                        }
-
-                        if (x === 0) ctx.moveTo(x, y);
-                        else ctx.lineTo(x, y);
-                    }
-                }
-                ctx.stroke();
-            });
-
-            animationRef.current = requestAnimationFrame(draw);
-        };
-
-        draw();
-        return () => cancelAnimationFrame(animationRef.current);
-    }, [state, theme]);
-
-    return (
-        <canvas
-            ref={canvasRef}
-            width={120}
-            height={40}
-            className="w-8 h-3 opacity-60"
-        />
-    );
-};
-
-const HUDNavItem: React.FC<{
-    children: string;
-    onClick?: (e: React.MouseEvent) => void;
-    onHover?: () => void;
-    title?: string;
-    badge?: number;
-}> = ({ children, onClick, onHover, title, badge }) => {
-    return (
-        <motion.button
-            onClick={onClick}
-            onMouseEnter={() => {
-                audioService.playHover();
-                onHover?.();
-            }}
-            initial="initial"
-            whileHover="hover"
-            className="group relative px-3 py-1 text-[13px] font-normal tracking-[0.25em] uppercase text-base-content/60 hover:text-primary transition-colors duration-300 pointer-events-auto"
-            title={title}
-        >
-            <RollingText
-                text={children}
-                hoverClassName="text-primary"
-            />
-
-            {badge !== undefined && badge > 0 && (
-                <span className="absolute top-0 right-0 flex h-2 w-2">
-                    <span className="animate-ping absolute inline-flex h-full w-full rounded-none bg-primary opacity-75"></span>
-                    <span className="relative inline-flex rounded-none h-2 w-2 bg-primary"></span>
-                </span>
-            )}
-        </motion.button>
-    );
-};
-
 interface PageFrameProps {
-    audioEnabled: boolean;
-    onAudioToggle: () => void;
-    playerState: 'idle' | 'syncing' | 'playing' | 'error';
-    onMusicToggle: () => void;
-    themeMode: 'light' | 'dark';
-    onNavigate: (tab: ActiveTab) => void;
-    onAboutClick: () => void;
-    onToggleClippingPanel: () => void;
-    onStandbyClick: (e: React.MouseEvent) => void;
-    clippedIdeasCount: number;
     isInitialized: boolean;
 }
 
 const PageFrame: React.FC<PageFrameProps> = ({
-    audioEnabled,
-    onAudioToggle,
-    playerState,
-    onMusicToggle,
-    themeMode,
-    onNavigate,
-    onAboutClick,
-    onToggleClippingPanel,
-    onStandbyClick,
-    clippedIdeasCount,
     isInitialized
 }) => {
-    const topRef = useRef<HTMLDivElement>(null);
-    const bottomRef = useRef<HTMLDivElement>(null);
-    const logoRef = useRef<HTMLDivElement>(null);
-
     // Scan Line Refs
     const scanTopRef = useRef<HTMLSpanElement>(null);
     const scanRightRef = useRef<HTMLSpanElement>(null);
@@ -404,28 +223,6 @@ const PageFrame: React.FC<PageFrameProps> = ({
 
     useLayoutEffect(() => {
         if (!isInitialized) return;
-
-        const tl = gsap.timeline({ delay: 2.2 }); // Start after blinds
-
-        gsap.set(topRef.current, { yPercent: -50, y: -20, autoAlpha: 0 });
-        gsap.set(logoRef.current, { xPercent: -50, yPercent: -50, y: -20, autoAlpha: 0, force3D: true });
-        gsap.set(bottomRef.current, { yPercent: 50, y: 20, autoAlpha: 0 });
-
-        tl.to([topRef.current, logoRef.current], {
-            y: 0,
-            autoAlpha: 1,
-            duration: 1.2,
-            ease: "power3.out",
-            stagger: 0.1,
-            force3D: true
-        });
-
-        tl.to(bottomRef.current, {
-            y: 0,
-            autoAlpha: 1,
-            duration: 1.2,
-            ease: "power3.out"
-        }, "-=0.8");
 
         // Periodic Frame Scan Animation (Snake effect)
         // Triggered every 1 minute (60 seconds)
@@ -462,7 +259,6 @@ const PageFrame: React.FC<PageFrameProps> = ({
         ).set(scanLeftRef.current, { opacity: 0 });
 
         return () => {
-            tl.kill();
             scanTl.kill();
         };
     }, [isInitialized]);
@@ -483,115 +279,6 @@ const PageFrame: React.FC<PageFrameProps> = ({
                 <div className="absolute -top-[1px] -right-[1px] w-4 h-4 border-t border-r border-primary/20" />
                 <div className="absolute -bottom-[1px] -left-[1px] w-4 h-4 border-b border-l border-primary/20" />
                 <div className="absolute -bottom-[1px] -right-[1px] w-4 h-4 border-b border-r border-primary/20" />
-
-                {/* Technical Labels - Top (Relocated Header Menus) */}
-                <div ref={topRef} className="absolute top-0 left-12 right-12 flex justify-between items-center pointer-events-auto opacity-0 -translate-y-1/2">
-
-                    <div className="flex gap-1 items-center">
-                        <HUDNavItem
-                            onClick={() => {
-                                audioService.playClick();
-                                onNavigate('dashboard');
-                            }}
-                        >
-                            DASHBOARD
-                        </HUDNavItem>
-                        <div className="w-px h-2 bg-base-content/10 self-center" />
-                        <HUDNavItem
-                            onClick={() => {
-                                audioService.playClick();
-                                onAboutClick();
-                            }}
-                        >
-                            ABOUT
-                        </HUDNavItem>
-                        <div className="w-px h-2 bg-base-content/10 self-center" />
-                        <div className="flex items-center">
-                            <ThemeSwitcher compact />
-                        </div>
-                    </div>
-
-                    <div className="flex gap-1 items-center">
-                        <HUDNavItem
-                            onClick={() => {
-                                audioService.playClick();
-                                onToggleClippingPanel();
-                            }}
-                            badge={clippedIdeasCount}
-                        >
-                            CLIPBOARD
-                        </HUDNavItem>
-                        <div className="w-px h-2 bg-base-content/10 self-center" />
-                        <HUDNavItem
-                            onClick={() => {
-                                audioService.playClick();
-                                onNavigate('settings');
-                            }}
-                        >
-                            SETTINGS
-                        </HUDNavItem>
-                        <div className="w-px h-2 bg-base-content/10 self-center" />
-                        <HUDNavItem
-                            onClick={(e) => {
-                                e.stopPropagation();
-                                audioService.playClick();
-                                onStandbyClick(e);
-                            }}
-                        >
-                            STANDBY
-                        </HUDNavItem>
-                    </div>
-                </div>
-
-                {/* Center Logo */}
-                <div ref={logoRef} className="absolute top-0 left-1/2 flex items-center pointer-events-auto opacity-0">
-                    <Logo onNavigate={onNavigate} />
-                </div>
-
-                {/* Technical Labels - Bottom (Relocated Controls) */}
-                <div ref={bottomRef} className="absolute bottom-0 left-12 right-12 flex justify-between items-center pointer-events-auto opacity-0 translate-y-1/2">
-                    <div className="flex gap-3 items-center">
-                        <span className="text-[12px] font-mono uppercase tracking-[0.3em] text-primary/60">ENGINE</span>
-                        {/* <div className="w-px h-2 bg-base-content/10 mx-1 self-center" /> */}
-                        <div className="min-w-[120px] flex items-center self-center">
-                            <LlmStatusSwitcher />
-                        </div>
-                    </div>
-
-                    <div className="flex items-center gap-4">
-                        <button
-                            onClick={onAudioToggle}
-                            className="flex items-center gap-2 text-[12px] font-mono uppercase tracking-[0.3em] transition-all"
-                        >
-                            <span className="text-primary/60">SFX</span>
-                            <span className={`${audioEnabled ? 'text-base-content/40' : 'text-base-content/20'}`}>{audioEnabled ? 'ON' : 'OFF'}</span>
-                        </button>
-                        <div className="w-px h-2 bg-base-content/10 self-center" />
-                        <button
-                            onClick={onMusicToggle}
-                            className="flex items-center gap-2 text-[12px] font-mono uppercase tracking-[0.3em] transition-all"
-                        >
-                            <span className="text-primary/60">MUSIC</span>
-                            <span className={`${playerState === 'playing' ? 'text-base-content/40' : 'text-base-content/20'}`}>
-                                {playerState === 'playing' ? 'ON' : playerState === 'syncing' ? 'SYNC' : 'OFF'}
-                            </span>
-                            <AnimatePresence mode="wait">
-                                {playerState !== 'idle' && (
-                                    <motion.div
-                                        key="oscillator"
-                                        initial={{ x: -10, opacity: 0 }}
-                                        animate={{ x: 0, opacity: 1 }}
-                                        exit={{ x: 10, opacity: 0 }}
-                                        transition={{ duration: 0.4, ease: [0.23, 1, 0.32, 1] }}
-                                        className="ml-4"
-                                    >
-                                        <DigitalOscillator state={playerState} theme={themeMode} />
-                                    </motion.div>
-                                )}
-                            </AnimatePresence>
-                        </button>
-                    </div>
-                </div>
 
                 {/* Side Markers */}
                 <div className="absolute top-1/2 left-0 -translate-x-1/2 -translate-y-1/2 flex flex-col gap-2">
@@ -630,7 +317,6 @@ const AppContent: React.FC = () => {
     const [videoError, setVideoError] = useState(false);
 
     const hasInitializedRef = useRef(false);
-    const isTransitioningRef = useRef(false);
     const isFirstRevealRef = useRef(true);
 
     // --- IDLE STATE REFS ---
@@ -834,96 +520,10 @@ const AppContent: React.FC = () => {
         return () => { };
     }, [isInitialized]);
 
-    const runScopedTransition = useCallback(async (targetTab: ActiveTab) => {
-        if (isTransitioningRef.current || !transitionOverlayRef.current || !contentRef.current) return;
-        isTransitioningRef.current = true;
-        audioService.playTransition();
-
-        const tl = gsap.timeline();
-
-        // Prepare overlay
-        gsap.set(transitionOverlayRef.current, { visibility: 'visible', autoAlpha: 1 });
-        gsap.set([topOverlayPanelRef.current, bottomOverlayPanelRef.current], { height: "0%" });
-        gsap.set(transitionLogoRef.current, { 
-            opacity: 0, 
-            scale: 0.8, 
-            y: 30,
-            xPercent: -50,
-            yPercent: -50,
-            force3D: true 
-        });
-
-        // Phase 1: Closing Shutter
-        tl.to([topOverlayPanelRef.current, bottomOverlayPanelRef.current], {
-            height: "50%",
-            duration: 0.8,
-            ease: "expo.inOut",
-            stagger: 0,
-            force3D: true
-        });
-
-        // Current content slides slightly down before being covered
-        tl.to(contentRef.current, {
-            y: 40,
-            autoAlpha: 0,
-            duration: 0.6,
-            ease: "power2.in"
-        }, 0);
-
-        // Phase 2: Show logo
-        tl.to(transitionLogoRef.current, {
-            opacity: 1,
-            scale: 1,
-            y: 0, // Slide to final position
-            duration: 0.8,
-            ease: "power3.out"
-        }, "-=0.2");
-
-        // Switch Tab mid-transition
-        tl.call(() => {
-            setActiveTab(targetTab);
-            // Prepare new content position - slide from bottom
-            if (contentRef.current) {
-                gsap.set(contentRef.current, { y: 60, autoAlpha: 0 });
-            }
-        });
-
-        // Hold briefly
-        tl.to({}, { duration: 0.4 });
-
-        // Phase 3: Opening Shutter
-        tl.to(transitionLogoRef.current, {
-            opacity: 0,
-            y: -20, // Slide up further as it disappears
-            scale: 1.05,
-            duration: 0.6,
-            ease: "power3.in"
-        });
-
-        tl.to([topOverlayPanelRef.current, bottomOverlayPanelRef.current], {
-            height: "0%",
-            duration: 0.8,
-            ease: "expo.inOut"
-        }, "-=0.2");
-
-        // Phase 4: Reveal new content
-        tl.to(contentRef.current, {
-            y: 0,
-            autoAlpha: 1,
-            duration: 1.0,
-            ease: "power4.out"
-        }, "-=0.5");
-
-        // Cleanup
-        tl.call(() => {
-            gsap.set(transitionOverlayRef.current, { visibility: 'hidden', autoAlpha: 0 });
-            isTransitioningRef.current = false;
-        });
-    }, [setActiveTab]);
 
     const handleNavigate = (tab: ActiveTab) => {
         if (tab === activeTab) return;
-        runScopedTransition(tab);
+        setActiveTab(tab);
     };
 
     useEffect(() => {
@@ -936,6 +536,11 @@ const AppContent: React.FC = () => {
     useEffect(() => {
         let isTabAllowed = true;
         switch (activeTab) {
+            case 'prompts':
+            case 'crafter':
+            case 'refiner':
+            case 'prompt_analyzer':
+            case 'media_analyzer': isTabAllowed = true; break;
             case 'prompt': isTabAllowed = features.isPromptLibraryEnabled; break;
             case 'gallery': isTabAllowed = features.isGalleryEnabled; break;
             case 'cheatsheet':
@@ -999,21 +604,25 @@ const AppContent: React.FC = () => {
         };
 
         switch (activeTab) {
-            case 'dashboard': return <Dashboard onNavigate={handleNavigate} onClipIdea={handleClipIdea} />;
-            case 'prompts': return <PromptsPage onClipIdea={handleClipIdea} initialState={promptsPageState} onStateHandled={() => setPromptsPageState(null)} showGlobalFeedback={showGlobalFeedback} />;
-            case 'storyboard': return <StoryboardPage showGlobalFeedback={showGlobalFeedback} />;
-            case 'prompt': return <SavedPrompts {...categoryPanelProps} onSendToEnhancer={(prompt) => handleSendToPromptsPage({ prompt, view: 'enhancer' })} showGlobalFeedback={showGlobalFeedback} onClipIdea={handleClipIdea} />;
-            case 'gallery': return <ImageGallery {...categoryPanelProps} isSidebarPinned={false} showGlobalFeedback={showGlobalFeedback} />;
-            case 'cheatsheet': return <Cheatsheet />;
-            case 'artstyles': return <ArtstyleCheatsheet onSendToPromptsPage={(state) => handleSendToPromptsPage({ ...state, view: 'enhancer' })} />;
-            case 'artists': return <ArtistCheatsheet onSendToPromptsPage={(state) => handleSendToPromptsPage({ ...state, view: 'enhancer' })} />;
-            case 'settings': return <SetupPage activeSettingsTab={activeSettingsTab} setActiveSettingsTab={setActiveSettingsTab} activeSubTab={activeSettingsSubTab} setActiveSubTab={setActiveSettingsSubTabSetter} showGlobalFeedback={showGlobalFeedback} />;
-            case 'composer': return <ComposerPage showGlobalFeedback={showGlobalFeedback} />;
-            case 'image_compare': return <ImageCompare />;
-            case 'color_palette_extractor': return <ColorPaletteExtractor onClipIdea={handleClipIdea} />;
-            case 'resizer': return <ImageResizer />;
-            case 'video_to_frames': return <VideoToFrames />;
-            default: return <Dashboard onNavigate={handleNavigate} onClipIdea={handleClipIdea} />;
+            case 'dashboard': return <Dashboard onNavigate={handleNavigate} onClipIdea={handleClipIdea} isExiting={false} />;
+            case 'prompts': return <PromptsPage onClipIdea={handleClipIdea} initialState={promptsPageState} onStateHandled={() => setPromptsPageState(null)} showGlobalFeedback={showGlobalFeedback} isExiting={false} />;
+            case 'crafter': return <PromptsPage forcedView="composer" onClipIdea={handleClipIdea} initialState={promptsPageState} onStateHandled={() => setPromptsPageState(null)} showGlobalFeedback={showGlobalFeedback} isExiting={false} />;
+            case 'refiner': return <PromptsPage forcedView="refine" onClipIdea={handleClipIdea} initialState={promptsPageState} onStateHandled={() => setPromptsPageState(null)} showGlobalFeedback={showGlobalFeedback} isExiting={false} />;
+            case 'prompt_analyzer': return <PromptsPage forcedView="prompt_analyzer" onClipIdea={handleClipIdea} initialState={promptsPageState} onStateHandled={() => setPromptsPageState(null)} showGlobalFeedback={showGlobalFeedback} isExiting={false} />;
+            case 'media_analyzer': return <PromptsPage forcedView="analyzer" onClipIdea={handleClipIdea} initialState={promptsPageState} onStateHandled={() => setPromptsPageState(null)} showGlobalFeedback={showGlobalFeedback} isExiting={false} />;
+            case 'storyboard': return <StoryboardPage showGlobalFeedback={showGlobalFeedback} isExiting={false} />;
+            case 'prompt': return <SavedPrompts {...categoryPanelProps} onSendToEnhancer={(prompt) => handleSendToPromptsPage({ prompt, view: 'enhancer' })} showGlobalFeedback={showGlobalFeedback} onClipIdea={handleClipIdea} isExiting={false} />;
+            case 'gallery': return <ImageGallery {...categoryPanelProps} isSidebarPinned={false} showGlobalFeedback={showGlobalFeedback} isExiting={false} />;
+            case 'cheatsheet': return <Cheatsheet isExiting={false} />;
+            case 'artstyles': return <ArtstyleCheatsheet onSendToPromptsPage={(state) => handleSendToPromptsPage({ ...state, view: 'enhancer' })} isExiting={false} />;
+            case 'artists': return <ArtistCheatsheet onSendToPromptsPage={(state) => handleSendToPromptsPage({ ...state, view: 'enhancer' })} isExiting={false} />;
+            case 'settings': return <SetupPage activeSettingsTab={activeSettingsTab} setActiveSettingsTab={setActiveSettingsTab} activeSubTab={activeSettingsSubTab} setActiveSubTab={setActiveSettingsSubTabSetter} showGlobalFeedback={showGlobalFeedback} isExiting={false} />;
+            case 'composer': return <ComposerPage showGlobalFeedback={showGlobalFeedback} isExiting={false} />;
+            case 'image_compare': return <ImageCompare isExiting={false} />;
+            case 'color_palette_extractor': return <ColorPaletteExtractor onClipIdea={handleClipIdea} isExiting={false} />;
+            case 'resizer': return <ImageResizer isExiting={false} />;
+            case 'video_to_frames': return <VideoToFrames isExiting={false} />;
+            default: return <Dashboard onNavigate={handleNavigate} onClipIdea={handleClipIdea} isExiting={false} />;
         }
     };
 
@@ -1102,7 +711,7 @@ const AppContent: React.FC = () => {
             {/* AMBIENT VIDEO BACKGROUND */}
             {isInitialized && (
                 <div className="absolute inset-0 z-0 overflow-hidden pointer-events-none">
-                    {!videoError && settings.dashboardVideoUrl ? (
+                    {!videoError && settings.dashboardVideoUrl && settings.isDashboardVideoEnabled ? (
                         <video
                             key={settings.dashboardVideoUrl}
                             src={settings.dashboardVideoUrl}
@@ -1186,16 +795,20 @@ const AppContent: React.FC = () => {
 
                     <div
                         ref={appWrapperRef}
-                        className="w-full h-full flex flex-col overflow-hidden relative z-0 bg-transparent rounded-none p-6 md:p-14 pt-10 md:pt-16"
+                        className="w-full h-full flex flex-col overflow-hidden relative z-0 bg-transparent rounded-none p-4 md:p-10"
                     >
                         <Header
                             onNavigate={handleNavigate}
                             activeTab={activeTab}
                             isInitialized={isInitialized}
+                            onAboutClick={() => setIsAboutModalOpen(true)}
+                            onToggleClippingPanel={() => setIsClippingPanelOpen(!isClippingPanelOpen)}
+                            onStandbyClick={handleStandbyClick}
+                            clippedIdeasCount={clippedIdeas.length}
                         />
 
-                        <div className={`flex-1 flex overflow-hidden relative ${activeTab === 'prompts' ? 'pt-0' : 'pt-4'} px-4 pb-4 bg-transparent`}>
-                            <main className="flex-grow min-w-0 relative overflow-hidden rounded-none bg-transparent border-none shadow-none backdrop-blur-none z-10">
+                        <div className={`flex-1 flex flex-col overflow-hidden relative ${activeTab === 'prompts' ? 'pt-0' : 'pt-0'} p-0 bg-transparent min-h-0 gap-0`}>
+                            <main className="flex-grow min-w-0 relative overflow-hidden rounded-none bg-transparent border-none shadow-none backdrop-blur-none z-10 p-4 md:p-6">
                                 {/* Cinematic Transition Overlay (Tesoro Style) */}
                                 <div
                                     ref={transitionOverlayRef}
@@ -1226,10 +839,14 @@ const AppContent: React.FC = () => {
                                     {renderContent()}
                                 </div>
                             </main>
-                        </div>
 
-                        <div className="absolute bottom-6 md:bottom-14 left-0 right-0 pointer-events-none z-[700]">
-                            <Footer />
+                            <Footer 
+                                audioEnabled={audioEnabled}
+                                onAudioToggle={handleAudioToggle}
+                                playerState={playerState}
+                                onMusicToggle={handleMusicToggle}
+                                themeMode={settings.activeThemeMode}
+                            />
                         </div>
                     </div>
                 </>
@@ -1267,16 +884,6 @@ const AppContent: React.FC = () => {
             <CustomCursor />
             {isInitialized && (
                 <PageFrame
-                    audioEnabled={audioEnabled}
-                    onAudioToggle={handleAudioToggle}
-                    playerState={playerState}
-                    onMusicToggle={handleMusicToggle}
-                    themeMode={settings.activeThemeMode}
-                    onNavigate={handleNavigate}
-                    onAboutClick={() => setIsAboutModalOpen(true)}
-                    onToggleClippingPanel={() => setIsClippingPanelOpen(!isClippingPanelOpen)}
-                    onStandbyClick={handleStandbyClick}
-                    clippedIdeasCount={clippedIdeas.length}
                     isInitialized={isInitialized}
                 />
             )}

@@ -1,4 +1,6 @@
 import React, { useState, useEffect, useCallback, useRef, useMemo } from 'react';
+import { motion } from 'framer-motion';
+import { TerminalText, PanelLine, ScanLine, panelVariants, sectionWipeVariants, contentVariants } from './AnimatedPanels';
 import JSZip from 'jszip';
 import { crafterService } from '../services/crafterService';
 import type { WildcardFile, CrafterData } from '../types';
@@ -20,9 +22,10 @@ interface PromptCrafterProps {
   onSendToRefine?: (prompt: string) => void;
   promptToInsert: { content: string, id: string } | null;
   header: React.ReactNode;
+  isNavigating?: boolean;
 }
 
-const PromptCrafter = ({ onSaveToLibrary, onClip, onSendToEnhancer, onSendToRefine, promptToInsert, header }: PromptCrafterProps) => {
+const PromptCrafter = ({ onSaveToLibrary, onClip, onSendToEnhancer, onSendToRefine, promptToInsert, header, isNavigating = false }: PromptCrafterProps) => {
     const { settings } = useSettings();
     const { setIsBusy } = useBusy();
     const [crafterData, setCrafterData] = useState<CrafterData | null>(null);
@@ -215,16 +218,6 @@ const PromptCrafter = ({ onSaveToLibrary, onClip, onSendToEnhancer, onSendToRefi
         if (!templateSearchText) return crafterData?.templates || [];
         return crafterData?.templates.filter(t => t.name.toLowerCase().includes(templateSearchText.toLowerCase())) || [];
     }, [templateSearchText, crafterData?.templates]);
-
-    const handleSelectTemplateFromDropdown = (template: WildcardFile) => {
-        setSelectedTemplate(template);
-        setTemplateSearchText(template.name);
-        // BUG FIX: Apply template immediately on selection
-        handleUseTemplate(template);
-        if (typeof (window as any).document !== 'undefined' && (window as any).document.activeElement instanceof (window as any).HTMLElement) {
-            ((window as any).document.activeElement as any).blur();
-        }
-    };
     
     const handleImportClick = () => {
         importInputRef.current?.click();
@@ -278,20 +271,51 @@ const PromptCrafter = ({ onSaveToLibrary, onClip, onSendToEnhancer, onSendToRefi
 
     return (
         <div className="grid grid-cols-1 lg:grid-cols-12 overflow-visible h-full gap-4 min-h-0">
-            <aside className="lg:col-span-3 h-full min-h-0 flex flex-col relative p-[3px] corner-frame overflow-visible">
-                <div className="flex flex-col h-full w-full overflow-hidden min-h-0 relative z-10 bg-base-100/40 backdrop-blur-xl">
+            <motion.aside 
+                variants={panelVariants}
+                initial="hidden"
+                animate={isNavigating ? "exit" : "visible"}
+                exit="exit"
+                className="lg:col-span-3 h-full min-h-0 flex flex-col relative p-[3px] corner-frame overflow-visible"
+            >
+                <PanelLine position="top" delay={0.4} />
+                <PanelLine position="bottom" delay={0.5} />
+                <PanelLine position="left" delay={0.6} />
+                <PanelLine position="right" delay={0.7} />
+                <ScanLine delay={3.5} />
+                <div className="flex flex-col h-full w-full overflow-visible min-h-0 relative z-10 bg-base-100/40 backdrop-blur-xl">
                     {header}
-                    <header className="p-6 h-16 flex items-center bg-base-100/10 backdrop-blur-md flex-shrink-0 panel-header">
-                        <h3 className="text-xs font-bold uppercase tracking-widest text-primary font-nunito">Wildcards</h3>
-                    </header>
-                    <div ref={wildcardScrollerRef} className="flex-grow p-6 overflow-y-auto">
+                    <motion.header 
+                        variants={sectionWipeVariants}
+                        custom={1.2}
+                        initial="hidden"
+                        animate="visible"
+                        exit="exit"
+                        className="p-6 h-16 flex items-center bg-base-100/10 backdrop-blur-md flex-shrink-0 panel-header"
+                    >
+                        <TerminalText text="WILDCARDS" delay={2.0} className="text-xs font-sf-mono uppercase text-primary" />
+                    </motion.header>
+                    <motion.div 
+                        variants={contentVariants}
+                        custom={2.2}
+                        initial="hidden"
+                        animate="visible"
+                        ref={wildcardScrollerRef} 
+                        className="flex-grow p-6 overflow-y-auto"
+                    >
                         <WildcardTree categories={crafterData?.wildcardCategories || []} onWildcardClick={handleWildcardClick} />
-                    </div>
-                    <footer className="h-14 flex items-stretch bg-base-100/10 backdrop-blur-md p-1.5 gap-1.5 flex-shrink-0 panel-footer">
+                    </motion.div>
+                    <motion.footer 
+                        variants={contentVariants}
+                        custom={2.4}
+                        initial="hidden"
+                        animate="visible"
+                        className="h-14 flex items-stretch bg-base-100/10 backdrop-blur-md p-1.5 gap-1.5 flex-shrink-0 panel-footer"
+                    >
                         <button 
                             onClick={loadData} 
                             disabled={isImporting}
-                            className="btn btn-sm btn-ghost h-full flex-1 rounded-none font-normal text-[13px] tracking-wider uppercase btn-snake font-display"
+                            className="btn btn-sm btn-ghost h-full flex-1 rounded-none font-normal text-[13px] tracking-wider border border-base-content/5 btn-snake"
                         >
                             <span/><span/><span/><span/>
                             {isImporting ? '...' : 'REFRESH'}
@@ -299,7 +323,7 @@ const PromptCrafter = ({ onSaveToLibrary, onClip, onSendToEnhancer, onSendToRefi
                         <button 
                             onClick={handleImportClick} 
                             disabled={isImporting}
-                            className="btn btn-sm btn-ghost h-full flex-1 rounded-none font-normal text-[13px] tracking-wider uppercase btn-snake font-display"
+                            className="btn btn-sm btn-ghost h-full flex-1 rounded-none font-normal text-[13px] tracking-wider border border-base-content/5 btn-snake"
                         >
                             <span/><span/><span/><span/>
                             IMPORT
@@ -312,78 +336,85 @@ const PromptCrafter = ({ onSaveToLibrary, onClip, onSendToEnhancer, onSendToRefi
                             multiple 
                             className="hidden" 
                         />
-                    </footer>
+                    </motion.footer>
                 </div>
                 {/* Manual Corner Accents - Reduced contrast to match app style */}
                 <div className="absolute -top-[1px] -left-[1px] w-3 h-3 border-t border-l border-primary/15 z-20 pointer-events-none" />
                 <div className="absolute -top-[1px] -right-[1px] w-3 h-3 border-t border-r border-primary/15 z-20 pointer-events-none" />
                 <div className="absolute -bottom-[1px] -left-[1px] w-3 h-3 border-b border-l border-primary/15 z-20 pointer-events-none" />
                 <div className="absolute -bottom-[1px] -right-[1px] w-3 h-3 border-b border-r border-primary/15 z-20 pointer-events-none" />
-            </aside>
-            <main className="lg:col-span-6 h-full min-h-0 flex flex-col relative p-[3px] corner-frame overflow-visible">
+            </motion.aside>
+            <motion.main 
+                variants={panelVariants}
+                initial="hidden"
+                animate={isNavigating ? "exit" : "visible"}
+                exit="exit"
+                className="lg:col-span-6 h-full min-h-0 flex flex-col relative p-[3px] corner-frame overflow-visible"
+            >
+                <PanelLine position="top" delay={0.4} />
+                <PanelLine position="bottom" delay={0.5} />
+                <PanelLine position="left" delay={0.6} />
+                <PanelLine position="right" delay={0.7} />
+                <ScanLine delay={3.5} />
                 <div className="flex flex-col h-full w-full overflow-visible min-h-0 relative z-10 bg-base-100/40 backdrop-blur-xl">
-                    <header className="h-16 flex-shrink-0 flex items-stretch bg-base-100/10 backdrop-blur-md p-1.5 gap-1.5 panel-header relative z-30">
-                        <div className="dropdown dropdown-bottom flex-grow h-full">
-                            <div className="relative h-full w-full flex items-center">
-                                <input 
-                                    type="text"
-                                    tabIndex={0}
-                                    className="w-full h-full bg-transparent border-none focus:outline-none focus:ring-0 pl-6 pr-10 font-bold text-sm font-nunito tracking-normal placeholder:text-base-content/40"
-                                    placeholder="SELECT TEMPLATE..."
-                                    value={templateSearchText}
-                                    onChange={(e) => {
-                                        const val = (e.currentTarget as any).value;
-                                        setTemplateSearchText(val);
-                                        if (!val) {
-                                            setSelectedTemplate(null);
-                                        } else if (selectedTemplate && val !== selectedTemplate.name) {
-                                            setSelectedTemplate(null);
-                                        }
-                                    }}
-                                />
-                                <svg className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-base-content/20 pointer-events-none flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 9l-7 7-7-7" />
-                                </svg>
+                    <motion.header 
+                        variants={sectionWipeVariants}
+                        custom={1.4}
+                        initial="hidden"
+                        animate="visible"
+                        exit="exit"
+                        className="h-16 flex-shrink-0 flex items-stretch bg-base-100/10 p-1.5 gap-1.5 panel-header relative z-[100]"
+                    >
+                        <div className="flex-grow h-full relative overflow-visible">
+                            <div className="flex gap-4 items-center h-full justify-center">
+                                            <div className="flex-1 px-2 font-sf-mono text-sm">
+                                                <select
+                                                    className="w-full bg-base-100/80 text-base-content outline-none cursor-pointer"
+                                                    value={selectedTemplate?.name || ''}
+                                                    onChange={(e) => {
+                                                        const template = filteredTemplates.find(t => t.name === e.target.value);
+                                                        if (template) {
+                                                            setSelectedTemplate(template);
+                                                            setTemplateSearchText(template.name);
+                                                            handleUseTemplate(template);
+                                                        }
+                                                    }}
+                                                >
+                                                    <option value="">SELECT TEMPLATE...</option>
+                                                    {filteredTemplates.map(t => (
+                                                        <option key={t.name} value={t.name}>
+                                                            {t.name}
+                                                        </option>
+                                                    ))}
+                                                </select>
+                                            </div>
+                                            <div className="flex gap-4 shrink-0">
+                                                <button
+                                                    onClick={() => { setTemplateSearchText(''); setSelectedTemplate(null); setPromptText(''); }}
+                                                    className="font-sf-mono text-[9px] tracking-widest text-base-content/40 hover:text-base-content transition-all"
+                                                >
+                                                    CLEAR
+                                                </button>
+                                                <button
+                                                    className="font-sf-mono text-[9px] tracking-widest text-error/40 hover:text-error transition-all mr-2"
+                                                    onClick={handleDeleteTemplateClick}
+                                                    disabled={!selectedTemplate}
+                                                >
+                                                    DELETE
+                                                </button>
+                                            </div>
                             </div>
-                            {filteredTemplates.length > 0 && (
-                                <ul tabIndex={0} className="dropdown-content z-[100] menu p-1 bg-base-100 border border-base-300/50 rounded-none w-full max-h-60 overflow-y-auto flex flex-col flex-nowrap shadow-2xl mt-2">
-                                    {filteredTemplates.map(t => (
-                                        <li key={t.name} className="w-full">
-                                            <a 
-                                                onMouseDown={(e) => {
-                                                    e.preventDefault();
-                                                    handleSelectTemplateFromDropdown(t);
-                                                }} 
-                                                className={`font-bold text-sm font-nunito block w-full truncate ${selectedTemplate?.name === t.name ? 'text-primary' : 'text-base-content/70 hover:text-base-content'}`}
-                                            >
-                                                {t.name}
-                                            </a>
-                                        </li>
-                                    ))}
-                                </ul>
-                            )}
                         </div>
-                        {(templateSearchText || selectedTemplate) && (
-                            <button 
-                                onClick={() => { setTemplateSearchText(''); setSelectedTemplate(null); }}
-                                className="btn btn-ghost h-full rounded-none border-none flex-[0_0_80px] font-normal text-[13px] tracking-widest text-error/40 hover:text-error transition-all px-1 truncate btn-snake font-display"
-                            >
-                                <span/><span/><span/><span/>
-                                CLEAR
-                            </button>
-                        )}
-                        <button 
-                            className="btn btn-ghost h-full rounded-none border-none flex-[0_0_80px] font-normal text-[13px] tracking-widest text-error/60 disabled:opacity-20 transition-all px-1 truncate btn-snake font-display" 
-                            onClick={handleDeleteTemplateClick} 
-                            disabled={!selectedTemplate}
-                        >
-                            <span/><span/><span/><span/>
-                            DELETE
-                        </button>
-                    </header>
+                    </motion.header>
 
                 <div className="flex-grow flex flex-col min-h-0 overflow-visible relative z-10">
-                    <div className="h-[25%] min-h-[160px] p-6 flex flex-col overflow-hidden panel-header">
+                    <motion.div 
+                        variants={sectionWipeVariants}
+                        custom={1.6}
+                        initial="hidden"
+                        animate="visible"
+                        className="h-[25%] min-h-[160px] p-6 flex flex-col overflow-hidden panel-header"
+                    >
                         <textarea 
                             ref={textareaRef}
                             value={promptText}
@@ -391,38 +422,51 @@ const PromptCrafter = ({ onSaveToLibrary, onClip, onSendToEnhancer, onSendToRefi
                             placeholder="Define your vision... Inject creative possibilities with __wildcards__."
                             className="w-full h-full resize-none font-medium leading-relaxed bg-transparent focus:outline-none p-0 text-[15px] font-nunito"
                         ></textarea>
-                    </div>
+                    </motion.div>
                     
                     {/* Middle Action Bar - Library Style */}
-                    <div className="h-14 flex items-stretch flex-shrink-0 bg-base-100/10 backdrop-blur-md p-1.5 gap-1.5 panel-y-accent">
+                    <motion.div 
+                        variants={contentVariants}
+                        custom={2.4}
+                        initial="hidden"
+                        animate="visible"
+                        className="h-14 flex items-stretch flex-shrink-0 bg-base-100/10 backdrop-blur-md p-1.5 gap-1.5 panel-y-accent"
+                    >
                         <button 
                             onClick={() => setPromptText('')} 
-                            className="btn btn-sm btn-ghost h-full rounded-none flex-1 font-normal text-[13px] tracking-wider text-error/40 hover:text-error uppercase px-1 truncate btn-snake font-display"
+                            className="btn btn-sm btn-ghost h-full rounded-none flex-1 font-normal text-[13px] tracking-wider border border-base-content/5 text-error/40 hover:text-error btn-snake"
                         >
                             <span/><span/><span/><span/>
                             CLEAR
                         </button>
                         <button 
                             onClick={handleSaveTemplateClick} 
-                            className="btn btn-sm btn-ghost h-full rounded-none flex-1 font-normal text-[13px] tracking-wider uppercase px-1 truncate btn-snake font-display"
+                            className="btn btn-sm btn-ghost h-full rounded-none flex-1 font-normal text-[13px] tracking-wider border border-base-content/5 btn-snake"
                         >
                             <span/><span/><span/><span/>
                             SAVE TEMPLATE
                         </button>
                         <button 
                             onClick={handleGenerate} 
-                            className="btn btn-sm btn-ghost h-full rounded-none flex-1 font-normal text-[13px] tracking-wider uppercase px-1 truncate btn-snake text-primary font-display"
+                            className="btn btn-sm btn-ghost h-full rounded-none flex-1 font-normal text-[13px] tracking-wider border border-base-content/5 btn-snake text-primary"
                         >
                             <span/><span/><span/><span/>
                             GENERATE
                         </button>
-                    </div>
+                    </motion.div>
 
-                    <div ref={mainScrollerRef} className="flex-1 min-h-0 overflow-y-auto relative">
+                    <motion.div 
+                        variants={contentVariants}
+                        custom={2.6}
+                        initial="hidden"
+                        animate="visible"
+                        ref={mainScrollerRef} 
+                        className="flex-1 min-h-0 overflow-y-auto relative"
+                    >
                         {aiAction && (
                             <div className="absolute inset-0 bg-base-100/20 backdrop-blur-sm flex flex-col items-center justify-center z-10 animate-fade-in">
                                 <LoadingSpinner />
-                                <p className="text-[10px] font-black uppercase tracking-[0.4em] text-primary animate-pulse mt-4">{aiAction}</p>
+                                <p className="text-[10px] font-normal text-[12px] font-sf-mono uppercase tracking-widest text-primary animate-pulse mt-4">{aiAction}</p>
                             </div>
                         )}
                         {generatedPrompt ? (
@@ -434,18 +478,24 @@ const PromptCrafter = ({ onSaveToLibrary, onClip, onSendToEnhancer, onSendToRefi
                         ) : (
                             <div className="h-full flex flex-col items-center justify-center text-center opacity-10">
                                 <SparklesIcon className="w-16 h-16 mx-auto mb-4"/>
-                                <p className="text-xl font-black uppercase tracking-widest">Awaiting generated prompt</p>
+                                <p className="text-xl text-[12px] font-sf-mono uppercase tracking-widest">Awaiting generated prompt</p>
                             </div>
                         )}
-                    </div>
+                    </motion.div>
                 </div>
 
                 {/* Bottom Action Bar - Library Style */}
-                <div className="h-14 flex items-stretch flex-shrink-0 bg-base-100/10 backdrop-blur-md p-1.5 gap-1.5 panel-footer">
+                <motion.div 
+                    variants={contentVariants}
+                    custom={2.8}
+                    initial="hidden"
+                    animate="visible"
+                    className="h-14 flex items-stretch flex-shrink-0 bg-base-100/10 backdrop-blur-md p-1.5 gap-1.5 panel-footer"
+                >
                     <button 
                         onClick={handleTranslate} 
                         disabled={!generatedPrompt || !!aiAction} 
-                        className="btn btn-sm btn-ghost h-full rounded-none flex-[1.5] font-normal text-[11px] tracking-wider uppercase px-1 truncate disabled:opacity-30 disabled:cursor-not-allowed btn-snake font-display"
+                        className="btn btn-sm btn-ghost h-full rounded-none flex-[1.5] font-normal text-[13px] tracking-wider border border-base-content/5 disabled:opacity-30 disabled:cursor-not-allowed btn-snake"
                     >
                         <span/><span/><span/><span/>
                         {translated ? 'RE-TRANSLATE' : 'TRANSLATE'}
@@ -453,7 +503,7 @@ const PromptCrafter = ({ onSaveToLibrary, onClip, onSendToEnhancer, onSendToRefi
                     <button 
                         onClick={handleReconstruct} 
                         disabled={!generatedPrompt || !!aiAction} 
-                        className="btn btn-sm btn-ghost h-full rounded-none flex-1 font-normal text-[11px] tracking-wider uppercase px-1 truncate disabled:opacity-30 disabled:cursor-not-allowed btn-snake font-display"
+                        className="btn btn-sm btn-ghost h-full rounded-none flex-1 font-normal text-[13px] tracking-wider border border-base-content/5 disabled:opacity-30 disabled:cursor-not-allowed btn-snake"
                     >
                         <span/><span/><span/><span/>
                         REWRITE
@@ -461,7 +511,7 @@ const PromptCrafter = ({ onSaveToLibrary, onClip, onSendToEnhancer, onSendToRefi
                     <button 
                         onClick={() => onSendToEnhancer(generatedPrompt!)} 
                         disabled={!generatedPrompt || !!aiAction} 
-                        className="btn btn-sm btn-ghost h-full rounded-none flex-1 font-normal text-[11px] tracking-wider uppercase px-1 truncate disabled:opacity-30 disabled:cursor-not-allowed btn-snake font-display text-primary/60"
+                        className="btn btn-sm btn-ghost h-full rounded-none flex-1 font-normal text-[13px] tracking-wider border border-base-content/5 disabled:opacity-30 disabled:cursor-not-allowed btn-snake text-primary/60"
                     >
                         <span/><span/><span/><span/>
                         IMPROVE
@@ -469,7 +519,7 @@ const PromptCrafter = ({ onSaveToLibrary, onClip, onSendToEnhancer, onSendToRefi
                     <button 
                         onClick={handleClip} 
                         disabled={!generatedPrompt} 
-                        className="btn btn-sm btn-ghost h-full rounded-none flex-1 font-normal text-[11px] tracking-wider uppercase px-1 truncate disabled:opacity-30 disabled:cursor-not-allowed btn-snake font-display"
+                        className="btn btn-sm btn-ghost h-full rounded-none flex-1 font-normal text-[13px] tracking-wider border border-base-content/5 disabled:opacity-30 disabled:cursor-not-allowed btn-snake"
                     >
                         <span/><span/><span/><span/>
                         {clipped ? 'OK' : 'CLIP'}
@@ -477,28 +527,50 @@ const PromptCrafter = ({ onSaveToLibrary, onClip, onSendToEnhancer, onSendToRefi
                     <button 
                         onClick={handleSaveResult} 
                         disabled={!generatedPrompt || savedResults.includes(generatedPrompt)} 
-                        className="btn btn-sm btn-ghost h-full rounded-none flex-1 font-normal text-[11px] tracking-wider uppercase px-1 truncate disabled:opacity-30 disabled:cursor-not-allowed btn-snake font-display"
+                        className="btn btn-sm btn-ghost h-full rounded-none flex-1 font-normal text-[13px] tracking-wider border border-base-content/5 disabled:opacity-30 disabled:cursor-not-allowed btn-snake"
                     >
                         <span/><span/><span/><span/>
                         {savedResults.includes(generatedPrompt!) ? 'SAVED' : 'SAVE RESULT'}
                     </button>
-                </div>
+                </motion.div>
             </div>
             {/* Manual Corner Accents */}
             <div className="absolute -top-[1px] -left-[1px] w-3 h-3 border-t border-l border-primary/15 z-20 pointer-events-none" />
             <div className="absolute -top-[1px] -right-[1px] w-3 h-3 border-t border-r border-primary/15 z-20 pointer-events-none" />
             <div className="absolute -bottom-[1px] -left-[1px] w-3 h-3 border-b border-l border-primary/15 z-20 pointer-events-none" />
             <div className="absolute -bottom-[1px] -right-[1px] w-3 h-3 border-b border-r border-primary/15 z-20 pointer-events-none" />
-        </main>
+        </motion.main>
             
-            <aside className="lg:col-span-3 h-full min-h-0 flex flex-col relative p-[3px] corner-frame overflow-visible">
-                <div className="flex flex-col h-full w-full overflow-hidden min-h-0 relative z-10 bg-base-100/40 backdrop-blur-xl">
-                    <header className="px-6 py-4 flex-shrink-0 bg-base-100/10 h-16 flex items-center panel-header">
-                        <h3 className="text-xs font-bold uppercase tracking-widest text-primary font-nunito flex items-center gap-3">
-                            <div className="w-1.5 h-1.5 rounded-full bg-primary animate-pulse"></div> CRAFTED RESULTS
-                        </h3>
-                    </header>
-                    <div className="flex-grow overflow-y-auto p-1.5 space-y-1.5 custom-scrollbar">
+        <motion.aside 
+            variants={panelVariants}
+            initial="hidden"
+            animate={isNavigating ? "exit" : "visible"}
+            exit="exit"
+            className="lg:col-span-3 h-full min-h-0 flex flex-col relative p-[3px] corner-frame overflow-visible hidden lg:flex"
+        >
+            <PanelLine position="top" delay={0.4} />
+            <PanelLine position="bottom" delay={0.5} />
+            <PanelLine position="left" delay={0.6} />
+            <PanelLine position="right" delay={0.7} />
+            <ScanLine delay={3.5} />
+            <div className="flex flex-col h-full w-full overflow-hidden min-h-0 relative z-10 bg-base-100/40 backdrop-blur-xl">
+                <motion.header 
+                    variants={sectionWipeVariants}
+                    custom={1.6}
+                    initial="hidden"
+                    animate="visible"
+                    exit="exit"
+                    className="px-6 py-4 flex-shrink-0 bg-base-100/10 h-16 flex items-center panel-header"
+                >
+                    <TerminalText text="CRAFTED RESULTS" delay={2.8} className="text-xs font-sf-mono uppercase text-primary" />
+                </motion.header>
+                <motion.div 
+                    variants={contentVariants}
+                    custom={2.8}
+                    initial="hidden"
+                    animate="visible"
+                    className="flex-grow overflow-y-auto p-1.5 space-y-1.5 custom-scrollbar"
+                >
                         {savedResults.length > 0 ? (
                             savedResults.map((res, idx) => (
                                 <SavedResultItem 
@@ -515,17 +587,17 @@ const PromptCrafter = ({ onSaveToLibrary, onClip, onSendToEnhancer, onSendToRefi
                         ) : (
                             <div className="h-full flex flex-col items-center justify-center text-center opacity-10">
                                 <SparklesIcon className="w-12 h-12 mb-4" />
-                                <p className="text-[10px] font-black uppercase tracking-widest leading-relaxed">Generated prompts mapped to session index will appear here</p>
+                                <p className="text-[10px] text-[12px] font-sf-mono uppercase tracking-widest leading-relaxed">Generated prompts mapped to session index will appear here</p>
                             </div>
                         )}
-                    </div>
+                    </motion.div>
                 </div>
                 {/* Manual Corner Accents */}
                 <div className="absolute -top-[1px] -left-[1px] w-3 h-3 border-t border-l border-primary/15 z-20 pointer-events-none" />
                 <div className="absolute -top-[1px] -right-[1px] w-3 h-3 border-t border-r border-primary/15 z-20 pointer-events-none" />
                 <div className="absolute -bottom-[1px] -left-[1px] w-3 h-3 border-b border-l border-primary/15 z-20 pointer-events-none" />
                 <div className="absolute -bottom-[1px] -right-[1px] w-3 h-3 border-b border-r border-primary/15 z-20 pointer-events-none" />
-            </aside>
+            </motion.aside>
             
             {isSaveModalOpen && (
                 <div className="fixed inset-0 bg-black/40 backdrop-blur-xl z-50 flex items-center justify-center p-4 animate-fade-in" onClick={() => setIsSaveModalOpen(false)}>
@@ -533,7 +605,7 @@ const PromptCrafter = ({ onSaveToLibrary, onClip, onSendToEnhancer, onSendToRefi
                         <div className="bg-base-100/40 backdrop-blur-xl rounded-none w-full overflow-hidden relative z-10">
                             <header className="px-8 py-6 panel-header">
                                 <h3 className="text-2xl font-black tracking-tighter text-base-content leading-none uppercase">SAVE TEMPLATE<span className="text-primary">.</span></h3>
-                                <p className="text-[10px] font-black uppercase tracking-[0.4em] text-base-content/30 mt-1.5">Preset Registration</p>
+                                <p className="text-[10px] font-normal text-[12px] font-sf-mono uppercase tracking-widest text-base-content/30 mt-1.5">Preset Registration</p>
                             </header>
                             <div className="p-8">
                                 <div className="form-control">
@@ -549,16 +621,16 @@ const PromptCrafter = ({ onSaveToLibrary, onClip, onSendToEnhancer, onSendToRefi
                                     />
                                 </div>
                             </div>
-                            <footer className="h-14 flex items-stretch bg-base-100/10 backdrop-blur-md p-1.5 gap-1.5 overflow-hidden flex-shrink-0 panel-footer">
-                                <button onClick={() => setIsSaveModalOpen(false)} className="btn btn-sm btn-ghost h-full flex-1 rounded-none font-normal text-[13px] tracking-wider uppercase btn-snake font-display">
-                                    <span/><span/><span/><span/>
-                                    CANCEL
-                                </button>
-                                <button onClick={handleConfirmSaveTemplate} disabled={isSavingTemplate || !templateName.trim()} className="btn btn-sm btn-primary h-full flex-1 rounded-none font-normal text-[13px] tracking-wider uppercase btn-snake-primary font-display">
-                                    <span/><span/><span/><span/>
-                                    {isSavingTemplate ? "SAVING..." : "COMMIT"}
-                                </button>
-                            </footer>
+            <footer className="h-14 flex items-stretch bg-base-100/10 backdrop-blur-md p-1.5 gap-1.5 overflow-hidden flex-shrink-0 panel-footer">
+                <button onClick={() => setIsSaveModalOpen(false)} className="btn btn-sm btn-ghost h-full flex-1 rounded-none font-normal text-[13px] tracking-wider border border-base-content/5 btn-snake no-glow active:no-glow">
+                    <span/><span/><span/><span/>
+                    CANCEL
+                </button>
+                <button onClick={handleConfirmSaveTemplate} disabled={isSavingTemplate || !templateName.trim()} className="btn btn-sm btn-primary h-full flex-1 rounded-none font-normal text-[13px] tracking-wider border border-base-content/5 btn-snake-primary no-glow active:no-glow">
+                    <span/><span/><span/><span/>
+                    {isSavingTemplate ? "SAVING..." : "COMMIT"}
+                </button>
+            </footer>
                         </div>
                         {/* Manual Corner Accents */}
                         <div className="absolute -top-[1px] -left-[1px] w-3 h-3 border-t border-l border-primary/15 z-20 pointer-events-none" />

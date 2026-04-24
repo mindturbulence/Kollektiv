@@ -1,4 +1,6 @@
 import React, { useState, useRef, useCallback, useEffect } from 'react';
+import { motion } from 'framer-motion';
+import { TerminalText, PanelLine, ScanLine, panelVariants, sectionWipeVariants, contentVariants } from './AnimatedPanels';
 import { useSettings } from '../contexts/SettingsContext';
 import { analyzePaletteMood, generateColorName } from '../services/llmService';
 import { UploadIcon, PaletteIcon, BookmarkIcon } from './icons';
@@ -18,6 +20,7 @@ interface ColorInfo {
 
 interface ColorPaletteExtractorProps {
   onClipIdea: (idea: Idea) => void;
+  isExiting?: boolean;
 }
 
 const ColorCard: React.FC<{ color: ColorInfo }> = ({ color }) => {
@@ -47,7 +50,7 @@ const ColorCard: React.FC<{ color: ColorInfo }> = ({ color }) => {
     );
 };
 
-export const ColorPaletteExtractor: React.FC<ColorPaletteExtractorProps> = ({ onClipIdea }) => {
+export const ColorPaletteExtractor: React.FC<ColorPaletteExtractorProps> = ({ onClipIdea, isExiting = false }) => {
   const { settings } = useSettings();
   const [imageFile, setImageFile] = useState<File | string | null>(null);
   const [imagePreviewUrl, setImagePreviewUrl] = useState<string | null>(null);
@@ -213,15 +216,39 @@ export const ColorPaletteExtractor: React.FC<ColorPaletteExtractorProps> = ({ on
       onClipIdea(idea);
   };
 
-  return (
-    <div className="h-full bg-transparent flex flex-col overflow-hidden p-0">
+    return (
+        <div className="h-full bg-transparent flex flex-col p-0 overflow-hidden relative z-0">
         <div className="flex-grow flex flex-col lg:flex-row overflow-hidden gap-4">
-            <aside className="w-full lg:w-96 flex-shrink-0 flex flex-col relative p-[3px] corner-frame overflow-visible z-10">
+            <motion.aside 
+                variants={panelVariants}
+                initial="hidden"
+                animate={isExiting ? "exit" : "visible"}
+                exit="exit"
+                className="w-full lg:w-96 flex-shrink-0 flex flex-col relative p-[3px] corner-frame overflow-visible z-10"
+            >
+                <PanelLine position="top" delay={0.4} />
+                <PanelLine position="bottom" delay={0.5} />
+                <PanelLine position="left" delay={0.6} />
+                <PanelLine position="right" delay={0.7} />
+                <ScanLine delay={3.5} />
                 <div className="flex flex-col h-full w-full overflow-hidden relative z-10 bg-base-100/40 backdrop-blur-xl">
-                    <header className="p-6 bg-base-100/10 backdrop-blur-md">
-                        <h3 className="text-[10px] font-black uppercase tracking-[0.4em] text-primary">Chromic Source</h3>
-                    </header>
-                    <div className="flex-grow p-6 flex flex-col gap-6 overflow-y-auto bg-transparent">
+                    <motion.header 
+                        variants={sectionWipeVariants}
+                        custom={1.2}
+                        initial="hidden"
+                        animate="visible"
+                        exit="exit"
+                        className="p-6 bg-base-100/10 backdrop-blur-md"
+                    >
+                        <TerminalText text="CHROMIC SOURCE" delay={2.0} className="text-[10px] font-black uppercase text-primary" />
+                    </motion.header>
+                    <motion.div 
+                        variants={contentVariants}
+                        custom={2.2}
+                        initial="hidden"
+                        animate="visible"
+                        className="flex-grow p-6 flex flex-col gap-6 overflow-y-auto bg-transparent"
+                    >
                          <div 
                             className={`relative flex-grow min-h-[200px] border-2 border-dashed rounded-none flex flex-col items-center justify-center cursor-pointer transition-all gap-4 group ${isDragging ? 'border-primary bg-primary/10' : 'border-base-300 hover:border-primary/50'}`}
                             style={{ backgroundImage: imagePreviewUrl ? `url(${imagePreviewUrl})` : 'none', backgroundSize: 'contain', backgroundPosition: 'center', backgroundRepeat: 'no-repeat' }}
@@ -255,18 +282,35 @@ export const ColorPaletteExtractor: React.FC<ColorPaletteExtractorProps> = ({ on
                                 {isLoading ? 'ANALYZING...' : 'RE-SCAN SPECTRUM'}
                             </button>
                         </div>
-                    </div>
+                    </motion.div>
                 </div>
                 {/* Manual Corner Accents */}
                 <div className="absolute -top-[1px] -left-[1px] w-3 h-3 border-t border-l border-primary/15 z-20 pointer-events-none" />
                 <div className="absolute -top-[1px] -right-[1px] w-3 h-3 border-t border-r border-primary/15 z-20 pointer-events-none" />
                 <div className="absolute -bottom-[1px] -left-[1px] w-3 h-3 border-b border-l border-primary/15 z-20 pointer-events-none" />
                 <div className="absolute -bottom-[1px] -right-[1px] w-3 h-3 border-b border-r border-primary/15 z-20 pointer-events-none" />
-            </aside>
+            </motion.aside>
 
-            <main className="flex-grow flex flex-col relative p-[3px] corner-frame overflow-visible z-10 ml-1">
+            <motion.main 
+                variants={panelVariants}
+                initial="hidden"
+                animate={isExiting ? "exit" : "visible"}
+                exit="exit"
+                className="flex-grow flex flex-col relative p-[3px] corner-frame overflow-visible z-10 lg:ml-1"
+            >
+                <PanelLine position="top" delay={0.4} />
+                <PanelLine position="bottom" delay={0.5} />
+                <PanelLine position="left" delay={0.6} />
+                <PanelLine position="right" delay={0.7} />
+                <ScanLine delay={3.5} />
                 <div className="flex flex-col h-full w-full overflow-hidden relative z-10 bg-base-100/40 backdrop-blur-xl">
-                    <div className="flex-grow p-8 lg:p-12 overflow-y-auto">
+                    <motion.div 
+                        variants={sectionWipeVariants}
+                        custom={1.6}
+                        initial="hidden"
+                        animate="visible"
+                        className="flex-grow p-8 lg:p-12 overflow-y-auto"
+                    >
                         {isLoading ? <div className="py-24"><LoadingSpinner/></div> :
                          error ? <div className="alert alert-error rounded-none border-2"><span>{error}</span></div> :
                          palette.length > 0 ? (
@@ -289,14 +333,20 @@ export const ColorPaletteExtractor: React.FC<ColorPaletteExtractorProps> = ({ on
                                 <p className="text-xl font-black uppercase tracking-widest">Awaiting Extraction Sequence</p>
                             </div>
                          )}
-                    </div>
+                    </motion.div>
                      {palette.length > 0 && (
-                        <footer className="h-14 flex items-stretch flex-shrink-0 bg-base-100/10 backdrop-blur-md p-1.5 gap-1.5">
+                        <motion.footer 
+                            variants={contentVariants}
+                            custom={2.4}
+                            initial="hidden"
+                            animate="visible"
+                            className="h-14 flex items-stretch flex-shrink-0 bg-base-100/10 backdrop-blur-md p-1.5 gap-1.5"
+                        >
                             <button onClick={handleClipPalette} className="btn btn-sm btn-ghost h-full flex-1 rounded-none font-normal text-[13px] tracking-wider uppercase btn-snake text-primary/40 hover:text-primary font-display">
                                 <span/><span/><span/><span/>
                                 <BookmarkIcon className="w-3.5 h-3.5 mr-1.5" /> CLIP DATA TO ARCHIVE
                             </button>
-                        </footer>
+                        </motion.footer>
                     )}
                 </div>
                 {/* Manual Corner Accents */}
@@ -304,7 +354,7 @@ export const ColorPaletteExtractor: React.FC<ColorPaletteExtractorProps> = ({ on
                 <div className="absolute -top-[1px] -right-[1px] w-3 h-3 border-t border-r border-primary/15 z-20 pointer-events-none" />
                 <div className="absolute -bottom-[1px] -left-[1px] w-3 h-3 border-b border-l border-primary/15 z-20 pointer-events-none" />
                 <div className="absolute -bottom-[1px] -right-[1px] w-3 h-3 border-b border-r border-primary/15 z-20 pointer-events-none" />
-            </main>
+            </motion.main>
         </div>
 
         <GalleryPickerModal 
