@@ -128,6 +128,7 @@ export default defineConfig(({ mode }) => {
       },
       optimizeDeps: {
         exclude: ['@ffmpeg/ffmpeg', '@ffmpeg/util'],
+        include: ['react-markdown', 'remark-gfm', 'vfile']
       },
       define: {
         'process.env.API_KEY': JSON.stringify(env.GEMINI_API_KEY),

@@ -1,4 +1,6 @@
 import React, { useState, useRef, useEffect, useCallback } from 'react';
+import { motion } from 'framer-motion';
+import { TerminalText, PanelLine, ScanLine, panelVariants, sectionWipeVariants, contentVariants } from './AnimatedPanels';
 import { FilmIcon, PlayIcon } from './icons';
 import LoadingSpinner from './LoadingSpinner';
 import JSZip from 'jszip';
@@ -35,7 +37,11 @@ const formatTime = (seconds: number) => {
     return `${String(mins).padStart(2, '0')}:${String(secs).padStart(2, '0')}.${String(ms).padStart(3, '0')}`;
 };
 
-export const VideoToFrames: React.FC = () => {
+interface VideoToFramesProps {
+    isExiting?: boolean;
+}
+
+export const VideoToFrames: React.FC<VideoToFramesProps> = ({ isExiting = false }) => {
     const [activeTab, setActiveTab] = useState<EditorTab>('extractor');
     
     const [extractorVideo, setExtractorVideo] = useState<File | string | null>(null);
@@ -276,22 +282,46 @@ export const VideoToFrames: React.FC = () => {
     const removeJoinItem = (id: string) => { setJoinFiles(prev => prev.filter(v => { if (v.id === id) { URL.revokeObjectURL(v.url); return false; } return true; })); };
 
     return (
-        <div className="h-full bg-transparent flex flex-col overflow-hidden p-0">
+        <div className="h-full bg-transparent flex flex-col overflow-hidden p-0 relative z-0">
             <div className="flex-grow flex flex-col lg:flex-row overflow-hidden gap-4">
-                <aside className="w-full lg:w-96 flex-shrink-0 flex flex-col relative p-[3px] corner-frame overflow-visible z-10">
+                <motion.aside 
+                    variants={panelVariants}
+                    initial="hidden"
+                    animate={isExiting ? "exit" : "visible"}
+                    exit="exit"
+                    className="w-full lg:w-96 flex-shrink-0 flex flex-col relative p-[3px] corner-frame overflow-visible z-10"
+                >
+                    <PanelLine position="top" delay={0.4} />
+                    <PanelLine position="bottom" delay={0.5} />
+                    <PanelLine position="left" delay={0.6} />
+                    <PanelLine position="right" delay={0.7} />
+                    <ScanLine delay={3.5} />
                     <div className="flex flex-col h-full w-full overflow-hidden relative z-10 bg-base-100/40 backdrop-blur-xl">
-                        <div className="h-14 flex items-stretch flex-shrink-0 bg-base-100/10 backdrop-blur-md p-1.5 gap-1.5">
-                            <button onClick={() => setActiveTab('extractor')} className={`btn btn-sm h-full rounded-none flex-1 font-normal text-[11px] tracking-wider uppercase px-1 truncate btn-snake font-display ${activeTab === 'extractor' ? 'btn-ghost text-primary font-black shadow-none drop-shadow-none [text-shadow:none] [filter:none]' : 'btn-ghost text-base-content/40 hover:text-primary'}`}>
+                        <motion.div 
+                            variants={sectionWipeVariants}
+                            custom={1.2}
+                            initial="hidden"
+                            animate="visible"
+                            exit="exit"
+                            className="h-14 flex items-stretch flex-shrink-0 bg-base-100/10 backdrop-blur-md p-1.5 gap-1.5"
+                        >
+                            <button onClick={() => setActiveTab('extractor')} className={`btn btn-sm h-full rounded-none flex-1 font-normal text-[11px] tracking-wider uppercase px-1 truncate btn-snake font-display ${activeTab === 'extractor' ? 'btn-ghost text-primary font-black no-glow' : 'btn-ghost text-base-content/40 hover:text-primary hover:no-glow'}`}>
                                 <span/><span/><span/><span/>
                                 FRAME EXTRACTOR
                             </button>
-                            <button onClick={() => setActiveTab('joiner')} className={`btn btn-sm h-full rounded-none flex-1 font-normal text-[11px] tracking-wider uppercase px-1 truncate btn-snake font-display ${activeTab === 'joiner' ? 'btn-ghost text-primary font-black shadow-none drop-shadow-none [text-shadow:none] [filter:none]' : 'btn-ghost text-base-content/40 hover:text-primary'}`}>
+                            <button onClick={() => setActiveTab('joiner')} className={`btn btn-sm h-full rounded-none flex-1 font-normal text-[11px] tracking-wider uppercase px-1 truncate btn-snake font-display ${activeTab === 'joiner' ? 'btn-ghost text-primary font-black no-glow' : 'btn-ghost text-base-content/40 hover:text-primary hover:no-glow'}`}>
                                 <span/><span/><span/><span/>
                                 VIDEO JOINER
                             </button>
-                        </div>
+                        </motion.div>
 
-                        <div className="flex-grow p-6 space-y-8 overflow-y-auto bg-transparent">
+                        <motion.div 
+                            variants={contentVariants}
+                            custom={2.2}
+                            initial="hidden"
+                            animate="visible"
+                            className="flex-grow p-6 space-y-8 overflow-y-auto bg-transparent"
+                        >
                             {activeTab === 'extractor' ? (
                                 <div className="space-y-6">
                                     <div>
@@ -396,8 +426,14 @@ export const VideoToFrames: React.FC = () => {
                                     </div>
                                 </div>
                             )}
-                        </div>
-                        <footer className="h-14 flex items-stretch flex-shrink-0 bg-base-100/10 backdrop-blur-md p-1.5 gap-1.5">
+                        </motion.div>
+                        <motion.footer 
+                            variants={contentVariants}
+                            custom={2.4}
+                            initial="hidden"
+                            animate="visible"
+                            className="h-14 flex items-stretch flex-shrink-0 bg-base-100/10 backdrop-blur-md p-1.5 gap-1.5"
+                        >
                             {activeTab === 'extractor' ? (
                                 <>
                                     <button onClick={handleCaptureCurrent} disabled={!extractorVideo || isExtracting} className="btn btn-sm btn-ghost h-full flex-1 rounded-none font-normal text-[13px] tracking-wider uppercase btn-snake font-display">
@@ -421,16 +457,27 @@ export const VideoToFrames: React.FC = () => {
                                     {isJoining ? 'PROCESSING...' : 'JOIN VIDEOS'}
                                 </button>
                             )}
-                        </footer>
+                        </motion.footer>
                     </div>
                     {/* Manual Corner Accents */}
                     <div className="absolute -top-[1px] -left-[1px] w-3 h-3 border-t border-l border-primary/15 z-20 pointer-events-none" />
                     <div className="absolute -top-[1px] -right-[1px] w-3 h-3 border-t border-r border-primary/15 z-20 pointer-events-none" />
                     <div className="absolute -bottom-[1px] -left-[1px] w-3 h-3 border-b border-l border-primary/15 z-20 pointer-events-none" />
                     <div className="absolute -bottom-[1px] -right-[1px] w-3 h-3 border-b border-r border-primary/15 z-20 pointer-events-none" />
-                </aside>
+                </motion.aside>
 
-                <main className="flex-grow flex flex-col relative p-[3px] corner-frame overflow-visible z-10 ml-1">
+                <motion.main 
+                    variants={panelVariants}
+                    initial="hidden"
+                    animate={isExiting ? "exit" : "visible"}
+                    exit="exit"
+                    className="flex-grow flex flex-col relative p-[3px] corner-frame overflow-visible z-10 lg:ml-1"
+                >
+                    <PanelLine position="top" delay={0.4} />
+                    <PanelLine position="bottom" delay={0.5} />
+                    <PanelLine position="left" delay={0.6} />
+                    <PanelLine position="right" delay={0.7} />
+                    <ScanLine delay={3.5} />
                     <div className="flex flex-col h-full w-full overflow-hidden relative z-10 bg-base-100/40 backdrop-blur-xl">
                         {activeTab === 'extractor' ? (
                             <div className="flex-grow flex flex-col p-4 lg:p-6 overflow-hidden bg-transparent">
@@ -487,16 +534,40 @@ export const VideoToFrames: React.FC = () => {
                     <div className="absolute -top-[1px] -right-[1px] w-3 h-3 border-t border-r border-primary/15 z-20 pointer-events-none" />
                     <div className="absolute -bottom-[1px] -left-[1px] w-3 h-3 border-b border-l border-primary/15 z-20 pointer-events-none" />
                     <div className="absolute -bottom-[1px] -right-[1px] w-3 h-3 border-b border-r border-primary/15 z-20 pointer-events-none" />
-                </main>
+                </motion.main>
 
                 {activeTab === 'extractor' && (
-                    <aside className="w-full lg:w-[480px] flex-shrink-0 flex flex-col relative p-[3px] corner-frame overflow-visible z-10">
+                    <motion.aside 
+                        variants={panelVariants}
+                        initial="hidden"
+                        animate={isExiting ? "exit" : "visible"}
+                        exit="exit"
+                        className="w-full lg:w-[480px] flex-shrink-0 flex flex-col relative p-[3px] corner-frame overflow-visible z-10"
+                    >
+                        <PanelLine position="top" delay={0.4} />
+                        <PanelLine position="bottom" delay={0.5} />
+                        <PanelLine position="left" delay={0.6} />
+                        <PanelLine position="right" delay={0.7} />
+                        <ScanLine delay={3.5} />
                         <div className="flex flex-col h-full w-full overflow-hidden relative z-10 bg-base-100/40 backdrop-blur-xl">
-                            <header className="p-6 bg-base-100/10 backdrop-blur-md flex justify-between items-center">
-                                <h3 className="text-[10px] font-black uppercase tracking-[0.4em] text-primary">Extracted Frames</h3>
+                            <motion.header 
+                                variants={sectionWipeVariants}
+                                custom={1.2}
+                                initial="hidden"
+                                animate="visible"
+                                exit="exit"
+                                className="p-6 bg-base-100/10 backdrop-blur-md flex justify-between items-center"
+                            >
+                                <TerminalText text="EXTRACTED FRAMES" delay={2.0} className="text-[10px] font-black uppercase text-primary" />
                                 <span className="text-[10px] font-mono font-bold text-base-content/20 uppercase">{frames.length} FILES</span>
-                            </header>
-                            <div className="flex-grow p-6 overflow-y-auto bg-transparent">
+                            </motion.header>
+                            <motion.div 
+                                variants={contentVariants}
+                                custom={2.2}
+                                initial="hidden"
+                                animate="visible"
+                                className="flex-grow p-6 overflow-y-auto bg-transparent"
+                            >
                                 <div className="grid grid-cols-2 gap-px bg-transparent">
                                     {frames.map(f => (
                                         <div key={f.id} className="group relative aspect-square bg-transparent overflow-hidden">
@@ -516,14 +587,14 @@ export const VideoToFrames: React.FC = () => {
                                         <div className="col-span-2 py-32 text-center opacity-10 uppercase font-black tracking-widest">Queue is Empty</div>
                                     )}
                                 </div>
-                            </div>
+                            </motion.div>
                         </div>
                         {/* Manual Corner Accents */}
                         <div className="absolute -top-[1px] -left-[1px] w-3 h-3 border-t border-l border-primary/15 z-20 pointer-events-none" />
                         <div className="absolute -top-[1px] -right-[1px] w-3 h-3 border-t border-r border-primary/15 z-20 pointer-events-none" />
                         <div className="absolute -bottom-[1px] -left-[1px] w-3 h-3 border-b border-l border-primary/15 z-20 pointer-events-none" />
                         <div className="absolute -bottom-[1px] -right-[1px] w-3 h-3 border-b border-r border-primary/15 z-20 pointer-events-none" />
-                    </aside>
+                    </motion.aside>
                 )}
             </div>
 

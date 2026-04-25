@@ -2,10 +2,10 @@ import React from 'react';
 import { useSettings } from '../contexts/SettingsContext';
 import { DAISYUI_DARK_THEMES } from '../constants';
 import { audioService } from '../services/audioService';
-import RollingText from './RollingText';
 import { motion } from 'framer-motion';
+import { PaletteIcon } from './icons';
 
-const ThemeSwitcher: React.FC<{ compact?: boolean }> = ({ compact }) => {
+const ThemeSwitcher: React.FC = () => {
   const { settings, updateSettings } = useSettings();
 
   const cycleToNextTheme = () => {
@@ -22,13 +22,10 @@ const ThemeSwitcher: React.FC<{ compact?: boolean }> = ({ compact }) => {
         whileHover="hover"
         onClick={cycleToNextTheme}
         onMouseEnter={() => audioService.playHover()}
-        className={`group uppercase transition-colors duration-300 flex items-center gap-2 ${compact ? 'px-3 py-1 text-[13px] font-normal tracking-[0.25em] text-base-content/60 hover:text-primary' : 'px-4 py-2 text-[13px] font-normal tracking-[0.25em] text-base-content/60 hover:text-primary'}`}
+        className="group p-2 text-primary transition-colors duration-300"
         aria-label="Next Theme"
       >
-        <RollingText 
-          text="Theme" 
-          hoverClassName="text-primary"
-        />
+        <PaletteIcon className="w-4 h-4" />
       </motion.button>
     </div>
   );

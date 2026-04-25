@@ -1,5 +1,6 @@
 
 import React, { useState, useEffect, useLayoutEffect, useRef, useMemo, useCallback } from 'react';
+import { motion } from 'framer-motion';
 import { gsap } from 'gsap';
 import type { LLMSettings, ActiveSettingsTab, PromptCategory, FeatureSettings, YouTubeConnection, GoogleIdentityConnection } from '../types';
 import { testOllamaConnection, type OllamaTestResult } from '../services/llmService';
@@ -30,12 +31,13 @@ import { PromptTxtImportModal } from './PromptTxtImportModal';
 import { rebuildGalleryDatabase, rebuildPromptDatabase, optimizeManifests, verifyAndRepairFiles } from '../utils/integrity';
 import AutocompleteSelect from './AutocompleteSelect';
 
-interface SetupPageProps {
+interface SetupPageProps {  
   activeSettingsTab: ActiveSettingsTab;
   setActiveSettingsTab: (tab: ActiveSettingsTab) => void;
   activeSubTab: string;
   setActiveSubTab: (subTab: string) => void;
   showGlobalFeedback: (message: string, isError?: boolean) => void;
+  isExiting?: boolean;
 }
 
 const subMenuConfig: Record<string, { id: string; label: string, icon: React.ReactNode, description: string }[]> = {
@@ -50,8 +52,7 @@ const subMenuConfig: Record<string, { id: string; label: string, icon: React.Rea
     integrations: [
         { id: 'llm', label: 'AI Engine', icon: <CpuChipIcon className="w-4 h-4" />, description: "AI models and local/cloud API connections." },
         { id: 'google', label: 'Cloud Identity', icon: <LinkIcon className="w-4 h-4" />, description: "Link your Google account for Cloud AI." },
-        { id: 'youtube', label: 'YouTube', icon: <PlayIcon className="w-4 h-4" />, description: "Manage YouTube API credentials." },
-        { id: 'instagram', label: 'Instagram', icon: <InstagramIcon className="w-4 h-4" />, description: "Manage Instagram API credentials." }
+        { id: 'youtube', label: 'YouTube', icon: <PlayIcon className="w-4 h-4" />, description: "Manage YouTube API credentials." }
     ],
     prompt: [
         { id: 'categories', label: 'Prompt Folders', icon: <FolderClosedIcon className="w-4 h-4" />, description: "Organize prompt hierarchies." },
@@ -103,7 +104,7 @@ const MaintenanceOverlay: React.FC<{ progress: number, message: string }> = ({ p
 
             <div className="relative z-10 flex flex-col items-center">
                 <div className="overflow-hidden mb-6 px-4">
-                    <h1 ref={textWrapperRef} className="grid grid-cols-1 grid-rows-1 text-2xl md:text-4xl font-black tracking-tighter uppercase select-none items-center font-logo">
+                    <h1 ref={textWrapperRef} className="grid grid-cols-1 grid-rows-1 text-2xl md:text-4xl font-black tracking-tighter uppercase select-none items-center font-sf-mono">
                         <span className="text-base-content/10 block leading-none py-2 row-start-1 col-start-1">
                             Kollektiv<span className="text-primary/10 italic">.</span>
                         </span>
@@ -184,7 +185,7 @@ const SettingRow: React.FC<{ label: string, desc?: string, children: React.React
 );
 
 export const SetupPage: React.FC<SetupPageProps> = ({ 
-    activeSettingsTab, setActiveSettingsTab, activeSubTab, setActiveSubTab, showGlobalFeedback
+    activeSettingsTab, setActiveSettingsTab, activeSubTab, setActiveSubTab, showGlobalFeedback, isExiting = false
 }) => {
   const { settings: globalSettings, updateSettings, availableOllamaModels, availableOllamaCloudModels, refreshOllamaModels } = useSettings();
   const { features } = globalSettings;
@@ -399,7 +400,7 @@ export const SetupPage: React.FC<SetupPageProps> = ({
   const handleSettingsChange = (field: keyof LLMSettings, value: any) => {
     const updated = { ...settings, [field]: value };
     setSettings(updated);
-    if (['youtube', 'instagram', 'googleIdentity'].includes(field)) updateSettings(updated);
+    if (['youtube', 'googleIdentity'].includes(field)) updateSettings(updated);
     if (field === 'fontSize' && typeof window !== 'undefined') (window as any).document.documentElement.style.fontSize = `${value}px`;
   };
 
@@ -485,7 +486,10 @@ export const SetupPage: React.FC<SetupPageProps> = ({
     }
   };
 
-  const handleMainTabClick = (tab: ActiveSettingsTab) => setActiveSettingsTab(tab);
+  const handleMainTabClick = (tab: ActiveSettingsTab) => {
+    audioService.playClick();
+    setActiveSettingsTab(tab);
+  };
 
   const currentOrigin = typeof window !== 'undefined' ? window.location.origin : 'unknown';
   const localModelOptions = useMemo(() => availableOllamaModels.map(m => ({ label: m, value: m })), [availableOllamaModels]);
@@ -498,6 +502,7 @@ export const SetupPage: React.FC<SetupPageProps> = ({
                     <div className="flex flex-col h-full overflow-y-auto animate-fade-in">
                         <SettingRow label="Storage Vault" desc="Current active directory for all local generative artifacts.">
                              <button onClick={async () => {
+                                 audioService.playClick();
                                  const handle = await fileSystemManager.selectAndSetAppDataDirectory();
                                  if (handle) {
                                      setAppDataDirectory(fileSystemManager.appDirectoryName);
@@ -508,7 +513,7 @@ export const SetupPage: React.FC<SetupPageProps> = ({
                              </button>
                         </SettingRow>
                         <SettingRow label="Cold Reboot" desc="Clear application cache and force-reload the interface.">
-                             <button onClick={() => setIsRestartModalOpen(true)} className="form-btn bg-warning text-warning-content border-warning px-6">RELOAD ENGINE</button>
+                             <button onClick={() => { audioService.playClick(); setIsRestartModalOpen(true); }} className="form-btn bg-warning text-warning-content border-warning px-6">RELOAD ENGINE</button>
                         </SettingRow>
                     </div>
                 );
@@ -534,7 +539,7 @@ export const SetupPage: React.FC<SetupPageProps> = ({
                      <div className="flex flex-col h-full overflow-y-auto animate-fade-in">
                          <SettingRow label="Sync & Reorganize" desc="Verify manifests and move files to correct category folders.">
                             <button 
-                                onClick={handleIntegrityCheck} 
+                                onClick={() => { audioService.playClick(); handleIntegrityCheck(); }} 
                                 disabled={isSyncing}
                                 className="form-btn px-6"
                             >
@@ -543,7 +548,7 @@ export const SetupPage: React.FC<SetupPageProps> = ({
                         </SettingRow>
                         <SettingRow label="Full Archival Export" desc="Generate a complete ZIP archive of all local data and files.">
                              <button 
-                                onClick={() => createZipAndDownload([], 'kollektiv_backup.zip')} 
+                                onClick={() => { audioService.playClick(); createZipAndDownload([], 'kollektiv_backup.zip'); }} 
                                 disabled={isWorking}
                                 className="form-btn form-btn-primary px-6"
                             >
@@ -551,7 +556,7 @@ export const SetupPage: React.FC<SetupPageProps> = ({
                             </button>
                         </SettingRow>
                         <SettingRow label="Registry Purge" desc="Irreversible deletion of all settings, prompts, and media.">
-                            <button onClick={() => { setResetTarget('all'); setIsResetModalOpen(true); }} className="form-btn bg-error text-error-content border-error px-6">WIPE STORAGE</button>
+                            <button onClick={() => { audioService.playClick(); setResetTarget('all'); setIsResetModalOpen(true); }} className="form-btn bg-error text-error-content border-error px-6">WIPE STORAGE</button>
                         </SettingRow>
                      </div>
                  );
@@ -567,6 +572,14 @@ export const SetupPage: React.FC<SetupPageProps> = ({
                         {DAISYUI_DARK_THEMES.map(t => <option key={t} value={t}>{t.toUpperCase()}</option>)}
                     </select>
                 </SettingRow>
+                <SettingRow label="Ambient Visualization" desc="Toggle the high-performance cinematic background video.">
+                    <input 
+                        type="checkbox" 
+                        checked={settings.isDashboardVideoEnabled} 
+                        onChange={(e) => handleSettingsChange('isDashboardVideoEnabled', e.target.checked)} 
+                        className="toggle toggle-primary toggle-sm" 
+                    />
+                </SettingRow>
                 <SettingRow label="Dashboard Video" desc="Direct MP4 URL for the cinematic dashboard background.">
                     <div className="flex w-full md:w-96">
                         <input 
@@ -577,7 +590,7 @@ export const SetupPage: React.FC<SetupPageProps> = ({
                             placeholder="https://..."
                         />
                         <button 
-                            onClick={() => handleSettingsChange('dashboardVideoUrl', defaultLLMSettings.dashboardVideoUrl)}
+                            onClick={() => { audioService.playClick(); handleSettingsChange('dashboardVideoUrl', defaultLLMSettings.dashboardVideoUrl); }}
                             className="form-btn px-4 border-l-0"
                             title="Reset to Default"
                         >
@@ -585,22 +598,50 @@ export const SetupPage: React.FC<SetupPageProps> = ({
                         </button>
                     </div>
                 </SettingRow>
-                <SettingRow label="Standby Mode" desc="Choose the visual experience shown during system idle state.">
-                    <div className="flex bg-white/5 p-1 rounded-none border border-white/10">
-                        <button 
-                            onClick={() => handleSettingsChange('idleScreenType', 'matrix')}
-                            className={`px-4 py-2 text-[10px] font-black uppercase tracking-widest transition-all ${settings.idleScreenType === 'matrix' ? 'bg-primary text-primary-content shadow-lg' : 'text-white/40 hover:text-white'}`}
-                        >
-                            Falling Codes
-                        </button>
-                        <button 
-                            onClick={() => handleSettingsChange('idleScreenType', 'gallery')}
-                            className={`px-4 py-2 text-[10px] font-black uppercase tracking-widest transition-all ${settings.idleScreenType === 'gallery' ? 'bg-primary text-primary-content shadow-lg' : 'text-white/40 hover:text-white'}`}
-                        >
-                            Neural Gallery
-                        </button>
-                    </div>
+                <SettingRow label="Standby Mode" desc="Enable or disable the system idle protection screen.">
+                    <input 
+                        type="checkbox" 
+                        checked={settings.isIdleEnabled} 
+                        onChange={(e) => { audioService.playClick(); handleSettingsChange('isIdleEnabled', e.target.checked); }} 
+                        className="toggle toggle-primary toggle-sm" 
+                    />
                 </SettingRow>
+                {settings.isIdleEnabled && (
+                    <>
+                        <SettingRow label="Standby Experience" desc="Choose the visual experience shown during system idle state.">
+                            <div className="flex bg-white/5 p-1 rounded-none border border-white/10">
+                                <button 
+                                    onClick={() => { audioService.playClick(); handleSettingsChange('idleScreenType', 'matrix'); }}
+                                    className={`px-4 py-2 text-[10px] font-black uppercase tracking-widest transition-all ${settings.idleScreenType === 'matrix' ? 'bg-primary text-primary-content shadow-lg' : 'text-white/40 hover:text-white'}`}
+                                >
+                                    Falling Codes
+                                </button>
+                                <button 
+                                    onClick={() => { audioService.playClick(); handleSettingsChange('idleScreenType', 'gallery'); }}
+                                    className={`px-4 py-2 text-[10px] font-black uppercase tracking-widest transition-all ${settings.idleScreenType === 'gallery' ? 'bg-primary text-primary-content shadow-lg' : 'text-white/40 hover:text-white'}`}
+                                >
+                                    Neural Gallery
+                                </button>
+                            </div>
+                        </SettingRow>
+                        <SettingRow label="Standby Delay" desc="Time of inactivity forced before the system enters standby (Minutes).">
+                            <div className="flex items-center gap-4">
+                                <input 
+                                    type="number" 
+                                    min={1} 
+                                    max={60} 
+                                    value={settings.idleTimeoutMinutes} 
+                                    onChange={(e) => { 
+                                        const val = parseInt(e.target.value) || 1;
+                                        handleSettingsChange('idleTimeoutMinutes', Math.max(1, Math.min(60, val))); 
+                                    }} 
+                                    className="form-input w-20 text-center font-mono font-bold bg-base-300" 
+                                />
+                                <span className="text-[10px] font-black uppercase tracking-widest text-base-content/40">Min</span>
+                            </div>
+                        </SettingRow>
+                    </>
+                )}
                 <SettingRow label="Interface Scale" desc="Global font sizing for the dashboard and workspaces.">
                      <div className="flex items-center gap-4 w-48">
                         <input type="range" min={10} max={18} value={settings.fontSize} onChange={(e) => handleSettingsChange('fontSize', Number((e.currentTarget as any).value))} className="range range-xs range-primary" />
@@ -653,7 +694,7 @@ export const SetupPage: React.FC<SetupPageProps> = ({
                                     <div className="space-y-4">
                                         <div className="flex w-full md:w-[620px]">
                                             <input type="text" value={settings.ollamaCloudBaseUrl} onChange={(e) => handleSettingsChange('ollamaCloudBaseUrl', (e.currentTarget as any).value)} className="form-input flex-1" placeholder="https://api.ollama-host.com" />
-                                            <button onClick={() => handleTestOllamaConnection(true)} disabled={isTestingOllama} className="form-btn px-4 border-l-0">{isTestingOllama ? '...' : 'PING'}</button>
+                                            <button onClick={() => { audioService.playClick(); handleTestOllamaConnection(true); }} disabled={isTestingOllama} className="form-btn px-4 border-l-0">{isTestingOllama ? '...' : 'PING'}</button>
                                         </div>
                                         {ollamaTestResult && (
                                             <div className={`flex items-center gap-2 text-[9px] font-black uppercase tracking-widest px-3 py-1.5 border ${ollamaTestResult.success ? 'bg-success/5 border-success/30 text-success' : 'bg-error/5 border-error/30 text-error'} animate-fade-in md:w-[620px]`}>
@@ -691,7 +732,7 @@ export const SetupPage: React.FC<SetupPageProps> = ({
                                      <div className="space-y-4">
                                         <div className="flex w-full md:w-[620px]">
                                             <input type="text" value={settings.ollamaBaseUrl} onChange={(e) => handleSettingsChange('ollamaBaseUrl', (e.currentTarget as any).value)} className="form-input flex-1" />
-                                            <button onClick={() => handleTestOllamaConnection(false)} disabled={isTestingOllama} className="form-btn px-4 border-l-0">PING</button>
+                                            <button onClick={() => { audioService.playClick(); handleTestOllamaConnection(false); }} disabled={isTestingOllama} className="form-btn px-4 border-l-0">PING</button>
                                         </div>
                                         {ollamaTestResult && (
                                             <div className={`flex items-center gap-2 text-[9px] font-black uppercase tracking-widest px-3 py-1.5 border ${ollamaTestResult.success ? 'bg-success/5 border-success/30 text-success' : 'bg-error/5 border-error/30 text-error'} animate-fade-in md:w-[620px]`}>
@@ -745,10 +786,10 @@ export const SetupPage: React.FC<SetupPageProps> = ({
                                             <p className="text-[10px] font-mono opacity-40 truncate">{settings.googleIdentity.email}</p>
                                         </div>
                                     </div>
-                                    <button onClick={handleGoogleDisconnect} className="form-btn text-error px-4">Revoke Access</button>
+                                    <button onClick={() => { audioService.playClick(); handleGoogleDisconnect(); }} className="form-btn text-error px-4">Revoke Access</button>
                                 </div>
                             ) : (
-                                <button onClick={() => handleAuthConnect('google')} className="form-btn px-6">AUTHENTICATE WITH GOOGLE</button>
+                                <button onClick={() => { audioService.playClick(); handleAuthConnect('google'); }} className="form-btn px-6">AUTHENTICATE WITH GOOGLE</button>
                             )}
                         </SettingRow>
                         <SettingRow label="Session Status" desc="Current encryption status of the cloud identity link.">
@@ -781,25 +822,11 @@ export const SetupPage: React.FC<SetupPageProps> = ({
                                             <p className="text-[10px] font-mono opacity-40 uppercase">{settings.youtube.subscriberCount} Subscribers</p>
                                         </div>
                                     </div>
-                                    <button onClick={() => handleSettingsChange('youtube', { ...settings.youtube, isConnected: false })} className="form-btn text-error px-4">Unlink Channel</button>
+                                    <button onClick={() => { audioService.playClick(); handleSettingsChange('youtube', { ...settings.youtube, isConnected: false }); }} className="form-btn text-error px-4">Unlink Channel</button>
                                 </div>
                             ) : (
-                                <button onClick={() => handleAuthConnect('youtube')} className="form-btn px-6">LINK CHANNEL</button>
+                                <button onClick={() => { audioService.playClick(); handleAuthConnect('youtube'); }} className="form-btn px-6">LINK CHANNEL</button>
                             )}
-                        </SettingRow>
-                    </div>
-                );
-            case 'instagram':
-                return (
-                    <div className="flex flex-col h-full overflow-y-auto animate-fade-in">
-                        <SettingRow label="Developer Key" desc="Meta for Developers Client Key.">
-                            <input type="text" value={settings.instagram?.clientKey || ''} onChange={(e) => handleSettingsChange('instagram', { ...settings.instagram, clientKey: e.target.value })} className="form-input w-full max-w-md" placeholder="CLIENT_KEY" />
-                        </SettingRow>
-                        <SettingRow label="Secret Fragment" desc="Meta for Developers Client Secret.">
-                            <input type="password" value={settings.instagram?.clientSecret || ''} onChange={(e) => handleSettingsChange('instagram', { ...settings.instagram, clientSecret: e.target.value })} className="form-input w-full max-w-md" placeholder="CLIENT_SECRET" />
-                        </SettingRow>
-                        <SettingRow label="Instagram Link" desc="Authenticate with Instagram for artifact distribution.">
-                             <button className="form-btn px-6" disabled>UNAVAILABLE IN ALPHA</button>
                         </SettingRow>
                     </div>
                 );
@@ -826,7 +853,7 @@ export const SetupPage: React.FC<SetupPageProps> = ({
                 return (
                     <div className="flex flex-col h-full overflow-y-auto animate-fade-in">
                         <SettingRow label="Batch Ingestion" desc="Import multiple prompts from a ZIP archive containing .txt files.">
-                            <button onClick={() => setIsTxtImportModalOpen(true)} className="form-btn px-6">
+                            <button onClick={() => { audioService.playClick(); setIsTxtImportModalOpen(true); }} className="form-btn px-6">
                                 <UploadIcon className="w-4 h-4 mr-2" />
                                 OPEN IMPORT MODULE
                             </button>
@@ -856,7 +883,7 @@ export const SetupPage: React.FC<SetupPageProps> = ({
                 return (
                     <div className="flex flex-col h-full overflow-y-auto animate-fade-in">
                         <SettingRow label="Bulk Export" desc="Package all gallery artifacts into a single ZIP archive for backup.">
-                            <button onClick={() => createZipAndDownload([], 'gallery_archive.zip')} className="form-btn form-btn-primary px-6">
+                            <button onClick={() => { audioService.playClick(); createZipAndDownload([], 'gallery_archive.zip'); }} className="form-btn form-btn-primary px-6">
                                 <DownloadIcon className="w-4 h-4 mr-2" />
                                 DOWNLOAD VAULT
                             </button>
@@ -884,9 +911,39 @@ export const SetupPage: React.FC<SetupPageProps> = ({
   const navScrollRef = useRef<HTMLDivElement>(null);
   const mainScrollRef = useRef<HTMLDivElement>(null);
 
+  const panelVariants = {
+    hidden: { 
+        clipPath: 'inset(100% 0 0 0)',
+        opacity: 0,
+    },
+    visible: (custom: number) => ({ 
+        clipPath: 'inset(0% 0 0 0)',
+        opacity: 1,
+        transition: { 
+            duration: 1.0, 
+            ease: [0.16, 1, 0.3, 1] as any,
+            delay: typeof custom === 'number' ? custom : 0
+        }
+    }),
+    exit: {
+        clipPath: 'inset(100% 0 0 0)',
+        opacity: 0,
+        transition: {
+            duration: 0.6,
+            ease: [0.7, 0, 0.84, 0] as any,
+        }
+    }
+  };
+
   return (
     <>
-    <section className="flex flex-row h-full bg-transparent w-full relative overflow-visible">
+    <motion.section 
+        variants={panelVariants}
+        initial="hidden"
+        animate={isExiting ? "exit" : "visible"}
+        exit="exit"
+        className="flex flex-row h-full bg-transparent w-full relative overflow-visible"
+    >
       <div className="flex flex-row h-full w-full overflow-hidden relative z-10 bg-transparent gap-4">
 
         <aside className="w-80 flex-shrink-0 flex flex-col relative p-[3px] corner-frame overflow-visible h-full bg-transparent">
@@ -921,15 +978,15 @@ export const SetupPage: React.FC<SetupPageProps> = ({
                     <div className="flex-shrink-0 px-6 py-2 overflow-x-auto">
                         <div className="form-tab-group">
                             {currentSubTabs.map(tab => (
-                                <button key={tab.id} onClick={() => setActiveSubTab(tab.id)} className={`form-tab-item ${activeSubTab === tab.id ? 'active' : ''}`}>{tab.label}</button>
+                                <button key={tab.id} onClick={() => { audioService.playClick(); setActiveSubTab(tab.id); }} className={`form-tab-item ${activeSubTab === tab.id ? 'active' : ''}`}>{tab.label}</button>
                             ))}
                         </div>
                     </div>
                 )}
                 <div ref={mainScrollRef} className="flex-grow overflow-y-auto">{renderActiveTabContent()}</div>
                 <footer className="flex flex-row p-0 overflow-hidden flex-shrink-0 panel-footer">
-                    <button onClick={handleCancel} className="form-btn flex-1">Abort</button>
-                    <button onClick={saveSettings} className="form-btn form-btn-primary flex-1 shadow-lg">Confirm</button>
+                    <button onClick={() => { audioService.playClick(); handleCancel(); }} className="form-btn flex-1">Abort</button>
+                    <button onClick={() => { audioService.playClick(); saveSettings(); }} className="form-btn form-btn-primary flex-1 shadow-lg">Confirm</button>
                 </footer>
             </div>
             {/* Manual Corner Accents */}
@@ -944,7 +1001,7 @@ export const SetupPage: React.FC<SetupPageProps> = ({
       <div className="absolute -top-[1px] -right-[1px] w-3 h-3 border-t border-r border-primary/15 z-20 pointer-events-none" />
       <div className="absolute -bottom-[1px] -left-[1px] w-3 h-3 border-b border-l border-primary/15 z-20 pointer-events-none" />
       <div className="absolute -bottom-[1px] -right-[1px] w-3 h-3 border-b border-r border-primary/15 z-20 pointer-events-none" />
-    </section>
+    </motion.section>
       {modalFeedback && <FeedbackModal isOpen={!!modalFeedback} onClose={() => setModalFeedback(null)} message={modalFeedback.message} type={modalFeedback.type} />}
       <ConfirmationModal isOpen={isRestartModalOpen} onClose={() => setIsRestartModalOpen(false)} onConfirm={() => window.location.reload()} title="RELOAD REQUEST" message="Purge neuronal state and restart interface?" btnClassName="btn-warning" />
       <ConfirmationModal 

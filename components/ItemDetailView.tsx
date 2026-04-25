@@ -13,6 +13,7 @@ import { useSettings } from '../contexts/SettingsContext';
 import LoadingSpinner from './LoadingSpinner';
 import AutocompleteSelect from './AutocompleteSelect';
 import YouTubePublishModal from './YouTubePublishModal';
+import { audioService } from '../services/audioService';
 
 interface ItemDetailViewProps {
   items: GalleryItem[];
@@ -173,7 +174,11 @@ const Thumbnail: React.FC<{
     return (
         <div className={`flex-shrink-0 flex flex-col items-center gap-2 group/thumb transition-all duration-300 ${isEditing ? 'w-16' : 'w-12'}`}>
             <div 
-                onClick={(e) => { e.preventDefault(); onClick(); }} 
+                onClick={(e) => { 
+                    e.preventDefault(); 
+                    audioService.playClick();
+                    onClick(); 
+                }} 
                 className={`relative w-12 h-12 aspect-square overflow-hidden transition-all duration-300 ease-out focus:outline-none cursor-pointer ${isActive ? 'scale-110 z-20 opacity-100 ring-2 ring-primary ring-offset-2 ring-offset-black' : 'opacity-40 hover:opacity-100'}`}
             >
                 {blobUrl ? (type === 'video' ? <video src={blobUrl} className="w-full h-full object-cover bg-black" /> : <img src={blobUrl} alt="Thumb" className="w-full h-full object-cover bg-black" />) : <div className="w-full h-full bg-transparent animate-pulse" />}
@@ -185,6 +190,7 @@ const Thumbnail: React.FC<{
                     onClick={(e) => { 
                         e.stopPropagation(); 
                         e.preventDefault();
+                        audioService.playClick();
                         onRemove?.(); 
                     }} 
                     className="w-5 h-5 flex items-center justify-center bg-red-600/90 text-white rounded-full shadow-lg opacity-40 group-hover/thumb:opacity-100 transition-all hover:scale-125 hover:bg-red-500 active:scale-90"
@@ -360,6 +366,7 @@ const ItemDetailView: React.FC<ItemDetailViewProps> = ({ items, currentIndex, is
   }, []);
 
   const handleClose = useCallback(() => {
+    audioService.playClick();
     if (timelineRef.current) {
         timelineRef.current.reverse().eventCallback("onReverseComplete", () => {
             onClose();
@@ -370,6 +377,7 @@ const ItemDetailView: React.FC<ItemDetailViewProps> = ({ items, currentIndex, is
   }, [onClose]);
 
   const handleSave = () => {
+    audioService.playClick();
     if (item) {
         onUpdate(item.id, { 
             title, notes, prompt, 
@@ -383,6 +391,7 @@ const ItemDetailView: React.FC<ItemDetailViewProps> = ({ items, currentIndex, is
   };
 
   const handleCancel = () => {
+      audioService.playClick();
       if (item) {
           setTitle(item.title);
           setNotes(item.notes || '');
@@ -422,6 +431,7 @@ const ItemDetailView: React.FC<ItemDetailViewProps> = ({ items, currentIndex, is
   };
 
   const handleInnerNavigate = (dir: 'next' | 'prev') => {
+      audioService.playClick();
       const list = (isEditing ? editableSamples.map(s => s.url) : item?.urls || []); 
       const len = list.length; 
       if (len <= 1) return;
@@ -431,18 +441,21 @@ const ItemDetailView: React.FC<ItemDetailViewProps> = ({ items, currentIndex, is
   };
 
   const handleGlobalNavigate = (dir: 'next' | 'prev') => {
+      audioService.playClick();
       setNavDirection(dir); 
       const nextIdx = dir === 'next' ? (currentIndex + 1) % items.length : (currentIndex - 1 + items.length) % items.length;
       onNavigate(nextIdx);
   };
 
   const handleCopyPrompt = () => {
+      audioService.playClick();
       navigator.clipboard.writeText(item.prompt || '');
       setIsCopied(true);
       setTimeout(() => setIsCopied(false), 2000);
   };
 
   const handlePublishClick = async () => {
+      audioService.playClick();
       if (!item || item.type !== 'video') return;
       try {
           const blob = await fileSystemManager.getFileAsBlob(item.urls[activeImageIndex]);
@@ -551,7 +564,7 @@ const ItemDetailView: React.FC<ItemDetailViewProps> = ({ items, currentIndex, is
             <aside ref={rightPanelRef} className="w-full lg:w-96 flex flex-col overflow-hidden border-l border-white/5 bg-base-100/40 backdrop-blur-xl">
                 <header ref={headerRef} className="flex-shrink-0 h-16 px-6 flex items-center justify-between border-b border-white/5 bg-base-100/10 backdrop-blur-md">
                     <div className="flex items-center gap-3">
-                        <button onClick={() => onTogglePin(item.id)} className={`p-1.5 transition-all ${isPinned ? 'text-primary' : 'text-base-content/20 hover:text-base-content/60'}`}>
+                        <button onClick={(e) => { e.stopPropagation(); audioService.playClick(); onTogglePin(item.id); }} className={`p-1.5 transition-all ${isPinned ? 'text-primary' : 'text-base-content/20 hover:text-base-content/60'}`}>
                             <ThumbTackIcon className="w-5 h-5" />
                         </button>
                         <span className="text-[10px] font-nunito font-bold uppercase tracking-[0.2em] text-base-content/40">Details</span>
@@ -588,7 +601,7 @@ const ItemDetailView: React.FC<ItemDetailViewProps> = ({ items, currentIndex, is
                                         {tags.map(tag => (
                                             <div key={tag} className="flex items-center gap-2 bg-primary/10 text-[10px] font-nunito font-bold uppercase tracking-widest px-2.1 py-0.5">
                                                 <span>{tag}</span>
-                                                <button type="button" onClick={() => setTags(tags.filter(t => t !== tag))} className="text-error hover:text-error-content transition-colors font-bold text-lg leading-none">&times;</button>
+                                                <button type="button" onClick={() => { audioService.playClick(); setTags(tags.filter(t => t !== tag)); }} className="text-error hover:text-error-content transition-colors font-bold text-lg leading-none">&times;</button>
                                             </div>
                                         ))}
                                         <input 

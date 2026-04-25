@@ -1,5 +1,5 @@
 # Kollektiv.
-### Neural Utility Suite & Creative Asset Vault
+### Precision Tools for Creative Minds
 
 Kollektiv is a high-performance, local-first application designed for prompt engineers, visual artists, and AI researchers. It synthesizes advanced linguistic refinement with a robust media management system, allowing you to bridge the gap between abstract concepts and production-ready generative artifacts.
 
@@ -8,10 +8,10 @@ Kollektiv is a high-performance, local-first application designed for prompt eng
 ## ⚡ Core Features
 
 ### 1. Neural Workspace
-*   **Prompt Crafter**: Build dynamic prompt templates using a deep wildcard system. Features a high-performance workspace with adaptive layout (25% workspace focus) and template management.
+*   **Prompt Builder**: Build dynamic prompt templates using a deep wildcard system. Features a high-performance workspace with adaptive layout and template management.
 *   **AI Refinement & Formula Architecture**: Multi-engine support powered by Google Gemini and Ollama. Transform raw ideas into model-specific formulas for **Image** (Flux, Midjourney, SDXL, Pony), **Video** (Veo, Luma, Kling, Sora), and **Audio** (Udio, Suno).
-*   **Prompt Anatomy & Formula Deconstruction**: Real-time deconstruction of prompts into thematic components (Subject, Style, Technical, Lighting) with AI-suggested variations for targeted adjustments.
-*   **Neural Abstractor**: Extract descriptive tokens and visual metadata directly from uploaded images or video frames using multimodal vision models.
+*   **Prompt Analyzer**: Real-time deconstruction of prompts into thematic components (Subject, Style, Technical, Lighting) with AI-suggested variations for targeted adjustments.
+*   **Media Analyzer**: Extract descriptive tokens and visual metadata directly from uploaded images or video frames using multimodal vision models.
 
 ### 2. The Vault (Local-First Storage)
 *   **File System Access API**: Directly manages files on your local machine. Kollektiv operates as a thin client over your chosen local folder, ensuring 100% data sovereignty.
@@ -22,17 +22,9 @@ Kollektiv is a high-performance, local-first application designed for prompt eng
 ### 3. Creative Utilities
 *   **Grid Composer**: Build professional image grids and contact sheets with custom matting, typography overlays, and ratio control (1:1, 4:5, 9:16).
 *   **Palette Extractor**: Deconstruct visual artifacts into precise chromatic tokens and atmospheric mood data.
-*   **Video Suite**: Precision frame extraction (via FFmpeg WASM) and a video joiner for temporal consistency studies and sequence merging.
+*   **Video Suite**: Precision frame extraction and video joiner for temporal consistency studies and sequence merging.
 *   **Artifact Comparison**: Synchronized viewports for pixel-accurate, side-by-side evaluation of model outputs and prompt variations.
-
-## 🛠 Tech Stack
-
-*   **Frontend**: React 19, TypeScript, Vite
-*   **Styling**: Tailwind CSS 3, DaisyUI
-*   **Animation**: GSAP (GreenSock) & Framer Motion for cinematic UI transitions and micro-interactions.
-*   **AI Engines**: Google Gemini API (`@google/genai`), Ollama (Local/Remote)
-*   **Storage**: Browser File System Access API, IndexedDB (`idb`)
-*   **Utilities**: FFmpeg.wasm, JSZip, UUID, Lottie
+*   **Image Resizer**: Batch resize with quality control for multiple aspect ratios.
 
 ---
 
@@ -71,6 +63,7 @@ Upon first launch, Kollektiv will prompt you to **Establish Local Vault Connecti
 ---
 
 ## 🎨 Theme Support
+
 Kollektiv includes specialized UI environments designed for high-focus creative sessions:
 *   **MindTurbulence**: Flagship high-contrast, neon-cyberpunk interface with sharp geometric accents.
 *   **Pip-Boy**: Retro-futuristic CRT aesthetic with digital jitter and terminal typography.
@@ -79,4 +72,4 @@ Kollektiv includes specialized UI environments designed for high-focus creative 
 
 ---
 
-Developed by **mndtrblnc** | [Civitai](https://civitai.com/user/mndtrblnc) | [Ko-fi](https://ko-fi.com/mindturbulence)
+Developed by **MINDTURBULENCE'S** | [Civitai](https://civitai.com/user/mndtrblnc) | [Ko-fi](https://ko-fi.com/mindturbulence)

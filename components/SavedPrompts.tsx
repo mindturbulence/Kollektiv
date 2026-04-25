@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useMemo, useCallback, useRef } from 'react';
+import { motion } from 'framer-motion';
 import { gsap } from 'gsap';
 import {
     loadSavedPrompts,
@@ -23,6 +24,7 @@ interface SavedPromptsProps {
   onToggleCategoryPanel: () => void;
   showGlobalFeedback: (message: string) => void;
   onClipIdea: (idea: Idea) => void;
+  isExiting?: boolean;
 }
 
 type SortOrder = 'newest' | 'oldest' | 'title';
@@ -32,7 +34,8 @@ const SavedPrompts: React.FC<SavedPromptsProps> = ({
     isCategoryPanelCollapsed, 
     onToggleCategoryPanel, 
     showGlobalFeedback, 
-    onClipIdea 
+    onClipIdea,
+    isExiting = false
 }) => {
   const [prompts, setPrompts] = useState<SavedPrompt[]>([]);
   const [categories, setCategories] = useState<PromptCategory[]>([]);
@@ -264,11 +267,41 @@ const SavedPrompts: React.FC<SavedPromptsProps> = ({
     return <div className="h-full w-full flex items-center justify-center bg-transparent"><LoadingSpinner /></div>;
   }
 
+  const panelVariants = {
+    hidden: { 
+        clipPath: 'inset(100% 0 0 0)',
+        opacity: 0,
+    },
+    visible: (custom: number) => ({ 
+        clipPath: 'inset(0% 0 0 0)',
+        opacity: 1,
+        transition: { 
+            duration: 1.0, 
+            ease: [0.16, 1, 0.3, 1] as any,
+            delay: typeof custom === 'number' ? custom : 0
+        }
+    }),
+    exit: {
+        clipPath: 'inset(100% 0 0 0)',
+        opacity: 0,
+        transition: {
+            duration: 0.6,
+            ease: [0.7, 0, 0.84, 0] as any,
+        }
+    }
+  };
+
   return (
     <>
-    <section className="flex flex-col h-full bg-transparent w-full relative p-[3px] corner-frame overflow-visible">
+    <motion.section 
+        variants={panelVariants}
+        initial="hidden"
+        animate={isExiting ? "exit" : "visible"}
+        exit="exit"
+        className="flex flex-col h-full bg-transparent w-full relative p-[3px] corner-frame overflow-hidden"
+    >
       <div className="flex flex-row h-full w-full overflow-hidden relative z-10 bg-base-100/40 backdrop-blur-xl gap-0 panel-transparent">
-        <aside className={`relative z-20 flex-shrink-0 bg-transparent border-r border-white/5 transition-all duration-300 ease-in-out flex flex-col overflow-visible ${isCategoryPanelCollapsed ? 'w-0' : 'w-80'}`}>
+        <aside className={`relative z-20 flex-shrink-0 bg-transparent border-r border-white/5 transition-all duration-300 ease-in-out flex flex-col overflow-hidden ${isCategoryPanelCollapsed ? 'w-0' : 'w-80'}`}>
           <CategoryPanelToggle isCollapsed={isCategoryPanelCollapsed} onToggle={onToggleCategoryPanel} position="right" />
           <div className={`flex flex-col h-full w-full overflow-hidden relative z-10 transition-opacity duration-200 ${isCategoryPanelCollapsed ? 'opacity-0 invisible' : 'opacity-100 visible'}`}>
             <div className="flex-shrink-0 h-14 px-6 flex items-center border-b border-white/5">
@@ -296,7 +329,7 @@ const SavedPrompts: React.FC<SavedPromptsProps> = ({
             </div>
           </div>
         </aside>
-        <main className="relative z-10 flex-1 flex flex-col h-full overflow-visible bg-transparent min-w-0">
+        <main className="relative z-10 flex-1 flex flex-col h-full overflow-hidden bg-transparent min-w-0">
           <div className="flex flex-col h-full w-full overflow-hidden relative z-10">
           {detailViewPromptId && (
             <PromptDetailView 
@@ -323,7 +356,7 @@ const SavedPrompts: React.FC<SavedPromptsProps> = ({
                           <div className="flex flex-col md:flex-row md:items-end justify-between gap-4">
                               <div className="space-y-1">
                                   <span className="text-[10px] font-black uppercase tracking-[0.6em] text-primary/60 block">LIBRARY INDEX</span>
-                                  <h1 className="text-3xl lg:text-4xl font-black tracking-tighter text-base-content leading-none uppercase font-logo">
+                                  <h1 className="text-3xl lg:text-4xl font-black tracking-tighter text-base-content leading-none uppercase font-sf-mono">
                                       {currentCategoryName}<span className="text-primary">.</span>
                                   </h1>
                               </div>
@@ -356,11 +389,11 @@ const SavedPrompts: React.FC<SavedPromptsProps> = ({
                       
                       <div className="flex items-stretch flex-shrink-0">
                           <div className="form-tab-group h-full rounded-none">
-                              <button onClick={() => { setSortOrder('newest'); setDisplayCount(30); }} className={`btn btn-xs btn-ghost h-full border-none rounded-none px-6 font-black text-[10px] tracking-widest uppercase btn-snake ${sortOrder === 'newest' ? 'active bg-primary/10 text-primary' : ''}`}>
+                              <button onClick={() => { setSortOrder('newest'); setDisplayCount(30); }} className={`btn btn-xs btn-ghost h-full border-none rounded-none px-6 font-black text-[10px] tracking-widest uppercase btn-snake ${sortOrder === 'newest' ? 'active bg-primary/10 text-primary no-glow' : 'hover:no-glow'}`}>
                                   <span/><span/><span/><span/>
                                   BY DATE
                               </button>
-                              <button onClick={() => { setSortOrder('title'); setDisplayCount(30); }} className={`btn btn-xs btn-ghost h-full border-none rounded-none px-6 font-black text-[10px] tracking-widest uppercase btn-snake ${sortOrder === 'title' ? 'active bg-primary/10 text-primary' : ''}`}>
+                              <button onClick={() => { setSortOrder('title'); setDisplayCount(30); }} className={`btn btn-xs btn-ghost h-full border-none rounded-none px-6 font-black text-[10px] tracking-widest uppercase btn-snake ${sortOrder === 'title' ? 'active bg-primary/10 text-primary no-glow' : 'hover:no-glow'}`}>
                                   <span/><span/><span/><span/>
                                   BY NAME
                               </button>
@@ -416,7 +449,7 @@ const SavedPrompts: React.FC<SavedPromptsProps> = ({
       <div className="absolute -top-[1px] -right-[1px] w-3 h-3 border-t border-r border-primary/15 z-20 pointer-events-none" />
       <div className="absolute -bottom-[1px] -left-[1px] w-3 h-3 border-b border-l border-primary/15 z-20 pointer-events-none" />
       <div className="absolute -bottom-[1px] -right-[1px] w-3 h-3 border-b border-r border-primary/15 z-20 pointer-events-none" />
-    </section>
+    </motion.section>
 
       <PromptEditorModal 
           isOpen={isEditorModalOpen} onClose={() => setIsEditorModalOpen(false)} 

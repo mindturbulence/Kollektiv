@@ -6,9 +6,10 @@ import { loadArtStyles, updateArtStyle } from '../utils/artstyleStorage';
 
 interface ArtstyleCheatsheetProps {
   onSendToPromptsPage: (state: { artStyle: string }) => void;
+  isExiting?: boolean;
 }
 
-const ArtstyleCheatsheet: React.FC<ArtstyleCheatsheetProps> = ({ onSendToPromptsPage }) => {
+const ArtstyleCheatsheet: React.FC<ArtstyleCheatsheetProps> = ({ onSendToPromptsPage, isExiting = false }) => {
   return (
     <GenericCheatsheetPage
       title="Art Styles"
@@ -17,6 +18,7 @@ const ArtstyleCheatsheet: React.FC<ArtstyleCheatsheetProps> = ({ onSendToPrompts
       loadDataFn={loadArtStyles}
       updateDataFn={updateArtStyle}
       onSendToPromptsPage={(item: CheatsheetItem, _category: string) => onSendToPromptsPage({ artStyle: item.name })}
+      isExiting={isExiting}
     />
   );
 };

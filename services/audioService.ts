@@ -16,11 +16,54 @@ class AudioService {
   private ambientOscillators: OscillatorNode[] = [];
   private lastHoverTime: number = 0;
   private initPromise: Promise<void> | null = null;
+  private bufferCache: Map<string, AudioBuffer> = new Map();
 
   constructor() {
     if (typeof window !== 'undefined') {
-      this.initContext();
+      this.initContext().then(() => {
+        this.preloadSounds();
+      });
     }
+  }
+
+  private async preloadSounds() {
+    try {
+      const sounds = [
+        { key: 'click', url: '/sfx/clicks.wav' },
+        { key: 'transition', url: '/sfx/page_transition.wav' },
+        { key: 'hover', url: '/sfx/hover.wav' },
+        { key: 'slide', url: '/sfx/slide.mp3' }
+      ];
+
+      for (const sound of sounds) {
+        const response = await fetch(sound.url);
+        if (!response.ok) continue;
+        const arrayBuffer = await response.arrayBuffer();
+        if (this.ctx) {
+          const audioBuffer = await this.ctx.decodeAudioData(arrayBuffer);
+          this.bufferCache.set(sound.key, audioBuffer);
+        }
+      }
+    } catch (e) {
+      console.warn("Failed to preload sounds:", e);
+    }
+  }
+
+  private playBuffer(bufferKey: string, volume: number = 0.5): boolean {
+    const buffer = this.bufferCache.get(bufferKey);
+    if (!buffer || !this.ctx || !this.masterGain) return false;
+
+    const source = this.ctx.createBufferSource();
+    source.buffer = buffer;
+    
+    const gain = this.ctx.createGain();
+    gain.gain.value = volume;
+    
+    source.connect(gain);
+    gain.connect(this.masterGain);
+    
+    source.start(this.ctx.currentTime);
+    return true;
   }
 
   private async initContext(): Promise<void> {
@@ -152,6 +195,10 @@ class AudioService {
   playClick(): void {
     if (!this.isEnabled || !this.ctx || !this.masterGain) return;
     this.resume();
+
+    // Try to play the external click sound first
+    if (this.playBuffer('click', 0.6)) return;
+    
     const now = this.ctx.currentTime;
     
     // Low frequency definition
@@ -195,6 +242,10 @@ class AudioService {
     this.lastHoverTime = nowMs;
     
     this.resume();
+
+    // Try to play the external hover sound first
+    if (this.playBuffer('hover', 0.25)) return;
+
     const now = this.ctx.currentTime;
     
     const osc = this.createDigitalOsc(3200); // Higher freq for "Brisk" feel
@@ -245,6 +296,10 @@ class AudioService {
   playTransition(): void {
     if (!this.isEnabled || !this.ctx || !this.masterGain) return;
     this.resume();
+    
+    // Try to play the external transition sound first
+    if (this.playBuffer('transition', 0.5)) return;
+
     const now = this.ctx.currentTime;
     
     // Quick noise bursts
@@ -326,6 +381,34 @@ class AudioService {
 
   playToggle(): void {
     this.playClick();
+  }
+
+  /**
+   * Sliding sound for parent menu expansion
+   */
+  playSlide(): void {
+    if (!this.isEnabled || !this.ctx || !this.masterGain) return;
+    this.resume();
+
+    // Try to play the external slide sound first
+    if (this.playBuffer('slide', 0.4)) return;
+
+    // Fallback if buffer not loaded
+    const now = this.ctx.currentTime;
+    const osc = this.createDigitalOsc(400, 'sine');
+    const gain = this.ctx.createGain();
+
+    osc.frequency.setValueAtTime(400, now);
+    osc.frequency.linearRampToValueAtTime(800, now + 0.3);
+
+    gain.gain.setValueAtTime(0, now);
+    gain.gain.linearRampToValueAtTime(0.05, now + 0.05);
+    gain.gain.linearRampToValueAtTime(0, now + 0.3);
+
+    osc.connect(gain);
+    gain.connect(this.masterGain);
+    osc.start(now);
+    osc.stop(now + 0.3);
   }
 
   startAmbient(intensity: number = 0.2): void {

@@ -1,5 +1,7 @@
 
 import React, { useState, useEffect, useCallback } from 'react';
+import { motion } from 'framer-motion';
+import { pageHeaderVariants, pageBodyVariants, pageFooterVariants } from './AnimatedPanels';
 import type { Storyboard, Scene, GalleryItem } from '../types';
 import { loadStoryboards, createStoryboard, updateStoryboard, deleteStoryboard } from '../utils/storyboardStorage';
 import { translateStoryboardScene } from '../services/llmService';
@@ -32,7 +34,10 @@ const SceneThumbnail: React.FC<{ url: string | null }> = ({ url }) => {
     return blobUrl ? <img src={blobUrl} className="w-full h-full object-cover" alt="" /> : <div className="w-full h-full bg-transparent flex items-center justify-center"><PhotoIcon className="w-4 h-4 opacity-20" /></div>;
 };
 
-export const StoryboardPage: React.FC<{ showGlobalFeedback: (m: string, e?: boolean) => void }> = ({ showGlobalFeedback }) => {
+export const StoryboardPage: React.FC<{ 
+    showGlobalFeedback: (m: string, e?: boolean) => void,
+    isExiting?: boolean
+}> = ({ showGlobalFeedback, isExiting = false }) => {
     const { settings } = useSettings();
     const { setIsBusy } = useBusy();
     const [storyboards, setStoryboards] = useState<Storyboard[]>([]);
@@ -121,7 +126,7 @@ export const StoryboardPage: React.FC<{ showGlobalFeedback: (m: string, e?: bool
             <div className="h-full flex flex-col items-center justify-center p-12 bg-transparent">
                 <div className="text-center space-y-8 max-w-lg">
                     <ViewGridIcon className="w-20 h-20 mx-auto text-primary opacity-20" />
-                    <h1 className="text-4xl font-black tracking-tighter uppercase">STORYBOARD<span className="text-primary">.</span></h1>
+                    <h1 className="text-4xl font-black tracking-tighter uppercase font-sf-mono">STORYBOARD<span className="text-primary">.</span></h1>
                     <p className="text-sm font-bold uppercase tracking-widest text-base-content/40 leading-relaxed">Sequence temporal artifacts and synthesize narrative flow for high-fidelity video generation.</p>
                     <div className="space-y-4">
                         <button onClick={handleCreate} className="form-btn form-btn-primary w-full rounded-none font-black tracking-[0.2em] uppercase">Create New Storyboard</button>
@@ -140,13 +145,19 @@ export const StoryboardPage: React.FC<{ showGlobalFeedback: (m: string, e?: bool
     }
 
     return (
-        <div className="h-full grid grid-cols-1 lg:grid-cols-12 overflow-hidden animate-fade-in">
+        <motion.div 
+            initial="hidden"
+            animate={isExiting ? "exit" : "visible"}
+            exit="exit"
+            variants={pageBodyVariants}
+            className="h-full grid grid-cols-1 lg:grid-cols-12 overflow-hidden"
+        >
             {/* LEFT: SCENE LIST */}
-            <aside className="lg:col-span-3 flex flex-col overflow-hidden bg-base-100/40 backdrop-blur-xl">
-                <header className="h-16 px-6 flex items-center justify-between">
-                    <button onClick={() => setActiveStoryboard(null)} className="form-btn h-8 px-4 gap-2 opacity-40 hover:opacity-100"><ChevronLeftIcon className="w-4 h-4"/> BACK</button>
+            <motion.aside variants={pageBodyVariants} className="lg:col-span-3 flex flex-col overflow-hidden bg-base-100/40 backdrop-blur-xl">
+                <motion.header variants={pageHeaderVariants} className="h-16 px-6 flex items-center justify-between">
+                    <button onClick={() => setActiveStoryboard(null)} className="form-btn h-8 px-4 gap-2 opacity-40 hover:opacity-100 font-black text-[9px]"><ChevronLeftIcon className="w-4 h-4"/> BACK</button>
                     <span className="text-[10px] font-black uppercase tracking-[0.3em] text-primary/40">Scenes</span>
-                </header>
+                </motion.header>
                 <div className="flex-grow p-4 overflow-y-auto space-y-2">
                     {activeStoryboard.scenes.map((s, i) => (
                         <button 
@@ -168,17 +179,17 @@ export const StoryboardPage: React.FC<{ showGlobalFeedback: (m: string, e?: bool
                         <span className="text-[9px] font-black tracking-widest uppercase">Append Node</span>
                     </button>
                 </div>
-            </aside>
+            </motion.aside>
 
             {/* CENTER: EDITOR */}
-            <main className="lg:col-span-6 flex flex-col overflow-hidden bg-base-100/40 backdrop-blur-xl">
-                <header className="h-16 px-10 flex items-center justify-between">
+            <motion.main variants={pageBodyVariants} className="lg:col-span-6 flex flex-col overflow-hidden bg-base-100/40 backdrop-blur-xl">
+                <motion.header variants={pageHeaderVariants} className="h-16 px-10 flex items-center justify-between">
                     <input 
                         value={activeStoryboard.title} 
                         onChange={e => updateStoryboard(activeStoryboard.id, { title: e.target.value }).then(refresh)}
                         className="form-input bg-transparent border-none focus:outline-none font-black text-xl uppercase tracking-tighter w-full"
                     />
-                </header>
+                </motion.header>
                 
                 <div className="flex-grow p-10 overflow-y-auto space-y-12">
                     {activeScene ? (
@@ -229,7 +240,7 @@ export const StoryboardPage: React.FC<{ showGlobalFeedback: (m: string, e?: bool
                     )}
                 </div>
 
-                <footer className="h-20 bg-base-100/40 backdrop-blur-xl p-6 flex items-center justify-between">
+                <motion.footer variants={pageFooterVariants} className="h-20 bg-base-100/40 backdrop-blur-xl p-6 flex items-center justify-between">
                     <div className="flex gap-6 overflow-hidden max-w-lg">
                         {activeStoryboard.scenes.map((s, i) => (
                             <div key={s.id} className={`w-12 h-8 flex-shrink-0 border ${activeSceneIndex === i ? 'border-primary' : 'border-base-300 opacity-20'} overflow-hidden`}>
@@ -240,14 +251,14 @@ export const StoryboardPage: React.FC<{ showGlobalFeedback: (m: string, e?: bool
                     <div className="flex gap-2">
                         <button onClick={() => { setStbToDelete(activeStoryboard); setIsDeleteModalOpen(true); }} className="form-btn h-10 px-6 text-error opacity-40 hover:opacity-100 font-black text-[9px] uppercase tracking-widest">Purge Story</button>
                     </div>
-                </footer>
-            </main>
+                </motion.footer>
+            </motion.main>
 
             {/* RIGHT: INSPECTOR */}
-            <aside className="lg:col-span-3 flex flex-col overflow-hidden bg-base-100/40 backdrop-blur-xl">
-                <header className="h-16 px-6 flex items-center justify-between">
+            <motion.aside variants={pageBodyVariants} className="lg:col-span-3 flex flex-col overflow-hidden bg-base-100/40 backdrop-blur-xl">
+                <motion.header variants={pageHeaderVariants} className="h-16 px-6 flex items-center justify-between">
                     <span className="text-[10px] font-black uppercase tracking-[0.3em] text-primary">Neural Translaton</span>
-                </header>
+                </motion.header>
                 <div className="flex-grow p-6 space-y-8 overflow-y-auto">
                     <div className="form-control">
                         <label className="text-[10px] font-black uppercase text-base-content/40 mb-2">Target Engine</label>
@@ -269,15 +280,15 @@ export const StoryboardPage: React.FC<{ showGlobalFeedback: (m: string, e?: bool
 
                     <p className="text-[9px] font-bold text-base-content/30 uppercase leading-relaxed">This translator adapts your narrative intent to the specific visual physics and semantic weight expected by the {activeStoryboard.targetModel} architecture.</p>
                 </div>
-                <footer className="h-14 bg-base-100/40 backdrop-blur-xl flex items-stretch">
+                <motion.footer variants={pageFooterVariants} className="h-14 bg-base-100/40 backdrop-blur-xl flex items-stretch">
                     <button 
                         onClick={() => { navigator.clipboard.writeText(translatedPrompt); showGlobalFeedback("Token Copied"); }} 
                         disabled={!translatedPrompt} 
                         className="form-btn flex-1 rounded-none border-none border-r border-base-300 font-black text-[9px] tracking-widest uppercase"
                     >Copy Token</button>
                     <button className="form-btn form-btn-primary flex-1 rounded-none border-none font-black text-[9px] tracking-widest uppercase">Export PDF</button>
-                </footer>
-            </aside>
+                </motion.footer>
+            </motion.aside>
 
             <GalleryPickerModal 
                 isOpen={isPickerOpen} 
@@ -295,6 +306,6 @@ export const StoryboardPage: React.FC<{ showGlobalFeedback: (m: string, e?: bool
                 title="PURGE STORYBOARD" 
                 message={`Permanently erase archival record for "${stbToDelete?.title}"?`} 
             />
-        </div>
+        </motion.div>
     );
 };

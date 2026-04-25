@@ -31,11 +31,14 @@ export const defaultLLMSettings: LLMSettings = {
 
   // Dashboard Settings
   dashboardVideoUrl: 'https://videos.pexels.com/video-files/35977437/15254965_1920_1080_24fps.mp4',
+  isDashboardVideoEnabled: true,
 
   // Audio Settings
   musicYoutubeUrl: 'https://www.youtube.com/watch?v=jY3A06qWwfw',
   musicEnabled: true,
   idleScreenType: 'matrix',
+  isIdleEnabled: true,
+  idleTimeoutMinutes: 1,
 
   // Feature Toggles
   features: {
@@ -47,9 +50,6 @@ export const defaultLLMSettings: LLMSettings = {
 
   // Integrations
   youtube: {
-    isConnected: false
-  },
-  instagram: {
     isConnected: false
   },
   googleIdentity: {
@@ -81,6 +81,8 @@ export const loadLLMSettings = (): LLMSettings => {
             activeThemeMode: 'dark',
             musicEnabled: parsed.musicEnabled ?? defaultLLMSettings.musicEnabled,
             idleScreenType: parsed.idleScreenType ?? defaultLLMSettings.idleScreenType,
+            isIdleEnabled: parsed.isIdleEnabled ?? defaultLLMSettings.isIdleEnabled,
+            idleTimeoutMinutes: parsed.idleTimeoutMinutes ?? defaultLLMSettings.idleTimeoutMinutes,
             features: {
                 ...defaultLLMSettings.features,
                 ...(parsed.features || {})
@@ -96,10 +98,6 @@ export const loadLLMSettings = (): LLMSettings => {
             youtube: {
               ...defaultLLMSettings.youtube,
               ...(parsed.youtube || {})
-            },
-            instagram: {
-              ...defaultLLMSettings.instagram,
-              ...(parsed.instagram || {})
             },
             googleIdentity: {
                 ...defaultLLMSettings.googleIdentity,

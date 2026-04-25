@@ -17,14 +17,15 @@ import Welcome from './Welcome';
 import CustomCursor from './CustomCursor';
 import AboutModal from './AboutModal';
 import ClippingPanel from './ClippingPanel';
+import LlmStatusPanel from './LlmStatusPanel';
 import FeedbackModal from './FeedbackModal';
 import Footer from './Footer';
 import IdleOverlay from './IdleOverlay';
-import LlmStatusSwitcher from './LlmStatusSwitcher';
 import { TabTitleManager } from './TabTitleManager';
 
 // Page components
 import Dashboard from './Dashboard';
+import DiscoveryPage from './DiscoveryPage';
 import PromptsPage from './PromptsPage';
 import { StoryboardPage } from './StoryboardPage';
 import SavedPrompts from './SavedPrompts';
@@ -38,22 +39,46 @@ import ImageCompare from './ImageCompare';
 import ColorPaletteExtractor from './ColorPaletteExtractor';
 import ImageResizer from './ImageResizer';
 import { VideoToFrames } from './VideoToFrames';
+import { motion, AnimatePresence } from 'framer-motion';
+import { pageVariants } from './AnimatedPanels';
+import ChromaticText from './ChromaticText';
+
 
 type PromptsPageState = { prompt?: string, artStyle?: string, artist?: string, view?: 'enhancer' | 'composer' | 'create', id?: string } | null;
 
-class ErrorBoundary extends React.Component<{ children: React.ReactNode }, { hasError: boolean }> {
+class ErrorBoundary extends React.Component<{ children: React.ReactNode }, { hasError: boolean, error: any, errorInfo: any }> {
     constructor(props: { children: React.ReactNode }) {
         super(props);
-        this.state = { hasError: false };
+        this.state = { hasError: false, error: null, errorInfo: null };
     }
-    static getDerivedStateFromError() { return { hasError: true }; }
-    componentDidCatch(error: any, errorInfo: any) { console.error("App Crash:", error, errorInfo); }
+    static getDerivedStateFromError(error: Error) { return { hasError: true, error }; }
+    componentDidCatch(error: any, errorInfo: any) { 
+        console.error("App Crash:", error, errorInfo); 
+        this.setState({ errorInfo });
+    }
     render() {
         if (this.state.hasError) {
             return (
                 <div className="h-screen w-screen flex flex-col items-center justify-center bg-base-100 p-5 text-center">
                     <h1 className="text-4xl font-black uppercase tracking-tighter mb-4">CRITICAL ERROR</h1>
-                    <p className="text-base-content/60 font-bold uppercase tracking-widest mb-8">The application encountered an unrecoverable state.</p>
+                    <p className="text-base-content/60 font-bold uppercase tracking-widest mb-4">The application encountered an unrecoverable state.</p>
+                    
+                    <div className="bg-error/10 border border-error/20 p-4 mb-8 max-w-4xl w-full overflow-auto transition-all animate-fade-in shadow-2xl">
+                        <div className="text-xs text-error font-mono font-black uppercase tracking-widest mb-2 border-b border-error/20 pb-1">Trace Summary</div>
+                        <code className="text-xs text-error font-mono break-words whitespace-pre-wrap text-left block max-h-[30vh]">
+                            {typeof this.state.error === 'object' ? (this.state.error.stack || this.state.error.message || JSON.stringify(this.state.error)) : String(this.state.error)}
+                        </code>
+                        
+                        {this.state.errorInfo && (
+                            <>
+                                <div className="text-xs text-error font-mono font-black uppercase tracking-widest mt-4 mb-2 border-b border-error/20 pb-1">Component Stack</div>
+                                <code className="text-xs text-error/60 font-mono break-words whitespace-pre-wrap text-left block max-h-[30vh]">
+                                    {this.state.errorInfo.componentStack}
+                                </code>
+                            </>
+                        )}
+                    </div>
+
                     <div className="flex flex-col gap-4">
                         <button onClick={() => window.location.reload()} className="form-btn form-btn-primary">Restart Application</button>
                         <button
@@ -166,9 +191,9 @@ const InitialLoader: React.FC<{ status: string; progress: number | null }> = ({ 
 
             <div className="relative z-10 flex flex-col items-center">
                 <div className="overflow-hidden mb-6 px-4">
-                    <h1 ref={textWrapperRef} className="grid grid-cols-1 grid-rows-1 text-2xl md:text-4xl font-normal tracking-widest uppercase select-none items-center font-monoton">
+                    <h1 ref={textWrapperRef} className="grid grid-cols-1 grid-rows-1 text-2xl md:text-4xl font-normal tracking-widest uppercase select-none items-center font-monoton leading-none translate-y-[2px]">
                         <span className="text-base-content/10 block leading-none py-2 row-start-1 col-start-1">
-                            Kollektiv<span className="text-primary/10 italic">.</span>
+                            <ChromaticText enabled={false}>Kollektiv</ChromaticText><span className="text-primary/10 italic">.</span>
                         </span>
 
                         <div
@@ -176,7 +201,7 @@ const InitialLoader: React.FC<{ status: string; progress: number | null }> = ({ 
                             style={{ width: `${percentage}%` }}
                         >
                             <span className="text-base-content block whitespace-nowrap leading-none py-2 drop-shadow-[0_0_20px_rgba(var(--bc),0.15)]">
-                                Kollektiv<span className="text-primary italic">.</span>
+                                <ChromaticText>Kollektiv</ChromaticText><span className="text-primary italic">.</span>
                             </span>
                         </div>
                     </h1>
@@ -185,19 +210,19 @@ const InitialLoader: React.FC<{ status: string; progress: number | null }> = ({ 
                 <div className={`flex flex-col items-center gap-4 transition-all duration-500 ${percentage >= 100 ? 'opacity-0 translate-y-4' : 'opacity-100 translate-y-0'}`}>
                     <div className="flex flex-col items-center gap-2">
                         <p className="text-[10px] font-mono font-bold uppercase tracking-[0.5em] text-center text-base-content/40">
-                            {status.toUpperCase()}
+                            {(status || 'DIAGNOSTIC_ACTIVE').toUpperCase()}
                         </p>
 
                         {/* Minimal Progress Bar */}
                         <div className="w-32 h-[1px] bg-base-content/10 relative overflow-hidden">
                             <div
                                 className="absolute inset-y-0 left-0 bg-primary transition-all duration-500 ease-out"
-                                style={{ width: `${percentage}%` }}
+                                style={{ width: `${smoothPercentage}%` }}
                             />
                         </div>
 
                         <span className="text-[10px] font-mono font-bold text-primary/60">
-                            {percentage}%
+                            {smoothPercentage}%
                         </span>
                     </div>
                 </div>
@@ -207,223 +232,72 @@ const InitialLoader: React.FC<{ status: string; progress: number | null }> = ({ 
 
 };
 
-import { motion, AnimatePresence } from 'framer-motion';
-import RollingText from './RollingText';
-import TimedScrambledText from './TimedScrambledText';
-import ThemeSwitcher from './ThemeSwitcher';
-import ChromaticText from './ChromaticText';
-
-const Logo: React.FC<{ onNavigate: (tab: ActiveTab) => void }> = ({ onNavigate }) => {
-    const [scrambleTrigger, setScrambleTrigger] = useState(0);
-
-    return (
-        <button
-            onClick={() => {
-                audioService.playClick();
-                onNavigate('dashboard');
-            }}
-            onMouseEnter={() => {
-                audioService.playHover();
-                setScrambleTrigger(prev => prev + 1);
-            }}
-            className="flex items-center gap-2 group pointer-events-auto"
-        >
-            <h1 className="text-3xl font-normal tracking-widest text-base-content uppercase flex items-center font-monoton">
-                <ChromaticText>
-                    <TimedScrambledText text="Kollektiv" intervalMs={300000} trigger={scrambleTrigger} />
-                </ChromaticText>
-                <span className="text-primary italic animate-pulse drop-shadow-[0_0_10px_oklch(var(--p))] transition-all inline-block ml-0.5 font-black">.</span>
-            </h1>
-        </button>
-    );
-};
-
-const DigitalOscillator = ({ state = 'idle', theme = 'light' }: { state: string, theme?: 'light' | 'dark' }) => {
-    const canvasRef = useRef<HTMLCanvasElement>(null);
-    const animationRef = useRef<number>(0);
-    const phaseRef = useRef<number>(0);
-
-    useEffect(() => {
-        const canvas = canvasRef.current;
-        if (!canvas) return;
-        const ctx = canvas.getContext('2d');
-        if (!ctx) return;
-
-        const draw = () => {
-            const w = canvas.width;
-            const h = canvas.height;
-            const centerY = h / 2;
-
-            ctx.clearRect(0, 0, w, h);
-
-            const color = '#ffffff';
-
-            phaseRef.current += 0.05;
-            const p = phaseRef.current;
-
-            const layers = [
-                { amp: 0.2, freq: 0.05, speed: 1.0, opacity: state === 'idle' ? 0.3 : 0.1 },
-                { amp: 0.4, freq: 0.08, speed: 1.5, opacity: state === 'idle' ? 0.5 : 0.3 },
-                { amp: 0.6, freq: 0.12, speed: 2.0, opacity: state === 'idle' ? 1.0 : 0.8 }
-            ];
-
-            layers.forEach((layer, i) => {
-                ctx.beginPath();
-                ctx.strokeStyle = color;
-                ctx.lineWidth = i === 2 ? 1.5 : 1;
-                ctx.globalAlpha = layer.opacity;
-
-                if (state === 'error') {
-                    ctx.strokeStyle = 'red';
-                    ctx.globalAlpha = Math.random() > 0.8 ? 0.8 : 0.2;
-                }
-
-                if (state === 'playing') {
-                    // Sterling style vertical bars
-                    const barWidth = 1;
-                    const gap = 2;
-                    const barCount = Math.floor(w / (barWidth + gap));
-
-                    for (let j = 0; j < barCount; j++) {
-                        const x = j * (barWidth + gap);
-                        const hFactor = Math.sin(p * (layer.speed * 0.5) + j * 0.3) * 0.5 + 0.5;
-                        const barHeight = 2 + hFactor * (h * 0.6 * layer.amp);
-
-                        ctx.moveTo(x, centerY - barHeight / 2);
-                        ctx.lineTo(x, centerY + barHeight / 2);
-                    }
-                } else {
-                    for (let x = 0; x < w; x++) {
-                        let y = centerY;
-                        if (state === 'syncing') {
-                            // Use the old 'playing' waveform for 'syncing'
-                            const noise = Math.sin(p * layer.speed + x * layer.freq) *
-                                Math.cos(p * 0.5 + x * 0.02);
-                            const spikes = Math.random() > 0.98 ? (Math.random() - 0.5) * 20 : 0;
-                            y += (noise * (h * 0.4) * layer.amp) + spikes;
-                        } else if (state === 'idle') {
-                            y = centerY;
-                        } else if (state === 'error') {
-                            y += (Math.random() - 0.5) * 2;
-                        }
-
-                        if (x === 0) ctx.moveTo(x, y);
-                        else ctx.lineTo(x, y);
-                    }
-                }
-                ctx.stroke();
-            });
-
-            animationRef.current = requestAnimationFrame(draw);
-        };
-
-        draw();
-        return () => cancelAnimationFrame(animationRef.current);
-    }, [state, theme]);
-
-    return (
-        <canvas
-            ref={canvasRef}
-            width={120}
-            height={40}
-            className="w-8 h-3 opacity-60"
-        />
-    );
-};
-
-const HUDNavItem: React.FC<{
-    children: string;
-    onClick?: (e: React.MouseEvent) => void;
-    onHover?: () => void;
-    title?: string;
-    badge?: number;
-}> = ({ children, onClick, onHover, title, badge }) => {
-    return (
-        <motion.button
-            onClick={onClick}
-            onMouseEnter={() => {
-                audioService.playHover();
-                onHover?.();
-            }}
-            initial="initial"
-            whileHover="hover"
-            className="group relative px-3 py-1 text-[13px] font-normal tracking-[0.25em] uppercase text-base-content/60 hover:text-primary transition-colors duration-300 pointer-events-auto"
-            title={title}
-        >
-            <RollingText
-                text={children}
-                hoverClassName="text-primary"
-            />
-
-            {badge !== undefined && badge > 0 && (
-                <span className="absolute top-0 right-0 flex h-2 w-2">
-                    <span className="animate-ping absolute inline-flex h-full w-full rounded-none bg-primary opacity-75"></span>
-                    <span className="relative inline-flex rounded-none h-2 w-2 bg-primary"></span>
-                </span>
-            )}
-        </motion.button>
-    );
-};
-
 interface PageFrameProps {
-    audioEnabled: boolean;
-    onAudioToggle: () => void;
-    playerState: 'idle' | 'syncing' | 'playing' | 'error';
-    onMusicToggle: () => void;
-    themeMode: 'light' | 'dark';
-    onNavigate: (tab: ActiveTab) => void;
-    onAboutClick: () => void;
-    onToggleClippingPanel: () => void;
-    onStandbyClick: (e: React.MouseEvent) => void;
-    clippedIdeasCount: number;
     isInitialized: boolean;
 }
 
 const PageFrame: React.FC<PageFrameProps> = ({
-    audioEnabled,
-    onAudioToggle,
-    playerState,
-    onMusicToggle,
-    themeMode,
-    onNavigate,
-    onAboutClick,
-    onToggleClippingPanel,
-    onStandbyClick,
-    clippedIdeasCount,
     isInitialized
 }) => {
-    const topRef = useRef<HTMLDivElement>(null);
-    const bottomRef = useRef<HTMLDivElement>(null);
-    const logoRef = useRef<HTMLDivElement>(null);
-
     // Scan Line Refs
     const scanTopRef = useRef<HTMLSpanElement>(null);
     const scanRightRef = useRef<HTMLSpanElement>(null);
     const scanBottomRef = useRef<HTMLSpanElement>(null);
     const scanLeftRef = useRef<HTMLSpanElement>(null);
 
+    const frameWrapperRef = useRef<HTMLDivElement>(null);
+
     useLayoutEffect(() => {
-        if (!isInitialized) return;
+        if (!isInitialized || !frameWrapperRef.current) return;
 
-        const tl = gsap.timeline({ delay: 2.2 }); // Start after blinds
+        // Entry animation for the main frame
+        // Slides in from all edges simultaneously
+        const frame = frameWrapperRef.current.querySelector('.main-app-frame');
+        const corners = frameWrapperRef.current.querySelectorAll('.corner-accent');
+        const markers = frameWrapperRef.current.querySelectorAll('.side-marker');
 
-        gsap.set([topRef.current, logoRef.current], { yPercent: -50, y: -20, autoAlpha: 0 });
-        gsap.set(bottomRef.current, { yPercent: 50, y: 20, autoAlpha: 0 });
+        if (frame) {
+            const tl = gsap.timeline({ delay: 0.1 });
+            
+            tl.fromTo(frame, 
+                { 
+                    scale: 1.04,
+                    autoAlpha: 1 
+                },
+                { 
+                    scale: 1,
+                    duration: 2.4,
+                    ease: "expo.out"
+                }
+            );
 
-        tl.to([topRef.current, logoRef.current], {
-            y: 0,
-            autoAlpha: 1,
-            duration: 1.2,
-            ease: "power3.out",
-            stagger: 0.1
-        });
+            if (corners.length > 0) {
+                tl.fromTo(corners,
+                    { 
+                        opacity: 0,
+                        x: (i) => (i % 2 === 0 ? -40 : 40), // contracting from edges
+                        y: (i) => (i < 2 ? -40 : 40)
+                    },
+                    {
+                        opacity: 1,
+                        x: 0,
+                        y: 0,
+                        duration: 1.8,
+                        stagger: 0.05,
+                        ease: "expo.out"
+                    },
+                    0.1
+                );
+            }
 
-        tl.to(bottomRef.current, {
-            y: 0,
-            autoAlpha: 1,
-            duration: 1.2,
-            ease: "power3.out"
-        }, "-=0.8");
+            if (markers.length > 0) {
+                tl.fromTo(markers,
+                    { opacity: 0, scaleY: 0 },
+                    { opacity: 1, scaleY: 1, duration: 1.5, ease: "expo.out" },
+                    1.2
+                );
+            }
+        }
 
         // Periodic Frame Scan Animation (Snake effect)
         // Triggered every 1 minute (60 seconds)
@@ -460,13 +334,12 @@ const PageFrame: React.FC<PageFrameProps> = ({
         ).set(scanLeftRef.current, { opacity: 0 });
 
         return () => {
-            tl.kill();
             scanTl.kill();
         };
     }, [isInitialized]);
 
     return (
-        <div className="fixed inset-0 z-[1000] pointer-events-none p-4 md:p-10">
+        <div ref={frameWrapperRef} className="fixed inset-0 z-[1000] pointer-events-none p-4 md:p-6">
             <div className="w-full h-full border border-base-content/5 relative main-app-frame">
                 {/* Dedicated Clipping Container for Scan Lines */}
                 <div className="absolute inset-0 overflow-hidden pointer-events-none z-0">
@@ -477,128 +350,19 @@ const PageFrame: React.FC<PageFrameProps> = ({
                 </div>
 
                 {/* Corner Accents */}
-                <div className="absolute -top-[1px] -left-[1px] w-4 h-4 border-t border-l border-primary/20" />
-                <div className="absolute -top-[1px] -right-[1px] w-4 h-4 border-t border-r border-primary/20" />
-                <div className="absolute -bottom-[1px] -left-[1px] w-4 h-4 border-b border-l border-primary/20" />
-                <div className="absolute -bottom-[1px] -right-[1px] w-4 h-4 border-b border-r border-primary/20" />
-
-                {/* Technical Labels - Top (Relocated Header Menus) */}
-                <div ref={topRef} className="absolute top-0 left-12 right-12 flex justify-between items-center pointer-events-auto opacity-0">
-
-                    <div className="flex gap-1 items-center">
-                        <HUDNavItem
-                            onClick={() => {
-                                audioService.playClick();
-                                onNavigate('dashboard');
-                            }}
-                        >
-                            DASHBOARD
-                        </HUDNavItem>
-                        <div className="w-px h-2 bg-base-content/10 self-center" />
-                        <HUDNavItem
-                            onClick={() => {
-                                audioService.playClick();
-                                onAboutClick();
-                            }}
-                        >
-                            ABOUT
-                        </HUDNavItem>
-                        <div className="w-px h-2 bg-base-content/10 self-center" />
-                        <div className="flex items-center">
-                            <ThemeSwitcher compact />
-                        </div>
-                    </div>
-
-                    <div className="flex gap-1 items-center">
-                        <HUDNavItem
-                            onClick={() => {
-                                audioService.playClick();
-                                onToggleClippingPanel();
-                            }}
-                            badge={clippedIdeasCount}
-                        >
-                            CLIPBOARD
-                        </HUDNavItem>
-                        <div className="w-px h-2 bg-base-content/10 self-center" />
-                        <HUDNavItem
-                            onClick={() => {
-                                audioService.playClick();
-                                onNavigate('settings');
-                            }}
-                        >
-                            SETTINGS
-                        </HUDNavItem>
-                        <div className="w-px h-2 bg-base-content/10 self-center" />
-                        <HUDNavItem
-                            onClick={(e) => {
-                                e.stopPropagation();
-                                audioService.playClick();
-                                onStandbyClick(e);
-                            }}
-                        >
-                            STANDBY
-                        </HUDNavItem>
-                    </div>
-                </div>
-
-                {/* Center Logo */}
-                <div ref={logoRef} className="absolute top-0 left-1/2 -translate-x-1/2 flex items-center pointer-events-auto opacity-0">
-                    <Logo onNavigate={onNavigate} />
-                </div>
-
-                {/* Technical Labels - Bottom (Relocated Controls) */}
-                <div ref={bottomRef} className="absolute bottom-0 left-12 right-12 flex justify-between items-center pointer-events-auto opacity-0">
-                    <div className="flex gap-3 items-center">
-                        <span className="text-[12px] font-mono uppercase tracking-[0.3em] text-primary/60">ENGINE</span>
-                        {/* <div className="w-px h-2 bg-base-content/10 mx-1 self-center" /> */}
-                        <div className="min-w-[120px] flex items-center self-center">
-                            <LlmStatusSwitcher />
-                        </div>
-                    </div>
-
-                    <div className="flex items-center gap-4">
-                        <button
-                            onClick={onAudioToggle}
-                            className="flex items-center gap-2 text-[12px] font-mono uppercase tracking-[0.3em] transition-all"
-                        >
-                            <span className="text-primary/60">SFX</span>
-                            <span className={`${audioEnabled ? 'text-base-content/40' : 'text-base-content/20'}`}>{audioEnabled ? 'ON' : 'OFF'}</span>
-                        </button>
-                        <div className="w-px h-2 bg-base-content/10 self-center" />
-                        <button
-                            onClick={onMusicToggle}
-                            className="flex items-center gap-2 text-[12px] font-mono uppercase tracking-[0.3em] transition-all"
-                        >
-                            <span className="text-primary/60">MUSIC</span>
-                            <span className={`${playerState === 'playing' ? 'text-base-content/40' : 'text-base-content/20'}`}>
-                                {playerState === 'playing' ? 'ON' : playerState === 'syncing' ? 'SYNC' : 'OFF'}
-                            </span>
-                            <AnimatePresence mode="wait">
-                                {playerState !== 'idle' && (
-                                    <motion.div
-                                        key="oscillator"
-                                        initial={{ x: -10, opacity: 0 }}
-                                        animate={{ x: 0, opacity: 1 }}
-                                        exit={{ x: 10, opacity: 0 }}
-                                        transition={{ duration: 0.4, ease: [0.23, 1, 0.32, 1] }}
-                                        className="ml-4"
-                                    >
-                                        <DigitalOscillator state={playerState} theme={themeMode} />
-                                    </motion.div>
-                                )}
-                            </AnimatePresence>
-                        </button>
-                    </div>
-                </div>
+                <div className="absolute -top-[1px] -left-[1px] w-4 h-4 border-t border-l border-primary/20 corner-accent" />
+                <div className="absolute -top-[1px] -right-[1px] w-4 h-4 border-t border-r border-primary/20 corner-accent" />
+                <div className="absolute -bottom-[1px] -left-[1px] w-4 h-4 border-b border-l border-primary/20 corner-accent" />
+                <div className="absolute -bottom-[1px] -right-[1px] w-4 h-4 border-b border-r border-primary/20 corner-accent" />
 
                 {/* Side Markers */}
-                <div className="absolute top-1/2 left-0 -translate-x-1/2 -translate-y-1/2 flex flex-col gap-2">
+                <div className="absolute top-1/2 left-0 -translate-x-1/2 -translate-y-1/2 flex flex-col gap-2 side-marker">
                     <div className="w-[1px] h-4 bg-primary/10" />
                     <div className="w-[1px] h-[1px] bg-primary/20" />
                     <div className="w-[1px] h-4 bg-primary/10" />
                 </div>
 
-                <div className="absolute top-1/2 right-0 translate-x-1/2 -translate-y-1/2 flex flex-col gap-2">
+                <div className="absolute top-1/2 right-0 translate-x-1/2 -translate-y-1/2 flex flex-col gap-2 side-marker">
                     <div className="w-[1px] h-4 bg-primary/10" />
                     <div className="w-[1px] h-[1px] bg-primary/20" />
                     <div className="w-[1px] h-4 bg-primary/10" />
@@ -628,7 +392,6 @@ const AppContent: React.FC = () => {
     const [videoError, setVideoError] = useState(false);
 
     const hasInitializedRef = useRef(false);
-    const isTransitioningRef = useRef(false);
     const isFirstRevealRef = useRef(true);
 
     // --- IDLE STATE REFS ---
@@ -641,6 +404,7 @@ const AppContent: React.FC = () => {
     const [activeTab, setActiveTab] = useLocalStorage<ActiveTab>('activeTab', 'dashboard');
     const [isAboutModalOpen, setIsAboutModalOpen] = useState(false);
     const [isClippingPanelOpen, setIsClippingPanelOpen] = useState(false);
+    const [isLlmPanelOpen, setIsLlmPanelOpen] = useState(false);
     const [collapsedPanels, setCollapsedPanels] = useLocalStorage<Record<string, boolean>>('collapsedPanels', {});
     const [globalFeedback, setGlobalFeedback] = useState<{ message: string; type: 'success' | 'error' } | null>(null);
 
@@ -654,7 +418,12 @@ const AppContent: React.FC = () => {
         const base = "KOLLEKTIV";
         switch (activeTab) {
             case 'dashboard': return `DASHBOARD | ${base}`;
+            case 'discovery': return `DISCOVERY | ${base}`;
             case 'prompts': return `BUILDER | ${base}`;
+            case 'crafter': return `CRAFTER | ${base}`;
+            case 'refiner': return `REFINER | ${base}`;
+            case 'prompt_analyzer': return `ANALYZER | ${base}`;
+            case 'media_analyzer': return `MEDIA | ${base}`;
             case 'storyboard': return `STORYBOARD | ${base}`;
             case 'gallery': return `VAULT | ${base}`;
             case 'prompt': return `LIBRARY | ${base}`;
@@ -671,14 +440,14 @@ const AppContent: React.FC = () => {
         }
     }, [activeTab]);
 
-    const mainGridRef = useRef<HTMLDivElement>(null);
+    const transitionOverlayRef = useRef<HTMLDivElement>(null);
+    const transitionLogoRef = useRef<HTMLDivElement>(null);
+    const topOverlayPanelRef = useRef<HTMLDivElement>(null);
+    const bottomOverlayPanelRef = useRef<HTMLDivElement>(null);
     const apertureRef = useRef<HTMLDivElement>(null);
     const blindsRef = useRef<HTMLDivElement>(null);
     const appWrapperRef = useRef<HTMLDivElement>(null);
     const contentRef = useRef<HTMLDivElement>(null);
-
-    const gridRows = 10;
-    const gridCols = 12;
 
     const resetIdleTimer = useCallback((forceWake: boolean = true) => {
         if (forceWake && isIdleRef.current) {
@@ -690,11 +459,21 @@ const AppContent: React.FC = () => {
             window.clearTimeout(idleTimerRef.current);
         }
 
+        if (!settings.isIdleEnabled) return;
+
         idleTimerRef.current = window.setTimeout(() => {
             setIsIdle(true);
             isIdleRef.current = true;
-        }, 60000);
-    }, []);
+        }, settings.idleTimeoutMinutes * 60000);
+    }, [settings.isIdleEnabled, settings.idleTimeoutMinutes]);
+
+    useEffect(() => {
+        if (!settings.isIdleEnabled && isIdleRef.current) {
+            setIsIdle(false);
+            isIdleRef.current = false;
+        }
+        resetIdleTimer(false);
+    }, [settings.isIdleEnabled, resetIdleTimer]);
 
     useEffect(() => {
         const handleUserActivity = () => {
@@ -772,7 +551,8 @@ const AppContent: React.FC = () => {
         } catch (err) {
             console.error("Initialization Failure:", err);
             hasInitializedRef.current = true; // Mark as "attempted" to prevent loop
-            setGlobalFeedback({ message: "Failed to initialize system.", type: 'error' });
+            const errorMsg = err instanceof Error ? err.message : String(err);
+            setGlobalFeedback({ message: `System error: ${errorMsg}`, type: 'error' });
             setIsLoading(false);
         }
         // Removed settings dependency to prevent re-init on theme switch
@@ -786,132 +566,71 @@ const AppContent: React.FC = () => {
     }, [initializeApp]);
 
     useLayoutEffect(() => {
-        if (!isInitialized || !apertureRef.current || !isFirstRevealRef.current || !blindsRef.current) return;
+        if (!isInitialized || !apertureRef.current || !blindsRef.current || !isFirstRevealRef.current) return;
 
         isFirstRevealRef.current = false;
 
-        const tl = gsap.timeline({
-            defaults: { ease: "power4.inOut" }
-        });
-
-        const blindItems = Array.from(blindsRef.current.children) as HTMLElement[];
-
-        // Ensure blinds are visible and covering everything
-        gsap.set(apertureRef.current, { visibility: 'visible', autoAlpha: 1 });
-
-        // Set alternating origins for vertical blinds
-        blindItems.forEach((item, i) => {
-            gsap.set(item, {
-                scaleY: 1,
-                scaleX: 1,
-                transformOrigin: i % 2 === 0 ? "top" : "bottom"
+        const ctx = gsap.context(() => {
+            const tl = gsap.timeline({
+                defaults: { ease: "power4.inOut" }
             });
+
+            const blindItems = Array.from(blindsRef.current!.children) as HTMLElement[];
+
+            gsap.set(apertureRef.current, { visibility: 'visible', autoAlpha: 1 });
+
+            blindItems.forEach((item, i) => {
+                gsap.set(item, {
+                    scaleY: 1,
+                    scaleX: 1,
+                    transformOrigin: i % 2 === 0 ? "top" : "bottom"
+                });
+            });
+
+            gsap.set(appWrapperRef.current, { autoAlpha: 0 });
+            gsap.set(['.app-header', '.app-footer'], { opacity: 0 });
+
+            tl.to(blindItems, {
+                scaleY: 0,
+                duration: 1.8,
+                stagger: {
+                    each: 0.1,
+                    from: "start"
+                },
+                ease: "expo.inOut"
+            }, 0);
+
+            tl.fromTo(appWrapperRef.current, {
+                scale: 1.02,
+                autoAlpha: 1
+            }, {
+                scale: 1,
+                duration: 2.8,
+                ease: "power2.out"
+            }, 0.8);
+
+            tl.fromTo('.app-header', 
+                { y: -50, opacity: 0 },
+                { y: 0, opacity: 1, duration: 1.4, ease: "expo.out" },
+                2.8
+            );
+
+            tl.fromTo('.app-footer', 
+                { y: 50, opacity: 0 },
+                { y: 0, opacity: 1, duration: 1.4, ease: "expo.out" },
+                2.8
+            );
+
+            tl.set(apertureRef.current, { visibility: 'hidden', autoAlpha: 0 });
         });
 
-        gsap.set(appWrapperRef.current, { autoAlpha: 0 });
-
-        // Vertical Blinds effect: Each strip scales down vertically
-        tl.to(blindItems, {
-            scaleY: 0,
-            duration: 1.8,
-            stagger: {
-                each: 0.1,
-                from: "start"
-            },
-            ease: "expo.inOut"
-        }, 0);
-
-        tl.to(appWrapperRef.current, {
-            autoAlpha: 1,
-            duration: 2.0,
-            ease: "power2.out"
-        }, 0.6);
-
-        tl.set(apertureRef.current, { visibility: 'hidden', autoAlpha: 0 });
-
-        return () => { };
+        return () => ctx.revert();
     }, [isInitialized]);
 
-    const runScopedTransition = useCallback(async (targetTab: ActiveTab) => {
-        if (isTransitioningRef.current || !mainGridRef.current || !contentRef.current) return;
-        isTransitioningRef.current = true;
-        audioService.playClick();
-
-        const tl = gsap.timeline();
-
-        // Phase 1: Current content slides down and fades out
-        tl.to(contentRef.current, {
-            y: 80,
-            autoAlpha: 0,
-            duration: 0.8,
-            ease: "power2.in"
-        });
-
-        // Show grid cover
-        tl.set(mainGridRef.current, { autoAlpha: 1, visibility: 'visible' });
-
-        // Phase 2: Grid slides down to cover
-        const cells = mainGridRef.current.querySelectorAll('.transition-cell');
-        tl.fromTo(cells,
-            { y: 0, scaleY: 1 },
-            {
-                y: 100,
-                scaleY: 0.5,
-                duration: 1,
-                ease: "power3.inOut",
-                stagger: {
-                    grid: [gridRows, gridCols],
-                    from: "start",
-                    axis: "y",
-                    amount: 0.3
-                }
-            },
-            "-=0.4"
-        );
-
-        // Switch tab
-        tl.call(() => setActiveTab(targetTab));
-        tl.call(() => {
-            if (contentRef.current) {
-                gsap.set(contentRef.current, { y: -80, autoAlpha: 0 });
-            }
-        });
-
-        // Phase 3: New content slides up from below
-        tl.call(() => {
-            if (contentRef.current) {
-                gsap.fromTo(contentRef.current,
-                    { y: 80, autoAlpha: 0 },
-                    { y: 0, autoAlpha: 1, duration: 0.8, ease: "power3.out" }
-                );
-            }
-        });
-
-        // Phase 4: Grid slides back up to reveal
-        tl.to(cells,
-            {
-                y: 0,
-                scaleY: 1,
-                duration: 1,
-                ease: "power3.inOut",
-                stagger: {
-                    grid: [gridRows, gridCols],
-                    from: "end",
-                    axis: "y",
-                    amount: 0.3
-                },
-                onComplete: () => {
-                    gsap.set(mainGridRef.current, { autoAlpha: 0, visibility: 'hidden' });
-                    isTransitioningRef.current = false;
-                }
-            },
-            "-=0.6"
-        );
-    }, [setActiveTab]);
 
     const handleNavigate = (tab: ActiveTab) => {
         if (tab === activeTab) return;
-        runScopedTransition(tab);
+        setActiveTab(tab);
     };
 
     useEffect(() => {
@@ -924,6 +643,11 @@ const AppContent: React.FC = () => {
     useEffect(() => {
         let isTabAllowed = true;
         switch (activeTab) {
+            case 'prompts':
+            case 'crafter':
+            case 'refiner':
+            case 'prompt_analyzer':
+            case 'media_analyzer': isTabAllowed = true; break;
             case 'prompt': isTabAllowed = features.isPromptLibraryEnabled; break;
             case 'gallery': isTabAllowed = features.isGalleryEnabled; break;
             case 'cheatsheet':
@@ -944,7 +668,20 @@ const AppContent: React.FC = () => {
 
     const handleSendToPromptsPage = useCallback((state: PromptsPageState) => {
         setPromptsPageState(state);
-        handleNavigate('prompts');
+        
+        // Map internal views to top-level navigation tabs
+        let targetTab: ActiveTab = 'crafter';
+        if (state?.view === 'enhancer') {
+            targetTab = 'refiner';
+        } else if (state?.view === 'composer' || state?.view === 'create') {
+            targetTab = 'crafter';
+        } else {
+            // Fallback to generic prompts tab if needed, 
+            // but user wants them separate so we prefer the specific ones
+            targetTab = 'crafter'; 
+        }
+
+        handleNavigate(targetTab);
         showGlobalFeedback('Sent to Builder!');
     }, [showGlobalFeedback, handleNavigate]);
 
@@ -987,21 +724,26 @@ const AppContent: React.FC = () => {
         };
 
         switch (activeTab) {
-            case 'dashboard': return <Dashboard onNavigate={handleNavigate} onClipIdea={handleClipIdea} />;
-            case 'prompts': return <PromptsPage onClipIdea={handleClipIdea} initialState={promptsPageState} onStateHandled={() => setPromptsPageState(null)} showGlobalFeedback={showGlobalFeedback} />;
-            case 'storyboard': return <StoryboardPage showGlobalFeedback={showGlobalFeedback} />;
-            case 'prompt': return <SavedPrompts {...categoryPanelProps} onSendToEnhancer={(prompt) => handleSendToPromptsPage({ prompt, view: 'enhancer' })} showGlobalFeedback={showGlobalFeedback} onClipIdea={handleClipIdea} />;
-            case 'gallery': return <ImageGallery {...categoryPanelProps} isSidebarPinned={false} showGlobalFeedback={showGlobalFeedback} />;
-            case 'cheatsheet': return <Cheatsheet />;
-            case 'artstyles': return <ArtstyleCheatsheet onSendToPromptsPage={(state) => handleSendToPromptsPage({ ...state, view: 'enhancer' })} />;
-            case 'artists': return <ArtistCheatsheet onSendToPromptsPage={(state) => handleSendToPromptsPage({ ...state, view: 'enhancer' })} />;
-            case 'settings': return <SetupPage activeSettingsTab={activeSettingsTab} setActiveSettingsTab={setActiveSettingsTab} activeSubTab={activeSettingsSubTab} setActiveSubTab={setActiveSettingsSubTabSetter} showGlobalFeedback={showGlobalFeedback} />;
-            case 'composer': return <ComposerPage showGlobalFeedback={showGlobalFeedback} />;
-            case 'image_compare': return <ImageCompare />;
-            case 'color_palette_extractor': return <ColorPaletteExtractor onClipIdea={handleClipIdea} />;
-            case 'resizer': return <ImageResizer />;
-            case 'video_to_frames': return <VideoToFrames />;
-            default: return <Dashboard onNavigate={handleNavigate} onClipIdea={handleClipIdea} />;
+            case 'dashboard': return <Dashboard key="dashboard" onNavigate={handleNavigate} onClipIdea={handleClipIdea} isExiting={false} />;
+            case 'discovery': return <DiscoveryPage key="discovery" isExiting={false} onSendToBuilder={handleSendToPromptsPage} showGlobalFeedback={showGlobalFeedback} />;
+            case 'prompts': return <PromptsPage key="prompts" onClipIdea={handleClipIdea} initialState={promptsPageState} onStateHandled={() => setPromptsPageState(null)} showGlobalFeedback={showGlobalFeedback} isExiting={false} />;
+            case 'crafter': return <PromptsPage key="crafter" forcedView="composer" onClipIdea={handleClipIdea} initialState={promptsPageState} onStateHandled={() => setPromptsPageState(null)} showGlobalFeedback={showGlobalFeedback} isExiting={false} />;
+            case 'refiner': return <PromptsPage key="refiner" forcedView="refine" onClipIdea={handleClipIdea} initialState={promptsPageState} onStateHandled={() => setPromptsPageState(null)} showGlobalFeedback={showGlobalFeedback} isExiting={false} />;
+            case 'prompt_analyzer': return <PromptsPage key="prompt_analyzer" forcedView="prompt_analyzer" onClipIdea={handleClipIdea} initialState={promptsPageState} onStateHandled={() => setPromptsPageState(null)} showGlobalFeedback={showGlobalFeedback} isExiting={false} />;
+            case 'media_analyzer': return <PromptsPage key="media_analyzer" forcedView="analyzer" onClipIdea={handleClipIdea} initialState={promptsPageState} onStateHandled={() => setPromptsPageState(null)} showGlobalFeedback={showGlobalFeedback} isExiting={false} />;
+            case 'storyboard': return <StoryboardPage key="storyboard" showGlobalFeedback={showGlobalFeedback} isExiting={false} />;
+            case 'prompt': return <SavedPrompts key="prompt" {...categoryPanelProps} onSendToEnhancer={(prompt) => handleSendToPromptsPage({ prompt, view: 'enhancer' })} showGlobalFeedback={showGlobalFeedback} onClipIdea={handleClipIdea} isExiting={false} />;
+            case 'gallery': return <ImageGallery key="gallery" {...categoryPanelProps} isSidebarPinned={false} showGlobalFeedback={showGlobalFeedback} isExiting={false} />;
+            case 'cheatsheet': return <Cheatsheet key="cheatsheet" isExiting={false} />;
+            case 'artstyles': return <ArtstyleCheatsheet key="artstyles" onSendToPromptsPage={(state) => handleSendToPromptsPage({ ...state, view: 'enhancer' })} isExiting={false} />;
+            case 'artists': return <ArtistCheatsheet key="artists" onSendToPromptsPage={(state) => handleSendToPromptsPage({ ...state, view: 'enhancer' })} isExiting={false} />;
+            case 'settings': return <SetupPage key="settings" activeSettingsTab={activeSettingsTab} setActiveSettingsTab={setActiveSettingsTab} activeSubTab={activeSettingsSubTab} setActiveSubTab={setActiveSettingsSubTabSetter} showGlobalFeedback={showGlobalFeedback} isExiting={false} />;
+            case 'composer': return <ComposerPage key="composer" showGlobalFeedback={showGlobalFeedback} isExiting={false} />;
+            case 'image_compare': return <ImageCompare key="image_compare" isExiting={false} />;
+            case 'color_palette_extractor': return <ColorPaletteExtractor key="color_palette_extractor" onClipIdea={handleClipIdea} isExiting={false} />;
+            case 'resizer': return <ImageResizer key="resizer" isExiting={false} />;
+            case 'video_to_frames': return <VideoToFrames key="video_to_frames" isExiting={false} />;
+            default: return <Dashboard key="default" onNavigate={handleNavigate} onClipIdea={handleClipIdea} isExiting={false} />;
         }
     };
 
@@ -1090,7 +832,7 @@ const AppContent: React.FC = () => {
             {/* AMBIENT VIDEO BACKGROUND */}
             {isInitialized && (
                 <div className="absolute inset-0 z-0 overflow-hidden pointer-events-none">
-                    {!videoError && settings.dashboardVideoUrl ? (
+                    {!videoError && settings.dashboardVideoUrl && settings.isDashboardVideoEnabled ? (
                         <video
                             key={settings.dashboardVideoUrl}
                             src={settings.dashboardVideoUrl}
@@ -1159,7 +901,7 @@ const AppContent: React.FC = () => {
                 <>
                     <div
                         ref={apertureRef}
-                        className="fixed inset-4 md:inset-10 z-[900] pointer-events-none"
+                        className="fixed inset-4 md:inset-6 z-[900] pointer-events-none"
                         style={{ visibility: 'hidden' }}
                     >
                         <div ref={blindsRef} className="absolute inset-0 flex flex-row">
@@ -1174,54 +916,99 @@ const AppContent: React.FC = () => {
 
                     <div
                         ref={appWrapperRef}
-                        className="w-full h-full flex flex-col overflow-hidden relative z-0 bg-transparent rounded-none p-6 md:p-14 pt-10 md:pt-16"
+                        className="w-full h-full flex flex-col overflow-hidden relative z-0 bg-transparent rounded-none p-4 md:p-6"
                     >
-                        <Header
-                            onNavigate={handleNavigate}
-                            activeTab={activeTab}
-                            isInitialized={isInitialized}
-                        />
+                        <div className="app-header flex-shrink-0">
+                            <Header
+                                onNavigate={handleNavigate}
+                                activeTab={activeTab}
+                                isInitialized={isInitialized}
+                                onAboutClick={() => setIsAboutModalOpen(true)}
+                                onToggleClippingPanel={() => setIsClippingPanelOpen(!isClippingPanelOpen)}
+                                onStandbyClick={handleStandbyClick}
+                                clippedIdeasCount={clippedIdeas.length}
+                            />
+                        </div>
 
-                        <div className={`flex-1 flex overflow-hidden relative ${activeTab === 'prompts' ? 'pt-0' : 'pt-4'} px-4 pb-4 bg-transparent`}>
-                            <main className="flex-grow min-w-0 relative overflow-hidden rounded-none bg-transparent border-none shadow-none backdrop-blur-none z-10">
+                        <div className={`flex-1 flex flex-col overflow-hidden relative ${activeTab === 'prompts' ? 'pt-0' : 'pt-0'} p-0 bg-transparent min-h-0 gap-0`}>
+                            <main className="flex-grow min-w-0 relative overflow-hidden rounded-none bg-transparent border-none shadow-none backdrop-blur-none z-10 p-4 md:p-6">
+                                {/* Cinematic Transition Overlay (Tesoro Style) */}
                                 <div
-                                    ref={mainGridRef}
-                                    className="absolute inset-0 z-[600] pointer-events-none grid"
-                                    style={{
-                                        gridTemplateColumns: `repeat(${gridCols}, 1fr)`,
-                                        gridTemplateRows: `repeat(${gridRows}, 1fr)`,
-                                        visibility: 'hidden'
-                                    }}
+                                    ref={transitionOverlayRef}
+                                    className="absolute inset-0 z-[1000] pointer-events-none flex flex-col overflow-hidden"
+                                    style={{ visibility: 'hidden' }}
                                 >
-                                    {Array.from({ length: gridRows * gridCols }).map((_, i) => (
-                                        <div key={i} className="transition-cell bg-transparent" />
-                                    ))}
+                                    <div
+                                        ref={topOverlayPanelRef}
+                                        className="bg-base-100/98 flex-1 w-full h-0"
+                                        style={{ height: '0%' }}
+                                    />
+                                    <div
+                                        ref={bottomOverlayPanelRef}
+                                        className="bg-base-100/98 flex-1 w-full h-0"
+                                        style={{ height: '0%' }}
+                                    />
+                                    <div
+                                        ref={transitionLogoRef}
+                                        className="absolute top-1/2 left-1/2 opacity-0 scale-90"
+                                    >
+                                        <h1 className="text-3xl md:text-5xl font-normal tracking-[0.4em] text-base-content uppercase font-monoton whitespace-nowrap">
+                                            <ChromaticText>Kollektiv</ChromaticText><span className="text-primary italic">.</span>
+                                        </h1>
+                                    </div>
                                 </div>
 
                                 <div ref={contentRef} className="h-full w-full z-10 relative">
-                                    {renderContent()}
+                                    <AnimatePresence mode="wait">
+                                        <motion.div
+                                            key={activeTab}
+                                            variants={pageVariants}
+                                            initial="hidden"
+                                            animate="visible"
+                                            exit="exit"
+                                            className="h-full w-full"
+                                        >
+                                            {renderContent()}
+                                        </motion.div>
+                                    </AnimatePresence>
+
+                                    <ClippingPanel
+                                        isOpen={isClippingPanelOpen}
+                                        onClose={() => setIsClippingPanelOpen(false)}
+                                        clippedIdeas={clippedIdeas}
+                                        onRemoveIdea={handleRemoveIdea}
+                                        onClearAll={handleClearAllIdeas}
+                                        onInsertIdea={handleInsertIdea}
+                                        onRefineIdea={handleRefineIdea}
+                                        onAddIdea={handleClipIdea}
+                                        onSaveToLibrary={handleSaveClippedIdea}
+                                    />
+
+                                    <LlmStatusPanel 
+                                        isOpen={isLlmPanelOpen}
+                                        onClose={() => setIsLlmPanelOpen(false)}
+                                    />
                                 </div>
                             </main>
-                        </div>
 
-                        <div className="absolute bottom-6 md:bottom-14 left-0 right-0 pointer-events-none z-[700]">
-                            <Footer />
+                            <div className="app-footer flex-shrink-0">
+                                <Footer 
+                                    audioEnabled={audioEnabled}
+                                    onAudioToggle={handleAudioToggle}
+                                    playerState={playerState}
+                                    onMusicToggle={handleMusicToggle}
+                                    themeMode={settings.activeThemeMode}
+                                    onToggleLlmPanel={() => {
+                                        audioService.playClick();
+                                        setIsLlmPanelOpen(!isLlmPanelOpen)
+                                    }}
+                                    isLlmPanelOpen={isLlmPanelOpen}
+                                />
+                            </div>
                         </div>
                     </div>
                 </>
             )}
-
-            <ClippingPanel
-                isOpen={isClippingPanelOpen}
-                onClose={() => setIsClippingPanelOpen(false)}
-                clippedIdeas={clippedIdeas}
-                onRemoveIdea={handleRemoveIdea}
-                onClearAll={handleClearAllIdeas}
-                onInsertIdea={handleInsertIdea}
-                onRefineIdea={handleRefineIdea}
-                onAddIdea={handleClipIdea}
-                onSaveToLibrary={handleSaveClippedIdea}
-            />
 
             <AboutModal
                 isOpen={isAboutModalOpen}
@@ -1243,16 +1030,6 @@ const AppContent: React.FC = () => {
             <CustomCursor />
             {isInitialized && (
                 <PageFrame
-                    audioEnabled={audioEnabled}
-                    onAudioToggle={handleAudioToggle}
-                    playerState={playerState}
-                    onMusicToggle={handleMusicToggle}
-                    themeMode={settings.activeThemeMode}
-                    onNavigate={handleNavigate}
-                    onAboutClick={() => setIsAboutModalOpen(true)}
-                    onToggleClippingPanel={() => setIsClippingPanelOpen(!isClippingPanelOpen)}
-                    onStandbyClick={handleStandbyClick}
-                    clippedIdeasCount={clippedIdeas.length}
                     isInitialized={isInitialized}
                 />
             )}

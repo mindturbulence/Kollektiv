@@ -1,5 +1,6 @@
 import React, { useEffect } from 'react';
 import { createPortal } from 'react-dom';
+import { audioService } from '../services/audioService';
 
 interface FeedbackModalProps {
   isOpen: boolean;
@@ -14,12 +15,15 @@ const FeedbackModal: React.FC<FeedbackModalProps> = ({ isOpen, onClose, message,
 
   useEffect(() => {
     if (isOpen) {
+      if (type === 'success') audioService.playSuccess();
+      else audioService.playError();
+      
       const timer = setTimeout(() => {
         onClose();
       }, effectiveDuration);
       return () => clearTimeout(timer);
     }
-  }, [isOpen, onClose, effectiveDuration]);
+  }, [isOpen, onClose, effectiveDuration, type]);
 
   if (!isOpen) return null;
 

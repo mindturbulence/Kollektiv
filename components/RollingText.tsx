@@ -21,7 +21,7 @@ const RollingText: React.FC<RollingTextProps> = ({ text, className = "", hoverCl
         <span key={i} className="relative inline-block overflow-hidden">
           {/* Top letter (original) */}
           <motion.span
-            className="inline-block"
+            className="inline-block no-glow"
             animate={isHovered ? { y: '-100%' } : { y: 0 }}
             transition={{
               duration: 0.5,
@@ -34,7 +34,7 @@ const RollingText: React.FC<RollingTextProps> = ({ text, className = "", hoverCl
           
           {/* Bottom letter (revealed on hover) */}
           <motion.span
-            className={`absolute left-0 top-full inline-block ${hoverClassName}`}
+            className={`absolute left-0 top-full inline-block no-glow ${hoverClassName}`}
             animate={isHovered ? { y: '-100%' } : { y: 0 }}
             transition={{
               duration: 0.5,

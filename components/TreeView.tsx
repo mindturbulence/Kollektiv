@@ -50,7 +50,7 @@ const TreeViewNode: React.FC<{
       <button
         onClick={handleNodeClick}
         style={{ paddingLeft: `${level * 1}rem` }}
-        className={`w-full text-left p-2 text-[11px] font-nunito transition-colors flex items-center justify-between ${isSelected ? 'text-primary' : 'text-base-content/70 hover:text-base-content'}`}
+        className={`w-full text-left p-2 text-[11px] font-nunito transition-colors flex items-center justify-between ${isSelected ? 'text-primary no-glow' : 'text-base-content/70 hover:text-base-content'}`}
       >
         <div className="flex items-center min-w-0">
           {hasChildren && (

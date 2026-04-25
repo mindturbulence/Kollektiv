@@ -1,9 +1,18 @@
+@import url('https://fonts.googleapis.com/css2?family=Nunito:wght@200;300;400;500;600;700;800;900&family=Rajdhani:wght@300;400;500;600;700&family=Space+Grotesk:wght@300;400;500;600;700&family=Space+Mono:wght@400;700&display=swap');
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
 .font-monoton {
   font-family: 'Monoton', cursive !important;
+}
+
+.font-sf-mono {
+  font-family: 'Space Mono', monospace;
+}
+
+.font-rajdhani {
+  font-family: 'Rajdhani', sans-serif !important;
 }
 
 html {
@@ -108,6 +117,9 @@ button {
     transition: 0.5s;
     border: 1px solid oklch(var(--bc) / 0.05) !important;
     letter-spacing: 0.1em;
+    text-shadow: none !important;
+    box-shadow: none !important;
+    filter: none !important;
   }
 
   .btn-snake:hover {
@@ -185,6 +197,9 @@ button {
     background-color: oklch(var(--p));
     color: oklch(var(--pc));
     border: none !important;
+    text-shadow: none !important;
+    box-shadow: none !important;
+    filter: none !important;
   }
 
   .btn-snake-primary:hover {
@@ -267,6 +282,7 @@ button {
     letter-spacing: -0.05em !important;
   }
 
+
   /* --- STANDARDIZED FORM COMPONENTS --- */
   .form-input, .form-select, .form-textarea {
     height: 2.5rem; /* 40px */
@@ -305,7 +321,7 @@ button {
     padding-left: 1.5rem;
     padding-right: 1.5rem;
     background-color: oklch(var(--b2));
-    border: 1px solid oklch(var(--bc) / 0.1);
+    border: 1px solid oklch(var(--bc) / 0.05);
     border-radius: 0;
     font-family: 'Nunito', sans-serif;
     font-size: 10px;
@@ -1708,4 +1724,11 @@ button {
     100% { transform: translate(0px, 0px); }
   }
   .box5631:nth-child(9) { animation: moveBox5631-9 4s infinite; }
+}
+
+/* --- NO GLOW UTILITY --- */
+.no-glow {
+  text-shadow: none !important;
+  filter: none !important;
+  box-shadow: none !important;
 }

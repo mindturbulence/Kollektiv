@@ -3,6 +3,7 @@ import { createPortal } from 'react-dom';
 import { gsap } from 'gsap';
 import type { Idea } from '../types';
 import { CloseIcon, DeleteIcon, SparklesIcon, BookmarkIcon, RefreshIcon, PlusIcon, ArchiveIcon, CopyIcon } from './icons';
+import { audioService } from '../services/audioService';
 
 interface ClippingPanelProps {
     isOpen: boolean;
@@ -44,7 +45,7 @@ const ManualClipModal: React.FC<{
             <div className="flex flex-col bg-transparent w-full max-w-lg mx-auto relative p-[3px] corner-frame overflow-visible" onClick={e => e.stopPropagation()}>
                 <div className="bg-base-100/40 backdrop-blur-xl rounded-none w-full flex flex-col overflow-hidden relative z-10">
                     <header className="p-8 border-b border-base-300 bg-base-200/20 relative">
-                        <button onClick={onClose} className="absolute top-6 right-6 form-btn h-8 w-8 opacity-40 hover:opacity-100">
+                        <button onClick={() => { audioService.playClick(); onClose(); }} className="absolute top-6 right-6 form-btn h-8 w-8 opacity-40 hover:opacity-100">
                             <CloseIcon className="w-6 h-6" />
                         </button>
                         <h3 className="text-3xl font-black tracking-tighter text-base-content leading-none">
@@ -77,9 +78,9 @@ const ManualClipModal: React.FC<{
                     </div>
 
                     <footer className="border-t border-base-300 flex bg-transparent p-0 overflow-hidden">
-                        <button onClick={onClose} className="form-btn flex-1 h-14 rounded-none border-r border-base-300">Abort</button>
+                        <button onClick={() => { audioService.playClick(); onClose(); }} className="form-btn flex-1 h-14 rounded-none border-r border-base-300">Abort</button>
                         <button 
-                            onClick={handleConfirm} 
+                            onClick={() => { audioService.playClick(); handleConfirm(); }} 
                             disabled={!text.trim()} 
                             className="form-btn form-btn-primary flex-1 h-14 rounded-none"
                         >
@@ -110,6 +111,7 @@ const ClippedIdeaItem: React.FC<{
     const [copied, setCopied] = useState(false);
 
     const handleCopy = useCallback(() => {
+        audioService.playClick();
         if (typeof window !== 'undefined' && (window as any).navigator?.clipboard) {
           (window as any).navigator.clipboard.writeText(idea.prompt)
             .then(() => {
@@ -145,7 +147,7 @@ const ClippedIdeaItem: React.FC<{
                             </div>
                         </div>
                         <button
-                            onClick={() => onRemove(idea.id)}
+                            onClick={() => { audioService.playClick(); onRemove(idea.id); }}
                             className="btn btn-xs btn-ghost h-8 w-8 rounded-none p-0 text-base-content/20 hover:text-error transition-colors btn-snake ml-4"
                             title="Remove clip"
                         >
@@ -172,21 +174,21 @@ const ClippedIdeaItem: React.FC<{
                         {copied ? 'COPIED' : 'COPY'}
                     </button>
                     <button
-                        onClick={() => onInsert(idea.prompt)}
+                        onClick={() => { audioService.playClick(); onInsert(idea.prompt); }}
                         className="text-[9px] font-black uppercase tracking-widest text-base-content/30 hover:text-primary transition-all flex items-center gap-1.5 group/btn"
                     >
                         <RefreshIcon className="w-3 h-3 opacity-40 group-hover/btn:opacity-100" />
                         CRAFT
                     </button>
                      <button
-                        onClick={() => onRefine(idea.prompt)}
+                        onClick={() => { audioService.playClick(); onRefine(idea.prompt); }}
                         className="text-[9px] font-black uppercase tracking-widest text-base-content/30 hover:text-primary transition-all flex items-center gap-1.5 group/btn"
                     >
                         <SparklesIcon className="w-3 h-3 opacity-40 group-hover/btn:opacity-100" />
                         REFINE
                     </button>
                     <button
-                        onClick={() => onSave(idea)}
+                        onClick={() => { audioService.playClick(); onSave(idea); }}
                         className="text-[9px] font-black uppercase tracking-widest text-base-content/30 hover:text-primary transition-all flex items-center gap-1.5 group/btn"
                     >
                         <ArchiveIcon className="w-3 h-3 opacity-40 group-hover/btn:opacity-100" />
@@ -282,7 +284,7 @@ const ClippingPanel: React.FC<ClippingPanelProps> = ({
         <>
             <div
                 ref={panelRef}
-                className="fixed top-6 right-6 bottom-6 md:top-12 md:right-12 md:bottom-12 w-[calc(100%-3rem)] md:w-[480px] bg-transparent z-[1100] translate-x-full pointer-events-none"
+                className="absolute top-0 right-0 bottom-0 w-full md:w-[480px] bg-transparent z-[50] translate-x-full pointer-events-none"
                 style={{ visibility: 'hidden' }}
                 aria-hidden={!isOpen}
             >
@@ -296,7 +298,7 @@ const ClippingPanel: React.FC<ClippingPanelProps> = ({
                             </div>
                             <div className="flex items-center gap-2">
                                 <button 
-                                    onClick={() => setIsModalOpen(true)} 
+                                    onClick={() => { audioService.playClick(); setIsModalOpen(true); }} 
                                     className="btn btn-xs btn-ghost h-8 w-8 rounded-none p-0 opacity-40 hover:opacity-100 hover:text-primary transition-all btn-snake"
                                     title="Manual Entry"
                                 >
@@ -305,7 +307,7 @@ const ClippingPanel: React.FC<ClippingPanelProps> = ({
                                 </button>
                                 {clippedIdeas.length > 0 && (
                                     <button 
-                                        onClick={onClearAll} 
+                                        onClick={() => { audioService.playClick(); onClearAll(); }} 
                                         className="btn btn-xs btn-ghost h-8 w-8 rounded-none p-0 opacity-40 hover:opacity-100 hover:text-error transition-all btn-snake"
                                         title="Purge All Clips"
                                     >
@@ -313,7 +315,7 @@ const ClippingPanel: React.FC<ClippingPanelProps> = ({
                                         <DeleteIcon className="w-5 h-5" />
                                     </button>
                                 )}
-                                <button onClick={onClose} className="btn btn-xs btn-ghost h-8 w-8 rounded-none p-0 opacity-40 hover:opacity-100 btn-snake" aria-label="Close clipping panel">
+                                <button onClick={() => { audioService.playClick(); onClose(); }} className="btn btn-xs btn-ghost h-8 w-8 rounded-none p-0 opacity-40 hover:opacity-100 btn-snake" aria-label="Close clipping panel">
                                     <span/><span/><span/><span/>
                                     <CloseIcon className="w-5 h-5" />
                                 </button>

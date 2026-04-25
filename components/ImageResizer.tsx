@@ -1,4 +1,6 @@
 import React, { useState, useRef, useCallback, useEffect } from 'react';
+import { motion } from 'framer-motion';
+import { TerminalText, PanelLine, ScanLine, panelVariants, sectionWipeVariants, contentVariants } from './AnimatedPanels';
 import JSZip from 'jszip';
 import { UploadIcon, CropIcon, LinkIcon, LinkOffIcon } from './icons';
 import { COMPOSER_PRESETS } from '../constants';
@@ -210,7 +212,11 @@ const ImageCard: React.FC<{
     )
 }
 
-const ImageResizer: React.FC = () => {
+interface ImageResizerProps {
+    isExiting?: boolean;
+}
+
+const ImageResizer: React.FC<ImageResizerProps> = ({ isExiting = false }) => {
     const [images, setImages] = useState<ImageItem[]>([]);
     const [isDownloading, setIsDownloading] = useState(false);
 
@@ -420,14 +426,38 @@ const ImageResizer: React.FC = () => {
     };
 
     return (
-        <div className="h-full bg-transparent flex flex-col overflow-hidden p-0">
+        <div className="h-full bg-transparent flex flex-col p-0 overflow-hidden relative z-0">
             <div className="flex-grow flex flex-col lg:flex-row overflow-hidden gap-4">
-                <aside className="w-full lg:w-96 flex-shrink-0 flex flex-col relative p-[3px] corner-frame overflow-visible z-10">
+                <motion.aside 
+                    variants={panelVariants}
+                    initial="hidden"
+                    animate={isExiting ? "exit" : "visible"}
+                    exit="exit"
+                    className="w-full lg:w-96 flex-shrink-0 flex flex-col relative p-[3px] corner-frame overflow-visible z-10"
+                >
+                    <PanelLine position="top" delay={0.4} />
+                    <PanelLine position="bottom" delay={0.5} />
+                    <PanelLine position="left" delay={0.6} />
+                    <PanelLine position="right" delay={0.7} />
+                    <ScanLine delay={3.5} />
                     <div className="flex flex-col h-full w-full overflow-hidden relative z-10 bg-base-100/40 backdrop-blur-xl">
-                        <header className="p-6 bg-base-100/10 backdrop-blur-md">
-                            <h3 className="text-[10px] font-black uppercase tracking-[0.4em] text-primary">Resize Settings</h3>
-                        </header>
-                        <div className="flex-grow p-6 space-y-8 overflow-y-auto bg-transparent">
+                        <motion.header 
+                            variants={sectionWipeVariants}
+                            custom={1.2}
+                            initial="hidden"
+                            animate="visible"
+                            exit="exit"
+                            className="p-6 bg-base-100/10 backdrop-blur-md"
+                        >
+                            <TerminalText text="RESIZE SETTINGS" delay={2.0} className="text-[10px] font-black uppercase text-primary" />
+                        </motion.header>
+                        <motion.div 
+                            variants={contentVariants}
+                            custom={2.2}
+                            initial="hidden"
+                            animate="visible"
+                            className="flex-grow p-6 space-y-8 overflow-y-auto bg-transparent"
+                        >
                             <div className="space-y-4">
                                 <div className="flex justify-between items-center">
                                     <label className="text-[10px] font-black uppercase tracking-widest text-base-content/40">Target Resolution</label>
@@ -492,8 +522,14 @@ const ImageResizer: React.FC = () => {
                                     </label>
                                 </div>
                             </div>
-                        </div>
-                        <footer className="h-14 flex items-stretch flex-shrink-0 bg-base-100/10 backdrop-blur-md p-1.5 gap-1.5">
+                            </motion.div>
+                        <motion.footer 
+                            variants={contentVariants}
+                            custom={2.4}
+                            initial="hidden"
+                            animate="visible"
+                            className="h-14 flex items-stretch flex-shrink-0 bg-base-100/10 backdrop-blur-md p-1.5 gap-1.5"
+                        >
                             <button
                                 onClick={handleReset}
                                 disabled={isDownloading || images.length === 0}
@@ -510,18 +546,35 @@ const ImageResizer: React.FC = () => {
                                 <span /><span /><span /><span />
                                 {isDownloading ? '...' : 'ZIP DOWNLOAD'}
                             </button>
-                        </footer>
+                        </motion.footer>
                     </div>
                     {/* Manual Corner Accents */}
                     <div className="absolute -top-[1px] -left-[1px] w-3 h-3 border-t border-l border-primary/15 z-20 pointer-events-none" />
                     <div className="absolute -top-[1px] -right-[1px] w-3 h-3 border-t border-r border-primary/15 z-20 pointer-events-none" />
                     <div className="absolute -bottom-[1px] -left-[1px] w-3 h-3 border-b border-l border-primary/15 z-20 pointer-events-none" />
                     <div className="absolute -bottom-[1px] -right-[1px] w-3 h-3 border-b border-r border-primary/15 z-20 pointer-events-none" />
-                </aside>
+                </motion.aside>
 
-                <main className="flex-grow flex flex-col relative p-[3px] corner-frame overflow-visible z-10 ml-1">
+                <motion.main 
+                    variants={panelVariants}
+                    initial="hidden"
+                    animate={isExiting ? "exit" : "visible"}
+                    exit="exit"
+                    className="flex-grow flex flex-col relative p-[3px] corner-frame overflow-visible z-10 lg:ml-1"
+                >
+                    <PanelLine position="top" delay={0.4} />
+                    <PanelLine position="bottom" delay={0.5} />
+                    <PanelLine position="left" delay={0.6} />
+                    <PanelLine position="right" delay={0.7} />
+                    <ScanLine delay={3.5} />
                     <div className="flex flex-col h-full w-full overflow-hidden relative z-10 bg-base-100/40 backdrop-blur-xl">
-                        <div className="flex-grow p-4 lg:p-6 bg-transparent relative flex flex-col overflow-hidden">
+                        <motion.div 
+                            variants={sectionWipeVariants}
+                            custom={1.6}
+                            initial="hidden"
+                            animate="visible"
+                            className="flex-grow p-4 lg:p-6 bg-transparent relative flex flex-col overflow-hidden"
+                        >
                             {images.length > 0 ? (
                                 <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 gap-4 lg:gap-6 bg-transparent overflow-y-auto w-full">
                                     {images.map(img => (
@@ -541,14 +594,14 @@ const ImageResizer: React.FC = () => {
                             ) : (
                                 <DropZone onFilesAdded={handleAddFiles} />
                             )}
-                        </div>
+                                </motion.div>
                     </div>
                     {/* Manual Corner Accents */}
                     <div className="absolute -top-[1px] -left-[1px] w-3 h-3 border-t border-l border-primary/15 z-20 pointer-events-none" />
                     <div className="absolute -top-[1px] -right-[1px] w-3 h-3 border-t border-r border-primary/15 z-20 pointer-events-none" />
                     <div className="absolute -bottom-[1px] -left-[1px] w-3 h-3 border-b border-l border-primary/15 z-20 pointer-events-none" />
                     <div className="absolute -bottom-[1px] -right-[1px] w-3 h-3 border-b border-r border-primary/15 z-20 pointer-events-none" />
-                </main>
+                </motion.main>
             </div>
         </div>
     );
