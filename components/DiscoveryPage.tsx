@@ -15,19 +15,99 @@ import {
 } from './icons';
 import { audioService } from '../services/audioService';
 import { addSavedPrompt } from '../utils/promptStorage';
+import { Idea } from '../types';
 
 interface DiscoveryPageProps {
     onSendToBuilder: (state: any) => void;
     showGlobalFeedback: (message: string, isError?: boolean) => void;
     isExiting?: boolean;
+    onClipIdea?: (idea: Idea) => void;
 }
+
+const TypewriterText: React.FC<{ text: string, speed?: number, delay?: number, onComplete?: () => void }> = ({ text, speed = 20, delay = 0, onComplete }) => {
+    const [displayedText, setDisplayedText] = useState('');
+    const [isComplete, setIsComplete] = useState(false);
+    const onCompleteRef = React.useRef(onComplete);
+
+    useEffect(() => {
+        onCompleteRef.current = onComplete;
+    }, [onComplete]);
+
+    useEffect(() => {
+        let isCancelled = false;
+        let i = 0;
+        let lastAudioPlay = 0;
+
+        setDisplayedText('');
+        setIsComplete(false);
+
+        const startTyping = () => {
+            if (isCancelled) return;
+            const typeChar = () => {
+                if (isCancelled) return;
+                if (i < text.length) {
+                    const charsToType = Math.floor(Math.random() * 3) + 1;
+                    i += charsToType;
+                    if (i > text.length) i = text.length;
+                    setDisplayedText(text.substring(0, i));
+
+                    const now = Date.now();
+                    if (now - lastAudioPlay > 40) {
+                        audioService.playHover();
+                        lastAudioPlay = now;
+                    }
+
+                    if (i < text.length) {
+                        setTimeout(typeChar, speed + Math.random() * 20);
+                    } else {
+                        setIsComplete(true);
+                        onCompleteRef.current?.();
+                    }
+                } else {
+                    setIsComplete(true);
+                    onCompleteRef.current?.();
+                }
+            };
+            typeChar();
+        };
+
+        let delayTimer: NodeJS.Timeout;
+        if (delay > 0) {
+            delayTimer = setTimeout(startTyping, delay);
+        } else {
+            startTyping();
+        }
+
+        return () => {
+            isCancelled = true;
+            clearTimeout(delayTimer);
+        };
+    }, [text, speed, delay]);
+
+    return (
+        <>
+            {displayedText}
+            {!isComplete && (
+                <span className="inline-block w-[0.4em] h-[1em] bg-current animate-[pulse_1s_ease-in-out_infinite] ml-1 align-middle translate-y-[-0.1em]" />
+            )}
+        </>
+    );
+};
 
 const DetailPanel: React.FC<{
     prompt: PromptItem | null;
     onCopy: (text: string) => void;
     onClip: (p: PromptItem) => void;
+    onClipboardClip: (p: PromptItem) => void;
     onSend: (text: string) => void;
-}> = ({ prompt, onCopy, onClip, onSend }) => {
+}> = ({ prompt, onCopy, onClip, onClipboardClip, onSend }) => {
+    const [isTitleDone, setIsTitleDone] = useState(false);
+
+    // Reset title done state when prompt changes
+    useEffect(() => {
+        setIsTitleDone(false);
+    }, [prompt?.id]);
+
     if (!prompt) {
         return (
             <div className="h-full flex flex-col items-center justify-center opacity-20 space-y-4">
@@ -41,16 +121,25 @@ const DetailPanel: React.FC<{
         <div className="h-full flex flex-col relative">
             <div className="flex-grow flex flex-col p-8 space-y-8 overflow-y-auto custom-scrollbar">
                 <div className="space-y-1">
-                    <span className="text-[9px] font-jardhani uppercase tracking-[0.2em] text-base-content/30">Title</span>
-                    <h2 className="text-[34px] font-jardhani tracking-tighter leading-tight break-all text-primary/80">{prompt.category || 'Archive Record'}</h2>
+                    <span className="text-[10px] uppercase tracking-[0.2em] text-base-content/50 shrink-0">Title</span>
+                    <h2 className="text-[34px] font-jardhani tracking-tighter leading-tight break-all text-primary/80">
+                        <TypewriterText
+                            text={prompt.category || 'Archive Record'}
+                            speed={50}
+                            onComplete={() => setIsTitleDone(true)}
+                        />
+                    </h2>
                 </div>
 
-                <div className="space-y-3">
-                    <span className="text-[9px] font-black uppercase tracking-[0.4em] text-base-content/30">Prompt Contents</span>
-                    <div className="p-6 bg-base-content/5 border border-white/5 relative overflow-hidden group">
-                        <div className="absolute top-0 left-0 w-1 h-full bg-primary/20" />
-                        <p className="text-base font-medium leading-relaxed italic text-base-content/80 transition-colors">
-                            "{prompt.prompt}"
+                <div className="space-y-3 flex-grow flex flex-col min-h-0">
+                    <span className="text-[10px] uppercase tracking-[0.2em] text-base-content/50 shrink-0">Prompt</span>
+                    <div className="p-0 bg-base-100/50 backdrop-blur-sm relative flex-grow overflow-y-auto custom-scrollbar">
+                        <p className="text-[16px] font-jardhani leading-relaxed  transition-colors">
+                            {isTitleDone ? (
+                                <TypewriterText text={prompt.prompt} speed={8} />
+                            ) : (
+                                <span className="inline-block w-[0.4em] h-[1em] bg-transparent animate-[pulse_1s_ease-in-out_infinite] ml-1 align-middle translate-y-[-0.1em]" />
+                            )}
                         </p>
                     </div>
                 </div>
@@ -65,6 +154,14 @@ const DetailPanel: React.FC<{
                 >
                     <span /><span /><span /><span />
                     Refine
+                </button>
+                <button
+                    onClick={() => onClipboardClip(prompt)}
+                    className="btn btn-sm btn-ghost h-full rounded-none flex-1 font-jardhani text-[10px] tracking-wider text-primary border-1 disabled:opacity-30 disabled:cursor-not-allowed btn-snake"
+                    title="Add to Clipboard"
+                >
+                    <span /><span /><span /><span />
+                    Clip
                 </button>
                 <button
                     onClick={() => onCopy(prompt.prompt)}
@@ -87,10 +184,86 @@ const DetailPanel: React.FC<{
     );
 };
 
+const TerminalDisplay: React.FC<{ prompt: PromptItem | null }> = ({ prompt }) => {
+    const [text, setText] = useState('');
+    const containerRef = React.useRef<HTMLDivElement>(null);
+
+    useEffect(() => {
+        if (!prompt) {
+            setText('> AWAITING ARCHIVE SELECTION_\n\n');
+            return;
+        }
+
+        const randomHex = () => Math.floor(Math.random() * 16777215).toString(16).toUpperCase().padStart(6, '0');
+        const latency = Math.floor(Math.random() * 24 + 4);
+
+        const fullText = `> ESTABLISHING SECURE PROTOCOL...
+> HANDSHAKE ACCEPTED [NODE_VER: 4.9.1.a]
+> UPLINK LATENCY: ${latency}ms || PACKET_LOSS: 0.00%
+>
+> RECORD_ID: ${prompt.id}
+> CATEGORY: ${prompt.category}
+> TITLE: ${prompt.title}
+> ENCRYPTION_MATRIX: AES-256-GCM / ${randomHex()}-${randomHex()}
+> INTEGRITY_CHECKSUM: 0x${randomHex()}${randomHex()}... VERIFIED
+>
+> INITIATING DECRYPTION...
+> EXECUTING [||||||||||||||||||||||||||||||||||||||||] 100%
+>
+${prompt.prompt}
+>
+> PAYLOAD EXTRACTED SECURELY.
+> EOF_`;
+
+        setText('');
+        let i = 0;
+        let isCancelled = false;
+        let lastAudioPlay = 0;
+
+        const typeChar = () => {
+            if (isCancelled) return;
+            if (i < fullText.length) {
+                const charsToType = Math.floor(Math.random() * 3) + 2;
+                i += charsToType;
+                if (i > fullText.length) i = fullText.length;
+                setText(fullText.substring(0, i));
+
+                const now = Date.now();
+                if (now - lastAudioPlay > 40) {
+                    audioService.playHover();
+                    lastAudioPlay = now;
+                }
+
+                // Scroll to bottom
+                if (containerRef.current) {
+                    containerRef.current.scrollTop = containerRef.current.scrollHeight;
+                }
+
+                setTimeout(typeChar, 10 + Math.random() * 20);
+            }
+        };
+        typeChar();
+
+        return () => { isCancelled = true; };
+    }, [prompt]);
+
+    return (
+        <div className="h-full w-full relative">
+            {/* Fader at the top */}
+            <div className="absolute top-0 left-0 right-0 h-12 bg-gradient-to-b from-base-100/80 to-transparent z-10 pointer-events-none" />
+            <div ref={containerRef} className="h-full w-full p-6 pt-8 font-mono text-[10px] leading-[1.6] text-primary/80 overflow-y-auto scrollbar-hide whitespace-pre-wrap break-words relative">
+                {text}
+                <span className="inline-block w-1.5 h-2.5 bg-primary/80 animate-[pulse_1s_ease-in-out_infinite] ml-1 align-middle" />
+            </div>
+        </div>
+    );
+};
+
 const DiscoveryPage: React.FC<DiscoveryPageProps> = ({
     onSendToBuilder,
     showGlobalFeedback,
-    isExiting = false
+    isExiting = false,
+    onClipIdea
 }) => {
     const [activeCollection, setActiveCollection] = useState<DiscoveryCollection | null>(null);
     const [prompts, setPrompts] = useState<PromptItem[]>([]);
@@ -230,6 +403,19 @@ const DiscoveryPage: React.FC<DiscoveryPageProps> = ({
         }
     };
 
+    const handleClipboardClip = (p: PromptItem) => {
+        if (!onClipIdea) return;
+        const newIdea: Idea = {
+            id: Date.now().toString(),
+            title: p.category + ' Idea',
+            prompt: p.prompt,
+            lens: 'Discovery',
+            source: 'Discovery'
+        };
+        onClipIdea(newIdea);
+        audioService.playClick();
+    };
+
     const handleSendToBuilder = (prompt: string) => {
         onSendToBuilder({ prompt, view: 'enhancer' });
         audioService.playClick();
@@ -247,71 +433,41 @@ const DiscoveryPage: React.FC<DiscoveryPageProps> = ({
                 <div className="flex flex-col h-full w-full bg-base-100/50 backdrop-blur-xl relative overflow-hidden">
                     <ScanLine delay={1} />
 
-                    <div className="flex-grow p-6 space-y-6 overflow-y-auto custom-scrollbar overflow-x-hidden">
-                        <div className="space-y-1 opacity-60 px-1 mb-8">
-                            <span className="text-[12px] font-black font-rajdhani uppercase tracking-[0.2em] text-primary/60 block">UPLINK</span>
-                            <h2 className="text-xl font-rajdhani text-[26px] tracking-tighter uppercase leading-none text-base-content/90">Vault Discovery</h2>
+                    {/* Left Panel Header */}
+                    <div className="h-16 flex items-center px-6 bg-base-100/10 backdrop-blur-md border-b border-primary/10 flex-shrink-0 z-20">
+                        <div className="flex items-center gap-3">
+                            <span className="text-[12px] font-rajdhani uppercase tracking-[0.2em] text-base-content/80">UPLINK - TERMINAL</span>
                         </div>
+                    </div>
 
+                    <div className="flex-grow flex flex-col h-full overflow-hidden">
                         {activeCollection && (
-                            <div className="space-y-6 px-1">
-                                <div className="space-y-4">
-                                    <div className="space-y-1">
-                                        <span className="text-[9px] font-jardhani uppercase tracking-[0.2em] text-base-content/30 italic">Active_Database</span>
-                                        <p className="text-[16px] font-rajdhani font-bold text-primary/80 uppercase tracking-wider leading-tight">{activeCollection.name}</p>
-                                    </div>
-
-                                    <div className="space-y-1">
-                                        <span className="text-[9px] font-jardhani uppercase tracking-[0.2em] text-base-content/30 italic">Repository</span>
-                                        <p className="text-[11px] font-mono text-base-content/60 break-all">{activeCollection.repo}</p>
-                                    </div>
-
-                                    <div className="space-y-1">
-                                        <span className="text-[9px] font-jardhani uppercase tracking-[0.2em] text-base-content/30 italic">Provider / Sync_Agent</span>
-                                        <p className="text-[11px] font-mono text-base-content/60 uppercase">{activeCollection.sourceType} • {activeCollection.config}</p>
-                                    </div>
-
-                                    <div className="flex flex-wrap gap-1.5 pt-2">
-                                        {activeCollection.tags.map(tag => (
-                                            <span key={tag} className="px-2 py-0.5 border border-primary/20 text-primary/40 text-[9px] font-rajdhani uppercase tracking-tighter">
-                                                {tag}
-                                            </span>
-                                        ))}
-                                    </div>
-                                </div>
-
-                                <div className="pt-8 space-y-4 border-t border-white/5">
-                                    <div className="flex items-center gap-3">
-                                        <div className={`w-2 h-2 rounded-full ${isLoading ? 'bg-primary animate-pulse' : 'bg-success shadow-[0_0_8px_rgba(34,197,94,0.4)]'}`} />
-                                        <span className="text-[10px] font-rajdhani font-bold uppercase tracking-[0.2em] text-base-content/40">
-                                            {isLoading ? 'SYNCING_BITSTREAM' : 'UPLINK_ESTABLISHED'}
-                                        </span>
-                                    </div>
-
-                                    <div className="space-y-1.5">
-                                        <div className="flex justify-between text-[8px] font-mono text-base-content/20 uppercase tracking-widest">
-                                            <span>Signal_Strength</span>
-                                            <span>99.9%</span>
-                                        </div>
-                                        <div className="h-[1px] w-full bg-white/5 relative overflow-hidden">
-                                            <motion.div
-                                                animate={{ x: ['-100%', '100%'] }}
-                                                transition={{ duration: 3, repeat: Infinity, ease: "linear" }}
-                                                className="absolute inset-y-0 w-1/3 bg-primary/20"
-                                            />
-                                            <div className="h-full w-full bg-primary/10" />
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
+                            <TerminalDisplay prompt={selectedPrompt} />
                         )}
                     </div>
 
-                    <div className="p-5 border-t border-white/10 bg-white/[0.02]">
-                        <div className="space-y-2 opacity-30">
-                            <div className="flex justify-between items-center text-[7px] font-black uppercase tracking-widest font-mono">
-                                <span>DB_IDENTIFIER</span>
-                                <span>FLUX_01</span>
+                    <div className="p-5 border-t border-white/10 bg-white/[0.02] shrink-0">
+                        <div className="space-y-4">
+                            <div className="flex items-center gap-3">
+                                <div className={`w-2 h-2 rounded-full ${isLoading ? 'bg-primary animate-pulse' : 'bg-success shadow-[0_0_8px_rgba(34,197,94,0.4)]'}`} />
+                                <span className="text-[10px] font-rajdhani font-bold uppercase tracking-[0.2em] text-base-content/40">
+                                    {isLoading ? 'SYNCING_BITSTREAM' : 'UPLINK_ESTABLISHED'}
+                                </span>
+                            </div>
+
+                            <div className="space-y-1.5">
+                                <div className="flex justify-between text-[8px] font-mono text-base-content/20 uppercase tracking-widest">
+                                    <span>Signal_Strength</span>
+                                    <span>99.9%</span>
+                                </div>
+                                <div className="h-[1px] w-full bg-white/5 relative overflow-hidden">
+                                    <motion.div
+                                        animate={{ x: ['-100%', '100%'] }}
+                                        transition={{ duration: 3, repeat: Infinity, ease: "linear" }}
+                                        className="absolute inset-y-0 w-1/3 bg-primary/20"
+                                    />
+                                    <div className="h-full w-full bg-primary/10" />
+                                </div>
                             </div>
                         </div>
                     </div>
@@ -444,6 +600,7 @@ const DiscoveryPage: React.FC<DiscoveryPageProps> = ({
                         prompt={selectedPrompt}
                         onCopy={handleCopy}
                         onClip={handleClip}
+                        onClipboardClip={handleClipboardClip}
                         onSend={handleSendToBuilder}
                     />
                 </div>

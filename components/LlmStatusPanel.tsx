@@ -2,7 +2,7 @@ import React, { useRef, useEffect, useLayoutEffect } from "react";
 import { gsap } from "gsap";
 import { useSettings } from "../contexts/SettingsContext";
 import { AVAILABLE_LLM_MODELS } from "../constants";
-import { CloseIcon, SparklesIcon } from "./icons";
+import { CloseIcon } from "./icons";
 import { audioService } from "../services/audioService";
 
 interface LlmStatusPanelProps {
@@ -17,6 +17,7 @@ const LlmStatusPanel: React.FC<LlmStatusPanelProps> = ({ isOpen, onClose }) => {
     updateSettings,
     availableOllamaModels,
     availableOllamaCloudModels,
+    availableOpenClawModels,
   } = useSettings();
 
   useLayoutEffect(() => {
@@ -69,7 +70,7 @@ const LlmStatusPanel: React.FC<LlmStatusPanelProps> = ({ isOpen, onClose }) => {
   }, [isOpen, onClose]);
 
   const handleProviderAndModelSelect = (
-    provider: "gemini" | "ollama" | "ollama_cloud",
+    provider: "gemini" | "ollama" | "ollama_cloud" | "openclaw",
     modelId?: string,
   ) => {
     audioService.playClick();
@@ -86,6 +87,12 @@ const LlmStatusPanel: React.FC<LlmStatusPanelProps> = ({ isOpen, onClose }) => {
         ...settings,
         activeLLM: "ollama_cloud",
         ollamaCloudModel: modelId,
+      });
+    } else if (provider === "openclaw" && modelId) {
+      updateSettings({
+        ...settings,
+        activeLLM: "openclaw",
+        openclawModel: modelId,
       });
     }
     onClose();
@@ -191,6 +198,34 @@ const LlmStatusPanel: React.FC<LlmStatusPanelProps> = ({ isOpen, onClose }) => {
                     </span>
                   </li>
                 )}
+
+              <div className="h-px bg-base-content/5 mx-8 my-6" />
+
+              {/* OpenClaw Section */}
+              <li className="menu-title px-8 py-4 text-[12px] uppercase tracking-[0.1em] opacity-40 font-bold text-accent">
+                <span>Agent Core (OpenClaw)</span>
+              </li>
+
+              {(availableOpenClawModels.length > 0 ? availableOpenClawModels : (settings.openclawModel ? [settings.openclawModel] : [])).map((model) => (
+                <li key={`claw-${model}`} className="w-full">
+                  <button
+                    onClick={() =>
+                      handleProviderAndModelSelect("openclaw", model)
+                    }
+                    className={`rounded-none text-[10px] font-jardhani uppercase tracking-widest py-2 w-full text-left px-8 border-l-2 transition-all ${settings.openclawModel === model && settings.activeLLM === "openclaw" ? "text-accent bg-accent/5 border-accent shadow-[inset_10px_0_20px_-10px_rgba(var(--a),0.1)]" : "text-base-content/40 hover:text-base-content hover:bg-base-content/5 border-transparent"}`}
+                  >
+                    {model}
+                  </button>
+                </li>
+              ))}
+
+              {availableOpenClawModels.length === 0 && !settings.openclawModel && (
+                <li className="disabled w-full">
+                  <span className="text-[10px] italic opacity-20 py-8 block text-center font-mono uppercase tracking-[0.4em]">
+                    OPENCLAW SYSTEM LINK OFFLINE
+                  </span>
+                </li>
+              )}
             </ul>
           </div>
         </div>

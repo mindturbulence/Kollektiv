@@ -24,7 +24,7 @@ import {
 import { resetAllSettings, defaultLLMSettings } from '../utils/settingsStorage';
 import { DAISYUI_DARK_THEMES } from '../constants';
 import ConfirmationModal from './ConfirmationModal';
-import { Cog6ToothIcon, CpuChipIcon, AppIcon, PromptIcon, PhotoIcon, FolderClosedIcon, PaintBrushIcon, AdjustmentsVerticalIcon, DownloadIcon, LinkIcon, PlayIcon, RefreshIcon, InformationCircleIcon, UploadIcon, InstagramIcon } from './icons';
+import { Cog6ToothIcon, CpuChipIcon, AppIcon, PromptIcon, PhotoIcon, FolderClosedIcon, PaintBrushIcon, AdjustmentsVerticalIcon, DownloadIcon, LinkIcon, PlayIcon, RefreshIcon, InformationCircleIcon, UploadIcon, AlertTriangleIcon } from './icons';
 import FeedbackModal from './FeedbackModal';
 import { audioService } from '../services/audioService';
 import { PromptTxtImportModal } from './PromptTxtImportModal';
@@ -51,6 +51,7 @@ const subMenuConfig: Record<string, { id: string; label: string, icon: React.Rea
     ],
     integrations: [
         { id: 'llm', label: 'AI Engine', icon: <CpuChipIcon className="w-4 h-4" />, description: "AI models and local/cloud API connections." },
+        { id: 'openclaw', label: 'OpenClaw Agent', icon: <Cog6ToothIcon className="w-4 h-4" />, description: "Manage OpenClaw local/remote agent configuration." },
         { id: 'google', label: 'Cloud Identity', icon: <LinkIcon className="w-4 h-4" />, description: "Link your Google account for Cloud AI." },
         { id: 'youtube', label: 'YouTube', icon: <PlayIcon className="w-4 h-4" />, description: "Manage YouTube API credentials." }
     ],
@@ -187,7 +188,7 @@ const SettingRow: React.FC<{ label: string, desc?: string, children: React.React
 export const SetupPage: React.FC<SetupPageProps> = ({ 
     activeSettingsTab, setActiveSettingsTab, activeSubTab, setActiveSubTab, showGlobalFeedback, isExiting = false
 }) => {
-  const { settings: globalSettings, updateSettings, availableOllamaModels, availableOllamaCloudModels, refreshOllamaModels } = useSettings();
+  const { settings: globalSettings, updateSettings, availableOllamaModels, availableOllamaCloudModels, availableOpenClawModels, refreshOllamaModels } = useSettings();
   const { features } = globalSettings;
   const [settings, setSettings] = useState<LLMSettings>(globalSettings);
   const [modalFeedback, setModalFeedback] = useState<{ message: string; type: 'success' | 'error' } | null>(null);
@@ -499,7 +500,7 @@ export const SetupPage: React.FC<SetupPageProps> = ({
         switch(activeSubTab) {
             case 'general':
                 return (
-                    <div className="flex flex-col h-full overflow-y-auto animate-fade-in">
+                    <div className="flex flex-col animate-fade-in">
                         <SettingRow label="Storage Vault" desc="Current active directory for all local generative artifacts.">
                              <button onClick={async () => {
                                  audioService.playClick();
@@ -519,7 +520,7 @@ export const SetupPage: React.FC<SetupPageProps> = ({
                 );
             case 'features':
                 return (
-                    <div className="flex flex-col h-full overflow-y-auto animate-fade-in">
+                    <div className="flex flex-col animate-fade-in">
                         <SettingRow label="Token Archiver" desc="Toggle the specialized prompt library and folder management.">
                             <input type="checkbox" checked={settings.features.isPromptLibraryEnabled} onChange={(e) => handleFeatureToggle('isPromptLibraryEnabled', (e.currentTarget as any).checked)} className="toggle toggle-primary toggle-sm" />
                         </SettingRow>
@@ -536,7 +537,7 @@ export const SetupPage: React.FC<SetupPageProps> = ({
                 );
             case 'data':
                  return (
-                     <div className="flex flex-col h-full overflow-y-auto animate-fade-in">
+                     <div className="flex flex-col animate-fade-in">
                          <SettingRow label="Sync & Reorganize" desc="Verify manifests and move files to correct category folders.">
                             <button 
                                 onClick={() => { audioService.playClick(); handleIntegrityCheck(); }} 
@@ -566,7 +567,7 @@ export const SetupPage: React.FC<SetupPageProps> = ({
 
     const renderAppearanceSettings = () => {
         return (
-            <div className="flex flex-col h-full overflow-y-auto animate-fade-in">
+            <div className="flex flex-col animate-fade-in">
                 <SettingRow label="Obscure Cycle Theme" desc="Visual palette used when in dark mode.">
                     <select value={settings.darkTheme} onChange={(e) => handleSettingsChange('darkTheme', (e.currentTarget as any).value)} className="form-select w-64">
                         {DAISYUI_DARK_THEMES.map(t => <option key={t} value={t}>{t.toUpperCase()}</option>)}
@@ -653,10 +654,14 @@ export const SetupPage: React.FC<SetupPageProps> = ({
     };
 
     const renderIntegrationSettings = () => {
+        const host = typeof window !== 'undefined' ? window.location.host : '';
+        const isCloudMode = host && !host.includes('localhost') && !host.includes('127.0.0.1');
+        const isOpenClawLocal = isCloudMode && (settings.openclawBaseUrl?.includes('localhost') || settings.openclawBaseUrl?.includes('127.0.0.1'));
+
         switch(activeSubTab) {
             case 'llm':
                 return (
-                    <div className="flex flex-col h-full overflow-y-auto animate-fade-in">
+                    <div className="flex flex-col animate-fade-in pb-12">
                         <SettingRow label="Neural Intelligence Core" desc="Choose the primary processing engine for prompt construction. Every engine is optimized with custom directives.">
                              <div className="tab-group">
                                 <div 
@@ -676,6 +681,12 @@ export const SetupPage: React.FC<SetupPageProps> = ({
                                     onClick={() => { audioService.playClick(); handleSettingsChange('activeLLM', 'ollama_cloud'); }}
                                 >
                                     Cloud Ollama
+                                </div>
+                                <div 
+                                    className={`tab-item ${settings.activeLLM === 'openclaw' ? 'tab-item-active' : ''}`}
+                                    onClick={() => { audioService.playClick(); handleSettingsChange('activeLLM', 'openclaw'); }}
+                                >
+                                    OpenClaw
                                 </div>
                              </div>
                         </SettingRow>
@@ -763,9 +774,63 @@ export const SetupPage: React.FC<SetupPageProps> = ({
                         )}
                     </div>
                 );
+            case 'openclaw':
+                return (
+                    <div className="flex flex-col animate-fade-in pb-12">
+                        {isOpenClawLocal && (
+                            <div className="mx-8 mt-4 p-4 bg-warning/10 border border-warning/20 rounded-none flex items-start gap-4">
+                                <AlertTriangleIcon className="w-5 h-5 text-warning flex-shrink-0 mt-0.5" />
+                                <div className="space-y-1">
+                                    <h6 className="text-[10px] font-black uppercase tracking-widest text-warning">CLOUD SYNC LIMITATION</h6>
+                                    <p className="text-[9px] font-bold opacity-70 leading-relaxed uppercase tracking-widest">
+                                        YOU ARE RUNNING IN THE CLOUD. "LOCALHOST" ADDRESSES CANNOT BE REACHED BY THE SERVER. 
+                                        PLEASE USE A PUBLIC URL (NGROK/TUNNEL) OR RUN THE APP LOCALLY TO CONNECT TO A LOCAL AGENT.
+                                    </p>
+                                </div>
+                            </div>
+                        )}
+                        <SettingRow label="OpenClaw Agent URL" desc="The local or remote address of your OpenClaw control node.">
+                            <div className="space-y-4">
+                                <div className="flex w-full md:w-[620px]">
+                                    <input type="text" value={settings.openclawBaseUrl} onChange={(e) => handleSettingsChange('openclawBaseUrl', (e.currentTarget as any).value)} className="form-input flex-1" placeholder="http://localhost:18789" />
+                                    <button onClick={() => { audioService.playClick(); refreshOllamaModels(); }} className="form-btn px-4 border-l-0">REFRESH</button>
+                                </div>
+                            </div>
+                        </SettingRow>
+                        <SettingRow label="Agent Identity" desc="Choose which agent skill set or model to activate.">
+                            <div className="w-full md:w-[620px]">
+                                <AutocompleteSelect 
+                                    value={settings.openclawModel} 
+                                    options={(availableOpenClawModels.length > 0 ? availableOpenClawModels : [settings.openclawModel || 'ollama/kimi-k2.5:cloud']).map(m => ({ label: m.toUpperCase(), value: m }))} 
+                                    onChange={(val) => handleSettingsChange('openclawModel', val)}
+                                    placeholder="ollama/kimi-k2.5:cloud"
+                                />
+                            </div>
+                        </SettingRow>
+                        <SettingRow label="Security Key" desc="If your OpenClaw instance requires authentication (Bearer Token).">
+                            <input type="password" value={settings.openclawApiKey} onChange={(e) => handleSettingsChange('openclawApiKey', (e.currentTarget as any).value)} className="form-input w-full md:w-[620px]" placeholder="OPENCLAW_SECRET_TOKEN"/>
+                        </SettingRow>
+                        <div className="p-8 mt-4">
+                             <div className="p-6 bg-accent/5 border border-accent/20 rounded-none space-y-4 max-w-2xl">
+                                <h5 className="text-xs font-black uppercase tracking-[0.2em] text-accent flex items-center gap-2">
+                                    <Cog6ToothIcon className="w-4 h-4" /> LOCAL AGENT STATUS
+                                </h5>
+                                <p className="text-[10px] font-bold uppercase tracking-widest text-base-content/60 leading-relaxed">
+                                    IF YOUR OPENCLAW INSTANCE IS RUNNING LOCALLY ON PORT 18789, SYSTEMS WILL AUTOMATICALLY PROXY REQUESTS THROUGH THE ENGINE HUB TO BYPASS CLOUD SECURITY POLICIES.
+                                </p>
+                                <div className="flex items-center gap-3">
+                                    <span className={`w-2 h-2 rounded-full ${availableOpenClawModels.length > 0 ? 'bg-success box-glow-success' : 'bg-base-content/20'}`} />
+                                    <span className="text-[9px] font-black uppercase tracking-[0.3em] opacity-40">
+                                        {availableOpenClawModels.length > 0 ? 'AGENT LINK ESTABLISHED' : 'AWAITING AGENT HANDSHAKE'}
+                                    </span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                );
             case 'google':
                 return (
-                    <div className="flex flex-col h-full overflow-y-auto animate-fade-in">
+                    <div className="flex flex-col animate-fade-in">
                         <SettingRow label="Global Client ID" desc="Google Cloud OAuth 2.0 Identifier used for all Identity services.">
                             <div className="flex flex-col gap-2 w-full max-w-md">
                                 <input type="text" value={settings.youtube?.customClientId || ''} onChange={(e) => handleSettingsChange('youtube', { ...settings.youtube, customClientId: e.target.value })} className="form-input w-full" placeholder="407408718192-..." />
@@ -801,7 +866,7 @@ export const SetupPage: React.FC<SetupPageProps> = ({
                 );
             case 'youtube':
                 return (
-                    <div className="flex flex-col h-full overflow-y-auto animate-fade-in">
+                    <div className="flex flex-col animate-fade-in">
                         <SettingRow label="Global Client ID" desc="Google Cloud OAuth 2.0 Identifier used for all Identity services.">
                             <div className="flex flex-col gap-2 w-full max-w-md">
                                 <input type="text" value={settings.youtube?.customClientId || ''} onChange={(e) => handleSettingsChange('youtube', { ...settings.youtube, customClientId: e.target.value })} className="form-input w-full" placeholder="407408718192-..." />
@@ -851,7 +916,7 @@ export const SetupPage: React.FC<SetupPageProps> = ({
                 );
             case 'data':
                 return (
-                    <div className="flex flex-col h-full overflow-y-auto animate-fade-in">
+                    <div className="flex flex-col h-full animate-fade-in">
                         <SettingRow label="Batch Ingestion" desc="Import multiple prompts from a ZIP archive containing .txt files.">
                             <button onClick={() => { audioService.playClick(); setIsTxtImportModalOpen(true); }} className="form-btn px-6">
                                 <UploadIcon className="w-4 h-4 mr-2" />
@@ -881,7 +946,7 @@ export const SetupPage: React.FC<SetupPageProps> = ({
                 );
             case 'data':
                 return (
-                    <div className="flex flex-col h-full overflow-y-auto animate-fade-in">
+                    <div className="flex flex-col h-full animate-fade-in">
                         <SettingRow label="Bulk Export" desc="Package all gallery artifacts into a single ZIP archive for backup.">
                             <button onClick={() => { audioService.playClick(); createZipAndDownload([], 'gallery_archive.zip'); }} className="form-btn form-btn-primary px-6">
                                 <DownloadIcon className="w-4 h-4 mr-2" />
@@ -895,14 +960,23 @@ export const SetupPage: React.FC<SetupPageProps> = ({
     };
 
     const renderActiveTabContent = () => {
+        let content;
         switch(activeSettingsTab) {
-            case 'app': return renderAppSettings();
-            case 'appearance': return renderAppearanceSettings();
-            case 'integrations': return renderIntegrationSettings();
-            case 'prompt': return renderPromptSettings();
-            case 'gallery': return renderGallerySettings();
-            default: return null;
+            case 'app': content = renderAppSettings(); break;
+            case 'appearance': content = renderAppearanceSettings(); break;
+            case 'integrations': content = renderIntegrationSettings(); break;
+            case 'prompt': content = renderPromptSettings(); break;
+            case 'gallery': content = renderGallerySettings(); break;
+            default: content = null;
         }
+
+        return (
+            <div className="flex-grow overflow-y-auto custom-scrollbar bg-base-100/20 backdrop-blur-sm border border-white/5 mx-6 mb-6">
+                <div className="p-1">
+                    {content}
+                </div>
+            </div>
+        );
     };
 
     const currentSubTabs = subMenuConfig[activeSettingsTab] || [];
@@ -983,7 +1057,7 @@ export const SetupPage: React.FC<SetupPageProps> = ({
                         </div>
                     </div>
                 )}
-                <div ref={mainScrollRef} className="flex-grow overflow-y-auto">{renderActiveTabContent()}</div>
+                <div ref={mainScrollRef} className="flex-grow min-h-0 flex flex-col">{renderActiveTabContent()}</div>
                 <footer className="flex flex-row p-0 overflow-hidden flex-shrink-0 panel-footer">
                     <button onClick={() => { audioService.playClick(); handleCancel(); }} className="form-btn flex-1">Abort</button>
                     <button onClick={() => { audioService.playClick(); saveSettings(); }} className="form-btn form-btn-primary flex-1 shadow-lg">Confirm</button>

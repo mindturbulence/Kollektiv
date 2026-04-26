@@ -1,10 +1,10 @@
 import React, { useState, useCallback, useRef } from 'react';
 import { useSettings } from '../contexts/SettingsContext';
 import { useBusy } from '../contexts/BusyContext';
+import BlobLoader from './BlobLoader';
 import { refineSinglePromptStream } from '../services/llmService';
 import { SparklesIcon, CheckIcon, ChevronDownIcon, BookmarkIcon, RefreshIcon, CloseIcon } from './icons';
 import { TARGET_IMAGE_AI_MODELS, TARGET_VIDEO_AI_MODELS } from '../constants';
-import LoadingSpinner from './LoadingSpinner';
 import CopyIcon from './CopyIcon';
 
 interface PromptRefinePanelProps {
@@ -118,7 +118,7 @@ const PromptRefinePanel: React.FC<PromptRefinePanelProps> = ({ promptText, onApp
                         <span className="w-1.5 h-1.5 rounded-none bg-primary animate-pulse"></span> Generated Text
                     </span>
                     
-                    {isLoading && !refinedPrompt ? <div className="flex-grow flex items-center justify-center"><LoadingSpinner size={48} /></div> :
+                    {isLoading && !refinedPrompt ? <div className="flex-grow flex items-center justify-center p-8"><BlobLoader /></div> :
                      error ? <div className="alert alert-error rounded-none text-xs"><span>{error}</span></div> :
                      refinedPrompt !== null ? (
                         <div className="text-sm font-medium leading-relaxed text-base-content/80 whitespace-pre-wrap flex-grow">

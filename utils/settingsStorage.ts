@@ -12,10 +12,16 @@ export const defaultLLMSettings: LLMSettings = {
   ollamaBaseUrl: 'http://localhost:11434',
   ollamaModel: 'llama3',
   
+  // OpenClaw Settings
+  openclawBaseUrl: 'http://localhost:18789',
+  openclawModel: 'ollama/kimi-k2.5:cloud',
+  openclawApiKey: '',
+  
   // Prompt & Token Tracking
   masterRolePrompt: 'You are an expert AI prompt engineer and creative director. You excel at extracting precise visual, atmospheric, and conceptual details.',
   geminiTokenUsage: { used: 0, limit: 1000000 },
   ollamaTokenUsage: { used: 0, limit: 500000 },
+  openclawTokenUsage: { used: 0, limit: 500000 },
 
   // Ollama Cloud Settings
   ollamaCloudBaseUrl: 'https://your-remote-ollama.com',
@@ -95,6 +101,10 @@ export const loadLLMSettings = (): LLMSettings => {
                 ...defaultLLMSettings.ollamaTokenUsage!,
                 ...(parsed.ollamaTokenUsage || {})
             },
+            openclawTokenUsage: {
+                ...defaultLLMSettings.openclawTokenUsage!,
+                ...(parsed.openclawTokenUsage || {})
+            },
             youtube: {
               ...defaultLLMSettings.youtube,
               ...(parsed.youtube || {})
@@ -123,7 +133,7 @@ export const resetAllSettings = async () => {
     await clearAllHandles();
 };
 
-export const trackTokenUsage = (provider: 'gemini' | 'ollama' | 'ollama_cloud', actualTokens: number): void => {
+export const trackTokenUsage = (provider: 'gemini' | 'ollama' | 'ollama_cloud' | 'openclaw', actualTokens: number): void => {
     const settings = loadLLMSettings();
 
     if (provider === 'gemini') {
@@ -131,6 +141,13 @@ export const trackTokenUsage = (provider: 'gemini' | 'ollama' | 'ollama_cloud', 
             settings.geminiTokenUsage.used += actualTokens;
             if (settings.geminiTokenUsage.used > settings.geminiTokenUsage.limit) {
                  settings.geminiTokenUsage.used = settings.geminiTokenUsage.limit;
+            }
+        }
+    } else if (provider === 'openclaw') {
+        if (settings.openclawTokenUsage) {
+            settings.openclawTokenUsage.used += actualTokens;
+            if (settings.openclawTokenUsage.used > settings.openclawTokenUsage.limit) {
+                settings.openclawTokenUsage.used = settings.openclawTokenUsage.limit;
             }
         }
     } else {

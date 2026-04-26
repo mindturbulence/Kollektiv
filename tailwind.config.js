@@ -8,12 +8,11 @@ export default {
   theme: {
     extend: {
       fontFamily: {
-        sans: ['Nunito', 'Inter', 'Plus Jakarta Sans', 'sans-serif'],
-        display: ['Nunito', 'Inter', 'Plus Jakarta Sans', 'sans-serif'],
-        mono: ['JetBrains Mono', 'monospace'],
+        sans: ["Nunito", "Inter", "Plus Jakarta Sans", "sans-serif"],
+        display: ["Nunito", "Inter", "Plus Jakarta Sans", "sans-serif"],
+        mono: ["JetBrains Mono", "monospace"],
       },
-      colors: {
-      }
+      colors: {},
     },
   },
   plugins: [require("daisyui"), require("@tailwindcss/typography")],
@@ -21,18 +20,18 @@ export default {
     themes: [
       {
         dich: {
-          "primary": "#78ff00",
-          "secondary": "#ffffff",
-          "accent": "#00d1ff",
-          "neutral": "#1a1a1a",
+          primary: "#78ff00",
+          secondary: "#ffffff",
+          accent: "#00d1ff",
+          neutral: "#1a1a1a",
           "base-100": "#000000",
           "base-200": "#0a0a0a",
           "base-300": "#1a1a1a",
           "base-content": "#ffffff",
-          "info": "#3abff8",
-          "success": "#36d399",
-          "warning": "#fbbd23",
-          "error": "#f87272",
+          info: "#3abff8",
+          success: "#36d399",
+          warning: "#fbbd23",
+          error: "#f87272",
           "--rounded-box": "0",
           "--rounded-btn": "0",
           "--rounded-badge": "0",
@@ -41,39 +40,39 @@ export default {
       },
       {
         pipboy: {
-          "primary": "#1aff1a",
-          "secondary": "#003300",
-          "accent": "#1aff1a",
-          "neutral": "#051105",
+          primary: "#1aff1a",
+          secondary: "#003300",
+          accent: "#1aff1a",
+          neutral: "#051105",
           "base-100": "#051105",
           "base-200": "#020802",
           "base-300": "#0a1a0a",
           "base-content": "#1aff1a",
-          "info": "#1aff1a",
-          "success": "#1aff1a",
-          "warning": "#1aff1a",
-          "error": "#ff0000",
+          info: "#1aff1a",
+          success: "#1aff1a",
+          warning: "#1aff1a",
+          error: "#ff0000",
           "--rounded-box": "0",
           "--rounded-btn": "0",
           "--rounded-badge": "0",
           "--rounded-tab": "0",
         },
       },
-      
+
       {
         abyss: {
-          "primary": "#00ffa3",
-          "secondary": "#00d1ff",
-          "accent": "#f3a01c",
-          "neutral": "#1e293b",
+          primary: "#00ffa3",
+          secondary: "#00d1ff",
+          accent: "#f3a01c",
+          neutral: "#1e293b",
           "base-100": "#020617",
           "base-200": "#0f172a",
           "base-300": "#1e293b",
           "base-content": "#ffffff",
-          "info": "#0ea5e9",
-          "success": "#22c55e",
-          "warning": "#f59e0b",
-          "error": "#ef4444",
+          info: "#0ea5e9",
+          success: "#22c55e",
+          warning: "#f59e0b",
+          error: "#ef4444",
           "--rounded-box": "0",
           "--rounded-btn": "0",
           "--rounded-badge": "0",
@@ -82,18 +81,18 @@ export default {
       },
       {
         futurismo: {
-          "primary": "#f27d26",
-          "secondary": "#00ffa3",
-          "accent": "#ffffff",
-          "neutral": "#1a1a1a",
+          primary: "#f27d26",
+          secondary: "#00ffa3",
+          accent: "#ffffff",
+          neutral: "#1a1a1a",
           "base-100": "#050505",
           "base-200": "#0f0f0f",
           "base-300": "#1a1a1a",
           "base-content": "#e5e5e5",
-          "info": "#3abff8",
-          "success": "#36d399",
-          "warning": "#fbbd23",
-          "error": "#f87272",
+          info: "#3abff8",
+          success: "#36d399",
+          warning: "#fbbd23",
+          error: "#f87272",
           "--rounded-box": "0",
           "--rounded-btn": "0",
           "--rounded-badge": "0",
@@ -102,18 +101,18 @@ export default {
       },
       {
         sanrita: {
-          "primary": "#006b4a",
-          "secondary": "#00d1ff",
-          "accent": "#f3a01c",
-          "neutral": "#f1f5f9",
+          primary: "#006b4a",
+          secondary: "#00d1ff",
+          accent: "#f3a01c",
+          neutral: "#f1f5f9",
           "base-100": "#f8fafc",
           "base-200": "#f1f5f9",
           "base-300": "#e2e8f0",
           "base-content": "#0f172a",
-          "info": "#0ea5e9",
-          "success": "#22c55e",
-          "warning": "#f59e0b",
-          "error": "#ef4444",
+          info: "#0ea5e9",
+          success: "#22c55e",
+          warning: "#f59e0b",
+          error: "#ef4444",
           "--rounded-box": "0",
           "--rounded-btn": "0",
           "--rounded-badge": "0",
@@ -122,9 +121,9 @@ export default {
       },
       {
         orange: {
-          "primary": "#e86830",
-          "secondary": "#c71f16",
-          "neutral": "#2a2a2a",
+          primary: "#e86830",
+          secondary: "#c71f16",
+          neutral: "#2a2a2a",
           "base-100": "#1a1a1a",
           "base-200": "#2a2a2a",
           "base-300": "#3a3a3a",
@@ -132,18 +131,18 @@ export default {
       },
       {
         Vanguard: {
-          "primary": "#ffcc00",
-          "secondary": "#332200",
-          "accent": "#ffcc00",
-          "neutral": "#0d0a00",
+          primary: "#ffcc00",
+          secondary: "#332200",
+          accent: "#ffcc00",
+          neutral: "#0d0a00",
           "base-100": "#0d0a00",
           "base-200": "#050400",
           "base-300": "#1a1400",
           "base-content": "#ffcc00",
-          "info": "#ffcc00",
-          "success": "#ffcc00",
-          "warning": "#ffcc00",
-          "error": "#ff3300",
+          info: "#ffcc00",
+          success: "#ffcc00",
+          warning: "#ffcc00",
+          error: "#ff3300",
           "--rounded-box": "0",
           "--rounded-btn": "0",
           "--rounded-badge": "0",
@@ -152,34 +151,34 @@ export default {
       },
       {
         MindTurbulence: {
-          "primary": "#e60012",
-          "secondary": "#ffc400",
-          "accent": "#fcc800",
-          "neutral": "#2a1b4d",
+          primary: "#e60012",
+          secondary: "#ffc400",
+          accent: "#fcc800",
+          neutral: "#2a1b4d",
           "base-100": "#1a103c",
           "base-200": "#251756",
           "base-300": "#342273",
           "base-content": "#f9f8fa",
-          "info": "#3abff8",
-          "success": "#36d399",
-          "warning": "#fbbd23",
-          "error": "#f87272",
+          info: "#3abff8",
+          success: "#36d399",
+          warning: "#fbbd23",
+          error: "#f87272",
         },
       },
       {
         synthwave: {
-          "primary": "#ff00ff",
-          "secondary": "#00dbff",
-          "accent": "#ffea00",
-          "neutral": "#191d24",
+          primary: "#ff00ff",
+          secondary: "#00dbff",
+          accent: "#ffea00",
+          neutral: "#191d24",
           "base-100": "#0d0221",
           "base-200": "#1a043c",
           "base-300": "#21064d",
           "base-content": "#ffffff",
-          "info": "#00dbff",
-          "success": "#00ff9f",
-          "warning": "#ffea00",
-          "error": "#ff0055",
+          info: "#00dbff",
+          success: "#00ff9f",
+          warning: "#ffea00",
+          error: "#ff0055",
           "--rounded-box": "0",
           "--rounded-btn": "0",
           "--rounded-badge": "0",
@@ -220,7 +219,7 @@ export default {
       "sunset",
       {
         light: {
-          "primary": "#570df8",
+          primary: "#570df8",
           "base-100": "#0d0221",
           "base-200": "#1a043c",
           "base-300": "#21064d",
@@ -231,7 +230,7 @@ export default {
       },
       {
         dark: {
-          "primary": "#661ae6",
+          primary: "#661ae6",
           "base-100": "#0d0221",
           "base-200": "#1a043c",
           "base-300": "#21064d",
@@ -242,7 +241,7 @@ export default {
       },
       {
         cupcake: {
-          "primary": "#65c3c8",
+          primary: "#65c3c8",
           "base-100": "#0d0221",
           "base-200": "#1a043c",
           "base-300": "#21064d",
@@ -253,7 +252,7 @@ export default {
       },
       {
         bumblebee: {
-          "primary": "#e0a82e",
+          primary: "#e0a82e",
           "base-100": "#0d0221",
           "base-200": "#1a043c",
           "base-300": "#21064d",
@@ -264,7 +263,7 @@ export default {
       },
       {
         emerald: {
-          "primary": "#66cc8a",
+          primary: "#66cc8a",
           "base-100": "#0d0221",
           "base-200": "#1a043c",
           "base-300": "#21064d",
@@ -275,7 +274,7 @@ export default {
       },
       {
         corporate: {
-          "primary": "#4b6bfb",
+          primary: "#4b6bfb",
           "base-100": "#0d0221",
           "base-200": "#1a043c",
           "base-300": "#21064d",
@@ -286,7 +285,7 @@ export default {
       },
       {
         retro: {
-          "primary": "#ef9995",
+          primary: "#ef9995",
           "base-100": "#0d0221",
           "base-200": "#1a043c",
           "base-300": "#21064d",
@@ -297,7 +296,7 @@ export default {
       },
       {
         cyberpunk: {
-          "primary": "#ff7598",
+          primary: "#ff7598",
           "base-100": "#0d0221",
           "base-200": "#1a043c",
           "base-300": "#21064d",
@@ -308,7 +307,7 @@ export default {
       },
       {
         valentine: {
-          "primary": "#e96d7b",
+          primary: "#e96d7b",
           "base-100": "#0d0221",
           "base-200": "#1a043c",
           "base-300": "#21064d",
@@ -319,7 +318,7 @@ export default {
       },
       {
         halloween: {
-          "primary": "#f28c18",
+          primary: "#f28c18",
           "base-100": "#0d0221",
           "base-200": "#1a043c",
           "base-300": "#21064d",
@@ -330,7 +329,7 @@ export default {
       },
       {
         garden: {
-          "primary": "#5c7f67",
+          primary: "#5c7f67",
           "base-100": "#0d0221",
           "base-200": "#1a043c",
           "base-300": "#21064d",
@@ -341,7 +340,7 @@ export default {
       },
       {
         forest: {
-          "primary": "#1eb854",
+          primary: "#1eb854",
           "base-100": "#0d0221",
           "base-200": "#1a043c",
           "base-300": "#21064d",
@@ -352,7 +351,7 @@ export default {
       },
       {
         aqua: {
-          "primary": "#09ecaf",
+          primary: "#09ecaf",
           "base-100": "#0d0221",
           "base-200": "#1a043c",
           "base-300": "#21064d",
@@ -363,18 +362,25 @@ export default {
       },
       {
         lofi: {
-          "primary": "#0d0d0d",
-          "base-100": "#0d0221",
-          "base-200": "#1a043c",
-          "base-300": "#21064d",
-          "base-content": "#ffffff",
+          primary: "#00f0ff",
+          secondary: "#004d4d",
+          accent: "#ff003c",
+          neutral: "#001a1a",
+          "base-100": "#001a1a",
+          "base-200": "#000d0d",
+          "base-300": "#003333",
+          "base-content": "#00f0ff",
+          info: "#00f0ff",
+          success: "#029090",
+          warning: "#fcee54",
+          error: "#ff003c",
           "--rounded-box": "0",
           "--rounded-btn": "0",
         },
       },
       {
         pastel: {
-          "primary": "#d1c1d7",
+          primary: "#d1c1d7",
           "base-100": "#0d0221",
           "base-200": "#1a043c",
           "base-300": "#21064d",
@@ -385,7 +391,7 @@ export default {
       },
       {
         fantasy: {
-          "primary": "#6e0b70",
+          primary: "#6e0b70",
           "base-100": "#0d0221",
           "base-200": "#1a043c",
           "base-300": "#21064d",
@@ -396,7 +402,7 @@ export default {
       },
       {
         wireframe: {
-          "primary": "#b8b8b8",
+          primary: "#b8b8b8",
           "base-100": "#0d0221",
           "base-200": "#1a043c",
           "base-300": "#21064d",
@@ -407,7 +413,7 @@ export default {
       },
       {
         black: {
-          "primary": "#ffffff",
+          primary: "#ffffff",
           "base-100": "#0d0221",
           "base-200": "#1a043c",
           "base-300": "#21064d",
@@ -418,7 +424,7 @@ export default {
       },
       {
         luxury: {
-          "primary": "#ffffff",
+          primary: "#ffffff",
           "base-100": "#0d0221",
           "base-200": "#1a043c",
           "base-300": "#21064d",
@@ -429,7 +435,7 @@ export default {
       },
       {
         dracula: {
-          "primary": "#ff79c6",
+          primary: "#ff79c6",
           "base-100": "#0d0221",
           "base-200": "#1a043c",
           "base-300": "#21064d",
@@ -440,7 +446,7 @@ export default {
       },
       {
         cmyk: {
-          "primary": "#45aeef",
+          primary: "#45aeef",
           "base-100": "#0d0221",
           "base-200": "#1a043c",
           "base-300": "#21064d",
@@ -451,7 +457,7 @@ export default {
       },
       {
         autumn: {
-          "primary": "#8c0327",
+          primary: "#8c0327",
           "base-100": "#0d0221",
           "base-200": "#1a043c",
           "base-300": "#21064d",
@@ -462,7 +468,7 @@ export default {
       },
       {
         business: {
-          "primary": "#1c4e80",
+          primary: "#1c4e80",
           "base-100": "#0d0221",
           "base-200": "#1a043c",
           "base-300": "#21064d",
@@ -473,7 +479,7 @@ export default {
       },
       {
         acid: {
-          "primary": "#ff00ff",
+          primary: "#ff00ff",
           "base-100": "#0d0221",
           "base-200": "#1a043c",
           "base-300": "#21064d",
@@ -484,7 +490,7 @@ export default {
       },
       {
         lemonade: {
-          "primary": "#519903",
+          primary: "#519903",
           "base-100": "#0d0221",
           "base-200": "#1a043c",
           "base-300": "#21064d",
@@ -495,7 +501,7 @@ export default {
       },
       {
         night: {
-          "primary": "#38bdf8",
+          primary: "#38bdf8",
           "base-100": "#0d0221",
           "base-200": "#1a043c",
           "base-300": "#21064d",
@@ -506,7 +512,7 @@ export default {
       },
       {
         coffee: {
-          "primary": "#db924b",
+          primary: "#db924b",
           "base-100": "#0d0221",
           "base-200": "#1a043c",
           "base-300": "#21064d",
@@ -517,7 +523,7 @@ export default {
       },
       {
         winter: {
-          "primary": "#047aff",
+          primary: "#047aff",
           "base-100": "#0d0221",
           "base-200": "#1a043c",
           "base-300": "#21064d",
@@ -528,7 +534,7 @@ export default {
       },
       {
         dim: {
-          "primary": "#9fb3d8",
+          primary: "#9fb3d8",
           "base-100": "#0d0221",
           "base-200": "#1a043c",
           "base-300": "#21064d",
@@ -539,7 +545,7 @@ export default {
       },
       {
         nord: {
-          "primary": "#81a1c1",
+          primary: "#81a1c1",
           "base-100": "#0d0221",
           "base-200": "#1a043c",
           "base-300": "#21064d",
@@ -550,7 +556,7 @@ export default {
       },
       {
         sunset: {
-          "primary": "#ff7e5f",
+          primary: "#ff7e5f",
           "base-100": "#0d0221",
           "base-200": "#1a043c",
           "base-300": "#21064d",
@@ -561,4 +567,4 @@ export default {
       },
     ],
   },
-}
+};

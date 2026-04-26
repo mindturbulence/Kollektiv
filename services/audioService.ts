@@ -32,7 +32,10 @@ class AudioService {
         { key: 'click', url: '/sfx/clicks.wav' },
         { key: 'transition', url: '/sfx/page_transition.wav' },
         { key: 'hover', url: '/sfx/hover.wav' },
-        { key: 'slide', url: '/sfx/slide.mp3' }
+        { key: 'slide', url: '/sfx/slide.mp3' },
+        { key: 'info', url: '/sfx/info.mp3' },
+        { key: 'type', url: '/sfx/type.mp3' },
+        { key: 'error', url: '/sfx/error.mp3' }
       ];
 
       for (const sound of sounds) {
@@ -269,6 +272,10 @@ class AudioService {
     if (!this.isEnabled || !this.ctx || !this.masterGain) return;
     this.resume();
     const now = this.ctx.currentTime;
+    
+    // Check if info buffer is loaded and use it for success notifications
+    if (this.playBuffer('info', 0.5)) return;
+
     const notes = [1200, 1600, 2400]; // Sharp upward movement
     
     notes.forEach((freq, i) => {
@@ -366,6 +373,9 @@ class AudioService {
   playError(): void {
     if (!this.isEnabled || !this.ctx || !this.masterGain) return;
     this.resume();
+
+    if (this.playBuffer('error', 0.6)) return;
+
     const now = this.ctx.currentTime;
     const osc = this.createDigitalOsc(220, 'square');
     const gain = this.ctx.createGain();
@@ -377,6 +387,21 @@ class AudioService {
     osc.connect(gain);
     gain.connect(this.masterGain);
     osc.start(now); osc.stop(now + 0.1);
+  }
+
+  playInfo(): void {
+    if (!this.isEnabled || !this.ctx || !this.masterGain) return;
+    this.resume();
+    // Use fallback if buffer misses, but primarily rely on buffer
+    if (this.playBuffer('info', 0.5)) return;
+    this.playSuccess(); // fallback to an existing positive tone
+  }
+
+  playType(): void {
+    if (!this.isEnabled || !this.ctx || !this.masterGain) return;
+    this.resume();
+    if (this.playBuffer('type', 0.3)) return;
+    this.playClick(); // fallback to click
   }
 
   playToggle(): void {

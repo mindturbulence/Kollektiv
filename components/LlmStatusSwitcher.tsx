@@ -40,21 +40,21 @@ const LlmStatusSwitcher: React.FC<LlmStatusSwitcherProps> = ({ onClick, isOpen }
     }
 
     return (
-        <div className="relative w-full z-[730] pointer-events-auto">
-            <button
-                type="button"
+        <div className="relative w-full z-[730] pointer-events-auto flex items-center">
+            <a
+                href="#"
                 onClick={(e) => {
                     e.preventDefault();
                     e.stopPropagation();
                     onClick(e);
                 }}
                 title={tooltipText}
-                className="flex items-center gap-2 group transition-all bg-transparent border-none p-0 cursor-pointer text-left"
+                className="inline-flex items-center group transition-all bg-transparent border-none p-0 cursor-pointer text-left"
             >
-                <span className={`text-[10px] font-jardhani uppercase tracking-[0.2em] transition-colors leading-none inline-block ${isOpen ? 'text-primary' : 'text-base-content/40 group-hover:text-primary underline decoration-primary/20 underline-offset-4'}`}>
+                <span className={`text-[10px] font-jardhani uppercase tracking-[0.1em] transition-colors leading-none inline-block shine-text ${isOpen ? '' : 'group-hover:opacity-80'}`}>
                     {displayText}
                 </span>
-            </button>
+            </a>
         </div>
     );
 };
