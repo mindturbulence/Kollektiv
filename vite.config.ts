@@ -22,14 +22,6 @@ export default defineConfig(({ mode }) => {
 
               const url = req.url || '';
               
-              // Intercept local Ollama requests
-              if (url.startsWith('/ollama-local')) {
-                res.statusCode = 502;
-                res.setHeader('Content-Type', 'application/json');
-                res.end(JSON.stringify({ error: 'Local Ollama unreachable in cloud', code: 'ECONNREFUSED_SILENT' }));
-                return;
-              }
-
               // Intercept remote proxy requests targeting local addresses
               if (url.startsWith('/proxy-remote')) {
                 const target = req.headers['x-target-url'];
@@ -73,6 +65,41 @@ export default defineConfig(({ mode }) => {
                             return;
                         }
                         console.error('[Proxy Error: Local]', err.message);
+                    });
+                });
+            }
+          },
+          '/openclaw-local': {
+            target: 'http://127.0.0.1:18789',
+            changeOrigin: true,
+            secure: false,
+            rewrite: (path) => path.replace(/^\/openclaw-local/, ''),
+            configure: (proxy, _options) => {
+                process.nextTick(() => {
+                    proxy.removeAllListeners('error');
+                    proxy.on('error', (err, _req: any, res: any) => {
+                        if ((err as any).code === 'ECONNREFUSED') {
+                            if (res && !res.writableEnded && typeof res.writeHead === 'function') {
+                                res.writeHead(502, { 
+                                    'Content-Type': 'application/json',
+                                    'X-Proxy-Error': 'true'
+                                });
+                                res.end(JSON.stringify({ error: 'OpenClaw Proxy Error (ECONNREFUSED)', code: 'ECONNREFUSED_SILENT' }));
+                            }
+                            return;
+                        }
+                        console.error('[Proxy Error: OpenClaw]', err.message);
+                        if (res && !res.writableEnded && typeof res.writeHead === 'function') {
+                            res.writeHead(502, { 
+                                'Content-Type': 'application/json',
+                                'X-Proxy-Error': 'true'
+                            });
+                            res.end(JSON.stringify({ 
+                                error: 'OpenClaw Proxy Error', 
+                                message: err.message,
+                                code: (err as any).code || 'PROXY_ERROR' 
+                            }));
+                        }
                     });
                 });
             }

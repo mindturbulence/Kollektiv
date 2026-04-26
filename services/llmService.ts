@@ -2,6 +2,7 @@
 import type { EnhancementResult, LLMSettings, PromptModifiers } from '../types';
 import { translateToEnglishGemini, analyzePaletteMood as analyzePaletteMoodGemini, generatePromptFormulaGemini, refineSinglePromptGemini, abstractImageGemini, generateColorNameGemini, dissectPromptGemini, generateFocusedVariationsGemini, reconstructPromptGemini, reconstructFromIntentGemini, replaceComponentInPromptGemini, generateArtistDescriptionGemini, enhancePromptGeminiStream, refineSinglePromptGeminiStream, generateConstructorPresetGemini } from './geminiService';
 import { analyzePaletteMoodOllama, generatePromptFormulaOllama, refineSinglePromptOllama, abstractImageOllama, generateColorNameOllama, dissectPromptOllama, generateFocusedVariationsOllama, reconstructPromptOllama, replaceComponentInPromptOllama, reconstructFromIntentOllama, generateArtistDescriptionOllama, enhancePromptOllamaStream, refineSinglePromptOllamaStream } from './ollamaService';
+import { refineSinglePromptOpenClaw, enhancePromptOpenClawStream, refineSinglePromptOpenClawStream } from './openclawService';
 import { TARGET_VIDEO_AI_MODELS, TARGET_AUDIO_AI_MODELS } from '../constants/models';
 
 // --- Model-Specific Syntax (Engine Tuning) ---
@@ -307,11 +308,14 @@ export async function* enhancePromptStream(
 
     const tokenBudget = promptLength === 'Long' ? 2500 : 1024;
     const isOllama = settings.activeLLM === 'ollama' || settings.activeLLM === 'ollama_cloud';
+    const isOpenClaw = settings.activeLLM === 'openclaw';
     const temperature = modifiers.creativity !== undefined ? modifiers.creativity / 100 : 0.7;
 
-    const stream = isOllama
-        ? enhancePromptOllamaStream(input, constantModifier, settings, systemInstruction, tokenBudget)
-        : enhancePromptGeminiStream(input, constantModifier, settings, systemInstruction, promptLength, referenceImages, temperature);
+    const stream = isOpenClaw
+        ? enhancePromptOpenClawStream(input, constantModifier, settings, systemInstruction, tokenBudget)
+        : isOllama
+            ? enhancePromptOllamaStream(input, constantModifier, settings, systemInstruction, tokenBudget)
+            : enhancePromptGeminiStream(input, constantModifier, settings, systemInstruction, promptLength, referenceImages, temperature);
 
     let inThought = false;
     for await (const chunk of stream) {
@@ -330,9 +334,12 @@ export const refineSinglePrompt = async (promptText: string, targetAIModel: stri
     const sys = AI_ROLES.REFINER(targetAIModel, isVideo, isAudio, hasManualCamera, modifiers.videoInputType, settings.masterRolePrompt);
     
     const isOllama = settings.activeLLM === 'ollama' || settings.activeLLM === 'ollama_cloud';
-    const raw = isOllama 
-        ? await refineSinglePromptOllama(promptText, settings, sys, 1024)
-        : await refineSinglePromptGemini(promptText, '', settings, sys);
+    const isOpenClaw = settings.activeLLM === 'openclaw';
+    const raw = isOpenClaw
+        ? await refineSinglePromptOpenClaw(promptText, settings, sys, 1024)
+        : isOllama 
+            ? await refineSinglePromptOllama(promptText, settings, sys, 1024)
+            : await refineSinglePromptGemini(promptText, '', settings, sys);
     const cleaned = cleanLLMResponse(raw);
     return cleaned;
 };
@@ -349,9 +356,12 @@ export async function* refineSinglePromptStream(
     const sys = AI_ROLES.REFINER(targetAIModel, isVideo, isAudio, hasManualCamera, modifiers.videoInputType, settings.masterRolePrompt);
     
     const isOllama = settings.activeLLM === 'ollama' || settings.activeLLM === 'ollama_cloud';
-    const stream = isOllama
-        ? refineSinglePromptOllamaStream(promptText, settings, sys, 1024)
-        : refineSinglePromptGeminiStream(promptText, '', settings, sys);
+    const isOpenClaw = settings.activeLLM === 'openclaw';
+    const stream = isOpenClaw
+        ? refineSinglePromptOpenClawStream(promptText, settings, sys, 1024)
+        : isOllama
+            ? refineSinglePromptOllamaStream(promptText, settings, sys, 1024)
+            : refineSinglePromptGeminiStream(promptText, '', settings, sys);
 
     let inThought = false;
     for await (const chunk of stream) {
@@ -365,6 +375,9 @@ export async function* refineSinglePromptStream(
 
 export const generateArtistDescription = async (artistName: string, settings: LLMSettings): Promise<string> => {
     const isOllama = settings.activeLLM === 'ollama' || settings.activeLLM === 'ollama_cloud';
+    const isOpenClaw = settings.activeLLM === 'openclaw';
+    if (isOpenClaw) return refineSinglePromptOpenClaw(artistName, settings, "Brief style summary. Text only.", 512);
+
     return isOllama
         ? generateArtistDescriptionOllama(artistName, settings)
         : generateArtistDescriptionGemini(artistName, settings);
@@ -372,6 +385,9 @@ export const generateArtistDescription = async (artistName: string, settings: LL
 
 export const analyzePaletteMood = async (hexColors: string[], settings: LLMSettings): Promise<string> => {
     const isOllama = settings.activeLLM === 'ollama' || settings.activeLLM === 'ollama_cloud';
+    const isOpenClaw = settings.activeLLM === 'openclaw';
+    if (isOpenClaw) return refineSinglePromptOpenClaw(`Colors: ${hexColors.join(', ')}`, settings, "Task: mood in 3 words max. Text only.", 64);
+
     return isOllama
         ? analyzePaletteMoodOllama(hexColors, settings)
         : analyzePaletteMoodGemini(hexColors, settings);
@@ -379,6 +395,9 @@ export const analyzePaletteMood = async (hexColors: string[], settings: LLMSetti
 
 export const generateColorName = async (hexColor: string, mood: string, settings: LLMSettings): Promise<string> => {
     const isOllama = settings.activeLLM === 'ollama' || settings.activeLLM === 'ollama_cloud';
+    const isOpenClaw = settings.activeLLM === 'openclaw';
+    if (isOpenClaw) return refineSinglePromptOpenClaw(`Hex:${hexColor}, Mood:${mood}`, settings, "Task: Poetic 2-word name. Text only.", 32);
+
     return isOllama
         ? generateColorNameOllama(hexColor, mood, settings)
         : generateColorNameGemini(hexColor, mood, settings);
@@ -386,6 +405,13 @@ export const generateColorName = async (hexColor: string, mood: string, settings
 
 export const dissectPrompt = async (promptText: string, settings: LLMSettings, modifierCatalog?: string, modelName?: string): Promise<{ naturalLanguage: string, prompt: string, modifiers: { [key: string]: string }, constantModifier: string, categorizedParameters: { label: string, value: string }[] }> => {
     const isOllama = settings.activeLLM === 'ollama' || settings.activeLLM === 'ollama_cloud';
+    const isOpenClaw = settings.activeLLM === 'openclaw';
+    // Fallback if custom dissection logic isn't built for OpenClaw yet - use its refiner to get natural lang
+    if (isOpenClaw) {
+        const naturalLang = await refineSinglePromptOpenClaw(promptText, settings, "Task: Convert this Stable Diffusion prompt into a clear, natural English narrative. No intros.", 800);
+        return { naturalLanguage: naturalLang, prompt: promptText, modifiers: {}, constantModifier: '', categorizedParameters: [] };
+    }
+
     return isOllama
         ? dissectPromptOllama(promptText, settings, modifierCatalog, modelName)
         : dissectPromptGemini(promptText, settings, modifierCatalog, modelName);
@@ -514,11 +540,11 @@ export const testOllamaConnection = async (baseUrl: string): Promise<OllamaTestR
     let targetUrl = cleanUrl;
     let headers: Record<string, string> = {};
     
-    if (window.location.protocol === 'https:') {
-        if (cleanUrl.includes('localhost:11434') || cleanUrl.includes('127.0.0.1:11434')) {
+    if (typeof window !== 'undefined' && window.location.protocol === 'https:') {
+        if (cleanUrl.includes('localhost:') || cleanUrl.includes('127.0.0.1:')) {
             // Optimization: Skip local fetch in cloud to avoid proxy noise
-            return { success: false, message: "LOCAL OLLAMA UNREACHABLE IN CLOUD. USE REMOTE ENDPOINT." };
-        } else if (cleanUrl.startsWith('http')) {
+            return { success: false, message: "LOCAL TARGET UNREACHABLE IN CLOUD. USE REMOTE OR RUN LOCALLY." };
+        } else if (cleanUrl.startsWith('http:')) {
             targetUrl = '/proxy-remote';
             headers['x-target-url'] = cleanUrl;
         }
@@ -545,3 +571,22 @@ export const testOllamaConnection = async (baseUrl: string): Promise<OllamaTestR
         return { success: false, message: e.message || "CONNECTION REFUSED" };
     }
 };
+
+export async function* streamChat(
+    messages: { role: 'user' | 'assistant' | 'system', content: string }[],
+    settings: LLMSettings
+): AsyncGenerator<string> {
+    const isOllama = settings.activeLLM === 'ollama' || settings.activeLLM === 'ollama_cloud';
+    const isOpenClaw = settings.activeLLM === 'openclaw';
+
+    if (isOpenClaw) {
+        const { streamChatOpenClaw } = await import('./openclawService');
+        yield* streamChatOpenClaw(messages, settings);
+    } else if (isOllama) {
+        const { streamChatOllama } = await import('./ollamaService');
+        yield* streamChatOllama(messages, settings);
+    } else {
+        const { streamChatGemini } = await import('./geminiService');
+        yield* streamChatGemini(messages, settings);
+    }
+}

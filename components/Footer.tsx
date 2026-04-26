@@ -204,7 +204,7 @@ const Footer: React.FC<FooterProps> = ({
                 <div className="flex gap-4 font-jardhani items-center pl-4 ps-6 border-l border-base-content/10">
                     <span className="text-[10px] tracking-widest text-primary/60 leading-none inline-block">INT</span>
                     <IntegrationItem label="VAULT" active={fileSystemManager.isDirectorySelected()} />
-                    <IntegrationItem label={(settings.activeLLM === 'ollama_cloud' ? 'OLLAMA' : settings.activeLLM?.toUpperCase()) || 'LLM'} active={!!process.env.GEMINI_API_KEY || settings.activeLLM?.includes('ollama')} />
+                    <IntegrationItem label={(settings.activeLLM === 'ollama_cloud' ? 'OLLAMA' : settings.activeLLM?.toUpperCase()) || 'LLM'} active={!!process.env.GEMINI_API_KEY || settings.activeLLM?.includes('ollama') || settings.activeLLM === 'openclaw'} />
                     <IntegrationItem label="YOUTUBE" active={!!settings.youtube?.isConnected} />
                 </div>
             </div>
@@ -212,7 +212,7 @@ const Footer: React.FC<FooterProps> = ({
             <div className="flex flex-row items-center h-full gap-6 relative z-[710] pointer-events-auto">
                 <div className="flex items-center gap-6">
                     <div className="hidden md:flex items-center gap-6">
-                        <MetadataItem label="VAULT" value={`${vaultCount} UNITS`} />
+                        <MetadataItem label="VLT" value={`${vaultCount} UNITS`} />
                         <div className="w-[1px] h-3 bg-base-content/10" />
                         <MetadataItem label="SEQ" value={time} />
                     </div>

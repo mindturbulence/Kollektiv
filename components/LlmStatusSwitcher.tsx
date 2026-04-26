@@ -27,6 +27,9 @@ const LlmStatusSwitcher: React.FC<LlmStatusSwitcherProps> = ({ onClick, isOpen }
     } else if (settings.activeLLM === 'ollama_cloud') {
         displayText = settings.ollamaCloudModel || 'Ollama Cloud';
         tooltipText = `Using Cloud Ollama endpoint.`;
+    } else if (settings.activeLLM === 'openclaw') {
+        displayText = settings.openclawModel || 'OpenClaw API';
+        tooltipText = `Using OpenClaw Agent Core.`;
     } else { // Gemini
         displayText = geminiModelShortName;
         if (isGeminiKeySet) {

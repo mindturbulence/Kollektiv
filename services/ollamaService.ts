@@ -39,10 +39,8 @@ const getOllamaConfig = (settings: LLMSettings) => {
     let effectiveBaseUrl = rawBaseUrl;
     let extraHeaders: Record<string, string> = {};
 
-    if (window.location.protocol === 'https:') {
-        if (isLocalOllama(rawBaseUrl)) {
-            effectiveBaseUrl = '/ollama-local';
-        } else if (isCloud && rawBaseUrl && !rawBaseUrl.startsWith('/proxy-remote')) {
+    if (typeof window !== 'undefined' && window.location.protocol === 'https:') {
+        if (rawBaseUrl.startsWith('http:') && !rawBaseUrl.startsWith('/proxy-remote') && !rawBaseUrl.includes('localhost') && !rawBaseUrl.includes('127.0.0.1')) {
             effectiveBaseUrl = '/proxy-remote';
             extraHeaders['x-target-url'] = rawBaseUrl;
         }
@@ -90,7 +88,8 @@ export const fetchOllamaModels = async (settings: LLMSettings, useCloud: boolean
         // skip the automatic fetch to avoid console/terminal noise if Ollama isn't running.
         // Users can still manually refresh or test connection in settings.
         const isTargetingLocal = config.baseUrl === '/ollama-local' || 
-                               (config.baseUrl === '/proxy-remote' && (config.headers as any)['x-target-url'] && isLocalOllama((config.headers as any)['x-target-url']));
+                               (config.baseUrl === '/proxy-remote' && (config.headers as any)['x-target-url'] && isLocalOllama((config.headers as any)['x-target-url'])) ||
+                               isLocalOllama(config.baseUrl);
 
         if (window.location.protocol === 'https:' && isTargetingLocal) {
             return [];
@@ -177,6 +176,66 @@ export async function* enhancePromptOllamaStream(
         }
     } catch (err: any) {
         throw handleGeminiError(err, 'enhancing with Ollama stream');
+    }
+}
+
+export async function* streamChatOllama(
+    messages: { role: 'user' | 'assistant' | 'system', content: string }[],
+    settings: LLMSettings
+): AsyncGenerator<string> {
+    try {
+        const config = getOllamaConfig(settings);
+        if (!config.baseUrl || !config.model) throw new Error("Ollama configuration missing.");
+        
+        const ollamaMessages = messages.map(m => ({
+            role: m.role,
+            content: m.content
+        }));
+
+        const apiResponse = await fetch(`${config.baseUrl}/api/chat`, {
+            method: 'POST',
+            headers: config.headers,
+            body: JSON.stringify({
+                model: config.model,
+                messages: ollamaMessages,
+                stream: true,
+                ...BASE_CONFIG,
+                options: { ...BASE_CONFIG.options, num_predict: 4096 }
+            }),
+        });
+
+        if (!apiResponse.ok) {
+            const errorBody = await apiResponse.text();
+            let msg = `Ollama Chat Stream failed (${apiResponse.status})`;
+            try { msg = JSON.parse(errorBody).error || msg; } catch(e) {}
+            throw new Error(msg);
+        }
+
+        if (!apiResponse.body) throw new Error("Ollama stream body is empty.");
+        
+        const reader = apiResponse.body.getReader();
+        const decoder = new TextDecoder();
+        let buffer = '';
+        while (true) {
+            const { done, value } = await reader.read();
+            if (done) break;
+            buffer += decoder.decode(value, { stream: true });
+            const lines = buffer.split('\n');
+            buffer = lines.pop() || '';
+            for (const line of lines) {
+                if (!line.trim()) continue;
+                try {
+                    const parsed = JSON.parse(line);
+                    if (parsed.message?.content) yield parsed.message.content;
+                    if (parsed.done) {
+                        const tokens = (parsed.prompt_eval_count || 0) + (parsed.eval_count || 0);
+                        if (tokens > 0) trackTokenUsage(settings.activeLLM === 'ollama_cloud' ? 'ollama_cloud' : 'ollama', tokens);
+                    }
+                } catch (e) {}
+            }
+        }
+    } catch (err: any) {
+        throw handleGeminiError(err, 'chatting with Ollama');
     }
 }
 

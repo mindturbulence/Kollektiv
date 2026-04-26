@@ -135,6 +135,14 @@ export const PaintBrushIcon: React.FC<React.SVGProps<SVGSVGElement>> = (props) =
   </svg>
 );
 
+export const SidebarIcon: React.FC<React.SVGProps<SVGSVGElement>> = (props) => (
+  <svg {...commonProps} {...props}>
+    <path stroke="none" d="M0 0h24v24H0z" fill="none"/>
+    <path d="M4 4m0 2a2 2 0 0 1 2 -2h12a2 2 0 0 1 2 2v12a2 2 0 0 1 -2 2h-12a2 2 0 0 1 -2 -2z" />
+    <path d="M9 4v16" />
+  </svg>
+);
+
 export const CheckIcon: React.FC<React.SVGProps<SVGSVGElement>> = (props) => (
   <svg {...commonProps} {...props}>
     <path stroke="none" d="M0 0h24v24H0z" fill="none"/>
@@ -598,4 +606,20 @@ export const CompassIcon: React.FC<React.SVGProps<SVGSVGElement>> = (props) => (
     <path d="M21 12l2 0" />
   </svg>
 );
+
+export const TerminalIcon: React.FC<React.SVGProps<SVGSVGElement>> = (props) => (
+  <svg {...commonProps} {...props}>
+    <path stroke="none" d="M0 0h24v24H0z" fill="none"/>
+    <path d="M5 7l5 5l-5 5" />
+    <path d="M12 19l7 0" />
+  </svg>
+);
+
+export const ChatBubbleIcon: React.FC<React.SVGProps<SVGSVGElement>> = (props) => (
+  <svg {...commonProps} {...props}>
+    <path stroke="none" d="M0 0h24v24H0z" fill="none"/>
+    <path d="M12 21a9 9 0 1 0 -9 -9c0 1.488 .382 2.881 1.053 4.08l-1.053 4.92l4.92 -1.053a8.95 8.95 0 0 0 4.08 1.053z" />
+  </svg>
+);
+
 

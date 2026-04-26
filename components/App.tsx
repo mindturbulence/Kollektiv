@@ -39,6 +39,7 @@ import ImageCompare from './ImageCompare';
 import ColorPaletteExtractor from './ColorPaletteExtractor';
 import ImageResizer from './ImageResizer';
 import { VideoToFrames } from './VideoToFrames';
+import { LLMChatPanel } from './LLMChatPanel';
 import { motion, AnimatePresence } from 'framer-motion';
 import { pageVariants } from './AnimatedPanels';
 import ChromaticText from './ChromaticText';
@@ -404,6 +405,7 @@ const AppContent: React.FC = () => {
     const [activeTab, setActiveTab] = useLocalStorage<ActiveTab>('activeTab', 'dashboard');
     const [isAboutModalOpen, setIsAboutModalOpen] = useState(false);
     const [isClippingPanelOpen, setIsClippingPanelOpen] = useState(false);
+    const [isOpenClawOpen, setIsOpenClawOpen] = useState(false);
     const [isLlmPanelOpen, setIsLlmPanelOpen] = useState(false);
     const [collapsedPanels, setCollapsedPanels] = useLocalStorage<Record<string, boolean>>('collapsedPanels', {});
     const [globalFeedback, setGlobalFeedback] = useState<{ message: string; type: 'success' | 'error' } | null>(null);
@@ -725,7 +727,7 @@ const AppContent: React.FC = () => {
 
         switch (activeTab) {
             case 'dashboard': return <Dashboard key="dashboard" onNavigate={handleNavigate} onClipIdea={handleClipIdea} isExiting={false} />;
-            case 'discovery': return <DiscoveryPage key="discovery" isExiting={false} onSendToBuilder={handleSendToPromptsPage} showGlobalFeedback={showGlobalFeedback} />;
+            case 'discovery': return <DiscoveryPage key="discovery" isExiting={false} onClipIdea={handleClipIdea} onSendToBuilder={handleSendToPromptsPage} showGlobalFeedback={showGlobalFeedback} />;
             case 'prompts': return <PromptsPage key="prompts" onClipIdea={handleClipIdea} initialState={promptsPageState} onStateHandled={() => setPromptsPageState(null)} showGlobalFeedback={showGlobalFeedback} isExiting={false} />;
             case 'crafter': return <PromptsPage key="crafter" forcedView="composer" onClipIdea={handleClipIdea} initialState={promptsPageState} onStateHandled={() => setPromptsPageState(null)} showGlobalFeedback={showGlobalFeedback} isExiting={false} />;
             case 'refiner': return <PromptsPage key="refiner" forcedView="refine" onClipIdea={handleClipIdea} initialState={promptsPageState} onStateHandled={() => setPromptsPageState(null)} showGlobalFeedback={showGlobalFeedback} isExiting={false} />;
@@ -925,6 +927,7 @@ const AppContent: React.FC = () => {
                                 isInitialized={isInitialized}
                                 onAboutClick={() => setIsAboutModalOpen(true)}
                                 onToggleClippingPanel={() => setIsClippingPanelOpen(!isClippingPanelOpen)}
+                                onToggleOpenClaw={() => setIsOpenClawOpen(!isOpenClawOpen)}
                                 onStandbyClick={handleStandbyClick}
                                 clippedIdeasCount={clippedIdeas.length}
                             />
@@ -987,6 +990,11 @@ const AppContent: React.FC = () => {
                                     <LlmStatusPanel 
                                         isOpen={isLlmPanelOpen}
                                         onClose={() => setIsLlmPanelOpen(false)}
+                                    />
+
+                                    <LLMChatPanel
+                                        isOpen={isOpenClawOpen}
+                                        onClose={() => setIsOpenClawOpen(false)}
                                     />
                                 </div>
                             </main>

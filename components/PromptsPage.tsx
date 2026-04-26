@@ -57,6 +57,7 @@ import PromptCrafter from './PromptCrafter';
 import { MediaAnalyzer } from './MediaAnalyzer';
 import { PromptAnalyzer } from './PromptAnalyzer';
 import LoadingSpinner from './LoadingSpinner';
+import BlobLoader from './BlobLoader';
 import AutocompleteSelect from './AutocompleteSelect';
 import { SparklesIcon, UploadIcon, Cog6ToothIcon, CloseIcon, DownloadIcon } from './icons';
 import ConfirmationModal from './ConfirmationModal';
@@ -1320,8 +1321,7 @@ const PromptsPage: React.FC<PromptsPageProps> = ({
                                 >
                                     {isLoadingRefine ? (
                                         <div className="flex-grow flex flex-col items-center justify-center text-center space-y-6">
-                                            <LoadingSpinner size={48} />
-                                            <p className="text-[10px] font-black uppercase tracking-[0.4em] text-primary animate-pulse -mt-4">{loadingMsg || 'Refining formula...'}</p>
+                                            <BlobLoader />
                                         </div>
                                     ) : errorRefine ? (
                                         <div className="p-8 w-full text-center">

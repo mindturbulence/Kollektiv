@@ -8,7 +8,7 @@ import RollingText from './RollingText';
 import TimedScrambledText from './TimedScrambledText';
 import ThemeSwitcher from './ThemeSwitcher';
 import ChromaticText from './ChromaticText';
-import { InformationCircleIcon, BookmarkIcon, Cog6ToothIcon, PowerIcon } from './icons';
+import { InformationCircleIcon, BookmarkIcon, Cog6ToothIcon, PowerIcon, ChatBubbleIcon } from './icons';
 
 interface HeaderProps {
   onNavigate: (tab: ActiveTab) => void;
@@ -18,6 +18,7 @@ interface HeaderProps {
   onToggleClippingPanel: () => void;
   onStandbyClick: (e: React.MouseEvent) => void;
   clippedIdeasCount: number;
+  onToggleOpenClaw?: () => void;
 }
 
 interface NavItemData {
@@ -137,6 +138,7 @@ const Header: React.FC<HeaderProps> = ({
   isInitialized,
   onAboutClick,
   onToggleClippingPanel,
+  onToggleOpenClaw,
   onStandbyClick,
   clippedIdeasCount
 }) => {
@@ -337,6 +339,17 @@ const Header: React.FC<HeaderProps> = ({
                 title="About"
             >
                 <InformationCircleIcon className="w-4 h-4" />
+            </HUDNavItem>
+            <div className="w-px h-2 bg-base-content/10 self-center" />
+            <HUDNavItem
+                onClick={(e) => {
+                    e.stopPropagation();
+                    audioService.playClick();
+                    onToggleOpenClaw?.();
+                }}
+                title="Chat"
+            >
+                <ChatBubbleIcon className="w-4 h-4" />
             </HUDNavItem>
             <div className="w-px h-2 bg-base-content/10 self-center" />
             <ThemeSwitcher />

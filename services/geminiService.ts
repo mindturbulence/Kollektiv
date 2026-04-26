@@ -273,6 +273,53 @@ export const reconstructFromIntentGemini = async (intents: string[], settings: L
     } catch (err) { throw handleGeminiError(err, 'reconstruction'); }
 };
 
+export async function* streamChatGemini(
+    messages: { role: 'user' | 'assistant' | 'system', content: string }[],
+    settings: LLMSettings
+): AsyncGenerator<string> {
+    try {
+        const ai = getGeminiClient(settings);
+        
+        let sysInstruction = '';
+        const history: any[] = [];
+        
+        for (const msg of messages) {
+            if (msg.role === 'system') {
+                sysInstruction += msg.content + '\n';
+            } else {
+                history.push({
+                    role: msg.role === 'user' ? 'user' : 'model',
+                    parts: [{ text: msg.content }]
+                });
+            }
+        }
+        
+        const lastMessage = history.pop(); // The current user message
+        if (!lastMessage || lastMessage.role !== 'user') {
+            throw new Error('Last message must be a user message');
+        }
+
+        const chat = ai.chats.create({
+            model: DEFAULT_MODEL,
+            config: {
+                systemInstruction: sysInstruction.trim() || "You are a helpful AI assistant.",
+            },
+            history: history
+        });
+
+        const responseStream = await chat.sendMessageStream({
+            message: lastMessage.parts[0].text
+        });
+
+        for await (const chunk of responseStream) {
+            if (chunk.text) {
+                yield chunk.text;
+            }
+        }
+    } catch (err) {
+        throw handleGeminiError(err, 'chatting');
+    }
+}
 export const translateToEnglishGemini = async (text: string, settings: LLMSettings): Promise<string> => {
     try {
         const ai = getGeminiClient(settings);

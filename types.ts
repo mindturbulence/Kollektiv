@@ -72,9 +72,14 @@ export interface TokenUsage {
 export interface LLMSettings {
   // LLM Provider Settings
   llmModel: string;
-  activeLLM: 'gemini' | 'ollama' | 'ollama_cloud';
+  activeLLM: 'gemini' | 'ollama' | 'ollama_cloud' | 'openclaw';
   ollamaBaseUrl: string;
   ollamaModel: string;
+  
+  // OpenClaw Settings
+  openclawBaseUrl: string;
+  openclawModel: string;
+  openclawApiKey: string;
   
   // Ollama Cloud Settings
   ollamaCloudBaseUrl: string;
@@ -86,6 +91,7 @@ export interface LLMSettings {
   masterRolePrompt?: string;
   geminiTokenUsage?: TokenUsage;
   ollamaTokenUsage?: TokenUsage;
+  openclawTokenUsage?: TokenUsage;
 
   // Theme Settings
   activeThemeMode: 'dark';
