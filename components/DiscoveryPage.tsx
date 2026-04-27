@@ -320,17 +320,25 @@ const DiscoveryPage: React.FC<DiscoveryPageProps> = ({
                 }
 
                 const extracted = discoveryService.parsePromptsFromMarkdown(md);
-                setPrompts(extracted);
-
-                if (activeCollection.sourceType === 'huggingface') {
-                    setHasMore(extracted.length >= (LIMIT * 0.8));
-                } else {
-                    setHasMore(false);
+                const hasMoreFromSource = activeCollection.sourceType === 'huggingface' ? extracted.length >= (LIMIT * 0.8) : false;
+                
+                let results = extracted;
+                if (debouncedSearchQuery) {
+                    const q = debouncedSearchQuery.toLowerCase();
+                    results = extracted.filter(p => 
+                        p.prompt.toLowerCase().includes(q) || 
+                        p.title.toLowerCase().includes(q) || 
+                        p.category.toLowerCase().includes(q)
+                    );
                 }
 
-                if (extracted.length === 0 && !debouncedSearchQuery) {
+                setPrompts(results);
+                setHasMore(hasMoreFromSource);
+
+                if (results.length === 0 && !debouncedSearchQuery) {
                     showGlobalFeedback('UPLINK_EMPTY: NO_RECORDS_FOUND');
                 }
+                // Removed the auto-loading as it can create infinite loops easily without state control
             } catch (err) {
                 console.error('Discovery fetch error:', err);
                 showGlobalFeedback('CRITICAL_UPLINK_FAILURE', true);
@@ -363,14 +371,28 @@ const DiscoveryPage: React.FC<DiscoveryPageProps> = ({
             }
 
             const extracted = discoveryService.parsePromptsFromMarkdown(md);
+            const hasMoreFromSource = activeCollection.sourceType === 'huggingface' ? extracted.length >= (LIMIT * 0.8) : false;
 
-            if (extracted.length > 0) {
-                setPrompts(prev => [...prev, ...extracted]);
+            let results = extracted;
+            if (debouncedSearchQuery) {
+                const q = debouncedSearchQuery.toLowerCase();
+                results = extracted.filter(p => 
+                    p.prompt.toLowerCase().includes(q) || 
+                    p.title.toLowerCase().includes(q) || 
+                    p.category.toLowerCase().includes(q)
+                );
+            }
+
+            if (results.length > 0) {
+                setPrompts(prev => [...prev, ...results]);
                 setOffset(newOffset);
-                setHasMore(extracted.length >= (LIMIT * 0.8));
+                setHasMore(hasMoreFromSource);
             } else {
-                setHasMore(false);
-                showGlobalFeedback('DATABASE_TERMINUS_REACHED');
+                setOffset(newOffset);
+                setHasMore(hasMoreFromSource);
+                if (!hasMoreFromSource) {
+                    showGlobalFeedback('DATABASE_TERMINUS_REACHED');
+                }
             }
         } catch (err) {
             console.error('Discovery load more error:', err);
@@ -548,7 +570,7 @@ const DiscoveryPage: React.FC<DiscoveryPageProps> = ({
                                     </motion.div>
                                 ))}
 
-                                {hasMore && !searchQuery && prompts.length > 0 && (
+                                {hasMore && (
                                     <button
                                         onClick={handleLoadMore}
                                         disabled={isLoadingMore}
@@ -560,12 +582,12 @@ const DiscoveryPage: React.FC<DiscoveryPageProps> = ({
                                                 <span>Expanding Buffer</span>
                                             </>
                                         ) : (
-                                            'Load More'
+                                            prompts.length === 0 ? 'Scan Deeper' : 'Load More'
                                         )}
                                     </button>
                                 )}
 
-                                {prompts.length === 0 && !isLoading && (
+                                {prompts.length === 0 && !isLoading && !hasMore && (
                                     <div className="py-20 text-center opacity-10">
                                         <p className="text-[12px] font-black uppercase tracking-widest">No Data Syncable</p>
                                     </div>

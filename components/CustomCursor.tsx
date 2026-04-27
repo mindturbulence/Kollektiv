@@ -71,29 +71,6 @@ const CustomCursor: React.FC = () => {
     }, []);
 
     useEffect(() => {
-        if (!cursorRef.current || !innerRef.current) return;
-        
-        const updateCursorColor = () => {
-            const style = getComputedStyle(document.documentElement);
-            const themeColor = style.getPropertyValue('--p').trim() || '#00ffa3';
-            const textColor = style.getPropertyValue('--bc').trim() || '#ffffff';
-            
-            gsap.set(cursorRef.current, { color: textColor });
-            gsap.set(innerRef.current, { borderColor: themeColor + '99' });
-        };
-        
-        updateCursorColor();
-        
-        const observer = new MutationObserver(updateCursorColor);
-        observer.observe(document.documentElement, { 
-            attributes: true, 
-            attributeFilter: ['data-theme'] 
-        });
-        
-        return () => observer.disconnect();
-    }, []);
-
-    useEffect(() => {
         if (!arrowRef.current) return;
         
         // Constant rotation for the half-circle
@@ -108,40 +85,6 @@ const CustomCursor: React.FC = () => {
             if (arrowRef.current) gsap.killTweensOf(arrowRef.current);
         };
     }, []);
-
-    useEffect(() => {
-        if (!innerRef.current) return;
-        
-        const getThemeColor = () => {
-            if (typeof document !== 'undefined') {
-                const style = getComputedStyle(document.documentElement);
-                return style.getPropertyValue('--p').trim() || '#00ffa3';
-            }
-            return '#00ffa3';
-        };
-        
-        const themeColor = getThemeColor();
-        
-        if (isHovering) {
-            gsap.to(innerRef.current, {
-                scale: 1.8,
-                backgroundColor: themeColor + '26',
-                borderColor: themeColor,
-                borderRadius: '50%',
-                duration: 0.6,
-                ease: "power2.out"
-            });
-        } else {
-            gsap.to(innerRef.current, {
-                scale: 1,
-                backgroundColor: 'transparent',
-                borderColor: themeColor + '99',
-                borderRadius: '50%',
-                duration: 0.8,
-                ease: "power2.inOut"
-            });
-        }
-    }, [isHovering]);
 
     useEffect(() => {
         if (isBusy && spinnerRef.current) {
@@ -159,13 +102,13 @@ const CustomCursor: React.FC = () => {
     return (
         <div
             ref={cursorRef}
-            className="fixed top-1 left-1 pointer-events-none z-[9999] opacity-0 flex items-center"
+            className="fixed top-1 left-1 pointer-events-none z-[9999] opacity-0 flex items-center text-base-content"
             style={{ width: 'auto', height: '40px' }}
         >
             <div className={`relative flex items-center justify-center transition-opacity duration-300 ${isBusy ? 'opacity-0' : 'opacity-100'}`}>
                 <div 
                     ref={innerRef}
-                    className="w-5 h-5 border rounded-full flex items-center justify-center overflow-hidden cursor-inner"
+                    className={`w-5 h-5 border rounded-full flex items-center justify-center overflow-hidden cursor-inner transition-all duration-300 ease-out border-primary text-primary ${isHovering ? 'scale-[1.8] bg-primary/20 border-opacity-100' : 'scale-100 bg-transparent border-opacity-60'}`}
                     style={{ borderRadius: '50%', borderStyle: 'solid' }}
                 >
                     {/* Rotating Half-Circle */}
@@ -185,7 +128,7 @@ const CustomCursor: React.FC = () => {
                 </div>
 
                 {/* X and Y Coordinates at the side */}
-                <div className="ml-4 flex flex-col gap-0.5 pointer-events-none">
+                <div className="ml-4 flex flex-col gap-0.5 pointer-events-none text-base-content">
                     <span className="text-[8px] font-mono font-bold opacity-40 leading-none uppercase tracking-tighter">
                         X:{coords.x.toString().padStart(4, '0')}
                     </span>
@@ -196,7 +139,7 @@ const CustomCursor: React.FC = () => {
             </div>
             
             {isBusy && (
-                <div className="absolute flex items-center gap-2 animate-fade-in whitespace-nowrap left-0">
+                <div className="absolute flex items-center gap-2 animate-fade-in whitespace-nowrap left-0 text-primary">
                     <div 
                         ref={spinnerRef}
                         className="w-3 h-3 border border-current border-t-current rounded-full"

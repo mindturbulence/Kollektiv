@@ -1295,6 +1295,54 @@ button:active {
       rgba(0, 0, 0, 0) 100%);
 }
 
+/* Hiigara Theme Enhancements (Homeworld inspired) */
+[data-theme="Hiigara"] {
+  --hiigara-glow: 0 0 10px rgba(77, 184, 255, 0.5);
+}
+
+[data-theme="Hiigara"] .card,
+[data-theme="Hiigara"] .bg-base-100 {
+  border: 1px solid rgba(77, 184, 255, 0.3) !important;
+  background: linear-gradient(180deg,
+      rgba(17, 24, 34, 0.8) 0%,
+      rgba(8, 11, 15, 0.9) 100%) !important;
+  backdrop-filter: blur(8px);
+  border-radius: 4px;
+}
+
+[data-theme="Hiigara"] .text-primary {
+  color: #4db8ff !important;
+  text-shadow: 0 0 8px rgba(77, 184, 255, 0.4);
+}
+
+[data-theme="Hiigara"] .btn-primary {
+  background: linear-gradient(135deg, #4db8ff 0%, #1a90ff 100%) !important;
+  color: #080b0f !important;
+  border: none !important;
+  font-weight: bold;
+  border-radius: 2px;
+  box-shadow: 0 0 15px rgba(77, 184, 255, 0.3);
+}
+
+[data-theme="Hiigara"] .panel-header,
+[data-theme="Hiigara"] .panel-footer,
+[data-theme="Hiigara"] header.panel-header,
+[data-theme="Hiigara"] footer.panel-footer {
+  border-color: rgba(77, 184, 255, 0.25) !important;
+  background-color: rgba(77, 184, 255, 0.05) !important;
+}
+
+[data-theme="Hiigara"] .input,
+[data-theme="Hiigara"] .select,
+[data-theme="Hiigara"] .textarea,
+[data-theme="Hiigara"] .form-input,
+[data-theme="Hiigara"] .form-select,
+[data-theme="Hiigara"] .form-textarea {
+  background-color: rgba(8, 11, 15, 0.6) !important;
+  border-color: rgba(77, 184, 255, 0.3) !important;
+  color: #e2e8f0;
+}
+
 /* MindTurbulence Theme Enhancements (f.k.a. Sazabi) */
 [data-theme="MindTurbulence"] .card,
 [data-theme="MindTurbulence"] .bg-base-100,

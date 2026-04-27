@@ -150,6 +150,26 @@ export default {
         },
       },
       {
+        Hiigara: {
+          primary: "#4db8ff",
+          secondary: "#1a2530",
+          accent: "#ffffff",
+          neutral: "#0a0e14",
+          "base-100": "#080b0f",
+          "base-200": "#0a0e14",
+          "base-300": "#111822",
+          "base-content": "#e2e8f0",
+          info: "#6eb6ff",
+          success: "#33ff99",
+          warning: "#f5a623",
+          error: "#ff3333",
+          "--rounded-box": "0",
+          "--rounded-btn": "0",
+          "--rounded-badge": "0",
+          "--rounded-tab": "0",
+        },
+      },
+      {
         MindTurbulence: {
           primary: "#e60012",
           secondary: "#ffc400",
