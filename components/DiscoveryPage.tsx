@@ -122,7 +122,7 @@ const DetailPanel: React.FC<{
             <div className="flex-grow flex flex-col p-8 space-y-8 overflow-y-auto custom-scrollbar">
                 <div className="space-y-1">
                     <span className="text-[10px] uppercase tracking-[0.2em] text-base-content/50 shrink-0">Title</span>
-                    <h2 className="text-[34px] font-jardhani tracking-tighter leading-tight break-all text-primary/80">
+                    <h2 className="text-[34px] font-rajdhani tracking-tighter leading-tight break-all text-primary/80">
                         <TypewriterText
                             text={prompt.category || 'Archive Record'}
                             speed={50}
@@ -134,7 +134,7 @@ const DetailPanel: React.FC<{
                 <div className="space-y-3 flex-grow flex flex-col min-h-0">
                     <span className="text-[10px] uppercase tracking-[0.2em] text-base-content/50 shrink-0">Prompt</span>
                     <div className="p-0 bg-base-100/50 backdrop-blur-sm relative flex-grow overflow-y-auto custom-scrollbar">
-                        <p className="text-[16px] font-jardhani leading-relaxed  transition-colors">
+                        <p className="text-[16px] font-rajdhani leading-relaxed  transition-colors">
                             {isTitleDone ? (
                                 <TypewriterText text={prompt.prompt} speed={8} />
                             ) : (
@@ -149,7 +149,7 @@ const DetailPanel: React.FC<{
             <div className="h-14 flex items-stretch p-1.5 bg-base-100/10 backdrop-blur-md border-t border-white/10 gap-1.5 shrink-0">
                 <button
                     onClick={() => onSend(prompt.prompt)}
-                    className="btn btn-sm btn-ghost h-full rounded-none flex-1 text-[10px] tracking-wider text-primary border-1 disabled:opacity-30 disabled:cursor-not-allowed btn-snake"
+                    className="btn btn-sm btn-ghost h-full rounded-none flex-1 tracking-wider text-primary border-1 disabled:opacity-30 disabled:cursor-not-allowed btn-snake"
                     title="Send to Refiner"
                 >
                     <span /><span /><span /><span />
@@ -157,7 +157,7 @@ const DetailPanel: React.FC<{
                 </button>
                 <button
                     onClick={() => onClipboardClip(prompt)}
-                    className="btn btn-sm btn-ghost h-full rounded-none flex-1 text-[10px] tracking-wider text-primary border-1 disabled:opacity-30 disabled:cursor-not-allowed btn-snake"
+                    className="btn btn-sm btn-ghost h-full rounded-none flex-1 tracking-wider text-primary border-1 disabled:opacity-30 disabled:cursor-not-allowed btn-snake"
                     title="Add to Clipboard"
                 >
                     <span /><span /><span /><span />
@@ -165,7 +165,7 @@ const DetailPanel: React.FC<{
                 </button>
                 <button
                     onClick={() => onCopy(prompt.prompt)}
-                    className="btn btn-sm btn-ghost h-full rounded-none flex-1 text-[10px] tracking-wider text-primary border-1 disabled:opacity-30 disabled:cursor-not-allowed btn-snake"
+                    className="btn btn-sm btn-ghost h-full rounded-none flex-1 tracking-wider text-primary border-1 disabled:opacity-30 disabled:cursor-not-allowed btn-snake"
                     title="Copy to Clipboard"
                 >
                     <span /><span /><span /><span />
@@ -173,7 +173,7 @@ const DetailPanel: React.FC<{
                 </button>
                 <button
                     onClick={() => onClip(prompt)}
-                    className="btn btn-sm btn-ghost h-full rounded-none flex-1 text-[10px] tracking-wider text-primary border-1 disabled:opacity-30 disabled:cursor-not-allowed btn-snake"
+                    className="btn btn-sm btn-ghost h-full rounded-none flex-1 tracking-wider text-primary border-1 disabled:opacity-30 disabled:cursor-not-allowed btn-snake"
                     title="Save to Memory"
                 >
                     <span /><span /><span /><span />
@@ -451,7 +451,7 @@ const DiscoveryPage: React.FC<DiscoveryPageProps> = ({
             className="flex h-full w-full gap-4"
         >
             {/* LEFT PANEL - FIXED WIDTH */}
-            <div className="hidden lg:flex w-[300px] shrink-0 flex-col h-full relative group p-[1px] corner-frame">
+            <div className="hidden lg:flex w-[400px] shrink-0 flex-col h-full relative group p-[1px] corner-frame">
                 <div className="flex flex-col h-full w-full bg-base-100/50 backdrop-blur-xl relative overflow-hidden">
                     <ScanLine delay={1} />
 
@@ -563,7 +563,7 @@ const DiscoveryPage: React.FC<DiscoveryPageProps> = ({
                                             {p.category}
                                         </div>
                                         <div className="flex-grow min-w-0 px-4 ml-4 overflow-hidden">
-                                            <h3 className={`text-[14px] font-jardhani tracking-tight truncate block w-full transition-colors ${selectedPrompt?.id === p.id ? 'text-base-content' : 'text-base-content/60 group-hover:text-base-content/90'}`}>
+                                            <h3 className={`text-[14px] font-rajdhani tracking-tight truncate block w-full transition-colors ${selectedPrompt?.id === p.id ? 'text-base-content' : 'text-base-content/60 group-hover:text-base-content/90'}`}>
                                                 {p.prompt.trim().replace(/\n/g, ' ')}
                                             </h3>
                                         </div>

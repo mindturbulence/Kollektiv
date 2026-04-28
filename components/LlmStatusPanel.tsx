@@ -110,7 +110,7 @@ const LlmStatusPanel: React.FC<LlmStatusPanelProps> = ({ isOpen, onClose }) => {
           {/* Header */}
           <div className="flex justify-between items-center h-16 px-6 bg-base-100/20 flex-shrink-0 border-b border-base-300/10 relative">
             <div className="flex items-center gap-3">
-              <h3 className="font-black text-[10px] font-jardhani uppercase tracking-[0.2em]">
+              <h3 className="font-black text-[10px] font-rajdhani uppercase tracking-[0.2em]">
                 Intelligence Models
               </h3>
             </div>
@@ -144,7 +144,7 @@ const LlmStatusPanel: React.FC<LlmStatusPanelProps> = ({ isOpen, onClose }) => {
                     onClick={() =>
                       handleProviderAndModelSelect("gemini", model.id)
                     }
-                    className={`rounded-none text-[10px] font-jardhani uppercase tracking-widest py-2 w-full text-left px-8 border-l-2 transition-all ${settings.llmModel === model.id && settings.activeLLM === "gemini" ? "text-primary bg-primary/5 border-primary shadow-[inset_10px_0_20px_-10px_rgba(var(--p),0.1)]" : "text-base-content/40 hover:text-base-content hover:bg-base-content/5 border-transparent"}`}
+                    className={`rounded-none text-[10px] font-rajdhani uppercase tracking-widest py-2 w-full text-left px-8 border-l-2 transition-all ${settings.llmModel === model.id && settings.activeLLM === "gemini" ? "text-primary bg-primary/5 border-primary shadow-[inset_10px_0_20px_-10px_rgba(var(--p),0.1)]" : "text-base-content/40 hover:text-base-content hover:bg-base-content/5 border-transparent"}`}
                   >
                     {model.name}
                   </button>
@@ -166,7 +166,7 @@ const LlmStatusPanel: React.FC<LlmStatusPanelProps> = ({ isOpen, onClose }) => {
                       onClick={() =>
                         handleProviderAndModelSelect("ollama", model)
                       }
-                      className={`rounded-none text-[10px] font-jardhani uppercase tracking-widest py-2 w-full text-left px-8 border-l-2 transition-all ${settings.ollamaModel === model && settings.activeLLM === "ollama" ? "text-secondary bg-secondary/5 border-secondary shadow-[inset_10px_0_20px_-10px_rgba(var(--s),0.1)]" : "text-base-content/40 hover:text-base-content hover:bg-base-content/5 border-transparent"}`}
+                      className={`rounded-none text-[10px] font-rajdhani uppercase tracking-widest py-2 w-full text-left px-8 border-l-2 transition-all ${settings.ollamaModel === model && settings.activeLLM === "ollama" ? "text-secondary bg-secondary/5 border-secondary shadow-[inset_10px_0_20px_-10px_rgba(var(--s),0.1)]" : "text-base-content/40 hover:text-base-content hover:bg-base-content/5 border-transparent"}`}
                     >
                       {model}
                     </button>
@@ -182,7 +182,7 @@ const LlmStatusPanel: React.FC<LlmStatusPanelProps> = ({ isOpen, onClose }) => {
                       onClick={() =>
                         handleProviderAndModelSelect("ollama_cloud", model)
                       }
-                      className={`rounded-none text-[10px] font-jardhani uppercase tracking-widest py-2 w-full text-left px-8 border-l-2 transition-all ${settings.ollamaCloudModel === model && settings.activeLLM === "ollama_cloud" ? "text-primary bg-primary/5 border-primary shadow-[inset_10px_0_20px_-10px_rgba(var(--p),0.1)]" : "text-base-content/40 hover:text-base-content hover:bg-base-content/5 border-transparent"}`}
+                      className={`rounded-none text-[10px] font-rajdhani uppercase tracking-widest py-2 w-full text-left px-8 border-l-2 transition-all ${settings.ollamaCloudModel === model && settings.activeLLM === "ollama_cloud" ? "text-primary bg-primary/5 border-primary shadow-[inset_10px_0_20px_-10px_rgba(var(--p),0.1)]" : "text-base-content/40 hover:text-base-content hover:bg-base-content/5 border-transparent"}`}
                     >
                       {model}
                     </button>
@@ -212,7 +212,7 @@ const LlmStatusPanel: React.FC<LlmStatusPanelProps> = ({ isOpen, onClose }) => {
                     onClick={() =>
                       handleProviderAndModelSelect("openclaw", model)
                     }
-                    className={`rounded-none text-[10px] font-jardhani uppercase tracking-widest py-2 w-full text-left px-8 border-l-2 transition-all ${settings.openclawModel === model && settings.activeLLM === "openclaw" ? "text-accent bg-accent/5 border-accent shadow-[inset_10px_0_20px_-10px_rgba(var(--a),0.1)]" : "text-base-content/40 hover:text-base-content hover:bg-base-content/5 border-transparent"}`}
+                    className={`rounded-none text-[10px] font-rajdhani uppercase tracking-widest py-2 w-full text-left px-8 border-l-2 transition-all ${settings.openclawModel === model && settings.activeLLM === "openclaw" ? "text-accent bg-accent/5 border-accent shadow-[inset_10px_0_20px_-10px_rgba(var(--a),0.1)]" : "text-base-content/40 hover:text-base-content hover:bg-base-content/5 border-transparent"}`}
                   >
                     {model}
                   </button>

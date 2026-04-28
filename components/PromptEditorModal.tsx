@@ -235,11 +235,11 @@ const PromptEditorModal: React.FC<PromptEditorModalProps> = ({ isOpen, onClose, 
           </div>
           
           <footer ref={footerRef} className="h-14 flex items-stretch bg-base-100/10 backdrop-blur-md p-1.5 gap-1.5 overflow-hidden flex-shrink-0 panel-footer">
-            <button onClick={handleClose} className="btn btn-sm btn-ghost h-full flex-1 rounded-none font-normal text-[13px] tracking-wider uppercase btn-snake font-display">
+            <button onClick={handleClose} className="btn btn-sm btn-ghost h-full flex-1 rounded-none tracking-wider uppercase btn-snake">
               <span/><span/><span/><span/>
               CANCEL
             </button>
-            <button onClick={handleSave} disabled={!text.trim() || isSaving} className="btn btn-sm btn-primary h-full flex-1 rounded-none font-normal text-[13px] tracking-wider uppercase btn-snake-primary font-display">
+            <button onClick={handleSave} disabled={!text.trim() || isSaving} className="btn btn-sm btn-primary h-full flex-1 rounded-none tracking-wider uppercase btn-snake-primary">
               <span/><span/><span/><span/>
               {isSaving ? 'SAVING...' : 'SAVE CHANGES'}
             </button>

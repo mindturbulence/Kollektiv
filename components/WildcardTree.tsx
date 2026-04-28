@@ -37,7 +37,7 @@ const WildcardCategoryNode: React.FC<WildcardCategoryNodeProps> = ({ category, o
                                 <button 
                                     key={file.path} 
                                     onClick={() => onWildcardClick(wildcardPath)} 
-                                    className="inline-flex h-auto p-0 border-none bg-transparent hover:text-primary transition-colors text-[10px] font-bold lowercase tracking-tight text-base-content/60 font-nunito"
+                                    className="inline-flex h-auto p-0 border-none bg-transparent hover:text-primary transition-colors lowercase tracking-tight text-base-content/60"
                                     title={`Insert __${wildcardPath}__`}
                                 >
                                     {displayName}

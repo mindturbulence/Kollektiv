@@ -361,7 +361,7 @@ export const VideoToFrames: React.FC<VideoToFramesProps> = ({ isExiting = false 
                                                 </button>
                                             </div>
                                             {!isFormatSupported && (
-                                                <p className="text-[8px] text-error font-black uppercase tracking-widest mt-2 text-center">
+                                                <p className="text-error uppercase tracking-widest mt-2 text-center">
                                                     {outputFormat.toUpperCase()} not supported by browser. Falling back to WEBM.
                                                 </p>
                                             )}
@@ -397,8 +397,8 @@ export const VideoToFrames: React.FC<VideoToFramesProps> = ({ isExiting = false 
                                         <div className="flex justify-between items-center">
                                             <label className="text-[10px] font-black uppercase text-base-content/40 tracking-widest">Video Queue</label>
                                             <div className="flex gap-2">
-                                                <button onClick={() => (window as any).document.getElementById('joiner-files')?.click()} className="form-btn h-6 px-2 text-[9px] text-base-content/60 hover:text-primary">ADD FILES</button>
-                                                <button onClick={() => setIsPickerOpen(true)} className="form-btn h-6 px-2 text-[9px] text-primary hover:underline">LIBRARY</button>
+                                                <button onClick={() => (window as any).document.getElementById('joiner-files')?.click()} className="form-btn h-6 px-2 -content/60 hover:text-primary">ADD FILES</button>
+                                                <button onClick={() => setIsPickerOpen(true)} className="form-btn h-6 px-2 text-primary hover:underline">LIBRARY</button>
                                             </div>
                                         </div>
                                         <input id="joiner-files" type="file" multiple accept="video/*" className="hidden" onChange={(e) => handleJoinFilesSelect((e.currentTarget as any).files)}/>
@@ -436,23 +436,23 @@ export const VideoToFrames: React.FC<VideoToFramesProps> = ({ isExiting = false 
                         >
                             {activeTab === 'extractor' ? (
                                 <>
-                                    <button onClick={handleCaptureCurrent} disabled={!extractorVideo || isExtracting} className="btn btn-sm btn-ghost h-full flex-1 rounded-none font-normal text-[13px] tracking-wider uppercase btn-snake font-display">
+                                    <button onClick={handleCaptureCurrent} disabled={!extractorVideo || isExtracting} className="btn btn-sm btn-ghost h-full flex-1 rounded-none tracking-wider uppercase btn-snake">
                                         <span/><span/><span/><span/>
                                         CAPTURE
                                     </button>
-                                    <button onClick={handleBatchExtract} disabled={!extractorVideo || isExtracting} className="btn btn-sm btn-primary h-full flex-1 rounded-none font-normal text-[13px] tracking-wider uppercase btn-snake-primary font-display">
+                                    <button onClick={handleBatchExtract} disabled={!extractorVideo || isExtracting} className="btn btn-sm btn-primary h-full flex-1 rounded-none tracking-wider uppercase btn-snake-primary">
                                         <span/><span/><span/><span/>
                                         EXTRACT
                                     </button>
                                     {frames.length > 0 && (
-                                        <button onClick={downloadAllFrames} className="btn btn-sm btn-ghost h-full px-4 rounded-none font-normal text-[13px] tracking-wider uppercase btn-snake font-display">
+                                        <button onClick={downloadAllFrames} className="btn btn-sm btn-ghost h-full px-4 rounded-none tracking-wider uppercase btn-snake">
                                             <span/><span/><span/><span/>
                                             ZIP ({frames.length})
                                         </button>
                                     )}
                                 </>
                             ) : (
-                                <button onClick={handleJoinVideos} disabled={joinFiles.length < 1 || isJoining} className="btn btn-sm btn-primary h-full flex-1 rounded-none font-normal text-[13px] tracking-wider uppercase btn-snake-primary font-display">
+                                <button onClick={handleJoinVideos} disabled={joinFiles.length < 1 || isJoining} className="btn btn-sm btn-primary h-full flex-1 rounded-none tracking-wider uppercase btn-snake-primary">
                                     <span/><span/><span/><span/>
                                     {isJoining ? 'PROCESSING...' : 'JOIN VIDEOS'}
                                 </button>

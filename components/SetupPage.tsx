@@ -801,7 +801,7 @@ export const SetupPage: React.FC<SetupPageProps> = ({
                             <div className="w-full md:w-[620px]">
                                 <AutocompleteSelect 
                                     value={settings.openclawModel} 
-                                    options={(availableOpenClawModels.length > 0 ? availableOpenClawModels : [settings.openclawModel || 'ollama/kimi-k2.5:cloud']).map(m => ({ label: m.toUpperCase(), value: m }))} 
+                                    options={(availableOpenClawModels.length > 0 ? availableOpenClawModels : [settings.openclawModel || 'ollama/kimi-k2.5:cloud']).map(m => ({ label: String(m || '').toUpperCase(), value: String(m || '') }))} 
                                     onChange={(val) => handleSettingsChange('openclawModel', val)}
                                     placeholder="ollama/kimi-k2.5:cloud"
                                 />

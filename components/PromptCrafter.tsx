@@ -320,7 +320,7 @@ const PromptCrafter = ({ onSaveToLibrary, onClip, onSendToEnhancer, onSendToRefi
                                 loadData();
                             }}
                             disabled={isImporting}
-                            className="btn btn-sm btn-ghost h-full rounded-none flex-1 text-[10px] tracking-wider text-primary border-1 disabled:opacity-30 disabled:cursor-not-allowed btn-snake"
+                            className="btn btn-sm btn-ghost h-full rounded-none flex-1 tracking-wider text-primary border-1 disabled:opacity-30 disabled:cursor-not-allowed btn-snake"
                         >
                             <span /><span /><span /><span />
                             {isImporting ? '...' : 'REFRESH'}
@@ -331,7 +331,7 @@ const PromptCrafter = ({ onSaveToLibrary, onClip, onSendToEnhancer, onSendToRefi
                                 handleImportClick();
                             }}
                             disabled={isImporting}
-                            className="btn btn-sm btn-ghost h-full rounded-none flex-1 text-[10px] tracking-wider text-primary border-1 disabled:opacity-30 disabled:cursor-not-allowed btn-snake"
+                            className="btn btn-sm btn-ghost h-full rounded-none flex-1 tracking-wider text-primary border-1 disabled:opacity-30 disabled:cursor-not-allowed btn-snake"
                         >
                             <span /><span /><span /><span />
                             IMPORT
@@ -454,7 +454,7 @@ const PromptCrafter = ({ onSaveToLibrary, onClip, onSendToEnhancer, onSendToRefi
                                     setPromptText('');
                                 }}
                                 onMouseEnter={() => audioService.playHover()}
-                                className="btn btn-sm btn-ghost h-full rounded-none flex-1 text-[10px] tracking-wider text-primary border-1 disabled:opacity-30 disabled:cursor-not-allowed btn-snake"
+                                className="btn btn-sm btn-ghost h-full rounded-none flex-1 tracking-wider text-primary border-1 disabled:opacity-30 disabled:cursor-not-allowed btn-snake"
                             >
                                 <span /><span /><span /><span />
                                 CLEAR
@@ -465,7 +465,7 @@ const PromptCrafter = ({ onSaveToLibrary, onClip, onSendToEnhancer, onSendToRefi
                                     handleSaveTemplateClick();
                                 }}
                                 onMouseEnter={() => audioService.playHover()}
-                                className="btn btn-sm btn-ghost h-full rounded-none flex-1 text-[10px] tracking-wider text-primary border-1 disabled:opacity-30 disabled:cursor-not-allowed btn-snake"
+                                className="btn btn-sm btn-ghost h-full rounded-none flex-1 tracking-wider text-primary border-1 disabled:opacity-30 disabled:cursor-not-allowed btn-snake"
                             >
                                 <span /><span /><span /><span />
                                 SAVE TEMPLATE
@@ -476,7 +476,7 @@ const PromptCrafter = ({ onSaveToLibrary, onClip, onSendToEnhancer, onSendToRefi
                                     handleGenerate();
                                 }}
                                 onMouseEnter={() => audioService.playHover()}
-                                className="btn btn-sm btn-ghost h-full rounded-none flex-1 text-[10px] tracking-wider text-primary border-1 disabled:opacity-30 disabled:cursor-not-allowed btn-snake"
+                                className="btn btn-sm btn-ghost h-full rounded-none flex-1 tracking-wider text-primary border-1 disabled:opacity-30 disabled:cursor-not-allowed btn-snake"
                             >
                                 <span /><span /><span /><span />
                                 GENERATE
@@ -526,7 +526,7 @@ const PromptCrafter = ({ onSaveToLibrary, onClip, onSendToEnhancer, onSendToRefi
                                 handleTranslate();
                             }}
                             disabled={!generatedPrompt || !!aiAction}
-                            className="btn btn-sm btn-ghost h-full rounded-none flex-1 text-[10px] tracking-wider text-primary border-1 disabled:opacity-30 disabled:cursor-not-allowed btn-snake"
+                            className="btn btn-sm btn-ghost h-full rounded-none flex-1 tracking-wider text-primary border-1 disabled:opacity-30 disabled:cursor-not-allowed btn-snake"
                         >
                             <span /><span /><span /><span />
                             {translated ? 'RE-TRANSLATE' : 'TRANSLATE'}
@@ -537,7 +537,7 @@ const PromptCrafter = ({ onSaveToLibrary, onClip, onSendToEnhancer, onSendToRefi
                                 handleReconstruct();
                             }}
                             disabled={!generatedPrompt || !!aiAction}
-                            className="btn btn-sm btn-ghost h-full rounded-none flex-1 text-[10px] tracking-wider text-primary border-1 disabled:opacity-30 disabled:cursor-not-allowed btn-snake"
+                            className="btn btn-sm btn-ghost h-full rounded-none flex-1 tracking-wider text-primary border-1 disabled:opacity-30 disabled:cursor-not-allowed btn-snake"
                         >
                             <span /><span /><span /><span />
                             REWRITE
@@ -548,7 +548,7 @@ const PromptCrafter = ({ onSaveToLibrary, onClip, onSendToEnhancer, onSendToRefi
                                 onSendToEnhancer(generatedPrompt!);
                             }}
                             disabled={!generatedPrompt || !!aiAction}
-                            className="btn btn-sm btn-ghost h-full rounded-none flex-1 text-[10px] tracking-wider text-primary border-1 disabled:opacity-30 disabled:cursor-not-allowed btn-snake"
+                            className="btn btn-sm btn-ghost h-full rounded-none flex-1 tracking-wider text-primary border-1 disabled:opacity-30 disabled:cursor-not-allowed btn-snake"
                         >
                             <span /><span /><span /><span />
                             IMPROVE
@@ -559,7 +559,7 @@ const PromptCrafter = ({ onSaveToLibrary, onClip, onSendToEnhancer, onSendToRefi
                                 handleClip();
                             }}
                             disabled={!generatedPrompt}
-                            className="btn btn-sm btn-ghost h-full rounded-none flex-1 text-[10px] tracking-wider text-primary border-1 disabled:opacity-30 disabled:cursor-not-allowed btn-snake"
+                            className="btn btn-sm btn-ghost h-full rounded-none flex-1 tracking-wider text-primary border-1 disabled:opacity-30 disabled:cursor-not-allowed btn-snake"
                         >
                             <span /><span /><span /><span />
                             {clipped ? 'OK' : 'CLIP'}
@@ -570,7 +570,7 @@ const PromptCrafter = ({ onSaveToLibrary, onClip, onSendToEnhancer, onSendToRefi
                                 handleSaveResult();
                             }}
                             disabled={!generatedPrompt || savedResults.includes(generatedPrompt)}
-                            className="btn btn-sm btn-ghost h-full rounded-none flex-1 text-[10px] tracking-wider text-primary border-1 disabled:opacity-30 disabled:cursor-not-allowed btn-snake"
+                            className="btn btn-sm btn-ghost h-full rounded-none flex-1 tracking-wider text-primary border-1 disabled:opacity-30 disabled:cursor-not-allowed btn-snake"
                         >
                             <span /><span /><span /><span />
                             {savedResults.includes(generatedPrompt!) ? 'SAVED' : 'SAVE RESULT'}
@@ -665,11 +665,11 @@ const PromptCrafter = ({ onSaveToLibrary, onClip, onSendToEnhancer, onSendToRefi
                                 </div>
                             </div>
                             <footer className="h-14 flex items-stretch bg-base-100/10 backdrop-blur-md p-1.5 gap-1.5 overflow-hidden flex-shrink-0 panel-footer">
-                                <button onClick={() => setIsSaveModalOpen(false)} className="btn btn-sm btn-ghost h-full flex-1 rounded-none font-normal text-[13px] tracking-wider border border-base-content/5 btn-snake no-glow active:no-glow">
+                                <button onClick={() => setIsSaveModalOpen(false)} className="btn btn-sm btn-ghost h-full flex-1 rounded-none tracking-wider border border-base-content/5 btn-snake no-glow active:no-glow">
                                     <span /><span /><span /><span />
                                     CANCEL
                                 </button>
-                                <button onClick={handleConfirmSaveTemplate} disabled={isSavingTemplate || !templateName.trim()} className="btn btn-sm btn-primary h-full flex-1 rounded-none font-normal text-[13px] tracking-wider border border-base-content/5 btn-snake-primary no-glow active:no-glow">
+                                <button onClick={handleConfirmSaveTemplate} disabled={isSavingTemplate || !templateName.trim()} className="btn btn-sm btn-primary h-full flex-1 rounded-none tracking-wider border border-base-content/5 btn-snake-primary no-glow active:no-glow">
                                     <span /><span /><span /><span />
                                     {isSavingTemplate ? "SAVING..." : "COMMIT"}
                                 </button>

@@ -276,7 +276,7 @@ const modalContent = (
                               {tags.map(tag => (
                                   <div key={tag} className="flex items-center gap-2 bg-base-100/40 backdrop-blur-xl text-[10px] font-black uppercase tracking-widest px-2.5 py-1.5">
                                       <span>{tag}</span>
-                                      <button type="button" onClick={() => setTags(tags.filter(t => t !== tag))} className="text-error hover:text-error-content transition-colors font-black text-lg">&times;</button>
+                                      <button type="button" onClick={() => setTags(tags.filter(t => t !== tag))} className="text-error hover:text-error-content transition-colors">&times;</button>
                                   </div>
                               ))}
                               <input type="text" value={tagInput} onChange={(e) => setTagInput((e.currentTarget as any).value)} onKeyDown={handleTagInputKeyDown} className="flex-grow bg-transparent outline-none text-[10px] font-bold uppercase tracking-widest px-1 h-8" placeholder="ADD TOKEN..."/>
@@ -298,11 +298,11 @@ const modalContent = (
               </div>
               
           <footer className="h-14 flex items-stretch bg-base-100/10 backdrop-blur-md p-1.5 gap-1.5 overflow-hidden flex-shrink-0 panel-footer">
-              <button type="button" onClick={onClose} className="btn btn-sm btn-ghost h-full flex-1 rounded-none font-normal text-[13px] tracking-wider uppercase btn-snake font-display">
+              <button type="button" onClick={onClose} className="btn btn-sm btn-ghost h-full flex-1 rounded-none tracking-wider uppercase btn-snake">
                   <span/><span/><span/><span/>
                   ABORT
               </button>
-              <button type="submit" className="btn btn-sm btn-primary h-full flex-1 rounded-none font-normal text-[13px] tracking-wider uppercase btn-snake-primary font-display" disabled={files.length === 0 || isProcessing}>
+              <button type="submit" className="btn btn-sm btn-primary h-full flex-1 rounded-none tracking-wider uppercase btn-snake-primary" disabled={files.length === 0 || isProcessing}>
                   <span/><span/><span/><span/>
                   {isProcessing ? 'INGESTING...' : 'COMMIT TO VAULT'}
               </button>

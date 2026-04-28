@@ -340,7 +340,7 @@ const ImageGallery: React.FC<ImageGalleryProps> = ({
         initial="hidden"
         animate={isExiting ? "exit" : "visible"}
         exit="exit"
-        className="flex flex-col h-full bg-transparent relative p-[3px] corner-frame overflow-hidden"
+        className="flex flex-col h-full bg-transparent w-full relative p-[3px] corner-frame overflow-hidden"
       >
         <div className="flex flex-row h-full w-full overflow-hidden relative z-10 bg-base-100/40 backdrop-blur-xl gap-0 panel-transparent">
           <aside className={`relative z-20 flex-shrink-0 bg-transparent border-r border-white/5 transition-all duration-300 ease-in-out flex flex-col overflow-hidden ${isCategoryPanelCollapsed ? 'w-0' : 'w-96'}`}>
@@ -465,7 +465,7 @@ const ImageGallery: React.FC<ImageGalleryProps> = ({
                           </div>
                         </div>
 
-                        <button onClick={() => { audioService.playClick(); setIsAddModalOpen(true); }} className="btn btn-sm btn-primary h-full rounded-none border-none px-8 font-black text-[10px] tracking-widest uppercase btn-snake-primary">
+                        <button onClick={() => { audioService.playClick(); setIsAddModalOpen(true); }} className="btn btn-sm btn-primary h-full rounded-none border-none px-8 tracking-widest uppercase btn-snake-primary">
                           <span /><span /><span /><span />
                           IMPORT
                         </button>

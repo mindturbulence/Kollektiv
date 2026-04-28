@@ -178,7 +178,7 @@ const LayeredCheatsheetDetail: React.FC<LayeredCheatsheetDetailProps> = ({
             </div>
             <button 
                 onClick={handleClose}
-                className="group flex items-center gap-4 text-[10px] font-black uppercase tracking-[0.3em] text-base-content/40 hover:text-primary transition-colors"
+                className="group flex items-center gap-4 uppercase tracking-[0.3em] text-base-content/40 hover:text-primary transition-colors"
             >
                 <span>CLOSE_INTERFACE</span>
                 <div className="w-10 h-10 rounded-full border border-base-content/10 flex items-center justify-center group-hover:border-primary transition-colors">
@@ -218,7 +218,7 @@ const LayeredCheatsheetDetail: React.FC<LayeredCheatsheetDetailProps> = ({
                                         navigator.clipboard.writeText(item.example!);
                                         audioService.playClick();
                                     }}
-                                    className="text-[8px] font-black uppercase tracking-widest opacity-0 group-hover/code:opacity-100 transition-opacity hover:text-primary"
+                                    className="uppercase tracking-widest opacity-0 group-hover/code:opacity-100 transition-opacity hover:text-primary"
                                 >
                                     COPY_CODE
                                 </button>

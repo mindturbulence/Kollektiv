@@ -145,7 +145,7 @@ const AutocompleteSelect: React.FC<AutocompleteSelectProps> = ({
             </li>
           ))
         ) : (
-          <li className="px-4 py-4 text-[10px] font-black uppercase tracking-widest text-base-content/30 text-center">
+          <li className="px-4 py-4 uppercase tracking-widest text-base-content/30 text-center">
             No matches found
           </li>
         )}

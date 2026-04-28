@@ -358,14 +358,14 @@ const GalleryPickerModal: React.FC<GalleryPickerModalProps> = ({
                             {selectedIds.size} SELECTED
                         </span>
                     </div>
-                    <button onClick={onClose} className="btn btn-sm btn-ghost h-full flex-1 rounded-none font-normal text-[13px] tracking-wider uppercase btn-snake font-display">
+                    <button onClick={onClose} className="btn btn-sm btn-ghost h-full flex-1 rounded-none tracking-wider uppercase btn-snake">
                         <span/><span/><span/><span/>
                         ABORT
                     </button>
                     <button 
                         onClick={handleConfirm}
                         disabled={selectedIds.size === 0}
-                        className="btn btn-sm btn-primary h-full flex-1 rounded-none font-normal text-[13px] tracking-wider uppercase btn-snake-primary font-display"
+                        className="btn btn-sm btn-primary h-full flex-1 rounded-none tracking-wider uppercase btn-snake-primary"
                     >
                         <span/><span/><span/><span/>
                         SELECT ITEMS

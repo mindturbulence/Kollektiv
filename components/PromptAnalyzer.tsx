@@ -622,7 +622,7 @@ export const PromptAnalyzer: React.FC<PromptAnalyzerProps> = ({
                                                     if (text) setPromptInput(text);
                                                 } catch { }
                                             }}
-                                            className="btn btn-sm btn-ghost h-full rounded-none flex-1 text-[10px] tracking-wider text-primary border-1 disabled:opacity-30 disabled:cursor-not-allowed btn-snake"
+                                            className="btn btn-sm btn-ghost h-full rounded-none flex-1 tracking-wider text-primary border-1 disabled:opacity-30 disabled:cursor-not-allowed btn-snake"
                                         >
                                             <span /><span /><span /><span />
                                             PASTE
@@ -643,7 +643,7 @@ export const PromptAnalyzer: React.FC<PromptAnalyzerProps> = ({
                                                 setPromptInput('');
                                             }
                                         }}
-                                        className="btn btn-sm btn-ghost h-full rounded-none flex-1 text-[10px] tracking-wider text-primary border-1 disabled:opacity-30 disabled:cursor-not-allowed btn-snake"
+                                        className="btn btn-sm btn-ghost h-full rounded-none flex-1 tracking-wider text-primary border-1 disabled:opacity-30 disabled:cursor-not-allowed btn-snake"
                                     >
                                         <span /><span /><span /><span />
                                         {hasBreakdown ? 'RESET' : 'CLEAR'}
@@ -682,7 +682,7 @@ export const PromptAnalyzer: React.FC<PromptAnalyzerProps> = ({
                                             }
                                         }}
                                         disabled={isAnalyzing || isRewriting || (!hasBreakdown && !promptInput.trim())}
-                                        className="btn btn-sm btn-ghost h-full rounded-none flex-1 text-[10px] tracking-wider text-primary border-1 disabled:opacity-30 disabled:cursor-not-allowed btn-snake"
+                                        className="btn btn-sm btn-ghost h-full rounded-none flex-1 tracking-wider text-primary border-1 disabled:opacity-30 disabled:cursor-not-allowed btn-snake"
                                     >
                                         <span /><span /><span /><span />
                                         {isAnalyzing ? 'WAIT...' : isRewriting ? 'WRITING...' : hasBreakdown ? 'REWRITE' : 'ANALYZE'}
@@ -839,7 +839,7 @@ export const PromptAnalyzer: React.FC<PromptAnalyzerProps> = ({
                                             }
                                         }}
                                         disabled={!modifiedPrompt || isRewriting}
-                                        className="btn btn-sm btn-ghost h-full rounded-none flex-1 text-[10px] tracking-wider text-primary border-1 disabled:opacity-30 disabled:cursor-not-allowed btn-snake"
+                                        className="btn btn-sm btn-ghost h-full rounded-none flex-1 tracking-wider text-primary border-1 disabled:opacity-30 disabled:cursor-not-allowed btn-snake"
                                     >
                                         <span /><span /><span /><span />
                                         COPY
@@ -851,7 +851,7 @@ export const PromptAnalyzer: React.FC<PromptAnalyzerProps> = ({
                                             }
                                         }}
                                         disabled={!modifiedPrompt || isRewriting}
-                                        className="btn btn-sm btn-ghost h-full rounded-none flex-1 text-[10px] tracking-wider text-primary border-1 disabled:opacity-30 disabled:cursor-not-allowed btn-snake"
+                                        className="btn btn-sm btn-ghost h-full rounded-none flex-1 tracking-wider text-primary border-1 disabled:opacity-30 disabled:cursor-not-allowed btn-snake"
                                     >
                                         <span /><span /><span /><span />
                                         CLIP
@@ -859,7 +859,7 @@ export const PromptAnalyzer: React.FC<PromptAnalyzerProps> = ({
                                     <button
                                         onClick={handleMapToRefiner}
                                         disabled={!modifiedPrompt || isRewriting}
-                                        className="btn btn-sm btn-ghost h-full rounded-none flex-1 text-[10px] tracking-wider text-primary border-1 disabled:opacity-30 disabled:cursor-not-allowed btn-snake"
+                                        className="btn btn-sm btn-ghost h-full rounded-none flex-1 tracking-wider text-primary border-1 disabled:opacity-30 disabled:cursor-not-allowed btn-snake"
                                     >
                                         <span /><span /><span /><span />
                                         REFINE
@@ -872,7 +872,7 @@ export const PromptAnalyzer: React.FC<PromptAnalyzerProps> = ({
                                             }
                                         }}
                                         disabled={!modifiedPrompt || isRewriting}
-                                        className="btn btn-sm btn-ghost h-full rounded-none flex-1 text-[10px] tracking-wider text-primary border-1 disabled:opacity-30 disabled:cursor-not-allowed btn-snake"
+                                        className="btn btn-sm btn-ghost h-full rounded-none flex-1 tracking-wider text-primary border-1 disabled:opacity-30 disabled:cursor-not-allowed btn-snake"
                                     >
                                         <span /><span /><span /><span />
                                         SAVE

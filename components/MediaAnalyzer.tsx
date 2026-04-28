@@ -315,7 +315,7 @@ export const MediaAnalyzer: React.FC<MediaAnalyzerProps> = ({
                                     <div className="h-14 flex items-stretch flex-shrink-0 animate-fade-in gap-1.5">
                                         <button
                                             onClick={handleSaveWorkflow}
-                                            className="btn btn-ghost h-full rounded-none border-none flex-1 font-black text-[10px] tracking-widest uppercase hover:bg-base-200 px-1 truncate"
+                                            className="btn btn-ghost h-full rounded-none border-none flex-1 tracking-widest uppercase hover:bg-base-200 px-1 truncate"
                                         >
                                             EXPORT JSON
                                         </button>
@@ -336,7 +336,7 @@ export const MediaAnalyzer: React.FC<MediaAnalyzerProps> = ({
                                     animate="visible"
                                     exit="exit"
                                     onClick={() => !isLoading && handleReset(null)}
-                                    className="btn btn-sm btn-ghost h-full rounded-none flex-1 text-[10px] tracking-wider text-primary border-1 disabled:opacity-30 disabled:cursor-not-allowed btn-snake"
+                                    className="btn btn-sm btn-ghost h-full rounded-none flex-1 tracking-wider text-primary border-1 disabled:opacity-30 disabled:cursor-not-allowed btn-snake"
                                 >
                                     <span /><span /><span /><span />
                                     RESET
@@ -471,7 +471,7 @@ export const MediaAnalyzer: React.FC<MediaAnalyzerProps> = ({
                                                 <button
                                                     onClick={() => onRefine(metadataResults.prompt)}
                                                     disabled={!hasPrompt}
-                                                    className="btn btn-sm btn-ghost h-full rounded-none text-primary px-4 font-normal text-[12px] tracking-wider uppercase btn-snake"
+                                                    className="btn btn-sm btn-ghost h-full rounded-none text-primary px-4 tracking-wider uppercase btn-snake"
                                                 >
                                                     <span /><span /><span /><span />
                                                     IMPROVE
@@ -479,7 +479,7 @@ export const MediaAnalyzer: React.FC<MediaAnalyzerProps> = ({
                                                 <button
                                                     onClick={() => onClip(metadataResults.prompt, `Info: ${sourceFile?.name}`)}
                                                     disabled={!hasPrompt}
-                                                    className="btn btn-sm btn-ghost h-full rounded-none px-4 font-normal text-[12px] tracking-wider uppercase btn-snake"
+                                                    className="btn btn-sm btn-ghost h-full rounded-none px-4 tracking-wider uppercase btn-snake"
                                                 >
                                                     <span /><span /><span /><span />
                                                     CLIP
@@ -511,7 +511,7 @@ export const MediaAnalyzer: React.FC<MediaAnalyzerProps> = ({
                                             <button
                                                 onClick={handleCopyRaw}
                                                 disabled={!metadataResults.raw && !metadataResults.workflow}
-                                                className="btn btn-sm btn-ghost h-8 rounded-none px-4 font-normal text-[12px] tracking-wider uppercase btn-snake"
+                                                className="btn btn-sm btn-ghost h-8 rounded-none px-4 tracking-wider uppercase btn-snake"
                                             >
                                                 <span /><span /><span /><span />
                                                 {copiedRaw ? 'OK' : 'COPY'}

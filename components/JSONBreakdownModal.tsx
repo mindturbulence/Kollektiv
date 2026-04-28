@@ -71,7 +71,7 @@ const JSONBreakdownModal: React.FC<JSONBreakdownModalProps> = ({
                             <footer className="h-14 flex items-stretch bg-base-100/40 backdrop-blur-md p-1.5 gap-1.5 panel-footer">
                                 <button 
                                     onClick={onCopy}
-                                    className="btn btn-sm btn-ghost h-full flex-1 rounded-none font-black text-[11px] tracking-[0.2em] uppercase btn-snake group"
+                                    className="btn btn-sm btn-ghost h-full flex-1 rounded-none tracking-[0.2em] uppercase btn-snake group"
                                 >
                                     <span/><span/><span/><span/>
                                     <CopyIcon className="w-4 h-4 mr-2 group-hover:scale-110 transition-transform" />
@@ -79,7 +79,7 @@ const JSONBreakdownModal: React.FC<JSONBreakdownModalProps> = ({
                                 </button>
                                 <button 
                                     onClick={onDownload}
-                                    className="btn btn-sm btn-primary h-full flex-1 rounded-none font-black text-[11px] tracking-[0.2em] uppercase btn-snake-primary group"
+                                    className="btn btn-sm btn-primary h-full flex-1 rounded-none tracking-[0.2em] uppercase btn-snake-primary group"
                                 >
                                     <span/><span/><span/><span/>
                                     <DownloadIcon className="w-4 h-4 mr-2 group-hover:scale-110 transition-transform" />

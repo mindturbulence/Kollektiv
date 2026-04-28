@@ -533,7 +533,7 @@ const ImageResizer: React.FC<ImageResizerProps> = ({ isExiting = false }) => {
                             <button
                                 onClick={handleReset}
                                 disabled={isDownloading || images.length === 0}
-                                className="btn btn-sm btn-ghost h-full flex-1 rounded-none font-normal text-[13px] tracking-wider uppercase btn-snake text-error/40 hover:text-error font-display"
+                                className="btn btn-sm btn-ghost h-full flex-1 rounded-none tracking-wider uppercase btn-snake text-error/40 hover:text-error"
                             >
                                 <span /><span /><span /><span />
                                 CLEAR ALL
@@ -541,7 +541,7 @@ const ImageResizer: React.FC<ImageResizerProps> = ({ isExiting = false }) => {
                             <button
                                 onClick={handleDownload}
                                 disabled={isDownloading || images.length === 0}
-                                className="btn btn-sm btn-primary h-full flex-1 rounded-none font-normal text-[13px] tracking-wider uppercase btn-snake-primary font-display"
+                                className="btn btn-sm btn-primary h-full flex-1 rounded-none tracking-wider uppercase btn-snake-primary"
                             >
                                 <span /><span /><span /><span />
                                 {isDownloading ? '...' : 'ZIP DOWNLOAD'}

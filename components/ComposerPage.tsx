@@ -153,7 +153,7 @@ const ItemRenderer: React.FC<{
             </div>
             <div className="absolute inset-x-0 bottom-0 p-2 flex justify-between items-center opacity-0 group-hover:opacity-100 transition-opacity bg-gradient-to-t from-black/60 to-transparent pointer-events-none">
                 <div className="flex gap-1 pointer-events-auto">
-                    <button onClick={(e) => { e.stopPropagation(); onTransform({ fit: item.fit === 'cover' ? 'contain' : 'cover' }); }} className="btn btn-xs rounded-none bg-black/40 border-none text-[8px] font-black">{item.fit === 'cover' ? 'FILL' : 'FIT'}</button>
+                    <button onClick={(e) => { e.stopPropagation(); onTransform({ fit: item.fit === 'cover' ? 'contain' : 'cover' }); }} className="btn btn-xs rounded-none bg-black/40 border-none">{item.fit === 'cover' ? 'FILL' : 'FIT'}</button>
                 </div>
                 <button onMouseDown={e => e.stopPropagation()} onClick={e => { e.stopPropagation(); onRemove(); }} className="btn btn-xs btn-circle btn-error pointer-events-auto border-none">✕</button>
             </div>
@@ -460,20 +460,20 @@ const ComposerPage: React.FC<ComposerPageProps> = ({ showGlobalFeedback, isExiti
 
                             <div className="space-y-4 pt-6 border-t border-base-300/20">
                                 <div className="flex justify-between items-center"><span className="text-[10px] font-black uppercase text-base-content/40 tracking-widest">Background</span><input type="color" value={bgColor} onChange={e => setBgColor(e.target.value)} className="w-8 h-8 rounded-none border-none cursor-pointer" /></div>
-                                <button onClick={() => { if(mode==='grid') setGridItems(prev => prev.map(i => i ? {...i, posX: 0, posY: 0, scale: 1} : null)); else { if(frameItem) setFrameItem({...frameItem, posX:0, posY:0, scale:1}); setLayers(prev => prev.map(s => ({...s, x:0.5, y:0.5}))); } }} className="form-btn btn-xs rounded-none w-full font-black text-[9px] tracking-widest uppercase mt-4">Reset Viewport</button>
+                                <button onClick={() => { if(mode==='grid') setGridItems(prev => prev.map(i => i ? {...i, posX: 0, posY: 0, scale: 1} : null)); else { if(frameItem) setFrameItem({...frameItem, posX:0, posY:0, scale:1}); setLayers(prev => prev.map(s => ({...s, x:0.5, y:0.5}))); } }} className="form-btn btn-xs rounded-none w-full tracking-widest uppercase mt-4">Reset Viewport</button>
                             </div>
                         </div>
 
                         <footer className="h-14 flex items-stretch flex-shrink-0 bg-base-100/10 backdrop-blur-md p-1.5 gap-1.5">
-                            <button onClick={() => { setGridItems(Array(gridCols*gridRows).fill(null)); setFrameItem(null); setLayers([]); }} className="btn btn-sm btn-ghost h-full flex-1 rounded-none font-normal text-[13px] tracking-wider uppercase btn-snake text-error/40 hover:text-error font-display no-glow active:no-glow">
+                            <button onClick={() => { setGridItems(Array(gridCols*gridRows).fill(null)); setFrameItem(null); setLayers([]); }} className="btn btn-sm btn-ghost h-full flex-1 rounded-none tracking-wider uppercase btn-snake text-error/40 hover:text-error no-glow active:no-glow">
                                 <span/><span/><span/><span/>
                                 RESET
                             </button>
-                            <button onClick={handleDownload} disabled={isProcessing || (mode==='grid'?!gridItems.some(Boolean):!frameItem)} className="btn btn-sm btn-ghost h-full flex-1 rounded-none font-normal text-[13px] tracking-wider uppercase btn-snake font-display no-glow active:no-glow">
+                            <button onClick={handleDownload} disabled={isProcessing || (mode==='grid'?!gridItems.some(Boolean):!frameItem)} className="btn btn-sm btn-ghost h-full flex-1 rounded-none tracking-wider uppercase btn-snake no-glow active:no-glow">
                                 <span/><span/><span/><span/>
                                 DOWNLOAD
                             </button>
-                            <button onClick={() => setIsVaultConfirmOpen(true)} disabled={isProcessing || (mode==='grid'?!gridItems.some(Boolean):!frameItem)} className="btn btn-sm btn-primary h-full flex-[1.5] rounded-none font-normal text-[13px] tracking-[0.2em] uppercase btn-snake-primary font-display no-glow active:no-glow">
+                            <button onClick={() => setIsVaultConfirmOpen(true)} disabled={isProcessing || (mode==='grid'?!gridItems.some(Boolean):!frameItem)} className="btn btn-sm btn-primary h-full flex-[1.5] rounded-none tracking-[0.2em] uppercase btn-snake-primary no-glow active:no-glow">
                                 <span/><span/><span/><span/>
                                 SAVE
                             </button>
@@ -505,8 +505,8 @@ const ComposerPage: React.FC<ComposerPageProps> = ({ showGlobalFeedback, isExiti
                                             {frameItem ? <ItemRenderer animateEntry item={frameItem} w={previewMetrics.width - (getFrameInsets(frameStyle, frameMatting, parseInt(width))[1]+getFrameInsets(frameStyle, frameMatting, parseInt(width))[3])*previewMetrics.scale} h={previewMetrics.height - (getFrameInsets(frameStyle, frameMatting, parseInt(width))[0]+getFrameInsets(frameStyle, frameMatting, parseInt(width))[2])*previewMetrics.scale} onRemove={() => setFrameItem(null)} onTransform={t => setFrameItem({...frameItem!, ...t})} />
                                             : <div className="w-full h-full border-2 border-dashed border-base-content/10 flex flex-col items-center justify-center gap-4 opacity-40 hover:opacity-100 transition-opacity">
                                                 <div className="flex gap-4">
-                                                    <button onClick={() => setIsPickerOpen(true)} className="form-btn rounded-none font-black text-[10px] tracking-widest px-8">LIBRARY</button>
-                                                    <button onClick={() => (window as any).document.getElementById('frame-file-upload')?.click()} className="form-btn form-btn-primary rounded-none font-black text-[10px] tracking-widest px-8">UPLOAD</button>
+                                                    <button onClick={() => setIsPickerOpen(true)} className="form-btn rounded-none tracking-widest px-8">LIBRARY</button>
+                                                    <button onClick={() => (window as any).document.getElementById('frame-file-upload')?.click()} className="form-btn form-btn-primary rounded-none tracking-widest px-8">UPLOAD</button>
                                                 </div>
                                             </div>}
                                         </div>

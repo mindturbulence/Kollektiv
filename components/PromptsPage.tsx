@@ -684,8 +684,8 @@ const PromptsPage: React.FC<PromptsPageProps> = ({
                             <div className="flex justify-between items-center mb-2">
                                 <label className="text-[10px] font-normal text-[12px] font-sf-mono uppercase tracking-widest text-base-content/40">Prompt Idea</label>
                                 <div className="flex gap-2">
-                                    <button onClick={handlePasteRefineText} className="form-btn h-6 px-2 opacity-20 hover:opacity-100 uppercase font-black text-[8px] tracking-widest">Paste</button>
-                                    <button onClick={() => setRefineText('')} className="form-btn h-6 px-2 opacity-20 hover:opacity-100 uppercase font-black text-[8px] tracking-widest">Clear</button>
+                                    <button onClick={handlePasteRefineText} className="form-btn h-6 px-2 opacity-20 hover:opacity-100 uppercase tracking-widest">Paste</button>
+                                    <button onClick={() => setRefineText('')} className="form-btn h-6 px-2 opacity-20 hover:opacity-100 uppercase tracking-widest">Clear</button>
                                 </div>
                             </div>
                             <textarea value={refineText} onChange={(e) => setRefineText((e.currentTarget as any).value)} className="form-textarea w-full flex-grow resize-none font-medium leading-relaxed bg-transparent" placeholder="Enter core concept..."></textarea>
@@ -1247,7 +1247,7 @@ const PromptsPage: React.FC<PromptsPageProps> = ({
                                             audioService.playClick();
                                             handleResetRefiner();
                                         }}
-                                        className="btn btn-sm btn-ghost h-full rounded-none flex-1 fonr-jardhani font-normal text-[10px] tracking-wider text-error/40 hover:text-error border-1 btn-snake"
+                                        className="btn btn-sm btn-ghost h-full rounded-none flex-1 font-rajdhani tracking-wider text-error/40 hover:text-error border-1 btn-snake"
                                     >
                                         <span /><span /><span /><span />
                                         RESET
@@ -1258,7 +1258,7 @@ const PromptsPage: React.FC<PromptsPageProps> = ({
                                             handleEnhance();
                                         }}
                                         disabled={isLoadingRefine || !refineText.trim()}
-                                        className="btn btn-sm btn-ghost h-full rounded-none flex-1 font-jardhani text-[10px] tracking-wider text-primary border-1 disabled:opacity-30 disabled:cursor-not-allowed btn-snake"
+                                        className="btn btn-sm btn-ghost h-full rounded-none flex-1 tracking-wider text-primary border-1 disabled:opacity-30 disabled:cursor-not-allowed btn-snake"
                                     >
                                         <span /><span /><span /><span />
                                         {isLoadingRefine ? '...' : 'IMPROVE'}
@@ -1270,7 +1270,7 @@ const PromptsPage: React.FC<PromptsPageProps> = ({
                                                 handleDirectGenerate();
                                             }}
                                             disabled={isLoadingRefine || !refineText.trim()}
-                                            className="btn btn-sm btn-ghost h-full rounded-none flex-1 font-jardhani text-[10px] tracking-wider text-primary border-0 disabled:opacity-30 disabled:cursor-not-allowed btn-snake"
+                                            className="btn btn-sm btn-ghost h-full rounded-none flex-1 tracking-wider text-primary border-0 disabled:opacity-30 disabled:cursor-not-allowed btn-snake"
                                         >
                                             <span /><span /><span /><span />
                                             {isLoadingRefine ? '...' : 'RENDER'}
@@ -1347,7 +1347,7 @@ const PromptsPage: React.FC<PromptsPageProps> = ({
                                                     )}
                                                 </div>
                                                 <div className="absolute top-4 right-4 opacity-0 group-hover:opacity-100 transition-opacity z-20">
-                                                    <a href={directMediaResult.url} download={`kollektiv_${directMediaResult.target.replace(/\s+/g, '_')}_${Date.now()}.${directMediaResult.type === 'video' ? 'mp4' : 'jpg'}`} className="btn btn-sm btn-primary rounded-none font-black text-[10px] tracking-widest shadow-2xl btn-snake-primary">
+                                                    <a href={directMediaResult.url} download={`kollektiv_${directMediaResult.target.replace(/\s+/g, '_')}_${Date.now()}.${directMediaResult.type === 'video' ? 'mp4' : 'jpg'}`} className="btn btn-sm btn-primary rounded-none tracking-widest shadow-2xl btn-snake-primary">
                                                         <span /><span /><span /><span />
                                                         <DownloadIcon className="w-4 h-4 mr-2" /> EXPORT
                                                     </a>
@@ -1360,13 +1360,13 @@ const PromptsPage: React.FC<PromptsPageProps> = ({
                                             </div>
                                             <div className="flex justify-between items-center px-2">
                                                 <span className="text-[9px] font-black uppercase tracking-[0.3em] text-primary/40">{directMediaResult.target} Render Output</span>
-                                                <button onClick={() => setDirectMediaResult(null)} className="text-[9px] font-bold uppercase tracking-widest text-base-content/20 hover:text-primary transition-colors">Terminate Visual</button>
+                                                <button onClick={() => setDirectMediaResult(null)} className="uppercase tracking-widest text-base-content/20 hover:text-primary transition-colors">Terminate Visual</button>
                                             </div>
                                         </div>
                                     ) : (
                                         <div className="flex-grow flex flex-col items-center justify-center text-center py-32 opacity-10">
                                             <span className="p-8"><SparklesIcon className="w-14 h-14" /></span>
-                                            <p className="font-jardhani text-[12px] font-sf-mono uppercase tracking-widest">Awaiting sequence initiation</p>
+                                            <p className="font-rajdhani text-[12px] font-sf-mono uppercase tracking-widest">Awaiting sequence initiation</p>
                                         </div>
                                     )}
                                 </motion.div>
@@ -1385,7 +1385,7 @@ const PromptsPage: React.FC<PromptsPageProps> = ({
                                                     audioService.playClick();
                                                     setIsJsonModalOpen(true);
                                                 }}
-                                                className="btn btn-sm btn-ghost h-full flex-1 rounded-none font-normal text-[11px] tracking-wider uppercase btn-snake font-display"
+                                                className="btn btn-sm btn-ghost h-full flex-1 rounded-none tracking-wider uppercase btn-snake"
                                             >
                                                 <span /><span /><span /><span />
                                                 SHOW JSON
@@ -1395,7 +1395,7 @@ const PromptsPage: React.FC<PromptsPageProps> = ({
                                                     audioService.playClick();
                                                     handleSaveSuggestion(resultsRefine.suggestions[0]);
                                                 }}
-                                                className="btn btn-sm btn-ghost h-full flex-1 rounded-none font-normal text-[11px] tracking-wider uppercase btn-snake font-display"
+                                                className="btn btn-sm btn-ghost h-full flex-1 rounded-none tracking-wider uppercase btn-snake"
                                             >
                                                 <span /><span /><span /><span />
                                                 SAVE
@@ -1408,7 +1408,7 @@ const PromptsPage: React.FC<PromptsPageProps> = ({
                                                     audioService.playClick();
                                                     handleSendToRefine(resultsRefine.suggestions[0]);
                                                 }}
-                                                className="btn btn-sm btn-ghost h-full flex-1 rounded-none font-normal text-[11px] tracking-wider uppercase btn-snake font-display"
+                                                className="btn btn-sm btn-ghost h-full flex-1 rounded-none tracking-wider uppercase btn-snake"
                                             >
                                                 <span /><span /><span /><span />
                                                 REFINE
@@ -1418,7 +1418,7 @@ const PromptsPage: React.FC<PromptsPageProps> = ({
                                                     audioService.playClick();
                                                     handleClipSuggestion(resultsRefine.suggestions[0]);
                                                 }}
-                                                className="btn btn-sm btn-ghost h-full flex-1 rounded-none font-normal text-[11px] tracking-wider uppercase btn-snake font-display"
+                                                className="btn btn-sm btn-ghost h-full flex-1 rounded-none tracking-wider uppercase btn-snake"
                                             >
                                                 <span /><span /><span /><span />
                                                 CLIP
@@ -1428,7 +1428,7 @@ const PromptsPage: React.FC<PromptsPageProps> = ({
                                                     audioService.playClick();
                                                     handleCopySuggestionText(resultsRefine.suggestions[0]);
                                                 }}
-                                                className="btn btn-sm btn-ghost h-full flex-1 rounded-none font-normal text-[11px] tracking-wider uppercase btn-snake font-display"
+                                                className="btn btn-sm btn-ghost h-full flex-1 rounded-none tracking-wider uppercase btn-snake"
                                             >
                                                 <span /><span /><span /><span />
                                                 COPY
@@ -1490,12 +1490,12 @@ const PromptsPage: React.FC<PromptsPageProps> = ({
                                                             setRefineText('');
                                                             setModifiers({ ...DEFAULT_MODIFIERS });
                                                         }}
-                                                        className="font-sf-mono text-[9px] tracking-widest text-base-content/40 hover:text-base-content transition-all"
+                                                        className="tracking-widest text-base-content/40 hover:-content transition-all"
                                                     >
                                                         CLEAR
                                                     </button> */}
                                                     <button
-                                                        className="font-jardhani text-[10px] tracking-widest text-error/40 hover:text-error transition-all mr-2 ms-2"
+                                                        className="tracking-widest text-error/40 hover:text-error transition-all mr-2 ms-2"
                                                         onClick={() => {
                                                             audioService.playClick();
                                                             handleDeletePresetClick();
@@ -1546,7 +1546,7 @@ const PromptsPage: React.FC<PromptsPageProps> = ({
                                             handleSavePresetClick();
                                         }}
                                         disabled={activeConstructionItems.length === 0}
-                                        className="btn btn-sm btn-ghost h-full rounded-none flex-1 font-jardhani text-[10px] tracking-wider text-primary border-1 disabled:opacity-30 disabled:cursor-not-allowed btn-snake"
+                                        className="btn btn-sm btn-ghost h-full rounded-none flex-1 tracking-wider text-primary border-1 disabled:opacity-30 disabled:cursor-not-allowed btn-snake"
                                     >
                                         <span /><span /><span /><span />
                                         SAVE AS PRESET
@@ -1624,11 +1624,11 @@ const PromptsPage: React.FC<PromptsPageProps> = ({
                                 </div>
                             </div>
                             <footer className="h-14 flex items-stretch bg-base-100/10 backdrop-blur-md p-1.5 gap-1.5 overflow-hidden flex-shrink-0 panel-footer">
-                                <button onClick={() => setIsSavePresetModalOpen(false)} className="btn btn-sm btn-ghost h-full flex-1 rounded-none font-normal text-[13px] tracking-wider uppercase btn-snake font-display no-glow active:no-glow">
+                                <button onClick={() => setIsSavePresetModalOpen(false)} className="btn btn-sm btn-ghost h-full flex-1 rounded-none tracking-wider uppercase btn-snake no-glow active:no-glow">
                                     <span /><span /><span /><span />
                                     CANCEL
                                 </button>
-                                <button onClick={handleConfirmSavePreset} disabled={isSavingPreset || !newPresetName.trim()} className="btn btn-sm btn-primary h-full flex-[1.5] rounded-none font-normal text-[13px] tracking-wider uppercase btn-snake-primary font-display no-glow active:no-glow">
+                                <button onClick={handleConfirmSavePreset} disabled={isSavingPreset || !newPresetName.trim()} className="btn btn-sm btn-primary h-full flex-[1.5] rounded-none tracking-wider uppercase btn-snake-primary no-glow active:no-glow">
                                     <span /><span /><span /><span />
                                     {isSavingPreset ? "SAVING..." : "COMMIT PRESET"}
                                 </button>

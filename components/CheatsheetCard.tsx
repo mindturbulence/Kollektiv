@@ -48,7 +48,7 @@ const KeywordTag: React.FC<{ keyword: string }> = ({ keyword }) => {
         <button
             onClick={handleCopy}
             title={copied ? "Copied!" : `Copy "${keyword}"`}
-            className="bg-base-300 text-base-content text-[10px] font-black uppercase tracking-widest py-1.5 pl-3 pr-2 rounded-none hover:bg-primary hover:text-primary-content transition-all flex items-center gap-2"
+            className="bg-base-300 text-base-content uppercase tracking-widest py-1.5 pl-3 pr-2 rounded-none hover:bg-primary hover:text-primary-content transition-all flex items-center gap-2"
         >
             {keyword}
             {copied ? <CheckIcon className="w-3 h-3 text-success-content" /> : null}

@@ -100,9 +100,9 @@ const SavedPromptCard: React.FC<SavedPromptCardProps> = memo(({
                 </button>
                 {isMenuOpen && (
                   <ul onClick={(e) => e.stopPropagation()} className="absolute right-0 mt-2 w-48 menu menu-sm bg-base-100/40 backdrop-blur-xl shadow-2xl z-20 animate-fade-in p-1 rounded-none">
-                    <li><button onClick={() => { onEditClick(prompt); setIsMenuOpen(false); }} className="w-full text-left font-bold py-2 flex items-center gap-2"><EditIcon className="w-4 h-4" /> Edit Details</button></li>
+                    <li><button onClick={() => { onEditClick(prompt); setIsMenuOpen(false); }} className="w-full text-left py-2 flex items-center gap-2"><EditIcon className="w-4 h-4" /> Edit Details</button></li>
                     <div className="divider my-0 opacity-10"></div>
-                    <li><button onClick={() => { onDeleteClick(prompt); setIsMenuOpen(false); }} className="w-full text-left text-error font-bold py-2 flex items-center gap-2"><DeleteIcon className="w-4 h-4" /> Delete Prompt</button></li>
+                    <li><button onClick={() => { onDeleteClick(prompt); setIsMenuOpen(false); }} className="w-full text-left text-error py-2 flex items-center gap-2"><DeleteIcon className="w-4 h-4" /> Delete Prompt</button></li>
                   </ul>
                 )}
               </div>
@@ -134,7 +134,7 @@ const SavedPromptCard: React.FC<SavedPromptCardProps> = memo(({
             {canExpand && (
                 <button 
                     onClick={(e) => { e.stopPropagation(); setIsExpanded(!isExpanded); }} 
-                    className="text-primary text-[10px] font-black uppercase tracking-[0.2em] hover:underline transition-all active:scale-95"
+                    className="text-primary uppercase tracking-[0.2em] hover:underline transition-all active:scale-95"
                 >
                     {isExpanded ? 'Collapse' : 'Expand'}
                 </button>
@@ -156,15 +156,15 @@ const SavedPromptCard: React.FC<SavedPromptCardProps> = memo(({
             </div>
             
             <div className="flex items-center gap-1">
-                <button onClick={(e) => { e.stopPropagation(); onClip(prompt); }} title="Clip Idea" className="btn btn-xs btn-ghost h-8 w-8 rounded-none p-0 text-base-content/20 hover:text-primary transition-colors btn-snake">
+                <button onClick={(e) => { e.stopPropagation(); onClip(prompt); }} title="Clip Idea" className="btn btn-xs btn-ghost h-8 w-8 rounded-none p-0 -content/20 hover:text-primary transition-colors btn-snake">
                     <span/><span/><span/><span/>
                     <BookmarkIcon className="w-4 h-4" />
                 </button>
-                <button onClick={(e) => { e.stopPropagation(); onSendToEnhancer(prompt.text); }} title="Refine Prompt" className="btn btn-xs btn-ghost h-8 w-8 rounded-none p-0 text-base-content/20 hover:text-primary transition-colors btn-snake">
+                <button onClick={(e) => { e.stopPropagation(); onSendToEnhancer(prompt.text); }} title="Refine Prompt" className="btn btn-xs btn-ghost h-8 w-8 rounded-none p-0 -content/20 hover:text-primary transition-colors btn-snake">
                     <span/><span/><span/><span/>
                     <SparklesIcon className="w-4 h-4" />
                 </button>
-                <button onClick={handleCopy} title="Copy Text" className="btn btn-xs btn-ghost h-8 w-8 rounded-none p-0 text-base-content/20 hover:text-success transition-colors btn-snake">
+                <button onClick={handleCopy} title="Copy Text" className="btn btn-xs btn-ghost h-8 w-8 rounded-none p-0 -content/20 hover:text-success transition-colors btn-snake">
                     <span/><span/><span/><span/>
                     {copied ? <CheckIcon className="w-4 h-4" /> : <CopyIcon className="w-4 h-4" />}
                 </button>

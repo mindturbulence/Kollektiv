@@ -285,15 +285,15 @@ const PromptDetailView: React.FC<PromptDetailViewProps> = ({
                         </div>
                         
                         <footer className="h-14 p-1.5 flex gap-1.5 bg-base-300/30 backdrop-blur-md items-stretch">
-                            <button onClick={() => onClip(prompt)} className="btn btn-sm btn-ghost h-full flex-1 rounded-none font-normal text-[13px] tracking-wider uppercase btn-snake font-display">
+                            <button onClick={() => onClip(prompt)} className="btn btn-sm btn-ghost h-full flex-1 rounded-none tracking-wider uppercase btn-snake">
                                 <span/><span/><span/><span/>
                                 Clip
                             </button>
-                            <button onClick={() => handleCopyToClipboard(editedText)} className="btn btn-sm btn-ghost h-full flex-1 rounded-none font-normal text-[13px] tracking-wider uppercase btn-snake font-display">
+                            <button onClick={() => handleCopyToClipboard(editedText)} className="btn btn-sm btn-ghost h-full flex-1 rounded-none tracking-wider uppercase btn-snake">
                                 <span/><span/><span/><span/>
                                 {copied ? 'Copied' : 'Copy'}
                             </button>
-                            <button onClick={() => onDelete(prompt)} className="btn btn-sm btn-ghost h-full flex-1 rounded-none font-normal text-[13px] tracking-wider uppercase btn-snake text-error/60 hover:text-error font-display">
+                            <button onClick={() => onDelete(prompt)} className="btn btn-sm btn-ghost h-full flex-1 rounded-none tracking-wider uppercase btn-snake text-error/60 hover:text-error">
                                 <span/><span/><span/><span/>
                                 Delete
                             </button>
@@ -314,7 +314,7 @@ const PromptDetailView: React.FC<PromptDetailViewProps> = ({
                                 <span className="flex items-center px-4 font-mono text-xs font-bold text-base-content/40 border-x border-base-content/10">{currentIndex + 1} / {prompts.length}</span>
                                 <button onClick={() => handleNavigation('next')} className="form-tab-item px-4"><ChevronRightIcon className="w-4 h-4" /></button>
                             </div>
-                            <button onClick={handleClose} className="p-2 text-base-content/40 hover:text-base-content transition-all hover:scale-110">
+                            <button onClick={handleClose} className="p-2 text-base-content/40 hover:-content transition-all hover:scale-110">
                                 <CloseIcon className="w-5 h-5 stroke-[2]"/>
                             </button>
                         </header>

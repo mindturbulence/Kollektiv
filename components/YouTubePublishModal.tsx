@@ -123,11 +123,11 @@ const YouTubePublishModal: React.FC<YouTubePublishModalProps> = ({
         </div>
 
         <footer className="h-14 flex items-stretch bg-base-100/10 backdrop-blur-md p-1.5 gap-1.5 overflow-hidden flex-shrink-0 panel-footer">
-            <button onClick={onClose} className="btn btn-sm btn-ghost h-full flex-1 rounded-none font-normal text-[13px] tracking-wider uppercase btn-snake font-display" disabled={isUploading}>
+            <button onClick={onClose} className="btn btn-sm btn-ghost h-full flex-1 rounded-none tracking-wider uppercase btn-snake" disabled={isUploading}>
                 <span/><span/><span/><span/>
                 ABORT
             </button>
-            <button onClick={handlePublish} className="btn btn-sm btn-primary h-full flex-1 rounded-none font-normal text-[13px] tracking-wider uppercase btn-snake-primary font-display" disabled={isUploading || !title.trim()}>
+            <button onClick={handlePublish} className="btn btn-sm btn-primary h-full flex-1 rounded-none tracking-wider uppercase btn-snake-primary" disabled={isUploading || !title.trim()}>
                 <span/><span/><span/><span/>
                 {isUploading ? 'SYNCING...' : 'INITIATE UPLINK'}
             </button>

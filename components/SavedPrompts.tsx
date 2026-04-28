@@ -398,7 +398,7 @@ const SavedPrompts: React.FC<SavedPromptsProps> = ({
                                   BY NAME
                               </button>
                           </div>
-                          <button onClick={() => { setPromptToEdit(null); setIsEditorModalOpen(true); }} className="btn btn-primary h-full rounded-none border-none w-[150px] font-black text-[10px] tracking-widest uppercase flex items-center justify-center gap-2 btn-snake-primary flex-shrink-0">
+                          <button onClick={() => { setPromptToEdit(null); setIsEditorModalOpen(true); }} className="btn btn-primary h-full rounded-none border-none w-[150px] tracking-widest uppercase flex items-center justify-center gap-2 btn-snake-primary flex-shrink-0">
                               <span/><span/><span/><span/>
                               <PlusIcon className="w-4 h-4" />
                               <span>Add Prompt</span>

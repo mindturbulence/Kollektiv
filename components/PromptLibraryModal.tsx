@@ -62,7 +62,7 @@ const PromptLibraryModal: React.FC<PromptLibraryModalProps> = ({ isOpen, onClose
                     </div>
                     
                     <footer className="p-6 bg-base-100/10 border-t border-base-content/10 flex justify-end">
-                        <button onClick={onClose} className="btn btn-ghost rounded-none text-xs font-black uppercase tracking-widest h-12 px-8 border border-base-content/5">
+                        <button onClick={onClose} className="btn btn-ghost rounded-none uppercase tracking-widest h-12 px-8 border border-base-content/5">
                             DISMISS
                         </button>
                     </footer>

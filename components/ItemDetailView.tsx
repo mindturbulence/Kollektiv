@@ -601,7 +601,7 @@ const ItemDetailView: React.FC<ItemDetailViewProps> = ({ items, currentIndex, is
                                         {tags.map(tag => (
                                             <div key={tag} className="flex items-center gap-2 bg-primary/10 text-[10px] font-nunito font-bold uppercase tracking-widest px-2.1 py-0.5">
                                                 <span>{tag}</span>
-                                                <button type="button" onClick={() => { audioService.playClick(); setTags(tags.filter(t => t !== tag)); }} className="text-error hover:text-error-content transition-colors font-bold text-lg leading-none">&times;</button>
+                                                <button type="button" onClick={() => { audioService.playClick(); setTags(tags.filter(t => t !== tag)); }} className="text-error hover:text-error-content transition-colors leading-none">&times;</button>
                                             </div>
                                         ))}
                                         <input 
@@ -638,7 +638,7 @@ const ItemDetailView: React.FC<ItemDetailViewProps> = ({ items, currentIndex, is
                                                 </div>
                                             )}
                                             {isPublishable && (
-                                                <button onClick={handlePublishClick} className="btn btn-xs btn-ghost gap-2 border-white/10 hover:border-primary px-3 text-[9px] tracking-widest uppercase text-white/40 hover:text-primary transition-all">
+                                                <button onClick={handlePublishClick} className="btn btn-xs btn-ghost gap-2 border-white/10 hover:border-primary px-3 tracking-widest uppercase text-white/40 hover:text-primary transition-all">
                                                     <YouTubeIcon className="w-3 h-3" />
                                                     Publish
                                                 </button>
@@ -666,7 +666,7 @@ const ItemDetailView: React.FC<ItemDetailViewProps> = ({ items, currentIndex, is
                                     <InfoRow label="Tags">
                                         <div className="flex flex-wrap gap-1 mt-1">
                                             {tags.map(tag => (
-                                                <button key={tag} className="form-btn wildcard-tag-btn h-auto px-2 py-0.5 text-[10px] font-nunito font-bold lowercase tracking-tight bg-white/5 border-white/10 hover:bg-primary/20 hover:text-primary transition-colors font-nunito">
+                                                <button key={tag} className="form-btn wildcard-tag-btn h-auto px-2 py-0.5 lowercase tracking-tight bg-white/5 border-white/10 hover:bg-primary/20 hover:text-primary transition-colors">
                                                     {tag}
                                                 </button>
                                             ))}
@@ -711,22 +711,22 @@ const ItemDetailView: React.FC<ItemDetailViewProps> = ({ items, currentIndex, is
                 <footer className="h-14 flex items-stretch bg-base-100/10 backdrop-blur-md p-1.5 gap-1.5 border-t border-white/5">
                     {isEditing ? (
                         <>
-                            <button onClick={handleCancel} className="btn btn-sm btn-ghost h-full flex-1 rounded-none font-normal text-[13px] tracking-wider uppercase btn-snake font-display">
+                            <button onClick={handleCancel} className="btn btn-sm btn-ghost h-full flex-1 rounded-none tracking-wider uppercase btn-snake">
                                 <span/><span/><span/><span/>
                                 CANCEL
                             </button>
-                            <button onClick={handleSave} className="btn btn-sm btn-primary h-full flex-1 rounded-none font-normal text-[13px] tracking-wider uppercase btn-snake-primary font-display">
+                            <button onClick={handleSave} className="btn btn-sm btn-primary h-full flex-1 rounded-none tracking-wider uppercase btn-snake-primary">
                                 <span/><span/><span/><span/>
                                 SAVE
                             </button>
                         </>
                     ) : (
                         <>
-                            <button onClick={() => setIsEditing(true)} className="btn btn-sm btn-ghost h-full flex-1 rounded-none font-normal text-[13px] tracking-wider uppercase btn-snake font-display">
+                            <button onClick={() => setIsEditing(true)} className="btn btn-sm btn-ghost h-full flex-1 rounded-none tracking-wider uppercase btn-snake">
                                 <span/><span/><span/><span/>
                                 EDIT
                             </button>
-                            <button onClick={() => onDelete(item)} className="btn btn-sm btn-ghost h-full flex-1 rounded-none font-normal text-[13px] tracking-wider uppercase btn-snake text-error font-display">
+                            <button onClick={() => onDelete(item)} className="btn btn-sm btn-ghost h-full flex-1 rounded-none tracking-wider uppercase btn-snake text-error">
                                 <span/><span/><span/><span/>
                                 DELETE
                             </button>

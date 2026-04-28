@@ -342,7 +342,7 @@ export const ColorPaletteExtractor: React.FC<ColorPaletteExtractorProps> = ({ on
                             animate="visible"
                             className="h-14 flex items-stretch flex-shrink-0 bg-base-100/10 backdrop-blur-md p-1.5 gap-1.5"
                         >
-                            <button onClick={handleClipPalette} className="btn btn-sm btn-ghost h-full flex-1 rounded-none font-normal text-[13px] tracking-wider uppercase btn-snake text-primary/40 hover:text-primary font-display">
+                            <button onClick={handleClipPalette} className="btn btn-sm btn-ghost h-full flex-1 rounded-none tracking-wider uppercase btn-snake text-primary/40 hover:text-primary">
                                 <span/><span/><span/><span/>
                                 <BookmarkIcon className="w-3.5 h-3.5 mr-1.5" /> CLIP DATA TO ARCHIVE
                             </button>

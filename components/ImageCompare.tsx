@@ -345,7 +345,7 @@ const ImageCompare: React.FC<ImageCompareProps> = ({ isExiting = false }) => {
                             animate="visible"
                             className="h-14 flex items-stretch flex-shrink-0 bg-base-100/10 backdrop-blur-md p-1.5 gap-1.5"
                         >
-                            <button onClick={handleResetAll} className="btn btn-sm btn-ghost h-full flex-1 rounded-none font-normal text-[13px] tracking-wider uppercase btn-snake text-error/40 hover:text-error font-display">
+                            <button onClick={handleResetAll} className="btn btn-sm btn-ghost h-full flex-1 rounded-none tracking-wider uppercase btn-snake text-error/40 hover:text-error">
                                 <span /><span /><span /><span />
                                 PURGE BUFFERS
                             </button>

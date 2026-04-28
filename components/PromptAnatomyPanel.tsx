@@ -283,7 +283,7 @@ export const PromptAnatomyPanel: React.FC<PromptAnatomyPanelProps> = ({ promptTo
                                                     <button 
                                                                 key={i} 
                                                                 onClick={() => handleVariationClick(key, v)}
-                                                                className="btn btn-xs btn-ghost h-auto py-2 px-4 text-left whitespace-normal text-xs font-bold tracking-tight disabled:opacity-30 rounded-none btn-snake"
+                                                                className="btn btn-xs btn-ghost h-auto py-2 px-4 text-left whitespace-normal tracking-tight disabled:opacity-30 rounded-none btn-snake"
                                                                 disabled={isProcessing || isReconstructing || isAnyVariationProcessing}
                                                             >
                                                                 <span/><span/><span/><span/>
@@ -309,7 +309,7 @@ export const PromptAnatomyPanel: React.FC<PromptAnatomyPanelProps> = ({ promptTo
           <button 
             onClick={handleSavePreset} 
             disabled={isSavingPreset || loadingState !== 'idle'}
-            className="btn btn-sm btn-primary w-full h-12 rounded-none font-black text-[10px] tracking-widest uppercase disabled:text-base-content/20 disabled:bg-transparent disabled:opacity-100 btn-snake-primary"
+            className="btn btn-sm btn-primary w-full h-12 rounded-none tracking-widest uppercase disabled:-content/20 disabled:bg-transparent disabled:opacity-100 btn-snake-primary"
           >
             <span/><span/><span/><span/>
             {isSavingPreset ? <LoadingSpinner size={16} /> : "SAVE CONSTRUCTOR PRESET"}
@@ -344,7 +344,7 @@ export const PromptAnatomyPanel: React.FC<PromptAnatomyPanelProps> = ({ promptTo
               <div className="flex gap-1.5 pt-2">
                 <button 
                   onClick={() => setShowSaveModal(false)}
-                  className="btn btn-sm btn-ghost flex-1 h-10 rounded-none uppercase font-black text-[10px] tracking-widest btn-snake"
+                  className="btn btn-sm btn-ghost flex-1 h-10 rounded-none uppercase tracking-widest btn-snake"
                 >
                   <span/><span/><span/><span/>
                   Cancel
@@ -352,7 +352,7 @@ export const PromptAnatomyPanel: React.FC<PromptAnatomyPanelProps> = ({ promptTo
                 <button 
                   onClick={confirmSavePreset}
                   disabled={!pendingPresetName.trim() || isSavingPreset}
-                  className="btn btn-sm btn-primary flex-1 h-10 rounded-none uppercase font-black text-[10px] tracking-widest btn-snake-primary"
+                  className="btn btn-sm btn-primary flex-1 h-10 rounded-none uppercase tracking-widest btn-snake-primary"
                 >
                   <span/><span/><span/><span/>
                   {isSavingPreset ? <LoadingSpinner size={16} /> : 'Save Preset'}

@@ -167,14 +167,14 @@ export const SuggestionItem: React.FC<SuggestionItemProps> = ({
                             <img src={mediaUrl} alt="Generated result" className="w-full h-full object-contain" />
                         )}
                         <div className="absolute top-4 right-4 opacity-0 group-hover:opacity-100 transition-opacity">
-                             <a href={mediaUrl} download={`kollektiv_${targetAI.replace(/\s+/g, '_')}_${Date.now()}.${isVideo ? 'mp4' : 'jpg'}`} className="form-btn form-btn-primary h-8 px-4 font-black text-[10px] tracking-widest shadow-2xl">
+                             <a href={mediaUrl} download={`kollektiv_${targetAI.replace(/\s+/g, '_')}_${Date.now()}.${isVideo ? 'mp4' : 'jpg'}`} className="form-btn form-btn-primary h-8 px-4 tracking-widest shadow-2xl">
                                 <DownloadIcon className="w-4 h-4 mr-2"/> EXPORT
                             </a>
                         </div>
                     </div>
                     <div className="flex justify-between items-center">
                          <span className="text-[9px] font-black uppercase tracking-[0.2em] text-primary/60">{targetAI} Result Archive</span>
-                         <button onClick={() => setMediaUrl(null)} className="text-[9px] font-bold uppercase tracking-widest text-base-content/30 hover:text-primary transition-colors">Close Archive</button>
+                         <button onClick={() => setMediaUrl(null)} className="uppercase tracking-widest text-base-content/30 hover:text-primary transition-colors">Close Archive</button>
                     </div>
                 </div>
             ) : (
@@ -228,14 +228,14 @@ export const SuggestionItem: React.FC<SuggestionItemProps> = ({
                                             <div className="flex gap-4">
                                                 <button
                                                     onClick={handleCopyJson}
-                                                    className="text-[9px] font-bold uppercase tracking-widest text-base-content/40 hover:text-primary transition-colors flex items-center gap-1.5"
+                                                    className="uppercase tracking-widest text-base-content/40 hover:text-primary transition-colors flex items-center gap-1.5"
                                                 >
                                                     <CopyIcon className="w-3 h-3" />
                                                     {jsonCopied ? 'COPIED' : 'COPY RAW'}
                                                 </button>
                                                 <button
                                                     onClick={handleDownloadJson}
-                                                    className="text-[9px] font-bold uppercase tracking-widest text-base-content/40 hover:text-primary transition-colors flex items-center gap-1.5"
+                                                    className="uppercase tracking-widest text-base-content/40 hover:text-primary transition-colors flex items-center gap-1.5"
                                                 >
                                                     <DownloadIcon className="w-3 h-3" />
                                                     DOWNLOAD
@@ -273,7 +273,7 @@ export const SuggestionItem: React.FC<SuggestionItemProps> = ({
                                 </button>
                                 <button
                                     onClick={handleSave}
-                                    className="text-[10px] font-black uppercase tracking-widest text-base-content/30 hover:text-primary transition-colors flex items-center gap-2 group/btn"
+                                    className="uppercase tracking-widest -content/30 hover:text-primary transition-colors flex items-center gap-2 group/btn"
                                 >
                                     <ArchiveIcon className="w-3.5 h-3.5 opacity-40 group-hover/btn:opacity-100" />
                                     SAVE
@@ -284,7 +284,7 @@ export const SuggestionItem: React.FC<SuggestionItemProps> = ({
                                 {onRefine && (
                                     <button 
                                         onClick={handleRefine} 
-                                        className="text-[10px] font-black uppercase tracking-widest text-base-content/30 hover:text-primary transition-colors flex items-center gap-2 group/btn"
+                                        className="uppercase tracking-widest -content/30 hover:text-primary transition-colors flex items-center gap-2 group/btn"
                                     >
                                         <RefreshIcon className="w-3.5 h-3.5 opacity-40 group-hover/btn:opacity-100" />
                                         REFINE
@@ -294,7 +294,7 @@ export const SuggestionItem: React.FC<SuggestionItemProps> = ({
                                     <button
                                         onClick={handleSaveAsPreset}
                                         disabled={presetSaved}
-                                        className="text-[10px] font-black uppercase tracking-widest text-base-content/30 hover:text-primary transition-colors flex items-center gap-2 group/btn"
+                                        className="uppercase tracking-widest -content/30 hover:text-primary transition-colors flex items-center gap-2 group/btn"
                                     >
                                         <SparklesIcon className="w-3.5 h-3.5 opacity-40 group-hover/btn:opacity-100" />
                                         {presetSaved ? 'MAPPED' : 'MAP TO REF'}
@@ -303,7 +303,7 @@ export const SuggestionItem: React.FC<SuggestionItemProps> = ({
                                 {onClip && (
                                     <button
                                         onClick={handleClip}
-                                        className="text-[10px] font-black uppercase tracking-widest text-base-content/30 hover:text-primary transition-colors flex items-center gap-2 group/btn"
+                                        className="uppercase tracking-widest -content/30 hover:text-primary transition-colors flex items-center gap-2 group/btn"
                                     >
                                         <BookmarkIcon className="w-3.5 h-3.5 opacity-40 group-hover/btn:opacity-100" />
                                         {clipped ? 'CLIPPED' : 'CLIP'}
@@ -311,7 +311,7 @@ export const SuggestionItem: React.FC<SuggestionItemProps> = ({
                                 )}
                                 <button
                                     onClick={handleCopy}
-                                    className="text-[10px] font-black uppercase tracking-widest text-base-content/30 hover:text-primary transition-colors flex items-center gap-2 group/btn"
+                                    className="uppercase tracking-widest -content/30 hover:text-primary transition-colors flex items-center gap-2 group/btn"
                                 >
                                     <CopyIcon className="w-3.5 h-3.5 opacity-40 group-hover/btn:opacity-100" />
                                     {copied ? 'COPIED' : 'COPY'}
@@ -324,7 +324,7 @@ export const SuggestionItem: React.FC<SuggestionItemProps> = ({
                             <div className="flex items-center gap-4 pt-4 border-t border-base-300/5">
                                 <button 
                                     onClick={handleTryGenerate} 
-                                    className="btn btn-xs btn-ghost gap-2 h-8 px-4 rounded-none font-black text-[10px] tracking-widest text-primary uppercase btn-snake bg-primary/5"
+                                    className="btn btn-xs btn-ghost gap-2 h-8 px-4 rounded-none tracking-widest text-primary uppercase btn-snake bg-primary/5"
                                 >
                                     <span/><span/><span/><span/>
                                     <PlayIcon className="w-3 h-3" />

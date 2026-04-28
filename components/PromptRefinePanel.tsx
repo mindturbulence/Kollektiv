@@ -136,17 +136,17 @@ const PromptRefinePanel: React.FC<PromptRefinePanelProps> = ({ promptText, onApp
                 
                 <footer className="p-1.5 flex justify-end gap-1.5">
                     {onClip && refinedPrompt && (
-                            <button onClick={handleClip} disabled={clipped} className="btn btn-sm btn-ghost h-10 rounded-none px-4 font-normal text-[13px] tracking-wider border border-base-content/5 btn-snake">
+                            <button onClick={handleClip} disabled={clipped} className="btn btn-sm btn-ghost h-10 rounded-none px-4 tracking-wider border border-base-content/5 btn-snake">
                             <span/><span/><span/><span/>
                             <BookmarkIcon className="w-3.5 h-3.5 mr-1.5" />
                             {clipped ? 'Ok' : 'Clip'}
                         </button>
                     )}
-                    <button onClick={handleCopy} disabled={!refinedPrompt || isLoading} className="btn btn-sm btn-ghost h-10 rounded-none px-4 font-normal text-[13px] tracking-wider border border-base-content/5 btn-snake">
+                    <button onClick={handleCopy} disabled={!refinedPrompt || isLoading} className="btn btn-sm btn-ghost h-10 rounded-none px-4 tracking-wider border border-base-content/5 btn-snake">
                         <span/><span/><span/><span/>
                         {copied ? <><CheckIcon className="w-3.5 h-3.5 mr-1.5 text-success" />Copied</> : <><CopyIcon className="w-3.5 h-3.5 mr-1.5" />Copy Text</>}
                     </button>
-                    <button onClick={handleApply} disabled={!refinedPrompt || isLoading} className="btn btn-sm btn-primary h-10 rounded-none px-4 font-normal text-[13px] tracking-wider border border-base-content/5 btn-snake-primary">
+                    <button onClick={handleApply} disabled={!refinedPrompt || isLoading} className="btn btn-sm btn-primary h-10 rounded-none px-4 tracking-wider border border-base-content/5 btn-snake-primary">
                         <span/><span/><span/><span/>
                         <CheckIcon className="w-3.5 h-3.5 mr-1.5" /> Apply Prompt
                     </button>

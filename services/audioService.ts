@@ -307,9 +307,16 @@ class AudioService {
     if (!this.isEnabled || !this.ctx || !this.masterGain) return;
     this.resume();
     
-    // Play both the transition and slide sound for a clear, audible whoosh
-    this.playBuffer('transition', 0.8);
-    this.playBuffer('slide', 0.4);
+    // Play the leaving sound immediately
+    if (this.playBuffer('panel_slide_out', 0.5)) {
+        // Play the entering sound after a short delay to simulate "arriving" at the new page
+        setTimeout(() => {
+            if (this.isEnabled) {
+                this.playBuffer('panel_slide_in', 0.5);
+            }
+        }, 400);
+        return;
+    }
 
     const now = this.ctx.currentTime;
     

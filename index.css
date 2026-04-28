@@ -1311,7 +1311,9 @@ button:active {
 }
 
 [data-theme="Hiigara"] header .parent-nav-item,
-[data-theme="Hiigara"] header button.px-3 {
+[data-theme="Hiigara"] header button.px-3,
+[data-theme="Hiigara"] footer .font-rajdhani,
+[data-theme="Hiigara"] footer .font-sf-mono {
   font-size: 10px !important;
   font-family: "Microgramma D Medium Extended", sans-serif !important;
   font-weight: normal !important;
@@ -2364,14 +2366,14 @@ button:active {
 
 /* --- LOFI (VANGUARD STYLE WITH CYAN COLORS) --- */
 [data-theme="lofi"] {
-  font-family: "Jardhani", sans-serif !important;
+  font-family: "Rajdhani", sans-serif !important;
   background-color: oklch(var(--b2)) !important;
   color: oklch(var(--p));
 }
 
 [data-theme="lofi"] .font-sans,
 [data-theme="lofi"] .font-serif {
-  font-family: "Jardhani", sans-serif !important;
+  font-family: "Rajdhani", sans-serif !important;
 }
 
 [data-theme="lofi"] *:not(.cursor-inner) {
@@ -2437,7 +2439,7 @@ button:active {
 [data-theme="lofi"] h2,
 [data-theme="lofi"] h3,
 [data-theme="lofi"] button,
-[data-theme="lofi"] .font-jardhani,
+[data-theme="lofi"] .font-rajdhani,
 [data-theme="lofi"] .font-mono {
   font-family: "Electrolize", monospace !important;
   letter-spacing: 0.1em;
