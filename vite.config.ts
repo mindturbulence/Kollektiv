@@ -49,7 +49,7 @@ export default defineConfig(({ mode }) => {
         },
         proxy: {
           '/ollama-local': {
-            target: 'http://127.0.0.1:11434',
+            target: 'http://localhost:11434',
             changeOrigin: true,
             secure: false,
             rewrite: (path) => path.replace(/^\/ollama-local/, ''),
@@ -70,7 +70,7 @@ export default defineConfig(({ mode }) => {
             }
           },
           '/openclaw-local': {
-            target: 'http://127.0.0.1:18789',
+            target: 'http://localhost:18789',
             changeOrigin: true,
             secure: false,
             rewrite: (path) => path.replace(/^\/openclaw-local/, ''),
@@ -123,7 +123,7 @@ export default defineConfig(({ mode }) => {
             }
           },
           '/proxy-remote': {
-            target: 'http://127.0.0.1:11434',
+            target: 'http://localhost:11434',
             changeOrigin: true,
             secure: false,
             ws: true,
@@ -131,8 +131,8 @@ export default defineConfig(({ mode }) => {
             proxyTimeout: 600000,
             router: (req: any) => {
                 let target = req.headers['x-target-url'];
-                if (!target || typeof target !== 'string') return 'http://127.0.0.1:11434';
-                return target.replace('localhost', '127.0.0.1');
+                if (!target || typeof target !== 'string') return 'http://localhost:11434';
+                return target.replace('127.0.0.1', 'localhost');
             },
             rewrite: (path) => path.replace(/^\/proxy-remote/, ''),
             configure: (proxy, _options) => {

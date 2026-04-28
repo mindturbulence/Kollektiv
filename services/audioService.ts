@@ -35,7 +35,10 @@ class AudioService {
         { key: 'slide', url: '/sfx/slide.mp3' },
         { key: 'info', url: '/sfx/info.mp3' },
         { key: 'type', url: '/sfx/type.mp3' },
-        { key: 'error', url: '/sfx/error.mp3' }
+        { key: 'error', url: '/sfx/error.mp3' },
+        { key: 'app_start', url: '/sfx/app_start.wav' },
+        { key: 'panel_slide_in', url: '/sfx/panel_slide_in.wav' },
+        { key: 'panel_slide_out', url: '/sfx/panel_slide_out.wav' }
       ];
 
       for (const sound of sounds) {
@@ -304,27 +307,28 @@ class AudioService {
     if (!this.isEnabled || !this.ctx || !this.masterGain) return;
     this.resume();
     
-    // Try to play the external transition sound first
-    if (this.playBuffer('transition', 0.5)) return;
+    // Play both the transition and slide sound for a clear, audible whoosh
+    this.playBuffer('transition', 0.8);
+    this.playBuffer('slide', 0.4);
 
     const now = this.ctx.currentTime;
     
     // Quick noise bursts
     for (let i = 0; i < 4; i++) {
-      const delay = i * 0.02;
-      const noise = this.ctx.createBufferSource();
-      const buf = this.ctx.createBuffer(1, this.ctx.sampleRate * 0.005, this.ctx.sampleRate);
-      const d = buf.getChannelData(0);
-      for (let j = 0; j < d.length; j++) d[j] = Math.random() * 2 - 1;
-      noise.buffer = buf;
-      
-      const g = this.ctx.createGain();
-      g.gain.setValueAtTime(0.04, now + delay);
-      g.gain.linearRampToValueAtTime(0, now + delay + 0.005);
-      
-      noise.connect(g);
-      g.connect(this.masterGain);
-      noise.start(now + delay);
+        const delay = i * 0.02;
+        const noise = this.ctx.createBufferSource();
+        const buf = this.ctx.createBuffer(1, this.ctx.sampleRate * 0.005, this.ctx.sampleRate);
+        const d = buf.getChannelData(0);
+        for (let j = 0; j < d.length; j++) d[j] = Math.random() * 2 - 1;
+        noise.buffer = buf;
+        
+        const g = this.ctx.createGain();
+        g.gain.setValueAtTime(0.08, now + delay);
+        g.gain.linearRampToValueAtTime(0, now + delay + 0.005);
+        
+        noise.connect(g);
+        g.connect(this.masterGain);
+        noise.start(now + delay);
     }
   }
 
@@ -406,6 +410,26 @@ class AudioService {
 
   playToggle(): void {
     this.playClick();
+  }
+
+  playAppStart(): void {
+    if (!this.isEnabled || !this.ctx || !this.masterGain) return;
+    this.resume();
+    this.playBuffer('app_start', 0.6);
+  }
+
+  playPanelSlideIn(): void {
+    if (!this.isEnabled || !this.ctx || !this.masterGain) return;
+    this.resume();
+    if (this.playBuffer('panel_slide_in', 0.4)) return;
+    this.playModalOpen(); // Fallback
+  }
+
+  playPanelSlideOut(): void {
+    if (!this.isEnabled || !this.ctx || !this.masterGain) return;
+    this.resume();
+    if (this.playBuffer('panel_slide_out', 0.4)) return;
+    this.playModalClose(); // Fallback
   }
 
   /**

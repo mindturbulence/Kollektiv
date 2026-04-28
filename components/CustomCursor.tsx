@@ -102,7 +102,7 @@ const CustomCursor: React.FC = () => {
     return (
         <div
             ref={cursorRef}
-            className="fixed top-1 left-1 pointer-events-none z-[9999] opacity-0 flex items-center text-base-content"
+            className="fixed top-1 left-1 pointer-events-none z-[9999] opacity-0 flex items-center text-primary"
             style={{ width: 'auto', height: '40px' }}
         >
             <div className={`relative flex items-center justify-center transition-opacity duration-300 ${isBusy ? 'opacity-0' : 'opacity-100'}`}>
@@ -128,7 +128,7 @@ const CustomCursor: React.FC = () => {
                 </div>
 
                 {/* X and Y Coordinates at the side */}
-                <div className="ml-4 flex flex-col gap-0.5 pointer-events-none text-base-content">
+                <div className="ml-4 flex flex-col gap-0.5 pointer-events-none text-primary">
                     <span className="text-[8px] font-mono font-bold opacity-40 leading-none uppercase tracking-tighter">
                         X:{coords.x.toString().padStart(4, '0')}
                     </span>

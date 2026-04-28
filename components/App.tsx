@@ -27,7 +27,6 @@ import { TabTitleManager } from './TabTitleManager';
 import Dashboard from './Dashboard';
 import DiscoveryPage from './DiscoveryPage';
 import PromptsPage from './PromptsPage';
-import { StoryboardPage } from './StoryboardPage';
 import SavedPrompts from './SavedPrompts';
 import ImageGallery from './ImageGallery';
 import Cheatsheet from './Cheatsheet';
@@ -426,7 +425,6 @@ const AppContent: React.FC = () => {
             case 'refiner': return `REFINER | ${base}`;
             case 'prompt_analyzer': return `ANALYZER | ${base}`;
             case 'media_analyzer': return `MEDIA | ${base}`;
-            case 'storyboard': return `STORYBOARD | ${base}`;
             case 'gallery': return `VAULT | ${base}`;
             case 'prompt': return `LIBRARY | ${base}`;
             case 'settings': return `SETTINGS | ${base}`;
@@ -540,7 +538,7 @@ const AppContent: React.FC = () => {
             onProgress('Finalizing System...', 0.9);
             onProgress('System Ready', 1.0);
 
-            audioService.playModalOpen(); // Chime for system ready
+            audioService.playAppStart(); // Chime for system ready
 
             await new Promise(r => setTimeout(r, 1500));
 
@@ -632,6 +630,7 @@ const AppContent: React.FC = () => {
 
     const handleNavigate = (tab: ActiveTab) => {
         if (tab === activeTab) return;
+        audioService.playTransition();
         setActiveTab(tab);
     };
 
@@ -733,7 +732,6 @@ const AppContent: React.FC = () => {
             case 'refiner': return <PromptsPage key="refiner" forcedView="refine" onClipIdea={handleClipIdea} initialState={promptsPageState} onStateHandled={() => setPromptsPageState(null)} showGlobalFeedback={showGlobalFeedback} isExiting={false} />;
             case 'prompt_analyzer': return <PromptsPage key="prompt_analyzer" forcedView="prompt_analyzer" onClipIdea={handleClipIdea} initialState={promptsPageState} onStateHandled={() => setPromptsPageState(null)} showGlobalFeedback={showGlobalFeedback} isExiting={false} />;
             case 'media_analyzer': return <PromptsPage key="media_analyzer" forcedView="analyzer" onClipIdea={handleClipIdea} initialState={promptsPageState} onStateHandled={() => setPromptsPageState(null)} showGlobalFeedback={showGlobalFeedback} isExiting={false} />;
-            case 'storyboard': return <StoryboardPage key="storyboard" showGlobalFeedback={showGlobalFeedback} isExiting={false} />;
             case 'prompt': return <SavedPrompts key="prompt" {...categoryPanelProps} onSendToEnhancer={(prompt) => handleSendToPromptsPage({ prompt, view: 'enhancer' })} showGlobalFeedback={showGlobalFeedback} onClipIdea={handleClipIdea} isExiting={false} />;
             case 'gallery': return <ImageGallery key="gallery" {...categoryPanelProps} isSidebarPinned={false} showGlobalFeedback={showGlobalFeedback} isExiting={false} />;
             case 'cheatsheet': return <Cheatsheet key="cheatsheet" isExiting={false} />;

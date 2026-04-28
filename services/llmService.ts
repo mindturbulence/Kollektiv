@@ -506,19 +506,7 @@ Output JSON ONLY.`;
 
 export { generateWithImagen, generateWithNanoBanana, generateWithVeo } from './geminiService';
 
-// --- Translator for storyboarding feature ---
-export const translateStoryboardScene = async (text: string, model: string, settings: LLMSettings): Promise<string> => {
-    const isOllama = settings.activeLLM === 'ollama' || settings.activeLLM === 'ollama_cloud';
-    const sys = `Role: Cinematic Translator for ${model}. 
-Task: Convert this scene description into a high-fidelity visual prompt. 
-Focus on: camera movement, lighting, atmospheric density, and temporal flow. 
-Output the translated prompt ONLY. No intros.`;
-
-    const raw = isOllama
-        ? await refineSinglePromptOllama(text, settings, sys, 1024)
-        : await refineSinglePromptGemini(text, '', settings, sys);
-    return cleanLLMResponse(raw);
-};
+// Removed storyboard translation
 
 export const translateToEnglish = async (text: string, settings: LLMSettings): Promise<string> => {
     const isOllama = settings.activeLLM === 'ollama' || settings.activeLLM === 'ollama_cloud';

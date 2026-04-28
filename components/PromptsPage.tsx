@@ -56,7 +56,6 @@ import PromptEditorModal from './PromptEditorModal';
 import PromptCrafter from './PromptCrafter';
 import { MediaAnalyzer } from './MediaAnalyzer';
 import { PromptAnalyzer } from './PromptAnalyzer';
-import LoadingSpinner from './LoadingSpinner';
 import BlobLoader from './BlobLoader';
 import AutocompleteSelect from './AutocompleteSelect';
 import { SparklesIcon, UploadIcon, Cog6ToothIcon, CloseIcon, DownloadIcon } from './icons';
@@ -208,7 +207,7 @@ const PromptsPage: React.FC<PromptsPageProps> = ({
     const refineScrollerRef = useRef<HTMLDivElement>(null);
     const neuralOutputScrollerRef = useRef<HTMLDivElement>(null);
     const activeConstructionScrollerRef = useRef<HTMLDivElement>(null);
-    const [loadingMsg, setLoadingMsg] = useState<string>('');
+    const [, setLoadingMsg] = useState<string>('');
 
     const [composerPromptToInsert, setComposerPromptToInsert] = useState<{ content: string, id: string } | null>(null);
     const [isSaveSuggestionModalOpen, setIsSaveSuggestionModalOpen] = useState(false);

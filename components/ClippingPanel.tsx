@@ -222,6 +222,7 @@ const ClippingPanel: React.FC<ClippingPanelProps> = ({
         if (!panelRef.current) return;
 
         if (isOpen) {
+            audioService.playPanelSlideIn();
             // Cancel any current animation
             gsap.killTweensOf(panelRef.current);
             gsap.to(panelRef.current, {
@@ -233,6 +234,7 @@ const ClippingPanel: React.FC<ClippingPanelProps> = ({
                 opacity: 1
             });
         } else {
+            audioService.playPanelSlideOut();
             // Cancel any current animation
             gsap.killTweensOf(panelRef.current);
             gsap.to(panelRef.current, {

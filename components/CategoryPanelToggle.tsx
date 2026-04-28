@@ -1,6 +1,7 @@
 
-import React from 'react';
+import React, { useEffect } from 'react';
 import { ChevronLeftIcon } from './icons';
+import { audioService } from '../services/audioService';
 
 interface CategoryPanelToggleProps {
   isCollapsed: boolean;
@@ -10,11 +11,21 @@ interface CategoryPanelToggleProps {
 
 const CategoryPanelToggle: React.FC<CategoryPanelToggleProps> = ({ isCollapsed, onToggle, position = 'right' }) => {
   const isLeftOfPanel = position === 'left'; 
-  
+
+  useEffect(() => {
+    if (isCollapsed) {
+        audioService.playPanelSlideOut();
+    } else {
+        audioService.playPanelSlideIn();
+    }
+  }, [isCollapsed]);
+
   return (
     <div className={`absolute top-1/2 transform -translate-y-1/2 z-[100] ${isLeftOfPanel ? '-left-3' : '-right-3'}`}>
       <button
-        onClick={onToggle}
+        onClick={() => {
+            onToggle();
+        }}
         title={isCollapsed ? 'Expand Panel' : 'Collapse Panel'}
         className={`w-6 h-12 bg-base-100/60 backdrop-blur-xl text-base-content flex items-center justify-center transition-colors focus:outline-none ${isLeftOfPanel ? 'rounded-l-lg' : 'rounded-r-lg'}`}
         aria-label={isCollapsed ? 'Expand Panel' : 'Collapse Panel'}

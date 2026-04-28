@@ -195,13 +195,13 @@ const Footer: React.FC<FooterProps> = ({
 
             <div className="flex items-center h-full gap-4 bg-transparent relative z-[710] pointer-events-auto">
                 <div className="flex gap-3 items-center">
-                    <span className="text-[10px] font-jardhani uppercase tracking-widest text-primary/60 leading-none inline-block">ENG</span>
+                    <span className="text-[10px] font-rajdhani uppercase tracking-widest text-primary/60 leading-none inline-block">ENG</span>
                     <div className="min-w-[120px] flex items-center">
                         <LlmStatusSwitcher onClick={onToggleLlmPanel} isOpen={isLlmPanelOpen} />
                     </div>
                 </div>
 
-                <div className="flex gap-4 font-jardhani items-center pl-4 ps-6 border-l border-base-content/10">
+                <div className="flex gap-4 font-rajdhani items-center pl-4 ps-6 border-l border-base-content/10">
                     <span className="text-[10px] tracking-widest text-primary/60 leading-none inline-block">INT</span>
                     <IntegrationItem label="VAULT" active={fileSystemManager.isDirectorySelected()} />
                     <IntegrationItem label={(settings.activeLLM === 'ollama_cloud' ? 'OLLAMA' : settings.activeLLM?.toUpperCase()) || 'LLM'} active={!!process.env.GEMINI_API_KEY || settings.activeLLM?.includes('ollama') || settings.activeLLM === 'openclaw'} />
@@ -228,8 +228,8 @@ const Footer: React.FC<FooterProps> = ({
                         onMouseEnter={() => audioService.playHover()}
                         className="flex items-center gap-2 group transition-all"
                     >
-                        <span className="text-[10px] font-jardhani uppercase tracking-widest text-primary/60 group-hover:text-primary leading-none inline-block">SFX</span>
-                        <span className={`text-[10px] font-jardhani uppercase tracking-widest leading-none inline-block ${audioEnabled ? 'text-base-content/40' : 'text-base-content/20'}`}>{audioEnabled ? 'ON' : 'OFF'}</span>
+                        <span className="text-[10px] font-rajdhani uppercase tracking-widest text-primary/60 group-hover:text-primary leading-none inline-block">SFX</span>
+                        <span className={`text-[10px] font-rajdhani uppercase tracking-widest leading-none inline-block ${audioEnabled ? 'text-base-content/40' : 'text-base-content/20'}`}>{audioEnabled ? 'ON' : 'OFF'}</span>
                     </button>
 
                     <div className="w-[1px] h-3 bg-base-content/10" />
@@ -239,8 +239,8 @@ const Footer: React.FC<FooterProps> = ({
                         onMouseEnter={() => audioService.playHover()}
                         className="flex items-center gap-2 group transition-all"
                     >
-                        <span className="text-[10px] font-jardhani uppercase tracking-widest text-primary/60 group-hover:text-primary leading-none inline-block">MSC</span>
-                        <span className={`text-[10px] font-jardhani uppercase tracking-widest leading-none inline-block ${playerState === 'playing' ? 'text-base-content/40' : 'text-base-content/20'}`}>
+                        <span className="text-[10px] font-rajdhani uppercase tracking-widest text-primary/60 group-hover:text-primary leading-none inline-block">MSC</span>
+                        <span className={`text-[10px] font-rajdhani uppercase tracking-widest leading-none inline-block ${playerState === 'playing' ? 'text-base-content/40' : 'text-base-content/20'}`}>
                             {playerState === 'playing' ? 'ON' : playerState === 'syncing' ? 'SYNC' : 'OFF'}
                         </span>
 

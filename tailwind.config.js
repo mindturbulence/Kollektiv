@@ -152,8 +152,8 @@ export default {
       {
         Hiigara: {
           primary: "#4db8ff",
-          secondary: "#1a2530",
-          accent: "#ffffff",
+          secondary: "#1e3a8a",
+          accent: "#facc15",
           neutral: "#0a0e14",
           "base-100": "#080b0f",
           "base-200": "#0a0e14",
@@ -161,7 +161,7 @@ export default {
           "base-content": "#e2e8f0",
           info: "#6eb6ff",
           success: "#33ff99",
-          warning: "#f5a623",
+          warning: "#facc15",
           error: "#ff3333",
           "--rounded-box": "0",
           "--rounded-btn": "0",

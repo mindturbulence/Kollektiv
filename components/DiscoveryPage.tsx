@@ -53,7 +53,7 @@ const TypewriterText: React.FC<{ text: string, speed?: number, delay?: number, o
 
                     const now = Date.now();
                     if (now - lastAudioPlay > 40) {
-                        audioService.playHover();
+                        audioService.playType();
                         lastAudioPlay = now;
                     }
 
@@ -149,7 +149,7 @@ const DetailPanel: React.FC<{
             <div className="h-14 flex items-stretch p-1.5 bg-base-100/10 backdrop-blur-md border-t border-white/10 gap-1.5 shrink-0">
                 <button
                     onClick={() => onSend(prompt.prompt)}
-                    className="btn btn-sm btn-ghost h-full rounded-none flex-1 font-jardhani text-[10px] tracking-wider text-primary border-1 disabled:opacity-30 disabled:cursor-not-allowed btn-snake"
+                    className="btn btn-sm btn-ghost h-full rounded-none flex-1 text-[10px] tracking-wider text-primary border-1 disabled:opacity-30 disabled:cursor-not-allowed btn-snake"
                     title="Send to Refiner"
                 >
                     <span /><span /><span /><span />
@@ -157,7 +157,7 @@ const DetailPanel: React.FC<{
                 </button>
                 <button
                     onClick={() => onClipboardClip(prompt)}
-                    className="btn btn-sm btn-ghost h-full rounded-none flex-1 font-jardhani text-[10px] tracking-wider text-primary border-1 disabled:opacity-30 disabled:cursor-not-allowed btn-snake"
+                    className="btn btn-sm btn-ghost h-full rounded-none flex-1 text-[10px] tracking-wider text-primary border-1 disabled:opacity-30 disabled:cursor-not-allowed btn-snake"
                     title="Add to Clipboard"
                 >
                     <span /><span /><span /><span />
@@ -165,7 +165,7 @@ const DetailPanel: React.FC<{
                 </button>
                 <button
                     onClick={() => onCopy(prompt.prompt)}
-                    className="btn btn-sm btn-ghost h-full rounded-none flex-1 font-jardhani text-[10px] tracking-wider text-primary border-1 disabled:opacity-30 disabled:cursor-not-allowed btn-snake"
+                    className="btn btn-sm btn-ghost h-full rounded-none flex-1 text-[10px] tracking-wider text-primary border-1 disabled:opacity-30 disabled:cursor-not-allowed btn-snake"
                     title="Copy to Clipboard"
                 >
                     <span /><span /><span /><span />
@@ -173,7 +173,7 @@ const DetailPanel: React.FC<{
                 </button>
                 <button
                     onClick={() => onClip(prompt)}
-                    className="btn btn-sm btn-ghost h-full rounded-none flex-1 font-jardhani text-[10px] tracking-wider text-primary border-1 disabled:opacity-30 disabled:cursor-not-allowed btn-snake"
+                    className="btn btn-sm btn-ghost h-full rounded-none flex-1 text-[10px] tracking-wider text-primary border-1 disabled:opacity-30 disabled:cursor-not-allowed btn-snake"
                     title="Save to Memory"
                 >
                     <span /><span /><span /><span />
@@ -230,7 +230,7 @@ ${prompt.prompt}
 
                 const now = Date.now();
                 if (now - lastAudioPlay > 40) {
-                    audioService.playHover();
+                    audioService.playType();
                     lastAudioPlay = now;
                 }
 
@@ -321,13 +321,13 @@ const DiscoveryPage: React.FC<DiscoveryPageProps> = ({
 
                 const extracted = discoveryService.parsePromptsFromMarkdown(md);
                 const hasMoreFromSource = activeCollection.sourceType === 'huggingface' ? extracted.length >= (LIMIT * 0.8) : false;
-                
+
                 let results = extracted;
                 if (debouncedSearchQuery) {
                     const q = debouncedSearchQuery.toLowerCase();
-                    results = extracted.filter(p => 
-                        p.prompt.toLowerCase().includes(q) || 
-                        p.title.toLowerCase().includes(q) || 
+                    results = extracted.filter(p =>
+                        p.prompt.toLowerCase().includes(q) ||
+                        p.title.toLowerCase().includes(q) ||
                         p.category.toLowerCase().includes(q)
                     );
                 }
@@ -376,9 +376,9 @@ const DiscoveryPage: React.FC<DiscoveryPageProps> = ({
             let results = extracted;
             if (debouncedSearchQuery) {
                 const q = debouncedSearchQuery.toLowerCase();
-                results = extracted.filter(p => 
-                    p.prompt.toLowerCase().includes(q) || 
-                    p.title.toLowerCase().includes(q) || 
+                results = extracted.filter(p =>
+                    p.prompt.toLowerCase().includes(q) ||
+                    p.title.toLowerCase().includes(q) ||
                     p.category.toLowerCase().includes(q)
                 );
             }
@@ -451,7 +451,7 @@ const DiscoveryPage: React.FC<DiscoveryPageProps> = ({
             className="flex h-full w-full gap-4"
         >
             {/* LEFT PANEL - FIXED WIDTH */}
-            <div className="hidden lg:flex w-[260px] shrink-0 flex-col h-full relative group p-[1px] corner-frame">
+            <div className="hidden lg:flex w-[300px] shrink-0 flex-col h-full relative group p-[1px] corner-frame">
                 <div className="flex flex-col h-full w-full bg-base-100/50 backdrop-blur-xl relative overflow-hidden">
                     <ScanLine delay={1} />
 

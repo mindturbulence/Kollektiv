@@ -7,8 +7,8 @@ import { dissectPrompt, reconstructPrompt, cleanLLMResponse } from '../services/
 import { audioService } from '../services/audioService';
 import useLocalStorage from '../utils/useLocalStorage';
 import LoadingSpinner from './LoadingSpinner';
-import { 
-    CloseIcon, 
+import {
+    CloseIcon,
     PlusIcon,
     SparklesIcon,
     ArchiveIcon
@@ -269,12 +269,12 @@ export const PromptAnalyzer: React.FC<PromptAnalyzerProps> = ({
             const validParams: { label: string, value: string }[] = [];
             const seenKeys = new Set<string>();
             const seenValues = new Set<string>();
-            
+
             // Add existing modifier values to seenValues to avoid duplicates
             newSegments.forEach(s => {
                 if (s.value.trim()) seenValues.add(s.value.trim().toLowerCase());
             });
-            
+
             // Add subject prompt keywords roughly to avoid echoing the core prompt
             cleanedPrompt.split(',').forEach(p => {
                 const val = p.trim().toLowerCase();
@@ -284,14 +284,14 @@ export const PromptAnalyzer: React.FC<PromptAnalyzerProps> = ({
             allCategorized.forEach(p => {
                 const val = (p.value || '').trim().toLowerCase();
                 const label = (p.label || '').trim().toLowerCase();
-                
+
                 // Skip invalid values
-                if (!val || val === 'none' || val === 'n/a' || val === 'null' || 
-                    val === 'undefined' || val === 'not specified' || val === 'default' || 
+                if (!val || val === 'none' || val === 'n/a' || val === 'null' ||
+                    val === 'undefined' || val === 'not specified' || val === 'default' ||
                     val === 'standard' || val === '[none]') {
                     return;
                 }
-                
+
                 // Check if we already have this key from modifiers
                 const existingModifier = newSegments.find(s => s.key.toLowerCase() === label);
                 if (existingModifier && existingModifier.value.trim()) {
@@ -301,26 +301,26 @@ export const PromptAnalyzer: React.FC<PromptAnalyzerProps> = ({
                 // Remove duplicate of Modifiers and Suggested Parameters (when have the same value)
                 // Normalize values for better deduplication
                 const normalizedVal = val.replace(/--ar\s+/g, '').replace(/--chaos\s+/g, '').trim();
-                const isDuplicateValue = Array.from(seenValues).some(v => 
-                    v === normalizedVal || 
-                    v.includes(normalizedVal) || 
+                const isDuplicateValue = Array.from(seenValues).some(v =>
+                    v === normalizedVal ||
+                    v.includes(normalizedVal) ||
                     normalizedVal.includes(v)
                 );
 
                 if (isDuplicateValue) {
                     return;
                 }
-                
+
                 // Check if we already added this suggested param key
                 if (seenKeys.has(label)) {
                     return;
                 }
-                
+
                 seenKeys.add(label);
                 seenValues.add(val);
                 validParams.push({ label: p.label, value: p.value });
             });
-            
+
             const finalConstant = result.constantModifier || '';
 
             // For modifiers with empty values, try to fill from suggested params
@@ -355,12 +355,12 @@ export const PromptAnalyzer: React.FC<PromptAnalyzerProps> = ({
     const handleMapToRefiner = async () => {
         if (!modifiedPrompt) return;
         audioService.playClick();
-        
+
         try {
             // Copy to clipboard as per "only copy the modified prompt"
             await navigator.clipboard.writeText(modifiedPrompt);
             showGlobalFeedback('Prompt copied & mapped to refiner.');
-            
+
             // Pass ONLY the modified prompt string, resetting other modifiers
             // This satisfies "copy the modified prompt and paste it to prompt refiner page"
             onMapToRefiner(modifiedPrompt, {}, '');
@@ -384,31 +384,31 @@ export const PromptAnalyzer: React.FC<PromptAnalyzerProps> = ({
     // --- Reconstruct from all parameters ---
     const reconstructFromParameters = useCallback(() => {
         const parts: string[] = [];
-        
+
         // Add subject/core prompt
         if (subjectPrompt) {
             parts.push(subjectPrompt);
         }
-        
+
         // Add all modifier segments with their values
         modifierSegments.forEach(seg => {
             if (seg.value && seg.value.trim()) {
                 parts.push(seg.value);
             }
         });
-        
+
         // Add custom parameter values
         customParameters.forEach(param => {
             if (param.value && param.value.trim()) {
                 parts.push(`${param.value}`);
             }
         });
-        
+
         // Add constant modifier
         if (constantModifier) {
             parts.push(constantModifier);
         }
-        
+
         return parts.join(', ');
     }, [subjectPrompt, modifierSegments, customParameters, constantModifier]);
 
@@ -433,7 +433,7 @@ export const PromptAnalyzer: React.FC<PromptAnalyzerProps> = ({
             <div className="flex-grow grid grid-cols-1 xl:grid-cols-12 gap-4 min-h-0 overflow-hidden">
 
                 {/* Left Section: Input / Dissection */}
-                <motion.section 
+                <motion.section
                     variants={panelVariants}
                     initial="hidden"
                     animate="visible"
@@ -447,7 +447,7 @@ export const PromptAnalyzer: React.FC<PromptAnalyzerProps> = ({
                     <ScanLine delay={2} />
 
                     <div className="flex flex-col h-full w-full overflow-hidden relative z-10 bg-base-100/40 backdrop-blur-xl panel-transparent">
-                        <motion.header 
+                        <motion.header
                             variants={sectionWipeVariants}
                             custom={1.2}
                             initial="hidden"
@@ -476,225 +476,225 @@ export const PromptAnalyzer: React.FC<PromptAnalyzerProps> = ({
                                     className="flex-grow overflow-y-auto custom-scrollbar relative"
                                 >
                                     {/* Stable Body Container */}
-                            <div className="min-h-full flex flex-col">
-                                {!hasBreakdown ? (
-                                    <div className="flex-grow flex flex-col p-6 h-full">
-                                        <textarea
-                                            value={promptInput}
-                                            onChange={(e) => setPromptInput(e.target.value)}
-                                            placeholder="Enter complex prompt sequence to deconstruct into atomic nodes..."
-                                            className="flex-grow w-full bg-base-100/10 border border-base-content/10 focus:border-primary/50 focus:outline-none p-6 font-nunito font-bold text-lg leading-relaxed resize-none transition-all placeholder:text-base-content/40 rounded-none shadow-inner"
-                                        />
-                                    </div>
-                                ) : (
-                                    <div className="p-6 space-y-8 flex-grow">
-                                        {/* Core Prompt Section */}
-                                        <div className="space-y-3">
-                                            <label className="text-[10px] font-black uppercase tracking-widest text-base-content/40 block">Subject / Core Idea</label>
-                                            <AutoTextArea
-                                                value={subjectPrompt}
-                                                onChange={(e) => setSubjectPrompt(e.target.value)}
-                                                className="bg-base-100/10 border border-base-content/10 p-4 font-nunito font-bold text-base md:text-lg leading-relaxed focus:border-primary/40 resize-none shadow-inner min-h-[4rem] rounded-none"
-                                                placeholder="Core subject matter..."
-                                            />
-                                        </div>
-
-                                        {/* Active Parameters */}
-                                        <div className="space-y-4">
-                                            <div className="grid grid-cols-1 md:grid-cols-2 gap-x-4 gap-y-6">
-                                                {modifierSegments.map(seg => (
-                                                    <div key={seg.id} className="flex flex-col space-y-2 group">
-                                                        <div className="flex justify-between items-center px-1">
-                                                            <label className="text-[12px] font-black uppercase tracking-widest text-base-content/40">{getModifierLabel(seg.key)}</label>
-                                                            <button
-                                                                onClick={() => removeSegment(seg.id)}
-                                                                className="opacity-0 group-hover:opacity-100 text-error transition-all p-1 hover:bg-error/10 rounded"
-                                                            >
-                                                                <CloseIcon className="w-3.5 h-3.5" />
-                                                            </button>
-                                                        </div>
-                                                        <AutocompleteSelect
-                                                            options={getModifierOptions(seg.key)}
-                                                            value={seg.value}
-                                                            onChange={(val) => updateSegment(seg.id, val)}
-                                                            placeholder={`Select ${getModifierLabel(seg.key)}...`}
-                                                            className="w-full h-10 rounded-none bg-base-100/5 focus:bg-base-100/10 transition-colors"
-                                                        />
-                                                    </div>
-                                                ))}
+                                    <div className="min-h-full flex flex-col">
+                                        {!hasBreakdown ? (
+                                            <div className="flex-grow flex flex-col p-6 h-full">
+                                                <textarea
+                                                    value={promptInput}
+                                                    onChange={(e) => setPromptInput(e.target.value)}
+                                                    placeholder="Enter complex prompt sequence to deconstruct into atomic nodes..."
+                                                    className="flex-grow w-full font-medium leading-relaxed bg-transparent focus:outline-none p-0 text-[15px] font-nunito"
+                                                />
                                             </div>
+                                        ) : (
+                                            <div className="p-6 space-y-8 flex-grow">
+                                                {/* Core Prompt Section */}
+                                                <div className="space-y-3">
+                                                    <label className="text-[10px] font-black uppercase tracking-widest text-base-content/40 block">Subject / Core Idea</label>
+                                                    <AutoTextArea
+                                                        value={subjectPrompt}
+                                                        onChange={(e) => setSubjectPrompt(e.target.value)}
+                                                        className="bg-base-100/10 border border-base-content/10 p-4 font-nunito font-bold text-base md:text-lg leading-relaxed focus:border-primary/40 resize-none shadow-inner min-h-[4rem] rounded-none"
+                                                        placeholder="Core subject matter..."
+                                                    />
+                                                </div>
 
-                                            <div className="flex justify-center pt-2">
-                                                <div className="relative w-full">
-                                                    <button
-                                                        type="button"
-                                                        onClick={(e) => {
-                                                            e.preventDefault();
-                                                            setShowAddDropdown(!showAddDropdown);
-                                                        }}
-                                                        className="w-full h-10 border border-dashed border-base-content/10 hover:border-primary/40 hover:bg-primary/5 transition-all flex items-center justify-center gap-2 text-[10px] font-black uppercase tracking-widest text-base-content/20 hover:text-primary/60 cursor-pointer rounded-none bg-base-100/5"
-                                                    >
-                                                        <PlusIcon className="w-4 h-4" /> ADD MODIFIERS
-                                                    </button>
-                                                    {showAddDropdown && (
-                                                        <div 
-                                                            className="absolute z-50 mt-1 w-full p-2 border border-base-content/10 bg-base-200 max-h-[15rem] overflow-y-auto custom-scrollbar rounded-none shadow-lg"
-                                                            onClick={(e) => e.preventDefault()}
-                                                        >
-                                                            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-1">
-                                                                {availableModifierKeys.filter(k => !modifierSegments.some(s => s.key === k)).length === 0 ? (
-                                                                    <div className="text-[10px] text-base-content/40 p-2 col-span-full">All modifiers added</div>
-                                                                ) : (
-                                                                    availableModifierKeys.filter(k => !modifierSegments.some(s => s.key === k)).map(key => (
-                                                                        <button
-                                                                            key={key}
-                                                                            type="button"
-                                                                            onClick={() => {
-                                                                                setModifierSegments((prev) => {
-                                                                                    const newSegment = {
-                                                                                        id: Date.now().toString(36) + Math.random().toString(36).substr(2, 9),
-                                                                                        key,
-                                                                                        value: ''
-                                                                                    };
-                                                                                    return [...prev, newSegment];
-                                                                                });
-                                                                                audioService.playClick();
-                                                                                setShowAddDropdown(false);
+                                                {/* Active Parameters */}
+                                                <div className="space-y-4">
+                                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-x-4 gap-y-6">
+                                                        {modifierSegments.map(seg => (
+                                                            <div key={seg.id} className="flex flex-col space-y-2 group">
+                                                                <div className="flex justify-between items-center px-1">
+                                                                    <label className="text-[12px] font-black uppercase tracking-widest text-base-content/40">{getModifierLabel(seg.key)}</label>
+                                                                    <button
+                                                                        onClick={() => removeSegment(seg.id)}
+                                                                        className="opacity-0 group-hover:opacity-100 text-error transition-all p-1 hover:bg-error/10 rounded"
+                                                                    >
+                                                                        <CloseIcon className="w-3.5 h-3.5" />
+                                                                    </button>
+                                                                </div>
+                                                                <AutocompleteSelect
+                                                                    options={getModifierOptions(seg.key)}
+                                                                    value={seg.value}
+                                                                    onChange={(val) => updateSegment(seg.id, val)}
+                                                                    placeholder={`Select ${getModifierLabel(seg.key)}...`}
+                                                                    className="w-full h-10 rounded-none bg-base-100/5 focus:bg-base-100/10 transition-colors"
+                                                                />
+                                                            </div>
+                                                        ))}
+                                                    </div>
+
+                                                    <div className="flex justify-center pt-2">
+                                                        <div className="relative w-full">
+                                                            <button
+                                                                type="button"
+                                                                onClick={(e) => {
+                                                                    e.preventDefault();
+                                                                    setShowAddDropdown(!showAddDropdown);
+                                                                }}
+                                                                className="w-full h-10 border border-dashed border-base-content/10 hover:border-primary/40 hover:bg-primary/5 transition-all flex items-center justify-center gap-2 text-[10px] font-black uppercase tracking-widest text-base-content/20 hover:text-primary/60 cursor-pointer rounded-none bg-base-100/5"
+                                                            >
+                                                                <PlusIcon className="w-4 h-4" /> ADD MODIFIERS
+                                                            </button>
+                                                            {showAddDropdown && (
+                                                                <div
+                                                                    className="absolute z-50 mt-1 w-full p-2 border border-base-content/10 bg-base-200 max-h-[15rem] overflow-y-auto custom-scrollbar rounded-none shadow-lg"
+                                                                    onClick={(e) => e.preventDefault()}
+                                                                >
+                                                                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-1">
+                                                                        {availableModifierKeys.filter(k => !modifierSegments.some(s => s.key === k)).length === 0 ? (
+                                                                            <div className="text-[10px] text-base-content/40 p-2 col-span-full">All modifiers added</div>
+                                                                        ) : (
+                                                                            availableModifierKeys.filter(k => !modifierSegments.some(s => s.key === k)).map(key => (
+                                                                                <button
+                                                                                    key={key}
+                                                                                    type="button"
+                                                                                    onClick={() => {
+                                                                                        setModifierSegments((prev) => {
+                                                                                            const newSegment = {
+                                                                                                id: Date.now().toString(36) + Math.random().toString(36).substr(2, 9),
+                                                                                                key,
+                                                                                                value: ''
+                                                                                            };
+                                                                                            return [...prev, newSegment];
+                                                                                        });
+                                                                                        audioService.playClick();
+                                                                                        setShowAddDropdown(false);
+                                                                                    }}
+                                                                                    className="w-full text-left text-[9px] font-bold uppercase tracking-widest py-2 px-2 hover:bg-primary/20 rounded-none"
+                                                                                >
+                                                                                    {getModifierLabel(key)}
+                                                                                </button>
+                                                                            ))
+                                                                        )}
+                                                                    </div>
+                                                                </div>
+                                                            )}
+                                                        </div>
+                                                    </div>
+
+                                                    {/* Custom Parameters Section */}
+                                                    {customParameters.length > 0 && (
+                                                        <div className="pt-6 border-t border-base-content/5 mt-4 space-y-4">
+                                                            <div className="flex items-center justify-between px-1">
+                                                                <label className="text-[12px] font-black uppercase tracking-widest text-base-content/40">Suggested Parameters</label>
+                                                                <span className="text-[12px] font-mono opacity-40 uppercase tracking-tighter">{customParameters.length}/10</span>
+                                                            </div>
+                                                            <div className="grid grid-cols-1 md:grid-cols-2 gap-x-4 gap-y-4">
+                                                                {customParameters.slice(0, 10).map((param, index) => (
+                                                                    <div key={index} className="flex flex-col space-y-1">
+                                                                        <span className="text-[12px] font-bold uppercase tracking-widest text-primary/60">{param.label}</span>
+                                                                        <input
+                                                                            value={param.value}
+                                                                            onChange={(e) => {
+                                                                                const next = [...customParameters];
+                                                                                next[index].value = e.target.value;
+                                                                                setCustomParameters(next);
                                                                             }}
-                                                                            className="w-full text-left text-[9px] font-bold uppercase tracking-widest py-2 px-2 hover:bg-primary/20 rounded-none"
-                                                                        >
-                                                                            {getModifierLabel(key)}
-                                                                        </button>
-                                                                    ))
-                                                                )}
+                                                                            className="w-full h-10 px-3 rounded-none bg-base-100/10 border border-base-content/10 text-[14px] focus:border-primary/40 focus:outline-none"
+                                                                            placeholder="Value..."
+                                                                        />
+                                                                    </div>
+                                                                ))}
                                                             </div>
                                                         </div>
                                                     )}
                                                 </div>
                                             </div>
-
-                                            {/* Custom Parameters Section */}
-                                            {customParameters.length > 0 && (
-                                                <div className="pt-6 border-t border-base-content/5 mt-4 space-y-4">
-                                                    <div className="flex items-center justify-between px-1">
-                                                        <label className="text-[12px] font-black uppercase tracking-widest text-base-content/40">Suggested Parameters</label>
-                                                        <span className="text-[12px] font-mono opacity-40 uppercase tracking-tighter">{customParameters.length}/10</span>
-                                                    </div>
-                                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-x-4 gap-y-4">
-                                                        {customParameters.slice(0, 10).map((param, index) => (
-                                                            <div key={index} className="flex flex-col space-y-1">
-                                                                <span className="text-[12px] font-bold uppercase tracking-widest text-primary/60">{param.label}</span>
-                                                                <input
-                                                                    value={param.value}
-                                                                    onChange={(e) => {
-                                                                        const next = [...customParameters];
-                                                                        next[index].value = e.target.value;
-                                                                        setCustomParameters(next);
-                                                                    }}
-                                                                    className="w-full h-10 px-3 rounded-none bg-base-100/10 border border-base-content/10 text-[14px] focus:border-primary/40 focus:outline-none"
-                                                                    placeholder="Value..."
-                                                                />
-                                                            </div>
-                                                        ))}
-                                                    </div>
-                                                </div>
-                                            )}
-                                        </div>
+                                        )}
                                     </div>
-                                )}
-                            </div>
-                        </motion.div>
-                        </motion.div>
+                                </motion.div>
+                            </motion.div>
 
-                        <motion.footer 
-                            variants={contentVariants}
-                            custom={2.4}
-                            initial="hidden"
-                            animate="visible"
-                            className="h-14 flex-shrink-0 border-t border-base-content/5 bg-base-100/20 backdrop-blur-md p-1.5 gap-1.5 flex items-stretch"
-                        >
-                            <div className="flex flex-1 items-stretch gap-1.5">
-                                {!hasBreakdown && (
+                            <motion.footer
+                                variants={contentVariants}
+                                custom={2.4}
+                                initial="hidden"
+                                animate="visible"
+                                className="h-14 flex-shrink-0 border-t border-base-content/5 bg-base-100/20 backdrop-blur-md p-1.5 gap-1.5 flex items-stretch"
+                            >
+                                <div className="flex flex-1 items-stretch gap-1.5">
+                                    {!hasBreakdown && (
+                                        <button
+                                            onClick={async () => {
+                                                try {
+                                                    const text = await (window as any).navigator.clipboard.readText();
+                                                    if (text) setPromptInput(text);
+                                                } catch { }
+                                            }}
+                                            className="btn btn-sm btn-ghost h-full rounded-none flex-1 text-[10px] tracking-wider text-primary border-1 disabled:opacity-30 disabled:cursor-not-allowed btn-snake"
+                                        >
+                                            <span /><span /><span /><span />
+                                            PASTE
+                                        </button>
+                                    )}
                                     <button
-                                        onClick={async () => {
-                                            try {
-                                                const text = await (window as any).navigator.clipboard.readText();
-                                                if (text) setPromptInput(text);
-                                            } catch { }
+                                        onClick={() => {
+                                            if (hasBreakdown) {
+                                                setSubjectPrompt('');
+                                                setModifierSegments([]);
+                                                setCustomParameters([]);
+                                                setConstantModifier('');
+                                                setReconstructedPrompt('');
+                                                setModifiedPrompt('');
+                                                setPromptInput('');
+                                                setNaturalLanguage('');
+                                            } else {
+                                                setPromptInput('');
+                                            }
                                         }}
-                                        className="btn btn-sm btn-ghost h-full flex-1 rounded-none font-normal text-[13px] tracking-wider border border-base-content/5 btn-snake min-h-0"
+                                        className="btn btn-sm btn-ghost h-full rounded-none flex-1 text-[10px] tracking-wider text-primary border-1 disabled:opacity-30 disabled:cursor-not-allowed btn-snake"
                                     >
                                         <span /><span /><span /><span />
-                                        PASTE
+                                        {hasBreakdown ? 'RESET' : 'CLEAR'}
                                     </button>
-                                )}
-                                <button
-                                    onClick={() => {
-                                        if (hasBreakdown) {
-                                            setSubjectPrompt('');
-                                            setModifierSegments([]);
-                                            setCustomParameters([]);
-                                            setConstantModifier('');
-                                            setReconstructedPrompt('');
-                                            setModifiedPrompt('');
-                                            setPromptInput('');
-                                            setNaturalLanguage('');
-                                        } else {
-                                            setPromptInput('');
-                                        }
-                                    }}
-                                    className="btn btn-sm btn-ghost h-full flex-1 rounded-none font-normal text-[13px] tracking-wider border border-base-content/5 btn-snake min-h-0"
-                                >
-                                    <span /><span /><span /><span />
-                                    {hasBreakdown ? 'RESET' : 'CLEAR'}
-                                </button>
-                                <button
-                                    onClick={async () => {
-                                        if (hasBreakdown) {
-                                            const modifiedText = reconstructFromParameters();
-                                            if (!modifiedText.trim()) return;
-                                            
-                                            setIsRewriting(true);
-                                            audioService.playClick();
-                                            
-                                            const hasModifications = modifierSegments.length > 0 || 
-                                                customParameters.some(p => p.value) || 
-                                                constantModifier;
-                                            
-                                            if (hasModifications) {
-                                                try {
-                                                    const components = { prompt: modifiedText };
-                                                    const result = await reconstructPrompt(components, settings);
-                                                    setModifiedPrompt(cleanLLMResponse(result));
-                                                } catch (err) {
-                                                    console.error('Rewrite error:', err);
-                                                    showGlobalFeedback('Rewrite failed.', true);
-                                                    setModifiedPrompt(modifiedText);
-                                                } finally {
+                                    <button
+                                        onClick={async () => {
+                                            if (hasBreakdown) {
+                                                const modifiedText = reconstructFromParameters();
+                                                if (!modifiedText.trim()) return;
+
+                                                setIsRewriting(true);
+                                                audioService.playClick();
+
+                                                const hasModifications = modifierSegments.length > 0 ||
+                                                    customParameters.some(p => p.value) ||
+                                                    constantModifier;
+
+                                                if (hasModifications) {
+                                                    try {
+                                                        const components = { prompt: modifiedText };
+                                                        const result = await reconstructPrompt(components, settings);
+                                                        setModifiedPrompt(cleanLLMResponse(result));
+                                                    } catch (err) {
+                                                        console.error('Rewrite error:', err);
+                                                        showGlobalFeedback('Rewrite failed.', true);
+                                                        setModifiedPrompt(modifiedText);
+                                                    } finally {
+                                                        setIsRewriting(false);
+                                                    }
+                                                } else {
+                                                    setModifiedPrompt(reconstructedPrompt || promptInput);
                                                     setIsRewriting(false);
                                                 }
                                             } else {
-                                                setModifiedPrompt(reconstructedPrompt || promptInput);
-                                                setIsRewriting(false);
+                                                handleDissect();
                                             }
-                                        } else {
-                                            handleDissect();
-                                        }
-                                    }}
-                                    disabled={isAnalyzing || isRewriting || (!hasBreakdown && !promptInput.trim())}
-                                    className="btn btn-sm btn-primary h-full flex-1 rounded-none font-normal text-[13px] tracking-wider border border-base-content/5 btn-snake min-h-0"
-                                >
-                                    <span /><span /><span /><span />
-                                    {isAnalyzing ? 'WAIT...' : isRewriting ? 'WRITING...' : hasBreakdown ? 'REWRITE' : 'ANALYZE'}
-                                </button>
-                            </div>
-                        </motion.footer>
-                    </div>
+                                        }}
+                                        disabled={isAnalyzing || isRewriting || (!hasBreakdown && !promptInput.trim())}
+                                        className="btn btn-sm btn-ghost h-full rounded-none flex-1 text-[10px] tracking-wider text-primary border-1 disabled:opacity-30 disabled:cursor-not-allowed btn-snake"
+                                    >
+                                        <span /><span /><span /><span />
+                                        {isAnalyzing ? 'WAIT...' : isRewriting ? 'WRITING...' : hasBreakdown ? 'REWRITE' : 'ANALYZE'}
+                                    </button>
+                                </div>
+                            </motion.footer>
+                        </div>
                     </div>
                 </motion.section>
 
                 {/* Right Section: Results / Integration */}
-                <motion.section 
+                <motion.section
                     variants={panelVariants}
                     initial="hidden"
                     animate="visible"
@@ -708,7 +708,7 @@ export const PromptAnalyzer: React.FC<PromptAnalyzerProps> = ({
                     <ScanLine delay={3.5} />
 
                     <div className="flex flex-col h-full w-full overflow-hidden relative z-10 bg-base-100/40 backdrop-blur-xl panel-transparent">
-                        <motion.header 
+                        <motion.header
                             variants={sectionWipeVariants}
                             custom={1.4}
                             initial="hidden"
@@ -740,148 +740,146 @@ export const PromptAnalyzer: React.FC<PromptAnalyzerProps> = ({
                                     className="flex-grow overflow-y-auto custom-scrollbar p-6"
                                 >
                                     <div className="h-full flex flex-col overflow-hidden">
-                                {/* Source Tab Container */}
-                                <div className="flex-1 flex flex-col min-h-0 overflow-hidden border-b border-base-content/5">
-                                    <div className="flex items-center justify-between mb-2">
-                                        <div className="flex items-center gap-1">
-                                            <button
-                                                type="button"
-                                                onClick={() => setSourceTab('original')}
-                                                className={`text-[10px] font-black uppercase tracking-widest px-3 py-1.5 transition-all ${
-                                                    sourceTab === 'original' 
-                                                    ? 'text-primary' 
-                                                    : 'text-base-content/40 hover:text-base-content/60'
-                                                }`}
-                                            >
-                                                ORIGINAL
-                                            </button>
-                                            {naturalLanguage && (
+                                        {/* Source Tab Container */}
+                                        <div className="flex-1 flex flex-col min-h-0 overflow-hidden border-b border-base-content/5">
+                                            <div className="flex items-center justify-between mb-2">
+                                                <div className="flex items-center gap-1">
+                                                    <button
+                                                        type="button"
+                                                        onClick={() => setSourceTab('original')}
+                                                        className={`text-[10px] font-black uppercase tracking-widest px-3 py-1.5 transition-all ${sourceTab === 'original'
+                                                            ? 'text-primary'
+                                                            : 'text-base-content/40 hover:text-base-content/60'
+                                                            }`}
+                                                    >
+                                                        ORIGINAL
+                                                    </button>
+                                                    {naturalLanguage && (
+                                                        <button
+                                                            type="button"
+                                                            onClick={() => setSourceTab('natural')}
+                                                            className={`text-[10px] font-black uppercase tracking-widest px-3 py-1.5 transition-all ${sourceTab === 'natural'
+                                                                ? 'text-secondary'
+                                                                : 'text-base-content/40 hover:text-base-content/60'
+                                                                }`}
+                                                        >
+                                                            NATURAL
+                                                        </button>
+                                                    )}
+                                                </div>
                                                 <button
-                                                    type="button"
-                                                    onClick={() => setSourceTab('natural')}
-                                                    className={`text-[10px] font-black uppercase tracking-widest px-3 py-1.5 transition-all ${
-                                                        sourceTab === 'natural' 
-                                                        ? 'text-secondary' 
-                                                        : 'text-base-content/40 hover:text-base-content/60'
-                                                    }`}
+                                                    onClick={() => {
+                                                        const textToCopy = sourceTab === 'original' ? (promptInput || reconstructedPrompt) : naturalLanguage;
+                                                        if (textToCopy) {
+                                                            navigator.clipboard.writeText(textToCopy);
+                                                            showGlobalFeedback('Source prompt copied');
+                                                        }
+                                                    }}
+                                                    className="text-[9px] font-black uppercase tracking-[0.2em] text-primary/40 hover:text-primary transition-colors px-3 py-1.5"
                                                 >
-                                                    NATURAL
+                                                    COPY
                                                 </button>
-                                            )}
+                                            </div>
+                                            <div className="flex-1 relative group flex flex-col p-4 bg-base-100/5 border border-base-content/5 overflow-y-auto custom-scrollbar">
+                                                {isAnalyzing ? (
+                                                    <div className="h-full flex items-center justify-center">
+                                                        <LoadingSpinner size={32} />
+                                                    </div>
+                                                ) : (promptInput || reconstructedPrompt || naturalLanguage) ? (
+                                                    <blockquote className="text-base md:text-lg font-nunito font-bold italic leading-relaxed tracking-tight text-base-content selection:bg-primary/20 pb-4">
+                                                        "{sourceTab === 'original'
+                                                            ? (promptInput || reconstructedPrompt || '...')
+                                                            : (naturalLanguage || '...')}"
+                                                    </blockquote>
+                                                ) : (
+                                                    <div className="h-full flex items-center justify-center opacity-10">
+                                                        <ArchiveIcon className="w-12 h-12" />
+                                                    </div>
+                                                )}
+                                            </div>
                                         </div>
-                                        <button
-                                            onClick={() => {
-                                                const textToCopy = sourceTab === 'original' ? (promptInput || reconstructedPrompt) : naturalLanguage;
-                                                if (textToCopy) {
-                                                    navigator.clipboard.writeText(textToCopy);
-                                                    showGlobalFeedback('Source prompt copied');
-                                                }
-                                            }}
-                                            className="text-[9px] font-black uppercase tracking-[0.2em] text-primary/40 hover:text-primary transition-colors px-3 py-1.5"
-                                        >
-                                            COPY
-                                        </button>
-                                    </div>
-                                    <div className="flex-1 relative group flex flex-col p-4 bg-base-100/5 border border-base-content/5 overflow-y-auto custom-scrollbar">
-                                        {isAnalyzing ? (
-                                            <div className="h-full flex items-center justify-center">
-                                                <LoadingSpinner size={32} />
+                                        {/* Modified Prompt Container */}
+                                        <div className="flex-1 flex flex-col min-h-0 overflow-hidden pt-2">
+                                            <div className="flex items-center justify-between mb-2">
+                                                <label className="text-[10px] font-black uppercase tracking-widest text-primary px-3 py-1.5">Result</label>
                                             </div>
-                                        ) : (promptInput || reconstructedPrompt || naturalLanguage) ? (
-                                            <blockquote className="text-base md:text-lg font-nunito font-bold italic leading-relaxed tracking-tight text-base-content selection:bg-primary/20 pb-4">
-                                                "{sourceTab === 'original' 
-                                                    ? (promptInput || reconstructedPrompt || '...') 
-                                                    : (naturalLanguage || '...')}"
-                                            </blockquote>
-                                        ) : (
-                                            <div className="h-full flex items-center justify-center opacity-10">
-                                                <ArchiveIcon className="w-12 h-12" />
+                                            <div className="flex-1 relative group flex flex-col p-4 bg-base-100/10 border border-primary/20 overflow-y-auto custom-scrollbar">
+                                                {isRewriting ? (
+                                                    <div className="h-full flex items-center justify-center">
+                                                        <LoadingSpinner size={32} />
+                                                    </div>
+                                                ) : modifiedPrompt ? (
+                                                    <blockquote className="text-base md:text-lg font-nunito font-bold italic leading-relaxed tracking-tight text-base-content selection:bg-primary/20 pb-4">
+                                                        "{modifiedPrompt}"
+                                                    </blockquote>
+                                                ) : (
+                                                    <div className="h-full flex items-center justify-center opacity-10">
+                                                        <SparklesIcon className="w-12 h-12" />
+                                                    </div>
+                                                )}
                                             </div>
-                                        )}
+                                        </div>
                                     </div>
-                                </div>
-                                {/* Modified Prompt Container */}
-                                <div className="flex-1 flex flex-col min-h-0 overflow-hidden pt-2">
-                                    <div className="flex items-center justify-between mb-2">
-                                        <label className="text-[10px] font-black uppercase tracking-widest text-primary px-3 py-1.5">Result</label>
-                                    </div>
-                                    <div className="flex-1 relative group flex flex-col p-4 bg-base-100/10 border border-primary/20 overflow-y-auto custom-scrollbar">
-                                        {isRewriting ? (
-                                            <div className="h-full flex items-center justify-center">
-                                                <LoadingSpinner size={32} />
-                                            </div>
-                                        ) : modifiedPrompt ? (
-                                            <blockquote className="text-base md:text-lg font-nunito font-bold italic leading-relaxed tracking-tight text-base-content selection:bg-primary/20 pb-4">
-                                                "{modifiedPrompt}"
-                                            </blockquote>
-                                        ) : (
-                                            <div className="h-full flex items-center justify-center opacity-10">
-                                                <SparklesIcon className="w-12 h-12" />
-                                            </div>
-                                        )}
-                                    </div>
-                                </div>
-                            </div>
-                        </motion.div>
-                    </motion.div>
+                                </motion.div>
+                            </motion.div>
 
-                        <motion.footer 
-                            variants={contentVariants}
-                            custom={2.6}
-                            initial="hidden"
-                            animate="visible"
-                            className="h-14 flex-shrink-0 flex items-stretch border-t border-base-content/5 bg-base-100/10 backdrop-blur-md p-1.5 gap-1.5 panel-footer"
-                        >
-                            <div className="flex flex-1 w-full h-full items-stretch gap-1.5">
-                                <button
-                                    onClick={() => {
-                                        if (modifiedPrompt) {
-                                            navigator.clipboard.writeText(modifiedPrompt);
-                                            showGlobalFeedback('Copied to clipboard');
-                                        }
-                                    }}
-                                    disabled={!modifiedPrompt || isRewriting}
-                                    className="btn btn-sm btn-ghost flex-1 h-full rounded-none font-normal text-[13px] tracking-wider border border-base-content/5 btn-snake"
-                                >
-                                    <span /><span /><span /><span />
-                                    COPY
-                                </button>
-                                <button
-                                    onClick={() => {
-                                        if (modifiedPrompt && onClip) {
-                                            onClip(modifiedPrompt, 'Rewritten Prompt');
-                                        }
-                                    }}
-                                    disabled={!modifiedPrompt || isRewriting}
-                                    className="btn btn-sm btn-ghost flex-1 h-full rounded-none font-normal text-[13px] tracking-wider border border-base-content/5 btn-snake"
-                                >
-                                    <span /><span /><span /><span />
-                                    CLIP
-                                </button>
-                                <button
-                                    onClick={handleMapToRefiner}
-                                    disabled={!modifiedPrompt || isRewriting}
-                                    className="btn btn-sm btn-ghost flex-1 h-full rounded-none font-normal text-[13px] tracking-wider border border-base-content/5 btn-snake"
-                                >
-                                    <span /><span /><span /><span />
-                                    REFINE
-                                </button>
-                                <button
-                                    onClick={() => {
-                                        if (modifiedPrompt && onSaveSuggestion) {
-                                            onSaveSuggestion(modifiedPrompt, 'Rewritten Prompt');
-                                            showGlobalFeedback('Saved to library');
-                                        }
-                                    }}
-                                    disabled={!modifiedPrompt || isRewriting}
-                                    className="btn btn-sm btn-ghost h-full flex-1 rounded-none font-normal text-[13px] tracking-wider border border-base-content/5 btn-snake"
-                                >
-                                    <span /><span /><span /><span />
-                                    SAVE
-                                </button>
-                            </div>
-                        </motion.footer>
-                    </div>
+                            <motion.footer
+                                variants={contentVariants}
+                                custom={2.6}
+                                initial="hidden"
+                                animate="visible"
+                                className="h-14 flex-shrink-0 flex items-stretch border-t border-base-content/5 bg-base-100/10 backdrop-blur-md p-1.5 gap-1.5 panel-footer"
+                            >
+                                <div className="flex flex-1 w-full h-full items-stretch gap-1.5">
+                                    <button
+                                        onClick={() => {
+                                            if (modifiedPrompt) {
+                                                navigator.clipboard.writeText(modifiedPrompt);
+                                                showGlobalFeedback('Copied to clipboard');
+                                            }
+                                        }}
+                                        disabled={!modifiedPrompt || isRewriting}
+                                        className="btn btn-sm btn-ghost h-full rounded-none flex-1 text-[10px] tracking-wider text-primary border-1 disabled:opacity-30 disabled:cursor-not-allowed btn-snake"
+                                    >
+                                        <span /><span /><span /><span />
+                                        COPY
+                                    </button>
+                                    <button
+                                        onClick={() => {
+                                            if (modifiedPrompt && onClip) {
+                                                onClip(modifiedPrompt, 'Rewritten Prompt');
+                                            }
+                                        }}
+                                        disabled={!modifiedPrompt || isRewriting}
+                                        className="btn btn-sm btn-ghost h-full rounded-none flex-1 text-[10px] tracking-wider text-primary border-1 disabled:opacity-30 disabled:cursor-not-allowed btn-snake"
+                                    >
+                                        <span /><span /><span /><span />
+                                        CLIP
+                                    </button>
+                                    <button
+                                        onClick={handleMapToRefiner}
+                                        disabled={!modifiedPrompt || isRewriting}
+                                        className="btn btn-sm btn-ghost h-full rounded-none flex-1 text-[10px] tracking-wider text-primary border-1 disabled:opacity-30 disabled:cursor-not-allowed btn-snake"
+                                    >
+                                        <span /><span /><span /><span />
+                                        REFINE
+                                    </button>
+                                    <button
+                                        onClick={() => {
+                                            if (modifiedPrompt && onSaveSuggestion) {
+                                                onSaveSuggestion(modifiedPrompt, 'Rewritten Prompt');
+                                                showGlobalFeedback('Saved to library');
+                                            }
+                                        }}
+                                        disabled={!modifiedPrompt || isRewriting}
+                                        className="btn btn-sm btn-ghost h-full rounded-none flex-1 text-[10px] tracking-wider text-primary border-1 disabled:opacity-30 disabled:cursor-not-allowed btn-snake"
+                                    >
+                                        <span /><span /><span /><span />
+                                        SAVE
+                                    </button>
+                                </div>
+                            </motion.footer>
+                        </div>
 
                         <div className="absolute -top-[1px] -left-[1px] w-3 h-3 border-t border-l border-primary/15 z-20 pointer-events-none" />
                         <div className="absolute -top-[1px] -right-[1px] w-3 h-3 border-t border-r border-primary/15 z-20 pointer-events-none" />
