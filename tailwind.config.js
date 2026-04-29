@@ -19,19 +19,19 @@ export default {
   daisyui: {
     themes: [
       {
-        dich: {
-          primary: "#78ff00",
-          secondary: "#ffffff",
-          accent: "#00d1ff",
-          neutral: "#1a1a1a",
-          "base-100": "#000000",
-          "base-200": "#0a0a0a",
-          "base-300": "#1a1a1a",
-          "base-content": "#ffffff",
-          info: "#3abff8",
-          success: "#36d399",
-          warning: "#fbbd23",
-          error: "#f87272",
+        Stellar: {
+          primary: "#00b8d4",
+          secondary: "#7c4dff",
+          accent: "#ffd54f",
+          neutral: "#011326",
+          "base-100": "#00050b",
+          "base-200": "#010e1c",
+          "base-300": "#03172e",
+          "base-content": "#b0c4de",
+          info: "#00b8d4",
+          success: "#00e676",
+          warning: "#ffd54f",
+          error: "#f44336",
           "--rounded-box": "0",
           "--rounded-btn": "0",
           "--rounded-badge": "0",
@@ -127,6 +127,17 @@ export default {
           "base-100": "#1a1a1a",
           "base-200": "#2a2a2a",
           "base-300": "#3a3a3a",
+        },
+      },
+      {
+        starfield: {
+          primary: "#f3a01c",
+          secondary: "#ffffff",
+          neutral: "#1a1c20",
+          "base-100": "#0b0e14",
+          "base-200": "#12151c",
+          "base-300": "#181c25",
+          "base-content": "#dce0e8",
         },
       },
       {

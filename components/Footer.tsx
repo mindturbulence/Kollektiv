@@ -1,184 +1,285 @@
 
-import React, { useMemo, useState, useEffect, useRef, useCallback } from 'react';
+import React, { useRef, useEffect, useState } from 'react';
+import { motion, AnimatePresence } from 'framer-motion';
+import LlmStatusSwitcher from './LlmStatusSwitcher';
 import { useSettings } from '../contexts/SettingsContext';
 import { fileSystemManager } from '../utils/fileUtils';
 import { audioService } from '../services/audioService';
+import { loadGalleryItems } from '../utils/galleryStorage';
 
-interface FooterProps {
-  onAboutClick: () => void;
-}
+const MetadataItem: React.FC<{ label: string; value: string }> = ({ label, value }) => {
+    const { settings } = useSettings();
+    const isPipboyTheme = settings.darkTheme === 'pipboy';
+    const fontClass = isPipboyTheme ? 'font-fixedsys text-[11px]' : 'font-rajdhani text-[12px] font-normal';
 
-const LedStatus: React.FC<{ 
-    label: string, 
-    active: boolean, 
-    color?: string 
-}> = ({ label, active, color = 'bg-success' }) => (
-    <div className={`flex items-center gap-1.5 transition-all duration-700 ${active ? 'opacity-100' : 'opacity-10'}`}>
-        <span className={`w-1.5 h-1.5 rounded-full ${active ? `${color} shadow-[0_0_5px_rgba(var(--p),0.5)] animate-pulse` : 'bg-base-content/20'}`}></span>
-        <span className="text-[10px] font-sans font-black text-base-content tracking-tighter uppercase whitespace-nowrap">{label}</span>
-    </div>
-);
-
-const DigitalOscillator = ({ state = 'idle' }: { state: string }) => {
     return (
-        <div className="flex items-center justify-center h-4 w-12 overflow-hidden relative">
-            <svg viewBox="0 0 100 40" preserveAspectRatio="none" className="w-full h-full overflow-visible">
-                <path d="M0 20 Q 25 5, 50 20 T 100 20 T 150 20" fill="none" stroke="currentColor" strokeWidth="0.5" className={`transition-all duration-1000 ${state === 'playing' ? 'opacity-20 animate-osc-slow' : state === 'syncing' ? 'opacity-10 animate-osc-erratic' : 'opacity-0'}`} />
-                <path d="M0 20 Q 15 35, 30 20 T 60 20 T 90 20 T 120 20" fill="none" stroke="currentColor" strokeWidth="1" className={`transition-all duration-1000 ${state === 'playing' ? 'opacity-40 animate-osc-mid' : state === 'syncing' ? 'opacity-20 animate-osc-erratic-reverse' : 'opacity-0'}`} />
-                <path d="M0 20 Q 10 10, 20 20 T 40 20 T 60 20 T 80 20 T 100 20 T 120 20" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" className={`transition-all duration-700 ${state === 'playing' ? 'text-primary drop-shadow-[0_0_3px_oklch(var(--p))] animate-osc-fast' : state === 'syncing' ? 'text-warning animate-osc-glitch' : 'text-base-content/20 animate-osc-idle'}`} />
-            </svg>
-            <style>{`
-                @keyframes osc-scroll { 0% { transform: translateX(0); } 100% { transform: translateX(-40px); } }
-                @keyframes osc-glitch-step { 0% { transform: translateX(0) scaleY(1); } 20% { transform: translateX(-5px) scaleY(2); } 40% { transform: translateX(-15px) scaleY(0.5); } 60% { transform: translateX(-2px) scaleY(3); } 80% { transform: translateX(-10px) scaleY(1); } 100% { transform: translateX(0) scaleY(1); } }
-                .animate-osc-slow { animation: osc-scroll 4s linear infinite; }
-                .animate-osc-mid { animation: osc-scroll 2.5s linear infinite reverse; }
-                .animate-osc-fast { animation: osc-scroll 1.2s linear infinite; }
-                .animate-osc-idle { animation: osc-scroll 10s linear infinite; scale: 1 0.1; }
-                .animate-osc-glitch { animation: osc-glitch-step 0.4s step-end infinite; }
-            `}</style>
+        <div className="flex items-center gap-2">
+            <span className={`uppercase tracking-widest text-primary/60 leading-none inline-block ${fontClass}`}>{label}</span>
+            <span className={`uppercase tracking-widest text-base-content/40 leading-none inline-block ${fontClass}`}>{value}</span>
         </div>
     );
 };
 
-const Footer: React.FC<FooterProps> = ({ onAboutClick }) => {
-  const { settings } = useSettings();
-  const [isUplinkActive, setIsUplinkActive] = useState(false);
-  const [playerState, setPlayerState] = useState<'idle' | 'syncing' | 'playing' | 'error'>('idle');
-  const [showMonitor, setShowMonitor] = useState(false);
-  
-  const iframeRef = useRef<HTMLIFrameElement>(null);
+const BatteryStatus: React.FC = () => {
+    const [battery, setBattery] = useState<{ level: number, charging: boolean } | null>(null);
+    const { settings } = useSettings();
+    const isPipboyTheme = settings.darkTheme === 'pipboy';
+    const fontClass = isPipboyTheme ? 'font-fixedsys text-[11px]' : 'font-rajdhani text-[12px] font-normal';
 
-  const extractVideoId = useCallback((url: string) => {
-      if (!url) return null;
-      const regExp = /^.*(?:(?:youtu\.be\/|v\/|vi\/|u\/\w\/|embed\/|shorts\/)|(?:(?:watch)?\?v(?:i)?=|\&v(?:i)?=))([^#\&\?]*).*/;
-      const match = url.match(regExp);
-      return (match && match[1].length === 11) ? match[1] : null;
-  }, []);
+    useEffect(() => {
+        // Battery API is not available in all browsers
+        if ('getBattery' in navigator) {
+            (navigator as any).getBattery().then((batt: any) => {
+                const updateBattery = () => {
+                    setBattery({
+                        level: Math.round(batt.level * 100),
+                        charging: batt.charging
+                    });
+                };
+                updateBattery();
+                batt.addEventListener('levelchange', updateBattery);
+                batt.addEventListener('chargingchange', updateBattery);
 
-  const videoId = useMemo(() => extractVideoId(settings.musicYoutubeUrl), [settings.musicYoutubeUrl, extractVideoId]);
+                return () => {
+                    batt.removeEventListener('levelchange', updateBattery);
+                    batt.removeEventListener('chargingchange', updateBattery);
+                };
+            });
+        }
+    }, []);
 
-  // dismiss UI after success
-  useEffect(() => {
-    if (playerState === 'playing') {
-        const timer = setTimeout(() => {
-            setShowMonitor(false);
-        }, 3000); // Wait 3 seconds after connected, then hide the toast
-        return () => clearTimeout(timer);
-    }
-  }, [playerState]);
+    if (!battery) return null;
 
-  const handleToggle = useCallback(() => {
-    if (!videoId) {
-        setPlayerState('error');
-        return;
-    }
-
-    audioService.playClick();
-
-    if (isUplinkActive) {
-        setIsUplinkActive(false);
-        setPlayerState('idle');
-        setShowMonitor(false);
-    } else {
-        setPlayerState('syncing');
-        setIsUplinkActive(true);
-        setShowMonitor(true);
-        // Transition to playing after handshake delay
-        setTimeout(() => {
-            setPlayerState('playing');
-        }, 2500);
-    }
-  }, [videoId, isUplinkActive]);
-
-  const statusLabel = useMemo(() => {
-      switch(playerState) {
-          case 'playing': return 'AUDIO: ON';
-          case 'syncing': return 'SYNCING...';
-          case 'error': return 'AUDIO: ERR';
-          default: return 'AUDIO: IDLE';
-      }
-  }, [playerState]);
-
-  const stateColorClass = useMemo(() => {
-    switch(playerState) {
-        case 'playing': return 'text-primary';
-        case 'syncing': return 'text-warning';
-        case 'error': return 'text-error';
-        default: return 'text-base-content/40 hover:text-base-content/60';
-    }
-  }, [playerState]);
-
-  const isActive = playerState === 'playing' || playerState === 'syncing';
-
-  return (
-    <>
-        {/* HIDDEN AUDIO ENGINE HOST: 1x1 and transparent to keep browser media focus */}
-        <div className="fixed top-0 left-0 w-1 h-1 pointer-events-none opacity-[0.001] z-[-1] overflow-hidden">
-            {isUplinkActive && videoId && (
-                <iframe
-                    ref={iframeRef}
-                    src={`https://www.youtube-nocookie.com/embed/${videoId}?autoplay=1&mute=0&controls=0&modestbranding=1&loop=1&playlist=${videoId}`}
-                    title="Hidden Audio Engine"
-                    frameBorder="0"
-                    allow="autoplay; encrypted-media"
-                    /* @ts-ignore */
-                    credentialless="true"
-                    referrerPolicy="no-referrer-when-downgrade"
-                />
-            )}
+    return (
+        <div className="flex items-center gap-2">
+            <span className={`uppercase tracking-widest text-primary/60 leading-none inline-block ${fontClass}`}>PWR</span>
+            <span className={`uppercase tracking-widest text-base-content/40 leading-none inline-block ${fontClass}`}>
+                {battery.level}%
+            </span>
         </div>
+    );
+};
 
-        {/* NEURAL MONITOR TOAST: Sleek and Minimal text-only status */}
-        <div className={`fixed bottom-20 right-6 z-[200] transition-all duration-1000 ease-out pointer-events-none ${showMonitor ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-12'}`}>
-            <div className="bg-base-100 border border-primary/40 p-4 shadow-[0_30px_90px_rgba(0,0,0,0.9)] flex items-center gap-4 backdrop-blur-3xl min-w-[320px] overflow-hidden">
-                <div className={`w-2 h-2 rounded-full flex-shrink-0 ${playerState === 'playing' ? 'bg-primary animate-pulse shadow-[0_0_8px_rgba(var(--p),0.8)]' : 'bg-warning animate-ping'}`}></div>
-                
-                <div className="flex flex-col min-w-0">
-                    <span className="text-[10px] font-black uppercase tracking-[0.3em] text-primary leading-none">
-                        {playerState === 'playing' ? 'UPLINK_STABLE' : 'ESTABLISHING_LINK'}
-                    </span>
-                    <span className="text-[9px] font-bold uppercase tracking-widest text-base-content/40 mt-1 truncate">
-                        {playerState === 'playing' ? 'SIGNAL_LOCKED // UI DISMISSING' : 'BYPASSING_RESTRICTIONS...'}
-                    </span>
-                </div>
+const IntegrationItem: React.FC<{
+    label: string,
+    active: boolean
+}> = ({ label, active }) => {
+    const { settings } = useSettings();
+    const isPipboyTheme = settings.darkTheme === 'pipboy';
+    const fontClass = isPipboyTheme ? 'font-fixedsys text-[11px]' : 'font-rajdhani text-[12px] font-normal';
 
-                <div className="ml-auto opacity-20">
-                    <DigitalOscillator state={playerState} />
-                </div>
-            </div>
-        </div>
+    return (
+        <span className={`uppercase tracking-widest transition-colors duration-500 leading-none inline-block ${fontClass} ${active ? 'text-base-content/40' : 'text-base-content/20'}`}>
+            {label}
+        </span>
+    );
+};
 
-        <footer className="flex-shrink-0 px-0 h-12 bg-base-100 border-t border-base-300 z-10 flex flex-row items-center justify-between overflow-hidden select-none whitespace-nowrap">
-            <div className="flex items-center h-full px-6 gap-6 bg-transparent">
-                <span className="text-[14px] font-black uppercase tracking-tighter text-primary">KOLLEKTIV. V2</span>
-                <div className="relative flex items-center justify-center border-l border-base-300/30 pl-6 h-full py-2">
-                    <div className="flex flex-row gap-4 items-center">
-                        <LedStatus label="VAULT" active={fileSystemManager.isDirectorySelected()} />
-                        <LedStatus label={settings.activeLLM === 'ollama_cloud' ? 'OLLAMA' : settings.activeLLM.toUpperCase()} active={!!process.env.API_KEY || settings.activeLLM.includes('ollama')} />
-                        <LedStatus label="STREAM" active={playerState === 'playing'} color="bg-primary" />
-                        <LedStatus label="YOUTUBE" active={!!settings.youtube?.isConnected} color="bg-error" />
+const DigitalOscillator = ({ state = 'idle', theme = 'light' }: { state: string, theme?: 'light' | 'dark' }) => {
+    const canvasRef = useRef<HTMLCanvasElement>(null);
+    const animationRef = useRef<number>(0);
+    const phaseRef = useRef<number>(0);
+
+    useEffect(() => {
+        const canvas = canvasRef.current;
+        if (!canvas) return;
+        const ctx = canvas.getContext('2d');
+        if (!ctx) return;
+
+        const draw = () => {
+            const w = canvas.width;
+            const h = canvas.height;
+            const centerY = h / 2;
+
+            ctx.clearRect(0, 0, w, h);
+
+            const color = theme === 'dark' ? '#ffffff' : '#000000';
+
+            phaseRef.current += 0.05;
+            const p = phaseRef.current;
+
+            const layers = [
+                { amp: 0.2, freq: 0.05, speed: 1.0, opacity: state === 'idle' ? 0.3 : 0.1 },
+                { amp: 0.4, freq: 0.08, speed: 1.5, opacity: state === 'idle' ? 0.5 : 0.3 },
+                { amp: 0.6, freq: 0.12, speed: 2.0, opacity: state === 'idle' ? 1.0 : 0.8 }
+            ];
+
+            layers.forEach((layer, i) => {
+                ctx.beginPath();
+                ctx.strokeStyle = color;
+                ctx.lineWidth = i === 2 ? 1.5 : 1;
+                ctx.globalAlpha = layer.opacity;
+
+                if (state === 'error') {
+                    ctx.strokeStyle = 'red';
+                    ctx.globalAlpha = Math.random() > 0.8 ? 0.8 : 0.2;
+                }
+
+                if (state === 'playing') {
+                    // Sterling style vertical bars
+                    const barWidth = 1;
+                    const gap = 2;
+                    const barCount = Math.floor(w / (barWidth + gap));
+
+                    for (let j = 0; j < barCount; j++) {
+                        const x = j * (barWidth + gap);
+                        const hFactor = Math.sin(p * (layer.speed * 0.5) + j * 0.3) * 0.5 + 0.5;
+                        const barHeight = 2 + hFactor * (h * 0.6 * layer.amp);
+
+                        ctx.moveTo(x, centerY - barHeight / 2);
+                        ctx.lineTo(x, centerY + barHeight / 2);
+                    }
+                } else {
+                    for (let x = 0; x < w; x++) {
+                        let y = centerY;
+                        if (state === 'syncing') {
+                            // Use the old 'playing' waveform for 'syncing'
+                            const noise = Math.sin(p * layer.speed + x * layer.freq) *
+                                Math.cos(p * 0.5 + x * 0.02);
+                            const spikes = Math.random() > 0.98 ? (Math.random() - 0.5) * 20 : 0;
+                            y += (noise * (h * 0.4) * layer.amp) + spikes;
+                        } else if (state === 'idle') {
+                            y = centerY;
+                        } else if (state === 'error') {
+                            y += (Math.random() - 0.5) * 2;
+                        }
+
+                        if (x === 0) ctx.moveTo(x, y);
+                        else ctx.lineTo(x, y);
+                    }
+                }
+                ctx.stroke();
+            });
+
+            animationRef.current = requestAnimationFrame(draw);
+        };
+
+        draw();
+        return () => cancelAnimationFrame(animationRef.current);
+    }, [state, theme]);
+
+    return (
+        <canvas
+            ref={canvasRef}
+            width={120}
+            height={40}
+            className="w-8 h-3 opacity-60"
+        />
+    );
+};
+
+interface FooterProps {
+    audioEnabled: boolean;
+    onAudioToggle: () => void;
+    playerState: 'idle' | 'syncing' | 'playing' | 'error';
+    onMusicToggle: () => void;
+    themeMode: 'light' | 'dark';
+    onToggleLlmPanel: () => void;
+    isLlmPanelOpen: boolean;
+}
+
+const Footer: React.FC<FooterProps> = ({
+    audioEnabled,
+    onAudioToggle,
+    playerState,
+    onMusicToggle,
+    themeMode,
+    onToggleLlmPanel,
+    isLlmPanelOpen
+}) => {
+    const { settings } = useSettings();
+    const [vaultCount, setVaultCount] = useState<number>(0);
+    const [time, setTime] = useState(new Date().toLocaleTimeString());
+    const isPipboyTheme = settings.darkTheme === 'pipboy';
+    const mainFontClass = isPipboyTheme ? 'font-fixedsys text-[11px]' : 'font-rajdhani text-[12px] font-normal';
+
+    useEffect(() => {
+        const fetch = async () => {
+            try {
+                const items = await loadGalleryItems();
+                setVaultCount(items.filter(i => !i.isNsfw).length);
+            } catch (e) { console.error(e); }
+        };
+        fetch();
+        const timer = setInterval(() => setTime(new Date().toLocaleTimeString()), 1000);
+        return () => clearInterval(timer);
+    }, []);
+
+    return (
+        <footer className="flex-shrink-0 px-8 py-4 bg-base-200/20 backdrop-blur-md z-[700] flex flex-row items-center justify-between select-none whitespace-nowrap relative pointer-events-auto border-t border-base-content/10 mt-auto">
+            {/* Background Technical Noise */}
+            <div className="absolute inset-0 pointer-events-none opacity-[0.03] bg-[url('https://www.transparenttextures.com/patterns/stardust.png')]"></div>
+
+            <div className="flex items-center h-full gap-4 bg-transparent relative z-[710] pointer-events-auto">
+                <div className="flex gap-3 items-center">
+                    <span className={`uppercase tracking-widest text-primary/60 leading-none inline-block ${mainFontClass}`}>ENG</span>
+                    <div className="min-w-[120px] flex items-center">
+                        <LlmStatusSwitcher onClick={onToggleLlmPanel} isOpen={isLlmPanelOpen} />
                     </div>
                 </div>
+
+                <div className={`flex gap-4 ${mainFontClass} items-center pl-4 ps-6 border-l border-base-content/10`}>
+                    <span className="uppercase tracking-widest text-primary/60 leading-none inline-block">INT</span>
+                    <IntegrationItem label="VAULT" active={fileSystemManager.isDirectorySelected()} />
+                    <IntegrationItem label={(settings.activeLLM === 'ollama_cloud' ? 'OLLAMA' : settings.activeLLM?.toUpperCase()) || 'LLM'} active={!!process.env.GEMINI_API_KEY || settings.activeLLM?.includes('ollama') || settings.activeLLM === 'openclaw'} />
+                    <IntegrationItem label="YOUTUBE" active={!!settings.youtube?.isConnected} />
+                </div>
             </div>
 
-            <div className="flex flex-row items-center h-full">
-                <button 
-                    onClick={handleToggle} 
-                    className={`relative flex items-center h-full px-10 transition-all duration-300 bg-transparent border-l border-base-300/30 outline-none ${stateColorClass}`}
-                >
-                    <div className="flex flex-row items-center h-full relative z-10 pointer-events-none">
-                        <div className={`flex flex-row items-center transition-all duration-500 ease-out ${isActive ? '-translate-x-2' : 'translate-x-0'}`}>
-                            <span className={`text-[10px] font-sans font-black uppercase tracking-tighter ${playerState === 'syncing' ? 'animate-pulse' : ''}`}>{statusLabel}</span>
-                        </div>
-                        <div className={`flex items-center transition-all duration-500 ease-in-out border-l border-base-300/30 ${isActive ? 'w-16 opacity-100 ml-4 pl-4' : 'w-0 opacity-0 pointer-events-none ml-0 pl-0'}`}>
-                            <DigitalOscillator state={playerState} />
-                        </div>
+            <div className="flex flex-row items-center h-full gap-6 relative z-[710] pointer-events-auto">
+                <div className="flex items-center gap-6">
+                    <div className="hidden md:flex items-center gap-6">
+                        <MetadataItem label="VLT" value={`${vaultCount} UNITS`} />
+                        <div className="w-[1px] h-3 bg-base-content/10" />
+                        <MetadataItem label="SEQ" value={time} />
                     </div>
-                </button>
+
+                    <div className="w-[1px] h-3 bg-base-content/10 invisible md:visible" />
+
+                    <BatteryStatus />
+
+                    <div className="w-[1px] h-3 bg-base-content/10" />
+
+                    <button
+                        onClick={onAudioToggle}
+                        onMouseEnter={() => audioService.playHover()}
+                        className="flex items-center gap-2 group transition-all"
+                    >
+                        <span className={`uppercase tracking-widest text-primary/60 group-hover:text-primary leading-none inline-block ${mainFontClass}`}>SFX</span>
+                        <span className={`uppercase tracking-widest leading-none inline-block ${audioEnabled ? 'text-base-content/40' : 'text-base-content/20'} ${mainFontClass}`}>{audioEnabled ? 'ON' : 'OFF'}</span>
+                    </button>
+
+                    <div className="w-[1px] h-3 bg-base-content/10" />
+
+                    <button
+                        onClick={onMusicToggle}
+                        onMouseEnter={() => audioService.playHover()}
+                        className="flex items-center gap-2 group transition-all"
+                    >
+                        <span className={`uppercase tracking-widest text-primary/60 group-hover:text-primary leading-none inline-block ${mainFontClass}`}>MSC</span>
+                        <span className={`uppercase tracking-widest leading-none inline-block ${playerState === 'playing' ? 'text-base-content/40' : 'text-base-content/20'} ${mainFontClass}`}>
+                            {playerState === 'playing' ? 'ON' : playerState === 'syncing' ? 'SYNC' : 'OFF'}
+                        </span>
+
+                        <AnimatePresence mode="wait">
+                            {playerState !== 'idle' && (
+                                <motion.div
+                                    key="oscillator"
+                                    initial={{ x: -10, opacity: 0 }}
+                                    animate={{ x: 0, opacity: 1 }}
+                                    exit={{ x: 10, opacity: 0 }}
+                                    transition={{ duration: 0.4, ease: [0.23, 1, 0.32, 1] }}
+                                    className="ml-2"
+                                >
+                                    <DigitalOscillator state={playerState} theme={themeMode} />
+                                </motion.div>
+                            )}
+                        </AnimatePresence>
+                    </button>
+                </div>
             </div>
         </footer>
-    </>
-  );
+    );
 };
 
 export default Footer;

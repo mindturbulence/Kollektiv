@@ -2,34 +2,24 @@
 import React from 'react';
 import type { CheatsheetItem } from '../types';
 import { GenericCheatsheetPage } from './GenericCheatsheetPage';
-import ArtistCard from './ArtistCard';
-import { loadArtists, updateArtist, updateCategory } from '../utils/artistStorage';
-import { UsersIcon } from './icons';
+import { loadArtists, updateArtist } from '../utils/artistStorage';
 
 interface ArtistCheatsheetProps {
-  isCategoryPanelCollapsed: boolean;
-  onToggleCategoryPanel: () => void;
   onSendToPromptsPage: (state: { artist: string, artStyle?: string }) => void;
-  isSidebarPinned: boolean;
+  isExiting?: boolean;
 }
 
-const ArtistCheatsheet: React.FC<ArtistCheatsheetProps> = ({ isCategoryPanelCollapsed, onToggleCategoryPanel, onSendToPromptsPage, isSidebarPinned }) => {
+const ArtistCheatsheet: React.FC<ArtistCheatsheetProps> = ({ onSendToPromptsPage, isExiting = false }) => {
   return (
     <div className="h-full w-full relative">
         <GenericCheatsheetPage
             title="Artists"
             heroText="ARTISTS"
             subtitle="The archival index of influential creators, techniques, and aesthetic pioneers."
-            searchPlaceholder="Search artist registry..."
             loadDataFn={loadArtists}
             updateDataFn={updateArtist}
-            updateCategoryFn={updateCategory}
-            CardComponent={ArtistCard}
             onSendToPromptsPage={(item: CheatsheetItem, category: string) => onSendToPromptsPage({ artist: item.name, artStyle: category })}
-            isCategoryPanelCollapsed={isCategoryPanelCollapsed}
-            onToggleCategoryPanel={onToggleCategoryPanel}
-            isSidebarPinned={isSidebarPinned}
-            EmptyIcon={UsersIcon}
+            isExiting={isExiting}
         />
     </div>
   );

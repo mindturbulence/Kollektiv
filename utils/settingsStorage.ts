@@ -12,6 +12,17 @@ export const defaultLLMSettings: LLMSettings = {
   ollamaBaseUrl: 'http://localhost:11434',
   ollamaModel: 'llama3',
   
+  // OpenClaw Settings
+  openclawBaseUrl: 'http://localhost:18789',
+  openclawModel: 'ollama/kimi-k2.5:cloud',
+  openclawApiKey: '',
+  
+  // Prompt & Token Tracking
+  masterRolePrompt: 'You are an expert AI prompt engineer and creative director. You excel at extracting precise visual, atmospheric, and conceptual details.',
+  geminiTokenUsage: { used: 0, limit: 1000000 },
+  ollamaTokenUsage: { used: 0, limit: 500000 },
+  openclawTokenUsage: { used: 0, limit: 500000 },
+
   // Ollama Cloud Settings
   ollamaCloudBaseUrl: 'https://your-remote-ollama.com',
   ollamaCloudModel: 'llama3',
@@ -19,16 +30,21 @@ export const defaultLLMSettings: LLMSettings = {
   ollamaCloudUseGoogleAuth: false,
   
   // Theme Settings
-  activeThemeMode: 'light',
+  activeThemeMode: 'dark',
   lightTheme: 'light',
-  darkTheme: 'pipboy',
+  darkTheme: 'MindTurbulence',
   fontSize: 14,
 
   // Dashboard Settings
-  dashboardVideoUrl: 'https://videos.pexels.com/video-files/3129671/3129671-uhd_3840_2160_30fps.mp4',
+  dashboardVideoUrl: 'https://videos.pexels.com/video-files/35977437/15254965_1920_1080_24fps.mp4',
+  isDashboardVideoEnabled: true,
 
   // Audio Settings
   musicYoutubeUrl: 'https://www.youtube.com/watch?v=jY3A06qWwfw',
+  musicEnabled: true,
+  idleScreenType: 'matrix',
+  isIdleEnabled: true,
+  idleTimeoutMinutes: 1,
 
   // Feature Toggles
   features: {
@@ -40,9 +56,6 @@ export const defaultLLMSettings: LLMSettings = {
 
   // Integrations
   youtube: {
-    isConnected: false
-  },
-  instagram: {
     isConnected: false
   },
   googleIdentity: {
@@ -71,17 +84,30 @@ export const loadLLMSettings = (): LLMSettings => {
         return { 
             ...defaultLLMSettings, 
             ...parsed,
+            activeThemeMode: 'dark',
+            musicEnabled: parsed.musicEnabled ?? defaultLLMSettings.musicEnabled,
+            idleScreenType: parsed.idleScreenType ?? defaultLLMSettings.idleScreenType,
+            isIdleEnabled: parsed.isIdleEnabled ?? defaultLLMSettings.isIdleEnabled,
+            idleTimeoutMinutes: parsed.idleTimeoutMinutes ?? defaultLLMSettings.idleTimeoutMinutes,
             features: {
                 ...defaultLLMSettings.features,
                 ...(parsed.features || {})
             },
+            geminiTokenUsage: {
+                ...defaultLLMSettings.geminiTokenUsage!,
+                ...(parsed.geminiTokenUsage || {})
+            },
+            ollamaTokenUsage: {
+                ...defaultLLMSettings.ollamaTokenUsage!,
+                ...(parsed.ollamaTokenUsage || {})
+            },
+            openclawTokenUsage: {
+                ...defaultLLMSettings.openclawTokenUsage!,
+                ...(parsed.openclawTokenUsage || {})
+            },
             youtube: {
               ...defaultLLMSettings.youtube,
               ...(parsed.youtube || {})
-            },
-            instagram: {
-              ...defaultLLMSettings.instagram,
-              ...(parsed.instagram || {})
             },
             googleIdentity: {
                 ...defaultLLMSettings.googleIdentity,
@@ -105,4 +131,37 @@ export const resetAllSettings = async () => {
     }
     // Finally, clear the directory handles from IndexedDB
     await clearAllHandles();
+};
+
+export const trackTokenUsage = (provider: 'gemini' | 'ollama' | 'ollama_cloud' | 'openclaw', actualTokens: number): void => {
+    const settings = loadLLMSettings();
+
+    if (provider === 'gemini') {
+        if (settings.geminiTokenUsage) {
+            settings.geminiTokenUsage.used += actualTokens;
+            if (settings.geminiTokenUsage.used > settings.geminiTokenUsage.limit) {
+                 settings.geminiTokenUsage.used = settings.geminiTokenUsage.limit;
+            }
+        }
+    } else if (provider === 'openclaw') {
+        if (settings.openclawTokenUsage) {
+            settings.openclawTokenUsage.used += actualTokens;
+            if (settings.openclawTokenUsage.used > settings.openclawTokenUsage.limit) {
+                settings.openclawTokenUsage.used = settings.openclawTokenUsage.limit;
+            }
+        }
+    } else {
+        if (settings.ollamaTokenUsage) {
+            settings.ollamaTokenUsage.used += actualTokens;
+            if (settings.ollamaTokenUsage.used > settings.ollamaTokenUsage.limit) {
+                settings.ollamaTokenUsage.used = settings.ollamaTokenUsage.limit;
+           }
+        }
+    }
+
+    saveLLMSettings(settings);
+    // Dispatch event so the SettingsContext or UI can listen and refresh
+    if (typeof window !== 'undefined') {
+        window.dispatchEvent(new Event('token-usage-updated'));
+    }
 };

@@ -1,62 +1,68 @@
-import React, { useState, useEffect, useCallback } from 'react';
-import { useSettings } from '../contexts/SettingsContext';
-import { dissectPrompt } from '../services/llmService';
+import React, { useState, useEffect, useCallback, useRef, useLayoutEffect } from 'react';
+import { gsap } from 'gsap';
 import type { SavedPrompt, PromptCategory } from '../types';
-import { loadPromptCategories } from '../utils/promptStorage';
 import {
-  ChevronLeftIcon, ChevronRightIcon, CloseIcon, RefreshIcon, SparklesIcon
+  ChevronLeftIcon, ChevronRightIcon, CloseIcon
 } from './icons';
-import LoadingSpinner from './LoadingSpinner';
-import PromptEditorModal from './PromptEditorModal';
-import PromptFormulaPanel from './PromptFormulaPanel';
-import PromptRefinePanel from './PromptRefinePanel';
 
 interface PromptDetailViewProps {
   prompts: SavedPrompt[];
   currentIndex: number;
+  categories: PromptCategory[];
   onClose: () => void;
   onNavigate: (index: number) => void;
   onDelete: (prompt: SavedPrompt) => void;
   onUpdate: (id: string, updates: Partial<Omit<SavedPrompt, 'id' | 'createdAt'>>) => void;
-  onSendToEnhancer: (text: string) => void;
   showGlobalFeedback: (message: string) => void;
   onClip: (prompt: SavedPrompt) => void;
-  onClipString?: (text: string, title: string) => void;
 }
 
-const PromptComponentsDisplay: React.FC<{
-  components: { [key: string]: string } | null;
-  isLoading: boolean;
-  error: string | null;
-  onRefresh: () => void;
-  hasPrompt: boolean;
-}> = ({ components, isLoading, error, onRefresh, hasPrompt }) => {
+const InfoRow: React.FC<{ label: string, children: React.ReactNode, action?: React.ReactNode }> = ({ label, children, action }) => (
+    <div className="space-y-1 group/info">
+        <div className="flex items-center gap-4">
+            <span className="text-xs font-bold uppercase tracking-widest text-[#a1a1aa] flex-grow">{label}</span>
+            {action && <div className="opacity-0 group-hover/info:opacity-100 transition-opacity -mt-2">{action}</div>}
+        </div>
+        <div className="text-sm font-bold text-base-content/80">
+            {children}
+        </div>
+    </div>
+);
+
+const PromptTemplatePanel: React.FC<{
+  prompt: SavedPrompt;
+}> = ({ prompt }) => {
     return (
-        <div className="flex flex-col h-full bg-base-100 overflow-hidden">
-            <header className="p-4 border-b border-base-300 bg-base-200/10 flex justify-between items-center">
-                <h3 className="text-[10px] font-black uppercase tracking-[0.3em] text-primary">Prompt Parts</h3>
-                <button onClick={onRefresh} disabled={isLoading || !hasPrompt} className="btn btn-xs btn-ghost opacity-40 hover:opacity-100">
-                    <RefreshIcon className={`w-4 h-4 ${isLoading ? 'animate-spin' : ''}`} />
-                </button>
-            </header>
-            <div className="flex-grow p-5 overflow-y-auto custom-scrollbar bg-base-100">
-                {isLoading ? <div className="py-12"><LoadingSpinner/></div> :
-                 error ? <div className="alert alert-error rounded-none text-xs"><span>{error}</span></div> :
-                 components && Object.keys(components).length > 0 ? (
-                    <div className="space-y-6">
-                        {Object.entries(components).map(([key, value]) => (
-                            <div key={key} className="animate-fade-in">
-                                <h4 className="text-[9px] font-black uppercase tracking-widest text-base-content/20 mb-1 border-b border-base-300/30 pb-0.5">{key}</h4>
-                                <p className="text-sm font-medium leading-relaxed text-base-content/80">{String(value)}</p>
-                            </div>
-                        ))}
-                    </div>
-                 ) : (
-                    <div className="py-24 text-center text-[10px] font-black uppercase tracking-[0.2em] text-base-content/20">
-                        { components ? "No parts found." : "Run analysis to see prompt parts." }
-                    </div>
-                 )}
-            </div>
+        <div className="space-y-8 animate-fade-in">
+            <InfoRow label="ITEM ID">
+                <span className="text-xs font-mono text-primary tracking-widest break-all">
+                    {prompt.id}
+                </span>
+            </InfoRow>
+
+            <InfoRow label="REGISTRY FOLDER">
+                <p className="text-base-content/60 font-medium tracking-wide">
+                    /PROMPTS/{prompt.categoryId || 'ROOT'}
+                </p>
+            </InfoRow>
+
+            <InfoRow label="CREATION DATE">
+                <span className="text-xs font-mono whitespace-nowrap tracking-wide text-base-content/60">
+                    {new Date(prompt.createdAt).toLocaleDateString()}
+                </span>
+            </InfoRow>
+
+            <InfoRow label="WORD COUNT">
+                <span className="text-xs font-mono whitespace-nowrap tracking-wide text-base-content/60">
+                    {prompt.text.split(/\s+/).filter(Boolean).length} WORDS
+                </span>
+            </InfoRow>
+
+            <InfoRow label="APPROX. TOKEN COUNT">
+                <span className="text-xs font-mono whitespace-nowrap tracking-wide text-base-content/60">
+                    {Math.ceil(prompt.text.length / 4)} TOKENS
+                </span>
+            </InfoRow>
         </div>
     );
 };
@@ -64,56 +70,106 @@ const PromptComponentsDisplay: React.FC<{
 const PromptDetailView: React.FC<PromptDetailViewProps> = ({
   prompts,
   currentIndex,
+  categories,
   onClose,
   onNavigate,
   onDelete,
   onUpdate,
-  onSendToEnhancer,
   showGlobalFeedback,
-  onClip,
-  onClipString
+  onClip
 }) => {
-  const { settings } = useSettings();
   const prompt = prompts[currentIndex] || null;
-  const [isEditorModalOpen, setIsEditorModalOpen] = useState(false);
   const [editedText, setEditedText] = useState(prompt ? prompt.text : '');
-  const [categories, setCategories] = useState<PromptCategory[]>([]);
+  const [editedTitle, setEditedTitle] = useState(prompt ? prompt.title || '' : '');
+  const [editedCategoryId, setEditedCategoryId] = useState(prompt ? prompt.categoryId || '' : '');
+  const [editedTags, setEditedTags] = useState<string[]>(prompt ? prompt.tags || [] : []);
+  const [tagInput, setTagInput] = useState('');
   const [copied, setCopied] = useState(false);
-  const [isRefinePanelCollapsed, setIsRefinePanelCollapsed] = useState(true);
-  const [isFormulaPanelCollapsed, setIsFormulaPanelCollapsed] = useState(true);
 
-  const [components, setComponents] = useState<{ [key: string]: string } | null>(null);
-  const [isLoadingParts, setIsLoadingParts] = useState(false);
-  const [errorParts, setErrorParts] = useState<string | null>(null);
+  const overlayRef = useRef<HTMLDivElement>(null);
+  const modalRef = useRef<HTMLDivElement>(null);
+  const leftPanelRef = useRef<HTMLDivElement>(null);
+  const rightPanelRef = useRef<HTMLDivElement>(null);
+  const headerRef = useRef<HTMLElement>(null);
+  const infoPanelRef = useRef<HTMLDivElement>(null);
+  const timelineRef = useRef<gsap.core.Timeline | null>(null);
 
-  const analyzePromptText = useCallback(async (text: string) => {
-      if (!text?.trim()) { setComponents(null); return; }
-      setIsLoadingParts(true);
-      setErrorParts(null);
-      try {
-          const result = await dissectPrompt(text, settings);
-          setComponents(result || {});
-      } catch (e: any) {
-          setErrorParts(e.message || "Analysis failed.");
-          setComponents(null);
-      } finally {
-          setIsLoadingParts(false);
-      }
-  }, [settings]);
-  
-  useEffect(() => { loadPromptCategories().then(setCategories); }, []);
-  
   useEffect(() => {
     if (prompt) {
         setEditedText(prompt.text);
+        setEditedTitle(prompt.title || '');
+        setEditedCategoryId(prompt.categoryId || '');
+        setEditedTags(prompt.tags || []);
+        setTagInput('');
         setCopied(false);
-        setIsRefinePanelCollapsed(true);
-        setIsFormulaPanelCollapsed(true);
-        setComponents(null);
     }
   }, [prompt]);
 
+  useLayoutEffect(() => {
+    if (!overlayRef.current || !modalRef.current || !leftPanelRef.current || !rightPanelRef.current || !headerRef.current || !infoPanelRef.current) return;
+
+    const ctx = gsap.context(() => {
+        const tl = gsap.timeline({ defaults: { ease: "expo.out", duration: 1.4 } });
+        timelineRef.current = tl;
+        
+        // Initial state
+        gsap.set(overlayRef.current, { opacity: 0 });
+        gsap.set(modalRef.current, { 
+            scale: 0.95, 
+            transformOrigin: "center center",
+            opacity: 0,
+            y: 10
+        });
+        gsap.set(leftPanelRef.current, { opacity: 0 });
+        gsap.set(rightPanelRef.current, { x: 40, opacity: 0 });
+        gsap.set(headerRef.current, { y: -10, opacity: 0 });
+        gsap.set(infoPanelRef.current, { opacity: 0, y: 10 });
+
+        // Animation sequence
+        tl.to(overlayRef.current, { opacity: 1, duration: 0.4 })
+          .to(modalRef.current, { 
+              scale: 1, 
+              opacity: 1, 
+              y: 0,
+              duration: 1.0,
+              ease: "expo.out"
+          }, "-=0.2")
+          .to(headerRef.current, { 
+              y: 0, 
+              opacity: 1, 
+              duration: 0.5 
+          }, "-=0.6")
+          .to(leftPanelRef.current, { 
+              opacity: 1, 
+              duration: 1.0 
+          }, "-=0.6")
+          .to(rightPanelRef.current, { 
+              x: 0, 
+              opacity: 1, 
+              duration: 0.8 
+          }, "-=0.7")
+          .to(infoPanelRef.current, {
+              opacity: 1,
+              y: 0,
+              duration: 0.6
+          }, "-=0.5");
+    });
+
+    return () => ctx.revert();
+  }, []);
+
+  const handleClose = useCallback(() => {
+    if (timelineRef.current) {
+        timelineRef.current.reverse().eventCallback("onReverseComplete", () => {
+            onClose();
+        });
+    } else {
+        onClose();
+    }
+  }, [onClose]);
+
   const handleNavigation = useCallback((direction: 'next' | 'prev') => {
+    if (!prompts.length) return;
     const newIndex = direction === 'next'
       ? (currentIndex + 1) % prompts.length
       : (currentIndex - 1 + prompts.length) % prompts.length;
@@ -128,87 +184,148 @@ const PromptDetailView: React.FC<PromptDetailViewProps> = ({
       });
   };
 
+  const handleTagInputKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === 'Enter' || e.key === ',') {
+        e.preventDefault();
+        const newTag = tagInput.trim();
+        if (newTag && !editedTags.includes(newTag)) {
+            setEditedTags([...editedTags, newTag]);
+        }
+        setTagInput('');
+    }
+  };
+
+  const handleRemoveTag = (tagToRemove: string) => {
+    setEditedTags(editedTags.filter(tag => tag !== tagToRemove));
+  };
+
   const handleSaveChanges = () => {
-      if (prompt && editedText.trim() !== prompt.text.trim()) {
-          onUpdate(prompt.id, { text: editedText });
+      if (prompt) {
+          onUpdate(prompt.id, { 
+            text: editedText,
+            title: editedTitle,
+            categoryId: editedCategoryId || undefined,
+            tags: editedTags
+          });
           showGlobalFeedback("Changes saved.");
-          onClose(); // BUG FIX: Return to list after saving
+          handleClose();
       }
   };
   
+  const isDirty = prompt && (
+    editedText.trim() !== (prompt.text || '').trim() ||
+    editedTitle.trim() !== (prompt.title || '').trim() ||
+    editedCategoryId !== (prompt.categoryId || '') ||
+    JSON.stringify(editedTags) !== JSON.stringify(prompt.tags || [])
+  );
+
   if (!prompt) return null;
 
   return (
-    <div className="absolute inset-0 z-40 bg-black/60 backdrop-blur-sm animate-fade-in flex items-center justify-center p-2 lg:p-4 overflow-hidden" onClick={onClose}>
-        <div className="w-full h-full bg-base-100 rounded-none border border-base-300 shadow-2xl flex flex-col overflow-hidden relative" onClick={e => e.stopPropagation()}>
-            <header className="flex-shrink-0 p-6 lg:px-8 lg:py-6 border-b border-base-300 bg-base-100 flex flex-wrap justify-between items-end gap-6">
-                <div className="min-w-0">
-                    <span className="text-[10px] font-black uppercase tracking-[0.4em] text-primary mb-1 block">ITEM ID : {prompt.id.slice(-8)}</span>
-                    <h2 className="text-xl lg:text-2xl font-black tracking-tighter text-base-content leading-none truncate max-w-2xl uppercase">
-                        {prompt.title || 'Untitled Prompt'}
-                    </h2>
-                </div>
-                <div className="flex items-center gap-4">
-                    <div className="join bg-base-200 border border-base-300 shadow-sm">
-                        <button onClick={() => handleNavigation('prev')} className="btn btn-sm btn-ghost join-item"><ChevronLeftIcon className="w-4 h-4" /></button>
-                        <span className="join-item flex items-center px-6 font-mono text-[10px] font-black text-base-content/40 uppercase tracking-widest border-x border-base-300/30">{currentIndex + 1} / {prompts.length}</span>
-                        <button onClick={() => handleNavigation('next')} className="btn btn-sm btn-ghost join-item"><ChevronRightIcon className="w-4 h-4" /></button>
-                    </div>
-                    <button onClick={onClose} className="btn btn-sm btn-ghost btn-square opacity-40 hover:opacity-100 ml-4">
-                        <CloseIcon className="w-6 h-6"/>
-                    </button>
-                </div>
-            </header>
-
-            <div className="flex-grow flex flex-col lg:flex-row overflow-hidden">
-                <main className="flex-1 flex flex-col overflow-hidden bg-base-100">
-                    <div className={`flex flex-col overflow-hidden transition-all duration-500 ease-in-out ${!isRefinePanelCollapsed ? 'h-1/2' : 'flex-grow'}`}>
-                        <div className="flex-grow p-5 relative overflow-hidden flex flex-col">
-                            <span className="text-[9px] font-black uppercase tracking-widest text-primary/40 mb-3 flex items-center gap-3">
-                                <span className="w-1.5 h-1.5 rounded-full bg-primary animate-pulse"></span> Prompt Text
-                            </span>
-                            <textarea 
-                                value={editedText}
-                                onChange={(e) => setEditedText(e.target.value)}
-                                className="textarea flex-grow w-full bg-transparent text-sm font-medium leading-relaxed resize-none focus:outline-none p-0 custom-scrollbar border-none shadow-none"
-                                placeholder="Type prompt here..."
-                            ></textarea>
+    <div ref={overlayRef} className="absolute inset-0 z-40 bg-black/40 flex items-center justify-center p-4 lg:p-8 overflow-hidden" onClick={handleClose}>
+        <div ref={modalRef} className="w-full h-full bg-transparent flex flex-col overflow-visible relative p-1 corner-frame" onClick={e => e.stopPropagation()}>
+            <div className="w-full h-full bg-base-100/95 backdrop-blur-xl flex flex-col overflow-hidden relative z-10">
+                <div className="flex-grow flex flex-col lg:flex-row overflow-hidden p-0 gap-0">
+                    <main ref={leftPanelRef} className="flex-1 flex flex-col overflow-hidden bg-base-200/30">
+                        <div className="flex-grow p-1.5 relative overflow-hidden flex flex-col bg-transparent">
+                            <div className="flex flex-col gap-4 px-6 pt-6">
+                                <div className="form-control w-full space-y-2">
+                                    <label className="font-nunito font-semibold text-xs tracking-widest text-base-content/40 uppercase">Prompt Title</label>
+                                    <input 
+                                        type="text" 
+                                        value={editedTitle}
+                                        onChange={(e) => setEditedTitle(e.target.value)}
+                                        placeholder="Enter prompt title..."
+                                        className="form-input text-lg font-nunito bg-base-300/50 border-none focus:bg-base-300/80"
+                                    />
+                                </div>
+                                <div className="grid grid-cols-1 xl:grid-cols-2 gap-4">
+                                    <div className="form-control w-full space-y-2">
+                                        <label className="font-nunito font-semibold text-xs tracking-widest text-base-content/40 uppercase">Category</label>
+                                        <select 
+                                            value={editedCategoryId}
+                                            onChange={(e) => setEditedCategoryId(e.target.value)}
+                                            className="form-select w-full font-nunito bg-base-300/50 border-none focus:bg-base-300/80"
+                                        >
+                                            <option value="">UNCATEGORIZED</option>
+                                            {categories.map(cat => (
+                                                <option key={cat.id} value={cat.id}>{cat.name}</option>
+                                            ))}
+                                        </select>
+                                    </div>
+                                    <div className="form-control w-full space-y-2">
+                                        <label className="font-nunito font-semibold text-xs tracking-widest text-base-content/40 uppercase">Tags</label>
+                                        <div className="flex flex-wrap items-center gap-2 p-2 bg-base-300/50 focus-within:bg-base-300/80 border-none transition-colors min-h-[3rem] rounded-md">
+                                            {editedTags.map(tag => (
+                                                <div key={tag} className="flex items-center gap-1 bg-primary/20 text-xs font-semibold px-2 py-1 text-primary rounded-sm">
+                                                    <span>{tag}</span>
+                                                    <button type="button" onClick={() => handleRemoveTag(tag)} className="text-primary/60 hover:text-primary transition-colors">&times;</button>
+                                                </div>
+                                            ))}
+                                            <input 
+                                                type="text" 
+                                                value={tagInput}
+                                                onChange={(e) => setTagInput(e.target.value)}
+                                                onKeyDown={handleTagInputKeyDown}
+                                                placeholder="Add tag..."
+                                                className="flex-grow bg-transparent outline-none text-sm p-1 text-base-content placeholder:text-base-content/30"
+                                            />
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            <div className="flex-grow p-6 relative overflow-hidden flex flex-col">
+                                <textarea 
+                                    value={editedText}
+                                    onChange={(e) => setEditedText(e.target.value)}
+                                    className="form-textarea flex-grow w-full bg-base-100/50 hover:bg-base-100/80 focus:bg-base-100 transition-colors text-lg font-medium leading-relaxed resize-none focus:outline-none p-6 border-none shadow-none text-base-content/90"
+                                    placeholder="Type prompt here..."
+                                ></textarea>
+                            </div>
                         </div>
-                    </div>
-                    <div className={`overflow-hidden transition-all duration-500 ease-in-out ${!isRefinePanelCollapsed ? 'h-1/2 border-t border-base-300' : 'h-0 opacity-0'}`}>
-                        <PromptRefinePanel 
-                            promptText={editedText} 
-                            onApplyRefinement={(res) => { setEditedText(res); setIsRefinePanelCollapsed(true); showGlobalFeedback("Applied refinement."); }}
-                            isCollapsed={isRefinePanelCollapsed}
-                            setIsCollapsed={setIsRefinePanelCollapsed}
-                            onClip={onClipString ? (res) => onClipString(res, `Refinement: ${prompt.title}`) : undefined}
-                        />
-                    </div>
-                    <footer className="p-4 bg-base-200/20 border-t border-base-300 flex flex-wrap justify-between items-center gap-4">
-                        <div className="flex items-center gap-1">
-                            <button onClick={() => setIsEditorModalOpen(true)} className="btn btn-sm btn-ghost rounded-none uppercase font-black text-[10px] tracking-widest px-4 hover:bg-base-300">Edit</button>
-                            <button onClick={() => setIsRefinePanelCollapsed(!isRefinePanelCollapsed)} className={`btn btn-sm rounded-none uppercase font-black text-[10px] tracking-widest px-4 ${!isRefinePanelCollapsed ? 'btn-primary' : 'btn-ghost text-primary hover:bg-primary/10'}`}>Refine</button>
-                            <button onClick={() => onClip(prompt)} className="btn btn-sm btn-ghost rounded-none uppercase font-black text-[10px] tracking-widest px-4 hover:bg-base-300">Clip</button>
-                            <button onClick={() => onDelete(prompt)} className="btn btn-sm btn-ghost rounded-none uppercase font-black text-[10px] tracking-widest px-4 text-error/40 hover:text-error">Delete</button>
-                        </div>
-                        <div className="flex items-center gap-3">
-                            {editedText.trim() !== prompt.text.trim() && (
-                                <button onClick={handleSaveChanges} className="btn btn-sm btn-primary rounded-none uppercase font-black text-[10px] tracking-widest px-8 shadow-lg">Save Changes</button>
-                            )}
-                            <button onClick={() => handleCopyToClipboard(editedText)} className="btn btn-sm btn-ghost rounded-none border border-base-300 bg-base-100 uppercase font-black text-[10px] tracking-widest px-8 hover:bg-base-200">
-                                {copied ? 'Copied' : 'Copy Text'}
+                        
+                        <footer className="h-14 p-1.5 flex gap-1.5 bg-base-300/30 backdrop-blur-md items-stretch">
+                            <button onClick={() => onClip(prompt)} className="btn btn-sm btn-ghost h-full flex-1 rounded-none tracking-wider uppercase btn-snake">
+                                <span/><span/><span/><span/>
+                                Clip
                             </button>
+                            <button onClick={() => handleCopyToClipboard(editedText)} className="btn btn-sm btn-ghost h-full flex-1 rounded-none tracking-wider uppercase btn-snake">
+                                <span/><span/><span/><span/>
+                                {copied ? 'Copied' : 'Copy'}
+                            </button>
+                            <button onClick={() => onDelete(prompt)} className="btn btn-sm btn-ghost h-full flex-1 rounded-none tracking-wider uppercase btn-snake text-error/60 hover:text-error">
+                                <span/><span/><span/><span/>
+                                Delete
+                            </button>
+                            <button 
+                                onClick={handleSaveChanges} 
+                                disabled={!isDirty}
+                                className={`btn btn-sm btn-ghost h-full flex-1 rounded-none font-normal text-[13px] tracking-wider uppercase btn-snake font-display ${!isDirty ? 'opacity-20 cursor-not-allowed' : 'opacity-100'}`}
+                            >
+                                <span/><span/><span/><span/>
+                                Save
+                            </button>
+                        </footer>
+                    </main>
+                    <aside className="w-full lg:w-96 flex-shrink-0 flex flex-col overflow-hidden relative border-l border-base-300/30">
+                        <header ref={headerRef} className="flex-shrink-0 h-16 px-6 flex items-center justify-between border-b border-base-300/30 bg-base-200/20">
+                            <div className="form-tab-group !w-auto">
+                                <button onClick={() => handleNavigation('prev')} className="form-tab-item px-4"><ChevronLeftIcon className="w-4 h-4" /></button>
+                                <span className="flex items-center px-4 font-mono text-xs font-bold text-base-content/40 border-x border-base-content/10">{currentIndex + 1} / {prompts.length}</span>
+                                <button onClick={() => handleNavigation('next')} className="form-tab-item px-4"><ChevronRightIcon className="w-4 h-4" /></button>
+                            </div>
+                            <button onClick={handleClose} className="p-2 text-base-content/40 hover:-content transition-all hover:scale-110">
+                                <CloseIcon className="w-5 h-5 stroke-[2]"/>
+                            </button>
+                        </header>
+                        <div ref={rightPanelRef} className="flex-grow flex flex-col min-h-0 overflow-hidden relative">
+                            <div ref={infoPanelRef} className="absolute inset-0 p-8 space-y-12 overflow-y-auto custom-scrollbar">
+                                <PromptTemplatePanel prompt={prompt} />
+                            </div>
                         </div>
-                    </footer>
-                </main>
-                <aside className="w-full lg:w-[420px] flex-shrink-0 bg-base-100 flex flex-col overflow-hidden border-l border-base-300">
-                    <div className="flex-grow flex flex-col min-h-0 divide-y divide-base-300">
-                        <PromptComponentsDisplay components={components} isLoading={isLoadingParts} error={errorParts} onRefresh={() => analyzePromptText(editedText)} hasPrompt={!!editedText} />
-                        <PromptFormulaPanel promptText={editedText} showGlobalFeedback={showGlobalFeedback} isCollapsed={isFormulaPanelCollapsed} setIsCollapsed={setIsFormulaPanelCollapsed} />
-                    </div>
-                </aside>
+                    </aside>
+                </div>
             </div>
-            <PromptEditorModal isOpen={isEditorModalOpen} onClose={() => setIsEditorModalOpen(false)} onSave={async (data) => { onUpdate(prompt.id, data); showGlobalFeedback("Details saved."); }} categories={categories} editingPrompt={prompt} />
         </div>
     </div>
   );

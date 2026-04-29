@@ -1,6 +1,5 @@
 
-import type { CheatsheetCategory, CheatsheetItem } from '../types';
-import { CHEATSHEET_DATA } from '../constants';
+import type { CheatsheetCategory } from '../types';
 import { fileSystemManager } from './fileUtils';
 
 const MANIFEST_NAME = 'cheatsheet.json';

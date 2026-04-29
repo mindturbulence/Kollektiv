@@ -1,10 +1,8 @@
-export const DAISYUI_LIGHT_THEMES = [
-  "light", "cupcake", "bumblebee", "emerald", "corporate", "retro", "cyberpunk", 
-  "valentine", "garden", "aqua", "lofi", "pastel", "fantasy", "wireframe", 
-  "cmyk", "autumn", "acid", "lemonade", "winter", "caramellatte", "nord"
-];
-
 export const DAISYUI_DARK_THEMES = [
-  "dark", "synthwave", "halloween", "forest", "black", "luxury", "dracula", 
-  "business", "night", "coffee", "dim", "sunset", "abyss", "pipboy", "starfield", "explorer", "prompt"
+  "abyss", "acid", "aqua", "Arc", "autumn", "black", "bumblebee", "business", 
+  "cmyk", "coffee", "corporate", "cupcake", "cyberpunk", "dark", "dim", "dracula", 
+  "emerald", "fantasy", "forest", "garden", "Hiigara", "isac",
+  "lemonade", "light", "lofi", "luxury", "MindTurbulence", "night", "nord", 
+  "orange", "pastel", "pipboy", "retro", "starfield", "Stellar", "sunset", "synthwave", "valentine", 
+  "Vanguard", "winter", "wireframe"
 ];

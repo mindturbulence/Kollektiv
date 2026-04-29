@@ -1,6 +1,6 @@
 import React, { useEffect } from 'react';
 import { createPortal } from 'react-dom';
-import { CheckIcon, InformationCircleIcon } from './icons';
+import { audioService } from '../services/audioService';
 
 interface FeedbackModalProps {
   isOpen: boolean;
@@ -15,12 +15,15 @@ const FeedbackModal: React.FC<FeedbackModalProps> = ({ isOpen, onClose, message,
 
   useEffect(() => {
     if (isOpen) {
+      if (type === 'success') audioService.playSuccess();
+      else audioService.playError();
+      
       const timer = setTimeout(() => {
         onClose();
       }, effectiveDuration);
       return () => clearTimeout(timer);
     }
-  }, [isOpen, onClose, effectiveDuration]);
+  }, [isOpen, onClose, effectiveDuration, type]);
 
   if (!isOpen) return null;
 
@@ -45,24 +48,31 @@ const FeedbackModal: React.FC<FeedbackModalProps> = ({ isOpen, onClose, message,
   
   const modalContent = (
     <div 
-        className="fixed inset-0 bg-black/40 z-[2000] flex items-center justify-center p-4 animate-fade-in" 
+        className="fixed inset-0 bg-black/40 backdrop-blur-xl z-[2000] flex items-center justify-center p-4 animate-fade-in" 
         onClick={onClose}
         role="alertdialog"
         aria-modal="true"
     >
       <div 
-        className="bg-base-100 rounded-none border border-base-300 shadow-2xl w-full max-w-md overflow-hidden"
+        className="bg-base-100/40 backdrop-blur-xl rounded-none w-full max-w-md relative p-[3px] corner-frame overflow-visible shadow-2xl"
         onClick={(e) => e.stopPropagation()}
       >
-        <div className={`h-1.5 w-full ${currentTheme.bgColor}`}></div>
-        <div className="p-8">
-            <h3 className={`text-4xl font-black tracking-tighter ${isError ? 'text-error' : 'text-success'} leading-none mb-4`}>
-                {currentTheme.headerText}
-            </h3>
-            <p className="text-xs font-black uppercase tracking-[0.2em] text-base-content/60 leading-relaxed">
-                {message}
-            </p>
+        <div className="flex flex-col h-full w-full overflow-hidden relative z-10 bg-transparent">
+          <div className={`h-1.5 w-full ${currentTheme.bgColor}`}></div>
+          <div className="p-6">
+              <h3 className={`text-3xl font-black tracking-tighter ${isError ? 'text-error' : 'text-success'} leading-none mb-4 uppercase`}>
+                  {currentTheme.headerText}
+              </h3>
+              <p className="text-xs font-black uppercase tracking-[0.2em] text-base-content/60 leading-relaxed uppercase tracking-tight">
+                  {message}
+              </p>
+          </div>
         </div>
+        {/* Manual Corner Accents */}
+        <div className="absolute -top-[1px] -left-[1px] w-3 h-3 border-t border-l border-primary/15 z-20 pointer-events-none" />
+        <div className="absolute -top-[1px] -right-[1px] w-3 h-3 border-t border-r border-primary/15 z-20 pointer-events-none" />
+        <div className="absolute -bottom-[1px] -left-[1px] w-3 h-3 border-b border-l border-primary/15 z-20 pointer-events-none" />
+        <div className="absolute -bottom-[1px] -right-[1px] w-3 h-3 border-b border-r border-primary/15 z-20 pointer-events-none" />
       </div>
     </div>
   );

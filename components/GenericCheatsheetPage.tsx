@@ -1,12 +1,14 @@
 
-import React, { useState, useEffect, ComponentType, useRef, useLayoutEffect, useMemo } from 'react';
+import React, { useState, useEffect, useRef, useLayoutEffect, useMemo } from 'react';
+import { motion } from 'framer-motion';
 import { gsap } from 'gsap';
 import type { CheatsheetCategory, CheatsheetItem } from '../types';
 import LoadingSpinner from './LoadingSpinner';
-import { CloseIcon, ChevronLeftIcon, SearchIcon } from './icons';
+import { SearchIcon } from './icons';
 import { fileSystemManager } from '../utils/fileUtils';
-import CheatsheetDetailView from './CheatsheetDetailView';
+import LayeredCheatsheetDetail from './LayeredCheatsheetDetail';
 import { audioService } from '../services/audioService';
+import { pageVariants } from './AnimatedPanels';
 
 const CATEGORY_PLACEHOLDER = "https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?q=80&w=1000&auto=format&fit=crop";
 
@@ -70,9 +72,9 @@ const CategoryCard: React.FC<CategoryCardProps> = ({
         <div 
             ref={cardRef}
             onClick={() => cardRef.current && onClick(category, cardRef.current)}
-            className="category-card flex-shrink-0 w-[300px] md:w-[380px] lg:w-[450px] h-full relative group cursor-pointer select-none bg-base-100 flex flex-col border-r border-base-300 first:border-l overflow-hidden will-change-transform"
+            className="category-card flex-shrink-0 w-[300px] md:w-[380px] lg:w-[450px] h-full relative group cursor-pointer select-none flex flex-col overflow-hidden will-change-transform"
         >
-            <div ref={bgContainerRef} className="absolute inset-0 z-0 bg-base-200 overflow-hidden">
+            <div ref={bgContainerRef} className="absolute inset-0 z-0 bg-transparent overflow-hidden">
                 {currentImage && (
                     <img 
                         src={currentImage} 
@@ -124,25 +126,14 @@ interface GenericCheatsheetPageProps {
   title: string;
   subtitle?: string;
   heroText: string;
-  searchPlaceholder: string;
   loadDataFn: () => Promise<CheatsheetCategory[]>;
   updateDataFn: (itemId: string, updates: Partial<CheatsheetItem>) => Promise<CheatsheetCategory[]>;
-  updateCategoryFn?: (categoryName: string, updates: Partial<CheatsheetCategory>) => Promise<CheatsheetCategory[]>;
-  CardComponent: ComponentType<{ 
-    item: CheatsheetItem; 
-    onUpdateImages: (newImageUrls: string[]) => void;
-    onInject: (item: CheatsheetItem) => void;
-  }>;
   onSendToPromptsPage?: (item: CheatsheetItem, category: string) => void;
-  isCategoryPanelCollapsed: boolean;
-  onToggleCategoryPanel: () => void;
-  isSidebarPinned: boolean;
-  EmptyIcon: ComponentType<React.SVGProps<SVGSVGElement>>;
-  layout?: 'grid' | 'article';
+  isExiting?: boolean;
 }
 
 export const GenericCheatsheetPage: React.FC<GenericCheatsheetPageProps> = ({
-  title, heroText, subtitle, loadDataFn, updateDataFn, CardComponent, onSendToPromptsPage, layout = 'grid', searchPlaceholder
+  title, heroText, subtitle, loadDataFn, updateDataFn, onSendToPromptsPage, isExiting = false
 }) => {
   const [data, setData] = useState<CheatsheetCategory[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -205,6 +196,9 @@ export const GenericCheatsheetPage: React.FC<GenericCheatsheetPageProps> = ({
       const tl = gsap.timeline({
           onComplete: () => {
               setActiveCategory(cat);
+              if (cat.items.length > 0) {
+                  setActiveItemIndex(0);
+              }
               setIsTransitioning(false);
           }
       });
@@ -242,35 +236,6 @@ export const GenericCheatsheetPage: React.FC<GenericCheatsheetPageProps> = ({
       }, "-=0.3");
   };
 
-  const handleBackToCarousel = () => {
-      if (isTransitioning) return;
-      setIsTransitioning(true);
-      audioService.playClick();
-
-      const items = gsap.utils.toArray('.item-card-wrapper');
-      const tl = gsap.timeline({
-          onComplete: () => {
-              setActiveCategory(null);
-              setIsTransitioning(false);
-          }
-      });
-      
-      tl.to(items, {
-          y: 40,
-          opacity: 0,
-          stagger: 0.05,
-          duration: 0.4,
-          ease: "power2.in"
-      }, 0);
-
-      tl.to('.detail-header', {
-          y: -20,
-          opacity: 0,
-          duration: 0.3,
-          ease: "power2.in"
-      }, 0);
-  };
-
   const handleUpdateItem = async (itemId: string, updates: Partial<CheatsheetItem>) => {
       const updatedData = await updateDataFn(itemId, updates);
       setData(updatedData);
@@ -295,14 +260,22 @@ export const GenericCheatsheetPage: React.FC<GenericCheatsheetPageProps> = ({
   }, [activeCategory, searchQuery]);
 
   if (isLoading) {
-    return <div className="h-full w-full flex items-center justify-center bg-base-100"><LoadingSpinner /></div>;
+    return <div className="h-full w-full flex items-center justify-center bg-transparent"><LoadingSpinner /></div>;
   }
 
   return (
-    <section className="h-full w-full min-w-0 bg-base-100 flex flex-col overflow-hidden relative">
+    <>
+    <motion.section 
+        variants={pageVariants}
+        initial="hidden"
+        animate={isExiting ? "exit" : "visible"}
+        exit="exit"
+        className="flex flex-col h-full bg-transparent w-full relative p-[3px] corner-frame overflow-visible"
+    >
+      <div className="flex flex-col h-full w-full overflow-hidden relative z-10 bg-base-100/40 backdrop-blur-xl">
       {!activeCategory ? (
         <>
-            <header className="flex-shrink-0 bg-base-200/20 border-b border-base-300">
+            <header className="flex-shrink-0">
                 <div className="p-10">
                     <div className="flex flex-col md:flex-row md:items-end justify-between gap-6">
                         <div className="space-y-2">
@@ -314,10 +287,22 @@ export const GenericCheatsheetPage: React.FC<GenericCheatsheetPageProps> = ({
                                 {subtitle || "Systematic visual logic and aesthetic repositories."}
                             </p>
                         </div>
-                        <div className="flex bg-base-100 border border-base-300 shadow-sm">
-                            <div className="px-8 py-3 flex flex-col items-center justify-center">
-                                <span className="text-3xl font-black tracking-tighter leading-none">{data.length}</span>
-                                <span className="text-[8px] uppercase font-black text-base-content/30 tracking-[0.2em] mt-1">Folders</span>
+                        <div className="flex flex-col md:flex-row items-center gap-6">
+                            <div className="relative w-full md:w-64">
+                                <SearchIcon className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 opacity-20 pointer-events-none" />
+                                <input 
+                                    type="text" 
+                                    value={searchQuery}
+                                    onChange={(e) => setSearchQuery(e.target.value)}
+                                    placeholder="Search registry..."
+                                    className="form-input w-full pl-12"
+                                />
+                            </div>
+                            <div className="flex">
+                                <div className="px-8 py-3 flex flex-col items-center justify-center">
+                                    <span className="text-3xl font-black tracking-tighter leading-none">{data.length}</span>
+                                    <span className="text-[8px] uppercase font-black text-base-content/30 tracking-[0.2em] mt-1">Folders</span>
+                                </div>
                             </div>
                         </div>
                     </div>
@@ -327,7 +312,7 @@ export const GenericCheatsheetPage: React.FC<GenericCheatsheetPageProps> = ({
             {/* SCROLLABLE TRACK */}
             <div 
                 ref={scrollWrapperRef} 
-                className="flex-grow min-h-0 w-full flex overflow-x-auto overflow-y-hidden bg-base-100 no-scrollbar relative animate-fade-in"
+                className="flex-grow min-h-0 w-full flex overflow-x-auto overflow-y-hidden scrollbar-hide bg-transparent relative animate-fade-in"
                 style={{ WebkitOverflowScrolling: 'touch', touchAction: 'pan-x' }}
             >
                 <div className="flex flex-nowrap h-full min-w-max">
@@ -339,72 +324,31 @@ export const GenericCheatsheetPage: React.FC<GenericCheatsheetPageProps> = ({
                             onClick={handleCategoryClick} 
                         />
                     ))}
-                    <div className="w-20 flex-shrink-0"></div>
                 </div>
             </div>
         </>
       ) : (
-        <div className="flex flex-col h-full w-full min-w-0 bg-base-100 z-50 overflow-hidden relative animate-fade-in">
-            {activeItemIndex !== null && (
-                <CheatsheetDetailView 
-                    items={filteredItems}
-                    currentIndex={activeItemIndex}
-                    onClose={() => setActiveItemIndex(null)}
-                    onNavigate={setActiveItemIndex}
-                    onInject={handleInject}
-                    onUpdateItem={handleUpdateItem}
-                />
-            )}
-
-            <header className="detail-header flex-shrink-0 border-b border-base-300 bg-base-200/10 p-8 flex flex-col md:flex-row md:items-center justify-between gap-6 z-[60]">
-                <div className="flex items-center gap-6">
-                    <button onClick={handleBackToCarousel} className="btn btn-ghost btn-circle opacity-40 hover:opacity-100 hover:bg-base-300 transition-all">
-                        <ChevronLeftIcon className="w-6 h-6" />
-                    </button>
-                    <div>
-                        <h2 className="text-3xl lg:text-4xl font-black tracking-tighter uppercase leading-none">{activeCategory.category}</h2>
-                        <p className="text-[10px] font-black uppercase tracking-[0.3em] text-primary/40 mt-1">{heroText} REPOSITORY</p>
-                    </div>
-                </div>
-                
-                <div className="relative w-full md:w-96">
-                    <SearchIcon className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 opacity-20 pointer-events-none" />
-                    <input 
-                        type="text" 
-                        value={searchQuery}
-                        onChange={(e) => setSearchQuery(e.target.value)}
-                        placeholder={searchPlaceholder}
-                        className="input input-bordered rounded-none w-full pl-12 font-bold uppercase tracking-tight text-sm h-12"
-                    />
-                </div>
-            </header>
-
-            <div className="flex-grow overflow-y-auto custom-scrollbar bg-base-100">
-                <div className={`mx-auto py-16 px-10 ${layout === 'article' ? 'max-w-4xl' : 'max-w-screen-2xl'}`}>
-                    <div className={layout === 'grid' 
-                        ? "grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-px bg-base-300 border border-base-300 shadow-2xl"
-                        : "flex flex-col gap-px bg-base-300 border border-base-300 shadow-2xl"
-                    }>
-                        {filteredItems.map((item, idx) => (
-                            <div 
-                                key={item.id} 
-                                className="item-card-wrapper bg-base-100 group/item overflow-hidden will-change-transform cursor-pointer" 
-                                onClick={() => setActiveItemIndex(idx)}
-                            >
-                                <div className="transition-transform duration-1000 group-hover/item:scale-[1.01]">
-                                    <CardComponent 
-                                      item={item}
-                                      onUpdateImages={(newImageUrls) => handleUpdateItem(item.id, { imageUrls: newImageUrls })}
-                                      onInject={handleInject}
-                                    />
-                                </div>
-                            </div>
-                        ))}
-                    </div>
-                </div>
-            </div>
+        <div className="flex flex-col h-full w-full min-w-0 bg-transparent z-50 overflow-hidden relative animate-fade-in">
+            <LayeredCheatsheetDetail 
+                items={filteredItems}
+                currentIndex={activeItemIndex ?? 0}
+                onClose={() => {
+                    setActiveItemIndex(null);
+                    setActiveCategory(null);
+                }}
+                onNavigate={setActiveItemIndex}
+                onInject={handleInject}
+                onUpdateItem={handleUpdateItem}
+            />
         </div>
       )}
-    </section>
+      </div>
+      {/* Manual Corner Accents */}
+      <div className="absolute -top-[1px] -left-[1px] w-3 h-3 border-t border-l border-primary/15 z-20 pointer-events-none" />
+      <div className="absolute -top-[1px] -right-[1px] w-3 h-3 border-t border-r border-primary/15 z-20 pointer-events-none" />
+      <div className="absolute -bottom-[1px] -left-[1px] w-3 h-3 border-b border-l border-primary/15 z-20 pointer-events-none" />
+      <div className="absolute -bottom-[1px] -right-[1px] w-3 h-3 border-b border-r border-primary/15 z-20 pointer-events-none" />
+    </motion.section>
+    </>
   );
 };

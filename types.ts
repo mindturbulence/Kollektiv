@@ -2,8 +2,12 @@
 // --- Core App Types ---
 export type ActiveTab =
   | 'dashboard'
+  | 'discovery'
   | 'prompts'
-  | 'storyboard'
+  | 'crafter'
+  | 'refiner'
+  | 'prompt_analyzer'
+  | 'media_analyzer'
   | 'prompt'
   | 'gallery'
   | 'cheatsheet'
@@ -50,13 +54,6 @@ export interface YouTubeConnection {
   customClientId?: string;
 }
 
-export interface InstagramConnection {
-  isConnected: boolean;
-  clientKey?: string;
-  clientSecret?: string;
-  connectedAt?: number;
-}
-
 export interface GoogleIdentityConnection {
   isConnected: boolean;
   email?: string;
@@ -66,12 +63,22 @@ export interface GoogleIdentityConnection {
   connectedAt?: number;
 }
 
+export interface TokenUsage {
+  used: number;
+  limit: number;
+}
+
 export interface LLMSettings {
   // LLM Provider Settings
   llmModel: string;
-  activeLLM: 'gemini' | 'ollama' | 'ollama_cloud';
+  activeLLM: 'gemini' | 'ollama' | 'ollama_cloud' | 'openclaw';
   ollamaBaseUrl: string;
   ollamaModel: string;
+  
+  // OpenClaw Settings
+  openclawBaseUrl: string;
+  openclawModel: string;
+  openclawApiKey: string;
   
   // Ollama Cloud Settings
   ollamaCloudBaseUrl: string;
@@ -79,46 +86,33 @@ export interface LLMSettings {
   ollamaCloudApiKey: string;
   ollamaCloudUseGoogleAuth: boolean;
 
+  // Prompt & Token Tracking
+  masterRolePrompt?: string;
+  geminiTokenUsage?: TokenUsage;
+  ollamaTokenUsage?: TokenUsage;
+  openclawTokenUsage?: TokenUsage;
+
   // Theme Settings
-  activeThemeMode: 'light' | 'dark';
+  activeThemeMode: 'dark';
   lightTheme: string;
   darkTheme: string;
   fontSize: number;
 
   // Dashboard Settings
   dashboardVideoUrl: string;
-  
-  // Audio Settings
+  isDashboardVideoEnabled: boolean;
   musicYoutubeUrl: string;
+  musicEnabled: boolean;
+  idleScreenType: 'matrix' | 'gallery';
+  isIdleEnabled: boolean;
+  idleTimeoutMinutes: number;
   
   // Feature Toggles
   features: FeatureSettings;
   
   // Integrations
   youtube?: YouTubeConnection;
-  instagram?: InstagramConnection;
   googleIdentity?: GoogleIdentityConnection;
-}
-
-// --- Storyboard Types ---
-export interface Scene {
-  id: string;
-  text: string;
-  referenceImages: string[]; // Base64 or local paths
-  duration: number;
-  motion: string;
-  camera: string;
-  style: string;
-  order: number;
-}
-
-export interface Storyboard {
-  id: string;
-  title: string;
-  targetModel: string;
-  scenes: Scene[];
-  createdAt: number;
-  updatedAt: number;
 }
 
 // --- Prompt Generation & Library ---
@@ -143,6 +137,11 @@ export interface PromptModifiers {
   composition?: string;
   // Specific model styles
   zImageStyle?: string;
+  facialExpression?: string;
+  hairStyle?: string;
+  eyeColor?: string;
+  skinTexture?: string;
+  clothing?: string;
   // Video specific
   motion?: string;
   cameraMovement?: string;
@@ -168,10 +167,13 @@ export interface PromptModifiers {
   mjSeed?: string;
   mjStop?: string;
   mjRepeat?: string;
+  // Refiner specific
+  creativity?: number; 
 }
 
 export interface EnhancementResult {
   suggestions: string[];
+  breakdown?: any;
   grounding_metadata?: any;
 }
 

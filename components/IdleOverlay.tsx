@@ -1,42 +1,57 @@
 
 import React, { useEffect, useRef, useState } from 'react';
 import { gsap } from 'gsap';
+import { useSettings } from '../contexts/SettingsContext';
+import { loadGalleryItems } from '../utils/galleryStorage';
+import DashboardGallery from './DashboardGallery';
+import type { GalleryItem } from '../types';
+import ChromaticText from './ChromaticText';
 
 const IdleOverlay: React.FC<{ isVisible: boolean; onInteraction: () => void }> = ({ isVisible, onInteraction }) => {
+    const { settings } = useSettings();
     const canvasRef = useRef<HTMLCanvasElement>(null);
     const containerRef = useRef<HTMLDivElement>(null);
     const frameCount = useRef(0);
+    const [galleryItems, setGalleryItems] = useState<GalleryItem[]>([]);
+
+    useEffect(() => {
+        if (isVisible && settings.idleScreenType === 'gallery') {
+            loadGalleryItems().then(items => setGalleryItems(items.filter(i => !i.isNsfw)));
+        }
+    }, [isVisible, settings.idleScreenType]);
 
     useEffect(() => {
         if (!containerRef.current) return;
-        
+
         gsap.killTweensOf(containerRef.current);
-        
+
         if (isVisible) {
-            gsap.to(containerRef.current, { 
-                autoAlpha: 1, 
-                duration: 2, 
-                ease: "power2.inOut" 
+            gsap.to(containerRef.current, {
+                autoAlpha: 1,
+                duration: 2,
+                ease: "power2.inOut"
             });
         } else {
-            gsap.to(containerRef.current, { 
-                autoAlpha: 0, 
-                duration: 0.8, 
-                ease: "power2.out" 
+            gsap.to(containerRef.current, {
+                autoAlpha: 0,
+                duration: 0.8,
+                ease: "power2.out"
             });
         }
     }, [isVisible]);
 
     useEffect(() => {
+        if (settings.idleScreenType !== 'matrix') return;
+
         const canvas = canvasRef.current;
         if (!canvas) return;
         const ctx = canvas.getContext('2d');
         if (!ctx) return;
 
         let animationFrameId: number;
-        
+
         // Configuration for Density
-        const fontSize = 11; 
+        const fontSize = 11;
         let columns: number;
         let drops: number[];
 
@@ -49,14 +64,15 @@ const IdleOverlay: React.FC<{ isVisible: boolean; onInteraction: () => void }> =
         };
 
         init();
-        window.addEventListener('resize', init);
+        const handleResize = () => init();
+        window.addEventListener('resize', handleResize);
 
         // Character set: Cryptographic / Neural mix
         const chars = '01ABCDEFXX_[]{}//\\*^!#%&?+=$@ΣΩΨΦ0123456789';
 
         const draw = () => {
             animationFrameId = requestAnimationFrame(draw);
-            
+
             // Speed Throttle: Only update every 3 frames for a slower, more deliberate feel
             frameCount.current++;
             if (frameCount.current % 3 !== 0) return;
@@ -64,7 +80,7 @@ const IdleOverlay: React.FC<{ isVisible: boolean; onInteraction: () => void }> =
             const style = getComputedStyle(document.documentElement);
             const primary = style.getPropertyValue('--p').trim();
             const base = style.getPropertyValue('--b1').trim();
-            
+
             // Denser Trails: Smaller opacity for the fade-out
             ctx.fillStyle = `oklch(${base} / 0.05)`;
             ctx.fillRect(0, 0, canvas.width, canvas.height);
@@ -79,7 +95,7 @@ const IdleOverlay: React.FC<{ isVisible: boolean; onInteraction: () => void }> =
                 }
 
                 const text = chars.charAt(Math.floor(Math.random() * chars.length));
-                
+
                 // Varied brightness for depth and glow
                 const brightness = Math.random();
                 if (brightness > 0.98) {
@@ -107,25 +123,55 @@ const IdleOverlay: React.FC<{ isVisible: boolean; onInteraction: () => void }> =
         draw();
 
         return () => {
-            window.removeEventListener('resize', init);
+            window.removeEventListener('resize', handleResize);
             cancelAnimationFrame(animationFrameId);
         };
-    }, []);
+    }, [settings.idleScreenType]);
 
     return (
-        <div 
+        <div
             ref={containerRef}
-            className="fixed inset-0 z-[9999] bg-base-100/60 backdrop-blur-xl cursor-none pointer-events-auto"
+            className="fixed inset-0 z-[9999] bg-transparent backdrop-blur-3xl cursor-none pointer-events-auto"
             style={{ opacity: 0, visibility: 'hidden' }}
             onClick={onInteraction}
             onMouseMove={onInteraction}
             onKeyDown={onInteraction}
         >
-            <canvas ref={canvasRef} className="w-full h-full block" />
-            <div className="absolute inset-0 bg-gradient-to-b from-base-100 via-transparent to-base-100 pointer-events-none opacity-80"></div>
+            {settings.idleScreenType === 'matrix' ? (
+                <>
+                    <canvas ref={canvasRef} className="w-full h-full block" />
+                    <div className="absolute inset-0 bg-gradient-to-b from-transparent via-transparent to-transparent pointer-events-none opacity-80"></div>
+                </>
+            ) : (
+                <div className="w-full h-full opacity-60">
+                    <DashboardGallery items={galleryItems} />
+                    <div className="absolute inset-0 bg-base-100/40 pointer-events-none" />
+
+                    <div className="absolute inset-0 flex flex-col items-center justify-center z-[30] pointer-events-none text-center">
+                        <div className="overflow-hidden py-1 mb-2">
+                            <p className="text-[12px] font-normal uppercase tracking-[1.5em] text-primary/60">
+                                MINDTURBULENCE'S
+                            </p>
+                        </div>
+                        <div className="overflow-hidden mb-4 py-2">
+                            <h1 className={`text-6xl md:text-8xl uppercase text-base-content flex items-center tracking-widest ${settings.darkTheme === 'pipboy' ? 'font-monofonto' : 'font-monoton'}`}>
+                                <ChromaticText>Kollektiv</ChromaticText>
+                                <span className="text-primary italic animate-pulse">.</span>
+                            </h1>
+                        </div>
+                        <div className="overflow-hidden py-1">
+                            <p className="text-[12px] font-normal uppercase text-base-content/40 max-w-2xl leading-relaxed tracking-[0.5em]">
+                                Precision tools for Generative Media Creation
+                            </p>
+                        </div>
+                        <div className="w-12 h-px bg-base-content/10 mt-10"></div>
+                    </div>
+                </div>
+            )}
+
             <div className="absolute bottom-12 left-1/2 -translate-x-1/2 flex flex-col items-center gap-2 pointer-events-none">
-                <span className="text-[10px] font-black uppercase tracking-[0.6em] text-primary animate-pulse drop-shadow-[0_0_8px_oklch(var(--p))]">System Standby</span>
-                <span className="text-[8px] font-mono text-base-content/20 uppercase tracking-[0.4em]">Neural stream active // click to resume</span>
+                <span className="text-[12px] font-black uppercase tracking-[0.6em] text-primary animate-pulse drop-shadow-[0_0_8px_oklch(var(--p))]">System Standby</span>
+                <span className="text-[10px] font-black text-base-content/20 uppercase tracking-[0.4em]">Hover your mouse to resume</span>
             </div>
         </div>
     );

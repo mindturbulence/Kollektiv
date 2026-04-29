@@ -1,18 +1,16 @@
 
-import React, { useState, useEffect, useCallback, useRef, useMemo, useLayoutEffect } from 'react';
+import React, { useState, useEffect, useRef, useMemo, useLayoutEffect } from 'react';
+import { motion } from 'framer-motion';
 import { gsap } from 'gsap';
 import { 
-    UploadIcon, CloseIcon, LinkIcon, LinkOffIcon, RefreshIcon, 
-    DownloadIcon, FolderClosedIcon, PlusIcon, GripVerticalIcon, 
-    DeleteIcon, CheckIcon, ArchiveIcon, SparklesIcon, ChevronDownIcon,
-    CenterIcon, PhotoIcon, ViewColumnsIcon
+    LinkIcon, LinkOffIcon, 
+    FolderClosedIcon, PlusIcon, TypeIcon, PhotoIcon
 } from './icons';
 import useLocalStorage from '../utils/useLocalStorage';
 import GalleryPickerModal from './GalleryPickerModal';
 import type { GalleryItem } from '../types';
 import { fileSystemManager, fileToBase64 } from '../utils/fileUtils';
 import { addItemToGallery } from '../utils/galleryStorage';
-import LoadingSpinner from './LoadingSpinner';
 import ConfirmationModal from './ConfirmationModal';
 
 // --- TYPES ---
@@ -46,10 +44,13 @@ interface ImageItem {
 
 interface ComposerPageProps {
   showGlobalFeedback: (message: string, isError?: boolean) => void;
+  isExiting?: boolean;
+  isLocalExiting?: boolean;
 }
 
 // --- CONSTANTS ---
 const FONTS = [
+    { name: 'Nunito', family: "'Nunito', sans-serif" },
     { name: 'Satoshi', family: "'Satoshi', sans-serif" },
     { name: 'General Sans', family: "'General Sans', sans-serif" },
     { name: 'Space Mono', family: "'Space Mono', monospace" },
@@ -143,7 +144,7 @@ const ItemRenderer: React.FC<{
     return (
         <div 
             ref={containerRef}
-            className="w-full h-full relative overflow-hidden group cursor-grab active:cursor-grabbing bg-base-300" 
+            className="w-full h-full relative overflow-hidden group cursor-grab active:cursor-grabbing bg-transparent" 
             onMouseDown={handleDown}
             onWheel={handleWheel}
         >
@@ -153,7 +154,7 @@ const ItemRenderer: React.FC<{
             </div>
             <div className="absolute inset-x-0 bottom-0 p-2 flex justify-between items-center opacity-0 group-hover:opacity-100 transition-opacity bg-gradient-to-t from-black/60 to-transparent pointer-events-none">
                 <div className="flex gap-1 pointer-events-auto">
-                    <button onClick={(e) => { e.stopPropagation(); onTransform({ fit: item.fit === 'cover' ? 'contain' : 'cover' }); }} className="btn btn-xs rounded-none bg-black/40 border-none text-[8px] font-black">{item.fit === 'cover' ? 'FILL' : 'FIT'}</button>
+                    <button onClick={(e) => { e.stopPropagation(); onTransform({ fit: item.fit === 'cover' ? 'contain' : 'cover' }); }} className="btn btn-xs rounded-none bg-black/40 border-none">{item.fit === 'cover' ? 'FILL' : 'FIT'}</button>
                 </div>
                 <button onMouseDown={e => e.stopPropagation()} onClick={e => { e.stopPropagation(); onRemove(); }} className="btn btn-xs btn-circle btn-error pointer-events-auto border-none">✕</button>
             </div>
@@ -209,8 +210,7 @@ const LayerRenderer: React.FC<{
 
 // --- MAIN PAGE ---
 
-const ComposerPage: React.FC<ComposerPageProps> = ({ showGlobalFeedback }) => {
-    const fileInputRef = useRef<HTMLInputElement>(null);
+const ComposerPage: React.FC<ComposerPageProps> = ({ showGlobalFeedback, isExiting = false, isLocalExiting = false }) => {
     const layerImageInputRef = useRef<HTMLInputElement>(null);
     const previewContainerRef = useRef<HTMLDivElement>(null);
     const framePaddingRef = useRef<HTMLDivElement>(null);
@@ -229,7 +229,7 @@ const ComposerPage: React.FC<ComposerPageProps> = ({ showGlobalFeedback }) => {
     const [frameMatting, setFrameMatting] = useLocalStorage('composerFrameMatting', 60);
     
     const [bgColor, setBgColor] = useLocalStorage('composerBgColor', '#FFFFFF');
-    const [outputFormat, setOutputFormat] = useLocalStorage<'png' | 'jpeg'>('composerFormat', 'jpeg');
+    const [outputFormat] = useLocalStorage<'png' | 'jpeg'>('composerFormat', 'jpeg');
 
     const [gridItems, setGridItems] = useState<(ImageItem | null)[]>([]);
     const [frameItem, setFrameItem] = useState<ImageItem | null>(null);
@@ -394,123 +394,161 @@ const ComposerPage: React.FC<ComposerPageProps> = ({ showGlobalFeedback }) => {
         return { cw, ch, gap };
     }, [mode, previewMetrics, gridCols, gridRows, gridGap]);
 
+    const panelVariants = {
+        hidden: { opacity: 0, scale: 0.98 },
+        visible: { opacity: 1, scale: 1, transition: { duration: 0.8, ease: [0.16, 1, 0.3, 1] as any } },
+        exit: { opacity: 0, scale: 0.98, transition: { duration: 0.4, ease: [0.7, 0, 0.84, 0] as any } }
+    };
+
     return (
-        <div className="h-full bg-base-100 flex flex-col overflow-hidden">
-            <div className="flex-grow flex flex-col lg:flex-row overflow-hidden">
-                <aside className="w-full lg:w-96 flex-shrink-0 bg-base-100 border-r border-base-300 flex flex-col overflow-hidden">
-                    <div className="p-4 border-b border-base-300 bg-base-200/10">
-                        <div className="tabs tabs-boxed rounded-none bg-transparent gap-1 p-0">
-                            <button onClick={() => setMode('grid')} className={`tab flex-1 rounded-none font-black text-[9px] uppercase tracking-widest ${mode === 'grid' ? 'tab-active' : ''}`}>Grid Builder</button>
-                            <button onClick={() => setMode('frame')} className={`tab flex-1 rounded-none font-black text-[9px] uppercase tracking-widest ${mode === 'frame' ? 'tab-active' : ''}`}>Image Framer</button>
+        <motion.div 
+            initial="hidden"
+            animate={isLocalExiting || isExiting ? "exit" : "visible"}
+            exit="exit"
+            variants={panelVariants}
+            className="flex flex-col h-full w-full relative overflow-visible p-0 bg-transparent"
+        >
+            <div className="flex-grow flex flex-col lg:flex-row overflow-hidden gap-6 p-0 bg-transparent">
+                <aside className="w-full lg:w-96 flex-shrink-0 flex flex-col relative p-[3px] corner-frame overflow-visible z-10">
+                    <div className="flex flex-col h-full w-full overflow-hidden relative z-10 bg-base-100/40 backdrop-blur-xl">
+                        <div className="h-14 flex items-stretch flex-shrink-0 bg-base-100/10 backdrop-blur-md p-1.5 gap-1.5">
+                            <button onClick={() => setMode('grid')} className={`btn btn-sm h-full rounded-none flex-1 font-normal text-[11px] tracking-wider uppercase px-1 truncate btn-snake font-display no-glow ${mode === 'grid' ? 'btn-ghost text-primary font-black active:no-glow' : 'btn-ghost text-base-content/40 hover:text-primary hover:no-glow'}`}>
+                                <span/><span/><span/><span/>
+                                GRID BUILDER
+                            </button>
+                            <button onClick={() => setMode('frame')} className={`btn btn-sm h-full rounded-none flex-1 font-normal text-[11px] tracking-wider uppercase px-1 truncate btn-snake font-display no-glow ${mode === 'frame' ? 'btn-ghost text-primary font-black active:no-glow' : 'btn-ghost text-base-content/40 hover:text-primary hover:no-glow'}`}>
+                                <span/><span/><span/><span/>
+                                IMAGE FRAMER
+                            </button>
                         </div>
-                    </div>
-                    
-                    <div className="flex-grow p-6 space-y-8 overflow-y-auto custom-scrollbar">
-                        <div className="space-y-4">
-                            <label className="text-[10px] font-black uppercase text-base-content/40 tracking-widest">Dimensions</label>
-                            <select value={aspectRatio} onChange={e => { setAspectRatio(e.target.value); const ratio = RATIOS.find(r => r.value === e.target.value)?.ratio || 1; setWidth("1024"); setHeight(String(Math.round(1024 / ratio))); }} className="select select-sm select-bordered rounded-none w-full font-bold uppercase text-[10px] tracking-widest">
-                                {RATIOS.map(r => <option key={r.value} value={r.value}>{r.label}</option>)}
-                            </select>
-                            <div className="flex gap-2">
-                                <input type="number" value={width} onChange={e => { setWidth(e.target.value); if(isLocked) setHeight(String(Math.round(parseInt(e.target.value) * (parseInt(height)/parseInt(width))))); }} className="input input-sm input-bordered rounded-none w-full font-mono text-xs" />
-                                <button onClick={() => setIsLocked(!isLocked)} className={`btn btn-xs btn-ghost ${isLocked ? 'text-primary' : 'opacity-20'}`}>{isLocked ? <LinkIcon className="w-4 h-4"/> : <LinkOffIcon className="w-4 h-4"/>}</button>
-                                <input type="number" value={height} onChange={e => { setHeight(e.target.value); if(isLocked) setWidth(String(Math.round(parseInt(e.target.value) * (parseInt(width)/parseInt(height))))); }} className="input input-sm input-bordered rounded-none w-full font-mono text-xs" />
-                            </div>
-                        </div>
-
-                        {mode === 'grid' ? (
-                            <div className="space-y-6 animate-fade-in">
-                                <div className="space-y-4">
-                                    <label className="text-[10px] font-black uppercase text-base-content/40 tracking-widest">Grid Rows & Cols</label>
-                                    <div className="flex gap-4"><input type="number" value={gridCols} onChange={e => setGridCols(Math.max(1, parseInt(e.target.value)))} className="input input-sm input-bordered w-full rounded-none font-bold" /><span className="self-center font-black opacity-20">×</span><input type="number" value={gridRows} onChange={e => setGridRows(Math.max(1, parseInt(e.target.value)))} className="input input-sm input-bordered w-full rounded-none font-bold" /></div>
-                                </div>
-                                <div className="space-y-2">
-                                    <div className="flex justify-between items-center"><span className="text-[10px] font-black uppercase text-base-content/20">Spacing</span></div>
-                                    <input type="range" min="0" max="256" step="1" onChange={e => handleGapChange(parseInt(e.target.value))} className="range range-xs range-primary" />
-                                </div>
-                            </div>
-                        ) : (
-                            <div className="space-y-6 animate-fade-in">
-                                <div className="space-y-4">
-                                    <label className="text-[10px] font-black uppercase text-base-content/40 tracking-widest mb-2 block">Matting Style</label>
-                                    <select value={frameStyle} onChange={e => setFrameStyle(e.target.value as FrameStyle)} className="select select-sm select-bordered rounded-none w-full font-bold uppercase text-[11px]"><option value="minimal">Minimal Uniform</option><option value="polaroid">Polaroid Weighted</option><option value="bottom_only">Gallery (Bottom Focus)</option><option value="leica">Leica Style</option><option value="vertical_mat">Vertical Offset</option></select>
-                                </div>
-                                <div className="space-y-2">
-                                    <div className="flex justify-between items-center"><span className="text-[10px] font-black uppercase text-base-content/20">Depth</span><span className="text-[10px] font-mono font-bold text-primary">{frameMatting}PX</span></div>
-                                    <input type="range" min="0" max={Math.floor(parseInt(width)*0.25)} value={frameMatting} onChange={e => setFrameMatting(parseInt(e.target.value))} className="range range-xs range-primary" />
+                        
+                        <div className="flex-grow p-6 space-y-8 overflow-y-auto bg-transparent">
+                            <div className="space-y-4">
+                                <label className="text-[10px] font-black uppercase text-base-content/40 tracking-widest">Dimensions</label>
+                                <select value={aspectRatio} onChange={e => { setAspectRatio(e.target.value); const ratio = RATIOS.find(r => r.value === e.target.value)?.ratio || 1; setWidth("1024"); setHeight(String(Math.round(1024 / ratio))); }} className="form-select w-full">
+                                    {RATIOS.map(r => <option key={r.value} value={r.value}>{r.label}</option>)}
+                                </select>
+                                <div className="flex gap-2">
+                                    <input type="number" value={width} onChange={e => { setWidth(e.target.value); if(isLocked) setHeight(String(Math.round(parseInt(e.target.value) * (parseInt(height)/parseInt(width))))); }} className="form-input w-full" />
+                                    <button onClick={() => setIsLocked(!isLocked)} className={`form-btn btn-xs btn-ghost ${isLocked ? 'text-primary' : 'opacity-20'}`}>{isLocked ? <LinkIcon className="w-4 h-4"/> : <LinkOffIcon className="w-4 h-4"/>}</button>
+                                    <input type="number" value={height} onChange={e => { setHeight(e.target.value); if(isLocked) setWidth(String(Math.round(parseInt(e.target.value) * (parseInt(width)/parseInt(height))))); }} className="form-input w-full" />
                                 </div>
                             </div>
-                        )}
 
-                        <div className="space-y-4 pt-6 border-t border-base-300">
-                            <div className="flex justify-between items-center"><span className="text-[10px] font-black uppercase text-base-content/40 tracking-widest">Background</span><input type="color" value={bgColor} onChange={e => setBgColor(e.target.value)} className="w-8 h-8 rounded-none border-none cursor-pointer" /></div>
-                            <button onClick={() => { if(mode==='grid') setGridItems(prev => prev.map(i => i ? {...i, posX: 0, posY: 0, scale: 1} : null)); else { if(frameItem) setFrameItem({...frameItem, posX:0, posY:0, scale:1}); setLayers(prev => prev.map(s => ({...s, x:0.5, y:0.5}))); } }} className="btn btn-xs btn-ghost border border-base-300 rounded-none w-full font-black text-[9px] tracking-widest uppercase mt-4">Reset Viewport</button>
-                        </div>
-                    </div>
-
-                    <footer className="border-t border-base-300 flex flex-col bg-base-200/5 p-0 overflow-hidden flex-shrink-0">
-                         <div className="flex w-full h-14 border-b border-base-300">
-                            <button onClick={() => { setGridItems(Array(gridCols*gridRows).fill(null)); setFrameItem(null); setLayers([]); }} className="btn btn-ghost flex-1 h-full rounded-none font-black text-[9px] tracking-widest uppercase text-error/40 hover:text-error">RESET</button>
-                            <button onClick={handleDownload} disabled={isProcessing || (mode==='grid'?!gridItems.some(Boolean):!frameItem)} className="btn btn-ghost flex-1 h-full rounded-none font-black text-[9px] tracking-widest uppercase border-l border-base-300">DOWNLOAD</button>
-                        </div>
-                        <button onClick={() => setIsVaultConfirmOpen(true)} disabled={isProcessing || (mode==='grid'?!gridItems.some(Boolean):!frameItem)} className="btn btn-primary h-14 w-full rounded-none font-black text-[9px] tracking-[0.2em] uppercase shadow-none border-none">SAVE TO LIBRARY</button>
-                    </footer>
-                </aside>
-
-                <main className="flex-grow flex flex-col bg-base-100 overflow-hidden relative">
-                    <section className="p-8 border-b border-base-300 bg-base-200/10 flex justify-between items-center h-16"><h1 className="text-xl font-black uppercase tracking-tighter">{mode === 'grid' ? 'Grid Builder' : 'Image Framer'}<span className="text-primary">.</span></h1></section>
-                    <div ref={previewContainerRef} className="flex-grow bg-base-200/5 flex items-center justify-center p-12 overflow-hidden" onMouseDown={e => { if(e.target === e.currentTarget) setActiveLayerId(null); }}>
-                        <div id="framer-canvas-root" className="shadow-2xl relative transition-all duration-500 overflow-hidden" style={{ width: previewMetrics.width, height: previewMetrics.height, backgroundColor: bgColor }}>
-                            {mode === 'grid' && gridLayout && gridItems.map((item, idx) => (
-                                <div key={idx} className="absolute bg-base-300 overflow-hidden" style={{ width: gridLayout.cw, height: gridLayout.ch, left: gridLayout.gap + (idx % gridCols) * (gridLayout.cw + gridLayout.gap), top: gridLayout.gap + Math.floor(idx / gridCols) * (gridLayout.ch + gridLayout.gap) }}>
-                                    {item ? <ItemRenderer item={item} w={gridLayout.cw} h={gridLayout.ch} onRemove={() => setGridItems(prev => { const n = [...prev]; n[idx]=null; return n; })} onTransform={t => setGridItems(prev => { const n = [...prev]; n[idx]={...item, ...t}; return n; })} /> 
-                                    : <div className="w-full h-full flex flex-col items-center justify-center gap-2 opacity-10 hover:opacity-40 transition-opacity">
-                                        <button onClick={() => { setPickerTarget(idx); setIsPickerOpen(true); }} className="btn btn-circle btn-sm btn-ghost"><FolderClosedIcon className="w-8 h-8"/></button>
-                                        <button onClick={() => { setPickerTarget(idx); (window as any).document.getElementById('grid-file-upload')?.click(); }} className="btn btn-circle btn-sm btn-ghost"><PlusIcon className="w-8 h-8"/></button>
-                                    </div>}
-                                </div>
-                            ))}
-                            {mode === 'frame' && (
-                                <div className="w-full h-full relative">
-                                    <div ref={framePaddingRef} className="w-full h-full will-change-[padding]">
-                                        {frameItem ? <ItemRenderer animateEntry item={frameItem} w={previewMetrics.width - (getFrameInsets(frameStyle, frameMatting, parseInt(width))[1]+getFrameInsets(frameStyle, frameMatting, parseInt(width))[3])*previewMetrics.scale} h={previewMetrics.height - (getFrameInsets(frameStyle, frameMatting, parseInt(width))[0]+getFrameInsets(frameStyle, frameMatting, parseInt(width))[2])*previewMetrics.scale} onRemove={() => setFrameItem(null)} onTransform={t => setFrameItem({...frameItem!, ...t})} />
-                                        : <div className="w-full h-full border-2 border-dashed border-base-content/10 flex flex-col items-center justify-center gap-4 opacity-40 hover:opacity-100 transition-opacity">
-                                            <div className="flex gap-4">
-                                                <button onClick={() => setIsPickerOpen(true)} className="btn btn-ghost border border-base-300 rounded-none font-black text-[10px] tracking-widest px-8">LIBRARY</button>
-                                                <button onClick={() => (window as any).document.getElementById('frame-file-upload')?.click()} className="btn btn-primary rounded-none font-black text-[10px] tracking-widest px-8">UPLOAD</button>
-                                            </div>
-                                        </div>}
+                            {mode === 'grid' ? (
+                                <div className="space-y-6 animate-fade-in">
+                                    <div className="space-y-4">
+                                        <label className="text-[10px] font-black uppercase text-base-content/40 tracking-widest">Grid Rows & Cols</label>
+                                        <div className="flex gap-4"><input type="number" value={gridCols} onChange={e => setGridCols(Math.max(1, parseInt(e.target.value)))} className="form-input w-full" /><span className="self-center font-black opacity-20">×</span><input type="number" value={gridRows} onChange={e => setGridRows(Math.max(1, parseInt(e.target.value)))} className="form-input w-full" /></div>
                                     </div>
-                                    {layers.map(layer => (
-                                        <LayerRenderer key={layer.id} layer={layer} isActive={activeLayerId === layer.id} scale={previewMetrics.scale} contW={previewMetrics.width} contH={previewMetrics.height} onActivate={() => setActiveLayerId(layer.id)} onUpdate={u => setLayers(prev => prev.map(s => s.id === layer.id ? {...s, ...u} : s))} />
-                                    ))}
+                                    <div className="space-y-2">
+                                        <div className="flex justify-between items-center"><span className="text-[10px] font-black uppercase text-base-content/20">Spacing</span></div>
+                                        <input type="range" min="0" max="256" step="1" onChange={e => handleGapChange(parseInt(e.target.value))} className="range range-xs range-primary" />
+                                    </div>
+                                </div>
+                            ) : (
+                                <div className="space-y-6 animate-fade-in">
+                                    <div className="space-y-4">
+                                        <label className="text-[10px] font-black uppercase text-base-content/40 tracking-widest mb-2 block">Matting Style</label>
+                                        <select value={frameStyle} onChange={e => setFrameStyle(e.target.value as FrameStyle)} className="form-select w-full"><option value="minimal">Minimal Uniform</option><option value="polaroid">Polaroid Weighted</option><option value="bottom_only">Gallery (Bottom Focus)</option><option value="leica">Leica Style</option><option value="vertical_mat">Vertical Offset</option></select>
+                                    </div>
+                                    <div className="space-y-2">
+                                        <div className="flex justify-between items-center"><span className="text-[10px] font-black uppercase text-base-content/20">Depth</span><span className="text-[10px] font-mono font-bold text-primary">{frameMatting}PX</span></div>
+                                        <input type="range" min="0" max={Math.floor(parseInt(width)*0.25)} value={frameMatting} onChange={e => setFrameMatting(parseInt(e.target.value))} className="range range-xs range-primary" />
+                                    </div>
                                 </div>
                             )}
+
+                            <div className="space-y-4 pt-6 border-t border-base-300/20">
+                                <div className="flex justify-between items-center"><span className="text-[10px] font-black uppercase text-base-content/40 tracking-widest">Background</span><input type="color" value={bgColor} onChange={e => setBgColor(e.target.value)} className="w-8 h-8 rounded-none border-none cursor-pointer" /></div>
+                                <button onClick={() => { if(mode==='grid') setGridItems(prev => prev.map(i => i ? {...i, posX: 0, posY: 0, scale: 1} : null)); else { if(frameItem) setFrameItem({...frameItem, posX:0, posY:0, scale:1}); setLayers(prev => prev.map(s => ({...s, x:0.5, y:0.5}))); } }} className="form-btn btn-xs rounded-none w-full tracking-widest uppercase mt-4">Reset Viewport</button>
+                            </div>
+                        </div>
+
+                        <footer className="h-14 flex items-stretch flex-shrink-0 bg-base-100/10 backdrop-blur-md p-1.5 gap-1.5">
+                            <button onClick={() => { setGridItems(Array(gridCols*gridRows).fill(null)); setFrameItem(null); setLayers([]); }} className="btn btn-sm btn-ghost h-full flex-1 rounded-none tracking-wider uppercase btn-snake text-error/40 hover:text-error no-glow active:no-glow">
+                                <span/><span/><span/><span/>
+                                RESET
+                            </button>
+                            <button onClick={handleDownload} disabled={isProcessing || (mode==='grid'?!gridItems.some(Boolean):!frameItem)} className="btn btn-sm btn-ghost h-full flex-1 rounded-none tracking-wider uppercase btn-snake no-glow active:no-glow">
+                                <span/><span/><span/><span/>
+                                DOWNLOAD
+                            </button>
+                            <button onClick={() => setIsVaultConfirmOpen(true)} disabled={isProcessing || (mode==='grid'?!gridItems.some(Boolean):!frameItem)} className="btn btn-sm btn-primary h-full flex-[1.5] rounded-none tracking-[0.2em] uppercase btn-snake-primary no-glow active:no-glow">
+                                <span/><span/><span/><span/>
+                                SAVE
+                            </button>
+                        </footer>
+                    </div>
+                </aside>
+
+                <main className="flex-grow flex flex-col relative p-[3px] corner-frame overflow-visible z-10 bg-transparent">
+                    <div className="flex flex-col h-full w-full overflow-hidden relative z-10 bg-base-100/40 backdrop-blur-xl">
+                        <div ref={previewContainerRef} className="flex-grow bg-transparent flex items-center justify-center p-12 overflow-hidden" onMouseDown={e => { if(e.target === e.currentTarget) setActiveLayerId(null); }}>
+                            <div id="framer-canvas-root" className="relative transition-all duration-500 overflow-hidden" style={{ width: previewMetrics.width, height: previewMetrics.height, backgroundColor: bgColor }}>
+                                {mode === 'grid' && gridLayout && gridItems.map((item, idx) => (
+                                    <div key={idx} className="absolute bg-transparent overflow-hidden" style={{ width: gridLayout.cw, height: gridLayout.ch, left: gridLayout.gap + (idx % gridCols) * (gridLayout.cw + gridLayout.gap), top: gridLayout.gap + Math.floor(idx / gridCols) * (gridLayout.ch + gridLayout.gap) }}>
+                                        {item ? <ItemRenderer item={item} w={gridLayout.cw} h={gridLayout.ch} onRemove={() => setGridItems(prev => { const n = [...prev]; n[idx]=null; return n; })} onTransform={t => setGridItems(prev => { const n = [...prev]; n[idx]={...item, ...t}; return n; })} /> 
+                                        : <div className="w-full h-full flex flex-col items-center justify-center gap-2 opacity-10 hover:opacity-40 transition-opacity">
+                                            <button onClick={() => { setPickerTarget(idx); setIsPickerOpen(true); }} className="form-btn btn-circle btn-sm bg-transparent border-none"><FolderClosedIcon className="w-8 h-8"/></button>
+                                            <button onClick={() => { setPickerTarget(idx); (window as any).document.getElementById('grid-file-upload')?.click(); }} className="form-btn btn-circle btn-sm bg-transparent border-none"><PlusIcon className="w-8 h-8"/></button>
+                                        </div>}
+                                    </div>
+                                ))}
+                                {mode === 'frame' && (
+                                    <div className="w-full h-full relative">
+                                        <div ref={framePaddingRef} className="w-full h-full will-change-[padding]">
+                                            {frameItem ? <ItemRenderer animateEntry item={frameItem} w={previewMetrics.width - (getFrameInsets(frameStyle, frameMatting, parseInt(width))[1]+getFrameInsets(frameStyle, frameMatting, parseInt(width))[3])*previewMetrics.scale} h={previewMetrics.height - (getFrameInsets(frameStyle, frameMatting, parseInt(width))[0]+getFrameInsets(frameStyle, frameMatting, parseInt(width))[2])*previewMetrics.scale} onRemove={() => setFrameItem(null)} onTransform={t => setFrameItem({...frameItem!, ...t})} />
+                                            : <div className="w-full h-full border-2 border-dashed border-base-content/10 flex flex-col items-center justify-center gap-4 opacity-40 hover:opacity-100 transition-opacity">
+                                                <div className="flex gap-4">
+                                                    <button onClick={() => setIsPickerOpen(true)} className="form-btn rounded-none tracking-widest px-8">LIBRARY</button>
+                                                    <button onClick={() => (window as any).document.getElementById('frame-file-upload')?.click()} className="form-btn form-btn-primary rounded-none tracking-widest px-8">UPLOAD</button>
+                                                </div>
+                                            </div>}
+                                        </div>
+                                        {layers.map(layer => (
+                                            <LayerRenderer key={layer.id} layer={layer} isActive={activeLayerId === layer.id} scale={previewMetrics.scale} contW={previewMetrics.width} contH={previewMetrics.height} onActivate={() => setActiveLayerId(layer.id)} onUpdate={u => setLayers(prev => prev.map(s => s.id === layer.id ? {...s, ...u} : s))} />
+                                        ))}
+                                    </div>
+                                )}
+                            </div>
                         </div>
                     </div>
                 </main>
 
                 {/* RIGHT SIDEBAR: LAYERS (IMAGE FRAMER ONLY) */}
                 {mode === 'frame' && (
-                    <aside className="w-full lg:w-80 flex-shrink-0 bg-base-100 border-l border-base-300 flex flex-col overflow-hidden animate-slide-in-from-right">
-                        <header className="p-6 border-b border-base-300 bg-base-200/10 flex justify-between items-center h-16"><h3 className="text-[10px] font-black uppercase tracking-[0.4em] text-primary">Layers</h3><div className="flex gap-1"><button onClick={() => { const n: Layer = { id: Math.random().toString(36).substr(2,9), type: 'text', content: 'New Text', x: 0.5, y: 0.5, fontSize: 80, color: '#000000', fontFamily: FONTS[0].family, bold: true, italic: false }; setLayers([...layers, n]); setActiveLayerId(n.id); }} className="btn btn-xs btn-ghost btn-square" title="Add Text Layer"><PlusIcon className="w-4 h-4"/></button><button onClick={() => layerImageInputRef.current?.click()} className="btn btn-xs btn-ghost btn-square" title="Add Image Layer"><UploadIcon className="w-4 h-4"/></button></div></header>
-                        <div className="flex-grow overflow-y-auto custom-scrollbar p-6 space-y-4">
-                            {layers.map((layer, i) => (
-                                <div key={layer.id} className={`p-4 border transition-all cursor-pointer ${activeLayerId === layer.id ? 'border-primary bg-primary/5' : 'border-base-300'}`} onClick={() => setActiveLayerId(layer.id)}>
-                                    <div className="flex justify-between items-center mb-3"><span className="text-[9px] font-black uppercase tracking-widest opacity-40">Layer {String(i+1).padStart(2, '0')}</span><button onClick={e => { e.stopPropagation(); setLayers(prev => prev.filter(s => s.id !== layer.id)); }} className="text-error opacity-40 hover:opacity-100">✕</button></div>
-                                    {layer.type === 'text' ? <input value={layer.content} onChange={e => setLayers(prev => prev.map(s => s.id === layer.id ? {...s, content: e.target.value} : s))} className="input input-xs w-full bg-base-200 rounded-none border-none uppercase font-bold" /> : <span className="text-[10px] font-mono opacity-30 truncate block">Image Overlay</span>}
-                                    {activeLayerId === layer.id && (
-                                        <div className="mt-4 pt-4 border-t border-base-300/50 space-y-4">
-                                            <div className="flex justify-between items-center"><span className="text-[9px] font-black uppercase opacity-40 text-primary">Size</span><span className="text-[10px] font-mono font-bold text-primary">{layer.fontSize}PX</span></div>
-                                            <input type="range" min="8" max="1500" value={layer.fontSize} onChange={e => { const v = parseInt(e.target.value); setLayers(prev => prev.map(s => s.id === layer.id ? {...s, fontSize: v} : s)); }} className="range range-xs range-primary" />
-                                            {layer.type === 'text' && <select value={layer.fontFamily} onChange={e => setLayers(prev => prev.map(s => s.id === layer.id ? {...s, fontFamily: e.target.value} : s))} className="select select-xs select-bordered w-full rounded-none text-[10px] font-bold uppercase tracking-tight">{FONTS.map(f => <option key={f.family} value={f.family}>{f.name}</option>)}</select>}
-                                        </div>
-                                    )}
+                    <aside className="w-full lg:w-80 flex-shrink-0 flex flex-col relative p-[3px] corner-frame overflow-visible z-10 animate-slide-in-from-right">
+                        <div className="flex flex-col h-full w-full overflow-hidden relative z-10 bg-base-100/40 backdrop-blur-xl">
+                            <header className="p-6 bg-base-100/10 backdrop-blur-md flex justify-between items-center h-16">
+                                <h3 className="text-[10px] font-black uppercase tracking-[0.4em] text-primary">Layers</h3>
+                                <div className="flex gap-2">
+                                    <button onClick={() => { const n: Layer = { id: Math.random().toString(36).substr(2,9), type: 'text', content: 'New Text', x: 0.5, y: 0.5, fontSize: 80, color: '#000000', fontFamily: FONTS[0].family, bold: true, italic: false }; setLayers([...layers, n]); setActiveLayerId(n.id); }} className="btn btn-xs btn-square bg-base-200/50 border border-primary/20 text-primary hover:bg-primary hover:text-primary-content transition-all" title="Add Text Layer">
+                                        <TypeIcon className="w-4 h-4"/>
+                                    </button>
+                                    <button onClick={() => layerImageInputRef.current?.click()} className="btn btn-xs btn-square bg-base-200/50 border border-primary/20 text-primary hover:bg-primary hover:text-primary-content transition-all" title="Add Image Layer">
+                                        <PhotoIcon className="w-4 h-4"/>
+                                    </button>
                                 </div>
-                            ))}
-                            {layers.length === 0 && (
-                                <div className="py-12 text-center opacity-10 uppercase font-black tracking-widest text-xs">No layers added</div>
-                            )}
+                            </header>
+                            <div className="flex-grow overflow-y-auto p-6 space-y-4 bg-transparent">
+                                {layers.map((layer, i) => (
+                                    <div key={layer.id} className={`p-4 border transition-all cursor-pointer ${activeLayerId === layer.id ? 'border-primary bg-primary/5' : 'border-base-300/20'}`} onClick={() => setActiveLayerId(layer.id)}>
+                                        <div className="flex justify-between items-center mb-3"><span className="text-[9px] font-black uppercase tracking-widest opacity-40">Layer {String(i+1).padStart(2, '0')}</span><button onClick={e => { e.stopPropagation(); setLayers(prev => prev.filter(s => s.id !== layer.id)); }} className="text-error opacity-40 hover:opacity-100">✕</button></div>
+                                        {layer.type === 'text' ? <input value={layer.content} onChange={e => setLayers(prev => prev.map(s => s.id === layer.id ? {...s, content: e.target.value} : s))} className="form-input h-8 w-full bg-transparent rounded-none border-none uppercase font-bold" /> : <span className="text-[10px] font-mono opacity-30 truncate block">Image Overlay</span>}
+                                        {activeLayerId === layer.id && (
+                                            <div className="mt-4 pt-4 border-t border-base-300/10 space-y-4">
+                                                <div className="flex justify-between items-center"><span className="text-[9px] font-black uppercase opacity-40 text-primary">Size</span><span className="text-[10px] font-mono font-bold text-primary">{layer.fontSize}PX</span></div>
+                                                <input type="range" min="8" max="1500" value={layer.fontSize} onChange={e => { const v = parseInt(e.target.value); setLayers(prev => prev.map(s => s.id === layer.id ? {...s, fontSize: v} : s)); }} className="range range-xs range-primary" />
+                                                {layer.type === 'text' && <select value={layer.fontFamily} onChange={e => setLayers(prev => prev.map(s => s.id === layer.id ? {...s, fontFamily: e.target.value} : s))} className="form-select h-8 w-full rounded-none text-[10px] font-bold uppercase tracking-tight">{FONTS.map(f => <option key={f.family} value={f.family}>{f.name}</option>)}</select>}
+                                            </div>
+                                        )}
+                                    </div>
+                                ))}
+                                {layers.length === 0 && (
+                                    <div className="py-12 text-center opacity-10 uppercase font-black tracking-widest text-xs">No layers added</div>
+                                )}
+                            </div>
                         </div>
                     </aside>
                 )}
@@ -521,8 +559,8 @@ const ComposerPage: React.FC<ComposerPageProps> = ({ showGlobalFeedback }) => {
             <input type="file" id="frame-file-upload" className="hidden" onChange={e => handleFiles(Array.from(e.target.files || []))} />
             <input type="file" ref={layerImageInputRef} className="hidden" onChange={async e => { if(e.target.files?.[0]) { const b64 = await fileToBase64(e.target.files[0]); const n: Layer = { id: Math.random().toString(36).substr(2,9), type: 'image', content: b64, x: 0.5, y: 0.5, fontSize: 100, color: '', fontFamily: '', bold: false, italic: false }; setLayers([...layers, n]); setActiveLayerId(n.id); } }} />
             <GalleryPickerModal isOpen={isPickerOpen} onClose={() => { setIsPickerOpen(false); setPickerTarget(null); }} onSelect={handleLibrarySelect} selectionMode={mode === 'frame' ? 'single' : 'multiple'} typeFilter="image" />
-            <ConfirmationModal isOpen={isVaultConfirmOpen} onClose={() => setIsVaultConfirmOpen(false)} onConfirm={async () => { setIsProcessing(true); const canvas = await generateFinalCanvas(); if(canvas) { await addItemToGallery('image', [canvas.toDataURL(`image/${outputFormat}`)], ['Composer'], undefined, `composition_${Date.now()}`); showGlobalFeedback?.("Saved to library."); } setIsProcessing(false); setIsVaultConfirmOpen(false); }} title="SAVE TO LIBRARY" message="Save this composition to your local folders?" btnClassName="btn-primary" />
-        </div>
+            <ConfirmationModal isOpen={isVaultConfirmOpen} onClose={() => setIsVaultConfirmOpen(false)} onConfirm={async () => { setIsProcessing(true); const canvas = await generateFinalCanvas(); if(canvas) { await addItemToGallery('image', [canvas.toDataURL(`image/${outputFormat}`)], ['Composer'], undefined, `composition_${Date.now()}`); showGlobalFeedback?.("Saved to library."); } setIsProcessing(false); setIsVaultConfirmOpen(false); }} title="SAVE COMPOSITION" message="Save this composition to your local folders?" btnClassName="btn-primary" />
+        </motion.div>
     );
 };
 

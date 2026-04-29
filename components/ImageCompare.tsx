@@ -1,5 +1,7 @@
 import React, { useState, useRef, useCallback, useEffect, useMemo } from 'react';
-import { UploadIcon, ViewColumnsIcon, RefreshIcon, EyeIcon, ViewSplitHorizontalIcon, FolderClosedIcon } from './icons';
+import { motion } from 'framer-motion';
+import { TerminalText, PanelLine, ScanLine, panelVariants, sectionWipeVariants, contentVariants } from './AnimatedPanels';
+import { ViewColumnsIcon, RefreshIcon, EyeIcon, ViewSplitHorizontalIcon } from './icons';
 import GalleryPickerModal from './GalleryPickerModal';
 import type { GalleryItem } from '../types';
 import { fileSystemManager } from '../utils/fileUtils';
@@ -8,15 +10,15 @@ import { fileSystemManager } from '../utils/fileUtils';
 type ViewMode = 'split' | 'sideBySide';
 
 interface ImageState {
-  file: File | null;
-  url: string;
-  width: number;
-  height: number;
+    file: File | null;
+    url: string;
+    width: number;
+    height: number;
 }
 
 interface TransformState {
-  zoom: number;
-  pan: { x: number; y: number };
+    zoom: number;
+    pan: { x: number; y: number };
 }
 
 const formatBytes = (bytes: number, decimals = 2) => {
@@ -29,64 +31,64 @@ const formatBytes = (bytes: number, decimals = 2) => {
 };
 
 const ImageSlot: React.FC<{
-  onFileSelect: (file: File) => void;
-  onLibraryOpen: () => void;
-  onRemove: () => void;
-  image: ImageState | null;
-  title: string;
+    onFileSelect: (file: File) => void;
+    onLibraryOpen: () => void;
+    onRemove: () => void;
+    image: ImageState | null;
+    title: string;
 }> = ({ onFileSelect, onLibraryOpen, onRemove, image, title }) => {
-  const [isDragging, setIsDragging] = useState(false);
-  const inputRef = useRef<HTMLInputElement>(null);
+    const [isDragging, setIsDragging] = useState(false);
+    const inputRef = useRef<HTMLInputElement>(null);
 
-  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    if ((e.currentTarget as any).files?.[0]) {
-      onFileSelect((e.currentTarget as any).files![0]);
-    }
-    if (e.currentTarget) (e.currentTarget as any).value = '';
-  };
+    const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+        if ((e.currentTarget as any).files?.[0]) {
+            onFileSelect((e.currentTarget as any).files![0]);
+        }
+        if (e.currentTarget) (e.currentTarget as any).value = '';
+    };
 
-  const handleDrop = (e: React.DragEvent) => {
-    e.preventDefault();
-    setIsDragging(false);
-    if ((e.dataTransfer as any).files?.[0]) {
-      onFileSelect((e.dataTransfer as any).files[0]);
-    }
-  };
+    const handleDrop = (e: React.DragEvent) => {
+        e.preventDefault();
+        setIsDragging(false);
+        if ((e.dataTransfer as any).files?.[0]) {
+            onFileSelect((e.dataTransfer as any).files[0]);
+        }
+    };
 
-  if (image) {
-    return (
-        <div className="p-4 bg-base-100 border border-base-300 group">
-            <div className="flex items-center gap-4">
-                <img src={image.url} alt={image.file?.name || 'Library File'} className="w-16 h-16 object-cover rounded-none flex-shrink-0 bg-base-300 border border-base-300"/>
-                <div className="text-[10px] flex-grow min-w-0">
-                    <p className="font-black uppercase tracking-widest text-primary mb-1">{title}</p>
-                    <p className="truncate font-bold text-base-content/60" title={image.file?.name || 'Library Image'}>{image.file?.name || 'Library Item'}</p>
-                    <p className="text-[9px] font-mono text-base-content/30 mt-1 uppercase">{image.width}×{image.height} {image.file ? `• ${formatBytes(image.file.size)}` : ''}</p>
+    if (image) {
+        return (
+            <div className="p-4 group">
+                <div className="flex items-center gap-4">
+                    <img src={image.url} alt={image.file?.name || 'Library File'} className="w-16 h-16 object-cover rounded-none flex-shrink-0 bg-transparent" />
+                    <div className="text-[10px] flex-grow min-w-0">
+                        <p className="font-black uppercase tracking-widest text-primary mb-1">{title}</p>
+                        <p className="truncate font-bold text-base-content/60" title={image.file?.name || 'Library Image'}>{image.file?.name || 'Library Item'}</p>
+                        <p className="text-[9px] font-mono text-base-content/30 mt-1 uppercase">{image.width}×{image.height} {image.file ? `• ${formatBytes(image.file.size)}` : ''}</p>
+                    </div>
+                    <button onClick={onRemove} className="form-btn h-6 w-6 text-error opacity-20 group-hover:opacity-100 transition-opacity">✕</button>
                 </div>
-                <button onClick={onRemove} className="btn btn-xs btn-ghost btn-square opacity-20 group-hover:opacity-100 transition-opacity">✕</button>
+            </div>
+        );
+    }
+
+    return (
+        <div
+            className={`p-6 border-2 border-dashed transition-all flex flex-col items-center justify-center text-center cursor-pointer gap-4 ${isDragging ? 'border-primary bg-primary/10' : 'border-base-300 hover:border-primary/50'}`}
+            onDragOver={(e) => { e.preventDefault(); setIsDragging(true); }}
+            onDragLeave={() => setIsDragging(false)}
+            onDrop={handleDrop}
+        >
+            <input type="file" ref={inputRef} onChange={handleFileChange} className="hidden" accept="image/*" />
+            <div>
+                <p className="text-[10px] font-black uppercase tracking-[0.2em] text-base-content/40 mb-1">{title}</p>
+                <p className="text-[9px] font-bold uppercase tracking-widest text-base-content/20">Source Input</p>
+            </div>
+            <div className="flex gap-2">
+                <button onClick={(e) => { e.stopPropagation(); (inputRef.current as any)?.click(); }} className="form-btn h-8 px-4">UPLOAD</button>
+                <button onClick={(e) => { e.stopPropagation(); onLibraryOpen(); }} className="form-btn form-btn-primary h-8 px-4">LIBRARY</button>
             </div>
         </div>
     );
-  }
-
-  return (
-    <div
-      className={`p-6 border-2 border-dashed transition-all flex flex-col items-center justify-center text-center cursor-pointer gap-4 ${isDragging ? 'border-primary bg-primary/10' : 'border-base-300 hover:border-primary/50 bg-base-200/10'}`}
-      onDragOver={(e) => { e.preventDefault(); setIsDragging(true); }}
-      onDragLeave={() => setIsDragging(false)}
-      onDrop={handleDrop}
-    >
-      <input type="file" ref={inputRef} onChange={handleFileChange} className="hidden" accept="image/*" />
-      <div>
-          <p className="text-[10px] font-black uppercase tracking-[0.2em] text-base-content/40 mb-1">{title}</p>
-          <p className="text-[9px] font-bold uppercase tracking-widest text-base-content/20">Source Input</p>
-      </div>
-      <div className="flex gap-2">
-        <button onClick={(e) => { e.stopPropagation(); (inputRef.current as any)?.click(); }} className="btn btn-xs btn-ghost border border-base-300 rounded-none font-black text-[8px] tracking-widest uppercase">UPLOAD</button>
-        <button onClick={(e) => { e.stopPropagation(); onLibraryOpen(); }} className="btn btn-xs btn-xs btn-primary rounded-none font-black text-[8px] tracking-widest uppercase">LIBRARY</button>
-      </div>
-    </div>
-  );
 };
 
 interface ViewProps {
@@ -146,7 +148,7 @@ const SplitView: React.FC<ViewProps & {
     }, [handleSliderMove, handleSliderMouseUp]);
 
     const baseImageStyle = useBaseImageStyle(transform);
-    
+
     return (
         <div ref={viewerRef} className="w-full h-full relative overflow-hidden">
             <img src={imageA.url} style={baseImageStyle} draggable={false} />
@@ -164,7 +166,7 @@ const SplitView: React.FC<ViewProps & {
 
 const SideBySideView: React.FC<ViewProps> = ({ imageA, imageB, transform }) => {
     const baseImageStyle = useBaseImageStyle(transform);
-    
+
     return (
         <div className="flex w-full h-full">
             <div className="w-1/2 h-full relative overflow-hidden">
@@ -177,12 +179,16 @@ const SideBySideView: React.FC<ViewProps> = ({ imageA, imageB, transform }) => {
     );
 };
 
-const ImageCompare: React.FC = () => {
+interface ImageCompareProps {
+    isExiting?: boolean;
+}
+
+const ImageCompare: React.FC<ImageCompareProps> = ({ isExiting = false }) => {
     const [imageA, setImageA] = useState<ImageState | null>(null);
     const [imageB, setImageB] = useState<ImageState | null>(null);
     const [viewMode, setViewMode] = useState<ViewMode>('split');
     const [transform, setTransform] = useState<TransformState>({ zoom: 1, pan: { x: 0, y: 0 } });
-    
+
     const [isPanning, setIsPanning] = useState(false);
     const panStartRef = useRef({ mouseX: 0, mouseY: 0, panX: transform.pan.x, panY: transform.pan.y });
     const viewerRef = useRef<HTMLDivElement>(null);
@@ -199,7 +205,7 @@ const ImageCompare: React.FC = () => {
         const url = imageB?.url;
         return () => { if (url) URL.revokeObjectURL(url); };
     }, [imageB]);
-    
+
     const handleFileSelect = (file: File, imageSlot: 'A' | 'B') => {
         const url = URL.createObjectURL(file);
         const img = new (window as any).Image();
@@ -219,7 +225,7 @@ const ImageCompare: React.FC = () => {
         const gItem = items[0];
         const blob = await fileSystemManager.getFileAsBlob(gItem.urls[0]);
         if (!blob) return;
-        
+
         const url = URL.createObjectURL(blob);
         const img = new (window as any).Image();
         img.onload = () => {
@@ -237,7 +243,7 @@ const ImageCompare: React.FC = () => {
     useEffect(() => {
         handleResetView();
     }, [viewMode, handleResetView]);
-    
+
     const handleResetAll = () => {
         setImageA(null);
         setImageB(null);
@@ -253,102 +259,143 @@ const ImageCompare: React.FC = () => {
         if (clampedZoom <= 1) { handleResetView(); return; }
         setTransform(prev => ({ ...prev, zoom: clampedZoom }));
     };
-    
+
     const handleMouseDown = (e: React.MouseEvent) => {
         if (e.button !== 0 || transform.zoom <= 1) return;
         e.preventDefault(); e.stopPropagation();
         setIsPanning(true);
         panStartRef.current = { mouseX: e.clientX, mouseY: e.clientY, panX: transform.pan.x, panY: transform.pan.y };
     };
-    
+
     const handleMouseMove = (e: React.MouseEvent) => {
         if (!isPanning) return;
         const dx = e.clientX - panStartRef.current.mouseX;
         const dy = e.clientY - panStartRef.current.mouseY;
-        setTransform(prev => ({ ...prev, pan: { x: panStartRef.current.panX + dx, y: panStartRef.current.panY + dy }}));
+        setTransform(prev => ({ ...prev, pan: { x: panStartRef.current.panX + dx, y: panStartRef.current.panY + dy } }));
     };
 
     const handleMouseUpOrLeave = () => setIsPanning(false);
-    
+
     return (
-        <div className="h-full bg-base-100 flex flex-col overflow-hidden">
-            <div className="flex-grow flex flex-col lg:flex-row overflow-hidden">
-                <aside className="w-full lg:w-96 flex-shrink-0 bg-base-100 flex flex-col border-r border-base-300 overflow-hidden">
-                    <header className="p-6 border-b border-base-300 bg-base-200/10">
-                        <h3 className="text-[10px] font-black uppercase tracking-[0.4em] text-primary">Artifact Inputs</h3>
-                    </header>
-                    <div className="flex-grow p-6 space-y-6 overflow-y-auto custom-scrollbar">
-                        <div className="space-y-4">
-                           <ImageSlot 
-                                onFileSelect={(f) => handleFileSelect(f, 'A')} 
-                                onLibraryOpen={() => { setPickerTargetIndex('A'); setIsPickerOpen(true); }}
-                                onRemove={() => setImageA(null)} 
-                                image={imageA} 
-                                title="Primary Image" 
-                           />
-                           <ImageSlot 
-                                onFileSelect={(f) => handleFileSelect(f, 'B')} 
-                                onLibraryOpen={() => { setPickerTargetIndex('B'); setIsPickerOpen(true); }}
-                                onRemove={() => setImageB(null)} 
-                                image={imageB} 
-                                title="Secondary Image" 
-                           />
-                        </div>
-
-                        <div className="space-y-4 pt-4 border-t border-base-300/50">
-                           <label className="text-[10px] font-black uppercase tracking-widest text-base-content/40">Visual Matrix</label>
-                           <div className="join w-full">
-                                <button onClick={() => setViewMode('split')} className={`join-item btn btn-xs flex-1 rounded-none font-black text-[9px] tracking-widest ${viewMode === 'split' ? 'btn-active' : ''}`}><ViewSplitHorizontalIcon className="w-4 h-4 mr-2"/>SPLIT</button>
-                                <button onClick={() => setViewMode('sideBySide')} className={`join-item btn btn-xs flex-1 rounded-none font-black text-[9px] tracking-widest ${viewMode === 'sideBySide' ? 'btn-active' : ''}`}><ViewColumnsIcon className="w-4 h-4 mr-2"/>DUAL</button>
-                           </div>
-                        </div>
-
-                         <div className="pt-4 border-t border-base-300/50">
-                            <button onClick={handleResetView} className="btn btn-xs btn-ghost w-full justify-start rounded-none font-black text-[9px] tracking-widest uppercase"><EyeIcon className="w-4 h-4 mr-2 text-primary"/> RE-CENTER OPTICS</button>
-                        </div>
-                    </div>
-                     <footer className="p-4 border-t border-base-300 bg-base-200/20">
-                        <button onClick={handleResetAll} className="btn btn-sm btn-ghost w-full rounded-none font-black text-[9px] tracking-widest uppercase text-error/40 hover:text-error hover:bg-error/10">PURGE BUFFERS</button>
-                    </footer>
-                </aside>
-
-                <main 
-                    className="flex-grow bg-base-100 overflow-y-auto overflow-x-hidden scroll-smooth custom-scrollbar flex flex-col"
+        <div className="flex flex-col h-full w-full relative overflow-visible p-0 bg-transparent">
+            <div className="flex-grow flex flex-col lg:flex-row overflow-hidden gap-6 p-0 bg-transparent">
+                <motion.aside 
+                    variants={panelVariants}
+                    initial="hidden"
+                    animate={isExiting ? "exit" : "visible"}
+                    exit="exit"
+                    className="w-full lg:w-96 flex-shrink-0 flex flex-col relative p-[3px] corner-frame overflow-visible z-10"
                 >
-                    <section className="p-10 border-b border-base-300 bg-base-200/20">
-                        <div className="max-w-screen-2xl mx-auto flex flex-col gap-1">
-                            <div className="flex flex-col md:flex-row md:items-stretch justify-between gap-6">
-                                <h1 className="text-2xl lg:text-3xl font-black tracking-tighter text-base-content leading-none flex items-center uppercase">Image Compare<span className="text-primary">.</span></h1>
+                    <PanelLine position="top" delay={0.4} />
+                    <PanelLine position="bottom" delay={0.5} />
+                    <PanelLine position="left" delay={0.6} />
+                    <PanelLine position="right" delay={0.7} />
+                    <ScanLine delay={3.5} />
+                    <div className="flex flex-col h-full w-full overflow-hidden relative z-10 bg-base-100/40 backdrop-blur-xl">
+                        <motion.header 
+                            variants={sectionWipeVariants}
+                            custom={1.2}
+                            initial="hidden"
+                            animate="visible"
+                            exit="exit"
+                            className="p-6 bg-base-100/10 backdrop-blur-md"
+                        >
+                            <TerminalText text="ARTIFACT INPUTS" delay={2.0} className="text-[10px] font-black uppercase text-primary" />
+                        </motion.header>
+                        <motion.div 
+                            variants={contentVariants}
+                            custom={2.2}
+                            initial="hidden"
+                            animate="visible"
+                            className="flex-grow p-6 space-y-6 overflow-y-auto bg-transparent"
+                        >
+                            <div className="space-y-4">
+                                <ImageSlot
+                                    onFileSelect={(f) => handleFileSelect(f, 'A')}
+                                    onLibraryOpen={() => { setPickerTargetIndex('A'); setIsPickerOpen(true); }}
+                                    onRemove={() => setImageA(null)}
+                                    image={imageA}
+                                    title="Primary Image"
+                                />
+                                <ImageSlot
+                                    onFileSelect={(f) => handleFileSelect(f, 'B')}
+                                    onLibraryOpen={() => { setPickerTargetIndex('B'); setIsPickerOpen(true); }}
+                                    onRemove={() => setImageB(null)}
+                                    image={imageB}
+                                    title="Secondary Image"
+                                />
                             </div>
-                            <p className="text-[11px] font-bold text-base-content/30 uppercase tracking-[0.3em] w-full">Synchronized viewport for pixel-accurate evaluation and side-by-side comparison.</p>
-                        </div>
-                    </section>
 
-                    <div 
-                        ref={viewerRef}
-                        className="flex-grow bg-base-200/20 overflow-hidden relative"
-                        style={{ cursor: transform.zoom > 1 ? (isPanning ? 'grabbing' : 'grab') : 'default' }}
-                        onWheel={handleWheel}
-                        onMouseDown={handleMouseDown}
-                        onMouseMove={handleMouseMove}
-                        onMouseUp={handleMouseUpOrLeave}
-                        onMouseLeave={handleMouseUpOrLeave}
-                    >
-                        {!imageA || !imageB ? (
-                            <div className="w-full h-full flex flex-col items-center justify-center text-center p-12 opacity-10">
-                                <RefreshIcon className="w-24 h-24 mb-6" />
-                                <p className="text-xl font-black uppercase tracking-widest">Awaiting Dual Input Sequence</p>
+                            <div className="space-y-4 pt-4">
+                                <label className="text-[10px] font-black uppercase tracking-widest text-base-content/40">Visual Matrix</label>
+                                <div className="form-tab-group w-full">
+                                    <button onClick={() => setViewMode('split')} className={`form-tab-item flex-1 ${viewMode === 'split' ? 'active' : ''}`}><ViewSplitHorizontalIcon className="w-4 h-4 mr-2" />SPLIT</button>
+                                    <button onClick={() => setViewMode('sideBySide')} className={`form-tab-item flex-1 ${viewMode === 'sideBySide' ? 'active' : ''}`}><ViewColumnsIcon className="w-4 h-4 mr-2" />DUAL</button>
+                                </div>
                             </div>
-                        ) : viewMode === 'split' ? (
-                            <SplitView key="split" imageA={imageA} imageB={imageB} transform={transform} viewerRef={viewerRef} />
-                        ) : (
-                            <SideBySideView key="sideBySide" imageA={imageA} imageB={imageB} transform={transform} />
-                        )}
+
+                            <div className="pt-4">
+                                <button onClick={handleResetView} className="form-btn w-full justify-start h-8 px-4"><EyeIcon className="w-4 h-4 mr-2 text-primary" /> RE-CENTER OPTICS</button>
+                            </div>
+                        </motion.div>
+                        <motion.footer 
+                            variants={contentVariants}
+                            custom={2.4}
+                            initial="hidden"
+                            animate="visible"
+                            className="h-14 flex items-stretch flex-shrink-0 bg-base-100/10 backdrop-blur-md p-1.5 gap-1.5"
+                        >
+                            <button onClick={handleResetAll} className="btn btn-sm btn-ghost h-full flex-1 rounded-none tracking-wider uppercase btn-snake text-error/40 hover:text-error">
+                                <span /><span /><span /><span />
+                                PURGE BUFFERS
+                            </button>
+                        </motion.footer>
                     </div>
-                </main>
+                </motion.aside>
+
+                <motion.main 
+                    variants={panelVariants}
+                    initial="hidden"
+                    animate={isExiting ? "exit" : "visible"}
+                    exit="exit"
+                    className="flex-grow flex flex-col relative p-[3px] corner-frame overflow-visible z-10 lg:ml-1"
+                >
+                    <PanelLine position="top" delay={0.4} />
+                    <PanelLine position="bottom" delay={0.5} />
+                    <PanelLine position="left" delay={0.6} />
+                    <PanelLine position="right" delay={0.7} />
+                    <ScanLine delay={3.5} />
+                    <div className="flex flex-col h-full w-full overflow-hidden relative z-10 bg-base-100/40 backdrop-blur-xl p-0">
+                        <motion.div
+                            variants={sectionWipeVariants}
+                            custom={1.6}
+                            initial="hidden"
+                            animate="visible"
+                            ref={viewerRef}
+                            className="flex-grow bg-base-200/20 overflow-hidden relative"
+                            style={{ cursor: transform.zoom > 1 ? (isPanning ? 'grabbing' : 'grab') : 'default' }}
+                            onWheel={handleWheel}
+                            onMouseDown={handleMouseDown}
+                            onMouseMove={handleMouseMove}
+                            onMouseUp={handleMouseUpOrLeave}
+                            onMouseLeave={handleMouseUpOrLeave}
+                        >
+                            {!imageA || !imageB ? (
+                                <div className="w-full h-full flex flex-col items-center justify-center text-center p-12 opacity-10">
+                                    <RefreshIcon className="w-24 h-24 mb-6" />
+                                    <p className="text-xl font-black uppercase tracking-widest">Awaiting Dual Input Sequence</p>
+                                </div>
+                            ) : viewMode === 'split' ? (
+                                <SplitView key="split" imageA={imageA} imageB={imageB} transform={transform} viewerRef={viewerRef} />
+                            ) : (
+                                <SideBySideView key="sideBySide" imageA={imageA} imageB={imageB} transform={transform} />
+                            )}
+                        </motion.div>
+                    </div>
+                </motion.main>
             </div>
 
-            <GalleryPickerModal 
+            <GalleryPickerModal
                 isOpen={isPickerOpen}
                 onClose={() => setIsPickerOpen(false)}
                 onSelect={handleLibrarySelect}

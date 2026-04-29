@@ -103,49 +103,93 @@ class ErrorBoundary extends React.Component<{ children: React.ReactNode }, { has
 
 const InitialLoader: React.FC<{ status: string; progress: number | null; onContinue: (withMusic: boolean) => void }> = ({ status, progress, onContinue }) => {
     const textWrapperRef = useRef<HTMLHeadingElement>(null);
-    const [logs, setLogs] = useState<string[]>([]);
-    const logRef = useRef(0);
-    const percentage = Math.round((progress || 0) * 100);
-    const displayPercentage = useRef(0);
+    const logoFillRef = useRef<HTMLDivElement>(null);
+    const [displayStatus, setDisplayStatus] = useState<string>('');
+    const [history, setHistory] = useState<string[]>([]);
+    const [visualPercentage, setVisualPercentage] = useState(0);
     const [smoothPercentage, setSmoothPercentage] = useState(0);
     const [isComplete, setIsComplete] = useState(false);
-
+    const actionButtonsRef = useRef<HTMLDivElement>(null);
+    const progressStatusRef = useRef<HTMLDivElement>(null);
+    const [showCursor, setShowCursor] = useState(true);
+    
+    // Blinking cursor
     useEffect(() => {
-        const target = percentage;
-        const obj = { val: displayPercentage.current };
-        gsap.to(obj, {
+        const interval = setInterval(() => {
+            setShowCursor(prev => !prev);
+        }, 500);
+        return () => clearInterval(interval);
+    }, []);
+    
+    const queueRef = useRef<{ s: string, p: number }[]>([]);
+    const isProcessingRef = useRef(false);
+    const displayPercentageRef = useRef(0);
+
+    // Queue updates and process them sequentially at human-readable speed
+    useEffect(() => {
+        const newProgress = Math.round((progress || 0) * 100);
+        // Only queue if it's a new status or a meaningful progress jump, to prevent locking up
+        if (queueRef.current.length === 0 || queueRef.current[queueRef.current.length - 1].s !== status || newProgress === 100) {
+             queueRef.current.push({ s: status || 'DIAGNOSTIC_ACTIVE', p: newProgress });
+             processQueue();
+        }
+
+        async function processQueue() {
+            if (isProcessingRef.current) return;
+            isProcessingRef.current = true;
+
+            while (queueRef.current.length > 0) {
+                const next = queueRef.current.shift()!;
+                const fullText = `> ${next.s.toUpperCase()}`;
+                
+                await new Promise<void>(resolve => {
+                    let i = 0;
+                    const typeChar = () => {
+                        if (i <= fullText.length) {
+                            setDisplayStatus(fullText.substring(0, i));
+                            i++;
+                            if (i <= fullText.length) {
+                                setTimeout(typeChar, 10 + Math.random() * 20);
+                            } else {
+                                setTimeout(resolve, 100 + Math.random() * 150); // Pause before next line
+                            }
+                        }
+                    };
+                    typeChar();
+                });
+
+                setHistory(prev => {
+                    const nextHist = [...prev, fullText];
+                    return nextHist.slice(-2);
+                });
+                setVisualPercentage(next.p);
+            }
+
+            isProcessingRef.current = false;
+            // Force a re-evaluation of completion by slightly shaking state or we just check here
+            if (visualPercentage >= 100) {
+                setVisualPercentage(100);
+            }
+        }
+    }, [status, progress]);
+
+    // Animate the fake visual percentage smoothly
+    useEffect(() => {
+        const target = visualPercentage;
+        const obj = { val: displayPercentageRef.current };
+        const animation = gsap.to(obj, {
             val: target,
-            duration: 1.2,
+            duration: 0.5,
             ease: "power2.out",
             onUpdate: () => {
-                displayPercentage.current = obj.val;
+                displayPercentageRef.current = obj.val;
                 setSmoothPercentage(Math.round(obj.val));
             }
         });
-    }, [percentage]);
-
-    const bootLogs = [
-        '> BOOT_SEQUENCE_INIT...',
-        '> KERNEL_LOAD...',
-        '> MOUNT_VOLUMES...',
-        '> INIT_DAEMONS...',
-        '> SYNC_REGISTRIES...',
-        '> VERIFY_INTEGRITY...',
-        '> ACTIVATE_MODULES...',
-        '> SYSTEM_ONLINE'
-    ];
-
-    useEffect(() => {
-        if (percentage > 10 && logRef.current < bootLogs.length) {
-            const interval = setInterval(() => {
-                if (logRef.current < bootLogs.length) {
-                    setLogs(prev => [...prev, bootLogs[logRef.current]]);
-                    logRef.current++;
-                }
-            }, 300);
-            return () => clearInterval(interval);
-        }
-    }, [percentage]);
+        return () => {
+            animation.kill();
+        };
+    }, [visualPercentage]);
 
     useLayoutEffect(() => {
         if (!textWrapperRef.current) return;
@@ -153,15 +197,39 @@ const InitialLoader: React.FC<{ status: string; progress: number | null; onConti
             { yPercent: 100, autoAlpha: 0 },
             { yPercent: 0, autoAlpha: 1, duration: 1.5, ease: "expo.out" }
         );
+        
+        if (logoFillRef.current) {
+            gsap.fromTo(logoFillRef.current,
+                { width: '0%' },
+                { 
+                    width: '100%', 
+                    duration: 2.5, 
+                    ease: "power2.inOut", 
+                    delay: 0.5
+                }
+            );
+        }
     }, []);
 
+    // Only mark as complete when visual progress reaches 100 AND the queue is done processing
     useEffect(() => {
-        if (percentage >= 100 && smoothPercentage === 100) {
-            setIsComplete(true);
+        if (visualPercentage >= 100 && smoothPercentage >= 99 && queueRef.current.length === 0) {
+            // delay for a moment so the blinking SYSTEM READY text is visible
+            const t = setTimeout(() => {
+                setIsComplete(true);
+            }, 2000);
+            return () => clearTimeout(t);
         }
-    }, [percentage, smoothPercentage]);
+    }, [visualPercentage, smoothPercentage]);
 
     const handleContinue = (withMusic: boolean) => {
+        if (actionButtonsRef.current) {
+            gsap.to(actionButtonsRef.current, { autoAlpha: 0, duration: 0.4 });
+        }
+        
+        const footerEl = document.querySelector('#initial-loader .absolute.bottom-8');
+        if (footerEl) gsap.to(footerEl, { autoAlpha: 0, duration: 0.4 });
+
         if (textWrapperRef.current) {
             gsap.to(textWrapperRef.current, {
                 y: -80,
@@ -180,25 +248,7 @@ const InitialLoader: React.FC<{ status: string; progress: number | null; onConti
     return (
         <div id="initial-loader" className="fixed inset-0 z-[500] flex flex-col items-center justify-center bg-base-100 text-base-content overflow-hidden select-none font-sans" style={{ background: 'oklch(var(--b1))', opacity: 1 }}>
             <div className="absolute inset-0 bg-grid-texture opacity-[0.03] pointer-events-none"></div>
-
-            {/* Large Background Percentage (SR Seventy One Style) */}
-            <div className={`absolute inset-0 flex items-center justify-center pointer-events-none overflow-hidden transition-opacity duration-1000 ${isComplete ? 'opacity-0' : 'opacity-100'}`}>
-                <span
-                    className="text-[25vw] font-normal opacity-[0.03] leading-none select-none font-monoton tracking-widest will-change-transform"
-                    style={{ transform: `translateY(${(100 - smoothPercentage) * 0.2}px)` }}
-                >
-                    {smoothPercentage.toString().padStart(2, '0')}
-                </span>
-            </div>
-
-            {/* Terminal Logs - Left Side */}
-            <div className={`absolute left-16 md:left-24 top-1/2 -translate-y-1/2 flex flex-col gap-1 pointer-events-none z-10 transition-opacity duration-1000 ${isComplete ? 'opacity-0' : 'opacity-100'}`}>
-                {logs.slice(-6).map((log, i) => (
-                    <span key={i} className="text-[8px] font-mono tracking-widest text-primary/40 animate-fade-in">
-                        {log}
-                    </span>
-                ))}
-            </div>
+            <div className="absolute inset-0 pointer-events-none opacity-20" style={{ backgroundImage: 'linear-gradient(transparent 50%, rgba(0, 0, 0, 0.25) 50%)', backgroundSize: '100% 4px', zIndex: 1 }}></div>
 
             <div className="relative z-10 flex flex-col items-center">
                 <div className="overflow-hidden mb-6 px-4">
@@ -208,8 +258,9 @@ const InitialLoader: React.FC<{ status: string; progress: number | null; onConti
                         </span>
 
                         <div
-                            className={`row-start-1 col-start-1 h-full overflow-hidden transition-all duration-700 ease-out border-base-content/20 ${isComplete ? 'border-r-0' : 'border-r'}`}
-                            style={{ width: `${percentage}%` }}
+                            ref={logoFillRef}
+                            className="row-start-1 col-start-1 h-full overflow-hidden"
+                            style={{ width: '0%' }}
                         >
                             <span className="text-base-content block whitespace-nowrap leading-none py-2 drop-shadow-[0_0_20px_rgba(var(--bc),0.15)]">
                                 <ChromaticText>Kollektiv</ChromaticText><span className="text-primary italic">.</span>
@@ -218,30 +269,34 @@ const InitialLoader: React.FC<{ status: string; progress: number | null; onConti
                     </h1>
                 </div>
 
-                <div className="relative h-20 w-80">
+                <div className="relative h-28 w-80">
                     {/* Progress Bar & Status - Crossfade out */}
-                    <div className={`absolute inset-0 flex flex-col items-center gap-4 transition-all duration-1000 ${isComplete ? 'opacity-0 scale-95 pointer-events-none' : 'opacity-100 scale-100'}`}>
-                        <div className="flex flex-col items-center gap-2">
-                            <p className="text-[10px] font-mono font-bold uppercase tracking-[0.5em] text-center text-base-content/40">
-                                {(status || 'DIAGNOSTIC_ACTIVE').toUpperCase()}
-                            </p>
-
+                    <div ref={progressStatusRef} className={`absolute inset-0 flex flex-col items-center gap-4 transition-all duration-1000 origin-center ${isComplete ? 'opacity-0 scale-95 pointer-events-none' : 'opacity-100 scale-100'}`}>
+                        <div className="flex flex-col items-center gap-2 w-full">
                             {/* Minimal Progress Bar */}
-                            <div className="w-32 h-[1px] bg-base-content/10 relative overflow-hidden">
-                                <div
-                                    className="absolute inset-y-0 left-0 bg-primary transition-all duration-500 ease-out"
-                                    style={{ width: `${smoothPercentage}%` }}
-                                />
+                            <div className="flex flex-col items-center gap-1 mb-2">
+                                <div className="w-48 h-[2px] bg-base-content/10 relative overflow-hidden rounded-full">
+                                    <div
+                                        className="absolute inset-y-0 left-0 bg-primary transition-all duration-500 ease-out"
+                                        style={{ width: `${smoothPercentage}%` }}
+                                    />
+                                </div>
+                                <span className="text-[9px] font-mono font-bold text-primary/60 tracking-widest">
+                                    {smoothPercentage}%
+                                </span>
                             </div>
 
-                            <span className="text-[10px] font-mono font-bold text-primary/60">
-                                {smoothPercentage}%
-                            </span>
+                            <div className="flex flex-col items-start justify-end min-h-[48px] max-h-[48px] overflow-hidden leading-snug w-full px-6 text-[10px] font-mono font-bold uppercase tracking-widest text-left text-base-content/40">
+                                {history.slice(-2).map((h, idx) => (
+                                    <div key={idx} className="opacity-40 w-full truncate">{h}</div>
+                                ))}
+                                <div className="w-full truncate">{displayStatus}{showCursor ? '_' : '\u00A0'}</div>
+                            </div>
                         </div>
                     </div>
 
                     {/* Action Buttons - Crossfade in */}
-                    <div className={`absolute inset-0 flex flex-col items-center gap-6 transition-all duration-1000 ${isComplete ? 'opacity-100 scale-100 pointer-events-auto delay-500' : 'opacity-0 scale-105 pointer-events-none'}`}>
+                    <div ref={actionButtonsRef} className={`absolute inset-0 flex flex-col items-center justify-center gap-4 transition-opacity duration-1000 ${isComplete ? 'opacity-100 pointer-events-auto' : 'opacity-0 pointer-events-none'}`}>
                         <button
                             className="form-btn form-btn-primary w-48 h-10 text-[10px]"
                             onClick={() => handleContinue(true)}
@@ -257,9 +312,13 @@ const InitialLoader: React.FC<{ status: string; progress: number | null; onConti
                     </div>
                 </div>
             </div>
+            
+            {/* Footer */}
+            <div className="absolute bottom-8 left-1/2 -translate-x-1/2 text-[10px] font-mono font-bold uppercase tracking-widest text-base-content/40 opacity-50">
+                Built by MindTurbulence
+            </div>
         </div>
     );
-
 };
 
 interface PageFrameProps {
@@ -558,12 +617,20 @@ const AppContent: React.FC = () => {
             setPlayerState('syncing');
             // Ambient start is handled by the syncing -> playing effect
         }
+        
+        // Play an SFX when the blinds open
+        // Try audioService panel transition
+        audioService.playTransition();
 
         hasInitializedRef.current = true;
         setIsInitialized(true);
 
-        // Wait briefly for isInitialized to propagate before starting reveal
-        await new Promise(r => setTimeout(r, 100));
+        if (loaderRef.current) {
+            gsap.set(loaderRef.current, {
+                autoAlpha: 0
+            });
+        }
+
         setIsLoading(false);
     }, [settings, updateSettings]);
 
@@ -594,11 +661,11 @@ const AppContent: React.FC = () => {
             gsap.set(contentRef.current, { autoAlpha: 0 }); // Inner content hidden
             gsap.set(['.app-header', '.app-footer'], { opacity: 0 });
 
-            blindItems.forEach((item, i) => {
+            blindItems.forEach((item) => {
                 gsap.set(item, {
-                    scaleY: 1,
+                    yPercent: 0,
                     scaleX: 1,
-                    transformOrigin: i % 2 === 0 ? "top" : "bottom"
+                    scaleY: 1
                 });
             });
 
@@ -630,16 +697,16 @@ const AppContent: React.FC = () => {
                 }
             }
 
-            // STEP 2: Blinds animation (After frame is mostly settled)
+            // STEP 2: Blinds animation
             tl.to(blindItems, {
-                scaleY: 0,
-                duration: 1.6,
+                yPercent: (i) => i % 2 === 0 ? -100 : 100,
+                duration: 1.2,
                 stagger: {
-                    each: 0.08,
-                    from: "start"
+                    each: 0.05,
+                    from: "center"
                 },
                 ease: "expo.inOut"
-            }, ">-0.5");
+            }, "<0.5");
 
             // STEP 3: App Header and Footer reveal
             tl.fromTo('.app-header',
@@ -657,9 +724,9 @@ const AppContent: React.FC = () => {
             // STEP 4: Reveal main content
             tl.to(contentRef.current, {
                 autoAlpha: 1,
-                duration: 0.8,
+                duration: 1.0,
                 ease: "power2.out"
-            }, ">-0.3");
+            }, "<0.2");
 
             tl.set(apertureRef.current, { visibility: 'hidden', autoAlpha: 0 });
         });
@@ -926,7 +993,7 @@ const AppContent: React.FC = () => {
                             {Array.from({ length: 12 }).map((_, i) => (
                                 <div
                                     key={i}
-                                    className="flex-1 bg-base-100/80 backdrop-blur-xl will-change-transform"
+                                    className="flex-1 bg-base-100/80 backdrop-blur-md will-change-transform z-50"
                                 />
                             ))}
                         </div>

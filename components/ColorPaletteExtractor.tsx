@@ -1,7 +1,9 @@
 import React, { useState, useRef, useCallback, useEffect } from 'react';
+import { motion } from 'framer-motion';
+import { TerminalText, PanelLine, ScanLine, panelVariants, sectionWipeVariants, contentVariants } from './AnimatedPanels';
 import { useSettings } from '../contexts/SettingsContext';
 import { analyzePaletteMood, generateColorName } from '../services/llmService';
-import { UploadIcon, PhotoIcon, PaletteIcon, RefreshIcon, BookmarkIcon, CloseIcon, FolderClosedIcon } from './icons';
+import { UploadIcon, PaletteIcon, BookmarkIcon } from './icons';
 import LoadingSpinner from './LoadingSpinner';
 import type { Idea, GalleryItem } from '../types';
 import { fileSystemManager } from '../utils/fileUtils';
@@ -18,6 +20,7 @@ interface ColorInfo {
 
 interface ColorPaletteExtractorProps {
   onClipIdea: (idea: Idea) => void;
+  isExiting?: boolean;
 }
 
 const ColorCard: React.FC<{ color: ColorInfo }> = ({ color }) => {
@@ -33,13 +36,13 @@ const ColorCard: React.FC<{ color: ColorInfo }> = ({ color }) => {
         }
     };
     return (
-        <div className="border border-base-300 bg-base-100 group">
+        <div className="bg-base-100/40 backdrop-blur-xl group">
             <div className="h-32 w-full" style={{ backgroundColor: color.hex }}></div>
             <div className="p-4">
                 <p className="font-black tracking-tighter text-xl text-base-content mb-3">{color.name}</p>
                 <div className="text-[10px] space-y-2 font-mono font-bold uppercase tracking-widest text-base-content/40">
-                    <p className="flex justify-between items-center border-b border-base-300/30 pb-1"><span>HEX</span> <span className="cursor-pointer hover:text-primary transition-colors" onClick={() => handleCopy('HEX', color.hex)}>{copied && copiedValue === 'HEX' ? 'OK' : color.hex}</span></p>
-                    <p className="flex justify-between items-center border-b border-base-300/30 pb-1"><span>RGB</span> <span className="cursor-pointer hover:text-primary transition-colors" onClick={() => handleCopy('RGB', `${Math.round(color.rgb[0])},${Math.round(color.rgb[1])},${Math.round(color.rgb[2])}`)}>{copied && copiedValue === 'RGB' ? 'OK' : `${Math.round(color.rgb[0])}, ${Math.round(color.rgb[1])}, ${Math.round(color.rgb[2])}`}</span></p>
+                    <p className="flex justify-between items-center pb-1"><span>HEX</span> <span className="cursor-pointer hover:text-primary transition-colors" onClick={() => handleCopy('HEX', color.hex)}>{copied && copiedValue === 'HEX' ? 'OK' : color.hex}</span></p>
+                    <p className="flex justify-between items-center pb-1"><span>RGB</span> <span className="cursor-pointer hover:text-primary transition-colors" onClick={() => handleCopy('RGB', `${Math.round(color.rgb[0])},${Math.round(color.rgb[1])},${Math.round(color.rgb[2])}`)}>{copied && copiedValue === 'RGB' ? 'OK' : `${Math.round(color.rgb[0])}, ${Math.round(color.rgb[1])}, ${Math.round(color.rgb[2])}`}</span></p>
                     <p className="flex justify-between items-center"><span>HSL</span> <span className="cursor-pointer hover:text-primary transition-colors" onClick={() => handleCopy('HSL', color.hsl)}>{copied && copiedValue === 'HSL' ? 'OK' : color.hsl}</span></p>
                 </div>
             </div>
@@ -47,7 +50,7 @@ const ColorCard: React.FC<{ color: ColorInfo }> = ({ color }) => {
     );
 };
 
-export const ColorPaletteExtractor: React.FC<ColorPaletteExtractorProps> = ({ onClipIdea }) => {
+export const ColorPaletteExtractor: React.FC<ColorPaletteExtractorProps> = ({ onClipIdea, isExiting = false }) => {
   const { settings } = useSettings();
   const [imageFile, setImageFile] = useState<File | string | null>(null);
   const [imagePreviewUrl, setImagePreviewUrl] = useState<string | null>(null);
@@ -213,94 +216,135 @@ export const ColorPaletteExtractor: React.FC<ColorPaletteExtractorProps> = ({ on
       onClipIdea(idea);
   };
 
-  return (
-    <div className="h-full bg-base-100 flex flex-col overflow-hidden">
-        <div className="flex-grow flex flex-col lg:flex-row overflow-hidden">
-            <aside className="w-full lg:w-96 flex-shrink-0 bg-base-100 flex flex-col border-r border-base-300 overflow-hidden">
-                <header className="p-6 border-b border-base-300 bg-base-200/10">
-                    <h3 className="text-[10px] font-black uppercase tracking-[0.4em] text-primary">Chromic Source</h3>
-                </header>
-                <div className="flex-grow p-6 flex flex-col gap-6 overflow-y-auto custom-scrollbar">
-                     <div 
-                        className={`relative flex-grow min-h-[200px] border-2 border-dashed rounded-none flex flex-col items-center justify-center cursor-pointer transition-all gap-4 group ${isDragging ? 'border-primary bg-primary/10' : 'border-base-300 hover:border-primary/50 bg-base-200/10'}`}
-                        style={{ backgroundImage: imagePreviewUrl ? `url(${imagePreviewUrl})` : 'none', backgroundSize: 'contain', backgroundPosition: 'center', backgroundRepeat: 'no-repeat' }}
-                        onDrop={(e) => { e.preventDefault(); setIsDragging(false); handleFileSelect((e.dataTransfer as any)?.files?.[0] || null); }}
-                        onDragOver={(e) => { e.preventDefault(); setIsDragging(true); }}
-                        onDragLeave={() => setIsDragging(false)}
+    return (
+        <div className="flex flex-col h-full w-full relative overflow-visible p-0 bg-transparent">
+        <div className="flex-grow flex flex-col lg:flex-row overflow-hidden gap-6 p-0 bg-transparent">
+            <motion.aside 
+                variants={panelVariants}
+                initial="hidden"
+                animate={isExiting ? "exit" : "visible"}
+                exit="exit"
+                className="w-full lg:w-96 flex-shrink-0 flex flex-col relative p-[3px] corner-frame overflow-visible z-10"
+            >
+                <PanelLine position="top" delay={0.4} />
+                <PanelLine position="bottom" delay={0.5} />
+                <PanelLine position="left" delay={0.6} />
+                <PanelLine position="right" delay={0.7} />
+                <ScanLine delay={3.5} />
+                <div className="flex flex-col h-full w-full overflow-hidden relative z-10 bg-base-100/40 backdrop-blur-xl">
+                    <motion.header 
+                        variants={sectionWipeVariants}
+                        custom={1.2}
+                        initial="hidden"
+                        animate="visible"
+                        exit="exit"
+                        className="p-6 bg-base-100/10 backdrop-blur-md"
                     >
-                        <input type="file" ref={fileInputRef} onChange={(e) => handleFileSelect((e.currentTarget as any).files?.[0] || null)} className="hidden" accept="image/*" />
-                        {!imagePreviewUrl && (
-                            <>
-                                <div className="text-center p-6 opacity-20">
-                                    <UploadIcon className="w-10 h-10 mx-auto mb-2"/>
-                                    <p className="text-[10px] font-black uppercase tracking-widest">Load Source</p>
-                                </div>
-                                <div className="flex gap-2">
-                                    <button onClick={(e) => { e.stopPropagation(); (fileInputRef.current as any).click(); }} className="btn btn-xs btn-ghost border border-base-300 rounded-none font-black text-[8px] tracking-widest uppercase">UPLOAD</button>
-                                    <button onClick={(e) => { e.stopPropagation(); setIsPickerOpen(true); }} className="btn btn-xs btn-primary rounded-none font-black text-[8px] tracking-widest uppercase">LIBRARY</button>
-                                </div>
-                            </>
-                        )}
-                        {imagePreviewUrl && (
-                            <button onClick={handleRemoveImage} className="btn btn-xs btn-square btn-error absolute top-2 right-2 opacity-0 group-hover:opacity-100 shadow-xl transition-all">✕</button>
-                        )}
-                    </div>
-                    <div className="space-y-4">
-                         <div className="space-y-4">
-                             <div className="flex justify-between items-end"><span className="text-[10px] font-black uppercase text-base-content/30">Nodes</span><span className="text-[10px] font-mono font-bold text-primary">{numClusters}</span></div>
-                             <input type="range" min="2" max="12" value={numClusters} onChange={(e) => setNumClusters(Number((e.currentTarget as any).value))} className="range range-xs range-primary" disabled={!imageFile || isLoading}/>
+                        <TerminalText text="CHROMIC SOURCE" delay={2.0} className="text-[10px] font-black uppercase text-primary" />
+                    </motion.header>
+                    <motion.div 
+                        variants={contentVariants}
+                        custom={2.2}
+                        initial="hidden"
+                        animate="visible"
+                        className="flex-grow p-6 flex flex-col gap-6 overflow-y-auto bg-transparent"
+                    >
+                         <div 
+                            className={`relative flex-grow min-h-[200px] border-2 border-dashed rounded-none flex flex-col items-center justify-center cursor-pointer transition-all gap-4 group ${isDragging ? 'border-primary bg-primary/10' : 'border-base-300 hover:border-primary/50'}`}
+                            style={{ backgroundImage: imagePreviewUrl ? `url(${imagePreviewUrl})` : 'none', backgroundSize: 'contain', backgroundPosition: 'center', backgroundRepeat: 'no-repeat' }}
+                            onDrop={(e) => { e.preventDefault(); setIsDragging(false); handleFileSelect((e.dataTransfer as any)?.files?.[0] || null); }}
+                            onDragOver={(e) => { e.preventDefault(); setIsDragging(true); }}
+                            onDragLeave={() => setIsDragging(false)}
+                        >
+                            <input type="file" ref={fileInputRef} onChange={(e) => handleFileSelect((e.currentTarget as any).files?.[0] || null)} className="hidden" accept="image/*" />
+                            {!imagePreviewUrl && (
+                                <>
+                                    <div className="text-center p-6 opacity-20">
+                                        <UploadIcon className="w-10 h-10 mx-auto mb-2"/>
+                                        <p className="text-[10px] font-black uppercase tracking-widest">Load Source</p>
+                                    </div>
+                                    <div className="flex gap-2">
+                                        <button onClick={(e) => { e.stopPropagation(); (fileInputRef.current as any).click(); }} className="form-btn h-8 px-4">UPLOAD</button>
+                                        <button onClick={(e) => { e.stopPropagation(); setIsPickerOpen(true); }} className="form-btn form-btn-primary h-8 px-4">LIBRARY</button>
+                                    </div>
+                                </>
+                            )}
+                            {imagePreviewUrl && (
+                                <button onClick={handleRemoveImage} className="form-btn h-8 w-8 text-error absolute top-2 right-2 opacity-0 group-hover:opacity-100 shadow-xl transition-all">✕</button>
+                            )}
                         </div>
-                        <button onClick={() => imagePreviewUrl && extractPalette(imagePreviewUrl, numClusters)} disabled={!imageFile || isLoading} className="btn btn-sm btn-secondary w-full rounded-none font-black text-[9px] tracking-widest">
-                            {isLoading ? 'ANALYZING...' : 'RE-SCAN SPECTRUM'}
-                        </button>
-                    </div>
+                        <div className="space-y-4">
+                             <div className="space-y-4">
+                                 <div className="flex justify-between items-end"><span className="text-[10px] font-black uppercase text-base-content/30">Nodes</span><span className="text-[10px] font-mono font-bold text-primary">{numClusters}</span></div>
+                                 <input type="range" min="2" max="12" value={numClusters} onChange={(e) => setNumClusters(Number((e.currentTarget as any).value))} className="range range-xs range-primary" disabled={!imageFile || isLoading}/>
+                            </div>
+                            <button onClick={() => imagePreviewUrl && extractPalette(imagePreviewUrl, numClusters)} disabled={!imageFile || isLoading} className="form-btn form-btn-secondary w-full h-10">
+                                {isLoading ? 'ANALYZING...' : 'RE-SCAN SPECTRUM'}
+                            </button>
+                        </div>
+                    </motion.div>
                 </div>
-            </aside>
+            </motion.aside>
 
-            <main className="flex-grow bg-base-100 overflow-y-auto overflow-x-hidden scroll-smooth custom-scrollbar flex flex-col">
-                <section className="p-10 border-b border-base-300 bg-base-200/20">
-                    <div className="max-w-screen-2xl mx-auto flex flex-col gap-1">
-                        <div className="flex flex-col md:flex-row md:items-stretch justify-between gap-6">
-                            <h1 className="text-2xl lg:text-3xl font-black tracking-tighter text-base-content leading-none flex items-center uppercase">Palette Extractor<span className="text-primary">.</span></h1>
-                        </div>
-                        <p className="text-[11px] font-bold text-base-content/30 uppercase tracking-[0.3em] w-full">Deconstruct visual artifacts into precise chromatic tokens and atmospheric mood data.</p>
-                    </div>
-                </section>
-
-                <div className="flex-shrink-0 bg-base-100 px-6 py-4 border-b border-base-300 flex justify-between items-center sticky top-0 z-20 backdrop-blur-md bg-base-100/80">
-                    <h2 className="text-xs font-black uppercase tracking-[0.4em] text-base-content/40">Extraction Output</h2>
-                    {palette.length > 0 && (
-                        <button onClick={handleClipPalette} className="btn btn-xs btn-ghost rounded-none font-black text-[9px] tracking-widest uppercase">
-                            <BookmarkIcon className="w-3.5 h-3.5 mr-2 opacity-40"/> CLIP TO ARCHIVE
-                        </button>
+            <motion.main 
+                variants={panelVariants}
+                initial="hidden"
+                animate={isExiting ? "exit" : "visible"}
+                exit="exit"
+                className="flex-grow flex flex-col relative p-[3px] corner-frame overflow-visible z-10 lg:ml-1"
+            >
+                <PanelLine position="top" delay={0.4} />
+                <PanelLine position="bottom" delay={0.5} />
+                <PanelLine position="left" delay={0.6} />
+                <PanelLine position="right" delay={0.7} />
+                <ScanLine delay={3.5} />
+                <div className="flex flex-col h-full w-full overflow-hidden relative z-10 bg-base-100/40 backdrop-blur-xl">
+                    <motion.div 
+                        variants={sectionWipeVariants}
+                        custom={1.6}
+                        initial="hidden"
+                        animate="visible"
+                        className="flex-grow p-8 lg:p-12 overflow-y-auto"
+                    >
+                        {isLoading ? <div className="py-24"><LoadingSpinner/></div> :
+                         error ? <div className="alert alert-error rounded-none border-2"><span>{error}</span></div> :
+                         palette.length > 0 ? (
+                            <div className="space-y-12 animate-fade-in">
+                                {mood && (
+                                    <div className="flex flex-col gap-2">
+                                        <span className="text-[10px] font-black uppercase tracking-widest text-primary/60">Identified Mood</span>
+                                        <p className="text-5xl font-black tracking-tighter text-base-content uppercase leading-none">{mood}</p>
+                                    </div>
+                                )}
+                                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-px">
+                                    {palette.map(color => (
+                                        <ColorCard key={color.hex} color={color} />
+                                    ))}
+                                </div>
+                            </div>
+                         ) : (
+                            <div className="h-full flex flex-col items-center justify-center text-center opacity-10 p-12">
+                                <PaletteIcon className="w-24 h-24 mb-6" />
+                                <p className="text-xl font-black uppercase tracking-widest">Awaiting Extraction Sequence</p>
+                            </div>
+                         )}
+                    </motion.div>
+                     {palette.length > 0 && (
+                        <motion.footer 
+                            variants={contentVariants}
+                            custom={2.4}
+                            initial="hidden"
+                            animate="visible"
+                            className="h-14 flex items-stretch flex-shrink-0 bg-base-100/10 backdrop-blur-md p-1.5 gap-1.5"
+                        >
+                            <button onClick={handleClipPalette} className="btn btn-sm btn-ghost h-full flex-1 rounded-none tracking-wider uppercase btn-snake text-primary/40 hover:text-primary">
+                                <span/><span/><span/><span/>
+                                <BookmarkIcon className="w-3.5 h-3.5 mr-1.5" /> CLIP DATA TO ARCHIVE
+                            </button>
+                        </motion.footer>
                     )}
                 </div>
-
-                <div className="flex-grow p-8 lg:p-12 bg-base-200/5">
-                    {isLoading ? <div className="py-24"><LoadingSpinner/></div> :
-                     error ? <div className="alert alert-error rounded-none border-2"><span>{error}</span></div> :
-                     palette.length > 0 ? (
-                        <div className="space-y-12 animate-fade-in">
-                            {mood && (
-                                <div className="flex flex-col gap-2">
-                                    <span className="text-[10px] font-black uppercase tracking-widest text-primary/60">Identified Mood</span>
-                                    <p className="text-5xl font-black tracking-tighter text-base-content uppercase leading-none">{mood}</p>
-                                </div>
-                            )}
-                            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-px bg-base-300 border border-base-300">
-                                {palette.map(color => (
-                                    <ColorCard key={color.hex} color={color} />
-                                ))}
-                            </div>
-                        </div>
-                     ) : (
-                        <div className="h-full flex flex-col items-center justify-center text-center opacity-10 p-12">
-                            <PaletteIcon className="w-24 h-24 mb-6" />
-                            <p className="text-xl font-black uppercase tracking-widest">Awaiting Extraction Sequence</p>
-                        </div>
-                     )}
-                </div>
-            </main>
+            </motion.main>
         </div>
 
         <GalleryPickerModal 

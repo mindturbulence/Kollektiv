@@ -30,11 +30,6 @@ export const setHandle = async (key: string, val: any): Promise<void> => {
   await db.put('keyval', val, key);
 };
 
-export const delHandle = async (key: string): Promise<void> => {
-  const db = await getDb();
-  await db.delete('keyval', key);
-};
-
 export const clearAllHandles = async (): Promise<void> => {
   const db = await getDb();
   await db.clear('keyval');

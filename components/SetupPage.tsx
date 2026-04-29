@@ -2,7 +2,7 @@
 import React, { useState, useEffect, useLayoutEffect, useRef, useMemo, useCallback } from 'react';
 import { motion } from 'framer-motion';
 import { gsap } from 'gsap';
-import type { LLMSettings, ActiveSettingsTab, PromptCategory, FeatureSettings, YouTubeConnection, GoogleIdentityConnection } from '../types';
+import type { LLMSettings, ActiveSettingsTab, PromptCategory, YouTubeConnection, GoogleIdentityConnection } from '../types';
 import { testOllamaConnection, type OllamaTestResult } from '../services/llmService';
 import { fileSystemManager, createZipAndDownload } from '../utils/fileUtils';
 import { useSettings } from '../contexts/SettingsContext';
@@ -24,7 +24,7 @@ import {
 import { resetAllSettings, defaultLLMSettings } from '../utils/settingsStorage';
 import { DAISYUI_DARK_THEMES } from '../constants';
 import ConfirmationModal from './ConfirmationModal';
-import { Cog6ToothIcon, CpuChipIcon, AppIcon, PromptIcon, PhotoIcon, FolderClosedIcon, PaintBrushIcon, AdjustmentsVerticalIcon, DownloadIcon, LinkIcon, PlayIcon, RefreshIcon, InformationCircleIcon, UploadIcon, AlertTriangleIcon } from './icons';
+import { Cog6ToothIcon, CpuChipIcon, AppIcon, PromptIcon, PhotoIcon, FolderClosedIcon, PaintBrushIcon, DownloadIcon, LinkIcon, PlayIcon, RefreshIcon, InformationCircleIcon, UploadIcon, AlertTriangleIcon } from './icons';
 import FeedbackModal from './FeedbackModal';
 import { audioService } from '../services/audioService';
 import { PromptTxtImportModal } from './PromptTxtImportModal';
@@ -189,7 +189,6 @@ export const SetupPage: React.FC<SetupPageProps> = ({
     activeSettingsTab, setActiveSettingsTab, activeSubTab, setActiveSubTab, showGlobalFeedback, isExiting = false
 }) => {
   const { settings: globalSettings, updateSettings, availableOllamaModels, availableOllamaCloudModels, availableOpenClawModels, refreshOllamaModels } = useSettings();
-  const { features } = globalSettings;
   const [settings, setSettings] = useState<LLMSettings>(globalSettings);
   const [modalFeedback, setModalFeedback] = useState<{ message: string; type: 'success' | 'error' } | null>(null);
 

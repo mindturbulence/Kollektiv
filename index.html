@@ -1,251 +1,55 @@
-
 <!DOCTYPE html>
-<html lang="en" data-theme="abyss">
-  <head>
-    <meta charset="UTF-8" />
-    <link rel="icon" type="image/svg+xml" href="/vite.svg" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Kollektiv</title>
-    <link rel="stylesheet" href="/index.css" />
-    <link rel="stylesheet" href="https://fonts.bunny.net/css?family=hind:400,500,600,700&display=swap" />
-    <script type="text/javascript">
-      // Critical: Load theme immediately to support "use current themes" during integrity check
-      (function() {
-        try {
-          const settings = JSON.parse(localStorage.getItem('kollektivSettingsV4'));
-          if (settings) {
-            const theme = settings.activeThemeMode === 'light' ? settings.lightTheme : settings.darkTheme;
-            if (theme) {
-              document.documentElement.setAttribute('data-theme', theme);
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8" />
+  <link rel="icon" type="image/svg+xml"
+    href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Crect width='100' height='100' rx='20' fill='%2300ffa3'/%3E%3Ctext y='.9em' x='50%25' text-anchor='middle' font-family='serif' font-weight='bold' font-size='80' fill='%23000'%3EK%3C/text%3E%3C/svg%3E" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <meta name="theme-color" id="theme-color-meta" content="#020617" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <title>Kollektiv</title>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800;900&family=Montserrat:wght@300;400;500;600;700;800;900&family=Inter:wght@300;400;500;600;700;800;900&family=Plus+Jakarta+Sans:ital,wght@0,300;0,400;0,500;0,600;0,700;0,800;1,800&family=JetBrains+Mono:wght@400;500;700;800&family=Space+Grotesk:wght@300;400;500;600;700&family=Playfair+Display:ital,wght@0,400;0,700;1,400&family=Monoton&family=Space+Mono:wght@400;700&display=swap" />
+  <link rel="stylesheet" href="https://db.onlinewebfonts.com/c/69dbc1186412d7831b88d8a78a360360?family=DIN+Condensed+Web" />
+  <link rel="stylesheet" href="https://api.fontshare.com/v2/css?f[]=satoshi@300,400,500,700,900&f[]=sf-mono@400,500,700&display=swap" />
+  <link href="https://db.onlinewebfonts.com/c/49441315ab9ce55176682715f25ea4b2?family=Microgramma+D+Bold+Extended" rel="stylesheet" type="text/css"/>
+  <link href="https://db.onlinewebfonts.com/c/4f18f8093767ff6a669f522b4e2b4b03?family=Microgramma+D+Medium+Extended" rel="stylesheet" type="text/css"/>
+  <script type="text/javascript">
+    // Critical: Load theme immediately to support "use current themes" during integrity check
+    (function () {
+      try {
+        const settings = JSON.parse(localStorage.getItem('kollektivSettingsV4'));
+        if (settings) {
+          const theme = settings.activeThemeMode === 'light' ? settings.lightTheme : settings.darkTheme;
+          if (theme) {
+            document.documentElement.setAttribute('data-theme', theme);
+
+            // Simple heuristic for light/dark
+            const isLight = ['light', 'cupcake', 'bumblebee', 'emerald', 'corporate', 'retro', 'cyberpunk', 'valentine', 'garden', 'lofi', 'pastel', 'fantasy', 'wireframe', 'cmyk', 'autumn', 'acid', 'lemonade', 'winter', 'nord'].includes(theme);
+            if (isLight) {
+              document.documentElement.classList.add('is-light-theme');
+            }
+
+            // Update theme-color meta
+            const meta = document.getElementById('theme-color-meta');
+            if (meta) {
+              if (theme === 'pipboy') meta.setAttribute('content', '#051105');
+              else if (theme === 'MindTurbulence') meta.setAttribute('content', '#0a0a0a');
+              else if (theme === 'abyss') meta.setAttribute('content', '#020617');
+              else if (isLight) meta.setAttribute('content', '#ffffff');
             }
           }
-        } catch (e) {}
-      })();
-    </script>
-    <style type="text/css">
-      html, body, #root {
-        height: 100%;
-        margin: 0;
-        padding: 0;
-        overflow: hidden;
-      }
-      #initial-loader {
-        display: flex;
-        flex-direction: column;
-        align-items: center;
-        justify-content: center;
-        height: 100%;
-        /* Use theme background variable, fallback to dark if not loaded yet */
-        background-color: oklch(var(--b1, 0.1 0 0)); 
-        color: oklch(var(--bc, 1 1 1));
-        font-family: 'Hind', sans-serif;
-        transition: background-color 0.3s ease;
-      }
-      
-      .loader-wrapper {
-        display: flex;
-        justify-content: center;
-        align-items: center;
-      }
-
-      .box5631 {
-        transform-origin: 50% 50%;
-        /* Adapt to primary theme color */
-        fill: oklch(var(--p, 0.6 0.2 260));
-      }
-
-      @keyframes moveBox5631-1 {
-        9.0909090909% { transform: translate(-12px, 0); }
-        18.1818181818% { transform: translate(0px, 0); }
-        27.2727272727% { transform: translate(0px, 0); }
-        36.3636363636% { transform: translate(12px, 0); }
-        45.4545454545% { transform: translate(12px, 12px); }
-        54.5454545455% { transform: translate(12px, 12px); }
-        63.6363636364% { transform: translate(12px, 12px); }
-        72.7272727273% { transform: translate(12px, 0px); }
-        81.8181818182% { transform: translate(0px, 0px); }
-        90.9090909091% { transform: translate(-12px, 0px); }
-        100% { transform: translate(0px, 0px); }
-      }
-      .box5631:nth-child(1) { animation: moveBox5631-1 4s infinite; }
-
-      @keyframes moveBox5631-2 {
-        9.0909090909% { transform: translate(0, 0); }
-        18.1818181818% { transform: translate(12px, 0); }
-        27.2727272727% { transform: translate(0px, 0); }
-        36.3636363636% { transform: translate(12px, 0); }
-        45.4545454545% { transform: translate(12px, 12px); }
-        54.5454545455% { transform: translate(12px, 12px); }
-        63.6363636364% { transform: translate(12px, 12px); }
-        72.7272727273% { transform: translate(12px, 12px); }
-        81.8181818182% { transform: translate(0px, 12px); }
-        90.9090909091% { transform: translate(0px, 12px); }
-        100% { transform: translate(0px, 0px); }
-      }
-      .box5631:nth-child(2) { animation: moveBox5631-2 4s infinite; }
-
-      @keyframes moveBox5631-3 {
-        9.0909090909% { transform: translate(-12px, 0); }
-        18.1818181818% { transform: translate(-12px, 0); }
-        27.2727272727% { transform: translate(0px, 0); }
-        36.3636363636% { transform: translate(-12px, 0); }
-        45.4545454545% { transform: translate(-12px, 0); }
-        54.5454545455% { transform: translate(-12px, 0); }
-        63.6363636364% { transform: translate(-12px, 0); }
-        72.7272727273% { transform: translate(-12px, 0); }
-        81.8181818182% { transform: translate(-12px, -12px); }
-        90.9090909091% { transform: translate(0px, -12px); }
-        100% { transform: translate(0px, 0px); }
-      }
-      .box5631:nth-child(3) { animation: moveBox5631-3 4s infinite; }
-
-      @keyframes moveBox5631-4 {
-        9.0909090909% { transform: translate(-12px, 0); }
-        18.1818181818% { transform: translate(-12px, 0); }
-        27.2727272727% { transform: translate(-12px, -12px); }
-        36.3636363636% { transform: translate(0px, -12px); }
-        45.4545454545% { transform: translate(0px, 0px); }
-        54.5454545455% { transform: translate(0px, -12px); }
-        63.6363636364% { transform: translate(0px, -12px); }
-        72.7272727273% { transform: translate(0px, -12px); }
-        81.8181818182% { transform: translate(-12px, -12px); }
-        90.9090909091% { transform: translate(-12px, 0px); }
-        100% { transform: translate(0px, 0px); }
-      }
-      .box5631:nth-child(4) { animation: moveBox5631-4 4s infinite; }
-
-      @keyframes moveBox5631-5 {
-        9.0909090909% { transform: translate(0, 0); }
-        18.1818181818% { transform: translate(0, 0); }
-        27.2727272727% { transform: translate(0, 0); }
-        36.3636363636% { transform: translate(12px, 0); }
-        45.4545454545% { transform: translate(12px, 0); }
-        54.5454545455% { transform: translate(12px, 0); }
-        63.6363636364% { transform: translate(12px, 0); }
-        72.7272727273% { transform: translate(12px, 0); }
-        81.8181818182% { transform: translate(12px, -12px); }
-        90.9090909091% { transform: translate(0px, -12px); }
-        100% { transform: translate(0px, 0px); }
-      }
-      .box5631:nth-child(5) { animation: moveBox5631-5 4s infinite; }
-
-      @keyframes moveBox5631-6 {
-        9.0909090909% { transform: translate(0, 0); }
-        18.1818181818% { transform: translate(-12px, 0); }
-        27.2727272727% { transform: translate(-12px, 0); }
-        36.3636363636% { transform: translate(0px, 0); }
-        45.4545454545% { transform: translate(0px, 0); }
-        54.5454545455% { transform: translate(0px, 0); }
-        63.6363636364% { transform: translate(0px, 0); }
-        72.7272727273% { transform: translate(0px, 12px); }
-        81.8181818182% { transform: translate(-12px, 12px); }
-        90.9090909091% { transform: translate(-12px, 0px); }
-        100% { transform: translate(0px, 0px); }
-      }
-      .box5631:nth-child(6) { animation: moveBox5631-6 4s infinite; }
-
-      @keyframes moveBox5631-7 {
-        9.0909090909% { transform: translate(12px, 0); }
-        18.1818181818% { transform: translate(12px, 0); }
-        27.2727272727% { transform: translate(12px, 0); }
-        36.3636363636% { transform: translate(0px, 0); }
-        45.4545454545% { transform: translate(0px, -12px); }
-        54.5454545455% { transform: translate(0px, -12px); }
-        63.6363636364% { transform: translate(0px, -12px); }
-        72.7272727273% { transform: translate(0px, -12px); }
-        81.8181818182% { transform: translate(0px, 0px); }
-        90.9090909091% { transform: translate(12px, 0px); }
-        100% { transform: translate(0px, 0px); }
-      }
-      .box5631:nth-child(7) { animation: moveBox5631-7 4s infinite; }
-
-      @keyframes moveBox5631-8 {
-        9.0909090909% { transform: translate(0, 0); }
-        18.1818181818% { transform: translate(-12px, 0); }
-        27.2727272727% { transform: translate(-12px, -12px); }
-        36.3636363636% { transform: translate(0px, -12px); }
-        45.4545454545% { transform: translate(0px, -12px); }
-        54.5454545455% { transform: translate(0px, -12px); }
-        63.6363636364% { transform: translate(0px, -12px); }
-        72.7272727273% { transform: translate(0px, -12px); }
-        81.8181818182% { transform: translate(12px, -12px); }
-        90.9090909091% { transform: translate(12px, 0px); }
-        100% { transform: translate(0px, 0px); }
-      }
-      .box5631:nth-child(8) { animation: moveBox5631-8 4s infinite; }
-
-      @keyframes moveBox5631-9 {
-        9.0909090909% { transform: translate(-12px, 0); }
-        18.1818181818% { transform: translate(-12px, 0); }
-        27.2727272727% { transform: translate(0px, 0); }
-        36.3636363636% { transform: translate(-12px, 0); }
-        45.4545454545% { transform: translate(0px, 0); }
-        54.5454545455% { transform: translate(0px, 0); }
-        63.6363636364% { transform: translate(-12px, 0); }
-        72.7272727273% { transform: translate(-12px, 0); }
-        81.8181818182% { transform: translate(-24px, 0); }
-        90.9090909091% { transform: translate(-12px, 0); }
-        100% { transform: translate(0px, 0px); }
-      }
-      .box5631:nth-child(9) { animation: moveBox5631-9 4s infinite; }
-    </style>
-<script type="importmap">
-{
-  "imports": {
-    "react": "https://esm.sh/react@^19.1.1?corp",
-    "react/jsx-runtime": "https://esm.sh/react@^19.1.1/jsx-runtime?corp",
-    "react/jsx-dev-runtime": "https://esm.sh/react@^19.1.1/jsx-dev-runtime?corp",
-    "react-dom/client": "https://esm.sh/react-dom@^19.1.1/client?corp",
-    "react-dom": "https://esm.sh/react-dom@^19.1.1?corp",
-    "@google/genai": "https://esm.sh/@google/genai@^1.12.0?corp",
-    "uuid": "https://esm.sh/uuid@^11.1.0?corp",
-    "jszip": "https://esm.sh/jszip@^3.10.1?corp",
-    "idb": "https://esm.sh/idb@^8.0.3?corp",
-    "@ffmpeg/ffmpeg": "https://esm.sh/@ffmpeg/ffmpeg@^0.12.6?corp",
-    "@ffmpeg/util": "https://esm.sh/@ffmpeg/util@^0.12.1?corp",
-    "@vitejs/plugin-react": "https://esm.sh/@vitejs/plugin-react@^5.0.0?corp",
-    "vite": "https://esm.sh/vite@^7.1.1?corp",
-    "path": "https://esm.sh/path@^0.12.7?corp",
-    "url": "https://esm.sh/url@^0.11.4?corp",
-    "react/": "https://esm.sh/react@^19.1.1/",
-    "react-dom/": "https://esm.sh/react-dom@^19.1.1/",
-    "daisyui": "https://esm.sh/daisyui@^5.0.50",
-    "lottie-web": "https://esm.sh/lottie-web@^5.12.2",
-    "@vitejs/plugin-basic-ssl": "https://esm.sh/@vitejs/plugin-basic-ssl@^2.1.4",
-    "gsap": "https://esm.sh/gsap@^3.14.2",
-    "gsap/": "https://esm.sh/gsap@^3.14.2/"
-  }
-}
-</script>
-<script src="https://accounts.google.com/gsi/client" async defer></script>
-<link rel="stylesheet" href="/index.css">
+        }
+      } catch (e) { }
+    })();
+  </script>
+  <script src="https://accounts.google.com/gsi/client" async defer></script>
 </head>
-  <body>
-    <div id="root">
-      <div id="initial-loader">
-        <div class="loader-wrapper">
-          <svg style="width: 120px; height: 120px" viewBox="-13 -13 45 45">
-            <g>
-              <circle class="box5631" cx="13" cy="1" r="5"/>
-              <circle class="box5631" cx="13" cy="1" r="5"/>
-              <circle class="box5631" cx="25" cy="25" r="5"/>
-              <circle class="box5631" cx="13" cy="13" r="5"/>
-              <circle class="box5631" cx="13" cy="13" r="5"/>
-              <circle class="box5631" cx="25" cy="13" r="5"/>
-              <circle class="box5631" cx="1" cy="25" r="5"/>
-              <circle class="box5631" cx="13" cy="25" r="5"/>
-              <circle class="box5631" cx="25" cy="25" r="5"/>
-            </g>
-          </svg>
-        </div>
-        <div class="flex flex-col items-center mt-8 relative z-10">
-          <p id="loading-status" class="text-[10px] font-black uppercase tracking-[0.5em] text-base-content opacity-40">Initializing System...</p>
-          <div id="loading-progress-container" class="w-48 h-0.5 bg-base-content/5 rounded-full mt-4 overflow-hidden" style="display: none;">
-            <div id="loading-progress-bar" class="h-full bg-primary rounded-full transition-all duration-300" style="width: 0%;"></div>
-          </div>
-        </div>
-      </div>
-    </div>
-    <script type="module" src="/index.tsx"></script>
-  </body>
+
+<body>
+  <div id="root"></div>
+  <script type="module" src="/index.tsx"></script>
+</body>
+
 </html>

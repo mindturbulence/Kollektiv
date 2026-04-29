@@ -44,10 +44,10 @@ const SavedPromptItem: React.FC<SavedPromptItemProps> = ({ prompt, onDeleteClick
   const title = prompt.title?.trim() || prompt.basePrompt?.trim() || 'Untitled Prompt';
 
   return (
-    <div className="bg-base-100 rounded-lg transition-all hover:bg-base-200/50">
+    <div className="bg-base-100 rounded-none transition-all hover:bg-base-200/50">
         <div className="p-3 flex justify-between items-center gap-2">
             <div className="flex-grow min-w-0 cursor-pointer" onClick={onOpenDetailView}>
-                <h4 className="font-semibold text-primary truncate" title={title}>
+                <h4 className="font-black text-primary truncate" title={title}>
                   {title}
                 </h4>
                 <p className="text-sm text-base-content/70 truncate">{prompt.text}</p>
@@ -60,14 +60,14 @@ const SavedPromptItem: React.FC<SavedPromptItemProps> = ({ prompt, onDeleteClick
                             setIsMenuOpen(!isMenuOpen);
                         }}
                         title="More options"
-                        className="btn btn-sm btn-square btn-ghost"
+                        className="form-btn h-8 w-8"
                     >
                         <EllipsisVerticalIcon className="w-5 h-5" />
                     </button>
                     {isMenuOpen && (
                         <ul 
                             onClick={(e) => e.stopPropagation()}
-                            className="absolute right-0 mt-2 w-48 menu menu-sm dropdown-content bg-base-200 rounded-box shadow-xl z-10 animate-fade-in-up"
+                            className="absolute right-0 mt-2 w-48 menu menu-sm dropdown-content bg-base-100 border border-base-300/50 rounded-box shadow-xl z-10 animate-fade-in-up"
                         >
                             <li><a onClick={() => { onEditClick(prompt); setIsMenuOpen(false); }}><EditIcon className="w-4 h-4" /> Edit</a></li>
                             <li><a onClick={(e) => { handleCopy(e); setIsMenuOpen(false); }}>

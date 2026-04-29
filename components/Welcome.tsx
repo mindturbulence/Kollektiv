@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { fileSystemManager } from '../utils/fileUtils';
 import { getHandle } from '../utils/db';
 import { FolderClosedIcon, AppLogoIcon, RefreshIcon } from './icons';
+import { audioService } from '../services/audioService';
 
 interface WelcomeProps {
   onSetupComplete: () => void;
@@ -15,16 +16,21 @@ const Welcome: React.FC<WelcomeProps> = ({ onSetupComplete }) => {
 
   useEffect(() => {
     const checkHandle = async () => {
-        const handle = await getHandle<FileSystemDirectoryHandle>('app-data-dir');
-        if (handle) {
-            setHasExistingHandle(true);
-            setExistingDirName(handle.name);
+        try {
+            const handle = await getHandle<FileSystemDirectoryHandle>('app-data-dir');
+            if (handle && typeof handle.name === 'string') {
+                setHasExistingHandle(true);
+                setExistingDirName(handle.name);
+            }
+        } catch (e) {
+            console.warn("Failed to check existing storage handle:", e);
         }
     };
     checkHandle();
   }, []);
 
   const handleSelectDirectory = async () => {
+    audioService.playClick();
     setError(null);
     setIsLoading(true);
     try {
@@ -41,6 +47,7 @@ const Welcome: React.FC<WelcomeProps> = ({ onSetupComplete }) => {
   };
 
   const handleReconnect = async () => {
+      audioService.playClick();
       setError(null);
       setIsLoading(true);
       try {
@@ -58,56 +65,68 @@ const Welcome: React.FC<WelcomeProps> = ({ onSetupComplete }) => {
   };
 
   return (
-    <div className="w-full h-full flex items-center justify-center p-4 bg-base-200">
-        <div className="w-full max-w-lg text-center bg-base-100 p-10 rounded-2xl shadow-2xl border border-base-300 animate-fade-in">
-            <AppLogoIcon className="w-20 h-20 text-primary mx-auto mb-6" />
-            <h1 className="text-4xl font-black tracking-tighter text-base-content mb-4">SETUP STORAGE<span className="text-primary">.</span></h1>
+    <div className="w-full h-full flex items-center justify-center p-4 bg-transparent relative overflow-hidden">
+        {/* Technical Scanline Effect */}
+        <div className="absolute inset-0 pointer-events-none opacity-[0.03] bg-[linear-gradient(rgba(18,16,16,0)_50%,rgba(0,0,0,0.25)_50%),linear-gradient(90deg,rgba(255,0,0,0.06),rgba(0,255,0,0.02),rgba(0,0,255,0.06))] bg-[length:100%_2px,3px_100%]"></div>
+        
+        <div className="w-full max-w-lg text-center bg-transparent p-10 rounded-none border border-primary/20 animate-fade-in relative overflow-hidden">
+            {/* Technical Corner Accents */}
+            <div className="absolute top-0 left-0 w-8 h-8 border-t-2 border-l-2 border-primary/40"></div>
+            <div className="absolute top-0 right-0 w-8 h-8 border-t-2 border-r-2 border-primary/40"></div>
+            <div className="absolute bottom-0 left-0 w-8 h-8 border-b-2 border-l-2 border-primary/40"></div>
+            <div className="absolute bottom-0 right-0 w-8 h-8 border-b-2 border-r-2 border-primary/40"></div>
             
-            <p className="text-base font-bold text-base-content/60 mb-10 uppercase tracking-tight leading-relaxed">
-              Select a local folder on your computer to save your images, prompts, and templates.
-            </p>
+            <div className="relative z-10">
+                <AppLogoIcon className="w-20 h-20 text-primary mx-auto mb-6 drop-shadow-[0_0_15px_rgba(var(--p),0.5)]" />
+                <h1 className="text-4xl font-black tracking-tighter text-base-content mb-4 uppercase font-sf-mono">STORAGE_INIT<span className="text-primary italic">.</span></h1>
+                
+                <p className="text-[10px] font-black text-base-content/40 mb-10 uppercase tracking-[0.3em] leading-relaxed">
+                  Establish local vault connection to synchronize neural templates and visual assets.
+                </p>
 
-            <div className="space-y-4">
-                {hasExistingHandle ? (
-                    <div className="space-y-6">
-                        <div className="p-4 bg-base-200/50 border border-base-300 rounded-lg text-left">
-                            <span className="text-[10px] font-black uppercase tracking-widest text-primary/60 block mb-1">Previous Folder</span>
-                            <span className="text-sm font-mono font-bold truncate block">{existingDirName || 'Unknown Folder'}</span>
+                <div className="space-y-4">
+                    {hasExistingHandle ? (
+                        <div className="space-y-6">
+                            <div className="p-4 bg-transparent border border-primary/10 rounded-none text-left relative overflow-hidden">
+                                <div className="absolute top-0 right-0 px-2 py-0.5 bg-primary/10 text-[8px] font-black tracking-widest text-primary uppercase">Cached_Path</div>
+                                <span className="text-[9px] font-black uppercase tracking-widest text-base-content/30 block mb-1">Previous Folder</span>
+                                <span className="text-xs font-mono font-bold truncate block text-primary/80">{existingDirName || 'Unknown Folder'}</span>
+                            </div>
+                            <button
+                              onClick={handleReconnect}
+                              disabled={isLoading}
+                              className="form-btn form-btn-primary w-full h-14"
+                            >
+                              {isLoading ? <span className="loading loading-spinner"></span> : <RefreshIcon className="w-5 h-5 mr-2" />}
+                              RECONNECT_VAULT
+                            </button>
+                            <div className="divider text-[10px] font-black opacity-10">OR</div>
+                            <button
+                              onClick={handleSelectDirectory}
+                              disabled={isLoading}
+                              className="form-btn w-full h-10 opacity-40 hover:opacity-100"
+                            >
+                              CHOOSE_NEW_DIRECTORY
+                            </button>
                         </div>
-                        <button
-                          onClick={handleReconnect}
-                          disabled={isLoading}
-                          className="btn btn-primary w-full rounded-none font-black text-xs tracking-widest"
-                        >
-                          {isLoading ? <span className="loading loading-spinner"></span> : <RefreshIcon className="w-5 h-5 mr-2" />}
-                          RECONNECT TO FOLDER
-                        </button>
-                        <div className="divider text-[10px] font-black opacity-30">OR</div>
+                    ) : (
                         <button
                           onClick={handleSelectDirectory}
                           disabled={isLoading}
-                          className="btn btn-ghost btn-sm w-full rounded-none font-bold text-[10px] tracking-widest opacity-60 hover:opacity-100"
+                          className="form-btn form-btn-primary w-full h-14"
                         >
-                          CHOOSE NEW FOLDER
+                          {isLoading ? <span className="loading loading-spinner"></span> : <FolderClosedIcon className="w-5 h-5 mr-2" />}
+                          SELECT_VAULT_FOLDER
                         </button>
+                    )}
+                </div>
+                
+                {error && (
+                    <div className="mt-8 p-4 bg-error/5 border border-error/20 rounded-none">
+                        <p className="text-error font-black text-[10px] uppercase tracking-widest">{error}</p>
                     </div>
-                ) : (
-                    <button
-                      onClick={handleSelectDirectory}
-                      disabled={isLoading}
-                      className="btn btn-primary w-full rounded-none font-black text-xs tracking-widest"
-                    >
-                      {isLoading ? <span className="loading loading-spinner"></span> : <FolderClosedIcon className="w-5 h-5 mr-2" />}
-                      SELECT STORAGE FOLDER
-                    </button>
                 )}
             </div>
-            
-            {error && (
-                <div className="mt-8 p-4 bg-error/10 border border-error/20 rounded-lg">
-                    <p className="text-error font-bold text-xs uppercase tracking-widest">{error}</p>
-                </div>
-            )}
         </div>
     </div>
   );
