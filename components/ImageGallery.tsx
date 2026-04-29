@@ -6,6 +6,7 @@ import { loadGalleryItems, addItemToGallery, updateItemInGallery, deleteItemFrom
 import ImageCard from './ImageCard';
 import TreeView, { TreeViewItem } from './TreeView';
 import { SearchIcon, CloseIcon } from './icons';
+import { pageVariants } from './AnimatedPanels';
 import CategoryPanelToggle from './CategoryPanelToggle';
 import ItemDetailView from './ItemDetailView';
 import ConfirmationModal from './ConfirmationModal';
@@ -309,43 +310,20 @@ const ImageGallery: React.FC<ImageGalleryProps> = ({
     return <div className="h-full w-full flex items-center justify-center bg-transparent"><LoadingSpinner /></div>;
   }
 
-  const panelVariants = {
-    hidden: {
-      clipPath: 'inset(100% 0 0 0)',
-      opacity: 0,
-    },
-    visible: (custom: number) => ({
-      clipPath: 'inset(0% 0 0 0)',
-      opacity: 1,
-      transition: {
-        duration: 1.0,
-        ease: [0.16, 1, 0.3, 1] as any,
-        delay: typeof custom === 'number' ? custom : 0
-      }
-    }),
-    exit: {
-      clipPath: 'inset(100% 0 0 0)',
-      opacity: 0,
-      transition: {
-        duration: 0.6,
-        ease: [0.7, 0, 0.84, 0] as any,
-      }
-    }
-  };
-
   return (
     <>
       <motion.section
-        variants={panelVariants}
+        variants={pageVariants}
         initial="hidden"
         animate={isExiting ? "exit" : "visible"}
         exit="exit"
-        className="flex flex-col h-full bg-transparent w-full relative p-[3px] corner-frame overflow-hidden"
+        className="flex flex-col h-full bg-transparent w-full relative overflow-hidden"
       >
-        <div className="flex flex-row h-full w-full overflow-hidden relative z-10 bg-base-100/40 backdrop-blur-xl gap-0 panel-transparent">
-          <aside className={`relative z-20 flex-shrink-0 bg-transparent border-r border-white/5 transition-all duration-300 ease-in-out flex flex-col overflow-hidden ${isCategoryPanelCollapsed ? 'w-0' : 'w-96'}`}>
+        <div className="flex flex-row h-full w-full overflow-hidden relative z-10 gap-6 bg-transparent">
+          <aside className={`relative z-20 flex-shrink-0 transition-all duration-300 ease-in-out flex flex-col overflow-visible ${isCategoryPanelCollapsed ? 'w-0 p-0' : 'w-96 p-[3px] corner-frame'}`}>
             <CategoryPanelToggle isCollapsed={isCategoryPanelCollapsed} onToggle={onToggleCategoryPanel} position="right" />
-            <div className={`flex flex-col h-full w-full overflow-hidden relative z-10 transition-opacity duration-200 ${isCategoryPanelCollapsed ? 'opacity-0 invisible' : 'opacity-100 visible'}`}>
+            <div className={`flex flex-col h-full w-full bg-base-100/50 backdrop-blur-xl relative overflow-hidden transition-all duration-300 ${isCategoryPanelCollapsed ? 'opacity-0 invisible' : 'opacity-100 visible'}`}>
+              <div className={`flex flex-col h-full w-full overflow-hidden relative z-10 transition-opacity duration-200 ${isCategoryPanelCollapsed ? 'opacity-0 invisible' : 'opacity-100 visible'}`}>
               <div className="flex-shrink-0 h-14 px-6 flex items-center border-b border-white/5">
                 <h3 className="text-[11px] font-black uppercase tracking-[0.3em] text-primary">Category Folder</h3>
               </div>
@@ -373,14 +351,17 @@ const ImageGallery: React.FC<ImageGalleryProps> = ({
                 <TreeView items={treeItems} selectedId={selectedCategoryId} onSelect={setSelectedCategoryId} searchActive={!!categorySearchQuery} />
               </div>
             </div>
+            </div>
           </aside>
-          <main className="relative z-10 flex-grow flex flex-col h-full overflow-hidden bg-transparent">
-            <div className="flex flex-col h-full w-full overflow-hidden relative z-10">
+          <main className="relative z-10 flex-1 flex flex-col h-full overflow-visible min-w-0 p-[3px] corner-frame">
+            <div className="flex flex-col h-full w-full bg-base-100/50 backdrop-blur-xl relative overflow-hidden">
+              <div className="flex flex-col h-full w-full overflow-hidden relative z-10">
               {detailViewItemId && (
                 <ItemDetailView
                   items={sortedAndFilteredItems} currentIndex={sortedAndFilteredItems.findIndex(i => i.id === detailViewItemId)} isPinned={pinnedItemIds.includes(detailViewItemId)} categories={categories} onClose={() => setDetailViewItemId(null)} onUpdate={handleUpdateItem} onDelete={(i) => setItemToDelete(i)} onTogglePin={(id) => { const n = pinnedItemIds.includes(id) ? pinnedItemIds.filter(pid => pid !== id) : [id, ...pinnedItemIds]; setPinnedItemIds(n); savePinnedItemIds(n); }} onNavigate={(idx) => setDetailViewItemId(sortedAndFilteredItems[idx].id)} showGlobalFeedback={showGlobalFeedback}
                 />
               )}
+
 
               <div className={`flex flex-col h-full overflow-hidden transition-all duration-300 ${detailViewItemId ? 'blur-sm pointer-events-none' : ''}`}>
                 <div className="relative flex-grow overflow-hidden">
@@ -497,17 +478,13 @@ const ImageGallery: React.FC<ImageGalleryProps> = ({
                     {targetDisplayCount < sortedAndFilteredItems.length && (
                       <div ref={lastElementRef} className="py-20 flex justify-center bg-transparent"><span className="loading loading-spinner loading-md opacity-20"></span></div>
                     )}
+                    </div>
                   </div>
                 </div>
               </div>
             </div>
           </main>
         </div>
-        {/* Manual Corner Accents */}
-        <div className="absolute -top-[1px] -left-[1px] w-3 h-3 border-t border-l border-primary/15 z-20 pointer-events-none" />
-        <div className="absolute -top-[1px] -right-[1px] w-3 h-3 border-t border-r border-primary/15 z-20 pointer-events-none" />
-        <div className="absolute -bottom-[1px] -left-[1px] w-3 h-3 border-b border-l border-primary/15 z-20 pointer-events-none" />
-        <div className="absolute -bottom-[1px] -right-[1px] w-3 h-3 border-b border-r border-primary/15 z-20 pointer-events-none" />
       </motion.section>
 
       <AddItemModal isOpen={isAddModalOpen} onClose={() => setIsAddModalOpen(false)} onAddItem={handleAddItem} categories={categories} />

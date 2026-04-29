@@ -8,6 +8,7 @@ import { SearchIcon } from './icons';
 import { fileSystemManager } from '../utils/fileUtils';
 import LayeredCheatsheetDetail from './LayeredCheatsheetDetail';
 import { audioService } from '../services/audioService';
+import { pageVariants } from './AnimatedPanels';
 
 const CATEGORY_PLACEHOLDER = "https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?q=80&w=1000&auto=format&fit=crop";
 
@@ -262,33 +263,10 @@ export const GenericCheatsheetPage: React.FC<GenericCheatsheetPageProps> = ({
     return <div className="h-full w-full flex items-center justify-center bg-transparent"><LoadingSpinner /></div>;
   }
 
-  const panelVariants = {
-    hidden: { 
-        clipPath: 'inset(100% 0 0 0)',
-        opacity: 0,
-    },
-    visible: { 
-        clipPath: 'inset(0% 0 0 0)',
-        opacity: 1,
-        transition: { 
-            duration: 1.0, 
-            ease: [0.16, 1, 0.3, 1] as any
-        }
-    },
-    exit: {
-        clipPath: 'inset(100% 0 0 0)',
-        opacity: 0,
-        transition: {
-            duration: 0.6,
-            ease: [0.7, 0, 0.84, 0] as any,
-        }
-    }
-  };
-
   return (
     <>
     <motion.section 
-        variants={panelVariants}
+        variants={pageVariants}
         initial="hidden"
         animate={isExiting ? "exit" : "visible"}
         exit="exit"

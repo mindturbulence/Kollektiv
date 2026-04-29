@@ -7,15 +7,24 @@ import { fileSystemManager } from '../utils/fileUtils';
 import { audioService } from '../services/audioService';
 import { loadGalleryItems } from '../utils/galleryStorage';
 
-const MetadataItem: React.FC<{ label: string; value: string }> = ({ label, value }) => (
-    <div className="flex items-center gap-2">
-        <span className="text-[10px] font-sf-mono uppercase tracking-widest text-primary/60 leading-none inline-block">{label}</span>
-        <span className="text-[10px] font-sf-mono uppercase tracking-widest text-base-content/40 leading-none inline-block">{value}</span>
-    </div>
-);
+const MetadataItem: React.FC<{ label: string; value: string }> = ({ label, value }) => {
+    const { settings } = useSettings();
+    const isPipboyTheme = settings.darkTheme === 'pipboy';
+    const fontClass = isPipboyTheme ? 'font-fixedsys text-[11px]' : 'font-rajdhani text-[12px] font-normal';
+
+    return (
+        <div className="flex items-center gap-2">
+            <span className={`uppercase tracking-widest text-primary/60 leading-none inline-block ${fontClass}`}>{label}</span>
+            <span className={`uppercase tracking-widest text-base-content/40 leading-none inline-block ${fontClass}`}>{value}</span>
+        </div>
+    );
+};
 
 const BatteryStatus: React.FC = () => {
     const [battery, setBattery] = useState<{ level: number, charging: boolean } | null>(null);
+    const { settings } = useSettings();
+    const isPipboyTheme = settings.darkTheme === 'pipboy';
+    const fontClass = isPipboyTheme ? 'font-fixedsys text-[11px]' : 'font-rajdhani text-[12px] font-normal';
 
     useEffect(() => {
         // Battery API is not available in all browsers
@@ -43,8 +52,8 @@ const BatteryStatus: React.FC = () => {
 
     return (
         <div className="flex items-center gap-2">
-            <span className="text-[10px] font-sf-mono uppercase tracking-widest text-primary/60 leading-none inline-block">PWR</span>
-            <span className="text-[10px] font-sf-mono uppercase tracking-widest text-base-content/40 leading-none inline-block">
+            <span className={`uppercase tracking-widest text-primary/60 leading-none inline-block ${fontClass}`}>PWR</span>
+            <span className={`uppercase tracking-widest text-base-content/40 leading-none inline-block ${fontClass}`}>
                 {battery.level}%
             </span>
         </div>
@@ -54,11 +63,17 @@ const BatteryStatus: React.FC = () => {
 const IntegrationItem: React.FC<{
     label: string,
     active: boolean
-}> = ({ label, active }) => (
-    <span className={`text-[10px] font-sf-mono uppercase tracking-widest transition-colors duration-500 leading-none inline-block ${active ? 'text-base-content/40' : 'text-base-content/20'}`}>
-        {label}
-    </span>
-);
+}> = ({ label, active }) => {
+    const { settings } = useSettings();
+    const isPipboyTheme = settings.darkTheme === 'pipboy';
+    const fontClass = isPipboyTheme ? 'font-fixedsys text-[11px]' : 'font-rajdhani text-[12px] font-normal';
+
+    return (
+        <span className={`uppercase tracking-widest transition-colors duration-500 leading-none inline-block ${fontClass} ${active ? 'text-base-content/40' : 'text-base-content/20'}`}>
+            {label}
+        </span>
+    );
+};
 
 const DigitalOscillator = ({ state = 'idle', theme = 'light' }: { state: string, theme?: 'light' | 'dark' }) => {
     const canvasRef = useRef<HTMLCanvasElement>(null);
@@ -175,6 +190,8 @@ const Footer: React.FC<FooterProps> = ({
     const { settings } = useSettings();
     const [vaultCount, setVaultCount] = useState<number>(0);
     const [time, setTime] = useState(new Date().toLocaleTimeString());
+    const isPipboyTheme = settings.darkTheme === 'pipboy';
+    const mainFontClass = isPipboyTheme ? 'font-fixedsys text-[11px]' : 'font-rajdhani text-[12px] font-normal';
 
     useEffect(() => {
         const fetch = async () => {
@@ -189,20 +206,20 @@ const Footer: React.FC<FooterProps> = ({
     }, []);
 
     return (
-        <footer className="flex-shrink-0 px-6 py-3 bg-base-200/20 backdrop-blur-md z-[700] flex flex-row items-center justify-between select-none whitespace-nowrap relative pointer-events-auto border-t border-base-content/10 mt-auto">
+        <footer className="flex-shrink-0 px-8 py-4 bg-base-200/20 backdrop-blur-md z-[700] flex flex-row items-center justify-between select-none whitespace-nowrap relative pointer-events-auto border-t border-base-content/10 mt-auto">
             {/* Background Technical Noise */}
             <div className="absolute inset-0 pointer-events-none opacity-[0.03] bg-[url('https://www.transparenttextures.com/patterns/stardust.png')]"></div>
 
             <div className="flex items-center h-full gap-4 bg-transparent relative z-[710] pointer-events-auto">
                 <div className="flex gap-3 items-center">
-                    <span className="text-[10px] font-rajdhani uppercase tracking-widest text-primary/60 leading-none inline-block">ENG</span>
+                    <span className={`uppercase tracking-widest text-primary/60 leading-none inline-block ${mainFontClass}`}>ENG</span>
                     <div className="min-w-[120px] flex items-center">
                         <LlmStatusSwitcher onClick={onToggleLlmPanel} isOpen={isLlmPanelOpen} />
                     </div>
                 </div>
 
-                <div className="flex gap-4 font-rajdhani items-center pl-4 ps-6 border-l border-base-content/10">
-                    <span className="text-[10px] tracking-widest text-primary/60 leading-none inline-block">INT</span>
+                <div className={`flex gap-4 ${mainFontClass} items-center pl-4 ps-6 border-l border-base-content/10`}>
+                    <span className="uppercase tracking-widest text-primary/60 leading-none inline-block">INT</span>
                     <IntegrationItem label="VAULT" active={fileSystemManager.isDirectorySelected()} />
                     <IntegrationItem label={(settings.activeLLM === 'ollama_cloud' ? 'OLLAMA' : settings.activeLLM?.toUpperCase()) || 'LLM'} active={!!process.env.GEMINI_API_KEY || settings.activeLLM?.includes('ollama') || settings.activeLLM === 'openclaw'} />
                     <IntegrationItem label="YOUTUBE" active={!!settings.youtube?.isConnected} />
@@ -228,8 +245,8 @@ const Footer: React.FC<FooterProps> = ({
                         onMouseEnter={() => audioService.playHover()}
                         className="flex items-center gap-2 group transition-all"
                     >
-                        <span className="text-[10px] font-rajdhani uppercase tracking-widest text-primary/60 group-hover:text-primary leading-none inline-block">SFX</span>
-                        <span className={`text-[10px] font-rajdhani uppercase tracking-widest leading-none inline-block ${audioEnabled ? 'text-base-content/40' : 'text-base-content/20'}`}>{audioEnabled ? 'ON' : 'OFF'}</span>
+                        <span className={`uppercase tracking-widest text-primary/60 group-hover:text-primary leading-none inline-block ${mainFontClass}`}>SFX</span>
+                        <span className={`uppercase tracking-widest leading-none inline-block ${audioEnabled ? 'text-base-content/40' : 'text-base-content/20'} ${mainFontClass}`}>{audioEnabled ? 'ON' : 'OFF'}</span>
                     </button>
 
                     <div className="w-[1px] h-3 bg-base-content/10" />
@@ -239,8 +256,8 @@ const Footer: React.FC<FooterProps> = ({
                         onMouseEnter={() => audioService.playHover()}
                         className="flex items-center gap-2 group transition-all"
                     >
-                        <span className="text-[10px] font-rajdhani uppercase tracking-widest text-primary/60 group-hover:text-primary leading-none inline-block">MSC</span>
-                        <span className={`text-[10px] font-rajdhani uppercase tracking-widest leading-none inline-block ${playerState === 'playing' ? 'text-base-content/40' : 'text-base-content/20'}`}>
+                        <span className={`uppercase tracking-widest text-primary/60 group-hover:text-primary leading-none inline-block ${mainFontClass}`}>MSC</span>
+                        <span className={`uppercase tracking-widest leading-none inline-block ${playerState === 'playing' ? 'text-base-content/40' : 'text-base-content/20'} ${mainFontClass}`}>
                             {playerState === 'playing' ? 'ON' : playerState === 'syncing' ? 'SYNC' : 'OFF'}
                         </span>
 

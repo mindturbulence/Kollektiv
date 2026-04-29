@@ -272,7 +272,7 @@ const PromptCrafter = ({ onSaveToLibrary, onClip, onSendToEnhancer, onSendToRefi
     if (error) return <div className="p-4 text-error">{error}</div>;
 
     return (
-        <div className="grid grid-cols-1 lg:grid-cols-12 overflow-hidden h-full gap-4 min-h-0">
+        <div className="grid grid-cols-1 lg:grid-cols-12 overflow-hidden h-full gap-6 min-h-0">
             <motion.aside
                 variants={panelVariants}
                 initial="hidden"

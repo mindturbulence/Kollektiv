@@ -4,7 +4,7 @@ import { motion } from 'framer-motion';
 import { discoveryService, type DiscoveryCollection, type PromptItem } from '../services/discoveryService';
 import {
     ScanLine,
-    panelVariants,
+    pageVariants,
     contentVariants
 } from './AnimatedPanels';
 import {
@@ -445,186 +445,189 @@ const DiscoveryPage: React.FC<DiscoveryPageProps> = ({
 
     return (
         <motion.div
-            variants={panelVariants}
+            variants={pageVariants}
             initial="hidden"
             animate={isExiting ? "exit" : "visible"}
-            className="flex h-full w-full gap-4"
+            exit="exit"
+            className="flex flex-col h-full bg-transparent w-full relative overflow-hidden"
         >
-            {/* LEFT PANEL - FIXED WIDTH */}
-            <div className="hidden lg:flex w-[400px] shrink-0 flex-col h-full relative group p-[1px] corner-frame">
-                <div className="flex flex-col h-full w-full bg-base-100/50 backdrop-blur-xl relative overflow-hidden">
-                    <ScanLine delay={1} />
+            <div className="flex flex-row h-full w-full overflow-hidden relative z-10 gap-8 bg-transparent">
+                {/* LEFT PANEL - FIXED WIDTH */}
+                <div className="hidden lg:flex w-[300px] shrink-0 flex-col h-full relative group p-[1px] corner-frame">
+                    <div className="flex flex-col h-full w-full bg-base-100/50 backdrop-blur-xl relative overflow-hidden">
+                        <ScanLine delay={1} />
 
-                    {/* Left Panel Header */}
-                    <div className="h-16 flex items-center px-6 bg-base-100/10 backdrop-blur-md border-b border-primary/10 flex-shrink-0 z-20">
-                        <div className="flex items-center gap-3">
-                            <span className="text-[12px] font-rajdhani uppercase tracking-[0.2em] text-base-content/80">UPLINK - TERMINAL</span>
-                        </div>
-                    </div>
-
-                    <div className="flex-grow flex flex-col h-full overflow-hidden">
-                        {activeCollection && (
-                            <TerminalDisplay prompt={selectedPrompt} />
-                        )}
-                    </div>
-
-                    <div className="p-5 border-t border-white/10 bg-white/[0.02] shrink-0">
-                        <div className="space-y-4">
+                        {/* Left Panel Header */}
+                        <div className="h-16 flex items-center px-6 bg-base-100/10 backdrop-blur-md border-b border-primary/10 flex-shrink-0 z-20">
                             <div className="flex items-center gap-3">
-                                <div className={`w-2 h-2 rounded-full ${isLoading ? 'bg-primary animate-pulse' : 'bg-success shadow-[0_0_8px_rgba(34,197,94,0.4)]'}`} />
-                                <span className="text-[10px] font-rajdhani font-bold uppercase tracking-[0.2em] text-base-content/40">
-                                    {isLoading ? 'SYNCING_BITSTREAM' : 'UPLINK_ESTABLISHED'}
-                                </span>
+                                <span className="text-[12px] font-rajdhani uppercase tracking-[0.2em] text-base-content/80">UPLINK - TERMINAL</span>
                             </div>
+                        </div>
 
-                            <div className="space-y-1.5">
-                                <div className="flex justify-between text-[8px] font-mono text-base-content/20 uppercase tracking-widest">
-                                    <span>Signal_Strength</span>
-                                    <span>99.9%</span>
+                        <div className="flex-grow flex flex-col h-full overflow-hidden">
+                            {activeCollection && (
+                                <TerminalDisplay prompt={selectedPrompt} />
+                            )}
+                        </div>
+
+                        <div className="p-5 border-t border-white/10 bg-white/[0.02] shrink-0">
+                            <div className="space-y-4">
+                                <div className="flex items-center gap-3">
+                                    <div className={`w-2 h-2 rounded-full ${isLoading ? 'bg-primary animate-pulse' : 'bg-success shadow-[0_0_8px_rgba(34,197,94,0.4)]'}`} />
+                                    <span className="text-[10px] font-rajdhani font-bold uppercase tracking-[0.2em] text-base-content/40">
+                                        {isLoading ? 'SYNCING_BITSTREAM' : 'UPLINK_ESTABLISHED'}
+                                    </span>
                                 </div>
-                                <div className="h-[1px] w-full bg-white/5 relative overflow-hidden">
-                                    <motion.div
-                                        animate={{ x: ['-100%', '100%'] }}
-                                        transition={{ duration: 3, repeat: Infinity, ease: "linear" }}
-                                        className="absolute inset-y-0 w-1/3 bg-primary/20"
-                                    />
-                                    <div className="h-full w-full bg-primary/10" />
+
+                                <div className="space-y-1.5">
+                                    <div className="flex justify-between text-[8px] font-mono text-base-content/20 uppercase tracking-widest">
+                                        <span>Signal_Strength</span>
+                                        <span>99.9%</span>
+                                    </div>
+                                    <div className="h-[1px] w-full bg-white/5 relative overflow-hidden">
+                                        <motion.div
+                                            animate={{ x: ['-100%', '100%'] }}
+                                            transition={{ duration: 3, repeat: Infinity, ease: "linear" }}
+                                            className="absolute inset-y-0 w-1/3 bg-primary/20"
+                                        />
+                                        <div className="h-full w-full bg-primary/10" />
+                                    </div>
                                 </div>
                             </div>
                         </div>
                     </div>
                 </div>
-            </div>
 
-            {/* CENTER PANEL - MAIN LIST */}
-            <div className="flex-grow min-w-0 flex flex-col h-full relative p-[1px] corner-frame">
-                <div className="flex flex-col h-full w-full bg-base-100/50 backdrop-blur-xl relative overflow-hidden">
-                    <ScanLine delay={2} />
+                {/* CENTER PANEL - MAIN LIST */}
+                <div className="flex-grow min-w-0 flex flex-col h-full relative p-[1px] corner-frame">
+                    <div className="flex flex-col h-full w-full bg-base-100/50 backdrop-blur-xl relative overflow-hidden">
+                        <ScanLine delay={2} />
 
-                    {/* Panel Header */}
-                    <div className="h-16 flex items-center px-6 bg-base-100/10 backdrop-blur-md border-b border-primary/10 flex-shrink-0 z-20">
-                        <div className="flex items-center gap-3">
-                            <span className="text-[12px] font-rajdhani uppercase tracking-[0.2em] text-base-content/80">Discovery Vault Database</span>
-                        </div>
-                    </div>
-
-                    {/* Search Area */}
-                    <div className="border-b border-primary/10 bg-base-100/20 backdrop-blur-md sticky top-16 z-30">
-                        <div className="flex items-center h-14 relative px-4">
-                            {isSearching ? (
-                                <RefreshIcon className="absolute left-8 w-4 h-4 text-primary animate-spin" />
-                            ) : (
-                                <SearchIcon className="absolute left-8 w-4 h-4 opacity-60 pointer-events-none" />
-                            )}
-                            <input
-                                type="text"
-                                value={searchQuery}
-                                onChange={(e) => { audioService.playHover(); setSearchQuery(e.target.value); }}
-                                placeholder="SEARCH ARCHIVES..."
-                                className="w-full h-full bg-transparent border-none focus:outline-none pl-14 pr-12 text-[12px] font-mono uppercase tracking-[0.2em] text-base-content/80 placeholder:text-base-content/40"
-                            />
-                            {searchQuery && (
-                                <button onClick={() => { setSearchQuery(''); audioService.playClick(); }} className="absolute right-6 btn btn-xs btn-ghost btn-circle opacity-40">
-                                    <CloseIcon className="w-4 h-4" />
-                                </button>
-                            )}
-                        </div>
-                    </div>
-
-                    {/* Table Header */}
-                    <div className="flex items-center px-5 py-5 border-b border-primary/10 bg-white/[0.05] text-[12px] font-rajdhani uppercase tracking-[0.3em] text-base-content/50">
-                        <div className="w-[250px] shrink-0">Title</div>
-                        <div className="flex-grow px-4 ml-4">Prompt</div>
-                    </div>
-
-                    {/* Scrollable List */}
-                    <div className="flex-grow overflow-y-auto custom-scrollbar">
-                        {isLoading ? (
-                            <div className="h-full flex flex-col items-center justify-center opacity-40">
-                                <RefreshIcon className="w-6 h-6 animate-spin text-primary" />
-                                <span className="text-[12px] font-rajdhani mt-3 tracking-[0.4em] uppercase">Syncing</span>
+                        {/* Panel Header */}
+                        <div className="h-16 flex items-center px-6 bg-base-100/10 backdrop-blur-md border-b border-primary/10 flex-shrink-0 z-20">
+                            <div className="flex items-center gap-3">
+                                <span className="text-[12px] font-rajdhani uppercase tracking-[0.2em] text-base-content/80">Discovery Vault Database</span>
                             </div>
-                        ) : (
-                            <div className="flex flex-col">
-                                {prompts.map((p, idx) => (
-                                    <motion.div
-                                        key={p.id}
-                                        variants={contentVariants}
-                                        custom={idx * 0.05}
-                                        initial="hidden"
-                                        animate="visible"
-                                        onClick={() => { audioService.playClick(); setSelectedPrompt(p); }}
-                                        className={`group px-5 py-4 flex items-center transition-all cursor-pointer relative border-b border-primary/10 overflow-hidden ${selectedPrompt?.id === p.id
-                                            ? 'bg-primary/5'
-                                            : 'bg-transparent hover:bg-white/[0.02]'
-                                            }`}
-                                    >
-                                        <div className="w-[250px] shrink-0 text-[16px] font-rajdhani truncate">
-                                            {p.category}
-                                        </div>
-                                        <div className="flex-grow min-w-0 px-4 ml-4 overflow-hidden">
-                                            <h3 className={`text-[14px] font-rajdhani tracking-tight truncate block w-full transition-colors ${selectedPrompt?.id === p.id ? 'text-base-content' : 'text-base-content/60 group-hover:text-base-content/90'}`}>
-                                                {p.prompt.trim().replace(/\n/g, ' ')}
-                                            </h3>
-                                        </div>
-                                    </motion.div>
-                                ))}
+                        </div>
 
-                                {hasMore && (
-                                    <button
-                                        onClick={handleLoadMore}
-                                        disabled={isLoadingMore}
-                                        className="w-full py-6 flex items-center justify-center gap-3 text-[12px] font-rajdhani uppercase tracking-[0.4em] text-base-content/20 hover:text-primary transition-colors border-b border-white/5"
-                                    >
-                                        {isLoadingMore ? (
-                                            <>
-                                                <RefreshIcon className="w-3 h-3 animate-spin" />
-                                                <span>Expanding Buffer</span>
-                                            </>
-                                        ) : (
-                                            prompts.length === 0 ? 'Scan Deeper' : 'Load More'
-                                        )}
+                        {/* Search Area */}
+                        <div className="border-b border-primary/10 bg-base-100/20 backdrop-blur-md sticky top-16 z-30">
+                            <div className="flex items-center h-14 relative px-4">
+                                {isSearching ? (
+                                    <RefreshIcon className="absolute left-8 w-4 h-4 text-primary animate-spin" />
+                                ) : (
+                                    <SearchIcon className="absolute left-8 w-4 h-4 opacity-60 pointer-events-none" />
+                                )}
+                                <input
+                                    type="text"
+                                    value={searchQuery}
+                                    onChange={(e) => { audioService.playHover(); setSearchQuery(e.target.value); }}
+                                    placeholder="SEARCH ARCHIVES..."
+                                    className="w-full h-full bg-transparent border-none focus:outline-none pl-14 pr-12 text-[12px] font-mono uppercase tracking-[0.2em] text-base-content/80 placeholder:text-base-content/40"
+                                />
+                                {searchQuery && (
+                                    <button onClick={() => { setSearchQuery(''); audioService.playClick(); }} className="absolute right-6 btn btn-xs btn-ghost btn-circle opacity-40">
+                                        <CloseIcon className="w-4 h-4" />
                                     </button>
                                 )}
-
-                                {prompts.length === 0 && !isLoading && !hasMore && (
-                                    <div className="py-20 text-center opacity-10">
-                                        <p className="text-[12px] font-black uppercase tracking-widest">No Data Syncable</p>
-                                    </div>
-                                )}
                             </div>
-                        )}
-                    </div>
+                        </div>
 
-                    {/* Center Panel Footer */}
-                    <div className="h-10 flex items-center justify-end px-6 border-t border-white/10 bg-white/[0.02] text-[12px] shrink-0">
-                        <div className="flex items-center font-rajdhani gap-2 text-base-content/30 text-[12px] uppercase tracking-[0.2em]">
-                            <span className="font-medium">RECORDS</span>
-                            <span className="text-primary/60 font-bold">{prompts.length}</span>
+                        {/* Table Header */}
+                        <div className="flex items-center px-5 py-5 border-b border-primary/10 bg-white/[0.05] text-[12px] font-rajdhani uppercase tracking-[0.3em] text-base-content/50">
+                            <div className="w-[250px] shrink-0">Title</div>
+                            <div className="flex-grow px-4 ml-4">Prompt</div>
+                        </div>
+
+                        {/* Scrollable List */}
+                        <div className="flex-grow overflow-y-auto custom-scrollbar">
+                            {isLoading ? (
+                                <div className="h-full flex flex-col items-center justify-center opacity-40">
+                                    <RefreshIcon className="w-6 h-6 animate-spin text-primary" />
+                                    <span className="text-[12px] font-rajdhani mt-3 tracking-[0.4em] uppercase">Syncing</span>
+                                </div>
+                            ) : (
+                                <div className="flex flex-col">
+                                    {prompts.map((p, idx) => (
+                                        <motion.div
+                                            key={p.id}
+                                            variants={contentVariants}
+                                            custom={idx * 0.05}
+                                            initial="hidden"
+                                            animate="visible"
+                                            onClick={() => { audioService.playClick(); setSelectedPrompt(p); }}
+                                            className={`group px-5 py-4 flex items-center transition-all cursor-pointer relative border-b border-primary/10 overflow-hidden ${selectedPrompt?.id === p.id
+                                                ? 'bg-primary/5'
+                                                : 'bg-transparent hover:bg-white/[0.02]'
+                                                }`}
+                                        >
+                                            <div className="w-[250px] shrink-0 text-[16px] font-rajdhani truncate">
+                                                {p.category}
+                                            </div>
+                                            <div className="flex-grow min-w-0 px-4 ml-4 overflow-hidden">
+                                                <h3 className={`text-[14px] font-rajdhani tracking-tight truncate block w-full transition-colors ${selectedPrompt?.id === p.id ? 'text-base-content' : 'text-base-content/60 group-hover:text-base-content/90'}`}>
+                                                    {p.prompt.trim().replace(/\n/g, ' ')}
+                                                </h3>
+                                            </div>
+                                        </motion.div>
+                                    ))}
+
+                                    {hasMore && (
+                                        <button
+                                            onClick={handleLoadMore}
+                                            disabled={isLoadingMore}
+                                            className="w-full py-6 flex items-center justify-center gap-3 text-[12px] font-rajdhani uppercase tracking-[0.4em] text-base-content/20 hover:text-primary transition-colors border-b border-white/5"
+                                        >
+                                            {isLoadingMore ? (
+                                                <>
+                                                    <RefreshIcon className="w-3 h-3 animate-spin" />
+                                                    <span>Expanding Buffer</span>
+                                                </>
+                                            ) : (
+                                                prompts.length === 0 ? 'Scan Deeper' : 'Load More'
+                                            )}
+                                        </button>
+                                    )}
+
+                                    {prompts.length === 0 && !isLoading && !hasMore && (
+                                        <div className="py-20 text-center opacity-10">
+                                            <p className="text-[12px] font-black uppercase tracking-widest">No Data Syncable</p>
+                                        </div>
+                                    )}
+                                </div>
+                            )}
+                        </div>
+
+                        {/* Center Panel Footer */}
+                        <div className="h-10 flex items-center justify-end px-6 border-t border-white/10 bg-white/[0.02] text-[12px] shrink-0">
+                            <div className="flex items-center font-rajdhani gap-2 text-base-content/30 text-[12px] uppercase tracking-[0.2em]">
+                                <span className="font-medium">RECORDS</span>
+                                <span className="text-primary/60 font-bold">{prompts.length}</span>
+                            </div>
                         </div>
                     </div>
                 </div>
-            </div>
 
-            {/* RIGHT PANEL - FIXED WIDTH (DETAILS) */}
-            <div className="hidden lg:flex w-[440px] shrink-0 flex-col h-full relative p-[1px] corner-frame">
-                <div className="flex flex-col h-full w-full bg-base-100/50 backdrop-blur-xl relative overflow-hidden">
-                    <ScanLine delay={3} />
+                {/* RIGHT PANEL - FIXED WIDTH (DETAILS) */}
+                <div className="hidden lg:flex w-[440px] shrink-0 flex-col h-full relative p-[1px] corner-frame">
+                    <div className="flex flex-col h-full w-full bg-base-100/50 backdrop-blur-xl relative overflow-hidden">
+                        <ScanLine delay={3} />
 
-                    {/* Right Panel Header */}
-                    <div className="h-16 flex items-center px-6 bg-base-100/10 backdrop-blur-md border-b border-primary/10 flex-shrink-0 z-20">
-                        <div className="flex items-center gap-3">
-                            <span className="text-[12px] font-rajdhani uppercase tracking-[0.2em] uppercase text-base-content/70">Prompt Detail</span>
+                        {/* Right Panel Header */}
+                        <div className="h-16 flex items-center px-6 bg-base-100/10 backdrop-blur-md border-b border-primary/10 flex-shrink-0 z-20">
+                            <div className="flex items-center gap-3">
+                                <span className="text-[12px] font-rajdhani uppercase tracking-[0.2em] uppercase text-base-content/70">Prompt Detail</span>
+                            </div>
                         </div>
-                    </div>
 
-                    <DetailPanel
-                        prompt={selectedPrompt}
-                        onCopy={handleCopy}
-                        onClip={handleClip}
-                        onClipboardClip={handleClipboardClip}
-                        onSend={handleSendToBuilder}
-                    />
+                        <DetailPanel
+                            prompt={selectedPrompt}
+                            onCopy={handleCopy}
+                            onClip={handleClip}
+                            onClipboardClip={handleClipboardClip}
+                            onSend={handleSendToBuilder}
+                        />
+                    </div>
                 </div>
             </div>
         </motion.div>

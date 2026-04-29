@@ -29,6 +29,9 @@ interface NavItemData {
 
 const Logo: React.FC<{ onNavigate: (tab: ActiveTab) => void }> = ({ onNavigate }) => {
   const [scrambleTrigger, setScrambleTrigger] = useState(0);
+  const { settings } = useSettings();
+  const isIsacTheme = settings.darkTheme === 'isac';
+  const isPipboyTheme = settings.darkTheme === 'pipboy';
 
   return (
     <button
@@ -42,7 +45,7 @@ const Logo: React.FC<{ onNavigate: (tab: ActiveTab) => void }> = ({ onNavigate }
       }}
       className="flex items-center justify-center gap-2 group pointer-events-auto w-[180px]"
     >
-      <h1 className="text-xl font-normal tracking-widest text-base-content uppercase flex items-center font-monoton leading-none translate-y-[2px]">
+      <h1 className={`text-xl font-normal tracking-widest text-base-content uppercase flex items-center leading-none translate-y-[2px] ${isIsacTheme ? 'font-prime-light' : isPipboyTheme ? 'font-monofonto' : 'font-monoton'}`}>
         <ChromaticText>
           <TimedScrambledText text="Kollektiv" intervalMs={300000} trigger={scrambleTrigger} />
         </ChromaticText>
@@ -90,6 +93,8 @@ const NavItem: React.FC<{
   isCurrent: boolean;
 }> = ({ label, onClick, isActive, isCurrent }) => {
   const containerRef = useRef<HTMLButtonElement>(null);
+  const { settings } = useSettings();
+  const isPipboyTheme = settings.darkTheme === 'pipboy';
 
   useLayoutEffect(() => {
     // Collect all elements from RollingText children if we want to animate entry with GSAP
@@ -125,7 +130,7 @@ const NavItem: React.FC<{
         audioService.playClick();
         onClick();
       }}
-      className={`px-3 h-full flex items-center text-[10px] font-sf-mono font-normal uppercase tracking-widest leading-none transition-all duration-300 whitespace-nowrap overflow-hidden opacity-0 translate-y-[10px] ${isCurrent ? 'text-primary no-glow' : 'text-base-content/30 hover:text-primary hover:no-glow'}`}
+      className={`px-3 h-full flex items-center font-normal uppercase tracking-widest leading-none transition-all duration-300 whitespace-nowrap overflow-hidden opacity-0 translate-y-[10px] ${isPipboyTheme ? 'font-fixedsys text-[12px]' : 'font-rajdhani text-[12px] font-normal'} ${isCurrent ? 'text-primary no-glow' : 'text-base-content/30 hover:text-primary hover:no-glow'}`}
     >
       <RollingText text={label} hoverClassName="text-primary" />
     </button>
@@ -243,18 +248,18 @@ const Header: React.FC<HeaderProps> = ({
   const handleParentClick = useCallback((group: typeof navGroups[0]) => {
     if (switchingRef.current) return;
 
+    audioService.playClick();
+
     if (group.singleId) {
       if (activeMenu) audioService.playSlide();
       onNavigate(group.singleId);
       setActiveMenu(null);
-      audioService.playClick();
       return;
     }
 
     if (activeMenu === group.id) {
       audioService.playSlide();
       setActiveMenu(null);
-      audioService.playClick();
       return;
     }
 
@@ -262,7 +267,6 @@ const Header: React.FC<HeaderProps> = ({
       switchingRef.current = true;
       audioService.playSlide();
       setActiveMenu(null);
-      audioService.playClick();
       setTimeout(() => {
         setActiveMenu(group.id);
         audioService.playSlide();
@@ -272,7 +276,6 @@ const Header: React.FC<HeaderProps> = ({
       setActiveMenu(group.id);
       audioService.playSlide();
     }
-    audioService.playClick();
   }, [activeMenu, onNavigate]);
 
   return (
@@ -289,6 +292,7 @@ const Header: React.FC<HeaderProps> = ({
           {navGroups.map((group, groupIdx) => {
             const isExpanded = activeMenu === group.id;
             const isCurrent = isGroupCurrent(group.id);
+            const isPipboyTheme = settings.darkTheme === 'pipboy';
 
             return (
               <React.Fragment key={group.id}>
@@ -296,7 +300,7 @@ const Header: React.FC<HeaderProps> = ({
                   <button
                     onClick={() => handleParentClick(group)}
                     onMouseEnter={() => audioService.playHover()}
-                    className={`parent-nav-item font-sf-mono font-normal uppercase tracking-widest relative z-10 px-3 h-full flex items-center text-[10px] leading-none transition-all duration-500 hover:text-primary hover:no-glow ${isExpanded || isCurrent || (group.singleId === activeTab) ? 'text-base-content no-glow' : 'text-base-content/30'}`}
+                    className={`parent-nav-item font-normal uppercase tracking-widest relative z-10 px-3 h-full flex items-center leading-none transition-all duration-500 hover:text-primary hover:no-glow ${isPipboyTheme ? 'font-fixedsys text-[12px]' : 'font-rajdhani text-[12px] font-normal'} ${isExpanded || isCurrent || (group.singleId === activeTab) ? 'text-base-content no-glow' : 'text-base-content/30'}`}
                   >
                     <RollingText text={group.label} hoverClassName="text-primary" />
                   </button>

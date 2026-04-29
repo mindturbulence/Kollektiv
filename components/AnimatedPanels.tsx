@@ -107,33 +107,33 @@ export const ScanLine = ({ delay = 0 }: { delay?: number }) => (
 
 export const pageVariants: Variants = {
     hidden: { 
+        clipPath: 'inset(100% 0 0 0)',
         opacity: 0,
-        scale: 0.9,
-        transformOrigin: "0% 0%",
+        scale: 0.98,
         filter: 'blur(10px)',
     },
     visible: { 
+        clipPath: 'inset(0% 0 0 0)',
         opacity: 1,
         scale: 1,
-        transformOrigin: "0% 0%",
         filter: 'blur(0px)',
         transition: { 
-            duration: 1.4,
-            ease: [0.19, 1, 0.22, 1] as any,
+            duration: 1.2,
+            ease: [0.16, 1, 0.3, 1] as any,
             when: "beforeChildren",
             staggerChildren: 0.1
         }
     },
     exit: {
+        clipPath: 'inset(100% 0 0 0)',
         opacity: 0,
-        scale: 0.85,
-        transformOrigin: "0% 0%",
-        filter: 'blur(25px)',
+        scale: 0.98,
+        filter: 'blur(20px)',
         transition: {
-            duration: 1.2,
+            duration: 0.8,
             ease: [0.7, 0, 0.84, 0] as any,
             when: "afterChildren",
-            staggerChildren: 0.15,
+            staggerChildren: 0.1,
             staggerDirection: -1
         }
     }

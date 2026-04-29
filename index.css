@@ -1,8 +1,23 @@
 @import url("https://fonts.googleapis.com/css2?family=Nunito:wght@200;300;400;500;600;700;800;900&family=Rajdhani:wght@300;400;500;600;700&family=Space+Grotesk:wght@300;400;500;600;700&family=Space+Mono:wght@400;700&display=swap");
 @import url("https://fonts.googleapis.com/css2?family=Electrolize&family=Titillium+Web:wght@300;400;600&display=swap");
+@import url("https://db.onlinewebfonts.com/c/ad92a081de42733674b960204a8b366c?family=Prime+Light");
+@import url("https://db.onlinewebfonts.com/c/ef616ea44b02534f31cfa5848bb22d2b?family=Monofonto");
+@import url("https://db.onlinewebfonts.com/c/344078ad9965a3962d3e3708dfcd4f2d?family=Fixedsys");
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
+
+.font-prime-light {
+  font-family: "Prime Light", sans-serif !important;
+}
+
+.font-monofonto {
+  font-family: "Monofonto", sans-serif !important;
+}
+
+.font-fixedsys {
+  font-family: "Fixedsys", monospace !important;
+}
 
 .font-monoton {
   font-family: "Monoton", cursive !important;

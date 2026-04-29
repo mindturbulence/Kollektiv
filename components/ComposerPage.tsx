@@ -45,6 +45,7 @@ interface ImageItem {
 interface ComposerPageProps {
   showGlobalFeedback: (message: string, isError?: boolean) => void;
   isExiting?: boolean;
+  isLocalExiting?: boolean;
 }
 
 // --- CONSTANTS ---
@@ -209,7 +210,7 @@ const LayerRenderer: React.FC<{
 
 // --- MAIN PAGE ---
 
-const ComposerPage: React.FC<ComposerPageProps> = ({ showGlobalFeedback, isExiting = false }) => {
+const ComposerPage: React.FC<ComposerPageProps> = ({ showGlobalFeedback, isExiting = false, isLocalExiting = false }) => {
     const layerImageInputRef = useRef<HTMLInputElement>(null);
     const previewContainerRef = useRef<HTMLDivElement>(null);
     const framePaddingRef = useRef<HTMLDivElement>(null);
@@ -402,12 +403,12 @@ const ComposerPage: React.FC<ComposerPageProps> = ({ showGlobalFeedback, isExiti
     return (
         <motion.div 
             initial="hidden"
-            animate={isExiting ? "exit" : "visible"}
+            animate={isLocalExiting || isExiting ? "exit" : "visible"}
             exit="exit"
             variants={panelVariants}
-            className="h-full bg-transparent flex flex-col overflow-hidden p-0 no-glow"
+            className="flex flex-col h-full w-full relative overflow-visible p-0 bg-transparent"
         >
-            <div className="flex-grow flex flex-col lg:flex-row overflow-hidden gap-4">
+            <div className="flex-grow flex flex-col lg:flex-row overflow-hidden gap-6 p-0 bg-transparent">
                 <aside className="w-full lg:w-96 flex-shrink-0 flex flex-col relative p-[3px] corner-frame overflow-visible z-10">
                     <div className="flex flex-col h-full w-full overflow-hidden relative z-10 bg-base-100/40 backdrop-blur-xl">
                         <div className="h-14 flex items-stretch flex-shrink-0 bg-base-100/10 backdrop-blur-md p-1.5 gap-1.5">
@@ -479,14 +480,9 @@ const ComposerPage: React.FC<ComposerPageProps> = ({ showGlobalFeedback, isExiti
                             </button>
                         </footer>
                     </div>
-                    {/* Manual Corner Accents */}
-                    <div className="absolute -top-[1px] -left-[1px] w-3 h-3 border-t border-l border-primary/15 z-20 pointer-events-none" />
-                    <div className="absolute -top-[1px] -right-[1px] w-3 h-3 border-t border-r border-primary/15 z-20 pointer-events-none" />
-                    <div className="absolute -bottom-[1px] -left-[1px] w-3 h-3 border-b border-l border-primary/15 z-20 pointer-events-none" />
-                    <div className="absolute -bottom-[1px] -right-[1px] w-3 h-3 border-b border-r border-primary/15 z-20 pointer-events-none" />
                 </aside>
 
-                <main className="flex-grow flex flex-col relative p-[3px] corner-frame overflow-visible z-10">
+                <main className="flex-grow flex flex-col relative p-[3px] corner-frame overflow-visible z-10 bg-transparent">
                     <div className="flex flex-col h-full w-full overflow-hidden relative z-10 bg-base-100/40 backdrop-blur-xl">
                         <div ref={previewContainerRef} className="flex-grow bg-transparent flex items-center justify-center p-12 overflow-hidden" onMouseDown={e => { if(e.target === e.currentTarget) setActiveLayerId(null); }}>
                             <div id="framer-canvas-root" className="relative transition-all duration-500 overflow-hidden" style={{ width: previewMetrics.width, height: previewMetrics.height, backgroundColor: bgColor }}>
@@ -518,11 +514,6 @@ const ComposerPage: React.FC<ComposerPageProps> = ({ showGlobalFeedback, isExiti
                             </div>
                         </div>
                     </div>
-                    {/* Manual Corner Accents */}
-                    <div className="absolute -top-[1px] -left-[1px] w-3 h-3 border-t border-l border-primary/15 z-20 pointer-events-none" />
-                    <div className="absolute -top-[1px] -right-[1px] w-3 h-3 border-t border-r border-primary/15 z-20 pointer-events-none" />
-                    <div className="absolute -bottom-[1px] -left-[1px] w-3 h-3 border-b border-l border-primary/15 z-20 pointer-events-none" />
-                    <div className="absolute -bottom-[1px] -right-[1px] w-3 h-3 border-b border-r border-primary/15 z-20 pointer-events-none" />
                 </main>
 
                 {/* RIGHT SIDEBAR: LAYERS (IMAGE FRAMER ONLY) */}
@@ -559,11 +550,6 @@ const ComposerPage: React.FC<ComposerPageProps> = ({ showGlobalFeedback, isExiti
                                 )}
                             </div>
                         </div>
-                        {/* Manual Corner Accents */}
-                        <div className="absolute -top-[1px] -left-[1px] w-3 h-3 border-t border-l border-primary/15 z-20 pointer-events-none" />
-                        <div className="absolute -top-[1px] -right-[1px] w-3 h-3 border-t border-r border-primary/15 z-20 pointer-events-none" />
-                        <div className="absolute -bottom-[1px] -left-[1px] w-3 h-3 border-b border-l border-primary/15 z-20 pointer-events-none" />
-                        <div className="absolute -bottom-[1px] -right-[1px] w-3 h-3 border-b border-r border-primary/15 z-20 pointer-events-none" />
                     </aside>
                 )}
             </div>

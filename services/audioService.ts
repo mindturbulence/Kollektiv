@@ -307,20 +307,12 @@ class AudioService {
     if (!this.isEnabled || !this.ctx || !this.masterGain) return;
     this.resume();
     
-    // Play the leaving sound immediately
-    if (this.playBuffer('panel_slide_out', 0.5)) {
-        // Play the entering sound after a short delay to simulate "arriving" at the new page
-        setTimeout(() => {
-            if (this.isEnabled) {
-                this.playBuffer('panel_slide_in', 0.5);
-            }
-        }, 400);
-        return;
-    }
+    // Use the actual page transition sound
+    if (this.playBuffer('transition', 0.7)) return;
 
     const now = this.ctx.currentTime;
     
-    // Quick noise bursts
+    // Quick noise bursts as fallback
     for (let i = 0; i < 4; i++) {
         const delay = i * 0.02;
         const noise = this.ctx.createBufferSource();

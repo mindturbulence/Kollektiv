@@ -217,8 +217,8 @@ export const ColorPaletteExtractor: React.FC<ColorPaletteExtractorProps> = ({ on
   };
 
     return (
-        <div className="h-full bg-transparent flex flex-col p-0 overflow-hidden relative z-0">
-        <div className="flex-grow flex flex-col lg:flex-row overflow-hidden gap-4">
+        <div className="flex flex-col h-full w-full relative overflow-visible p-0 bg-transparent">
+        <div className="flex-grow flex flex-col lg:flex-row overflow-hidden gap-6 p-0 bg-transparent">
             <motion.aside 
                 variants={panelVariants}
                 initial="hidden"
@@ -284,11 +284,6 @@ export const ColorPaletteExtractor: React.FC<ColorPaletteExtractorProps> = ({ on
                         </div>
                     </motion.div>
                 </div>
-                {/* Manual Corner Accents */}
-                <div className="absolute -top-[1px] -left-[1px] w-3 h-3 border-t border-l border-primary/15 z-20 pointer-events-none" />
-                <div className="absolute -top-[1px] -right-[1px] w-3 h-3 border-t border-r border-primary/15 z-20 pointer-events-none" />
-                <div className="absolute -bottom-[1px] -left-[1px] w-3 h-3 border-b border-l border-primary/15 z-20 pointer-events-none" />
-                <div className="absolute -bottom-[1px] -right-[1px] w-3 h-3 border-b border-r border-primary/15 z-20 pointer-events-none" />
             </motion.aside>
 
             <motion.main 
@@ -349,11 +344,6 @@ export const ColorPaletteExtractor: React.FC<ColorPaletteExtractorProps> = ({ on
                         </motion.footer>
                     )}
                 </div>
-                {/* Manual Corner Accents */}
-                <div className="absolute -top-[1px] -left-[1px] w-3 h-3 border-t border-l border-primary/15 z-20 pointer-events-none" />
-                <div className="absolute -top-[1px] -right-[1px] w-3 h-3 border-t border-r border-primary/15 z-20 pointer-events-none" />
-                <div className="absolute -bottom-[1px] -left-[1px] w-3 h-3 border-b border-l border-primary/15 z-20 pointer-events-none" />
-                <div className="absolute -bottom-[1px] -right-[1px] w-3 h-3 border-b border-r border-primary/15 z-20 pointer-events-none" />
             </motion.main>
         </div>
 

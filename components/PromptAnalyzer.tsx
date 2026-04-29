@@ -430,7 +430,7 @@ export const PromptAnalyzer: React.FC<PromptAnalyzerProps> = ({
                 {header}
             </div>
 
-            <div className="flex-grow grid grid-cols-1 xl:grid-cols-12 gap-4 min-h-0 overflow-hidden">
+            <div className="flex-grow grid grid-cols-1 xl:grid-cols-12 gap-6 min-h-0 overflow-hidden">
 
                 {/* Left Section: Input / Dissection */}
                 <motion.section

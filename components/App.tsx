@@ -52,8 +52,8 @@ class ErrorBoundary extends React.Component<{ children: React.ReactNode }, { has
         this.state = { hasError: false, error: null, errorInfo: null };
     }
     static getDerivedStateFromError(error: Error) { return { hasError: true, error }; }
-    componentDidCatch(error: any, errorInfo: any) { 
-        console.error("App Crash:", error, errorInfo); 
+    componentDidCatch(error: any, errorInfo: any) {
+        console.error("App Crash:", error, errorInfo);
         this.setState({ errorInfo });
     }
     render() {
@@ -62,13 +62,13 @@ class ErrorBoundary extends React.Component<{ children: React.ReactNode }, { has
                 <div className="h-screen w-screen flex flex-col items-center justify-center bg-base-100 p-5 text-center">
                     <h1 className="text-4xl font-black uppercase tracking-tighter mb-4">CRITICAL ERROR</h1>
                     <p className="text-base-content/60 font-bold uppercase tracking-widest mb-4">The application encountered an unrecoverable state.</p>
-                    
+
                     <div className="bg-error/10 border border-error/20 p-4 mb-8 max-w-4xl w-full overflow-auto transition-all animate-fade-in shadow-2xl">
                         <div className="text-xs text-error font-mono font-black uppercase tracking-widest mb-2 border-b border-error/20 pb-1">Trace Summary</div>
                         <code className="text-xs text-error font-mono break-words whitespace-pre-wrap text-left block max-h-[30vh]">
                             {typeof this.state.error === 'object' ? (this.state.error.stack || this.state.error.message || JSON.stringify(this.state.error)) : String(this.state.error)}
                         </code>
-                        
+
                         {this.state.errorInfo && (
                             <>
                                 <div className="text-xs text-error font-mono font-black uppercase tracking-widest mt-4 mb-2 border-b border-error/20 pb-1">Component Stack</div>
@@ -101,20 +101,21 @@ class ErrorBoundary extends React.Component<{ children: React.ReactNode }, { has
     }
 }
 
-const InitialLoader: React.FC<{ status: string; progress: number | null }> = ({ status, progress }) => {
+const InitialLoader: React.FC<{ status: string; progress: number | null; onContinue: (withMusic: boolean) => void }> = ({ status, progress, onContinue }) => {
     const textWrapperRef = useRef<HTMLHeadingElement>(null);
     const [logs, setLogs] = useState<string[]>([]);
     const logRef = useRef(0);
     const percentage = Math.round((progress || 0) * 100);
     const displayPercentage = useRef(0);
     const [smoothPercentage, setSmoothPercentage] = useState(0);
+    const [isComplete, setIsComplete] = useState(false);
 
     useEffect(() => {
         const target = percentage;
         const obj = { val: displayPercentage.current };
         gsap.to(obj, {
             val: target,
-            duration: 0.8,
+            duration: 1.2,
             ease: "power2.out",
             onUpdate: () => {
                 displayPercentage.current = obj.val;
@@ -141,7 +142,7 @@ const InitialLoader: React.FC<{ status: string; progress: number | null }> = ({ 
                     setLogs(prev => [...prev, bootLogs[logRef.current]]);
                     logRef.current++;
                 }
-            }, 200);
+            }, 300);
             return () => clearInterval(interval);
         }
     }, [percentage]);
@@ -150,28 +151,38 @@ const InitialLoader: React.FC<{ status: string; progress: number | null }> = ({ 
         if (!textWrapperRef.current) return;
         gsap.fromTo(textWrapperRef.current,
             { yPercent: 100, autoAlpha: 0 },
-            { yPercent: 0, autoAlpha: 1, duration: 1.2, ease: "expo.out" }
+            { yPercent: 0, autoAlpha: 1, duration: 1.5, ease: "expo.out" }
         );
     }, []);
 
     useEffect(() => {
-        if (percentage >= 100 && textWrapperRef.current) {
+        if (percentage >= 100 && smoothPercentage === 100) {
+            setIsComplete(true);
+        }
+    }, [percentage, smoothPercentage]);
+
+    const handleContinue = (withMusic: boolean) => {
+        if (textWrapperRef.current) {
             gsap.to(textWrapperRef.current, {
                 y: -80,
                 autoAlpha: 0,
                 duration: 0.8,
                 ease: "expo.inOut",
-                delay: 0.2
+                onComplete: () => {
+                    onContinue(withMusic);
+                }
             });
+        } else {
+            onContinue(withMusic);
         }
-    }, [percentage]);
+    };
 
     return (
         <div id="initial-loader" className="fixed inset-0 z-[500] flex flex-col items-center justify-center bg-base-100 text-base-content overflow-hidden select-none font-sans" style={{ background: 'oklch(var(--b1))', opacity: 1 }}>
             <div className="absolute inset-0 bg-grid-texture opacity-[0.03] pointer-events-none"></div>
 
             {/* Large Background Percentage (SR Seventy One Style) */}
-            <div className="absolute inset-0 flex items-center justify-center pointer-events-none overflow-hidden">
+            <div className={`absolute inset-0 flex items-center justify-center pointer-events-none overflow-hidden transition-opacity duration-1000 ${isComplete ? 'opacity-0' : 'opacity-100'}`}>
                 <span
                     className="text-[25vw] font-normal opacity-[0.03] leading-none select-none font-monoton tracking-widest will-change-transform"
                     style={{ transform: `translateY(${(100 - smoothPercentage) * 0.2}px)` }}
@@ -181,7 +192,7 @@ const InitialLoader: React.FC<{ status: string; progress: number | null }> = ({ 
             </div>
 
             {/* Terminal Logs - Left Side */}
-            <div className="absolute left-16 md:left-24 top-1/2 -translate-y-1/2 flex flex-col gap-1 pointer-events-none z-10">
+            <div className={`absolute left-16 md:left-24 top-1/2 -translate-y-1/2 flex flex-col gap-1 pointer-events-none z-10 transition-opacity duration-1000 ${isComplete ? 'opacity-0' : 'opacity-100'}`}>
                 {logs.slice(-6).map((log, i) => (
                     <span key={i} className="text-[8px] font-mono tracking-widest text-primary/40 animate-fade-in">
                         {log}
@@ -197,7 +208,7 @@ const InitialLoader: React.FC<{ status: string; progress: number | null }> = ({ 
                         </span>
 
                         <div
-                            className="row-start-1 col-start-1 h-full overflow-hidden transition-all duration-700 ease-out border-r border-base-content/20"
+                            className={`row-start-1 col-start-1 h-full overflow-hidden transition-all duration-700 ease-out border-base-content/20 ${isComplete ? 'border-r-0' : 'border-r'}`}
                             style={{ width: `${percentage}%` }}
                         >
                             <span className="text-base-content block whitespace-nowrap leading-none py-2 drop-shadow-[0_0_20px_rgba(var(--bc),0.15)]">
@@ -207,23 +218,42 @@ const InitialLoader: React.FC<{ status: string; progress: number | null }> = ({ 
                     </h1>
                 </div>
 
-                <div className={`flex flex-col items-center gap-4 transition-all duration-500 ${percentage >= 100 ? 'opacity-0 translate-y-4' : 'opacity-100 translate-y-0'}`}>
-                    <div className="flex flex-col items-center gap-2">
-                        <p className="text-[10px] font-mono font-bold uppercase tracking-[0.5em] text-center text-base-content/40">
-                            {(status || 'DIAGNOSTIC_ACTIVE').toUpperCase()}
-                        </p>
+                <div className="relative h-20 w-80">
+                    {/* Progress Bar & Status - Crossfade out */}
+                    <div className={`absolute inset-0 flex flex-col items-center gap-4 transition-all duration-1000 ${isComplete ? 'opacity-0 scale-95 pointer-events-none' : 'opacity-100 scale-100'}`}>
+                        <div className="flex flex-col items-center gap-2">
+                            <p className="text-[10px] font-mono font-bold uppercase tracking-[0.5em] text-center text-base-content/40">
+                                {(status || 'DIAGNOSTIC_ACTIVE').toUpperCase()}
+                            </p>
 
-                        {/* Minimal Progress Bar */}
-                        <div className="w-32 h-[1px] bg-base-content/10 relative overflow-hidden">
-                            <div
-                                className="absolute inset-y-0 left-0 bg-primary transition-all duration-500 ease-out"
-                                style={{ width: `${smoothPercentage}%` }}
-                            />
+                            {/* Minimal Progress Bar */}
+                            <div className="w-32 h-[1px] bg-base-content/10 relative overflow-hidden">
+                                <div
+                                    className="absolute inset-y-0 left-0 bg-primary transition-all duration-500 ease-out"
+                                    style={{ width: `${smoothPercentage}%` }}
+                                />
+                            </div>
+
+                            <span className="text-[10px] font-mono font-bold text-primary/60">
+                                {smoothPercentage}%
+                            </span>
                         </div>
+                    </div>
 
-                        <span className="text-[10px] font-mono font-bold text-primary/60">
-                            {smoothPercentage}%
-                        </span>
+                    {/* Action Buttons - Crossfade in */}
+                    <div className={`absolute inset-0 flex flex-col items-center gap-6 transition-all duration-1000 ${isComplete ? 'opacity-100 scale-100 pointer-events-auto delay-500' : 'opacity-0 scale-105 pointer-events-none'}`}>
+                        <button
+                            className="form-btn form-btn-primary w-48 h-10 text-[10px]"
+                            onClick={() => handleContinue(true)}
+                        >
+                            CONTINUE
+                        </button>
+                        <button
+                            className="text-xs font-rajdhani uppercase tracking-widest font-normal text-base-content/30 hover:text-base-content px-4 py-2 transition-colors bg-transparent hover:bg-transparent"
+                            onClick={() => handleContinue(false)}
+                        >
+                            CONTINUE WITHOUT MUSIC
+                        </button>
                     </div>
                 </div>
             </div>
@@ -234,70 +264,23 @@ const InitialLoader: React.FC<{ status: string; progress: number | null }> = ({ 
 
 interface PageFrameProps {
     isInitialized: boolean;
+    frameWrapperRef: React.RefObject<HTMLDivElement>;
+    scanTopRef: React.RefObject<HTMLSpanElement>;
+    scanRightRef: React.RefObject<HTMLSpanElement>;
+    scanBottomRef: React.RefObject<HTMLSpanElement>;
+    scanLeftRef: React.RefObject<HTMLSpanElement>;
 }
 
 const PageFrame: React.FC<PageFrameProps> = ({
-    isInitialized
+    isInitialized,
+    frameWrapperRef,
+    scanTopRef,
+    scanRightRef,
+    scanBottomRef,
+    scanLeftRef
 }) => {
-    // Scan Line Refs
-    const scanTopRef = useRef<HTMLSpanElement>(null);
-    const scanRightRef = useRef<HTMLSpanElement>(null);
-    const scanBottomRef = useRef<HTMLSpanElement>(null);
-    const scanLeftRef = useRef<HTMLSpanElement>(null);
-
-    const frameWrapperRef = useRef<HTMLDivElement>(null);
-
     useLayoutEffect(() => {
         if (!isInitialized || !frameWrapperRef.current) return;
-
-        // Entry animation for the main frame
-        // Slides in from all edges simultaneously
-        const frame = frameWrapperRef.current.querySelector('.main-app-frame');
-        const corners = frameWrapperRef.current.querySelectorAll('.corner-accent');
-        const markers = frameWrapperRef.current.querySelectorAll('.side-marker');
-
-        if (frame) {
-            const tl = gsap.timeline({ delay: 0.1 });
-            
-            tl.fromTo(frame, 
-                { 
-                    scale: 1.04,
-                    autoAlpha: 1 
-                },
-                { 
-                    scale: 1,
-                    duration: 2.4,
-                    ease: "expo.out"
-                }
-            );
-
-            if (corners.length > 0) {
-                tl.fromTo(corners,
-                    { 
-                        opacity: 0,
-                        x: (i) => (i % 2 === 0 ? -40 : 40), // contracting from edges
-                        y: (i) => (i < 2 ? -40 : 40)
-                    },
-                    {
-                        opacity: 1,
-                        x: 0,
-                        y: 0,
-                        duration: 1.8,
-                        stagger: 0.05,
-                        ease: "expo.out"
-                    },
-                    0.1
-                );
-            }
-
-            if (markers.length > 0) {
-                tl.fromTo(markers,
-                    { opacity: 0, scaleY: 0 },
-                    { opacity: 1, scaleY: 1, duration: 1.5, ease: "expo.out" },
-                    1.2
-                );
-            }
-        }
 
         // Periodic Frame Scan Animation (Snake effect)
         // Triggered every 1 minute (60 seconds)
@@ -310,33 +293,35 @@ const PageFrame: React.FC<PageFrameProps> = ({
         const scanDuration = 2;
         const scanEase = "power1.inOut";
 
-        scanTl.set([scanTopRef.current, scanRightRef.current, scanBottomRef.current, scanLeftRef.current], { opacity: 0 });
+        if (scanTopRef.current && scanRightRef.current && scanBottomRef.current && scanLeftRef.current) {
+            scanTl.set([scanTopRef.current, scanRightRef.current, scanBottomRef.current, scanLeftRef.current], { opacity: 0 });
 
-        // Sequence: Top -> Right -> Bottom -> Left
-        scanTl.fromTo(scanTopRef.current,
-            { left: "-100%", opacity: 0 },
-            { left: "100%", opacity: 1, duration: scanDuration, ease: scanEase }
-        ).set(scanTopRef.current, { opacity: 0 });
+            // Sequence: Top -> Right -> Bottom -> Left
+            scanTl.fromTo(scanTopRef.current,
+                { left: "-100%", opacity: 0 },
+                { left: "100%", opacity: 1, duration: scanDuration, ease: scanEase }
+            ).set(scanTopRef.current, { opacity: 0 });
 
-        scanTl.fromTo(scanRightRef.current,
-            { top: "-100%", opacity: 0 },
-            { top: "100%", opacity: 1, duration: scanDuration, ease: scanEase }
-        ).set(scanRightRef.current, { opacity: 0 });
+            scanTl.fromTo(scanRightRef.current,
+                { top: "-100%", opacity: 0 },
+                { top: "100%", opacity: 1, duration: scanDuration, ease: scanEase }
+            ).set(scanRightRef.current, { opacity: 0 });
 
-        scanTl.fromTo(scanBottomRef.current,
-            { right: "-100%", opacity: 0 },
-            { right: "100%", opacity: 1, duration: scanDuration, ease: scanEase }
-        ).set(scanBottomRef.current, { opacity: 0 });
+            scanTl.fromTo(scanBottomRef.current,
+                { right: "-100%", opacity: 0 },
+                { right: "100%", opacity: 1, duration: scanDuration, ease: scanEase }
+            ).set(scanBottomRef.current, { opacity: 0 });
 
-        scanTl.fromTo(scanLeftRef.current,
-            { bottom: "-100%", opacity: 0 },
-            { bottom: "100%", opacity: 1, duration: scanDuration, ease: scanEase }
-        ).set(scanLeftRef.current, { opacity: 0 });
+            scanTl.fromTo(scanLeftRef.current,
+                { bottom: "-100%", opacity: 0 },
+                { bottom: "100%", opacity: 1, duration: scanDuration, ease: scanEase }
+            ).set(scanLeftRef.current, { opacity: 0 });
+        }
 
         return () => {
             scanTl.kill();
         };
-    }, [isInitialized]);
+    }, [isInitialized, frameWrapperRef, scanTopRef, scanRightRef, scanBottomRef, scanLeftRef]);
 
     return (
         <div ref={frameWrapperRef} className="fixed inset-0 z-[1000] pointer-events-none p-4 md:p-6">
@@ -503,6 +488,12 @@ const AppContent: React.FC = () => {
         };
     }, [resetIdleTimer]);
 
+    const frameWrapperRef = useRef<HTMLDivElement>(null);
+    const scanTopRef = useRef<HTMLSpanElement>(null);
+    const scanRightRef = useRef<HTMLSpanElement>(null);
+    const scanBottomRef = useRef<HTMLSpanElement>(null);
+    const scanLeftRef = useRef<HTMLSpanElement>(null);
+
     const initializeApp = useCallback(async () => {
         if (hasInitializedRef.current && isInitialized) return;
 
@@ -538,16 +529,8 @@ const AppContent: React.FC = () => {
             onProgress('Finalizing System...', 0.9);
             onProgress('System Ready', 1.0);
 
-            audioService.playAppStart(); // Chime for system ready
-
-            await new Promise(r => setTimeout(r, 1500));
-
-            hasInitializedRef.current = true;
-            setIsInitialized(true);
-
-            // Wait for blinds to start before hiding loader
-            await new Promise(r => setTimeout(r, 500));
-            setIsLoading(false);
+            // Wait for user to interact with the continue buttons exposed by InitialLoader.
+            // The InitialLoader component will call handleInitContinue.
         } catch (err) {
             console.error("Initialization Failure:", err);
             hasInitializedRef.current = true; // Mark as "attempted" to prevent loop
@@ -559,6 +542,31 @@ const AppContent: React.FC = () => {
         // settings are only needed for initial storage handle check
     }, [auth, isInitialized]);
 
+    const handleInitContinue = useCallback(async (withMusic: boolean) => {
+        // ALWAYS enable audio system for SFX
+        audioService.enable();
+        setAudioEnabled(true);
+
+        if (!withMusic) {
+            updateSettings({ ...settings, musicEnabled: false });
+            setIsUplinkActive(false);
+            setPlayerState('idle');
+        } else {
+            updateSettings({ ...settings, musicEnabled: true });
+            audioService.playAppStart();
+            setIsUplinkActive(true);
+            setPlayerState('syncing');
+            // Ambient start is handled by the syncing -> playing effect
+        }
+
+        hasInitializedRef.current = true;
+        setIsInitialized(true);
+
+        // Wait briefly for isInitialized to propagate before starting reveal
+        await new Promise(r => setTimeout(r, 100));
+        setIsLoading(false);
+    }, [settings, updateSettings]);
+
     useEffect(() => {
         if (!hasInitializedRef.current) {
             initializeApp();
@@ -566,7 +574,7 @@ const AppContent: React.FC = () => {
     }, [initializeApp]);
 
     useLayoutEffect(() => {
-        if (!isInitialized || !apertureRef.current || !blindsRef.current || !isFirstRevealRef.current) return;
+        if (!isInitialized || !frameWrapperRef.current || !apertureRef.current || !blindsRef.current || !isFirstRevealRef.current) return;
 
         isFirstRevealRef.current = false;
 
@@ -575,9 +583,16 @@ const AppContent: React.FC = () => {
                 defaults: { ease: "power4.inOut" }
             });
 
+            const frame = frameWrapperRef.current?.querySelector('.main-app-frame');
+            const corners = frameWrapperRef.current?.querySelectorAll('.corner-accent');
+            const markers = frameWrapperRef.current?.querySelectorAll('.side-marker');
             const blindItems = Array.from(blindsRef.current!.children) as HTMLElement[];
 
+            // Initial State: Frame slightly scaled up, layout items hidden
             gsap.set(apertureRef.current, { visibility: 'visible', autoAlpha: 1 });
+            gsap.set(appWrapperRef.current, { autoAlpha: 1 }); // Outer wrapper visible
+            gsap.set(contentRef.current, { autoAlpha: 0 }); // Inner content hidden
+            gsap.set(['.app-header', '.app-footer'], { opacity: 0 });
 
             blindItems.forEach((item, i) => {
                 gsap.set(item, {
@@ -587,39 +602,64 @@ const AppContent: React.FC = () => {
                 });
             });
 
-            gsap.set(appWrapperRef.current, { autoAlpha: 0 });
-            gsap.set(['.app-header', '.app-footer'], { opacity: 0 });
+            // STEP 1: Main Frame Scale In
+            if (frame) {
+                tl.fromTo(frame,
+                    { scale: 1.04, autoAlpha: 1 },
+                    { scale: 1, duration: 2.0, ease: "expo.out" }
+                );
 
+                if (corners && corners.length > 0) {
+                    tl.fromTo(corners,
+                        {
+                            opacity: 0,
+                            x: (i) => (i % 2 === 0 ? -40 : 40),
+                            y: (i) => (i < 2 ? -40 : 40)
+                        },
+                        { opacity: 1, x: 0, y: 0, duration: 1.5, stagger: 0.05, ease: "expo.out" },
+                        0.2
+                    );
+                }
+
+                if (markers && markers.length > 0) {
+                    tl.fromTo(markers,
+                        { opacity: 0, scaleY: 0 },
+                        { opacity: 1, scaleY: 1, duration: 1.2, ease: "expo.out" },
+                        0.8
+                    );
+                }
+            }
+
+            // STEP 2: Blinds animation (After frame is mostly settled)
             tl.to(blindItems, {
                 scaleY: 0,
-                duration: 1.8,
+                duration: 1.6,
                 stagger: {
-                    each: 0.1,
+                    each: 0.08,
                     from: "start"
                 },
                 ease: "expo.inOut"
-            }, 0);
+            }, ">-0.5");
 
-            tl.fromTo(appWrapperRef.current, {
-                scale: 1.02,
-                autoAlpha: 1
-            }, {
-                scale: 1,
-                duration: 2.8,
+            // STEP 3: App Header and Footer reveal
+            tl.fromTo('.app-header',
+                { y: -30, opacity: 0 },
+                { y: 0, opacity: 1, duration: 1.0, ease: "expo.out" },
+                ">-0.4"
+            );
+
+            tl.fromTo('.app-footer',
+                { y: 30, opacity: 0 },
+                { y: 0, opacity: 1, duration: 1.0, ease: "expo.out" },
+                "<"
+            );
+
+            // STEP 4: Reveal main content
+            tl.to(contentRef.current, {
+                autoAlpha: 1,
+                duration: 0.8,
                 ease: "power2.out"
-            }, 0.8);
-
-            tl.fromTo('.app-header', 
-                { y: -50, opacity: 0 },
-                { y: 0, opacity: 1, duration: 1.4, ease: "expo.out" },
-                2.8
-            );
-
-            tl.fromTo('.app-footer', 
-                { y: 50, opacity: 0 },
-                { y: 0, opacity: 1, duration: 1.4, ease: "expo.out" },
-                2.8
-            );
+            }, ">-0.3");
 
             tl.set(apertureRef.current, { visibility: 'hidden', autoAlpha: 0 });
         });
@@ -669,7 +709,7 @@ const AppContent: React.FC = () => {
 
     const handleSendToPromptsPage = useCallback((state: PromptsPageState) => {
         setPromptsPageState(state);
-        
+
         // Map internal views to top-level navigation tabs
         let targetTab: ActiveTab = 'crafter';
         if (state?.view === 'enhancer') {
@@ -679,7 +719,7 @@ const AppContent: React.FC = () => {
         } else {
             // Fallback to generic prompts tab if needed, 
             // but user wants them separate so we prefer the specific ones
-            targetTab = 'crafter'; 
+            targetTab = 'crafter';
         }
 
         handleNavigate(targetTab);
@@ -719,7 +759,6 @@ const AppContent: React.FC = () => {
         const categoryPanelProps = {
             isCategoryPanelCollapsed: !!collapsedPanels[activeTab],
             onToggleCategoryPanel: () => {
-                audioService.playClick();
                 setCollapsedPanels(p => ({ ...p, [activeTab]: !p[activeTab] }));
             },
         };
@@ -747,8 +786,8 @@ const AppContent: React.FC = () => {
         }
     };
 
-    const [isUplinkActive, setIsUplinkActive] = useState(true);
-    const [playerState, setPlayerState] = useState<'idle' | 'syncing' | 'playing' | 'error'>('syncing');
+    const [isUplinkActive, setIsUplinkActive] = useState(false);
+    const [playerState, setPlayerState] = useState<'idle' | 'syncing' | 'playing' | 'error'>('idle');
     const [audioEnabled, setAudioEnabled] = useState(true); // Default to true
 
     useEffect(() => {
@@ -772,13 +811,13 @@ const AppContent: React.FC = () => {
         if (isUplinkActive && playerState === 'syncing' && videoId) {
             const timer = setTimeout(() => {
                 setPlayerState('playing');
-                if (audioEnabled) {
+                if (audioEnabled && settings.musicEnabled) {
                     audioService.startAmbient(0.3);
                 }
             }, 3000);
             return () => clearTimeout(timer);
         }
-    }, [videoId, isUplinkActive, playerState, audioEnabled]);
+    }, [videoId, isUplinkActive, playerState, audioEnabled, settings.musicEnabled]);
 
     const handleMusicToggle = useCallback(() => {
         if (!videoId) {
@@ -792,17 +831,19 @@ const AppContent: React.FC = () => {
             setIsUplinkActive(false);
             setPlayerState('idle');
             audioService.stopAmbient();
+            updateSettings({ ...settings, musicEnabled: false });
         } else {
             setPlayerState('syncing');
             setIsUplinkActive(true);
+            updateSettings({ ...settings, musicEnabled: true });
             setTimeout(() => {
                 setPlayerState('playing');
-                if (audioEnabled) {
+                if (audioEnabled && settings.musicEnabled) {
                     audioService.startAmbient(0.3);
                 }
             }, 2500);
         }
-    }, [videoId, isUplinkActive, audioEnabled]);
+    }, [videoId, isUplinkActive, audioEnabled, settings, updateSettings]);
 
     const loaderRef = useRef<HTMLDivElement>(null);
 
@@ -826,7 +867,7 @@ const AppContent: React.FC = () => {
         <div className="h-full w-full overflow-hidden relative font-sans">
             {isLoading && (
                 <div ref={loaderRef} className="fixed inset-0 z-[1000]">
-                    <InitialLoader status={initStatus} progress={initProgress} />
+                    <InitialLoader status={initStatus} progress={initProgress} onContinue={handleInitContinue} />
                 </div>
             )}
             {/* AMBIENT VIDEO BACKGROUND */}
@@ -932,7 +973,7 @@ const AppContent: React.FC = () => {
                         </div>
 
                         <div className={`flex-1 flex flex-col overflow-hidden relative ${activeTab === 'prompts' ? 'pt-0' : 'pt-0'} p-0 bg-transparent min-h-0 gap-0`}>
-                            <main className="flex-grow min-w-0 relative overflow-hidden rounded-none bg-transparent border-none shadow-none backdrop-blur-none z-10 p-4 md:p-6">
+                            <main className="flex-grow min-w-0 relative overflow-hidden rounded-none bg-transparent border-none shadow-none backdrop-blur-none z-10 py-6 px-7">
                                 {/* Cinematic Transition Overlay (Tesoro Style) */}
                                 <div
                                     ref={transitionOverlayRef}
@@ -985,7 +1026,7 @@ const AppContent: React.FC = () => {
                                         onSaveToLibrary={handleSaveClippedIdea}
                                     />
 
-                                    <LlmStatusPanel 
+                                    <LlmStatusPanel
                                         isOpen={isLlmPanelOpen}
                                         onClose={() => setIsLlmPanelOpen(false)}
                                     />
@@ -998,7 +1039,7 @@ const AppContent: React.FC = () => {
                             </main>
 
                             <div className="app-footer flex-shrink-0">
-                                <Footer 
+                                <Footer
                                     audioEnabled={audioEnabled}
                                     onAudioToggle={handleAudioToggle}
                                     playerState={playerState}
@@ -1037,6 +1078,11 @@ const AppContent: React.FC = () => {
             {isInitialized && (
                 <PageFrame
                     isInitialized={isInitialized}
+                    frameWrapperRef={frameWrapperRef}
+                    scanTopRef={scanTopRef}
+                    scanRightRef={scanRightRef}
+                    scanBottomRef={scanBottomRef}
+                    scanLeftRef={scanLeftRef}
                 />
             )}
 

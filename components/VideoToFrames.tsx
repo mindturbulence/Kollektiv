@@ -282,8 +282,8 @@ export const VideoToFrames: React.FC<VideoToFramesProps> = ({ isExiting = false 
     const removeJoinItem = (id: string) => { setJoinFiles(prev => prev.filter(v => { if (v.id === id) { URL.revokeObjectURL(v.url); return false; } return true; })); };
 
     return (
-        <div className="h-full bg-transparent flex flex-col overflow-hidden p-0 relative z-0">
-            <div className="flex-grow flex flex-col lg:flex-row overflow-hidden gap-4">
+        <div className="flex flex-col h-full w-full relative overflow-visible p-0 bg-transparent">
+            <div className="flex-grow flex flex-col lg:flex-row overflow-hidden gap-6 p-0 bg-transparent">
                 <motion.aside 
                     variants={panelVariants}
                     initial="hidden"
@@ -459,11 +459,6 @@ export const VideoToFrames: React.FC<VideoToFramesProps> = ({ isExiting = false 
                             )}
                         </motion.footer>
                     </div>
-                    {/* Manual Corner Accents */}
-                    <div className="absolute -top-[1px] -left-[1px] w-3 h-3 border-t border-l border-primary/15 z-20 pointer-events-none" />
-                    <div className="absolute -top-[1px] -right-[1px] w-3 h-3 border-t border-r border-primary/15 z-20 pointer-events-none" />
-                    <div className="absolute -bottom-[1px] -left-[1px] w-3 h-3 border-b border-l border-primary/15 z-20 pointer-events-none" />
-                    <div className="absolute -bottom-[1px] -right-[1px] w-3 h-3 border-b border-r border-primary/15 z-20 pointer-events-none" />
                 </motion.aside>
 
                 <motion.main 
@@ -529,11 +524,6 @@ export const VideoToFrames: React.FC<VideoToFramesProps> = ({ isExiting = false 
                             </div>
                         )}
                     </div>
-                    {/* Manual Corner Accents */}
-                    <div className="absolute -top-[1px] -left-[1px] w-3 h-3 border-t border-l border-primary/15 z-20 pointer-events-none" />
-                    <div className="absolute -top-[1px] -right-[1px] w-3 h-3 border-t border-r border-primary/15 z-20 pointer-events-none" />
-                    <div className="absolute -bottom-[1px] -left-[1px] w-3 h-3 border-b border-l border-primary/15 z-20 pointer-events-none" />
-                    <div className="absolute -bottom-[1px] -right-[1px] w-3 h-3 border-b border-r border-primary/15 z-20 pointer-events-none" />
                 </motion.main>
 
                 {activeTab === 'extractor' && (
@@ -589,11 +579,6 @@ export const VideoToFrames: React.FC<VideoToFramesProps> = ({ isExiting = false 
                                 </div>
                             </motion.div>
                         </div>
-                        {/* Manual Corner Accents */}
-                        <div className="absolute -top-[1px] -left-[1px] w-3 h-3 border-t border-l border-primary/15 z-20 pointer-events-none" />
-                        <div className="absolute -top-[1px] -right-[1px] w-3 h-3 border-t border-r border-primary/15 z-20 pointer-events-none" />
-                        <div className="absolute -bottom-[1px] -left-[1px] w-3 h-3 border-b border-l border-primary/15 z-20 pointer-events-none" />
-                        <div className="absolute -bottom-[1px] -right-[1px] w-3 h-3 border-b border-r border-primary/15 z-20 pointer-events-none" />
                     </motion.aside>
                 )}
             </div>

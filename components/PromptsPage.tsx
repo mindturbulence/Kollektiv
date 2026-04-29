@@ -9,7 +9,7 @@ import { loadArtStyles } from '../utils/artstyleStorage';
 import { loadArtists } from '../utils/artistStorage';
 import { fileToBase64 } from '../utils/fileUtils';
 import { motion, AnimatePresence } from 'framer-motion';
-import { TerminalText, PanelLine, ScanLine, panelVariants, pageHeaderVariants, pageBodyVariants, pageFooterVariants, reverseTextVariants, sectionWipeVariants, contentVariants } from './AnimatedPanels';
+import { TerminalText, PanelLine, ScanLine, pageVariants, pageHeaderVariants, pageBodyVariants, pageFooterVariants, reverseTextVariants, sectionWipeVariants, contentVariants } from './AnimatedPanels';
 import { refinerPresetService, type RefinerPreset } from '../services/refinerPresetService';
 
 import { useBusy } from '../contexts/BusyContext';
@@ -702,7 +702,7 @@ const PromptsPage: React.FC<PromptsPageProps> = ({
                                 <button onClick={() => { audioService.playClick(); setMediaMode('audio'); }} className={`form-tab-item ${mediaMode === 'audio' ? 'active' : ''}`}>AUDIO</button>
                             </div>
                         </div>
-                        <div className="grid grid-cols-2 gap-4">
+                        <div className="grid grid-cols-2 gap-6">
                             <div className="form-control">
                                 <label className="text-[10px] font-normal text-[12px] font-sf-mono uppercase tracking-widest text-base-content/40 mb-2">Neural Engine</label>
                                 <select value={targetAIModel} onChange={(e) => setTargetAIModel((e.currentTarget as any).value)} className="form-select w-full">
@@ -729,9 +729,9 @@ const PromptsPage: React.FC<PromptsPageProps> = ({
                                 onChange={e => setModifiers({ ...modifiers, creativity: parseInt(e.target.value) })}
                                 className="range range-xs range-primary"
                             />
-                            <div className="flex justify-between px-1 mt-1">
-                                <span className="text-[8px] font-black opacity-20 uppercase">Accurate</span>
-                                <span className="text-[8px] font-black opacity-20 uppercase">Creative</span>
+                            <div className="flex justify-between px-1 mt-2">
+                                <span className="text-[10px] tracking-[0.3em] font-black opacity-20 uppercase">Accurate</span>
+                                <span className="text-[10px] tracking-[0.3em] font-black opacity-20 uppercase">Creative</span>
                             </div>
                         </div>
                     </div>
@@ -1167,323 +1167,330 @@ const PromptsPage: React.FC<PromptsPageProps> = ({
     };
 
     return (
-        <div className="flex flex-col h-full bg-transparent overflow-hidden p-0">
-            <div className={`flex-grow overflow-hidden relative min-h-0`}>
-                {activeView === 'composer' && (
-                    <PromptCrafter
-                        isNavigating={isExiting}
-                        onSaveToLibrary={(gen) => handleSaveSuggestion(gen)}
-                        onClip={(gen) => handleClipSuggestion(gen, 'Crafted Prompt', 'Crafter Formula', 'Crafter')}
-                        onSendToEnhancer={handleSendToRefine}
-                        onSavePresetSuccess={(prompt, mods, constantMod) => {
-                            setRefineText(prompt);
-                            setModifiers({ ...DEFAULT_MODIFIERS, ...mods });
-                            if (constantMod) setConstantModifier(constantMod);
-                            showGlobalFeedback('Mapped to Refiner.');
-                        }}
-                        onSendToRefine={handleSendToRefine}
-                        promptToInsert={composerPromptToInsert}
-                        header={null}
-                    />
-                )}
+        <motion.div
+            variants={pageVariants}
+            initial="hidden"
+            animate={isLocalExiting || isExiting ? "exit" : "visible"}
+            exit="exit"
+            className="flex flex-col h-full bg-transparent w-full relative overflow-hidden"
+        >
+            <div className="flex flex-col h-full w-full overflow-hidden relative z-10 min-h-0 bg-transparent">
+                <div className={`flex-grow overflow-hidden relative min-h-0`}>
+                    {activeView === 'composer' && (
+                        <PromptCrafter
+                            isNavigating={isExiting}
+                            onSaveToLibrary={(gen) => handleSaveSuggestion(gen)}
+                            onClip={(gen) => handleClipSuggestion(gen, 'Crafted Prompt', 'Crafter Formula', 'Crafter')}
+                            onSendToEnhancer={handleSendToRefine}
+                            onSavePresetSuccess={(prompt, mods, constantMod) => {
+                                setRefineText(prompt);
+                                setModifiers({ ...DEFAULT_MODIFIERS, ...mods });
+                                if (constantMod) setConstantModifier(constantMod);
+                                showGlobalFeedback('Mapped to Refiner.');
+                            }}
+                            onSendToRefine={handleSendToRefine}
+                            promptToInsert={composerPromptToInsert}
+                            header={null}
+                        />
+                    )}
 
-                {activeView === 'refine' && (
-                    <div className="grid grid-cols-1 lg:grid-cols-12 overflow-hidden h-full gap-4 min-h-0">
-                        {/* Left Sidebar: Controls & Tabs */}
-                        <motion.aside
-                            variants={panelVariants}
-                            initial="hidden"
-                            animate={isExiting ? "exit" : "visible"}
-                            exit="exit"
-                            className="lg:col-span-3 h-full min-h-0 flex flex-col relative p-[3px] corner-frame overflow-visible"
-                        >
-                            <PanelLine position="top" delay={0.4} />
-                            <PanelLine position="bottom" delay={0.5} />
-                            <PanelLine position="left" delay={0.6} />
-                            <PanelLine position="right" delay={0.7} />
-                            <ScanLine delay={3.5} />
-                            <div className="flex flex-col h-full w-full overflow-visible relative z-10 bg-base-100/40 backdrop-blur-xl panel-transparent">
-                                <motion.header
-                                    variants={pageHeaderVariants}
-                                    initial="hidden"
-                                    animate="visible"
-                                    exit="exit"
-                                    className="h-16 flex items-stretch flex-shrink-0 bg-base-100/80 backdrop-blur-md p-2 gap-1.5 panel-header overflow-visible relative z-[800]"
-                                >
-                                    {tabs.map(tab => (
-                                        <button
-                                            key={tab.id}
-                                            onClick={() => {
-                                                audioService.playClick();
-                                                setActiveRefineSubTab(tab.id);
-                                            }}
-                                            onMouseEnter={() => audioService.playHover()}
-                                            className={`btn btn-sm h-full rounded-none flex-1 font-normal text-[12px] tracking-widest uppercase px-1 truncate btn-snake font-display shadow-none drop-shadow-none ${activeRefineSubTab === tab.id ? 'btn-ghost text-primary no-glow' : 'btn-ghost text-base-content/40 hover:text-primary hover:no-glow'}`}
-                                        >
-                                            <span /><span /><span /><span />
-                                            {tab.label}
-                                        </button>
-                                    ))}
-                                </motion.header>
-                                <motion.div
-                                    variants={pageBodyVariants}
-                                    initial="hidden"
-                                    animate="visible"
-                                    exit="exit"
-                                    ref={refineScrollerRef}
-                                    className="flex-grow p-6 overflow-y-auto bg-transparent modifiers-tabs-container"
-                                >
-                                    {renderRefineSubContent()}
-                                </motion.div>
-                                <motion.footer
-                                    variants={pageFooterVariants}
-                                    initial="hidden"
-                                    animate="visible"
-                                    exit="exit"
-                                    className="h-14 flex items-stretch flex-shrink-0 bg-base-100/10 backdrop-blur-md p-1.5 gap-1.5 panel-footer"
-                                >
-                                    <button
-                                        onClick={() => {
-                                            audioService.playClick();
-                                            handleResetRefiner();
-                                        }}
-                                        className="btn btn-sm btn-ghost h-full rounded-none flex-1 font-rajdhani tracking-wider text-error/40 hover:text-error border-1 btn-snake"
+                    {activeView === 'refine' && (
+                        <div className="grid grid-cols-1 lg:grid-cols-12 overflow-hidden h-full gap-6 min-h-0">
+                            {/* Left Sidebar: Controls & Tabs */}
+                            <motion.aside
+                                variants={pageVariants}
+                                initial="hidden"
+                                animate={isExiting ? "exit" : "visible"}
+                                exit="exit"
+                                className="lg:col-span-3 h-full min-h-0 flex flex-col relative p-[3px] corner-frame overflow-visible"
+                            >
+                                <PanelLine position="top" delay={0.4} />
+                                <PanelLine position="bottom" delay={0.5} />
+                                <PanelLine position="left" delay={0.6} />
+                                <PanelLine position="right" delay={0.7} />
+                                <ScanLine delay={3.5} />
+                                <div className="flex flex-col h-full w-full overflow-visible relative z-10 bg-base-100/40 backdrop-blur-xl panel-transparent">
+                                    <motion.header
+                                        variants={pageHeaderVariants}
+                                        initial="hidden"
+                                        animate="visible"
+                                        exit="exit"
+                                        className="h-16 flex items-stretch flex-shrink-0 bg-base-100/80 backdrop-blur-md p-2 gap-1.5 panel-header overflow-visible relative z-[800]"
                                     >
-                                        <span /><span /><span /><span />
-                                        RESET
-                                    </button>
-                                    <button
-                                        onClick={() => {
-                                            audioService.playClick();
-                                            handleEnhance();
-                                        }}
-                                        disabled={isLoadingRefine || !refineText.trim()}
-                                        className="btn btn-sm btn-ghost h-full rounded-none flex-1 tracking-wider text-primary border-1 disabled:opacity-30 disabled:cursor-not-allowed btn-snake"
+                                        {tabs.map(tab => (
+                                            <button
+                                                key={tab.id}
+                                                onClick={() => {
+                                                    audioService.playClick();
+                                                    setActiveRefineSubTab(tab.id);
+                                                }}
+                                                onMouseEnter={() => audioService.playHover()}
+                                                className={`btn btn-sm h-full rounded-none flex-1 font-normal text-[12px] tracking-widest uppercase px-1 truncate btn-snake font-display shadow-none drop-shadow-none ${activeRefineSubTab === tab.id ? 'btn-ghost text-primary no-glow' : 'btn-ghost text-base-content/40 hover:text-primary hover:no-glow'}`}
+                                            >
+                                                <span /><span /><span /><span />
+                                                {tab.label}
+                                            </button>
+                                        ))}
+                                    </motion.header>
+                                    <motion.div
+                                        variants={pageBodyVariants}
+                                        initial="hidden"
+                                        animate="visible"
+                                        exit="exit"
+                                        ref={refineScrollerRef}
+                                        className="flex-grow p-6 overflow-y-auto bg-transparent modifiers-tabs-container"
                                     >
-                                        <span /><span /><span /><span />
-                                        {isLoadingRefine ? '...' : 'IMPROVE'}
-                                    </button>
-                                    {isGoogleProduct && (
-                                        <button
-                                            onClick={() => {
-                                                audioService.playClick();
-                                                handleDirectGenerate();
-                                            }}
-                                            disabled={isLoadingRefine || !refineText.trim()}
-                                            className="btn btn-sm btn-ghost h-full rounded-none flex-1 tracking-wider text-primary border-0 disabled:opacity-30 disabled:cursor-not-allowed btn-snake"
-                                        >
-                                            <span /><span /><span /><span />
-                                            {isLoadingRefine ? '...' : 'RENDER'}
-                                        </button>
-                                    )}
-                                </motion.footer>
-                            </div>
-                            {/* Manual Corner Accents */}
-                            <div className="absolute -top-[1px] -left-[1px] w-3 h-3 border-t border-l border-primary/15 z-20 pointer-events-none" />
-                            <div className="absolute -top-[1px] -right-[1px] w-3 h-3 border-t border-r border-primary/15 z-20 pointer-events-none" />
-                            <div className="absolute -bottom-[1px] -left-[1px] w-3 h-3 border-b border-l border-primary/15 z-20 pointer-events-none" />
-                            <div className="absolute -bottom-[1px] -right-[1px] w-3 h-3 border-b border-r border-primary/15 z-20 pointer-events-none" />
-                        </motion.aside>
-
-                        {/* Center: Main Neural Output */}
-                        <motion.main
-                            variants={panelVariants}
-                            initial="hidden"
-                            animate={isExiting ? "exit" : "visible"}
-                            exit="exit"
-                            className="lg:col-span-6 h-full min-h-0 flex flex-col relative p-[3px] corner-frame overflow-visible"
-                        >
-                            <PanelLine position="top" delay={0.4} />
-                            <PanelLine position="bottom" delay={0.5} />
-                            <PanelLine position="left" delay={0.6} />
-                            <PanelLine position="right" delay={0.7} />
-                            <ScanLine delay={3.5} />
-                            <div className="flex flex-col h-full w-full overflow-visible relative z-10 bg-base-100/40 backdrop-blur-xl panel-transparent">
-                                <motion.header
-                                    variants={pageHeaderVariants}
-                                    initial="hidden"
-                                    animate="visible"
-                                    exit="exit"
-                                    className="p-6 h-16 flex justify-between items-center bg-base-100/80 backdrop-blur-md panel-header overflow-visible relative z-[800]"
-                                >
-                                    <motion.div variants={reverseTextVariants}>
-                                        <TerminalText text={`REFINED PROMPT : ${targetAIModel}`} delay={2.6} className="text-xs font-sf-mono uppercase text-primary" />
+                                        {renderRefineSubContent()}
                                     </motion.div>
-                                </motion.header>
-                                <motion.div
-                                    variants={pageBodyVariants}
-                                    initial="hidden"
-                                    animate="visible"
-                                    exit="exit"
-                                    ref={neuralOutputScrollerRef}
-                                    className="flex-grow overflow-y-auto flex flex-col items-stretch justify-center"
-                                >
-                                    {isLoadingRefine ? (
-                                        <div className="flex-grow flex flex-col items-center justify-center text-center space-y-6">
-                                            <BlobLoader />
-                                        </div>
-                                    ) : errorRefine ? (
-                                        <div className="p-8 w-full text-center">
-                                            <div className="alert alert-error rounded-none border-2 justify-center">
-                                                <span className="font-black uppercase text-[10px] tracking-widest">{errorRefine.message}</span>
-                                            </div>
-                                        </div>
-                                    ) : resultsRefine ? (
-                                        <div className="p-5 md:p-5 lg:p-5 w-full animate-fade-in group">
-                                            <div className="flex flex-col">
-                                                <p className="text-base font-medium leading-relaxed text-base-content italic selection:bg-primary/20">
-                                                    "{resultsRefine.suggestions[0]}"
-                                                </p>
-                                            </div>
-                                        </div>
-                                    ) : directMediaResult ? (
-                                        <div className="p-8 w-full max-w-4xl space-y-4 animate-fade-in">
-                                            <div className="relative group bg-black aspect-video flex items-center justify-center overflow-hidden corner-frame p-[1px]">
-                                                <div className="bg-black w-full h-full flex items-center justify-center relative z-10">
-                                                    {directMediaResult.type === 'video' ? (
-                                                        <video src={directMediaResult.url} controls autoPlay loop className="w-full h-full object-contain" />
-                                                    ) : (
-                                                        <img src={directMediaResult.url} alt="Generated result" className="w-full h-full object-contain" referrerPolicy="no-referrer" />
-                                                    )}
-                                                </div>
-                                                <div className="absolute top-4 right-4 opacity-0 group-hover:opacity-100 transition-opacity z-20">
-                                                    <a href={directMediaResult.url} download={`kollektiv_${directMediaResult.target.replace(/\s+/g, '_')}_${Date.now()}.${directMediaResult.type === 'video' ? 'mp4' : 'jpg'}`} className="btn btn-sm btn-primary rounded-none tracking-widest shadow-2xl btn-snake-primary">
-                                                        <span /><span /><span /><span />
-                                                        <DownloadIcon className="w-4 h-4 mr-2" /> EXPORT
-                                                    </a>
-                                                </div>
-
-                                                <div className="absolute top-0 left-0 w-3 h-3 border-t border-l border-primary/40 z-30 pointer-events-none" />
-                                                <div className="absolute top-0 right-0 w-3 h-3 border-t border-r border-primary/40 z-30 pointer-events-none" />
-                                                <div className="absolute bottom-0 left-0 w-3 h-3 border-b border-l border-primary/40 z-30 pointer-events-none" />
-                                                <div className="absolute bottom-0 right-0 w-3 h-3 border-b border-r border-primary/40 z-30 pointer-events-none" />
-                                            </div>
-                                            <div className="flex justify-between items-center px-2">
-                                                <span className="text-[9px] font-black uppercase tracking-[0.3em] text-primary/40">{directMediaResult.target} Render Output</span>
-                                                <button onClick={() => setDirectMediaResult(null)} className="uppercase tracking-widest text-base-content/20 hover:text-primary transition-colors">Terminate Visual</button>
-                                            </div>
-                                        </div>
-                                    ) : (
-                                        <div className="flex-grow flex flex-col items-center justify-center text-center py-32 opacity-10">
-                                            <span className="p-8"><SparklesIcon className="w-14 h-14" /></span>
-                                            <p className="font-rajdhani text-[12px] font-sf-mono uppercase tracking-widest">Awaiting sequence initiation</p>
-                                        </div>
-                                    )}
-                                </motion.div>
-
-                                {resultsRefine && !isLoadingRefine && (
                                     <motion.footer
                                         variants={pageFooterVariants}
                                         initial="hidden"
                                         animate="visible"
                                         exit="exit"
-                                        className="h-14 flex items-stretch bg-base-100/10 backdrop-blur-md p-1.5 gap-1.5 panel-footer selection:bg-transparent"
+                                        className="h-14 flex items-stretch flex-shrink-0 bg-base-100/10 backdrop-blur-md p-1.5 gap-1.5 panel-footer"
                                     >
-                                        <div className="flex-[4] flex items-stretch gap-1.5">
+                                        <button
+                                            onClick={() => {
+                                                audioService.playClick();
+                                                handleResetRefiner();
+                                            }}
+                                            className="btn btn-sm btn-ghost h-full rounded-none flex-1 font-rajdhani tracking-wider text-error/40 hover:text-error border-1 btn-snake"
+                                        >
+                                            <span /><span /><span /><span />
+                                            RESET
+                                        </button>
+                                        <button
+                                            onClick={() => {
+                                                audioService.playClick();
+                                                handleEnhance();
+                                            }}
+                                            disabled={isLoadingRefine || !refineText.trim()}
+                                            className="btn btn-sm btn-ghost h-full rounded-none flex-1 tracking-wider text-primary border-1 disabled:opacity-30 disabled:cursor-not-allowed btn-snake"
+                                        >
+                                            <span /><span /><span /><span />
+                                            {isLoadingRefine ? '...' : 'IMPROVE'}
+                                        </button>
+                                        {isGoogleProduct && (
                                             <button
                                                 onClick={() => {
                                                     audioService.playClick();
-                                                    setIsJsonModalOpen(true);
+                                                    handleDirectGenerate();
                                                 }}
-                                                className="btn btn-sm btn-ghost h-full flex-1 rounded-none tracking-wider uppercase btn-snake"
+                                                disabled={isLoadingRefine || !refineText.trim()}
+                                                className="btn btn-sm btn-ghost h-full rounded-none flex-1 tracking-wider text-primary border-0 disabled:opacity-30 disabled:cursor-not-allowed btn-snake"
                                             >
                                                 <span /><span /><span /><span />
-                                                SHOW JSON
+                                                {isLoadingRefine ? '...' : 'RENDER'}
                                             </button>
-                                            <button
-                                                onClick={() => {
-                                                    audioService.playClick();
-                                                    handleSaveSuggestion(resultsRefine.suggestions[0]);
-                                                }}
-                                                className="btn btn-sm btn-ghost h-full flex-1 rounded-none tracking-wider uppercase btn-snake"
-                                            >
-                                                <span /><span /><span /><span />
-                                                SAVE
-                                            </button>
-                                        </div>
-
-                                        <div className="flex-[6] flex items-stretch gap-1.5 justify-end">
-                                            <button
-                                                onClick={() => {
-                                                    audioService.playClick();
-                                                    handleSendToRefine(resultsRefine.suggestions[0]);
-                                                }}
-                                                className="btn btn-sm btn-ghost h-full flex-1 rounded-none tracking-wider uppercase btn-snake"
-                                            >
-                                                <span /><span /><span /><span />
-                                                REFINE
-                                            </button>
-                                            <button
-                                                onClick={() => {
-                                                    audioService.playClick();
-                                                    handleClipSuggestion(resultsRefine.suggestions[0]);
-                                                }}
-                                                className="btn btn-sm btn-ghost h-full flex-1 rounded-none tracking-wider uppercase btn-snake"
-                                            >
-                                                <span /><span /><span /><span />
-                                                CLIP
-                                            </button>
-                                            <button
-                                                onClick={() => {
-                                                    audioService.playClick();
-                                                    handleCopySuggestionText(resultsRefine.suggestions[0]);
-                                                }}
-                                                className="btn btn-sm btn-ghost h-full flex-1 rounded-none tracking-wider uppercase btn-snake"
-                                            >
-                                                <span /><span /><span /><span />
-                                                COPY
-                                            </button>
-                                        </div>
+                                        )}
                                     </motion.footer>
-                                )}
-                            </div>
-                            {/* Manual Corner Accents */}
-                            <div className="absolute -top-[1px] -left-[1px] w-3 h-3 border-t border-l border-primary/15 z-20 pointer-events-none" />
-                            <div className="absolute -top-[1px] -right-[1px] w-3 h-3 border-t border-r border-primary/15 z-20 pointer-events-none" />
-                            <div className="absolute -bottom-[1px] -left-[1px] w-3 h-3 border-b border-l border-primary/15 z-20 pointer-events-none" />
-                            <div className="absolute -bottom-[1px] -right-[1px] w-3 h-3 border-b border-r border-primary/15 z-20 pointer-events-none" />
-                        </motion.main>
+                                </div>
+                                {/* Manual Corner Accents */}
+                                <div className="absolute -top-[1px] -left-[1px] w-3 h-3 border-t border-l border-primary/15 z-20 pointer-events-none" />
+                                <div className="absolute -top-[1px] -right-[1px] w-3 h-3 border-t border-r border-primary/15 z-20 pointer-events-none" />
+                                <div className="absolute -bottom-[1px] -left-[1px] w-3 h-3 border-b border-l border-primary/15 z-20 pointer-events-none" />
+                                <div className="absolute -bottom-[1px] -right-[1px] w-3 h-3 border-b border-r border-primary/15 z-20 pointer-events-none" />
+                            </motion.aside>
 
-                        {/* Right Sidebar: Refiner Preset */}
-                        <motion.aside
-                            variants={panelVariants}
-                            initial="hidden"
-                            animate={isLocalExiting || isExiting ? "exit" : "visible"}
-                            exit="exit"
-                            className="lg:col-span-3 h-full min-h-0 flex flex-col relative p-[3px] corner-frame overflow-visible hidden lg:flex origin-top-left"
-                        >
-                            <div className="flex flex-col h-full w-full overflow-visible relative bg-base-100/40 backdrop-blur-xl panel-transparent">
-                                <motion.header
-                                    variants={sectionWipeVariants}
-                                    custom={1.6}
-                                    initial="hidden"
-                                    animate="visible"
-                                    exit="exit"
-                                    className="h-16 flex items-stretch relative z-[800] bg-base-100/80 p-1.5 gap-1.5 panel-header overflow-visible"
-                                >
-                                    <div className="flex-grow h-full relative overflow-visible">
-                                        <div className="flex flex-col gap-3 h-full justify-center overflow-visible">
-                                            <div className="flex gap-4 items-center">
-                                                <div className="flex-1 px-0 text-sm h-full flex items-center border-0 overflow-visible">
-                                                    <AutocompleteSelect
-                                                        placeholder="SELECT PRESET..."
-                                                        value={selectedPreset?.name || ''}
-                                                        onChange={(val) => {
-                                                            const preset = presets.find(p => p.name === val);
-                                                            if (preset) {
-                                                                setSelectedPreset(preset);
-                                                                handleUsePreset(preset);
-                                                            } else if (val === '') {
-                                                                setSelectedPreset(null);
-                                                                setRefineText('');
-                                                                setModifiers({ ...DEFAULT_MODIFIERS });
-                                                            }
-                                                        }}
-                                                        options={presets.map(p => ({ label: p.name.toUpperCase(), value: p.name }))}
-                                                    />
+                            {/* Center: Main Neural Output */}
+                            <motion.main
+                                variants={pageVariants}
+                                initial="hidden"
+                                animate={isExiting ? "exit" : "visible"}
+                                exit="exit"
+                                className="lg:col-span-6 h-full min-h-0 flex flex-col relative p-[3px] corner-frame overflow-visible"
+                            >
+                                <PanelLine position="top" delay={0.4} />
+                                <PanelLine position="bottom" delay={0.5} />
+                                <PanelLine position="left" delay={0.6} />
+                                <PanelLine position="right" delay={0.7} />
+                                <ScanLine delay={3.5} />
+                                <div className="flex flex-col h-full w-full overflow-visible relative z-10 bg-base-100/40 backdrop-blur-xl panel-transparent">
+                                    <motion.header
+                                        variants={pageHeaderVariants}
+                                        initial="hidden"
+                                        animate="visible"
+                                        exit="exit"
+                                        className="p-6 h-16 flex justify-between items-center bg-base-100/80 backdrop-blur-md panel-header overflow-visible relative z-[800]"
+                                    >
+                                        <motion.div variants={reverseTextVariants}>
+                                            <TerminalText text={`REFINED PROMPT : ${targetAIModel}`} delay={2.6} className="text-xs font-sf-mono uppercase text-primary" />
+                                        </motion.div>
+                                    </motion.header>
+                                    <motion.div
+                                        variants={pageBodyVariants}
+                                        initial="hidden"
+                                        animate="visible"
+                                        exit="exit"
+                                        ref={neuralOutputScrollerRef}
+                                        className="flex-grow overflow-y-auto flex flex-col items-stretch justify-center"
+                                    >
+                                        {isLoadingRefine ? (
+                                            <div className="flex-grow flex flex-col items-center justify-center text-center space-y-6">
+                                                <BlobLoader />
+                                            </div>
+                                        ) : errorRefine ? (
+                                            <div className="p-8 w-full text-center">
+                                                <div className="alert alert-error rounded-none border-2 justify-center">
+                                                    <span className="font-black uppercase text-[10px] tracking-widest">{errorRefine.message}</span>
                                                 </div>
-                                                <div className="flex gap-4 shrink-0">
-                                                    {/* <button
+                                            </div>
+                                        ) : resultsRefine ? (
+                                            <div className="p-5 md:p-5 lg:p-5 w-full animate-fade-in group">
+                                                <div className="flex flex-col">
+                                                    <p className="text-base font-medium leading-relaxed text-base-content italic selection:bg-primary/20">
+                                                        "{resultsRefine.suggestions[0]}"
+                                                    </p>
+                                                </div>
+                                            </div>
+                                        ) : directMediaResult ? (
+                                            <div className="p-8 w-full max-w-4xl space-y-4 animate-fade-in">
+                                                <div className="relative group bg-black aspect-video flex items-center justify-center overflow-hidden corner-frame p-[1px]">
+                                                    <div className="bg-black w-full h-full flex items-center justify-center relative z-10">
+                                                        {directMediaResult.type === 'video' ? (
+                                                            <video src={directMediaResult.url} controls autoPlay loop className="w-full h-full object-contain" />
+                                                        ) : (
+                                                            <img src={directMediaResult.url} alt="Generated result" className="w-full h-full object-contain" referrerPolicy="no-referrer" />
+                                                        )}
+                                                    </div>
+                                                    <div className="absolute top-4 right-4 opacity-0 group-hover:opacity-100 transition-opacity z-20">
+                                                        <a href={directMediaResult.url} download={`kollektiv_${directMediaResult.target.replace(/\s+/g, '_')}_${Date.now()}.${directMediaResult.type === 'video' ? 'mp4' : 'jpg'}`} className="btn btn-sm btn-primary rounded-none tracking-widest shadow-2xl btn-snake-primary">
+                                                            <span /><span /><span /><span />
+                                                            <DownloadIcon className="w-4 h-4 mr-2" /> EXPORT
+                                                        </a>
+                                                    </div>
+
+                                                    <div className="absolute top-0 left-0 w-3 h-3 border-t border-l border-primary/40 z-30 pointer-events-none" />
+                                                    <div className="absolute top-0 right-0 w-3 h-3 border-t border-r border-primary/40 z-30 pointer-events-none" />
+                                                    <div className="absolute bottom-0 left-0 w-3 h-3 border-b border-l border-primary/40 z-30 pointer-events-none" />
+                                                    <div className="absolute bottom-0 right-0 w-3 h-3 border-b border-r border-primary/40 z-30 pointer-events-none" />
+                                                </div>
+                                                <div className="flex justify-between items-center px-2">
+                                                    <span className="text-[9px] font-black uppercase tracking-[0.3em] text-primary/40">{directMediaResult.target} Render Output</span>
+                                                    <button onClick={() => setDirectMediaResult(null)} className="uppercase tracking-widest text-base-content/20 hover:text-primary transition-colors">Terminate Visual</button>
+                                                </div>
+                                            </div>
+                                        ) : (
+                                            <div className="flex-grow flex flex-col items-center justify-center text-center py-32 opacity-10">
+                                                <span className="p-8"><SparklesIcon className="w-14 h-14" /></span>
+                                                <p className="font-rajdhani text-[12px] font-sf-mono uppercase tracking-widest">Awaiting sequence initiation</p>
+                                            </div>
+                                        )}
+                                    </motion.div>
+
+                                    {resultsRefine && !isLoadingRefine && (
+                                        <motion.footer
+                                            variants={pageFooterVariants}
+                                            initial="hidden"
+                                            animate="visible"
+                                            exit="exit"
+                                            className="h-14 flex items-stretch bg-base-100/10 backdrop-blur-md p-1.5 gap-1.5 panel-footer selection:bg-transparent"
+                                        >
+                                            <div className="flex-[4] flex items-stretch gap-1.5">
+                                                <button
+                                                    onClick={() => {
+                                                        audioService.playClick();
+                                                        setIsJsonModalOpen(true);
+                                                    }}
+                                                    className="btn btn-sm btn-ghost h-full flex-1 rounded-none tracking-wider uppercase btn-snake"
+                                                >
+                                                    <span /><span /><span /><span />
+                                                    SHOW JSON
+                                                </button>
+                                                <button
+                                                    onClick={() => {
+                                                        audioService.playClick();
+                                                        handleSaveSuggestion(resultsRefine.suggestions[0]);
+                                                    }}
+                                                    className="btn btn-sm btn-ghost h-full flex-1 rounded-none tracking-wider uppercase btn-snake"
+                                                >
+                                                    <span /><span /><span /><span />
+                                                    SAVE
+                                                </button>
+                                            </div>
+
+                                            <div className="flex-[6] flex items-stretch gap-1.5 justify-end">
+                                                <button
+                                                    onClick={() => {
+                                                        audioService.playClick();
+                                                        handleSendToRefine(resultsRefine.suggestions[0]);
+                                                    }}
+                                                    className="btn btn-sm btn-ghost h-full flex-1 rounded-none tracking-wider uppercase btn-snake"
+                                                >
+                                                    <span /><span /><span /><span />
+                                                    REFINE
+                                                </button>
+                                                <button
+                                                    onClick={() => {
+                                                        audioService.playClick();
+                                                        handleClipSuggestion(resultsRefine.suggestions[0]);
+                                                    }}
+                                                    className="btn btn-sm btn-ghost h-full flex-1 rounded-none tracking-wider uppercase btn-snake"
+                                                >
+                                                    <span /><span /><span /><span />
+                                                    CLIP
+                                                </button>
+                                                <button
+                                                    onClick={() => {
+                                                        audioService.playClick();
+                                                        handleCopySuggestionText(resultsRefine.suggestions[0]);
+                                                    }}
+                                                    className="btn btn-sm btn-ghost h-full flex-1 rounded-none tracking-wider uppercase btn-snake"
+                                                >
+                                                    <span /><span /><span /><span />
+                                                    COPY
+                                                </button>
+                                            </div>
+                                        </motion.footer>
+                                    )}
+                                </div>
+                                {/* Manual Corner Accents */}
+                                <div className="absolute -top-[1px] -left-[1px] w-3 h-3 border-t border-l border-primary/15 z-20 pointer-events-none" />
+                                <div className="absolute -top-[1px] -right-[1px] w-3 h-3 border-t border-r border-primary/15 z-20 pointer-events-none" />
+                                <div className="absolute -bottom-[1px] -left-[1px] w-3 h-3 border-b border-l border-primary/15 z-20 pointer-events-none" />
+                                <div className="absolute -bottom-[1px] -right-[1px] w-3 h-3 border-b border-r border-primary/15 z-20 pointer-events-none" />
+                            </motion.main>
+
+                            {/* Right Sidebar: Refiner Preset */}
+                            <motion.aside
+                                variants={pageVariants}
+                                initial="hidden"
+                                animate={isLocalExiting || isExiting ? "exit" : "visible"}
+                                exit="exit"
+                                className="lg:col-span-3 h-full min-h-0 flex flex-col relative p-[3px] corner-frame overflow-visible hidden lg:flex origin-top-left"
+                            >
+                                <div className="flex flex-col h-full w-full overflow-visible relative bg-base-100/40 backdrop-blur-xl panel-transparent">
+                                    <motion.header
+                                        variants={sectionWipeVariants}
+                                        custom={1.6}
+                                        initial="hidden"
+                                        animate="visible"
+                                        exit="exit"
+                                        className="h-16 flex items-stretch relative z-[800] bg-base-100/80 p-1.5 gap-1.5 panel-header overflow-visible"
+                                    >
+                                        <div className="flex-grow h-full relative overflow-visible">
+                                            <div className="flex flex-col gap-3 h-full justify-center overflow-visible">
+                                                <div className="flex gap-4 items-center">
+                                                    <div className="flex-1 px-0 text-sm h-full flex items-center border-0 overflow-visible">
+                                                        <AutocompleteSelect
+                                                            placeholder="SELECT PRESET..."
+                                                            value={selectedPreset?.name || ''}
+                                                            onChange={(val) => {
+                                                                const preset = presets.find(p => p.name === val);
+                                                                if (preset) {
+                                                                    setSelectedPreset(preset);
+                                                                    handleUsePreset(preset);
+                                                                } else if (val === '') {
+                                                                    setSelectedPreset(null);
+                                                                    setRefineText('');
+                                                                    setModifiers({ ...DEFAULT_MODIFIERS });
+                                                                }
+                                                            }}
+                                                            options={presets.map(p => ({ label: p.name.toUpperCase(), value: p.name }))}
+                                                        />
+                                                    </div>
+                                                    <div className="flex gap-4 shrink-0">
+                                                        {/* <button
                                                         onClick={() => {
                                                             audioService.playClick();
                                                             setSelectedPreset(null);
@@ -1494,176 +1501,177 @@ const PromptsPage: React.FC<PromptsPageProps> = ({
                                                     >
                                                         CLEAR
                                                     </button> */}
-                                                    <button
-                                                        className="tracking-widest text-error/40 hover:text-error transition-all mr-2 ms-2"
-                                                        onClick={() => {
-                                                            audioService.playClick();
-                                                            handleDeletePresetClick();
-                                                        }}
-                                                    >
-                                                        DELETE
-                                                    </button>
+                                                        <button
+                                                            className="tracking-widest text-error/40 hover:text-error transition-all mr-2 ms-2"
+                                                            onClick={() => {
+                                                                audioService.playClick();
+                                                                handleDeletePresetClick();
+                                                            }}
+                                                        >
+                                                            DELETE
+                                                        </button>
+                                                    </div>
                                                 </div>
                                             </div>
                                         </div>
-                                    </div>
-                                </motion.header>
+                                    </motion.header>
 
-                                <motion.div
-                                    variants={contentVariants}
-                                    custom={2.8}
-                                    initial="hidden"
-                                    animate="visible"
-                                    ref={activeConstructionScrollerRef}
-                                    className="flex-grow p-0 overflow-y-auto relative"
-                                >
-                                    {activeConstructionItems.length > 0 ? (
-                                        <div className="flex flex-col">
-                                            {activeConstructionItems.map((item) => (
-                                                <PropertyCard
-                                                    key={item.key}
-                                                    label={item.label}
-                                                    value={item.value}
-                                                    onClear={() => handleClearModifier(item.key)}
-                                                    onClick={() => handleModifierClick(item.tab)}
-                                                    active={activeRefineSubTab === item.tab}
-                                                />
-                                            ))}
-                                        </div>
-                                    ) : null}
-                                </motion.div>
-
-                                <motion.footer
-                                    variants={contentVariants}
-                                    custom={3.0}
-                                    initial="hidden"
-                                    animate="visible"
-                                    className="h-14 flex items-stretch flex-shrink-0 bg-base-100/10 backdrop-blur-md p-1.5 gap-1.5 panel-footer"
-                                >
-                                    <button
-                                        onClick={() => {
-                                            audioService.playClick();
-                                            handleSavePresetClick();
-                                        }}
-                                        disabled={activeConstructionItems.length === 0}
-                                        className="btn btn-sm btn-ghost h-full rounded-none flex-1 tracking-wider text-primary border-1 disabled:opacity-30 disabled:cursor-not-allowed btn-snake"
+                                    <motion.div
+                                        variants={contentVariants}
+                                        custom={2.8}
+                                        initial="hidden"
+                                        animate="visible"
+                                        ref={activeConstructionScrollerRef}
+                                        className="flex-grow p-0 overflow-y-auto relative"
                                     >
-                                        <span /><span /><span /><span />
-                                        SAVE AS PRESET
+                                        {activeConstructionItems.length > 0 ? (
+                                            <div className="flex flex-col">
+                                                {activeConstructionItems.map((item) => (
+                                                    <PropertyCard
+                                                        key={item.key}
+                                                        label={item.label}
+                                                        value={item.value}
+                                                        onClear={() => handleClearModifier(item.key)}
+                                                        onClick={() => handleModifierClick(item.tab)}
+                                                        active={activeRefineSubTab === item.tab}
+                                                    />
+                                                ))}
+                                            </div>
+                                        ) : null}
+                                    </motion.div>
+
+                                    <motion.footer
+                                        variants={contentVariants}
+                                        custom={3.0}
+                                        initial="hidden"
+                                        animate="visible"
+                                        className="h-14 flex items-stretch flex-shrink-0 bg-base-100/10 backdrop-blur-md p-1.5 gap-1.5 panel-footer"
+                                    >
+                                        <button
+                                            onClick={() => {
+                                                audioService.playClick();
+                                                handleSavePresetClick();
+                                            }}
+                                            disabled={activeConstructionItems.length === 0}
+                                            className="btn btn-sm btn-ghost h-full rounded-none flex-1 tracking-wider text-primary border-1 disabled:opacity-30 disabled:cursor-not-allowed btn-snake"
+                                        >
+                                            <span /><span /><span /><span />
+                                            SAVE AS PRESET
+                                        </button>
+                                    </motion.footer>
+                                </div>
+                                {/* Manual Corner Accents */}
+                                <div className="absolute -top-[1px] -left-[1px] w-3 h-3 border-t border-l border-primary/15 z-20 pointer-events-none" />
+                                <div className="absolute -top-[1px] -right-[1px] w-3 h-3 border-t border-r border-primary/15 z-20 pointer-events-none" />
+                                <div className="absolute -bottom-[1px] -left-[1px] w-3 h-3 border-b border-l border-primary/15 z-20 pointer-events-none" />
+                                <div className="absolute -bottom-[1px] -right-[1px] w-3 h-3 border-b border-r border-primary/15 z-20 pointer-events-none" />
+                            </motion.aside>
+                        </div>
+                    )}
+
+                    <AnimatePresence mode="wait">
+                        {activeView === 'analyzer' && (
+                            <MediaAnalyzer
+                                onSaveSuggestion={handleSaveSuggestion}
+                                onSaveAsPreset={handleSaveAsPreset}
+                                onRefine={handleSendToRefine}
+                                onClip={handleClipSuggestion}
+                                header={null}
+                                isNavigating={isLocalExiting || isExiting}
+                            />
+                        )}
+
+                        {activeView === 'prompt_analyzer' && (
+                            <PromptAnalyzer
+                                header={null}
+                                libraryItems={savedPrompts}
+                                onSaveSuggestion={handleSaveSuggestion}
+                                onClip={(text) => handleClipSuggestion(text)}
+                                onSwitchView={(view) => handleSwitchView(view)}
+                                onMapToRefiner={(prompt, mods, constantMod) => {
+                                    setRefineText(prompt);
+                                    setModifiers({ ...DEFAULT_MODIFIERS, ...mods });
+                                    if (constantMod) setConstantModifier(constantMod);
+                                    handleSwitchView('refine');
+                                }}
+                                showGlobalFeedback={showGlobalFeedback}
+                                isNavigating={isLocalExiting || isExiting}
+                            />
+                        )}
+                    </AnimatePresence>
+                </div>
+
+                {/* Save Preset Modal */}
+                {isSavePresetModalOpen && (
+                    <div className="fixed inset-0 bg-black/40 backdrop-blur-xl z-[1000] flex items-center justify-center p-4 animate-fade-in" onClick={() => setIsSavePresetModalOpen(false)}>
+                        <div className="flex flex-col bg-transparent w-full max-w-lg mx-auto relative overflow-visible" onClick={(e) => e.stopPropagation()}>
+                            <div className="bg-base-100/40 backdrop-blur-xl rounded-none w-full flex flex-col overflow-hidden relative z-10">
+                                <header className="px-8 py-4 panel-header bg-transparent relative flex-shrink-0 flex items-center justify-between">
+                                    <div className="flex flex-col">
+                                        <h3 className="text-xl font-black tracking-tighter text-base-content leading-none uppercase">SAVE PRESET<span className="text-primary">.</span></h3>
+                                        <p className="text-[10px] font-black uppercase tracking-[0.4em] text-base-content/30 mt-1.5">Asset Indexing Interface</p>
+                                    </div>
+                                    <button onClick={() => setIsSavePresetModalOpen(false)} className="p-2 text-error/30 hover:text-error transition-all hover:scale-110">
+                                        <CloseIcon className="w-5 h-5" />
                                     </button>
-                                </motion.footer>
+                                </header>
+
+                                <div className="p-10 space-y-8">
+                                    <div className="form-control">
+                                        <label className="text-[10px] font-black uppercase tracking-[0.2em] text-base-content/40 mb-2">Preset Designation</label>
+                                        <input
+                                            type="text"
+                                            value={newPresetName}
+                                            onChange={(e) => setNewPresetName((e.currentTarget as any).value)}
+                                            placeholder="ENTER PRESET NAME..."
+                                            className="form-input w-full"
+                                            autoFocus
+                                            onKeyDown={(e) => e.key === 'Enter' && handleConfirmSavePreset()}
+                                        />
+                                    </div>
+                                </div>
+                                <footer className="h-14 flex items-stretch bg-base-100/10 backdrop-blur-md p-1.5 gap-1.5 overflow-hidden flex-shrink-0 panel-footer">
+                                    <button onClick={() => setIsSavePresetModalOpen(false)} className="btn btn-sm btn-ghost h-full flex-1 rounded-none tracking-wider uppercase btn-snake no-glow active:no-glow">
+                                        <span /><span /><span /><span />
+                                        CANCEL
+                                    </button>
+                                    <button onClick={handleConfirmSavePreset} disabled={isSavingPreset || !newPresetName.trim()} className="btn btn-sm btn-primary h-full flex-[1.5] rounded-none tracking-wider uppercase btn-snake-primary no-glow active:no-glow">
+                                        <span /><span /><span /><span />
+                                        {isSavingPreset ? "SAVING..." : "COMMIT PRESET"}
+                                    </button>
+                                </footer>
                             </div>
-                            {/* Manual Corner Accents */}
-                            <div className="absolute -top-[1px] -left-[1px] w-3 h-3 border-t border-l border-primary/15 z-20 pointer-events-none" />
-                            <div className="absolute -top-[1px] -right-[1px] w-3 h-3 border-t border-r border-primary/15 z-20 pointer-events-none" />
-                            <div className="absolute -bottom-[1px] -left-[1px] w-3 h-3 border-b border-l border-primary/15 z-20 pointer-events-none" />
-                            <div className="absolute -bottom-[1px] -right-[1px] w-3 h-3 border-b border-r border-primary/15 z-20 pointer-events-none" />
-                        </motion.aside>
+                        </div>
                     </div>
                 )}
 
-                <AnimatePresence mode="wait">
-                    {activeView === 'analyzer' && (
-                        <MediaAnalyzer
-                            onSaveSuggestion={handleSaveSuggestion}
-                            onSaveAsPreset={handleSaveAsPreset}
-                            onRefine={handleSendToRefine}
-                            onClip={handleClipSuggestion}
-                            header={null}
-                            isNavigating={isLocalExiting || isExiting}
-                        />
-                    )}
+                {/* Delete Preset Confirmation */}
+                <ConfirmationModal
+                    isOpen={isDeletePresetModalOpen}
+                    onClose={() => setIsDeletePresetModalOpen(false)}
+                    onConfirm={handleConfirmDeletePreset}
+                    title={`PURGE PRESET`}
+                    message={`Permanently remove preset "${presetToDelete?.name}"?`}
+                />
 
-                    {activeView === 'prompt_analyzer' && (
-                        <PromptAnalyzer
-                            header={null}
-                            libraryItems={savedPrompts}
-                            onSaveSuggestion={handleSaveSuggestion}
-                            onClip={(text) => handleClipSuggestion(text)}
-                            onSwitchView={(view) => handleSwitchView(view)}
-                            onMapToRefiner={(prompt, mods, constantMod) => {
-                                setRefineText(prompt);
-                                setModifiers({ ...DEFAULT_MODIFIERS, ...mods });
-                                if (constantMod) setConstantModifier(constantMod);
-                                handleSwitchView('refine');
-                            }}
-                            showGlobalFeedback={showGlobalFeedback}
-                            isNavigating={isLocalExiting || isExiting}
-                        />
-                    )}
-                </AnimatePresence>
+                <PromptEditorModal
+                    isOpen={isSaveSuggestionModalOpen}
+                    onClose={() => setIsSaveSuggestionModalOpen(false)}
+                    onSave={handleConfirmSaveSuggestion}
+                    categories={promptCategories}
+                    editingPrompt={suggestionToSave}
+                />
+
+                <JSONBreakdownModal
+                    isOpen={isJsonModalOpen}
+                    onClose={() => setIsJsonModalOpen(false)}
+                    jsonData={jsonData}
+                    onDownload={handleDownloadJson}
+                    onCopy={handleCopyJson}
+                    jsonCopied={jsonCopied}
+                />
             </div>
-
-            {/* Save Preset Modal */}
-            {isSavePresetModalOpen && (
-                <div className="fixed inset-0 bg-black/40 backdrop-blur-xl z-[1000] flex items-center justify-center p-4 animate-fade-in" onClick={() => setIsSavePresetModalOpen(false)}>
-                    <div className="flex flex-col bg-transparent w-full max-w-lg mx-auto relative p-[3px] corner-frame overflow-visible" onClick={(e) => e.stopPropagation()}>
-                        <div className="bg-base-100/40 backdrop-blur-xl rounded-none w-full flex flex-col overflow-hidden relative z-10">
-                            <header className="px-8 py-4 panel-header bg-transparent relative flex-shrink-0 flex items-center justify-between">
-                                <div className="flex flex-col">
-                                    <h3 className="text-xl font-black tracking-tighter text-base-content leading-none uppercase">SAVE PRESET<span className="text-primary">.</span></h3>
-                                    <p className="text-[10px] font-black uppercase tracking-[0.4em] text-base-content/30 mt-1.5">Asset Indexing Interface</p>
-                                </div>
-                                <button onClick={() => setIsSavePresetModalOpen(false)} className="p-2 text-error/30 hover:text-error transition-all hover:scale-110">
-                                    <CloseIcon className="w-5 h-5" />
-                                </button>
-                            </header>
-
-                            <div className="p-10 space-y-8">
-                                <div className="form-control">
-                                    <label className="text-[10px] font-black uppercase tracking-[0.2em] text-base-content/40 mb-2">Preset Designation</label>
-                                    <input
-                                        type="text"
-                                        value={newPresetName}
-                                        onChange={(e) => setNewPresetName((e.currentTarget as any).value)}
-                                        placeholder="ENTER PRESET NAME..."
-                                        className="form-input w-full"
-                                        autoFocus
-                                        onKeyDown={(e) => e.key === 'Enter' && handleConfirmSavePreset()}
-                                    />
-                                </div>
-                            </div>
-                            <footer className="h-14 flex items-stretch bg-base-100/10 backdrop-blur-md p-1.5 gap-1.5 overflow-hidden flex-shrink-0 panel-footer">
-                                <button onClick={() => setIsSavePresetModalOpen(false)} className="btn btn-sm btn-ghost h-full flex-1 rounded-none tracking-wider uppercase btn-snake no-glow active:no-glow">
-                                    <span /><span /><span /><span />
-                                    CANCEL
-                                </button>
-                                <button onClick={handleConfirmSavePreset} disabled={isSavingPreset || !newPresetName.trim()} className="btn btn-sm btn-primary h-full flex-[1.5] rounded-none tracking-wider uppercase btn-snake-primary no-glow active:no-glow">
-                                    <span /><span /><span /><span />
-                                    {isSavingPreset ? "SAVING..." : "COMMIT PRESET"}
-                                </button>
-                            </footer>
-                        </div>
-                    </div>
-                </div>
-            )}
-
-            {/* Delete Preset Confirmation */}
-            <ConfirmationModal
-                isOpen={isDeletePresetModalOpen}
-                onClose={() => setIsDeletePresetModalOpen(false)}
-                onConfirm={handleConfirmDeletePreset}
-                title={`PURGE PRESET`}
-                message={`Permanently remove preset "${presetToDelete?.name}"?`}
-            />
-
-            <PromptEditorModal
-                isOpen={isSaveSuggestionModalOpen}
-                onClose={() => setIsSaveSuggestionModalOpen(false)}
-                onSave={handleConfirmSaveSuggestion}
-                categories={promptCategories}
-                editingPrompt={suggestionToSave}
-            />
-
-            <JSONBreakdownModal
-                isOpen={isJsonModalOpen}
-                onClose={() => setIsJsonModalOpen(false)}
-                jsonData={jsonData}
-                onDownload={handleDownloadJson}
-                onCopy={handleCopyJson}
-                jsonCopied={jsonCopied}
-            />
-        </div>
+        </motion.div>
     );
 };
 

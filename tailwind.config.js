@@ -215,7 +215,7 @@ export default {
       "retro",
       "cyberpunk",
       "valentine",
-      "halloween",
+      "isac",
       "garden",
       "forest",
       "aqua",
@@ -337,7 +337,7 @@ export default {
         },
       },
       {
-        halloween: {
+        isac: {
           primary: "#f28c18",
           "base-100": "#0d0221",
           "base-200": "#1a043c",

@@ -426,8 +426,8 @@ const ImageResizer: React.FC<ImageResizerProps> = ({ isExiting = false }) => {
     };
 
     return (
-        <div className="h-full bg-transparent flex flex-col p-0 overflow-hidden relative z-0">
-            <div className="flex-grow flex flex-col lg:flex-row overflow-hidden gap-4">
+        <div className="flex flex-col h-full w-full relative overflow-visible p-0 bg-transparent">
+            <div className="flex-grow flex flex-col lg:flex-row overflow-hidden gap-6 p-0 bg-transparent">
                 <motion.aside 
                     variants={panelVariants}
                     initial="hidden"
@@ -440,7 +440,7 @@ const ImageResizer: React.FC<ImageResizerProps> = ({ isExiting = false }) => {
                     <PanelLine position="left" delay={0.6} />
                     <PanelLine position="right" delay={0.7} />
                     <ScanLine delay={3.5} />
-                    <div className="flex flex-col h-full w-full overflow-hidden relative z-10 bg-base-100/40 backdrop-blur-xl">
+                    <div className="flex flex-col h-full w-full overflow-hidden relative z-10 bg-transparent">
                         <motion.header 
                             variants={sectionWipeVariants}
                             custom={1.2}
@@ -548,11 +548,6 @@ const ImageResizer: React.FC<ImageResizerProps> = ({ isExiting = false }) => {
                             </button>
                         </motion.footer>
                     </div>
-                    {/* Manual Corner Accents */}
-                    <div className="absolute -top-[1px] -left-[1px] w-3 h-3 border-t border-l border-primary/15 z-20 pointer-events-none" />
-                    <div className="absolute -top-[1px] -right-[1px] w-3 h-3 border-t border-r border-primary/15 z-20 pointer-events-none" />
-                    <div className="absolute -bottom-[1px] -left-[1px] w-3 h-3 border-b border-l border-primary/15 z-20 pointer-events-none" />
-                    <div className="absolute -bottom-[1px] -right-[1px] w-3 h-3 border-b border-r border-primary/15 z-20 pointer-events-none" />
                 </motion.aside>
 
                 <motion.main 
@@ -596,11 +591,6 @@ const ImageResizer: React.FC<ImageResizerProps> = ({ isExiting = false }) => {
                             )}
                                 </motion.div>
                     </div>
-                    {/* Manual Corner Accents */}
-                    <div className="absolute -top-[1px] -left-[1px] w-3 h-3 border-t border-l border-primary/15 z-20 pointer-events-none" />
-                    <div className="absolute -top-[1px] -right-[1px] w-3 h-3 border-t border-r border-primary/15 z-20 pointer-events-none" />
-                    <div className="absolute -bottom-[1px] -left-[1px] w-3 h-3 border-b border-l border-primary/15 z-20 pointer-events-none" />
-                    <div className="absolute -bottom-[1px] -right-[1px] w-3 h-3 border-b border-r border-primary/15 z-20 pointer-events-none" />
                 </motion.main>
             </div>
         </div>

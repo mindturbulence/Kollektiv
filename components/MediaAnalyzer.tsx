@@ -214,7 +214,7 @@ export const MediaAnalyzer: React.FC<MediaAnalyzerProps> = ({
     const hasPrompt = !!metadataResults?.prompt && !metadataResults.prompt.includes('extraction failed') && !metadataResults.prompt.includes('No text nodes');
 
     return (
-        <div className="grid grid-cols-1 lg:grid-cols-12 overflow-hidden h-full gap-4 relative auto-rows-fr">
+        <div className="grid grid-cols-1 lg:grid-cols-12 overflow-hidden h-full gap-6 relative auto-rows-fr">
 
             {/* Media Input Area */}
             <motion.aside

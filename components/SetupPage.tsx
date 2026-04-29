@@ -67,6 +67,7 @@ const subMenuConfig: Record<string, { id: string; label: string, icon: React.Rea
 
 const MaintenanceOverlay: React.FC<{ progress: number, message: string }> = ({ progress, message }) => {
     const textWrapperRef = useRef<HTMLDivElement>(null);
+    const { settings } = useSettings();
     
     useLayoutEffect(() => {
         if (!textWrapperRef.current) return;
@@ -96,7 +97,7 @@ const MaintenanceOverlay: React.FC<{ progress: number, message: string }> = ({ p
             {/* Large Background Percentage (SR Seventy One Style) */}
             <div className="absolute inset-0 flex items-center justify-center pointer-events-none overflow-hidden">
                 <span 
-                    className="text-[25vw] font-black opacity-[0.03] leading-none select-none transition-all duration-500 ease-out font-logo"
+                    className={`text-[25vw] font-black opacity-[0.03] leading-none select-none transition-all duration-500 ease-out ${settings.darkTheme === 'pipboy' ? 'font-monofonto' : 'font-logo'}`}
                     style={{ transform: `translateY(${(100 - progress) * 0.2}px)` }}
                 >
                     {Math.round(progress).toString().padStart(2, '0')}
@@ -105,7 +106,7 @@ const MaintenanceOverlay: React.FC<{ progress: number, message: string }> = ({ p
 
             <div className="relative z-10 flex flex-col items-center">
                 <div className="overflow-hidden mb-6 px-4">
-                    <h1 ref={textWrapperRef} className="grid grid-cols-1 grid-rows-1 text-2xl md:text-4xl font-black tracking-tighter uppercase select-none items-center font-sf-mono">
+                    <h1 ref={textWrapperRef} className={`grid grid-cols-1 grid-rows-1 text-2xl md:text-4xl font-black tracking-tighter uppercase select-none items-center ${settings.darkTheme === 'pipboy' ? 'font-monofonto' : 'font-sf-mono'}`}>
                         <span className="text-base-content/10 block leading-none py-2 row-start-1 col-start-1">
                             Kollektiv<span className="text-primary/10 italic">.</span>
                         </span>
@@ -1018,9 +1019,9 @@ export const SetupPage: React.FC<SetupPageProps> = ({
         exit="exit"
         className="flex flex-row h-full bg-transparent w-full relative overflow-visible"
     >
-      <div className="flex flex-row h-full w-full overflow-hidden relative z-10 bg-transparent gap-4">
+      <div className="flex flex-row h-full w-full overflow-hidden relative z-10 gap-4 p-[1px] corner-frame bg-base-100/40 backdrop-blur-xl">
 
-        <aside className="w-80 flex-shrink-0 flex flex-col relative p-[3px] corner-frame overflow-visible h-full bg-transparent">
+        <aside className="w-80 flex-shrink-0 flex flex-col relative p-0 overflow-visible h-full bg-transparent">
             <div className="flex flex-col h-full w-full overflow-hidden relative z-10 bg-base-100/40 backdrop-blur-xl">
                 <h1 className="h-16 flex-shrink-0 flex items-center px-6 text-[10px] font-black uppercase tracking-[0.4em] text-base-content/30 panel-header">System Hub</h1>
                 <div ref={navScrollRef} className="flex-grow px-4 py-6 overflow-y-auto relative">
@@ -1042,7 +1043,7 @@ export const SetupPage: React.FC<SetupPageProps> = ({
             <div className="absolute -bottom-[1px] -right-[1px] w-3 h-3 border-b border-r border-primary/15 z-20 pointer-events-none" />
         </aside>
 
-        <main className="flex-grow flex flex-col h-full bg-transparent relative p-[3px] corner-frame overflow-visible">
+        <main className="flex-grow flex flex-col h-full bg-transparent relative p-0 overflow-visible">
             <div className="flex flex-col h-full w-full overflow-hidden relative z-10 bg-base-100/40 backdrop-blur-xl">
                 <section className="p-10 flex-shrink-0">
                     <h1 className="text-2xl lg:text-3xl font-black tracking-tighter uppercase leading-none">{mainCategories.find(c => c.id === activeSettingsTab)?.label}<span className="text-primary">.</span></h1>
