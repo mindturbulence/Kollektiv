@@ -43,7 +43,6 @@ interface SetupPageProps {
 const subMenuConfig: Record<string, { id: string; label: string, icon: React.ReactNode, description: string }[]> = {
     app: [
         { id: 'general', label: 'General', icon: <Cog6ToothIcon className="w-4 h-4" />, description: "Storage and engine lifecycle." },
-        { id: 'features', label: 'Features', icon: <AdjustmentsVerticalIcon className="w-4 h-4" />, description: "Toggle available modules." },
         { id: 'data', label: 'Backup & Restore', icon: <FolderClosedIcon className="w-4 h-4" />, description: "System data management." }
     ],
     appearance: [
@@ -377,11 +376,11 @@ export const SetupPage: React.FC<SetupPageProps> = ({
         { id: 'app', label: 'APPLICATION', icon: <AppIcon className="w-5 h-5"/> },
         { id: 'appearance', label: 'APPEARANCE', icon: <PaintBrushIcon className="w-5 h-5"/> },
         { id: 'integrations', label: 'INTEGRATIONS', icon: <LinkIcon className="w-5 h-5"/> },
+        { id: 'prompt', label: 'PROMPTS', icon: <PromptIcon className="w-5 h-5"/> },
+        { id: 'gallery', label: 'GALLERY', icon: <PhotoIcon className="w-5 h-5"/> }
     ];
-    if (features.isPromptLibraryEnabled) categories.push({ id: 'prompt', label: 'PROMPTS', icon: <PromptIcon className="w-5 h-5"/> });
-    if (features.isGalleryEnabled) categories.push({ id: 'gallery', label: 'GALLERY', icon: <PhotoIcon className="w-5 h-5"/> });
     return categories;
-  }, [features]);
+  }, []);
 
   useEffect(() => { setSettings(globalSettings); }, [globalSettings]);
 
@@ -404,10 +403,6 @@ export const SetupPage: React.FC<SetupPageProps> = ({
     setSettings(updated);
     if (['youtube', 'googleIdentity'].includes(field)) updateSettings(updated);
     if (field === 'fontSize' && typeof window !== 'undefined') (window as any).document.documentElement.style.fontSize = `${value}px`;
-  };
-
-  const handleFeatureToggle = (feature: keyof FeatureSettings, value: boolean) => {
-    updateSettings({ ...settings, features: { ...settings.features, [feature]: value } });
   };
 
   const saveSettings = () => { updateSettings(settings); showGlobalFeedback('Settings synchronized with vault.'); };
@@ -516,23 +511,6 @@ export const SetupPage: React.FC<SetupPageProps> = ({
                         </SettingRow>
                         <SettingRow label="Cold Reboot" desc="Clear application cache and force-reload the interface.">
                              <button onClick={() => { audioService.playClick(); setIsRestartModalOpen(true); }} className="form-btn bg-warning text-warning-content border-warning px-6">RELOAD ENGINE</button>
-                        </SettingRow>
-                    </div>
-                );
-            case 'features':
-                return (
-                    <div className="flex flex-col animate-fade-in">
-                        <SettingRow label="Token Archiver" desc="Toggle the specialized prompt library and folder management.">
-                            <input type="checkbox" checked={settings.features.isPromptLibraryEnabled} onChange={(e) => handleFeatureToggle('isPromptLibraryEnabled', (e.currentTarget as any).checked)} className="toggle toggle-primary toggle-sm" />
-                        </SettingRow>
-                        <SettingRow label="Visual Repository" desc="Toggle the high-performance media gallery and image vault.">
-                            <input type="checkbox" checked={settings.features.isGalleryEnabled} onChange={(e) => handleFeatureToggle('isGalleryEnabled', (e.currentTarget as any).checked)} className="toggle toggle-primary toggle-sm" />
-                        </SettingRow>
-                        <SettingRow label="Archival Guides" desc="Toggle access to curated artists and style cheatsheets.">
-                            <input type="checkbox" checked={settings.features.isCheatsheetsEnabled} onChange={(e) => handleFeatureToggle('isCheatsheetsEnabled', (e.currentTarget as any).checked)} className="toggle toggle-primary toggle-sm" />
-                        </SettingRow>
-                        <SettingRow label="Utility Suite" desc="Toggle the composer, resizer, and palette extractor modules.">
-                            <input type="checkbox" checked={settings.features.isToolsEnabled} onChange={(e) => handleFeatureToggle('isToolsEnabled', (e.currentTarget as any).checked)} className="toggle toggle-primary toggle-sm" />
                         </SettingRow>
                     </div>
                 );
@@ -1019,9 +997,9 @@ export const SetupPage: React.FC<SetupPageProps> = ({
         exit="exit"
         className="flex flex-row h-full bg-transparent w-full relative overflow-visible"
     >
-      <div className="flex flex-row h-full w-full overflow-hidden relative z-10 gap-4 p-[1px] corner-frame bg-base-100/40 backdrop-blur-xl">
+      <div className="flex flex-row h-full w-full overflow-visible relative z-10 gap-6 p-0 bg-transparent">
 
-        <aside className="w-80 flex-shrink-0 flex flex-col relative p-0 overflow-visible h-full bg-transparent">
+        <aside className="w-80 flex-shrink-0 flex flex-col relative p-[3px] corner-frame overflow-visible h-full bg-transparent">
             <div className="flex flex-col h-full w-full overflow-hidden relative z-10 bg-base-100/40 backdrop-blur-xl">
                 <h1 className="h-16 flex-shrink-0 flex items-center px-6 text-[10px] font-black uppercase tracking-[0.4em] text-base-content/30 panel-header">System Hub</h1>
                 <div ref={navScrollRef} className="flex-grow px-4 py-6 overflow-y-auto relative">
@@ -1036,14 +1014,9 @@ export const SetupPage: React.FC<SetupPageProps> = ({
                     </ul>
                 </div>
             </div>
-            {/* Manual Corner Accents */}
-            <div className="absolute -top-[1px] -left-[1px] w-3 h-3 border-t border-l border-primary/15 z-20 pointer-events-none" />
-            <div className="absolute -top-[1px] -right-[1px] w-3 h-3 border-t border-r border-primary/15 z-20 pointer-events-none" />
-            <div className="absolute -bottom-[1px] -left-[1px] w-3 h-3 border-b border-l border-primary/15 z-20 pointer-events-none" />
-            <div className="absolute -bottom-[1px] -right-[1px] w-3 h-3 border-b border-r border-primary/15 z-20 pointer-events-none" />
         </aside>
 
-        <main className="flex-grow flex flex-col h-full bg-transparent relative p-0 overflow-visible">
+        <main className="flex-grow flex flex-col h-full bg-transparent relative p-[3px] corner-frame overflow-visible">
             <div className="flex flex-col h-full w-full overflow-hidden relative z-10 bg-base-100/40 backdrop-blur-xl">
                 <section className="p-10 flex-shrink-0">
                     <h1 className="text-2xl lg:text-3xl font-black tracking-tighter uppercase leading-none">{mainCategories.find(c => c.id === activeSettingsTab)?.label}<span className="text-primary">.</span></h1>
@@ -1064,18 +1037,8 @@ export const SetupPage: React.FC<SetupPageProps> = ({
                     <button onClick={() => { audioService.playClick(); saveSettings(); }} className="form-btn form-btn-primary flex-1 shadow-lg">Confirm</button>
                 </footer>
             </div>
-            {/* Manual Corner Accents */}
-            <div className="absolute -top-[1px] -left-[1px] w-3 h-3 border-t border-l border-primary/15 z-20 pointer-events-none" />
-            <div className="absolute -top-[1px] -right-[1px] w-3 h-3 border-t border-r border-primary/15 z-20 pointer-events-none" />
-            <div className="absolute -bottom-[1px] -left-[1px] w-3 h-3 border-b border-l border-primary/15 z-20 pointer-events-none" />
-            <div className="absolute -bottom-[1px] -right-[1px] w-3 h-3 border-b border-r border-primary/15 z-20 pointer-events-none" />
         </main>
       </div>
-      {/* Manual Corner Accents */}
-      <div className="absolute -top-[1px] -left-[1px] w-3 h-3 border-t border-l border-primary/15 z-20 pointer-events-none" />
-      <div className="absolute -top-[1px] -right-[1px] w-3 h-3 border-t border-r border-primary/15 z-20 pointer-events-none" />
-      <div className="absolute -bottom-[1px] -left-[1px] w-3 h-3 border-b border-l border-primary/15 z-20 pointer-events-none" />
-      <div className="absolute -bottom-[1px] -right-[1px] w-3 h-3 border-b border-r border-primary/15 z-20 pointer-events-none" />
     </motion.section>
       {modalFeedback && <FeedbackModal isOpen={!!modalFeedback} onClose={() => setModalFeedback(null)} message={modalFeedback.message} type={modalFeedback.type} />}
       <ConfirmationModal isOpen={isRestartModalOpen} onClose={() => setIsRestartModalOpen(false)} onConfirm={() => window.location.reload()} title="RELOAD REQUEST" message="Purge neuronal state and restart interface?" btnClassName="btn-warning" />

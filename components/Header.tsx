@@ -148,7 +148,6 @@ const Header: React.FC<HeaderProps> = ({
   clippedIdeasCount
 }) => {
   const { settings } = useSettings();
-  const { features } = settings;
   const navRef = useRef<HTMLDivElement>(null);
   const [activeMenu, setActiveMenu] = useState<string | null>(null);
   const switchingRef = useRef(false);
@@ -162,8 +161,8 @@ const Header: React.FC<HeaderProps> = ({
   ];
 
   const vaultItems: NavItemData[] = [
-    { id: 'prompt' as ActiveTab, label: 'Prompt', enabled: features.isPromptLibraryEnabled },
-    { id: 'gallery' as ActiveTab, label: 'Media', enabled: features.isGalleryEnabled },
+    { id: 'prompt' as ActiveTab, label: 'Prompt' },
+    { id: 'gallery' as ActiveTab, label: 'Media' },
   ];
 
   const guideItems: NavItemData[] = [

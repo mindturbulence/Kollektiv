@@ -680,29 +680,6 @@ const AppContent: React.FC = () => {
         document.documentElement.style.fontSize = `${settings.fontSize}px`;
     }, [settings.darkTheme, settings.fontSize]);
 
-    const { features } = settings;
-    useEffect(() => {
-        let isTabAllowed = true;
-        switch (activeTab) {
-            case 'prompts':
-            case 'crafter':
-            case 'refiner':
-            case 'prompt_analyzer':
-            case 'media_analyzer': isTabAllowed = true; break;
-            case 'prompt': isTabAllowed = features.isPromptLibraryEnabled; break;
-            case 'gallery': isTabAllowed = features.isGalleryEnabled; break;
-            case 'cheatsheet':
-            case 'artstyles':
-            case 'artists': isTabAllowed = features.isCheatsheetsEnabled; break;
-            case 'composer':
-            case 'image_compare':
-            case 'color_palette_extractor':
-            case 'resizer':
-            case 'video_to_frames': isTabAllowed = features.isToolsEnabled; break;
-        }
-        if (!isTabAllowed) setActiveTab('dashboard');
-    }, [activeTab, features, setActiveTab]);
-
     const showGlobalFeedback = useCallback((message: string, isError = false) => {
         setGlobalFeedback({ message, type: isError ? 'error' : 'success' });
     }, []);
