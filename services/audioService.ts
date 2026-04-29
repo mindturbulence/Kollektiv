@@ -1,149 +1,500 @@
+/**
+ * Audio Service for Kollektiv
+ * High-tech, minimalist sound design inspired by briskgaurav.in
+ * Features: Sharp digital transients, high-frequency pips, mechanical definition
+ */
+
 class AudioService {
   private ctx: AudioContext | null = null;
+  private masterGain: GainNode | null = null;
+  private ambientGain: GainNode | null = null;
+  private compressor: DynamicsCompressorNode | null = null;
+  private reverbNode: ConvolverNode | null = null;
+  private reverbWet: GainNode | null = null;
   private isEnabled: boolean = true;
+  private isAmbientPlaying: boolean = false;
+  private ambientOscillators: OscillatorNode[] = [];
+  private lastHoverTime: number = 0;
+  private initPromise: Promise<void> | null = null;
+  private bufferCache: Map<string, AudioBuffer> = new Map();
 
-  private getCtx() {
-    if (!this.ctx) {
-      const AudioCtx = window.AudioContext || (window as any).webkitAudioContext;
-      if (AudioCtx) this.ctx = new AudioCtx();
+  constructor() {
+    if (typeof window !== 'undefined') {
+      this.initContext().then(() => {
+        this.preloadSounds();
+      });
     }
-    return this.ctx;
   }
 
-  // Futuristic Digital Tick (Hover)
-  public playHover() {
-    if (!this.isEnabled) return;
-    const ctx = this.getCtx();
-    if (!ctx) return;
-    if (ctx.state === 'suspended') ctx.resume();
+  private async preloadSounds() {
+    try {
+      const sounds = [
+        { key: 'click', url: '/sfx/clicks.wav' },
+        { key: 'transition', url: '/sfx/page_transition.wav' },
+        { key: 'hover', url: '/sfx/hover.wav' },
+        { key: 'slide', url: '/sfx/slide.mp3' },
+        { key: 'info', url: '/sfx/info.mp3' },
+        { key: 'type', url: '/sfx/type.mp3' },
+        { key: 'error', url: '/sfx/error.mp3' },
+        { key: 'app_start', url: '/sfx/app_start.wav' },
+        { key: 'panel_slide_in', url: '/sfx/panel_slide_in.wav' },
+        { key: 'panel_slide_out', url: '/sfx/panel_slide_out.wav' }
+      ];
 
-    const osc = ctx.createOscillator();
-    const gain = ctx.createGain();
+      for (const sound of sounds) {
+        const response = await fetch(sound.url);
+        if (!response.ok) continue;
+        const arrayBuffer = await response.arrayBuffer();
+        if (this.ctx) {
+          const audioBuffer = await this.ctx.decodeAudioData(arrayBuffer);
+          this.bufferCache.set(sound.key, audioBuffer);
+        }
+      }
+    } catch (e) {
+      console.warn("Failed to preload sounds:", e);
+    }
+  }
+
+  private playBuffer(bufferKey: string, volume: number = 0.5): boolean {
+    const buffer = this.bufferCache.get(bufferKey);
+    if (!buffer || !this.ctx || !this.masterGain) return false;
+
+    const source = this.ctx.createBufferSource();
+    source.buffer = buffer;
     
-    osc.type = 'sine';
-    osc.frequency.setValueAtTime(3200, ctx.currentTime);
-    osc.frequency.exponentialRampToValueAtTime(1600, ctx.currentTime + 0.01);
+    const gain = this.ctx.createGain();
+    gain.gain.value = volume;
     
-    gain.gain.setValueAtTime(0.02, ctx.currentTime);
-    gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.01);
+    source.connect(gain);
+    gain.connect(this.masterGain);
+    
+    source.start(this.ctx.currentTime);
+    return true;
+  }
+
+  private async initContext(): Promise<void> {
+    if (this.ctx) return;
+    if (this.initPromise) return this.initPromise;
+    
+    this.initPromise = this._initContextInternal();
+    return this.initPromise;
+  }
+
+  private async _initContextInternal(): Promise<void> {
+    try {
+      if (this.ctx) return;
+
+      const AudioCtx = window.AudioContext || (window as any).webkitAudioContext;
+      if (!AudioCtx) return;
+      this.ctx = new AudioCtx({ latencyHint: 'interactive' });
+      
+      // Master gain - clinical and clean
+      this.masterGain = this.ctx.createGain();
+      this.masterGain.gain.value = 0.45;
+      
+      // Compressor for tightness
+      this.compressor = this.ctx.createDynamicsCompressor();
+      this.compressor.threshold.value = -12;
+      this.compressor.knee.value = 6;
+      this.compressor.ratio.value = 8; // Tighter ratio
+      this.compressor.attack.value = 0.001; // Instant attack for transients
+      this.compressor.release.value = 0.15;
+      
+      // Reverb wet/dry mix - very subtle for clinical feel
+      this.reverbWet = this.ctx.createGain();
+      this.reverbWet.gain.value = 0.15;
+      
+      // Create reverb
+      this.reverbNode = this.ctx.createConvolver();
+      this.createReverbImpulse();
+      
+      // Chain
+      this.masterGain.connect(this.compressor);
+      this.compressor.connect(this.ctx.destination);
+      
+      this.masterGain.connect(this.reverbNode);
+      this.reverbNode.connect(this.reverbWet);
+      this.reverbWet.connect(this.ctx.destination);
+      
+      // Ambient gain
+      this.ambientGain = this.ctx.createGain();
+      this.ambientGain.gain.value = 0;
+      this.ambientGain.connect(this.reverbNode);
+      this.ambientGain.connect(this.reverbWet);
+      
+      if (this.ctx.state === 'suspended') {
+        await this.ctx.resume();
+      }
+    } catch (e) {
+      console.warn("AudioContext init failed:", e);
+    } finally {
+      this.initPromise = null;
+    }
+  }
+
+  private createReverbImpulse(): void {
+    if (!this.ctx || !this.reverbNode) return;
+    const sampleRate = this.ctx.sampleRate;
+    const length = sampleRate * 0.8; // Shorter room for precise feel
+    const impulse = this.ctx.createBuffer(2, length, sampleRate);
+    
+    for (let channel = 0; channel < 2; channel++) {
+      const channelData = impulse.getChannelData(channel);
+      for (let i = 0; i < length; i++) {
+        const decay = Math.exp(-8 * i / length); // Faster decay
+        channelData[i] = (Math.random() * 2 - 1) * decay * 0.35;
+      }
+    }
+    this.reverbNode.buffer = impulse;
+  }
+
+  public resume(): void {
+    if (!this.ctx) {
+      this.initContext();
+      return;
+    }
+    if (this.ctx.state === 'suspended') {
+      this.ctx.resume().catch(() => {});
+    }
+  }
+
+  enable(): void {
+    if (this.isEnabled) return;
+    this.isEnabled = true;
+    this.initContext().then(() => this.resume());
+  }
+
+  disable(): void {
+    this.isEnabled = false;
+    this.stopAmbient();
+  }
+
+  toggle(): boolean {
+    this.isEnabled ? this.disable() : this.enable();
+    return this.isEnabled;
+  }
+
+  getIsEnabled(): boolean {
+    return this.isEnabled;
+  }
+
+  setVolume(value: number): void {
+    if (this.masterGain && this.ctx) {
+      this.masterGain.gain.setTargetAtTime(Math.max(0, Math.min(1, value)), this.ctx.currentTime, 0.05);
+    }
+  }
+
+  /**
+   * Technical Digital Pip
+   */
+  private createDigitalOsc(freq: number, type: OscillatorType = 'sine'): OscillatorNode {
+    if (!this.ctx) throw new Error("No context");
+    const osc = this.ctx.createOscillator();
+    osc.type = type;
+    osc.frequency.value = freq;
+    return osc;
+  }
+
+  /**
+   * Minimal Click (Mechanical Shutter feel)
+   */
+  playClick(): void {
+    if (!this.isEnabled || !this.ctx || !this.masterGain) return;
+    this.resume();
+
+    // Try to play the external click sound first
+    if (this.playBuffer('click', 0.6)) return;
+    
+    const now = this.ctx.currentTime;
+    
+    // Low frequency definition
+    const body = this.createDigitalOsc(600);
+    const bodyGain = this.ctx.createGain();
+    body.frequency.setValueAtTime(600, now);
+    body.frequency.exponentialRampToValueAtTime(120, now + 0.03);
+    
+    bodyGain.gain.setValueAtTime(0, now);
+    bodyGain.gain.linearRampToValueAtTime(0.25, now + 0.002);
+    bodyGain.gain.exponentialRampToValueAtTime(0.001, now + 0.04);
+    
+    body.connect(bodyGain);
+    bodyGain.connect(this.masterGain);
+    
+    // High transient noise
+    const noise = this.ctx.createBufferSource();
+    const noiseBuffer = this.ctx.createBuffer(1, this.ctx.sampleRate * 0.01, this.ctx.sampleRate);
+    const data = noiseBuffer.getChannelData(0);
+    for (let i = 0; i < data.length; i++) data[i] = (Math.random() * 2 - 1) * Math.exp(-i / (data.length * 0.2));
+    noise.buffer = noiseBuffer;
+    
+    const noiseGain = this.ctx.createGain();
+    noiseGain.gain.setValueAtTime(0.08, now);
+    noiseGain.gain.exponentialRampToValueAtTime(0.001, now + 0.01);
+    
+    noise.connect(noiseGain);
+    noiseGain.connect(this.masterGain);
+    
+    body.start(now); body.stop(now + 0.05);
+    noise.start(now); noise.stop(now + 0.015);
+  }
+
+  /**
+   * Precise Hover Pip (Ultra-short, high frequency)
+   */
+  playHover(): void {
+    if (!this.isEnabled || !this.ctx || !this.masterGain) return;
+    const nowMs = Date.now();
+    if (nowMs - this.lastHoverTime < 50) return;
+    this.lastHoverTime = nowMs;
+    
+    this.resume();
+
+    // Try to play the external hover sound first
+    if (this.playBuffer('hover', 0.25)) return;
+
+    const now = this.ctx.currentTime;
+    
+    const osc = this.createDigitalOsc(3200); // Higher freq for "Brisk" feel
+    const gain = this.ctx.createGain();
+    
+    gain.gain.setValueAtTime(0, now);
+    gain.gain.linearRampToValueAtTime(0.04, now + 0.001);
+    gain.gain.exponentialRampToValueAtTime(0.001, now + 0.008);
     
     osc.connect(gain);
-    gain.connect(ctx.destination);
+    gain.connect(this.masterGain);
     
-    osc.start();
-    osc.stop(ctx.currentTime + 0.01);
+    osc.start(now);
+    osc.stop(now + 0.01);
   }
 
-  // Tactical FM Pop (Click)
-  public playClick() {
-    if (!this.isEnabled) return;
-    const ctx = this.getCtx();
-    if (!ctx) return;
-    if (ctx.state === 'suspended') ctx.resume();
-
-    const now = ctx.currentTime;
-    const carrier = ctx.createOscillator();
-    const modulator = ctx.createOscillator();
-    const modGain = ctx.createGain();
-    const mainGain = ctx.createGain();
-
-    carrier.type = 'sine';
-    modulator.type = 'square';
+  /**
+   * Clinical Succession (Ascending digital notes)
+   */
+  playSuccess(): void {
+    if (!this.isEnabled || !this.ctx || !this.masterGain) return;
+    this.resume();
+    const now = this.ctx.currentTime;
     
-    carrier.frequency.setValueAtTime(150, now);
-    carrier.frequency.exponentialRampToValueAtTime(40, now + 0.08);
+    // Check if info buffer is loaded and use it for success notifications
+    if (this.playBuffer('info', 0.5)) return;
+
+    const notes = [1200, 1600, 2400]; // Sharp upward movement
     
-    modulator.frequency.setValueAtTime(400, now);
-    modGain.gain.setValueAtTime(200, now);
-    modGain.gain.exponentialRampToValueAtTime(1, now + 0.08);
-
-    mainGain.gain.setValueAtTime(0.15, now);
-    mainGain.gain.exponentialRampToValueAtTime(0.001, now + 0.1);
-
-    modulator.connect(modGain);
-    modGain.connect(carrier.frequency);
-    carrier.connect(mainGain);
-    mainGain.connect(ctx.destination);
-
-    modulator.start(now);
-    carrier.start(now);
-    modulator.stop(now + 0.1);
-    carrier.stop(now + 0.1);
+    notes.forEach((freq, i) => {
+      if (!this.ctx || !this.masterGain) return;
+      const delay = i * 0.04;
+      const osc = this.createDigitalOsc(freq);
+      const gain = this.ctx.createGain();
+      
+      if (gain) {
+        gain.gain.setValueAtTime(0, now + delay);
+        gain.gain.linearRampToValueAtTime(0.08, now + delay + 0.002);
+        gain.gain.exponentialRampToValueAtTime(0.001, now + delay + 0.08);
+        
+        osc.connect(gain);
+        gain.connect(this.masterGain);
+        osc.start(now + delay);
+        osc.stop(now + delay + 0.1);
+      }
+    });
   }
 
-  // Neural Wake (Modal Open)
-  public playModalOpen() {
-    if (!this.isEnabled) return;
-    const ctx = this.getCtx();
-    if (!ctx) return;
-    if (ctx.state === 'suspended') ctx.resume();
+  /**
+   * Minimalist Transition (Digital shuffle/glitch)
+   */
+  playTransition(): void {
+    if (!this.isEnabled || !this.ctx || !this.masterGain) return;
+    this.resume();
+    
+    // Use the actual page transition sound
+    if (this.playBuffer('transition', 0.7)) return;
 
-    const now = ctx.currentTime;
-    const osc = ctx.createOscillator();
-    const noise = ctx.createBufferSource();
-    const filter = ctx.createBiquadFilter();
-    const gain = ctx.createGain();
+    const now = this.ctx.currentTime;
+    
+    // Quick noise bursts as fallback
+    for (let i = 0; i < 4; i++) {
+        const delay = i * 0.02;
+        const noise = this.ctx.createBufferSource();
+        const buf = this.ctx.createBuffer(1, this.ctx.sampleRate * 0.005, this.ctx.sampleRate);
+        const d = buf.getChannelData(0);
+        for (let j = 0; j < d.length; j++) d[j] = Math.random() * 2 - 1;
+        noise.buffer = buf;
+        
+        const g = this.ctx.createGain();
+        g.gain.setValueAtTime(0.08, now + delay);
+        g.gain.linearRampToValueAtTime(0, now + delay + 0.005);
+        
+        noise.connect(g);
+        g.connect(this.masterGain);
+        noise.start(now + delay);
+    }
+  }
 
-    // FM Arpeggio-like sweep
-    osc.type = 'triangle';
-    osc.frequency.setValueAtTime(220, now);
-    osc.frequency.exponentialRampToValueAtTime(1760, now + 0.2);
+  /**
+   * Modal Mechanics (Open)
+   */
+  playModalOpen(): void {
+    if (!this.isEnabled || !this.ctx || !this.masterGain) return;
+    this.resume();
+    const now = this.ctx.currentTime;
+    
+    const osc = this.createDigitalOsc(400);
+    const gain = this.ctx.createGain();
+    osc.frequency.exponentialRampToValueAtTime(1200, now + 0.08);
+    
+    gain.gain.setValueAtTime(0, now);
+    gain.gain.linearRampToValueAtTime(0.12, now + 0.005);
+    gain.gain.exponentialRampToValueAtTime(0.001, now + 0.2);
+    
+    osc.connect(gain);
+    gain.connect(this.masterGain);
+    osc.start(now); osc.stop(now + 0.25);
+  }
 
-    // Noise burst for texture
-    const bufferSize = ctx.sampleRate * 0.2;
-    const buffer = ctx.createBuffer(1, bufferSize, ctx.sampleRate);
-    const data = buffer.getChannelData(0);
-    for (let i = 0; i < bufferSize; i++) data[i] = Math.random() * 2 - 1;
-    noise.buffer = buffer;
+  /**
+   * Modal Mechanics (Close)
+   */
+  playModalClose(): void {
+    if (!this.isEnabled || !this.ctx || !this.masterGain) return;
+    this.resume();
+    const now = this.ctx.currentTime;
+    
+    const osc = this.createDigitalOsc(1200);
+    const gain = this.ctx.createGain();
+    osc.frequency.exponentialRampToValueAtTime(400, now + 0.08);
+    
+    gain.gain.setValueAtTime(0, now);
+    gain.gain.linearRampToValueAtTime(0.12, now + 0.005);
+    gain.gain.exponentialRampToValueAtTime(0.001, now + 0.15);
+    
+    osc.connect(gain);
+    gain.connect(this.masterGain);
+    osc.start(now); osc.stop(now + 0.2);
+  }
 
-    filter.type = 'highpass';
-    filter.frequency.setValueAtTime(1000, now);
-    filter.frequency.exponentialRampToValueAtTime(5000, now + 0.2);
+  playError(): void {
+    if (!this.isEnabled || !this.ctx || !this.masterGain) return;
+    this.resume();
+
+    if (this.playBuffer('error', 0.6)) return;
+
+    const now = this.ctx.currentTime;
+    const osc = this.createDigitalOsc(220, 'square');
+    const gain = this.ctx.createGain();
+    
+    gain.gain.setValueAtTime(0.05, now);
+    gain.gain.linearRampToValueAtTime(0.05, now + 0.05);
+    gain.gain.linearRampToValueAtTime(0, now + 0.06);
+    
+    osc.connect(gain);
+    gain.connect(this.masterGain);
+    osc.start(now); osc.stop(now + 0.1);
+  }
+
+  playInfo(): void {
+    if (!this.isEnabled || !this.ctx || !this.masterGain) return;
+    this.resume();
+    // Use fallback if buffer misses, but primarily rely on buffer
+    if (this.playBuffer('info', 0.5)) return;
+    this.playSuccess(); // fallback to an existing positive tone
+  }
+
+  playType(): void {
+    if (!this.isEnabled || !this.ctx || !this.masterGain) return;
+    this.resume();
+    if (this.playBuffer('type', 0.3)) return;
+    this.playClick(); // fallback to click
+  }
+
+  playToggle(): void {
+    this.playClick();
+  }
+
+  playAppStart(): void {
+    if (!this.isEnabled || !this.ctx || !this.masterGain) return;
+    this.resume();
+    this.playBuffer('app_start', 0.6);
+  }
+
+  playPanelSlideIn(): void {
+    if (!this.isEnabled || !this.ctx || !this.masterGain) return;
+    this.resume();
+    if (this.playBuffer('panel_slide_in', 0.4)) return;
+    this.playModalOpen(); // Fallback
+  }
+
+  playPanelSlideOut(): void {
+    if (!this.isEnabled || !this.ctx || !this.masterGain) return;
+    this.resume();
+    if (this.playBuffer('panel_slide_out', 0.4)) return;
+    this.playModalClose(); // Fallback
+  }
+
+  /**
+   * Sliding sound for parent menu expansion
+   */
+  playSlide(): void {
+    if (!this.isEnabled || !this.ctx || !this.masterGain) return;
+    this.resume();
+
+    // Try to play the external slide sound first
+    if (this.playBuffer('slide', 0.4)) return;
+
+    // Fallback if buffer not loaded
+    const now = this.ctx.currentTime;
+    const osc = this.createDigitalOsc(400, 'sine');
+    const gain = this.ctx.createGain();
+
+    osc.frequency.setValueAtTime(400, now);
+    osc.frequency.linearRampToValueAtTime(800, now + 0.3);
 
     gain.gain.setValueAtTime(0, now);
-    gain.gain.linearRampToValueAtTime(0.1, now + 0.05);
-    gain.gain.exponentialRampToValueAtTime(0.001, now + 0.4);
+    gain.gain.linearRampToValueAtTime(0.05, now + 0.05);
+    gain.gain.linearRampToValueAtTime(0, now + 0.3);
 
     osc.connect(gain);
-    noise.connect(filter);
-    filter.connect(gain);
-    gain.connect(ctx.destination);
-
+    gain.connect(this.masterGain);
     osc.start(now);
-    noise.start(now);
-    osc.stop(now + 0.4);
-    noise.stop(now + 0.4);
+    osc.stop(now + 0.3);
   }
 
-  // Data Purge (Modal Close)
-  public playModalClose() {
-    if (!this.isEnabled) return;
-    const ctx = this.getCtx();
-    if (!ctx) return;
-    if (ctx.state === 'suspended') ctx.resume();
+  startAmbient(intensity: number = 0.2): void {
+    if (!this.isEnabled || this.isAmbientPlaying || !this.ctx || !this.ambientGain) return;
+    this.resume();
+    this.isAmbientPlaying = true;
+    const now = this.ctx.currentTime;
+    
+    const drones = [
+      { freq: 40, gain: 0.05 },
+      { freq: 80, gain: 0.03 }
+    ];
+    
+    drones.forEach(d => {
+      const osc = this.ctx!.createOscillator();
+      osc.type = 'sine';
+      osc.frequency.value = d.freq;
+      const g = this.ctx!.createGain();
+      g.gain.value = 0;
+      osc.connect(g);
+      g.connect(this.ambientGain!);
+      osc.start(now);
+      this.ambientOscillators.push(osc);
+      g.gain.setTargetAtTime(d.gain * intensity, now, 2);
+    });
+    
+    this.ambientGain.gain.setTargetAtTime(intensity, now, 1);
+  }
 
-    const now = ctx.currentTime;
-    const osc = ctx.createOscillator();
-    const gain = ctx.createGain();
-    
-    osc.type = 'sawtooth';
-    osc.frequency.setValueAtTime(880, now);
-    osc.frequency.exponentialRampToValueAtTime(110, now + 0.2);
-    
-    gain.gain.setValueAtTime(0.08, now);
-    gain.gain.exponentialRampToValueAtTime(0.001, now + 0.25);
-    
-    const filter = ctx.createBiquadFilter();
-    filter.type = 'lowpass';
-    filter.frequency.setValueAtTime(2000, now);
-    filter.frequency.exponentialRampToValueAtTime(100, now + 0.2);
-
-    osc.connect(filter);
-    filter.connect(gain);
-    gain.connect(ctx.destination);
-    
-    osc.start(now);
-    osc.stop(now + 0.25);
+  stopAmbient(): void {
+    if (!this.ctx || !this.ambientGain) return;
+    const now = this.ctx.currentTime;
+    this.ambientGain.gain.setTargetAtTime(0, now, 0.5);
+    setTimeout(() => {
+      this.ambientOscillators.forEach(osc => { try { osc.stop(); } catch(e) {} });
+      this.ambientOscillators = [];
+      this.isAmbientPlaying = false;
+    }, 1000);
   }
 }
 
