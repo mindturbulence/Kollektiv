@@ -230,7 +230,6 @@ export default {
       "garden",
       "forest",
       "aqua",
-      "lofi",
       "pastel",
       "fantasy",
       "wireframe",
@@ -392,7 +391,7 @@ export default {
         },
       },
       {
-        lofi: {
+        arwes: {
           primary: "#00f0ff",
           secondary: "#004d4d",
           accent: "#ff003c",

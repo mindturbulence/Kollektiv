@@ -38,6 +38,8 @@ export const defaultLLMSettings: LLMSettings = {
   // Dashboard Settings
   dashboardVideoUrl: 'https://videos.pexels.com/video-files/35977437/15254965_1920_1080_24fps.mp4',
   isDashboardVideoEnabled: true,
+  dashboardBackgroundType: 'video',
+  dashboardImageUrl: '/background-large.jpg',
 
   // Audio Settings
   musicYoutubeUrl: 'https://www.youtube.com/watch?v=jY3A06qWwfw',
@@ -81,9 +83,10 @@ export const loadLLMSettings = (): LLMSettings => {
         if (storedSettings) {
         const parsed = JSON.parse(storedSettings);
         // Deep merge with defaults to ensure all keys, especially nested ones, are present
-        return { 
+        const merged = { 
             ...defaultLLMSettings, 
             ...parsed,
+            dashboardBackgroundType: parsed.dashboardBackgroundType || (parsed.isDashboardVideoEnabled === false ? 'none' : 'video'),
             activeThemeMode: 'dark',
             musicEnabled: parsed.musicEnabled ?? defaultLLMSettings.musicEnabled,
             idleScreenType: parsed.idleScreenType ?? defaultLLMSettings.idleScreenType,
@@ -114,6 +117,12 @@ export const loadLLMSettings = (): LLMSettings => {
                 ...(parsed.googleIdentity || {})
             }
         };
+
+        if (merged.darkTheme === 'lofi') {
+            merged.darkTheme = 'arwes';
+        }
+
+        return merged;
         }
     }
   } catch (error) {

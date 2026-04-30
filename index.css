@@ -3,6 +3,13 @@
 @import url("https://db.onlinewebfonts.com/c/ad92a081de42733674b960204a8b366c?family=Prime+Light");
 @import url("https://db.onlinewebfonts.com/c/ef616ea44b02534f31cfa5848bb22d2b?family=Monofonto");
 @import url("https://db.onlinewebfonts.com/c/344078ad9965a3962d3e3708dfcd4f2d?family=Fixedsys");
+@import url("https://db.onlinewebfonts.com/c/3fce0db825099477357d2bd2f2a84f77?family=ITC+Serif+Gothic+Std");
+@import url("https://db.onlinewebfonts.com/c/19893e5e904508f85c0cafc7e74ca6ef?family=ITC+Serif+Gothic+Black");
+@import url("https://db.onlinewebfonts.com/c/34024de67e7902c685c4c771c10ec00e?family=Marvin+Visions+Bold");
+@import url("https://db.onlinewebfonts.com/c/65dc1b4fb1cd6bf31e730421533dafc7?family=ITC+Avant+Garde+Gothic+W02+Md");
+@import url("https://fonts.googleapis.com/css2?family=Urbanist:wght@300;400;500;600;700;800;900&display=swap");
+@import url("https://db.onlinewebfonts.com/c/787588e6c611222861fa21b3ff9c12e4?family=Westminster");
+@import url("https://db.onlinewebfonts.com/c/964496b7572957fd7a7cf6083bba6df0?family=Megazoid");
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
@@ -1249,6 +1256,65 @@ button:active {
   font-family: "Raleway", sans-serif !important;
 }
 
+/* --- ARC FONT OVERRIDES --- */
+[data-theme="Arc"] header .parent-nav-item,
+[data-theme="Arc"] header button.px-3,
+[data-theme="Arc"] footer .font-rajdhani,
+[data-theme="Arc"] footer .font-sf-mono,
+[data-theme="Arc"] footer span,
+[data-theme="Arc"] footer a {
+  font-family: "Urbanist", sans-serif !important;
+}
+
+[data-theme="Arc"] .font-monoton,
+[data-theme="Arc"] .font-logo {
+  font-family: "ITC Avant Garde Gothic W02 Md", sans-serif !important;
+  font-weight: 900 !important;
+}
+
+/* --- MINDTURBULENCE FONT OVERRIDES --- */
+[data-theme="MindTurbulence"] header .parent-nav-item,
+[data-theme="MindTurbulence"] header button.px-3,
+[data-theme="MindTurbulence"] footer .font-rajdhani,
+[data-theme="MindTurbulence"] footer .font-sf-mono,
+[data-theme="MindTurbulence"] footer span,
+[data-theme="MindTurbulence"] footer a {
+  font-size: 10px !important;
+  font-family: "Microgramma D Medium Extended", sans-serif !important;
+  font-weight: normal !important;
+  letter-spacing: 0.2em !important;
+  text-transform: uppercase;
+}
+
+[data-theme="MindTurbulence"] .font-monoton,
+[data-theme="MindTurbulence"] .font-logo {
+  font-family: "Westminster", sans-serif !important;
+}
+
+/* --- COFFEE FONT OVERRIDES --- */
+[data-theme="coffee"] .font-monoton,
+[data-theme="coffee"] .font-logo {
+  font-family: "Megazoid", sans-serif !important;
+}
+
+/* --- SYNTHWAVE & DRACULA FONT OVERRIDES --- */
+[data-theme="synthwave"] header .parent-nav-item,
+[data-theme="synthwave"] header button.px-3,
+[data-theme="synthwave"] footer .font-rajdhani,
+[data-theme="synthwave"] footer .font-sf-mono,
+[data-theme="synthwave"] footer span,
+[data-theme="synthwave"] footer a {
+  font-family: "ITC Serif Gothic Std", sans-serif !important;
+}
+
+[data-theme="synthwave"] .font-monoton {
+  font-family: "ITC Serif Gothic Black", sans-serif !important;
+}
+
+[data-theme="dracula"] .font-monoton {
+  font-family: "Marvin Visions Bold", sans-serif !important;
+}
+
 
 /* CRT Flicker Animation */
 @keyframes crt-flicker {
@@ -2022,23 +2088,32 @@ button:active {
   box-shadow: none !important;
 }
 
-/* --- LOFI (VANGUARD STYLE WITH CYAN COLORS) --- */
-[data-theme="lofi"] {
+/* --- ARWES (VANGUARD STYLE WITH CYAN COLORS) --- */
+[data-theme="arwes"] {
   font-family: "Rajdhani", sans-serif !important;
   background-color: oklch(var(--b2)) !important;
   color: oklch(var(--p));
 }
 
-[data-theme="lofi"] .font-sans,
-[data-theme="lofi"] .font-serif {
+[data-theme="arwes"] .is-active,
+[data-theme="arwes"] .is-active .text-primary {
+  color: oklch(var(--wa)) !important;
+}
+
+[data-theme="arwes"] .arwes-label {
+  color: oklch(var(--wa)) !important;
+}
+
+[data-theme="arwes"] .font-sans,
+[data-theme="arwes"] .font-serif {
   font-family: "Rajdhani", sans-serif !important;
 }
 
-[data-theme="lofi"] *:not(.cursor-inner) {
+[data-theme="arwes"] *:not(.cursor-inner) {
   cursor: crosshair !important;
 }
 
-[data-theme="lofi"] body::before {
+[data-theme="arwes"] body::before {
   content: " ";
   display: block;
   position: fixed;
@@ -2060,7 +2135,7 @@ button:active {
   opacity: 0.3;
 }
 
-[data-theme="lofi"] body::after {
+[data-theme="arwes"] body::after {
   content: "";
   position: fixed;
   inset: 0;
@@ -2068,9 +2143,9 @@ button:active {
   pointer-events: none;
 }
 
-[data-theme="lofi"] .card,
-[data-theme="lofi"] .bg-base-100,
-[data-theme="lofi"] .main-app-frame {
+[data-theme="arwes"] .card,
+[data-theme="arwes"] .bg-base-100,
+[data-theme="arwes"] .main-app-frame {
   border: 1px solid oklch(var(--p) / 0.1) !important;
   background: linear-gradient(180deg,
       oklch(var(--b1) / 0.2) 0%,
@@ -2079,32 +2154,32 @@ button:active {
   border-radius: 0 !important;
 }
 
-[data-theme="lofi"] .corner-frame {
+[data-theme="arwes"] .corner-frame {
   border: 1px solid oklch(var(--p) / 0.1) !important;
   background: none !important;
   box-shadow: none !important;
   border-radius: 0 !important;
 }
 
-[data-theme="lofi"] .corner-frame::before,
-[data-theme="lofi"] .corner-frame::after,
-[data-theme="lofi"] .corner-frame .top-right,
-[data-theme="lofi"] .corner-frame .bottom-left {
+[data-theme="arwes"] .corner-frame::before,
+[data-theme="arwes"] .corner-frame::after,
+[data-theme="arwes"] .corner-frame .top-right,
+[data-theme="arwes"] .corner-frame .bottom-left {
   display: none !important;
 }
 
-[data-theme="lofi"] h1,
-[data-theme="lofi"] h2,
-[data-theme="lofi"] h3,
-[data-theme="lofi"] button,
-[data-theme="lofi"] .font-rajdhani,
-[data-theme="lofi"] .font-mono {
+[data-theme="arwes"] h1,
+[data-theme="arwes"] h2,
+[data-theme="arwes"] h3,
+[data-theme="arwes"] button,
+[data-theme="arwes"] .font-rajdhani,
+[data-theme="arwes"] .font-mono {
   font-family: "Electrolize", monospace !important;
   letter-spacing: 0.1em;
   text-transform: uppercase;
 }
 
-[data-theme="lofi"] .text-primary {
+[data-theme="arwes"] .text-primary {
   color: oklch(var(--p)) !important;
   text-shadow:
     1px 0 0 oklch(var(--p) / 0.5),
@@ -2113,7 +2188,7 @@ button:active {
   animation: crt-flicker 0.15s infinite;
 }
 
-[data-theme="lofi"] .btn-primary {
+[data-theme="arwes"] .btn-primary {
   background: linear-gradient(135deg, oklch(var(--p)) 0%, oklch(var(--p) / 0.7) 100%) !important;
   color: oklch(var(--b1)) !important;
   border: none !important;
@@ -2126,7 +2201,7 @@ button:active {
   transition: all 0.2s ease-out;
 }
 
-[data-theme="lofi"] .btn-primary::after {
+[data-theme="arwes"] .btn-primary::after {
   content: "";
   position: absolute;
   top: 0;
@@ -2141,40 +2216,40 @@ button:active {
   pointer-events: none;
 }
 
-[data-theme="lofi"] .btn-primary:hover {
+[data-theme="arwes"] .btn-primary:hover {
   background: oklch(var(--p)) !important;
   box-shadow: 0 0 30px oklch(var(--p) / 0.8) !important;
 }
 
-[data-theme="lofi"] .panel-header,
-[data-theme="lofi"] .panel-footer,
-[data-theme="lofi"] header.panel-header,
-[data-theme="lofi"] footer.panel-footer {
+[data-theme="arwes"] .panel-header,
+[data-theme="arwes"] .panel-footer,
+[data-theme="arwes"] header.panel-header,
+[data-theme="arwes"] footer.panel-footer {
   border-color: oklch(var(--p) / 0.15) !important;
   background-color: oklch(var(--p) / 0.05) !important;
 }
 
-[data-theme="lofi"] .input,
-[data-theme="lofi"] .select,
-[data-theme="lofi"] .textarea,
-[data-theme="lofi"] .form-input,
-[data-theme="lofi"] .form-select,
-[data-theme="lofi"] .form-textarea {
+[data-theme="arwes"] .input,
+[data-theme="arwes"] .select,
+[data-theme="arwes"] .textarea,
+[data-theme="arwes"] .form-input,
+[data-theme="arwes"] .form-select,
+[data-theme="arwes"] .form-textarea {
   background-color: rgba(0, 0, 0, 0.4) !important;
   border: 1px solid oklch(var(--p) / 0.2) !important;
   color: oklch(var(--p));
   border-radius: 0 !important;
 }
 
-[data-theme="lofi"] .input:focus,
-[data-theme="lofi"] .select:focus,
-[data-theme="lofi"] .textarea:focus {
+[data-theme="arwes"] .input:focus,
+[data-theme="arwes"] .select:focus,
+[data-theme="arwes"] .textarea:focus {
   border-color: oklch(var(--p)) !important;
   box-shadow: 0 0 10px oklch(var(--p) / 0.5);
   outline: none;
 }
 
-[data-theme="lofi"]::before {
+[data-theme="arwes"]::before {
   content: "";
   position: fixed;
   bottom: 0;
@@ -2199,7 +2274,7 @@ button:active {
       rgba(0, 0, 0, 0) 100%);
 }
 
-[data-theme="lofi"] ::selection {
+[data-theme="arwes"] ::selection {
   background-color: oklch(var(--p) / 0.5);
   color: oklch(var(--b1));
 }
