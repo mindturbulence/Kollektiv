@@ -295,7 +295,7 @@ const PromptCrafter = ({ onSaveToLibrary, onClip, onSendToEnhancer, onSendToRefi
                         exit="exit"
                         className="p-6 h-16 flex items-center bg-base-100/10 backdrop-blur-md flex-shrink-0 panel-header"
                     >
-                        <TerminalText text="WILDCARDS" delay={2.0} className="text-xs font-sf-mono uppercase text-primary" />
+                        <TerminalText text="WILDCARDS" delay={2.0} className="text-xs font-mono uppercase text-primary" />
                     </motion.header>
                     <motion.div
                         variants={contentVariants}
@@ -403,12 +403,12 @@ const PromptCrafter = ({ onSaveToLibrary, onClip, onSendToEnhancer, onSendToRefi
                                             setPromptText('');
                                         }}
                                         onMouseEnter={() => audioService.playHover()}
-                                        className="font-sf-mono text-[9px] tracking-widest text-base-content/40 hover:text-base-content transition-all"
+                                        className="font-mono text-[9px] tracking-widest text-base-content/40 hover:text-base-content transition-all"
                                     >
                                         CLEAR
                                     </button>
                                     <button
-                                        className="font-sf-mono text-[9px] tracking-widest text-error/40 hover:text-error transition-all mr-2"
+                                        className="font-mono text-[9px] tracking-widest text-error/40 hover:text-error transition-all mr-2"
                                         onClick={() => {
                                             audioService.playClick();
                                             handleDeleteTemplateClick();
@@ -494,7 +494,7 @@ const PromptCrafter = ({ onSaveToLibrary, onClip, onSendToEnhancer, onSendToRefi
                             {aiAction && (
                                 <div className="absolute inset-0 bg-base-100/20 backdrop-blur-sm flex flex-col items-center justify-center z-10 animate-fade-in">
                                     <LoadingSpinner />
-                                    <p className="text-[10px] font-normal text-[12px] font-sf-mono uppercase tracking-widest text-primary animate-pulse mt-4">{aiAction}</p>
+                                    <p className="text-[10px] font-normal text-[12px] font-mono uppercase tracking-widest text-primary animate-pulse mt-4">{aiAction}</p>
                                 </div>
                             )}
                             {generatedPrompt ? (
@@ -506,7 +506,7 @@ const PromptCrafter = ({ onSaveToLibrary, onClip, onSendToEnhancer, onSendToRefi
                             ) : (
                                 <div className="h-full flex flex-col items-center justify-center text-center opacity-10">
                                     <SparklesIcon className="w-16 h-16 mx-auto mb-4" />
-                                    <p className="text-xl text-[12px] font-sf-mono uppercase tracking-widest">Awaiting generated prompt</p>
+                                    <p className="text-xl text-[12px] font-mono uppercase tracking-widest">Awaiting generated prompt</p>
                                 </div>
                             )}
                         </motion.div>
@@ -605,7 +605,7 @@ const PromptCrafter = ({ onSaveToLibrary, onClip, onSendToEnhancer, onSendToRefi
                         exit="exit"
                         className="px-6 py-4 flex-shrink-0 bg-base-100/10 h-16 flex items-center panel-header"
                     >
-                        <TerminalText text="CRAFTED RESULTS" delay={2.8} className="text-xs font-sf-mono uppercase text-primary" />
+                        <TerminalText text="CRAFTED RESULTS" delay={2.8} className="text-xs font-mono uppercase text-primary" />
                     </motion.header>
                     <motion.div
                         variants={contentVariants}
@@ -630,7 +630,7 @@ const PromptCrafter = ({ onSaveToLibrary, onClip, onSendToEnhancer, onSendToRefi
                         ) : (
                             <div className="h-full flex flex-col items-center justify-center text-center opacity-10">
                                 <SparklesIcon className="w-12 h-12 mb-4" />
-                                <p className="text-[10px] text-[12px] font-sf-mono uppercase tracking-widest leading-relaxed">Generated prompts mapped to session index will appear here</p>
+                                <p className="text-[10px] text-[12px] font-mono uppercase tracking-widest leading-relaxed">Generated prompts mapped to session index will appear here</p>
                             </div>
                         )}
                     </motion.div>
@@ -648,7 +648,7 @@ const PromptCrafter = ({ onSaveToLibrary, onClip, onSendToEnhancer, onSendToRefi
                         <div className="bg-base-100/40 backdrop-blur-xl rounded-none w-full overflow-hidden relative z-10">
                             <header className="px-8 py-6 panel-header">
                                 <h3 className="text-2xl font-black tracking-tighter text-base-content leading-none uppercase">SAVE TEMPLATE<span className="text-primary">.</span></h3>
-                                <p className="text-[10px] font-normal text-[12px] font-sf-mono uppercase tracking-widest text-base-content/30 mt-1.5">Preset Registration</p>
+                                <p className="text-[10px] font-normal text-[12px] font-mono uppercase tracking-widest text-base-content/30 mt-1.5">Preset Registration</p>
                             </header>
                             <div className="p-8">
                                 <div className="form-control">

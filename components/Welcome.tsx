@@ -78,7 +78,7 @@ const Welcome: React.FC<WelcomeProps> = ({ onSetupComplete }) => {
             
             <div className="relative z-10">
                 <AppLogoIcon className="w-20 h-20 text-primary mx-auto mb-6 drop-shadow-[0_0_15px_rgba(var(--p),0.5)]" />
-                <h1 className="text-4xl font-black tracking-tighter text-base-content mb-4 uppercase font-sf-mono">STORAGE_INIT<span className="text-primary italic">.</span></h1>
+                <h1 className="text-4xl font-black tracking-tighter text-base-content mb-4 uppercase font-mono">STORAGE_INIT<span className="text-primary italic">.</span></h1>
                 
                 <p className="text-[10px] font-black text-base-content/40 mb-10 uppercase tracking-[0.3em] leading-relaxed">
                   Establish local vault connection to synchronize neural templates and visual assets.

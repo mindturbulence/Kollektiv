@@ -8,12 +8,12 @@ import { loadPromptCategories, addSavedPrompt, loadSavedPrompts } from '../utils
 import { loadArtStyles } from '../utils/artstyleStorage';
 import { loadArtists } from '../utils/artistStorage';
 import { fileToBase64 } from '../utils/fileUtils';
-import { motion, AnimatePresence } from 'framer-motion';
+import { motion, AnimatePresence } from 'motion/react';
 import { TerminalText, PanelLine, ScanLine, pageVariants, pageHeaderVariants, pageBodyVariants, pageFooterVariants, reverseTextVariants, sectionWipeVariants, contentVariants } from './AnimatedPanels';
 import { refinerPresetService, type RefinerPreset } from '../services/refinerPresetService';
 
 import { useBusy } from '../contexts/BusyContext';
-import type { AppError, SavedPrompt, PromptCategory, EnhancementResult, PromptModifiers, CheatsheetCategory, Idea } from '../types';
+import type { AppError, SavedPrompt, PromptCategory, EnhancementResult, PromptModifiers, CheatsheetCategory, Idea, ActiveTab } from '../types';
 import {
     FILM_TYPES,
     GENERAL_ASPECT_RATIOS,
@@ -69,10 +69,12 @@ type RefineSubTab = 'basic' | 'styling' | 'photography' | 'motion' | 'audio' | '
 interface PromptsPageProps {
     initialState?: { prompt?: string, artStyle?: string, artist?: string, view?: 'enhancer' | 'composer' | 'create', id?: string } | null;
     forcedView?: 'refine' | 'composer' | 'analyzer' | 'prompt_analyzer';
+    onNavigate?: (tab: ActiveTab) => void;
     onStateHandled: () => void;
     showGlobalFeedback: (message: string, isError?: boolean) => void;
     onClipIdea: (idea: Idea) => void;
     isExiting?: boolean;
+    onSendToBuilder?: (state: any) => void;
 }
 
 const PropertyCard: React.FC<{
@@ -150,10 +152,12 @@ const DEFAULT_MODIFIERS: PromptModifiers = {
 const PromptsPage: React.FC<PromptsPageProps> = ({
     initialState,
     forcedView,
+    onNavigate,
     onStateHandled,
     showGlobalFeedback,
     onClipIdea,
     isExiting = false,
+    onSendToBuilder,
 }) => {
     const { settings } = useSettings();
     const { setIsBusy } = useBusy();
@@ -164,16 +168,20 @@ const PromptsPage: React.FC<PromptsPageProps> = ({
             setActiveView(forcedView);
         }
     }, [forcedView]);
-    const [isLocalExiting, setIsLocalExiting] = useState(false);
 
     const handleSwitchView = (newView: 'refine' | 'composer' | 'analyzer' | 'prompt_analyzer') => {
         if (newView === activeView) return;
         audioService.playClick();
-        setIsLocalExiting(true);
-        setTimeout(() => {
-            setActiveView(newView);
-            setIsLocalExiting(false);
-        }, 800);
+        setActiveView(newView);
+        if (onNavigate) {
+            const viewToTabMap: Record<string, ActiveTab> = {
+                'composer': 'crafter',
+                'refine': 'refiner',
+                'analyzer': 'media_analyzer',
+                'prompt_analyzer': 'prompt_analyzer',
+            };
+            onNavigate(viewToTabMap[newView]);
+        }
     };
 
 
@@ -350,6 +358,10 @@ const PromptsPage: React.FC<PromptsPageProps> = ({
             const catalog = buildModifierCatalog();
             const stream = enhancePromptStream(refineText, constantModifier, promptLength, targetAIModel, modifiers, settings, activeRefImages, catalog);
             for await (const chunk of stream) fullText += chunk;
+
+            if (!fullText.trim()) {
+                throw new Error("Target unreachable or returned empty sequence. Ensure Ollama is running.");
+            }
 
             let refinedPrompt = fullText;
             let breakdown: any = null;
@@ -598,12 +610,15 @@ const PromptsPage: React.FC<PromptsPageProps> = ({
 
 
     const handleSendToRefine = (text: string) => {
-        setRefineText(text);
-        setActiveView('refine');
+        if (onSendToBuilder) {
+            onSendToBuilder({ prompt: text || '', view: 'enhancer' });
+            return;
+        }
+        setRefineText(text || '');
         setResultsRefine(null);
         setDirectMediaResult(null);
         setErrorRefine(null);
-        showGlobalFeedback('Imported.');
+        handleSwitchView('refine');
     };
 
     const activeConstructionItems = useMemo(() => {
@@ -682,7 +697,7 @@ const PromptsPage: React.FC<PromptsPageProps> = ({
                     <div className="flex flex-col h-full space-y-6 overflow-hidden">
                         <div className="form-control flex-grow flex flex-col min-h-[120px]">
                             <div className="flex justify-between items-center mb-2">
-                                <label className="text-[10px] font-normal text-[12px] font-sf-mono uppercase tracking-widest text-base-content/40">Prompt Idea</label>
+                                <label className="text-[10px] font-normal text-[12px] font-mono uppercase tracking-widest text-base-content/40">Prompt Idea</label>
                                 <div className="flex gap-2">
                                     <button onClick={handlePasteRefineText} className="form-btn h-6 px-2 opacity-20 hover:opacity-100 uppercase tracking-widest">Paste</button>
                                     <button onClick={() => setRefineText('')} className="form-btn h-6 px-2 opacity-20 hover:opacity-100 uppercase tracking-widest">Clear</button>
@@ -691,11 +706,11 @@ const PromptsPage: React.FC<PromptsPageProps> = ({
                             <textarea value={refineText} onChange={(e) => setRefineText((e.currentTarget as any).value)} className="form-textarea w-full flex-grow resize-none font-medium leading-relaxed bg-transparent" placeholder="Enter core concept..."></textarea>
                         </div>
                         <div className="form-control">
-                            <label className="text-[10px] font-normal text-[12px] font-sf-mono uppercase tracking-widest text-base-content/40 mb-2">Constant Modifiers</label>
+                            <label className="text-[10px] font-normal text-[12px] font-mono uppercase tracking-widest text-base-content/40 mb-2">Constant Modifiers</label>
                             <input type="text" value={constantModifier} onChange={(e) => setConstantModifier((e.currentTarget as any).value)} className="form-input w-full" placeholder="Tokens the AI must include..." />
                         </div>
                         <div className="form-control">
-                            <label className="text-[10px] font-normal text-[12px] font-sf-mono uppercase tracking-widest text-base-content/40 mb-2">Media Output</label>
+                            <label className="text-[10px] font-normal text-[12px] font-mono uppercase tracking-widest text-base-content/40 mb-2">Media Output</label>
                             <div className="form-tab-group">
                                 <button onClick={() => { audioService.playClick(); setMediaMode('image'); }} className={`form-tab-item ${mediaMode === 'image' ? 'active' : ''}`}>IMAGE</button>
                                 <button onClick={() => { audioService.playClick(); setMediaMode('video'); }} className={`form-tab-item ${mediaMode === 'video' ? 'active' : ''}`}>VIDEO</button>
@@ -704,13 +719,13 @@ const PromptsPage: React.FC<PromptsPageProps> = ({
                         </div>
                         <div className="grid grid-cols-2 gap-6">
                             <div className="form-control">
-                                <label className="text-[10px] font-normal text-[12px] font-sf-mono uppercase tracking-widest text-base-content/40 mb-2">Neural Engine</label>
+                                <label className="text-[10px] font-normal text-[12px] font-mono uppercase tracking-widest text-base-content/40 mb-2">Neural Engine</label>
                                 <select value={targetAIModel} onChange={(e) => setTargetAIModel((e.currentTarget as any).value)} className="form-select w-full">
                                     {(mediaMode === 'image' ? TARGET_IMAGE_AI_MODELS : mediaMode === 'video' ? TARGET_VIDEO_AI_MODELS : TARGET_AUDIO_AI_MODELS).map(m => <option key={m} value={m}>{m}</option>)}
                                 </select>
                             </div>
                             <div className="form-control">
-                                <label className="text-[10px] font-normal text-[12px] font-sf-mono uppercase tracking-widest text-base-content/40 mb-2">Complexity</label>
+                                <label className="text-[10px] font-normal text-[12px] font-mono uppercase tracking-widest text-base-content/40 mb-2">Complexity</label>
                                 <select value={promptLength} onChange={(e) => setPromptLength((e.currentTarget as any).value)} className="form-select w-full">
                                     {Object.entries(PROMPT_DETAIL_LEVELS).map(([k, v]) => <option key={k} value={v}>{v}</option>)}
                                 </select>
@@ -718,7 +733,7 @@ const PromptsPage: React.FC<PromptsPageProps> = ({
                         </div>
                         <div className="form-control">
                             <div className="flex justify-between items-center mb-2">
-                                <label className="text-[10px] font-normal text-[12px] font-sf-mono uppercase tracking-widest text-base-content/40">Refiner Creativity / Uniqueness</label>
+                                <label className="text-[10px] font-normal text-[12px] font-mono uppercase tracking-widest text-base-content/40">Refiner Creativity / Uniqueness</label>
                                 <span className="text-[10px] font-mono font-bold text-primary">{modifiers.creativity ?? 70}%</span>
                             </div>
                             <input
@@ -962,7 +977,7 @@ const PromptsPage: React.FC<PromptsPageProps> = ({
                         </div>
                         <div className="form-control">
                             <div className="flex justify-between items-center mb-2">
-                                <label className="text-[10px] font-normal text-[12px] font-sf-mono uppercase tracking-widest">Targeted Duration</label>
+                                <label className="text-[10px] font-normal text-[12px] font-mono uppercase tracking-widest">Targeted Duration</label>
                                 <span className="text-[10px] font-mono font-bold text-primary">{modifiers.audioDuration}s</span>
                             </div>
                             <input
@@ -1080,7 +1095,7 @@ const PromptsPage: React.FC<PromptsPageProps> = ({
                         ) : (
                             <div className="text-center py-20 opacity-20">
                                 <Cog6ToothIcon className="w-12 h-12 mx-auto mb-4" />
-                                <p className="text-[10px] font-normal text-[12px] font-sf-mono uppercase tracking-widest text-center">No platform extensions available</p>
+                                <p className="text-[10px] font-normal text-[12px] font-mono uppercase tracking-widest text-center">No platform extensions available</p>
                             </div>
                         )}
                     </div>
@@ -1170,7 +1185,7 @@ const PromptsPage: React.FC<PromptsPageProps> = ({
         <motion.div
             variants={pageVariants}
             initial="hidden"
-            animate={isLocalExiting || isExiting ? "exit" : "visible"}
+            animate={isExiting ? "exit" : "visible"}
             exit="exit"
             className="flex flex-col h-full bg-transparent w-full relative overflow-hidden"
         >
@@ -1264,7 +1279,7 @@ const PromptsPage: React.FC<PromptsPageProps> = ({
                                                 audioService.playClick();
                                                 handleEnhance();
                                             }}
-                                            disabled={isLoadingRefine || !refineText.trim()}
+                                            disabled={isLoadingRefine || !(refineText || '').trim()}
                                             className="btn btn-sm btn-ghost h-full rounded-none flex-1 tracking-wider text-primary border-1 disabled:opacity-30 disabled:cursor-not-allowed btn-snake"
                                         >
                                             <span /><span /><span /><span />
@@ -1276,7 +1291,7 @@ const PromptsPage: React.FC<PromptsPageProps> = ({
                                                     audioService.playClick();
                                                     handleDirectGenerate();
                                                 }}
-                                                disabled={isLoadingRefine || !refineText.trim()}
+                                                disabled={isLoadingRefine || !(refineText || '').trim()}
                                                 className="btn btn-sm btn-ghost h-full rounded-none flex-1 tracking-wider text-primary border-0 disabled:opacity-30 disabled:cursor-not-allowed btn-snake"
                                             >
                                                 <span /><span /><span /><span />
@@ -1314,7 +1329,7 @@ const PromptsPage: React.FC<PromptsPageProps> = ({
                                         className="p-6 h-16 flex justify-between items-center bg-base-100/80 backdrop-blur-md panel-header overflow-visible relative z-[800]"
                                     >
                                         <motion.div variants={reverseTextVariants}>
-                                            <TerminalText text={`REFINED PROMPT : ${targetAIModel}`} delay={2.6} className="text-xs font-sf-mono uppercase text-primary" />
+                                            <TerminalText text={`REFINED PROMPT : ${targetAIModel}`} delay={2.6} className="text-xs font-mono uppercase text-primary" />
                                         </motion.div>
                                     </motion.header>
                                     <motion.div
@@ -1330,9 +1345,10 @@ const PromptsPage: React.FC<PromptsPageProps> = ({
                                                 <BlobLoader />
                                             </div>
                                         ) : errorRefine ? (
-                                            <div className="p-8 w-full text-center">
-                                                <div className="alert alert-error rounded-none border-2 justify-center">
-                                                    <span className="font-black uppercase text-[10px] tracking-widest">{errorRefine.message}</span>
+                                            <div className="flex-grow flex items-center justify-center p-8 w-full">
+                                                <div className="border border-error/30 bg-error/5 p-6 max-w-md text-center flex flex-col items-center gap-3 relative corner-frame shadow-[0_0_20px_oklch(var(--er)/0.15)] mx-auto">
+                                                    <span className="text-[10px] uppercase tracking-widest opacity-60 font-mono text-error">System Alert</span>
+                                                    <span className="font-medium uppercase text-[11px] tracking-widest leading-relaxed text-error">{errorRefine.message}</span>
                                                 </div>
                                             </div>
                                         ) : resultsRefine ? (
@@ -1373,7 +1389,7 @@ const PromptsPage: React.FC<PromptsPageProps> = ({
                                         ) : (
                                             <div className="flex-grow flex flex-col items-center justify-center text-center py-32 opacity-10">
                                                 <span className="p-8"><SparklesIcon className="w-14 h-14" /></span>
-                                                <p className="font-rajdhani text-[12px] font-sf-mono uppercase tracking-widest">Awaiting sequence initiation</p>
+                                                <p className="font-rajdhani text-[12px] font-mono uppercase tracking-widest">Awaiting sequence initiation</p>
                                             </div>
                                         )}
                                     </motion.div>
@@ -1455,7 +1471,7 @@ const PromptsPage: React.FC<PromptsPageProps> = ({
                             <motion.aside
                                 variants={pageVariants}
                                 initial="hidden"
-                                animate={isLocalExiting || isExiting ? "exit" : "visible"}
+                                animate={isExiting ? "exit" : "visible"}
                                 exit="exit"
                                 className="lg:col-span-3 h-full min-h-0 flex flex-col relative p-[3px] corner-frame overflow-visible hidden lg:flex origin-top-left"
                             >
@@ -1577,7 +1593,7 @@ const PromptsPage: React.FC<PromptsPageProps> = ({
                                 onRefine={handleSendToRefine}
                                 onClip={handleClipSuggestion}
                                 header={null}
-                                isNavigating={isLocalExiting || isExiting}
+                                isNavigating={isExiting}
                             />
                         )}
 
@@ -1595,7 +1611,7 @@ const PromptsPage: React.FC<PromptsPageProps> = ({
                                     handleSwitchView('refine');
                                 }}
                                 showGlobalFeedback={showGlobalFeedback}
-                                isNavigating={isLocalExiting || isExiting}
+                                isNavigating={isExiting}
                             />
                         )}
                     </AnimatePresence>

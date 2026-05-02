@@ -35,9 +35,14 @@ const PromptRefinePanel: React.FC<PromptRefinePanelProps> = ({ promptText, onApp
         setRefinedPrompt(''); 
         setClipped(false);
         try {
+            let fullText = '';
             const stream = refineSinglePromptStream(promptText, targetAIModel, settings);
             for await (const chunk of stream) {
+                fullText += chunk;
                 setRefinedPrompt(prev => (prev || '') + chunk);
+            }
+            if (!fullText.trim()) {
+                throw new Error("Target unreachable or returned empty sequence. Ensure Ollama is running.");
             }
         } catch (e) {
             setError(e instanceof Error ? e.message : "An error occurred.");
@@ -77,7 +82,7 @@ const PromptRefinePanel: React.FC<PromptRefinePanelProps> = ({ promptText, onApp
         return (
             <div className="bg-transparent">
                 <button onClick={() => setIsCollapsed(false)} className="w-full p-4 flex items-center justify-between hover:bg-primary/5 transition-colors">
-                    <span className="text-xs font-sf-mono uppercase tracking-widest text-primary">Open Refiner</span>
+                    <span className="text-xs font-mono uppercase tracking-widest text-primary">Open Refiner</span>
                     <ChevronDownIcon className="w-4 h-4" />
                 </button>
             </div>
@@ -89,7 +94,7 @@ const PromptRefinePanel: React.FC<PromptRefinePanelProps> = ({ promptText, onApp
             <div className="flex flex-col h-full w-full bg-base-100/30 backdrop-blur-xl overflow-hidden relative z-10">
                 <header className="p-4 flex justify-between items-center bg-base-100/10 backdrop-blur-md">
                     <div className="flex items-center gap-4">
-                        <span className="text-xs text-[12px] font-sf-mono uppercase tracking-widest text-primary">AI Refinement</span>
+                        <span className="text-xs text-[12px] font-mono uppercase tracking-widest text-primary">AI Refinement</span>
                         <div className="form-control max-w-[140px]">
                              <select value={targetAIModel} onChange={(e) => setTargetAIModel((e.currentTarget as any).value)} className="form-select h-8 text-[10px]">
                                 <optgroup label="Image">
@@ -114,12 +119,19 @@ const PromptRefinePanel: React.FC<PromptRefinePanelProps> = ({ promptText, onApp
                 </header>
                 
                 <main ref={scrollerRef} className="flex-grow p-5 lg:p-5 overflow-y-auto flex flex-col relative">
-                    <span className="text-xs font-sf-mono uppercase tracking-widest text-primary/40 mb-3 flex items-center gap-3">
+                    <span className="text-xs font-mono uppercase tracking-widest text-primary/40 mb-3 flex items-center gap-3">
                         <span className="w-1.5 h-1.5 rounded-none bg-primary animate-pulse"></span> Generated Text
                     </span>
                     
                     {isLoading && !refinedPrompt ? <div className="flex-grow flex items-center justify-center p-8"><BlobLoader /></div> :
-                     error ? <div className="alert alert-error rounded-none text-xs"><span>{error}</span></div> :
+                     error ? (
+                        <div className="flex-grow flex items-center justify-center p-4">
+                            <div className="border border-error/30 bg-error/5 p-4 text-center flex flex-col items-center gap-2 max-w-[90%] corner-frame shadow-[0_0_15px_oklch(var(--er)/0.1)]">
+                                <span className="text-[9px] uppercase tracking-widest opacity-60 font-mono text-error">Alert</span>
+                                <span className="font-medium uppercase text-[10px] tracking-widest leading-relaxed text-error">{error}</span>
+                            </div>
+                        </div>
+                     ) :
                      refinedPrompt !== null ? (
                         <div className="text-sm font-medium leading-relaxed text-base-content/80 whitespace-pre-wrap flex-grow">
                             {refinedPrompt}

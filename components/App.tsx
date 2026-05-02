@@ -39,7 +39,7 @@ import ColorPaletteExtractor from './ColorPaletteExtractor';
 import ImageResizer from './ImageResizer';
 import { VideoToFrames } from './VideoToFrames';
 import { LLMChatPanel } from './LLMChatPanel';
-import { motion, AnimatePresence } from 'framer-motion';
+import { motion, AnimatePresence } from 'motion/react';
 import { pageVariants } from './AnimatedPanels';
 import ChromaticText from './ChromaticText';
 
@@ -314,8 +314,8 @@ const InitialLoader: React.FC<{ status: string; progress: number | null; onConti
             </div>
             
             {/* Footer */}
-            <div className="absolute bottom-8 left-1/2 -translate-x-1/2 text-[10px] font-mono font-bold uppercase tracking-widest text-base-content/40 opacity-50">
-                Built by MindTurbulence
+            <div className="absolute bottom-8 left-1/2 -translate-x-1/2 text-[10px] font-mono uppercase tracking-widest text-base-content/40 opacity-70">
+                <span className="font-bold">Built by</span> <span className="text-primary font-bold">MindTurbulence</span>
             </div>
         </div>
     );
@@ -810,11 +810,11 @@ const AppContent: React.FC = () => {
         switch (activeTab) {
             case 'dashboard': return <Dashboard key="dashboard" onNavigate={handleNavigate} onClipIdea={handleClipIdea} isExiting={false} />;
             case 'discovery': return <DiscoveryPage key="discovery" isExiting={false} onClipIdea={handleClipIdea} onSendToBuilder={handleSendToPromptsPage} showGlobalFeedback={showGlobalFeedback} />;
-            case 'prompts': return <PromptsPage key="prompts" onClipIdea={handleClipIdea} initialState={promptsPageState} onStateHandled={() => setPromptsPageState(null)} showGlobalFeedback={showGlobalFeedback} isExiting={false} />;
-            case 'crafter': return <PromptsPage key="crafter" forcedView="composer" onClipIdea={handleClipIdea} initialState={promptsPageState} onStateHandled={() => setPromptsPageState(null)} showGlobalFeedback={showGlobalFeedback} isExiting={false} />;
-            case 'refiner': return <PromptsPage key="refiner" forcedView="refine" onClipIdea={handleClipIdea} initialState={promptsPageState} onStateHandled={() => setPromptsPageState(null)} showGlobalFeedback={showGlobalFeedback} isExiting={false} />;
-            case 'prompt_analyzer': return <PromptsPage key="prompt_analyzer" forcedView="prompt_analyzer" onClipIdea={handleClipIdea} initialState={promptsPageState} onStateHandled={() => setPromptsPageState(null)} showGlobalFeedback={showGlobalFeedback} isExiting={false} />;
-            case 'media_analyzer': return <PromptsPage key="media_analyzer" forcedView="analyzer" onClipIdea={handleClipIdea} initialState={promptsPageState} onStateHandled={() => setPromptsPageState(null)} showGlobalFeedback={showGlobalFeedback} isExiting={false} />;
+            case 'prompts': return <PromptsPage key="prompts" onClipIdea={handleClipIdea} initialState={promptsPageState} onStateHandled={() => setPromptsPageState(null)} showGlobalFeedback={showGlobalFeedback} isExiting={false} onSendToBuilder={handleSendToPromptsPage} />;
+            case 'crafter': return <PromptsPage key="prompts" forcedView="composer" onNavigate={handleNavigate} onClipIdea={handleClipIdea} initialState={promptsPageState} onStateHandled={() => setPromptsPageState(null)} showGlobalFeedback={showGlobalFeedback} isExiting={false} onSendToBuilder={handleSendToPromptsPage} />;
+            case 'refiner': return <PromptsPage key="prompts" forcedView="refine" onNavigate={handleNavigate} onClipIdea={handleClipIdea} initialState={promptsPageState} onStateHandled={() => setPromptsPageState(null)} showGlobalFeedback={showGlobalFeedback} isExiting={false} onSendToBuilder={handleSendToPromptsPage} />;
+            case 'prompt_analyzer': return <PromptsPage key="prompts" forcedView="prompt_analyzer" onNavigate={handleNavigate} onClipIdea={handleClipIdea} initialState={promptsPageState} onStateHandled={() => setPromptsPageState(null)} showGlobalFeedback={showGlobalFeedback} isExiting={false} onSendToBuilder={handleSendToPromptsPage} />;
+            case 'media_analyzer': return <PromptsPage key="prompts" forcedView="analyzer" onNavigate={handleNavigate} onClipIdea={handleClipIdea} initialState={promptsPageState} onStateHandled={() => setPromptsPageState(null)} showGlobalFeedback={showGlobalFeedback} isExiting={false} onSendToBuilder={handleSendToPromptsPage} />;
             case 'prompt': return <SavedPrompts key="prompt" {...categoryPanelProps} onSendToEnhancer={(prompt) => handleSendToPromptsPage({ prompt, view: 'enhancer' })} showGlobalFeedback={showGlobalFeedback} onClipIdea={handleClipIdea} isExiting={false} />;
             case 'gallery': return <ImageGallery key="gallery" {...categoryPanelProps} isSidebarPinned={false} showGlobalFeedback={showGlobalFeedback} isExiting={false} />;
             case 'cheatsheet': return <Cheatsheet key="cheatsheet" isExiting={false} />;
@@ -917,7 +917,7 @@ const AppContent: React.FC = () => {
             {/* AMBIENT VIDEO BACKGROUND */}
             {isInitialized && (
                 <div className="absolute inset-0 z-0 overflow-hidden pointer-events-none">
-                    {!videoError && settings.dashboardVideoUrl && settings.isDashboardVideoEnabled ? (
+                    {((settings.dashboardBackgroundType === 'video' || (!settings.dashboardBackgroundType && settings.isDashboardVideoEnabled)) && !videoError && settings.dashboardVideoUrl) ? (
                         <video
                             key={settings.dashboardVideoUrl}
                             src={settings.dashboardVideoUrl}
@@ -929,6 +929,14 @@ const AppContent: React.FC = () => {
                             className="w-full h-full object-cover grayscale brightness-[0.6] contrast-125 opacity-30 transition-opacity duration-1000"
                             style={{ filter: 'grayscale(1) brightness(0.6) contrast(1.1)' }}
                             onError={() => setVideoError(true)}
+                        />
+                    ) : settings.dashboardBackgroundType === 'image' && settings.dashboardImageUrl ? (
+                        <div 
+                            className="w-full h-full bg-cover bg-center grayscale brightness-[0.6] contrast-125 opacity-30 transition-opacity duration-1000"
+                            style={{ 
+                                backgroundImage: `url(${settings.dashboardImageUrl})`,
+                                filter: 'grayscale(1) brightness(0.6) contrast(1.1)'
+                            }}
                         />
                     ) : (
                         <div className="w-full h-full bg-transparent"></div>
@@ -1047,7 +1055,7 @@ const AppContent: React.FC = () => {
                                 <div ref={contentRef} className="h-full w-full z-10 relative">
                                     <AnimatePresence mode="wait">
                                         <motion.div
-                                            key={activeTab}
+                                            key={['crafter', 'refiner', 'prompt_analyzer', 'media_analyzer', 'prompts'].includes(activeTab) ? 'prompts_group' : activeTab}
                                             variants={pageVariants}
                                             initial="hidden"
                                             animate="visible"

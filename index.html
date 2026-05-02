@@ -21,12 +21,13 @@
       try {
         const settings = JSON.parse(localStorage.getItem('kollektivSettingsV4'));
         if (settings) {
-          const theme = settings.activeThemeMode === 'light' ? settings.lightTheme : settings.darkTheme;
+          let theme = settings.activeThemeMode === 'light' ? settings.lightTheme : settings.darkTheme;
+          if (theme === 'lofi') theme = 'arwes';
           if (theme) {
             document.documentElement.setAttribute('data-theme', theme);
 
             // Simple heuristic for light/dark
-            const isLight = ['light', 'cupcake', 'bumblebee', 'emerald', 'corporate', 'retro', 'cyberpunk', 'valentine', 'garden', 'lofi', 'pastel', 'fantasy', 'wireframe', 'cmyk', 'autumn', 'acid', 'lemonade', 'winter', 'nord'].includes(theme);
+            const isLight = ['light', 'cupcake', 'bumblebee', 'emerald', 'corporate', 'retro', 'cyberpunk', 'valentine', 'garden', 'pastel', 'fantasy', 'wireframe', 'cmyk', 'autumn', 'acid', 'lemonade', 'winter', 'nord'].includes(theme);
             if (isLight) {
               document.documentElement.classList.add('is-light-theme');
             }

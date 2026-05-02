@@ -456,7 +456,7 @@ export const PromptAnalyzer: React.FC<PromptAnalyzerProps> = ({
                             className="px-6 h-14 flex items-center justify-between border-b border-primary/10 bg-base-100/10 backdrop-blur-md panel-header flex-shrink-0 z-20"
                         >
                             <div className="flex items-center gap-3">
-                                <TerminalText text="NEURAL DISSECTION" delay={2.0} className="text-[10px] font-black uppercase font-sf-mono text-primary" />
+                                <TerminalText text="NEURAL DISSECTION" delay={2.0} className="text-[10px] font-black uppercase font-mono text-primary" />
                             </div>
                         </motion.header>
 
@@ -717,7 +717,7 @@ export const PromptAnalyzer: React.FC<PromptAnalyzerProps> = ({
                             className="px-6 h-14 flex items-center justify-between border-b border-primary/10 bg-base-100/10 backdrop-blur-md panel-header flex-shrink-0 z-20"
                         >
                             <div className="flex items-center gap-3">
-                                <TerminalText text="LIVE RECONSTRUCTION" delay={2.5} className="text-[10px] font-black uppercase font-sf-mono text-primary/60" />
+                                <TerminalText text="LIVE RECONSTRUCTION" delay={2.5} className="text-[10px] font-black uppercase font-mono text-primary/60" />
                             </div>
                             <div className="flex items-center gap-3">
                                 <span className="text-[10px] font-mono text-primary animate-pulse">{tokenCount} TOKENS</span>

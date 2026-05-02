@@ -1,6 +1,6 @@
 
 import React, { useRef, useEffect, useState } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
+import { motion, AnimatePresence } from 'motion/react';
 import LlmStatusSwitcher from './LlmStatusSwitcher';
 import { useSettings } from '../contexts/SettingsContext';
 import { fileSystemManager } from '../utils/fileUtils';
@@ -14,7 +14,7 @@ const MetadataItem: React.FC<{ label: string; value: string }> = ({ label, value
 
     return (
         <div className="flex items-center gap-2">
-            <span className={`uppercase tracking-widest text-primary/60 leading-none inline-block ${fontClass}`}>{label}</span>
+            <span className={`arwes-label uppercase tracking-widest text-primary/60 leading-none inline-block ${fontClass}`}>{label}</span>
             <span className={`uppercase tracking-widest text-base-content/40 leading-none inline-block ${fontClass}`}>{value}</span>
         </div>
     );
@@ -52,7 +52,7 @@ const BatteryStatus: React.FC = () => {
 
     return (
         <div className="flex items-center gap-2">
-            <span className={`uppercase tracking-widest text-primary/60 leading-none inline-block ${fontClass}`}>PWR</span>
+            <span className={`arwes-label uppercase tracking-widest text-primary/60 leading-none inline-block ${fontClass}`}>PWR</span>
             <span className={`uppercase tracking-widest text-base-content/40 leading-none inline-block ${fontClass}`}>
                 {battery.level}%
             </span>
@@ -212,14 +212,14 @@ const Footer: React.FC<FooterProps> = ({
 
             <div className="flex items-center h-full gap-4 bg-transparent relative z-[710] pointer-events-auto">
                 <div className="flex gap-3 items-center">
-                    <span className={`uppercase tracking-widest text-primary/60 leading-none inline-block ${mainFontClass}`}>ENG</span>
+                    <span className={`arwes-label uppercase tracking-widest text-primary/60 leading-none inline-block ${mainFontClass}`}>ENG</span>
                     <div className="min-w-[120px] flex items-center">
                         <LlmStatusSwitcher onClick={onToggleLlmPanel} isOpen={isLlmPanelOpen} />
                     </div>
                 </div>
 
                 <div className={`flex gap-4 ${mainFontClass} items-center pl-4 ps-6 border-l border-base-content/10`}>
-                    <span className="uppercase tracking-widest text-primary/60 leading-none inline-block">INT</span>
+                    <span className="arwes-label uppercase tracking-widest text-primary/60 leading-none inline-block">INT</span>
                     <IntegrationItem label="VAULT" active={fileSystemManager.isDirectorySelected()} />
                     <IntegrationItem label={(settings.activeLLM === 'ollama_cloud' ? 'OLLAMA' : settings.activeLLM?.toUpperCase()) || 'LLM'} active={!!process.env.GEMINI_API_KEY || settings.activeLLM?.includes('ollama') || settings.activeLLM === 'openclaw'} />
                     <IntegrationItem label="YOUTUBE" active={!!settings.youtube?.isConnected} />
@@ -245,7 +245,7 @@ const Footer: React.FC<FooterProps> = ({
                         onMouseEnter={() => audioService.playHover()}
                         className="flex items-center gap-2 group transition-all"
                     >
-                        <span className={`uppercase tracking-widest text-primary/60 group-hover:text-primary leading-none inline-block ${mainFontClass}`}>SFX</span>
+                        <span className={`arwes-label uppercase tracking-widest text-primary/60 group-hover:text-primary leading-none inline-block ${mainFontClass}`}>SFX</span>
                         <span className={`uppercase tracking-widest leading-none inline-block ${audioEnabled ? 'text-base-content/40' : 'text-base-content/20'} ${mainFontClass}`}>{audioEnabled ? 'ON' : 'OFF'}</span>
                     </button>
 
@@ -256,7 +256,7 @@ const Footer: React.FC<FooterProps> = ({
                         onMouseEnter={() => audioService.playHover()}
                         className="flex items-center gap-2 group transition-all"
                     >
-                        <span className={`uppercase tracking-widest text-primary/60 group-hover:text-primary leading-none inline-block ${mainFontClass}`}>MSC</span>
+                        <span className={`arwes-label uppercase tracking-widest text-primary/60 group-hover:text-primary leading-none inline-block ${mainFontClass}`}>MSC</span>
                         <span className={`uppercase tracking-widest leading-none inline-block ${playerState === 'playing' ? 'text-base-content/40' : 'text-base-content/20'} ${mainFontClass}`}>
                             {playerState === 'playing' ? 'ON' : playerState === 'syncing' ? 'SYNC' : 'OFF'}
                         </span>

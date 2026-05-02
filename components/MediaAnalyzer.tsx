@@ -240,7 +240,7 @@ export const MediaAnalyzer: React.FC<MediaAnalyzerProps> = ({
                         exit="exit"
                         className="p-6 h-16 flex items-center justify-between bg-base-100/10 backdrop-blur-md panel-header flex-shrink-0 z-20 border-b border-primary/10"
                     >
-                        <TerminalText text="MEDIA INPUT" delay={2.0} className="text-[10px] font-black uppercase font-sf-mono text-primary" />
+                        <TerminalText text="MEDIA INPUT" delay={2.0} className="text-[10px] font-black uppercase font-mono text-primary" />
                     </motion.header>
 
                     <div className="flex flex-col flex-grow min-h-0 overflow-hidden">
@@ -402,11 +402,11 @@ export const MediaAnalyzer: React.FC<MediaAnalyzerProps> = ({
                         className="p-6 h-16 flex items-center justify-between bg-base-100/10 backdrop-blur-md panel-header flex-shrink-0 z-20 border-b border-primary/10"
                     >
                         <div className="flex items-center gap-1.5">
-                            <TerminalText text="ANALYZED MEDIA" delay={2.2} className="text-[10px] font-black uppercase font-sf-mono text-primary" />
+                            <TerminalText text="ANALYZED MEDIA" delay={2.2} className="text-[10px] font-black uppercase font-mono text-primary" />
                             {metadataResults && (
                                 <button
                                     onClick={() => metadataResults && setActiveResultType('metadata')}
-                                    className="text-[10px] font-black uppercase tracking-[0.4em] font-sf-mono text-primary/30 hover:text-primary/60 transition-colors"
+                                    className="text-[10px] font-black uppercase tracking-[0.4em] font-mono text-primary/30 hover:text-primary/60 transition-colors"
                                 >
                                     <TerminalText text="METADATA" delay={2.2} className={activeResultType === 'metadata' ? 'text-primary' : 'text-primary/30'} />
                                 </button>

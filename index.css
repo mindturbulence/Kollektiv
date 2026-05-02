@@ -1103,7 +1103,7 @@ button:active {
 [data-theme="Hiigara"] header .parent-nav-item,
 [data-theme="Hiigara"] header button.px-3,
 [data-theme="Hiigara"] footer .font-rajdhani,
-[data-theme="Hiigara"] footer .font-sf-mono {
+[data-theme="Hiigara"] footer .font-mono {
   font-size: 10px !important;
   font-family: "Microgramma D Medium Extended", sans-serif !important;
   font-weight: normal !important;
@@ -1239,7 +1239,7 @@ button:active {
 [data-theme="Stellar"] header .parent-nav-item,
 [data-theme="Stellar"] header button.px-3,
 [data-theme="Stellar"] footer .font-rajdhani,
-[data-theme="Stellar"] footer .font-sf-mono,
+[data-theme="Stellar"] footer .font-mono,
 [data-theme="Stellar"] footer span,
 [data-theme="Stellar"] footer a,
 [data-theme="Stellar"] .font-monoton {
@@ -1249,7 +1249,7 @@ button:active {
 [data-theme="starfield"] header .parent-nav-item,
 [data-theme="starfield"] header button.px-3,
 [data-theme="starfield"] footer .font-rajdhani,
-[data-theme="starfield"] footer .font-sf-mono,
+[data-theme="starfield"] footer .font-mono,
 [data-theme="starfield"] footer span,
 [data-theme="starfield"] footer a,
 [data-theme="starfield"] .font-monoton {
@@ -1260,7 +1260,7 @@ button:active {
 [data-theme="Arc"] header .parent-nav-item,
 [data-theme="Arc"] header button.px-3,
 [data-theme="Arc"] footer .font-rajdhani,
-[data-theme="Arc"] footer .font-sf-mono,
+[data-theme="Arc"] footer .font-mono,
 [data-theme="Arc"] footer span,
 [data-theme="Arc"] footer a {
   font-family: "Urbanist", sans-serif !important;
@@ -1276,7 +1276,7 @@ button:active {
 [data-theme="MindTurbulence"] header .parent-nav-item,
 [data-theme="MindTurbulence"] header button.px-3,
 [data-theme="MindTurbulence"] footer .font-rajdhani,
-[data-theme="MindTurbulence"] footer .font-sf-mono,
+[data-theme="MindTurbulence"] footer .font-mono,
 [data-theme="MindTurbulence"] footer span,
 [data-theme="MindTurbulence"] footer a {
   font-size: 10px !important;
@@ -1301,7 +1301,7 @@ button:active {
 [data-theme="synthwave"] header .parent-nav-item,
 [data-theme="synthwave"] header button.px-3,
 [data-theme="synthwave"] footer .font-rajdhani,
-[data-theme="synthwave"] footer .font-sf-mono,
+[data-theme="synthwave"] footer .font-mono,
 [data-theme="synthwave"] footer span,
 [data-theme="synthwave"] footer a {
   font-family: "ITC Serif Gothic Std", sans-serif !important;
