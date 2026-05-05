@@ -101,6 +101,8 @@ export interface LLMSettings {
   // Dashboard Settings
   dashboardVideoUrl: string;
   isDashboardVideoEnabled: boolean;
+  dashboardBackgroundType?: 'video' | 'image' | 'color';
+  dashboardImageUrl?: string;
   musicYoutubeUrl: string;
   musicEnabled: boolean;
   idleScreenType: 'matrix' | 'gallery';

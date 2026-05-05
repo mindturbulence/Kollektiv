@@ -8,12 +8,12 @@ import { loadPromptCategories, addSavedPrompt, loadSavedPrompts } from '../utils
 import { loadArtStyles } from '../utils/artstyleStorage';
 import { loadArtists } from '../utils/artistStorage';
 import { fileToBase64 } from '../utils/fileUtils';
-import { motion, AnimatePresence } from 'framer-motion';
+import { motion, AnimatePresence } from 'motion/react';
 import { TerminalText, PanelLine, ScanLine, pageVariants, pageHeaderVariants, pageBodyVariants, pageFooterVariants, reverseTextVariants, sectionWipeVariants, contentVariants } from './AnimatedPanels';
 import { refinerPresetService, type RefinerPreset } from '../services/refinerPresetService';
 
 import { useBusy } from '../contexts/BusyContext';
-import type { AppError, SavedPrompt, PromptCategory, EnhancementResult, PromptModifiers, CheatsheetCategory, Idea } from '../types';
+import type { AppError, SavedPrompt, PromptCategory, EnhancementResult, PromptModifiers, CheatsheetCategory, Idea, ActiveTab } from '../types';
 import {
     FILM_TYPES,
     GENERAL_ASPECT_RATIOS,
@@ -69,10 +69,12 @@ type RefineSubTab = 'basic' | 'styling' | 'photography' | 'motion' | 'audio' | '
 interface PromptsPageProps {
     initialState?: { prompt?: string, artStyle?: string, artist?: string, view?: 'enhancer' | 'composer' | 'create', id?: string } | null;
     forcedView?: 'refine' | 'composer' | 'analyzer' | 'prompt_analyzer';
+    onNavigate?: (tab: ActiveTab) => void;
     onStateHandled: () => void;
     showGlobalFeedback: (message: string, isError?: boolean) => void;
     onClipIdea: (idea: Idea) => void;
     isExiting?: boolean;
+    onSendToBuilder?: (state: any) => void;
 }
 
 const PropertyCard: React.FC<{
@@ -150,10 +152,12 @@ const DEFAULT_MODIFIERS: PromptModifiers = {
 const PromptsPage: React.FC<PromptsPageProps> = ({
     initialState,
     forcedView,
+    onNavigate,
     onStateHandled,
     showGlobalFeedback,
     onClipIdea,
     isExiting = false,
+    onSendToBuilder,
 }) => {
     const { settings } = useSettings();
     const { setIsBusy } = useBusy();
@@ -164,16 +168,20 @@ const PromptsPage: React.FC<PromptsPageProps> = ({
             setActiveView(forcedView);
         }
     }, [forcedView]);
-    const [isLocalExiting, setIsLocalExiting] = useState(false);
 
     const handleSwitchView = (newView: 'refine' | 'composer' | 'analyzer' | 'prompt_analyzer') => {
         if (newView === activeView) return;
         audioService.playClick();
-        setIsLocalExiting(true);
-        setTimeout(() => {
-            setActiveView(newView);
-            setIsLocalExiting(false);
-        }, 800);
+        setActiveView(newView);
+        if (onNavigate) {
+            const viewToTabMap: Record<string, ActiveTab> = {
+                'composer': 'crafter',
+                'refine': 'refiner',
+                'analyzer': 'media_analyzer',
+                'prompt_analyzer': 'prompt_analyzer',
+            };
+            onNavigate(viewToTabMap[newView]);
+        }
     };
 
 
@@ -232,7 +240,6 @@ const PromptsPage: React.FC<PromptsPageProps> = ({
     }, [targetAIModel]);
 
     const isMidjourney = useMemo(() => targetAIModel.toLowerCase().includes('midjourney'), [targetAIModel]);
-    const isZImage = useMemo(() => targetAIModel === 'Z-Image', [targetAIModel]);
 
     // Tabs visibility logic
     const tabs = useMemo(() => {
@@ -350,6 +357,10 @@ const PromptsPage: React.FC<PromptsPageProps> = ({
             const catalog = buildModifierCatalog();
             const stream = enhancePromptStream(refineText, constantModifier, promptLength, targetAIModel, modifiers, settings, activeRefImages, catalog);
             for await (const chunk of stream) fullText += chunk;
+
+            if (!fullText.trim()) {
+                throw new Error("Target unreachable or returned empty sequence. Ensure Ollama is running.");
+            }
 
             let refinedPrompt = fullText;
             let breakdown: any = null;
@@ -598,12 +609,15 @@ const PromptsPage: React.FC<PromptsPageProps> = ({
 
 
     const handleSendToRefine = (text: string) => {
-        setRefineText(text);
-        setActiveView('refine');
+        if (onSendToBuilder) {
+            onSendToBuilder({ prompt: text || '', view: 'enhancer' });
+            return;
+        }
+        setRefineText(text || '');
         setResultsRefine(null);
         setDirectMediaResult(null);
         setErrorRefine(null);
-        showGlobalFeedback('Imported.');
+        handleSwitchView('refine');
     };
 
     const activeConstructionItems = useMemo(() => {
@@ -742,23 +756,21 @@ const PromptsPage: React.FC<PromptsPageProps> = ({
                         <div className="grid grid-cols-1 gap-4">
                             <div className="form-control">
                                 <label className="text-[10px] font-black uppercase text-base-content/40 tracking-widest mb-2 block">Visual Discipline</label>
-                                <AutocompleteSelect value={modifiers.artStyle || ''} onChange={(v) => setModifiers({ ...modifiers, artStyle: v })} options={artStyles.flatMap(c => c.items.map(i => ({ label: i.name.toUpperCase(), value: i.name })))} placeholder="Discipline..." />
+                                <AutocompleteSelect 
+                                    value={modifiers.artStyle || ''} 
+                                    onChange={(v) => setModifiers({ ...modifiers, artStyle: v })} 
+                                    options={[
+                                        ...artStyles.flatMap(c => c.items.map(i => ({ label: i.name.toUpperCase(), value: i.name }))),
+                                        ...Z_IMAGE_STYLES.map(s => ({ label: `${s.toUpperCase()} (Z-VARIANT)`, value: s }))
+                                    ]} 
+                                    placeholder="Discipline..." 
+                                />
                             </div>
                             <div className="form-control">
                                 <label className="text-[10px] font-black uppercase text-base-content/40 tracking-widest mb-2 block">Styling Trends</label>
                                 <AutocompleteSelect value={modifiers.artist || ''} onChange={(v) => setModifiers({ ...modifiers, artist: v })} options={artists.flatMap(c => c.items.map(i => ({ label: i.name.toUpperCase(), value: i.name })))} placeholder="Creator influence..." />
                             </div>
                         </div>
-
-                        {isZImage && (
-                            <div className="form-control">
-                                <label className="text-[10px] font-black uppercase text-base-content/40 tracking-widest mb-2 block">Z-Image Variant</label>
-                                <select value={modifiers.zImageStyle} onChange={e => setModifiers({ ...modifiers, zImageStyle: e.target.value })} className="form-select w-full">
-                                    <option value="">NONE</option>
-                                    {Z_IMAGE_STYLES.map(s => <option key={s} value={s}>{s}</option>)}
-                                </select>
-                            </div>
-                        )}
 
                         <div className="form-control">
                             <label className="text-[10px] font-black uppercase text-base-content/40 tracking-widest mb-2 block">Aesthetics Look</label>
@@ -1170,7 +1182,7 @@ const PromptsPage: React.FC<PromptsPageProps> = ({
         <motion.div
             variants={pageVariants}
             initial="hidden"
-            animate={isLocalExiting || isExiting ? "exit" : "visible"}
+            animate={isExiting ? "exit" : "visible"}
             exit="exit"
             className="flex flex-col h-full bg-transparent w-full relative overflow-hidden"
         >
@@ -1264,7 +1276,7 @@ const PromptsPage: React.FC<PromptsPageProps> = ({
                                                 audioService.playClick();
                                                 handleEnhance();
                                             }}
-                                            disabled={isLoadingRefine || !refineText.trim()}
+                                            disabled={isLoadingRefine || !(refineText || '').trim()}
                                             className="btn btn-sm btn-ghost h-full rounded-none flex-1 tracking-wider text-primary border-1 disabled:opacity-30 disabled:cursor-not-allowed btn-snake"
                                         >
                                             <span /><span /><span /><span />
@@ -1276,7 +1288,7 @@ const PromptsPage: React.FC<PromptsPageProps> = ({
                                                     audioService.playClick();
                                                     handleDirectGenerate();
                                                 }}
-                                                disabled={isLoadingRefine || !refineText.trim()}
+                                                disabled={isLoadingRefine || !(refineText || '').trim()}
                                                 className="btn btn-sm btn-ghost h-full rounded-none flex-1 tracking-wider text-primary border-0 disabled:opacity-30 disabled:cursor-not-allowed btn-snake"
                                             >
                                                 <span /><span /><span /><span />
@@ -1330,9 +1342,10 @@ const PromptsPage: React.FC<PromptsPageProps> = ({
                                                 <BlobLoader />
                                             </div>
                                         ) : errorRefine ? (
-                                            <div className="p-8 w-full text-center">
-                                                <div className="alert alert-error rounded-none border-2 justify-center">
-                                                    <span className="font-black uppercase text-[10px] tracking-widest">{errorRefine.message}</span>
+                                            <div className="flex-grow flex items-center justify-center p-8 w-full h-full absolute inset-0 z-10 pointer-events-none">
+                                                <div className="border border-base-content/20 bg-base-200/50 backdrop-blur-md p-8 min-w-[300px] max-w-md text-center flex flex-col items-center gap-4 relative corner-frame shadow-[0_0_30px_oklch(var(--p)/0.2)] pointer-events-auto">
+                                                    <span className="text-[11px] uppercase tracking-widest opacity-60 font-sf-mono text-primary">System Alert</span>
+                                                    <span className="font-medium uppercase text-[12px] tracking-widest leading-relaxed text-base-content">{errorRefine.message}</span>
                                                 </div>
                                             </div>
                                         ) : resultsRefine ? (
@@ -1455,7 +1468,7 @@ const PromptsPage: React.FC<PromptsPageProps> = ({
                             <motion.aside
                                 variants={pageVariants}
                                 initial="hidden"
-                                animate={isLocalExiting || isExiting ? "exit" : "visible"}
+                                animate={isExiting ? "exit" : "visible"}
                                 exit="exit"
                                 className="lg:col-span-3 h-full min-h-0 flex flex-col relative p-[3px] corner-frame overflow-visible hidden lg:flex origin-top-left"
                             >
@@ -1577,7 +1590,7 @@ const PromptsPage: React.FC<PromptsPageProps> = ({
                                 onRefine={handleSendToRefine}
                                 onClip={handleClipSuggestion}
                                 header={null}
-                                isNavigating={isLocalExiting || isExiting}
+                                isNavigating={isExiting}
                             />
                         )}
 
@@ -1595,7 +1608,7 @@ const PromptsPage: React.FC<PromptsPageProps> = ({
                                     handleSwitchView('refine');
                                 }}
                                 showGlobalFeedback={showGlobalFeedback}
-                                isNavigating={isLocalExiting || isExiting}
+                                isNavigating={isExiting}
                             />
                         )}
                     </AnimatePresence>

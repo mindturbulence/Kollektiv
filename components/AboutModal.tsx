@@ -1,7 +1,7 @@
 import React from 'react';
 import { createPortal } from 'react-dom';
 import { CloseIcon, AppLogoIcon } from './icons';
-import { motion, AnimatePresence } from 'framer-motion';
+import { motion, AnimatePresence } from 'motion/react';
 import { audioService } from '../services/audioService';
 
 interface AboutModalProps {

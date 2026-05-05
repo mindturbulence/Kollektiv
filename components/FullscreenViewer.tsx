@@ -1,7 +1,7 @@
 import React, { useState, useRef, useEffect, useCallback, useMemo, useLayoutEffect } from 'react';
 import { createPortal } from 'react-dom';
 import { gsap } from 'gsap';
-import { motion } from 'framer-motion';
+import { motion } from 'motion/react';
 import type { GalleryItem } from '../types';
 import { CloseIcon, CenterIcon, ImageBrokenIcon, ChevronLeftIcon, ChevronRightIcon, DownloadIcon, PlayIcon, PauseIcon } from './icons';
 import { fileSystemManager } from '../utils/fileUtils';

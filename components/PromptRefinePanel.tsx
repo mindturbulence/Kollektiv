@@ -35,9 +35,14 @@ const PromptRefinePanel: React.FC<PromptRefinePanelProps> = ({ promptText, onApp
         setRefinedPrompt(''); 
         setClipped(false);
         try {
+            let fullText = '';
             const stream = refineSinglePromptStream(promptText, targetAIModel, settings);
             for await (const chunk of stream) {
+                fullText += chunk;
                 setRefinedPrompt(prev => (prev || '') + chunk);
+            }
+            if (!fullText.trim()) {
+                throw new Error("Target unreachable or returned empty sequence. Ensure Ollama is running.");
             }
         } catch (e) {
             setError(e instanceof Error ? e.message : "An error occurred.");
@@ -119,7 +124,14 @@ const PromptRefinePanel: React.FC<PromptRefinePanelProps> = ({ promptText, onApp
                     </span>
                     
                     {isLoading && !refinedPrompt ? <div className="flex-grow flex items-center justify-center p-8"><BlobLoader /></div> :
-                     error ? <div className="alert alert-error rounded-none text-xs"><span>{error}</span></div> :
+                     error ? (
+                        <div className="flex-grow flex items-center justify-center p-4 w-full h-full absolute inset-0 z-10 pointer-events-none">
+                            <div className="border border-base-content/20 bg-base-200/50 backdrop-blur-md p-6 text-center flex flex-col items-center gap-2 max-w-[90%] corner-frame shadow-[0_0_20px_oklch(var(--p)/0.2)] pointer-events-auto">
+                                <span className="text-[9px] uppercase tracking-widest opacity-60 font-sf-mono text-primary">System Alert</span>
+                                <span className="font-medium uppercase text-[10px] tracking-widest leading-relaxed text-base-content">{error}</span>
+                            </div>
+                        </div>
+                     ) :
                      refinedPrompt !== null ? (
                         <div className="text-sm font-medium leading-relaxed text-base-content/80 whitespace-pre-wrap flex-grow">
                             {refinedPrompt}

@@ -2,7 +2,7 @@ import React from 'react';
 import { useSettings } from '../contexts/SettingsContext';
 import { DAISYUI_DARK_THEMES } from '../constants';
 import { audioService } from '../services/audioService';
-import { motion } from 'framer-motion';
+import { motion } from 'motion/react';
 import { PaletteIcon } from './icons';
 
 const ThemeSwitcher: React.FC = () => {

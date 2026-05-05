@@ -1,5 +1,5 @@
 import React, { useMemo, useState, useEffect, useRef, memo } from 'react';
-import { motion } from 'framer-motion';
+import { motion } from 'motion/react';
 import { gsap } from 'gsap';
 import type { GalleryItem } from '../types';
 import { fileSystemManager } from '../utils/fileUtils';

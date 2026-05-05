@@ -116,7 +116,7 @@ FINAL OUTPUT CONSTRAINTS:
 const AI_ROLES = {
     ENHANCER: (model: string, length: string, isVideo: boolean, isAudio: boolean, _hasManualCamera: boolean, inputType?: string, modifierCatalog?: string, masterRole?: string) => {
         const syntax = getModelSyntax(model);
-        const l = length === 'Short' ? '40 words' : length === 'Long' ? '600+ words' : '220 words';
+        const l = length === 'Short' ? 'Strictly under 40 words' : length === 'Long' ? 'EXTREMELY DETAILED, at least 4-5 long paragraphs (minimum 600 words)' : 'Around 150-200 words';
         const isI2V = isVideo && inputType === 'i2v';
 
         let persona = masterRole ? `Master Role: ${masterRole}\n\nTask Specific Role: World-Class Visual Strategist and Prompt Architect.` : "Role: World-Class Visual Strategist and Prompt Architect.";
@@ -139,7 +139,7 @@ const AI_ROLES = {
         return `${persona}
 Goal: Generate 1 highly accurate, production-ready refined prompt.
 Target Architecture: ${model}.
-Syntax: ${syntax.format}. Rules: ${syntax.rules}. Target Len: ${l}.
+Syntax: ${syntax.format}. Rules: ${syntax.rules}. Target Len: ${l} (CRITICAL: YOU MUST STRICTLY FOLLOW THIS LENGTH CONSTRAINT).
 ${modeProtocol}
 
 BREAKDOWN PROTOCOL:
@@ -306,7 +306,7 @@ export async function* enhancePromptStream(
     const context = buildContextForEnhancer(modifiers, isAudio);
     const input = `${context}\n\n[Primary Concept]\n${originalPrompt}`;
 
-    const tokenBudget = promptLength === 'Long' ? 2500 : 1024;
+    const tokenBudget = promptLength === 'Long' ? 4096 : (promptLength === 'Medium' ? 2048 : 1024);
     const isOllama = settings.activeLLM === 'ollama' || settings.activeLLM === 'ollama_cloud';
     const isOpenClaw = settings.activeLLM === 'openclaw';
     const temperature = modifiers.creativity !== undefined ? modifiers.creativity / 100 : 0.7;
@@ -319,10 +319,27 @@ export async function* enhancePromptStream(
 
     let inThought = false;
     for await (const chunk of stream) {
-        if (chunk.includes('<think') || chunk.includes('<thought')) { inThought = true; continue; }
-        if (chunk.includes('</think') || chunk.includes('</thought')) { inThought = false; continue; }
-        if (!inThought) {
-            yield chunk;
+        let processChunk = chunk;
+        if (processChunk.includes('<think') && processChunk.includes('</think>')) {
+            processChunk = processChunk.replace(/<think[\s\S]*?<\/think>/g, '');
+        } else if (processChunk.includes('<thought') && processChunk.includes('</thought>')) {
+            processChunk = processChunk.replace(/<thought[\s\S]*?<\/thought>/g, '');
+        } else {
+            if (processChunk.includes('<think') || processChunk.includes('<thought')) {
+                inThought = true;
+                const parts = processChunk.split(/<think|<thought/);
+                if (parts[0]) yield parts[0];
+                continue;
+            }
+            if (processChunk.includes('</think>') || processChunk.includes('</thought>')) {
+                inThought = false;
+                const parts = processChunk.split(/<\/think>|<\/thought>/);
+                if (parts[1]) yield parts[1];
+                continue;
+            }
+        }
+        if (!inThought && processChunk) {
+            yield processChunk;
         }
     }
 }
@@ -365,10 +382,27 @@ export async function* refineSinglePromptStream(
 
     let inThought = false;
     for await (const chunk of stream) {
-        if (chunk.includes('<think') || chunk.includes('<thought')) { inThought = true; continue; }
-        if (chunk.includes('</think') || chunk.includes('</thought')) { inThought = false; continue; }
-        if (!inThought) {
-            yield chunk;
+        let processChunk = chunk;
+        if (processChunk.includes('<think') && processChunk.includes('</think>')) {
+            processChunk = processChunk.replace(/<think[\s\S]*?<\/think>/g, '');
+        } else if (processChunk.includes('<thought') && processChunk.includes('</thought>')) {
+            processChunk = processChunk.replace(/<thought[\s\S]*?<\/thought>/g, '');
+        } else {
+            if (processChunk.includes('<think') || processChunk.includes('<thought')) {
+                inThought = true;
+                const parts = processChunk.split(/<think|<thought/);
+                if (parts[0]) yield parts[0];
+                continue;
+            }
+            if (processChunk.includes('</think>') || processChunk.includes('</thought>')) {
+                inThought = false;
+                const parts = processChunk.split(/<\/think>|<\/thought>/);
+                if (parts[1]) yield parts[1];
+                continue;
+            }
+        }
+        if (!inThought && processChunk) {
+            yield processChunk;
         }
     }
 }

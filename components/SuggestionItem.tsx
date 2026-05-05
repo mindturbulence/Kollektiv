@@ -1,5 +1,5 @@
 import React, { useState, useCallback, useMemo } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
+import { motion, AnimatePresence } from 'motion/react';
 import { DownloadIcon, BookmarkIcon, SparklesIcon, CopyIcon, BracesIcon, RefreshIcon, PlayIcon, ArchiveIcon } from './icons';
 import { generateWithImagen, generateWithNanoBanana, generateWithVeo } from '../services/llmService';
 import LoadingSpinner from './LoadingSpinner';

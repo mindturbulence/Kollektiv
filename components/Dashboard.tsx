@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { motion } from 'framer-motion';
+import { motion } from 'motion/react';
 import { pageVariants } from './AnimatedPanels';
 import { loadGalleryItems } from '../utils/galleryStorage';
 import type { GalleryItem, ActiveTab, Idea } from '../types';

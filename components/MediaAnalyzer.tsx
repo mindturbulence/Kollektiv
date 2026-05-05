@@ -1,5 +1,5 @@
 import React, { useState, useRef, useCallback, useMemo } from 'react';
-import { motion } from 'framer-motion';
+import { motion } from 'motion/react';
 import { useSettings } from '../contexts/SettingsContext';
 import { useBusy } from '../contexts/BusyContext';
 import { abstractImage } from '../services/llmService';

@@ -1,6 +1,6 @@
 import React, { useRef, useEffect, useState } from 'react';
 import { createPortal } from 'react-dom';
-import { motion, AnimatePresence } from 'framer-motion';
+import { motion, AnimatePresence } from 'motion/react';
 import { streamChat } from '../services/llmService';
 import { useSettings } from '../contexts/SettingsContext';
 import { CloseIcon, SparklesIcon, SidebarIcon, PlusIcon, DeleteIcon } from './icons';
@@ -208,7 +208,7 @@ export const LLMChatPanel: React.FC<LLMChatPanelProps> = ({ isOpen, onClose }) =
                         animate={{ x: 0, opacity: 1 }}
                         exit={{ x: '100%', opacity: 0 }}
                         transition={{ type: "spring", stiffness: 300, damping: 30 }}
-                        className="fixed top-[84px] right-[42px] bottom-[74px] w-full md:w-[600px] lg:w-[800px] bg-transparent z-[200] pointer-events-auto shadow-2xl"
+                        className="fixed top-[84px] right-[42px] bottom-[81px] w-full md:w-[600px] lg:w-[800px] bg-transparent z-[200] pointer-events-auto shadow-2xl"
                     >
                         <div className="w-full h-full relative corner-frame overflow-visible flex flex-col">
                             <div className="bg-base-100/90 backdrop-blur-3xl rounded-none w-[calc(100%-6px)] h-[calc(100%-6px)] m-[3px] flex flex-col overflow-hidden relative z-10 border border-white/5">

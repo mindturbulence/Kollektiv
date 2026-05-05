@@ -1,5 +1,5 @@
 import React, { useState, useRef, useCallback, useEffect, useMemo } from 'react';
-import { motion } from 'framer-motion';
+import { motion } from 'motion/react';
 import { TerminalText, PanelLine, ScanLine, panelVariants, sectionWipeVariants, contentVariants } from './AnimatedPanels';
 import { ViewColumnsIcon, RefreshIcon, EyeIcon, ViewSplitHorizontalIcon } from './icons';
 import GalleryPickerModal from './GalleryPickerModal';
