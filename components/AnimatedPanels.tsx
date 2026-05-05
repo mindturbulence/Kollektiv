@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { motion, type Variants } from 'framer-motion';
+import { motion, type Variants } from 'motion/react';
 
 export const TerminalText = ({ text, delay = 0, className = "", centered = false }: { text: string; delay?: number; className?: string; centered?: boolean }) => {
     const [displayedText, setDisplayedText] = useState('');

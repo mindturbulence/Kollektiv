@@ -240,7 +240,6 @@ const PromptsPage: React.FC<PromptsPageProps> = ({
     }, [targetAIModel]);
 
     const isMidjourney = useMemo(() => targetAIModel.toLowerCase().includes('midjourney'), [targetAIModel]);
-    const isZImage = useMemo(() => targetAIModel === 'Z-Image', [targetAIModel]);
 
     // Tabs visibility logic
     const tabs = useMemo(() => {
@@ -697,7 +696,7 @@ const PromptsPage: React.FC<PromptsPageProps> = ({
                     <div className="flex flex-col h-full space-y-6 overflow-hidden">
                         <div className="form-control flex-grow flex flex-col min-h-[120px]">
                             <div className="flex justify-between items-center mb-2">
-                                <label className="text-[10px] font-normal text-[12px] font-mono uppercase tracking-widest text-base-content/40">Prompt Idea</label>
+                                <label className="text-[10px] font-normal text-[12px] font-sf-mono uppercase tracking-widest text-base-content/40">Prompt Idea</label>
                                 <div className="flex gap-2">
                                     <button onClick={handlePasteRefineText} className="form-btn h-6 px-2 opacity-20 hover:opacity-100 uppercase tracking-widest">Paste</button>
                                     <button onClick={() => setRefineText('')} className="form-btn h-6 px-2 opacity-20 hover:opacity-100 uppercase tracking-widest">Clear</button>
@@ -706,11 +705,11 @@ const PromptsPage: React.FC<PromptsPageProps> = ({
                             <textarea value={refineText} onChange={(e) => setRefineText((e.currentTarget as any).value)} className="form-textarea w-full flex-grow resize-none font-medium leading-relaxed bg-transparent" placeholder="Enter core concept..."></textarea>
                         </div>
                         <div className="form-control">
-                            <label className="text-[10px] font-normal text-[12px] font-mono uppercase tracking-widest text-base-content/40 mb-2">Constant Modifiers</label>
+                            <label className="text-[10px] font-normal text-[12px] font-sf-mono uppercase tracking-widest text-base-content/40 mb-2">Constant Modifiers</label>
                             <input type="text" value={constantModifier} onChange={(e) => setConstantModifier((e.currentTarget as any).value)} className="form-input w-full" placeholder="Tokens the AI must include..." />
                         </div>
                         <div className="form-control">
-                            <label className="text-[10px] font-normal text-[12px] font-mono uppercase tracking-widest text-base-content/40 mb-2">Media Output</label>
+                            <label className="text-[10px] font-normal text-[12px] font-sf-mono uppercase tracking-widest text-base-content/40 mb-2">Media Output</label>
                             <div className="form-tab-group">
                                 <button onClick={() => { audioService.playClick(); setMediaMode('image'); }} className={`form-tab-item ${mediaMode === 'image' ? 'active' : ''}`}>IMAGE</button>
                                 <button onClick={() => { audioService.playClick(); setMediaMode('video'); }} className={`form-tab-item ${mediaMode === 'video' ? 'active' : ''}`}>VIDEO</button>
@@ -719,13 +718,13 @@ const PromptsPage: React.FC<PromptsPageProps> = ({
                         </div>
                         <div className="grid grid-cols-2 gap-6">
                             <div className="form-control">
-                                <label className="text-[10px] font-normal text-[12px] font-mono uppercase tracking-widest text-base-content/40 mb-2">Neural Engine</label>
+                                <label className="text-[10px] font-normal text-[12px] font-sf-mono uppercase tracking-widest text-base-content/40 mb-2">Neural Engine</label>
                                 <select value={targetAIModel} onChange={(e) => setTargetAIModel((e.currentTarget as any).value)} className="form-select w-full">
                                     {(mediaMode === 'image' ? TARGET_IMAGE_AI_MODELS : mediaMode === 'video' ? TARGET_VIDEO_AI_MODELS : TARGET_AUDIO_AI_MODELS).map(m => <option key={m} value={m}>{m}</option>)}
                                 </select>
                             </div>
                             <div className="form-control">
-                                <label className="text-[10px] font-normal text-[12px] font-mono uppercase tracking-widest text-base-content/40 mb-2">Complexity</label>
+                                <label className="text-[10px] font-normal text-[12px] font-sf-mono uppercase tracking-widest text-base-content/40 mb-2">Complexity</label>
                                 <select value={promptLength} onChange={(e) => setPromptLength((e.currentTarget as any).value)} className="form-select w-full">
                                     {Object.entries(PROMPT_DETAIL_LEVELS).map(([k, v]) => <option key={k} value={v}>{v}</option>)}
                                 </select>
@@ -733,7 +732,7 @@ const PromptsPage: React.FC<PromptsPageProps> = ({
                         </div>
                         <div className="form-control">
                             <div className="flex justify-between items-center mb-2">
-                                <label className="text-[10px] font-normal text-[12px] font-mono uppercase tracking-widest text-base-content/40">Refiner Creativity / Uniqueness</label>
+                                <label className="text-[10px] font-normal text-[12px] font-sf-mono uppercase tracking-widest text-base-content/40">Refiner Creativity / Uniqueness</label>
                                 <span className="text-[10px] font-mono font-bold text-primary">{modifiers.creativity ?? 70}%</span>
                             </div>
                             <input
@@ -757,23 +756,21 @@ const PromptsPage: React.FC<PromptsPageProps> = ({
                         <div className="grid grid-cols-1 gap-4">
                             <div className="form-control">
                                 <label className="text-[10px] font-black uppercase text-base-content/40 tracking-widest mb-2 block">Visual Discipline</label>
-                                <AutocompleteSelect value={modifiers.artStyle || ''} onChange={(v) => setModifiers({ ...modifiers, artStyle: v })} options={artStyles.flatMap(c => c.items.map(i => ({ label: i.name.toUpperCase(), value: i.name })))} placeholder="Discipline..." />
+                                <AutocompleteSelect 
+                                    value={modifiers.artStyle || ''} 
+                                    onChange={(v) => setModifiers({ ...modifiers, artStyle: v })} 
+                                    options={[
+                                        ...artStyles.flatMap(c => c.items.map(i => ({ label: i.name.toUpperCase(), value: i.name }))),
+                                        ...Z_IMAGE_STYLES.map(s => ({ label: `${s.toUpperCase()} (Z-VARIANT)`, value: s }))
+                                    ]} 
+                                    placeholder="Discipline..." 
+                                />
                             </div>
                             <div className="form-control">
                                 <label className="text-[10px] font-black uppercase text-base-content/40 tracking-widest mb-2 block">Styling Trends</label>
                                 <AutocompleteSelect value={modifiers.artist || ''} onChange={(v) => setModifiers({ ...modifiers, artist: v })} options={artists.flatMap(c => c.items.map(i => ({ label: i.name.toUpperCase(), value: i.name })))} placeholder="Creator influence..." />
                             </div>
                         </div>
-
-                        {isZImage && (
-                            <div className="form-control">
-                                <label className="text-[10px] font-black uppercase text-base-content/40 tracking-widest mb-2 block">Z-Image Variant</label>
-                                <select value={modifiers.zImageStyle} onChange={e => setModifiers({ ...modifiers, zImageStyle: e.target.value })} className="form-select w-full">
-                                    <option value="">NONE</option>
-                                    {Z_IMAGE_STYLES.map(s => <option key={s} value={s}>{s}</option>)}
-                                </select>
-                            </div>
-                        )}
 
                         <div className="form-control">
                             <label className="text-[10px] font-black uppercase text-base-content/40 tracking-widest mb-2 block">Aesthetics Look</label>
@@ -977,7 +974,7 @@ const PromptsPage: React.FC<PromptsPageProps> = ({
                         </div>
                         <div className="form-control">
                             <div className="flex justify-between items-center mb-2">
-                                <label className="text-[10px] font-normal text-[12px] font-mono uppercase tracking-widest">Targeted Duration</label>
+                                <label className="text-[10px] font-normal text-[12px] font-sf-mono uppercase tracking-widest">Targeted Duration</label>
                                 <span className="text-[10px] font-mono font-bold text-primary">{modifiers.audioDuration}s</span>
                             </div>
                             <input
@@ -1095,7 +1092,7 @@ const PromptsPage: React.FC<PromptsPageProps> = ({
                         ) : (
                             <div className="text-center py-20 opacity-20">
                                 <Cog6ToothIcon className="w-12 h-12 mx-auto mb-4" />
-                                <p className="text-[10px] font-normal text-[12px] font-mono uppercase tracking-widest text-center">No platform extensions available</p>
+                                <p className="text-[10px] font-normal text-[12px] font-sf-mono uppercase tracking-widest text-center">No platform extensions available</p>
                             </div>
                         )}
                     </div>
@@ -1329,7 +1326,7 @@ const PromptsPage: React.FC<PromptsPageProps> = ({
                                         className="p-6 h-16 flex justify-between items-center bg-base-100/80 backdrop-blur-md panel-header overflow-visible relative z-[800]"
                                     >
                                         <motion.div variants={reverseTextVariants}>
-                                            <TerminalText text={`REFINED PROMPT : ${targetAIModel}`} delay={2.6} className="text-xs font-mono uppercase text-primary" />
+                                            <TerminalText text={`REFINED PROMPT : ${targetAIModel}`} delay={2.6} className="text-xs font-sf-mono uppercase text-primary" />
                                         </motion.div>
                                     </motion.header>
                                     <motion.div
@@ -1345,10 +1342,10 @@ const PromptsPage: React.FC<PromptsPageProps> = ({
                                                 <BlobLoader />
                                             </div>
                                         ) : errorRefine ? (
-                                            <div className="flex-grow flex items-center justify-center p-8 w-full">
-                                                <div className="border border-error/30 bg-error/5 p-6 max-w-md text-center flex flex-col items-center gap-3 relative corner-frame shadow-[0_0_20px_oklch(var(--er)/0.15)] mx-auto">
-                                                    <span className="text-[10px] uppercase tracking-widest opacity-60 font-mono text-error">System Alert</span>
-                                                    <span className="font-medium uppercase text-[11px] tracking-widest leading-relaxed text-error">{errorRefine.message}</span>
+                                            <div className="flex-grow flex items-center justify-center p-8 w-full h-full absolute inset-0 z-10 pointer-events-none">
+                                                <div className="border border-base-content/20 bg-base-200/50 backdrop-blur-md p-8 min-w-[300px] max-w-md text-center flex flex-col items-center gap-4 relative corner-frame shadow-[0_0_30px_oklch(var(--p)/0.2)] pointer-events-auto">
+                                                    <span className="text-[11px] uppercase tracking-widest opacity-60 font-sf-mono text-primary">System Alert</span>
+                                                    <span className="font-medium uppercase text-[12px] tracking-widest leading-relaxed text-base-content">{errorRefine.message}</span>
                                                 </div>
                                             </div>
                                         ) : resultsRefine ? (
@@ -1389,7 +1386,7 @@ const PromptsPage: React.FC<PromptsPageProps> = ({
                                         ) : (
                                             <div className="flex-grow flex flex-col items-center justify-center text-center py-32 opacity-10">
                                                 <span className="p-8"><SparklesIcon className="w-14 h-14" /></span>
-                                                <p className="font-rajdhani text-[12px] font-mono uppercase tracking-widest">Awaiting sequence initiation</p>
+                                                <p className="font-rajdhani text-[12px] font-sf-mono uppercase tracking-widest">Awaiting sequence initiation</p>
                                             </div>
                                         )}
                                     </motion.div>

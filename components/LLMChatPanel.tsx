@@ -1,6 +1,6 @@
 import React, { useRef, useEffect, useState } from 'react';
 import { createPortal } from 'react-dom';
-import { motion, AnimatePresence } from 'framer-motion';
+import { motion, AnimatePresence } from 'motion/react';
 import { streamChat } from '../services/llmService';
 import { useSettings } from '../contexts/SettingsContext';
 import { CloseIcon, SparklesIcon, SidebarIcon, PlusIcon, DeleteIcon } from './icons';
@@ -347,8 +347,8 @@ export const LLMChatPanel: React.FC<LLMChatPanelProps> = ({ isOpen, onClose }) =
                                         </div>
 
                                         {/* Input Area */}
-                                        <div className="p-4 bg-base-200/30 shrink-0">
-                                            <form onSubmit={handleSubmit} className="relative bg-base-100/50 border border-white/10 focus-within:border-primary/50 transition-colors rounded-none flex flex-col">
+                                        <div className="p-4 border-t border-white/5 bg-base-200/30 shrink-0">
+                                            <form onSubmit={handleSubmit} className="relative bg-base-100/50 border border-white/10 focus-within:border-primary/50 transition-colors rounded-xl flex flex-col">
                                                 <textarea
                                                     ref={textareaRef}
                                                     value={input}

@@ -1,6 +1,6 @@
 
 import React from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
+import { motion, AnimatePresence } from 'motion/react';
 import { CloseIcon, CopyIcon, DownloadIcon, BracesIcon } from './icons';
 
 interface JSONBreakdownModalProps {

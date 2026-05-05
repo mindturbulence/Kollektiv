@@ -42,7 +42,7 @@ export default defineConfig(({ mode }) => {
       ],
       server: {
         host: true,  
-        port: 7500,
+        port: 3000,
         headers: {
           'Cross-Origin-Opener-Policy': 'same-origin-allow-popups',
           'Cross-Origin-Embedder-Policy': 'credentialless',
@@ -112,7 +112,7 @@ export default defineConfig(({ mode }) => {
             configure: (proxy, _options) => {
               proxy.on('proxyRes', (proxyRes, req, _res) => {
                 if (proxyRes.headers.location) {
-                  const origin = req.headers.referer || req.headers.origin || 'http://localhost:5000';
+                  const origin = req.headers.referer || req.headers.origin || 'http://localhost:3000';
                   const originBase = new URL(origin).origin;
                   proxyRes.headers.location = proxyRes.headers.location.replace(
                     'https://www.googleapis.com',
