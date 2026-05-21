@@ -70,15 +70,20 @@ export interface TokenUsage {
 
 export interface LLMSettings {
   // LLM Provider Settings
+  geminiApiKey: string;
   llmModel: string;
-  activeLLM: 'gemini' | 'ollama' | 'ollama_cloud' | 'openclaw';
+  activeLLM: 'gemini' | 'ollama' | 'ollama_cloud' | 'hermes' | 'openrouter';
   ollamaBaseUrl: string;
   ollamaModel: string;
   
-  // OpenClaw Settings
-  openclawBaseUrl: string;
-  openclawModel: string;
-  openclawApiKey: string;
+  // OpenRouter Settings
+  openrouterApiKey?: string;
+  openrouterModel?: string;
+  
+  // Hermes Settings
+  hermesBaseUrl: string;
+  hermesModel: string;
+  hermesApiKey: string;
   
   // Ollama Cloud Settings
   ollamaCloudBaseUrl: string;
@@ -90,7 +95,8 @@ export interface LLMSettings {
   masterRolePrompt?: string;
   geminiTokenUsage?: TokenUsage;
   ollamaTokenUsage?: TokenUsage;
-  openclawTokenUsage?: TokenUsage;
+  hermesTokenUsage?: TokenUsage;
+  openrouterTokenUsage?: TokenUsage;
 
   // Theme Settings
   activeThemeMode: 'dark';
@@ -143,11 +149,13 @@ export interface PromptModifiers {
   hairStyle?: string;
   eyeColor?: string;
   skinTexture?: string;
+  realism?: string;
   clothing?: string;
   // Video specific
   motion?: string;
   cameraMovement?: string;
   videoInputType?: 't2v' | 'i2v'; 
+  videoEffect?: string;
   // Audio specific
   audioType?: string;
   voiceGender?: string;

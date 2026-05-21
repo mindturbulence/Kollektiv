@@ -17,7 +17,7 @@ const LlmStatusPanel: React.FC<LlmStatusPanelProps> = ({ isOpen, onClose }) => {
     updateSettings,
     availableOllamaModels,
     availableOllamaCloudModels,
-    availableOpenClawModels,
+    availableHermesModels,
   } = useSettings();
 
   useLayoutEffect(() => {
@@ -70,7 +70,7 @@ const LlmStatusPanel: React.FC<LlmStatusPanelProps> = ({ isOpen, onClose }) => {
   }, [isOpen, onClose]);
 
   const handleProviderAndModelSelect = (
-    provider: "gemini" | "ollama" | "ollama_cloud" | "openclaw",
+    provider: "gemini" | "ollama" | "ollama_cloud" | "hermes" | "openrouter",
     modelId?: string,
   ) => {
     audioService.playClick();
@@ -88,11 +88,17 @@ const LlmStatusPanel: React.FC<LlmStatusPanelProps> = ({ isOpen, onClose }) => {
         activeLLM: "ollama_cloud",
         ollamaCloudModel: modelId,
       });
-    } else if (provider === "openclaw" && modelId) {
+    } else if (provider === "hermes" && modelId) {
       updateSettings({
         ...settings,
-        activeLLM: "openclaw",
-        openclawModel: modelId,
+        activeLLM: "hermes",
+        hermesModel: modelId,
+      });
+    } else if (provider === "openrouter" && modelId) {
+      updateSettings({
+        ...settings,
+        activeLLM: "openrouter",
+        openrouterModel: modelId,
       });
     }
     onClose();
@@ -135,7 +141,7 @@ const LlmStatusPanel: React.FC<LlmStatusPanelProps> = ({ isOpen, onClose }) => {
           <div className="flex-grow overflow-y-auto scrollbar-thin">
             <ul className="menu p-0 flex flex-col flex-nowrap py-4">
               {/* Google Gemini Section */}
-              <li className="menu-title px-8 py-4 text-[12px] uppercase tracking-[0.1em] opacity-40 font-bold text-primary">
+              <li className="menu-title px-8 py-2 text-[12px] uppercase tracking-[0.1em] opacity-40 font-bold text-primary">
                 <span>Google Models (Gemini)</span>
               </li>
               {AVAILABLE_LLM_MODELS.map((model) => (
@@ -151,10 +157,10 @@ const LlmStatusPanel: React.FC<LlmStatusPanelProps> = ({ isOpen, onClose }) => {
                 </li>
               ))}
 
-              <div className="h-px bg-base-content/5 mx-8 my-6" />
+              <div className="h-px bg-base-content/5 mx-8 my-2" />
 
               {/* Ollama Model Section */}
-              <li className="menu-title px-8 py-4 text-[12px] uppercase tracking-[0.1em] opacity-40 font-bold text-primary">
+              <li className="menu-title px-8 py-2 text-[12px] uppercase tracking-[0.1em] opacity-40 font-bold text-primary">
                 <span>OpenSource Models (Ollama)</span>
               </li>
 
@@ -199,33 +205,51 @@ const LlmStatusPanel: React.FC<LlmStatusPanelProps> = ({ isOpen, onClose }) => {
                   </li>
                 )}
 
-              <div className="h-px bg-base-content/5 mx-8 my-6" />
+              <div className="h-px bg-base-content/5 mx-8 my-2" />
 
-              {/* OpenClaw Section */}
-              <li className="menu-title px-8 py-4 text-[12px] uppercase tracking-[0.1em] opacity-40 font-bold text-accent">
-                <span>Agent Core (OpenClaw)</span>
+              {/* Hermes Section */}
+              <li className="menu-title px-8 py-2 text-[12px] uppercase tracking-[0.1em] opacity-40 font-bold text-accent">
+                <span>Agent Core (Hermes)</span>
               </li>
 
-              {(availableOpenClawModels.length > 0 ? availableOpenClawModels : (settings.openclawModel ? [settings.openclawModel] : [])).map((model) => (
+              {(availableHermesModels.length > 0 ? availableHermesModels : (settings.hermesModel ? [settings.hermesModel] : [])).map((model) => (
                 <li key={`claw-${model}`} className="w-full">
                   <button
                     onClick={() =>
-                      handleProviderAndModelSelect("openclaw", model)
+                      handleProviderAndModelSelect("hermes", model)
                     }
-                    className={`rounded-none text-[10px] font-rajdhani uppercase tracking-widest py-2 w-full text-left px-8 border-l-2 transition-all ${settings.openclawModel === model && settings.activeLLM === "openclaw" ? "text-accent bg-accent/5 border-accent shadow-[inset_10px_0_20px_-10px_rgba(var(--a),0.1)]" : "text-base-content/40 hover:text-base-content hover:bg-base-content/5 border-transparent"}`}
+                    className={`rounded-none text-[10px] font-rajdhani uppercase tracking-widest py-2 w-full text-left px-8 border-l-2 transition-all ${settings.hermesModel === model && settings.activeLLM === "hermes" ? "text-accent bg-accent/5 border-accent shadow-[inset_10px_0_20px_-10px_rgba(var(--a),0.1)]" : "text-base-content/40 hover:text-base-content hover:bg-base-content/5 border-transparent"}`}
                   >
                     {model}
                   </button>
                 </li>
               ))}
 
-              {availableOpenClawModels.length === 0 && !settings.openclawModel && (
+              {availableHermesModels.length === 0 && !settings.hermesModel && (
                 <li className="disabled w-full">
                   <span className="text-[10px] italic opacity-20 py-8 block text-center font-mono uppercase tracking-[0.4em]">
-                    OPENCLAW SYSTEM LINK OFFLINE
+                    HERMES SYSTEM LINK OFFLINE
                   </span>
                 </li>
               )}
+
+              <div className="h-px bg-base-content/5 mx-8 my-2" />
+
+              {/* OpenRouter Section */}
+              <li className="menu-title px-8 py-2 text-[12px] uppercase tracking-[0.1em] opacity-40 font-bold text-info">
+                <span>Cloud Models (OpenRouter)</span>
+              </li>
+
+              <li className="w-full">
+                <button
+                  onClick={() =>
+                    handleProviderAndModelSelect("openrouter", settings.openrouterModel || "openrouter/auto")
+                  }
+                  className={`rounded-none text-[10px] font-rajdhani uppercase tracking-widest py-2 w-full text-left px-8 border-l-2 transition-all ${settings.activeLLM === "openrouter" ? "text-info bg-info/5 border-info shadow-[inset_10px_0_20px_-10px_rgba(var(--in),0.1)]" : "text-base-content/40 hover:text-base-content hover:bg-base-content/5 border-transparent"}`}
+                >
+                  {settings.openrouterModel || "openrouter/auto"}
+                </button>
+              </li>
             </ul>
           </div>
         </div>

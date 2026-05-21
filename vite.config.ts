@@ -41,12 +41,8 @@ export default defineConfig(({ mode }) => {
         }
       ],
       server: {
-        host: true,  
-        port: 3000,
-        headers: {
-          'Cross-Origin-Opener-Policy': 'same-origin-allow-popups',
-          'Cross-Origin-Embedder-Policy': 'credentialless',
-        },
+        host: true,
+        strictPort: false,
         proxy: {
           '/ollama-local': {
             target: 'http://127.0.0.1:11434',
@@ -69,11 +65,11 @@ export default defineConfig(({ mode }) => {
                 });
             }
           },
-          '/openclaw-local': {
+          '/hermes-local': {
             target: 'http://localhost:18789',
             changeOrigin: true,
             secure: false,
-            rewrite: (path) => path.replace(/^\/openclaw-local/, ''),
+            rewrite: (path) => path.replace(/^\/hermes-local/, ''),
             configure: (proxy, _options) => {
                 process.nextTick(() => {
                     proxy.removeAllListeners('error');
@@ -84,18 +80,18 @@ export default defineConfig(({ mode }) => {
                                     'Content-Type': 'application/json',
                                     'X-Proxy-Error': 'true'
                                 });
-                                res.end(JSON.stringify({ error: 'OpenClaw Proxy Error (ECONNREFUSED)', code: 'ECONNREFUSED_SILENT' }));
+                                res.end(JSON.stringify({ error: 'Hermes Proxy Error (ECONNREFUSED)', code: 'ECONNREFUSED_SILENT' }));
                             }
                             return;
                         }
-                        console.error('[Proxy Error: OpenClaw]', err.message);
+                        console.error('[Proxy Error: Hermes]', err.message);
                         if (res && !res.writableEnded && typeof res.writeHead === 'function') {
                             res.writeHead(502, { 
                                 'Content-Type': 'application/json',
                                 'X-Proxy-Error': 'true'
                             });
                             res.end(JSON.stringify({ 
-                                error: 'OpenClaw Proxy Error', 
+                                error: 'Hermes Proxy Error', 
                                 message: err.message,
                                 code: (err as any).code || 'PROXY_ERROR' 
                             }));
@@ -159,9 +155,10 @@ export default defineConfig(({ mode }) => {
         include: ['react-markdown', 'remark-gfm', 'vfile']
       },
       define: {
-        'process.env.API_KEY': JSON.stringify(env.GEMINI_API_KEY),
-        'process.env.GEMINI_API_KEY': JSON.stringify(env.GEMINI_API_KEY),
-        'process.env.YOUTUBE_CLIENT_ID': JSON.stringify(env.YOUTUBE_CLIENT_ID)
+        'process.env.NODE_ENV': JSON.stringify(env.NODE_ENV || 'development'),
+        'process.env.API_KEY': JSON.stringify(env.GEMINI_API_KEY || ''),
+        'process.env.GEMINI_API_KEY': JSON.stringify(env.GEMINI_API_KEY || ''),
+        'process.env.YOUTUBE_CLIENT_ID': JSON.stringify(env.YOUTUBE_CLIENT_ID || '')
       },
       resolve: {
         alias: {

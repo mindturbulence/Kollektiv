@@ -24,8 +24,8 @@ import {
 import { resetAllSettings, defaultLLMSettings } from '../utils/settingsStorage';
 import { DAISYUI_DARK_THEMES } from '../constants';
 import ConfirmationModal from './ConfirmationModal';
-import { Cog6ToothIcon, CpuChipIcon, AppIcon, PromptIcon, PhotoIcon, FolderClosedIcon, PaintBrushIcon, DownloadIcon, LinkIcon, PlayIcon, RefreshIcon, InformationCircleIcon, UploadIcon, AlertTriangleIcon } from './icons';
-import FeedbackModal from './FeedbackModal';
+import { Cog6ToothIcon, CpuChipIcon, AppIcon, PromptIcon, PhotoIcon, FolderClosedIcon, PaintBrushIcon, DownloadIcon, LinkIcon, PlayIcon, RefreshIcon, InformationCircleIcon, UploadIcon, AlertTriangleIcon, GlobeIcon } from './icons';
+import FeedbackToast from './FeedbackToast';
 import { audioService } from '../services/audioService';
 import { PromptTxtImportModal } from './PromptTxtImportModal';
 import { rebuildGalleryDatabase, rebuildPromptDatabase, optimizeManifests, verifyAndRepairFiles } from '../utils/integrity';
@@ -51,7 +51,8 @@ const subMenuConfig: Record<string, { id: string; label: string, icon: React.Rea
     ],
     integrations: [
         { id: 'llm', label: 'AI Engine', icon: <CpuChipIcon className="w-4 h-4" />, description: "AI models and local/cloud API connections." },
-        { id: 'openclaw', label: 'OpenClaw Agent', icon: <Cog6ToothIcon className="w-4 h-4" />, description: "Manage OpenClaw local/remote agent configuration." },
+        { id: 'openrouter', label: 'OpenRouter', icon: <GlobeIcon className="w-4 h-4" />, description: "Manage OpenRouter configuration." },
+        { id: 'hermes', label: 'Hermes Agent', icon: <Cog6ToothIcon className="w-4 h-4" />, description: "Manage Hermes local/remote agent configuration." },
         { id: 'google', label: 'Cloud Identity', icon: <LinkIcon className="w-4 h-4" />, description: "Link your Google account for Cloud AI." },
         { id: 'youtube', label: 'YouTube', icon: <PlayIcon className="w-4 h-4" />, description: "Manage YouTube API credentials." }
     ],
@@ -189,7 +190,7 @@ const SettingRow: React.FC<{ label: string, desc?: string, children: React.React
 export const SetupPage: React.FC<SetupPageProps> = ({ 
     activeSettingsTab, setActiveSettingsTab, activeSubTab, setActiveSubTab, showGlobalFeedback, isExiting = false
 }) => {
-  const { settings: globalSettings, updateSettings, availableOllamaModels, availableOllamaCloudModels, availableOpenClawModels, refreshOllamaModels } = useSettings();
+  const { settings: globalSettings, updateSettings, availableOllamaModels, availableOllamaCloudModels, availableHermesModels, availableOpenRouterModels, refreshOllamaModels } = useSettings();
   const [settings, setSettings] = useState<LLMSettings>(globalSettings);
   const [modalFeedback, setModalFeedback] = useState<{ message: string; type: 'success' | 'error' } | null>(null);
 
@@ -679,7 +680,7 @@ export const SetupPage: React.FC<SetupPageProps> = ({
     const renderIntegrationSettings = () => {
         const host = typeof window !== 'undefined' ? window.location.host : '';
         const isCloudMode = host && !host.includes('localhost') && !host.includes('127.0.0.1');
-        const isOpenClawLocal = isCloudMode && (settings.openclawBaseUrl?.includes('localhost') || settings.openclawBaseUrl?.includes('127.0.0.1'));
+        const isHermesLocal = isCloudMode && (settings.hermesBaseUrl?.includes('localhost') || settings.hermesBaseUrl?.includes('127.0.0.1'));
 
         switch(activeSubTab) {
             case 'llm':
@@ -706,10 +707,16 @@ export const SetupPage: React.FC<SetupPageProps> = ({
                                     Cloud Ollama
                                 </div>
                                 <div 
-                                    className={`tab-item ${settings.activeLLM === 'openclaw' ? 'tab-item-active' : ''}`}
-                                    onClick={() => { audioService.playClick(); handleSettingsChange('activeLLM', 'openclaw'); }}
+                                    className={`tab-item ${settings.activeLLM === 'hermes' ? 'tab-item-active' : ''}`}
+                                    onClick={() => { audioService.playClick(); handleSettingsChange('activeLLM', 'hermes'); }}
                                 >
-                                    OpenClaw
+                                    Hermes
+                                </div>
+                                <div 
+                                    className={`tab-item ${settings.activeLLM === 'openrouter' ? 'tab-item-active' : ''}`}
+                                    onClick={() => { audioService.playClick(); handleSettingsChange('activeLLM', 'openrouter'); }}
+                                >
+                                    OpenRouter
                                 </div>
                              </div>
                         </SettingRow>
@@ -722,6 +729,26 @@ export const SetupPage: React.FC<SetupPageProps> = ({
                                 placeholder="You are an expert AI prompt engineer and creative director. You excel at extracting precise visual, atmospheric, and conceptual details."
                              />
                         </SettingRow>
+                        {settings.activeLLM === 'gemini' && (
+                             <div className="animate-fade-in flex flex-col bg-transparent">
+                                <SettingRow label="Gemini API Key" desc="To unlock Pro capabilities (e.g. Nano Banana, Veo Work), furnish your unique Gemini API Key.">
+                                    <input 
+                                        type="password" 
+                                        value={settings.geminiApiKey || ''} 
+                                        onChange={(e) => handleSettingsChange('geminiApiKey', e.target.value)} 
+                                        className="form-input w-full md:w-[620px]" 
+                                        placeholder="AIza..."
+                                    />
+                                </SettingRow>
+                                <SettingRow label="Model Target" desc="The core AI iteration powering standard generations. Ensure this model is accessible by your API key.">
+                                    <select value={settings.llmModel} onChange={(e) => handleSettingsChange('llmModel', e.target.value)} className="form-select w-full md:w-[620px]">
+                                        <option value="gemini-3-flash-preview">Gemini 3 Flash (High-Speed)</option>
+                                        <option value="gemini-3-pro-preview">Gemini 3 Pro (High-Reasoning)</option>
+                                        <option value="gemini-2.5-flash">Gemini 2.5 Flash</option>
+                                    </select>
+                                </SettingRow>
+                             </div>
+                        )}
                         {settings.activeLLM === 'ollama_cloud' && (
                              <div className="animate-fade-in flex flex-col bg-transparent">
                                 <SettingRow label="Remote Endpoint" desc="HTTPS URL of your hosted Ollama server.">
@@ -797,10 +824,34 @@ export const SetupPage: React.FC<SetupPageProps> = ({
                         )}
                     </div>
                 );
-            case 'openclaw':
+            case 'openrouter':
                 return (
                     <div className="flex flex-col animate-fade-in pb-12">
-                        {isOpenClawLocal && (
+                        <SettingRow label="OpenRouter API Key" desc="Get your API key from openrouter.ai.">
+                            <input 
+                                type="password" 
+                                value={settings.openrouterApiKey || ''} 
+                                onChange={(e) => handleSettingsChange('openrouterApiKey', e.target.value)} 
+                                className="form-input w-full md:w-[620px]" 
+                                placeholder="sk-or-v1-..."
+                            />
+                        </SettingRow>
+                        <SettingRow label="Model Target" desc="The model ID to use on OpenRouter (e.g. anthropic/claude-3-haiku, google/gemini-pro).">
+                            <div className="w-full md:w-[620px]">
+                                <AutocompleteSelect 
+                                    value={settings.openrouterModel || ''} 
+                                    options={(availableOpenRouterModels.length > 0 ? availableOpenRouterModels : [settings.openrouterModel || 'openrouter/auto']).map(m => ({ label: String(m || ''), value: String(m || '') }))} 
+                                    onChange={(val) => handleSettingsChange('openrouterModel', val)}
+                                    placeholder="openrouter/auto"
+                                />
+                            </div>
+                        </SettingRow>
+                    </div>
+                );
+            case 'hermes':
+                return (
+                    <div className="flex flex-col animate-fade-in pb-12">
+                        {isHermesLocal && (
                             <div className="mx-8 mt-4 p-4 bg-warning/10 border border-warning/20 rounded-none flex items-start gap-4">
                                 <AlertTriangleIcon className="w-5 h-5 text-warning flex-shrink-0 mt-0.5" />
                                 <div className="space-y-1">
@@ -812,10 +863,10 @@ export const SetupPage: React.FC<SetupPageProps> = ({
                                 </div>
                             </div>
                         )}
-                        <SettingRow label="OpenClaw Agent URL" desc="The local or remote address of your OpenClaw control node.">
+                        <SettingRow label="Hermes Agent URL" desc="The local or remote address of your Hermes control node.">
                             <div className="space-y-4">
                                 <div className="flex w-full md:w-[620px]">
-                                    <input type="text" value={settings.openclawBaseUrl} onChange={(e) => handleSettingsChange('openclawBaseUrl', (e.currentTarget as any).value)} className="form-input flex-1" placeholder="http://localhost:18789" />
+                                    <input type="text" value={settings.hermesBaseUrl} onChange={(e) => handleSettingsChange('hermesBaseUrl', (e.currentTarget as any).value)} className="form-input flex-1" placeholder="http://localhost:18789" />
                                     <button onClick={() => { audioService.playClick(); refreshOllamaModels(); }} className="form-btn px-4 border-l-0">REFRESH</button>
                                 </div>
                             </div>
@@ -823,15 +874,15 @@ export const SetupPage: React.FC<SetupPageProps> = ({
                         <SettingRow label="Agent Identity" desc="Choose which agent skill set or model to activate.">
                             <div className="w-full md:w-[620px]">
                                 <AutocompleteSelect 
-                                    value={settings.openclawModel} 
-                                    options={(availableOpenClawModels.length > 0 ? availableOpenClawModels : [settings.openclawModel || 'ollama/kimi-k2.5:cloud']).map(m => ({ label: String(m || '').toUpperCase(), value: String(m || '') }))} 
-                                    onChange={(val) => handleSettingsChange('openclawModel', val)}
-                                    placeholder="ollama/kimi-k2.5:cloud"
+                                    value={settings.hermesModel} 
+                                    options={(availableHermesModels.length > 0 ? availableHermesModels : [settings.hermesModel || 'hermes-agent']).map(m => ({ label: String(m || '').toUpperCase(), value: String(m || '') }))} 
+                                    onChange={(val) => handleSettingsChange('hermesModel', val)}
+                                    placeholder="hermes-agent"
                                 />
                             </div>
                         </SettingRow>
-                        <SettingRow label="Security Key" desc="If your OpenClaw instance requires authentication (Bearer Token).">
-                            <input type="password" value={settings.openclawApiKey} onChange={(e) => handleSettingsChange('openclawApiKey', (e.currentTarget as any).value)} className="form-input w-full md:w-[620px]" placeholder="OPENCLAW_SECRET_TOKEN"/>
+                        <SettingRow label="Security Key" desc="If your Hermes instance requires authentication (Bearer Token).">
+                            <input type="password" value={settings.hermesApiKey} onChange={(e) => handleSettingsChange('hermesApiKey', (e.currentTarget as any).value)} className="form-input w-full md:w-[620px]" placeholder="HERMES_SECRET_TOKEN"/>
                         </SettingRow>
                         <div className="p-8 mt-4">
                              <div className="p-6 bg-accent/5 border border-accent/20 rounded-none space-y-4 max-w-2xl">
@@ -839,12 +890,12 @@ export const SetupPage: React.FC<SetupPageProps> = ({
                                     <Cog6ToothIcon className="w-4 h-4" /> LOCAL AGENT STATUS
                                 </h5>
                                 <p className="text-[10px] font-bold uppercase tracking-widest text-base-content/60 leading-relaxed">
-                                    IF YOUR OPENCLAW INSTANCE IS RUNNING LOCALLY ON PORT 18789, SYSTEMS WILL AUTOMATICALLY PROXY REQUESTS THROUGH THE ENGINE HUB TO BYPASS CLOUD SECURITY POLICIES.
+                                    IF YOUR HERMES INSTANCE IS RUNNING LOCALLY ON PORT 18789, SYSTEMS WILL AUTOMATICALLY PROXY REQUESTS THROUGH THE ENGINE HUB TO BYPASS CLOUD SECURITY POLICIES.
                                 </p>
                                 <div className="flex items-center gap-3">
-                                    <span className={`w-2 h-2 rounded-full ${availableOpenClawModels.length > 0 ? 'bg-success box-glow-success' : 'bg-base-content/20'}`} />
+                                    <span className={`w-2 h-2 rounded-full ${availableHermesModels.length > 0 ? 'bg-success box-glow-success' : 'bg-base-content/20'}`} />
                                     <span className="text-[9px] font-black uppercase tracking-[0.3em] opacity-40">
-                                        {availableOpenClawModels.length > 0 ? 'AGENT LINK ESTABLISHED' : 'AWAITING AGENT HANDSHAKE'}
+                                        {availableHermesModels.length > 0 ? 'AGENT LINK ESTABLISHED' : 'AWAITING AGENT HANDSHAKE'}
                                     </span>
                                 </div>
                             </div>
@@ -1084,7 +1135,7 @@ export const SetupPage: React.FC<SetupPageProps> = ({
         </main>
       </div>
     </motion.section>
-      {modalFeedback && <FeedbackModal isOpen={!!modalFeedback} onClose={() => setModalFeedback(null)} message={modalFeedback.message} type={modalFeedback.type} />}
+      {modalFeedback && <FeedbackToast isOpen={!!modalFeedback} onClose={() => setModalFeedback(null)} message={modalFeedback.message} type={modalFeedback.type} />}
       <ConfirmationModal isOpen={isRestartModalOpen} onClose={() => setIsRestartModalOpen(false)} onConfirm={() => window.location.reload()} title="RELOAD REQUEST" message="Purge neuronal state and restart interface?" btnClassName="btn-warning" />
       <ConfirmationModal 
         isOpen={isResetModalOpen} 

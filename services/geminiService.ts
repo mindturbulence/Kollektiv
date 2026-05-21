@@ -4,10 +4,10 @@ import { handleGeminiError } from '../utils/errorHandler';
 import type { EnhancementResult, LLMSettings } from '../types';
 import { trackTokenUsage } from '../utils/settingsStorage';
 
-const getGeminiClient = (_settings: LLMSettings): GoogleGenAI => {
-    const apiKey = process.env.GEMINI_API_KEY;
+const getGeminiClient = (settings: LLMSettings): GoogleGenAI => {
+    const apiKey = settings?.geminiApiKey || process.env.GEMINI_API_KEY;
     if (!apiKey) {
-        throw new Error("GEMINI_API_KEY is missing. Please ensure it is set in your environment.");
+        throw new Error("GEMINI_API_KEY is missing. Add it in Setup -> LLM -> Gemini API Key");
     }
     return new GoogleGenAI({ apiKey });
 };
@@ -274,8 +274,9 @@ export const reconstructFromIntentGemini = async (intents: string[], settings: L
 };
 
 export async function* streamChatGemini(
-    messages: { role: 'user' | 'assistant' | 'system', content: string }[],
-    settings: LLMSettings
+    messages: { role: 'user' | 'assistant' | 'system', content: string, attachments?: { data: string, mimeType: string, fileName?: string }[] }[],
+    settings: LLMSettings,
+    useWebSearch: boolean = false
 ): AsyncGenerator<string> {
     try {
         const ai = getGeminiClient(settings);
@@ -287,9 +288,36 @@ export async function* streamChatGemini(
             if (msg.role === 'system') {
                 sysInstruction += msg.content + '\n';
             } else {
+                const parts: any[] = [];
+                if (msg.content.trim()) {
+                    parts.push({ text: msg.content });
+                } else if (msg.attachments && msg.attachments.length > 0) {
+                    parts.push({ text: "Please analyze the attached media." });
+                }
+                if (msg.attachments && msg.attachments.length > 0) {
+                    for (const att of msg.attachments) {
+                        const data = att.data.includes('base64,') ? att.data.split('base64,')[1] : att.data;
+                        const mt = (att.mimeType || '').toLowerCase();
+                        if (mt.startsWith('image/') || mt === 'application/pdf') {
+                            parts.push({
+                                inlineData: {
+                                    mimeType: att.mimeType || 'text/plain',
+                                    data: data
+                                }
+                            });
+                        } else {
+                            parts.push({
+                                text: `[Notice: System skipped unsupported document attachment: ${att.fileName || 'unknown format'} (MIME: ${att.mimeType})]`
+                            });
+                        }
+                    }
+                }
+                if (parts.length === 0) {
+                    parts.push({ text: " " });
+                }
                 history.push({
                     role: msg.role === 'user' ? 'user' : 'model',
-                    parts: [{ text: msg.content }]
+                    parts: parts
                 });
             }
         }
@@ -303,12 +331,13 @@ export async function* streamChatGemini(
             model: DEFAULT_MODEL,
             config: {
                 systemInstruction: sysInstruction.trim() || "You are a helpful AI assistant.",
+                tools: useWebSearch ? [{ googleSearch: {} }] : undefined
             },
             history: history
         });
 
         const responseStream = await chat.sendMessageStream({
-            message: lastMessage.parts[0].text
+            message: lastMessage.parts
         });
 
         for await (const chunk of responseStream) {
@@ -386,10 +415,10 @@ export const abstractImageGemini = async (base64ImageData: string, _promptLength
     } catch (err) { throw handleGeminiError(err, 'analysis'); }
 };
 
-export const generateWithImagen = async (prompt: string, aspectRatio: string = '1:1'): Promise<string> => {
+export const generateWithImagen = async (prompt: string, aspectRatio: string = '1:1', settings?: LLMSettings): Promise<string> => {
     try {
-        const apiKey = process.env.GEMINI_API_KEY;
-        if (!apiKey) throw new Error("GEMINI_API_KEY is missing.");
+        const apiKey = settings?.geminiApiKey || process.env.GEMINI_API_KEY;
+        if (!apiKey) throw new Error("GEMINI_API_KEY is missing. Add it in Setup -> LLM -> Gemini API Key");
         const ai = new GoogleGenAI({ apiKey });
         const response = await ai.models.generateImages({
             model: 'imagen-4.0-generate-001',
@@ -406,10 +435,10 @@ export const generateWithImagen = async (prompt: string, aspectRatio: string = '
     } catch (err) { throw handleGeminiError(err, 'rendering'); }
 };
 
-export const generateWithNanoBanana = async (prompt: string, referenceImages: string[] = [], aspectRatio: string = '1:1'): Promise<string> => {
+export const generateWithNanoBanana = async (prompt: string, referenceImages: string[] = [], aspectRatio: string = '1:1', settings?: LLMSettings): Promise<string> => {
     try {
-        const apiKey = process.env.GEMINI_API_KEY;
-        if (!apiKey) throw new Error("GEMINI_API_KEY is missing.");
+        const apiKey = settings?.geminiApiKey || process.env.GEMINI_API_KEY;
+        if (!apiKey) throw new Error("GEMINI_API_KEY is missing. Add it in Setup -> LLM -> Gemini API Key");
         const ai = new GoogleGenAI({ apiKey });
         const parts: any[] = [{ text: prompt }];
         for (const imgBase64 of referenceImages) {
@@ -431,10 +460,10 @@ export const generateWithNanoBanana = async (prompt: string, referenceImages: st
     } catch (err) { throw handleGeminiError(err, 'rendering'); }
 };
 
-export const generateWithVeo = async (prompt: string, onStatusUpdate?: (msg: string) => void, aspectRatio: string = '16:9'): Promise<string> => {
+export const generateWithVeo = async (prompt: string, onStatusUpdate?: (msg: string) => void, aspectRatio: string = '16:9', settings?: LLMSettings): Promise<string> => {
     try {
-        const apiKey = process.env.GEMINI_API_KEY;
-        if (!apiKey) throw new Error("GEMINI_API_KEY is missing.");
+        const apiKey = settings?.geminiApiKey || process.env.GEMINI_API_KEY;
+        if (!apiKey) throw new Error("GEMINI_API_KEY is missing. Add it in Setup -> LLM -> Gemini API Key");
         const ai = new GoogleGenAI({ apiKey });
         let finalAspectRatio = aspectRatio;
         if (finalAspectRatio !== '16:9' && finalAspectRatio !== '9:16') finalAspectRatio = '16:9';

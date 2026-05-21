@@ -18,7 +18,7 @@ interface HeaderProps {
   onToggleClippingPanel: () => void;
   onStandbyClick: (e: React.MouseEvent) => void;
   clippedIdeasCount: number;
-  onToggleOpenClaw?: () => void;
+  onToggleHermes?: () => void;
 }
 
 interface NavItemData {
@@ -144,7 +144,7 @@ const Header: React.FC<HeaderProps> = ({
   isInitialized,
   onAboutClick,
   onToggleClippingPanel,
-  onToggleOpenClaw,
+  onToggleHermes,
   onStandbyClick,
   clippedIdeasCount
 }) => {
@@ -348,7 +348,7 @@ const Header: React.FC<HeaderProps> = ({
             onClick={(e) => {
               e.stopPropagation();
               audioService.playClick();
-              onToggleOpenClaw?.();
+              onToggleHermes?.();
             }}
             title="Chat"
           >

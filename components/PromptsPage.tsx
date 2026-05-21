@@ -35,6 +35,7 @@ import {
     AESTHETIC_LOOKS,
     MOTION_OPTIONS,
     CAMERA_MOVEMENT_OPTIONS,
+    VIDEO_EFFECTS,
     MIDJOURNEY_VERSIONS,
     MIDJOURNEY_NIJI_VERSIONS,
     MIDJOURNEY_ASPECT_RATIOS,
@@ -48,6 +49,7 @@ import {
     HAIR_STYLES,
     EYE_COLORS,
     SKIN_TEXTURES,
+    REALISM_OPTIONS,
     CLOTHING_STYLES
 } from '../constants/modifiers';
 import { TARGET_IMAGE_AI_MODELS, TARGET_VIDEO_AI_MODELS, TARGET_AUDIO_AI_MODELS } from '../constants/models';
@@ -142,7 +144,7 @@ const DEFAULT_MODIFIERS: PromptModifiers = {
     aestheticLook: "", digitalAesthetic: "", cameraType: "", cameraModel: "", cameraAngle: "", cameraProximity: "",
     cameraSettings: "", cameraEffect: "", specialtyLens: "", lensType: "", filmType: "", filmStock: "",
     lighting: "", composition: "", motion: "", cameraMovement: "", zImageStyle: "", facialExpression: "",
-    hairStyle: "", eyeColor: "", skinTexture: "", clothing: "",
+    hairStyle: "", eyeColor: "", skinTexture: "", realism: "", clothing: "",
     audioType: "", voiceGender: "", voiceTone: "", audioEnvironment: "", audioMood: "", audioDuration: "10",
     mjAspectRatio: "", mjChaos: "0", mjStylize: "100", mjVersion: MIDJOURNEY_VERSIONS[0],
     mjNiji: "", mjStyle: "", mjTile: false, mjWeird: "0", mjNo: "", mjQuality: "",
@@ -408,11 +410,11 @@ const PromptsPage: React.FC<PromptsPageProps> = ({
             const activeRefImages = referenceImages.filter((img): img is string => img !== null);
 
             if (target.includes('imagen')) {
-                resultUrl = await generateWithImagen(combinedPrompt, modifiers.aspectRatio);
+                resultUrl = await generateWithImagen(combinedPrompt, modifiers.aspectRatio, settings);
             } else if (target.includes('nano banana')) {
-                resultUrl = await generateWithNanoBanana(combinedPrompt, activeRefImages, modifiers.aspectRatio);
+                resultUrl = await generateWithNanoBanana(combinedPrompt, activeRefImages, modifiers.aspectRatio, settings);
             } else if (target.includes('veo')) {
-                resultUrl = await generateWithVeo(combinedPrompt, (msg) => setLoadingMsg(msg), modifiers.aspectRatio);
+                resultUrl = await generateWithVeo(combinedPrompt, (msg) => setLoadingMsg(msg), modifiers.aspectRatio, settings);
             } else {
                 throw new Error("Direct rendering unsupported.");
             }
@@ -440,6 +442,7 @@ const PromptsPage: React.FC<PromptsPageProps> = ({
             aestheticLook: "", digitalAesthetic: "", cameraType: "", cameraModel: "", cameraAngle: "", cameraProximity: "",
             cameraSettings: "", cameraEffect: "", specialtyLens: "", lensType: "", filmType: "", filmStock: "",
             lighting: "", composition: "", motion: "", cameraMovement: "", zImageStyle: "", facialExpression: "",
+            hairStyle: "", eyeColor: "", skinTexture: "", realism: "", clothing: "",
             audioType: "", voiceGender: "", voiceTone: "", audioEnvironment: "", audioMood: "", audioDuration: "10",
             mjAspectRatio: "", mjChaos: "0", mjStylize: "100", mjVersion: MIDJOURNEY_VERSIONS[0],
             mjNiji: "", mjStyle: "", mjTile: false, mjWeird: "0", mjNo: "", mjQuality: "",
@@ -487,9 +490,11 @@ const PromptsPage: React.FC<PromptsPageProps> = ({
         catalog.push(`hairStyle: ${HAIR_STYLES.join(', ')}`);
         catalog.push(`eyeColor: ${EYE_COLORS.join(', ')}`);
         catalog.push(`skinTexture: ${SKIN_TEXTURES.join(', ')}`);
+        catalog.push(`realism: ${REALISM_OPTIONS.join(', ')}`);
         catalog.push(`clothing: ${CLOTHING_STYLES.join(', ')}`);
         catalog.push(`motion: ${MOTION_OPTIONS.map(o => o.name).join(', ')}`);
         catalog.push(`cameraMovement: ${CAMERA_MOVEMENT_OPTIONS.map(o => o.name).join(', ')}`);
+        catalog.push(`videoEffect: ${VIDEO_EFFECTS.join(', ')}`);
         catalog.push(`mjVersion: ${MIDJOURNEY_VERSIONS.join(', ')}`);
         catalog.push(`mjNiji: ${MIDJOURNEY_NIJI_VERSIONS.join(', ')}`);
         catalog.push(`mjAspectRatio: ${MIDJOURNEY_ASPECT_RATIOS.join(', ')}`);
@@ -635,6 +640,7 @@ const PromptsPage: React.FC<PromptsPageProps> = ({
             hairStyle: { label: 'Hair Style', tab: 'styling' },
             eyeColor: { label: 'Eye Color', tab: 'styling' },
             skinTexture: { label: 'Skin Texture', tab: 'styling' },
+            realism: { label: 'Realism Engine', tab: 'styling' },
             clothing: { label: 'Clothing', tab: 'styling' },
             zImageStyle: { label: 'Z-Image', tab: 'styling' },
             aspectRatio: { label: 'Aspect Ratio', tab: 'photography' },
@@ -832,14 +838,25 @@ const PromptsPage: React.FC<PromptsPageProps> = ({
                                         />
                                     </div>
                                 </div>
-                                <div className="form-control">
-                                    <label className="text-[10px] font-black uppercase text-base-content/40 tracking-widest mb-2 block">Clothing & Outfit</label>
-                                    <AutocompleteSelect
-                                        value={modifiers.clothing || ''}
-                                        onChange={(v) => setModifiers({ ...modifiers, clothing: v })}
-                                        options={CLOTHING_STYLES.map(c => ({ label: c.toUpperCase(), value: c }))}
-                                        placeholder="Outfit..."
-                                    />
+                                <div className="grid grid-cols-1 gap-4">
+                                    <div className="form-control">
+                                        <label className="text-[10px] font-black uppercase text-base-content/40 tracking-widest mb-2 block">Realism Options</label>
+                                        <AutocompleteSelect
+                                            value={modifiers.realism || ''}
+                                            onChange={(v) => setModifiers({ ...modifiers, realism: v })}
+                                            options={REALISM_OPTIONS.map(r => ({ label: r.toUpperCase(), value: r }))}
+                                            placeholder="Realism..."
+                                        />
+                                    </div>
+                                    <div className="form-control">
+                                        <label className="text-[10px] font-black uppercase text-base-content/40 tracking-widest mb-2 block">Clothing & Outfit</label>
+                                        <AutocompleteSelect
+                                            value={modifiers.clothing || ''}
+                                            onChange={(v) => setModifiers({ ...modifiers, clothing: v })}
+                                            options={CLOTHING_STYLES.map(c => ({ label: c.toUpperCase(), value: c }))}
+                                            placeholder="Outfit..."
+                                        />
+                                    </div>
                                 </div>
                             </div>
                         </div>
@@ -953,6 +970,15 @@ const PromptsPage: React.FC<PromptsPageProps> = ({
                                 onChange={(v) => setModifiers({ ...modifiers, cameraMovement: v })}
                                 options={CAMERA_MOVEMENT_OPTIONS.map(m => ({ label: m.name.toUpperCase(), value: m.name, description: m.description }))}
                                 placeholder="Pathing..."
+                            />
+                        </div>
+                        <div className="form-control">
+                            <label className="text-[10px] font-black uppercase text-base-content/40 tracking-widest mb-2 block">Video Effects</label>
+                            <AutocompleteSelect
+                                value={modifiers.videoEffect || ''}
+                                onChange={(v) => setModifiers({ ...modifiers, videoEffect: v })}
+                                options={VIDEO_EFFECTS.map(v => ({ label: v.toUpperCase(), value: v }))}
+                                placeholder="Effects..."
                             />
                         </div>
                     </div>
@@ -1214,7 +1240,7 @@ const PromptsPage: React.FC<PromptsPageProps> = ({
                                 initial="hidden"
                                 animate={isExiting ? "exit" : "visible"}
                                 exit="exit"
-                                className="lg:col-span-3 h-full min-h-0 flex flex-col relative p-[3px] corner-frame overflow-visible"
+                                className="lg:col-span-4 h-full min-h-0 flex flex-col relative p-[3px] corner-frame overflow-visible"
                             >
                                 <PanelLine position="top" delay={0.4} />
                                 <PanelLine position="bottom" delay={0.5} />
@@ -1310,7 +1336,7 @@ const PromptsPage: React.FC<PromptsPageProps> = ({
                                 initial="hidden"
                                 animate={isExiting ? "exit" : "visible"}
                                 exit="exit"
-                                className="lg:col-span-6 h-full min-h-0 flex flex-col relative p-[3px] corner-frame overflow-visible"
+                                className="lg:col-span-5 h-full min-h-0 flex flex-col relative p-[3px] corner-frame overflow-visible"
                             >
                                 <PanelLine position="top" delay={0.4} />
                                 <PanelLine position="bottom" delay={0.5} />
@@ -1502,20 +1528,20 @@ const PromptsPage: React.FC<PromptsPageProps> = ({
                                                             options={presets.map(p => ({ label: p.name.toUpperCase(), value: p.name }))}
                                                         />
                                                     </div>
-                                                    <div className="flex gap-4 shrink-0">
-                                                        {/* <button
-                                                        onClick={() => {
-                                                            audioService.playClick();
-                                                            setSelectedPreset(null);
-                                                            setRefineText('');
-                                                            setModifiers({ ...DEFAULT_MODIFIERS });
-                                                        }}
-                                                        className="tracking-widest text-base-content/40 hover:-content transition-all"
-                                                    >
-                                                        CLEAR
-                                                    </button> */}
+                                                    <div className="flex gap-4 shrink-0 items-center">
                                                         <button
-                                                            className="tracking-widest text-error/40 hover:text-error transition-all mr-2 ms-2"
+                                                            onClick={() => {
+                                                                audioService.playClick();
+                                                                setSelectedPreset(null);
+                                                                setRefineText('');
+                                                                setModifiers({ ...DEFAULT_MODIFIERS });
+                                                            }}
+                                                            className="tracking-widest text-[10px] uppercase font-bold text-base-content/40 hover:text-base-content transition-all"
+                                                        >
+                                                            CLEAR
+                                                        </button>
+                                                        <button
+                                                            className="tracking-widest text-[10px] uppercase font-bold text-error/40 hover:text-error transition-all"
                                                             onClick={() => {
                                                                 audioService.playClick();
                                                                 handleDeletePresetClick();

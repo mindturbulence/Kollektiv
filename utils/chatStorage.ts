@@ -1,6 +1,13 @@
+export interface ChatMessageAttachment {
+    data: string; // Base64 data including or excluding data URI prefix? Let's use data URI prefix for UI rendering, and rip it out for Gemini payload.
+    mimeType: string;
+    fileName?: string;
+}
+
 export interface ChatMessage {
     role: 'user' | 'assistant' | 'system';
     content: string;
+    attachments?: ChatMessageAttachment[];
 }
 
 export interface ChatSession {

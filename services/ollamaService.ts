@@ -24,11 +24,8 @@ const sanitizeUrl = (url: string) => {
 const BASE_CONFIG = {
     keep_alive: "30m",
     options: {
-        num_ctx: 8192, // Increased context window for longer prompt histories
-        temperature: 0.7,
-        top_p: 0.9,
-        top_k: 40,
-        repeat_penalty: 1.05 // Relaxed slightly to prevent early stopping in descriptive texts
+        // Relaxed or omitted to prevent model-specific crashes (e.g., Nemotron)
+        temperature: 0.7
     }
 };
 
@@ -122,25 +119,24 @@ export async function* enhancePromptOllamaStream(
     constantModifier: string,
     settings: LLMSettings,
     systemInstruction: string,
-    maxTokens: number = 2048
+    _maxTokens: number = 2048
 ): AsyncGenerator<string> {
     try {
         const config = getOllamaConfig(settings);
         if (!config.baseUrl || !config.model) throw new Error("Ollama configuration missing.");
         const fullPrompt = [prompt.trim(), constantModifier.trim()].filter(Boolean).join('\n\n');
-        const apiResponse = await fetch(`${config.baseUrl}/api/generate`, {
+        const apiResponse = await fetch(`${config.baseUrl}/api/chat`, {
             method: 'POST',
             headers: config.headers,
             body: JSON.stringify({
                 model: config.model,
-                prompt: fullPrompt,
-                system: systemInstruction,
+                messages: [
+                    { role: 'system', content: systemInstruction },
+                    { role: 'user', content: fullPrompt }
+                ],
                 stream: true,
                 ...BASE_CONFIG,
-                options: {
-                    ...BASE_CONFIG.options,
-                    num_predict: maxTokens
-                }
+                
             }),
         });
 
@@ -156,6 +152,7 @@ export async function* enhancePromptOllamaStream(
         const reader = apiResponse.body.getReader();
         const decoder = new TextDecoder();
         let buffer = '';
+        
         while (true) {
             const { done, value } = await reader.read();
             if (done) break;
@@ -165,8 +162,8 @@ export async function* enhancePromptOllamaStream(
             for (const line of lines) {
                 if (!line.trim()) continue;
                 try {
-                    const parsed = JSON.parse(line);
-                    if (parsed.response) yield parsed.response;
+                    const parsed = JSON.parse(line); if (parsed.error) throw new Error(`Ollama API Error: ${parsed.error}`);
+                    if (parsed.message?.content) yield parsed.message.content; else if (parsed.response) yield parsed.response;
                     if (parsed.done) {
                         const tokens = (parsed.prompt_eval_count || 0) + (parsed.eval_count || 0);
                         if (tokens > 0) trackTokenUsage(settings.activeLLM === 'ollama_cloud' ? 'ollama_cloud' : 'ollama', tokens);
@@ -180,17 +177,35 @@ export async function* enhancePromptOllamaStream(
 }
 
 export async function* streamChatOllama(
-    messages: { role: 'user' | 'assistant' | 'system', content: string }[],
+    messages: { role: 'user' | 'assistant' | 'system', content: string, attachments?: { data: string, mimeType: string, fileName?: string }[] }[],
     settings: LLMSettings
 ): AsyncGenerator<string> {
     try {
         const config = getOllamaConfig(settings);
         if (!config.baseUrl || !config.model) throw new Error("Ollama configuration missing.");
         
-        const ollamaMessages = messages.map(m => ({
-            role: m.role,
-            content: m.content
-        }));
+        const ollamaMessages = messages.map(m => {
+            const msg: any = { role: m.role, content: m.content };
+            if (m.attachments && m.attachments.length > 0) {
+                // Ollama supports images array with base64 strings
+                const images = [];
+                let skippedNotice = '';
+                for (const a of m.attachments) {
+                    if (a.mimeType.startsWith('image/')) {
+                        images.push(a.data.includes('base64,') ? a.data.split('base64,')[1] : a.data);
+                    } else {
+                        skippedNotice += `\n[Notice: System skipped unsupported document attachment: ${a.fileName}]`;
+                    }
+                }
+                if (images.length > 0) {
+                    msg.images = images;
+                }
+                if (skippedNotice) {
+                    msg.content += skippedNotice;
+                }
+            }
+            return msg;
+        });
 
         const apiResponse = await fetch(`${config.baseUrl}/api/chat`, {
             method: 'POST',
@@ -200,7 +215,7 @@ export async function* streamChatOllama(
                 messages: ollamaMessages,
                 stream: true,
                 ...BASE_CONFIG,
-                options: { ...BASE_CONFIG.options, num_predict: 4096 }
+                
             }),
         });
 
@@ -216,6 +231,7 @@ export async function* streamChatOllama(
         const reader = apiResponse.body.getReader();
         const decoder = new TextDecoder();
         let buffer = '';
+        
         while (true) {
             const { done, value } = await reader.read();
             if (done) break;
@@ -225,8 +241,8 @@ export async function* streamChatOllama(
             for (const line of lines) {
                 if (!line.trim()) continue;
                 try {
-                    const parsed = JSON.parse(line);
-                    if (parsed.message?.content) yield parsed.message.content;
+                    const parsed = JSON.parse(line); if (parsed.error) throw new Error(`Ollama API Error: ${parsed.error}`);
+                    if (parsed.message?.content) yield parsed.message.content; else if (parsed.response) yield parsed.response;
                     if (parsed.done) {
                         const tokens = (parsed.prompt_eval_count || 0) + (parsed.eval_count || 0);
                         if (tokens > 0) trackTokenUsage(settings.activeLLM === 'ollama_cloud' ? 'ollama_cloud' : 'ollama', tokens);
@@ -239,23 +255,22 @@ export async function* streamChatOllama(
     }
 }
 
-export const refineSinglePromptOllama = async (promptText: string, settings: LLMSettings, systemInstruction: string, maxTokens: number = 1024): Promise<string> => {
+export const refineSinglePromptOllama = async (promptText: string, settings: LLMSettings, systemInstruction: string, _maxTokens: number = 1024): Promise<string> => {
     try {
         const config = getOllamaConfig(settings);
         if (!config.baseUrl || !config.model) throw new Error("Ollama configuration missing.");
-        const apiResponse = await fetch(`${config.baseUrl}/api/generate`, {
+        const apiResponse = await fetch(`${config.baseUrl}/api/chat`, {
             method: 'POST',
             headers: config.headers,
             body: JSON.stringify({
                 model: config.model,
-                prompt: promptText,
-                system: systemInstruction,
+                messages: [
+                    { role: 'system', content: systemInstruction },
+                    { role: 'user', content: promptText }
+                ],
                 stream: false,
                 ...BASE_CONFIG,
-                options: {
-                    ...BASE_CONFIG.options,
-                    num_predict: maxTokens
-                }
+                
             }),
         });
         if (!apiResponse.ok) throw new Error(`Ollama status: ${apiResponse.status}`);
@@ -264,29 +279,28 @@ export const refineSinglePromptOllama = async (promptText: string, settings: LLM
         const tokens = (responseData.prompt_eval_count || 0) + (responseData.eval_count || 0);
         if (tokens > 0) trackTokenUsage(settings.activeLLM === 'ollama_cloud' ? 'ollama_cloud' : 'ollama', tokens);
 
-        return responseData.response || '';
+        return responseData.message?.content || '';
     } catch (err) {
         throw handleGeminiError(err, 'refining with Ollama');
     }
 };
 
-export async function* refineSinglePromptOllamaStream(promptText: string, settings: LLMSettings, systemInstruction: string, maxTokens: number = 1024): AsyncGenerator<string> {
+export async function* refineSinglePromptOllamaStream(promptText: string, settings: LLMSettings, systemInstruction: string, _maxTokens: number = 1024): AsyncGenerator<string> {
     try {
         const config = getOllamaConfig(settings);
         if (!config.baseUrl || !config.model) throw new Error("Ollama configuration missing.");
-        const apiResponse = await fetch(`${config.baseUrl}/api/generate`, {
+        const apiResponse = await fetch(`${config.baseUrl}/api/chat`, {
             method: 'POST',
             headers: config.headers,
             body: JSON.stringify({
                 model: config.model,
-                prompt: promptText,
-                system: systemInstruction,
+                messages: [
+                    { role: 'system', content: systemInstruction },
+                    { role: 'user', content: promptText }
+                ],
                 stream: true,
                 ...BASE_CONFIG,
-                options: {
-                    ...BASE_CONFIG.options,
-                    num_predict: maxTokens
-                }
+                
             }),
         });
         
@@ -301,6 +315,7 @@ export async function* refineSinglePromptOllamaStream(promptText: string, settin
         const reader = apiResponse.body.getReader();
         const decoder = new TextDecoder();
         let buffer = '';
+        
         while (true) {
             const { done, value } = await reader.read();
             if (done) break;
@@ -310,8 +325,8 @@ export async function* refineSinglePromptOllamaStream(promptText: string, settin
             for (const line of lines) {
                 if (!line.trim()) continue;
                 try {
-                    const parsed = JSON.parse(line);
-                    if (parsed.response) yield parsed.response;
+                    const parsed = JSON.parse(line); if (parsed.error) throw new Error(`Ollama API Error: ${parsed.error}`);
+                    if (parsed.message?.content) yield parsed.message.content; else if (parsed.response) yield parsed.response;
                     if (parsed.done) {
                         const tokens = (parsed.prompt_eval_count || 0) + (parsed.eval_count || 0);
                         if (tokens > 0) trackTokenUsage(settings.activeLLM === 'ollama_cloud' ? 'ollama_cloud' : 'ollama', tokens);
@@ -327,59 +342,57 @@ export async function* refineSinglePromptOllamaStream(promptText: string, settin
 export const analyzePaletteMoodOllama = async (hexColors: string[], settings: LLMSettings): Promise<string> => {
     try {
         const config = getOllamaConfig(settings);
-        const apiResponse = await fetch(`${config.baseUrl}/api/generate`, {
+        const apiResponse = await fetch(`${config.baseUrl}/api/chat`, {
             method: 'POST',
             headers: config.headers,
             body: JSON.stringify({
                 model: config.model,
-                prompt: `Colors: ${hexColors.join(', ')}`,
-                system: "Task: mood in 3 words max. Text only.",
+                messages: [
+                    { role: 'system', content: "Task: mood in 3 words max. Text only." },
+                    { role: 'user', content: `Colors: ${hexColors.join(', ')}` }
+                ],
                 stream: false,
                 ...BASE_CONFIG,
-                options: {
-                    ...BASE_CONFIG.options,
-                    num_predict: 64
-                }
+                
             }),
         });
         const data = await apiResponse.json();
-        return (data.response || '').trim();
+        return (data.message?.content || '').trim();
     } catch (err) { return "Archive Error"; }
 };
 
 export const generateColorNameOllama = async (hexColor: string, mood: string, settings: LLMSettings): Promise<string> => {
     try {
         const config = getOllamaConfig(settings);
-        const apiResponse = await fetch(`${config.baseUrl}/api/generate`, {
+        const apiResponse = await fetch(`${config.baseUrl}/api/chat`, {
             method: 'POST',
             headers: config.headers,
             body: JSON.stringify({
                 model: config.model,
-                prompt: `Hex:${hexColor}, Mood:${mood}`,
-                system: "Task: Poetic 2-word name. Text only.",
+                messages: [
+                    { role: 'system', content: "Task: Poetic 2-word name. Text only." },
+                    { role: 'user', content: `Hex:${hexColor}, Mood:${mood}` }
+                ],
                 stream: false,
                 ...BASE_CONFIG,
-                options: {
-                    ...BASE_CONFIG.options,
-                    num_predict: 32
-                }
+                
             }),
         });
         const data = await apiResponse.json();
-        return (data.response || '').trim().replace(/"/g, '');
+        return (data.message?.content || '').trim().replace(/"/g, '');
     } catch (err) { return "Archived Color"; }
 };
 
 export const convertPromptToNaturalLanguage = async (promptText: string, settings: LLMSettings): Promise<string> => {
     try {
         const config = getOllamaConfig(settings);
-        const apiResponse = await fetch(`${config.baseUrl}/api/generate`, {
+        const apiResponse = await fetch(`${config.baseUrl}/api/chat`, {
             method: 'POST',
             headers: config.headers,
             body: JSON.stringify({
                 model: config.model,
-                prompt: `ORIGINAL PROMPT: ${promptText}`,
-                system: `Task: Convert this Stable Diffusion/Midjourney prompt into a clear, natural English narrative.
+                messages: [
+                    { role: 'system', content: `Task: Convert this Stable Diffusion/Midjourney prompt into a clear, natural English narrative.
                 
 PROTOCOL:
 1. PRESERVE EVERY DETAIL: Every subject, action, lighting style, camera angle, artist, and medium must be included in the narrative.
@@ -387,17 +400,16 @@ PROTOCOL:
 3. REMOVE SCORING: Strip quality tags like "highly detailed", "8k", "masterpiece".
 4. REMOVE PARAMS: Strip --ar, --v, --q, --s, --niji, etc.
 5. MERGE INTO PROSE: Instead of a list, write a flowing description (e.g., "A high-fashion portrait of a woman wearing a red dress, shot on a Leica M11 with soft studio lighting in a minimalist room").
-6. NO INTRO/OUTRO: Output the narrative text ONLY.`,
+6. NO INTRO/OUTRO: Output the narrative text ONLY.`},
+                    { role: 'user', content: `ORIGINAL PROMPT: ${promptText}` }
+                ],
                 stream: false,
                 ...BASE_CONFIG,
-                options: {
-                    ...BASE_CONFIG.options,
-                    num_predict: 800
-                }
+                
             }),
         });
         const data = await apiResponse.json();
-        return (data.response || promptText).trim();
+        return (data.message?.content || promptText).trim();
     } catch (err) {
         console.error('Natural language conversion failed:', err);
         return promptText;
@@ -460,25 +472,24 @@ Result: {
 
 Input for Processing: "${naturalLang}"`;
 
-        const apiResponse = await fetch(`${config.baseUrl}/api/generate`, {
+        const apiResponse = await fetch(`${config.baseUrl}/api/chat`, {
             method: 'POST',
             headers: config.headers,
             body: JSON.stringify({
                 model: config.model,
-                prompt: "PROCESS INPUT NOW.",
-                system: systemInstruction,
+                messages: [
+                    { role: 'system', content: systemInstruction },
+                    { role: 'user', content: "PROCESS INPUT NOW." }
+                ],
                 stream: false,
                 format: "json",
                 ...BASE_CONFIG,
-                options: {
-                    ...BASE_CONFIG.options,
-                    num_predict: 1200
-                }
+                
             }),
         });
         const data = await apiResponse.json();
         try {
-            const result = JSON.parse(data.response || '{}');
+            const result = JSON.parse(data.message?.content || '{}');
             return {
                 naturalLanguage: naturalLang,
                 prompt: result.prompt || '',
@@ -496,117 +507,112 @@ Input for Processing: "${naturalLang}"`;
 export const generateFocusedVariationsOllama = async (promptText: string, components: { [key: string]: string }, settings: LLMSettings): Promise<{ [key: string]: string[] }> => {
     try {
         const config = getOllamaConfig(settings);
-        const apiResponse = await fetch(`${config.baseUrl}/api/generate`, {
+        const apiResponse = await fetch(`${config.baseUrl}/api/chat`, {
             method: 'POST',
             headers: config.headers,
             body: JSON.stringify({
                 model: config.model,
-                prompt: `Formula:${promptText}\nKeys:${Object.keys(components).join(',')}`,
-                system: "Task: 2 variations per key. Output valid JSON only.",
+                messages: [
+                    { role: 'system', content: "Task: 2 variations per key. Output valid JSON only." },
+                    { role: 'user', content: `Formula:${promptText}\nKeys:${Object.keys(components).join(',')}` }
+                ],
                 stream: false,
                 format: "json",
                 ...BASE_CONFIG,
-                options: {
-                    ...BASE_CONFIG.options,
-                    num_predict: 2048
-                }
+                
             }),
         });
         const data = await apiResponse.json();
-        return JSON.parse(data.response || '{}');
+        return JSON.parse(data.message?.content || '{}');
     } catch (err) { throw handleGeminiError(err, 'processing'); }
 };
 
 export const reconstructPromptOllama = async (components: { [key: string]: string }, settings: LLMSettings): Promise<string> => {
     try {
         const config = getOllamaConfig(settings);
-        const apiResponse = await fetch(`${config.baseUrl}/api/generate`, {
+        const apiResponse = await fetch(`${config.baseUrl}/api/chat`, {
             method: 'POST',
             headers: config.headers,
             body: JSON.stringify({
                 model: config.model,
-                prompt: JSON.stringify(components),
-                system: "Merge into prose. Text only.",
+                messages: [
+                    { role: 'system', content: "Merge into prose. Text only." },
+                    { role: 'user', content: JSON.stringify(components) }
+                ],
                 stream: false,
                 ...BASE_CONFIG,
-                options: {
-                    ...BASE_CONFIG.options,
-                    num_predict: 1024
-                }
+                
             }),
         });
         const data = await apiResponse.json();
-        return (data.response || '').trim();
+        return (data.message?.content || '').trim();
     } catch (err) { throw handleGeminiError(err, 'reconstruction'); }
 };
 
 export const replaceComponentInPromptOllama = async (originalPrompt: string, componentKey: string, newValue: string, settings: LLMSettings): Promise<string> => {
     try {
         const config = getOllamaConfig(settings);
-        const apiResponse = await fetch(`${config.baseUrl}/api/generate`, {
+        const apiResponse = await fetch(`${config.baseUrl}/api/chat`, {
             method: 'POST',
             headers: config.headers,
             body: JSON.stringify({
                 model: config.model,
-                prompt: `Orig:${originalPrompt}\nKey:${componentKey}\nNew:${newValue}`,
-                system: "Swap value. Text only.",
+                messages: [
+                    { role: 'system', content: "Swap value. Text only." },
+                    { role: 'user', content: `Orig:${originalPrompt}\nKey:${componentKey}\nNew:${newValue}` }
+                ],
                 stream: false,
                 ...BASE_CONFIG,
-                options: {
-                    ...BASE_CONFIG.options,
-                    num_predict: 1024
-                }
+                
             }),
         });
         const data = await apiResponse.json();
-        return (data.response || '').trim();
+        return (data.message?.content || '').trim();
     } catch (err) { throw handleGeminiError(err, 'updating'); }
 };
 
 export const reconstructFromIntentOllama = async (intents: string[], settings: LLMSettings): Promise<string> => {
     try {
         const config = getOllamaConfig(settings);
-        const apiResponse = await fetch(`${config.baseUrl}/api/generate`, {
+        const apiResponse = await fetch(`${config.baseUrl}/api/chat`, {
             method: 'POST',
             headers: config.headers,
             body: JSON.stringify({
                 model: config.model,
-                prompt: intents.join(', '),
-                system: "Merge into prose. Text only.",
+                messages: [
+                    { role: 'system', content: "Merge into prose. Text only." },
+                    { role: 'user', content: intents.join(', ') }
+                ],
                 stream: false,
                 ...BASE_CONFIG,
-                options: {
-                    ...BASE_CONFIG.options,
-                    num_predict: 1500
-                }
+                
             }),
         });
         const data = await apiResponse.json();
-        return (data.response || '').trim();
+        return (data.message?.content || '').trim();
     } catch (err) { throw handleGeminiError(err, 'reconstruction'); }
 };
 
 export const abstractImageOllama = async (base64ImageData: string, promptLength: string, _targetAIModel: string, settings: LLMSettings): Promise<EnhancementResult> => {
     try {
         const config = getOllamaConfig(settings);
-        const tokenLimit = promptLength === 'Long' ? 2048 : 1024;
-        const apiResponse = await fetch(`${config.baseUrl}/api/generate`, {
+        /* @ts-ignore */
+let _tokenLimit = promptLength === 'Long' ? 2048 : 1024;
+        const apiResponse = await fetch(`${config.baseUrl}/api/chat`, {
             method: 'POST',
             headers: config.headers,
             body: JSON.stringify({
                 model: config.model,
-                images: [base64ImageData],
-                prompt: "Deconstruct this image into a comprehensive, high-fidelity descriptive prompt. Provide 3 distinct variations of the prompt, separated by newlines. Focus on micro-textures, lighting interaction, physical materials, and atmospheric density. Output the variations ONLY. No preamble.",
+                messages: [
+                    { role: 'user', content: "Deconstruct this image into a comprehensive, high-fidelity descriptive prompt. Provide 3 distinct variations of the prompt, separated by newlines. Focus on micro-textures, lighting interaction, physical materials, and atmospheric density. Output the variations ONLY. No preamble.", images: [base64ImageData] }
+                ],
                 stream: false,
                 ...BASE_CONFIG,
-                options: {
-                    ...BASE_CONFIG.options,
-                    num_predict: tokenLimit
-                }
+                
             }),
         });
         const data = await apiResponse.json();
-        const suggestions = (data.response || '').split('\n').map((s: string) => s.trim().replace(/^\d+\.\s*/, '')).filter(Boolean);
+        const suggestions = (data.message?.content || '').split('\n').map((s: string) => s.trim().replace(/^\d+\.\s*/, '')).filter(Boolean);
         return { suggestions };
     } catch (err) { throw handleGeminiError(err, 'analysis'); }
 };
@@ -614,45 +620,43 @@ export const abstractImageOllama = async (base64ImageData: string, promptLength:
 export const generatePromptFormulaOllama = async (promptText: string, settings: LLMSettings, systemInstruction: string): Promise<string> => {
     try {
         const config = getOllamaConfig(settings);
-        const apiResponse = await fetch(`${config.baseUrl}/api/generate`, {
+        const apiResponse = await fetch(`${config.baseUrl}/api/chat`, {
             method: 'POST',
             headers: config.headers,
             body: JSON.stringify({
                 model: config.model,
-                prompt: promptText,
-                system: systemInstruction,
+                messages: [
+                    { role: 'system', content: systemInstruction },
+                    { role: 'user', content: promptText }
+                ],
                 stream: false,
                 ...BASE_CONFIG,
-                options: {
-                    ...BASE_CONFIG.options,
-                    num_predict: 1024
-                }
+                
             }),
         });
         const data = await apiResponse.json();
-        return (data.response || '').trim();
+        return (data.message?.content || '').trim();
     } catch (err) { throw handleGeminiError(err, 'analysis'); }
 };
 
 export const generateArtistDescriptionOllama = async (artistName: string, settings: LLMSettings): Promise<string> => {
     try {
         const config = getOllamaConfig(settings);
-        const apiResponse = await fetch(`${config.baseUrl}/api/generate`, {
+        const apiResponse = await fetch(`${config.baseUrl}/api/chat`, {
             method: 'POST',
             headers: config.headers,
             body: JSON.stringify({
                 model: config.model,
-                prompt: artistName,
-                system: "Brief style summary. Text only.",
+                messages: [
+                    { role: 'system', content: "Brief style summary. Text only." },
+                    { role: 'user', content: artistName }
+                ],
                 stream: false,
                 ...BASE_CONFIG,
-                options: {
-                    ...BASE_CONFIG.options,
-                    num_predict: 512
-                }
+                
             }),
         });
         const data = await apiResponse.json();
-        return (data.response || '').trim();
+        return (data.message?.content || '').trim();
     } catch (err) { throw handleGeminiError(err, 'description'); }
 };

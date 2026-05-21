@@ -159,6 +159,7 @@ export const PromptAnalyzer: React.FC<PromptAnalyzerProps> = ({
             clothing: MODIFIERS.CLOTHING_STYLES,
             motion: MODIFIERS.MOTION_OPTIONS,
             cameraMovement: MODIFIERS.CAMERA_MOVEMENT_OPTIONS,
+            videoEffect: MODIFIERS.VIDEO_EFFECTS,
             mjVersion: MODIFIERS.MIDJOURNEY_VERSIONS,
             mjNiji: MODIFIERS.MIDJOURNEY_NIJI_VERSIONS,
             mjAspectRatio: MODIFIERS.MIDJOURNEY_ASPECT_RATIOS,
