@@ -24,6 +24,9 @@ const LlmStatusSwitcher: React.FC<LlmStatusSwitcherProps> = ({ onClick, isOpen }
     if (settings.activeLLM === 'ollama') {
         displayText = settings.ollamaModel || 'Ollama';
         tooltipText = `Using Local Ollama.`;
+    } else if (settings.activeLLM === 'llamacpp') {
+        displayText = settings.llamacppModel || 'Llama.cpp';
+        tooltipText = `Using Llama.cpp standard endpoint.`;
     } else if (settings.activeLLM === 'ollama_cloud') {
         displayText = settings.ollamaCloudModel || 'Ollama Cloud';
         tooltipText = `Using Cloud Ollama endpoint.`;

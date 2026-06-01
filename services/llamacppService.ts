@@ -3,7 +3,7 @@ import type { LLMSettings } from '../types';
 import { trackTokenUsage } from '../utils/settingsStorage';
 
 /**
- * Checks if a URL is targeting the local machine's Hermes port.
+ * Sanitizes base URL by removing trailing slashes and common API paths.
  */
 const sanitizeUrl = (url: string) => {
     if (!url || typeof url !== 'string') return '';
@@ -14,8 +14,8 @@ const sanitizeUrl = (url: string) => {
     return sanitized;
 };
 
-const getHermesConfig = (settings: LLMSettings) => {
-    const rawBaseUrl = sanitizeUrl(settings.hermesBaseUrl || 'http://localhost:18789');
+const getLlamaCppConfig = (settings: LLMSettings) => {
+    const rawBaseUrl = sanitizeUrl(settings.llamacppBaseUrl || 'http://localhost:8080');
     
     let effectiveBaseUrl = rawBaseUrl;
     let extraHeaders: Record<string, string> = {
@@ -24,8 +24,8 @@ const getHermesConfig = (settings: LLMSettings) => {
 
     if (typeof window !== 'undefined') {
         const isLocalHost = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
-        if (isLocalHost && (rawBaseUrl.includes('localhost:18789') || rawBaseUrl.includes('127.0.0.1:18789'))) {
-            effectiveBaseUrl = '/hermes-local';
+        if (isLocalHost && (rawBaseUrl.includes('localhost:8080') || rawBaseUrl.includes('127.0.0.1:8080'))) {
+            effectiveBaseUrl = '/llamacpp-local';
         } else if (window.location.protocol === 'https:') {
             if ((rawBaseUrl.startsWith('http:') || rawBaseUrl.startsWith('https:')) && 
                 !rawBaseUrl.includes('localhost') && 
@@ -36,21 +36,29 @@ const getHermesConfig = (settings: LLMSettings) => {
         }
     }
 
-    if (settings.hermesApiKey) {
-        extraHeaders['Authorization'] = `Bearer ${settings.hermesApiKey}`;
+    if (settings.llamacppApiKey) {
+        extraHeaders['Authorization'] = `Bearer ${settings.llamacppApiKey}`;
     }
 
     return {
         baseUrl: effectiveBaseUrl,
-        model: settings.hermesModel || 'hermes-agent',
+        model: settings.llamacppModel || 'default',
         headers: extraHeaders
     };
 };
 
-export const fetchHermesModels = async (settings: LLMSettings): Promise<string[]> => {
+export const fetchLlamaCppModels = async (settings: LLMSettings): Promise<string[]> => {
     try {
-        const config = getHermesConfig(settings);
-        if (!config.baseUrl) return [];
+        const config = getLlamaCppConfig(settings);
+        if (!config.baseUrl) return ['default'];
+
+        // Avoid querying default placeholder domains
+        const targetUrl = config.headers['x-target-url'] || config.baseUrl;
+        if (targetUrl && (targetUrl.toLowerCase().includes('localhost:8080') || targetUrl.toLowerCase().includes('127.0.0.1:8080'))) {
+            if (window.location.protocol === 'https:' && config.baseUrl === '/llamacpp-local') {
+                return ['default'];
+            }
+        }
 
         const response = await fetch(`${config.baseUrl}/v1/models`, {
             method: 'GET',
@@ -59,28 +67,29 @@ export const fetchHermesModels = async (settings: LLMSettings): Promise<string[]
 
         if (!response.ok) {
             const errorText = await response.text().catch(() => 'No error body');
-            console.error(`Hermes models fetch failed: ${response.status} ${response.statusText}`, errorText.slice(0, 500));
-            return ['hermes-agent'];
+            console.error(`Llama.cpp models fetch failed: ${response.status} ${response.statusText}`, errorText.slice(0, 500));
+            return ['default'];
         }
 
         const contentType = response.headers.get('content-type') || '';
         if (!contentType.includes('application/json')) {
             const text = await response.text().catch(() => 'Unreadable body');
-            console.warn(`Hermes fetch returned non-JSON (${contentType}):`, text.slice(0, 100) + '...');
-            return ['hermes-agent'];
+            console.warn(`Llama.cpp fetch returned non-JSON (${contentType}):`, text.slice(0, 100) + '...');
+            return ['default'];
         }
 
         const data = await response.json();
-        return (Array.isArray(data?.data) ? data.data : (Array.isArray(data) ? data : [])).map((m: any) => String(m?.id || m || 'unknown'));
+        return (Array.isArray(data?.data) ? data.data : (Array.isArray(data) ? data : []))
+            .map((m: any) => String(m?.id || m || 'default'));
     } catch (e: any) {
         if (!e.message?.includes('Failed to fetch') && !e.message?.includes('ECONNREFUSED') && !e.message?.includes('Load failed')) {
-            console.error('Hermes models fetch error:', e);
+            console.error('Llama.cpp models fetch error:', e);
         }
-        return ['hermes-agent'];
+        return ['default'];
     }
 };
 
-export async function* enhancePromptHermesStream(
+export async function* enhancePromptLlamaCppStream(
     prompt: string,
     constantModifier: string,
     settings: LLMSettings,
@@ -88,7 +97,7 @@ export async function* enhancePromptHermesStream(
     maxTokens: number = 2048
 ): AsyncGenerator<string> {
     try {
-        const config = getHermesConfig(settings);
+        const config = getLlamaCppConfig(settings);
         const fullPrompt = [prompt.trim(), constantModifier.trim()].filter(Boolean).join('\n\n');
         
         const apiResponse = await fetch(`${config.baseUrl}/v1/chat/completions`, {
@@ -106,10 +115,10 @@ export async function* enhancePromptHermesStream(
         });
 
         if (!apiResponse.ok) {
-            throw new Error(`Hermes Stream failed (${apiResponse.status})`);
+            throw new Error(`Llama.cpp Stream failed (${apiResponse.status})`);
         }
         
-        if (!apiResponse.body) throw new Error("Hermes stream body is empty.");
+        if (!apiResponse.body) throw new Error("Llama.cpp stream body is empty.");
         
         const reader = apiResponse.body.getReader();
         const decoder = new TextDecoder();
@@ -133,25 +142,24 @@ export async function* enhancePromptHermesStream(
                     const content = parsed.choices?.[0]?.delta?.content;
                     if (content) {
                         yield content;
-                        // Track roughly by character count for local models if token count not provided
-                        trackTokenUsage('hermes', Math.ceil(content.length / 4));
+                        trackTokenUsage('llamacpp', Math.ceil(content.length / 4));
                     }
                 } catch (e) {}
             }
         }
     } catch (err: any) {
-        throw handleGeminiError(err, 'enhancing with Hermes');
+        throw handleGeminiError(err, 'enhancing with Llama.cpp');
     }
 }
 
-export async function* streamChatHermes(
+export async function* streamChatLlamaCpp(
     messages: { role: 'user' | 'assistant' | 'system', content: string, attachments?: { data: string, mimeType: string, fileName?: string }[] }[],
     settings: LLMSettings
 ): AsyncGenerator<string> {
     try {
-        const config = getHermesConfig(settings);
+        const config = getLlamaCppConfig(settings);
         
-        const hermesMessages = messages.map(m => {
+        const llamacppMessages = messages.map(m => {
             if (m.attachments && m.attachments.length > 0) {
                 const contentData: any[] = [{ type: 'text', text: m.content }];
                 let skippedNotice = '';
@@ -159,7 +167,7 @@ export async function* streamChatHermes(
                     if (att.mimeType.startsWith('image/')) {
                         contentData.push({
                             type: 'image_url',
-                            image_url: { url: att.data } // Expects data URI
+                            image_url: { url: att.data }
                         });
                     } else {
                         skippedNotice += `\n[Notice: System skipped unsupported document attachment: ${att.fileName}]`;
@@ -178,17 +186,17 @@ export async function* streamChatHermes(
             headers: config.headers,
             body: JSON.stringify({
                 model: config.model,
-                messages: hermesMessages,
+                messages: llamacppMessages,
                 stream: true,
                 max_tokens: 4096
             }),
         });
 
         if (!apiResponse.ok) {
-            throw new Error(`Hermes Stream failed (${apiResponse.status})`);
+            throw new Error(`Llama.cpp Stream failed (${apiResponse.status})`);
         }
         
-        if (!apiResponse.body) throw new Error("Hermes stream body is empty.");
+        if (!apiResponse.body) throw new Error("Llama.cpp stream body is empty.");
         
         const reader = apiResponse.body.getReader();
         const decoder = new TextDecoder();
@@ -212,19 +220,19 @@ export async function* streamChatHermes(
                     const content = parsed.choices?.[0]?.delta?.content;
                     if (content) {
                         yield content;
-                        trackTokenUsage('hermes', Math.ceil(content.length / 4));
+                        trackTokenUsage('llamacpp', Math.ceil(content.length / 4));
                     }
                 } catch (e) {}
             }
         }
     } catch (err: any) {
-        throw handleGeminiError(err, 'chatting with Hermes');
+        throw handleGeminiError(err, 'chatting with Llama.cpp');
     }
 }
 
-export const refineSinglePromptHermes = async (promptText: string, settings: LLMSettings, systemInstruction: string, maxTokens: number = 1024): Promise<string> => {
+export const refineSinglePromptLlamaCpp = async (promptText: string, settings: LLMSettings, systemInstruction: string, maxTokens: number = 1024): Promise<string> => {
     try {
-        const config = getHermesConfig(settings);
+        const config = getLlamaCppConfig(settings);
         const apiResponse = await fetch(`${config.baseUrl}/v1/chat/completions`, {
             method: 'POST',
             headers: config.headers,
@@ -239,18 +247,65 @@ export const refineSinglePromptHermes = async (promptText: string, settings: LLM
             }),
         });
         
-        if (!apiResponse.ok) throw new Error(`Hermes status: ${apiResponse.status}`);
+        if (!apiResponse.ok) throw new Error(`Llama.cpp status: ${apiResponse.status}`);
         const data = await apiResponse.json();
         const content = data.choices?.[0]?.message?.content || '';
         
-        trackTokenUsage('hermes', Math.ceil(content.length / 4));
+        trackTokenUsage('llamacpp', Math.ceil(content.length / 4));
         return content;
     } catch (err) {
-        throw handleGeminiError(err, 'refining with Hermes');
+        throw handleGeminiError(err, 'refining with Llama.cpp');
     }
 };
 
-export async function* refineSinglePromptHermesStream(promptText: string, settings: LLMSettings, systemInstruction: string, maxTokens: number = 1024): AsyncGenerator<string> {
-    // Re-use the existing stream logic
-    yield* enhancePromptHermesStream(promptText, '', settings, systemInstruction, maxTokens);
+export async function* refineSinglePromptLlamaCppStream(promptText: string, settings: LLMSettings, systemInstruction: string, maxTokens: number = 1024): AsyncGenerator<string> {
+    yield* enhancePromptLlamaCppStream(promptText, '', settings, systemInstruction, maxTokens);
 }
+
+export interface LlamaCppTestResult {
+    success: boolean;
+    status?: number;
+    message: string;
+}
+
+export const testLlamaCppConnection = async (baseUrl: string, apiKey?: string): Promise<LlamaCppTestResult> => {
+    const cleanUrl = sanitizeUrl(baseUrl);
+    let targetUrl = cleanUrl;
+    let headers: Record<string, string> = {
+        'Content-Type': 'application/json'
+    };
+    
+    if (apiKey) {
+        headers['Authorization'] = `Bearer ${apiKey}`;
+    }
+    
+    if (typeof window !== 'undefined' && window.location.protocol === 'https:') {
+        if (cleanUrl.includes('localhost:') || cleanUrl.includes('127.0.0.1:')) {
+            return { success: false, message: "LOCAL TARGET UNREACHABLE IN CLOUD. USE REMOTE OR RUN LOCALLY." };
+        } else if (cleanUrl.startsWith('http:')) {
+            targetUrl = '/proxy-remote';
+            headers['x-target-url'] = cleanUrl;
+        }
+    }
+
+    try {
+        const response = await fetch(`${targetUrl}/v1/models`, { headers });
+        if (response.ok) {
+            return { success: true, status: response.status, message: "CONNECTION ESTABLISHED (200 OK)" };
+        }
+        
+        const msg = response.status === 500 
+            ? "TARGET UNREACHABLE (500). ENSURE LLAMA.CPP IS RUNNING."
+            : `HTTP ERROR ${response.status}: ${response.statusText}`;
+            
+        return { success: false, status: response.status, message: msg };
+    } catch (e: any) {
+        if (e.name === 'TypeError' && e.message === 'Failed to fetch') {
+            if (window.location.protocol === 'https:' && cleanUrl.startsWith('http:') && !headers['x-target-url']) {
+                return { success: false, message: "PROTOCOL MISMATCH (HTTPS -> HTTP BLOCKED). USE PROXY." };
+            }
+            return { success: false, message: "SERVICE REFUSED CONNECTION. CHECK CORS SETTINGS FOR LLAMA.CPP." };
+        }
+        return { success: false, message: e.message || "CONNECTION REFUSED" };
+    }
+};

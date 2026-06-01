@@ -9,11 +9,27 @@ const getGeminiClient = (settings: LLMSettings): GoogleGenAI => {
     if (!apiKey) {
         throw new Error("GEMINI_API_KEY is missing. Add it in Setup -> LLM -> Gemini API Key");
     }
-    return new GoogleGenAI({ apiKey });
+    return new GoogleGenAI({ 
+        apiKey,
+        httpOptions: {
+            headers: {
+                'User-Agent': 'aistudio-build',
+            }
+        }
+    });
 };
 
-const DEFAULT_MODEL = 'gemini-3-flash-preview';
-const LITE_MODEL = 'gemini-3.1-flash-lite-preview'; 
+const DEFAULT_MODEL = 'gemini-3.5-flash';
+const LITE_MODEL = 'gemini-3.1-flash-lite'; 
+
+const getMappedModel = (modelId: string): string => {
+    if (!modelId) return 'gemini-3.5-flash';
+    const lower = modelId.toLowerCase();
+    if (lower === 'gemini-3-flash-preview' || lower === 'gemini-3.1-flash-preview') return 'gemini-3.5-flash';
+    if (lower === 'gemini-3.1-flash-lite-preview') return 'gemini-3.1-flash-lite';
+    if (lower === 'gemini-3.1-pro-preview') return 'gemini-3.1-pro-preview';
+    return modelId;
+};
 
 export async function* enhancePromptGeminiStream(prompt: string, constantModifier: string, settings: LLMSettings, systemInstruction: string, length: string = 'Medium', referenceImages?: string[], temperature: number = 0.7): AsyncGenerator<string> {
     try {
@@ -32,7 +48,7 @@ export async function* enhancePromptGeminiStream(prompt: string, constantModifie
  
         const tokenBudget = length === 'Long' ? 1800 : 800;
         const response = await ai.models.generateContentStream({
-            model: settings.llmModel || DEFAULT_MODEL,
+            model: getMappedModel(settings.llmModel || DEFAULT_MODEL),
             contents,
             config: { 
                 systemInstruction, 
@@ -54,7 +70,7 @@ export const refineSinglePromptGemini = async (promptText: string, _cheatsheetCo
     try {
         const ai = getGeminiClient(settings);
         const response = await ai.models.generateContent({
-            model: settings.llmModel || DEFAULT_MODEL,
+            model: getMappedModel(settings.llmModel || DEFAULT_MODEL),
             contents: promptText,
             config: { 
                 systemInstruction, 
@@ -73,7 +89,7 @@ export async function* refineSinglePromptGeminiStream(promptText: string, _cheat
     try {
         const ai = getGeminiClient(settings);
         const response = await ai.models.generateContentStream({
-            model: settings.llmModel || DEFAULT_MODEL,
+            model: getMappedModel(settings.llmModel || DEFAULT_MODEL),
             contents: promptText,
             config: { 
                 systemInstruction, 
@@ -94,7 +110,7 @@ export const analyzePaletteMood = async (hexColors: string[], settings: LLMSetti
   try {
     const ai = getGeminiClient(settings);
     const response = await ai.models.generateContent({
-      model: LITE_MODEL,
+      model: getMappedModel(LITE_MODEL),
       contents: `Colors: ${hexColors.join(', ')}`,
       config: { 
           systemInstruction: "Task: mood in 3 words max.", 
@@ -110,7 +126,7 @@ export const generateColorNameGemini = async (hexColor: string, mood: string, se
     try {
         const ai = getGeminiClient(settings);
         const response = await ai.models.generateContent({
-            model: LITE_MODEL,
+            model: getMappedModel(LITE_MODEL),
             contents: `Hex:${hexColor}, Mood:${mood}`,
             config: { 
                 systemInstruction: "Task: Poetic 2-word name.", 
@@ -126,7 +142,7 @@ export const convertPromptToNaturalLanguage = async (promptText: string, setting
     try {
         const ai = getGeminiClient(settings);
         const response = await ai.models.generateContent({
-            model: LITE_MODEL,
+            model: getMappedModel(LITE_MODEL),
             contents: promptText,
             config: {
                 systemInstruction: `Task: Convert this Stable Diffusion/Midjourney prompt into clear, natural narrative language.
@@ -170,7 +186,7 @@ export const dissectPromptGemini = async (promptText: string, settings: LLMSetti
         const naturalLang = await convertPromptToNaturalLanguage(promptText, settings);
         
         const response = await ai.models.generateContent({
-            model: LITE_MODEL,
+            model: getMappedModel(LITE_MODEL),
             contents: naturalLang,
             config: {
                 systemInstruction: `Task: Perform a deep neural breakdown of the provided natural language prompt into its atomic components and extract smart categorized parameters.
@@ -215,7 +231,7 @@ export const generateFocusedVariationsGemini = async (promptText: string, compon
     try {
         const ai = getGeminiClient(settings);
         const response = await ai.models.generateContent({
-            model: DEFAULT_MODEL,
+            model: getMappedModel(DEFAULT_MODEL),
             contents: `Formula:${promptText}\nKeys:${Object.keys(components).join(',')}`,
             config: {
                 systemInstruction: "Task: 2 variations per key. JSON only.",
@@ -232,7 +248,7 @@ export const reconstructPromptGemini = async (components: { [key: string]: strin
     try {
         const ai = getGeminiClient(settings);
         const response = await ai.models.generateContent({
-            model: LITE_MODEL,
+            model: getMappedModel(LITE_MODEL),
             contents: JSON.stringify(components),
             config: { 
                 systemInstruction: "Merge into prose. Text only.", 
@@ -247,7 +263,7 @@ export const replaceComponentInPromptGemini = async (originalPrompt: string, com
     try {
         const ai = getGeminiClient(settings);
         const response = await ai.models.generateContent({
-            model: LITE_MODEL,
+            model: getMappedModel(LITE_MODEL),
             contents: `Orig:${originalPrompt}\nKey:${componentKey}\nNew:${newValue}`,
             config: { 
                 systemInstruction: "Swap value. Text only.", 
@@ -262,7 +278,7 @@ export const reconstructFromIntentGemini = async (intents: string[], settings: L
     try {
         const ai = getGeminiClient(settings);
         const response = await ai.models.generateContent({
-            model: LITE_MODEL,
+            model: getMappedModel(LITE_MODEL),
             contents: `Components: ${intents.join(' | ')}`,
             config: { 
                 systemInstruction: "Task: Consolidate the provided visual components and descriptive intents into a single, cohesive, high-fidelity visual prompt. Remove redundancies. Ensure a logical flow from subject to environment to artistic style. Output the prompt text ONLY. No preamble.", 
@@ -328,7 +344,7 @@ export async function* streamChatGemini(
         }
 
         const chat = ai.chats.create({
-            model: DEFAULT_MODEL,
+            model: getMappedModel(DEFAULT_MODEL),
             config: {
                 systemInstruction: sysInstruction.trim() || "You are a helpful AI assistant.",
                 tools: useWebSearch ? [{ googleSearch: {} }] : undefined
@@ -353,7 +369,7 @@ export const translateToEnglishGemini = async (text: string, settings: LLMSettin
     try {
         const ai = getGeminiClient(settings);
         const response = await ai.models.generateContent({
-            model: LITE_MODEL,
+            model: getMappedModel(LITE_MODEL),
             contents: text,
             config: { 
                 systemInstruction: "Role: Polyglot Translator. Task: Translate the input text into professional, clear English. If the text is already in English, refine its clarity and impact. Output the translated/refined English text ONLY. No explanations.", 
@@ -369,7 +385,7 @@ export const generatePromptFormulaGemini = async (promptText: string, settings: 
     try {
         const ai = getGeminiClient(settings);
         const response = await ai.models.generateContent({
-            model: DEFAULT_MODEL,
+            model: getMappedModel(DEFAULT_MODEL),
             contents: promptText,
             config: { 
                 systemInstruction, 
@@ -385,7 +401,7 @@ export const generateArtistDescriptionGemini = async (artistName: string, settin
     try {
         const ai = getGeminiClient(settings);
         const response = await ai.models.generateContent({
-            model: LITE_MODEL,
+            model: getMappedModel(LITE_MODEL),
             contents: artistName,
             config: { 
                 systemInstruction: "Brief style summary. Text only.", 
@@ -402,7 +418,7 @@ export const abstractImageGemini = async (base64ImageData: string, _promptLength
         const ai = getGeminiClient(settings);
         const imagePart = { inlineData: { mimeType: 'image/jpeg', data: base64ImageData } };
         const response = await ai.models.generateContent({
-            model: DEFAULT_MODEL,
+            model: getMappedModel(DEFAULT_MODEL),
             contents: [imagePart],
             config: { 
                 systemInstruction: "Role: Visual Archeologist. Task: Deconstruct this image into a comprehensive, high-fidelity descriptive prompt. Provide 3 distinct variations of the prompt, separated by newlines. Focus on micro-textures, lighting interaction, physical materials, and atmospheric density. Output the variations ONLY. No preamble.", 
@@ -491,7 +507,7 @@ export const generateConstructorPresetGemini = async (components: { [key: string
     try {
         const ai = getGeminiClient(settings);
         const response = await ai.models.generateContent({
-            model: DEFAULT_MODEL,
+            model: getMappedModel(DEFAULT_MODEL),
             contents: JSON.stringify(components),
             config: {
                 systemInstruction: `Role: Prompt Constructor Architect. 

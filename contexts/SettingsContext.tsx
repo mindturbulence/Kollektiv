@@ -4,6 +4,7 @@ import { loadLLMSettings, saveLLMSettings } from '../utils/settingsStorage';
 import { fetchOllamaModels } from '../services/ollamaService';
 import { fetchHermesModels } from '../services/hermesService';
 import { fetchOpenRouterModels } from '../services/openrouterService';
+import { fetchLlamaCppModels } from '../services/llamacppService';
 import type { LLMSettings } from '../types';
 
 interface SettingsContextType {
@@ -13,6 +14,7 @@ interface SettingsContextType {
   availableOllamaCloudModels: string[];
   availableHermesModels: string[];
   availableOpenRouterModels: string[];
+  availableLlamaCppModels: string[];
   loadingModels: boolean;
   refreshOllamaModels: () => Promise<void>;
 }
@@ -25,6 +27,7 @@ export const SettingsProvider: React.FC<{ children: ReactNode }> = ({ children }
   const [availableOllamaCloudModels, setAvailableOllamaCloudModels] = useState<string[]>([]);
   const [availableHermesModels, setAvailableHermesModels] = useState<string[]>([]);
   const [availableOpenRouterModels, setAvailableOpenRouterModels] = useState<string[]>([]);
+  const [availableLlamaCppModels, setAvailableLlamaCppModels] = useState<string[]>([]);
   const [loadingModels, setLoadingModels] = useState(false);
 
   const updateSettings = useCallback((newSettings: LLMSettings) => {
@@ -35,20 +38,22 @@ export const SettingsProvider: React.FC<{ children: ReactNode }> = ({ children }
   const refreshOllamaModels = useCallback(async () => {
       setLoadingModels(true);
       try {
-          const [local, cloud, claw, router] = await Promise.all([
+          const [local, cloud, claw, router, llamacpp] = await Promise.all([
               fetchOllamaModels(settings, false),
               fetchOllamaModels(settings, true),
               fetchHermesModels(settings),
-              fetchOpenRouterModels()
+              fetchOpenRouterModels(),
+              fetchLlamaCppModels(settings)
           ]);
           setAvailableOllamaModels(local);
           setAvailableOllamaCloudModels(cloud);
           setAvailableHermesModels(claw);
           setAvailableOpenRouterModels(router);
+          setAvailableLlamaCppModels(llamacpp);
       } finally {
           setLoadingModels(false);
       }
-  }, [settings.ollamaBaseUrl, settings.ollamaCloudBaseUrl, settings.hermesBaseUrl, settings.googleIdentity?.accessToken, settings.ollamaCloudApiKey, settings.hermesApiKey, settings.openrouterApiKey]);
+  }, [settings.ollamaBaseUrl, settings.ollamaCloudBaseUrl, settings.hermesBaseUrl, settings.llamacppBaseUrl, settings.googleIdentity?.accessToken, settings.ollamaCloudApiKey, settings.hermesApiKey, settings.llamacppApiKey, settings.openrouterApiKey]);
 
   useEffect(() => {
       refreshOllamaModels();
@@ -71,9 +76,10 @@ export const SettingsProvider: React.FC<{ children: ReactNode }> = ({ children }
       availableOllamaCloudModels,
       availableHermesModels,
       availableOpenRouterModels,
+      availableLlamaCppModels,
       loadingModels,
       refreshOllamaModels
-  }), [settings, updateSettings, availableOllamaModels, availableOllamaCloudModels, availableHermesModels, availableOpenRouterModels, loadingModels, refreshOllamaModels]);
+  }), [settings, updateSettings, availableOllamaModels, availableOllamaCloudModels, availableHermesModels, availableOpenRouterModels, availableLlamaCppModels, loadingModels, refreshOllamaModels]);
 
   return (
     <SettingsContext.Provider value={value}>

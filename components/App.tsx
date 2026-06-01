@@ -10,7 +10,7 @@ import { verifyAndRepairFiles } from '../utils/integrity';
 import { addSavedPrompt } from '../utils/promptStorage';
 import { audioService } from '../services/audioService';
 import { BusyProvider } from '../contexts/BusyContext';
-import type { ActiveTab, Idea, ActiveSettingsTab } from '../types';
+import type { ActiveTab, Idea, ActiveSettingsTab, LLMSettings } from '../types';
 
 // Layout & Global Components
 import Header from './Header';
@@ -555,8 +555,12 @@ const AppContent: React.FC = () => {
     const scanBottomRef = useRef<HTMLSpanElement>(null);
     const scanLeftRef = useRef<HTMLSpanElement>(null);
 
-    const initializeApp = useCallback(async () => {
-        if (hasInitializedRef.current && isInitialized) return;
+    const initializeApp = useCallback(async (customSettings?: LLMSettings) => {
+        if (customSettings) {
+            hasInitializedRef.current = false;
+        } else if (hasInitializedRef.current && isInitialized) {
+            return;
+        }
 
         setIsLoading(true);
         setShowWelcome(false);
@@ -568,9 +572,11 @@ const AppContent: React.FC = () => {
             if (progress !== undefined) setInitProgress(progress);
         };
 
+        const activeSettings = customSettings || settings;
+
         try {
             await new Promise(r => setTimeout(r, 1000));
-            const hasHandleAndPermission = await (fileSystemManager as any).initialize(settings, auth);
+            const hasHandleAndPermission = await (fileSystemManager as any).initialize(activeSettings, auth);
 
             if (!hasHandleAndPermission) {
                 setShowWelcome(true);
@@ -580,7 +586,7 @@ const AppContent: React.FC = () => {
             }
 
             onProgress('Loading Folders...', 0.35);
-            await verifyAndRepairFiles(onProgress, settings);
+            await verifyAndRepairFiles(onProgress, activeSettings);
 
             onProgress('Syncing Styles...', 0.7);
             if ('fonts' in document) {

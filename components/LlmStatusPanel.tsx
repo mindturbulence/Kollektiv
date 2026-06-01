@@ -18,6 +18,7 @@ const LlmStatusPanel: React.FC<LlmStatusPanelProps> = ({ isOpen, onClose }) => {
     availableOllamaModels,
     availableOllamaCloudModels,
     availableHermesModels,
+    availableLlamaCppModels,
   } = useSettings();
 
   useLayoutEffect(() => {
@@ -70,12 +71,18 @@ const LlmStatusPanel: React.FC<LlmStatusPanelProps> = ({ isOpen, onClose }) => {
   }, [isOpen, onClose]);
 
   const handleProviderAndModelSelect = (
-    provider: "gemini" | "ollama" | "ollama_cloud" | "hermes" | "openrouter",
+    provider: "gemini" | "ollama" | "ollama_cloud" | "hermes" | "openrouter" | "llamacpp",
     modelId?: string,
   ) => {
     audioService.playClick();
     if (provider === "gemini" && modelId) {
       updateSettings({ ...settings, activeLLM: "gemini", llmModel: modelId });
+    } else if (provider === "llamacpp" && modelId) {
+      updateSettings({
+        ...settings,
+        activeLLM: "llamacpp",
+        llamacppModel: modelId,
+      });
     } else if (provider === "ollama" && modelId) {
       updateSettings({
         ...settings,
@@ -202,6 +209,39 @@ const LlmStatusPanel: React.FC<LlmStatusPanelProps> = ({ isOpen, onClose }) => {
                     <span className="text-[10px] italic opacity-20 py-12 block text-center font-mono uppercase tracking-[0.4em]">
                       NO LOCAL INTERFACES DETECTED
                     </span>
+                  </li>
+                )}
+
+              <div className="h-px bg-base-content/5 mx-8 my-2" />
+
+              {/* Llama.cpp Model Section */}
+              <li className="menu-title px-8 py-2 text-[12px] uppercase tracking-[0.1em] opacity-40 font-bold text-primary">
+                <span>Local Engine (Llama.cpp)</span>
+              </li>
+
+              {availableLlamaCppModels && availableLlamaCppModels.length > 0
+                ? availableLlamaCppModels.map((model) => (
+                  <li key={`llamacpp-${model}`} className="w-full">
+                    <button
+                      onClick={() =>
+                        handleProviderAndModelSelect("llamacpp", model)
+                      }
+                      className={`rounded-none text-[10px] font-rajdhani uppercase tracking-widest py-2 w-full text-left px-8 border-l-2 transition-all ${settings.llamacppModel === model && settings.activeLLM === "llamacpp" ? "text-primary bg-primary/5 border-primary shadow-[inset_10px_0_20px_-10px_rgba(var(--p),0.1)]" : "text-base-content/40 hover:text-base-content hover:bg-base-content/5 border-transparent"}`}
+                    >
+                      {model}
+                    </button>
+                  </li>
+                ))
+                : (
+                  <li key={`llamacpp-default`} className="w-full">
+                    <button
+                      onClick={() =>
+                        handleProviderAndModelSelect("llamacpp", settings.llamacppModel || "default")
+                      }
+                      className={`rounded-none text-[10px] font-rajdhani uppercase tracking-widest py-2 w-full text-left px-8 border-l-2 transition-all ${settings.activeLLM === "llamacpp" ? "text-primary bg-primary/5 border-primary shadow-[inset_10px_0_20px_-10px_rgba(var(--p),0.1)]" : "text-base-content/40 hover:text-base-content hover:bg-base-content/5 border-transparent"}`}
+                    >
+                      {settings.llamacppModel || "default"}
+                    </button>
                   </li>
                 )}
 

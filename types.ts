@@ -72,7 +72,7 @@ export interface LLMSettings {
   // LLM Provider Settings
   geminiApiKey: string;
   llmModel: string;
-  activeLLM: 'gemini' | 'ollama' | 'ollama_cloud' | 'hermes' | 'openrouter';
+  activeLLM: 'gemini' | 'ollama' | 'ollama_cloud' | 'hermes' | 'openrouter' | 'llamacpp';
   ollamaBaseUrl: string;
   ollamaModel: string;
   
@@ -84,6 +84,11 @@ export interface LLMSettings {
   hermesBaseUrl: string;
   hermesModel: string;
   hermesApiKey: string;
+
+  // Llama.cpp Settings
+  llamacppBaseUrl: string;
+  llamacppModel: string;
+  llamacppApiKey: string;
   
   // Ollama Cloud Settings
   ollamaCloudBaseUrl: string;
@@ -91,12 +96,17 @@ export interface LLMSettings {
   ollamaCloudApiKey: string;
   ollamaCloudUseGoogleAuth: boolean;
 
+  // MCP Server Settings
+  mcpServerUrl?: string;
+  mcpEnabled?: boolean;
+
   // Prompt & Token Tracking
   masterRolePrompt?: string;
   geminiTokenUsage?: TokenUsage;
   ollamaTokenUsage?: TokenUsage;
   hermesTokenUsage?: TokenUsage;
   openrouterTokenUsage?: TokenUsage;
+  llamacppTokenUsage?: TokenUsage;
 
   // Theme Settings
   activeThemeMode: 'dark';
@@ -121,6 +131,7 @@ export interface LLMSettings {
   // Integrations
   youtube?: YouTubeConnection;
   googleIdentity?: GoogleIdentityConnection;
+  storageProvider?: 'local' | 'drive';
 }
 
 // --- Prompt Generation & Library ---

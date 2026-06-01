@@ -36,10 +36,18 @@ const getOllamaConfig = (settings: LLMSettings) => {
     let effectiveBaseUrl = rawBaseUrl;
     let extraHeaders: Record<string, string> = {};
 
-    if (typeof window !== 'undefined' && window.location.protocol === 'https:') {
-        if (rawBaseUrl.startsWith('http:') && !rawBaseUrl.startsWith('/proxy-remote') && !rawBaseUrl.includes('localhost') && !rawBaseUrl.includes('127.0.0.1')) {
-            effectiveBaseUrl = '/proxy-remote';
-            extraHeaders['x-target-url'] = rawBaseUrl;
+    if (typeof window !== 'undefined') {
+        const isLocalHost = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
+        if (isLocalHost && (rawBaseUrl.includes('localhost:11434') || rawBaseUrl.includes('127.0.0.1:11434'))) {
+            effectiveBaseUrl = '/ollama-local';
+        } else if (window.location.protocol === 'https:') {
+            if ((rawBaseUrl.startsWith('http:') || rawBaseUrl.startsWith('https:')) && 
+                !rawBaseUrl.startsWith('/proxy-remote') && 
+                !rawBaseUrl.includes('localhost') && 
+                !rawBaseUrl.includes('127.0.0.1')) {
+                effectiveBaseUrl = '/proxy-remote';
+                extraHeaders['x-target-url'] = rawBaseUrl;
+            }
         }
     }
 
@@ -78,6 +86,12 @@ export const fetchOllamaModels = async (settings: LLMSettings, useCloud: boolean
         const config = getOllamaConfig(tempSettings);
         
         if (!config.baseUrl || config.baseUrl === 'http://' || config.baseUrl === 'https://') {
+            return [];
+        }
+
+        // Avoid querying the default placeholder domain which doesn't exist and causes server-side DNS failures
+        const targetUrl = (config.headers as any)['x-target-url'] || config.baseUrl;
+        if (targetUrl && (targetUrl.toLowerCase().includes('your-remote-ollama.com') || targetUrl.toLowerCase().includes('your-remote-ollama'))) {
             return [];
         }
 

@@ -19,12 +19,86 @@ interface IFileSystemManager {
     calculateTotalSize(): Promise<number>;
 }
 
+// --- Helper Classes for GDrive Integration ---
+class DriveDirectoryHandle {
+    kind = 'directory' as const;
+    name: string;
+    private driveId: string;
+    public fullPath: string;
+    private manager: any;
+
+    constructor(name: string, driveId: string, fullPath: string, manager: any) {
+        this.name = name;
+        this.driveId = driveId;
+        this.fullPath = fullPath;
+        this.manager = manager;
+    }
+
+    async* values(): AsyncGenerator<any> {
+        const q = `'${this.driveId}' in parents and trashed = false`;
+        const url = `/google-api/drive/v3/files?q=${encodeURIComponent(q)}&fields=files(id,name,mimeType)`;
+        const res = await fetch(url, {
+            headers: { 'Authorization': `Bearer ${this.manager.accessToken}` }
+        });
+        if (!res.ok) return;
+
+        const data = await res.json();
+        const files = data.files || [];
+
+        for (const file of files) {
+            const isFolder = file.mimeType === 'application/vnd.google-apps.folder';
+            const childPath = this.fullPath ? `${this.fullPath}/${file.name}` : file.name;
+            this.manager.pathCache.set(childPath, { id: file.id, mimeType: file.mimeType });
+
+            if (isFolder) {
+                yield new DriveDirectoryHandle(file.name, file.id, childPath, this.manager);
+            } else {
+                yield new DriveFileHandle(file.name, file.id, childPath, this.manager);
+            }
+        }
+    }
+}
+
+class DriveFileHandle {
+    kind = 'file' as const;
+    name: string;
+    private driveId: string;
+    public fullPath: string;
+    private manager: any;
+
+    constructor(name: string, driveId: string, fullPath: string, manager: any) {
+        this.name = name;
+        this.driveId = driveId;
+        this.fullPath = fullPath;
+        this.manager = manager;
+    }
+
+    async getFile(): Promise<Blob> {
+        const downloadUrl = `/google-api/drive/v3/files/${this.driveId}?alt=media`;
+        const res = await fetch(downloadUrl, {
+            headers: { 'Authorization': `Bearer ${this.manager.accessToken}` }
+        });
+        if (!res.ok) {
+            throw new Error(`Failed to download GDrive file: ${this.name}`);
+        }
+        const blob = await res.blob();
+        return blob;
+    }
+}
+
 // --- Local File System Implementation ---
 class LocalFileSystemManager implements IFileSystemManager {
     private appDirHandle: FileSystemDirectoryHandle | null = null;
     public appDirectoryName: string | null = null;
     private isInitialized: boolean = false;
     private initPromise: Promise<boolean> | null = null;
+
+    // Google Drive integration state
+    public storageProvider: 'local' | 'drive' = 'local';
+    public accessToken: string | null = null;
+    public rootFolderId: string | null = null;
+    public pathCache: Map<string, { id: string; mimeType: string }> = new Map();
+    public lastError: string | null = null;
 
     private async verifyPermission(handle: FileSystemDirectoryHandle, interactive: boolean = false): Promise<boolean> {
         const options = { mode: 'readwrite' as const };
@@ -46,8 +120,194 @@ class LocalFileSystemManager implements IFileSystemManager {
         return false;
     }
 
-    async initialize(_settings: LLMSettings, _auth: AuthContextType): Promise<boolean> {
-        if (this.isInitialized) return true;
+    private async extractGoogleError(res: Response): Promise<string> {
+        try {
+            const txt = await res.text();
+            try {
+                const parsed = JSON.parse(txt);
+                if (parsed?.error?.message) {
+                    return `${parsed.error.message} (Status: ${res.status})`;
+                }
+            } catch (e) {}
+            return `Status ${res.status}: ${txt || res.statusText}`;
+        } catch (e) {
+            return `Status ${res.status} (${res.statusText})`;
+        }
+    }
+
+    private async ensureRootFolder(): Promise<void> {
+        if (!this.accessToken) {
+            throw new Error("No Google access token configured for Google Drive.");
+        }
+
+        const q = "(name = 'Kollektiv' or name = 'kollektiv' or name = 'KOLLEKTIV') and mimeType = 'application/vnd.google-apps.folder' and trashed = false";
+        const searchUrl = `/google-api/drive/v3/files?q=${encodeURIComponent(q)}&fields=files(id,name)`;
+        const res = await fetch(searchUrl, {
+            headers: { 'Authorization': `Bearer ${this.accessToken}` }
+        });
+
+        if (!res.ok) {
+            const details = await this.extractGoogleError(res);
+            throw new Error(`Failed to query Google Drive root folder: ${details}`);
+        }
+
+        const data = await res.json();
+        const folders = data.files || [];
+
+        if (folders.length > 0) {
+            this.rootFolderId = folders[0].id;
+        } else {
+            const createRes = await fetch(`/google-api/drive/v3/files`, {
+                method: 'POST',
+                headers: {
+                    'Authorization': `Bearer ${this.accessToken}`,
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({
+                    name: 'Kollektiv',
+                    mimeType: 'application/vnd.google-apps.folder',
+                    parents: ['root']
+                })
+            });
+
+            if (!createRes.ok) {
+                const details = await this.extractGoogleError(createRes);
+                throw new Error(`Failed to create Kollektiv root folder in Google Drive: ${details}`);
+            }
+
+            const newFolder = await createRes.json();
+            this.rootFolderId = newFolder.id;
+        }
+
+        this.pathCache.clear();
+
+        // Prefetch root folder children into cache
+        if (this.rootFolderId) {
+            try {
+                const qRoot = `'${this.rootFolderId}' in parents and trashed = false`;
+                const qUrl = `/google-api/drive/v3/files?q=${encodeURIComponent(qRoot)}&fields=files(id,name,mimeType)&pageSize=1000`;
+                const rootRes = await fetch(qUrl, {
+                    headers: { 'Authorization': `Bearer ${this.accessToken}` }
+                });
+                if (rootRes.ok) {
+                    const rootData = await rootRes.json();
+                    for (const f of (rootData.files || [])) {
+                        this.pathCache.set(f.name, { id: f.id, mimeType: f.mimeType });
+                    }
+                }
+            } catch (e) {
+                console.warn("Failed to prefill root cache:", e);
+            }
+        }
+    }
+
+    private async resolvePath(filePath: string, createIfMissing: boolean = false): Promise<string | null> {
+        if (!this.rootFolderId) {
+            await this.ensureRootFolder();
+        }
+        if (!this.rootFolderId) return null;
+
+        const cleanPath = filePath.replace(/\\/g, '/').replace(/^\/+|\/+$/g, '');
+        if (cleanPath === '') return this.rootFolderId;
+
+        if (this.pathCache.has(cleanPath)) {
+            return this.pathCache.get(cleanPath)!.id;
+        }
+
+        const segments = cleanPath.split('/');
+        let currentParentId = this.rootFolderId;
+        let currentPath = '';
+
+        for (let i = 0; i < segments.length; i++) {
+            const name = segments[i];
+            if (name === '') continue;
+            
+            currentPath = currentPath ? `${currentPath}/${name}` : name;
+            const isLast = (i === segments.length - 1);
+            const mimeTypeFilter = isLast ? "" : " and mimeType = 'application/vnd.google-apps.folder'";
+
+            if (this.pathCache.has(currentPath)) {
+                currentParentId = this.pathCache.get(currentPath)!.id;
+                continue;
+            }
+
+            const q = `name = '${name}' and '${currentParentId}' in parents and trashed = false${mimeTypeFilter}`;
+            const url = `/google-api/drive/v3/files?q=${encodeURIComponent(q)}&fields=files(id,name,mimeType)`;
+            const res = await fetch(url, {
+                headers: { 'Authorization': `Bearer ${this.accessToken}` }
+            });
+
+            if (!res.ok) {
+                const details = await this.extractGoogleError(res);
+                throw new Error(`GDrive resolve path segment failed: ${details}`);
+            }
+
+            const data = await res.json();
+            const files = data.files || [];
+
+            if (files.length > 0) {
+                currentParentId = files[0].id;
+                this.pathCache.set(currentPath, { id: files[0].id, mimeType: files[0].mimeType });
+            } else {
+                if (createIfMissing) {
+                    const isFolder = !isLast;
+                    const creationBody = {
+                        name: name,
+                        parents: [currentParentId],
+                        mimeType: isFolder ? 'application/vnd.google-apps.folder' : undefined
+                    };
+                    const createRes = await fetch(`/google-api/drive/v3/files`, {
+                        method: 'POST',
+                        headers: {
+                            'Authorization': `Bearer ${this.accessToken}`,
+                            'Content-Type': 'application/json'
+                        },
+                        body: JSON.stringify(creationBody)
+                    });
+                    if (!createRes.ok) {
+                        const details = await this.extractGoogleError(createRes);
+                        throw new Error(`GDrive failed to create ${name}: ${details}`);
+                    }
+                    const newFile = await createRes.json();
+                    currentParentId = newFile.id;
+                    this.pathCache.set(currentPath, { 
+                        id: newFile.id, 
+                        mimeType: isFolder ? 'application/vnd.google-apps.folder' : 'application/octet-stream' 
+                    });
+                } else {
+                    return null;
+                }
+            }
+        }
+
+        return currentParentId;
+    }
+
+    async initialize(settings: LLMSettings, _auth: AuthContextType): Promise<boolean> {
+        this.lastError = null;
+        this.storageProvider = settings.storageProvider || 'local';
+        this.accessToken = settings.googleIdentity?.isConnected ? (settings.googleIdentity.accessToken || null) : null;
+
+        if (this.storageProvider === 'drive') {
+            if (!this.accessToken) {
+                this.lastError = "Google Client access token is missing. Please reconnect.";
+                this.isInitialized = false;
+                return false;
+            }
+            try {
+                await this.ensureRootFolder();
+                this.appDirectoryName = "Google Drive (Kollektiv)";
+                this.isInitialized = true;
+                return true;
+            } catch (e: any) {
+                console.error("Failed to initialize Google Drive storage:", e);
+                this.lastError = e?.message || String(e);
+                this.isInitialized = false;
+                return false;
+            }
+        }
+
+        if (this.isInitialized && this.appDirHandle) return true;
         if (this.initPromise) return this.initPromise;
 
         this.initPromise = (async () => {
@@ -73,6 +333,10 @@ class LocalFileSystemManager implements IFileSystemManager {
     }
 
     public async requestExistingPermission(): Promise<boolean> {
+        if (this.storageProvider === 'drive') {
+            return this.isInitialized && !!this.rootFolderId;
+        }
+
         try {
             const handle = await getHandle<FileSystemDirectoryHandle>('app-data-dir');
             if (handle && (await this.verifyPermission(handle, true))) {
@@ -88,6 +352,9 @@ class LocalFileSystemManager implements IFileSystemManager {
     }
 
     public isDirectorySelected(): boolean {
+        if (this.storageProvider === 'drive') {
+            return this.isInitialized && !!this.rootFolderId;
+        }
         return this.isInitialized && !!this.appDirHandle;
     }
 
@@ -104,14 +371,6 @@ class LocalFileSystemManager implements IFileSystemManager {
             }
             return null;
         }
-
-        /* 
-        // Removed for AI Studio Preview compatibility
-        if ((window as any).self !== (window as any).top) {
-            (window as any).alert("This application must be opened in its own browser tab to access the local file system.");
-            return null;
-        }
-        */
         
         try {
             const handle = await (window as any).showDirectoryPicker({ id: 'kollektiv-app-data-dir', mode: 'readwrite' });
@@ -120,6 +379,7 @@ class LocalFileSystemManager implements IFileSystemManager {
                 this.appDirHandle = handle;
                 this.appDirectoryName = handle.name;
                 this.isInitialized = true;
+                this.storageProvider = 'local';
                 return handle;
             }
         } catch (err) {
@@ -138,6 +398,40 @@ class LocalFileSystemManager implements IFileSystemManager {
     }
     
     public async saveFile(filePath: string, content: Blob): Promise<string> {
+        if (this.storageProvider === 'drive') {
+            try {
+                if (!this.accessToken) throw new Error("Google access token missing.");
+                const fileId = await this.resolvePath(filePath, true);
+                if (!fileId) throw new Error(`Could not resolve or create Google Drive file at: ${filePath}`);
+
+                const uploadUrl = `/google-api/upload/drive/v3/files/${fileId}?uploadType=media`;
+                const res = await fetch(uploadUrl, {
+                    method: 'PATCH',
+                    headers: {
+                        'Authorization': `Bearer ${this.accessToken}`,
+                        'Content-Type': content.type || 'application/octet-stream'
+                    },
+                    body: content
+                });
+
+                if (!res.ok) {
+                    throw new Error(`Failed to upload content to files/${fileId}: ${res.statusText}`);
+                }
+
+                if (typeof caches !== 'undefined') {
+                    try {
+                        const cache = await caches.open('kollektiv-drive-cache');
+                        await cache.delete(`/google-api/drive/v3/files/${fileId}?alt=media`);
+                    } catch(e) {}
+                }
+
+                return filePath;
+            } catch (e) {
+                console.error("saveFile error in Google Drive:", e);
+                throw e;
+            }
+        }
+
         try {
             const rootHandle = await this.getHandle();
             const segments = filePath.replace(/\\/g, '/').split('/');
@@ -175,6 +469,44 @@ class LocalFileSystemManager implements IFileSystemManager {
     }
     
     public async getFileAsBlob(filePath: string): Promise<Blob | null> {
+        if (this.storageProvider === 'drive') {
+            try {
+                if (!this.accessToken) return null;
+                const fileId = await this.resolvePath(filePath, false);
+                if (!fileId) return null;
+
+                const downloadUrl = `/google-api/drive/v3/files/${fileId}?alt=media`;
+                
+                if (typeof caches !== 'undefined') {
+                    try {
+                        const cache = await caches.open('kollektiv-drive-cache');
+                        const cachedRes = await cache.match(downloadUrl);
+                        if (cachedRes) {
+                            return await cachedRes.blob();
+                        }
+                    } catch(e) {}
+                }
+
+                const res = await fetch(downloadUrl, {
+                    headers: { 'Authorization': `Bearer ${this.accessToken}` }
+                });
+
+                if (!res.ok) return null;
+                
+                if (typeof caches !== 'undefined') {
+                    try {
+                        const cache = await caches.open('kollektiv-drive-cache');
+                        await cache.put(downloadUrl, res.clone());
+                    } catch(e) {}
+                }
+
+                return await res.blob();
+            } catch (e) {
+                console.error("getFileAsBlob error for", filePath, e);
+                return null;
+            }
+        }
+
         try {
             const rootHandle = await this.getHandle();
             const segments = filePath.replace(/\\/g, '/').split('/');
@@ -194,6 +526,34 @@ class LocalFileSystemManager implements IFileSystemManager {
     }
     
     public async deleteFile(filePath: string): Promise<void> {
+        if (this.storageProvider === 'drive') {
+            try {
+                if (!this.accessToken) return;
+                const fileId = await this.resolvePath(filePath, false);
+                if (!fileId) return;
+
+                const deleteUrl = `/google-api/drive/v3/files/${fileId}`;
+                const res = await fetch(deleteUrl, {
+                    method: 'DELETE',
+                    headers: { 'Authorization': `Bearer ${this.accessToken}` }
+                });
+
+                if (res.ok) {
+                    const cleanPath = filePath.replace(/\\/g, '/').replace(/^\/+|\/+$/g, '');
+                    this.pathCache.delete(cleanPath);
+                    if (typeof caches !== 'undefined') {
+                        try {
+                            const cache = await caches.open('kollektiv-drive-cache');
+                            await cache.delete(`/google-api/drive/v3/files/${fileId}?alt=media`);
+                        } catch(e) {}
+                    }
+                }
+            } catch (e) {
+                console.error("deleteFile error for", filePath, e);
+            }
+            return;
+        }
+
         try {
             const rootHandle = await this.getHandle();
             const segments = filePath.replace(/\\/g, '/').split('/');
@@ -210,6 +570,35 @@ class LocalFileSystemManager implements IFileSystemManager {
     }
 
     public async reset(): Promise<void> {
+        if (this.storageProvider === 'drive') {
+            try {
+                if (!this.accessToken) return;
+                if (!this.rootFolderId) await this.ensureRootFolder();
+                if (!this.rootFolderId) return;
+
+                const q = `'${this.rootFolderId}' in parents and trashed = false`;
+                const url = `/google-api/drive/v3/files?q=${encodeURIComponent(q)}&fields=files(id)`;
+                const res = await fetch(url, {
+                    headers: { 'Authorization': `Bearer ${this.accessToken}` }
+                });
+                if (!res.ok) return;
+
+                const data = await res.json();
+                const files = data.files || [];
+
+                for (const file of files) {
+                    await fetch(`/google-api/drive/v3/files/${file.id}`, {
+                        method: 'DELETE',
+                        headers: { 'Authorization': `Bearer ${this.accessToken}` }
+                    }).catch(() => {});
+                }
+                this.pathCache.clear();
+            } catch (e) {
+                console.error("GDrive reset error:", e);
+            }
+            return;
+        }
+
         const handle = await this.getHandle();
         for await (const key of (handle as any).keys()) {
             await handle.removeEntry(key, { recursive: true });
@@ -217,6 +606,39 @@ class LocalFileSystemManager implements IFileSystemManager {
     }
     
     public async* listDirectoryContents(path: string): AsyncGenerator<FileSystemHandle> {
+        if (this.storageProvider === 'drive') {
+            try {
+                if (!this.accessToken) return;
+                const folderId = await this.resolvePath(path, false);
+                if (!folderId) return;
+
+                const q = `'${folderId}' in parents and trashed = false`;
+                const url = `/google-api/drive/v3/files?q=${encodeURIComponent(q)}&fields=files(id,name,mimeType)`;
+                const res = await fetch(url, {
+                    headers: { 'Authorization': `Bearer ${this.accessToken}` }
+                });
+                if (!res.ok) return;
+
+                const data = await res.json();
+                const files = data.files || [];
+
+                for (const file of files) {
+                    const isFolder = file.mimeType === 'application/vnd.google-apps.folder';
+                    const childPath = path ? `${path}/${file.name}` : file.name;
+                    this.pathCache.set(childPath, { id: file.id, mimeType: file.mimeType });
+
+                    if (isFolder) {
+                        yield new DriveDirectoryHandle(file.name, file.id, childPath, this) as any;
+                    } else {
+                        yield new DriveFileHandle(file.name, file.id, childPath, this) as any;
+                    }
+                }
+            } catch (e) {
+                console.error("GDrive listDirectoryContents error for", path, e);
+            }
+            return;
+        }
+
         try {
             const rootHandle = await this.getHandle();
             let currentHandle = rootHandle;
@@ -231,12 +653,15 @@ class LocalFileSystemManager implements IFileSystemManager {
                 yield handle;
             }
         } catch (error) {
-            // Directory doesn't exist or can't be accessed - return empty
             return;
         }
     }
 
     public async calculateTotalSize(): Promise<number> {
+        if (this.storageProvider === 'drive') {
+            return 1024 * 1024;
+        }
+
         if (!this.appDirHandle) return 0;
         
         const getSizeRecursive = async (handle: FileSystemDirectoryHandle): Promise<number> => {

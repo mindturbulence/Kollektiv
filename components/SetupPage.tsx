@@ -4,8 +4,10 @@ import { motion } from 'motion/react';
 import { gsap } from 'gsap';
 import type { LLMSettings, ActiveSettingsTab, PromptCategory, YouTubeConnection, GoogleIdentityConnection } from '../types';
 import { testOllamaConnection, type OllamaTestResult } from '../services/llmService';
+import { testLlamaCppConnection, type LlamaCppTestResult } from '../services/llamacppService';
 import { fileSystemManager, createZipAndDownload } from '../utils/fileUtils';
 import { useSettings } from '../contexts/SettingsContext';
+import { getHandle } from '../utils/db';
 import { NestedCategoryManager } from './NestedCategoryManager';
 import { 
     loadCategories as loadGalleryCategoriesFS, 
@@ -190,13 +192,32 @@ const SettingRow: React.FC<{ label: string, desc?: string, children: React.React
 export const SetupPage: React.FC<SetupPageProps> = ({ 
     activeSettingsTab, setActiveSettingsTab, activeSubTab, setActiveSubTab, showGlobalFeedback, isExiting = false
 }) => {
-  const { settings: globalSettings, updateSettings, availableOllamaModels, availableOllamaCloudModels, availableHermesModels, availableOpenRouterModels, refreshOllamaModels } = useSettings();
+  const { settings: globalSettings, updateSettings, availableOllamaModels, availableOllamaCloudModels, availableHermesModels, availableOpenRouterModels, availableLlamaCppModels, refreshOllamaModels } = useSettings();
   const [settings, setSettings] = useState<LLMSettings>(globalSettings);
   const [modalFeedback, setModalFeedback] = useState<{ message: string; type: 'success' | 'error' } | null>(null);
 
   const [isTestingOllama, setIsTestingOllama] = useState(false);
   const [ollamaTestResult, setOllamaTestResult] = useState<OllamaTestResult | null>(null);
+  const [isTestingLlamaCpp, setIsTestingLlamaCpp] = useState(false);
+  const [llamacppTestResult, setLlamaCppTestResult] = useState<LlamaCppTestResult | null>(null);
   const [appDataDirectory, setAppDataDirectory] = useState<string | null>(fileSystemManager.appDirectoryName);
+  const [hasCachedHandle, setHasCachedHandle] = useState(false);
+  const [cachedDirName, setCachedDirName] = useState<string | null>(null);
+
+  useEffect(() => {
+    const checkCached = async () => {
+        try {
+            const handle = await getHandle<FileSystemDirectoryHandle>('app-data-dir');
+            if (handle && typeof handle.name === 'string') {
+                setHasCachedHandle(true);
+                setCachedDirName(handle.name);
+            }
+        } catch (e) {
+            console.warn("Error checking cached handle inside SetupPage:", e);
+        }
+    };
+    checkCached();
+  }, []);
   
   const [resetTarget, setResetTarget] = useState<'all' | null>(null);
   const [isSyncing, setIsSyncing] = useState(false);
@@ -273,11 +294,24 @@ export const SetupPage: React.FC<SetupPageProps> = ({
             accessToken: accessToken,
             connectedAt: Date.now()
           };
-          const updatedSettings = { ...settings, googleIdentity: updatedGoogle };
+          const updatedSettings = { 
+            ...settings, 
+            googleIdentity: updatedGoogle,
+            storageProvider: 'drive' as const
+          };
           setSettings(updatedSettings);
           updateSettings(updatedSettings);
+          
+          showGlobalFeedback(`Uplink confirmed. Connecting to Google Drive storage...`);
+          const success = await fileSystemManager.initialize(updatedSettings, {} as any);
+          if (success) {
+            setAppDataDirectory(fileSystemManager.appDirectoryName);
+            await verifyAndRepairFiles(() => {}, updatedSettings);
+            showGlobalFeedback(`Uplink confirmed & GDrive synced for ${user.email}`);
+          } else {
+            showGlobalFeedback(`Uplink confirmed for ${user.email} but failed to initialize GDrive storage folder.`, true);
+          }
           playSuccessChime();
-          showGlobalFeedback(`Uplink confirmed for ${user.email}`);
       }
     } catch (error: any) {
       console.error("Auth Fetch Error:", error);
@@ -296,7 +330,7 @@ export const SetupPage: React.FC<SetupPageProps> = ({
           if ((window as any).google?.accounts?.oauth2) {
               tokenClientRef.current = (window as any).google.accounts.oauth2.initTokenClient({
                   client_id: clientId,
-                  scope: 'https://www.googleapis.com/auth/youtube.upload https://www.googleapis.com/auth/youtube.readonly https://www.googleapis.com/auth/userinfo.email https://www.googleapis.com/auth/userinfo.profile openid',
+                  scope: 'https://www.googleapis.com/auth/youtube.upload https://www.googleapis.com/auth/youtube.readonly https://www.googleapis.com/auth/drive https://www.googleapis.com/auth/userinfo.email https://www.googleapis.com/auth/userinfo.profile openid',
                   callback: (response: any) => {
                       if (authTimeoutRef.current) {
                         window.clearTimeout(authTimeoutRef.current);
@@ -432,6 +466,21 @@ export const SetupPage: React.FC<SetupPageProps> = ({
     setIsTestingOllama(false);
   };
 
+  const handleTestLlamaCppConnection = async () => {
+    setIsTestingLlamaCpp(true);
+    setLlamaCppTestResult(null);
+    try {
+        const url = settings.llamacppBaseUrl || 'http://localhost:8080';
+        const apiKey = settings.llamacppApiKey;
+        const result = await testLlamaCppConnection(url, apiKey);
+        setLlamaCppTestResult(result);
+        if (result.success) refreshOllamaModels();
+    } catch(e) {
+        setLlamaCppTestResult({ success: false, message: "CRITICAL PING FAILURE" });
+    }
+    setIsTestingLlamaCpp(false);
+  };
+
   const handleIntegrityCheck = async () => {
     if (!fileSystemManager.isDirectorySelected()) {
         showGlobalFeedback("Please select a storage directory first.", true);
@@ -501,26 +550,120 @@ export const SetupPage: React.FC<SetupPageProps> = ({
   const currentOrigin = typeof window !== 'undefined' ? window.location.origin : 'unknown';
   const localModelOptions = useMemo(() => availableOllamaModels.map(m => ({ label: m, value: m })), [availableOllamaModels]);
   const cloudModelOptions = useMemo(() => availableOllamaCloudModels.map(m => ({ label: m, value: m })), [availableOllamaCloudModels]);
+  const llamacppModelOptions = useMemo(() => (availableLlamaCppModels.length > 0 ? availableLlamaCppModels : ['default']).map(m => ({ label: m, value: m })), [availableLlamaCppModels]);
 
     const renderAppSettings = () => {
         switch(activeSubTab) {
             case 'general':
                 return (
                     <div className="flex flex-col animate-fade-in">
-                        <SettingRow label="Storage Vault" desc="Current active directory for all local generative artifacts.">
-                             <button onClick={async () => {
-                                 audioService.playClick();
-                                 const handle = await fileSystemManager.selectAndSetAppDataDirectory();
-                                 if (handle) {
-                                     setAppDataDirectory(fileSystemManager.appDirectoryName);
-                                     showFeedback('Vault Connected');
-                                 }
-                             }} className="form-btn px-6">
-                                {appDataDirectory ? `PATH: ${appDataDirectory}` : 'CONNECT DIRECTORY'}
-                             </button>
+                        <SettingRow label="Storage Provider" desc="Choose between local sandbox directory and cloud Google Drive syncing.">
+                            <select
+                                value={settings.storageProvider || 'local'}
+                                onChange={async (e) => {
+                                    audioService.playClick();
+                                    const val = e.target.value as 'local' | 'drive';
+                                    const updatedSettings = { ...settings, storageProvider: val };
+                                    setSettings(updatedSettings);
+                                    updateSettings(updatedSettings);
+
+                                    if (val === 'drive') {
+                                        if (!settings.googleIdentity?.isConnected) {
+                                            showGlobalFeedback("Google credentials required for GDrive cloud sync. Please authenticate.");
+                                            handleAuthConnect('google');
+                                        } else {
+                                            const success = await fileSystemManager.initialize(updatedSettings, {} as any);
+                                            if (success) {
+                                                setAppDataDirectory(fileSystemManager.appDirectoryName);
+                                                showFeedback('Drive Storage Initialized. Syncing databases...');
+                                                await verifyAndRepairFiles(() => {}, updatedSettings);
+                                                showFeedback('Drive Storage Synced with GDrive.');
+                                            } else {
+                                                showGlobalFeedback("Failed to sync with Google Drive folder. Please retry login.", true);
+                                            }
+                                        }
+                                    } else {
+                                        // Initialize with local settings to reset state & reconnect handle
+                                        await fileSystemManager.initialize(updatedSettings, {} as any);
+                                        setAppDataDirectory(fileSystemManager.appDirectoryName);
+                                        showFeedback("Switched to Local Directory Mode.");
+                                    }
+                                }}
+                                className="form-select select select-bordered max-w-xs font-mono font-bold text-xs uppercase"
+                            >
+                                <option value="local">LOCAL STORAGE (BROWSER DIRECTORY)</option>
+                                <option value="drive">GOOGLE DRIVE (CLOUD SECURE SYNC)</option>
+                            </select>
                         </SettingRow>
+
+                        {settings.storageProvider === 'drive' ? (
+                            <SettingRow label="Google Drive Sync" desc={settings.googleIdentity?.isConnected ? `Connected as: ${settings.googleIdentity.email}` : "Credentials required to sync with cloud folders."}>
+                                {settings.googleIdentity?.isConnected ? (
+                                    <div className="flex items-center space-x-2">
+                                        <div className="text-[10px] font-black tracking-widest text-primary font-mono bg-primary/10 px-3 py-1.5 uppercase">
+                                            ACTIVE_SYNC
+                                        </div>
+                                        <button
+                                            onClick={() => {
+                                                audioService.playClick();
+                                                handleGoogleDisconnect();
+                                            }}
+                                            className="form-btn bg-error/10 hover:bg-error/20 border-error/20 hover:border-error/40 text-error px-4 text-xs font-mono font-bold uppercase"
+                                        >
+                                            DISCONNECT
+                                        </button>
+                                    </div>
+                                ) : (
+                                    <button
+                                        onClick={() => {
+                                            audioService.playClick();
+                                            handleAuthConnect('google');
+                                        }}
+                                        className="form-btn form-btn-primary px-6 font-mono font-bold text-xs"
+                                    >
+                                        AUTHORIZE DRIVE
+                                    </button>
+                                )}
+                            </SettingRow>
+                        ) : (
+                            <SettingRow label="Storage Vault" desc="Current active directory for all local generative artifacts.">
+                                <div className="flex flex-col md:flex-row items-stretch md:items-center gap-2">
+                                     {appDataDirectory ? (
+                                         <span className="text-xs font-mono font-bold px-4 py-2 border border-white/10 bg-white/5 flex items-center shrink-0">
+                                             PATH: {appDataDirectory}
+                                         </span>
+                                     ) : hasCachedHandle ? (
+                                         <button onClick={async () => {
+                                             audioService.playClick();
+                                             const success = await fileSystemManager.requestExistingPermission();
+                                             if (success) {
+                                                 setAppDataDirectory(fileSystemManager.appDirectoryName);
+                                                 showFeedback('Vault Reconnected');
+                                             } else {
+                                                 showGlobalFeedback('Permission request failed. Choose folder manually.', true);
+                                             }
+                                         }} className="form-btn bg-primary/10 hover:bg-primary/20 text-primary border-primary/30 px-6 font-mono font-bold text-xs uppercase">
+                                             RECONNECT VAULT ({cachedDirName || 'CACHED'})
+                                         </button>
+                                     ) : null}
+                                     <button onClick={async () => {
+                                         audioService.playClick();
+                                         const handle = await fileSystemManager.selectAndSetAppDataDirectory();
+                                         if (handle) {
+                                             setAppDataDirectory(fileSystemManager.appDirectoryName);
+                                             showFeedback('Vault Connected');
+                                             setHasCachedHandle(true);
+                                             setCachedDirName(handle.name);
+                                         }
+                                     }} className="form-btn px-6 font-mono font-bold text-xs">
+                                        {appDataDirectory ? 'CHANGE VAULT' : 'CHOOSE FOLDER'}
+                                     </button>
+                                 </div>
+                            </SettingRow>
+                        )}
+
                         <SettingRow label="Cold Reboot" desc="Clear application cache and force-reload the interface.">
-                             <button onClick={() => { audioService.playClick(); setIsRestartModalOpen(true); }} className="form-btn bg-warning text-warning-content border-warning px-6">RELOAD ENGINE</button>
+                             <button onClick={() => { audioService.playClick(); setIsRestartModalOpen(true); }} className="form-btn bg-warning text-warning-content border-warning px-6 font-mono font-bold text-xs">RELOAD ENGINE</button>
                         </SettingRow>
                     </div>
                 );
@@ -718,6 +861,12 @@ export const SetupPage: React.FC<SetupPageProps> = ({
                                 >
                                     OpenRouter
                                 </div>
+                                <div 
+                                    className={`tab-item ${settings.activeLLM === 'llamacpp' ? 'tab-item-active' : ''}`}
+                                    onClick={() => { audioService.playClick(); handleSettingsChange('activeLLM', 'llamacpp'); }}
+                                >
+                                    Llama.cpp
+                                </div>
                              </div>
                         </SettingRow>
 
@@ -821,6 +970,50 @@ export const SetupPage: React.FC<SetupPageProps> = ({
                                     />
                                 </SettingRow>
                             </div>
+                        )}
+                        {settings.activeLLM === 'llamacpp' && (
+                             <div className="animate-fade-in flex flex-col bg-transparent">
+                                <SettingRow label="Host Address" desc="Local llama.cpp (Default: http://localhost:8080).">
+                                     <div className="space-y-4">
+                                        <div className="flex w-full md:w-[620px]">
+                                            <input type="text" value={settings.llamacppBaseUrl || ''} onChange={(e) => handleSettingsChange('llamacppBaseUrl', (e.currentTarget as any).value)} className="form-input flex-1" />
+                                            <button onClick={() => { audioService.playClick(); handleTestLlamaCppConnection(); }} disabled={isTestingLlamaCpp} className="form-btn px-4 border-l-0">{isTestingLlamaCpp ? '...' : 'PING'}</button>
+                                        </div>
+                                        {llamacppTestResult && (
+                                            <div className={`flex items-center gap-2 text-[9px] font-black uppercase tracking-widest px-3 py-1.5 border ${llamacppTestResult.success ? 'bg-success/5 border-success/30 text-success' : 'bg-error/5 border-error/30 text-error'} animate-fade-in md:w-[620px]`}>
+                                                <span className={`w-1.5 h-1.5 rounded-full ${llamacppTestResult.success ? 'bg-success' : 'bg-error'} animate-pulse`}></span>
+                                                {llamacppTestResult.message}
+                                            </div>
+                                        )}
+                                         <div className="p-4 bg-info/5 border border-info/20 rounded-none space-y-3 md:w-[620px]">
+                                            <h5 className="text-[10px] font-black uppercase tracking-widest text-info flex items-center gap-2">
+                                                <InformationCircleIcon className="w-3.5 h-3.5" /> CORS POLICY GUIDE
+                                             </h5>
+                                            <p className="text-[10px] font-bold uppercase tracking-tight text-base-content/60 leading-relaxed">
+                                                To allow web access, ensure llama.cpp is compiled and running with the <code className="text-primary px-1 bg-base-100">--cors</code> flag.
+                                            </p>
+                                        </div>
+                                    </div>
+                                </SettingRow>
+                                <SettingRow label="Llama.cpp API Key" desc="Ensure to insert custom authorize bearer token key if your llama.cpp server requires authentication.">
+                                    <input 
+                                        type="password" 
+                                        value={settings.llamacppApiKey || ''} 
+                                        onChange={(e) => handleSettingsChange('llamacppApiKey', e.target.value)} 
+                                        className="form-input w-full md:w-[620px]" 
+                                        placeholder="SECRET_API_TOKEN"
+                                    />
+                                </SettingRow>
+                                <SettingRow label="Model Tag" desc="The model identification string on your llama.cpp server (e.g. default, custom-model).">
+                                    <AutocompleteSelect 
+                                        value={settings.llamacppModel || 'default'} 
+                                        onChange={(v) => handleSettingsChange('llamacppModel', v)} 
+                                        options={llamacppModelOptions} 
+                                        placeholder="SELECT LLAMACPP MODEL..." 
+                                        className="w-full md:w-[620px]"
+                                    />
+                                </SettingRow>
+                             </div>
                         )}
                     </div>
                 );
