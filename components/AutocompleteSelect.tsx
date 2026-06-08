@@ -28,7 +28,13 @@ const AutocompleteSelect: React.FC<AutocompleteSelectProps> = ({
 }) => {
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
-  const [dropdownPos, setDropdownPos] = useState({ top: 0, left: 0, width: 0 });
+  const [dropdownPos, setDropdownPos] = useState<{
+    top: number | 'auto';
+    bottom: number | 'auto';
+    left: number;
+    width: number;
+    isUpward: boolean;
+  }>({ top: 0, bottom: 'auto', left: 0, width: 0, isUpward: false });
   const wrapperRef = useRef<HTMLDivElement>(null);
   const dropdownRef = useRef<HTMLDivElement>(null);
   const scrollerRef = useRef<HTMLUListElement>(null);
@@ -49,11 +55,30 @@ const AutocompleteSelect: React.FC<AutocompleteSelectProps> = ({
   const updatePosition = () => {
     if (wrapperRef.current) {
       const rect = wrapperRef.current.getBoundingClientRect();
-      setDropdownPos({
-        top: rect.bottom,
-        left: rect.left,
-        width: rect.width
-      });
+      const windowHeight = window.innerHeight;
+      
+      const spaceBelow = windowHeight - rect.bottom;
+      const spaceAbove = rect.top;
+      
+      const requiresUpward = spaceBelow < 250 && spaceAbove > spaceBelow;
+
+      if (requiresUpward) {
+        setDropdownPos({
+          top: 'auto',
+          bottom: windowHeight - rect.top,
+          left: rect.left,
+          width: rect.width,
+          isUpward: true
+        });
+      } else {
+        setDropdownPos({
+          top: rect.bottom,
+          bottom: 'auto',
+          left: rect.left,
+          width: rect.width,
+          isUpward: false
+        });
+      }
     }
   };
 
@@ -106,14 +131,15 @@ const AutocompleteSelect: React.FC<AutocompleteSelectProps> = ({
   const dropdownMenu = isDropdownOpen ? (
     <div 
       ref={dropdownRef}
-      className="fixed z-[12000] mt-1 bg-base-100 border border-base-300 shadow-2xl rounded-none flex flex-col overflow-hidden animate-fade-in"
+      className={`fixed z-[12000] flex ${dropdownPos.isUpward ? 'flex-col-reverse' : 'flex-col'} overflow-hidden animate-fade-in bg-base-100 border border-base-300 shadow-2xl rounded-none ${dropdownPos.isUpward ? 'mb-1' : 'mt-1'}`}
       style={{ 
-        top: `${dropdownPos.top}px`, 
+        top: dropdownPos.top !== 'auto' ? `${dropdownPos.top}px` : 'auto', 
+        bottom: dropdownPos.bottom !== 'auto' ? `${dropdownPos.bottom}px` : 'auto', 
         left: `${dropdownPos.left}px`, 
         width: `${dropdownPos.width}px` 
       }}
     >
-      <div className="p-2 border-b border-base-300 bg-base-100 flex items-center gap-2">
+      <div className={`p-2 border-base-300 bg-base-100 flex items-center gap-2 ${dropdownPos.isUpward ? 'border-t' : 'border-b'}`}>
         <SearchIcon className="w-3.5 h-3.5 opacity-30" />
         <input
           autoFocus

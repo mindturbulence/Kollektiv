@@ -534,13 +534,51 @@ export const SKIN_TEXTURES = [
     'Freckled',
     'Weathered / Wrinkled',
     'Pores / Realistic Texture',
+    'Visible Pores',
+    'Micro-Pores',
+    'Peach Fuzz / Vellus Hair',
     'Tanned',
     'Pale / Porcelain',
     'Scarred',
     'Tattooed',
     'Sweaty / Glistening',
     'Dirty / Gritty',
-    'Vitiligo Patterns'
+    'Vitiligo Patterns',
+    'Sunburst Freckles',
+    'Rosacea / Redness',
+    'Oily / Shiny',
+    'Matte Finish',
+    'Pockmarks',
+    'Acne / Blemishes',
+    'Subsurface Scattering / Translucent',
+    'Micro-Pigmentation',
+    'Veins Visible',
+    'Age Spots / Liver Spots',
+    'Birthmarks',
+    'Stretch Marks',
+    'Cellulite',
+    'Goosebumps'
+];
+
+export const REALISM_OPTIONS = [
+    'Hyper-Realistic',
+    'Photorealistic',
+    'Ultra-Detailed',
+    'Unreal Engine 5 Render',
+    'Octane Render',
+    'Raw Photo',
+    'Candid Photography',
+    'Unedited',
+    'Documentary Style',
+    'Polaroid',
+    'Amateur Photography',
+    'Cinematic Realism',
+    'Scientific Photography',
+    'Micro-detailed',
+    'Imperfection / Flawed Realism',
+    'Life-like',
+    'Natural Lighting',
+    'Unfiltered'
 ];
 
 export const CLOTHING_STYLES = [
@@ -559,4 +597,23 @@ export const CLOTHING_STYLES = [
     'Tactical / Military Gear',
     'Summer / Beachwear',
     'Winter / Heavy Coat'
+];
+
+export const VIDEO_EFFECTS = [
+    'Time-lapse',
+    'Hyper-lapse',
+    'Slow Motion (Slo-mo)',
+    'Fast Motion',
+    'Reverse Motion',
+    'Glitch Effect',
+    'VHS Style',
+    'Cinematic Grain',
+    'Color Grading',
+    'Light Leaks',
+    'Double Exposure',
+    'Bokeh Bloom',
+    'Anamorphic Streak',
+    'Motion Blur',
+    'Freeze Frame',
+    'Ken Burns Effect'
 ];

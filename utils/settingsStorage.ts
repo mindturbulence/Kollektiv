@@ -7,27 +7,43 @@ const SETTINGS_KEY = 'kollektivSettingsV4';
 
 export const defaultLLMSettings: LLMSettings = {
   // LLM Provider Settings
+  geminiApiKey: '',
   llmModel: 'gemini-3-flash-preview',
   activeLLM: 'gemini',
   ollamaBaseUrl: 'http://localhost:11434',
   ollamaModel: 'llama3',
   
-  // OpenClaw Settings
-  openclawBaseUrl: 'http://localhost:18789',
-  openclawModel: 'ollama/kimi-k2.5:cloud',
-  openclawApiKey: '',
+  // OpenRouter Settings
+  openrouterApiKey: '',
+  openrouterModel: 'openrouter/auto',
+  
+  // Hermes Settings
+  hermesBaseUrl: 'http://localhost:18789',
+  hermesModel: 'hermes-agent',
+  hermesApiKey: '',
+
+  // Llama.cpp Settings
+  llamacppBaseUrl: 'http://localhost:8080',
+  llamacppModel: 'default',
+  llamacppApiKey: '',
   
   // Prompt & Token Tracking
   masterRolePrompt: 'You are an expert AI prompt engineer and creative director. You excel at extracting precise visual, atmospheric, and conceptual details.',
   geminiTokenUsage: { used: 0, limit: 1000000 },
   ollamaTokenUsage: { used: 0, limit: 500000 },
-  openclawTokenUsage: { used: 0, limit: 500000 },
+  hermesTokenUsage: { used: 0, limit: 500000 },
+  openrouterTokenUsage: { used: 0, limit: 1000000 },
+  llamacppTokenUsage: { used: 0, limit: 500000 },
 
   // Ollama Cloud Settings
   ollamaCloudBaseUrl: 'https://your-remote-ollama.com',
   ollamaCloudModel: 'llama3',
   ollamaCloudApiKey: '',
   ollamaCloudUseGoogleAuth: false,
+
+  // MCP Server Settings
+  mcpServerUrl: 'http://localhost:3010',
+  mcpEnabled: false,
   
   // Theme Settings
   activeThemeMode: 'dark',
@@ -62,7 +78,15 @@ export const defaultLLMSettings: LLMSettings = {
   },
   googleIdentity: {
     isConnected: false
-  }
+  },
+  storageProvider: 'local',
+  driveFolderId: '',
+  driveFolderName: '',
+  
+  // Gallery
+  convertImageToJpgLocal: false,
+  convertImageToJpgDrive: true,
+  jpgCompressionQuality: 0.9
 };
 
 
@@ -104,9 +128,17 @@ export const loadLLMSettings = (): LLMSettings => {
                 ...defaultLLMSettings.ollamaTokenUsage!,
                 ...(parsed.ollamaTokenUsage || {})
             },
-            openclawTokenUsage: {
-                ...defaultLLMSettings.openclawTokenUsage!,
-                ...(parsed.openclawTokenUsage || {})
+            hermesTokenUsage: {
+                ...defaultLLMSettings.hermesTokenUsage!,
+                ...(parsed.hermesTokenUsage || {})
+            },
+            openrouterTokenUsage: {
+                ...defaultLLMSettings.openrouterTokenUsage!,
+                ...(parsed.openrouterTokenUsage || {})
+            },
+            llamacppTokenUsage: {
+                ...defaultLLMSettings.llamacppTokenUsage!,
+                ...(parsed.llamacppTokenUsage || {})
             },
             youtube: {
               ...defaultLLMSettings.youtube,
@@ -115,7 +147,13 @@ export const loadLLMSettings = (): LLMSettings => {
             googleIdentity: {
                 ...defaultLLMSettings.googleIdentity,
                 ...(parsed.googleIdentity || {})
-            }
+            },
+            storageProvider: parsed.storageProvider || 'local',
+            driveFolderId: parsed.driveFolderId ?? '',
+            driveFolderName: parsed.driveFolderName ?? '',
+            convertImageToJpgLocal: parsed.convertImageToJpgLocal ?? defaultLLMSettings.convertImageToJpgLocal,
+            convertImageToJpgDrive: parsed.convertImageToJpgDrive ?? defaultLLMSettings.convertImageToJpgDrive,
+            jpgCompressionQuality: parsed.jpgCompressionQuality ?? defaultLLMSettings.jpgCompressionQuality
         };
 
         if (merged.darkTheme === 'lofi') {
@@ -142,7 +180,7 @@ export const resetAllSettings = async () => {
     await clearAllHandles();
 };
 
-export const trackTokenUsage = (provider: 'gemini' | 'ollama' | 'ollama_cloud' | 'openclaw', actualTokens: number): void => {
+export const trackTokenUsage = (provider: 'gemini' | 'ollama' | 'ollama_cloud' | 'hermes' | 'openrouter' | 'llamacpp', actualTokens: number): void => {
     const settings = loadLLMSettings();
 
     if (provider === 'gemini') {
@@ -152,11 +190,25 @@ export const trackTokenUsage = (provider: 'gemini' | 'ollama' | 'ollama_cloud' |
                  settings.geminiTokenUsage.used = settings.geminiTokenUsage.limit;
             }
         }
-    } else if (provider === 'openclaw') {
-        if (settings.openclawTokenUsage) {
-            settings.openclawTokenUsage.used += actualTokens;
-            if (settings.openclawTokenUsage.used > settings.openclawTokenUsage.limit) {
-                settings.openclawTokenUsage.used = settings.openclawTokenUsage.limit;
+    } else if (provider === 'hermes') {
+        if (settings.hermesTokenUsage) {
+            settings.hermesTokenUsage.used += actualTokens;
+            if (settings.hermesTokenUsage.used > settings.hermesTokenUsage.limit) {
+                settings.hermesTokenUsage.used = settings.hermesTokenUsage.limit;
+            }
+        }
+    } else if (provider === 'openrouter') {
+        if (settings.openrouterTokenUsage) {
+            settings.openrouterTokenUsage.used += actualTokens;
+            if (settings.openrouterTokenUsage.used > settings.openrouterTokenUsage.limit) {
+                settings.openrouterTokenUsage.used = settings.openrouterTokenUsage.limit;
+            }
+        }
+    } else if (provider === 'llamacpp') {
+        if (settings.llamacppTokenUsage) {
+            settings.llamacppTokenUsage.used += actualTokens;
+            if (settings.llamacppTokenUsage.used > settings.llamacppTokenUsage.limit) {
+                settings.llamacppTokenUsage.used = settings.llamacppTokenUsage.limit;
             }
         }
     } else {

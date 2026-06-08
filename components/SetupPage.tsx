@@ -4,8 +4,10 @@ import { motion } from 'motion/react';
 import { gsap } from 'gsap';
 import type { LLMSettings, ActiveSettingsTab, PromptCategory, YouTubeConnection, GoogleIdentityConnection } from '../types';
 import { testOllamaConnection, type OllamaTestResult } from '../services/llmService';
+import { testLlamaCppConnection, type LlamaCppTestResult } from '../services/llamacppService';
 import { fileSystemManager, createZipAndDownload } from '../utils/fileUtils';
 import { useSettings } from '../contexts/SettingsContext';
+import { getHandle } from '../utils/db';
 import { NestedCategoryManager } from './NestedCategoryManager';
 import { 
     loadCategories as loadGalleryCategoriesFS, 
@@ -24,8 +26,9 @@ import {
 import { resetAllSettings, defaultLLMSettings } from '../utils/settingsStorage';
 import { DAISYUI_DARK_THEMES } from '../constants';
 import ConfirmationModal from './ConfirmationModal';
-import { Cog6ToothIcon, CpuChipIcon, AppIcon, PromptIcon, PhotoIcon, FolderClosedIcon, PaintBrushIcon, DownloadIcon, LinkIcon, PlayIcon, RefreshIcon, InformationCircleIcon, UploadIcon, AlertTriangleIcon } from './icons';
-import FeedbackModal from './FeedbackModal';
+import MigrationModal from './MigrationModal';
+import { Cog6ToothIcon, CpuChipIcon, AppIcon, PromptIcon, PhotoIcon, FolderClosedIcon, PaintBrushIcon, DownloadIcon, LinkIcon, PlayIcon, RefreshIcon, InformationCircleIcon, UploadIcon, AlertTriangleIcon, GlobeIcon } from './icons';
+import FeedbackToast from './FeedbackToast';
 import { audioService } from '../services/audioService';
 import { PromptTxtImportModal } from './PromptTxtImportModal';
 import { rebuildGalleryDatabase, rebuildPromptDatabase, optimizeManifests, verifyAndRepairFiles } from '../utils/integrity';
@@ -43,7 +46,8 @@ interface SetupPageProps {
 const subMenuConfig: Record<string, { id: string; label: string, icon: React.ReactNode, description: string }[]> = {
     app: [
         { id: 'general', label: 'General', icon: <Cog6ToothIcon className="w-4 h-4" />, description: "Storage and engine lifecycle." },
-        { id: 'data', label: 'Backup & Restore', icon: <FolderClosedIcon className="w-4 h-4" />, description: "System data management." }
+        { id: 'data', label: 'Backup & Restore', icon: <FolderClosedIcon className="w-4 h-4" />, description: "System data management." },
+        { id: 'migration', label: 'Migration', icon: <UploadIcon className="w-4 h-4" />, description: "Migrate library from local to Google Drive." }
     ],
     appearance: [
         { id: 'styling', label: 'Themes & Scale', icon: <PaintBrushIcon className="w-4 h-4" />, description: "Color palettes and typography sizing." },
@@ -51,7 +55,8 @@ const subMenuConfig: Record<string, { id: string; label: string, icon: React.Rea
     ],
     integrations: [
         { id: 'llm', label: 'AI Engine', icon: <CpuChipIcon className="w-4 h-4" />, description: "AI models and local/cloud API connections." },
-        { id: 'openclaw', label: 'OpenClaw Agent', icon: <Cog6ToothIcon className="w-4 h-4" />, description: "Manage OpenClaw local/remote agent configuration." },
+        { id: 'openrouter', label: 'OpenRouter', icon: <GlobeIcon className="w-4 h-4" />, description: "Manage OpenRouter configuration." },
+        { id: 'hermes', label: 'Hermes Agent', icon: <Cog6ToothIcon className="w-4 h-4" />, description: "Manage Hermes local/remote agent configuration." },
         { id: 'google', label: 'Cloud Identity', icon: <LinkIcon className="w-4 h-4" />, description: "Link your Google account for Cloud AI." },
         { id: 'youtube', label: 'YouTube', icon: <PlayIcon className="w-4 h-4" />, description: "Manage YouTube API credentials." }
     ],
@@ -189,13 +194,32 @@ const SettingRow: React.FC<{ label: string, desc?: string, children: React.React
 export const SetupPage: React.FC<SetupPageProps> = ({ 
     activeSettingsTab, setActiveSettingsTab, activeSubTab, setActiveSubTab, showGlobalFeedback, isExiting = false
 }) => {
-  const { settings: globalSettings, updateSettings, availableOllamaModels, availableOllamaCloudModels, availableOpenClawModels, refreshOllamaModels } = useSettings();
+  const { settings: globalSettings, updateSettings, availableOllamaModels, availableOllamaCloudModels, availableHermesModels, availableOpenRouterModels, availableLlamaCppModels, refreshOllamaModels } = useSettings();
   const [settings, setSettings] = useState<LLMSettings>(globalSettings);
   const [modalFeedback, setModalFeedback] = useState<{ message: string; type: 'success' | 'error' } | null>(null);
 
   const [isTestingOllama, setIsTestingOllama] = useState(false);
   const [ollamaTestResult, setOllamaTestResult] = useState<OllamaTestResult | null>(null);
+  const [isTestingLlamaCpp, setIsTestingLlamaCpp] = useState(false);
+  const [llamacppTestResult, setLlamaCppTestResult] = useState<LlamaCppTestResult | null>(null);
   const [appDataDirectory, setAppDataDirectory] = useState<string | null>(fileSystemManager.appDirectoryName);
+  const [hasCachedHandle, setHasCachedHandle] = useState(false);
+  const [cachedDirName, setCachedDirName] = useState<string | null>(null);
+
+  useEffect(() => {
+    const checkCached = async () => {
+        try {
+            const handle = await getHandle<FileSystemDirectoryHandle>('app-data-dir');
+            if (handle && typeof handle.name === 'string') {
+                setHasCachedHandle(true);
+                setCachedDirName(handle.name);
+            }
+        } catch (e) {
+            console.warn("Error checking cached handle inside SetupPage:", e);
+        }
+    };
+    checkCached();
+  }, []);
   
   const [resetTarget, setResetTarget] = useState<'all' | null>(null);
   const [isSyncing, setIsSyncing] = useState(false);
@@ -211,6 +235,7 @@ export const SetupPage: React.FC<SetupPageProps> = ({
   const [isRestartModalOpen, setIsRestartModalOpen] = useState(false);
   const [isResetModalOpen, setIsResetModalOpen] = useState(false);
   const [isTxtImportModalOpen, setIsTxtImportModalOpen] = useState(false);
+  const [isMigrationModalOpen, setIsMigrationModalOpen] = useState(false);
   const [promptCategories, setPromptCategories] = useState<PromptCategory[]>([]);
 
   const navRefs = useRef<Record<string, HTMLAnchorElement | null>>({});
@@ -218,7 +243,6 @@ export const SetupPage: React.FC<SetupPageProps> = ({
   const lastClientIdRef = useRef<string | null>(null);
   const authModeRef = useRef<'youtube' | 'google'>('google');
   const authTimeoutRef = useRef<number | null>(null);
-
   // --- AUDIO ENGINE: SUCCESS CHIME ---
   const playSuccessChime = useCallback(() => {
     audioService.playSuccess();
@@ -272,11 +296,24 @@ export const SetupPage: React.FC<SetupPageProps> = ({
             accessToken: accessToken,
             connectedAt: Date.now()
           };
-          const updatedSettings = { ...settings, googleIdentity: updatedGoogle };
+          const updatedSettings = { 
+            ...settings, 
+            googleIdentity: updatedGoogle,
+            storageProvider: 'drive' as const
+          };
           setSettings(updatedSettings);
           updateSettings(updatedSettings);
+          
+          showGlobalFeedback(`Uplink confirmed. Connecting to Google Drive storage...`);
+          const success = await fileSystemManager.initialize(updatedSettings, {} as any);
+          if (success) {
+            setAppDataDirectory(fileSystemManager.appDirectoryName);
+            await verifyAndRepairFiles(() => {}, updatedSettings);
+            showGlobalFeedback(`Uplink confirmed & GDrive synced for ${user.email}`);
+          } else {
+            showGlobalFeedback(`Uplink confirmed for ${user.email} but failed to initialize GDrive storage folder.`, true);
+          }
           playSuccessChime();
-          showGlobalFeedback(`Uplink confirmed for ${user.email}`);
       }
     } catch (error: any) {
       console.error("Auth Fetch Error:", error);
@@ -295,7 +332,7 @@ export const SetupPage: React.FC<SetupPageProps> = ({
           if ((window as any).google?.accounts?.oauth2) {
               tokenClientRef.current = (window as any).google.accounts.oauth2.initTokenClient({
                   client_id: clientId,
-                  scope: 'https://www.googleapis.com/auth/youtube.upload https://www.googleapis.com/auth/youtube.readonly https://www.googleapis.com/auth/userinfo.email https://www.googleapis.com/auth/userinfo.profile openid',
+                  scope: 'https://www.googleapis.com/auth/youtube.upload https://www.googleapis.com/auth/youtube.readonly https://www.googleapis.com/auth/drive https://www.googleapis.com/auth/userinfo.email https://www.googleapis.com/auth/userinfo.profile openid',
                   callback: (response: any) => {
                       if (authTimeoutRef.current) {
                         window.clearTimeout(authTimeoutRef.current);
@@ -431,6 +468,21 @@ export const SetupPage: React.FC<SetupPageProps> = ({
     setIsTestingOllama(false);
   };
 
+  const handleTestLlamaCppConnection = async () => {
+    setIsTestingLlamaCpp(true);
+    setLlamaCppTestResult(null);
+    try {
+        const url = settings.llamacppBaseUrl || 'http://localhost:8080';
+        const apiKey = settings.llamacppApiKey;
+        const result = await testLlamaCppConnection(url, apiKey);
+        setLlamaCppTestResult(result);
+        if (result.success) refreshOllamaModels();
+    } catch(e) {
+        setLlamaCppTestResult({ success: false, message: "CRITICAL PING FAILURE" });
+    }
+    setIsTestingLlamaCpp(false);
+  };
+
   const handleIntegrityCheck = async () => {
     if (!fileSystemManager.isDirectorySelected()) {
         showGlobalFeedback("Please select a storage directory first.", true);
@@ -492,6 +544,27 @@ export const SetupPage: React.FC<SetupPageProps> = ({
     }
   };
 
+  const handleConfirmMigration = async () => {
+        setIsWorking(true);
+        setMaintenanceProgress(10);
+        setMaintenanceMsg("MIGRATING_TO_DRIVE...");
+        try {
+            await fileSystemManager.migrateLocalToDrive((msg) => {
+                 setMaintenanceMsg(msg);
+            });
+            setMaintenanceProgress(100);
+            showGlobalFeedback("Migration completed. You can now switch to Google Drive storage.");
+            setIsMigrationModalOpen(false);
+        } catch(e: any) {
+            console.error("Migration Error:", e);
+            showGlobalFeedback(`Migration Error: ${e.message}`, true);
+        } finally {
+            setIsWorking(false);
+            setMaintenanceProgress(0);
+            setMaintenanceMsg("");
+        }
+  };
+
   const handleMainTabClick = (tab: ActiveSettingsTab) => {
     audioService.playClick();
     setActiveSettingsTab(tab);
@@ -500,26 +573,120 @@ export const SetupPage: React.FC<SetupPageProps> = ({
   const currentOrigin = typeof window !== 'undefined' ? window.location.origin : 'unknown';
   const localModelOptions = useMemo(() => availableOllamaModels.map(m => ({ label: m, value: m })), [availableOllamaModels]);
   const cloudModelOptions = useMemo(() => availableOllamaCloudModels.map(m => ({ label: m, value: m })), [availableOllamaCloudModels]);
+  const llamacppModelOptions = useMemo(() => (availableLlamaCppModels.length > 0 ? availableLlamaCppModels : ['default']).map(m => ({ label: m, value: m })), [availableLlamaCppModels]);
 
     const renderAppSettings = () => {
         switch(activeSubTab) {
             case 'general':
                 return (
                     <div className="flex flex-col animate-fade-in">
-                        <SettingRow label="Storage Vault" desc="Current active directory for all local generative artifacts.">
-                             <button onClick={async () => {
-                                 audioService.playClick();
-                                 const handle = await fileSystemManager.selectAndSetAppDataDirectory();
-                                 if (handle) {
-                                     setAppDataDirectory(fileSystemManager.appDirectoryName);
-                                     showFeedback('Vault Connected');
-                                 }
-                             }} className="form-btn px-6">
-                                {appDataDirectory ? `PATH: ${appDataDirectory}` : 'CONNECT DIRECTORY'}
-                             </button>
+                        <SettingRow label="Storage Provider" desc="Choose between local sandbox directory and cloud Google Drive syncing.">
+                            <select
+                                value={settings.storageProvider || 'local'}
+                                onChange={async (e) => {
+                                    audioService.playClick();
+                                    const val = e.target.value as 'local' | 'drive';
+                                    const updatedSettings = { ...settings, storageProvider: val };
+                                    setSettings(updatedSettings);
+                                    updateSettings(updatedSettings);
+
+                                    if (val === 'drive') {
+                                        if (!settings.googleIdentity?.isConnected) {
+                                            showGlobalFeedback("Google credentials required for GDrive cloud sync. Please authenticate.");
+                                            handleAuthConnect('google');
+                                        } else {
+                                            const success = await fileSystemManager.initialize(updatedSettings, {} as any);
+                                            if (success) {
+                                                setAppDataDirectory(fileSystemManager.appDirectoryName);
+                                                showFeedback('Drive Storage Initialized. Syncing databases...');
+                                                await verifyAndRepairFiles(() => {}, updatedSettings);
+                                                showFeedback('Drive Storage Synced with GDrive.');
+                                            } else {
+                                                showGlobalFeedback("Failed to sync with Google Drive folder. Please retry login.", true);
+                                            }
+                                        }
+                                    } else {
+                                        // Initialize with local settings to reset state & reconnect handle
+                                        await fileSystemManager.initialize(updatedSettings, {} as any);
+                                        setAppDataDirectory(fileSystemManager.appDirectoryName);
+                                        showFeedback("Switched to Local Directory Mode.");
+                                    }
+                                }}
+                                className="form-select select select-bordered max-w-xs font-mono font-bold text-xs uppercase"
+                            >
+                                <option value="local">LOCAL STORAGE (BROWSER DIRECTORY)</option>
+                                <option value="drive">GOOGLE DRIVE (CLOUD SECURE SYNC)</option>
+                            </select>
                         </SettingRow>
+
+                        {settings.storageProvider === 'drive' ? (
+                            <SettingRow label="Google Drive Sync" desc={settings.googleIdentity?.isConnected ? `Connected as: ${settings.googleIdentity.email}` : "Credentials required to sync with cloud folders."}>
+                                {settings.googleIdentity?.isConnected ? (
+                                    <div className="flex items-center space-x-2">
+                                        <div className="text-[10px] font-black tracking-widest text-primary font-mono bg-primary/10 px-3 py-1.5 uppercase">
+                                            ACTIVE_SYNC
+                                        </div>
+                                        <button
+                                            onClick={() => {
+                                                audioService.playClick();
+                                                handleGoogleDisconnect();
+                                            }}
+                                            className="form-btn bg-error/10 hover:bg-error/20 border-error/20 hover:border-error/40 text-error px-4 text-xs font-mono font-bold uppercase"
+                                        >
+                                            DISCONNECT
+                                        </button>
+                                    </div>
+                                ) : (
+                                    <button
+                                        onClick={() => {
+                                            audioService.playClick();
+                                            handleAuthConnect('google');
+                                        }}
+                                        className="form-btn form-btn-primary px-6 font-mono font-bold text-xs"
+                                    >
+                                        AUTHORIZE DRIVE
+                                    </button>
+                                )}
+                            </SettingRow>
+                        ) : (
+                            <SettingRow label="Storage Vault" desc="Current active directory for all local generative artifacts.">
+                                <div className="flex flex-col md:flex-row items-stretch md:items-center gap-2">
+                                     {appDataDirectory ? (
+                                         <span className="text-xs font-mono font-bold px-4 py-2 border border-white/10 bg-white/5 flex items-center shrink-0">
+                                             PATH: {appDataDirectory}
+                                         </span>
+                                     ) : hasCachedHandle ? (
+                                         <button onClick={async () => {
+                                             audioService.playClick();
+                                             const success = await fileSystemManager.requestExistingPermission();
+                                             if (success) {
+                                                 setAppDataDirectory(fileSystemManager.appDirectoryName);
+                                                 showFeedback('Vault Reconnected');
+                                             } else {
+                                                 showGlobalFeedback('Permission request failed. Choose folder manually.', true);
+                                             }
+                                         }} className="form-btn bg-primary/10 hover:bg-primary/20 text-primary border-primary/30 px-6 font-mono font-bold text-xs uppercase">
+                                             RECONNECT VAULT ({cachedDirName || 'CACHED'})
+                                         </button>
+                                     ) : null}
+                                     <button onClick={async () => {
+                                         audioService.playClick();
+                                         const handle = await fileSystemManager.selectAndSetAppDataDirectory();
+                                         if (handle) {
+                                             setAppDataDirectory(fileSystemManager.appDirectoryName);
+                                             showFeedback('Vault Connected');
+                                             setHasCachedHandle(true);
+                                             setCachedDirName(handle.name);
+                                         }
+                                     }} className="form-btn px-6 font-mono font-bold text-xs">
+                                        {appDataDirectory ? 'CHANGE VAULT' : 'CHOOSE FOLDER'}
+                                     </button>
+                                 </div>
+                            </SettingRow>
+                        )}
+
                         <SettingRow label="Cold Reboot" desc="Clear application cache and force-reload the interface.">
-                             <button onClick={() => { audioService.playClick(); setIsRestartModalOpen(true); }} className="form-btn bg-warning text-warning-content border-warning px-6">RELOAD ENGINE</button>
+                             <button onClick={() => { audioService.playClick(); setIsRestartModalOpen(true); }} className="form-btn bg-warning text-warning-content border-warning px-6 font-mono font-bold text-xs">RELOAD ENGINE</button>
                         </SettingRow>
                     </div>
                 );
@@ -546,6 +713,33 @@ export const SetupPage: React.FC<SetupPageProps> = ({
                         </SettingRow>
                         <SettingRow label="Registry Purge" desc="Irreversible deletion of all settings, prompts, and media.">
                             <button onClick={() => { audioService.playClick(); setResetTarget('all'); setIsResetModalOpen(true); }} className="form-btn bg-error text-error-content border-error px-6">WIPE STORAGE</button>
+                        </SettingRow>
+                     </div>
+                 );
+            case 'migration':
+                 return (
+                     <div className="flex flex-col animate-fade-in">
+                        <SettingRow label="Local to Google Drive Migration" desc="Copies all prompts, gallery items, and settings from your Local storage to your connected Google Drive storage.">
+                             <button 
+                                onClick={async () => {
+                                    audioService.playClick();
+                                    if (!settings.googleIdentity?.isConnected) {
+                                        showGlobalFeedback("You must connect your Google Identity first.");
+                                        setActiveSubTab('general');
+                                        return;
+                                    }
+                                    if (settings.storageProvider === 'drive') {
+                                        showGlobalFeedback("Switch to Local Storage temporarily if you want to migrate data from Local to Drive.");
+                                        return;
+                                    }
+                                    setIsMigrationModalOpen(true);
+                                }} 
+                                disabled={isMigrationModalOpen}
+                                className="form-btn px-6 text-primary bg-primary/10 border-primary/20 hover:bg-primary/20"
+                            >
+                                <UploadIcon className="w-4 h-4 mr-2" />
+                                START MIGRATION
+                            </button>
                         </SettingRow>
                      </div>
                  );
@@ -679,7 +873,7 @@ export const SetupPage: React.FC<SetupPageProps> = ({
     const renderIntegrationSettings = () => {
         const host = typeof window !== 'undefined' ? window.location.host : '';
         const isCloudMode = host && !host.includes('localhost') && !host.includes('127.0.0.1');
-        const isOpenClawLocal = isCloudMode && (settings.openclawBaseUrl?.includes('localhost') || settings.openclawBaseUrl?.includes('127.0.0.1'));
+        const isHermesLocal = isCloudMode && (settings.hermesBaseUrl?.includes('localhost') || settings.hermesBaseUrl?.includes('127.0.0.1'));
 
         switch(activeSubTab) {
             case 'llm':
@@ -706,10 +900,22 @@ export const SetupPage: React.FC<SetupPageProps> = ({
                                     Cloud Ollama
                                 </div>
                                 <div 
-                                    className={`tab-item ${settings.activeLLM === 'openclaw' ? 'tab-item-active' : ''}`}
-                                    onClick={() => { audioService.playClick(); handleSettingsChange('activeLLM', 'openclaw'); }}
+                                    className={`tab-item ${settings.activeLLM === 'hermes' ? 'tab-item-active' : ''}`}
+                                    onClick={() => { audioService.playClick(); handleSettingsChange('activeLLM', 'hermes'); }}
                                 >
-                                    OpenClaw
+                                    Hermes
+                                </div>
+                                <div 
+                                    className={`tab-item ${settings.activeLLM === 'openrouter' ? 'tab-item-active' : ''}`}
+                                    onClick={() => { audioService.playClick(); handleSettingsChange('activeLLM', 'openrouter'); }}
+                                >
+                                    OpenRouter
+                                </div>
+                                <div 
+                                    className={`tab-item ${settings.activeLLM === 'llamacpp' ? 'tab-item-active' : ''}`}
+                                    onClick={() => { audioService.playClick(); handleSettingsChange('activeLLM', 'llamacpp'); }}
+                                >
+                                    Llama.cpp
                                 </div>
                              </div>
                         </SettingRow>
@@ -722,6 +928,26 @@ export const SetupPage: React.FC<SetupPageProps> = ({
                                 placeholder="You are an expert AI prompt engineer and creative director. You excel at extracting precise visual, atmospheric, and conceptual details."
                              />
                         </SettingRow>
+                        {settings.activeLLM === 'gemini' && (
+                             <div className="animate-fade-in flex flex-col bg-transparent">
+                                <SettingRow label="Gemini API Key" desc="To unlock Pro capabilities (e.g. Nano Banana, Veo Work), furnish your unique Gemini API Key.">
+                                    <input 
+                                        type="password" 
+                                        value={settings.geminiApiKey || ''} 
+                                        onChange={(e) => handleSettingsChange('geminiApiKey', e.target.value)} 
+                                        className="form-input w-full md:w-[620px]" 
+                                        placeholder="AIza..."
+                                    />
+                                </SettingRow>
+                                <SettingRow label="Model Target" desc="The core AI iteration powering standard generations. Ensure this model is accessible by your API key.">
+                                    <select value={settings.llmModel} onChange={(e) => handleSettingsChange('llmModel', e.target.value)} className="form-select w-full md:w-[620px]">
+                                        <option value="gemini-3-flash-preview">Gemini 3 Flash (High-Speed)</option>
+                                        <option value="gemini-3-pro-preview">Gemini 3 Pro (High-Reasoning)</option>
+                                        <option value="gemini-2.5-flash">Gemini 2.5 Flash</option>
+                                    </select>
+                                </SettingRow>
+                             </div>
+                        )}
                         {settings.activeLLM === 'ollama_cloud' && (
                              <div className="animate-fade-in flex flex-col bg-transparent">
                                 <SettingRow label="Remote Endpoint" desc="HTTPS URL of your hosted Ollama server.">
@@ -795,12 +1021,80 @@ export const SetupPage: React.FC<SetupPageProps> = ({
                                 </SettingRow>
                             </div>
                         )}
+                        {settings.activeLLM === 'llamacpp' && (
+                             <div className="animate-fade-in flex flex-col bg-transparent">
+                                <SettingRow label="Host Address" desc="Local llama.cpp (Default: http://localhost:8080).">
+                                     <div className="space-y-4">
+                                        <div className="flex w-full md:w-[620px]">
+                                            <input type="text" value={settings.llamacppBaseUrl || ''} onChange={(e) => handleSettingsChange('llamacppBaseUrl', (e.currentTarget as any).value)} className="form-input flex-1" />
+                                            <button onClick={() => { audioService.playClick(); handleTestLlamaCppConnection(); }} disabled={isTestingLlamaCpp} className="form-btn px-4 border-l-0">{isTestingLlamaCpp ? '...' : 'PING'}</button>
+                                        </div>
+                                        {llamacppTestResult && (
+                                            <div className={`flex items-center gap-2 text-[9px] font-black uppercase tracking-widest px-3 py-1.5 border ${llamacppTestResult.success ? 'bg-success/5 border-success/30 text-success' : 'bg-error/5 border-error/30 text-error'} animate-fade-in md:w-[620px]`}>
+                                                <span className={`w-1.5 h-1.5 rounded-full ${llamacppTestResult.success ? 'bg-success' : 'bg-error'} animate-pulse`}></span>
+                                                {llamacppTestResult.message}
+                                            </div>
+                                        )}
+                                         <div className="p-4 bg-info/5 border border-info/20 rounded-none space-y-3 md:w-[620px]">
+                                            <h5 className="text-[10px] font-black uppercase tracking-widest text-info flex items-center gap-2">
+                                                <InformationCircleIcon className="w-3.5 h-3.5" /> CORS POLICY GUIDE
+                                             </h5>
+                                            <p className="text-[10px] font-bold uppercase tracking-tight text-base-content/60 leading-relaxed">
+                                                To allow web access, ensure llama.cpp is compiled and running with the <code className="text-primary px-1 bg-base-100">--cors</code> flag.
+                                            </p>
+                                        </div>
+                                    </div>
+                                </SettingRow>
+                                <SettingRow label="Llama.cpp API Key" desc="Ensure to insert custom authorize bearer token key if your llama.cpp server requires authentication.">
+                                    <input 
+                                        type="password" 
+                                        value={settings.llamacppApiKey || ''} 
+                                        onChange={(e) => handleSettingsChange('llamacppApiKey', e.target.value)} 
+                                        className="form-input w-full md:w-[620px]" 
+                                        placeholder="SECRET_API_TOKEN"
+                                    />
+                                </SettingRow>
+                                <SettingRow label="Model Tag" desc="The model identification string on your llama.cpp server (e.g. default, custom-model).">
+                                    <AutocompleteSelect 
+                                        value={settings.llamacppModel || 'default'} 
+                                        onChange={(v) => handleSettingsChange('llamacppModel', v)} 
+                                        options={llamacppModelOptions} 
+                                        placeholder="SELECT LLAMACPP MODEL..." 
+                                        className="w-full md:w-[620px]"
+                                    />
+                                </SettingRow>
+                             </div>
+                        )}
                     </div>
                 );
-            case 'openclaw':
+            case 'openrouter':
                 return (
                     <div className="flex flex-col animate-fade-in pb-12">
-                        {isOpenClawLocal && (
+                        <SettingRow label="OpenRouter API Key" desc="Get your API key from openrouter.ai.">
+                            <input 
+                                type="password" 
+                                value={settings.openrouterApiKey || ''} 
+                                onChange={(e) => handleSettingsChange('openrouterApiKey', e.target.value)} 
+                                className="form-input w-full md:w-[620px]" 
+                                placeholder="sk-or-v1-..."
+                            />
+                        </SettingRow>
+                        <SettingRow label="Model Target" desc="The model ID to use on OpenRouter (e.g. anthropic/claude-3-haiku, google/gemini-pro).">
+                            <div className="w-full md:w-[620px]">
+                                <AutocompleteSelect 
+                                    value={settings.openrouterModel || ''} 
+                                    options={(availableOpenRouterModels.length > 0 ? availableOpenRouterModels : [settings.openrouterModel || 'openrouter/auto']).map(m => ({ label: String(m || ''), value: String(m || '') }))} 
+                                    onChange={(val) => handleSettingsChange('openrouterModel', val)}
+                                    placeholder="openrouter/auto"
+                                />
+                            </div>
+                        </SettingRow>
+                    </div>
+                );
+            case 'hermes':
+                return (
+                    <div className="flex flex-col animate-fade-in pb-12">
+                        {isHermesLocal && (
                             <div className="mx-8 mt-4 p-4 bg-warning/10 border border-warning/20 rounded-none flex items-start gap-4">
                                 <AlertTriangleIcon className="w-5 h-5 text-warning flex-shrink-0 mt-0.5" />
                                 <div className="space-y-1">
@@ -812,10 +1106,10 @@ export const SetupPage: React.FC<SetupPageProps> = ({
                                 </div>
                             </div>
                         )}
-                        <SettingRow label="OpenClaw Agent URL" desc="The local or remote address of your OpenClaw control node.">
+                        <SettingRow label="Hermes Agent URL" desc="The local or remote address of your Hermes control node.">
                             <div className="space-y-4">
                                 <div className="flex w-full md:w-[620px]">
-                                    <input type="text" value={settings.openclawBaseUrl} onChange={(e) => handleSettingsChange('openclawBaseUrl', (e.currentTarget as any).value)} className="form-input flex-1" placeholder="http://localhost:18789" />
+                                    <input type="text" value={settings.hermesBaseUrl} onChange={(e) => handleSettingsChange('hermesBaseUrl', (e.currentTarget as any).value)} className="form-input flex-1" placeholder="http://localhost:18789" />
                                     <button onClick={() => { audioService.playClick(); refreshOllamaModels(); }} className="form-btn px-4 border-l-0">REFRESH</button>
                                 </div>
                             </div>
@@ -823,15 +1117,15 @@ export const SetupPage: React.FC<SetupPageProps> = ({
                         <SettingRow label="Agent Identity" desc="Choose which agent skill set or model to activate.">
                             <div className="w-full md:w-[620px]">
                                 <AutocompleteSelect 
-                                    value={settings.openclawModel} 
-                                    options={(availableOpenClawModels.length > 0 ? availableOpenClawModels : [settings.openclawModel || 'ollama/kimi-k2.5:cloud']).map(m => ({ label: String(m || '').toUpperCase(), value: String(m || '') }))} 
-                                    onChange={(val) => handleSettingsChange('openclawModel', val)}
-                                    placeholder="ollama/kimi-k2.5:cloud"
+                                    value={settings.hermesModel} 
+                                    options={(availableHermesModels.length > 0 ? availableHermesModels : [settings.hermesModel || 'hermes-agent']).map(m => ({ label: String(m || '').toUpperCase(), value: String(m || '') }))} 
+                                    onChange={(val) => handleSettingsChange('hermesModel', val)}
+                                    placeholder="hermes-agent"
                                 />
                             </div>
                         </SettingRow>
-                        <SettingRow label="Security Key" desc="If your OpenClaw instance requires authentication (Bearer Token).">
-                            <input type="password" value={settings.openclawApiKey} onChange={(e) => handleSettingsChange('openclawApiKey', (e.currentTarget as any).value)} className="form-input w-full md:w-[620px]" placeholder="OPENCLAW_SECRET_TOKEN"/>
+                        <SettingRow label="Security Key" desc="If your Hermes instance requires authentication (Bearer Token).">
+                            <input type="password" value={settings.hermesApiKey} onChange={(e) => handleSettingsChange('hermesApiKey', (e.currentTarget as any).value)} className="form-input w-full md:w-[620px]" placeholder="HERMES_SECRET_TOKEN"/>
                         </SettingRow>
                         <div className="p-8 mt-4">
                              <div className="p-6 bg-accent/5 border border-accent/20 rounded-none space-y-4 max-w-2xl">
@@ -839,12 +1133,12 @@ export const SetupPage: React.FC<SetupPageProps> = ({
                                     <Cog6ToothIcon className="w-4 h-4" /> LOCAL AGENT STATUS
                                 </h5>
                                 <p className="text-[10px] font-bold uppercase tracking-widest text-base-content/60 leading-relaxed">
-                                    IF YOUR OPENCLAW INSTANCE IS RUNNING LOCALLY ON PORT 18789, SYSTEMS WILL AUTOMATICALLY PROXY REQUESTS THROUGH THE ENGINE HUB TO BYPASS CLOUD SECURITY POLICIES.
+                                    IF YOUR HERMES INSTANCE IS RUNNING LOCALLY ON PORT 18789, SYSTEMS WILL AUTOMATICALLY PROXY REQUESTS THROUGH THE ENGINE HUB TO BYPASS CLOUD SECURITY POLICIES.
                                 </p>
                                 <div className="flex items-center gap-3">
-                                    <span className={`w-2 h-2 rounded-full ${availableOpenClawModels.length > 0 ? 'bg-success box-glow-success' : 'bg-base-content/20'}`} />
+                                    <span className={`w-2 h-2 rounded-full ${availableHermesModels.length > 0 ? 'bg-success box-glow-success' : 'bg-base-content/20'}`} />
                                     <span className="text-[9px] font-black uppercase tracking-[0.3em] opacity-40">
-                                        {availableOpenClawModels.length > 0 ? 'AGENT LINK ESTABLISHED' : 'AWAITING AGENT HANDSHAKE'}
+                                        {availableHermesModels.length > 0 ? 'AGENT LINK ESTABLISHED' : 'AWAITING AGENT HANDSHAKE'}
                                     </span>
                                 </div>
                             </div>
@@ -863,6 +1157,9 @@ export const SetupPage: React.FC<SetupPageProps> = ({
                                     <p className="text-[8px] font-bold text-base-content/30 uppercase leading-relaxed">Add the above URL to 'Authorized JavaScript origins' in Google Cloud Console Credentials.</p>
                                 </div>
                             </div>
+                        </SettingRow>
+                        <SettingRow label="Google API Key" desc="API Key (Developer Key) for browser-level services like Google Picker.">
+                            <input type="password" value={settings.youtube?.customApiKey || ''} onChange={(e) => handleSettingsChange('youtube', { ...settings.youtube, customApiKey: e.target.value })} className="form-input w-full max-w-md" placeholder="AIzaSy..." />
                         </SettingRow>
                         <SettingRow label="Cloud Identity Link" desc="Connect your account to enable Cloud AI and data sync features.">
                             {settings.googleIdentity?.isConnected ? (
@@ -899,6 +1196,9 @@ export const SetupPage: React.FC<SetupPageProps> = ({
                                     <p className="text-[8px] font-bold text-base-content/30 uppercase leading-relaxed">Add the above URL to 'Authorized JavaScript origins' in Google Cloud Console Credentials.</p>
                                 </div>
                             </div>
+                        </SettingRow>
+                        <SettingRow label="Google API Key" desc="API Key (Developer Key) for browser-level services like Google Picker.">
+                            <input type="password" value={settings.youtube?.customApiKey || ''} onChange={(e) => handleSettingsChange('youtube', { ...settings.youtube, customApiKey: e.target.value })} className="form-input w-full max-w-md" placeholder="AIzaSy..." />
                         </SettingRow>
                         <SettingRow label="Channel Integration" desc="Connect to your YouTube account for direct artifact publishing.">
                             {settings.youtube?.isConnected ? (
@@ -976,6 +1276,36 @@ export const SetupPage: React.FC<SetupPageProps> = ({
                                 DOWNLOAD VAULT
                             </button>
                         </SettingRow>
+                        <SettingRow label="Convert Media to JPG (Local Storage)" desc="Automatically convert saved images to JPG format when using Local Storage. Metadata will be preserved.">
+                            <input 
+                                type="checkbox" 
+                                checked={settings.convertImageToJpgLocal || false} 
+                                onChange={(e) => { audioService.playClick(); handleSettingsChange('convertImageToJpgLocal', e.target.checked); }} 
+                                className="toggle toggle-primary toggle-sm" 
+                            />
+                        </SettingRow>
+                        <SettingRow label="Convert Media to JPG (Google Drive)" desc="Automatically convert saved images to JPG format when using Google Drive storage. Metadata will be preserved.">
+                            <input 
+                                type="checkbox" 
+                                checked={settings.convertImageToJpgDrive ?? true} 
+                                onChange={(e) => { audioService.playClick(); handleSettingsChange('convertImageToJpgDrive', e.target.checked); }} 
+                                className="toggle toggle-primary toggle-sm" 
+                            />
+                        </SettingRow>
+                        {(settings.convertImageToJpgLocal || settings.convertImageToJpgDrive) && (
+                            <SettingRow label="JPG Compression Quality" desc="Adjust the compression level for JPG conversion (10% to 100%).">
+                                <div className="flex items-center gap-4 w-48">
+                                    <input 
+                                        type="range" 
+                                        min={0.1} max={1.0} step={0.1} 
+                                        value={settings.jpgCompressionQuality || 0.9} 
+                                        onChange={(e) => handleSettingsChange('jpgCompressionQuality', Number(e.currentTarget.value))} 
+                                        className="range range-xs range-primary" 
+                                    />
+                                    <span className="text-[10px] font-mono font-bold text-primary">{Math.round((settings.jpgCompressionQuality || 0.9) * 100)}%</span>
+                                </div>
+                            </SettingRow>
+                        )}
                     </div>
                 );
             default: return null;
@@ -1084,7 +1414,7 @@ export const SetupPage: React.FC<SetupPageProps> = ({
         </main>
       </div>
     </motion.section>
-      {modalFeedback && <FeedbackModal isOpen={!!modalFeedback} onClose={() => setModalFeedback(null)} message={modalFeedback.message} type={modalFeedback.type} />}
+      {modalFeedback && <FeedbackToast isOpen={!!modalFeedback} onClose={() => setModalFeedback(null)} message={modalFeedback.message} type={modalFeedback.type} />}
       <ConfirmationModal isOpen={isRestartModalOpen} onClose={() => setIsRestartModalOpen(false)} onConfirm={() => window.location.reload()} title="RELOAD REQUEST" message="Purge neuronal state and restart interface?" btnClassName="btn-warning" />
       <ConfirmationModal 
         isOpen={isResetModalOpen} 
@@ -1099,7 +1429,15 @@ export const SetupPage: React.FC<SetupPageProps> = ({
           onImport={() => {}} 
           categories={promptCategories}
       />
-      {isWorking && <MaintenanceOverlay progress={maintenanceProgress} message={maintenanceMsg} />}
+      <MigrationModal
+          isOpen={isMigrationModalOpen}
+          onClose={() => setIsMigrationModalOpen(false)}
+          onConfirm={handleConfirmMigration}
+          isWorking={isWorking}
+          progress={maintenanceProgress}
+          message={maintenanceMsg}
+      />
+      {isWorking && !isMigrationModalOpen && <MaintenanceOverlay progress={maintenanceProgress} message={maintenanceMsg} />}
     </>
   );
 };

@@ -4,12 +4,13 @@ import { gsap } from 'gsap';
 import { useSettings } from '../contexts/SettingsContext';
 import { useAuth } from '../contexts/AuthContext';
 import useLocalStorage from '../utils/useLocalStorage';
+import { appEventBus } from '../utils/eventBus';
 import { fileSystemManager } from '../utils/fileUtils';
 import { verifyAndRepairFiles } from '../utils/integrity';
 import { addSavedPrompt } from '../utils/promptStorage';
 import { audioService } from '../services/audioService';
 import { BusyProvider } from '../contexts/BusyContext';
-import type { ActiveTab, Idea, ActiveSettingsTab } from '../types';
+import type { ActiveTab, Idea, ActiveSettingsTab, LLMSettings } from '../types';
 
 // Layout & Global Components
 import Header from './Header';
@@ -18,7 +19,7 @@ import CustomCursor from './CustomCursor';
 import AboutModal from './AboutModal';
 import ClippingPanel from './ClippingPanel';
 import LlmStatusPanel from './LlmStatusPanel';
-import FeedbackModal from './FeedbackModal';
+import FeedbackToast from './FeedbackToast';
 import Footer from './Footer';
 import IdleOverlay from './IdleOverlay';
 import { TabTitleManager } from './TabTitleManager';
@@ -42,6 +43,7 @@ import { LLMChatPanel } from './LLMChatPanel';
 import { motion, AnimatePresence } from 'motion/react';
 import { pageVariants } from './AnimatedPanels';
 import ChromaticText from './ChromaticText';
+import { HermesController } from './HermesController';
 
 
 type PromptsPageState = { prompt?: string, artStyle?: string, artist?: string, view?: 'enhancer' | 'composer' | 'create', id?: string } | null;
@@ -448,7 +450,7 @@ const AppContent: React.FC = () => {
     const [activeTab, setActiveTab] = useLocalStorage<ActiveTab>('activeTab', 'dashboard');
     const [isAboutModalOpen, setIsAboutModalOpen] = useState(false);
     const [isClippingPanelOpen, setIsClippingPanelOpen] = useState(false);
-    const [isOpenClawOpen, setIsOpenClawOpen] = useState(false);
+    const [isHermesOpen, setIsHermesOpen] = useState(false);
     const [isLlmPanelOpen, setIsLlmPanelOpen] = useState(false);
     const [collapsedPanels, setCollapsedPanels] = useLocalStorage<Record<string, boolean>>('collapsedPanels', {});
     const [globalFeedback, setGlobalFeedback] = useState<{ message: string; type: 'success' | 'error' } | null>(null);
@@ -553,8 +555,12 @@ const AppContent: React.FC = () => {
     const scanBottomRef = useRef<HTMLSpanElement>(null);
     const scanLeftRef = useRef<HTMLSpanElement>(null);
 
-    const initializeApp = useCallback(async () => {
-        if (hasInitializedRef.current && isInitialized) return;
+    const initializeApp = useCallback(async (customSettings?: LLMSettings) => {
+        if (customSettings) {
+            hasInitializedRef.current = false;
+        } else if (hasInitializedRef.current && isInitialized) {
+            return;
+        }
 
         setIsLoading(true);
         setShowWelcome(false);
@@ -566,9 +572,11 @@ const AppContent: React.FC = () => {
             if (progress !== undefined) setInitProgress(progress);
         };
 
+        const activeSettings = customSettings || settings;
+
         try {
             await new Promise(r => setTimeout(r, 1000));
-            const hasHandleAndPermission = await (fileSystemManager as any).initialize(settings, auth);
+            const hasHandleAndPermission = await (fileSystemManager as any).initialize(activeSettings, auth);
 
             if (!hasHandleAndPermission) {
                 setShowWelcome(true);
@@ -578,11 +586,14 @@ const AppContent: React.FC = () => {
             }
 
             onProgress('Loading Folders...', 0.35);
-            await verifyAndRepairFiles(onProgress, settings);
+            await verifyAndRepairFiles(onProgress, activeSettings);
 
             onProgress('Syncing Styles...', 0.7);
             if ('fonts' in document) {
-                await (document as any).fonts.ready;
+                await Promise.race([
+                    (document as any).fonts.ready,
+                    new Promise(r => setTimeout(r, 1000))
+                ]).catch(() => {});
             }
 
             onProgress('Finalizing System...', 0.9);
@@ -740,6 +751,15 @@ const AppContent: React.FC = () => {
         audioService.playTransition();
         setActiveTab(tab);
     };
+
+    useEffect(() => {
+        const unsubscribe = appEventBus.on('navigate', (tab) => {
+            if (typeof tab === 'string') {
+                setActiveTab(tab as ActiveTab);
+            }
+        });
+        return () => unsubscribe();
+    }, [activeTab]);
 
     useEffect(() => {
         const currentTheme = settings.darkTheme;
@@ -1018,7 +1038,7 @@ const AppContent: React.FC = () => {
                                 isInitialized={isInitialized}
                                 onAboutClick={() => setIsAboutModalOpen(true)}
                                 onToggleClippingPanel={() => setIsClippingPanelOpen(!isClippingPanelOpen)}
-                                onToggleOpenClaw={() => setIsOpenClawOpen(!isOpenClawOpen)}
+                                onToggleHermes={() => setIsHermesOpen(!isHermesOpen)}
                                 onStandbyClick={handleStandbyClick}
                                 clippedIdeasCount={clippedIdeas.length}
                             />
@@ -1084,9 +1104,10 @@ const AppContent: React.FC = () => {
                                     />
 
                                     <LLMChatPanel
-                                        isOpen={isOpenClawOpen}
-                                        onClose={() => setIsOpenClawOpen(false)}
+                                        isOpen={isHermesOpen}
+                                        onClose={() => setIsHermesOpen(false)}
                                     />
+                                    <HermesController />
                                 </div>
                             </main>
 
@@ -1118,7 +1139,7 @@ const AppContent: React.FC = () => {
             />
 
             {globalFeedback && (
-                <FeedbackModal
+                <FeedbackToast
                     isOpen={!!globalFeedback}
                     onClose={() => setGlobalFeedback(null)}
                     message={globalFeedback.message}

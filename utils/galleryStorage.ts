@@ -2,6 +2,8 @@
 import type { GalleryItem, GalleryCategory } from '../types';
 import { fileSystemManager } from './fileUtils';
 import { v4 as uuidv4 } from 'uuid';
+import { loadLLMSettings } from './settingsStorage';
+import { convertToJpgWithMetadata } from './imageFormatTools';
 
 interface GalleryManifest {
   galleryItems: GalleryItem[];
@@ -79,8 +81,21 @@ export const addItemToGallery = async (type: 'image' | 'video', urls: string[], 
     const savedUrls = await Promise.all(urls.map(async (url, index) => {
         try {
             const response = await fetch(url);
-            const blob = await response.blob();
-            const extension = blob.type.split('/')[1]?.split('+')[0] || (type === 'image' ? 'png' : 'mp4');
+            let blob = await response.blob();
+            let extension = blob.type.split('/')[1]?.split('+')[0] || (type === 'image' ? 'png' : 'mp4');
+            
+            if (type === 'image') {
+                const settings = loadLLMSettings();
+                const shouldConvert = settings.storageProvider === 'drive' 
+                    ? settings.convertImageToJpgDrive 
+                    : settings.convertImageToJpgLocal;
+                    
+                if (shouldConvert) {
+                    blob = await convertToJpgWithMetadata(blob, settings.jpgCompressionQuality || 0.9);
+                    extension = 'jpg';
+                }
+            }
+
             const fileName = `${newItemId}_${index}.${extension}`;
             
             const pathSegments = ['gallery'];

@@ -2,7 +2,8 @@
 import type { EnhancementResult, LLMSettings, PromptModifiers } from '../types';
 import { translateToEnglishGemini, analyzePaletteMood as analyzePaletteMoodGemini, generatePromptFormulaGemini, refineSinglePromptGemini, abstractImageGemini, generateColorNameGemini, dissectPromptGemini, generateFocusedVariationsGemini, reconstructPromptGemini, reconstructFromIntentGemini, replaceComponentInPromptGemini, generateArtistDescriptionGemini, enhancePromptGeminiStream, refineSinglePromptGeminiStream, generateConstructorPresetGemini } from './geminiService';
 import { analyzePaletteMoodOllama, generatePromptFormulaOllama, refineSinglePromptOllama, abstractImageOllama, generateColorNameOllama, dissectPromptOllama, generateFocusedVariationsOllama, reconstructPromptOllama, replaceComponentInPromptOllama, reconstructFromIntentOllama, generateArtistDescriptionOllama, enhancePromptOllamaStream, refineSinglePromptOllamaStream } from './ollamaService';
-import { refineSinglePromptOpenClaw, enhancePromptOpenClawStream, refineSinglePromptOpenClawStream } from './openclawService';
+import { refineSinglePromptHermes, enhancePromptHermesStream, refineSinglePromptHermesStream } from './hermesService';
+import { refineSinglePromptLlamaCpp, enhancePromptLlamaCppStream, refineSinglePromptLlamaCppStream } from './llamacppService';
 import { TARGET_VIDEO_AI_MODELS, TARGET_AUDIO_AI_MODELS } from '../constants/models';
 
 // --- Model-Specific Syntax (Engine Tuning) ---
@@ -260,6 +261,7 @@ export const buildContextForEnhancer = (modifiers: PromptModifiers, isAudio: boo
 
     if (modifiers.motion) ctx.push(`Dynamics: ${modifiers.motion}`);
     if (modifiers.cameraMovement) ctx.push(`Camera Path: ${modifiers.cameraMovement}`);
+    if (modifiers.videoEffect) ctx.push(`Video Effect / Post-Processing: ${modifiers.videoEffect}`);
 
     if (modifiers.audioType) ctx.push(`Type: ${modifiers.audioType}`);
     if (modifiers.voiceGender) ctx.push(`Voice: ${modifiers.voiceGender}`);
@@ -308,14 +310,17 @@ export async function* enhancePromptStream(
 
     const tokenBudget = promptLength === 'Long' ? 4096 : (promptLength === 'Medium' ? 2048 : 1024);
     const isOllama = settings.activeLLM === 'ollama' || settings.activeLLM === 'ollama_cloud';
-    const isOpenClaw = settings.activeLLM === 'openclaw';
+    const isHermes = settings.activeLLM === 'hermes';
+    const isLlamaCpp = settings.activeLLM === 'llamacpp';
     const temperature = modifiers.creativity !== undefined ? modifiers.creativity / 100 : 0.7;
 
-    const stream = isOpenClaw
-        ? enhancePromptOpenClawStream(input, constantModifier, settings, systemInstruction, tokenBudget)
-        : isOllama
-            ? enhancePromptOllamaStream(input, constantModifier, settings, systemInstruction, tokenBudget)
-            : enhancePromptGeminiStream(input, constantModifier, settings, systemInstruction, promptLength, referenceImages, temperature);
+    const stream = isLlamaCpp
+        ? enhancePromptLlamaCppStream(input, constantModifier, settings, systemInstruction, tokenBudget)
+        : isHermes
+            ? enhancePromptHermesStream(input, constantModifier, settings, systemInstruction, tokenBudget)
+            : isOllama
+                ? enhancePromptOllamaStream(input, constantModifier, settings, systemInstruction, tokenBudget)
+                : enhancePromptGeminiStream(input, constantModifier, settings, systemInstruction, promptLength, referenceImages, temperature);
 
     let inThought = false;
     for await (const chunk of stream) {
@@ -351,12 +356,15 @@ export const refineSinglePrompt = async (promptText: string, targetAIModel: stri
     const sys = AI_ROLES.REFINER(targetAIModel, isVideo, isAudio, hasManualCamera, modifiers.videoInputType, settings.masterRolePrompt);
     
     const isOllama = settings.activeLLM === 'ollama' || settings.activeLLM === 'ollama_cloud';
-    const isOpenClaw = settings.activeLLM === 'openclaw';
-    const raw = isOpenClaw
-        ? await refineSinglePromptOpenClaw(promptText, settings, sys, 1024)
-        : isOllama 
-            ? await refineSinglePromptOllama(promptText, settings, sys, 1024)
-            : await refineSinglePromptGemini(promptText, '', settings, sys);
+    const isHermes = settings.activeLLM === 'hermes';
+    const isLlamaCpp = settings.activeLLM === 'llamacpp';
+    const raw = isLlamaCpp
+        ? await refineSinglePromptLlamaCpp(promptText, settings, sys, 1024)
+        : isHermes
+            ? await refineSinglePromptHermes(promptText, settings, sys, 1024)
+            : isOllama 
+                ? await refineSinglePromptOllama(promptText, settings, sys, 1024)
+                : await refineSinglePromptGemini(promptText, '', settings, sys);
     const cleaned = cleanLLMResponse(raw);
     return cleaned;
 };
@@ -373,12 +381,15 @@ export async function* refineSinglePromptStream(
     const sys = AI_ROLES.REFINER(targetAIModel, isVideo, isAudio, hasManualCamera, modifiers.videoInputType, settings.masterRolePrompt);
     
     const isOllama = settings.activeLLM === 'ollama' || settings.activeLLM === 'ollama_cloud';
-    const isOpenClaw = settings.activeLLM === 'openclaw';
-    const stream = isOpenClaw
-        ? refineSinglePromptOpenClawStream(promptText, settings, sys, 1024)
-        : isOllama
-            ? refineSinglePromptOllamaStream(promptText, settings, sys, 1024)
-            : refineSinglePromptGeminiStream(promptText, '', settings, sys);
+    const isHermes = settings.activeLLM === 'hermes';
+    const isLlamaCpp = settings.activeLLM === 'llamacpp';
+    const stream = isLlamaCpp
+        ? refineSinglePromptLlamaCppStream(promptText, settings, sys, 1024)
+        : isHermes
+            ? refineSinglePromptHermesStream(promptText, settings, sys, 1024)
+            : isOllama
+                ? refineSinglePromptOllamaStream(promptText, settings, sys, 1024)
+                : refineSinglePromptGeminiStream(promptText, '', settings, sys);
 
     let inThought = false;
     for await (const chunk of stream) {
@@ -409,8 +420,11 @@ export async function* refineSinglePromptStream(
 
 export const generateArtistDescription = async (artistName: string, settings: LLMSettings): Promise<string> => {
     const isOllama = settings.activeLLM === 'ollama' || settings.activeLLM === 'ollama_cloud';
-    const isOpenClaw = settings.activeLLM === 'openclaw';
-    if (isOpenClaw) return refineSinglePromptOpenClaw(artistName, settings, "Brief style summary. Text only.", 512);
+    const isHermes = settings.activeLLM === 'hermes';
+    const isLlamaCpp = settings.activeLLM === 'llamacpp';
+    
+    if (isLlamaCpp) return refineSinglePromptLlamaCpp(artistName, settings, "Brief style summary. Text only.", 512);
+    if (isHermes) return refineSinglePromptHermes(artistName, settings, "Brief style summary. Text only.", 512);
 
     return isOllama
         ? generateArtistDescriptionOllama(artistName, settings)
@@ -419,8 +433,11 @@ export const generateArtistDescription = async (artistName: string, settings: LL
 
 export const analyzePaletteMood = async (hexColors: string[], settings: LLMSettings): Promise<string> => {
     const isOllama = settings.activeLLM === 'ollama' || settings.activeLLM === 'ollama_cloud';
-    const isOpenClaw = settings.activeLLM === 'openclaw';
-    if (isOpenClaw) return refineSinglePromptOpenClaw(`Colors: ${hexColors.join(', ')}`, settings, "Task: mood in 3 words max. Text only.", 64);
+    const isHermes = settings.activeLLM === 'hermes';
+    const isLlamaCpp = settings.activeLLM === 'llamacpp';
+    
+    if (isLlamaCpp) return refineSinglePromptLlamaCpp(`Colors: ${hexColors.join(', ')}`, settings, "Task: mood in 3 words max. Text only.", 64);
+    if (isHermes) return refineSinglePromptHermes(`Colors: ${hexColors.join(', ')}`, settings, "Task: mood in 3 words max. Text only.", 64);
 
     return isOllama
         ? analyzePaletteMoodOllama(hexColors, settings)
@@ -429,8 +446,11 @@ export const analyzePaletteMood = async (hexColors: string[], settings: LLMSetti
 
 export const generateColorName = async (hexColor: string, mood: string, settings: LLMSettings): Promise<string> => {
     const isOllama = settings.activeLLM === 'ollama' || settings.activeLLM === 'ollama_cloud';
-    const isOpenClaw = settings.activeLLM === 'openclaw';
-    if (isOpenClaw) return refineSinglePromptOpenClaw(`Hex:${hexColor}, Mood:${mood}`, settings, "Task: Poetic 2-word name. Text only.", 32);
+    const isHermes = settings.activeLLM === 'hermes';
+    const isLlamaCpp = settings.activeLLM === 'llamacpp';
+    
+    if (isLlamaCpp) return refineSinglePromptLlamaCpp(`Hex:${hexColor}, Mood:${mood}`, settings, "Task: Poetic 2-word name. Text only.", 32);
+    if (isHermes) return refineSinglePromptHermes(`Hex:${hexColor}, Mood:${mood}`, settings, "Task: Poetic 2-word name. Text only.", 32);
 
     return isOllama
         ? generateColorNameOllama(hexColor, mood, settings)
@@ -439,10 +459,15 @@ export const generateColorName = async (hexColor: string, mood: string, settings
 
 export const dissectPrompt = async (promptText: string, settings: LLMSettings, modifierCatalog?: string, modelName?: string): Promise<{ naturalLanguage: string, prompt: string, modifiers: { [key: string]: string }, constantModifier: string, categorizedParameters: { label: string, value: string }[] }> => {
     const isOllama = settings.activeLLM === 'ollama' || settings.activeLLM === 'ollama_cloud';
-    const isOpenClaw = settings.activeLLM === 'openclaw';
-    // Fallback if custom dissection logic isn't built for OpenClaw yet - use its refiner to get natural lang
-    if (isOpenClaw) {
-        const naturalLang = await refineSinglePromptOpenClaw(promptText, settings, "Task: Convert this Stable Diffusion prompt into a clear, natural English narrative. No intros.", 800);
+    const isHermes = settings.activeLLM === 'hermes';
+    const isLlamaCpp = settings.activeLLM === 'llamacpp';
+    
+    if (isLlamaCpp) {
+        const naturalLang = await refineSinglePromptLlamaCpp(promptText, settings, "Task: Convert this Stable Diffusion prompt into a clear, natural English narrative. No intros.", 800);
+        return { naturalLanguage: naturalLang, prompt: promptText, modifiers: {}, constantModifier: '', categorizedParameters: [] };
+    }
+    if (isHermes) {
+        const naturalLang = await refineSinglePromptHermes(promptText, settings, "Task: Convert this Stable Diffusion prompt into a clear, natural English narrative. No intros.", 800);
         return { naturalLanguage: naturalLang, prompt: promptText, modifiers: {}, constantModifier: '', categorizedParameters: [] };
     }
 
@@ -544,6 +569,10 @@ export { generateWithImagen, generateWithNanoBanana, generateWithVeo } from './g
 
 export const translateToEnglish = async (text: string, settings: LLMSettings): Promise<string> => {
     const isOllama = settings.activeLLM === 'ollama' || settings.activeLLM === 'ollama_cloud';
+    const isLlamaCpp = settings.activeLLM === 'llamacpp';
+    if (isLlamaCpp) {
+        return refineSinglePromptLlamaCpp(text, settings, "Translate this to high-fidelity English visual prompt. Output translated text ONLY.", 1200);
+    }
     if (isOllama) {
         // Fallback or Ollama specific translation if needed later, for now just Gemini
         return refineSinglePromptOllama(text, settings, "Translate this to high-fidelity English visual prompt. Output translated text ONLY.", 1200);
@@ -594,21 +623,104 @@ export const testOllamaConnection = async (baseUrl: string): Promise<OllamaTestR
     }
 };
 
+const decodeBase64UTF8 = (b64: string) => {
+    const data = b64.includes('base64,') ? b64.split('base64,')[1] : b64;
+    const binString = atob(data);
+    const bytes = new Uint8Array(binString.length);
+    for (let i = 0; i < binString.length; i++) {
+        bytes[i] = binString.charCodeAt(i);
+    }
+    return new TextDecoder().decode(bytes);
+};
+
 export async function* streamChat(
-    messages: { role: 'user' | 'assistant' | 'system', content: string }[],
+    messages: { role: 'user' | 'assistant' | 'system', content: string, attachments?: { data: string, mimeType: string, fileName?: string }[] }[],
     settings: LLMSettings
 ): AsyncGenerator<string> {
     const isOllama = settings.activeLLM === 'ollama' || settings.activeLLM === 'ollama_cloud';
-    const isOpenClaw = settings.activeLLM === 'openclaw';
+    const isHermes = settings.activeLLM === 'hermes';
+    const isOpenRouter = settings.activeLLM === 'openrouter';
+    const isLlamaCpp = settings.activeLLM === 'llamacpp';
 
-    if (isOpenClaw) {
-        const { streamChatOpenClaw } = await import('./openclawService');
-        yield* streamChatOpenClaw(messages, settings);
+    // Process text attachments from messages before passing to specific handlers
+    const processedMessages = await Promise.all(messages.map(async msg => {
+        if (msg.role !== 'user' || !msg.attachments) return msg;
+
+        let appendedContent = '';
+        const keptAttachments: any[] = [];
+        
+        for (const att of msg.attachments) {
+            // Process text-like formats directly into the prompt text
+            const mt = att.mimeType.toLowerCase();
+            const fn = (att.fileName || '').toLowerCase();
+            
+            try {
+                if (mt.startsWith('text/') || mt === 'application/json' || mt === 'application/csv' || mt === 'application/xml' || fn.endsWith('.md') || fn.endsWith('.csv') || fn.endsWith('.log')) {
+                    const text = decodeBase64UTF8(att.data);
+                    appendedContent += `\n\n--- Attachment: ${att.fileName || 'Document'} ---\n${text}\n--- End Attachment ---\n`;
+                } else if (mt === 'application/pdf' || fn.endsWith('.pdf')) {
+                    const { extractTextFromPdf } = await import('../utils/documentParser');
+                    const base64Data = att.data.includes('base64,') ? att.data.split('base64,')[1] : att.data;
+                    const text = await extractTextFromPdf(base64Data);
+                    appendedContent += `\n\n--- Attachment: ${att.fileName || 'PDF Document'} ---\n${text}\n--- End Attachment ---\n`;
+                } else if (mt.includes('wordprocessingml') || mt === 'application/msword' || fn.endsWith('.docx') || fn.endsWith('.doc')) {
+                    const { extractTextFromDocx } = await import('../utils/documentParser');
+                    const base64Data = att.data.includes('base64,') ? att.data.split('base64,')[1] : att.data;
+                    const text = await extractTextFromDocx(base64Data);
+                    appendedContent += `\n\n--- Attachment: ${att.fileName || 'Word Document'} ---\n${text}\n--- End Attachment ---\n`;
+                } else {
+                    keptAttachments.push(att);
+                }
+            } catch (e) {
+                console.error(`Failed to process attachment ${att.fileName}:`, e);
+                // Keep it so the downstream service can attempt to parse it (like Gemini with PDF)
+                keptAttachments.push(att);
+            }
+        }
+        
+        return {
+            ...msg,
+            content: msg.content + appendedContent,
+            attachments: keptAttachments.length > 0 ? keptAttachments : undefined
+        };
+    }));
+
+    let finalMessages = [...processedMessages];
+    if (settings.masterRolePrompt && settings.masterRolePrompt.trim()) {
+        const masterPrompt = settings.masterRolePrompt.trim();
+        const systemMessageIdx = finalMessages.findIndex(m => m.role === 'system');
+        if (systemMessageIdx !== -1) {
+            finalMessages = finalMessages.map((msg, idx) => {
+                if (idx === systemMessageIdx) {
+                    return {
+                        ...msg,
+                        content: `${masterPrompt}\n\n${msg.content}`
+                    };
+                }
+                return msg;
+            });
+        } else {
+            finalMessages.unshift({
+                role: 'system',
+                content: masterPrompt
+            });
+        }
+    }
+
+    if (isHermes) {
+        const { streamChatHermes } = await import('./hermesService');
+        yield* streamChatHermes(finalMessages, settings);
+    } else if (isOpenRouter) {
+        const { streamChatOpenRouter } = await import('./openrouterService');
+        yield* streamChatOpenRouter(finalMessages, settings);
     } else if (isOllama) {
         const { streamChatOllama } = await import('./ollamaService');
-        yield* streamChatOllama(messages, settings);
+        yield* streamChatOllama(finalMessages, settings);
+    } else if (isLlamaCpp) {
+        const { streamChatLlamaCpp } = await import('./llamacppService');
+        yield* streamChatLlamaCpp(finalMessages, settings);
     } else {
         const { streamChatGemini } = await import('./geminiService');
-        yield* streamChatGemini(messages, settings);
+        yield* streamChatGemini(finalMessages, settings, false);
     }
 }

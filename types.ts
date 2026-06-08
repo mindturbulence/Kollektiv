@@ -52,6 +52,7 @@ export interface YouTubeConnection {
   thumbnailUrl?: string;
   connectedAt?: number;
   customClientId?: string;
+  customApiKey?: string;
 }
 
 export interface GoogleIdentityConnection {
@@ -61,6 +62,7 @@ export interface GoogleIdentityConnection {
   picture?: string;
   accessToken?: string;
   connectedAt?: number;
+  customApiKey?: string;
 }
 
 export interface TokenUsage {
@@ -70,15 +72,25 @@ export interface TokenUsage {
 
 export interface LLMSettings {
   // LLM Provider Settings
+  geminiApiKey: string;
   llmModel: string;
-  activeLLM: 'gemini' | 'ollama' | 'ollama_cloud' | 'openclaw';
+  activeLLM: 'gemini' | 'ollama' | 'ollama_cloud' | 'hermes' | 'openrouter' | 'llamacpp';
   ollamaBaseUrl: string;
   ollamaModel: string;
   
-  // OpenClaw Settings
-  openclawBaseUrl: string;
-  openclawModel: string;
-  openclawApiKey: string;
+  // OpenRouter Settings
+  openrouterApiKey?: string;
+  openrouterModel?: string;
+  
+  // Hermes Settings
+  hermesBaseUrl: string;
+  hermesModel: string;
+  hermesApiKey: string;
+
+  // Llama.cpp Settings
+  llamacppBaseUrl: string;
+  llamacppModel: string;
+  llamacppApiKey: string;
   
   // Ollama Cloud Settings
   ollamaCloudBaseUrl: string;
@@ -86,11 +98,17 @@ export interface LLMSettings {
   ollamaCloudApiKey: string;
   ollamaCloudUseGoogleAuth: boolean;
 
+  // MCP Server Settings
+  mcpServerUrl?: string;
+  mcpEnabled?: boolean;
+
   // Prompt & Token Tracking
   masterRolePrompt?: string;
   geminiTokenUsage?: TokenUsage;
   ollamaTokenUsage?: TokenUsage;
-  openclawTokenUsage?: TokenUsage;
+  hermesTokenUsage?: TokenUsage;
+  openrouterTokenUsage?: TokenUsage;
+  llamacppTokenUsage?: TokenUsage;
 
   // Theme Settings
   activeThemeMode: 'dark';
@@ -115,6 +133,14 @@ export interface LLMSettings {
   // Integrations
   youtube?: YouTubeConnection;
   googleIdentity?: GoogleIdentityConnection;
+  storageProvider?: 'local' | 'drive';
+  driveFolderId?: string;
+  driveFolderName?: string;
+
+  // Gallery
+  convertImageToJpgLocal?: boolean;
+  convertImageToJpgDrive?: boolean;
+  jpgCompressionQuality?: number;
 }
 
 // --- Prompt Generation & Library ---
@@ -143,11 +169,13 @@ export interface PromptModifiers {
   hairStyle?: string;
   eyeColor?: string;
   skinTexture?: string;
+  realism?: string;
   clothing?: string;
   // Video specific
   motion?: string;
   cameraMovement?: string;
   videoInputType?: 't2v' | 'i2v'; 
+  videoEffect?: string;
   // Audio specific
   audioType?: string;
   voiceGender?: string;

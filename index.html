@@ -16,6 +16,45 @@
   <link href="https://db.onlinewebfonts.com/c/49441315ab9ce55176682715f25ea4b2?family=Microgramma+D+Bold+Extended" rel="stylesheet" type="text/css"/>
   <link href="https://db.onlinewebfonts.com/c/4f18f8093767ff6a669f522b4e2b4b03?family=Microgramma+D+Medium+Extended" rel="stylesheet" type="text/css"/>
   <script type="text/javascript">
+    // Critical: Ensure process global is defined before any module import starts
+    window.process = {
+      env: {
+        NODE_ENV: 'development',
+        API_KEY: '',
+        GEMINI_API_KEY: ''
+      }
+    };
+
+    // Critical: Unregister any existing service workers and clear caches to prevent stale cache/white-screen issues
+    if (typeof window !== 'undefined') {
+      if ('serviceWorker' in navigator) {
+        navigator.serviceWorker.getRegistrations().then(function (registrations) {
+          var unregistered = false;
+          for (var i = 0; i < registrations.length; i++) {
+            registrations[i].unregister();
+            unregistered = true;
+          }
+          if (unregistered && !sessionStorage.getItem('sw_unregistered_reload')) {
+            sessionStorage.setItem('sw_unregistered_reload', 'true');
+            console.log('Stale service worker found and unregistered. Reloading to apply clean state...');
+            window.location.reload();
+          }
+        }).catch(function (err) {
+          console.error('Failed to unregister service worker:', err);
+        });
+      }
+
+      if ('caches' in window) {
+        caches.keys().then(function (keys) {
+          keys.forEach(function (key) {
+            caches.delete(key);
+          });
+        }).catch(function (err) {
+          console.error('Failed to clear caches:', err);
+        });
+      }
+    }
+
     // Critical: Load theme immediately to support "use current themes" during integrity check
     (function () {
       try {

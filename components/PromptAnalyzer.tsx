@@ -17,6 +17,8 @@ import AutocompleteSelect, { AutocompleteOption } from './AutocompleteSelect';
 import * as MODIFIERS from '../constants/modifiers';
 import type { SavedPrompt } from '../types';
 import PromptLibraryModal from './PromptLibraryModal';
+import { loadArtStyles } from '../utils/artstyleStorage';
+import { loadArtists } from '../utils/artistStorage';
 
 interface PromptAnalyzerProps {
     libraryItems: SavedPrompt[];
@@ -81,13 +83,35 @@ export const PromptAnalyzer: React.FC<PromptAnalyzerProps> = ({
     const [naturalLanguage, setNaturalLanguage] = useState('');
     const [sourceTab, setSourceTab] = useState<'original' | 'natural'>('original');
 
+    // Load cheatsheet categories for art styles and artists on mount
+    const [artStyles, setArtStyles] = useState<any[]>([]);
+    const [artists, setArtists] = useState<any[]>([]);
+
+    useEffect(() => {
+        const loadCategories = async () => {
+            try {
+                const [styles, artistsData] = await Promise.all([
+                    loadArtStyles(),
+                    loadArtists()
+                ]);
+                setArtStyles(styles);
+                setArtists(artistsData);
+            } catch (err) {
+                console.error('Error loading cheatsheet categories in analyzer:', err);
+            }
+        };
+        loadCategories();
+    }, []);
+
     // --- Filters ---
     const availableModifierKeys = useMemo(() => [
         'artStyle', 'artist', 'photographyStyle', 'aestheticLook', 'digitalAesthetic', 'aspectRatio',
         'cameraType', 'cameraModel', 'cameraAngle', 'cameraProximity', 'cameraSettings', 'cameraEffect',
         'specialtyLens', 'lensType', 'filmType', 'filmStock', 'lighting', 'composition',
-        'facialExpression', 'hairStyle', 'eyeColor', 'skinTexture', 'clothing',
-        'motion', 'cameraMovement', 'mjVersion', 'mjNiji', 'mjAspectRatio', 'zImageStyle'
+        'facialExpression', 'hairStyle', 'eyeColor', 'skinTexture', 'realism', 'clothing',
+        'motion', 'cameraMovement', 'videoEffect',
+        'audioType', 'voiceGender', 'voiceTone', 'audioEnvironment', 'audioMood', 'audioDuration',
+        'mjVersion', 'mjNiji', 'mjAspectRatio', 'mjStylize', 'mjChaos', 'mjWeird', 'mjNo'
     ], []);
 
 
@@ -95,8 +119,8 @@ export const PromptAnalyzer: React.FC<PromptAnalyzerProps> = ({
     // --- Labels & Options Mapping ---
     const getModifierLabel = (key: string) => {
         const labels: Record<string, string> = {
-            artStyle: 'Art Style',
-            artist: 'Artist',
+            artStyle: 'Visual Discipline',
+            artist: 'Styling Trends',
             photographyStyle: 'Photography Style',
             aestheticLook: 'Cinematic Look',
             digitalAesthetic: 'Digital Aesthetic',
@@ -117,13 +141,24 @@ export const PromptAnalyzer: React.FC<PromptAnalyzerProps> = ({
             hairStyle: 'Hair Style',
             eyeColor: 'Eye Color',
             skinTexture: 'Skin Texture',
+            realism: 'Realism Engine',
             clothing: 'Clothing',
             motion: 'Motion',
             cameraMovement: 'Movement',
+            videoEffect: 'Video Effect',
+            audioType: 'Audio Type',
+            voiceGender: 'Voice Profile',
+            voiceTone: 'Voice Tone',
+            audioEnvironment: 'Acoustic Environment',
+            audioMood: 'Audio Mood',
+            audioDuration: 'Audio Duration',
             mjVersion: 'Midjourney Version',
             mjNiji: 'Niji Version',
             mjAspectRatio: 'MJ Aspect Ratio',
-            zImageStyle: 'Z-Image Style'
+            mjStylize: 'MJ Stylize',
+            mjChaos: 'MJ Chaos',
+            mjWeird: 'MJ Weird',
+            mjNo: 'MJ Negative Limit (--no)'
         };
         if (labels[key]) return labels[key];
         // Humanize dynamic keys (e.g., camelCase to Title Case)
@@ -134,8 +169,11 @@ export const PromptAnalyzer: React.FC<PromptAnalyzerProps> = ({
 
     const getModifierOptions = (key: string): AutocompleteOption[] => {
         const optMaps: Record<string, any[]> = {
-            artStyle: [],
-            artist: [],
+            artStyle: [
+                ...artStyles.flatMap(c => c.items.map((i: any) => i.name)),
+                ...MODIFIERS.Z_IMAGE_STYLES
+            ],
+            artist: artists.flatMap(c => c.items.map((i: any) => i.name)),
             photographyStyle: MODIFIERS.PHOTOGRAPHY_STYLES,
             aestheticLook: MODIFIERS.AESTHETIC_LOOKS,
             digitalAesthetic: MODIFIERS.DIGITAL_AESTHETICS,
@@ -156,13 +194,24 @@ export const PromptAnalyzer: React.FC<PromptAnalyzerProps> = ({
             hairStyle: MODIFIERS.HAIR_STYLES,
             eyeColor: MODIFIERS.EYE_COLORS,
             skinTexture: MODIFIERS.SKIN_TEXTURES,
+            realism: MODIFIERS.REALISM_OPTIONS,
             clothing: MODIFIERS.CLOTHING_STYLES,
             motion: MODIFIERS.MOTION_OPTIONS,
             cameraMovement: MODIFIERS.CAMERA_MOVEMENT_OPTIONS,
+            videoEffect: MODIFIERS.VIDEO_EFFECTS,
+            audioType: MODIFIERS.AUDIO_TYPES,
+            voiceGender: MODIFIERS.VOICE_GENDERS,
+            voiceTone: MODIFIERS.VOICE_TONES,
+            audioEnvironment: MODIFIERS.AUDIO_ENVIRONMENTS,
+            audioMood: MODIFIERS.AUDIO_MOODS,
+            audioDuration: ['5', '10', '15', '30', '45', '60', '90', '120'],
             mjVersion: MODIFIERS.MIDJOURNEY_VERSIONS,
             mjNiji: MODIFIERS.MIDJOURNEY_NIJI_VERSIONS,
             mjAspectRatio: MODIFIERS.MIDJOURNEY_ASPECT_RATIOS,
-            zImageStyle: MODIFIERS.Z_IMAGE_STYLES,
+            mjStylize: ['0', '50', '100', '250', '500', '750', '1000'],
+            mjChaos: ['0', '10', '25', '50', '75', '100'],
+            mjWeird: ['0', '100', '250', '500', '1000', '2000', '3000'],
+            mjNo: [],
             // Fallback heuristics for custom keys
             environment: MODIFIERS.AUDIO_ENVIRONMENTS,
             mood: MODIFIERS.AUDIO_MOODS,
@@ -227,7 +276,7 @@ export const PromptAnalyzer: React.FC<PromptAnalyzerProps> = ({
             console.log('LLM modifiers returned:', result.modifiers);
             console.log('LLM categorizedParameters returned:', result.categorizedParameters);
 
-            Object.entries(result.modifiers).forEach(([key, value]) => {
+            Object.entries(result.modifiers).forEach(([rawKey, value]) => {
                 const valStr = String(value).trim();
                 const isGhost = valStr === '' ||
                     valStr.toLowerCase() === 'none' ||
@@ -241,14 +290,27 @@ export const PromptAnalyzer: React.FC<PromptAnalyzerProps> = ({
 
                 if (isGhost) return;
 
+                // Map 'zImageStyle' back to 'artStyle' since zImageStyle is removed from refiner tabs and represented in artStyle instead
+                const key = rawKey === 'zImageStyle' ? 'artStyle' : rawKey;
+
                 // Check if this key is "matched" in our system
                 if (availableModifierKeys.includes(key)) {
-                    console.log('Adding matched modifier:', key, '=', valStr);
-                    newSegments.push({
-                        id: Math.random().toString(36).substr(2, 9),
-                        key,
-                        value: valStr
-                    });
+                    // Avoid duplicating segments for the mapped key
+                    const existingSeg = newSegments.find(s => s.key === key);
+                    if (existingSeg) {
+                        if (existingSeg.value && !existingSeg.value.includes(valStr)) {
+                            existingSeg.value = `${existingSeg.value}, ${valStr}`;
+                        } else if (!existingSeg.value) {
+                            existingSeg.value = valStr;
+                        }
+                    } else {
+                        console.log('Adding matched modifier:', key, '=', valStr);
+                        newSegments.push({
+                            id: Math.random().toString(36).substr(2, 9),
+                            key,
+                            value: valStr
+                        });
+                    }
                 } else {
                     console.log('Unmatched modifier found, moving to suggested params:', key);
                     potentialCustomParams.push({ label: key, value: valStr });
@@ -356,18 +418,24 @@ export const PromptAnalyzer: React.FC<PromptAnalyzerProps> = ({
         if (!modifiedPrompt) return;
         audioService.playClick();
 
+        const mods: Record<string, any> = {};
+        modifierSegments.forEach(seg => {
+            if (seg.key && seg.value) {
+                mods[seg.key] = seg.value;
+            }
+        });
+
         try {
             // Copy to clipboard as per "only copy the modified prompt"
             await navigator.clipboard.writeText(modifiedPrompt);
             showGlobalFeedback('Prompt copied & mapped to refiner.');
 
-            // Pass ONLY the modified prompt string, resetting other modifiers
-            // This satisfies "copy the modified prompt and paste it to prompt refiner page"
-            onMapToRefiner(modifiedPrompt, {}, '');
+            // Pass the modified prompt string and all current/added modifiers to Refiner page
+            onMapToRefiner(modifiedPrompt, mods, constantModifier);
         } catch (err) {
             console.error('Copy/Map error:', err);
             // Still try to map even if clipboard fails (some browsers might block clipboard in iframe)
-            onMapToRefiner(modifiedPrompt, {}, '');
+            onMapToRefiner(modifiedPrompt, mods, constantModifier);
         }
     };
 
