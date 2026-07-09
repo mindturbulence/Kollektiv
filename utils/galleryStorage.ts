@@ -239,6 +239,7 @@ export const updateItemInGallery = async (id: string, updates: Partial<Omit<Gall
     const newCatId = updates.categoryId !== undefined ? updates.categoryId : originalItem.categoryId;
     const newCategory = newCatId ? manifest.categories.find(c => c.id === newCatId) : null;
     const newCategoryName = newCategory?.name || '';
+    let urlsToDelete: string[] = [];
 
     // 1. Handle actual image data updates
     if (updates.urls && Array.isArray(updates.urls)) {
@@ -268,10 +269,7 @@ export const updateItemInGallery = async (id: string, updates: Partial<Omit<Gall
         finalUrls = successfullyProcessed.map(p => p.savedPath);
         finalSources = successfullyProcessed.map(p => p.sourceName);
         
-        const urlsToDelete = oldUrlList.filter(oldUrl => !finalUrls.includes(oldUrl));
-        for (const urlToDelete of urlsToDelete) {
-            await fileSystemManager.deleteFile(urlToDelete);
-        }
+        urlsToDelete = oldUrlList.filter(oldUrl => !finalUrls.includes(oldUrl));
     }
 
     // 2. Handle File Relocation if the category changed
@@ -326,24 +324,30 @@ export const updateItemInGallery = async (id: string, updates: Partial<Omit<Gall
     
     manifest.galleryItems[itemIndex] = updatedItem;
     await saveManifest(manifest);
-    
+
     // Always update/save metadata JSON
     await saveItemMetadata(updatedItem, manifest.categories);
+
+    // Only now is it safe to remove replaced media — the manifest no longer references them.
+    for (const urlToDelete of urlsToDelete) {
+        await fileSystemManager.deleteFile(urlToDelete);
+    }
 };
 
 export const deleteItemFromGallery = async (id: string): Promise<void> => {
     const manifest = await getManifest();
     const itemToDelete = manifest.galleryItems.find(item => item.id === id);
+    manifest.galleryItems = manifest.galleryItems.filter(item => item.id !== id);
+    manifest.pinnedIds = manifest.pinnedIds.filter(pid => pid !== id);
+    await saveManifest(manifest);
+    // Manifest is durable; deleting the binaries afterwards means a crash here
+    // leaves harmless orphan files instead of a gallery of dead links.
     if (itemToDelete) {
         for (const path of itemToDelete.urls) {
             await fileSystemManager.deleteFile(path);
         }
-        // Also delete metadata JSON
         await deleteItemMetadata(itemToDelete, manifest.categories);
     }
-    manifest.galleryItems = manifest.galleryItems.filter(item => item.id !== id);
-    manifest.pinnedIds = manifest.pinnedIds.filter(pid => pid !== id);
-    await saveManifest(manifest);
 };
 
 export const loadCategories = async (): Promise<GalleryCategory[]> => {
