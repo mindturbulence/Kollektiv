@@ -1,5 +1,6 @@
 import React, { useState, useRef, useCallback, useMemo } from 'react';
 import { motion } from 'motion/react';
+import { audioService } from '../services/audioService';
 import { useSettings } from '../contexts/SettingsContext';
 import { useBusy } from '../contexts/BusyContext';
 import { abstractImage } from '../services/llmService';
@@ -34,6 +35,8 @@ export const MediaAnalyzer: React.FC<MediaAnalyzerProps> = ({
     const [sourceFile, setSourceFile] = useState<File | null>(null);
     const [previewUrl, setPreviewUrl] = useState<string | null>(null);
     const [fileType, setFileType] = useState<'image' | 'video' | null>(null);
+    const [selectedFrameTime, setSelectedFrameTime] = useState<number>(0);
+    const [capturedFrames, setCapturedFrames] = useState<Record<number, string>>({});
     const fileInputRef = useRef<HTMLInputElement>(null);
     const videoRef = useRef<HTMLVideoElement>(null);
     const [isDragging, setIsDragging] = useState(false);
@@ -105,6 +108,24 @@ export const MediaAnalyzer: React.FC<MediaAnalyzerProps> = ({
         ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
         const dataUrl = canvas.toDataURL('image/jpeg', 0.95);
         return dataUrl.split(',')[1];
+    };
+
+    const handleSeekFrame = (seconds: number) => {
+        if (!videoRef.current) return;
+        videoRef.current.currentTime = seconds;
+        setSelectedFrameTime(seconds);
+        audioService.playClick();
+    };
+
+    const handleCaptureAnchor = () => {
+        const frameData = captureVideoFrame();
+        if (frameData) {
+            setCapturedFrames(prev => ({
+                ...prev,
+                [selectedFrameTime]: `data:image/jpeg;base64,${frameData}`
+            }));
+            audioService.playClick();
+        }
     };
 
     const handleAnalyze = useCallback(async () => {
@@ -310,6 +331,51 @@ export const MediaAnalyzer: React.FC<MediaAnalyzerProps> = ({
                                         </div>
                                     )}
                                 </div>
+
+                                {fileType === 'video' && (
+                                    <div className="flex flex-col space-y-3 p-3 bg-base-content/5 rounded border border-base-content/5 animate-fade-in mt-2">
+                                        <div className="flex justify-between items-center pb-1.5 border-b border-primary/10">
+                                            <span className="text-[9px] font-black uppercase tracking-wider text-primary">Kinematic Matcher</span>
+                                            <span className="text-[7px] font-mono text-base-content/30">Active: {selectedFrameTime.toFixed(1)}s</span>
+                                        </div>
+                                        
+                                        {/* Timeline slots */}
+                                        <div className="grid grid-cols-3 gap-2">
+                                            {[0, 2, 4].map((seconds) => (
+                                                <button
+                                                    key={seconds}
+                                                    onClick={() => handleSeekFrame(seconds)}
+                                                    className={`p-1.5 flex flex-col items-center justify-center border transition-all rounded ${
+                                                        selectedFrameTime === seconds 
+                                                            ? 'border-primary bg-primary/15' 
+                                                            : 'border-base-content/10 bg-base-200/50 hover:border-primary/40'
+                                                    }`}
+                                                >
+                                                    <span className="text-[8px] font-bold font-mono tracking-wider mb-1">KEY {seconds}s</span>
+                                                    {capturedFrames[seconds] ? (
+                                                        <img 
+                                                            src={capturedFrames[seconds]} 
+                                                            className="w-full h-8 object-cover rounded border border-primary/20" 
+                                                            alt={`Frame ${seconds}s`}
+                                                        />
+                                                    ) : (
+                                                        <div className="w-full h-8 bg-black/40 rounded flex items-center justify-center border border-dashed border-base-content/10">
+                                                            <span className="text-[6px] font-mono text-base-content/30">EMPTY</span>
+                                                        </div>
+                                                    )}
+                                                </button>
+                                            ))}
+                                        </div>
+                                        
+                                        {/* Action buttons */}
+                                        <button
+                                            onClick={handleCaptureAnchor}
+                                            className="btn btn-xs btn-ghost border border-primary/20 rounded-none w-full text-[8px] font-sf-mono tracking-widest uppercase hover:bg-primary/20 text-primary"
+                                        >
+                                            Capture Current Frame
+                                        </button>
+                                    </div>
+                                )}
 
                                 {metadataResults?.workflow && (
                                     <div className="h-14 flex items-stretch flex-shrink-0 animate-fade-in gap-1.5">

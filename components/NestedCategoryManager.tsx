@@ -1,8 +1,9 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { 
     DeleteIcon, ChevronDownIcon, 
     FolderClosedIcon, PlusIcon,
-    SearchIcon, RefreshIcon, CloseIcon, GripVerticalIcon
+    SearchIcon, RefreshIcon, CloseIcon,
+    EditIcon, CheckIcon
 } from './icons';
 import ConfirmationModal from './ConfirmationModal';
 import { audioService } from '../services/audioService';
@@ -25,6 +26,21 @@ interface NestedCategoryManagerProps {
   deleteConfirmationMessage: (name: string) => string;
 }
 
+// Circular-safe helper: find all categories that are NOT the target itself or any of its descendants
+const getAvailableParents = (catId: string, allCats: Category[]): Category[] => {
+    const descendants = new Set<string>();
+    const findDescendants = (id: string) => {
+        allCats.forEach(c => {
+            if (c.parentId === id) {
+                descendants.add(c.id);
+                findDescendants(c.id);
+            }
+        });
+    };
+    findDescendants(catId);
+    return allCats.filter(c => c.id !== catId && !descendants.has(c.id));
+};
+
 const CategoryItem: React.FC<{
     category: Category;
     allCategories: Category[];
@@ -36,12 +52,11 @@ const CategoryItem: React.FC<{
     onAddSub: (parentId: string) => void;
     onMove: (id: string, direction: 'up' | 'down' | 'top' | 'bottom') => void;
     onReparent: (id: string, newParentId?: string) => void;
-    onDragReorder: (sourceId: string, targetId: string) => void;
-}> = ({ category, allCategories, level, searchQuery, isAllExpanded, onEdit, onDelete, onAddSub, onMove, onReparent, onDragReorder }) => {
+}> = ({ category, allCategories, level, searchQuery, isAllExpanded, onEdit, onDelete, onAddSub, onMove, onReparent }) => {
     const [isLocalExpanded, setIsLocalExpanded] = useState(true);
     const [isEditing, setIsEditing] = useState(false);
     const [editValue, setEditValue] = useState(category.name);
-    const [isDragOver, setIsDragOver] = useState(false);
+    const savingRef = useRef(false);
     
     useEffect(() => {
         if (searchQuery) setIsLocalExpanded(true);
@@ -51,13 +66,17 @@ const CategoryItem: React.FC<{
         setIsLocalExpanded(isAllExpanded);
     }, [isAllExpanded]);
 
-    const children = allCategories.filter(c => c.parentId === category.id).sort((a, b) => a.order - b.order);
-    const siblings = allCategories.filter(c => c.parentId === category.parentId).sort((a, b) => a.order - b.order);
+    const children = allCategories.filter(c => c.parentId === category.id).sort((a, b) => (a.order || 0) - (b.order || 0));
+    const siblings = allCategories.filter(c => c.parentId === category.parentId).sort((a, b) => (a.order || 0) - (b.order || 0));
     const index = siblings.findIndex(s => s.id === category.id);
     
     const handleRename = () => {
-        if (editValue.trim() && editValue !== category.name) {
-            onEdit(category.id, editValue.trim());
+        if (savingRef.current) return;
+        const trimmed = editValue.trim();
+        if (trimmed && trimmed !== category.name) {
+            savingRef.current = true;
+            onEdit(category.id, trimmed);
+            savingRef.current = false;
         } else {
             setEditValue(category.name);
         }
@@ -70,55 +89,13 @@ const CategoryItem: React.FC<{
 
     if (!isVisible) return null;
 
-    const handleDragStart = (e: React.DragEvent) => {
-        e.dataTransfer.setData('text/plain', category.id);
-        e.dataTransfer.effectAllowed = 'move';
-        const target = e.currentTarget as HTMLElement;
-        // Visual ghost effect
-        setTimeout(() => { 
-            target.classList.add('opacity-20');
-            target.classList.add('border-primary');
-        }, 0);
-    };
-
-    const handleDragEnd = (e: React.DragEvent) => {
-        const target = e.currentTarget as HTMLElement;
-        target.classList.remove('opacity-20');
-        target.classList.remove('border-primary');
-        setIsDragOver(false);
-    };
-
-    const handleDragOver = (e: React.DragEvent) => {
-        e.preventDefault();
-        e.dataTransfer.dropEffect = 'move';
-        setIsDragOver(true);
-    };
-
-    const handleDragLeave = () => {
-        setIsDragOver(false);
-    };
-
-    const handleDrop = (e: React.DragEvent) => {
-        e.preventDefault();
-        setIsDragOver(false);
-        const sourceId = e.dataTransfer.getData('text/plain');
-        if (sourceId !== category.id) {
-            onDragReorder(sourceId, category.id);
-        }
-    };
+    const availableParents = getAvailableParents(category.id, allCategories);
 
     return (
         <div className="flex flex-col">
             <div 
-                draggable={!isEditing}
-                onDragStart={handleDragStart}
-                onDragEnd={handleDragEnd}
-                onDragOver={handleDragOver}
-                onDragLeave={handleDragLeave}
-                onDrop={handleDrop}
-                className={`group relative flex items-center gap-4 py-3 pr-4 border-b border-base-300/50 transition-all duration-200 
-                    ${isEditing ? 'bg-primary/5' : 'hover:bg-base-200/50'} 
-                    ${isDragOver ? 'bg-primary/10 ring-2 ring-inset ring-primary z-10' : ''}`}
+                className={`group relative flex flex-col md:flex-row md:items-center justify-between gap-4 py-3 pr-4 border-b border-base-300/45 transition-all duration-200 
+                    ${isEditing ? 'bg-primary/5' : 'hover:bg-base-200/40'}`}
                 style={{ paddingLeft: `${(level * 24) + 12}px` }}
             >
                 {/* Visual Connection Line */}
@@ -126,50 +103,145 @@ const CategoryItem: React.FC<{
                     <div className="absolute w-px bg-base-300 left-0 top-0 bottom-0" style={{ left: `${(level * 24) - 12}px` }}></div>
                 )}
 
+                {/* Left Side: Folder Toggle Expand & Folder Icon & Name/Input */}
                 <div className="flex items-center gap-2 flex-grow min-w-0">
-                    <div className="cursor-grab active:cursor-grabbing text-base-content/20 hover:text-primary transition-colors p-1 -ml-1">
-                        <GripVerticalIcon className="w-4 h-4" />
-                    </div>
-
                     <button 
                         onClick={() => { audioService.playClick(); setIsLocalExpanded(!isLocalExpanded); }}
-                        className={`p-1 transition-transform text-base-content/40 hover:text-primary ${children.length === 0 ? 'opacity-0 pointer-events-none' : ''} ${isLocalExpanded ? 'rotate-0' : '-rotate-90'}`}
+                        className={`p-1.5 transition-transform text-base-content/40 hover:text-primary ${children.length === 0 ? 'opacity-0 pointer-events-none' : ''} ${isLocalExpanded ? 'rotate-0' : '-rotate-90'}`}
                     >
                         <ChevronDownIcon className="w-3.5 h-3.5" />
                     </button>
 
                     <div className="flex items-center gap-3 flex-grow min-w-0">
-                        <FolderClosedIcon className={`w-4 h-4 flex-shrink-0 ${level === 0 ? 'text-primary' : 'text-base-content/40'}`} />
+                        <FolderClosedIcon className={`w-4 h-4 flex-shrink-0 ${level === 0 ? 'text-primary' : 'text-base-content/45'}`} />
                         
                         {isEditing ? (
-                            <input 
-                                autoFocus
-                                value={editValue}
-                                onChange={e => setEditValue(e.target.value)}
-                                onBlur={() => { audioService.playClick(); handleRename(); }}
-                                onKeyDown={e => { if (e.key === 'Enter') { audioService.playClick(); handleRename(); } }}
-                                className="form-input h-8 w-full"
-                            />
+                            <div className="flex items-center gap-1.5 flex-grow max-w-sm">
+                                <input 
+                                    autoFocus
+                                    value={editValue}
+                                    onChange={e => setEditValue(e.target.value)}
+                                    onKeyDown={e => { 
+                                        if (e.key === 'Enter') { 
+                                            audioService.playClick(); 
+                                            handleRename(); 
+                                        } else if (e.key === 'Escape') {
+                                            audioService.playClick();
+                                            setIsEditing(false);
+                                            setEditValue(category.name);
+                                        }
+                                    }}
+                                    className="form-input h-8 w-full font-bold uppercase text-[11px] focus:outline-none"
+                                    placeholder="Enter category name..."
+                                />
+                                <button 
+                                    onClick={() => { audioService.playClick(); handleRename(); }}
+                                    className="p-1 px-2.5 h-8 bg-success/20 hover:bg-success/30 text-success border border-success/30 transition-colors uppercase font-bold text-[10px] flex items-center justify-center"
+                                    title="Save Rename"
+                                >
+                                    <CheckIcon className="w-3.5 h-3.5" />
+                                </button>
+                                <button 
+                                    onClick={() => { 
+                                        audioService.playClick(); 
+                                        setIsEditing(false); 
+                                        setEditValue(category.name); 
+                                    }}
+                                    className="p-1 px-2.5 h-8 bg-base-300 hover:bg-base-200 text-base-content/60 border border-base-300 transition-colors uppercase font-bold text-[10px] flex items-center justify-center"
+                                    title="Cancel"
+                                >
+                                    <CloseIcon className="w-3.5 h-3.5" />
+                                </button>
+                            </div>
                         ) : (
-                            <span 
-                                onClick={() => { audioService.playClick(); setIsEditing(true); }}
-                                className="text-sm font-bold text-base-content truncate cursor-text hover:text-primary transition-colors uppercase tracking-tight"
-                            >
-                                {category.name}
-                            </span>
+                            <div className="flex items-center gap-2 min-w-0">
+                                <span 
+                                    onClick={() => { audioService.playClick(); setIsLocalExpanded(!isLocalExpanded); }}
+                                    className="text-sm font-black text-base-content truncate hover:text-primary transition-colors uppercase tracking-tight cursor-pointer"
+                                    title={`Click to expansion toggle. ID: ${category.id}`}
+                                >
+                                    {category.name}
+                                </span>
+                                <span className="text-[8px] font-mono text-base-content/20 flex-shrink-0">#{category.id.slice(-4)}</span>
+                            </div>
                         )}
-                        <span className="text-[8px] font-mono text-base-content/10 flex-shrink-0">#{category.id.slice(-4)}</span>
                     </div>
                 </div>
 
-                <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                    <div className="flex bg-base-200/50 mr-2">
-                        <button onClick={() => { audioService.playClick(); onMove(category.id, 'up'); }} disabled={index === 0} className="p-1 text-base-content/40 hover:text-primary disabled:opacity-10 transition-colors" title="Move Up"><ChevronDownIcon className="w-3 h-3 rotate-180"/></button>
-                        <button onClick={() => { audioService.playClick(); onMove(category.id, 'down'); }} disabled={index === siblings.length - 1} className="p-1 text-base-content/40 hover:text-primary disabled:opacity-10 transition-colors" title="Move Down"><ChevronDownIcon className="w-3 h-3"/></button>
+                {/* Right Side: Reorganizing parent dropdown, Sibling movers, and Action Buttons */}
+                <div className="flex items-center gap-4 flex-wrap md:flex-nowrap">
+                    {/* Parent Selector (reparenting) - 100% stable folder moves */}
+                    {!isEditing && (
+                        <div className="flex items-center gap-2">
+                            <span className="text-[9px] font-mono text-base-content/40 uppercase tracking-wider hidden md:inline">Folder Placement:</span>
+                            <select
+                                value={category.parentId || ''}
+                                onChange={(e) => {
+                                    audioService.playClick();
+                                    const val = e.target.value;
+                                    onReparent(category.id, val ? val : undefined);
+                                }}
+                                className="select select-xs select-bordered font-mono text-[9px] uppercase font-bold tracking-wider h-7 bg-base-200/50 hover:bg-base-200 border-base-300/50 rounded-none max-w-[150px] focus:outline-none"
+                                title="Move folder to another placement in tree"
+                            >
+                                <option value="">[ROOT DIRECTORY]</option>
+                                {availableParents.map(p => (
+                                    <option key={p.id} value={p.id}>
+                                        {p.name.toUpperCase()}
+                                    </option>
+                                ))}
+                            </select>
+                        </div>
+                    )}
+
+                    {/* Sibling Sort Sequence Moves */}
+                    <div className="flex bg-base-200/50 border border-base-300/30">
+                        <button 
+                            onClick={() => { audioService.playClick(); onMove(category.id, 'up'); }} 
+                            disabled={index === 0} 
+                            className="p-1 px-2.5 text-base-content/50 hover:text-primary disabled:opacity-10 disabled:pointer-events-none transition-colors border-r border-base-300/30" 
+                            title="Sort Up"
+                        >
+                            <ChevronDownIcon className="w-3.5 h-3.5 rotate-180"/>
+                        </button>
+                        <button 
+                            onClick={() => { audioService.playClick(); onMove(category.id, 'down'); }} 
+                            disabled={index === siblings.length - 1} 
+                            className="p-1 px-2.5 text-base-content/50 hover:text-primary disabled:opacity-10 disabled:pointer-events-none transition-colors" 
+                            title="Sort Down"
+                        >
+                            <ChevronDownIcon className="w-3.5 h-3.5"/>
+                        </button>
                     </div>
 
-                    <button onClick={() => { audioService.playClick(); onAddSub(category.id); }} className="p-1 text-primary/40 hover:text-primary transition-colors" title="Add Subfolder"><PlusIcon className="w-3.5 h-3.5"/></button>
-                    <button onClick={() => { audioService.playClick(); onDelete(category); }} className="p-1 text-error/20 hover:text-error transition-colors" title="Delete"><DeleteIcon className="w-3.5 h-3.5"/></button>
+                    {/* Direct modification triggers */}
+                    <div className="flex items-center gap-1 border-l border-base-300/40 pl-3">
+                        <button 
+                            onClick={() => { audioService.playClick(); onAddSub(category.id); }} 
+                            className="p-1.5 bg-primary/5 hover:bg-primary/10 text-primary border border-primary/20 transition-all flex items-center justify-center" 
+                            title="New Nest Subfolder"
+                        >
+                            <PlusIcon className="w-3.5 h-3.5"/>
+                        </button>
+                        
+                        {!isEditing && (
+                            <button 
+                                onClick={() => { audioService.playClick(); setIsEditing(true); }} 
+                                className="p-1.5 bg-info/5 hover:bg-info/10 text-info border border-info/20 transition-all flex items-center justify-center" 
+                                title="Rename Folder"
+                            >
+                                <EditIcon className="w-3.5 h-3.5"/>
+                            </button>
+                        )}
+                        
+                        <button 
+                            onClick={() => { audioService.playClick(); onDelete(category); }} 
+                            className="p-1.5 bg-error/5 hover:bg-error/10 text-error border border-error/20 transition-all flex items-center justify-center" 
+                            title="Purge Empty or Filled Folder"
+                        >
+                            <DeleteIcon className="w-3.5 h-3.5"/>
+                        </button>
+                    </div>
                 </div>
             </div>
             
@@ -188,7 +260,6 @@ const CategoryItem: React.FC<{
                             onAddSub={onAddSub}
                             onMove={onMove}
                             onReparent={onReparent}
-                            onDragReorder={onDragReorder}
                         />
                     ))}
                 </div>
@@ -217,7 +288,7 @@ export const NestedCategoryManager: React.FC<NestedCategoryManagerProps> = ({
   const handleReorder = async (id: string, direction: 'up' | 'down' | 'top' | 'bottom') => {
       const cat = categories.find(c => c.id === id);
       if (!cat) return;
-      const siblings = categories.filter(c => c.parentId === cat.parentId).sort((a, b) => a.order - b.order);
+      const siblings = categories.filter(c => c.parentId === cat.parentId).sort((a, b) => (a.order || 0) - (b.order || 0));
       const index = siblings.findIndex(s => s.id === id);
       
       let targetIndex = -1;
@@ -239,45 +310,6 @@ export const NestedCategoryManager: React.FC<NestedCategoryManagerProps> = ({
           return updated || c;
       });
       
-      setCategories(updatedAll);
-      await saveOrderFn(updatedAll);
-  };
-
-  const handleDragReorder = async (sourceId: string, targetId: string) => {
-      const sourceCat = categories.find(c => c.id === sourceId);
-      const targetCat = categories.find(c => c.id === targetId);
-      if (!sourceCat || !targetCat) return;
-
-      let updatedAll = [...categories];
-
-      // Circular check (cannot drag parent into child)
-      let tempParent = targetCat.parentId;
-      while (tempParent) {
-          if (tempParent === sourceId) return;
-          tempParent = categories.find(c => c.id === tempParent)?.parentId;
-      }
-
-      const newParentId = targetCat.parentId;
-      const siblings = updatedAll.filter(c => c.parentId === newParentId).sort((a, b) => a.order - b.order);
-      const targetIndex = siblings.findIndex(s => s.id === targetId);
-
-      updatedAll = updatedAll.filter(c => c.id !== sourceId);
-      const updatedSource = { ...sourceCat, parentId: newParentId };
-      const newSiblings = siblings.filter(s => s.id !== sourceId);
-      newSiblings.splice(targetIndex, 0, updatedSource);
-
-      const reorderedSiblings = newSiblings.map((s, i) => ({ ...s, order: i }));
-
-      updatedAll = updatedAll.map(c => {
-          const reordered = reorderedSiblings.find(s => s.id === c.id);
-          return reordered || c;
-      });
-
-      if (!updatedAll.find(c => c.id === sourceId)) {
-          const sourceWithOrder = reorderedSiblings.find(s => s.id === sourceId)!;
-          updatedAll.push(sourceWithOrder);
-      }
-
       setCategories(updatedAll);
       await saveOrderFn(updatedAll);
   };
@@ -320,14 +352,14 @@ export const NestedCategoryManager: React.FC<NestedCategoryManagerProps> = ({
       }
   };
 
-  const rootCategories = categories.filter(c => !c.parentId).sort((a, b) => a.order - b.order);
+  const rootCategories = categories.filter(c => !c.parentId).sort((a, b) => (a.order || 0) - (b.order || 0));
 
   return (
     <div className="flex flex-col h-full bg-base-100/40 backdrop-blur-xl overflow-hidden">
         <header className="p-6 flex flex-col gap-6 flex-shrink-0">
             <div className="flex justify-between items-center">
                 <h3 className="text-xs font-black uppercase tracking-[0.4em] text-primary">{title}</h3>
-                <div className="flex gap-1">
+                <div className="flex gap-1.5">
                     <button onClick={() => { audioService.playClick(); setIsAllExpanded(!isAllExpanded); }} className="p-2 text-primary/40 hover:text-primary transition-colors" title={isAllExpanded ? 'Collapse All' : 'Expand All'}>
                         <ChevronDownIcon className={`w-5 h-5 transition-transform ${isAllExpanded ? 'rotate-0' : '-rotate-90'}`} />
                     </button>
@@ -377,7 +409,6 @@ export const NestedCategoryManager: React.FC<NestedCategoryManagerProps> = ({
                             onAddSub={(pid) => { setAddParentId(pid); setIsAddModalOpen(true); }}
                             onMove={handleReorder}
                             onReparent={handleReparent}
-                            onDragReorder={handleDragReorder}
                         />
                     ))}
                 </div>
@@ -408,11 +439,6 @@ export const NestedCategoryManager: React.FC<NestedCategoryManagerProps> = ({
                             <button onClick={() => { audioService.playClick(); handleConfirmAdd(); }} disabled={!addName.trim()} className="form-btn form-btn-primary px-8 shadow-lg">Create</button>
                         </footer>
                     </div>
-                    {/* Manual Corner Accents */}
-                    <div className="absolute -top-[1px] -left-[1px] w-3 h-3 border-t border-l border-primary/15 z-20 pointer-events-none" />
-                    <div className="absolute -top-[1px] -right-[1px] w-3 h-3 border-t border-r border-primary/15 z-20 pointer-events-none" />
-                    <div className="absolute -bottom-[1px] -left-[1px] w-3 h-3 border-b border-l border-primary/15 z-20 pointer-events-none" />
-                    <div className="absolute -bottom-[1px] -right-[1px] w-3 h-3 border-b border-r border-primary/15 z-20 pointer-events-none" />
                 </div>
             </div>
         )}

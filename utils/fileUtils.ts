@@ -3,6 +3,8 @@ import JSZip from 'jszip';
 import { getHandle, setHandle } from './db';
 import type { AuthContextType } from '../contexts/AuthContext';
 import type { LLMSettings } from '../types';
+import { loadLLMSettings } from './settingsStorage';
+import { convertToJpgWithMetadata } from './imageFormatTools';
 
 // --- Interfaces and Types ---
 interface IFileSystemManager {
@@ -16,8 +18,30 @@ interface IFileSystemManager {
     isDirectorySelected(): boolean;
     selectAndSetAppDataDirectory(): Promise<FileSystemDirectoryHandle | null>;
     requestExistingPermission(): Promise<boolean>;
-    migrateLocalToDrive(onProgress?: (msg: string) => void): Promise<void>;
+    migrateLocalToDrive(
+        onProgress?: (
+            msg: string,
+            progress?: number,
+            extra?: {
+                phase: 'converting' | 'uploading' | 'complete';
+                convertingProgress?: number;
+                convertingMsg?: string;
+                uploadingProgress?: number;
+                uploadingMsg?: string;
+                overallProgress?: number;
+            }
+        ) => void,
+        onDuplicateFound?: (fileName: string) => Promise<'replace' | 'copy'>
+    ): Promise<void>;
+    syncDriveToLocal(
+        onProgress?: (
+            msg: string,
+            progress?: number
+        ) => void
+    ): Promise<void>;
     calculateTotalSize(): Promise<number>;
+    scanForKollektivFolder(): Promise<{ id: string; name: string } | null>;
+    createKollektivFolder(): Promise<string>;
 }
 
 // --- Helper Classes for GDrive Integration ---
@@ -100,6 +124,8 @@ class LocalFileSystemManager implements IFileSystemManager {
     public rootFolderId: string | null = null;
     public pathCache: Map<string, { id: string; mimeType: string }> = new Map();
     public lastError: string | null = null;
+    private ensureRootFolderPromise: Promise<void> | null = null;
+    private resolvePathLock: Promise<any> = Promise.resolve();
 
     private async verifyPermission(handle: FileSystemDirectoryHandle, interactive: boolean = false): Promise<boolean> {
         const options = { mode: 'readwrite' as const };
@@ -137,72 +163,104 @@ class LocalFileSystemManager implements IFileSystemManager {
     }
 
     private async ensureRootFolder(): Promise<void> {
-        if (!this.accessToken) {
-            throw new Error("No Google access token configured for Google Drive.");
+        if (this.rootFolderId) return;
+        if (this.ensureRootFolderPromise) {
+            return this.ensureRootFolderPromise;
         }
 
-        const q = "(name = 'Kollektiv' or name = 'kollektiv' or name = 'KOLLEKTIV') and mimeType = 'application/vnd.google-apps.folder' and trashed = false";
-        const searchUrl = `/google-api/drive/v3/files?q=${encodeURIComponent(q)}&fields=files(id,name)`;
-        const res = await fetch(searchUrl, {
-            headers: { 'Authorization': `Bearer ${this.accessToken}` }
-        });
+        this.ensureRootFolderPromise = (async () => {
+            if (!this.accessToken) {
+                throw new Error("No Google access token configured for Google Drive.");
+            }
 
-        if (!res.ok) {
-            const details = await this.extractGoogleError(res);
-            throw new Error(`Failed to query Google Drive root folder: ${details}`);
-        }
-
-        const data = await res.json();
-        const folders = data.files || [];
-
-        if (folders.length > 0) {
-            this.rootFolderId = folders[0].id;
-        } else {
-            const createRes = await fetch(`/google-api/drive/v3/files`, {
-                method: 'POST',
-                headers: {
-                    'Authorization': `Bearer ${this.accessToken}`,
-                    'Content-Type': 'application/json'
-                },
-                body: JSON.stringify({
-                    name: 'Kollektiv',
-                    mimeType: 'application/vnd.google-apps.folder',
-                    parents: ['root']
-                })
+            const q = "(name = 'Kollektiv' or name = 'kollektiv' or name = 'KOLLEKTIV') and mimeType = 'application/vnd.google-apps.folder' and trashed = false";
+            const searchUrl = `/google-api/drive/v3/files?q=${encodeURIComponent(q)}&fields=files(id,name)`;
+            const res = await fetch(searchUrl, {
+                headers: { 'Authorization': `Bearer ${this.accessToken}` }
             });
 
-            if (!createRes.ok) {
-                const details = await this.extractGoogleError(createRes);
-                throw new Error(`Failed to create Kollektiv root folder in Google Drive: ${details}`);
+            if (!res.ok) {
+                const details = await this.extractGoogleError(res);
+                throw new Error(`Failed to query Google Drive root folder: ${details}`);
             }
 
-            const newFolder = await createRes.json();
-            this.rootFolderId = newFolder.id;
-        }
+            const data = await res.json();
+            const folders = data.files || [];
 
-        this.pathCache.clear();
-
-        // Prefetch root folder children into cache
-        if (this.rootFolderId) {
-            try {
-                const qRoot = `'${this.rootFolderId}' in parents and trashed = false`;
-                const qUrl = `/google-api/drive/v3/files?q=${encodeURIComponent(qRoot)}&fields=files(id,name,mimeType)&pageSize=1000`;
-                const rootRes = await fetch(qUrl, {
-                    headers: { 'Authorization': `Bearer ${this.accessToken}` }
+            if (folders.length > 0) {
+                this.rootFolderId = folders[0].id;
+            } else {
+                const createRes = await fetch(`/google-api/drive/v3/files`, {
+                    method: 'POST',
+                    headers: {
+                        'Authorization': `Bearer ${this.accessToken}`,
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        name: 'Kollektiv',
+                        mimeType: 'application/vnd.google-apps.folder',
+                        parents: ['root']
+                    })
                 });
-                if (rootRes.ok) {
-                    const rootData = await rootRes.json();
-                    for (const f of (rootData.files || [])) {
-                        this.pathCache.set(f.name, { id: f.id, mimeType: f.mimeType });
-                    }
+
+                if (!createRes.ok) {
+                    const details = await this.extractGoogleError(createRes);
+                    throw new Error(`Failed to create Kollektiv root folder in Google Drive: ${details}`);
                 }
-            } catch (e) {
-                console.warn("Failed to prefill root cache:", e);
+
+                const newFolder = await createRes.json();
+                this.rootFolderId = newFolder.id;
             }
+
+            this.pathCache.clear();
+
+            // Prefetch root folder children into cache
+            if (this.rootFolderId) {
+                try {
+                    const qRoot = `'${this.rootFolderId}' in parents and trashed = false`;
+                    const qUrl = `/google-api/drive/v3/files?q=${encodeURIComponent(qRoot)}&fields=files(id,name,mimeType)&pageSize=1000`;
+                    const rootRes = await fetch(qUrl, {
+                        headers: { 'Authorization': `Bearer ${this.accessToken}` }
+                    });
+                    if (rootRes.ok) {
+                        const rootData = await rootRes.json();
+                        for (const f of (rootData.files || [])) {
+                            this.pathCache.set(f.name, { id: f.id, mimeType: f.mimeType });
+                        }
+                    }
+                } catch (e) {
+                    console.warn("Failed to prefill root cache:", e);
+                }
+            }
+        })();
+
+        try {
+            await this.ensureRootFolderPromise;
+        } finally {
+            this.ensureRootFolderPromise = null;
         }
     }
 
     private async resolvePath(filePath: string, createIfMissing: boolean = false): Promise<string | null> {
+        if (!createIfMissing) {
+            return this.resolvePathInternal(filePath, false);
+        }
+
+        const currentLock = this.resolvePathLock;
+        let resolveLock: () => void = () => {};
+        this.resolvePathLock = new Promise<void>((resolve) => {
+            resolveLock = resolve;
+        });
+
+        try {
+            await currentLock;
+            return await this.resolvePathInternal(filePath, true);
+        } finally {
+            resolveLock();
+        }
+    }
+
+    private async resolvePathInternal(filePath: string, createIfMissing: boolean = false): Promise<string | null> {
         if (!this.rootFolderId) {
             await this.ensureRootFolder();
         }
@@ -232,7 +290,8 @@ class LocalFileSystemManager implements IFileSystemManager {
                 continue;
             }
 
-            const q = `name = '${name}' and '${currentParentId}' in parents and trashed = false${mimeTypeFilter}`;
+            const cleanName = name.replace(/\\/g, '\\\\').replace(/'/g, "\\'");
+            const q = `name = '${cleanName}' and '${currentParentId}' in parents and trashed = false${mimeTypeFilter}`;
             const url = `/google-api/drive/v3/files?q=${encodeURIComponent(q)}&fields=files(id,name,mimeType)`;
             const res = await fetch(url, {
                 headers: { 'Authorization': `Bearer ${this.accessToken}` }
@@ -284,10 +343,96 @@ class LocalFileSystemManager implements IFileSystemManager {
         return currentParentId;
     }
 
+    public async scanForKollektivFolder(): Promise<{ id: string; name: string } | null> {
+        if (!this.accessToken) {
+            throw new Error("No Google access token configured.");
+        }
+        const q = "(name = 'Kollektiv' or name = 'kollektiv' or name = 'KOLLEKTIV') and mimeType = 'application/vnd.google-apps.folder' and trashed = false";
+        const searchUrl = `/google-api/drive/v3/files?q=${encodeURIComponent(q)}&fields=files(id,name)`;
+        const res = await fetch(searchUrl, {
+            headers: { 'Authorization': `Bearer ${this.accessToken}` }
+        });
+
+        if (!res.ok) {
+            const details = await this.extractGoogleError(res);
+            throw new Error(`Failed to query Google Drive folder: ${details}`);
+        }
+
+        const data = await res.json();
+        const folders = data.files || [];
+        if (folders.length > 0) {
+            return { id: folders[0].id, name: folders[0].name };
+        }
+        return null;
+    }
+
+    public async createKollektivFolder(): Promise<string> {
+        if (!this.accessToken) {
+            throw new Error("No Google access token configured.");
+        }
+        const createRes = await fetch(`/google-api/drive/v3/files`, {
+            method: 'POST',
+            headers: {
+                'Authorization': `Bearer ${this.accessToken}`,
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+                name: 'Kollektiv',
+                mimeType: 'application/vnd.google-apps.folder',
+                parents: ['root']
+            })
+        });
+
+        if (!createRes.ok) {
+            const details = await this.extractGoogleError(createRes);
+            throw new Error(`Failed to create Kollektiv root folder in Google Drive: ${details}`);
+        }
+
+        const newFolder = await createRes.json();
+        this.rootFolderId = newFolder.id;
+        this.appDirectoryName = "Google Drive (Kollektiv)";
+        this.pathCache.clear();
+
+        // Prefetch root folder children into cache
+        try {
+            const qRoot = `'${this.rootFolderId}' in parents and trashed = false`;
+            const qUrl = `/google-api/drive/v3/files?q=${encodeURIComponent(qRoot)}&fields=files(id,name,mimeType)&pageSize=1000`;
+            const rootRes = await fetch(qUrl, {
+                headers: { 'Authorization': `Bearer ${this.accessToken}` }
+            });
+            if (rootRes.ok) {
+                const rootData = await rootRes.json();
+                for (const f of (rootData.files || [])) {
+                    this.pathCache.set(f.name, { id: f.id, mimeType: f.mimeType });
+                }
+            }
+        } catch (e) {
+            console.warn("Failed to prefill root cache:", e);
+        }
+
+        return newFolder.id;
+    }
+
     async initialize(settings: LLMSettings, _auth: AuthContextType): Promise<boolean> {
         this.lastError = null;
         this.storageProvider = settings.storageProvider || 'local';
         this.accessToken = settings.googleIdentity?.isConnected ? (settings.googleIdentity.accessToken || null) : null;
+
+        // Drive standby/keep-alive initialization
+        if (this.accessToken) {
+            try {
+                if (settings.driveFolderId) {
+                    this.rootFolderId = settings.driveFolderId;
+                } else {
+                    const folder = await this.scanForKollektivFolder().catch(() => null);
+                    if (folder) {
+                        this.rootFolderId = folder.id;
+                    }
+                }
+            } catch (e) {
+                console.warn("Google Drive standby initialization warning:", e);
+            }
+        }
 
         if (this.storageProvider === 'drive') {
             if (!this.accessToken) {
@@ -664,7 +809,24 @@ class LocalFileSystemManager implements IFileSystemManager {
         }
     }
 
-    public async migrateLocalToDrive(onProgress?: (msg: string) => void): Promise<void> {
+    public isMigrationPaused = false;
+    public isMigrationAborted = false;
+
+    public async migrateLocalToDrive(
+        onProgress?: (
+            msg: string,
+            progress?: number,
+            extra?: {
+                phase: 'converting' | 'uploading' | 'complete';
+                convertingProgress?: number;
+                convertingMsg?: string;
+                uploadingProgress?: number;
+                uploadingMsg?: string;
+                overallProgress?: number;
+            }
+        ) => void,
+        onDuplicateFound?: (fileName: string) => Promise<'replace' | 'copy'>
+    ): Promise<void> {
         if (!this.accessToken) {
             throw new Error("No Google Drive connection configured. Please connect first.");
         }
@@ -672,23 +834,292 @@ class LocalFileSystemManager implements IFileSystemManager {
             throw new Error("Local vault handle is not connected. Please connect it first.");
         }
 
+        this.isMigrationPaused = false;
+        this.isMigrationAborted = false;
+
         // Clear path cache to force fresh resolution and ensure we overwrite existing files accurately
         this.pathCache.clear();
 
+        const checkPause = async () => {
+            while (this.isMigrationPaused && !this.isMigrationAborted) {
+                await new Promise((resolve) => setTimeout(resolve, 200));
+            }
+            if (this.isMigrationAborted) {
+                throw new Error("Migration aborted by user.");
+            }
+        };
+
+        // Keep track of paths that we have already converted and uploaded
+        const uploadedFilePaths = new Set<string>();
+
+        // --- PHASE 1: CONVERT AND UPLOAD EACH POST POST-BY-POST IN MEMORY ---
+        if (onProgress) {
+            onProgress("Initializing post-by-post image conversion phase...", 0, {
+                phase: 'converting',
+                convertingProgress: 0,
+                convertingMsg: "Checking gallery items for conversion...",
+                overallProgress: 0
+            });
+        }
+
+        // 1. Read the manifest
+        const manifestContent = await this.readFile('kollektiv_gallery_manifest.json');
+        let manifest: any = null;
+        if (manifestContent) {
+            try {
+                manifest = JSON.parse(manifestContent);
+            } catch (e) {
+                console.error("Failed to parse gallery manifest for migration conversion:", e);
+            }
+        }
+
+        if (manifest && Array.isArray(manifest.galleryItems)) {
+            const categories = Array.isArray(manifest.categories) ? manifest.categories : [];
+            const galleryItems = manifest.galleryItems;
+            const totalGItems = galleryItems.length;
+
+            const settings = loadLLMSettings();
+
+            // Create a deep copy of the manifest to modify for Google Drive only
+            const driveManifest = JSON.parse(JSON.stringify(manifest));
+
+            for (let itemIdx = 0; itemIdx < totalGItems; itemIdx++) {
+                if (this.isMigrationAborted) {
+                    throw new Error("Migration aborted by user.");
+                }
+                await checkPause();
+
+                const item = galleryItems[itemIdx];
+                const postTitle = item.title || item.id || 'Untitled Post';
+
+                // STEP A: CONVERT this post's images in memory (or copy video as is)
+                const convertingMsg = `Converting images for "${postTitle}" (${itemIdx + 1}/${totalGItems})`;
+                const convertingProgress = totalGItems > 0 ? (itemIdx / totalGItems) * 100 : 100;
+                const overallProgressConv = totalGItems > 0 ? Math.round((itemIdx / totalGItems) * 50) : 50;
+
+                if (onProgress) {
+                    onProgress(convertingMsg, overallProgressConv, {
+                        phase: 'converting',
+                        convertingProgress,
+                        convertingMsg,
+                        overallProgress: overallProgressConv
+                    });
+                }
+
+                const itemIndexInManifest = driveManifest.galleryItems.findIndex((it: any) => it.id === item.id);
+                const urlsToUploadInGDrive: string[] = [];
+                const convertedBlobsToUpload: { path: string; blob: Blob }[] = [];
+
+                if (Array.isArray(item.urls)) {
+                    for (let urlIndex = 0; urlIndex < item.urls.length; urlIndex++) {
+                        const originalUrl = item.urls[urlIndex];
+                        if (originalUrl && !originalUrl.startsWith('data:') && !originalUrl.startsWith('http')) {
+                            try {
+                                const blob = await this.getFileAsBlob(originalUrl);
+                                if (blob) {
+                                    if (item.type === 'image') {
+                                        const isAlreadyJpg = originalUrl.toLowerCase().endsWith('.jpg') || originalUrl.toLowerCase().endsWith('.jpeg');
+                                        if (isAlreadyJpg) {
+                                            convertedBlobsToUpload.push({ path: originalUrl, blob });
+                                            urlsToUploadInGDrive.push(originalUrl);
+                                            uploadedFilePaths.add(originalUrl);
+                                        } else {
+                                            const quality = settings.jpgCompressionQuality || 0.9;
+                                            const jpgBlob = await convertToJpgWithMetadata(blob, quality);
+                                            const newUrl = originalUrl.replace(/\.[^/.]+$/, "") + ".jpg";
+
+                                            convertedBlobsToUpload.push({ path: newUrl, blob: jpgBlob });
+                                            urlsToUploadInGDrive.push(newUrl);
+
+                                            uploadedFilePaths.add(originalUrl);
+                                            uploadedFilePaths.add(newUrl);
+                                        }
+                                    } else {
+                                        // Video or non-image
+                                        convertedBlobsToUpload.push({ path: originalUrl, blob });
+                                        urlsToUploadInGDrive.push(originalUrl);
+                                        uploadedFilePaths.add(originalUrl);
+                                    }
+                                } else {
+                                    urlsToUploadInGDrive.push(originalUrl);
+                                }
+                            } catch (err) {
+                                console.error(`Failed to process image index ${urlIndex} for post ${item.id}:`, err);
+                                urlsToUploadInGDrive.push(originalUrl);
+                            }
+                        } else {
+                            urlsToUploadInGDrive.push(originalUrl);
+                        }
+                    }
+                }
+
+                // Metadata path
+                const category = categories.find((c: any) => c.id === item.categoryId);
+                const categoryName = category?.name || '';
+                const pathSegments = ['gallery'];
+                if (categoryName) pathSegments.push(categoryName);
+                const metadataPath = [...pathSegments, `${item.id}_metadata.json`].join('/');
+
+                // Build Google Drive metadata (referencing the converted .jpg paths)
+                let driveMetaObj = { ...item };
+                driveMetaObj.urls = urlsToUploadInGDrive;
+                const driveMetaBlob = new Blob([JSON.stringify(driveMetaObj, null, 2)], { type: 'application/json' });
+
+                // Update the drive manifest with the new GDrive paths for this item
+                if (itemIndexInManifest > -1 && driveManifest.galleryItems[itemIndexInManifest]) {
+                    driveManifest.galleryItems[itemIndexInManifest].urls = urlsToUploadInGDrive;
+                }
+
+                // Add metadata path to skip list in Phase 2
+                uploadedFilePaths.add(metadataPath);
+
+                // STEP B: UPLOAD this post's files and metadata to Google Drive straight away!
+                const uploadingMsg = `Uploading converts for "${postTitle}" to Google Drive (${itemIdx + 1}/${totalGItems})`;
+                const uploadingProgress = totalGItems > 0 ? (itemIdx / totalGItems) * 100 : 100;
+                const overallProgressUpload = totalGItems > 0 ? Math.round(((itemIdx + 0.5) / totalGItems) * 50) : 50;
+
+                if (onProgress) {
+                    onProgress(uploadingMsg, overallProgressUpload, {
+                        phase: 'uploading',
+                        uploadingProgress,
+                        uploadingMsg,
+                        overallProgress: overallProgressUpload
+                    });
+                }
+
+                const oldProvider = this.storageProvider;
+                try {
+                    this.storageProvider = 'drive';
+                    
+                    // Upload metadata JSON to Google Drive
+                    await this.saveFile(metadataPath, driveMetaBlob);
+
+                    // Upload actual image/video files to Google Drive
+                    for (const fileToUpload of convertedBlobsToUpload) {
+                        await this.saveFile(fileToUpload.path, fileToUpload.blob);
+                    }
+                } catch (uploaderErr) {
+                    console.error(`Post-by-post upload error for item ${item.id}:`, uploaderErr);
+                } finally {
+                    this.storageProvider = oldProvider;
+                }
+            }
+
+            // Upload GDrive manifest to Google Drive
+            const oldProvider = this.storageProvider;
+            try {
+                this.storageProvider = 'drive';
+                await this.saveFile('kollektiv_gallery_manifest.json', new Blob([JSON.stringify(driveManifest, null, 2)], { type: 'application/json' }));
+                uploadedFilePaths.add('kollektiv_gallery_manifest.json');
+            } catch (err) {
+                console.error("Failed to upload updated gallery manifest to Google Drive in Phase 1:", err);
+            } finally {
+                this.storageProvider = oldProvider;
+            }
+        }
+
+        // --- PHASE 2: COPY ALL OTHER WORKSPACE FILES TO GOOGLE DRIVE ---
+        const countFiles = async (handle: FileSystemDirectoryHandle): Promise<number> => {
+            let count = 0;
+            for await (const entry of (handle as any).values()) {
+                if (entry.kind === 'file') {
+                    count++;
+                } else if (entry.kind === 'directory') {
+                    count += await countFiles(entry);
+                }
+            }
+            return count;
+        };
+
+        let totalFiles = 0;
+        try {
+            totalFiles = await countFiles(this.appDirHandle);
+        } catch (e) {
+            console.warn("Failed to count local files for progress", e);
+        }
+
+        let processedFiles = 0;
+
         const copyRecursive = async (localHandle: FileSystemDirectoryHandle, currentPath: string) => {
             for await (const entry of (localHandle as any).values()) {
+                if (this.isMigrationAborted) {
+                    throw new Error("Migration aborted by user.");
+                }
+                await checkPause();
+
+                const filePath = currentPath ? `${currentPath}/${entry.name}` : entry.name;
+
                 if (entry.kind === 'file') {
-                    if (onProgress) onProgress(`Migrating ${entry.name}...`);
+                    // Skip files already converted and uploaded in Phase 1
+                    if (uploadedFilePaths.has(filePath)) {
+                        processedFiles++;
+                        continue;
+                    }
+
+                    const uploadingProgress = totalFiles > 0 ? (processedFiles / totalFiles) * 100 : 100;
+                    const overallProgress = totalFiles > 0 ? Math.round(50 + (processedFiles / totalFiles) * 50) : 100;
+                    const uploadingMsg = `Uploading general ${entry.name}...`;
+
+                    if (onProgress) {
+                        onProgress(uploadingMsg, overallProgress, {
+                            phase: 'uploading',
+                            uploadingProgress,
+                            uploadingMsg,
+                            overallProgress
+                        });
+                    }
+
                     const file = await entry.getFile();
-                    const filePath = currentPath ? `${currentPath}/${entry.name}` : entry.name;
                     const oldProvider = this.storageProvider;
                     this.storageProvider = 'drive';
+
                     try {
-                        await this.saveFile(filePath, file);
+                        const exists = await this.resolvePath(filePath);
+                        let finalPath = filePath;
+
+                        const isDatabaseOrMetadata = 
+                            filePath === 'kollektiv_gallery_manifest.json' || 
+                            filePath.endsWith('_manifest.json') || 
+                            filePath.endsWith('_cheatsheet.json') || 
+                            filePath.endsWith('_metadata.json');
+
+                        if (exists && !isDatabaseOrMetadata) {
+                            if (onDuplicateFound) {
+                                const choice = await onDuplicateFound(entry.name);
+                                if (choice === 'copy') {
+                                    const dotIndex = entry.name.lastIndexOf('.');
+                                    const nameWithoutExt = dotIndex !== -1 ? entry.name.substring(0, dotIndex) : entry.name;
+                                    const ext = dotIndex !== -1 ? entry.name.substring(dotIndex) : '';
+                                    
+                                    let copyIndex = 1;
+                                    let copyPath = `${currentPath ? currentPath + '/' : ''}${nameWithoutExt} (${copyIndex})${ext}`;
+                                    while (await this.resolvePath(copyPath) !== null) {
+                                        copyIndex++;
+                                        copyPath = `${currentPath ? currentPath + '/' : ''}${nameWithoutExt} (${copyIndex})${ext}`;
+                                    }
+                                    finalPath = copyPath;
+                                }
+                            }
+                        }
+
+                        await this.saveFile(finalPath, file);
                     } catch (e) {
                          console.error("Migration failed for", filePath, e);
                     } finally {
                         this.storageProvider = oldProvider;
+                    }
+
+                    processedFiles++;
+                    const finalUploadingProgress = totalFiles > 0 ? (processedFiles / totalFiles) * 100 : 100;
+                    const finalOverallProgress = totalFiles > 0 ? Math.round(50 + (processedFiles / totalFiles) * 50) : 100;
+
+                    if (onProgress) {
+                        onProgress(`Uploaded ${entry.name}.`, finalOverallProgress, {
+                            phase: 'uploading',
+                            uploadingProgress: finalUploadingProgress,
+                            uploadingMsg: `Uploaded ${entry.name}.`,
+                            overallProgress: finalOverallProgress
+                        });
                     }
                 } else if (entry.kind === 'directory') {
                     const newPath = currentPath ? `${currentPath}/${entry.name}` : entry.name;
@@ -697,9 +1128,162 @@ class LocalFileSystemManager implements IFileSystemManager {
             }
         };
 
-        if (onProgress) onProgress("Starting migration to Google Drive...");
+        if (onProgress) {
+            onProgress("Starting overall general upload phase to Google Drive...", 50, {
+                phase: 'uploading',
+                uploadingProgress: 0,
+                uploadingMsg: "Starting general upload phase...",
+                overallProgress: 50
+            });
+        }
+
         await copyRecursive(this.appDirHandle, '');
-        if (onProgress) onProgress("Migration complete!");
+
+        if (onProgress) {
+            onProgress("Migration complete!", 100, {
+                phase: 'complete',
+                overallProgress: 100
+            });
+        }
+    }
+
+    public async syncDriveToLocal(
+        onProgress?: (
+            msg: string,
+            progress?: number
+        ) => void
+    ): Promise<void> {
+        if (!this.accessToken) {
+            throw new Error("No Google Drive connection configured. Please connect first.");
+        }
+        if (!this.appDirHandle) {
+            throw new Error("Local vault handle is not connected. Please connect it first.");
+        }
+
+        this.isMigrationPaused = false;
+        this.isMigrationAborted = false;
+
+        const checkPause = async () => {
+            while (this.isMigrationPaused && !this.isMigrationAborted) {
+                await new Promise((resolve) => setTimeout(resolve, 200));
+            }
+            if (this.isMigrationAborted) {
+                throw new Error("Migration aborted by user.");
+            }
+        };
+
+        if (onProgress) {
+            onProgress("Initializing Google Drive to Local Sync...", 0);
+        }
+
+        // 1. Read manifest from GDrive
+        const oldProvider = this.storageProvider;
+        this.storageProvider = 'drive';
+        let driveManifestContent: string | null = null;
+        try {
+            driveManifestContent = await this.readFile('kollektiv_gallery_manifest.json');
+        } catch (e) {
+            console.error("Failed to read manifest from Drive:", e);
+        }
+        this.storageProvider = oldProvider;
+
+        if (!driveManifestContent) {
+            throw new Error("No gallery manifest found on Google Drive. Sync cannot proceed.");
+        }
+
+        // Parse drive manifest
+        let driveManifest: any = null;
+        try {
+            driveManifest = JSON.parse(driveManifestContent);
+        } catch (e) {
+            throw new Error("Failed to parse gallery manifest from Google Drive.");
+        }
+
+        const categories = Array.isArray(driveManifest.categories) ? driveManifest.categories : [];
+        const galleryItems = Array.isArray(driveManifest.galleryItems) ? driveManifest.galleryItems : [];
+        const totalItems = galleryItems.length;
+
+        // Save categories and manifest locally
+        await this.saveFile('kollektiv_gallery_manifest.json', new Blob([driveManifestContent], { type: 'application/json' }));
+
+        // Sync items post-by-post from GDrive to Local
+        for (let i = 0; i < totalItems; i++) {
+            if (this.isMigrationAborted) {
+                throw new Error("Migration aborted by user.");
+            }
+            await checkPause();
+
+            const item = galleryItems[i];
+            const postTitle = item.title || item.id || 'Untitled Post';
+            const progressVal = Math.round((i / totalItems) * 100);
+
+            if (onProgress) {
+                onProgress(`Downloading "${postTitle}" (${i + 1}/${totalItems})...`, progressVal);
+            }
+
+            // A. Download metadata JSON from GDrive and save locally
+            const category = categories.find((c: any) => c.id === item.categoryId);
+            const categoryName = category?.name || '';
+            const pathSegments = ['gallery'];
+            if (categoryName) pathSegments.push(categoryName);
+            const metadataPath = [...pathSegments, `${item.id}_metadata.json`].join('/');
+
+            this.storageProvider = 'drive';
+            const metaBlob = await this.getFileAsBlob(metadataPath);
+            this.storageProvider = 'local';
+            if (metaBlob) {
+                await this.saveFile(metadataPath, metaBlob);
+            }
+
+            // B. Download actual images/media from GDrive and save locally
+            if (Array.isArray(item.urls)) {
+                for (const url of item.urls) {
+                    if (url && !url.startsWith('data:') && !url.startsWith('http')) {
+                        this.storageProvider = 'drive';
+                        const fileBlob = await this.getFileAsBlob(url);
+                        this.storageProvider = 'local';
+                        if (fileBlob) {
+                            await this.saveFile(url, fileBlob);
+                        }
+                    }
+                }
+            }
+        }
+
+        // Download any other workspace JSON files from GDrive
+        if (onProgress) {
+            onProgress("Syncing general workspace configurations...", 95);
+        }
+
+        this.storageProvider = 'drive';
+        const rootFiles: any[] = [];
+        try {
+            const q = `'${this.rootFolderId}' in parents and trashed = false`;
+            const url = `/google-api/drive/v3/files?q=${encodeURIComponent(q)}&fields=files(id,name,mimeType)`;
+            const res = await fetch(url, { headers: { 'Authorization': `Bearer ${this.accessToken}` } });
+            if (res.ok) {
+                const data = await res.json();
+                rootFiles.push(...(data.files || []));
+            }
+        } catch (e) {
+            console.error("Failed to list general files from GDrive root:", e);
+        }
+        this.storageProvider = oldProvider;
+
+        for (const file of rootFiles) {
+            if (file.mimeType !== 'application/vnd.google-apps.folder' && file.name.endsWith('.json') && file.name !== 'kollektiv_gallery_manifest.json') {
+                this.storageProvider = 'drive';
+                const fileBlob = await this.getFileAsBlob(file.name);
+                this.storageProvider = 'local';
+                if (fileBlob) {
+                    await this.saveFile(file.name, fileBlob);
+                }
+            }
+        }
+
+        if (onProgress) {
+            onProgress("Sync Complete!", 100);
+        }
     }
 
     public async calculateTotalSize(): Promise<number> {

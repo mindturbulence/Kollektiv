@@ -27,6 +27,13 @@ export const defaultLLMSettings: LLMSettings = {
   llamacppModel: 'default',
   llamacppApiKey: '',
   
+  // Anthropic Settings
+  anthropicApiKey: '',
+  anthropicModel: 'claude-3-7-sonnet-20250219',
+  anthropicConnectionMode: 'api_key',
+  anthropicSubscriptionUrl: 'http://localhost:8000',
+  anthropicSubscriptionKey: '',
+  
   // Prompt & Token Tracking
   masterRolePrompt: 'You are an expert AI prompt engineer and creative director. You excel at extracting precise visual, atmospheric, and conceptual details.',
   geminiTokenUsage: { used: 0, limit: 1000000 },
@@ -34,6 +41,7 @@ export const defaultLLMSettings: LLMSettings = {
   hermesTokenUsage: { used: 0, limit: 500000 },
   openrouterTokenUsage: { used: 0, limit: 1000000 },
   llamacppTokenUsage: { used: 0, limit: 500000 },
+  anthropicTokenUsage: { used: 0, limit: 1000000 },
 
   // Ollama Cloud Settings
   ollamaCloudBaseUrl: 'https://your-remote-ollama.com',
@@ -48,7 +56,7 @@ export const defaultLLMSettings: LLMSettings = {
   // Theme Settings
   activeThemeMode: 'dark',
   lightTheme: 'light',
-  darkTheme: 'MindTurbulence',
+  darkTheme: 'Kollektiv',
   fontSize: 14,
 
   // Dashboard Settings
@@ -140,6 +148,15 @@ export const loadLLMSettings = (): LLMSettings => {
                 ...defaultLLMSettings.llamacppTokenUsage!,
                 ...(parsed.llamacppTokenUsage || {})
             },
+            anthropicTokenUsage: {
+                ...defaultLLMSettings.anthropicTokenUsage!,
+                ...(parsed.anthropicTokenUsage || {})
+            },
+            anthropicApiKey: parsed.anthropicApiKey ?? '',
+            anthropicModel: parsed.anthropicModel ?? 'claude-3-7-sonnet-20250219',
+            anthropicConnectionMode: parsed.anthropicConnectionMode ?? 'api_key',
+            anthropicSubscriptionUrl: parsed.anthropicSubscriptionUrl ?? 'http://localhost:8000',
+            anthropicSubscriptionKey: parsed.anthropicSubscriptionKey ?? '',
             youtube: {
               ...defaultLLMSettings.youtube,
               ...(parsed.youtube || {})
@@ -158,6 +175,10 @@ export const loadLLMSettings = (): LLMSettings => {
 
         if (merged.darkTheme === 'lofi') {
             merged.darkTheme = 'arwes';
+        }
+
+        if (merged.activeLLM === ('hermes' as any)) {
+            merged.activeLLM = 'gemini';
         }
 
         return merged;
@@ -180,7 +201,7 @@ export const resetAllSettings = async () => {
     await clearAllHandles();
 };
 
-export const trackTokenUsage = (provider: 'gemini' | 'ollama' | 'ollama_cloud' | 'hermes' | 'openrouter' | 'llamacpp', actualTokens: number): void => {
+export const trackTokenUsage = (provider: 'gemini' | 'ollama' | 'ollama_cloud' | 'openrouter' | 'llamacpp' | 'anthropic', actualTokens: number): void => {
     const settings = loadLLMSettings();
 
     if (provider === 'gemini') {
@@ -188,13 +209,6 @@ export const trackTokenUsage = (provider: 'gemini' | 'ollama' | 'ollama_cloud' |
             settings.geminiTokenUsage.used += actualTokens;
             if (settings.geminiTokenUsage.used > settings.geminiTokenUsage.limit) {
                  settings.geminiTokenUsage.used = settings.geminiTokenUsage.limit;
-            }
-        }
-    } else if (provider === 'hermes') {
-        if (settings.hermesTokenUsage) {
-            settings.hermesTokenUsage.used += actualTokens;
-            if (settings.hermesTokenUsage.used > settings.hermesTokenUsage.limit) {
-                settings.hermesTokenUsage.used = settings.hermesTokenUsage.limit;
             }
         }
     } else if (provider === 'openrouter') {
@@ -209,6 +223,13 @@ export const trackTokenUsage = (provider: 'gemini' | 'ollama' | 'ollama_cloud' |
             settings.llamacppTokenUsage.used += actualTokens;
             if (settings.llamacppTokenUsage.used > settings.llamacppTokenUsage.limit) {
                 settings.llamacppTokenUsage.used = settings.llamacppTokenUsage.limit;
+            }
+        }
+    } else if (provider === 'anthropic') {
+        if (settings.anthropicTokenUsage) {
+            settings.anthropicTokenUsage.used += actualTokens;
+            if (settings.anthropicTokenUsage.used > settings.anthropicTokenUsage.limit) {
+                settings.anthropicTokenUsage.used = settings.anthropicTokenUsage.limit;
             }
         }
     } else {

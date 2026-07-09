@@ -19,6 +19,26 @@ export default {
   daisyui: {
     themes: [
       {
+        Kollektiv: {
+          primary: "#C0F04C",
+          secondary: "#A8E22E",
+          accent: "#7B5CFF",
+          neutral: "#171A14",
+          "base-100": "#0F120C",
+          "base-200": "#1C2018",
+          "base-300": "#22261D",
+          "base-content": "#F4F6EF",
+          info: "#C0F04C",
+          success: "#84C11C",
+          warning: "#FFC53D",
+          error: "#F5484F",
+          "--rounded-box": "8px",
+          "--rounded-btn": "4px",
+          "--rounded-badge": "2px",
+          "--rounded-tab": "4px",
+        },
+      },
+      {
         Stellar: {
           primary: "#00b8d4",
           secondary: "#7c4dff",

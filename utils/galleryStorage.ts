@@ -64,8 +64,97 @@ const deleteItemMetadata = async (item: GalleryItem, categories: GalleryCategory
     }
 };
 
+const healItemUrls = async (item: GalleryItem, categories: GalleryCategory[]): Promise<boolean> => {
+    let modified = false;
+    const newUrls: string[] = [];
+    
+    for (const url of item.urls) {
+        if (!url || url.startsWith('data:') || url.startsWith('http') || url.startsWith('blob:')) {
+            newUrls.push(url);
+            continue;
+        }
+
+        const blobAtOrig = await fileSystemManager.getFileAsBlob(url);
+        if (blobAtOrig) {
+            newUrls.push(url);
+            continue;
+        }
+
+        const fileName = url.split('/').pop();
+        if (!fileName) {
+            newUrls.push(url);
+            continue;
+        }
+
+        const candidates: string[] = [];
+        
+        const currentCategory = categories.find(c => c.id === item.categoryId);
+        if (currentCategory) {
+            candidates.push(`gallery/${currentCategory.name}/${fileName}`);
+        }
+        
+        candidates.push(`gallery/${fileName}`);
+        
+        for (const cat of categories) {
+            if (currentCategory && cat.id === currentCategory.id) continue;
+            candidates.push(`gallery/${cat.name}/${fileName}`);
+        }
+
+        let foundPath: string | null = null;
+        for (const candidate of candidates) {
+            if (candidate === url) continue;
+            try {
+                const testBlob = await fileSystemManager.getFileAsBlob(candidate);
+                if (testBlob) {
+                    foundPath = candidate;
+                    break;
+                }
+            } catch (err) {
+                // ignore
+            }
+        }
+
+        if (foundPath) {
+            console.log(`[Self-Heal] Repaired broken path for ${item.id}: ${url} -> ${foundPath}`);
+            newUrls.push(foundPath);
+            modified = true;
+        } else {
+            newUrls.push(url);
+        }
+    }
+
+    if (modified) {
+        item.urls = newUrls;
+        return true;
+    }
+    return false;
+};
+
 export const loadGalleryItems = async (): Promise<GalleryItem[]> => {
     const manifest = await getManifest();
+    
+    // Background self-healing
+    setTimeout(async () => {
+        try {
+            let manifestChanged = false;
+            const bgManifest = await getManifest();
+            for (const item of bgManifest.galleryItems) {
+                if (item && item.urls && Array.isArray(item.urls)) {
+                    const healed = await healItemUrls(item, bgManifest.categories);
+                    if (healed) {
+                        manifestChanged = true;
+                    }
+                }
+            }
+            if (manifestChanged) {
+                await saveManifest(bgManifest);
+                window.dispatchEvent(new CustomEvent('gallery-manifest-healed'));
+            }
+        } catch (e) {
+            console.error("Background loading heal error:", e);
+        }
+    }, 100);
+
     return manifest.galleryItems
         .filter(item => item && item.id)
         .sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0));
@@ -272,7 +361,7 @@ export const addCategory = async (name: string, parentId?: string): Promise<Gall
     };
     manifest.categories.push(newCategory);
     await saveManifest(manifest);
-    return manifest.categories.sort((a, b) => a.order - b.order);
+    return manifest.categories.sort((a, b) => (a.order || 0) - (b.order || 0));
 };
 
 export const updateCategory = async (id: string, updates: Partial<Omit<GalleryCategory, 'id'>>): Promise<GalleryCategory[]> => {
@@ -290,29 +379,38 @@ export const updateCategory = async (id: string, updates: Partial<Omit<GalleryCa
                 if (item.categoryId === id) {
                     const newUrls: string[] = [];
                     for (const url of item.urls) {
-                        const blob = await fileSystemManager.getFileAsBlob(url);
-                        if (blob) {
-                            const fileName = url.split('/').pop() || `${item.id}_media`;
-                            const newPath = `gallery/${newName}/${fileName}`;
-                            if (newPath !== url) {
-                                await fileSystemManager.saveFile(newPath, blob);
-                                await fileSystemManager.deleteFile(url);
-                                newUrls.push(newPath);
+                        try {
+                            const blob = await fileSystemManager.getFileAsBlob(url);
+                            if (blob) {
+                                const fileName = url.split('/').pop() || `${item.id}_media`;
+                                const newPath = `gallery/${newName}/${fileName}`;
+                                if (newPath !== url) {
+                                    await fileSystemManager.saveFile(newPath, blob);
+                                    await fileSystemManager.deleteFile(url);
+                                    newUrls.push(newPath);
+                                } else {
+                                    newUrls.push(url);
+                                }
                             } else {
                                 newUrls.push(url);
                             }
-                        } else {
+                        } catch (err) {
+                            console.error("Failed to relocate category URL handle", url, err);
                             newUrls.push(url);
                         }
                     }
                     
                     // Move metadata JSON
-                    const oldMetadataPath = `gallery/${oldCategory.name}/${item.id}_metadata.json`;
-                    const newMetadataPath = `gallery/${newName}/${item.id}_metadata.json`;
-                    const metadataBlob = await fileSystemManager.getFileAsBlob(oldMetadataPath);
-                    if (metadataBlob) {
-                        await fileSystemManager.saveFile(newMetadataPath, metadataBlob);
-                        await fileSystemManager.deleteFile(oldMetadataPath);
+                    try {
+                        const oldMetadataPath = `gallery/${oldCategory.name}/${item.id}_metadata.json`;
+                        const newMetadataPath = `gallery/${newName}/${item.id}_metadata.json`;
+                        const metadataBlob = await fileSystemManager.getFileAsBlob(oldMetadataPath);
+                        if (metadataBlob) {
+                            await fileSystemManager.saveFile(newMetadataPath, metadataBlob);
+                            await fileSystemManager.deleteFile(oldMetadataPath);
+                        }
+                    } catch (err) {
+                        console.error("Failed to relocate metadata handle", err);
                     }
                     
                     item.urls = newUrls;
@@ -321,7 +419,7 @@ export const updateCategory = async (id: string, updates: Partial<Omit<GalleryCa
         }
     }
     await saveManifest(manifest);
-    return manifest.categories.sort((a, b) => a.order - b.order);
+    return manifest.categories.sort((a, b) => (a.order || 0) - (b.order || 0));
 };
 
 export const saveCategoriesOrder = async (categories: GalleryCategory[]): Promise<void> => {
@@ -339,29 +437,38 @@ export const deleteCategory = async (id: string): Promise<GalleryCategory[]> => 
             if (item.categoryId === id) {
                 const newUrls: string[] = [];
                 for (const url of item.urls) {
-                    const blob = await fileSystemManager.getFileAsBlob(url);
-                    if (blob) {
-                        const fileName = url.split('/').pop() || `${item.id}_media`;
-                        const newPath = `gallery/${fileName}`;
-                        if (newPath !== url) {
-                            await fileSystemManager.saveFile(newPath, blob);
-                            await fileSystemManager.deleteFile(url);
-                            newUrls.push(newPath);
+                    try {
+                        const blob = await fileSystemManager.getFileAsBlob(url);
+                        if (blob) {
+                            const fileName = url.split('/').pop() || `${item.id}_media`;
+                            const newPath = `gallery/${fileName}`;
+                            if (newPath !== url) {
+                                await fileSystemManager.saveFile(newPath, blob);
+                                await fileSystemManager.deleteFile(url);
+                                newUrls.push(newPath);
+                            } else {
+                                newUrls.push(url);
+                            }
                         } else {
                             newUrls.push(url);
                         }
-                    } else {
+                    } catch (err) {
+                        console.error("Failed to restore URL handle on delete", url, err);
                         newUrls.push(url);
                     }
                 }
                 
                 // Move metadata JSON to root gallery
-                const oldMetadataPath = `gallery/${categoryToDelete.name}/${item.id}_metadata.json`;
-                const newMetadataPath = `gallery/${item.id}_metadata.json`;
-                const metadataBlob = await fileSystemManager.getFileAsBlob(oldMetadataPath);
-                if (metadataBlob) {
-                    await fileSystemManager.saveFile(newMetadataPath, metadataBlob);
-                    await fileSystemManager.deleteFile(oldMetadataPath);
+                try {
+                    const oldMetadataPath = `gallery/${categoryToDelete.name}/${item.id}_metadata.json`;
+                    const newMetadataPath = `gallery/${item.id}_metadata.json`;
+                    const metadataBlob = await fileSystemManager.getFileAsBlob(oldMetadataPath);
+                    if (metadataBlob) {
+                        await fileSystemManager.saveFile(newMetadataPath, metadataBlob);
+                        await fileSystemManager.deleteFile(oldMetadataPath);
+                    }
+                } catch (err) {
+                    console.error("Failed to restore metadata handle on delete", err);
                 }
                 
                 item.urls = newUrls;
@@ -372,7 +479,7 @@ export const deleteCategory = async (id: string): Promise<GalleryCategory[]> => 
 
     manifest.categories = manifest.categories.filter(cat => cat.id !== id);
     await saveManifest(manifest);
-    return manifest.categories.sort((a, b) => a.order - b.order);
+    return manifest.categories.sort((a, b) => (a.order || 0) - (b.order || 0));
 };
 
 export const loadPinnedItemIds = async (): Promise<string[]> => {

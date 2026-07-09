@@ -221,7 +221,7 @@ const Footer: React.FC<FooterProps> = ({
                 <div className={`flex gap-4 ${mainFontClass} items-center pl-4 ps-6 border-l border-base-content/10`}>
                     <span className="arwes-label uppercase tracking-widest text-primary/60 leading-none inline-block">INT</span>
                     <IntegrationItem label="VAULT" active={fileSystemManager.isDirectorySelected()} />
-                    <IntegrationItem label={(settings.activeLLM === 'ollama_cloud' ? 'OLLAMA' : settings.activeLLM?.toUpperCase()) || 'LLM'} active={!!process.env.GEMINI_API_KEY || settings.activeLLM?.includes('ollama') || settings.activeLLM === 'hermes'} />
+                    <IntegrationItem label={(settings.activeLLM === 'ollama_cloud' ? 'OLLAMA' : settings.activeLLM?.toUpperCase()) || 'LLM'} active={!!process.env.GEMINI_API_KEY || settings.activeLLM?.includes('ollama')} />
                     <IntegrationItem label="YOUTUBE" active={!!settings.youtube?.isConnected} />
                 </div>
             </div>

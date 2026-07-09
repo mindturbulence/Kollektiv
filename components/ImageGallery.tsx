@@ -168,7 +168,14 @@ const ImageGallery: React.FC<ImageGalleryProps> = ({
     }
   }, []);
 
-  useEffect(() => { refreshData(); }, [refreshData]);
+  useEffect(() => {
+    refreshData();
+    const handleHealed = () => {
+      refreshData();
+    };
+    window.addEventListener('gallery-manifest-healed', handleHealed);
+    return () => window.removeEventListener('gallery-manifest-healed', handleHealed);
+  }, [refreshData]);
 
   const handleAddItem = async (type: 'image' | 'video', urls: string[], sources: string[], categoryId?: string, title?: string, tags?: string[], notes?: string, prompt?: string, isNsfw?: boolean) => {
     await addItemToGallery(type, urls, sources, categoryId, title, tags, notes, prompt, isNsfw);

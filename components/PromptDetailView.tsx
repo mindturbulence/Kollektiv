@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useCallback, useRef, useLayoutEffect } from 'react';
 import { gsap } from 'gsap';
 import type { SavedPrompt, PromptCategory } from '../types';
+import { LineageGraph } from './LineageGraph';
 import {
   ChevronLeftIcon, ChevronRightIcon, CloseIcon
 } from './icons';
@@ -31,9 +32,16 @@ const InfoRow: React.FC<{ label: string, children: React.ReactNode, action?: Rea
 
 const PromptTemplatePanel: React.FC<{
   prompt: SavedPrompt;
-}> = ({ prompt }) => {
+  onRestore: (versionId: string) => void;
+}> = ({ prompt, onRestore }) => {
     return (
         <div className="space-y-8 animate-fade-in">
+            {prompt.lineage && prompt.lineage.length > 0 && (
+                <div className="space-y-2">
+                    <span className="text-xs font-bold uppercase tracking-widest text-[#a1a1aa]">Version History</span>
+                    <LineageGraph lineage={prompt.lineage} onRestore={onRestore} />
+                </div>
+            )}
             <InfoRow label="ITEM ID">
                 <span className="text-xs font-mono text-primary tracking-widest break-all">
                     {prompt.id}
@@ -212,6 +220,16 @@ const PromptDetailView: React.FC<PromptDetailViewProps> = ({
       }
   };
   
+  const handleRestore = useCallback((versionId: string) => {
+    if (!prompt || !prompt.lineage) return;
+    const version = prompt.lineage.find(v => v.versionId === versionId);
+    if (version) {
+        setEditedText(version.refinedText);
+        setEditedTags(version.appliedModifiers);
+        showGlobalFeedback(`Restored version ${versionId}`);
+    }
+  }, [prompt, showGlobalFeedback]);
+
   const isDirty = prompt && (
     editedText.trim() !== (prompt.text || '').trim() ||
     editedTitle.trim() !== (prompt.title || '').trim() ||
@@ -320,7 +338,7 @@ const PromptDetailView: React.FC<PromptDetailViewProps> = ({
                         </header>
                         <div ref={rightPanelRef} className="flex-grow flex flex-col min-h-0 overflow-hidden relative">
                             <div ref={infoPanelRef} className="absolute inset-0 p-8 space-y-12 overflow-y-auto custom-scrollbar">
-                                <PromptTemplatePanel prompt={prompt} />
+                                <PromptTemplatePanel prompt={prompt} onRestore={handleRestore} />
                             </div>
                         </div>
                     </aside>

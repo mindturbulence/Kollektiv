@@ -74,7 +74,7 @@ export interface LLMSettings {
   // LLM Provider Settings
   geminiApiKey: string;
   llmModel: string;
-  activeLLM: 'gemini' | 'ollama' | 'ollama_cloud' | 'hermes' | 'openrouter' | 'llamacpp';
+  activeLLM: 'gemini' | 'ollama' | 'ollama_cloud' | 'openrouter' | 'llamacpp' | 'anthropic';
   ollamaBaseUrl: string;
   ollamaModel: string;
   
@@ -98,6 +98,13 @@ export interface LLMSettings {
   ollamaCloudApiKey: string;
   ollamaCloudUseGoogleAuth: boolean;
 
+  // Anthropic Settings
+  anthropicApiKey?: string;
+  anthropicModel?: string;
+  anthropicConnectionMode?: 'api_key' | 'subscription';
+  anthropicSubscriptionUrl?: string;
+  anthropicSubscriptionKey?: string;
+
   // MCP Server Settings
   mcpServerUrl?: string;
   mcpEnabled?: boolean;
@@ -109,6 +116,7 @@ export interface LLMSettings {
   hermesTokenUsage?: TokenUsage;
   openrouterTokenUsage?: TokenUsage;
   llamacppTokenUsage?: TokenUsage;
+  anthropicTokenUsage?: TokenUsage;
 
   // Theme Settings
   activeThemeMode: 'dark';
@@ -207,6 +215,14 @@ export interface EnhancementResult {
   grounding_metadata?: any;
 }
 
+export interface PromptVersionNode {
+  versionId: string;
+  timestamp: number;
+  refinedText: string;
+  appliedModifiers: string[];
+  parentVersionId: string | null;
+}
+
 export interface SavedPrompt {
   id: string;
   title?: string;
@@ -216,6 +232,7 @@ export interface SavedPrompt {
   targetAI?: string;
   categoryId?: string;
   tags?: string[];
+  lineage?: PromptVersionNode[];
 }
 
 export interface PromptCategory {

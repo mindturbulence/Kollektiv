@@ -43,7 +43,6 @@ import { LLMChatPanel } from './LLMChatPanel';
 import { motion, AnimatePresence } from 'motion/react';
 import { pageVariants } from './AnimatedPanels';
 import ChromaticText from './ChromaticText';
-import { HermesController } from './HermesController';
 
 
 type PromptsPageState = { prompt?: string, artStyle?: string, artist?: string, view?: 'enhancer' | 'composer' | 'create', id?: string } | null;
@@ -108,7 +107,6 @@ const InitialLoader: React.FC<{ status: string; progress: number | null; onConti
     const logoFillRef = useRef<HTMLDivElement>(null);
     const [displayStatus, setDisplayStatus] = useState<string>('');
     const [history, setHistory] = useState<string[]>([]);
-    const [visualPercentage, setVisualPercentage] = useState(0);
     const [smoothPercentage, setSmoothPercentage] = useState(0);
     const [isComplete, setIsComplete] = useState(false);
     const actionButtonsRef = useRef<HTMLDivElement>(null);
@@ -123,65 +121,40 @@ const InitialLoader: React.FC<{ status: string; progress: number | null; onConti
         return () => clearInterval(interval);
     }, []);
     
-    const queueRef = useRef<{ s: string, p: number }[]>([]);
-    const isProcessingRef = useRef(false);
+    // Simple and robust typewriter effect for the current status
+    useEffect(() => {
+        if (!status) return;
+        const formatted = `> ${status.toUpperCase()}`;
+        setHistory(prev => {
+            if (prev.includes(formatted)) return prev;
+            return [...prev, formatted].slice(-2);
+        });
+        
+        let isCancelled = false;
+        let i = 0;
+        const typeChar = () => {
+            if (isCancelled) return;
+            if (i <= formatted.length) {
+                setDisplayStatus(formatted.substring(0, i));
+                i++;
+                setTimeout(typeChar, 15);
+            }
+        };
+        typeChar();
+        return () => {
+            isCancelled = true;
+        };
+    }, [status]);
+
     const displayPercentageRef = useRef(0);
+    const targetPercentage = Math.round((progress || 0) * 100);
 
-    // Queue updates and process them sequentially at human-readable speed
+    // Animate the smooth percentage smoothly
     useEffect(() => {
-        const newProgress = Math.round((progress || 0) * 100);
-        // Only queue if it's a new status or a meaningful progress jump, to prevent locking up
-        if (queueRef.current.length === 0 || queueRef.current[queueRef.current.length - 1].s !== status || newProgress === 100) {
-             queueRef.current.push({ s: status || 'DIAGNOSTIC_ACTIVE', p: newProgress });
-             processQueue();
-        }
-
-        async function processQueue() {
-            if (isProcessingRef.current) return;
-            isProcessingRef.current = true;
-
-            while (queueRef.current.length > 0) {
-                const next = queueRef.current.shift()!;
-                const fullText = `> ${next.s.toUpperCase()}`;
-                
-                await new Promise<void>(resolve => {
-                    let i = 0;
-                    const typeChar = () => {
-                        if (i <= fullText.length) {
-                            setDisplayStatus(fullText.substring(0, i));
-                            i++;
-                            if (i <= fullText.length) {
-                                setTimeout(typeChar, 10 + Math.random() * 20);
-                            } else {
-                                setTimeout(resolve, 100 + Math.random() * 150); // Pause before next line
-                            }
-                        }
-                    };
-                    typeChar();
-                });
-
-                setHistory(prev => {
-                    const nextHist = [...prev, fullText];
-                    return nextHist.slice(-2);
-                });
-                setVisualPercentage(next.p);
-            }
-
-            isProcessingRef.current = false;
-            // Force a re-evaluation of completion by slightly shaking state or we just check here
-            if (visualPercentage >= 100) {
-                setVisualPercentage(100);
-            }
-        }
-    }, [status, progress]);
-
-    // Animate the fake visual percentage smoothly
-    useEffect(() => {
-        const target = visualPercentage;
         const obj = { val: displayPercentageRef.current };
         const animation = gsap.to(obj, {
-            val: target,
-            duration: 0.5,
+            val: targetPercentage,
+            duration: 0.4,
             ease: "power2.out",
             onUpdate: () => {
                 displayPercentageRef.current = obj.val;
@@ -191,7 +164,7 @@ const InitialLoader: React.FC<{ status: string; progress: number | null; onConti
         return () => {
             animation.kill();
         };
-    }, [visualPercentage]);
+    }, [targetPercentage]);
 
     useLayoutEffect(() => {
         if (!textWrapperRef.current) return;
@@ -213,16 +186,15 @@ const InitialLoader: React.FC<{ status: string; progress: number | null; onConti
         }
     }, []);
 
-    // Only mark as complete when visual progress reaches 100 AND the queue is done processing
+    // Bulletproof check: mark complete when target reaches 100% and smooth animation matches
     useEffect(() => {
-        if (visualPercentage >= 100 && smoothPercentage >= 99 && queueRef.current.length === 0) {
-            // delay for a moment so the blinking SYSTEM READY text is visible
+        if (targetPercentage >= 100 && smoothPercentage >= 99) {
             const t = setTimeout(() => {
                 setIsComplete(true);
-            }, 2000);
+            }, 1000);
             return () => clearTimeout(t);
         }
-    }, [visualPercentage, smoothPercentage]);
+    }, [targetPercentage, smoothPercentage]);
 
     const handleContinue = (withMusic: boolean) => {
         if (actionButtonsRef.current) {
@@ -1107,7 +1079,6 @@ const AppContent: React.FC = () => {
                                         isOpen={isHermesOpen}
                                         onClose={() => setIsHermesOpen(false)}
                                     />
-                                    <HermesController />
                                 </div>
                             </main>
 

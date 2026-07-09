@@ -119,7 +119,14 @@ const Welcome: React.FC<WelcomeProps> = ({ onSetupComplete }) => {
                             const success = await fileSystemManager.initialize(updatedSettings, {} as any);
                             if (success) {
                                 audioService.playAppStart();
-                                onSetupComplete(updatedSettings);
+                                const folderId = (fileSystemManager as any).rootFolderId;
+                                const finalSettings = {
+                                    ...updatedSettings,
+                                    driveFolderId: folderId || '',
+                                    driveFolderName: (fileSystemManager as any).appDirectoryName || ''
+                                };
+                                updateSettings(finalSettings);
+                                onSetupComplete(finalSettings);
                             } else {
                                 const detailedMsg = (fileSystemManager as any).lastError || "Please verify Google Drive permissions.";
                                 setError(`Failed to initialize Google Drive: ${detailedMsg}`);
@@ -144,23 +151,37 @@ const Welcome: React.FC<WelcomeProps> = ({ onSetupComplete }) => {
         setIsLoading(false);
     }
   };
-
+ 
   const handleActivateDriveDirectly = async () => {
       audioService.playClick();
       setError(null);
       setIsLoading(true);
+
+      const isTokenExpired = settings.googleIdentity?.connectedAt 
+          ? (Date.now() - settings.googleIdentity.connectedAt > 50 * 60 * 1000) 
+          : true;
+
+      if (isTokenExpired || !settings.googleIdentity?.accessToken) {
+          handleGoogleDriveSignIn();
+          return;
+      }
+
       try {
           const success = await fileSystemManager.initialize(settings, {} as any);
           if (success) {
-              onSetupComplete(settings);
+              const folderId = (fileSystemManager as any).rootFolderId;
+              const finalSettings = {
+                  ...settings,
+                  driveFolderId: folderId || '',
+                  driveFolderName: (fileSystemManager as any).appDirectoryName || ''
+              };
+              updateSettings(finalSettings);
+              onSetupComplete(finalSettings);
           } else {
-              const detailedMsg = (fileSystemManager as any).lastError || "Please reconnect your Google Account.";
-              setError(`Initialization failed: ${detailedMsg}`);
-              setIsLoading(false);
+              handleGoogleDriveSignIn();
           }
       } catch (e) {
-          setError(e instanceof Error ? e.message : 'Activation failed.');
-          setIsLoading(false);
+          handleGoogleDriveSignIn();
       }
   };
 

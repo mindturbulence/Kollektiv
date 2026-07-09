@@ -40,6 +40,7 @@ Kollektiv is a high-performance, local-first application designed for prompt eng
 
 ### Prerequisites
 *   [Node.js](https://nodejs.org/) (Latest LTS)
+*   [pnpm](https://pnpm.io/) (v11 or later)
 *   Google Gemini API Key (Required for Neural features)
 *   Ollama (Optional, for local LLM execution)
 
@@ -49,7 +50,7 @@ Kollektiv is a high-performance, local-first application designed for prompt eng
     ```bash
     git clone https://github.com/mindturbulence/Kollektiv.git
     cd Kollektiv
-    npm install
+    pnpm install
     ```
 
 2.  **Environment Configuration**:
@@ -60,7 +61,7 @@ Kollektiv is a high-performance, local-first application designed for prompt eng
 
 3.  **Launch**:
     ```bash
-    npm run dev
+    pnpm dev
     ```
 
 ### 🔐 Storage Setup

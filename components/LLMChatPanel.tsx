@@ -507,7 +507,6 @@ ${systemResponse}` };
     };
 
     const getChatSubtitle = () => {
-        if (settings.activeLLM === 'hermes') return settings.hermesModel || 'hermes-agent';
         if (settings.activeLLM === 'llamacpp') return settings.llamacppModel || 'llamacpp';
         if (settings.activeLLM === 'ollama') return settings.ollamaModel || 'llama3';
         if (settings.activeLLM === 'ollama_cloud') return settings.ollamaCloudModel || 'llama3';
