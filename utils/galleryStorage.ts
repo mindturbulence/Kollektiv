@@ -4,6 +4,7 @@ import { fileSystemManager } from './fileUtils';
 import { v4 as uuidv4 } from 'uuid';
 import { loadLLMSettings } from './settingsStorage';
 import { convertToJpgWithMetadata } from './imageFormatTools';
+import { loadManifestSafe, ManifestWriteBlockedError, type ManifestLoad } from './manifestStore';
 
 interface GalleryManifest {
   galleryItems: GalleryItem[];
@@ -13,26 +14,19 @@ interface GalleryManifest {
 
 const MANIFEST_NAME = 'kollektiv_gallery_manifest.json';
 
-const getManifest = async (): Promise<GalleryManifest> => {
-    const manifestContent = await fileSystemManager.readFile(MANIFEST_NAME);
-    if (manifestContent) {
-        try {
-            const parsed = JSON.parse(manifestContent);
+const getManifest = (): Promise<ManifestLoad<GalleryManifest>> =>
+    loadManifestSafe<GalleryManifest>(
+        MANIFEST_NAME,
+        (parsed) => {
+            if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed)) return null;
             return {
                 galleryItems: Array.isArray(parsed.galleryItems) ? parsed.galleryItems.filter((i: any) => i && typeof i === 'object' && i.id) : [],
                 categories: Array.isArray(parsed.categories) ? parsed.categories.filter((c: any) => c && typeof c === 'object' && c.id) : [],
                 pinnedIds: Array.isArray(parsed.pinnedIds) ? parsed.pinnedIds : [],
             };
-        } catch (e) {
-            console.error("Failed to parse gallery manifest, starting fresh.", e);
-        }
-    }
-    return {
-        galleryItems: [],
-        categories: [],
-        pinnedIds: [],
-    };
-};
+        },
+        () => ({ galleryItems: [], categories: [], pinnedIds: [] })
+    );
 
 const saveManifest = async (manifest: GalleryManifest) => {
     await fileSystemManager.saveFile(MANIFEST_NAME, new Blob([JSON.stringify(manifest, null, 2)], { type: 'application/json' }));
@@ -131,23 +125,29 @@ const healItemUrls = async (item: GalleryItem, categories: GalleryCategory[]): P
 };
 
 export const loadGalleryItems = async (): Promise<GalleryItem[]> => {
-    const manifest = await getManifest();
+    const { data: manifest, safeToSave } = await getManifest();
     
     // Background self-healing
     setTimeout(async () => {
+        if (!safeToSave) return;
         try {
-            let manifestChanged = false;
-            const bgManifest = await getManifest();
-            for (const item of bgManifest.galleryItems) {
-                if (item && item.urls && Array.isArray(item.urls)) {
-                    const healed = await healItemUrls(item, bgManifest.categories);
-                    if (healed) {
-                        manifestChanged = true;
-                    }
+            const healedUrls = new Map<string, string[]>();
+            for (const item of manifest.galleryItems) {
+                if (item && Array.isArray(item.urls) && await healItemUrls(item, manifest.categories)) {
+                    healedUrls.set(item.id, item.urls);
                 }
             }
-            if (manifestChanged) {
-                await saveManifest(bgManifest);
+            if (healedUrls.size === 0) return;
+            // Re-read fresh so concurrent adds/deletes are not clobbered
+            const fresh = await getManifest();
+            if (!fresh.safeToSave) return;
+            let changed = false;
+            for (const item of fresh.data.galleryItems) {
+                const urls = healedUrls.get(item.id);
+                if (urls) { item.urls = urls; changed = true; }
+            }
+            if (changed) {
+                await saveManifest(fresh.data);
                 window.dispatchEvent(new CustomEvent('gallery-manifest-healed'));
             }
         } catch (e) {
@@ -161,7 +161,8 @@ export const loadGalleryItems = async (): Promise<GalleryItem[]> => {
 };
 
 export const addItemToGallery = async (type: 'image' | 'video', urls: string[], sources: string[], categoryId?: string, defaultTitle?: string, tags?: string[], notes?: string, prompt?: string, isNsfw?: boolean): Promise<GalleryItem> => {
-    const manifest = await getManifest();
+    const { data: manifest, safeToSave } = await getManifest();
+    if (!safeToSave) throw new ManifestWriteBlockedError(MANIFEST_NAME);
     const category = manifest.categories.find(c => c.id === categoryId);
     const categoryName = category?.name;
 
@@ -227,7 +228,8 @@ export const addItemToGallery = async (type: 'image' | 'video', urls: string[], 
 };
 
 export const updateItemInGallery = async (id: string, updates: Partial<Omit<GalleryItem, 'id' | 'createdAt'>>): Promise<void> => {
-    const manifest = await getManifest();
+    const { data: manifest, safeToSave } = await getManifest();
+    if (!safeToSave) throw new ManifestWriteBlockedError(MANIFEST_NAME);
     const itemIndex = manifest.galleryItems.findIndex(item => item.id === id);
     if (itemIndex === -1) return;
 
@@ -335,7 +337,8 @@ export const updateItemInGallery = async (id: string, updates: Partial<Omit<Gall
 };
 
 export const deleteItemFromGallery = async (id: string): Promise<void> => {
-    const manifest = await getManifest();
+    const { data: manifest, safeToSave } = await getManifest();
+    if (!safeToSave) throw new ManifestWriteBlockedError(MANIFEST_NAME);
     const itemToDelete = manifest.galleryItems.find(item => item.id === id);
     manifest.galleryItems = manifest.galleryItems.filter(item => item.id !== id);
     manifest.pinnedIds = manifest.pinnedIds.filter(pid => pid !== id);
@@ -351,12 +354,13 @@ export const deleteItemFromGallery = async (id: string): Promise<void> => {
 };
 
 export const loadCategories = async (): Promise<GalleryCategory[]> => {
-    const manifest = await getManifest();
+    const { data: manifest } = await getManifest();
     return manifest.categories.sort((a, b) => (a.order || 0) - (b.order || 0));
 };
 
 export const addCategory = async (name: string, parentId?: string): Promise<GalleryCategory[]> => {
-    const manifest = await getManifest();
+    const { data: manifest, safeToSave } = await getManifest();
+    if (!safeToSave) throw new ManifestWriteBlockedError(MANIFEST_NAME);
     const newCategory: GalleryCategory = {
         id: `cat_${Date.now()}`,
         name: name,
@@ -369,7 +373,8 @@ export const addCategory = async (name: string, parentId?: string): Promise<Gall
 };
 
 export const updateCategory = async (id: string, updates: Partial<Omit<GalleryCategory, 'id'>>): Promise<GalleryCategory[]> => {
-    const manifest = await getManifest();
+    const { data: manifest, safeToSave } = await getManifest();
+    if (!safeToSave) throw new ManifestWriteBlockedError(MANIFEST_NAME);
     const catIndex = manifest.categories.findIndex(c => c.id === id);
     if (catIndex > -1) {
         const oldCategory = manifest.categories[catIndex];
@@ -427,13 +432,15 @@ export const updateCategory = async (id: string, updates: Partial<Omit<GalleryCa
 };
 
 export const saveCategoriesOrder = async (categories: GalleryCategory[]): Promise<void> => {
-    const manifest = await getManifest();
+    const { data: manifest, safeToSave } = await getManifest();
+    if (!safeToSave) throw new ManifestWriteBlockedError(MANIFEST_NAME);
     manifest.categories = categories;
     await saveManifest(manifest);
 };
 
 export const deleteCategory = async (id: string): Promise<GalleryCategory[]> => {
-    const manifest = await getManifest();
+    const { data: manifest, safeToSave } = await getManifest();
+    if (!safeToSave) throw new ManifestWriteBlockedError(MANIFEST_NAME);
     const categoryToDelete = manifest.categories.find(cat => cat.id === id);
     
     if (categoryToDelete) {
@@ -487,12 +494,13 @@ export const deleteCategory = async (id: string): Promise<GalleryCategory[]> => 
 };
 
 export const loadPinnedItemIds = async (): Promise<string[]> => {
-    const manifest = await getManifest();
+    const { data: manifest } = await getManifest();
     return manifest.pinnedIds;
 };
 
 export const savePinnedItemIds = async (ids: string[]): Promise<void> => {
-    const manifest = await getManifest();
+    const { data: manifest, safeToSave } = await getManifest();
+    if (!safeToSave) throw new ManifestWriteBlockedError(MANIFEST_NAME);
     manifest.pinnedIds = ids;
     await saveManifest(manifest);
 };
