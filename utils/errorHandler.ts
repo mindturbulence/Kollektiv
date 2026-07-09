@@ -17,7 +17,7 @@ export const handleGeminiError = (error: unknown, context: string): Error => {
             errorMessage = `A network error occurred while ${context}. Please ensure your API/Hermes/Ollama target is reachable and your configuration is correct.`;
         }
     } else if (lowerCaseMessage.includes("api key not valid") || lowerCaseMessage.includes("api key is missing")) {
-      errorMessage = "The API key is invalid or missing. Please ensure your environment variable process.env.GEMINI_API_KEY is correctly configured.";
+      errorMessage = "The API key is invalid or missing. Add a valid Gemini API Key in Setup -> LLM -> Gemini API Key.";
     } else if (lowerCaseMessage.includes("content is blocked") || lowerCaseMessage.includes("safety")) {
       errorMessage = `The request for ${context} was blocked due to safety settings. Please modify your input and try again.`;
     } else if (lowerCaseMessage.includes("quota")) {

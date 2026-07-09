@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React from 'react';
 import { useSettings } from '../contexts/SettingsContext';
 import { AVAILABLE_LLM_MODELS } from '../constants';
 
@@ -9,11 +9,7 @@ interface LlmStatusSwitcherProps {
 
 const LlmStatusSwitcher: React.FC<LlmStatusSwitcherProps> = ({ onClick, isOpen }) => {
     const { settings } = useSettings();
-    const [isGeminiKeySet, setIsGeminiKeySet] = useState(false);
-
-    useEffect(() => {
-        setIsGeminiKeySet(!!process.env.GEMINI_API_KEY);
-    }, []);
+    const isGeminiKeySet = !!(settings.geminiApiKey || process.env.GEMINI_API_KEY);
 
     const selectedGeminiModel = AVAILABLE_LLM_MODELS.find(m => m.id === settings.llmModel);
     const geminiModelShortName = selectedGeminiModel ? selectedGeminiModel.name.split('(')[0].trim() : 'Unknown';
