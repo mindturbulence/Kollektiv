@@ -1,6 +1,7 @@
 
 import type { CheatsheetCategory, CheatsheetItem, LLMSettings } from '../types';
 import { fileSystemManager } from './fileUtils';
+import { loadManifestSafe, ManifestWriteBlockedError, type ManifestLoad } from './manifestStore';
 import { generateArtistDescription } from '../services/llmService';
 
 const MANIFEST_NAME = 'artists_cheatsheet.json';
@@ -9,20 +10,12 @@ const BG_FOLDER = 'backgrounds';
 
 const delay = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
 
-const getManifest = async (): Promise<CheatsheetCategory[]> => {
-    try {
-        const manifestContent = await fileSystemManager.readFile(MANIFEST_NAME);
-        if (manifestContent) {
-            const storedData = JSON.parse(manifestContent);
-            if (Array.isArray(storedData)) {
-                return storedData;
-            }
-        }
-    } catch (e) {
-        console.error(`Error reading ${MANIFEST_NAME}, returning empty.`, e);
-    }
-    return [];
-};
+const getManifest = (): Promise<ManifestLoad<CheatsheetCategory[]>> =>
+    loadManifestSafe<CheatsheetCategory[]>(
+        MANIFEST_NAME,
+        (parsed) => (Array.isArray(parsed) ? parsed : null),
+        () => []
+    );
 
 const saveArtists = async (data: CheatsheetCategory[]): Promise<void> => {
     try {
@@ -34,11 +27,14 @@ const saveArtists = async (data: CheatsheetCategory[]): Promise<void> => {
 };
 
 export const loadArtists = async (): Promise<CheatsheetCategory[]> => {
-    return await getManifest();
+    const { data: manifest } = await getManifest();
+    return manifest;
 };
 
 export const updateArtist = async (itemId: string, updates: Partial<CheatsheetItem>): Promise<CheatsheetCategory[]> => {
-    const data = await getManifest();
+    const { data: manifest, safeToSave } = await getManifest();
+    if (!safeToSave) throw new ManifestWriteBlockedError(MANIFEST_NAME);
+    const data = manifest;
     let itemFound = false;
 
     let finalUrls: string[] | undefined = undefined;
@@ -90,7 +86,9 @@ export const updateArtist = async (itemId: string, updates: Partial<CheatsheetIt
 };
 
 export const updateCategory = async (categoryName: string, updates: Partial<CheatsheetCategory>): Promise<CheatsheetCategory[]> => {
-    const data = await getManifest();
+    const { data: manifest, safeToSave } = await getManifest();
+    if (!safeToSave) throw new ManifestWriteBlockedError(MANIFEST_NAME);
+    const data = manifest;
     let finalBgUrl = updates.backgroundImageUrl;
 
     if (finalBgUrl && finalBgUrl.startsWith('data:')) {
@@ -120,7 +118,9 @@ export const enrichArtistDataWithDescriptions = async (
     settings: LLMSettings,
     onProgress: (progress: { current: number, total: number }) => void
 ): Promise<{ updated: number; total: number }> => {
-    const data = await getManifest();
+    const { data: manifest, safeToSave } = await getManifest();
+    if (!safeToSave) throw new ManifestWriteBlockedError(MANIFEST_NAME);
+    const data = manifest;
     const artistsToEnrich = data.flatMap(cat => cat.items).filter(item => !item.description?.trim());
 
     const total = artistsToEnrich.length;

@@ -44,17 +44,17 @@ const fileManifest: FileManifestEntry[] = [
     {
         path: 'artstyles_cheatsheet.json',
         type: 'json',
-        getDefaultContent: () => ({ categories: [], items: [] }),
+        getDefaultContent: () => ([]),
     },
     {
         path: 'artists_cheatsheet.json',
         type: 'json',
-        getDefaultContent: () => ({ categories: [], items: [] }),
+        getDefaultContent: () => ([]),
     },
     {
         path: 'cheatsheet.json',
         type: 'json',
-        getDefaultContent: () => ({ categories: [], items: [] }),
+        getDefaultContent: () => ([]),
     }
 ];
 

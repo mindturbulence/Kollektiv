@@ -1,41 +1,33 @@
 
 import type { CheatsheetCategory } from '../types';
 import { fileSystemManager } from './fileUtils';
+import { loadManifestSafe, ManifestWriteBlockedError, type ManifestLoad } from './manifestStore';
 
 const MANIFEST_NAME = 'cheatsheet.json';
 const IMG_FOLDER = 'backgrounds';
 
-const getManifest = async (): Promise<CheatsheetCategory[]> => {
-    try {
-        const manifestContent = await fileSystemManager.readFile(MANIFEST_NAME);
-        if (manifestContent) {
-            const storedData = JSON.parse(manifestContent);
-            if (Array.isArray(storedData)) {
-                return storedData;
-            }
-        }
-    } catch (e) {
-        console.error(`Error reading ${MANIFEST_NAME}, returning empty.`, e);
-    }
-    return [];
-};
+const getManifest = (): Promise<ManifestLoad<CheatsheetCategory[]>> =>
+    loadManifestSafe<CheatsheetCategory[]>(
+        MANIFEST_NAME,
+        (parsed) => (Array.isArray(parsed) ? parsed : null),
+        () => []
+    );
 
 
 const saveCheatsheet = async (data: CheatsheetCategory[]): Promise<void> => {
-    try {
-        const dataString = JSON.stringify(data, null, 2);
-        await fileSystemManager.saveFile(MANIFEST_NAME, new Blob([dataString], { type: 'application/json' }));
-    } catch (error) {
-        console.error("Failed to save cheatsheet:", error);
-    }
+    const dataString = JSON.stringify(data, null, 2);
+    await fileSystemManager.saveFile(MANIFEST_NAME, new Blob([dataString], { type: 'application/json' }));
 };
 
 export const loadCheatsheet = async (): Promise<CheatsheetCategory[]> => {
-    return await getManifest();
+    const { data: manifest } = await getManifest();
+    return manifest;
 };
 
 export const updateCategory = async (categoryName: string, updates: Partial<CheatsheetCategory>): Promise<CheatsheetCategory[]> => {
-    const data = await getManifest();
+    const { data: manifestData, safeToSave } = await getManifest();
+    if (!safeToSave) throw new ManifestWriteBlockedError(MANIFEST_NAME);
+    const data = manifestData;
     let finalBgUrl = updates.backgroundImageUrl;
 
     if (finalBgUrl && finalBgUrl.startsWith('data:')) {

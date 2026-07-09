@@ -1,25 +1,18 @@
 
 import type { CheatsheetCategory, CheatsheetItem } from '../types';
 import { fileSystemManager } from './fileUtils';
+import { loadManifestSafe, ManifestWriteBlockedError, type ManifestLoad } from './manifestStore';
 
 const MANIFEST_NAME = 'artstyles_cheatsheet.json';
 const IMG_FOLDER = 'artstyles';
 const BG_FOLDER = 'backgrounds';
 
-const getManifest = async (): Promise<CheatsheetCategory[]> => {
-    try {
-        const manifestContent = await fileSystemManager.readFile(MANIFEST_NAME);
-        if (manifestContent) {
-            const storedData = JSON.parse(manifestContent);
-            if (Array.isArray(storedData)) {
-                return storedData;
-            }
-        }
-    } catch (e) {
-        console.error(`Error reading ${MANIFEST_NAME}, returning empty.`, e);
-    }
-    return [];
-};
+const getManifest = (): Promise<ManifestLoad<CheatsheetCategory[]>> =>
+    loadManifestSafe<CheatsheetCategory[]>(
+        MANIFEST_NAME,
+        (parsed) => (Array.isArray(parsed) ? parsed : null),
+        () => []
+    );
 
 
 const saveArtStyles = async (data: CheatsheetCategory[]): Promise<void> => {
@@ -32,11 +25,14 @@ const saveArtStyles = async (data: CheatsheetCategory[]): Promise<void> => {
 };
 
 export const loadArtStyles = async (): Promise<CheatsheetCategory[]> => {
-    return await getManifest();
+    const { data: manifest } = await getManifest();
+    return manifest;
 };
 
 export const updateArtStyle = async (itemId: string, updates: Partial<CheatsheetItem>): Promise<CheatsheetCategory[]> => {
-    const data = await getManifest();
+    const { data: manifest, safeToSave } = await getManifest();
+    if (!safeToSave) throw new ManifestWriteBlockedError(MANIFEST_NAME);
+    const data = manifest;
     let itemFound = false;
     
     let finalUrls: string[] | undefined = undefined;
@@ -88,7 +84,9 @@ export const updateArtStyle = async (itemId: string, updates: Partial<Cheatsheet
 };
 
 export const updateCategory = async (categoryName: string, updates: Partial<CheatsheetCategory>): Promise<CheatsheetCategory[]> => {
-    const data = await getManifest();
+    const { data: manifest, safeToSave } = await getManifest();
+    if (!safeToSave) throw new ManifestWriteBlockedError(MANIFEST_NAME);
+    const data = manifest;
     let finalBgUrl = updates.backgroundImageUrl;
 
     if (finalBgUrl && finalBgUrl.startsWith('data:')) {
