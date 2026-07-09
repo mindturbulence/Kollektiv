@@ -439,13 +439,20 @@ export const optimizeManifests = async (onProgress: (msg: string) => void): Prom
 export const verifyAndRepairFiles = async (onProgress: (message: string, progress?: number) => void, _settings: LLMSettings): Promise<boolean> => {
     console.log('[Integrity] Starting file verification');
     const originalProvider = fileSystemManager.storageProvider;
+    // ponytail: repair tooling only understands the local vault. Running it while
+    // provider is 'drive' used to stamp default manifests into a stale local folder.
+    if (originalProvider === 'drive') {
+        console.warn('[Integrity] Drive storage active — skipping local file verification');
+        onProgress('> DRIVE STORAGE ACTIVE — VERIFICATION SKIPPED', 1);
+        return true;
+    }
     fileSystemManager.storageProvider = 'local';
     try {
         onProgress('> INITIATING SYSTEM CHECK...');
         await new Promise(r => setTimeout(r, 300));
-        
+
         const totalSteps = fileManifest.length;
-        
+
         for (let i = 0; i < totalSteps; i++) {
             const entry = fileManifest[i];
             try {
@@ -453,41 +460,59 @@ export const verifyAndRepairFiles = async (onProgress: (message: string, progres
                 const status = i % 2 === 0 ? '[CHECK]' : '[VERIFY]';
                 onProgress(`${status} ${entry.path.replace('.json', '').toUpperCase()}`, progress);
                 await new Promise(r => setTimeout(r, 150));
-                
+
                 const content = await fileSystemManager.readFile(entry.path);
-                
+
                 if (content === null) {
-                    console.log(`[Integrity] Creating ${entry.path}`);
-                    onProgress(`[CREATE] ${entry.path.replace('.json', '').toUpperCase()}`);
-                    const defaultContent = entry.getDefaultContent();
-                    const contentString = typeof defaultContent === 'string' ? defaultContent : JSON.stringify(defaultContent);
-                    const blob = new Blob([contentString], { type: entry.type === 'json' ? 'application/json' : 'text/plain' });
-                    await fileSystemManager.saveFile(entry.path, blob);
-                    await new Promise(r => setTimeout(r, 100));
-                } else if (entry.type === 'json') {
-                    const parsed = forceParseJson(content);
-                    if (parsed === null) {
-                        console.log(`[Integrity] Repairing ${entry.path} with default content (completely corrupt)`);
-                        onProgress(`[REPAIR] ${entry.path.replace('.json', '').toUpperCase()}`);
+                    // readFile returns null for BOTH "absent" and "read failed/timed out".
+                    // Only create defaults when the file is confirmed absent.
+                    let exists = true;
+                    try {
+                        exists = await fileSystemManager.fileExists(entry.path);
+                    } catch (checkErr) {
+                        console.warn(`[Integrity] Could not verify existence of ${entry.path}; leaving it untouched`, checkErr);
+                    }
+                    if (!exists) {
+                        console.log(`[Integrity] Creating ${entry.path}`);
+                        onProgress(`[CREATE] ${entry.path.replace('.json', '').toUpperCase()}`);
                         const defaultContent = entry.getDefaultContent();
                         const contentString = typeof defaultContent === 'string' ? defaultContent : JSON.stringify(defaultContent);
-                        const blob = new Blob([contentString], { type: 'application/json' });
+                        const blob = new Blob([contentString], { type: entry.type === 'json' ? 'application/json' : 'text/plain' });
                         await fileSystemManager.saveFile(entry.path, blob);
                         await new Promise(r => setTimeout(r, 100));
                     } else {
-                        // Successfully parsed (or repaired). Save back the sanitized/pretty JSON format
-                        const cleanedString = JSON.stringify(parsed, null, 2);
-                        if (cleanedString.length !== content.trim().length || cleanedString !== content.trim()) {
-                            console.log(`[Integrity] Rewriting repaired JSON structure for ${entry.path}`);
-                            await fileSystemManager.saveFile(entry.path, new Blob([cleanedString], { type: 'application/json' }));
-                        }
+                        console.warn(`[Integrity] ${entry.path} exists but could not be read; skipping to avoid data loss`);
+                        onProgress(`[SKIP] ${entry.path.replace('.json', '').toUpperCase()}`);
+                    }
+                } else if (entry.type === 'json') {
+                    let strictOk = false;
+                    try { JSON.parse(content); strictOk = true; } catch {}
+                    if (strictOk) {
+                        // File parses cleanly — leave it alone. (Previously it was
+                        // re-pretty-printed on every startup, churning the vault.)
+                        continue;
+                    }
+                    const parsed = forceParseJson(content);
+                    // Whatever happens next overwrites the original — keep a backup first.
+                    await fileSystemManager.saveFile(`${entry.path}.bak`, new Blob([content], { type: 'text/plain' }));
+                    if (parsed === null) {
+                        console.log(`[Integrity] Repairing ${entry.path} with default content (completely corrupt; original saved to ${entry.path}.bak)`);
+                        onProgress(`[REPAIR] ${entry.path.replace('.json', '').toUpperCase()}`);
+                        const defaultContent = entry.getDefaultContent();
+                        const contentString = typeof defaultContent === 'string' ? defaultContent : JSON.stringify(defaultContent);
+                        await fileSystemManager.saveFile(entry.path, new Blob([contentString], { type: 'application/json' }));
+                        await new Promise(r => setTimeout(r, 100));
+                    } else {
+                        console.log(`[Integrity] Structurally repaired ${entry.path} (original saved to ${entry.path}.bak)`);
+                        onProgress(`[REPAIR] ${entry.path.replace('.json', '').toUpperCase()}`);
+                        await fileSystemManager.saveFile(entry.path, new Blob([JSON.stringify(parsed, null, 2)], { type: 'application/json' }));
                     }
                 }
             } catch (e) {
                 console.error(`Error processing ${entry.path}:`, e);
             }
         }
-        
+
         console.log('[Integrity] File verification complete');
         onProgress('> SYSTEM VERIFIED [OK]', 1);
         return true;
