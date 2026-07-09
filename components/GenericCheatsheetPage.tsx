@@ -6,6 +6,7 @@ import type { CheatsheetCategory, CheatsheetItem } from '../types';
 import LoadingSpinner from './LoadingSpinner';
 import { SearchIcon } from './icons';
 import { fileSystemManager } from '../utils/fileUtils';
+import { useObjectUrls } from '../utils/useObjectUrls';
 import LayeredCheatsheetDetail from './LayeredCheatsheetDetail';
 import { audioService } from '../services/audioService';
 import { pageVariants } from './AnimatedPanels';
@@ -18,9 +19,10 @@ interface CategoryCardProps {
     index: number;
 }
 
-const CategoryCard: React.FC<CategoryCardProps> = ({ 
+const CategoryCard: React.FC<CategoryCardProps> = ({
     category, onClick, index
 }) => {
+    const { track } = useObjectUrls();
     const cardRef = useRef<HTMLDivElement>(null);
     const titleContainerRef = useRef<HTMLDivElement>(null);
     const bgContainerRef = useRef<HTMLDivElement>(null);
@@ -39,7 +41,7 @@ const CategoryCard: React.FC<CategoryCardProps> = ({
                     setCurrentImage(urlToLoad);
                 } else {
                     const blob = await fileSystemManager.getFileAsBlob(urlToLoad);
-                    if (blob && active) setCurrentImage(URL.createObjectURL(blob));
+                    if (blob && active) setCurrentImage(track(URL.createObjectURL(blob)));
                 }
             } else {
                 setCurrentImage(CATEGORY_PLACEHOLDER);

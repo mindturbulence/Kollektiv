@@ -5,6 +5,7 @@ import { useSettings } from '../contexts/SettingsContext';
 import { useBusy } from '../contexts/BusyContext';
 import { abstractImage } from '../services/llmService';
 import { extractFullMetadata, fileToBase64, type ParsedMetadata } from '../utils/fileUtils';
+import { useObjectUrls } from '../utils/useObjectUrls';
 import type { EnhancementResult } from '../types';
 import { PROMPT_DETAIL_LEVELS } from '../constants';
 import { PhotoIcon, CloseIcon, SparklesIcon } from './icons';
@@ -32,6 +33,7 @@ export const MediaAnalyzer: React.FC<MediaAnalyzerProps> = ({
 }) => {
     const { settings } = useSettings();
     const { setIsBusy } = useBusy();
+    const { track } = useObjectUrls();
     const [sourceFile, setSourceFile] = useState<File | null>(null);
     const [previewUrl, setPreviewUrl] = useState<string | null>(null);
     const [fileType, setFileType] = useState<'image' | 'video' | null>(null);
@@ -63,7 +65,7 @@ export const MediaAnalyzer: React.FC<MediaAnalyzerProps> = ({
             setSourceFile(file);
             setFileType(isImage ? 'image' : 'video');
             if (previewUrl && typeof window !== 'undefined') URL.revokeObjectURL(previewUrl);
-            setPreviewUrl(URL.createObjectURL(file));
+            setPreviewUrl(track(URL.createObjectURL(file)));
             setError(null);
             setAbstractionResults(null);
             setMetadataResults(null);
