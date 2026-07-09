@@ -2,6 +2,7 @@
 import type { SavedPrompt, PromptCategory, PromptVersionNode } from '../types';
 import { fileSystemManager } from './fileUtils';
 import { v4 as uuidv4 } from 'uuid';
+import { loadManifestSafe, ManifestWriteBlockedError, type ManifestLoad } from './manifestStore';
 
 interface PromptManifest {
   prompts: SavedPrompt[];
@@ -11,21 +12,18 @@ interface PromptManifest {
 const MANIFEST_NAME = 'prompts_manifest.json';
 const PROMPTS_DIR = 'prompts';
 
-const getManifest = async (): Promise<PromptManifest> => {
-    const manifestContent = await fileSystemManager.readFile(MANIFEST_NAME);
-    if (manifestContent) {
-        try {
-            const parsed = JSON.parse(manifestContent);
+const getManifest = (): Promise<ManifestLoad<PromptManifest>> =>
+    loadManifestSafe<PromptManifest>(
+        MANIFEST_NAME,
+        (parsed) => {
+            if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed)) return null;
             return {
                 prompts: Array.isArray(parsed.prompts) ? parsed.prompts.filter((p: any) => p && typeof p === 'object' && p.id) : [],
                 categories: Array.isArray(parsed.categories) ? parsed.categories.filter((c: any) => c && typeof c === 'object' && c.id) : []
             };
-        } catch (e) {
-            console.error("Failed to parse prompts manifest, starting fresh.", e);
-        }
-    }
-    return { prompts: [], categories: [] };
-};
+        },
+        () => ({ prompts: [], categories: [] })
+    );
 
 const saveManifest = async (manifest: PromptManifest) => {
     await fileSystemManager.saveFile(MANIFEST_NAME, new Blob([JSON.stringify(manifest, null, 2)], { type: 'application/json' }));
@@ -56,7 +54,7 @@ const _loadPromptsWithText = async (prompts: SavedPrompt[]): Promise<SavedPrompt
 };
 
 export const loadSavedPrompts = async (): Promise<SavedPrompt[]> => {
-    const manifest = await getManifest();
+    const { data: manifest } = await getManifest();
     return _loadPromptsWithText(manifest.prompts);
 };
 
@@ -65,7 +63,7 @@ export const addSavedPrompt = async (promptData: Omit<SavedPrompt, 'id' | 'creat
         throw new Error('Cannot save a prompt without text content.');
     }
 
-    const manifest = await getManifest();
+    const { data: manifest } = await getManifest();
     
     let newId = '';
     try {
@@ -97,7 +95,7 @@ export const addSavedPrompt = async (promptData: Omit<SavedPrompt, 'id' | 'creat
 };
 
 export const updateSavedPrompt = async (id: string, promptData: Omit<SavedPrompt, 'id' | 'createdAt'>): Promise<void> => {
-    const manifest = await getManifest();
+    const { data: manifest } = await getManifest();
     const promptIndex = manifest.prompts.findIndex(p => p.id === id);
     if (promptIndex > -1) {
         const oldPrompt = manifest.prompts[promptIndex];
@@ -124,19 +122,20 @@ export const updateSavedPrompt = async (id: string, promptData: Omit<SavedPrompt
 };
 
 export const deleteSavedPrompt = async (id: string): Promise<void> => {
-    const manifest = await getManifest();
+    const { data: manifest, safeToSave } = await getManifest();
+    if (!safeToSave) throw new ManifestWriteBlockedError(MANIFEST_NAME);
     manifest.prompts = manifest.prompts.filter(p => p.id !== id);
     await fileSystemManager.deleteFile(`${PROMPTS_DIR}/${id}.txt`);
     await saveManifest(manifest);
 };
 
 export const loadPromptCategories = async (): Promise<PromptCategory[]> => {
-    const manifest = await getManifest();
+    const { data: manifest } = await getManifest();
     return manifest.categories.sort((a, b) => (a.order || 0) - (b.order || 0));
 };
 
 export const addPromptCategory = async (name: string, parentId?: string): Promise<PromptCategory[]> => {
-    const manifest = await getManifest();
+    const { data: manifest } = await getManifest();
     const newCategory: PromptCategory = {
         id: `pcat_${Date.now()}`,
         name: name,
@@ -149,7 +148,8 @@ export const addPromptCategory = async (name: string, parentId?: string): Promis
 };
 
 export const updatePromptCategory = async (id: string, updates: Partial<Omit<PromptCategory, 'id'>>): Promise<PromptCategory[]> => {
-    const manifest = await getManifest();
+    const { data: manifest, safeToSave } = await getManifest();
+    if (!safeToSave) throw new ManifestWriteBlockedError(MANIFEST_NAME);
     const catIndex = manifest.categories.findIndex(c => c.id === id);
     if (catIndex > -1) {
         manifest.categories[catIndex] = { ...manifest.categories[catIndex], ...updates };
@@ -159,13 +159,15 @@ export const updatePromptCategory = async (id: string, updates: Partial<Omit<Pro
 };
 
 export const savePromptCategoriesOrder = async (categories: PromptCategory[]): Promise<void> => {
-    const manifest = await getManifest();
+    const { data: manifest, safeToSave } = await getManifest();
+    if (!safeToSave) throw new ManifestWriteBlockedError(MANIFEST_NAME);
     manifest.categories = categories;
     await saveManifest(manifest);
 };
 
 export const deletePromptCategory = async (id: string): Promise<PromptCategory[]> => {
-    const manifest = await getManifest();
+    const { data: manifest, safeToSave } = await getManifest();
+    if (!safeToSave) throw new ManifestWriteBlockedError(MANIFEST_NAME);
     manifest.categories = manifest.categories.filter(cat => cat.id !== id);
     manifest.prompts.forEach(prompt => {
         if (prompt.categoryId === id) prompt.categoryId = undefined;
