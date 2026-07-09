@@ -156,8 +156,10 @@ export default defineConfig(({ mode }) => {
       },
       define: {
         'process.env.NODE_ENV': JSON.stringify(env.NODE_ENV || 'development'),
-        'process.env.API_KEY': JSON.stringify(env.GEMINI_API_KEY || ''),
-        'process.env.GEMINI_API_KEY': JSON.stringify(env.GEMINI_API_KEY || ''),
+        // Never inline the Gemini key into a production bundle. Users supply it at
+        // runtime via Setup (settings.geminiApiKey). Dev builds may read .env.
+        'process.env.API_KEY': JSON.stringify(mode === 'production' ? '' : (env.GEMINI_API_KEY || '')),
+        'process.env.GEMINI_API_KEY': JSON.stringify(mode === 'production' ? '' : (env.GEMINI_API_KEY || '')),
         'process.env.YOUTUBE_CLIENT_ID': JSON.stringify(env.YOUTUBE_CLIENT_ID || '')
       },
       resolve: {

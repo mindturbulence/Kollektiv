@@ -28,7 +28,6 @@ jobs:
       - name: Build Project
         run: npm run build
         env:
-          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
           YOUTUBE_CLIENT_ID: ${{ secrets.YOUTUBE_CLIENT_ID }}
 
       - name: Deploy to GitHub Pages
