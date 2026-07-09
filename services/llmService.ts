@@ -746,6 +746,6 @@ export async function* streamChat(
         yield* streamChatLlamaCpp(finalMessages, settings);
     } else {
         const { streamChatGemini } = await import('./geminiService');
-        yield* streamChatGemini(finalMessages, settings, false);
+        yield* streamChatGemini(finalMessages, settings);
     }
 }

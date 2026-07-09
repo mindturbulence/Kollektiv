@@ -291,8 +291,7 @@ export const reconstructFromIntentGemini = async (intents: string[], settings: L
 
 export async function* streamChatGemini(
     messages: { role: 'user' | 'assistant' | 'system', content: string, attachments?: { data: string, mimeType: string, fileName?: string }[] }[],
-    settings: LLMSettings,
-    useWebSearch: boolean = false
+    settings: LLMSettings
 ): AsyncGenerator<string> {
     try {
         const ai = getGeminiClient(settings);
@@ -346,8 +345,7 @@ export async function* streamChatGemini(
         const chat = ai.chats.create({
             model: getMappedModel(DEFAULT_MODEL),
             config: {
-                systemInstruction: sysInstruction.trim() || "You are a helpful AI assistant.",
-                tools: useWebSearch ? [{ googleSearch: {} }] : undefined
+                systemInstruction: sysInstruction.trim() || "You are a helpful AI assistant."
             },
             history: history
         });
