@@ -19,7 +19,7 @@ const sanitizeUrl = (url: string) => {
 
 /**
  * BASE_CONFIG provides optimized parameters for Ollama.
- * num_predict is now handled dynamically per request to prevent cut-offs.
+ * num_predict is set per request from the caller's token budget.
  */
 const BASE_CONFIG = {
     keep_alive: "30m",
@@ -169,7 +169,7 @@ export async function* enhancePromptOllamaStream(
     constantModifier: string,
     settings: LLMSettings,
     systemInstruction: string,
-    _maxTokens: number = 2048
+    maxTokens: number = 2048
 ): AsyncGenerator<string> {
     try {
         const config = getOllamaConfig(settings);
@@ -186,7 +186,7 @@ export async function* enhancePromptOllamaStream(
                 ],
                 stream: true,
                 ...BASE_CONFIG,
-                
+                options: { ...BASE_CONFIG.options, num_predict: maxTokens },
             }),
         });
 
@@ -259,7 +259,7 @@ export async function* streamChatOllama(
     }
 }
 
-export const refineSinglePromptOllama = async (promptText: string, settings: LLMSettings, systemInstruction: string, _maxTokens: number = 1024): Promise<string> => {
+export const refineSinglePromptOllama = async (promptText: string, settings: LLMSettings, systemInstruction: string, maxTokens: number = 1024): Promise<string> => {
     try {
         const config = getOllamaConfig(settings);
         if (!config.baseUrl || !config.model) throw new Error("Ollama configuration missing.");
@@ -274,7 +274,7 @@ export const refineSinglePromptOllama = async (promptText: string, settings: LLM
                 ],
                 stream: false,
                 ...BASE_CONFIG,
-                
+                options: { ...BASE_CONFIG.options, num_predict: maxTokens },
             }),
         });
         if (!apiResponse.ok) throw new Error(`Ollama status: ${apiResponse.status}`);
@@ -289,7 +289,7 @@ export const refineSinglePromptOllama = async (promptText: string, settings: LLM
     }
 };
 
-export async function* refineSinglePromptOllamaStream(promptText: string, settings: LLMSettings, systemInstruction: string, _maxTokens: number = 1024): AsyncGenerator<string> {
+export async function* refineSinglePromptOllamaStream(promptText: string, settings: LLMSettings, systemInstruction: string, maxTokens: number = 1024): AsyncGenerator<string> {
     try {
         const config = getOllamaConfig(settings);
         if (!config.baseUrl || !config.model) throw new Error("Ollama configuration missing.");
@@ -304,7 +304,7 @@ export async function* refineSinglePromptOllamaStream(promptText: string, settin
                 ],
                 stream: true,
                 ...BASE_CONFIG,
-                
+                options: { ...BASE_CONFIG.options, num_predict: maxTokens },
             }),
         });
         
