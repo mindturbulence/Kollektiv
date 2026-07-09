@@ -30,9 +30,6 @@ const LlmStatusSwitcher: React.FC<LlmStatusSwitcherProps> = ({ onClick, isOpen }
     } else if (settings.activeLLM === 'ollama_cloud') {
         displayText = settings.ollamaCloudModel || 'Ollama Cloud';
         tooltipText = `Using Cloud Ollama endpoint.`;
-    } else if (settings.activeLLM === 'hermes') {
-        displayText = settings.hermesModel || 'Hermes API';
-        tooltipText = `Using Hermes Agent Core.`;
     } else if (settings.activeLLM === 'openrouter') {
         const modelParts = (settings.openrouterModel || 'OpenRouter').split('/');
         displayText = modelParts[modelParts.length - 1]; // display only the model name to save space

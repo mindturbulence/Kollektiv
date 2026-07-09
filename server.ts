@@ -49,11 +49,25 @@ async function startServer() {
         });
         if (bodyBuffer.length > 0) {
           fetchOptions.body = bodyBuffer;
+          const bodyStr = bodyBuffer.toString('utf8');
+          console.log(`[Google-API Proxy] Request body size: ${bodyBuffer.length} bytes. Body preview: ${bodyStr.substring(0, 500)}`);
+        } else {
+          console.warn(`[Google-API Proxy] Expected body but bodyBuffer is empty (0 bytes)`);
         }
       }
 
       const response = await fetch(targetUrl, fetchOptions);
       console.log(`[Google-API Proxy] <<< ${req.method} ${targetUrl} -> Status ${response.status} (${Date.now() - start}ms)`);
+
+      if (response.status >= 400) {
+        try {
+          const cloneRes = response.clone();
+          const errText = await cloneRes.text();
+          console.error(`[Google-API Proxy] Error response from Google (${response.status}):`, errText);
+        } catch (e) {
+          console.error(`[Google-API Proxy] Error response clone/read failed:`, e);
+        }
+      }
 
       res.status(response.status);
       for (const [key, value] of response.headers.entries()) {
@@ -243,12 +257,10 @@ async function startServer() {
       try {
         response = await fetch(targetUrl, fetchOptions);
       } catch (err: any) {
-        console.warn('Llama.cpp IPv4 proxy failed, trying localhost fallback...', err.message);
         try {
           const fallbackUrl = `http://localhost:8080${subPath}`;
           response = await fetch(fallbackUrl, fetchOptions);
         } catch (fallbackErr: any) {
-          console.warn('Llama.cpp localhost proxy failed, trying IPv6 fallback...', fallbackErr.message);
           const ipv6Url = `http://[::1]:8080${subPath}`;
           response = await fetch(ipv6Url, fetchOptions);
         }
@@ -274,7 +286,10 @@ async function startServer() {
       }
       res.end();
     } catch (err: any) {
-      console.error('Llama.cpp Local Proxy Error:', err);
+      const isConnRefused = err.code === 'ECONNREFUSED' || err.message?.includes('fetch failed') || err.cause?.code === 'ECONNREFUSED';
+      if (!isConnRefused) {
+        console.error('Llama.cpp Local Proxy Error:', err);
+      }
       if (!res.headersSent) {
         const isCloudEnv = process.env.NODE_ENV === 'production' || req.headers.host && !req.headers.host.includes('localhost') && !req.headers.host.includes('127.0.0.1');
         const customMessage = isCloudEnv
@@ -371,6 +386,125 @@ async function startServer() {
   // Health check endpoint
   app.get("/api/health", (_req, res) => {
     res.json({ status: "ok" });
+  });
+
+  // Anthropic API Proxy Endpoint
+  app.post("/api/anthropic/chat", async (req, res) => {
+    try {
+      const { messages, settings, stream } = req.body;
+      
+      const isSubscriptionMode = settings.anthropicConnectionMode === 'subscription';
+      const apiKey = isSubscriptionMode 
+        ? (settings.anthropicSubscriptionKey || '')
+        : (settings.anthropicApiKey || process.env.ANTHROPIC_API_KEY);
+      
+      const baseUrl = isSubscriptionMode
+        ? (settings.anthropicSubscriptionUrl || 'http://localhost:8000')
+        : 'https://api.anthropic.com/v1/messages';
+
+      if (!isSubscriptionMode && !apiKey) {
+        return res.status(400).json({ error: "Anthropic API Key is missing. Please set it in Settings -> Integrations -> Anthropic." });
+      }
+
+      // Format messages for Anthropic
+      // Anthropic does not allow 'system' in messages, only user and assistant. System instruction is a top-level property.
+      const systemMessage = messages.find((m: any) => m.role === 'system');
+      const systemInstruction = systemMessage ? systemMessage.content : (settings.masterRolePrompt || '');
+      
+      const otherMessages = messages.filter((m: any) => m.role !== 'system');
+      
+      const formattedMessages = otherMessages.map((msg: any) => {
+        let content: any = msg.content;
+        
+        if (msg.attachments && msg.attachments.length > 0) {
+          content = [
+            { type: "text", text: msg.content || " " }
+          ];
+          
+          for (const att of msg.attachments) {
+            if (att.mimeType.startsWith('image/')) {
+              const mime = att.mimeType;
+              const base64Data = att.data.includes('base64,') ? att.data.split('base64,')[1] : att.data;
+              
+              content.push({
+                type: "image",
+                source: {
+                  type: "base64",
+                  media_type: mime,
+                  data: base64Data
+                }
+              });
+            }
+          }
+        }
+        
+        return {
+          role: msg.role === 'assistant' ? 'assistant' : 'user',
+          content
+        };
+      });
+
+      const requestBody: any = {
+        model: settings.anthropicModel || 'claude-3-7-sonnet-20250219',
+        messages: formattedMessages,
+        max_tokens: 4096,
+        stream: stream !== false
+      };
+
+      if (systemInstruction) {
+        requestBody.system = systemInstruction;
+      }
+
+      const headers: Record<string, string> = {
+        "Content-Type": "application/json"
+      };
+
+      if (!isSubscriptionMode) {
+        headers["x-api-key"] = apiKey;
+        headers["anthropic-version"] = "2023-06-01";
+        headers["anthropic-dangerous-direct-browser-access"] = "true";
+      } else {
+        if (apiKey) {
+          headers["Authorization"] = `Bearer ${apiKey}`;
+          headers["x-api-key"] = apiKey;
+        }
+      }
+
+      console.log(`[Anthropic Proxy] Calling ${baseUrl} with model ${requestBody.model}`);
+      const response = await fetch(baseUrl, {
+        method: "POST",
+        headers,
+        body: JSON.stringify(requestBody)
+      });
+
+      res.status(response.status);
+      
+      for (const [key, value] of response.headers.entries()) {
+        const lowerKey = key.toLowerCase();
+        if (lowerKey !== 'transfer-encoding' && lowerKey !== 'content-encoding' && lowerKey !== 'content-length') {
+          res.setHeader(key, value);
+        }
+      }
+
+      if (!response.body) {
+        res.end();
+        return;
+      }
+
+      const reader = (response.body as any).getReader();
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        res.write(value);
+      }
+      res.end();
+
+    } catch (err: any) {
+      console.error("[Anthropic Proxy Error]:", err);
+      if (!res.headersSent) {
+        res.status(500).json({ error: "Failed to communicate with Anthropic service", message: err.message });
+      }
+    }
   });
 
   // MCP Server Proxy Endpoint

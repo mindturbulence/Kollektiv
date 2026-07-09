@@ -4,6 +4,7 @@ import React, { useState, useCallback, useEffect, useMemo, useRef } from 'react'
 import { audioService } from '../services/audioService';
 import { useSettings } from '../contexts/SettingsContext';
 import { enhancePromptStream, buildMidjourneyParams, generateWithImagen, generateWithNanoBanana, generateWithVeo, cleanLLMResponse, dissectPrompt, generateConstructorPreset } from '../services/llmService';
+import { computeWordDiff, calculateSemanticMetrics } from '../utils/diffUtils';
 import { loadPromptCategories, addSavedPrompt, loadSavedPrompts } from '../utils/promptStorage';
 import { loadArtStyles } from '../utils/artstyleStorage';
 import { loadArtists } from '../utils/artistStorage';
@@ -63,6 +64,8 @@ import AutocompleteSelect from './AutocompleteSelect';
 import { SparklesIcon, UploadIcon, Cog6ToothIcon, CloseIcon, DownloadIcon } from './icons';
 import ConfirmationModal from './ConfirmationModal';
 import JSONBreakdownModal from './JSONBreakdownModal';
+// Import code snippet export modal component
+import CodeSnippetModal from './CodeSnippetModal';
 
 // --- Types ---
 type MediaMode = 'image' | 'video' | 'audio';
@@ -125,7 +128,7 @@ const ReferenceSlot: React.FC<{
         <div className="aspect-square bg-transparent relative group overflow-hidden w-full h-full">
             {url ? (
                 <>
-                    <img src={url} className="w-full h-full object-cover" alt={`Ref ${index}`} />
+                    <img src={url} className="w-full h-full object-cover" alt={`Ref ${index}`} referrerPolicy="no-referrer" onError={(e) => { e.currentTarget.style.filter = 'grayscale(1)'; }} />
                     <button onClick={onRemove} className="btn btn-xs btn-square btn-error absolute top-1 right-1 opacity-0 group-hover:opacity-100">✕</button>
                 </>
             ) : (
@@ -211,7 +214,31 @@ const PromptsPage: React.FC<PromptsPageProps> = ({
     const [artists, setArtists] = useState<CheatsheetCategory[]>([]);
     const [isLoadingRefine, setIsLoadingRefine] = useState(false);
     const [errorRefine, setErrorRefine] = useState<AppError | null>(null);
+    const [isCodeExportModalOpen, setIsCodeExportModalOpen] = useState(false);
     const [resultsRefine, setResultsRefine] = useState<EnhancementResult | null>(null);
+    const [outputTab, setOutputTab] = useState<'prose' | 'diff'>('prose');
+
+    // --- Dual Arena Mode comparison states ---
+    const [arenaMode, setArenaMode] = useState(false);
+    const [arenaModelA, setArenaModelA] = useState<string>('gemini');
+    const [arenaModelB, setArenaModelB] = useState<string>('ollama');
+    const [isLoadingRefineA, setIsLoadingRefineA] = useState(false);
+    const [isLoadingRefineB, setIsLoadingRefineB] = useState(false);
+    const [errorRefineA, setErrorRefineA] = useState<any>(null);
+    const [errorRefineB, setErrorRefineB] = useState<any>(null);
+    const [resultsRefineA, setResultsRefineA] = useState<any>(null);
+    const [resultsRefineB, setResultsRefineB] = useState<any>(null);
+    const [statsA, setStatsA] = useState<any>(null);
+    const [statsB, setStatsB] = useState<any>(null);
+
+    const diffAnalysis = useMemo(() => {
+        if (!resultsRefine || !resultsRefine.suggestions || !resultsRefine.suggestions[0]) return null;
+        const original = refineText || '';
+        const refined = resultsRefine.suggestions[0];
+        const diff = computeWordDiff(original, refined);
+        const metrics = calculateSemanticMetrics(original, refined, targetAIModel);
+        return { diff, metrics };
+    }, [resultsRefine, refineText, targetAIModel]);
     const [directMediaResult, setDirectMediaResult] = useState<{ url: string, type: 'image' | 'video', target: string, prompt: string } | null>(null);
     const [activeRefineSubTab, setActiveRefineSubTab] = useState<RefineSubTab>('basic');
     const refineScrollerRef = useRef<HTMLDivElement>(null);
@@ -346,6 +373,44 @@ const PromptsPage: React.FC<PromptsPageProps> = ({
         setSuggestionToSave(null);
     };
 
+    const buildModifierCatalog = useCallback(() => {
+        const catalog: string[] = [];
+
+        if (artStyles.length > 0) catalog.push(`artStyle: ${artStyles.flatMap(c => c.items.map(i => i.name)).join(', ')}`);
+        if (artists.length > 0) catalog.push(`artist: ${artists.flatMap(c => c.items.map(i => i.name)).join(', ')}`);
+
+        catalog.push(`photographyStyle: ${PHOTOGRAPHY_STYLES.join(', ')}`);
+        catalog.push(`aestheticLook: ${AESTHETIC_LOOKS.map(l => l.name).join(', ')}`);
+        catalog.push(`digitalAesthetic: ${DIGITAL_AESTHETICS.map(a => a.name).join(', ')}`);
+        catalog.push(`aspectRatio: ${GENERAL_ASPECT_RATIOS.join(', ')}`);
+        catalog.push(`cameraType: ${CAMERA_TYPES.join(', ')}`);
+        catalog.push(`cameraAngle: ${CAMERA_ANGLES.join(', ')}`);
+        catalog.push(`cameraProximity: ${CAMERA_PROXIMITY.join(', ')}`);
+        catalog.push(`cameraSettings: ${CAMERA_SETTINGS.join(', ')}`);
+        catalog.push(`cameraEffect: ${CAMERA_EFFECTS.join(', ')}`);
+        catalog.push(`specialtyLens: ${SPECIALTY_LENS_EFFECTS.map(l => l.name).join(', ')}`);
+        catalog.push(`lensType: ${LENS_TYPES.join(', ')}`);
+        catalog.push(`filmType: ${FILM_TYPES.join(', ')}`);
+        catalog.push(`filmStock: ${ANALOG_FILM_STOCKS.join(', ')}`);
+        catalog.push(`lighting: ${LIGHTING_OPTIONS.join(', ')}`);
+        catalog.push(`composition: ${COMPOSITION_OPTIONS.join(', ')}`);
+        catalog.push(`facialExpression: ${FACIAL_EXPRESSIONS.join(', ')}`);
+        catalog.push(`hairStyle: ${HAIR_STYLES.join(', ')}`);
+        catalog.push(`eyeColor: ${EYE_COLORS.join(', ')}`);
+        catalog.push(`skinTexture: ${SKIN_TEXTURES.join(', ')}`);
+        catalog.push(`realism: ${REALISM_OPTIONS.join(', ')}`);
+        catalog.push(`clothing: ${CLOTHING_STYLES.join(', ')}`);
+        catalog.push(`motion: ${MOTION_OPTIONS.map(o => o.name).join(', ')}`);
+        catalog.push(`cameraMovement: ${CAMERA_MOVEMENT_OPTIONS.map(o => o.name).join(', ')}`);
+        catalog.push(`videoEffect: ${VIDEO_EFFECTS.join(', ')}`);
+        catalog.push(`mjVersion: ${MIDJOURNEY_VERSIONS.join(', ')}`);
+        catalog.push(`mjNiji: ${MIDJOURNEY_NIJI_VERSIONS.join(', ')}`);
+        catalog.push(`mjAspectRatio: ${MIDJOURNEY_ASPECT_RATIOS.join(', ')}`);
+        catalog.push(`zImageStyle: ${Z_IMAGE_STYLES.join(', ')}`);
+
+        return catalog.join('\\n');
+    }, [artStyles, artists]);
+
     const handleEnhance = useCallback(async () => {
         setIsBusy(true);
         setIsLoadingRefine(true);
@@ -364,8 +429,6 @@ const PromptsPage: React.FC<PromptsPageProps> = ({
                 const active = settings.activeLLM || 'ollama';
                 if (active === 'gemini') {
                     throw new Error("Target unreachable or returned empty sequence. Please ensure your Gemini API Key is configured and valid in Setup.");
-                } else if (active === 'hermes') {
-                    throw new Error("Target unreachable or returned empty sequence. Please ensure your Hermes service is running on port 18789.");
                 } else if (active === 'openrouter') {
                     throw new Error("Target unreachable or returned empty sequence. Please verify your OpenRouter configuration.");
                 } else {
@@ -403,6 +466,127 @@ const PromptsPage: React.FC<PromptsPageProps> = ({
             setIsBusy(false);
         }
     }, [refineText, constantModifier, promptLength, targetAIModel, modifiers, settings, isMidjourney, referenceImages, mediaMode]);
+
+    const handleEnhanceArena = useCallback(async () => {
+        setIsBusy(true);
+        setIsLoadingRefineA(true);
+        setIsLoadingRefineB(true);
+        setErrorRefineA(null);
+        setErrorRefineB(null);
+        setResultsRefineA(null);
+        setResultsRefineB(null);
+        setStatsA(null);
+        setStatsB(null);
+
+        const activeRefImages = referenceImages.filter((img): img is string => img !== null);
+        const catalog = buildModifierCatalog();
+
+        const runModelA = async () => {
+            const start = performance.now();
+            let fullText = '';
+            try {
+                const stream = enhancePromptStream(refineText, constantModifier, promptLength, targetAIModel, modifiers, settings, activeRefImages, catalog, arenaModelA);
+                for await (const chunk of stream) fullText += chunk;
+                const duration = performance.now() - start;
+
+                let refinedPrompt = fullText;
+                let breakdown: any = null;
+                if (fullText.includes('---PROMPT_BREAKDOWN---')) {
+                    const parts = fullText.split('---PROMPT_BREAKDOWN---');
+                    refinedPrompt = parts[0].trim();
+                    const jsonStr = parts[1].trim();
+                    try {
+                        breakdown = JSON.parse(jsonStr.replace(/```json\n?|\n?```/g, '').trim());
+                    } catch (e) {
+                        console.error('Failed to parse breakdown A:', e);
+                    }
+                }
+
+                const cleanedText = cleanLLMResponse(refinedPrompt);
+                const mjParams = isMidjourney ? buildMidjourneyParams(modifiers) : '';
+                const finalPrompt = isMidjourney ? `${cleanedText} ${mjParams}`.trim() : cleanedText;
+
+                setResultsRefineA({
+                    suggestions: [finalPrompt],
+                    breakdown
+                });
+
+                const wordCount = finalPrompt.split(/\s+/).length;
+                const tokensPerSec = duration > 0 ? parseFloat(((wordCount * 1.3) / (duration / 1000)).toFixed(1)) : 0;
+                const metrics = calculateSemanticMetrics(refineText, finalPrompt, arenaModelA);
+                
+                setStatsA({
+                    durationMs: Math.round(duration),
+                    tokensPerSec,
+                    overlap: metrics.semanticOverlap,
+                    expansion: metrics.expansionRatio,
+                    purity: metrics.enrichmentPurity,
+                    aesthetic: metrics.aestheticImprovement
+                });
+            } catch (err: any) {
+                setErrorRefineA({ message: err.message || "Model A failed." });
+            } finally {
+                setIsLoadingRefineA(false);
+            }
+        };
+
+        const runModelB = async () => {
+            const start = performance.now();
+            let fullText = '';
+            try {
+                const stream = enhancePromptStream(refineText, constantModifier, promptLength, targetAIModel, modifiers, settings, activeRefImages, catalog, arenaModelB);
+                for await (const chunk of stream) fullText += chunk;
+                const duration = performance.now() - start;
+
+                let refinedPrompt = fullText;
+                let breakdown: any = null;
+                if (fullText.includes('---PROMPT_BREAKDOWN---')) {
+                    const parts = fullText.split('---PROMPT_BREAKDOWN---');
+                    refinedPrompt = parts[0].trim();
+                    const jsonStr = parts[1].trim();
+                    try {
+                        breakdown = JSON.parse(jsonStr.replace(/```json\n?|\n?```/g, '').trim());
+                    } catch (e) {
+                        console.error('Failed to parse breakdown B:', e);
+                    }
+                }
+
+                const cleanedText = cleanLLMResponse(refinedPrompt);
+                const mjParams = isMidjourney ? buildMidjourneyParams(modifiers) : '';
+                const finalPrompt = isMidjourney ? `${cleanedText} ${mjParams}`.trim() : cleanedText;
+
+                setResultsRefineB({
+                    suggestions: [finalPrompt],
+                    breakdown
+                });
+
+                const wordCount = finalPrompt.split(/\s+/).length;
+                const tokensPerSec = duration > 0 ? parseFloat(((wordCount * 1.3) / (duration / 1000)).toFixed(1)) : 0;
+                const metrics = calculateSemanticMetrics(refineText, finalPrompt, arenaModelB);
+                
+                setStatsB({
+                    durationMs: Math.round(duration),
+                    tokensPerSec,
+                    overlap: metrics.semanticOverlap,
+                    expansion: metrics.expansionRatio,
+                    purity: metrics.enrichmentPurity,
+                    aesthetic: metrics.aestheticImprovement
+                });
+            } catch (err: any) {
+                setErrorRefineB({ message: err.message || "Model B failed." });
+            } finally {
+                setIsLoadingRefineB(false);
+            }
+        };
+
+        try {
+            await Promise.all([runModelA(), runModelB()]);
+        } catch (globalErr: any) {
+            console.error("Arena execution issue:", globalErr);
+        } finally {
+            setIsBusy(false);
+        }
+    }, [refineText, constantModifier, promptLength, targetAIModel, modifiers, settings, isMidjourney, referenceImages, mediaMode, arenaModelA, arenaModelB, buildModifierCatalog]);
 
     const handleDirectGenerate = async () => {
         setIsBusy(true);
@@ -473,44 +657,6 @@ const PromptsPage: React.FC<PromptsPageProps> = ({
         });
         setIsSaveSuggestionModalOpen(true);
     };
-
-    const buildModifierCatalog = useCallback(() => {
-        const catalog: string[] = [];
-
-        if (artStyles.length > 0) catalog.push(`artStyle: ${artStyles.flatMap(c => c.items.map(i => i.name)).join(', ')}`);
-        if (artists.length > 0) catalog.push(`artist: ${artists.flatMap(c => c.items.map(i => i.name)).join(', ')}`);
-
-        catalog.push(`photographyStyle: ${PHOTOGRAPHY_STYLES.join(', ')}`);
-        catalog.push(`aestheticLook: ${AESTHETIC_LOOKS.map(l => l.name).join(', ')}`);
-        catalog.push(`digitalAesthetic: ${DIGITAL_AESTHETICS.map(a => a.name).join(', ')}`);
-        catalog.push(`aspectRatio: ${GENERAL_ASPECT_RATIOS.join(', ')}`);
-        catalog.push(`cameraType: ${CAMERA_TYPES.join(', ')}`);
-        catalog.push(`cameraAngle: ${CAMERA_ANGLES.join(', ')}`);
-        catalog.push(`cameraProximity: ${CAMERA_PROXIMITY.join(', ')}`);
-        catalog.push(`cameraSettings: ${CAMERA_SETTINGS.join(', ')}`);
-        catalog.push(`cameraEffect: ${CAMERA_EFFECTS.join(', ')}`);
-        catalog.push(`specialtyLens: ${SPECIALTY_LENS_EFFECTS.map(l => l.name).join(', ')}`);
-        catalog.push(`lensType: ${LENS_TYPES.join(', ')}`);
-        catalog.push(`filmType: ${FILM_TYPES.join(', ')}`);
-        catalog.push(`filmStock: ${ANALOG_FILM_STOCKS.join(', ')}`);
-        catalog.push(`lighting: ${LIGHTING_OPTIONS.join(', ')}`);
-        catalog.push(`composition: ${COMPOSITION_OPTIONS.join(', ')}`);
-        catalog.push(`facialExpression: ${FACIAL_EXPRESSIONS.join(', ')}`);
-        catalog.push(`hairStyle: ${HAIR_STYLES.join(', ')}`);
-        catalog.push(`eyeColor: ${EYE_COLORS.join(', ')}`);
-        catalog.push(`skinTexture: ${SKIN_TEXTURES.join(', ')}`);
-        catalog.push(`realism: ${REALISM_OPTIONS.join(', ')}`);
-        catalog.push(`clothing: ${CLOTHING_STYLES.join(', ')}`);
-        catalog.push(`motion: ${MOTION_OPTIONS.map(o => o.name).join(', ')}`);
-        catalog.push(`cameraMovement: ${CAMERA_MOVEMENT_OPTIONS.map(o => o.name).join(', ')}`);
-        catalog.push(`videoEffect: ${VIDEO_EFFECTS.join(', ')}`);
-        catalog.push(`mjVersion: ${MIDJOURNEY_VERSIONS.join(', ')}`);
-        catalog.push(`mjNiji: ${MIDJOURNEY_NIJI_VERSIONS.join(', ')}`);
-        catalog.push(`mjAspectRatio: ${MIDJOURNEY_ASPECT_RATIOS.join(', ')}`);
-        catalog.push(`zImageStyle: ${Z_IMAGE_STYLES.join(', ')}`);
-
-        return catalog.join('\\n');
-    }, [artStyles, artists]);
 
     const handleCopySuggestionText = useCallback((suggestionText: string) => {
         if (typeof window !== 'undefined' && (window as any).navigator?.clipboard) {
@@ -881,6 +1027,18 @@ const PromptsPage: React.FC<PromptsPageProps> = ({
                         <div className="form-control">
                             <label className="text-[10px] font-black uppercase text-base-content/40 tracking-widest mb-2 block">Photo Genre</label>
                             <AutocompleteSelect value={modifiers.photographyStyle || ''} onChange={(v) => setModifiers({ ...modifiers, photographyStyle: v })} options={PHOTOGRAPHY_STYLES.map(s => ({ label: s.toUpperCase(), value: s }))} placeholder="Genre..." />
+                        </div>
+
+                        <div className="form-control">
+                            <label className="text-[10px] font-black uppercase text-base-content/40 tracking-widest mb-2 block">Aspect Ratio</label>
+                            <select
+                                value={modifiers.aspectRatio || ''}
+                                onChange={(e) => setModifiers({ ...modifiers, aspectRatio: e.target.value })}
+                                className="form-select w-full font-mono"
+                            >
+                                <option value="">SELECT ASPECT RATIO...</option>
+                                {GENERAL_ASPECT_RATIOS.map(ratio => <option key={ratio} value={ratio}>{ratio}</option>)}
+                            </select>
                         </div>
 
                         <div className="form-control">
@@ -1309,13 +1467,25 @@ const PromptsPage: React.FC<PromptsPageProps> = ({
                                         <button
                                             onClick={() => {
                                                 audioService.playClick();
-                                                handleEnhance();
+                                                if (arenaMode) {
+                                                    handleEnhanceArena();
+                                                } else {
+                                                    handleEnhance();
+                                                }
                                             }}
-                                            disabled={isLoadingRefine || !(refineText || '').trim()}
+                                            disabled={(arenaMode ? (isLoadingRefineA || isLoadingRefineB) : isLoadingRefine) || !(refineText || '').trim()}
                                             className="btn btn-sm btn-ghost h-full rounded-none flex-1 tracking-wider text-primary border-1 disabled:opacity-30 disabled:cursor-not-allowed btn-snake"
                                         >
                                             <span /><span /><span /><span />
-                                            {isLoadingRefine ? '...' : 'IMPROVE'}
+                                            {(arenaMode ? (isLoadingRefineA || isLoadingRefineB) : isLoadingRefine) ? '...' : 'IMPROVE'}
+                                        </button>
+                                        <button
+                                            onClick={() => { audioService.playClick(); setIsCodeExportModalOpen(true); }}
+                                            disabled={!(resultsRefine?.suggestions[0] || (arenaMode && resultsRefineA?.suggestions[0]))}
+                                            className="btn btn-sm btn-ghost h-full rounded-none flex-1 tracking-wider text-base-content/40 hover:text-primary border-1 btn-snake"
+                                        >
+                                            <span /><span /><span /><span />
+                                            EXPORT CODE
                                         </button>
                                         {isGoogleProduct && (
                                             <button
@@ -1345,7 +1515,7 @@ const PromptsPage: React.FC<PromptsPageProps> = ({
                                 initial="hidden"
                                 animate={isExiting ? "exit" : "visible"}
                                 exit="exit"
-                                className="lg:col-span-5 h-full min-h-0 flex flex-col relative p-[3px] corner-frame overflow-visible"
+                                className={`${arenaMode ? "lg:col-span-8" : "lg:col-span-5"} h-full min-h-0 flex flex-col relative p-[3px] corner-frame overflow-visible`}
                             >
                                 <PanelLine position="top" delay={0.4} />
                                 <PanelLine position="bottom" delay={0.5} />
@@ -1358,11 +1528,20 @@ const PromptsPage: React.FC<PromptsPageProps> = ({
                                         initial="hidden"
                                         animate="visible"
                                         exit="exit"
-                                        className="p-6 h-16 flex justify-between items-center bg-base-100/80 backdrop-blur-md panel-header overflow-visible relative z-[800]"
+                                        className="p-6 h-16 flex justify-between items-center bg-base-100/80 backdrop-blur-md panel-header overflow-visible relative z-[800] gap-4"
                                     >
                                         <motion.div variants={reverseTextVariants}>
-                                            <TerminalText text={`REFINED PROMPT : ${targetAIModel}`} delay={2.6} className="text-xs font-sf-mono uppercase text-primary" />
+                                            <TerminalText text={arenaMode ? "DUAL NEURAL COMPARISON ARENA" : `REFINED PROMPT : ${targetAIModel}`} delay={2.6} className="text-xs font-sf-mono uppercase text-primary" />
                                         </motion.div>
+                                        <button
+                                            onClick={() => {
+                                                audioService.playClick();
+                                                setArenaMode(!arenaMode);
+                                            }}
+                                            className={`btn btn-xs px-2.5 rounded-none font-sans font-bold uppercase tracking-wider text-[10px] ${arenaMode ? 'btn-primary' : 'btn-ghost border border-white/10 hover:border-white/20 text-base-content/60'}`}
+                                        >
+                                            ⚔️ {arenaMode ? "Close Arena" : "Arena Mode"}
+                                        </button>
                                     </motion.header>
                                     <motion.div
                                         variants={pageBodyVariants}
@@ -1370,12 +1549,230 @@ const PromptsPage: React.FC<PromptsPageProps> = ({
                                         animate="visible"
                                         exit="exit"
                                         ref={neuralOutputScrollerRef}
-                                        className="flex-grow overflow-y-auto flex flex-col items-stretch justify-center"
+                                        className={`flex-grow overflow-y-auto flex flex-col ${arenaMode ? "items-stretch justify-start" : "items-stretch justify-center"}`}
                                     >
-                                        {isLoadingRefine ? (
-                                            <div className="flex-grow flex flex-col items-center justify-center text-center space-y-6">
-                                                <BlobLoader />
+                                        {arenaMode ? (
+                                            <div className="grid grid-cols-1 md:grid-cols-2 gap-5 h-full w-full p-4 overflow-y-auto min-h-0 min-w-0">
+                                                {/* Column A */}
+                                                <div className="flex flex-col h-full bg-base-100/20 md:border-r border-base-content/10 pr-2 overflow-y-auto space-y-4">
+                                                    <div className="flex justify-between items-center bg-base-content/5 p-3 rounded border border-base-content/5 shrink-0">
+                                                        <span className="text-xs font-black uppercase tracking-[0.2em] text-primary">Model A Strategy</span>
+                                                        <select
+                                                            value={arenaModelA}
+                                                            onChange={(e) => { audioService.playClick(); setArenaModelA(e.target.value); }}
+                                                            className="select select-bordered select-xs focus:outline-none bg-base-200 text-xs border-base-content/20"
+                                                        >
+                                                            <option value="gemini">Gemini Flash</option>
+                                                            <option value="ollama">Ollama Cloud / Local</option>
+                                                            <option value="llamacpp">LlamaCpp Local</option>
+                                                        </select>
+                                                    </div>
+
+                                                    <div className="flex-grow min-h-0">
+                                                        {isLoadingRefineA ? (
+                                                            <div className="h-full flex flex-col items-center justify-center text-center py-20">
+                                                                <BlobLoader />
+                                                                <span className="text-xs text-base-content/40 mt-4 uppercase tracking-widest font-mono">Model A Synapsing...</span>
+                                                            </div>
+                                                        ) : errorRefineA ? (
+                                                            <div className="p-4 border border-error/20 bg-error/5 text-error text-xs uppercase leading-relaxed font-mono">
+                                                                {errorRefineA.message}
+                                                            </div>
+                                                        ) : resultsRefineA ? (
+                                                            <div className="space-y-4 animate-fade-in pb-4">
+                                                                <div className="bg-base-content/5 p-4 rounded border border-base-content/5">
+                                                                    <p className="text-sm font-medium leading-relaxed italic text-base-content selection:bg-primary/20">
+                                                                        "{resultsRefineA.suggestions[0]}"
+                                                                    </p>
+                                                                </div>
+
+                                                                {/* Performance Analytics Engine (Task 2.4) */}
+                                                                {statsA && (
+                                                                    <div className="bg-base-content/5 p-4 rounded border border-base-content/5 space-y-2 font-mono text-xs">
+                                                                        <div className="text-[10px] uppercase font-black tracking-widest text-primary/60 border-b border-base-content/10 pb-1.5 mb-2">Performance Analytics</div>
+                                                                        <div className="grid grid-cols-2 gap-3 text-base-content/75">
+                                                                            <div className="flex flex-col">
+                                                                                <span className="text-[9px] uppercase text-base-content/40 mb-0.5">Response Latency</span>
+                                                                                <span className="font-bold text-primary">{statsA.durationMs} ms</span>
+                                                                            </div>
+                                                                            <div className="flex flex-col">
+                                                                                <span className="text-[9px] uppercase text-base-content/40 mb-0.5">Output Bandwidth</span>
+                                                                                <span className="font-bold text-primary">{statsA.tokensPerSec} tokens/sec</span>
+                                                                            </div>
+                                                                            <div className="flex flex-col">
+                                                                                <span className="text-[9px] uppercase text-base-content/40 mb-0.5">Syntactic Loyalty</span>
+                                                                                <span className="font-bold text-primary">{statsA.overlap}%</span>
+                                                                            </div>
+                                                                            <div className="flex flex-col">
+                                                                                <span className="text-[9px] uppercase text-base-content/40 mb-0.5">Expansion Intensity</span>
+                                                                                <span className="font-bold text-primary">{statsA.expansion}x</span>
+                                                                            </div>
+                                                                            <div className="flex flex-col">
+                                                                                <span className="text-[9px] uppercase text-base-content/40 mb-0.5">Prompt Aesthetic Rating</span>
+                                                                                <span className="font-bold text-primary">{statsA.aesthetic}%</span>
+                                                                            </div>
+                                                                            <div className="flex flex-col">
+                                                                                <span className="text-[9px] uppercase text-base-content/40 mb-0.5">Enrichment Density</span>
+                                                                                <span className="font-bold text-primary">{statsA.purity}%</span>
+                                                                            </div>
+                                                                        </div>
+                                                                    </div>
+                                                                )}
+
+                                                                {/* Structural Anatomy Alignment (Task 2.3) */}
+                                                                {resultsRefineA.breakdown && (
+                                                                    <div className="bg-base-content/5 p-4 rounded border border-base-content/5 space-y-3">
+                                                                        <div className="text-[10px] font-black uppercase tracking-widest text-primary/60 border-b border-base-content/10 pb-1.5 font-mono">Structural Anatomy</div>
+                                                                        <div className="grid grid-cols-1 gap-2.5">
+                                                                            {Object.entries(resultsRefineA.breakdown).map(([k, v]) => (
+                                                                                <div key={k} className="p-2.5 bg-base-200/50 rounded border border-base-content/5 flex flex-col">
+                                                                                    <span className="text-[9px] uppercase font-bold tracking-widest text-primary/40 font-mono mb-1">{k}</span>
+                                                                                    <span className="text-xs text-base-content/80 font-medium leading-relaxed">{String(v)}</span>
+                                                                                </div>
+                                                                            ))}
+                                                                        </div>
+                                                                    </div>
+                                                                )}
+                                                            </div>
+                                                        ) : (
+                                                            <div className="h-full flex flex-col items-center justify-center opacity-10 py-20">
+                                                                <SparklesIcon className="w-10 h-10 text-primary" />
+                                                                <span className="text-[10px] uppercase mt-2 tracking-widest font-mono">Awaiting Sequence</span>
+                                                            </div>
+                                                        )}
+                                                    </div>
+
+                                                    {resultsRefineA && !isLoadingRefineA && (
+                                                        <div className="flex gap-2 p-1 bg-base-content/5 rounded border border-base-content/5 shrink-0 mt-auto">
+                                                            <button 
+                                                                onClick={() => { audioService.playClick(); handleCopySuggestionText(resultsRefineA.suggestions[0]); }}
+                                                                className="btn btn-xs btn-ghost flex-grow rounded-none font-mono tracking-widest text-[9px] uppercase"
+                                                            >
+                                                                COPY
+                                                            </button>
+                                                            <button 
+                                                                onClick={() => { audioService.playClick(); handleSendToRefine(resultsRefineA.suggestions[0]); }}
+                                                                className="btn btn-xs btn-ghost text-primary flex-grow rounded-none font-mono tracking-widest text-[9px] uppercase"
+                                                            >
+                                                                APPLY
+                                                            </button>
+                                                        </div>
+                                                    )}
+                                                </div>
+
+                                                {/* Column B */}
+                                                <div className="flex flex-col h-full bg-base-100/20 pl-2 overflow-y-auto space-y-4">
+                                                    <div className="flex justify-between items-center bg-base-content/5 p-3 rounded border border-base-content/5 shrink-0">
+                                                        <span className="text-xs font-black uppercase tracking-[0.2em] text-primary">Model B Strategy</span>
+                                                        <select
+                                                            value={arenaModelB}
+                                                            onChange={(e) => { audioService.playClick(); setArenaModelB(e.target.value); }}
+                                                            className="select select-bordered select-xs focus:outline-none bg-base-200 text-xs border-base-content/20"
+                                                        >
+                                                            <option value="gemini">Gemini Flash</option>
+                                                            <option value="ollama">Ollama Cloud / Local</option>
+                                                            <option value="llamacpp">LlamaCpp Local</option>
+                                                        </select>
+                                                    </div>
+
+                                                    <div className="flex-grow min-h-0">
+                                                        {isLoadingRefineB ? (
+                                                            <div className="h-full flex flex-col items-center justify-center text-center py-20">
+                                                                <BlobLoader />
+                                                                <span className="text-xs text-base-content/40 mt-4 uppercase tracking-widest font-mono">Model B Synapsing...</span>
+                                                            </div>
+                                                        ) : errorRefineB ? (
+                                                            <div className="p-4 border border-error/20 bg-error/5 text-error text-xs uppercase leading-relaxed font-mono">
+                                                                {errorRefineB.message}
+                                                            </div>
+                                                        ) : resultsRefineB ? (
+                                                            <div className="space-y-4 animate-fade-in pb-4">
+                                                                <div className="bg-base-content/5 p-4 rounded border border-base-content/5">
+                                                                    <p className="text-sm font-medium leading-relaxed italic text-base-content selection:bg-primary/20">
+                                                                        "{resultsRefineB.suggestions[0]}"
+                                                                    </p>
+                                                                </div>
+
+                                                                {/* Performance Analytics Engine (Task 2.4) */}
+                                                                {statsB && (
+                                                                    <div className="bg-base-content/5 p-4 rounded border border-base-content/5 space-y-2 font-mono text-xs">
+                                                                        <div className="text-[10px] uppercase font-black tracking-widest text-primary/60 border-b border-base-content/10 pb-1.5 mb-2">Performance Analytics</div>
+                                                                        <div className="grid grid-cols-2 gap-3 text-base-content/75">
+                                                                            <div className="flex flex-col">
+                                                                                <span className="text-[9px] uppercase text-base-content/40 mb-0.5">Response Latency</span>
+                                                                                <span className="font-bold text-primary">{statsB.durationMs} ms</span>
+                                                                            </div>
+                                                                            <div className="flex flex-col">
+                                                                                <span className="text-[9px] uppercase text-base-content/40 mb-0.5">Output Bandwidth</span>
+                                                                                <span className="font-bold text-primary">{statsB.tokensPerSec} tokens/sec</span>
+                                                                            </div>
+                                                                            <div className="flex flex-col">
+                                                                                <span className="text-[9px] uppercase text-base-content/40 mb-0.5">Syntactic Loyalty</span>
+                                                                                <span className="font-bold text-primary">{statsB.overlap}%</span>
+                                                                            </div>
+                                                                            <div className="flex flex-col">
+                                                                                <span className="text-[9px] uppercase text-base-content/40 mb-0.5">Expansion Intensity</span>
+                                                                                <span className="font-bold text-primary">{statsB.expansion}x</span>
+                                                                            </div>
+                                                                            <div className="flex flex-col">
+                                                                                <span className="text-[9px] uppercase text-base-content/40 mb-0.5">Prompt Aesthetic Rating</span>
+                                                                                <span className="font-bold text-primary">{statsB.aesthetic}%</span>
+                                                                            </div>
+                                                                            <div className="flex flex-col">
+                                                                                <span className="text-[9px] uppercase text-base-content/40 mb-0.5">Enrichment Density</span>
+                                                                                <span className="font-bold text-primary">{statsB.purity}%</span>
+                                                                            </div>
+                                                                        </div>
+                                                                    </div>
+                                                                )}
+
+                                                                {/* Structural Anatomy Alignment (Task 2.3) */}
+                                                                {resultsRefineB.breakdown && (
+                                                                    <div className="bg-base-content/5 p-4 rounded border border-base-content/5 space-y-3">
+                                                                        <div className="text-[10px] font-black uppercase tracking-widest text-primary/60 border-b border-base-content/10 pb-1.5 font-mono">Structural Anatomy</div>
+                                                                        <div className="grid grid-cols-1 gap-2.5">
+                                                                            {Object.entries(resultsRefineB.breakdown).map(([k, v]) => (
+                                                                                <div key={k} className="p-2.5 bg-base-200/50 rounded border border-base-content/5 flex flex-col">
+                                                                                    <span className="text-[9px] uppercase font-bold tracking-widest text-primary/40 font-mono mb-1">{k}</span>
+                                                                                    <span className="text-xs text-base-content/80 font-medium leading-relaxed">{String(v)}</span>
+                                                                                </div>
+                                                                            ))}
+                                                                        </div>
+                                                                    </div>
+                                                                )}
+                                                            </div>
+                                                        ) : (
+                                                            <div className="h-full flex flex-col items-center justify-center opacity-10 py-20">
+                                                                <SparklesIcon className="w-10 h-10 text-primary" />
+                                                                <span className="text-[10px] uppercase mt-2 tracking-widest font-mono">Awaiting Sequence</span>
+                                                            </div>
+                                                        )}
+                                                    </div>
+
+                                                    {resultsRefineB && !isLoadingRefineB && (
+                                                        <div className="flex gap-2 p-1 bg-base-content/5 rounded border border-base-content/5 shrink-0 mt-auto">
+                                                            <button 
+                                                                onClick={() => { audioService.playClick(); handleCopySuggestionText(resultsRefineB.suggestions[0]); }}
+                                                                className="btn btn-xs btn-ghost flex-grow rounded-none font-mono tracking-widest text-[9px] uppercase"
+                                                            >
+                                                                COPY
+                                                            </button>
+                                                            <button 
+                                                                onClick={() => { audioService.playClick(); handleSendToRefine(resultsRefineB.suggestions[0]); }}
+                                                                className="btn btn-xs btn-ghost text-primary flex-grow rounded-none font-mono tracking-widest text-[9px] uppercase"
+                                                            >
+                                                                APPLY
+                                                            </button>
+                                                        </div>
+                                                    )}
+                                                </div>
                                             </div>
+                                        ) : (
+                                            <>
+                                                {isLoadingRefine ? (
+                                                    <div className="flex-grow flex flex-col items-center justify-center text-center space-y-6">
+                                                        <BlobLoader />
+                                                    </div>
                                         ) : errorRefine ? (
                                             <div className="flex-grow flex items-center justify-center p-8 w-full h-full absolute inset-0 z-10 pointer-events-none">
                                                 <div className="border border-base-content/20 bg-base-200/50 backdrop-blur-md p-8 min-w-[300px] max-w-md text-center flex flex-col items-center gap-4 relative corner-frame shadow-[0_0_30px_oklch(var(--p)/0.2)] pointer-events-auto">
@@ -1384,10 +1781,107 @@ const PromptsPage: React.FC<PromptsPageProps> = ({
                                                 </div>
                                             </div>
                                         ) : resultsRefine ? (
-                                            <div className="p-5 md:p-5 lg:p-5 w-full animate-fade-in group">
-                                                <div className="flex flex-col">
+                                            <div className="p-5 md:p-5 lg:p-5 w-full animate-fade-in group flex flex-col h-full overflow-y-auto space-y-5">
+                                                {/* Core Tab Switches */}
+                                                <div className="flex border-b border-base-content/10 gap-6 mb-1">
+                                                    <button 
+                                                        onClick={() => { audioService.playClick(); setOutputTab('prose'); }} 
+                                                        className={`pb-2.5 text-xs md:text-sm font-bold uppercase tracking-wider transition-all relative ${outputTab === 'prose' ? 'text-primary border-b-2 border-primary' : 'text-base-content/30 hover:text-base-content/60'}`}
+                                                    >
+                                                        ✨ Refined Prompt
+                                                    </button>
+                                                    <button 
+                                                        onClick={() => { audioService.playClick(); setOutputTab('diff'); }} 
+                                                        className={`pb-2.5 text-xs md:text-sm font-bold uppercase tracking-wider transition-all relative ${outputTab === 'diff' ? 'text-primary border-b-2 border-primary' : 'text-base-content/30 hover:text-base-content/60'}`}
+                                                    >
+                                                        🔍 Compare Changes
+                                                    </button>
+                                                </div>
+
+                                                {outputTab === 'prose' ? (
+                                                    <div className="flex flex-col">
                                                     <p className="text-base font-medium leading-relaxed text-base-content italic selection:bg-primary/20">
                                                         "{resultsRefine.suggestions[0]}"
+                                                    </p>
+                                                </div>
+                                                ) : (
+                                                    <div className="flex-grow flex flex-col space-y-5 animate-fade-in h-full">
+                                                        {/* Semantic Statistics Bar */}
+                                                        {diffAnalysis && (
+                                                            <div className="grid grid-cols-2 md:grid-cols-4 gap-4 bg-base-content/5 p-4 rounded border border-base-content/5">
+                                                                <div className="flex flex-col justify-between">
+                                                                    <span className="text-[10px] md:text-xs font-bold uppercase tracking-wider text-base-content/60 leading-none mb-1.5">Original Idea Kept</span>
+                                                                    <span className="text-xl md:text-2xl font-bold font-mono text-primary leading-none mb-1">{diffAnalysis.metrics.semanticOverlap}%</span>
+                                                                    <span className="text-[9px] md:text-xs text-base-content/40 font-medium leading-none">Kept your main concept</span>
+                                                                </div>
+                                                                <div className="flex flex-col justify-between">
+                                                                    <span className="text-[10px] md:text-xs font-bold uppercase tracking-wider text-base-content/60 leading-none mb-1.5">Added Details</span>
+                                                                    <span className="text-xl md:text-2xl font-bold font-mono text-primary leading-none mb-1">{diffAnalysis.metrics.expansionRatio}x</span>
+                                                                    <span className="text-[9px] md:text-xs text-base-content/40 font-medium leading-none">More descriptive words</span>
+                                                                </div>
+                                                                <div className="flex flex-col justify-between">
+                                                                    <span className="text-[10px] md:text-xs font-bold uppercase tracking-wider text-base-content/60 leading-none mb-1.5">Style Quality</span>
+                                                                    <span className="text-xl md:text-2xl font-bold font-mono text-primary leading-none mb-1">{diffAnalysis.metrics.enrichmentPurity}%</span>
+                                                                    <span className="text-[9px] md:text-xs text-base-content/40 font-medium leading-none">High-quality trigger tags</span>
+                                                                </div>
+                                                                <div className="flex flex-col justify-between">
+                                                                    <span className="text-[10px] md:text-xs font-bold uppercase tracking-wider text-base-content/60 leading-none mb-1.5">Aesthetic Upgrade</span>
+                                                                    <span className="text-xl md:text-2xl font-bold font-mono text-primary leading-none mb-1">{diffAnalysis.metrics.aestheticImprovement}%</span>
+                                                                    <span className="text-[9px] md:text-xs text-base-content/40 font-medium leading-none">Our computed rating</span>
+                                                                </div>
+                                                            </div>
+                                                        )}
+
+                                                        {/* Token Level Inline Diff Visualizer */}
+                                                        <div className="flex-grow flex flex-col space-y-3 min-h-[220px]">
+                                                            <span className="text-xs font-bold uppercase tracking-wider text-base-content/50">Word-by-Word Compare View</span>
+                                                            <div className="flex-grow border border-base-content/10 bg-base-200/40 p-5 rounded font-mono text-sm md:text-base leading-relaxed overflow-y-auto selection:bg-primary/20">
+                                                                {diffAnalysis && diffAnalysis.diff.map((token, idx) => {
+                                                                    if (token.type === 'added') {
+                                                                        return (
+                                                                            <span 
+                                                                                key={idx} 
+                                                                                className="bg-emerald-500/10 text-emerald-400 font-semibold px-1 rounded border border-emerald-500/15 inline-block m-[1px] transition-colors hover:bg-emerald-500/20"
+                                                                                title="Added visual descriptor"
+                                                                            >
+                                                                                {token.text}
+                                                                            </span>
+                                                                        );
+                                                                    } else if (token.type === 'removed') {
+                                                                        return (
+                                                                            <span 
+                                                                                key={idx} 
+                                                                                className="bg-error/10 text-error/60 line-through px-1 rounded border border-error/15 inline-block m-[1px]"
+                                                                                title="Original descriptor filtered or modified"
+                                                                            >
+                                                                                {token.text}
+                                                                            </span>
+                                                                        );
+                                                                    } else {
+                                                                        return (
+                                                                            <span 
+                                                                                key={idx} 
+                                                                                className="text-base-content/80 inline-block m-[1px]"
+                                                                            >
+                                                                                {token.text}
+                                                                            </span>
+                                                                        );
+                                                                    }
+                                                                })}
+                                                             </div>
+                                                             <div className="flex gap-6 text-[10px] md:text-xs uppercase text-base-content/40 font-medium">
+                                                                 <div className="flex items-center gap-1.5">
+                                                                     <span className="w-3 h-3 bg-emerald-500/20 border border-emerald-500/45 rounded inline-block" /> ✨ New creative details added
+                                                                 </div>
+                                                                 <div className="flex items-center gap-1.5">
+                                                                     <span className="w-3 h-3 bg-error/20 border border-error/45 rounded inline-block" /> ✂️ Old words cleaned up / rewritten
+                                                                 </div>
+                                                             </div>
+                                                         </div>
+                                                    </div>
+                                                )}
+                                                <div className="hidden">
+                                                    <p>
                                                     </p>
                                                 </div>
                                             </div>
@@ -1398,7 +1892,7 @@ const PromptsPage: React.FC<PromptsPageProps> = ({
                                                         {directMediaResult.type === 'video' ? (
                                                             <video src={directMediaResult.url} controls autoPlay loop className="w-full h-full object-contain" />
                                                         ) : (
-                                                            <img src={directMediaResult.url} alt="Generated result" className="w-full h-full object-contain" referrerPolicy="no-referrer" />
+                                                            <img src={directMediaResult.url} alt="Generated result" className="w-full h-full object-contain" referrerPolicy="no-referrer" onError={(e) => { e.currentTarget.style.filter = 'grayscale(1)'; }} />
                                                         )}
                                                     </div>
                                                     <div className="absolute top-4 right-4 opacity-0 group-hover:opacity-100 transition-opacity z-20">
@@ -1423,6 +1917,8 @@ const PromptsPage: React.FC<PromptsPageProps> = ({
                                                 <span className="p-8"><SparklesIcon className="w-14 h-14" /></span>
                                                 <p className="font-rajdhani text-[12px] font-sf-mono uppercase tracking-widest">Awaiting sequence initiation</p>
                                             </div>
+                                        )}
+                                        </>
                                         )}
                                     </motion.div>
 
@@ -1717,6 +2213,12 @@ const PromptsPage: React.FC<PromptsPageProps> = ({
                     onDownload={handleDownloadJson}
                     onCopy={handleCopyJson}
                     jsonCopied={jsonCopied}
+                />
+
+                <CodeSnippetModal
+                    isOpen={isCodeExportModalOpen}
+                    onClose={() => setIsCodeExportModalOpen(false)}
+                    promptText={arenaMode ? (resultsRefineA?.suggestions?.[0] || '') : (resultsRefine?.suggestions?.[0] || '')}
                 />
             </div>
         </motion.div>

@@ -1,5 +1,5 @@
 
-import type { SavedPrompt, PromptCategory } from '../types';
+import type { SavedPrompt, PromptCategory, PromptVersionNode } from '../types';
 import { fileSystemManager } from './fileUtils';
 import { v4 as uuidv4 } from 'uuid';
 
@@ -77,6 +77,13 @@ export const addSavedPrompt = async (promptData: Omit<SavedPrompt, 'id' | 'creat
     const newPrompt: SavedPrompt = {
         id: newId,
         createdAt: Date.now(),
+        lineage: [{
+            versionId: `v_0`,
+            timestamp: Date.now(),
+            refinedText: promptData.text,
+            appliedModifiers: promptData.tags || [],
+            parentVersionId: null
+        }],
         ...promptData,
     };
     
@@ -93,7 +100,22 @@ export const updateSavedPrompt = async (id: string, promptData: Omit<SavedPrompt
     const manifest = await getManifest();
     const promptIndex = manifest.prompts.findIndex(p => p.id === id);
     if (promptIndex > -1) {
-        manifest.prompts[promptIndex] = { ...manifest.prompts[promptIndex], ...promptData };
+        const oldPrompt = manifest.prompts[promptIndex];
+        const newVersionId = `v_${oldPrompt.lineage ? oldPrompt.lineage.length : 0}`;
+        const newVersion: PromptVersionNode = {
+            versionId: newVersionId,
+            timestamp: Date.now(),
+            refinedText: promptData.text,
+            appliedModifiers: promptData.tags || [],
+            parentVersionId: oldPrompt.lineage && oldPrompt.lineage.length > 0
+                ? oldPrompt.lineage[oldPrompt.lineage.length - 1].versionId
+                : null
+        };
+        manifest.prompts[promptIndex] = { 
+            ...oldPrompt, 
+            ...promptData,
+            lineage: [...(oldPrompt.lineage || []), newVersion]
+        };
         if (promptData.text) {
             await fileSystemManager.saveFile(`${PROMPTS_DIR}/${id}.txt`, new Blob([promptData.text], { type: 'text/plain;charset=utf-8' }));
         }
@@ -123,7 +145,7 @@ export const addPromptCategory = async (name: string, parentId?: string): Promis
     };
     manifest.categories.push(newCategory);
     await saveManifest(manifest);
-    return manifest.categories.sort((a, b) => a.order - b.order);
+    return manifest.categories.sort((a, b) => (a.order || 0) - (b.order || 0));
 };
 
 export const updatePromptCategory = async (id: string, updates: Partial<Omit<PromptCategory, 'id'>>): Promise<PromptCategory[]> => {
@@ -133,7 +155,7 @@ export const updatePromptCategory = async (id: string, updates: Partial<Omit<Pro
         manifest.categories[catIndex] = { ...manifest.categories[catIndex], ...updates };
     }
     await saveManifest(manifest);
-    return manifest.categories.sort((a, b) => a.order - b.order);
+    return manifest.categories.sort((a, b) => (a.order || 0) - (b.order || 0));
 };
 
 export const savePromptCategoriesOrder = async (categories: PromptCategory[]): Promise<void> => {
@@ -149,5 +171,5 @@ export const deletePromptCategory = async (id: string): Promise<PromptCategory[]
         if (prompt.categoryId === id) prompt.categoryId = undefined;
     });
     await saveManifest(manifest);
-    return manifest.categories.sort((a, b) => a.order - b.order);
+    return manifest.categories.sort((a, b) => (a.order || 0) - (b.order || 0));
 };

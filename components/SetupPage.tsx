@@ -23,10 +23,11 @@ import {
     deletePromptCategory, 
     savePromptCategoriesOrder as savePromptCategoriesOrderFS
 } from '../utils/promptStorage';
-import { resetAllSettings, defaultLLMSettings } from '../utils/settingsStorage';
+import { resetAllSettings, defaultLLMSettings, loadLLMSettings } from '../utils/settingsStorage';
 import { DAISYUI_DARK_THEMES } from '../constants';
 import ConfirmationModal from './ConfirmationModal';
-import { Cog6ToothIcon, CpuChipIcon, AppIcon, PromptIcon, PhotoIcon, FolderClosedIcon, PaintBrushIcon, DownloadIcon, LinkIcon, PlayIcon, RefreshIcon, InformationCircleIcon, UploadIcon, AlertTriangleIcon, GlobeIcon } from './icons';
+import MigrationModal from './MigrationModal';
+import { Cog6ToothIcon, CpuChipIcon, AppIcon, PromptIcon, PhotoIcon, FolderClosedIcon, PaintBrushIcon, DownloadIcon, LinkIcon, PlayIcon, RefreshIcon, InformationCircleIcon, UploadIcon, GlobeIcon } from './icons';
 import FeedbackToast from './FeedbackToast';
 import { audioService } from '../services/audioService';
 import { PromptTxtImportModal } from './PromptTxtImportModal';
@@ -45,7 +46,8 @@ interface SetupPageProps {
 const subMenuConfig: Record<string, { id: string; label: string, icon: React.ReactNode, description: string }[]> = {
     app: [
         { id: 'general', label: 'General', icon: <Cog6ToothIcon className="w-4 h-4" />, description: "Storage and engine lifecycle." },
-        { id: 'data', label: 'Backup & Restore', icon: <FolderClosedIcon className="w-4 h-4" />, description: "System data management." }
+        { id: 'data', label: 'Backup & Restore', icon: <FolderClosedIcon className="w-4 h-4" />, description: "System data management." },
+        { id: 'migration', label: 'Migration', icon: <UploadIcon className="w-4 h-4" />, description: "Migrate library from local to Google Drive." }
     ],
     appearance: [
         { id: 'styling', label: 'Themes & Scale', icon: <PaintBrushIcon className="w-4 h-4" />, description: "Color palettes and typography sizing." },
@@ -53,8 +55,8 @@ const subMenuConfig: Record<string, { id: string; label: string, icon: React.Rea
     ],
     integrations: [
         { id: 'llm', label: 'AI Engine', icon: <CpuChipIcon className="w-4 h-4" />, description: "AI models and local/cloud API connections." },
+        { id: 'anthropic', label: 'Anthropic', icon: <CpuChipIcon className="w-4 h-4" />, description: "Manage Anthropic configuration." },
         { id: 'openrouter', label: 'OpenRouter', icon: <GlobeIcon className="w-4 h-4" />, description: "Manage OpenRouter configuration." },
-        { id: 'hermes', label: 'Hermes Agent', icon: <Cog6ToothIcon className="w-4 h-4" />, description: "Manage Hermes local/remote agent configuration." },
         { id: 'google', label: 'Cloud Identity', icon: <LinkIcon className="w-4 h-4" />, description: "Link your Google account for Cloud AI." },
         { id: 'youtube', label: 'YouTube', icon: <PlayIcon className="w-4 h-4" />, description: "Manage YouTube API credentials." }
     ],
@@ -192,7 +194,7 @@ const SettingRow: React.FC<{ label: string, desc?: string, children: React.React
 export const SetupPage: React.FC<SetupPageProps> = ({ 
     activeSettingsTab, setActiveSettingsTab, activeSubTab, setActiveSubTab, showGlobalFeedback, isExiting = false
 }) => {
-  const { settings: globalSettings, updateSettings, availableOllamaModels, availableOllamaCloudModels, availableHermesModels, availableOpenRouterModels, availableLlamaCppModels, refreshOllamaModels } = useSettings();
+  const { settings: globalSettings, updateSettings, availableOllamaModels, availableOllamaCloudModels, availableOpenRouterModels, availableLlamaCppModels, refreshOllamaModels } = useSettings();
   const [settings, setSettings] = useState<LLMSettings>(globalSettings);
   const [modalFeedback, setModalFeedback] = useState<{ message: string; type: 'success' | 'error' } | null>(null);
 
@@ -233,14 +235,44 @@ export const SetupPage: React.FC<SetupPageProps> = ({
   const [isRestartModalOpen, setIsRestartModalOpen] = useState(false);
   const [isResetModalOpen, setIsResetModalOpen] = useState(false);
   const [isTxtImportModalOpen, setIsTxtImportModalOpen] = useState(false);
+  const [isMigrationModalOpen, setIsMigrationModalOpen] = useState(false);
+  const [migrationDirection, setMigrationDirection] = useState<'push' | 'pull'>('push');
+  const [isCreateFolderModalOpen, setIsCreateFolderModalOpen] = useState(false);
   const [promptCategories, setPromptCategories] = useState<PromptCategory[]>([]);
+
+  const [isMigrationPaused, setIsMigrationPaused] = useState(false);
+  const [migrationPhase, setMigrationPhase] = useState<'idle' | 'converting' | 'uploading' | 'complete'>('idle');
+  const [convertingProgress, setConvertingProgress] = useState(0);
+  const [convertingMsg, setConvertingMsg] = useState("");
+  const [uploadingProgress, setUploadingProgress] = useState(0);
+  const [uploadingMsg, setUploadingMsg] = useState("");
+  const [duplicateFile, setDuplicateFile] = useState<string | null>(null);
+  const duplicateResolverRef = useRef<((choice: 'replace' | 'copy') => void) | null>(null);
+
+  const handleResolveDuplicate = (choice: 'replace' | 'copy') => {
+      audioService.playClick();
+      if (duplicateResolverRef.current) {
+          duplicateResolverRef.current(choice);
+      }
+  };
+
+  const handlePauseMigration = () => {
+      audioService.playClick();
+      fileSystemManager.isMigrationPaused = true;
+      setIsMigrationPaused(true);
+  };
+
+  const handleResumeMigration = () => {
+      audioService.playClick();
+      fileSystemManager.isMigrationPaused = false;
+      setIsMigrationPaused(false);
+  };
 
   const navRefs = useRef<Record<string, HTMLAnchorElement | null>>({});
   const tokenClientRef = useRef<any>(null);
   const lastClientIdRef = useRef<string | null>(null);
   const authModeRef = useRef<'youtube' | 'google'>('google');
   const authTimeoutRef = useRef<number | null>(null);
-
   // --- AUDIO ENGINE: SUCCESS CHIME ---
   const playSuccessChime = useCallback(() => {
     audioService.playSuccess();
@@ -296,20 +328,28 @@ export const SetupPage: React.FC<SetupPageProps> = ({
           };
           const updatedSettings = { 
             ...settings, 
-            googleIdentity: updatedGoogle,
-            storageProvider: 'drive' as const
+            googleIdentity: updatedGoogle
           };
           setSettings(updatedSettings);
           updateSettings(updatedSettings);
           
-          showGlobalFeedback(`Uplink confirmed. Connecting to Google Drive storage...`);
-          const success = await fileSystemManager.initialize(updatedSettings, {} as any);
-          if (success) {
-            setAppDataDirectory(fileSystemManager.appDirectoryName);
-            await verifyAndRepairFiles(() => {}, updatedSettings);
-            showGlobalFeedback(`Uplink confirmed & GDrive synced for ${user.email}`);
+          showGlobalFeedback(`Uplink confirmed. Scanning Google Drive for 'Kollektiv' folder...`);
+          
+          fileSystemManager.accessToken = accessToken;
+          const folder = await fileSystemManager.scanForKollektivFolder().catch(() => null);
+          
+          if (folder) {
+              const finalSettings = {
+                ...updatedSettings,
+                driveFolderId: folder.id,
+                driveFolderName: folder.name
+              };
+              setSettings(finalSettings);
+              updateSettings(finalSettings);
+              showGlobalFeedback(`Uplink confirmed & standby Google Drive configured for ${user.email}`);
           } else {
-            showGlobalFeedback(`Uplink confirmed for ${user.email} but failed to initialize GDrive storage folder.`, true);
+              // Ask user to create the folder
+              setIsCreateFolderModalOpen(true);
           }
           playSuccessChime();
       }
@@ -474,9 +514,15 @@ export const SetupPage: React.FC<SetupPageProps> = ({
         const apiKey = settings.llamacppApiKey;
         const result = await testLlamaCppConnection(url, apiKey);
         setLlamaCppTestResult(result);
-        if (result.success) refreshOllamaModels();
-    } catch(e) {
+        if (result.success) {
+            refreshOllamaModels();
+            showGlobalFeedback("Llama.cpp connection established (200 OK)", false);
+        } else {
+            showGlobalFeedback(`Llama.cpp connection failed: ${result.message}`, true);
+        }
+    } catch(e: any) {
         setLlamaCppTestResult({ success: false, message: "CRITICAL PING FAILURE" });
+        showGlobalFeedback(`Llama.cpp ping error: ${e.message || e}`, true);
     }
     setIsTestingLlamaCpp(false);
   };
@@ -542,12 +588,130 @@ export const SetupPage: React.FC<SetupPageProps> = ({
     }
   };
 
+  const handleConfirmMigration = async () => {
+        setIsWorking(true);
+        setMaintenanceProgress(0);
+        setMaintenanceMsg("MIGRATING_TO_DRIVE...");
+        setIsMigrationPaused(false);
+        setDuplicateFile(null);
+        setMigrationPhase('converting');
+        setConvertingProgress(0);
+        setConvertingMsg("Initializing digital assets conversion...");
+        setUploadingProgress(0);
+        setUploadingMsg("");
+        fileSystemManager.isMigrationPaused = false;
+        try {
+            await fileSystemManager.migrateLocalToDrive(
+                (msg, progress, extra) => {
+                     setMaintenanceMsg(msg);
+                     if (progress !== undefined) setMaintenanceProgress(progress);
+                     if (extra) {
+                         if (extra.phase) setMigrationPhase(extra.phase);
+                         if (extra.convertingProgress !== undefined) setConvertingProgress(extra.convertingProgress);
+                         if (extra.convertingMsg !== undefined) setConvertingMsg(extra.convertingMsg);
+                         if (extra.uploadingProgress !== undefined) setUploadingProgress(extra.uploadingProgress);
+                         if (extra.uploadingMsg !== undefined) setUploadingMsg(extra.uploadingMsg);
+                     }
+                },
+                async (fileName) => {
+                    const choice = await new Promise<'replace' | 'copy'>((resolve) => {
+                        setDuplicateFile(fileName);
+                        duplicateResolverRef.current = resolve;
+                    });
+                    setDuplicateFile(null);
+                    duplicateResolverRef.current = null;
+                    return choice;
+                }
+            );
+            setMaintenanceProgress(100);
+            setMigrationPhase('complete');
+            showGlobalFeedback("Migration completed. You can now switch to Google Drive storage.");
+            setIsMigrationModalOpen(false);
+        } catch(e: any) {
+            console.error("Migration Error:", e);
+            setMigrationPhase('idle');
+            if (e?.message === "Migration aborted by user.") {
+                showGlobalFeedback("Migration cancelled.");
+            } else {
+                showGlobalFeedback(`Migration Error: ${e.message}`, true);
+            }
+        } finally {
+            setIsWorking(false);
+            setMaintenanceProgress(0);
+            setMaintenanceMsg("");
+            setDuplicateFile(null);
+            setIsMigrationPaused(false);
+        }
+  };
+
+  const handleConfirmPullMigration = async () => {
+        setIsWorking(true);
+        setMaintenanceProgress(0);
+        setMaintenanceMsg("SYNCING_FROM_DRIVE...");
+        setIsMigrationPaused(false);
+        setDuplicateFile(null);
+        setMigrationPhase('converting');
+        setConvertingProgress(0);
+        setConvertingMsg("Retrieving Google Drive catalog manifest...");
+        setUploadingProgress(0);
+        setUploadingMsg("");
+        fileSystemManager.isMigrationPaused = false;
+        try {
+            await fileSystemManager.syncDriveToLocal(
+                (msg, progress) => {
+                     setMaintenanceMsg(msg);
+                     if (progress !== undefined) {
+                         setMaintenanceProgress(progress);
+                         if (progress < 10) {
+                             setMigrationPhase('converting');
+                             setConvertingProgress(progress * 10);
+                             setConvertingMsg(msg);
+                         } else {
+                             setMigrationPhase('uploading');
+                             setUploadingProgress(progress);
+                             setUploadingMsg(msg);
+                         }
+                     }
+                }
+            );
+            setMaintenanceProgress(100);
+            setMigrationPhase('complete');
+            showGlobalFeedback("Pull Sync completed! Your local vault is now fully synchronized with Google Drive.");
+            setIsMigrationModalOpen(false);
+            const updated = loadLLMSettings();
+            setSettings(updated);
+        } catch(e: any) {
+            console.error("Pull Sync Error:", e);
+            setMigrationPhase('idle');
+            if (e?.message === "Migration aborted by user.") {
+                showGlobalFeedback("Pull sync cancelled.");
+            } else {
+                showGlobalFeedback(`Pull Sync Error: ${e.message}`, true);
+            }
+        } finally {
+            setIsWorking(false);
+            setMaintenanceProgress(0);
+            setMaintenanceMsg("");
+            setDuplicateFile(null);
+            setIsMigrationPaused(false);
+        }
+  };
+
   const handleMainTabClick = (tab: ActiveSettingsTab) => {
     audioService.playClick();
     setActiveSettingsTab(tab);
   };
 
   const currentOrigin = typeof window !== 'undefined' ? window.location.origin : 'unknown';
+  const siblingOrigin = useMemo(() => {
+    if (!currentOrigin || currentOrigin === 'unknown') return '';
+    if (currentOrigin.includes('ais-dev-')) {
+      return currentOrigin.replace('ais-dev-', 'ais-pre-');
+    } else if (currentOrigin.includes('ais-pre-')) {
+      return currentOrigin.replace('ais-pre-', 'ais-dev-');
+    }
+    return '';
+  }, [currentOrigin]);
   const localModelOptions = useMemo(() => availableOllamaModels.map(m => ({ label: m, value: m })), [availableOllamaModels]);
   const cloudModelOptions = useMemo(() => availableOllamaCloudModels.map(m => ({ label: m, value: m })), [availableOllamaCloudModels]);
   const llamacppModelOptions = useMemo(() => (availableLlamaCppModels.length > 0 ? availableLlamaCppModels : ['default']).map(m => ({ label: m, value: m })), [availableLlamaCppModels]);
@@ -568,18 +732,30 @@ export const SetupPage: React.FC<SetupPageProps> = ({
                                     updateSettings(updatedSettings);
 
                                     if (val === 'drive') {
-                                        if (!settings.googleIdentity?.isConnected) {
-                                            showGlobalFeedback("Google credentials required for GDrive cloud sync. Please authenticate.");
+                                        const isTokenExpired = settings.googleIdentity?.connectedAt 
+                                            ? (Date.now() - settings.googleIdentity.connectedAt > 50 * 60 * 1000) 
+                                            : true;
+                                        if (!settings.googleIdentity?.isConnected || isTokenExpired || !settings.googleIdentity?.accessToken) {
+                                            showGlobalFeedback("Refreshing Google Drive secure session...", false);
                                             handleAuthConnect('google');
                                         } else {
                                             const success = await fileSystemManager.initialize(updatedSettings, {} as any);
                                             if (success) {
                                                 setAppDataDirectory(fileSystemManager.appDirectoryName);
+                                                const folderId = (fileSystemManager as any).rootFolderId;
+                                                const finalSettings = {
+                                                    ...updatedSettings,
+                                                    driveFolderId: folderId || '',
+                                                    driveFolderName: (fileSystemManager as any).appDirectoryName || ''
+                                                };
+                                                setSettings(finalSettings);
+                                                updateSettings(finalSettings);
                                                 showFeedback('Drive Storage Initialized. Syncing databases...');
-                                                await verifyAndRepairFiles(() => {}, updatedSettings);
+                                                await verifyAndRepairFiles(() => {}, finalSettings);
                                                 showFeedback('Drive Storage Synced with GDrive.');
                                             } else {
-                                                showGlobalFeedback("Failed to sync with Google Drive folder. Please retry login.", true);
+                                                showGlobalFeedback("Failed to sync with Google Drive folder - attempting refresh session.", true);
+                                                handleAuthConnect('google');
                                             }
                                         }
                                     } else {
@@ -690,6 +866,56 @@ export const SetupPage: React.FC<SetupPageProps> = ({
                         </SettingRow>
                         <SettingRow label="Registry Purge" desc="Irreversible deletion of all settings, prompts, and media.">
                             <button onClick={() => { audioService.playClick(); setResetTarget('all'); setIsResetModalOpen(true); }} className="form-btn bg-error text-error-content border-error px-6">WIPE STORAGE</button>
+                        </SettingRow>
+                     </div>
+                 );
+            case 'migration':
+                 return (
+                     <div className="flex flex-col animate-fade-in gap-4">
+                        <SettingRow 
+                           label="Sync to Google Drive (Push)" 
+                           desc="Converts all new local images to JPG in-memory and uploads all prompts, gallery items, and configurations to Google Drive (keeps local originals completely unchanged)."
+                        >
+                             <button 
+                                onClick={async () => {
+                                    audioService.playClick();
+                                    if (!settings.googleIdentity?.isConnected) {
+                                        showGlobalFeedback("You must connect your Google Identity first in General settings.");
+                                        setActiveSubTab('general');
+                                        return;
+                                    }
+                                    setMigrationDirection('push');
+                                    setIsMigrationModalOpen(true);
+                                }} 
+                                disabled={isMigrationModalOpen}
+                                className="form-btn px-6 text-primary bg-primary/10 border-primary/20 hover:bg-primary/25"
+                             >
+                                <UploadIcon className="w-4 h-4 mr-2" />
+                                PUSH TO DRIVE
+                            </button>
+                        </SettingRow>
+
+                        <SettingRow 
+                           label="Sync from Google Drive (Pull)" 
+                           desc="Downloads all prompts, gallery items, and configuration files from Google Drive to your Local storage, synchronizing your offline database."
+                        >
+                             <button 
+                                onClick={async () => {
+                                    audioService.playClick();
+                                    if (!settings.googleIdentity?.isConnected) {
+                                        showGlobalFeedback("You must connect your Google Identity first in General settings.");
+                                        setActiveSubTab('general');
+                                        return;
+                                    }
+                                    setMigrationDirection('pull');
+                                    setIsMigrationModalOpen(true);
+                                }} 
+                                disabled={isMigrationModalOpen}
+                                className="form-btn px-6 text-secondary bg-secondary/10 border-secondary/20 hover:bg-secondary/25"
+                             >
+                                <DownloadIcon className="w-4 h-4 mr-2" />
+                                PULL FROM DRIVE
+                            </button>
                         </SettingRow>
                      </div>
                  );
@@ -821,10 +1047,6 @@ export const SetupPage: React.FC<SetupPageProps> = ({
     };
 
     const renderIntegrationSettings = () => {
-        const host = typeof window !== 'undefined' ? window.location.host : '';
-        const isCloudMode = host && !host.includes('localhost') && !host.includes('127.0.0.1');
-        const isHermesLocal = isCloudMode && (settings.hermesBaseUrl?.includes('localhost') || settings.hermesBaseUrl?.includes('127.0.0.1'));
-
         switch(activeSubTab) {
             case 'llm':
                 return (
@@ -838,6 +1060,12 @@ export const SetupPage: React.FC<SetupPageProps> = ({
                                     Gemini
                                 </div>
                                 <div 
+                                    className={`tab-item ${settings.activeLLM === 'anthropic' ? 'tab-item-active' : ''}`}
+                                    onClick={() => { audioService.playClick(); handleSettingsChange('activeLLM', 'anthropic'); }}
+                                >
+                                    Anthropic
+                                </div>
+                                <div 
                                     className={`tab-item ${settings.activeLLM === 'ollama' ? 'tab-item-active' : ''}`}
                                     onClick={() => { audioService.playClick(); handleSettingsChange('activeLLM', 'ollama'); }}
                                 >
@@ -848,12 +1076,6 @@ export const SetupPage: React.FC<SetupPageProps> = ({
                                     onClick={() => { audioService.playClick(); handleSettingsChange('activeLLM', 'ollama_cloud'); }}
                                 >
                                     Cloud Ollama
-                                </div>
-                                <div 
-                                    className={`tab-item ${settings.activeLLM === 'hermes' ? 'tab-item-active' : ''}`}
-                                    onClick={() => { audioService.playClick(); handleSettingsChange('activeLLM', 'hermes'); }}
-                                >
-                                    Hermes
                                 </div>
                                 <div 
                                     className={`tab-item ${settings.activeLLM === 'openrouter' ? 'tab-item-active' : ''}`}
@@ -878,6 +1100,87 @@ export const SetupPage: React.FC<SetupPageProps> = ({
                                 placeholder="You are an expert AI prompt engineer and creative director. You excel at extracting precise visual, atmospheric, and conceptual details."
                              />
                         </SettingRow>
+
+                        {settings.activeLLM === 'anthropic' && (
+                             <div className="animate-fade-in flex flex-col bg-transparent">
+                                 <SettingRow label="Connection Mode" desc="Choose between using your own Anthropic API Key or a customized Subscription Proxy/Tunnel.">
+                                     <div className="flex bg-white/5 p-1 rounded-none border border-white/10 w-full md:w-[620px]">
+                                         <button 
+                                             onClick={() => { audioService.playClick(); handleSettingsChange('anthropicConnectionMode', 'api_key'); }}
+                                             className={`flex-1 py-2 text-[10px] font-black uppercase tracking-widest transition-all ${settings.anthropicConnectionMode !== 'subscription' ? 'bg-primary text-primary-content shadow-lg' : 'text-white/40 hover:text-white'}`}
+                                         >
+                                             API Key Mode
+                                         </button>
+                                         <button 
+                                             onClick={() => { audioService.playClick(); handleSettingsChange('anthropicConnectionMode', 'subscription'); }}
+                                             className={`flex-1 py-2 text-[10px] font-black uppercase tracking-widest transition-all ${settings.anthropicConnectionMode === 'subscription' ? 'bg-primary text-primary-content shadow-lg' : 'text-white/40 hover:text-white'}`}
+                                         >
+                                             Subscription Mode
+                                         </button>
+                                     </div>
+                                 </SettingRow>
+
+                                 {settings.anthropicConnectionMode !== 'subscription' ? (
+                                     <>
+                                         <SettingRow label="Anthropic API Key" desc="Get your developer API key from the Anthropic Console.">
+                                             <input 
+                                                 type="password" 
+                                                 value={settings.anthropicApiKey || ''} 
+                                                 onChange={(e) => handleSettingsChange('anthropicApiKey', e.target.value)} 
+                                                 className="form-input w-full md:w-[620px]" 
+                                                 placeholder="sk-ant-api03-..."
+                                             />
+                                         </SettingRow>
+                                         <SettingRow label="Model Target" desc="The Anthropic Claude model to invoke.">
+                                             <select 
+                                                 value={settings.anthropicModel || 'claude-3-7-sonnet-20250219'} 
+                                                 onChange={(e) => handleSettingsChange('anthropicModel', e.target.value)} 
+                                                 className="form-select w-full md:w-[620px]"
+                                             >
+                                                 <option value="claude-3-7-sonnet-20250219">Claude 3.7 Sonnet (Latest)</option>
+                                                 <option value="claude-3-5-sonnet-latest">Claude 3.5 Sonnet</option>
+                                                 <option value="claude-3-5-haiku-latest">Claude 3.5 Haiku (Fast)</option>
+                                                 <option value="claude-3-opus-latest">Claude 3 Opus (Complex reasoning)</option>
+                                             </select>
+                                         </SettingRow>
+                                     </>
+                                 ) : (
+                                     <>
+                                         <SettingRow label="Custom Proxy Endpoint" desc="The custom reverse proxy, tunnel, or endpoint URL (e.g. http://localhost:8000 or custom Claude.ai wrappers).">
+                                             <input 
+                                                 type="text" 
+                                                 value={settings.anthropicSubscriptionUrl || ''} 
+                                                 onChange={(e) => handleSettingsChange('anthropicSubscriptionUrl', e.target.value)} 
+                                                 className="form-input w-full md:w-[620px]" 
+                                                 placeholder="http://localhost:8000"
+                                             />
+                                         </SettingRow>
+                                         <SettingRow label="Custom Proxy / Session Token" desc="If your proxy requires authentication (e.g., sk-ant-sid-... session cookie, or a bearer token).">
+                                             <input 
+                                                 type="password" 
+                                                 value={settings.anthropicSubscriptionKey || ''} 
+                                                 onChange={(e) => handleSettingsChange('anthropicSubscriptionKey', e.target.value)} 
+                                                 className="form-input w-full md:w-[620px]" 
+                                                 placeholder="TOKEN_OR_SESSION_KEY"
+                                             />
+                                         </SettingRow>
+                                         <SettingRow label="Model Target" desc="The Claude model identification to send to the custom proxy.">
+                                             <select 
+                                                 value={settings.anthropicModel || 'claude-3-7-sonnet-20250219'} 
+                                                 onChange={(e) => handleSettingsChange('anthropicModel', e.target.value)} 
+                                                 className="form-select w-full md:w-[620px]"
+                                             >
+                                                 <option value="claude-3-7-sonnet">Claude 3.7 Sonnet</option>
+                                                 <option value="claude-3-5-sonnet">Claude 3.5 Sonnet</option>
+                                                 <option value="claude-3-5-haiku">Claude 3.5 Haiku</option>
+                                                 <option value="claude-3-opus">Claude 3 Opus</option>
+                                             </select>
+                                         </SettingRow>
+                                     </>
+                                 )}
+                             </div>
+                        )}
+
                         {settings.activeLLM === 'gemini' && (
                              <div className="animate-fade-in flex flex-col bg-transparent">
                                 <SettingRow label="Gemini API Key" desc="To unlock Pro capabilities (e.g. Nano Banana, Veo Work), furnish your unique Gemini API Key.">
@@ -1017,6 +1320,86 @@ export const SetupPage: React.FC<SetupPageProps> = ({
                         )}
                     </div>
                 );
+            case 'anthropic':
+                return (
+                    <div className="flex flex-col animate-fade-in pb-12">
+                        <SettingRow label="Connection Mode" desc="Choose between using your own Anthropic API Key or a customized Subscription Proxy/Tunnel.">
+                            <div className="flex bg-white/5 p-1 rounded-none border border-white/10 w-full md:w-[620px]">
+                                <button 
+                                    onClick={() => { audioService.playClick(); handleSettingsChange('anthropicConnectionMode', 'api_key'); }}
+                                    className={`flex-1 py-2 text-[10px] font-black uppercase tracking-widest transition-all ${settings.anthropicConnectionMode !== 'subscription' ? 'bg-primary text-primary-content shadow-lg' : 'text-white/40 hover:text-white'}`}
+                                >
+                                    API Key Mode
+                                </button>
+                                <button 
+                                    onClick={() => { audioService.playClick(); handleSettingsChange('anthropicConnectionMode', 'subscription'); }}
+                                    className={`flex-1 py-2 text-[10px] font-black uppercase tracking-widest transition-all ${settings.anthropicConnectionMode === 'subscription' ? 'bg-primary text-primary-content shadow-lg' : 'text-white/40 hover:text-white'}`}
+                                >
+                                    Subscription Mode
+                                </button>
+                            </div>
+                        </SettingRow>
+
+                        {settings.anthropicConnectionMode !== 'subscription' ? (
+                            <>
+                                <SettingRow label="Anthropic API Key" desc="Get your developer API key from the Anthropic Console.">
+                                    <input 
+                                        type="password" 
+                                        value={settings.anthropicApiKey || ''} 
+                                        onChange={(e) => handleSettingsChange('anthropicApiKey', e.target.value)} 
+                                        className="form-input w-full md:w-[620px]" 
+                                        placeholder="sk-ant-api03-..."
+                                    />
+                                </SettingRow>
+                                <SettingRow label="Model Target" desc="The Anthropic Claude model to invoke.">
+                                    <select 
+                                        value={settings.anthropicModel || 'claude-3-7-sonnet-20250219'} 
+                                        onChange={(e) => handleSettingsChange('anthropicModel', e.target.value)} 
+                                        className="form-select w-full md:w-[620px]"
+                                    >
+                                        <option value="claude-3-7-sonnet-20250219">Claude 3.7 Sonnet (Latest)</option>
+                                        <option value="claude-3-5-sonnet-latest">Claude 3.5 Sonnet</option>
+                                        <option value="claude-3-5-haiku-latest">Claude 3.5 Haiku (Fast)</option>
+                                        <option value="claude-3-opus-latest">Claude 3 Opus (Complex reasoning)</option>
+                                    </select>
+                                </SettingRow>
+                            </>
+                        ) : (
+                            <>
+                                <SettingRow label="Custom Proxy Endpoint" desc="The custom reverse proxy, tunnel, or endpoint URL (e.g. http://localhost:8000 or custom Claude.ai wrappers).">
+                                    <input 
+                                        type="text" 
+                                        value={settings.anthropicSubscriptionUrl || ''} 
+                                        onChange={(e) => handleSettingsChange('anthropicSubscriptionUrl', e.target.value)} 
+                                        className="form-input w-full md:w-[620px]" 
+                                        placeholder="http://localhost:8000"
+                                    />
+                                </SettingRow>
+                                <SettingRow label="Custom Proxy / Session Token" desc="If your proxy requires authentication (e.g., sk-ant-sid-... session cookie, or a bearer token).">
+                                    <input 
+                                        type="password" 
+                                        value={settings.anthropicSubscriptionKey || ''} 
+                                        onChange={(e) => handleSettingsChange('anthropicSubscriptionKey', e.target.value)} 
+                                        className="form-input w-full md:w-[620px]" 
+                                        placeholder="TOKEN_OR_SESSION_KEY"
+                                    />
+                                </SettingRow>
+                                <SettingRow label="Model Target" desc="The Claude model identification to send to the custom proxy.">
+                                    <select 
+                                        value={settings.anthropicModel || 'claude-3-7-sonnet-20250219'} 
+                                        onChange={(e) => handleSettingsChange('anthropicModel', e.target.value)} 
+                                        className="form-select w-full md:w-[620px]"
+                                    >
+                                        <option value="claude-3-7-sonnet">Claude 3.7 Sonnet</option>
+                                        <option value="claude-3-5-sonnet">Claude 3.5 Sonnet</option>
+                                        <option value="claude-3-5-haiku">Claude 3.5 Haiku</option>
+                                        <option value="claude-3-opus">Claude 3 Opus</option>
+                                    </select>
+                                </SettingRow>
+                            </>
+                        )}
+                    </div>
+                );
             case 'openrouter':
                 return (
                     <div className="flex flex-col animate-fade-in pb-12">
@@ -1041,60 +1424,6 @@ export const SetupPage: React.FC<SetupPageProps> = ({
                         </SettingRow>
                     </div>
                 );
-            case 'hermes':
-                return (
-                    <div className="flex flex-col animate-fade-in pb-12">
-                        {isHermesLocal && (
-                            <div className="mx-8 mt-4 p-4 bg-warning/10 border border-warning/20 rounded-none flex items-start gap-4">
-                                <AlertTriangleIcon className="w-5 h-5 text-warning flex-shrink-0 mt-0.5" />
-                                <div className="space-y-1">
-                                    <h6 className="text-[10px] font-black uppercase tracking-widest text-warning">CLOUD SYNC LIMITATION</h6>
-                                    <p className="text-[9px] font-bold opacity-70 leading-relaxed uppercase tracking-widest">
-                                        YOU ARE RUNNING IN THE CLOUD. "LOCALHOST" ADDRESSES CANNOT BE REACHED BY THE SERVER. 
-                                        PLEASE USE A PUBLIC URL (NGROK/TUNNEL) OR RUN THE APP LOCALLY TO CONNECT TO A LOCAL AGENT.
-                                    </p>
-                                </div>
-                            </div>
-                        )}
-                        <SettingRow label="Hermes Agent URL" desc="The local or remote address of your Hermes control node.">
-                            <div className="space-y-4">
-                                <div className="flex w-full md:w-[620px]">
-                                    <input type="text" value={settings.hermesBaseUrl} onChange={(e) => handleSettingsChange('hermesBaseUrl', (e.currentTarget as any).value)} className="form-input flex-1" placeholder="http://localhost:18789" />
-                                    <button onClick={() => { audioService.playClick(); refreshOllamaModels(); }} className="form-btn px-4 border-l-0">REFRESH</button>
-                                </div>
-                            </div>
-                        </SettingRow>
-                        <SettingRow label="Agent Identity" desc="Choose which agent skill set or model to activate.">
-                            <div className="w-full md:w-[620px]">
-                                <AutocompleteSelect 
-                                    value={settings.hermesModel} 
-                                    options={(availableHermesModels.length > 0 ? availableHermesModels : [settings.hermesModel || 'hermes-agent']).map(m => ({ label: String(m || '').toUpperCase(), value: String(m || '') }))} 
-                                    onChange={(val) => handleSettingsChange('hermesModel', val)}
-                                    placeholder="hermes-agent"
-                                />
-                            </div>
-                        </SettingRow>
-                        <SettingRow label="Security Key" desc="If your Hermes instance requires authentication (Bearer Token).">
-                            <input type="password" value={settings.hermesApiKey} onChange={(e) => handleSettingsChange('hermesApiKey', (e.currentTarget as any).value)} className="form-input w-full md:w-[620px]" placeholder="HERMES_SECRET_TOKEN"/>
-                        </SettingRow>
-                        <div className="p-8 mt-4">
-                             <div className="p-6 bg-accent/5 border border-accent/20 rounded-none space-y-4 max-w-2xl">
-                                <h5 className="text-xs font-black uppercase tracking-[0.2em] text-accent flex items-center gap-2">
-                                    <Cog6ToothIcon className="w-4 h-4" /> LOCAL AGENT STATUS
-                                </h5>
-                                <p className="text-[10px] font-bold uppercase tracking-widest text-base-content/60 leading-relaxed">
-                                    IF YOUR HERMES INSTANCE IS RUNNING LOCALLY ON PORT 18789, SYSTEMS WILL AUTOMATICALLY PROXY REQUESTS THROUGH THE ENGINE HUB TO BYPASS CLOUD SECURITY POLICIES.
-                                </p>
-                                <div className="flex items-center gap-3">
-                                    <span className={`w-2 h-2 rounded-full ${availableHermesModels.length > 0 ? 'bg-success box-glow-success' : 'bg-base-content/20'}`} />
-                                    <span className="text-[9px] font-black uppercase tracking-[0.3em] opacity-40">
-                                        {availableHermesModels.length > 0 ? 'AGENT LINK ESTABLISHED' : 'AWAITING AGENT HANDSHAKE'}
-                                    </span>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                );
             case 'google':
                 return (
                     <div className="flex flex-col animate-fade-in">
@@ -1102,11 +1431,20 @@ export const SetupPage: React.FC<SetupPageProps> = ({
                             <div className="flex flex-col gap-2 w-full max-w-md">
                                 <input type="text" value={settings.youtube?.customClientId || ''} onChange={(e) => handleSettingsChange('youtube', { ...settings.youtube, customClientId: e.target.value })} className="form-input w-full" placeholder="407408718192-..." />
                                 <div className="p-4 bg-primary/5 border border-primary/20 space-y-2">
-                                    <p className="text-[9px] font-black uppercase text-primary tracking-widest leading-tight">CRITICAL: AUTHORIZED ORIGIN</p>
+                                    <p className="text-[9px] font-black uppercase text-primary tracking-widest leading-tight">CRITICAL: AUTHORIZED ORIGINS</p>
                                     <p className="text-[10px] font-mono text-base-content/60 break-all select-all py-1 bg-black/20 px-2">{currentOrigin}</p>
-                                    <p className="text-[8px] font-bold text-base-content/30 uppercase leading-relaxed">Add the above URL to 'Authorized JavaScript origins' in Google Cloud Console Credentials.</p>
+                                    {siblingOrigin && (
+                                        <>
+                                            <p className="text-[8px] font-bold text-base-content/40 uppercase tracking-wider mt-1">SHARED PREVIEW ORIGIN</p>
+                                            <p className="text-[10px] font-mono text-base-content/60 break-all select-all py-1 bg-black/20 px-2">{siblingOrigin}</p>
+                                        </>
+                                    )}
+                                    <p className="text-[8px] font-bold text-base-content/30 uppercase leading-relaxed mt-2">Add BOTH of the above URLs to 'Authorized JavaScript origins' in your Google Cloud Console Credentials.</p>
                                 </div>
                             </div>
+                        </SettingRow>
+                        <SettingRow label="Google API Key" desc="API Key (Developer Key) for browser-level services like Google Picker.">
+                            <input type="password" value={settings.youtube?.customApiKey || ''} onChange={(e) => handleSettingsChange('youtube', { ...settings.youtube, customApiKey: e.target.value })} className="form-input w-full max-w-md" placeholder="AIzaSy..." />
                         </SettingRow>
                         <SettingRow label="Cloud Identity Link" desc="Connect your account to enable Cloud AI and data sync features.">
                             {settings.googleIdentity?.isConnected ? (
@@ -1138,11 +1476,20 @@ export const SetupPage: React.FC<SetupPageProps> = ({
                             <div className="flex flex-col gap-2 w-full max-w-md">
                                 <input type="text" value={settings.youtube?.customClientId || ''} onChange={(e) => handleSettingsChange('youtube', { ...settings.youtube, customClientId: e.target.value })} className="form-input w-full" placeholder="407408718192-..." />
                                 <div className="p-4 bg-primary/5 border border-primary/20 space-y-2">
-                                    <p className="text-[9px] font-black uppercase text-primary tracking-widest leading-tight">CRITICAL: AUTHORIZED ORIGIN</p>
+                                    <p className="text-[9px] font-black uppercase text-primary tracking-widest leading-tight">CRITICAL: AUTHORIZED ORIGINS</p>
                                     <p className="text-[10px] font-mono text-base-content/60 break-all select-all py-1 bg-black/20 px-2">{currentOrigin}</p>
-                                    <p className="text-[8px] font-bold text-base-content/30 uppercase leading-relaxed">Add the above URL to 'Authorized JavaScript origins' in Google Cloud Console Credentials.</p>
+                                    {siblingOrigin && (
+                                        <>
+                                            <p className="text-[8px] font-bold text-base-content/40 uppercase tracking-wider mt-1">SHARED PREVIEW ORIGIN</p>
+                                            <p className="text-[10px] font-mono text-base-content/60 break-all select-all py-1 bg-black/20 px-2">{siblingOrigin}</p>
+                                        </>
+                                    )}
+                                    <p className="text-[8px] font-bold text-base-content/30 uppercase leading-relaxed mt-2">Add BOTH of the above URLs to 'Authorized JavaScript origins' in Google Cloud Console Credentials.</p>
                                 </div>
                             </div>
+                        </SettingRow>
+                        <SettingRow label="Google API Key" desc="API Key (Developer Key) for browser-level services like Google Picker.">
+                            <input type="password" value={settings.youtube?.customApiKey || ''} onChange={(e) => handleSettingsChange('youtube', { ...settings.youtube, customApiKey: e.target.value })} className="form-input w-full max-w-md" placeholder="AIzaSy..." />
                         </SettingRow>
                         <SettingRow label="Channel Integration" desc="Connect to your YouTube account for direct artifact publishing.">
                             {settings.youtube?.isConnected ? (
@@ -1220,6 +1567,36 @@ export const SetupPage: React.FC<SetupPageProps> = ({
                                 DOWNLOAD VAULT
                             </button>
                         </SettingRow>
+                        <SettingRow label="Convert Media to JPG (Local Storage)" desc="Automatically convert saved images to JPG format when using Local Storage. Metadata will be preserved.">
+                            <input 
+                                type="checkbox" 
+                                checked={settings.convertImageToJpgLocal || false} 
+                                onChange={(e) => { audioService.playClick(); handleSettingsChange('convertImageToJpgLocal', e.target.checked); }} 
+                                className="toggle toggle-primary toggle-sm" 
+                            />
+                        </SettingRow>
+                        <SettingRow label="Convert Media to JPG (Google Drive)" desc="Automatically convert saved images to JPG format when using Google Drive storage. Metadata will be preserved.">
+                            <input 
+                                type="checkbox" 
+                                checked={settings.convertImageToJpgDrive ?? true} 
+                                onChange={(e) => { audioService.playClick(); handleSettingsChange('convertImageToJpgDrive', e.target.checked); }} 
+                                className="toggle toggle-primary toggle-sm" 
+                            />
+                        </SettingRow>
+                        {(settings.convertImageToJpgLocal || settings.convertImageToJpgDrive) && (
+                            <SettingRow label="JPG Compression Quality" desc="Adjust the compression level for JPG conversion (10% to 100%).">
+                                <div className="flex items-center gap-4 w-48">
+                                    <input 
+                                        type="range" 
+                                        min={0.1} max={1.0} step={0.1} 
+                                        value={settings.jpgCompressionQuality || 0.9} 
+                                        onChange={(e) => handleSettingsChange('jpgCompressionQuality', Number(e.currentTarget.value))} 
+                                        className="range range-xs range-primary" 
+                                    />
+                                    <span className="text-[10px] font-mono font-bold text-primary">{Math.round((settings.jpgCompressionQuality || 0.9) * 100)}%</span>
+                                </div>
+                            </SettingRow>
+                        )}
                     </div>
                 );
             default: return null;
@@ -1343,7 +1720,66 @@ export const SetupPage: React.FC<SetupPageProps> = ({
           onImport={() => {}} 
           categories={promptCategories}
       />
-      {isWorking && <MaintenanceOverlay progress={maintenanceProgress} message={maintenanceMsg} />}
+      <ConfirmationModal 
+        isOpen={isCreateFolderModalOpen} 
+        onClose={() => {
+            setIsCreateFolderModalOpen(false);
+            showGlobalFeedback("Google Drive standby configured without custom folder.");
+        }} 
+        onConfirm={async () => {
+            setIsCreateFolderModalOpen(false);
+            setIsWorking(true);
+            setMaintenanceMsg("CREATING_FOLDER_ON_DRIVE...");
+            try {
+                const folderId = await fileSystemManager.createKollektivFolder();
+                const updatedSettings = {
+                    ...settings,
+                    driveFolderId: folderId,
+                    driveFolderName: "Google Drive (Kollektiv)"
+                };
+                setSettings(updatedSettings);
+                updateSettings(updatedSettings);
+                showGlobalFeedback("Created 'Kollektiv' folder on Google Drive successfully!");
+            } catch (err: any) {
+                showGlobalFeedback(`Failed to create Kollektiv folder: ${err.message}`, true);
+            } finally {
+                setIsWorking(false);
+                setMaintenanceMsg("");
+            }
+        }} 
+        title="CREATE STORAGE FOLDER" 
+        message="The 'Kollektiv' sync folder was not found on your Google Drive. Would you like to create it now?" 
+        btnClassName="btn-primary"
+      />
+      <MigrationModal
+          isOpen={isMigrationModalOpen}
+          onClose={() => {
+              fileSystemManager.isMigrationAborted = true;
+              fileSystemManager.isMigrationPaused = false;
+              if (duplicateResolverRef.current) {
+                  duplicateResolverRef.current('replace'); // Unblock the queue so it instantly catches the abort flag
+              }
+              setIsMigrationPaused(false);
+              setDuplicateFile(null);
+              setIsMigrationModalOpen(false);
+          }}
+          onConfirm={migrationDirection === 'push' ? handleConfirmMigration : handleConfirmPullMigration}
+          isWorking={isWorking}
+          progress={maintenanceProgress}
+          message={maintenanceMsg}
+          isPaused={isMigrationPaused}
+          onPause={handlePauseMigration}
+          onResume={handleResumeMigration}
+          duplicateFile={duplicateFile}
+          onResolveDuplicate={handleResolveDuplicate}
+          convertingProgress={convertingProgress}
+          convertingMessage={convertingMsg}
+          uploadingProgress={uploadingProgress}
+          uploadingMessage={uploadingMsg}
+          phase={migrationPhase}
+          syncDirection={migrationDirection}
+      />
+      {isWorking && !isMigrationModalOpen && <MaintenanceOverlay progress={maintenanceProgress} message={maintenanceMsg} />}
     </>
   );
 };

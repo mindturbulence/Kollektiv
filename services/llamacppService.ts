@@ -94,7 +94,8 @@ export async function* enhancePromptLlamaCppStream(
     constantModifier: string,
     settings: LLMSettings,
     systemInstruction: string,
-    maxTokens: number = 2048
+    maxTokens: number = 2048,
+    temperature: number = 0.7
 ): AsyncGenerator<string> {
     try {
         const config = getLlamaCppConfig(settings);
@@ -110,7 +111,8 @@ export async function* enhancePromptLlamaCppStream(
                     { role: 'user', content: fullPrompt }
                 ],
                 stream: true,
-                max_tokens: maxTokens
+                max_tokens: maxTokens,
+                temperature: temperature
             }),
         });
 
@@ -258,8 +260,45 @@ export const refineSinglePromptLlamaCpp = async (promptText: string, settings: L
     }
 };
 
-export async function* refineSinglePromptLlamaCppStream(promptText: string, settings: LLMSettings, systemInstruction: string, maxTokens: number = 1024): AsyncGenerator<string> {
-    yield* enhancePromptLlamaCppStream(promptText, '', settings, systemInstruction, maxTokens);
+export const reconstructFromIntentLlamaCpp = async (intents: string[], settings: LLMSettings): Promise<string> => {
+    try {
+        const config = getLlamaCppConfig(settings);
+        const apiResponse = await fetch(`${config.baseUrl}/v1/chat/completions`, {
+            method: 'POST',
+            headers: config.headers,
+            body: JSON.stringify({
+                model: config.model,
+                messages: [
+                    { 
+                        role: 'system', 
+                        content: "Task: Consolidate the provided visual components and descriptive intents into a single, cohesive, high-fidelity visual prompt. Remove redundancies. Ensure a logical flow from subject to environment to artistic style. Output the prompt text ONLY. No preamble." 
+                    },
+                    { role: 'user', content: `Components: ${intents.join(' | ')}` }
+                ],
+                stream: false,
+                max_tokens: 1000
+            }),
+        });
+        
+        if (!apiResponse.ok) throw new Error(`Llama.cpp status: ${apiResponse.status}`);
+        const data = await apiResponse.json();
+        const content = data.choices?.[0]?.message?.content || '';
+        
+        trackTokenUsage('llamacpp', Math.ceil(content.length / 4));
+        return content.trim();
+    } catch (err) {
+        throw handleGeminiError(err, 'reconstruction with Llama.cpp');
+    }
+};
+
+export async function* refineSinglePromptLlamaCppStream(
+    promptText: string, 
+    settings: LLMSettings, 
+    systemInstruction: string, 
+    maxTokens: number = 1024,
+    temperature: number = 0.7
+): AsyncGenerator<string> {
+    yield* enhancePromptLlamaCppStream(promptText, '', settings, systemInstruction, maxTokens, temperature);
 }
 
 export interface LlamaCppTestResult {

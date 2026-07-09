@@ -119,7 +119,14 @@ const Welcome: React.FC<WelcomeProps> = ({ onSetupComplete }) => {
                             const success = await fileSystemManager.initialize(updatedSettings, {} as any);
                             if (success) {
                                 audioService.playAppStart();
-                                onSetupComplete(updatedSettings);
+                                const folderId = (fileSystemManager as any).rootFolderId;
+                                const finalSettings = {
+                                    ...updatedSettings,
+                                    driveFolderId: folderId || '',
+                                    driveFolderName: (fileSystemManager as any).appDirectoryName || ''
+                                };
+                                updateSettings(finalSettings);
+                                onSetupComplete(finalSettings);
                             } else {
                                 const detailedMsg = (fileSystemManager as any).lastError || "Please verify Google Drive permissions.";
                                 setError(`Failed to initialize Google Drive: ${detailedMsg}`);
@@ -144,23 +151,37 @@ const Welcome: React.FC<WelcomeProps> = ({ onSetupComplete }) => {
         setIsLoading(false);
     }
   };
-
+ 
   const handleActivateDriveDirectly = async () => {
       audioService.playClick();
       setError(null);
       setIsLoading(true);
+
+      const isTokenExpired = settings.googleIdentity?.connectedAt 
+          ? (Date.now() - settings.googleIdentity.connectedAt > 50 * 60 * 1000) 
+          : true;
+
+      if (isTokenExpired || !settings.googleIdentity?.accessToken) {
+          handleGoogleDriveSignIn();
+          return;
+      }
+
       try {
           const success = await fileSystemManager.initialize(settings, {} as any);
           if (success) {
-              onSetupComplete(settings);
+              const folderId = (fileSystemManager as any).rootFolderId;
+              const finalSettings = {
+                  ...settings,
+                  driveFolderId: folderId || '',
+                  driveFolderName: (fileSystemManager as any).appDirectoryName || ''
+              };
+              updateSettings(finalSettings);
+              onSetupComplete(finalSettings);
           } else {
-              const detailedMsg = (fileSystemManager as any).lastError || "Please reconnect your Google Account.";
-              setError(`Initialization failed: ${detailedMsg}`);
-              setIsLoading(false);
+              handleGoogleDriveSignIn();
           }
       } catch (e) {
-          setError(e instanceof Error ? e.message : 'Activation failed.');
-          setIsLoading(false);
+          handleGoogleDriveSignIn();
       }
   };
 
@@ -225,17 +246,17 @@ const Welcome: React.FC<WelcomeProps> = ({ onSetupComplete }) => {
                 <div className="space-y-4">
                     {currentProvider === 'drive' ? (
                         <div className="space-y-6">
-                            {settings.googleIdentity?.isConnected ? (
+                             {settings.googleIdentity?.isConnected ? (
                                 <div className="space-y-4">
                                     <div className="p-4 bg-transparent border border-primary/10 rounded-none text-left relative overflow-hidden">
-                                        <div className="absolute top-0 right-0 px-2 py-0.5 bg-primary/10 text-[8px] font-black tracking-widest text-primary uppercase">Authenticated</div>
+                                        <div className="absolute top-0 right-0 px-2 py-0.5 bg-primary/10 text-[8px] font-black tracking-widest text-primary uppercase font-mono">Authenticated</div>
                                         <span className="text-[9px] font-black uppercase tracking-widest text-base-content/30 block mb-1">Google Identity</span>
                                         <span className="text-xs font-mono font-bold truncate block text-primary/80">{settings.googleIdentity.email}</span>
                                     </div>
                                     <button
                                       onClick={handleActivateDriveDirectly}
                                       disabled={isLoading}
-                                      className="form-btn form-btn-primary w-full h-14"
+                                      className="form-btn form-btn-primary w-full h-14 uppercase"
                                     >
                                       {isLoading ? <span className="loading loading-spinner"></span> : <RefreshIcon className="w-5 h-5 mr-2" />}
                                       CONNECT_DRIVE_CLOUD

@@ -17,7 +17,6 @@ const LlmStatusPanel: React.FC<LlmStatusPanelProps> = ({ isOpen, onClose }) => {
     updateSettings,
     availableOllamaModels,
     availableOllamaCloudModels,
-    availableHermesModels,
     availableLlamaCppModels,
   } = useSettings();
 
@@ -71,7 +70,7 @@ const LlmStatusPanel: React.FC<LlmStatusPanelProps> = ({ isOpen, onClose }) => {
   }, [isOpen, onClose]);
 
   const handleProviderAndModelSelect = (
-    provider: "gemini" | "ollama" | "ollama_cloud" | "hermes" | "openrouter" | "llamacpp",
+    provider: "gemini" | "ollama" | "ollama_cloud" | "openrouter" | "llamacpp",
     modelId?: string,
   ) => {
     audioService.playClick();
@@ -79,9 +78,9 @@ const LlmStatusPanel: React.FC<LlmStatusPanelProps> = ({ isOpen, onClose }) => {
       updateSettings({ ...settings, activeLLM: "gemini", llmModel: modelId });
     } else if (provider === "llamacpp" && modelId) {
       updateSettings({
-        ...settings,
-        activeLLM: "llamacpp",
-        llamacppModel: modelId,
+         ...settings,
+         activeLLM: "llamacpp",
+         llamacppModel: modelId,
       });
     } else if (provider === "ollama" && modelId) {
       updateSettings({
@@ -94,12 +93,6 @@ const LlmStatusPanel: React.FC<LlmStatusPanelProps> = ({ isOpen, onClose }) => {
         ...settings,
         activeLLM: "ollama_cloud",
         ollamaCloudModel: modelId,
-      });
-    } else if (provider === "hermes" && modelId) {
-      updateSettings({
-        ...settings,
-        activeLLM: "hermes",
-        hermesModel: modelId,
       });
     } else if (provider === "openrouter" && modelId) {
       updateSettings({
@@ -244,34 +237,6 @@ const LlmStatusPanel: React.FC<LlmStatusPanelProps> = ({ isOpen, onClose }) => {
                     </button>
                   </li>
                 )}
-
-              <div className="h-px bg-base-content/5 mx-8 my-2" />
-
-              {/* Hermes Section */}
-              <li className="menu-title px-8 py-2 text-[12px] uppercase tracking-[0.1em] opacity-40 font-bold text-accent">
-                <span>Agent Core (Hermes)</span>
-              </li>
-
-              {(availableHermesModels.length > 0 ? availableHermesModels : (settings.hermesModel ? [settings.hermesModel] : [])).map((model) => (
-                <li key={`claw-${model}`} className="w-full">
-                  <button
-                    onClick={() =>
-                      handleProviderAndModelSelect("hermes", model)
-                    }
-                    className={`rounded-none text-[10px] font-rajdhani uppercase tracking-widest py-2 w-full text-left px-8 border-l-2 transition-all ${settings.hermesModel === model && settings.activeLLM === "hermes" ? "text-accent bg-accent/5 border-accent shadow-[inset_10px_0_20px_-10px_rgba(var(--a),0.1)]" : "text-base-content/40 hover:text-base-content hover:bg-base-content/5 border-transparent"}`}
-                  >
-                    {model}
-                  </button>
-                </li>
-              ))}
-
-              {availableHermesModels.length === 0 && !settings.hermesModel && (
-                <li className="disabled w-full">
-                  <span className="text-[10px] italic opacity-20 py-8 block text-center font-mono uppercase tracking-[0.4em]">
-                    HERMES SYSTEM LINK OFFLINE
-                  </span>
-                </li>
-              )}
 
               <div className="h-px bg-base-content/5 mx-8 my-2" />
 

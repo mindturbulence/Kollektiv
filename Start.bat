@@ -1,1 +1,1 @@
-call npm run dev
+call pnpm dev

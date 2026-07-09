@@ -2,8 +2,7 @@
 import type { EnhancementResult, LLMSettings, PromptModifiers } from '../types';
 import { translateToEnglishGemini, analyzePaletteMood as analyzePaletteMoodGemini, generatePromptFormulaGemini, refineSinglePromptGemini, abstractImageGemini, generateColorNameGemini, dissectPromptGemini, generateFocusedVariationsGemini, reconstructPromptGemini, reconstructFromIntentGemini, replaceComponentInPromptGemini, generateArtistDescriptionGemini, enhancePromptGeminiStream, refineSinglePromptGeminiStream, generateConstructorPresetGemini } from './geminiService';
 import { analyzePaletteMoodOllama, generatePromptFormulaOllama, refineSinglePromptOllama, abstractImageOllama, generateColorNameOllama, dissectPromptOllama, generateFocusedVariationsOllama, reconstructPromptOllama, replaceComponentInPromptOllama, reconstructFromIntentOllama, generateArtistDescriptionOllama, enhancePromptOllamaStream, refineSinglePromptOllamaStream } from './ollamaService';
-import { refineSinglePromptHermes, enhancePromptHermesStream, refineSinglePromptHermesStream } from './hermesService';
-import { refineSinglePromptLlamaCpp, enhancePromptLlamaCppStream, refineSinglePromptLlamaCppStream } from './llamacppService';
+import { refineSinglePromptLlamaCpp, enhancePromptLlamaCppStream, refineSinglePromptLlamaCppStream, reconstructFromIntentLlamaCpp } from './llamacppService';
 import { TARGET_VIDEO_AI_MODELS, TARGET_AUDIO_AI_MODELS } from '../constants/models';
 
 // --- Model-Specific Syntax (Engine Tuning) ---
@@ -106,6 +105,10 @@ STRICT IMAGE WORKFLOW:
    - For text replacement, use fixed phrasing: Replace "original" to "new" or Replace the [region] bounding box to "new".
    - Never include the camera/drone/light device itself, studio lights or stands, camera body, propellers, or quadcopter body within the frame, nor any text or camera model names referencing specific drone brands like DJI in your output. Use positive constraints to describe the aesthetic produced from the camera/drone/lighting like 'birds-eye view,' 'high-altitude aerial,' 'top-down perspective,' or 'soft studio illumination,' to ensure the model focuses on the visual style and angle rather than rendering the hardware.
 4. ENFORCE LOGICAL CONSISTENCY: Resolve ambiguities, contradictions, or unfeasible requests; infer missing details (e.g., default placement in visually balanced areas); ensure new elements align with scene logic and style.
+5. DEEP ENVIRONMENTAL ENRICHMENT: Always expand simplistic style commands or sparse subjects into rich multi-layered parameters:
+   - Cinematic Composition: Mandate volumetric lighting, exact shot types (e.g., master shot, extreme close-up), high depth-of-field separation, or meticulous lens reflections.
+   - Color Theory and Palette Limits: Prescribe strict harmony schemes (e.g., complementary cyan-orange color grading, split-complementary warm tones, monochromatic slate scales).
+   - Render & Environmental Quality: Include native descriptions of physically based materials (PBR Shaders), Raytraced reflections, light scatter, lens aberrations, and atmospheric elements like volumetric fog or floating dust particles.
 
 FINAL OUTPUT CONSTRAINTS:
 - Be in English.
@@ -123,7 +126,9 @@ const AI_ROLES = {
         let persona = masterRole ? `Master Role: ${masterRole}\n\nTask Specific Role: World-Class Visual Strategist and Prompt Architect.` : "Role: World-Class Visual Strategist and Prompt Architect.";
         let modeProtocol = "Focus on unique, high-fidelity textures, atmospheric depth, and sophisticated storytelling. CRITICAL: Camera specifications (Body/Model) are technical metadata for the capture device. Do NOT describe a person holding the camera or the camera appearing in the scene.";
 
+        let temporalInstruct = "";
         if (isVideo) {
+            temporalInstruct = `\n[KINEMATICS FRAME SEQUENCING RULES]: Describe the motion naturally as an elegant chronological sequence with timeline landmarks: Keyframe 0s (establish framing, initial subject posture), Keyframe 2s (dynamic peak, fluid speed transitions, momentum shifts, and gravity calibration), Keyframe 4s+ (resolution, parallax deceleration, or physical culmination of the shot).`;
             persona = masterRole ? `Master Role: ${masterRole}\n\nTask Specific Role: Visionary Cinematic Director.` : "Role: Visionary Cinematic Director.";
             if (isI2V) {
                 modeProtocol = `I2V PROTOCOL (DIRECTING AN IMAGE): The user is providing a reference image. Assume the subject, colors, and static details are already set. DO NOT describe colors or objects in the image. Focus EXCLUSIVELY on directing movement, camera paths, and temporal shifts. Strip all static adjectives. Output must be purely kinetic, efficient, and physically plausible.`;
@@ -131,17 +136,22 @@ const AI_ROLES = {
                 modeProtocol = `T2V PROTOCOL (WORLD BUILDING): Build a cinematic world from scratch. Focus on composition, blocking, character action, and lighting that establishes a powerful narrative scene.`;
             }
         } else if (isAudio) {
+            temporalInstruct = `\n[ACOUSTIC STRUCTURE RULES]: Format the prompt using structured audio tags. If music: include BPM and instrument tags with headers like [Genre: <cyberpunk metal/ambient synth>] [Tempo: <120 BPM>] [Verse] [Chorus] [Drop]. If dialogue: embed precise phonetic cadence and delivery cues directly into the output lyrics or script (e.g., [breath], [whisper], [dramatic pause], [annunciated]).`;
             persona = "Role: Master Audio Producer and Sound Architect.";
             modeProtocol = "Acoustic focus. Map the frequency, rhythm, and sonic textures with extreme precision. If dialogue, focus on emotional delivery. If music, focus on instrumentation, production quality, and structural complexity.";
         } else {
             modeProtocol += ` IMAGE PROTOCOL: This is for a STATIC image. Do NOT include temporal descriptions, durations, or motion verbs unless they describe a frozen moment in time. Focus on 'the decisive moment'. ${IMAGE_GENERATION_WORKFLOW}`;
         }
 
+        const spatialInstruct = `\n[SPATIAL GEOMETRY & MESH DESCRIPTORS]: If the input describes geometric, 3D, architecture, CAD, or spatial layouts, explicitly refer to native XYZ coordinate grids, surface extrusion normals, wireframe vertices, depth topologies, and mesh structures (e.g., 'oriented at coordinate node [X, Y, Z]', 'triangular tessellation boundary curves', or 'extruded normal vectors').`;
+
         return `${persona}
 Goal: Generate 1 highly accurate, production-ready refined prompt.
 Target Architecture: ${model}.
 Syntax: ${syntax.format}. Rules: ${syntax.rules}. Target Len: ${l} (CRITICAL: YOU MUST STRICTLY FOLLOW THIS LENGTH CONSTRAINT).
 ${modeProtocol}
+${temporalInstruct}
+${spatialInstruct}
 
 BREAKDOWN PROTOCOL:
 At the end of your response, after a "---PROMPT_BREAKDOWN---" separator, provide a JSON object breaking down the prompt's anatomy.
@@ -173,8 +183,10 @@ NO INTROS, NO EXPLANATIONS.`;
         
         let protocol = "";
         let role = masterRole ? `Master Role: ${masterRole}\nTask Role: Elite Prompt Refiner and Model Specialist.` : "Elite Prompt Refiner and Model Specialist.";
+        let temporalInstruct = "";
         
         if (isVideo) {
+            temporalInstruct = `\n[KINEMATICS FRAME SEQUENCING]: Structure the prompt as an elegant chronological vision timeline: Keyframe 0s (initial setup/focal), Keyframe 2s (dynamic peak, volumetric speed transitions, gravity vectors), Keyframe 4s+ (momentum deceleration, physical culmination).`;
             role = masterRole ? `Master Role: ${masterRole}\nTask Role: Visionary Cinematic Director.` : "Visionary Cinematic Director.";
             if (isI2V) {
                 protocol = "I2V PROTOCOL: You are animating a fixed image. Strip all static descriptions of the subject. Focus ONLY on the physics of motion, camera pathing, and scene evolution.";
@@ -182,15 +194,20 @@ NO INTROS, NO EXPLANATIONS.`;
                 protocol = "T2V PROTOCOL: Direct the scene from text. Establish subject, environment, and motion sequence with cinematic precision.";
             }
         } else if (isAudio) {
+            temporalInstruct = `\n[ACOUSTIC STRUCTURE]: Use musical block notation like [Genre: <style>] [Tempo: <BPM>] [Verse] [Chorus] [Drop]. For voice-over, interlace delivery triggers [breath], [whisper], [dramatic pause] inside scripts.`;
             role = "Master Sound Engineer.";
             protocol = "Focus on acoustics, material sounds, and rhythmic structure. Maximize sonic fidelity.";
         } else {
             protocol = `IMAGE PROTOCOL: This is for a STATIC image. Do NOT include temporal descriptions or motion verbs. Focus on composition, lighting, and texture. ${IMAGE_GENERATION_WORKFLOW}`;
         }
 
+        const spatialInstruct = `\n[SPATIAL GEOMETRY & MESH DESCRIPTORS]: If the layout has geometric or coordinate traits, describe boundaries explicitly using 3D spatial points [X, Y, Z], surface normal extrusions, or wireframe grid tessellations.`;
+
         return `Role: ${role} Optimized for ${model}.
 Task: Rewrite the user's concept into the absolute best possible ${syntax.format} formula for ${model}.
 Rules: ${syntax.rules}. ${protocol}
+${temporalInstruct}
+${spatialInstruct}
 CRITICAL: Camera specifications (Body/Model) are technical metadata. Do NOT suggest a person holding the camera.
 Goal: Maximize accuracy to the user's intent while injecting unique, high-quality stylistic details that ${model} excels at.
 Output the refined prompt text ONLY.`;
@@ -299,7 +316,8 @@ export async function* enhancePromptStream(
     modifiers: PromptModifiers,
     settings: LLMSettings,
     referenceImages?: string[],
-    modifierCatalog?: string
+    modifierCatalog?: string,
+    overrideProvider?: string
 ): AsyncGenerator<string> {
     const isVideo = !!TARGET_VIDEO_AI_MODELS.find(m => m === targetAIModel);
     const isAudio = !!TARGET_AUDIO_AI_MODELS.find(m => m === targetAIModel);
@@ -309,15 +327,19 @@ export async function* enhancePromptStream(
     const input = `${context}\n\n[Primary Concept]\n${originalPrompt}`;
 
     const tokenBudget = promptLength === 'Long' ? 4096 : (promptLength === 'Medium' ? 2048 : 1024);
-    const isOllama = settings.activeLLM === 'ollama' || settings.activeLLM === 'ollama_cloud';
-    const isHermes = settings.activeLLM === 'hermes';
-    const isLlamaCpp = settings.activeLLM === 'llamacpp';
+    const activeProvider = overrideProvider || settings.activeLLM;
+    const isOllama = activeProvider === 'ollama' || activeProvider === 'ollama_cloud';
+    const isLlamaCpp = activeProvider === 'llamacpp';
+    const isAnthropic = activeProvider === 'anthropic';
     const temperature = modifiers.creativity !== undefined ? modifiers.creativity / 100 : 0.7;
 
-    const stream = isLlamaCpp
-        ? enhancePromptLlamaCppStream(input, constantModifier, settings, systemInstruction, tokenBudget)
-        : isHermes
-            ? enhancePromptHermesStream(input, constantModifier, settings, systemInstruction, tokenBudget)
+    const stream = isAnthropic
+        ? (async function* () {
+              const { streamChatAnthropic } = await import('./anthropicService');
+              yield* streamChatAnthropic([{ role: 'system', content: systemInstruction }, { role: 'user', content: input }], settings);
+          })()
+        : isLlamaCpp
+            ? enhancePromptLlamaCppStream(input, constantModifier, settings, systemInstruction, tokenBudget, temperature)
             : isOllama
                 ? enhancePromptOllamaStream(input, constantModifier, settings, systemInstruction, tokenBudget)
                 : enhancePromptGeminiStream(input, constantModifier, settings, systemInstruction, promptLength, referenceImages, temperature);
@@ -356,15 +378,23 @@ export const refineSinglePrompt = async (promptText: string, targetAIModel: stri
     const sys = AI_ROLES.REFINER(targetAIModel, isVideo, isAudio, hasManualCamera, modifiers.videoInputType, settings.masterRolePrompt);
     
     const isOllama = settings.activeLLM === 'ollama' || settings.activeLLM === 'ollama_cloud';
-    const isHermes = settings.activeLLM === 'hermes';
     const isLlamaCpp = settings.activeLLM === 'llamacpp';
-    const raw = isLlamaCpp
-        ? await refineSinglePromptLlamaCpp(promptText, settings, sys, 1024)
-        : isHermes
-            ? await refineSinglePromptHermes(promptText, settings, sys, 1024)
+    const isAnthropic = settings.activeLLM === 'anthropic';
+    let raw = "";
+    
+    if (isAnthropic) {
+        const { streamChatAnthropic } = await import('./anthropicService');
+        const generator = streamChatAnthropic([{ role: 'system', content: sys }, { role: 'user', content: promptText }], settings);
+        for await (const chunk of generator) {
+            raw += chunk;
+        }
+    } else {
+        raw = isLlamaCpp
+            ? await refineSinglePromptLlamaCpp(promptText, settings, sys, 1024)
             : isOllama 
                 ? await refineSinglePromptOllama(promptText, settings, sys, 1024)
                 : await refineSinglePromptGemini(promptText, '', settings, sys);
+    }
     const cleaned = cleanLLMResponse(raw);
     return cleaned;
 };
@@ -381,12 +411,16 @@ export async function* refineSinglePromptStream(
     const sys = AI_ROLES.REFINER(targetAIModel, isVideo, isAudio, hasManualCamera, modifiers.videoInputType, settings.masterRolePrompt);
     
     const isOllama = settings.activeLLM === 'ollama' || settings.activeLLM === 'ollama_cloud';
-    const isHermes = settings.activeLLM === 'hermes';
     const isLlamaCpp = settings.activeLLM === 'llamacpp';
-    const stream = isLlamaCpp
-        ? refineSinglePromptLlamaCppStream(promptText, settings, sys, 1024)
-        : isHermes
-            ? refineSinglePromptHermesStream(promptText, settings, sys, 1024)
+    const isAnthropic = settings.activeLLM === 'anthropic';
+    const temperature = modifiers.creativity !== undefined ? modifiers.creativity / 100 : 0.7;
+    const stream = isAnthropic
+        ? (async function* () {
+              const { streamChatAnthropic } = await import('./anthropicService');
+              yield* streamChatAnthropic([{ role: 'system', content: sys }, { role: 'user', content: promptText }], settings);
+          })()
+        : isLlamaCpp
+            ? refineSinglePromptLlamaCppStream(promptText, settings, sys, 1024, temperature)
             : isOllama
                 ? refineSinglePromptOllamaStream(promptText, settings, sys, 1024)
                 : refineSinglePromptGeminiStream(promptText, '', settings, sys);
@@ -420,11 +454,9 @@ export async function* refineSinglePromptStream(
 
 export const generateArtistDescription = async (artistName: string, settings: LLMSettings): Promise<string> => {
     const isOllama = settings.activeLLM === 'ollama' || settings.activeLLM === 'ollama_cloud';
-    const isHermes = settings.activeLLM === 'hermes';
     const isLlamaCpp = settings.activeLLM === 'llamacpp';
     
     if (isLlamaCpp) return refineSinglePromptLlamaCpp(artistName, settings, "Brief style summary. Text only.", 512);
-    if (isHermes) return refineSinglePromptHermes(artistName, settings, "Brief style summary. Text only.", 512);
 
     return isOllama
         ? generateArtistDescriptionOllama(artistName, settings)
@@ -433,11 +465,9 @@ export const generateArtistDescription = async (artistName: string, settings: LL
 
 export const analyzePaletteMood = async (hexColors: string[], settings: LLMSettings): Promise<string> => {
     const isOllama = settings.activeLLM === 'ollama' || settings.activeLLM === 'ollama_cloud';
-    const isHermes = settings.activeLLM === 'hermes';
     const isLlamaCpp = settings.activeLLM === 'llamacpp';
     
     if (isLlamaCpp) return refineSinglePromptLlamaCpp(`Colors: ${hexColors.join(', ')}`, settings, "Task: mood in 3 words max. Text only.", 64);
-    if (isHermes) return refineSinglePromptHermes(`Colors: ${hexColors.join(', ')}`, settings, "Task: mood in 3 words max. Text only.", 64);
 
     return isOllama
         ? analyzePaletteMoodOllama(hexColors, settings)
@@ -446,11 +476,9 @@ export const analyzePaletteMood = async (hexColors: string[], settings: LLMSetti
 
 export const generateColorName = async (hexColor: string, mood: string, settings: LLMSettings): Promise<string> => {
     const isOllama = settings.activeLLM === 'ollama' || settings.activeLLM === 'ollama_cloud';
-    const isHermes = settings.activeLLM === 'hermes';
     const isLlamaCpp = settings.activeLLM === 'llamacpp';
     
     if (isLlamaCpp) return refineSinglePromptLlamaCpp(`Hex:${hexColor}, Mood:${mood}`, settings, "Task: Poetic 2-word name. Text only.", 32);
-    if (isHermes) return refineSinglePromptHermes(`Hex:${hexColor}, Mood:${mood}`, settings, "Task: Poetic 2-word name. Text only.", 32);
 
     return isOllama
         ? generateColorNameOllama(hexColor, mood, settings)
@@ -459,15 +487,10 @@ export const generateColorName = async (hexColor: string, mood: string, settings
 
 export const dissectPrompt = async (promptText: string, settings: LLMSettings, modifierCatalog?: string, modelName?: string): Promise<{ naturalLanguage: string, prompt: string, modifiers: { [key: string]: string }, constantModifier: string, categorizedParameters: { label: string, value: string }[] }> => {
     const isOllama = settings.activeLLM === 'ollama' || settings.activeLLM === 'ollama_cloud';
-    const isHermes = settings.activeLLM === 'hermes';
     const isLlamaCpp = settings.activeLLM === 'llamacpp';
     
     if (isLlamaCpp) {
         const naturalLang = await refineSinglePromptLlamaCpp(promptText, settings, "Task: Convert this Stable Diffusion prompt into a clear, natural English narrative. No intros.", 800);
-        return { naturalLanguage: naturalLang, prompt: promptText, modifiers: {}, constantModifier: '', categorizedParameters: [] };
-    }
-    if (isHermes) {
-        const naturalLang = await refineSinglePromptHermes(promptText, settings, "Task: Convert this Stable Diffusion prompt into a clear, natural English narrative. No intros.", 800);
         return { naturalLanguage: naturalLang, prompt: promptText, modifiers: {}, constantModifier: '', categorizedParameters: [] };
     }
 
@@ -499,6 +522,8 @@ export const replaceComponentInPrompt = async (originalPrompt: string, component
 
 export const reconstructFromIntent = async (intents: string[], settings: LLMSettings): Promise<string> => {
     const isOllama = settings.activeLLM === 'ollama' || settings.activeLLM === 'ollama_cloud';
+    const isLlamaCpp = settings.activeLLM === 'llamacpp';
+    if (isLlamaCpp) return reconstructFromIntentLlamaCpp(intents, settings);
     return isOllama
         ? reconstructFromIntentOllama(intents, settings)
         : reconstructFromIntentGemini(intents, settings);
@@ -638,9 +663,9 @@ export async function* streamChat(
     settings: LLMSettings
 ): AsyncGenerator<string> {
     const isOllama = settings.activeLLM === 'ollama' || settings.activeLLM === 'ollama_cloud';
-    const isHermes = settings.activeLLM === 'hermes';
     const isOpenRouter = settings.activeLLM === 'openrouter';
     const isLlamaCpp = settings.activeLLM === 'llamacpp';
+    const isAnthropic = settings.activeLLM === 'anthropic';
 
     // Process text attachments from messages before passing to specific handlers
     const processedMessages = await Promise.all(messages.map(async msg => {
@@ -707,9 +732,9 @@ export async function* streamChat(
         }
     }
 
-    if (isHermes) {
-        const { streamChatHermes } = await import('./hermesService');
-        yield* streamChatHermes(finalMessages, settings);
+    if (isAnthropic) {
+        const { streamChatAnthropic } = await import('./anthropicService');
+        yield* streamChatAnthropic(finalMessages, settings);
     } else if (isOpenRouter) {
         const { streamChatOpenRouter } = await import('./openrouterService');
         yield* streamChatOpenRouter(finalMessages, settings);

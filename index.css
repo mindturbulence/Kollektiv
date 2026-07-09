@@ -1,5 +1,6 @@
 @import url("https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@300;400;500;600;700&family=Raleway:wght@300;400;500;600;700;800;900&family=Nunito:wght@200;300;400;500;600;700;800;900&family=Rajdhani:wght@300;400;500;600;700&family=Space+Grotesk:wght@300;400;500;600;700&family=Space+Mono:wght@400;700&display=swap");
 @import url("https://fonts.googleapis.com/css2?family=Electrolize&family=Titillium+Web:wght@300;400;600&display=swap");
+@import url("https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=Monoton&display=swap");
 @import url("https://db.onlinewebfonts.com/c/ad92a081de42733674b960204a8b366c?family=Prime+Light");
 @import url("https://db.onlinewebfonts.com/c/ef616ea44b02534f31cfa5848bb22d2b?family=Monofonto");
 @import url("https://db.onlinewebfonts.com/c/344078ad9965a3962d3e3708dfcd4f2d?family=Fixedsys");
@@ -1314,6 +1315,228 @@ button:active {
 [data-theme="dracula"] .font-monoton {
   font-family: "Marvin Visions Bold", sans-serif !important;
 }
+
+/* --- KOLLEKTIV THEME STYLING & FONT OVERRIDES --- */
+/* Inter is the default font for all content in the Kollektiv theme, including all components */
+[data-theme="Kollektiv"],
+[data-theme="Kollektiv"] *,
+[data-theme="Kollektiv"] input,
+[data-theme="Kollektiv"] textarea,
+[data-theme="Kollektiv"] select {
+  font-family: "Inter", sans-serif !important;
+}
+
+/* Monoton is used exclusively for the Logo font */
+[data-theme="Kollektiv"] .font-monoton,
+[data-theme="Kollektiv"] .font-monoton *,
+[data-theme="Kollektiv"] .font-logo,
+[data-theme="Kollektiv"] .font-logo *,
+[data-theme="Kollektiv"] header .font-monoton,
+[data-theme="Kollektiv"] header .font-monoton * {
+  font-family: "Monoton", cursive !important;
+  font-weight: normal !important;
+  letter-spacing: 0.05em !important;
+}
+
+/* Microgramma is used exclusively for header navigation menus and nav links */
+[data-theme="Kollektiv"] header .parent-nav-item,
+[data-theme="Kollektiv"] header button.px-3,
+[data-theme="Kollektiv"] header [role="menuitem"],
+[data-theme="Kollektiv"] .nav-link,
+[data-theme="Kollektiv"] .tab-link {
+  font-family: "Microgramma D Medium Extended", "Microgramma D Bold Extended", sans-serif !important;
+  letter-spacing: 0.1em !important;
+  text-transform: uppercase !important;
+}
+
+/* Footer text must use Inter instead of Microgramma */
+[data-theme="Kollektiv"] footer,
+[data-theme="Kollektiv"] footer *,
+[data-theme="Kollektiv"] footer .font-rajdhani,
+[data-theme="Kollektiv"] footer .font-sf-mono,
+[data-theme="Kollektiv"] footer span,
+[data-theme="Kollektiv"] footer button,
+[data-theme="Kollektiv"] footer a {
+  font-family: "Inter", sans-serif !important;
+  text-transform: uppercase !important;
+  letter-spacing: 0.05em !important;
+}
+
+/* Standardize all button styles under Kollektiv theme using standard styling patterns that allow utility overrides */
+[data-theme="Kollektiv"] button,
+[data-theme="Kollektiv"] .btn,
+[data-theme="Kollektiv"] .form-btn {
+  font-family: "Inter", sans-serif !important;
+  font-weight: 500 !important;
+  letter-spacing: 0.02em !important;
+  text-transform: uppercase !important;
+  border-radius: 4px !important; /* Low-rounded sharp as of design doc */
+  line-height: 1.2 !important;
+}
+
+/* Default height/padding for standard buttons, allowing tailwind classes to override */
+[data-theme="Kollektiv"] button:not([class*="h-"]):not([class*="w-"]):not(.btn-xs):not(.btn-sm):not(.btn-lg):not(.btn-ghost),
+[data-theme="Kollektiv"] .btn:not([class*="h-"]):not([class*="w-"]):not(.btn-xs):not(.btn-sm):not(.btn-lg):not(.btn-ghost),
+[data-theme="Kollektiv"] .form-btn:not([class*="h-"]):not([class*="w-"]):not(.btn-xs):not(.btn-sm):not(.btn-lg):not(.btn-ghost) {
+  height: 2.25rem;
+  min-height: 2.25rem;
+  padding-left: 1rem;
+  padding-right: 1rem;
+  font-size: 0.8125rem;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* Base style overrides for form input, select, and textarea elements under Kollektiv */
+[data-theme="Kollektiv"] input,
+[data-theme="Kollektiv"] textarea,
+[data-theme="Kollektiv"] select,
+[data-theme="Kollektiv"] .input,
+[data-theme="Kollektiv"] .select,
+[data-theme="Kollektiv"] .textarea,
+[data-theme="Kollektiv"] .form-input,
+[data-theme="Kollektiv"] .form-select,
+[data-theme="Kollektiv"] .form-textarea {
+  background-color: #171A14 !important; /* Base base-200 / neutral background for the dark theme */
+  border: 1px solid rgba(192, 240, 76, 0.25) !important;
+  color: #F4F6EF !important;
+  font-family: "Inter", sans-serif !important;
+  text-align: left !important;
+  text-transform: none !important;
+  border-radius: 4px !important;
+}
+
+/* Maintain distinct sizes for inputs and select boxes if not specified by classes */
+[data-theme="Kollektiv"] input:not([class*="h-"]):not(.input-lg):not(.input-sm):not(.input-xs),
+[data-theme="Kollektiv"] select:not([class*="h-"]):not(.input-lg):not(.input-sm):not(.input-xs),
+[data-theme="Kollektiv"] .input:not([class*="h-"]):not(.input-lg):not(.input-sm):not(.input-xs),
+[data-theme="Kollektiv"] .select:not([class*="h-"]):not(.input-lg):not(.input-sm):not(.input-xs),
+[data-theme="Kollektiv"] .form-input:not([class*="h-"]):not(.input-lg):not(.input-sm):not(.input-xs),
+[data-theme="Kollektiv"] .form-select:not([class*="h-"]):not(.input-lg):not(.input-sm):not(.input-xs) {
+  height: 2.5rem !important; /* Uniform height of 40px */
+}
+
+[data-theme="Kollektiv"] select option {
+  background-color: #171A14 !important;
+  color: #F4F6EF !important;
+  text-transform: none !important;
+  text-align: left !important;
+}
+
+[data-theme="Kollektiv"] input:focus,
+[data-theme="Kollektiv"] textarea:focus,
+[data-theme="Kollektiv"] select:focus,
+[data-theme="Kollektiv"] .input:focus,
+[data-theme="Kollektiv"] .select:focus,
+[data-theme="Kollektiv"] .textarea:focus,
+[data-theme="Kollektiv"] .form-input:focus,
+[data-theme="Kollektiv"] .form-select:focus,
+[data-theme="Kollektiv"] .form-textarea:focus {
+  border-color: #C0F04C !important;
+  outline: none !important;
+  box-shadow: 0 0 0 1px rgba(192, 240, 76, 0.3) !important;
+}
+
+/* If buttons or button sets are inside a panel-header or panel-footer container under Kollektiv, stretch them to the container height */
+[data-theme="Kollektiv"] .panel-header,
+[data-theme="Kollektiv"] .panel-footer,
+[data-theme="Kollektiv"] header.panel-header,
+[data-theme="Kollektiv"] footer.panel-footer {
+  display: flex !important;
+  align-items: stretch !important;
+}
+
+/* Ensure intermediate children layout wrapper divs containing buttons inside panel headers/footers also stretch */
+[data-theme="Kollektiv"] .panel-header > div,
+[data-theme="Kollektiv"] .panel-footer > div {
+  align-self: stretch !important;
+  display: flex !important;
+  align-items: stretch !important;
+  height: 100% !important;
+}
+
+/* Ensure buttons inside those panel headers/footers stretch perfectly to the full container height */
+[data-theme="Kollektiv"] .panel-header button,
+[data-theme="Kollektiv"] .panel-header .btn,
+[data-theme="Kollektiv"] .panel-footer button,
+[data-theme="Kollektiv"] .panel-footer .btn,
+[data-theme="Kollektiv"] header.panel-header button,
+[data-theme="Kollektiv"] header.panel-header .btn,
+[data-theme="Kollektiv"] footer.panel-footer button,
+[data-theme="Kollektiv"] footer.panel-footer .btn {
+  height: 100% !important;
+  min-height: 100% !important;
+  align-self: stretch !important;
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  border-radius: 0px !important; /* Low-rounded sharp as of design doc for panel actions */
+}
+
+/* Align textbox, textarea, and select elements to the left, and disable uppercase casing on select fields */
+[data-theme="Kollektiv"] input,
+[data-theme="Kollektiv"] textarea,
+[data-theme="Kollektiv"] select,
+[data-theme="Kollektiv"] select option {
+  text-align: left !important;
+}
+
+[data-theme="Kollektiv"] select,
+[data-theme="Kollektiv"] select option {
+  text-transform: none !important;
+}
+
+/* Standardize small buttons under Kollektiv theme */
+[data-theme="Kollektiv"] .btn-sm,
+[data-theme="Kollektiv"] button.btn-sm,
+[data-theme="Kollektiv"] button.px-2.py-1,
+[data-theme="Kollektiv"] button.px-3.py-1 {
+  height: 1.75rem !important; /* Uniform small height of 28px */
+  min-height: 1.75rem !important;
+  padding-left: 0.75rem !important;
+  padding-right: 0.75rem !important;
+  font-size: 0.75rem !important; /* Clean 12px text size */
+}
+
+/* Standardize extra small buttons under Kollektiv theme */
+[data-theme="Kollektiv"] .btn-xs,
+[data-theme="Kollektiv"] button.btn-xs {
+  height: 1.375rem !important; /* Uniform extra small height of 22px */
+  min-height: 1.375rem !important;
+  padding-left: 0.5rem !important;
+  padding-right: 0.5rem !important;
+  font-size: 0.6875rem !important; /* Clean 11px text size */
+}
+
+/* Standardize large buttons under Kollektiv theme */
+[data-theme="Kollektiv"] .btn-lg,
+[data-theme="Kollektiv"] button.btn-lg {
+  height: 2.75rem !important; /* Uniform large height of 44px */
+  min-height: 2.75rem !important;
+  padding-left: 1.5rem !important;
+  padding-right: 1.5rem !important;
+  font-size: 0.9375rem !important; /* Clean 15px text size */
+}
+
+/* Keep JetBrains Mono for code blocks and specific raw monospace data panels */
+[data-theme="Kollektiv"] code,
+[data-theme="Kollektiv"] pre,
+[data-theme="Kollektiv"] .font-mono,
+[data-theme="Kollektiv"] .font-sf-mono {
+  font-family: "JetBrains Mono", monospace !important;
+}
+
+[data-theme="Kollektiv"] .bg-primary,
+[data-theme="Kollektiv"] .btn-primary,
+[data-theme="Kollektiv"] .form-btn-primary {
+  color: #171A14 !important;
+}
+
+[data-theme="Kollektiv"] .form-btn-primary::before {
+  background: linear-gradient(90deg, transparent, rgba(23, 26, 20, 0.4), transparent) !important;
+}
+
 
 
 /* CRT Flicker Animation */

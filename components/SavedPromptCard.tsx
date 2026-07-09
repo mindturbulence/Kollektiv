@@ -1,8 +1,7 @@
 
 import React, { useState, useCallback, useRef, useEffect, memo } from 'react';
 import type { SavedPrompt } from '../types';
-import CopyIcon from './CopyIcon';
-import { DeleteIcon, CheckIcon, EditIcon, EllipsisVerticalIcon, SparklesIcon, BookmarkIcon } from './icons';
+import { DeleteIcon, CheckIcon, EditIcon, EllipsisVerticalIcon, SparklesIcon, BookmarkIcon, CopyIcon } from './icons';
 
 interface SavedPromptCardProps {
   prompt: SavedPrompt;
