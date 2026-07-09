@@ -1,6 +1,5 @@
 import express from "express";
 import { createServer as createViteServer } from "vite";
-import cors from "cors";
 import path from "path";
 
 // Array to keep track of active SSE connections
@@ -9,9 +8,9 @@ let clients: express.Response[] = [];
 async function startServer() {
   const app = express();
   const PORT = process.env.PORT ? parseInt(process.env.PORT, 10) : 7500;
-  const HOST = process.env.PORT ? "0.0.0.0" : "127.0.0.1";
+  // Explicit opt-in only: HOST=0.0.0.0 for containerized/cloud runs. Never inferred from PORT.
+  const HOST = process.env.HOST || "127.0.0.1";
 
-  app.use(cors());
 
   // Proxy for Google Drive / Google APIs (Bypasses body parsing on GETs to avoid hangs)
   app.use("/google-api", async (req, res) => {
