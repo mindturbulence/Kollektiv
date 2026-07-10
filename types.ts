@@ -16,6 +16,7 @@ export type ActiveTab =
   | 'image_compare'
   | 'color_palette_extractor'
   | 'composer'
+  | 'lora_editor'
   | 'settings';
 
 export type ActiveSettingsTab = 'app' | 'appearance' | 'integrations' | 'prompt' | 'gallery';
