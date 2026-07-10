@@ -1040,10 +1040,11 @@ import {
 
 describe('aggregateAndSort', () => {
     it('sums tag counts across folders and sorts descending', () => {
-        const input = { folderA: { cat: 2, dog: 5 }, folderB: { cat: 3 } };
-        expect(Object.entries(aggregateAndSort(input))).toEqual([['dog', 5], ['cat', 5]].sort((a, b) => b[1] - a[1]));
-        // dog=5, cat=2+3=5 -> both 5, order by original insertion after sort is stable per Object.entries
-        expect(aggregateAndSort(input)).toEqual({ dog: 5, cat: 5 });
+        const input = { folderA: { cat: 2, dog: 9 }, folderB: { cat: 3 } };
+        // dog=9, cat=2+3=5 -> unambiguous descending order (no tie), unlike an equal-count fixture
+        // which would leave the result order-dependent on Array.sort's stability plus insertion order.
+        expect(aggregateAndSort(input)).toEqual({ dog: 9, cat: 5 });
+        expect(Object.keys(aggregateAndSort(input))).toEqual(['dog', 'cat']);
     });
 });
 
