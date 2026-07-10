@@ -4,7 +4,7 @@ import { handleGeminiError } from '../utils/errorHandler';
 import type { EnhancementResult, LLMSettings } from '../types';
 import { trackTokenUsage } from '../utils/settingsStorage';
 
-const getGeminiClient = (settings: LLMSettings): GoogleGenAI => {
+export const getGeminiClient = (settings: LLMSettings): GoogleGenAI => {
     const apiKey = settings?.geminiApiKey || process.env.GEMINI_API_KEY;
     if (!apiKey) {
         throw new Error("GEMINI_API_KEY is missing. Add it in Setup -> LLM -> Gemini API Key");
@@ -138,7 +138,7 @@ export const generateColorNameGemini = async (hexColor: string, mood: string, se
     } catch (err) { return "Archived Color"; }
 };
 
-export const convertPromptToNaturalLanguage = async (promptText: string, settings: LLMSettings): Promise<string> => {
+const convertPromptToNaturalLanguage = async (promptText: string, settings: LLMSettings): Promise<string> => {
     try {
         const ai = getGeminiClient(settings);
         const response = await ai.models.generateContent({

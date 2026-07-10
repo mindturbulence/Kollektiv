@@ -10,9 +10,7 @@ export type ActiveTab =
   | 'media_analyzer'
   | 'prompt'
   | 'gallery'
-  | 'cheatsheet'
-  | 'artstyles'
-  | 'artists'
+
   | 'resizer'
   | 'video_to_frames'
   | 'image_compare'
@@ -36,13 +34,6 @@ export interface Idea {
 }
 
 // --- Settings ---
-export interface FeatureSettings {
-  isPromptLibraryEnabled: boolean;
-  isGalleryEnabled: boolean;
-  isCheatsheetsEnabled: boolean;
-  isToolsEnabled: boolean;
-}
-
 export interface YouTubeConnection {
   isConnected: boolean;
   channelName?: string;
@@ -109,6 +100,12 @@ export interface LLMSettings {
   mcpServerUrl?: string;
   mcpEnabled?: boolean;
 
+  // AI Assistant Persona (chat + Gemini Live voice mode)
+  assistantName?: string;
+  assistantVoice?: string;
+  assistantLanguage?: string;
+  assistantPersonality?: string;
+
   // Prompt & Token Tracking
   masterRolePrompt?: string;
   geminiTokenUsage?: TokenUsage;
@@ -134,9 +131,6 @@ export interface LLMSettings {
   idleScreenType: 'matrix' | 'gallery';
   isIdleEnabled: boolean;
   idleTimeoutMinutes: number;
-  
-  // Feature Toggles
-  features: FeatureSettings;
   
   // Integrations
   youtube?: YouTubeConnection;

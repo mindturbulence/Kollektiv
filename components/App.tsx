@@ -30,9 +30,7 @@ import DiscoveryPage from './DiscoveryPage';
 import PromptsPage from './PromptsPage';
 import SavedPrompts from './SavedPrompts';
 import ImageGallery from './ImageGallery';
-import Cheatsheet from './Cheatsheet';
-import ArtstyleCheatsheet from './ArtstyleCheatsheet';
-import ArtistCheatsheet from './ArtistCheatsheet';
+
 import { SetupPage } from './SetupPage';
 import ComposerPage from './ComposerPage';
 import ImageCompare from './ImageCompare';
@@ -448,9 +446,7 @@ const AppContent: React.FC = () => {
             case 'prompt': return `LIBRARY | ${base}`;
             case 'settings': return `SETTINGS | ${base}`;
             case 'composer': return `COMPOSER | ${base}`;
-            case 'cheatsheet': return `CHEATSHEET | ${base}`;
-            case 'artstyles': return `STYLES | ${base}`;
-            case 'artists': return `ARTISTS | ${base}`;
+
             case 'image_compare': return `COMPARE | ${base}`;
             case 'color_palette_extractor': return `PALETTE | ${base}`;
             case 'resizer': return `RESIZER | ${base}`;
@@ -719,19 +715,10 @@ const AppContent: React.FC = () => {
     }, [isInitialized]);
 
 
-    const handleNavigate = (tab: ActiveTab) => {
+    const handleNavigate = useCallback((tab: ActiveTab) => {
         if (tab === activeTab) return;
         audioService.playTransition();
         setActiveTab(tab);
-    };
-
-    useEffect(() => {
-        const unsubscribe = appEventBus.on('navigate', (tab) => {
-            if (typeof tab === 'string') {
-                setActiveTab(tab as ActiveTab);
-            }
-        });
-        return () => unsubscribe();
     }, [activeTab]);
 
     useEffect(() => {
@@ -763,23 +750,37 @@ const AppContent: React.FC = () => {
         showGlobalFeedback('Sent to Builder!');
     }, [showGlobalFeedback, handleNavigate]);
 
+    useEffect(() => {
+        const navigateSub = appEventBus.on('navigate', (tab) => {
+            if (typeof tab === 'string') {
+                setActiveTab(tab as ActiveTab);
+            }
+        });
+        const sendToSub = appEventBus.on('sendToPromptsPage', (state) => {
+            if (state && typeof state === 'object') {
+                handleSendToPromptsPage(state as PromptsPageState);
+            }
+        });
+        return () => { navigateSub(); sendToSub(); };
+    }, [activeTab, handleSendToPromptsPage]);
+
     const handleClipIdea = useCallback((idea: Idea) => {
         setClippedIdeas(prev => [idea, ...prev]);
         showGlobalFeedback(`Clipped "${idea.title}"`);
     }, [setClippedIdeas, showGlobalFeedback]);
 
-    const handleRemoveIdea = (id: string) => setClippedIdeas(prev => prev.filter(idea => idea.id !== id));
-    const handleClearAllIdeas = () => setClippedIdeas([]);
-    const handleInsertIdea = (prompt: string) => {
+    const handleRemoveIdea = useCallback((id: string) => setClippedIdeas(prev => prev.filter(idea => idea.id !== id)), [setClippedIdeas]);
+    const handleClearAllIdeas = useCallback(() => setClippedIdeas([]), [setClippedIdeas]);
+    const handleInsertIdea = useCallback((prompt: string) => {
         handleSendToPromptsPage({ prompt, view: 'composer', id: `clip-${Date.now()}` });
         setIsClippingPanelOpen(false);
-    };
-    const handleRefineIdea = (prompt: string) => {
+    }, [handleSendToPromptsPage, setIsClippingPanelOpen]);
+    const handleRefineIdea = useCallback((prompt: string) => {
         handleSendToPromptsPage({ prompt, view: 'enhancer' });
         setIsClippingPanelOpen(false);
-    };
+    }, [handleSendToPromptsPage, setIsClippingPanelOpen]);
 
-    const handleSaveClippedIdea = async (idea: Idea) => {
+    const handleSaveClippedIdea = useCallback(async (idea: Idea) => {
         try {
             await addSavedPrompt({
                 text: idea.prompt,
@@ -790,7 +791,7 @@ const AppContent: React.FC = () => {
         } catch (e) {
             showGlobalFeedback("Failed to save.", true);
         }
-    };
+    }, [showGlobalFeedback]);
 
     const renderContent = () => {
         const categoryPanelProps = {
@@ -803,16 +804,14 @@ const AppContent: React.FC = () => {
         switch (activeTab) {
             case 'dashboard': return <Dashboard key="dashboard" onNavigate={handleNavigate} onClipIdea={handleClipIdea} isExiting={false} />;
             case 'discovery': return <DiscoveryPage key="discovery" isExiting={false} onClipIdea={handleClipIdea} onSendToBuilder={handleSendToPromptsPage} showGlobalFeedback={showGlobalFeedback} />;
-            case 'prompts': return <PromptsPage key="prompts" onClipIdea={handleClipIdea} initialState={promptsPageState} onStateHandled={() => setPromptsPageState(null)} showGlobalFeedback={showGlobalFeedback} isExiting={false} onSendToBuilder={handleSendToPromptsPage} />;
-            case 'crafter': return <PromptsPage key="prompts" forcedView="composer" onNavigate={handleNavigate} onClipIdea={handleClipIdea} initialState={promptsPageState} onStateHandled={() => setPromptsPageState(null)} showGlobalFeedback={showGlobalFeedback} isExiting={false} onSendToBuilder={handleSendToPromptsPage} />;
-            case 'refiner': return <PromptsPage key="prompts" forcedView="refine" onNavigate={handleNavigate} onClipIdea={handleClipIdea} initialState={promptsPageState} onStateHandled={() => setPromptsPageState(null)} showGlobalFeedback={showGlobalFeedback} isExiting={false} onSendToBuilder={handleSendToPromptsPage} />;
-            case 'prompt_analyzer': return <PromptsPage key="prompts" forcedView="prompt_analyzer" onNavigate={handleNavigate} onClipIdea={handleClipIdea} initialState={promptsPageState} onStateHandled={() => setPromptsPageState(null)} showGlobalFeedback={showGlobalFeedback} isExiting={false} onSendToBuilder={handleSendToPromptsPage} />;
-            case 'media_analyzer': return <PromptsPage key="prompts" forcedView="analyzer" onNavigate={handleNavigate} onClipIdea={handleClipIdea} initialState={promptsPageState} onStateHandled={() => setPromptsPageState(null)} showGlobalFeedback={showGlobalFeedback} isExiting={false} onSendToBuilder={handleSendToPromptsPage} />;
-            case 'prompt': return <SavedPrompts key="prompt" {...categoryPanelProps} onSendToEnhancer={(prompt) => handleSendToPromptsPage({ prompt, view: 'enhancer' })} showGlobalFeedback={showGlobalFeedback} onClipIdea={handleClipIdea} isExiting={false} />;
+            case 'prompts': return <PromptsPage key="prompts" onClipIdea={handleClipIdea} initialState={promptsPageState}                            onStateHandled={handleClearPromptsPageState} showGlobalFeedback={showGlobalFeedback} isExiting={false} onSendToBuilder={handleSendToPromptsPage} />;
+            case 'crafter': return <PromptsPage key="prompts" forcedView="composer" onNavigate={handleNavigate} onClipIdea={handleClipIdea} initialState={promptsPageState}                            onStateHandled={handleClearPromptsPageState} showGlobalFeedback={showGlobalFeedback} isExiting={false} onSendToBuilder={handleSendToPromptsPage} />;
+            case 'refiner': return <PromptsPage key="prompts" forcedView="refine" onNavigate={handleNavigate} onClipIdea={handleClipIdea} initialState={promptsPageState}                            onStateHandled={handleClearPromptsPageState} showGlobalFeedback={showGlobalFeedback} isExiting={false} onSendToBuilder={handleSendToPromptsPage} />;
+            case 'prompt_analyzer': return <PromptsPage key="prompts" forcedView="prompt_analyzer" onNavigate={handleNavigate} onClipIdea={handleClipIdea} initialState={promptsPageState}                            onStateHandled={handleClearPromptsPageState} showGlobalFeedback={showGlobalFeedback} isExiting={false} onSendToBuilder={handleSendToPromptsPage} />;
+            case 'media_analyzer': return <PromptsPage key="prompts" forcedView="analyzer" onNavigate={handleNavigate} onClipIdea={handleClipIdea} initialState={promptsPageState}                            onStateHandled={handleClearPromptsPageState} showGlobalFeedback={showGlobalFeedback} isExiting={false} onSendToBuilder={handleSendToPromptsPage} />;
+            case 'prompt': return <SavedPrompts key="prompt" {...categoryPanelProps}                    onSendToEnhancer={handleSendToEnhancer} showGlobalFeedback={showGlobalFeedback} onClipIdea={handleClipIdea} isExiting={false} />;
             case 'gallery': return <ImageGallery key="gallery" {...categoryPanelProps} isSidebarPinned={false} showGlobalFeedback={showGlobalFeedback} isExiting={false} />;
-            case 'cheatsheet': return <Cheatsheet key="cheatsheet" isExiting={false} />;
-            case 'artstyles': return <ArtstyleCheatsheet key="artstyles" onSendToPromptsPage={(state) => handleSendToPromptsPage({ ...state, view: 'enhancer' })} isExiting={false} />;
-            case 'artists': return <ArtistCheatsheet key="artists" onSendToPromptsPage={(state) => handleSendToPromptsPage({ ...state, view: 'enhancer' })} isExiting={false} />;
+
             case 'settings': return <SetupPage key="settings" activeSettingsTab={activeSettingsTab} setActiveSettingsTab={setActiveSettingsTab} activeSubTab={activeSettingsSubTab} setActiveSubTab={setActiveSettingsSubTabSetter} showGlobalFeedback={showGlobalFeedback} isExiting={false} />;
             case 'composer': return <ComposerPage key="composer" showGlobalFeedback={showGlobalFeedback} isExiting={false} />;
             case 'image_compare': return <ImageCompare key="image_compare" isExiting={false} />;
@@ -891,12 +890,32 @@ const AppContent: React.FC = () => {
         updateSettings({ ...settings, musicEnabled: newState });
     }, [settings, updateSettings]);
 
-    const handleStandbyClick = (e: React.MouseEvent) => {
+    const handleStandbyClick = useCallback((e: React.MouseEvent) => {
         e.stopPropagation();
         audioService.playClick();
         setIsIdle(true);
         isIdleRef.current = true;
-    };
+    }, []);
+
+    // --- Inline-callback replacements ---
+    const handleAboutClick = useCallback(() => setIsAboutModalOpen(true), []);
+    const handleToggleClippingPanel = useCallback(() => setIsClippingPanelOpen(prev => !prev), []);
+    const handleToggleHermes = useCallback(() => setIsHermesOpen(prev => !prev), []);
+    const handleClearPromptsPageState = useCallback(() => setPromptsPageState(null), []);
+    const handleSendToEnhancer = useCallback((prompt: string) => handleSendToPromptsPage({ prompt, view: 'enhancer' }), [handleSendToPromptsPage]);
+    const handleCloseClippingPanel = useCallback(() => setIsClippingPanelOpen(false), []);
+    const handleCloseLlmStatus = useCallback(() => setIsLlmPanelOpen(false), []);
+    const handleCloseHermes = useCallback(() => setIsHermesOpen(false), []);
+    const handleToggleLlmPanel = useCallback(() => {
+        audioService.playClick();
+        setIsLlmPanelOpen(prev => !prev);
+    }, []);
+    const handleCloseAboutModal = useCallback(() => {
+        audioService.playModalClose();
+        setIsAboutModalOpen(false);
+    }, []);
+    const handleCloseFeedback = useCallback(() => setGlobalFeedback(null), []);
+    const handleIdleInteraction = useCallback(() => resetIdleTimer(true), [resetIdleTimer]);
 
     if (showWelcome) return <Welcome onSetupComplete={initializeApp} />;
 
@@ -938,7 +957,7 @@ const AppContent: React.FC = () => {
                 </div>
             )}
 
-            <IdleOverlay isVisible={isIdle} onInteraction={() => resetIdleTimer(true)} />
+            <IdleOverlay isVisible={isIdle} onInteraction={handleIdleInteraction} />
 
             {!isInitialized ? (
                 !isLoading ? (
@@ -1009,9 +1028,9 @@ const AppContent: React.FC = () => {
                                 onNavigate={handleNavigate}
                                 activeTab={activeTab}
                                 isInitialized={isInitialized}
-                                onAboutClick={() => setIsAboutModalOpen(true)}
-                                onToggleClippingPanel={() => setIsClippingPanelOpen(!isClippingPanelOpen)}
-                                onToggleHermes={() => setIsHermesOpen(!isHermesOpen)}
+                                onAboutClick={handleAboutClick}
+                                onToggleClippingPanel={handleToggleClippingPanel}
+                                onToggleHermes={handleToggleHermes}
                                 onStandbyClick={handleStandbyClick}
                                 clippedIdeasCount={clippedIdeas.length}
                             />
@@ -1061,7 +1080,7 @@ const AppContent: React.FC = () => {
 
                                     <ClippingPanel
                                         isOpen={isClippingPanelOpen}
-                                        onClose={() => setIsClippingPanelOpen(false)}
+                                        onClose={handleCloseClippingPanel}
                                         clippedIdeas={clippedIdeas}
                                         onRemoveIdea={handleRemoveIdea}
                                         onClearAll={handleClearAllIdeas}
@@ -1073,12 +1092,12 @@ const AppContent: React.FC = () => {
 
                                     <LlmStatusPanel
                                         isOpen={isLlmPanelOpen}
-                                        onClose={() => setIsLlmPanelOpen(false)}
+                                        onClose={handleCloseLlmStatus}
                                     />
 
                                     <LLMChatPanel
                                         isOpen={isHermesOpen}
-                                        onClose={() => setIsHermesOpen(false)}
+                                        onClose={handleCloseHermes}
                                     />
                                     <HermesController />
                                 </div>
@@ -1091,10 +1110,7 @@ const AppContent: React.FC = () => {
                                     playerState={playerState}
                                     onMusicToggle={handleMusicToggle}
                                     themeMode={settings.activeThemeMode}
-                                    onToggleLlmPanel={() => {
-                                        audioService.playClick();
-                                        setIsLlmPanelOpen(!isLlmPanelOpen)
-                                    }}
+                                    onToggleLlmPanel={handleToggleLlmPanel}
                                     isLlmPanelOpen={isLlmPanelOpen}
                                 />
                             </div>
@@ -1105,16 +1121,13 @@ const AppContent: React.FC = () => {
 
             <AboutModal
                 isOpen={isAboutModalOpen}
-                onClose={() => {
-                    audioService.playModalClose();
-                    setIsAboutModalOpen(false);
-                }}
+                onClose={handleCloseAboutModal}
             />
 
             {globalFeedback && (
                 <FeedbackToast
                     isOpen={!!globalFeedback}
-                    onClose={() => setGlobalFeedback(null)}
+                    onClose={handleCloseFeedback}
                     message={globalFeedback.message}
                     type={globalFeedback.type}
                 />

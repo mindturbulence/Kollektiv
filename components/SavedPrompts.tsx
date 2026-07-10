@@ -220,17 +220,15 @@ const SavedPrompts: React.FC<SavedPromptsProps> = ({
             );
         }
     }
-  }, [masonryColumns]);
-
-  const handleClip = (p: SavedPrompt) => {
-      onClipIdea({
-          id: p.id,
-          lens: 'Archived',
-          title: p.title || 'Untitled Prompt',
-          prompt: p.text,
-          source: 'Library'
-      });
-  };
+  }, [masonryColumns]);    const handleClip = useCallback((p: SavedPrompt) => {
+        onClipIdea({
+            id: p.id,
+            lens: 'Archived',
+            title: p.title || 'Untitled Prompt',
+            prompt: p.text,
+            source: 'Library'
+        });
+    }, [onClipIdea]);
 
   const treeItems = useMemo<TreeViewItem[]>(() => {
     const q = categorySearchQuery.toLowerCase().trim();

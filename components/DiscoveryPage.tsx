@@ -1,5 +1,5 @@
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { motion } from 'motion/react';
 import { discoveryService, type DiscoveryCollection, type PromptItem } from '../services/discoveryService';
 import {
@@ -404,13 +404,13 @@ const DiscoveryPage: React.FC<DiscoveryPageProps> = ({
 
     const isSearching = searchQuery !== debouncedSearchQuery;
 
-    const handleCopy = (text: string) => {
+    const handleCopy = useCallback((text: string) => {
         navigator.clipboard.writeText(text);
         audioService.playClick();
         showGlobalFeedback('SCRIPT_COPIED');
-    };
+    }, [showGlobalFeedback]);
 
-    const handleClip = async (p: PromptItem) => {
+    const handleClip = useCallback(async (p: PromptItem) => {
         try {
             await addSavedPrompt({
                 text: p.prompt,
@@ -423,7 +423,7 @@ const DiscoveryPage: React.FC<DiscoveryPageProps> = ({
             console.error('Failed to save to vault:', err);
             showGlobalFeedback('VAULT_FAILURE', true);
         }
-    };
+    }, [showGlobalFeedback]);
 
     const handleClipboardClip = (p: PromptItem) => {
         if (!onClipIdea) return;

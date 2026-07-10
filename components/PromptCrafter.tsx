@@ -559,7 +559,7 @@ const PromptCrafter = ({ onSaveToLibrary, onClip, onSendToEnhancer, onSendToRefi
         setSelectedRecipeId(recipeId);
     };
 
-    const handleWildcardClick = (wildcardName: string) => {
+    const handleWildcardClick = useCallback((wildcardName: string) => {
         const textToInsert = `__${wildcardName}__`;
         const prefix = promptText.trim().length > 0 && !promptText.endsWith(' ') ? ' ' : '';
         const newText = `${promptText}${prefix}${textToInsert}`;
@@ -573,7 +573,7 @@ const PromptCrafter = ({ onSaveToLibrary, onClip, onSendToEnhancer, onSendToRefi
                 (textarea as any).setSelectionRange(newText.length, newText.length);
             }, 0);
         }
-    };
+    }, [promptText]);
 
     const handleUseTemplate = useCallback((templateToUse: WildcardFile | null = selectedTemplate) => {
         if (templateToUse) {

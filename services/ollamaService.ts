@@ -29,7 +29,7 @@ const BASE_CONFIG = {
     }
 };
 
-const getOllamaConfig = (settings: LLMSettings) => {
+export const getOllamaConfig = (settings: LLMSettings) => {
     const isCloud = settings.activeLLM === 'ollama_cloud';
     const rawBaseUrl = sanitizeUrl(isCloud ? settings.ollamaCloudBaseUrl : settings.ollamaBaseUrl);
     
@@ -365,7 +365,7 @@ export const generateColorNameOllama = async (hexColor: string, mood: string, se
     } catch (err) { return "Archived Color"; }
 };
 
-export const convertPromptToNaturalLanguage = async (promptText: string, settings: LLMSettings): Promise<string> => {
+const convertPromptToNaturalLanguage = async (promptText: string, settings: LLMSettings): Promise<string> => {
     try {
         const config = getOllamaConfig(settings);
         const apiResponse = await fetch(`${config.baseUrl}/api/chat`, {

@@ -1,7 +1,7 @@
-import React, { useRef, useEffect, useState } from 'react';
+import React, { useRef, useEffect, useState, useCallback } from 'react';
 import { createPortal } from 'react-dom';
 import { motion, AnimatePresence } from 'motion/react';
-import { streamChat } from '../services/llmService';
+import { runAssistantTurn } from '../services/assistantService';
 import { useSettings } from '../contexts/SettingsContext';
 import { CloseIcon, SparklesIcon, SidebarIcon, PlusIcon, DeleteIcon, PaperclipIcon, CpuChipIcon } from './icons';
 import { mcpService } from '../services/mcpService';
@@ -13,6 +13,7 @@ import { vscDarkPlus } from 'react-syntax-highlighter/dist/esm/styles/prism';
 import { getSavedChatSessions, saveChatSession, deleteChatSession, clearAllChatSessions, ChatSession } from '../utils/chatStorage';
 import { v4 as uuidv4 } from 'uuid';
 import { appControlService } from '../services/appControlService';
+import { appEventBus } from '../utils/eventBus';
 
 interface LLMChatPanelProps {
     isOpen: boolean;
@@ -43,13 +44,20 @@ export const LLMChatPanel: React.FC<LLMChatPanelProps> = ({ isOpen, onClose }) =
         }
     }, [isOpen]);
 
-    const startNewSession = () => {
-        
-        
+    // The live voice widget lives outside this panel (see App.tsx) so voice
+    // sessions survive the panel closing; log its tool activity here while open.
+    useEffect(() => {
+        if (!isOpen) return;
+        return appEventBus.on('liveAssistantActivity', (line: string) => {
+            setMessages(prev => [...prev, { role: 'system', content: line }]);
+        });
+    }, [isOpen]);
+
+    const startNewSession = useCallback(() => {
         setMessages([{ role: 'system', content: `Type /help to see available local commands.` }]);
         setActiveSessionId(null);
         if (window.innerWidth < 768) setIsSidebarOpen(false);
-    };
+    }, []);
 
     const loadSession = (id: string) => {
         const session = savedSessions.find(s => s.id === id);
@@ -60,24 +68,24 @@ export const LLMChatPanel: React.FC<LLMChatPanelProps> = ({ isOpen, onClose }) =
         }
     };
 
-    const deleteSession = (id: string) => {
+    const deleteSession = useCallback((id: string) => {
         deleteChatSession(id);
         const updated = getSavedChatSessions();
         setSavedSessions(updated);
         if (activeSessionId === id) {
             startNewSession();
         }
-    };
+    }, [activeSessionId, startNewSession]);
 
-    const clearAllSessions = () => {
+    const clearAllSessions = useCallback(() => {
         if (window.confirm("Are you sure you want to clear all chat history?")) {
             clearAllChatSessions();
             setSavedSessions([]);
             startNewSession();
         }
-    };
+    }, [startNewSession]);
 
-    const persistSession = (currentMessages: any[], idToUse?: string) => {
+    const persistSession = useCallback((currentMessages: any[], idToUse?: string) => {
         let id = idToUse || activeSessionId;
         if (!id) {
             id = uuidv4();
@@ -93,7 +101,7 @@ export const LLMChatPanel: React.FC<LLMChatPanelProps> = ({ isOpen, onClose }) =
         // Refresh session list without losing focus
         setSavedSessions(getSavedChatSessions());
         return id; // return created ID if needed
-    };
+    }, [activeSessionId]);
 
     // Initialize system message based on active LLM (only on mount or change if we have no user messages)
     useEffect(() => {
@@ -231,15 +239,15 @@ export const LLMChatPanel: React.FC<LLMChatPanelProps> = ({ isOpen, onClose }) =
         { cmd: '/help', desc: 'Show all available commands' }
     ];
 
-    const insertCommand = (cmdStr: string) => {
+    const insertCommand = useCallback((cmdStr: string) => {
         setInput(cmdStr);
         setShowCommandMenu(false);
         textareaRef.current?.focus();
-    };
+    }, []);
     const textareaRef = useRef<HTMLTextAreaElement>(null);
     const fileInputRef = useRef<HTMLInputElement>(null);
 
-    const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const handleFileChange = useCallback(async (e: React.ChangeEvent<HTMLInputElement>) => {
         if (e.target.files) {
             const files = Array.from(e.target.files);
             const newAttachments = await Promise.all(
@@ -257,11 +265,11 @@ export const LLMChatPanel: React.FC<LLMChatPanelProps> = ({ isOpen, onClose }) =
             setAttachments(prev => [...prev, ...newAttachments].slice(0, 5)); // max 5
         }
         if (fileInputRef.current) fileInputRef.current.value = '';
-    };
+    }, []);
 
-    const removeAttachment = (index: number) => {
+    const removeAttachment = useCallback((index: number) => {
         setAttachments(prev => prev.filter((_, i) => i !== index));
-    };
+    }, []);
 
     useEffect(() => {
         if (textareaRef.current) {
@@ -281,9 +289,9 @@ export const LLMChatPanel: React.FC<LLMChatPanelProps> = ({ isOpen, onClose }) =
         }
     }, [isOpen, isProcessing, activeSessionId]);
 
-    const scrollToBottom = () => {
+    const scrollToBottom = useCallback(() => {
         messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
-    };
+    }, []);
 
     useEffect(() => {
         if (isOpen) {
@@ -414,77 +422,36 @@ ${systemResponse}` };
         setIsProcessing(true);
 
         try {
-            let currentMessages = [...newMessages];
-            let shouldContinue = true;
+            const events = runAssistantTurn(newMessages, settings);
+            let fullResponse = '';
+            let assistantOpen = false;
 
-            while (shouldContinue) {
-                shouldContinue = false;
-
-                setMessages(prev => [...prev, { role: 'assistant', content: '' }]);
-                const generator = streamChat(currentMessages, settings);
-
-                let fullResponse = '';
-                for await (const chunk of generator) {
-                    fullResponse += chunk;
-                    if (chunk.trim() && chunk.length > 0) {
-                        audioService.playType();
+            for await (const ev of events) {
+                if (ev.type === 'text') {
+                    if (!assistantOpen) {
+                        assistantOpen = true;
+                        fullResponse = '';
+                        setMessages(prev => [...prev, { role: 'assistant', content: '' }]);
                     }
+                    fullResponse += ev.chunk;
+                    if (ev.chunk.trim() && ev.chunk.length > 0) audioService.playType();
                     setMessages(prev => {
                         const cloned = [...prev];
-                        cloned[cloned.length - 1] = {
-                            ...cloned[cloned.length - 1],
-                            content: fullResponse
-                        };
+                        cloned[cloned.length - 1] = { ...cloned[cloned.length - 1], content: fullResponse };
                         return cloned;
                     });
-                }
-
-                currentMessages = [...currentMessages, { role: 'assistant' as const, content: fullResponse }];
-
-                // Final save after stream ends
-                setMessages(prev => {
-                    persistSession(prev, currentSessionId);
-                    return prev;
-                });
-
-                // Check for action tags
-                const actionMatch = fullResponse.match(/<action>([\s\S]*?)<\/action>/);
-                if (actionMatch) {
-                    try {
-                        const actionObj = JSON.parse(actionMatch[1].trim());
-                        let result;
-                        if (actionObj.type === 'navigate') {
-                            result = appControlService.navigate(actionObj.page);
-                        } else if (actionObj.type === 'read_prompts') {
-                            result = await appControlService.getPrompts(actionObj.query);
-                        } else if (actionObj.type === 'save_prompt') {
-                            result = await appControlService.savePrompt(actionObj.title || 'Untitled', actionObj.prompt || '');
-                        } else if (actionObj.type === 'read_cheatsheets') {
-                            result = await appControlService.getCheatsheets(actionObj.query);
-                        } else if (actionObj.type === 'read_chat_history') {
-                            result = await appControlService.getChatHistory();
-                        } else if (actionObj.type === 'read_gallery') {
-                            result = await appControlService.getGalleryInfo();
-                        } else if (actionObj.type === 'read_discovery_collections') {
-                            result = await appControlService.getDiscoveryCollections();
-                        } else if (actionObj.type === 'read_discovery_prompts') {
-                            result = await appControlService.getDiscoveryPrompts(actionObj.collectionId, actionObj.query);
-                        } else {
-                            result = "Unknown action type: " + actionObj.type;
-                        }
-
-                        const systemMsg = "System: Action executed. Result:\n" + result;
-                        setMessages(prev => [...prev, { role: 'system' as const, content: systemMsg }]);
-                        currentMessages = [...currentMessages, { role: 'system' as const, content: systemMsg }];
-                        
-                        // Loop again to let assistant process result!
-                        shouldContinue = true;
-                    } catch (e) {
-                         const sysErr = "System: Failed to parse or execute action: " + e;
-                         setMessages(prev => [...prev, { role: 'system' as const, content: sysErr }]);
-                         currentMessages = [...currentMessages, { role: 'system' as const, content: sysErr }];
-                         shouldContinue = true;
-                    }
+                } else if (ev.type === 'turn_end') {
+                    assistantOpen = false;
+                    setMessages(prev => { persistSession(prev, currentSessionId); return prev; });
+                } else if (ev.type === 'tool_start') {
+                    setMessages(prev => [...prev, { role: 'system', content: `⚙️ [Assistant]: ${ev.name}(${JSON.stringify(ev.args)})` }]);
+                } else if (ev.type === 'tool_result') {
+                    const preview = ev.result.length > 600 ? ev.result.slice(0, 600) + '…' : ev.result;
+                    setMessages(prev => {
+                        const next = [...prev, { role: 'system' as const, content: `✅ [${ev.name}]: ${preview}` }];
+                        persistSession(next, currentSessionId);
+                        return next;
+                    });
                 }
             }
         } catch (error: any) {

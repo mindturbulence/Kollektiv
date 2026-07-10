@@ -3,12 +3,14 @@ import type { ActiveTab } from '../types';
 import { audioService } from '../services/audioService';
 import { useSettings } from '../contexts/SettingsContext';
 import { gsap } from 'gsap';
-import { motion } from 'motion/react';
 import RollingText from './RollingText';
 import TimedScrambledText from './TimedScrambledText';
 import ThemeSwitcher from './ThemeSwitcher';
 import ChromaticText from './ChromaticText';
 import { InformationCircleIcon, BookmarkIcon, Cog6ToothIcon, PowerIcon, ChatBubbleIcon } from './icons';
+import { HUDNavItem } from './HUDNavItem';
+import { LiveAssistantMicButton, LiveAssistantScreenButton } from './LiveAssistantBar';
+import { LiveAssistantProvider } from '../contexts/LiveAssistantContext';
 
 interface HeaderProps {
   onNavigate: (tab: ActiveTab) => void;
@@ -52,38 +54,6 @@ const Logo: React.FC<{ onNavigate: (tab: ActiveTab) => void }> = ({ onNavigate }
         <span className="text-primary italic animate-pulse drop-shadow-[0_0_10px_oklch(var(--p))] transition-all inline-block ml-0.5 font-black">.</span>
       </h1>
     </button>
-  );
-};
-
-const HUDNavItem: React.FC<{
-  children: React.ReactNode;
-  onClick?: (e: React.MouseEvent) => void;
-  onHover?: () => void;
-  title?: string;
-  badge?: number;
-}> = ({ children, onClick, onHover, title, badge }) => {
-  return (
-    <motion.button
-      type="button"
-      onClick={onClick}
-      onMouseEnter={() => {
-        audioService.playHover();
-        onHover?.();
-      }}
-      initial="initial"
-      whileHover="hover"
-      className="group relative p-2 text-primary no-glow transition-colors duration-300 pointer-events-auto z-[99999]"
-      title={title}
-    >
-      {children}
-
-      {badge !== undefined && badge > 0 && (
-        <span className="absolute top-0 right-0 flex h-2 w-2">
-          <span className="animate-ping absolute inline-flex h-full w-full rounded-none bg-primary opacity-75"></span>
-          <span className="relative inline-flex rounded-none h-2 w-2 bg-primary"></span>
-        </span>
-      )}
-    </motion.button>
   );
 };
 
@@ -166,12 +136,6 @@ const Header: React.FC<HeaderProps> = ({
     { id: 'gallery' as ActiveTab, label: 'Media' },
   ];
 
-  const guideItems: NavItemData[] = [
-    { id: 'cheatsheet' as ActiveTab, label: 'Cheatsheet' },
-    { id: 'artstyles' as ActiveTab, label: 'Styles' },
-    { id: 'artists' as ActiveTab, label: 'Artists' },
-  ];
-
   const utilityItems: NavItemData[] = [
     { id: 'composer' as ActiveTab, label: 'Composer' },
     { id: 'image_compare' as ActiveTab, label: 'Compare' },
@@ -185,7 +149,6 @@ const Header: React.FC<HeaderProps> = ({
     { id: 'discovery', label: 'Discovery', items: [], singleId: 'discovery' as ActiveTab },
     { id: 'workspaces', label: 'Workspaces', items: workspaceItems },
     { id: 'vault', label: 'Vault', items: vaultItems },
-    { id: 'guides', label: 'References', items: guideItems },
     { id: 'utilities', label: 'Utilities', items: utilityItems },
   ];
 
@@ -279,6 +242,7 @@ const Header: React.FC<HeaderProps> = ({
   }, [activeMenu, onNavigate]);
 
   return (
+    <LiveAssistantProvider>
     <header className="flex-shrink-0 flex flex-col h-12 bg-base-200/20 backdrop-blur-md border-b border-base-content/10 z-50 relative">
       <div ref={navRef} className="flex flex-grow items-center relative z-50 px-6 gap-4">
 
@@ -333,6 +297,7 @@ const Header: React.FC<HeaderProps> = ({
 
         {/* Right Side Controls */}
         <div className="ml-auto flex gap-1 items-center relative z-[9999] pointer-events-auto">
+          <LiveAssistantScreenButton />
           <HUDNavItem
             onClick={(e) => {
               e.stopPropagation();
@@ -343,6 +308,8 @@ const Header: React.FC<HeaderProps> = ({
           >
             <InformationCircleIcon className="w-4 h-4" />
           </HUDNavItem>
+          <div className="w-px h-2 bg-base-content/10 self-center" />
+          <LiveAssistantMicButton />
           <div className="w-px h-2 bg-base-content/10 self-center" />
           <HUDNavItem
             onClick={(e) => {
@@ -393,6 +360,7 @@ const Header: React.FC<HeaderProps> = ({
         </div>
       </div>
     </header>
+    </LiveAssistantProvider>
   );
 };
 

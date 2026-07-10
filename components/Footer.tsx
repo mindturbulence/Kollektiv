@@ -6,6 +6,7 @@ import { useSettings } from '../contexts/SettingsContext';
 import { fileSystemManager } from '../utils/fileUtils';
 import { audioService } from '../services/audioService';
 import { loadGalleryItems } from '../utils/galleryStorage';
+import { appEventBus } from '../utils/eventBus';
 
 const MetadataItem: React.FC<{ label: string; value: string }> = ({ label, value }) => {
     const { settings } = useSettings();
@@ -190,6 +191,8 @@ const Footer: React.FC<FooterProps> = ({
     const { settings } = useSettings();
     const [vaultCount, setVaultCount] = useState<number>(0);
     const [time, setTime] = useState(new Date().toLocaleTimeString());
+    const [liveStatus, setLiveStatus] = useState<'idle' | 'connecting' | 'live' | 'error'>('idle');
+    const [liveSpeaking, setLiveSpeaking] = useState(false);
     const isPipboyTheme = settings.darkTheme === 'pipboy';
     const mainFontClass = isPipboyTheme ? 'font-fixedsys text-[11px]' : 'font-rajdhani text-[12px] font-normal';
 
@@ -205,10 +208,35 @@ const Footer: React.FC<FooterProps> = ({
         return () => clearInterval(timer);
     }, []);
 
+    useEffect(() => {
+        return appEventBus.on('liveAssistantState', (s: { status: 'idle' | 'connecting' | 'live' | 'error'; speaking: boolean }) => {
+            setLiveStatus(s.status);
+            setLiveSpeaking(s.speaking);
+        });
+    }, []);
+
+    // idle = flat line, connecting/listening = noisy wave, speaking = bar equalizer, error = red jitter.
+    const liveOscillatorState = liveStatus === 'error' ? 'error' : liveSpeaking ? 'playing' : liveStatus === 'idle' ? 'idle' : 'syncing';
+
     return (
         <footer className="flex-shrink-0 px-8 py-4 bg-base-200/20 backdrop-blur-md z-[700] flex flex-row items-center justify-between select-none whitespace-nowrap relative pointer-events-auto border-t border-base-content/10 mt-auto">
             {/* Background Technical Noise */}
             <div className="absolute inset-0 pointer-events-none opacity-[0.03] bg-[url('https://www.transparenttextures.com/patterns/stardust.png')]"></div>
+
+            <AnimatePresence>
+                {liveStatus !== 'idle' && (
+                    <motion.div
+                        key="live-oscillator"
+                        initial={{ opacity: 0, scale: 0.9 }}
+                        animate={{ opacity: 1, scale: 1 }}
+                        exit={{ opacity: 0, scale: 0.9 }}
+                        transition={{ duration: 0.4, ease: [0.23, 1, 0.32, 1] }}
+                        className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 z-[705] pointer-events-none"
+                    >
+                        <DigitalOscillator state={liveOscillatorState} theme={themeMode} />
+                    </motion.div>
+                )}
+            </AnimatePresence>
 
             <div className="flex items-center h-full gap-4 bg-transparent relative z-[710] pointer-events-auto">
                 <div className="flex gap-3 items-center">

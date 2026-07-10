@@ -52,7 +52,13 @@ export const defaultLLMSettings: LLMSettings = {
   // MCP Server Settings
   mcpServerUrl: 'http://localhost:3010',
   mcpEnabled: false,
-  
+
+  // AI Assistant Persona
+  assistantName: 'Kollektiv',
+  assistantVoice: 'Kore',
+  assistantLanguage: '',
+  assistantPersonality: '',
+
   // Theme Settings
   activeThemeMode: 'dark',
   lightTheme: 'light',
@@ -71,14 +77,6 @@ export const defaultLLMSettings: LLMSettings = {
   idleScreenType: 'matrix',
   isIdleEnabled: true,
   idleTimeoutMinutes: 1,
-
-  // Feature Toggles
-  features: {
-    isPromptLibraryEnabled: true,
-    isGalleryEnabled: true,
-    isCheatsheetsEnabled: true,
-    isToolsEnabled: true,
-  },
 
   // Integrations
   youtube: {
@@ -124,10 +122,6 @@ export const loadLLMSettings = (): LLMSettings => {
             idleScreenType: parsed.idleScreenType ?? defaultLLMSettings.idleScreenType,
             isIdleEnabled: parsed.isIdleEnabled ?? defaultLLMSettings.isIdleEnabled,
             idleTimeoutMinutes: parsed.idleTimeoutMinutes ?? defaultLLMSettings.idleTimeoutMinutes,
-            features: {
-                ...defaultLLMSettings.features,
-                ...(parsed.features || {})
-            },
             geminiTokenUsage: {
                 ...defaultLLMSettings.geminiTokenUsage!,
                 ...(parsed.geminiTokenUsage || {})
