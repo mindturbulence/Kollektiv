@@ -235,7 +235,7 @@ const server = http.createServer((req, res) => {
 });
 
 // Start listening
-server.listen(port, '0.0.0.0', () => {
+server.listen(port, process.env.HOST || '127.0.0.1', () => {
   console.log(`🚀 Bridge listening at: http://localhost:${port}`);
   console.log(`👉 Enter this URL in Kollektiv Settings -> MCP Server URL to connect!\n`);
 });

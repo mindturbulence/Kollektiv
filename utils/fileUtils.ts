@@ -619,7 +619,35 @@ class LocalFileSystemManager implements IFileSystemManager {
             return null;
         }
     }
-    
+
+    /**
+     * True existence check. Returns false ONLY when the file is confirmed absent.
+     * Throws on permission or transient errors — callers must never treat a
+     * failed check as "missing" (that mistake is how manifests got wiped).
+     */
+    public async fileExists(filePath: string): Promise<boolean> {
+        if (this.storageProvider === 'drive') {
+            const fileId = await this.resolvePath(filePath, false);
+            return fileId !== null;
+        }
+        const rootHandle = await this.getHandle();
+        const segments = filePath.replace(/\\/g, '/').split('/');
+        const fileName = segments.pop();
+        if (!fileName) throw new Error("Invalid file path provided.");
+        try {
+            let currentHandle = rootHandle;
+            for (const segment of segments) {
+                if (segment === '') continue;
+                currentHandle = await currentHandle.getDirectoryHandle(segment);
+            }
+            await currentHandle.getFileHandle(fileName);
+            return true;
+        } catch (e: any) {
+            if (e?.name === 'NotFoundError' || e?.name === 'TypeMismatchError') return false;
+            throw e;
+        }
+    }
+
     public async getFileAsBlob(filePath: string): Promise<Blob | null> {
         if (this.storageProvider === 'drive') {
             try {

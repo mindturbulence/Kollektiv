@@ -11,6 +11,7 @@ import GalleryPickerModal from './GalleryPickerModal';
 import type { GalleryItem } from '../types';
 import { fileSystemManager, fileToBase64 } from '../utils/fileUtils';
 import { addItemToGallery } from '../utils/galleryStorage';
+import { useObjectUrls } from '../utils/useObjectUrls';
 import ConfirmationModal from './ConfirmationModal';
 
 // --- TYPES ---
@@ -211,6 +212,7 @@ const LayerRenderer: React.FC<{
 // --- MAIN PAGE ---
 
 const ComposerPage: React.FC<ComposerPageProps> = ({ showGlobalFeedback, isExiting = false, isLocalExiting = false }) => {
+    const { track } = useObjectUrls();
     const layerImageInputRef = useRef<HTMLInputElement>(null);
     const previewContainerRef = useRef<HTMLDivElement>(null);
     const framePaddingRef = useRef<HTMLDivElement>(null);
@@ -302,7 +304,7 @@ const ComposerPage: React.FC<ComposerPageProps> = ({ showGlobalFeedback, isExiti
 
     const handleFiles = async (files: File[], targetIdx?: number) => {
         const items = await Promise.all(files.filter(f => f.type.startsWith('image/')).map(file => new Promise<ImageItem>(res => {
-            const url = URL.createObjectURL(file);
+            const url = track(URL.createObjectURL(file));
             const img = new Image();
             img.onload = () => res({ id: Math.random().toString(36).substr(2, 9), url: url, width: img.naturalWidth, height: img.naturalHeight, scale: 1, posX: 0, posY: 0, fit: 'cover' });
             img.src = url;
@@ -322,7 +324,7 @@ const ComposerPage: React.FC<ComposerPageProps> = ({ showGlobalFeedback, isExiti
         const valid = (await Promise.all(items.map(async g => {
             const blob = await fileSystemManager.getFileAsBlob(g.urls[0]);
             if (!blob) return null;
-            const url = URL.createObjectURL(blob);
+            const url = track(URL.createObjectURL(blob));
             const img = new Image(); await new Promise(r => { img.onload = r; img.src = url; });
             return { id: g.id, url: url, width: img.naturalWidth, height: img.naturalHeight, scale: 1, posX: 0, posY: 0, fit: 'cover' as FitMode };
         }))).filter((i): i is ImageItem => i !== null);

@@ -19,7 +19,7 @@ const sanitizeUrl = (url: string) => {
 
 /**
  * BASE_CONFIG provides optimized parameters for Ollama.
- * num_predict is now handled dynamically per request to prevent cut-offs.
+ * num_predict is set per request from the caller's token budget.
  */
 const BASE_CONFIG = {
     keep_alive: "30m",
@@ -29,7 +29,7 @@ const BASE_CONFIG = {
     }
 };
 
-const getOllamaConfig = (settings: LLMSettings) => {
+export const getOllamaConfig = (settings: LLMSettings) => {
     const isCloud = settings.activeLLM === 'ollama_cloud';
     const rawBaseUrl = sanitizeUrl(isCloud ? settings.ollamaCloudBaseUrl : settings.ollamaBaseUrl);
     
@@ -128,12 +128,48 @@ export const fetchOllamaModels = async (settings: LLMSettings, useCloud: boolean
     }
 };
 
+/**
+ * Reads Ollama's NDJSON chat stream. JSON parse failures on a line are skipped
+ * (partial frames), but an in-band { error } object is THROWN — previously the
+ * throw sat inside the same try/catch that guarded JSON.parse, so real API
+ * errors were silently swallowed and the user saw empty output.
+ */
+async function* readOllamaNdjsonStream(apiResponse: Response, settings: LLMSettings): AsyncGenerator<string> {
+    if (!apiResponse.body) throw new Error("Ollama stream body is empty.");
+    const reader = apiResponse.body.getReader();
+    const decoder = new TextDecoder();
+    let buffer = '';
+    while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        buffer += decoder.decode(value, { stream: true });
+        const lines = buffer.split('\n');
+        buffer = lines.pop() || '';
+        for (const line of lines) {
+            if (!line.trim()) continue;
+            let parsed: any;
+            try {
+                parsed = JSON.parse(line);
+            } catch {
+                continue;
+            }
+            if (parsed.error) throw new Error(`Ollama API Error: ${parsed.error}`);
+            if (parsed.message?.content) yield parsed.message.content;
+            else if (parsed.response) yield parsed.response;
+            if (parsed.done) {
+                const tokens = (parsed.prompt_eval_count || 0) + (parsed.eval_count || 0);
+                if (tokens > 0) trackTokenUsage(settings.activeLLM === 'ollama_cloud' ? 'ollama_cloud' : 'ollama', tokens);
+            }
+        }
+    }
+}
+
 export async function* enhancePromptOllamaStream(
     prompt: string,
     constantModifier: string,
     settings: LLMSettings,
     systemInstruction: string,
-    _maxTokens: number = 2048
+    maxTokens: number = 2048
 ): AsyncGenerator<string> {
     try {
         const config = getOllamaConfig(settings);
@@ -150,7 +186,7 @@ export async function* enhancePromptOllamaStream(
                 ],
                 stream: true,
                 ...BASE_CONFIG,
-                
+                options: { ...BASE_CONFIG.options, num_predict: maxTokens },
             }),
         });
 
@@ -161,30 +197,7 @@ export async function* enhancePromptOllamaStream(
             throw new Error(msg);
         }
         
-        if (!apiResponse.body) throw new Error("Ollama stream body is empty.");
-        
-        const reader = apiResponse.body.getReader();
-        const decoder = new TextDecoder();
-        let buffer = '';
-        
-        while (true) {
-            const { done, value } = await reader.read();
-            if (done) break;
-            buffer += decoder.decode(value, { stream: true });
-            const lines = buffer.split('\n');
-            buffer = lines.pop() || '';
-            for (const line of lines) {
-                if (!line.trim()) continue;
-                try {
-                    const parsed = JSON.parse(line); if (parsed.error) throw new Error(`Ollama API Error: ${parsed.error}`);
-                    if (parsed.message?.content) yield parsed.message.content; else if (parsed.response) yield parsed.response;
-                    if (parsed.done) {
-                        const tokens = (parsed.prompt_eval_count || 0) + (parsed.eval_count || 0);
-                        if (tokens > 0) trackTokenUsage(settings.activeLLM === 'ollama_cloud' ? 'ollama_cloud' : 'ollama', tokens);
-                    }
-                } catch (e) {}
-            }
-        }
+        yield* readOllamaNdjsonStream(apiResponse, settings);
     } catch (err: any) {
         throw handleGeminiError(err, 'enhancing with Ollama stream');
     }
@@ -240,36 +253,13 @@ export async function* streamChatOllama(
             throw new Error(msg);
         }
 
-        if (!apiResponse.body) throw new Error("Ollama stream body is empty.");
-        
-        const reader = apiResponse.body.getReader();
-        const decoder = new TextDecoder();
-        let buffer = '';
-        
-        while (true) {
-            const { done, value } = await reader.read();
-            if (done) break;
-            buffer += decoder.decode(value, { stream: true });
-            const lines = buffer.split('\n');
-            buffer = lines.pop() || '';
-            for (const line of lines) {
-                if (!line.trim()) continue;
-                try {
-                    const parsed = JSON.parse(line); if (parsed.error) throw new Error(`Ollama API Error: ${parsed.error}`);
-                    if (parsed.message?.content) yield parsed.message.content; else if (parsed.response) yield parsed.response;
-                    if (parsed.done) {
-                        const tokens = (parsed.prompt_eval_count || 0) + (parsed.eval_count || 0);
-                        if (tokens > 0) trackTokenUsage(settings.activeLLM === 'ollama_cloud' ? 'ollama_cloud' : 'ollama', tokens);
-                    }
-                } catch (e) {}
-            }
-        }
+        yield* readOllamaNdjsonStream(apiResponse, settings);
     } catch (err: any) {
         throw handleGeminiError(err, 'chatting with Ollama');
     }
 }
 
-export const refineSinglePromptOllama = async (promptText: string, settings: LLMSettings, systemInstruction: string, _maxTokens: number = 1024): Promise<string> => {
+export const refineSinglePromptOllama = async (promptText: string, settings: LLMSettings, systemInstruction: string, maxTokens: number = 1024): Promise<string> => {
     try {
         const config = getOllamaConfig(settings);
         if (!config.baseUrl || !config.model) throw new Error("Ollama configuration missing.");
@@ -284,7 +274,7 @@ export const refineSinglePromptOllama = async (promptText: string, settings: LLM
                 ],
                 stream: false,
                 ...BASE_CONFIG,
-                
+                options: { ...BASE_CONFIG.options, num_predict: maxTokens },
             }),
         });
         if (!apiResponse.ok) throw new Error(`Ollama status: ${apiResponse.status}`);
@@ -299,7 +289,7 @@ export const refineSinglePromptOllama = async (promptText: string, settings: LLM
     }
 };
 
-export async function* refineSinglePromptOllamaStream(promptText: string, settings: LLMSettings, systemInstruction: string, _maxTokens: number = 1024): AsyncGenerator<string> {
+export async function* refineSinglePromptOllamaStream(promptText: string, settings: LLMSettings, systemInstruction: string, maxTokens: number = 1024): AsyncGenerator<string> {
     try {
         const config = getOllamaConfig(settings);
         if (!config.baseUrl || !config.model) throw new Error("Ollama configuration missing.");
@@ -314,7 +304,7 @@ export async function* refineSinglePromptOllamaStream(promptText: string, settin
                 ],
                 stream: true,
                 ...BASE_CONFIG,
-                
+                options: { ...BASE_CONFIG.options, num_predict: maxTokens },
             }),
         });
         
@@ -325,29 +315,7 @@ export async function* refineSinglePromptOllamaStream(promptText: string, settin
              throw new Error(msg);
         }
 
-        if (!apiResponse.body) throw new Error("Ollama stream error.");
-        const reader = apiResponse.body.getReader();
-        const decoder = new TextDecoder();
-        let buffer = '';
-        
-        while (true) {
-            const { done, value } = await reader.read();
-            if (done) break;
-            buffer += decoder.decode(value, { stream: true });
-            const lines = buffer.split('\n');
-            buffer = lines.pop() || '';
-            for (const line of lines) {
-                if (!line.trim()) continue;
-                try {
-                    const parsed = JSON.parse(line); if (parsed.error) throw new Error(`Ollama API Error: ${parsed.error}`);
-                    if (parsed.message?.content) yield parsed.message.content; else if (parsed.response) yield parsed.response;
-                    if (parsed.done) {
-                        const tokens = (parsed.prompt_eval_count || 0) + (parsed.eval_count || 0);
-                        if (tokens > 0) trackTokenUsage(settings.activeLLM === 'ollama_cloud' ? 'ollama_cloud' : 'ollama', tokens);
-                    }
-                } catch (e) {}
-            }
-        }
+        yield* readOllamaNdjsonStream(apiResponse, settings);
     } catch (err: any) {
         throw handleGeminiError(err, 'refining with Ollama stream');
     }
@@ -397,7 +365,7 @@ export const generateColorNameOllama = async (hexColor: string, mood: string, se
     } catch (err) { return "Archived Color"; }
 };
 
-export const convertPromptToNaturalLanguage = async (promptText: string, settings: LLMSettings): Promise<string> => {
+const convertPromptToNaturalLanguage = async (promptText: string, settings: LLMSettings): Promise<string> => {
     try {
         const config = getOllamaConfig(settings);
         const apiResponse = await fetch(`${config.baseUrl}/api/chat`, {

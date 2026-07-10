@@ -1,6 +1,5 @@
 import express from "express";
 import { createServer as createViteServer } from "vite";
-import cors from "cors";
 import path from "path";
 
 // Array to keep track of active SSE connections
@@ -9,9 +8,9 @@ let clients: express.Response[] = [];
 async function startServer() {
   const app = express();
   const PORT = process.env.PORT ? parseInt(process.env.PORT, 10) : 7500;
-  const HOST = process.env.PORT ? "0.0.0.0" : "127.0.0.1";
+  // Explicit opt-in only: HOST=0.0.0.0 for containerized/cloud runs. Never inferred from PORT.
+  const HOST = process.env.HOST || "127.0.0.1";
 
-  app.use(cors());
 
   // Proxy for Google Drive / Google APIs (Bypasses body parsing on GETs to avoid hangs)
   app.use("/google-api", async (req, res) => {
@@ -49,8 +48,7 @@ async function startServer() {
         });
         if (bodyBuffer.length > 0) {
           fetchOptions.body = bodyBuffer;
-          const bodyStr = bodyBuffer.toString('utf8');
-          console.log(`[Google-API Proxy] Request body size: ${bodyBuffer.length} bytes. Body preview: ${bodyStr.substring(0, 500)}`);
+          console.log(`[Google-API Proxy] Request body size: ${bodyBuffer.length} bytes.`);
         } else {
           console.warn(`[Google-API Proxy] Expected body but bodyBuffer is empty (0 bytes)`);
         }
@@ -305,11 +303,23 @@ async function startServer() {
   });
 
   // Proxy for remote URLs to handle mixed content and CORS in cloud/production
+  const isValidProxyTarget = (raw: string): boolean => {
+    try {
+      const u = new URL(raw);
+      return u.protocol === 'http:' || u.protocol === 'https:';
+    } catch {
+      return false;
+    }
+  };
+
   app.use("/proxy-remote", async (req, res) => {
     try {
       const target = req.headers['x-target-url'] || req.headers['X-Target-Url'];
       if (!target || typeof target !== 'string') {
         return res.status(400).json({ error: 'Missing x-target-url header' });
+      }
+      if (!isValidProxyTarget(target)) {
+        return res.status(400).json({ error: 'x-target-url must be a valid http(s) URL' });
       }
 
       const subPath = req.url;
@@ -513,6 +523,9 @@ async function startServer() {
     if (!url) {
       return res.status(400).json({ success: false, error: "Missing MCP server URL" });
     }
+    if (!isValidProxyTarget(url)) {
+      return res.status(400).json({ success: false, error: "MCP server URL must be a valid http(s) URL" });
+    }
 
     try {
       // Standard JSON-RPC 2.0 payload format for MCP
@@ -587,6 +600,10 @@ async function startServer() {
   // Endpoint for Hermes (or external agent) to send control commands
   // E.g. POST /api/hermes/control -> { "action": "navigate", "payload": "prompts" }
   app.post("/api/hermes/control", (req, res) => {
+    const expected = process.env.HERMES_TOKEN;
+    if (expected && req.headers.authorization !== `Bearer ${expected}`) {
+      return res.status(401).json({ error: "Invalid or missing Hermes token" });
+    }
     const { action, payload } = req.body;
     
     if (!action) {

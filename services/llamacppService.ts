@@ -137,7 +137,7 @@ export async function* enhancePromptLlamaCppStream(
             for (const line of lines) {
                 const trimmed = line.trim();
                 if (!trimmed || !trimmed.startsWith('data: ')) continue;
-                if (trimmed === 'data: [DONE]') break;
+                if (trimmed === 'data: [DONE]') return;
                 
                 try {
                     const parsed = JSON.parse(trimmed.slice(6));

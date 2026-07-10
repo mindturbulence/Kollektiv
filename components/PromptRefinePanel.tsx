@@ -45,8 +45,6 @@ const PromptRefinePanel: React.FC<PromptRefinePanelProps> = ({ promptText, onApp
                 const active = settings.activeLLM || 'ollama';
                 if (active === 'gemini') {
                     throw new Error("Target unreachable or returned empty sequence. Please ensure your Gemini API Key is configured and valid in Setup.");
-                } else if (active === 'hermes') {
-                    throw new Error("Target unreachable or returned empty sequence. Please ensure your Hermes service is running on port 18789.");
                 } else if (active === 'openrouter') {
                     throw new Error("Target unreachable or returned empty sequence. Please verify your OpenRouter configuration.");
                 } else {

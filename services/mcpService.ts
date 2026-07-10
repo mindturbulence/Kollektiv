@@ -30,12 +30,14 @@ export interface MCPResource {
  */
 async function executeMcpRequest(serverUrl: string, method: string, params: Record<string, any> = {}): Promise<any> {
   const cleanUrl = serverUrl.trim();
-  const isLocalHost = cleanUrl.includes('localhost') || 
-                      cleanUrl.includes('127.0.0.1') || 
-                      cleanUrl.includes('0.0.0.0') || 
-                      cleanUrl.includes('[::1]') || 
-                      cleanUrl.includes('192.168.') || 
-                      cleanUrl.includes('10.');
+  let mcpHostname = '';
+  try { mcpHostname = new URL(cleanUrl).hostname; } catch {}
+  const isLocalHost = mcpHostname === 'localhost' ||
+                      mcpHostname === '127.0.0.1' ||
+                      mcpHostname === '0.0.0.0' ||
+                      mcpHostname === '[::1]' || mcpHostname === '::1' ||
+                      mcpHostname.startsWith('192.168.') ||
+                      mcpHostname.startsWith('10.');
 
   if (isLocalHost) {
     // Attempt standard direct client-side fallback so browser can reach local containers/servers directly

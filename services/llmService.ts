@@ -5,6 +5,32 @@ import { analyzePaletteMoodOllama, generatePromptFormulaOllama, refineSingleProm
 import { refineSinglePromptLlamaCpp, enhancePromptLlamaCppStream, refineSinglePromptLlamaCppStream, reconstructFromIntentLlamaCpp } from './llamacppService';
 import { TARGET_VIDEO_AI_MODELS, TARGET_AUDIO_AI_MODELS } from '../constants/models';
 
+export type LLMProvider = 'gemini' | 'ollama' | 'llamacpp' | 'anthropic' | 'openrouter';
+
+export const getActiveProvider = (settings: LLMSettings): LLMProvider => {
+    switch (settings.activeLLM) {
+        case 'ollama':
+        case 'ollama_cloud': return 'ollama';
+        case 'llamacpp': return 'llamacpp';
+        case 'anthropic': return 'anthropic';
+        case 'openrouter': return 'openrouter';
+        default: return 'gemini';
+    }
+};
+
+export class ProviderUnsupportedError extends Error {
+    constructor(feature: string, provider: LLMProvider, supported: LLMProvider[]) {
+        super(`${feature} is not available with the ${provider} engine (supported: ${supported.join(', ')}). Switch the AI Engine in Settings > Integrations.`);
+        this.name = 'ProviderUnsupportedError';
+    }
+}
+
+const requireProvider = (feature: string, settings: LLMSettings, supported: LLMProvider[]): LLMProvider => {
+    const provider = getActiveProvider(settings);
+    if (!supported.includes(provider)) throw new ProviderUnsupportedError(feature, provider, supported);
+    return provider;
+};
+
 // --- Model-Specific Syntax (Engine Tuning) ---
 const getModelSyntax = (model: string) => {
     const lower = model.toLowerCase();
@@ -308,6 +334,34 @@ export const buildMidjourneyParams = (modifiers: PromptModifiers): string => {
     return params.join(' ');
 };
 
+async function* stripReasoningTags(stream: AsyncGenerator<string>): AsyncGenerator<string> {
+    let inThought = false;
+    for await (const chunk of stream) {
+        let processChunk = chunk;
+        if (processChunk.includes('<think') && processChunk.includes('</think>')) {
+            processChunk = processChunk.replace(/<think[\s\S]*?<\/think>/g, '');
+        } else if (processChunk.includes('<thought') && processChunk.includes('</thought>')) {
+            processChunk = processChunk.replace(/<thought[\s\S]*?<\/thought>/g, '');
+        } else {
+            if (processChunk.includes('<think') || processChunk.includes('<thought')) {
+                inThought = true;
+                const parts = processChunk.split(/<think|<thought/);
+                if (parts[0]) yield parts[0];
+                continue;
+            }
+            if (processChunk.includes('<\/think>') || processChunk.includes('<\/thought>')) {
+                inThought = false;
+                const parts = processChunk.split(/<\/think>|<\/thought>/);
+                if (parts[1]) yield parts[1];
+                continue;
+            }
+        }
+        if (!inThought && processChunk) {
+            yield processChunk;
+        }
+    }
+}
+
 export async function* enhancePromptStream(
     originalPrompt: string,
     constantModifier: string,
@@ -327,48 +381,21 @@ export async function* enhancePromptStream(
     const input = `${context}\n\n[Primary Concept]\n${originalPrompt}`;
 
     const tokenBudget = promptLength === 'Long' ? 4096 : (promptLength === 'Medium' ? 2048 : 1024);
-    const activeProvider = overrideProvider || settings.activeLLM;
-    const isOllama = activeProvider === 'ollama' || activeProvider === 'ollama_cloud';
-    const isLlamaCpp = activeProvider === 'llamacpp';
-    const isAnthropic = activeProvider === 'anthropic';
+    const activeProvider = overrideProvider || getActiveProvider(settings);
     const temperature = modifiers.creativity !== undefined ? modifiers.creativity / 100 : 0.7;
 
-    const stream = isAnthropic
+    const stream = activeProvider === 'anthropic'
         ? (async function* () {
               const { streamChatAnthropic } = await import('./anthropicService');
               yield* streamChatAnthropic([{ role: 'system', content: systemInstruction }, { role: 'user', content: input }], settings);
           })()
-        : isLlamaCpp
+        : activeProvider === 'llamacpp'
             ? enhancePromptLlamaCppStream(input, constantModifier, settings, systemInstruction, tokenBudget, temperature)
-            : isOllama
+            : activeProvider === 'ollama'
                 ? enhancePromptOllamaStream(input, constantModifier, settings, systemInstruction, tokenBudget)
                 : enhancePromptGeminiStream(input, constantModifier, settings, systemInstruction, promptLength, referenceImages, temperature);
 
-    let inThought = false;
-    for await (const chunk of stream) {
-        let processChunk = chunk;
-        if (processChunk.includes('<think') && processChunk.includes('</think>')) {
-            processChunk = processChunk.replace(/<think[\s\S]*?<\/think>/g, '');
-        } else if (processChunk.includes('<thought') && processChunk.includes('</thought>')) {
-            processChunk = processChunk.replace(/<thought[\s\S]*?<\/thought>/g, '');
-        } else {
-            if (processChunk.includes('<think') || processChunk.includes('<thought')) {
-                inThought = true;
-                const parts = processChunk.split(/<think|<thought/);
-                if (parts[0]) yield parts[0];
-                continue;
-            }
-            if (processChunk.includes('</think>') || processChunk.includes('</thought>')) {
-                inThought = false;
-                const parts = processChunk.split(/<\/think>|<\/thought>/);
-                if (parts[1]) yield parts[1];
-                continue;
-            }
-        }
-        if (!inThought && processChunk) {
-            yield processChunk;
-        }
-    }
+    yield* stripReasoningTags(stream);
 }
 
 export const refineSinglePrompt = async (promptText: string, targetAIModel: string, settings: LLMSettings, modifiers: PromptModifiers = {}): Promise<string> => {
@@ -377,21 +404,19 @@ export const refineSinglePrompt = async (promptText: string, targetAIModel: stri
     const hasManualCamera = !!modifiers.cameraMovement;
     const sys = AI_ROLES.REFINER(targetAIModel, isVideo, isAudio, hasManualCamera, modifiers.videoInputType, settings.masterRolePrompt);
     
-    const isOllama = settings.activeLLM === 'ollama' || settings.activeLLM === 'ollama_cloud';
-    const isLlamaCpp = settings.activeLLM === 'llamacpp';
-    const isAnthropic = settings.activeLLM === 'anthropic';
+    const provider = requireProvider('Prompt refinement', settings, ['gemini', 'ollama', 'llamacpp', 'anthropic']);
     let raw = "";
     
-    if (isAnthropic) {
+    if (provider === 'anthropic') {
         const { streamChatAnthropic } = await import('./anthropicService');
         const generator = streamChatAnthropic([{ role: 'system', content: sys }, { role: 'user', content: promptText }], settings);
         for await (const chunk of generator) {
             raw += chunk;
         }
     } else {
-        raw = isLlamaCpp
+        raw = provider === 'llamacpp'
             ? await refineSinglePromptLlamaCpp(promptText, settings, sys, 1024)
-            : isOllama 
+            : provider === 'ollama' 
                 ? await refineSinglePromptOllama(promptText, settings, sys, 1024)
                 : await refineSinglePromptGemini(promptText, '', settings, sys);
     }
@@ -410,144 +435,113 @@ export async function* refineSinglePromptStream(
     const hasManualCamera = !!modifiers.cameraMovement;
     const sys = AI_ROLES.REFINER(targetAIModel, isVideo, isAudio, hasManualCamera, modifiers.videoInputType, settings.masterRolePrompt);
     
-    const isOllama = settings.activeLLM === 'ollama' || settings.activeLLM === 'ollama_cloud';
-    const isLlamaCpp = settings.activeLLM === 'llamacpp';
-    const isAnthropic = settings.activeLLM === 'anthropic';
+    const provider = requireProvider('Prompt refinement stream', settings, ['gemini', 'ollama', 'llamacpp', 'anthropic']);
     const temperature = modifiers.creativity !== undefined ? modifiers.creativity / 100 : 0.7;
-    const stream = isAnthropic
+    const stream = provider === 'anthropic'
         ? (async function* () {
               const { streamChatAnthropic } = await import('./anthropicService');
               yield* streamChatAnthropic([{ role: 'system', content: sys }, { role: 'user', content: promptText }], settings);
           })()
-        : isLlamaCpp
+        : provider === 'llamacpp'
             ? refineSinglePromptLlamaCppStream(promptText, settings, sys, 1024, temperature)
-            : isOllama
+            : provider === 'ollama'
                 ? refineSinglePromptOllamaStream(promptText, settings, sys, 1024)
                 : refineSinglePromptGeminiStream(promptText, '', settings, sys);
 
-    let inThought = false;
-    for await (const chunk of stream) {
-        let processChunk = chunk;
-        if (processChunk.includes('<think') && processChunk.includes('</think>')) {
-            processChunk = processChunk.replace(/<think[\s\S]*?<\/think>/g, '');
-        } else if (processChunk.includes('<thought') && processChunk.includes('</thought>')) {
-            processChunk = processChunk.replace(/<thought[\s\S]*?<\/thought>/g, '');
-        } else {
-            if (processChunk.includes('<think') || processChunk.includes('<thought')) {
-                inThought = true;
-                const parts = processChunk.split(/<think|<thought/);
-                if (parts[0]) yield parts[0];
-                continue;
-            }
-            if (processChunk.includes('</think>') || processChunk.includes('</thought>')) {
-                inThought = false;
-                const parts = processChunk.split(/<\/think>|<\/thought>/);
-                if (parts[1]) yield parts[1];
-                continue;
-            }
-        }
-        if (!inThought && processChunk) {
-            yield processChunk;
-        }
-    }
+    yield* stripReasoningTags(stream);
 }
 
 export const generateArtistDescription = async (artistName: string, settings: LLMSettings): Promise<string> => {
-    const isOllama = settings.activeLLM === 'ollama' || settings.activeLLM === 'ollama_cloud';
-    const isLlamaCpp = settings.activeLLM === 'llamacpp';
+    const provider = requireProvider('Artist description', settings, ['gemini', 'ollama', 'llamacpp']);
     
-    if (isLlamaCpp) return refineSinglePromptLlamaCpp(artistName, settings, "Brief style summary. Text only.", 512);
+    if (provider === 'llamacpp') return refineSinglePromptLlamaCpp(artistName, settings, "Brief style summary. Text only.", 512);
 
-    return isOllama
+    return provider === 'ollama'
         ? generateArtistDescriptionOllama(artistName, settings)
         : generateArtistDescriptionGemini(artistName, settings);
 };
 
 export const analyzePaletteMood = async (hexColors: string[], settings: LLMSettings): Promise<string> => {
-    const isOllama = settings.activeLLM === 'ollama' || settings.activeLLM === 'ollama_cloud';
-    const isLlamaCpp = settings.activeLLM === 'llamacpp';
+    const provider = requireProvider('Palette mood analysis', settings, ['gemini', 'ollama', 'llamacpp']);
     
-    if (isLlamaCpp) return refineSinglePromptLlamaCpp(`Colors: ${hexColors.join(', ')}`, settings, "Task: mood in 3 words max. Text only.", 64);
+    if (provider === 'llamacpp') return refineSinglePromptLlamaCpp(`Colors: ${hexColors.join(', ')}`, settings, "Task: mood in 3 words max. Text only.", 64);
 
-    return isOllama
+    return provider === 'ollama'
         ? analyzePaletteMoodOllama(hexColors, settings)
         : analyzePaletteMoodGemini(hexColors, settings);
 };
 
 export const generateColorName = async (hexColor: string, mood: string, settings: LLMSettings): Promise<string> => {
-    const isOllama = settings.activeLLM === 'ollama' || settings.activeLLM === 'ollama_cloud';
-    const isLlamaCpp = settings.activeLLM === 'llamacpp';
+    const provider = requireProvider('Color name generation', settings, ['gemini', 'ollama', 'llamacpp']);
     
-    if (isLlamaCpp) return refineSinglePromptLlamaCpp(`Hex:${hexColor}, Mood:${mood}`, settings, "Task: Poetic 2-word name. Text only.", 32);
+    if (provider === 'llamacpp') return refineSinglePromptLlamaCpp(`Hex:${hexColor}, Mood:${mood}`, settings, "Task: Poetic 2-word name. Text only.", 32);
 
-    return isOllama
+    return provider === 'ollama'
         ? generateColorNameOllama(hexColor, mood, settings)
         : generateColorNameGemini(hexColor, mood, settings);
 };
 
 export const dissectPrompt = async (promptText: string, settings: LLMSettings, modifierCatalog?: string, modelName?: string): Promise<{ naturalLanguage: string, prompt: string, modifiers: { [key: string]: string }, constantModifier: string, categorizedParameters: { label: string, value: string }[] }> => {
-    const isOllama = settings.activeLLM === 'ollama' || settings.activeLLM === 'ollama_cloud';
-    const isLlamaCpp = settings.activeLLM === 'llamacpp';
+    const provider = requireProvider('Prompt dissection', settings, ['gemini', 'ollama', 'llamacpp']);
     
-    if (isLlamaCpp) {
+    if (provider === 'llamacpp') {
         const naturalLang = await refineSinglePromptLlamaCpp(promptText, settings, "Task: Convert this Stable Diffusion prompt into a clear, natural English narrative. No intros.", 800);
         return { naturalLanguage: naturalLang, prompt: promptText, modifiers: {}, constantModifier: '', categorizedParameters: [] };
     }
 
-    return isOllama
+    return provider === 'ollama'
         ? dissectPromptOllama(promptText, settings, modifierCatalog, modelName)
         : dissectPromptGemini(promptText, settings, modifierCatalog, modelName);
 };
 
 export const generateFocusedVariations = async (promptText: string, components: { [key: string]: string }, settings: LLMSettings): Promise<{ [key: string]: string[] }> => {
-    const isOllama = settings.activeLLM === 'ollama' || settings.activeLLM === 'ollama_cloud';
-    return isOllama
+    const provider = requireProvider('Focused variations', settings, ['gemini', 'ollama']);
+    return provider === 'ollama'
         ? generateFocusedVariationsOllama(promptText, components, settings)
         : generateFocusedVariationsGemini(promptText, components, settings);
 };
 
 export const reconstructPrompt = async (components: { [key: string]: string }, settings: LLMSettings): Promise<string> => {
-    const isOllama = settings.activeLLM === 'ollama' || settings.activeLLM === 'ollama_cloud';
-    return isOllama
+    const provider = requireProvider('Prompt reconstruction', settings, ['gemini', 'ollama']);
+    return provider === 'ollama'
         ? reconstructPromptOllama(components, settings)
         : reconstructPromptGemini(components, settings);
 };
 
 export const replaceComponentInPrompt = async (originalPrompt: string, componentKey: string, newValue: string, settings: LLMSettings): Promise<string> => {
-    const isOllama = settings.activeLLM === 'ollama' || settings.activeLLM === 'ollama_cloud';
-    return isOllama
+    const provider = requireProvider('Component replacement', settings, ['gemini', 'ollama']);
+    return provider === 'ollama'
         ? replaceComponentInPromptOllama(originalPrompt, componentKey, newValue, settings)
         : replaceComponentInPromptGemini(originalPrompt, componentKey, newValue, settings);
 };
 
 export const reconstructFromIntent = async (intents: string[], settings: LLMSettings): Promise<string> => {
-    const isOllama = settings.activeLLM === 'ollama' || settings.activeLLM === 'ollama_cloud';
-    const isLlamaCpp = settings.activeLLM === 'llamacpp';
-    if (isLlamaCpp) return reconstructFromIntentLlamaCpp(intents, settings);
-    return isOllama
+    const provider = requireProvider('Intent reconstruction', settings, ['gemini', 'ollama', 'llamacpp']);
+    if (provider === 'llamacpp') return reconstructFromIntentLlamaCpp(intents, settings);
+    return provider === 'ollama'
         ? reconstructFromIntentOllama(intents, settings)
         : reconstructFromIntentGemini(intents, settings);
 };
 
 export const abstractImage = async (base64ImageData: string, promptLength: string, targetAIModel: string, settings: LLMSettings): Promise<EnhancementResult> => {
-    const isOllama = settings.activeLLM === 'ollama' || settings.activeLLM === 'ollama_cloud';
-    return isOllama
+    const provider = requireProvider('Image abstraction', settings, ['gemini', 'ollama']);
+    return provider === 'ollama'
         ? abstractImageOllama(base64ImageData, promptLength, targetAIModel, settings)
         : abstractImageGemini(base64ImageData, promptLength, targetAIModel, settings);
 };
 
 export const generatePromptFormulaWithAI = async (promptText: string, wildcards: string[], settings: LLMSettings): Promise<string> => {
     const sys = AI_ROLES.DECONSTRUCTOR(wildcards);
-    const isOllama = settings.activeLLM === 'ollama' || settings.activeLLM === 'ollama_cloud';
-    return isOllama
+    const provider = requireProvider('Formula generation', settings, ['gemini', 'ollama']);
+    return provider === 'ollama'
         ? generatePromptFormulaOllama(promptText, settings, sys)
         : generatePromptFormulaGemini(promptText, settings, sys);
 };
 
 export const generateConstructorPreset = async (components: { [key: string]: string }, settings: LLMSettings, modifierCatalog?: string, modelName?: string): Promise<{ prompt: string, modifiers: PromptModifiers, constantModifier?: string }> => {
-    const isOllama = settings.activeLLM === 'ollama' || settings.activeLLM === 'ollama_cloud';
+    const provider = requireProvider('Constructor preset', settings, ['gemini', 'ollama']);
     
-    if (isOllama) {
+    if (provider === 'ollama') {
         const sys = `Role: Prompt Constructor Architect. 
 Task: Deconstruct the analyzed prompt components into a "Prompt Idea" (base subject/intent), "Active Construction Items" (mapped modifiers), and "Constant Modifiers" (unmapped details).
 
@@ -593,13 +587,11 @@ export { generateWithImagen, generateWithNanoBanana, generateWithVeo } from './g
 // Removed storyboard translation
 
 export const translateToEnglish = async (text: string, settings: LLMSettings): Promise<string> => {
-    const isOllama = settings.activeLLM === 'ollama' || settings.activeLLM === 'ollama_cloud';
-    const isLlamaCpp = settings.activeLLM === 'llamacpp';
-    if (isLlamaCpp) {
+    const provider = requireProvider('Translation', settings, ['gemini', 'ollama', 'llamacpp']);
+    if (provider === 'llamacpp') {
         return refineSinglePromptLlamaCpp(text, settings, "Translate this to high-fidelity English visual prompt. Output translated text ONLY.", 1200);
     }
-    if (isOllama) {
-        // Fallback or Ollama specific translation if needed later, for now just Gemini
+    if (provider === 'ollama') {
         return refineSinglePromptOllama(text, settings, "Translate this to high-fidelity English visual prompt. Output translated text ONLY.", 1200);
     }
     return translateToEnglishGemini(text, settings);
@@ -662,10 +654,7 @@ export async function* streamChat(
     messages: { role: 'user' | 'assistant' | 'system', content: string, attachments?: { data: string, mimeType: string, fileName?: string }[] }[],
     settings: LLMSettings
 ): AsyncGenerator<string> {
-    const isOllama = settings.activeLLM === 'ollama' || settings.activeLLM === 'ollama_cloud';
-    const isOpenRouter = settings.activeLLM === 'openrouter';
-    const isLlamaCpp = settings.activeLLM === 'llamacpp';
-    const isAnthropic = settings.activeLLM === 'anthropic';
+    const provider = requireProvider('Chat', settings, ['gemini', 'ollama', 'openrouter', 'llamacpp', 'anthropic']);
 
     // Process text attachments from messages before passing to specific handlers
     const processedMessages = await Promise.all(messages.map(async msg => {
@@ -732,20 +721,20 @@ export async function* streamChat(
         }
     }
 
-    if (isAnthropic) {
+    if (provider === 'anthropic') {
         const { streamChatAnthropic } = await import('./anthropicService');
         yield* streamChatAnthropic(finalMessages, settings);
-    } else if (isOpenRouter) {
+    } else if (provider === 'openrouter') {
         const { streamChatOpenRouter } = await import('./openrouterService');
         yield* streamChatOpenRouter(finalMessages, settings);
-    } else if (isOllama) {
+    } else if (provider === 'ollama') {
         const { streamChatOllama } = await import('./ollamaService');
         yield* streamChatOllama(finalMessages, settings);
-    } else if (isLlamaCpp) {
+    } else if (provider === 'llamacpp') {
         const { streamChatLlamaCpp } = await import('./llamacppService');
         yield* streamChatLlamaCpp(finalMessages, settings);
     } else {
         const { streamChatGemini } = await import('./geminiService');
-        yield* streamChatGemini(finalMessages, settings, false);
+        yield* streamChatGemini(finalMessages, settings);
     }
 }

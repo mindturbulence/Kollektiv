@@ -8,6 +8,7 @@ import { COMPOSER_PRESETS } from '../constants';
 import GalleryPickerModal from './GalleryPickerModal';
 import type { GalleryItem } from '../types';
 import { fileSystemManager } from '../utils/fileUtils';
+import { useObjectUrls } from '../utils/useObjectUrls';
 
 type EditorTab = 'extractor' | 'joiner';
 type ExtractionUnit = 'seconds' | 'minutes' | 'frames';
@@ -42,6 +43,7 @@ interface VideoToFramesProps {
 }
 
 export const VideoToFrames: React.FC<VideoToFramesProps> = ({ isExiting = false }) => {
+    const { track, revoke } = useObjectUrls();
     const [activeTab, setActiveTab] = useState<EditorTab>('extractor');
     
     const [extractorVideo, setExtractorVideo] = useState<File | string | null>(null);
@@ -87,29 +89,29 @@ export const VideoToFrames: React.FC<VideoToFramesProps> = ({ isExiting = false 
 
     const handleExtractorFileSelect = (file: File) => {
         if (!file.type.startsWith('video/')) return;
-        if (extractorUrl) URL.revokeObjectURL(extractorUrl);
-        setExtractorUrl(URL.createObjectURL(file));
+        if (extractorUrl) revoke(extractorUrl);
+        setExtractorUrl(track(URL.createObjectURL(file)));
         setExtractorVideo(file);
-        setFrames([]);
+        setFrames(prev => { prev.forEach(f => revoke(f.url)); return []; });
     };
 
     const handleLibrarySelect = async (items: GalleryItem[]) => {
         if (!items.length) return;
-        
+
         if (activeTab === 'extractor') {
             const gItem = items[0];
             const blob = await fileSystemManager.getFileAsBlob(gItem.urls[0]);
             if (!blob) return;
-            if (extractorUrl) URL.revokeObjectURL(extractorUrl);
-            setExtractorUrl(URL.createObjectURL(blob));
+            if (extractorUrl) revoke(extractorUrl);
+            setExtractorUrl(track(URL.createObjectURL(blob)));
             setExtractorVideo(gItem.title);
-            setFrames([]);
+            setFrames(prev => { prev.forEach(f => revoke(f.url)); return []; });
         } else {
             // Joiner Mode
             const newVideos = await Promise.all(items.map(async (gItem): Promise<JoinableVideo | null> => {
                 const blob = await fileSystemManager.getFileAsBlob(gItem.urls[0]);
                 if (!blob) return null;
-                const url = URL.createObjectURL(blob);
+                const url = track(URL.createObjectURL(blob));
                 const metadata = await new Promise<{duration: number, width: number, height: number}>((res) => {
                     const v = (window as any).document.createElement('video');
                     v.src = url;
@@ -151,7 +153,7 @@ export const VideoToFrames: React.FC<VideoToFramesProps> = ({ isExiting = false 
                         if (blob) {
                             resolve({
                                 id: Math.random().toString(36).substr(2, 9),
-                                url: URL.createObjectURL(blob),
+                                url: track(URL.createObjectURL(blob)),
                                 timestamp: time,
                                 blob
                             });
@@ -201,12 +203,13 @@ export const VideoToFrames: React.FC<VideoToFramesProps> = ({ isExiting = false 
         const vidTitle = typeof extractorVideo === 'string' ? extractorVideo : extractorVideo?.name || 'video';
         link.download = `frames_${vidTitle}.zip`;
         link.click();
+        URL.revokeObjectURL(link.href);
     };
 
     const handleJoinFilesSelect = async (files: FileList | null) => {
         if (!files) return;
         const newVideos = await Promise.all(Array.from(files).map(async (file) => {
-            const url = URL.createObjectURL(file);
+            const url = track(URL.createObjectURL(file));
             const metadata = await new Promise<{duration: number, width: number, height: number}>((res) => {
                 const v = (window as any).document.createElement('video');
                 v.src = url;
@@ -255,7 +258,7 @@ export const VideoToFrames: React.FC<VideoToFramesProps> = ({ isExiting = false 
         recorder.ondataavailable = (e: any) => { if (e.data.size > 0) recordedChunksRef.current.push(e.data); };
         recorder.onstop = () => {
             const blob = new Blob(recordedChunksRef.current, { type: recorder.mimeType });
-            setJoinedVideoUrl(URL.createObjectURL(blob)); setIsJoining(false);
+            setJoinedVideoUrl(track(URL.createObjectURL(blob))); setIsJoining(false);
             setActualExtension(recorder.mimeType.includes('mp4') ? 'mp4' : 'webm');
             if (animationFrameRef.current !== null) cancelAnimationFrame(animationFrameRef.current);
         };
@@ -279,7 +282,7 @@ export const VideoToFrames: React.FC<VideoToFramesProps> = ({ isExiting = false 
         (streamVideo as any).onended = playNext; recorder.start(); drawLoop(); playNext();
     };
 
-    const removeJoinItem = (id: string) => { setJoinFiles(prev => prev.filter(v => { if (v.id === id) { URL.revokeObjectURL(v.url); return false; } return true; })); };
+    const removeJoinItem = (id: string) => { setJoinFiles(prev => prev.filter(v => { if (v.id === id) { revoke(v.url); return false; } return true; })); };
 
     return (
         <div className="flex flex-col h-full w-full relative overflow-visible p-0 bg-transparent">
@@ -568,7 +571,7 @@ export const VideoToFrames: React.FC<VideoToFramesProps> = ({ isExiting = false 
                                                 <p className="text-[9px] text-white font-mono font-black mb-2 uppercase">{formatTime(f.timestamp)}</p>
                                                 <div className="flex gap-2">
                                                     <a href={f.url} download={`frame_${f.timestamp.toFixed(2)}s.jpg`} className="form-btn h-8 flex-grow">SAVE</a>
-                                                    <button onClick={() => setFrames(prev => prev.filter(x => x.id !== f.id))} className="form-btn h-8 w-8 text-error">✕</button>
+                                                    <button onClick={() => setFrames(prev => prev.filter(x => { if (x.id === f.id) { revoke(x.url); return false; } return true; }))} className="form-btn h-8 w-8 text-error">✕</button>
                                                 </div>
                                             </div>
                                         </div>

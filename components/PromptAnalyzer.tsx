@@ -485,9 +485,9 @@ export const PromptAnalyzer: React.FC<PromptAnalyzerProps> = ({
         return Math.ceil(text.length / 4);
     }, [reconstructedPrompt, promptInput]);
 
-    const handleSelectLibraryPrompt = (prompt: SavedPrompt) => {
+    const handleSelectLibraryPrompt = useCallback((prompt: SavedPrompt) => {
         setPromptInput(prompt.text);
-    };
+    }, []);
 
     const hasBreakdown = subjectPrompt || modifierSegments.length > 0;
 

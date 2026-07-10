@@ -175,17 +175,13 @@ const ImageGallery: React.FC<ImageGalleryProps> = ({
     };
     window.addEventListener('gallery-manifest-healed', handleHealed);
     return () => window.removeEventListener('gallery-manifest-healed', handleHealed);
-  }, [refreshData]);
-
-  const handleAddItem = async (type: 'image' | 'video', urls: string[], sources: string[], categoryId?: string, title?: string, tags?: string[], notes?: string, prompt?: string, isNsfw?: boolean) => {
-    await addItemToGallery(type, urls, sources, categoryId, title, tags, notes, prompt, isNsfw);
-    await refreshData();
-  };
-
-  const handleUpdateItem = async (id: string, updates: Partial<GalleryItem>) => {
-    await updateItemInGallery(id, updates);
-    await refreshData();
-  };
+  }, [refreshData]);    const handleAddItem = useCallback(async (type: 'image' | 'video', urls: string[], sources: string[], categoryId?: string, title?: string, tags?: string[], notes?: string, prompt?: string, isNsfw?: boolean) => {
+        await addItemToGallery(type, urls, sources, categoryId, title, tags, notes, prompt, isNsfw);
+        await refreshData();
+    }, [refreshData]);    const handleUpdateItem = useCallback(async (id: string, updates: Partial<GalleryItem>) => {
+        await updateItemInGallery(id, updates);
+        await refreshData();
+    }, [refreshData]);
 
   const handleDeleteItem = async (item: GalleryItem) => {
     setDetailViewItemId(null);
