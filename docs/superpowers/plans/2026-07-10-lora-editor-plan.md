@@ -876,7 +876,7 @@ export function evaluateCustomFields(defs: CustomFieldDef[], context: CustomFiel
 - [ ] **Step 4: Run test to verify it passes**
 
 Run: `pnpm vitest run components/loraEditor/lib/customFields.test.ts`
-Expected: PASS (4 tests)
+Expected: PASS (5 tests)
 
 - [ ] **Step 5: Commit**
 
@@ -1023,8 +1023,8 @@ git commit -m "feat: add templating/field-resolution lib for LoRA Editor"
 - Test: `components/loraEditor/lib/tagTools.test.ts`
 
 **Interfaces:**
-- Consumes: none (pure functions over plain objects).
-- Produces: `aggregateAndSort`, `sortSubproperties`, `convertNumericKeysToString`, `filterTopN`, `filterByTag`, `removeTags`, `isValidRegex`, `applyFiltersToSubproperties`, `listToRegex`, `getSuggestedPrompt` — used by Task 13 (TagFrequencyPanel/SuggestedPromptPanel).
+- Consumes: `FilterMethod` from `../types` (Task 2).
+- Produces: `aggregateAndSort`, `sortSubproperties`, `convertNumericKeysToString`, `filterTopN`, `filterByTag`, `removeTags`, `isValidRegex`, `applyFiltersToSubproperties`, `listToRegex`, `getSuggestedPrompt`, `buildFilterRegex(method: FilterMethod, value: string): RegExp | string | null`, `applyTagFilters(tags: Record<string, any>, options: TagFilterOptions): Record<string, any>`, `TagFilterOptions` type — used by Task 13 (TagFrequencyPanel/SuggestedPromptPanel), which both call `applyTagFilters` instead of duplicating the include/exclude/top-N/by-folder branch logic.
 
 - [ ] **Step 1: Write the failing test**
 
@@ -1035,7 +1035,7 @@ import { describe, it, expect } from 'vitest';
 import {
     aggregateAndSort, sortSubproperties, convertNumericKeysToString,
     filterTopN, filterByTag, removeTags, isValidRegex, applyFiltersToSubproperties,
-    listToRegex, getSuggestedPrompt,
+    listToRegex, getSuggestedPrompt, buildFilterRegex, applyTagFilters,
 } from './tagTools';
 
 describe('aggregateAndSort', () => {
@@ -1121,6 +1121,53 @@ describe('getSuggestedPrompt', () => {
         expect(getSuggestedPrompt(undefined as any)).toBeUndefined();
     });
 });
+
+describe('buildFilterRegex', () => {
+    it('builds a partial-match regex for method "partial"', () => {
+        const re = buildFilterRegex('partial', 'cat, dog');
+        expect(re && (re as RegExp).test('catfish')).toBe(true);
+    });
+    it('builds an exact-match regex for method "exact"', () => {
+        const re = buildFilterRegex('exact', 'cat');
+        expect(re && (re as RegExp).test('catfish')).toBe(false);
+    });
+    it('passes the raw string through for method "regex"', () => {
+        expect(buildFilterRegex('regex', '^cat$')).toBe('^cat$');
+    });
+    it('returns null for method "none" or an empty value', () => {
+        expect(buildFilterRegex('none', 'cat')).toBeNull();
+        expect(buildFilterRegex('partial', '')).toBeNull();
+    });
+});
+
+describe('applyTagFilters', () => {
+    const flatTags = { cat: 5, dog: 3, catfish: 1 };
+    const folderTags = { folderA: { cat: 5, dog: 3 }, folderB: { catfish: 1 } };
+
+    it('applies include/exclude/top-N on flat tags when byFolder is false', () => {
+        const result = applyTagFilters(flatTags, {
+            byFolder: false, filterMethod: 'exact', filter: 'cat, catfish',
+            excludeFilterMethod: 'none', excludeFilter: '', count: 1,
+        });
+        expect(result).toEqual({ cat: 5 });
+    });
+
+    it('applies the same filters per-folder when byFolder is true', () => {
+        const result = applyTagFilters(folderTags, {
+            byFolder: true, filterMethod: 'none', filter: '',
+            excludeFilterMethod: 'exact', excludeFilter: 'catfish', count: 0,
+        });
+        expect(result).toEqual({ folderA: { cat: 5, dog: 3 }, folderB: {} });
+    });
+
+    it('ignores invalid regex filters instead of throwing', () => {
+        const result = applyTagFilters(flatTags, {
+            byFolder: false, filterMethod: 'regex', filter: '(unterminated',
+            excludeFilterMethod: 'none', excludeFilter: '', count: 0,
+        });
+        expect(result).toEqual(flatTags);
+    });
+});
 ```
 
 - [ ] **Step 2: Run test to verify it fails**
@@ -1133,6 +1180,8 @@ Expected: FAIL — `Cannot find module './tagTools'`
 Create `components/loraEditor/lib/tagTools.ts`:
 
 ```ts
+import type { FilterMethod } from '../types';
+
 export function aggregateAndSort(originalObject: Record<string, Record<string, number>>): Record<string, number> {
     return Object.fromEntries(
         Object.entries(
@@ -1236,12 +1285,56 @@ export function getSuggestedPrompt(tags: Record<string, any> | undefined): Recor
     }
     return prompts;
 }
+
+export function buildFilterRegex(method: FilterMethod, value: string): RegExp | string | null {
+    switch (method) {
+        case 'regex': return value || null;
+        case 'exact': return value ? listToRegex(value, true) : null;
+        case 'partial': return value ? listToRegex(value) : null;
+        default: return null;
+    }
+}
+
+export interface TagFilterOptions {
+    byFolder: boolean;
+    filterMethod: FilterMethod;
+    filter: string;
+    excludeFilterMethod: FilterMethod;
+    excludeFilter: string;
+    count: number;
+}
+
+/**
+ * Shared by TagFrequencyPanel and SuggestedPromptPanel (Task 13): both apply the
+ * same include/exclude/top-N/by-folder pipeline to a tag object, just with different
+ * settings-field sources and a different final render. Invalid regexes are ignored
+ * rather than thrown, matching the original tool's validation-then-skip behavior.
+ */
+export function applyTagFilters(tags: Record<string, any>, options: TagFilterOptions): Record<string, any> {
+    const includeRegex = buildFilterRegex(options.filterMethod, options.filter);
+    const excludeRegex = buildFilterRegex(options.excludeFilterMethod, options.excludeFilter);
+    const validInclude = includeRegex !== null && isValidRegex(includeRegex);
+    const validExclude = excludeRegex !== null && isValidRegex(excludeRegex);
+
+    let result: Record<string, any> = JSON.parse(JSON.stringify(tags));
+
+    if (options.byFolder) {
+        if (validInclude) result = applyFiltersToSubproperties(result, filterByTag, includeRegex as RegExp | string);
+        if (validExclude) result = applyFiltersToSubproperties(result, removeTags, excludeRegex as RegExp | string);
+        if (options.count > 0) result = applyFiltersToSubproperties(result, filterTopN, options.count);
+    } else {
+        if (validInclude) result = filterByTag(result, includeRegex as RegExp | string);
+        if (validExclude) result = removeTags(result, excludeRegex as RegExp | string);
+        if (options.count > 0) result = filterTopN(result, options.count);
+    }
+    return result;
+}
 ```
 
 - [ ] **Step 4: Run test to verify it passes**
 
 Run: `pnpm vitest run components/loraEditor/lib/tagTools.test.ts`
-Expected: PASS (13 tests)
+Expected: PASS (21 tests)
 
 - [ ] **Step 5: Commit**
 
@@ -2076,16 +2169,15 @@ git commit -m "feat: add LoRA Editor summary panel (JSON/table/dashboard layouts
 - Create: `components/loraEditor/SuggestedPromptPanel.tsx`
 
 **Interfaces:**
-- Consumes: `filterTopN`, `filterByTag`, `removeTags`, `isValidRegex`, `applyFiltersToSubproperties`, `listToRegex`, `getSuggestedPrompt` (Task 7); `LoraEditorState`, `LoraEditorSettings`.
+- Consumes: `applyTagFilters`, `TagFilterOptions`, `getSuggestedPrompt` (Task 7); `LoraEditorState`, `LoraEditorSettings`.
 - Produces: `TagFrequencyPanel: React.FC<{ state: LoraEditorState; settings: LoraEditorSettings; onSettingsChange: (next: LoraEditorSettings) => void }>`, `SuggestedPromptPanel` with the same signature — used by Task 16's tab bar.
 
 - [ ] **Step 1: Create the shared filter controls**
 
-Create `components/loraEditor/TagFilterControls.tsx`:
+Create `components/loraEditor/TagFilterControls.tsx`. This is presentational only — the filtering logic itself lives in Task 7's `applyTagFilters`, shared by both panels below instead of being duplicated:
 
 ```tsx
 import React from 'react';
-import { listToRegex } from './lib/tagTools';
 import type { FilterMethod } from './types';
 
 export interface TagFilterValues {
@@ -2145,15 +2237,6 @@ const TagFilterControls: React.FC<TagFilterControlsProps> = ({ values, onChange 
 };
 
 export default TagFilterControls;
-
-export function buildFilterRegex(method: FilterMethod, value: string): RegExp | string | null {
-    switch (method) {
-        case 'regex': return value || null;
-        case 'exact': return value ? listToRegex(value, true) : null;
-        case 'partial': return value ? listToRegex(value) : null;
-        default: return null;
-    }
-}
 ```
 
 - [ ] **Step 2: Create TagFrequencyPanel.tsx**
@@ -2164,8 +2247,8 @@ Create `components/loraEditor/TagFrequencyPanel.tsx`:
 import React, { useMemo } from 'react';
 import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter';
 import { vscDarkPlus } from 'react-syntax-highlighter/dist/esm/styles/prism';
-import TagFilterControls, { buildFilterRegex } from './TagFilterControls';
-import { filterByTag, removeTags, filterTopN, applyFiltersToSubproperties, isValidRegex } from './lib/tagTools';
+import TagFilterControls from './TagFilterControls';
+import { applyTagFilters } from './lib/tagTools';
 import type { LoraEditorState } from './LoraEditorPage';
 import type { LoraEditorSettings } from './types';
 
@@ -2176,27 +2259,14 @@ interface TagFrequencyPanelProps {
 }
 
 const TagFrequencyPanel: React.FC<TagFrequencyPanelProps> = ({ state, settings, onSettingsChange }) => {
-    const filtered = useMemo(() => {
-        const includeRegex = buildFilterRegex(settings.tagFrequencyFilterMethod, settings.tagFrequencyFilter);
-        const excludeRegex = buildFilterRegex(settings.tagExcludeFilterMethod, settings.tagExcludeFilter);
-        const validInclude = includeRegex !== null && isValidRegex(includeRegex);
-        const validExclude = excludeRegex !== null && isValidRegex(excludeRegex);
-
-        let result: Record<string, any> = settings.tagByFolder
-            ? JSON.parse(JSON.stringify(state.tagsByFolder))
-            : JSON.parse(JSON.stringify(state.tagsAggregated));
-
-        if (settings.tagByFolder) {
-            if (validInclude) result = applyFiltersToSubproperties(result, filterByTag, includeRegex as RegExp | string);
-            if (validExclude) result = applyFiltersToSubproperties(result, removeTags, excludeRegex as RegExp | string);
-            if (settings.tagFrequencyCount > 0) result = applyFiltersToSubproperties(result, filterTopN, settings.tagFrequencyCount);
-        } else {
-            if (validInclude) result = filterByTag(result, includeRegex as RegExp | string);
-            if (validExclude) result = removeTags(result, excludeRegex as RegExp | string);
-            if (settings.tagFrequencyCount > 0) result = filterTopN(result, settings.tagFrequencyCount);
-        }
-        return result;
-    }, [state.tagsByFolder, state.tagsAggregated, settings.tagByFolder, settings.tagFrequencyFilter, settings.tagFrequencyFilterMethod, settings.tagExcludeFilter, settings.tagExcludeFilterMethod, settings.tagFrequencyCount]);
+    const filtered = useMemo(() => applyTagFilters(settings.tagByFolder ? state.tagsByFolder : state.tagsAggregated, {
+        byFolder: settings.tagByFolder,
+        filterMethod: settings.tagFrequencyFilterMethod,
+        filter: settings.tagFrequencyFilter,
+        excludeFilterMethod: settings.tagExcludeFilterMethod,
+        excludeFilter: settings.tagExcludeFilter,
+        count: settings.tagFrequencyCount,
+    }), [state.tagsByFolder, state.tagsAggregated, settings.tagByFolder, settings.tagFrequencyFilter, settings.tagFrequencyFilterMethod, settings.tagExcludeFilter, settings.tagExcludeFilterMethod, settings.tagFrequencyCount]);
 
     return (
         <div className="flex flex-col h-full overflow-hidden">
@@ -2228,8 +2298,8 @@ Create `components/loraEditor/SuggestedPromptPanel.tsx`:
 
 ```tsx
 import React, { useMemo } from 'react';
-import TagFilterControls, { buildFilterRegex } from './TagFilterControls';
-import { filterByTag, removeTags, filterTopN, applyFiltersToSubproperties, isValidRegex, getSuggestedPrompt } from './lib/tagTools';
+import TagFilterControls from './TagFilterControls';
+import { applyTagFilters, getSuggestedPrompt } from './lib/tagTools';
 import type { LoraEditorState } from './LoraEditorPage';
 import type { LoraEditorSettings } from './types';
 
@@ -2241,26 +2311,15 @@ interface SuggestedPromptPanelProps {
 
 const SuggestedPromptPanel: React.FC<SuggestedPromptPanelProps> = ({ state, settings, onSettingsChange }) => {
     const prompt = useMemo(() => {
-        const includeRegex = buildFilterRegex(settings.suggestedPromptFilterMethod, settings.suggestedPromptFilter);
-        const excludeRegex = buildFilterRegex(settings.suggestedPromptExcludeFilterMethod, settings.suggestedPromptExcludeFilter);
-        const validInclude = includeRegex !== null && isValidRegex(includeRegex);
-        const validExclude = excludeRegex !== null && isValidRegex(excludeRegex);
-
-        let result: Record<string, any> = settings.suggestedPromptByFolder
-            ? JSON.parse(JSON.stringify(state.tagsByFolder))
-            : JSON.parse(JSON.stringify(state.tagsAggregated));
-
-        if (settings.suggestedPromptByFolder) {
-            if (validInclude) result = applyFiltersToSubproperties(result, filterByTag, includeRegex as RegExp | string);
-            if (validExclude) result = applyFiltersToSubproperties(result, removeTags, excludeRegex as RegExp | string);
-            if (settings.suggestedPromptCount > 0) result = applyFiltersToSubproperties(result, filterTopN, settings.suggestedPromptCount);
-        } else {
-            if (validInclude) result = filterByTag(result, includeRegex as RegExp | string);
-            if (validExclude) result = removeTags(result, excludeRegex as RegExp | string);
-            if (settings.suggestedPromptCount > 0) result = filterTopN(result, settings.suggestedPromptCount);
-        }
-
-        const built = getSuggestedPrompt(result);
+        const filtered = applyTagFilters(settings.suggestedPromptByFolder ? state.tagsByFolder : state.tagsAggregated, {
+            byFolder: settings.suggestedPromptByFolder,
+            filterMethod: settings.suggestedPromptFilterMethod,
+            filter: settings.suggestedPromptFilter,
+            excludeFilterMethod: settings.suggestedPromptExcludeFilterMethod,
+            excludeFilter: settings.suggestedPromptExcludeFilter,
+            count: settings.suggestedPromptCount,
+        });
+        const built = getSuggestedPrompt(filtered);
         if (!settings.suggestedPromptByFolder && built) return { Prompt: built.Prompt };
         return built || {};
     }, [state.tagsByFolder, state.tagsAggregated, settings.suggestedPromptByFolder, settings.suggestedPromptFilter, settings.suggestedPromptFilterMethod, settings.suggestedPromptExcludeFilter, settings.suggestedPromptExcludeFilterMethod, settings.suggestedPromptCount]);
@@ -2643,7 +2702,7 @@ pnpm run lint
 pnpm run test
 ```
 
-Expected: no new type errors; all `components/loraEditor/**/*.test.ts` files pass (safetensors: 5, hashing: 4, customFields: 4, templating: 7, tagTools: 13, onlineLookup: 8 — 41 tests total).
+Expected: no new type errors; all `components/loraEditor/**/*.test.ts` files pass (safetensors: 5, hashing: 4, customFields: 5, templating: 7, tagTools: 21, onlineLookup: 8 — 50 tests total).
 
 - [ ] **Step 7: Commit**
 
