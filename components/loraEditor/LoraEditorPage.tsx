@@ -11,8 +11,14 @@ import { aggregateAndSort, sortSubproperties, convertNumericKeysToString } from 
 import { DEFAULT_SETTINGS } from './constants';
 import type { LoraEditorSettings, FileHashes } from './types';
 import SettingsDrawer from './SettingsDrawer';
+import MetadataPanel from './MetadataPanel';
+import SummaryPanel from './SummaryPanel';
+import TagFrequencyPanel from './TagFrequencyPanel';
+import SuggestedPromptPanel from './SuggestedPromptPanel';
+import OnlineLookupPanel from './OnlineLookupPanel';
+import MetadataEditorPanel from './MetadataEditorPanel';
 
-export type LoraEditorTab = 'summary' | 'tags' | 'metadata' | 'editor' | 'lookup';
+export type LoraEditorTab = 'summary' | 'tags' | 'prompt' | 'metadata' | 'editor' | 'lookup';
 
 export interface LoraEditorState {
     file: File | null;
@@ -50,12 +56,16 @@ const LoraEditorPage: React.FC<LoraEditorPageProps> = ({ isExiting = false }) =>
     const [settings, setSettings] = useLocalStorage<LoraEditorSettings>('loraEditorSettings', DEFAULT_SETTINGS);
     const [state, setState] = useState<LoraEditorState>(EMPTY_STATE);
     const [activeTab, setActiveTab] = useState<LoraEditorTab>('summary');
-    void activeTab; void setActiveTab; // ponytail: read by Task 16's tab bar, not rendered yet
     const [isSettingsOpen, setIsSettingsOpen] = useState(false);
     const [isDragging, setIsDragging] = useState(false);
     const [isLoading, setIsLoading] = useState(false);
     const [loadingMessage, setLoadingMessage] = useState('');
     const [loadError, setLoadError] = useState<string | null>(null);
+    const [feedback, setFeedback] = useState<{ message: string; isError: boolean } | null>(null);
+    const showFeedback = useCallback((message: string, isError = false) => {
+        setFeedback({ message, isError });
+        setTimeout(() => setFeedback(null), 4000);
+    }, []);
 
     const recomputeCustomMetadata = useCallback((partial: Partial<LoraEditorState>, currentSettings: LoraEditorSettings) => {
         // Seed customMetadata with the hashes computed in Task 4's lib/hashing.ts — these aren't
@@ -218,9 +228,29 @@ const LoraEditorPage: React.FC<LoraEditorPageProps> = ({ isExiting = false }) =>
                                 </label>
                             </div>
                         ) : (
-                            <div className="text-xs font-mono text-base-content/60 overflow-y-auto">
-                                {Object.keys(state.fileMetadata).length} metadata fields parsed. AutoV2: {state.hashes.autov2 || 'n/a'}, AutoV3: {state.hashes.autov3 || 'n/a'}.
-                                {/* Task 16 replaces this block with the tab bar + panels. */}
+                            <div className="flex flex-col h-full overflow-hidden">
+                                <div className="flex gap-1 border-b border-base-content/10 mb-2 flex-shrink-0">
+                                    {([
+                                        ['summary', 'Summary'], ['tags', 'Tag Frequency'], ['prompt', 'Suggested Prompt'],
+                                        ['metadata', 'Metadata'], ['editor', 'Editor'], ['lookup', 'Online Lookup'],
+                                    ] as const).map(([id, label]) => (
+                                        <button
+                                            key={id}
+                                            onClick={() => setActiveTab(id)}
+                                            className={`px-3 h-8 text-[10px] font-black uppercase tracking-widest transition-colors ${activeTab === id ? 'text-primary border-b-2 border-primary' : 'text-base-content/40 hover:text-base-content'}`}
+                                        >
+                                            {label}
+                                        </button>
+                                    ))}
+                                </div>
+                                <div className="flex-grow overflow-hidden">
+                                    {activeTab === 'summary' && <SummaryPanel state={state} settings={settings} />}
+                                    {activeTab === 'tags' && <TagFrequencyPanel state={state} settings={settings} onSettingsChange={setSettings} />}
+                                    {activeTab === 'prompt' && <SuggestedPromptPanel state={state} settings={settings} onSettingsChange={setSettings} />}
+                                    {activeTab === 'metadata' && <MetadataPanel fileMetadata={state.fileMetadata} />}
+                                    {activeTab === 'editor' && <MetadataEditorPanel state={state} settings={settings} onFeedback={showFeedback} />}
+                                    {activeTab === 'lookup' && <OnlineLookupPanel state={state} />}
+                                </div>
                             </div>
                         )}
                     </div>
@@ -232,6 +262,11 @@ const LoraEditorPage: React.FC<LoraEditorPageProps> = ({ isExiting = false }) =>
                 settings={settings}
                 onChange={setSettings}
             />
+            {feedback && (
+                <div className={`fixed bottom-6 right-6 z-[700] px-4 py-3 text-xs font-bold uppercase tracking-widest ${feedback.isError ? 'bg-error text-error-content' : 'bg-primary text-primary-content'}`}>
+                    {feedback.message}
+                </div>
+            )}
         </div>
     );
 };
