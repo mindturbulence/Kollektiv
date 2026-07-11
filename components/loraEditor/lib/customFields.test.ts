@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { evaluateCustomFields } from './customFields';
+import { evaluateCustomFields, escapeHtml } from './customFields';
 import type { CustomFieldContext } from '../types';
 
 function baseContext(overrides: Partial<CustomFieldContext> = {}): CustomFieldContext {
@@ -56,5 +56,33 @@ describe('evaluateCustomFields', () => {
         const result = evaluateCustomFields(defs, baseContext(), { sha256: 'abcdef123456' });
         expect(result.short_hash).toBe('abcd');
         expect(result.sha256).toBe('abcdef123456');
+    });
+
+    it('exposes escapeHtml to expressions for safely embedding remote lookup data as HTML', () => {
+        const defs = [{ label: 'safe', calc: "escapeHtml(civitaiMetadata.username)" }];
+        const result = evaluateCustomFields(defs, baseContext({ civitaiMetadata: { username: "<img src=x onerror=alert(1)>" } }));
+        expect(result.safe).toBe('&lt;img src=x onerror=alert(1)&gt;');
+    });
+});
+
+describe('escapeHtml', () => {
+    it('escapes the five HTML-significant characters', () => {
+        expect(escapeHtml(`<script>&"'</script>`)).toBe('&lt;script&gt;&amp;&quot;&#39;&lt;/script&gt;');
+    });
+
+    it('neutralizes an attribute-breakout payload used to inject an event handler', () => {
+        const payload = `x' onerror='alert(1)`;
+        const escaped = escapeHtml(payload);
+        expect(escaped).not.toContain("'");
+        expect(`<img src='${escaped}'>`).toBe(`<img src='x&#39; onerror=&#39;alert(1)'>`);
+    });
+
+    it('returns an empty string for null/undefined', () => {
+        expect(escapeHtml(null)).toBe('');
+        expect(escapeHtml(undefined)).toBe('');
+    });
+
+    it('stringifies non-string values before escaping', () => {
+        expect(escapeHtml(42)).toBe('42');
     });
 });
