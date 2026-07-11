@@ -233,10 +233,10 @@ const Footer: React.FC<FooterProps> = ({
                         animate={{ opacity: 1, y: 0 }}
                         exit={{ opacity: 0, y: -4 }}
                         transition={{ duration: 0.25, ease: [0.23, 1, 0.32, 1] }}
-                        className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 z-[705] pointer-events-none flex items-center gap-2"
+                        className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 z-[705] pointer-events-none flex items-center h-full gap-2"
                     >
                         <span className={`w-1.5 h-1.5 ${liveStatus === 'error' ? 'bg-error' : 'bg-primary animate-pulse'}`} />
-                        <span className={`font-mono text-[10px] font-bold tracking-[0.5em] uppercase leading-none ${liveStatus === 'error' ? 'text-error' : 'text-base-content/70'}`}>
+                        <span className={`uppercase tracking-[0.1em] font-normal leading-none inline-block ${liveStatus === 'error' ? 'text-error' : 'shine-text'} ${mainFontClass}`}>
                             {liveLabel}
                         </span>
                     </motion.div>

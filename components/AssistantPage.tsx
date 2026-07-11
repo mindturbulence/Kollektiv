@@ -1,8 +1,7 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { appEventBus } from '../utils/eventBus';
 import { useAssistantSignals } from '../utils/useAssistantSignals';
-import { useSettings } from '../contexts/SettingsContext';
 import AssistantBackdrop from './AssistantBackdrop';
 
 const PROMPT = 'WHAT ARE YOUR COMMANDS?';
@@ -59,14 +58,53 @@ const Stage: React.FC<{ text: string; streaming?: boolean; wordTime?: number; si
     );
 };
 
+/** One-time terminal-style reveal of the command prompt: the full sentence
+ * types out character-by-character with a blinking cursor. Only ever shown
+ * once per page visit — later returns to command mode just show the idle
+ * sigil (see AssistantPage). */
+const TerminalPrompt: React.FC<{ text: string }> = ({ text }) => {
+    const [n, setN] = useState(0);
+    const done = n >= text.length;
+
+    useEffect(() => {
+        if (done) return;
+        const t = setTimeout(() => setN(v => v + 1), 45);
+        return () => clearTimeout(t);
+    }, [n, done]);
+
+    return (
+        <div className="flex flex-col items-center gap-6">
+            <p className={`${BIG_TEXT} text-center`}>
+                {text.slice(0, n)}
+                {!done && <span className="inline-block w-[0.5ch] h-[0.9em] bg-base-content align-middle ml-1 animate-pulse" />}
+            </p>
+            <motion.div animate={{ scale: done ? 1 : 0 }} transition={{ duration: 0.15 }}>
+                <motion.div animate={{ opacity: [1, 0.25, 1] }} transition={{ duration: 1.6, repeat: Infinity, ease: 'easeInOut' }}>
+                    <Sigil />
+                </motion.div>
+            </motion.div>
+        </div>
+    );
+};
+
 /** Fullscreen Samaritan-style face of the live voice assistant. Mounted as the
  * 'assistant' tab; the mic toggle navigates here on session start and this
  * page navigates back to the dashboard when the session ends. The AI reply
  * streams as the large center text (no subtitle strip on this screen). */
 const AssistantPage: React.FC = () => {
     const { mode, status, error, userText, assistantText, activity } = useAssistantSignals();
-    const { settings } = useSettings();
-    const assistantName = settings.assistantName || 'Kollektiv';
+
+    // Tracks whether the command-mode intro sentence has played this visit —
+    // it only ever types out once; later returns to command mode just show
+    // the idle sigil.
+    const shownIntroRef = useRef(false);
+    const commandViewRef = useRef<'intro' | 'idle'>('idle');
+    const prevModeRef = useRef<typeof mode | null>(null);
+    if (mode === 'command' && prevModeRef.current !== 'command') {
+        commandViewRef.current = shownIntroRef.current ? 'idle' : 'intro';
+        shownIntroRef.current = true;
+    }
+    prevModeRef.current = mode;
 
     // Session over — return home. Also bounces straight out if someone lands
     // here without an active session. Errors linger long enough to read.
@@ -80,18 +118,11 @@ const AssistantPage: React.FC = () => {
         <div className="absolute inset-0 bg-base-100 overflow-hidden select-none flex items-center justify-center">
             <AssistantBackdrop mode={mode} />
 
-            {/* Wordmark — this is Kollektiv., not Samaritan */}
-            <div className="absolute top-4 inset-x-0 flex justify-center pointer-events-none">
-                <p className="font-monoton text-sm tracking-[0.4em] uppercase text-base-content/40">
-                    {assistantName}<span className="text-primary italic">.</span>
-                </p>
-            </div>
-
-            {/* Corner readouts */}
+            {/* Corner readout */}
             <div className="absolute top-4 left-5 font-mono text-[9px] tracking-[0.4em] uppercase text-base-content/30">
                 {status === 'live' ? 'UPLINK ACTIVE' : status.toUpperCase()}
             </div>
-            <div className="absolute bottom-4 right-5 font-mono text-[9px] tracking-[0.4em] uppercase text-base-content/30">
+            <div className="absolute bottom-4 inset-x-0 flex justify-center font-mono text-[9px] tracking-[0.4em] uppercase text-base-content/30 pointer-events-none">
                 CTRL+SPACE TO END
             </div>
 
@@ -115,7 +146,13 @@ const AssistantPage: React.FC = () => {
                         )}
 
                         {mode === 'command' && (
-                            <Stage text={PROMPT} />
+                            commandViewRef.current === 'intro' ? (
+                                <TerminalPrompt text={PROMPT} />
+                            ) : (
+                                <motion.div animate={{ opacity: [1, 0.25, 1] }} transition={{ duration: 1.6, repeat: Infinity, ease: 'easeInOut' }}>
+                                    <Sigil />
+                                </motion.div>
+                            )
                         )}
 
                         {mode === 'listening' && (

@@ -43,6 +43,7 @@ export default defineConfig(({ mode }) => {
       server: {
         host: true,
         strictPort: false,
+        allowedHosts: ['host.docker.internal'],
         proxy: {
           '/ollama-local': {
             target: 'http://127.0.0.1:11434',
