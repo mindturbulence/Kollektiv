@@ -1,1 +1,5 @@
 .pi/superpowers-state.json
+node_modules/
+local_storage/
+dist/
+*.log
