@@ -11,10 +11,9 @@ const OnlineLookupPanel: React.FC<OnlineLookupPanelProps> = ({ state }) => {
     const source = state.civitaiMetadata?.modelId ? 'civitai' : (state.arcencielMetadata?.id ? 'arcenciel' : null);
     const data = source === 'civitai' ? state.civitaiMetadata : source === 'arcenciel' ? state.arcencielMetadata : null;
 
-    if (!source) {
-        return <div className="h-full flex items-center justify-center text-xs text-base-content/40 uppercase tracking-widest">No matching resource found</div>;
-    }
-
+    // Hooks must run unconditionally on every render, so this is computed before the
+    // early return below rather than after it (a prior version violated the Rules of
+    // Hooks here; harmless under this panel's current mount pattern, but latent).
     const previewUrl = useMemo(() => {
         if (source === 'civitai') return data?.images?.[0]?.url;
         if (source === 'arcenciel') {
@@ -24,6 +23,10 @@ const OnlineLookupPanel: React.FC<OnlineLookupPanelProps> = ({ state }) => {
         }
         return undefined;
     }, [source, data]);
+
+    if (!source) {
+        return <div className="h-full flex items-center justify-center text-xs text-base-content/40 uppercase tracking-widest">No matching resource found</div>;
+    }
 
     const modelUrl = source === 'civitai'
         ? `https://civitai.com/models/${data!.modelId}?modelVersionId=${data!.id}`
