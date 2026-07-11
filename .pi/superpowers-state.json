@@ -27,16 +27,15 @@
     }
   },
   "tdd": {
-    "phase": "red-pending",
-    "testFiles": [
-      "D:\\AI-Dev\\Kollektiv-Dev\\utils\\notesStorage.test.ts"
-    ],
+    "phase": "idle",
+    "testFiles": [],
     "sourceFiles": [
-      "D:\\AI-Dev\\Kollektiv-Dev\\utils\\notesStorage.ts",
-      "D:\\AI-Dev\\Kollektiv-Dev\\services\\assistantTools.ts",
-      "D:\\AI-Dev\\Kollektiv-Dev\\services\\assistantService.ts"
+      "D:\\AI-Dev\\Kollektiv-Dev\\components\\icons.tsx",
+      "D:\\AI-Dev\\Kollektiv-Dev\\components\\NotesPanel.tsx",
+      "D:\\AI-Dev\\Kollektiv-Dev\\components\\Header.tsx",
+      "D:\\AI-Dev\\Kollektiv-Dev\\components\\App.tsx"
     ],
-    "redVerificationPending": true
+    "redVerificationPending": false
   },
   "debug": {
     "active": false,

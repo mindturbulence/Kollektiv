@@ -40,6 +40,7 @@ import { VideoToFrames } from './VideoToFrames';
 import LoraEditorPage from './loraEditor/LoraEditorPage';
 import { LLMChatPanel } from './LLMChatPanel';
 import WebViewerPanel from './WebViewerPanel';
+import NotesPanel from './NotesPanel';
 import { motion, AnimatePresence } from 'motion/react';
 import { pageVariants } from './AnimatedPanels';
 import ChromaticText from './ChromaticText';
@@ -424,6 +425,7 @@ const AppContent: React.FC = () => {
     const [isAboutModalOpen, setIsAboutModalOpen] = useState(false);
     const [isClippingPanelOpen, setIsClippingPanelOpen] = useState(false);
     const [isChatPanelOpen, setIsChatPanelOpen] = useState(false);
+    const [isNotesPanelOpen, setIsNotesPanelOpen] = useState(false);
     const [isLlmPanelOpen, setIsLlmPanelOpen] = useState(false);
     const [collapsedPanels, setCollapsedPanels] = useLocalStorage<Record<string, boolean>>('collapsedPanels', {});
     const [globalFeedback, setGlobalFeedback] = useState<{ message: string; type: 'success' | 'error' } | null>(null);
@@ -922,6 +924,8 @@ const AppContent: React.FC = () => {
     const handleAboutClick = useCallback(() => setIsAboutModalOpen(true), []);
     const handleToggleClippingPanel = useCallback(() => setIsClippingPanelOpen(prev => !prev), []);
     const handleToggleChatPanel = useCallback(() => setIsChatPanelOpen(prev => !prev), []);
+    const handleToggleNotesPanel = useCallback(() => setIsNotesPanelOpen(prev => !prev), []);
+    const handleCloseNotesPanel = useCallback(() => setIsNotesPanelOpen(false), []);
     const handleClearPromptsPageState = useCallback(() => setPromptsPageState(null), []);
     const handleSendToEnhancer = useCallback((prompt: string) => handleSendToPromptsPage({ prompt, view: 'enhancer' }), [handleSendToPromptsPage]);
     const handleCloseClippingPanel = useCallback(() => setIsClippingPanelOpen(false), []);
@@ -1052,6 +1056,7 @@ const AppContent: React.FC = () => {
                                 onAboutClick={handleAboutClick}
                                 onToggleClippingPanel={handleToggleClippingPanel}
                                 onToggleChatPanel={handleToggleChatPanel}
+                                onToggleNotesPanel={handleToggleNotesPanel}
                                 onStandbyClick={handleStandbyClick}
                                 clippedIdeasCount={clippedIdeas.length}
                             />
@@ -1109,6 +1114,11 @@ const AppContent: React.FC = () => {
                                         onRefineIdea={handleRefineIdea}
                                         onAddIdea={handleClipIdea}
                                         onSaveToLibrary={handleSaveClippedIdea}
+                                    />
+
+                                    <NotesPanel
+                                        isOpen={isNotesPanelOpen}
+                                        onClose={handleCloseNotesPanel}
                                     />
 
                                     <LlmStatusPanel

@@ -7,7 +7,7 @@ import RollingText from './RollingText';
 import TimedScrambledText from './TimedScrambledText';
 import ThemeSwitcher from './ThemeSwitcher';
 import ChromaticText from './ChromaticText';
-import { InformationCircleIcon, BookmarkIcon, Cog6ToothIcon, PowerIcon, ChatBubbleIcon } from './icons';
+import { InformationCircleIcon, BookmarkIcon, Cog6ToothIcon, PowerIcon, ChatBubbleIcon, NoteIcon } from './icons';
 import { HUDNavItem } from './HUDNavItem';
 import { LiveAssistantMicButton, LiveAssistantScreenButton } from './LiveAssistantBar';
 import { LiveAssistantProvider } from '../contexts/LiveAssistantContext';
@@ -21,6 +21,7 @@ interface HeaderProps {
   onStandbyClick: (e: React.MouseEvent) => void;
   clippedIdeasCount: number;
   onToggleChatPanel?: () => void;
+  onToggleNotesPanel?: () => void;
 }
 
 interface NavItemData {
@@ -115,6 +116,7 @@ const Header: React.FC<HeaderProps> = ({
   onAboutClick,
   onToggleClippingPanel,
   onToggleChatPanel,
+  onToggleNotesPanel,
   onStandbyClick,
   clippedIdeasCount
 }) => {
@@ -321,6 +323,17 @@ const Header: React.FC<HeaderProps> = ({
             title="Chat"
           >
             <ChatBubbleIcon className="w-4 h-4" />
+          </HUDNavItem>
+          <div className="w-px h-2 bg-base-content/10 self-center" />
+          <HUDNavItem
+            onClick={(e) => {
+              e.stopPropagation();
+              audioService.playClick();
+              onToggleNotesPanel?.();
+            }}
+            title="Assistant Notes & Files"
+          >
+            <NoteIcon className="w-4 h-4" />
           </HUDNavItem>
           <div className="w-px h-2 bg-base-content/10 self-center" />
           <ThemeSwitcher />
