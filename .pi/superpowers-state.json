@@ -27,20 +27,16 @@
     }
   },
   "tdd": {
-    "phase": "idle",
-    "testFiles": [],
-    "sourceFiles": [
-      "components/RefinerModifierControls.tsx",
-      "components/RefinerSlots.tsx",
-      "components/PromptsPage.tsx",
-      "D:\\AI-Dev\\Kollektiv-Dev\\components\\App.tsx",
-      "D:\\AI-Dev\\Kollektiv-Dev\\components\\Header.tsx",
-      "D:\\AI-Dev\\Kollektiv-Dev\\types.ts",
-      "D:\\AI-Dev\\Kollektiv-Dev\\utils\\settingsStorage.ts",
-      "D:\\AI-Dev\\Kollektiv-Dev\\utils\\errorHandler.ts",
-      "D:\\AI-Dev\\Kollektiv-Dev\\server.ts"
+    "phase": "red-pending",
+    "testFiles": [
+      "D:\\AI-Dev\\Kollektiv-Dev\\services\\assistantProtocol.test.ts"
     ],
-    "redVerificationPending": false
+    "sourceFiles": [
+      "D:\\AI-Dev\\Kollektiv-Dev\\types.ts",
+      "D:\\AI-Dev\\Kollektiv-Dev\\services\\assistantProtocol.ts",
+      "D:\\AI-Dev\\Kollektiv-Dev\\services\\assistantService.ts"
+    ],
+    "redVerificationPending": true
   },
   "debug": {
     "active": false,

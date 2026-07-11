@@ -101,6 +101,8 @@ export interface LLMSettings {
   assistantVoice?: string;
   assistantLanguage?: string;
   assistantPersonality?: string;
+  /** Reasoning engine for the chat assistant. Live voice always runs on Gemini. */
+  assistantProvider?: 'gemini' | 'ollama' | 'ollama_cloud' | 'openrouter' | 'anthropic' | 'llamacpp';
 
   // Prompt & Token Tracking
   masterRolePrompt?: string;

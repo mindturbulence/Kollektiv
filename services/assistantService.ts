@@ -1,6 +1,8 @@
 import type { LLMSettings } from '../types';
 import { getGeminiClient } from './geminiService';
-import { executeAssistantTool, geminiToolDeclarations } from './assistantTools';
+import { executeAssistantTool, geminiToolDeclarations, fallbackProtocolPrompt } from './assistantTools';
+import { streamChat } from './llmService';
+import { parseActionBlock, visibleText } from './assistantProtocol';
 
 export type ChatMsg = { role: 'user' | 'assistant' | 'system'; content: string; attachments?: { data: string; mimeType: string; fileName?: string }[] };
 
@@ -50,13 +52,28 @@ export const buildSystemIdentity = (settings: LLMSettings): string => {
     return `${withMasterRole}\n\n${WORKSPACE_CAPABILITIES}`;
 };
 
-// The assistant always reasons on Gemini (native function calling), independent of
-// whichever engine is active for the rest of the app. Switching the footer's LLM
-// engine changes what PromptCrafter/Refiner/etc. use for manual work — it must not
-// change what the assistant itself runs on.
+export type AssistantProvider = NonNullable<LLMSettings['assistantProvider']>;
+
+/** Which engine the assistant reasons on (Settings > Integrations > Assistant).
+ * Independent of the footer's activeLLM switch, which governs manual
+ * Crafter/Refiner work. Live voice is always Gemini (liveAssistantService). */
+export const getAssistantProvider = (settings: LLMSettings): AssistantProvider =>
+    settings.assistantProvider || 'gemini';
+
 export async function* runAssistantTurn(messages: ChatMsg[], settings: LLMSettings): AsyncGenerator<AssistantEvent> {
-    yield* runGeminiTurn(messages, settings);
+    switch (getAssistantProvider(settings)) {
+        case 'gemini':
+            yield* runGeminiTurn(messages, settings);
+            return;
+        default:
+            // ponytail: every non-Gemini brain uses the <action> text protocol for
+            // now; Ollama and OpenRouter get native tool-calling turns next.
+            yield* runFallbackTurn(messages, settings);
+    }
 }
+
+const latestAttachments = (messages: ChatMsg[]) =>
+    [...messages].reverse().find(m => m.role === 'user' && m.attachments?.length)?.attachments;
 
 // ---------------- Gemini: native function calling ----------------
 
@@ -64,8 +81,7 @@ async function* runGeminiTurn(messages: ChatMsg[], settings: LLMSettings): Async
     const ai = getGeminiClient(settings);
     const model = settings.llmModel || 'gemini-3.5-flash';
     const systemText = [buildSystemIdentity(settings), ...messages.filter(m => m.role === 'system').map(m => m.content)].join('\n\n');
-    // Attachments on the most recent user turn, made available to tools like abstract_image.
-    const attachments = [...messages].reverse().find(m => m.role === 'user' && m.attachments?.length)?.attachments;
+    const attachments = latestAttachments(messages);
     const contents: any[] = messages
         .filter(m => m.role !== 'system')
         .map(m => ({
@@ -123,3 +139,41 @@ async function* runGeminiTurn(messages: ChatMsg[], settings: LLMSettings): Async
     yield { type: 'turn_end' };
 }
 
+// ---------------- Fallback: <action> text protocol over streamChat ----------------
+
+async function* runFallbackTurn(messages: ChatMsg[], settings: LLMSettings): AsyncGenerator<AssistantEvent> {
+    const provider = getAssistantProvider(settings);
+    // streamChat dispatches on activeLLM, so force it to the assistant's brain.
+    // masterRolePrompt is blanked because buildSystemIdentity already prepends
+    // it — streamChat would otherwise inject it a second time.
+    const chatSettings: LLMSettings = { ...settings, activeLLM: provider as LLMSettings['activeLLM'], masterRolePrompt: '' };
+    const attachments = latestAttachments(messages);
+    const convo: ChatMsg[] = [
+        { role: 'system', content: fallbackProtocolPrompt(buildSystemIdentity(settings)) },
+        ...messages.filter(m => m.role !== 'system'),
+    ];
+
+    for (let round = 0; round < MAX_TOOL_ROUNDS; round++) {
+        let full = '';
+        let shown = 0;
+        for await (const chunk of streamChat(convo, chatSettings)) {
+            full += chunk;
+            const vis = visibleText(full);
+            if (vis.length > shown) {
+                yield { type: 'text', chunk: vis.slice(shown) };
+                shown = vis.length;
+            }
+        }
+        yield { type: 'turn_end' };
+
+        const action = parseActionBlock(full);
+        if (!action) return;
+        yield { type: 'tool_start', name: action.tool, args: action.args };
+        const result = await executeAssistantTool(action.tool, action.args, { settings, attachments });
+        yield { type: 'tool_result', name: action.tool, result };
+        convo.push({ role: 'assistant', content: full });
+        convo.push({ role: 'user', content: `[System — result of ${action.tool}]: ${result}\nContinue helping the user based on this result.` });
+    }
+    yield { type: 'text', chunk: '\n[Assistant]: tool-call limit reached for this turn.' };
+    yield { type: 'turn_end' };
+}
