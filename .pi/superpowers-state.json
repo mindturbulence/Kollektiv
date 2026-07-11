@@ -27,16 +27,12 @@
     }
   },
   "tdd": {
-    "phase": "red-pending",
-    "testFiles": [
-      "D:\\AI-Dev\\Kollektiv-Dev\\services\\assistantProtocol.test.ts"
-    ],
+    "phase": "idle",
+    "testFiles": [],
     "sourceFiles": [
-      "D:\\AI-Dev\\Kollektiv-Dev\\types.ts",
-      "D:\\AI-Dev\\Kollektiv-Dev\\services\\assistantProtocol.ts",
       "D:\\AI-Dev\\Kollektiv-Dev\\services\\assistantService.ts"
     ],
-    "redVerificationPending": true
+    "redVerificationPending": false
   },
   "debug": {
     "active": false,

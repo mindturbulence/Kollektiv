@@ -1,8 +1,9 @@
 import type { LLMSettings } from '../types';
 import { getGeminiClient } from './geminiService';
-import { executeAssistantTool, geminiToolDeclarations, fallbackProtocolPrompt } from './assistantTools';
+import { executeAssistantTool, geminiToolDeclarations, ollamaToolDeclarations, fallbackProtocolPrompt } from './assistantTools';
 import { streamChat } from './llmService';
 import { parseActionBlock, visibleText } from './assistantProtocol';
+import { getOllamaConfig } from './ollamaService';
 
 export type ChatMsg = { role: 'user' | 'assistant' | 'system'; content: string; attachments?: { data: string; mimeType: string; fileName?: string }[] };
 
@@ -65,9 +66,11 @@ export async function* runAssistantTurn(messages: ChatMsg[], settings: LLMSettin
         case 'gemini':
             yield* runGeminiTurn(messages, settings);
             return;
+        case 'ollama':
+        case 'ollama_cloud':
+            yield* runOllamaTurn(messages, settings);
+            return;
         default:
-            // ponytail: every non-Gemini brain uses the <action> text protocol for
-            // now; Ollama and OpenRouter get native tool-calling turns next.
             yield* runFallbackTurn(messages, settings);
     }
 }
@@ -173,6 +176,77 @@ async function* runFallbackTurn(messages: ChatMsg[], settings: LLMSettings): Asy
         yield { type: 'tool_result', name: action.tool, result };
         convo.push({ role: 'assistant', content: full });
         convo.push({ role: 'user', content: `[System — result of ${action.tool}]: ${result}\nContinue helping the user based on this result.` });
+    }
+    yield { type: 'text', chunk: '\n[Assistant]: tool-call limit reached for this turn.' };
+    yield { type: 'turn_end' };
+}
+
+// ---------------- Ollama: native /api/chat tool calling ----------------
+
+async function* runOllamaTurn(messages: ChatMsg[], settings: LLMSettings): AsyncGenerator<AssistantEvent> {
+    const provider = getAssistantProvider(settings); // 'ollama' | 'ollama_cloud'
+    const config = getOllamaConfig({ ...settings, activeLLM: provider as LLMSettings['activeLLM'] });
+    if (!config.baseUrl || !config.model) {
+        yield { type: 'text', chunk: 'The Ollama brain is not configured — set the endpoint and model in Settings > Integrations.' };
+        yield { type: 'turn_end' };
+        return;
+    }
+    const attachments = latestAttachments(messages);
+    const convo: any[] = [
+        { role: 'system', content: buildSystemIdentity(settings) },
+        ...messages.filter(m => m.role !== 'system').map(m => {
+            const msg: any = { role: m.role, content: m.content };
+            const images = (m.attachments || [])
+                .filter(a => a.mimeType.startsWith('image/'))
+                .map(a => (a.data.includes('base64,') ? a.data.split('base64,')[1] : a.data));
+            if (images.length) msg.images = images;
+            return msg;
+        }),
+    ];
+
+    for (let round = 0; round < MAX_TOOL_ROUNDS; round++) {
+        const res = await fetch(`${config.baseUrl}/api/chat`, {
+            method: 'POST',
+            headers: config.headers,
+            body: JSON.stringify({ model: config.model, messages: convo, stream: true, tools: ollamaToolDeclarations() }),
+        });
+        if (!res.ok || !res.body) throw new Error(`Ollama chat failed (${res.status}): ${await res.text().catch(() => res.statusText)}`);
+
+        const reader = res.body.getReader();
+        const decoder = new TextDecoder();
+        let buf = '';
+        let content = '';
+        const calls: { name: string; args: Record<string, any> }[] = [];
+        while (true) {
+            const { done, value } = await reader.read();
+            if (done) break;
+            buf += decoder.decode(value, { stream: true });
+            const lines = buf.split('\n');
+            buf = lines.pop() || '';
+            for (const line of lines) {
+                if (!line.trim()) continue;
+                let json: any;
+                try { json = JSON.parse(line); } catch { continue; }
+                const msg = json.message;
+                if (msg?.content) {
+                    content += msg.content;
+                    yield { type: 'text', chunk: msg.content };
+                }
+                for (const tc of msg?.tool_calls || []) {
+                    if (tc.function?.name) calls.push({ name: tc.function.name, args: tc.function.arguments || {} });
+                }
+            }
+        }
+        yield { type: 'turn_end' };
+        if (calls.length === 0) return;
+
+        convo.push({ role: 'assistant', content, tool_calls: calls.map(c => ({ function: { name: c.name, arguments: c.args } })) });
+        for (const c of calls) {
+            yield { type: 'tool_start', name: c.name, args: c.args };
+            const result = await executeAssistantTool(c.name, c.args, { settings, attachments });
+            yield { type: 'tool_result', name: c.name, result };
+            convo.push({ role: 'tool', content: result });
+        }
     }
     yield { type: 'text', chunk: '\n[Assistant]: tool-call limit reached for this turn.' };
     yield { type: 'turn_end' };
