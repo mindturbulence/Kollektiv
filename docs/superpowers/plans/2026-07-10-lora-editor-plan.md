@@ -1561,7 +1561,7 @@ This task has no new automated test (it's integration/orchestration wiring over 
 Replace the entire contents of `components/loraEditor/LoraEditorPage.tsx`:
 
 ```tsx
-import React, { useState, useCallback, useMemo } from 'react';
+import React, { useState, useCallback } from 'react';
 import { motion } from 'motion/react';
 import { PanelLine, ScanLine, panelVariants, sectionWipeVariants, TerminalText } from '../AnimatedPanels';
 import { UploadIcon } from '../icons';
@@ -1724,8 +1724,6 @@ const LoraEditorPage: React.FC<LoraEditorPageProps> = ({ isExiting = false }) =>
     }, [settings, recomputeCustomMetadata, runLookups]);
 
     const handleReset = useCallback(() => setState(EMPTY_STATE), []);
-
-    const context = useMemo(() => ({ state, settings, setSettings, activeTab, setActiveTab }), [state, settings, setSettings, activeTab]);
 
     return (
         <div className="flex flex-col h-full w-full relative overflow-visible p-0 bg-transparent">
@@ -1976,6 +1974,8 @@ In `components/loraEditor/LoraEditorPage.tsx`, add the import:
 ```tsx
 import SettingsDrawer from './SettingsDrawer';
 ```
+
+If Task 9's implementation added a `void isSettingsOpen;` line (a `noUnusedLocals` workaround for `isSettingsOpen` having no reader yet), delete that line now — this step gives `isSettingsOpen` its first real reader, making the suppression both unnecessary and dead code.
 
 Add the drawer just before the closing `</div>` of the root element (after the main `motion.div`):
 
