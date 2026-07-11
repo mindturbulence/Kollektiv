@@ -2,6 +2,7 @@ import type { LLMSettings, WildcardCategory } from '../types';
 import { appControlService } from './appControlService';
 import { appEventBus } from '../utils/eventBus';
 import { addNote, loadNotes, updateNote, deleteNote } from '../utils/notesStorage';
+import { addMemory, loadMemories as loadMemoryEntries, deleteMemory } from '../utils/memoryStorage';
 import { loadGalleryItems } from '../utils/galleryStorage';
 import { refineSinglePrompt, reconstructFromIntent, dissectPrompt, translateToEnglish, generateConstructorPreset, abstractImage } from './llmService';
 import { crafterService } from './crafterService';
@@ -429,6 +430,32 @@ export const ASSISTANT_TOOLS: AssistantTool[] = [
             required: ['id'],
         },
         execute: ({ id }) => (deleteNote(String(id)) ? 'Note deleted.' : `Error: no note with id ${id}.`),
+    },
+    {
+        name: 'remember',
+        description: "Permanently remember a short fact about the user or their preferences (e.g. 'prefers SDXL', 'works in German'). It will be available in every future session, chat and voice. Use when the user says 'remember ...' or states a durable preference.",
+        parameters: {
+            type: 'object',
+            properties: { fact: { type: 'string', description: 'One concise fact to remember.' } },
+            required: ['fact'],
+        },
+        execute: ({ fact }) => (addMemory(String(fact)) ? 'Remembered.' : 'Already remembered (or empty fact).'),
+    },
+    {
+        name: 'list_memories',
+        description: 'List everything you permanently remember about the user. Returns JSON with ids (needed for forget).',
+        parameters: { type: 'object', properties: {} },
+        execute: () => JSON.stringify(loadMemoryEntries().map(m => ({ id: m.id, fact: m.fact }))),
+    },
+    {
+        name: 'forget',
+        description: 'Delete a remembered fact by id (get ids from list_memories first). Use when the user asks you to forget something.',
+        parameters: {
+            type: 'object',
+            properties: { id: { type: 'string', description: 'Memory id.' } },
+            required: ['id'],
+        },
+        execute: ({ id }) => (deleteMemory(String(id)) ? 'Forgotten.' : `Error: no memory with id ${id}.`),
     },
 ];
 

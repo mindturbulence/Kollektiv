@@ -27,15 +27,16 @@
     }
   },
   "tdd": {
-    "phase": "idle",
-    "testFiles": [],
-    "sourceFiles": [
-      "D:\\AI-Dev\\Kollektiv-Dev\\types.ts",
-      "D:\\AI-Dev\\Kollektiv-Dev\\components\\AssistantAvatar.tsx",
-      "D:\\AI-Dev\\Kollektiv-Dev\\components\\Dashboard.tsx",
-      "D:\\AI-Dev\\Kollektiv-Dev\\components\\settings\\IntegrationsSection.tsx"
+    "phase": "red-pending",
+    "testFiles": [
+      "D:\\AI-Dev\\Kollektiv-Dev\\utils\\memoryStorage.test.ts"
     ],
-    "redVerificationPending": false
+    "sourceFiles": [
+      "D:\\AI-Dev\\Kollektiv-Dev\\utils\\memoryStorage.ts",
+      "D:\\AI-Dev\\Kollektiv-Dev\\services\\assistantService.ts",
+      "D:\\AI-Dev\\Kollektiv-Dev\\services\\assistantTools.ts"
+    ],
+    "redVerificationPending": true
   },
   "debug": {
     "active": false,

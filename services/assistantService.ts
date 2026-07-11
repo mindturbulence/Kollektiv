@@ -4,6 +4,7 @@ import { executeAssistantTool, geminiToolDeclarations, ollamaToolDeclarations, f
 import { streamChat } from './llmService';
 import { parseActionBlock, visibleText } from './assistantProtocol';
 import { getOllamaConfig } from './ollamaService';
+import { memoryPromptBlock } from '../utils/memoryStorage';
 
 export type ChatMsg = { role: 'user' | 'assistant' | 'system'; content: string; attachments?: { data: string; mimeType: string; fileName?: string }[] };
 
@@ -23,7 +24,7 @@ const WORKSPACE_CAPABILITIES = `Workspace pages and what's on them. Call the nam
 - Crafter: Generate (resolve wildcards + AI polish) = generate_crafter_prompt, list real wildcard names = list_wildcards, Translate = translate_prompt, Rewrite/Reconstruct = rewrite_prompt, Clip to Clipped Ideas = clip_idea, load text here = send_to_crafter. UI-only: Save Result (local scratch list), Save/Apply/Delete Template, Import wildcard file (touches disk).
 - Prompt Analyzer: Analyze/dissect a prompt = analyze_prompt, load text here = send_to_prompt_analyzer. UI-only: Map to Refiner (approximate it by chaining analyze_prompt then send_to_refiner), select from library.
 - Abstractor (Media Analyzer): reverse-engineer a prompt from an image the user attached to the chat = abstract_image (fails if no image is attached — it cannot read files off disk, only chat attachments). UI-only: Read Metadata (needs the original file, not available from chat), Save Workflow, Copy Raw.
-Elsewhere: manage your Notes panel = save_note/list_notes/update_note/delete_note, save a text/markdown file into the vault (shows in Notes panel > Files) = save_file, show a web page to the user in the in-app viewer = open_web_page, search the live web = web_search, read a web page yourself = fetch_url, search/save the prompt library = search_prompts/save_prompt, search the gallery = search_gallery, search cheatsheets = search_cheatsheets, navigate the app = navigate, browse discovery collections = list_discovery_collections/search_discovery_prompts.`;
+Elsewhere: long-term memory = remember/list_memories/forget, manage your Notes panel = save_note/list_notes/update_note/delete_note, save a text/markdown file into the vault (shows in Notes panel > Files) = save_file, show a web page to the user in the in-app viewer = open_web_page, search the live web = web_search, read a web page yourself = fetch_url, search/save the prompt library = search_prompts/save_prompt, search the gallery = search_gallery, search cheatsheets = search_cheatsheets, navigate the app = navigate, browse discovery collections = list_discovery_collections/search_discovery_prompts.`;
 
 /** Builds the assistant's system prompt from the configured persona
  * (Settings > Integrations > Assistant). Used by every provider path,
@@ -50,7 +51,8 @@ export const buildSystemIdentity = (settings: LLMSettings): string => {
     const withMasterRole = settings.masterRolePrompt?.trim()
         ? `${settings.masterRolePrompt.trim()}\n\n${identity}`
         : identity;
-    return `${withMasterRole}\n\n${WORKSPACE_CAPABILITIES}`;
+    const memoryBlock = memoryPromptBlock();
+    return `${withMasterRole}\n\n${WORKSPACE_CAPABILITIES}${memoryBlock ? `\n\n${memoryBlock}` : ''}`;
 };
 
 export type AssistantProvider = NonNullable<LLMSettings['assistantProvider']>;
