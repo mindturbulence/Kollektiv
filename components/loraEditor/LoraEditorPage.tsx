@@ -1,4 +1,4 @@
-import React, { useState, useCallback, useMemo } from 'react';
+import React, { useState, useCallback } from 'react';
 import { motion } from 'motion/react';
 import { PanelLine, ScanLine, panelVariants, sectionWipeVariants, TerminalText } from '../AnimatedPanels';
 import { UploadIcon } from '../icons';
@@ -47,13 +47,16 @@ interface LoraEditorPageProps {
 
 const LoraEditorPage: React.FC<LoraEditorPageProps> = ({ isExiting = false }) => {
     const [settings, setSettings] = useLocalStorage<LoraEditorSettings>('loraEditorSettings', DEFAULT_SETTINGS);
+    void setSettings; // ponytail: read by Task 10's SettingsDrawer onChange, not rendered yet
     const [state, setState] = useState<LoraEditorState>(EMPTY_STATE);
     const [activeTab, setActiveTab] = useState<LoraEditorTab>('summary');
+    void activeTab; void setActiveTab; // ponytail: read by Task 16's tab bar, not rendered yet
     const [isSettingsOpen, setIsSettingsOpen] = useState(false);
     void isSettingsOpen; // ponytail: read by Task 16's settings modal, not rendered yet
     const [isDragging, setIsDragging] = useState(false);
     const [isLoading, setIsLoading] = useState(false);
     const [loadingMessage, setLoadingMessage] = useState('');
+    const [loadError, setLoadError] = useState<string | null>(null);
 
     const recomputeCustomMetadata = useCallback((partial: Partial<LoraEditorState>, currentSettings: LoraEditorSettings) => {
         // Seed customMetadata with the hashes computed in Task 4's lib/hashing.ts — these aren't
@@ -89,7 +92,7 @@ const LoraEditorPage: React.FC<LoraEditorPageProps> = ({ isExiting = false }) =>
         // Primary/secondary resource lookup: CivitAI keys on AutoV2/AutoV3 short hashes,
         // Arc en Ciel keys on full SHA-256. Try both hash forms per the original tool.
         const primaryHash = currentSettings.primaryLookup === 'civ' ? (civAutov2 || civAutov3) : (sha256 || sha256Autov3);
-        let lookupResult = primaryHash ? await getModelDataByHash(primaryHash, currentSettings.primaryLookup, currentSettings.secondaryLookup, proxyUrl) : null;
+        const lookupResult = primaryHash ? await getModelDataByHash(primaryHash, currentSettings.primaryLookup, currentSettings.secondaryLookup, proxyUrl) : null;
 
         let civitaiMetadata = base.civitaiMetadata;
         let arcencielMetadata = base.arcencielMetadata;
@@ -123,6 +126,7 @@ const LoraEditorPage: React.FC<LoraEditorPageProps> = ({ isExiting = false }) =>
 
         setIsLoading(true);
         setState(EMPTY_STATE);
+        setLoadError(null);
 
         try {
             let fileMetadata: Record<string, any> = {};
@@ -155,6 +159,9 @@ const LoraEditorPage: React.FC<LoraEditorPageProps> = ({ isExiting = false }) =>
             next = await runLookups(next, settings);
 
             setState(next);
+        } catch (error) {
+            console.error('LoRA Editor: failed to load file', error);
+            setLoadError(error instanceof Error ? error.message : 'Failed to read this file.');
         } finally {
             setIsLoading(false);
             setLoadingMessage('');
@@ -162,9 +169,6 @@ const LoraEditorPage: React.FC<LoraEditorPageProps> = ({ isExiting = false }) =>
     }, [settings, recomputeCustomMetadata, runLookups]);
 
     const handleReset = useCallback(() => setState(EMPTY_STATE), []);
-
-    const context = useMemo(() => ({ state, settings, setSettings, activeTab, setActiveTab }), [state, settings, setSettings, activeTab]);
-    void context; // ponytail: passed to panels by Task 16, no panels mounted yet
 
     return (
         <div className="flex flex-col h-full w-full relative overflow-visible p-0 bg-transparent">
@@ -209,6 +213,9 @@ const LoraEditorPage: React.FC<LoraEditorPageProps> = ({ isExiting = false }) =>
                                     <UploadIcon className="w-16 h-16 text-base-content/20 mb-6" />
                                     <h2 className="text-2xl font-black uppercase tracking-tighter">DROP LORA FILE</h2>
                                     <p className="text-[10px] font-bold uppercase tracking-[0.3em] text-base-content/40 mt-2 px-4 text-center">.safetensors or .gguf — drop or click to select</p>
+                                    {loadError && (
+                                        <p className="text-[10px] font-bold uppercase tracking-widest text-error mt-4 px-4 text-center">{loadError}</p>
+                                    )}
                                 </label>
                             </div>
                         ) : (
