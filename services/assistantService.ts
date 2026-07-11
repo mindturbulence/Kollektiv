@@ -70,6 +70,9 @@ export async function* runAssistantTurn(messages: ChatMsg[], settings: LLMSettin
         case 'ollama_cloud':
             yield* runOllamaTurn(messages, settings);
             return;
+        case 'openrouter':
+            yield* runOpenRouterTurn(messages, settings);
+            return;
         default:
             yield* runFallbackTurn(messages, settings);
     }
@@ -246,6 +249,95 @@ async function* runOllamaTurn(messages: ChatMsg[], settings: LLMSettings): Async
             const result = await executeAssistantTool(c.name, c.args, { settings, attachments });
             yield { type: 'tool_result', name: c.name, result };
             convo.push({ role: 'tool', content: result });
+        }
+    }
+    yield { type: 'text', chunk: '\n[Assistant]: tool-call limit reached for this turn.' };
+    yield { type: 'turn_end' };
+}
+
+// ---------------- OpenRouter: OpenAI-style streaming tool calling ----------------
+// ollamaToolDeclarations() already emits the OpenAI tools wire format, so it
+// doubles as the OpenRouter declaration set.
+
+async function* runOpenRouterTurn(messages: ChatMsg[], settings: LLMSettings): AsyncGenerator<AssistantEvent> {
+    if (!settings.openrouterApiKey) {
+        yield { type: 'text', chunk: 'The OpenRouter brain needs an API key — set it in Settings > Integrations > OpenRouter.' };
+        yield { type: 'turn_end' };
+        return;
+    }
+    const model = settings.openrouterModel || 'openrouter/auto';
+    const attachments = latestAttachments(messages);
+    const convo: any[] = [
+        { role: 'system', content: buildSystemIdentity(settings) },
+        ...messages.filter(m => m.role !== 'system').map(m => {
+            const images = (m.attachments || []).filter(a => a.mimeType.startsWith('image/'));
+            if (!images.length) return { role: m.role, content: m.content };
+            return {
+                role: m.role,
+                content: [
+                    { type: 'text', text: m.content || ' ' },
+                    ...images.map(a => ({ type: 'image_url', image_url: { url: a.data } })),
+                ],
+            };
+        }),
+    ];
+
+    for (let round = 0; round < MAX_TOOL_ROUNDS; round++) {
+        const res = await fetch('https://openrouter.ai/api/v1/chat/completions', {
+            method: 'POST',
+            headers: { Authorization: `Bearer ${settings.openrouterApiKey}`, 'Content-Type': 'application/json' },
+            body: JSON.stringify({ model, messages: convo, stream: true, tools: ollamaToolDeclarations() }),
+        });
+        if (!res.ok || !res.body) throw new Error(`OpenRouter chat failed (${res.status}): ${await res.text().catch(() => res.statusText)}`);
+
+        const reader = res.body.getReader();
+        const decoder = new TextDecoder();
+        let buf = '';
+        let content = '';
+        // tool_call deltas arrive keyed by index; arguments stream as string fragments
+        const calls: { id?: string; name: string; argsRaw: string }[] = [];
+        while (true) {
+            const { done, value } = await reader.read();
+            if (done) break;
+            buf += decoder.decode(value, { stream: true });
+            const lines = buf.split('\n');
+            buf = lines.pop() || '';
+            for (const line of lines) {
+                const data = line.replace(/^data:\s*/, '').trim();
+                if (!data || data === '[DONE]' || !line.startsWith('data:')) continue;
+                let json: any;
+                try { json = JSON.parse(data); } catch { continue; }
+                const delta = json.choices?.[0]?.delta;
+                if (!delta) continue;
+                if (delta.content) {
+                    content += delta.content;
+                    yield { type: 'text', chunk: delta.content };
+                }
+                for (const tc of delta.tool_calls || []) {
+                    const i = tc.index ?? 0;
+                    if (!calls[i]) calls[i] = { id: tc.id, name: '', argsRaw: '' };
+                    if (tc.id) calls[i].id = tc.id;
+                    if (tc.function?.name) calls[i].name += tc.function.name;
+                    if (tc.function?.arguments) calls[i].argsRaw += tc.function.arguments;
+                }
+            }
+        }
+        yield { type: 'turn_end' };
+        const validCalls = calls.filter(c => c && c.name);
+        if (validCalls.length === 0) return;
+
+        convo.push({
+            role: 'assistant',
+            content: content || null,
+            tool_calls: validCalls.map(c => ({ id: c.id, type: 'function', function: { name: c.name, arguments: c.argsRaw || '{}' } })),
+        });
+        for (const c of validCalls) {
+            let args: Record<string, any> = {};
+            try { args = JSON.parse(c.argsRaw || '{}'); } catch { /* keep {} */ }
+            yield { type: 'tool_start', name: c.name, args };
+            const result = await executeAssistantTool(c.name, args, { settings, attachments });
+            yield { type: 'tool_result', name: c.name, result };
+            convo.push({ role: 'tool', tool_call_id: c.id, content: result });
         }
     }
     yield { type: 'text', chunk: '\n[Assistant]: tool-call limit reached for this turn.' };
