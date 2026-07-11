@@ -140,6 +140,6 @@ export const DEFAULT_SETTINGS: LoraEditorSettings = {
     suggestedPromptFilter: '',
     suggestedPromptFilterMethod: 'none',
     suggestedPromptExcludeFilter: '1girl,1boy,background,standing,portrait,cowboy shot,upper body,looking at viewer,solo,smile,open mouth,closed mouth,blush,nude,nipples,anime,male focus',
-    suggestedPromptExcludeFilterMethod: 'exact',
+    suggestedPromptExcludeFilterMethod: 'partial',
     suggestedPromptByFolder: true,
 };

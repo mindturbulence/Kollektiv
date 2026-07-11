@@ -7,7 +7,7 @@ import { parseHeader } from './lib/safetensors';
 import { calculateFileHashes } from './lib/hashing';
 import { evaluateCustomFields } from './lib/customFields';
 import { getModelDataByHash } from './lib/onlineLookup';
-import { aggregateAndSort, sortSubproperties, convertNumericKeysToString } from './lib/tagTools';
+import { aggregateAndSort, sortSubproperties, convertNumericKeysToString, applyTagFilters, getSuggestedPrompt } from './lib/tagTools';
 import { DEFAULT_SETTINGS } from './constants';
 import type { LoraEditorSettings, FileHashes } from './types';
 import SettingsDrawer from './SettingsDrawer';
@@ -164,6 +164,23 @@ const LoraEditorPage: React.FC<LoraEditorPageProps> = ({ isExiting = false }) =>
                 customMetadata: {}, tagsByFolder, tagsAggregated,
             };
             next.customMetadata = recomputeCustomMetadata(next, settings);
+
+            // Mirror SuggestedPromptPanel's computation so the Dashboard summary's
+            // {{custom.suggested_prompt?}} placeholder isn't always blank — the original
+            // tool writes this as a side effect of its tag-frequency render; no eval
+            // expression depends on the value, so it's simplest to compute it once here.
+            const promptFiltered = applyTagFilters(settings.suggestedPromptByFolder ? tagsByFolder : tagsAggregated, {
+                byFolder: settings.suggestedPromptByFolder,
+                filterMethod: settings.suggestedPromptFilterMethod,
+                filter: settings.suggestedPromptFilter,
+                excludeFilterMethod: settings.suggestedPromptExcludeFilterMethod,
+                excludeFilter: settings.suggestedPromptExcludeFilter,
+                count: settings.suggestedPromptCount,
+            });
+            const promptBuilt = getSuggestedPrompt(promptFiltered);
+            next.customMetadata.suggested_prompt = settings.suggestedPromptByFolder
+                ? Object.entries(promptBuilt || {}).map(([folder, value]) => `${folder}: ${value}`).join('; ')
+                : (promptBuilt?.Prompt || '');
 
             next = await runLookups(next, settings);
 

@@ -33,7 +33,13 @@ const MetadataEditorPanel: React.FC<MetadataEditorPanelProps> = ({ state, settin
     }, [editorText, onFeedback]);
 
     const handleSimpleFieldChange = (field: string, value: string) => {
-        const parsed = JSON.parse(editorText || '{}');
+        let parsed: Record<string, any>;
+        try {
+            parsed = JSON.parse(editorText || '{}');
+        } catch {
+            onFeedback('Cannot edit fields: the Manual view currently contains invalid JSON.', true);
+            return;
+        }
         parsed[field] = value;
         setEditorText(JSON.stringify(parsed, null, 2));
     };
