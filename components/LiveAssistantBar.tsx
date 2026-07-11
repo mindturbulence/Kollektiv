@@ -12,7 +12,7 @@ export const LiveAssistantMicButton: React.FC = () => {
     if (!hasGeminiKey) return null;
 
     const isOn = status === 'live' || status === 'connecting';
-    const title = status === 'connecting' ? 'Linking…' : status === 'error' ? 'Live error — click to retry' : isOn ? 'End Live' : 'Go Live';
+    const title = status === 'connecting' ? 'Linking…' : status === 'error' ? 'Live error — click to retry' : isOn ? 'End Live (Ctrl+Space)' : 'Go Live (Ctrl+Space)';
 
     return (
         <div className="relative">
@@ -25,7 +25,7 @@ export const LiveAssistantMicButton: React.FC = () => {
                 title={title}
                 badge={isOn ? 1 : undefined}
             >
-                <MicrophoneIcon className={`w-4 h-4 ${status === 'error' ? 'text-error' : speaking ? 'text-primary animate-pulse' : ''}`} />
+                <MicrophoneIcon className={`w-4 h-4 ${status === 'error' ? 'text-error' : speaking ? 'text-primary' : ''}`} />
             </HUDNavItem>
 
             {status === 'error' && (

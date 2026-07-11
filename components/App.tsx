@@ -26,6 +26,7 @@ import { TabTitleManager } from './TabTitleManager';
 
 // Page components
 import Dashboard from './Dashboard';
+import AssistantPage from './AssistantPage';
 import DiscoveryPage from './DiscoveryPage';
 import PromptsPage from './PromptsPage';
 import SavedPrompts from './SavedPrompts';
@@ -37,14 +38,19 @@ import ImageCompare from './ImageCompare';
 import ColorPaletteExtractor from './ColorPaletteExtractor';
 import ImageResizer from './ImageResizer';
 import { VideoToFrames } from './VideoToFrames';
+import LoraEditorPage from './loraEditor/LoraEditorPage';
 import { LLMChatPanel } from './LLMChatPanel';
+import { LiveAssistantProvider } from '../contexts/LiveAssistantContext';
+import WebViewerPanel from './WebViewerPanel';
+import NotesPanel from './NotesPanel';
+import LiveCaptionOverlay from './LiveCaptionOverlay';
 import { motion, AnimatePresence } from 'motion/react';
 import { pageVariants } from './AnimatedPanels';
 import ChromaticText from './ChromaticText';
-import { HermesController } from './HermesController';
 
 
-type PromptsPageState = { prompt?: string, artStyle?: string, artist?: string, view?: 'enhancer' | 'composer' | 'create', id?: string } | null;
+
+type PromptsPageState = { prompt?: string, artStyle?: string, artist?: string, view?: 'enhancer' | 'composer' | 'create' | 'prompt_analyzer', id?: string } | null;
 
 class ErrorBoundary extends React.Component<{ children: React.ReactNode }, { hasError: boolean, error: any, errorInfo: any }> {
     constructor(props: { children: React.ReactNode }) {
@@ -421,7 +427,8 @@ const AppContent: React.FC = () => {
     const [activeTab, setActiveTab] = useLocalStorage<ActiveTab>('activeTab', 'dashboard');
     const [isAboutModalOpen, setIsAboutModalOpen] = useState(false);
     const [isClippingPanelOpen, setIsClippingPanelOpen] = useState(false);
-    const [isHermesOpen, setIsHermesOpen] = useState(false);
+    const [isChatPanelOpen, setIsChatPanelOpen] = useState(false);
+    const [isNotesPanelOpen, setIsNotesPanelOpen] = useState(false);
     const [isLlmPanelOpen, setIsLlmPanelOpen] = useState(false);
     const [collapsedPanels, setCollapsedPanels] = useLocalStorage<Record<string, boolean>>('collapsedPanels', {});
     const [globalFeedback, setGlobalFeedback] = useState<{ message: string; type: 'success' | 'error' } | null>(null);
@@ -436,6 +443,7 @@ const AppContent: React.FC = () => {
         const base = "KOLLEKTIV";
         switch (activeTab) {
             case 'dashboard': return `DASHBOARD | ${base}`;
+            case 'assistant': return `ASSISTANT | ${base}`;
             case 'discovery': return `DISCOVERY | ${base}`;
             case 'prompts': return `BUILDER | ${base}`;
             case 'crafter': return `CRAFTER | ${base}`;
@@ -451,6 +459,7 @@ const AppContent: React.FC = () => {
             case 'color_palette_extractor': return `PALETTE | ${base}`;
             case 'resizer': return `RESIZER | ${base}`;
             case 'video_to_frames': return `VIDEO | ${base}`;
+            case 'lora_editor': return `LORA | ${base}`;
             default: return base;
         }
     }, [activeTab]);
@@ -738,10 +747,12 @@ const AppContent: React.FC = () => {
         let targetTab: ActiveTab = 'crafter';
         if (state?.view === 'enhancer') {
             targetTab = 'refiner';
+        } else if (state?.view === 'prompt_analyzer') {
+            targetTab = 'prompt_analyzer';
         } else if (state?.view === 'composer' || state?.view === 'create') {
             targetTab = 'crafter';
         } else {
-            // Fallback to generic prompts tab if needed, 
+            // Fallback to generic prompts tab if needed,
             // but user wants them separate so we prefer the specific ones
             targetTab = 'crafter';
         }
@@ -768,6 +779,21 @@ const AppContent: React.FC = () => {
         setClippedIdeas(prev => [idea, ...prev]);
         showGlobalFeedback(`Clipped "${idea.title}"`);
     }, [setClippedIdeas, showGlobalFeedback]);
+
+    useEffect(() => {
+        return appEventBus.on('clipIdea', (payload) => {
+            if (payload && typeof payload === 'object' && (payload as any).prompt) {
+                const p = payload as { title?: string; prompt: string; lens?: string; source?: string };
+                handleClipIdea({
+                    id: `clip-${Date.now()}`,
+                    title: p.title || p.prompt.slice(0, 40),
+                    prompt: p.prompt,
+                    lens: p.lens || 'Assistant',
+                    source: p.source || 'Assistant',
+                });
+            }
+        });
+    }, [handleClipIdea]);
 
     const handleRemoveIdea = useCallback((id: string) => setClippedIdeas(prev => prev.filter(idea => idea.id !== id)), [setClippedIdeas]);
     const handleClearAllIdeas = useCallback(() => setClippedIdeas([]), [setClippedIdeas]);
@@ -803,6 +829,7 @@ const AppContent: React.FC = () => {
 
         switch (activeTab) {
             case 'dashboard': return <Dashboard key="dashboard" onNavigate={handleNavigate} onClipIdea={handleClipIdea} isExiting={false} />;
+            case 'assistant': return <AssistantPage key="assistant" />;
             case 'discovery': return <DiscoveryPage key="discovery" isExiting={false} onClipIdea={handleClipIdea} onSendToBuilder={handleSendToPromptsPage} showGlobalFeedback={showGlobalFeedback} />;
             case 'prompts': return <PromptsPage key="prompts" onClipIdea={handleClipIdea} initialState={promptsPageState}                            onStateHandled={handleClearPromptsPageState} showGlobalFeedback={showGlobalFeedback} isExiting={false} onSendToBuilder={handleSendToPromptsPage} />;
             case 'crafter': return <PromptsPage key="prompts" forcedView="composer" onNavigate={handleNavigate} onClipIdea={handleClipIdea} initialState={promptsPageState}                            onStateHandled={handleClearPromptsPageState} showGlobalFeedback={showGlobalFeedback} isExiting={false} onSendToBuilder={handleSendToPromptsPage} />;
@@ -818,6 +845,7 @@ const AppContent: React.FC = () => {
             case 'color_palette_extractor': return <ColorPaletteExtractor key="color_palette_extractor" onClipIdea={handleClipIdea} isExiting={false} />;
             case 'resizer': return <ImageResizer key="resizer" isExiting={false} />;
             case 'video_to_frames': return <VideoToFrames key="video_to_frames" isExiting={false} />;
+            case 'lora_editor': return <LoraEditorPage key="lora_editor" isExiting={false} />;
             default: return <Dashboard key="default" onNavigate={handleNavigate} onClipIdea={handleClipIdea} isExiting={false} />;
         }
     };
@@ -900,12 +928,17 @@ const AppContent: React.FC = () => {
     // --- Inline-callback replacements ---
     const handleAboutClick = useCallback(() => setIsAboutModalOpen(true), []);
     const handleToggleClippingPanel = useCallback(() => setIsClippingPanelOpen(prev => !prev), []);
-    const handleToggleHermes = useCallback(() => setIsHermesOpen(prev => !prev), []);
+    const handleToggleChatPanel = useCallback(() => setIsChatPanelOpen(prev => {
+        if (!prev) appEventBus.emit('navigate', 'dashboard');
+        return !prev;
+    }), []);
+    const handleToggleNotesPanel = useCallback(() => setIsNotesPanelOpen(prev => !prev), []);
+    const handleCloseNotesPanel = useCallback(() => setIsNotesPanelOpen(false), []);
     const handleClearPromptsPageState = useCallback(() => setPromptsPageState(null), []);
     const handleSendToEnhancer = useCallback((prompt: string) => handleSendToPromptsPage({ prompt, view: 'enhancer' }), [handleSendToPromptsPage]);
     const handleCloseClippingPanel = useCallback(() => setIsClippingPanelOpen(false), []);
     const handleCloseLlmStatus = useCallback(() => setIsLlmPanelOpen(false), []);
-    const handleCloseHermes = useCallback(() => setIsHermesOpen(false), []);
+    const handleCloseChatPanel = useCallback(() => setIsChatPanelOpen(false), []);
     const handleToggleLlmPanel = useCallback(() => {
         audioService.playClick();
         setIsLlmPanelOpen(prev => !prev);
@@ -920,6 +953,7 @@ const AppContent: React.FC = () => {
     if (showWelcome) return <Welcome onSetupComplete={initializeApp} />;
 
     return (
+        <LiveAssistantProvider>
         <div className="h-full w-full overflow-hidden relative font-sans">
             {isLoading && (
                 <div ref={loaderRef} className="fixed inset-0 z-[1000]">
@@ -1030,7 +1064,8 @@ const AppContent: React.FC = () => {
                                 isInitialized={isInitialized}
                                 onAboutClick={handleAboutClick}
                                 onToggleClippingPanel={handleToggleClippingPanel}
-                                onToggleHermes={handleToggleHermes}
+                                onToggleChatPanel={handleToggleChatPanel}
+                                onToggleNotesPanel={handleToggleNotesPanel}
                                 onStandbyClick={handleStandbyClick}
                                 clippedIdeasCount={clippedIdeas.length}
                             />
@@ -1090,16 +1125,21 @@ const AppContent: React.FC = () => {
                                         onSaveToLibrary={handleSaveClippedIdea}
                                     />
 
+                                    <NotesPanel
+                                        isOpen={isNotesPanelOpen}
+                                        onClose={handleCloseNotesPanel}
+                                    />
+
                                     <LlmStatusPanel
                                         isOpen={isLlmPanelOpen}
                                         onClose={handleCloseLlmStatus}
                                     />
 
                                     <LLMChatPanel
-                                        isOpen={isHermesOpen}
-                                        onClose={handleCloseHermes}
+                                        isOpen={isChatPanelOpen}
+                                        onClose={handleCloseChatPanel}
                                     />
-                                    <HermesController />
+                                    <WebViewerPanel />
                                 </div>
                             </main>
 
@@ -1134,6 +1174,7 @@ const AppContent: React.FC = () => {
             )}
             <TabTitleManager defaultTitle={currentTitle} />
             <CustomCursor />
+            <LiveCaptionOverlay hidden={activeTab === 'assistant'} />
             {isInitialized && (
                 <PageFrame
                     isInitialized={isInitialized}
@@ -1160,6 +1201,7 @@ const AppContent: React.FC = () => {
                 )}
             </div>
         </div>
+    </LiveAssistantProvider>
     );
 };
 

@@ -20,6 +20,7 @@ export default {
     themes: [
       {
         Kollektiv: {
+          "color-scheme": "dark",
           primary: "#C0F04C",
           secondary: "#A8E22E",
           accent: "#7B5CFF",
@@ -32,10 +33,10 @@ export default {
           success: "#84C11C",
           warning: "#FFC53D",
           error: "#F5484F",
-          "--rounded-box": "8px",
-          "--rounded-btn": "4px",
+          "--rounded-box": "6px",
+          "--rounded-btn": "3px",
           "--rounded-badge": "2px",
-          "--rounded-tab": "4px",
+          "--rounded-tab": "3px",
         },
       },
       {

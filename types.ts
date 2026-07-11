@@ -2,6 +2,7 @@
 // --- Core App Types ---
 export type ActiveTab =
   | 'dashboard'
+  | 'assistant'
   | 'discovery'
   | 'prompts'
   | 'crafter'
@@ -16,6 +17,7 @@ export type ActiveTab =
   | 'image_compare'
   | 'color_palette_extractor'
   | 'composer'
+  | 'lora_editor'
   | 'settings';
 
 export type ActiveSettingsTab = 'app' | 'appearance' | 'integrations' | 'prompt' | 'gallery';
@@ -73,11 +75,6 @@ export interface LLMSettings {
   openrouterApiKey?: string;
   openrouterModel?: string;
   
-  // Hermes Settings
-  hermesBaseUrl: string;
-  hermesModel: string;
-  hermesApiKey: string;
-
   // Llama.cpp Settings
   llamacppBaseUrl: string;
   llamacppModel: string;
@@ -105,12 +102,13 @@ export interface LLMSettings {
   assistantVoice?: string;
   assistantLanguage?: string;
   assistantPersonality?: string;
+  /** Reasoning engine for the chat assistant. Live voice always runs on Gemini. */
+  assistantProvider?: 'gemini' | 'ollama' | 'ollama_cloud' | 'openrouter' | 'anthropic' | 'llamacpp';
 
   // Prompt & Token Tracking
   masterRolePrompt?: string;
   geminiTokenUsage?: TokenUsage;
   ollamaTokenUsage?: TokenUsage;
-  hermesTokenUsage?: TokenUsage;
   openrouterTokenUsage?: TokenUsage;
   llamacppTokenUsage?: TokenUsage;
   anthropicTokenUsage?: TokenUsage;

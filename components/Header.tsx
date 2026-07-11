@@ -7,10 +7,9 @@ import RollingText from './RollingText';
 import TimedScrambledText from './TimedScrambledText';
 import ThemeSwitcher from './ThemeSwitcher';
 import ChromaticText from './ChromaticText';
-import { InformationCircleIcon, BookmarkIcon, Cog6ToothIcon, PowerIcon, ChatBubbleIcon } from './icons';
+import { InformationCircleIcon, BookmarkIcon, Cog6ToothIcon, PowerIcon, ChatBubbleIcon, NoteIcon } from './icons';
 import { HUDNavItem } from './HUDNavItem';
 import { LiveAssistantMicButton, LiveAssistantScreenButton } from './LiveAssistantBar';
-import { LiveAssistantProvider } from '../contexts/LiveAssistantContext';
 
 interface HeaderProps {
   onNavigate: (tab: ActiveTab) => void;
@@ -20,7 +19,8 @@ interface HeaderProps {
   onToggleClippingPanel: () => void;
   onStandbyClick: (e: React.MouseEvent) => void;
   clippedIdeasCount: number;
-  onToggleHermes?: () => void;
+  onToggleChatPanel?: () => void;
+  onToggleNotesPanel?: () => void;
 }
 
 interface NavItemData {
@@ -114,7 +114,8 @@ const Header: React.FC<HeaderProps> = ({
   isInitialized,
   onAboutClick,
   onToggleClippingPanel,
-  onToggleHermes,
+  onToggleChatPanel,
+  onToggleNotesPanel,
   onStandbyClick,
   clippedIdeasCount
 }) => {
@@ -142,6 +143,7 @@ const Header: React.FC<HeaderProps> = ({
     { id: 'color_palette_extractor' as ActiveTab, label: 'Palette' },
     { id: 'resizer' as ActiveTab, label: 'Resizer' },
     { id: 'video_to_frames' as ActiveTab, label: 'Video' },
+    { id: 'lora_editor' as ActiveTab, label: 'LoRA Editor' },
   ];
 
   const navGroups = [
@@ -242,7 +244,6 @@ const Header: React.FC<HeaderProps> = ({
   }, [activeMenu, onNavigate]);
 
   return (
-    <LiveAssistantProvider>
     <header className="flex-shrink-0 flex flex-col h-12 bg-base-200/20 backdrop-blur-md border-b border-base-content/10 z-50 relative">
       <div ref={navRef} className="flex flex-grow items-center relative z-50 px-6 gap-4">
 
@@ -315,11 +316,22 @@ const Header: React.FC<HeaderProps> = ({
             onClick={(e) => {
               e.stopPropagation();
               audioService.playClick();
-              onToggleHermes?.();
+              onToggleChatPanel?.();
             }}
             title="Chat"
           >
             <ChatBubbleIcon className="w-4 h-4" />
+          </HUDNavItem>
+          <div className="w-px h-2 bg-base-content/10 self-center" />
+          <HUDNavItem
+            onClick={(e) => {
+              e.stopPropagation();
+              audioService.playClick();
+              onToggleNotesPanel?.();
+            }}
+            title="Assistant Notes & Files"
+          >
+            <NoteIcon className="w-4 h-4" />
           </HUDNavItem>
           <div className="w-px h-2 bg-base-content/10 self-center" />
           <ThemeSwitcher />
@@ -360,7 +372,6 @@ const Header: React.FC<HeaderProps> = ({
         </div>
       </div>
     </header>
-    </LiveAssistantProvider>
   );
 };
 

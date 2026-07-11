@@ -17,11 +17,6 @@ export const defaultLLMSettings: LLMSettings = {
   openrouterApiKey: '',
   openrouterModel: 'openrouter/auto',
   
-  // Hermes Settings
-  hermesBaseUrl: 'http://localhost:18789',
-  hermesModel: 'hermes-agent',
-  hermesApiKey: '',
-
   // Llama.cpp Settings
   llamacppBaseUrl: 'http://localhost:8080',
   llamacppModel: 'default',
@@ -38,7 +33,6 @@ export const defaultLLMSettings: LLMSettings = {
   masterRolePrompt: 'You are an expert AI prompt engineer and creative director. You excel at extracting precise visual, atmospheric, and conceptual details.',
   geminiTokenUsage: { used: 0, limit: 1000000 },
   ollamaTokenUsage: { used: 0, limit: 500000 },
-  hermesTokenUsage: { used: 0, limit: 500000 },
   openrouterTokenUsage: { used: 0, limit: 1000000 },
   llamacppTokenUsage: { used: 0, limit: 500000 },
   anthropicTokenUsage: { used: 0, limit: 1000000 },
@@ -130,10 +124,6 @@ export const loadLLMSettings = (): LLMSettings => {
                 ...defaultLLMSettings.ollamaTokenUsage!,
                 ...(parsed.ollamaTokenUsage || {})
             },
-            hermesTokenUsage: {
-                ...defaultLLMSettings.hermesTokenUsage!,
-                ...(parsed.hermesTokenUsage || {})
-            },
             openrouterTokenUsage: {
                 ...defaultLLMSettings.openrouterTokenUsage!,
                 ...(parsed.openrouterTokenUsage || {})
@@ -171,6 +161,7 @@ export const loadLLMSettings = (): LLMSettings => {
             merged.darkTheme = 'arwes';
         }
 
+        // legacy: Hermes provider removed 2026-07
         if (merged.activeLLM === ('hermes' as any)) {
             merged.activeLLM = 'gemini';
         }

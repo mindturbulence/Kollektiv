@@ -2,8 +2,7 @@ import express from "express";
 import { createServer as createViteServer } from "vite";
 import path from "path";
 
-// Array to keep track of active SSE connections
-let clients: express.Response[] = [];
+
 
 async function startServer() {
   const app = express();
@@ -95,76 +94,8 @@ async function startServer() {
 
   app.use(express.json());
 
-  // --- Proxy Routes (to support local Hermes / Ollama / Remote bypasses in both development and production) ---
+  // --- Proxy Routes (to support local Ollama / Remote bypasses in both development and production) ---
   
-  // Proxy for local Hermes gateway
-  app.use("/hermes-local", async (req, res) => {
-    try {
-      const subPath = req.url;
-      const targetUrl = `http://127.0.0.1:18789${subPath}`;
-      
-      const fetchOptions: any = {
-        method: req.method,
-        headers: {
-          'Content-Type': req.headers['content-type'] || 'application/json',
-          ...(req.headers['authorization'] ? { 'Authorization': req.headers['authorization'] } : {})
-        }
-      };
-
-      if (['POST', 'PUT', 'PATCH'].includes(req.method)) {
-        fetchOptions.body = JSON.stringify(req.body);
-      }
-
-      let response;
-      try {
-        response = await fetch(targetUrl, fetchOptions);
-      } catch (err: any) {
-        console.warn('Hermes IPv4 proxy failed, trying localhost fallback...', err.message);
-        try {
-          const fallbackUrl = `http://localhost:18789${subPath}`;
-          response = await fetch(fallbackUrl, fetchOptions);
-        } catch (fallbackErr: any) {
-          console.warn('Hermes localhost proxy failed, trying IPv6 fallback...', fallbackErr.message);
-          const ipv6Url = `http://[::1]:18789${subPath}`;
-          response = await fetch(ipv6Url, fetchOptions);
-        }
-      }
-
-      res.status(response.status);
-      for (const [key, value] of response.headers.entries()) {
-        if (key.toLowerCase() !== 'transfer-encoding') {
-          res.setHeader(key, value);
-        }
-      }
-
-      if (!response.body) {
-        res.end();
-        return;
-      }
-
-      const reader = (response.body as any).getReader();
-      while (true) {
-        const { done, value } = await reader.read();
-        if (done) break;
-        res.write(value);
-      }
-      res.end();
-    } catch (err: any) {
-      console.error('Hermes Local Proxy Error:', err);
-      if (!res.headersSent) {
-        const isCloudEnv = process.env.NODE_ENV === 'production' || req.headers.host && !req.headers.host.includes('localhost') && !req.headers.host.includes('127.0.0.1');
-        const customMessage = isCloudEnv
-          ? "Connection refused to 127.0.0.1:18789. Because Kollektiv is hosted on a remote cloud server, it cannot connect directly to a localhost service running on your computer. Please configure a secure public tunnel (like ngrok, e.g., 'ngrok http 18789') and update the secure URL in settings."
-          : `Connection refused. Please make sure your Hermes agent gateway is running locally on port 18789: ${err.message}`;
-        res.status(502).json({ 
-          error: 'Hermes proxy failed', 
-          message: customMessage, 
-          code: 'ECONNREFUSED' 
-        });
-      }
-    }
-  });
-
   // Proxy for local Ollama gateway
   app.use("/ollama-local", async (req, res) => {
     try {
@@ -373,7 +304,7 @@ async function startServer() {
         
         if (isDnsError) {
           const host = err.cause?.hostname || '';
-          message = `The remote URL host ${host ? `'${host}' ` : ''}could not be resolved. Please verify that the endpoint configured in your Settings (under AI Engine, OpenRouter, or Hermes Agent) is correct, free of typos, and currently available.`;
+          message = `The remote URL host ${host ? `'${host}' ` : ''}could not be resolved. Please verify that the endpoint configured in your Settings (under AI Engine or OpenRouter) is correct, free of typos, and currently available.`;
         } else if (code === 'ECONNREFUSED' || message.includes('ECONNREFUSED')) {
           message = 'The remote server refused the connection. Please verify that the remote service is active, reachable over the internet, and not blocked by any firewall rules or ports.';
         } else if (code === 'ETIMEDOUT' || message.includes('timeout')) {
@@ -579,45 +510,6 @@ async function startServer() {
 
       res.status(500).json({ success: false, error: err.message });
     }
-  });
-
-  // SSE endpoint for Kollektiv frontend to receive commands
-  app.get("/api/events", (req, res) => {
-    res.setHeader("Content-Type", "text/event-stream");
-    res.setHeader("Cache-Control", "no-cache");
-    res.setHeader("Connection", "keep-alive");
-
-    // Send initial connection establish event
-    res.write("data: {\"type\": \"connected\"}\n\n");
-
-    clients.push(res);
-
-    req.on("close", () => {
-      clients = clients.filter((client) => client !== res);
-    });
-  });
-
-  // Endpoint for Hermes (or external agent) to send control commands
-  // E.g. POST /api/hermes/control -> { "action": "navigate", "payload": "prompts" }
-  app.post("/api/hermes/control", (req, res) => {
-    const expected = process.env.HERMES_TOKEN;
-    if (expected && req.headers.authorization !== `Bearer ${expected}`) {
-      return res.status(401).json({ error: "Invalid or missing Hermes token" });
-    }
-    const { action, payload } = req.body;
-    
-    if (!action) {
-      return res.status(400).json({ error: "Action is required" });
-    }
-
-    const commandStr = JSON.stringify({ action, payload });
-
-    // Broadcast the command to all connected frontend clients
-    clients.forEach((client) => {
-      client.write(`data: ${commandStr}\n\n`);
-    });
-
-    res.json({ success: true, message: `Command '${action}' sent to ${clients.length} clients.` });
   });
 
   // --- Vite Middleware ---

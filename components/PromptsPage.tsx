@@ -14,7 +14,7 @@ import { useBusy } from '../contexts/BusyContext';
 import RefinerPage from './RefinerPage';
 
 interface PromptsPageProps {
-    initialState?: { prompt?: string; artStyle?: string; artist?: string; view?: 'enhancer' | 'composer' | 'create'; id?: string } | null;
+    initialState?: { prompt?: string; artStyle?: string; artist?: string; view?: 'enhancer' | 'composer' | 'create' | 'prompt_analyzer'; id?: string } | null;
     forcedView?: 'refine' | 'composer' | 'analyzer' | 'prompt_analyzer';
     onNavigate?: (tab: ActiveTab) => void;
     onStateHandled: () => void;
@@ -64,6 +64,7 @@ const PromptsPage: React.FC<PromptsPageProps> = ({
 
     // Pending refiner input for cross-view handoff
     const [pendingRefinerInput, setPendingRefinerInput] = useState<{ prompt?: string; artStyle?: string; artist?: string } | null>(null);
+    const [pendingAnalyzerInput, setPendingAnalyzerInput] = useState<{ content: string; id: string } | null>(null);
 
     useEffect(() => {
         const load = async () => {
@@ -80,6 +81,10 @@ const PromptsPage: React.FC<PromptsPageProps> = ({
             if (initialState.prompt) setComposerPromptToInsert({ content: initialState.prompt, id: initialState.id || `init-${Date.now()}` });
         } else if (initialState.view === 'enhancer') {
             setActiveView('refine');
+            if (initialState.prompt) setPendingRefinerInput({ prompt: initialState.prompt, artStyle: initialState.artStyle, artist: initialState.artist });
+        } else if (initialState.view === 'prompt_analyzer') {
+            setActiveView('prompt_analyzer');
+            if (initialState.prompt) setPendingAnalyzerInput({ content: initialState.prompt, id: initialState.id || `init-${Date.now()}` });
         }
         onStateHandled();
     }, [initialState, onStateHandled]);
@@ -185,6 +190,7 @@ const PromptsPage: React.FC<PromptsPageProps> = ({
                                 }}
                                 showGlobalFeedback={showGlobalFeedback}
                                 isNavigating={isExiting}
+                                promptToInsert={pendingAnalyzerInput}
                             />
                         )}
                     </AnimatePresence>

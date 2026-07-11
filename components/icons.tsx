@@ -468,6 +468,20 @@ export const CloseIcon: React.FC<React.SVGProps<SVGSVGElement>> = (props) => (
   </svg>
 );
 
+export const ArrowsMaximizeIcon: React.FC<React.SVGProps<SVGSVGElement>> = (props) => (
+  <svg {...commonProps} {...props}>
+    <path stroke="none" d="M0 0h24v24H0z" fill="none"/>
+    <path d="M16 4l4 0l0 4" />
+    <path d="M14 10l6 -6" />
+    <path d="M8 20l-4 0l0 -4" />
+    <path d="M4 20l6 -6" />
+    <path d="M16 20l4 0l0 -4" />
+    <path d="M14 14l6 6" />
+    <path d="M8 4l-4 0l0 4" />
+    <path d="M4 4l6 6" />
+  </svg>
+);
+
 export const CenterIcon: React.FC<React.SVGProps<SVGSVGElement>> = (props) => (
   <svg {...commonProps} {...props}>
     <path stroke="none" d="M0 0h24v24H0z" fill="none"/>
@@ -661,4 +675,10 @@ export const MonitorIcon: React.FC<React.SVGProps<SVGSVGElement>> = (props) => (
   </svg>
 );
 
+export const NoteIcon: React.FC<React.SVGProps<SVGSVGElement>> = (props) => (
+  <svg {...commonProps} {...props}>
+    <path stroke="none" d="M0 0h24v24H0z" fill="none"/>
+    <path d="M19.5 14.25v-2.625a3.375 3.375 0 0 0-3.375-3.375h-1.5A1.125 1.125 0 0 1 13.5 7.125v-1.5a3.375 3.375 0 0 0-3.375-3.375H8.25m0 12.75h7.5m-7.5 3H12M10.5 2.25H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 0 0-9-9Z" />
+  </svg>
+);
 

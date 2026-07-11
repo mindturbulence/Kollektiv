@@ -1,5 +1,6 @@
 import { fileSystemManager } from '../utils/fileUtils';
 import type { PromptModifiers } from '../types';
+import { loadManifestSafe, ManifestWriteBlockedError } from '../utils/manifestStore';
 
 const MANIFEST_NAME = 'refiner_presets_manifest.json';
 
@@ -17,29 +18,24 @@ interface PresetsManifest {
   presets: RefinerPreset[];
 }
 
-class RefinerPresetService {
-  private async getManifest(): Promise<PresetsManifest> {
-    const manifestContent = await fileSystemManager.readFile(MANIFEST_NAME);
-    if (manifestContent) {
-      try {
-        const parsed = JSON.parse(manifestContent);
-        if (Array.isArray(parsed.presets)) {
-          return parsed;
-        }
-      } catch (e) {
-        console.error("Failed to parse refiner presets manifest, returning empty.", e);
-      }
-    }
-    return { presets: [] };
-  }
+const getManifest = () =>
+  loadManifestSafe<PresetsManifest>(
+    MANIFEST_NAME,
+    (parsed) => {
+      if (!parsed || typeof parsed !== 'object' || !Array.isArray(parsed.presets)) return null;
+      return { presets: parsed.presets.filter((p: any) => p && typeof p === 'object' && typeof p.name === 'string') };
+    },
+    () => ({ presets: [] })
+  );
 
+class RefinerPresetService {
   private async saveManifest(manifest: PresetsManifest): Promise<void> {
     await fileSystemManager.saveFile(MANIFEST_NAME, new Blob([JSON.stringify(manifest, null, 2)], { type: 'application/json' }));
   }
 
   public async loadPresets(): Promise<RefinerPreset[]> {
     if (!fileSystemManager.isDirectorySelected()) return [];
-    const manifest = await this.getManifest();
+    const { data: manifest } = await getManifest();
     return manifest.presets.sort((a, b) => a.name.localeCompare(b.name));
   }
 
@@ -47,7 +43,8 @@ class RefinerPresetService {
     if (!fileSystemManager.isDirectorySelected()) {
       throw new Error("Application data directory not selected.");
     }
-    const manifest = await this.getManifest();
+    const { data: manifest, safeToSave } = await getManifest();
+    if (!safeToSave) throw new ManifestWriteBlockedError(MANIFEST_NAME);
     const existingIndex = manifest.presets.findIndex(p => p.name === preset.name);
     if (existingIndex > -1) {
       manifest.presets[existingIndex] = preset;
@@ -61,7 +58,8 @@ class RefinerPresetService {
     if (!fileSystemManager.isDirectorySelected()) {
       throw new Error("Application data directory not selected.");
     }
-    const manifest = await this.getManifest();
+    const { data: manifest, safeToSave } = await getManifest();
+    if (!safeToSave) throw new ManifestWriteBlockedError(MANIFEST_NAME);
     manifest.presets = manifest.presets.filter(p => p.name !== presetName);
     await this.saveManifest(manifest);
   }
