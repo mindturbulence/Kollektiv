@@ -2,6 +2,7 @@ import React, { createContext, useContext, useRef, useState, useCallback, useEff
 import { LiveAssistant } from '../services/liveAssistantService';
 import { useSettings } from './SettingsContext';
 import { appEventBus } from '../utils/eventBus';
+import { audioService } from '../services/audioService';
 
 type Status = 'idle' | 'connecting' | 'live' | 'error';
 
@@ -82,6 +83,25 @@ export const LiveAssistantProvider: React.FC<{ children: React.ReactNode }> = ({
         else void start();
     }, [status, stop, start]);
 
+    // Live voice always runs on Gemini regardless of the footer's active-engine
+    // switch (same reasoning as the text assistant) — gate on key presence, not
+    // on activeLLM, so switching engines for manual work doesn't hide this.
+    const hasGeminiKey = !!(settings.geminiApiKey || process.env.GEMINI_API_KEY);
+
+    // Global hotkey: Ctrl+Space toggles the live voice session from anywhere.
+    useEffect(() => {
+        if (!hasGeminiKey) return;
+        const onKey = (e: KeyboardEvent) => {
+            if (e.ctrlKey && e.code === 'Space' && !e.repeat) {
+                e.preventDefault();
+                audioService.playClick();
+                toggleLive();
+            }
+        };
+        window.addEventListener('keydown', onKey);
+        return () => window.removeEventListener('keydown', onKey);
+    }, [toggleLive, hasGeminiKey]);
+
     const toggleShare = useCallback(() => {
         if (!liveRef.current) return;
         setShareError('');
@@ -94,11 +114,6 @@ export const LiveAssistantProvider: React.FC<{ children: React.ReactNode }> = ({
                 setShareError(e?.message || 'Screen share failed — see console.');
             });
     }, [sharing]);
-
-    // Live voice always runs on Gemini regardless of the footer's active-engine
-    // switch (same reasoning as the text assistant) — gate on key presence, not
-    // on activeLLM, so switching engines for manual work doesn't hide this.
-    const hasGeminiKey = !!(settings.geminiApiKey || process.env.GEMINI_API_KEY);
 
     return (
         <LiveAssistantCtx.Provider value={{ status, speaking, sharing, error, shareError, hasGeminiKey, toggleLive, toggleShare }}>
