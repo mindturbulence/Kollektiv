@@ -43,6 +43,9 @@ export const LiveAssistantProvider: React.FC<{ children: React.ReactNode }> = ({
     }, []);
 
     const start = useCallback(async () => {
+        // Assistant activation always brings the user home first — the avatar
+        // and captions live on the dashboard/footer.
+        appEventBus.emit('navigate', 'dashboard');
         setError('');
         const live = new LiveAssistant();
         liveRef.current = live;

@@ -924,7 +924,10 @@ const AppContent: React.FC = () => {
     // --- Inline-callback replacements ---
     const handleAboutClick = useCallback(() => setIsAboutModalOpen(true), []);
     const handleToggleClippingPanel = useCallback(() => setIsClippingPanelOpen(prev => !prev), []);
-    const handleToggleChatPanel = useCallback(() => setIsChatPanelOpen(prev => !prev), []);
+    const handleToggleChatPanel = useCallback(() => setIsChatPanelOpen(prev => {
+        if (!prev) appEventBus.emit('navigate', 'dashboard');
+        return !prev;
+    }), []);
     const handleToggleNotesPanel = useCallback(() => setIsNotesPanelOpen(prev => !prev), []);
     const handleCloseNotesPanel = useCallback(() => setIsNotesPanelOpen(false), []);
     const handleClearPromptsPageState = useCallback(() => setPromptsPageState(null), []);
