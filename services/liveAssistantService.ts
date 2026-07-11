@@ -1,8 +1,9 @@
 import { Modality } from '@google/genai';
 import type { LLMSettings } from '../types';
 import { getGeminiClient } from './geminiService';
-import { executeAssistantTool, geminiToolDeclarations } from './assistantTools';
+import { executeAssistantTool, geminiToolDeclarations, ASSISTANT_TOOLS, AssistantTool } from './assistantTools';
 import { buildSystemIdentity } from './assistantService';
+import { loadMcpAssistantTools } from './mcpAssistantTools';
 
 // Single source of truth for the live model constant.
 // Verified against https://ai.google.dev/gemini-api/docs/live-api/capabilities (2026-07-10) —
@@ -84,6 +85,7 @@ export class LiveAssistant {
     private videoEl: HTMLVideoElement | null = null;
     private handlers!: LiveHandlers;
     private settings!: LLMSettings;
+    private mcpTools: AssistantTool[] = [];
     private closedByUs = false;
 
     async connect(settings: LLMSettings, handlers: LiveHandlers): Promise<void> {
@@ -92,7 +94,12 @@ export class LiveAssistant {
         this.closedByUs = false;
         handlers.onStatus('connecting');
         const ai = getGeminiClient(settings);
-
+        
+        // Load MCP tools (cached) and combine with built-in tools
+        const mcpTools = await loadMcpAssistantTools(settings);
+        this.mcpTools = mcpTools;
+        const allTools = mcpTools.length ? [...ASSISTANT_TOOLS, ...mcpTools] : ASSISTANT_TOOLS;
+        
         this.session = await ai.live.connect({
             model: LIVE_MODEL,
             config: {
@@ -101,7 +108,7 @@ export class LiveAssistant {
                 speechConfig: {
                     voiceConfig: { prebuiltVoiceConfig: { voiceName: settings.assistantVoice || 'Kore' } },
                 },
-                tools: [{ functionDeclarations: geminiToolDeclarations() as any }],
+                tools: [{ functionDeclarations: geminiToolDeclarations(allTools) as any }],
                 inputAudioTranscription: {},
                 outputAudioTranscription: {},
             },
@@ -160,7 +167,7 @@ export class LiveAssistant {
             const responses: any[] = [];
             for (const fc of msg.toolCall.functionCalls) {
                 this.handlers.onToolActivity(`⚙️ ${fc.name}(${JSON.stringify(fc.args || {})})`);
-                const result = await executeAssistantTool(fc.name, fc.args || {}, { settings: this.settings });
+                const result = await executeAssistantTool(fc.name, fc.args || {}, { settings: this.settings }, this.mcpTools);
                 this.handlers.onToolActivity(`✅ ${fc.name}: ${result.slice(0, 300)}`);
                 responses.push({ id: fc.id, name: fc.name, response: { result } });
             }

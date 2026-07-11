@@ -459,9 +459,9 @@ export const ASSISTANT_TOOLS: AssistantTool[] = [
     },
 ];
 
-export const executeAssistantTool = async (name: string, args: Record<string, any>, ctx: ToolContext): Promise<string> => {
-    const tool = ASSISTANT_TOOLS.find(t => t.name === name);
-    if (!tool) return `Error: unknown tool "${name}". Available: ${ASSISTANT_TOOLS.map(t => t.name).join(', ')}`;
+export const executeAssistantTool = async (name: string, args: Record<string, any>, ctx: ToolContext, extraTools: AssistantTool[] = []): Promise<string> => {
+    const tool = [...ASSISTANT_TOOLS, ...extraTools].find(t => t.name === name);
+    if (!tool) return `Error: unknown tool "${name}". Available: ${[...ASSISTANT_TOOLS, ...extraTools].map(t => t.name).join(', ')}`;
     try {
         return String(await tool.execute(args || {}, ctx));
     } catch (e: any) {
@@ -471,8 +471,8 @@ export const executeAssistantTool = async (name: string, args: Record<string, an
 };
 
 /** Gemini functionDeclarations (uppercase Type strings). */
-export const geminiToolDeclarations = () =>
-    ASSISTANT_TOOLS.map(t => ({
+export const geminiToolDeclarations = (tools: AssistantTool[] = ASSISTANT_TOOLS) =>
+    tools.map(t => ({
         name: t.name,
         description: t.description,
         parameters: {
@@ -485,16 +485,16 @@ export const geminiToolDeclarations = () =>
     }));
 
 /** Ollama /api/chat tools (OpenAI-style). */
-export const ollamaToolDeclarations = () =>
-    ASSISTANT_TOOLS.map(t => ({
+export const ollamaToolDeclarations = (tools: AssistantTool[] = ASSISTANT_TOOLS) =>
+    tools.map(t => ({
         type: 'function',
         function: { name: t.name, description: t.description, parameters: t.parameters },
     }));
 
 /** System-prompt tool protocol for providers without native function calling. */
-export const fallbackProtocolPrompt = (persona: string) => `${persona} You can control the app with tools.
+export const fallbackProtocolPrompt = (persona: string, tools: AssistantTool[] = ASSISTANT_TOOLS) => `${persona} You can control the app with tools.
 To call a tool, output EXACTLY one block in this format and nothing after it:
 <action>{"tool": "<tool_name>", "args": { ... }}</action>
 The system will reply with the result; then continue helping the user. Available tools:
-${ASSISTANT_TOOLS.map(t => `- ${t.name}: ${t.description} Args schema: ${JSON.stringify(t.parameters.properties)}`).join('\n')}
+${tools.map(t => `- ${t.name}: ${t.description} Args schema: ${JSON.stringify(t.parameters.properties)}`).join('\n')}
 Only use a tool when it helps. Otherwise answer normally.`;

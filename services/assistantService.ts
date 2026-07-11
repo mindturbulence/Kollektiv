@@ -1,10 +1,11 @@
 import type { LLMSettings } from '../types';
 import { getGeminiClient } from './geminiService';
-import { executeAssistantTool, geminiToolDeclarations, ollamaToolDeclarations, fallbackProtocolPrompt } from './assistantTools';
+import { executeAssistantTool, geminiToolDeclarations, ollamaToolDeclarations, fallbackProtocolPrompt, ASSISTANT_TOOLS } from './assistantTools';
 import { streamChat } from './llmService';
 import { parseActionBlock, visibleText } from './assistantProtocol';
 import { getOllamaConfig } from './ollamaService';
 import { memoryPromptBlock } from '../utils/memoryStorage';
+import { loadMcpAssistantTools } from './mcpAssistantTools';
 
 export type ChatMsg = { role: 'user' | 'assistant' | 'system'; content: string; attachments?: { data: string; mimeType: string; fileName?: string }[] };
 
@@ -86,6 +87,8 @@ const latestAttachments = (messages: ChatMsg[]) =>
 // ---------------- Gemini: native function calling ----------------
 
 async function* runGeminiTurn(messages: ChatMsg[], settings: LLMSettings): AsyncGenerator<AssistantEvent> {
+    const mcpTools = await loadMcpAssistantTools(settings);
+    const allTools = mcpTools.length ? [...ASSISTANT_TOOLS, ...mcpTools] : ASSISTANT_TOOLS;
     const ai = getGeminiClient(settings);
     const model = settings.llmModel || 'gemini-3.5-flash';
     const systemText = [buildSystemIdentity(settings), ...messages.filter(m => m.role === 'system').map(m => m.content)].join('\n\n');
@@ -108,7 +111,7 @@ async function* runGeminiTurn(messages: ChatMsg[], settings: LLMSettings): Async
             contents,
             config: {
                 systemInstruction: systemText,
-                tools: [{ functionDeclarations: geminiToolDeclarations() as any }],
+                tools: [{ functionDeclarations: geminiToolDeclarations(allTools) as any }],
             },
         });
 
@@ -137,7 +140,7 @@ async function* runGeminiTurn(messages: ChatMsg[], settings: LLMSettings): Async
         const responseParts: any[] = [];
         for (const c of calls) {
             yield { type: 'tool_start', name: c.name, args: c.args };
-            const result = await executeAssistantTool(c.name, c.args, { settings, attachments });
+            const result = await executeAssistantTool(c.name, c.args, { settings, attachments }, mcpTools);
             yield { type: 'tool_result', name: c.name, result };
             responseParts.push({ functionResponse: { name: c.name, response: { result } } });
         }
@@ -150,6 +153,8 @@ async function* runGeminiTurn(messages: ChatMsg[], settings: LLMSettings): Async
 // ---------------- Fallback: <action> text protocol over streamChat ----------------
 
 async function* runFallbackTurn(messages: ChatMsg[], settings: LLMSettings): AsyncGenerator<AssistantEvent> {
+    const mcpTools = await loadMcpAssistantTools(settings);
+    const allTools = mcpTools.length ? [...ASSISTANT_TOOLS, ...mcpTools] : ASSISTANT_TOOLS;
     const provider = getAssistantProvider(settings);
     // streamChat dispatches on activeLLM, so force it to the assistant's brain.
     // masterRolePrompt is blanked because buildSystemIdentity already prepends
@@ -157,7 +162,7 @@ async function* runFallbackTurn(messages: ChatMsg[], settings: LLMSettings): Asy
     const chatSettings: LLMSettings = { ...settings, activeLLM: provider as LLMSettings['activeLLM'], masterRolePrompt: '' };
     const attachments = latestAttachments(messages);
     const convo: ChatMsg[] = [
-        { role: 'system', content: fallbackProtocolPrompt(buildSystemIdentity(settings)) },
+        { role: 'system', content: fallbackProtocolPrompt(buildSystemIdentity(settings), allTools) },
         ...messages.filter(m => m.role !== 'system'),
     ];
 
@@ -177,7 +182,7 @@ async function* runFallbackTurn(messages: ChatMsg[], settings: LLMSettings): Asy
         const action = parseActionBlock(full);
         if (!action) return;
         yield { type: 'tool_start', name: action.tool, args: action.args };
-        const result = await executeAssistantTool(action.tool, action.args, { settings, attachments });
+        const result = await executeAssistantTool(action.tool, action.args, { settings, attachments }, mcpTools);
         yield { type: 'tool_result', name: action.tool, result };
         convo.push({ role: 'assistant', content: full });
         convo.push({ role: 'user', content: `[System — result of ${action.tool}]: ${result}\nContinue helping the user based on this result.` });
@@ -189,6 +194,8 @@ async function* runFallbackTurn(messages: ChatMsg[], settings: LLMSettings): Asy
 // ---------------- Ollama: native /api/chat tool calling ----------------
 
 async function* runOllamaTurn(messages: ChatMsg[], settings: LLMSettings): AsyncGenerator<AssistantEvent> {
+    const mcpTools = await loadMcpAssistantTools(settings);
+    const allTools = mcpTools.length ? [...ASSISTANT_TOOLS, ...mcpTools] : ASSISTANT_TOOLS;
     const provider = getAssistantProvider(settings); // 'ollama' | 'ollama_cloud'
     const config = getOllamaConfig({ ...settings, activeLLM: provider as LLMSettings['activeLLM'] });
     if (!config.baseUrl || !config.model) {
@@ -213,7 +220,7 @@ async function* runOllamaTurn(messages: ChatMsg[], settings: LLMSettings): Async
         const res = await fetch(`${config.baseUrl}/api/chat`, {
             method: 'POST',
             headers: config.headers,
-            body: JSON.stringify({ model: config.model, messages: convo, stream: true, tools: ollamaToolDeclarations() }),
+            body: JSON.stringify({ model: config.model, messages: convo, stream: true, tools: ollamaToolDeclarations(allTools) }),
         });
         if (!res.ok || !res.body) throw new Error(`Ollama chat failed (${res.status}): ${await res.text().catch(() => res.statusText)}`);
 
@@ -248,7 +255,7 @@ async function* runOllamaTurn(messages: ChatMsg[], settings: LLMSettings): Async
         convo.push({ role: 'assistant', content, tool_calls: calls.map(c => ({ function: { name: c.name, arguments: c.args } })) });
         for (const c of calls) {
             yield { type: 'tool_start', name: c.name, args: c.args };
-            const result = await executeAssistantTool(c.name, c.args, { settings, attachments });
+            const result = await executeAssistantTool(c.name, c.args, { settings, attachments }, mcpTools);
             yield { type: 'tool_result', name: c.name, result };
             convo.push({ role: 'tool', content: result });
         }
@@ -262,6 +269,8 @@ async function* runOllamaTurn(messages: ChatMsg[], settings: LLMSettings): Async
 // doubles as the OpenRouter declaration set.
 
 async function* runOpenRouterTurn(messages: ChatMsg[], settings: LLMSettings): AsyncGenerator<AssistantEvent> {
+    const mcpTools = await loadMcpAssistantTools(settings);
+    const allTools = mcpTools.length ? [...ASSISTANT_TOOLS, ...mcpTools] : ASSISTANT_TOOLS;
     if (!settings.openrouterApiKey) {
         yield { type: 'text', chunk: 'The OpenRouter brain needs an API key — set it in Settings > Integrations > OpenRouter.' };
         yield { type: 'turn_end' };
@@ -288,7 +297,7 @@ async function* runOpenRouterTurn(messages: ChatMsg[], settings: LLMSettings): A
         const res = await fetch('https://openrouter.ai/api/v1/chat/completions', {
             method: 'POST',
             headers: { Authorization: `Bearer ${settings.openrouterApiKey}`, 'Content-Type': 'application/json' },
-            body: JSON.stringify({ model, messages: convo, stream: true, tools: ollamaToolDeclarations() }),
+            body: JSON.stringify({ model, messages: convo, stream: true, tools: ollamaToolDeclarations(allTools) }),
         });
         if (!res.ok || !res.body) throw new Error(`OpenRouter chat failed (${res.status}): ${await res.text().catch(() => res.statusText)}`);
 
@@ -337,7 +346,7 @@ async function* runOpenRouterTurn(messages: ChatMsg[], settings: LLMSettings): A
             let args: Record<string, any> = {};
             try { args = JSON.parse(c.argsRaw || '{}'); } catch { /* keep {} */ }
             yield { type: 'tool_start', name: c.name, args };
-            const result = await executeAssistantTool(c.name, args, { settings, attachments });
+            const result = await executeAssistantTool(c.name, args, { settings, attachments }, mcpTools);
             yield { type: 'tool_result', name: c.name, result };
             convo.push({ role: 'tool', tool_call_id: c.id, content: result });
         }
