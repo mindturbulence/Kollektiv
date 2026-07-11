@@ -237,6 +237,16 @@ const IntegrationsSection: React.FC<IntegrationsSectionProps> = ({
                 <SettingRow label="Assistant Name" desc="What the assistant calls itself in chat and live voice mode.">
                     <input type="text" value={settings.assistantName || ''} onChange={(e) => handleSettingsChange('assistantName', e.target.value)} className="form-input w-full md:w-[620px]" placeholder="Kollektiv" />
                 </SettingRow>
+                <SettingRow label="Assistant Brain" desc="Which engine the chat assistant reasons and calls tools on. Uses that provider's endpoint/model from the AI Engine tab. GPT (ChatGPT) models are available via OpenRouter. Live voice conversations always run on Gemini Live with the voice below.">
+                    <div className="tab-group">
+                        <ProviderTab label="Gemini" isActive={(settings.assistantProvider || 'gemini') === 'gemini'} onClick={() => handleSettingsChange('assistantProvider', 'gemini')} />
+                        <ProviderTab label="Anthropic" isActive={settings.assistantProvider === 'anthropic'} onClick={() => handleSettingsChange('assistantProvider', 'anthropic')} />
+                        <ProviderTab label="Ollama" isActive={settings.assistantProvider === 'ollama'} onClick={() => handleSettingsChange('assistantProvider', 'ollama')} />
+                        <ProviderTab label="Cloud Ollama" isActive={settings.assistantProvider === 'ollama_cloud'} onClick={() => handleSettingsChange('assistantProvider', 'ollama_cloud')} />
+                        <ProviderTab label="OpenRouter" isActive={settings.assistantProvider === 'openrouter'} onClick={() => handleSettingsChange('assistantProvider', 'openrouter')} />
+                        <ProviderTab label="Llama.cpp" isActive={settings.assistantProvider === 'llamacpp'} onClick={() => handleSettingsChange('assistantProvider', 'llamacpp')} />
+                    </div>
+                </SettingRow>
                 <SettingRow label="Quick Persona" desc="Jump to a representative male or female voice. Pick any of the 30 voices individually below.">
                     <div className="tab-group">
                         <ProviderTab label="Male" isActive={currentVoiceGender === 'Male'} onClick={() => handleSettingsChange('assistantVoice', DEFAULT_MALE_VOICE)} />

@@ -474,10 +474,13 @@ ${systemResponse}` };
     };
 
     const getChatSubtitle = () => {
-        if (settings.activeLLM === 'llamacpp') return settings.llamacppModel || 'llamacpp';
-        if (settings.activeLLM === 'ollama') return settings.ollamaModel || 'llama3';
-        if (settings.activeLLM === 'ollama_cloud') return settings.ollamaCloudModel || 'llama3';
-        return settings.llmModel || 'gemini-2.5-flash';
+        const brain = settings.assistantProvider || 'gemini';
+        if (brain === 'ollama') return `ollama · ${settings.ollamaModel || 'model?'}`;
+        if (brain === 'ollama_cloud') return `ollama cloud · ${settings.ollamaCloudModel || 'model?'}`;
+        if (brain === 'openrouter') return `openrouter · ${settings.openrouterModel || 'auto'}`;
+        if (brain === 'anthropic') return `anthropic · ${settings.anthropicModel || 'claude'}`;
+        if (brain === 'llamacpp') return `llama.cpp · ${settings.llamacppModel || 'default'}`;
+        return `gemini · ${settings.llmModel || 'gemini-2.5-flash'}`;
     };
 
     const panelContent = (
