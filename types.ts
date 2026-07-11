@@ -2,6 +2,7 @@
 // --- Core App Types ---
 export type ActiveTab =
   | 'dashboard'
+  | 'assistant'
   | 'discovery'
   | 'prompts'
   | 'crafter'

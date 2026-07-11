@@ -26,6 +26,7 @@ import { TabTitleManager } from './TabTitleManager';
 
 // Page components
 import Dashboard from './Dashboard';
+import AssistantPage from './AssistantPage';
 import DiscoveryPage from './DiscoveryPage';
 import PromptsPage from './PromptsPage';
 import SavedPrompts from './SavedPrompts';
@@ -442,6 +443,7 @@ const AppContent: React.FC = () => {
         const base = "KOLLEKTIV";
         switch (activeTab) {
             case 'dashboard': return `DASHBOARD | ${base}`;
+            case 'assistant': return `ASSISTANT | ${base}`;
             case 'discovery': return `DISCOVERY | ${base}`;
             case 'prompts': return `BUILDER | ${base}`;
             case 'crafter': return `CRAFTER | ${base}`;
@@ -827,6 +829,7 @@ const AppContent: React.FC = () => {
 
         switch (activeTab) {
             case 'dashboard': return <Dashboard key="dashboard" onNavigate={handleNavigate} onClipIdea={handleClipIdea} isExiting={false} />;
+            case 'assistant': return <AssistantPage key="assistant" />;
             case 'discovery': return <DiscoveryPage key="discovery" isExiting={false} onClipIdea={handleClipIdea} onSendToBuilder={handleSendToPromptsPage} showGlobalFeedback={showGlobalFeedback} />;
             case 'prompts': return <PromptsPage key="prompts" onClipIdea={handleClipIdea} initialState={promptsPageState}                            onStateHandled={handleClearPromptsPageState} showGlobalFeedback={showGlobalFeedback} isExiting={false} onSendToBuilder={handleSendToPromptsPage} />;
             case 'crafter': return <PromptsPage key="prompts" forcedView="composer" onNavigate={handleNavigate} onClipIdea={handleClipIdea} initialState={promptsPageState}                            onStateHandled={handleClearPromptsPageState} showGlobalFeedback={showGlobalFeedback} isExiting={false} onSendToBuilder={handleSendToPromptsPage} />;
@@ -1171,7 +1174,7 @@ const AppContent: React.FC = () => {
             )}
             <TabTitleManager defaultTitle={currentTitle} />
             <CustomCursor />
-            <LiveCaptionOverlay />
+            <LiveCaptionOverlay hidden={activeTab === 'assistant'} />
             {isInitialized && (
                 <PageFrame
                     isInitialized={isInitialized}

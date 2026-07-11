@@ -8,7 +8,7 @@ const MAX_CHARS = 220;   // keep it subtitle-sized; older text scrolls off the f
 /** Movie-subtitle strip floating just above the footer oscillator. Fed by
  * live-voice transcriptions AND streamed chat replies (both emit
  * 'liveCaption'); clears after a quiet period or when a voice session ends. */
-const LiveCaptionOverlay: React.FC = () => {
+const LiveCaptionOverlay: React.FC<{ hidden?: boolean }> = ({ hidden = false }) => {
     const [caption, setCaption] = useState<{ who: 'user' | 'assistant'; text: string } | null>(null);
     const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
@@ -30,6 +30,8 @@ const LiveCaptionOverlay: React.FC = () => {
             if (timer.current) clearTimeout(timer.current);
         };
     }, []);
+
+    if (hidden) return null;
 
     return (
         <div className="fixed bottom-[88px] inset-x-0 z-[720] flex justify-center pointer-events-none px-8">
