@@ -41,7 +41,9 @@ export function useAssistantSignals(): AssistantSignals {
                 setUserText(prev => (prev + p.text).slice(-160));
                 setAssistantText('');
             } else {
-                setAssistantText(prev => (prev + p.text).slice(-280));
+                // Full turn kept (reset on next user caption) — the assistant page
+                // plays it word-by-word, so truncating would drop words mid-reply.
+                setAssistantText(prev => prev + p.text);
                 setUserText('');
             }
         });

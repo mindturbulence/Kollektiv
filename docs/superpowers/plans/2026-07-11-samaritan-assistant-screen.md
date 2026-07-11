@@ -855,3 +855,18 @@ git commit -m "feat: replace footer live oscillator with assistant activity labe
 - `Footer` is rendered inside `LiveAssistantProvider` (verified in `App.tsx`), so `useAssistantSignals` → `useLiveAssistantContext` is safe there.
 - The hook's tick interval is gated on active status, so the always-mounted footer pays nothing while idle.
 - Deliberately skipped: a persistent history feed and the show's OS-boot sequence — add only if the minimal five-mode screen feels too static in practice.
+
+---
+
+## Revision 2026-07-11 — word-at-a-time stage (per reference demos)
+
+References: `github.com/Phreshhh/poi-web-ui`, `rodrigograca31.github.io/Samaritan` (source of truth: its `js/samaritan.js` + `css/style.css`).
+
+The original center stage (char-by-char `Typewriter` with `_` cursor, full streamed reply as one paragraph, fixed 256px bar, triangle always visible) did not match the reference behavior. Replaced in `components/AssistantPage.tsx` with a single `Stage` component:
+
+- Words display ONE AT A TIME, each replacing the last (demo: ~750ms/word, longer words linger). Here: 550ms for the command prompt, 450ms connecting, 280ms while streaming the live reply so it keeps pace with speech.
+- The underline bar auto-sizes to the current word's width (`self-stretch` in an inline-flex column) and shrinks to 30px when no word is shown — matching the demo's `hr` animation.
+- No cursor. The sigil collapses to scale 0 while a phrase plays and blinks (opacity loop) when idle; during `responding` it stays collapsed for the whole reply and only returns with command mode.
+- While streaming, the trailing token is held back until whitespace confirms it is a complete word.
+- `utils/useAssistantSignals.ts`: assistant caption text no longer truncated to 280 chars (word indexing needs the whole turn; still reset on each user caption).
+- Known ceilings (accepted): the last partial word of a reply can be dropped when speaking ends and mode flips; a tool call mid-reply remounts the stage and replays the turn's words.

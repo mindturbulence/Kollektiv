@@ -12,24 +12,52 @@ const Sigil: React.FC = () => (
     <div className="w-0 h-0 border-l-[18px] border-r-[18px] border-b-[30px] border-l-transparent border-r-transparent border-b-primary" />
 );
 
-/** Types text one character at a time, restarting when `text` changes. */
-const Typewriter: React.FC<{ text: string; speed?: number; className?: string }> = ({ text, speed = 30, className }) => {
-    const [n, setN] = useState(0);
-    useEffect(() => {
-        setN(0);
-        const id = setInterval(() => {
-            setN(prev => {
-                if (prev >= text.length) { clearInterval(id); return prev; }
-                return prev + 1;
-            });
-        }, speed);
-        return () => clearInterval(id);
-    }, [text, speed]);
-    return <span className={className}>{text.slice(0, n)}<span className="animate-pulse">_</span></span>;
-};
-
 // Shared type stack for the big center text — Samaritan-style: large, mono, spaced.
-const BIG_TEXT = 'font-mono text-2xl md:text-4xl tracking-[0.3em] uppercase text-base-content leading-relaxed';
+const BIG_TEXT = 'font-mono text-3xl md:text-5xl tracking-[0.2em] uppercase text-base-content leading-relaxed';
+
+/** Word-at-a-time display per the reference demo: each word replaces the last,
+ * the underline bar matches the word's width (30px when empty), and the sigil
+ * collapses while words play, then blinks once the phrase is done. When
+ * `streaming` the trailing token is held back until whitespace confirms it's a
+ * complete word. */
+const Stage: React.FC<{ text: string; streaming?: boolean; wordTime?: number; sigil?: boolean }> = ({
+    text,
+    streaming = false,
+    wordTime = 550,
+    sigil = true,
+}) => {
+    const words = text.trim() ? text.trim().split(/\s+/) : [];
+    const ready = streaming ? Math.max(0, words.length - 1) : words.length;
+    const [idx, setIdx] = useState(-1);
+
+    useEffect(() => {
+        if (idx >= ready) return;
+        // Longer words linger longer, like the reference implementation.
+        const shown = idx >= 0 ? words[idx] : '';
+        const hold = idx < 0 ? 120 : wordTime + Math.max(0, shown.length - 7) * 60;
+        const t = setTimeout(() => setIdx(i => i + 1), hold);
+        return () => clearTimeout(t);
+    }, [idx, ready, wordTime]);
+
+    const word = idx >= 0 && idx < ready ? words[idx] : '';
+    const playing = idx < ready || word !== '';
+
+    return (
+        <div className="flex flex-col items-center gap-6">
+            <div className="inline-flex flex-col items-center gap-5">
+                <span className={`${BIG_TEXT} whitespace-nowrap px-2`}>{word || ' '}</span>
+                <div className="h-[3px] bg-base-content self-stretch" style={word ? undefined : { width: 30, alignSelf: 'center' }} />
+            </div>
+            {sigil && (
+                <motion.div animate={{ scale: playing ? 0 : 1 }} transition={{ duration: 0.15 }}>
+                    <motion.div animate={{ opacity: [1, 0.25, 1] }} transition={{ duration: 1.6, repeat: Infinity, ease: 'easeInOut' }}>
+                        <Sigil />
+                    </motion.div>
+                </motion.div>
+            )}
+        </div>
+    );
+};
 
 /** Fullscreen Samaritan-style face of the live voice assistant. Mounted as the
  * 'assistant' tab; the mic toggle navigates here on session start and this
@@ -83,24 +111,18 @@ const AssistantPage: React.FC = () => {
                         className="relative z-10 flex flex-col items-center gap-6 max-w-5xl px-8 text-center"
                     >
                         {mode === 'connecting' && (
-                            <Typewriter text="ESTABLISHING UPLINK..." className="font-mono text-xl md:text-3xl tracking-[0.4em] uppercase text-base-content/70" />
+                            <Stage text="ESTABLISHING UPLINK..." wordTime={450} />
                         )}
 
                         {mode === 'command' && (
-                            <>
-                                <Typewriter text={PROMPT} className={BIG_TEXT} />
-                                <div className="w-64 h-[3px] bg-base-content" />
-                                <motion.div animate={{ opacity: [1, 0.35, 1] }} transition={{ duration: 2.4, repeat: Infinity, ease: 'easeInOut' }}>
-                                    <Sigil />
-                                </motion.div>
-                            </>
+                            <Stage text={PROMPT} />
                         )}
 
                         {mode === 'listening' && (
                             <>
                                 <p className="font-mono text-[10px] tracking-[0.5em] uppercase text-primary/70">RECEIVING</p>
-                                <p className={BIG_TEXT}>{userText}</p>
-                                <div className="w-64 h-[3px] bg-base-content" />
+                                <p className="font-mono text-xl md:text-2xl tracking-[0.2em] uppercase text-base-content/80 leading-relaxed">{userText}</p>
+                                <div className="w-[30px] h-[3px] bg-base-content" />
                                 <Sigil />
                             </>
                         )}
@@ -129,13 +151,9 @@ const AssistantPage: React.FC = () => {
                         )}
 
                         {mode === 'responding' && (
-                            <>
-                                <p className={BIG_TEXT}>{assistantText}</p>
-                                <div className="w-64 h-[3px] bg-base-content" />
-                                <motion.div animate={{ scaleY: [1, 0.82, 1] }} transition={{ duration: 0.35, repeat: Infinity, ease: 'easeInOut' }}>
-                                    <Sigil />
-                                </motion.div>
-                            </>
+                            // Sigil stays collapsed for the whole reply, per the reference:
+                            // the triangle only returns once the phrase is over (command mode).
+                            <Stage text={assistantText} streaming wordTime={280} sigil={false} />
                         )}
                     </motion.div>
                 </AnimatePresence>
