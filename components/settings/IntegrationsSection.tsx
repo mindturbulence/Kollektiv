@@ -2,6 +2,8 @@ import React from 'react';
 import type { LLMSettings } from '../../types';
 import { SettingRow, SettingsGroup, ProviderTab } from './primitives';
 import { audioService } from '../../services/audioService';
+import { fileSystemManager } from '../../utils/fileUtils';
+import { drawFaceTemplate, AVATAR_TEXTURE_PATH } from '../AssistantAvatar';
 import AutocompleteSelect from '../AutocompleteSelect';
 import { InformationCircleIcon } from '../icons';
 import { ASSISTANT_VOICES, DEFAULT_MALE_VOICE, DEFAULT_FEMALE_VOICE, voiceGender } from '../../utils/assistantVoices';
@@ -266,6 +268,61 @@ const IntegrationsSection: React.FC<IntegrationsSectionProps> = ({
                         className="textarea textarea-bordered w-full md:w-[620px] min-h-[120px] leading-relaxed text-sm font-medium focus:outline-none focus:ring-1 focus:ring-primary/40 focus:border-primary/40 rounded-none bg-base-300/30 font-mono"
                         placeholder="e.g. Speak like a witty noir detective. Keep answers short and punchy. Never use emoji."
                     />
+                </SettingRow>
+            </SettingsGroup>
+            <SettingsGroup title="3D Persona Avatar">
+                <SettingRow label="Show Avatar" desc="Floating 3D talking head on the dashboard. Its jaw animates while the assistant speaks in live voice mode or streams a chat reply.">
+                    <label className="label cursor-pointer justify-start gap-4 p-0">
+                        <input
+                            type="checkbox"
+                            checked={settings.assistantAvatarEnabled !== false}
+                            onChange={e => handleSettingsChange('assistantAvatarEnabled', e.target.checked)}
+                            className="toggle toggle-primary toggle-xs"
+                        />
+                        <span className="text-[10px] font-black uppercase tracking-widest">Enabled</span>
+                    </label>
+                </SettingRow>
+                <SettingRow label="Face Texture" desc="1024x512 image wrapped around the head. Download the template, paint or generate a face onto it (the Crafter can help), then upload it here. Stored in the vault at assistant/avatar-face.png.">
+                    <div className="flex flex-col gap-3">
+                        <div className="flex gap-2">
+                            <button
+                                onClick={() => {
+                                    audioService.playClick();
+                                    drawFaceTemplate(true).toBlob((blob: Blob | null) => {
+                                        if (!blob) return;
+                                        const a = document.createElement('a');
+                                        a.href = URL.createObjectURL(blob);
+                                        a.download = 'avatar-face-template.png';
+                                        a.click();
+                                        URL.revokeObjectURL(a.href);
+                                    }, 'image/png');
+                                }}
+                                className="form-btn px-4"
+                            >
+                                Download Template
+                            </button>
+                            <label className="form-btn form-btn-primary px-4 cursor-pointer">
+                                Upload Face Texture
+                                <input
+                                    type="file"
+                                    accept="image/png,image/jpeg,image/webp"
+                                    className="hidden"
+                                    onChange={async (e) => {
+                                        const file = e.target.files?.[0];
+                                        e.target.value = '';
+                                        if (!file) return;
+                                        if (!fileSystemManager.isDirectorySelected()) {
+                                            alert('Connect a vault folder first — the texture is stored there.');
+                                            return;
+                                        }
+                                        await fileSystemManager.saveFile(AVATAR_TEXTURE_PATH, file);
+                                        audioService.playClick();
+                                    }}
+                                />
+                            </label>
+                        </div>
+                        <p className="text-[9px] font-bold uppercase tracking-widest text-base-content/30">The dashboard reloads the texture next time it mounts.</p>
+                    </div>
                 </SettingRow>
             </SettingsGroup>
         </div>

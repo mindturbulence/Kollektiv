@@ -30,8 +30,10 @@
     "phase": "idle",
     "testFiles": [],
     "sourceFiles": [
-      "D:\\AI-Dev\\Kollektiv-Dev\\contexts\\LiveAssistantContext.tsx",
-      "D:\\AI-Dev\\Kollektiv-Dev\\components\\App.tsx"
+      "D:\\AI-Dev\\Kollektiv-Dev\\types.ts",
+      "D:\\AI-Dev\\Kollektiv-Dev\\components\\AssistantAvatar.tsx",
+      "D:\\AI-Dev\\Kollektiv-Dev\\components\\Dashboard.tsx",
+      "D:\\AI-Dev\\Kollektiv-Dev\\components\\settings\\IntegrationsSection.tsx"
     ],
     "redVerificationPending": false
   },

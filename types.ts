@@ -103,6 +103,8 @@ export interface LLMSettings {
   assistantPersonality?: string;
   /** Reasoning engine for the chat assistant. Live voice always runs on Gemini. */
   assistantProvider?: 'gemini' | 'ollama' | 'ollama_cloud' | 'openrouter' | 'anthropic' | 'llamacpp';
+  /** Show the 3D persona avatar on the dashboard. Undefined = enabled. */
+  assistantAvatarEnabled?: boolean;
 
   // Prompt & Token Tracking
   masterRolePrompt?: string;
