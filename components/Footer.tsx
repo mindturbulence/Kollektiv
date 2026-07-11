@@ -6,7 +6,8 @@ import { useSettings } from '../contexts/SettingsContext';
 import { fileSystemManager } from '../utils/fileUtils';
 import { audioService } from '../services/audioService';
 import { loadGalleryItems } from '../utils/galleryStorage';
-import { appEventBus } from '../utils/eventBus';
+import { useAssistantSignals } from '../utils/useAssistantSignals';
+import type { AssistantMode } from '../utils/assistantMode';
 
 const MetadataItem: React.FC<{ label: string; value: string }> = ({ label, value }) => {
     const { settings } = useSettings();
@@ -169,6 +170,15 @@ const DigitalOscillator = ({ state = 'idle', theme = 'light' }: { state: string,
     );
 };
 
+// Footer readout for the live assistant — replaces the old center oscillator.
+const ASSISTANT_LABEL: Record<AssistantMode, string> = {
+    connecting: 'CONNECTING',
+    command: 'LISTENING',
+    listening: 'RECEIVING',
+    processing: 'THINKING',
+    responding: 'RESPONDING',
+};
+
 interface FooterProps {
     audioEnabled: boolean;
     onAudioToggle: () => void;
@@ -191,8 +201,8 @@ const Footer: React.FC<FooterProps> = ({
     const { settings } = useSettings();
     const [vaultCount, setVaultCount] = useState<number>(0);
     const [time, setTime] = useState(new Date().toLocaleTimeString());
-    const [liveStatus, setLiveStatus] = useState<'idle' | 'connecting' | 'live' | 'error'>('idle');
-    const [liveSpeaking, setLiveSpeaking] = useState(false);
+    const { mode: liveMode, status: liveStatus } = useAssistantSignals();
+    const liveLabel = liveStatus === 'error' ? 'FAULT' : ASSISTANT_LABEL[liveMode];
     const isPipboyTheme = settings.darkTheme === 'pipboy';
     const mainFontClass = isPipboyTheme ? 'font-fixedsys text-[11px]' : 'font-rajdhani text-[12px] font-normal';
 
@@ -208,32 +218,27 @@ const Footer: React.FC<FooterProps> = ({
         return () => clearInterval(timer);
     }, []);
 
-    useEffect(() => {
-        return appEventBus.on('liveAssistantState', (s: { status: 'idle' | 'connecting' | 'live' | 'error'; speaking: boolean }) => {
-            setLiveStatus(s.status);
-            setLiveSpeaking(s.speaking);
-        });
-    }, []);
 
-    // idle = flat line, connecting/listening = noisy wave, speaking = bar equalizer, error = red jitter.
-    const liveOscillatorState = liveStatus === 'error' ? 'error' : liveSpeaking ? 'playing' : liveStatus === 'idle' ? 'idle' : 'syncing';
 
     return (
         <footer className="flex-shrink-0 px-8 py-4 bg-base-200/20 backdrop-blur-md z-[700] flex flex-row items-center justify-between select-none whitespace-nowrap relative pointer-events-auto border-t border-base-content/10 mt-auto">
             {/* Background Technical Noise */}
             <div className="absolute inset-0 pointer-events-none opacity-[0.03] bg-[url('https://www.transparenttextures.com/patterns/stardust.png')]"></div>
 
-            <AnimatePresence>
+            <AnimatePresence mode="wait">
                 {liveStatus !== 'idle' && (
                     <motion.div
-                        key="live-oscillator"
-                        initial={{ opacity: 0, scale: 0.9 }}
-                        animate={{ opacity: 1, scale: 1 }}
-                        exit={{ opacity: 0, scale: 0.9 }}
-                        transition={{ duration: 0.4, ease: [0.23, 1, 0.32, 1] }}
-                        className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 z-[705] pointer-events-none"
+                        key={liveLabel}
+                        initial={{ opacity: 0, y: 4 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        exit={{ opacity: 0, y: -4 }}
+                        transition={{ duration: 0.25, ease: [0.23, 1, 0.32, 1] }}
+                        className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 z-[705] pointer-events-none flex items-center gap-2"
                     >
-                        <DigitalOscillator state={liveOscillatorState} theme={themeMode} />
+                        <span className={`w-1.5 h-1.5 ${liveStatus === 'error' ? 'bg-error' : 'bg-primary animate-pulse'}`} />
+                        <span className={`font-mono text-[10px] font-bold tracking-[0.5em] uppercase leading-none ${liveStatus === 'error' ? 'text-error' : 'text-base-content/70'}`}>
+                            {liveLabel}
+                        </span>
                     </motion.div>
                 )}
             </AnimatePresence>
