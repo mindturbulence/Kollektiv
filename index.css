@@ -1316,229 +1316,6 @@ button:active {
   font-family: "Marvin Visions Bold", sans-serif !important;
 }
 
-/* --- KOLLEKTIV THEME STYLING & FONT OVERRIDES --- */
-/* Inter is the default font for all content in the Kollektiv theme, including all components */
-[data-theme="Kollektiv"],
-[data-theme="Kollektiv"] *,
-[data-theme="Kollektiv"] input,
-[data-theme="Kollektiv"] textarea,
-[data-theme="Kollektiv"] select {
-  font-family: "Inter", sans-serif !important;
-}
-
-/* Monoton is used exclusively for the Logo font */
-[data-theme="Kollektiv"] .font-monoton,
-[data-theme="Kollektiv"] .font-monoton *,
-[data-theme="Kollektiv"] .font-logo,
-[data-theme="Kollektiv"] .font-logo *,
-[data-theme="Kollektiv"] header .font-monoton,
-[data-theme="Kollektiv"] header .font-monoton * {
-  font-family: "Monoton", cursive !important;
-  font-weight: normal !important;
-  letter-spacing: 0.05em !important;
-}
-
-/* Microgramma is used exclusively for header navigation menus and nav links */
-[data-theme="Kollektiv"] header .parent-nav-item,
-[data-theme="Kollektiv"] header button.px-3,
-[data-theme="Kollektiv"] header [role="menuitem"],
-[data-theme="Kollektiv"] .nav-link,
-[data-theme="Kollektiv"] .tab-link {
-  font-family: "Microgramma D Medium Extended", "Microgramma D Bold Extended", sans-serif !important;
-  letter-spacing: 0.1em !important;
-  text-transform: uppercase !important;
-}
-
-/* Footer text must use Inter instead of Microgramma */
-[data-theme="Kollektiv"] footer,
-[data-theme="Kollektiv"] footer *,
-[data-theme="Kollektiv"] footer .font-rajdhani,
-[data-theme="Kollektiv"] footer .font-sf-mono,
-[data-theme="Kollektiv"] footer span,
-[data-theme="Kollektiv"] footer button,
-[data-theme="Kollektiv"] footer a {
-  font-family: "Inter", sans-serif !important;
-  text-transform: uppercase !important;
-  letter-spacing: 0.05em !important;
-}
-
-/* Standardize all button styles under Kollektiv theme using standard styling patterns that allow utility overrides */
-[data-theme="Kollektiv"] button,
-[data-theme="Kollektiv"] .btn,
-[data-theme="Kollektiv"] .form-btn {
-  font-family: "Inter", sans-serif !important;
-  font-weight: 500 !important;
-  letter-spacing: 0.02em !important;
-  text-transform: uppercase !important;
-  border-radius: 4px !important; /* Low-rounded sharp as of design doc */
-  line-height: 1.2 !important;
-}
-
-/* Default height/padding for standard buttons, allowing tailwind classes to override */
-[data-theme="Kollektiv"] button:not([class*="h-"]):not([class*="w-"]):not(.btn-xs):not(.btn-sm):not(.btn-lg):not(.btn-ghost),
-[data-theme="Kollektiv"] .btn:not([class*="h-"]):not([class*="w-"]):not(.btn-xs):not(.btn-sm):not(.btn-lg):not(.btn-ghost),
-[data-theme="Kollektiv"] .form-btn:not([class*="h-"]):not([class*="w-"]):not(.btn-xs):not(.btn-sm):not(.btn-lg):not(.btn-ghost) {
-  height: 2.25rem;
-  min-height: 2.25rem;
-  padding-left: 1rem;
-  padding-right: 1rem;
-  font-size: 0.8125rem;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-}
-
-/* Base style overrides for form input, select, and textarea elements under Kollektiv */
-[data-theme="Kollektiv"] input,
-[data-theme="Kollektiv"] textarea,
-[data-theme="Kollektiv"] select,
-[data-theme="Kollektiv"] .input,
-[data-theme="Kollektiv"] .select,
-[data-theme="Kollektiv"] .textarea,
-[data-theme="Kollektiv"] .form-input,
-[data-theme="Kollektiv"] .form-select,
-[data-theme="Kollektiv"] .form-textarea {
-  background-color: #171A14 !important; /* Base base-200 / neutral background for the dark theme */
-  border: 1px solid rgba(192, 240, 76, 0.25) !important;
-  color: #F4F6EF !important;
-  font-family: "Inter", sans-serif !important;
-  text-align: left !important;
-  text-transform: none !important;
-  border-radius: 4px !important;
-}
-
-/* Maintain distinct sizes for inputs and select boxes if not specified by classes */
-[data-theme="Kollektiv"] input:not([class*="h-"]):not(.input-lg):not(.input-sm):not(.input-xs),
-[data-theme="Kollektiv"] select:not([class*="h-"]):not(.input-lg):not(.input-sm):not(.input-xs),
-[data-theme="Kollektiv"] .input:not([class*="h-"]):not(.input-lg):not(.input-sm):not(.input-xs),
-[data-theme="Kollektiv"] .select:not([class*="h-"]):not(.input-lg):not(.input-sm):not(.input-xs),
-[data-theme="Kollektiv"] .form-input:not([class*="h-"]):not(.input-lg):not(.input-sm):not(.input-xs),
-[data-theme="Kollektiv"] .form-select:not([class*="h-"]):not(.input-lg):not(.input-sm):not(.input-xs) {
-  height: 2.5rem !important; /* Uniform height of 40px */
-}
-
-[data-theme="Kollektiv"] select option {
-  background-color: #171A14 !important;
-  color: #F4F6EF !important;
-  text-transform: none !important;
-  text-align: left !important;
-}
-
-[data-theme="Kollektiv"] input:focus,
-[data-theme="Kollektiv"] textarea:focus,
-[data-theme="Kollektiv"] select:focus,
-[data-theme="Kollektiv"] .input:focus,
-[data-theme="Kollektiv"] .select:focus,
-[data-theme="Kollektiv"] .textarea:focus,
-[data-theme="Kollektiv"] .form-input:focus,
-[data-theme="Kollektiv"] .form-select:focus,
-[data-theme="Kollektiv"] .form-textarea:focus {
-  border-color: #C0F04C !important;
-  outline: none !important;
-  box-shadow: 0 0 0 1px rgba(192, 240, 76, 0.3) !important;
-}
-
-/* If buttons or button sets are inside a panel-header or panel-footer container under Kollektiv, stretch them to the container height */
-[data-theme="Kollektiv"] .panel-header,
-[data-theme="Kollektiv"] .panel-footer,
-[data-theme="Kollektiv"] header.panel-header,
-[data-theme="Kollektiv"] footer.panel-footer {
-  display: flex !important;
-  align-items: stretch !important;
-}
-
-/* Ensure intermediate children layout wrapper divs containing buttons inside panel headers/footers also stretch */
-[data-theme="Kollektiv"] .panel-header > div,
-[data-theme="Kollektiv"] .panel-footer > div {
-  align-self: stretch !important;
-  display: flex !important;
-  align-items: stretch !important;
-  height: 100% !important;
-}
-
-/* Ensure buttons inside those panel headers/footers stretch perfectly to the full container height */
-[data-theme="Kollektiv"] .panel-header button,
-[data-theme="Kollektiv"] .panel-header .btn,
-[data-theme="Kollektiv"] .panel-footer button,
-[data-theme="Kollektiv"] .panel-footer .btn,
-[data-theme="Kollektiv"] header.panel-header button,
-[data-theme="Kollektiv"] header.panel-header .btn,
-[data-theme="Kollektiv"] footer.panel-footer button,
-[data-theme="Kollektiv"] footer.panel-footer .btn {
-  height: 100% !important;
-  min-height: 100% !important;
-  align-self: stretch !important;
-  display: inline-flex !important;
-  align-items: center !important;
-  justify-content: center !important;
-  border-radius: 0px !important; /* Low-rounded sharp as of design doc for panel actions */
-}
-
-/* Align textbox, textarea, and select elements to the left, and disable uppercase casing on select fields */
-[data-theme="Kollektiv"] input,
-[data-theme="Kollektiv"] textarea,
-[data-theme="Kollektiv"] select,
-[data-theme="Kollektiv"] select option {
-  text-align: left !important;
-}
-
-[data-theme="Kollektiv"] select,
-[data-theme="Kollektiv"] select option {
-  text-transform: none !important;
-}
-
-/* Standardize small buttons under Kollektiv theme */
-[data-theme="Kollektiv"] .btn-sm,
-[data-theme="Kollektiv"] button.btn-sm,
-[data-theme="Kollektiv"] button.px-2.py-1,
-[data-theme="Kollektiv"] button.px-3.py-1 {
-  height: 1.75rem !important; /* Uniform small height of 28px */
-  min-height: 1.75rem !important;
-  padding-left: 0.75rem !important;
-  padding-right: 0.75rem !important;
-  font-size: 0.75rem !important; /* Clean 12px text size */
-}
-
-/* Standardize extra small buttons under Kollektiv theme */
-[data-theme="Kollektiv"] .btn-xs,
-[data-theme="Kollektiv"] button.btn-xs {
-  height: 1.375rem !important; /* Uniform extra small height of 22px */
-  min-height: 1.375rem !important;
-  padding-left: 0.5rem !important;
-  padding-right: 0.5rem !important;
-  font-size: 0.6875rem !important; /* Clean 11px text size */
-}
-
-/* Standardize large buttons under Kollektiv theme */
-[data-theme="Kollektiv"] .btn-lg,
-[data-theme="Kollektiv"] button.btn-lg {
-  height: 2.75rem !important; /* Uniform large height of 44px */
-  min-height: 2.75rem !important;
-  padding-left: 1.5rem !important;
-  padding-right: 1.5rem !important;
-  font-size: 0.9375rem !important; /* Clean 15px text size */
-}
-
-/* Keep JetBrains Mono for code blocks and specific raw monospace data panels */
-[data-theme="Kollektiv"] code,
-[data-theme="Kollektiv"] pre,
-[data-theme="Kollektiv"] .font-mono,
-[data-theme="Kollektiv"] .font-sf-mono {
-  font-family: "JetBrains Mono", monospace !important;
-}
-
-[data-theme="Kollektiv"] .bg-primary,
-[data-theme="Kollektiv"] .btn-primary,
-[data-theme="Kollektiv"] .form-btn-primary {
-  color: #171A14 !important;
-}
-
-[data-theme="Kollektiv"] .form-btn-primary::before {
-  background: linear-gradient(90deg, transparent, rgba(23, 26, 20, 0.4), transparent) !important;
-}
-
-
-
 /* CRT Flicker Animation */
 @keyframes crt-flicker {
   0% {
@@ -1727,6 +1504,337 @@ button:active {
 
   100% {
     background-position: center 40px;
+  }
+}
+
+/* =========================================================================
+   KOLLEKTIV // ACID TERMINAL
+   A precision instrument in acid-lime + electric-violet on green-black.
+   Placed AFTER the global synthwave layer so equal-specificity + source
+   order lets these rules win. Colors are frozen (palette lives in
+   tailwind.config.js); everything else is deliberately revised.
+   ========================================================================= */
+[data-theme="Kollektiv"] {
+  color-scheme: dark;
+  accent-color: oklch(var(--p));
+  --k-line: oklch(var(--p) / 0.22);
+  --k-line-strong: oklch(var(--p) / 0.42);
+  --k-tint: oklch(var(--p) / 0.12);
+  --k-surface: oklch(var(--b2) / 0.7);
+  --k-ring: 0 0 0 2px oklch(var(--p) / 0.35);
+  --k-ease: cubic-bezier(0.2, 1, 0.3, 1);
+  scrollbar-color: oklch(var(--p) / 0.3) oklch(var(--b1));
+  scrollbar-width: thin;
+}
+
+/* --- Typography: Inter for dense UI, Space Grotesk for headings,
+       JetBrains Mono for technical labels, Monoton reserved for the logo --- */
+[data-theme="Kollektiv"],
+[data-theme="Kollektiv"] p,
+[data-theme="Kollektiv"] span,
+[data-theme="Kollektiv"] li,
+[data-theme="Kollektiv"] label,
+[data-theme="Kollektiv"] input,
+[data-theme="Kollektiv"] textarea,
+[data-theme="Kollektiv"] select,
+[data-theme="Kollektiv"] .form-input,
+[data-theme="Kollektiv"] .form-select,
+[data-theme="Kollektiv"] .form-textarea {
+  font-family: "Inter", sans-serif !important;
+}
+
+[data-theme="Kollektiv"] h1,
+[data-theme="Kollektiv"] h2,
+[data-theme="Kollektiv"] h3,
+[data-theme="Kollektiv"] h4,
+[data-theme="Kollektiv"] h5,
+[data-theme="Kollektiv"] h6,
+[data-theme="Kollektiv"] .font-display {
+  font-family: "Space Grotesk", sans-serif !important;
+  letter-spacing: -0.02em !important; /* respects the -0.04em floor; app-wide default was a cramped -0.05em */
+  text-wrap: balance;
+}
+
+[data-theme="Kollektiv"] code,
+[data-theme="Kollektiv"] pre,
+[data-theme="Kollektiv"] .font-mono,
+[data-theme="Kollektiv"] .font-sf-mono {
+  font-family: "JetBrains Mono", monospace !important;
+}
+
+/* Monoton stays the brand wordmark */
+[data-theme="Kollektiv"] .font-monoton,
+[data-theme="Kollektiv"] .font-monoton *,
+[data-theme="Kollektiv"] .font-logo,
+[data-theme="Kollektiv"] .font-logo * {
+  font-family: "Monoton", cursive !important;
+  font-weight: normal !important;
+  letter-spacing: 0.04em !important;
+}
+
+/* --- Calm the global neon so labels stay legible; keep a tight signature halo --- */
+[data-theme="Kollektiv"] .text-primary {
+  text-shadow: 0 0 10px oklch(var(--p) / 0.35) !important;
+  filter: none !important;
+}
+[data-theme="Kollektiv"] .text-secondary {
+  text-shadow: 0 0 8px oklch(var(--s) / 0.28) !important;
+  filter: none !important;
+}
+
+/* Dim the animated floor grid — signature stays, noise drops */
+[data-theme="Kollektiv"]::before {
+  opacity: 0.12 !important;
+}
+
+/* --- Buttons: monospaced terminal labels, one consistent state model --- */
+[data-theme="Kollektiv"] .btn,
+[data-theme="Kollektiv"] .form-btn {
+  font-family: "JetBrains Mono", monospace !important;
+  font-weight: 600 !important;
+  text-transform: uppercase;
+  letter-spacing: 0.14em !important;
+  border-radius: 3px !important;
+  transition:
+    background-color 0.16s var(--k-ease),
+    border-color 0.16s var(--k-ease),
+    color 0.16s var(--k-ease),
+    box-shadow 0.16s var(--k-ease),
+    transform 0.08s var(--k-ease) !important;
+}
+
+/* Default / neutral buttons */
+[data-theme="Kollektiv"] .btn:not(.btn-primary):not(.btn-ghost):not(.btn-outline),
+[data-theme="Kollektiv"] .form-btn:not(.form-btn-primary) {
+  background-color: var(--k-surface) !important;
+  border: 1px solid var(--k-line) !important;
+  color: oklch(var(--bc) / 0.85) !important;
+  box-shadow: none !important;
+  text-shadow: none !important;
+}
+[data-theme="Kollektiv"] .btn:not(.btn-primary):not(.btn-ghost):not(.btn-outline):hover:not(:disabled),
+[data-theme="Kollektiv"] .form-btn:not(.form-btn-primary):hover:not(:disabled) {
+  background-color: var(--k-tint) !important;
+  border-color: var(--k-line-strong) !important;
+  color: oklch(var(--p)) !important;
+}
+
+/* Ghost buttons */
+[data-theme="Kollektiv"] .btn-ghost {
+  background-color: transparent !important;
+  border-color: transparent !important;
+  color: oklch(var(--bc) / 0.7) !important;
+  box-shadow: none !important;
+}
+[data-theme="Kollektiv"] .btn-ghost:hover:not(:disabled) {
+  background-color: oklch(var(--p) / 0.1) !important;
+  color: oklch(var(--p)) !important;
+}
+
+/* Outline buttons */
+[data-theme="Kollektiv"] .btn-outline {
+  background-color: transparent !important;
+  border: 1px solid var(--k-line-strong) !important;
+  color: oklch(var(--p)) !important;
+}
+[data-theme="Kollektiv"] .btn-outline:hover:not(:disabled) {
+  background-color: var(--k-tint) !important;
+  border-color: oklch(var(--p) / 0.6) !important;
+  color: oklch(var(--p)) !important;
+}
+
+/* Primary buttons — the acid signal */
+[data-theme="Kollektiv"] .btn-primary,
+[data-theme="Kollektiv"] .form-btn-primary {
+  background: oklch(var(--p)) !important;
+  border: 1px solid oklch(var(--p)) !important;
+  color: oklch(var(--pc)) !important;
+  text-shadow: none !important;
+  box-shadow:
+    0 0 0 1px oklch(var(--p) / 0.4),
+    0 6px 20px -8px oklch(var(--p) / 0.5) !important;
+}
+[data-theme="Kollektiv"] .btn-primary:hover:not(:disabled),
+[data-theme="Kollektiv"] .form-btn-primary:hover:not(:disabled) {
+  background: oklch(var(--p) / 0.88) !important;
+  box-shadow:
+    0 0 0 1px oklch(var(--p) / 0.7),
+    0 8px 26px -8px oklch(var(--p) / 0.65) !important;
+}
+
+/* Shared active + disabled */
+[data-theme="Kollektiv"] .btn:active:not(:disabled),
+[data-theme="Kollektiv"] .form-btn:active:not(:disabled) {
+  transform: translateY(1px) scale(0.99);
+}
+[data-theme="Kollektiv"] .btn:disabled,
+[data-theme="Kollektiv"] .btn[disabled],
+[data-theme="Kollektiv"] .form-btn:disabled {
+  opacity: 0.4 !important;
+  box-shadow: none !important;
+  filter: grayscale(0.3);
+  cursor: not-allowed;
+}
+
+/* --- Form controls: dark well, hairline lime, lime focus ring, lime caret --- */
+[data-theme="Kollektiv"] .form-input,
+[data-theme="Kollektiv"] .form-select,
+[data-theme="Kollektiv"] .form-textarea,
+[data-theme="Kollektiv"] input:not([type="checkbox"]):not([type="radio"]):not([type="range"]),
+[data-theme="Kollektiv"] textarea,
+[data-theme="Kollektiv"] select {
+  background-color: oklch(var(--b1) / 0.7) !important;
+  border: 1px solid var(--k-line) !important;
+  color: oklch(var(--bc)) !important;
+  border-radius: 3px !important;
+  caret-color: oklch(var(--p));
+  text-align: left !important;
+  text-transform: none !important;
+  transition:
+    border-color 0.16s var(--k-ease),
+    box-shadow 0.16s var(--k-ease),
+    background-color 0.16s var(--k-ease) !important;
+}
+[data-theme="Kollektiv"] .form-input:focus,
+[data-theme="Kollektiv"] .form-select:focus,
+[data-theme="Kollektiv"] .form-textarea:focus,
+[data-theme="Kollektiv"] input:not([type="checkbox"]):not([type="radio"]):not([type="range"]):focus,
+[data-theme="Kollektiv"] textarea:focus,
+[data-theme="Kollektiv"] select:focus {
+  outline: none !important;
+  border-color: oklch(var(--p) / 0.7) !important;
+  background-color: oklch(var(--b1)) !important;
+  box-shadow: var(--k-ring) !important;
+}
+[data-theme="Kollektiv"] ::placeholder {
+  color: oklch(var(--bc) / 0.5) !important; /* contrast-safe muted, not washed-out gray */
+  opacity: 1;
+}
+[data-theme="Kollektiv"] .form-input:disabled,
+[data-theme="Kollektiv"] .form-select:disabled,
+[data-theme="Kollektiv"] .form-textarea:disabled,
+[data-theme="Kollektiv"] input:disabled,
+[data-theme="Kollektiv"] textarea:disabled,
+[data-theme="Kollektiv"] select:disabled {
+  opacity: 0.45 !important;
+  cursor: not-allowed;
+}
+[data-theme="Kollektiv"] select option {
+  background-color: oklch(var(--b1)) !important;
+  color: oklch(var(--bc)) !important;
+}
+
+/* --- Toggles, checkboxes, tabs, badges: unified acid accent --- */
+[data-theme="Kollektiv"] .checkbox:checked,
+[data-theme="Kollektiv"] .checkbox[aria-checked="true"] {
+  background-color: oklch(var(--p)) !important;
+  border-color: oklch(var(--p)) !important;
+}
+[data-theme="Kollektiv"] .toggle:checked {
+  --tglbg: oklch(var(--b1));
+  background-color: oklch(var(--p)) !important;
+  border-color: oklch(var(--p)) !important;
+}
+[data-theme="Kollektiv"] .tab-item-active,
+[data-theme="Kollektiv"] .tab.tab-active,
+[data-theme="Kollektiv"] .form-tab-item.active {
+  color: oklch(var(--p)) !important;
+  border-color: var(--k-line-strong) !important;
+}
+[data-theme="Kollektiv"] .badge {
+  font-family: "JetBrains Mono", monospace !important;
+  letter-spacing: 0.08em;
+  border-radius: 2px !important;
+}
+
+/* Dropdown / menu active + hover */
+[data-theme="Kollektiv"] .menu li > *:not(ul):not(.menu-title):hover,
+[data-theme="Kollektiv"] .menu li > *.active {
+  background-color: var(--k-tint) !important;
+  color: oklch(var(--p)) !important;
+}
+
+/* --- Cards & framed panels: hairline lime + honest elevation, no neon bloom --- */
+[data-theme="Kollektiv"] .card,
+[data-theme="Kollektiv"] .bg-base-100 {
+  border-color: var(--k-line) !important;
+  background: linear-gradient(135deg,
+      oklch(var(--b2) / 0.75) 0%,
+      oklch(var(--b1) / 0.92) 100%) !important;
+  box-shadow:
+    inset 0 1px 0 oklch(var(--bc) / 0.03),
+    0 10px 30px -18px oklch(0 0 0 / 0.8) !important;
+}
+[data-theme="Kollektiv"] .corner-frame {
+  border-color: var(--k-line-strong) !important;
+}
+
+/* --- Panel header/footer: consistent chrome + buttons that fill the bar --- */
+[data-theme="Kollektiv"] .panel-header,
+[data-theme="Kollektiv"] header.panel-header,
+[data-theme="Kollektiv"] .panel-footer,
+[data-theme="Kollektiv"] footer.panel-footer {
+  display: flex !important;
+  align-items: stretch !important;
+  background: oklch(var(--b1) / 0.85) !important;
+  border-color: var(--k-line) !important;
+}
+[data-theme="Kollektiv"] .panel-header > div,
+[data-theme="Kollektiv"] .panel-footer > div {
+  align-self: stretch;
+  display: flex;
+  align-items: stretch;
+}
+[data-theme="Kollektiv"] .panel-header button,
+[data-theme="Kollektiv"] .panel-header .btn,
+[data-theme="Kollektiv"] .panel-footer button,
+[data-theme="Kollektiv"] .panel-footer .btn {
+  height: 100% !important;
+  min-height: 100% !important;
+  align-self: stretch;
+  border-radius: 0 !important;
+}
+
+/* --- Scrollbar: thin acid rail --- */
+[data-theme="Kollektiv"] ::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+[data-theme="Kollektiv"] ::-webkit-scrollbar-track {
+  background: oklch(var(--b1));
+}
+[data-theme="Kollektiv"] ::-webkit-scrollbar-thumb {
+  background: oklch(var(--p) / 0.25);
+  border: 2px solid oklch(var(--b1));
+  border-radius: 6px;
+}
+[data-theme="Kollektiv"] ::-webkit-scrollbar-thumb:hover {
+  background: oklch(var(--p) / 0.45);
+}
+
+/* --- Selection + consistent keyboard focus ring --- */
+[data-theme="Kollektiv"] ::selection {
+  background: oklch(var(--p) / 0.85);
+  color: oklch(var(--n));
+  text-shadow: none;
+}
+[data-theme="Kollektiv"] a:focus-visible,
+[data-theme="Kollektiv"] button:focus-visible,
+[data-theme="Kollektiv"] .btn:focus-visible,
+[data-theme="Kollektiv"] [role="button"]:focus-visible,
+[data-theme="Kollektiv"] [tabindex]:focus-visible {
+  outline: 2px solid oklch(var(--p) / 0.6);
+  outline-offset: 2px;
+}
+
+/* --- Motion respect --- */
+@media (prefers-reduced-motion: reduce) {
+  [data-theme="Kollektiv"]::before {
+    animation: none !important;
+  }
+  [data-theme="Kollektiv"] * {
+    transition-duration: 0.01ms !important;
+    animation-duration: 0.01ms !important;
   }
 }
 

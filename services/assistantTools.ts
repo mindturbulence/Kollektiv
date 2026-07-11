@@ -1,11 +1,16 @@
-import type { LLMSettings } from '../types';
+import type { LLMSettings, WildcardCategory } from '../types';
 import { appControlService } from './appControlService';
 import { appEventBus } from '../utils/eventBus';
 import { loadGalleryItems } from '../utils/galleryStorage';
-import { refineSinglePrompt } from './llmService';
+import { refineSinglePrompt, reconstructFromIntent, dissectPrompt, translateToEnglish, generateConstructorPreset, abstractImage } from './llmService';
+import { crafterService } from './crafterService';
+import { refinerPresetService } from './refinerPresetService';
+import { PROMPT_DETAIL_LEVELS } from '../constants/modifiers';
 
 export interface ToolContext {
     settings: LLMSettings;
+    /** Attachments on the user's current chat turn (images), if any. */
+    attachments?: { data: string; mimeType: string; fileName?: string }[];
 }
 
 /** JSON-Schema-style (lowercase types); converted per-provider below. */
@@ -77,6 +82,18 @@ export const ASSISTANT_TOOLS: AssistantTool[] = [
         },
     },
     {
+        name: 'abstract_image',
+        description: "Reverse-engineer a generation prompt from an image the user attached to this chat message, same engine as the Abstractor page's Analyze button. Fails if no image is attached.",
+        parameters: { type: 'object', properties: {} },
+        execute: async (_args, ctx) => {
+            const image = ctx.attachments?.find(a => a.mimeType.startsWith('image/'));
+            if (!image) return 'Error: no image attached to this message. Ask the user to attach an image first.';
+            const base64Data = image.data.includes('base64,') ? image.data.split('base64,')[1] : image.data;
+            const result = await abstractImage(base64Data, PROMPT_DETAIL_LEVELS.MEDIUM, 'General', ctx.settings);
+            return JSON.stringify(result);
+        },
+    },
+    {
         name: 'search_cheatsheets',
         description: 'Search the style/technique cheatsheets (keywords, artists, art styles) for reference material. Returns JSON.',
         parameters: {
@@ -100,6 +117,42 @@ export const ASSISTANT_TOOLS: AssistantTool[] = [
             refineSinglePrompt(String(idea), String(target_model || 'Flux'), ctx.settings),
     },
     {
+        name: 'translate_prompt',
+        description: 'Translate prompt text to English, same engine as the Translate button on the Crafter/Refiner pages. Returns the translated text.',
+        parameters: {
+            type: 'object',
+            properties: { text: { type: 'string', description: 'Text to translate to English.' } },
+            required: ['text'],
+        },
+        execute: ({ text }, ctx) => translateToEnglish(String(text), ctx.settings),
+    },
+    {
+        name: 'rewrite_prompt',
+        description: 'Rewrite/polish prompt text for clarity and visual detail, same engine as the Reconstruct button on the Crafter/Refiner pages. Returns the rewritten text.',
+        parameters: {
+            type: 'object',
+            properties: { text: { type: 'string', description: 'Prompt text to rewrite.' } },
+            required: ['text'],
+        },
+        execute: ({ text }, ctx) => reconstructFromIntent([String(text)], ctx.settings),
+    },
+    {
+        name: 'clip_idea',
+        description: "Save text to the app's Clipped Ideas panel (the in-app clipboard reachable from every page via the paperclip icon) — not the OS clipboard.",
+        parameters: {
+            type: 'object',
+            properties: {
+                prompt: { type: 'string', description: 'The prompt/idea text to clip.' },
+                title: { type: 'string', description: 'Short title. Defaults to the first part of the prompt.' },
+            },
+            required: ['prompt'],
+        },
+        execute: ({ prompt, title }) => {
+            appEventBus.emit('clipIdea', { prompt: String(prompt), title: title ? String(title) : undefined, lens: 'Assistant', source: 'Assistant' });
+            return 'Clipped to the Clipped Ideas panel.';
+        },
+    },
+    {
         name: 'send_to_refiner',
         description: 'Open the Refiner page with the given prompt text pre-loaded so the user can work on it interactively.',
         parameters: {
@@ -110,6 +163,114 @@ export const ASSISTANT_TOOLS: AssistantTool[] = [
         execute: ({ prompt }) => {
             appEventBus.emit('sendToPromptsPage', { prompt: String(prompt), view: 'enhancer' });
             return 'Opened the Refiner with the prompt pre-loaded.';
+        },
+    },
+    {
+        name: 'save_refiner_preset',
+        description: "Analyze a prompt into the Refiner's structured modifier format and save it as a named preset, same as the Refiner's Save as Preset button. Does not require the Refiner page to be open.",
+        parameters: {
+            type: 'object',
+            properties: {
+                name: { type: 'string', description: 'Name for the saved preset.' },
+                prompt: { type: 'string', description: 'The prompt text to analyze and save.' },
+                target_model: { type: 'string', description: "Target generative model, e.g. 'SDXL', 'Flux', 'Midjourney'. Defaults to 'Flux'." },
+            },
+            required: ['name', 'prompt'],
+        },
+        execute: async ({ name, prompt, target_model }, ctx) => {
+            const targetModel = String(target_model || 'Flux');
+            const { prompt: dissectedPrompt, modifiers, constantModifier } = await dissectPrompt(String(prompt), ctx.settings, undefined, targetModel);
+            const flatComponents: Record<string, string> = { prompt: dissectedPrompt, ...modifiers };
+            if (constantModifier) flatComponents.constantModifier = constantModifier;
+            const result = await generateConstructorPreset(flatComponents, ctx.settings);
+            await refinerPresetService.savePreset({
+                name: String(name),
+                modifiers: result.modifiers,
+                targetAIModel: targetModel,
+                mediaMode: 'image',
+                promptLength: PROMPT_DETAIL_LEVELS.MEDIUM,
+                constantModifier: result.constantModifier,
+                refineText: result.prompt,
+            });
+            return `Saved preset "${name}".`;
+        },
+    },
+    {
+        name: 'send_to_crafter',
+        description: 'Open the Crafter page with the given idea text appended into its main prompt textarea so the user can work on it interactively (it can include __wildcard__ tokens).',
+        parameters: {
+            type: 'object',
+            properties: { prompt: { type: 'string', description: 'Idea/prompt text to insert into the Crafter textarea.' } },
+            required: ['prompt'],
+        },
+        execute: ({ prompt }) => {
+            appEventBus.emit('sendToPromptsPage', { prompt: String(prompt), view: 'composer' });
+            return 'Opened the Crafter with the text inserted into the textarea.';
+        },
+    },
+    {
+        name: 'list_wildcards',
+        description: "List the user's Crafter __wildcard__ tokens (grouped by category) so you know real names to insert instead of guessing. Returns JSON.",
+        parameters: {
+            type: 'object',
+            properties: { query: { type: 'string', description: 'Optional filter text to match against wildcard or category names.' } },
+        },
+        execute: async ({ query }) => {
+            const { wildcardCategories } = await crafterService.loadWildcardsAndTemplates();
+            const q = query ? String(query).toLowerCase() : undefined;
+            const out: { category: string; wildcards: string[] }[] = [];
+            const walk = (categories: WildcardCategory[], prefix: string) => {
+                for (const cat of categories) {
+                    const label = prefix ? `${prefix}/${cat.name}` : cat.name;
+                    const names = cat.files
+                        .map(f => f.name.replace(/\.(txt|yml|yaml)$/i, ''))
+                        .filter(n => !q || n.toLowerCase().includes(q) || label.toLowerCase().includes(q));
+                    if (names.length) out.push({ category: label, wildcards: names });
+                    if (cat.subCategories?.length) walk(cat.subCategories, label);
+                }
+            };
+            walk(wildcardCategories, '');
+            return JSON.stringify(out.slice(0, 50));
+        },
+    },
+    {
+        name: 'generate_crafter_prompt',
+        description: 'Resolve __wildcard__ tokens in the given idea and run it through the same AI polish pipeline as the Crafter page\'s Generate button. Returns the finished prompt text (does not modify the page — use send_to_crafter afterward to show it there).',
+        parameters: {
+            type: 'object',
+            properties: { idea: { type: 'string', description: 'Idea/prompt text, may include __wildcard__ tokens (see list_wildcards).' } },
+            required: ['idea'],
+        },
+        execute: async ({ idea }, ctx) => {
+            const { wildcardCategories } = await crafterService.loadWildcardsAndTemplates();
+            const resolved = crafterService.processCrafterPrompt(String(idea), wildcardCategories);
+            return reconstructFromIntent([resolved], ctx.settings);
+        },
+    },
+    {
+        name: 'send_to_prompt_analyzer',
+        description: 'Open the Prompt Analyzer page with the given prompt text pre-loaded so the user can dissect it interactively.',
+        parameters: {
+            type: 'object',
+            properties: { prompt: { type: 'string', description: 'Prompt text to load into the Prompt Analyzer.' } },
+            required: ['prompt'],
+        },
+        execute: ({ prompt }) => {
+            appEventBus.emit('sendToPromptsPage', { prompt: String(prompt), view: 'prompt_analyzer' });
+            return 'Opened the Prompt Analyzer with the prompt pre-loaded.';
+        },
+    },
+    {
+        name: 'analyze_prompt',
+        description: "Dissect a prompt into its components (subject, style modifiers, constants) using the same engine as the Prompt Analyzer page. Returns a JSON breakdown in chat — does not open or populate the page (use send_to_prompt_analyzer for that).",
+        parameters: {
+            type: 'object',
+            properties: { prompt: { type: 'string', description: 'The prompt text to dissect.' } },
+            required: ['prompt'],
+        },
+        execute: async ({ prompt }, ctx) => {
+            const result = await dissectPrompt(String(prompt), ctx.settings);
+            return JSON.stringify(result);
         },
     },
     {

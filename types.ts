@@ -74,11 +74,6 @@ export interface LLMSettings {
   openrouterApiKey?: string;
   openrouterModel?: string;
   
-  // Hermes Settings
-  hermesBaseUrl: string;
-  hermesModel: string;
-  hermesApiKey: string;
-
   // Llama.cpp Settings
   llamacppBaseUrl: string;
   llamacppModel: string;
@@ -111,7 +106,6 @@ export interface LLMSettings {
   masterRolePrompt?: string;
   geminiTokenUsage?: TokenUsage;
   ollamaTokenUsage?: TokenUsage;
-  hermesTokenUsage?: TokenUsage;
   openrouterTokenUsage?: TokenUsage;
   llamacppTokenUsage?: TokenUsage;
   anthropicTokenUsage?: TokenUsage;

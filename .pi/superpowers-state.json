@@ -32,7 +32,13 @@
     "sourceFiles": [
       "components/RefinerModifierControls.tsx",
       "components/RefinerSlots.tsx",
-      "components/PromptsPage.tsx"
+      "components/PromptsPage.tsx",
+      "D:\\AI-Dev\\Kollektiv-Dev\\components\\App.tsx",
+      "D:\\AI-Dev\\Kollektiv-Dev\\components\\Header.tsx",
+      "D:\\AI-Dev\\Kollektiv-Dev\\types.ts",
+      "D:\\AI-Dev\\Kollektiv-Dev\\utils\\settingsStorage.ts",
+      "D:\\AI-Dev\\Kollektiv-Dev\\utils\\errorHandler.ts",
+      "D:\\AI-Dev\\Kollektiv-Dev\\server.ts"
     ],
     "redVerificationPending": false
   },

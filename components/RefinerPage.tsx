@@ -539,7 +539,14 @@ const RefinerPage: React.FC<RefinerPageProps> = ({
     };
 
     // Preset handlers
-    const handleSavePresetClick = () => { setNewPresetName(''); setIsSavePresetModalOpen(true); };
+    const handleSavePresetClick = () => { setNewPresetName(selectedPreset?.name || ''); setIsSavePresetModalOpen(true); };
+    const handleClearConstruction = () => {
+        setRefineText('');
+        setConstantModifier('');
+        setModifiers({ ...DEFAULT_MODIFIERS });
+        setSelectedPreset(null);
+        showGlobalFeedback('Construction cleared.');
+    };
     const handleConfirmSavePreset = async () => {
         if (!newPresetName.trim()) return;
         setIsSavingPreset(true);
@@ -550,7 +557,7 @@ const RefinerPage: React.FC<RefinerPageProps> = ({
             setIsSavePresetModalOpen(false);
             showGlobalFeedback('Preset saved to registry.');
         } catch (e) {
-            showGlobalFeedback('Failed to save preset.', true);
+            showGlobalFeedback(e instanceof Error ? e.message : 'Failed to save preset.', true);
         } finally { setIsSavingPreset(false); }
     };
     const handleUsePreset = useCallback((presetToUse: RefinerPreset | null = selectedPreset) => {
@@ -574,7 +581,7 @@ const RefinerPage: React.FC<RefinerPageProps> = ({
                 await loadPresets();
                 setSelectedPreset(null);
                 showGlobalFeedback('Preset purged.');
-            } catch (e) { showGlobalFeedback('Deletion failed.', true); }
+            } catch (e) { showGlobalFeedback(e instanceof Error ? e.message : 'Deletion failed.', true); }
         }
         setIsDeletePresetModalOpen(false);
         setPresetToDelete(null);
@@ -1039,15 +1046,21 @@ const RefinerPage: React.FC<RefinerPageProps> = ({
                                 />
                             ))
                         )}
-                        {activeConstructionItems.length > 0 && (
+                        {(activeConstructionItems.length > 0 || selectedPreset) && (
                             <div className="pt-4 space-y-2">
-                                <button onClick={() => { audioService.playClick(); handleUsePreset(null); }}
-                                    className="btn btn-sm w-full rounded-none font-rajdhani tracking-wider text-xs border border-base-content/10 text-base-content/40 hover:text-primary">APPLY</button>
+                                <div className="flex gap-2">
+                                    <button onClick={() => { audioService.playClick(); handleUsePreset(null); }}
+                                        disabled={!selectedPreset}
+                                        className="btn btn-sm flex-1 rounded-none font-rajdhani tracking-wider text-xs border border-base-content/10 text-base-content/40 hover:text-primary disabled:opacity-20">APPLY</button>
+                                    <button onClick={() => { audioService.playClick(); handleClearConstruction(); }}
+                                        className="btn btn-sm flex-1 rounded-none font-rajdhani tracking-wider text-xs border border-base-content/10 text-base-content/40 hover:text-error">CLEAR</button>
+                                </div>
                                 <div className="flex gap-2">
                                     <button onClick={handleSavePresetClick}
                                         className="btn btn-sm flex-1 rounded-none text-[10px] font-black tracking-widest border border-base-content/10 text-primary/40 hover:text-primary">SAVE</button>
                                     <button onClick={handleDeletePresetClick}
-                                        className="btn btn-sm flex-1 rounded-none text-[10px] font-black tracking-widest border border-base-content/10 text-error/40 hover:text-error">DELETE</button>
+                                        disabled={!selectedPreset}
+                                        className="btn btn-sm flex-1 rounded-none text-[10px] font-black tracking-widest border border-base-content/10 text-error/40 hover:text-error disabled:opacity-20">DELETE</button>
                                 </div>
                             </div>
                         )}

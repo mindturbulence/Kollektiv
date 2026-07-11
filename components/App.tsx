@@ -42,10 +42,10 @@ import { LLMChatPanel } from './LLMChatPanel';
 import { motion, AnimatePresence } from 'motion/react';
 import { pageVariants } from './AnimatedPanels';
 import ChromaticText from './ChromaticText';
-import { HermesController } from './HermesController';
 
 
-type PromptsPageState = { prompt?: string, artStyle?: string, artist?: string, view?: 'enhancer' | 'composer' | 'create', id?: string } | null;
+
+type PromptsPageState = { prompt?: string, artStyle?: string, artist?: string, view?: 'enhancer' | 'composer' | 'create' | 'prompt_analyzer', id?: string } | null;
 
 class ErrorBoundary extends React.Component<{ children: React.ReactNode }, { hasError: boolean, error: any, errorInfo: any }> {
     constructor(props: { children: React.ReactNode }) {
@@ -422,7 +422,7 @@ const AppContent: React.FC = () => {
     const [activeTab, setActiveTab] = useLocalStorage<ActiveTab>('activeTab', 'dashboard');
     const [isAboutModalOpen, setIsAboutModalOpen] = useState(false);
     const [isClippingPanelOpen, setIsClippingPanelOpen] = useState(false);
-    const [isHermesOpen, setIsHermesOpen] = useState(false);
+    const [isChatPanelOpen, setIsChatPanelOpen] = useState(false);
     const [isLlmPanelOpen, setIsLlmPanelOpen] = useState(false);
     const [collapsedPanels, setCollapsedPanels] = useLocalStorage<Record<string, boolean>>('collapsedPanels', {});
     const [globalFeedback, setGlobalFeedback] = useState<{ message: string; type: 'success' | 'error' } | null>(null);
@@ -740,10 +740,12 @@ const AppContent: React.FC = () => {
         let targetTab: ActiveTab = 'crafter';
         if (state?.view === 'enhancer') {
             targetTab = 'refiner';
+        } else if (state?.view === 'prompt_analyzer') {
+            targetTab = 'prompt_analyzer';
         } else if (state?.view === 'composer' || state?.view === 'create') {
             targetTab = 'crafter';
         } else {
-            // Fallback to generic prompts tab if needed, 
+            // Fallback to generic prompts tab if needed,
             // but user wants them separate so we prefer the specific ones
             targetTab = 'crafter';
         }
@@ -770,6 +772,21 @@ const AppContent: React.FC = () => {
         setClippedIdeas(prev => [idea, ...prev]);
         showGlobalFeedback(`Clipped "${idea.title}"`);
     }, [setClippedIdeas, showGlobalFeedback]);
+
+    useEffect(() => {
+        return appEventBus.on('clipIdea', (payload) => {
+            if (payload && typeof payload === 'object' && (payload as any).prompt) {
+                const p = payload as { title?: string; prompt: string; lens?: string; source?: string };
+                handleClipIdea({
+                    id: `clip-${Date.now()}`,
+                    title: p.title || p.prompt.slice(0, 40),
+                    prompt: p.prompt,
+                    lens: p.lens || 'Assistant',
+                    source: p.source || 'Assistant',
+                });
+            }
+        });
+    }, [handleClipIdea]);
 
     const handleRemoveIdea = useCallback((id: string) => setClippedIdeas(prev => prev.filter(idea => idea.id !== id)), [setClippedIdeas]);
     const handleClearAllIdeas = useCallback(() => setClippedIdeas([]), [setClippedIdeas]);
@@ -903,12 +920,12 @@ const AppContent: React.FC = () => {
     // --- Inline-callback replacements ---
     const handleAboutClick = useCallback(() => setIsAboutModalOpen(true), []);
     const handleToggleClippingPanel = useCallback(() => setIsClippingPanelOpen(prev => !prev), []);
-    const handleToggleHermes = useCallback(() => setIsHermesOpen(prev => !prev), []);
+    const handleToggleChatPanel = useCallback(() => setIsChatPanelOpen(prev => !prev), []);
     const handleClearPromptsPageState = useCallback(() => setPromptsPageState(null), []);
     const handleSendToEnhancer = useCallback((prompt: string) => handleSendToPromptsPage({ prompt, view: 'enhancer' }), [handleSendToPromptsPage]);
     const handleCloseClippingPanel = useCallback(() => setIsClippingPanelOpen(false), []);
     const handleCloseLlmStatus = useCallback(() => setIsLlmPanelOpen(false), []);
-    const handleCloseHermes = useCallback(() => setIsHermesOpen(false), []);
+    const handleCloseChatPanel = useCallback(() => setIsChatPanelOpen(false), []);
     const handleToggleLlmPanel = useCallback(() => {
         audioService.playClick();
         setIsLlmPanelOpen(prev => !prev);
@@ -1033,7 +1050,7 @@ const AppContent: React.FC = () => {
                                 isInitialized={isInitialized}
                                 onAboutClick={handleAboutClick}
                                 onToggleClippingPanel={handleToggleClippingPanel}
-                                onToggleHermes={handleToggleHermes}
+                                onToggleChatPanel={handleToggleChatPanel}
                                 onStandbyClick={handleStandbyClick}
                                 clippedIdeasCount={clippedIdeas.length}
                             />
@@ -1099,10 +1116,9 @@ const AppContent: React.FC = () => {
                                     />
 
                                     <LLMChatPanel
-                                        isOpen={isHermesOpen}
-                                        onClose={handleCloseHermes}
+                                        isOpen={isChatPanelOpen}
+                                        onClose={handleCloseChatPanel}
                                     />
-                                    <HermesController />
                                 </div>
                             </main>
 

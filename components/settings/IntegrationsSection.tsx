@@ -56,7 +56,7 @@ const IntegrationsSection: React.FC<IntegrationsSectionProps> = ({
                 </div>
             </SettingRow>
 
-            <SettingRow label="Master Role Concept" desc="Global persona applied to every LLM request. Prevents repeating role instructions to save tokens and maintain consistent AI behavior.">
+            <SettingRow label="Master Role Concept" desc="Global persona applied to every LLM request, including the AI Assistant (Settings > Assistant). Prevents repeating role instructions to save tokens and maintain consistent AI behavior.">
                 <textarea
                     value={settings.masterRolePrompt || ''}
                     onChange={(e) => handleSettingsChange('masterRolePrompt', e.target.value)}
@@ -249,7 +249,7 @@ const IntegrationsSection: React.FC<IntegrationsSectionProps> = ({
                 <SettingRow label="Preferred Language" desc="Always reply in this language regardless of what language you write or speak in. Leave blank to match you automatically.">
                     <input type="text" value={settings.assistantLanguage || ''} onChange={(e) => handleSettingsChange('assistantLanguage', e.target.value)} className="form-input w-full md:w-[620px]" placeholder="e.g. English, Japanese, Tagalog" />
                 </SettingRow>
-                <SettingRow label="Personality & Style" desc="Free-form tone, quirks, or backstory — appended to the assistant's instructions on every provider and in live voice mode.">
+                <SettingRow label="Personality & Style" desc="Free-form tone, quirks, or backstory — layered on top of the Master Role Concept (AI Engine tab), appended to the assistant's instructions on every provider and in live voice mode.">
                     <textarea
                         value={settings.assistantPersonality || ''}
                         onChange={(e) => handleSettingsChange('assistantPersonality', e.target.value)}

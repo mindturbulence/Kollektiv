@@ -65,41 +65,6 @@ export default defineConfig(({ mode }) => {
                 });
             }
           },
-          '/hermes-local': {
-            target: 'http://localhost:18789',
-            changeOrigin: true,
-            secure: false,
-            rewrite: (path) => path.replace(/^\/hermes-local/, ''),
-            configure: (proxy, _options) => {
-                process.nextTick(() => {
-                    proxy.removeAllListeners('error');
-                    proxy.on('error', (err, _req: any, res: any) => {
-                        if ((err as any).code === 'ECONNREFUSED') {
-                            if (res && !res.writableEnded && typeof res.writeHead === 'function') {
-                                res.writeHead(502, { 
-                                    'Content-Type': 'application/json',
-                                    'X-Proxy-Error': 'true'
-                                });
-                                res.end(JSON.stringify({ error: 'Hermes Proxy Error (ECONNREFUSED)', code: 'ECONNREFUSED_SILENT' }));
-                            }
-                            return;
-                        }
-                        console.error('[Proxy Error: Hermes]', err.message);
-                        if (res && !res.writableEnded && typeof res.writeHead === 'function') {
-                            res.writeHead(502, { 
-                                'Content-Type': 'application/json',
-                                'X-Proxy-Error': 'true'
-                            });
-                            res.end(JSON.stringify({ 
-                                error: 'Hermes Proxy Error', 
-                                message: err.message,
-                                code: (err as any).code || 'PROXY_ERROR' 
-                            }));
-                        }
-                    });
-                });
-            }
-          },
           '/google-api': {
             target: 'https://www.googleapis.com',
             changeOrigin: true,

@@ -9,12 +9,10 @@ export const handleGeminiError = (error: unknown, context: string): Error => {
     if (lowerCaseMessage.includes("failed to fetch") || lowerCaseMessage.includes("networkerror")) {
         if (context.toLowerCase().includes("ollama")) {
             errorMessage = `A network error occurred while ${context}. Ensure OLLAMA_ORIGINS="*" is set and Ollama is running locally. If your site is on HTTPS, browsers block local HTTP calls (Mixed Content), so please use the desktop app or standard API.`;
-        } else if (context.toLowerCase().includes("hermes")) {
-            errorMessage = `A network error occurred while ${context}. Please ensure your local Hermes agent is running on port 18789.`;
         } else if (context.toLowerCase().includes("gemini")) {
             errorMessage = `A network error occurred while ${context}. Please verify your network connection, ensure you have set a valid Gemini API Key, and try again.`;
         } else {
-            errorMessage = `A network error occurred while ${context}. Please ensure your API/Hermes/Ollama target is reachable and your configuration is correct.`;
+            errorMessage = `A network error occurred while ${context}. Please ensure your API/Ollama target is reachable and your configuration is correct.`;
         }
     } else if (lowerCaseMessage.includes("api key not valid") || lowerCaseMessage.includes("api key is missing")) {
       errorMessage = "The API key is invalid or missing. Add a valid Gemini API Key in Setup -> LLM -> Gemini API Key.";
