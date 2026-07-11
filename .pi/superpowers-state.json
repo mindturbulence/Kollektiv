@@ -27,13 +27,16 @@
     }
   },
   "tdd": {
-    "phase": "idle",
-    "testFiles": [],
+    "phase": "red-pending",
+    "testFiles": [
+      "D:\\AI-Dev\\Kollektiv-Dev\\utils\\notesStorage.test.ts"
+    ],
     "sourceFiles": [
+      "D:\\AI-Dev\\Kollektiv-Dev\\utils\\notesStorage.ts",
       "D:\\AI-Dev\\Kollektiv-Dev\\services\\assistantTools.ts",
       "D:\\AI-Dev\\Kollektiv-Dev\\services\\assistantService.ts"
     ],
-    "redVerificationPending": false
+    "redVerificationPending": true
   },
   "debug": {
     "active": false,

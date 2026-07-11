@@ -1,6 +1,7 @@
 import type { LLMSettings, WildcardCategory } from '../types';
 import { appControlService } from './appControlService';
 import { appEventBus } from '../utils/eventBus';
+import { addNote, loadNotes, updateNote, deleteNote } from '../utils/notesStorage';
 import { loadGalleryItems } from '../utils/galleryStorage';
 import { refineSinglePrompt, reconstructFromIntent, dissectPrompt, translateToEnglish, generateConstructorPreset, abstractImage } from './llmService';
 import { crafterService } from './crafterService';
@@ -369,6 +370,65 @@ export const ASSISTANT_TOOLS: AssistantTool[] = [
             appEventBus.emit('assistantFilesChanged');
             return `Saved to assistant/${safe} in the vault — visible in the Notes panel's FILES tab, downloadable from there.`;
         },
+    },
+    {
+        name: 'save_note',
+        description: "Save a note to your Notes panel (note icon in the header) so the user can revisit, edit, copy, or download it later. Use for reminders, research findings, summaries, or anything the user asks you to note down.",
+        parameters: {
+            type: 'object',
+            properties: {
+                title: { type: 'string', description: 'Short title. Defaults to the first words of the content.' },
+                content: { type: 'string', description: 'The note body (markdown allowed).' },
+            },
+            required: ['content'],
+        },
+        execute: ({ title, content }) => {
+            const n = addNote(title ? String(title) : '', String(content), 'assistant');
+            return `Saved note "${n.title}" (id ${n.id}).`;
+        },
+    },
+    {
+        name: 'list_notes',
+        description: 'List the notes in your Notes panel (optionally filtered). Returns JSON with ids — needed before update_note/delete_note.',
+        parameters: {
+            type: 'object',
+            properties: { query: { type: 'string', description: 'Optional filter text matched against title and content.' } },
+        },
+        execute: ({ query }) => {
+            const q = query ? String(query).toLowerCase() : undefined;
+            const notes = loadNotes().filter(n => !q || n.title.toLowerCase().includes(q) || n.content.toLowerCase().includes(q));
+            return JSON.stringify(notes.slice(0, 30).map(n => ({ id: n.id, title: n.title, content: n.content, updatedAt: n.updatedAt })));
+        },
+    },
+    {
+        name: 'update_note',
+        description: 'Revise an existing note (get its id from list_notes first). Provide title and/or content.',
+        parameters: {
+            type: 'object',
+            properties: {
+                id: { type: 'string', description: 'Note id.' },
+                title: { type: 'string', description: 'New title (optional).' },
+                content: { type: 'string', description: 'New body (optional).' },
+            },
+            required: ['id'],
+        },
+        execute: ({ id, title, content }) => {
+            const patch: { title?: string; content?: string } = {};
+            if (title !== undefined) patch.title = String(title);
+            if (content !== undefined) patch.content = String(content);
+            const n = updateNote(String(id), patch);
+            return n ? `Updated note "${n.title}".` : `Error: no note with id ${id}.`;
+        },
+    },
+    {
+        name: 'delete_note',
+        description: 'Delete a note by id (get ids from list_notes first).',
+        parameters: {
+            type: 'object',
+            properties: { id: { type: 'string', description: 'Note id.' } },
+            required: ['id'],
+        },
+        execute: ({ id }) => (deleteNote(String(id)) ? 'Note deleted.' : `Error: no note with id ${id}.`),
     },
 ];
 
