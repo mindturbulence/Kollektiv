@@ -30,10 +30,8 @@
     "phase": "idle",
     "testFiles": [],
     "sourceFiles": [
-      "D:\\AI-Dev\\Kollektiv-Dev\\components\\WebViewerPanel.tsx",
       "D:\\AI-Dev\\Kollektiv-Dev\\services\\assistantTools.ts",
-      "D:\\AI-Dev\\Kollektiv-Dev\\services\\assistantService.ts",
-      "D:\\AI-Dev\\Kollektiv-Dev\\components\\App.tsx"
+      "D:\\AI-Dev\\Kollektiv-Dev\\services\\assistantService.ts"
     ],
     "redVerificationPending": false
   },

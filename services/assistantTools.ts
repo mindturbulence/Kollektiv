@@ -347,6 +347,29 @@ export const ASSISTANT_TOOLS: AssistantTool[] = [
             return `Opened ${url} in the web viewer panel.`;
         },
     },
+    {
+        name: 'save_file',
+        description: "Save a text file (markdown, plain text, JSON, code) into the user's vault under the 'assistant' folder. The file appears in the Notes panel's FILES tab, where the user can download it to their PC. Use when the user asks to save, export, or write something to a file.",
+        parameters: {
+            type: 'object',
+            properties: {
+                filename: { type: 'string', description: "File name with extension, e.g. 'moodboard-ideas.md'. No folders or path separators." },
+                content: { type: 'string', description: 'Full text content of the file.' },
+            },
+            required: ['filename', 'content'],
+        },
+        execute: async ({ filename, content }) => {
+            const { fileSystemManager } = await import('../utils/fileUtils');
+            if (!fileSystemManager.isDirectorySelected()) {
+                return 'Error: no vault folder is connected — the user must connect one via the app setup (Welcome screen or Settings).';
+            }
+            const safe = String(filename).replace(/[\\\/:*?"<>|]/g, '_').replace(/^\.+/, '').trim();
+            if (!safe) return 'Error: invalid filename.';
+            await fileSystemManager.saveFile(`assistant/${safe}`, new Blob([String(content)], { type: 'text/plain' }));
+            appEventBus.emit('assistantFilesChanged');
+            return `Saved to assistant/${safe} in the vault — visible in the Notes panel's FILES tab, downloadable from there.`;
+        },
+    },
 ];
 
 export const executeAssistantTool = async (name: string, args: Record<string, any>, ctx: ToolContext): Promise<string> => {
