@@ -7,7 +7,6 @@ import { useSettings } from '../contexts/SettingsContext';
 import LoadingSpinner from './LoadingSpinner';
 import DashboardGallery from './DashboardGallery';
 import ChromaticText from './ChromaticText';
-import AssistantAvatar from './AssistantAvatar';
 
 // --- ORAGE-STYLE IMAGE TRAIL ---
 // Removed as per user request
@@ -71,12 +70,7 @@ const Dashboard: React.FC<DashboardProps> = ({ isExiting = false }) => {
                         </p>
                     </div>
 
-                    <div className="w-12 h-px bg-base-content/10 mt-10"></div>
-                    {settings.assistantAvatarEnabled !== false && (
-                        <div className="mt-6">
-                            <AssistantAvatar />
-                        </div>
-                    )}
+
                 </motion.div>
 
                 {/* DECORATIVE ELEMENTS */}

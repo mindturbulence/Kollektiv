@@ -539,7 +539,6 @@ const RefinerPage: React.FC<RefinerPageProps> = ({
     };
 
     // Preset handlers
-    const handleSavePresetClick = () => { setNewPresetName(selectedPreset?.name || ''); setIsSavePresetModalOpen(true); };
     const handleClearConstruction = () => {
         setRefineText('');
         setConstantModifier('');
@@ -1007,20 +1006,37 @@ const RefinerPage: React.FC<RefinerPageProps> = ({
                         initial="hidden"
                         animate="visible"
                         exit="exit"
-                        className="h-16 flex items-stretch relative z-[800] bg-base-100/80 p-1.5 gap-1.5 panel-header overflow-visible"
+                        className="h-16 flex items-stretch relative z-[800] bg-base-100/80 panel-header overflow-visible"
                     >
-                        <div className="flex-grow h-full relative overflow-visible">
-                            <div className="flex flex-col gap-3 h-full justify-center overflow-visible">
-                                <div className="flex gap-4 items-center">
-                                    <div className="flex-1 px-0 text-sm h-full flex items-center border-0 overflow-visible">
-                                        <AutocompleteSelect
-                                            placeholder="SELECT PRESET..."
-                                            value={selectedPreset?.name || ''}
-                                            onChange={(v) => setSelectedPreset(presets.find(p => p.name === v) || null)}
-                                            options={presets.map(p => ({ label: p.name.toUpperCase(), value: p.name }))}
-                                        />
-                                    </div>
-                                </div>
+                        <div className="flex items-center gap-2 w-full h-full px-3 overflow-visible">
+                            <div className="flex-1 min-w-0 overflow-visible">
+                                <AutocompleteSelect
+                                    placeholder="SELECT PRESET..."
+                                    value={selectedPreset?.name || ''}
+                                    onChange={(v) => {
+                                        const preset = presets.find(p => p.name === v) || null;
+                                        setSelectedPreset(preset);
+                                        if (preset) handleUsePreset(preset);
+                                    }}
+                                    options={presets.map(p => ({ label: p.name.toUpperCase(), value: p.name }))}
+                                />
+                            </div>
+                            <div className="flex gap-1.5 shrink-0 items-center">
+                                <button
+                                    onClick={() => { audioService.playClick(); handleClearConstruction(); }}
+                                    onMouseEnter={() => audioService.playHover()}
+                                    className="font-sf-mono text-[9px] tracking-widest text-base-content/40 hover:text-base-content transition-all bg-base-100/5 px-2 py-1.5 hover:bg-base-100/10"
+                                >
+                                    CLEAR
+                                </button>
+                                <button
+                                    onClick={() => { audioService.playClick(); handleDeletePresetClick(); }}
+                                    onMouseEnter={() => audioService.playHover()}
+                                    disabled={!selectedPreset}
+                                    className="font-sf-mono text-[9px] tracking-widest text-error/40 hover:text-error transition-all bg-error/5 disabled:bg-transparent px-2 py-1.5 hover:bg-error/10 disabled:opacity-20"
+                                >
+                                    DELETE
+                                </button>
                             </div>
                         </div>
                     </motion.header>
@@ -1046,24 +1062,7 @@ const RefinerPage: React.FC<RefinerPageProps> = ({
                                 />
                             ))
                         )}
-                        {(activeConstructionItems.length > 0 || selectedPreset) && (
-                            <div className="pt-4 space-y-2">
-                                <div className="flex gap-2">
-                                    <button onClick={() => { audioService.playClick(); handleUsePreset(null); }}
-                                        disabled={!selectedPreset}
-                                        className="btn btn-sm flex-1 rounded-none font-rajdhani tracking-wider text-xs border border-base-content/10 text-base-content/40 hover:text-primary disabled:opacity-20">APPLY</button>
-                                    <button onClick={() => { audioService.playClick(); handleClearConstruction(); }}
-                                        className="btn btn-sm flex-1 rounded-none font-rajdhani tracking-wider text-xs border border-base-content/10 text-base-content/40 hover:text-error">CLEAR</button>
-                                </div>
-                                <div className="flex gap-2">
-                                    <button onClick={handleSavePresetClick}
-                                        className="btn btn-sm flex-1 rounded-none text-[10px] font-black tracking-widest border border-base-content/10 text-primary/40 hover:text-primary">SAVE</button>
-                                    <button onClick={handleDeletePresetClick}
-                                        disabled={!selectedPreset}
-                                        className="btn btn-sm flex-1 rounded-none text-[10px] font-black tracking-widest border border-base-content/10 text-error/40 hover:text-error disabled:opacity-20">DELETE</button>
-                                </div>
-                            </div>
-                        )}
+
                     </motion.div>
                     <motion.footer
                         variants={pageFooterVariants}

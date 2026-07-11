@@ -27,16 +27,17 @@
     }
   },
   "tdd": {
-    "phase": "red-pending",
-    "testFiles": [
-      "D:\\AI-Dev\\Kollektiv-Dev\\utils\\memoryStorage.test.ts"
-    ],
+    "phase": "idle",
+    "testFiles": [],
     "sourceFiles": [
-      "D:\\AI-Dev\\Kollektiv-Dev\\utils\\memoryStorage.ts",
+      "D:\\AI-Dev\\Kollektiv-Dev\\services\\mcpAssistantTools.ts",
+      "D:\\AI-Dev\\Kollektiv-Dev\\services\\assistantTools.ts",
       "D:\\AI-Dev\\Kollektiv-Dev\\services\\assistantService.ts",
-      "D:\\AI-Dev\\Kollektiv-Dev\\services\\assistantTools.ts"
+      "D:\\AI-Dev\\Kollektiv-Dev\\services\\liveAssistantService.ts",
+      "D:\\AI-Dev\\Kollektiv-Dev/components/App.tsx",
+      "D:\\AI-Dev\\Kollektiv-Dev/components/Header.tsx"
     ],
-    "redVerificationPending": true
+    "redVerificationPending": false
   },
   "debug": {
     "active": false,

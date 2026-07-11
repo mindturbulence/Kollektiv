@@ -39,6 +39,7 @@ import ImageResizer from './ImageResizer';
 import { VideoToFrames } from './VideoToFrames';
 import LoraEditorPage from './loraEditor/LoraEditorPage';
 import { LLMChatPanel } from './LLMChatPanel';
+import { LiveAssistantProvider } from '../contexts/LiveAssistantContext';
 import WebViewerPanel from './WebViewerPanel';
 import NotesPanel from './NotesPanel';
 import LiveCaptionOverlay from './LiveCaptionOverlay';
@@ -949,6 +950,7 @@ const AppContent: React.FC = () => {
     if (showWelcome) return <Welcome onSetupComplete={initializeApp} />;
 
     return (
+        <LiveAssistantProvider>
         <div className="h-full w-full overflow-hidden relative font-sans">
             {isLoading && (
                 <div ref={loaderRef} className="fixed inset-0 z-[1000]">
@@ -1196,6 +1198,7 @@ const AppContent: React.FC = () => {
                 )}
             </div>
         </div>
+    </LiveAssistantProvider>
     );
 };
 

@@ -10,7 +10,6 @@ import ChromaticText from './ChromaticText';
 import { InformationCircleIcon, BookmarkIcon, Cog6ToothIcon, PowerIcon, ChatBubbleIcon, NoteIcon } from './icons';
 import { HUDNavItem } from './HUDNavItem';
 import { LiveAssistantMicButton, LiveAssistantScreenButton } from './LiveAssistantBar';
-import { LiveAssistantProvider } from '../contexts/LiveAssistantContext';
 
 interface HeaderProps {
   onNavigate: (tab: ActiveTab) => void;
@@ -245,7 +244,6 @@ const Header: React.FC<HeaderProps> = ({
   }, [activeMenu, onNavigate]);
 
   return (
-    <LiveAssistantProvider>
     <header className="flex-shrink-0 flex flex-col h-12 bg-base-200/20 backdrop-blur-md border-b border-base-content/10 z-50 relative">
       <div ref={navRef} className="flex flex-grow items-center relative z-50 px-6 gap-4">
 
@@ -374,7 +372,6 @@ const Header: React.FC<HeaderProps> = ({
         </div>
       </div>
     </header>
-    </LiveAssistantProvider>
   );
 };
 
