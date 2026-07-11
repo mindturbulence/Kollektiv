@@ -25,7 +25,7 @@ export const LiveAssistantMicButton: React.FC = () => {
                 title={title}
                 badge={isOn ? 1 : undefined}
             >
-                <MicrophoneIcon className={`w-4 h-4 ${status === 'error' ? 'text-error' : speaking ? 'text-primary animate-pulse' : ''}`} />
+                <MicrophoneIcon className={`w-4 h-4 ${status === 'error' ? 'text-error' : speaking ? 'text-primary' : ''}`} />
             </HUDNavItem>
 
             {status === 'error' && (

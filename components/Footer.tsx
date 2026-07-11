@@ -7,6 +7,7 @@ import { fileSystemManager } from '../utils/fileUtils';
 import { audioService } from '../services/audioService';
 import { loadGalleryItems } from '../utils/galleryStorage';
 import { useAssistantSignals } from '../utils/useAssistantSignals';
+import { appEventBus } from '../utils/eventBus';
 import type { AssistantMode } from '../utils/assistantMode';
 
 const MetadataItem: React.FC<{ label: string; value: string }> = ({ label, value }) => {
@@ -225,24 +226,6 @@ const Footer: React.FC<FooterProps> = ({
             {/* Background Technical Noise */}
             <div className="absolute inset-0 pointer-events-none opacity-[0.03] bg-[url('https://www.transparenttextures.com/patterns/stardust.png')]"></div>
 
-            <AnimatePresence mode="wait">
-                {liveStatus !== 'idle' && (
-                    <motion.div
-                        key={liveLabel}
-                        initial={{ opacity: 0, y: 4 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        exit={{ opacity: 0, y: -4 }}
-                        transition={{ duration: 0.25, ease: [0.23, 1, 0.32, 1] }}
-                        className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 z-[705] pointer-events-none flex items-center h-full gap-2"
-                    >
-                        <span className={`w-1.5 h-1.5 ${liveStatus === 'error' ? 'bg-error' : 'bg-primary animate-pulse'}`} />
-                        <span className={`uppercase tracking-[0.1em] font-normal leading-none inline-block ${liveStatus === 'error' ? 'text-error' : 'shine-text'} ${mainFontClass}`}>
-                            {liveLabel}
-                        </span>
-                    </motion.div>
-                )}
-            </AnimatePresence>
-
             <div className="flex items-center h-full gap-4 bg-transparent relative z-[710] pointer-events-auto">
                 <div className="flex gap-3 items-center">
                     <span className={`arwes-label uppercase tracking-widest text-primary/60 leading-none inline-block ${mainFontClass}`}>ENG</span>
@@ -257,6 +240,28 @@ const Footer: React.FC<FooterProps> = ({
                     <IntegrationItem label={(settings.activeLLM === 'ollama_cloud' ? 'OLLAMA' : settings.activeLLM?.toUpperCase()) || 'LLM'} active={!!(settings.geminiApiKey || process.env.GEMINI_API_KEY) || settings.activeLLM?.includes('ollama')} />
                     <IntegrationItem label="YOUTUBE" active={!!settings.youtube?.isConnected} />
                 </div>
+            </div>
+
+            <div className="flex-1 flex items-center justify-center h-full relative z-[705] pointer-events-none">
+                <AnimatePresence mode="wait">
+                    {liveStatus !== 'idle' && (
+                        <motion.button
+                            key={liveLabel}
+                            type="button"
+                            onClick={() => appEventBus.emit('navigate', 'assistant')}
+                            onMouseEnter={() => audioService.playHover()}
+                            initial={{ opacity: 0, y: 4 }}
+                            animate={{ opacity: 1, y: 0 }}
+                            exit={{ opacity: 0, y: -4 }}
+                            transition={{ duration: 0.25, ease: [0.23, 1, 0.32, 1] }}
+                            className="flex items-center pointer-events-auto cursor-pointer"
+                        >
+                            <span className={`uppercase tracking-[0.1em] font-normal leading-none inline-block ${liveStatus === 'error' ? 'text-error' : 'shine-text'} ${mainFontClass}`}>
+                                {liveLabel}
+                            </span>
+                        </motion.button>
+                    )}
+                </AnimatePresence>
             </div>
 
             <div className="flex flex-row items-center h-full gap-6 relative z-[710] pointer-events-auto">
