@@ -30,8 +30,9 @@
     "phase": "idle",
     "testFiles": [],
     "sourceFiles": [
-      "D:\\AI-Dev\\Kollektiv-Dev\\components\\settings\\IntegrationsSection.tsx",
-      "D:\\AI-Dev\\Kollektiv-Dev\\components\\LLMChatPanel.tsx"
+      "D:\\AI-Dev\\Kollektiv-Dev\\services\\geminiService.ts",
+      "D:\\AI-Dev\\Kollektiv-Dev\\services\\assistantTools.ts",
+      "D:\\AI-Dev\\Kollektiv-Dev\\services\\assistantService.ts"
     ],
     "redVerificationPending": false
   },

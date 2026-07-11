@@ -293,6 +293,46 @@ export const ASSISTANT_TOOLS: AssistantTool[] = [
         execute: ({ collection_id, query }) =>
             appControlService.getDiscoveryPrompts(String(collection_id), query ? String(query) : undefined),
     },
+    {
+        name: 'web_search',
+        description: 'Search the web (Google) for current, real-world information. Returns an answer summary plus source URLs as JSON. Runs on Gemini grounding regardless of the assistant brain, so it needs a Gemini API key. Offer open_web_page when the user wants to SEE a result page.',
+        parameters: {
+            type: 'object',
+            properties: { query: { type: 'string', description: 'What to search for.' } },
+            required: ['query'],
+        },
+        execute: async ({ query }, ctx) => {
+            if (!(ctx.settings.geminiApiKey || process.env.GEMINI_API_KEY)) {
+                return 'Error: web search needs a Gemini API key (Settings > Integrations > Gemini) — it runs on Google Search grounding.';
+            }
+            const { googleSearchGemini } = await import('./geminiService');
+            return googleSearchGemini(String(query), ctx.settings);
+        },
+    },
+    {
+        name: 'fetch_url',
+        description: 'Fetch a web page by absolute URL and return its readable text (HTML stripped, truncated to ~8000 chars) for YOUR OWN reading. To show the page to the user, use open_web_page instead.',
+        parameters: {
+            type: 'object',
+            properties: { url: { type: 'string', description: 'Absolute http(s) URL.' } },
+            required: ['url'],
+        },
+        execute: async ({ url }) => {
+            let parsed: URL;
+            try { parsed = new URL(String(url)); } catch { return 'Error: invalid URL.'; }
+            if (parsed.protocol !== 'http:' && parsed.protocol !== 'https:') return 'Error: only http(s) URLs are supported.';
+            // /proxy-remote appends the request sub-path to the x-target-url header value.
+            const res = await fetch(`/proxy-remote${parsed.pathname}${parsed.search}`, {
+                headers: { 'x-target-url': parsed.origin },
+            });
+            if (!res.ok) return `Error: fetch failed (${res.status} ${res.statusText}).`;
+            const raw = await res.text();
+            const doc = new DOMParser().parseFromString(raw, 'text/html');
+            doc.querySelectorAll('script, style, noscript, svg').forEach(el => el.remove());
+            const text = (doc.body?.textContent || raw).replace(/\s{3,}/g, '\n').trim();
+            return text.slice(0, 8000) || 'Error: page contained no readable text.';
+        },
+    },
 ];
 
 export const executeAssistantTool = async (name: string, args: Record<string, any>, ctx: ToolContext): Promise<string> => {
