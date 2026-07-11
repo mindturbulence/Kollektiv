@@ -30,9 +30,9 @@
     "phase": "idle",
     "testFiles": [],
     "sourceFiles": [
-      "D:\\AI-Dev\\Kollektiv-Dev\\components\\icons.tsx",
-      "D:\\AI-Dev\\Kollektiv-Dev\\components\\NotesPanel.tsx",
-      "D:\\AI-Dev\\Kollektiv-Dev\\components\\Header.tsx",
+      "D:\\AI-Dev\\Kollektiv-Dev\\contexts\\LiveAssistantContext.tsx",
+      "D:\\AI-Dev\\Kollektiv-Dev\\components\\LLMChatPanel.tsx",
+      "D:\\AI-Dev\\Kollektiv-Dev\\components\\LiveCaptionOverlay.tsx",
       "D:\\AI-Dev\\Kollektiv-Dev\\components\\App.tsx"
     ],
     "redVerificationPending": false

@@ -41,6 +41,7 @@ import LoraEditorPage from './loraEditor/LoraEditorPage';
 import { LLMChatPanel } from './LLMChatPanel';
 import WebViewerPanel from './WebViewerPanel';
 import NotesPanel from './NotesPanel';
+import LiveCaptionOverlay from './LiveCaptionOverlay';
 import { motion, AnimatePresence } from 'motion/react';
 import { pageVariants } from './AnimatedPanels';
 import ChromaticText from './ChromaticText';
@@ -1165,6 +1166,7 @@ const AppContent: React.FC = () => {
             )}
             <TabTitleManager defaultTitle={currentTitle} />
             <CustomCursor />
+            <LiveCaptionOverlay />
             {isInitialized && (
                 <PageFrame
                     isInitialized={isInitialized}

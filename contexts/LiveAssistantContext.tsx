@@ -61,7 +61,7 @@ export const LiveAssistantProvider: React.FC<{ children: React.ReactNode }> = ({
                     }
                     else stop();
                 },
-                onCaption: () => { /* transcripts are intentionally not displayed */ },
+                onCaption: (who, text) => appEventBus.emit('liveCaption', { who, text }),
                 onToolActivity: (line) => appEventBus.emit('liveAssistantActivity', line),
                 onSpeaking: setSpeaking,
                 onScreenShare: setSharing,
