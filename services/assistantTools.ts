@@ -333,6 +333,20 @@ export const ASSISTANT_TOOLS: AssistantTool[] = [
             return text.slice(0, 8000) || 'Error: page contained no readable text.';
         },
     },
+    {
+        name: 'open_web_page',
+        description: 'Open a URL in the in-app web viewer panel so the USER can see the page (live embed when the site allows it, reader mode otherwise). Use when the user asks to show/open/display a web page or a web_search source.',
+        parameters: {
+            type: 'object',
+            properties: { url: { type: 'string', description: 'Absolute http(s) URL to display.' } },
+            required: ['url'],
+        },
+        execute: ({ url }) => {
+            try { new URL(String(url)); } catch { return 'Error: invalid URL.'; }
+            appEventBus.emit('openWebPage', { url: String(url) });
+            return `Opened ${url} in the web viewer panel.`;
+        },
+    },
 ];
 
 export const executeAssistantTool = async (name: string, args: Record<string, any>, ctx: ToolContext): Promise<string> => {

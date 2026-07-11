@@ -39,6 +39,7 @@ import ImageResizer from './ImageResizer';
 import { VideoToFrames } from './VideoToFrames';
 import LoraEditorPage from './loraEditor/LoraEditorPage';
 import { LLMChatPanel } from './LLMChatPanel';
+import WebViewerPanel from './WebViewerPanel';
 import { motion, AnimatePresence } from 'motion/react';
 import { pageVariants } from './AnimatedPanels';
 import ChromaticText from './ChromaticText';
@@ -1119,6 +1120,7 @@ const AppContent: React.FC = () => {
                                         isOpen={isChatPanelOpen}
                                         onClose={handleCloseChatPanel}
                                     />
+                                    <WebViewerPanel />
                                 </div>
                             </main>
 
