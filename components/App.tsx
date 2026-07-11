@@ -37,6 +37,7 @@ import ImageCompare from './ImageCompare';
 import ColorPaletteExtractor from './ColorPaletteExtractor';
 import ImageResizer from './ImageResizer';
 import { VideoToFrames } from './VideoToFrames';
+import LoraEditorPage from './loraEditor/LoraEditorPage';
 import { LLMChatPanel } from './LLMChatPanel';
 import { motion, AnimatePresence } from 'motion/react';
 import { pageVariants } from './AnimatedPanels';
@@ -451,6 +452,7 @@ const AppContent: React.FC = () => {
             case 'color_palette_extractor': return `PALETTE | ${base}`;
             case 'resizer': return `RESIZER | ${base}`;
             case 'video_to_frames': return `VIDEO | ${base}`;
+            case 'lora_editor': return `LORA | ${base}`;
             default: return base;
         }
     }, [activeTab]);
@@ -818,6 +820,7 @@ const AppContent: React.FC = () => {
             case 'color_palette_extractor': return <ColorPaletteExtractor key="color_palette_extractor" onClipIdea={handleClipIdea} isExiting={false} />;
             case 'resizer': return <ImageResizer key="resizer" isExiting={false} />;
             case 'video_to_frames': return <VideoToFrames key="video_to_frames" isExiting={false} />;
+            case 'lora_editor': return <LoraEditorPage key="lora_editor" isExiting={false} />;
             default: return <Dashboard key="default" onNavigate={handleNavigate} onClipIdea={handleClipIdea} isExiting={false} />;
         }
     };

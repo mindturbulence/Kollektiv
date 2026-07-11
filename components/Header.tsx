@@ -142,6 +142,7 @@ const Header: React.FC<HeaderProps> = ({
     { id: 'color_palette_extractor' as ActiveTab, label: 'Palette' },
     { id: 'resizer' as ActiveTab, label: 'Resizer' },
     { id: 'video_to_frames' as ActiveTab, label: 'Video' },
+    { id: 'lora_editor' as ActiveTab, label: 'LoRA Editor' },
   ];
 
   const navGroups = [
