@@ -10,6 +10,7 @@ import { getModelDataByHash } from './lib/onlineLookup';
 import { aggregateAndSort, sortSubproperties, convertNumericKeysToString } from './lib/tagTools';
 import { DEFAULT_SETTINGS } from './constants';
 import type { LoraEditorSettings, FileHashes } from './types';
+import SettingsDrawer from './SettingsDrawer';
 
 export type LoraEditorTab = 'summary' | 'tags' | 'metadata' | 'editor' | 'lookup';
 
@@ -47,12 +48,10 @@ interface LoraEditorPageProps {
 
 const LoraEditorPage: React.FC<LoraEditorPageProps> = ({ isExiting = false }) => {
     const [settings, setSettings] = useLocalStorage<LoraEditorSettings>('loraEditorSettings', DEFAULT_SETTINGS);
-    void setSettings; // ponytail: read by Task 10's SettingsDrawer onChange, not rendered yet
     const [state, setState] = useState<LoraEditorState>(EMPTY_STATE);
     const [activeTab, setActiveTab] = useState<LoraEditorTab>('summary');
     void activeTab; void setActiveTab; // ponytail: read by Task 16's tab bar, not rendered yet
     const [isSettingsOpen, setIsSettingsOpen] = useState(false);
-    void isSettingsOpen; // ponytail: read by Task 16's settings modal, not rendered yet
     const [isDragging, setIsDragging] = useState(false);
     const [isLoading, setIsLoading] = useState(false);
     const [loadingMessage, setLoadingMessage] = useState('');
@@ -227,6 +226,12 @@ const LoraEditorPage: React.FC<LoraEditorPageProps> = ({ isExiting = false }) =>
                     </div>
                 </div>
             </motion.div>
+            <SettingsDrawer
+                isOpen={isSettingsOpen}
+                onClose={() => setIsSettingsOpen(false)}
+                settings={settings}
+                onChange={setSettings}
+            />
         </div>
     );
 };
