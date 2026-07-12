@@ -55,14 +55,19 @@ class BrowserControlService {
 
     // ─── Coordinates: map from scaled capture to real viewport ───
 
-    /** Convert capture-relative coordinates (0–1) to absolute viewport px.
-     *  The capture frame is scaled down by captureScale for sending to the
-     *  assistant, but nx/ny are *fractions* of that frame, which map directly
-     *  to the same fraction of the actual viewport. */
+    /** The capture canvas the assistant sees is scaled to max 1024px on the
+     *  longest side (see startScreenShare in liveAssistantService.ts).
+     *  The model may provide coordinates EITHER as 0–1 fractions OR as absolute
+     *  pixel values from that scaled frame. Auto-detect: if > 1, treat as pixel. */
     private captureToViewport(nx: number, ny: number): { x: number; y: number } {
+        const scale = Math.min(1, 1024 / Math.max(window.innerWidth, window.innerHeight));
+        const capW = Math.round(window.innerWidth * scale);
+        const capH = Math.round(window.innerHeight * scale);
+        const normX = nx > 1 && capW > 0 ? nx / capW : nx;
+        const normY = ny > 1 && capH > 0 ? ny / capH : ny;
         return {
-            x: Math.round(nx * window.innerWidth),
-            y: Math.round(ny * window.innerHeight),
+            x: Math.round(normX * window.innerWidth),
+            y: Math.round(normY * window.innerHeight),
         };
     }
 

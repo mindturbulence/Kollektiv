@@ -463,12 +463,12 @@ export const ASSISTANT_TOOLS: AssistantTool[] = [
 
     {
         name: 'browser_click',
-        description: 'Click at the specified screen-capture coordinates (nx, ny are fractions 0–1). Requires screen sharing + control permission. Use when you can see something on screen you want to interact with — buttons, links, inputs, etc.',
+        description: 'Click where you see something on the screen you want to interact with (buttons, links, inputs, icons). Provide nx/ny as pixel coordinates from the image you see (the screen image sent to you is scaled to max 1024 pixels on the long side). For example, if you see a button at pixel (400, 500) in the 1024-pixel image, call browser_click(400, 500). 0–1 fractions also work. Requires screen sharing + control permission.',
         parameters: {
             type: 'object',
             properties: {
-                nx: { type: 'number', description: 'X coordinate as a fraction of the capture width (0 = left edge, 1 = right edge).' },
-                ny: { type: 'number', description: 'Y coordinate as a fraction of the capture height (0 = top edge, 1 = bottom edge).' },
+                nx: { type: 'number', description: 'X coordinate: either absolute pixel (0–1024) or fraction 0–1 in the screen image you see.' },
+                ny: { type: 'number', description: 'Y coordinate: either absolute pixel or fraction 0–1 in the screen image you see.' },
             },
             required: ['nx', 'ny'],
         },
@@ -476,12 +476,12 @@ export const ASSISTANT_TOOLS: AssistantTool[] = [
     },
     {
         name: 'browser_double_click',
-        description: 'Double-click at the specified screen-capture coordinates. Requires screen sharing + control permission.',
+        description: 'Double-click where you see something. Same coordinate format as browser_click — use pixel coordinates from the image you see (max 1024px wide), or 0–1 fractions.',
         parameters: {
             type: 'object',
             properties: {
-                nx: { type: 'number', description: 'X fraction (0–1).' },
-                ny: { type: 'number', description: 'Y fraction (0–1).' },
+                nx: { type: 'number', description: 'X coordinate: pixel (0–1024) or fraction 0–1.' },
+                ny: { type: 'number', description: 'Y coordinate: pixel or fraction 0–1.' },
             },
             required: ['nx', 'ny'],
         },
@@ -489,11 +489,11 @@ export const ASSISTANT_TOOLS: AssistantTool[] = [
     },
     {
         name: 'browser_type',
-        description: 'Type text into the currently focused input field. Requires screen sharing + control permission. Use after clicking on a text field with browser_click.',
+        description: 'Type text into the input field that currently has focus. Make sure you click the input field first with browser_click. Requires screen sharing + control permission.',
         parameters: {
             type: 'object',
             properties: {
-                text: { type: 'string', description: 'The text to type.' },
+                text: { type: 'string', description: 'The text to type into the focused field.' },
             },
             required: ['text'],
         },
@@ -501,7 +501,7 @@ export const ASSISTANT_TOOLS: AssistantTool[] = [
     },
     {
         name: 'browser_press_key',
-        description: 'Press a named key (Enter, Tab, Escape, Backspace, ArrowUp/Down/Left/Right, etc.) on the currently focused element. Requires screen sharing + control permission.',
+        description: 'Press a named key (Enter, Tab, Escape, Backspace, ArrowUp/Down/Left/Right, etc.) on the element that currently has focus. Requires screen sharing + control permission.',
         parameters: {
             type: 'object',
             properties: {
@@ -513,23 +513,23 @@ export const ASSISTANT_TOOLS: AssistantTool[] = [
     },
     {
         name: 'browser_scroll',
-        description: 'Scroll the page by a relative amount. dx/dy are fractions 0–1 (e.g. 0 = none, 0.5 = half screen). Requires screen sharing + control permission.',
+        description: 'Scroll the page by a small or large amount. dy = 0.5 scrolls down half a page. dy = -0.3 scrolls up a bit. dx scrolls sideways. Requires screen sharing + control permission.',
         parameters: {
             type: 'object',
             properties: {
-                dx: { type: 'number', description: 'Horizontal scroll fraction (negative = left, positive = right).' },
-                dy: { type: 'number', description: 'Vertical scroll fraction (negative = up, positive = down).' },
+                dx: { type: 'number', description: 'Horizontal scroll factor (negative = left, positive = right, 0.3 = ~300px).' },
+                dy: { type: 'number', description: 'Vertical scroll factor (negative = up, positive = down, 0.5 = ~500px).' },
             },
         },
         execute: ({ dx, dy }) => browserControlService.scroll(Number(dx || 0), Number(dy || 0)),
     },
     {
         name: 'browser_scroll_to',
-        description: 'Scroll to a specific position on the page. frac is 0 (top) to 1 (bottom). Requires screen sharing + control permission.',
+        description: 'Scroll to a specific position on the page. frac = 0 is the top, frac = 1 is the bottom. Requires screen sharing + control permission.',
         parameters: {
             type: 'object',
             properties: {
-                frac: { type: 'number', description: 'Scroll position fraction (0 = top, 1 = bottom).' },
+                frac: { type: 'number', description: 'Scroll position (0 = top, 0.5 = middle, 1 = bottom).' },
             },
             required: ['frac'],
         },
@@ -537,13 +537,13 @@ export const ASSISTANT_TOOLS: AssistantTool[] = [
     },
     {
         name: 'browser_read_page',
-        description: 'Read the visible page content (text) and return it. Includes page title and URL. Requires screen sharing + control permission.',
+        description: 'Read all visible text content from the current page. Returns the page title, URL, and up to 5000 characters of body text. Use this when you need to know what the page says. Requires screen sharing + control permission.',
         parameters: { type: 'object', properties: {} },
         execute: () => browserControlService.readVisibleContent(),
     },
     {
         name: 'browser_read_structure',
-        description: 'List the interactive elements visible on screen (headings, links, buttons, inputs) with their positions and sizes. Useful before clicking to find what is where on a page. Requires screen sharing + control permission.',
+        description: 'Scan the page and list all interactive elements visible on screen (buttons, links, inputs, headings) with their tag, text, position, and size. Use BEFORE browser_click so you know the exact positions of elements. Requires screen sharing + control permission.',
         parameters: { type: 'object', properties: {} },
         execute: () => browserControlService.readPageStructure(),
     },
