@@ -42,7 +42,7 @@ import LoraEditorPage from './loraEditor/LoraEditorPage';
 import { LLMChatPanel } from './LLMChatPanel';
 import { LiveAssistantProvider } from '../contexts/LiveAssistantContext';
 import WebViewerPanel from './WebViewerPanel';
-import NotesPanel from './NotesPanel';
+
 import LiveCaptionOverlay from './LiveCaptionOverlay';
 import { ScreenControlOverlay } from './ScreenControlOverlay';
 import { motion, AnimatePresence } from 'motion/react';
@@ -432,7 +432,6 @@ const AppContent: React.FC = () => {
     const [isAboutModalOpen, setIsAboutModalOpen] = useState(false);
     const [isClippingPanelOpen, setIsClippingPanelOpen] = useState(false);
     const [isChatPanelOpen, setIsChatPanelOpen] = useState(false);
-    const [isNotesPanelOpen, setIsNotesPanelOpen] = useState(false);
     const [isLlmPanelOpen, setIsLlmPanelOpen] = useState(false);
     const [collapsedPanels, setCollapsedPanels] = useLocalStorage<Record<string, boolean>>('collapsedPanels', {});
     const [globalFeedback, setGlobalFeedback] = useState<{ message: string; type: 'success' | 'error' } | null>(null);
@@ -788,8 +787,12 @@ const AppContent: React.FC = () => {
                 handleSendToPromptsPage(state as PromptsPageState);
             }
         });
-        return () => { navigateSub(); sendToSub(); };
-    }, [handleNavigate, handleSendToPromptsPage]);
+        const feedbackSub = appEventBus.on('assistantFeedback', (payload) => {
+            const p = payload as { message: string; isError?: boolean } | undefined;
+            if (p?.message) showGlobalFeedback(p.message, !!p.isError);
+        });
+        return () => { navigateSub(); sendToSub(); feedbackSub(); };
+    }, [handleNavigate, handleSendToPromptsPage, showGlobalFeedback]);
 
     const handleClipIdea = useCallback((idea: Idea) => {
         setClippedIdeas(prev => [idea, ...prev]);
@@ -948,8 +951,6 @@ const AppContent: React.FC = () => {
         if (!prev) appEventBus.emit('navigate', 'dashboard');
         return !prev;
     }), []);
-    const handleToggleNotesPanel = useCallback(() => setIsNotesPanelOpen(prev => !prev), []);
-    const handleCloseNotesPanel = useCallback(() => setIsNotesPanelOpen(false), []);
     const handleClearPromptsPageState = useCallback(() => setPromptsPageState(null), []);
     const handleSendToEnhancer = useCallback((prompt: string) => handleSendToPromptsPage({ prompt, view: 'enhancer' }), [handleSendToPromptsPage]);
     const handleCloseClippingPanel = useCallback(() => setIsClippingPanelOpen(false), []);
@@ -1081,7 +1082,6 @@ const AppContent: React.FC = () => {
                                 onAboutClick={handleAboutClick}
                                 onToggleClippingPanel={handleToggleClippingPanel}
                                 onToggleChatPanel={handleToggleChatPanel}
-                                onToggleNotesPanel={handleToggleNotesPanel}
                                 onStandbyClick={handleStandbyClick}
                                 clippedIdeasCount={clippedIdeas.length}
                             />
@@ -1117,11 +1117,6 @@ const AppContent: React.FC = () => {
                                         onRefineIdea={handleRefineIdea}
                                         onAddIdea={handleClipIdea}
                                         onSaveToLibrary={handleSaveClippedIdea}
-                                    />
-
-                                    <NotesPanel
-                                        isOpen={isNotesPanelOpen}
-                                        onClose={handleCloseNotesPanel}
                                     />
 
                                     <LlmStatusPanel
