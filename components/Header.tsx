@@ -7,9 +7,9 @@ import RollingText from './RollingText';
 import TimedScrambledText from './TimedScrambledText';
 import ThemeSwitcher from './ThemeSwitcher';
 import ChromaticText from './ChromaticText';
-import { InformationCircleIcon, BookmarkIcon, Cog6ToothIcon, PowerIcon, ChatBubbleIcon, NoteIcon } from './icons';
+import { InformationCircleIcon, BookmarkIcon, Cog6ToothIcon, PowerIcon, ChatBubbleIcon } from './icons';
 import { HUDNavItem } from './HUDNavItem';
-import { LiveAssistantMicButton, LiveAssistantScreenButton } from './LiveAssistantBar';
+import { LiveAssistantMicButton, LiveAssistantScreenButton, LiveAssistantControlButton, LiveAssistantFault } from './LiveAssistantBar';
 
 interface HeaderProps {
   onNavigate: (tab: ActiveTab) => void;
@@ -20,7 +20,6 @@ interface HeaderProps {
   onStandbyClick: (e: React.MouseEvent) => void;
   clippedIdeasCount: number;
   onToggleChatPanel?: () => void;
-  onToggleNotesPanel?: () => void;
 }
 
 interface NavItemData {
@@ -115,7 +114,6 @@ const Header: React.FC<HeaderProps> = ({
   onAboutClick,
   onToggleClippingPanel,
   onToggleChatPanel,
-  onToggleNotesPanel,
   onStandbyClick,
   clippedIdeasCount
 }) => {
@@ -299,6 +297,7 @@ const Header: React.FC<HeaderProps> = ({
         {/* Right Side Controls */}
         <div className="ml-auto flex gap-1 items-center relative z-[9999] pointer-events-auto">
           <LiveAssistantScreenButton />
+          <LiveAssistantControlButton />
           <HUDNavItem
             onClick={(e) => {
               e.stopPropagation();
@@ -311,6 +310,7 @@ const Header: React.FC<HeaderProps> = ({
           </HUDNavItem>
           <div className="w-px h-2 bg-base-content/10 self-center" />
           <LiveAssistantMicButton />
+          <LiveAssistantFault hidden={activeTab === 'assistant'} />
           <div className="w-px h-2 bg-base-content/10 self-center" />
           <HUDNavItem
             onClick={(e) => {
@@ -322,18 +322,7 @@ const Header: React.FC<HeaderProps> = ({
           >
             <ChatBubbleIcon className="w-4 h-4" />
           </HUDNavItem>
-          <div className="w-px h-2 bg-base-content/10 self-center" />
-          <HUDNavItem
-            onClick={(e) => {
-              e.stopPropagation();
-              audioService.playClick();
-              onToggleNotesPanel?.();
-            }}
-            title="Assistant Notes & Files"
-          >
-            <NoteIcon className="w-4 h-4" />
-          </HUDNavItem>
-          <div className="w-px h-2 bg-base-content/10 self-center" />
+
           <ThemeSwitcher />
           <div className="w-px h-2 bg-base-content/10 self-center" />
           <HUDNavItem

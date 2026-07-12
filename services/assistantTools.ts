@@ -1,6 +1,7 @@
 import type { LLMSettings, WildcardCategory } from '../types';
 import { appControlService } from './appControlService';
 import { appEventBus } from '../utils/eventBus';
+import { browserControlService } from './browserControlService';
 import { addNote, loadNotes, updateNote, deleteNote } from '../utils/notesStorage';
 import { addMemory, loadMemories as loadMemoryEntries, deleteMemory } from '../utils/memoryStorage';
 import { loadGalleryItems } from '../utils/galleryStorage';
@@ -457,6 +458,107 @@ export const ASSISTANT_TOOLS: AssistantTool[] = [
         },
         execute: ({ id }) => (deleteMemory(String(id)) ? 'Forgotten.' : `Error: no memory with id ${id}.`),
     },
+
+    // ─── Browser Control Tools (require screen sharing + permission) ───────────
+
+    {
+        name: 'browser_click',
+        description: 'Click where you see something on the screen you want to interact with (buttons, links, inputs, icons). Provide nx/ny as pixel coordinates from the image you see (the screen image sent to you is scaled to max 1024 pixels on the long side). For example, if you see a button at pixel (400, 500) in the 1024-pixel image, call browser_click(400, 500). 0–1 fractions also work. Requires screen sharing + control permission.',
+        parameters: {
+            type: 'object',
+            properties: {
+                nx: { type: 'number', description: 'X coordinate: either absolute pixel (0–1024) or fraction 0–1 in the screen image you see.' },
+                ny: { type: 'number', description: 'Y coordinate: either absolute pixel or fraction 0–1 in the screen image you see.' },
+            },
+            required: ['nx', 'ny'],
+        },
+        execute: ({ nx, ny }) => browserControlService.click(Number(nx), Number(ny)),
+    },
+    {
+        name: 'browser_double_click',
+        description: 'Double-click where you see something. Same coordinate format as browser_click — use pixel coordinates from the image you see (max 1024px wide), or 0–1 fractions.',
+        parameters: {
+            type: 'object',
+            properties: {
+                nx: { type: 'number', description: 'X coordinate: pixel (0–1024) or fraction 0–1.' },
+                ny: { type: 'number', description: 'Y coordinate: pixel or fraction 0–1.' },
+            },
+            required: ['nx', 'ny'],
+        },
+        execute: ({ nx, ny }) => browserControlService.doubleClick(Number(nx), Number(ny)),
+    },
+    {
+        name: 'browser_type',
+        description: 'Type text into the input field that currently has focus. Make sure you click the input field first with browser_click. Requires screen sharing + control permission.',
+        parameters: {
+            type: 'object',
+            properties: {
+                text: { type: 'string', description: 'The text to type into the focused field.' },
+            },
+            required: ['text'],
+        },
+        execute: ({ text }) => browserControlService.type(String(text)),
+    },
+    {
+        name: 'browser_press_key',
+        description: 'Press a named key (Enter, Tab, Escape, Backspace, ArrowUp/Down/Left/Right, etc.) on the element that currently has focus. Requires screen sharing + control permission.',
+        parameters: {
+            type: 'object',
+            properties: {
+                key: { type: 'string', description: 'Key name. Valid: Enter, Tab, Escape, Backspace, Delete, ArrowUp, ArrowDown, ArrowLeft, ArrowRight, Space, Home, End, PageUp, PageDown, F1–F12, Shift, Control, Alt, CapsLock.' },
+            },
+            required: ['key'],
+        },
+        execute: ({ key }) => browserControlService.pressKey(String(key)),
+    },
+    {
+        name: 'browser_scroll',
+        description: 'Scroll the page by a small or large amount. dy = 0.5 scrolls down half a page. dy = -0.3 scrolls up a bit. dx scrolls sideways. Requires screen sharing + control permission.',
+        parameters: {
+            type: 'object',
+            properties: {
+                dx: { type: 'number', description: 'Horizontal scroll factor (negative = left, positive = right, 0.3 = ~300px).' },
+                dy: { type: 'number', description: 'Vertical scroll factor (negative = up, positive = down, 0.5 = ~500px).' },
+            },
+        },
+        execute: ({ dx, dy }) => browserControlService.scroll(Number(dx || 0), Number(dy || 0)),
+    },
+    {
+        name: 'browser_scroll_to',
+        description: 'Scroll to a specific position on the page. frac = 0 is the top, frac = 1 is the bottom. Requires screen sharing + control permission.',
+        parameters: {
+            type: 'object',
+            properties: {
+                frac: { type: 'number', description: 'Scroll position (0 = top, 0.5 = middle, 1 = bottom).' },
+            },
+            required: ['frac'],
+        },
+        execute: ({ frac }) => browserControlService.scrollTo(Number(frac)),
+    },
+    {
+        name: 'browser_read_page',
+        description: 'Read all visible text content from the current page. Returns the page title, URL, and up to 5000 characters of body text. Use this when you need to know what the page says. Requires screen sharing + control permission.',
+        parameters: { type: 'object', properties: {} },
+        execute: () => browserControlService.readVisibleContent(),
+    },
+    {
+        name: 'browser_read_structure',
+        description: 'Scan the page and list all interactive elements visible on screen (buttons, links, inputs, headings) with their tag, text, position, and size. Use BEFORE browser_click so you know the exact positions of elements. Requires screen sharing + control permission.',
+        parameters: { type: 'object', properties: {} },
+        execute: () => browserControlService.readPageStructure(),
+    },
+    {
+        name: 'browser_navigate',
+        description: 'Navigate the browser to a different URL. Requires screen sharing + control permission.',
+        parameters: {
+            type: 'object',
+            properties: {
+                url: { type: 'string', description: 'Full absolute URL (http/https) to navigate to.' },
+            },
+            required: ['url'],
+        },
+        execute: ({ url }) => browserControlService.navigate(String(url)),
+    },
 ];
 
 export const executeAssistantTool = async (name: string, args: Record<string, any>, ctx: ToolContext, extraTools: AssistantTool[] = []): Promise<string> => {
@@ -472,17 +574,23 @@ export const executeAssistantTool = async (name: string, args: Record<string, an
 
 /** Gemini functionDeclarations (uppercase Type strings). */
 export const geminiToolDeclarations = (tools: AssistantTool[] = ASSISTANT_TOOLS) =>
-    tools.map(t => ({
-        name: t.name,
-        description: t.description,
-        parameters: {
-            type: 'OBJECT',
-            properties: Object.fromEntries(
-                Object.entries(t.parameters.properties).map(([k, v]) => [k, { ...v, type: v.type.toUpperCase() }])
-            ),
-            ...(t.parameters.required?.length ? { required: t.parameters.required } : {}),
-        },
-    }));
+    tools.map(t => {
+        const propEntries = Object.entries(t.parameters.properties);
+        const decl: any = { name: t.name, description: t.description };
+        // Gemini rejects function declarations whose OBJECT parameter has an empty
+        // `properties` map — a malformed declaration can poison the whole tool
+        // array. For parameterless tools, omit `parameters` entirely instead.
+        if (propEntries.length) {
+            decl.parameters = {
+                type: 'OBJECT',
+                properties: Object.fromEntries(
+                    propEntries.map(([k, v]) => [k, { ...v, type: v.type.toUpperCase() }])
+                ),
+                ...(t.parameters.required?.length ? { required: t.parameters.required } : {}),
+            };
+        }
+        return decl;
+    });
 
 /** Ollama /api/chat tools (OpenAI-style). */
 export const ollamaToolDeclarations = (tools: AssistantTool[] = ASSISTANT_TOOLS) =>

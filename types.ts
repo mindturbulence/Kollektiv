@@ -163,6 +163,9 @@ export interface PromptModifiers {
   filmStock?: string;
   lighting?: string;
   composition?: string;
+  timeOfDay?: string;
+  weather?: string;
+  colorGrade?: string;
   // Specific model styles
   zImageStyle?: string;
   facialExpression?: string;
@@ -182,6 +185,10 @@ export interface PromptModifiers {
   voiceTone?: string;
   audioEnvironment?: string;
   audioMood?: string;
+  musicGenre?: string;
+  instrumentation?: string;
+  vocalStyle?: string;
+  productionEra?: string;
   audioDuration?: string;
   // Midjourney specific
   mjAspectRatio?: string;

@@ -11,6 +11,7 @@
 @import url("https://fonts.googleapis.com/css2?family=Urbanist:wght@300;400;500;600;700;800;900&display=swap");
 @import url("https://db.onlinewebfonts.com/c/787588e6c611222861fa21b3ff9c12e4?family=Westminster");
 @import url("https://db.onlinewebfonts.com/c/964496b7572957fd7a7cf6083bba6df0?family=Megazoid");
+@import url(https://db.onlinewebfonts.com/c/a81f90d558ea26efea1b403766df80e6?family=RainmakerScript-Bold);
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
@@ -37,6 +38,10 @@
 
 .font-rajdhani {
   font-family: "Rajdhani", sans-serif !important;
+}
+
+.font-rainmaker {
+  font-family: "RainmakerScript-Bold", cursive !important;
 }
 
 .font-microgramma-bold {
@@ -2617,4 +2622,144 @@ button:active {
   font-weight: normal !important;
   text-transform: uppercase !important;
   letter-spacing: 0.1em !important;
+}
+/* ============================================================
+   CONTEXT SHIFT ENGINE — futuristic-OS page transition system
+   Motion tokens + FX layers. Overlay/transform/filter only:
+   zero layout impact by design.
+   ============================================================ */
+
+:root {
+  /* transitions.dev-aligned motion scale */
+  --duration-stagger: 40ms;
+  --duration-micro: 80ms;
+  --duration-quick: 150ms;
+  --duration-fast: 250ms;
+  --duration-medium: 350ms;
+  --duration-slow: 400ms;
+  --duration-very-slow: 500ms;
+  --ease-smooth-out: cubic-bezier(0.22, 1, 0.36, 1);
+  --ease-sharp-in: cubic-bezier(0.7, 0, 0.84, 0);
+  /* OS-shell extensions */
+  --fx-derez: 320ms;
+  --fx-hold: 260ms;
+  --fx-strip-stagger: 28ms;
+  --fx-flash: 600ms;
+}
+
+/* --- Dead-class resurrection: these were referenced 66x but never defined --- */
+@keyframes fade-in {
+  from { opacity: 0; transform: translateY(4px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+.animate-fade-in {
+  animation: fade-in var(--duration-slow) var(--ease-smooth-out) both;
+}
+@keyframes slide-in-from-right {
+  from { opacity: 0; transform: translateX(16px); }
+  to   { opacity: 1; transform: translateX(0); }
+}
+.animate-slide-in-from-right {
+  animation: slide-in-from-right var(--duration-slow) var(--ease-smooth-out) both;
+}
+
+/* --- DE-REZ: the old module loses power (applied to content wrapper by director).
+   Cinematic rhythm: a brief "inhale" (anticipation beat) before the collapse. --- */
+@keyframes fx-derez {
+  0%   { filter: none; transform: none; }
+  12%  { filter: brightness(1.07) saturate(1.12); transform: scale(1.004); }
+  35%  { filter: saturate(0.55) blur(1px); transform: translateX(-2px) scale(0.997); }
+  50%  { filter: saturate(0.4) blur(2px) hue-rotate(8deg); transform: translateX(2px) scale(0.995); }
+  65%  { filter: saturate(0.35) blur(4px) hue-rotate(-6deg); transform: translateX(-1px) scale(0.992); }
+  100% { filter: saturate(0.3) blur(7px) brightness(0.82); transform: scale(0.985); }
+}
+[data-fx="derez"] {
+  animation: fx-derez var(--fx-derez) var(--ease-sharp-in) both;
+  will-change: transform, filter;
+}
+
+/* --- MATERIALIZE: entering panels get a primary edge flash cascade --- */
+@keyframes fx-edge-flash {
+  0%   { box-shadow: inset 0 0 0 1px oklch(var(--p) / 0), 0 0 0px oklch(var(--p) / 0); }
+  35%  { box-shadow: inset 0 0 0 1px oklch(var(--p) / 0.85), 0 0 18px oklch(var(--p) / 0.25); }
+  100% { box-shadow: inset 0 0 0 1px oklch(var(--p) / 0), 0 0 0px oklch(var(--p) / 0); }
+}
+[data-fx="enter"] .corner-frame {
+  animation: fx-edge-flash var(--fx-flash) ease-out both;
+}
+[data-fx="enter"] .corner-frame:nth-child(2)  { animation-delay: calc(1 * 60ms); }
+[data-fx="enter"] .corner-frame:nth-child(3)  { animation-delay: calc(2 * 60ms); }
+[data-fx="enter"] .corner-frame:nth-child(4)  { animation-delay: calc(3 * 60ms); }
+[data-fx="enter"] .corner-frame:nth-child(5)  { animation-delay: calc(4 * 60ms); }
+[data-fx="enter"] .corner-frame:nth-child(6)  { animation-delay: calc(5 * 60ms); }
+[data-fx="enter"] .corner-frame:nth-child(7)  { animation-delay: calc(6 * 60ms); }
+[data-fx="enter"] .corner-frame:nth-child(8)  { animation-delay: calc(7 * 60ms); }
+[data-fx="enter"] .corner-frame:nth-child(9)  { animation-delay: calc(8 * 60ms); }
+[data-fx="enter"] .corner-frame:nth-child(10) { animation-delay: calc(9 * 60ms); }
+[data-fx="enter"] .corner-frame:nth-child(11) { animation-delay: calc(10 * 60ms); }
+[data-fx="enter"] .corner-frame:nth-child(n+12) { animation-delay: calc(11 * 60ms); }
+
+/* --- Transition overlay HUD --- */
+.fx-overlay-strip {
+  will-change: transform;
+  background: oklch(var(--b1) / 0.98);
+  /* machined-panel edge light: reads as physical shutter blades in motion */
+  box-shadow: inset 0 0 0 1px oklch(var(--p) / 0.08), 0 0 24px oklch(var(--p) / 0.06);
+}
+.fx-hud-vignette {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background: radial-gradient(ellipse at center, transparent 40%, oklch(0 0 0 / 0.35) 100%);
+}
+.fx-light-sweep {
+  position: absolute;
+  inset: -20%;
+  pointer-events: none;
+  mix-blend-mode: screen;
+  background: linear-gradient(
+    115deg,
+    transparent 42%,
+    oklch(var(--p) / 0.10) 47%,
+    oklch(1 0 0 / 0.16) 50%,
+    oklch(var(--p) / 0.10) 53%,
+    transparent 58%
+  );
+  transform: translateX(-120%);
+  will-change: transform;
+}
+.fx-hud-bracket {
+  position: absolute;
+  width: 22px;
+  height: 22px;
+  border-color: oklch(var(--p) / 0.7);
+  border-style: solid;
+  border-width: 0;
+}
+.fx-hud-progress {
+  height: 1px;
+  background: oklch(var(--p) / 0.9);
+  transform-origin: left center;
+  box-shadow: 0 0 8px oklch(var(--p) / 0.5);
+}
+@keyframes fx-hud-blink {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.25; }
+}
+.fx-hud-blink { animation: fx-hud-blink 0.9s steps(2) infinite; }
+
+/* --- Global reduced-motion: collapse the whole engine, all themes --- */
+@media (prefers-reduced-motion: reduce) {
+  :root {
+    --fx-derez: 1ms;
+    --fx-hold: 1ms;
+    --fx-flash: 1ms;
+  }
+  [data-fx="derez"],
+  [data-fx="enter"] .corner-frame,
+  .animate-fade-in,
+  .animate-slide-in-from-right {
+    animation-duration: 1ms !important;
+  }
+  .fx-hud-blink { animation: none; }
 }

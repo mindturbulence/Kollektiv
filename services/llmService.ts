@@ -31,8 +31,18 @@ const requireProvider = (feature: string, settings: LLMSettings, supported: LLMP
     return provider;
 };
 
+// --- Audio Mode Detection (speech vs music vs sfx changes the whole prompt shape) ---
+const getAudioMode = (model: string): 'speech' | 'music' | 'sfx' => {
+    const lower = model.toLowerCase();
+    // Music models must be checked before generic speech matches
+    if (/(elevenlabs.*music|music v2|suno|udio|stable audio|ace-step|lyria|mureka|minimax.*music)/.test(lower)) return 'music';
+    if (/(elevenlabs|voice|tts|bark|speech|kokoro|fish audio|minimax.*speech)/.test(lower)) return 'speech';
+    if (/(mmaudio|sound fx|sfx|audioldm|audiobox|foley)/.test(lower)) return 'sfx';
+    return 'music';
+};
+
 // --- Model-Specific Syntax (Engine Tuning) ---
-const getModelSyntax = (model: string) => {
+const getModelSyntax = (model: string, isVideo: boolean = false, isAudio: boolean = false) => {
     const lower = model.toLowerCase();
     
     // Video Architectures
@@ -63,6 +73,50 @@ const getModelSyntax = (model: string) => {
     if (lower.includes('wan video') || lower.includes('hunyuan video')) return {
         format: "Dense Visual Script.",
         rules: "Describe the scene with a focus on spatial relationships, character expressions, and environmental changes over time. High emphasis on consistent character features."
+    };
+    if (lower.includes('pika')) return {
+        format: "Concise Action Prose.",
+        rules: "Short, punchy sentences: one clear subject, one primary action, strong style keywords. Avoid multi-event sequences; describe a single continuous motion with a distinct visual style."
+    };
+    if (lower.includes('hailuo') || lower.includes('minimax')) return {
+        format: "Directorial Shot Description.",
+        rules: "Subject + scene + action + camera language. Camera moves may be given as bracketed director commands, e.g. [Pan left], [Zoom in], [Tracking shot], placed at the point in the action where they occur."
+    };
+    if (lower.includes('vidu')) return {
+        format: "Dynamic Scene Prose.",
+        rules: "Prioritize subject consistency and animation strength: clear subject identity, then environment, then a well-defined motion arc. Avoid ambiguous pronouns; restate the subject."
+    };
+    if (lower.includes('cogvideo')) return {
+        format: "Detailed Narrative Paragraph.",
+        rules: "Verbose, caption-style prose: exhaustively describe subject appearance, environment, and the full motion sequence in flowing sentences. This architecture rewards long, dense descriptions."
+    };
+    if (lower.includes('hidream')) return {
+        format: "High-Fidelity Scene Prose.",
+        rules: "Natural language with strong emphasis on aesthetic quality: lighting mood, color harmony, and clean composition, followed by a simple, physically plausible motion."
+    };
+    if (lower.includes('higgsfield')) return {
+        format: "Camera-Motion Centric Shot.",
+        rules: "Lead with the camera move (crash zoom, orbit, dolly, FPV dive, bullet-time) and build the scene around it. Bold, dramatic cinematography verbs; one signature move per prompt."
+    };
+    if (lower.includes('seedance')) return {
+        format: "Dynamic Cinematic Shot.",
+        rules: "Fluid motion with strong temporal coherence. Describe the scene as a continuous unfolding moment with precise lighting transitions and physics-consistent movement. Leverage multi-modal input: describe character reactions, camera paths, and environmental physics."
+    };
+    if (lower.includes('mochi')) return {
+        format: "Open-Domain Motion Script.",
+        rules: "General-purpose video description with strong subject consistency. Describe character actions, environment changes, and camera movement in flowing prose paragraphs."
+    };
+    if (lower.includes('happyhorse')) return {
+        format: "Multi-Style Cinematic Prose.",
+        rules: "Versatile scene description that adapts to any visual style. Focus on dynamic composition, rich color language, and physically coherent motion. High emphasis on atmosphere and emotional tone."
+    };
+    if (lower.includes('skyreels')) return {
+        format: "Structured Scene Narrative.",
+        rules: "Detailed subject-first description with strong temporal continuity. Establish character, environment, and action arc in flowing prose. Focus on 1080p fidelity and consistent physics across the full clip."
+    };
+    if (lower.includes('pixverse')) return {
+        format: "Stylized Visual Scene.",
+        rules: "Creative visual descriptions with emphasis on artistic style and aesthetic quality. Blend narrative prose with specific visual references and mood cues."
     };
 
     // Image Architectures
@@ -98,21 +152,102 @@ const getModelSyntax = (model: string) => {
         format: "Balanced Semantic Tags.",
         rules: "Focus on subject clarity and environmental context. Use a mix of natural language and descriptive keywords. Follow the STRICT IMAGE WORKFLOW."
     };
+    if (lower.includes('seedream')) return {
+        format: "Aesthetic Detail Prose.",
+        rules: "Prioritize aesthetic quality: lighting mood, color harmony, material textures, and elegant composition. Write flowing descriptive paragraphs with strong artistic direction. Follow the STRICT IMAGE WORKFLOW."
+    };
+    if (lower.includes('qwen-image')) return {
+        format: "Balanced Descriptive Prose.",
+        rules: "Clear subject-focused description with strong emphasis on visual relationships: foreground subject, midground action, background environment. Use natural language with precise spatial terms. Follow the STRICT IMAGE WORKFLOW."
+    };
+    if (lower.includes('nano banana')) return {
+        format: "Concise Visual Direction.",
+        rules: "Short, direct descriptive phrases focusing on style, composition, and lighting. Avoid long narratives; prioritize visual keywords and clear aesthetic direction. Follow the STRICT IMAGE WORKFLOW."
+    };
+    if (lower.includes('recraft')) return {
+        format: "Vector-Ready Graphic Description.",
+        rules: "Geometric precision, scalable shapes, and consistent style. Describe flat colors, typography, and layout composition with exact spatial relationships. Follow the STRICT IMAGE WORKFLOW."
+    };
+    if (lower.includes('lumina')) return {
+        format: "Atmospheric Scene Description.",
+        rules: "Focus on lighting, color palette, and mood. Use rich descriptive language emphasizing shadows, highlights, and atmospheric effects as primary elements. Follow the STRICT IMAGE WORKFLOW."
+    };
     
     // Audio Architectures
-    if (lower.includes('elevenlabs')) return { 
-        format: "Dialogue Script.", 
-        rules: "Include [emotional cues] or [breath sounds] for natural delivery. Focus on cadence, emphasis, and character-specific vocal quirks." 
+    if (lower.includes('elevenlabs')) return {
+        format: "Dialogue Script.",
+        rules: "Embed inline audio tags for delivery: [whispers], [laughs], [sighs], [excited], [sarcastic], [pause]. Punctuation drives pacing (ellipses for hesitation, CAPS for emphasis). Focus on cadence and character-specific vocal quirks."
     };
-    if (lower.includes('suno') || lower.includes('udio')) return { 
-        format: "Musical Structure.", 
-        rules: "Define [Genre], [Instruments], [Mood], [Tempo], and structure (Verse, Chorus, Bridge, Drop). Use descriptive musical terms and production style cues." 
+    if (lower.includes('bark')) return {
+        format: "Expressive Script.",
+        rules: "Plain script text with nonverbal cues in brackets: [laughter], [sighs], [gasps], [clears throat], and ♪ around sung lines. Keep sentences short; hesitation via '...' reads naturally."
     };
-    if (lower.includes('mmaudio')) return { 
-        format: "Layered Sonic Textures.", 
-        rules: "Describe the layers of sound, material impact, and acoustic environment (reverb, echo, spatial positioning). Focus on foley-style detail." 
+    if (lower.includes('vibe voice')) return {
+        format: "Conversational Script.",
+        rules: "Long-form multi-speaker dialogue with explicit speaker labels (Speaker 1:, Speaker 2:). Natural conversational rhythm, turn-taking, and consistent per-speaker tone descriptions."
+    };
+    if (lower.includes('voice engine') || lower.includes('openai voice')) return {
+        format: "Voice Direction Script.",
+        rules: "The script text plus concise delivery direction: emotion, pacing, accent, and energy level stated up front, then the verbatim lines to speak."
+    };
+    if (lower.includes('suno') || lower.includes('udio')) return {
+        format: "Musical Structure.",
+        rules: "Define [Genre], [Instruments], [Mood], [Tempo], and structure (Verse, Chorus, Bridge, Drop). Use descriptive musical terms and production style cues. NEVER name real artists; describe their style traits instead."
+    };
+    if (lower.includes('stable audio')) return {
+        format: "Structured Sound Descriptors.",
+        rules: "Comma-separated descriptor fields: Genre, Subgenre, Instruments, Moods, BPM, Key, production style (e.g. 'Trip Hop, Dusty Drums, Rhodes, Moody, 90 BPM, D minor'). Concrete sonic vocabulary over narrative prose."
+    };
+    if (lower.includes('audioldm')) return {
+        format: "Concise Sound Event Description.",
+        rules: "One clear sentence per sound event: source, action, and acoustic environment (e.g. 'a wooden door creaks open slowly in an empty stone hallway'). Avoid abstract or visual-only adjectives."
+    };
+    if (lower.includes('audiobox')) return {
+        format: "Natural Sound Narration.",
+        rules: "Plain-language description of the sound scene or voice qualities: who/what is producing sound, where, and how it evolves. Combine voice description with environmental context when both apply."
+    };
+    if (lower.includes('mmaudio')) return {
+        format: "Layered Sonic Textures.",
+        rules: "Describe the layers of sound, material impact, and acoustic environment (reverb, echo, spatial positioning). Focus on foley-style detail."
+    };
+    if (lower.includes('kokoro')) return {
+        format: "Natural Speech Script.",
+        rules: "Conversational text with natural rhythm. Punctuation drives pacing: commas for brief pauses, periods for stops, ellipses for hesitation. No special tags needed."
+    };
+    if (lower.includes('fish audio')) return {
+        format: "Character Voice Script.",
+        rules: "Explicit speaker labels with delivery cues. Use inline tags for emotion [happy], [sad], [angry], [whisper], [shout]. Clear pause and emphasis markers."
+    };
+    if (lower.includes('minimax music')) return {
+        format: "Vocal-First Musical Structure.",
+        rules: "Prioritize vocal description: emotional delivery, vocal timbre, vibrato, and lyrical phrasing. Then define genre, tempo, instruments, and arrangement. Write structured tags: [Genre], [Vocal Style], [Instrumentation], [Mood]. Focus on natural-sounding vocal performance with realistic breath control."
+    };
+    if (lower.includes('minimax speech')) return {
+        format: "Expressive Dialogue Prose.",
+        rules: "Rich emotional context cues embedded in natural prose. Describe the delivery style before the dialogue line: 'In a hushed, urgent tone: [...]'."
+    };
+    if (lower.includes('mureka')) return {
+        format: "Lyrics-First Musical Structure.",
+        rules: "Start with the lyrics/theme, then define the instrumental arrangement around them. Use structured tags: [Genre], [Mood], [Vocal Style], [Instrumentation], [Tempo]. Write lyrics with clear section markers: [Verse], [Chorus], [Bridge]. Match the musical arrangement to the emotional arc of the lyrics."
+    };
+    if (lower.includes('lyria')) return {
+        format: "Musical Genre & Texture.",
+        rules: "Define genre, instrumentation, texture, and production style. Use descriptive musical language: 'lush pads', 'driving 808s', 'airy vocal harmonies', 'lo-fi tape warmth'. Multi-language support available; specify language explicitly."
+    };
+    if (lower.includes('ace-step')) return {
+        format: "Structured Music Tags.",
+        rules: "Comma-separated musical descriptors: genre, tempo (BPM), key, instruments, mood, production references. Keep concise; structure before lyrics."
     };
 
+    // Media-aware fallbacks for models without a dedicated profile
+    if (isVideo) return {
+        format: "Cinematic Motion Prose.",
+        rules: "One continuous shot: subject, scene, action, camera movement, lighting, and style in flowing prose. Concrete motion verbs and physically plausible dynamics."
+    };
+    if (isAudio) return {
+        format: "Structured Audio Description.",
+        rules: "Describe sound sources, acoustic space, mood, and rhythm with precise sonic vocabulary. No visual-only language."
+    };
     return { format: "Natural Language.", rules: "Cohesive visual or conceptual description with high attention to detail and unique stylistic flair." };
 };
 
@@ -143,9 +278,29 @@ FINAL OUTPUT CONSTRAINTS:
 - CONTAIN ONLY THE FINAL PROMPT—NO EXPLANATIONS, TITLES, OR FORMATTING.
 `;
 
+// Shared by ENHANCER and REFINER. Video models read plain prose — literal
+// "Keyframe 2s" labels leak into the output prompt and hurt adherence.
+const VIDEO_MOTION_RULES = `
+[MOTION TIMELINE RULES]: Write the motion as ONE continuous chronological arc in prose: (1) establish the opening framing and the subject's initial state, (2) develop the primary action to its dynamic peak — speed changes, momentum shifts, weight and gravity, (3) resolve with the action's culmination or a camera settle. Connect the beats with natural flow words ("as", "then", "while"), NEVER with labels. STRICTLY FORBIDDEN in the output: timestamps, "Keyframe" markers, section headers, or shot lists. Every described motion must be physically plausible and achievable within a single short clip — one primary action, not a montage.`;
+
+const AUDIO_STRUCTURE_RULES: Record<'speech' | 'music' | 'sfx', string> = {
+    speech: `
+[SPEECH SCRIPT RULES]: Output a performable script. Embed delivery cues inline in brackets exactly where they occur: [whispers], [sighs], [laughs], [pause], [excited], [breath]. Use punctuation for pacing (ellipses for hesitation, em-dashes for interruption, CAPS sparingly for emphasis). Describe the voice once up front (age, timbre, accent, emotional register), then give the verbatim lines. NO music headers, BPM, or [Verse]/[Chorus] tags.`,
+    music: `
+[MUSIC STRUCTURE RULES]: Define the sonic identity with structured tags: [Genre: <style>] [Tempo: <BPM>] [Mood: <emotion>] [Instruments: <list>], then the song structure where lyrics apply: [Intro] [Verse] [Chorus] [Bridge] [Drop] [Outro]. Include production style cues (analog warmth, sidechain compression, lo-fi tape hiss). NEVER name real artists or bands — describe their sonic traits instead.`,
+    sfx: `
+[SOUND DESIGN RULES]: Describe the sound event in concrete physical layers: the source and its material (wood, metal, glass, flesh), the action producing the sound (impact, scrape, whoosh), the acoustic space (room size, reverb tail, echo), and spatial position/movement (close-up, panning left, receding). Order the layers foreground to background. NO song structure, lyrics, BPM, or genre tags.`,
+};
+
+const AUDIO_MODE_PROTOCOLS: Record<'speech' | 'music' | 'sfx', string> = {
+    speech: "Vocal performance focus. Prioritize emotional delivery, cadence, and character consistency over ambient description.",
+    music: "Musical composition focus. Prioritize instrumentation, arrangement, production quality, and structural complexity.",
+    sfx: "Sound design focus. Prioritize physical accuracy of sources, materials, and acoustic space. Foley-level precision.",
+};
+
 const AI_ROLES = {
     ENHANCER: (model: string, length: string, isVideo: boolean, isAudio: boolean, _hasManualCamera: boolean, inputType?: string, modifierCatalog?: string, masterRole?: string) => {
-        const syntax = getModelSyntax(model);
+        const syntax = getModelSyntax(model, isVideo, isAudio);
         const l = length === 'Short' ? 'Strictly under 40 words' : length === 'Long' ? 'EXTREMELY DETAILED, at least 4-5 long paragraphs (minimum 600 words)' : 'Around 150-200 words';
         const isI2V = isVideo && inputType === 'i2v';
 
@@ -154,7 +309,7 @@ const AI_ROLES = {
 
         let temporalInstruct = "";
         if (isVideo) {
-            temporalInstruct = `\n[KINEMATICS FRAME SEQUENCING RULES]: Describe the motion naturally as an elegant chronological sequence with timeline landmarks: Keyframe 0s (establish framing, initial subject posture), Keyframe 2s (dynamic peak, fluid speed transitions, momentum shifts, and gravity calibration), Keyframe 4s+ (resolution, parallax deceleration, or physical culmination of the shot).`;
+            temporalInstruct = VIDEO_MOTION_RULES;
             persona = masterRole ? `Master Role: ${masterRole}\n\nTask Specific Role: Visionary Cinematic Director.` : "Role: Visionary Cinematic Director.";
             if (isI2V) {
                 modeProtocol = `I2V PROTOCOL (DIRECTING AN IMAGE): The user is providing a reference image. Assume the subject, colors, and static details are already set. DO NOT describe colors or objects in the image. Focus EXCLUSIVELY on directing movement, camera paths, and temporal shifts. Strip all static adjectives. Output must be purely kinetic, efficient, and physically plausible.`;
@@ -162,14 +317,15 @@ const AI_ROLES = {
                 modeProtocol = `T2V PROTOCOL (WORLD BUILDING): Build a cinematic world from scratch. Focus on composition, blocking, character action, and lighting that establishes a powerful narrative scene.`;
             }
         } else if (isAudio) {
-            temporalInstruct = `\n[ACOUSTIC STRUCTURE RULES]: Format the prompt using structured audio tags. If music: include BPM and instrument tags with headers like [Genre: <cyberpunk metal/ambient synth>] [Tempo: <120 BPM>] [Verse] [Chorus] [Drop]. If dialogue: embed precise phonetic cadence and delivery cues directly into the output lyrics or script (e.g., [breath], [whisper], [dramatic pause], [annunciated]).`;
-            persona = "Role: Master Audio Producer and Sound Architect.";
-            modeProtocol = "Acoustic focus. Map the frequency, rhythm, and sonic textures with extreme precision. If dialogue, focus on emotional delivery. If music, focus on instrumentation, production quality, and structural complexity.";
+            const audioMode = getAudioMode(model);
+            temporalInstruct = AUDIO_STRUCTURE_RULES[audioMode];
+            persona = masterRole ? `Master Role: ${masterRole}\n\nTask Specific Role: Master Audio Producer and Sound Architect.` : "Role: Master Audio Producer and Sound Architect.";
+            modeProtocol = AUDIO_MODE_PROTOCOLS[audioMode];
         } else {
             modeProtocol += ` IMAGE PROTOCOL: This is for a STATIC image. Do NOT include temporal descriptions, durations, or motion verbs unless they describe a frozen moment in time. Focus on 'the decisive moment'. ${IMAGE_GENERATION_WORKFLOW}`;
         }
 
-        const spatialInstruct = `\n[SPATIAL GEOMETRY & MESH DESCRIPTORS]: If the input describes geometric, 3D, architecture, CAD, or spatial layouts, explicitly refer to native XYZ coordinate grids, surface extrusion normals, wireframe vertices, depth topologies, and mesh structures (e.g., 'oriented at coordinate node [X, Y, Z]', 'triangular tessellation boundary curves', or 'extruded normal vectors').`;
+        const spatialInstruct = isAudio ? '' : `\n[SPATIAL GEOMETRY & MESH DESCRIPTORS]: If the input describes geometric, 3D, architecture, CAD, or spatial layouts, explicitly refer to native XYZ coordinate grids, surface extrusion normals, wireframe vertices, depth topologies, and mesh structures (e.g., 'oriented at coordinate node [X, Y, Z]', 'triangular tessellation boundary curves', or 'extruded normal vectors').`;
 
         return `${persona}
 Goal: Generate 1 highly accurate, production-ready refined prompt.
@@ -204,15 +360,15 @@ NO INTROS, NO EXPLANATIONS.`;
     },
 
     REFINER: (model: string, isVideo: boolean, isAudio: boolean, _hasManualCamera: boolean, inputType?: string, masterRole?: string) => {
-        const syntax = getModelSyntax(model);
+        const syntax = getModelSyntax(model, isVideo, isAudio);
         const isI2V = isVideo && inputType === 'i2v';
-        
+
         let protocol = "";
         let role = masterRole ? `Master Role: ${masterRole}\nTask Role: Elite Prompt Refiner and Model Specialist.` : "Elite Prompt Refiner and Model Specialist.";
         let temporalInstruct = "";
-        
+
         if (isVideo) {
-            temporalInstruct = `\n[KINEMATICS FRAME SEQUENCING]: Structure the prompt as an elegant chronological vision timeline: Keyframe 0s (initial setup/focal), Keyframe 2s (dynamic peak, volumetric speed transitions, gravity vectors), Keyframe 4s+ (momentum deceleration, physical culmination).`;
+            temporalInstruct = VIDEO_MOTION_RULES;
             role = masterRole ? `Master Role: ${masterRole}\nTask Role: Visionary Cinematic Director.` : "Visionary Cinematic Director.";
             if (isI2V) {
                 protocol = "I2V PROTOCOL: You are animating a fixed image. Strip all static descriptions of the subject. Focus ONLY on the physics of motion, camera pathing, and scene evolution.";
@@ -220,14 +376,15 @@ NO INTROS, NO EXPLANATIONS.`;
                 protocol = "T2V PROTOCOL: Direct the scene from text. Establish subject, environment, and motion sequence with cinematic precision.";
             }
         } else if (isAudio) {
-            temporalInstruct = `\n[ACOUSTIC STRUCTURE]: Use musical block notation like [Genre: <style>] [Tempo: <BPM>] [Verse] [Chorus] [Drop]. For voice-over, interlace delivery triggers [breath], [whisper], [dramatic pause] inside scripts.`;
-            role = "Master Sound Engineer.";
-            protocol = "Focus on acoustics, material sounds, and rhythmic structure. Maximize sonic fidelity.";
+            const audioMode = getAudioMode(model);
+            temporalInstruct = AUDIO_STRUCTURE_RULES[audioMode];
+            role = masterRole ? `Master Role: ${masterRole}\nTask Role: Master Sound Engineer.` : "Master Sound Engineer.";
+            protocol = AUDIO_MODE_PROTOCOLS[audioMode];
         } else {
             protocol = `IMAGE PROTOCOL: This is for a STATIC image. Do NOT include temporal descriptions or motion verbs. Focus on composition, lighting, and texture. ${IMAGE_GENERATION_WORKFLOW}`;
         }
 
-        const spatialInstruct = `\n[SPATIAL GEOMETRY & MESH DESCRIPTORS]: If the layout has geometric or coordinate traits, describe boundaries explicitly using 3D spatial points [X, Y, Z], surface normal extrusions, or wireframe grid tessellations.`;
+        const spatialInstruct = isAudio ? '' : `\n[SPATIAL GEOMETRY & MESH DESCRIPTORS]: If the layout has geometric or coordinate traits, describe boundaries explicitly using 3D spatial points [X, Y, Z], surface normal extrusions, or wireframe grid tessellations.`;
 
         return `Role: ${role} Optimized for ${model}.
 Task: Rewrite the user's concept into the absolute best possible ${syntax.format} formula for ${model}.
@@ -298,6 +455,9 @@ export const buildContextForEnhancer = (modifiers: PromptModifiers, isAudio: boo
     
     if (modifiers.lighting) ctx.push(`Lighting: ${modifiers.lighting}`);
     if (modifiers.composition) ctx.push(`Composition: ${modifiers.composition}`);
+    if (modifiers.timeOfDay) ctx.push(`Time of Day: ${modifiers.timeOfDay}`);
+    if (modifiers.weather) ctx.push(`Weather: ${modifiers.weather}`);
+    if (modifiers.colorGrade) ctx.push(`Color Grade: ${modifiers.colorGrade}`);
     if (modifiers.photographyStyle) ctx.push(`Genre: ${modifiers.photographyStyle}`);
     if (modifiers.filmType) ctx.push(`Medium: ${modifiers.filmType}`);
     if (modifiers.aspectRatio) ctx.push(`Aspect Ratio: ${modifiers.aspectRatio}`);
@@ -311,6 +471,10 @@ export const buildContextForEnhancer = (modifiers: PromptModifiers, isAudio: boo
     if (modifiers.voiceTone) ctx.push(`Tone: ${modifiers.voiceTone}`);
     if (modifiers.audioEnvironment) ctx.push(`Acoustics: ${modifiers.audioEnvironment}`);
     if (modifiers.audioMood) ctx.push(`Mood: ${modifiers.audioMood}`);
+    if (isAudio && modifiers.musicGenre) ctx.push(`Music Genre: ${modifiers.musicGenre}`);
+    if (isAudio && modifiers.instrumentation) ctx.push(`Instrumentation: ${modifiers.instrumentation}`);
+    if (isAudio && modifiers.vocalStyle) ctx.push(`Vocal Style: ${modifiers.vocalStyle}`);
+    if (isAudio && modifiers.productionEra) ctx.push(`Production Era: ${modifiers.productionEra}`);
     if (isAudio && modifiers.audioDuration) ctx.push(`Duration: ${modifiers.audioDuration}s`);
 
     return ctx.length ? `[Architectural Constraints]\n${ctx.join('\n')}` : '';

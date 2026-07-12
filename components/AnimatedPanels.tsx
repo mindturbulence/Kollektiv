@@ -1,16 +1,13 @@
 import { useState, useEffect } from 'react';
 import { motion, type Variants } from 'motion/react';
 
-export const TerminalText = ({ text, delay = 0, className = "", centered = false }: { text: string; delay?: number; className?: string; centered?: boolean }) => {
+const DECRYPT_GLYPHS = '!<>-_\\/[]{}=+*^?#0123456789';
+
+export const TerminalText = ({ text, delay = 0, className = "", centered = false, mode = 'decrypt' }: { text: string; delay?: number; className?: string; centered?: boolean; mode?: 'type' | 'decrypt' }) => {
     const [displayedText, setDisplayedText] = useState('');
     const [started, setStarted] = useState(false);
     const [isComplete, setIsComplete] = useState(false);
-    
-    // Use motion's internal presence state if wrapped in AnimatePresence
-    // However, since we want a custom "un-typing" on exit, we might need to handle it via a prop or a separate animation
-    // For now, let's just make it respond to variants if they stagger correctly.
-    // If we want actual un-typing on exit, it's complex because AnimatePresence waits for the component to unmount.
-    
+
     useEffect(() => {
         const timeout = setTimeout(() => {
             setStarted(true);
@@ -20,18 +17,36 @@ export const TerminalText = ({ text, delay = 0, className = "", centered = false
 
     useEffect(() => {
         if (!started || !text) return;
+        if (typeof window !== 'undefined' && window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
+            setDisplayedText(text);
+            setIsComplete(true);
+            return;
+        }
         let i = 0;
         const interval = setInterval(() => {
             if (i <= text.length) {
-                setDisplayedText(text.slice(0, i));
-                if (i === text.length) setIsComplete(true);
+                if (mode === 'decrypt') {
+                    // Resolved prefix + scrambled live tail: futuristic decrypt readout.
+                    let tail = '';
+                    const tailLen = Math.min(text.length - i, 3);
+                    for (let t = 0; t < tailLen; t++) {
+                        tail += text[i + t] === ' ' ? ' ' : DECRYPT_GLYPHS[(Math.random() * DECRYPT_GLYPHS.length) | 0];
+                    }
+                    setDisplayedText(text.slice(0, i) + tail);
+                } else {
+                    setDisplayedText(text.slice(0, i));
+                }
+                if (i === text.length) {
+                    setDisplayedText(text);
+                    setIsComplete(true);
+                }
                 i++;
             } else {
                 clearInterval(interval);
             }
         }, 20);
         return () => clearInterval(interval);
-    }, [text, started]);
+    }, [text, started, mode]);
 
     return (
         <motion.span 
@@ -105,35 +120,62 @@ export const ScanLine = ({ delay = 0 }: { delay?: number }) => (
     </div>
 );
 
-export const pageVariants: Variants = {
-    hidden: { 
-        clipPath: 'inset(100% 0 0 0)',
-        opacity: 0,
-        scale: 0.98,
-        filter: 'blur(10px)',
-    },
-    visible: { 
-        clipPath: 'inset(0% 0 0 0)',
+/**
+ * Shell-level variants for the App page wrapper. The Context Shift Engine's
+ * overlay owns the visual drama; the shell only coordinates a light blur-settle
+ * and keeps exit near-instant (it happens behind an opaque cover).
+ */
+export const shellVariants: Variants = {
+    hidden: { opacity: 0, scale: 0.995, filter: 'blur(6px)' },
+    visible: {
         opacity: 1,
         scale: 1,
         filter: 'blur(0px)',
-        transition: { 
-            duration: 1.2,
+        transition: {
+            duration: 0.5,
+            ease: [0.22, 1, 0.36, 1] as any,
+            when: "beforeChildren",
+            staggerChildren: 0.08
+        }
+    },
+    exit: {
+        opacity: 0,
+        transition: { duration: 0.15 }
+    }
+};
+
+export const pageVariants: Variants = {
+    hidden: {
+        clipPath: 'inset(100% 0 0 0)',
+        opacity: 0,
+        scale: 0.985,
+        y: 10,
+        filter: 'blur(8px)',
+    },
+    visible: {
+        clipPath: 'inset(0% 0 0 0)',
+        opacity: 1,
+        scale: 1,
+        y: 0,
+        filter: 'blur(0px)',
+        transition: {
+            duration: 0.65,
             ease: [0.16, 1, 0.3, 1] as any,
             when: "beforeChildren",
-            staggerChildren: 0.1
+            staggerChildren: 0.08
         }
     },
     exit: {
         clipPath: 'inset(100% 0 0 0)',
         opacity: 0,
-        scale: 0.98,
-        filter: 'blur(20px)',
+        scale: 0.985,
+        y: -8,
+        filter: 'blur(10px)',
         transition: {
-            duration: 0.8,
+            duration: 0.3,
             ease: [0.7, 0, 0.84, 0] as any,
             when: "afterChildren",
-            staggerChildren: 0.1,
+            staggerChildren: 0.05,
             staggerDirection: -1
         }
     }
