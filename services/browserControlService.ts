@@ -16,6 +16,11 @@ type PermissionListener = (granted: boolean) => void;
 class BrowserControlService {
     private _permissionGranted = false;
     private listeners = new Set<PermissionListener>();
+    /** Actual pixel size of the last captured frame, set by liveAssistantService
+     *  so coordinate mapping uses the real encoded frame — not a guess derived
+     *  from window.innerWidth/innerHeight, which can diverge from it. */
+    private captureW = 0;
+    private captureH = 0;
 
     /** Whether browser control permission is currently granted. */
     get permissionGranted(): boolean {
@@ -55,16 +60,28 @@ class BrowserControlService {
 
     // ─── Coordinates: map from scaled capture to real viewport ───
 
+    /** Called by liveAssistantService each time it encodes a frame, so
+     *  captureToViewport maps against the real captured pixel size instead of
+     *  re-deriving it from window.innerWidth/innerHeight (wrong whenever the
+     *  device pixel ratio isn't 1, or CSS viewport size is < 1024px). */
+    setCaptureSize(width: number, height: number): void {
+        this.captureW = width;
+        this.captureH = height;
+    }
+
     /** The capture canvas the assistant sees is scaled to max 1024px on the
      *  longest side (see startScreenShare in liveAssistantService.ts).
      *  The model may provide coordinates EITHER as 0–1 fractions OR as absolute
-     *  pixel values from that scaled frame. Auto-detect: if > 1, treat as pixel. */
+     *  pixel values from that scaled frame. Auto-detect: if > 1, treat as pixel.
+     *  Clamped to [0, 1] after normalisation so out-of-range values never produce
+     *  negative or overshoot viewport coordinates. */
     private captureToViewport(nx: number, ny: number): { x: number; y: number } {
-        const scale = Math.min(1, 1024 / Math.max(window.innerWidth, window.innerHeight));
-        const capW = Math.round(window.innerWidth * scale);
-        const capH = Math.round(window.innerHeight * scale);
-        const normX = nx > 1 && capW > 0 ? nx / capW : nx;
-        const normY = ny > 1 && capH > 0 ? ny / capH : ny;
+        const capW = this.captureW || window.innerWidth;
+        const capH = this.captureH || window.innerHeight;
+        let normX = nx > 1 && capW > 0 ? nx / capW : nx;
+        let normY = ny > 1 && capH > 0 ? ny / capH : ny;
+        normX = Math.max(0, Math.min(1, normX));
+        normY = Math.max(0, Math.min(1, normY));
         return {
             x: Math.round(normX * window.innerWidth),
             y: Math.round(normY * window.innerHeight),
@@ -73,11 +90,37 @@ class BrowserControlService {
 
     // ─── Element-level helpers ────────────────────────────────────
 
-    /** Find the topmost element at the given viewport coordinates. */
+    /** Tags that indicate an element is likely an interactive overlay / popup. */
+    private static OVERLAY_SKIP = ['screen-control-overlay', 'assistant-fault', 'toast', 'modal', 'popup', 'dropdown'];
+
+    /** Find the best clickable element at viewport coordinates, skipping known
+     *  overlays by walking up from the hit element and preferring interactives. */
     private elementAt(x: number, y: number): Element | null {
-        // Temporarily disable pointer-events so we can query through overlays.
-        const el = document.elementFromPoint(x, y);
-        return el && el !== document.documentElement ? el : null;
+        // elementsFromPoint not supported in older browsers; fallback to elementFromPoint.
+        const elementsAt = (typeof document.elementsFromPoint === 'function')
+            ? document.elementsFromPoint(x, y)
+            : [document.elementFromPoint(x, y)].filter(Boolean) as Element[];
+        // First pass: find the first interactive element (button, a, input, etc.).
+        for (const el of elementsAt) {
+            if (el === document.documentElement || el === document.body) continue;
+            // Skip elements that are part of known overlays.
+            const cls = (el as HTMLElement).className || '';
+            if (typeof cls === 'string' &&
+                BrowserControlService.OVERLAY_SKIP.some(k => cls.includes(k))) continue;
+            const tag = el.tagName.toLowerCase();
+            if (['button', 'a', 'input', 'textarea', 'select', 'label'].includes(tag)) return el;
+            if (el.getAttribute('role') === 'button' || el.getAttribute('tabindex') !== null) return el;
+        }
+        // Second pass: first non-overlay, non-root element.
+        for (const el of elementsAt) {
+            if (el === document.documentElement || el === document.body) continue;
+            const cls = (el as HTMLElement).className || '';
+            if (typeof cls === 'string' &&
+                BrowserControlService.OVERLAY_SKIP.some(k => cls.includes(k))) continue;
+            return el;
+        }
+        // Fallback.
+        return document.elementFromPoint(x, y);
     }
 
     /** Scroll ancestors so the element is visible before interacting. */
@@ -98,13 +141,20 @@ class BrowserControlService {
         if (el) this.scrollIntoView(el);
 
         // Dispatch real-looking pointer + mouse + click sequence.
-        const opts: MouseEventInit = { bubbles: true, cancelable: true, view: window, clientX: x, clientY: y, button: 0 };
+        const pointerId = 1;
+        const ptrOpts: PointerEventInit = { bubbles: true, cancelable: true, view: window, clientX: x, clientY: y, button: 0, pointerId, pointerType: 'mouse' };
+        const mouseOpts: MouseEventInit = { bubbles: true, cancelable: true, view: window, clientX: x, clientY: y, button: 0 };
         const target = el || document.body;
-        target.dispatchEvent(new PointerEvent('pointerdown', { ...opts, pointerType: 'mouse' }));
-        target.dispatchEvent(new MouseEvent('mousedown', opts));
-        target.dispatchEvent(new PointerEvent('pointerup', { ...opts, pointerType: 'mouse' }));
-        target.dispatchEvent(new MouseEvent('mouseup', opts));
-        target.dispatchEvent(new MouseEvent('click', opts));
+        target.dispatchEvent(new PointerEvent('pointerdown', ptrOpts));
+        target.dispatchEvent(new MouseEvent('mousedown', mouseOpts));
+        // Focus the element after mousedown — synthetic events don't trigger
+        // automatic focus like real user interaction does.
+        if (el && typeof (el as HTMLElement).focus === 'function') {
+            (el as HTMLElement).focus();
+        }
+        target.dispatchEvent(new PointerEvent('pointerup', ptrOpts));
+        target.dispatchEvent(new MouseEvent('mouseup', mouseOpts));
+        target.dispatchEvent(new MouseEvent('click', mouseOpts));
 
         const tag = el?.tagName?.toLowerCase() || 'document';
         const id = el?.id ? `#${el.id}` : '';
@@ -119,9 +169,12 @@ class BrowserControlService {
         const el = this.elementAt(x, y);
         if (el) this.scrollIntoView(el);
 
-        const opts: MouseEventInit = { bubbles: true, cancelable: true, view: window, clientX: x, clientY: y, button: 0 };
+        const mouseOpts: MouseEventInit = { bubbles: true, cancelable: true, view: window, clientX: x, clientY: y, button: 0 };
         const target = el || document.body;
-        target.dispatchEvent(new MouseEvent('dblclick', opts));
+        if (el && typeof (el as HTMLElement).focus === 'function') {
+            (el as HTMLElement).focus();
+        }
+        target.dispatchEvent(new MouseEvent('dblclick', mouseOpts));
         return `Double-clicked at (${x}, ${y})`;
     }
 
@@ -132,9 +185,12 @@ class BrowserControlService {
         const el = this.elementAt(x, y);
         if (el) this.scrollIntoView(el);
 
-        const opts: MouseEventInit = { bubbles: true, cancelable: true, view: window, clientX: x, clientY: y, button: 2 };
+        const mouseOpts: MouseEventInit = { bubbles: true, cancelable: true, view: window, clientX: x, clientY: y, button: 2 };
         const target = el || document.body;
-        target.dispatchEvent(new MouseEvent('contextmenu', opts));
+        if (el && typeof (el as HTMLElement).focus === 'function') {
+            (el as HTMLElement).focus();
+        }
+        target.dispatchEvent(new MouseEvent('contextmenu', mouseOpts));
         return `Right-clicked at (${x}, ${y})`;
     }
 
@@ -170,17 +226,27 @@ class BrowserControlService {
         }
 
         // Insert text into the field.
-        const existing = isInput ? (el as HTMLInputElement).value : (el as HTMLElement).textContent || '';
-        const start = isInput ? (el as HTMLInputElement).selectionStart ?? existing.length : existing.length;
-
         if (isInput) {
             const input = el as HTMLInputElement;
+            const start = input.selectionStart ?? input.value.length;
             const before = input.value.slice(0, start);
             const after = input.value.slice(input.selectionEnd ?? start);
-            input.value = before + text + after;
+            const newValue = before + text + after;
             const caret = start + text.length;
+
+            // Use the native value setter so React's controlled-input detection fires.
+            // Setting `input.value` directly bypasses React's property descriptor
+            // patch — React polls the native setter to detect changes in 18+.
+            const nativeSetter = Object.getOwnPropertyDescriptor(
+                window.HTMLInputElement.prototype, 'value'
+            )?.set;
+            if (nativeSetter) {
+                nativeSetter.call(input, newValue);
+            } else {
+                input.value = newValue;
+            }
             input.setSelectionRange(caret, caret);
-        } else {
+        } else if (isContentEditable) {
             const editable = el as HTMLElement;
             const sel = window.getSelection();
             if (sel && sel.rangeCount) {
@@ -241,14 +307,31 @@ class BrowserControlService {
         const cx = rect.left + rect.width / 2;
         const cy = rect.top + rect.height / 2;
 
-        const opts: MouseEventInit = { bubbles: true, cancelable: true, view: window, clientX: cx, clientY: cy, button: 0 };
-        el.dispatchEvent(new PointerEvent('pointerdown', { ...opts, pointerType: 'mouse' }));
-        el.dispatchEvent(new MouseEvent('mousedown', opts));
-        el.dispatchEvent(new PointerEvent('pointerup', { ...opts, pointerType: 'mouse' }));
-        el.dispatchEvent(new MouseEvent('mouseup', opts));
-        el.dispatchEvent(new MouseEvent('click', opts));
+        const pointerId = 1;
+        const ptrOpts: PointerEventInit = { bubbles: true, cancelable: true, view: window, clientX: cx, clientY: cy, button: 0, pointerId, pointerType: 'mouse' };
+        const mouseOpts: MouseEventInit = { bubbles: true, cancelable: true, view: window, clientX: cx, clientY: cy, button: 0 };
+        el.dispatchEvent(new PointerEvent('pointerdown', ptrOpts));
+        el.dispatchEvent(new MouseEvent('mousedown', mouseOpts));
+        if (typeof el.focus === 'function') el.focus();
+        el.dispatchEvent(new PointerEvent('pointerup', ptrOpts));
+        el.dispatchEvent(new MouseEvent('mouseup', mouseOpts));
+        el.dispatchEvent(new MouseEvent('click', mouseOpts));
 
         return `Clicked <${el.tagName.toLowerCase()}${el.id ? `#${el.id}` : ''}${el.className ? `.${el.className.split(' ').filter(Boolean).slice(0, 1)}` : ''}> matching "${cssSelector}".`;
+    }
+
+    /** Find the actual scrollable container under the given viewport point.
+     *  This app shell is a fixed-viewport SPA (root + <main> are overflow-hidden
+     *  — see App.tsx) — window/document never scrolls, each page owns its own
+     *  overflow-y-auto region, so scrolling must target that element, not window. */
+    private scrollableAt(x: number, y: number): Element | null {
+        let el: Element | null = document.elementFromPoint(x, y);
+        while (el && el !== document.documentElement) {
+            const style = getComputedStyle(el);
+            if (/(auto|scroll|overlay)/.test(style.overflowY) && el.scrollHeight > el.clientHeight + 1) return el;
+            el = el.parentElement;
+        }
+        return null;
     }
 
     /** Scroll the page by the given capture-relative delta (0–1). */
@@ -257,16 +340,25 @@ class BrowserControlService {
         const factor = 1000; // Scale relative deltas to actual px.
         const sx = Math.round(dx * factor);
         const sy = Math.round(dy * factor);
-        window.scrollBy({ left: sx, top: sy, behavior: 'instant' });
+        const target = this.scrollableAt(window.innerWidth / 2, window.innerHeight / 2);
+        if (target) target.scrollBy({ left: sx, top: sy, behavior: 'instant' });
+        else window.scrollBy({ left: sx, top: sy, behavior: 'instant' });
         return `Scrolled by (${sx}, ${sy}) px.`;
     }
 
     /** Scroll to a specific position (fraction 0–1 of total scrollable height). */
     scrollTo(frac: number): string {
         this.assertPermission();
-        const maxY = Math.max(0, document.documentElement.scrollHeight - window.innerHeight);
-        window.scrollTo({ top: Math.round(maxY * Math.max(0, Math.min(1, frac))), behavior: 'instant' });
-        return `Scrolled to ${Math.round(frac * 100)}% of page.`;
+        const f = Math.max(0, Math.min(1, frac));
+        const target = this.scrollableAt(window.innerWidth / 2, window.innerHeight / 2);
+        if (target) {
+            const maxY = Math.max(0, target.scrollHeight - target.clientHeight);
+            target.scrollTop = Math.round(maxY * f);
+        } else {
+            const maxY = Math.max(0, document.documentElement.scrollHeight - window.innerHeight);
+            window.scrollTo({ top: Math.round(maxY * f), behavior: 'instant' });
+        }
+        return `Scrolled to ${Math.round(f * 100)}% of page.`;
     }
 
     /** Read the visible page content (text nodes in the viewport). */

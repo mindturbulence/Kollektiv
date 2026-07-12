@@ -4,6 +4,7 @@ import { getGeminiClient } from './geminiService';
 import { executeAssistantTool, geminiToolDeclarations, ASSISTANT_TOOLS, AssistantTool } from './assistantTools';
 import { buildSystemIdentity } from './assistantService';
 import { loadMcpAssistantTools } from './mcpAssistantTools';
+import { browserControlService } from './browserControlService';
 
 // Single source of truth for the live model constant.
 // Verified against https://ai.google.dev/gemini-api/docs/live-api/capabilities (2026-07-10) —
@@ -19,6 +20,15 @@ export interface LiveHandlers {
     onToolActivity: (line: string) => void;
     onSpeaking: (speaking: boolean) => void;
     onScreenShare: (active: boolean) => void;
+    /** Fired when the model attempts a browser_* tool without control permission
+     *  granted. `sharingActive` distinguishes "share your screen first" (the
+     *  control-permission button doesn't even exist yet) from "you're sharing
+     *  but haven't granted control" — telling a non-sharing user to "click the
+     *  cursor icon" sends them looking for a button that isn't there. */
+    onControlDenied: (sharingActive: boolean) => void;
+    /** Fired when the shared source isn't this browser tab — click/scroll
+     *  coordinates can't line up with what the model sees in that case. */
+    onShareWarning: (message: string) => void;
 }
 
 // Mic worklet: captures mono float32, downsamples to 16 kHz if the context refuses that rate.
@@ -166,10 +176,19 @@ export class LiveAssistant {
         if (msg.toolCall?.functionCalls?.length) {
             const responses: any[] = [];
             for (const fc of msg.toolCall.functionCalls) {
+                console.debug('[LiveAssistant] tool call', fc.name, fc.args);
                 this.handlers.onToolActivity(`⚙️ ${fc.name}(${JSON.stringify(fc.args || {})})`);
-                const result = await executeAssistantTool(fc.name, fc.args || {}, { settings: this.settings }, this.mcpTools);
-                this.handlers.onToolActivity(`✅ ${fc.name}: ${result.slice(0, 300)}`);
-                responses.push({ id: fc.id, name: fc.name, response: { result } });
+                // Check permission for browser tools BEFORE executing — don't waste
+                // a turn running the tool only for assertPermission() to throw.
+                if (fc.name.startsWith('browser_') && !browserControlService.permissionGranted) {
+                    this.handlers.onControlDenied(!!this.screenStream);
+                    responses.push({ id: fc.id, name: fc.name, response: { result: 'Permission denied — user has not granted browser control permission.' } });
+                } else {
+                    const result = await executeAssistantTool(fc.name, fc.args || {}, { settings: this.settings }, this.mcpTools);
+                    console.debug('[LiveAssistant] tool result', fc.name, result.slice(0, 200));
+                    this.handlers.onToolActivity(`✅ ${fc.name}: ${result.slice(0, 300)}`);
+                    responses.push({ id: fc.id, name: fc.name, response: { result } });
+                }
             }
             try { this.session?.sendToolResponse({ functionResponses: responses }); } catch { /* closed */ }
             return;
@@ -221,9 +240,32 @@ export class LiveAssistant {
     }
 
     async startScreenShare(): Promise<void> {
-        this.screenStream = await navigator.mediaDevices.getDisplayMedia({ video: true });
+        // Prefer current tab so coordinates the model sees in the scaled frame
+        // map 1:1 to the viewport. When a different window/screen is shared,
+        // the captured dimensions differ from the viewport and clicks land
+        // at the wrong position — the model cannot control what it doesn't see.
+        this.screenStream = await navigator.mediaDevices.getDisplayMedia({
+            video: true,
+            // preferCurrentTab biases the picker toward "This Tab" so coordinates
+            // from the scaled capture map 1:1 to the viewport without mapping errors.
+            // Non-standard but widely supported (Chrome 94+, Edge 94+).
+            ...{ preferCurrentTab: true } as any,
+            selfBrowserSurface: 'include' as any,
+            surfaceSwitching: 'include' as any,
+        });
         const track = this.screenStream.getVideoTracks()[0];
         track.addEventListener('ended', () => this.stopScreenShare());
+
+        const displaySurface = (track.getSettings() as any)?.displaySurface;
+        if (displaySurface && displaySurface !== 'browser') {
+            // Revoke control until they fix the share source — wrong coordinates
+            // would silently break every click/scroll.
+            if (browserControlService.permissionGranted) browserControlService.revoke();
+            this.handlers.onShareWarning(
+                'You shared a window/screen instead of this browser tab — the assistant\'s clicks and scrolling won\'t line up with what it sees. Control has been revoked. Stop sharing, then re-share picking "This Tab" from the browser list.'
+            );
+        }
+
         this.videoEl = document.createElement('video');
         this.videoEl.srcObject = this.screenStream;
         this.videoEl.muted = true;
@@ -235,6 +277,7 @@ export class LiveAssistant {
             canvas.width = Math.round(this.videoEl.videoWidth * scale);
             canvas.height = Math.round(this.videoEl.videoHeight * scale);
             canvas.getContext('2d')!.drawImage(this.videoEl, 0, 0, canvas.width, canvas.height);
+            browserControlService.setCaptureSize(canvas.width, canvas.height);
             const b64 = canvas.toDataURL('image/jpeg', 0.7).split('base64,')[1];
             try {
                 this.session.sendRealtimeInput({ video: { data: b64, mimeType: 'image/jpeg' } });
@@ -248,6 +291,7 @@ export class LiveAssistant {
         this.screenStream?.getTracks().forEach(t => t.stop());
         this.screenStream = null;
         if (this.videoEl) { this.videoEl.srcObject = null; this.videoEl = null; }
+        browserControlService.setCaptureSize(0, 0);
         this.handlers?.onScreenShare(false);
     }
 
