@@ -55,16 +55,14 @@ class BrowserControlService {
 
     // ─── Coordinates: map from scaled capture to real viewport ───
 
-    /** Scale factor used during screen capture (1024 / max dimension). */
-    private get captureScale(): number {
-        return Math.min(1, 1024 / Math.max(window.innerWidth, window.innerHeight));
-    }
-
-    /** Convert capture-relative coordinates (0–1) to absolute viewport px. */
+    /** Convert capture-relative coordinates (0–1) to absolute viewport px.
+     *  The capture frame is scaled down by captureScale for sending to the
+     *  assistant, but nx/ny are *fractions* of that frame, which map directly
+     *  to the same fraction of the actual viewport. */
     private captureToViewport(nx: number, ny: number): { x: number; y: number } {
         return {
-            x: Math.round(nx / this.captureScale),
-            y: Math.round(ny / this.captureScale),
+            x: Math.round(nx * window.innerWidth),
+            y: Math.round(ny * window.innerHeight),
         };
     }
 
