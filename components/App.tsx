@@ -44,9 +44,13 @@ import { LiveAssistantProvider } from '../contexts/LiveAssistantContext';
 import WebViewerPanel from './WebViewerPanel';
 import NotesPanel from './NotesPanel';
 import LiveCaptionOverlay from './LiveCaptionOverlay';
+import { ScreenControlOverlay } from './ScreenControlOverlay';
 import { motion, AnimatePresence } from 'motion/react';
-import { pageVariants } from './AnimatedPanels';
+import { shellVariants } from './AnimatedPanels';
 import ChromaticText from './ChromaticText';
+import TransitionOverlay, { type TransitionOverlayHandle } from './transitions/TransitionOverlay';
+import { useTransitionDirector } from './transitions/useTransitionDirector';
+import type { FxKind } from './transitions/routeFx';
 
 
 
@@ -464,10 +468,7 @@ const AppContent: React.FC = () => {
         }
     }, [activeTab]);
 
-    const transitionOverlayRef = useRef<HTMLDivElement>(null);
-    const transitionLogoRef = useRef<HTMLDivElement>(null);
-    const topOverlayPanelRef = useRef<HTMLDivElement>(null);
-    const bottomOverlayPanelRef = useRef<HTMLDivElement>(null);
+    const transitionOverlayHandleRef = useRef<TransitionOverlayHandle>(null);
     const apertureRef = useRef<HTMLDivElement>(null);
     const blindsRef = useRef<HTMLDivElement>(null);
     const appWrapperRef = useRef<HTMLDivElement>(null);
@@ -724,11 +725,24 @@ const AppContent: React.FC = () => {
     }, [isInitialized]);
 
 
+    // --- Context Shift Engine: page transition orchestration ---
+    const [pageFxKind, setPageFxKind] = useState<FxKind>('module-boot');
+    const activeTabRef = useRef(activeTab);
+    activeTabRef.current = activeTab;
+
+    const { navigate: directorNavigate } = useTransitionDirector({
+        overlayRef: transitionOverlayHandleRef,
+        contentRef,
+        getActiveTab: () => activeTabRef.current,
+        commit: (tab, kind) => {
+            setPageFxKind(kind);
+            setActiveTab(tab);
+        },
+    });
+
     const handleNavigate = useCallback((tab: ActiveTab) => {
-        if (tab === activeTab) return;
-        audioService.playTransition();
-        setActiveTab(tab);
-    }, [activeTab]);
+        directorNavigate(tab);
+    }, [directorNavigate]);
 
     useEffect(() => {
         const currentTheme = settings.darkTheme;
@@ -764,7 +778,9 @@ const AppContent: React.FC = () => {
     useEffect(() => {
         const navigateSub = appEventBus.on('navigate', (tab) => {
             if (typeof tab === 'string') {
-                setActiveTab(tab as ActiveTab);
+                // Route through the director so programmatic navigation gets the
+                // same transition + SFX as header clicks.
+                handleNavigate(tab as ActiveTab);
             }
         });
         const sendToSub = appEventBus.on('sendToPromptsPage', (state) => {
@@ -773,7 +789,7 @@ const AppContent: React.FC = () => {
             }
         });
         return () => { navigateSub(); sendToSub(); };
-    }, [activeTab, handleSendToPromptsPage]);
+    }, [handleNavigate, handleSendToPromptsPage]);
 
     const handleClipIdea = useCallback((idea: Idea) => {
         setClippedIdeas(prev => [idea, ...prev]);
@@ -1073,37 +1089,15 @@ const AppContent: React.FC = () => {
 
                         <div className={`flex-1 flex flex-col overflow-hidden relative ${activeTab === 'prompts' ? 'pt-0' : 'pt-0'} p-0 bg-transparent min-h-0 gap-0`}>
                             <main className="flex-grow min-w-0 relative overflow-hidden rounded-none bg-transparent border-none shadow-none backdrop-blur-none z-10 py-6 px-7">
-                                {/* Cinematic Transition Overlay (Tesoro Style) */}
-                                <div
-                                    ref={transitionOverlayRef}
-                                    className="absolute inset-0 z-[1000] pointer-events-none flex flex-col overflow-hidden"
-                                    style={{ visibility: 'hidden' }}
-                                >
-                                    <div
-                                        ref={topOverlayPanelRef}
-                                        className="bg-base-100/98 flex-1 w-full h-0"
-                                        style={{ height: '0%' }}
-                                    />
-                                    <div
-                                        ref={bottomOverlayPanelRef}
-                                        className="bg-base-100/98 flex-1 w-full h-0"
-                                        style={{ height: '0%' }}
-                                    />
-                                    <div
-                                        ref={transitionLogoRef}
-                                        className="absolute top-1/2 left-1/2 opacity-0 scale-90"
-                                    >
-                                        <h1 className="text-3xl md:text-5xl font-normal tracking-[0.4em] text-base-content uppercase font-monoton whitespace-nowrap">
-                                            <ChromaticText>Kollektiv</ChromaticText><span className="text-primary italic">.</span>
-                                        </h1>
-                                    </div>
-                                </div>
+                                {/* Context Shift Engine — futuristic OS transition overlay */}
+                                <TransitionOverlay ref={transitionOverlayHandleRef} />
 
                                 <div ref={contentRef} className="h-full w-full z-10 relative">
-                                    <AnimatePresence mode="wait">
+                                    <AnimatePresence mode="wait" custom={pageFxKind}>
                                         <motion.div
                                             key={['crafter', 'refiner', 'prompt_analyzer', 'media_analyzer', 'prompts'].includes(activeTab) ? 'prompts_group' : activeTab}
-                                            variants={pageVariants}
+                                            custom={pageFxKind}
+                                            variants={shellVariants}
                                             initial="hidden"
                                             animate="visible"
                                             exit="exit"
@@ -1175,6 +1169,7 @@ const AppContent: React.FC = () => {
             <TabTitleManager defaultTitle={currentTitle} />
             <CustomCursor />
             <LiveCaptionOverlay hidden={activeTab === 'assistant'} />
+            <ScreenControlOverlay />
             {isInitialized && (
                 <PageFrame
                     isInitialized={isInitialized}

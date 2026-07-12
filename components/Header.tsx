@@ -9,7 +9,7 @@ import ThemeSwitcher from './ThemeSwitcher';
 import ChromaticText from './ChromaticText';
 import { InformationCircleIcon, BookmarkIcon, Cog6ToothIcon, PowerIcon, ChatBubbleIcon, NoteIcon } from './icons';
 import { HUDNavItem } from './HUDNavItem';
-import { LiveAssistantMicButton, LiveAssistantScreenButton } from './LiveAssistantBar';
+import { LiveAssistantMicButton, LiveAssistantScreenButton, LiveAssistantControlButton, LiveAssistantFault } from './LiveAssistantBar';
 
 interface HeaderProps {
   onNavigate: (tab: ActiveTab) => void;
@@ -299,6 +299,7 @@ const Header: React.FC<HeaderProps> = ({
         {/* Right Side Controls */}
         <div className="ml-auto flex gap-1 items-center relative z-[9999] pointer-events-auto">
           <LiveAssistantScreenButton />
+          <LiveAssistantControlButton />
           <HUDNavItem
             onClick={(e) => {
               e.stopPropagation();
@@ -311,6 +312,7 @@ const Header: React.FC<HeaderProps> = ({
           </HUDNavItem>
           <div className="w-px h-2 bg-base-content/10 self-center" />
           <LiveAssistantMicButton />
+          <LiveAssistantFault hidden={activeTab === 'assistant'} />
           <div className="w-px h-2 bg-base-content/10 self-center" />
           <HUDNavItem
             onClick={(e) => {

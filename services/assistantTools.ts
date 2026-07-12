@@ -1,6 +1,7 @@
 import type { LLMSettings, WildcardCategory } from '../types';
 import { appControlService } from './appControlService';
 import { appEventBus } from '../utils/eventBus';
+import { browserControlService } from './browserControlService';
 import { addNote, loadNotes, updateNote, deleteNote } from '../utils/notesStorage';
 import { addMemory, loadMemories as loadMemoryEntries, deleteMemory } from '../utils/memoryStorage';
 import { loadGalleryItems } from '../utils/galleryStorage';
@@ -456,6 +457,107 @@ export const ASSISTANT_TOOLS: AssistantTool[] = [
             required: ['id'],
         },
         execute: ({ id }) => (deleteMemory(String(id)) ? 'Forgotten.' : `Error: no memory with id ${id}.`),
+    },
+
+    // ─── Browser Control Tools (require screen sharing + permission) ───────────
+
+    {
+        name: 'browser_click',
+        description: 'Click at the specified screen-capture coordinates (nx, ny are fractions 0–1). Requires screen sharing + control permission. Use when you can see something on screen you want to interact with — buttons, links, inputs, etc.',
+        parameters: {
+            type: 'object',
+            properties: {
+                nx: { type: 'number', description: 'X coordinate as a fraction of the capture width (0 = left edge, 1 = right edge).' },
+                ny: { type: 'number', description: 'Y coordinate as a fraction of the capture height (0 = top edge, 1 = bottom edge).' },
+            },
+            required: ['nx', 'ny'],
+        },
+        execute: ({ nx, ny }) => browserControlService.click(Number(nx), Number(ny)),
+    },
+    {
+        name: 'browser_double_click',
+        description: 'Double-click at the specified screen-capture coordinates. Requires screen sharing + control permission.',
+        parameters: {
+            type: 'object',
+            properties: {
+                nx: { type: 'number', description: 'X fraction (0–1).' },
+                ny: { type: 'number', description: 'Y fraction (0–1).' },
+            },
+            required: ['nx', 'ny'],
+        },
+        execute: ({ nx, ny }) => browserControlService.doubleClick(Number(nx), Number(ny)),
+    },
+    {
+        name: 'browser_type',
+        description: 'Type text into the currently focused input field. Requires screen sharing + control permission. Use after clicking on a text field with browser_click.',
+        parameters: {
+            type: 'object',
+            properties: {
+                text: { type: 'string', description: 'The text to type.' },
+            },
+            required: ['text'],
+        },
+        execute: ({ text }) => browserControlService.type(String(text)),
+    },
+    {
+        name: 'browser_press_key',
+        description: 'Press a named key (Enter, Tab, Escape, Backspace, ArrowUp/Down/Left/Right, etc.) on the currently focused element. Requires screen sharing + control permission.',
+        parameters: {
+            type: 'object',
+            properties: {
+                key: { type: 'string', description: 'Key name. Valid: Enter, Tab, Escape, Backspace, Delete, ArrowUp, ArrowDown, ArrowLeft, ArrowRight, Space, Home, End, PageUp, PageDown, F1–F12, Shift, Control, Alt, CapsLock.' },
+            },
+            required: ['key'],
+        },
+        execute: ({ key }) => browserControlService.pressKey(String(key)),
+    },
+    {
+        name: 'browser_scroll',
+        description: 'Scroll the page by a relative amount. dx/dy are fractions 0–1 (e.g. 0 = none, 0.5 = half screen). Requires screen sharing + control permission.',
+        parameters: {
+            type: 'object',
+            properties: {
+                dx: { type: 'number', description: 'Horizontal scroll fraction (negative = left, positive = right).' },
+                dy: { type: 'number', description: 'Vertical scroll fraction (negative = up, positive = down).' },
+            },
+        },
+        execute: ({ dx, dy }) => browserControlService.scroll(Number(dx || 0), Number(dy || 0)),
+    },
+    {
+        name: 'browser_scroll_to',
+        description: 'Scroll to a specific position on the page. frac is 0 (top) to 1 (bottom). Requires screen sharing + control permission.',
+        parameters: {
+            type: 'object',
+            properties: {
+                frac: { type: 'number', description: 'Scroll position fraction (0 = top, 1 = bottom).' },
+            },
+            required: ['frac'],
+        },
+        execute: ({ frac }) => browserControlService.scrollTo(Number(frac)),
+    },
+    {
+        name: 'browser_read_page',
+        description: 'Read the visible page content (text) and return it. Includes page title and URL. Requires screen sharing + control permission.',
+        parameters: { type: 'object', properties: {} },
+        execute: () => browserControlService.readVisibleContent(),
+    },
+    {
+        name: 'browser_read_structure',
+        description: 'List the interactive elements visible on screen (headings, links, buttons, inputs) with their positions and sizes. Useful before clicking to find what is where on a page. Requires screen sharing + control permission.',
+        parameters: { type: 'object', properties: {} },
+        execute: () => browserControlService.readPageStructure(),
+    },
+    {
+        name: 'browser_navigate',
+        description: 'Navigate the browser to a different URL. Requires screen sharing + control permission.',
+        parameters: {
+            type: 'object',
+            properties: {
+                url: { type: 'string', description: 'Full absolute URL (http/https) to navigate to.' },
+            },
+            required: ['url'],
+        },
+        execute: ({ url }) => browserControlService.navigate(String(url)),
     },
 ];
 

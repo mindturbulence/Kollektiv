@@ -665,6 +665,14 @@ export const MicrophoneIcon: React.FC<React.SVGProps<SVGSVGElement>> = (props) =
   </svg>
 );
 
+export const CursorIcon: React.FC<React.SVGProps<SVGSVGElement>> = (props) => (
+  <svg {...commonProps} {...props}>
+    <path stroke="none" d="M0 0h24v24H0z" fill="none"/>
+    <path d="M8 4l10 16l-5.6 -2.8l-2.4 3.8l-.89 -8.28z" fill="currentColor" />
+    <path d="M8 4l10 16l-5.6 -2.8l-2.4 3.8l-.89 -8.28z" />
+  </svg>
+);
+
 export const MonitorIcon: React.FC<React.SVGProps<SVGSVGElement>> = (props) => (
   <svg {...commonProps} {...props}>
     <path stroke="none" d="M0 0h24v24H0z" fill="none"/>

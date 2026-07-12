@@ -3,6 +3,7 @@ import { LiveAssistant } from '../services/liveAssistantService';
 import { useSettings } from './SettingsContext';
 import { appEventBus } from '../utils/eventBus';
 import { audioService } from '../services/audioService';
+import { browserControlService } from '../services/browserControlService';
 
 type Status = 'idle' | 'connecting' | 'live' | 'error';
 
@@ -10,11 +11,15 @@ interface LiveAssistantContextValue {
     status: Status;
     speaking: boolean;
     sharing: boolean;
+    controlEnabled: boolean;
     error: string;
+    setError: (message: string) => void;
     shareError: string;
     hasGeminiKey: boolean;
     toggleLive: () => void;
     toggleShare: () => void;
+    grantControl: () => void;
+    revokeControl: () => void;
 }
 
 const LiveAssistantCtx = createContext<LiveAssistantContextValue | null>(null);
@@ -28,6 +33,7 @@ export const LiveAssistantProvider: React.FC<{ children: React.ReactNode }> = ({
     const [status, setStatus] = useState<Status>('idle');
     const [speaking, setSpeaking] = useState(false);
     const [sharing, setSharing] = useState(false);
+    const [controlEnabled, setControlEnabled] = useState(false);
     const [error, setError] = useState('');
     const [shareError, setShareError] = useState('');
 
@@ -40,7 +46,8 @@ export const LiveAssistantProvider: React.FC<{ children: React.ReactNode }> = ({
     const stop = useCallback(() => {
         liveRef.current?.disconnect();
         liveRef.current = null;
-        setStatus('idle'); setSpeaking(false); setSharing(false); setShareError('');
+        setStatus('idle'); setSpeaking(false); setSharing(false); setControlEnabled(false); setShareError('');
+        if (browserControlService.permissionGranted) browserControlService.revoke();
     }, []);
 
     const start = useCallback(async () => {
@@ -114,8 +121,31 @@ export const LiveAssistantProvider: React.FC<{ children: React.ReactNode }> = ({
             });
     }, [sharing]);
 
+    // Subscribe to browserControlService permission changes.
+    useEffect(() => {
+        const unsub = browserControlService.onPermissionChange((granted) => {
+            setControlEnabled(granted);
+        });
+        return unsub;
+    }, []);
+
+    // Auto-revoke control permission when screen sharing stops.
+    useEffect(() => {
+        if (!sharing && controlEnabled) {
+            browserControlService.revoke();
+        }
+    }, [sharing, controlEnabled]);
+
+    const grantControl = useCallback(() => {
+        browserControlService.grant();
+    }, []);
+
+    const revokeControl = useCallback(() => {
+        browserControlService.revoke();
+    }, []);
+
     return (
-        <LiveAssistantCtx.Provider value={{ status, speaking, sharing, error, shareError, hasGeminiKey, toggleLive, toggleShare }}>
+        <LiveAssistantCtx.Provider value={{ status, speaking, sharing, controlEnabled, error, setError, shareError, hasGeminiKey, toggleLive, toggleShare, grantControl, revokeControl }}>
             {children}
         </LiveAssistantCtx.Provider>
     );
