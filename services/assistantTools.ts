@@ -574,17 +574,23 @@ export const executeAssistantTool = async (name: string, args: Record<string, an
 
 /** Gemini functionDeclarations (uppercase Type strings). */
 export const geminiToolDeclarations = (tools: AssistantTool[] = ASSISTANT_TOOLS) =>
-    tools.map(t => ({
-        name: t.name,
-        description: t.description,
-        parameters: {
-            type: 'OBJECT',
-            properties: Object.fromEntries(
-                Object.entries(t.parameters.properties).map(([k, v]) => [k, { ...v, type: v.type.toUpperCase() }])
-            ),
-            ...(t.parameters.required?.length ? { required: t.parameters.required } : {}),
-        },
-    }));
+    tools.map(t => {
+        const propEntries = Object.entries(t.parameters.properties);
+        const decl: any = { name: t.name, description: t.description };
+        // Gemini rejects function declarations whose OBJECT parameter has an empty
+        // `properties` map — a malformed declaration can poison the whole tool
+        // array. For parameterless tools, omit `parameters` entirely instead.
+        if (propEntries.length) {
+            decl.parameters = {
+                type: 'OBJECT',
+                properties: Object.fromEntries(
+                    propEntries.map(([k, v]) => [k, { ...v, type: v.type.toUpperCase() }])
+                ),
+                ...(t.parameters.required?.length ? { required: t.parameters.required } : {}),
+            };
+        }
+        return decl;
+    });
 
 /** Ollama /api/chat tools (OpenAI-style). */
 export const ollamaToolDeclarations = (tools: AssistantTool[] = ASSISTANT_TOOLS) =>

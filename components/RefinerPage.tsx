@@ -12,19 +12,15 @@ import CodeSnippetModal from './CodeSnippetModal';
 import JSONBreakdownModal from './JSONBreakdownModal';
 import { audioService } from '../services/audioService';
 import { refinerPresetService, type RefinerPreset } from '../services/refinerPresetService';
+import { modifierOptionsService } from '../services/modifierOptionsService';
 import { enhancePromptStream, cleanLLMResponse, buildMidjourneyParams, dissectPrompt, generateConstructorPreset, generateWithImagen, generateWithNanoBanana, generateWithVeo } from '../services/llmService';
 import { computeWordDiff, calculateSemanticMetrics } from '../utils/diffUtils';
 import { loadArtists } from '../utils/artistStorage';
 import { loadArtStyles } from '../utils/artstyleStorage';
 import {
-    PROMPT_DETAIL_LEVELS, GENERAL_ASPECT_RATIOS, CAMERA_ANGLES, CAMERA_PROXIMITY,
-    LIGHTING_OPTIONS, COMPOSITION_OPTIONS, CAMERA_TYPES, CAMERA_SETTINGS, CAMERA_EFFECTS,
-    LENS_TYPES, ANALOG_FILM_STOCKS, PHOTOGRAPHY_STYLES, DIGITAL_AESTHETICS, AESTHETIC_LOOKS,
-    MOTION_OPTIONS, CAMERA_MOVEMENT_OPTIONS, VIDEO_EFFECTS, MIDJOURNEY_VERSIONS,
-    MIDJOURNEY_NIJI_VERSIONS, MIDJOURNEY_ASPECT_RATIOS, Z_IMAGE_STYLES, SPECIALTY_LENS_EFFECTS,
-    FILM_TYPES, FACIAL_EXPRESSIONS, HAIR_STYLES, EYE_COLORS, SKIN_TEXTURES, REALISM_OPTIONS,
-    CLOTHING_STYLES
+    PROMPT_DETAIL_LEVELS, MIDJOURNEY_VERSIONS
 } from '../constants/modifiers';
+import { MODIFIER_CATEGORIES } from '../constants/modifierRegistry';
 import { TARGET_IMAGE_AI_MODELS, TARGET_VIDEO_AI_MODELS, TARGET_AUDIO_AI_MODELS } from '../constants/models';
 import type { LLMSettings } from '../types';
 
@@ -91,6 +87,7 @@ const RefinerPage: React.FC<RefinerPageProps> = ({
     // --- Data & Loading State ---
     const [artStyles, setArtStyles] = useState<any[]>([]);
     const [artists, setArtists] = useState<any[]>([]);
+    const [customOptions, setCustomOptions] = useState<Record<string, (string | { name: string; description?: string })[]>>({});
     const [isLoadingRefine, setIsLoadingRefine] = useState(false);
     const [errorRefine, setErrorRefine] = useState<AppError | null>(null);
     const [isCodeExportModalOpen, setIsCodeExportModalOpen] = useState(false);
@@ -232,12 +229,14 @@ const RefinerPage: React.FC<RefinerPageProps> = ({
     useEffect(() => {
         const loadData = async () => {
             try {
-                const [styles, artistsData] = await Promise.all([
+                const [styles, artistsData, custom] = await Promise.all([
                     loadArtStyles(),
                     loadArtists(),
+                    modifierOptionsService.loadCustomOptions(),
                 ]);
                 setArtStyles(styles);
                 setArtists(artistsData);
+                setCustomOptions(custom);
             } catch (e) {
                 setErrorRefine({ message: "Reference data offline." });
             }
@@ -288,36 +287,16 @@ const RefinerPage: React.FC<RefinerPageProps> = ({
         const catalog: string[] = [];
         if (artStyles.length > 0) catalog.push(`artStyle: ${artStyles.flatMap((c: any) => c.items.map((i: any) => i.name)).join(', ')}`);
         if (artists.length > 0) catalog.push(`artist: ${artists.flatMap((c: any) => c.items.map((i: any) => i.name)).join(', ')}`);
-        catalog.push(`photographyStyle: ${PHOTOGRAPHY_STYLES.join(', ')}`);
-        catalog.push(`aestheticLook: ${AESTHETIC_LOOKS.map(l => l.name).join(', ')}`);
-        catalog.push(`digitalAesthetic: ${DIGITAL_AESTHETICS.map(a => a.name).join(', ')}`);
-        catalog.push(`aspectRatio: ${GENERAL_ASPECT_RATIOS.join(', ')}`);
-        catalog.push(`cameraType: ${CAMERA_TYPES.join(', ')}`);
-        catalog.push(`cameraAngle: ${CAMERA_ANGLES.join(', ')}`);
-        catalog.push(`cameraProximity: ${CAMERA_PROXIMITY.join(', ')}`);
-        catalog.push(`cameraSettings: ${CAMERA_SETTINGS.join(', ')}`);
-        catalog.push(`cameraEffect: ${CAMERA_EFFECTS.join(', ')}`);
-        catalog.push(`specialtyLens: ${SPECIALTY_LENS_EFFECTS.map(l => l.name).join(', ')}`);
-        catalog.push(`lensType: ${LENS_TYPES.join(', ')}`);
-        catalog.push(`filmType: ${FILM_TYPES.join(', ')}`);
-        catalog.push(`filmStock: ${ANALOG_FILM_STOCKS.join(', ')}`);
-        catalog.push(`lighting: ${LIGHTING_OPTIONS.join(', ')}`);
-        catalog.push(`composition: ${COMPOSITION_OPTIONS.join(', ')}`);
-        catalog.push(`facialExpression: ${FACIAL_EXPRESSIONS.join(', ')}`);
-        catalog.push(`hairStyle: ${HAIR_STYLES.join(', ')}`);
-        catalog.push(`eyeColor: ${EYE_COLORS.join(', ')}`);
-        catalog.push(`skinTexture: ${SKIN_TEXTURES.join(', ')}`);
-        catalog.push(`realism: ${REALISM_OPTIONS.join(', ')}`);
-        catalog.push(`clothing: ${CLOTHING_STYLES.join(', ')}`);
-        catalog.push(`motion: ${MOTION_OPTIONS.map(o => o.name).join(', ')}`);
-        catalog.push(`cameraMovement: ${CAMERA_MOVEMENT_OPTIONS.map(o => o.name).join(', ')}`);
-        catalog.push(`videoEffect: ${VIDEO_EFFECTS.join(', ')}`);
-        catalog.push(`mjVersion: ${MIDJOURNEY_VERSIONS.join(', ')}`);
-        catalog.push(`mjNiji: ${MIDJOURNEY_NIJI_VERSIONS.join(', ')}`);
-        catalog.push(`mjAspectRatio: ${MIDJOURNEY_ASPECT_RATIOS.join(', ')}`);
-        catalog.push(`zImageStyle: ${Z_IMAGE_STYLES.join(', ')}`);
+        // Use MODIFIER_CATEGORIES from registry, filtered by media mode
+        const registryCatalog = MODIFIER_CATEGORIES.filter((c: any) => c.media === 'all' || c.media === mediaMode);
+        for (const cat of registryCatalog) {
+            const builtin = cat.getOptions();
+            const custom = customOptions?.[cat.key] || [];
+            const merged = Array.from(new Set([...builtin, ...custom.map((e: any) => typeof e === 'string' ? e : e.name)]));
+            if (merged.length > 0) catalog.push(`${cat.key}: ${merged.join(', ')}`);
+        }
         return catalog.join('\\n');
-    }, [artStyles, artists]);
+    }, [artStyles, artists, mediaMode, customOptions]);
 
     const handleEnhance = useCallback(async () => {
         setIsBusy(true);
@@ -454,6 +433,16 @@ const RefinerPage: React.FC<RefinerPageProps> = ({
         }
     };
 
+    const handleAddCustomOption = useCallback(async (key: string, value: string) => {
+        try {
+            await modifierOptionsService.addCustomOption(key, value);
+            const updated = await modifierOptionsService.loadCustomOptions();
+            setCustomOptions(updated);
+        } catch (e) {
+            console.error('Failed to save custom option', e);
+        }
+    }, []);
+
     const handleSendToRefine = (text: string) => {
         if (onSendToBuilder) {
             onSendToBuilder({ prompt: text || '', view: 'enhancer' });
@@ -589,6 +578,8 @@ const RefinerPage: React.FC<RefinerPageProps> = ({
                             setReferenceImages={setReferenceImages}
                             setModifiers={setModifiers}
                             handlePasteRefineText={handlePasteRefineText}
+                            customOptions={customOptions}
+                            onAddCustomOption={handleAddCustomOption}
                         />
                     </motion.div>
                     <motion.footer

@@ -1,6 +1,7 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { appEventBus } from '../utils/eventBus';
+import { useSettings } from '../contexts/SettingsContext';
 
 const QUIET_MS = 4000;   // fade out after this much silence
 const MAX_CHARS = 220;   // keep it subtitle-sized; older text scrolls off the front
@@ -9,6 +10,8 @@ const MAX_CHARS = 220;   // keep it subtitle-sized; older text scrolls off the f
  * live-voice transcriptions AND streamed chat replies (both emit
  * 'liveCaption'); clears after a quiet period or when a voice session ends. */
 const LiveCaptionOverlay: React.FC<{ hidden?: boolean }> = ({ hidden = false }) => {
+    const { settings } = useSettings();
+    const assistantName = settings.assistantName || 'Kollektiv';
     const [caption, setCaption] = useState<{ who: 'user' | 'assistant'; text: string } | null>(null);
     const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
@@ -47,7 +50,7 @@ const LiveCaptionOverlay: React.FC<{ hidden?: boolean }> = ({ hidden = false }) 
                     >
                         <p className="text-center text-sm md:text-base font-medium text-base-content bg-base-100/70 backdrop-blur-md px-4 py-2 border border-base-content/10 leading-snug">
                             <span className="uppercase text-[9px] tracking-[0.3em] text-primary/70 block mb-1">
-                                {caption.who === 'user' ? 'You' : 'Assistant'}
+                                {caption.who === 'user' ? 'You' : assistantName}
                             </span>
                             {caption.text}
                         </p>

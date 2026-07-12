@@ -3,7 +3,7 @@ import { createPortal } from 'react-dom';
 import { motion, AnimatePresence } from 'motion/react';
 import { appEventBus } from '../utils/eventBus';
 import { audioService } from '../services/audioService';
-import { CloseIcon, GlobeIcon } from './icons';
+import { CloseIcon, GlobeIcon, ArrowsMaximizeIcon, ArrowRightIcon } from './icons';
 
 type Mode = 'loading' | 'live' | 'reader';
 
@@ -30,7 +30,9 @@ const probePage = async (url: string): Promise<{ embeddable: boolean; title: str
 
 /** Sliding web viewer summoned via the 'openWebPage' bus event (assistant
  * open_web_page tool). Live iframe when the site allows embedding, reader
- * mode otherwise, with a manual toggle and open-in-browser escape hatch. */
+ * mode otherwise; a persistent browser-style address bar navigates in place
+ * via its own Open button, and the panel can stretch to full width like the
+ * chat panel. */
 const WebViewerPanel: React.FC = () => {
     const [url, setUrl] = useState<string | null>(null);
     const [mode, setMode] = useState<Mode>('loading');
@@ -38,16 +40,18 @@ const WebViewerPanel: React.FC = () => {
     const [title, setTitle] = useState('');
     const [text, setText] = useState('');
     const [probeError, setProbeError] = useState('');
+    const [isExpanded, setIsExpanded] = useState(false);
+    const [urlDraft, setUrlDraft] = useState('');
 
-    useEffect(() => appEventBus.on('openWebPage', (p: { url: string }) => {
-        audioService.playPanelSlideIn();
-        setUrl(p.url);
+    const load = useCallback((target: string) => {
+        setUrl(target);
+        setUrlDraft(target);
         setMode('loading');
         setEmbeddable(false);
-        setTitle(p.url);
+        setTitle(target);
         setText('');
         setProbeError('');
-        probePage(p.url)
+        probePage(target)
             .then(r => {
                 setTitle(r.title);
                 setText(r.text);
@@ -61,12 +65,25 @@ const WebViewerPanel: React.FC = () => {
                 setEmbeddable(true);
                 setMode('live');
             });
-    }), []);
+    }, []);
+
+    useEffect(() => appEventBus.on('openWebPage', (p: { url: string }) => {
+        audioService.playPanelSlideIn();
+        load(p.url);
+    }), [load]);
 
     const close = useCallback(() => {
         audioService.playPanelSlideOut();
         setUrl(null);
+        setIsExpanded(false);
     }, []);
+
+    const navigate = useCallback(() => {
+        const target = urlDraft.trim();
+        if (!target) return;
+        audioService.playClick();
+        load(/^https?:\/\//i.test(target) ? target : `https://${target}`);
+    }, [urlDraft, load]);
 
     const content = (
         <AnimatePresence>
@@ -78,46 +95,61 @@ const WebViewerPanel: React.FC = () => {
                         animate={{ x: 0, opacity: 1 }}
                         exit={{ x: '100%', opacity: 0 }}
                         transition={{ type: 'spring', stiffness: 300, damping: 30 }}
-                        className="fixed top-[84px] right-[42px] bottom-[81px] w-full md:w-[720px] bg-transparent z-[190] pointer-events-auto shadow-2xl"
+                        className={`fixed top-[84px] right-[42px] bottom-[81px] bg-transparent z-[190] pointer-events-auto shadow-2xl transition-[left,width] duration-300 ${isExpanded ? 'left-[42px] w-auto' : 'w-full md:w-[720px]'}`}
                     >
                         <div className="w-full h-full relative corner-frame overflow-visible flex flex-col">
                             <div className="bg-base-100/95 backdrop-blur-3xl rounded-none w-[calc(100%-6px)] h-[calc(100%-6px)] m-[3px] flex flex-col overflow-hidden relative z-10 border border-white/5">
                                 {/* Header */}
-                                <div className="flex justify-between items-center h-16 px-4 bg-base-100/40 flex-shrink-0 border-b border-base-300/20 relative gap-3">
-                                    <div className="flex items-center gap-3 min-w-0">
-                                        <GlobeIcon className="w-5 h-5 text-primary flex-shrink-0" />
-                                        <div className="min-w-0">
+                                <div className="flex flex-col bg-base-100/40 flex-shrink-0 border-b border-base-300/20 relative">
+                                    {/* Title row */}
+                                    <div className="flex justify-between items-center h-11 px-4 gap-3">
+                                        <div className="flex items-center gap-2 min-w-0">
+                                            <GlobeIcon className="w-4 h-4 text-primary flex-shrink-0" />
                                             <h3 className="text-xs font-black uppercase tracking-[0.2em] font-logo truncate">{title}</h3>
-                                            <p className="text-[9px] font-mono text-base-content/40 truncate">{url}</p>
+                                        </div>
+                                        <div className="flex items-center gap-2 flex-shrink-0">
+                                            <button
+                                                onClick={() => { audioService.playClick(); setIsExpanded(!isExpanded); }}
+                                                className={`btn btn-xs btn-ghost h-8 w-8 rounded-none p-0 hover:opacity-100 hidden md:flex ${isExpanded ? 'opacity-100' : 'opacity-40'}`}
+                                                aria-label={isExpanded ? 'Shrink panel' : 'Expand panel to full width'}
+                                                aria-pressed={isExpanded}
+                                            >
+                                                <ArrowsMaximizeIcon className="w-5 h-5" />
+                                            </button>
+                                            <button onClick={close} className="btn btn-xs btn-ghost h-8 w-8 rounded-none p-0 opacity-40 hover:opacity-100" aria-label="Close web viewer">
+                                                <CloseIcon className="w-5 h-5" />
+                                            </button>
                                         </div>
                                     </div>
-                                    <div className="flex items-center gap-2 flex-shrink-0">
-                                        <div className="tab-group flex">
+
+                                    {/* Address bar row */}
+                                    <div className="flex items-center gap-2 px-4 pb-2.5">
+                                        <input
+                                            type="text"
+                                            value={urlDraft}
+                                            onChange={(e) => setUrlDraft(e.target.value)}
+                                            onFocus={(e) => e.target.select()}
+                                            onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); navigate(); } }}
+                                            placeholder="Enter address…"
+                                            className="flex-grow min-w-0 text-[11px] font-mono text-base-content bg-base-200/50 border border-base-300/30 rounded-md px-3 py-1.5 focus:outline-none focus:border-primary/50"
+                                        />
+                                        <div className="tab-group flex flex-shrink-0">
                                             <button
-                                                onClick={() => { audioService.playClick(); setMode('live'); }}
-                                                disabled={!embeddable}
-                                                title={embeddable ? 'Live page' : 'This site refuses to be embedded'}
-                                                className={`px-3 py-1 text-[9px] font-black uppercase tracking-widest border border-base-300/30 ${mode === 'live' ? 'bg-primary/20 text-primary' : 'opacity-50 hover:opacity-100'} disabled:opacity-20 disabled:pointer-events-none`}
+                                                onClick={navigate}
+                                                title="Go"
+                                                aria-label="Open address in panel"
+                                                className="px-3 py-1.5 text-[9px] font-black uppercase tracking-widest border border-base-300/30 text-primary hover:bg-primary/20 flex items-center gap-1"
                                             >
-                                                Live
+                                                <ArrowRightIcon className="w-3 h-3" /> Open
                                             </button>
                                             <button
                                                 onClick={() => { audioService.playClick(); setMode('reader'); }}
                                                 disabled={!text}
-                                                className={`px-3 py-1 text-[9px] font-black uppercase tracking-widest border border-base-300/30 border-l-0 ${mode === 'reader' ? 'bg-primary/20 text-primary' : 'opacity-50 hover:opacity-100'} disabled:opacity-20 disabled:pointer-events-none`}
+                                                className={`px-3 py-1.5 text-[9px] font-black uppercase tracking-widest border border-base-300/30 border-l-0 ${mode === 'reader' ? 'bg-primary/20 text-primary' : 'opacity-50 hover:opacity-100'} disabled:opacity-20 disabled:pointer-events-none`}
                                             >
                                                 Reader
                                             </button>
                                         </div>
-                                        <button
-                                            onClick={() => { audioService.playClick(); window.open(url, '_blank', 'noopener'); }}
-                                            className="px-3 py-1 text-[9px] font-black uppercase tracking-widest border border-base-300/30 opacity-50 hover:opacity-100"
-                                        >
-                                            Open ↗
-                                        </button>
-                                        <button onClick={close} className="btn btn-xs btn-ghost h-8 w-8 rounded-none p-0 opacity-40 hover:opacity-100" aria-label="Close web viewer">
-                                            <CloseIcon className="w-5 h-5" />
-                                        </button>
                                     </div>
                                     <div className="absolute bottom-0 left-0 right-0 h-[1px] bg-gradient-to-r from-transparent via-primary/30 to-transparent" />
                                 </div>

@@ -240,29 +240,14 @@ export class LiveAssistant {
     }
 
     async startScreenShare(): Promise<void> {
-        // Prefer current tab so coordinates the model sees in the scaled frame
-        // map 1:1 to the viewport. When a different window/screen is shared,
-        // the captured dimensions differ from the viewport and clicks land
-        // at the wrong position — the model cannot control what it doesn't see.
-        this.screenStream = await navigator.mediaDevices.getDisplayMedia({
-            video: true,
-            // preferCurrentTab biases the picker toward "This Tab" so coordinates
-            // from the scaled capture map 1:1 to the viewport without mapping errors.
-            // Non-standard but widely supported (Chrome 94+, Edge 94+).
-            ...{ preferCurrentTab: true } as any,
-            selfBrowserSurface: 'include' as any,
-            surfaceSwitching: 'include' as any,
-        });
+        this.screenStream = await navigator.mediaDevices.getDisplayMedia({ video: true });
         const track = this.screenStream.getVideoTracks()[0];
         track.addEventListener('ended', () => this.stopScreenShare());
 
         const displaySurface = (track.getSettings() as any)?.displaySurface;
         if (displaySurface && displaySurface !== 'browser') {
-            // Revoke control until they fix the share source — wrong coordinates
-            // would silently break every click/scroll.
-            if (browserControlService.permissionGranted) browserControlService.revoke();
             this.handlers.onShareWarning(
-                'You shared a window/screen instead of this browser tab — the assistant\'s clicks and scrolling won\'t line up with what it sees. Control has been revoked. Stop sharing, then re-share picking "This Tab" from the browser list.'
+                'You shared a window/screen instead of this browser tab — the assistant\'s clicks and scrolling may not line up with what it sees. Consider re-sharing and picking "This Tab" instead.'
             );
         }
 

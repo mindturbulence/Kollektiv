@@ -75,6 +75,13 @@ export const LiveAssistantProvider: React.FC<{ children: React.ReactNode }> = ({
                 onToolActivity: (line) => appEventBus.emit('liveAssistantActivity', line),
                 onSpeaking: setSpeaking,
                 onScreenShare: setSharing,
+                onControlDenied: (sharingActive) => appEventBus.emit('assistantFeedback', {
+                    message: sharingActive
+                        ? 'Assistant tried to control your browser, but control permission isn\'t granted — click the cursor icon in the header to allow it.'
+                        : 'Assistant tried to control your browser, but you haven\'t shared your screen yet — click the monitor icon in the header first, then click the cursor icon that appears next to it.',
+                    isError: true,
+                }),
+                onShareWarning: (message) => appEventBus.emit('assistantFeedback', { message, isError: true }),
             });
         } catch (e: any) {
             setStatus('error');

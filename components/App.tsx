@@ -235,20 +235,26 @@ const InitialLoader: React.FC<{ status: string; progress: number | null; onConti
 
             <div className="relative z-10 flex flex-col items-center">
                 <div className="overflow-hidden mb-6 px-4">
-                    <h1 ref={textWrapperRef} className="grid grid-cols-1 grid-rows-1 text-2xl md:text-4xl font-normal tracking-widest uppercase select-none items-center font-monoton leading-none translate-y-[2px]">
-                        <span className="text-base-content/10 block leading-none py-2 row-start-1 col-start-1">
-                            <ChromaticText enabled={false}>Kollektiv</ChromaticText><span className="text-primary/10 italic">.</span>
-                        </span>
-
-                        <div
-                            ref={logoFillRef}
-                            className="row-start-1 col-start-1 h-full overflow-hidden"
-                            style={{ width: '0%' }}
-                        >
-                            <span className="text-base-content block whitespace-nowrap leading-none py-2 drop-shadow-[0_0_20px_rgba(var(--bc),0.15)]">
-                                <ChromaticText>Kollektiv</ChromaticText><span className="text-primary italic">.</span>
+                    <h1 ref={textWrapperRef} className="flex flex-col items-center text-2xl md:text-4xl font-normal tracking-widest uppercase select-none leading-none translate-y-[2px]">
+                        <div className="grid grid-cols-1 grid-rows-1 font-monoton">
+                            <span className="text-base-content/10 block leading-none py-2 row-start-1 col-start-1">
+                                <ChromaticText enabled={false}>Kollektiv</ChromaticText><span className="text-primary/10 italic">.</span>
                             </span>
+
+                            <div
+                                ref={logoFillRef}
+                                className="row-start-1 col-start-1 h-full overflow-hidden"
+                                style={{ width: '0%' }}
+                            >
+                                <span className="text-base-content block whitespace-nowrap leading-none py-2 drop-shadow-[0_0_20px_rgba(var(--bc),0.15)]">
+                                    <ChromaticText>Kollektiv</ChromaticText><span className="text-primary italic">.</span>
+                                </span>
+                            </div>
                         </div>
+
+                        <span className="mt-1 md:mt-2 font-rainmaker text-primary text-xs md:text-sm whitespace-nowrap leading-none drop-shadow-[0_0_12px_rgba(var(--p),0.3)] pointer-events-none">
+                            Systems
+                        </span>
                     </h1>
                 </div>
 
@@ -297,8 +303,9 @@ const InitialLoader: React.FC<{ status: string; progress: number | null; onConti
             </div>
             
             {/* Footer */}
-            <div className="absolute bottom-8 left-1/2 -translate-x-1/2 text-[10px] font-mono uppercase tracking-widest text-base-content/40 opacity-70">
-                <span className="font-bold">Built by</span> <span className="text-primary font-bold">MindTurbulence</span>
+            <div className="absolute bottom-8 left-1/2 -translate-x-1/2 text-[10px] font-mono uppercase tracking-widest text-base-content/40 opacity-70 flex flex-col items-center gap-0.5">
+                <span className="font-bold text-base-content/30 text-[8px]">Built by</span>
+                <span className="text-primary font-bold">MindTurbulence</span>
             </div>
         </div>
     );

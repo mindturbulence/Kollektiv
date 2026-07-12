@@ -16,6 +16,7 @@ interface AutocompleteSelectProps {
   placeholder?: string;
   className?: string;
   fontClass?: string;
+  onAddCustom?: (typed: string) => void;
 }
 
 const AutocompleteSelect: React.FC<AutocompleteSelectProps> = ({ 
@@ -24,7 +25,8 @@ const AutocompleteSelect: React.FC<AutocompleteSelectProps> = ({
   onChange, 
   placeholder, 
   className = "",
-  fontClass = "font-rajdhani"
+  fontClass = "font-rajdhani",
+  onAddCustom
 }) => {
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
@@ -152,6 +154,19 @@ const AutocompleteSelect: React.FC<AutocompleteSelectProps> = ({
         />
       </div>
       <ul ref={scrollerRef} className="max-h-60 overflow-y-auto p-1">
+        {searchQuery && onAddCustom && filteredOptions.every(o => o.value.toLowerCase() !== searchQuery.toLowerCase()) && (
+          <li>
+            <button
+              type="button"
+              onClick={() => { onAddCustom(searchQuery); handleOptionClick(searchQuery); }}
+              onMouseEnter={() => audioService.playHover()}
+              className="w-full text-left px-3 py-2 text-xs font-bold font-rajdhani transition-colors flex flex-col gap-0.5 text-accent"
+            >
+              <span>ADD &ldquo;{searchQuery}&rdquo;</span>
+              <span className="text-[11px] opacity-60 tracking-normal">Add as custom option</span>
+            </button>
+          </li>
+        )}
         {filteredOptions.length > 0 ? (
           filteredOptions.map(option => (
             <li key={option.value}>

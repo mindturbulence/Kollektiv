@@ -5,7 +5,45 @@ import { useAssistantSignals } from '../utils/useAssistantSignals';
 import { useSettings } from '../contexts/SettingsContext';
 import AssistantBackdrop from './AssistantBackdrop';
 
-const PROMPT = 'WHAT ARE YOUR COMMANDS?';
+// Get the translated prompt based on assistant language setting
+const getPrompt = (language: string | undefined): string => {
+    // Default to English if no language is set or not supported
+    const lang = (language || 'en').toLowerCase();
+    
+    // Simple translation map for the prompt
+    const translations: Record<string, string> = {
+        'en': 'WHAT ARE YOUR COMMANDS?',
+        'es': '¿CUÁLES SON TUS COMANDOS?',
+        'es-mx': '¿CUÁLES SON TUS COMANDOS?',
+        'es-es': '¿CUÁLES SON TUS COMANDOS?',
+        'fr': 'QUELS SONT VOS COMMANDES ?',
+        'fr-fr': 'QUELS SONT VOS COMMANDES ?',
+        'de': 'WAS SIND DEINE BEFEHLE?',
+        'de-de': 'WAS SIND DEINE BEFEHLE?',
+        'it': "QUALI SONO I TUOI COMANDI?",
+        'it-it': "QUALI SONO I TUOI COMANDI?",
+        'pt': 'QUAIS SÃO OS SEUS COMANDOS?',
+        'pt-br': 'QUAIS SÃO OS SEUS COMANDOS?',
+        'pt-pt': 'QUAIS SÃO OS SEUS COMANDOS?',
+        'ru': 'КАКИЕ У ТЕБЯ КОМАНДЫ?',
+        'ru-ru': 'КАКИЕ У ТЕБЯ КОМАНДЫ?',
+        'ja': 'あなたのコマンドは何ですか？',
+        'zh': '您的命令是什么？',
+        'zh-cn': '您的命令是什么？',
+        'zh-tw': '您的命令是什麼？',
+        'ko': '당신의 명령은 무엇입니까?',
+        'ko-kr': '당신의 명령은 무엇입니까?',
+        'ar': 'مَا هِيَ أَوْامِرُكَ؟',
+        'ar-sa': 'مَا هِيَ أَوْامِرُكَ؟',
+        'hi': 'आपके आदेश क्या हैं?',
+        'hi-in': 'आपके आदेश क्या हैं?',
+    };
+    
+    // Try to get exact match first, then try without locale variant, then default to English
+    return translations[lang] || 
+           translations[lang.split('-')[0]] || 
+           translations['en'];
+};
 
 const STOPWORDS = new Set([
     'a', 'an', 'the', 'and', 'or', 'but', 'if', 'then', 'so', 'because', 'as', 'of', 'to', 'in', 'on', 'at', 'by',
@@ -110,16 +148,21 @@ const Stage: React.FC<{ text: string; streaming?: boolean; wordTime?: number; on
  * character-by-character with a blinking cursor and a matching underline.
  * Used both for the very first boot and as the periodic idle reminder (see
  * AssistantPage). */
-const TerminalPrompt: React.FC<{ text: string }> = ({ text }) => {
+const TerminalPrompt: React.FC<{ text: string; onDone?: () => void }> = ({ text, onDone }) => {
     const [n, setN] = useState(0);
     const done = n >= text.length;
     const shown = text.slice(0, n);
 
     useEffect(() => {
-        if (done) return;
+        if (done) {
+            if (onDone) {
+                onDone();
+            }
+            return;
+        }
         const t = setTimeout(() => setN(v => v + 1), 45);
         return () => clearTimeout(t);
-    }, [n, done]);
+    }, [n, done, onDone]);
 
     return (
         <Underline text={shown}>
@@ -136,6 +179,7 @@ const TerminalPrompt: React.FC<{ text: string }> = ({ text }) => {
 const AssistantPage: React.FC = () => {
     const { mode, status, error, userText, assistantText, activity } = useAssistantSignals();
     const { settings } = useSettings();
+    const PROMPT = getPrompt(settings.assistantLanguage);
 
     // Only the words worth reading actually get displayed — see
     // pickImportant. Kept in a ref too so the completion callback below
@@ -272,10 +316,8 @@ const AssistantPage: React.FC = () => {
                         )}
 
                         {displayMode === 'responding' && (
-                            <Stage
+                            <TerminalPrompt
                                 text={importantText}
-                                streaming={mode === 'responding'}
-                                wordTime={520}
                                 onDone={handleStageDone}
                             />
                         )}

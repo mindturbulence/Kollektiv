@@ -1,7 +1,7 @@
 import React from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { useLiveAssistantContext } from '../contexts/LiveAssistantContext';
-import { CursorIcon } from './icons';
+import { CursorIcon, CloseIcon } from './icons';
 import { audioService } from '../services/audioService';
 
 /**
@@ -54,6 +54,17 @@ export const ScreenControlOverlay: React.FC = () => {
                                                hover:bg-warning/30 transition-colors"
                                 >
                                     Release
+                                </button>
+                                <button
+                                    onClick={(e) => {
+                                        e.stopPropagation();
+                                        audioService.playClick();
+                                        revokeControl();
+                                    }}
+                                    title="Close"
+                                    className="p-1.5 hover:bg-base-content/10 transition-colors rounded-none shrink-0 self-start -mr-1"
+                                >
+                                    <CloseIcon className="w-3.5 h-3.5 text-warning/60 hover:text-warning transition-colors" />
                                 </button>
                             </div>
                         </div>
