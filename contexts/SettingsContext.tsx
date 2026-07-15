@@ -54,12 +54,16 @@ export const SettingsProvider: React.FC<{ children: ReactNode }> = ({ children }
   }, [refreshOllamaModels]);
 
   useEffect(() => {
-    const handleTokenUpdate = () => {
+    const handleSettingsUpdate = () => {
         setSettings(loadLLMSettings());
     };
     if (typeof window !== 'undefined') {
-        window.addEventListener('token-usage-updated', handleTokenUpdate);
-        return () => window.removeEventListener('token-usage-updated', handleTokenUpdate);
+        window.addEventListener('token-usage-updated', handleSettingsUpdate);
+        window.addEventListener('settings-updated', handleSettingsUpdate);
+        return () => {
+            window.removeEventListener('token-usage-updated', handleSettingsUpdate);
+            window.removeEventListener('settings-updated', handleSettingsUpdate);
+        };
     }
   }, []);
 

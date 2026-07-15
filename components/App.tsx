@@ -114,6 +114,7 @@ class ErrorBoundary extends React.Component<{ children: React.ReactNode }, { has
 const InitialLoader: React.FC<{ status: string; progress: number | null; onContinue: (withMusic: boolean) => void }> = ({ status, progress, onContinue }) => {
     const textWrapperRef = useRef<HTMLHeadingElement>(null);
     const logoFillRef = useRef<HTMLDivElement>(null);
+    const systemTextRef = useRef<HTMLSpanElement>(null);
     const [displayStatus, setDisplayStatus] = useState<string>('');
     const [history, setHistory] = useState<string[]>([]);
     const [smoothPercentage, setSmoothPercentage] = useState(0);
@@ -193,6 +194,13 @@ const InitialLoader: React.FC<{ status: string; progress: number | null; onConti
                 }
             );
         }
+
+        if (systemTextRef.current) {
+            gsap.fromTo(systemTextRef.current,
+                { y: 24, autoAlpha: 0 },
+                { y: 0, autoAlpha: 1, duration: 0.8, ease: "power2.out", delay: 3.2 }
+            );
+        }
     }, []);
 
     // Bulletproof check: mark complete when target reaches 100% and smooth animation matches
@@ -212,6 +220,10 @@ const InitialLoader: React.FC<{ status: string; progress: number | null; onConti
         
         const footerEl = document.querySelector('#initial-loader .absolute.bottom-8');
         if (footerEl) gsap.to(footerEl, { autoAlpha: 0, duration: 0.4 });
+
+        if (systemTextRef.current) {
+            gsap.to(systemTextRef.current, { y: -20, autoAlpha: 0, duration: 0.6, ease: "power2.inOut" });
+        }
 
         if (textWrapperRef.current) {
             gsap.to(textWrapperRef.current, {
@@ -234,7 +246,7 @@ const InitialLoader: React.FC<{ status: string; progress: number | null; onConti
             <div className="absolute inset-0 pointer-events-none opacity-20" style={{ backgroundImage: 'linear-gradient(transparent 50%, rgba(0, 0, 0, 0.25) 50%)', backgroundSize: '100% 4px', zIndex: 1 }}></div>
 
             <div className="relative z-10 flex flex-col items-center">
-                <div className="overflow-hidden mb-6 px-4">
+                <div className="mb-6 px-4 flex flex-col items-center">
                     <h1 ref={textWrapperRef} className="flex flex-col items-center text-2xl md:text-4xl font-normal tracking-widest uppercase select-none leading-none translate-y-[2px]">
                         <div className="grid grid-cols-1 grid-rows-1 font-monoton">
                             <span className="text-base-content/10 block leading-none py-2 row-start-1 col-start-1">
@@ -251,11 +263,13 @@ const InitialLoader: React.FC<{ status: string; progress: number | null; onConti
                                 </span>
                             </div>
                         </div>
-
-                        <span className="mt-1 md:mt-2 font-rainmaker text-primary text-xs md:text-sm whitespace-nowrap leading-none drop-shadow-[0_0_12px_rgba(var(--p),0.3)] pointer-events-none">
-                            Systems
-                        </span>
                     </h1>
+                    <span
+                        ref={systemTextRef}
+                        className="block -mt-10 md:-mt-10 font-rainmaker text-primary text-xl md:text-5xl whitespace-nowrap leading-[0] drop-shadow-[0_0_22px_rgba(var(--p),0.3)] pointer-events-none normal-case"
+                    >
+                        _Systems_
+                    </span>
                 </div>
 
                 <div className="relative h-28 w-80">
@@ -1015,7 +1029,12 @@ const AppContent: React.FC = () => {
                 </div>
             )}
 
-            <IdleOverlay isVisible={isIdle} onInteraction={handleIdleInteraction} />
+            {/* Don't show idle overlay on the assistant screen — the
+                assistant page manages its own full-screen state and should
+                never be interrupted by the idle timer. */}
+            {activeTab !== 'assistant' && (
+                <IdleOverlay isVisible={isIdle} onInteraction={handleIdleInteraction} />
+            )}
 
             {!isInitialized ? (
                 !isLoading ? (

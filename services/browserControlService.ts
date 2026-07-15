@@ -70,18 +70,17 @@ class BrowserControlService {
     }
 
     /** The capture canvas the assistant sees is scaled to max 1024px on the
-     *  longest side (see startScreenShare in liveAssistantService.ts).
-     *  The model may provide coordinates EITHER as 0–1 fractions OR as absolute
-     *  pixel values from that scaled frame. Auto-detect: if > 1, treat as pixel.
-     *  Clamped to [0, 1] after normalisation so out-of-range values never produce
-     *  negative or overshoot viewport coordinates. */
-    private captureToViewport(nx: number, ny: number): { x: number; y: number } {
+     *  longest side (see startScreenShare in liveAssistantService.ts). Coordinates
+     *  are ALWAYS absolute pixels within that scaled frame — no fraction mode,
+     *  no auto-detection. (Coordinate clicking is now a canvas-only fallback;
+     *  DOM targets go through clickElement/data-ai-id, which needs no mapping
+     *  at all.) Clamped to [0, 1] after normalisation so out-of-range values
+     *  never produce negative or overshoot viewport coordinates. */
+    private captureToViewport(px: number, py: number): { x: number; y: number } {
         const capW = this.captureW || window.innerWidth;
         const capH = this.captureH || window.innerHeight;
-        let normX = nx > 1 && capW > 0 ? nx / capW : nx;
-        let normY = ny > 1 && capH > 0 ? ny / capH : ny;
-        normX = Math.max(0, Math.min(1, normX));
-        normY = Math.max(0, Math.min(1, normY));
+        const normX = Math.max(0, Math.min(1, capW > 0 ? px / capW : px));
+        const normY = Math.max(0, Math.min(1, capH > 0 ? py / capH : py));
         return {
             x: Math.round(normX * window.innerWidth),
             y: Math.round(normY * window.innerHeight),
@@ -291,9 +290,56 @@ class BrowserControlService {
             if (el instanceof HTMLInputElement || el instanceof HTMLTextAreaElement) {
                 el.dispatchEvent(new Event('input', { bubbles: true }));
             }
+            // Synthetic Enter never triggers native form submission (browsers
+            // require a trusted event) — request it explicitly so "type then
+            // press Enter" actually submits.
+            const form = (el as HTMLElement | null)?.closest?.('form');
+            if (form instanceof HTMLFormElement) form.requestSubmit();
         }
 
         return `Pressed "${k}".`;
+    }
+
+    /** Click a UI control by its `data-ai-id` (see readPageStructure output).
+     *  This is the PRIMARY click path — it targets a real element directly,
+     *  no coordinate estimation or capture/viewport mapping involved. Looked
+     *  up live via querySelector each call, so there is no cache to go stale. */
+    clickElement(id: string): string {
+        this.assertPermission();
+        const selector = `[data-ai-id="${CSS.escape(id)}"]`;
+        if (!document.querySelector(selector)) {
+            return `Error: no element with id "${id}". Call browser_read_structure to see current ids.`;
+        }
+        return this.selectAndClick(selector);
+    }
+
+    /** Set a native <select>'s value by its `data-ai-id` and visible option text.
+     *  Synthetic mouse/keyboard events cannot open a native dropdown's OS-level
+     *  popup, so browser_click/click_element can never pick an option — the
+     *  value must be set directly through React's native setter. */
+    selectOption(id: string, optionText: string): string {
+        this.assertPermission();
+        const el = document.querySelector(`[data-ai-id="${CSS.escape(id)}"]`) as HTMLSelectElement | null;
+        if (!el) return `Error: no element with id "${id}". Call browser_read_structure to see current ids.`;
+        if (el.tagName.toLowerCase() !== 'select') return `Error: element "${id}" is not a <select>.`;
+
+        const match = Array.from(el.options).find(o =>
+            o.textContent?.trim().toLowerCase() === optionText.trim().toLowerCase()
+        );
+        if (!match) {
+            const available = Array.from(el.options).map(o => o.textContent?.trim()).filter(Boolean).join(', ');
+            return `Error: no option "${optionText}" in "${id}". Available: ${available}`;
+        }
+
+        const nativeSetter = Object.getOwnPropertyDescriptor(
+            window.HTMLSelectElement.prototype, 'value'
+        )?.set;
+        if (nativeSetter) nativeSetter.call(el, match.value);
+        else el.value = match.value;
+        el.dispatchEvent(new Event('input', { bubbles: true, cancelable: true }));
+        el.dispatchEvent(new Event('change', { bubbles: true }));
+
+        return `Selected "${match.textContent?.trim()}" in "${id}".`;
     }
 
     /** Select text by CSS selector and click it. */
@@ -378,23 +424,32 @@ Content (${full.length} chars):
 ${full.slice(0, 5000)}${full.length > 5000 ? '\n… (truncated)' : ''}`;
     }
 
-    /** Get structural info about visible elements (headings, links, buttons, inputs). */
+    /** Get structural info about visible elements (headings, links, buttons, inputs).
+     *  Elements tagged with `data-ai-id` are shown with their id in brackets —
+     *  pass that id straight to browser_click_element / browser_select_option.
+     *  No pixel positions are reported: this list is deliberately incompatible
+     *  with browser_click's coordinate args, so the model can't feed one tool's
+     *  output into the other and silently click the wrong spot. */
     readPageStructure(): string {
         this.assertPermission();
-        const tags = ['h1', 'h2', 'h3', 'h4', 'a', 'button', 'input', 'textarea', 'select', '[role="button"]', '[tabindex]'];
+        const tags = ['h1', 'h2', 'h3', 'h4', 'a', 'button', 'input', 'textarea', 'select', '[role="button"]', '[tabindex]', '[data-ai-id]'];
+        const seen = new Set<Element>();
         const items: string[] = [];
         for (const sel of tags) {
             const els = document.querySelectorAll(sel);
             for (const el of els) {
+                if (seen.has(el)) continue;
                 const rect = el.getBoundingClientRect();
                 // Only include elements visible in the viewport.
-                if (rect.top < window.innerHeight && rect.bottom > 0) {
+                if (rect.top < window.innerHeight && rect.bottom > 0 && rect.width > 0) {
+                    seen.add(el);
                     const tag = el.tagName.toLowerCase();
                     const text = (el.textContent || '').trim().slice(0, 60);
-                    const id = el.id ? `#${el.id}` : '';
                     const placeholder = (el as HTMLInputElement).placeholder || '';
                     const label = text || placeholder || tag;
-                    items.push(`<${tag}${id}> "${label}" at (${Math.round(rect.left)}, ${Math.round(rect.top)}) [${Math.round(rect.width)}×${Math.round(rect.height)}]`);
+                    const aiId = (el as HTMLElement).dataset?.aiId;
+                    const ref = aiId ? `[${aiId}]` : '(no id — use browser_click coordinates)';
+                    items.push(`${ref} <${tag}> "${label}"`);
                 }
             }
         }

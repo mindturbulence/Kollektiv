@@ -928,6 +928,8 @@ export const WEATHER_OPTIONS = [
     'Sunny Clear', 'Heavy Humidity', 'Tornado Sky'
 ];
 
+export const STYLING_TRENDS: string[] = [];
+
 export const COLOR_GRADES = [
     'Teal & Orange Blockbuster', 'Bleach Bypass', 'Day-for-Night',
     'Kodak 2383 Print Emulation', 'Pastel Wash', 'High-Key Commercial',

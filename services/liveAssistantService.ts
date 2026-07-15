@@ -114,7 +114,7 @@ export class LiveAssistant {
             model: LIVE_MODEL,
             config: {
                 responseModalities: [Modality.AUDIO],
-                systemInstruction: buildSystemIdentity(settings) + ' You are in live voice mode; keep spoken replies short. When the user shares their screen and grants you browser control permission, you can call browser_* tools to click buttons, type text, scroll, and navigate on their screen. You can see what is on their screen via the video feed. Offer to help with visible elements — say things like "I can click that button for you" or "shall I scroll down?". Ask for control permission if the screen share is active but you have not been granted control yet.',
+                systemInstruction: buildSystemIdentity(settings) + ' You are in live voice mode; keep spoken replies short. If the user shares their screen and explicitly asks you to interact with it, they will grant browser control permission — then you can call browser_* tools to click buttons, type text, scroll, and navigate on their screen. Do NOT attempt to use browser_* tools or ask for control permission on your own. Wait quietly until the user explicitly asks you to click, type, or navigate something.',
                 speechConfig: {
                     voiceConfig: { prebuiltVoiceConfig: { voiceName: settings.assistantVoice || 'Kore' } },
                 },

@@ -4,8 +4,9 @@ import { appEventBus } from '../utils/eventBus';
 import { browserControlService } from './browserControlService';
 import { addNote, loadNotes, updateNote, deleteNote } from '../utils/notesStorage';
 import { addMemory, loadMemories as loadMemoryEntries, deleteMemory } from '../utils/memoryStorage';
-import { loadGalleryItems } from '../utils/galleryStorage';
-import { refineSinglePrompt, reconstructFromIntent, dissectPrompt, translateToEnglish, generateConstructorPreset, abstractImage } from './llmService';
+import { loadGalleryItems, addItemToGallery, deleteItemFromGallery } from '../utils/galleryStorage';
+import { loadLLMSettings, saveLLMSettings } from '../utils/settingsStorage';
+import { refineSinglePrompt, reconstructFromIntent, dissectPrompt, translateToEnglish, generateConstructorPreset, abstractImage, generateWithImagen, generateWithNanoBanana, generateWithVeo } from './llmService';
 import { crafterService } from './crafterService';
 import { refinerPresetService } from './refinerPresetService';
 import { PROMPT_DETAIL_LEVELS } from '../constants/modifiers';
@@ -459,16 +460,211 @@ export const ASSISTANT_TOOLS: AssistantTool[] = [
         execute: ({ id }) => (deleteMemory(String(id)) ? 'Forgotten.' : `Error: no memory with id ${id}.`),
     },
 
-    // ─── Browser Control Tools (require screen sharing + permission) ───────────
+    // ─── Phase 3: Semantic tools for top journeys (call state layer directly) ──
 
     {
-        name: 'browser_click',
-        description: 'Click where you see something on the screen you want to interact with (buttons, links, inputs, icons). Provide nx/ny as pixel coordinates from the image you see (the screen image sent to you is scaled to max 1024 pixels on the long side). For example, if you see a button at pixel (400, 500) in the 1024-pixel image, call browser_click(400, 500). 0–1 fractions also work. Requires screen sharing + control permission.',
+        name: 'generate_image',
+        description: 'Generate an image or video directly using Google Imagen, Nano Banana, or Veo. Requires a Gemini API key. The generated media is saved to the user gallery automatically — you can navigate to the gallery afterward. Returns gallery item info. Models: "imagen" (images, fast), "nano_banana" (images with reference support), "veo" (video, slow ~2min).',
         parameters: {
             type: 'object',
             properties: {
-                nx: { type: 'number', description: 'X coordinate: either absolute pixel (0–1024) or fraction 0–1 in the screen image you see.' },
-                ny: { type: 'number', description: 'Y coordinate: either absolute pixel or fraction 0–1 in the screen image you see.' },
+                prompt: { type: 'string', description: 'The generation prompt describing what to create.' },
+                model: { type: 'string', description: 'Generation engine.', enum: ['imagen', 'nano_banana', 'veo'] },
+                aspect_ratio: { type: 'string', description: 'Aspect ratio for the output. Default: "1:1" for imagen/nano_banana, "16:9" for veo.' },
+            },
+            required: ['prompt', 'model'],
+        },
+        execute: async ({ prompt, model, aspect_ratio }, ctx) => {
+            const apiKey = ctx.settings.geminiApiKey || process.env.GEMINI_API_KEY;
+            if (!apiKey) return 'Error: Gemini API key not configured. User must add it in Settings > Integrations > Gemini.';
+            try {
+                const m = String(model || 'imagen').toLowerCase();
+                const ratio = aspect_ratio ? String(aspect_ratio) : (m === 'veo' ? '16:9' : '1:1');
+                let dataUrl: string;
+                if (m === 'imagen') {
+                    dataUrl = await generateWithImagen(String(prompt), ratio, ctx.settings);
+                } else if (m === 'nano_banana') {
+                    dataUrl = await generateWithNanoBanana(String(prompt), [], ratio, ctx.settings);
+                } else if (m === 'veo') {
+                    dataUrl = await generateWithVeo(String(prompt), undefined, ratio, ctx.settings);
+                } else {
+                    return `Error: unknown model "${m}". Valid: imagen, nano_banana, veo.`;
+                }
+                // Save to gallery so it persists and is findable.
+                const item = await addItemToGallery('image', [dataUrl], ['AI Generation'], undefined, undefined, [], undefined, String(prompt));
+                return JSON.stringify({
+                    success: true,
+                    galleryId: item.id,
+                    title: item.title,
+                    prompt: String(prompt),
+                    model: m,
+                    note: `Saved to gallery as "${item.title}" (id: ${item.id}). Navigate to the gallery page to view it — or ask the user to open it.`,
+                });
+            } catch (e: any) {
+                return `Error generating image: ${e?.message || e}`;
+            }
+        },
+    },
+    {
+        name: 'update_settings',
+        description: 'Update one or more app settings (theme, model, persona, dashboard preferences, etc.). Does NOT require screen share or page navigation. The change persists immediately. Returns the updated settings snapshot. Safe settings: activeLLM, llmModel, masterRolePrompt, assistantName, assistantPersonality, assistantLanguage, assistantVoice, darkTheme, lightTheme, fontSize, musicEnabled, musicYoutubeUrl, dashboardVideoUrl, isDashboardVideoEnabled, dashboardBackgroundType, idleScreenType, isIdleEnabled, idleTimeoutMinutes, convertImageToJpgLocal, convertImageToJpgDrive, jpgCompressionQuality.',
+        parameters: {
+            type: 'object',
+            properties: {
+                changes: {
+                    type: 'object',
+                    description: 'JSON object with the settings keys and new values to change. See tool description for the full list of safe settings.',
+                },
+            },
+            required: ['changes'],
+        },
+        execute: ({ changes }) => {
+            const SAFE_KEYS = new Set([
+                'activeLLM', 'llmModel', 'masterRolePrompt',
+                'assistantName', 'assistantPersonality', 'assistantLanguage', 'assistantVoice',
+                'darkTheme', 'lightTheme', 'fontSize',
+                'musicEnabled', 'musicYoutubeUrl',
+                'dashboardVideoUrl', 'isDashboardVideoEnabled', 'dashboardBackgroundType',
+                'idleScreenType', 'isIdleEnabled', 'idleTimeoutMinutes',
+                'convertImageToJpgLocal', 'convertImageToJpgDrive', 'jpgCompressionQuality',
+            ]);
+            if (!changes || typeof changes !== 'object') return 'Error: changes must be a JSON object.';
+            const current = loadLLMSettings();
+            const applied: string[] = [];
+            const skipped: string[] = [];
+            for (const [key, value] of Object.entries(changes)) {
+                if (SAFE_KEYS.has(key) && key in current) {
+                    (current as any)[key] = value;
+                    applied.push(key);
+                } else {
+                    skipped.push(key);
+                }
+            }
+            if (applied.length === 0) return 'Error: no valid/safe settings to update. Use one of: ' + [...SAFE_KEYS].join(', ');
+            saveLLMSettings(current);
+            // Notify the React context so the UI picks up the change immediately.
+            if (typeof window !== 'undefined') window.dispatchEvent(new Event('settings-updated'));
+            const msg = `Updated: ${applied.join(', ')}.` + (skipped.length ? ` Skipped (unsafe or unknown): ${skipped.join(', ')}.` : '');
+            return msg;
+        },
+    },
+    {
+        name: 'get_gallery_item',
+        description: 'Get the full details of a specific gallery item by its id. Returns the item\'s title, type, urls, prompt, notes, tags, and creation date as JSON. Use search_gallery first to find the id.',
+        parameters: {
+            type: 'object',
+            properties: {
+                id: { type: 'string', description: 'The gallery item id (obtained from search_gallery).' },
+            },
+            required: ['id'],
+        },
+        execute: async ({ id }) => {
+            const items = await loadGalleryItems();
+            const item = items.find(i => i.id === String(id));
+            if (!item) return `Error: no gallery item with id "${id}". Use search_gallery to find current items.`;
+            return JSON.stringify({
+                id: item.id,
+                title: item.title,
+                type: item.type,
+                prompt: item.prompt,
+                notes: item.notes,
+                tags: item.tags,
+                createdAt: new Date(item.createdAt).toISOString(),
+                urls: item.urls,
+                sources: item.sources,
+            });
+        },
+    },
+    {
+        name: 'delete_gallery_item',
+        description: 'Delete a gallery item by its id (obtained from search_gallery). The saved media file is also removed from the vault if possible. Cannot be undone.',
+        parameters: {
+            type: 'object',
+            properties: {
+                id: { type: 'string', description: 'The gallery item id (obtained from search_gallery).' },
+            },
+            required: ['id'],
+        },
+        execute: async ({ id }) => {
+            try {
+                await deleteItemFromGallery(String(id));
+                return `Gallery item "${id}" deleted.`;
+            } catch (e: any) {
+                return `Error deleting gallery item: ${e?.message || e}`;
+            }
+        },
+    },
+    {
+        name: 'save_to_gallery',
+        description: 'Save a note, prompt, or external media reference to the user gallery as a text/image entry. Use for saving generated prompts, results, or reference material the user wants to keep. Returns the new gallery item id.',
+        parameters: {
+            type: 'object',
+            properties: {
+                title: { type: 'string', description: 'Display title for the gallery entry.' },
+                content: { type: 'string', description: 'The text content to save. For prompts, pass the full prompt text. For image references, pass a data URL or URL to the image.' },
+                type: { type: 'string', description: 'Content type.', enum: ['image', 'video', 'text'] },
+                tags: { type: 'string', description: 'Optional comma-separated tags.' },
+                prompt: { type: 'string', description: 'Optional generation prompt associated with this content.' },
+            },
+            required: ['title', 'content'],
+        },
+        execute: async ({ title, content, type, tags, prompt }) => {
+            const contentType = String(type || 'text');
+            const tagList = tags ? String(tags).split(',').map(t => t.trim()).filter(Boolean) : [];
+            const p = prompt ? String(prompt) : '';
+            try {
+                if (contentType === 'image') {
+                    const item = await addItemToGallery('image', [String(content)], ['Assistant'], undefined, String(title), tagList, undefined, p);
+                    return `Saved image "${item.title}" to gallery (id: ${item.id}).`;
+                } else if (contentType === 'video') {
+                    const item = await addItemToGallery('video', [String(content)], ['Assistant'], undefined, String(title), tagList, undefined, p);
+                    return `Saved video "${item.title}" to gallery (id: ${item.id}).`;
+                } else {
+                    // Save a text-only note to the gallery (stored as an item with empty urls).
+                    const item = await addItemToGallery('image', [], ['Assistant'], undefined, String(title), tagList, String(content), p);
+                    return `Saved note "${item.title}" to gallery (id: ${item.id}).`;
+                }
+            } catch (e: any) {
+                return `Error saving to gallery: ${e?.message || e}`;
+            }
+        },
+    },
+
+    // ─── Browser Control Tools (require screen sharing + permission) ───────────
+
+    {
+        name: 'browser_click_element',
+        description: 'Click a specific UI control by the id shown in brackets by browser_read_structure (e.g. "[generate-btn] <button>..." → pass "generate-btn"). This is the PRIMARY way to click things in the app — it targets the real element directly, so it is exact and never misses. Always call browser_read_structure first to get current ids. Use browser_click (coordinates) only as a fallback for canvas/image content that has no id. Requires screen sharing + control permission.',
+        parameters: {
+            type: 'object',
+            properties: {
+                id: { type: 'string', description: 'The data-ai-id shown in brackets by browser_read_structure, e.g. "generate-btn".' },
+            },
+            required: ['id'],
+        },
+        execute: ({ id }) => browserControlService.clickElement(String(id)),
+    },
+    {
+        name: 'browser_select_option',
+        description: 'Pick an option in a native dropdown (<select>) by its data-ai-id and the option\'s visible text. Regular clicks cannot open a native dropdown\'s popup, so use this instead of browser_click_element for <select> elements. Requires screen sharing + control permission.',
+        parameters: {
+            type: 'object',
+            properties: {
+                id: { type: 'string', description: 'The data-ai-id of the <select> element, from browser_read_structure.' },
+                option: { type: 'string', description: 'The visible text of the option to select, exactly as shown.' },
+            },
+            required: ['id', 'option'],
+        },
+        execute: ({ id, option }) => browserControlService.selectOption(String(id), String(option)),
+    },
+    {
+        name: 'browser_click',
+        description: 'FALLBACK ONLY — for clicking inside canvas/image content that has no data-ai-id (e.g. the image editor canvas). For any normal UI control, use browser_click_element instead — it is exact, this is not. Provide nx/ny as absolute pixel coordinates within the screen image you see (scaled to max 1024px on the long side). Requires screen sharing + control permission.',
+        parameters: {
+            type: 'object',
+            properties: {
+                nx: { type: 'number', description: 'X pixel coordinate within the screen image you see (0–1024 range).' },
+                ny: { type: 'number', description: 'Y pixel coordinate within the screen image you see (0–1024 range).' },
             },
             required: ['nx', 'ny'],
         },
@@ -476,12 +672,12 @@ export const ASSISTANT_TOOLS: AssistantTool[] = [
     },
     {
         name: 'browser_double_click',
-        description: 'Double-click where you see something. Same coordinate format as browser_click — use pixel coordinates from the image you see (max 1024px wide), or 0–1 fractions.',
+        description: 'FALLBACK ONLY — same as browser_click, for canvas/image content without a data-ai-id. Pixel coordinates within the screen image you see (max 1024px wide).',
         parameters: {
             type: 'object',
             properties: {
-                nx: { type: 'number', description: 'X coordinate: pixel (0–1024) or fraction 0–1.' },
-                ny: { type: 'number', description: 'Y coordinate: pixel or fraction 0–1.' },
+                nx: { type: 'number', description: 'X pixel coordinate within the screen image you see.' },
+                ny: { type: 'number', description: 'Y pixel coordinate within the screen image you see.' },
             },
             required: ['nx', 'ny'],
         },
@@ -543,7 +739,7 @@ export const ASSISTANT_TOOLS: AssistantTool[] = [
     },
     {
         name: 'browser_read_structure',
-        description: 'Scan the page and list all interactive elements visible on screen (buttons, links, inputs, headings) with their tag, text, position, and size. Use BEFORE browser_click so you know the exact positions of elements. Requires screen sharing + control permission.',
+        description: 'Scan the page and list interactive elements visible on screen (buttons, links, inputs, headings) with their tag and text. Elements with an id (shown in brackets, e.g. "[generate-btn]") can be clicked exactly with browser_click_element or browser_select_option — call this FIRST to get those ids, then act on them. Elements without an id have no exact click target; only fall back to browser_click coordinates for canvas/image content. Requires screen sharing + control permission.',
         parameters: { type: 'object', properties: {} },
         execute: () => browserControlService.readPageStructure(),
     },

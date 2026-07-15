@@ -1577,6 +1577,12 @@ button:active {
   letter-spacing: 0.04em !important;
 }
 
+/* Rainmaker Script for the brand tagline */
+[data-theme="Kollektiv"] .font-rainmaker,
+[data-theme="Kollektiv"] .font-rainmaker * {
+  font-family: "RainmakerScript-Bold", cursive !important;
+}
+
 /* --- Calm the global neon so labels stay legible; keep a tight signature halo --- */
 [data-theme="Kollektiv"] .text-primary {
   text-shadow: 0 0 10px oklch(var(--p) / 0.35) !important;
