@@ -266,7 +266,7 @@ const InitialLoader: React.FC<{ status: string; progress: number | null; onConti
                     </h1>
                     <span
                         ref={systemTextRef}
-                        className="block -mt-10 md:-mt-10 font-rainmaker text-primary text-xl md:text-5xl whitespace-nowrap leading-[0] drop-shadow-[0_0_22px_rgba(var(--p),0.3)] pointer-events-none normal-case"
+                        className="block -mt-10 md:-mt-10 font-rainmaker text-primary text-xl md:text-5xl whitespace-nowrap leading-[0] pulse-glow pointer-events-none normal-case"
                     >
                         _Systems_
                     </span>
