@@ -2,6 +2,7 @@ import type { LLMSettings, WildcardCategory } from '../types';
 import { appControlService } from './appControlService';
 import { appEventBus } from '../utils/eventBus';
 import { browserControlService } from './browserControlService';
+import { externalBrowserService } from './externalBrowserService';
 import { addNote, loadNotes, updateNote, deleteNote } from '../utils/notesStorage';
 import { addMemory, loadMemories as loadMemoryEntries, deleteMemory } from '../utils/memoryStorage';
 import { loadGalleryItems, addItemToGallery, deleteItemFromGallery } from '../utils/galleryStorage';
@@ -23,7 +24,7 @@ export interface AssistantTool {
     description: string;
     parameters: {
         type: 'object';
-        properties: Record<string, { type: string; description: string; enum?: string[] }>;
+        properties: Record<string, Record<string, any>>;
         required?: string[];
     };
     execute: (args: Record<string, any>, ctx: ToolContext) => Promise<string> | string;
@@ -631,6 +632,8 @@ export const ASSISTANT_TOOLS: AssistantTool[] = [
     },
 
     // ─── Browser Control Tools (require screen sharing + permission) ───────────
+    // These tools auto-route: when CDP external browser is connected, coordinate-based
+    // actions go to the external page via CDP. data-ai-id tools stay in-app.
 
     {
         name: 'browser_click_element',
@@ -659,7 +662,7 @@ export const ASSISTANT_TOOLS: AssistantTool[] = [
     },
     {
         name: 'browser_click',
-        description: 'FALLBACK ONLY — for clicking inside canvas/image content that has no data-ai-id (e.g. the image editor canvas). For any normal UI control, use browser_click_element instead — it is exact, this is not. Provide nx/ny as absolute pixel coordinates within the screen image you see (scaled to max 1024px on the long side). Requires screen sharing + control permission.',
+        description: 'Click at pixel coordinates within the screen image you see (scaled to max 1024px on the long side). Works in-app (synthetic events) and on external websites (via CDP when connected). For any normal UI control with a data-ai-id, use browser_click_element instead — it is exact, this is not. Requires screen sharing + control permission.',
         parameters: {
             type: 'object',
             properties: {
@@ -668,11 +671,14 @@ export const ASSISTANT_TOOLS: AssistantTool[] = [
             },
             required: ['nx', 'ny'],
         },
-        execute: ({ nx, ny }) => browserControlService.click(Number(nx), Number(ny)),
+        execute: async ({ nx, ny }) => {
+            if (externalBrowserService.connected) return externalBrowserService.click(Number(nx), Number(ny));
+            return browserControlService.click(Number(nx), Number(ny));
+        },
     },
     {
         name: 'browser_double_click',
-        description: 'FALLBACK ONLY — same as browser_click, for canvas/image content without a data-ai-id. Pixel coordinates within the screen image you see (max 1024px wide).',
+        description: 'Double-click at pixel coordinates within the screen image (scaled to max 1024px). Works in-app and on external websites (via CDP).',
         parameters: {
             type: 'object',
             properties: {
@@ -681,11 +687,46 @@ export const ASSISTANT_TOOLS: AssistantTool[] = [
             },
             required: ['nx', 'ny'],
         },
-        execute: ({ nx, ny }) => browserControlService.doubleClick(Number(nx), Number(ny)),
+        execute: async ({ nx, ny }) => {
+            if (externalBrowserService.connected) return externalBrowserService.doubleClick(Number(nx), Number(ny));
+            return browserControlService.doubleClick(Number(nx), Number(ny));
+        },
+    },
+    {
+        name: 'browser_right_click',
+        description: 'Right-click at pixel coordinates within the screen image (scaled to max 1024px). Works in-app and on external websites (via CDP).',
+        parameters: {
+            type: 'object',
+            properties: {
+                nx: { type: 'number', description: 'X pixel coordinate within the screen image you see.' },
+                ny: { type: 'number', description: 'Y pixel coordinate within the screen image you see.' },
+            },
+            required: ['nx', 'ny'],
+        },
+        execute: async ({ nx, ny }) => {
+            if (externalBrowserService.connected) return externalBrowserService.rightClick(Number(nx), Number(ny));
+            return browserControlService.rightClick(Number(nx), Number(ny));
+        },
+    },
+    {
+        name: 'browser_hover',
+        description: 'Hover (move mouse to) a position on the page. Useful for revealing hover menus, tooltips, or previews. Provide pixel coordinates within the screen image (scaled to max 1024px). Works in-app and on external websites (via CDP).',
+        parameters: {
+            type: 'object',
+            properties: {
+                nx: { type: 'number', description: 'X pixel coordinate within the screen image you see.' },
+                ny: { type: 'number', description: 'Y pixel coordinate within the screen image you see.' },
+            },
+            required: ['nx', 'ny'],
+        },
+        execute: async ({ nx, ny }) => {
+            if (externalBrowserService.connected) return externalBrowserService.hover(Number(nx), Number(ny));
+            return browserControlService.hover(Number(nx), Number(ny));
+        },
     },
     {
         name: 'browser_type',
-        description: 'Type text into the input field that currently has focus. Make sure you click the input field first with browser_click. Requires screen sharing + control permission.',
+        description: 'Type text into the input field that is focused on the page. Make sure you click the input field first with browser_click. Works in-app and on external websites (via CDP).',
         parameters: {
             type: 'object',
             properties: {
@@ -693,23 +734,29 @@ export const ASSISTANT_TOOLS: AssistantTool[] = [
             },
             required: ['text'],
         },
-        execute: ({ text }) => browserControlService.type(String(text)),
+        execute: async ({ text }) => {
+            if (externalBrowserService.connected) return externalBrowserService.type(String(text));
+            return browserControlService.type(String(text));
+        },
     },
     {
         name: 'browser_press_key',
-        description: 'Press a named key (Enter, Tab, Escape, Backspace, ArrowUp/Down/Left/Right, etc.) on the element that currently has focus. Requires screen sharing + control permission.',
+        description: 'Press a named key (Enter, Tab, Escape, Backspace, ArrowUp/Down/Left/Right, etc.) or combinations (Control+C, Control+V, Shift+Tab) on the element that currently has focus. Works in-app and on external websites (via CDP).',
         parameters: {
             type: 'object',
             properties: {
-                key: { type: 'string', description: 'Key name. Valid: Enter, Tab, Escape, Backspace, Delete, ArrowUp, ArrowDown, ArrowLeft, ArrowRight, Space, Home, End, PageUp, PageDown, F1–F12, Shift, Control, Alt, CapsLock.' },
+                key: { type: 'string', description: 'Key name. Valid: Enter, Tab, Escape, Backspace, Delete, ArrowUp, ArrowDown, ArrowLeft, ArrowRight, Space, Home, End, PageUp, PageDown, F1–F12, Shift, Control, Alt, CapsLock. Can also combine modifiers like Control+V, Control+C, Meta+C, Shift+Tab.' },
             },
             required: ['key'],
         },
-        execute: ({ key }) => browserControlService.pressKey(String(key)),
+        execute: async ({ key }) => {
+            if (externalBrowserService.connected) return externalBrowserService.pressKey(String(key));
+            return browserControlService.pressKey(String(key));
+        },
     },
     {
         name: 'browser_scroll',
-        description: 'Scroll the page by a small or large amount. dy = 0.5 scrolls down half a page. dy = -0.3 scrolls up a bit. dx scrolls sideways. Requires screen sharing + control permission.',
+        description: 'Scroll the page by a small or large amount. dy = 0.5 scrolls down half a page. dy = -0.3 scrolls up a bit. dx scrolls sideways. Works in-app and on external websites (via CDP).',
         parameters: {
             type: 'object',
             properties: {
@@ -717,11 +764,14 @@ export const ASSISTANT_TOOLS: AssistantTool[] = [
                 dy: { type: 'number', description: 'Vertical scroll factor (negative = up, positive = down, 0.5 = ~500px).' },
             },
         },
-        execute: ({ dx, dy }) => browserControlService.scroll(Number(dx || 0), Number(dy || 0)),
+        execute: async ({ dx, dy }) => {
+            if (externalBrowserService.connected) return externalBrowserService.scroll(Number(dx || 0), Number(dy || 0));
+            return browserControlService.scroll(Number(dx || 0), Number(dy || 0));
+        },
     },
     {
         name: 'browser_scroll_to',
-        description: 'Scroll to a specific position on the page. frac = 0 is the top, frac = 1 is the bottom. Requires screen sharing + control permission.',
+        description: 'Scroll to a specific position on the page. frac = 0 is the top, frac = 1 is the bottom. Works in-app and on external websites (via CDP).',
         parameters: {
             type: 'object',
             properties: {
@@ -729,23 +779,48 @@ export const ASSISTANT_TOOLS: AssistantTool[] = [
             },
             required: ['frac'],
         },
-        execute: ({ frac }) => browserControlService.scrollTo(Number(frac)),
+        execute: async ({ frac }) => {
+            if (externalBrowserService.connected) return externalBrowserService.scrollTo(Number(frac));
+            return browserControlService.scrollTo(Number(frac));
+        },
+    },
+    {
+        name: 'browser_get_url',
+        description: 'Get the current page URL. Works in-app and on external websites (via CDP).',
+        parameters: { type: 'object', properties: {} },
+        execute: async () => {
+            if (externalBrowserService.connected) {
+                const r = await externalBrowserService.readContent();
+                return r.url || '(unknown)';
+            }
+            return browserControlService.getUrl();
+        },
     },
     {
         name: 'browser_read_page',
-        description: 'Read all visible text content from the current page. Returns the page title, URL, and up to 5000 characters of body text. Use this when you need to know what the page says. Requires screen sharing + control permission.',
+        description: 'Read all visible text content from the current page. Returns the page title, URL, and up to 5000 characters of body text. Works in-app and on external websites (via CDP).',
         parameters: { type: 'object', properties: {} },
-        execute: () => browserControlService.readVisibleContent(),
+        execute: async () => {
+            if (externalBrowserService.connected) {
+                const r = await externalBrowserService.readContent();
+                if (!r.success) return `Error: ${r.error}`;
+                return `Page title: "${r.title}"\nURL: ${r.url}\nContent:\n${r.content}`;
+            }
+            return browserControlService.readVisibleContent();
+        },
     },
     {
         name: 'browser_read_structure',
-        description: 'Scan the page and list interactive elements visible on screen (buttons, links, inputs, headings) with their tag and text. Elements with an id (shown in brackets, e.g. "[generate-btn]") can be clicked exactly with browser_click_element or browser_select_option — call this FIRST to get those ids, then act on them. Elements without an id have no exact click target; only fall back to browser_click coordinates for canvas/image content. Requires screen sharing + control permission.',
+        description: 'Scan the page and list interactive elements visible on screen (buttons, links, inputs, headings) with their tag and text. Elements with a data-ai-id (shown in brackets, e.g. "[generate-btn]") can be clicked exactly with browser_click_element — call this FIRST to get those ids, then act on them. On external pages (via CDP), no data-ai-id will be shown — use browser_click with coordinates instead. Works in-app and on external websites.',
         parameters: { type: 'object', properties: {} },
-        execute: () => browserControlService.readPageStructure(),
+        execute: async () => {
+            if (externalBrowserService.connected) return externalBrowserService.readStructure();
+            return browserControlService.readPageStructure();
+        },
     },
     {
         name: 'browser_navigate',
-        description: 'Navigate the browser to a different URL. Requires screen sharing + control permission.',
+        description: 'Navigate the browser to a different URL. Works in-app and on external websites (via CDP).',
         parameters: {
             type: 'object',
             properties: {
@@ -753,11 +828,174 @@ export const ASSISTANT_TOOLS: AssistantTool[] = [
             },
             required: ['url'],
         },
-        execute: ({ url }) => browserControlService.navigate(String(url)),
+        execute: async ({ url }) => {
+            if (externalBrowserService.connected) return externalBrowserService.navigate(String(url));
+            return browserControlService.navigate(String(url));
+        },
+    },
+
+    // ─── Gmail Tools (require Google Identity connection) ───────────────────
+
+    {
+        name: 'read_gmail',
+        description: 'Read the user\'s Gmail inbox — list recent messages, search by query, or read a specific email\'s full content (headers + body). Requires Google Identity to be connected (Settings > App > Storage > Authorize Drive).',
+        parameters: {
+            type: 'object',
+            properties: {
+                action: {
+                    type: 'string',
+                    enum: ['list', 'search', 'read'],
+                    description: '"list" = recent inbox messages, "search" = search by query, "read" = read full content by message id.'
+                },
+                query: { type: 'string', description: 'For "search": a Gmail search query (e.g. "from:john subject:invoice"). For "read": the message id to fetch.' },
+                maxResults: { type: 'number', description: 'Max messages for list/search (1-20, default 10).' },
+            },
+            required: ['action'],
+        },
+        execute: async (args, ctx) => {
+            const token = ctx.settings.googleIdentity?.accessToken;
+            if (!token) return 'Error: No Google Identity connected. Go to Settings > App > Storage and authorize Google Drive first, then re-authorize to include Gmail access.';
+            const BASE = '/google-api/gmail/v1/users/me';
+            const headers = { Authorization: `Bearer ${token}` };
+            try {
+                if (args.action === 'list' || args.action === 'search') {
+                    const q = args.action === 'search' && args.query ? `&q=${encodeURIComponent(String(args.query))}` : '';
+                    const max = Math.min(Math.max(Number(args.maxResults) || 10, 1), 20);
+                    const res = await fetch(`${BASE}/messages?maxResults=${max}${q}&fields=messages(id,threadId,snippet,labelIds)`, { headers });
+                    if (!res.ok) return `Gmail API error: ${res.status} ${res.statusText}${res.status === 401 ? ' — token expired, re-authorize in Settings.' : ''}`;
+                    const data = await res.json();
+                    if (!data.messages?.length) return 'No messages found.';
+                    const out = await Promise.all(data.messages.slice(0, max).map(async (m: any) => {
+                        const detail = await fetch(`${BASE}/messages/${m.id}?format=metadata&fields=id,labelIds,payload/headers,snippet`, { headers }).then(r => r.json()).catch(() => ({}));
+                        const h = (hds: any[], name: string) => hds?.find((h: any) => h.name === name)?.value || '';
+                        const hs = detail.payload?.headers || [];
+                        return `[${m.id}] From: ${h(hs, 'From')} | To: ${h(hs, 'To')} | Subject: ${h(hs, 'Subject')} | Date: ${h(hs, 'Date')} | Labels: ${(m.labelIds||[]).join(', ')} | Snippet: ${m.snippet || ''}`;
+                    }));
+                    return `Found ${data.messages.length} message(s):\n\n${out.join('\n')}` + (data.nextPageToken ? '\n\n(More results available — use a more specific query.)' : '');
+                } else if (args.action === 'read') {
+                    if (!args.query) return 'Error: provide a message id as the "query" parameter.';
+                    const res = await fetch(`${BASE}/messages/${encodeURIComponent(String(args.query))}?format=full`, { headers });
+                    if (!res.ok) return `Gmail API error: ${res.status} ${res.statusText}`;
+                    const msg = await res.json();
+                    const h = (name: string) => msg.payload?.headers?.find((x: any) => x.name === name)?.value || '';
+                    // Extract body from message parts
+                    const extractBody = (part: any): string => {
+                        if (part.mimeType === 'text/plain' && part.body?.data) {
+                            try { return atob(part.body.data.replace(/-/g, '+').replace(/_/g, '/')); } catch { return '[could not decode body]'; }
+                        }
+                        if (part.parts) return part.parts.map(extractBody).filter(Boolean).join('\n---\n');
+                        return '';
+                    };
+                    const body = extractBody(msg.payload || {});
+                    return `From: ${h('From')}\nTo: ${h('To')}\nDate: ${h('Date')}\nSubject: ${h('Subject')}\n\n${body || '(no plain text body)'}`;
+                } else {
+                    return `Error: unknown action "${args.action}". Use "list", "search", or "read".`;
+                }
+            } catch (e: any) {
+                return `Gmail error: ${e?.message || e}`;
+            }
+        },
+    },
+    {
+        name: 'send_gmail',
+        description: 'Send an email from the user\'s Gmail account (the one connected via Google Identity). Use for composing and sending messages on the user\'s behalf.',
+        parameters: {
+            type: 'object',
+            properties: {
+                to: { type: 'string', description: 'Recipient email address(es). Comma-separate multiple recipients.' },
+                subject: { type: 'string', description: 'Email subject line.' },
+                body: { type: 'string', description: 'Email body text (plain text).' },
+                cc: { type: 'string', description: 'Optional CC recipient(s).' },
+                bcc: { type: 'string', description: 'Optional BCC recipient(s).' },
+            },
+            required: ['to', 'subject', 'body'],
+        },
+        execute: async (args, ctx) => {
+            const token = ctx.settings.googleIdentity?.accessToken;
+            if (!token) return 'Error: No Google Identity connected. Go to Settings > App > Storage and authorize Google Drive first.';
+            try {
+                // Build RFC 2822 MIME message
+                const to = String(args.to || '');
+                const subject = String(args.subject || '');
+                const body = String(args.body || '');
+                const cc = args.cc ? String(args.cc) : '';
+                const bcc = args.bcc ? String(args.bcc) : '';
+                if (!to) return 'Error: "to" is required.';
+                // Construct email headers + body as a MIME message
+                const headers = [
+                    `To: ${to}`,
+                    `Subject: ${subject}`,
+                    'MIME-Version: 1.0',
+                    'Content-Type: text/plain; charset="UTF-8"',
+                    'Content-Transfer-Encoding: 7bit',
+                ];
+                if (cc) headers.push(`Cc: ${cc}`);
+                if (bcc) headers.push(`Bcc: ${bcc}`);
+                const raw = headers.join('\r\n') + '\r\n\r\n' + body;
+                // Base64url encode
+                const b64 = btoa(unescape(encodeURIComponent(raw)));
+                const b64url = b64.replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
+                const res = await fetch('/google-api/gmail/v1/users/me/messages/send', {
+                    method: 'POST',
+                    headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ raw: b64url }),
+                });
+                if (!res.ok) {
+                    const err = await res.text().catch(() => res.statusText);
+                    return `Failed to send email: ${res.status} ${err}`;
+                }
+                const result = await res.json();
+                return `Email sent successfully. Message id: ${result.id}${result.threadId ? `, thread: ${result.threadId}` : ''}`;
+            } catch (e: any) {
+                return `Error sending email: ${e?.message || e}`;
+            }
+        },
+    },
+    {
+        name: 'delete_gmail',
+        description: 'Trash or permanently delete an email from Gmail. Requires the message id obtained from read_gmail (action "list" or "search").',
+        parameters: {
+            type: 'object',
+            properties: {
+                id: { type: 'string', description: 'The Gmail message id to act on (from read_gmail).' },
+                action: { type: 'string', enum: ['trash', 'delete'], description: '"trash" (default) moves to trash (undoable in Gmail UI). "delete" permanently deletes immediately (irreversible).' },
+            },
+            required: ['id'],
+        },
+        execute: async (args, ctx) => {
+            const token = ctx.settings.googleIdentity?.accessToken;
+            if (!token) return 'Error: No Google Identity connected.';
+            try {
+                const msgId = encodeURIComponent(String(args.id));
+                const isPermanent = args.action === 'delete';
+                const url = isPermanent
+                    ? `/google-api/gmail/v1/users/me/messages/${msgId}`
+                    : `/google-api/gmail/v1/users/me/messages/${msgId}/trash`;
+                const res = await fetch(url, {
+                    method: isPermanent ? 'DELETE' : 'POST',
+                    headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
+                });
+                if (!res.ok) {
+                    const err = await res.text().catch(() => res.statusText);
+                    return `Failed to ${isPermanent ? 'delete' : 'trash'} message: ${res.status} ${err}`;
+                }
+                return isPermanent ? `Message ${args.id} permanently deleted.` : `Message ${args.id} moved to trash.`;
+            } catch (e: any) {
+                return `Error deleting message: ${e?.message || e}`;
+            }
+        },
     },
 ];
 
 export const executeAssistantTool = async (name: string, args: Record<string, any>, ctx: ToolContext, extraTools: AssistantTool[] = []): Promise<string> => {
+    // Check control permission for browser tools.
+    if (name.startsWith('browser_') && !browserControlService.permissionGranted) {
+        appEventBus.emit('assistantFeedback', {
+            message: 'Assistant tried to control your browser, but control permission isn\'t granted — click the cursor icon in the header. If it\'s not visible, share your screen first (monitor icon), then grant control (cursor icon).',
+            isError: true,
+        });
+        return `Error: Browser control permission not granted. Please share your screen and grant browser control permission (click the cursor icon in the header).`;
+    }
     const tool = [...ASSISTANT_TOOLS, ...extraTools].find(t => t.name === name);
     if (!tool) return `Error: unknown tool "${name}". Available: ${[...ASSISTANT_TOOLS, ...extraTools].map(t => t.name).join(', ')}`;
     try {
