@@ -486,7 +486,7 @@ async function startServer() {
       const data = await response.json();
       res.json({ success: true, data });
     } catch (err: any) {
-      console.warn("MCP JSON-RPC proxy failed, attempting REST API fallback:", err.message);
+      console.warn("MCP JSON-RPC proxy failed:", err.message, err.cause ? `(cause: ${err.cause.message || err.cause.code || JSON.stringify(err.cause)})` : '');
 
       try {
         const actionMatch = method?.split('/') || [];
@@ -505,10 +505,16 @@ async function startServer() {
           return res.json({ success: true, isRest: true, data });
         }
       } catch (restErr: any) {
-        console.error("MCP REST fallback also failed:", restErr.message);
+        console.error("MCP REST fallback also failed:", restErr.message, restErr.cause ? `(cause: ${restErr.cause.message || restErr.cause.code || JSON.stringify(restErr.cause)})` : '');
       }
 
-      res.status(500).json({ success: false, error: err.message });
+      const causeCode = err.cause?.code || err.cause?.cause?.code || '';
+      const friendlyMsg = causeCode === 'ECONNREFUSED'
+        ? `Connection refused to ${url}. The MCP server is not running. Start it first.`
+        : causeCode === 'ENOTFOUND'
+        ? `DNS resolution failed for ${url}. Check the MCP server URL.`
+        : err.message;
+      res.status(500).json({ success: false, error: friendlyMsg });
     }
   });
 

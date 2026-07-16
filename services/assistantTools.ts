@@ -863,6 +863,8 @@ export const ASSISTANT_TOOLS: AssistantTool[] = [
                     const max = Math.min(Math.max(Number(args.maxResults) || 10, 1), 20);
                     const res = await fetch(`${BASE}/messages?maxResults=${max}${q}&fields=messages(id,threadId,snippet,labelIds)`, { headers });
                     if (!res.ok) return `Gmail API error: ${res.status} ${res.statusText}${res.status === 401 ? ' — token expired, re-authorize in Settings.' : ''}`;
+                    // 204 No Content means no messages (empty inbox/result)
+                    if (res.status === 204) return 'No messages found.';
                     const data = await res.json();
                     if (!data.messages?.length) return 'No messages found.';
                     const out = await Promise.all(data.messages.slice(0, max).map(async (m: any) => {
