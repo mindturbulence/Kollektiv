@@ -1,11 +1,19 @@
-import type { LLMSettings } from '../types';
+import type { LLMSettings, WildcardCategory } from '../types';
 import { appControlService } from './appControlService';
 import { appEventBus } from '../utils/eventBus';
+import { browserControlService } from './browserControlService';
+import { addNote, loadNotes, updateNote, deleteNote } from '../utils/notesStorage';
+import { addMemory, loadMemories as loadMemoryEntries, deleteMemory } from '../utils/memoryStorage';
 import { loadGalleryItems } from '../utils/galleryStorage';
-import { refineSinglePrompt } from './llmService';
+import { refineSinglePrompt, reconstructFromIntent, dissectPrompt, translateToEnglish, generateConstructorPreset, abstractImage } from './llmService';
+import { crafterService } from './crafterService';
+import { refinerPresetService } from './refinerPresetService';
+import { PROMPT_DETAIL_LEVELS } from '../constants/modifiers';
 
 export interface ToolContext {
     settings: LLMSettings;
+    /** Attachments on the user's current chat turn (images), if any. */
+    attachments?: { data: string; mimeType: string; fileName?: string }[];
 }
 
 /** JSON-Schema-style (lowercase types); converted per-provider below. */
@@ -77,6 +85,18 @@ export const ASSISTANT_TOOLS: AssistantTool[] = [
         },
     },
     {
+        name: 'abstract_image',
+        description: "Reverse-engineer a generation prompt from an image the user attached to this chat message, same engine as the Abstractor page's Analyze button. Fails if no image is attached.",
+        parameters: { type: 'object', properties: {} },
+        execute: async (_args, ctx) => {
+            const image = ctx.attachments?.find(a => a.mimeType.startsWith('image/'));
+            if (!image) return 'Error: no image attached to this message. Ask the user to attach an image first.';
+            const base64Data = image.data.includes('base64,') ? image.data.split('base64,')[1] : image.data;
+            const result = await abstractImage(base64Data, PROMPT_DETAIL_LEVELS.MEDIUM, 'General', ctx.settings);
+            return JSON.stringify(result);
+        },
+    },
+    {
         name: 'search_cheatsheets',
         description: 'Search the style/technique cheatsheets (keywords, artists, art styles) for reference material. Returns JSON.',
         parameters: {
@@ -100,6 +120,42 @@ export const ASSISTANT_TOOLS: AssistantTool[] = [
             refineSinglePrompt(String(idea), String(target_model || 'Flux'), ctx.settings),
     },
     {
+        name: 'translate_prompt',
+        description: 'Translate prompt text to English, same engine as the Translate button on the Crafter/Refiner pages. Returns the translated text.',
+        parameters: {
+            type: 'object',
+            properties: { text: { type: 'string', description: 'Text to translate to English.' } },
+            required: ['text'],
+        },
+        execute: ({ text }, ctx) => translateToEnglish(String(text), ctx.settings),
+    },
+    {
+        name: 'rewrite_prompt',
+        description: 'Rewrite/polish prompt text for clarity and visual detail, same engine as the Reconstruct button on the Crafter/Refiner pages. Returns the rewritten text.',
+        parameters: {
+            type: 'object',
+            properties: { text: { type: 'string', description: 'Prompt text to rewrite.' } },
+            required: ['text'],
+        },
+        execute: ({ text }, ctx) => reconstructFromIntent([String(text)], ctx.settings),
+    },
+    {
+        name: 'clip_idea',
+        description: "Save text to the app's Clipped Ideas panel (the in-app clipboard reachable from every page via the paperclip icon) — not the OS clipboard.",
+        parameters: {
+            type: 'object',
+            properties: {
+                prompt: { type: 'string', description: 'The prompt/idea text to clip.' },
+                title: { type: 'string', description: 'Short title. Defaults to the first part of the prompt.' },
+            },
+            required: ['prompt'],
+        },
+        execute: ({ prompt, title }) => {
+            appEventBus.emit('clipIdea', { prompt: String(prompt), title: title ? String(title) : undefined, lens: 'Assistant', source: 'Assistant' });
+            return 'Clipped to the Clipped Ideas panel.';
+        },
+    },
+    {
         name: 'send_to_refiner',
         description: 'Open the Refiner page with the given prompt text pre-loaded so the user can work on it interactively.',
         parameters: {
@@ -110,6 +166,114 @@ export const ASSISTANT_TOOLS: AssistantTool[] = [
         execute: ({ prompt }) => {
             appEventBus.emit('sendToPromptsPage', { prompt: String(prompt), view: 'enhancer' });
             return 'Opened the Refiner with the prompt pre-loaded.';
+        },
+    },
+    {
+        name: 'save_refiner_preset',
+        description: "Analyze a prompt into the Refiner's structured modifier format and save it as a named preset, same as the Refiner's Save as Preset button. Does not require the Refiner page to be open.",
+        parameters: {
+            type: 'object',
+            properties: {
+                name: { type: 'string', description: 'Name for the saved preset.' },
+                prompt: { type: 'string', description: 'The prompt text to analyze and save.' },
+                target_model: { type: 'string', description: "Target generative model, e.g. 'SDXL', 'Flux', 'Midjourney'. Defaults to 'Flux'." },
+            },
+            required: ['name', 'prompt'],
+        },
+        execute: async ({ name, prompt, target_model }, ctx) => {
+            const targetModel = String(target_model || 'Flux');
+            const { prompt: dissectedPrompt, modifiers, constantModifier } = await dissectPrompt(String(prompt), ctx.settings, undefined, targetModel);
+            const flatComponents: Record<string, string> = { prompt: dissectedPrompt, ...modifiers };
+            if (constantModifier) flatComponents.constantModifier = constantModifier;
+            const result = await generateConstructorPreset(flatComponents, ctx.settings);
+            await refinerPresetService.savePreset({
+                name: String(name),
+                modifiers: result.modifiers,
+                targetAIModel: targetModel,
+                mediaMode: 'image',
+                promptLength: PROMPT_DETAIL_LEVELS.MEDIUM,
+                constantModifier: result.constantModifier,
+                refineText: result.prompt,
+            });
+            return `Saved preset "${name}".`;
+        },
+    },
+    {
+        name: 'send_to_crafter',
+        description: 'Open the Crafter page with the given idea text appended into its main prompt textarea so the user can work on it interactively (it can include __wildcard__ tokens).',
+        parameters: {
+            type: 'object',
+            properties: { prompt: { type: 'string', description: 'Idea/prompt text to insert into the Crafter textarea.' } },
+            required: ['prompt'],
+        },
+        execute: ({ prompt }) => {
+            appEventBus.emit('sendToPromptsPage', { prompt: String(prompt), view: 'composer' });
+            return 'Opened the Crafter with the text inserted into the textarea.';
+        },
+    },
+    {
+        name: 'list_wildcards',
+        description: "List the user's Crafter __wildcard__ tokens (grouped by category) so you know real names to insert instead of guessing. Returns JSON.",
+        parameters: {
+            type: 'object',
+            properties: { query: { type: 'string', description: 'Optional filter text to match against wildcard or category names.' } },
+        },
+        execute: async ({ query }) => {
+            const { wildcardCategories } = await crafterService.loadWildcardsAndTemplates();
+            const q = query ? String(query).toLowerCase() : undefined;
+            const out: { category: string; wildcards: string[] }[] = [];
+            const walk = (categories: WildcardCategory[], prefix: string) => {
+                for (const cat of categories) {
+                    const label = prefix ? `${prefix}/${cat.name}` : cat.name;
+                    const names = cat.files
+                        .map(f => f.name.replace(/\.(txt|yml|yaml)$/i, ''))
+                        .filter(n => !q || n.toLowerCase().includes(q) || label.toLowerCase().includes(q));
+                    if (names.length) out.push({ category: label, wildcards: names });
+                    if (cat.subCategories?.length) walk(cat.subCategories, label);
+                }
+            };
+            walk(wildcardCategories, '');
+            return JSON.stringify(out.slice(0, 50));
+        },
+    },
+    {
+        name: 'generate_crafter_prompt',
+        description: 'Resolve __wildcard__ tokens in the given idea and run it through the same AI polish pipeline as the Crafter page\'s Generate button. Returns the finished prompt text (does not modify the page — use send_to_crafter afterward to show it there).',
+        parameters: {
+            type: 'object',
+            properties: { idea: { type: 'string', description: 'Idea/prompt text, may include __wildcard__ tokens (see list_wildcards).' } },
+            required: ['idea'],
+        },
+        execute: async ({ idea }, ctx) => {
+            const { wildcardCategories } = await crafterService.loadWildcardsAndTemplates();
+            const resolved = crafterService.processCrafterPrompt(String(idea), wildcardCategories);
+            return reconstructFromIntent([resolved], ctx.settings);
+        },
+    },
+    {
+        name: 'send_to_prompt_analyzer',
+        description: 'Open the Prompt Analyzer page with the given prompt text pre-loaded so the user can dissect it interactively.',
+        parameters: {
+            type: 'object',
+            properties: { prompt: { type: 'string', description: 'Prompt text to load into the Prompt Analyzer.' } },
+            required: ['prompt'],
+        },
+        execute: ({ prompt }) => {
+            appEventBus.emit('sendToPromptsPage', { prompt: String(prompt), view: 'prompt_analyzer' });
+            return 'Opened the Prompt Analyzer with the prompt pre-loaded.';
+        },
+    },
+    {
+        name: 'analyze_prompt',
+        description: "Dissect a prompt into its components (subject, style modifiers, constants) using the same engine as the Prompt Analyzer page. Returns a JSON breakdown in chat — does not open or populate the page (use send_to_prompt_analyzer for that).",
+        parameters: {
+            type: 'object',
+            properties: { prompt: { type: 'string', description: 'The prompt text to dissect.' } },
+            required: ['prompt'],
+        },
+        execute: async ({ prompt }, ctx) => {
+            const result = await dissectPrompt(String(prompt), ctx.settings);
+            return JSON.stringify(result);
         },
     },
     {
@@ -132,11 +296,274 @@ export const ASSISTANT_TOOLS: AssistantTool[] = [
         execute: ({ collection_id, query }) =>
             appControlService.getDiscoveryPrompts(String(collection_id), query ? String(query) : undefined),
     },
+    {
+        name: 'web_search',
+        description: 'Search the web (Google) for current, real-world information. Returns an answer summary plus source URLs as JSON. Runs on Gemini grounding regardless of the assistant brain, so it needs a Gemini API key. Offer open_web_page when the user wants to SEE a result page.',
+        parameters: {
+            type: 'object',
+            properties: { query: { type: 'string', description: 'What to search for.' } },
+            required: ['query'],
+        },
+        execute: async ({ query }, ctx) => {
+            if (!(ctx.settings.geminiApiKey || process.env.GEMINI_API_KEY)) {
+                return 'Error: web search needs a Gemini API key (Settings > Integrations > Gemini) — it runs on Google Search grounding.';
+            }
+            const { googleSearchGemini } = await import('./geminiService');
+            return googleSearchGemini(String(query), ctx.settings);
+        },
+    },
+    {
+        name: 'fetch_url',
+        description: 'Fetch a web page by absolute URL and return its readable text (HTML stripped, truncated to ~8000 chars) for YOUR OWN reading. To show the page to the user, use open_web_page instead.',
+        parameters: {
+            type: 'object',
+            properties: { url: { type: 'string', description: 'Absolute http(s) URL.' } },
+            required: ['url'],
+        },
+        execute: async ({ url }) => {
+            let parsed: URL;
+            try { parsed = new URL(String(url)); } catch { return 'Error: invalid URL.'; }
+            if (parsed.protocol !== 'http:' && parsed.protocol !== 'https:') return 'Error: only http(s) URLs are supported.';
+            // /proxy-remote appends the request sub-path to the x-target-url header value.
+            const res = await fetch(`/proxy-remote${parsed.pathname}${parsed.search}`, {
+                headers: { 'x-target-url': parsed.origin },
+            });
+            if (!res.ok) return `Error: fetch failed (${res.status} ${res.statusText}).`;
+            const raw = await res.text();
+            const doc = new DOMParser().parseFromString(raw, 'text/html');
+            doc.querySelectorAll('script, style, noscript, svg').forEach(el => el.remove());
+            const text = (doc.body?.textContent || raw).replace(/\s{3,}/g, '\n').trim();
+            return text.slice(0, 8000) || 'Error: page contained no readable text.';
+        },
+    },
+    {
+        name: 'open_web_page',
+        description: 'Open a URL in the in-app web viewer panel so the USER can see the page (live embed when the site allows it, reader mode otherwise). Use when the user asks to show/open/display a web page or a web_search source.',
+        parameters: {
+            type: 'object',
+            properties: { url: { type: 'string', description: 'Absolute http(s) URL to display.' } },
+            required: ['url'],
+        },
+        execute: ({ url }) => {
+            try { new URL(String(url)); } catch { return 'Error: invalid URL.'; }
+            appEventBus.emit('openWebPage', { url: String(url) });
+            return `Opened ${url} in the web viewer panel.`;
+        },
+    },
+    {
+        name: 'save_file',
+        description: "Save a text file (markdown, plain text, JSON, code) into the user's vault under the 'assistant' folder. The file appears in the Notes panel's FILES tab, where the user can download it to their PC. Use when the user asks to save, export, or write something to a file.",
+        parameters: {
+            type: 'object',
+            properties: {
+                filename: { type: 'string', description: "File name with extension, e.g. 'moodboard-ideas.md'. No folders or path separators." },
+                content: { type: 'string', description: 'Full text content of the file.' },
+            },
+            required: ['filename', 'content'],
+        },
+        execute: async ({ filename, content }) => {
+            const { fileSystemManager } = await import('../utils/fileUtils');
+            if (!fileSystemManager.isDirectorySelected()) {
+                return 'Error: no vault folder is connected — the user must connect one via the app setup (Welcome screen or Settings).';
+            }
+            const safe = String(filename).replace(/[\\\/:*?"<>|]/g, '_').replace(/^\.+/, '').trim();
+            if (!safe) return 'Error: invalid filename.';
+            await fileSystemManager.saveFile(`assistant/${safe}`, new Blob([String(content)], { type: 'text/plain' }));
+            appEventBus.emit('assistantFilesChanged');
+            return `Saved to assistant/${safe} in the vault — visible in the Notes panel's FILES tab, downloadable from there.`;
+        },
+    },
+    {
+        name: 'save_note',
+        description: "Save a note to your Notes panel (note icon in the header) so the user can revisit, edit, copy, or download it later. Use for reminders, research findings, summaries, or anything the user asks you to note down.",
+        parameters: {
+            type: 'object',
+            properties: {
+                title: { type: 'string', description: 'Short title. Defaults to the first words of the content.' },
+                content: { type: 'string', description: 'The note body (markdown allowed).' },
+            },
+            required: ['content'],
+        },
+        execute: ({ title, content }) => {
+            const n = addNote(title ? String(title) : '', String(content), 'assistant');
+            return `Saved note "${n.title}" (id ${n.id}).`;
+        },
+    },
+    {
+        name: 'list_notes',
+        description: 'List the notes in your Notes panel (optionally filtered). Returns JSON with ids — needed before update_note/delete_note.',
+        parameters: {
+            type: 'object',
+            properties: { query: { type: 'string', description: 'Optional filter text matched against title and content.' } },
+        },
+        execute: ({ query }) => {
+            const q = query ? String(query).toLowerCase() : undefined;
+            const notes = loadNotes().filter(n => !q || n.title.toLowerCase().includes(q) || n.content.toLowerCase().includes(q));
+            return JSON.stringify(notes.slice(0, 30).map(n => ({ id: n.id, title: n.title, content: n.content, updatedAt: n.updatedAt })));
+        },
+    },
+    {
+        name: 'update_note',
+        description: 'Revise an existing note (get its id from list_notes first). Provide title and/or content.',
+        parameters: {
+            type: 'object',
+            properties: {
+                id: { type: 'string', description: 'Note id.' },
+                title: { type: 'string', description: 'New title (optional).' },
+                content: { type: 'string', description: 'New body (optional).' },
+            },
+            required: ['id'],
+        },
+        execute: ({ id, title, content }) => {
+            const patch: { title?: string; content?: string } = {};
+            if (title !== undefined) patch.title = String(title);
+            if (content !== undefined) patch.content = String(content);
+            const n = updateNote(String(id), patch);
+            return n ? `Updated note "${n.title}".` : `Error: no note with id ${id}.`;
+        },
+    },
+    {
+        name: 'delete_note',
+        description: 'Delete a note by id (get ids from list_notes first).',
+        parameters: {
+            type: 'object',
+            properties: { id: { type: 'string', description: 'Note id.' } },
+            required: ['id'],
+        },
+        execute: ({ id }) => (deleteNote(String(id)) ? 'Note deleted.' : `Error: no note with id ${id}.`),
+    },
+    {
+        name: 'remember',
+        description: "Permanently remember a short fact about the user or their preferences (e.g. 'prefers SDXL', 'works in German'). It will be available in every future session, chat and voice. Use when the user says 'remember ...' or states a durable preference.",
+        parameters: {
+            type: 'object',
+            properties: { fact: { type: 'string', description: 'One concise fact to remember.' } },
+            required: ['fact'],
+        },
+        execute: ({ fact }) => (addMemory(String(fact)) ? 'Remembered.' : 'Already remembered (or empty fact).'),
+    },
+    {
+        name: 'list_memories',
+        description: 'List everything you permanently remember about the user. Returns JSON with ids (needed for forget).',
+        parameters: { type: 'object', properties: {} },
+        execute: () => JSON.stringify(loadMemoryEntries().map(m => ({ id: m.id, fact: m.fact }))),
+    },
+    {
+        name: 'forget',
+        description: 'Delete a remembered fact by id (get ids from list_memories first). Use when the user asks you to forget something.',
+        parameters: {
+            type: 'object',
+            properties: { id: { type: 'string', description: 'Memory id.' } },
+            required: ['id'],
+        },
+        execute: ({ id }) => (deleteMemory(String(id)) ? 'Forgotten.' : `Error: no memory with id ${id}.`),
+    },
+
+    // ─── Browser Control Tools (require screen sharing + permission) ───────────
+
+    {
+        name: 'browser_click',
+        description: 'Click where you see something on the screen you want to interact with (buttons, links, inputs, icons). Provide nx/ny as pixel coordinates from the image you see (the screen image sent to you is scaled to max 1024 pixels on the long side). For example, if you see a button at pixel (400, 500) in the 1024-pixel image, call browser_click(400, 500). 0–1 fractions also work. Requires screen sharing + control permission.',
+        parameters: {
+            type: 'object',
+            properties: {
+                nx: { type: 'number', description: 'X coordinate: either absolute pixel (0–1024) or fraction 0–1 in the screen image you see.' },
+                ny: { type: 'number', description: 'Y coordinate: either absolute pixel or fraction 0–1 in the screen image you see.' },
+            },
+            required: ['nx', 'ny'],
+        },
+        execute: ({ nx, ny }) => browserControlService.click(Number(nx), Number(ny)),
+    },
+    {
+        name: 'browser_double_click',
+        description: 'Double-click where you see something. Same coordinate format as browser_click — use pixel coordinates from the image you see (max 1024px wide), or 0–1 fractions.',
+        parameters: {
+            type: 'object',
+            properties: {
+                nx: { type: 'number', description: 'X coordinate: pixel (0–1024) or fraction 0–1.' },
+                ny: { type: 'number', description: 'Y coordinate: pixel or fraction 0–1.' },
+            },
+            required: ['nx', 'ny'],
+        },
+        execute: ({ nx, ny }) => browserControlService.doubleClick(Number(nx), Number(ny)),
+    },
+    {
+        name: 'browser_type',
+        description: 'Type text into the input field that currently has focus. Make sure you click the input field first with browser_click. Requires screen sharing + control permission.',
+        parameters: {
+            type: 'object',
+            properties: {
+                text: { type: 'string', description: 'The text to type into the focused field.' },
+            },
+            required: ['text'],
+        },
+        execute: ({ text }) => browserControlService.type(String(text)),
+    },
+    {
+        name: 'browser_press_key',
+        description: 'Press a named key (Enter, Tab, Escape, Backspace, ArrowUp/Down/Left/Right, etc.) on the element that currently has focus. Requires screen sharing + control permission.',
+        parameters: {
+            type: 'object',
+            properties: {
+                key: { type: 'string', description: 'Key name. Valid: Enter, Tab, Escape, Backspace, Delete, ArrowUp, ArrowDown, ArrowLeft, ArrowRight, Space, Home, End, PageUp, PageDown, F1–F12, Shift, Control, Alt, CapsLock.' },
+            },
+            required: ['key'],
+        },
+        execute: ({ key }) => browserControlService.pressKey(String(key)),
+    },
+    {
+        name: 'browser_scroll',
+        description: 'Scroll the page by a small or large amount. dy = 0.5 scrolls down half a page. dy = -0.3 scrolls up a bit. dx scrolls sideways. Requires screen sharing + control permission.',
+        parameters: {
+            type: 'object',
+            properties: {
+                dx: { type: 'number', description: 'Horizontal scroll factor (negative = left, positive = right, 0.3 = ~300px).' },
+                dy: { type: 'number', description: 'Vertical scroll factor (negative = up, positive = down, 0.5 = ~500px).' },
+            },
+        },
+        execute: ({ dx, dy }) => browserControlService.scroll(Number(dx || 0), Number(dy || 0)),
+    },
+    {
+        name: 'browser_scroll_to',
+        description: 'Scroll to a specific position on the page. frac = 0 is the top, frac = 1 is the bottom. Requires screen sharing + control permission.',
+        parameters: {
+            type: 'object',
+            properties: {
+                frac: { type: 'number', description: 'Scroll position (0 = top, 0.5 = middle, 1 = bottom).' },
+            },
+            required: ['frac'],
+        },
+        execute: ({ frac }) => browserControlService.scrollTo(Number(frac)),
+    },
+    {
+        name: 'browser_read_page',
+        description: 'Read all visible text content from the current page. Returns the page title, URL, and up to 5000 characters of body text. Use this when you need to know what the page says. Requires screen sharing + control permission.',
+        parameters: { type: 'object', properties: {} },
+        execute: () => browserControlService.readVisibleContent(),
+    },
+    {
+        name: 'browser_read_structure',
+        description: 'Scan the page and list all interactive elements visible on screen (buttons, links, inputs, headings) with their tag, text, position, and size. Use BEFORE browser_click so you know the exact positions of elements. Requires screen sharing + control permission.',
+        parameters: { type: 'object', properties: {} },
+        execute: () => browserControlService.readPageStructure(),
+    },
+    {
+        name: 'browser_navigate',
+        description: 'Navigate the browser to a different URL. Requires screen sharing + control permission.',
+        parameters: {
+            type: 'object',
+            properties: {
+                url: { type: 'string', description: 'Full absolute URL (http/https) to navigate to.' },
+            },
+            required: ['url'],
+        },
+        execute: ({ url }) => browserControlService.navigate(String(url)),
+    },
 ];
 
-export const executeAssistantTool = async (name: string, args: Record<string, any>, ctx: ToolContext): Promise<string> => {
-    const tool = ASSISTANT_TOOLS.find(t => t.name === name);
-    if (!tool) return `Error: unknown tool "${name}". Available: ${ASSISTANT_TOOLS.map(t => t.name).join(', ')}`;
+export const executeAssistantTool = async (name: string, args: Record<string, any>, ctx: ToolContext, extraTools: AssistantTool[] = []): Promise<string> => {
+    const tool = [...ASSISTANT_TOOLS, ...extraTools].find(t => t.name === name);
+    if (!tool) return `Error: unknown tool "${name}". Available: ${[...ASSISTANT_TOOLS, ...extraTools].map(t => t.name).join(', ')}`;
     try {
         return String(await tool.execute(args || {}, ctx));
     } catch (e: any) {
@@ -146,30 +573,36 @@ export const executeAssistantTool = async (name: string, args: Record<string, an
 };
 
 /** Gemini functionDeclarations (uppercase Type strings). */
-export const geminiToolDeclarations = () =>
-    ASSISTANT_TOOLS.map(t => ({
-        name: t.name,
-        description: t.description,
-        parameters: {
-            type: 'OBJECT',
-            properties: Object.fromEntries(
-                Object.entries(t.parameters.properties).map(([k, v]) => [k, { ...v, type: v.type.toUpperCase() }])
-            ),
-            ...(t.parameters.required?.length ? { required: t.parameters.required } : {}),
-        },
-    }));
+export const geminiToolDeclarations = (tools: AssistantTool[] = ASSISTANT_TOOLS) =>
+    tools.map(t => {
+        const propEntries = Object.entries(t.parameters.properties);
+        const decl: any = { name: t.name, description: t.description };
+        // Gemini rejects function declarations whose OBJECT parameter has an empty
+        // `properties` map — a malformed declaration can poison the whole tool
+        // array. For parameterless tools, omit `parameters` entirely instead.
+        if (propEntries.length) {
+            decl.parameters = {
+                type: 'OBJECT',
+                properties: Object.fromEntries(
+                    propEntries.map(([k, v]) => [k, { ...v, type: v.type.toUpperCase() }])
+                ),
+                ...(t.parameters.required?.length ? { required: t.parameters.required } : {}),
+            };
+        }
+        return decl;
+    });
 
 /** Ollama /api/chat tools (OpenAI-style). */
-export const ollamaToolDeclarations = () =>
-    ASSISTANT_TOOLS.map(t => ({
+export const ollamaToolDeclarations = (tools: AssistantTool[] = ASSISTANT_TOOLS) =>
+    tools.map(t => ({
         type: 'function',
         function: { name: t.name, description: t.description, parameters: t.parameters },
     }));
 
 /** System-prompt tool protocol for providers without native function calling. */
-export const fallbackProtocolPrompt = (persona: string) => `${persona} You can control the app with tools.
+export const fallbackProtocolPrompt = (persona: string, tools: AssistantTool[] = ASSISTANT_TOOLS) => `${persona} You can control the app with tools.
 To call a tool, output EXACTLY one block in this format and nothing after it:
 <action>{"tool": "<tool_name>", "args": { ... }}</action>
 The system will reply with the result; then continue helping the user. Available tools:
-${ASSISTANT_TOOLS.map(t => `- ${t.name}: ${t.description} Args schema: ${JSON.stringify(t.parameters.properties)}`).join('\n')}
+${tools.map(t => `- ${t.name}: ${t.description} Args schema: ${JSON.stringify(t.parameters.properties)}`).join('\n')}
 Only use a tool when it helps. Otherwise answer normally.`;

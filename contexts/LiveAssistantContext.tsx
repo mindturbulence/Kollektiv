@@ -2,6 +2,8 @@ import React, { createContext, useContext, useRef, useState, useCallback, useEff
 import { LiveAssistant } from '../services/liveAssistantService';
 import { useSettings } from './SettingsContext';
 import { appEventBus } from '../utils/eventBus';
+import { audioService } from '../services/audioService';
+import { browserControlService } from '../services/browserControlService';
 
 type Status = 'idle' | 'connecting' | 'live' | 'error';
 
@@ -9,11 +11,15 @@ interface LiveAssistantContextValue {
     status: Status;
     speaking: boolean;
     sharing: boolean;
+    controlEnabled: boolean;
     error: string;
+    setError: (message: string) => void;
     shareError: string;
     hasGeminiKey: boolean;
     toggleLive: () => void;
     toggleShare: () => void;
+    grantControl: () => void;
+    revokeControl: () => void;
 }
 
 const LiveAssistantCtx = createContext<LiveAssistantContextValue | null>(null);
@@ -27,6 +33,7 @@ export const LiveAssistantProvider: React.FC<{ children: React.ReactNode }> = ({
     const [status, setStatus] = useState<Status>('idle');
     const [speaking, setSpeaking] = useState(false);
     const [sharing, setSharing] = useState(false);
+    const [controlEnabled, setControlEnabled] = useState(false);
     const [error, setError] = useState('');
     const [shareError, setShareError] = useState('');
 
@@ -39,10 +46,13 @@ export const LiveAssistantProvider: React.FC<{ children: React.ReactNode }> = ({
     const stop = useCallback(() => {
         liveRef.current?.disconnect();
         liveRef.current = null;
-        setStatus('idle'); setSpeaking(false); setSharing(false); setShareError('');
+        setStatus('idle'); setSpeaking(false); setSharing(false); setControlEnabled(false); setShareError('');
+        if (browserControlService.permissionGranted) browserControlService.revoke();
     }, []);
 
     const start = useCallback(async () => {
+        // Assistant activation opens the dedicated fullscreen assistant view.
+        appEventBus.emit('navigate', 'assistant');
         setError('');
         const live = new LiveAssistant();
         liveRef.current = live;
@@ -61,10 +71,17 @@ export const LiveAssistantProvider: React.FC<{ children: React.ReactNode }> = ({
                     }
                     else stop();
                 },
-                onCaption: () => { /* transcripts are intentionally not displayed */ },
+                onCaption: (who, text) => appEventBus.emit('liveCaption', { who, text }),
                 onToolActivity: (line) => appEventBus.emit('liveAssistantActivity', line),
                 onSpeaking: setSpeaking,
                 onScreenShare: setSharing,
+                onControlDenied: (sharingActive) => appEventBus.emit('assistantFeedback', {
+                    message: sharingActive
+                        ? 'Assistant tried to control your browser, but control permission isn\'t granted — click the cursor icon in the header to allow it.'
+                        : 'Assistant tried to control your browser, but you haven\'t shared your screen yet — click the monitor icon in the header first, then click the cursor icon that appears next to it.',
+                    isError: true,
+                }),
+                onShareWarning: (message) => appEventBus.emit('assistantFeedback', { message, isError: true }),
             });
         } catch (e: any) {
             setStatus('error');
@@ -79,6 +96,25 @@ export const LiveAssistantProvider: React.FC<{ children: React.ReactNode }> = ({
         else void start();
     }, [status, stop, start]);
 
+    // Live voice always runs on Gemini regardless of the footer's active-engine
+    // switch (same reasoning as the text assistant) — gate on key presence, not
+    // on activeLLM, so switching engines for manual work doesn't hide this.
+    const hasGeminiKey = !!(settings.geminiApiKey || process.env.GEMINI_API_KEY);
+
+    // Global hotkey: Ctrl+Space toggles the live voice session from anywhere.
+    useEffect(() => {
+        if (!hasGeminiKey) return;
+        const onKey = (e: KeyboardEvent) => {
+            if (e.ctrlKey && e.code === 'Space' && !e.repeat) {
+                e.preventDefault();
+                audioService.playClick();
+                toggleLive();
+            }
+        };
+        window.addEventListener('keydown', onKey);
+        return () => window.removeEventListener('keydown', onKey);
+    }, [toggleLive, hasGeminiKey]);
+
     const toggleShare = useCallback(() => {
         if (!liveRef.current) return;
         setShareError('');
@@ -92,13 +128,31 @@ export const LiveAssistantProvider: React.FC<{ children: React.ReactNode }> = ({
             });
     }, [sharing]);
 
-    // Live voice always runs on Gemini regardless of the footer's active-engine
-    // switch (same reasoning as the text assistant) — gate on key presence, not
-    // on activeLLM, so switching engines for manual work doesn't hide this.
-    const hasGeminiKey = !!(settings.geminiApiKey || process.env.GEMINI_API_KEY);
+    // Subscribe to browserControlService permission changes.
+    useEffect(() => {
+        const unsub = browserControlService.onPermissionChange((granted) => {
+            setControlEnabled(granted);
+        });
+        return unsub;
+    }, []);
+
+    // Auto-revoke control permission when screen sharing stops.
+    useEffect(() => {
+        if (!sharing && controlEnabled) {
+            browserControlService.revoke();
+        }
+    }, [sharing, controlEnabled]);
+
+    const grantControl = useCallback(() => {
+        browserControlService.grant();
+    }, []);
+
+    const revokeControl = useCallback(() => {
+        browserControlService.revoke();
+    }, []);
 
     return (
-        <LiveAssistantCtx.Provider value={{ status, speaking, sharing, error, shareError, hasGeminiKey, toggleLive, toggleShare }}>
+        <LiveAssistantCtx.Provider value={{ status, speaking, sharing, controlEnabled, error, setError, shareError, hasGeminiKey, toggleLive, toggleShare, grantControl, revokeControl }}>
             {children}
         </LiveAssistantCtx.Provider>
     );

@@ -8,7 +8,7 @@ export const PROMPT_DETAIL_LEVELS = {
 export const GENERAL_ASPECT_RATIOS = ["1:1", "3:4", "4:3", "9:16", "16:9"];
 
 // --- Midjourney Specific Modifiers ---
-export const MIDJOURNEY_VERSIONS = ["6.1", "6", "5.2", "5.1", "5", "4"];
+export const MIDJOURNEY_VERSIONS = ["7", "6.1", "6", "5.2", "5.1", "5", "4"];
 export const MIDJOURNEY_NIJI_VERSIONS = ["6", "5", "4"];
 export const MIDJOURNEY_ASPECT_RATIOS = ["1:1", "2:3", "3:2", "4:5", "5:4", "9:16", "16:9"];
 
@@ -21,7 +21,15 @@ export const AUDIO_TYPES = [
     'Musical Composition',
     'Foley Recording',
     'Binaural / 3D Audio',
-    'Podcast Segment'
+    'Podcast Segment',
+    'ASMR',
+    'Audiobook',
+    'Meditation / Sleep',
+    'Jingle / Sonic Logo',
+    'Trailer Sound Design',
+    'Game SFX',
+    'Loopable Ambience',
+    'Radio Drama'
 ];
 
 export const VOICE_GENDERS = ['Masculine', 'Feminine', 'Androgynous', 'Child', 'Elderly'];
@@ -29,18 +37,28 @@ export const VOICE_GENDERS = ['Masculine', 'Feminine', 'Androgynous', 'Child', '
 export const VOICE_TONES = [
     'Deep / Bass', 'Smooth / Silk', 'Raspy / Gravelly', 'Energetic / Bright',
     'Monotone / Robotic', 'Whispering / Soft', 'Commanding / Authoritative',
-    'Sarcastic / Playful', 'Melancholic / Sad', 'Terrified / Shaky'
+    'Sarcastic / Playful', 'Melancholic / Sad', 'Terrified / Shaky',
+    'Warm Narrator', 'Hushed Documentary', 'Hype Announcer',
+    'Deadpan', 'Soothing ASMR', 'Gravelly Noir',
+    'Corporate Explainer', 'Storyteller Grandparent',
+    'Cultivational / Calm', 'Gritty Streetwise'
 ];
 
 export const AUDIO_ENVIRONMENTS = [
     'Studio / Dry', 'Large Cathedral Hall', 'Tiled Bathroom', 'Outdoor Forest',
     'Crowded City Street', 'Under water', 'Empty Warehouse', 'Small Cozy Room',
-    'Telephone / Radio Filter', 'Space Vacuum'
+    'Telephone / Radio Filter', 'Space Vacuum',
+    'Concert Arena', 'Parking Garage', 'Padded Booth',
+    'Cave System', 'Open Ocean', 'Night Forest',
+    'Spaceship Interior Hum', 'Vinyl Room Tone'
 ];
 
 export const AUDIO_MOODS = [
     'Cinematic', 'Suspenseful', 'Hopeful', 'Dark & Gritty',
-    'Upbeat & Fun', 'Ethereal / Dreamy', 'Aggressive', 'Calm / Zen'
+    'Upbeat & Fun', 'Ethereal / Dreamy', 'Aggressive', 'Calm / Zen',
+    'Triumphant', 'Ominous Drone', 'Bittersweet', 'Nostalgic',
+    'Playful Whimsy', 'Meditative', 'Urgent Breaking-News', 'Romantic',
+    'Melancholic', 'Mysterious'
 ];
 
 // --- Z-Image Specific Styles ---
@@ -58,7 +76,11 @@ export const Z_IMAGE_STYLES = [
     'Anime',
     'Oil Painting',
     'Minimalist Sketchwash',
-    'Retro Pixel Art'
+    'Retro Pixel Art',
+    'Editorial Flash',
+    'CCTV Still',
+    'Risograph Print',
+    'Gouache Illustration'
 ];
 
 export interface DescriptiveOption {
@@ -99,7 +121,27 @@ export const DIGITAL_AESTHETICS: DescriptiveOption[] = [
     { name: 'Cyber-Y2K', description: 'Glitch, Chrome, Fisheye Lens, Tech-Retro' },
     { name: 'Lo-fi Hip Hop', description: 'Anime Style, Warm, Cozy, Chilled' },
     { name: 'Backrooms Aesthetic', description: 'Yellowed, Fluorescent, Liminal, Eerie' },
-    { name: 'Frutiger Aero', description: 'Glossy, Water, Bubbles, 2000s Tech, Optimistic' }
+    { name: 'Frutiger Aero', description: 'Glossy, Water, Bubbles, 2000s Tech, Optimistic' },
+    { name: 'Mob Wife', description: 'Leopard, Fur, Statement Gold Jewelry, Dark Glamour' },
+    { name: 'Tomato Girl', description: 'Red-Toned, Mediterranean, Warm Lighting, Casual Chic' },
+    { name: 'Office Siren', description: 'Tailored, Corporate Corsetry, Sleek, Power Dressing' },
+    { name: 'Eclectic Grandpa', description: 'Layered Patterns, Wool Textures, Vintage Finds' },
+    { name: 'Coastal Grandmother', description: 'Linen, Stripes, Neutral Palette, Beachside Serenity' },
+    { name: 'Solarpunk', description: 'Bright Green, Solar Tech, Optimistic Eco-Future' },
+    { name: 'Fairycore', description: 'Magical, Translucent Wings, Woodland, Soft Pastel' },
+    { name: 'Gothcore', description: 'Dark Victorian, Lace, Corsets, Subcultural Dark' },
+    { name: 'Kidcore', description: 'Primary Colors, 90s Toys, Hyper-Saturated, Playful' },
+    { name: 'Blokecore', description: 'Retro Football Kits, Terrace Culture, 90s Sportswear' },
+    { name: 'Acubi', description: 'Minimalist Avant-Garde, Structural Silhouettes, Deconstructed' },
+    { name: 'Nostalgiacore', description: 'Nostalgia-Induced, Warm Memory Haze, Late 90s/Early 00s' },
+    { name: 'Corporate Memphis', description: 'Flat, Exaggerated Limbs, 2010s Tech Illustration Style' },
+    { name: 'Neo-Brutalist Web', description: 'Raw HTML, Monochrome, Functional, Anti-Design' },
+    { name: 'Cyber Fairy Grunge', description: 'Iridescent, Ripped Mesh, Digital Decay, Pastel Goth' },
+    { name: 'Whimsigoth', description: 'Mystical, Velvet, Celestial Motifs, Moody Jewel Tones' },
+    { name: 'Coquette Academia', description: 'Plaid, Bow Ties, Glasses, Studious Yet Feminine' },
+    { name: 'Brat Green', description: 'Lime Green, Y2K Revival, Messy Attitude, Slimy Aesthetic' },
+    { name: 'Seapunk', description: 'Aquatic, 90s Internet, Cyan, Shell Motifs, Neon' },
+    { name: 'Normcore', description: 'Unassuming, Anti-Fashion, Practical, Generic Minimal' }
 ];
 
 // --- Movie Aesthetics / Cinematic Looks ---
@@ -145,13 +187,35 @@ export const AESTHETIC_LOOKS: DescriptiveOption[] = [
     { name: '90s Sitcom', description: 'Low Contrast, Soft Lighting, Set-Look, Flat' },
     { name: 'Technicolor Classic', description: 'Vibrant 1950s Look, High Saturation' },
     { name: 'War Cinema', description: 'Gritty, Desaturated, Saving Private Ryan Style' },
-    { name: 'Space Opera', description: 'Epic, Lived-in Future, Star Wars Look' }
+    { name: 'Space Opera', description: 'Epic, Lived-in Future, Star Wars Look' },
+    { name: 'Oppenheimer', description: 'High Contrast B&W, IMAX, Intense Close-Ups, Period' },
+    { name: 'Blade Runner 2049', description: 'Expansive, Neon-Washed, Holographic, Cold' },
+    { name: 'Poor Things', description: 'Fisheye, Steampunk Color, Desaturated Victorian, Quirky' },
+    { name: 'Saltburn', description: 'Sun-Drenched, 2000s Indie Grit, Rich Tapestry, Tension' },
+    { name: 'Severance', description: 'Sterile Corporate, Green-Gray Tint, Flat Lighting' },
+    { name: 'Andor', description: 'Gritty Rebel, Industrial, Practical Sets, Grounded Sci-Fi' },
+    { name: 'The Bear', description: 'Handheld, Harsh Fluorescent, Kitchen Heat, Raw' },
+    { name: 'Past Lives', description: 'Soft Natural, Melancholic Warmth, Intimate Framing' },
+    { name: 'Everything Everywhere', description: 'Chaotic Multiverse, Rapid Cuts, Maximalist' },
+    { name: 'Furiosa', description: 'Orange Dust, Desolate Horizon, Kinetic Fury, Epic' },
+    { name: 'Fallout', description: 'Retro-Future, Irradiated Green, Vault-Tec Sterile' },
+    { name: 'Wednesday', description: 'Gothic School, Monochrome Wardrobe, Moody Shadows' },
+    { name: 'Dune Part Two', description: 'Monochrome Arena, Black Sun, Epic Scale, Harsh' },
+    { name: 'The Batman', description: 'Red Saturated Noir, Rain-Slicked, Gritty Gotham' },
+    { name: 'Sinners', description: 'Period Gothic South, Blood Red, Spiritual Horror' },
+    { name: 'K-Drama Soft Look', description: 'Soft Diffuse, Warm Flush, Flattering Skin Tone, Romantic' },
+    { name: 'Midsommar', description: 'Overexposed Flower, Bright Pastel, Daylight Horror' },
+    { name: 'Parasite', description: 'Class Divide Framing, Rain-Soaked, Naturalistic' }
 ];
 
 // --- Refiner Dropdown Options ---
 export const COMPOSITION_OPTIONS = [
     'Rule of Thirds', 'Golden Ratio', 'Leading Lines', 'Symmetry', 'Asymmetrical Balance',
-    'Frame within a Frame', 'Vanishing Point', 'Centered Composition', 'Diagonal Composition'
+    'Frame within a Frame', 'Vanishing Point', 'Centered Composition', 'Diagonal Composition',
+    'Negative Space', 'Radial Composition', 'Triangular Composition', 'Dynamic Symmetry',
+    'Layered Depth', 'Foreground Framing', 'Isolation', 'Pattern Interruption',
+    'Figure-to-Ground', 'Dead Center Minimal', 'Off-Center Tension', 'Spiral Composition',
+    'S-Curve', 'L-Shape', 'Cross Composition', 'Quadrant Grid', 'Juxtaposition'
 ];
 
 export const CAMERA_ANGLES = [
@@ -170,7 +234,13 @@ export const CAMERA_ANGLES = [
     'Ground Level Shot',
     'Shoulder Level Shot',
     'Extreme High Angle',
-    'Extreme Low Angle'
+    'Extreme Low Angle',
+    'Aerial Oblique',
+    'Drone Top-Down 45°',
+    'Mirror Reflection Angle',
+    'Through-Object POV',
+    'Security-Camera Corner',
+    'Overhead Flat Lay'
 ];
 
 export const CAMERA_PROXIMITY = [
@@ -190,7 +260,11 @@ export const CAMERA_PROXIMITY = [
     'Zoomed In',
     'Zoomed Out',
     'Telephoto Zoom',
-    'Super Wide Angle'
+    'Super Wide Angle',
+    'Detail Shot',
+    'Two-Shot',
+    'Crowd Scale',
+    'Aerial Establishing'
 ];
 
 export const CAMERA_SETTINGS = [
@@ -218,7 +292,17 @@ export const CAMERA_SETTINGS = [
     'High Saturation',
     'Desaturated',
     'Overexposed',
-    'Underexposed'
+    'Underexposed',
+    'f/0.95 Razor DOF',
+    'Focus Stacking',
+    'ND Long Exposure',
+    'Intentional Camera Movement (ICM)',
+    'Zone Focusing',
+    'Push Processing',
+    'Halation Bloom',
+    'Exposure Bracketing',
+    'Lens Baby Effect',
+    'Focal Length Blending'
 ];
 
 export const CAMERA_EFFECTS = [
@@ -244,7 +328,16 @@ export const CAMERA_EFFECTS = [
     'Vignetting Shading',
     'Wide-angle Stretch',
     'X-ray Vision Look',
-    'Zoom Burst Blur'
+    'Zoom Burst Blur',
+    'Prism Fractal',
+    'Freelensing',
+    'Lens Whacking',
+    'Anamorphic Squeeze Artifacts',
+    'CCD Sensor Bloom',
+    'Datamosh Smear',
+    'Scanline CRT',
+    'Split-Diopter Effect',
+    'Lensbaby Selective Focus'
 ];
 
 export const SPECIALTY_LENS_EFFECTS: DescriptiveOption[] = [
@@ -292,13 +385,33 @@ export const FILM_TYPES = [
     'Cross Processed',
     'Bleach Bypass',
     'Autochrome',
-    'Calotype'
+    'Calotype',
+    'Kodak Vision3 Motion Picture',
+    'Wet Plate Collodion',
+    'Tintype',
+    'Large Format 8x10',
+    'Half-Frame',
+    'Redscale',
+    'Lomochrome Purple',
+    'Aerochrome'
 ];
 
 export const LIGHTING_OPTIONS = [
     'Cinematic Lighting', 'Volumetric Lighting', 'Soft Light', 'Hard Light', 'Rim Lighting',
     'Backlighting', 'Studio Lighting', 'Golden Hour', 'Blue Hour', 'Neon Lighting',
-    'Chiaroscuro', 'Ambient Occlusion', 'Global Illumination', 'Crepuscular Rays'
+    'Chiaroscuro', 'Ambient Occlusion', 'Global Illumination', 'Crepuscular Rays',
+    'Rembrandt Lighting', 'Split Lighting', 'Butterfly Lighting', 'Clamshell Lighting',
+    'Practicals Only', 'Candlelight', 'Moonlight', 'Harsh Direct Flash',
+    'Gobo Patterns', 'Caustics', 'North-Window Light', 'Tenebrism',
+    'UV / Blacklight', 'Sodium Vapor Light', 'Tungsten Practicals', 'Ring Light',
+    'Light Through Blinds', 'Dappled Forest Light', 'Underwater God Rays',
+    'Bioluminescent Glow', 'Overcast Diffusion', 'Mixed Color Temperature',
+    'Strip Lighting', 'Fluorescent Tube', 'LED Panel Soft', 'Kino Flo',
+    'HMI Daylight', 'Carbon Arc Light', 'Firelight Flicker', 'Neon Tube Sign',
+    'Lava Lamp Glow', 'Strobe / Flash Burst', 'Twilight Gradient', 'Half-Frost Diffusion',
+    'Cookie / Cucoloris Pattern', 'Rag Diffusion', 'Ultra-Soft Sky Panel',
+    'Cross-Backlight', 'Kicker Light', 'Eye Light Catchlight', 'Lens Flare Source',
+    'Edge Ribbon Light', 'Top Hair Light', 'Background Accent Wash'
 ];
 
 export const PHOTOGRAPHY_STYLES = [
@@ -314,6 +427,26 @@ export const PHOTOGRAPHY_STYLES = [
     'Documentary Photography',
     'Glamour Photography',
     'Still Life Photography',
+    'Astro Photography',
+    'Underwater Photography',
+    'Sports Action Photography',
+    'Concert Photography',
+    'Editorial Photography',
+    'Product Photography',
+    'Real Estate Photography',
+    'Urbex Photography',
+    'Drone / Aerial Photography',
+    'Photojournalism',
+    'Fine Art Photography',
+    'Boudoir Photography',
+    'Night Street Photography',
+    'Seascape Long Exposure',
+    'Birding Photography',
+    'Scientific / Micro Photography',
+    'Pet Photography',
+    'Wedding Photography',
+    'Event Photography',
+    'Travel Photography'
 ];
 
 export const CAMERA_TYPES = [
@@ -340,20 +473,22 @@ export const CAMERA_MODELS_BY_TYPE: Record<string, string[]> = {
         'Sony FX6',
         'Blackmagic URSA Mini Pro 12K',
         'Panavision Millennium DXL2',
-        'Canon EOS C500 Mark II'
+        'Canon EOS C500 Mark II',
+        'Sony BURANO'
     ],
     'Mirrorless Camera': [
         'Sony A7R V',
         'Sony A1',
         'Sony A7S III',
         'Canon EOS R3',
-        'Canon EOS R5 II',
+        'Canon EOS R5 Mark II',
         'Nikon Z9',
         'Nikon Z8',
         'Fujifilm X-H2S',
         'Fujifilm X-T5',
         'Panasonic Lumix S1H',
-        'Leica SL3'
+        'Leica SL3',
+        'Nikon Z6 III'
     ],
     'Medium Format Camera': [
         'Fujifilm GFX 100 II',
@@ -361,13 +496,15 @@ export const CAMERA_MODELS_BY_TYPE: Record<string, string[]> = {
         'Hasselblad X2D 100C',
         'Hasselblad H6D-100c',
         'Phase One XF IQ4',
-        'Leica S3'
+        'Leica S3',
+        'Fujifilm GFX100RF'
     ],
     'DSLR': [
         'Canon EOS-1D X Mark III',
         'Canon EOS 5D Mark IV',
         'Nikon D6',
-        'Nikon D850'
+        'Nikon D850',
+        'Canon EOS R1'
     ],
     'Analog Film Camera': [
         'Hasselblad 500C/M',
@@ -375,13 +512,34 @@ export const CAMERA_MODELS_BY_TYPE: Record<string, string[]> = {
         'Contax T2',
         'Mamiya RZ67',
         'Pentax 67',
-        'Nikon F6'
+        'Nikon F6',
+        'Pentax 17',
+        'Leica M6 Reissue'
     ],
     'Rangefinder Camera': [
         'Leica M11',
         'Leica M11-P',
         'Leica M10-R',
         'Fujifilm X-Pro3'
+    ],
+    'Action Camera': [
+        'GoPro Hero 13 Black',
+        'DJI Osmo Action 5 Pro',
+        'Insta360 X4',
+        'Insta360 Ace Pro 2'
+    ],
+    'Drone / Aerial Camera': [
+        'DJI Mavic 4 Pro',
+        'DJI Air 3S',
+        'DJI Mini 4 Pro',
+        'DJI Inspire 3',
+        'Freefly Alta X'
+    ],
+    'Smartphone Camera': [
+        'iPhone 17 Pro Max',
+        'Samsung Galaxy S25 Ultra',
+        'Google Pixel 10 Pro',
+        'Xiaomi 15 Ultra'
     ]
 };
 
@@ -431,7 +589,14 @@ export const CAMERA_MOVEMENT_OPTIONS: DescriptiveOption[] = [
     { name: 'FPV Drone Aggressive', description: 'High-speed, acrobatic aerial maneuvers.' },
     { name: 'Top Down', description: 'Birds-eye view looking directly perpendicular to ground.' },
     { name: 'Worms Eye Tracking', description: 'Following movement from a ground-level perspective.' },
-    { name: 'Snorricam Shot', description: 'Camera rigged to the actor for a locked-face POV.' }
+    { name: 'Snorricam Shot', description: 'Camera rigged to the actor for a locked-face POV.' },
+    { name: 'Robot-Arm Hyperspeed (Bolt Cam)', description: 'Programmable high-speed robotic arm moves.' },
+    { name: 'Cable Cam Flythrough', description: 'Suspended camera on cables soaring through a scene.' },
+    { name: 'Gimbal Low-Mode Run', description: 'Low-to-ground gimbal walk for dynamic tracking.' },
+    { name: 'Periscope Probe Move', description: 'Low-angle probe lens tracking parallel to ground.' },
+    { name: 'Roll-Locked FPV Dive', description: 'FPV drone maintaining level horizon while diving.' },
+    { name: 'Step-Printed Handheld', description: 'Handheld with staccato frame-doubled motion.' },
+    { name: 'Slider Close-Up', description: 'Precise short-distance slider movement for detail.' }
 ];
 
 export const MOTION_OPTIONS: DescriptiveOption[] = [
@@ -455,18 +620,36 @@ export const MOTION_OPTIONS: DescriptiveOption[] = [
     { name: 'Elastic Bounce', description: 'Physics with recoil and squash/stretch.' },
     { name: 'Swirling Vortex', description: 'Centripetal rotation around a core.' },
     { name: 'Temporal Warp', description: 'Distortion of time and spatial consistency.' },
-    { name: 'Liquid Ripple', description: 'Wave propagation across surfaces.' }
+    { name: 'Liquid Ripple', description: 'Wave propagation across surfaces.' },
+    { name: 'Parkour Flow', description: 'Fluid traversal with dynamic jumps and vaults.' },
+    { name: 'Cloth Simulation Billow', description: 'Fabric physics with wind and drag.' },
+    { name: 'Hair in Wind', description: 'Strand-based hair reacting to directional flow.' },
+    { name: 'Particle Disintegration', description: 'Breaking apart into many small fragments.' },
+    { name: 'Growth Time-Lapse', description: 'Organic expansion from seed to full form.' },
+    { name: 'Ferrofluid Morph', description: 'Liquid metal shaping into spike formations.' },
+    { name: 'Murmuration Swarm', description: 'Collective flocking behavior with fluid paths.' },
+    { name: 'Shatter / Break', description: 'Brittle fracture into debris.' }
 ];
 
 export const LENS_TYPES = [
     'Wide-Angle Lens', 'Telephoto Lens', 'Macro Lens', 'Prime Lens (50mm)', 'Fisheye Lens',
-    'Tilt-Shift Lens', 'Anamorphic Lens', 'Lens Flare'
+    'Tilt-Shift Lens', 'Anamorphic Lens', 'Lens Flare',
+    '24mm Environmental Lens', '35mm Documentary Lens', '85mm f/1.2 Portrait Lens',
+    '135mm Compression Lens', '600mm Super-Telephoto', 'Probe Lens',
+    'Pinhole Lens', 'MP-E Ultra-Macro', 'Cine Prime Set',
+    'Vintage Uncoated Glass', 'Mirror / Catadioptric Lens', 'Zoom Lens (Variable Focal)',
+    'Super-Wide 14mm', '400mm Sports Lens'
 ];
 
 export const ANALOG_FILM_STOCKS = [
     'Kodak Portra 160', 'Kodak Portra 400', 'Kodak Ektar 100', 'Kodak Gold 200', 'Kodak Tri-X 400',
     'Fujifilm Velvia 50', 'Fujifilm Provia 100F', 'Fujifilm Superia 400', 'CineStill 800T',
-    'Ilford HP5 Plus 400', 'Lomography Color Negative 400', 'Polaroid 600', 'Agfa Vista 400'
+    'Ilford HP5 Plus 400', 'Lomography Color Negative 400', 'Polaroid 600', 'Agfa Vista 400',
+    'Kodak Portra 800', 'Kodak Ektachrome E100', 'Fujifilm Pro 400H',
+    'Kodak Vision3 500T', 'Kodak Vision3 250D', 'Kodak Aerochrome IR',
+    'Fomapan 100', 'Kentmere 400', 'Ilford Delta 3200',
+    'Fujifilm Acros II', 'Kodak Ultramax 400', 'Lomography Lomochrome Metropolis',
+    'Ilford XP2 Super 400'
 ];
 
 export const FACIAL_EXPRESSIONS = [
@@ -489,13 +672,21 @@ export const FACIAL_EXPRESSIONS = [
     'Winking',
     'Screaming',
     'Grinning',
-    'Stoic / Expressionless'
+    'Stoic / Expressionless',
+    'Awestruck',
+    'Smug',
+    'Gritted Teeth',
+    'Tearful Smile',
+    'Thousand-Yard Stare',
+    'Mid-Laugh Candid',
+    'Eyes Closed Serene',
+    'Biting Lip'
 ];
 
 export const HAIR_STYLES = [
     'Buzz Cut',
     'Pixie Cut',
-    ' Bob Cut',
+    'Bob Cut',
     'Shoulder Length',
     'Long Flowing Hair',
     'Braided / Cornrows',
@@ -512,7 +703,21 @@ export const HAIR_STYLES = [
     'Wavy',
     'Curly',
     'Straight',
-    'Frizzy'
+    'Frizzy',
+    'Wolf Cut',
+    'Mullet',
+    'Shag',
+    'Butterfly Cut',
+    'Curtain Bangs',
+    'Box Braids',
+    'Space Buns',
+    'Finger Waves',
+    'French Bob',
+    'Jellyfish Cut',
+    'Taper Fade',
+    'Twists',
+    'Bantu Knots',
+    'Asymmetrical Bob'
 ];
 
 export const EYE_COLORS = [
@@ -526,7 +731,10 @@ export const EYE_COLORS = [
     'Heterochromia (Two-toned)',
     'Glowing / Luminous',
     'Piercing Light Blue',
-    'Deep Dark Brown'
+    'Deep Dark Brown',
+    'Sectoral Heterochromia',
+    'Red Albino',
+    'Black Sclera (Fantasy)'
 ];
 
 export const SKIN_TEXTURES = [
@@ -557,7 +765,13 @@ export const SKIN_TEXTURES = [
     'Birthmarks',
     'Stretch Marks',
     'Cellulite',
-    'Goosebumps'
+    'Goosebumps',
+    'Melasma',
+    'Dermal Piercings',
+    'Henna Patterns',
+    'Metallic Body Paint',
+    'Cracked Porcelain (Stylized)',
+    'Dry / Flaking'
 ];
 
 export const REALISM_OPTIONS = [
@@ -578,7 +792,11 @@ export const REALISM_OPTIONS = [
     'Imperfection / Flawed Realism',
     'Life-like',
     'Natural Lighting',
-    'Unfiltered'
+    'Unfiltered',
+    'Smartphone Snapshot Realism',
+    'Editorial Retouch',
+    'Medium-Format Digital Clarity',
+    'Film Scan Realism'
 ];
 
 export const CLOTHING_STYLES = [
@@ -596,7 +814,22 @@ export const CLOTHING_STYLES = [
     'Traditional / Cultural Garb',
     'Tactical / Military Gear',
     'Summer / Beachwear',
-    'Winter / Heavy Coat'
+    'Winter / Heavy Coat',
+    'Y2K Revival',
+    'Gorpcore Shell Layers',
+    'Dark Academia Knitwear',
+    'Quiet Luxury Tailoring',
+    'K-Fashion Street',
+    'Cyber-Goth',
+    'Western / Cowboycore',
+    'Regencycore',
+    'Balletcore',
+    'Utility Workwear',
+    'Festival Wear',
+    'Haute Couture Gown',
+    'Preppy / Ivy League',
+    'Rave / Festival Gear',
+    'Mori Kei (Forest Style)'
 ];
 
 export const VIDEO_EFFECTS = [
@@ -615,5 +848,92 @@ export const VIDEO_EFFECTS = [
     'Anamorphic Streak',
     'Motion Blur',
     'Freeze Frame',
-    'Ken Burns Effect'
+    'Ken Burns Effect',
+    'Speed Ramp',
+    'Crash Zoom Punch-In',
+    'Match-Cut Morph',
+    'Seamless Loop',
+    'Datamosh',
+    'Projector Flicker',
+    'Day-for-Night Grade',
+    'Split Diopter',
+    'Jump Cut',
+    'GoPro Wide Distortion'
+];
+
+export const MUSIC_GENRES = [
+    'Synthwave', 'Phonk', 'Hyperpop', 'Drum & Bass', 'Lo-fi Hip Hop',
+    'Afrobeats', 'Amapiano', 'City Pop', 'Shoegaze', 'Post-Rock',
+    'Neo-Soul', 'UK Drill', 'Reggaeton', 'Cumbia', 'Bossa Nova',
+    'Metalcore', 'Djent', 'Dark Ambient', 'Epic Trailer Orchestral',
+    'Chiptune', 'Jersey Club', 'Breakcore', 'Gospel', 'Bluegrass',
+    'House (Deep)', 'Techno (Minimal)', 'Trance (Progressive)', 'Dubstep (Melodic)',
+    'Jazz (Contemporary)', 'Funk (P-Funk)', 'R&B (Alternative)', 'Hip Hop (Boom Bap)',
+    'Country (Outlaw)', 'Folk (Indie)', 'Soul (Philly)', 'Disco (Nu-Disco)',
+    'Ambient (Drone)', 'IDM (Glitch)', 'Footwork', 'Jungle',
+    'Garage (UK)', 'Grime', 'Trap (Southern)', 'Drill (Chicago)',
+    'Reggae (Roots)', 'Dub (Instrumental)', 'Ska (2-Tone)', 'Punk (Hardcore)',
+    'Emo (Midwest)', 'Math Rock', 'Prog Rock', 'Krautrock',
+    'Samba', 'Tango (Electro)', 'Flamenco (Nuevo)', 'K-Pop (4th Gen)',
+    'J-Pop (Shibuya-kei)', 'Mande (West African)', 'Bollywood (Film Music)',
+    'Classical (Minimalist)', 'Opera (Modern)', 'Musical Theatre'
+];
+
+export const INSTRUMENTATION = [
+    'Analog Synth Pads', '808 Sub-Bass', 'Live Brass Section', 'String Quartet',
+    'Nylon Guitar', 'Upright Bass', 'Modular Sequences', 'Taiko Drums',
+    'Hang Drum', 'Mellotron', 'Theremin', 'Gamelan',
+    'Fender Rhodes', 'Hammond Organ', 'Moog Bass', 'ARP 2600 Arpeggio',
+    'Acoustic Drum Kit (Vintage)', 'Electronic Drum Machine (808)', 'Tambourine Shake',
+    'Steel Pan', 'Sitar', 'Shakuhachi Flute', 'Bagpipes',
+    'Pedal Steel Guitar', 'Wah-Wah Guitar', 'Slide Guitar', '12-String Acoustic',
+    'Saw Wave Lead', 'Sine Wave Sub', 'FM Synth Bell', 'Granular Texture',
+    'Orchestral Swells', 'Pizzicato Strings', 'French Horn', 'Piccolo Trumpet',
+    'Vibraphone', 'Marimba', 'Glockenspiel', 'Tubular Bells',
+    'Didgeridoo', 'Koto', 'Erhu', 'Oud'
+];
+
+export const VOCAL_STYLES = [
+    'Breathy Female Pop', 'Gritty Blues Baritone', 'Stacked Choir Harmonies',
+    'Rapid Rap Flow', 'Falsetto Hook', 'Operatic Soprano',
+    'Whisper-Sung', 'Vocoder / Talkbox', 'Autotuned Melodic',
+    'Spoken Word', 'Throat Singing', 'Growl (Death Metal)',
+    'Crooner (Sinatra Style)', 'Yodel', 'Scat Jazz',
+    'Soul Belt', 'Head Voice (Falsetto)', 'Chest Voice (Power Belt)',
+    'Harmonic Overtone Singing', 'Beatbox Percussion', 'Lullaby Soft',
+    'Preaching Cadence', 'Rapping (Lyrical)', 'Rapping (Mumble)',
+    'Call and Response Lead'
+];
+
+export const MUSIC_PRODUCTION_ERAS = [
+    '60s Motown Mono', '70s Analog Funk', '80s Gated-Reverb Synth-Pop',
+    '90s Boom Bap', 'Y2K Maximalist Pop', '2010s EDM Festival',
+    'Modern Trap Hi-Fi', 'Lo-fi Cassette', 'Audiophile Binaural',
+    'Doo-wop Mono', 'Surf Reverb Spring', 'Psychedelic Panning',
+    'Disco Four-on-the-Floor', 'New Wave Gate', 'Grunge Wall of Distortion',
+    'Trip Hop Dusty Vinyl', 'Nu-Metal Digital Clip', 'Blog House Lo-fi',
+    'Hyperpop Glitch Compressed', 'Bedroom Pop Intimate'
+];
+
+export const TIME_OF_DAY = [
+    'Pre-Dawn Blue', 'Sunrise', 'Harsh Noon', 'Golden Hour', 'Dusk',
+    'Blue Hour', 'Neon Night', 'Overcast Midday', 'Midnight Moonlit',
+    'Twilight Gradient', 'Late Afternoon Warm', 'Dawn Mist'
+];
+
+export const WEATHER_OPTIONS = [
+    'Light Drizzle', 'Downpour', 'Fog Bank', 'Snowfall', 'Blizzard',
+    'Heat Haze', 'Sandstorm', 'Lightning Storm', 'Rainbow After Rain',
+    'Morning Mist', 'Hail', 'Overcast Grey', 'Partly Cloudy',
+    'Sunny Clear', 'Heavy Humidity', 'Tornado Sky'
+];
+
+export const COLOR_GRADES = [
+    'Teal & Orange Blockbuster', 'Bleach Bypass', 'Day-for-Night',
+    'Kodak 2383 Print Emulation', 'Pastel Wash', 'High-Key Commercial',
+    'Desaturated Nordic', 'Sepia Archive', 'Cross-Processed',
+    'Infrared False Color', 'Warm Golden Glow', 'Cold Blue Tint',
+    'Green Toxic / Sickness', 'Magenta / Pink Dream', 'Amber Vintage',
+    'LUT: Cinematic LUT', 'Technicolor Three-Strip', 'Black & White High Contrast',
+    'Silver Retention (Bleach Bypass)', 'Fade in Film'
 ];

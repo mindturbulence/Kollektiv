@@ -3,8 +3,9 @@ import { createPortal } from 'react-dom';
 import { motion, AnimatePresence } from 'motion/react';
 import { runAssistantTurn } from '../services/assistantService';
 import { useSettings } from '../contexts/SettingsContext';
-import { CloseIcon, SparklesIcon, SidebarIcon, PlusIcon, DeleteIcon, PaperclipIcon, CpuChipIcon } from './icons';
+import { CloseIcon, SparklesIcon, SidebarIcon, PlusIcon, DeleteIcon, PaperclipIcon, CpuChipIcon, ArrowsMaximizeIcon } from './icons';
 import { mcpService } from '../services/mcpService';
+import { loadMcpAssistantTools } from '../services/mcpAssistantTools';
 import { audioService } from '../services/audioService';
 import Markdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
@@ -27,6 +28,7 @@ export const LLMChatPanel: React.FC<LLMChatPanelProps> = ({ isOpen, onClose }) =
     const [messages, setMessages] = useState<{ role: 'user' | 'assistant' | 'system', content: string, attachments?: any[] }[]>([]);
 
     const [isSidebarOpen, setIsSidebarOpen] = useState(false);
+    const [isExpanded, setIsExpanded] = useState(false);
     const [savedSessions, setSavedSessions] = useState<ChatSession[]>([]);
     const [activeSessionId, setActiveSessionId] = useState<string | null>(null);
 
@@ -43,6 +45,12 @@ export const LLMChatPanel: React.FC<LLMChatPanelProps> = ({ isOpen, onClose }) =
             audioService.playPanelSlideOut();
         }
     }, [isOpen]);
+
+    // Sync local MCP states when settings change externally
+    useEffect(() => {
+        setMcpServerUrl(settings.mcpServerUrl || 'http://localhost:3010');
+        setMcpEnabled(settings.mcpEnabled || false);
+    }, [settings.mcpServerUrl, settings.mcpEnabled]);
 
     // The live voice widget lives outside this panel (see App.tsx) so voice
     // sessions survive the panel closing; log its tool activity here while open.
@@ -148,6 +156,8 @@ export const LLMChatPanel: React.FC<LLMChatPanelProps> = ({ isOpen, onClose }) =
                 setMcpTools(tools);
                 setMcpPrompts(prompts);
                 setMcpResources(resources);
+                // Warm the assistant's MCP tool cache so it can use tools immediately
+                loadMcpAssistantTools(settings).catch(() => {});
                 setMessages(prev => [
                     ...prev,
                     { role: 'system', content: `🛸 [MCP Connected]: Established Session at ${urlToUse} successfully. Cataloged ${tools.length} Tools, ${prompts.length} Prompts, ${resources.length} Resources.` }
@@ -188,7 +198,7 @@ export const LLMChatPanel: React.FC<LLMChatPanelProps> = ({ isOpen, onClose }) =
         }
     };
 
-    // Execute an MCP Tool from client console
+    // Execute an MCP Tool from client console (routes through assistant tool pipeline)
     const handleRunMcpTool = async (toolName: string, argsObj: Record<string, any>) => {
         setToolRunning(true);
         audioService.playClick();
@@ -197,17 +207,13 @@ export const LLMChatPanel: React.FC<LLMChatPanelProps> = ({ isOpen, onClose }) =
                 ...prev,
                 { role: 'system', content: `⚙️ [MCP Execute]: Calling "${toolName}" with args: ${JSON.stringify(argsObj)}...` }
             ]);
-            const response = await mcpService.callTool(mcpServerUrl, toolName, argsObj);
-            
-            // Format output string
-            let outStr = '';
-            if (response && Array.isArray(response)) {
-                outStr = response.map((item: any) => item.text || JSON.stringify(item)).join('\n');
-            } else if (response && typeof response === 'object') {
-                outStr = JSON.stringify(response, null, 2);
-            } else {
-                outStr = String(response || 'No raw output');
-            }
+            // Go through the assistant's MCP tool pipeline so the assistant
+            // sees the result and can reason about it in follow-up.
+            const { executeAssistantTool } = await import('../services/assistantTools');
+            const mcpTools = await loadMcpAssistantTools(settings);
+            const mcpToolName = `mcp_${toolName}`.replace(/[^a-zA-Z0-9_-]/g, '_').slice(0, 60);
+            const result = await executeAssistantTool(mcpToolName, argsObj, { settings }, mcpTools);
+            const outStr = result.length > 8000 ? result.slice(0, 8000) + '…' : result;
 
             setMessages(prev => [
                 ...prev,
@@ -420,6 +426,7 @@ ${systemResponse}` };
         }
 
         setIsProcessing(true);
+        appEventBus.emit('chatSpeaking', { speaking: true });
 
         try {
             const events = runAssistantTurn(newMessages, settings);
@@ -434,6 +441,7 @@ ${systemResponse}` };
                         setMessages(prev => [...prev, { role: 'assistant', content: '' }]);
                     }
                     fullResponse += ev.chunk;
+                    appEventBus.emit('liveCaption', { who: 'assistant', text: ev.chunk });
                     if (ev.chunk.trim() && ev.chunk.length > 0) audioService.playType();
                     setMessages(prev => {
                         const cloned = [...prev];
@@ -466,6 +474,7 @@ ${systemResponse}` };
             });
         } finally {
             setIsProcessing(false);
+            appEventBus.emit('chatSpeaking', { speaking: false });
         }
     };
 
@@ -474,10 +483,13 @@ ${systemResponse}` };
     };
 
     const getChatSubtitle = () => {
-        if (settings.activeLLM === 'llamacpp') return settings.llamacppModel || 'llamacpp';
-        if (settings.activeLLM === 'ollama') return settings.ollamaModel || 'llama3';
-        if (settings.activeLLM === 'ollama_cloud') return settings.ollamaCloudModel || 'llama3';
-        return settings.llmModel || 'gemini-2.5-flash';
+        const brain = settings.assistantProvider || 'gemini';
+        if (brain === 'ollama') return `ollama · ${settings.ollamaModel || 'model?'}`;
+        if (brain === 'ollama_cloud') return `ollama cloud · ${settings.ollamaCloudModel || 'model?'}`;
+        if (brain === 'openrouter') return `openrouter · ${settings.openrouterModel || 'auto'}`;
+        if (brain === 'anthropic') return `anthropic · ${settings.anthropicModel || 'claude'}`;
+        if (brain === 'llamacpp') return `llama.cpp · ${settings.llamacppModel || 'default'}`;
+        return `gemini · ${settings.llmModel || 'gemini-2.5-flash'}`;
     };
 
     const panelContent = (
@@ -493,7 +505,7 @@ ${systemResponse}` };
                         animate={{ x: 0, opacity: 1 }}
                         exit={{ x: '100%', opacity: 0 }}
                         transition={{ type: "spring", stiffness: 300, damping: 30 }}
-                        className="fixed top-[84px] right-[42px] bottom-[81px] w-full md:w-[600px] lg:w-[800px] bg-transparent z-[200] pointer-events-auto shadow-2xl"
+                        className={`fixed top-[84px] right-[42px] bottom-[81px] bg-transparent z-[200] pointer-events-auto shadow-2xl transition-[left,width] duration-300 ${isExpanded ? 'left-[42px] w-auto' : 'w-full md:w-[600px] lg:w-[800px]'}`}
                     >
                         <div className="w-full h-full relative corner-frame overflow-visible flex flex-col">
                             <div className="bg-base-100/90 backdrop-blur-3xl rounded-none w-[calc(100%-6px)] h-[calc(100%-6px)] m-[3px] flex flex-col overflow-hidden relative z-10 border border-white/5">
@@ -518,6 +530,9 @@ ${systemResponse}` };
                                         </div>
                                     </div>
                                     <div className="flex items-center gap-2">
+                                        <button onClick={() => { audioService.playClick(); setIsExpanded(!isExpanded); }} className={`btn btn-xs btn-ghost h-8 w-8 rounded-none p-0 hover:opacity-100 hidden md:flex ${isExpanded ? 'opacity-100' : 'opacity-40'}`} aria-label={isExpanded ? 'Shrink panel' : 'Expand panel to full width'} aria-pressed={isExpanded}>
+                                            <ArrowsMaximizeIcon className="w-5 h-5" />
+                                        </button>
                                         <button onClick={() => { audioService.playClick(); onClose(); }} className="btn btn-xs btn-ghost h-8 w-8 rounded-none p-0 opacity-40 hover:opacity-100 btn-snake" aria-label="Close panel">
                                             <span /><span /><span /><span />
                                             <CloseIcon className="w-5 h-5" />
@@ -578,7 +593,7 @@ ${systemResponse}` };
                                             {messages.map((msg, index) => (
                                                 <div key={index} className={`flex flex-col ${msg.role === 'user' ? 'items-end' : msg.role === 'system' ? 'items-center' : 'items-start'}`}>
                                                     {msg.role === 'system' && !msg.content.includes('Control Node initialized. Awaiting commands.') && (
-                                                        <div className="text-[10px] font-mono text-warning/80 bg-warning/10 px-3 py-1.5 rounded-lg border border-warning/20 inline-block my-2">
+                                                        <div className="text-[15px] font-mono text-warning/80 bg-warning/10 px-3 py-1.5 rounded-lg border border-warning/20 inline-block my-2">
                                                             &gt; {msg.content}
                                                         </div>
                                                     )}

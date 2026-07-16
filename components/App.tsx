@@ -26,6 +26,7 @@ import { TabTitleManager } from './TabTitleManager';
 
 // Page components
 import Dashboard from './Dashboard';
+import AssistantPage from './AssistantPage';
 import DiscoveryPage from './DiscoveryPage';
 import PromptsPage from './PromptsPage';
 import SavedPrompts from './SavedPrompts';
@@ -39,13 +40,21 @@ import ImageResizer from './ImageResizer';
 import { VideoToFrames } from './VideoToFrames';
 import LoraEditorPage from './loraEditor/LoraEditorPage';
 import { LLMChatPanel } from './LLMChatPanel';
+import { LiveAssistantProvider } from '../contexts/LiveAssistantContext';
+import WebViewerPanel from './WebViewerPanel';
+
+import LiveCaptionOverlay from './LiveCaptionOverlay';
+import { ScreenControlOverlay } from './ScreenControlOverlay';
 import { motion, AnimatePresence } from 'motion/react';
-import { pageVariants } from './AnimatedPanels';
+import { shellVariants } from './AnimatedPanels';
 import ChromaticText from './ChromaticText';
-import { HermesController } from './HermesController';
+import TransitionOverlay, { type TransitionOverlayHandle } from './transitions/TransitionOverlay';
+import { useTransitionDirector } from './transitions/useTransitionDirector';
+import type { FxKind } from './transitions/routeFx';
 
 
-type PromptsPageState = { prompt?: string, artStyle?: string, artist?: string, view?: 'enhancer' | 'composer' | 'create', id?: string } | null;
+
+type PromptsPageState = { prompt?: string, artStyle?: string, artist?: string, view?: 'enhancer' | 'composer' | 'create' | 'prompt_analyzer', id?: string } | null;
 
 class ErrorBoundary extends React.Component<{ children: React.ReactNode }, { hasError: boolean, error: any, errorInfo: any }> {
     constructor(props: { children: React.ReactNode }) {
@@ -226,20 +235,26 @@ const InitialLoader: React.FC<{ status: string; progress: number | null; onConti
 
             <div className="relative z-10 flex flex-col items-center">
                 <div className="overflow-hidden mb-6 px-4">
-                    <h1 ref={textWrapperRef} className="grid grid-cols-1 grid-rows-1 text-2xl md:text-4xl font-normal tracking-widest uppercase select-none items-center font-monoton leading-none translate-y-[2px]">
-                        <span className="text-base-content/10 block leading-none py-2 row-start-1 col-start-1">
-                            <ChromaticText enabled={false}>Kollektiv</ChromaticText><span className="text-primary/10 italic">.</span>
-                        </span>
-
-                        <div
-                            ref={logoFillRef}
-                            className="row-start-1 col-start-1 h-full overflow-hidden"
-                            style={{ width: '0%' }}
-                        >
-                            <span className="text-base-content block whitespace-nowrap leading-none py-2 drop-shadow-[0_0_20px_rgba(var(--bc),0.15)]">
-                                <ChromaticText>Kollektiv</ChromaticText><span className="text-primary italic">.</span>
+                    <h1 ref={textWrapperRef} className="flex flex-col items-center text-2xl md:text-4xl font-normal tracking-widest uppercase select-none leading-none translate-y-[2px]">
+                        <div className="grid grid-cols-1 grid-rows-1 font-monoton">
+                            <span className="text-base-content/10 block leading-none py-2 row-start-1 col-start-1">
+                                <ChromaticText enabled={false}>Kollektiv</ChromaticText><span className="text-primary/10 italic">.</span>
                             </span>
+
+                            <div
+                                ref={logoFillRef}
+                                className="row-start-1 col-start-1 h-full overflow-hidden"
+                                style={{ width: '0%' }}
+                            >
+                                <span className="text-base-content block whitespace-nowrap leading-none py-2 drop-shadow-[0_0_20px_rgba(var(--bc),0.15)]">
+                                    <ChromaticText>Kollektiv</ChromaticText><span className="text-primary italic">.</span>
+                                </span>
+                            </div>
                         </div>
+
+                        <span className="mt-1 md:mt-2 font-rainmaker text-primary text-xs md:text-sm whitespace-nowrap leading-none drop-shadow-[0_0_12px_rgba(var(--p),0.3)] pointer-events-none">
+                            Systems
+                        </span>
                     </h1>
                 </div>
 
@@ -288,8 +303,9 @@ const InitialLoader: React.FC<{ status: string; progress: number | null; onConti
             </div>
             
             {/* Footer */}
-            <div className="absolute bottom-8 left-1/2 -translate-x-1/2 text-[10px] font-mono uppercase tracking-widest text-base-content/40 opacity-70">
-                <span className="font-bold">Built by</span> <span className="text-primary font-bold">MindTurbulence</span>
+            <div className="absolute bottom-8 left-1/2 -translate-x-1/2 text-[10px] font-mono uppercase tracking-widest text-base-content/40 opacity-70 flex flex-col items-center gap-0.5">
+                <span className="font-bold text-base-content/30 text-[8px]">Built by</span>
+                <span className="text-primary font-bold">MindTurbulence</span>
             </div>
         </div>
     );
@@ -422,7 +438,7 @@ const AppContent: React.FC = () => {
     const [activeTab, setActiveTab] = useLocalStorage<ActiveTab>('activeTab', 'dashboard');
     const [isAboutModalOpen, setIsAboutModalOpen] = useState(false);
     const [isClippingPanelOpen, setIsClippingPanelOpen] = useState(false);
-    const [isHermesOpen, setIsHermesOpen] = useState(false);
+    const [isChatPanelOpen, setIsChatPanelOpen] = useState(false);
     const [isLlmPanelOpen, setIsLlmPanelOpen] = useState(false);
     const [collapsedPanels, setCollapsedPanels] = useLocalStorage<Record<string, boolean>>('collapsedPanels', {});
     const [globalFeedback, setGlobalFeedback] = useState<{ message: string; type: 'success' | 'error' } | null>(null);
@@ -437,6 +453,7 @@ const AppContent: React.FC = () => {
         const base = "KOLLEKTIV";
         switch (activeTab) {
             case 'dashboard': return `DASHBOARD | ${base}`;
+            case 'assistant': return `ASSISTANT | ${base}`;
             case 'discovery': return `DISCOVERY | ${base}`;
             case 'prompts': return `BUILDER | ${base}`;
             case 'crafter': return `CRAFTER | ${base}`;
@@ -457,10 +474,7 @@ const AppContent: React.FC = () => {
         }
     }, [activeTab]);
 
-    const transitionOverlayRef = useRef<HTMLDivElement>(null);
-    const transitionLogoRef = useRef<HTMLDivElement>(null);
-    const topOverlayPanelRef = useRef<HTMLDivElement>(null);
-    const bottomOverlayPanelRef = useRef<HTMLDivElement>(null);
+    const transitionOverlayHandleRef = useRef<TransitionOverlayHandle>(null);
     const apertureRef = useRef<HTMLDivElement>(null);
     const blindsRef = useRef<HTMLDivElement>(null);
     const appWrapperRef = useRef<HTMLDivElement>(null);
@@ -717,11 +731,24 @@ const AppContent: React.FC = () => {
     }, [isInitialized]);
 
 
+    // --- Context Shift Engine: page transition orchestration ---
+    const [pageFxKind, setPageFxKind] = useState<FxKind>('module-boot');
+    const activeTabRef = useRef(activeTab);
+    activeTabRef.current = activeTab;
+
+    const { navigate: directorNavigate } = useTransitionDirector({
+        overlayRef: transitionOverlayHandleRef,
+        contentRef,
+        getActiveTab: () => activeTabRef.current,
+        commit: (tab, kind) => {
+            setPageFxKind(kind);
+            setActiveTab(tab);
+        },
+    });
+
     const handleNavigate = useCallback((tab: ActiveTab) => {
-        if (tab === activeTab) return;
-        audioService.playTransition();
-        setActiveTab(tab);
-    }, [activeTab]);
+        directorNavigate(tab);
+    }, [directorNavigate]);
 
     useEffect(() => {
         const currentTheme = settings.darkTheme;
@@ -740,10 +767,12 @@ const AppContent: React.FC = () => {
         let targetTab: ActiveTab = 'crafter';
         if (state?.view === 'enhancer') {
             targetTab = 'refiner';
+        } else if (state?.view === 'prompt_analyzer') {
+            targetTab = 'prompt_analyzer';
         } else if (state?.view === 'composer' || state?.view === 'create') {
             targetTab = 'crafter';
         } else {
-            // Fallback to generic prompts tab if needed, 
+            // Fallback to generic prompts tab if needed,
             // but user wants them separate so we prefer the specific ones
             targetTab = 'crafter';
         }
@@ -755,7 +784,9 @@ const AppContent: React.FC = () => {
     useEffect(() => {
         const navigateSub = appEventBus.on('navigate', (tab) => {
             if (typeof tab === 'string') {
-                setActiveTab(tab as ActiveTab);
+                // Route through the director so programmatic navigation gets the
+                // same transition + SFX as header clicks.
+                handleNavigate(tab as ActiveTab);
             }
         });
         const sendToSub = appEventBus.on('sendToPromptsPage', (state) => {
@@ -763,13 +794,32 @@ const AppContent: React.FC = () => {
                 handleSendToPromptsPage(state as PromptsPageState);
             }
         });
-        return () => { navigateSub(); sendToSub(); };
-    }, [activeTab, handleSendToPromptsPage]);
+        const feedbackSub = appEventBus.on('assistantFeedback', (payload) => {
+            const p = payload as { message: string; isError?: boolean } | undefined;
+            if (p?.message) showGlobalFeedback(p.message, !!p.isError);
+        });
+        return () => { navigateSub(); sendToSub(); feedbackSub(); };
+    }, [handleNavigate, handleSendToPromptsPage, showGlobalFeedback]);
 
     const handleClipIdea = useCallback((idea: Idea) => {
         setClippedIdeas(prev => [idea, ...prev]);
         showGlobalFeedback(`Clipped "${idea.title}"`);
     }, [setClippedIdeas, showGlobalFeedback]);
+
+    useEffect(() => {
+        return appEventBus.on('clipIdea', (payload) => {
+            if (payload && typeof payload === 'object' && (payload as any).prompt) {
+                const p = payload as { title?: string; prompt: string; lens?: string; source?: string };
+                handleClipIdea({
+                    id: `clip-${Date.now()}`,
+                    title: p.title || p.prompt.slice(0, 40),
+                    prompt: p.prompt,
+                    lens: p.lens || 'Assistant',
+                    source: p.source || 'Assistant',
+                });
+            }
+        });
+    }, [handleClipIdea]);
 
     const handleRemoveIdea = useCallback((id: string) => setClippedIdeas(prev => prev.filter(idea => idea.id !== id)), [setClippedIdeas]);
     const handleClearAllIdeas = useCallback(() => setClippedIdeas([]), [setClippedIdeas]);
@@ -805,6 +855,7 @@ const AppContent: React.FC = () => {
 
         switch (activeTab) {
             case 'dashboard': return <Dashboard key="dashboard" onNavigate={handleNavigate} onClipIdea={handleClipIdea} isExiting={false} />;
+            case 'assistant': return <AssistantPage key="assistant" />;
             case 'discovery': return <DiscoveryPage key="discovery" isExiting={false} onClipIdea={handleClipIdea} onSendToBuilder={handleSendToPromptsPage} showGlobalFeedback={showGlobalFeedback} />;
             case 'prompts': return <PromptsPage key="prompts" onClipIdea={handleClipIdea} initialState={promptsPageState}                            onStateHandled={handleClearPromptsPageState} showGlobalFeedback={showGlobalFeedback} isExiting={false} onSendToBuilder={handleSendToPromptsPage} />;
             case 'crafter': return <PromptsPage key="prompts" forcedView="composer" onNavigate={handleNavigate} onClipIdea={handleClipIdea} initialState={promptsPageState}                            onStateHandled={handleClearPromptsPageState} showGlobalFeedback={showGlobalFeedback} isExiting={false} onSendToBuilder={handleSendToPromptsPage} />;
@@ -903,12 +954,15 @@ const AppContent: React.FC = () => {
     // --- Inline-callback replacements ---
     const handleAboutClick = useCallback(() => setIsAboutModalOpen(true), []);
     const handleToggleClippingPanel = useCallback(() => setIsClippingPanelOpen(prev => !prev), []);
-    const handleToggleHermes = useCallback(() => setIsHermesOpen(prev => !prev), []);
+    const handleToggleChatPanel = useCallback(() => setIsChatPanelOpen(prev => {
+        if (!prev) appEventBus.emit('navigate', 'dashboard');
+        return !prev;
+    }), []);
     const handleClearPromptsPageState = useCallback(() => setPromptsPageState(null), []);
     const handleSendToEnhancer = useCallback((prompt: string) => handleSendToPromptsPage({ prompt, view: 'enhancer' }), [handleSendToPromptsPage]);
     const handleCloseClippingPanel = useCallback(() => setIsClippingPanelOpen(false), []);
     const handleCloseLlmStatus = useCallback(() => setIsLlmPanelOpen(false), []);
-    const handleCloseHermes = useCallback(() => setIsHermesOpen(false), []);
+    const handleCloseChatPanel = useCallback(() => setIsChatPanelOpen(false), []);
     const handleToggleLlmPanel = useCallback(() => {
         audioService.playClick();
         setIsLlmPanelOpen(prev => !prev);
@@ -923,6 +977,7 @@ const AppContent: React.FC = () => {
     if (showWelcome) return <Welcome onSetupComplete={initializeApp} />;
 
     return (
+        <LiveAssistantProvider>
         <div className="h-full w-full overflow-hidden relative font-sans">
             {isLoading && (
                 <div ref={loaderRef} className="fixed inset-0 z-[1000]">
@@ -1033,7 +1088,7 @@ const AppContent: React.FC = () => {
                                 isInitialized={isInitialized}
                                 onAboutClick={handleAboutClick}
                                 onToggleClippingPanel={handleToggleClippingPanel}
-                                onToggleHermes={handleToggleHermes}
+                                onToggleChatPanel={handleToggleChatPanel}
                                 onStandbyClick={handleStandbyClick}
                                 clippedIdeasCount={clippedIdeas.length}
                             />
@@ -1041,37 +1096,15 @@ const AppContent: React.FC = () => {
 
                         <div className={`flex-1 flex flex-col overflow-hidden relative ${activeTab === 'prompts' ? 'pt-0' : 'pt-0'} p-0 bg-transparent min-h-0 gap-0`}>
                             <main className="flex-grow min-w-0 relative overflow-hidden rounded-none bg-transparent border-none shadow-none backdrop-blur-none z-10 py-6 px-7">
-                                {/* Cinematic Transition Overlay (Tesoro Style) */}
-                                <div
-                                    ref={transitionOverlayRef}
-                                    className="absolute inset-0 z-[1000] pointer-events-none flex flex-col overflow-hidden"
-                                    style={{ visibility: 'hidden' }}
-                                >
-                                    <div
-                                        ref={topOverlayPanelRef}
-                                        className="bg-base-100/98 flex-1 w-full h-0"
-                                        style={{ height: '0%' }}
-                                    />
-                                    <div
-                                        ref={bottomOverlayPanelRef}
-                                        className="bg-base-100/98 flex-1 w-full h-0"
-                                        style={{ height: '0%' }}
-                                    />
-                                    <div
-                                        ref={transitionLogoRef}
-                                        className="absolute top-1/2 left-1/2 opacity-0 scale-90"
-                                    >
-                                        <h1 className="text-3xl md:text-5xl font-normal tracking-[0.4em] text-base-content uppercase font-monoton whitespace-nowrap">
-                                            <ChromaticText>Kollektiv</ChromaticText><span className="text-primary italic">.</span>
-                                        </h1>
-                                    </div>
-                                </div>
+                                {/* Context Shift Engine — futuristic OS transition overlay */}
+                                <TransitionOverlay ref={transitionOverlayHandleRef} />
 
                                 <div ref={contentRef} className="h-full w-full z-10 relative">
-                                    <AnimatePresence mode="wait">
+                                    <AnimatePresence mode="wait" custom={pageFxKind}>
                                         <motion.div
                                             key={['crafter', 'refiner', 'prompt_analyzer', 'media_analyzer', 'prompts'].includes(activeTab) ? 'prompts_group' : activeTab}
-                                            variants={pageVariants}
+                                            custom={pageFxKind}
+                                            variants={shellVariants}
                                             initial="hidden"
                                             animate="visible"
                                             exit="exit"
@@ -1099,10 +1132,10 @@ const AppContent: React.FC = () => {
                                     />
 
                                     <LLMChatPanel
-                                        isOpen={isHermesOpen}
-                                        onClose={handleCloseHermes}
+                                        isOpen={isChatPanelOpen}
+                                        onClose={handleCloseChatPanel}
                                     />
-                                    <HermesController />
+                                    <WebViewerPanel />
                                 </div>
                             </main>
 
@@ -1137,6 +1170,8 @@ const AppContent: React.FC = () => {
             )}
             <TabTitleManager defaultTitle={currentTitle} />
             <CustomCursor />
+            <LiveCaptionOverlay hidden={activeTab === 'assistant'} />
+            <ScreenControlOverlay />
             {isInitialized && (
                 <PageFrame
                     isInitialized={isInitialized}
@@ -1163,6 +1198,7 @@ const AppContent: React.FC = () => {
                 )}
             </div>
         </div>
+    </LiveAssistantProvider>
     );
 };
 

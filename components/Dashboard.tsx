@@ -70,7 +70,7 @@ const Dashboard: React.FC<DashboardProps> = ({ isExiting = false }) => {
                         </p>
                     </div>
 
-                    <div className="w-12 h-px bg-base-content/10 mt-10"></div>
+
                 </motion.div>
 
                 {/* DECORATIVE ELEMENTS */}

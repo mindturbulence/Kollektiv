@@ -12,19 +12,15 @@ import CodeSnippetModal from './CodeSnippetModal';
 import JSONBreakdownModal from './JSONBreakdownModal';
 import { audioService } from '../services/audioService';
 import { refinerPresetService, type RefinerPreset } from '../services/refinerPresetService';
+import { modifierOptionsService } from '../services/modifierOptionsService';
 import { enhancePromptStream, cleanLLMResponse, buildMidjourneyParams, dissectPrompt, generateConstructorPreset, generateWithImagen, generateWithNanoBanana, generateWithVeo } from '../services/llmService';
 import { computeWordDiff, calculateSemanticMetrics } from '../utils/diffUtils';
 import { loadArtists } from '../utils/artistStorage';
 import { loadArtStyles } from '../utils/artstyleStorage';
 import {
-    PROMPT_DETAIL_LEVELS, GENERAL_ASPECT_RATIOS, CAMERA_ANGLES, CAMERA_PROXIMITY,
-    LIGHTING_OPTIONS, COMPOSITION_OPTIONS, CAMERA_TYPES, CAMERA_SETTINGS, CAMERA_EFFECTS,
-    LENS_TYPES, ANALOG_FILM_STOCKS, PHOTOGRAPHY_STYLES, DIGITAL_AESTHETICS, AESTHETIC_LOOKS,
-    MOTION_OPTIONS, CAMERA_MOVEMENT_OPTIONS, VIDEO_EFFECTS, MIDJOURNEY_VERSIONS,
-    MIDJOURNEY_NIJI_VERSIONS, MIDJOURNEY_ASPECT_RATIOS, Z_IMAGE_STYLES, SPECIALTY_LENS_EFFECTS,
-    FILM_TYPES, FACIAL_EXPRESSIONS, HAIR_STYLES, EYE_COLORS, SKIN_TEXTURES, REALISM_OPTIONS,
-    CLOTHING_STYLES
+    PROMPT_DETAIL_LEVELS, MIDJOURNEY_VERSIONS
 } from '../constants/modifiers';
+import { MODIFIER_CATEGORIES } from '../constants/modifierRegistry';
 import { TARGET_IMAGE_AI_MODELS, TARGET_VIDEO_AI_MODELS, TARGET_AUDIO_AI_MODELS } from '../constants/models';
 import type { LLMSettings } from '../types';
 
@@ -91,6 +87,7 @@ const RefinerPage: React.FC<RefinerPageProps> = ({
     // --- Data & Loading State ---
     const [artStyles, setArtStyles] = useState<any[]>([]);
     const [artists, setArtists] = useState<any[]>([]);
+    const [customOptions, setCustomOptions] = useState<Record<string, (string | { name: string; description?: string })[]>>({});
     const [isLoadingRefine, setIsLoadingRefine] = useState(false);
     const [errorRefine, setErrorRefine] = useState<AppError | null>(null);
     const [isCodeExportModalOpen, setIsCodeExportModalOpen] = useState(false);
@@ -99,18 +96,7 @@ const RefinerPage: React.FC<RefinerPageProps> = ({
     const [isJsonModalOpen, setIsJsonModalOpen] = useState(false);
     const [jsonCopied, setJsonCopied] = useState(false);
 
-    // --- Arena Mode State ---
-    const [arenaMode, setArenaMode] = useState(false);
-    const [arenaModelA, setArenaModelA] = useState<string>('gemini');
-    const [arenaModelB, setArenaModelB] = useState<string>('ollama');
-    const [isLoadingRefineA, setIsLoadingRefineA] = useState(false);
-    const [isLoadingRefineB, setIsLoadingRefineB] = useState(false);
-    const [errorRefineA, setErrorRefineA] = useState<any>(null);
-    const [errorRefineB, setErrorRefineB] = useState<any>(null);
-    const [resultsRefineA, setResultsRefineA] = useState<any>(null);
-    const [resultsRefineB, setResultsRefineB] = useState<any>(null);
-    const [statsA, setStatsA] = useState<any>(null);
-    const [statsB, setStatsB] = useState<any>(null);
+    // --- Direct Media State ---
     const [directMediaResult, setDirectMediaResult] = useState<{ url: string; type: 'image' | 'video'; target: string; prompt: string } | null>(null);
 
     const [activeRefineSubTab, setActiveRefineSubTab] = useState<RefineSubTab>('basic');
@@ -243,12 +229,14 @@ const RefinerPage: React.FC<RefinerPageProps> = ({
     useEffect(() => {
         const loadData = async () => {
             try {
-                const [styles, artistsData] = await Promise.all([
+                const [styles, artistsData, custom] = await Promise.all([
                     loadArtStyles(),
                     loadArtists(),
+                    modifierOptionsService.loadCustomOptions(),
                 ]);
                 setArtStyles(styles);
                 setArtists(artistsData);
+                setCustomOptions(custom);
             } catch (e) {
                 setErrorRefine({ message: "Reference data offline." });
             }
@@ -299,36 +287,16 @@ const RefinerPage: React.FC<RefinerPageProps> = ({
         const catalog: string[] = [];
         if (artStyles.length > 0) catalog.push(`artStyle: ${artStyles.flatMap((c: any) => c.items.map((i: any) => i.name)).join(', ')}`);
         if (artists.length > 0) catalog.push(`artist: ${artists.flatMap((c: any) => c.items.map((i: any) => i.name)).join(', ')}`);
-        catalog.push(`photographyStyle: ${PHOTOGRAPHY_STYLES.join(', ')}`);
-        catalog.push(`aestheticLook: ${AESTHETIC_LOOKS.map(l => l.name).join(', ')}`);
-        catalog.push(`digitalAesthetic: ${DIGITAL_AESTHETICS.map(a => a.name).join(', ')}`);
-        catalog.push(`aspectRatio: ${GENERAL_ASPECT_RATIOS.join(', ')}`);
-        catalog.push(`cameraType: ${CAMERA_TYPES.join(', ')}`);
-        catalog.push(`cameraAngle: ${CAMERA_ANGLES.join(', ')}`);
-        catalog.push(`cameraProximity: ${CAMERA_PROXIMITY.join(', ')}`);
-        catalog.push(`cameraSettings: ${CAMERA_SETTINGS.join(', ')}`);
-        catalog.push(`cameraEffect: ${CAMERA_EFFECTS.join(', ')}`);
-        catalog.push(`specialtyLens: ${SPECIALTY_LENS_EFFECTS.map(l => l.name).join(', ')}`);
-        catalog.push(`lensType: ${LENS_TYPES.join(', ')}`);
-        catalog.push(`filmType: ${FILM_TYPES.join(', ')}`);
-        catalog.push(`filmStock: ${ANALOG_FILM_STOCKS.join(', ')}`);
-        catalog.push(`lighting: ${LIGHTING_OPTIONS.join(', ')}`);
-        catalog.push(`composition: ${COMPOSITION_OPTIONS.join(', ')}`);
-        catalog.push(`facialExpression: ${FACIAL_EXPRESSIONS.join(', ')}`);
-        catalog.push(`hairStyle: ${HAIR_STYLES.join(', ')}`);
-        catalog.push(`eyeColor: ${EYE_COLORS.join(', ')}`);
-        catalog.push(`skinTexture: ${SKIN_TEXTURES.join(', ')}`);
-        catalog.push(`realism: ${REALISM_OPTIONS.join(', ')}`);
-        catalog.push(`clothing: ${CLOTHING_STYLES.join(', ')}`);
-        catalog.push(`motion: ${MOTION_OPTIONS.map(o => o.name).join(', ')}`);
-        catalog.push(`cameraMovement: ${CAMERA_MOVEMENT_OPTIONS.map(o => o.name).join(', ')}`);
-        catalog.push(`videoEffect: ${VIDEO_EFFECTS.join(', ')}`);
-        catalog.push(`mjVersion: ${MIDJOURNEY_VERSIONS.join(', ')}`);
-        catalog.push(`mjNiji: ${MIDJOURNEY_NIJI_VERSIONS.join(', ')}`);
-        catalog.push(`mjAspectRatio: ${MIDJOURNEY_ASPECT_RATIOS.join(', ')}`);
-        catalog.push(`zImageStyle: ${Z_IMAGE_STYLES.join(', ')}`);
+        // Use MODIFIER_CATEGORIES from registry, filtered by media mode
+        const registryCatalog = MODIFIER_CATEGORIES.filter((c: any) => c.media === 'all' || c.media === mediaMode);
+        for (const cat of registryCatalog) {
+            const builtin = cat.getOptions();
+            const custom = customOptions?.[cat.key] || [];
+            const merged = Array.from(new Set([...builtin, ...custom.map((e: any) => typeof e === 'string' ? e : e.name)]));
+            if (merged.length > 0) catalog.push(`${cat.key}: ${merged.join(', ')}`);
+        }
         return catalog.join('\\n');
-    }, [artStyles, artists]);
+    }, [artStyles, artists, mediaMode, customOptions]);
 
     const handleEnhance = useCallback(async () => {
         setIsBusy(true);
@@ -366,58 +334,6 @@ const RefinerPage: React.FC<RefinerPageProps> = ({
             setIsBusy(false);
         }
     }, [refineText, constantModifier, promptLength, targetAIModel, modifiers, settings, isMidjourney, referenceImages, buildModifierCatalog, setIsBusy]);
-
-    const handleEnhanceArena = useCallback(async () => {
-        setIsBusy(true);
-        setIsLoadingRefineA(true);
-        setIsLoadingRefineB(true);
-        setErrorRefineA(null); setErrorRefineB(null);
-        setResultsRefineA(null); setResultsRefineB(null);
-        setStatsA(null); setStatsB(null);
-
-        const activeRefImages = referenceImages.filter((img): img is string => img !== null);
-        const catalog = buildModifierCatalog();
-
-        const runModel = async (model: string, setResult: any, setStats: any, setError: any, setLoading: any) => {
-            const start = performance.now();
-            let fullText = '';
-            try {
-                const stream = enhancePromptStream(refineText, constantModifier, promptLength, targetAIModel, modifiers, settings, activeRefImages, catalog, model);
-                for await (const chunk of stream) fullText += chunk;
-                const duration = performance.now() - start;
-                let refinedPrompt = fullText;
-                let breakdown: any = null;
-                if (fullText.includes('---PROMPT_BREAKDOWN---')) {
-                    const parts = fullText.split('---PROMPT_BREAKDOWN---');
-                    refinedPrompt = parts[0].trim();
-                    try { breakdown = JSON.parse(parts[1].trim().replace(/```json\n?|\n?```/g, '').trim()); } catch {}
-                }
-                const cleanedText = cleanLLMResponse(refinedPrompt);
-                const mjParams = isMidjourney ? buildMidjourneyParams(modifiers) : '';
-                const finalPrompt = isMidjourney ? `${cleanedText} ${mjParams}`.trim() : cleanedText;
-                setResult({ suggestions: [finalPrompt], breakdown });
-                const wordCount = finalPrompt.split(/\s+/).length;
-                const tokensPerSec = duration > 0 ? parseFloat(((wordCount * 1.3) / (duration / 1000)).toFixed(1)) : 0;
-                const metrics = calculateSemanticMetrics(refineText, finalPrompt, model);
-                setStats({ durationMs: Math.round(duration), tokensPerSec, overlap: metrics.semanticOverlap, expansion: metrics.expansionRatio, purity: metrics.enrichmentPurity, aesthetic: metrics.aestheticImprovement });
-            } catch (err: any) {
-                setError({ message: err.message || `${model} failed.` });
-            } finally {
-                setLoading(false);
-            }
-        };
-
-        try {
-            await Promise.all([
-                runModel(arenaModelA, setResultsRefineA, setStatsA, setErrorRefineA, setIsLoadingRefineA),
-                runModel(arenaModelB, setResultsRefineB, setStatsB, setErrorRefineB, setIsLoadingRefineB),
-            ]);
-        } catch (globalErr: any) {
-            console.error("Arena execution issue:", globalErr);
-        } finally {
-            setIsBusy(false);
-        }
-    }, [refineText, constantModifier, promptLength, targetAIModel, modifiers, settings, isMidjourney, referenceImages, arenaModelA, arenaModelB, buildModifierCatalog, setIsBusy]);
 
     const handleDirectGenerate = async () => {
         setIsBusy(true);
@@ -517,6 +433,16 @@ const RefinerPage: React.FC<RefinerPageProps> = ({
         }
     };
 
+    const handleAddCustomOption = useCallback(async (key: string, value: string) => {
+        try {
+            await modifierOptionsService.addCustomOption(key, value);
+            const updated = await modifierOptionsService.loadCustomOptions();
+            setCustomOptions(updated);
+        } catch (e) {
+            console.error('Failed to save custom option', e);
+        }
+    }, []);
+
     const handleSendToRefine = (text: string) => {
         if (onSendToBuilder) {
             onSendToBuilder({ prompt: text || '', view: 'enhancer' });
@@ -539,7 +465,13 @@ const RefinerPage: React.FC<RefinerPageProps> = ({
     };
 
     // Preset handlers
-    const handleSavePresetClick = () => { setNewPresetName(''); setIsSavePresetModalOpen(true); };
+    const handleClearConstruction = () => {
+        setRefineText('');
+        setConstantModifier('');
+        setModifiers({ ...DEFAULT_MODIFIERS });
+        setSelectedPreset(null);
+        showGlobalFeedback('Construction cleared.');
+    };
     const handleConfirmSavePreset = async () => {
         if (!newPresetName.trim()) return;
         setIsSavingPreset(true);
@@ -550,7 +482,7 @@ const RefinerPage: React.FC<RefinerPageProps> = ({
             setIsSavePresetModalOpen(false);
             showGlobalFeedback('Preset saved to registry.');
         } catch (e) {
-            showGlobalFeedback('Failed to save preset.', true);
+            showGlobalFeedback(e instanceof Error ? e.message : 'Failed to save preset.', true);
         } finally { setIsSavingPreset(false); }
     };
     const handleUsePreset = useCallback((presetToUse: RefinerPreset | null = selectedPreset) => {
@@ -574,7 +506,7 @@ const RefinerPage: React.FC<RefinerPageProps> = ({
                 await loadPresets();
                 setSelectedPreset(null);
                 showGlobalFeedback('Preset purged.');
-            } catch (e) { showGlobalFeedback('Deletion failed.', true); }
+            } catch (e) { showGlobalFeedback(e instanceof Error ? e.message : 'Deletion failed.', true); }
         }
         setIsDeletePresetModalOpen(false);
         setPresetToDelete(null);
@@ -590,7 +522,7 @@ const RefinerPage: React.FC<RefinerPageProps> = ({
                 initial="hidden"
                 animate={isExiting ? "exit" : "visible"}
                 exit="exit"
-                className="lg:col-span-4 h-full min-h-0 flex flex-col relative p-[3px] corner-frame overflow-visible"
+                className="lg:col-span-3 h-full min-h-0 flex flex-col relative p-[3px] corner-frame overflow-visible"
             >
                 <PanelLine position="top" delay={0.4} />
                 <PanelLine position="bottom" delay={0.5} />
@@ -646,6 +578,8 @@ const RefinerPage: React.FC<RefinerPageProps> = ({
                             setReferenceImages={setReferenceImages}
                             setModifiers={setModifiers}
                             handlePasteRefineText={handlePasteRefineText}
+                            customOptions={customOptions}
+                            onAddCustomOption={handleAddCustomOption}
                         />
                     </motion.div>
                     <motion.footer
@@ -660,13 +594,13 @@ const RefinerPage: React.FC<RefinerPageProps> = ({
                             <span /><span /><span /><span />RESET
                         </button>
                         <button
-                            onClick={() => { audioService.playClick(); if (arenaMode) handleEnhanceArena(); else handleEnhance(); }}
-                            disabled={(arenaMode ? (isLoadingRefineA || isLoadingRefineB) : isLoadingRefine) || !(refineText || '').trim()}
+                            onClick={() => { audioService.playClick(); handleEnhance(); }}
+                            disabled={isLoadingRefine || !(refineText || '').trim()}
                             className="btn btn-sm btn-ghost h-full rounded-none flex-1 tracking-wider text-primary border-1 disabled:opacity-30 disabled:cursor-not-allowed btn-snake">
-                            <span /><span /><span /><span />{(arenaMode ? (isLoadingRefineA || isLoadingRefineB) : isLoadingRefine) ? '...' : 'IMPROVE'}
+                            <span /><span /><span /><span />{isLoadingRefine ? '...' : 'IMPROVE'}
                         </button>
                         <button onClick={() => { audioService.playClick(); setIsCodeExportModalOpen(true); }}
-                            disabled={!(resultsRefine?.suggestions[0] || (arenaMode && resultsRefineA?.suggestions[0]))}
+                            disabled={!resultsRefine?.suggestions[0]}
                             className="btn btn-sm btn-ghost h-full rounded-none flex-1 tracking-wider text-base-content/40 hover:text-primary border-1 btn-snake">
                             <span /><span /><span /><span />EXPORT CODE
                         </button>
@@ -691,7 +625,7 @@ const RefinerPage: React.FC<RefinerPageProps> = ({
                 initial="hidden"
                 animate={isExiting ? "exit" : "visible"}
                 exit="exit"
-                className={`${arenaMode ? "lg:col-span-8" : "lg:col-span-5"} h-full min-h-0 flex flex-col relative p-[3px] corner-frame overflow-visible`}
+                className={`lg:col-span-6 h-full min-h-0 flex flex-col relative p-[3px] corner-frame overflow-visible`}
             >
                 <PanelLine position="top" delay={0.4} />
                 <PanelLine position="bottom" delay={0.5} />
@@ -707,12 +641,8 @@ const RefinerPage: React.FC<RefinerPageProps> = ({
                         className="p-6 h-16 flex justify-between items-center bg-base-100/80 backdrop-blur-md panel-header overflow-visible relative z-[800] gap-4"
                     >
                         <motion.div variants={reverseTextVariants}>
-                            <TerminalText text={arenaMode ? "DUAL NEURAL COMPARISON ARENA" : `REFINED PROMPT : ${targetAIModel}`} delay={2.6} className="text-xs font-sf-mono uppercase text-primary" />
+                            <TerminalText text={`REFINED PROMPT : ${targetAIModel}`} delay={2.6} className="text-xs font-sf-mono uppercase text-primary" />
                         </motion.div>
-                        <button onClick={() => { audioService.playClick(); setArenaMode(!arenaMode); }}
-                            className={`btn btn-xs px-2.5 rounded-none font-sans font-bold uppercase tracking-wider text-[10px] ${arenaMode ? 'btn-primary' : 'btn-ghost border border-white/10 hover:border-white/20 text-base-content/60'}`}>
-                            ⚔️ {arenaMode ? "Close Arena" : "Arena Mode"}
-                        </button>
                     </motion.header>
                     <motion.div
                         variants={pageBodyVariants}
@@ -720,147 +650,10 @@ const RefinerPage: React.FC<RefinerPageProps> = ({
                         animate="visible"
                         exit="exit"
                         ref={neuralOutputScrollerRef}
-                        className={`flex-grow overflow-y-auto flex flex-col ${arenaMode ? "items-stretch justify-start" : "items-stretch justify-center"}`}
+                        className={`flex-grow overflow-y-auto flex flex-col "items-stretch justify-center"`}
                     >
-                        {arenaMode ? (
-                            <div className="grid grid-cols-1 md:grid-cols-2 gap-5 h-full w-full p-4 overflow-y-auto min-h-0 min-w-0">
-                                {/* Column A */}
-                                <div className="flex flex-col h-full bg-base-100/20 md:border-r border-base-content/10 pr-2 overflow-y-auto space-y-4">
-                                    <div className="flex justify-between items-center bg-base-content/5 p-3 rounded border border-base-content/5 shrink-0">
-                                        <span className="text-xs font-black uppercase tracking-[0.2em] text-primary">Model A Strategy</span>
-                                        <select value={arenaModelA} onChange={(e) => { audioService.playClick(); setArenaModelA(e.target.value); }}
-                                            className="select select-bordered select-xs focus:outline-none bg-base-200 text-xs border-base-content/20">
-                                            <option value="gemini">Gemini Flash</option>
-                                            <option value="ollama">Ollama Cloud / Local</option>
-                                            <option value="llamacpp">LlamaCpp Local</option>
-                                        </select>
-                                    </div>
-                                    <div className="flex-grow min-h-0">
-                                        {isLoadingRefineA ? (
-                                            <div className="h-full flex flex-col items-center justify-center text-center py-20">
-                                                <BlobLoader />
-                                                <span className="text-xs text-base-content/40 mt-4 uppercase tracking-widest font-mono">Model A Synapsing...</span>
-                                            </div>
-                                        ) : errorRefineA ? (
-                                            <div className="p-4 border border-error/20 bg-error/5 text-error text-xs uppercase leading-relaxed font-mono">{errorRefineA.message}</div>
-                                        ) : resultsRefineA ? (
-                                            <div className="space-y-4 animate-fade-in pb-4">
-                                                <div className="bg-base-content/5 p-4 rounded border border-base-content/5">
-                                                    <p className="text-sm font-medium leading-relaxed italic text-base-content selection:bg-primary/20">"{resultsRefineA.suggestions[0]}"</p>
-                                                </div>
-                                                {statsA && (
-                                                    <div className="bg-base-content/5 p-4 rounded border border-base-content/5 space-y-2 font-mono text-xs">
-                                                        <div className="text-[10px] uppercase font-black tracking-widest text-primary/60 border-b border-base-content/10 pb-1.5 mb-2">Performance Analytics</div>
-                                                        <div className="grid grid-cols-2 gap-3 text-base-content/75">
-                                                            <div className="flex flex-col"><span className="text-[9px] uppercase text-base-content/40 mb-0.5">Response Latency</span><span className="font-bold text-primary">{statsA.durationMs} ms</span></div>
-                                                            <div className="flex flex-col"><span className="text-[9px] uppercase text-base-content/40 mb-0.5">Output Bandwidth</span><span className="font-bold text-primary">{statsA.tokensPerSec} tokens/sec</span></div>
-                                                            <div className="flex flex-col"><span className="text-[9px] uppercase text-base-content/40 mb-0.5">Syntactic Loyalty</span><span className="font-bold text-primary">{statsA.overlap}%</span></div>
-                                                            <div className="flex flex-col"><span className="text-[9px] uppercase text-base-content/40 mb-0.5">Expansion Intensity</span><span className="font-bold text-primary">{statsA.expansion}x</span></div>
-                                                            <div className="flex flex-col"><span className="text-[9px] uppercase text-base-content/40 mb-0.5">Prompt Aesthetic Rating</span><span className="font-bold text-primary">{statsA.aesthetic}%</span></div>
-                                                            <div className="flex flex-col"><span className="text-[9px] uppercase text-base-content/40 mb-0.5">Enrichment Density</span><span className="font-bold text-primary">{statsA.purity}%</span></div>
-                                                        </div>
-                                                    </div>
-                                                )}
-                                                {resultsRefineA.breakdown && (
-                                                    <div className="bg-base-content/5 p-4 rounded border border-base-content/5 space-y-3">
-                                                        <div className="text-[10px] font-black uppercase tracking-widest text-primary/60 border-b border-base-content/10 pb-1.5 font-mono">Structural Anatomy</div>
-                                                        <div className="grid grid-cols-1 gap-2.5">
-                                                            {Object.entries(resultsRefineA.breakdown).map(([k, v]) => (
-                                                                <div key={k} className="p-2.5 bg-base-200/50 rounded border border-base-content/5 flex flex-col">
-                                                                    <span className="text-[9px] uppercase font-bold tracking-widest text-primary/40 font-mono mb-1">{k}</span>
-                                                                    <span className="text-xs text-base-content/80 font-medium leading-relaxed">{String(v)}</span>
-                                                                </div>
-                                                            ))}
-                                                        </div>
-                                                    </div>
-                                                )}
-                                            </div>
-                                        ) : (
-                                            <div className="h-full flex flex-col items-center justify-center opacity-10 py-20">
-                                                <SparklesIcon className="w-10 h-10 text-primary" />
-                                                <span className="text-[10px] uppercase mt-2 tracking-widest font-mono">Awaiting Sequence</span>
-                                            </div>
-                                        )}
-                                    </div>
-                                    {resultsRefineA && !isLoadingRefineA && (
-                                        <div className="flex gap-2 p-1 bg-base-content/5 rounded border border-base-content/5 shrink-0 mt-auto">
-                                            <button onClick={() => { audioService.playClick(); handleCopySuggestionText(resultsRefineA.suggestions[0]); }}
-                                                className="btn btn-xs btn-ghost flex-grow rounded-none font-mono tracking-widest text-[9px] uppercase">COPY</button>
-                                            <button onClick={() => { audioService.playClick(); handleSendToRefine(resultsRefineA.suggestions[0]); }}
-                                                className="btn btn-xs btn-ghost text-primary flex-grow rounded-none font-mono tracking-widest text-[9px] uppercase">APPLY</button>
-                                        </div>
-                                    )}
-                                </div>
-                                {/* Column B */}
-                                <div className="flex flex-col h-full bg-base-100/20 pl-2 overflow-y-auto space-y-4">
-                                    <div className="flex justify-between items-center bg-base-content/5 p-3 rounded border border-base-content/5 shrink-0">
-                                        <span className="text-xs font-black uppercase tracking-[0.2em] text-primary">Model B Strategy</span>
-                                        <select value={arenaModelB} onChange={(e) => { audioService.playClick(); setArenaModelB(e.target.value); }}
-                                            className="select select-bordered select-xs focus:outline-none bg-base-200 text-xs border-base-content/20">
-                                            <option value="gemini">Gemini Flash</option>
-                                            <option value="ollama">Ollama Cloud / Local</option>
-                                            <option value="llamacpp">LlamaCpp Local</option>
-                                        </select>
-                                    </div>
-                                    <div className="flex-grow min-h-0">
-                                        {isLoadingRefineB ? (
-                                            <div className="h-full flex flex-col items-center justify-center text-center py-20">
-                                                <BlobLoader />
-                                                <span className="text-xs text-base-content/40 mt-4 uppercase tracking-widest font-mono">Model B Synapsing...</span>
-                                            </div>
-                                        ) : errorRefineB ? (
-                                            <div className="p-4 border border-error/20 bg-error/5 text-error text-xs uppercase leading-relaxed font-mono">{errorRefineB.message}</div>
-                                        ) : resultsRefineB ? (
-                                            <div className="space-y-4 animate-fade-in pb-4">
-                                                <div className="bg-base-content/5 p-4 rounded border border-base-content/5">
-                                                    <p className="text-sm font-medium leading-relaxed italic text-base-content selection:bg-primary/20">"{resultsRefineB.suggestions[0]}"</p>
-                                                </div>
-                                                {statsB && (
-                                                    <div className="bg-base-content/5 p-4 rounded border border-base-content/5 space-y-2 font-mono text-xs">
-                                                        <div className="text-[10px] uppercase font-black tracking-widest text-primary/60 border-b border-base-content/10 pb-1.5 mb-2">Performance Analytics</div>
-                                                        <div className="grid grid-cols-2 gap-3 text-base-content/75">
-                                                            <div className="flex flex-col"><span className="text-[9px] uppercase text-base-content/40 mb-0.5">Response Latency</span><span className="font-bold text-primary">{statsB.durationMs} ms</span></div>
-                                                            <div className="flex flex-col"><span className="text-[9px] uppercase text-base-content/40 mb-0.5">Output Bandwidth</span><span className="font-bold text-primary">{statsB.tokensPerSec} tokens/sec</span></div>
-                                                            <div className="flex flex-col"><span className="text-[9px] uppercase text-base-content/40 mb-0.5">Syntactic Loyalty</span><span className="font-bold text-primary">{statsB.overlap}%</span></div>
-                                                            <div className="flex flex-col"><span className="text-[9px] uppercase text-base-content/40 mb-0.5">Expansion Intensity</span><span className="font-bold text-primary">{statsB.expansion}x</span></div>
-                                                            <div className="flex flex-col"><span className="text-[9px] uppercase text-base-content/40 mb-0.5">Prompt Aesthetic Rating</span><span className="font-bold text-primary">{statsB.aesthetic}%</span></div>
-                                                            <div className="flex flex-col"><span className="text-[9px] uppercase text-base-content/40 mb-0.5">Enrichment Density</span><span className="font-bold text-primary">{statsB.purity}%</span></div>
-                                                        </div>
-                                                    </div>
-                                                )}
-                                                {resultsRefineB.breakdown && (
-                                                    <div className="bg-base-content/5 p-4 rounded border border-base-content/5 space-y-3">
-                                                        <div className="text-[10px] font-black uppercase tracking-widest text-primary/60 border-b border-base-content/10 pb-1.5 font-mono">Structural Anatomy</div>
-                                                        <div className="grid grid-cols-1 gap-2.5">
-                                                            {Object.entries(resultsRefineB.breakdown).map(([k, v]) => (
-                                                                <div key={k} className="p-2.5 bg-base-200/50 rounded border border-base-content/5 flex flex-col">
-                                                                    <span className="text-[9px] uppercase font-bold tracking-widest text-primary/40 font-mono mb-1">{k}</span>
-                                                                    <span className="text-xs text-base-content/80 font-medium leading-relaxed">{String(v)}</span>
-                                                                </div>
-                                                            ))}
-                                                        </div>
-                                                    </div>
-                                                )}
-                                            </div>
-                                        ) : (
-                                            <div className="h-full flex flex-col items-center justify-center opacity-10 py-20">
-                                                <SparklesIcon className="w-10 h-10 text-primary" />
-                                                <span className="text-[10px] uppercase mt-2 tracking-widest font-mono">Awaiting Sequence</span>
-                                            </div>
-                                        )}
-                                    </div>
-                                    {resultsRefineB && !isLoadingRefineB && (
-                                        <div className="flex gap-2 p-1 bg-base-content/5 rounded border border-base-content/5 shrink-0 mt-auto">
-                                            <button onClick={() => { audioService.playClick(); handleCopySuggestionText(resultsRefineB.suggestions[0]); }}
-                                                className="btn btn-xs btn-ghost flex-grow rounded-none font-mono tracking-widest text-[9px] uppercase">COPY</button>
-                                            <button onClick={() => { audioService.playClick(); handleSendToRefine(resultsRefineB.suggestions[0]); }}
-                                                className="btn btn-xs btn-ghost text-primary flex-grow rounded-none font-mono tracking-widest text-[9px] uppercase">APPLY</button>
-                                        </div>
-                                    )}
-                                </div>
-                            </div>
-                        ) : (
-                            <>
+                        <>                        
+
                                 {isLoadingRefine ? (
                                     <div className="flex-grow flex flex-col items-center justify-center text-center space-y-6"><BlobLoader /></div>
                                 ) : errorRefine ? (
@@ -941,7 +734,6 @@ const RefinerPage: React.FC<RefinerPageProps> = ({
                                     </div>
                                 )}
                             </>
-                        )}
                     </motion.div>
 
                     {resultsRefine && !isLoadingRefine && (
@@ -1000,20 +792,37 @@ const RefinerPage: React.FC<RefinerPageProps> = ({
                         initial="hidden"
                         animate="visible"
                         exit="exit"
-                        className="h-16 flex items-stretch relative z-[800] bg-base-100/80 p-1.5 gap-1.5 panel-header overflow-visible"
+                        className="h-16 flex items-stretch relative z-[800] bg-base-100/80 panel-header overflow-visible"
                     >
-                        <div className="flex-grow h-full relative overflow-visible">
-                            <div className="flex flex-col gap-3 h-full justify-center overflow-visible">
-                                <div className="flex gap-4 items-center">
-                                    <div className="flex-1 px-0 text-sm h-full flex items-center border-0 overflow-visible">
-                                        <AutocompleteSelect
-                                            placeholder="SELECT PRESET..."
-                                            value={selectedPreset?.name || ''}
-                                            onChange={(v) => setSelectedPreset(presets.find(p => p.name === v) || null)}
-                                            options={presets.map(p => ({ label: p.name.toUpperCase(), value: p.name }))}
-                                        />
-                                    </div>
-                                </div>
+                        <div className="flex items-center gap-2 w-full h-full px-3 overflow-visible">
+                            <div className="flex-1 min-w-0 overflow-visible flex items-center">
+                                <AutocompleteSelect
+                                    placeholder="SELECT PRESET..."
+                                    value={selectedPreset?.name || ''}
+                                    onChange={(v) => {
+                                        const preset = presets.find(p => p.name === v) || null;
+                                        setSelectedPreset(preset);
+                                        if (preset) handleUsePreset(preset);
+                                    }}
+                                    options={presets.map(p => ({ label: p.name.toUpperCase(), value: p.name }))}
+                                />
+                            </div>
+                            <div className="flex gap-1.5 shrink-0 items-center">
+                                <button
+                                    onClick={() => { audioService.playClick(); handleClearConstruction(); }}
+                                    onMouseEnter={() => audioService.playHover()}
+                                    className="font-sf-mono text-[9px] tracking-widest text-base-content/40 hover:text-base-content transition-all bg-base-100/5 px-2 py-1.5 hover:bg-base-100/10"
+                                >
+                                    CLEAR
+                                </button>
+                                <button
+                                    onClick={() => { audioService.playClick(); handleDeletePresetClick(); }}
+                                    onMouseEnter={() => audioService.playHover()}
+                                    disabled={!selectedPreset}
+                                    className="font-sf-mono text-[9px] tracking-widest text-error/40 hover:text-error transition-all bg-error/5 disabled:bg-transparent px-2 py-1.5 hover:bg-error/10 disabled:opacity-20"
+                                >
+                                    DELETE
+                                </button>
                             </div>
                         </div>
                     </motion.header>
@@ -1039,18 +848,7 @@ const RefinerPage: React.FC<RefinerPageProps> = ({
                                 />
                             ))
                         )}
-                        {activeConstructionItems.length > 0 && (
-                            <div className="pt-4 space-y-2">
-                                <button onClick={() => { audioService.playClick(); handleUsePreset(null); }}
-                                    className="btn btn-sm w-full rounded-none font-rajdhani tracking-wider text-xs border border-base-content/10 text-base-content/40 hover:text-primary">APPLY</button>
-                                <div className="flex gap-2">
-                                    <button onClick={handleSavePresetClick}
-                                        className="btn btn-sm flex-1 rounded-none text-[10px] font-black tracking-widest border border-base-content/10 text-primary/40 hover:text-primary">SAVE</button>
-                                    <button onClick={handleDeletePresetClick}
-                                        className="btn btn-sm flex-1 rounded-none text-[10px] font-black tracking-widest border border-base-content/10 text-error/40 hover:text-error">DELETE</button>
-                                </div>
-                            </div>
-                        )}
+
                     </motion.div>
                     <motion.footer
                         variants={pageFooterVariants}
@@ -1111,10 +909,10 @@ const RefinerPage: React.FC<RefinerPageProps> = ({
                 />
             )}
 
-            {isCodeExportModalOpen && (resultsRefine?.suggestions[0] || (arenaMode && resultsRefineA?.suggestions[0])) && (
+            {isCodeExportModalOpen && resultsRefine?.suggestions[0] && (
                 <CodeSnippetModal
                     isOpen={isCodeExportModalOpen}
-                    promptText={resultsRefine?.suggestions[0] || resultsRefineA?.suggestions[0] || ''}
+                    promptText={resultsRefine?.suggestions[0] || ''}
                     onClose={() => setIsCodeExportModalOpen(false)}
                 />
             )}

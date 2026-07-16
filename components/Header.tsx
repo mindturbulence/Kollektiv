@@ -9,8 +9,7 @@ import ThemeSwitcher from './ThemeSwitcher';
 import ChromaticText from './ChromaticText';
 import { InformationCircleIcon, BookmarkIcon, Cog6ToothIcon, PowerIcon, ChatBubbleIcon } from './icons';
 import { HUDNavItem } from './HUDNavItem';
-import { LiveAssistantMicButton, LiveAssistantScreenButton } from './LiveAssistantBar';
-import { LiveAssistantProvider } from '../contexts/LiveAssistantContext';
+import { LiveAssistantMicButton, LiveAssistantScreenButton, LiveAssistantControlButton, LiveAssistantFault } from './LiveAssistantBar';
 
 interface HeaderProps {
   onNavigate: (tab: ActiveTab) => void;
@@ -20,7 +19,7 @@ interface HeaderProps {
   onToggleClippingPanel: () => void;
   onStandbyClick: (e: React.MouseEvent) => void;
   clippedIdeasCount: number;
-  onToggleHermes?: () => void;
+  onToggleChatPanel?: () => void;
 }
 
 interface NavItemData {
@@ -114,7 +113,7 @@ const Header: React.FC<HeaderProps> = ({
   isInitialized,
   onAboutClick,
   onToggleClippingPanel,
-  onToggleHermes,
+  onToggleChatPanel,
   onStandbyClick,
   clippedIdeasCount
 }) => {
@@ -243,7 +242,6 @@ const Header: React.FC<HeaderProps> = ({
   }, [activeMenu, onNavigate]);
 
   return (
-    <LiveAssistantProvider>
     <header className="flex-shrink-0 flex flex-col h-12 bg-base-200/20 backdrop-blur-md border-b border-base-content/10 z-50 relative">
       <div ref={navRef} className="flex flex-grow items-center relative z-50 px-6 gap-4">
 
@@ -299,6 +297,7 @@ const Header: React.FC<HeaderProps> = ({
         {/* Right Side Controls */}
         <div className="ml-auto flex gap-1 items-center relative z-[9999] pointer-events-auto">
           <LiveAssistantScreenButton />
+          <LiveAssistantControlButton />
           <HUDNavItem
             onClick={(e) => {
               e.stopPropagation();
@@ -311,18 +310,19 @@ const Header: React.FC<HeaderProps> = ({
           </HUDNavItem>
           <div className="w-px h-2 bg-base-content/10 self-center" />
           <LiveAssistantMicButton />
+          <LiveAssistantFault hidden={activeTab === 'assistant'} />
           <div className="w-px h-2 bg-base-content/10 self-center" />
           <HUDNavItem
             onClick={(e) => {
               e.stopPropagation();
               audioService.playClick();
-              onToggleHermes?.();
+              onToggleChatPanel?.();
             }}
             title="Chat"
           >
             <ChatBubbleIcon className="w-4 h-4" />
           </HUDNavItem>
-          <div className="w-px h-2 bg-base-content/10 self-center" />
+
           <ThemeSwitcher />
           <div className="w-px h-2 bg-base-content/10 self-center" />
           <HUDNavItem
@@ -361,7 +361,6 @@ const Header: React.FC<HeaderProps> = ({
         </div>
       </div>
     </header>
-    </LiveAssistantProvider>
   );
 };
 

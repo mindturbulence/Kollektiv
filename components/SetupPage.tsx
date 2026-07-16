@@ -371,7 +371,6 @@ export const SetupPage: React.FC<SetupPageProps> = ({
     const llamacppModelOptions = useMemo(() => (availableLlamaCppModels.length > 0 ? availableLlamaCppModels : ['default']).map(m => ({ label: m, value: m })), [availableLlamaCppModels]);
 
     const currentSubTabs = subMenuConfig[activeSettingsTab] || [];
-    const currentSubTab = currentSubTabs.find(sub => sub.id === activeSubTab);
 
     const renderActiveTabContent = () => {
         let content: React.ReactNode = null;
@@ -444,8 +443,8 @@ export const SetupPage: React.FC<SetupPageProps> = ({
                 break;
         }
         return (
-            <div className="flex-grow overflow-y-auto custom-scrollbar bg-base-100/20 backdrop-blur-sm border border-white/5 mx-6 mb-6">
-                <div className="p-1">{content}</div>
+            <div className="flex-grow overflow-y-auto custom-scrollbar px-6 pb-6">
+                {content}
             </div>
         );
     };
@@ -466,12 +465,12 @@ export const SetupPage: React.FC<SetupPageProps> = ({
                 initial="hidden"
                 animate={isExiting ? "exit" : "visible"}
                 custom={0.4}
-                className="w-full h-full flex items-center justify-center p-4 sm:p-6"
+                className="w-full h-full"
             >
                 <div className="w-full h-full bg-base-200/30 backdrop-blur-sm border border-white/5 shadow-2xl grid grid-cols-1 lg:grid-cols-[280px_1fr] overflow-hidden relative">
                     {/* Left Sidebar - System Hub */}
                     <aside className="hidden lg:flex flex-col bg-base-100/30 border-r border-white/5 overflow-hidden">
-                        <div className="px-6 py-6 border-b border-white/5 flex-shrink-0">
+                        <div className="h-16 flex items-center px-6 border-b border-white/5 flex-shrink-0">
                             <h2 className="text-[10px] font-black uppercase tracking-[0.3em] text-base-content/30">SYSTEM HUB</h2>
                         </div>
                         <div ref={navScrollRef} className="flex-grow overflow-y-auto custom-scrollbar px-4 py-4">
@@ -488,19 +487,26 @@ export const SetupPage: React.FC<SetupPageProps> = ({
                                 ))}
                             </ul>
                         </div>
-                        <div className="px-6 py-4 border-t border-white/5 flex-shrink-0">
-                            <div className="flex items-center gap-2">
-                                <div className={`w-1.5 h-1.5 rounded-full ${fileSystemManager.isDirectorySelected() ? 'bg-success animate-pulse' : 'bg-warning'}`} />
-                                <span className="text-[8px] font-black uppercase tracking-widest text-base-content/40">
-                                    {fileSystemManager.isDirectorySelected() ? 'VAULT ACTIVE' : 'NO VAULT'}
-                                </span>
-                            </div>
-                        </div>
                     </aside>
 
                     {/* Main Content */}
                     <main ref={mainScrollRef} className="flex flex-col h-full overflow-hidden">
-                        <div className="flex items-center border-b border-white/5 px-6 py-0 flex-shrink-0 overflow-x-auto custom-scrollbar">
+                        {/* Category fallback for viewports below the lg sidebar breakpoint — the
+                            System Hub sidebar is hidden there, so this is the only way to switch
+                            categories without it. */}
+                        <div className="lg:hidden flex items-center gap-1.5 border-b border-white/5 px-4 py-2 flex-shrink-0 overflow-x-auto custom-scrollbar">
+                            {mainCategories.map(cat => (
+                                <button
+                                    key={cat.id}
+                                    onClick={() => handleMainTabClick(cat.id)}
+                                    className={`flex items-center gap-1.5 px-3 py-1.5 text-[10px] font-black uppercase tracking-widest whitespace-nowrap transition-colors border ${activeSettingsTab === cat.id ? 'bg-primary/10 text-primary border-primary/30' : 'text-base-content/40 border-transparent hover:text-base-content/70'}`}
+                                >
+                                    {cat.icon}
+                                    {cat.label}
+                                </button>
+                            ))}
+                        </div>
+                        <div className="h-16 flex items-center border-b border-white/5 px-6 flex-shrink-0 overflow-x-auto custom-scrollbar">
                             <div className="flex gap-4">
                                 {currentSubTabs.map(sub => (
                                     <button
@@ -515,15 +521,9 @@ export const SetupPage: React.FC<SetupPageProps> = ({
                             </div>
                         </div>
 
-                        {currentSubTab && (
-                            <div className="px-6 py-3 border-b border-white/5 flex-shrink-0">
-                                <p className="text-[9px] font-medium text-base-content/30 uppercase tracking-wider">{currentSubTab.description}</p>
-                            </div>
-                        )}
-
                         {renderActiveTabContent()}
 
-                        <footer className="flex flex-row p-0 overflow-hidden flex-shrink-0 panel-footer">
+                        <footer className="flex flex-row h-14 items-stretch p-1.5 gap-1.5 flex-shrink-0 panel-footer">
                             <button onClick={() => { audioService.playClick(); handleCancel(); }} className="form-btn flex-1">Abort</button>
                             <button onClick={() => { audioService.playClick(); saveSettings(); }} className="form-btn form-btn-primary flex-1 shadow-lg">Confirm</button>
                         </footer>

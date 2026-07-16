@@ -9,7 +9,10 @@ import {
     LENS_TYPES, ANALOG_FILM_STOCKS, PHOTOGRAPHY_STYLES, DIGITAL_AESTHETICS, AESTHETIC_LOOKS,
     MOTION_OPTIONS, CAMERA_MOVEMENT_OPTIONS, VIDEO_EFFECTS, MIDJOURNEY_VERSIONS,
     MIDJOURNEY_NIJI_VERSIONS, MIDJOURNEY_ASPECT_RATIOS, Z_IMAGE_STYLES, AUDIO_TYPES,
-    VOICE_GENDERS, VOICE_TONES, AUDIO_ENVIRONMENTS, AUDIO_MOODS, FACIAL_EXPRESSIONS,
+    VOICE_GENDERS, VOICE_TONES, AUDIO_ENVIRONMENTS, AUDIO_MOODS,
+    MUSIC_GENRES, INSTRUMENTATION, VOCAL_STYLES, MUSIC_PRODUCTION_ERAS,
+    TIME_OF_DAY, WEATHER_OPTIONS, COLOR_GRADES,
+    FACIAL_EXPRESSIONS,
     HAIR_STYLES, EYE_COLORS, SKIN_TEXTURES, REALISM_OPTIONS, CLOTHING_STYLES
 } from '../constants/modifiers';
 import { TARGET_IMAGE_AI_MODELS, TARGET_VIDEO_AI_MODELS, TARGET_AUDIO_AI_MODELS } from '../constants/models';
@@ -32,6 +35,8 @@ interface RefinerModifierControlsProps {
     isGoogleProduct: boolean;
     artStyles: CheatsheetCategory[];
     artists: CheatsheetCategory[];
+    customOptions?: Record<string, (string | { name: string; description?: string })[]>;
+    onAddCustomOption?: (key: string, value: string) => void;
     setRefineText: (v: string) => void;
     setConstantModifier: (v: string) => void;
     setMediaMode: (m: 'image' | 'video' | 'audio') => void;
@@ -42,10 +47,18 @@ interface RefinerModifierControlsProps {
     handlePasteRefineText: () => void;
 }
 
+function mergePlain(builtin: string[], key: string, customOptions?: Record<string, (string | { name: string; description?: string })[]>): string[] {
+    if (!customOptions?.[key]?.length) return builtin;
+    const customStrings = (customOptions[key] || []).map(e => typeof e === 'string' ? e : e.name);
+    const exists = new Set(builtin.map(s => s.toLowerCase()));
+    return [...builtin, ...customStrings.filter(c => !exists.has(c.toLowerCase()))];
+}
+
 export const RefinerModifierControls: React.FC<RefinerModifierControlsProps> = ({
     activeRefineSubTab, modifiers, refineText, constantModifier, mediaMode,
     targetAIModel, promptLength, referenceImages, isMidjourney, isGoogleProduct,
-    artStyles, artists, setRefineText, setConstantModifier, setMediaMode,
+    artStyles, artists, customOptions, onAddCustomOption,
+    setRefineText, setConstantModifier, setMediaMode,
     setTargetAIModel, setPromptLength, setReferenceImages, setModifiers,
     handlePasteRefineText
 }) => {
@@ -258,6 +271,26 @@ export const RefinerModifierControls: React.FC<RefinerModifierControlsProps> = (
                         <AutocompleteSelect value={modifiers.composition || ''} onChange={(v) => setModifiers({ ...modifiers, composition: v })}
                             options={COMPOSITION_OPTIONS.map(c => ({ label: c.toUpperCase(), value: c }))} placeholder="Layout..." />
                     </div>
+                    <div className="grid grid-cols-1 gap-4">
+                        <div className="form-control">
+                            <label className="text-[10px] font-black uppercase text-base-content/40 tracking-widest mb-2 block">Time of Day</label>
+                            <AutocompleteSelect value={modifiers.timeOfDay || ''} onChange={(v) => setModifiers({ ...modifiers, timeOfDay: v })}
+                                options={mergePlain(TIME_OF_DAY, 'timeOfDay', customOptions).map(t => ({ label: t.toUpperCase(), value: t }))}
+                                placeholder="Time..." onAddCustom={onAddCustomOption ? (v) => onAddCustomOption('timeOfDay', v) : undefined} />
+                        </div>
+                        <div className="form-control">
+                            <label className="text-[10px] font-black uppercase text-base-content/40 tracking-widest mb-2 block">Weather</label>
+                            <AutocompleteSelect value={modifiers.weather || ''} onChange={(v) => setModifiers({ ...modifiers, weather: v })}
+                                options={mergePlain(WEATHER_OPTIONS, 'weather', customOptions).map(w => ({ label: w.toUpperCase(), value: w }))}
+                                placeholder="Weather..." onAddCustom={onAddCustomOption ? (v) => onAddCustomOption('weather', v) : undefined} />
+                        </div>
+                        <div className="form-control">
+                            <label className="text-[10px] font-black uppercase text-base-content/40 tracking-widest mb-2 block">Color Grade</label>
+                            <AutocompleteSelect value={modifiers.colorGrade || ''} onChange={(v) => setModifiers({ ...modifiers, colorGrade: v })}
+                                options={mergePlain(COLOR_GRADES, 'colorGrade', customOptions).map(c => ({ label: c.toUpperCase(), value: c }))}
+                                placeholder="Grade..." onAddCustom={onAddCustomOption ? (v) => onAddCustomOption('colorGrade', v) : undefined} />
+                        </div>
+                    </div>
                 </div>
             );
         case 'motion':
@@ -322,7 +355,29 @@ export const RefinerModifierControls: React.FC<RefinerModifierControlsProps> = (
                     <div className="form-control">
                         <label className="text-[10px] font-black uppercase text-base-content/40 tracking-widest mb-2 block">Audio Mood</label>
                         <AutocompleteSelect value={modifiers.audioMood || ''} onChange={(v) => setModifiers({ ...modifiers, audioMood: v })}
-                            options={AUDIO_MOODS.map(m => ({ label: m.toUpperCase(), value: m }))} placeholder="Mood..." />
+                            options={mergePlain(AUDIO_MOODS, 'audioMood', customOptions).map(m => ({ label: m.toUpperCase(), value: m }))}
+                            placeholder="Mood..." onAddCustom={onAddCustomOption ? (v) => onAddCustomOption('audioMood', v) : undefined} />
+                    </div>
+                    <div className="form-control">
+                        <label className="text-[10px] font-black uppercase text-base-content/40 tracking-widest mb-2 block">Music Genre</label>
+                        <AutocompleteSelect value={modifiers.musicGenre || ''} onChange={(v) => setModifiers({ ...modifiers, musicGenre: v })}
+                            options={mergePlain(MUSIC_GENRES, 'musicGenre', customOptions).map(g => ({ label: g.toUpperCase(), value: g }))}
+                            placeholder="Genre..." onAddCustom={onAddCustomOption ? (v) => onAddCustomOption('musicGenre', v) : undefined} />
+                    </div>
+                    <div className="form-control">
+                        <label className="text-[10px] font-black uppercase text-base-content/40 tracking-widest mb-2 block">Instrumentation</label>
+                        <AutocompleteSelect value={modifiers.instrumentation || ''} onChange={(v) => setModifiers({ ...modifiers, instrumentation: v })}
+                            options={INSTRUMENTATION.map(i => ({ label: i.toUpperCase(), value: i }))} placeholder="Instruments..." />
+                    </div>
+                    <div className="form-control">
+                        <label className="text-[10px] font-black uppercase text-base-content/40 tracking-widest mb-2 block">Vocal Style</label>
+                        <AutocompleteSelect value={modifiers.vocalStyle || ''} onChange={(v) => setModifiers({ ...modifiers, vocalStyle: v })}
+                            options={VOCAL_STYLES.map(v => ({ label: v.toUpperCase(), value: v }))} placeholder="Vocals..." />
+                    </div>
+                    <div className="form-control">
+                        <label className="text-[10px] font-black uppercase text-base-content/40 tracking-widest mb-2 block">Production Era</label>
+                        <AutocompleteSelect value={modifiers.productionEra || ''} onChange={(v) => setModifiers({ ...modifiers, productionEra: v })}
+                            options={MUSIC_PRODUCTION_ERAS.map(e => ({ label: e.toUpperCase(), value: e }))} placeholder="Era..." />
                     </div>
                 </div>
             );

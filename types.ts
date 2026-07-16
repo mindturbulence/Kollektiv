@@ -2,6 +2,7 @@
 // --- Core App Types ---
 export type ActiveTab =
   | 'dashboard'
+  | 'assistant'
   | 'discovery'
   | 'prompts'
   | 'crafter'
@@ -74,11 +75,6 @@ export interface LLMSettings {
   openrouterApiKey?: string;
   openrouterModel?: string;
   
-  // Hermes Settings
-  hermesBaseUrl: string;
-  hermesModel: string;
-  hermesApiKey: string;
-
   // Llama.cpp Settings
   llamacppBaseUrl: string;
   llamacppModel: string;
@@ -106,12 +102,13 @@ export interface LLMSettings {
   assistantVoice?: string;
   assistantLanguage?: string;
   assistantPersonality?: string;
+  /** Reasoning engine for the chat assistant. Live voice always runs on Gemini. */
+  assistantProvider?: 'gemini' | 'ollama' | 'ollama_cloud' | 'openrouter' | 'anthropic' | 'llamacpp';
 
   // Prompt & Token Tracking
   masterRolePrompt?: string;
   geminiTokenUsage?: TokenUsage;
   ollamaTokenUsage?: TokenUsage;
-  hermesTokenUsage?: TokenUsage;
   openrouterTokenUsage?: TokenUsage;
   llamacppTokenUsage?: TokenUsage;
   anthropicTokenUsage?: TokenUsage;
@@ -166,6 +163,9 @@ export interface PromptModifiers {
   filmStock?: string;
   lighting?: string;
   composition?: string;
+  timeOfDay?: string;
+  weather?: string;
+  colorGrade?: string;
   // Specific model styles
   zImageStyle?: string;
   facialExpression?: string;
@@ -185,6 +185,10 @@ export interface PromptModifiers {
   voiceTone?: string;
   audioEnvironment?: string;
   audioMood?: string;
+  musicGenre?: string;
+  instrumentation?: string;
+  vocalStyle?: string;
+  productionEra?: string;
   audioDuration?: string;
   // Midjourney specific
   mjAspectRatio?: string;

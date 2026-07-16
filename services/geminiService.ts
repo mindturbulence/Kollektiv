@@ -556,3 +556,21 @@ Only include relevant modifiers. Output JSON ONLY.`,
         }
     } catch (err) { throw handleGeminiError(err, 'processing'); }
 };
+
+/** One-shot web search via Gemini googleSearch grounding. Kept separate from
+ * the assistant's function-calling session because Gemini rejects requests
+ * mixing googleSearch with functionDeclarations. Returns JSON {answer, sources}. */
+export const googleSearchGemini = async (query: string, settings: LLMSettings): Promise<string> => {
+    const ai = getGeminiClient(settings);
+    const response = await ai.models.generateContent({
+        model: settings.llmModel || 'gemini-2.5-flash',
+        contents: `Answer using current web results, concisely with concrete facts: ${query}`,
+        config: { tools: [{ googleSearch: {} }] },
+    });
+    const chunks = (response.candidates?.[0] as any)?.groundingMetadata?.groundingChunks || [];
+    const sources = chunks
+        .map((c: any) => c.web?.uri ? `${c.web.title || 'source'} — ${c.web.uri}` : null)
+        .filter(Boolean)
+        .slice(0, 8);
+    return JSON.stringify({ answer: response.text, sources });
+};

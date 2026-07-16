@@ -29,6 +29,7 @@ interface PromptAnalyzerProps {
     header: React.ReactNode;
     showGlobalFeedback: (message: string, isError?: boolean) => void;
     isNavigating?: boolean;
+    promptToInsert?: { content: string; id: string } | null;
 }
 
 interface DissectedSegment {
@@ -64,10 +65,19 @@ export const PromptAnalyzer: React.FC<PromptAnalyzerProps> = ({
     onMapToRefiner,
     header,
     showGlobalFeedback,
+    promptToInsert,
 }) => {
     const { settings } = useSettings();
     const { setIsBusy } = useBusy();
     const [promptInput, setPromptInput] = useLocalStorage('analyzer_promptInput', '');
+    const lastInsertedId = useRef<string | null>(null);
+
+    useEffect(() => {
+        if (promptToInsert && promptToInsert.id !== lastInsertedId.current) {
+            setPromptInput(promptToInsert.content);
+            lastInsertedId.current = promptToInsert.id;
+        }
+    }, [promptToInsert]);
     const [subjectPrompt, setSubjectPrompt] = useLocalStorage('analyzer_subjectPrompt', '');
     const [modifierSegments, setModifierSegments] = useLocalStorage<DissectedSegment[]>('analyzer_modifierSegments', []);
     const [customParameters, setCustomParameters] = useState<{ label: string, value: string }[]>([]);
