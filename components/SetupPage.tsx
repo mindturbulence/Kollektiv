@@ -23,6 +23,7 @@ import IntegrationsSection from './settings/IntegrationsSection';
 import PromptsSection from './settings/PromptsSection';
 import GallerySection from './settings/GallerySection';
 
+
 interface SetupPageProps {
     activeSettingsTab: ActiveSettingsTab;
     setActiveSettingsTab: (tab: ActiveSettingsTab) => void;
@@ -193,7 +194,7 @@ export const SetupPage: React.FC<SetupPageProps> = ({
             if ((window as any).google?.accounts?.oauth2) {
                 tokenClientRef.current = (window as any).google.accounts.oauth2.initTokenClient({
                     client_id: clientId,
-                    scope: 'https://www.googleapis.com/auth/youtube.upload https://www.googleapis.com/auth/youtube.readonly https://www.googleapis.com/auth/drive https://www.googleapis.com/auth/userinfo.email https://www.googleapis.com/auth/userinfo.profile openid',
+                    scope: 'https://www.googleapis.com/auth/youtube.upload https://www.googleapis.com/auth/youtube.readonly https://www.googleapis.com/auth/drive https://www.googleapis.com/auth/userinfo.email https://www.googleapis.com/auth/userinfo.profile https://www.googleapis.com/auth/gmail.modify openid',
                     callback: (response: any) => {
                         if (authTimeoutRef.current) { window.clearTimeout(authTimeoutRef.current); authTimeoutRef.current = null; }
                         if (response.error) { setIsWorking(false); setMaintenanceMsg(""); setMaintenanceProgress(0); if (response.error !== 'popup_closed') showGlobalFeedback(`Authentication failed: ${response.error}`, true); return; }
@@ -243,7 +244,7 @@ export const SetupPage: React.FC<SetupPageProps> = ({
     const handleSettingsChange = useCallback((field: keyof LLMSettings, value: any) => {
         const updated = { ...settings, [field]: value };
         setSettings(updated);
-        if (['youtube', 'googleIdentity', 'dashboardImageUrl', 'dashboardVideoUrl', 'darkTheme'].includes(field)) updateSettings(updated);
+        if (['youtube', 'googleIdentity', 'dashboardImageUrl', 'dashboardVideoUrl', 'darkTheme', 'mcpServers'].includes(field)) updateSettings(updated);
         if (field === 'fontSize' && typeof window !== 'undefined') (window as any).document.documentElement.style.fontSize = `${value}px`;
     }, [settings, updateSettings]);
 

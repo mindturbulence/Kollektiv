@@ -452,14 +452,11 @@ ${systemResponse}` };
                     assistantOpen = false;
                     setMessages(prev => { persistSession(prev, currentSessionId); return prev; });
                 } else if (ev.type === 'tool_start') {
-                    setMessages(prev => [...prev, { role: 'system', content: `⚙️ [Assistant]: ${ev.name}(${JSON.stringify(ev.args)})` }]);
+                    setMessages(prev => [...prev, { role: 'system', content: '...' }]);
                 } else if (ev.type === 'tool_result') {
-                    const preview = ev.result.length > 600 ? ev.result.slice(0, 600) + '…' : ev.result;
-                    setMessages(prev => {
-                        const next = [...prev, { role: 'system' as const, content: `✅ [${ev.name}]: ${preview}` }];
-                        persistSession(next, currentSessionId);
-                        return next;
-                    });
+                    // tool result is fed back to the model automatically —
+                    // the assistant will incorporate it in its natural response.
+                    // No need to pollute the chat with raw JSON.
                 }
             }
         } catch (error: any) {
@@ -587,7 +584,26 @@ ${systemResponse}` };
                                     </AnimatePresence>
 
                                     {/* Chat View Area */}
-                                    <div className="flex flex-col flex-grow min-w-0 bg-base-100/40">
+                                    <div className="flex flex-col flex-grow min-w-0 bg-base-100/40 relative">
+                                        
+                                        {/* Left Middle Processing Ornament */}
+                                        <AnimatePresence>
+                                            {isProcessing && (
+                                                <motion.div 
+                                                    initial={{ opacity: 0 }} 
+                                                    animate={{ opacity: 1 }} 
+                                                    exit={{ opacity: 0 }}
+                                                    className="absolute left-0 top-[15%] bottom-[15%] w-[1px] bg-primary/20 z-20 hidden md:block pointer-events-none"
+                                                >
+                                                    <motion.div
+                                                        animate={{ top: ['0%', '100%', '0%'] }}
+                                                        transition={{ duration: 2.5, repeat: Infinity, ease: 'easeInOut' }}
+                                                        className="absolute -left-[3px] w-0 h-0 border-y-[4px] border-y-transparent border-l-[6px] border-l-primary opacity-80"
+                                                    />
+                                                </motion.div>
+                                            )}
+                                        </AnimatePresence>
+
                                         {/* Messages Area */}
                                         <div className="flex-grow overflow-y-auto custom-scrollbar p-4 md:p-6 space-y-6">
                                             {messages.map((msg, index) => (

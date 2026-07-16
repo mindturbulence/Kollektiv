@@ -835,6 +835,7 @@ const PromptCrafter = ({ onSaveToLibrary, onClip, onSendToEnhancer, onSendToRefi
                             className="h-[40%] min-h-[200px] p-6 flex flex-col overflow-hidden panel-header"
                         >
                             <textarea
+                                data-ai-id="crafter-prompt-input"
                                 ref={textareaRef}
                                 value={promptText}
                                 onChange={(e) => setPromptText((e.currentTarget as any).value)}
@@ -914,6 +915,7 @@ const PromptCrafter = ({ onSaveToLibrary, onClip, onSendToEnhancer, onSendToRefi
                                 SAVE TEMPLATE
                             </button>
                             <button
+                                data-ai-id="crafter-preview-wildcards"
                                 onClick={handlePreviewWildcards}
                                 onMouseEnter={() => audioService.playHover()}
                                 disabled={!promptText.trim()}
@@ -923,6 +925,7 @@ const PromptCrafter = ({ onSaveToLibrary, onClip, onSendToEnhancer, onSendToRefi
                                 PREVIEW WILDCARDS
                             </button>
                             <button
+                                data-ai-id="crafter-generate-prompt"
                                 onClick={handleGeneratePrompt}
                                 onMouseEnter={() => audioService.playHover()}
                                 disabled={!promptText.trim()}

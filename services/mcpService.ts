@@ -25,13 +25,57 @@ export interface MCPResource {
   mimeType?: string;
 }
 
+// Track per-server MCP session initialization
+const initializedSessions = new Set<string>();
+
 /**
- * Base helper to issue MCP request either client-side directly (for localhost) or proxied through cloud backend (for remote hosts)
+ * Perform the MCP initialize handshake so the server accepts tools/list etc.
+ * The bridge maintains a persistent stdio connection; once initialized the
+ * session stays initialized for subsequent calls.
  */
-async function executeMcpRequest(serverUrl: string, method: string, params: Record<string, any> = {}): Promise<any> {
-  const cleanUrl = serverUrl.trim();
+async function ensureSession(url: string, headers?: Record<string, string>): Promise<void> {
+  if (initializedSessions.has(url)) return;
+
+  const initResult = await rawRequest(url, 'initialize', {
+    protocolVersion: '0.1.0',
+    capabilities: {},
+    clientInfo: { name: 'kollektiv', version: '1.0.0' },
+  }, headers);
+
+  if (!initResult.success) {
+    throw new Error(initResult.error || 'MCP initialize handshake failed');
+  }
+
+  await rawRequest(url, 'notifications/initialized', {}, headers);
+
+  initializedSessions.add(url);
+}
+
+/**
+ * Low-level JSON-RPC call (no auto-initialize).
+ */
+async function rawRequest(
+  url: string,
+  method: string,
+  params: Record<string, any> = {},
+  headers?: Record<string, string>,
+): Promise<{ success: boolean; data?: any; error?: string }> {
+  const cleanUrl = url.trim();
   let mcpHostname = '';
   try { mcpHostname = new URL(cleanUrl).hostname; } catch {}
+
+  const mergedHeaders: Record<string, string> = {
+    'Content-Type': 'application/json',
+    'Accept': 'application/json',
+    ...headers,
+  };
+
+  const jsonRpcPayload: Record<string, any> = { jsonrpc: '2.0', id: Date.now(), method, params };
+  if (method === 'notifications/initialized') {
+    delete jsonRpcPayload.id;
+  }
+  const body = JSON.stringify(jsonRpcPayload);
+
   const isLocalHost = mcpHostname === 'localhost' ||
                       mcpHostname === '127.0.0.1' ||
                       mcpHostname === '0.0.0.0' ||
@@ -40,69 +84,64 @@ async function executeMcpRequest(serverUrl: string, method: string, params: Reco
                       mcpHostname.startsWith('10.');
 
   if (isLocalHost) {
-    // Attempt standard direct client-side fallback so browser can reach local containers/servers directly
     try {
-      const jsonRpcPayload = {
-        jsonrpc: "2.0",
-        id: Date.now(),
-        method,
-        params
-      };
-
       const response = await fetch(cleanUrl, {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Accept': 'application/json'
-        },
-        body: JSON.stringify(jsonRpcPayload)
+        headers: mergedHeaders,
+        body,
       });
-
       if (response.ok) {
-        const data = await response.json();
-        return { success: true, data };
+        const text = await response.text();
+        if (!text) return { success: true, data: {} };
+        return { success: true, data: JSON.parse(text) };
       }
-    } catch (clientErr: any) {
-      console.warn("Direct browser-to-local MCP connection failed (usually due to CORS policies or local process offline), passing to remote proxy fallback:", clientErr.message);
+    } catch {
+      // fall through to proxy
     }
   }
 
-  // Fallback / standard remote mode: route through server proxy
   const response = await fetch('/api/mcp/proxy', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({
-      url: cleanUrl,
-      method,
-      params
-    })
+    body: JSON.stringify({ url: cleanUrl, method, params, headers }),
   });
 
-  if (!response.ok) throw new Error(`HTTP error ${response.status}`);
-  const json = await response.json();
-  return json;
+  if (!response.ok) return { success: false, error: `HTTP error ${response.status}` };
+  return await response.json();
+}
+
+/**
+ * Base helper to issue MCP request with automatic session initialization.
+ * Retries initialization once if the server rejects the request with a
+ * "session initialization" error (e.g. after bridge restart).
+ */
+async function executeMcpRequest(
+  serverUrl: string,
+  method: string,
+  params: Record<string, any> = {},
+  headers?: Record<string, string>,
+): Promise<any> {
+  await ensureSession(serverUrl, headers);
+  const result = await rawRequest(serverUrl, method, params, headers);
+  if (!result.success && result.error?.includes?.('session initialization')) {
+    initializedSessions.delete(serverUrl);
+    await ensureSession(serverUrl, headers);
+    return rawRequest(serverUrl, method, params, headers);
+  }
+  return result;
 }
 
 export const mcpService = {
-  /**
-   * Pings / tests connection to MCP server by listing tools
-   */
-  async ping(serverUrl: string): Promise<boolean> {
-    const json = await executeMcpRequest(serverUrl, 'tools/list', {});
-    if (!json.success) {
-      throw new Error(json.error || 'Request unsuccessful');
-    }
+  async ping(serverUrl: string, headers?: Record<string, string>): Promise<boolean> {
+    const json = await executeMcpRequest(serverUrl, 'tools/list', {}, headers);
+    if (!json.success) throw new Error(json.error || 'Request unsuccessful');
     return true;
   },
 
-  /**
-   * Lists available tools from the MCP server
-   */
-  async listTools(serverUrl: string): Promise<MCPTool[]> {
+  async listTools(serverUrl: string, headers?: Record<string, string>): Promise<MCPTool[]> {
     try {
-      const json = await executeMcpRequest(serverUrl, 'tools/list', {});
+      const json = await executeMcpRequest(serverUrl, 'tools/list', {}, headers);
       if (!json.success) throw new Error(json.error || 'Request failed');
-      
       const payload = json.data;
       const resultObj = payload.result || payload;
       return resultObj.tools || (Array.isArray(resultObj) ? resultObj : []);
@@ -112,17 +151,10 @@ export const mcpService = {
     }
   },
 
-  /**
-   * Call a tool on the MCP Server
-   */
-  async callTool(serverUrl: string, name: string, args: Record<string, any>): Promise<any> {
+  async callTool(serverUrl: string, name: string, args: Record<string, any>, headers?: Record<string, string>): Promise<any> {
     try {
-      const json = await executeMcpRequest(serverUrl, 'tools/call', {
-        name,
-        arguments: args
-      });
+      const json = await executeMcpRequest(serverUrl, 'tools/call', { name, arguments: args }, headers);
       if (!json.success) throw new Error(json.error || 'Request failed');
-      
       const payload = json.data;
       const resultObj = payload.result || payload;
       return resultObj.content || resultObj;
@@ -132,14 +164,10 @@ export const mcpService = {
     }
   },
 
-  /**
-   * Lists available custom prompts from the MCP server
-   */
-  async listPrompts(serverUrl: string): Promise<MCPPrompt[]> {
+  async listPrompts(serverUrl: string, headers?: Record<string, string>): Promise<MCPPrompt[]> {
     try {
-      const json = await executeMcpRequest(serverUrl, 'prompts/list', {});
+      const json = await executeMcpRequest(serverUrl, 'prompts/list', {}, headers);
       if (!json.success) throw new Error(json.error || 'Request failed');
-      
       const payload = json.data;
       const resultObj = payload.result || payload;
       return resultObj.prompts || (Array.isArray(resultObj) ? resultObj : []);
@@ -149,14 +177,10 @@ export const mcpService = {
     }
   },
 
-  /**
-   * Lists available resources from the MCP server
-   */
-  async listResources(serverUrl: string): Promise<MCPResource[]> {
+  async listResources(serverUrl: string, headers?: Record<string, string>): Promise<MCPResource[]> {
     try {
-      const json = await executeMcpRequest(serverUrl, 'resources/list', {});
+      const json = await executeMcpRequest(serverUrl, 'resources/list', {}, headers);
       if (!json.success) throw new Error(json.error || 'Request failed');
-      
       const payload = json.data;
       const resultObj = payload.result || payload;
       return resultObj.resources || (Array.isArray(resultObj) ? resultObj : []);
@@ -164,5 +188,5 @@ export const mcpService = {
       console.error("Failed to list MCP resources:", err);
       return [];
     }
-  }
+  },
 };

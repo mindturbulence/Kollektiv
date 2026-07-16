@@ -11,7 +11,7 @@ import {
     MIDJOURNEY_NIJI_VERSIONS, MIDJOURNEY_ASPECT_RATIOS, Z_IMAGE_STYLES, AUDIO_TYPES,
     VOICE_GENDERS, VOICE_TONES, AUDIO_ENVIRONMENTS, AUDIO_MOODS,
     MUSIC_GENRES, INSTRUMENTATION, VOCAL_STYLES, MUSIC_PRODUCTION_ERAS,
-    TIME_OF_DAY, WEATHER_OPTIONS, COLOR_GRADES,
+    TIME_OF_DAY, WEATHER_OPTIONS, COLOR_GRADES, STYLING_TRENDS,
     FACIAL_EXPRESSIONS,
     HAIR_STYLES, EYE_COLORS, SKIN_TEXTURES, REALISM_OPTIONS, CLOTHING_STYLES
 } from '../constants/modifiers';
@@ -34,7 +34,6 @@ interface RefinerModifierControlsProps {
     isMidjourney: boolean;
     isGoogleProduct: boolean;
     artStyles: CheatsheetCategory[];
-    artists: CheatsheetCategory[];
     customOptions?: Record<string, (string | { name: string; description?: string })[]>;
     onAddCustomOption?: (key: string, value: string) => void;
     setRefineText: (v: string) => void;
@@ -57,7 +56,7 @@ function mergePlain(builtin: string[], key: string, customOptions?: Record<strin
 export const RefinerModifierControls: React.FC<RefinerModifierControlsProps> = ({
     activeRefineSubTab, modifiers, refineText, constantModifier, mediaMode,
     targetAIModel, promptLength, referenceImages, isMidjourney, isGoogleProduct,
-    artStyles, artists, customOptions, onAddCustomOption,
+    artStyles, customOptions, onAddCustomOption,
     setRefineText, setConstantModifier, setMediaMode,
     setTargetAIModel, setPromptLength, setReferenceImages, setModifiers,
     handlePasteRefineText
@@ -74,7 +73,7 @@ export const RefinerModifierControls: React.FC<RefinerModifierControlsProps> = (
                                 <button onClick={() => setRefineText('')} className="form-btn h-6 px-2 opacity-20 hover:opacity-100 uppercase tracking-widest">Clear</button>
                             </div>
                         </div>
-                        <textarea value={refineText} onChange={(e) => setRefineText((e.currentTarget as any).value)} className="form-textarea w-full flex-grow resize-none font-medium leading-relaxed bg-transparent" placeholder="Enter core concept..."></textarea>
+                        <textarea data-ai-id="refiner-prompt-input" value={refineText} onChange={(e) => setRefineText((e.currentTarget as any).value)} className="form-textarea w-full flex-grow resize-none font-medium leading-relaxed bg-transparent" placeholder="Enter core concept..."></textarea>
                     </div>
                     <div className="form-control">
                         <label className="text-[10px] font-normal text-[12px] font-sf-mono uppercase tracking-widest text-base-content/40 mb-2">Constant Modifiers</label>
@@ -132,7 +131,9 @@ export const RefinerModifierControls: React.FC<RefinerModifierControlsProps> = (
                         <div className="form-control">
                             <label className="text-[10px] font-black uppercase text-base-content/40 tracking-widest mb-2 block">Styling Trends</label>
                             <AutocompleteSelect value={modifiers.artist || ''} onChange={(v) => setModifiers({ ...modifiers, artist: v })}
-                                options={artists.flatMap(c => c.items.map(i => ({ label: i.name.toUpperCase(), value: i.name })))} placeholder="Creator influence..." />
+                                options={mergePlain(STYLING_TRENDS, 'artist', customOptions).map(s => ({ label: s.toUpperCase(), value: s }))}
+                                placeholder="Creator influence..."
+                                onAddCustom={onAddCustomOption ? (v) => onAddCustomOption('artist', v) : undefined} />
                         </div>
                     </div>
                     <div className="form-control">

@@ -15,7 +15,6 @@ import { refinerPresetService, type RefinerPreset } from '../services/refinerPre
 import { modifierOptionsService } from '../services/modifierOptionsService';
 import { enhancePromptStream, cleanLLMResponse, buildMidjourneyParams, dissectPrompt, generateConstructorPreset, generateWithImagen, generateWithNanoBanana, generateWithVeo } from '../services/llmService';
 import { computeWordDiff, calculateSemanticMetrics } from '../utils/diffUtils';
-import { loadArtists } from '../utils/artistStorage';
 import { loadArtStyles } from '../utils/artstyleStorage';
 import {
     PROMPT_DETAIL_LEVELS, MIDJOURNEY_VERSIONS
@@ -86,7 +85,6 @@ const RefinerPage: React.FC<RefinerPageProps> = ({
 
     // --- Data & Loading State ---
     const [artStyles, setArtStyles] = useState<any[]>([]);
-    const [artists, setArtists] = useState<any[]>([]);
     const [customOptions, setCustomOptions] = useState<Record<string, (string | { name: string; description?: string })[]>>({});
     const [isLoadingRefine, setIsLoadingRefine] = useState(false);
     const [errorRefine, setErrorRefine] = useState<AppError | null>(null);
@@ -229,13 +227,11 @@ const RefinerPage: React.FC<RefinerPageProps> = ({
     useEffect(() => {
         const loadData = async () => {
             try {
-                const [styles, artistsData, custom] = await Promise.all([
+                const [styles, custom] = await Promise.all([
                     loadArtStyles(),
-                    loadArtists(),
                     modifierOptionsService.loadCustomOptions(),
                 ]);
                 setArtStyles(styles);
-                setArtists(artistsData);
                 setCustomOptions(custom);
             } catch (e) {
                 setErrorRefine({ message: "Reference data offline." });
@@ -286,7 +282,6 @@ const RefinerPage: React.FC<RefinerPageProps> = ({
     const buildModifierCatalog = useCallback(() => {
         const catalog: string[] = [];
         if (artStyles.length > 0) catalog.push(`artStyle: ${artStyles.flatMap((c: any) => c.items.map((i: any) => i.name)).join(', ')}`);
-        if (artists.length > 0) catalog.push(`artist: ${artists.flatMap((c: any) => c.items.map((i: any) => i.name)).join(', ')}`);
         // Use MODIFIER_CATEGORIES from registry, filtered by media mode
         const registryCatalog = MODIFIER_CATEGORIES.filter((c: any) => c.media === 'all' || c.media === mediaMode);
         for (const cat of registryCatalog) {
@@ -296,7 +291,7 @@ const RefinerPage: React.FC<RefinerPageProps> = ({
             if (merged.length > 0) catalog.push(`${cat.key}: ${merged.join(', ')}`);
         }
         return catalog.join('\\n');
-    }, [artStyles, artists, mediaMode, customOptions]);
+    }, [artStyles, mediaMode, customOptions]);
 
     const handleEnhance = useCallback(async () => {
         setIsBusy(true);
@@ -569,7 +564,6 @@ const RefinerPage: React.FC<RefinerPageProps> = ({
                             isMidjourney={isMidjourney}
                             isGoogleProduct={isGoogleProduct}
                             artStyles={artStyles}
-                            artists={artists}
                             setRefineText={setRefineText}
                             setConstantModifier={setConstantModifier}
                             setMediaMode={setMediaMode}
@@ -589,23 +583,24 @@ const RefinerPage: React.FC<RefinerPageProps> = ({
                         exit="exit"
                         className="h-14 flex items-stretch flex-shrink-0 bg-base-100/10 backdrop-blur-md p-1.5 gap-1.5 panel-footer"
                     >
-                        <button onClick={() => { audioService.playClick(); handleResetRefiner(); }}
+                        <button data-ai-id="refiner-reset" onClick={() => { audioService.playClick(); handleResetRefiner(); }}
                             className="btn btn-sm btn-ghost h-full rounded-none flex-1 font-rajdhani tracking-wider text-error/40 hover:text-error border-1 btn-snake">
                             <span /><span /><span /><span />RESET
                         </button>
                         <button
+                            data-ai-id="refiner-improve"
                             onClick={() => { audioService.playClick(); handleEnhance(); }}
                             disabled={isLoadingRefine || !(refineText || '').trim()}
                             className="btn btn-sm btn-ghost h-full rounded-none flex-1 tracking-wider text-primary border-1 disabled:opacity-30 disabled:cursor-not-allowed btn-snake">
                             <span /><span /><span /><span />{isLoadingRefine ? '...' : 'IMPROVE'}
                         </button>
-                        <button onClick={() => { audioService.playClick(); setIsCodeExportModalOpen(true); }}
+                        <button data-ai-id="refiner-export-code" onClick={() => { audioService.playClick(); setIsCodeExportModalOpen(true); }}
                             disabled={!resultsRefine?.suggestions[0]}
                             className="btn btn-sm btn-ghost h-full rounded-none flex-1 tracking-wider text-base-content/40 hover:text-primary border-1 btn-snake">
                             <span /><span /><span /><span />EXPORT CODE
                         </button>
                         {isGoogleProduct && (
-                            <button onClick={() => { audioService.playClick(); handleDirectGenerate(); }}
+                            <button data-ai-id="refiner-render" onClick={() => { audioService.playClick(); handleDirectGenerate(); }}
                                 disabled={isLoadingRefine || !(refineText || '').trim()}
                                 className="btn btn-sm btn-ghost h-full rounded-none flex-1 tracking-wider text-primary border-0 disabled:opacity-30 disabled:cursor-not-allowed btn-snake">
                                 <span /><span /><span /><span />{isLoadingRefine ? '...' : 'RENDER'}

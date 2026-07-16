@@ -130,18 +130,15 @@ export const LiveAssistantProvider: React.FC<{ children: React.ReactNode }> = ({
 
     // Subscribe to browserControlService permission changes.
     useEffect(() => {
+        // Sync initial state from the service (covers Strict Mode remount where
+        // React state resets but the service singleton kept its value).
+        setControlEnabled(browserControlService.permissionGranted);
         const unsub = browserControlService.onPermissionChange((granted) => {
+            console.debug('[LiveAssistant] permission changed', granted);
             setControlEnabled(granted);
         });
         return unsub;
     }, []);
-
-    // Auto-revoke control permission when screen sharing stops.
-    useEffect(() => {
-        if (!sharing && controlEnabled) {
-            browserControlService.revoke();
-        }
-    }, [sharing, controlEnabled]);
 
     const grantControl = useCallback(() => {
         browserControlService.grant();

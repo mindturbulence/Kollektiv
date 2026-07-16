@@ -82,7 +82,7 @@ const Welcome: React.FC<WelcomeProps> = ({ onSetupComplete }) => {
         if ((window as any).google?.accounts?.oauth2) {
             const client = (window as any).google.accounts.oauth2.initTokenClient({
                 client_id: clientId,
-                scope: 'https://www.googleapis.com/auth/youtube.upload https://www.googleapis.com/auth/youtube.readonly https://www.googleapis.com/auth/drive https://www.googleapis.com/auth/userinfo.email https://www.googleapis.com/auth/userinfo.profile openid',
+                scope: 'https://www.googleapis.com/auth/youtube.upload https://www.googleapis.com/auth/youtube.readonly https://www.googleapis.com/auth/drive https://www.googleapis.com/auth/userinfo.email https://www.googleapis.com/auth/userinfo.profile https://www.googleapis.com/auth/gmail.modify openid',
                 callback: async (response: any) => {
                     if (response.error) {
                         setIsLoading(false);

@@ -1577,6 +1577,12 @@ button:active {
   letter-spacing: 0.04em !important;
 }
 
+/* Rainmaker Script for the brand tagline */
+[data-theme="Kollektiv"] .font-rainmaker,
+[data-theme="Kollektiv"] .font-rainmaker * {
+  font-family: "RainmakerScript-Bold", cursive !important;
+}
+
 /* --- Calm the global neon so labels stay legible; keep a tight signature halo --- */
 [data-theme="Kollektiv"] .text-primary {
   text-shadow: 0 0 10px oklch(var(--p) / 0.35) !important;
@@ -2747,6 +2753,19 @@ button:active {
   50% { opacity: 0.25; }
 }
 .fx-hud-blink { animation: fx-hud-blink 0.9s steps(2) infinite; }
+
+/* --- System text pulsating dark outer glow --- */
+@keyframes system-glow-pulse {
+  0%, 100% {
+    filter: drop-shadow(0 0 10px rgba(0,0,0,0.85)) drop-shadow(0 0 30px rgba(0,0,0,0.35)) drop-shadow(0 0 22px rgba(var(--p), 0.3));
+  }
+  50% {
+    filter: drop-shadow(0 0 16px rgba(0,0,0,0.95)) drop-shadow(0 0 48px rgba(0,0,0,0.5)) drop-shadow(0 0 30px rgba(var(--p), 0.45));
+  }
+}
+.pulse-glow {
+  animation: system-glow-pulse 3s ease-in-out infinite;
+}
 
 /* --- Global reduced-motion: collapse the whole engine, all themes --- */
 @media (prefers-reduced-motion: reduce) {

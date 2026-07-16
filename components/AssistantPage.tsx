@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useRef, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { appEventBus } from '../utils/eventBus';
 import { useAssistantSignals } from '../utils/useAssistantSignals';
@@ -72,6 +72,22 @@ const pickImportant = (text: string): string => {
         return clean.length >= 5 && !STOPWORDS.has(clean.toLowerCase());
     }).join(' ');
 };
+
+/** 10 idle prompt variations. After 3 minutes of silence on the assistant
+ * screen the last-words display is replaced with a randomly chosen one,
+ * and it keeps cycling every 30 seconds for variety. */
+const COMMAND_VARIATIONS = [
+    'WHAT ARE YOUR COMMANDS?',
+    'AWAITING YOUR INSTRUCTION.',
+    'READY FOR YOUR INPUT.',
+    'STANDING BY FOR ORDERS.',
+    'HOW MAY I BE OF SERVICE?',
+    'YOUR DIRECTIVE, PLEASE.',
+    'AT YOUR DISPOSAL.',
+    'INPUT YOUR COMMAND.',
+    'READY AND WAITING.',
+    'STATE YOUR REQUEST.',
+];
 
 /** CSS triangle in the theme accent color — the Samaritan sigil. Always on
  * screen, gently pulsing; it never collapses or hides. */
@@ -148,10 +164,19 @@ const Stage: React.FC<{ text: string; streaming?: boolean; wordTime?: number; on
  * character-by-character with a blinking cursor and a matching underline.
  * Used both for the very first boot and as the periodic idle reminder (see
  * AssistantPage). */
-const TerminalPrompt: React.FC<{ text: string; onDone?: () => void }> = ({ text, onDone }) => {
+const TerminalPrompt: React.FC<{ text: string; onDone?: () => void; maxWords?: number }> = ({ text, onDone, maxWords }) => {
     const [n, setN] = useState(0);
     const done = n >= text.length;
     const shown = text.slice(0, n);
+
+    // When maxWords is set, show only the last N words so the line never
+    // grows wider than ~6 tokens — prevents text overlap during long replies.
+    const displayText = (() => {
+        if (!maxWords) return shown;
+        const words = shown.trim().split(/\s+/);
+        if (words.length <= maxWords) return shown;
+        return words.slice(-maxWords).join(' ');
+    })();
 
     useEffect(() => {
         if (done) {
@@ -165,9 +190,35 @@ const TerminalPrompt: React.FC<{ text: string; onDone?: () => void }> = ({ text,
     }, [n, done, onDone]);
 
     return (
+        <Underline text={displayText}>
+            {displayText}
+            {!done && <span className="inline-block w-[0.5ch] h-[0.9em] bg-base-content align-middle ml-1 animate-pulse" />}
+        </Underline>
+    );
+};
+
+/** Typewriter reveal for the latest activity context line. Resets and starts
+ * typing from the beginning every time the text changes. */
+const TypewriterActivity: React.FC<{ text: string }> = ({ text }) => {
+    const [n, setN] = useState(0);
+    const prevRef = useRef(text);
+    if (prevRef.current !== text) {
+        prevRef.current = text;
+        setN(0);
+    }
+    const done = n >= text.length;
+    const shown = text.slice(0, n);
+
+    useEffect(() => {
+        if (done) return;
+        const t = setTimeout(() => setN(v => v + 1), 30);
+        return () => clearTimeout(t);
+    }, [n, done]);
+
+    return (
         <Underline text={shown}>
             {shown}
-            {!done && <span className="inline-block w-[0.5ch] h-[0.9em] bg-base-content align-middle ml-1 animate-pulse" />}
+            {!done && <span className="inline-block w-[0.5ch] h-[0.9em] bg-primary align-middle ml-1 animate-pulse" />}
         </Underline>
     );
 };
@@ -181,70 +232,140 @@ const AssistantPage: React.FC = () => {
     const { settings } = useSettings();
     const PROMPT = getPrompt(settings.assistantLanguage);
 
+    // AI-translated idle variations: on mount the English COMMAND_VARIATIONS
+    // are sent to Gemini for a creative translation into the user's preferred
+    // language. English is shown as fallback while loading or on error.
+    const [localizedVariations, setLocalizedVariations] = useState<string[] | null>(null);
+
+    useEffect(() => {
+        const lang = settings.assistantLanguage;
+        if (!lang || lang === 'en' || lang.startsWith('en-')) {
+            setLocalizedVariations(COMMAND_VARIATIONS);
+            return;
+        }
+        setLocalizedVariations(null);
+        const apiKey = settings.geminiApiKey || process.env.GEMINI_API_KEY;
+        if (!apiKey) { setLocalizedVariations(COMMAND_VARIATIONS); return; }
+
+        let cancelled = false;
+        (async () => {
+            try {
+                const { getGeminiClient } = await import('../services/geminiService');
+                const ai = getGeminiClient({ geminiApiKey: apiKey } as any);
+                const result = await ai.models.generateContent({
+                    model: 'gemini-3.5-flash',
+                    contents: [{
+                        role: 'user',
+                        parts: [{
+                            text: `You are a creative translator. Below are 10 command prompts in English that a voice assistant shows on screen while waiting for the user to speak. Translate each one into ${lang}. Be creative and idiomatic — make them sound natural in ${lang}, not literal translations. Keep them short and uppercase (or the closest equivalent in ${lang}). Return ONLY the translations, one per line, in the same order, no numbering:\n\n${COMMAND_VARIATIONS.join('\n')}`
+                        }]
+                    }],
+                });
+                const text = result.text?.trim();
+                if (!cancelled && text) {
+                    const lines = text.split('\n').map(l => l.trim().replace(/^\d+[\.\)]\s*/, '')).filter(Boolean);
+                    setLocalizedVariations(lines.length === COMMAND_VARIATIONS.length ? lines : COMMAND_VARIATIONS);
+                } else if (!cancelled) {
+                    setLocalizedVariations(COMMAND_VARIATIONS);
+                }
+            } catch {
+                if (!cancelled) setLocalizedVariations(COMMAND_VARIATIONS);
+            }
+        })();
+        return () => { cancelled = true; };
+    }, [settings.assistantLanguage, settings.geminiApiKey]);
+
+    const idleVariations = localizedVariations ?? COMMAND_VARIATIONS;
+
     // Only the words worth reading actually get displayed — see
     // pickImportant. Kept in a ref too so the completion callback below
     // (which fires from an effect, not a render) can read the latest value.
     const importantText = pickImportant(assistantText);
-    const importantTextRef = useRef(importantText);
-    importantTextRef.current = importantText;
 
-    // The word-by-word reveal can't always keep pace with speech, so leaving
-    // 'responding' the instant audio playback ends would cut the reply off
-    // mid-sentence. displayMode mirrors `mode` except it holds on
-    // 'responding' until Stage finishes revealing the full text, then jumps
-    // to wherever `mode` has moved on to.
+    // displayMode follows `mode` directly — no hold mechanism since the
+    // RollingCaption used for responding mode is stateless and updates
+    // instantly, so there's no "reveal" timing to wait for.
     const [displayMode, setDisplayMode] = useState(mode);
-    const modeRef = useRef(mode);
-    modeRef.current = mode;
-    const holdingRef = useRef(false);
 
     useEffect(() => {
-        if (mode === 'responding') {
-            holdingRef.current = false;
-            setDisplayMode('responding');
-            return;
-        }
-        setDisplayMode(prev => {
-            if (holdingRef.current) return prev;
-            if (prev === 'responding') {
-                holdingRef.current = true;
-                return prev;
-            }
-            return mode;
-        });
+        setDisplayMode(mode);
     }, [mode]);
 
-    // Once a reply finishes revealing, its last word stays on screen through
-    // idle command mode — a lingering "last thing said" — until either a new
-    // conversation starts or the idle reminder below takes over.
+    // The last word from the assistant's reply lingers in command mode.
+    // Tracked via mode transition rather than a TerminalPrompt callback,
+    // so the limit never depends on animation timing.
     const lastWordRef = useRef('');
-    const handleStageDone = useCallback(() => {
-        holdingRef.current = false;
-        const words = importantTextRef.current.trim().split(/\s+/).filter(Boolean);
-        lastWordRef.current = words[words.length - 1] || '';
-        setDisplayMode(modeRef.current);
-    }, []);
+    const prevModeRef2 = useRef(mode);
+
+    useEffect(() => {
+        if (prevModeRef2.current === 'responding' && mode !== 'responding') {
+            const words = importantText.trim().split(/\s+/).filter(Boolean);
+            lastWordRef.current = words[words.length - 1] || '';
+        }
+        prevModeRef2.current = mode;
+    }, [mode]);
+
+    // Tracks the last moment of actual conversation (responding, listening,
+    // or processing) so we can detect 3 minutes of silence on the assistant
+    // screen independently of the app-wide idle timeout.
+    const lastActivityRef = useRef(Date.now());
+
+    useEffect(() => {
+        if (mode !== 'command') lastActivityRef.current = Date.now();
+    }, [mode]);
 
     // The command prompt types out once on first boot. After that, idle
-    // command mode shows the last thing the assistant said until the user
-    // has been idle for as long as the app's own idle-screen timeout
-    // (settings.idleTimeoutMinutes) — then it resurfaces as a reminder.
+    // command mode shows the last thing the assistant said until the screen
+    // has been silent for 3 minutes — then it cycles through a random
+    // selection of 10 prompt variations to keep the display fresh.
     const shownIntroRef = useRef(false);
     const commandViewRef = useRef<'intro' | 'idle'>('idle');
-    const [reminderShown, setReminderShown] = useState(false);
+    const [idlePromptIndex, setIdlePromptIndex] = useState(0);
+    const [idleShown, setIdleShown] = useState(false);
     const prevModeRef = useRef<typeof displayMode | null>(null);
+
     if (displayMode === 'command' && prevModeRef.current !== 'command') {
         commandViewRef.current = shownIntroRef.current ? 'idle' : 'intro';
         shownIntroRef.current = true;
     }
     prevModeRef.current = displayMode;
 
+    // Reset idle whenever conversation activity resumes.
     useEffect(() => {
-        setReminderShown(false);
-        if (displayMode !== 'command' || commandViewRef.current === 'intro') return;
-        const t = window.setTimeout(() => setReminderShown(true), settings.idleTimeoutMinutes * 60000);
-        return () => window.clearTimeout(t);
-    }, [displayMode, settings.idleTimeoutMinutes]);
+        if (mode !== 'command') setIdleShown(false);
+    }, [mode]);
+
+    // 3-minute assistant-specific idle timer: checks every second, and once
+    // the screen has been in command mode for 3 continuous minutes without
+    // any conversation activity, it picks a random prompt variation to show.
+    useEffect(() => {
+        if (displayMode !== 'command' || commandViewRef.current === 'intro') {
+            setIdleShown(false);
+            return;
+        }
+        const t = window.setInterval(() => {
+            const elapsed = Date.now() - lastActivityRef.current;
+            if (elapsed >= 60_000 && !idleShown) {
+                setIdlePromptIndex(Math.floor(Math.random() * idleVariations.length));
+                setIdleShown(true);
+            }
+        }, 1000);
+        return () => window.clearInterval(t);
+    }, [displayMode, idleShown]);
+
+    // Cycle the idle prompt every 30 seconds for variety while idle.
+    useEffect(() => {
+        if (!idleShown) return;
+        const t = window.setInterval(() => {
+            setIdlePromptIndex(prev => {
+                let next;
+                do { next = Math.floor(Math.random() * idleVariations.length); }
+                while (next === prev);
+                return next;
+            });
+        }, 30_000);
+        return () => window.clearInterval(t);
+    }, [idleShown]);
 
     // Session over — return home. Also bounces straight out if someone lands
     // here without an active session. Errors linger long enough to read.
@@ -298,8 +419,10 @@ const AssistantPage: React.FC = () => {
                         )}
 
                         {displayMode === 'command' && (
-                            commandViewRef.current === 'intro' || reminderShown ? (
+                            commandViewRef.current === 'intro' ? (
                                 <TerminalPrompt text={PROMPT} />
+                            ) : idleShown ? (
+                                <TerminalPrompt text={idleVariations[idlePromptIndex]} />
                             ) : lastWordRef.current ? (
                                 <Underline text={lastWordRef.current}>{lastWordRef.current}</Underline>
                             ) : (
@@ -316,10 +439,20 @@ const AssistantPage: React.FC = () => {
                         )}
 
                         {displayMode === 'responding' && (
-                            <TerminalPrompt
-                                text={importantText}
-                                onDone={handleStageDone}
-                            />
+                            activity.length > 0 ? (
+                                <TypewriterActivity text={activity[activity.length - 1]} />
+                            ) : (
+                                <div className="flex gap-1">
+                                    {Array.from({ length: 5 }).map((_, i) => (
+                                        <motion.div
+                                            key={i}
+                                            className="w-4 h-1 bg-primary/60"
+                                            animate={{ opacity: [0.1, 1, 0.1] }}
+                                            transition={{ duration: 0.7, repeat: Infinity, delay: i * 0.09 }}
+                                        />
+                                    ))}
+                                </div>
+                            )
                         )}
 
                         <Sigil />

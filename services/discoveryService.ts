@@ -1,4 +1,3 @@
-
 export interface DiscoveryCollection {
     id: string;
     name: string;
@@ -30,7 +29,6 @@ const COLLECTIONS: DiscoveryCollection[] = [
         sourceType: 'huggingface'
     }
 ];
-
 export const discoveryService = {
     getCollections: async (): Promise<DiscoveryCollection[]> => {
         return COLLECTIONS;
@@ -39,10 +37,9 @@ export const discoveryService = {
     fetchPrompts: async (collection: DiscoveryCollection, offset: number = 0, length: number = 50): Promise<string> => {
         if (collection.sourceType === 'huggingface') {
             try {
-                // Primary endpoint: Datasets Server Rows
                 const config = collection.config || 'default';
                 const url = `https://datasets-server.huggingface.co/rows?dataset=${collection.repo}&config=${config}&split=train&offset=${offset}&length=${length}`;
-                
+
                 const response = await fetch(url);
                 if (response.ok) {
                     const data = await response.json();
@@ -50,7 +47,7 @@ export const discoveryService = {
                         return `---HF_JSON_PAYLOAD---\n${JSON.stringify(data)}`;
                     }
                 }
-                
+
                 // Secondary check: Config might be missing or different
                 const infoUrl = `https://datasets-server.huggingface.co/info?dataset=${collection.repo}`;
                 const infoRes = await fetch(infoUrl);
@@ -58,7 +55,7 @@ export const discoveryService = {
                     const info = await infoRes.json();
                     const actualConfig = Object.keys(info.dataset_info || {})[2] || Object.keys(info.dataset_info || {})[0] || config;
                     const fallbackUrl = `https://datasets-server.huggingface.co/rows?dataset=${collection.repo}&config=${actualConfig}&split=train&offset=${offset}&length=${length}`;
-                    
+
                     const fallbackRes = await fetch(fallbackUrl);
                     if (fallbackRes.ok) {
                         const fbData = await fallbackRes.json();
@@ -89,7 +86,7 @@ export const discoveryService = {
                     const data = await response.json();
                     return `---HF_JSON_PAYLOAD---\n${JSON.stringify(data)}`;
                 }
-                
+
                 // Search often fails if indexing isn't complete, fallback to list
                 return discoveryService.fetchPrompts(collection, offset, length);
             } catch (err) {
@@ -108,14 +105,14 @@ export const discoveryService = {
                 const rows = data.rows || [];
                 return rows.map((row: any, idx: number) => {
                     const r = row.row;
-                    
+
                     // Comprehensive field mapping for image prompt datasets
-                    const prompt = r.final_prompt || r.revised_prompt || r.gpt_prompt || r.Prompt || r.prompt || r.text || r.content || r.instruction || 
+                    const prompt = r.final_prompt || r.revised_prompt || r.gpt_prompt || r.Prompt || r.prompt || r.text || r.content || r.instruction ||
                                    r.text_raw || r.caption || r.image_caption || r.user_prompt || r.description || '';
-                                   
+
                     const category = r.theme || r.sampler || r.model || r.source || r.category || r.label || '';
                     const timestamp = r.timestamp || r.created_at || r.date || new Date().toISOString();
-                    
+
                     return {
                         id: row.row_idx !== undefined ? `hf-${row.row_idx}` : `hf-${idx}-${Math.random().toString(36).substr(2, 5)}`,
                         category: category ? String(category).substring(0, 20) : 'Archive Record',
