@@ -63,6 +63,15 @@ export interface TokenUsage {
   limit: number;
 }
 
+export interface McpServerConfig {
+  id: string;
+  name: string;
+  url: string;
+  enabled: boolean;
+  apiKey?: string;
+  headers?: Record<string, string>;
+}
+
 export interface LLMSettings {
   // LLM Provider Settings
   geminiApiKey: string;
@@ -94,8 +103,7 @@ export interface LLMSettings {
   anthropicSubscriptionKey?: string;
 
   // MCP Server Settings
-  mcpServerUrl?: string;
-  mcpEnabled?: boolean;
+  mcpServers: McpServerConfig[];
 
   // AI Assistant Persona (chat + Gemini Live voice mode)
   assistantName?: string;

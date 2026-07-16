@@ -192,13 +192,27 @@ const server = http.createServer((req, res) => {
         return;
       }
 
-      // If no ID is supplied, create one so we can match the stdout response
-      const requestId = payload.id !== undefined ? payload.id : Date.now();
-      payload.id = requestId;
+      // If no ID is supplied, create one so we can match the stdout response.
+      // Notifications (method starting with "notifications/") must NOT have an id.
+      const isNotification = typeof payload.method === 'string' && payload.method.startsWith('notifications/');
+      const requestId = payload.id !== undefined ? payload.id : (isNotification ? undefined : Date.now());
+      if (!isNotification) payload.id = requestId;
+      else delete payload.id;
 
       if (!childProcess || childProcess.exitCode !== null) {
         res.writeHead(503, { 'Content-Type': 'application/json' });
         res.end(JSON.stringify({ error: 'MCP backend service is offline.' }));
+        return;
+      }
+
+      // Send the single line JSON message to container stdio
+      const message = JSON.stringify(payload) + '\n';
+      childProcess.stdin.write(message);
+
+      // Notifications get no response from the MCP process; acknowledge immediately.
+      if (isNotification) {
+        res.writeHead(202, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify({ ok: true }));
         return;
       }
 
@@ -211,10 +225,6 @@ const server = http.createServer((req, res) => {
 
         pendingRequests.set(requestId, { resolve, reject, timeoutId });
       });
-
-      // Send the single line JSON message to container stdio
-      const message = JSON.stringify(payload) + '\n';
-      childProcess.stdin.write(message);
 
       // Await and return the response
       responsePromise

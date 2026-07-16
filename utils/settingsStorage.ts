@@ -44,8 +44,7 @@ export const defaultLLMSettings: LLMSettings = {
   ollamaCloudUseGoogleAuth: false,
 
   // MCP Server Settings
-  mcpServerUrl: 'http://localhost:3010',
-  mcpEnabled: false,
+  mcpServers: [],
 
   // AI Assistant Persona
   assistantName: 'Kollektiv',
@@ -165,6 +164,23 @@ export const loadLLMSettings = (): LLMSettings => {
         if (merged.activeLLM === ('hermes' as any)) {
             merged.activeLLM = 'gemini';
         }
+
+        // legacy: migrate single mcpServerUrl/mcpEnabled to mcpServers array
+        if ((merged as any).mcpServerUrl && !Array.isArray(merged.mcpServers?.length)) {
+            const oldUrl = String((merged as any).mcpServerUrl || '');
+            const oldEnabled = Boolean((merged as any).mcpEnabled);
+            if (oldUrl) {
+                merged.mcpServers = [{
+                    id: 'mcp-server-1',
+                    name: 'MCP Server',
+                    url: oldUrl,
+                    enabled: oldEnabled,
+                }];
+            }
+            delete (merged as any).mcpServerUrl;
+            delete (merged as any).mcpEnabled;
+        }
+        if (!Array.isArray(merged.mcpServers)) merged.mcpServers = [];
 
         return merged;
         }

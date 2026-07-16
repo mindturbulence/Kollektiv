@@ -5,6 +5,7 @@ import { executeAssistantTool, geminiToolDeclarations, ASSISTANT_TOOLS, Assistan
 import { buildSystemIdentity } from './assistantService';
 import { loadMcpAssistantTools } from './mcpAssistantTools';
 import { browserControlService } from './browserControlService';
+import { externalBrowserService } from './externalBrowserService';
 
 // Single source of truth for the live model constant.
 // Verified against https://ai.google.dev/gemini-api/docs/live-api/capabilities (2026-07-10) —
@@ -80,6 +81,36 @@ const fromBase64 = (b64: string): Uint8Array => {
     const out = new Uint8Array(bin.length);
     for (let i = 0; i < bin.length; i++) out[i] = bin.charCodeAt(i);
     return out;
+};
+
+/** Maps a tool call to a short human-readable context line — no raw tool
+ * names, no JSON args — so the user sees what the assistant is doing, not
+ * how it's doing it. */
+const describeToolCall = (name: string, args: Record<string, any>): string => {
+    switch (true) {
+        case name === 'search' || name === 'websearch':
+            return `SEARCHING: ${String(args.query || args.q || '').slice(0, 60)}`;
+        case name === 'fetch' || name === 'fetch_content' || name === 'scrape':
+            return `FETCHING: ${String(args.url || '').slice(0, 60)}`;
+        case name.startsWith('browser_navigate'):
+            return `NAVIGATING TO: ${String(args.url || '').slice(0, 60)}`;
+        case name.startsWith('browser_click'):
+            return `CLICKING: ${String(args.element || args.target || '').slice(0, 40)}`;
+        case name.startsWith('browser_type'):
+            return `TYPING: ${String(args.text || '').slice(0, 40)}`;
+        case name.startsWith('browser_snapshot') || name.startsWith('browser_screenshot'):
+            return `READING PAGE`;
+        case name.startsWith('browser_') && name.includes('evaluate'):
+            return `RUNNING CODE`;
+        case name.startsWith('browser_'):
+            return `BROWSER ACTION: ${name.replace('browser_', '').replace(/_/g, ' ').toUpperCase()}`;
+        case name.startsWith('obsidian_'):
+            return `NOTEBOOK: ${name.replace('obsidian_', '').replace(/_/g, ' ').toUpperCase()}`;
+        case name.startsWith('mcp_') || name.includes('_'):
+            return `TOOL: ${name.split('_').slice(-1)[0].replace(/_/g, ' ').toUpperCase()}`;
+        default:
+            return `EXECUTING: ${name.replace(/_/g, ' ').toUpperCase()}`;
+    }
 };
 
 export class LiveAssistant {
@@ -177,16 +208,17 @@ export class LiveAssistant {
             const responses: any[] = [];
             for (const fc of msg.toolCall.functionCalls) {
                 console.debug('[LiveAssistant] tool call', fc.name, fc.args);
-                this.handlers.onToolActivity(`⚙️ ${fc.name}(${JSON.stringify(fc.args || {})})`);
+                const ctx = describeToolCall(fc.name, fc.args || {});
+                this.handlers.onToolActivity(ctx);
                 // Check permission for browser tools BEFORE executing — don't waste
                 // a turn running the tool only for assertPermission() to throw.
                 if (fc.name.startsWith('browser_') && !browserControlService.permissionGranted) {
+                    console.debug('[LiveAssistant] browser tool blocked — permission not granted', fc.name);
                     this.handlers.onControlDenied(!!this.screenStream);
                     responses.push({ id: fc.id, name: fc.name, response: { result: 'Permission denied — user has not granted browser control permission.' } });
                 } else {
                     const result = await executeAssistantTool(fc.name, fc.args || {}, { settings: this.settings }, this.mcpTools);
                     console.debug('[LiveAssistant] tool result', fc.name, result.slice(0, 200));
-                    this.handlers.onToolActivity(`✅ ${fc.name}: ${result.slice(0, 300)}`);
                     responses.push({ id: fc.id, name: fc.name, response: { result } });
                 }
             }
@@ -247,7 +279,7 @@ export class LiveAssistant {
         const displaySurface = (track.getSettings() as any)?.displaySurface;
         if (displaySurface && displaySurface !== 'browser') {
             this.handlers.onShareWarning(
-                'You shared a window/screen instead of this browser tab — the assistant\'s clicks and scrolling may not line up with what it sees. Consider re-sharing and picking "This Tab" instead.'
+                'You shared a window/screen instead of this browser tab. To let the assistant click or type on external windows, you must connect the CDP bridge in Settings. Otherwise, clicks will only affect this Kollektiv tab.'
             );
         }
 
@@ -263,6 +295,7 @@ export class LiveAssistant {
             canvas.height = Math.round(this.videoEl.videoHeight * scale);
             canvas.getContext('2d')!.drawImage(this.videoEl, 0, 0, canvas.width, canvas.height);
             browserControlService.setCaptureSize(canvas.width, canvas.height);
+            externalBrowserService.setCaptureSize(canvas.width, canvas.height);
             const b64 = canvas.toDataURL('image/jpeg', 0.7).split('base64,')[1];
             try {
                 this.session.sendRealtimeInput({ video: { data: b64, mimeType: 'image/jpeg' } });
@@ -277,6 +310,7 @@ export class LiveAssistant {
         this.screenStream = null;
         if (this.videoEl) { this.videoEl.srcObject = null; this.videoEl = null; }
         browserControlService.setCaptureSize(0, 0);
+        externalBrowserService.setCaptureSize(0, 0);
         this.handlers?.onScreenShare(false);
     }
 

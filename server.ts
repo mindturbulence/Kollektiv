@@ -1,6 +1,7 @@
 import express from "express";
 import { createServer as createViteServer } from "vite";
 import path from "path";
+import http from "http";
 
 
 
@@ -450,7 +451,7 @@ async function startServer() {
 
   // MCP Server Proxy Endpoint
   app.post("/api/mcp/proxy", async (req, res) => {
-    const { url, method, params } = req.body;
+    const { url, method, params, headers: extraHeaders } = req.body;
     if (!url) {
       return res.status(400).json({ success: false, error: "Missing MCP server URL" });
     }
@@ -458,8 +459,13 @@ async function startServer() {
       return res.status(400).json({ success: false, error: "MCP server URL must be a valid http(s) URL" });
     }
 
+    const requestHeaders: Record<string, string> = {
+      'Content-Type': 'application/json',
+      'Accept': 'application/json',
+      ...(extraHeaders || {}),
+    };
+
     try {
-      // Standard JSON-RPC 2.0 payload format for MCP
       const jsonRpcPayload = {
         jsonrpc: "2.0",
         id: Date.now(),
@@ -469,10 +475,7 @@ async function startServer() {
 
       const response = await fetch(url, {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Accept': 'application/json'
-        },
+        headers: requestHeaders,
         body: JSON.stringify(jsonRpcPayload)
       });
 
@@ -484,19 +487,16 @@ async function startServer() {
       res.json({ success: true, data });
     } catch (err: any) {
       console.warn("MCP JSON-RPC proxy failed, attempting REST API fallback:", err.message);
-      
-      // If the target is a REST-based model server or simple node agent, let's fall back to REST GET/POST
+
       try {
         const actionMatch = method?.split('/') || [];
-        const action = actionMatch[actionMatch.length - 1] || "tools"; // tools, prompts, resources
+        const action = actionMatch[actionMatch.length - 1] || "tools";
         const targetUrl = url.endsWith('/') ? `${url}${action}` : `${url}/${action}`;
-        
+
         const isWrite = method?.includes('call') || method?.includes('write') || method?.includes('execute');
         const response = await fetch(targetUrl, {
           method: isWrite ? 'POST' : 'GET',
-          headers: {
-            'Content-Type': 'application/json'
-          },
+          headers: requestHeaders,
           body: isWrite ? JSON.stringify(params || {}) : undefined
         });
 
@@ -509,6 +509,408 @@ async function startServer() {
       }
 
       res.status(500).json({ success: false, error: err.message });
+    }
+  });
+
+  // --- CDP (Chrome DevTools Protocol) Bridge for External Browser Control ---
+  // Allows the assistant to control tabs in the user's Chrome browser via CDP,
+  // requiring Chrome to be started with --remote-debugging-port=9222.
+
+  const CDP_DEFAULT_PORT = 9222;
+  let cdpWs: WebSocket | null = null;
+  let cdpConnected = false;
+  let cdpTargetId: string | null = null;
+  let cdpTargetTitle: string | null = null;
+  let cdpMsgId = 0;
+  let cdpPending = new Map<number, { resolve: (v: any) => void; reject: (e: any) => void }>();
+
+  function cdpSend(method: string, params: any = {}): Promise<any> {
+    return new Promise((resolve, reject) => {
+      if (!cdpWs || cdpWs.readyState !== WebSocket.OPEN) {
+        reject(new Error('CDP not connected'));
+        return;
+      }
+      const id = ++cdpMsgId;
+      cdpPending.set(id, { resolve, reject });
+      cdpWs.send(JSON.stringify({ id, method, params }));
+    });
+  }
+
+  function cdpGet(url: string): Promise<any> {
+    return new Promise((resolve, reject) => {
+      http.get(url, (res) => {
+        let data = '';
+        res.on('data', (chunk: string) => data += chunk);
+        res.on('end', () => { try { resolve(JSON.parse(data)); } catch { resolve(data); } });
+      }).on('error', reject);
+    });
+  }
+
+  async function cdpListTargets(port: number): Promise<{ id: string; title: string; url: string; wsUrl: string }[]> {
+    const list: any[] = await cdpGet(`http://127.0.0.1:${port}/json/list`);
+    return list.map((t: any) => ({
+      id: t.id,
+      title: t.title || '(untitled)',
+      url: t.url || '',
+      wsUrl: t.webSocketDebuggerUrl || '',
+    })).filter((t: any) => t.wsUrl && t.url !== 'about:blank');
+  }
+
+  async function cdpConnectToTarget(wsUrl: string, targetId: string, title: string): Promise<boolean> {
+    if (cdpWs) {
+      cdpWs.onclose = null;
+      cdpWs.onerror = null;
+      cdpWs.onmessage = null;
+      try { cdpWs.close(); } catch {}
+    }
+    cdpPending.clear();
+    cdpConnected = false;
+
+    return new Promise((resolve) => {
+      try {
+        const ws = new WebSocket(wsUrl);
+        const timeout = setTimeout(() => { ws.close(); resolve(false); }, 8000);
+
+        ws.onopen = async () => {
+          cdpWs = ws;
+          cdpTargetId = targetId;
+          cdpTargetTitle = title;
+
+          try {
+            await cdpSend('Page.enable');
+            await cdpSend('Runtime.enable');
+            await cdpSend('Input.enable');
+            cdpConnected = true;
+            clearTimeout(timeout);
+            resolve(true);
+          } catch (e) {
+            clearTimeout(timeout);
+            cdpWs = null;
+            cdpConnected = false;
+            resolve(false);
+          }
+        };
+
+        ws.onmessage = (event: MessageEvent) => {
+          try {
+            const msg = JSON.parse(event.data as string);
+            if (msg.id !== undefined && cdpPending.has(msg.id)) {
+              const p = cdpPending.get(msg.id)!;
+              cdpPending.delete(msg.id);
+              if (msg.error) p.reject(new Error(msg.error.message));
+              else p.resolve(msg.result);
+            }
+          } catch {}
+        };
+
+        ws.onerror = () => { clearTimeout(timeout); cdpConnected = false; resolve(false); };
+        ws.onclose = () => { cdpConnected = false; };
+      } catch {
+        resolve(false);
+      }
+    });
+  }
+
+  function cdpDisconnect(): void {
+    if (cdpWs) {
+      cdpWs.onclose = null;
+      cdpWs.onerror = null;
+      try { cdpWs.close(); } catch {}
+    }
+    cdpWs = null;
+    cdpConnected = false;
+    cdpTargetId = null;
+    cdpTargetTitle = null;
+    cdpPending.clear();
+  }
+
+  // GET /api/cdp/status — check connection state
+  app.get("/api/cdp/status", (_req, res) => {
+    res.json({
+      connected: cdpConnected,
+      targetId: cdpTargetId,
+      targetTitle: cdpTargetTitle,
+    });
+  });
+
+  // POST /api/cdp/connect — verify Chrome debug port is reachable and list targets
+  app.post("/api/cdp/connect", async (req, res) => {
+    const port = parseInt(req.body.port as string) || CDP_DEFAULT_PORT;
+    try {
+      const version: any = await cdpGet(`http://127.0.0.1:${port}/json/version`);
+      res.json({ success: true, browser: version.Browser });
+    } catch {
+      res.json({ success: false, error: `Cannot reach Chrome on port ${port}. Make sure Chrome is started with --remote-debugging-port=${port}.` });
+    }
+  });
+
+  // GET /api/cdp/targets — list available browser tabs
+  app.get("/api/cdp/targets", async (req, res) => {
+    const port = parseInt(req.query.port as string) || CDP_DEFAULT_PORT;
+    try {
+      const targets = await cdpListTargets(port);
+      res.json({ success: true, targets });
+    } catch {
+      res.json({ success: false, targets: [], error: 'Failed to list targets.' });
+    }
+  });
+
+  // POST /api/cdp/select — connect to a specific target tab
+  app.post("/api/cdp/select", async (req, res) => {
+    const { targetId, wsUrl, title } = req.body;
+    if (!targetId || !wsUrl) {
+      return res.status(400).json({ success: false, error: 'Missing targetId or wsUrl.' });
+    }
+    const ok = await cdpConnectToTarget(wsUrl, targetId, title || '');
+    if (ok) {
+      // Get viewport dimensions for coordinate mapping
+      try {
+        const metrics = await cdpSend('Page.getLayoutMetrics');
+        res.json({ success: true, title: cdpTargetTitle, viewport: metrics?.layoutViewport || null });
+      } catch {
+        res.json({ success: true, title: cdpTargetTitle, viewport: null });
+      }
+    } else {
+      res.json({ success: false, error: 'Failed to connect to target.' });
+    }
+  });
+
+  // POST /api/cdp/disconnect
+  app.post("/api/cdp/disconnect", (_req, res) => {
+    cdpDisconnect();
+    res.json({ success: true });
+  });
+
+  // Helper: map capture coordinates to target viewport
+  async function cdpMapCoords(nx: number, ny: number, captureW?: number, captureH?: number): Promise<{ x: number; y: number }> {
+    const metrics = await cdpSend('Page.getLayoutMetrics');
+    const vw = metrics?.layoutViewport?.clientWidth || 1280;
+    const vh = metrics?.layoutViewport?.clientHeight || 720;
+    const cw = captureW || 1024;
+    const ch = captureH || (vh / vw * 1024);
+    return {
+      x: Math.round((nx / cw) * vw),
+      y: Math.round((ny / ch) * vh),
+    };
+  }
+
+  // POST /api/cdp/click
+  app.post("/api/cdp/click", async (req, res) => {
+    try {
+      if (!cdpConnected) return res.json({ success: false, error: 'CDP not connected.' });
+      const { nx, ny, captureW, captureH } = req.body;
+      const { x, y } = await cdpMapCoords(nx, ny, captureW, captureH);
+      await cdpSend('Input.dispatchMouseEvent', { type: 'mousePressed', x, y, button: 'left', clickCount: 1 });
+      await cdpSend('Input.dispatchMouseEvent', { type: 'mouseReleased', x, y, button: 'left', clickCount: 1 });
+      res.json({ success: true, result: `Clicked at (${x}, ${y}) in target page.` });
+    } catch (e: any) {
+      res.json({ success: false, error: e.message });
+    }
+  });
+
+  // POST /api/cdp/double_click
+  app.post("/api/cdp/double_click", async (req, res) => {
+    try {
+      if (!cdpConnected) return res.json({ success: false, error: 'CDP not connected.' });
+      const { nx, ny, captureW, captureH } = req.body;
+      const { x, y } = await cdpMapCoords(nx, ny, captureW, captureH);
+      await cdpSend('Input.dispatchMouseEvent', { type: 'mousePressed', x, y, button: 'left', clickCount: 2 });
+      await cdpSend('Input.dispatchMouseEvent', { type: 'mouseReleased', x, y, button: 'left', clickCount: 2 });
+      res.json({ success: true, result: `Double-clicked at (${x}, ${y}) in target page.` });
+    } catch (e: any) {
+      res.json({ success: false, error: e.message });
+    }
+  });
+
+  // POST /api/cdp/right_click
+  app.post("/api/cdp/right_click", async (req, res) => {
+    try {
+      if (!cdpConnected) return res.json({ success: false, error: 'CDP not connected.' });
+      const { nx, ny, captureW, captureH } = req.body;
+      const { x, y } = await cdpMapCoords(nx, ny, captureW, captureH);
+      await cdpSend('Input.dispatchMouseEvent', { type: 'mousePressed', x, y, button: 'right', clickCount: 1 });
+      await cdpSend('Input.dispatchMouseEvent', { type: 'mouseReleased', x, y, button: 'right', clickCount: 1 });
+      res.json({ success: true, result: `Right-clicked at (${x}, ${y}) in target page.` });
+    } catch (e: any) {
+      res.json({ success: false, error: e.message });
+    }
+  });
+
+  // POST /api/cdp/hover
+  app.post("/api/cdp/hover", async (req, res) => {
+    try {
+      if (!cdpConnected) return res.json({ success: false, error: 'CDP not connected.' });
+      const { nx, ny, captureW, captureH } = req.body;
+      const { x, y } = await cdpMapCoords(nx, ny, captureW, captureH);
+      await cdpSend('Input.dispatchMouseEvent', { type: 'mouseMoved', x, y });
+      res.json({ success: true, result: `Hovered at (${x}, ${y}) in target page.` });
+    } catch (e: any) {
+      res.json({ success: false, error: e.message });
+    }
+  });
+
+  // POST /api/cdp/type — type text into focused element
+  app.post("/api/cdp/type", async (req, res) => {
+    try {
+      if (!cdpConnected) return res.json({ success: false, error: 'CDP not connected.' });
+      const { text } = req.body;
+      if (!text) return res.json({ success: false, error: 'Missing text.' });
+      await cdpSend('Input.insertText', { text: String(text) });
+      res.json({ success: true, result: `Typed "${String(text).slice(0, 200)}"${String(text).length > 200 ? '…' : ''} in target page.` });
+    } catch (e: any) {
+      res.json({ success: false, error: e.message });
+    }
+  });
+
+  // POST /api/cdp/press_key
+  app.post("/api/cdp/press_key", async (req, res) => {
+    try {
+      if (!cdpConnected) return res.json({ success: false, error: 'CDP not connected.' });
+      const { key } = req.body;
+      if (!key) return res.json({ success: false, error: 'Missing key.' });
+
+      const parts = String(key).split('+').map(k => k.trim().toLowerCase());
+      const mainKeyRaw = parts.pop() || '';
+
+      const keyMap: Record<string, { windowsVirtualKeyCode: number }> = {
+        Enter: { windowsVirtualKeyCode: 13 },
+        Tab: { windowsVirtualKeyCode: 9 },
+        Escape: { windowsVirtualKeyCode: 27 },
+        Backspace: { windowsVirtualKeyCode: 8 },
+        Delete: { windowsVirtualKeyCode: 46 },
+        ArrowUp: { windowsVirtualKeyCode: 38 },
+        ArrowDown: { windowsVirtualKeyCode: 40 },
+        ArrowLeft: { windowsVirtualKeyCode: 37 },
+        ArrowRight: { windowsVirtualKeyCode: 39 },
+        Home: { windowsVirtualKeyCode: 36 },
+        End: { windowsVirtualKeyCode: 35 },
+        PageUp: { windowsVirtualKeyCode: 33 },
+        PageDown: { windowsVirtualKeyCode: 34 },
+        Space: { windowsVirtualKeyCode: 32 },
+      };
+
+      const k = mainKeyRaw.length === 1 ? mainKeyRaw.toUpperCase() : (mainKeyRaw.charAt(0).toUpperCase() + mainKeyRaw.slice(1));
+      const codeInfo = keyMap[k] || { windowsVirtualKeyCode: k.charCodeAt(0) };
+      
+      const ctrlKey = parts.includes('control') || parts.includes('ctrl');
+      const shiftKey = parts.includes('shift');
+      const altKey = parts.includes('alt');
+      const metaKey = parts.includes('meta') || parts.includes('command') || parts.includes('cmd');
+      
+      let modifiers = 0;
+      if (altKey) modifiers |= 1;
+      if (ctrlKey) modifiers |= 2;
+      if (metaKey) modifiers |= 4;
+      if (shiftKey) modifiers |= 8;
+
+      await cdpSend('Input.dispatchKeyEvent', {
+        type: 'keyDown',
+        windowsVirtualKeyCode: codeInfo.windowsVirtualKeyCode,
+        key: k,
+        modifiers
+      });
+      await cdpSend('Input.dispatchKeyEvent', {
+        type: 'keyUp',
+        windowsVirtualKeyCode: codeInfo.windowsVirtualKeyCode,
+        key: k,
+        modifiers
+      });
+      res.json({ success: true, result: `Pressed "${key}" in target page.` });
+    } catch (e: any) {
+      res.json({ success: false, error: e.message });
+    }
+  });
+
+  // POST /api/cdp/scroll
+  app.post("/api/cdp/scroll", async (req, res) => {
+    try {
+      if (!cdpConnected) return res.json({ success: false, error: 'CDP not connected.' });
+      const { dx, dy } = req.body;
+      const sx = Math.round((dx || 0) * 1000);
+      const sy = Math.round((dy || 0) * 1000);
+      await cdpSend('Input.synthesizeScrollGesture', {
+        x: 100, y: 100, xDistance: sx, yDistance: sy,
+        xOverscroll: 0, yOverscroll: 0,
+        preventFling: true, speedMultiplier: 0.5,
+      });
+      res.json({ success: true, result: `Scrolled by (${sx}, ${sy}) px in target page.` });
+    } catch (e: any) {
+      res.json({ success: false, error: e.message });
+    }
+  });
+
+  // POST /api/cdp/scroll_to
+  app.post("/api/cdp/scroll_to", async (req, res) => {
+    try {
+      if (!cdpConnected) return res.json({ success: false, error: 'CDP not connected.' });
+      const { frac } = req.body;
+      const f = Math.max(0, Math.min(1, Number(frac || 0)));
+      await cdpSend('Runtime.evaluate', {
+        expression: `window.scrollTo({ top: (document.documentElement.scrollHeight - window.innerHeight) * ${f}, behavior: 'instant' })`,
+      });
+      res.json({ success: true, result: `Scrolled to ${Math.round(f * 100)}% in target page.` });
+    } catch (e: any) {
+      res.json({ success: false, error: e.message });
+    }
+  });
+
+  // POST /api/cdp/navigate
+  app.post("/api/cdp/navigate", async (req, res) => {
+    try {
+      if (!cdpConnected) return res.json({ success: false, error: 'CDP not connected.' });
+      const { url } = req.body;
+      if (!url) return res.json({ success: false, error: 'Missing url.' });
+      await cdpSend('Page.navigate', { url: String(url) });
+      res.json({ success: true, result: `Navigated to ${url}.` });
+    } catch (e: any) {
+      res.json({ success: false, error: e.message });
+    }
+  });
+
+  // GET /api/cdp/content — read page text content
+  app.get("/api/cdp/content", async (_req, res) => {
+    try {
+      if (!cdpConnected) return res.json({ success: false, error: 'CDP not connected.' });
+      const title: any = await cdpSend('Runtime.evaluate', { expression: 'document.title' });
+      const url: any = await cdpSend('Runtime.evaluate', { expression: 'window.location.href' });
+      const body: any = await cdpSend('Runtime.evaluate', {
+        expression: `(function(){const n=document.body?.innerText||'';return n.substring(0,5000)+(n.length>5000?'\\n… (truncated)':'');})()`,
+      });
+      res.json({
+        success: true,
+        title: title?.result?.value || '',
+        url: url?.result?.value || '',
+        content: body?.result?.value || '',
+      });
+    } catch (e: any) {
+      res.json({ success: false, error: e.message });
+    }
+  });
+
+  // GET /api/cdp/structure — read interactive elements
+  app.get("/api/cdp/structure", async (_req, res) => {
+    try {
+      if (!cdpConnected) return res.json({ success: false, error: 'CDP not connected.' });
+      const result: any = await cdpSend('Runtime.evaluate', {
+        expression: `(function(){
+          const tags=['h1','h2','h3','h4','a','button','input','textarea','select','[role="button"]','[tabindex]'];
+          const seen=new Set(); const items=[];
+          for(const sel of tags){document.querySelectorAll(sel).forEach(el=>{
+            if(seen.has(el))return; const r=el.getBoundingClientRect();
+            if(r.top<innerHeight&&r.bottom>0&&r.width>0){
+              seen.add(el);
+              const tag=el.tagName.toLowerCase();
+              const t=(el.textContent||'').trim().slice(0,60);
+              const p=(el.placeholder||'');
+              items.push('<'+tag+'> "'+(t||p||tag)+'"');
+            }
+          });}
+          return items.slice(0,100).join('\\n')||'No interactive elements found.';
+        })()`,
+      });
+      res.json({ success: true, structure: result?.result?.value || '' });
+    } catch (e: any) {
+      res.json({ success: false, error: e.message });
     }
   });
 

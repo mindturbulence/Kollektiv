@@ -5,6 +5,8 @@ import { audioService } from '../../services/audioService';
 import AutocompleteSelect from '../AutocompleteSelect';
 import { InformationCircleIcon } from '../icons';
 import { ASSISTANT_VOICES, DEFAULT_MALE_VOICE, DEFAULT_FEMALE_VOICE, voiceGender } from '../../utils/assistantVoices';
+import McpSection from './McpSection';
+import CdpSection from './CdpSection';
 
 interface IntegrationsSectionProps {
     activeSubTab: string;
@@ -364,8 +366,10 @@ const IntegrationsSection: React.FC<IntegrationsSectionProps> = ({
     switch (activeSubTab) {
         case 'llm': return renderLLM();
         case 'assistant': return renderAssistant();
+        case 'mcp': return <McpSection activeSubTab={activeSubTab} settings={settings} handleSettingsChange={handleSettingsChange} />;
         case 'google': return renderGoogle();
         case 'youtube': return renderYouTube();
+        case 'cdp': return <CdpSection activeSubTab={activeSubTab} />;
         default: return null;
     }
 };

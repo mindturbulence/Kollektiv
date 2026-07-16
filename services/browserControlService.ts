@@ -30,6 +30,8 @@ class BrowserControlService {
     /** Grant control permission. Called when the user clicks "Allow" on the
      * permission prompt. */
     grant(): void {
+        if (this._permissionGranted) return;
+        console.debug('[BrowserControl] grant');
         this._permissionGranted = true;
         this.notify();
     }
@@ -37,6 +39,8 @@ class BrowserControlService {
     /** Revoke control permission. Called when the user clicks "Release" or
      * stops screen sharing. */
     revoke(): void {
+        if (!this._permissionGranted) return;
+        console.debug('[BrowserControl] revoke');
         this._permissionGranted = false;
         this.notify();
     }
@@ -198,8 +202,11 @@ class BrowserControlService {
         this.assertPermission();
         const { x, y } = this.captureToViewport(nx, ny);
         const el = this.elementAt(x, y);
+        const target = el || document.body;
         const opts: MouseEventInit = { bubbles: true, cancelable: true, view: window, clientX: x, clientY: y };
-        (el || document.body).dispatchEvent(new MouseEvent('mousemove', opts));
+        target.dispatchEvent(new MouseEvent('mousemove', opts));
+        target.dispatchEvent(new MouseEvent('mouseenter', opts));
+        target.dispatchEvent(new MouseEvent('mouseover', opts));
         return `Hovered at (${x}, ${y})`;
     }
 
@@ -265,9 +272,13 @@ class BrowserControlService {
         return `Typed "${text.slice(0, 200)}"${text.length > 200 ? '…' : ''}.`;
     }
 
-    /** Press a named key (Enter, Tab, Escape, ArrowUp, etc.) on the focused element. */
-    pressKey(key: string): string {
+    /** Press a named key (Enter, Tab, Escape, ArrowUp, etc.) or combinations (Control+C, Control+V) on the focused element. */
+    async pressKey(key: string): Promise<string> {
         this.assertPermission();
+        
+        const parts = key.split('+').map(k => k.trim().toLowerCase());
+        const mainKeyRaw = parts.pop() || '';
+        
         const validKeys = [
             'Enter', 'Tab', 'Escape', 'Backspace', 'Delete',
             'ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight',
@@ -276,10 +287,52 @@ class BrowserControlService {
             'F1', 'F2', 'F3', 'F4', 'F5', 'F6', 'F7', 'F8', 'F9', 'F10', 'F11', 'F12',
             'CapsLock', 'Space',
         ];
-        const k = key.charAt(0).toUpperCase() + key.slice(1);
-        if (!validKeys.includes(k) && k.length > 1) return `Error: unknown key "${key}". Valid: ${validKeys.slice(0, 15).join(', ')}…`;
+        
+        let k = mainKeyRaw.charAt(0).toUpperCase() + mainKeyRaw.slice(1);
+        if (mainKeyRaw.length === 1) {
+            k = mainKeyRaw.toLowerCase();
+        } else if (!validKeys.includes(k)) {
+            return `Error: unknown key "${mainKeyRaw}". Valid: ${validKeys.slice(0, 15).join(', ')}…`;
+        }
 
-        const opts = { key: k, code: k, bubbles: true, cancelable: true };
+        const ctrlKey = parts.includes('control') || parts.includes('ctrl');
+        const shiftKey = parts.includes('shift');
+        const altKey = parts.includes('alt');
+        const metaKey = parts.includes('meta') || parts.includes('command') || parts.includes('cmd');
+
+        if ((ctrlKey || metaKey) && mainKeyRaw === 'c') {
+            try {
+                const el = document.activeElement;
+                let textToCopy = '';
+                if (el instanceof HTMLInputElement || el instanceof HTMLTextAreaElement) {
+                    textToCopy = el.value.substring(el.selectionStart || 0, el.selectionEnd || 0);
+                } else {
+                    textToCopy = window.getSelection()?.toString() || '';
+                }
+                if (textToCopy) {
+                    await navigator.clipboard.writeText(textToCopy);
+                } else {
+                    document.execCommand('copy');
+                }
+                return `Pressed "${key}" and copied text to clipboard.`;
+            } catch (e) {
+                // Ignore errors and fall through to dispatching the event
+            }
+        }
+        
+        if ((ctrlKey || metaKey) && mainKeyRaw === 'v') {
+            try {
+                const text = await navigator.clipboard.readText();
+                if (text) {
+                    this.type(text);
+                    return `Pressed "${key}" and pasted text from clipboard.`;
+                }
+            } catch (e) {
+                // Ignore errors and fall through to dispatching the event
+            }
+        }
+
+        const opts = { key: k, code: k, bubbles: true, cancelable: true, ctrlKey, shiftKey, altKey, metaKey };
         document.activeElement?.dispatchEvent(new KeyboardEvent('keydown', opts));
         document.activeElement?.dispatchEvent(new KeyboardEvent('keypress', opts));
         document.activeElement?.dispatchEvent(new KeyboardEvent('keyup', opts));
@@ -297,7 +350,7 @@ class BrowserControlService {
             if (form instanceof HTMLFormElement) form.requestSubmit();
         }
 
-        return `Pressed "${k}".`;
+        return `Pressed "${key}".`;
     }
 
     /** Click a UI control by its `data-ai-id` (see readPageStructure output).

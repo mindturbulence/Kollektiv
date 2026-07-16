@@ -160,16 +160,6 @@ const Stage: React.FC<{ text: string; streaming?: boolean; wordTime?: number; on
     return <Underline text={word}>{word || ' '}</Underline>;
 };
 
-/** Shows at most `maxWords` words at a time — preserves only the last N
- * words of the text so the line never grows wider than the limit.
- * Updates instantly as the text prop changes, with no character-by-character
- * animation, so it always stays in sync with the assistant\'s speech. */
-const RollingCaption: React.FC<{ text: string; maxWords?: number }> = ({ text, maxWords = 6 }) => {
-    const words = text.trim().split(/\s+/).filter(Boolean);
-    const display = words.length <= maxWords ? text : words.slice(-maxWords).join(' ');
-    return <Underline text={display}>{display || ' '}</Underline>;
-};
-
 /** Terminal-style reveal of the command prompt: the sentence types out
  * character-by-character with a blinking cursor and a matching underline.
  * Used both for the very first boot and as the periodic idle reminder (see
@@ -203,6 +193,32 @@ const TerminalPrompt: React.FC<{ text: string; onDone?: () => void; maxWords?: n
         <Underline text={displayText}>
             {displayText}
             {!done && <span className="inline-block w-[0.5ch] h-[0.9em] bg-base-content align-middle ml-1 animate-pulse" />}
+        </Underline>
+    );
+};
+
+/** Typewriter reveal for the latest activity context line. Resets and starts
+ * typing from the beginning every time the text changes. */
+const TypewriterActivity: React.FC<{ text: string }> = ({ text }) => {
+    const [n, setN] = useState(0);
+    const prevRef = useRef(text);
+    if (prevRef.current !== text) {
+        prevRef.current = text;
+        setN(0);
+    }
+    const done = n >= text.length;
+    const shown = text.slice(0, n);
+
+    useEffect(() => {
+        if (done) return;
+        const t = setTimeout(() => setN(v => v + 1), 30);
+        return () => clearTimeout(t);
+    }, [n, done]);
+
+    return (
+        <Underline text={shown}>
+            {shown}
+            {!done && <span className="inline-block w-[0.5ch] h-[0.9em] bg-primary align-middle ml-1 animate-pulse" />}
         </Underline>
     );
 };
@@ -423,7 +439,20 @@ const AssistantPage: React.FC = () => {
                         )}
 
                         {displayMode === 'responding' && (
-                            <RollingCaption text={importantText} maxWords={6} />
+                            activity.length > 0 ? (
+                                <TypewriterActivity text={activity[activity.length - 1]} />
+                            ) : (
+                                <div className="flex gap-1">
+                                    {Array.from({ length: 5 }).map((_, i) => (
+                                        <motion.div
+                                            key={i}
+                                            className="w-4 h-1 bg-primary/60"
+                                            animate={{ opacity: [0.1, 1, 0.1] }}
+                                            transition={{ duration: 0.7, repeat: Infinity, delay: i * 0.09 }}
+                                        />
+                                    ))}
+                                </div>
+                            )
                         )}
 
                         <Sigil />

@@ -151,6 +151,7 @@ const DetailPanel: React.FC<{
                     onClick={() => onSend(prompt.prompt)}
                     className="btn btn-sm btn-ghost h-full rounded-none flex-1 tracking-wider text-primary border-1 disabled:opacity-30 disabled:cursor-not-allowed btn-snake"
                     title="Send to Refiner"
+                    data-ai-id="discovery-refine-btn"
                 >
                     <span /><span /><span /><span />
                     Refine
@@ -159,6 +160,7 @@ const DetailPanel: React.FC<{
                     onClick={() => onClipboardClip(prompt)}
                     className="btn btn-sm btn-ghost h-full rounded-none flex-1 tracking-wider text-primary border-1 disabled:opacity-30 disabled:cursor-not-allowed btn-snake"
                     title="Add to Clipboard"
+                    data-ai-id="discovery-clip-btn"
                 >
                     <span /><span /><span /><span />
                     Clip
@@ -520,6 +522,7 @@ const DiscoveryPage: React.FC<DiscoveryPageProps> = ({
                                 )}
                                 <input
                                     type="text"
+                                    data-ai-id="discovery-search"
                                     value={searchQuery}
                                     onChange={(e) => { audioService.playHover(); setSearchQuery(e.target.value); }}
                                     placeholder="SEARCH ARCHIVES..."
@@ -551,6 +554,7 @@ const DiscoveryPage: React.FC<DiscoveryPageProps> = ({
                                     {prompts.map((p, idx) => (
                                         <motion.div
                                             key={p.id}
+                                            data-ai-id={`discovery-prompt-${idx}`}
                                             variants={contentVariants}
                                             custom={idx * 0.05}
                                             initial="hidden"
@@ -574,6 +578,7 @@ const DiscoveryPage: React.FC<DiscoveryPageProps> = ({
 
                                     {hasMore && (
                                         <button
+                                            data-ai-id="discovery-load-more"
                                             onClick={handleLoadMore}
                                             disabled={isLoadingMore}
                                             className="w-full py-6 flex items-center justify-center gap-3 text-[12px] font-rajdhani uppercase tracking-[0.4em] text-base-content/20 hover:text-primary transition-colors border-b border-white/5"
