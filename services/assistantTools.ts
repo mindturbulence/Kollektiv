@@ -581,7 +581,7 @@ export const ASSISTANT_TOOLS: AssistantTool[] = [
         },
     },
     {
-        name: 'save_note',
+        name: 'save_file',
         description: "Save a text file (markdown, plain text, JSON, code) into the user's vault under the 'assistant' folder. The file appears in the Notes panel's FILES tab, where the user can download it to their PC. Use when the user asks to save, export, or write something to a file.",
         parameters: {
             type: 'object',
