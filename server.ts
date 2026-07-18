@@ -14,6 +14,18 @@ async function startServer() {
   // Explicit opt-in only: HOST=0.0.0.0 for containerized/cloud runs. Never inferred from PORT.
   const HOST = process.env.HOST || "127.0.0.1";
 
+  // Reject cross-origin browser requests. This server proxies traffic with
+  // auth headers (Google, Anthropic, MCP, CDP), so only the Kollektiv
+  // front-end served from this same host may call it. Same-origin GETs send
+  // no Origin header; same-origin POSTs send one that matches Host.
+  app.use((req, res, next) => {
+    const origin = req.headers.origin;
+    if (!origin) return next();
+    try {
+      if (new URL(origin).host === req.headers.host) return next();
+    } catch { /* malformed Origin falls through to 403 */ }
+    res.status(403).json({ error: "Cross-origin requests are not allowed" });
+  });
 
   // Proxy for Google Drive / Google APIs (Bypasses body parsing on GETs to avoid hangs)
   app.use("/google-api", async (req, res) => {
