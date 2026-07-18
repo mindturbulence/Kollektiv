@@ -151,6 +151,7 @@ const AppContent: React.FC = () => {
     const [isClippingPanelOpen, setIsClippingPanelOpen] = useState(false);
     const [isNotesPanelOpen, setIsNotesPanelOpen] = useState(false);
     const [isMediaPanelOpen, setIsMediaPanelOpen] = useState(false);
+    const [isWebViewerOpen, setIsWebViewerOpen] = useState(false);
     const [isChatPanelOpen, setIsChatPanelOpen] = useState(false);
     const [isLlmPanelOpen, setIsLlmPanelOpen] = useState(false);
     const [collapsedPanels, setCollapsedPanels] = useLocalStorage<Record<string, boolean>>('collapsedPanels', {});
@@ -451,6 +452,20 @@ const AppContent: React.FC = () => {
         return () => { navigateSub(); sendToSub(); feedbackSub(); };
     }, [handleNavigate, handleSendToPromptsPage, showGlobalFeedback]);
 
+    // Close web viewer on tab navigation
+    useEffect(() => {
+        return appEventBus.on('navigate', () => {
+            setIsWebViewerOpen(false);
+        });
+    }, []);
+
+    // Open web viewer when assistant calls open_web_page
+    useEffect(() => {
+        return appEventBus.on('openWebPage', () => {
+            setIsWebViewerOpen(true);
+        });
+    }, []);
+
     useEffect(() => {
         return appEventBus.on('openMediaPanel', (payload: { url: string }) => {
             if (payload?.url) {
@@ -561,6 +576,8 @@ const AppContent: React.FC = () => {
     const handleToggleNotesPanel = useCallback(() => setIsNotesPanelOpen(prev => !prev), []);
     const handleToggleMediaPanel = useCallback(() => setIsMediaPanelOpen(prev => !prev), []);
     const handleCloseMediaPanel = useCallback(() => setIsMediaPanelOpen(false), []);
+    const handleToggleWebViewer = useCallback(() => setIsWebViewerOpen(prev => !prev), []);
+    const handleCloseWebViewer = useCallback(() => setIsWebViewerOpen(false), []);
     const handleToggleChatPanel = useCallback(() => setIsChatPanelOpen(prev => {
         if (!prev) appEventBus.emit('navigate', 'dashboard');
         return !prev;
@@ -704,6 +721,7 @@ const AppContent: React.FC = () => {
                                 onToggleNotesPanel={handleToggleNotesPanel}
                                 onToggleMediaPanel={handleToggleMediaPanel}
                                 onToggleChatPanel={handleToggleChatPanel}
+                                onToggleWebViewer={handleToggleWebViewer}
                                 onStandbyClick={goIdle}
                                 clippedIdeasCount={clippedIdeas.length + notesCount + filesCount}
                             />
@@ -760,7 +778,11 @@ const AppContent: React.FC = () => {
                                         isOpen={isMediaPanelOpen}
                                         onClose={handleCloseMediaPanel}
                                     />
-                                    <WebViewerPanel />
+
+                                    <WebViewerPanel
+                                        isOpen={isWebViewerOpen}
+                                        onClose={handleCloseWebViewer}
+                                    />
                                 </div>
                             </main>
 
