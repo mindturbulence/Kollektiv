@@ -3,7 +3,8 @@ import type { LLMSettings } from '../../types';
 import { SettingRow, SettingsGroup, ProviderTab } from './primitives';
 import { audioService } from '../../services/audioService';
 import AutocompleteSelect from '../AutocompleteSelect';
-import { InformationCircleIcon } from '../icons';
+import { DEFAULT_ANTHROPIC_MODEL } from '../../constants/llmDefaults';
+import { InformationCircleIcon, SparklesIcon } from '../icons';
 import { ASSISTANT_VOICES, DEFAULT_MALE_VOICE, DEFAULT_FEMALE_VOICE, voiceGender } from '../../utils/assistantVoices';
 import McpSection from './McpSection';
 import CdpSection from './CdpSection';
@@ -82,7 +83,7 @@ const IntegrationsSection: React.FC<IntegrationsSectionProps> = ({
                                 <input type="password" value={settings.anthropicApiKey || ''} onChange={(e) => handleSettingsChange('anthropicApiKey', e.target.value)} className="form-input w-full md:w-[620px]" placeholder="sk-ant-api03-..." />
                             </SettingRow>
                             <SettingRow label="Model Target" desc="The Anthropic Claude model to invoke.">
-                                <select value={settings.anthropicModel || 'claude-3-7-sonnet-20250219'} onChange={(e) => handleSettingsChange('anthropicModel', e.target.value)} className="form-select w-full md:w-[620px]">
+                                <select value={settings.anthropicModel || DEFAULT_ANTHROPIC_MODEL} onChange={(e) => handleSettingsChange('anthropicModel', e.target.value)} className="form-select w-full md:w-[620px]">
                                     <option value="claude-3-7-sonnet-20250219">Claude 3.7 Sonnet (Latest)</option>
                                     <option value="claude-3-5-sonnet-latest">Claude 3.5 Sonnet</option>
                                     <option value="claude-3-5-haiku-latest">Claude 3.5 Haiku (Fast)</option>
@@ -99,7 +100,7 @@ const IntegrationsSection: React.FC<IntegrationsSectionProps> = ({
                                 <input type="password" value={settings.anthropicSubscriptionKey || ''} onChange={(e) => handleSettingsChange('anthropicSubscriptionKey', e.target.value)} className="form-input w-full md:w-[620px]" placeholder="TOKEN_OR_SESSION_KEY" />
                             </SettingRow>
                             <SettingRow label="Model Target" desc="The Claude model identification to send to the custom proxy.">
-                                <select value={settings.anthropicModel || 'claude-3-7-sonnet-20250219'} onChange={(e) => handleSettingsChange('anthropicModel', e.target.value)} className="form-select w-full md:w-[620px]">
+                                <select value={settings.anthropicModel || DEFAULT_ANTHROPIC_MODEL} onChange={(e) => handleSettingsChange('anthropicModel', e.target.value)} className="form-select w-full md:w-[620px]">
                                     <option value="claude-3-7-sonnet">Claude 3.7 Sonnet</option>
                                     <option value="claude-3-5-sonnet">Claude 3.5 Sonnet</option>
                                     <option value="claude-3-5-haiku">Claude 3.5 Haiku</option>
@@ -363,6 +364,46 @@ const IntegrationsSection: React.FC<IntegrationsSectionProps> = ({
                     </div>
     );
 
+    const renderTensorArt = () => (
+        <div className="flex flex-col animate-fade-in">
+            <SettingsGroup title="Tensor Art Configuration">
+                <SettingRow label="API Access Key" desc="Your Tensor Art Access Key from tensor.art/settings/access-key. Starts with ak_tensor (global) or ak_tusi (China).">
+                    <input
+                        type="password"
+                        value={settings.tensorartApiKey || ''}
+                        onChange={(e) => handleSettingsChange('tensorartApiKey', e.target.value)}
+                        className="form-input w-full md:w-[620px]"
+                        placeholder="ak_tensor_..."
+                    />
+                </SettingRow>
+                <SettingRow label="Available Models" desc="Browse available generation models on Tensor Art.">
+                    <a
+                        href="https://tensor.art/models"
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="form-btn px-6 inline-flex items-center gap-2"
+                        onClick={() => audioService.playClick()}
+                    >
+                        <SparklesIcon className="w-4 h-4" />
+                        BROWSE MODELS
+                    </a>
+                </SettingRow>
+            </SettingsGroup>
+            <SettingsGroup title="Usage">
+                <div className="p-4 bg-info/5 border border-info/20 space-y-2">
+                    <p className="text-[10px] font-black uppercase text-info tracking-widest leading-tight">HOW IT WORKS</p>
+                    <p className="text-[10px] font-bold leading-relaxed text-base-content/60">
+                        Once configured, the AI assistant can generate images and videos by calling Tensor Art models.
+                        Just tell the assistant what you want — it will pick the right model, write the prompt, and deliver the result.
+                    </p>
+                    <p className="text-[10px] font-bold leading-relaxed text-base-content/60 mt-2">
+                        Examples: <em>"Create an image of a cyberpunk city using Flux"</em> or <em>"Make a video of a waterfall"</em>.
+                    </p>
+                </div>
+            </SettingsGroup>
+        </div>
+    );
+
     switch (activeSubTab) {
         case 'llm': return renderLLM();
         case 'assistant': return renderAssistant();
@@ -370,6 +411,7 @@ const IntegrationsSection: React.FC<IntegrationsSectionProps> = ({
         case 'google': return renderGoogle();
         case 'youtube': return renderYouTube();
         case 'cdp': return <CdpSection activeSubTab={activeSubTab} />;
+        case 'tensorart': return renderTensorArt();
         default: return null;
     }
 };

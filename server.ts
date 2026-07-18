@@ -5,6 +5,7 @@ import http from "http";
 import multer from "multer";
 import { execFile } from "child_process";
 import fs from "fs";
+import { DEFAULT_ANTHROPIC_MODEL } from "./constants/llmDefaults";
 
 
 
@@ -402,7 +403,7 @@ async function startServer() {
       });
 
       const requestBody: any = {
-        model: settings.anthropicModel || 'claude-3-7-sonnet-20250219',
+        model: settings.anthropicModel || DEFAULT_ANTHROPIC_MODEL,
         messages: formattedMessages,
         max_tokens: 4096,
         stream: stream !== false
