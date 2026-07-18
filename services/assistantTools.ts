@@ -362,6 +362,20 @@ export const ASSISTANT_TOOLS: AssistantTool[] = [
         },
     },
     {
+        name: 'play_media',
+        description: 'Open a YouTube video or Spotify track/playlist in the in-app Media Panel so the USER can watch or listen. Use when the user asks to play a song, show a video, or play media from a link.',
+        parameters: {
+            type: 'object',
+            properties: { url: { type: 'string', description: 'The full YouTube or Spotify URL to play.' } },
+            required: ['url'],
+        },
+        execute: ({ url }) => {
+            try { new URL(String(url)); } catch { return 'Error: invalid URL.'; }
+            appEventBus.emit('openMediaPanel', { url: String(url) });
+            return `Opened ${url} in the media panel — playing now.`;
+        },
+    },
+    {
         name: 'save_file',
         description: "Save a text file (markdown, plain text, JSON, code) into the user's vault under the 'assistant' folder. The file appears in the Notes panel's FILES tab, where the user can download it to their PC. Use when the user asks to save, export, or write something to a file.",
         parameters: {

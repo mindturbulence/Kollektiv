@@ -7,7 +7,7 @@ import RollingText from './RollingText';
 import TimedScrambledText from './TimedScrambledText';
 import ThemeSwitcher from './ThemeSwitcher';
 import ChromaticText from './ChromaticText';
-import { InformationCircleIcon, BookmarkIcon, Cog6ToothIcon, PowerIcon, ChatBubbleIcon } from './icons';
+import { InformationCircleIcon, BookmarkIcon, Cog6ToothIcon, PowerIcon, ChatBubbleIcon, NoteIcon, FilmIcon } from './icons';
 import { HUDNavItem } from './HUDNavItem';
 import { LiveAssistantMicButton, LiveAssistantScreenButton, LiveAssistantControlButton, LiveAssistantFault } from './LiveAssistantBar';
 
@@ -17,6 +17,8 @@ interface HeaderProps {
   isInitialized?: boolean;
   onAboutClick: () => void;
   onToggleClippingPanel: () => void;
+  onToggleNotesPanel?: () => void;
+  onToggleMediaPanel?: () => void;
   onStandbyClick: (e: React.MouseEvent) => void;
   clippedIdeasCount: number;
   onToggleChatPanel?: () => void;
@@ -113,6 +115,8 @@ const Header: React.FC<HeaderProps> = ({
   isInitialized,
   onAboutClick,
   onToggleClippingPanel,
+  onToggleNotesPanel,
+  onToggleMediaPanel,
   onToggleChatPanel,
   onStandbyClick,
   clippedIdeasCount
@@ -321,6 +325,28 @@ const Header: React.FC<HeaderProps> = ({
             title="Chat"
           >
             <ChatBubbleIcon className="w-4 h-4" />
+          </HUDNavItem>
+          <div className="w-px h-2 bg-base-content/10 self-center" />
+          <HUDNavItem
+            onClick={(e) => {
+              e.stopPropagation();
+              audioService.playClick();
+              onToggleNotesPanel?.();
+            }}
+            title="Assistant Notes & Files"
+          >
+            <NoteIcon className="w-4 h-4" />
+          </HUDNavItem>
+          <div className="w-px h-2 bg-base-content/10 self-center" />
+          <HUDNavItem
+            onClick={(e) => {
+              e.stopPropagation();
+              audioService.playClick();
+              onToggleMediaPanel?.();
+            }}
+            title="Media Player"
+          >
+            <FilmIcon className="w-4 h-4" />
           </HUDNavItem>
 
           <ThemeSwitcher />

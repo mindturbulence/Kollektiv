@@ -592,6 +592,15 @@ export const YouTubeIcon: React.FC<React.SVGProps<SVGSVGElement>> = (props) => (
   </svg>
 );
 
+export const MusicNoteIcon: React.FC<React.SVGProps<SVGSVGElement>> = (props) => (
+  <svg {...commonProps} {...props}>
+    <path stroke="none" d="M0 0h24v24H0z" fill="none"/>
+    <path d="M9 18v-12l10 -2v12" />
+    <path d="M9 18a3 3 0 1 0 -6 0a3 3 0 0 0 6 0" />
+    <path d="M19 16a3 3 0 1 0 -6 0a3 3 0 0 0 6 0" />
+  </svg>
+);
+
 export const InstagramIcon: React.FC<React.SVGProps<SVGSVGElement>> = (props) => (
     <svg {...commonProps} {...props}>
         <path stroke="none" d="M0 0h24v24H0z" fill="none"/>
