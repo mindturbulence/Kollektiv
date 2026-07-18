@@ -13,6 +13,63 @@ import { refinerPresetService } from './refinerPresetService';
 import { PROMPT_DETAIL_LEVELS } from '../constants/modifiers';
 import { listTools, createTask, pollTask } from './tensorartService';
 
+// Spotify token refresh helper
+async function refreshSpotifyToken(): Promise<string | null> {
+    const refreshToken = localStorage.getItem('spotify_refresh_token');
+    const expiresAt = parseInt(localStorage.getItem('spotify_expires_at') || '0', 10);
+    const clientId = (window as any).__SPOTIFY_CLIENT_ID || localStorage.getItem('spotify_client_id') || '';
+    
+    if (!refreshToken || !clientId) return null;
+    
+    // Check if token is still valid (with 30s buffer)
+    if (Date.now() < expiresAt - 30_000) {
+        return localStorage.getItem('spotify_access_token');
+    }
+    
+    try {
+        const params = new URLSearchParams({
+            grant_type: 'refresh_token',
+            refresh_token: refreshToken,
+            client_id: clientId,
+        });
+        
+        const res = await fetch('https://accounts.spotify.com/api/token', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+            body: params,
+        });
+        
+        if (!res.ok) {
+            console.error('Spotify token refresh failed:', await res.text());
+            return null;
+        }
+        
+        const data = await res.json();
+        localStorage.setItem('spotify_access_token', data.access_token);
+        if (data.refresh_token) localStorage.setItem('spotify_refresh_token', data.refresh_token);
+        localStorage.setItem('spotify_expires_at', String(Date.now() + data.expires_in * 1000));
+        
+        return data.access_token;
+    } catch (err) {
+        console.error('Spotify token refresh error:', err);
+        return null;
+    }
+}
+
+// Helper to get valid Spotify access token (auto-refreshes if needed)
+async function getSpotifyAccessToken(): Promise<string | null> {
+    const token = localStorage.getItem('spotify_access_token');
+    const expiresAt = parseInt(localStorage.getItem('spotify_expires_at') || '0', 10);
+    
+    // Token still valid (with 30s buffer)
+    if (token && Date.now() < expiresAt - 30_000) {
+        return token;
+    }
+    
+    // Try to refresh
+    return refreshSpotifyToken();
+}
+
 export interface ToolContext {
     settings: LLMSettings;
     /** Attachments on the user's current chat turn (images), if any. */
@@ -418,7 +475,7 @@ export const ASSISTANT_TOOLS: AssistantTool[] = [
         },
         execute: async ({ limit = 20 }) => {
             if (typeof window === 'undefined') return 'Error: This tool requires a browser environment.';
-            const token = localStorage.getItem('spotify_access_token');
+            const token = await getSpotifyAccessToken();
             if (!token) return 'Error: Spotify not connected. Go to Settings > Integrations > Spotify and link your account.';
             const max = Math.min(Math.max(1, Math.floor(limit)), 50);
             const res = await fetch(`https://api.spotify.com/v1/me/playlists?limit=${max}`, {
@@ -452,7 +509,7 @@ export const ASSISTANT_TOOLS: AssistantTool[] = [
         },
         execute: async ({ playlistId, limit = 50 }) => {
             if (typeof window === 'undefined') return 'Error: This tool requires a browser environment.';
-            const token = localStorage.getItem('spotify_access_token');
+            const token = await getSpotifyAccessToken();
             if (!token) return 'Error: Spotify not connected. Go to Settings > Integrations > Spotify and link your account.';
             const max = Math.min(Math.max(1, Math.floor(limit)), 100);
             const res = await fetch(`https://api.spotify.com/v1/playlists/${playlistId}/tracks?limit=${max}`, {
