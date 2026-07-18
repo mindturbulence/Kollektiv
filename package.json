@@ -14,12 +14,16 @@
     "build": "vite build",
     "lint": "tsc --noEmit",
     "test": "vitest run",
+    "test:e2e": "playwright test",
     "preview": "vite preview",
     "predeploy": "pnpm run build",
-    "deploy": "gh-pages -d dist"
+    "deploy": "gh-pages -d dist",
+    "obsidian:mcp": "cross-env OBSIDIAN_API_KEY=8597a7e3c1ef8e9c7b830c198886fdfbd5c06bca92a2bf194643e36f2066a2e0 OBSIDIAN_BASE_URL=https://127.0.0.1:27124 OBSIDIAN_VERIFY_SSL=false npx obsidian-mcp-server@latest",
+    "obsidian:mcp:http": "cross-env OBSIDIAN_API_KEY=8597a7e3c1ef8e9c7b830c198886fdfbd5c06bca92a2bf194643e36f2066a2e0 OBSIDIAN_BASE_URL=https://127.0.0.1:27124 OBSIDIAN_VERIFY_SSL=false MCP_TRANSPORT_TYPE=http MCP_HTTP_PORT=3012 npx obsidian-mcp-server@latest"
   },
   "packageManager": "pnpm@11.5.3",
   "dependencies": {
+    "@apify/actors-mcp-server": "^0.11.6",
     "@babel/generator": "^7.29.0",
     "@dsnp/parquetjs": "^1.8.8",
     "@ffmpeg/ffmpeg": "^0.12.6",
@@ -36,6 +40,7 @@
     "jszip": "^3.10.1",
     "mammoth": "^1.12.0",
     "motion": "^12.38.0",
+    "multer": "^2.2.0",
     "pdfjs-dist": "^5.7.284",
     "react": "^19.1.1",
     "react-dom": "^19.1.1",
@@ -45,13 +50,16 @@
     "uuid": "^9.0.1"
   },
   "devDependencies": {
+    "@playwright/test": "^1.61.1",
     "@types/express": "^5.0.6",
+    "@types/multer": "^2.2.0",
     "@types/node": "^20.12.12",
     "@types/react": "^18.3.3",
     "@types/react-dom": "^18.3.0",
     "@typescript-eslint/parser": "^8.63.0",
     "@vitejs/plugin-react": "^4.3.1",
     "autoprefixer": "^10.4.19",
+    "cross-env": "^10.1.0",
     "daisyui": "^4.12.10",
     "eslint": "^10.6.0",
     "eslint-plugin-react-hooks": "^7.1.1",

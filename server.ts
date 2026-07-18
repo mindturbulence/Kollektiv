@@ -3,7 +3,7 @@ import { createServer as createViteServer } from "vite";
 import path from "path";
 import http from "http";
 import multer from "multer";
-import { execFile } from "child_process";
+import { execFile, spawn } from "child_process";
 import fs from "fs";
 import { DEFAULT_ANTHROPIC_MODEL } from "./constants/llmDefaults";
 
@@ -1103,6 +1103,45 @@ async function startServer() {
       res.sendFile(path.join(distPath, 'index.html'));
     });
   }
+
+  // Start Obsidian MCP server as child process
+  let obsidianMcpProc: ReturnType<typeof spawn> | null = null;
+  const startObsidianMcp = () => {
+    if (obsidianMcpProc) return;
+    const env = {
+      ...process.env,
+      OBSIDIAN_API_KEY: "8597a7e3c1ef8e9c7b830c198886fdfbd5c06bca92a2bf194643e36f2066a2e0",
+      OBSIDIAN_BASE_URL: "https://127.0.0.1:27124",
+      OBSIDIAN_VERIFY_SSL: "false",
+      MCP_TRANSPORT_TYPE: "http",
+      MCP_HTTP_PORT: "3012",
+    };
+    obsidianMcpProc = spawn("npx", ["-y", "obsidian-mcp-server@latest"], {
+      env,
+      shell: true, // needed on Windows
+      stdio: ["ignore", "pipe", "pipe"],
+    });
+    obsidianMcpProc.stdout?.on("data", (d) => console.log(`[Obsidian MCP] ${d.toString().trim()}`));
+    obsidianMcpProc.stderr?.on("data", (d) => console.error(`[Obsidian MCP] ${d.toString().trim()}`));
+    obsidianMcpProc.on("exit", (code) => {
+      console.log(`[Obsidian MCP] exited with code ${code}`);
+      obsidianMcpProc = null;
+    });
+    console.log(`[Obsidian MCP] starting on http://127.0.0.1:3012/mcp`);
+  };
+
+  startObsidianMcp();
+
+  // Cleanup on shutdown
+  const shutdown = () => {
+    if (obsidianMcpProc) {
+      console.log(`[Obsidian MCP] shutting down...`);
+      obsidianMcpProc.kill();
+    }
+    process.exit(0);
+  };
+  process.on("SIGINT", shutdown);
+  process.on("SIGTERM", shutdown);
 
   app.listen(PORT, HOST, () => {
     console.log(`Server running on http://${HOST}:${PORT}`);
