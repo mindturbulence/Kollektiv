@@ -498,7 +498,7 @@ export const buildMidjourneyParams = (modifiers: PromptModifiers): string => {
     return params.join(' ');
 };
 
-async function* stripReasoningTags(stream: AsyncGenerator<string>): AsyncGenerator<string> {
+export async function* stripReasoningTags(stream: AsyncGenerator<string>): AsyncGenerator<string> {
     let inThought = false;
     for await (const chunk of stream) {
         let processChunk = chunk;
