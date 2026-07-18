@@ -31,7 +31,7 @@ export const externalBrowserService = {
         _captureH = h;
     },
 
-    async status(): Promise<{ connected: boolean; targetId: string | null; targetTitle: string | null }> {
+    async status(): Promise<{ connected: boolean; chromeAvailable: boolean; targetId: string | null; targetTitle: string | null }> {
         const data = await api('/api/cdp/status');
         _connected = data.connected;
         _targetId = data.targetId;

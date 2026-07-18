@@ -31,7 +31,7 @@ class BrowserControlService {
      * permission prompt. */
     grant(): void {
         if (this._permissionGranted) return;
-        console.debug('[BrowserControl] grant');
+        console.debug('[BrowserControl] grant — caller:', new Error().stack?.split('\n').slice(2).join('\n'));
         this._permissionGranted = true;
         this.notify();
     }
@@ -40,7 +40,7 @@ class BrowserControlService {
      * stops screen sharing. */
     revoke(): void {
         if (!this._permissionGranted) return;
-        console.debug('[BrowserControl] revoke');
+        console.debug('[BrowserControl] revoke — caller:', new Error().stack?.split('\n').slice(2).join('\n'));
         this._permissionGranted = false;
         this.notify();
     }

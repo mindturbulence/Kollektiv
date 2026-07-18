@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useCallback } from 'react';
+import React, { useEffect, useState, useCallback, useRef } from 'react';
 import type { CDPTarget } from '../../services/externalBrowserService';
 import { externalBrowserService } from '../../services/externalBrowserService';
 import { audioService } from '../../services/audioService';
@@ -23,20 +23,45 @@ export const CdpSection: React.FC<CdpSectionProps> = ({ activeSubTab }) => {
     const [feedback, setFeedback] = useState<{ ok: boolean; msg: string } | null>(null);
     const [copied, setCopied] = useState(false);
 
+    // Track whether Chrome was explicitly verified reachable by the user.
+    // This is our source of truth for showing the targets list — the server's
+    // `cdpConnected` flag only becomes true AFTER a target WebSocket opens,
+    // so we can't rely on polling to determine "Chrome reachable" state.
+    const chromeAvailableRef = useRef(false);
+
     const showFeedback = (ok: boolean, msg: string) => {
         setFeedback({ ok, msg });
         setTimeout(() => setFeedback(null), 4000);
     };
 
+    // Poll the server for CDP target connection status only.
+    // Never downgrades "chromeAvailable" state — that's only cleared by
+    // explicit user disconnect. This prevents the 3s poll from reverting
+    // the UI to "disconnected" between Connect and target selection.
     const refreshStatus = useCallback(async () => {
         try {
             const st = await externalBrowserService.status();
-            setConnState(st.connected ? 'connected' : 'disconnected');
-            if (st.connected) setSelectedId(st.targetId);
+            if (st.connected) {
+                // Full CDP WebSocket to a target is active.
+                chromeAvailableRef.current = true;
+                setConnState('connected');
+                setSelectedId(st.targetId);
+            } else if (chromeAvailableRef.current && selectedId) {
+                // We had a target selected but the WebSocket dropped.
+                // Chrome is still reachable — keep connected state, just
+                // clear the active target.
+                setSelectedId(null);
+                showFeedback(false, 'Browser tab disconnected. Select a new target.');
+            } else if (!chromeAvailableRef.current && !st.chromeAvailable) {
+                // Never connected and Chrome not reachable — idle.
+                setConnState('disconnected');
+            }
         } catch {
-            setConnState('disconnected');
+            if (!chromeAvailableRef.current) {
+                setConnState('disconnected');
+            }
         }
-    }, []);
+    }, [selectedId]);
 
     useEffect(() => {
         refreshStatus();
@@ -50,16 +75,19 @@ export const CdpSection: React.FC<CdpSectionProps> = ({ activeSubTab }) => {
         try {
             const result = await externalBrowserService.connect(port);
             if (result.success) {
+                chromeAvailableRef.current = true;
                 setConnState('connected');
                 setBrowserInfo(result.browser || null);
                 showFeedback(true, `Connected — ${result.browser || 'Chrome instance'}`);
                 const tResult = await externalBrowserService.getTargets(port);
                 if (tResult.success) setTargets(tResult.targets || []);
             } else {
+                chromeAvailableRef.current = false;
                 setConnState('disconnected');
                 showFeedback(false, result.error || 'Connection failed');
             }
         } catch (e: any) {
+            chromeAvailableRef.current = false;
             setConnState('disconnected');
             showFeedback(false, e.message || 'Connection error');
         }
@@ -83,6 +111,7 @@ export const CdpSection: React.FC<CdpSectionProps> = ({ activeSubTab }) => {
     const handleDisconnect = async () => {
         try {
             await externalBrowserService.disconnect();
+            chromeAvailableRef.current = false;
             setConnState('disconnected');
             setBrowserInfo(null);
             setTargets([]);
@@ -110,27 +139,37 @@ export const CdpSection: React.FC<CdpSectionProps> = ({ activeSubTab }) => {
         });
     };
 
+    // Determine which status badge to show.
+    // 'connected' can mean either Chrome is reachable (no target yet) or
+    // a full CDP target WebSocket is active.
+    const statusText = (() => {
+        if (connState === 'connected' && selectedId) return 'TARGET ACTIVE';
+        if (connState === 'connected') return 'CHROME READY';
+        if (connState === 'error') return 'ERROR';
+        if (connState === 'unknown') return 'CHECKING...';
+        return 'DISCONNECTED';
+    })();
+
+    const isConnected = connState === 'connected';
+
     return (
         <div className="flex flex-col animate-fade-in pb-12">
             <SettingsGroup title="Connection">
                 <SettingRow label="Status" desc="Live connection state to the Chrome DevTools Protocol endpoint.">
                     <div className="flex items-center gap-3">
                         <span className={`flex items-center gap-2 text-[10px] font-black uppercase tracking-widest px-3 py-1.5 border ${
-                            connState === 'connected' ? 'bg-success/5 border-success/30 text-success' :
+                            isConnected ? (selectedId ? 'bg-success/5 border-success/30 text-success' : 'bg-info/5 border-info/30 text-info') :
                             connState === 'error' ? 'bg-error/5 border-error/30 text-error' :
                             connState === 'unknown' ? 'bg-warning/5 border-warning/30 text-warning' :
                             'bg-base-300/30 border-base-content/20 text-base-content/40'
                         }`}>
                             <span className={`w-1.5 h-1.5 rounded-full ${
-                                connState === 'connected' ? 'bg-success' :
+                                isConnected ? (selectedId ? 'bg-success' : 'bg-info') :
                                 connState === 'error' ? 'bg-error' :
                                 connState === 'unknown' ? 'bg-warning' :
                                 'bg-base-content/30'
-                            } ${connState === 'connected' ? 'animate-pulse' : ''}`} />
-                            {connState === 'connected' ? 'CONNECTED' :
-                             connState === 'error' ? 'ERROR' :
-                             connState === 'unknown' ? 'CHECKING...' :
-                             'DISCONNECTED'}
+                            } ${isConnected ? 'animate-pulse' : ''}`} />
+                            {statusText}
                         </span>
                         {browserInfo && (
                             <span className="text-[9px] font-mono text-base-content/40 truncate max-w-[200px]">
@@ -149,9 +188,9 @@ export const CdpSection: React.FC<CdpSectionProps> = ({ activeSubTab }) => {
                             className="form-input w-28"
                             min={1024}
                             max={65535}
-                            disabled={connState === 'connected'}
+                            disabled={isConnected}
                         />
-                        {connState === 'connected' ? (
+                        {isConnected ? (
                             <button onClick={() => { audioService.playClick(); handleDisconnect(); }} className="form-btn text-error px-4 flex items-center gap-2">
                                 <PowerIcon className="w-3.5 h-3.5" /> DISCONNECT
                             </button>
@@ -165,7 +204,7 @@ export const CdpSection: React.FC<CdpSectionProps> = ({ activeSubTab }) => {
                 </SettingRow>
             </SettingsGroup>
 
-            {connState === 'connected' && (
+            {isConnected && (
                 <SettingsGroup title="Browser Tabs">
                     <div className="px-6 py-3 border-b border-base-content/10 flex justify-end">
                         <button onClick={() => { audioService.playClick(); handleRefreshTargets(); }} className="flex items-center gap-1.5 text-[9px] font-black uppercase tracking-widest text-base-content/30 hover:text-primary transition-colors">

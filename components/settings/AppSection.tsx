@@ -14,8 +14,9 @@ interface AppSectionProps {
     handleSettingsChange: (field: keyof LLMSettings, value: any) => void;
     showGlobalFeedback: (message: string, isError?: boolean) => void;
     setActiveSubTab: (tab: string) => void;
-    handleAuthConnect: (mode: 'youtube' | 'google') => void;
+    handleAuthConnect: (mode: 'youtube' | 'google' | 'spotify') => void;
     handleGoogleDisconnect: () => void;
+    handleSpotifyDisconnect: () => void;
     isSyncing: boolean;
     setIsSyncing: (v: boolean) => void;
     isWorking: boolean;

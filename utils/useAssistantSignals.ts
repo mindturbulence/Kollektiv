@@ -27,6 +27,16 @@ export function useAssistantSignals(): AssistantSignals {
     const [activity, setActivity] = useState<string[]>([]);
     const lastActivityAt = useRef(0);
     const lastUserCaptionAt = useRef(0);
+    const wasSpeakingRef = useRef(speaking);
+
+    // Clear assistant text when the assistant stops speaking — prevents the
+    // last utterance from lingering on screen after the AI goes quiet.
+    useEffect(() => {
+        if (wasSpeakingRef.current && !speaking) {
+            setAssistantText('');
+        }
+        wasSpeakingRef.current = speaking;
+    }, [speaking]);
 
     useEffect(() => {
         if (status === 'idle' || status === 'error') return;

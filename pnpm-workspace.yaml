@@ -2,3 +2,5 @@ allowBuilds:
   '@google/genai': false
   esbuild: false
   protobufjs: false
+minimumReleaseAgeExclude:
+  - '@apify/actors-mcp-server@0.11.6'

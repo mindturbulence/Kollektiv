@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useLayoutEffect, useRef, useMemo, useCallback } from 'react';
 import { motion } from 'motion/react';
 import { gsap } from 'gsap';
-import type { LLMSettings, ActiveSettingsTab, PromptCategory, YouTubeConnection, GoogleIdentityConnection } from '../types';
+import type { LLMSettings, ActiveSettingsTab, PromptCategory, YouTubeConnection, GoogleIdentityConnection, SpotifyConnection } from '../types';
 import { testOllamaConnection, type OllamaTestResult } from '../services/llmService';
 import { testLlamaCppConnection, type LlamaCppTestResult } from '../services/llamacppService';
 import { fileSystemManager } from '../utils/fileUtils';
@@ -132,14 +132,15 @@ export const SetupPage: React.FC<SetupPageProps> = ({
     const navRefs = useRef<Record<string, HTMLAnchorElement | null>>({});
     const tokenClientRef = useRef<any>(null);
     const lastClientIdRef = useRef<string | null>(null);
-    const authModeRef = useRef<'youtube' | 'google'>('google');
+    const authModeRef = useRef<'youtube' | 'google' | 'spotify'>('google');
+    const codeVerifierRef = useRef<string | null>(null);
     const authTimeoutRef = useRef<number | null>(null);
     const navScrollRef = useRef<HTMLDivElement>(null);
     const mainScrollRef = useRef<HTMLDivElement>(null);
 
     const playSuccessChime = useCallback(() => { audioService.playSuccess(); }, []);
 
-    const handleAuthResponse = useCallback(async (accessToken: string, mode: 'youtube' | 'google') => {
+    const handleAuthResponse = useCallback(async (accessToken: string, mode: 'youtube' | 'google' | 'spotify') => {
         if (authTimeoutRef.current) { window.clearTimeout(authTimeoutRef.current); authTimeoutRef.current = null; }
         try {
             if (mode === 'youtube') {
@@ -160,6 +161,24 @@ export const SetupPage: React.FC<SetupPageProps> = ({
                     setSettings(updatedSettings); updateSettings(updatedSettings); playSuccessChime();
                     showGlobalFeedback(`YouTube Linked: ${channel.snippet.title}`);
                 }
+                } else if (mode === 'spotify') {
+                const response = await fetch('https://api.spotify.com/v1/me', {
+                    headers: { 'Authorization': `Bearer ${accessToken}` }
+                });
+                if (!response.ok) throw new Error("Spotify profile fetch failed.");
+                const user = await response.json();
+                const updatedSpotify: SpotifyConnection = {
+                    isConnected: true,
+                    displayName: user.display_name,
+                    email: user.email,
+                    accessToken: accessToken,
+                    refreshToken: localStorage.getItem('spotify_refresh_token') || undefined,
+                    expiresAt: parseInt(localStorage.getItem('spotify_expires_at') || '0') || undefined,
+                    connectedAt: Date.now(),
+                };
+                const updatedSettings = { ...settings, spotify: updatedSpotify };
+                setSettings(updatedSettings); updateSettings(updatedSettings); playSuccessChime();
+                showGlobalFeedback(`Spotify Linked: ${user.display_name}`);
             } else {
                 const response = await fetch('/google-api/oauth2/v3/userinfo', {
                     headers: { 'Authorization': `Bearer ${accessToken}` }
@@ -215,7 +234,40 @@ export const SetupPage: React.FC<SetupPageProps> = ({
         return () => { if (authTimeoutRef.current) window.clearTimeout(authTimeoutRef.current); }
     }, [settings.youtube?.customClientId, initGsi]);
 
-    const handleAuthConnect = (mode: 'youtube' | 'google') => {
+    // PKCE helpers for Spotify OAuth
+    const generateCodeVerifier = (): string => {
+        const array = new Uint8Array(32);
+        crypto.getRandomValues(array);
+        return btoa(String.fromCharCode(...array))
+            .replace(/\+/g, '-')
+            .replace(/\//g, '_')
+            .replace(/=/g, '');
+    };
+
+    const generateCodeChallenge = async (codeVerifier: string): Promise<string> => {
+        const encoder = new TextEncoder();
+        const data = encoder.encode(codeVerifier);
+        const digest = await crypto.subtle.digest('SHA-256', data);
+        return btoa(String.fromCharCode(...new Uint8Array(digest)))
+            .replace(/\+/g, '-')
+            .replace(/\//g, '_')
+            .replace(/=/g, '');
+    };
+
+    const handleAuthConnect = async (mode: 'youtube' | 'google' | 'spotify') => {
+        if (mode === 'spotify') {
+            const clientId = settings.spotify?.customClientId || process.env.SPOTIFY_CLIENT_ID || '';
+            if (!clientId || clientId.includes('PLACEHOLDER')) { showGlobalFeedback("Configuration Error: Missing Spotify Client ID in Settings.", true); return; }
+            // PKCE flow for Spotify
+            const codeVerifier = generateCodeVerifier();
+            const codeChallenge = await generateCodeChallenge(codeVerifier);
+            codeVerifierRef.current = codeVerifier;
+            const redirectUri = `${window.location.origin}/auth/spotify/callback`;
+            const scope = 'user-read-private user-read-email playlist-read-private playlist-read-collaborative user-library-read streaming user-read-playback-state user-modify-playback-state';
+            const authUrl = `https://accounts.spotify.com/authorize?response_type=code&client_id=${clientId}&redirect_uri=${encodeURIComponent(redirectUri)}&scope=${encodeURIComponent(scope)}&code_challenge_method=S256&code_challenge=${codeChallenge}&show_dialog=true`;
+            window.location.href = authUrl;
+            return;
+        }
         const clientId = settings.youtube?.customClientId || process.env.YOUTUBE_CLIENT_ID;
         if (!clientId || clientId.includes('PLACEHOLDER')) { showGlobalFeedback("Configuration Error: Missing Google Client ID in Settings.", true); return; }
         authModeRef.current = mode;
@@ -233,7 +285,88 @@ export const SetupPage: React.FC<SetupPageProps> = ({
         showGlobalFeedback('Cloud Identity revoked.');
     };
 
+    const handleSpotifyDisconnect = () => {
+        const updatedSpotify: SpotifyConnection = { isConnected: false };
+        const updatedSettings = { ...settings, spotify: updatedSpotify };
+        setSettings(updatedSettings); updateSettings(updatedSettings);
+        // Clear localStorage
+        if (typeof window !== 'undefined') {
+            localStorage.removeItem('spotify_access_token');
+            localStorage.removeItem('spotify_refresh_token');
+            localStorage.removeItem('spotify_expires_at');
+        }
+        showGlobalFeedback('Spotify disconnected.');
+    };
+
     useEffect(() => { setSettings(globalSettings); }, [globalSettings]);
+
+    // Handle Spotify OAuth callback
+    useEffect(() => {
+        const params = new URLSearchParams(window.location.search);
+        const code = params.get('code');
+        const error = params.get('error');
+        
+        if (code && !error) {
+            // Clean up URL
+            window.history.replaceState({}, document.title, window.location.pathname);
+            
+            const codeVerifier = codeVerifierRef.current;
+            if (!codeVerifier) {
+                showGlobalFeedback("Spotify auth error: missing code verifier.", true);
+                return;
+            }
+            
+            const clientId = settings.spotify?.customClientId || process.env.SPOTIFY_CLIENT_ID || '';
+            const redirectUri = `${window.location.origin}/auth/spotify/callback`;
+            
+            fetch('https://accounts.spotify.com/api/token', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+                body: new URLSearchParams({
+                    grant_type: 'authorization_code',
+                    code,
+                    redirect_uri: redirectUri,
+                    client_id: clientId,
+                    code_verifier: codeVerifier,
+                }),
+            })
+            .then(res => res.json())
+            .then(async (data) => {
+                if (data.error) throw new Error(data.error_description || data.error);
+                
+                // Store tokens
+                localStorage.setItem('spotify_access_token', data.access_token);
+                localStorage.setItem('spotify_refresh_token', data.refresh_token);
+                localStorage.setItem('spotify_expires_at', String(Date.now() + data.expires_in * 1000));
+                
+                // Fetch user profile
+                const profileRes = await fetch('https://api.spotify.com/v1/me', {
+                    headers: { 'Authorization': `Bearer ${data.access_token}` }
+                });
+                const user = await profileRes.json();
+                
+                const updatedSpotify: SpotifyConnection = {
+                    isConnected: true,
+                    displayName: user.display_name,
+                    email: user.email,
+                    accessToken: data.access_token,
+                    refreshToken: data.refresh_token,
+                    expiresAt: Date.now() + data.expires_in * 1000,
+                    connectedAt: Date.now(),
+                };
+                const updatedSettings = { ...settings, spotify: updatedSpotify };
+                setSettings(updatedSettings);
+                updateSettings(updatedSettings);
+                showGlobalFeedback(`Spotify Linked: ${user.display_name}`);
+            })
+            .catch(err => {
+                console.error('Spotify callback error:', err);
+                showGlobalFeedback(`Spotify auth failed: ${err.message}`, true);
+            });
+        } else if (error) {
+            showGlobalFeedback(`Spotify auth error: ${error}`, true);
+        }
+    }, [settings, updateSettings, showGlobalFeedback]);
 
     useEffect(() => {
         const subTabs = subMenuConfig[activeSettingsTab] || [];
@@ -246,6 +379,10 @@ export const SetupPage: React.FC<SetupPageProps> = ({
         setSettings(updated);
         if (['youtube', 'googleIdentity', 'dashboardImageUrl', 'dashboardVideoUrl', 'darkTheme', 'mcpServers'].includes(field)) updateSettings(updated);
         if (field === 'fontSize' && typeof window !== 'undefined') (window as any).document.documentElement.style.fontSize = `${value}px`;
+        // Update YouTube API key on window for assistant tools
+        if (field === 'youtube' && value?.customApiKey && typeof window !== 'undefined') {
+            (window as any).__YOUTUBE_API_KEY = value.customApiKey;
+        }
     }, [settings, updateSettings]);
 
     const handleMultipleSettingsChange = useCallback((updates: Partial<LLMSettings>) => {
@@ -386,6 +523,7 @@ export const SetupPage: React.FC<SetupPageProps> = ({
                         setActiveSubTab={setActiveSubTab}
                         handleAuthConnect={handleAuthConnect}
                         handleGoogleDisconnect={handleGoogleDisconnect}
+                        handleSpotifyDisconnect={handleSpotifyDisconnect}
                         isSyncing={isSyncing}
                         setIsSyncing={setIsSyncing}
                         isWorking={isWorking}
@@ -416,6 +554,7 @@ export const SetupPage: React.FC<SetupPageProps> = ({
                         handleSettingsChange={handleSettingsChange}
                         handleAuthConnect={handleAuthConnect}
                         handleGoogleDisconnect={handleGoogleDisconnect}
+                        handleSpotifyDisconnect={handleSpotifyDisconnect}
                         isTestingOllama={isTestingOllama}
                         ollamaTestResult={ollamaTestResult}
                         isTestingLlamaCpp={isTestingLlamaCpp}

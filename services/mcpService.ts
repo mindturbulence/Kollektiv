@@ -25,19 +25,69 @@ export interface MCPResource {
   mimeType?: string;
 }
 
-// Track per-server MCP session initialization
-const initializedSessions = new Set<string>();
+// Track per-server MCP session state
+interface SessionState {
+  initialized: boolean;
+  sessionId?: string;
+}
+const sessionStates = new Map<string, SessionState>();
+
+/**
+ * Parse an SSE (Server-Sent Events) response text and extract JSON from data: fields.
+ */
+function parseSseResponse(sseText: string): { sessionId?: string; jsonData?: any; error?: string } {
+  let lastEventId: string | undefined;
+  let jsonData: string | undefined;
+
+  for (const line of sseText.split('\n')) {
+    if (line.startsWith('id: ')) {
+      lastEventId = line.slice(4).trim();
+    } else if (line.startsWith('data: ')) {
+      const dataStr = line.slice(6).trim();
+      if (dataStr) {
+        jsonData = dataStr;
+      }
+    }
+  }
+
+  if (jsonData) {
+    try {
+      const parsed = JSON.parse(jsonData);
+      if (parsed.error) {
+        return { sessionId: lastEventId, error: parsed.error.message || JSON.stringify(parsed.error), jsonData: parsed };
+      }
+      return { sessionId: lastEventId, jsonData: parsed };
+    } catch {
+      return { sessionId: lastEventId, jsonData: undefined, error: 'Failed to parse SSE JSON data' };
+    }
+  }
+
+  // Check for plain JSON responses (some servers fall back to this)
+  const trimmed = sseText.trim();
+  if (trimmed.startsWith('{') && trimmed.endsWith('}')) {
+    try {
+      const parsed = JSON.parse(trimmed);
+      if (parsed.error) {
+        return { error: parsed.error.message || JSON.stringify(parsed.error), jsonData: parsed };
+      }
+      return { jsonData: parsed };
+    } catch {
+      // not json
+    }
+  }
+
+  return { sessionId: lastEventId, error: undefined };
+}
 
 /**
  * Perform the MCP initialize handshake so the server accepts tools/list etc.
- * The bridge maintains a persistent stdio connection; once initialized the
- * session stays initialized for subsequent calls.
  */
 async function ensureSession(url: string, headers?: Record<string, string>): Promise<void> {
-  if (initializedSessions.has(url)) return;
+  const state = sessionStates.get(url);
+  if (state?.initialized) return;
 
   const initResult = await rawRequest(url, 'initialize', {
-    protocolVersion: '0.1.0',
+    protocolVersion: '2025-11-25',
     capabilities: {},
     clientInfo: { name: 'kollektiv', version: '1.0.0' },
   }, headers);
@@ -46,9 +96,15 @@ async function ensureSession(url: string, headers?: Record<string, string>): Pro
     throw new Error(initResult.error || 'MCP initialize handshake failed');
   }
 
-  await rawRequest(url, 'notifications/initialized', {}, headers);
+  // Send notifications/initialized — fire-and-forget. Some servers (e.g. Apify)
+  // don't support it and return an error; that's fine, we ignore it.
+  try {
+    await rawRequest(url, 'notifications/initialized', {}, headers);
+  } catch {
+    // notification ignored by server — not an error
+  }
 
-  initializedSessions.add(url);
+  sessionStates.set(url, { initialized: true, sessionId: initResult.sessionId });
 }
 
 /**
@@ -59,16 +115,21 @@ async function rawRequest(
   method: string,
   params: Record<string, any> = {},
   headers?: Record<string, string>,
-): Promise<{ success: boolean; data?: any; error?: string }> {
+): Promise<{ success: boolean; data?: any; error?: string; sessionId?: string }> {
   const cleanUrl = url.trim();
   let mcpHostname = '';
   try { mcpHostname = new URL(cleanUrl).hostname; } catch {}
 
   const mergedHeaders: Record<string, string> = {
     'Content-Type': 'application/json',
-    'Accept': 'application/json',
+    'Accept': 'application/json, text/event-stream',
     ...headers,
   };
+
+  const sessionState = sessionStates.get(cleanUrl);
+  if (sessionState?.sessionId) {
+    mergedHeaders['mcp-session-id'] = sessionState.sessionId;
+  }
 
   const jsonRpcPayload: Record<string, any> = { jsonrpc: '2.0', id: Date.now(), method, params };
   if (method === 'notifications/initialized') {
@@ -83,6 +144,47 @@ async function rawRequest(
                       mcpHostname.startsWith('192.168.') ||
                       mcpHostname.startsWith('10.');
 
+  async function handleResponse(response: Response): Promise<{ success: boolean; data?: any; error?: string; sessionId?: string }> {
+    // Extract session ID from response headers (Streamable HTTP)
+    const responseSessionId = response.headers.get('mcp-session-id') || undefined;
+
+    // If session ID changed, store it
+    if (responseSessionId && responseSessionId !== sessionState?.sessionId) {
+      const existing = sessionStates.get(cleanUrl) || { initialized: false };
+      sessionStates.set(cleanUrl, { ...existing, sessionId: responseSessionId });
+    }
+
+    const contentType = response.headers.get('content-type') || '';
+    const text = await response.text();
+
+    if (!text.trim()) {
+      return { success: true, data: {}, sessionId: responseSessionId };
+    }
+
+    if (contentType.includes('text/event-stream')) {
+      // Streamable HTTP: parse SSE response
+      const parsed = parseSseResponse(text);
+      if (parsed.error) {
+        return { success: false, error: parsed.error, sessionId: parsed.sessionId || responseSessionId };
+      }
+      if (parsed.jsonData) {
+        return { success: true, data: parsed.jsonData, sessionId: parsed.sessionId || responseSessionId };
+      }
+      return { success: true, data: {}, sessionId: parsed.sessionId || responseSessionId };
+    }
+
+    // Regular JSON response
+    try {
+      const parsed = JSON.parse(text);
+      if (parsed.error) {
+        return { success: false, error: parsed.error.message || JSON.stringify(parsed.error), sessionId: responseSessionId };
+      }
+      return { success: true, data: parsed, sessionId: responseSessionId };
+    } catch {
+      return { success: false, error: 'Invalid response from MCP server', sessionId: responseSessionId };
+    }
+  }
+
   if (isLocalHost) {
     try {
       const response = await fetch(cleanUrl, {
@@ -90,11 +192,7 @@ async function rawRequest(
         headers: mergedHeaders,
         body,
       });
-      if (response.ok) {
-        const text = await response.text();
-        if (!text) return { success: true, data: {} };
-        return { success: true, data: JSON.parse(text) };
-      }
+      return await handleResponse(response);
     } catch {
       // fall through to proxy
     }
@@ -103,17 +201,35 @@ async function rawRequest(
   const response = await fetch('/api/mcp/proxy', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ url: cleanUrl, method, params, headers }),
+    body: JSON.stringify({
+      url: cleanUrl,
+      method,
+      params,
+      headers: mergedHeaders,
+    }),
   });
 
-  if (!response.ok) return { success: false, error: `HTTP error ${response.status}` };
-  return await response.json();
+  if (!response.ok) {
+    return { success: false, error: `HTTP error ${response.status}` };
+  }
+
+  // Parse proxy response (proxy normalizes SSE to JSON)
+  try {
+    const proxyResult = await response.json();
+    return {
+      success: proxyResult.success !== false,
+      data: proxyResult.data,
+      error: proxyResult.error,
+      sessionId: proxyResult.sessionId,
+    };
+  } catch {
+    return { success: false, error: 'Invalid proxy response' };
+  }
 }
 
 /**
  * Base helper to issue MCP request with automatic session initialization.
- * Retries initialization once if the server rejects the request with a
- * "session initialization" error (e.g. after bridge restart).
+ * Retries initialization once if the server rejects the request.
  */
 async function executeMcpRequest(
   serverUrl: string,
@@ -123,8 +239,8 @@ async function executeMcpRequest(
 ): Promise<any> {
   await ensureSession(serverUrl, headers);
   const result = await rawRequest(serverUrl, method, params, headers);
-  if (!result.success && result.error?.includes?.('session initialization')) {
-    initializedSessions.delete(serverUrl);
+  if (!result.success && result.error?.toLowerCase?.().includes?.('session')) {
+    sessionStates.delete(serverUrl);
     await ensureSession(serverUrl, headers);
     return rawRequest(serverUrl, method, params, headers);
   }

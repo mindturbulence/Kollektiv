@@ -376,7 +376,155 @@ export const ASSISTANT_TOOLS: AssistantTool[] = [
         },
     },
     {
+        name: 'youtube_search',
+        description: 'Search YouTube for videos and return a list of results with title, channel, video ID, and URL. Use when the user asks to find or search for a video.',
+        parameters: {
+            type: 'object',
+            properties: {
+                query: { type: 'string', description: 'Search query for YouTube.' },
+                maxResults: { type: 'number', description: 'Maximum number of results (default 5, max 10).' },
+            },
+            required: ['query'],
+        },
+        execute: async ({ query, maxResults = 5 }) => {
+            const { appControlService } = await import('./appControlService');
+            const apiKey = appControlService.getYouTubeApiKey?.();
+            if (!apiKey) {
+                return 'Error: YouTube API key not configured. Go to Settings > Integrations > YouTube to add your API key.';
+            }
+            const q = encodeURIComponent(String(query));
+            const max = Math.min(Math.max(1, Math.floor(maxResults)), 10);
+            const res = await fetch(`https://www.googleapis.com/youtube/v3/search?part=snippet&type=video&q=${q}&maxResults=${max}&key=${apiKey}`);
+            if (!res.ok) return `Error: YouTube search failed (${res.status}).`;
+            const data = await res.json();
+            const items = data.items || [];
+            return JSON.stringify(items.map((item: any) => ({
+                title: item.snippet.title,
+                channel: item.snippet.channelTitle,
+                videoId: item.id.videoId,
+                url: `https://www.youtube.com/watch?v=${item.id.videoId}`,
+                thumbnail: item.snippet.thumbnails.medium?.url,
+            })));
+        },
+    },
+    {
+        name: 'spotify_list_playlists',
+        description: 'List the authenticated user\'s Spotify playlists. Requires Spotify to be connected in Settings > Integrations > Spotify.',
+        parameters: {
+            type: 'object',
+            properties: {
+                limit: { type: 'number', description: 'Maximum number of playlists to return (default 20).' },
+            },
+        },
+        execute: async ({ limit = 20 }) => {
+            if (typeof window === 'undefined') return 'Error: This tool requires a browser environment.';
+            const token = localStorage.getItem('spotify_access_token');
+            if (!token) return 'Error: Spotify not connected. Go to Settings > Integrations > Spotify and link your account.';
+            const max = Math.min(Math.max(1, Math.floor(limit)), 50);
+            const res = await fetch(`https://api.spotify.com/v1/me/playlists?limit=${max}`, {
+                headers: { 'Authorization': `Bearer ${token}` }
+            });
+            if (!res.ok) {
+                if (res.status === 401) return 'Error: Spotify token expired. Please reconnect in Settings.';
+                return `Error: Failed to fetch playlists (${res.status}).`;
+            }
+            const data = await res.json();
+            const items = data.items || [];
+            return JSON.stringify(items.map((pl: any) => ({
+                id: pl.id,
+                name: pl.name,
+                description: pl.description,
+                trackCount: pl.tracks?.total,
+                url: pl.external_urls?.spotify,
+            })));
+        },
+    },
+    {
+        name: 'spotify_get_playlist_tracks',
+        description: 'Get tracks from a Spotify playlist. Requires Spotify connected in Settings.',
+        parameters: {
+            type: 'object',
+            properties: {
+                playlistId: { type: 'string', description: 'Spotify playlist ID.' },
+                limit: { type: 'number', description: 'Maximum tracks to return (default 50).' },
+            },
+            required: ['playlistId'],
+        },
+        execute: async ({ playlistId, limit = 50 }) => {
+            if (typeof window === 'undefined') return 'Error: This tool requires a browser environment.';
+            const token = localStorage.getItem('spotify_access_token');
+            if (!token) return 'Error: Spotify not connected. Go to Settings > Integrations > Spotify and link your account.';
+            const max = Math.min(Math.max(1, Math.floor(limit)), 100);
+            const res = await fetch(`https://api.spotify.com/v1/playlists/${playlistId}/tracks?limit=${max}`, {
+                headers: { 'Authorization': `Bearer ${token}` }
+            });
+            if (!res.ok) {
+                if (res.status === 401) return 'Error: Spotify token expired. Please reconnect in Settings.';
+                return `Error: Failed to fetch tracks (${res.status}).`;
+            }
+            const data = await res.json();
+            const items = data.items || [];
+            return JSON.stringify(items.map((item: any) => ({
+                trackId: item.track?.id,
+                name: item.track?.name,
+                artists: item.track?.artists?.map((a: any) => a.name).join(', '),
+                album: item.track?.album?.name,
+                durationMs: item.track?.duration_ms,
+                url: item.track?.external_urls?.spotify,
+            })));
+        },
+    },
+    {
+        name: 'spotify_play',
+        description: 'Play a Spotify track, album, or playlist in the Media Panel. Requires Spotify connected in Settings.',
+        parameters: {
+            type: 'object',
+            properties: {
+                uri: { type: 'string', description: 'Spotify URI (e.g., spotify:track:..., spotify:album:..., spotify:playlist:...) or track/album/playlist ID.' },
+            },
+            required: ['uri'],
+        },
+        execute: ({ uri }) => {
+            if (typeof window === 'undefined') return 'Error: This tool requires a browser environment.';
+            const token = localStorage.getItem('spotify_access_token');
+            if (!token) return 'Error: Spotify not connected. Go to Settings > Integrations > Spotify and link your account.';
+            // Normalize URI
+            let spotifyUri = String(uri).trim();
+            if (!spotifyUri.startsWith('spotify:')) {
+                // Assume it's an ID, try to detect type from context or default to track
+                if (spotifyUri.includes(':')) spotifyUri = `spotify:track:${spotifyUri}`;
+                else spotifyUri = `spotify:track:${spotifyUri}`;
+            }
+            // Emit to open media panel with Spotify URI
+            appEventBus.emit('openMediaPanel', { url: spotifyUri, isSpotifyUri: true });
+            return `Playing ${spotifyUri} in the media panel.`;
+        },
+    },
+    {
         name: 'save_file',
+        description: "Save a text file (markdown, plain text, JSON, code) into the user's vault under the 'assistant' folder. The file appears in the Notes panel's FILES tab, where the user can download it to their PC. Use when the user asks to save, export, or write something to a file.",
+        parameters: {
+            type: 'object',
+            properties: {
+                filename: { type: 'string', description: "File name with extension, e.g. 'moodboard-ideas.md'. No folders or path separators." },
+                content: { type: 'string', description: 'Full text content of the file.' },
+            },
+            required: ['filename', 'content'],
+        },
+        execute: async ({ filename, content }) => {
+            const { fileSystemManager } = await import('../utils/fileUtils');
+            if (!fileSystemManager.isDirectorySelected()) {
+                return 'Error: no vault folder is connected &mdash; the user must connect one via the app setup (Welcome screen or Settings).';
+            }
+            const safe = String(filename).replace(/[\\/:*?"<>|]/g, '_').replace(/^\.+/, '').trim();
+            if (!safe) return 'Error: invalid filename.';
+            await fileSystemManager.saveFile(`assistant/${safe}`, new Blob([String(content)], { type: 'text/plain' }));
+            appEventBus.emit('assistantFilesChanged');
+            return `Saved to assistant/${safe} in the vault &mdash; visible in the Notes panel's FILES tab, downloadable from there.`;
+        },
+    },
+    {
+        name: 'save_note',
         description: "Save a text file (markdown, plain text, JSON, code) into the user's vault under the 'assistant' folder. The file appears in the Notes panel's FILES tab, where the user can download it to their PC. Use when the user asks to save, export, or write something to a file.",
         parameters: {
             type: 'object',

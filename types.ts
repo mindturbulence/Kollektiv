@@ -48,6 +48,18 @@ export interface YouTubeConnection {
   customApiKey?: string;
 }
 
+export interface SpotifyConnection {
+  isConnected: boolean;
+  displayName?: string;
+  email?: string;
+  accessToken?: string;
+  refreshToken?: string;
+  expiresAt?: number;
+  connectedAt?: number;
+  customClientId?: string;
+  customClientSecret?: string;
+}
+
 export interface GoogleIdentityConnection {
   isConnected: boolean;
   email?: string;
@@ -102,6 +114,9 @@ export interface LLMSettings {
   anthropicSubscriptionUrl?: string;
   anthropicSubscriptionKey?: string;
 
+  // Tensor Art Settings
+  tensorartApiKey?: string;
+
   // MCP Server Settings
   mcpServers: McpServerConfig[];
 
@@ -140,6 +155,7 @@ export interface LLMSettings {
   
   // Integrations
   youtube?: YouTubeConnection;
+  spotify?: SpotifyConnection;
   googleIdentity?: GoogleIdentityConnection;
   storageProvider?: 'local' | 'drive';
   driveFolderId?: string;

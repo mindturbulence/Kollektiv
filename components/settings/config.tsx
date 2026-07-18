@@ -1,6 +1,6 @@
 import React from 'react';
 import type { ActiveSettingsTab } from '../../types';
-import { Cog6ToothIcon, CpuChipIcon, AppIcon, PromptIcon, PhotoIcon, FolderClosedIcon, PaintBrushIcon, LinkIcon, PlayIcon, UploadIcon, ChatBubbleIcon, MonitorIcon } from '../icons';
+import { Cog6ToothIcon, CpuChipIcon, AppIcon, PromptIcon, PhotoIcon, FolderClosedIcon, PaintBrushIcon, LinkIcon, PlayIcon, UploadIcon, ChatBubbleIcon, MonitorIcon, SparklesIcon, MusicNoteIcon } from '../icons';
 
 export const subMenuConfig: Record<string, { id: string; label: string, icon: React.ReactNode, description: string }[]> = {
     app: [
@@ -18,7 +18,9 @@ export const subMenuConfig: Record<string, { id: string; label: string, icon: Re
         { id: 'mcp', label: 'MCP Servers', icon: <CpuChipIcon className="w-4 h-4" />, description: "Connect to Model Context Protocol servers for extended AI tools." },
         { id: 'google', label: 'Cloud Identity', icon: <LinkIcon className="w-4 h-4" />, description: "Link your Google account for Cloud AI." },
         { id: 'youtube', label: 'YouTube', icon: <PlayIcon className="w-4 h-4" />, description: "Manage YouTube API credentials." },
-        { id: 'cdp', label: 'Browser Bridge', icon: <MonitorIcon className="w-4 h-4" />, description: "External browser control via Chrome DevTools Protocol." }
+        { id: 'spotify', label: 'Spotify', icon: <MusicNoteIcon className="w-4 h-4" />, description: "Connect your Spotify account for playlists and playback." },
+        { id: 'cdp', label: 'Browser Bridge', icon: <MonitorIcon className="w-4 h-4" />, description: "External browser control via Chrome DevTools Protocol." },
+        { id: 'tensorart', label: 'Tensor Art', icon: <SparklesIcon className="w-4 h-4" />, description: "AI image and video generation via Tensor Art API." }
     ],
     prompt: [
         { id: 'categories', label: 'Prompt Folders', icon: <FolderClosedIcon className="w-4 h-4" />, description: "Organize prompt hierarchies." },

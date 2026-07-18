@@ -5,89 +5,274 @@ import { useAssistantSignals } from '../utils/useAssistantSignals';
 import { useSettings } from '../contexts/SettingsContext';
 import AssistantBackdrop from './AssistantBackdrop';
 
-// Get the translated prompt based on assistant language setting
+// ── Language helpers ────────────────────────────────────────────────
+// Map of language names to the lookup keys used in translation tables.
+// Supports both full names ("French") and ISO codes ("fr", "fr-fr").
+const LANGUAGE_ALIASES: Record<string, string> = {
+    // Full names → canonical ISO code
+    'english': 'en',
+    'spanish': 'es',
+    'french': 'fr',
+    'german': 'de',
+    'italian': 'it',
+    'portuguese': 'pt',
+    'russian': 'ru',
+    'japanese': 'ja',
+    'chinese': 'zh',
+    'chinese (simplified)': 'zh',
+    'chinese (traditional)': 'zh-tw',
+    'korean': 'ko',
+    'arabic': 'ar',
+    'hindi': 'hi',
+    'tagalog': 'tl',
+    'dutch': 'nl',
+    'polish': 'pl',
+    'turkish': 'tr',
+    'thai': 'th',
+    'vietnamese': 'vi',
+    'indonesian': 'id',
+    'swedish': 'sv',
+    'danish': 'da',
+    'norwegian': 'no',
+    'finnish': 'fi',
+    'czech': 'cs',
+    'romanian': 'ro',
+    'ukrainian': 'uk',
+    'greek': 'el',
+    'hebrew': 'he',
+    'hungarian': 'hu',
+};
+
+/** Resolve the user's assistantLanguage setting to a canonical lookup key
+ *  ("en", "es", "fr", …). Accepts full names ("French"), ISO codes ("fr"),
+ *  or locale variants ("fr-fr"). Falls back to "en". */
+const resolveLangKey = (language: string | undefined): string => {
+    const raw = (language || '').toLowerCase().trim();
+    if (!raw) return 'en';
+    // Direct match: ISO code
+    if (/^[a-z]{2}(-[a-z]{2,4})?$/.test(raw)) return raw.split('-')[0];
+    // Alias match: full name
+    return LANGUAGE_ALIASES[raw] || 'en';
+};
+
+/** All translated prompts, keyed by canonical language key ("en", "es", …). */
+const PROMPT_TRANSLATIONS: Record<string, string> = {
+    'en': 'WHAT ARE YOUR COMMANDS?',
+    'es': '¿CUÁLES SON TUS COMANDOS?',
+    'fr': 'QUELS SONT VOS COMMANDES ?',
+    'de': 'WAS SIND DEINE BEFEHLE?',
+    'it': 'QUALI SONO I TUOI COMANDI?',
+    'pt': 'QUAIS SÃO OS SEUS COMANDOS?',
+    'ru': 'КАКИЕ У ТЕБЯ КОМАНДЫ?',
+    'ja': 'あなたのコマンドは何ですか？',
+    'zh': '您的命令是什么？',
+    'zh-tw': '您的命令是什麼？',
+    'ko': '당신의 명령은 무엇입니까?',
+    'ar': 'مَا هِيَ أَوَامِرُكَ؟',
+    'hi': 'आपके आदेश क्या हैं?',
+    'tl': 'ANO ANG IYONG MGA UTOS?',
+    'nl': 'WAT ZIJN UW COMMANDO\'S?',
+    'pl': 'JAKIE SĄ TWOJE POLECENIA?',
+    'tr': 'EMİRLERİNİZ NELERDİR?',
+    'th': 'คำสั่งของคุณคืออะไร?',
+    'vi': 'LỆNH CỦA BẠN LÀ GÌ?',
+    'id': 'APA PERINTAH ANDA?',
+    'sv': 'VAD ÄR DINA KOMMANDON?',
+    'da': 'HVAD ER DINE KOMMANDOER?',
+    'no': 'HVA ER DINE KOMMANDOER?',
+    'fi': 'MITKÄ OVAT KOMENTOSI?',
+    'cs': 'JAKÉ JSOU VAŠE PŘÍKAZY?',
+    'ro': 'CARE SUNT COMENZILE TALE?',
+    'uk': 'ЯКІ ТВОЇ КОМАНДИ?',
+    'el': 'ΠΟΙΕΣ ΕΙΝΑΙ ΟΙ ΕΝΤΟΛΕΣ ΣΟΥ;',
+    'he': 'מָה הַפְּקֻדּוֹת שֶׁלְּךָ?',
+    'hu': 'MI A PARANCSOD?',
+};
+
 const getPrompt = (language: string | undefined): string => {
-    // Default to English if no language is set or not supported
-    const lang = (language || 'en').toLowerCase();
-    
-    // Simple translation map for the prompt
-    const translations: Record<string, string> = {
-        'en': 'WHAT ARE YOUR COMMANDS?',
-        'es': '¿CUÁLES SON TUS COMANDOS?',
-        'es-mx': '¿CUÁLES SON TUS COMANDOS?',
-        'es-es': '¿CUÁLES SON TUS COMANDOS?',
-        'fr': 'QUELS SONT VOS COMMANDES ?',
-        'fr-fr': 'QUELS SONT VOS COMMANDES ?',
-        'de': 'WAS SIND DEINE BEFEHLE?',
-        'de-de': 'WAS SIND DEINE BEFEHLE?',
-        'it': "QUALI SONO I TUOI COMANDI?",
-        'it-it': "QUALI SONO I TUOI COMANDI?",
-        'pt': 'QUAIS SÃO OS SEUS COMANDOS?',
-        'pt-br': 'QUAIS SÃO OS SEUS COMANDOS?',
-        'pt-pt': 'QUAIS SÃO OS SEUS COMANDOS?',
-        'ru': 'КАКИЕ У ТЕБЯ КОМАНДЫ?',
-        'ru-ru': 'КАКИЕ У ТЕБЯ КОМАНДЫ?',
-        'ja': 'あなたのコマンドは何ですか？',
-        'zh': '您的命令是什么？',
-        'zh-cn': '您的命令是什么？',
-        'zh-tw': '您的命令是什麼？',
-        'ko': '당신의 명령은 무엇입니까?',
-        'ko-kr': '당신의 명령은 무엇입니까?',
-        'ar': 'مَا هِيَ أَوْامِرُكَ؟',
-        'ar-sa': 'مَا هِيَ أَوْامِرُكَ؟',
-        'hi': 'आपके आदेश क्या हैं?',
-        'hi-in': 'आपके आदेश क्या हैं?',
-    };
-    
-    // Try to get exact match first, then try without locale variant, then default to English
-    return translations[lang] || 
-           translations[lang.split('-')[0]] || 
-           translations['en'];
+    const key = resolveLangKey(language);
+    return PROMPT_TRANSLATIONS[key] || PROMPT_TRANSLATIONS['en'];
 };
 
-const STOPWORDS = new Set([
-    'a', 'an', 'the', 'and', 'or', 'but', 'if', 'then', 'so', 'because', 'as', 'of', 'to', 'in', 'on', 'at', 'by',
-    'for', 'with', 'about', 'against', 'between', 'into', 'through', 'during', 'before', 'after', 'above', 'below',
-    'from', 'up', 'down', 'out', 'off', 'over', 'under', 'again', 'further', 'is', 'are', 'was', 'were', 'be',
-    'been', 'being', 'have', 'has', 'had', 'having', 'do', 'does', 'did', 'doing', 'will', 'would', 'shall',
-    'should', 'can', 'could', 'may', 'might', 'must', 'i', 'you', 'he', 'she', 'it', 'we', 'they', 'this', 'that',
-    'these', 'those', 'my', 'your', 'his', 'her', 'its', 'our', 'their', 'me', 'him', 'us', 'them', 'not', 'no',
-    'yes', 'just', 'very', 'really', 'also', 'too', 'there', 'here', 'what', 'which', 'who', 'whom', 'when',
-    'where', 'why', 'how', 'okay', 'ok', 'sure', 'well', 'like', 'get', 'got', 'gonna', 'going', 'let', 'lets',
-]);
-
-/** Picks the words worth putting on screen out of a full reply — content
- * words, acronyms, and numbers — instead of replaying the whole sentence
- * verbatim. A live reply is much longer than what a glanceable HUD needs,
- * and trying to reveal every single word in sync with speech is a losing
- * race; showing only what actually carries information keeps the reveal
- * short enough to stay calm and readable. */
-const pickImportant = (text: string): string => {
-    const words = text.trim() ? text.trim().split(/\s+/) : [];
-    return words.filter(w => {
-        const clean = w.replace(/[^a-zA-Z0-9']/g, '');
-        if (!clean) return false;
-        if (/\d/.test(clean)) return true;
-        if (clean.length >= 2 && clean.length <= 4 && clean === clean.toUpperCase() && /[A-Z]/.test(clean)) return true;
-        return clean.length >= 5 && !STOPWORDS.has(clean.toLowerCase());
-    }).join(' ');
+/**
+ * All 10 idle prompt variations translated into every supported language.
+ * Keyed by canonical language key, each entry is an array of 10 strings.
+ */
+const IDLE_VARIATIONS: Record<string, string[]> = {
+    'en': [
+        'WHAT ARE YOUR COMMANDS?',
+        'AWAITING YOUR INSTRUCTION.',
+        'READY FOR YOUR INPUT.',
+        'STANDING BY FOR ORDERS.',
+        'HOW MAY I BE OF SERVICE?',
+        'YOUR DIRECTIVE, PLEASE.',
+        'AT YOUR DISPOSAL.',
+        'INPUT YOUR COMMAND.',
+        'READY AND WAITING.',
+        'STATE YOUR REQUEST.',
+    ],
+    'es': [
+        '¿CUÁLES SON TUS COMANDOS?',
+        'ESPERANDO TU INSTRUCCIÓN.',
+        'LISTO PARA TU ENTRADA.',
+        'EN ESPERA DE ÓRDENES.',
+        '¿CÓMO PUEDO SERVIRTE?',
+        'TU DIRECTIVA, POR FAVOR.',
+        'A TU DISPOSICIÓN.',
+        'INGRESA TU COMANDO.',
+        'LISTO Y ESPERANDO.',
+        'FORMULA TU SOLICITUD.',
+    ],
+    'fr': [
+        'QUELS SONT VOS COMMANDES ?',
+        'EN ATTENTE DE VOTRE INSTRUCTION.',
+        'PRÊT POUR VOTRE SAISIE.',
+        'EN ATTENTE D\'ORDRES.',
+        'PUIS-JE VOUS ÊTRE UTILE ?',
+        'VOTRE DIRECTIVE, S\'IL VOUS PLAÎT.',
+        'À VOTRE DISPOSITION.',
+        'ENTREZ VOTRE COMMANDE.',
+        'PRÊT ET EN ATTENTE.',
+        'EXPOSEZ VOTRE DEMANDE.',
+    ],
+    'de': [
+        'WAS SIND DEINE BEFEHLE?',
+        'WARTE AUF DEINE ANWEISUNG.',
+        'BEREIT FÜR DEINE EINGABE.',
+        'IN BEREITSCHAFT FÜR BEFEHLE.',
+        'WIE KANN ICH DIR DIENEN?',
+        'DEINE ANWEISUNG, BITTE.',
+        'ZU DEINER VERFÜGUNG.',
+        'GIB DEINEN BEFEHL EIN.',
+        'BEREIT UND WARTEND.',
+        'NENNE DEIN ANLIEGEN.',
+    ],
+    'it': [
+        'QUALI SONO I TUOI COMANDI?',
+        'IN ATTESA DELLA TUA ISTRUZIONE.',
+        'PRONTO PER IL TUO INPUT.',
+        'IN ATTESA DI ORDINI.',
+        'COME POSSO ESSERLE UTILE?',
+        'LA TUA DIRETTIVA, PER PIACERE.',
+        'A TUA DISPOSIZIONE.',
+        'INSERISCI IL TUO COMANDO.',
+        'PRONTO E IN ATTESA.',
+        'ESPONI LA TUA RICHIESTA.',
+    ],
+    'pt': [
+        'QUAIS SÃO OS SEUS COMANDOS?',
+        'AGUARDANDO SUA INSTRUÇÃO.',
+        'PRONTO PARA SUA ENTRADA.',
+        'AGUARDANDO ORDENS.',
+        'COMO POSSO SER ÚTIL?',
+        'SUA DIRETIVA, POR FAVOR.',
+        'À SUA DISPOSIÇÃO.',
+        'INSIRA SEU COMANDO.',
+        'PRONTO E AGUARDANDO.',
+        'DECLARE SUA SOLICITAÇÃO.',
+    ],
+    'ru': [
+        'КАКИЕ У ТЕБЯ КОМАНДЫ?',
+        'ОЖИДАЮ ВАШЕЙ ИНСТРУКЦИИ.',
+        'ГОТОВ К ВАШЕМУ ВВОДУ.',
+        'ОЖИДАЮ ПРИКАЗОВ.',
+        'ЧЕМ МОГУ БЫТЬ ПОЛЕЗЕН?',
+        'ВАШЕ РАСПОРЯЖЕНИЕ, ПОЖАЛУЙСТА.',
+        'К ВАШИМ УСЛУГАМ.',
+        'ВВЕДИТЕ КОМАНДУ.',
+        'ГОТОВ И ЖДУ.',
+        'ИЗЛОЖИТЕ ЗАПРОС.',
+    ],
+    'ja': [
+        'あなたのコマンドは何ですか？',
+        '指示をお待ちしています。',
+        '入力を受け付ける準備ができています。',
+        '命令を待機中。',
+        'どのようなご用件でしょうか？',
+        '指示をお願いします。',
+        'ご自由にお使いください。',
+        'コマンドを入力してください。',
+        '準備完了、待機中。',
+        'リクエストをお伝えください。',
+    ],
+    'zh': [
+        '您的命令是什么？',
+        '等待您的指示。',
+        '准备接收您的输入。',
+        '待命听候指令。',
+        '我能为您效劳吗？',
+        '请下达指示。',
+        '随时为您效劳。',
+        '请输入命令。',
+        '准备就绪，等候中。',
+        '请提出您的请求。',
+    ],
+    'zh-tw': [
+        '您的命令是什麼？',
+        '等待您的指示。',
+        '準備接收您的輸入。',
+        '待命聽候指令。',
+        '我能為您效勞嗎？',
+        '請下達指示。',
+        '隨時為您效勞。',
+        '請輸入命令。',
+        '準備就緒，等候中。',
+        '請提出您的請求。',
+    ],
+    'ko': [
+        '당신의 명령은 무엇입니까?',
+        '지시를 기다리는 중입니다.',
+        '입력을 받을 준비가 되었습니다.',
+        '명령을 대기 중입니다.',
+        '무엇을 도와드릴까요?',
+        '지시를 내려주세요.',
+        '당신을 위해 대기 중입니다.',
+        '명령을 입력하세요.',
+        '준비 완료, 대기 중.',
+        '요청을 말씀해 주세요.',
+    ],
+    'ar': [
+        'مَا هِيَ أَوَامِرُكَ؟',
+        'فِي انتظَارِ تَعلِيمَاتِكَ.',
+        'جَاهِزٌ لِإدخَالِكَ.',
+        'فِي انتظَارِ الأَوَامِرِ.',
+        'كَيْفَ يُمكِنُنِي خِدمَتُكَ؟',
+        'تَوجِيهَاتُكَ، مِن فَضلِكَ.',
+        'تَحتَ تَصرُفِكَ.',
+        'أَدخِلْ أَمْرَكَ.',
+        'جَاهِزٌ ومُنتَظِرٌ.',
+        'اذكُرْ طَلَبَكَ.',
+    ],
+    'hi': [
+        'आपके आदेश क्या हैं?',
+        'आपके निर्देश की प्रतीक्षा है।',
+        'आपके इनपुट के लिए तैयार।',
+        'आदेशों की प्रतीक्षा में।',
+        'मैं आपकी कैसे सेवा कर सकता हूँ?',
+        'कृपया अपना निर्देश दें।',
+        'आपकी सेवा में।',
+        'अपना आदेश इनपुट करें।',
+        'तैयार और प्रतीक्षारत।',
+        'अपना अनुरोध बताएं।',
+    ],
+    'tl': [
+        'ANO ANG IYONG MGA UTOS?',
+        'HIHINTAY ANG IYONG TAGUBILIN.',
+        'HANDA NA PARA SA IYONG INPUT.',
+        'NAKAHANDA PARA SA UTOS.',
+        'PAANO KITA MAPAGLILINGKURAN?',
+        'ANG IYONG DIREKTIBO, PAKIUSAP.',
+        'NASA IYONG PAGASASA.',
+        'ILAGAY ANG IYONG UTOS.',
+        'HANDA AT NAGHIHINTAY.',
+        'SABIHIN ANG IYONG HILING.',
+    ],
 };
 
-/** 10 idle prompt variations. After 3 minutes of silence on the assistant
- * screen the last-words display is replaced with a randomly chosen one,
- * and it keeps cycling every 30 seconds for variety. */
-const COMMAND_VARIATIONS = [
-    'WHAT ARE YOUR COMMANDS?',
-    'AWAITING YOUR INSTRUCTION.',
-    'READY FOR YOUR INPUT.',
-    'STANDING BY FOR ORDERS.',
-    'HOW MAY I BE OF SERVICE?',
-    'YOUR DIRECTIVE, PLEASE.',
-    'AT YOUR DISPOSAL.',
-    'INPUT YOUR COMMAND.',
-    'READY AND WAITING.',
-    'STATE YOUR REQUEST.',
-];
+const getVariations = (language: string | undefined): string[] => {
+    const key = resolveLangKey(language);
+    return IDLE_VARIATIONS[key] || IDLE_VARIATIONS['en'];
+};
 
 /** CSS triangle in the theme accent color — the Samaritan sigil. Always on
  * screen, gently pulsing; it never collapses or hides. */
@@ -228,59 +413,12 @@ const TypewriterActivity: React.FC<{ text: string }> = ({ text }) => {
  * page navigates back to the dashboard when the session ends. The AI reply
  * streams as the large center text (no subtitle strip on this screen). */
 const AssistantPage: React.FC = () => {
-    const { mode, status, error, userText, assistantText, activity } = useAssistantSignals();
+    const { mode, status, error, userText, activity } = useAssistantSignals();
     const { settings } = useSettings();
     const PROMPT = getPrompt(settings.assistantLanguage);
+    const idleVariations = getVariations(settings.assistantLanguage);
 
-    // AI-translated idle variations: on mount the English COMMAND_VARIATIONS
-    // are sent to Gemini for a creative translation into the user's preferred
-    // language. English is shown as fallback while loading or on error.
-    const [localizedVariations, setLocalizedVariations] = useState<string[] | null>(null);
 
-    useEffect(() => {
-        const lang = settings.assistantLanguage;
-        if (!lang || lang === 'en' || lang.startsWith('en-')) {
-            setLocalizedVariations(COMMAND_VARIATIONS);
-            return;
-        }
-        setLocalizedVariations(null);
-        const apiKey = settings.geminiApiKey || process.env.GEMINI_API_KEY;
-        if (!apiKey) { setLocalizedVariations(COMMAND_VARIATIONS); return; }
-
-        let cancelled = false;
-        (async () => {
-            try {
-                const { getGeminiClient } = await import('../services/geminiService');
-                const ai = getGeminiClient({ geminiApiKey: apiKey } as any);
-                const result = await ai.models.generateContent({
-                    model: 'gemini-3.5-flash',
-                    contents: [{
-                        role: 'user',
-                        parts: [{
-                            text: `You are a creative translator. Below are 10 command prompts in English that a voice assistant shows on screen while waiting for the user to speak. Translate each one into ${lang}. Be creative and idiomatic — make them sound natural in ${lang}, not literal translations. Keep them short and uppercase (or the closest equivalent in ${lang}). Return ONLY the translations, one per line, in the same order, no numbering:\n\n${COMMAND_VARIATIONS.join('\n')}`
-                        }]
-                    }],
-                });
-                const text = result.text?.trim();
-                if (!cancelled && text) {
-                    const lines = text.split('\n').map(l => l.trim().replace(/^\d+[\.\)]\s*/, '')).filter(Boolean);
-                    setLocalizedVariations(lines.length === COMMAND_VARIATIONS.length ? lines : COMMAND_VARIATIONS);
-                } else if (!cancelled) {
-                    setLocalizedVariations(COMMAND_VARIATIONS);
-                }
-            } catch {
-                if (!cancelled) setLocalizedVariations(COMMAND_VARIATIONS);
-            }
-        })();
-        return () => { cancelled = true; };
-    }, [settings.assistantLanguage, settings.geminiApiKey]);
-
-    const idleVariations = localizedVariations ?? COMMAND_VARIATIONS;
-
-    // Only the words worth reading actually get displayed — see
-    // pickImportant. Kept in a ref too so the completion callback below
-    // (which fires from an effect, not a render) can read the latest value.
-    const importantText = pickImportant(assistantText);
 
     // displayMode follows `mode` directly — no hold mechanism since the
     // RollingCaption used for responding mode is stateless and updates
@@ -289,20 +427,6 @@ const AssistantPage: React.FC = () => {
 
     useEffect(() => {
         setDisplayMode(mode);
-    }, [mode]);
-
-    // The last word from the assistant's reply lingers in command mode.
-    // Tracked via mode transition rather than a TerminalPrompt callback,
-    // so the limit never depends on animation timing.
-    const lastWordRef = useRef('');
-    const prevModeRef2 = useRef(mode);
-
-    useEffect(() => {
-        if (prevModeRef2.current === 'responding' && mode !== 'responding') {
-            const words = importantText.trim().split(/\s+/).filter(Boolean);
-            lastWordRef.current = words[words.length - 1] || '';
-        }
-        prevModeRef2.current = mode;
     }, [mode]);
 
     // Tracks the last moment of actual conversation (responding, listening,
@@ -327,6 +451,12 @@ const AssistantPage: React.FC = () => {
     if (displayMode === 'command' && prevModeRef.current !== 'command') {
         commandViewRef.current = shownIntroRef.current ? 'idle' : 'intro';
         shownIntroRef.current = true;
+        // When the assistant finishes speaking (responding→command), immediately
+        // show an idle variation instead of a blank space.
+        if (prevModeRef.current === 'responding') {
+            setIdlePromptIndex(Math.floor(Math.random() * idleVariations.length));
+            setIdleShown(true);
+        }
     }
     prevModeRef.current = displayMode;
 
@@ -423,8 +553,6 @@ const AssistantPage: React.FC = () => {
                                 <TerminalPrompt text={PROMPT} />
                             ) : idleShown ? (
                                 <TerminalPrompt text={idleVariations[idlePromptIndex]} />
-                            ) : lastWordRef.current ? (
-                                <Underline text={lastWordRef.current}>{lastWordRef.current}</Underline>
                             ) : (
                                 <Underline text="">{' '}</Underline>
                             )

@@ -212,16 +212,221 @@ const ImageCard: React.FC<{
     )
 }
 
+type ProcessMode = 'standard' | 'ai_upscale';
+
 interface ImageResizerProps {
     isExiting?: boolean;
 }
 
+const MODEL_URL = 'https://huggingface.co/litert-community/real-esrgan-x4v3-litert/resolve/main/realesr_general_x4v3.tflite';
+
+/** Tile an image through Real-ESRGAN, returning a 4x upscaled ImageData. */
+const aiUpscaleImage = async (
+    imageData: ImageData,
+    model: any,
+    onProgress?: (done: number, total: number) => void,
+): Promise<ImageData> => {
+    // @ts-expect-error — CDN URL import; runtime loads from jsDelivr
+    const { Tensor } = await import('https://cdn.jsdelivr.net/npm/@litertjs/core/+esm');
+
+    const { width: srcW, height: srcH, data: px } = imageData;
+    const TILE = 128;
+    const SCALE = 4;
+
+    // Pad dimensions to multiples of TILE
+    const tilesX = Math.ceil(srcW / TILE);
+    const tilesY = Math.ceil(srcH / TILE);
+    const pw = tilesX * TILE;
+    const ph = tilesY * TILE;
+
+    // Output canvas (padded)
+    const outW = pw * SCALE;
+    const outH = ph * SCALE;
+    const outData = new Uint8ClampedArray(outW * outH * 4);
+
+    let processed = 0;
+    const total = tilesX * tilesY;
+
+    for (let ty = 0; ty < tilesY; ty++) {
+        for (let tx = 0; tx < tilesX; tx++) {
+            const sx = tx * TILE;
+            const sy = ty * TILE;
+
+            // Extract 128×128 RGB patch (pad with black if beyond image bounds)
+            const patch = new Float32Array(TILE * TILE * 3);
+            for (let y = 0; y < TILE; y++) {
+                for (let x = 0; x < TILE; x++) {
+                    const ix = sx + x;
+                    const iy = sy + y;
+                    const pi = (iy * srcW + ix) * 4;
+                    const ti = (y * TILE + x) * 3;
+                    if (ix < srcW && iy < srcH) {
+                        patch[ti] = px[pi] / 255;
+                        patch[ti + 1] = px[pi + 1] / 255;
+                        patch[ti + 2] = px[pi + 2] / 255;
+                    } // else stays 0 (black)
+                }
+            }
+
+            // Run inference
+            const inputTensor = new Tensor(patch, [1, TILE, TILE, 3]);
+            const outputs = await model.run(inputTensor);
+            inputTensor.delete();
+
+            // Output is [1, 3, 512, 512] NCHW → transpose to [512, 512, 3]
+            const [outputTensor] = outputs;
+            const outRaw = await outputTensor.moveTo('wasm');
+            const arr = outRaw.toTypedArray() as Float32Array;
+            outputs.forEach((t: any) => t.delete());
+            outRaw.delete();
+
+            const otSize = TILE * SCALE; // 512
+            for (let y = 0; y < otSize; y++) {
+                for (let x = 0; x < otSize; x++) {
+                    const oy = sy * SCALE + y;
+                    const ox = sx * SCALE + x;
+                    if (oy >= outH || ox >= outW) continue;
+                    const oi = (oy * outW + ox) * 4;
+                    // NCHW → HWC: arr[c * otSize * otSize + y * otSize + x]
+                    const r = arr[0 * otSize * otSize + y * otSize + x];
+                    const g = arr[1 * otSize * otSize + y * otSize + x];
+                    const b = arr[2 * otSize * otSize + y * otSize + x];
+                    outData[oi] = clampByte(r);
+                    outData[oi + 1] = clampByte(g);
+                    outData[oi + 2] = clampByte(b);
+                    outData[oi + 3] = 255;
+                }
+            }
+
+            processed++;
+            onProgress?.(processed, total);
+        }
+    }
+
+    // Crop to original dimensions * SCALE
+    const finalW = srcW * SCALE;
+    const finalH = srcH * SCALE;
+    const result = new Uint8ClampedArray(finalW * finalH * 4);
+    for (let y = 0; y < finalH; y++) {
+        const srcRow = y * outW * 4;
+        const dstRow = y * finalW * 4;
+        result.set(outData.subarray(srcRow, srcRow + finalW * 4), dstRow);
+    }
+
+    return new ImageData(result, finalW, finalH);
+};
+
+const clampByte = (v: number) =>
+    Math.max(0, Math.min(255, Math.round(v * 255)));
+
 const ImageResizer: React.FC<ImageResizerProps> = ({ isExiting = false }) => {
     const [images, setImages] = useState<ImageItem[]>([]);
     const [isDownloading, setIsDownloading] = useState(false);
+    const [mode, setMode] = useState<ProcessMode>('standard');
+    const [aiEngine, setAiEngine] = useState<'litert' | 'topaz'>('litert');
+    const [aiModel, setAiModel] = useState<any>(null);
+    const [aiStatus, setAiStatus] = useState<'idle' | 'loading' | 'ready' | 'error'>('idle');
+    const [aiError, setAiError] = useState('');
+    const [aiProgress, setAiProgress] = useState(0);
+    const [aiProgressTotal, setAiProgressTotal] = useState(0);
+
+    const [topazAvailable, setTopazAvailable] = useState<boolean>(true);
+    const [topazChecking, setTopazChecking] = useState<boolean>(false);
+
+    // Check if Topaz is available via server, or mark ready if not
+    useEffect(() => {
+        if (mode === 'ai_upscale' && aiEngine === 'topaz') {
+            // Topaz doesn't need a model loaded — skip LiteRT init
+            setAiStatus('ready');
+            setAiError('');
+            setTopazChecking(true);
+            fetch('/api/topaz-status')
+                .then(r => r.json())
+                .then(data => {
+                    setTopazAvailable(data.available);
+                    if (!data.available) {
+                        setAiError('Topaz Gigapixel AI not found on server. ' + (data.path ? 'Check server logs.' : 'Install it or set TOPAZ_GIGAPIXEL_PATH env var.'));
+                        setAiStatus('error');
+                    }
+                })
+                .catch(() => {
+                    setTopazAvailable(false);
+                    setAiError('Could not reach server. Is the dev server running?');
+                    setAiStatus('error');
+                })
+                .finally(() => setTopazChecking(false));
+        }
+    }, [mode, aiEngine]);
+
+    const MODEL_FILE = 'assets/real-esrgan-x4v3.tflite';
+
+    /**
+     * Load the model bytes from the app data directory, or download + persist
+     * them if they don't exist yet.
+     */
+    const loadModelBytes = async (): Promise<Uint8Array> => {
+        const { fileSystemManager } = await import('../utils/fileUtils');
+
+        // Try reading from disk first
+        if (fileSystemManager.isDirectorySelected()) {
+            const blob = await fileSystemManager.getFileAsBlob(MODEL_FILE);
+            if (blob) {
+                const buf = await blob.arrayBuffer();
+                return new Uint8Array(buf);
+            }
+        }
+
+        // Not on disk — fetch from HuggingFace and save
+        const resp = await fetch(MODEL_URL);
+        if (!resp.ok) throw new Error(`Failed to download model: HTTP ${resp.status}`);
+        const blob = await resp.blob();
+
+        if (fileSystemManager.isDirectorySelected()) {
+            // Persist to app directory so it survives cache clears
+            await fileSystemManager.saveFile(MODEL_FILE, blob);
+        }
+
+        const buf = await blob.arrayBuffer();
+        return new Uint8Array(buf);
+    };
+
+    const retryInit = useCallback(() => {
+        setAiStatus('idle');
+        setAiError('');
+    }, []);
+
+    // Initialise LiteRT on first switch to AI Upscale mode (only for LiteRT engine)
+    useEffect(() => {
+        if (mode === 'ai_upscale' && aiEngine === 'litert' && !aiModel && aiStatus === 'idle') {
+            setAiStatus('loading');
+            (async () => {
+                try {
+                    // Load the LiteRT.js runtime from CDN (WASM files also from CDN)
+                    // @ts-expect-error — CDN URL import; runtime loads from jsDelivr
+                    const { loadLiteRt, getGlobalLiteRtPromise, loadAndCompile } = await import('https://cdn.jsdelivr.net/npm/@litertjs/core/+esm');
+                    // loadLiteRt throws if called more than once; guard via the promise
+                    if (!getGlobalLiteRtPromise()) {
+                        await loadLiteRt('https://cdn.jsdelivr.net/npm/@litertjs/core/wasm/');
+                    }
+
+                    // Load model from disk (or download + persist)
+                    const modelBytes = await loadModelBytes();
+                    const model = await loadAndCompile(modelBytes, {
+                        accelerator: 'webgpu',
+                    });
+                    setAiModel(model);
+                    setAiStatus('ready');
+                } catch (e: any) {
+                    console.error('[AI Upscaler] init error', e);
+                    setAiStatus('error');
+                    setAiError(e?.message || 'Failed to load AI upscaler.');
+                }
+            })();
+        }
+    }, [mode, aiEngine, aiModel, aiStatus]);
 
     const [settings, setSettings] = useState<ProcessSettings>({
-        width: 1024, height: 1024, lockAspectRatio: true, enableCropping: true,
+        width: 1024, height: 1024, lockAspectRatio: true, enableCropping: false,
         preserveOriginal: false,
         format: 'jpeg', quality: 0.9, renamePrefix: '', renameSequentially: false,
     });
@@ -345,11 +550,146 @@ const ImageResizer: React.FC<ImageResizerProps> = ({ isExiting = false }) => {
         setImages(imgs => imgs.map(i => ({ ...i, status: 'pending', processed: undefined })));
     };
 
+    /** Draw ImageData onto a canvas and export as Blob. */
+    const imageDataToBlob = (data: ImageData, format: 'jpeg' | 'png' | 'webp', quality: number): Promise<Blob> => {
+        return new Promise((resolve, reject) => {
+            const c = document.createElement('canvas');
+            c.width = data.width;
+            c.height = data.height;
+            const ctx = c.getContext('2d');
+            if (!ctx) return reject(new Error('Canvas error'));
+            ctx.putImageData(data, 0, 0);
+            const q = format === 'jpeg' || format === 'webp' ? quality : undefined;
+            c.toBlob(b => { if (b) resolve(b); else reject(new Error('Blob export failed')); }, `image/${format}`, q);
+        });
+    };
+
     const handleDownload = async () => {
         if (images.length === 0) return;
         setIsDownloading(true);
+        setAiProgress(0);
+        setAiProgressTotal(0);
         setImages(prev => prev.map(i => ({ ...i, status: 'processing', errorMessage: undefined })));
 
+        if (mode === 'ai_upscale') {
+            // AI Upscale — process & download each image immediately
+            let totalTiles = 0;
+            let doneTiles = 0;
+            for (const item of images) {
+                const tilesX = Math.ceil(item.originalWidth / 128);
+                const tilesY = Math.ceil(item.originalHeight / 128);
+                totalTiles += tilesX * tilesY;
+            }
+            setAiProgressTotal(totalTiles);
+
+            const results: ImageItem[] = [];
+            for (const item of images) {
+                try {
+                    let blob: Blob;
+                    let width: number, height: number;
+
+                    if (aiEngine === 'topaz') {
+                        // --- Topaz Gigapixel AI (via server) ---
+                        const formData = new FormData();
+                        formData.append('image', item.file);
+                        formData.append('scale', '4');
+                        formData.append('model', 'std');
+
+                        setAiProgress(0);
+                        setAiProgressTotal(1);
+
+                        const resp = await fetch('/api/topaz-upscale', {
+                            method: 'POST',
+                            body: formData,
+                        });
+
+                        if (!resp.ok) {
+                            const errData = await resp.json().catch(() => null);
+                            throw new Error(errData?.error || `Server error ${resp.status}`);
+                        }
+
+                        blob = await resp.blob();
+                        // Decode the blob to get dimensions
+                        const img = new Image();
+                        const url = URL.createObjectURL(blob);
+                        await new Promise<void>((resolve, reject) => {
+                            img.onload = () => resolve();
+                            img.onerror = () => reject(new Error('Failed to decode upscaled image'));
+                            img.src = url;
+                        });
+                        width = img.naturalWidth;
+                        height = img.naturalHeight;
+                        // Don't revoke yet — used below
+                        setAiProgress(1);
+                    } else {
+                        // --- LiteRT.js (browser WebGPU) ---
+                        const img = new Image();
+                        await new Promise<void>((resolve, reject) => {
+                            img.onload = () => resolve();
+                            img.onerror = () => reject(new Error('Failed to load image'));
+                            img.src = item.originalUrl;
+                        });
+                        const c = document.createElement('canvas');
+                        c.width = item.originalWidth;
+                        c.height = item.originalHeight;
+                        const ctx = c.getContext('2d')!;
+                        ctx.drawImage(img, 0, 0);
+                        const srcData = ctx.getImageData(0, 0, item.originalWidth, item.originalHeight);
+
+                        const upscaled = await aiUpscaleImage(srcData, aiModel, (done) => {
+                            setAiProgress(doneTiles + done);
+                        });
+                        doneTiles += Math.ceil(item.originalWidth / 128) * Math.ceil(item.originalHeight / 128);
+
+                        blob = await imageDataToBlob(upscaled, 'png', 1);
+                        width = upscaled.width;
+                        height = upscaled.height;
+                    }
+
+                    const url = URL.createObjectURL(blob);
+
+                    // Single image → download immediately; batch → ZIP at the end
+                    if (images.length === 1) {
+                        const link = document.createElement('a');
+                        link.href = url;
+                        link.download = item.file.name.replace(/\.[^.]+$/, '') + '_x4.png';
+                        link.click();
+                        setTimeout(() => URL.revokeObjectURL(url), 1000);
+                    }
+
+                    results.push({
+                        ...item,
+                        status: 'done',
+                        processed: { url, blob, width, height, size: blob.size },
+                    });
+                } catch (e: any) {
+                    results.push({ ...item, status: 'error', errorMessage: e?.message || 'AI upscale failed' });
+                }
+            }
+            setImages(results);
+
+            // Also offer a ZIP of all successful upscales
+            const good = results.filter((r): r is ImageItem & { processed: NonNullable<ImageItem['processed']> } => r.status === 'done' && !!r.processed);
+            if (good.length > 1) {
+                const zip = new JSZip();
+                good.forEach((img) => {
+                    const name = img.file.name.replace(/\.[^.]+$/, '') + '_x4.png';
+                    zip.file(name, img.processed.blob);
+                });
+                const content = await zip.generateAsync({ type: 'blob' });
+                const zipUrl = URL.createObjectURL(content);
+                const link = document.createElement('a');
+                link.href = zipUrl;
+                link.download = `ai_upscaled_${Date.now()}.zip`;
+                link.click();
+                setTimeout(() => URL.revokeObjectURL(zipUrl), 1000);
+            }
+
+            setIsDownloading(false);
+            return;
+        }
+
+        // Standard mode — batch canvas processing
         const processingPromises = images.map(item =>
             processImage(item, settings)
                 .catch(err => ({ ...item, status: 'error', errorMessage: err.message }))
@@ -449,7 +789,7 @@ const ImageResizer: React.FC<ImageResizerProps> = ({ isExiting = false }) => {
                             exit="exit"
                             className="p-6 bg-base-100/10 backdrop-blur-md"
                         >
-                            <TerminalText text="RESIZE SETTINGS" delay={2.0} className="text-[10px] font-black uppercase text-primary" />
+                            <TerminalText text={mode === 'ai_upscale' ? 'AI UPSCALE SETTINGS' : 'RESIZE SETTINGS'} delay={2.0} className="text-[10px] font-black uppercase text-primary" />
                         </motion.header>
                         <motion.div 
                             variants={contentVariants}
@@ -458,70 +798,207 @@ const ImageResizer: React.FC<ImageResizerProps> = ({ isExiting = false }) => {
                             animate="visible"
                             className="flex-grow p-6 space-y-8 overflow-y-auto bg-transparent"
                         >
-                            <div className="space-y-4">
-                                <div className="flex justify-between items-center">
-                                    <label className="text-[10px] font-black uppercase tracking-widest text-base-content/40">Target Resolution</label>
-                                    <label className="cursor-pointer label p-0 gap-2">
-                                        <span className="text-[9px] font-black uppercase text-base-content/40 tracking-widest">Original</span>
-                                        <input type="checkbox" checked={settings.preserveOriginal} onChange={e => handleSettingsChange('preserveOriginal', (e.currentTarget as any).checked)} className="checkbox checkbox-xs checkbox-primary rounded-none" />
-                                    </label>
-                                </div>
-                                <div className={`flex items-center gap-2 transition-opacity ${settings.preserveOriginal ? 'opacity-30 pointer-events-none' : ''}`}>
-                                    <input type="number" disabled={settings.preserveOriginal} value={settings.width} onChange={e => handleSettingsChange('width', (e.currentTarget as any).value ? parseInt((e.currentTarget as any).value) : '')} className="form-input w-full font-mono text-xs" placeholder="W" />
-                                    <button disabled={settings.preserveOriginal} onClick={() => handleSettingsChange('lockAspectRatio', !settings.lockAspectRatio)} className={`form-btn h-8 w-8 ${settings.lockAspectRatio ? 'text-primary' : 'opacity-20'}`}>{settings.lockAspectRatio ? <LinkIcon className="w-4 h-4" /> : <LinkOffIcon className="w-4 h-4" />}</button>
-                                    <input type="number" disabled={settings.preserveOriginal} value={settings.height} onChange={e => handleSettingsChange('height', (e.currentTarget as any).value ? parseInt((e.currentTarget as any).value) : '')} className="form-input w-full font-mono text-xs" placeholder="H" />
-                                </div>
-                                <select
-                                    disabled={settings.preserveOriginal}
-                                    className={`form-select w-full mt-2 transition-opacity ${settings.preserveOriginal ? 'opacity-30 pointer-events-none' : ''}`}
-                                    onChange={e => {
-                                        const value = (e.currentTarget as any).value;
-                                        if (value) {
-                                            const [w, h] = value.split('x').map(Number);
-                                            setSettings(s => ({ ...s, width: w, height: h }));
-                                        }
-                                    }}
-                                    value={settings.width && settings.height ? `${settings.width}x${settings.height}` : ""}
-                                >
-                                    <option value="" disabled>Standard Presets</option>
-                                    {COMPOSER_PRESETS.map(cat => (
-                                        <optgroup key={cat.category} label={cat.category}>
-                                            {cat.presets.map(p => <option key={p.name} value={`${p.width}x${p.height}`}>{p.name}</option>)}
-                                        </optgroup>
-                                    ))}
-                                </select>
-                            </div>
-
-                            <div className="space-y-4">
-                                <label className="text-[10px] font-black uppercase tracking-widest text-base-content/40">Cropping</label>
-                                <div className={`form-control transition-opacity ${settings.preserveOriginal ? 'opacity-30 pointer-events-none' : ''}`}>
-                                    <label className="cursor-pointer label p-0 gap-4">
-                                        <span className="text-[10px] font-black uppercase text-base-content/40 tracking-widest flex items-center gap-2"><CropIcon className="w-3.5 h-3.5" /> Enable Smart Crop</span>
-                                        <input type="checkbox" disabled={settings.preserveOriginal} checked={settings.enableCropping && !settings.preserveOriginal} onChange={e => handleSettingsChange('enableCropping', (e.currentTarget as any).checked)} className="toggle toggle-xs toggle-primary" />
-                                    </label>
+                            {/* Mode Toggle */}
+                            <div className="space-y-2">
+                                <label className="text-[10px] font-black uppercase tracking-widest text-base-content/40">Processing Mode</label>
+                                <div className="form-tab-group w-full">
+                                    <button
+                                        className={`form-tab-item flex-1 ${mode === 'standard' ? 'active' : ''}`}
+                                        onClick={() => { setMode('standard'); setAiProgress(0); }}
+                                    >
+                                        Standard
+                                    </button>
+                                    <button
+                                        className={`form-tab-item flex-1 ${mode === 'ai_upscale' ? 'active' : ''}`}
+                                        onClick={() => { setMode('ai_upscale'); setAiProgress(0); }}
+                                    >
+                                        AI Upscale 4×
+                                    </button>
                                 </div>
                             </div>
 
-                            <div className="space-y-6">
-                                <label className="text-[10px] font-black uppercase tracking-widest text-base-content/40">Output Files</label>
-                                <div className="space-y-4">
-                                    <div className="flex items-center gap-2">
-                                        <select value={settings.format} onChange={e => handleSettingsChange('format', (e.currentTarget as any).value as 'jpeg' | 'png' | 'webp')} className="form-select w-full">
-                                            <option value="jpeg">JPEG</option>
-                                            <option value="png">PNG</option>
-                                            <option value="webp">WEBP</option>
-                                        </select>
-                                        {(settings.format === 'jpeg' || settings.format === 'webp') &&
-                                            <input type="range" min={0.1} max={1} step={0.05} value={settings.quality} onChange={e => handleSettingsChange('quality', parseFloat((e.currentTarget as any).value))} className="range range-xs range-primary w-24" />
-                                        }
+                            {/* AI Upscale panel */}
+                            {mode === 'ai_upscale' ? (
+                                <div className="space-y-4 animate-fade-in">
+                                    {/* Engine selector */}
+                                    <div className="space-y-2">
+                                        <label className="text-[10px] font-black uppercase tracking-widest text-base-content/40">Engine</label>
+                                        <div className="form-tab-group w-full">
+                                            <button
+                                                className={`form-tab-item flex-1 ${aiEngine === 'litert' ? 'active' : ''}`}
+                                                onClick={() => { setAiEngine('litert'); setAiProgress(0); }}
+                                            >
+                                                Fast (Browser)
+                                            </button>
+                                            <button
+                                                className={`form-tab-item flex-1 ${aiEngine === 'topaz' ? 'active' : ''}`}
+                                                onClick={() => { setAiEngine('topaz'); setAiProgress(0); }}
+                                            >
+                                                High Quality
+                                            </button>
+                                        </div>
                                     </div>
-                                    <input type="text" value={settings.renamePrefix} onChange={e => handleSettingsChange('renamePrefix', (e.currentTarget as any).value)} className="form-input w-full font-bold text-xs" placeholder="FILE_PREFIX_" />
-                                    <label className="cursor-pointer label p-0 gap-4">
-                                        <span className="text-[10px] font-black uppercase text-base-content/40 tracking-widest">Sequential Naming</span>
-                                        <input type="checkbox" checked={settings.renameSequentially} onChange={e => handleSettingsChange('renameSequentially', (e.currentTarget as any).checked)} className="checkbox checkbox-xs checkbox-primary rounded-none" />
-                                    </label>
+
+                                    {aiEngine === 'litert' ? (
+                                        <>
+                                            <div className="p-4 bg-info/5 border border-info/20 space-y-3">
+                                                <p className="text-[10px] font-black uppercase text-info tracking-widest">
+                                                    Real-ESRGAN ×4
+                                                </p>
+                                                <p className="text-[10px] font-bold leading-relaxed text-base-content/60">
+                                                    Upscales each image 4× using AI inference in the browser.
+                                                    Powered by LiteRT.js via WebGPU. No data leaves your machine.
+                                                </p>
+                                                {aiStatus === 'loading' && (
+                                                    <div className="flex items-center gap-3">
+                                                        <span className="loading loading-spinner loading-xs text-primary" />
+                                                        <span className="text-[10px] font-mono text-primary/70">Loading AI model… (~3.5 MB)</span>
+                                                    </div>
+                                                )}
+                                                {aiStatus === 'ready' && (
+                                                    <span className="inline-flex items-center gap-2 text-[10px] font-black uppercase text-success px-3 py-1.5 border border-success/30 bg-success/5">
+                                                        <span className="w-1.5 h-1.5 rounded-full bg-success animate-pulse" />
+                                                        Model Ready
+                                                    </span>
+                                                )}
+                                                {aiStatus === 'error' && (
+                                                    <div className="space-y-2">
+                                                        <span className="inline-flex items-center gap-2 text-[10px] font-black uppercase text-error px-3 py-1.5 border border-error/30 bg-error/5">
+                                                            <span className="w-1.5 h-1.5 rounded-full bg-error" />
+                                                            Model Failed
+                                                        </span>
+                                                        <p className="text-[9px] font-mono text-error/70 break-all">{aiError}</p>
+                                                        <button
+                                                            onClick={retryInit}
+                                                            className="btn btn-xs btn-outline btn-error rounded-none mt-2 text-[9px] font-black uppercase tracking-widest"
+                                                        >
+                                                            Retry Loading
+                                                        </button>
+                                                    </div>
+                                                )}
+                                            </div>
+
+                                            {isDownloading && aiProgressTotal > 0 && (
+                                                <div className="space-y-2">
+                                                    <div className="flex justify-between text-[10px] font-mono font-bold">
+                                                        <span className="text-primary">PROCESSING TILES</span>
+                                                        <span className="text-base-content/40">{aiProgress} / {aiProgressTotal}</span>
+                                                    </div>
+                                                    <div className="w-full h-1 bg-base-300/50 relative overflow-hidden">
+                                                        <div
+                                                            className="absolute inset-y-0 left-0 bg-primary transition-all duration-300"
+                                                            style={{ width: `${(aiProgress / aiProgressTotal) * 100}%` }}
+                                                        />
+                                                    </div>
+                                                </div>
+                                            )}
+                                        </>
+                                    ) : (
+                                        <div className="p-4 bg-accent/5 border border-accent/20 space-y-3">
+                                            <p className="text-[10px] font-black uppercase text-accent tracking-widest">
+                                                Topaz Gigapixel AI ×4
+                                            </p>
+                                            <p className="text-[10px] font-bold leading-relaxed text-base-content/60">
+                                                Uses your locally installed Topaz Gigapixel AI for
+                                                superior upscale quality. Image is sent to the local dev
+                                                server and processed by the desktop app.
+                                            </p>
+                                            {topazChecking ? (
+                                            <div className="flex items-center gap-2 text-[10px] font-mono text-base-content/40">
+                                                <span className="loading loading-spinner loading-xs" />
+                                                Checking server…
+                                            </div>
+                                        ) : topazAvailable ? (
+                                            <div className="flex items-center gap-2 text-[10px] font-mono text-base-content/40">
+                                                <span className="w-1.5 h-1.5 rounded-full bg-success/60 animate-pulse" />
+                                                Server connected — engine available
+                                            </div>
+                                        ) : (
+                                            <div className="flex items-center gap-2 text-[10px] font-mono text-error/60">
+                                                <span className="w-1.5 h-1.5 rounded-full bg-error" />
+                                                Engine not available
+                                            </div>
+                                        )}
+                                        </div>
+                                    )}
+
+                                    {/* Output format info (AI mode) */}
+                                    <div className="p-4 bg-base-300/20 border border-base-300/30">
+                                        <p className="text-[10px] font-mono text-base-content/40">
+                                            Output: <span className="text-base-content/70">PNG</span> (lossless) ·
+                                            4× original resolution
+                                        </p>
+                                    </div>
                                 </div>
-                            </div>
+                            ) : (
+                                /* Standard settings — hidden in AI mode */
+                                <>
+                                    <div className="space-y-4">
+                                        <div className="flex justify-between items-center">
+                                            <label className="text-[10px] font-black uppercase tracking-widest text-base-content/40">Target Resolution</label>
+                                            <label className="cursor-pointer label p-0 gap-2">
+                                                <span className="text-[9px] font-black uppercase text-base-content/40 tracking-widest">Original</span>
+                                                <input type="checkbox" checked={settings.preserveOriginal} onChange={e => handleSettingsChange('preserveOriginal', (e.currentTarget as any).checked)} className="checkbox checkbox-xs checkbox-primary rounded-none" />
+                                            </label>
+                                        </div>
+                                        <div className={`flex items-center gap-2 transition-opacity ${settings.preserveOriginal ? 'opacity-30 pointer-events-none' : ''}`}>
+                                            <input type="number" disabled={settings.preserveOriginal} value={settings.width} onChange={e => handleSettingsChange('width', (e.currentTarget as any).value ? parseInt((e.currentTarget as any).value) : '')} className="form-input w-full font-mono text-xs" placeholder="W" />
+                                            <button disabled={settings.preserveOriginal} onClick={() => handleSettingsChange('lockAspectRatio', !settings.lockAspectRatio)} className={`form-btn h-8 w-8 ${settings.lockAspectRatio ? 'text-primary' : 'opacity-20'}`}>{settings.lockAspectRatio ? <LinkIcon className="w-4 h-4" /> : <LinkOffIcon className="w-4 h-4" />}</button>
+                                            <input type="number" disabled={settings.preserveOriginal} value={settings.height} onChange={e => handleSettingsChange('height', (e.currentTarget as any).value ? parseInt((e.currentTarget as any).value) : '')} className="form-input w-full font-mono text-xs" placeholder="H" />
+                                        </div>
+                                        <select
+                                            disabled={settings.preserveOriginal}
+                                            className={`form-select w-full mt-2 transition-opacity ${settings.preserveOriginal ? 'opacity-30 pointer-events-none' : ''}`}
+                                            onChange={e => {
+                                                const value = (e.currentTarget as any).value;
+                                                if (value) {
+                                                    const [w, h] = value.split('x').map(Number);
+                                                    setSettings(s => ({ ...s, width: w, height: h }));
+                                                }
+                                            }}
+                                            value={settings.width && settings.height ? `${settings.width}x${settings.height}` : ""}
+                                        >
+                                            <option value="" disabled>Standard Presets</option>
+                                            {COMPOSER_PRESETS.map(cat => (
+                                                <optgroup key={cat.category} label={cat.category}>
+                                                    {cat.presets.map(p => <option key={p.name} value={`${p.width}x${p.height}`}>{p.name}</option>)}
+                                                </optgroup>
+                                            ))}
+                                        </select>
+                                    </div>
+
+                                    <div className="space-y-4">
+                                        <label className="text-[10px] font-black uppercase tracking-widest text-base-content/40">Cropping</label>
+                                        <div className={`form-control transition-opacity ${settings.preserveOriginal ? 'opacity-30 pointer-events-none' : ''}`}>
+                                            <label className="cursor-pointer label p-0 gap-4">
+                                                <span className="text-[10px] font-black uppercase text-base-content/40 tracking-widest flex items-center gap-2"><CropIcon className="w-3.5 h-3.5" /> Enable Smart Crop</span>
+                                                <input type="checkbox" disabled={settings.preserveOriginal} checked={settings.enableCropping && !settings.preserveOriginal} onChange={e => handleSettingsChange('enableCropping', (e.currentTarget as any).checked)} className="toggle toggle-xs toggle-primary" />
+                                            </label>
+                                        </div>
+                                    </div>
+
+                                    <div className="space-y-6">
+                                        <label className="text-[10px] font-black uppercase tracking-widest text-base-content/40">Output Files</label>
+                                        <div className="space-y-4">
+                                            <div className="flex items-center gap-2">
+                                                <select value={settings.format} onChange={e => handleSettingsChange('format', (e.currentTarget as any).value as 'jpeg' | 'png' | 'webp')} className="form-select w-full">
+                                                    <option value="jpeg">JPEG</option>
+                                                    <option value="png">PNG</option>
+                                                    <option value="webp">WEBP</option>
+                                                </select>
+                                                {(settings.format === 'jpeg' || settings.format === 'webp') &&
+                                                    <input type="range" min={0.1} max={1} step={0.05} value={settings.quality} onChange={e => handleSettingsChange('quality', parseFloat((e.currentTarget as any).value))} className="range range-xs range-primary w-24" />
+                                                }
+                                            </div>
+                                            <input type="text" value={settings.renamePrefix} onChange={e => handleSettingsChange('renamePrefix', (e.currentTarget as any).value)} className="form-input w-full font-bold text-xs" placeholder="FILE_PREFIX_" />
+                                            <label className="cursor-pointer label p-0 gap-4">
+                                                <span className="text-[10px] font-black uppercase text-base-content/40 tracking-widest">Sequential Naming</span>
+                                                <input type="checkbox" checked={settings.renameSequentially} onChange={e => handleSettingsChange('renameSequentially', (e.currentTarget as any).checked)} className="checkbox checkbox-xs checkbox-primary rounded-none" />
+                                            </label>
+                                        </div>
+                                    </div>
+                                </>
+                            )}
                             </motion.div>
                         <motion.footer 
                             variants={contentVariants}
@@ -540,11 +1017,11 @@ const ImageResizer: React.FC<ImageResizerProps> = ({ isExiting = false }) => {
                             </button>
                             <button
                                 onClick={handleDownload}
-                                disabled={isDownloading || images.length === 0}
+                                disabled={isDownloading || images.length === 0 || (mode === 'ai_upscale' && aiEngine === 'litert' && aiStatus !== 'ready')}
                                 className="btn btn-sm btn-primary h-full flex-1 rounded-none tracking-wider uppercase btn-snake-primary"
                             >
                                 <span /><span /><span /><span />
-                                {isDownloading ? '...' : 'ZIP DOWNLOAD'}
+                                {isDownloading ? '...' : mode === 'ai_upscale' ? 'UPSCALE ALL' : 'ZIP DOWNLOAD'}
                             </button>
                         </motion.footer>
                     </div>

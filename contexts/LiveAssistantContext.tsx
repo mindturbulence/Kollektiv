@@ -47,7 +47,12 @@ export const LiveAssistantProvider: React.FC<{ children: React.ReactNode }> = ({
         liveRef.current?.disconnect();
         liveRef.current = null;
         setStatus('idle'); setSpeaking(false); setSharing(false); setControlEnabled(false); setShareError('');
-        if (browserControlService.permissionGranted) browserControlService.revoke();
+        // Do NOT revoke browser control permission here — it persists across
+        // session boundaries so the user doesn't have to re-grant it every time
+        // a session reconnects or errors. Permission is only revoked when the
+        // user explicitly clicks the cursor/Release button.
+        // https://github.com/user-attachments/assets/??? (auto-revoke bug)
+        console.debug('[LiveAssistant] stop() — preserving browser control permission');
     }, []);
 
     const start = useCallback(async () => {

@@ -28,6 +28,9 @@ export const defaultLLMSettings: LLMSettings = {
   anthropicConnectionMode: 'api_key',
   anthropicSubscriptionUrl: 'http://localhost:8000',
   anthropicSubscriptionKey: '',
+
+  // Tensor Art Settings
+  tensorartApiKey: '',
   
   // Prompt & Token Tracking
   masterRolePrompt: 'You are an expert AI prompt engineer and creative director. You excel at extracting precise visual, atmospheric, and conceptual details.',

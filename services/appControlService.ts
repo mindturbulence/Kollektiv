@@ -82,5 +82,10 @@ export const appControlService = {
 - /gallery
 - /discover
 - /discover_prompts <collection_id> <optional query>`;
-    }
+    },
+
+    getYouTubeApiKey: () => {
+        // This will be set via settings
+        return (window as any).__YOUTUBE_API_KEY || '';
+    },
 };

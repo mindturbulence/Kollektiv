@@ -83,33 +83,189 @@ const fromBase64 = (b64: string): Uint8Array => {
     return out;
 };
 
-/** Maps a tool call to a short human-readable context line — no raw tool
- * names, no JSON args — so the user sees what the assistant is doing, not
- * how it's doing it. */
-const describeToolCall = (name: string, args: Record<string, any>): string => {
+/**
+ * Phrase translations for flavored tool-activity text.
+ * Keys are a short phrase id, values are { language → translated string }.
+ * English is the fallback and must be present for every phrase.
+ */
+const toolPhrases: Record<string, Record<string, string>> = {
+    search: {
+        English: `Sniffing out answers on the web…`,
+        Japanese: `ウェブで答えを探している…`,
+        French: `Je cherche des réponses sur le web…`,
+        Spanish: `Buscando respuestas en la web…`,
+        German: `Durchsuche das Netz nach Antworten…`,
+        Tagalog: `Naghahanap ng sagot sa web…`,
+        Korean: `웹에서 답을 찾는 중…`,
+        Chinese: `在网上寻找答案…`,
+        'Chinese (Simplified)': `在网上寻找答案…`,
+        'Chinese (Traditional)': `在網路上尋找答案…`,
+        Italian: `Cercando risposte sul web…`,
+        Portuguese: `Buscando respostas na web…`,
+        Russian: `Ищу ответы в интернете…`,
+        Arabic: `أبحث عن إجابات على الويب…`,
+        Hindi: `वेब पर जवाब ढूंढ रहा हूँ…`,
+    },
+    fetch: {
+        English: `Peeking inside a page to see what's there…`,
+        Japanese: `ページの中を覗いている…`,
+        French: `Jette un coup d'œil à l'intérieur de la page…`,
+        Spanish: `Echando un vistazo a la página…`,
+        German: `Schau mal in die Seite hinein…`,
+        Tagalog: `Sinusilip ang loob ng pahina…`,
+        Korean: `페이지 내용을 살펴보는 중…`,
+        Chinese: `查看页面内容…`,
+        Italian: `Dando un'occhiata dentro la pagina…`,
+        Portuguese: `Dando uma espiada na página…`,
+    },
+    navigate: {
+        English: `Steering the browser somewhere new…`,
+        Japanese: `ブラウザを新しい場所へ誘導中…`,
+        French: `Direction un nouvel endroit dans le navigateur…`,
+        Spanish: `Llevando el navegador a un nuevo lugar…`,
+        German: `Navigiere zu einem neuen Ziel…`,
+        Tagalog: `Pinapunta ang browser sa bagong lugar…`,
+        Korean: `브라우저를 새 곳으로 이동 중…`,
+        Chinese: `将浏览器导航到新位置…`,
+        Italian: `Portando il browser verso un nuovo posto…`,
+        Portuguese: `Navegando para um novo lugar…`,
+    },
+    click: {
+        English: `Gentle nudge on the screen…`,
+        Japanese: `画面を優しくタップ…`,
+        French: `Petit coup doux sur l'écran…`,
+        Spanish: `Toque suave en la pantalla…`,
+        German: `Sanfter Tipp auf den Bildschirm…`,
+        Tagalog: `Mahinang tapik sa screen…`,
+        Korean: `화면을 살짝 누르는 중…`,
+        Chinese: `轻点屏幕…`,
+        Italian: `Tocco leggero sullo schermo…`,
+        Portuguese: `Toque suave na tela…`,
+    },
+    type: {
+        English: `Tapping out a message…`,
+        Japanese: `メッセージを打ち込んでいる…`,
+        French: `Je tape un message…`,
+        Spanish: `Escribiendo un mensaje…`,
+        German: `Tippe eine Nachricht…`,
+        Tagalog: `Nagta-type ng mensahe…`,
+        Korean: `메시지를 입력하는 중…`,
+        Chinese: `正在输入消息…`,
+        Italian: `Scrivendo un messaggio…`,
+        Portuguese: `Digitando uma mensagem…`,
+    },
+    read: {
+        English: `Taking a look around the page…`,
+        Japanese: `ページを見渡している…`,
+        French: `Jette un œil autour de la page…`,
+        Spanish: `Echando un vistazo a la página…`,
+        German: `Schau dich auf der Seite um…`,
+        Tagalog: `Tumingin-tingin sa paligid ng pahina…`,
+        Korean: `페이지를 둘러보는 중…`,
+        Chinese: `浏览页面…`,
+        Italian: `Dando un'occhiata in giro per la pagina…`,
+        Portuguese: `Dando uma olhada na página…`,
+    },
+    evaluate: {
+        English: `Running a little snippet…`,
+        Japanese: `小さなコードを実行中…`,
+        French: `Exécute un petit bout de code…`,
+        Spanish: `Ejecutando un pequeño fragmento…`,
+        German: `Führe ein kleines Skript aus…`,
+        Tagalog: `Nagpapatakbo ng munting snippet…`,
+        Korean: `작은 코드를 실행하는 중…`,
+        Chinese: `运行一小段代码…`,
+        Italian: `Eseguendo un piccolo snippet…`,
+        Portuguese: `Executando um pequeno trecho…`,
+    },
+    fiddling: {
+        English: `Fiddling with the browser…`,
+        Japanese: `ブラウザをいじっている…`,
+        French: `Je tripote le navigateur…`,
+        Spanish: `Jugando con el navegador…`,
+        German: `Spiele mit dem Browser herum…`,
+        Tagalog: `Kinakalikot ang browser…`,
+        Korean: `브라우저를 조작하는 중…`,
+        Chinese: `摆弄浏览器…`,
+        Italian: `Armeggiando con il browser…`,
+        Portuguese: `Mexendo no navegador…`,
+    },
+    notes: {
+        English: `Flipping through your notebook…`,
+        Japanese: `ノートをめくっている…`,
+        French: `Feuillette ton carnet…`,
+        Spanish: `Hojeando tu cuaderno…`,
+        German: `Blättere in deinem Notizbuch…`,
+        Tagalog: `Binabaliktan ang iyong kuwaderno…`,
+        Korean: `노트북을 넘겨보는 중…`,
+        Chinese: `翻阅你的笔记本…`,
+        Italian: `Sfogliando il tuo taccuino…`,
+        Portuguese: `Folheando seu caderno…`,
+    },
+    inbox: {
+        English: `Checking your inbox…`,
+        Japanese: `受信箱をチェック中…`,
+        French: `Vérifie ta boîte de réception…`,
+        Spanish: `Revisando tu bandeja de entrada…`,
+        German: `Überprüfe deinen Posteingang…`,
+        Tagalog: `Sinusuri ang iyong inbox…`,
+        Korean: `받은 편지함을 확인하는 중…`,
+        Chinese: `检查收件箱…`,
+        Italian: `Controllando la tua posta in arrivo…`,
+        Portuguese: `Verificando sua caixa de entrada…`,
+    },
+    magic: {
+        English: `Working some quiet magic…`,
+        Japanese: `静かに魔法をかけている…`,
+        French: `Fais un peu de magie tranquille…`,
+        Spanish: `Haciendo un poco de magia silenciosa…`,
+        German: `Wirke leise Magie…`,
+        Tagalog: `Gumagawa ng tahimik na mahika…`,
+        Korean: `조용히 마법을 부리는 중…`,
+        Chinese: `正在施展安静的魔法…`,
+        Italian: `Operando un po' di magia silenziosa…`,
+        Portuguese: `Fazendo uma mágica silenciosa…`,
+    },
+};
+
+/** Look up a translated phrase for the user's preferred language. Falls back
+ *  to English if the language has no entry for that phrase. */
+function t(phraseKey: string, lang: string): string {
+    const phrase = toolPhrases[phraseKey];
+    if (!phrase) return toolPhrases.magic?.English || `Working some quiet magic…`;
+    // Try exact match first, then check if the language string contains the key
+    if (phrase[lang]) return phrase[lang];
+    const match = Object.keys(phrase).find(k => lang.toLowerCase().includes(k.toLowerCase()));
+    return match ? phrase[match] : phrase.English;
+}
+
+/** Maps a tool call to a flavored, human-readable line in the user's preferred
+ *  language, telling them what the assistant is actually doing without leaking
+ *  raw tool names or JSON args. */
+const describeToolCall = (name: string, _args: Record<string, any>, lang: string): string => {
     switch (true) {
         case name === 'search' || name === 'websearch':
-            return `SEARCHING: ${String(args.query || args.q || '').slice(0, 60)}`;
+            return t('search', lang);
         case name === 'fetch' || name === 'fetch_content' || name === 'scrape':
-            return `FETCHING: ${String(args.url || '').slice(0, 60)}`;
+            return t('fetch', lang);
         case name.startsWith('browser_navigate'):
-            return `NAVIGATING TO: ${String(args.url || '').slice(0, 60)}`;
+            return t('navigate', lang);
         case name.startsWith('browser_click'):
-            return `CLICKING: ${String(args.element || args.target || '').slice(0, 40)}`;
+            return t('click', lang);
         case name.startsWith('browser_type'):
-            return `TYPING: ${String(args.text || '').slice(0, 40)}`;
+            return t('type', lang);
         case name.startsWith('browser_snapshot') || name.startsWith('browser_screenshot'):
-            return `READING PAGE`;
+            return t('read', lang);
         case name.startsWith('browser_') && name.includes('evaluate'):
-            return `RUNNING CODE`;
+            return t('evaluate', lang);
         case name.startsWith('browser_'):
-            return `BROWSER ACTION: ${name.replace('browser_', '').replace(/_/g, ' ').toUpperCase()}`;
+            return t('fiddling', lang);
         case name.startsWith('obsidian_'):
-            return `NOTEBOOK: ${name.replace('obsidian_', '').replace(/_/g, ' ').toUpperCase()}`;
-        case name.startsWith('mcp_') || name.includes('_'):
-            return `TOOL: ${name.split('_').slice(-1)[0].replace(/_/g, ' ').toUpperCase()}`;
+            return t('notes', lang);
+        case name.startsWith('gmail_'):
+            return t('inbox', lang);
         default:
-            return `EXECUTING: ${name.replace(/_/g, ' ').toUpperCase()}`;
+            return t('magic', lang);
     }
 };
 
@@ -208,7 +364,7 @@ export class LiveAssistant {
             const responses: any[] = [];
             for (const fc of msg.toolCall.functionCalls) {
                 console.debug('[LiveAssistant] tool call', fc.name, fc.args);
-                const ctx = describeToolCall(fc.name, fc.args || {});
+                const ctx = describeToolCall(fc.name, fc.args || {}, this.settings.assistantLanguage || 'English');
                 this.handlers.onToolActivity(ctx);
                 // Check permission for browser tools BEFORE executing — don't waste
                 // a turn running the tool only for assertPermission() to throw.

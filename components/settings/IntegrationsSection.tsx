@@ -13,8 +13,9 @@ interface IntegrationsSectionProps {
     activeSubTab: string;
     settings: LLMSettings;
     handleSettingsChange: (field: keyof LLMSettings, value: any) => void;
-    handleAuthConnect: (mode: 'youtube' | 'google') => void;
+    handleAuthConnect: (mode: 'youtube' | 'google' | 'spotify') => void;
     handleGoogleDisconnect: () => void;
+    handleSpotifyDisconnect: () => void;
     isTestingOllama: boolean;
     ollamaTestResult: { success: boolean; message: string } | null;
     isTestingLlamaCpp: boolean;
@@ -34,6 +35,7 @@ const IntegrationsSection: React.FC<IntegrationsSectionProps> = ({
     handleSettingsChange,
     handleAuthConnect,
     handleGoogleDisconnect,
+    handleSpotifyDisconnect,
     isTestingOllama,
     ollamaTestResult,
     isTestingLlamaCpp,
@@ -364,6 +366,39 @@ const IntegrationsSection: React.FC<IntegrationsSectionProps> = ({
                     </div>
     );
 
+    const renderSpotify = () => (
+        <div className="flex flex-col animate-fade-in">
+            <SettingsGroup title="OAuth Configuration">
+            <SettingRow label="Client ID" desc="Spotify Developer Dashboard OAuth Client ID.">
+                <input type="text" value={settings.spotify?.customClientId || ''} onChange={(e) => handleSettingsChange('spotify', { ...settings.spotify, customClientId: e.target.value })} className="form-input w-full max-w-md" placeholder="abc123..." />
+            </SettingRow>
+            <SettingRow label="Client Secret" desc="Spotify Developer Dashboard OAuth Client Secret.">
+                <input type="password" value={settings.spotify?.customClientSecret || ''} onChange={(e) => handleSettingsChange('spotify', { ...settings.spotify, customClientSecret: e.target.value })} className="form-input w-full max-w-md" placeholder="..." />
+            </SettingRow>
+            <SettingRow label="Account Integration" desc="Connect to your Spotify account for playlist access and playback.">
+                {settings.spotify?.isConnected ? (
+                    <div className="flex flex-col gap-4 w-full max-w-lg">
+                        <div className="flex items-center gap-4 p-4">
+                            <div className="w-12 h-12 rounded-full bg-green-500 flex items-center justify-center text-white font-bold text-xl">
+                                {settings.spotify.displayName?.charAt(0).toUpperCase() || 'S'}
+                            </div>
+                            <div className="min-w-0">
+                                <p className="text-sm font-black uppercase truncate">{settings.spotify.displayName || 'Spotify User'}</p>
+                                <p className="text-[10px] font-mono opacity-40 uppercase">{settings.spotify.email || 'Connected'}</p>
+                            </div>
+                        </div>
+                        <button onClick={() => { audioService.playClick(); handleSpotifyDisconnect(); }} className="form-btn text-error px-4">
+                            Unlink Spotify
+                        </button>
+                    </div>
+                ) : (
+                    <button onClick={() => { audioService.playClick(); handleAuthConnect('spotify'); }} className="form-btn px-6">LINK SPOTIFY</button>
+                )}
+            </SettingRow>
+        </SettingsGroup>
+        </div>
+    );
+
     const renderTensorArt = () => (
         <div className="flex flex-col animate-fade-in">
             <SettingsGroup title="Tensor Art Configuration">
@@ -410,6 +445,7 @@ const IntegrationsSection: React.FC<IntegrationsSectionProps> = ({
         case 'mcp': return <McpSection activeSubTab={activeSubTab} settings={settings} handleSettingsChange={handleSettingsChange} />;
         case 'google': return renderGoogle();
         case 'youtube': return renderYouTube();
+        case 'spotify': return renderSpotify();
         case 'cdp': return <CdpSection activeSubTab={activeSubTab} />;
         case 'tensorart': return renderTensorArt();
         default: return null;

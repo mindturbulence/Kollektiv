@@ -4,3 +4,7 @@ local_storage/
 dist/
 *.log
 nul
+
+# Playwright
+test-results/
+playwright-report/

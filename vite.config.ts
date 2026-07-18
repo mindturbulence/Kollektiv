@@ -133,5 +133,10 @@ export default defineConfig(({ mode }) => {
           '@': path.resolve(__dirname, '.'),
         }
       },
+      // Vitest config — exclude Playwright E2E tests
+      // @ts-ignore
+test: {
+    exclude: ['e2e/**', 'node_modules/**'],
+},
     };
 });
