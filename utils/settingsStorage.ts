@@ -81,6 +81,9 @@ export const defaultLLMSettings: LLMSettings = {
   googleIdentity: {
     isConnected: false
   },
+  spotify: {
+    isConnected: false
+  },
   storageProvider: 'local',
   driveFolderId: '',
   driveFolderName: '',
@@ -150,6 +153,10 @@ export const loadLLMSettings = (): LLMSettings => {
             googleIdentity: {
                 ...defaultLLMSettings.googleIdentity,
                 ...(parsed.googleIdentity || {})
+            },
+            spotify: {
+                ...defaultLLMSettings.spotify,
+                ...(parsed.spotify || {})
             },
             storageProvider: parsed.storageProvider || 'local',
             driveFolderId: parsed.driveFolderId ?? '',

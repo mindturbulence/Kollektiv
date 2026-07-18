@@ -360,7 +360,11 @@ async function startServer() {
 
     const clientId = process.env.SPOTIFY_CLIENT_ID;
     const clientSecret = process.env.SPOTIFY_CLIENT_SECRET;
-    const redirectUri = `${req.protocol}://${req.get('host')}/auth/spotify/callback`;
+    // Use ngrok URL if available (for HTTPS Spotify OAuth), otherwise use request host
+    const ngrokUrl = process.env.NGROK_URL;
+    const redirectUri = ngrokUrl 
+      ? `${ngrokUrl}/auth/spotify/callback`
+      : `${req.protocol}://${req.get('host')}/auth/spotify/callback`;
 
     if (!clientId || !clientSecret) {
       return res.redirect(`/?spotify_error=missing_credentials`);
@@ -563,11 +567,22 @@ async function startServer() {
       return res.status(400).json({ success: false, error: "MCP server URL must be a valid http(s) URL" });
     }
 
+    // Debug: log incoming headers
+    console.log('[MCP Proxy] Incoming headers:', JSON.stringify(req.headers));
+
+    // Forward mcp-session-id from incoming request headers
+    const incomingSessionId = req.headers['mcp-session-id'];
+    console.log('[MCP Proxy] Incoming session ID:', incomingSessionId);
+
     const requestHeaders: Record<string, string> = {
       'Content-Type': 'application/json',
       'Accept': 'application/json, text/event-stream',
       ...(extraHeaders || {}),
     };
+
+    if (incomingSessionId) {
+      requestHeaders['mcp-session-id'] = Array.isArray(incomingSessionId) ? incomingSessionId[0] : incomingSessionId;
+    }
 
     try {
       const jsonRpcPayload = {
@@ -582,6 +597,9 @@ async function startServer() {
         headers: requestHeaders,
         body: JSON.stringify(jsonRpcPayload)
       });
+
+      console.log('[MCP Proxy] Response status:', response.status);
+      console.log('[MCP Proxy] Response headers:', Object.fromEntries(response.headers.entries()));
 
       // Capture session ID from response headers (Streamable HTTP)
       const sessionId = response.headers.get('mcp-session-id') || undefined;
