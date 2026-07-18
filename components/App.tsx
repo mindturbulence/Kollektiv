@@ -20,6 +20,7 @@ import AboutModal from './AboutModal';
 import ClippingPanel from './ClippingPanel';
 import NotesPanel from './NotesPanel';
 import MediaPanel from './MediaPanel';
+import ActivityPanel from './ActivityPanel';
 import LlmStatusPanel from './LlmStatusPanel';
 import FeedbackToast from './FeedbackToast';
 import Footer from './Footer';
@@ -152,6 +153,7 @@ const AppContent: React.FC = () => {
     const [isNotesPanelOpen, setIsNotesPanelOpen] = useState(false);
     const [isMediaPanelOpen, setIsMediaPanelOpen] = useState(false);
     const [isWebViewerOpen, setIsWebViewerOpen] = useState(false);
+    const [isActivityPanelOpen, setIsActivityPanelOpen] = useState(false);
     const [isChatPanelOpen, setIsChatPanelOpen] = useState(false);
     const [isLlmPanelOpen, setIsLlmPanelOpen] = useState(false);
     const [collapsedPanels, setCollapsedPanels] = useLocalStorage<Record<string, boolean>>('collapsedPanels', {});
@@ -574,6 +576,8 @@ const AppContent: React.FC = () => {
     const handleAboutClick = useCallback(() => setIsAboutModalOpen(true), []);
     const handleToggleClippingPanel = useCallback(() => setIsClippingPanelOpen(prev => !prev), []);
     const handleToggleNotesPanel = useCallback(() => setIsNotesPanelOpen(prev => !prev), []);
+    const handleToggleActivityPanel = useCallback(() => setIsActivityPanelOpen(prev => !prev), []);
+    const handleCloseActivityPanel = useCallback(() => setIsActivityPanelOpen(false), []);
     const handleToggleMediaPanel = useCallback(() => setIsMediaPanelOpen(prev => !prev), []);
     const handleCloseMediaPanel = useCallback(() => setIsMediaPanelOpen(false), []);
     const handleToggleWebViewer = useCallback(() => setIsWebViewerOpen(prev => !prev), []);
@@ -722,6 +726,7 @@ const AppContent: React.FC = () => {
                                 onToggleMediaPanel={handleToggleMediaPanel}
                                 onToggleChatPanel={handleToggleChatPanel}
                                 onToggleWebViewer={handleToggleWebViewer}
+                                onToggleActivityPanel={handleToggleActivityPanel}
                                 onStandbyClick={goIdle}
                                 clippedIdeasCount={clippedIdeas.length + notesCount + filesCount}
                             />
@@ -782,6 +787,11 @@ const AppContent: React.FC = () => {
                                     <WebViewerPanel
                                         isOpen={isWebViewerOpen}
                                         onClose={handleCloseWebViewer}
+                                    />
+
+                                    <ActivityPanel
+                                        isOpen={isActivityPanelOpen}
+                                        onClose={handleCloseActivityPanel}
                                     />
                                 </div>
                             </main>
