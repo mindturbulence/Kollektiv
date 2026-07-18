@@ -2,6 +2,9 @@ import express from "express";
 import { createServer as createViteServer } from "vite";
 import path from "path";
 import http from "http";
+import multer from "multer";
+import { execFile } from "child_process";
+import fs from "fs";
 
 
 
@@ -449,7 +452,34 @@ async function startServer() {
     }
   });
 
-  // MCP Server Proxy Endpoint
+  /**
+   * Parse an SSE response body and extract the JSON from the data: field.
+   * Also returns the session ID from the event id field as a fallback
+   * (the mcp-session-id header is the primary source).
+   */
+  function parseSseBody(sseText: string): { jsonData?: any; lastEventId?: string } {
+    let jsonData: string | undefined;
+    let lastEventId: string | undefined;
+
+    for (const line of sseText.split('\n')) {
+      if (line.startsWith('id: ')) {
+        lastEventId = line.slice(4).trim();
+      } else if (line.startsWith('data: ')) {
+        const dataStr = line.slice(6).trim();
+        if (dataStr) {
+          jsonData = dataStr;
+        }
+      }
+    }
+
+    if (jsonData) {
+      try { return { jsonData: JSON.parse(jsonData), lastEventId }; } catch {}
+    }
+
+    return { jsonData: undefined, lastEventId };
+  }
+
+  // MCP Server Proxy Endpoint (Streamable HTTP compatible)
   app.post("/api/mcp/proxy", async (req, res) => {
     const { url, method, params, headers: extraHeaders } = req.body;
     if (!url) {
@@ -461,7 +491,7 @@ async function startServer() {
 
     const requestHeaders: Record<string, string> = {
       'Content-Type': 'application/json',
-      'Accept': 'application/json',
+      'Accept': 'application/json, text/event-stream',
       ...(extraHeaders || {}),
     };
 
@@ -479,12 +509,32 @@ async function startServer() {
         body: JSON.stringify(jsonRpcPayload)
       });
 
+      // Capture session ID from response headers (Streamable HTTP)
+      const sessionId = response.headers.get('mcp-session-id') || undefined;
+
+      const contentType = response.headers.get('content-type') || '';
+
+      if (contentType.includes('text/event-stream')) {
+        // Streamable HTTP: parse SSE response
+        const text = await response.text();
+        const { jsonData } = parseSseBody(text);
+        if (jsonData) {
+          return res.json({ success: true, data: jsonData, sessionId });
+        }
+        // If no SSE data found but response is ok, return empty
+        if (response.ok) {
+          return res.json({ success: true, data: {}, sessionId });
+        }
+        throw new Error(`MCP Server responded with status ${response.status}`);
+      }
+
       if (!response.ok) {
         throw new Error(`MCP Server responded with status ${response.status}`);
       }
 
+      // Regular JSON response
       const data = await response.json();
-      res.json({ success: true, data });
+      res.json({ success: true, data, sessionId });
     } catch (err: any) {
       console.warn("MCP JSON-RPC proxy failed:", err.message, err.cause ? `(cause: ${err.cause.message || err.cause.code || JSON.stringify(err.cause)})` : '');
 
@@ -525,6 +575,7 @@ async function startServer() {
   const CDP_DEFAULT_PORT = 9222;
   let cdpWs: WebSocket | null = null;
   let cdpConnected = false;
+  let cdpChromeAvailable = false;
   let cdpTargetId: string | null = null;
   let cdpTargetTitle: string | null = null;
   let cdpMsgId = 0;
@@ -634,6 +685,7 @@ async function startServer() {
   app.get("/api/cdp/status", (_req, res) => {
     res.json({
       connected: cdpConnected,
+      chromeAvailable: cdpChromeAvailable,
       targetId: cdpTargetId,
       targetTitle: cdpTargetTitle,
     });
@@ -644,8 +696,10 @@ async function startServer() {
     const port = parseInt(req.body.port as string) || CDP_DEFAULT_PORT;
     try {
       const version: any = await cdpGet(`http://127.0.0.1:${port}/json/version`);
+      cdpChromeAvailable = true;
       res.json({ success: true, browser: version.Browser });
     } catch {
+      cdpChromeAvailable = false;
       res.json({ success: false, error: `Cannot reach Chrome on port ${port}. Make sure Chrome is started with --remote-debugging-port=${port}.` });
     }
   });
@@ -684,6 +738,7 @@ async function startServer() {
   // POST /api/cdp/disconnect
   app.post("/api/cdp/disconnect", (_req, res) => {
     cdpDisconnect();
+    cdpChromeAvailable = false;
     res.json({ success: true });
   });
 
@@ -920,6 +975,104 @@ async function startServer() {
     }
   });
 
+  // --- Topaz Gigapixel AI Upscale API ---
+  const TOPAZ_TMP = path.join(process.cwd(), '.topaz-tmp');
+  try { if (!fs.existsSync(TOPAZ_TMP)) fs.mkdirSync(TOPAZ_TMP, { recursive: true }); } catch {}
+  const topazUpload = multer({ dest: TOPAZ_TMP, limits: { fileSize: 100 * 1024 * 1024 } });
+
+  // Search for the Gigapixel executable in common install locations + env override
+  function findTopazExe(): string | null {
+    const override = process.env.TOPAZ_GIGAPIXEL_PATH;
+    if (override && fs.existsSync(override)) return override;
+
+    const basePaths = [
+      'C:\\Program Files\\Topaz Labs LLC\\Topaz Gigapixel AI',
+      'C:\\Program Files (x86)\\Topaz Labs LLC\\Topaz Gigapixel AI',
+    ];
+    const candidates: string[] = [];
+    for (const base of basePaths) {
+      candidates.push(path.join(base, 'gigapixel.exe'));        // CLI binary
+      candidates.push(path.join(base, 'Topaz Gigapixel AI.exe')); // fallback GUI
+    }
+    for (const p of candidates) {
+      if (fs.existsSync(p)) return p;
+    }
+    return null;
+  }
+
+  const TOPAZ_EXE = findTopazExe();
+
+  // GET /api/topaz-status — check if Topaz Gigapixel is available
+  app.get("/api/topaz-status", (_req, res) => {
+    res.json({
+      available: !!TOPAZ_EXE,
+      path: TOPAZ_EXE || null,
+      envOverride: !!process.env.TOPAZ_GIGAPIXEL_PATH,
+    });
+  });
+
+  // POST /api/topaz-upscale — upscale an image using locally installed Topaz Gigapixel AI
+  app.post("/api/topaz-upscale", topazUpload.single('image'), async (req, res) => {
+    if (!req.file) return res.status(400).json({ error: 'No image file provided.' });
+
+    const ext = path.extname(req.file.originalname) || '.png';
+    // Multer saves without extension — rename so Gigapixel can detect the format
+    const inputPath = req.file.path + ext;
+    try { fs.renameSync(req.file.path, inputPath); } catch {}
+
+    const outputPath = path.join(TOPAZ_TMP, 'out_' + req.file.filename + ext);
+
+    const scale = String(req.body.scale || '4');
+    const model = String(req.body.model || 'std');
+
+    // Re-check availability each call (allows installing after server starts)
+    const exe = findTopazExe();
+    if (!exe) {
+      return res.status(503).json({
+        error: 'Topaz Gigapixel AI not found. Install from https://www.topazlabs.com/gigapixel-ai',
+        hint: 'Set TOPAZ_GIGAPIXEL_PATH environment variable to the executable path if installed in a non-default location.',
+      });
+    }
+
+    try {
+      await new Promise<void>((resolve, reject) => {
+        // CLI syntax from `gigapixel.exe --help`:
+        //   -i PATH  input file
+        //   -o PATH  output file
+        //   --scale MULTIPLIER
+        //   -m MODEL / --model MODEL
+        const child = execFile(exe, [
+          '-i', inputPath,
+          '-o', outputPath,
+          '--scale', scale,
+          '-m', model,
+        ], { timeout: 300_000 });
+
+        let stderr = '';
+        child.stderr?.on('data', (chunk: Buffer) => { stderr += chunk.toString(); });
+        child.stdout?.on('data', (chunk: Buffer) => { /* progress info */ });
+        child.on('error', (err) => reject(err));
+        child.on('exit', (code) => {
+          if (code === 0) resolve();
+          else reject(new Error(`Topaz exited with code ${code}. ${stderr.slice(0, 500)}`));
+        });
+      });
+
+      if (!fs.existsSync(outputPath)) {
+        return res.status(500).json({ error: 'Topaz did not produce an output file.' });
+      }
+
+      const outputBuf = fs.readFileSync(outputPath);
+      res.set('Content-Type', `image/${ext.replace('.', '')}`);
+      res.send(outputBuf);
+    } catch (e: any) {
+      res.status(500).json({ error: e.message || 'Topaz upscale failed.' });
+    } finally {
+      try { fs.unlinkSync(inputPath); } catch {}
+      try { fs.unlinkSync(outputPath); } catch {}
+    }
+  });
+
   // --- Vite Middleware ---
   if (process.env.NODE_ENV !== "production") {
     const vite = await createViteServer({
@@ -931,7 +1084,9 @@ async function startServer() {
     // In production, serve the built dist directory
     const distPath = path.join(process.cwd(), 'dist');
     app.use(express.static(distPath));
-    app.get('*', (_req, res) => {
+    // SPA fallback. Express 5 (path-to-regexp 8) rejects app.get('*'),
+    // so use a plain middleware for the catch-all.
+    app.use((_req, res) => {
       res.sendFile(path.join(distPath, 'index.html'));
     });
   }
