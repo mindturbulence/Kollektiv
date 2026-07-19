@@ -28,10 +28,10 @@ fails for everyone but the original author.
       Verified: matches the spec exactly, no secrets embedded.
 - [x] Confirm no secrets are embedded in the HTML (client-side PKCE needs none).
 - [x] Commit the file.
-- [ ] Verify `pnpm run build` copies it into `dist/` (it's under `public/`, so Vite
-      should — confirm, don't assume).
-- [ ] Manual: fresh clone → `pnpm install && pnpm build && pnpm preview` → complete
-      a Spotify connect end to end.
+- [x] Verify `pnpm run build` copies it into `dist/` — confirmed:
+      `dist/spotify-callback.html` exists after a clean `pnpm run build`.
+- [ ] **Manual, needs a live Spotify app + browser:** fresh clone → `pnpm install &&
+      pnpm build && pnpm preview` → complete a Spotify connect end to end.
 
 **Acceptance:** Spotify connect works from a clean checkout with no author-local files.
 
@@ -52,8 +52,9 @@ to Gmail tools" goal of `82f3897`. The three other GSI call sites (lines 237, 29
 - [x] Remove `settings.googleApiKey` from that effect's dependency array (line ~262)
       if it's no longer referenced.
 - [x] `pnpm run lint` clean afterwards.
-- [ ] Manual: with an expired Google token, confirm a Gmail tool triggers a
-      successful silent refresh (no full re-consent) when a GSI session is available.
+- [ ] **Manual, needs a live Google session:** with an expired Google token, confirm
+      a Gmail tool triggers a successful silent refresh (no full re-consent) when a
+      GSI session is available.
 
 **Acceptance:** silent refresh uses only a real OAuth client_id; behaviour matches the other GSI sites.
 
@@ -69,11 +70,11 @@ The MCP-UI removal left residue that compiles but shouldn't be in the tree.
       `remove_mcp_ui.py`, `_final.py`, `_v4.py`, `_v5.py`, `_v6.py`;
       `remove_remaining_mcp_button.py`; `remove_slash_button.py` (`6afb40a`).
 - [x] Add `*.bak` and the throwaway root `*.py` scripts to `.gitignore`.
-- [ ] Grep for any other orphaned `mcp`/`MCP` references in `LLMChatPanel.tsx` and
-      confirm none are dead.
+- [x] Grep for any other orphaned `mcp`/`MCP` references in `LLMChatPanel.tsx` and
+      confirm none are dead. Confirmed: `grep -in "mcp" components/LLMChatPanel.tsx` → no matches.
 - [x] `pnpm run lint` clean.
 
-**Acceptance:** no dead statements, no scratch files, `.gitignore` prevents recurrence.
+**Acceptance:** no dead statements, no scratch files, `.gitignore` prevents recurrence. ✅ Verified.
 
 ---
 
@@ -128,9 +129,10 @@ key is now permanently in git history regardless of code fixes.
 - [x] Added `.env`/`.env.local` to `.gitignore`, plus a tracked `.env.example`
       documenting `OBSIDIAN_API_KEY`.
 - [x] Add a note to CONTRIBUTING.md's secrets section pointing at the `.env.example` pattern.
-- [ ] **Manual, user-only:** rotate/regenerate the key in Obsidian's Local REST API
-      plugin settings — the old value is exposed in git history and code fixes alone
-      don't invalidate it. Update your local `.env` with the new value afterward.
+- [ ] **Manual, user-only — cannot be automated:** rotate/regenerate the key in
+      Obsidian's Local REST API plugin settings — the old value is exposed in git
+      history and code fixes alone don't invalidate it. Update your local `.env`
+      with the new value afterward.
 
 **Acceptance:** no credential literals anywhere in the tree (verified via grep); key rotated (pending user action).
 
@@ -158,24 +160,24 @@ major version, which can hide or misreport React 19 API type errors.
 
 ---
 
-## ISSUE-8 — `SplitView`'s `viewerRef` prop is passed but never used · LOW
+## ISSUE-8 — `SplitView`'s `viewerRef` prop is passed but never used · LOW · ✅ FIXED
 
-Found while fixing ISSUE-7. `components/ImageCompare.tsx:389` passes `viewerRef={viewerRef}`
-into `SplitView`, and `SplitView`'s prop type declares `viewerRef` — but the component
-destructures only `{ imageA, imageB, transform }` (line 118) and creates its **own**
-separate local ref via `useRef<HTMLDivElement>(null)` at line 121. The parent's ref is
-silently discarded; whatever the caller intended to read/observe via that ref (e.g. the
-parent's own `ref={viewerRef}` at line 374) is disconnected from the div `SplitView`
-actually renders.
+Found while fixing ISSUE-7. `components/ImageCompare.tsx:389` passed `viewerRef={viewerRef}`
+into `SplitView`, and `SplitView`'s prop type declared `viewerRef` — but the component
+destructured only `{ imageA, imageB, transform }` and created its **own** separate local
+ref via `useRef<HTMLDivElement>(null)`. The parent's ref was silently discarded.
 
-- [ ] Decide intent: either `SplitView` should accept and attach the passed-in
-      `viewerRef` (drop its local one), or the prop is genuinely unused and should be
-      removed from both the type and the call site.
-- [ ] Apply the fix and confirm split-view drag/slider behavior (which reads
-      `viewerRef.current.getBoundingClientRect()`) still works correctly.
-- [ ] `pnpm run lint` clean.
+- [x] Decided intent: the parent's `viewerRef` (`ImageCompare.tsx:374`) is attached to a
+      *different* element — the outer `motion.div` used for wheel-zoom/pan handling —
+      not the same node `SplitView` needs for its slider drag math. `SplitView`'s own
+      local ref was already correct and sufficient for its own purpose. The prop was
+      genuinely unused, not a wiring bug: removed it from both the type
+      (`SplitView: React.FC<ViewProps>`, dropped the intersection) and the call site.
+- [x] Confirmed split-view drag/slider behavior is unchanged: `SplitView` still reads
+      its own local `viewerRef.current.getBoundingClientRect()`, untouched.
+- [x] `pnpm run lint` clean.
 
-**Acceptance:** exactly one `viewerRef` is in play for `SplitView`, and it's the one actually attached to the rendered DOM node.
+**Acceptance:** exactly one `viewerRef` is in play for `SplitView`, and it's the one actually attached to the rendered DOM node. ✅ Verified.
 
 ---
 

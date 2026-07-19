@@ -113,9 +113,7 @@ const useBaseImageStyle = (transform: TransformState) => {
 };
 
 
-const SplitView: React.FC<ViewProps & {
-    viewerRef: React.RefObject<HTMLDivElement | null>;
-}> = ({ imageA, imageB, transform }) => {
+const SplitView: React.FC<ViewProps> = ({ imageA, imageB, transform }) => {
     const [sliderPosition, setSliderPosition] = useState(50);
     const [isDraggingSlider, setIsDraggingSlider] = useState(false);
     const viewerRef = useRef<HTMLDivElement>(null);
@@ -386,7 +384,7 @@ const ImageCompare: React.FC<ImageCompareProps> = ({ isExiting = false }) => {
                                     <p className="text-xl font-black uppercase tracking-widest">Awaiting Dual Input Sequence</p>
                                 </div>
                             ) : viewMode === 'split' ? (
-                                <SplitView key="split" imageA={imageA} imageB={imageB} transform={transform} viewerRef={viewerRef} />
+                                <SplitView key="split" imageA={imageA} imageB={imageB} transform={transform} />
                             ) : (
                                 <SideBySideView key="sideBySide" imageA={imageA} imageB={imageB} transform={transform} />
                             )}
