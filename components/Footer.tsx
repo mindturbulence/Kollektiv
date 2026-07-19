@@ -239,7 +239,10 @@ const Footer: React.FC<FooterProps> = ({
                     <span className="arwes-label uppercase tracking-widest text-primary/60 leading-none inline-block">INT</span>
                     <IntegrationItem label="VAULT" active={fileSystemManager.isDirectorySelected()} />
                     <IntegrationItem label={(settings.activeLLM === 'ollama_cloud' ? 'OLLAMA' : settings.activeLLM?.toUpperCase()) || 'LLM'} active={!!(settings.geminiApiKey || process.env.GEMINI_API_KEY) || settings.activeLLM?.includes('ollama')} />
-                    <IntegrationItem label="YOUTUBE" active={!!settings.youtube?.isConnected && isGoogleAuthValid(settings.googleIdentity)} />
+                    <IntegrationItem label="GOOGLE" active={isGoogleAuthValid(settings.googleIdentity)} />
+                    <IntegrationItem label="SPOTIFY" active={!!settings.spotify?.isConnected} />
+                    <IntegrationItem label="TENSORART" active={!!settings.tensorartApiKey} />
+                    <IntegrationItem label={`MCP: ${(settings.mcpServers || []).filter(s => s.enabled).length}`} active={(settings.mcpServers || []).filter(s => s.enabled).length > 0} />
                 </div>
             </div>
 
