@@ -346,69 +346,11 @@ async function startServer() {
     res.json({ status: "ok" });
   });
 
-  // Spotify OAuth callback - exchange authorization code for tokens
-  app.get("/auth/spotify/callback", async (req, res) => {
-    const { code, error, state } = req.query;
-    
-    if (error) {
-      return res.redirect(`/?spotify_error=${encodeURIComponent(error as string)}`);
-    }
-    
-    if (!code) {
-      return res.redirect(`/?spotify_error=missing_code`);
-    }
-
-    const clientId = process.env.SPOTIFY_CLIENT_ID;
-    const clientSecret = process.env.SPOTIFY_CLIENT_SECRET;
-    // Use ngrok URL if available (for HTTPS Spotify OAuth), otherwise use request host
-    const ngrokUrl = process.env.NGROK_URL;
-    const redirectUri = ngrokUrl 
-      ? `${ngrokUrl}/auth/spotify/callback`
-      : `${req.protocol}://${req.get('host')}/auth/spotify/callback`;
-
-    if (!clientId || !clientSecret) {
-      return res.redirect(`/?spotify_error=missing_credentials`);
-    }
-
-    try {
-      const response = await fetch('https://accounts.spotify.com/api/token', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/x-www-form-urlencoded',
-          'Authorization': 'Basic ' + Buffer.from(`${clientId}:${clientSecret}`).toString('base64'),
-        },
-        body: new URLSearchParams({
-          grant_type: 'authorization_code',
-          code: code as string,
-          redirect_uri: redirectUri,
-        }),
-      });
-
-      if (!response.ok) {
-        const errorData = await response.text();
-        console.error('Spotify token exchange failed:', errorData);
-        return res.redirect(`/?spotify_error=token_exchange_failed`);
-      }
-
-      const tokenData = await response.json();
-      
-      // Store tokens in localStorage via a script that runs on the redirect
-      const html = `
-        <html><body>
-          <script>
-            localStorage.setItem('spotify_access_token', '${tokenData.access_token}');
-            localStorage.setItem('spotify_refresh_token', '${tokenData.refresh_token || ''}');
-            localStorage.setItem('spotify_expires_at', '${Date.now() + (tokenData.expires_in * 1000)}');
-            window.close();
-          </script>
-          <p>Authentication successful! You can close this window.</p>
-        </body></html>
-      `;
-      res.send(html);
-    } catch (err) {
-      console.error('Spotify callback error:', err);
-      return res.redirect(`/?spotify_error=server_error`);
-    }
+  // Spotify OAuth callback — redirects to static HTML page that performs
+  // the PKCE token exchange entirely client-side (no server-side env vars needed).
+  app.get("/auth/spotify/callback", (req, res) => {
+    const qs = req.url.includes('?') ? req.url.slice(req.url.indexOf('?')) : '';
+    res.redirect(`/spotify-callback.html${qs}`);
   });
 
   // Anthropic API Proxy Endpoint

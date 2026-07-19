@@ -1,4 +1,4 @@
-import type { LLMSettings, WildcardCategory } from '../types';
+import type { GoogleIdentityConnection, LLMSettings, WildcardCategory } from '../types';
 import { appControlService } from './appControlService';
 import { appEventBus } from '../utils/eventBus';
 import { browserControlService } from './browserControlService';
@@ -99,6 +99,25 @@ const confirmSensitiveAction = (summary: string): boolean => {
     if (typeof window === 'undefined' || typeof window.confirm !== 'function') return false;
     return window.confirm(`The assistant wants to:\n\n${summary}\n\nAllow this?`);
 };
+
+/** Try to obtain a valid Google access token, attempting silent refresh if stale. */
+async function ensureGoogleToken(identity: GoogleIdentityConnection | null | undefined): Promise<{ token: string } | string> {
+    if (isGoogleAuthValid(identity)) {
+        return { token: identity.accessToken };
+    }
+    if (!identity?.isConnected) {
+        return 'Error: No Google Identity connected. Go to Settings > Integrations > Google and authorize your account.';
+    }
+    // Token expired — attempt silent refresh
+    try {
+        const { trySilentRefreshWithWait } = await import('../utils/googleAuth');
+        const refreshed = await trySilentRefreshWithWait(identity, 5000, 300);
+        if (refreshed?.accessToken) {
+            return { token: refreshed.accessToken };
+        }
+    } catch {}
+    return 'Error: Your Google session has expired and could not be refreshed. Go to Settings > Integrations > Google and re-authenticate.';
+}
 
 export const ASSISTANT_TOOLS: AssistantTool[] = [
     {
@@ -1061,13 +1080,9 @@ export const ASSISTANT_TOOLS: AssistantTool[] = [
             required: ['action'],
         },
         execute: async (args, ctx) => {
-            if (!isGoogleAuthValid(ctx.settings.googleIdentity)) {
-                if (ctx.settings.googleIdentity?.isConnected) {
-                    return 'Error: Your Google session has expired. Ask the user to re-authenticate in Settings > Integrations > Google.';
-                }
-                return 'Error: No Google Identity connected. Go to Settings > App > Storage and authorize Google Drive first, then re-authorize to include Gmail access.';
-            }
-            const token = ctx.settings.googleIdentity!.accessToken!;
+            const authResult = await ensureGoogleToken(ctx.settings.googleIdentity);
+            if (typeof authResult === 'string') return authResult;
+            const token = authResult.token;
             const BASE = '/google-api/gmail/v1/users/me';
             const headers = { Authorization: `Bearer ${token}` };
             try {
@@ -1126,13 +1141,9 @@ export const ASSISTANT_TOOLS: AssistantTool[] = [
             required: ['to', 'subject', 'body'],
         },
         execute: async (args, ctx) => {
-            if (!isGoogleAuthValid(ctx.settings.googleIdentity)) {
-                if (ctx.settings.googleIdentity?.isConnected) {
-                    return 'Error: Your Google session has expired. Ask the user to re-authenticate in Settings > Integrations > Google.';
-                }
-                return 'Error: No Google Identity connected. Go to Settings > App > Storage and authorize Google Drive first.';
-            }
-            const token = ctx.settings.googleIdentity!.accessToken!;
+            const authResult = await ensureGoogleToken(ctx.settings.googleIdentity);
+            if (typeof authResult === 'string') return authResult;
+            const token = authResult.token;
             if (!confirmSensitiveAction(`Send an email\nTo: ${String(args.to || '')}\nSubject: ${String(args.subject || '')}`)) {
                 return 'User declined: the email was NOT sent. Do not retry unless the user explicitly asks again.';
             }
@@ -1186,13 +1197,9 @@ export const ASSISTANT_TOOLS: AssistantTool[] = [
             required: ['id'],
         },
         execute: async (args, ctx) => {
-            if (!isGoogleAuthValid(ctx.settings.googleIdentity)) {
-                if (ctx.settings.googleIdentity?.isConnected) {
-                    return 'Error: Your Google session has expired. Ask the user to re-authenticate in Settings > Integrations > Google.';
-                }
-                return 'Error: No Google Identity connected.';
-            }
-            const token = ctx.settings.googleIdentity!.accessToken!;
+            const authResult = await ensureGoogleToken(ctx.settings.googleIdentity);
+            if (typeof authResult === 'string') return authResult;
+            const token = authResult.token;
             const wantsPermanent = args.action === 'delete';
             if (!confirmSensitiveAction(`${wantsPermanent ? 'PERMANENTLY DELETE (irreversible)' : 'Move to trash'}\nGmail message: ${String(args.id)}`)) {
                 return 'User declined: the message was NOT modified. Do not retry unless the user explicitly asks again.';

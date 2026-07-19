@@ -75,17 +75,38 @@ export const appControlService = {
     
     help: () => {
         return `Commands available:
-- /nav <page_name>
-- /list_prompts <optional query>
-- /save_prompt <prompt_text>
-- /cheatsheets <optional query>
-- /gallery
-- /discover
-- /discover_prompts <collection_id> <optional query>`;
+- /nav <page_name> — Navigate to any page (dashboard, assistant, discovery, prompts, crafter, refiner, prompt_analyzer, media_analyzer, prompt, gallery, resizer, video_to_frames, image_compare, color_palette_extractor, composer, lora_editor, settings)
+- /refine — Navigate to the prompt refiner
+- /composer — Navigate to the prompt composer/crafter
+- /settings — Open settings
+- /analyzer — Open the prompt analyzer
+- /media_analyzer — Open the media analyzer
+- /compare — Open the image compare tool
+- /resizer — Open the image resizer
+- /lora_editor — Open the LoRA editor
+- /list_prompts <optional query> — List your saved prompts
+- /save_prompt <title> <prompt> — Save a new prompt
+- /cheatsheets <optional query> — View prompt cheatsheets
+- /gallery — View gallery info
+- /discover — Explore discovery collections
+- /discover_prompts <collection_id> <optional query> — View prompts in a discovery collection
+- /chat — View your chat session history
+- /help — Show this help message`;
     },
 
     getYouTubeApiKey: () => {
-        // This will be set via settings
-        return (window as any).__YOUTUBE_API_KEY || '';
+        // Try window var first (synced from handleSettingsChange)
+        const fromWindow = (window as any).__YOUTUBE_API_KEY;
+        if (fromWindow) return fromWindow;
+        // Fallback: read directly from localStorage (avoids bundler issues with require/import)
+        try {
+            const raw = localStorage.getItem('kollektivSettingsV4');
+            if (raw) {
+                const parsed = JSON.parse(raw);
+                if (parsed.googleApiKey) return parsed.googleApiKey;
+                if (parsed.youtube?.customApiKey) return parsed.youtube.customApiKey;
+            }
+        } catch {}
+        return '';
     },
 };

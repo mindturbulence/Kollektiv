@@ -149,7 +149,7 @@ const WebViewerPanel: React.FC<WebViewerPanelProps> = ({ isOpen, onClose }) => {
     return (
         <div
             ref={panelRef}
-            className="absolute top-0 right-0 bottom-0 w-full md:w-[720px] bg-transparent z-[50] translate-x-full pointer-events-none"
+            className={`absolute top-0 right-0 bottom-0 bg-transparent z-[50] translate-x-full pointer-events-none ${isExpanded ? 'w-full' : 'w-full md:w-[720px]'}`}
             style={{ visibility: 'hidden' }}
             aria-hidden={!isOpen}
         >

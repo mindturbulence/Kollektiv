@@ -35,7 +35,7 @@ export const buildGoogleIdentity = (
     name: userInfo.name,
     picture: userInfo.picture,
     accessToken: payload.access_token,
-    expiresAt: Date.now() + payload.expires_in * 1000,
+    expiresAt: Date.now() + (typeof payload.expires_in === 'number' ? payload.expires_in : 3600) * 1000,
     connectedAt: Date.now(),
 });
 
@@ -75,4 +75,52 @@ export const requestSilentTokenRefresh = (identity?: GoogleIdentityConnection | 
         return true;
     }
     return false;
+};
+
+/**
+ * Used by assistant tools: attempt a silent token refresh and wait for it.
+ * First tries the event bus (SetupPage listener), then tries the GSI token client
+ * directly if stored on window.__GOOGLE_TOKEN_CLIENT.
+ * Polls localStorage settings up to `timeoutMs` for the new token to arrive.
+ * Returns { accessToken, expiresAt } on success, or null if still expired.
+ */
+export const trySilentRefreshWithWait = async (
+    identity?: GoogleIdentityConnection | null,
+    timeoutMs = 5000,
+    pollInterval = 300,
+): Promise<{ accessToken: string; expiresAt?: number } | null> => {
+    if (!identity?.isConnected) return null;
+
+    // Already valid? No refresh needed.
+    if (isGoogleAuthValid(identity)) {
+        return { accessToken: identity.accessToken, expiresAt: identity.expiresAt };
+    }
+
+    // Trigger silent refresh via event bus (works when SetupPage is mounted)
+    appEventBus.emit('googleTokenRefreshRequested', {});
+
+    // Also try calling the GSI token client directly in case SetupPage is not mounted
+    // (the event bus listener is only active when SetupPage is rendered).
+    // If SetupPage IS mounted, the listener will also fire — GSI handles concurrent
+    // requestAccessToken calls gracefully (second call is a no-op).
+    try {
+        const gsiClient = typeof window !== 'undefined' ? (window as any).__GOOGLE_TOKEN_CLIENT : null;
+        if (gsiClient && typeof gsiClient.requestAccessToken === 'function') {
+            gsiClient.requestAccessToken({ prompt: '' });
+        }
+    } catch { /* direct GSI call failed, fallback to polling only */ }
+
+    // Poll for new token in localStorage (GSI callback updates via context → saveLLMSettings)
+    const start = Date.now();
+    while (Date.now() - start < timeoutMs) {
+        await new Promise(r => setTimeout(r, pollInterval));
+        try {
+            const { loadLLMSettings } = await import('./settingsStorage');
+            const fresh = loadLLMSettings();
+            if (fresh.googleIdentity && isGoogleAuthValid(fresh.googleIdentity)) {
+                return { accessToken: fresh.googleIdentity.accessToken, expiresAt: fresh.googleIdentity.expiresAt };
+            }
+        } catch { /* continue polling */ }
+    }
+    return null;
 };

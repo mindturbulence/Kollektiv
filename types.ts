@@ -157,6 +157,9 @@ export interface LLMSettings {
   isIdleEnabled: boolean;
   idleTimeoutMinutes: number;
   
+  // Google Cloud API key (top-level for robust persistence, used by YouTube search & other Google APIs)
+  googleApiKey?: string;
+
   // Integrations
   youtube?: YouTubeConnection;
   spotify?: SpotifyConnection;

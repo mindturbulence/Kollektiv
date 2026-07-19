@@ -191,7 +191,7 @@ export const SetupPage: React.FC<SetupPageProps> = ({
                 const updatedGoogle: GoogleIdentityConnection = {
                     isConnected: true, email: user.email, name: user.name, picture: user.picture,
                     accessToken: accessToken,
-                    expiresAt: expiresIn ? Date.now() + expiresIn * 1000 : undefined,
+                    expiresAt: Date.now() + (typeof expiresIn === 'number' ? expiresIn : 3600) * 1000,
                     connectedAt: Date.now()
                 };
                 const updatedSettings = { ...settings, googleIdentity: updatedGoogle };
@@ -226,6 +226,8 @@ export const SetupPage: React.FC<SetupPageProps> = ({
                         else { setIsWorking(false); setMaintenanceMsg(""); }
                     },
                 });
+                // Expose globally so assistant tools can trigger silent token refresh
+                (window as any).__GOOGLE_TOKEN_CLIENT = tokenClientRef.current;
                 lastClientIdRef.current = clientId;
             }
         } catch (e) { console.error("GSI Client Init Error:", e); tokenClientRef.current = null; }
@@ -242,16 +244,22 @@ export const SetupPage: React.FC<SetupPageProps> = ({
     // Silent token refresh for Google Identity (triggered by other components
     // when they detect the token is expired but isConnected is still true).
     useEffect(() => {
-        return appEventBus.on('googleTokenRefreshRequested', () => {
-            const clientId = settings.youtube?.customClientId || process.env.YOUTUBE_CLIENT_ID;
-            if (!clientId || clientId.includes('PLACEHOLDER') || !tokenClientRef.current) return;
+        const doRefresh = () => {
+            const clientId = settings.youtube?.customClientId || settings.googleApiKey || process.env.YOUTUBE_CLIENT_ID;
+            if (!clientId || clientId.includes('PLACEHOLDER')) return;
+            // Re-init if client id changed or token client not available
+            if (!tokenClientRef.current || lastClientIdRef.current !== clientId) {
+                initGsi(clientId);
+            }
+            if (!tokenClientRef.current) return;
             try {
                 tokenClientRef.current.requestAccessToken({ prompt: '' });
             } catch (e) {
                 console.warn('Silent token refresh failed:', e);
             }
-        });
-    }, [settings.youtube?.customClientId]);
+        };
+        return appEventBus.on('googleTokenRefreshRequested', doRefresh);
+    }, [settings.youtube?.customClientId, settings.googleApiKey, initGsi]);
 
     // PKCE helpers for Spotify OAuth
     const generateCodeVerifier = useCallback((): string => {
@@ -426,11 +434,15 @@ export const SetupPage: React.FC<SetupPageProps> = ({
     const handleSettingsChange = useCallback((field: keyof LLMSettings, value: any) => {
         const updated = { ...settings, [field]: value };
         setSettings(updated);
-        if (['youtube', 'googleIdentity', 'spotify', 'dashboardImageUrl', 'dashboardVideoUrl', 'darkTheme', 'mcpServers'].includes(field)) updateSettings(updated);
+        if (['youtube', 'googleIdentity', 'spotify', 'dashboardImageUrl', 'dashboardVideoUrl', 'darkTheme', 'mcpServers', 'googleApiKey', 'storageProvider', 'driveFolderId', 'driveFolderName'].includes(field)) updateSettings(updated);
         if (field === 'fontSize' && typeof window !== 'undefined') (window as any).document.documentElement.style.fontSize = `${value}px`;
-        // Update YouTube API key on window for assistant tools
-        if (field === 'youtube' && value?.customApiKey && typeof window !== 'undefined') {
-            (window as any).__YOUTUBE_API_KEY = value.customApiKey;
+        // Sync Google API key to window for assistant tools (read from googleApiKey, fallback to youtube.customApiKey)
+        if (typeof window !== 'undefined') {
+            if (field === 'googleApiKey' && value) {
+                (window as any).__YOUTUBE_API_KEY = value;
+            } else if (field === 'youtube' && value?.customApiKey) {
+                (window as any).__YOUTUBE_API_KEY = value.customApiKey;
+            }
         }
     }, [settings, updateSettings]);
 

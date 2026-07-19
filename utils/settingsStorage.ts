@@ -74,6 +74,9 @@ export const defaultLLMSettings: LLMSettings = {
   isIdleEnabled: true,
   idleTimeoutMinutes: 1,
 
+  // Google Cloud API key
+  googleApiKey: '',
+
   // Integrations
   youtube: {
     isConnected: false
@@ -141,6 +144,7 @@ export const loadLLMSettings = (): LLMSettings => {
                 ...defaultLLMSettings.anthropicTokenUsage!,
                 ...(parsed.anthropicTokenUsage || {})
             },
+            googleApiKey: parsed.googleApiKey ?? '',
             anthropicApiKey: parsed.anthropicApiKey ?? '',
             anthropicModel: parsed.anthropicModel ?? 'claude-3-7-sonnet-20250219',
             anthropicConnectionMode: parsed.anthropicConnectionMode ?? 'api_key',

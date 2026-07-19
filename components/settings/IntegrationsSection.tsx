@@ -300,7 +300,7 @@ const IntegrationsSection: React.FC<IntegrationsSectionProps> = ({
                 </div>
             </SettingRow>
             <SettingRow label="API Key" desc="API Key (Developer Key) for browser-level Google services.">
-                <input type="password" value={settings.youtube?.customApiKey || ''} onChange={(e) => handleSettingsChange('youtube', { ...settings.youtube, customApiKey: e.target.value })} className="form-input w-full max-w-md" placeholder="AIzaSy..." />
+                <input type="password" value={settings.googleApiKey || ''} onChange={(e) => handleSettingsChange('googleApiKey', e.target.value)} className="form-input w-full max-w-md" placeholder="AIzaSy..." />
             </SettingRow>
             </SettingsGroup>
 
