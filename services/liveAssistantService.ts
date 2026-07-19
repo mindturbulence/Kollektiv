@@ -239,9 +239,13 @@ function t(phraseKey: string, lang: string): string {
     return match ? phrase[match] : phrase.English;
 }
 
+/** 'read_gmail' -> 'Read Gmail'. Used when a tool has no flavored phrase above. */
+const humanizeToolName = (name: string): string =>
+    name.replace(/_/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase());
+
 /** Maps a tool call to a flavored, human-readable line in the user's preferred
- *  language, telling them what the assistant is actually doing without leaking
- *  raw tool names or JSON args. */
+ *  language, telling them what the assistant is actually doing. Falls back to
+ *  the tool's own name (humanized) rather than a vague phrase when unmatched. */
 const describeToolCall = (name: string, _args: Record<string, any>, lang: string): string => {
     switch (true) {
         case name === 'search' || name === 'websearch':
@@ -265,7 +269,7 @@ const describeToolCall = (name: string, _args: Record<string, any>, lang: string
         case name.startsWith('gmail_'):
             return t('inbox', lang);
         default:
-            return t('magic', lang);
+            return humanizeToolName(name);
     }
 };
 

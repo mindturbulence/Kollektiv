@@ -72,14 +72,20 @@ const ActivityPanel: React.FC<ActivityPanelProps> = ({ isOpen, onClose }) => {
         // Listen for caption chunks (user + assistant)
         const offCaption = appEventBus.on('liveCaption', (p: { who: 'user' | 'assistant'; text: string }) => {
             if (p && p.who && p.text) {
-                // For assistant text, we accumulate until we see a user caption or silence
-                // For transcript, we append each chunk as a separate entry
-                setTranscript(prev => [...prev, {
-                    id: uuidv4(),
-                    role: p.who,
-                    content: p.text,
-                    timestamp: Date.now(),
-                }]);
+                // Append to the transcript: merge into the last entry while the same
+                // speaker keeps talking, so the row reads as full speech, not one chunk per row.
+                setTranscript(prev => {
+                    const last = prev[prev.length - 1];
+                    if (last && last.role === p.who) {
+                        return [...prev.slice(0, -1), { ...last, content: last.content + p.text }];
+                    }
+                    return [...prev, {
+                        id: uuidv4(),
+                        role: p.who,
+                        content: p.text,
+                        timestamp: Date.now(),
+                    }];
+                });
             }
         });
 
@@ -88,7 +94,6 @@ const ActivityPanel: React.FC<ActivityPanelProps> = ({ isOpen, onClose }) => {
             if (s?.status === 'idle' || s?.status === 'error') {
                 setSessionActive(false);
                 setModeLabel(s.status === 'error' ? 'Error' : 'Idle');
-                // Add a system note
                 setTranscript(prev => [...prev, {
                     id: uuidv4(),
                     role: 'system',
@@ -98,7 +103,6 @@ const ActivityPanel: React.FC<ActivityPanelProps> = ({ isOpen, onClose }) => {
             } else if (s?.status === 'connecting') {
                 setSessionActive(true);
                 setModeLabel('Connecting');
-                // Clear previous transcript on new session
                 setTranscript([{
                     id: uuidv4(),
                     role: 'system',
@@ -207,7 +211,7 @@ const ActivityPanel: React.FC<ActivityPanelProps> = ({ isOpen, onClose }) => {
                                     }`}
                                 >
                                     <TerminalIcon className="w-3.5 h-3.5" />
-                                    Activity [{activity.length}]
+                                    Activity
                                 </button>
                                 <button
                                     onClick={() => { audioService.playClick(); setTab('transcript'); }}
@@ -218,7 +222,7 @@ const ActivityPanel: React.FC<ActivityPanelProps> = ({ isOpen, onClose }) => {
                                     }`}
                                 >
                                     <ChatBubbleIcon className="w-3.5 h-3.5" />
-                                    Transcript [{transcript.length}]
+                                    Transcript
                                 </button>
                             </div>
                         </div>
@@ -275,12 +279,17 @@ const ActivityPanel: React.FC<ActivityPanelProps> = ({ isOpen, onClose }) => {
                                         {activity.map((entry) => (
                                             <div
                                                 key={entry.id}
-                                                className="flex items-start gap-3 px-6 py-2.5 border-b border-base-300/5 hover:bg-base-100/10 transition-colors"
+                                                className="flex flex-col gap-1 px-6 py-3 border-b border-base-300/10 hover:bg-base-100/10 transition-colors"
                                             >
-                                                <span className="text-[8px] font-mono text-base-content/20 flex-shrink-0 mt-0.5 tabular-nums">
-                                                    {formatTime(entry.timestamp)}
-                                                </span>
-                                                <span className="text-[11px] font-medium text-base-content/70 leading-relaxed">
+                                                <div className="flex items-center justify-between gap-3">
+                                                    <span className="text-[9px] font-black uppercase tracking-[0.2em] text-primary/60">
+                                                        Log
+                                                    </span>
+                                                    <span className="text-[9px] font-mono text-base-content/20 tabular-nums">
+                                                        {formatTime(entry.timestamp)}
+                                                    </span>
+                                                </div>
+                                                <span className="text-sm font-medium text-base-content/70 leading-relaxed">
                                                     {entry.text}
                                                 </span>
                                             </div>
@@ -306,7 +315,7 @@ const ActivityPanel: React.FC<ActivityPanelProps> = ({ isOpen, onClose }) => {
                                         {transcript.map((entry) => (
                                             <div
                                                 key={entry.id}
-                                                className={`flex items-start gap-3 px-6 py-2.5 border-b border-base-300/5 transition-colors ${
+                                                className={`flex flex-col gap-1 px-6 py-3 border-b border-base-300/10 transition-colors ${
                                                     entry.role === 'user'
                                                         ? 'bg-primary/[0.02]'
                                                         : entry.role === 'system'
@@ -314,11 +323,8 @@ const ActivityPanel: React.FC<ActivityPanelProps> = ({ isOpen, onClose }) => {
                                                         : 'hover:bg-base-100/10'
                                                 }`}
                                             >
-                                                <div className="flex flex-col min-w-0 flex-shrink-0 w-14">
-                                                    <span className="text-[8px] font-mono text-base-content/20 tabular-nums">
-                                                        {formatTime(entry.timestamp)}
-                                                    </span>
-                                                    <span className={`text-[7px] font-black uppercase tracking-[0.2em] mt-0.5 ${
+                                                <div className="flex items-center justify-between gap-3">
+                                                    <span className={`text-[9px] font-black uppercase tracking-[0.2em] ${
                                                         entry.role === 'user'
                                                             ? 'text-accent'
                                                             : entry.role === 'system'
@@ -327,8 +333,11 @@ const ActivityPanel: React.FC<ActivityPanelProps> = ({ isOpen, onClose }) => {
                                                     }`}>
                                                         {entry.role === 'user' ? 'You' : entry.role === 'system' ? 'Sys' : 'AI'}
                                                     </span>
+                                                    <span className="text-[9px] font-mono text-base-content/20 tabular-nums">
+                                                        {formatTime(entry.timestamp)}
+                                                    </span>
                                                 </div>
-                                                <span className={`text-[11px] leading-relaxed ${
+                                                <span className={`text-sm leading-relaxed ${
                                                     entry.role === 'system'
                                                         ? 'text-base-content/40 italic'
                                                         : 'text-base-content/80'
