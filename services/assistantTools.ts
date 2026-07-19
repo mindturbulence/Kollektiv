@@ -1366,6 +1366,26 @@ export const executeAssistantTool = async (name: string, args: Record<string, an
     }
 };
 
+/** Recursively convert one internal (lowercase-type) schema node to Gemini's
+ *  Schema shape. A union node (`anyOf`, e.g. an MCP tool's discriminated-union
+ *  param) has no top-level `type` — only recurse into `type`/`items`/`properties`
+ *  when they're actually present, so those nodes pass through as `anyOf` alone. */
+const toGeminiSchema = (v: Record<string, any>): Record<string, any> => {
+    if (Array.isArray(v.anyOf)) {
+        const node: Record<string, any> = { anyOf: v.anyOf.map(toGeminiSchema) };
+        if (v.description) node.description = v.description;
+        return node;
+    }
+    const node: Record<string, any> = { ...v, type: String(v.type || 'string').toUpperCase() };
+    if (node.items) node.items = toGeminiSchema(node.items);
+    if (node.properties) {
+        node.properties = Object.fromEntries(
+            Object.entries(node.properties as Record<string, any>).map(([k, sub]) => [k, toGeminiSchema(sub)])
+        );
+    }
+    return node;
+};
+
 /** Gemini functionDeclarations (uppercase Type strings). */
 export const geminiToolDeclarations = (tools: AssistantTool[] = ASSISTANT_TOOLS) =>
     tools.map(t => {
@@ -1378,7 +1398,7 @@ export const geminiToolDeclarations = (tools: AssistantTool[] = ASSISTANT_TOOLS)
             decl.parameters = {
                 type: 'OBJECT',
                 properties: Object.fromEntries(
-                    propEntries.map(([k, v]) => [k, { ...v, type: v.type.toUpperCase() }])
+                    propEntries.map(([k, v]) => [k, toGeminiSchema(v)])
                 ),
                 ...(t.parameters.required?.length ? { required: t.parameters.required } : {}),
             };

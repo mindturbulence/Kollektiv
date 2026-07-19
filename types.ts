@@ -86,6 +86,10 @@ export interface McpServerConfig {
   enabled: boolean;
   apiKey?: string;
   headers?: Record<string, string>;
+  /** Set when this entry was created from the Predefined tab — identifies which
+   *  catalog entry (see constants/mcpPresets.ts) it was derived from, and keeps
+   *  it out of the Custom tab's list. */
+  presetId?: string;
 }
 
 export interface LLMSettings {

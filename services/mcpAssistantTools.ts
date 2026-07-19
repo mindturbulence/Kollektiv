@@ -13,6 +13,38 @@ function buildHeaders(cfg: McpServerConfig): Record<string, string> | undefined 
   return Object.keys(h).length ? h : undefined;
 }
 
+/** Recursively translate one JSON-Schema node into the tool-parameter shape the
+ *  assistant's function-calling layer expects. A shallow, type-only translation
+ *  is enough for flat params (e.g. a plain `path: string`), but MCP tools with a
+ *  discriminated-union param (e.g. Obsidian's `target: {type:'path',path} |
+ *  {type:'active'} | {type:'periodic',...}`) need the full nested shape
+ *  preserved as `anyOf`/`properties` — otherwise the model has no way to know
+ *  what to put inside an object-typed argument and the call fails validation. */
+function translateSchemaNode(v: any): Record<string, any> {
+  if (!v || typeof v !== 'object') return { type: 'string' };
+
+  const union = v.anyOf || v.oneOf;
+  if (Array.isArray(union)) {
+    const node: Record<string, any> = { anyOf: union.map(translateSchemaNode) };
+    if (v.description) node.description = v.description;
+    return node;
+  }
+
+  const rawType = typeof v.type === 'string' ? v.type : 'string';
+  const node: Record<string, any> = { type: rawType };
+  if (v.description) node.description = v.description;
+  if (v.enum) node.enum = v.enum;
+  else if (v.const !== undefined) node.enum = [v.const];
+  if (rawType === 'array' && v.items) node.items = translateSchemaNode(v.items);
+  if (rawType === 'object' && v.properties) {
+    node.properties = Object.fromEntries(
+      Object.entries(v.properties as Record<string, any>).map(([k, sub]) => [k, translateSchemaNode(sub)])
+    );
+    if (Array.isArray(v.required) && v.required.length) node.required = v.required;
+  }
+  return node;
+}
+
 /** MCP server tools wrapped as assistant tools (name-prefixed mcp_<serverId>_).
  *  Iterates all enabled MCP servers, merges their tools, and caches per server
  *  for 60s. Returns [] when no servers are enabled or all are unreachable. */
@@ -46,26 +78,7 @@ export const loadMcpAssistantTools = async (settings: LLMSettings): Promise<Assi
           parameters: {
             type: 'object',
             properties: Object.fromEntries(
-              Object.entries((t.inputSchema?.properties || {}) as Record<string, any>).map(([k, v]) => {
-                const prop: Record<string, any> = {};
-                let rawType = v?.type;
-                if (!rawType && v?.anyOf) {
-                  const first = v.anyOf.find((a: any) => a?.type && a.type !== 'null');
-                  if (first) rawType = first.type;
-                }
-                if (!rawType && v?.oneOf) {
-                  const first = v.oneOf.find((a: any) => a?.type && a.type !== 'null');
-                  if (first) rawType = first.type;
-                }
-                prop.type = typeof rawType === 'string' ? rawType : 'string';
-                if (v?.description) prop.description = v.description;
-                if (v?.enum) prop.enum = v.enum;
-                if (v?.items) {
-                  prop.items = { type: v.items.type || 'string' };
-                  if (v.items.enum) prop.items.enum = v.items.enum;
-                }
-                return [k, prop];
-              })
+              Object.entries((t.inputSchema?.properties || {}) as Record<string, any>).map(([k, v]) => [k, translateSchemaNode(v)])
             ),
             ...(Array.isArray(t.inputSchema?.required) && t.inputSchema.required.length ? { required: t.inputSchema.required } : {}),
           },
