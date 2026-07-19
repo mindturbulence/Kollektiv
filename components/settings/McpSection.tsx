@@ -4,6 +4,7 @@ import { mcpService } from '../../services/mcpService';
 import { audioService } from '../../services/audioService';
 import { CpuChipIcon, PlusIcon, CloseIcon } from '../icons';
 import PredefinedMcpSection from './PredefinedMcpSection';
+import { genMcpServerId } from '../../constants/mcpPresets';
 
 interface McpSectionProps {
     activeSubTab: string;
@@ -17,10 +18,6 @@ interface ServerStatus {
     connected: boolean | null;
     toolCount?: number;
     checking: boolean;
-}
-
-function genId(): string {
-    return 'mcp-' + Date.now().toString(36) + '-' + Math.random().toString(36).slice(2, 6);
 }
 
 const McpSection: React.FC<McpSectionProps> = ({ activeSubTab, settings, handleSettingsChange }) => {
@@ -42,7 +39,7 @@ const McpSection: React.FC<McpSectionProps> = ({ activeSubTab, settings, handleS
     const addServer = () => {
         audioService.playClick();
         const newServer: McpServerConfig = {
-            id: genId(),
+            id: genMcpServerId(),
             name: 'New MCP Server',
             url: 'http://localhost:3010',
             enabled: false,

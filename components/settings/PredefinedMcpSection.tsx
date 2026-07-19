@@ -1,6 +1,6 @@
 import React, { useState, useCallback } from 'react';
 import type { LLMSettings, McpServerConfig } from '../../types';
-import { MCP_PRESETS, McpPreset } from '../../constants/mcpPresets';
+import { MCP_PRESETS, McpPreset, findMcpPresetEntry, upsertMcpPresetEntry } from '../../constants/mcpPresets';
 import { mcpService } from '../../services/mcpService';
 import { audioService } from '../../services/audioService';
 import { CopyIcon } from '../icons';
@@ -14,10 +14,6 @@ interface ServerStatus {
     connected: boolean | null;
     toolCount?: number;
     checking: boolean;
-}
-
-function genId(): string {
-    return 'mcp-' + Date.now().toString(36) + '-' + Math.random().toString(36).slice(2, 6);
 }
 
 /** Pull the API key back out of a Firecrawl-built URL so the input shows
@@ -38,7 +34,7 @@ const PredefinedMcpSection: React.FC<PredefinedMcpSectionProps> = ({ settings, h
         const initial: Record<string, string> = {};
         for (const p of MCP_PRESETS) {
             if (p.buildUrl) {
-                const existing = servers.find(s => s.presetId === p.id);
+                const existing = findMcpPresetEntry(servers, p.id);
                 if (existing) initial[p.id] = extractFirecrawlKey(existing.url);
             }
         }
@@ -50,7 +46,7 @@ const PredefinedMcpSection: React.FC<PredefinedMcpSectionProps> = ({ settings, h
         handleSettingsChange('mcpServers', next);
     }, [handleSettingsChange]);
 
-    const findEntry = (presetId: string) => servers.find(s => s.presetId === presetId);
+    const findEntry = (presetId: string) => findMcpPresetEntry(servers, presetId);
 
     const testConnection = async (sv: McpServerConfig) => {
         setStatuses(prev => ({ ...prev, [sv.id]: { ...prev[sv.id], checking: true } }));
@@ -63,22 +59,9 @@ const PredefinedMcpSection: React.FC<PredefinedMcpSectionProps> = ({ settings, h
     };
 
     const upsertEntry = (preset: McpPreset, patch: Partial<McpServerConfig>): McpServerConfig => {
-        const existing = findEntry(preset.id);
-        if (existing) {
-            const updated = { ...existing, ...patch };
-            updateServers(servers.map(s => s.id === existing.id ? updated : s));
-            return updated;
-        }
-        const created: McpServerConfig = {
-            id: genId(),
-            name: preset.name,
-            url: preset.defaultUrl || '',
-            enabled: false,
-            presetId: preset.id,
-            ...patch,
-        };
-        updateServers([...servers, created]);
-        return created;
+        const { servers: next, entry } = upsertMcpPresetEntry(servers, preset, patch);
+        updateServers(next);
+        return entry;
     };
 
     const handleToggle = (preset: McpPreset, enabled: boolean) => {

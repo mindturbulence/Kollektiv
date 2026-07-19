@@ -1156,11 +1156,36 @@ async function startServer() {
 
   startObsidianMcp();
 
+  // Start Playwright MCP server as child process — no API key needed, so it
+  // always starts (matches the Predefined MCP tab's Playwright preset, which
+  // points at this same port by default).
+  let playwrightMcpProc: ReturnType<typeof spawn> | null = null;
+  const startPlaywrightMcp = () => {
+    if (playwrightMcpProc) return;
+    playwrightMcpProc = spawn("npx @playwright/mcp@latest --port 8931", [], {
+      shell: true, // needed on Windows
+      stdio: ["ignore", "pipe", "pipe"],
+    });
+    playwrightMcpProc.stdout?.on("data", (d) => console.log(`[Playwright MCP] ${d.toString().trim()}`));
+    playwrightMcpProc.stderr?.on("data", (d) => console.error(`[Playwright MCP] ${d.toString().trim()}`));
+    playwrightMcpProc.on("exit", (code) => {
+      console.log(`[Playwright MCP] exited with code ${code}`);
+      playwrightMcpProc = null;
+    });
+    console.log(`[Playwright MCP] starting on http://localhost:8931/mcp`);
+  };
+
+  startPlaywrightMcp();
+
   // Cleanup on shutdown
   const shutdown = () => {
     if (obsidianMcpProc) {
       console.log(`[Obsidian MCP] shutting down...`);
       obsidianMcpProc.kill();
+    }
+    if (playwrightMcpProc) {
+      console.log(`[Playwright MCP] shutting down...`);
+      playwrightMcpProc.kill();
     }
     process.exit(0);
   };

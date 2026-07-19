@@ -13,6 +13,8 @@ import { crafterService } from './crafterService';
 import { refinerPresetService } from './refinerPresetService';
 import { PROMPT_DETAIL_LEVELS } from '../constants/modifiers';
 import { listTools, createTask, pollTask } from './tensorartService';
+import { MCP_PRESETS, findMcpPresetEntry, upsertMcpPresetEntry } from '../constants/mcpPresets';
+import { mcpService } from './mcpService';
 
 // Spotify token refresh helper
 async function refreshSpotifyToken(): Promise<string | null> {
@@ -780,6 +782,72 @@ export const ASSISTANT_TOOLS: AssistantTool[] = [
             if (typeof window !== 'undefined') window.dispatchEvent(new Event('settings-updated'));
             const msg = `Updated: ${applied.join(', ')}.` + (skipped.length ? ` Skipped (unsafe or unknown): ${skipped.join(', ')}.` : '');
             return msg;
+        },
+    },
+    {
+        name: 'list_mcp_servers',
+        description: 'List MCP servers: the Predefined catalog (Firecrawl, Brave Search, Playwright — see Settings > MCP Servers > Predefined) with whether each is currently configured/enabled, plus any Custom MCP servers the user added. Use before toggle_mcp_server to see current state.',
+        parameters: { type: 'object', properties: {} },
+        execute: () => {
+            const settings = loadLLMSettings();
+            const servers = settings.mcpServers || [];
+            const predefined = MCP_PRESETS.map(p => {
+                const entry = findMcpPresetEntry(servers, p.id);
+                return `- ${p.id} (${p.name}): ${p.description} — ${entry ? (entry.enabled ? 'ENABLED' : 'configured but disabled') : 'not configured'}${p.needsApiKey && !entry?.url ? ', needs an API key' : ''}`;
+            }).join('\n');
+            const custom = servers.filter(s => !s.presetId);
+            const customList = custom.length
+                ? custom.map(s => `- ${s.name} (${s.url}) — ${s.enabled ? 'ENABLED' : 'disabled'}`).join('\n')
+                : '(none)';
+            return `Predefined:\n${predefined}\n\nCustom:\n${customList}`;
+        },
+    },
+    {
+        name: 'toggle_mcp_server',
+        description: `Turn a Predefined MCP server on or off (default: all off). Valid preset ids: ${MCP_PRESETS.map(p => p.id).join(', ')}. Firecrawl is hosted and needs an api_key to enable (ask the user for one if they don't have it configured yet, or point them to Settings > MCP Servers > Predefined). Brave Search and Playwright run as a local process the user must launch themselves — enabling here only tells the assistant it's allowed to use it; if the ping right after enabling fails, tell the user to run the shown local command.`,
+        parameters: {
+            type: 'object',
+            properties: {
+                preset: { type: 'string', description: 'Preset id.', enum: MCP_PRESETS.map(p => p.id) },
+                enabled: { type: 'boolean', description: 'true to turn on, false to turn off.' },
+                api_key: { type: 'string', description: "API key, only meaningful for presets that need one (see list_mcp_servers). Not required when disabling, or when re-enabling a preset that's already configured." },
+            },
+            required: ['preset', 'enabled'],
+        },
+        execute: async ({ preset: presetId, enabled, api_key }) => {
+            const preset = MCP_PRESETS.find(p => p.id === presetId);
+            if (!preset) return `Error: unknown preset "${presetId}". Valid ids: ${MCP_PRESETS.map(p => p.id).join(', ')}.`;
+
+            const settings = loadLLMSettings();
+            const servers = settings.mcpServers || [];
+            const existing = findMcpPresetEntry(servers, preset.id);
+
+            const patch: Record<string, any> = { enabled: !!enabled };
+            if (enabled && preset.buildUrl) {
+                const key = (typeof api_key === 'string' && api_key.trim()) || undefined;
+                if (key) {
+                    patch.url = preset.buildUrl(key);
+                } else if (!existing?.url) {
+                    return `Error: ${preset.name} needs an API key to enable. Ask the user for one, or pass it as api_key.`;
+                }
+            }
+
+            const { servers: nextServers, entry } = upsertMcpPresetEntry(servers, preset, patch);
+            saveLLMSettings({ ...settings, mcpServers: nextServers });
+            if (typeof window !== 'undefined') window.dispatchEvent(new Event('settings-updated'));
+
+            if (!enabled) return `${preset.name} disabled.`;
+            if (!entry.url) return `${preset.name} enabled, but no connection URL is set yet.`;
+
+            try {
+                const tools = await mcpService.listTools(entry.url);
+                return `${preset.name} enabled and reachable — ${tools.length} tools available.`;
+            } catch {
+                const hint = preset.launchCommand
+                    ? ` It runs locally — tell the user to run: ${preset.launchCommand.replace('{apiKey}', 'their API key')}`
+                    : '';
+                return `${preset.name} enabled, but not reachable yet at ${entry.url}.${hint}`;
+            }
         },
     },
     {

@@ -6,9 +6,9 @@ import AutocompleteSelect from '../AutocompleteSelect';
 import { DEFAULT_ANTHROPIC_MODEL } from '../../constants/llmDefaults';
 import { InformationCircleIcon, SparklesIcon } from '../icons';
 import { isGoogleAuthValid } from '../../utils/googleAuth';
-import { ASSISTANT_VOICES, DEFAULT_MALE_VOICE, DEFAULT_FEMALE_VOICE, voiceGender } from '../../utils/assistantVoices';
 import McpSection from './McpSection';
 import CdpSection from './CdpSection';
+import AssistantSection from './AssistantSection';
 
 interface IntegrationsSectionProps {
     activeSubTab: string;
@@ -234,50 +234,6 @@ const IntegrationsSection: React.FC<IntegrationsSectionProps> = ({
         </div>
     );
 
-    const voiceOptions = ASSISTANT_VOICES.map(v => ({ label: `${v.name} — ${v.gender}`, value: v.name, description: v.gender }));
-    const currentVoiceGender = voiceGender(settings.assistantVoice);
-
-    const renderAssistant = () => (
-        <div className="flex flex-col animate-fade-in pb-12">
-            <SettingsGroup title="Assistant Persona">
-                <SettingRow label="Assistant Name" desc="What the assistant calls itself in chat and live voice mode.">
-                    <input type="text" value={settings.assistantName || ''} onChange={(e) => handleSettingsChange('assistantName', e.target.value)} className="form-input w-full md:w-[620px]" placeholder="Kollektiv" />
-                </SettingRow>
-                <SettingRow label="Assistant Brain" desc="Which engine the chat assistant reasons and calls tools on. Uses that provider's endpoint/model from the AI Engine tab. GPT (ChatGPT) models are available via OpenRouter. Live voice conversations always run on Gemini Live with the voice below.">
-                    <div className="tab-group">
-                        <ProviderTab label="Gemini" isActive={(settings.assistantProvider || 'gemini') === 'gemini'} onClick={() => handleSettingsChange('assistantProvider', 'gemini')} />
-                        <ProviderTab label="Anthropic" isActive={settings.assistantProvider === 'anthropic'} onClick={() => handleSettingsChange('assistantProvider', 'anthropic')} />
-                        <ProviderTab label="Ollama" isActive={settings.assistantProvider === 'ollama'} onClick={() => handleSettingsChange('assistantProvider', 'ollama')} />
-                        <ProviderTab label="Cloud Ollama" isActive={settings.assistantProvider === 'ollama_cloud'} onClick={() => handleSettingsChange('assistantProvider', 'ollama_cloud')} />
-                        <ProviderTab label="OpenRouter" isActive={settings.assistantProvider === 'openrouter'} onClick={() => handleSettingsChange('assistantProvider', 'openrouter')} />
-                        <ProviderTab label="Llama.cpp" isActive={settings.assistantProvider === 'llamacpp'} onClick={() => handleSettingsChange('assistantProvider', 'llamacpp')} />
-                    </div>
-                </SettingRow>
-                <SettingRow label="Quick Persona" desc="Jump to a representative male or female voice. Pick any of the 30 voices individually below.">
-                    <div className="tab-group">
-                        <ProviderTab label="Male" isActive={currentVoiceGender === 'Male'} onClick={() => handleSettingsChange('assistantVoice', DEFAULT_MALE_VOICE)} />
-                        <ProviderTab label="Female" isActive={currentVoiceGender === 'Female'} onClick={() => handleSettingsChange('assistantVoice', DEFAULT_FEMALE_VOICE)} />
-                    </div>
-                </SettingRow>
-                <SettingRow label="Voice" desc="Exact voice used for spoken replies in Live voice mode (Gemini only). Type to search, e.g. 'female' or a name.">
-                    <AutocompleteSelect value={settings.assistantVoice || 'Kore'} onChange={(v) => handleSettingsChange('assistantVoice', v)} options={voiceOptions} placeholder="SELECT VOICE..." className="w-full md:w-[620px]" />
-                </SettingRow>
-                <SettingRow label="Preferred Language" desc="Always reply in this language regardless of what language you write or speak in. Leave blank to match you automatically.">
-                    <input type="text" value={settings.assistantLanguage || ''} onChange={(e) => handleSettingsChange('assistantLanguage', e.target.value)} className="form-input w-full md:w-[620px]" placeholder="e.g. English, Japanese, Tagalog" />
-                </SettingRow>
-                <SettingRow label="Personality & Style" desc="Free-form tone, quirks, or backstory — layered on top of the Master Role Concept (AI Engine tab), appended to the assistant's instructions on every provider and in live voice mode.">
-                    <textarea
-                        value={settings.assistantPersonality || ''}
-                        onChange={(e) => handleSettingsChange('assistantPersonality', e.target.value)}
-                        className="textarea textarea-bordered w-full md:w-[620px] min-h-[120px] leading-relaxed text-sm font-medium focus:outline-none focus:ring-1 focus:ring-primary/40 focus:border-primary/40 rounded-none bg-base-300/30 font-mono"
-                        placeholder="e.g. Speak like a witty noir detective. Keep answers short and punchy. Never use emoji."
-                    />
-                </SettingRow>
-            </SettingsGroup>
-
-        </div>
-    );
-
     const renderGoogleCloud = () => {
         const isConnected = isGoogleAuthValid(settings.googleIdentity);
         return (
@@ -456,7 +412,7 @@ const IntegrationsSection: React.FC<IntegrationsSectionProps> = ({
 
     switch (activeSubTab) {
         case 'llm': return renderLLM();
-        case 'assistant': return renderAssistant();
+        case 'assistant': return <AssistantSection activeSubTab={activeSubTab} settings={settings} handleSettingsChange={handleSettingsChange} />;
         case 'mcp': return <McpSection activeSubTab={activeSubTab} settings={settings} handleSettingsChange={handleSettingsChange} />;
         case 'google': return renderGoogleCloud();
         case 'spotify': return renderSpotify();

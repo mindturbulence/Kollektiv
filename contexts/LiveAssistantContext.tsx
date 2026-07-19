@@ -77,7 +77,7 @@ export const LiveAssistantProvider: React.FC<{ children: React.ReactNode }> = ({
                     else stop();
                 },
                 onCaption: (who, text) => appEventBus.emit('liveCaption', { who, text }),
-                onToolActivity: (line) => appEventBus.emit('liveAssistantActivity', line),
+                onToolActivity: (info) => appEventBus.emit('liveAssistantActivity', info),
                 onSpeaking: setSpeaking,
                 onScreenShare: setSharing,
                 onControlDenied: (sharingActive) => appEventBus.emit('assistantFeedback', {

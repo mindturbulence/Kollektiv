@@ -58,12 +58,13 @@ const ActivityPanel: React.FC<ActivityPanelProps> = ({ isOpen, onClose }) => {
     // ── Event bus listeners ─────────────────────────────────────
 
     useEffect(() => {
-        // Listen for tool activity lines
-        const offActivity = appEventBus.on('liveAssistantActivity', (line: string) => {
-            if (typeof line === 'string') {
+        // Listen for tool activity — show the actual tool name here, distinct
+        // from the flavored phrase shown on the Samaritan assistant screen.
+        const offActivity = appEventBus.on('liveAssistantActivity', (info: { flavour: string; toolName: string }) => {
+            if (info?.toolName) {
                 setActivity(prev => [...prev, {
                     id: uuidv4(),
-                    text: line,
+                    text: info.toolName,
                     timestamp: Date.now(),
                 }]);
             }

@@ -3,6 +3,8 @@
  *  in the same settings.mcpServers array the Custom tab manages — the tool
  *  loader (services/mcpAssistantTools.ts) doesn't distinguish origin at all. */
 
+import type { McpServerConfig } from '../types';
+
 export interface McpPreset {
     id: string;
     name: string;
@@ -47,7 +49,39 @@ export const MCP_PRESETS: McpPreset[] = [
         description: 'Official Microsoft browser automation — navigate, click, screenshot, extract content.',
         needsApiKey: false,
         defaultUrl: 'http://localhost:8931/mcp',
-        launchCommand: 'npx @playwright/mcp@latest --port 8931',
-        launchNotes: 'No API key needed. Runs locally — leave the command running in a terminal, then Ping to verify.',
+        launchNotes: 'No API key needed. Auto-started by the dev server (server.ts) on port 8931 — just toggle it on, then Ping to verify.',
     },
 ];
+
+export function genMcpServerId(): string {
+    return 'mcp-' + Date.now().toString(36) + '-' + Math.random().toString(36).slice(2, 6);
+}
+
+/** Find the settings.mcpServers entry derived from a given preset, if any. */
+export function findMcpPresetEntry(servers: McpServerConfig[], presetId: string): McpServerConfig | undefined {
+    return servers.find(s => s.presetId === presetId);
+}
+
+/** Create-or-update the entry for a preset within a servers array. Single
+ *  definition of "how a preset becomes a settings.mcpServers entry" — shared
+ *  by the Predefined Settings UI and the assistant's toggle_mcp_server tool. */
+export function upsertMcpPresetEntry(
+    servers: McpServerConfig[],
+    preset: McpPreset,
+    patch: Partial<McpServerConfig>,
+): { servers: McpServerConfig[]; entry: McpServerConfig } {
+    const existing = findMcpPresetEntry(servers, preset.id);
+    if (existing) {
+        const updated = { ...existing, ...patch };
+        return { servers: servers.map(s => s.id === existing.id ? updated : s), entry: updated };
+    }
+    const created: McpServerConfig = {
+        id: genMcpServerId(),
+        name: preset.name,
+        url: preset.defaultUrl || '',
+        enabled: false,
+        presetId: preset.id,
+        ...patch,
+    };
+    return { servers: [...servers, created], entry: created };
+}

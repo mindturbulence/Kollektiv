@@ -57,9 +57,9 @@ export function useAssistantSignals(): AssistantSignals {
                 setUserText('');
             }
         });
-        const offActivity = appEventBus.on('liveAssistantActivity', (line: string) => {
+        const offActivity = appEventBus.on('liveAssistantActivity', (info: { flavour: string; toolName: string }) => {
             lastActivityAt.current = Date.now();
-            setActivity(prev => [...prev, line].slice(-4));
+            setActivity(prev => [...prev, info.flavour].slice(-4));
         });
         return () => { offCaption(); offActivity(); };
     }, []);
