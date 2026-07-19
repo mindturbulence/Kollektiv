@@ -6,7 +6,7 @@ import { SettingRow, SettingsGroup } from './primitives';
 import { audioService } from '../../services/audioService';
 import { UploadIcon, DownloadIcon } from '../icons';
 import { useSettings } from '../../contexts/SettingsContext';
-import { isGoogleAuthValid, requestSilentTokenRefresh } from '../../utils/googleAuth';
+import { isGoogleAuthValid, requestSilentTokenRefresh, trySilentRefreshWithWait } from '../../utils/googleAuth';
 import { verifyAndRepairFiles, rebuildGalleryDatabase, rebuildPromptDatabase, optimizeManifests } from '../../utils/integrity';
 
 interface AppSectionProps {
@@ -283,10 +283,21 @@ const AppSection: React.FC<AppSectionProps> = ({
                     onClick={async () => {
                         audioService.playClick();
                         if (!isGoogleAuthValid(settings.googleIdentity)) {
-                            showGlobalFeedback("Your Google session has expired. Reconnecting...");
-                            setActiveSubTab('general');
-                            handleAuthConnect('google');
-                            return;
+                            if (settings.googleIdentity?.isConnected) {
+                                showGlobalFeedback("Refreshing Google session...", false);
+                                const refreshed = await trySilentRefreshWithWait(settings.googleIdentity);
+                                if (!refreshed) {
+                                    showGlobalFeedback("Your Google session has expired. Reconnecting...", true);
+                                    setActiveSubTab('general');
+                                    handleAuthConnect('google');
+                                    return;
+                                }
+                            } else {
+                                showGlobalFeedback("Connect your Google account first.", true);
+                                setActiveSubTab('general');
+                                handleAuthConnect('google');
+                                return;
+                            }
                         }
                         onOpenMigrationModal('push');
                     }}
@@ -306,10 +317,21 @@ const AppSection: React.FC<AppSectionProps> = ({
                     onClick={async () => {
                         audioService.playClick();
                         if (!isGoogleAuthValid(settings.googleIdentity)) {
-                            showGlobalFeedback("Your Google session has expired. Reconnecting...");
-                            setActiveSubTab('general');
-                            handleAuthConnect('google');
-                            return;
+                            if (settings.googleIdentity?.isConnected) {
+                                showGlobalFeedback("Refreshing Google session...", false);
+                                const refreshed = await trySilentRefreshWithWait(settings.googleIdentity);
+                                if (!refreshed) {
+                                    showGlobalFeedback("Your Google session has expired. Reconnecting...", true);
+                                    setActiveSubTab('general');
+                                    handleAuthConnect('google');
+                                    return;
+                                }
+                            } else {
+                                showGlobalFeedback("Connect your Google account first.", true);
+                                setActiveSubTab('general');
+                                handleAuthConnect('google');
+                                return;
+                            }
                         }
                         onOpenMigrationModal('pull');
                     }}

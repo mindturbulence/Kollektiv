@@ -4,7 +4,7 @@ import { getHandle } from '../utils/db';
 import { FolderClosedIcon, AppLogoIcon, RefreshIcon } from './icons';
 import { audioService } from '../services/audioService';
 import { useSettings } from '../contexts/SettingsContext';
-import { isGoogleAuthValid, buildGoogleIdentity } from '../utils/googleAuth';
+import { isGoogleAuthValid, buildGoogleIdentity, trySilentRefreshWithWait } from '../utils/googleAuth';
 
 interface WelcomeProps {
   onSetupComplete: (customSettings?: any) => void;
@@ -154,17 +154,30 @@ const Welcome: React.FC<WelcomeProps> = ({ onSetupComplete }) => {
       setError(null);
       setIsLoading(true);
 
+      let activeSettings = settings;
       if (!isGoogleAuthValid(settings.googleIdentity)) {
-          handleGoogleDriveSignIn();
-          return;
+          if (settings.googleIdentity?.isConnected) {
+              const refreshed = await trySilentRefreshWithWait(settings.googleIdentity);
+              if (!refreshed) {
+                  handleGoogleDriveSignIn();
+                  return;
+              }
+              activeSettings = {
+                  ...settings,
+                  googleIdentity: { ...settings.googleIdentity, accessToken: refreshed.accessToken, expiresAt: refreshed.expiresAt },
+              };
+          } else {
+              handleGoogleDriveSignIn();
+              return;
+          }
       }
 
       try {
-          const success = await fileSystemManager.initialize(settings, {} as any);
+          const success = await fileSystemManager.initialize(activeSettings, {} as any);
           if (success) {
               const folderId = (fileSystemManager as any).rootFolderId;
               const finalSettings = {
-                  ...settings,
+                  ...activeSettings,
                   driveFolderId: folderId || '',
                   driveFolderName: (fileSystemManager as any).appDirectoryName || ''
               };
