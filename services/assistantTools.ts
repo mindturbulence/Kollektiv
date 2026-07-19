@@ -428,7 +428,9 @@ export const ASSISTANT_TOOLS: AssistantTool[] = [
         },
         execute: ({ url }) => {
             try { new URL(String(url)); } catch { return 'Error: invalid URL.'; }
-            appEventBus.emit('openMediaPanel', { url: String(url) });
+            const urlStr = String(url);
+            appEventBus.emit('openMediaPanel', { url: urlStr });
+            appEventBus.emit('playVideo', { url: urlStr });
             return `Opened ${url} in the media panel — playing now.`;
         },
     },

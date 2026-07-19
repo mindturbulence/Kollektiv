@@ -2,7 +2,7 @@ import React, { useRef, useEffect, useState, useCallback, useLayoutEffect } from
 import { gsap } from 'gsap';
 import { appEventBus } from '../utils/eventBus';
 import { audioService } from '../services/audioService';
-import { CloseIcon, YouTubeIcon, PlayIcon, FilmIcon, MusicNoteIcon } from './icons';
+import { CloseIcon, YouTubeIcon, PlayIcon, FilmIcon, MusicNoteIcon, ChatBubbleIcon, EyeIcon } from './icons';
 
 // ── URL parsers ─────────────────────────────────────────────────────
 
@@ -80,6 +80,8 @@ const MediaPanel: React.FC<MediaPanelProps> = ({ isOpen, onClose }) => {
             setMedia(prev => ({ ...prev, tab: 'video', videoId, videoTitle: url, spotifyType: null, spotifyId: null }));
             setTab('video');
             setUrlDraft(url);
+            // Emit event to open center video player
+            appEventBus.emit('playVideo', { url });
             return;
         }
 
@@ -261,20 +263,33 @@ const MediaPanel: React.FC<MediaPanelProps> = ({ isOpen, onClose }) => {
                         )}
 
                         {tab === 'video' && media.videoId ? (
-                            <div className="flex-grow flex flex-col bg-black/40">
+                            <div className="flex-grow flex flex-col">
                                 {/* Video title bar */}
-                                <div className="px-4 py-2 text-[9px] font-black uppercase tracking-[0.2em] text-base-content/40 truncate border-b border-base-300/10">
-                                    {media.videoTitle}
+                                <div className="px-4 py-2 text-[9px] font-black uppercase tracking-[0.2em] text-base-content/40 truncate border-b border-base-300/10 flex items-center gap-2">
+                                    <EyeIcon className="w-3.5 h-3.5 text-primary" />
+                                    <span>{media.videoTitle}</span>
                                 </div>
-                                {/* YouTube embed */}
-                                <div className="flex-grow relative">
-                                    <iframe
-                                        src={`https://www.youtube-nocookie.com/embed/${media.videoId}?autoplay=1&rel=0`}
-                                        title="YouTube video player"
-                                        allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-                                        allowFullScreen
-                                        className="absolute inset-0 w-full h-full"
-                                    />
+                                {/* Video info / description panel */}
+                                <div className="flex-grow flex flex-col items-center justify-center px-8 py-8 overflow-y-auto">
+                                    <div className="max-w-md text-center">
+                                        <YouTubeIcon className="w-12 h-12 mx-auto mb-4 opacity-20" />
+                                        <p className="text-[11px] font-black uppercase tracking-[0.25em] text-base-content/30 mb-2">
+                                            Now Playing in Center Player
+                                        </p>
+                                        <p className="text-[9px] font-mono text-base-content/20 leading-relaxed">
+                                            The video is playing in the center of the screen.
+                                            <br />
+                                            Use this panel to browse related content and video info.
+                                        </p>
+
+                                        {/* Video metadata stub */}
+                                        <div className="mt-8 pt-6 border-t border-base-300/10 w-full">
+                                            <div className="flex items-center gap-2 justify-center text-[9px] font-mono text-base-content/30">
+                                                <ChatBubbleIcon className="w-3.5 h-3.5" />
+                                                <span className="uppercase tracking-widest">Comments &amp; description coming soon</span>
+                                            </div>
+                                        </div>
+                                    </div>
                                 </div>
                             </div>
                         ) : tab === 'music' && media.spotifyId ? (

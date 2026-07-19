@@ -45,6 +45,7 @@ import LoraEditorPage from './loraEditor/LoraEditorPage';
 import { LLMChatPanel } from './LLMChatPanel';
 import { LiveAssistantProvider } from '../contexts/LiveAssistantContext';
 import WebViewerPanel from './WebViewerPanel';
+import VideoPlayerOverlay from './VideoPlayerOverlay';
 
 import InitialLoader from './InitialLoader';
 import PageFrame from './PageFrame';
@@ -153,6 +154,7 @@ const AppContent: React.FC = () => {
     const [isNotesPanelOpen, setIsNotesPanelOpen] = useState(false);
     const [isMediaPanelOpen, setIsMediaPanelOpen] = useState(false);
     const [isWebViewerOpen, setIsWebViewerOpen] = useState(false);
+    const [videoPlayerUrl, setVideoPlayerUrl] = useState<string | null>(null);
     const [isActivityPanelOpen, setIsActivityPanelOpen] = useState(false);
     const [isChatPanelOpen, setIsChatPanelOpen] = useState(false);
     const [isLlmPanelOpen, setIsLlmPanelOpen] = useState(false);
@@ -468,6 +470,15 @@ const AppContent: React.FC = () => {
         });
     }, []);
 
+    // Center video player — triggered when a YouTube URL is played
+    useEffect(() => {
+        return appEventBus.on('playVideo', (payload: { url: string }) => {
+            if (payload?.url) {
+                setVideoPlayerUrl(payload.url);
+            }
+        });
+    }, []);
+
     useEffect(() => {
         return appEventBus.on('openMediaPanel', (payload: { url: string }) => {
             if (payload?.url) {
@@ -582,6 +593,7 @@ const AppContent: React.FC = () => {
     const handleCloseMediaPanel = useCallback(() => setIsMediaPanelOpen(false), []);
     const handleToggleWebViewer = useCallback(() => setIsWebViewerOpen(prev => !prev), []);
     const handleCloseWebViewer = useCallback(() => setIsWebViewerOpen(false), []);
+    const handleCloseVideoPlayer = useCallback(() => setVideoPlayerUrl(null), []);
     const handleToggleChatPanel = useCallback(() => setIsChatPanelOpen(prev => {
         if (!prev) appEventBus.emit('navigate', 'dashboard');
         return !prev;
@@ -787,6 +799,11 @@ const AppContent: React.FC = () => {
                                     <WebViewerPanel
                                         isOpen={isWebViewerOpen}
                                         onClose={handleCloseWebViewer}
+                                    />
+
+                                    <VideoPlayerOverlay
+                                        url={videoPlayerUrl}
+                                        onClose={handleCloseVideoPlayer}
                                     />
 
                                     <ActivityPanel
