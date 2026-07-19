@@ -1,4 +1,4 @@
-import type { GoogleIdentityConnection, LLMSettings, WildcardCategory } from '../types';
+import type { LLMSettings, WildcardCategory } from '../types';
 import { appControlService } from './appControlService';
 import { appEventBus } from '../utils/eventBus';
 import { browserControlService } from './browserControlService';
@@ -100,8 +100,14 @@ const confirmSensitiveAction = (summary: string): boolean => {
     return window.confirm(`The assistant wants to:\n\n${summary}\n\nAllow this?`);
 };
 
-/** Try to obtain a valid Google access token, attempting silent refresh if stale. */
-async function ensureGoogleToken(identity: GoogleIdentityConnection | null | undefined): Promise<{ token: string } | string> {
+/** Try to obtain a valid Google access token, attempting silent refresh if stale.
+ *  Reads the identity fresh from localStorage rather than trusting the caller's
+ *  settings snapshot — the live/voice assistant (services/liveAssistantService.ts)
+ *  captures `settings` once at session start and never refreshes it, so a stale
+ *  ctx.settings.googleIdentity kept reporting "session expired" for the rest of
+ *  a voice session even after the user re-authenticated in Settings. */
+async function ensureGoogleToken(): Promise<{ token: string } | string> {
+    const identity = loadLLMSettings().googleIdentity;
     if (isGoogleAuthValid(identity)) {
         return { token: identity.accessToken };
     }
@@ -1079,8 +1085,8 @@ export const ASSISTANT_TOOLS: AssistantTool[] = [
             },
             required: ['action'],
         },
-        execute: async (args, ctx) => {
-            const authResult = await ensureGoogleToken(ctx.settings.googleIdentity);
+        execute: async (args) => {
+            const authResult = await ensureGoogleToken();
             if (typeof authResult === 'string') return authResult;
             const token = authResult.token;
             const BASE = '/google-api/gmail/v1/users/me';
@@ -1140,8 +1146,8 @@ export const ASSISTANT_TOOLS: AssistantTool[] = [
             },
             required: ['to', 'subject', 'body'],
         },
-        execute: async (args, ctx) => {
-            const authResult = await ensureGoogleToken(ctx.settings.googleIdentity);
+        execute: async (args) => {
+            const authResult = await ensureGoogleToken();
             if (typeof authResult === 'string') return authResult;
             const token = authResult.token;
             if (!confirmSensitiveAction(`Send an email\nTo: ${String(args.to || '')}\nSubject: ${String(args.subject || '')}`)) {
@@ -1196,8 +1202,8 @@ export const ASSISTANT_TOOLS: AssistantTool[] = [
             },
             required: ['id'],
         },
-        execute: async (args, ctx) => {
-            const authResult = await ensureGoogleToken(ctx.settings.googleIdentity);
+        execute: async (args) => {
+            const authResult = await ensureGoogleToken();
             if (typeof authResult === 'string') return authResult;
             const token = authResult.token;
             const wantsPermanent = args.action === 'delete';
