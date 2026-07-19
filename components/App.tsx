@@ -18,7 +18,6 @@ import Welcome from './Welcome';
 import CustomCursor from './CustomCursor';
 import AboutModal from './AboutModal';
 import ClippingPanel from './ClippingPanel';
-import NotesPanel from './NotesPanel';
 import MediaPanel from './MediaPanel';
 import ActivityPanel from './ActivityPanel';
 import LlmStatusPanel from './LlmStatusPanel';
@@ -151,7 +150,6 @@ const AppContent: React.FC = () => {
     const [activeTab, setActiveTab] = useLocalStorage<ActiveTab>('activeTab', 'dashboard');
     const [isAboutModalOpen, setIsAboutModalOpen] = useState(false);
     const [isClippingPanelOpen, setIsClippingPanelOpen] = useState(false);
-    const [isNotesPanelOpen, setIsNotesPanelOpen] = useState(false);
     const [isMediaPanelOpen, setIsMediaPanelOpen] = useState(false);
     const [isWebViewerOpen, setIsWebViewerOpen] = useState(false);
     const [videoPlayerUrl, setVideoPlayerUrl] = useState<string | null>(null);
@@ -586,7 +584,6 @@ const AppContent: React.FC = () => {
     // --- Inline-callback replacements ---
     const handleAboutClick = useCallback(() => setIsAboutModalOpen(true), []);
     const handleToggleClippingPanel = useCallback(() => setIsClippingPanelOpen(prev => !prev), []);
-    const handleToggleNotesPanel = useCallback(() => setIsNotesPanelOpen(prev => !prev), []);
     const handleToggleActivityPanel = useCallback(() => setIsActivityPanelOpen(prev => !prev), []);
     const handleCloseActivityPanel = useCallback(() => setIsActivityPanelOpen(false), []);
     const handleToggleMediaPanel = useCallback(() => setIsMediaPanelOpen(prev => !prev), []);
@@ -601,7 +598,6 @@ const AppContent: React.FC = () => {
     const handleClearPromptsPageState = useCallback(() => setPromptsPageState(null), []);
     const handleSendToEnhancer = useCallback((promptValue: string) => handleSendToPromptsPage({ prompt: promptValue, view: 'enhancer' }), [handleSendToPromptsPage]);
     const handleCloseClippingPanel = useCallback(() => setIsClippingPanelOpen(false), []);
-    const handleCloseNotesPanel = useCallback(() => setIsNotesPanelOpen(false), []);
     const handleCloseLlmStatus = useCallback(() => setIsLlmPanelOpen(false), []);
     const handleCloseChatPanel = useCallback(() => setIsChatPanelOpen(false), []);
     const handleToggleLlmPanel = useCallback(() => {
@@ -734,7 +730,6 @@ const AppContent: React.FC = () => {
                                 isInitialized={isInitialized}
                                 onAboutClick={handleAboutClick}
                                 onToggleClippingPanel={handleToggleClippingPanel}
-                                onToggleNotesPanel={handleToggleNotesPanel}
                                 onToggleMediaPanel={handleToggleMediaPanel}
                                 onToggleChatPanel={handleToggleChatPanel}
                                 onToggleWebViewer={handleToggleWebViewer}
@@ -784,11 +779,6 @@ const AppContent: React.FC = () => {
                                     <LLMChatPanel
                                         isOpen={isChatPanelOpen}
                                         onClose={handleCloseChatPanel}
-                                    />
-
-                                    <NotesPanel
-                                        isOpen={isNotesPanelOpen}
-                                        onClose={handleCloseNotesPanel}
                                     />
 
                                     <MediaPanel

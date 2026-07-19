@@ -37,7 +37,7 @@ interface WebViewerPanelProps {
 /** Sliding web viewer. Opens via the 'openWebPage' bus event (assistant
  * open_web_page tool) or the header button. Live iframe when the site allows
  * embedding, reader mode otherwise. GSAP slide animation matching the other
- * panels (NotesPanel, MediaPanel). */
+ * panels (ClippingPanel, MediaPanel). */
 const WebViewerPanel: React.FC<WebViewerPanelProps> = ({ isOpen, onClose }) => {
     const panelRef = useRef<HTMLDivElement>(null);
     const inputRef = useRef<HTMLInputElement>(null);
