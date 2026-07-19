@@ -278,14 +278,16 @@ const IntegrationsSection: React.FC<IntegrationsSectionProps> = ({
         </div>
     );
 
-    const renderGoogle = () => (
+    const renderGoogleCloud = () => {
+        const isConnected = isGoogleAuthValid(settings.googleIdentity);
+        return (
         <div className="flex flex-col animate-fade-in">
-            <SettingsGroup title="OAuth Configuration">
-            <SettingRow label="Global Client ID" desc="Google Cloud OAuth 2.0 Identifier used for all Identity services.">
+            <SettingsGroup title="Credentials">
+            <SettingRow label="Client ID" desc="Google Cloud OAuth 2.0 Client ID for all Google services.">
                 <div className="flex flex-col gap-2 w-full max-w-md">
                     <input type="text" value={settings.youtube?.customClientId || ''} onChange={(e) => handleSettingsChange('youtube', { ...settings.youtube, customClientId: e.target.value })} className="form-input w-full" placeholder="407408718192-..." />
                     <div className="p-4 bg-primary/5 border border-primary/20 space-y-2">
-                        <p className="text-[9px] font-black uppercase text-primary tracking-widest leading-tight">CRITICAL: AUTHORIZED ORIGINS</p>
+                        <p className="text-[9px] font-black uppercase text-primary tracking-widest leading-tight">AUTHORIZED ORIGINS</p>
                         <p className="text-[10px] font-mono text-base-content/60 break-all select-all py-1 bg-black/20 px-2">{currentOrigin}</p>
                         {siblingOrigin && (
                             <>
@@ -293,79 +295,57 @@ const IntegrationsSection: React.FC<IntegrationsSectionProps> = ({
                                 <p className="text-[10px] font-mono text-base-content/60 break-all select-all py-1 bg-black/20 px-2">{siblingOrigin}</p>
                             </>
                         )}
-                        <p className="text-[8px] font-bold text-base-content/30 uppercase leading-relaxed mt-2">Add BOTH of the above URLs to 'Authorized JavaScript origins' in your Google Cloud Console Credentials.</p>
+                        <p className="text-[8px] font-bold text-base-content/30 uppercase leading-relaxed mt-2">Add both URLs to 'Authorized JavaScript origins' in your Google Cloud Console.</p>
                     </div>
                 </div>
             </SettingRow>
-            <SettingRow label="Google API Key" desc="API Key (Developer Key) for browser-level services like Google Picker.">
+            <SettingRow label="API Key" desc="API Key (Developer Key) for browser-level Google services.">
                 <input type="password" value={settings.youtube?.customApiKey || ''} onChange={(e) => handleSettingsChange('youtube', { ...settings.youtube, customApiKey: e.target.value })} className="form-input w-full max-w-md" placeholder="AIzaSy..." />
             </SettingRow>
-            <SettingRow label="Cloud Identity Link" desc="Connect your account to enable Cloud AI and data sync features.">
-                {isGoogleAuthValid(settings.googleIdentity) ? (
+            </SettingsGroup>
+
+            <SettingsGroup title="Account">
+            <SettingRow label="Google Account" desc="Connect once — used for Cloud AI, Drive, YouTube, and Gmail.">
+                {isConnected ? (
                     <div className="flex flex-col gap-4 w-full max-w-lg">
                         <div className="flex items-center gap-4 p-4">
-                            <img src={settings.googleIdentity.picture} className="w-12 h-12 rounded-full bg-black" alt="profile" />
+                            <img src={settings.googleIdentity!.picture} className="w-12 h-12 rounded-full bg-black" alt="profile" />
                             <div className="min-w-0">
-                                <p className="text-sm font-black uppercase truncate">{settings.googleIdentity.name}</p>
-                                <p className="text-[10px] font-mono opacity-40 truncate">{settings.googleIdentity.email}</p>
+                                <p className="text-sm font-black uppercase truncate">{settings.googleIdentity!.name}</p>
+                                <p className="text-[10px] font-mono opacity-40 truncate">{settings.googleIdentity!.email}</p>
                             </div>
+                            <span className="text-[9px] font-black uppercase px-2 py-1 border bg-success/5 border-success/30 text-success ml-auto">ACTIVE</span>
                         </div>
-                        <button onClick={() => { audioService.playClick(); handleGoogleDisconnect(); }} className="form-btn text-error px-4">Revoke Access</button>
+
+                        {settings.youtube?.isConnected && (
+                            <div className="flex items-center gap-4 p-4 bg-base-200/30 border border-base-300/10">
+                                <img src={settings.youtube.thumbnailUrl} className="w-10 h-10 rounded-none bg-black" alt="channel" />
+                                <div className="min-w-0">
+                                    <p className="text-xs font-black uppercase truncate">{settings.youtube.channelName}</p>
+                                    <p className="text-[9px] font-mono opacity-40 uppercase">{settings.youtube.subscriberCount} subscribers · {settings.youtube.videoCount} videos</p>
+                                </div>
+                            </div>
+                        )}
+
+                        <div className="flex gap-2">
+                            <button onClick={() => { audioService.playClick(); handleGoogleDisconnect(); }} className="form-btn text-error px-4">Revoke Access</button>
+                            {!settings.youtube?.isConnected && (
+                                <button onClick={() => { audioService.playClick(); handleAuthConnect('youtube'); }} className="form-btn px-4">Link YouTube Channel</button>
+                            )}
+                        </div>
                     </div>
                 ) : (
-                    <button onClick={() => { audioService.playClick(); handleAuthConnect('google'); }} className="form-btn px-6">AUTHENTICATE WITH GOOGLE</button>
+                    <div className="flex flex-col gap-3">
+                        <p className="text-[10px] font-mono text-base-content/40">
+                            One authentication enables Drive sync, YouTube publishing, and Gmail tools.
+                        </p>
+                        <button onClick={() => { audioService.playClick(); handleAuthConnect('google'); }} className="form-btn px-6 self-start">AUTHENTICATE WITH GOOGLE</button>
+                    </div>
                 )}
             </SettingRow>
-            <SettingRow label="Session Status" desc="Current encryption status of the cloud identity link.">
-                <span className={`text-[10px] font-black uppercase px-3 py-1.5 rounded-none border ${isGoogleAuthValid(settings.googleIdentity) ? 'bg-success/5 border-success/30 text-success' : 'bg-warning/5 border-warning/30 text-warning'}`}>                                {isGoogleAuthValid(settings.googleIdentity) ? 'ACTIVE & ENCRYPTED' : (settings.googleIdentity?.isConnected ? 'SESSION EXPIRED — RE-AUTH REQUIRED' : 'AWAITING UPLINK')}
-                            </span>
-                        </SettingRow>
-                    </SettingsGroup>
-                    </div>
-    );
-
-    const renderYouTube = () => (
-        <div className="flex flex-col animate-fade-in">
-            <SettingsGroup title="OAuth Configuration">
-            <SettingRow label="Global Client ID" desc="Google Cloud OAuth 2.0 Identifier used for all Identity services.">
-                <div className="flex flex-col gap-2 w-full max-w-md">
-                    <input type="text" value={settings.youtube?.customClientId || ''} onChange={(e) => handleSettingsChange('youtube', { ...settings.youtube, customClientId: e.target.value })} className="form-input w-full" placeholder="407408718192-..." />
-                    <div className="p-4 bg-primary/5 border border-primary/20 space-y-2">
-                        <p className="text-[9px] font-black uppercase text-primary tracking-widest leading-tight">CRITICAL: AUTHORIZED ORIGINS</p>
-                        <p className="text-[10px] font-mono text-base-content/60 break-all select-all py-1 bg-black/20 px-2">{currentOrigin}</p>
-                        {siblingOrigin && (
-                            <>
-                                <p className="text-[8px] font-bold text-base-content/40 uppercase tracking-wider mt-1">SHARED PREVIEW ORIGIN</p>
-                                <p className="text-[10px] font-mono text-base-content/60 break-all select-all py-1 bg-black/20 px-2">{siblingOrigin}</p>
-                            </>
-                        )}
-                        <p className="text-[8px] font-bold text-base-content/30 uppercase leading-relaxed mt-2">Add BOTH of the above URLs to 'Authorized JavaScript origins' in Google Cloud Console Credentials.</p>
-                    </div>
-                </div>
-            </SettingRow>
-            <SettingRow label="Google API Key" desc="API Key (Developer Key) for browser-level services like Google Picker.">
-                <input type="password" value={settings.youtube?.customApiKey || ''} onChange={(e) => handleSettingsChange('youtube', { ...settings.youtube, customApiKey: e.target.value })} className="form-input w-full max-w-md" placeholder="AIzaSy..." />
-            </SettingRow>
-            <SettingRow label="Channel Integration" desc="Connect to your YouTube account for direct artifact publishing.">
-                {settings.youtube?.isConnected ? (
-                    <div className="flex flex-col gap-4 w-full max-w-lg">
-                        <div className="flex items-center gap-4 p-4">
-                            <img src={settings.youtube.thumbnailUrl} className="w-12 h-12 rounded-none bg-black" alt="channel" />
-                            <div className="min-w-0">
-                                <p className="text-sm font-black uppercase truncate">{settings.youtube.channelName}</p>
-                                <p className="text-[10px] font-mono opacity-40 uppercase">{settings.youtube.subscriberCount} Subscribers</p>
-                            </div>
-                        </div>
-                        <button onClick={() => { audioService.playClick(); handleSettingsChange('youtube', { ...settings.youtube, isConnected: false }); }} className="form-btn text-error px-4">                                Unlink Channel
-                            </button>
-                                </div>
-                            ) : (
-                                <button onClick={() => { audioService.playClick(); handleAuthConnect('youtube'); }} className="form-btn px-6">LINK CHANNEL</button>
-                            )}
-                        </SettingRow>
-                    </SettingsGroup>
-                    </div>
-    );
+            </SettingsGroup>
+        </div>
+    );}
 
     const renderSpotify = () => {
         const spotify = settings.spotify;
@@ -478,8 +458,7 @@ const IntegrationsSection: React.FC<IntegrationsSectionProps> = ({
         case 'llm': return renderLLM();
         case 'assistant': return renderAssistant();
         case 'mcp': return <McpSection activeSubTab={activeSubTab} settings={settings} handleSettingsChange={handleSettingsChange} />;
-        case 'google': return renderGoogle();
-        case 'youtube': return renderYouTube();
+        case 'google': return renderGoogleCloud();
         case 'spotify': return renderSpotify();
         case 'cdp': return <CdpSection activeSubTab={activeSubTab} />;
         case 'tensorart': return renderTensorArt();
