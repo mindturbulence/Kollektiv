@@ -71,7 +71,12 @@ A change is done when **all** of these hold:
 
 - **Never commit secrets** — API keys, OAuth client secrets, tokens — in source,
   in `package.json` scripts, or in committed HTML. Use environment variables or
-  the in-app settings UI. (There is a known violation tracked as ISSUE-6.)
+  the in-app settings UI.
+- **Local dev secrets go in `.env`** (gitignored). Copy `.env.example` to `.env`
+  and fill in real values — e.g. `OBSIDIAN_API_KEY` for the optional Obsidian MCP
+  bridge (`pnpm run obsidian:mcp`, or the auto-started bridge in `server.ts` —
+  both are skipped entirely if the var is unset). Adding a new local-only secret?
+  Add its placeholder to `.env.example` in the same change.
 - Gmail/Drive assistant tools have real, irreversible power (send/delete email).
   Keep them behind the existing `confirmSensitiveAction` confirmation.
 - Don't widen the `server.ts` `/proxy-remote` forwarder (see CODING_STANDARDS §6).

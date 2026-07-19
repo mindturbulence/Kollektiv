@@ -1084,7 +1084,7 @@ async function startServer() {
 
         let stderr = '';
         child.stderr?.on('data', (chunk: Buffer) => { stderr += chunk.toString(); });
-        child.stdout?.on('data', (chunk: Buffer) => { /* progress info */ });
+        child.stdout?.on('data', (_chunk: Buffer) => { /* progress info */ });
         child.on('error', (err) => reject(err));
         child.on('exit', (code) => {
           if (code === 0) resolve();
@@ -1125,15 +1125,18 @@ async function startServer() {
     });
   }
 
-  // Start Obsidian MCP server as child process
+  // Start Obsidian MCP server as child process (opt-in: requires OBSIDIAN_API_KEY in the environment)
   let obsidianMcpProc: ReturnType<typeof spawn> | null = null;
   const startObsidianMcp = () => {
     if (obsidianMcpProc) return;
+    if (!process.env.OBSIDIAN_API_KEY) {
+      console.log(`[Obsidian MCP] OBSIDIAN_API_KEY not set — skipping local Obsidian bridge.`);
+      return;
+    }
     const env = {
       ...process.env,
-      OBSIDIAN_API_KEY: "8597a7e3c1ef8e9c7b830c198886fdfbd5c06bca92a2bf194643e36f2066a2e0",
-      OBSIDIAN_BASE_URL: "https://127.0.0.1:27124",
-      OBSIDIAN_VERIFY_SSL: "false",
+      OBSIDIAN_BASE_URL: process.env.OBSIDIAN_BASE_URL || "https://127.0.0.1:27124",
+      OBSIDIAN_VERIFY_SSL: process.env.OBSIDIAN_VERIFY_SSL || "false",
       MCP_TRANSPORT_TYPE: "http",
       MCP_HTTP_PORT: "3012",
     };

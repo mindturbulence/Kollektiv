@@ -3,11 +3,11 @@ import { gsap } from 'gsap';
 
 export interface PageFrameProps {
     isInitialized: boolean;
-    frameWrapperRef: React.RefObject<HTMLDivElement>;
-    scanTopRef: React.RefObject<HTMLSpanElement>;
-    scanRightRef: React.RefObject<HTMLSpanElement>;
-    scanBottomRef: React.RefObject<HTMLSpanElement>;
-    scanLeftRef: React.RefObject<HTMLSpanElement>;
+    frameWrapperRef: React.RefObject<HTMLDivElement | null>;
+    scanTopRef: React.RefObject<HTMLSpanElement | null>;
+    scanRightRef: React.RefObject<HTMLSpanElement | null>;
+    scanBottomRef: React.RefObject<HTMLSpanElement | null>;
+    scanLeftRef: React.RefObject<HTMLSpanElement | null>;
 }
 
 const PageFrame: React.FC<PageFrameProps> = ({

@@ -5,6 +5,16 @@ dist/
 *.log
 nul
 
+# Secrets
+.env
+.env.local
+
+# Scratch / scripted-edit artifacts — never commit these
+*.bak
+*.bak[0-9]*
+/remove_*.py
+/fix_*.py
+
 # Playwright
 test-results/
 playwright-report/

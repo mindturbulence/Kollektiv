@@ -114,7 +114,7 @@ const useBaseImageStyle = (transform: TransformState) => {
 
 
 const SplitView: React.FC<ViewProps & {
-    viewerRef: React.RefObject<HTMLDivElement>;
+    viewerRef: React.RefObject<HTMLDivElement | null>;
 }> = ({ imageA, imageB, transform }) => {
     const [sliderPosition, setSliderPosition] = useState(50);
     const [isDraggingSlider, setIsDraggingSlider] = useState(false);
