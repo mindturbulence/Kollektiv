@@ -2,7 +2,7 @@ import React, { useRef, useEffect, useState, useCallback, useLayoutEffect } from
 import { gsap } from 'gsap';
 import { appEventBus } from '../utils/eventBus';
 import { audioService } from '../services/audioService';
-import { CloseIcon, YouTubeIcon, PlayIcon, FilmIcon, MusicNoteIcon, ChatBubbleIcon, EyeIcon } from './icons';
+import { CloseIcon, YouTubeIcon, PlayIcon, FilmIcon, MusicNoteIcon, ChatBubbleIcon, EyeIcon, LinkIcon } from './icons';
 
 // ── URL parsers ─────────────────────────────────────────────────────
 
@@ -279,8 +279,19 @@ const MediaPanel: React.FC<MediaPanelProps> = ({ isOpen, onClose }) => {
                                         <p className="text-[9px] font-mono text-base-content/20 leading-relaxed">
                                             The video is playing in the center of the screen.
                                             <br />
-                                            Use this panel to browse related content and video info.
+                                            If the embed fails, open it directly on YouTube.
                                         </p>
+
+                                        {/* Direct YouTube link */}
+                                        <a
+                                            href={`https://www.youtube.com/watch?v=${media.videoId}`}
+                                            target="_blank"
+                                            rel="noopener noreferrer"
+                                            className="inline-flex items-center gap-2 px-4 py-2 mt-4 text-[9px] font-black uppercase tracking-widest bg-red-600/80 hover:bg-red-500 text-white rounded transition-colors"
+                                        >
+                                            <LinkIcon className="w-3.5 h-3.5" />
+                                            Open in YouTube
+                                        </a>
 
                                         {/* Video metadata stub */}
                                         <div className="mt-8 pt-6 border-t border-base-300/10 w-full">

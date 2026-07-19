@@ -1,6 +1,6 @@
 import React, { useRef, useEffect, useState, useCallback } from 'react';
 import { gsap } from 'gsap';
-import { CloseIcon } from './icons';
+import { CloseIcon, YouTubeIcon, LinkIcon } from './icons';
 
 /** Extract a YouTube video ID from various URL formats. */
 const extractYouTubeId = (url: string): string | null => {
@@ -17,6 +17,25 @@ const extractYouTubeId = (url: string): string | null => {
     return loose?.[1] || null;
 };
 
+/** Build the best-guess watch URL for the user to open directly. */
+const buildWatchUrl = (videoId: string) =>
+    `https://www.youtube.com/watch?v=${videoId}`;
+
+/** Build the embed src with compatible parameters. */
+const buildEmbedSrc = (videoId: string) => {
+    const origin = typeof window !== 'undefined' ? window.location.origin : '';
+    const params = new URLSearchParams({
+        autoplay: '1',
+        rel: '0',
+        modestbranding: '1',
+        playsinline: '1',
+        controls: '1',
+        fs: '1',
+    });
+    if (origin) params.set('origin', origin);
+    return `https://www.youtube.com/embed/${videoId}?${params.toString()}`;
+};
+
 interface VideoPlayerOverlayProps {
     url: string | null;
     onClose: () => void;
@@ -26,9 +45,15 @@ const VideoPlayerOverlay: React.FC<VideoPlayerOverlayProps> = ({ url, onClose })
     const overlayRef = useRef<HTMLDivElement>(null);
     const backdropRef = useRef<HTMLDivElement>(null);
     const playerRef = useRef<HTMLDivElement>(null);
+    const iframeRef = useRef<HTMLIFrameElement>(null);
     const [visible, setVisible] = useState(false);
 
     const videoId = url ? extractYouTubeId(url) : null;
+
+    // ── Build embed src ───────────────────────────────────────
+
+    const embedSrc = videoId ? buildEmbedSrc(videoId) : '';
+    const watchUrl = videoId ? buildWatchUrl(videoId) : '';
 
     // ── GSAP entrance / exit ──────────────────────────────────
 
@@ -36,7 +61,6 @@ const VideoPlayerOverlay: React.FC<VideoPlayerOverlayProps> = ({ url, onClose })
         if (!overlayRef.current || !backdropRef.current || !playerRef.current) return;
 
         if (url && videoId) {
-            // Enter
             setVisible(true);
             gsap.killTweensOf([backdropRef.current, playerRef.current, overlayRef.current]);
 
@@ -58,7 +82,6 @@ const VideoPlayerOverlay: React.FC<VideoPlayerOverlayProps> = ({ url, onClose })
                 delay: 0.05,
             });
         } else {
-            // Exit
             if (!visible) return;
             gsap.to(playerRef.current, {
                 scale: 0.85,
@@ -96,6 +119,12 @@ const VideoPlayerOverlay: React.FC<VideoPlayerOverlayProps> = ({ url, onClose })
         if (e.target === backdropRef.current) onClose();
     }, [onClose]);
 
+    // ── Open in YouTube ───────────────────────────────────────
+
+    const handleOpenInYoutube = useCallback(() => {
+        if (watchUrl) window.open(watchUrl, '_blank', 'noopener,noreferrer');
+    }, [watchUrl]);
+
     if (!url || !videoId) return null;
 
     return (
@@ -120,20 +149,49 @@ const VideoPlayerOverlay: React.FC<VideoPlayerOverlayProps> = ({ url, onClose })
                 {/* Close button */}
                 <button
                     onClick={onClose}
-                    className="absolute top-3 right-3 z-10 w-9 h-9 flex items-center justify-center bg-black/50 hover:bg-black/80 rounded-full transition-all opacity-60 hover:opacity-100 text-white"
+                    className="absolute top-3 right-3 z-20 w-9 h-9 flex items-center justify-center bg-black/50 hover:bg-black/80 rounded-full transition-all opacity-60 hover:opacity-100 text-white"
                     aria-label="Close video player"
                 >
                     <CloseIcon className="w-5 h-5" />
                 </button>
 
-                {/* YouTube embed */}
+                {/* YouTube embed — standard youtube.com/embed for broader compatibility */}
                 <iframe
-                    src={`https://www.youtube-nocookie.com/embed/${videoId}?autoplay=1&rel=0&modestbranding=1`}
+                    ref={iframeRef}
+                    key={embedSrc}
+                    src={embedSrc}
                     title="YouTube video player"
                     allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
                     allowFullScreen
                     className="absolute inset-0 w-full h-full"
                 />
+
+                {/* Fallback overlay — always visible so user can one-click escape to YouTube */}
+                <div className="absolute bottom-0 left-0 right-0 z-10 pointer-events-none">
+                    <div className="bg-gradient-to-t from-black/80 via-black/40 to-transparent pt-16 pb-4 px-4">
+                        <div className="flex items-center justify-between pointer-events-auto">
+                            <div className="flex items-center gap-2 min-w-0">
+                                <YouTubeIcon className="w-4 h-4 text-red-500 flex-shrink-0" />
+                                <a
+                                    href={watchUrl}
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    className="text-[10px] font-black uppercase tracking-widest text-white/70 hover:text-white truncate transition-colors"
+                                    onClick={(e) => e.stopPropagation()}
+                                >
+                                    Watch on YouTube
+                                </a>
+                            </div>
+                            <button
+                                onClick={handleOpenInYoutube}
+                                className="flex items-center gap-1.5 px-3 py-1.5 text-[9px] font-black uppercase tracking-widest bg-red-600 hover:bg-red-500 text-white rounded transition-colors"
+                            >
+                                <LinkIcon className="w-3 h-3" />
+                                Open in YouTube
+                            </button>
+                        </div>
+                    </div>
+                </div>
             </div>
         </div>
     );
