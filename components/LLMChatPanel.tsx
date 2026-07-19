@@ -116,12 +116,6 @@ export const LLMChatPanel: React.FC<LLMChatPanelProps> = ({ isOpen, onClose }) =
     const [attachments, setAttachments] = useState<{data: string, mimeType: string, fileName: string}[]>([]);
     const [isProcessing, setIsProcessing] = useState(false);
     
-    // Connect to MCP Server and retrieve capabilities (Tools, Prompts, Resources)
-    ;
-
-    // Execute an MCP Tool from client console (routes through assistant tool pipeline)
-    ;
-
     const [showCommandMenu, setShowCommandMenu] = useState(false);
     const availableCommands = [
         { cmd: '/nav ', desc: 'Navigate to page (dashboard, assistant, discovery, prompts, crafter, refiner, prompt_analyzer, media_analyzer, prompt, gallery, resizer, video_to_frames, image_compare, color_palette_extractor, composer, lora_editor, settings)' },

@@ -1137,7 +1137,7 @@ async function startServer() {
       MCP_TRANSPORT_TYPE: "http",
       MCP_HTTP_PORT: "3012",
     };
-    obsidianMcpProc = spawn("npx", ["-y", "obsidian-mcp-server@latest"], {
+    obsidianMcpProc = spawn("npx -y obsidian-mcp-server@latest", [], {
       env,
       shell: true, // needed on Windows
       stdio: ["ignore", "pipe", "pipe"],

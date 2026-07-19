@@ -8,6 +8,7 @@ import { fileSystemManager } from '../utils/fileUtils';
 import { useSettings } from '../contexts/SettingsContext';
 import { loadPromptCategories } from '../utils/promptStorage';
 import { resetAllSettings, loadLLMSettings } from '../utils/settingsStorage';
+import { buildGoogleIdentity } from '../utils/googleAuth';
 import ConfirmationModal from './ConfirmationModal';
 import MigrationModal from './MigrationModal';
 
@@ -188,12 +189,10 @@ export const SetupPage: React.FC<SetupPageProps> = ({
                 });
                 if (!response.ok) throw new Error("Cloud Identity fetch failed.");
                 const user = await response.json();
-                const updatedGoogle: GoogleIdentityConnection = {
-                    isConnected: true, email: user.email, name: user.name, picture: user.picture,
-                    accessToken: accessToken,
-                    expiresAt: Date.now() + (typeof expiresIn === 'number' ? expiresIn : 3600) * 1000,
-                    connectedAt: Date.now()
-                };
+                const updatedGoogle = buildGoogleIdentity(
+                    { access_token: accessToken, expires_in: typeof expiresIn === 'number' ? expiresIn : 3600 },
+                    { email: user.email, name: user.name, picture: user.picture },
+                );
                 const updatedSettings = { ...settings, googleIdentity: updatedGoogle };
                 setSettings(updatedSettings); updateSettings(updatedSettings);
                 showGlobalFeedback(`Uplink confirmed. Scanning Google Drive for 'Kollektiv' folder...`);
@@ -245,7 +244,7 @@ export const SetupPage: React.FC<SetupPageProps> = ({
     // when they detect the token is expired but isConnected is still true).
     useEffect(() => {
         const doRefresh = () => {
-            const clientId = settings.youtube?.customClientId || settings.googleApiKey || process.env.YOUTUBE_CLIENT_ID;
+            const clientId = settings.youtube?.customClientId || process.env.YOUTUBE_CLIENT_ID;
             if (!clientId || clientId.includes('PLACEHOLDER')) return;
             // Re-init if client id changed or token client not available
             if (!tokenClientRef.current || lastClientIdRef.current !== clientId) {
@@ -259,7 +258,7 @@ export const SetupPage: React.FC<SetupPageProps> = ({
             }
         };
         return appEventBus.on('googleTokenRefreshRequested', doRefresh);
-    }, [settings.youtube?.customClientId, settings.googleApiKey, initGsi]);
+    }, [settings.youtube?.customClientId, initGsi]);
 
     // PKCE helpers for Spotify OAuth
     const generateCodeVerifier = useCallback((): string => {

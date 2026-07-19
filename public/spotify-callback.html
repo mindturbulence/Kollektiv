@@ -1,0 +1,61 @@
+<!DOCTYPE html>
+<html>
+<head><title>Spotify Auth</title></head>
+<body>
+<script>
+(async () => {
+  const params = new URLSearchParams(window.location.search);
+  const code = params.get('code');
+  const error = params.get('error');
+  if (error || !code) {
+    document.body.textContent = 'Auth error: ' + (error || 'missing code');
+    setTimeout(window.close, 2000);
+    return;
+  }
+  const codeVerifier = localStorage.getItem('spotify_code_verifier_temp');
+  const clientId = localStorage.getItem('spotify_client_id_temp');
+  if (!codeVerifier || !clientId) {
+    document.body.textContent = 'Missing PKCE params. Please re-link Spotify from settings.';
+    setTimeout(window.close, 2000);
+    return;
+  }
+  // Must match the redirect_uri in the Spotify auth URL (the registered one)
+  const redirectUri = window.location.origin + '/auth/spotify/callback';
+  try {
+    const resp = await fetch('https://accounts.spotify.com/api/token', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+      body: new URLSearchParams({
+        grant_type: 'authorization_code',
+        code,
+        redirect_uri: redirectUri,
+        client_id: clientId,
+        code_verifier: codeVerifier,
+      }),
+    });
+    if (!resp.ok) {
+      const errText = await resp.text();
+      document.body.textContent = 'Token exchange failed: ' + errText;
+      localStorage.removeItem('spotify_code_verifier_temp');
+      localStorage.removeItem('spotify_client_id_temp');
+      setTimeout(window.close, 3000);
+      return;
+    }
+    const data = await resp.json();
+    localStorage.setItem('spotify_access_token', data.access_token);
+    localStorage.setItem('spotify_refresh_token', data.refresh_token || '');
+    localStorage.setItem('spotify_expires_at', String(Date.now() + data.expires_in * 1000));
+    localStorage.setItem('spotify_client_id', clientId);
+    localStorage.removeItem('spotify_code_verifier_temp');
+    localStorage.removeItem('spotify_client_id_temp');
+    localStorage.setItem('spotify_just_connected', Date.now().toString());
+    window.close();
+  } catch (err) {
+    document.body.textContent = 'Network error: ' + err.message;
+    setTimeout(window.close, 3000);
+  }
+})();
+</script>
+<p>Completing Spotify authentication…</p>
+</body>
+</html>

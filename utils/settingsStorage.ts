@@ -2,6 +2,7 @@
 import { LLMSettings } from '../types';
 import { clearAllHandles } from './db';
 import { fileSystemManager } from './fileUtils';
+import { DEFAULT_ANTHROPIC_MODEL } from '../constants/llmDefaults';
 
 const SETTINGS_KEY = 'kollektivSettingsV4';
 
@@ -146,7 +147,7 @@ export const loadLLMSettings = (): LLMSettings => {
             },
             googleApiKey: parsed.googleApiKey ?? '',
             anthropicApiKey: parsed.anthropicApiKey ?? '',
-            anthropicModel: parsed.anthropicModel ?? 'claude-3-7-sonnet-20250219',
+            anthropicModel: parsed.anthropicModel ?? DEFAULT_ANTHROPIC_MODEL,
             anthropicConnectionMode: parsed.anthropicConnectionMode ?? 'api_key',
             anthropicSubscriptionUrl: parsed.anthropicSubscriptionUrl ?? 'http://localhost:8000',
             anthropicSubscriptionKey: parsed.anthropicSubscriptionKey ?? '',

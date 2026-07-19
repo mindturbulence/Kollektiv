@@ -80,9 +80,11 @@ function startMcpProcess() {
   console.log(`⚙️ Starting Local MCP process:`);
   console.log(`  > ${spawnCmd} ${spawnArgs.join(' ')}\n`);
 
-  childProcess = spawn(spawnCmd, spawnArgs, {
-    shell: isWindows // On Windows, shell ensures CMD environment wraps spawn securely
-  });
+  // On Windows: shell is needed for .cmd/.bat resolution, but Node.js >=21 warns
+  // about separate args with shell:true (DEP0190). Pass full command string instead.
+  childProcess = isWindows
+    ? spawn(`${spawnCmd} ${spawnArgs.join(' ')}`, [], { shell: true })
+    : spawn(spawnCmd, spawnArgs);
 
   childProcess.on('error', (err) => {
     console.error(`\n❌ Could not start MCP process: "${spawnCmd}"`);

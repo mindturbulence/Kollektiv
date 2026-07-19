@@ -8,7 +8,7 @@ import { dirname, resolve } from 'path';
 const __dirname = dirname(fileURLToPath(import.meta.url));
 
 // Start ngrok and capture the HTTPS URL
-const ngrok = spawn('C:\\Users\\dwun2\\AppData\\Roaming\\npm\\ngrok.cmd', ['http', '7500', '--log=stdout'], {
+const ngrok = spawn('C:\\Users\\dwun2\\AppData\\Roaming\\npm\\ngrok.cmd http 7500 --log=stdout', [], {
   stdio: ['ignore', 'pipe', 'pipe'],
   shell: true,
 });
