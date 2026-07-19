@@ -9,6 +9,7 @@ import { loadGalleryItems } from '../utils/galleryStorage';
 import { useAssistantSignals } from '../utils/useAssistantSignals';
 import { appEventBus } from '../utils/eventBus';
 import type { AssistantMode } from '../utils/assistantMode';
+import { isGoogleAuthValid } from '../utils/googleAuth';
 
 const MetadataItem: React.FC<{ label: string; value: string }> = ({ label, value }) => {
     const { settings } = useSettings();
@@ -238,7 +239,7 @@ const Footer: React.FC<FooterProps> = ({
                     <span className="arwes-label uppercase tracking-widest text-primary/60 leading-none inline-block">INT</span>
                     <IntegrationItem label="VAULT" active={fileSystemManager.isDirectorySelected()} />
                     <IntegrationItem label={(settings.activeLLM === 'ollama_cloud' ? 'OLLAMA' : settings.activeLLM?.toUpperCase()) || 'LLM'} active={!!(settings.geminiApiKey || process.env.GEMINI_API_KEY) || settings.activeLLM?.includes('ollama')} />
-                    <IntegrationItem label="YOUTUBE" active={!!settings.youtube?.isConnected} />
+                    <IntegrationItem label="YOUTUBE" active={!!settings.youtube?.isConnected && isGoogleAuthValid(settings.googleIdentity)} />
                 </div>
             </div>
 

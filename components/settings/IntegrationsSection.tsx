@@ -5,6 +5,7 @@ import { audioService } from '../../services/audioService';
 import AutocompleteSelect from '../AutocompleteSelect';
 import { DEFAULT_ANTHROPIC_MODEL } from '../../constants/llmDefaults';
 import { InformationCircleIcon, SparklesIcon } from '../icons';
+import { isGoogleAuthValid } from '../../utils/googleAuth';
 import { ASSISTANT_VOICES, DEFAULT_MALE_VOICE, DEFAULT_FEMALE_VOICE, voiceGender } from '../../utils/assistantVoices';
 import McpSection from './McpSection';
 import CdpSection from './CdpSection';
@@ -300,7 +301,7 @@ const IntegrationsSection: React.FC<IntegrationsSectionProps> = ({
                 <input type="password" value={settings.youtube?.customApiKey || ''} onChange={(e) => handleSettingsChange('youtube', { ...settings.youtube, customApiKey: e.target.value })} className="form-input w-full max-w-md" placeholder="AIzaSy..." />
             </SettingRow>
             <SettingRow label="Cloud Identity Link" desc="Connect your account to enable Cloud AI and data sync features.">
-                {settings.googleIdentity?.isConnected ? (
+                {isGoogleAuthValid(settings.googleIdentity) ? (
                     <div className="flex flex-col gap-4 w-full max-w-lg">
                         <div className="flex items-center gap-4 p-4">
                             <img src={settings.googleIdentity.picture} className="w-12 h-12 rounded-full bg-black" alt="profile" />
@@ -316,7 +317,7 @@ const IntegrationsSection: React.FC<IntegrationsSectionProps> = ({
                 )}
             </SettingRow>
             <SettingRow label="Session Status" desc="Current encryption status of the cloud identity link.">
-                <span className={`text-[10px] font-black uppercase px-3 py-1.5 rounded-none border ${settings.googleIdentity?.isConnected ? 'bg-success/5 border-success/30 text-success' : 'bg-warning/5 border-warning/30 text-warning'}`}>                                {settings.googleIdentity?.isConnected ? 'ACTIVE & ENCRYPTED' : 'AWAITING UPLINK'}
+                <span className={`text-[10px] font-black uppercase px-3 py-1.5 rounded-none border ${isGoogleAuthValid(settings.googleIdentity) ? 'bg-success/5 border-success/30 text-success' : 'bg-warning/5 border-warning/30 text-warning'}`}>                                {isGoogleAuthValid(settings.googleIdentity) ? 'ACTIVE & ENCRYPTED' : (settings.googleIdentity?.isConnected ? 'SESSION EXPIRED — RE-AUTH REQUIRED' : 'AWAITING UPLINK')}
                             </span>
                         </SettingRow>
                     </SettingsGroup>
@@ -366,38 +367,72 @@ const IntegrationsSection: React.FC<IntegrationsSectionProps> = ({
                     </div>
     );
 
-    const renderSpotify = () => (
+    const renderSpotify = () => {
+        const spotify = settings.spotify;
+        const isTokenExpired = spotify?.expiresAt ? Date.now() > spotify.expiresAt : false;
+        const connectionStatus = spotify?.isConnected
+            ? isTokenExpired
+                ? { label: 'TOKEN EXPIRED', cls: 'text-warning border-warning/30 bg-warning/10' }
+                : { label: 'CONNECTED', cls: 'text-success border-success/30 bg-success/10' }
+            : { label: 'DISCONNECTED', cls: 'text-neutral border-neutral/30 bg-neutral/10' };
+
+        return (
         <div className="flex flex-col animate-fade-in">
             <SettingsGroup title="OAuth Configuration">
             <SettingRow label="Client ID" desc="Spotify Developer Dashboard OAuth Client ID.">
-                <input type="text" value={settings.spotify?.customClientId || ''} onChange={(e) => handleSettingsChange('spotify', { ...settings.spotify, customClientId: e.target.value })} className="form-input w-full max-w-md" placeholder="abc123..." />
+                <input type="text" value={spotify?.customClientId || ''} onChange={(e) => handleSettingsChange('spotify', { ...spotify, customClientId: e.target.value })} className="form-input w-full max-w-md" placeholder="abc123..." />
             </SettingRow>
             <SettingRow label="Client Secret" desc="Spotify Developer Dashboard OAuth Client Secret.">
-                <input type="password" value={settings.spotify?.customClientSecret || ''} onChange={(e) => handleSettingsChange('spotify', { ...settings.spotify, customClientSecret: e.target.value })} className="form-input w-full max-w-md" placeholder="..." />
+                <input type="password" value={spotify?.customClientSecret || ''} onChange={(e) => handleSettingsChange('spotify', { ...spotify, customClientSecret: e.target.value })} className="form-input w-full max-w-md" placeholder="..." />
             </SettingRow>
+            <div className="px-4 py-3 mb-2 rounded-md border border-warning/30 bg-warning/5 text-[11px] font-mono leading-relaxed">
+                <span className="font-bold text-warning uppercase tracking-wider">⚠ Requires Spotify Premium</span>
+                <br />
+                The Spotify Developer app owner must have an active <strong>Spotify Premium</strong> subscription.
+                Free-tier accounts cannot access playback, streaming, or user profile APIs
+                (<code>403 Active premium subscription required</code>).
+                If you see this error after linking, upgrade the account that owns the app in the
+                <a className="underline text-warning/80 hover:text-warning" href="https://developer.spotify.com/dashboard" target="_blank"> Spotify Developer Dashboard</a> to Premium.
+                Changes can take a few hours to propagate.
+            </div>
             <SettingRow label="Account Integration" desc="Connect to your Spotify account for playlist access and playback.">
-                {settings.spotify?.isConnected ? (
-                    <div className="flex flex-col gap-4 w-full max-w-lg">
-                        <div className="flex items-center gap-4 p-4">
-                            <div className="w-12 h-12 rounded-full bg-green-500 flex items-center justify-center text-white font-bold text-xl">
-                                {settings.spotify.displayName?.charAt(0).toUpperCase() || 'S'}
-                            </div>
-                            <div className="min-w-0">
-                                <p className="text-sm font-black uppercase truncate">{settings.spotify.displayName || 'Spotify User'}</p>
-                                <p className="text-[10px] font-mono opacity-40 uppercase">{settings.spotify.email || 'Connected'}</p>
-                            </div>
-                        </div>
-                        <button onClick={() => { audioService.playClick(); handleSpotifyDisconnect(); }} className="form-btn text-error px-4">
-                            Unlink Spotify
-                        </button>
+                <div className="flex flex-col gap-4 w-full max-w-lg">
+                    <div className={`inline-flex items-center gap-2 px-3 py-1.5 rounded-md text-[10px] font-mono font-bold uppercase tracking-wider border ${connectionStatus.cls}`}>
+                        <span className={`w-2 h-2 rounded-full ${isTokenExpired ? 'bg-warning' : spotify?.isConnected ? 'bg-success' : 'bg-neutral'}`} />
+                        {connectionStatus.label}
                     </div>
-                ) : (
-                    <button onClick={() => { audioService.playClick(); handleAuthConnect('spotify'); }} className="form-btn px-6">LINK SPOTIFY</button>
-                )}
+
+                    {spotify?.isConnected ? (
+                        <>
+                            <div className="flex items-center gap-4 p-4">
+                                <div className="w-12 h-12 rounded-full bg-green-500 flex items-center justify-center text-white font-bold text-xl shrink-0">
+                                    {spotify.displayName?.charAt(0).toUpperCase() || 'S'}
+                                </div>
+                                <div className="min-w-0">
+                                    <p className="text-sm font-black uppercase truncate">{spotify.displayName || 'Spotify User'}</p>
+                                    <p className="text-[10px] font-mono opacity-40 uppercase">{spotify.email || 'Connected'}</p>
+                                    {isTokenExpired && (
+                                        <p className="text-[10px] font-mono text-warning mt-1">Token expired — click Re-link to refresh</p>
+                                    )}
+                                </div>
+                            </div>
+                            <div className="flex gap-2">
+                                <button onClick={() => { audioService.playClick(); handleAuthConnect('spotify'); }} className="form-btn px-4">
+                                    Re-link Spotify
+                                </button>
+                                <button onClick={() => { audioService.playClick(); handleSpotifyDisconnect(); }} className="form-btn text-error px-4">
+                                    Unlink
+                                </button>
+                            </div>
+                        </>
+                    ) : (
+                        <button onClick={() => { audioService.playClick(); handleAuthConnect('spotify'); }} className="form-btn px-6">LINK SPOTIFY</button>
+                    )}
+                </div>
             </SettingRow>
         </SettingsGroup>
         </div>
-    );
+    );}
 
     const renderTensorArt = () => (
         <div className="flex flex-col animate-fade-in">

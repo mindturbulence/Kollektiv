@@ -5,6 +5,7 @@ import type { AuthContextType } from '../contexts/AuthContext';
 import type { LLMSettings } from '../types';
 import { loadLLMSettings } from './settingsStorage';
 import { convertToJpgWithMetadata } from './imageFormatTools';
+import { isGoogleAuthValid } from './googleAuth';
 
 // --- Interfaces and Types ---
 interface IFileSystemManager {
@@ -416,7 +417,8 @@ class LocalFileSystemManager implements IFileSystemManager {
     async initialize(settings: LLMSettings, _auth: AuthContextType): Promise<boolean> {
         this.lastError = null;
         this.storageProvider = settings.storageProvider || 'local';
-        this.accessToken = settings.googleIdentity?.isConnected ? (settings.googleIdentity.accessToken || null) : null;
+        const googleIdentity = settings.googleIdentity;
+        this.accessToken = isGoogleAuthValid(googleIdentity) ? googleIdentity.accessToken : null;
 
         // Drive standby/keep-alive initialization
         if (this.accessToken) {

@@ -6,6 +6,7 @@ import { SettingRow, SettingsGroup } from './primitives';
 import { audioService } from '../../services/audioService';
 import { UploadIcon, DownloadIcon } from '../icons';
 import { useSettings } from '../../contexts/SettingsContext';
+import { isGoogleAuthValid, requestSilentTokenRefresh } from '../../utils/googleAuth';
 import { verifyAndRepairFiles, rebuildGalleryDatabase, rebuildPromptDatabase, optimizeManifests } from '../../utils/integrity';
 
 interface AppSectionProps {
@@ -131,12 +132,15 @@ const AppSection: React.FC<AppSectionProps> = ({
                         handleSettingsChange('storageProvider', val);
 
                         if (val === 'drive') {
-                            const isTokenExpired = settings.googleIdentity?.connectedAt
-                                ? (Date.now() - settings.googleIdentity.connectedAt > 50 * 60 * 1000)
-                                : true;
-                            if (!settings.googleIdentity?.isConnected || isTokenExpired || !settings.googleIdentity?.accessToken) {
-                                showGlobalFeedback("Refreshing Google Drive secure session...", false);
-                                handleAuthConnect('google');
+                            if (!isGoogleAuthValid(settings.googleIdentity)) {
+                                // Attempt silent refresh first; if that doesn't work, open consent popup
+                                const refreshRequested = requestSilentTokenRefresh(settings.googleIdentity);
+                                if (!refreshRequested) {
+                                    showGlobalFeedback("Refreshing Google Drive secure session...", false);
+                                    handleAuthConnect('google');
+                                } else {
+                                    showGlobalFeedback("Refreshing Google session silently...", false);
+                                }
                             } else {
                                 const success = await fileSystemManager.initialize(updatedSettings, {} as any);
                                 if (success) {
@@ -278,9 +282,10 @@ const AppSection: React.FC<AppSectionProps> = ({
                 <button
                     onClick={async () => {
                         audioService.playClick();
-                        if (!settings.googleIdentity?.isConnected) {
-                            showGlobalFeedback("You must connect your Google Identity first in General settings.");
+                        if (!isGoogleAuthValid(settings.googleIdentity)) {
+                            showGlobalFeedback("Your Google session has expired. Reconnecting...");
                             setActiveSubTab('general');
+                            handleAuthConnect('google');
                             return;
                         }
                         onOpenMigrationModal('push');
@@ -300,9 +305,10 @@ const AppSection: React.FC<AppSectionProps> = ({
                 <button
                     onClick={async () => {
                         audioService.playClick();
-                        if (!settings.googleIdentity?.isConnected) {
-                            showGlobalFeedback("You must connect your Google Identity first in General settings.");
+                        if (!isGoogleAuthValid(settings.googleIdentity)) {
+                            showGlobalFeedback("Your Google session has expired. Reconnecting...");
                             setActiveSubTab('general');
+                            handleAuthConnect('google');
                             return;
                         }
                         onOpenMigrationModal('pull');

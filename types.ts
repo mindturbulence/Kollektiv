@@ -66,6 +66,10 @@ export interface GoogleIdentityConnection {
   name?: string;
   picture?: string;
   accessToken?: string;
+  /** Absolute timestamp (ms) when the access token expires. 
+   *  Captured from the `expires_in` field of the OAuth response. */
+  expiresAt?: number;
+  /** Absolute timestamp (ms) when the connection was first established. */
   connectedAt?: number;
   customApiKey?: string;
 }

@@ -4,6 +4,7 @@ import { getHandle } from '../utils/db';
 import { FolderClosedIcon, AppLogoIcon, RefreshIcon } from './icons';
 import { audioService } from '../services/audioService';
 import { useSettings } from '../contexts/SettingsContext';
+import { isGoogleAuthValid, buildGoogleIdentity } from '../utils/googleAuth';
 
 interface WelcomeProps {
   onSetupComplete: (customSettings?: any) => void;
@@ -100,14 +101,10 @@ const Welcome: React.FC<WelcomeProps> = ({ onSetupComplete }) => {
                             if (!userInfoRes.ok) throw new Error("Cloud Identity fetch failed.");
                             const user = await userInfoRes.json();
                             
-                            const updatedGoogle = {
-                                isConnected: true,
-                                email: user.email,
-                                name: user.name,
-                                picture: user.picture,
-                                accessToken: response.access_token,
-                                connectedAt: Date.now()
-                            };
+                            const updatedGoogle = buildGoogleIdentity(
+                                { access_token: response.access_token, expires_in: response.expires_in },
+                                { email: user.email, name: user.name, picture: user.picture }
+                            );
                             
                             const updatedSettings = { 
                                 ...settings, 
@@ -157,11 +154,7 @@ const Welcome: React.FC<WelcomeProps> = ({ onSetupComplete }) => {
       setError(null);
       setIsLoading(true);
 
-      const isTokenExpired = settings.googleIdentity?.connectedAt 
-          ? (Date.now() - settings.googleIdentity.connectedAt > 50 * 60 * 1000) 
-          : true;
-
-      if (isTokenExpired || !settings.googleIdentity?.accessToken) {
+      if (!isGoogleAuthValid(settings.googleIdentity)) {
           handleGoogleDriveSignIn();
           return;
       }

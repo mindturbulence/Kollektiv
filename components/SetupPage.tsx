@@ -13,6 +13,7 @@ import MigrationModal from './MigrationModal';
 
 import FeedbackToast from './FeedbackToast';
 import { audioService } from '../services/audioService';
+import { appEventBus } from '../utils/eventBus';
 import { PromptTxtImportModal } from './PromptTxtImportModal';
 
 import { SetupNavItem } from './settings/primitives';
@@ -133,14 +134,15 @@ export const SetupPage: React.FC<SetupPageProps> = ({
     const tokenClientRef = useRef<any>(null);
     const lastClientIdRef = useRef<string | null>(null);
     const authModeRef = useRef<'youtube' | 'google' | 'spotify'>('google');
-    const codeVerifierRef = useRef<string | null>(null);
     const authTimeoutRef = useRef<number | null>(null);
     const navScrollRef = useRef<HTMLDivElement>(null);
     const mainScrollRef = useRef<HTMLDivElement>(null);
+    // Pre-computed PKCE params so window.open is called synchronously (avoids popup blockers)
+    const spotifyPkceRef = useRef<{ verifier: string; challenge: string } | null>(null);
 
     const playSuccessChime = useCallback(() => { audioService.playSuccess(); }, []);
 
-    const handleAuthResponse = useCallback(async (accessToken: string, mode: 'youtube' | 'google' | 'spotify') => {
+    const handleAuthResponse = useCallback(async (accessToken: string, mode: 'youtube' | 'google' | 'spotify', expiresIn?: number) => {
         if (authTimeoutRef.current) { window.clearTimeout(authTimeoutRef.current); authTimeoutRef.current = null; }
         try {
             if (mode === 'youtube') {
@@ -168,6 +170,7 @@ export const SetupPage: React.FC<SetupPageProps> = ({
                 if (!response.ok) throw new Error("Spotify profile fetch failed.");
                 const user = await response.json();
                 const updatedSpotify: SpotifyConnection = {
+                    ...settings.spotify,
                     isConnected: true,
                     displayName: user.display_name,
                     email: user.email,
@@ -187,7 +190,9 @@ export const SetupPage: React.FC<SetupPageProps> = ({
                 const user = await response.json();
                 const updatedGoogle: GoogleIdentityConnection = {
                     isConnected: true, email: user.email, name: user.name, picture: user.picture,
-                    accessToken: accessToken, connectedAt: Date.now()
+                    accessToken: accessToken,
+                    expiresAt: expiresIn ? Date.now() + expiresIn * 1000 : undefined,
+                    connectedAt: Date.now()
                 };
                 const updatedSettings = { ...settings, googleIdentity: updatedGoogle };
                 setSettings(updatedSettings); updateSettings(updatedSettings);
@@ -217,7 +222,7 @@ export const SetupPage: React.FC<SetupPageProps> = ({
                     callback: (response: any) => {
                         if (authTimeoutRef.current) { window.clearTimeout(authTimeoutRef.current); authTimeoutRef.current = null; }
                         if (response.error) { setIsWorking(false); setMaintenanceMsg(""); setMaintenanceProgress(0); if (response.error !== 'popup_closed') showGlobalFeedback(`Authentication failed: ${response.error}`, true); return; }
-                        if (response.access_token) handleAuthResponse(response.access_token, authModeRef.current);
+                        if (response.access_token) handleAuthResponse(response.access_token, authModeRef.current, response.expires_in);
                         else { setIsWorking(false); setMaintenanceMsg(""); }
                     },
                 });
@@ -234,17 +239,31 @@ export const SetupPage: React.FC<SetupPageProps> = ({
         return () => { if (authTimeoutRef.current) window.clearTimeout(authTimeoutRef.current); }
     }, [settings.youtube?.customClientId, initGsi]);
 
+    // Silent token refresh for Google Identity (triggered by other components
+    // when they detect the token is expired but isConnected is still true).
+    useEffect(() => {
+        return appEventBus.on('googleTokenRefreshRequested', () => {
+            const clientId = settings.youtube?.customClientId || process.env.YOUTUBE_CLIENT_ID;
+            if (!clientId || clientId.includes('PLACEHOLDER') || !tokenClientRef.current) return;
+            try {
+                tokenClientRef.current.requestAccessToken({ prompt: '' });
+            } catch (e) {
+                console.warn('Silent token refresh failed:', e);
+            }
+        });
+    }, [settings.youtube?.customClientId]);
+
     // PKCE helpers for Spotify OAuth
-    const generateCodeVerifier = (): string => {
+    const generateCodeVerifier = useCallback((): string => {
         const array = new Uint8Array(32);
         crypto.getRandomValues(array);
         return btoa(String.fromCharCode(...array))
             .replace(/\+/g, '-')
             .replace(/\//g, '_')
             .replace(/=/g, '');
-    };
+    }, []);
 
-    const generateCodeChallenge = async (codeVerifier: string): Promise<string> => {
+    const generateCodeChallenge = useCallback(async (codeVerifier: string): Promise<string> => {
         const encoder = new TextEncoder();
         const data = encoder.encode(codeVerifier);
         const digest = await crypto.subtle.digest('SHA-256', data);
@@ -252,20 +271,34 @@ export const SetupPage: React.FC<SetupPageProps> = ({
             .replace(/\+/g, '-')
             .replace(/\//g, '_')
             .replace(/=/g, '');
-    };
+    }, []);
+
+    // Pre-compute PKCE params for Spotify so window.open is synchronous (avoids popup blockers)
+    useEffect(() => {
+        const clientId = settings.spotify?.customClientId || process.env.SPOTIFY_CLIENT_ID || '';
+        if (!clientId || clientId.includes('PLACEHOLDER')) { spotifyPkceRef.current = null; return; }
+        const verifier = generateCodeVerifier();
+        generateCodeChallenge(verifier).then(challenge => {
+            spotifyPkceRef.current = { verifier, challenge };
+        });
+    }, [settings.spotify?.customClientId, generateCodeVerifier, generateCodeChallenge]);
 
     const handleAuthConnect = async (mode: 'youtube' | 'google' | 'spotify') => {
         if (mode === 'spotify') {
             const clientId = settings.spotify?.customClientId || process.env.SPOTIFY_CLIENT_ID || '';
             if (!clientId || clientId.includes('PLACEHOLDER')) { showGlobalFeedback("Configuration Error: Missing Spotify Client ID in Settings.", true); return; }
-            // PKCE flow for Spotify
-            const codeVerifier = generateCodeVerifier();
-            const codeChallenge = await generateCodeChallenge(codeVerifier);
-            codeVerifierRef.current = codeVerifier;
+            // Use pre-computed PKCE params so window.open is synchronous (avoids popup blockers)
+            const pkce = spotifyPkceRef.current;
+            if (!pkce) {
+                showGlobalFeedback("Preparing authentication… try again in a moment.", false);
+                return;
+            }
+            localStorage.setItem('spotify_code_verifier_temp', pkce.verifier);
+            localStorage.setItem('spotify_client_id_temp', clientId);
             const redirectUri = `${window.location.origin}/auth/spotify/callback`;
             const scope = 'user-read-private user-read-email playlist-read-private playlist-read-collaborative user-library-read streaming user-read-playback-state user-modify-playback-state';
-            const authUrl = `https://accounts.spotify.com/authorize?response_type=code&client_id=${clientId}&redirect_uri=${encodeURIComponent(redirectUri)}&scope=${encodeURIComponent(scope)}&code_challenge_method=S256&code_challenge=${codeChallenge}&show_dialog=true`;
-            window.location.href = authUrl;
+            const authUrl = `https://accounts.spotify.com/authorize?response_type=code&client_id=${clientId}&redirect_uri=${encodeURIComponent(redirectUri)}&scope=${encodeURIComponent(scope)}&code_challenge_method=S256&code_challenge=${pkce.challenge}&show_dialog=true`;
+            window.open(authUrl, 'spotify-auth', 'width=600,height=800,popup=yes');
             return;
         }
         const clientId = settings.youtube?.customClientId || process.env.YOUTUBE_CLIENT_ID;
@@ -294,64 +327,53 @@ export const SetupPage: React.FC<SetupPageProps> = ({
             localStorage.removeItem('spotify_access_token');
             localStorage.removeItem('spotify_refresh_token');
             localStorage.removeItem('spotify_expires_at');
+            localStorage.removeItem('spotify_just_connected');
+            localStorage.removeItem('spotify_code_verifier_temp');
+            localStorage.removeItem('spotify_client_id_temp');
         }
         showGlobalFeedback('Spotify disconnected.');
     };
 
     useEffect(() => { setSettings(globalSettings); }, [globalSettings]);
 
-    // Handle Spotify OAuth callback
+    // Detect Spotify tokens written to localStorage by the popup callback.
+    // Uses both a storage event (fires when popup writes to localStorage)
+    // and a fallback interval to cover any missed events.
     useEffect(() => {
-        const params = new URLSearchParams(window.location.search);
-        const code = params.get('code');
-        const error = params.get('error');
-        
-        if (code && !error) {
-            // Clean up URL
-            window.history.replaceState({}, document.title, window.location.pathname);
-            
-            const codeVerifier = codeVerifierRef.current;
-            if (!codeVerifier) {
-                showGlobalFeedback("Spotify auth error: missing code verifier.", true);
-                return;
-            }
-            
-            const clientId = settings.spotify?.customClientId || process.env.SPOTIFY_CLIENT_ID || '';
-            const redirectUri = `${window.location.origin}/auth/spotify/callback`;
-            
-            fetch('https://accounts.spotify.com/api/token', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-                body: new URLSearchParams({
-                    grant_type: 'authorization_code',
-                    code,
-                    redirect_uri: redirectUri,
-                    client_id: clientId,
-                    code_verifier: codeVerifier,
-                }),
+        if (typeof window === 'undefined') return;
+
+        const tryConnect = () => {
+            const justConnected = localStorage.getItem('spotify_just_connected');
+            if (!justConnected) return;
+
+            const accessToken = localStorage.getItem('spotify_access_token');
+            const expiresAt = parseInt(localStorage.getItem('spotify_expires_at') || '0', 10);
+
+            if (!accessToken || expiresAt <= Date.now()) return;
+
+            // Consume the flag so we don't re-process
+            localStorage.removeItem('spotify_just_connected');
+
+            fetch('https://api.spotify.com/v1/me', {
+                headers: { 'Authorization': `Bearer ${accessToken}` }
             })
-            .then(res => res.json())
-            .then(async (data) => {
-                if (data.error) throw new Error(data.error_description || data.error);
-                
-                // Store tokens
-                localStorage.setItem('spotify_access_token', data.access_token);
-                localStorage.setItem('spotify_refresh_token', data.refresh_token);
-                localStorage.setItem('spotify_expires_at', String(Date.now() + data.expires_in * 1000));
-                
-                // Fetch user profile
-                const profileRes = await fetch('https://api.spotify.com/v1/me', {
-                    headers: { 'Authorization': `Bearer ${data.access_token}` }
-                });
-                const user = await profileRes.json();
-                
+            .then(async res => {
+                if (!res.ok) {
+                    const body = await res.text();
+                    throw new Error(`Spotify API ${res.status}: ${body.slice(0, 200)}`);
+                }
+                return res.json();
+            })
+            .then(user => {
+                const refreshToken = localStorage.getItem('spotify_refresh_token') || undefined;
                 const updatedSpotify: SpotifyConnection = {
+                    ...settings.spotify,
                     isConnected: true,
                     displayName: user.display_name,
                     email: user.email,
-                    accessToken: data.access_token,
-                    refreshToken: data.refresh_token,
-                    expiresAt: Date.now() + data.expires_in * 1000,
+                    accessToken,
+                    refreshToken,
+                    expiresAt,
                     connectedAt: Date.now(),
                 };
                 const updatedSettings = { ...settings, spotify: updatedSpotify };
@@ -360,12 +382,39 @@ export const SetupPage: React.FC<SetupPageProps> = ({
                 showGlobalFeedback(`Spotify Linked: ${user.display_name}`);
             })
             .catch(err => {
-                console.error('Spotify callback error:', err);
-                showGlobalFeedback(`Spotify auth failed: ${err.message}`, true);
+                console.error('Spotify profile fetch error:', err);
+                showGlobalFeedback(`Spotify linked but profile fetch failed: ${err.message}`, true);
+                const updatedSpotify: SpotifyConnection = {
+                    ...settings.spotify,
+                    isConnected: true,
+                    accessToken,
+                    expiresAt,
+                    connectedAt: Date.now(),
+                };
+                const updatedSettings = { ...settings, spotify: updatedSpotify };
+                setSettings(updatedSettings);
+                updateSettings(updatedSettings);
             });
-        } else if (error) {
-            showGlobalFeedback(`Spotify auth error: ${error}`, true);
-        }
+        };
+
+        // Check immediately in case tokens are already there
+        tryConnect();
+
+        // Listen for storage events from the popup
+        const onStorage = (e: StorageEvent) => {
+            if (e.key === 'spotify_just_connected' || e.key === 'spotify_access_token') {
+                tryConnect();
+            }
+        };
+        window.addEventListener('storage', onStorage);
+
+        // Poll every 2s as a fallback (storage event can be missed in some browsers)
+        const interval = setInterval(tryConnect, 2000);
+
+        return () => {
+            window.removeEventListener('storage', onStorage);
+            clearInterval(interval);
+        };
     }, [settings, updateSettings, showGlobalFeedback]);
 
     useEffect(() => {

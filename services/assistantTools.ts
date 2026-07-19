@@ -8,6 +8,7 @@ import { addMemory, loadMemories as loadMemoryEntries, deleteMemory } from '../u
 import { loadGalleryItems, addItemToGallery, deleteItemFromGallery } from '../utils/galleryStorage';
 import { loadLLMSettings, saveLLMSettings } from '../utils/settingsStorage';
 import { refineSinglePrompt, reconstructFromIntent, dissectPrompt, translateToEnglish, generateConstructorPreset, abstractImage, generateWithImagen, generateWithNanoBanana, generateWithVeo } from './llmService';
+import { isGoogleAuthValid } from '../utils/googleAuth';
 import { crafterService } from './crafterService';
 import { refinerPresetService } from './refinerPresetService';
 import { PROMPT_DETAIL_LEVELS } from '../constants/modifiers';
@@ -1060,8 +1061,13 @@ export const ASSISTANT_TOOLS: AssistantTool[] = [
             required: ['action'],
         },
         execute: async (args, ctx) => {
-            const token = ctx.settings.googleIdentity?.accessToken;
-            if (!token) return 'Error: No Google Identity connected. Go to Settings > App > Storage and authorize Google Drive first, then re-authorize to include Gmail access.';
+            if (!isGoogleAuthValid(ctx.settings.googleIdentity)) {
+                if (ctx.settings.googleIdentity?.isConnected) {
+                    return 'Error: Your Google session has expired. Ask the user to re-authenticate in Settings > Integrations > Google.';
+                }
+                return 'Error: No Google Identity connected. Go to Settings > App > Storage and authorize Google Drive first, then re-authorize to include Gmail access.';
+            }
+            const token = ctx.settings.googleIdentity!.accessToken!;
             const BASE = '/google-api/gmail/v1/users/me';
             const headers = { Authorization: `Bearer ${token}` };
             try {
@@ -1120,8 +1126,13 @@ export const ASSISTANT_TOOLS: AssistantTool[] = [
             required: ['to', 'subject', 'body'],
         },
         execute: async (args, ctx) => {
-            const token = ctx.settings.googleIdentity?.accessToken;
-            if (!token) return 'Error: No Google Identity connected. Go to Settings > App > Storage and authorize Google Drive first.';
+            if (!isGoogleAuthValid(ctx.settings.googleIdentity)) {
+                if (ctx.settings.googleIdentity?.isConnected) {
+                    return 'Error: Your Google session has expired. Ask the user to re-authenticate in Settings > Integrations > Google.';
+                }
+                return 'Error: No Google Identity connected. Go to Settings > App > Storage and authorize Google Drive first.';
+            }
+            const token = ctx.settings.googleIdentity!.accessToken!;
             if (!confirmSensitiveAction(`Send an email\nTo: ${String(args.to || '')}\nSubject: ${String(args.subject || '')}`)) {
                 return 'User declined: the email was NOT sent. Do not retry unless the user explicitly asks again.';
             }
@@ -1175,8 +1186,13 @@ export const ASSISTANT_TOOLS: AssistantTool[] = [
             required: ['id'],
         },
         execute: async (args, ctx) => {
-            const token = ctx.settings.googleIdentity?.accessToken;
-            if (!token) return 'Error: No Google Identity connected.';
+            if (!isGoogleAuthValid(ctx.settings.googleIdentity)) {
+                if (ctx.settings.googleIdentity?.isConnected) {
+                    return 'Error: Your Google session has expired. Ask the user to re-authenticate in Settings > Integrations > Google.';
+                }
+                return 'Error: No Google Identity connected.';
+            }
+            const token = ctx.settings.googleIdentity!.accessToken!;
             const wantsPermanent = args.action === 'delete';
             if (!confirmSensitiveAction(`${wantsPermanent ? 'PERMANENTLY DELETE (irreversible)' : 'Move to trash'}\nGmail message: ${String(args.id)}`)) {
                 return 'User declined: the message was NOT modified. Do not retry unless the user explicitly asks again.';
