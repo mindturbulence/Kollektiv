@@ -94,14 +94,6 @@ export interface AssistantTool {
 // Must mirror ActiveTab in types.ts.
 const PAGES = ['dashboard', 'discovery', 'prompts', 'crafter', 'refiner', 'prompt_analyzer', 'media_analyzer', 'prompt', 'gallery', 'resizer', 'video_to_frames', 'image_compare', 'color_palette_extractor', 'composer', 'settings'];
 
-// Blocking, per-action user confirmation for destructive external actions.
-// window.confirm is deliberate: synchronous, unmissable, and impossible for
-// the tool loop to bypass. ponytail: upgrade to an in-app modal later.
-const confirmSensitiveAction = (summary: string): boolean => {
-    if (typeof window === 'undefined' || typeof window.confirm !== 'function') return false;
-    return window.confirm(`The assistant wants to:\n\n${summary}\n\nAllow this?`);
-};
-
 /** Try to obtain a valid Google access token, attempting silent refresh if stale.
  *  Reads the identity fresh from localStorage rather than trusting the caller's
  *  settings snapshot — the live/voice assistant (services/liveAssistantService.ts)
@@ -723,11 +715,12 @@ export const ASSISTANT_TOOLS: AssistantTool[] = [
                     dataUrl = await generateWithNanoBanana(String(prompt), [], ratio, ctx.settings);
                 } else if (m === 'veo') {
                     dataUrl = await generateWithVeo(String(prompt), undefined, ratio, ctx.settings);
-                } else {
-                    return `Error: unknown model "${m}". Valid: imagen, nano_banana, veo.`;
-                }
-                // Save to gallery so it persists and is findable.
-                const item = await addItemToGallery('image', [dataUrl], ['AI Generation'], undefined, undefined, [], undefined, String(prompt));
+        } else {
+            return `Error: unknown model "${m}". Valid: imagen, nano_banana, veo.`;
+        }
+        // Save to gallery so it persists and is findable.
+        const mediaType = m === 'veo' ? 'video' : 'image';
+        const item = await addItemToGallery(mediaType, [dataUrl], ['AI Generation'], undefined, undefined, [], undefined, String(prompt));
                 return JSON.stringify({
                     success: true,
                     galleryId: item.id,
@@ -1218,9 +1211,6 @@ export const ASSISTANT_TOOLS: AssistantTool[] = [
             const authResult = await ensureGoogleToken();
             if (typeof authResult === 'string') return authResult;
             const token = authResult.token;
-            if (!confirmSensitiveAction(`Send an email\nTo: ${String(args.to || '')}\nSubject: ${String(args.subject || '')}`)) {
-                return 'User declined: the email was NOT sent. Do not retry unless the user explicitly asks again.';
-            }
             try {
                 // Build RFC 2822 MIME message
                 const to = String(args.to || '');
@@ -1274,10 +1264,6 @@ export const ASSISTANT_TOOLS: AssistantTool[] = [
             const authResult = await ensureGoogleToken();
             if (typeof authResult === 'string') return authResult;
             const token = authResult.token;
-            const wantsPermanent = args.action === 'delete';
-            if (!confirmSensitiveAction(`${wantsPermanent ? 'PERMANENTLY DELETE (irreversible)' : 'Move to trash'}\nGmail message: ${String(args.id)}`)) {
-                return 'User declined: the message was NOT modified. Do not retry unless the user explicitly asks again.';
-            }
             try {
                 const msgId = encodeURIComponent(String(args.id));
                 const isPermanent = args.action === 'delete';
