@@ -32,6 +32,54 @@ interface SessionState {
 }
 const sessionStates = new Map<string, SessionState>();
 
+/** localStorage key prefix for persisting MCP session IDs across page reloads. */
+const LS_SESSION_PREFIX = "kollektiv_mcp_session_";
+
+/** Escape a server URL so it can be used as a localStorage key. */
+function lsKey(url: string): string {
+  return LS_SESSION_PREFIX + url.replace(/[^a-zA-Z0-9._~-]/g, "_");
+}
+
+/**
+ * Persist the session ID for a server URL to localStorage so it survives
+ * page refresh.  The server-side multi-session transport will recognise
+ * the session ID on reconnect and avoid "Server already initialized".
+ */
+function persistSessionId(url: string, sessionId: string): void {
+  try {
+    localStorage.setItem(lsKey(url), sessionId);
+  } catch {
+    // localStorage may be unavailable (private browsing, quota)
+  }
+}
+
+/** Clear a persisted session ID from localStorage. */
+function clearPersistedSessionId(url: string): void {
+  try {
+    localStorage.removeItem(lsKey(url));
+  } catch {
+    // ignore
+  }
+}
+
+/**
+ * Restore session state from localStorage if available.
+ * Returns true if a persisted session was found and loaded.
+ */
+function tryRestoreSession(url: string): boolean {
+  if (sessionStates.has(url)) return true; // already loaded
+  try {
+    const stored = localStorage.getItem(lsKey(url));
+    if (stored) {
+      sessionStates.set(url, { initialized: true, sessionId: stored });
+      return true;
+    }
+  } catch {
+    // ignore
+  }
+  return false;
+}
+
 /**
  * Parse an SSE (Server-Sent Events) response text and extract JSON from data: fields.
  */
@@ -86,6 +134,11 @@ async function ensureSession(url: string, headers?: Record<string, string>): Pro
   const state = sessionStates.get(url);
   if (state?.initialized) return;
 
+  // Before sending a fresh initialize, try restoring a persisted session ID
+  // from localStorage.  If the server still has that session alive, we skip
+  // the expensive handshake and go straight to tools/list etc.
+  if (tryRestoreSession(url)) return;
+
   const initResult = await rawRequest(url, 'initialize', {
     protocolVersion: '2025-11-25',
     capabilities: {},
@@ -105,6 +158,12 @@ async function ensureSession(url: string, headers?: Record<string, string>): Pro
   }
 
   sessionStates.set(url, { initialized: true, sessionId: initResult.sessionId });
+
+  // Persist the session ID so future page loads can reconnect without
+  // a fresh initialize handshake.
+  if (initResult.sessionId) {
+    persistSessionId(url, initResult.sessionId);
+  }
 }
 
 /**
@@ -148,10 +207,11 @@ async function rawRequest(
     // Extract session ID from response headers (Streamable HTTP)
     const responseSessionId = response.headers.get('mcp-session-id') || undefined;
 
-    // If session ID changed, store it
+    // If session ID changed, store it (both in-memory and persisted)
     if (responseSessionId && responseSessionId !== sessionState?.sessionId) {
       const existing = sessionStates.get(cleanUrl) || { initialized: false };
       sessionStates.set(cleanUrl, { ...existing, sessionId: responseSessionId });
+      persistSessionId(cleanUrl, responseSessionId);
     }
 
     const contentType = response.headers.get('content-type') || '';
@@ -240,7 +300,9 @@ async function executeMcpRequest(
   await ensureSession(serverUrl, headers);
   const result = await rawRequest(serverUrl, method, params, headers);
   if (!result.success && result.error?.toLowerCase?.().includes?.('session')) {
+    // Stale session — clear both in-memory and persisted state, then retry
     sessionStates.delete(serverUrl);
+    clearPersistedSessionId(serverUrl);
     await ensureSession(serverUrl, headers);
     return rawRequest(serverUrl, method, params, headers);
   }
