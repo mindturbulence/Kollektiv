@@ -1532,6 +1532,27 @@ button:active {
   scrollbar-width: thin;
 }
 
+/* Chat panel layout variables (consumed via arbitrary values in LLMChatPanel.tsx). */
+:root {
+  --footer-h: 76px;
+  --chat-panel-w-md: 400px;
+  --chat-panel-w-lg: 480px;
+}
+
+footer.footer {
+  min-height: 64px;
+}
+
+/* Textarea inside the chat panel input — hide native scrollbar; panel custom-scrollbar handles scroll. */
+.llm-chat-textarea {
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+.llm-chat-textarea::-webkit-scrollbar {
+  display: none;
+}
+
+
 /* --- Typography: Inter for dense UI, Space Grotesk for headings,
        JetBrains Mono for technical labels, Monoton reserved for the logo --- */
 [data-theme="Kollektiv"],

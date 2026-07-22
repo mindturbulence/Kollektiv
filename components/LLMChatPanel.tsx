@@ -13,6 +13,11 @@ import { getSavedChatSessions, saveChatSession, deleteChatSession, clearAllChatS
 import { v4 as uuidv4 } from 'uuid';
 import { appControlService } from '../services/appControlService';
 import { appEventBus } from '../utils/eventBus';
+import { ResearchProvider, useResearch } from '../contexts/ResearchContext';
+import { ResearchSourcesPanel } from './ResearchSourcesPanel';
+import { ResearchFindingsPanel } from './ResearchFindingsPanel';
+import { ResearchProjectBrowser } from './ResearchProjectBrowser';
+import { fileSystemManager } from '../utils/fileUtils';
 
 interface LLMChatPanelProps {
     isOpen: boolean;
@@ -27,6 +32,7 @@ export const LLMChatPanel: React.FC<LLMChatPanelProps> = ({ isOpen, onClose }) =
 
     const [isSidebarOpen, setIsSidebarOpen] = useState(false);
     const [isExpanded, setIsExpanded] = useState(false);
+    const [researchMode, setResearchMode] = useState(false);
     const [savedSessions, setSavedSessions] = useState<ChatSession[]>([]);
     const [activeSessionId, setActiveSessionId] = useState<string | null>(null);
 
@@ -353,44 +359,45 @@ ${systemResponse}` };
                         animate={{ x: 0, opacity: 1 }}
                         exit={{ x: '100%', opacity: 0 }}
                         transition={{ type: "spring", stiffness: 300, damping: 30 }}
-                        className={`fixed top-[84px] right-[42px] bottom-[81px] bg-transparent z-[200] pointer-events-auto shadow-2xl transition-[left,width] duration-300 ${isExpanded ? 'left-[42px] w-auto' : 'w-full md:w-[600px] lg:w-[800px]'}`}
+                        className={`fixed top-[84px] right-[42px] bottom-[var(--footer-h,81px)] bg-transparent z-[200] pointer-events-auto shadow-2xl transition-[left,width] duration-300 ${isExpanded ? 'left-[42px] w-auto' : 'w-full md:w-[400px] lg:w-[480px]'}`}
                     >
                         <div className="w-full h-full relative corner-frame overflow-visible flex flex-col">
                             <div className="bg-base-100/90 backdrop-blur-3xl rounded-none w-[calc(100%-6px)] h-[calc(100%-6px)] m-[3px] flex flex-col overflow-hidden relative z-10 border border-white/5">
 
                                 {/* Header */}
                                 <div className="flex justify-between items-center h-20 px-4 md:px-6 bg-base-100/40 flex-shrink-0 border-b border-base-300/20 relative shadow-md">
-                                    <div className="flex items-center gap-3">
-                                        <button onClick={() => setIsSidebarOpen(!isSidebarOpen)} className="btn btn-xs btn-ghost h-8 w-8 rounded-none p-0 opacity-60 hover:opacity-100 z-10 hidden md:flex" aria-label="Toggle Sidebar">
+                                    <div className="flex items-center gap-3 min-w-0">
+                                        <button
+                                            onClick={() => setIsSidebarOpen(!isSidebarOpen)}
+                                            className="btn btn-xs btn-ghost h-8 w-8 rounded-none p-0 opacity-60 hover:opacity-100 z-10"
+                                            aria-label="Toggle Sidebar"
+                                            aria-expanded={isSidebarOpen}
+                                        >
                                             <SidebarIcon className="w-8 h-8" />
                                         </button>
-                                        <button onClick={() => setIsSidebarOpen(!isSidebarOpen)} className="btn btn-xs btn-ghost h-8 w-8 rounded-none p-0 opacity-60 hover:opacity-100 z-10 md:hidden" aria-label="Toggle Sidebar">
-                                            <SidebarIcon className="w-8 h-8" />
-                                        </button>
-                                        <div>
-                                            <div className="flex items-center gap-2">
-                                                <h3 className="font-rajdhani text-[20px] uppercase tracking-[0.3em] font-logo">{getChatTitle()} ID : </h3>
-                                                {activeSessionId && <span className="opacity-40 text-[20px]">{activeSessionId.substring(0, 4)}</span>}
+                                        <div className="min-w-0">
+                                            <div className="flex items-center gap-2 min-w-0">
+                                                <h3 className="font-rajdhani text-[20px] uppercase tracking-[0.3em] truncate">{getChatTitle()}</h3>
+                                                {activeSessionId && <span className="font-rajdhani opacity-40 text-[20px] shrink-0">:&nbsp;{activeSessionId.substring(0, 4)}</span>}
                                             </div>
-                                            <p className="text-[10px] uppercase tracking-[0.3em] text-base-content/50 font-mono hidden md:block">
+                                            <p className="text-[10px] uppercase tracking-[0.3em] text-base-content/50 font-mono hidden md:block truncate">
                                                 {getChatSubtitle()}
                                             </p>
                                         </div>
                                     </div>
-                                    <div className="flex items-center gap-2">
-                                        <button onClick={() => { audioService.playClick(); setIsExpanded(!isExpanded); }} className={`btn btn-xs btn-ghost h-8 w-8 rounded-none p-0 hover:opacity-100 hidden md:flex ${isExpanded ? 'opacity-100' : 'opacity-40'}`} aria-label={isExpanded ? 'Shrink panel' : 'Expand panel to full width'} aria-pressed={isExpanded}>
+                                    <div className="flex items-center gap-1 shrink-0">
+                                        <button onClick={() => { audioService.playClick(); setIsExpanded(!isExpanded); }} className={`btn btn-xs btn-ghost h-9 w-9 min-h-9 rounded-none p-0 hover:opacity-100 hidden md:flex ${isExpanded ? 'opacity-100' : 'opacity-40'}`} aria-label={isExpanded ? 'Shrink panel' : 'Expand panel to full width'} aria-pressed={isExpanded}>
                                             <ArrowsMaximizeIcon className="w-5 h-5" />
                                         </button>
-                                        <button onClick={() => { audioService.playClick(); onClose(); }} className="btn btn-xs btn-ghost h-8 w-8 rounded-none p-0 opacity-40 hover:opacity-100 btn-snake" aria-label="Close panel">
+                                        <button onClick={() => { audioService.playClick(); onClose(); }} className="btn btn-xs btn-ghost h-9 w-9 min-h-9 rounded-none p-0 opacity-40 hover:opacity-100 btn-snake" aria-label="Close panel">
                                             <span /><span /><span /><span />
                                             <CloseIcon className="w-5 h-5" />
                                         </button>
                                     </div>
-                                    <div className="absolute bottom-0 left-0 right-0 h-[1px] bg-gradient-to-r from-transparent via-primary/30 to-transparent" />
                                 </div>
 
-                                {/* Two-pane layout */}
-                                <div className="flex flex-row flex-grow overflow-hidden relative">
+                                {/* Two-pane layout (chat mode) */}
+                                <div className={`flex flex-row flex-grow overflow-hidden relative ${researchMode ? 'hidden' : ''}`}>
 
                                     {/* Inner left Sidebar */}
                                     <AnimatePresence>
@@ -436,7 +443,44 @@ ${systemResponse}` };
 
                                     {/* Chat View Area */}
                                     <div className="flex flex-col flex-grow min-w-0 bg-base-100/40 relative">
-                                        
+
+                                        {/* Contextual Mode Toolbar (sits above message scroll, not in header strip) */}
+                                        <div className="flex items-center gap-1 px-4 md:px-6 py-2 border-b border-base-300/20 bg-base-100/30 shrink-0">
+                                            <div className="flex items-center gap-0.5 border border-white/10 rounded">
+                                                <button
+                                                    onClick={() => setResearchMode(false)}
+                                                    className={`btn btn-xs rounded-none px-2 py-1 text-[10px] font-mono uppercase tracking-wider transition-colors ${!researchMode ? 'bg-primary/20 text-primary' : 'opacity-50 hover:opacity-80'}`}
+                                                    aria-pressed={!researchMode}
+                                                >
+                                                    Chat
+                                                </button>
+                                                <button
+                                                    onClick={() => setResearchMode(true)}
+                                                    className={`btn btn-xs rounded-none px-2 py-1 text-[10px] font-mono uppercase tracking-wider transition-colors ${researchMode ? 'bg-primary/20 text-primary' : 'opacity-50 hover:opacity-80'}`}
+                                                    aria-pressed={researchMode}
+                                                >
+                                                    Research
+                                                </button>
+                                            </div>
+                                        </div>
+
+                                        {/* Streams jab — accessible status announcement + visual confirmation */}
+                                        <AnimatePresence>
+                                            {isProcessing && (
+                                                <div
+                                                    role="status"
+                                                    aria-live="polite"
+                                                    className="absolute left-1/2 -translate-x-1/2 top-2 z-30 pointer-events-none inline-flex items-center gap-2 px-3 py-1 bg-primary/15 border border-primary/40 rounded-full text-[10px] font-mono uppercase tracking-[0.3em] text-primary"
+                                                >
+                                                    <span className="relative flex h-2 w-2">
+                                                        <span className="absolute inline-flex h-full w-full rounded-full bg-primary opacity-60 animate-ping" />
+                                                        <span className="relative inline-flex rounded-full h-2 w-2 bg-primary" />
+                                                    </span>
+                                                    composing
+                                                </div>
+                                            )}
+                                        </AnimatePresence>
+
                                         {/* Left Middle Processing Ornament */}
                                         <AnimatePresence>
                                             {isProcessing && (
@@ -523,6 +567,17 @@ ${systemResponse}` };
                                                                     {msg.content}
                                                                 </Markdown>
                                                             </div>
+                                                            {(msg as any).citations && (msg as any).citations.length > 0 && (
+                                                                <div className="mt-3 pt-3 border-t border-white/10 space-y-1">
+                                                                    <p className="text-[10px] font-mono uppercase tracking-wider opacity-40 mb-1">Sources</p>
+                                                                    {(msg as any).citations.map((c: { index: number; fileName: string; title: string }) => (
+                                                                        <div key={c.index} className="flex items-center gap-2 text-xs font-mono opacity-60 hover:opacity-100">
+                                                                            <span className="text-primary text-[10px]">[{c.index}]</span>
+                                                                            <span className="truncate">{c.title || c.fileName}</span>
+                                                                        </div>
+                                                                    ))}
+                                                                </div>
+                                                            )}
                                                             {!msg.content && isProcessing && (
                                                                 <div className="flex space-x-1 items-center h-4 mt-2">
                                                                     <div className="w-1.5 h-1.5 bg-primary/60 rounded-full animate-bounce [animation-delay:-0.3s]"></div>
@@ -540,7 +595,7 @@ ${systemResponse}` };
                                         {/* Input Area */}
                                         <div className="p-4 border-t border-white/5 bg-base-200/30 shrink-0 relative">
                                             {showCommandMenu && (
-                                                <div className="absolute bottom-[calc(100%-1rem)] left-4 mb-2 w-72 bg-[#2d2d2d] border border-white/10 rounded-xl shadow-xl overflow-hidden z-[100]">
+                                                <div className="absolute bottom-[calc(100%-1rem)] left-4 mb-2 w-72 bg-base-300 border border-white/10 rounded-xl shadow-xl overflow-hidden z-[100]">
                                                     <div className="max-h-80 overflow-y-auto w-full flex flex-col p-1 custom-scrollbar">
                                                         {availableCommands.filter(c => input.startsWith('/') ? c.cmd.toLowerCase().includes(input.toLowerCase().split(' ')[0]) : true).map((c, i) => (
                                                             <button
@@ -549,13 +604,13 @@ ${systemResponse}` };
                                                                 onClick={() => insertCommand(c.cmd)}
                                                                 className="text-left py-1.5 px-3 hover:bg-white/10 rounded-md transition-colors flex flex-col w-full"
                                                             >
-                                                                <span className="text-[#64b5f6] text-[12px] font-mono leading-relaxed mb-1">{c.cmd.replace('/', '')}</span>
-                                                                <span className="text-white/50 text-[12px] leading-relaxed">{c.desc}</span>
+                                                                <span className="text-primary text-[12px] font-mono leading-relaxed mb-1">{c.cmd.replace('/', '')}</span>
+                                                                <span className="text-base-content/50 text-[12px] leading-relaxed">{c.desc}</span>
                                                             </button>
                                                         ))}
                                                     </div>
-                                                    <div className="bg-[#1e1e1e] border-t border-white/10 p-2 text-xs text-white/40 flex items-center font-mono">
-                                                        <span className="text-white/60 mr-1">/</span> Type to filter
+                                                    <div className="bg-base-200 border-t border-white/10 p-2 text-xs text-base-content/40 flex items-center font-mono">
+                                                        <span className="text-base-content/60 mr-1">/</span> Type to filter
                                                     </div>
                                                 </div>
                                             )}
@@ -592,16 +647,11 @@ ${systemResponse}` };
                                                         }
                                                     }}
                                                     placeholder="Enter command directive..."
-                                                    className={`w-full bg-transparent px-4 ${attachments.length > 0 ? 'pt-2' : 'pt-4'} pb-2 text-[14px] font-mono focus:outline-none resize-none`}
+                                                    className={`llm-chat-textarea w-full bg-transparent px-4 ${attachments.length > 0 ? 'pt-2' : 'pt-4'} pb-2 text-[14px] font-mono focus:outline-none resize-none`}
                                                     disabled={isProcessing}
                                                     rows={1}
-                                                    style={{ minHeight: '44px', maxHeight: '200px', scrollbarWidth: 'none', msOverflowStyle: 'none' }}
+                                                    style={{ minHeight: '44px', maxHeight: '200px' }}
                                                 />
-                                                <style>{`
-                                                    textarea::-webkit-scrollbar {
-                                                        display: none;
-                                                    }
-                                                `}</style>
                                                 <div className="flex items-center justify-between px-2 pb-2 mt-1">
                                                     <div className="flex gap-1 relative">
                                                         <input 
@@ -642,6 +692,14 @@ ${systemResponse}` };
                                     </div>
                                 </div>
                             </div>
+
+                            {/* Research mode body (shown only when researchMode is true) */}
+                            {researchMode && (
+                                <ResearchProvider settings={settings} fileManager={fileSystemManager}>
+                                    <ResearchPanelBody />
+                                </ResearchProvider>
+                            )}
+
                             {/* Manual Corner Accents */}
                             <div className="absolute -top-[1px] -left-[1px] w-3 h-3 border-t border-l border-primary/20 z-20 pointer-events-none" />
                             <div className="absolute -top-[1px] -right-[1px] w-3 h-3 border-t border-r border-primary/20 z-20 pointer-events-none" />
@@ -655,4 +713,37 @@ ${systemResponse}` };
     );
 
     return typeof document !== 'undefined' ? createPortal(panelContent, document.body) : null;
+};
+
+/**
+ * Three-panel research layout: Sources | body (browser or conversation) | Findings.
+ * Rendered inside <ResearchProvider>.
+ */
+const ResearchPanelBody: React.FC = () => {
+    const { projectSlug } = useResearch();
+
+    if (!projectSlug) {
+        return <ResearchProjectBrowser />;
+    }
+
+    return (
+        <div className="flex flex-row flex-grow min-h-0 w-full">
+            <ResearchSourcesPanel />
+            <div className="flex flex-col flex-1 min-w-0 items-center justify-center p-8 bg-base-100/30">
+                <div className="text-center max-w-md space-y-3">
+                    <p className="text-2xl font-rajdhani uppercase tracking-widest opacity-80">
+                        Research Project Active
+                    </p>
+                    <p className="text-sm font-mono opacity-50">
+                        Sources panel (left) and Findings panel (right) are now interactive.
+                        Edit findings, add sources, and ask the assistant questions.
+                    </p>
+                    <p className="text-xs font-mono opacity-30 mt-4">
+                        Project: <span className="text-primary">{projectSlug}</span>
+                    </p>
+                </div>
+            </div>
+            <ResearchFindingsPanel />
+        </div>
+    );
 };
