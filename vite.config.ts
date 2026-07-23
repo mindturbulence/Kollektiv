@@ -2,6 +2,7 @@ import path from 'path';
 import { fileURLToPath } from 'url';
 import { defineConfig, loadEnv } from 'vite';
 import react from '@vitejs/plugin-react';
+import { viteStaticCopy } from 'vite-plugin-static-copy';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
@@ -12,6 +13,19 @@ export default defineConfig(({ mode }) => {
       base: '/',
       plugins: [
         react(),
+        // Copy RNNoise WASM assets for client-side noise cancellation
+        viteStaticCopy({
+            targets: [
+                {
+                    src: 'node_modules/simple-rnnoise-wasm/dist/rnnoise.wasm',
+                    dest: '.',
+                },
+                {
+                    src: 'node_modules/simple-rnnoise-wasm/dist/rnnoise.worklet.js',
+                    dest: '.',
+                },
+            ],
+        }),
         {
           name: 'silence-ollama-proxy-errors',
           configureServer(server) {

@@ -48,6 +48,7 @@
     "react-markdown": "^9.1.0",
     "react-syntax-highlighter": "^16.1.1",
     "remark-gfm": "^4.0.1",
+    "simple-rnnoise-wasm": "^1.1.0",
     "uuid": "^9.0.1"
   },
   "devDependencies": {
@@ -71,6 +72,7 @@
     "tsx": "^4.21.0",
     "typescript": "^5.4.5",
     "vite": "^5.2.11",
+    "vite-plugin-static-copy": "^4.1.1",
     "vitest": "^3.2.7"
   }
 }
