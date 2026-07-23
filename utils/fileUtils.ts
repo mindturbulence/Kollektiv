@@ -8,7 +8,7 @@ import { convertToJpgWithMetadata } from './imageFormatTools';
 import { isGoogleAuthValid } from './googleAuth';
 
 // --- Interfaces and Types ---
-interface IFileSystemManager {
+export interface IFileSystemManager {
     initialize(settings: LLMSettings, auth: AuthContextType): Promise<boolean>;
     saveFile(filePath: string, content: Blob): Promise<string>;
     readFile(filePath: string): Promise<string | null>;

@@ -26,6 +26,7 @@ interface IntegrationsSectionProps {
     localModelOptions: { label: string; value: string }[];
     cloudModelOptions: { label: string; value: string }[];
     llamacppModelOptions: { label: string; value: string }[];
+    openrouterModelOptions: { label: string; value: string }[];
     currentOrigin: string;
     siblingOrigin: string;
 }
@@ -46,6 +47,7 @@ const IntegrationsSection: React.FC<IntegrationsSectionProps> = ({
     localModelOptions,
     cloudModelOptions,
     llamacppModelOptions,
+    openrouterModelOptions,
     currentOrigin,
     siblingOrigin,
 }) => {
@@ -166,6 +168,18 @@ const IntegrationsSection: React.FC<IntegrationsSectionProps> = ({
                     </SettingsGroup>
                 </div>
             )}
+            {settings.activeLLM === 'openrouter' && (
+                <div className="animate-fade-in flex flex-col bg-transparent">
+                    <SettingsGroup title="OpenRouter Configuration">
+                    <SettingRow label="API Key" desc="Your OpenRouter API key. Get one at openrouter.ai/keys.">
+                        <input type="password" value={settings.openrouterApiKey || ''} onChange={(e) => handleSettingsChange('openrouterApiKey', e.target.value)} className="form-input w-full md:w-[620px]" placeholder="sk-or-..." />
+                    </SettingRow>
+                    <SettingRow label="Model" desc="Any model slug from OpenRouter's catalog (e.g. openrouter/auto for automatic routing).">
+                        <AutocompleteSelect value={settings.openrouterModel || 'openrouter/auto'} onChange={(v) => handleSettingsChange('openrouterModel', v)} options={openrouterModelOptions} placeholder="SELECT MODEL..." className="w-full md:w-[620px]" />
+                    </SettingRow>
+                    </SettingsGroup>
+                </div>
+            )}
             {settings.activeLLM === 'ollama' && (
                 <div className="animate-fade-in flex flex-col bg-transparent">
                     <SettingsGroup title="Ollama (Local) Configuration">
@@ -231,6 +245,18 @@ const IntegrationsSection: React.FC<IntegrationsSectionProps> = ({
                     </SettingsGroup>
                 </div>
             )}
+
+            <SettingsGroup title="Voice Engine Credentials">
+            <SettingRow label="OpenAI API Key" desc="Required for the OpenAI Realtime voice engine. Choose it under Settings > Assistant > Voice Engine. Set as OPENAI_API_KEY in your environment, or enter it here.">
+                <input type="password" value={settings.openaiApiKey || ''} onChange={(e) => handleSettingsChange('openaiApiKey', e.target.value)} className="form-input w-full max-w-md" placeholder="sk-..." />
+            </SettingRow>
+            <SettingRow label="ElevenLabs API Key" desc="Required for the ElevenLabs Conversational AI voice engine. Choose it under Settings > Assistant > Voice Engine.">
+                <input type="password" value={settings.elevenlabsApiKey || ''} onChange={(e) => handleSettingsChange('elevenlabsApiKey', e.target.value)} className="form-input w-full max-w-md" placeholder="sk_..." />
+            </SettingRow>
+            <SettingRow label="ElevenLabs Agent ID" desc="The agent ID from your ElevenLabs Conversational AI agent. Create one in the ElevenLabs dashboard first.">
+                <input type="text" value={settings.elevenlabsAgentId || ''} onChange={(e) => handleSettingsChange('elevenlabsAgentId', e.target.value)} className="form-input w-full max-w-md" placeholder="agent_..." />
+            </SettingRow>
+            </SettingsGroup>
         </div>
     );
 
@@ -257,15 +283,6 @@ const IntegrationsSection: React.FC<IntegrationsSectionProps> = ({
             </SettingRow>
             <SettingRow label="API Key" desc="API Key (Developer Key) for browser-level Google services.">
                 <input type="password" value={settings.googleApiKey || ''} onChange={(e) => handleSettingsChange('googleApiKey', e.target.value)} className="form-input w-full max-w-md" placeholder="AIzaSy..." />
-            </SettingRow>
-            <SettingRow label="OpenAI API Key" desc="Required for the OpenAI Realtime voice engine. Set as OPENAI_API_KEY in your environment, or enter it here.">
-                <input type="password" value={settings.openaiApiKey || ''} onChange={(e) => handleSettingsChange('openaiApiKey', e.target.value)} className="form-input w-full max-w-md" placeholder="sk-..." />
-            </SettingRow>
-            <SettingRow label="ElevenLabs API Key" desc="Required for the ElevenLabs Conversational AI voice engine.">
-                <input type="password" value={settings.elevenlabsApiKey || ''} onChange={(e) => handleSettingsChange('elevenlabsApiKey', e.target.value)} className="form-input w-full max-w-md" placeholder="sk_..." />
-            </SettingRow>
-            <SettingRow label="ElevenLabs Agent ID" desc="The agent ID from your ElevenLabs Conversational AI agent. Create one in the ElevenLabs dashboard first.">
-                <input type="text" value={settings.elevenlabsAgentId || ''} onChange={(e) => handleSettingsChange('elevenlabsAgentId', e.target.value)} className="form-input w-full max-w-md" placeholder="agent_..." />
             </SettingRow>
             </SettingsGroup>
 

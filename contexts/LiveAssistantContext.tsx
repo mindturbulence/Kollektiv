@@ -41,6 +41,15 @@ const LiveAssistantCtx = createContext<LiveAssistantContextValue | null>(null);
 export const LiveAssistantProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
     const { settings } = useSettings();
     const liveRef = useRef<LiveAssistant | OpenAIRealtimeAssistant | ElevenLabsAssistant | null>(null);
+    // Bumped by every start()/stop() call. connect() is a multi-step async
+    // sequence (mic permission, WS handshake, VAD init) that can still be
+    // resolving after the user has already toggled off or toggled again —
+    // disconnect() called mid-connect can't tear down state that doesn't
+    // exist yet, so a stale connect() finishing later leaves a live session
+    // running with nothing left referencing it ("ghost" mic/audio). Any
+    // start() whose generation no longer matches when its connect() resolves
+    // disconnects itself instead of wiring into liveRef/status.
+    const sessionIdRef = useRef(0);
     const [status, setStatus] = useState<Status>('idle');
     const [speaking, setSpeaking] = useState(false);
     const [sharing, setSharing] = useState(false);
@@ -59,6 +68,7 @@ export const LiveAssistantProvider: React.FC<{ children: React.ReactNode }> = ({
     }, [status, speaking]);
 
     const stop = useCallback(() => {
+        sessionIdRef.current++; // invalidate any in-flight start()
         liveRef.current?.disconnect();
         liveRef.current = null;
         setStatus('idle'); setSpeaking(false); setSharing(false); setCameraActive(false);
@@ -72,11 +82,15 @@ export const LiveAssistantProvider: React.FC<{ children: React.ReactNode }> = ({
     }, []);
 
     const start = useCallback(async () => {
+        const mySession = ++sessionIdRef.current;
+        const isStale = () => sessionIdRef.current !== mySession;
+
         // Assistant activation opens the dedicated fullscreen assistant view.
         appEventBus.emit('navigate', 'assistant');
         setError('');
         const handlers: LiveHandlers | OpenAILiveHandlers = {
             onStatus: (s, detail) => {
+                if (isStale()) return; // superseded by a newer start()/stop() — don't touch shared state
                 if (s === 'live') setStatus('live');
                 else if (s === 'connecting') setStatus('connecting');
                 else if (s === 'error') {
@@ -87,11 +101,12 @@ export const LiveAssistantProvider: React.FC<{ children: React.ReactNode }> = ({
                 }
                 else stop();
             },
-            onCaption: (who, text) => appEventBus.emit('liveCaption', { who, text }),
-            onToolActivity: (info) => appEventBus.emit('liveAssistantActivity', info),
-            onSpeaking: setSpeaking,
-            onScreenShare: setSharing,
+            onCaption: (who, text) => { if (!isStale()) appEventBus.emit('liveCaption', { who, text }); },
+            onToolActivity: (info) => { if (!isStale()) appEventBus.emit('liveAssistantActivity', info); },
+            onSpeaking: (s) => { if (!isStale()) setSpeaking(s); },
+            onScreenShare: (s) => { if (!isStale()) setSharing(s); },
             onCamera: (active) => {
+                if (isStale()) return;
                 setCameraActive(active);
                 // Mirror the active MediaStream from the backend into state for
                 // the PIP preview. Backend exposes this via activeCameraStream.
@@ -117,12 +132,25 @@ export const LiveAssistantProvider: React.FC<{ children: React.ReactNode }> = ({
         try {
             await live.connect(settings, handlers as any);
         } catch (e: any) {
-            setStatus('error');
-            setError(e?.message || 'Failed to start live session');
+            if (!isStale()) {
+                setStatus('error');
+                setError(e?.message || 'Failed to start live session');
+            }
             live.disconnect();
-            liveRef.current = null;
+            if (liveRef.current === live) liveRef.current = null;
+            return;
         }
-    }, [settings, stop]);
+        if (isStale()) {
+            // User toggled off (or started a newer session) while this connect()
+            // was still resolving. connect() just finished wiring up a live
+            // session + open mic — disconnect() calls made while we were mid-flight
+            // couldn't tear down state that didn't exist yet, so do it now or this
+            // becomes a ghost session running behind the UI's back.
+            console.debug('[LiveAssistant] stale connect() resolved after toggle-away — disconnecting orphaned session');
+            live.disconnect();
+            if (liveRef.current === live) liveRef.current = null;
+        }
+    }, [settings, stop, voiceProvider]);
 
     const toggleLive = useCallback(() => {
         if (status === 'live' || status === 'connecting') stop();

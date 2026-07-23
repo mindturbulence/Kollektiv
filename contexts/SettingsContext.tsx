@@ -50,7 +50,7 @@ export const SettingsProvider: React.FC<{ children: ReactNode }> = ({ children }
   }, [settings.ollamaBaseUrl, settings.ollamaCloudBaseUrl, settings.llamacppBaseUrl, settings.googleIdentity?.accessToken, settings.ollamaCloudApiKey, settings.llamacppApiKey, settings.openrouterApiKey]);
 
   useEffect(() => {
-      refreshOllamaModels();
+      refreshOllamaModels().catch(() => {});
   }, [refreshOllamaModels]);
 
   useEffect(() => {

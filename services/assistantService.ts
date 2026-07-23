@@ -1,4 +1,4 @@
-import type { LLMSettings } from '../types';
+import type { LLMSettings, SourceContext } from '../types';
 import { getGeminiClient } from './geminiService';
 import { executeAssistantTool, geminiToolDeclarations, ollamaToolDeclarations, fallbackProtocolPrompt, ASSISTANT_TOOLS } from './assistantTools';
 import { streamChat } from './llmService';
@@ -27,7 +27,7 @@ const WORKSPACE_CAPABILITIES = `Workspace pages and what's on them. Call the nam
 - Abstractor (Media Analyzer): reverse-engineer a prompt from an image the user attached to the chat = abstract_image (fails if no image is attached — it cannot read files off disk, only chat attachments). UI-only: Read Metadata (needs the original file, not available from chat), Save Workflow, Copy Raw.
 - YouTube Search & Play: search YouTube = youtube_search, play a YouTube video = play_media.
 - Spotify (requires Spotify connected in Settings > Integrations > Spotify): list your playlists = spotify_list_playlists, get playlist tracks = spotify_get_playlist_tracks, play track/playlist = play_media.
-- Obsidian Second Brain (requires Obsidian running + MCP server connected in Settings > MCP): search vault = obsidian_search_notes, read a note = obsidian_get_note, list folder = obsidian_list_notes, list all tags = obsidian_list_tags, create/overwrite note = obsidian_write_note, append to note/section = obsidian_append_to_note, surgical edit (heading/block/frontmatter) = obsidian_patch_note, find-and-replace = obsidian_replace_in_note, manage frontmatter key = obsidian_manage_frontmatter, add/remove/list tags = obsidian_manage_tags, delete note = obsidian_delete_note, open note in Obsidian app = obsidian_open_in_ui.
+- Obsidian Second Brain (requires OBSIDIAN_API_KEY set in the server's environment before startup — there is no Settings UI for this yet): search vault = obsidian_search_notes, read a note = obsidian_get_note, list folder = obsidian_list_notes, list all tags = obsidian_list_tags, create/overwrite note = obsidian_write_note, append to note/section = obsidian_append_to_note, surgical edit (heading/block/frontmatter) = obsidian_patch_note, find-and-replace = obsidian_replace_in_note, manage frontmatter key = obsidian_manage_frontmatter, add/remove/list tags = obsidian_manage_tags, delete note = obsidian_delete_note, open note in Obsidian app = obsidian_open_in_ui.
 Elsewhere: long-term memory = remember/list_memories/forget, manage your Notes panel = save_note/list_notes/update_note/delete_note, save a text/markdown file into the vault (shows in Notes panel > Files) = save_file, show a web page to the user in the in-app viewer = open_web_page, play a YouTube video or Spotify track in the in-app media player = play_media, search the live web = web_search, read a web page yourself = fetch_url, search/save the prompt library = search_prompts/save_prompt, search the gallery = search_gallery, get/delete gallery items = get_gallery_item/delete_gallery_item, save content to gallery = save_to_gallery, search cheatsheets = search_cheatsheets, change settings = update_settings, navigate the app = navigate, browse discovery collections = list_discovery_collections/search_discovery_prompts.
 - Gmail (requires Google Identity connected in Settings > App > Storage): read emails = read_gmail (list/search/read), send emails = send_gmail, trash/delete emails = delete_gmail.
 - MCP Servers (Settings > MCP Servers): see what's configured = list_mcp_servers, turn a Predefined server (Firecrawl, Brave Search, Playwright) on/off = toggle_mcp_server — all Predefined servers are off by default, only enable one when the user asks.
@@ -43,7 +43,7 @@ Elsewhere: long-term memory = remember/list_memories/forget, manage your Notes p
  * assistant's own identity, so its "applied to every LLM request" description
  * was false for the one place users talk to the AI directly. Prepending it
  * here, same convention as llmService.ts (prepend, blank-line separated). */
-export const buildSystemIdentity = (settings: LLMSettings): string => {
+export const buildSystemIdentity = (settings: LLMSettings, sourceContext?: SourceContext[]): string => {
     const name = settings.assistantName?.trim() || 'the Kollektiv assistant';
     const lines = [
         `You are ${name}, embedded in a local-first creative suite for prompt engineering and media management. Be concise. Use your tools to act on the app when the user asks for something the tools can do; report what you did.`,
@@ -59,7 +59,18 @@ export const buildSystemIdentity = (settings: LLMSettings): string => {
         ? `${settings.masterRolePrompt.trim()}\n\n${identity}`
         : identity;
     const memoryBlock = memoryPromptBlock();
-    return `${withMasterRole}\n\n${WORKSPACE_CAPABILITIES}${memoryBlock ? `\n\n${memoryBlock}` : ''}`;
+    let result = `${withMasterRole}\n\n${WORKSPACE_CAPABILITIES}${memoryBlock ? `\n\n${memoryBlock}` : ''}`;
+    if (sourceContext?.length) {
+        result += `\n\n## Pinned Sources\n\n`;
+        sourceContext.forEach((s, i) => {
+            const truncated = s.content.length > 4000
+                ? s.content.slice(0, 4000) + '\n\n[...truncated — use expand_source to read full content]'
+                : s.content;
+            result += `[${i + 1}] ${s.title}\n\`\`\`\n${truncated}\n\`\`\`\n\n`;
+        });
+        result += `When answering, cite sources using [1], [2], etc. Provide a citation footer at the end of your response.`;
+    }
+    return result;
 };
 
 export type AssistantProvider = NonNullable<LLMSettings['assistantProvider']>;
@@ -70,20 +81,20 @@ export type AssistantProvider = NonNullable<LLMSettings['assistantProvider']>;
 export const getAssistantProvider = (settings: LLMSettings): AssistantProvider =>
     settings.assistantProvider || 'gemini';
 
-export async function* runAssistantTurn(messages: ChatMsg[], settings: LLMSettings): AsyncGenerator<AssistantEvent> {
+export async function* runAssistantTurn(messages: ChatMsg[], settings: LLMSettings, sourceContext?: SourceContext[]): AsyncGenerator<AssistantEvent> {
     switch (getAssistantProvider(settings)) {
         case 'gemini':
-            yield* runGeminiTurn(messages, settings);
+            yield* runGeminiTurn(messages, settings, sourceContext);
             return;
         case 'ollama':
         case 'ollama_cloud':
-            yield* runOllamaTurn(messages, settings);
+            yield* runOllamaTurn(messages, settings, sourceContext);
             return;
         case 'openrouter':
-            yield* runOpenRouterTurn(messages, settings);
+            yield* runOpenRouterTurn(messages, settings, sourceContext);
             return;
         default:
-            yield* runFallbackTurn(messages, settings);
+            yield* runFallbackTurn(messages, settings, sourceContext);
     }
 }
 
@@ -92,12 +103,12 @@ const latestAttachments = (messages: ChatMsg[]) =>
 
 // ---------------- Gemini: native function calling ----------------
 
-async function* runGeminiTurn(messages: ChatMsg[], settings: LLMSettings): AsyncGenerator<AssistantEvent> {
+async function* runGeminiTurn(messages: ChatMsg[], settings: LLMSettings, sourceContext?: SourceContext[]): AsyncGenerator<AssistantEvent> {
     const mcpTools = await loadMcpAssistantTools(settings);
     const allTools = mcpTools.length ? [...ASSISTANT_TOOLS, ...mcpTools] : ASSISTANT_TOOLS;
     const ai = getGeminiClient(settings);
     const model = settings.llmModel || 'gemini-3.5-flash';
-    const systemText = [buildSystemIdentity(settings), ...messages.filter(m => m.role === 'system').map(m => m.content)].join('\n\n');
+    const systemText = [buildSystemIdentity(settings, sourceContext), ...messages.filter(m => m.role === 'system').map(m => m.content)].join('\n\n');
     const attachments = latestAttachments(messages);
     const contents: any[] = messages
         .filter(m => m.role !== 'system')
@@ -158,7 +169,7 @@ async function* runGeminiTurn(messages: ChatMsg[], settings: LLMSettings): Async
 
 // ---------------- Fallback: <action> text protocol over streamChat ----------------
 
-async function* runFallbackTurn(messages: ChatMsg[], settings: LLMSettings): AsyncGenerator<AssistantEvent> {
+async function* runFallbackTurn(messages: ChatMsg[], settings: LLMSettings, sourceContext?: SourceContext[]): AsyncGenerator<AssistantEvent> {
     const mcpTools = await loadMcpAssistantTools(settings);
     const allTools = mcpTools.length ? [...ASSISTANT_TOOLS, ...mcpTools] : ASSISTANT_TOOLS;
     const provider = getAssistantProvider(settings);
@@ -168,7 +179,7 @@ async function* runFallbackTurn(messages: ChatMsg[], settings: LLMSettings): Asy
     const chatSettings: LLMSettings = { ...settings, activeLLM: provider as LLMSettings['activeLLM'], masterRolePrompt: '' };
     const attachments = latestAttachments(messages);
     const convo: ChatMsg[] = [
-        { role: 'system', content: fallbackProtocolPrompt(buildSystemIdentity(settings), allTools) },
+        { role: 'system', content: fallbackProtocolPrompt(buildSystemIdentity(settings, sourceContext), allTools) },
         ...messages.filter(m => m.role !== 'system'),
     ];
 
@@ -199,7 +210,7 @@ async function* runFallbackTurn(messages: ChatMsg[], settings: LLMSettings): Asy
 
 // ---------------- Ollama: native /api/chat tool calling ----------------
 
-async function* runOllamaTurn(messages: ChatMsg[], settings: LLMSettings): AsyncGenerator<AssistantEvent> {
+async function* runOllamaTurn(messages: ChatMsg[], settings: LLMSettings, sourceContext?: SourceContext[]): AsyncGenerator<AssistantEvent> {
     const mcpTools = await loadMcpAssistantTools(settings);
     const allTools = mcpTools.length ? [...ASSISTANT_TOOLS, ...mcpTools] : ASSISTANT_TOOLS;
     const provider = getAssistantProvider(settings); // 'ollama' | 'ollama_cloud'
@@ -211,7 +222,7 @@ async function* runOllamaTurn(messages: ChatMsg[], settings: LLMSettings): Async
     }
     const attachments = latestAttachments(messages);
     const convo: any[] = [
-        { role: 'system', content: buildSystemIdentity(settings) },
+        { role: 'system', content: buildSystemIdentity(settings, sourceContext) },
         ...messages.filter(m => m.role !== 'system').map(m => {
             const msg: any = { role: m.role, content: m.content };
             const images = (m.attachments || [])
@@ -274,7 +285,7 @@ async function* runOllamaTurn(messages: ChatMsg[], settings: LLMSettings): Async
 // ollamaToolDeclarations() already emits the OpenAI tools wire format, so it
 // doubles as the OpenRouter declaration set.
 
-async function* runOpenRouterTurn(messages: ChatMsg[], settings: LLMSettings): AsyncGenerator<AssistantEvent> {
+async function* runOpenRouterTurn(messages: ChatMsg[], settings: LLMSettings, sourceContext?: SourceContext[]): AsyncGenerator<AssistantEvent> {
     const mcpTools = await loadMcpAssistantTools(settings);
     const allTools = mcpTools.length ? [...ASSISTANT_TOOLS, ...mcpTools] : ASSISTANT_TOOLS;
     if (!settings.openrouterApiKey) {
@@ -285,7 +296,7 @@ async function* runOpenRouterTurn(messages: ChatMsg[], settings: LLMSettings): A
     const model = settings.openrouterModel || 'openrouter/auto';
     const attachments = latestAttachments(messages);
     const convo: any[] = [
-        { role: 'system', content: buildSystemIdentity(settings) },
+        { role: 'system', content: buildSystemIdentity(settings, sourceContext) },
         ...messages.filter(m => m.role !== 'system').map(m => {
             const images = (m.attachments || []).filter(a => a.mimeType.startsWith('image/'));
             if (!images.length) return { role: m.role, content: m.content };

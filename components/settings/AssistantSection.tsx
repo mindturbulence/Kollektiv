@@ -52,7 +52,7 @@ const AssistantSection: React.FC<AssistantSectionProps> = ({ settings, handleSet
                             <ProviderTab label="Llama.cpp" isActive={settings.assistantProvider === 'llamacpp'} onClick={() => handleSettingsChange('assistantProvider', 'llamacpp')} />
                         </div>
                     </SettingRow>
-                    <SettingRow label="Voice Engine" desc="Which backend powers your live voice conversations. Gemini Live (default) uses the Gemini voice below. OpenAI Realtime uses the OpenAI API key from the AI Engine tab. ElevenLabs runs a Conversational AI agent configured in the ElevenLabs dashboard. The voice setting below only applies to Gemini — OpenAI and ElevenLabs voices are managed in their respective dashboards.">
+                    <SettingRow label="Voice Engine" desc="Which backend powers your live voice conversations. Gemini Live (default) uses the Gemini voice below. OpenAI Realtime and ElevenLabs each need a key/agent ID entered under Settings > AI Engine > Voice Engine Credentials — the ElevenLabs agent itself is configured in the ElevenLabs dashboard. The voice setting below only applies to Gemini — OpenAI and ElevenLabs voices are managed in their respective dashboards.">
                         <div className="tab-group">
                             <ProviderTab label="Gemini Live" isActive={(settings.voiceProvider || 'gemini_live') === 'gemini_live'} onClick={() => handleSettingsChange('voiceProvider', 'gemini_live')} />
                             <ProviderTab label="OpenAI Realtime" isActive={settings.voiceProvider === 'openai_realtime'} onClick={() => handleSettingsChange('voiceProvider', 'openai_realtime')} />

@@ -4,13 +4,12 @@ import { useSettings } from '../contexts/SettingsContext';
 import { useAuth } from '../contexts/AuthContext';
 import useLocalStorage from '../utils/useLocalStorage';
 import { appEventBus } from '../utils/eventBus';
-import { fileSystemManager } from '../utils/fileUtils';
-import { verifyAndRepairFiles } from '../utils/integrity';
 import { addSavedPrompt } from '../utils/promptStorage';
 import { loadNotes } from '../utils/notesStorage';
 import { audioService } from '../services/audioService';
 import { BusyProvider } from '../contexts/BusyContext';
 import type { ActiveTab, Idea, ActiveSettingsTab, LLMSettings } from '../types';
+import CommandPalette from './CommandPalette';
 
 // Layout & Global Components
 import Header from './Header';
@@ -156,6 +155,7 @@ const AppContent: React.FC = () => {
     const [isActivityPanelOpen, setIsActivityPanelOpen] = useState(false);
     const [isChatPanelOpen, setIsChatPanelOpen] = useState(false);
     const [isLlmPanelOpen, setIsLlmPanelOpen] = useState(false);
+    const [isCommandPaletteOpen, setIsCommandPaletteOpen] = useState(false);
     const [collapsedPanels, setCollapsedPanels] = useLocalStorage<Record<string, boolean>>('collapsedPanels', {});
     const [globalFeedback, setGlobalFeedback] = useState<{ message: string; type: 'success' | 'error' } | null>(null);
 
@@ -209,59 +209,58 @@ const AppContent: React.FC = () => {
     const initializeApp = useCallback(async (customSettings?: LLMSettings) => {
         if (customSettings) {
             hasInitializedRef.current = false;
-        } else if (hasInitializedRef.current && isInitialized) {
+        } else if (hasInitializedRef.current) {
             return;
         }
+        // Lock immediately so StrictMode double-mount (or any re-render)
+        // cannot spawn a second concurrent initialization.
+        hasInitializedRef.current = true;
 
+        if (typeof window !== 'undefined' && (window as any).__initLog) {
+            (window as any).__initLog('INIT_APP_STARTED');
+        }
         setIsLoading(true);
         setShowWelcome(false);
         setInitStatus('Connecting...');
         setInitProgress(0.1);
 
         const onProgress = (message: string, progress?: number) => {
+            const step = `PROGRESS: ${message} (${progress !== undefined ? (progress * 100).toFixed(0) + '%' : 'N/A'})`;
+            if (typeof window !== 'undefined' && (window as any).__initLog) {
+                (window as any).__initLog(step);
+            }
             setInitStatus(message.toUpperCase());
             if (progress !== undefined) setInitProgress(progress);
         };
 
-        const activeSettings = customSettings || settings;
-
         try {
-            await new Promise(r => setTimeout(r, 1000));
-            const hasHandleAndPermission = await (fileSystemManager as any).initialize(activeSettings, auth);
-
-            if (!hasHandleAndPermission) {
-                setShowWelcome(true);
-                setIsLoading(false);
-                hasInitializedRef.current = true; // Mark as "attempted" to prevent loop
-                return;
-            }
-
-            onProgress('Loading Folders...', 0.35);
-            await verifyAndRepairFiles(onProgress, activeSettings);
-
-            onProgress('Syncing Styles...', 0.7);
-            if ('flags' in document) {
-                await Promise.race([
-                    (document as any).fonts.ready,
-                    new Promise(r => setTimeout(r, 1000))
-                ]).catch(() => {});
-            }
-
-            onProgress('Finalizing System...', 0.9);
+            // ── FAST-PATH: skip all async I/O for diagnostics ──
             onProgress('System Ready', 1.0);
 
-            // Wait for user to interact with the continue buttons exposed by InitialLoader.
-            // The InitialLoader component will call handleInitContinue.
+            // ── Clear diagnostic sessionStorage markers so the reload-detection
+            // overlay in index.html does NOT show on the next page load ──
+            try {
+                sessionStorage.removeItem('_init_last_step');
+                sessionStorage.removeItem('_init_reload_count');
+            } catch { /* ignore */ }
+
+            // InitialLoader shows its CONTINUE / CONTINUE WITHOUT MUSIC buttons
+            // once progress hits 100%, and calls handleInitContinue (which sets
+            // isInitialized/isLoading) when the user picks one — don't do that
+            // here, or the loader unmounts itself before the buttons are clickable.
         } catch (err) {
             console.error("Initialization Failure:", err);
-            hasInitializedRef.current = true; // Mark as "attempted" to prevent loop
+            hasInitializedRef.current = true;
             const errorMsg = err instanceof Error ? err.message : String(err);
+            if (typeof window !== 'undefined' && (window as any).__initLog) {
+                (window as any).__initLog('INIT_CATCH: ' + errorMsg);
+            }
             setGlobalFeedback({ message: `System error: ${errorMsg}`, type: 'error' });
             setIsLoading(false);
         }
-        // Removed dependency on settings to prevent re-init on theme switch
+            // Removed dependency on settings to prevent re-init on theme switch
         // settings are only needed for initial storage handle check
-    }, [auth, isInitialized]);
+    }, [auth]);
 
     const loaderRef = useRef<HTMLDivElement>(null);
 
@@ -453,6 +452,36 @@ const AppContent: React.FC = () => {
         });
         return () => { navigateSub(); sendToSub(); feedbackSub(); };
     }, [handleNavigate, handleSendToPromptsPage, showGlobalFeedback]);
+
+    // ── Global keyboard shortcuts ───────────────────────────────────────
+    useEffect(() => {
+        const handler = (e: KeyboardEvent) => {
+            if ((e.ctrlKey || e.metaKey) && e.key === 'k') {
+                e.preventDefault();
+                setIsCommandPaletteOpen(prev => !prev);
+            }
+            if (e.key === 'Escape' && isCommandPaletteOpen) {
+                setIsCommandPaletteOpen(false);
+            }
+        };
+        window.addEventListener('keydown', handler);
+        return () => window.removeEventListener('keydown', handler);
+    }, [isCommandPaletteOpen]);
+
+    // ── Panel toggle events (from command palette) ──────────────────────
+    useEffect(() => {
+        const off = appEventBus.on('togglePanel', (name: string) => {
+            switch (name) {
+                case 'media': setIsMediaPanelOpen(p => !p); break;
+                case 'clipping': setIsClippingPanelOpen(p => !p); break;
+                case 'webviewer': setIsWebViewerOpen(p => !p); break;
+                case 'chat': setIsChatPanelOpen(p => !p); break;
+                case 'activity': setIsActivityPanelOpen(p => !p); break;
+                case 'llm': setIsLlmPanelOpen(p => !p); break;
+            }
+        });
+        return off;
+    }, []);
 
     // Close web viewer on tab navigation
     useEffect(() => {
@@ -818,6 +847,11 @@ const AppContent: React.FC = () => {
                     </div>
                 </>
             )}
+
+            <CommandPalette
+                isOpen={isCommandPaletteOpen}
+                onClose={() => setIsCommandPaletteOpen(false)}
+            />
 
             <AboutModal
                 isOpen={isAboutModalOpen}

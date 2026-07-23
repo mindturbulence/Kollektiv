@@ -17,6 +17,8 @@ export const CdpSection: React.FC<CdpSectionProps> = ({ activeSubTab }) => {
     const [port, setPort] = useState(9222);
     const [connState, setConnState] = useState<ConnectionState>('unknown');
     const [connecting, setConnecting] = useState(false);
+    const [launching, setLaunching] = useState(false);
+    const [launchedPort, setLaunchedPort] = useState<number | null>(null);
     const [browserInfo, setBrowserInfo] = useState<string | null>(null);
     const [targets, setTargets] = useState<CDPTarget[]>([]);
     const [selectedId, setSelectedId] = useState<string | null>(null);
@@ -129,8 +131,49 @@ export const CdpSection: React.FC<CdpSectionProps> = ({ activeSubTab }) => {
         } catch { /* ignore */ }
     };
 
-    const chromeCmd = `chrome.exe --remote-debugging-port=${port}`;
-    const vivaldiCmd = `vivaldi.exe --remote-debugging-port=${port}`;
+    // On mount, check if Chrome was already auto-launched
+    useEffect(() => {
+        (async () => {
+            try {
+                const st = await externalBrowserService.launchStatus();
+                if (st.isRunning && st.port) {
+                    setLaunchedPort(st.port);
+                    setPort(st.port);
+                }
+            } catch {}
+        })();
+    }, []);
+
+    const handleLaunchBrowser = async () => {
+        setLaunching(true);
+        setFeedback(null);
+        try {
+            const result = await externalBrowserService.launch(port);
+            if (result.success) {
+                setLaunchedPort(result.port!);
+                setPort(result.port!);
+                chromeAvailableRef.current = true;
+                setConnState('connected');
+                setBrowserInfo(`Auto-launched (port ${result.port})`);
+                showFeedback(true, `Browser launched on port ${result.port}${result.reachable ? '' : ' — waiting for it to respond...'}`);
+                // Don't fetch targets yet — Chrome may not have any tabs ready.
+                // User opens a tab, then clicks REFRESH.
+            } else {
+                showFeedback(false, result.error || 'Failed to launch browser');
+            }
+        } catch (e: any) {
+            showFeedback(false, e.message || 'Launch error');
+        }
+        setLaunching(false);
+    };
+
+    const BROWSER_COMMANDS = [
+        { name: 'CHROME / CHROMIUM', cmd: `chrome.exe --remote-debugging-port=${port}` },
+        { name: 'VIVALDI', cmd: `vivaldi.exe --remote-debugging-port=${port}` },
+        { name: 'OPERA', cmd: `opera.exe --remote-debugging-port=${port}` },
+        { name: 'BRAVE', cmd: `brave.exe --remote-debugging-port=${port}` },
+        { name: 'EDGE', cmd: `msedge.exe --remote-debugging-port=${port}` },
+    ];
 
     const copyToClipboard = (text: string) => {
         navigator.clipboard.writeText(text).then(() => {
@@ -195,12 +238,23 @@ export const CdpSection: React.FC<CdpSectionProps> = ({ activeSubTab }) => {
                                 <PowerIcon className="w-3.5 h-3.5" /> DISCONNECT
                             </button>
                         ) : (
-                            <button onClick={() => { audioService.playClick(); handleConnect(); }} disabled={connecting} className="form-btn px-4 flex items-center gap-2">
-                                {connecting ? '...' : <PowerIcon className="w-3.5 h-3.5" />}
-                                {connecting ? 'CONNECTING' : 'CONNECT'}
-                            </button>
+                            <div className="flex gap-2">
+                                <button onClick={() => { audioService.playClick(); handleConnect(); }} disabled={connecting} className="form-btn px-4 flex items-center gap-2">
+                                    {connecting ? '...' : <PowerIcon className="w-3.5 h-3.5" />}
+                                    {connecting ? 'CONNECTING' : 'CONNECT'}
+                                </button>
+                                <button onClick={() => { audioService.playClick(); handleLaunchBrowser(); }} disabled={launching} className="form-btn px-4 flex items-center gap-2 text-primary border-primary/30 hover:bg-primary/10">
+                                    {launching ? '...' : <PowerIcon className="w-3.5 h-3.5" />}
+                                    {launching ? 'LAUNCHING...' : 'LAUNCH BROWSER'}
+                                </button>
+                            </div>
                         )}
                     </div>
+                    {launchedPort && !isConnected && (
+                        <p className="text-[9px] font-mono text-primary/60 mt-1 px-1">
+                            Chrome auto-launched on port {launchedPort} — click CONNECT above to link it.
+                        </p>
+                    )}
                 </SettingRow>
             </SettingsGroup>
 
@@ -241,51 +295,52 @@ export const CdpSection: React.FC<CdpSectionProps> = ({ activeSubTab }) => {
                 </SettingsGroup>
             )}
 
+            {launchedPort && targets.length === 0 && !selectedId && (
+                <SettingsGroup title="Next Steps">
+                    <div className="p-6 text-center">
+                        <p className="text-[10px] font-black uppercase tracking-wider text-primary/60 mb-2">
+                            Browser is running on port {launchedPort}
+                        </p>
+                        <p className="text-xs font-mono text-base-content/40 leading-relaxed">
+                            Open a tab in the launched Chrome window, then click <span className="text-primary">REFRESH</span> above to see it here.
+                            <br />
+                            Select a tab, then use the assistant's browser tools to control it.
+                        </p>
+                    </div>
+                </SettingsGroup>
+            )}
+
             <SettingsGroup title="Launch Guide">
                 <div className="p-6 bg-info/5 border border-info/20 mx-6 my-4 space-y-4">
                     <h5 className="text-sm font-black uppercase tracking-widest text-info flex items-center gap-2">
-                        <InformationCircleIcon className="w-4 h-4" /> START CHROME WITH DEBUG FLAG
+                        <InformationCircleIcon className="w-4 h-4" /> LAUNCH BROWSER WITH DEBUG FLAG
                     </h5>
                     <p className="text-xs font-bold uppercase tracking-tight text-base-content/70 leading-relaxed">
-                        Close all browser windows, then launch with the flag below.
+                        Works with any Chromium-based browser. Close all browser windows, then launch with the flag below.
                     </p>
 
-                    <div className="space-y-2">
-                        <p className="text-[10px] font-black uppercase tracking-wider text-base-content/40">CHROME</p>
-                        <div className="flex items-center gap-2">
-                            <code className="flex-1 text-sm font-mono bg-black/30 px-4 py-3 text-primary break-all select-all">
-                                {chromeCmd}
-                            </code>
-                            <button
-                                onClick={() => { audioService.playClick(); copyToClipboard(chromeCmd); }}
-                                className="shrink-0 p-2.5 hover:text-primary transition-colors border border-white/10 hover:border-primary/40"
-                                title="Copy command"
-                            >
-                                {copied ? <span className="text-[9px] font-black text-success">COPIED</span> : <CopyIcon className="w-4 h-4" />}
-                            </button>
+                    {BROWSER_COMMANDS.map((b, i) => (
+                        <div key={i} className="space-y-2">
+                            <p className="text-[10px] font-black uppercase tracking-wider text-base-content/40">{b.name}</p>
+                            <div className="flex items-center gap-2">
+                                <code className="flex-1 text-sm font-mono bg-black/30 px-4 py-3 text-primary break-all select-all">
+                                    {b.cmd}
+                                </code>
+                                <button
+                                    onClick={() => { audioService.playClick(); copyToClipboard(b.cmd); }}
+                                    className="shrink-0 p-2.5 hover:text-primary transition-colors border border-white/10 hover:border-primary/40"
+                                    title="Copy command"
+                                >
+                                    {copied ? <span className="text-[9px] font-black text-success">COPIED</span> : <CopyIcon className="w-4 h-4" />}
+                                </button>
+                            </div>
                         </div>
-                    </div>
-
-                    <div className="space-y-2">
-                        <p className="text-[10px] font-black uppercase tracking-wider text-base-content/40">VIVALDI</p>
-                        <div className="flex items-center gap-2">
-                            <code className="flex-1 text-sm font-mono bg-black/30 px-4 py-3 text-primary break-all select-all">
-                                {vivaldiCmd}
-                            </code>
-                            <button
-                                onClick={() => { audioService.playClick(); copyToClipboard(vivaldiCmd); }}
-                                className="shrink-0 p-2.5 hover:text-primary transition-colors border border-white/10 hover:border-primary/40"
-                                title="Copy command"
-                            >
-                                {copied ? <span className="text-[9px] font-black text-success">COPIED</span> : <CopyIcon className="w-4 h-4" />}
-                            </button>
-                        </div>
-                    </div>
+                    ))}
 
                     <div className="p-4 bg-black/20 border border-white/5 space-y-2">
                         <p className="text-[10px] font-black uppercase tracking-wider text-warning">TROUBLESHOOTING</p>
                         <ul className="text-xs font-mono text-base-content/60 space-y-1.5 leading-relaxed">
-                            <li>• Fully quit all browser processes before restarting with the flag</li>
+                            <li>• Fully quit all browser windows before restarting with the flag</li>
                             <li>• Verify the port is not in use: <code className="text-primary px-1 bg-black/30">netstat -ano | findstr :{port}</code></li>
                             <li>• After connecting, open a browser tab for it to appear in the list</li>
                             <li>• The assistant uses CDP when connected, falls back to Playwright otherwise</li>

@@ -2,15 +2,64 @@ import express from "express";
 import { createServer as createViteServer } from "vite";
 import path from "path";
 import http from "http";
+import net from "net";
 import multer from "multer";
-import { execFile, spawn } from "child_process";
+import { execFile, spawn, execSync } from "child_process";
 import fs from "fs";
+import os from "os";
 import { DEFAULT_ANTHROPIC_MODEL } from "./constants/llmDefaults";
+import { chromeLauncher } from "./services/chromeLauncher";
+import { startKollektivMcp, type KollektivMcpInstance } from "./services/kollektivMcp";
 
+/**
+ * Try to free a TCP port by killing whatever process is listening on it.
+ * Returns true if the port is now free, false if it couldn't be freed.
+ * Works on Windows via netstat + taskkill.
+ */
+function freePort(port: number): boolean {
+  try {
+    const stdout = execSync(
+      `netstat -ano | findstr "LISTENING" | findstr ":${port}"`,
+      { encoding: "utf8", timeout: 5000 },
+    );
+    // Parse PID from the last column of the first matching line
+    const lines = stdout.trim().split(/\r?\n/).filter(Boolean);
+    for (const line of lines) {
+      const parts = line.trim().split(/\s+/);
+      const pid = parts[parts.length - 1];
+      if (pid && /^\d+$/.test(pid)) {
+        execSync(`taskkill /F /PID ${pid}`, { timeout: 3000 });
+        console.log(`[Port] Killed PID ${pid} to free port ${port}.`);
+      }
+    }
+    return true;
+  } catch {
+    // No process found listening on this port — that's fine
+    return true;
+  }
+}
 
+/**
+ * Probe a TCP port to see if it's available.
+ */
+function isPortFree(port: number, host: string): Promise<boolean> {
+  return new Promise((resolve) => {
+    const server = net.createServer();
+    server.once("error", () => resolve(false));
+    server.once("listening", () => {
+      server.close();
+      resolve(true);
+    });
+    server.listen(port, host);
+  });
+}
+
+const PLAYWRIGHT_MCP_PORT = 8931;
+const PLAYWRIGHT_MCP_FALLBACK_PORT = 8932;
 
 async function startServer() {
   const app = express();
+  const httpServer = http.createServer(app);
   const PORT = process.env.PORT ? parseInt(process.env.PORT, 10) : 7500;
   // Explicit opt-in only: HOST=0.0.0.0 for containerized/cloud runs. Never inferred from PORT.
   const HOST = process.env.HOST || "127.0.0.1";
@@ -19,7 +68,16 @@ async function startServer() {
   // auth headers (Google, Anthropic, MCP, CDP), so only the Kollektiv
   // front-end served from this same host may call it. Same-origin GETs send
   // no Origin header; same-origin POSTs send one that matches Host.
+  //
+  // WebSocket upgrade requests (Vite HMR, etc.) must bypass this check:
+  // the browser sends `Upgrade: websocket` which is NOT an API call and has
+  // no auth headers to leak. Blocking it would cause Vite's HMR client to
+  // fall back to a full page reload, creating a reload loop.
   app.use((req, res, next) => {
+    const upgrade = req.headers.upgrade;
+    if (upgrade && typeof upgrade === 'string' && upgrade.toLowerCase() === 'websocket') {
+      return next();
+    }
     const origin = req.headers.origin;
     if (!origin) return next();
     try {
@@ -636,6 +694,9 @@ async function startServer() {
   // requiring Chrome to be started with --remote-debugging-port=9222.
 
   const CDP_DEFAULT_PORT = 9222;
+  // Track the actual CDP port — may differ from default when Chrome auto-launches
+  // (the launcher tries ports 9222-9232 and picks the first free one).
+  let cdpActualPort = CDP_DEFAULT_PORT;
   let cdpWs: WebSocket | null = null;
   let cdpConnected = false;
   let cdpChromeAvailable = false;
@@ -694,12 +755,10 @@ async function startServer() {
         ws.onopen = async () => {
           cdpWs = ws;
           cdpTargetId = targetId;
-          cdpTargetTitle = title;
-
-          try {
+          cdpTargetTitle = title;            try {
             await cdpSend('Page.enable');
             await cdpSend('Runtime.enable');
-            await cdpSend('Input.enable');
+            // Input domain has no enable() method — using dispatchMouseEvent does not require it
             cdpConnected = true;
             clearTimeout(timeout);
             resolve(true);
@@ -760,6 +819,7 @@ async function startServer() {
     try {
       const version: any = await cdpGet(`http://127.0.0.1:${port}/json/version`);
       cdpChromeAvailable = true;
+      cdpActualPort = port; // Track the port for tab management endpoints
       res.json({ success: true, browser: version.Browser });
     } catch {
       cdpChromeAvailable = false;
@@ -803,6 +863,73 @@ async function startServer() {
     cdpDisconnect();
     cdpChromeAvailable = false;
     res.json({ success: true });
+  });
+
+  // POST /api/cdp/open_tab — open a new tab with the given URL
+  app.post("/api/cdp/open_tab", async (req, res) => {
+    try {
+      if (!cdpConnected) return res.json({ success: false, error: 'CDP not connected.' });
+      const { url } = req.body;
+      const result: any = await cdpSend('Target.createTarget', {
+        url: url || 'about:blank',
+        newWindow: false,
+        background: false,
+      });
+      if (result?.targetId) {
+        // Automatically connect to the new tab
+        // Use the actual CDP port (may differ from default when auto-launched)
+        const targets = await cdpListTargets(cdpActualPort);
+        const newTarget = targets.find((t: any) => t.id === result.targetId);
+        if (newTarget) {
+          const ok = await cdpConnectToTarget(newTarget.wsUrl, newTarget.id, newTarget.title);
+          if (ok) {
+            return res.json({ success: true, targetId: result.targetId, switched: true });
+          }
+        }
+        res.json({ success: true, targetId: result.targetId, switched: false, note: 'Tab created but could not auto-switch.' });
+      } else {
+        res.json({ success: false, error: 'Failed to create target.' });
+      }
+    } catch (e: any) {
+      res.json({ success: false, error: e.message });
+    }
+  });
+
+  // POST /api/cdp/close_tab — close a tab by target id
+  app.post("/api/cdp/close_tab", async (req, res) => {
+    try {
+      if (!cdpConnected) return res.json({ success: false, error: 'CDP not connected.' });
+      const { targetId } = req.body;
+      if (!targetId) return res.json({ success: false, error: 'Missing targetId.' });
+      await cdpSend('Target.closeTarget', { targetId: String(targetId) });
+      // If the closed tab was the active one, disconnect
+      if (targetId === cdpTargetId) {
+        cdpDisconnect();
+      }
+      res.json({ success: true });
+    } catch (e: any) {
+      res.json({ success: false, error: e.message });
+    }
+  });
+
+  // POST /api/cdp/switch_tab — switch active connection to a different tab
+  app.post("/api/cdp/switch_tab", async (req, res) => {
+    try {
+      const { targetId } = req.body;
+      if (!targetId) return res.json({ success: false, error: 'Missing targetId.' });
+      // Use the actual CDP port (may differ from default when auto-launched)
+      const targets = await cdpListTargets(cdpActualPort);
+      const target = targets.find((t: any) => t.id === targetId);
+      if (!target) return res.json({ success: false, error: `No tab with id "${targetId}".` });
+      const ok = await cdpConnectToTarget(target.wsUrl, target.id, target.title);
+      if (ok) {
+        res.json({ success: true, targetId: target.id, title: target.title });
+      } else {
+        res.json({ success: false, error: 'Failed to connect to target.' });
+      }
+    } catch (e: any) {
+      res.json({ success: false, error: e.message });
+    }
   });
 
   // Helper: map capture coordinates to target viewport
@@ -978,6 +1105,85 @@ async function startServer() {
     }
   });
 
+  // POST /api/cdp/drag — simulate mouse drag from (nx, ny) to (endNx, endNy)
+  app.post("/api/cdp/drag", async (req, res) => {
+    try {
+      if (!cdpConnected) return res.json({ success: false, error: 'CDP not connected.' });
+      const { nx, ny, endNx, endNy, captureW, captureH } = req.body;
+      if (nx === undefined || ny === undefined || endNx === undefined || endNy === undefined) {
+        return res.json({ success: false, error: 'Missing drag coordinates.' });
+      }
+      const start = await cdpMapCoords(Number(nx), Number(ny), captureW, captureH);
+      const end = await cdpMapCoords(Number(endNx), Number(endNy), captureW, captureH);
+
+      // mousePressed at start
+      await cdpSend('Input.dispatchMouseEvent', { type: 'mousePressed', x: start.x, y: start.y, button: 'left', clickCount: 1 });
+
+      // Interpolate intermediate moves for smooth drag
+      const steps = 5;
+      for (let i = 1; i <= steps; i++) {
+        const t = i / steps;
+        const mx = Math.round(start.x + (end.x - start.x) * t);
+        const my = Math.round(start.y + (end.y - start.y) * t);
+        await cdpSend('Input.dispatchMouseEvent', { type: 'mouseMoved', x: mx, y: my, button: 'left' });
+      }
+
+      // mouseReleased at end
+      await cdpSend('Input.dispatchMouseEvent', { type: 'mouseReleased', x: end.x, y: end.y, button: 'left', clickCount: 1 });
+
+      res.json({ success: true, result: `Dragged from (${start.x}, ${start.y}) to (${end.x}, ${end.y}).` });
+    } catch (e: any) {
+      res.json({ success: false, error: e.message });
+    }
+  });
+
+  // POST /api/cdp/upload — upload a file to a file input element
+  app.post("/api/cdp/upload", async (req, res) => {
+    let tmpPath: string | null = null;
+    try {
+      if (!cdpConnected) return res.json({ success: false, error: 'CDP not connected.' });
+      const { cssSelector, data, filename } = req.body;
+      if (!cssSelector || !data || !filename) {
+        return res.json({ success: false, error: 'Missing cssSelector, data, or filename.' });
+      }
+
+      // Write the base64 data to a temp file in the OS temp directory
+      const tmpDir = path.join(os.tmpdir(), 'kollektiv-cdp-upload');
+      try { if (!fs.existsSync(tmpDir)) fs.mkdirSync(tmpDir, { recursive: true }); } catch {}
+      tmpPath = path.join(tmpDir, `${Date.now()}_${filename.replace(/[^a-zA-Z0-9._-]/g, '_')}`);
+      fs.writeFileSync(tmpPath, Buffer.from(String(data), 'base64'));
+
+      // Enable DOM domain, get document, find the file input, set files
+      await cdpSend('DOM.enable');
+      const docResult: any = await cdpSend('DOM.getDocument');
+      if (!docResult?.root?.nodeId) {
+        return res.json({ success: false, error: 'Could not get DOM document node.' });
+      }
+
+      const queryResult: any = await cdpSend('DOM.querySelector', {
+        nodeId: docResult.root.nodeId,
+        selector: String(cssSelector),
+      });
+      if (!queryResult?.nodeId) {
+        return res.json({ success: false, error: `No element found for selector "${cssSelector}".` });
+      }
+
+      await cdpSend('DOM.setFileInputFiles', {
+        nodeId: queryResult.nodeId,
+        files: [tmpPath],
+      });
+
+      res.json({ success: true, result: `Uploaded "${filename}" to <${cssSelector}>.` });
+    } catch (e: any) {
+      res.json({ success: false, error: e.message });
+    } finally {
+      // Clean up temp file immediately after upload
+      if (tmpPath) {
+        try { fs.unlinkSync(tmpPath); } catch {}
+      }
+    }
+  });
+
   // POST /api/cdp/navigate
   app.post("/api/cdp/navigate", async (req, res) => {
     try {
@@ -986,6 +1192,28 @@ async function startServer() {
       if (!url) return res.json({ success: false, error: 'Missing url.' });
       await cdpSend('Page.navigate', { url: String(url) });
       res.json({ success: true, result: `Navigated to ${url}.` });
+    } catch (e: any) {
+      res.json({ success: false, error: e.message });
+    }
+  });
+
+  // GET /api/cdp/screenshot — capture a JPEG screenshot of the current tab
+  app.get("/api/cdp/screenshot", async (_req, res) => {
+    try {
+      if (!cdpConnected) return res.json({ success: false, error: 'CDP not connected.' });
+      const result: any = await cdpSend('Page.captureScreenshot', {
+        format: 'jpeg',
+        quality: 70,
+        fromSurface: true,
+        captureBeyondViewport: false,
+      });
+      // Page.captureScreenshot returns base64-encoded data (no data: prefix)
+      // width/height are not returned by the CDP command — callers should infer
+      // dimensions from the data if needed.
+      res.json({
+        success: true,
+        data: result?.data || '',
+      });
     } catch (e: any) {
       res.json({ success: false, error: e.message });
     }
@@ -1009,6 +1237,43 @@ async function startServer() {
     } catch (e: any) {
       res.json({ success: false, error: e.message });
     }
+  });
+
+  // POST /api/cdp/launch — auto-launch Chrome with remote debugging
+  app.post("/api/cdp/launch", async (_req, res) => {
+    const result = await chromeLauncher.launch(CDP_DEFAULT_PORT);
+    if (result.success) {
+      cdpChromeAvailable = true;
+      cdpActualPort = result.port!; // Track the actual auto-launch port
+      // Poll until Chrome's CDP endpoint is actually reachable
+      let reachable = false;
+      for (let i = 0; i < 15; i++) {
+        try {
+          await cdpGet(`http://127.0.0.1:${result.port}/json/version`);
+          reachable = true;
+          break;
+        } catch {
+          await new Promise(r => setTimeout(r, 500));
+        }
+      }
+      res.json({
+        success: true,
+        port: result.port,
+        pid: result.pid,
+        exe: result.exe,
+        reachable,
+      });
+    } else {
+      res.json(result);
+    }
+  });
+
+  // GET /api/cdp/launch-status — check auto-launch state
+  app.get("/api/cdp/launch-status", (_req, res) => {
+    res.json({
+      isRunning: chromeLauncher.isRunning,
+      port: chromeLauncher.port,
+    });
   });
 
   // GET /api/cdp/structure — read interactive elements
@@ -1138,8 +1403,15 @@ async function startServer() {
 
   // --- Vite Middleware ---
   if (process.env.NODE_ENV !== "production") {
+    // hmr.server must point at the SAME http.Server Express listens on.
+    // Without it, Vite's middlewareMode has no server to attach its HMR
+    // websocket to, so it falls back to a second standalone listener on a
+    // hardcoded port (24678). That fallback has no reconnect grace period —
+    // any failure to reach it (port already held by a stale server.ts
+    // process, firewall, whatever) makes the browser's Vite client treat it
+    // as "server connection lost" and call location.reload() forever.
     const vite = await createViteServer({
-      server: { middlewareMode: true },
+      server: { middlewareMode: true, hmr: { server: httpServer } },
       appType: "spa",
     });
     app.use(vite.middlewares);
@@ -1154,10 +1426,27 @@ async function startServer() {
     });
   }
 
+  // New opt-in path: direct vault access via kollektivMcp.ts (services/kollektivMcp.ts),
+  // superseding the legacy obsidian-mcp-server child process below. Kept side-by-side
+  // (not a replacement) so the existing OBSIDIAN_API_KEY setup keeps working untouched —
+  // see ISSUE-14 in ISSUES.md: the new module's tool names (read_note, search_notes, ...)
+  // differ from the old obsidian_* names, so WORKSPACE_CAPABILITIES and the assistant's
+  // obsidian_ prefix filter haven't been migrated yet. Only one of the two paths runs.
+  let kollektivMcpInstance: KollektivMcpInstance | null = null;
+  const startKollektivMcpVault = async () => {
+    if (!process.env.OBSIDIAN_VAULT_PATH) return;
+    try {
+      kollektivMcpInstance = await startKollektivMcp({ vaultPath: process.env.OBSIDIAN_VAULT_PATH, port: 3012 });
+    } catch (err) {
+      console.error(`[Kollektiv MCP] failed to start: ${err instanceof Error ? err.message : err}`);
+    }
+  };
+
   // Start Obsidian MCP server as child process (opt-in: requires OBSIDIAN_API_KEY in the environment)
   let obsidianMcpProc: ReturnType<typeof spawn> | null = null;
   const startObsidianMcp = () => {
     if (obsidianMcpProc) return;
+    if (process.env.OBSIDIAN_VAULT_PATH) return; // new path (above) already owns port 3012
     if (!process.env.OBSIDIAN_API_KEY) {
       console.log(`[Obsidian MCP] OBSIDIAN_API_KEY not set — skipping local Obsidian bridge.`);
       return;
@@ -1183,31 +1472,62 @@ async function startServer() {
     console.log(`[Obsidian MCP] starting on http://127.0.0.1:3012/mcp`);
   };
 
+  void startKollektivMcpVault();
   startObsidianMcp();
 
   // Start Playwright MCP server as child process — no API key needed, so it
   // always starts (matches the Predefined MCP tab's Playwright preset, which
   // points at this same port by default).
+  // If the default port is taken, tries a fallback port.
   let playwrightMcpProc: ReturnType<typeof spawn> | null = null;
-  const startPlaywrightMcp = () => {
+  const startPlaywrightMcp = async () => {
     if (playwrightMcpProc) return;
-    playwrightMcpProc = spawn("npx @playwright/mcp@latest --port 8931", [], {
+
+    // Check if default port is free; if not, try fallback
+    let pwPort = PLAYWRIGHT_MCP_PORT;
+    const pwFree = await isPortFree(pwPort, "127.0.0.1");
+    if (!pwFree) {
+      console.warn(`[Playwright MCP] Port ${pwPort} is in use, trying fallback port ${PLAYWRIGHT_MCP_FALLBACK_PORT}...`);
+      freePort(pwPort);
+      await new Promise(r => setTimeout(r, 500));
+      const fallbackFree = await isPortFree(PLAYWRIGHT_MCP_FALLBACK_PORT, "127.0.0.1");
+      if (fallbackFree) {
+        pwPort = PLAYWRIGHT_MCP_FALLBACK_PORT;
+        console.log(`[Playwright MCP] Using fallback port ${pwPort}.`);
+      } else {
+        console.error(`[Playwright MCP] Both ports ${PLAYWRIGHT_MCP_PORT} and ${PLAYWRIGHT_MCP_FALLBACK_PORT} are in use — skipping.`);
+        return;
+      }
+    }
+
+    playwrightMcpProc = spawn(`npx @playwright/mcp@latest --port ${pwPort}`, [], {
       shell: true, // needed on Windows
       stdio: ["ignore", "pipe", "pipe"],
     });
     playwrightMcpProc.stdout?.on("data", (d) => console.log(`[Playwright MCP] ${d.toString().trim()}`));
-    playwrightMcpProc.stderr?.on("data", (d) => console.error(`[Playwright MCP] ${d.toString().trim()}`));
+    playwrightMcpProc.stderr?.on("data", (d) => {
+      const msg = d.toString().trim();
+      if (msg.includes("EADDRINUSE") || msg.includes("address already in use")) {
+        console.warn(`[Playwright MCP] Port conflict: ${msg}`);
+      } else {
+        console.error(`[Playwright MCP] ${msg}`);
+      }
+    });
     playwrightMcpProc.on("exit", (code) => {
       console.log(`[Playwright MCP] exited with code ${code}`);
       playwrightMcpProc = null;
     });
-    console.log(`[Playwright MCP] starting on http://localhost:8931/mcp`);
+    console.log(`[Playwright MCP] starting on http://localhost:${pwPort}/mcp`);
   };
 
   startPlaywrightMcp();
 
   // Cleanup on shutdown
   const shutdown = () => {
+    if (kollektivMcpInstance) {
+      console.log(`[Kollektiv MCP] shutting down...`);
+      void kollektivMcpInstance.stop();
+    }
     if (obsidianMcpProc) {
       console.log(`[Obsidian MCP] shutting down...`);
       obsidianMcpProc.kill();
@@ -1216,15 +1536,51 @@ async function startServer() {
       console.log(`[Playwright MCP] shutting down...`);
       playwrightMcpProc.kill();
     }
+    if (chromeLauncher.isRunning) {
+      console.log(`[Chrome Launcher] shutting down...`);
+      chromeLauncher.kill();
+    }
     process.exit(0);
   };
   process.on("SIGINT", shutdown);
   process.on("SIGTERM", shutdown);
 
-  app.listen(PORT, HOST, () => {
+  // 'exit' only allows synchronous work, so this covers the case SIGINT/SIGTERM
+  // don't: a hard crash (uncaught exception) or a plain process.exit() call
+  // elsewhere, either of which would otherwise leave chromeLauncher's Chrome
+  // process (and the MCP child processes) orphaned.
+  const killChildProcessesSync = () => {
+    if (obsidianMcpProc) obsidianMcpProc.kill();
+    if (playwrightMcpProc) playwrightMcpProc.kill();
+    if (chromeLauncher.isRunning) chromeLauncher.kill();
+  };
+  process.on("exit", killChildProcessesSync);
+  process.on("uncaughtException", (err) => {
+    console.error("[Server] Uncaught exception:", err);
+    killChildProcessesSync();
+    process.exit(1);
+  });
+
+  // Pre-flight: check if port is free before attempting to listen
+  const portFree = await isPortFree(PORT, HOST);
+  if (!portFree) {
+    console.warn(`[Port] Port ${PORT} is already in use. Attempting to free it...`);
+    freePort(PORT);
+    // Give the OS a moment to release the port
+    await new Promise(r => setTimeout(r, 500));
+  }
+
+  httpServer.listen(PORT, HOST, () => {
     console.log(`Server running on http://${HOST}:${PORT}`);
   }).on('error', (err: any) => {
-    console.error('Failed to start Express server:', err);
+    if (err.code === 'EADDRINUSE') {
+      console.error(`[FATAL] Port ${PORT} is already in use and could not be freed.`);
+      console.error(`[FATAL] Ensure no other instance of the server is running, then try again.`);
+      console.error(`[FATAL] You can run: taskkill /F /IM node.exe (kills ALL node processes)`);
+    } else {
+      console.error('Failed to start Express server:', err);
+    }
+    process.exit(1);
   });
 }
 

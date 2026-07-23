@@ -151,4 +151,61 @@ export const externalBrowserService = {
         const data = await api('/api/cdp/structure');
         return data.success ? data.structure : `Error: ${data.error}`;
     },
+
+    /** Auto-launch Chrome with CDP debug port. Returns { success, port, pid, exe, reachable, error }. */
+    async launch(port = 9222): Promise<{ success: boolean; port?: number; pid?: number; exe?: string; reachable?: boolean; error?: string }> {
+        return api('/api/cdp/launch', {
+            method: 'POST',
+            body: JSON.stringify({ port }),
+        });
+    },
+
+    /** Check if Chrome was auto-launched by the server. */
+    async launchStatus(): Promise<{ isRunning: boolean; port: number | null }> {
+        return api('/api/cdp/launch-status');
+    },
+
+    // ─── Tab management ───────────────────────────────────────
+
+    /** Open a new tab with the given URL. */
+    async openTab(url = 'about:blank'): Promise<{ success: boolean; targetId?: string; switched?: boolean; error?: string }> {
+        return api('/api/cdp/open_tab', {
+            method: 'POST',
+            body: JSON.stringify({ url }),
+        });
+    },
+
+    /** Close a tab by target id. */
+    async closeTab(targetId: string): Promise<{ success: boolean; error?: string }> {
+        return api('/api/cdp/close_tab', {
+            method: 'POST',
+            body: JSON.stringify({ targetId }),
+        });
+    },
+
+    /** Switch active connection to a different tab by target id. */
+    async switchTab(targetId: string): Promise<{ success: boolean; targetId?: string; title?: string; error?: string }> {
+        return api('/api/cdp/switch_tab', {
+            method: 'POST',
+            body: JSON.stringify({ targetId }),
+        });
+    },
+
+    // ─── Drag & file upload ───────────────────────────────────────
+
+    /** Simulate a mouse drag from one coordinate to another. */
+    async drag(nx: number, ny: number, endNx: number, endNy: number, captureW?: number, captureH?: number): Promise<{ success: boolean; result?: string; error?: string }> {
+        return api('/api/cdp/drag', {
+            method: 'POST',
+            body: JSON.stringify({ nx, ny, endNx, endNy, captureW, captureH }),
+        });
+    },
+
+    /** Upload a file to a file input element identified by CSS selector. */
+    async uploadFile(cssSelector: string, data: string, filename: string): Promise<{ success: boolean; result?: string; error?: string }> {
+        return api('/api/cdp/upload', {
+            method: 'POST',
+            body: JSON.stringify({ cssSelector, data, filename }),
+        });
+    },
 };

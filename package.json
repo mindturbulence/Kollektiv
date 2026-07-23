@@ -26,12 +26,14 @@
   "dependencies": {
     "@apify/actors-mcp-server": "^0.11.6",
     "@babel/generator": "^7.29.0",
+    "@bitbonsai/mcpvault": "^0.12.1",
     "@dsnp/parquetjs": "^1.8.8",
     "@elevenlabs/client": "^1.15.1",
     "@elevenlabs/react": "^1.10.1",
     "@ffmpeg/ffmpeg": "^0.12.6",
     "@ffmpeg/util": "^0.12.1",
     "@google/genai": "^1.12.0",
+    "@playwright/mcp": "^0.0.78",
     "@ricky0123/vad-web": "^0.0.30",
     "@tailwindcss/typography": "^0.5.19",
     "@types/react-syntax-highlighter": "^15.5.13",
@@ -45,6 +47,7 @@
     "mammoth": "^1.12.0",
     "motion": "^12.38.0",
     "multer": "^2.2.0",
+    "onnxruntime-web": "^1.27.0",
     "pdfjs-dist": "^5.7.284",
     "react": "^19.1.1",
     "react-dom": "^19.1.1",
@@ -52,7 +55,8 @@
     "react-syntax-highlighter": "^16.1.1",
     "remark-gfm": "^4.0.1",
     "simple-rnnoise-wasm": "^1.1.0",
-    "uuid": "^9.0.1"
+    "uuid": "^9.0.1",
+    "vfile": "^6.0.3"
   },
   "devDependencies": {
     "@playwright/test": "^1.61.1",
@@ -75,7 +79,7 @@
     "tsx": "^4.21.0",
     "typescript": "^5.4.5",
     "vite": "^5.2.11",
-    "vite-plugin-static-copy": "^4.1.1",
+    "vite-plugin-static-copy": "^3.4.0",
     "vitest": "^3.2.7"
   }
 }

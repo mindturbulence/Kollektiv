@@ -449,9 +449,12 @@ export const verifyAndRepairFiles = async (onProgress: (message: string, progres
     fileSystemManager.storageProvider = 'local';
     try {
         onProgress('> INITIATING SYSTEM CHECK...');
+        if (typeof window !== 'undefined' && (window as any).__initLog) (window as any).__initLog('V_AFTER_INIT_CHECK');
         await new Promise(r => setTimeout(r, 300));
+        if (typeof window !== 'undefined' && (window as any).__initLog) (window as any).__initLog('V_AFTER_300MS_DELAY');
 
         const totalSteps = fileManifest.length;
+        if (typeof window !== 'undefined' && (window as any).__initLog) (window as any).__initLog('V_LOOP_START n=' + totalSteps);
 
         for (let i = 0; i < totalSteps; i++) {
             const entry = fileManifest[i];
@@ -459,9 +462,12 @@ export const verifyAndRepairFiles = async (onProgress: (message: string, progres
                 const progress = (i + 1) / totalSteps;
                 const status = i % 2 === 0 ? '[CHECK]' : '[VERIFY]';
                 onProgress(`${status} ${entry.path.replace('.json', '').toUpperCase()}`, progress);
+                if (typeof window !== 'undefined' && (window as any).__initLog) (window as any).__initLog('V_ITER i=' + i + ' ' + entry.path);
                 await new Promise(r => setTimeout(r, 150));
+                if (typeof window !== 'undefined' && (window as any).__initLog) (window as any).__initLog('V_BEFORE_READ ' + entry.path);
 
                 const content = await fileSystemManager.readFile(entry.path);
+                if (typeof window !== 'undefined' && (window as any).__initLog) (window as any).__initLog('V_AFTER_READ ' + entry.path + ' r=' + (content === null ? 'null' : 'ok'));
 
                 if (content === null) {
                     // readFile returns null for BOTH "absent" and "read failed/timed out".

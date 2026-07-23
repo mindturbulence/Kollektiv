@@ -2,7 +2,7 @@ import React, { useCallback, useEffect, useState, useRef, useLayoutEffect } from
 import { gsap } from 'gsap';
 import { appEventBus } from '../utils/eventBus';
 import { audioService } from '../services/audioService';
-import { CloseIcon, GlobeIcon, ArrowsMaximizeIcon, ArrowRightIcon } from './icons';
+import { CloseIcon, GlobeIcon, ArrowsMaximizeIcon, ArrowRightIcon, DownloadIcon } from './icons';
 
 type Mode = 'loading' | 'live' | 'reader';
 
@@ -144,6 +144,44 @@ const WebViewerPanel: React.FC<WebViewerPanelProps> = ({ isOpen, onClose }) => {
         if (e.key === 'Enter') { e.preventDefault(); navigate(); }
     }, [navigate]);
 
+    // ── Save page ─────────────────────────────────────────────────
+
+    const handleSavePage = useCallback(async (mode: 'note' | 'vault') => {
+        if (!url) return;
+        audioService.playClick();
+        try {
+            const parsed = new URL(url);
+            const res = await fetch(`/proxy-remote${parsed.pathname}${parsed.search}`, {
+                headers: { 'x-target-url': parsed.origin },
+            });
+            if (!res.ok) throw new Error(`HTTP ${res.status}`);
+            const raw = await res.text();
+            const doc = new DOMParser().parseFromString(raw, 'text/html');
+            doc.querySelectorAll('script, style, noscript, svg').forEach(el => el.remove());
+            const pageTitle = doc.title || url;
+            const content = (doc.body?.textContent || '').replace(/\s{3,}/g, '\n\n').trim();
+
+            if (mode === 'note') {
+                appEventBus.emit('clipIdea', {
+                    title: pageTitle.slice(0, 80),
+                    prompt: content.slice(0, 5000),
+                    lens: 'Web',
+                    source: url,
+                });
+                appEventBus.emit('assistantFeedback', { message: 'Page saved as note — check Clipping Panel.', isError: false });
+            } else {
+                const safe = pageTitle.replace(/[\\/:*?"<>|]/g, '_').slice(0, 100) || 'page';
+                const { fileSystemManager } = await import('../utils/fileUtils');
+                const markdown = `# ${pageTitle}\n\nSource: ${url}\n\n${content}`;
+                await fileSystemManager.saveFile(`assistant/pages/${safe}.md`, new Blob([markdown], { type: 'text/markdown' }));
+                appEventBus.emit('assistantFilesChanged');
+                appEventBus.emit('assistantFeedback', { message: `Saved "${safe}.md" to vault > assistant > pages`, isError: false });
+            }
+        } catch (e: any) {
+            appEventBus.emit('assistantFeedback', { message: `Save failed: ${e?.message || e}`, isError: true });
+        }
+    }, [url]);
+
     // ── Render ──────────────────────────────────────────────────
 
     return (
@@ -210,6 +248,27 @@ const WebViewerPanel: React.FC<WebViewerPanelProps> = ({ isOpen, onClose }) => {
                                 </button>
                             </div>
                         </div>
+
+                        {/* Save toolbar */}
+                        {url && (
+                            <div className="flex items-center gap-2 px-6 pb-3 border-b border-base-300/10">
+                                <button
+                                    onClick={() => handleSavePage('note')}
+                                    className="px-2.5 py-1 text-[9px] font-black uppercase tracking-widest border border-base-300/30 text-primary/70 hover:text-primary hover:bg-primary/10 transition-all flex items-center gap-1.5"
+                                    title="Save page content as a note"
+                                >
+                                    <DownloadIcon className="w-3 h-3" /> Save as Note
+                                </button>
+                                <button
+                                    onClick={() => handleSavePage('vault')}
+                                    className="px-2.5 py-1 text-[9px] font-black uppercase tracking-widest border border-base-300/30 text-base-content/50 hover:text-base-content hover:bg-base-content/10 transition-all flex items-center gap-1.5"
+                                    title="Save page content to vault as markdown file"
+                                >
+                                    <DownloadIcon className="w-3 h-3" /> Save to Vault
+                                </button>
+                            </div>
+                        )}
+
                         <div className="absolute bottom-0 left-0 right-0 h-[1px] bg-gradient-to-r from-transparent via-primary/30 to-transparent" />
                     </div>
 

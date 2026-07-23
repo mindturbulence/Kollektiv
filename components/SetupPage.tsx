@@ -99,7 +99,7 @@ const MaintenanceOverlay: React.FC<{ progress: number, message: string }> = ({ p
 export const SetupPage: React.FC<SetupPageProps> = ({
     activeSettingsTab, setActiveSettingsTab, activeSubTab, setActiveSubTab, showGlobalFeedback, isExiting = false
 }) => {
-    const { settings: globalSettings, updateSettings, availableOllamaModels, availableOllamaCloudModels, availableLlamaCppModels, refreshOllamaModels } = useSettings();
+    const { settings: globalSettings, updateSettings, availableOllamaModels, availableOllamaCloudModels, availableLlamaCppModels, availableOpenRouterModels, refreshOllamaModels } = useSettings();
     const [settings, setSettings] = useState<LLMSettings>(globalSettings);
     const [modalFeedback, setModalFeedback] = useState<{ message: string; type: 'success' | 'error' } | null>(null);
 
@@ -567,6 +567,7 @@ export const SetupPage: React.FC<SetupPageProps> = ({
     const localModelOptions = useMemo(() => availableOllamaModels.map(m => ({ label: m, value: m })), [availableOllamaModels]);
     const cloudModelOptions = useMemo(() => availableOllamaCloudModels.map(m => ({ label: m, value: m })), [availableOllamaCloudModels]);
     const llamacppModelOptions = useMemo(() => (availableLlamaCppModels.length > 0 ? availableLlamaCppModels : ['default']).map(m => ({ label: m, value: m })), [availableLlamaCppModels]);
+    const openrouterModelOptions = useMemo(() => availableOpenRouterModels.map(m => ({ label: m, value: m })), [availableOpenRouterModels]);
 
     const currentSubTabs = subMenuConfig[activeSettingsTab] || [];
 
@@ -624,6 +625,7 @@ export const SetupPage: React.FC<SetupPageProps> = ({
                         localModelOptions={localModelOptions}
                         cloudModelOptions={cloudModelOptions}
                         llamacppModelOptions={llamacppModelOptions}
+                        openrouterModelOptions={openrouterModelOptions}
                         currentOrigin={currentOrigin}
                         siblingOrigin={siblingOrigin}
                     />

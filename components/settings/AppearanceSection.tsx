@@ -78,6 +78,25 @@ const AppearanceSection: React.FC<AppearanceSectionProps> = ({
                 </SettingRow>
             )}
 
+            <SettingRow label="Ambient Music URL" desc="YouTube URL played as background music. Toggle music on/off from the dashboard footer.">
+                <div className="flex w-full md:w-96">
+                    <input
+                        type="text"
+                        value={settings.musicYoutubeUrl}
+                        onChange={(e) => handleSettingsChange('musicYoutubeUrl', e.target.value)}
+                        className="form-input flex-1"
+                        placeholder="https://www.youtube.com/watch?v=..."
+                    />
+                    <button
+                        onClick={() => { audioService.playClick(); handleSettingsChange('musicYoutubeUrl', defaultLLMSettings.musicYoutubeUrl); }}
+                        className="form-btn px-4 border-l-0"
+                        title="Reset to Default"
+                    >
+                        <RefreshIcon className="w-3.5 h-3.5" />
+                    </button>
+                </div>
+            </SettingRow>
+
             {settings.dashboardBackgroundType === 'image' && (
                 <SettingRow label="Dashboard Image" desc="Select a static image background.">
                     <select

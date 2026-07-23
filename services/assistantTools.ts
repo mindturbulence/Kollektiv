@@ -1,8 +1,7 @@
 import type { LLMSettings, WildcardCategory } from '../types';
 import { appControlService } from './appControlService';
 import { appEventBus } from '../utils/eventBus';
-import { browserControlService } from './browserControlService';
-import { externalBrowserService } from './externalBrowserService';
+import { getOperator, getInAppOperator } from './browserOperatorResolver';
 import { addNote, loadNotes, updateNote, deleteNote } from '../utils/notesStorage';
 import { addMemory, loadMemories as loadMemoryEntries, deleteMemory } from '../utils/memoryStorage';
 import { loadGalleryItems, addItemToGallery, deleteItemFromGallery } from '../utils/galleryStorage';
@@ -950,8 +949,10 @@ export const ASSISTANT_TOOLS: AssistantTool[] = [
     },
 
     // ─── Browser Control Tools (require screen sharing + permission) ───────────
-    // These tools auto-route: when CDP external browser is connected, coordinate-based
-    // actions go to the external page via CDP. data-ai-id tools stay in-app.
+    // These tools auto-route through the unified BrowserOperator interface:
+    //   - CDP external browser (when connected via `--remote-debugging-port`)
+    //   - In-app synthetic events (fallback)
+    // data-ai-id tools (click_element, select_option) always go to the in-app operator.
 
     {
         name: 'browser_click_element',
@@ -963,7 +964,7 @@ export const ASSISTANT_TOOLS: AssistantTool[] = [
             },
             required: ['id'],
         },
-        execute: ({ id }) => browserControlService.clickElement(String(id)),
+        execute: ({ id }) => getInAppOperator().clickElement(String(id)),
     },
     {
         name: 'browser_select_option',
@@ -976,7 +977,7 @@ export const ASSISTANT_TOOLS: AssistantTool[] = [
             },
             required: ['id', 'option'],
         },
-        execute: ({ id, option }) => browserControlService.selectOption(String(id), String(option)),
+        execute: ({ id, option }) => getInAppOperator().selectOption(String(id), String(option)),
     },
     {
         name: 'browser_click',
@@ -989,10 +990,7 @@ export const ASSISTANT_TOOLS: AssistantTool[] = [
             },
             required: ['nx', 'ny'],
         },
-        execute: async ({ nx, ny }) => {
-            if (externalBrowserService.connected) return externalBrowserService.click(Number(nx), Number(ny));
-            return browserControlService.click(Number(nx), Number(ny));
-        },
+        execute: async ({ nx, ny }) => getOperator().operator.click(Number(nx), Number(ny)),
     },
     {
         name: 'browser_double_click',
@@ -1005,10 +1003,7 @@ export const ASSISTANT_TOOLS: AssistantTool[] = [
             },
             required: ['nx', 'ny'],
         },
-        execute: async ({ nx, ny }) => {
-            if (externalBrowserService.connected) return externalBrowserService.doubleClick(Number(nx), Number(ny));
-            return browserControlService.doubleClick(Number(nx), Number(ny));
-        },
+        execute: async ({ nx, ny }) => getOperator().operator.doubleClick(Number(nx), Number(ny)),
     },
     {
         name: 'browser_right_click',
@@ -1021,10 +1016,7 @@ export const ASSISTANT_TOOLS: AssistantTool[] = [
             },
             required: ['nx', 'ny'],
         },
-        execute: async ({ nx, ny }) => {
-            if (externalBrowserService.connected) return externalBrowserService.rightClick(Number(nx), Number(ny));
-            return browserControlService.rightClick(Number(nx), Number(ny));
-        },
+        execute: async ({ nx, ny }) => getOperator().operator.rightClick(Number(nx), Number(ny)),
     },
     {
         name: 'browser_hover',
@@ -1037,10 +1029,7 @@ export const ASSISTANT_TOOLS: AssistantTool[] = [
             },
             required: ['nx', 'ny'],
         },
-        execute: async ({ nx, ny }) => {
-            if (externalBrowserService.connected) return externalBrowserService.hover(Number(nx), Number(ny));
-            return browserControlService.hover(Number(nx), Number(ny));
-        },
+        execute: async ({ nx, ny }) => getOperator().operator.hover(Number(nx), Number(ny)),
     },
     {
         name: 'browser_type',
@@ -1052,10 +1041,7 @@ export const ASSISTANT_TOOLS: AssistantTool[] = [
             },
             required: ['text'],
         },
-        execute: async ({ text }) => {
-            if (externalBrowserService.connected) return externalBrowserService.type(String(text));
-            return browserControlService.type(String(text));
-        },
+        execute: async ({ text }) => getOperator().operator.type(String(text)),
     },
     {
         name: 'browser_press_key',
@@ -1067,10 +1053,7 @@ export const ASSISTANT_TOOLS: AssistantTool[] = [
             },
             required: ['key'],
         },
-        execute: async ({ key }) => {
-            if (externalBrowserService.connected) return externalBrowserService.pressKey(String(key));
-            return browserControlService.pressKey(String(key));
-        },
+        execute: async ({ key }) => getOperator().operator.pressKey(String(key)),
     },
     {
         name: 'browser_scroll',
@@ -1082,10 +1065,7 @@ export const ASSISTANT_TOOLS: AssistantTool[] = [
                 dy: { type: 'number', description: 'Vertical scroll factor (negative = up, positive = down, 0.5 = ~500px).' },
             },
         },
-        execute: async ({ dx, dy }) => {
-            if (externalBrowserService.connected) return externalBrowserService.scroll(Number(dx || 0), Number(dy || 0));
-            return browserControlService.scroll(Number(dx || 0), Number(dy || 0));
-        },
+        execute: async ({ dx, dy }) => getOperator().operator.scroll(Number(dx || 0), Number(dy || 0)),
     },
     {
         name: 'browser_scroll_to',
@@ -1097,44 +1077,25 @@ export const ASSISTANT_TOOLS: AssistantTool[] = [
             },
             required: ['frac'],
         },
-        execute: async ({ frac }) => {
-            if (externalBrowserService.connected) return externalBrowserService.scrollTo(Number(frac));
-            return browserControlService.scrollTo(Number(frac));
-        },
+        execute: async ({ frac }) => getOperator().operator.scrollTo(Number(frac)),
     },
     {
         name: 'browser_get_url',
         description: 'Get the current page URL. Works in-app and on external websites (via CDP).',
         parameters: { type: 'object', properties: {} },
-        execute: async () => {
-            if (externalBrowserService.connected) {
-                const r = await externalBrowserService.readContent();
-                return r.url || '(unknown)';
-            }
-            return browserControlService.getUrl();
-        },
+        execute: async () => getOperator().operator.getUrl(),
     },
     {
         name: 'browser_read_page',
         description: 'Read all visible text content from the current page. Returns the page title, URL, and up to 5000 characters of body text. Works in-app and on external websites (via CDP).',
         parameters: { type: 'object', properties: {} },
-        execute: async () => {
-            if (externalBrowserService.connected) {
-                const r = await externalBrowserService.readContent();
-                if (!r.success) return `Error: ${r.error}`;
-                return `Page title: "${r.title}"\nURL: ${r.url}\nContent:\n${r.content}`;
-            }
-            return browserControlService.readVisibleContent();
-        },
+        execute: async () => getOperator().operator.readContent(),
     },
     {
         name: 'browser_read_structure',
         description: 'Scan the page and list interactive elements visible on screen (buttons, links, inputs, headings) with their tag and text. Elements with a data-ai-id (shown in brackets, e.g. "[generate-btn]") can be clicked exactly with browser_click_element — call this FIRST to get those ids, then act on them. On external pages (via CDP), no data-ai-id will be shown — use browser_click with coordinates instead. Works in-app and on external websites.',
         parameters: { type: 'object', properties: {} },
-        execute: async () => {
-            if (externalBrowserService.connected) return externalBrowserService.readStructure();
-            return browserControlService.readPageStructure();
-        },
+        execute: async () => getOperator().operator.readStructure(),
     },
     {
         name: 'browser_navigate',
@@ -1146,9 +1107,142 @@ export const ASSISTANT_TOOLS: AssistantTool[] = [
             },
             required: ['url'],
         },
+        execute: async ({ url }) => getOperator().operator.navigate(String(url)),
+    },
+    {
+        name: 'browser_list_tabs',
+        description: 'List all open tabs in the CDP-connected browser. Returns each tab\'s id, title, and URL. Use the id with browser_switch_tab to change tabs. Only works when CDP external browser is connected (Settings > Browser Bridge).',
+        parameters: { type: 'object', properties: {} },
+        execute: async () => {
+            const { operator } = getOperator();
+            if (!operator.listTabs) return 'Error: tab management not available with the current browser backend.';
+            const tabs = await operator.listTabs();
+            if (!tabs.length) return 'No tabs found.';
+            return tabs.map(t => `[${t.id}] ${t.title} — ${t.url}`).join('\n');
+        },
+    },
+    {
+        name: 'browser_new_tab',
+        description: 'Open a new tab in the CDP-connected browser with the given URL. The active connection automatically switches to the new tab. Only works when CDP external browser is connected (Settings > Browser Bridge).',
+        parameters: {
+            type: 'object',
+            properties: {
+                url: { type: 'string', description: 'The URL to open (e.g. "https://example.com"). Defaults to about:blank.' },
+            },
+        },
         execute: async ({ url }) => {
-            if (externalBrowserService.connected) return externalBrowserService.navigate(String(url));
-            return browserControlService.navigate(String(url));
+            const { operator } = getOperator();
+            if (!operator.openTab) return 'Error: new tab not available with the current browser backend.';
+            const targetUrl = url ? String(url) : 'about:blank';
+            const result = await operator.openTab(targetUrl);
+            return `Opened new tab: "${result.title}" (id: ${result.id}).`;
+        },
+    },
+    {
+        name: 'browser_switch_tab',
+        description: 'Switch the active CDP connection to a different browser tab. Use browser_list_tabs first to get tab ids. Only works when CDP external browser is connected (Settings > Browser Bridge).',
+        parameters: {
+            type: 'object',
+            properties: {
+                id: { type: 'string', description: 'The tab id from browser_list_tabs.' },
+            },
+            required: ['id'],
+        },
+        execute: async ({ id }) => {
+            const { operator } = getOperator();
+            if (!operator.switchTab) return 'Error: tab switching not available with the current browser backend.';
+            const title = await operator.switchTab(String(id));
+            return `Switched to tab: "${title}".`;
+        },
+    },
+    {
+        name: 'browser_close_tab',
+        description: 'Close a tab in the CDP-connected browser. Use browser_list_tabs first to get tab ids. Only works when CDP external browser is connected (Settings > Browser Bridge).',
+        parameters: {
+            type: 'object',
+            properties: {
+                id: { type: 'string', description: 'The tab id from browser_list_tabs.' },
+            },
+            required: ['id'],
+        },
+        execute: async ({ id }) => {
+            const { operator } = getOperator();
+            if (!operator.closeTab) return 'Error: tab closing not available with the current browser backend.';
+            const ok = await operator.closeTab(String(id));
+            return ok ? `Closed tab ${id}.` : `Error: failed to close tab ${id}.`;
+        },
+    },
+    {
+        name: 'browser_drag',
+        description: 'Drag the mouse from one position to another on the page. Useful for slider controls, canvas drawing, or drag-and-drop interfaces. Provide start (nx, ny) and end (endNx, endNy) as pixel coordinates within the screen image (scaled to max 1024px). Only works with CDP external browser connected (Settings > Browser Bridge).',
+        parameters: {
+            type: 'object',
+            properties: {
+                nx: { type: 'number', description: 'Starting X pixel coordinate within the screen image (0–1024).' },
+                ny: { type: 'number', description: 'Starting Y pixel coordinate within the screen image (0–1024).' },
+                endNx: { type: 'number', description: 'Ending X pixel coordinate within the screen image (0–1024).' },
+                endNy: { type: 'number', description: 'Ending Y pixel coordinate within the screen image (0–1024).' },
+            },
+            required: ['nx', 'ny', 'endNx', 'endNy'],
+        },
+        execute: async ({ nx, ny, endNx, endNy }) => {
+            const { operator } = getOperator();
+            if (!operator.drag) return 'Error: drag not available with the current browser backend. Connect CDP external browser in Settings > Browser Bridge.';
+            return operator.drag(Number(nx), Number(ny), Number(endNx), Number(endNy));
+        },
+    },
+    {
+        name: 'browser_upload_file',
+        description: 'Upload a file to a file input element on the page. Provide the CSS selector of the <input type="file"> element, the base64-encoded file data, and a filename. Only works with CDP external browser connected (Settings > Browser Bridge). Use browser_read_structure first to find the file input element.',
+        parameters: {
+            type: 'object',
+            properties: {
+                cssSelector: { type: 'string', description: 'CSS selector for the file input element, e.g. "input[type=\"file\"]" or "#upload-input".' },
+                data: { type: 'string', description: 'Base64-encoded file data.' },
+                filename: { type: 'string', description: 'The visible filename, e.g. "image.png" or "document.pdf".' },
+            },
+            required: ['cssSelector', 'data', 'filename'],
+        },
+        execute: async ({ cssSelector, data, filename }) => {
+            const { operator } = getOperator();
+            if (!operator.uploadFile) return 'Error: file upload not available with the current browser backend. Connect CDP external browser in Settings > Browser Bridge.';
+            return operator.uploadFile(String(cssSelector), String(data), String(filename));
+        },
+    },
+    {
+        name: 'browser_complete_task',
+        description: 'Complete a multi-step browser task autonomously. The assistant will look at the screen, click buttons, type text, navigate pages, and scroll until the task is done. Provide a clear, specific goal. Requires the AI provider to be set to Gemini (vision analysis) and either screen sharing (in-app) or CDP external browser connection.',
+        parameters: {
+            type: 'object',
+            properties: {
+                goal: { type: 'string', description: 'What to accomplish, e.g. "Search for cats on Google Images and tell me the first result" or "Go to wikipedia and find the article about Mars".' },
+            },
+            required: ['goal'],
+        },
+        execute: async ({ goal }, ctx) => {
+            const { VisionLoop } = await import('./visionLoop');
+            const { getOperator } = await import('./browserOperatorResolver');
+            const { operator, warning } = getOperator();
+
+            // Check if operator can capture screenshots
+            try {
+                await operator.captureScreenshot();
+            } catch {
+                return 'Error: Cannot capture screenshots. For in-app mode, start screen sharing first. For CDP mode, connect to a browser tab in Settings > Browser Bridge.';
+            }
+
+            const loop = new VisionLoop(operator, ctx.settings, {
+                onActivity: (text) => {
+                    appEventBus.emit('assistantFeedback', { type: 'activity', text });
+                },
+                onError: (err) => {
+                    appEventBus.emit('assistantFeedback', { type: 'error', text: err });
+                },
+            });
+
+            const result = await loop.run(String(goal));
+            const prefix = warning ? `(Note: ${warning})\n` : '';
+            return prefix + result;
         },
     },
 
@@ -1429,11 +1523,61 @@ export const ASSISTANT_TOOLS: AssistantTool[] = [
             }
         },
     },
+    {
+        name: 'append_findings',
+        description: "Append a note to the active research project's findings.md (Research mode, Findings panel). Use when the user says things like 'note that down as a finding' during a research conversation. No-op error if no research project is currently open.",
+        parameters: {
+            type: 'object',
+            properties: { text: { type: 'string', description: 'Markdown text to append as a new finding.' } },
+            required: ['text'],
+        },
+        execute: async ({ text }) => {
+            const { getActiveResearchProject, researchVault } = await import('./researchVaultService');
+            const slug = getActiveResearchProject();
+            if (!slug) return 'Error: no active research project — the user must open one in Research mode first.';
+            const { fileSystemManager } = await import('../utils/fileUtils');
+            if (!fileSystemManager.isDirectorySelected()) return 'Error: no vault folder is connected.';
+            await researchVault.findings.append(slug, String(text), fileSystemManager);
+            appEventBus.emit('research:findingsAppended', { slug });
+            return `Appended to findings.md for research project "${slug}".`;
+        },
+    },
+    {
+        name: 'expand_source',
+        description: "Fetch the full, untruncated content of a research source that was truncated in your context (marked '[...truncated — use expand_source to read full content]'). Reference it by its citation index (e.g. 2 for [2]) or by file name. No-op error if no research project is currently open.",
+        parameters: {
+            type: 'object',
+            properties: {
+                index: { type: 'number', description: 'Citation index of the source, e.g. 2 for [2]. Use this or fileName.' },
+                fileName: { type: 'string', description: 'Source file name (as shown in the Sources panel). Use this or index.' },
+            },
+        },
+        execute: async ({ index, fileName }) => {
+            const { getActiveResearchProject, researchVault } = await import('./researchVaultService');
+            const slug = getActiveResearchProject();
+            if (!slug) return 'Error: no active research project — the user must open one in Research mode first.';
+            const { fileSystemManager } = await import('../utils/fileUtils');
+            if (!fileSystemManager.isDirectorySelected()) return 'Error: no vault folder is connected.';
+            let targetFileName = fileName ? String(fileName) : undefined;
+            if (!targetFileName && index !== undefined) {
+                const project = await researchVault.projects.open(slug, fileSystemManager);
+                const src = (project.sourceFiles || [])[Number(index) - 1];
+                if (!src) return `Error: no source at index ${index}.`;
+                targetFileName = src.path.replace(/^sources\//, '');
+            }
+            if (!targetFileName) return 'Error: provide either index or fileName.';
+            try {
+                return await researchVault.sources.readContent(slug, targetFileName, fileSystemManager);
+            } catch (e: any) {
+                return `Error: ${e?.message || e}`;
+            }
+        },
+    },
 ];
 
 export const executeAssistantTool = async (name: string, args: Record<string, any>, ctx: ToolContext, extraTools: AssistantTool[] = []): Promise<string> => {
     // Check control permission for browser tools.
-    if (name.startsWith('browser_') && !browserControlService.permissionGranted) {
+    if (name.startsWith('browser_') && !getOperator().operator.permissionGranted) {
         appEventBus.emit('assistantFeedback', {
             message: 'Assistant tried to control your browser, but control permission isn\'t granted — click the cursor icon in the header. If it\'s not visible, share your screen first (monitor icon), then grant control (cursor icon).',
             isError: true,

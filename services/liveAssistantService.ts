@@ -6,9 +6,11 @@ import { buildSystemIdentity } from './assistantService';
 import { loadMcpAssistantTools } from './mcpAssistantTools';
 import { browserControlService } from './browserControlService';
 import { externalBrowserService } from './externalBrowserService';
+import { getOperator, setInAppScreenshotFrame } from './browserOperatorResolver';
 import { resolveLangKey } from '../utils/languageKey';
 import { TurnManager } from './turnManager';
 import { VoiceActivityService } from './voiceActivityService';
+import { NoiseCancellation } from './noiseCancellation';
 
 // Single source of truth for the live model constant.
 // Verified against https://ai.google.dev/gemini-api/docs/live-api/capabilities (2026-07-10) —
@@ -347,6 +349,7 @@ export class LiveAssistant {
     private micCtx: AudioContext | null = null;
     private micStream: MediaStream | null = null;
     private micNode: AudioWorkletNode | null = null;
+    private noiseCancellation: NoiseCancellation | null = null;
     private outCtx: AudioContext | null = null;
     private nextStart = 0;
     private playing = new Set<AudioBufferSourceNode>();
@@ -472,7 +475,20 @@ export class LiveAssistant {
                 this.session.sendRealtimeInput({ audio: { data: b64, mimeType: `audio/pcm;rate=${MIC_RATE}` } });
             } catch { /* session mid-close */ }
         };
-        source.connect(this.micNode);
+        if (NoiseCancellation.isSupported) {
+            try {
+                await NoiseCancellation.register(this.micCtx);
+                this.noiseCancellation = new NoiseCancellation();
+                const ncNode = this.noiseCancellation.create(this.micCtx, source);
+                ncNode.connect(this.micNode);
+            } catch (err) {
+                console.warn('[LiveAssistant] noise cancellation init failed, using raw mic:', err);
+                this.noiseCancellation = null;
+                source.connect(this.micNode);
+            }
+        } else {
+            source.connect(this.micNode);
+        }
         // Do NOT connect micNode to destination — no local echo.
     }
 
@@ -480,6 +496,7 @@ export class LiveAssistant {
         // 1. Tool calls
         if (msg.toolCall?.functionCalls?.length) {
             const responses: any[] = [];
+            let hadBrowserTool = false;
             for (const fc of msg.toolCall.functionCalls) {
                 console.debug('[LiveAssistant] tool call', fc.name, fc.args);
                 const flavour = describeToolCall(fc.name, fc.args || {}, this.settings.assistantLanguage || 'English');
@@ -494,9 +511,20 @@ export class LiveAssistant {
                     const result = await executeAssistantTool(fc.name, fc.args || {}, { settings: this.settings }, this.mcpTools);
                     console.debug('[LiveAssistant] tool result', fc.name, result.slice(0, 200));
                     responses.push({ id: fc.id, name: fc.name, response: { result } });
+                    if (fc.name.startsWith('browser_')) hadBrowserTool = true;
                 }
             }
             try { this.session?.sendToolResponse({ functionResponses: responses }); } catch { /* closed */ }
+
+            // ─── Vision Loop: post-browser-action verification frame ──────────
+            // After a browser tool executes, wait for the page to settle, then
+            // capture a screenshot and send it to Gemini so the AI can see the
+            // result of its action. This is a minimal single-frame approach:
+            // it does NOT loop autonomously — the AI decides what to do next.
+            if (hadBrowserTool && this.session && !this.closedByUs) {
+                this.scheduleVerificationFrame();
+            }
+
             return;
         }
         // 2. Interruption: user spoke over the assistant -> kill queued audio immediately.
@@ -511,6 +539,44 @@ export class LiveAssistant {
         if (outTr) this.handlers.onCaption('assistant', outTr);
         // 4. Audio out (24 kHz PCM16 in msg.data)
         if (msg.data) this.playChunk(fromBase64(msg.data));
+    }
+
+    // ─── Vision Loop: post-browser-action verification frame ──────────
+
+    /** Schedule a single verification frame capture after a browser tool executes.
+     *  Waits 1.2s for the page to settle, then captures a JPEG screenshot and
+     *  sends it to Gemini Live as a realtime input frame so the AI can see the
+     *  result of its action.
+     *
+     *  This is a minimal single-frame approach per tool turn — it does NOT loop
+     *  autonomously. The AI receives one frame, processes it visually, and decides
+     *  whether to act again. To avoid interfering with the AI's spoken response,
+     *  the frame is only sent when audio playback is not active. */
+    private scheduleVerificationFrame(): void {
+        // Delay to let the page settle after the action (DOM updates, animations)
+        setTimeout(async () => {
+            if (this.closedByUs || !this.session) return;
+
+            // Skip if the AI is currently speaking — sending a frame mid-response
+            // would interrupt its audio output with new visual context that may
+            // conflict with what it's about to say.
+            if (this.playing.size > 0) return;
+
+            try {
+                const { operator } = getOperator();
+                const shot = await operator.captureScreenshot();
+                if (!shot.data) return;
+
+                console.debug('[LiveAssistant] sending verification frame', shot.width, 'x', shot.height);
+                this.session.sendRealtimeInput({
+                    video: { data: shot.data, mimeType: 'image/jpeg' },
+                });
+            } catch (err) {
+                // Non-critical: vision loop failure should not break the session.
+                // The AI can still proceed based on text tool results.
+                console.warn('[LiveAssistant] verification frame failed:', (err as Error)?.message);
+            }
+        }, 1200);
     }
 
     private playChunk(bytes: Uint8Array): void {
@@ -583,6 +649,8 @@ export class LiveAssistant {
             send: (b64, w, h) => {
                 browserControlService.setCaptureSize(w, h);
                 externalBrowserService.setCaptureSize(w, h);
+                // Cache the latest frame for in-app screenshot capture
+                setInAppScreenshotFrame({ data: b64, width: w, height: h });
                 try {
                     this.session?.sendRealtimeInput({ video: { data: b64, mimeType: 'image/jpeg' } });
                 } catch { /* session mid-close */ }
@@ -674,6 +742,8 @@ export class LiveAssistant {
         this.stopScreenShare();
         this.stopCamera();
         this.flushPlayback();
+        this.noiseCancellation?.dispose();
+        this.noiseCancellation = null;
         this.micNode?.port.close();
         this.micNode?.disconnect();
         this.micNode = null;

@@ -17,6 +17,7 @@ import { ResearchProvider, useResearch } from '../contexts/ResearchContext';
 import { ResearchSourcesPanel } from './ResearchSourcesPanel';
 import { ResearchFindingsPanel } from './ResearchFindingsPanel';
 import { ResearchProjectBrowser } from './ResearchProjectBrowser';
+import { ResearchChatArea } from './ResearchChatArea';
 import { fileSystemManager } from '../utils/fileUtils';
 
 interface LLMChatPanelProps {
@@ -359,7 +360,7 @@ ${systemResponse}` };
                         animate={{ x: 0, opacity: 1 }}
                         exit={{ x: '100%', opacity: 0 }}
                         transition={{ type: "spring", stiffness: 300, damping: 30 }}
-                        className={`fixed top-[84px] right-[42px] bottom-[var(--footer-h,81px)] bg-transparent z-[200] pointer-events-auto shadow-2xl transition-[left,width] duration-300 ${isExpanded ? 'left-[42px] w-auto' : 'w-full md:w-[400px] lg:w-[480px]'}`}
+                        className={`fixed top-[84px] right-[42px] bottom-[var(--footer-h,81px)] bg-transparent z-[200] pointer-events-auto shadow-2xl transition-[left,width] duration-300 ${(isExpanded || researchMode) ? 'left-[42px] w-auto' : 'w-full md:w-[400px] lg:w-[480px]'}`}
                     >
                         <div className="w-full h-full relative corner-frame overflow-visible flex flex-col">
                             <div className="bg-base-100/90 backdrop-blur-3xl rounded-none w-[calc(100%-6px)] h-[calc(100%-6px)] m-[3px] flex flex-col overflow-hidden relative z-10 border border-white/5">
@@ -392,6 +393,28 @@ ${systemResponse}` };
                                         <button onClick={() => { audioService.playClick(); onClose(); }} className="btn btn-xs btn-ghost h-9 w-9 min-h-9 rounded-none p-0 opacity-40 hover:opacity-100 btn-snake" aria-label="Close panel">
                                             <span /><span /><span /><span />
                                             <CloseIcon className="w-5 h-5" />
+                                        </button>
+                                    </div>
+                                </div>
+
+                                {/* Contextual Mode Toolbar — always visible so Research stays reachable
+                                    and Chat stays reachable from Research; must not live inside either
+                                    pane below, since each pane is hidden while the other is active. */}
+                                <div className="flex items-center gap-1 px-4 md:px-6 py-2 border-b border-base-300/20 bg-base-100/30 shrink-0">
+                                    <div className="flex items-center gap-0.5 border border-white/10 rounded">
+                                        <button
+                                            onClick={() => setResearchMode(false)}
+                                            className={`btn btn-xs rounded-none px-2 py-1 text-[10px] font-mono uppercase tracking-wider transition-colors ${!researchMode ? 'bg-primary/20 text-primary' : 'opacity-50 hover:opacity-80'}`}
+                                            aria-pressed={!researchMode}
+                                        >
+                                            Chat
+                                        </button>
+                                        <button
+                                            onClick={() => setResearchMode(true)}
+                                            className={`btn btn-xs rounded-none px-2 py-1 text-[10px] font-mono uppercase tracking-wider transition-colors ${researchMode ? 'bg-primary/20 text-primary' : 'opacity-50 hover:opacity-80'}`}
+                                            aria-pressed={researchMode}
+                                        >
+                                            Research
                                         </button>
                                     </div>
                                 </div>
@@ -443,26 +466,6 @@ ${systemResponse}` };
 
                                     {/* Chat View Area */}
                                     <div className="flex flex-col flex-grow min-w-0 bg-base-100/40 relative">
-
-                                        {/* Contextual Mode Toolbar (sits above message scroll, not in header strip) */}
-                                        <div className="flex items-center gap-1 px-4 md:px-6 py-2 border-b border-base-300/20 bg-base-100/30 shrink-0">
-                                            <div className="flex items-center gap-0.5 border border-white/10 rounded">
-                                                <button
-                                                    onClick={() => setResearchMode(false)}
-                                                    className={`btn btn-xs rounded-none px-2 py-1 text-[10px] font-mono uppercase tracking-wider transition-colors ${!researchMode ? 'bg-primary/20 text-primary' : 'opacity-50 hover:opacity-80'}`}
-                                                    aria-pressed={!researchMode}
-                                                >
-                                                    Chat
-                                                </button>
-                                                <button
-                                                    onClick={() => setResearchMode(true)}
-                                                    className={`btn btn-xs rounded-none px-2 py-1 text-[10px] font-mono uppercase tracking-wider transition-colors ${researchMode ? 'bg-primary/20 text-primary' : 'opacity-50 hover:opacity-80'}`}
-                                                    aria-pressed={researchMode}
-                                                >
-                                                    Research
-                                                </button>
-                                            </div>
-                                        </div>
 
                                         {/* Streams jab — accessible status announcement + visual confirmation */}
                                         <AnimatePresence>
@@ -729,20 +732,7 @@ const ResearchPanelBody: React.FC = () => {
     return (
         <div className="flex flex-row flex-grow min-h-0 w-full">
             <ResearchSourcesPanel />
-            <div className="flex flex-col flex-1 min-w-0 items-center justify-center p-8 bg-base-100/30">
-                <div className="text-center max-w-md space-y-3">
-                    <p className="text-2xl font-rajdhani uppercase tracking-widest opacity-80">
-                        Research Project Active
-                    </p>
-                    <p className="text-sm font-mono opacity-50">
-                        Sources panel (left) and Findings panel (right) are now interactive.
-                        Edit findings, add sources, and ask the assistant questions.
-                    </p>
-                    <p className="text-xs font-mono opacity-30 mt-4">
-                        Project: <span className="text-primary">{projectSlug}</span>
-                    </p>
-                </div>
-            </div>
+            <ResearchChatArea />
             <ResearchFindingsPanel />
         </div>
     );

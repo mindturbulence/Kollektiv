@@ -67,7 +67,12 @@ export const fetchLlamaCppModels = async (settings: LLMSettings): Promise<string
 
         if (!response.ok) {
             const errorText = await response.text().catch(() => 'No error body');
-            console.error(`Llama.cpp models fetch failed: ${response.status} ${response.statusText}`, errorText.slice(0, 500));
+            const isConnRefused = errorText.includes('ECONNREFUSED');
+            if (isConnRefused) {
+                console.warn(`Llama.cpp not available (${response.status}) — using default models.`);
+            } else {
+                console.error(`Llama.cpp models fetch failed: ${response.status} ${response.statusText}`, errorText.slice(0, 500));
+            }
             return ['default'];
         }
 

@@ -1,8 +1,9 @@
-import { test, expect } from '@playwright/test';
+import { test, expect, type Page } from '@playwright/test';
 
-test('boots through STORAGE_INIT and loader to the app shell', async ({ page }) => {
-    // The app gates boot on the File System Access API folder picker.
-    // Stub it with OPFS: a real FileSystemDirectoryHandle that satisfies
+// The app gates boot on the File System Access API folder picker and an
+// integrity-check loader. Shared by every test that needs a booted app shell.
+async function bootToAppShell(page: Page) {
+    // Stub the picker with OPFS: a real FileSystemDirectoryHandle that satisfies
     // fileSystemManager. Belt-and-braces: also stub the permission methods,
     // which OPFS handles lack in some Chromium builds.
     await page.addInitScript(() => {
@@ -27,4 +28,20 @@ test('boots through STORAGE_INIT and loader to the app shell', async ({ page }) 
 
     // App shell (header) becomes visible after the blinds reveal.
     await expect(page.locator('.app-header')).toBeVisible({ timeout: 30_000 });
+}
+
+test('boots through STORAGE_INIT and loader to the app shell', async ({ page }) => {
+    await bootToAppShell(page);
+});
+
+test('opens the Web Viewer panel from the header', async ({ page }) => {
+    await bootToAppShell(page);
+
+    // HUDNavItem renders as <button title="Web Browser">, and Playwright derives
+    // the accessible name from `title` when there's no aria-label/text content.
+    await page.getByRole('button', { name: 'Web Browser' }).click();
+
+    // WebViewerPanel toggles a real `visibility` style (not just aria-hidden),
+    // so toBeVisible() reflects the open/closed state correctly.
+    await expect(page.getByRole('button', { name: 'Close web viewer' })).toBeVisible({ timeout: 10_000 });
 });

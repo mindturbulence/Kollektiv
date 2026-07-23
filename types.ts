@@ -1,4 +1,62 @@
 
+import type { ChatMessage as BaseChatMessage } from './utils/chatStorage';
+
+// --- Research Vault Types (for researchVaultService.ts) ---
+export class ResearchVaultError extends Error {
+    code: string;
+    constructor(code: string, message: string) {
+        super(message);
+        this.name = 'ResearchVaultError';
+        this.code = code;
+    }
+}
+
+export interface SourceFile {
+    path: string;
+    title: string;
+    addedAt: string; // ISO timestamp
+}
+
+export interface ResearchProject {
+    title: string;
+    slug: string;
+    createdAt: string; // ISO timestamp
+    updatedAt: string; // ISO timestamp
+    messages: any[]; // or ResearchMessage[] if defined
+    sourceFiles: SourceFile[];
+}
+export interface ProjectSummary {
+    slug: string;
+    title: string;
+    createdAt: string;
+    updatedAt: string;
+    sourceCount: number;
+    messageCount: number;
+}
+export interface SourceInput {
+    kind: 'url' | 'vault-file' | 'upload';
+    // URL-specific
+    value?: string;
+    // vault-file-specific
+    vaultPath?: string;
+    // upload-specific
+    file?: File;
+    fileName?: string;
+    mimeType?: string;
+}
+
+// Chat message used in research project conversations
+// Extends the base chat message from chatStorage with an ISO timestamp for per-message tracking
+export interface ChatMessage extends BaseChatMessage {
+    timestamp?: string; // ISO timestamp
+}
+
+// Context from a source file passed to the assistant
+export interface SourceContext {
+    title: string;
+    content: string;
+}
+
 // --- Core App Types ---
 export type ActiveTab =
   | 'dashboard'

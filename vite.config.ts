@@ -18,11 +18,11 @@ export default defineConfig(({ mode }) => {
             targets: [
                 {
                     src: 'node_modules/simple-rnnoise-wasm/dist/rnnoise.wasm',
-                    dest: '.',
+                    dest: '',
                 },
                 {
                     src: 'node_modules/simple-rnnoise-wasm/dist/rnnoise.worklet.js',
-                    dest: '.',
+                    dest: '',
                 },
                 // VAD ONNX model files
                 {
@@ -33,11 +33,11 @@ export default defineConfig(({ mode }) => {
                     src: 'node_modules/@ricky0123/vad-web/dist/silero_vad_v5.onnx',
                     dest: '.',
                 },
-                // ONNX Runtime WASM files
-                {
-                    src: 'node_modules/onnxruntime-web/dist/ort-wasm-simd-threaded.wasm',
-                    dest: '.',
-                },
+                // ONNX Runtime WASM files — removed ort-wasm-simd-threaded.wasm
+                // because it doesn't exist in the current onnxruntime-web package
+                // and the missing file caused vite-plugin-static-copy to throw,
+                // which triggered a full-page HMR reload loop. The library loads
+                // its WASM dynamically at runtime from its own node_modules path.
             ],
         }),
         {
@@ -72,6 +72,12 @@ export default defineConfig(({ mode }) => {
         host: true,
         strictPort: false,
         allowedHosts: ['host.docker.internal'],
+        watch: {
+          // When the vault is the project directory, verifyAndRepairFiles writes
+          // JSON manifest files there; without this, chokidar sees those writes
+          // as source changes and Vite issues a full-reload over HMR.
+          ignored: ['**/*_manifest.json', '**/*_manifest.json.bak'],
+        },
         proxy: {
           '/ollama-local': {
             target: 'http://127.0.0.1:11434',

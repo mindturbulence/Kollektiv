@@ -103,6 +103,46 @@
       });
     })();
 
+    // ── Session-storage diagnostic: persists LAST init step across reloads ──
+    (function() {
+      // On page load, check if the PREVIOUS page left a trace
+      try {
+        var lastStep = sessionStorage.getItem('_init_last_step');
+        var reloadCount = parseInt(sessionStorage.getItem('_init_reload_count') || '0', 10);
+        if (lastStep) {
+          reloadCount++;
+          sessionStorage.setItem('_init_reload_count', String(reloadCount));
+          // Show diagnostic overlay
+          var div = document.createElement('div');
+          div.id = '_init_diag';
+          div.style.cssText = 'position:fixed;top:0;left:0;width:100vw;height:100vh;background:#0c0a09;color:#00ffa3;font-family:monospace;padding:2rem;z-index:999999;overflow:auto;box-sizing:border-box';
+          div.innerHTML = [
+            '<div style="max-width:800px;margin:0 auto;border:1px solid rgba(0,255,163,0.2);padding:2rem;background:rgba(0,255,163,0.03);border-radius:4px;">',
+            '<h1 style="font-size:1.2rem;margin-top:0;font-weight:900;text-transform:uppercase;color:#ef4444;">⚠️ PAGE RELOAD DETECTED</h1>',
+            '<p style="color:#a8a29e;font-size:13px;line-height:1.6;">The page was reloaded (count: ' + reloadCount + '). The last initialization step before the previous reload was:</p>',
+            '<pre style="background:#1c1917;padding:1rem;border-radius:4px;color:#f87171;overflow:auto;max-height:60vh;text-align:left;font-size:12px;border:1px solid #2e2a24;white-space:pre-wrap;">' + lastStep + '</pre>',
+            '<hr style="border-color:#2e2a24;margin:1rem 0;"/>',
+            '<p style="color:#a8a29e;font-size:11px;">After you see this, type <strong style="color:#fff;">sessionStorage.clear(); location.reload()</strong> in the console to reset.</p>',
+            '<button onclick="sessionStorage.clear(); location.reload()" style="background:#ef4444;color:white;border:none;padding:0.75rem 1.5rem;font-family:monospace;font-weight:bold;cursor:pointer;border-radius:2px;margin-top:1rem;">CLEAR AND RELOAD</button>',
+            '</div>'
+          ].join('\n');
+          document.addEventListener('DOMContentLoaded', function() {
+            (document.body || document.documentElement).appendChild(div);
+          });
+          // Also show immediately in case DOM is already ready
+          if (document.body) (document.body || document.documentElement).appendChild(div);
+        }
+      } catch(e) { console.warn('[DIAG] Error:', e); }
+
+      // Clear the step marker on a fresh successful page load (will be re-set by init code)
+      try { sessionStorage.removeItem('_init_last_step'); } catch(e) {}
+      window.__initLog = function(step) {
+        try { sessionStorage.setItem('_init_last_step', step); } catch(e) {}
+      };
+      window.__initLog('INDEX_HTML_LOADED');
+      console.log('[INIT] Diagnostic active — steps will be logged to sessionStorage.');
+    })();
+
     // Critical: Ensure process global is defined before any module import starts
     window.process = {
       env: {
@@ -112,32 +152,19 @@
       }
     };
 
-    // Critical: Unregister any existing service workers and clear caches to prevent stale cache/white-screen issues
+    // Clean up: unregister any stale service workers left over from previous builds
+    // Refrain from calling location.reload() here — that creates a refresh loop.
     if (typeof window !== 'undefined') {
       if ('serviceWorker' in navigator) {
         navigator.serviceWorker.getRegistrations().then(function (registrations) {
-          var unregistered = false;
           for (var i = 0; i < registrations.length; i++) {
             registrations[i].unregister();
-            unregistered = true;
           }
-          if (unregistered && !sessionStorage.getItem('sw_unregistered_reload')) {
-            sessionStorage.setItem('sw_unregistered_reload', 'true');
-            console.log('Stale service worker found and unregistered. Reloading to apply clean state...');
-            window.location.reload();
+          if (registrations.length > 0) {
+            console.log('Stale service worker(s) unregistered.');
           }
         }).catch(function (err) {
           console.error('Failed to unregister service worker:', err);
-        });
-      }
-
-      if ('caches' in window) {
-        caches.keys().then(function (keys) {
-          keys.forEach(function (key) {
-            caches.delete(key);
-          });
-        }).catch(function (err) {
-          console.error('Failed to clear caches:', err);
         });
       }
     }
