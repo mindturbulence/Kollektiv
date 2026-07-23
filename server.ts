@@ -346,6 +346,35 @@ async function startServer() {
     res.json({ status: "ok" });
   });
 
+  // OpenAI Realtime API — mint ephemeral token for client-side WebRTC
+  app.get("/api/openai/token", async (_req, res) => {
+    const apiKey = process.env.OPENAI_API_KEY;
+    if (!apiKey) return res.status(400).json({ error: 'OpenAI API key not configured. Set OPENAI_API_KEY in your environment.' });
+    try {
+      const response = await fetch('https://api.openai.com/v1/realtime/client_secrets', {
+        method: 'POST',
+        headers: {
+          Authorization: `Bearer ${apiKey}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          session: {
+            type: 'realtime',
+            model: 'gpt-realtime-2.1',
+            audio: {
+              output: { voice: 'marin' },
+            },
+          },
+        }),
+      });
+      const data = await response.json();
+      res.json(data);
+    } catch (err: any) {
+      console.error('[OpenAI Token] error:', err.message);
+      res.status(500).json({ error: err.message || 'Failed to generate token' });
+    }
+  });
+
   // Spotify OAuth callback — redirects to static HTML page that performs
   // the PKCE token exchange entirely client-side (no server-side env vars needed).
   app.get("/auth/spotify/callback", (req, res) => {

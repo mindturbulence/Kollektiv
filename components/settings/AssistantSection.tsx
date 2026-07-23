@@ -52,6 +52,12 @@ const AssistantSection: React.FC<AssistantSectionProps> = ({ settings, handleSet
                             <ProviderTab label="Llama.cpp" isActive={settings.assistantProvider === 'llamacpp'} onClick={() => handleSettingsChange('assistantProvider', 'llamacpp')} />
                         </div>
                     </SettingRow>
+                    <SettingRow label="Voice Engine" desc="Which backend powers your live voice conversations. Gemini Live (default) uses the Gemini voice below. OpenAI Realtime uses the OpenAI API key from the AI Engine tab. The voice setting below only applies to Gemini — OpenAI voices are fixed per model.">
+                        <div className="tab-group">
+                            <ProviderTab label="Gemini Live" isActive={(settings.voiceProvider || 'gemini_live') === 'gemini_live'} onClick={() => handleSettingsChange('voiceProvider', 'gemini_live')} />
+                            <ProviderTab label="OpenAI Realtime" isActive={settings.voiceProvider === 'openai_realtime'} onClick={() => handleSettingsChange('voiceProvider', 'openai_realtime')} />
+                        </div>
+                    </SettingRow>
                     <SettingRow label="Quick Persona" desc="Jump to a representative male or female voice. Pick any of the 30 voices individually below.">
                         <div className="tab-group">
                             <ProviderTab label="Male" isActive={currentVoiceGender === 'Male'} onClick={() => handleSettingsChange('assistantVoice', DEFAULT_MALE_VOICE)} />

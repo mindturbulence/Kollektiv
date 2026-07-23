@@ -128,6 +128,11 @@ export interface LLMSettings {
   // MCP Server Settings
   mcpServers: McpServerConfig[];
 
+  // OpenAI Settings
+  openaiApiKey?: string;
+  /** Voice backend provider. Default: 'gemini_live' */
+  voiceProvider?: 'gemini_live' | 'openai_realtime';
+
   // AI Assistant Persona (chat + Gemini Live voice mode)
   assistantName?: string;
   assistantVoice?: string;

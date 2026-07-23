@@ -11,8 +11,8 @@ import { useLiveAssistantContext } from '../contexts/LiveAssistantContext';
  * `LiveAssistantFault` (floating center-screen) rather than here — a header
  * icon has nowhere legible nearby to surface a failure. */
 export const LiveAssistantMicButton: React.FC = () => {
-    const { status, speaking, hasGeminiKey, toggleLive } = useLiveAssistantContext();
-    if (!hasGeminiKey) return null;
+    const { status, speaking, hasVoiceKey, toggleLive } = useLiveAssistantContext();
+    if (!hasVoiceKey) return null;
 
     const isOn = status === 'live' || status === 'connecting';
     const title = status === 'connecting' ? 'Linking…' : status === 'error' ? 'Live error — click to retry' : isOn ? 'End Live (Ctrl+Space)' : 'Go Live (Ctrl+Space)';
@@ -83,8 +83,8 @@ export const LiveAssistantFault: React.FC<{ hidden?: boolean }> = ({ hidden = fa
 /** Screen-share toggle for the active live session. Only meaningful while
  * live, so it's hidden the rest of the time rather than shown disabled. */
 export const LiveAssistantScreenButton: React.FC = () => {
-    const { status, sharing, shareError, hasGeminiKey, toggleShare } = useLiveAssistantContext();
-    if (!hasGeminiKey || status !== 'live') return null;
+    const { status, sharing, shareError, hasVoiceKey, toggleShare } = useLiveAssistantContext();
+    if (!hasVoiceKey || status !== 'live') return null;
 
     return (
         <HUDNavItem
@@ -104,8 +104,8 @@ export const LiveAssistantScreenButton: React.FC = () => {
  * The assistant needs explicit user permission before it can click, type, or
  * scroll on the user's screen. */
 export const LiveAssistantControlButton: React.FC = () => {
-    const { status, sharing, controlEnabled, hasGeminiKey, grantControl, revokeControl } = useLiveAssistantContext();
-    if (!hasGeminiKey || status !== 'live' || !sharing) return null;
+    const { status, sharing, controlEnabled, hasVoiceKey, grantControl, revokeControl } = useLiveAssistantContext();
+    if (!hasVoiceKey || status !== 'live' || !sharing) return null;
 
     return (
         <HUDNavItem

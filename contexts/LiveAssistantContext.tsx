@@ -1,5 +1,6 @@
 import React, { createContext, useContext, useRef, useState, useCallback, useEffect } from 'react';
-import { LiveAssistant } from '../services/liveAssistantService';
+import { LiveAssistant, type LiveHandlers } from '../services/liveAssistantService';
+import { OpenAIRealtimeAssistant, type OpenAILiveHandlers } from '../services/openaiRealtimeService';
 import { useSettings } from './SettingsContext';
 import { appEventBus } from '../utils/eventBus';
 import { audioService } from '../services/audioService';
@@ -15,7 +16,9 @@ interface LiveAssistantContextValue {
     error: string;
     setError: (message: string) => void;
     shareError: string;
-    hasGeminiKey: boolean;
+    hasVoiceKey: boolean;
+    /** Which voice backend is currently active. */
+    voiceProvider: 'gemini_live' | 'openai_realtime';
     toggleLive: () => void;
     toggleShare: () => void;
     grantControl: () => void;
@@ -29,13 +32,14 @@ const LiveAssistantCtx = createContext<LiveAssistantContextValue | null>(null);
  * of each spinning up its own connection. */
 export const LiveAssistantProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
     const { settings } = useSettings();
-    const liveRef = useRef<LiveAssistant | null>(null);
+    const liveRef = useRef<LiveAssistant | OpenAIRealtimeAssistant | null>(null);
     const [status, setStatus] = useState<Status>('idle');
     const [speaking, setSpeaking] = useState(false);
     const [sharing, setSharing] = useState(false);
     const [controlEnabled, setControlEnabled] = useState(false);
     const [error, setError] = useState('');
     const [shareError, setShareError] = useState('');
+    const voiceProvider = settings.voiceProvider || 'gemini_live';
 
     useEffect(() => () => { liveRef.current?.disconnect(); }, []); // unmount cleanup
 
@@ -59,36 +63,38 @@ export const LiveAssistantProvider: React.FC<{ children: React.ReactNode }> = ({
         // Assistant activation opens the dedicated fullscreen assistant view.
         appEventBus.emit('navigate', 'assistant');
         setError('');
-        const live = new LiveAssistant();
+        const handlers: LiveHandlers | OpenAILiveHandlers = {
+            onStatus: (s, detail) => {
+                if (s === 'live') setStatus('live');
+                else if (s === 'connecting') setStatus('connecting');
+                else if (s === 'error') {
+                    liveRef.current?.disconnect();
+                    liveRef.current = null;
+                    setStatus('error'); setSpeaking(false); setSharing(false);
+                    setError(detail || 'Live session error');
+                }
+                else stop();
+            },
+            onCaption: (who, text) => appEventBus.emit('liveCaption', { who, text }),
+            onToolActivity: (info) => appEventBus.emit('liveAssistantActivity', info),
+            onSpeaking: setSpeaking,
+            onScreenShare: setSharing,
+            onControlDenied: (sharingActive) => appEventBus.emit('assistantFeedback', {
+                message: sharingActive
+                    ? 'Assistant tried to control your browser, but control permission isn\'t granted — click the cursor icon in the header to allow it.'
+                    : 'Assistant tried to control your browser, but you haven\'t shared your screen yet — click the monitor icon in the header first, then click the cursor icon that appears next to it.',
+                isError: true,
+            }),
+            onShareWarning: (message) => appEventBus.emit('assistantFeedback', { message, isError: true }),
+            onTurnState: (state) => console.debug('[LiveAssistant] turn state:', state),
+        };
+
+        const live = voiceProvider === 'openai_realtime'
+            ? new OpenAIRealtimeAssistant()
+            : new LiveAssistant();
         liveRef.current = live;
         try {
-            await live.connect(settings, {
-                onStatus: (s, detail) => {
-                    if (s === 'live') setStatus('live');
-                    else if (s === 'connecting') setStatus('connecting');
-                    else if (s === 'error') {
-                        // Tear down mic/audio like stop() would, but keep the error
-                        // message on screen instead of silently reverting to idle.
-                        liveRef.current?.disconnect();
-                        liveRef.current = null;
-                        setStatus('error'); setSpeaking(false); setSharing(false);
-                        setError(detail || 'Live session error');
-                    }
-                    else stop();
-                },
-                onCaption: (who, text) => appEventBus.emit('liveCaption', { who, text }),
-                onToolActivity: (info) => appEventBus.emit('liveAssistantActivity', info),
-                onSpeaking: setSpeaking,
-                onScreenShare: setSharing,
-                onControlDenied: (sharingActive) => appEventBus.emit('assistantFeedback', {
-                    message: sharingActive
-                        ? 'Assistant tried to control your browser, but control permission isn\'t granted — click the cursor icon in the header to allow it.'
-                        : 'Assistant tried to control your browser, but you haven\'t shared your screen yet — click the monitor icon in the header first, then click the cursor icon that appears next to it.',
-                    isError: true,
-                }),
-                onShareWarning: (message) => appEventBus.emit('assistantFeedback', { message, isError: true }),
-                onTurnState: (state) => console.debug('[LiveAssistant] turn state:', state),
-            });
+            await live.connect(settings, handlers as any);
         } catch (e: any) {
             setStatus('error');
             setError(e?.message || 'Failed to start live session');
@@ -100,16 +106,16 @@ export const LiveAssistantProvider: React.FC<{ children: React.ReactNode }> = ({
     const toggleLive = useCallback(() => {
         if (status === 'live' || status === 'connecting') stop();
         else void start();
-    }, [status, stop, start]);
+    }, [status, stop, start, voiceProvider]);
 
-    // Live voice always runs on Gemini regardless of the footer's active-engine
-    // switch (same reasoning as the text assistant) — gate on key presence, not
-    // on activeLLM, so switching engines for manual work doesn't hide this.
-    const hasGeminiKey = !!(settings.geminiApiKey || process.env.GEMINI_API_KEY);
+    // Check for the right API key based on the selected voice provider
+    const hasVoiceKey = voiceProvider === 'openai_realtime'
+        ? !!(settings.openaiApiKey || process.env.OPENAI_API_KEY)
+        : !!(settings.geminiApiKey || process.env.GEMINI_API_KEY);
 
     // Global hotkey: Ctrl+Space toggles the live voice session from anywhere.
     useEffect(() => {
-        if (!hasGeminiKey) return;
+        if (!hasVoiceKey) return;
         const onKey = (e: KeyboardEvent) => {
             if (e.ctrlKey && e.code === 'Space' && !e.repeat) {
                 e.preventDefault();
@@ -119,15 +125,13 @@ export const LiveAssistantProvider: React.FC<{ children: React.ReactNode }> = ({
         };
         window.addEventListener('keydown', onKey);
         return () => window.removeEventListener('keydown', onKey);
-    }, [toggleLive, hasGeminiKey]);
+    }, [toggleLive, hasVoiceKey]);
 
     const toggleShare = useCallback(() => {
         if (!liveRef.current) return;
         setShareError('');
         (sharing ? Promise.resolve(liveRef.current.stopScreenShare()) : liveRef.current.startScreenShare())
             .catch((e: any) => {
-                // NotAllowedError covers both "permission denied" and "user closed
-                // the picker dialog" — both are a normal no-op, not a failure.
                 if (e?.name === 'NotAllowedError') return;
                 console.error('[LiveAssistant] screen share failed', e);
                 setShareError(e?.message || 'Screen share failed — see console.');
@@ -155,7 +159,7 @@ export const LiveAssistantProvider: React.FC<{ children: React.ReactNode }> = ({
     }, []);
 
     return (
-        <LiveAssistantCtx.Provider value={{ status, speaking, sharing, controlEnabled, error, setError, shareError, hasGeminiKey, toggleLive, toggleShare, grantControl, revokeControl }}>
+        <LiveAssistantCtx.Provider value={{ status, speaking, sharing, controlEnabled, error, setError, shareError, hasVoiceKey, voiceProvider, toggleLive, toggleShare, grantControl, revokeControl }}>
             {children}
         </LiveAssistantCtx.Provider>
     );

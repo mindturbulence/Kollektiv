@@ -258,6 +258,9 @@ const IntegrationsSection: React.FC<IntegrationsSectionProps> = ({
             <SettingRow label="API Key" desc="API Key (Developer Key) for browser-level Google services.">
                 <input type="password" value={settings.googleApiKey || ''} onChange={(e) => handleSettingsChange('googleApiKey', e.target.value)} className="form-input w-full max-w-md" placeholder="AIzaSy..." />
             </SettingRow>
+            <SettingRow label="OpenAI API Key" desc="Required for the OpenAI Realtime voice engine. Set as OPENAI_API_KEY in your environment, or enter it here.">
+                <input type="password" value={settings.openaiApiKey || ''} onChange={(e) => handleSettingsChange('openaiApiKey', e.target.value)} className="form-input w-full max-w-md" placeholder="sk-..." />
+            </SettingRow>
             </SettingsGroup>
 
             <SettingsGroup title="Account">
