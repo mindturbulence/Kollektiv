@@ -19,3 +19,14 @@ nul
 test-results/
 playwright-report/
 .env.example
+.playwright-mcp/
+
+# One-off debugging scratch scripts — never commit these
+scripts/health-check.mjs
+scripts/health-check.sh
+scripts/test-browser-control.mjs
+scripts/test-debug-hang*.mjs
+scripts/test-exact-flow.mjs
+scripts/test-im-obsidian.mjs
+scripts/test-narrow*.mjs
+obsidian-notes-list.md
