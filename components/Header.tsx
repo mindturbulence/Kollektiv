@@ -329,16 +329,6 @@ const Header: React.FC<HeaderProps> = ({
                           >
                             <ChatBubbleIcon className="w-4 h-4" />
                           </HUDNavItem>
-                          <div className="w-px h-2 bg-base-content/10 self-center" />
-                          <HUDNavItem
-                            onClick={(e) => {
-                                e.stopPropagation();
-                                // Ctrl+K is handled globally in App.tsx
-                            }}
-                            title="Commands (Ctrl+K)"
-                          >
-                            <kbd className="text-[9px] font-mono tracking-widest text-base-content/40 border border-base-content/20 px-1 py-0.5">⌘K</kbd>
-                          </HUDNavItem>
           <div className="w-px h-2 bg-base-content/10 self-center" />
           <HUDNavItem
             onClick={(e) => {

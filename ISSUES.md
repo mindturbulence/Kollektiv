@@ -644,7 +644,7 @@ manual intervention.
 
 ---
 
-## ISSUE-22 — `send_gmail`/`delete_gmail` assistant tools had no confirmation gate · SECURITY · ✅ FIXED
+## ISSUE-22 — `send_gmail`/`delete_gmail` assistant tools had no confirmation gate · SECURITY · ⛔ REVERTED (user decision, 2026-07-24)
 
 Found during a codebase cleanup pass while independently re-verifying
 `docs/superpowers/plans/2026-07-18-phase0-foundation-hardening.md` (its own
@@ -666,13 +666,48 @@ user's behalf with zero human-in-the-loop check.
       `'User declined:...'` message.
 - [x] `tsc --noEmit` clean; `npx vitest run` — 174/174 tests pass (including
       `services/assistantTools.test.ts`, 8/8).
-- [ ] **Manual, needs a live Google session:** ask the assistant to send a test
-      email — confirm a native dialog blocks the send, and clicking Cancel
-      produces the decline message with no network call made.
 
-**Acceptance:** neither tool can send/delete anything without a synchronous,
-unbypassable user confirmation. ✅ Verified via code inspection + full test
-suite; manual live-session repro still recommended.
+**Reverted 2026-07-24, explicit user decision.** After trying it live, the user
+found the `window.confirm` popup unwanted friction — considers Google OAuth
+consent (already granting the app Gmail API scope) sufficient permission, and
+wants the assistant to act on `send_gmail`/`delete_gmail` fully autonomously
+with no per-action prompt. Offered a middle ground (keep the gate only for the
+irreversible permanent-delete path, drop it for send/trash) — declined in
+favor of removing it entirely. `confirmSensitiveAction` helper and both call
+sites removed; `tsc --noEmit` clean, 174/174 tests pass after the revert.
+
+**Note for future sessions:** this is a deliberate, informed choice, not an
+oversight — don't re-add this gate without the user asking for it again.
+
+---
+
+## ISSUE-23 — Chat panel crashes with `msg.content.includes is not a function` during live tool activity · HIGH · ✅ FIXED
+
+`services/liveAssistantService.ts:503` and `services/openaiRealtimeService.ts:177`
+both emit `liveAssistantActivity` as an object, `{ flavour, toolName }` — matching
+how `components/ActivityPanel.tsx:63` and `utils/useAssistantSignals.ts:60`
+correctly consume it. But `components/LLMChatPanel.tsx`'s listener assumed the
+payload was already a formatted string (`(line: string) => ... content: line`)
+and pushed the raw object straight into a chat message's `content` field. The
+render path (`!msg.content.includes(...)`) assumes `content` is always a
+string and threw as soon as any tool call fired during a live voice session
+while the chat panel was open, crashing the whole app (no error boundary around
+this component in the stack).
+
+- [x] Fixed the listener to read `info.flavour` (the human-readable phrase),
+      matching what `ActivityPanel.tsx`/`useAssistantSignals.ts` already do
+      correctly.
+- [x] Added a defensive coercion in `utils/chatStorage.ts`'s
+      `getSavedChatSessions()` — any session already corrupted by this bug and
+      persisted to localStorage before the fix would otherwise keep crashing
+      on load every time the user reopens it.
+- [x] `tsc --noEmit` clean; full `vitest` suite 174/174 passing.
+
+**Acceptance:** live tool-call activity while the chat panel is open renders as
+a normal system message, never crashes; previously-corrupted saved sessions
+load without throwing. ✅ Verified via code inspection; the fix requires a
+browser refresh to take effect since the crash left the prior page's React
+tree in a broken state HMR can't recover from.
 
 ---
 

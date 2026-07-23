@@ -73,13 +73,14 @@ export const buildSystemIdentity = (settings: LLMSettings, sourceContext?: Sourc
     return result;
 };
 
-export type AssistantProvider = NonNullable<LLMSettings['assistantProvider']>;
+export type AssistantProvider = LLMSettings['activeLLM'];
 
-/** Which engine the assistant reasons on (Settings > Integrations > Assistant).
- * Independent of the footer's activeLLM switch, which governs manual
- * Crafter/Refiner work. Live voice is always Gemini (liveAssistantService). */
+/** Which engine the chat assistant reasons on — follows the same engine
+ * switch as manual Crafter/Refiner work (settings.activeLLM), so switching
+ * the app's active model switches the assistant too. Live voice is always
+ * Gemini regardless (liveAssistantService), a separate, deliberate exception. */
 export const getAssistantProvider = (settings: LLMSettings): AssistantProvider =>
-    settings.assistantProvider || 'gemini';
+    settings.activeLLM;
 
 export async function* runAssistantTurn(messages: ChatMsg[], settings: LLMSettings, sourceContext?: SourceContext[]): AsyncGenerator<AssistantEvent> {
     switch (getAssistantProvider(settings)) {

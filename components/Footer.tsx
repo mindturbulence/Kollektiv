@@ -7,6 +7,7 @@ import { fileSystemManager } from '../utils/fileUtils';
 import { audioService } from '../services/audioService';
 import { loadGalleryItems } from '../utils/galleryStorage';
 import { useAssistantSignals } from '../utils/useAssistantSignals';
+import { useLiveAssistantContext } from '../contexts/LiveAssistantContext';
 import { appEventBus } from '../utils/eventBus';
 import type { AssistantMode } from '../utils/assistantMode';
 import { isGoogleAuthValid } from '../utils/googleAuth';
@@ -204,6 +205,7 @@ const Footer: React.FC<FooterProps> = ({
     const [vaultCount, setVaultCount] = useState<number>(0);
     const [time, setTime] = useState(new Date().toLocaleTimeString());
     const { mode: liveMode, status: liveStatus } = useAssistantSignals();
+    const { controlEnabled } = useLiveAssistantContext();
     const liveLabel = liveStatus === 'error' ? 'FAULT' : ASSISTANT_LABEL[liveMode];
     const isPipboyTheme = settings.darkTheme === 'pipboy';
     const mainFontClass = isPipboyTheme ? 'font-fixedsys text-[11px]' : 'font-rajdhani text-[12px] font-normal';
@@ -271,6 +273,12 @@ const Footer: React.FC<FooterProps> = ({
             <div className="flex flex-row items-center h-full gap-6 relative z-[710] pointer-events-auto">
                 <div className="flex items-center gap-6">
                     <div className="hidden md:flex items-center gap-6">
+                        {liveStatus === 'live' && (
+                            <>
+                                <MetadataItem label="AUT" value={controlEnabled ? 'ON' : 'OFF'} />
+                                <div className="w-[1px] h-3 bg-base-content/10" />
+                            </>
+                        )}
                         <MetadataItem label="VLT" value={`${vaultCount} UNITS`} />
                         <div className="w-[1px] h-3 bg-base-content/10" />
                         <MetadataItem label="SEQ" value={time} />

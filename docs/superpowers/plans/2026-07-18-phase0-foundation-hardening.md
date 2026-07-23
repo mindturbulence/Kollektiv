@@ -426,6 +426,16 @@ git commit -m "refactor: extract Anthropic default model to shared constant"
 
 ### Task 5: Confirmation gate on destructive Gmail assistant tools
 
+**Status: implemented then reverted 2026-07-24 — explicit user decision, not an
+oversight.** `send_gmail` and `delete_gmail` execute inside an autonomous tool
+loop (up to 8 rounds) with no user confirmation, by design: the user considers
+Google OAuth consent (granting the app Gmail API access at all) sufficient
+permission and wants the assistant to act fully autonomously with no
+per-action prompt, having tried the gate below live and found it unwanted
+friction. See ISSUES.md ISSUE-22 for the full history. **Do not re-add this
+gate without the user asking again.** Steps below are left in place as a
+record of what was built and removed, not as an outstanding TODO.
+
 `send_gmail` and `delete_gmail` execute inside an autonomous tool loop (up to 8 rounds) with no user confirmation. Add a blocking, per-action `window.confirm` gate. Native confirm is deliberate (ponytail: platform feature over new UI) — it is synchronous, cannot be dismissed by the model, and the codebase already uses `confirm()` for the emergency reset in `App.tsx`. A styled in-app modal can replace it in a later polish phase without touching the contract.
 
 **Files:**
@@ -488,7 +498,7 @@ insert:
 
 - [x] **Step 4: Verify** — `tsc --noEmit` clean; `npx vitest run services/assistantTools.test.ts` (8/8 pass) and full suite (174/174 pass). Logged as ISSUES.md ISSUE-22.
 
-Manual check (only if a browser session is available): in the assistant, ask it to send a test email — a native confirm dialog must appear before any network call; clicking Cancel must produce an assistant message acknowledging the decline. **Deferred — no browser session available this pass; manual verification still recommended.**
+**Step 5 (unplanned): Revert** — user tried the gate live, found it unwanted friction given OAuth consent already covers "permission." `confirmSensitiveAction` helper and both call sites removed 2026-07-24; `tsc --noEmit` clean, 174/174 tests pass after the revert.
 
 - [ ] **Step 5: Commit**
 

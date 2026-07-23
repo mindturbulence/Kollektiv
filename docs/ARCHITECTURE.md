@@ -247,7 +247,7 @@ Each `ActiveTab` maps to a top-level component (see `renderContent()` in `App.ts
 The assistant is the most complex subsystem, spanning chat, tool-calling, live voice, browser control, and MCP.
 
 ### Text assistant (`services/assistantService.ts` + `assistantTools.ts`)
-- An agentic loop (`MAX_TOOL_ROUNDS = 8`) that streams `AssistantEvent`s: `text`, `tool_start`, `tool_result`, `turn_end`. Provider is whatever `assistantProvider` / `activeLLM` selects.
+- An agentic loop (`MAX_TOOL_ROUNDS = 8`) that streams `AssistantEvent`s: `text`, `tool_start`, `tool_result`, `turn_end`. Provider is whatever `activeLLM` selects — the chat assistant follows the same active engine as manual Crafter/Refiner work, no separate setting.
 - **55 built-in tools** (`ASSISTANT_TOOLS` in `assistantTools.ts`), each with a JSON-Schema-style definition converted per-provider. Categories:
   - **App control / navigation:** `navigate`, `update_settings`.
   - **Prompt library & engine:** `search_prompts`, `save_prompt`, `refine_prompt`, `translate_prompt`, `rewrite_prompt`, `analyze_prompt`, `send_to_refiner`, `save_refiner_preset`, `send_to_crafter`, `send_to_prompt_analyzer`, `list_wildcards`, `generate_crafter_prompt`.
@@ -263,7 +263,7 @@ The assistant is the most complex subsystem, spanning chat, tool-calling, live v
 ### Live voice (`services/liveAssistantService.ts`)
 - Uses the **Gemini Live API** — model constant `gemini-3.1-flash-live-preview` (verified against the Live API docs; the file warns to re-check that page if the model 404s on `bidiGenerateContent`).
 - Audio rates: **16 kHz mic input**, **24 kHz speaker output** (Live API requirements).
-- Live voice **always runs on Gemini**, independent of the text `assistantProvider` (documented in `types.ts`). Persona is configurable: `assistantName`, `assistantVoice`, `assistantLanguage`, `assistantPersonality`.
+- Live voice **always runs on Gemini**, independent of `activeLLM` (the text assistant's engine). Persona is configurable: `assistantName`, `assistantVoice`, `assistantLanguage`, `assistantPersonality`.
 - Screen sharing + browser control can be enabled during a live session (`LiveAssistantContext.sharing/controlEnabled`), surfaced via `LiveCaptionOverlay` and `ScreenControlOverlay`.
 
 ### MCP integration (`services/mcpService.ts`, `mcpAssistantTools.ts`)

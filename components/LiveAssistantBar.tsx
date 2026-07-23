@@ -168,12 +168,14 @@ export const LiveAssistantCameraPreview: React.FC<{ hidden?: boolean }> = ({ hid
     );
 };
 
-/** Browser-control permission toggle. Only visible when screen sharing is active.
- * The assistant needs explicit user permission before it can click, type, or
- * scroll on the user's screen. */
+/** Assistant permission toggle. Visible whenever a live voice session is
+ * active, not only during screen sharing — granting ahead of time means
+ * control is already allowed the moment the user does share. The assistant
+ * needs this explicit permission before it can click, type, or scroll on
+ * the user's screen. */
 export const LiveAssistantControlButton: React.FC = () => {
-    const { status, sharing, controlEnabled, hasVoiceKey, grantControl, revokeControl } = useLiveAssistantContext();
-    if (!hasVoiceKey || status !== 'live' || !sharing) return null;
+    const { status, controlEnabled, hasVoiceKey, grantControl, revokeControl } = useLiveAssistantContext();
+    if (!hasVoiceKey || status !== 'live') return null;
 
     return (
         <HUDNavItem
@@ -183,7 +185,7 @@ export const LiveAssistantControlButton: React.FC = () => {
                 if (controlEnabled) revokeControl();
                 else grantControl();
             }}
-            title={controlEnabled ? 'Revoke browser control permission' : 'Grant browser control permission so the assistant can click, type, scroll on your screen'}
+            title={controlEnabled ? 'Revoke assistant permission' : 'Grant the assistant permission to act on your behalf (e.g. control your browser once shared)'}
         >
             <CursorIcon className={`w-4 h-4 ${controlEnabled ? 'text-warning' : ''}`} />
         </HUDNavItem>
