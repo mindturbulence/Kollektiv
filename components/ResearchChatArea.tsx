@@ -47,10 +47,10 @@ export const ResearchChatArea: React.FC = () => {
             <div className="w-12 h-12 rounded-full bg-primary/10 border border-primary/20 flex items-center justify-center mb-4">
               <SparklesIcon className="w-5 h-5 text-primary/60" />
             </div>
-            <p className="text-sm font-mono opacity-50 max-w-xs">
+            <p className="text-base font-mono opacity-50 max-w-xs">
               Ask a question about your sources to get started.
             </p>
-            <p className="text-xs font-mono opacity-30 mt-2">
+            <p className="text-sm font-mono opacity-30 mt-2">
               Responses include inline citations you can trace back.
             </p>
           </div>
@@ -60,26 +60,26 @@ export const ResearchChatArea: React.FC = () => {
               <div key={i}>
                 {msg.role === 'user' && (
                   <div className="flex justify-end">
-                    <div className="bg-primary/20 text-base-content px-4 py-2.5 max-w-[80%] rounded-2xl rounded-tr-sm border border-primary/30 text-sm leading-relaxed">
+                    <div className="bg-primary/20 text-base-content px-4 py-2.5 max-w-[80%] rounded-2xl rounded-tr-sm border border-primary/30 text-base leading-relaxed">
                       {msg.content}
                     </div>
                   </div>
                 )}
                 {msg.role === 'assistant' && (
-                  <div className="bg-base-200/40 text-base-content px-4 py-3 rounded-2xl rounded-tl-sm border border-white/5 text-sm leading-relaxed">
-                    <div className="prose prose-sm prose-invert max-w-none">
+                  <div className="bg-base-200/40 text-base-content px-4 py-3 rounded-2xl rounded-tl-sm border border-white/5 text-base leading-relaxed">
+                    <div className="prose prose-base prose-invert max-w-none">
                       <Markdown remarkPlugins={[remarkGfm]}>
                         {msg.content}
                       </Markdown>
                     </div>
                     {msg.citations && msg.citations.length > 0 && (
                       <div className="mt-3 pt-3 border-t border-white/10">
-                        <p className="text-[10px] font-mono uppercase tracking-wider opacity-30 mb-1.5">Sources</p>
+                        <p className="text-xs font-mono uppercase tracking-wider opacity-30 mb-1.5">Sources</p>
                         <div className="flex flex-wrap gap-2">
                           {msg.citations.map((c, idx) => (
                             <span
                               key={idx}
-                              className="inline-flex items-center gap-1 px-2 py-0.5 rounded bg-base-300/50 text-[11px] font-mono text-base-content/60 border border-white/5"
+                              className="inline-flex items-center gap-1 px-2 py-0.5 rounded bg-base-300/50 text-xs font-mono text-base-content/60 border border-white/5"
                             >
                               <span className="text-primary/70 font-bold">[{c.index}]</span>
                               {c.title}
@@ -92,7 +92,7 @@ export const ResearchChatArea: React.FC = () => {
                 )}
                 {msg.role === 'system' && (
                   <div className="text-center">
-                    <span className="inline-block text-[11px] font-mono text-warning/60 bg-warning/5 px-2 py-1 rounded border border-warning/10">
+                    <span className="inline-block text-xs font-mono text-warning/60 bg-warning/5 px-2 py-1 rounded border border-warning/10">
                       {msg.content}
                     </span>
                   </div>
@@ -111,7 +111,7 @@ export const ResearchChatArea: React.FC = () => {
               </div>)}
             {(lastSendError || error) && (
               <div className="flex justify-center">
-                <div className="inline-flex items-center gap-1.5 text-[11px] font-mono text-error/80 bg-error/5 px-3 py-1.5 rounded border border-error/10 max-w-md">
+                <div className="inline-flex items-center gap-1.5 text-xs font-mono text-error/80 bg-error/5 px-3 py-1.5 rounded border border-error/10 max-w-md">
                   <span>⚠</span>
                   <span>{lastSendError || error}</span>
                   <button
@@ -140,7 +140,7 @@ export const ResearchChatArea: React.FC = () => {
               }
             }}
             placeholder="Ask about your sources..."
-            className="flex-1 bg-base-300/40 border border-white/10 rounded-lg px-3 py-2 text-sm font-mono focus:outline-none focus:border-primary/50 resize-none transition-colors"
+            className="flex-1 bg-base-300/40 border border-white/10 rounded-lg px-3 py-2 text-base font-mono focus:outline-none focus:border-primary/50 resize-none transition-colors"
             disabled={isProcessing}
             rows={1}
             style={{ minHeight: '36px', maxHeight: '160px' }}

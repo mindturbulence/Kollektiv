@@ -32,23 +32,23 @@ export const ResearchSourcesPanel: React.FC = () => {
   };
 
   return (
-    <div className="w-72 flex-shrink-0 border-r border-white/5 flex flex-col bg-base-200/20">
+    <div className="w-96 flex-shrink-0 border-r border-white/5 flex flex-col bg-base-200/20">
       <div className="flex items-center justify-between px-3 py-2.5 border-b border-white/5">
-        <span className="text-xs font-mono uppercase tracking-wider opacity-50">
+        <span className="text-sm font-mono uppercase tracking-wider opacity-50">
           Sources
         </span>
-        <span className="text-[10px] font-mono text-primary/60 tabular-nums">{sources.length}</span>
+        <span className="text-xs font-mono text-primary/60 tabular-nums">{sources.length}</span>
       </div>
       <div className="flex-1 overflow-y-auto custom-scrollbar p-2 space-y-0.5">
         {sources.length === 0 ? (
-          <div className="text-center p-4 text-xs font-mono opacity-30">
+          <div className="text-center p-4 text-sm font-mono opacity-30">
             No sources yet.
           </div>
         ) : (
           sources.map(s => (
             <div
               key={s.path}
-              className="group flex items-center justify-between px-2.5 py-2 rounded cursor-pointer hover:bg-base-300/40 text-xs border border-transparent hover:border-white/5 transition-all"
+              className="group flex items-center justify-between px-2.5 py-2 rounded cursor-pointer hover:bg-base-300/40 text-sm border border-transparent hover:border-white/5 transition-all"
             >
               <button
                 onClick={() => openPreview(s.path)}
@@ -87,7 +87,7 @@ export const ResearchSourcesPanel: React.FC = () => {
             onClick={e => e.stopPropagation()}
           >
             <div className="flex items-center justify-between px-4 py-2.5 border-b border-white/5">
-              <span className="text-xs font-mono uppercase tracking-wider opacity-70 truncate">
+              <span className="text-sm font-mono uppercase tracking-wider opacity-70 truncate">
                 {previewFile.replace(/^sources\//, '')}
               </span>
               <button onClick={() => setPreviewFile(null)} className="opacity-50 hover:opacity-100" aria-label="Close preview">
@@ -96,9 +96,9 @@ export const ResearchSourcesPanel: React.FC = () => {
             </div>
             <div className="flex-1 overflow-y-auto custom-scrollbar p-4">
               {previewLoading ? (
-                <div className="text-xs font-mono opacity-40">Loading…</div>
+                <div className="text-sm font-mono opacity-40">Loading…</div>
               ) : (
-                <div className="prose prose-sm prose-invert max-w-none">
+                <div className="prose prose-base prose-invert max-w-none">
                   <Markdown remarkPlugins={[remarkGfm]}>{previewContent}</Markdown>
                 </div>
               )}

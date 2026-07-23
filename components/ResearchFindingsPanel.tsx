@@ -17,9 +17,9 @@ export const ResearchFindingsPanel: React.FC = () => {
   };
 
   return (
-    <div className="w-72 flex-shrink-0 border-l border-white/5 flex flex-col bg-base-200/20">
+    <div className="w-96 flex-shrink-0 border-l border-white/5 flex flex-col bg-base-200/20">
       <div className="flex items-center justify-between px-3 py-2.5 border-b border-white/5">
-        <span className="text-xs font-mono uppercase tracking-wider opacity-50">
+        <span className="text-sm font-mono uppercase tracking-wider opacity-50">
           Findings
         </span>
         {isEditing ? (
@@ -37,16 +37,16 @@ export const ResearchFindingsPanel: React.FC = () => {
           <textarea
             value={editText}
             onChange={e => setEditText(e.target.value)}
-            className="w-full h-full bg-base-300/50 border border-white/10 rounded p-2 text-sm font-mono focus:outline-none focus:border-primary/50 resize-none"
+            className="w-full h-full bg-base-300/50 border border-white/10 rounded p-2 text-base font-mono focus:outline-none focus:border-primary/50 resize-none"
           />
         ) : (
-          <div className="prose prose-sm prose-invert max-w-none text-[13px]">
+          <div className="prose prose-base prose-invert max-w-none">
             {findings ? (
               <Markdown remarkPlugins={[remarkGfm]}>{findings}</Markdown>
             ) : (
               <div className="text-center mt-8">
-                <p className="text-xs font-mono opacity-30">No findings yet.</p>
-                <p className="text-[10px] font-mono opacity-20 mt-1">Click edit to add notes.</p>
+                <p className="text-sm font-mono opacity-30">No findings yet.</p>
+                <p className="text-xs font-mono opacity-20 mt-1">Click edit to add notes.</p>
               </div>
             )}
           </div>

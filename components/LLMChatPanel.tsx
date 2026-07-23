@@ -55,8 +55,9 @@ export const LLMChatPanel: React.FC<LLMChatPanelProps> = ({ isOpen, onClose }) =
     // sessions survive the panel closing; log its tool activity here while open.
     useEffect(() => {
         if (!isOpen) return;
-        return appEventBus.on('liveAssistantActivity', (line: string) => {
-            setMessages(prev => [...prev, { role: 'system', content: line }]);
+        return appEventBus.on('liveAssistantActivity', (info: { flavour: string; toolName: string }) => {
+            if (!info?.flavour) return;
+            setMessages(prev => [...prev, { role: 'system', content: info.flavour }]);
         });
     }, [isOpen]);
 
@@ -338,7 +339,7 @@ ${systemResponse}` };
     };
 
     const getChatSubtitle = () => {
-        const brain = settings.assistantProvider || 'gemini';
+        const brain = settings.activeLLM;
         if (brain === 'ollama') return `ollama · ${settings.ollamaModel || 'model?'}`;
         if (brain === 'ollama_cloud') return `ollama cloud · ${settings.ollamaCloudModel || 'model?'}`;
         if (brain === 'openrouter') return `openrouter · ${settings.openrouterModel || 'auto'}`;
@@ -694,14 +695,18 @@ ${systemResponse}` };
                                         </div>
                                     </div>
                                 </div>
-                            </div>
 
-                            {/* Research mode body (shown only when researchMode is true) */}
-                            {researchMode && (
-                                <ResearchProvider settings={settings} fileManager={fileSystemManager}>
-                                    <ResearchPanelBody />
-                                </ResearchProvider>
-                            )}
+                                {/* Research mode body (shown only when researchMode is true) —
+                                    must live inside the same styled box as the chat two-pane div
+                                    above (background/border/sizing), not after it, or it renders
+                                    unstyled and gets squeezed to near-zero height by that box's
+                                    own h-[calc(100%-6px)]. */}
+                                {researchMode && (
+                                    <ResearchProvider settings={settings} fileManager={fileSystemManager}>
+                                        <ResearchPanelBody />
+                                    </ResearchProvider>
+                                )}
+                            </div>
 
                             {/* Manual Corner Accents */}
                             <div className="absolute -top-[1px] -left-[1px] w-3 h-3 border-t border-l border-primary/20 z-20 pointer-events-none" />

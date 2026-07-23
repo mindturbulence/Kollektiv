@@ -42,15 +42,10 @@ const AssistantSection: React.FC<AssistantSectionProps> = ({ settings, handleSet
                     <SettingRow label="Assistant Name" desc="What the assistant calls itself in chat and live voice mode.">
                         <input type="text" value={settings.assistantName || ''} onChange={(e) => handleSettingsChange('assistantName', e.target.value)} className="form-input w-full md:w-[620px]" placeholder="Kollektiv" />
                     </SettingRow>
-                    <SettingRow label="Assistant Brain" desc="Which engine the chat assistant reasons and calls tools on. Uses that provider's endpoint/model from the AI Engine tab. GPT (ChatGPT) models are available via OpenRouter. Live voice conversations always run on Gemini Live with the voice below.">
-                        <div className="tab-group">
-                            <ProviderTab label="Gemini" isActive={(settings.assistantProvider || 'gemini') === 'gemini'} onClick={() => handleSettingsChange('assistantProvider', 'gemini')} />
-                            <ProviderTab label="Anthropic" isActive={settings.assistantProvider === 'anthropic'} onClick={() => handleSettingsChange('assistantProvider', 'anthropic')} />
-                            <ProviderTab label="Ollama" isActive={settings.assistantProvider === 'ollama'} onClick={() => handleSettingsChange('assistantProvider', 'ollama')} />
-                            <ProviderTab label="Cloud Ollama" isActive={settings.assistantProvider === 'ollama_cloud'} onClick={() => handleSettingsChange('assistantProvider', 'ollama_cloud')} />
-                            <ProviderTab label="OpenRouter" isActive={settings.assistantProvider === 'openrouter'} onClick={() => handleSettingsChange('assistantProvider', 'openrouter')} />
-                            <ProviderTab label="Llama.cpp" isActive={settings.assistantProvider === 'llamacpp'} onClick={() => handleSettingsChange('assistantProvider', 'llamacpp')} />
-                        </div>
+                    <SettingRow label="Assistant Brain" desc="The chat assistant now always follows the active engine from Settings > AI Engine — the same one Crafter/Refiner/etc. use. Switch it there and the chat panel switches with it. Live voice conversations always run on Gemini Live with the voice below, regardless of that engine.">
+                        <p className="text-xs font-mono text-base-content/50">
+                            Currently: <span className="text-primary">{settings.activeLLM}</span> — change it under <span className="text-base-content/70">Settings &gt; AI Engine</span>.
+                        </p>
                     </SettingRow>
                     <SettingRow label="Voice Engine" desc="Which backend powers your live voice conversations. Gemini Live (default) uses the Gemini voice below. OpenAI Realtime and ElevenLabs each need a key/agent ID entered under Settings > AI Engine > Voice Engine Credentials — the ElevenLabs agent itself is configured in the ElevenLabs dashboard. The voice setting below only applies to Gemini — OpenAI and ElevenLabs voices are managed in their respective dashboards.">
                         <div className="tab-group">

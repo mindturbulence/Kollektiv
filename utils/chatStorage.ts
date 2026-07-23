@@ -23,7 +23,19 @@ export const getSavedChatSessions = (): ChatSession[] => {
     try {
         const data = localStorage.getItem(STORAGE_KEY);
         if (data) {
-            return JSON.parse(data).sort((a: ChatSession, b: ChatSession) => b.updatedAt - a.updatedAt);
+            const sessions: ChatSession[] = JSON.parse(data);
+            // Defensive: a past bug could have persisted a non-string content
+            // (e.g. a raw event payload object) into a saved session. Coerce
+            // here, the one place every consumer reads persisted sessions
+            // through, rather than guarding every render site downstream.
+            for (const session of sessions) {
+                for (const msg of session.messages || []) {
+                    if (typeof msg.content !== 'string') {
+                        msg.content = msg.content == null ? '' : String(msg.content);
+                    }
+                }
+            }
+            return sessions.sort((a, b) => b.updatedAt - a.updatedAt);
         }
     } catch (error) {
         console.error('Failed to parse chat sessions', error);
