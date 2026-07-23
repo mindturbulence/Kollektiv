@@ -699,3 +699,22 @@ export const NoteIcon: React.FC<React.SVGProps<SVGSVGElement>> = (props) => (
   </svg>
 );
 
+/** Camera / webcam — used by the live voice camera-toggle button. Tabler style. */
+export const CameraIcon: React.FC<React.SVGProps<SVGSVGElement>> = (props) => (
+  <svg {...commonProps} {...props}>
+    <path stroke="none" d="M0 0h24v24H0z" fill="none"/>
+    <path d="M5 7h1a2 2 0 0 0 2 -2h1a2 2 0 0 0 2 2h1a2 2 0 0 0 2 -2h1a2 2 0 0 0 2 2h1a2 2 0 0 0 2 -2v9a4 4 0 0 1 -4 4h-12a4 4 0 0 1 -4 -4v-7a2 2 0 0 0 -2 -2z" />
+    <path d="M9 13a3 3 0 1 0 6 0a3 3 0 0 0 -6 0z" />
+  </svg>
+);
+
+/** Camera-off — used when camera permission was denied / camera unavailable. */
+export const CameraOffIcon: React.FC<React.SVGProps<SVGSVGElement>> = (props) => (
+  <svg {...commonProps} {...props}>
+    <path stroke="none" d="M0 0h24v24H0z" fill="none"/>
+    <path d="M3 3l18 18" />
+    <path d="M5 7h1a2 2 0 0 0 2 -2h1a2 2 0 0 0 2 2h1a2 2 0 0 0 2 -2h1a2 2 0 0 0 2 2h1a2 2 0 0 0 2 -2v9c0 .55 -.22 1.05 -.59 1.41" />
+    <path d="M9 13a3 3 0 0 0 6 0" />
+  </svg>
+);
+

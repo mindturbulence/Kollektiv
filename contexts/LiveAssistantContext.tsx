@@ -13,15 +13,22 @@ interface LiveAssistantContextValue {
     status: Status;
     speaking: boolean;
     sharing: boolean;
+    cameraActive: boolean;
     controlEnabled: boolean;
     error: string;
     setError: (message: string) => void;
     shareError: string;
+    cameraError: string;
+    /** MediaStream from the active camera — pass to a <video> element for
+     *  PIP preview. Null when camera is off or backend doesn't expose one
+     *  (ElevenLabs manages its own audio I/O internally). */
+    activeCameraStream: MediaStream | null;
     hasVoiceKey: boolean;
     /** Which voice backend is currently active. */
     voiceProvider: 'gemini_live' | 'openai_realtime' | 'elevenlabs';
     toggleLive: () => void;
     toggleShare: () => void;
+    toggleCamera: () => void;
     grantControl: () => void;
     revokeControl: () => void;
 }
@@ -37,6 +44,9 @@ export const LiveAssistantProvider: React.FC<{ children: React.ReactNode }> = ({
     const [status, setStatus] = useState<Status>('idle');
     const [speaking, setSpeaking] = useState(false);
     const [sharing, setSharing] = useState(false);
+    const [cameraActive, setCameraActive] = useState(false);
+    const [cameraError, setCameraError] = useState('');
+    const [activeCameraStream, setActiveCameraStream] = useState<MediaStream | null>(null);
     const [controlEnabled, setControlEnabled] = useState(false);
     const [error, setError] = useState('');
     const [shareError, setShareError] = useState('');
@@ -51,7 +61,8 @@ export const LiveAssistantProvider: React.FC<{ children: React.ReactNode }> = ({
     const stop = useCallback(() => {
         liveRef.current?.disconnect();
         liveRef.current = null;
-        setStatus('idle'); setSpeaking(false); setSharing(false); setControlEnabled(false); setShareError('');
+        setStatus('idle'); setSpeaking(false); setSharing(false); setCameraActive(false);
+        setActiveCameraStream(null); setControlEnabled(false); setShareError(''); setCameraError('');
         // Do NOT revoke browser control permission here — it persists across
         // session boundaries so the user doesn't have to re-grant it every time
         // a session reconnects or errors. Permission is only revoked when the
@@ -71,7 +82,7 @@ export const LiveAssistantProvider: React.FC<{ children: React.ReactNode }> = ({
                 else if (s === 'error') {
                     liveRef.current?.disconnect();
                     liveRef.current = null;
-                    setStatus('error'); setSpeaking(false); setSharing(false);
+                    setStatus('error'); setSpeaking(false); setSharing(false); setCameraActive(false); setActiveCameraStream(null);
                     setError(detail || 'Live session error');
                 }
                 else stop();
@@ -80,6 +91,13 @@ export const LiveAssistantProvider: React.FC<{ children: React.ReactNode }> = ({
             onToolActivity: (info) => appEventBus.emit('liveAssistantActivity', info),
             onSpeaking: setSpeaking,
             onScreenShare: setSharing,
+            onCamera: (active) => {
+                setCameraActive(active);
+                // Mirror the active MediaStream from the backend into state for
+                // the PIP preview. Backend exposes this via activeCameraStream.
+                const stream = (liveRef.current as any)?.activeCameraStream ?? null;
+                setActiveCameraStream(active ? stream : null);
+            },
             onControlDenied: (sharingActive) => appEventBus.emit('assistantFeedback', {
                 message: sharingActive
                     ? 'Assistant tried to control your browser, but control permission isn\'t granted — click the cursor icon in the header to allow it.'
@@ -143,6 +161,26 @@ export const LiveAssistantProvider: React.FC<{ children: React.ReactNode }> = ({
             });
     }, [sharing]);
 
+    const toggleCamera = useCallback(() => {
+        if (!liveRef.current) return;
+        setCameraError('');
+        // ElevenLabs rejects startCamera with an Error — surface it; otherwise
+        // fall through to the standard cameras-active check.
+        if (cameraActive) {
+            liveRef.current.stopCamera();
+        } else {
+            Promise.resolve(liveRef.current.startCamera?.())
+                .catch((e: any) => {
+                    if (e?.name === 'NotAllowedError') {
+                        setCameraError('Camera permission denied.');
+                        return;
+                    }
+                    console.error('[LiveAssistant] camera failed', e);
+                    setCameraError(e?.message || 'Camera failed — see console.');
+                });
+        }
+    }, [cameraActive]);
+
     // Subscribe to browserControlService permission changes.
     useEffect(() => {
         // Sync initial state from the service (covers Strict Mode remount where
@@ -164,7 +202,11 @@ export const LiveAssistantProvider: React.FC<{ children: React.ReactNode }> = ({
     }, []);
 
     return (
-        <LiveAssistantCtx.Provider value={{ status, speaking, sharing, controlEnabled, error, setError, shareError, hasVoiceKey, voiceProvider, toggleLive, toggleShare, grantControl, revokeControl }}>
+        <LiveAssistantCtx.Provider value={{
+            status, speaking, sharing, cameraActive, activeCameraStream, controlEnabled,
+            error, setError, shareError, cameraError, hasVoiceKey, voiceProvider,
+            toggleLive, toggleShare, toggleCamera, grantControl, revokeControl,
+        }}>
             {children}
         </LiveAssistantCtx.Provider>
     );

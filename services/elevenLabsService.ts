@@ -18,6 +18,7 @@ export interface ElevenLabsHandlers {
   onStatus: (s: 'connecting' | 'live' | 'closed' | 'error', detail?: string) => void;
   onCaption: (who: 'user' | 'assistant', text: string) => void;
   onSpeaking: (speaking: boolean) => void;
+  onCamera?: (active: boolean) => void;
   onTurnState?: (state: 'idle' | 'listening' | 'processing' | 'responding') => void;
 }
 
@@ -103,11 +104,17 @@ export class ElevenLabsAssistant {
     return true;
   }
 
-  // Screen sharing is not supported via ElevenLabs Conversational AI.
+  // Screen sharing / camera is not supported via ElevenLabs Conversational AI
+  // — the SDK manages audio I/O internally and doesn't expose a way to add
+  // arbitrary video tracks. Users who want video must pick Gemini or OpenAI.
   startScreenShare(): Promise<void> {
     return Promise.resolve();
   }
   stopScreenShare(): void {}
+  startCamera(): Promise<MediaStream> {
+    return Promise.reject(new Error('Camera is not supported by the ElevenLabs voice backend. Switch to Gemini Live or OpenAI Realtime.'));
+  }
+  stopCamera(): void {}
 }
 
 // ── helpers ───────────────────────────────────────────────────────────

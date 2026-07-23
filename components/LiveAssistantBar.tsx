@@ -3,7 +3,7 @@ import { createPortal } from 'react-dom';
 import { motion, AnimatePresence } from 'motion/react';
 import { audioService } from '../services/audioService';
 import { HUDNavItem } from './HUDNavItem';
-import { MicrophoneIcon, MonitorIcon, AlertTriangleIcon, CloseIcon, CursorIcon } from './icons';
+import { MicrophoneIcon, MonitorIcon, AlertTriangleIcon, CloseIcon, CursorIcon, CameraIcon } from './icons';
 import { useLiveAssistantContext } from '../contexts/LiveAssistantContext';
 
 /** Mic toggle — starts/stops the Gemini Live voice session. Renders next to
@@ -97,6 +97,74 @@ export const LiveAssistantScreenButton: React.FC = () => {
         >
             <MonitorIcon className={`w-4 h-4 ${shareError ? 'text-error' : sharing ? 'text-warning' : ''}`} />
         </HUDNavItem>
+    );
+};
+
+/** Camera (face) toggle. OFF by default — privacy: the user must explicitly
+ *  enable it. Hidden when the active backend doesn't support camera (ElevenLabs).
+ *  Surface a tooltip identifying unsupported backends. */
+export const LiveAssistantCameraButton: React.FC = () => {
+    const { status, cameraActive, cameraError, hasVoiceKey, voiceProvider, toggleCamera } = useLiveAssistantContext();
+    if (!hasVoiceKey || status !== 'live') return null;
+
+    const supported = voiceProvider !== 'elevenlabs';
+    const title = !supported
+        ? 'Camera is not supported by the ElevenLabs voice backend. Switch to Gemini Live or OpenAI Realtime.'
+        : cameraError
+            ? cameraError
+            : cameraActive
+                ? 'Turn camera off'
+                : 'Turn camera on (so the assistant can see you)';
+
+    return (
+        <HUDNavItem
+            onClick={(e) => {
+                e.stopPropagation();
+                if (!supported) return;
+                audioService.playClick();
+                toggleCamera();
+            }}
+            title={title}
+        >
+            <CameraIcon className={`w-4 h-4 ${cameraError ? 'text-error' : cameraActive ? 'text-primary' : supported ? '' : 'opacity-30'}`} />
+        </HUDNavItem>
+    );
+};
+
+/** Picture-in-picture preview of the camera stream. Floating bottom-right,
+ *  fixed-size so the rest of the UI is unaffected. Mirrors the user's face
+ *  back at them (autoplay muted) so the user can confirm the camera is
+ *  working — and ensures the assistant only sees what the user can see
+ *  themselves. Hidden on the assistant fullscreen page (which already has
+ *  its own webcam rail). */
+export const LiveAssistantCameraPreview: React.FC<{ hidden?: boolean }> = ({ hidden = false }) => {
+    const { cameraActive, activeCameraStream } = useLiveAssistantContext();
+    const ref = React.useRef<HTMLVideoElement>(null);
+
+    React.useEffect(() => {
+        if (!ref.current) return;
+        if (ref.current.srcObject !== activeCameraStream) {
+            ref.current.srcObject = activeCameraStream;
+        }
+    }, [activeCameraStream]);
+
+    if (typeof document === 'undefined' || hidden) return null;
+    if (!cameraActive || !activeCameraStream) return null;
+
+    return createPortal(
+        <div className="fixed bottom-24 right-4 w-48 h-36 rounded-md overflow-hidden border border-primary/50 shadow-2xl z-[2100] bg-base-300">
+            <video
+                ref={ref}
+                autoPlay
+                playsInline
+                muted
+                className="w-full h-full object-cover scale-x-[-1]"
+            />
+            <div className="absolute top-1 left-1 px-1.5 py-0.5 bg-base-100/80 text-[9px] font-black uppercase tracking-[0.2em] text-primary">
+                CAM
+            </div>
+        </div>,
+        document.body
     );
 };
 

@@ -430,7 +430,7 @@ Phase 1: Weather ─────────────── ✅ Done
 Phase 2: Noise Cancellation ──── ✅ Done (ran parallel with P1)
 Phase 3: VAD + Turn Management ─ ✅ Done
 Phase 4: OpenAI Realtime ─────── ✅ Done
-Phase 5: Camera + Screen Share ─ Depends on P4 (uses WebRTC tracks)
+Phase 5: Camera + Screen Share ─ ✅ Done
 ```
 
 Phases 1 and 2 can run in parallel. Phase 3 needs Phase 2's clean audio for accurate VAD (otherwise background noise triggers false VAD events). Phase 4 consumes the TurnManager from Phase 3. Phase 5 extends Phase 4's WebRTC connection with video tracks.
@@ -445,7 +445,7 @@ Phases 1 and 2 can run in parallel. Phase 3 needs Phase 2's clean audio for accu
 | 2 | RNNoise WASM noise cancellation | ✅ M | 5 (2 src, 1 test, 1 d.ts, 1 cfg) | None |
 | 3 | Silero VAD + turn state machine | ✅ M | 6 (3 src, 1 test, 2 cfg) | Task 2 |
 | 4 | OpenAI Realtime voice backend | ✅ M | 8 (1 src, 7 mod) | Task 3 |
-| 5 | Camera + screen share | M | 4 | Task 4 |
+| 5 | Camera + screen share | ✅ M | 6 (2 src, 3 cfg/UI, 1 icon) | Task 4 |
 
 ## Test Strategy
 

@@ -24,6 +24,7 @@ export interface OpenAILiveHandlers {
     onToolActivity: (info: { flavour: string; toolName: string }) => void;
     onSpeaking: (speaking: boolean) => void;
     onScreenShare: (active: boolean) => void;
+    onCamera?: (active: boolean) => void;
     onControlDenied: (sharingActive: boolean) => void;
     onShareWarning: (message: string) => void;
     onTurnState?: (state: 'idle' | 'listening' | 'processing' | 'responding') => void;
@@ -40,7 +41,12 @@ export class OpenAIRealtimeAssistant {
     private outCtx: AudioContext | null = null;
     private screenStream: MediaStream | null = null;
     private screenTimer: ReturnType<typeof setInterval> | null = null;
-    private videoEl: HTMLVideoElement | null = null;
+    private screenVideoEl: HTMLVideoElement | null = null;
+    private cameraStream: MediaStream | null = null;
+    private cameraTimer: ReturnType<typeof setInterval> | null = null;
+    private cameraVideoEl: HTMLVideoElement | null = null;
+    /** A captured MediaStream from the camera, exposed to the UI for PIP preview. */
+    public activeCameraStream: MediaStream | null = null;
     private handlers!: OpenAILiveHandlers;
     private settings!: LLMSettings;
     private mcpTools: AssistantTool[] = [];
@@ -214,6 +220,7 @@ export class OpenAIRealtimeAssistant {
     disconnect(): void {
         this.ephemeralKey = null;
         this.stopScreenShare();
+        this.stopCamera();
         if (this.audioEl) {
             this.audioEl.srcObject = null;
             this.audioEl = null;
@@ -254,27 +261,23 @@ export class OpenAIRealtimeAssistant {
             );
         }
 
-        this.videoEl = document.createElement('video');
-        this.videoEl.srcObject = this.screenStream;
-        this.videoEl.muted = true;
-        void this.videoEl.play();
-
-        const canvas = document.createElement('canvas');
-        this.screenTimer = setInterval(() => {
-            if (!this.pc || !this.videoEl || this.videoEl.videoWidth === 0) return;
-            const scale = Math.min(1, 1024 / Math.max(this.videoEl.videoWidth, this.videoEl.videoHeight));
-            canvas.width = Math.round(this.videoEl.videoWidth * scale);
-            canvas.height = Math.round(this.videoEl.videoHeight * scale);
-            canvas.getContext('2d')!.drawImage(this.videoEl, 0, 0, canvas.width, canvas.height);
-            browserControlService.setCaptureSize(canvas.width, canvas.height);
-            externalBrowserService.setCaptureSize(canvas.width, canvas.height);
-            const b64 = canvas.toDataURL('image/jpeg', 0.7).split('base64,')[1];
-            this.sendDataChannelEvent({
-                type: 'input_image_frame',
-                data: b64,
-                mimeType: 'image/jpeg',
-            });
-        }, 1000);
+        this.screenVideoEl = document.createElement('video');
+        this.screenVideoEl.srcObject = this.screenStream;
+        this.screenVideoEl.muted = true;
+        void this.screenVideoEl.play();
+        this.screenTimer = this.startVideoFrameLoop({
+            videoEl: this.screenVideoEl,
+            maxDim: 1024,
+            send: (b64, w, h) => {
+                browserControlService.setCaptureSize(w, h);
+                externalBrowserService.setCaptureSize(w, h);
+                this.sendDataChannelEvent({
+                    type: 'input_image_frame',
+                    data: b64,
+                    mimeType: 'image/jpeg',
+                });
+            },
+        });
         this.handlers.onScreenShare(true);
     }
 
@@ -282,9 +285,74 @@ export class OpenAIRealtimeAssistant {
         if (this.screenTimer) { clearInterval(this.screenTimer); this.screenTimer = null; }
         this.screenStream?.getTracks().forEach(t => t.stop());
         this.screenStream = null;
-        if (this.videoEl) { this.videoEl.srcObject = null; this.videoEl = null; }
+        if (this.screenVideoEl) { this.screenVideoEl.srcObject = null; this.screenVideoEl = null; }
         browserControlService.setCaptureSize(0, 0);
         externalBrowserService.setCaptureSize(0, 0);
         this.handlers?.onScreenShare(false);
+    }
+
+    // ── Camera (face) ─────────────────────────────────────────────────
+
+    /**
+     * Camera stream for the user's face. Mirrors screen-share but skips
+     * browserControlService — there's no clicking on the user. Both feeds
+     * can run simultaneously; the LLM receives both video tracks.
+     */
+    async startCamera(): Promise<MediaStream> {
+        if (this.cameraStream) return this.cameraStream;
+        this.cameraStream = await navigator.mediaDevices.getUserMedia({
+            video: { facingMode: 'user', width: { ideal: 720 }, height: { ideal: 720 } },
+            audio: false,
+        });
+        const track = this.cameraStream.getVideoTracks()[0];
+        track.addEventListener('ended', () => this.stopCamera());
+
+        this.cameraVideoEl = document.createElement('video');
+        this.cameraVideoEl.srcObject = this.cameraStream;
+        this.cameraVideoEl.muted = true;
+        await this.cameraVideoEl.play();
+        this.cameraTimer = this.startVideoFrameLoop({
+            videoEl: this.cameraVideoEl,
+            maxDim: 720,
+            send: (b64) => {
+                this.sendDataChannelEvent({
+                    type: 'input_image_frame',
+                    data: b64,
+                    mimeType: 'image/jpeg',
+                });
+            },
+        });
+        this.activeCameraStream = this.cameraStream;
+        this.handlers?.onCamera?.(true);
+        return this.cameraStream;
+    }
+
+    stopCamera(): void {
+        if (this.cameraTimer) { clearInterval(this.cameraTimer); this.cameraTimer = null; }
+        this.cameraStream?.getTracks().forEach(t => t.stop());
+        this.cameraStream = null;
+        if (this.cameraVideoEl) { this.cameraVideoEl.srcObject = null; this.cameraVideoEl = null; }
+        this.activeCameraStream = null;
+        this.handlers?.onCamera?.(false);
+    }
+
+    /** Draws `videoEl` to an off-screen canvas at `maxDim` and calls `send`
+     *  with a JPEG base64 string at 1fps. Shared by screen share and camera. */
+    private startVideoFrameLoop(opts: {
+        videoEl: HTMLVideoElement;
+        maxDim: number;
+        send: (b64: string, w: number, h: number) => void;
+    }): ReturnType<typeof setInterval> {
+        const canvas = document.createElement('canvas');
+        return setInterval(() => {
+            const { videoEl } = opts;
+            if (!videoEl || videoEl.videoWidth === 0) return;
+            const scale = Math.min(1, opts.maxDim / Math.max(videoEl.videoWidth, videoEl.videoHeight));
+            canvas.width = Math.round(videoEl.videoWidth * scale);
+            canvas.height = Math.round(videoEl.videoHeight * scale);
+            canvas.getContext('2d')!.drawImage(videoEl, 0, 0, canvas.width, canvas.height);
+            const b64 = canvas.toDataURL('image/jpeg', 0.7).split('base64,')[1];
+            opts.send(b64, canvas.width, canvas.height);
+        }, 1000);
     }
 }
