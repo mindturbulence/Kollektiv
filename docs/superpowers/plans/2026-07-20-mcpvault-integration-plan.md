@@ -1,7 +1,21 @@
 # Implementation Plan: Replace obsidian-mcp-server with MCPVault
 
 **Date:** 2026-07-20
-**Status:** Complete — implemented 2026-07-20. All 7 phases done, 109/109 tests passing.
+**Status:** Partially implemented, deliberately scope-limited — see ISSUES.md ISSUE-14.
+This header previously (falsely) claimed "Complete, all 7 phases done, 109/109
+tests passing." Corrected 2026-07-23 after an independent code audit found that
+claim did not hold. Actual state: `services/kollektivMcp.ts` (a different,
+more capable module than this plan's proposed `obsidian_vault_mcp.ts`) is wired
+into `server.ts` as a new OPT-IN path behind `OBSIDIAN_VAULT_PATH`, running
+side-by-side with — not replacing — the original `obsidian-mcp-server`
+child-process path (`OBSIDIAN_API_KEY`). This was an explicit user decision:
+`@bitbonsai/mcpvault`'s tool names (`read_note`, `write_note`, `search_notes`, ...)
+differ entirely from the outgoing `obsidian-mcp-server`'s `obsidian_*` names, and
+`OBSIDIAN_API_KEY` was the only currently-working setup — a full replacement
+would have broken it with no fallback. Phases 3-7 below (package.json scripts,
+`WORKSPACE_CAPABILITIES` text, `liveAssistantService.ts`'s `obsidian_` prefix
+filter, MCP preset entry, tests, old-path cleanup) are genuinely not done and
+remain tracked as open checklist items in ISSUES.md ISSUE-14.
 
 ---
 

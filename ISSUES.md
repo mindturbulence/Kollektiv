@@ -644,6 +644,38 @@ manual intervention.
 
 ---
 
+## ISSUE-22 — `send_gmail`/`delete_gmail` assistant tools had no confirmation gate · SECURITY · ✅ FIXED
+
+Found during a codebase cleanup pass while independently re-verifying
+`docs/superpowers/plans/2026-07-18-phase0-foundation-hardening.md` (its own
+Task 5, never implemented despite the other 9/10 tasks being done).
+`send_gmail` and `delete_gmail` in `services/assistantTools.ts` executed
+immediately inside the autonomous tool loop (up to 8 rounds) with no user
+confirmation — the assistant could send or permanently delete email on the
+user's behalf with zero human-in-the-loop check.
+
+- [x] Added `confirmSensitiveAction(summary): boolean` module-private helper —
+      blocking, synchronous `window.confirm`, deliberately native (unmissable,
+      impossible for the tool loop to bypass, matches the existing `confirm()`
+      convention already used for the emergency reset in `App.tsx`).
+- [x] Gated `send_gmail`: prompts with recipient + subject before sending;
+      declining returns `'User declined: the email was NOT sent...'` so the
+      model sees the refusal and doesn't retry.
+- [x] Gated `delete_gmail`: prompts with trash-vs-permanent-delete distinction
+      + message id before acting; declining returns a matching
+      `'User declined:...'` message.
+- [x] `tsc --noEmit` clean; `npx vitest run` — 174/174 tests pass (including
+      `services/assistantTools.test.ts`, 8/8).
+- [ ] **Manual, needs a live Google session:** ask the assistant to send a test
+      email — confirm a native dialog blocks the send, and clicking Cancel
+      produces the decline message with no network call made.
+
+**Acceptance:** neither tool can send/delete anything without a synchronous,
+unbypassable user confirmation. ✅ Verified via code inspection + full test
+suite; manual live-session repro still recommended.
+
+---
+
 ## Notes / non-issues (verified, no action)
 
 - Video overlay **does** handle Escape-to-close (`VideoPlayerOverlay.tsx:110`) and

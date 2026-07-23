@@ -435,7 +435,7 @@ git commit -m "refactor: extract Anthropic default model to shared constant"
 - Consumes: nothing from other tasks.
 - Produces: `confirmSensitiveAction(summary: string): boolean` (module-private helper in `assistantTools.ts`). Declined actions return a string starting with `'User declined:'` — the LLM sees this as the tool result and must not retry.
 
-- [ ] **Step 1: Add the helper**
+- [x] **Step 1: Add the helper**
 
 In `services/assistantTools.ts`, directly after the `PAGES` constant (line ~35), add:
 
@@ -449,7 +449,7 @@ const confirmSensitiveAction = (summary: string): boolean => {
 };
 ```
 
-- [ ] **Step 2: Gate `send_gmail`**
+- [x] **Step 2: Gate `send_gmail`** (actual code uses `ensureGoogleToken()` + `authResult.token`, not the stale `ctx.settings.googleIdentity?.accessToken` check this step names — gate inserted after the real token check instead)
 
 In the `send_gmail` tool's `execute` (line ~916), directly after the token check
 
@@ -466,7 +466,7 @@ insert:
             }
 ```
 
-- [ ] **Step 3: Gate `delete_gmail`**
+- [x] **Step 3: Gate `delete_gmail`** (same `ensureGoogleToken()` note as Step 2; also reused `wantsPermanent` in place of the duplicate `isPermanent` boolean instead of keeping both, per the note below — a smaller diff, not a bigger one)
 
 In the `delete_gmail` tool's `execute` (line ~968), directly after
 
@@ -484,14 +484,11 @@ insert:
             }
 ```
 
-(The existing `const isPermanent = args.action === 'delete';` inside the `try` block stays as-is; the duplicate boolean is fine and keeps the diff minimal.)
+(Superseded: reused `wantsPermanent` for the `try` block's `isPermanent` instead of keeping both — smaller diff, not bigger.)
 
-- [ ] **Step 4: Verify**
+- [x] **Step 4: Verify** — `tsc --noEmit` clean; `npx vitest run services/assistantTools.test.ts` (8/8 pass) and full suite (174/174 pass). Logged as ISSUES.md ISSUE-22.
 
-Run: `pnpm lint`
-Expected: clean.
-
-Manual check (only if a browser session is available): in the assistant, ask it to send a test email — a native confirm dialog must appear before any network call; clicking Cancel must produce an assistant message acknowledging the decline. If no browser session is available, note this as deferred manual verification in the commit body.
+Manual check (only if a browser session is available): in the assistant, ask it to send a test email — a native confirm dialog must appear before any network call; clicking Cancel must produce an assistant message acknowledging the decline. **Deferred — no browser session available this pass; manual verification still recommended.**
 
 - [ ] **Step 5: Commit**
 
