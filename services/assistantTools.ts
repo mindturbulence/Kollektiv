@@ -401,6 +401,30 @@ export const ASSISTANT_TOOLS: AssistantTool[] = [
         },
     },
     {
+        name: 'get_weather',
+        description: 'Get the current weather for a city. Returns temperature, conditions, wind, humidity as formatted text. No API key needed — uses wttr.in.',
+        parameters: {
+            type: 'object',
+            properties: {
+                city: {
+                    type: 'string',
+                    description: 'City name (e.g. "London", "Tokyo", "New York"). Optionally add country code for accuracy ("London,UK").',
+                },
+            },
+            required: ['city'],
+        },
+        execute: async ({ city }) => {
+            try {
+                const res = await fetch(`https://wttr.in/${encodeURIComponent(String(city))}?format=%C+%t+%w+%h`);
+                if (!res.ok) return `Could not retrieve weather for ${city}.`;
+                const text = await res.text();
+                return `Weather in ${city}: ${text.trim()}`;
+            } catch (e: any) {
+                return `Weather lookup failed for ${city}: ${e?.message || e}. Verify network connectivity.`;
+            }
+        },
+    },
+    {
         name: 'fetch_url',
         description: 'Fetch a web page by absolute URL and return its readable text (HTML stripped, truncated to ~8000 chars) for YOUR OWN reading. To show the page to the user, use open_web_page instead.',
         parameters: {
