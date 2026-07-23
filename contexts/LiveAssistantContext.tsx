@@ -1,6 +1,7 @@
 import React, { createContext, useContext, useRef, useState, useCallback, useEffect } from 'react';
 import { LiveAssistant, type LiveHandlers } from '../services/liveAssistantService';
 import { OpenAIRealtimeAssistant, type OpenAILiveHandlers } from '../services/openaiRealtimeService';
+import { ElevenLabsAssistant } from '../services/elevenLabsService';
 import { useSettings } from './SettingsContext';
 import { appEventBus } from '../utils/eventBus';
 import { audioService } from '../services/audioService';
@@ -18,7 +19,7 @@ interface LiveAssistantContextValue {
     shareError: string;
     hasVoiceKey: boolean;
     /** Which voice backend is currently active. */
-    voiceProvider: 'gemini_live' | 'openai_realtime';
+    voiceProvider: 'gemini_live' | 'openai_realtime' | 'elevenlabs';
     toggleLive: () => void;
     toggleShare: () => void;
     grantControl: () => void;
@@ -32,7 +33,7 @@ const LiveAssistantCtx = createContext<LiveAssistantContextValue | null>(null);
  * of each spinning up its own connection. */
 export const LiveAssistantProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
     const { settings } = useSettings();
-    const liveRef = useRef<LiveAssistant | OpenAIRealtimeAssistant | null>(null);
+    const liveRef = useRef<LiveAssistant | OpenAIRealtimeAssistant | ElevenLabsAssistant | null>(null);
     const [status, setStatus] = useState<Status>('idle');
     const [speaking, setSpeaking] = useState(false);
     const [sharing, setSharing] = useState(false);
@@ -91,7 +92,9 @@ export const LiveAssistantProvider: React.FC<{ children: React.ReactNode }> = ({
 
         const live = voiceProvider === 'openai_realtime'
             ? new OpenAIRealtimeAssistant()
-            : new LiveAssistant();
+            : voiceProvider === 'elevenlabs'
+                ? new ElevenLabsAssistant()
+                : new LiveAssistant();
         liveRef.current = live;
         try {
             await live.connect(settings, handlers as any);
@@ -111,7 +114,9 @@ export const LiveAssistantProvider: React.FC<{ children: React.ReactNode }> = ({
     // Check for the right API key based on the selected voice provider
     const hasVoiceKey = voiceProvider === 'openai_realtime'
         ? !!(settings.openaiApiKey || process.env.OPENAI_API_KEY)
-        : !!(settings.geminiApiKey || process.env.GEMINI_API_KEY);
+        : voiceProvider === 'elevenlabs'
+            ? !!(settings.elevenlabsApiKey || process.env.ELEVENLABS_API_KEY)
+            : !!(settings.geminiApiKey || process.env.GEMINI_API_KEY);
 
     // Global hotkey: Ctrl+Space toggles the live voice session from anywhere.
     useEffect(() => {

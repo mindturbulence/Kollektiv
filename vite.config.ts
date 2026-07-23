@@ -155,6 +155,7 @@ export default defineConfig(({ mode }) => {
         'process.env.API_KEY': JSON.stringify(mode === 'production' ? '' : (env.GEMINI_API_KEY || '')),
         'process.env.GEMINI_API_KEY': JSON.stringify(mode === 'production' ? '' : (env.GEMINI_API_KEY || '')),
         'process.env.OPENAI_API_KEY': JSON.stringify(mode === 'production' ? '' : (env.OPENAI_API_KEY || '')),
+        'process.env.ELEVENLABS_API_KEY': JSON.stringify(mode === 'production' ? '' : (env.ELEVENLABS_API_KEY || '')),
         'process.env.YOUTUBE_CLIENT_ID': JSON.stringify(env.YOUTUBE_CLIENT_ID || '')
       },
       resolve: {

@@ -261,6 +261,12 @@ const IntegrationsSection: React.FC<IntegrationsSectionProps> = ({
             <SettingRow label="OpenAI API Key" desc="Required for the OpenAI Realtime voice engine. Set as OPENAI_API_KEY in your environment, or enter it here.">
                 <input type="password" value={settings.openaiApiKey || ''} onChange={(e) => handleSettingsChange('openaiApiKey', e.target.value)} className="form-input w-full max-w-md" placeholder="sk-..." />
             </SettingRow>
+            <SettingRow label="ElevenLabs API Key" desc="Required for the ElevenLabs Conversational AI voice engine.">
+                <input type="password" value={settings.elevenlabsApiKey || ''} onChange={(e) => handleSettingsChange('elevenlabsApiKey', e.target.value)} className="form-input w-full max-w-md" placeholder="sk_..." />
+            </SettingRow>
+            <SettingRow label="ElevenLabs Agent ID" desc="The agent ID from your ElevenLabs Conversational AI agent. Create one in the ElevenLabs dashboard first.">
+                <input type="text" value={settings.elevenlabsAgentId || ''} onChange={(e) => handleSettingsChange('elevenlabsAgentId', e.target.value)} className="form-input w-full max-w-md" placeholder="agent_..." />
+            </SettingRow>
             </SettingsGroup>
 
             <SettingsGroup title="Account">

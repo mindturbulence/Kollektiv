@@ -130,8 +130,13 @@ export interface LLMSettings {
 
   // OpenAI Settings
   openaiApiKey?: string;
+
+  // ElevenLabs Settings
+  elevenlabsApiKey?: string;
+  elevenlabsAgentId?: string;
+
   /** Voice backend provider. Default: 'gemini_live' */
-  voiceProvider?: 'gemini_live' | 'openai_realtime';
+  voiceProvider?: 'gemini_live' | 'openai_realtime' | 'elevenlabs';
 
   // AI Assistant Persona (chat + Gemini Live voice mode)
   assistantName?: string;
