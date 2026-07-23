@@ -87,6 +87,7 @@ export const LiveAssistantProvider: React.FC<{ children: React.ReactNode }> = ({
                     isError: true,
                 }),
                 onShareWarning: (message) => appEventBus.emit('assistantFeedback', { message, isError: true }),
+                onTurnState: (state) => console.debug('[LiveAssistant] turn state:', state),
             });
         } catch (e: any) {
             setStatus('error');

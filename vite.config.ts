@@ -13,7 +13,7 @@ export default defineConfig(({ mode }) => {
       base: '/',
       plugins: [
         react(),
-        // Copy RNNoise WASM assets for client-side noise cancellation
+        // Copy RNNoise WASM + VAD ONNX model + ONNX Runtime WASM for voice pipeline
         viteStaticCopy({
             targets: [
                 {
@@ -22,6 +22,20 @@ export default defineConfig(({ mode }) => {
                 },
                 {
                     src: 'node_modules/simple-rnnoise-wasm/dist/rnnoise.worklet.js',
+                    dest: '.',
+                },
+                // VAD ONNX model files
+                {
+                    src: 'node_modules/@ricky0123/vad-web/dist/silero_vad_legacy.onnx',
+                    dest: '.',
+                },
+                {
+                    src: 'node_modules/@ricky0123/vad-web/dist/silero_vad_v5.onnx',
+                    dest: '.',
+                },
+                // ONNX Runtime WASM files
+                {
+                    src: 'node_modules/onnxruntime-web/dist/ort-wasm-simd-threaded.wasm',
                     dest: '.',
                 },
             ],

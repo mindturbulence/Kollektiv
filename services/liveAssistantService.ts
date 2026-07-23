@@ -7,6 +7,8 @@ import { loadMcpAssistantTools } from './mcpAssistantTools';
 import { browserControlService } from './browserControlService';
 import { externalBrowserService } from './externalBrowserService';
 import { resolveLangKey } from '../utils/languageKey';
+import { TurnManager } from './turnManager';
+import { VoiceActivityService } from './voiceActivityService';
 
 // Single source of truth for the live model constant.
 // Verified against https://ai.google.dev/gemini-api/docs/live-api/capabilities (2026-07-10) —
@@ -40,6 +42,8 @@ export interface LiveHandlers {
     /** Fired when the shared source isn't this browser tab — click/scroll
      *  coordinates can't line up with what the model sees in that case. */
     onShareWarning: (message: string) => void;
+    /** Fired when the voice turn state changes (idle/listening/processing/responding). */
+    onTurnState?: (state: 'idle' | 'listening' | 'processing' | 'responding') => void;
 }
 
 // Mic worklet: captures mono float32, downsamples to 16 kHz if the context refuses that rate.
@@ -349,6 +353,8 @@ export class LiveAssistant {
     private screenTimer: ReturnType<typeof setInterval> | null = null;
     private videoEl: HTMLVideoElement | null = null;
     private handlers!: LiveHandlers;
+    private turnManager: TurnManager | null = null;
+    private vadService: VoiceActivityService | null = null;
     private settings!: LLMSettings;
     private mcpTools: AssistantTool[] = [];
     private closedByUs = false;
@@ -397,6 +403,44 @@ export class LiveAssistant {
         });
 
         await this.startMic();
+
+        // Initialize turn management with VAD
+        this.turnManager = new TurnManager();
+        this.turnManager.silenceTimeoutMs = 800;
+        this.turnManager.onInterruption = () => {
+            console.debug('[LiveAssistant] local interruption — user spoke over AI');
+            this.flushPlayback();
+        };
+        this.turnManager.onTurnStart = () => {
+            this.handlers.onTurnState?.('listening');
+        };
+        this.turnManager.onUserSpeechEndCallback = (_audio) => {
+            // Audio is already streaming to the LLM in real-time via the PCM worklet.
+            // After silence timeout, transition to processing state for UI
+            this.handlers.onTurnState?.('processing');
+        };
+        this.turnManager.onTurnEnd = () => {
+            this.handlers.onTurnState?.('idle');
+        };
+
+        // Start VAD if we have mic access
+        if (this.micCtx && this.micStream) {
+            try {
+                const vadService = new VoiceActivityService(this.turnManager);
+                await vadService.start({
+                    audioContext: this.micCtx,
+                    stream: this.micStream,
+                    turnManager: this.turnManager,
+                    baseAssetPath: '/',
+                    onnxWASMBasePath: '/',
+                });
+                this.vadService = vadService;
+                console.debug('[LiveAssistant] VAD started');
+            } catch (err) {
+                console.warn('[LiveAssistant] VAD initialization failed, continuing without VAD:', err);
+                // Graceful degradation — continue without VAD
+            }
+        }
     }
 
     private async startMic(): Promise<void> {
@@ -480,11 +524,23 @@ export class LiveAssistant {
         const startAt = Math.max(this.outCtx.currentTime, this.nextStart);
         src.start(startAt);
         this.nextStart = startAt + buf.duration;
+
+        // Track AI turn state
+        const wasEmpty = this.playing.size === 0;
         this.playing.add(src);
-        this.handlers.onSpeaking(true);
+        if (wasEmpty) {
+            this.handlers.onSpeaking(true);
+            this.turnManager?.onAISpeechStart();
+            this.handlers.onTurnState?.('responding');
+        }
+
         src.onended = () => {
             this.playing.delete(src);
-            if (this.playing.size === 0) this.handlers.onSpeaking(false);
+            if (this.playing.size === 0) {
+                this.handlers.onSpeaking(false);
+                this.turnManager?.onAISpeechEnd();
+                this.handlers.onTurnState?.('idle');
+            }
         };
     }
 
@@ -493,6 +549,10 @@ export class LiveAssistant {
         this.playing.clear();
         this.nextStart = 0;
         this.handlers.onSpeaking(false);
+        // Reset turn state — if this was triggered by a server interruption event,
+        // the client-side VAD may have already handled it. Still safe to call.
+        this.turnManager?.reset();
+        this.handlers.onTurnState?.('idle');
     }
 
     async startScreenShare(): Promise<void> {
@@ -540,6 +600,13 @@ export class LiveAssistant {
 
     disconnect(): void {
         this.closedByUs = true;
+        // Clean up VAD before stopping mic (VAD needs the stream to be alive)
+        if (this.vadService) {
+            void this.vadService.stop().catch(() => {});
+            this.vadService = null;
+        }
+        this.turnManager?.reset();
+        this.turnManager = null;
         this.stopScreenShare();
         this.flushPlayback();
         this.micNode?.port.close();
