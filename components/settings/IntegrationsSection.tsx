@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import type { LLMSettings } from '../../types';
 import { SettingRow, SettingsGroup, ProviderTab } from './primitives';
 import { audioService } from '../../services/audioService';
@@ -9,6 +9,7 @@ import { isGoogleAuthValid } from '../../utils/googleAuth';
 import McpSection from './McpSection';
 import CdpSection from './CdpSection';
 import AssistantSection from './AssistantSection';
+import { pickObsidianVault, disconnectObsidianVault, initObsidianVault } from '../../utils/obsidianStorage';
 
 interface IntegrationsSectionProps {
     activeSubTab: string;
@@ -396,6 +397,69 @@ const IntegrationsSection: React.FC<IntegrationsSectionProps> = ({
         </div>
     );}
 
+    const renderObsidian = () => {
+        const [connected, setConnected] = useState(false);
+        const [vaultName, setVaultName] = useState('');
+
+        useEffect(() => {
+            initObsidianVault().then(ok => {
+                setConnected(ok);
+                if (ok) setVaultName('Obsidian Vault');
+            });
+        }, []);
+
+        const handlePick = async () => {
+            const ok = await pickObsidianVault();
+            setConnected(ok);
+            if (ok) setVaultName('Connected vault');
+        };
+
+        const handleDisconnect = async () => {
+            await disconnectObsidianVault();
+            setConnected(false);
+            setVaultName('');
+        };
+
+        return (
+            <div className="flex flex-col animate-fade-in">
+                <div className="bg-base-200/30 border border-base-300/10 p-6 space-y-4">
+                    <h3 className="text-xs font-black uppercase tracking-widest">
+                        Obsidian Second Brain
+                    </h3>
+                    <p className="text-[10px] font-bold leading-relaxed text-base-content/60">
+                        Connect your Obsidian vault to let the AI assistant search, read, and write notes.
+                        Your vault is a folder containing <code className="text-primary px-1 bg-base-100">.obsidian/</code>
+                        and your markdown notes.
+                    </p>
+
+                    {connected ? (
+                        <div className="space-y-4">
+                            <div className="flex items-center gap-3 p-4 bg-success/5 border border-success/30">
+                                <span className="w-2 h-2 bg-success rounded-full animate-pulse" />
+                                <span className="text-[10px] font-black uppercase tracking-widest text-success">
+                                    Connected {vaultName ? `— ${vaultName}` : ''}
+                                </span>
+                            </div>
+                            <button onClick={() => { audioService.playClick(); handleDisconnect(); }} className="form-btn text-error px-4">
+                                Disconnect
+                            </button>
+                        </div>
+                    ) : (
+                        <div className="space-y-3">
+                            <p className="text-[10px] font-mono text-base-content/40">
+                                Pick the folder containing your Obsidian vault. The assistant will be able to
+                                search notes, read them, create new ones, and edit existing ones.
+                            </p>
+                            <button onClick={() => { audioService.playClick(); handlePick(); }} className="form-btn px-6">
+                                PICK OBSIDIAN VAULT FOLDER
+                            </button>
+                        </div>
+                    )}
+                </div>
+            </div>
+        );
+    };
+
     const renderTensorArt = () => (
         <div className="flex flex-col animate-fade-in">
             <SettingsGroup title="Tensor Art Configuration">
@@ -444,6 +508,7 @@ const IntegrationsSection: React.FC<IntegrationsSectionProps> = ({
         case 'spotify': return renderSpotify();
         case 'cdp': return <CdpSection activeSubTab={activeSubTab} />;
         case 'tensorart': return renderTensorArt();
+        case 'obsidian': return renderObsidian();
         default: return null;
     }
 };
