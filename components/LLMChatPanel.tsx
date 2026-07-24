@@ -9,7 +9,7 @@ import Markdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter';
 import { vscDarkPlus } from 'react-syntax-highlighter/dist/esm/styles/prism';
-import { getSavedChatSessions, saveChatSession, deleteChatSession, clearAllChatSessions, ChatSession } from '../utils/chatStorage';
+import { getChatSessionsSync, getChatMessagesSync, saveChatSession, deleteChatSession, clearAllChatSessions, loadChatMessages, ChatSession, ChatSessionStored } from '../utils/chatStorage';
 import { v4 as uuidv4 } from 'uuid';
 import { appControlService } from '../services/appControlService';
 import { appEventBus } from '../utils/eventBus';
@@ -34,15 +34,14 @@ export const LLMChatPanel: React.FC<LLMChatPanelProps> = ({ isOpen, onClose }) =
     const [isSidebarOpen, setIsSidebarOpen] = useState(false);
     const [isExpanded, setIsExpanded] = useState(false);
     const [researchMode, setResearchMode] = useState(false);
-    const [savedSessions, setSavedSessions] = useState<ChatSession[]>([]);
+    const [savedSessions, setSavedSessions] = useState<ChatSessionStored[]>(() => getChatSessionsSync());
     const [activeSessionId, setActiveSessionId] = useState<string | null>(null);
 
     // Initial load
     useEffect(() => {
         if (isOpen) {
             audioService.playPanelSlideIn();
-            const sessions = getSavedChatSessions();
-            setSavedSessions(sessions);
+            setSavedSessions(getChatSessionsSync());
             if (!activeSessionId && messages.length <= 1) {
                 startNewSession(); // setup default view
             }
@@ -50,6 +49,13 @@ export const LLMChatPanel: React.FC<LLMChatPanelProps> = ({ isOpen, onClose }) =
             audioService.playPanelSlideOut();
         }
     }, [isOpen]);
+
+    // Subscribe to chat session changes from IDB
+    useEffect(() => {
+        return appEventBus.on('chatSessionsChanged', () => {
+            setSavedSessions(getChatSessionsSync());
+        });
+    }, []);
 
     // The live voice widget lives outside this panel (see App.tsx) so voice
     // sessions survive the panel closing; log its tool activity here while open.
@@ -67,27 +73,35 @@ export const LLMChatPanel: React.FC<LLMChatPanelProps> = ({ isOpen, onClose }) =
         if (window.innerWidth < 768) setIsSidebarOpen(false);
     }, []);
 
-    const loadSession = (id: string) => {
+    const loadSession = async (id: string) => {
         const session = savedSessions.find(s => s.id === id);
         if (session) {
             setActiveSessionId(id);
-            setMessages(session.messages);
+            // Load messages from IDB (sync cache first, then async refresh)
+            let stored = getChatMessagesSync(id);
+            if (!stored.length) {
+                stored = await loadChatMessages(id);
+            }
+            setMessages(stored.map(m => ({
+                role: m.role,
+                content: m.content,
+                attachments: m.attachments_json ? JSON.parse(m.attachments_json) : undefined,
+            })));
             if (window.innerWidth < 768) setIsSidebarOpen(false);
         }
     };
 
-    const deleteSession = useCallback((id: string) => {
-        deleteChatSession(id);
-        const updated = getSavedChatSessions();
-        setSavedSessions(updated);
+    const deleteSession = useCallback(async (id: string) => {
+        await deleteChatSession(id);
+        setSavedSessions(getChatSessionsSync());
         if (activeSessionId === id) {
             startNewSession();
         }
     }, [activeSessionId, startNewSession]);
 
-    const clearAllSessions = useCallback(() => {
+    const clearAllSessions = useCallback(async () => {
         if (window.confirm("Are you sure you want to clear all chat history?")) {
-            clearAllChatSessions();
+            await clearAllChatSessions();
             setSavedSessions([]);
             startNewSession();
         }
@@ -107,7 +121,7 @@ export const LLMChatPanel: React.FC<LLMChatPanelProps> = ({ isOpen, onClose }) =
         saveChatSession(newSession);
 
         // Refresh session list without losing focus
-        setSavedSessions(getSavedChatSessions());
+        setSavedSessions(getChatSessionsSync());
         return id; // return created ID if needed
     }, [activeSessionId]);
 

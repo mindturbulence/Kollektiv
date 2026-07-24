@@ -3,7 +3,7 @@ import { createPortal } from 'react-dom';
 import { gsap } from 'gsap';
 import type { Idea } from '../types';
 import type { AssistantNote } from '../utils/notesStorage';
-import { loadNotes, addNote, updateNote, deleteNote, clearNotes } from '../utils/notesStorage';
+import { loadNotes, getNotesSync, addNote, updateNote, deleteNote, clearNotes } from '../utils/notesStorage';
 import { appEventBus } from '../utils/eventBus';
 import { fileSystemManager } from '../utils/fileUtils';
 import { CloseIcon, DeleteIcon, SparklesIcon, BookmarkIcon, RefreshIcon, PlusIcon, ArchiveIcon, CopyIcon, EditIcon, NoteIcon } from './icons';
@@ -326,7 +326,7 @@ const ClippingPanel: React.FC<ClippingPanelProps> = ({
     const [tab, setTab] = useState<PanelTab>('clips');
 
     // Notes state
-    const [notes, setNotes] = useState<AssistantNote[]>(() => loadNotes());
+    const [notes, setNotes] = useState<AssistantNote[]>(() => getNotesSync());
 
     // Files state
     const [files, setFiles] = useState<string[]>([]);
@@ -350,7 +350,10 @@ const ClippingPanel: React.FC<ClippingPanelProps> = ({
 
     useEffect(() => {
         if (isOpen) {
-            setNotes(loadNotes());
+            (async () => {
+                const loaded = await loadNotes();
+                setNotes(loaded);
+            })();
             void refreshFiles();
         }
     }, [isOpen, refreshFiles]);

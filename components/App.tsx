@@ -5,7 +5,9 @@ import { useAuth } from '../contexts/AuthContext';
 import useLocalStorage from '../utils/useLocalStorage';
 import { appEventBus } from '../utils/eventBus';
 import { addSavedPrompt } from '../utils/promptStorage';
-import { loadNotes } from '../utils/notesStorage';
+import { getNotesSync, initNotesStore } from '../utils/notesStorage';
+import { initMemoriesStore } from '../utils/memoryStorage';
+import { initChatStore } from '../utils/chatStorage';
 import { audioService } from '../services/audioService';
 import { BusyProvider } from '../contexts/BusyContext';
 import type { ActiveTab, Idea, ActiveSettingsTab, LLMSettings } from '../types';
@@ -164,7 +166,7 @@ const AppContent: React.FC = () => {
     const [activeSettingsSubTab, setActiveSettingsSubTabSetter] = useLocalStorage<string>('activeSettingsSubTab', 'general');
 
     const [clippedIdeas, setClippedIdeas] = useLocalStorage<Idea[]>('clippedIdeas', []);
-    const [notesCount, setNotesCount] = useState(() => { try { return loadNotes().length; } catch { return 0; } });
+    const [notesCount, setNotesCount] = useState(() => getNotesSync().length);
     const [filesCount, setFilesCount] = useState(0);
 
     const currentTitle = useMemo(() => {
@@ -234,7 +236,14 @@ const AppContent: React.FC = () => {
         };
 
         try {
-            // ── FAST-PATH: skip all async I/O for diagnostics ──
+            // ── Initialize IndexedDB stores (notes, memories, chat) ──
+            await Promise.all([
+                initNotesStore(),
+                initMemoriesStore(),
+                initChatStore(),
+            ]);
+
+            // ── FAST-PATH: skip remaining async I/O for diagnostics ──
             onProgress('System Ready', 1.0);
 
             // ── Clear diagnostic sessionStorage markers so the reload-detection
