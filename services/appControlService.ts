@@ -1,7 +1,7 @@
 import { appEventBus } from '../utils/eventBus';
 import { loadSavedPrompts, addSavedPrompt } from '../utils/promptStorage';
 import { loadCheatsheet } from '../utils/cheatsheetStorage';
-import { getSavedChatSessions } from '../utils/chatStorage';
+import { getChatSessionsSync } from '../utils/chatStorage';
 import { discoveryService } from './discoveryService';
 import { loadGalleryItems } from '../utils/galleryStorage';
 
@@ -44,8 +44,8 @@ export const appControlService = {
     },
     
     getChatHistory: async () => {
-        const sessions = await getSavedChatSessions();
-        return JSON.stringify(sessions.map(s => ({ id: s.id, name: s.title, msgCount: s.messages.length })).slice(0, 10));
+        const sessions = getChatSessionsSync();
+        return JSON.stringify(sessions.map(s => ({ id: s.id, name: s.title })).slice(0, 10));
     },
 
     getGalleryInfo: async () => {
