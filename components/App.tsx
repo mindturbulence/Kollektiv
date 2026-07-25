@@ -58,6 +58,7 @@ import TransitionOverlay, { type TransitionOverlayHandle } from './transitions/T
 import { useTransitionDirector } from './transitions/useTransitionDirector';
 import type { FxKind } from './transitions/routeFx';
 import { useBootSequence } from '../hooks/useBootSequence';
+import { useAppTheme } from '../hooks/useAppTheme';
 
 
 type PromptsPageState = { 
@@ -187,6 +188,8 @@ const AppContent: React.FC = () => {
     }, [activeTab]);
 
     const { isIdle, resetIdleTimer, goIdle } = useIdleSystem(settings.isIdleEnabled, settings.idleTimeoutMinutes);
+
+    useAppTheme(settings.darkTheme, settings.fontSize);
 
     const transitionOverlayHandleRef = useRef<TransitionOverlayHandle>(null);
     const apertureRef = useRef<HTMLDivElement>(null);
@@ -329,12 +332,6 @@ const AppContent: React.FC = () => {
     const handleNavigate = useCallback((tab: ActiveTab) => {
         directorNavigate(tab);
     }, [directorNavigate]);
-
-    useEffect(() => {
-        const currentTheme = settings.darkTheme;
-        document.documentElement.setAttribute('data-theme', currentTheme);
-        document.documentElement.style.fontSize = `${settings.fontSize}px`;
-    }, [settings.darkTheme, settings.fontSize]);
 
     const showGlobalFeedback = useCallback((message: string, isError = false) => {
         setGlobalFeedback({ message, type: isError ? 'error' : 'success' });
