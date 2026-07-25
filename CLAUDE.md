@@ -1,5 +1,9 @@
 # Project Documentation
 
+## Documentation lookup
+
+All project documentation lives under `docs/handbook/`. Look there first for architecture, design principles, subsystem specs (AI engine, capability platform, knowledge engine, memory, MCP, voice pipeline, providers), and implementation docs — before searching elsewhere or guessing from code alone.
+
 ## gstack
 
 For all web browsing tasks, use the `/browse` skill from gstack instead of `mcp__claude-in-chrome__*` tools.

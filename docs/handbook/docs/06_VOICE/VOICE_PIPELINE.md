@@ -101,3 +101,8 @@ Wired into all three voice backends:
 - `assistantVoice`: Voice model selection
 - `assistantLanguage`: Language for voice interactions
 - Assistant persona settings also affect voice behavior
+
+## Related
+
+- [ARCHITECTURE_CONSTITUTION.md § Security Hardening](../00_FOUNDATION/ARCHITECTURE_CONSTITUTION.md#security-hardening) — the CSP entries this pipeline depends on: `blob:` for the mic-capture `AudioWorklet`, `'wasm-unsafe-eval'` for RNNoise/VAD WASM compilation, and the `wss://generativelanguage.googleapis.com` `connect-src` entry for Gemini Live
+- [AI_ENGINE.md](../01_AI_ENGINE/AI_ENGINE.md) — the assistant tool loop that voice-derived transcripts are routed through, same as typed input

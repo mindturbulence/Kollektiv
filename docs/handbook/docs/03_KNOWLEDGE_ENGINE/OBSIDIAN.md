@@ -66,3 +66,9 @@ The Kollektiv MCP server logs "OBSIDIAN_VAULT_PATH not set — skipping Obsidian
 ## Settings UI
 
 Obsidian is configured via the **Built-In** tab in Settings > Integrations > MCP Servers (not a separate settings section). The `kollektiv-mcp` preset auto-detects the vault path from `OBSIDIAN_VAULT_PATH` and shows vault tools in the right column when Ping succeeds.
+
+## Related
+
+- [MCP_SPEC.md](../05_MCP/MCP_SPEC.md) — the sub-server aggregation architecture that exposes the 15 vault tools described above
+- [KNOWLEDGE_ENGINE.md](KNOWLEDGE_ENGINE.md) — how this vault backend serves as the knowledge repository tier
+- [MEMORY_SYSTEM.md](../04_MEMORY/MEMORY_SYSTEM.md) — the memory-tier promotion path that lands durable facts here

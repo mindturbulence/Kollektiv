@@ -40,3 +40,9 @@ The planner should always make the downstream contract explicit:
 - whether the workflow needs user confirmation
 - whether the operation should persist data or simply return a response
 - whether the task may require fallback if the preferred provider is unavailable
+
+## Related
+
+- [AI_ENGINE.md](AI_ENGINE.md) — the execution pipeline this planner feeds into
+- [PROVIDER_ROUTER.md](../07_PROVIDERS/PROVIDER_ROUTER.md) — the provider selection/fallback mechanics referenced above
+- [CAPABILITY_SPEC.md](../02_CAPABILITY_PLATFORM/CAPABILITY_SPEC.md) — the capability lifecycle a routed task moves through

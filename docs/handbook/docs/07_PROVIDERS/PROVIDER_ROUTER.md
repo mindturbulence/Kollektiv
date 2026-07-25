@@ -51,3 +51,8 @@ The provider router is a cost-aware, latency-aware selection engine that chooses
 ## Tests
 
 `services/providerRouter.test.ts` — selection ordering, fallback chain, cost calculation
+
+## Related
+
+- [AI_ENGINE.md](../01_AI_ENGINE/AI_ENGINE.md) — the full 5-provider catalog (Gemini, Ollama, OpenRouter, llama.cpp, Anthropic) this router selects between
+- [PLANNER.md](../01_AI_ENGINE/PLANNER.md) — where provider selection fits in the overall request-planning flow

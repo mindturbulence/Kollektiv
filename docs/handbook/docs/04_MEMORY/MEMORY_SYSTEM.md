@@ -70,3 +70,8 @@ The implementation already supports memory-like behavior through:
 - `services/knowledgeService.ts` — unified knowledge interface
 - `services/knowledgeLifecycle.ts` — lifecycle folder projection
 - `services/relationshipGraph.ts` — cross-entity relationship tracking
+
+## Related
+
+- [KNOWLEDGE_ENGINE.md](../03_KNOWLEDGE_ENGINE/KNOWLEDGE_ENGINE.md) — covers the same 3-tier model from the knowledge-lifecycle side (vault folder projection, relationship graph, retrieval); read both, they describe one system from two angles
+- [OBSIDIAN.md](../03_KNOWLEDGE_ENGINE/OBSIDIAN.md) — the vault backend the knowledge repository tier persists to

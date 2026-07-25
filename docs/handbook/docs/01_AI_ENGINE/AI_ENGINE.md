@@ -8,11 +8,11 @@ The AI engine in Kollektiv is the orchestration layer that turns user intent int
 
 The engine is centered around the provider-agnostic service layer in the services tree:
 
-- [services/llmService.ts](../../../services/llmService.ts): shared orchestration, prompt formatting, model-specific syntax, and provider dispatch
-- [services/geminiService.ts](../../../services/geminiService.ts): Gemini-based text, image, and video flows
-- [services/ollamaService.ts](../../../services/ollamaService.ts), [services/openrouterService.ts](../../../services/openrouterService.ts), [services/llamacppService.ts](../../../services/llamacppService.ts), and [services/anthropicService.ts](../../../services/anthropicService.ts): provider-specific adapters
-- [services/assistantService.ts](../../../services/assistantService.ts) and [services/assistantTools.ts](../../../services/assistantTools.ts): assistant-style tool execution and tool-grounded conversation
-- [services/turnManager.ts](../../../services/turnManager.ts): orchestrates multi-turn assistant conversations with tool execution
+- [services/llmService.ts](../../../../services/llmService.ts): shared orchestration, prompt formatting, model-specific syntax, and provider dispatch
+- [services/geminiService.ts](../../../../services/geminiService.ts): Gemini-based text, image, and video flows
+- [services/ollamaService.ts](../../../../services/ollamaService.ts), [services/openrouterService.ts](../../../../services/openrouterService.ts), [services/llamacppService.ts](../../../../services/llamacppService.ts), and [services/anthropicService.ts](../../../../services/anthropicService.ts): provider-specific adapters
+- [services/assistantService.ts](../../../../services/assistantService.ts) and [services/assistantTools.ts](../../../../services/assistantTools.ts): assistant-style tool execution and tool-grounded conversation
+- [services/turnManager.ts](../../../../services/turnManager.ts): orchestrates multi-turn assistant conversations with tool execution
 
 ## Execution Pipeline
 
@@ -159,3 +159,11 @@ Tools receive a `ToolContext` carrying `settings` and `attachments`. The assista
 ## Context Building
 
 `buildContextForEnhancer(modifiers, isAudio)` builds an `[Architectural Constraints]` block from the modifier state, covering camera specs, lighting, composition, motion, and audio parameters. `buildMidjourneyParams()` constructs `--ar`, `--s`, `--c`, `--v` etc. flags for Midjourney syntax.
+
+## Related
+
+- [PLANNER.md](PLANNER.md) — how requests are classified and routed before reaching this engine
+- [PROVIDER_ROUTER.md](../07_PROVIDERS/PROVIDER_ROUTER.md) — the cost/latency-aware selection layer behind provider dispatch
+- [CAPABILITY_SPEC.md](../02_CAPABILITY_PLATFORM/CAPABILITY_SPEC.md) — the assistant tool registry this engine's tool loop executes against
+- [VOICE_PIPELINE.md](../06_VOICE/VOICE_PIPELINE.md) — voice input feeds the same planning/tool-loop path described here
+- [contracts/interfaces.md](../../contracts/interfaces.md) §3 — the LLM provider and assistant turn contracts in implementation-facing detail

@@ -24,3 +24,8 @@ Kollektiv exists to make generative creative work feel more deliberate, more loc
 - Core prompt and vault workflows remain usable without cloud connectivity.
 - Lint, tests, and the primary build path stay green as the product evolves.
 - The assistant can complete meaningful tasks without introducing destructive or unsafe actions by default.
+
+## Related
+
+- [DESIGN_PRINCIPLES.md](DESIGN_PRINCIPLES.md) — the engineering philosophy that implements this vision
+- [ARCHITECTURE_CONSTITUTION.md](ARCHITECTURE_CONSTITUTION.md) — current system state, roadmap, and known gaps against these goals

@@ -19,3 +19,8 @@ Every capability should have a small manifest describing its name, description, 
 ## Tests
 
 Tests should validate the happy path, the failure path, and any provider-specific branching. If the capability changes settings or persistent state, include a regression test for that path as well.
+
+## Related
+
+- [CAPABILITY_SPEC.md](../02_CAPABILITY_PLATFORM/CAPABILITY_SPEC.md) — the manifest/lifecycle contract this workflow implements
+- [contracts/interfaces.md](../../contracts/interfaces.md) §4.1 — the concrete `AssistantTool` interface (`name`, `description`, `parameters`, `execute`) if the capability is assistant-facing
