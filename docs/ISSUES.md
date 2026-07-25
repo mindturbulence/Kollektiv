@@ -828,6 +828,59 @@ if the settings schema is changed again.
 
 ---
 
+## ISSUE-28 — Aspirational MCP Architecture (FINAL_MCP_PLAN.md) not started · LOW
+
+`docs/superpowers/plans/FINAL_MCP_PLAN.md` (now deleted) described a vision for
+MCP as a thin adapter layer with an 8-layer architecture (Interfaces → AI Engine
+→ Intent Router → Planner → Capability Registry → Execution Engine → Service
+Layer → Infrastructure). Key elements never built:
+
+- 5 public MCP capability tools: `capability_search`, `capability_describe`,
+  `capability_execute`, `capability_list`, `capability_health` — none exist
+- Intent Router + Planner layers — no matching modules
+- Capability model (metadata + execution strategy + permissions + dependencies)
+  with execution types: prompt, workflow, native, agent, external_mcp
+- Service layer abstractions (WebService, GitService, BrowserService, etc.) —
+  `appControlService`, `browserOperatorResolver`, etc. exist but don't follow
+  this abstraction
+- Provider Router abstraction across Gemini/OpenAI/ElevenLabs — `getActiveProvider`
+  in `llmService.ts` is a simple switch, not the architectured abstraction
+
+**Current reality:** The app has `kollektivMcp.ts` (multi-sub-server aggregator)
+plus the legacy `obsidian-mcp-server` child-process path. Neither follows this
+capability model. The Phase 0 extraction pattern (grouped arrays, spread into
+`ASSISTANT_TOOLS`) works well for the current codebase, so this architecture is
+**deferred indefinitely** — revisit only if MCP becomes a primary interface
+(rather than chat/voice being primary, with MCP as a secondary protocol).
+
+---
+
+## ISSUE-29 — Aspirational Knowledge & Obsidian Architecture (FINAL_OBSIDIAN_PLAN.md) not started · LOW
+
+`docs/superpowers/plans/FINAL_OBSIDIAN_PLAN.md` (now deleted) described a vision
+for semantic knowledge management over raw Obsidian file I/O. Key elements never built:
+
+- Knowledge Manager API: `capture()`, `search()`, `recall()`, `promote()`,
+  `distill()`, `archive()` — none exist
+- Memory architecture with 3 tiers: Working Memory (conversation), Long-term
+  Memory (preferences/profile), Knowledge Repository (Obsidian) — current
+  `memoryStorage.ts` is a flat key-value store
+- 5 index types: metadata, full-text, embedding, relationship graph, project —
+  no indexing layer exists
+- Automatic retrieval + context injection on every request — `buildSystemIdentity`
+  exists but doesn't auto-inject vault content
+- Knowledge lifecycle with promotion rules (inbox → projects → output → wiki)
+  and automatic folder projection
+
+**Current reality:** The app has `utils/obsidianStorage.ts` (raw markdown I/O)
+plus 12 `obsidian_*` assistant tools for search/read/write. The research panel
+has `researchVaultService.ts` with project-based source management. This is
+sufficient for the current feature set. The knowledge architecture is
+**deferred indefinitely** — revisit if semantic retrieval or multi-index search
+becomes a user-facing priority.
+
+---
+
 ## Notes / non-issues (verified, no action)
 
 - Video overlay **does** handle Escape-to-close (`VideoPlayerOverlay.tsx:110`) and
