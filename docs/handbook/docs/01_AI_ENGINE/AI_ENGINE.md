@@ -25,7 +25,7 @@ The engine is centered around the provider-agnostic service layer in the service
 
 ## Provider Strategy
 
-The engine is provider-agnostic at the feature level while adapting prompt structure per model family. A provider router (`services/providerRouter.ts`) plus model-specific formatting rules (`constants/modelProfiles.ts`) handle dispatch.
+The engine is provider-agnostic at the feature level while adapting prompt structure per model family. Model-specific formatting rules (`constants/modelProfiles.ts`) handle dispatch; the active provider itself is a direct, explicit user choice via `getActiveProvider(settings)` in `services/llmService.ts` (`services/providerRouter.ts`, a cost/latency-aware auto-selection layer, was found built-but-disconnected — a literal stub — in a 2026-07-25 audit and deleted 2026-07-26 rather than wired, since auto-fallback conflicts with the user's explicit provider choice; see ARCHITECTURE_CONSTITUTION.md § Built But Not Wired).
 
 ## Interfaces
 
@@ -112,7 +112,7 @@ The engine builds model-specific system instructions via factory functions:
 
 ## Assistant Tool Catalog
 
-The assistant has ~55+ built-in tools defined in `services/assistantTools.ts`, organized into category-specific modules under `services/tools/`:
+The assistant has 89 built-in tools (45 defined inline in `services/assistantTools.ts` plus 44 spread in from the category modules below), organized into category-specific modules under `services/tools/`:
 
 ### Core tools (in assistantTools.ts)
 
@@ -131,16 +131,19 @@ The assistant has ~55+ built-in tools defined in `services/assistantTools.ts`, o
 
 | Module | Tools | Description |
 |---|---|---|
-| `services/tools/browserTools.ts` | `browser_navigate`, `browser_click`, `browser_type`, `browser_snapshot`, `browser_scroll`, etc. (23 tools) | CDP-based browser automation |
+| `services/tools/browserTools.ts` | `browser_navigate`, `browser_click`, `browser_type`, `browser_scroll`, etc. (21 tools) | CDP-based browser automation |
 | `services/tools/obsidianTools.ts` | `obsidian_search_notes`, `obsidian_get_note`, `obsidian_write_note`, etc. (12+ tools) | Obsidian vault access via MCP |
 | `services/tools/gmailTools.ts` | `read_gmail`, `send_gmail`, `delete_gmail` | Google Gmail via OAuth token |
 | `services/tools/spotifyTools.ts` | `spotify_list_playlists`, `spotify_get_playlist_tracks`, `spotify_play` | Spotify playback |
 | `services/tools/tensorArtTools.ts` | `tensorart_list_models`, `tensorart_generate` | Remote image generation |
 | `services/tools/researchTools.ts` | `append_findings`, `expand_source` | Research panel findings management |
+| `services/tools/graphTools.ts` | `find_related_knowledge` | Cross-store tag-based relations via `services/relationshipGraph.ts` — finds memories/gallery items/prompts sharing tags with a given item |
 
 ### Tool execution
 
-Tools receive a `ToolContext` carrying `settings` and `attachments`. The assistant loop runs up to `MAX_TOOL_ROUNDS = 8` iterative turns per user request. Browser tools require explicit permission via the cursor icon in the header.
+Tools receive a `ToolContext` carrying `settings` and `attachments`. The assistant loop runs up to `MAX_TOOL_ROUNDS = 8` iterative turns per user request (constant lives in `services/assistantService.ts`, not `assistantTools.ts`). Browser tools require explicit permission via the cursor icon in the header.
+
+`services/relationshipGraph.ts` (entity graph, 52 tests) is now reachable via the `find_related_knowledge` tool below — it was found built-but-disconnected in a 2026-07-25 audit and wired in 2026-07-26. See [ARCHITECTURE_CONSTITUTION.md § Built But Not Wired](../00_FOUNDATION/ARCHITECTURE_CONSTITUTION.md#built-but-not-wired) for the history.
 
 ### Tool declarations by provider
 
@@ -163,7 +166,6 @@ Tools receive a `ToolContext` carrying `settings` and `attachments`. The assista
 ## Related
 
 - [PLANNER.md](PLANNER.md) — how requests are classified and routed before reaching this engine
-- [PROVIDER_ROUTER.md](../07_PROVIDERS/PROVIDER_ROUTER.md) — the cost/latency-aware selection layer behind provider dispatch
 - [CAPABILITY_SPEC.md](../02_CAPABILITY_PLATFORM/CAPABILITY_SPEC.md) — the assistant tool registry this engine's tool loop executes against
 - [VOICE_PIPELINE.md](../06_VOICE/VOICE_PIPELINE.md) — voice input feeds the same planning/tool-loop path described here
 - [contracts/interfaces.md](../../contracts/interfaces.md) §3 — the LLM provider and assistant turn contracts in implementation-facing detail

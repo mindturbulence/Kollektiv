@@ -28,7 +28,7 @@ The memory system uses three tiers based on durability and scope:
 
 ## Memory Injection
 
-**File:** `services/assistantService.ts` — `memoryPromptBlock()`
+**Function:** `memoryPromptBlock()` — defined in `utils/memoryStorage.ts`, imported into `services/assistantService.ts`
 
 Memory is injected into every assistant request **contextually** by filtering against the user's latest message. This ensures only relevant memories are surfaced to the model:
 
@@ -39,7 +39,7 @@ Memory is injected into every assistant request **contextually** by filtering ag
 
 ## Knowledge Context Block
 
-**File:** `services/buildKnowledgeContextBlock.ts`
+**Function:** `buildKnowledgeContextBlock()` — defined inline in `services/assistantService.ts`
 
 Formats knowledge search results into an LLM prompt context block:
 - Kind badges (memory, note, vault_note, prompt)
@@ -58,7 +58,7 @@ Items move through tiers with automatic lifecycle folder projection (`services/k
 ## Tests
 
 - `utils/memoryStorage.test.ts` — memory CRUD and search
-- `services/buildKnowledgeContextBlock.test.ts` — 17 tests for context formatting
+- `services/buildKnowledgeContextBlock.test.ts` — 17 tests for context formatting (tests a function defined in `assistantService.ts`, not a same-named source file)
 - `services/knowledgeLifecycle.test.ts` — 59 tests for lifecycle and projection
 - `utils/vaultSearch.test.ts` — 27 tests for BM25 search index
 

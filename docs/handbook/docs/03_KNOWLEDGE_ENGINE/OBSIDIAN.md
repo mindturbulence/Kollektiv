@@ -37,7 +37,7 @@ BM25 full-text search engine built on top of the Obsidian vault:
 - **Index building:** Chunked async build with `requestIdleCallback` polyfill
 - **Storage:** Index persisted to IndexedDB for fast reload
 - **Search:** BM25 scoring with configurable k/b parameters
-- **Auto-rebuild:** Debounced `_scheduleSearchRebuild()` triggered after vault mutations
+- **Auto-rebuild:** Debounced `_scheduleSearchRebuild()` triggered after vault mutations (lives in `utils/obsidianStorage.ts`, not `vaultSearch.ts` itself — it calls into the search index after every mutation)
 - **Integration:** Search results appear in the Command Palette for instant note lookup
 - **Loading indicator:** Subtle "searching notes…" shown while building
 

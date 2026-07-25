@@ -47,7 +47,7 @@ A lightweight entity graph connecting prompts, images, styles, notes, and memori
 
 ## Knowledge Context Injection
 
-**File:** `services/buildKnowledgeContextBlock.ts`
+**Function:** `buildKnowledgeContextBlock()` — defined inline in `services/assistantService.ts` (only its test file, `services/buildKnowledgeContextBlock.test.ts`, is a separate module)
 
 Formats knowledge search results into an LLM prompt context block with kind badges and tag badges. Injected into every assistant request via `buildSystemIdentity()`:
 
