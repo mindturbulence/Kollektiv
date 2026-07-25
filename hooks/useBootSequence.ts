@@ -112,8 +112,8 @@ export const useBootSequence = ({
       if (typeof window !== 'undefined' && (window as any).__initLog) {
         (window as any).__initLog('INIT_CATCH: ' + errorMsg);
       }
-      showGlobalFeedback(`System error: ${errorMsg}`, true);
       setIsLoading(false);
+      showGlobalFeedback(`System error: ${errorMsg}`, true);
     }
     // Removed dependency on settings to prevent re-init on theme switch
     // settings are only needed for initial storage handle check

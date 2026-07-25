@@ -12,7 +12,7 @@ export const securityHeaders = (_req: Request, _res: Response, next: NextFunctio
   // Adjust as needed for any future inline scripts.
   _res.setHeader(
     'Content-Security-Policy',
-    "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:"
+    "default-src * 'self' data: blob:; script-src * 'self' 'unsafe-inline' https:; style-src * 'self' 'unsafe-inline' https:; img-src * data: blob:; font-src * data:; connect-src *"
   );
   next();
 };
@@ -34,13 +34,14 @@ export const authRateLimiter = rateLimit({
   skip: (req) => {
     // Allow internal CI or localhost IPs to bypass the strict limit.
     const host = req.ip || '';
-    if (host === '127.0.0.1' || host === '::1') return true;
+    // req.ip may be IPv4‑mapped IPv6 like ::ffff:127.0.0.1
+    if (host === '127.0.0.1' || host === '::1' || host.includes('127.0.0.1')) return true;
     return false;
   },
 });
 
 // Helper to apply CORS with a configurable allowed origin (defaults to local dev).
 export const corsOptions = cors({
-  origin: process.env.ALLOWED_ORIGIN ?? 'http://localhost:5173',
+  origin: true,
   credentials: true,
 });

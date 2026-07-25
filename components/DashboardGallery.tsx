@@ -47,16 +47,24 @@ const GalleryCard: React.FC<{ url: string }> = memo(({ url }) => {
     // Retro GSAP "Shader" Effect - Median speed with performance optimizations
     useEffect(() => {
         if (!imgRef.current || !colorImgRef.current || !displayUrl) return;
+        if (typeof document === 'undefined') return;
 
         const turb = document.querySelector('#global-retro-shader feTurbulence');
         const disp = document.querySelector('#global-retro-shader feDisplacementMap');
-
         if (!turb || !disp) return;
 
+        let isMounted = true;
+        let timeoutId: ReturnType<typeof setTimeout> | null = null;
+
         const ctx = gsap.context(() => {
+            const scheduleNext = () => {
+                if (!isMounted) return;
+                timeoutId = setTimeout(triggerGlitch, Math.random() * 9000 + 3000);
+            };
             const triggerGlitch = () => {
-                const tl = gsap.timeline({ 
-                    onComplete: () => { setTimeout(triggerGlitch, Math.random() * 9000 + 3000); } 
+                if (!isMounted) return;
+                const tl = gsap.timeline({
+                    onComplete: scheduleNext
                 });
 
                 const attackTime = 0.4;
@@ -92,7 +100,11 @@ const GalleryCard: React.FC<{ url: string }> = memo(({ url }) => {
             triggerGlitch();
         });
 
-        return () => ctx.revert();
+        return () => {
+            isMounted = false;
+            if (timeoutId) clearTimeout(timeoutId);
+            ctx.revert();
+        };
     }, [displayUrl]);
 
     // Cleanup object URL
@@ -135,6 +147,7 @@ const GalleryCard: React.FC<{ url: string }> = memo(({ url }) => {
 const DashboardGallery: React.FC<DashboardGalleryProps> = ({ items }) => {
     // Shared SVG Filter to reduce total SVG node count and avoid per-card re-paints
     useEffect(() => {
+        if (typeof document === 'undefined') return;
         const turb = document.querySelector('#global-retro-shader feTurbulence');
         if (!turb) return;
         
