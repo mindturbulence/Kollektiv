@@ -1,5 +1,23 @@
 # Kollektiv — Coding Standards
 
+## ⚠️ OBSOLETE — See `docs/Architecture/` (Tech Handbook)
+
+This file is preserved as reference only. The canonical engineering standards now
+live in [`docs/Architecture/docs/09_AI_WORKER/AI_WORKER_RULES.md`](Architecture/docs/09_AI_WORKER/AI_WORKER_RULES.md)
+and [`docs/Architecture/docs/00_FOUNDATION/ARCHITECTURE_CONSTITUTION.md`](Architecture/docs/00_FOUNDATION/ARCHITECTURE_CONSTITUTION.md)
+(§Development and Engineering Standards).
+
+**Unique content in this file not yet migrated to the new handbook:**
+- §1–10: Detailed TypeScript compiler rules, React patterns, styling conventions,
+  state/settings patterns, auth/token rules, server constraints, constants hygiene,
+  comment policy, test expectations — all grounded in actual toolchain config
+
+The new handbook's AI_WORKER_RULES is a concise overview. This file contains the
+full implementation-level detail. **Use this for day-to-day coding guidance until
+the content is migrated to the handbook.**
+
+---
+
 > How code is written in this repo. Every rule here is grounded in the actual
 > toolchain (`tsconfig.json`, `eslint.config.js`, `package.json`) or an
 > established pattern in the tree — not generic advice. Companion docs:

@@ -1,5 +1,24 @@
 # Kollektiv — Pre-Monetization Roadmap (Future Iteration Notes)
 
+## ⚠️ OBSOLETE — See `docs/Architecture/` (Tech Handbook)
+
+This file is preserved as reference only. The canonical roadmap direction is now
+documented in
+[`docs/Architecture/docs/00_FOUNDATION/ARCHITECTURE_CONSTITUTION.md`](Architecture/docs/00_FOUNDATION/ARCHITECTURE_CONSTITUTION.md)
+(§Roadmap Direction) and
+[`docs/Architecture/docs/00_FOUNDATION/VISION.md`](Architecture/docs/00_FOUNDATION/VISION.md).
+
+**Unique content in this file not yet migrated to the new handbook:**
+- Granular phase tasks with checkbox tracking (Phases 0–3)
+- Definition of "ready to think about money" (6-point checklist)
+- Explicit non-goals list for the current phase
+
+The new handbook covers the same 4 phases at a strategic level. This file contains
+the tactical task breakdown and progress tracking. **Use for task-level reference
+until the content is migrated.**
+
+---
+
 > Working note, 2026-07-18. Premise: the app is **not monetizable yet**. Before any pricing/packaging work, the goal is to resolve structural weaknesses, enrich the feature set, and polish the UI until the app feels like a finished product to a stranger, not just to its author. Sequenced for a solo developer — each phase is shippable on its own.
 
 Companion doc: [ARCHITECTURE.md](ARCHITECTURE.md) describes the system as it is; this file describes where it should go next.

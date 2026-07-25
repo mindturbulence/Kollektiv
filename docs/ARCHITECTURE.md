@@ -1,5 +1,22 @@
 # Kollektiv — Technical Architecture & Reference
 
+## ⚠️ OBSOLETE — See `docs/Architecture/` (Tech Handbook)
+
+This file is preserved as reference only. The canonical architectural documentation
+now lives in `docs/Architecture/` (the tech handbook), starting with
+[`docs/Architecture/docs/00_FOUNDATION/ARCHITECTURE_CONSTITUTION.md`](Architecture/docs/00_FOUNDATION/ARCHITECTURE_CONSTITUTION.md).
+
+**Unique content in this file not yet migrated to the new handbook:**
+- §5: Full server endpoint table (proxy routes, CDP bridge, Topaz, MCP)
+- §8: Complete LLM provider catalog with model lists
+- §9: Feature module map (14 tabs with exact component references)
+- §10: Full assistant tool catalog (55 tools by name)
+- §13: Known issues & gotchas (production branch, headless Chrome, boot gates)
+
+**Use the new handbook for architecture decisions. Use this file for implementation-level reference until the above sections are migrated.**
+
+---
+
 > **Kollektiv** — *Neural Utility Suite & Creative Asset Vault*. A local-first, single-page web application for prompt engineers and generative-media artists. It combines multi-provider LLM prompt refinement, a local file-backed media vault, an AI assistant (chat + live voice + browser control), and a suite of image/video utilities.
 
 This document describes the codebase as it exists on the `main` branch. It is grounded in the actual source — file paths and behaviours cited here were verified against the tree, not assumed. Where something is a known-broken or fragile area, it is flagged explicitly.
