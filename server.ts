@@ -12,6 +12,12 @@ import { DEFAULT_ANTHROPIC_MODEL } from "./constants/llmDefaults";
 import { isAllowedProxyTarget } from "./utils/proxyTargetValidation";
 import { chromeLauncher } from "./services/chromeLauncher";
 import { startKollektivMcp, type KollektivMcpInstance } from "./services/kollektivMcp";
+// Security and validation middleware
+import { securityHeaders, globalRateLimiter, authRateLimiter, corsOptions } from "./middleware/security";
+import { validate } from "./middleware/validate";
+// Request schemas
+import { AnthropicRequestSchema } from "./schemas/anthropic";
+import { TopazUpscaleSchema } from "./schemas/topaz";
 
 /**
  * Try to free a TCP port by killing whatever process is listening on it.
@@ -84,6 +90,11 @@ async function startServer() {
     } catch { /* malformed Origin falls through to 403 */ }
     res.status(403).json({ error: "Cross-origin requests are not allowed" });
   });
+
+  // Apply security middlewares
+  app.use(corsOptions);
+  app.use(securityHeaders);
+  app.use(globalRateLimiter);
 
   // Proxy for Google Drive / Google APIs (Bypasses body parsing on GETs to avoid hangs)
   app.use("/google-api", async (req, res) => {
@@ -410,7 +421,7 @@ async function startServer() {
   });
 
   // OpenAI Realtime API — mint ephemeral token for client-side WebRTC
-  app.get("/api/openai/token", async (_req, res) => {
+  app.get("/api/openai/token", authRateLimiter, async (_req, res) => {
     const apiKey = process.env.OPENAI_API_KEY;
     if (!apiKey) return res.status(400).json({ error: 'OpenAI API key not configured. Set OPENAI_API_KEY in your environment.' });
     try {
@@ -446,7 +457,7 @@ async function startServer() {
   });
 
   // Anthropic API Proxy Endpoint
-  app.post("/api/anthropic/chat", async (req, res) => {
+  app.post("/api/anthropic/chat", authRateLimiter, validate(AnthropicRequestSchema), async (req, res) => {
     try {
       const { messages, settings, stream } = req.body;
       
@@ -1353,7 +1364,7 @@ async function startServer() {
   });
 
   // POST /api/topaz-upscale — upscale an image using locally installed Topaz Gigapixel AI
-  app.post("/api/topaz-upscale", topazUpload.single('image'), async (req, res) => {
+  app.post("/api/topaz-upscale", authRateLimiter, topazUpload.single('image'), validate(TopazUpscaleSchema), async (req, res) => {
     if (!req.file) return res.status(400).json({ error: 'No image file provided.' });
 
     const ext = path.extname(req.file.originalname) || '.png';
