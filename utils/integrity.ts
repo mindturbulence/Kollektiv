@@ -528,4 +528,146 @@ export const verifyAndRepairFiles = async (onProgress: (message: string, progres
     } finally {
         fileSystemManager.storageProvider = originalProvider;
     }
-};
+}
+
+// ── Integrity Report ──
+
+const LAST_SCAN_KEY = 'kollektiv_last_scan_report';
+
+export interface IntegrityReport {
+  /** Number of files checked */
+  scanned: number;
+  /** Number of default files created */
+  created: number;
+  /** Number of files structurally repaired */
+  repaired: number;
+  /** Number of files skipped (exist but unreadable) */
+  skipped: number;
+  /** Number of processing errors */
+  errors: number;
+  /** Duration in milliseconds */
+  duration: number;
+  /** Number of prompts rebuilt */
+  promptsRebuilt: number;
+  /** Gallery items after rebuild */
+  galleryItems: number;
+  /** ISO timestamp of the scan */
+  timestamp: string;
+}
+
+/**
+ * Run a full integrity scan: verify files, rebuild manifests, and persist the report.
+ * Returns the IntegrityReport and saves it to localStorage for the modal to read.
+ */
+export async function runIntegrityScan(
+  settings: LLMSettings,
+  onProgress?: (msg: string, progress?: number) => void,
+): Promise<IntegrityReport> {
+  const start = performance.now();
+  let scanned = 0;
+  let created = 0;
+  let repaired = 0;
+  let skipped = 0;
+  let errors = 0;
+  let galleryItems = 0;
+  let promptsRebuilt = 0;
+
+  const progress = (msg: string, p?: number) => {
+    const upper = msg.toUpperCase();
+    if (upper.includes('[CREATE]')) created++;
+    else if (upper.includes('[REPAIR]')) repaired++;
+    else if (upper.includes('[SKIP]')) skipped++;
+    else if (upper.includes('[CHECK]') || upper.includes('[VERIFY]')) scanned++;
+    onProgress?.(msg, p);
+  };
+
+  try {
+    await verifyAndRepairFiles(progress, settings);
+  } catch (e) {
+    errors++;
+    console.error('[Integrity] Scan failed:', e);
+  }
+
+  // Rebuild gallery (recover metadata files)
+  try {
+    const originalProvider = fileSystemManager.storageProvider;
+    if (originalProvider !== 'drive') {
+      fileSystemManager.storageProvider = 'local';
+      await rebuildGalleryDatabase((msg) => {
+        const m = msg.toUpperCase();
+        if (m.includes('ITEMS]')) {
+          const match = msg.match(/(\d+)\s*ITEMS?/i);
+          if (match) galleryItems = parseInt(match[1], 10);
+        }
+        onProgress?.(msg);
+      });
+      fileSystemManager.storageProvider = originalProvider;
+    }
+  } catch (e) {
+    errors++;
+    console.error('[Integrity] Gallery rebuild failed:', e);
+  }
+
+  // Rebuild prompts
+  try {
+    const originalProvider = fileSystemManager.storageProvider;
+    if (originalProvider !== 'drive') {
+      fileSystemManager.storageProvider = 'local';
+      await rebuildPromptDatabase((msg) => {
+        const m = msg.toUpperCase();
+        if (m.includes('ENTRIES]')) {
+          const match = msg.match(/(\d+)\s*ENTRIES?/i);
+          if (match) promptsRebuilt = parseInt(match[1], 10);
+        }
+        onProgress?.(msg);
+      });
+      fileSystemManager.storageProvider = originalProvider;
+    }
+  } catch (e) {
+    errors++;
+    console.error('[Integrity] Prompt rebuild failed:', e);
+  }
+
+  const report: IntegrityReport = {
+    scanned,
+    created,
+    repaired,
+    skipped,
+    errors,
+    duration: Math.round(performance.now() - start),
+    galleryItems,
+    promptsRebuilt,
+    timestamp: new Date().toISOString(),
+  };
+
+  // Persist to localStorage
+  try {
+    localStorage.setItem(LAST_SCAN_KEY, JSON.stringify(report));
+  } catch {
+    // non-critical
+  }
+
+  return report;
+}
+
+/**
+ * Read the last integrity scan report from localStorage.
+ */
+export function getLastScanReport(): IntegrityReport | null {
+  try {
+    const raw = localStorage.getItem(LAST_SCAN_KEY);
+    if (!raw) return null;
+    return JSON.parse(raw) as IntegrityReport;
+  } catch {
+    return null;
+  }
+}
+
+/** Clear the persisted scan report (e.g. after settings reset). */
+export function clearScanReport(): void {
+  try {
+    localStorage.removeItem(LAST_SCAN_KEY);
+  } catch {
+    // non-critical
+  }
+}
