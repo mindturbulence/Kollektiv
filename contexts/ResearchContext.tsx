@@ -21,11 +21,7 @@ interface ResearchProviderProps {
 export const ResearchProvider: React.FC<ResearchProviderProps> = ({ children, settings, fileManager }) => {
   const ctx = useResearchProject(settings, fileManager);
 
-  const value = useMemo(() => ctx, [
-    ctx.mode, ctx.projectSlug, ctx.project, ctx.isProjectLoading,
-    ctx.sources, ctx.isAddingSource, ctx.messages, ctx.isProcessing,
-    ctx.findings, ctx.error,
-  ]);
+  const value = useMemo(() => ctx, [ctx]);
 
   return (
     <ResearchContext.Provider value={value}>

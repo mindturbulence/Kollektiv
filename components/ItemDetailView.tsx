@@ -97,12 +97,13 @@ const TransitionalMedia: React.FC<{
         };
         load();
         return () => { isMounted = false; };
-    }, [url]);
+    }, [url, displayUrl]);
 
     useEffect(() => {
+        const urls = objectUrls.current;
         return () => {
-            objectUrls.current.forEach(u => URL.revokeObjectURL(u));
-            objectUrls.current.clear();
+            urls.forEach(u => URL.revokeObjectURL(u));
+            urls.clear();
         };
     }, []);
 
@@ -122,7 +123,7 @@ const TransitionalMedia: React.FC<{
         }, containerRef);
 
         return () => ctx.revert();
-    }, [displayUrl, direction]);
+    }, [displayUrl, direction, prevUrl]);
 
     if (isLoading && !displayUrl) {
         return <div className="w-full h-full flex items-center justify-center bg-transparent"><LoadingSpinner size={48} /></div>;

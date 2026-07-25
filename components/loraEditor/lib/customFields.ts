@@ -31,7 +31,6 @@ export function evaluateCustomFields(defs: CustomFieldDef[], context: CustomFiel
     for (const def of defs) {
         if (!def || typeof def.label !== 'string' || typeof def.calc !== 'string') continue;
         try {
-            // eslint-disable-next-line no-new-func
             const evaluator = new Function(
                 'fileMetadata', 'civitaiMetadata', 'arcencielMetadata', 'basemodelMetadata', 'vaeMetadata', 'customMetadata', 'safetensorsFile', 'escapeHtml',
                 `return (${def.calc});`

@@ -15,7 +15,7 @@ const MetadataEditorPanel: React.FC<MetadataEditorPanelProps> = ({ state, settin
 
     useEffect(() => {
         setEditorText(JSON.stringify(state.rawMetadataStrings, null, 2));
-    }, [state.file]);
+    }, [state.file, state.rawMetadataStrings]);
 
     const editorFields = settings.editorFields.split(',').map(f => f.trim()).filter(Boolean);
 

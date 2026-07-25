@@ -129,34 +129,34 @@ const Header: React.FC<HeaderProps> = ({
   const switchingRef = useRef(false);
   const containerRefs = useRef<Record<string, HTMLDivElement | null>>({});
 
-  const workspaceItems: NavItemData[] = [
+  const workspaceItems = React.useMemo<NavItemData[]>(() => [
     { id: 'crafter' as ActiveTab, label: 'Crafter' },
     { id: 'refiner' as ActiveTab, label: 'Refiner' },
     { id: 'prompt_analyzer' as ActiveTab, label: 'Analyzer' },
     { id: 'media_analyzer' as ActiveTab, label: 'Abstractor' },
-  ];
+  ], []);
 
-  const vaultItems: NavItemData[] = [
+  const vaultItems = React.useMemo<NavItemData[]>(() => [
     { id: 'prompt' as ActiveTab, label: 'Prompt' },
     { id: 'gallery' as ActiveTab, label: 'Media' },
-  ];
+  ], []);
 
-  const utilityItems: NavItemData[] = [
+  const utilityItems = React.useMemo<NavItemData[]>(() => [
     { id: 'composer' as ActiveTab, label: 'Composer' },
     { id: 'image_compare' as ActiveTab, label: 'Compare' },
     { id: 'color_palette_extractor' as ActiveTab, label: 'Palette' },
     { id: 'resizer' as ActiveTab, label: 'Resizer' },
     { id: 'video_to_frames' as ActiveTab, label: 'Video' },
     { id: 'lora_editor' as ActiveTab, label: 'LoRA Editor' },
-  ];
+  ], []);
 
-  const navGroups = [
+  const navGroups = React.useMemo(() => [
     { id: 'home', label: 'Home', items: [], singleId: 'dashboard' as ActiveTab },
     { id: 'discovery', label: 'Discovery', items: [], singleId: 'discovery' as ActiveTab },
     { id: 'workspaces', label: 'Workspaces', items: workspaceItems },
     { id: 'vault', label: 'Vault', items: vaultItems },
     { id: 'utilities', label: 'Utilities', items: utilityItems },
-  ];
+  ], [workspaceItems, vaultItems, utilityItems]);
 
   // If activeTab changes, but no menu is open, expand the group containing the active tab
   useLayoutEffect(() => {
@@ -169,7 +169,7 @@ const Header: React.FC<HeaderProps> = ({
         setActiveMenu(activeGroup.id);
       }
     }
-  }, [activeTab]);
+  }, [activeTab, activeMenu, navGroups]);
 
   const isGroupCurrent = (groupId: string) => {
     const group = navGroups.find(g => g.id === groupId);
@@ -212,7 +212,7 @@ const Header: React.FC<HeaderProps> = ({
         });
       }
     });
-  }, [activeMenu]);
+  }, [activeMenu, navGroups]);
 
   const handleParentClick = useCallback((group: typeof navGroups[0]) => {
     if (switchingRef.current) return;

@@ -280,10 +280,9 @@ export class DemoFileSystemManager implements IFileSystemManager {
     dirHandle: FileSystemDirectoryHandle
   ): Promise<number> {
     let total = 0;
-    // eslint-disable-next-line @typescript-eslint/no-unused-vars
-    for await (const _entry of (dirHandle as any).entries()) {
-      const entry = _entry as [string, FileSystemFileHandle | FileSystemDirectoryHandle];
-      const _fileHandle = entry[1];
+    for await (const [, entryVal] of (dirHandle as any).entries()) {
+      const _fileHandle = entryVal;
+
       if (_fileHandle.kind === 'file') {
         const file = await (_fileHandle as FileSystemFileHandle).getFile();
         total += file.size;

@@ -180,7 +180,7 @@ const SavedPrompts: React.FC<SavedPromptsProps> = ({
     }
 
     return () => observer.current?.disconnect();
-  }, [isLoading, displayCount, prompts.length, searchQuery, selectedCategoryId]);
+  }, [isLoading, displayCount, prompts.length, searchQuery, selectedCategoryId, sortedAndFilteredPrompts.length]);
 
   // Masonry Split Logic with Pagination Slicing
   const masonryColumns = useMemo(() => {

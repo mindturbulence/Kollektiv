@@ -264,7 +264,7 @@ const Stage: React.FC<{ text: string; streaming?: boolean; wordTime?: number; on
     wordTime = 550,
     onDone,
 }) => {
-    const words = text.trim() ? text.trim().split(/\s+/) : [];
+    const words = React.useMemo(() => text.trim() ? text.trim().split(/\s+/) : [], [text]);
     const ready = streaming ? Math.max(0, words.length - 1) : words.length;
     const [idx, setIdx] = useState(-1);
     const onDoneRef = useRef(onDone);
@@ -285,7 +285,7 @@ const Stage: React.FC<{ text: string; streaming?: boolean; wordTime?: number; on
         const hold = idx < 0 ? 120 : wordTime + Math.max(0, shown.length - 7) * 60;
         const t = setTimeout(() => setIdx(i => i + 1), hold);
         return () => clearTimeout(t);
-    }, [idx, ready, wordTime, streaming]);
+    }, [idx, ready, wordTime, streaming, words]);
 
     // Once caught up to `ready`, keep showing the last word revealed instead
     // of blanking out while waiting for the next one (or for streaming to
@@ -432,7 +432,7 @@ const AssistantPage: React.FC = () => {
             }
         }, 1000);
         return () => window.clearInterval(t);
-    }, [displayMode, idleShown]);
+    }, [displayMode, idleShown, idleVariations.length]);
 
     // Cycle the idle prompt every 30 seconds for variety while idle.
     useEffect(() => {
@@ -446,7 +446,7 @@ const AssistantPage: React.FC = () => {
             });
         }, 30_000);
         return () => window.clearInterval(t);
-    }, [idleShown]);
+    }, [idleShown, idleVariations.length]);
 
     // Session over — return home. Also bounces straight out if someone lands
     // here without an active session. Errors linger long enough to read.

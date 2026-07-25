@@ -77,7 +77,7 @@ export const PromptAnalyzer: React.FC<PromptAnalyzerProps> = ({
             setPromptInput(promptToInsert.content);
             lastInsertedId.current = promptToInsert.id;
         }
-    }, [promptToInsert]);
+    }, [promptToInsert, setPromptInput]);
     const [subjectPrompt, setSubjectPrompt] = useLocalStorage('analyzer_subjectPrompt', '');
     const [modifierSegments, setModifierSegments] = useLocalStorage<DissectedSegment[]>('analyzer_modifierSegments', []);
     const [customParameters, setCustomParameters] = useState<{ label: string, value: string }[]>([]);
@@ -497,7 +497,7 @@ export const PromptAnalyzer: React.FC<PromptAnalyzerProps> = ({
 
     const handleSelectLibraryPrompt = useCallback((prompt: SavedPrompt) => {
         setPromptInput(prompt.text);
-    }, []);
+    }, [setPromptInput]);
 
     const hasBreakdown = subjectPrompt || modifierSegments.length > 0;
 

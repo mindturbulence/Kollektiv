@@ -100,7 +100,7 @@ const VideoPlayerOverlay: React.FC<VideoPlayerOverlayProps> = ({ url, onClose })
                 },
             });
         }
-    }, [url, videoId]);
+    }, [url, videoId, visible]);
 
     // ── Keyboard: Escape to close ─────────────────────────────
 

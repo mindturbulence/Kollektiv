@@ -74,7 +74,7 @@ const AssistantToolsSection: React.FC<AssistantToolsSectionProps> = ({ settings 
             if (!cancelled) { setMcpTools(tools); setMcpLoading(false); }
         });
         return () => { cancelled = true; };
-    }, [settings.mcpServers]);
+    }, [settings.mcpServers, settings]);
 
     const allTools = useMemo<DisplayTool[]>(() => {
         const native: DisplayTool[] = ASSISTANT_TOOLS.map(t => ({

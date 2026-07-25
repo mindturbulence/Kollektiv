@@ -439,7 +439,7 @@ const ImageResizer: React.FC<ImageResizerProps> = ({ isExiting = false }) => {
 
         const targetAspect = targetWidth / targetHeight;
         const imgAspect = image.originalWidth / image.originalHeight;
-        let newCrop: CropData = { x: 0, y: 0, width: 100, height: 100 };
+        const newCrop: CropData = { x: 0, y: 0, width: 100, height: 100 };
 
         if (imgAspect > targetAspect) {
             newCrop.width = (targetAspect / imgAspect) * 100;
@@ -511,6 +511,7 @@ const ImageResizer: React.FC<ImageResizerProps> = ({ isExiting = false }) => {
                 if (item.processed) URL.revokeObjectURL(item.processed.url);
             });
         };
+        // eslint-disable-next-line react-hooks/exhaustive-deps
     }, []);
 
     const handleAddFiles = useCallback((files: File[]) => {
