@@ -13,11 +13,11 @@ import { isAllowedProxyTarget } from "./utils/proxyTargetValidation";
 import { chromeLauncher } from "./services/chromeLauncher";
 import { startKollektivMcp, type KollektivMcpInstance } from "./services/kollektivMcp";
 // Security and validation middleware
-import { securityHeaders, globalRateLimiter, authRateLimiter, corsOptions } from "./middleware/security";
-import { validate } from "./middleware/validate";
+import { securityHeaders, authRateLimiter, corsOptions } from "./src/middleware/security";
+import { validate } from "./src/middleware/validate";
 // Request schemas
-import { AnthropicRequestSchema } from "./schemas/anthropic";
-import { TopazUpscaleSchema } from "./schemas/topaz";
+import { AnthropicRequestSchema } from "./src/schemas/anthropic";
+import { TopazUpscaleSchema } from "./src/schemas/topaz";
 
 /**
  * Try to free a TCP port by killing whatever process is listening on it.
@@ -94,7 +94,7 @@ async function startServer() {
   // Apply security middlewares
   app.use(corsOptions);
   app.use(securityHeaders);
-  app.use(globalRateLimiter);
+  // app.use(globalRateLimiter); // Disabled rate limiting per request
 
   // Proxy for Google Drive / Google APIs (Bypasses body parsing on GETs to avoid hangs)
   app.use("/google-api", async (req, res) => {
@@ -421,7 +421,7 @@ async function startServer() {
   });
 
   // OpenAI Realtime API — mint ephemeral token for client-side WebRTC
-  app.get("/api/openai/token", authRateLimiter, async (_req, res) => {
+  app.get("/api/openai/token", async (_req, res) => {
     const apiKey = process.env.OPENAI_API_KEY;
     if (!apiKey) return res.status(400).json({ error: 'OpenAI API key not configured. Set OPENAI_API_KEY in your environment.' });
     try {
@@ -457,7 +457,7 @@ async function startServer() {
   });
 
   // Anthropic API Proxy Endpoint
-  app.post("/api/anthropic/chat", authRateLimiter, validate(AnthropicRequestSchema), async (req, res) => {
+  app.post("/api/anthropic/chat", validate(AnthropicRequestSchema), async (req, res) => {
     try {
       const { messages, settings, stream } = req.body;
       
