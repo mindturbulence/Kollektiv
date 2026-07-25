@@ -1,4 +1,5 @@
 import type { LLMSettings, WildcardCategory } from '../types';
+import { UI_STRINGS } from '../constants/uiStrings';
 import { appControlService } from './appControlService';
 import { appEventBus } from '../utils/eventBus';
 import { getOperator, getInAppOperator } from './browserOperatorResolver';
@@ -133,7 +134,7 @@ async function ensureGoogleToken(): Promise<{ token: string } | string> {
         return { token: identity.accessToken };
     }
     if (!identity?.isConnected) {
-        return 'Error: No Google Identity connected. Go to Settings > Integrations > Google and authorize your account.';
+        return `Error: ${UI_STRINGS.googleNotConnected}`;
     }
     // Token expired — attempt silent refresh
     try {
@@ -143,7 +144,7 @@ async function ensureGoogleToken(): Promise<{ token: string } | string> {
             return { token: refreshed.accessToken };
         }
     } catch {}
-    return 'Error: Your Google session has expired and could not be refreshed. Go to Settings > Integrations > Google and re-authenticate.';
+    return `Error: ${UI_STRINGS.googleSessionExpired}`;
 }
 
 export const ASSISTANT_TOOLS: AssistantTool[] = [
@@ -1583,7 +1584,7 @@ export const ASSISTANT_TOOLS: AssistantTool[] = [
             const to = String(args.to || '');
             const subject = String(args.subject || '');
             if (!confirmSensitiveAction(`Send an email\nTo: ${to}\nSubject: ${subject}`)) {
-                return 'User declined: the email was NOT sent. Do not retry unless the user explicitly asks again.';
+                return UI_STRINGS.gmailSendDeclined;
             }
             try {
                 // Build RFC 2822 MIME message
@@ -1641,7 +1642,7 @@ export const ASSISTANT_TOOLS: AssistantTool[] = [
                 ? `PERMANENTLY DELETE (irreversible)\nGmail message: ${String(args.id)}`
                 : `Move to trash (undoable in Gmail UI)\nGmail message: ${String(args.id)}`;
             if (!confirmSensitiveAction(summary)) {
-                return 'User declined: the message was NOT modified. Do not retry unless the user explicitly asks again.';
+                return UI_STRINGS.gmailDeleteDeclined;
             }
             try {
                 const msgId = encodeURIComponent(String(args.id));
