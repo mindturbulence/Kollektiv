@@ -24,7 +24,7 @@ const McpSection: React.FC<McpSectionProps> = ({ activeSubTab, settings, handleS
     if (activeSubTab !== 'mcp') return null;
 
     const [tab, setTab] = useState<McpTab>('built-in');
-    const allServers = settings.mcpServers || [];
+    const allServers = useMemo(() => settings.mcpServers || [], [settings.mcpServers]);
     // Predefined-tab entries (tagged with presetId) live in the same array but
     // are never shown or mutated here — they merge back untouched on every write.
     const servers = allServers.filter(s => !s.presetId);
@@ -85,7 +85,7 @@ const McpSection: React.FC<McpSectionProps> = ({ activeSubTab, settings, handleS
                 testConnection(sv);
             }
         }
-    }, [servers, tab]);
+    }, [servers, tab, statuses]);
 
     return (
         <div className="flex flex-col animate-fade-in pb-12">

@@ -18,12 +18,15 @@ const SummaryPanel: React.FC<SummaryPanelProps> = ({ state, settings }) => {
         customMetadata: state.customMetadata,
     }), [state]);
 
-    const resolve = (field: string) => resolveField(field, fieldContext, settings.showUndefinedSummaryValues);
+    const resolve = React.useCallback(
+        (field: string) => resolveField(field, fieldContext, settings.showUndefinedSummaryValues),
+        [fieldContext, settings.showUndefinedSummaryValues]
+    );
 
     const summaryJson = useMemo(() => {
         const fields = settings.summaryFields.split(',').map(f => f.trim()).filter(Boolean);
         return Object.fromEntries(fields.map(f => [f, resolve(f)]));
-    }, [settings.summaryFields, fieldContext, settings.showUndefinedSummaryValues]);
+    }, [settings.summaryFields, resolve]);
 
     if (settings.summaryLayout === 'json') {
         return (

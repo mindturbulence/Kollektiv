@@ -127,12 +127,13 @@ const FullscreenViewer: React.FC<FullscreenViewerProps> = ({ items, currentIndex
     
         loadMedia();
         return () => { isMounted = false; };
-    }, [itemGroup, currentImageIndex]);
+    }, [itemGroup, currentImageIndex, mediaBlobUrl]);
 
     useEffect(() => {
+        const urls = objectUrls.current;
         return () => {
-            objectUrls.current.forEach(u => URL.revokeObjectURL(u));
-            objectUrls.current.clear();
+            urls.forEach(u => URL.revokeObjectURL(u));
+            urls.clear();
         }
     }, []);
 
@@ -155,7 +156,7 @@ const FullscreenViewer: React.FC<FullscreenViewerProps> = ({ items, currentIndex
         }, containerRef);
 
         return () => ctx.revert();
-    }, [mediaBlobUrl, navDirection]);
+    }, [navDirection, prevMediaBlobUrl]);
     
     const handleNavigation = useCallback((direction: 'next-image' | 'prev-image') => {
         if (zoom > 1) return; // Prevent navigation while zoomed

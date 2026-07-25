@@ -5,7 +5,7 @@ const ChromaticText: React.FC<{ children: React.ReactNode; enabled?: boolean }> 
     const requestRef = useRef<number>(0);
     const lastUpdate = useRef<number>(0);
 
-    const update = (time: number) => {
+    const update = React.useCallback((time: number) => {
         // Only update every ~60ms to create a "steppy" digital flicker rather than smooth motion
         if (time - lastUpdate.current > 60) {
             if (enabled) {
@@ -29,12 +29,12 @@ const ChromaticText: React.FC<{ children: React.ReactNode; enabled?: boolean }> 
             lastUpdate.current = time;
         }
         requestRef.current = requestAnimationFrame(update);
-    };
+    }, [enabled]);
 
     useEffect(() => {
         requestRef.current = requestAnimationFrame(update);
         return () => cancelAnimationFrame(requestRef.current);
-    }, [enabled]);
+    }, [enabled, update]);
 
     return (
         <span 

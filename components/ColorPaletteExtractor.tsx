@@ -103,7 +103,7 @@ export const ColorPaletteExtractor: React.FC<ColorPaletteExtractorProps> = ({ on
 
   const medianCut = (pixels: RGBColor[], maxClusters: number): RGBColor[] => {
     if (pixels.length === 0 || maxClusters < 1) return [];
-    let buckets: RGBColor[][] = [pixels];
+    const buckets: RGBColor[][] = [pixels];
     while (buckets.length < maxClusters) {
       let largestBucketIndex = -1;
       let largestBucketSize = -1;

@@ -21,7 +21,6 @@ export class NoiseCancellation {
     private node: import('simple-rnnoise-wasm').RNNoiseNodeInstance | null = null;
     private _vadStatus = 0;
     private static _registered = false;
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     private static _RNNoiseCtor: new (ctx: AudioContext) => any = null as any;
 
     /** Whether RNNoise + AudioWorklet are supported in this browser. */

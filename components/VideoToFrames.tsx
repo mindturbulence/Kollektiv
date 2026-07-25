@@ -164,7 +164,7 @@ export const VideoToFrames: React.FC<VideoToFramesProps> = ({ isExiting = false 
             (video as any).addEventListener('seeked', onSeeked);
             (video as any).currentTime = Math.min(time, (video as any).duration - 0.1);
         });
-    }, []);
+    }, [track]);
 
     const handleBatchExtract = async () => {
         const video = extractorVideoRef.current;

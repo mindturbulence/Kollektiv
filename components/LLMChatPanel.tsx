@@ -40,6 +40,14 @@ export const LLMChatPanel: React.FC<LLMChatPanelProps> = ({ isOpen, onClose }) =
     const [loadedUpToTimestamp, setLoadedUpToTimestamp] = useState<number | null>(null);
     const [isLoadingMore, setIsLoadingMore] = useState(false);
 
+    const startNewSession = useCallback(() => {
+        setMessages([{ role: 'system', content: `Type /help to see available local commands.` }]);
+        setActiveSessionId(null);
+        setHasMoreMessages(false);
+        setLoadedUpToTimestamp(null);
+        if (window.innerWidth < 768) setIsSidebarOpen(false);
+    }, []);
+
     // Initial load
     useEffect(() => {
         if (isOpen) {
@@ -51,7 +59,7 @@ export const LLMChatPanel: React.FC<LLMChatPanelProps> = ({ isOpen, onClose }) =
         } else {
             audioService.playPanelSlideOut();
         }
-    }, [isOpen]);
+    }, [isOpen, activeSessionId, messages.length, startNewSession]);
 
     // Subscribe to chat session changes from IDB
     useEffect(() => {
@@ -69,14 +77,6 @@ export const LLMChatPanel: React.FC<LLMChatPanelProps> = ({ isOpen, onClose }) =
             setMessages(prev => [...prev, { role: 'system', content: info.flavour }]);
         });
     }, [isOpen]);
-
-    const startNewSession = useCallback(() => {
-        setMessages([{ role: 'system', content: `Type /help to see available local commands.` }]);
-        setActiveSessionId(null);
-        setHasMoreMessages(false);
-        setLoadedUpToTimestamp(null);
-        if (window.innerWidth < 768) setIsSidebarOpen(false);
-    }, []);
 
     const loadSession = async (id: string) => {
         const session = savedSessions.find(s => s.id === id);
@@ -165,7 +165,7 @@ export const LLMChatPanel: React.FC<LLMChatPanelProps> = ({ isOpen, onClose }) =
             
             setMessages([{ role: 'system', content: `Type /help to see available local commands.` }]);
         }
-    }, [settings.activeLLM]);
+    }, [settings.activeLLM, activeSessionId, messages.length]);
 
     const [input, setInput] = useState('');
     const [attachments, setAttachments] = useState<{data: string, mimeType: string, fileName: string}[]>([]);
@@ -250,7 +250,7 @@ export const LLMChatPanel: React.FC<LLMChatPanelProps> = ({ isOpen, onClose }) =
         if (isOpen) {
             scrollToBottom();
         }
-    }, [messages, isOpen]);
+    }, [messages, isOpen, scrollToBottom]);
 
     const handleSubmit = async (e?: React.FormEvent) => {
         e?.preventDefault();

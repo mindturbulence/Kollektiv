@@ -155,7 +155,7 @@ export const LiveAssistantProvider: React.FC<{ children: React.ReactNode }> = ({
     const toggleLive = useCallback(() => {
         if (status === 'live' || status === 'connecting') stop();
         else void start();
-    }, [status, stop, start, voiceProvider]);
+    }, [status, stop, start]);
 
     // Check for the right API key based on the selected voice provider
     const hasVoiceKey = voiceProvider === 'openai_realtime'

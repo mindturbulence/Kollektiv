@@ -117,7 +117,7 @@ export const useBootSequence = ({
     }
     // Removed dependency on settings to prevent re-init on theme switch
     // settings are only needed for initial storage handle check
-  }, [auth, showGlobalFeedback]);
+  }, [showGlobalFeedback]);
 
   const handleInitContinue = useCallback(async (withMusic: boolean) => {
     // startupContinue handles audio system enable + music toggle logic

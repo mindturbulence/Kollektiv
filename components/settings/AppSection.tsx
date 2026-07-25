@@ -70,6 +70,7 @@ const AppSection: React.FC<AppSectionProps> = ({
 
     useEffect(() => {
         setAppDataDirectory(fileSystemManager.appDirectoryName);
+        // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [fileSystemManager.appDirectoryName]);
 
     const showFeedback = (message: string, isError: boolean = false) => {

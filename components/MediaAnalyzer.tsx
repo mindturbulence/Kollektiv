@@ -96,7 +96,7 @@ export const MediaAnalyzer: React.FC<MediaAnalyzerProps> = ({
         if (fileInputRef.current) (fileInputRef.current as any).value = "";
     };
 
-    const captureVideoFrame = (): string | null => {
+    const captureVideoFrame = React.useCallback((): string | null => {
         if (!videoRef.current || fileType !== 'video') return null;
 
         const video = videoRef.current;
@@ -110,7 +110,7 @@ export const MediaAnalyzer: React.FC<MediaAnalyzerProps> = ({
         ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
         const dataUrl = canvas.toDataURL('image/jpeg', 0.95);
         return dataUrl.split(',')[1];
-    };
+    }, [fileType]);
 
     const handleSeekFrame = (seconds: number) => {
         if (!videoRef.current) return;
@@ -165,7 +165,7 @@ export const MediaAnalyzer: React.FC<MediaAnalyzerProps> = ({
             setIsLoading(false);
             setIsBusy(false);
         }
-    }, [sourceFile, fileType, settings]);
+    }, [sourceFile, fileType, settings, captureVideoFrame, setIsBusy]);
 
     const handleReadMetadata = useCallback(async () => {
         if (!sourceFile) {
@@ -198,7 +198,7 @@ export const MediaAnalyzer: React.FC<MediaAnalyzerProps> = ({
             setIsLoading(false);
             setIsBusy(false);
         }
-    }, [sourceFile, fileType]);
+    }, [sourceFile, fileType, setIsBusy]);
 
     const handleSaveWorkflow = () => {
         if (!metadataResults?.workflow) return;

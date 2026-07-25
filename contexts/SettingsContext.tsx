@@ -47,7 +47,7 @@ export const SettingsProvider: React.FC<{ children: ReactNode }> = ({ children }
       } finally {
           setLoadingModels(false);
       }
-  }, [settings.ollamaBaseUrl, settings.ollamaCloudBaseUrl, settings.llamacppBaseUrl, settings.googleIdentity?.accessToken, settings.ollamaCloudApiKey, settings.llamacppApiKey, settings.openrouterApiKey]);
+  }, [settings]);
 
   useEffect(() => {
       refreshOllamaModels().catch(() => {});

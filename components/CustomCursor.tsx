@@ -81,8 +81,9 @@ const CustomCursor: React.FC = () => {
             ease: "none"
         });
         
+        const arrow = arrowRef.current;
         return () => {
-            if (arrowRef.current) gsap.killTweensOf(arrowRef.current);
+            if (arrow) gsap.killTweensOf(arrow);
         };
     }, []);
 
