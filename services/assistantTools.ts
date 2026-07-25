@@ -1,129 +1,38 @@
 import type { WildcardCategory } from '../types';
-import { UI_STRINGS } from '../constants/uiStrings';
 import { appControlService } from './appControlService';
 import { appEventBus } from '../utils/eventBus';
 import { getOperator } from './browserOperatorResolver';
 import { addNote, loadNotes, updateNote, deleteNote } from '../utils/notesStorage';
 import { addMemory, loadMemories as loadMemoryEntries, deleteMemory } from '../utils/memoryStorage';
 // Obsidian imports removed — all obsidian tools live in services/tools/obsidianTools.ts
-import { loadGalleryItems, addItemToGallery, deleteItemFromGallery } from '../utils/galleryStorage';
+import { loadGalleryItems, addItemToGallery, deleteItemFromGallery, loadCategories, loadPinnedItemIds } from '../utils/galleryStorage';
+import { computeGalleryStats } from '../utils/galleryAnalytics';
 import { loadLLMSettings, saveLLMSettings } from '../utils/settingsStorage';
-import { refineSinglePrompt, reconstructFromIntent, dissectPrompt, translateToEnglish, generateConstructorPreset, abstractImage, generateWithImagen, generateWithNanoBanana, generateWithVeo } from './llmService';
-import { isGoogleAuthValid } from '../utils/googleAuth';
+import { refineSinglePrompt, reconstructFromIntent, dissectPrompt, translateToEnglish, generateConstructorPreset, abstractImage, generateWithImagen, generateWithNanoBanana, generateWithVeo, enhancePromptStream, cleanLLMResponse } from './llmService';
 import { crafterService } from './crafterService';
 import { refinerPresetService } from './refinerPresetService';
 import { PROMPT_DETAIL_LEVELS } from '../constants/modifiers';
-import { listTools, createTask, pollTask } from './tensorartService';
 import { MCP_PRESETS, findMcpPresetEntry, upsertMcpPresetEntry } from '../constants/mcpPresets';
 import { mcpService } from './mcpService';
-
-// Spotify token refresh helper
-async function refreshSpotifyToken(): Promise<string | null> {
-    const refreshToken = localStorage.getItem('spotify_refresh_token');
-    const expiresAt = parseInt(localStorage.getItem('spotify_expires_at') || '0', 10);
-    const clientId = (window as any).__SPOTIFY_CLIENT_ID || localStorage.getItem('spotify_client_id') || '';
-    
-    if (!refreshToken || !clientId) return null;
-    
-    // Check if token is still valid (with 30s buffer)
-    if (Date.now() < expiresAt - 30_000) {
-        return localStorage.getItem('spotify_access_token');
-    }
-    
-    try {
-        const params = new URLSearchParams({
-            grant_type: 'refresh_token',
-            refresh_token: refreshToken,
-            client_id: clientId,
-        });
-        
-        const res = await fetch('https://accounts.spotify.com/api/token', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-            body: params,
-        });
-        
-        if (!res.ok) {
-            console.error('Spotify token refresh failed:', await res.text());
-            return null;
-        }
-        
-        const data = await res.json();
-        localStorage.setItem('spotify_access_token', data.access_token);
-        if (data.refresh_token) localStorage.setItem('spotify_refresh_token', data.refresh_token);
-        localStorage.setItem('spotify_expires_at', String(Date.now() + data.expires_in * 1000));
-        
-        return data.access_token;
-    } catch (err) {
-        console.error('Spotify token refresh error:', err);
-        return null;
-    }
-}
-
-// Helper to get valid Spotify access token (auto-refreshes if needed)
-async function getSpotifyAccessToken(): Promise<string | null> {
-    const token = localStorage.getItem('spotify_access_token');
-    const expiresAt = parseInt(localStorage.getItem('spotify_expires_at') || '0', 10);
-    
-    // Token still valid (with 30s buffer)
-    if (token && Date.now() < expiresAt - 30_000) {
-        return token;
-    }
-    
-    // Try to refresh
-    return refreshSpotifyToken();
-}
 
 // Re-export ToolContext + AssistantTool from the shared module so callers
 // that import them from this file still work. New code should import from
 // 'services/tools/types' directly.
-// Re-export types so existing importers still work.
-// New code should import from 'services/tools/types' directly.
 export type { AssistantTool, ToolContext } from './tools/types';
 import type { AssistantTool, ToolContext } from './tools/types';
+import { capabilityRegistry, type ExecutionKind } from './capabilityRegistry';
+import { createExecutionEngine } from './executionEngine';
+import { plan } from './planner';
+import { classifyIntent, findCapabilityForIntent } from './intentRouter';
 import { browserTools } from './tools/browserTools';
 import { obsidianTools } from './tools/obsidianTools';
-
-// Blocking, per-action user confirmation for destructive external actions.
-// window.confirm is deliberate: synchronous, unmissable, and impossible for
-// the autonomous tool loop to bypass. If window.confirm is unavailable
-// (e.g. SSR or a stripped sandbox), fall through and refuse, so the tool loop
-// can never silently perform a destructive action.
-const confirmSensitiveAction = (summary: string): boolean => {
-    if (typeof window === 'undefined' || typeof window.confirm !== 'function') {
-        // Default-deny: if we can't ask, we don't act.
-        return false;
-    }
-    return window.confirm(`The assistant wants to:\n\n${summary}\n\nAllow this?`);
-};
+import { gmailTools } from './tools/gmailTools';
+import { spotifyTools } from './tools/spotifyTools';
+import { tensorArtTools } from './tools/tensorArtTools';
+import { researchTools } from './tools/researchTools';
 
 // Must mirror ActiveTab in types.ts.
 const PAGES = ['dashboard', 'discovery', 'prompts', 'crafter', 'refiner', 'prompt_analyzer', 'media_analyzer', 'prompt', 'gallery', 'resizer', 'video_to_frames', 'image_compare', 'color_palette_extractor', 'composer', 'settings'];
-
-/** Try to obtain a valid Google access token, attempting silent refresh if stale.
- *  Reads the identity fresh from localStorage rather than trusting the caller's
- *  settings snapshot — the live/voice assistant (services/liveAssistantService.ts)
- *  captures `settings` once at session start and never refreshes it, so a stale
- *  ctx.settings.googleIdentity kept reporting "session expired" for the rest of
- *  a voice session even after the user re-authenticated in Settings. */
-async function ensureGoogleToken(): Promise<{ token: string } | string> {
-    const identity = loadLLMSettings().googleIdentity;
-    if (isGoogleAuthValid(identity)) {
-        return { token: identity.accessToken };
-    }
-    if (!identity?.isConnected) {
-        return `Error: ${UI_STRINGS.googleNotConnected}`;
-    }
-    // Token expired — attempt silent refresh
-    try {
-        const { trySilentRefreshWithWait } = await import('../utils/googleAuth');
-        const refreshed = await trySilentRefreshWithWait(identity, 5000, 300);
-        if (refreshed?.accessToken) {
-            return { token: refreshed.accessToken };
-        }
-    } catch {}
-    return `Error: ${UI_STRINGS.googleSessionExpired}`;
-}
 
 export const ASSISTANT_TOOLS: AssistantTool[] = [
     {
@@ -517,99 +426,6 @@ export const ASSISTANT_TOOLS: AssistantTool[] = [
         },
     },
     {
-        name: 'spotify_list_playlists',
-        description: 'List the authenticated user\'s Spotify playlists. Requires Spotify to be connected in Settings > Integrations > Spotify.',
-        parameters: {
-            type: 'object',
-            properties: {
-                limit: { type: 'number', description: 'Maximum number of playlists to return (default 20).' },
-            },
-        },
-        execute: async ({ limit = 20 }) => {
-            if (typeof window === 'undefined') return 'Error: This tool requires a browser environment.';
-            const token = await getSpotifyAccessToken();
-            if (!token) return 'Error: Spotify not connected. Go to Settings > Integrations > Spotify and link your account.';
-            const max = Math.min(Math.max(1, Math.floor(limit)), 50);
-            const res = await fetch(`https://api.spotify.com/v1/me/playlists?limit=${max}`, {
-                headers: { 'Authorization': `Bearer ${token}` }
-            });
-            if (!res.ok) {
-                if (res.status === 401) return 'Error: Spotify token expired. Please reconnect in Settings.';
-                return `Error: Failed to fetch playlists (${res.status}).`;
-            }
-            const data = await res.json();
-            const items = data.items || [];
-            return JSON.stringify(items.map((pl: any) => ({
-                id: pl.id,
-                name: pl.name,
-                description: pl.description,
-                trackCount: pl.tracks?.total,
-                url: pl.external_urls?.spotify,
-            })));
-        },
-    },
-    {
-        name: 'spotify_get_playlist_tracks',
-        description: 'Get tracks from a Spotify playlist. Requires Spotify connected in Settings.',
-        parameters: {
-            type: 'object',
-            properties: {
-                playlistId: { type: 'string', description: 'Spotify playlist ID.' },
-                limit: { type: 'number', description: 'Maximum tracks to return (default 50).' },
-            },
-            required: ['playlistId'],
-        },
-        execute: async ({ playlistId, limit = 50 }) => {
-            if (typeof window === 'undefined') return 'Error: This tool requires a browser environment.';
-            const token = await getSpotifyAccessToken();
-            if (!token) return 'Error: Spotify not connected. Go to Settings > Integrations > Spotify and link your account.';
-            const max = Math.min(Math.max(1, Math.floor(limit)), 100);
-            const res = await fetch(`https://api.spotify.com/v1/playlists/${playlistId}/tracks?limit=${max}`, {
-                headers: { 'Authorization': `Bearer ${token}` }
-            });
-            if (!res.ok) {
-                if (res.status === 401) return 'Error: Spotify token expired. Please reconnect in Settings.';
-                return `Error: Failed to fetch tracks (${res.status}).`;
-            }
-            const data = await res.json();
-            const items = data.items || [];
-            return JSON.stringify(items.map((item: any) => ({
-                trackId: item.track?.id,
-                name: item.track?.name,
-                artists: item.track?.artists?.map((a: any) => a.name).join(', '),
-                album: item.track?.album?.name,
-                durationMs: item.track?.duration_ms,
-                url: item.track?.external_urls?.spotify,
-            })));
-        },
-    },
-    {
-        name: 'spotify_play',
-        description: 'Play a Spotify track, album, or playlist in the Media Panel. Requires Spotify connected in Settings.',
-        parameters: {
-            type: 'object',
-            properties: {
-                uri: { type: 'string', description: 'Spotify URI (e.g., spotify:track:..., spotify:album:..., spotify:playlist:...) or track/album/playlist ID.' },
-            },
-            required: ['uri'],
-        },
-        execute: ({ uri }) => {
-            if (typeof window === 'undefined') return 'Error: This tool requires a browser environment.';
-            const token = localStorage.getItem('spotify_access_token');
-            if (!token) return 'Error: Spotify not connected. Go to Settings > Integrations > Spotify and link your account.';
-            // Normalize URI
-            let spotifyUri = String(uri).trim();
-            if (!spotifyUri.startsWith('spotify:')) {
-                // Assume it's an ID, try to detect type from context or default to track
-                if (spotifyUri.includes(':')) spotifyUri = `spotify:track:${spotifyUri}`;
-                else spotifyUri = `spotify:track:${spotifyUri}`;
-            }
-            // Emit to open media panel with Spotify URI
-            appEventBus.emit('openMediaPanel', { url: spotifyUri, isSpotifyUri: true });
-            return `Playing ${spotifyUri} in the media panel.`;
-        },
-    },
-    {
         name: 'save_file',
         description: "Save a text file (markdown, plain text, JSON, code) into the user's vault under the 'assistant' folder. The file appears in the Notes panel's FILES tab, where the user can download it to their PC. Use when the user asks to save, export, or write something to a file.",
         parameters: {
@@ -694,21 +510,44 @@ export const ASSISTANT_TOOLS: AssistantTool[] = [
     },
     {
         name: 'remember',
-        description: "Permanently remember a short fact about the user or their preferences (e.g. 'prefers SDXL', 'works in German'). It will be available in every future session, chat and voice. Use when the user says 'remember ...' or states a durable preference.",
+        description: "Permanently remember a short fact about the user or their preferences (e.g. 'prefers SDXL', 'works in German'). Optionally categorize it so the assistant can retrieve more relevant memories later. It will be available in every future session, chat and voice. Use when the user says 'remember ...' or states a durable preference.",
         parameters: {
             type: 'object',
-            properties: { fact: { type: 'string', description: 'One concise fact to remember.' } },
+            properties: {
+                fact: { type: 'string', description: 'One concise fact to remember.' },
+                category: {
+                    type: 'string',
+                    description: 'Optional category to organise the memory.',
+                    enum: ['user_preference', 'style_pattern', 'prompt_formula', 'workflow_step', 'general'],
+                },
+                tags: {
+                    type: 'string',
+                    description: 'Optional comma-separated tags for searchability.',
+                },
+            },
             required: ['fact'],
         },
-        execute: async ({ fact }) => ((await addMemory(String(fact))) ? 'Remembered.' : 'Already remembered (or empty fact).'),
+        execute: async ({ fact, category, tags }) => {
+            const tagList = tags ? String(tags).split(',').map((t: string) => t.trim()).filter(Boolean) : undefined;
+            const cat = category && ['user_preference', 'style_pattern', 'prompt_formula', 'workflow_step', 'general'].includes(String(category))
+                ? String(category) as any
+                : undefined;
+            const result = await addMemory(String(fact), { category: cat, tags: tagList });
+            return result ? 'Remembered.' : 'Already remembered (or empty fact).';
+        },
     },
     {
         name: 'list_memories',
-        description: 'List everything you permanently remember about the user. Returns JSON with ids (needed for forget).',
+        description: 'List everything you permanently remember about the user. Returns JSON with ids, categories, and tags (needed for forget).',
         parameters: { type: 'object', properties: {} },
         execute: async () => {
             const memories = await loadMemoryEntries();
-            return JSON.stringify(memories.map(m => ({ id: m.id, fact: m.fact })));
+            return JSON.stringify(memories.map(m => ({
+                id: m.id,
+                fact: m.fact,
+                category: m.category,
+                tags: m.tags,
+            })));
         },
     },
     {
@@ -720,6 +559,105 @@ export const ASSISTANT_TOOLS: AssistantTool[] = [
             required: ['id'],
         },
         execute: async ({ id }) => ((await deleteMemory(String(id))) ? 'Forgotten.' : `Error: no memory with id ${id}.`),
+    },
+    {
+        name: 'search_memories',
+        description: 'Search your persistent memories by text and/or filter by category. Returns JSON with ids and categories (use forget with an id to delete one). Use when you need to find a specific fact without listing everything.',
+        parameters: {
+            type: 'object',
+            properties: {
+                query: { type: 'string', description: 'Text to search for in memory facts and tags.' },
+                category: {
+                    type: 'string',
+                    description: 'Optional category to narrow results.',
+                    enum: ['user_preference', 'style_pattern', 'prompt_formula', 'workflow_step', 'general'],
+                },
+            },
+        },
+        execute: async ({ query, category }) => {
+            const memories = await loadMemoryEntries();
+            let results = memories;
+            if (query) {
+                const q = String(query);
+                results = results.filter(
+                    m => m.fact.toLowerCase().includes(q.toLowerCase()) ||
+                        m.tags.some((t: string) => t.toLowerCase().includes(q.toLowerCase()))
+                );
+            }
+            if (category && ['user_preference', 'style_pattern', 'prompt_formula', 'workflow_step', 'general'].includes(String(category))) {
+                results = results.filter(m => m.category === category);
+            }
+            return JSON.stringify(results.map(m => ({
+                id: m.id,
+                fact: m.fact,
+                category: m.category,
+                tags: m.tags,
+            })));
+        },
+    },
+
+    {
+        name: 'knowledge_lifecycle_promote',
+        description: 'Move a knowledge item (note, memory, vault file) to a different lifecycle stage folder in the vault. Stages: inbox (raw uncategorized), projects (active work), output (completed items), wiki (permanent reference). Use search_memories / list_notes / search_gallery / list_vault_tools first to find the item id and kind.',
+        parameters: {
+            type: 'object',
+            properties: {
+                kind: {
+                    type: 'string',
+                    description: 'Type of knowledge item. The item must be indexed in the knowledge service (search_memories / list_notes / vault search). Gallery items are stored in IndexedDB and cannot be promoted through lifecycle stages.',
+                    enum: ['memory', 'note', 'vault_note', 'prompt'],
+                },
+                id: { type: 'string', description: 'The item id (obtained from search_memories, list_notes, or vault search).' },
+                target_stage: {
+                    type: 'string',
+                    description: 'Target lifecycle stage folder. inbox = raw items awaiting triage, projects = active work, output = completed/publishable, wiki = permanent reference documentation.',
+                    enum: ['inbox', 'projects', 'output', 'wiki'],
+                },
+            },
+            required: ['kind', 'id', 'target_stage'],
+        },
+        execute: async ({ kind, id, target_stage }) => {
+            const { knowledgeService } = await import('./knowledgeService');
+            const { knowledgeLifecycle } = await import('./knowledgeLifecycle');
+
+            // Find the ref in the knowledge index
+            const refs = knowledgeService.list([kind]);
+            const ref = refs.find((r) => r.id === id);
+            if (!ref) return `Error: no ${kind} item with id "${id}". Use search_memories / list_notes / search_gallery to find current items.`;
+
+            // Determine current lifecycle stage from vault path
+            const currentStage = ref.sourcePath ? knowledgeLifecycle.stageFromPath(ref.sourcePath) : null;
+            const fromStage = currentStage || 'inbox';
+
+            // Load the item's content
+            const content = await knowledgeService.recall(ref);
+            if (!content) return `Error: could not load content for item "${ref.title}".`;
+
+            // Promote to the target lifecycle stage
+            const result = await knowledgeLifecycle.promote(
+                ref.sourcePath,
+                fromStage,
+                target_stage,
+                { kind: ref.kind, id: ref.id, title: ref.title, tags: ref.tags, tier: ref.tier },
+                content,
+            );
+
+            if (!result) return `Item "${ref.title}" is already in the "${target_stage}" stage.`;
+
+            // Update the ref's source path
+            ref.sourcePath = result.newPath;
+
+            // If promoting to wiki or output, also promote the tier to 'knowledge'
+            if (target_stage === 'wiki' || target_stage === 'output') {
+                await knowledgeService.promote({
+                    ref,
+                    targetTier: 'knowledge',
+                    reason: `Promoted to ${target_stage} lifecycle stage`,
+                });
+            }
+
+            return `Moved "${ref.title}" from ${fromStage} → ${target_stage}. New vault path: ${result.newPath}.`;
+        },
     },
 
     ...obsidianTools,
@@ -767,6 +705,73 @@ export const ASSISTANT_TOOLS: AssistantTool[] = [
                 });
             } catch (e: any) {
                 return `Error generating image: ${e?.message || e}`;
+            }
+        },
+    },
+    {
+        name: 'generate_and_ingest',
+        description: 'Full generate loop: take a raw prompt, refine it through the Kollektiv engine, generate media via Imagen/Banana/Veo, and ingest the result into the gallery — all in one call. Returns the gallery item info. Requires a Gemini API key. Equivalent to clicking IMPROVE → RENDER → AUTO-INGEST in the Refiner UI.',
+        parameters: {
+            type: 'object',
+            properties: {
+                prompt: { type: 'string', description: 'The raw prompt or idea to refine, generate from, and save.' },
+                model: { type: 'string', description: 'Generation engine.', enum: ['imagen', 'nano_banana', 'veo'] },
+                aspect_ratio: { type: 'string', description: 'Aspect ratio. Default: "1:1" for imagen/nano_banana, "16:9" for veo.' },
+                constant_modifier: { type: 'string', description: 'Tokens the model must always include in the prompt.' },
+                skip_refine: { type: 'boolean', description: 'If true, skip the AI refinement step and generate directly from the raw prompt.' },
+            },
+            required: ['prompt', 'model'],
+        },
+        execute: async ({ prompt, model, aspect_ratio, constant_modifier, skip_refine }, ctx) => {
+            const apiKey = ctx.settings.geminiApiKey || process.env.GEMINI_API_KEY;
+            if (!apiKey) return 'Error: Gemini API key not configured. User must add it in Settings > Integrations > Gemini.';
+            try {
+                const m = String(model || 'imagen').toLowerCase();
+                const ratio = aspect_ratio ? String(aspect_ratio) : (m === 'veo' ? '16:9' : '1:1');
+                const cm = constant_modifier ? String(constant_modifier) : '';
+                const rawPrompt = String(prompt);
+
+                // 1. Refine
+                let refinedPrompt = rawPrompt;
+                if (!skip_refine && rawPrompt.trim()) {
+                    let fullText = '';
+                    const stream = enhancePromptStream(rawPrompt, cm, 'MEDIUM', m, {}, ctx.settings, [], '');
+                    for await (const chunk of stream) fullText += chunk;
+                    if (fullText.trim()) {
+                        if (fullText.includes('---PROMPT_BREAKDOWN---')) {
+                            refinedPrompt = fullText.split('---PROMPT_BREAKDOWN---')[0].trim();
+                        } else {
+                            refinedPrompt = cleanLLMResponse(fullText);
+                        }
+                    }
+                }
+
+                // 2. Generate
+                let dataUrl: string;
+                if (m === 'imagen') {
+                    dataUrl = await generateWithImagen(refinedPrompt, ratio, ctx.settings);
+                } else if (m === 'nano_banana') {
+                    dataUrl = await generateWithNanoBanana(refinedPrompt, [], ratio, ctx.settings);
+                } else if (m === 'veo') {
+                    dataUrl = await generateWithVeo(refinedPrompt, undefined, ratio, ctx.settings);
+                } else {
+                    return `Error: unknown model "${m}". Valid: imagen, nano_banana, veo.`;
+                }
+
+                // 3. Ingest
+                const mediaType = m === 'veo' ? 'video' : 'image';
+                const item = await addItemToGallery(mediaType, [dataUrl], ['Generate Loop'], undefined, undefined, [], undefined, refinedPrompt);
+
+                return JSON.stringify({
+                    success: true,
+                    galleryId: item.id,
+                    title: item.title,
+                    refinedPrompt,
+                    model: m,
+                    note: `Generated and saved to gallery as "${item.title}" (id: ${item.id}). Navigate to the gallery to view.`,
+                });
+            } catch (e: any) {
+                return `Error in generate loop: ${e?.message || e}`;
             }
         },
     },
@@ -960,344 +965,174 @@ export const ASSISTANT_TOOLS: AssistantTool[] = [
             }
         },
     },
+    {
+        name: 'gallery_stats',
+        description: 'Get analytics and statistics about the full gallery. Returns JSON with total counts, tag frequency, category distribution, model usage breakdown, source distribution, generation timeline, and top prompt words. Useful before search_gallery to understand what\'s in the gallery.',
+        parameters: { type: 'object', properties: {} },
+        execute: async () => {
+            const [items, categories, pinnedIds] = await Promise.all([
+                loadGalleryItems(),
+                loadCategories(),
+                loadPinnedItemIds(),
+            ]);
+            const stats = computeGalleryStats(items, categories, pinnedIds);
+            return JSON.stringify({
+                totalItems: stats.totalItems,
+                imageCount: stats.imageCount,
+                videoCount: stats.videoCount,
+                pinnedCount: stats.pinnedCount,
+                topTags: stats.tagFrequency.slice(0, 15),
+                topCategories: stats.categoryDistribution.slice(0, 10),
+                topSources: stats.sourceDistribution.slice(0, 10),
+                topModels: stats.modelUsage.slice(0, 10),
+                timeline: stats.timeline,
+                topPromptWords: stats.promptWordFrequency.slice(0, 10),
+            });
+        },
+    },
 
     ...browserTools,
 
-    // ─── Gmail Tools (require Google Identity connection) ───────────────────
+    // Gmail, Spotify, Tensor Art, and Research tools have been moved to dedicated modules.
+    ...gmailTools,
+    ...spotifyTools,
+    ...tensorArtTools,
+    ...researchTools,
+
+    // ─── MCP Architecture: 5 capability introspection/execution tools ────
 
     {
-        name: 'read_gmail',
-        description: 'Read the user\'s Gmail inbox — list recent messages, search by query, or read a specific email\'s full content (headers + body). Requires Google Identity to be connected (Settings > App > Storage > Authorize Drive).',
+        name: 'capability_search',
+        description: 'Search the capability registry by keyword to find what capabilities the system can perform. Returns matching capabilities as JSON with id, name, description, tags, and health status.',
         parameters: {
             type: 'object',
             properties: {
-                action: {
-                    type: 'string',
-                    enum: ['list', 'search', 'read'],
-                    description: '"list" = recent inbox messages, "search" = search by query, "read" = read full content by message id.'
-                },
-                query: { type: 'string', description: 'For "search": a Gmail search query (e.g. "from:john subject:invoice"). For "read": the message id to fetch.' },
-                maxResults: { type: 'number', description: 'Max messages for list/search (1-20, default 10).' },
+                query: { type: 'string', description: 'Search keyword (case-insensitive). Matches against capability id, name, description, and tags.' },
             },
-            required: ['action'],
+            required: ['query'],
         },
-        execute: async (args) => {
-            const authResult = await ensureGoogleToken();
-            if (typeof authResult === 'string') return authResult;
-            const token = authResult.token;
-            const BASE = '/google-api/gmail/v1/users/me';
-            const headers = { Authorization: `Bearer ${token}` };
-            try {
-                if (args.action === 'list' || args.action === 'search') {
-                    const q = args.action === 'search' && args.query ? `&q=${encodeURIComponent(String(args.query))}` : '';
-                    const max = Math.min(Math.max(Number(args.maxResults) || 10, 1), 20);
-                    const res = await fetch(`${BASE}/messages?maxResults=${max}${q}&fields=messages(id,threadId,snippet,labelIds)`, { headers });
-                    if (!res.ok) return `Gmail API error: ${res.status} ${res.statusText}${res.status === 401 ? ' — token expired, re-authorize in Settings.' : ''}`;
-                    // 204 No Content means no messages (empty inbox/result)
-                    if (res.status === 204) return 'No messages found.';
-                    const data = await res.json();
-                    if (!data.messages?.length) return 'No messages found.';
-                    const out = await Promise.all(data.messages.slice(0, max).map(async (m: any) => {
-                        const detail = await fetch(`${BASE}/messages/${m.id}?format=metadata&fields=id,labelIds,payload/headers,snippet`, { headers }).then(r => r.json()).catch(() => ({}));
-                        const h = (hds: any[], name: string) => hds?.find((h: any) => h.name === name)?.value || '';
-                        const hs = detail.payload?.headers || [];
-                        return `[${m.id}] From: ${h(hs, 'From')} | To: ${h(hs, 'To')} | Subject: ${h(hs, 'Subject')} | Date: ${h(hs, 'Date')} | Labels: ${(m.labelIds||[]).join(', ')} | Snippet: ${m.snippet || ''}`;
-                    }));
-                    return `Found ${data.messages.length} message(s):\n\n${out.join('\n')}` + (data.nextPageToken ? '\n\n(More results available — use a more specific query.)' : '');
-                } else if (args.action === 'read') {
-                    if (!args.query) return 'Error: provide a message id as the "query" parameter.';
-                    const res = await fetch(`${BASE}/messages/${encodeURIComponent(String(args.query))}?format=full`, { headers });
-                    if (!res.ok) return `Gmail API error: ${res.status} ${res.statusText}`;
-                    const msg = await res.json();
-                    const h = (name: string) => msg.payload?.headers?.find((x: any) => x.name === name)?.value || '';
-                    // Extract body from message parts
-                    const extractBody = (part: any): string => {
-                        if (part.mimeType === 'text/plain' && part.body?.data) {
-                            try { return atob(part.body.data.replace(/-/g, '+').replace(/_/g, '/')); } catch { return '[could not decode body]'; }
-                        }
-                        if (part.parts) return part.parts.map(extractBody).filter(Boolean).join('\n---\n');
-                        return '';
-                    };
-                    const body = extractBody(msg.payload || {});
-                    return `From: ${h('From')}\nTo: ${h('To')}\nDate: ${h('Date')}\nSubject: ${h('Subject')}\n\n${body || '(no plain text body)'}`;
-                } else {
-                    return `Error: unknown action "${args.action}". Use "list", "search", or "read".`;
-                }
-            } catch (e: any) {
-                return `Gmail error: ${e?.message || e}`;
-            }
+        execute: async ({ query }) => {
+            const results = capabilityRegistry.search(String(query));
+            if (results.length === 0) return 'No capabilities matched your query.';
+            return JSON.stringify(results.map(c => ({
+                id: c.id,
+                name: c.name,
+                description: c.description,
+                kind: c.execution.kind,
+                tags: c.tags,
+                healthy: c.healthy,
+            })));
         },
     },
     {
-        name: 'send_gmail',
-        description: 'Send an email from the user\'s Gmail account (the one connected via Google Identity). Use for composing and sending messages on the user\'s behalf.',
+        name: 'capability_describe',
+        description: 'Get the full contract of a registered capability by its exact id. Use capability_search first to find the id. Returns the complete capability schema including input/output types, execution strategy, permissions, and dependencies.',
         parameters: {
             type: 'object',
             properties: {
-                to: { type: 'string', description: 'Recipient email address(es). Comma-separate multiple recipients.' },
-                subject: { type: 'string', description: 'Email subject line.' },
-                body: { type: 'string', description: 'Email body text (plain text).' },
-                cc: { type: 'string', description: 'Optional CC recipient(s).' },
-                bcc: { type: 'string', description: 'Optional BCC recipient(s).' },
-            },
-            required: ['to', 'subject', 'body'],
-        },
-        execute: async (args) => {
-            const authResult = await ensureGoogleToken();
-            if (typeof authResult === 'string') return authResult;
-            const token = authResult.token;
-            const to = String(args.to || '');
-            const subject = String(args.subject || '');
-            if (!confirmSensitiveAction(`Send an email\nTo: ${to}\nSubject: ${subject}`)) {
-                return UI_STRINGS.gmailSendDeclined;
-            }
-            try {
-                // Build RFC 2822 MIME message
-                const body = String(args.body || '');
-                const cc = args.cc ? String(args.cc) : '';
-                const bcc = args.bcc ? String(args.bcc) : '';
-                if (!to) return 'Error: "to" is required.';
-                // Construct email headers + body as a MIME message
-                const headers = [
-                    `To: ${to}`,
-                    `Subject: ${subject}`,
-                    'MIME-Version: 1.0',
-                    'Content-Type: text/plain; charset="UTF-8"',
-                    'Content-Transfer-Encoding: 7bit',
-                ];
-                if (cc) headers.push(`Cc: ${cc}`);
-                if (bcc) headers.push(`Bcc: ${bcc}`);
-                const raw = headers.join('\r\n') + '\r\n\r\n' + body;
-                // Base64url encode
-                const b64 = btoa(unescape(encodeURIComponent(raw)));
-                const b64url = b64.replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
-                const res = await fetch('/google-api/gmail/v1/users/me/messages/send', {
-                    method: 'POST',
-                    headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ raw: b64url }),
-                });
-                if (!res.ok) {
-                    const err = await res.text().catch(() => res.statusText);
-                    return `Failed to send email: ${res.status} ${err}`;
-                }
-                const result = await res.json();
-                return `Email sent successfully. Message id: ${result.id}${result.threadId ? `, thread: ${result.threadId}` : ''}`;
-            } catch (e: any) {
-                return `Error sending email: ${e?.message || e}`;
-            }
-        },
-    },
-    {
-        name: 'delete_gmail',
-        description: 'Trash or permanently delete an email from Gmail. Requires the message id obtained from read_gmail (action "list" or "search").',
-        parameters: {
-            type: 'object',
-            properties: {
-                id: { type: 'string', description: 'The Gmail message id to act on (from read_gmail).' },
-                action: { type: 'string', enum: ['trash', 'delete'], description: '"trash" (default) moves to trash (undoable in Gmail UI). "delete" permanently deletes immediately (irreversible).' },
+                id: { type: 'string', description: 'Exact capability id (obtained from capability_search).' },
             },
             required: ['id'],
         },
-        execute: async (args) => {
-            const authResult = await ensureGoogleToken();
-            if (typeof authResult === 'string') return authResult;
-            const token = authResult.token;
-            const wantsPermanent = args.action === 'delete';
-            const summary = wantsPermanent
-                ? `PERMANENTLY DELETE (irreversible)\nGmail message: ${String(args.id)}`
-                : `Move to trash (undoable in Gmail UI)\nGmail message: ${String(args.id)}`;
-            if (!confirmSensitiveAction(summary)) {
-                return UI_STRINGS.gmailDeleteDeclined;
-            }
-            try {
-                const msgId = encodeURIComponent(String(args.id));
-                const isPermanent = wantsPermanent;
-                const url = isPermanent
-                    ? `/google-api/gmail/v1/users/me/messages/${msgId}`
-                    : `/google-api/gmail/v1/users/me/messages/${msgId}/trash`;
-                const res = await fetch(url, {
-                    method: isPermanent ? 'DELETE' : 'POST',
-                    headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
-                });
-                if (!res.ok) {
-                    const err = await res.text().catch(() => res.statusText);
-                    return `Failed to ${isPermanent ? 'delete' : 'trash'} message: ${res.status} ${err}`;
-                }
-                return isPermanent ? `Message ${args.id} permanently deleted.` : `Message ${args.id} moved to trash.`;
-            } catch (e: any) {
-                return `Error deleting message: ${e?.message || e}`;
-            }
-        },
-    },
-    // --- Tensor Art ---
-    {
-        name: 'tensorart_list_models',
-        description: 'Lists all available Tensor Art models (tools) with their names, descriptions, input schemas, and estimated costs. Call this first so the AI knows which models are available before generating.',
-        parameters: {
-            type: 'object',
-            properties: {},
-        },
-        execute: async (_args: any, ctx: ToolContext) => {
-            const key = ctx.settings.tensorartApiKey;
-            if (!key) return 'Error: Tensor Art API key not configured. Ask the user to add it in Settings → Integrations → Tensor Art.';
-            try {
-                const tools = await listTools(key);
-                if (!tools.length) return 'No models found on this account.';
-                return JSON.stringify(tools.map(t => ({
-                    name: t.name,
-                    description: t.description,
-                    cost: t.estimatedCost,
-                    tags: t.tags,
-                    inputs: t.inputs.map(i => ({ name: i.name, type: i.type, description: i.description })),
-                })));
-            } catch (e: any) {
-                return `Error fetching models: ${e?.message || e}`;
-            }
+        execute: async ({ id }) => {
+            const cap = capabilityRegistry.get(String(id));
+            if (!cap) return `Error: no capability with id "${id}". Use capability_search to find valid capabilities.`;
+            return JSON.stringify(cap, null, 2);
         },
     },
     {
-        name: 'tensorart_generate',
-        description: 'Generates an image or video using a Tensor Art model. Accepts the model name and prompt; optionally width, height, and count. The result URL is returned — tell the user it\'s ready.',
+        name: 'capability_execute',
+        description: 'Execute a named capability through the Planning + Execution Engine pipeline. The system will classify your intent, plan the steps, and run them with automatic error handling and retries. Returns the execution result. Use when you need to run a capability with the full architectural pipeline.',
         parameters: {
             type: 'object',
             properties: {
-                toolName: { type: 'string', description: 'The exact model/tool name from tensorart_list_models, e.g. strong_text2image_nano_banana2.' },
-                prompt: { type: 'string', description: 'The text prompt describing what to generate.' },
-                width: { type: 'integer', description: 'Image width in pixels (e.g. 1024). Omit to use the model default.' },
-                height: { type: 'integer', description: 'Image height in pixels (e.g. 1024). Omit to use the model default.' },
-                count: { type: 'integer', description: 'Number of images to generate (default 1).' },
+                capability: { type: 'string', description: 'The capability id to execute (e.g. "refine_prompt", "analyze_prompt", "search_memories").' },
+                input: { type: 'string', description: 'User-facing request text that describes what to do. This is classified into an intent, then planned, then executed.' },
             },
-            required: ['toolName', 'prompt'],
+            required: ['capability', 'input'],
         },
-        execute: async (args: any, ctx: ToolContext) => {
-            const key = ctx.settings.tensorartApiKey;
-            if (!key) return 'Error: Tensor Art API key not configured. Ask the user to add it in Settings → Integrations → Tensor Art.';
-            const { toolName, prompt, width, height, count } = args;
-            try {
-                // Fetch the tool definition so we can build the correct inputs array
-                const tools = await listTools(key);
-                const tool = tools.find(t => t.name === toolName);
-                if (!tool) {
-                    const names = tools.map(t => t.name).join(', ');
-                    return `Error: model "${toolName}" not found. Available: ${names || '(none)'}`;
-                }
+        execute: async ({ capability, input }) => {
+            const cap = capabilityRegistry.get(String(capability));
+            if (!cap) return `Error: capability "${capability}" not found. Use capability_search to find valid capabilities.`;
 
-                // Build the inputs array positionally matching the tool's schema
-                const inputs: { type: string; value: any }[] = [];
-                for (const input of tool.inputs) {
-                    const nameL = input.name.toLowerCase();
-                    let value: any;
+            const intent = classifyIntent(String(input));
+            const matchingCap = findCapabilityForIntent(intent.category);
 
-                    if (nameL === 'prompt' || nameL === 'text' || nameL === 'description') {
-                        value = prompt || '';
-                    } else if (nameL === 'image' && input.type === 'FILE') {
-                        value = args.imageUrl || null;
-                    } else if (input.type === 'STRING' && (nameL === 'negative_prompt' || nameL === 'negative')) {
-                        value = '';
-                    } else if (input.type === 'INTEGER' && (nameL === 'width' || nameL === 'w')) {
-                        value = width ?? 1024;
-                    } else if (input.type === 'INTEGER' && (nameL === 'height' || nameL === 'h')) {
-                        value = height ?? 1024;
-                    } else if (input.type === 'INTEGER' && (nameL === 'count' || nameL === 'num' || nameL === 'n' || nameL === 'number')) {
-                        value = count ?? 1;
-                    } else if (input.type === 'INTEGER' && (nameL === 'steps' || nameL === 'num_steps')) {
-                        value = 20;
-                    } else if (input.type === 'NUMBER' && (nameL === 'cfg' || nameL === 'guidance_scale')) {
-                        value = 7.0;
-                    } else if (input.type === 'STRING' && nameL.includes('prompt')) {
-                        value = prompt || '';
-                    } else if (input.type === 'INTEGER') {
-                        value = input.description?.toLowerCase().includes('count') ? (count ?? 1) :
-                                input.description?.toLowerCase().includes('width') ? (width ?? 1024) :
-                                input.description?.toLowerCase().includes('height') ? (height ?? 1024) :
-                                input.description?.toLowerCase().includes('step') ? 20 :
-                                input.description?.toLowerCase().includes('seed') ? 0 : 0;
-                    } else if (input.type === 'NUMBER') {
-                        value = 0;
-                    } else if (input.type === 'BOOLEAN') {
-                        value = false;
-                    } else if (input.type === 'ARRAY') {
-                        value = [];
-                    } else if (input.type === 'OBJECT') {
-                        value = {};
-                    } else {
-                        value = input.type === 'STRING' ? '' : 0;
-                    }
-                    inputs.push({ type: input.type, value });
-                }
+            const executionPlan = plan({
+                ...intent,
+                capabilityId: String(capability),
+            });
 
-                // Create the task
-                const task = await createTask(key, toolName, inputs);
-
-                // Poll until done
-                const result = await pollTask(key, task.taskId, 30, 3000);
-
-                if (result.status === 'FINISH' && result.outputs?.length) {
-                    const files = result.outputs
-                        .filter(o => (o.type === 'FILE' || o.type === 'IMAGE' || o.type === 'VIDEO') && o.url)
-                        .map(o => o.url);
-                    if (files.length) {
-                        return `Generation complete! Result URL${files.length > 1 ? 's' : ''}: ${files.join(', ')}`;
-                    }
-                    return `Generation complete (status: FINISH) but no output URLs returned. Full result: ${JSON.stringify(result.outputs)}`;
-                }
-                if (result.status === 'EXCEPTION') {
-                    return `Generation failed: ${result.error || 'Unknown error'}`;
-                }
-                return `Task ${task.taskId} is still processing (status: ${result.status}). Ask the user to check back later.`;
-            } catch (e: any) {
-                return `Error generating with Tensor Art: ${e?.message || e}`;
+            const engine = createExecutionEngine();
+            const validation = engine.validate(executionPlan);
+            if (validation.errors.length > 0) {
+                return `Error: plan validation failed — ${validation.errors.join('; ')}`;
             }
+
+            const result = await engine.execute(executionPlan);
+            return JSON.stringify({
+                planId: result.planId,
+                status: result.status,
+                steps: result.steps.map(s => ({
+                    kind: s.step.kind,
+                    description: s.step.description,
+                    status: s.status,
+                    duration: `${s.duration}ms`,
+                    error: s.error,
+                })),
+                totalDuration: `${result.totalDuration}ms`,
+                matchingCapability: matchingCap,
+            }, null, 2);
         },
     },
     {
-        name: 'append_findings',
-        description: "Append a note to the active research project's findings.md (Research mode, Findings panel). Use when the user says things like 'note that down as a finding' during a research conversation. No-op error if no research project is currently open.",
-        parameters: {
-            type: 'object',
-            properties: { text: { type: 'string', description: 'Markdown text to append as a new finding.' } },
-            required: ['text'],
-        },
-        execute: async ({ text }) => {
-            const { getActiveResearchProject, researchVault } = await import('./researchVaultService');
-            const slug = getActiveResearchProject();
-            if (!slug) return 'Error: no active research project — the user must open one in Research mode first.';
-            const { fileSystemManager } = await import('../utils/fileUtils');
-            if (!fileSystemManager.isDirectorySelected()) return 'Error: no vault folder is connected.';
-            await researchVault.findings.append(slug, String(text), fileSystemManager);
-            appEventBus.emit('research:findingsAppended', { slug });
-            return `Appended to findings.md for research project "${slug}".`;
-        },
-    },
-    {
-        name: 'expand_source',
-        description: "Fetch the full, untruncated content of a research source that was truncated in your context (marked '[...truncated — use expand_source to read full content]'). Reference it by its citation index (e.g. 2 for [2]) or by file name. No-op error if no research project is currently open.",
+        name: 'capability_list',
+        description: 'List all registered capabilities, optionally filtered by execution kind (local, provider, assistant-tool, mcp). Returns JSON with id, name, description, kind, and health.',
         parameters: {
             type: 'object',
             properties: {
-                index: { type: 'number', description: 'Citation index of the source, e.g. 2 for [2]. Use this or fileName.' },
-                fileName: { type: 'string', description: 'Source file name (as shown in the Sources panel). Use this or index.' },
+                kind: {
+                    type: 'string',
+                    description: 'Optional filter: only show capabilities of this execution kind.',
+                    enum: ['local', 'provider', 'assistant-tool', 'mcp'],
+                },
             },
         },
-        execute: async ({ index, fileName }) => {
-            const { getActiveResearchProject, researchVault } = await import('./researchVaultService');
-            const slug = getActiveResearchProject();
-            if (!slug) return 'Error: no active research project — the user must open one in Research mode first.';
-            const { fileSystemManager } = await import('../utils/fileUtils');
-            if (!fileSystemManager.isDirectorySelected()) return 'Error: no vault folder is connected.';
-            let targetFileName = fileName ? String(fileName) : undefined;
-            if (!targetFileName && index !== undefined) {
-                const project = await researchVault.projects.open(slug, fileSystemManager);
-                const src = (project.sourceFiles || [])[Number(index) - 1];
-                if (!src) return `Error: no source at index ${index}.`;
-                targetFileName = src.path.replace(/^sources\//, '');
-            }
-            if (!targetFileName) return 'Error: provide either index or fileName.';
-            try {
-                return await researchVault.sources.readContent(slug, targetFileName, fileSystemManager);
-            } catch (e: any) {
-                return `Error: ${e?.message || e}`;
-            }
+        execute: async ({ kind }) => {
+            const caps = kind
+                ? capabilityRegistry.list(kind as ExecutionKind)
+                : capabilityRegistry.list();
+            if (caps.length === 0) return 'No capabilities registered.';
+            return JSON.stringify(caps.map(c => ({
+                id: c.id,
+                name: c.name,
+                description: c.description,
+                kind: c.execution.kind,
+                healthy: c.healthy,
+                tags: c.tags,
+            })));
+        },
+    },
+    {
+        name: 'capability_health',
+        description: 'Check the health status of all registered capabilities. Returns a JSON summary showing which capabilities are healthy, which are degraded or down, and any health messages. Use when troubleshooting why a capability is unavailable.',
+        parameters: { type: 'object', properties: {} },
+        execute: async () => {
+            const caps = capabilityRegistry.list();
+            const healthy = caps.filter(c => c.healthy !== false);
+            const degraded = caps.filter(c => c.healthy === false);
+            const unknown = caps.filter(c => c.healthy === undefined);
+            return JSON.stringify({
+                total: caps.length,
+                healthy: healthy.length,
+                degraded: degraded.length,
+                unknown: unknown.length,
+                details: caps.map(c => ({
+                    id: c.id,
+                    healthy: c.healthy ?? 'unknown',
+                    message: c.healthMessage,
+                })),
+            }, null, 2);
         },
     },
 ];

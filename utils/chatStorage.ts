@@ -69,18 +69,12 @@ export async function initChatStore(): Promise<void> {
     // IDB unavailable
   }
 
-  // Try reading from IDB
+  // Try reading from IDB — only load sessions, NOT all messages
+  // (messages are loaded on demand via loadRecentMessages / loadMessagesBefore)
   try {
     const db = await getDb();
     _sessionsCache = await db.getAll(SESSIONS_STORE);
     _sessionsCache.sort((a, b) => b.updatedAt - a.updatedAt);
-
-    // Load messages for all sessions into cache
-    for (const session of _sessionsCache) {
-      const messages = await db.getAllFromIndex(MESSAGES_STORE, 'by_sessionId', session.id);
-      messages.sort((a, b) => a.createdAt - b.createdAt);
-      _messagesCache.set(session.id, messages);
-    }
 
     if (alreadyMigrated) {
       _initialized = true;
@@ -149,6 +143,77 @@ export function getChatSessionsSync(): ChatSessionStored[] {
 
 export function getChatMessagesSync(sessionId: string): ChatMessageStored[] {
   return _messagesCache.get(sessionId) || [];
+}
+
+// ── Chunked / paginated reads ─────────────────────────────────────────
+
+const CHUNK_SIZE = 50;
+
+/**
+ * Load the latest N messages for a session.
+ * Returns the messages, total count, and whether older messages exist.
+ */
+export async function loadRecentMessages(
+  sessionId: string,
+  limit = CHUNK_SIZE,
+): Promise<{
+  messages: ChatMessageStored[];
+  totalCount: number;
+  hasMore: boolean;
+}> {
+  try {
+    const db = await getDb();
+    const all = await db.getAllFromIndex(MESSAGES_STORE, 'by_sessionId', sessionId);
+    all.sort((a, b) => a.createdAt - b.createdAt);
+
+    const totalCount = all.length;
+    const hasMore = all.length > limit;
+    const recent = all.slice(-limit);
+
+    // Update the sync cache with just this chunk (not all messages)
+    _messagesCache.set(sessionId, recent);
+
+    return { messages: recent, totalCount, hasMore };
+  } catch {
+    return { messages: [], totalCount: 0, hasMore: false };
+  }
+}
+
+/**
+ * Load messages older than a given timestamp (cursor-based pagination).
+ * Returns the batch and whether even older messages exist.
+ */
+export async function loadMessagesBefore(
+  sessionId: string,
+  beforeCreatedAt: number,
+  limit = CHUNK_SIZE,
+): Promise<{
+  messages: ChatMessageStored[];
+  hasMore: boolean;
+}> {
+  try {
+    const db = await getDb();
+    const all = await db.getAllFromIndex(MESSAGES_STORE, 'by_sessionId', sessionId);
+    const older = all.filter((m) => m.createdAt < beforeCreatedAt);
+    older.sort((a, b) => a.createdAt - b.createdAt);
+
+    const hasMore = older.length > limit;
+    const batch = older.slice(-limit);
+    return { messages: batch, hasMore };
+  } catch {
+    return { messages: [], hasMore: false };
+  }
+}
+
+/** Get the total message count for a session. */
+export async function getMessageCount(sessionId: string): Promise<number> {
+  try {
+    const db = await getDb();
+    const all = await db.getAllFromIndex(MESSAGES_STORE, 'by_sessionId', sessionId);
+    return all.length;
+  } catch {
+    return 0;
+  }
 }
 
 // ── Async reads ────────────────────────────────────────────────────────

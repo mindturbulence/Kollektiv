@@ -12,6 +12,8 @@ import CodeSnippetModal from './CodeSnippetModal';
 import JSONBreakdownModal from './JSONBreakdownModal';
 import { audioService } from '../services/audioService';
 import { refinerPresetService, type RefinerPreset } from '../services/refinerPresetService';
+import { useGenerateLoop } from '../hooks/useGenerateLoop';
+import GeneratePanel from './GeneratePanel';
 import { modifierOptionsService } from '../services/modifierOptionsService';
 import { enhancePromptStream, cleanLLMResponse, buildMidjourneyParams, dissectPrompt, generateConstructorPreset, generateWithImagen, generateWithNanoBanana, generateWithVeo } from '../services/llmService';
 import { computeWordDiff, calculateSemanticMetrics } from '../utils/diffUtils';
@@ -96,6 +98,45 @@ const RefinerPage: React.FC<RefinerPageProps> = ({
 
     // --- Direct Media State ---
     const [directMediaResult, setDirectMediaResult] = useState<{ url: string; type: 'image' | 'video'; target: string; prompt: string } | null>(null);
+
+    // ── Generate Loop Integration ───────────────────────────────────
+    const {
+      state: generateState,
+      startGenerate,
+      reset: resetGenerate,
+      autoIngest,
+      setAutoIngest,
+      previousResult,
+    } = useGenerateLoop();
+
+    // --- Handlers ---
+
+    const buildModifierCatalog = useCallback(() => {
+        const catalog: string[] = [];
+        if (artStyles.length > 0) catalog.push(`artStyle: ${artStyles.flatMap((c: any) => c.items.map((i: any) => i.name)).join(', ')}`);
+        // Use MODIFIER_CATEGORIES from registry, filtered by media mode
+        const registryCatalog = MODIFIER_CATEGORIES.filter((c: any) => c.media === 'all' || c.media === mediaMode);
+        for (const cat of registryCatalog) {
+            const builtin = cat.getOptions();
+            const custom = customOptions?.[cat.key] || [];
+            const merged = Array.from(new Set([...builtin, ...custom.map((e: any) => typeof e === 'string' ? e : e.name)]));
+            if (merged.length > 0) catalog.push(`${cat.key}: ${merged.join(', ')}`);
+        }
+        return catalog.join('\\n');
+    }, [artStyles, mediaMode, customOptions]);
+
+    const handleStartGenerate = useCallback(() => {
+      const activeRefImages = referenceImages.filter((img): img is string => img !== null);
+      const catalog = buildModifierCatalog();
+      startGenerate({
+        rawPrompt: refineText || '',
+        constantModifier,
+        targetAIModel,
+        settings,
+        referenceImages: activeRefImages,
+        modifierCatalog: catalog,
+      });
+    }, [refineText, constantModifier, targetAIModel, settings, referenceImages, startGenerate, buildModifierCatalog]);
 
     const [activeRefineSubTab, setActiveRefineSubTab] = useState<RefineSubTab>('basic');
     const refineScrollerRef = useRef<HTMLDivElement>(null);
@@ -278,20 +319,6 @@ const RefinerPage: React.FC<RefinerPageProps> = ({
     }, [initialPrompt, initialArtStyle, initialArtist]);
 
     // --- Handlers ---
-
-    const buildModifierCatalog = useCallback(() => {
-        const catalog: string[] = [];
-        if (artStyles.length > 0) catalog.push(`artStyle: ${artStyles.flatMap((c: any) => c.items.map((i: any) => i.name)).join(', ')}`);
-        // Use MODIFIER_CATEGORIES from registry, filtered by media mode
-        const registryCatalog = MODIFIER_CATEGORIES.filter((c: any) => c.media === 'all' || c.media === mediaMode);
-        for (const cat of registryCatalog) {
-            const builtin = cat.getOptions();
-            const custom = customOptions?.[cat.key] || [];
-            const merged = Array.from(new Set([...builtin, ...custom.map((e: any) => typeof e === 'string' ? e : e.name)]));
-            if (merged.length > 0) catalog.push(`${cat.key}: ${merged.join(', ')}`);
-        }
-        return catalog.join('\\n');
-    }, [artStyles, mediaMode, customOptions]);
 
     const handleEnhance = useCallback(async () => {
         setIsBusy(true);
@@ -760,6 +787,17 @@ const RefinerPage: React.FC<RefinerPageProps> = ({
                             </div>
                         </motion.footer>
                     )}
+
+                    {/* Generate Loop Panel — always visible at the bottom of the output column */}
+                    <GeneratePanel
+                        state={generateState}
+                        onStart={handleStartGenerate}
+                        onReset={resetGenerate}
+                        autoIngest={autoIngest}
+                        onToggleAutoIngest={() => setAutoIngest(!autoIngest)}
+                        disabled={isLoadingRefine || !(refineText || '').trim()}
+                        previousResult={previousResult}
+                    />
                 </div>
                 <div className="absolute -top-[1px] -left-[1px] w-3 h-3 border-t border-l border-primary/15 z-20 pointer-events-none" />
                 <div className="absolute -top-[1px] -right-[1px] w-3 h-3 border-t border-r border-primary/15 z-20 pointer-events-none" />

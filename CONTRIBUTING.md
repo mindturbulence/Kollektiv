@@ -73,9 +73,8 @@ A change is done when **all** of these hold:
   in `package.json` scripts, or in committed HTML. Use environment variables or
   the in-app settings UI.
 - **Local dev secrets go in `.env`** (gitignored). Copy `.env.example` to `.env`
-  and fill in real values — e.g. `OBSIDIAN_API_KEY` for the optional Obsidian MCP
-  bridge (`pnpm run obsidian:mcp`, or the auto-started bridge in `server.ts` —
-  both are skipped entirely if the var is unset). Adding a new local-only secret?
+  and fill in real values — e.g. `OBSIDIAN_VAULT_PATH` for the optional local vault MCP
+  bridge (auto-started when the env var is set). Adding a new local-only secret?
   Add its placeholder to `.env.example` in the same change.
 - Gmail/Drive assistant tools have real, irreversible power (send/delete email).
   Keep them behind the existing `confirmSensitiveAction` confirmation.

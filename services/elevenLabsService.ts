@@ -13,6 +13,7 @@
 import { VoiceConversation } from '@elevenlabs/client';
 import type { ToolContext } from './assistantTools';
 import type { LLMSettings } from '../types';
+import { ReconnectManager } from '../utils/reconnectManager';
 
 export interface ElevenLabsHandlers {
   onStatus: (s: 'connecting' | 'live' | 'closed' | 'error', detail?: string) => void;
@@ -25,8 +26,24 @@ export interface ElevenLabsHandlers {
 export class ElevenLabsAssistant {
   private conversation: VoiceConversation | null = null;
   private handlers!: ElevenLabsHandlers;
+  private settings!: LLMSettings;
+  private reconnectManager = new ReconnectManager({
+    maxRetries: 5,
+    baseDelayMs: 1000,
+    onAttempt: (attempt, _delay) => {
+      this.handlers?.onStatus('connecting', `Reconnecting (${attempt}/5)…`);
+    },
+    onSuccess: () => {
+      this.handlers?.onStatus('live');
+    },
+    onFailure: (msg) => {
+      this.handlers?.onStatus('error', msg);
+    },
+  });
 
   async connect(settings: LLMSettings, handlers: ElevenLabsHandlers): Promise<void> {
+    this.settings = settings;
+
     this.handlers = handlers;
     handlers.onStatus('connecting');
 
@@ -67,6 +84,11 @@ export class ElevenLabsAssistant {
         onDisconnect: () => {
           handlers.onStatus('closed');
           this.conversation = null;
+          // Start exponential backoff reconnection
+          this.reconnectManager.start(async () => {
+            this.disconnect();
+            await this.connect(this.settings, this.handlers);
+          });
         },
         onError: (msg, _ctx) => {
           handlers.onStatus('error', msg);
@@ -83,6 +105,7 @@ export class ElevenLabsAssistant {
         },
       });
 
+      this.reconnectManager.reportSuccess();
       handlers.onStatus('live');
     } catch (err) {
       handlers.onStatus('error', String(err));
@@ -92,6 +115,7 @@ export class ElevenLabsAssistant {
   }
 
   disconnect(): void {
+    this.reconnectManager.cancel();
     this.conversation?.endSession().catch(() => {});
     this.conversation = null;
     this.handlers?.onSpeaking(false);

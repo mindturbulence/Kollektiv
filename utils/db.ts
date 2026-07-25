@@ -72,6 +72,11 @@ export interface KollektivDB extends DBSchema {
       'by_createdAt': number;
     };
   };
+
+  'search_index': {
+    key: string;
+    value: any;
+  };
 }
 
 export type StoreName = keyof KollektivDB;
@@ -80,7 +85,7 @@ let _dbPromise: Promise<IDBPDatabase<KollektivDB>> | null = null;
 
 export const getDb = (): Promise<IDBPDatabase<KollektivDB>> => {
   if (!_dbPromise) {
-    _dbPromise = openDB<KollektivDB>('kollektiv-db', 2, {
+    _dbPromise = openDB<KollektivDB>('kollektiv-db', 3, {
       upgrade(db, oldVersion, _newVersion, _transaction) {
         // v1: keyval store
         if (oldVersion < 1) {
@@ -103,6 +108,11 @@ export const getDb = (): Promise<IDBPDatabase<KollektivDB>> => {
           const messagesStore = db.createObjectStore('chat_messages', { keyPath: 'id' });
           messagesStore.createIndex('by_sessionId', 'sessionId', { unique: false });
           messagesStore.createIndex('by_createdAt', 'createdAt', { unique: false });
+        }
+
+        // v3: search_index for vaultSearch
+        if (oldVersion < 3) {
+          db.createObjectStore('search_index');
         }
       },
     });

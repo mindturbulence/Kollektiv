@@ -33,10 +33,16 @@ Kollektiv is a high-performance, local-first application designed for prompt eng
 
 - **Frontend**: React 19, TypeScript, Vite
 - **Styling**: Tailwind CSS 3, DaisyUI
-- **Animation**: GSAP and Framer Motion
+- **Animation**: GSAP and Motion (motion/react)
 - **AI Engines**: Google Gemini, Ollama, OpenRouter, llama.cpp, Anthropic
 - **Storage**: File System Access API, IndexedDB, optional Google Drive integration
-- **Utilities**: FFmpeg.wasm, JSZip, UUID, Lottie
+- **Utilities**: JSZip, UUID, Lottie
+
+> **2026-07-25 — Dependency cleanup:** Removed 9 unused runtime dependencies
+> (`@apify/actors-mcp-server`, `@babel/generator`, `@dsnp/parquetjs`,
+> `@elevenlabs/react`, `@ffmpeg/ffmpeg`, `@ffmpeg/util`, `framer-motion`,
+> `onnxruntime-web`, `vfile`) and added the missing explicit dependency
+> `@modelcontextprotocol/sdk`. Tech stack section above updated to match.
 
 ---
 

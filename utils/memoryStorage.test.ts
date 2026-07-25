@@ -6,6 +6,9 @@ import {
   addMemory,
   deleteMemory,
   memoryPromptBlock,
+  searchMemories,
+  getMemoriesByCategory,
+  refreshMemoryCache,
   _testReset,
 } from './memoryStorage';
 
@@ -203,5 +206,239 @@ describe('memoryStorage', () => {
     (getDb as any).mockRejectedValueOnce(new Error('IDB unavailable'));
     const result = await addMemory('should fail');
     expect(result).toBeNull();
+  });
+
+  // ── Category & Tags ──
+
+  it('adds memory with category and tags', async () => {
+    await initMemoriesStore();
+    const entry = await addMemory('prefers 85mm portraits', {
+      category: 'user_preference',
+      tags: ['portrait', 'photography'],
+    });
+    expect(entry).not.toBeNull();
+    expect(entry!.category).toBe('user_preference');
+    expect(entry!.tags).toEqual(['portrait', 'photography']);
+  });
+
+  it('defaults to general category when no options given', async () => {
+    await initMemoriesStore();
+    const entry = await addMemory('something random');
+    expect(entry).not.toBeNull();
+    expect(entry!.category).toBe('general');
+    expect(entry!.tags).toEqual([]);
+  });
+
+  it('normalizes legacy entries without category/tags on load', async () => {
+    // Seed a legacy entry with no category/tags
+    const legacyEntry = { id: 'legacy-1', fact: 'old fact', createdAt: 100 };
+    _store.set('memories:legacy-1', legacyEntry);
+
+    await initMemoriesStore();
+    const memories = await loadMemories();
+    expect(memories).toHaveLength(1);
+    expect(memories[0].category).toBe('general');
+    expect(memories[0].tags).toEqual([]);
+  });
+
+  it('preserves category and tags when re-loading', async () => {
+    await initMemoriesStore();
+    await addMemory('fine art style', {
+      category: 'style_pattern',
+      tags: ['art', 'painting'],
+    });
+    const memories = await loadMemories();
+    expect(memories).toHaveLength(1);
+    expect(memories[0].category).toBe('style_pattern');
+    expect(memories[0].tags).toEqual(['art', 'painting']);
+  });
+
+  // ── Rich retrieval ──
+
+  it('searchMemories finds by fact text', async () => {
+    await initMemoriesStore();
+    await addMemory('prefers 85mm portraits');
+    await addMemory('likes neon aesthetic');
+    const results = searchMemories('neon');
+    expect(results).toHaveLength(1);
+    expect(results[0].fact).toBe('likes neon aesthetic');
+  });
+
+  it('searchMemories finds by tags', async () => {
+    await initMemoriesStore();
+    await addMemory('prefers 85mm', { tags: ['portrait', 'lens'] });
+    const results = searchMemories('lens');
+    expect(results).toHaveLength(1);
+  });
+
+  it('searchMemories returns all when query is empty', async () => {
+    await initMemoriesStore();
+    await addMemory('fact a');
+    await addMemory('fact b');
+    expect(searchMemories('')).toHaveLength(2);
+  });
+
+  it('getMemoriesByCategory filters correctly', async () => {
+    await initMemoriesStore();
+    await addMemory('prefers 85mm', { category: 'user_preference' });
+    await addMemory('likes neon', { category: 'style_pattern' });
+    await addMemory('some fact', { category: 'general' });
+
+    expect(getMemoriesByCategory('user_preference')).toHaveLength(1);
+    expect(getMemoriesByCategory('style_pattern')).toHaveLength(1);
+    expect(getMemoriesByCategory('general')).toHaveLength(1);
+    expect(getMemoriesByCategory()).toHaveLength(3);
+  });
+
+  it('refreshMemoryCache reloads from IDB', async () => {
+    await initMemoriesStore();
+    await addMemory('original');
+    // Simulate an external add
+    const externalEntry = { id: 'external', fact: 'external fact', category: 'general', tags: [], createdAt: Date.now() };
+    _store.set('memories:external', externalEntry);
+
+    await refreshMemoryCache();
+    const memories = getMemoriesSync();
+    expect(memories).toHaveLength(2);
+    expect(memories.some(m => m.fact === 'external fact')).toBe(true);
+  });
+
+  // ── Context-aware memoryPromptBlock ──
+
+  it('memoryPromptBlock without context returns all memories', async () => {
+    await initMemoriesStore();
+    await addMemory('speaks German');
+    await addMemory('prefers 85mm portraits');
+    const block = memoryPromptBlock();
+    expect(block).toContain('speaks German');
+    expect(block).toContain('prefers 85mm portraits');
+  });
+
+  it('memoryPromptBlock with context filters relevant memories', async () => {
+    await initMemoriesStore();
+    await addMemory('speaks German', { category: 'user_preference' });
+    await addMemory('prefers 85mm portraits', { category: 'user_preference' });
+    await addMemory('likes neon aesthetic', { category: 'style_pattern' });
+
+    const block = memoryPromptBlock('What lens should I use for portraits?');
+    expect(block).toContain('prefers 85mm portraits');
+    expect(block).not.toContain('speaks German');
+    expect(block).not.toContain('likes neon aesthetic');
+  });
+
+  it('memoryPromptBlock with context that matches nothing returns empty', async () => {
+    await initMemoriesStore();
+    await addMemory('prefers 85mm portraits');
+    const block = memoryPromptBlock('quantum physics equations');
+    expect(block).toBe('');
+  });
+
+  it('tags appear in memoryPromptBlock output', async () => {
+    await initMemoriesStore();
+    await addMemory('prefers 85mm', { tags: ['portrait', 'lens'] });
+    const block = memoryPromptBlock();
+    expect(block).toContain('[portrait, lens]');
+  });
+
+  // ── Context-aware edge cases ──
+
+  it('empty string context behaves same as no context (all memories)', async () => {
+    await initMemoriesStore();
+    await addMemory('speaks German');
+    await addMemory('prefers 85mm portraits');
+    const block = memoryPromptBlock('');
+    expect(block).toContain('speaks German');
+    expect(block).toContain('prefers 85mm portraits');
+  });
+
+  it('context with only stopwords falls back to all memories', async () => {
+    await initMemoriesStore();
+    await addMemory('speaks German');
+    await addMemory('prefers 85mm portraits');
+    // All words in this context are stopwords (<4 chars or in stopword set)
+    const block = memoryPromptBlock('the and for you all');
+    expect(block).toContain('speaks German');
+    expect(block).toContain('prefers 85mm portraits');
+  });
+
+  it('context with only short words (<4 chars) falls back to all memories', async () => {
+    await initMemoriesStore();
+    await addMemory('speaks German');
+    await addMemory('prefers 85mm portraits');
+    const block = memoryPromptBlock('hi my to we');
+    expect(block).toContain('speaks German');
+    expect(block).toContain('prefers 85mm portraits');
+  });
+
+  it('context matches via tags, not just fact text', async () => {
+    await initMemoriesStore();
+    await addMemory('speaks German', { tags: ['language', 'profile'] });
+    await addMemory('prefers 85mm portraits', { tags: ['portrait', 'lens'] });
+    // 'lens' is a tag on the second memory, not in the fact text
+    const block = memoryPromptBlock('Which lens do you recommend?');
+    expect(block).toContain('prefers 85mm portraits');
+    expect(block).not.toContain('speaks German');
+  });
+
+  it('scores by keyword match count — memories with more matches come first', async () => {
+    await initMemoriesStore();
+    await addMemory('prefers 85mm portraits', { tags: ['lens'] });       // matches 'portraits' + 'lens' = 2
+    await addMemory('warm lighting enhances mood', { tags: ['portrait'] }); // matches 'lighting' + 'portrait' = 2
+    await addMemory('speaks German');                                     // matches nothing = 0
+
+    const block = memoryPromptBlock('portrait lighting with 85mm lens');
+    const lines = block.split('\n').filter(l => l.startsWith('-'));
+    expect(lines).toHaveLength(2); // German excluded
+
+    // Two-match memories should appear before zero-match (which is excluded)
+    const firstIndex = block.indexOf('prefers 85mm portraits');
+    const secondIndex = block.indexOf('warm lighting');
+    expect(firstIndex).not.toBe(-1);
+    expect(secondIndex).not.toBe(-1);
+  });
+
+  it('is case-insensitive when matching context to memories', async () => {
+    await initMemoriesStore();
+    await addMemory('Prefers 85mm Portraits');
+    await addMemory('speaks german');
+    const block = memoryPromptBlock('portrait');
+    expect(block).toContain('Prefers 85mm Portraits');
+    expect(block).not.toContain('speaks german');
+  });
+
+  it('handles unicode characters in context (äöüß)', async () => {
+    await initMemoriesStore();
+    await addMemory('straße ist lang');
+    await addMemory('prefers 85mm portraits');
+    const block = memoryPromptBlock('straße');
+    expect(block).toContain('straße ist lang');
+    expect(block).not.toContain('prefers 85mm portraits');
+  });
+
+  it('memory with special characters in fact still matches keywords', async () => {
+    await initMemoriesStore();
+    await addMemory('user likes [cyberpunk] & neon_aesthetic');
+    const block = memoryPromptBlock('cyberpunk aesthetic style');
+    expect(block).toContain('cyberpunk');
+    expect(block).toContain('neon_aesthetic');
+  });
+
+  it('context matching a single memory returns only that one', async () => {
+    await initMemoriesStore();
+    await addMemory('speaks German');
+    await addMemory('prefers 85mm portraits');
+    await addMemory('likes neon aesthetic');
+    const block = memoryPromptBlock('neon');
+    const lines = block.split('\n').filter(l => l.startsWith('-'));
+    expect(lines).toHaveLength(1);
+    expect(lines[0]).toContain('neon aesthetic');
+  });
+
+  it('falls back to all memories when context has no meaningful keywords (words <4 chars)', async () => {
+    await initMemoriesStore();
+    await addMemory('uses Midjourney for art');
+    const block = memoryPromptBlock('for'); // 'for' is 3 chars → extractKeywords returns empty → fallback
+    const lines = block.split('\n').filter(l => l.startsWith('-'));
+    expect(lines).toHaveLength(1);
   });
 });

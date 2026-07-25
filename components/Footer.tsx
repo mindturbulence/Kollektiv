@@ -7,6 +7,7 @@ import { fileSystemManager } from '../utils/fileUtils';
 import { audioService } from '../services/audioService';
 import { loadGalleryItems } from '../utils/galleryStorage';
 import { useAssistantSignals } from '../utils/useAssistantSignals';
+import DemoModeIndicator from './DemoModeIndicator';
 import { useLiveAssistantContext } from '../contexts/LiveAssistantContext';
 import { appEventBus } from '../utils/eventBus';
 import type { AssistantMode } from '../utils/assistantMode';
@@ -245,6 +246,7 @@ const Footer: React.FC<FooterProps> = ({
                     <IntegrationItem label="SPOTIFY" active={!!settings.spotify?.isConnected} />
                     <IntegrationItem label="TENSORART" active={!!settings.tensorartApiKey} />
                     <IntegrationItem label={`MCP: ${(settings.mcpServers || []).filter(s => s.enabled).length}`} active={(settings.mcpServers || []).filter(s => s.enabled).length > 0} />
+                    <DemoModeIndicator />
                 </div>
             </div>
 

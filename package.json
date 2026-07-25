@@ -18,28 +18,20 @@
     "test:e2e": "playwright test",
     "preview": "vite preview",
     "predeploy": "pnpm run build",
-    "deploy": "gh-pages -d dist",
-    "obsidian:mcp": "cross-env OBSIDIAN_BASE_URL=https://127.0.0.1:27124 OBSIDIAN_VERIFY_SSL=false npx obsidian-mcp-server@latest",
-    "obsidian:mcp:http": "cross-env OBSIDIAN_BASE_URL=https://127.0.0.1:27124 OBSIDIAN_VERIFY_SSL=false MCP_TRANSPORT_TYPE=http MCP_HTTP_PORT=3012 npx obsidian-mcp-server@latest"
+    "deploy": "gh-pages -d dist"
   },
   "packageManager": "pnpm@11.5.3",
   "dependencies": {
-    "@apify/actors-mcp-server": "^0.11.6",
-    "@babel/generator": "^7.29.0",
     "@bitbonsai/mcpvault": "^0.12.1",
-    "@dsnp/parquetjs": "^1.8.8",
     "@elevenlabs/client": "^1.15.1",
-    "@elevenlabs/react": "^1.10.1",
-    "@ffmpeg/ffmpeg": "^0.12.6",
-    "@ffmpeg/util": "^0.12.1",
     "@google/genai": "^1.12.0",
+    "@modelcontextprotocol/sdk": "^1.10.0",
     "@playwright/mcp": "^0.0.78",
     "@ricky0123/vad-web": "^0.0.30",
     "@tailwindcss/typography": "^0.5.19",
     "@types/react-syntax-highlighter": "^15.5.13",
     "@types/uuid": "^10.0.0",
     "express": "^5.2.1",
-    "framer-motion": "^12.38.0",
     "gsap": "^3.12.5",
     "hash-wasm": "^4.12.0",
     "idb": "^8.0.0",
@@ -47,7 +39,6 @@
     "mammoth": "^1.12.0",
     "motion": "^12.38.0",
     "multer": "^2.2.0",
-    "onnxruntime-web": "^1.27.0",
     "pdfjs-dist": "^5.7.284",
     "react": "^19.1.1",
     "react-dom": "^19.1.1",
@@ -55,8 +46,7 @@
     "react-syntax-highlighter": "^16.1.1",
     "remark-gfm": "^4.0.1",
     "simple-rnnoise-wasm": "^1.1.0",
-    "uuid": "^9.0.1",
-    "vfile": "^6.0.3"
+    "uuid": "^9.0.1"
   },
   "devDependencies": {
     "@playwright/test": "^1.61.1",

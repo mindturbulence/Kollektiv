@@ -2,7 +2,7 @@ import { Modality } from '@google/genai';
 import type { LLMSettings } from '../types';
 import { getGeminiClient } from './geminiService';
 import { executeAssistantTool, geminiToolDeclarations, ASSISTANT_TOOLS, AssistantTool } from './assistantTools';
-import { buildSystemIdentity } from './assistantService';
+import { buildSystemIdentity, buildKnowledgeContextBlock } from './assistantService';
 import { loadMcpAssistantTools } from './mcpAssistantTools';
 import { browserControlService } from './browserControlService';
 import { externalBrowserService } from './externalBrowserService';
@@ -11,6 +11,7 @@ import { resolveLangKey } from '../utils/languageKey';
 import { TurnManager } from './turnManager';
 import { VoiceActivityService } from './voiceActivityService';
 import { NoiseCancellation } from './noiseCancellation';
+import { ReconnectManager } from '../utils/reconnectManager';
 
 // Single source of truth for the live model constant.
 // Verified against https://ai.google.dev/gemini-api/docs/live-api/capabilities (2026-07-10) —
@@ -335,7 +336,7 @@ const describeToolCall = (name: string, _args: Record<string, any>, lang: string
             return t('evaluate', lang);
         case name.startsWith('browser_'):
             return t('fiddling', lang);
-        case name.startsWith('obsidian_'):
+        case name.startsWith('mcp_') && (name.includes('obsidian') || name.includes('vault') || name.includes('note')):
             return t('notes', lang);
         case name.startsWith('gmail_'):
             return t('inbox', lang);
@@ -367,6 +368,19 @@ export class LiveAssistant {
     private settings!: LLMSettings;
     private mcpTools: AssistantTool[] = [];
     private closedByUs = false;
+    private reconnectManager = new ReconnectManager({
+        maxRetries: 5,
+        baseDelayMs: 1000,
+        onAttempt: (attempt, _delay) => {
+            this.handlers?.onStatus('connecting', `Reconnecting (${attempt}/5)…`);
+        },
+        onSuccess: () => {
+            this.handlers?.onStatus('live');
+        },
+        onFailure: (msg) => {
+            this.handlers?.onStatus('error', msg);
+        },
+    });
 
     async connect(settings: LLMSettings, handlers: LiveHandlers): Promise<void> {
         this.settings = settings;
@@ -384,7 +398,7 @@ export class LiveAssistant {
             model: LIVE_MODEL,
             config: {
                 responseModalities: [Modality.AUDIO],
-                systemInstruction: buildSystemIdentity(settings) + ' You are in live voice mode; keep spoken replies short. If the user shares their screen and explicitly asks you to interact with it, they will grant browser control permission — then you can call browser_* tools to click buttons, type text, scroll, and navigate on their screen. Do NOT attempt to use browser_* tools or ask for control permission on your own. Wait quietly until the user explicitly asks you to click, type, or navigate something.',
+                systemInstruction: buildSystemIdentity(settings, undefined, undefined, await buildKnowledgeContextBlock('')) + ' You are in live voice mode; keep spoken replies short. If the user shares their screen and explicitly asks you to interact with it, they will grant browser control permission — then you can call browser_* tools to click buttons, type text, scroll, and navigate on their screen. Do NOT attempt to use browser_* tools or ask for control permission on your own. Wait quietly until the user explicitly asks you to click, type, or navigate something.',
                 speechConfig: {
                     voiceConfig: { prebuiltVoiceConfig: { voiceName: settings.assistantVoice || 'Kore' } },
                 },
@@ -401,16 +415,18 @@ export class LiveAssistant {
                 },
                 onclose: (e: CloseEvent) => {
                     if (this.closedByUs) return;
-                    // Surface the real reason instead of silently resetting to idle —
-                    // a session that dies right after opening (bad model name, no Live
-                    // API access on this key, malformed tool config, quota) otherwise
-                    // just looks like the button "does nothing".
                     console.error('[LiveAssistant] session closed unexpectedly', e?.code, e?.reason);
                     handlers.onStatus('error', e?.reason || `Live session closed unexpectedly (code ${e?.code ?? '?'})`);
+                    // Start exponential backoff reconnection
+                    this.reconnectManager.start(async () => {
+                        this.disconnect();
+                        await this.connect(this.settings, this.handlers);
+                    });
                 },
             },
         });
 
+        this.reconnectManager.reportSuccess();
         await this.startMic();
 
         // Initialize turn management with VAD
@@ -732,6 +748,7 @@ export class LiveAssistant {
 
     disconnect(): void {
         this.closedByUs = true;
+        this.reconnectManager.cancel();
         // Clean up VAD before stopping mic (VAD needs the stream to be alive)
         if (this.vadService) {
             void this.vadService.stop().catch(() => {});

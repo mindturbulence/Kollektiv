@@ -7,6 +7,16 @@ async function bootToAppShell(page: Page) {
     // fileSystemManager. Belt-and-braces: also stub the permission methods,
     // which OPFS handles lack in some Chromium builds.
     await page.addInitScript(() => {
+        // Clear any IndexedDB state from previous test runs.
+        // Chromium's OPFS implementation can leak directory handles across
+        // BrowserContext boundaries — a stale handle makes the Welcome screen
+        // show RECONNECT_VAULT instead of SELECT_VAULT_FOLDER, timing out the test.
+        try {
+            indexedDB.deleteDatabase('kollektiv-db');
+        } catch {
+            // non-fatal in restricted contexts
+        }
+
         (window as any).showDirectoryPicker = async () => {
             const dir: any = await navigator.storage.getDirectory();
             dir.queryPermission = async () => 'granted';
@@ -18,8 +28,17 @@ async function bootToAppShell(page: Page) {
     await page.goto('/');
 
     // Gate 1: STORAGE_INIT — fresh context has no stored handle, so the
-    // Welcome screen shows SELECT_VAULT_FOLDER.
-    await page.getByRole('button', { name: 'SELECT_VAULT_FOLDER' }).click({ timeout: 30_000 });
+    // Welcome screen shows SELECT_VAULT_FOLDER.  Fall back to RECONNECT_VAULT
+    // if a stale OPFS handle leaked from a previous context.
+    const selectBtn = page.getByRole('button', { name: 'SELECT_VAULT_FOLDER' });
+    const reconnectBtn = page.getByRole('button', { name: 'RECONNECT_VAULT' });
+    const gateBtn = await Promise.race([
+        selectBtn.waitFor({ state: 'visible', timeout: 10_000 }).then(() => selectBtn),
+        reconnectBtn.waitFor({ state: 'visible', timeout: 10_000 }).then(() => reconnectBtn),
+    ].map(p => p.catch(() => null as any)));
+    // If neither button appeared (e.g., app crashed), fail with a clear error
+    if (!gateBtn) throw new Error('Neither SELECT_VAULT_FOLDER nor RECONNECT_VAULT appeared on the Welcome screen.');
+    await gateBtn.click();
 
     // Gate 2: loader — integrity check runs, progress reaches 100%, then the
     // CONTINUE buttons crossfade in. Headless throttles rAF, so be generous.

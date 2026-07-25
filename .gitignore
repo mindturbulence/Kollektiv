@@ -18,7 +18,6 @@ nul
 # Playwright
 test-results/
 playwright-report/
-.env.example
 .playwright-mcp/
 
 # One-off debugging scratch scripts — never commit these

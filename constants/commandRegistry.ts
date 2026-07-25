@@ -4,10 +4,12 @@ import type { ActiveTab } from '../types';
 export interface CommandItem {
   id: string;
   label: string;
-  category: 'Navigation' | 'Panels' | 'Assistant Actions' | 'Themes' | 'Settings' | 'Tools';
+  category: 'Navigation' | 'Panels' | 'Assistant Actions' | 'Themes' | 'Settings' | 'Tools' | 'Vault Notes';
   keywords: string[];
   shortcut?: string;
   icon?: string;
+  /** Optional subtitle/detail shown below the label (e.g. a file path). */
+  detail?: string;
   execute: () => void;
 }
 

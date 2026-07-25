@@ -5,7 +5,6 @@ import type { AuthContextType } from '../contexts/AuthContext';
 import type { LLMSettings } from '../types';
 import { loadLLMSettings } from './settingsStorage';
 import { convertToJpgWithMetadata } from './imageFormatTools';
-import { isGoogleAuthValid } from './googleAuth';
 
 // --- Interfaces and Types ---
 export interface IFileSystemManager {
@@ -418,7 +417,7 @@ class LocalFileSystemManager implements IFileSystemManager {
         this.lastError = null;
         this.storageProvider = settings.storageProvider || 'local';
         const googleIdentity = settings.googleIdentity;
-        this.accessToken = isGoogleAuthValid(googleIdentity) ? googleIdentity.accessToken : null;
+        this.accessToken = (await import('./googleAuth')).isGoogleAuthValid(googleIdentity) ? googleIdentity.accessToken : null;
 
         // Drive standby/keep-alive initialization
         if (this.accessToken) {
@@ -1345,7 +1344,70 @@ class LocalFileSystemManager implements IFileSystemManager {
     }
 }
 
-export const fileSystemManager = new LocalFileSystemManager();
+// ── File-system manager proxy (supports swapping to demo mode) ───────
+
+// Wrap _activeFileManager in a holder object so the Proxy handler can always
+// reference the current instance by reference rather than by closure capture.
+const _holder = { current: new LocalFileSystemManager() };
+
+export const fileSystemManager: LocalFileSystemManager = new Proxy(_holder, {
+    get(_target, prop: string | symbol, _receiver) {
+        const target: any = _holder.current;
+        const value = target[prop];
+        if (typeof value === 'function') {
+            return function (this: any, ...args: any[]) {
+                return value.apply(_holder.current, args);
+            };
+        }
+        return value;
+    },
+    set(_target, prop: string | symbol, value, _receiver) {
+        (_holder.current as any)[prop] = value;
+        return true;
+    },
+    has(_target, prop: string | symbol) {
+        return prop in _holder.current;
+    },
+    ownKeys(_target) {
+        return Reflect.ownKeys(_holder.current);
+    },
+    getOwnPropertyDescriptor(_target, prop) {
+        return Reflect.getOwnPropertyDescriptor(_holder.current, prop);
+    },
+}) as unknown as LocalFileSystemManager;
+
+/**
+ * Replace the active file-system manager (used to enter/exit demo mode).
+ * The exported `fileSystemManager` proxy transparently delegates to the new instance.
+ * Accepts any IFileSystemManager that also provides the extended properties
+ * used by existing code (accessToken, storageProvider, etc.).
+ */
+export type FileSystemManagerInstance =
+    | LocalFileSystemManager
+    | (IFileSystemManager & {
+          storageProvider: 'local' | 'drive';
+          accessToken: string | null;
+          appDirectoryName: string | null;
+          rootFolderId: string | null;
+          pathCache: Map<string, { id: string; mimeType: string }>;
+          lastError: string | null;
+          isMigrationPaused: boolean;
+          isMigrationAborted: boolean;
+          isInitialized: boolean;
+      });
+
+export function setActiveFileManager(mgr: FileSystemManagerInstance): void {
+    // safe cast: both LocalFileSystemManager and DemoFileSystemManager
+    // provide the same extended properties accessed on fileSystemManager
+    _holder.current = mgr as LocalFileSystemManager;
+}
+
+/**
+ * Returns the current active file-system manager instance.
+ */
+export function getActiveFileManager(): FileSystemManagerInstance {
+    return _holder.current;
+}
 
 // --- Utility Functions ---
 
