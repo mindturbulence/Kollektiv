@@ -12,7 +12,7 @@ interface McpSectionProps {
     handleSettingsChange: (field: keyof LLMSettings, value: any) => void;
 }
 
-type McpTab = 'predefined' | 'custom';
+type McpTab = 'built-in' | 'custom';
 
 interface ServerStatus {
     connected: boolean | null;
@@ -23,7 +23,7 @@ interface ServerStatus {
 const McpSection: React.FC<McpSectionProps> = ({ activeSubTab, settings, handleSettingsChange }) => {
     if (activeSubTab !== 'mcp') return null;
 
-    const [tab, setTab] = useState<McpTab>('predefined');
+    const [tab, setTab] = useState<McpTab>('built-in');
     const allServers = settings.mcpServers || [];
     // Predefined-tab entries (tagged with presetId) live in the same array but
     // are never shown or mutated here — they merge back untouched on every write.
@@ -96,10 +96,10 @@ const McpSection: React.FC<McpSectionProps> = ({ activeSubTab, settings, handleS
                 </p>
                 <div className="flex gap-0 mt-4">
                     <button
-                        onClick={() => { audioService.playClick(); setTab('predefined'); }}
-                        className={`px-3 py-1 text-[10px] font-black uppercase tracking-[0.3em] font-logo border border-base-300/30 ${tab === 'predefined' ? 'bg-primary/20 text-primary' : 'opacity-50 hover:opacity-100'}`}
+                        onClick={() => { audioService.playClick(); setTab('built-in'); }}
+                        className={`px-3 py-1 text-[10px] font-black uppercase tracking-[0.3em] font-logo border border-base-300/30 ${tab === 'built-in' ? 'bg-primary/20 text-primary' : 'opacity-50 hover:opacity-100'}`}
                     >
-                        Predefined
+                        Built-In
                     </button>
                     <button
                         onClick={() => { audioService.playClick(); setTab('custom'); }}
@@ -110,7 +110,7 @@ const McpSection: React.FC<McpSectionProps> = ({ activeSubTab, settings, handleS
                 </div>
             </div>
 
-            {tab === 'predefined' && (
+            {tab === 'built-in' && (
                 <PredefinedMcpSection settings={settings} handleSettingsChange={handleSettingsChange} />
             )}
 

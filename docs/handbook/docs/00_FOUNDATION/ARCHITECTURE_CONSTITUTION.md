@@ -103,72 +103,128 @@ The engineering contract for this repository is explicit:
 
 ## Contribution Workflow
 
-Contributors should follow the established development flow:
+### Prerequisites
 
-1. Install dependencies with pnpm.
-2. Run the project locally with the development server.
-3. Keep changes scoped to a single logical improvement.
-4. Validate with the relevant lint, test, and build commands.
-5. Verify persistence and asset handling when a change affects settings or stored files.
-6. Track work in the repository issue file and write commits in the existing conventional style.
+- **Node.js 20+** (`@types/node` is pinned to 20).
+- **pnpm 11.5.3** — this is the declared package manager (`packageManager` field). Use it, not npm/yarn, so the lockfile stays consistent.
+- A **Chromium browser** for running the app — it depends on the File System Access API and other Chromium-only web APIs.
 
-The definition of done requires more than code correctness. A change is considered complete when it passes the project quality gate, preserves persistence behavior where relevant, and leaves no scratch or temporary files behind.
+### Development flow
+
+1. Clone and install:
+   ```bash
+   git clone https://github.com/mindturbulence/Kollektiv.git
+   cd Kollektiv
+   pnpm install
+   ```
+
+2. Create a `.env` file in the root (copy `.env.example`):
+   ```env
+   GEMINI_API_KEY=your_gemini_api_key_here
+   ```
+
+3. Start the dev server:
+   ```bash
+   pnpm dev
+   ```
+
+   <!-- dev:https was removed (dev-with-ngrok.js deleted in 2026-07-25 cleanup) -->
+
+### Everyday scripts
+
+| Command | What it does |
+|---|---|
+| `pnpm dev` | Dev server (`npx tsx server.ts`) |
+| `pnpm lint` | **`tsc --noEmit`** — the type gate; must pass |
+| `pnpm test` | Vitest unit tests (`vitest run`) |
+| `pnpm test:e2e` | Playwright E2E tests |
+| `pnpm build` | Production bundle (`vite build`) |
+| `pnpm preview` | Serve the built bundle |
+| `pnpm deploy` | Builds then `gh-pages -d dist` |
+
+### Branching & commits
+
+- Branch off `main`. Don't commit directly to `main`.
+- **Conventional Commits.** Use `type(scope): summary` format, e.g. `fix(google-auth): …`, `feat(footer): …`, `refactor(settings): …`. Common types: `feat`, `fix`, `refactor`, `chore`, `test`, `docs`.
+- Reference an issue when one exists: `Fixes ISSUE-N` (see [ISSUES.md](../../../ISSUES.md)).
+- Keep commits scoped to one logical change. A feature removal and its import cleanup belong in the **same** commit.
+
+### Definition of done
+
+A change is done when **all** of these hold:
+
+1. **`pnpm lint` passes** (`tsc --noEmit`, clean).
+2. **You ran it.** Tests for logic you touched (`pnpm test`), or the app for UI/flows.
+3. **No scratch files staged.** No `*.bak`, no throwaway scripts, no editor cruft.
+4. **Persistence verified** — if you added/changed a setting, confirm it survives a reload (the field must be in the `handleSettingsChange` allow-list; see [AI_WORKER_RULES.md](../09_AI_WORKER/AI_WORKER_RULES.md) §4).
+5. **Clean-build safe** — if your change references a static asset or new file, confirm it's committed and appears in `dist/` after `pnpm build`.
+
+### Housekeeping
+
+- Delete any `components/*.bak*` copies before committing.
+- Delete throwaway migration scripts once their edit is committed.
+- Ensure `.gitignore` covers `*.bak` and local-only scripts.
+
+### Filing work
+
+Track tasks in [ISSUES.md](../../../ISSUES.md) using the checkbox format. Give each issue an ID (`ISSUE-N`), severity, and acceptance criteria. This markdown file *is* the issue tracker — there is no external one.
 
 ## Roadmap Direction
 
 The roadmap focuses on four levels of maturity:
 
-### Phase 0 — Foundation Hardening
+### Phase 0 — Foundation Hardening ✅
 
-Resolve existing structural defects, security issues, and test gaps before adding new surface area.
+Resolved existing structural defects, security issues, and test gaps.
 
-- [-] Fix the production server branch (`app.get('*')` → `app.use()` fallback)
+- [ ] **Still open:** Fix the production server branch (`app.get('*')` → `app.use()` fallback)
 - [x] Split App.tsx (~1,200 lines → 5 extracted hooks)
-- [x] Raise the test floor (llmService tests added, E2E smoke test added)
+- [x] Raise the test floor (llmService tests, E2E smoke test, settingsStorage tests)
 - [x] Security trims: proxy allowlist, confirmation gates, browser kill switch
 - [x] De-hardcode drift-prone strings into constants
-- [~] settingsStorage.test.ts not yet created — the planned migration tests are missing
+- [x] settingsStorage.test.ts — 16 tests added
 
-### Phase 1 — First-Run Experience and Resilience
+### Phase 1 — First-Run Experience and Resilience ✅
 
-Make onboarding and error handling understandable for non-expert users.
+Onboarding and error handling are now standardized.
 
-- [ ] Onboarding rework: explainer screen, demo mode (OPFS), graceful non-Chromium messaging
-- [ ] Error UX pass: standardized toast/panel pattern with actionable suggestions
-- [ ] Settings resilience: versioned migration + per-section fallback instead of all-or-nothing reset
-- [ ] Vault integrity visibility: surface repair report in Settings
+- [x] Onboarding rework: multi-step wizard (`OnboardingFlow`), demo mode (OPFS `DemoFileSystemManager`), non-Chromium indicator (`DemoModeIndicator`)
+- [x] Error UX pass: `ErrorDisplay` component + `AppError` class hierarchy (25 utility tests + 12 component tests)
+- [x] Settings resilience: shadow-backup dual-write pattern (`saveLLMSettings` → shadow → primary fallback)
+- [x] Vault integrity visibility: `IntegrityReportModal` + `runIntegrityScan()` with localStorage persistence
 
-### Phase 2 — Feature Enrichment
+### Phase 2 — Feature Enrichment ✅
 
-Strengthen the generate-refine-ingest loop, make model profiles data-driven, and improve gallery intelligence.
+Generate loop, model registry, knowledge graph, and gallery intelligence implemented.
 
-- [ ] Close the generate loop: refine → generate → auto-ingest → compare → re-refine
-- [ ] Extract model registry to data: versioned JSON replacing ~50 hardcoded profiles in llmService
-- [ ] Gallery intelligence: duplicate detection, prompt-similarity search, batch tagging
-- [ ] Assistant memory that compounds: auto-inject learned preferences into refiner context
-- [ ] Prompt lineage as a first-class view in the library UI
+- [x] Generate loop: `useGenerateLoop` state machine + `GeneratePanel` + `CompareQuickAction` + `generate_and_ingest` tool
+- [x] Model registry: `constants/modelProfiles.json` — versioned JSON replacing ~50 hardcoded profiles
+- [x] Gallery intelligence: auto-tagging, similarity clustering, visual search, usage analytics
+- [x] Assistant knowledge graph: entity graph connecting prompts, images, styles, notes, memories with `query_tool`
+- [x] Assistant memory: context-aware `memoryPromptBlock()` injected into every assistant request
 
-### Phase 3 — UI Polish and Accessibility
+### Phase 3 — Polish & Performance ✅
 
-Bring consistency, motion discipline, and comfort to the interface.
+WebSocket resilience, chunked loading, and WASM-accelerated search.
 
-- [ ] Consistency audit: spacing, button variants, empty states, loading states across all pages
-- [ ] Motion discipline: honor `prefers-reduced-motion`, boot sequence skip affordance
-- [ ] Command palette (Ctrl+K): navigation + actions over the existing event bus
-- [ ] Performance pass on gallery: virtualize at 1k+ items, verify object-URL lifecycle
-- [ ] Keyboard and accessibility basics: focus states, escape-to-close, alt text
-- [ ] Font loading hygiene: self-host actual subset used instead of third-party CDNs
+- [x] WebSocket reconnection: `reconnectManager.ts` with exponential backoff — wired into all 3 voice backends
+- [x] Chunked chat loading: paginated `loadChatMessages()` with offset/pageSize + "Load more" in UI
+- [x] WASM-accelerated search: `vaultSearch.ts` BM25 index with IDB persistence, auto-rebuild on vault mutations, integrated into Command Palette
+
+### Additional completed work
+
+- **MCP Architecture (ISSUE-28):** 8-layer architecture — capability registry, intent router, planner, execution engine, service layer, provider router, 5 capability tools, 22 built-in capabilities
+- **Knowledge & Obsidian (ISSUE-29):** 5 phases — knowledge manager API, 3-tier memory, relationship graph (52 tests), context-aware injection (17 tests), knowledge lifecycle with folder projection (59 tests)
+- **MCP Infrastructure (2026-07-25):** Redundant Playwright child process removed, MCP server always starts, .env loading, CORS session-id fix, preset URL sync, consolidated to single Built-In tab with 61 tools
 
 ### Definition of "Ready to Think About Money"
 
-All boxes below true:
-
 1. A stranger on a fresh machine reaches a working dashboard in under 3 minutes without help.
-2. `pnpm lint && pnpm test` green in CI, plus one E2E smoke test.
-3. No assistant tool can perform a destructive external action without explicit confirmation.
-4. The generate→ingest→compare loop works end-to-end with at least one provider.
-5. Model registry lives in data, updated at least once for a newly released model.
-6. Consistency audit done; every page has empty/loading/error states.
+2. `pnpm lint` clean, `pnpm test` green (630 tests), E2E smoke test passes.
+3. No assistant tool can perform a destructive external action without explicit confirmation. **(Note: ISSUE-22 revert means send_gmail/delete_gmail have no confirmation gate — user decision)**
+4. The generate→ingest→compare loop works end-to-end with at least one provider. ✅
+5. Model registry lives in data (`modelProfiles.json`). ✅
+6. Consistency audit and UI polish remain as ongoing work (Phase 3 original scope).
 
 ## Feature Modules
 
@@ -176,19 +232,41 @@ Each `ActiveTab` maps to a top-level React component:
 
 | Tab | Component | What it does |
 |---|---|---|
-| `dashboard` | `Dashboard` | Landing HUD, gallery montage, idea clipping. |
-| `assistant` | `AssistantPage` | Full-screen AI assistant (chat + live voice). |
+| Tab | Component | What it does |
+|---|---|---|
+| `dashboard` | `Dashboard` | Landing HUD, gallery montage, idea clipping. Ambient video background, music player, idle overlay. |
+| `assistant` | `AssistantPage` | Full-screen AI assistant (chat + live voice). Widgets: QuickActions, VaultStats, LiveAssistantMini, RecentActivity, IntegrationHealth. |
 | `discovery` | `DiscoveryPage` | Browse GitHub/HuggingFace prompt collections. |
-| `prompts` / `crafter` / `refiner` / `prompt_analyzer` / `media_analyzer` | `PromptsPage` (with `forcedView`) | Prompt workbench: builder, wildcard Crafter, Refiner (modifier-driven), analyzer, image abstractor. |
-| `prompt` | `SavedPrompts` | Nested, searchable prompt library with lineage/version graph. |
-| `gallery` | `ImageGallery` | Masonry media vault with categories, metadata, NSFW flag. |
-| `composer` | `ComposerPage` | Grid/contact-sheet builder with matting + typography. |
-| `image_compare` | `ImageCompare` | Synchronized side-by-side viewers. |
-| `color_palette_extractor` | `ColorPaletteExtractor` | Extract palette + AI mood/color naming. |
-| `resizer` | `ImageResizer` | Image resizing + Topaz upscale via server. |
-| `video_to_frames` | `VideoToFrames` | Frame extraction from video uploads. |
-| `lora_editor` | `loraEditor/LoraEditorPage` | LoRA metadata/tag editor sub-app. |
-| `settings` | `SetupPage` | Settings shell over `components/settings/*` sections. |
+| `prompts` / `crafter` / `refiner` / `prompt_analyzer` / `media_analyzer` | `PromptsPage` (with `forcedView`) | Prompt workbench: builder, wildcard Crafter, Refiner (modifier-driven), analyzer, image abstractor. Supports 5 views via `forcedView` prop. |
+| `prompt` | `SavedPrompts` | Nested, searchable prompt library with lineage/version graph, tree view, and edit/duplicate/delete. |
+| `gallery` | `ImageGallery` | Masonry media vault with categories, metadata, NSFW flag, pinning, gallery stats. |
+| `settings` | `SetupPage` | Settings shell with 5 main categories (App, Appearance, Integrations, Prompts, Gallery) and sub-tabs. |
+| `composer` | `ComposerPage` | Grid/contact-sheet builder with matting + typography, preset aspect ratios. |
+| `image_compare` | `ImageCompare` | Synchronized side-by-side viewers with linked pan/zoom, SplitView slider, and compare/swap layout. |
+| `color_palette_extractor` | `ColorPaletteExtractor` | Extract color palette from image + AI mood/color naming. |
+| `resizer` | `ImageResizer` | Image resizing + Topaz Gigapixel upscale via server bridge. |
+| `video_to_frames` | `VideoToFrames` | Frame extraction from video uploads with frame rate and resolution controls. |
+| `lora_editor` | `loraEditor/LoraEditorPage` | LoRA metadata/tag editor sub-app with safetensors parsing, hashing, online lookup, tag frequency analysis, and metadata editing. |
+
+### Global overlay panels
+
+| Panel | Component | Toggle source |
+|---|---|---|
+| Command Palette | `CommandPalette` | Ctrl+K / ⌘K. 30+ commands across Navigation, Panels, Assistant Actions, Themes. Fuzzy search with scoring. |
+| Clipping Panel | `ClippingPanel` | Paperclip icon in header. Ideas, notes, files tabs. |
+| Media Panel | `MediaPanel` | YouTube/Spotify player panel. |
+| Web Viewer | `WebViewerPanel` | In-app browser for opening URLs. |
+| Chat Panel | `LLMChatPanel` | Assistant chat (text + research mode with 3-panel layout). |
+| LLM Status | `LlmStatusPanel` | Active provider, model, token usage. |
+| Activity Panel | `ActivityPanel` | Live tool-call transcript, status. |
+| Video Player | `VideoPlayerOverlay` | YouTube video overlay player. |
+| About Modal | `AboutModal` | App info. |
+| Feedback Toast | `FeedbackToast` | Global success/error messages. |
+| Page Frame | `PageFrame` | Scan-line overlay, corner accents, side markers. |
+| Screen Control | `ScreenControlOverlay` | Screen-share + browser control permission UI. |
+| Live Caption | `LiveCaptionOverlay` | Real-time voice caption overlay (hidden during Assistant page). |
+| Idle Overlay | `IdleOverlay` | Matrix/gallery screensaver. |
+| Transition Overlay | `transitions/TransitionOverlay` | Page transition aperture effect. |
 
 ## Server and Bridge Endpoints
 

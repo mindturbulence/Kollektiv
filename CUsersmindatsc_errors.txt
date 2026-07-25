@@ -1,4 +1,0 @@
-utils/demoMode.ts(203,7): error TS1434: Unexpected keyword or identifier.
-utils/demoMode.ts(205,13): error TS1005: ';' expected.
-utils/demoMode.ts(206,7): error TS1109: Expression expected.
-utils/demoMode.ts(206,9): error TS1434: Unexpected keyword or identifier.

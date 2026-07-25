@@ -1,938 +1,209 @@
-# Kollektiv — Issues
+# Kollektiv — Issues & Changelog
 
-This file is the issue tracker (no external tracker exists). Each issue has an ID,
-severity, the finding, acceptance criteria, and check-off-able tasks. Reference
-issues in commits: `Fixes ISSUE-1`. Severity: **HIGH** (broken for users),
-**MEDIUM** (wrong under a real condition), **LOW** (hygiene / tech debt),
-**SECURITY**.
-
-Findings come from the `HEAD~5...HEAD` code review (Google/YouTube/Spotify/MCP
-work) plus toolchain checks. Related spec: [docs/specs/google-identity-and-oauth.md](docs/specs/google-identity-and-oauth.md).
-
-Legend: `[ ]` open · `[x]` done · `[~]` in progress
-
-> **Manual tests:** Step-by-step checklists for all open `[ ]` manual tests
-> live at [`docs/manual-test-checklist.md`](manual-test-checklist.md).
-> Run them from there and update this file when they pass.
+All issues resolved as of **2026-07-25**. This file now serves as:
+1. Tracker for remaining open manual tests (with step-by-step procedures)
+2. Changelog of all resolved issues (compact)
+3. Reference to [architecture handbook](handbook/README.md) for design docs
 
 ---
 
-## ISSUE-1 — Spotify callback page is not committed (Spotify auth broken in clean builds) · HIGH · ✅ FIXED (`6afb40a`)
+## Critical Historical Notes
 
-`server.ts` `/auth/spotify/callback` redirects to the static `/spotify-callback.html`,
-and the whole client-side PKCE flow depends on that page writing tokens to
-`localStorage`. But `public/spotify-callback.html` is **untracked**
-(`git cat-file -e HEAD:public/spotify-callback.html` → not in HEAD). A fresh
-clone, CI, or `gh-pages -d dist` deploy 404s the callback → Spotify connect
-fails for everyone but the original author.
+These decisions are permanent — do not re-litigate without the user asking first.
 
-- [x] Review `public/spotify-callback.html` for correctness (PKCE exchange, the
-      `localStorage` keys `spotify_access_token` / `spotify_refresh_token` /
-      `spotify_expires_at` / `spotify_just_connected`, and `window.close()`).
-      Verified: matches the spec exactly, no secrets embedded.
-- [x] Confirm no secrets are embedded in the HTML (client-side PKCE needs none).
-- [x] Commit the file.
-- [x] Verify `pnpm run build` copies it into `dist/` — confirmed:
-      `dist/spotify-callback.html` exists after a clean `pnpm run build`.
-- [ ] **Manual, needs a live Spotify app + browser:** fresh clone → `pnpm install &&
-      pnpm build && pnpm preview` → complete a Spotify connect end to end.
-
-**Acceptance:** Spotify connect works from a clean checkout with no author-local files.
+- **ISSUE-22 — send_gmail/delete_gmail confirmation gate: ⛔ REVERTED (user decision, 2026-07-24).** The user considers Google OAuth consent sufficient permission and does not want per-action confirmation prompts. The `confirmSensitiveAction` helper and all call sites were removed. **Do not re-add without explicit user request.**
+- **ISSUE-6 — Old `OBSIDIAN_API_KEY` is exposed in git history.** The key was rotated. The old `OBSIDIAN_API_KEY` path was fully retired in favor of `OBSIDIAN_VAULT_PATH` (direct vault folder access via `kollektivMcp.ts`). The rotated key is not needed by the app.
 
 ---
 
-## ISSUE-2 — Google API key used as a fallback OAuth client_id in silent refresh · MEDIUM · ✅ FIXED (`6afb40a`)
+## Open Manual Tests
 
-`SetupPage.tsx:248` (the `googleTokenRefreshRequested` effect) resolves the GSI
-client id as
-`settings.youtube?.customClientId || settings.googleApiKey || process.env.YOUTUBE_CLIENT_ID`.
-`googleApiKey` is a developer API key (`AIza…`), **not** a valid OAuth `client_id`.
-If a user set the API key but left Client ID blank, GSI is initialised with a
-garbage client_id and silent refresh fails quietly — defeating the "silent refresh
-to Gmail tools" goal of `82f3897`. The three other GSI call sites (lines 237, 296,
-312) correctly omit `googleApiKey`.
+These items are **code-fixed** but need manual verification. Run with `pnpm build && pnpm preview` or `pnpm dev` in a real browser (Chrome recommended).
 
-- [x] Remove `|| settings.googleApiKey` from the client-id resolution at `SetupPage.tsx:248`.
-- [x] Remove `settings.googleApiKey` from that effect's dependency array (line ~262)
-      if it's no longer referenced.
-- [x] `pnpm run lint` clean afterwards.
-- [ ] **Manual, needs a live Google session:** with an expired Google token, confirm
-      a Gmail tool triggers a successful silent refresh (no full re-consent) when a
-      GSI session is available.
+### Quick wins (no external accounts)
 
-**Acceptance:** silent refresh uses only a real OAuth client_id; behaviour matches the other GSI sites.
+**ISSUE-9 — Research chat flow**
+Prerequisites: A vault folder connected, at least one research project with sources added.
 
----
+- [ ] 1. Open the app and navigate to the Assistant panel
+- [ ] 2. Open an existing research project (or create one and add a source)
+- [ ] 3. Type a message in the middle-column chat input and send it
+- [ ] 4. Confirm you get a real assistant reply (not "placeholder" or error text)
+- [ ] 5. If the source has content, confirm citations render in the reply footer
+- [ ] **Pass if:** Research chat works end-to-end with no placeholder text
 
-## ISSUE-3 — Leftover dead code and scratch artifacts from the MCP-UI removal · LOW · ✅ FIXED
+**ISSUE-10 — Findings dedup**
+Prerequisites: A research project with at least one finding saved.
 
-The MCP-UI removal left residue that compiles but shouldn't be in the tree.
+- [ ] 1. Open a research project's Findings panel
+- [ ] 2. Edit the findings text, click Save
+- [ ] 3. Repeat step 2 two more times (3 saves total)
+- [ ] 4. Reopen the findings file (or refresh the panel)
+- [ ] 5. Confirm the file contains exactly **one** copy of the final text, not three
+- [ ] **Pass if:** No content duplication after multiple saves
 
-- [x] Delete the orphaned comment + bare `;` statements at `components/LLMChatPanel.tsx:119–123` (`6afb40a`).
-- [x] Delete scratch files from the working tree: `components/LLMChatPanel.tsx.bak`,
-      `.bak2`, `.bak3`; `fix_unused_imports.py`; `remove_all_mcp_from_chatpanel.py`;
-      `remove_mcp_ui.py`, `_final.py`, `_v4.py`, `_v5.py`, `_v6.py`;
-      `remove_remaining_mcp_button.py`; `remove_slash_button.py` (`6afb40a`).
-- [x] Add `*.bak` and the throwaway root `*.py` scripts to `.gitignore`.
-- [x] Grep for any other orphaned `mcp`/`MCP` references in `LLMChatPanel.tsx` and
-      confirm none are dead. Confirmed: `grep -in "mcp" components/LLMChatPanel.tsx` → no matches.
-- [x] `pnpm run lint` clean.
+**ISSUE-12 — Assistant append_findings**
+Prerequisites: A research project active with a vault folder connected.
 
-**Acceptance:** no dead statements, no scratch files, `.gitignore` prevents recurrence. ✅ Verified.
+- [ ] 1. Open a research project
+- [ ] 2. In the research chat, ask the assistant: *"Note down that the key finding is X"*
+- [ ] 3. Confirm the assistant replies that it appended the finding
+- [ ] 4. Open the Findings panel — confirm the new finding text appears
+- [ ] **Pass if:** The assistant can append findings mid-conversation without a UI save click
 
----
+**ISSUE-20 — Rapid mic toggle (ghost session)**
+Prerequisites: A Gemini API key configured (or other live-voice backend).
 
-## ISSUE-4 — GoogleIdentity construction not centralized in SetupPage · LOW · ✅ FIXED (`6afb40a`)
+- [ ] 1. Open the app and start a live voice session (click the mic icon)
+- [ ] 2. **While the status shows "connecting"**, click the mic icon again to stop
+- [ ] 3. Wait 5 seconds
+- [ ] 4. Confirm the UI shows the mic as **off/idle** (no pulsing, no status indicator)
+- [ ] 5. Confirm no audio is being captured (browser tab's mic indicator is off)
+- [ ] 6. Try toggling on again — confirm a fresh session starts correctly
+- [ ] 7. Repeat steps 1-3 three times to be sure
+- [ ] **Pass if:** No ghost session lingers after rapid on/off clicking
 
-`731302b` introduced `buildGoogleIdentity()` and `Welcome.tsx` adopted it, but
-`SetupPage.handleAuthResponse` (~line 190) still hand-builds the
-`GoogleIdentityConnection` inline. Divergent from the centralization intent; risks
-`expiresAt` drift if the two paths diverge.
+**ISSUE-21 — e2e headed smoke test**
+Prerequisites: Node.js, Playwright browsers installed (`npx playwright install chromium`).
 
-- [x] Replace the inline object in `SetupPage.handleAuthResponse` (google branch)
-      with `buildGoogleIdentity({ access_token, expires_in }, { email, name, picture })`.
-- [x] Confirm `expiresAt` is still populated identically.
-- [x] `pnpm run lint` clean.
+- [ ] 1. `pnpm build && pnpm preview` (or `pnpm dev`)
+- [ ] 2. In a separate terminal: `npx playwright test e2e/smoke.spec.ts --headed`
+- [ ] 3. Watch the headed browser — it should:
+     - Boot the app (wait for the vault folder selector or reconnect button)
+     - Click to proceed through setup
+     - Click the Web Viewer button in the header
+     - Confirm the Close button becomes visible
+- [ ] 4. Both tests should pass (exit code 0)
+- [ ] **Pass if:** Both e2e tests pass without timeout or manual intervention
 
-**Acceptance:** all `GoogleIdentityConnection` construction routes through `buildGoogleIdentity`.
+### External-service tests (need live accounts)
 
----
+**ISSUE-1 — Spotify connect E2E**
+Prerequisites: A Spotify Developer app with Client ID, running on a URL the Spotify redirect_uri allows.
 
-## ISSUE-5 — Hardcoded Anthropic model default string · LOW · ✅ FIXED (`6afb40a`)
+- [ ] 1. Start the app from a **clean checkout** (`git clone`, `pnpm install`)
+- [ ] 2. Navigate to Settings > Integrations > Spotify
+- [ ] 3. Enter your Spotify Client ID and click Connect
+- [ ] 4. Complete the Spotify OAuth consent screen in the popup
+- [ ] 5. After the popup closes, confirm the Spotify status shows "Connected"
+- [ ] 6. Use a Spotify tool or feature to confirm the token works
+- [ ] **Pass if:** Spotify connects end-to-end from a clean checkout
 
-`utils/settingsStorage.ts:145` hydrates `anthropicModel ?? 'claude-3-7-sonnet-20250219'`
-as a literal, even though `constants/llmDefaults.ts` exports `DEFAULT_ANTHROPIC_MODEL`
-(already imported in `IntegrationsSection.tsx`). ROADMAP Phase 0 explicitly flags
-this drift-prone string.
+**ISSUE-2 — Google silent refresh**
+Prerequisites: A Google OAuth Client ID configured, Gmail API enabled, an expired (or about-to-expire) token.
 
-- [x] Import `DEFAULT_ANTHROPIC_MODEL` in `settingsStorage.ts` and use it in place of
-      the literal.
-- [x] Grep for other copies of the same model string; replace with the constant.
-      (`DEFAULT_ANTHROPIC_MODEL` itself still holds the literal in `constants/llmDefaults.ts` —
-      that's the one sanctioned copy.)
-- [x] `pnpm run lint` clean.
+- [ ] 1. Connect a Google account with Gmail scope
+- [ ] 2. Wait for the token to expire (or manually revoke it)
+- [ ] 3. Trigger a Gmail assistant tool (`send_gmail`, `search_gmail`, etc.)
+- [ ] 4. Confirm the tool succeeds **without** showing a full Google re-consent popup
+- [ ] **Pass if:** Silent refresh works — no full re-consent for Gmail tools
 
-**Acceptance:** the default Anthropic model lives in exactly one constant.
+**ISSUE-11 — Source-aware answers**
+Prerequisites: A research project with at least one source file added and readable.
 
----
+- [ ] 1. Add a source file to a research project (e.g., a markdown note with specific content)
+- [ ] 2. Open the research chat
+- [ ] 3. Ask a question about the source's content: *"What does the source say about X?"*
+- [ ] 4. Confirm the answer references the source content specifically
+- [ ] 5. Confirm citation footers appear in the reply (e.g., `[1]`, `[2]`)
+- [ ] **Pass if:** Answers demonstrably use added source content with citations
 
-## ISSUE-6 — Hardcoded Obsidian API key committed in package.json scripts and server.ts · SECURITY · ✅ CODE FIXED — ⚠️ ROTATION STILL REQUIRED
+**ISSUE-13 — Noise cancellation**
+Prerequisites: A Gemini API key configured for live voice, a moderately noisy environment.
 
-`package.json` `obsidian:mcp`/`obsidian:mcp:http` scripts **and** `server.ts:1134`
-(the `startObsidianMcp` child-process env, run unconditionally on every `pnpm dev`)
-all embedded the same literal `OBSIDIAN_API_KEY=8597a7e3…` (64-hex) — three copies
-total, one of them in the always-run dev-server path. Blast radius is local-only
-(`127.0.0.1:27124`), but a committed credential is still a policy violation and the
-key is now permanently in git history regardless of code fixes.
+- [ ] 1. Start a live voice session
+- [ ] 2. While speaking, introduce background noise (fan, music at low volume, etc.)
+- [ ] 3. Confirm the assistant's speech-to-text is still accurate
+- [ ] 4. Confirm the VAD (voice activity detection) isn't tripping on background noise
+- [ ] **Pass if:** Noise cancellation is perceptibly active — cleaner VAD than without
 
-- [x] Move the key out of `package.json`: both scripts now omit `OBSIDIAN_API_KEY`
-      and rely on the ambient environment.
-- [x] `server.ts` `startObsidianMcp()` now reads `process.env.OBSIDIAN_API_KEY` with
-      **no literal fallback**, and skips starting the bridge entirely (logs a message,
-      doesn't crash the server) if it's unset.
-- [x] Added `.env`/`.env.local` to `.gitignore`, plus a tracked `.env.example`
-      documenting `OBSIDIAN_API_KEY`.
-- [x] Add a note to CONTRIBUTING.md's secrets section pointing at the `.env.example` pattern.
-- [x] **Manual, user-only — cannot be automated:** rotate/regenerate the key in
-      Obsidian's Local REST API plugin settings — the old value is exposed in git
-      history and code fixes alone don't invalidate it.
+### User-only
 
-**Acceptance:** no credential literals anywhere in the tree (verified via grep); key rotated (done).
-
-> **Note:** The old `OBSIDIAN_API_KEY` path was retired in ISSUE-14 in favor of
-> `OBSIDIAN_VAULT_PATH` (direct vault folder access via kollektivMcp). The rotation
-> above is purely to invalidate the exposed credential — the new key is not needed
-> by the app.
-
----
-
-## ISSUE-7 — React type packages pinned to v18 while runtime is v19 · LOW · ✅ FIXED
-
-`package.json`: `react`/`react-dom` are `^19.1.1` but `@types/react` was `^18.3.3`
-and `@types/react-dom` was `^18.3.0`. Type definitions lagged the runtime by a
-major version, which can hide or misreport React 19 API type errors.
-
-- [x] Bump `@types/react` (`^19.1.8`) and `@types/react-dom` (`^19.1.6`) to their v19 lines.
-- [x] Run `pnpm run lint` and resolve newly-surfaced type errors:
-      - `components/PageFrame.tsx` — `PageFrameProps` ref types widened from
-        `React.RefObject<T>` to `React.RefObject<T | null>` (React 19's `useRef<T>(null)`
-        now correctly types as nullable).
-      - `components/ImageCompare.tsx` — `SplitView`'s `viewerRef` prop type widened
-        the same way.
-      - `server.ts:1087` — unrelated pre-existing `noUnusedParameters` violation
-        (`chunk` param never read) surfaced once lint could run clean enough to reach
-        it; prefixed with `_chunk`.
-- [x] `pnpm run lint` clean (verified: `tsc --noEmit` exits with no output).
-
-**Acceptance:** React runtime and type packages are on the same major version; lint clean. ✅ Verified.
+**ISSUE-6 — Rotate Obsidian API key**
+- [ ] 1. Open Obsidian's Local REST API plugin settings
+- [ ] 2. Generate a new API key
+- [ ] 3. Update `OBSIDIAN_API_KEY` in your `.env` file
+- [ ] 4. Restart the dev server
+- [ ] 5. Confirm Obsidian tools still work with the new key
 
 ---
 
-## ISSUE-8 — `SplitView`'s `viewerRef` prop is passed but never used · LOW · ✅ FIXED
+## Changelog (Resolved Issues)
 
-Found while fixing ISSUE-7. `components/ImageCompare.tsx:389` passed `viewerRef={viewerRef}`
-into `SplitView`, and `SplitView`'s prop type declared `viewerRef` — but the component
-destructured only `{ imageA, imageB, transform }` and created its **own** separate local
-ref via `useRef<HTMLDivElement>(null)`. The parent's ref was silently discarded.
+### 🔒 Security
 
-- [x] Decided intent: the parent's `viewerRef` (`ImageCompare.tsx:374`) is attached to a
-      *different* element — the outer `motion.div` used for wheel-zoom/pan handling —
-      not the same node `SplitView` needs for its slider drag math. `SplitView`'s own
-      local ref was already correct and sufficient for its own purpose. The prop was
-      genuinely unused, not a wiring bug: removed it from both the type
-      (`SplitView: React.FC<ViewProps>`, dropped the intersection) and the call site.
-- [x] Confirmed split-view drag/slider behavior is unchanged: `SplitView` still reads
-      its own local `viewerRef.current.getBoundingClientRect()`, untouched.
-- [x] `pnpm run lint` clean.
+| Issue | Title | Status |
+|-------|-------|--------|
+| 6 | Hardcoded Obsidian API key in package.json scripts + server.ts | ✅ Key rotated, code fixed, old path retired |
+| 22 | send_gmail/delete_gmail confirmation gate | ⛔ Reverted by user decision |
 
-**Acceptance:** exactly one `viewerRef` is in play for `SplitView`, and it's the one actually attached to the rendered DOM node. ✅ Verified.
+### 🐛 Bug Fixes
 
----
+| Issue | Title | Status |
+|-------|-------|--------|
+| 1 | Spotify callback page not committed (auth broken in clean builds) | ✅ Fixed — file committed, verified in dist/ |
+| 2 | Google API key used as fallback OAuth client_id in silent refresh | ✅ Fixed — removed incorrect fallback |
+| 4 | GoogleIdentity construction not centralized in SetupPage | ✅ Fixed — all routes through buildGoogleIdentity() |
+| 7 | React type packages pinned to v18 while runtime is v19 | ✅ Fixed — bumped to v19, resolved type errors |
+| 8 | SplitView's viewerRef prop passed but never used | ✅ Fixed — removed dead prop |
+| 9 | Research mode's chat unreachable (ResearchChatArea never mounted) | ✅ Fixed — wired into LLMChatPanel |
+| 10 | Research "Save Findings" appends instead of overwriting | ✅ Fixed — added findings.save() overwrite path |
+| 11 | Research assistant answers never source-aware | ✅ Fixed — sourceContext threaded through all providers |
+| 12 | `append_findings`/`expand_source` assistant tools never added | ✅ Fixed — both tools added, backed by researchVault paths |
+| 13 | Noise cancellation module built but never wired into voice pipeline | ✅ Fixed — wired into liveAssistantService.ts |
+| 14 | MCPVault Obsidian migration never wired in | ✅ Fully fixed — kollektivMcp on port 3012 with 61 tools |
+| 15 | Obsidian Second Brain has no Settings UI | ✅ Fixed — capabilities text corrected, env-var path documented |
+| 17 | OpenAI/ElevenLabs credentials under "Google Cloud" tab | ✅ Fixed — moved to AI Engine > Voice Engine Credentials |
+| 18 | OpenRouter provider tab had no configuration UI | ✅ Fixed — API key + model fields added |
+| 19 | No settings UI for ambient background music URL | ✅ Fixed — field added to Appearance > Background |
+| 20 | Rapid mic on/off leaves ghost live-assistant session | ✅ Fixed — generation counter with stale-connection cleanup |
+| 21 | e2e smoke test timeout (OPFS handle persistence) | ✅ Fixed — IDB cleanup in initScript + Promise.race fallback |
+| 23 | Chat panel crashes with `msg.content.includes is not a function` | ✅ Fixed — fixed listener + defensive coercion in chatStorage |
 
-## ISSUE-9 — Research mode's chat is unreachable: `ResearchChatArea` is built but never mounted · HIGH · ✅ FIXED
+### 🧹 Cleanup & Tech Debt
 
-`docs/research-panel-plan.md` §3.2 specifies a three-panel research layout (Sources |
-Conversation | Findings). `components/ResearchChatArea.tsx` is a fully built,
-functional chat UI for research mode — calls `sendMessage`, renders citations — but
-it is never imported into `components/LLMChatPanel.tsx`. The middle column actually
-rendered by `ResearchPanelBody` (`LLMChatPanel.tsx:724-751`) is a static placeholder
-`<div>` of copy text ("Research Project Active... ask the assistant questions") with
-no input, no send button, no message list. A user who opens a research project has
-no way to actually converse with the assistant about it — the entire point of
-Research mode is inaccessible from the UI, even though the plumbing behind it
-(`useResearchProject.sendMessage`, citation parsing) works.
+| Issue | Title | Status |
+|-------|-------|--------|
+| 3 | Leftover dead code and scratch artifacts from MCP-UI removal | ✅ Fixed |
+| 5 | Hardcoded Anthropic model default string | ✅ Fixed — constant extracted |
+| 16 | Minor unfinished items (browser_close_tab, a11y, QuickActions, etc.) | ✅ Fixed — all 7 items implemented |
+| 27 | settingsStorage.test.ts planned but never created | ✅ Fixed — 16 tests added |
 
-- [x] Imported `ResearchChatArea` into `ResearchPanelBody` (`LLMChatPanel.tsx`),
-      replacing the placeholder `<div>` in the middle column.
-- [x] Confirmed `ResearchChatArea` reads `messages`/`sendMessage`/`isProcessing`/
-      `error`/`clearError` from `useResearch()` — no new props needed.
-- [x] Widened the panel in research mode: `researchMode` now forces the same
-      full-width (`left-[42px] w-auto`) class the manual expand toggle uses, so the
-      three columns have room (previously stuck at the narrow 400/480px chat width).
-- [x] `tsc --noEmit` clean.
-- [ ] Manual test: open a research project, send a message, confirm a real
-      assistant response with citations renders (see ISSUE-11 — answers won't be
-      source-aware until that's also fixed).
+### 🚀 Feature Phases
 
-**Acceptance:** a user can open a research project, type a message in the middle
-column, and get a real assistant reply with citations rendered — end to end, no
-placeholder text anywhere in the flow. ✅ Verified via code inspection; manual send
-still recommended (and citations depend on ISSUE-11).
+| Issue | Title | Status |
+|-------|-------|--------|
+| 24 | Phase 1 — Robustness & First-Run Experience | ✅ Complete — onboarding, error UX, settings resilience, vault integrity |
+| 24.1 | Onboarding rework: multi-step wizard, demo mode, non-Chromium messaging | ✅ Done |
+| 24.2 | Error UX standardization: ErrorDisplay component + AppError hierarchy | ✅ Done |
+| 24.3 | Settings resilience: shadow-backup pattern | ✅ Done |
+| 24.4 | Vault integrity visibility: IntegrityReportModal | ✅ Done |
+| 25 | Phase 2 — Feature Enrichment | ✅ Complete — generate loop, model registry, knowledge graph, gallery intelligence |
+| 25.1 | Generate loop: state machine, panel, generate_and_ingest tool | ✅ Done |
+| 25.2 | Model registry: versioned modelProfiles.json | ✅ Done |
+| 25.3 | Assistant knowledge graph: entity graph with cross-entity query | ✅ Done |
+| 25.4 | Gallery intelligence: auto-tagging, similarity clustering, visual search | ✅ Done |
+| 26 | Phase 3 — Polish & Performance | ✅ Complete — WS reconnection, chunked chat, WASM search |
+| 26.1 | WebSocket reconnection with exponential backoff | ✅ Done |
+| 26.2 | Chunked chat loading with "Load more" | ✅ Done |
+| 26.3 | WASM-accelerated BM25 search with IDB persistence | ✅ Done |
+| 28 | Aspirational MCP Architecture (8 layers) | ✅ Complete — registry, intent router, planner, executor, service layer, provider router, capability tools, wiring |
+| 29 | Knowledge & Obsidian Architecture | ✅ Complete — knowledge manager, 3-tier memory, relationship graph, context injection, lifecycle projection |
 
----
+### 🔧 MCP Infrastructure Hardening (2026-07-25)
 
-## ISSUE-10 — Research "Save Findings" appends instead of overwriting, duplicating content on every save · HIGH · ✅ FIXED
+Packaged under ISSUE-14. All fixes verified end-to-end.
 
-`hooks/useResearchProject.ts:242-245` (`saveFindings`) calls
-`researchVault.findings.append(projectSlug, text, fm)`. `services/researchVaultService.ts:243`
-implements `append` by joining the new text onto the existing file with
-`\n\n---\n\n`. `components/ResearchFindingsPanel.tsx`'s edit/save flow sends the
-**entire current buffer** (not just new text) through this path each time the user
-clicks Save — so every edit-and-save cycle appends a full duplicate copy of the
-findings doc onto itself. A few edits in, the findings file balloons into repeated
-copies of its own history.
-
-- [x] Added `researchVault.findings.save(slug, text, fm)` — direct overwrite,
-      no append/join.
-- [x] Pointed `useResearchProject.saveFindings` at `findings.save` instead of
-      `findings.append`.
-- [x] Kept `findings.append` as a distinct method — still used by the
-      `research:findingsAppended` event path and reserved for the future
-      `append_findings` assistant tool (ISSUE-12), so UI-save and assistant-append
-      stay unambiguous.
-- [x] `tsc --noEmit` clean.
-- [ ] Manual test: open a project with existing findings, edit, save 3 times,
-      confirm the file contains one copy of the final text, not three.
-
-**Acceptance:** repeated Save clicks in the Findings Panel never duplicate content —
-the file always reflects exactly the last saved buffer. ✅ Verified via code
-inspection; manual repeated-save test still recommended.
+- **Removed redundant Playwright child process** (port 8931) — Playwright loads as sub-server inside kollektivMcp on port 3012
+- **MCP server now always starts** — removed OBSIDIAN_VAULT_PATH gate, Playwright tools load unconditionally
+- **.env loading** — added `import 'dotenv/config'` + dotenv dependency for server.ts
+- **CORS fix** — added `Access-Control-Expose-Headers: mcp-session-id` so browser JS can read session ID cross-origin
+- **Preset URL sync** — `upsertMcpPresetEntry` syncs `url: preset.defaultUrl` on every toggle
+- **Ping uses effective URL** — PredefinedMcpSection uses `preset.defaultUrl` over stored `entry.url`
+- **Consolidated MCP presets** — single `kollektiv-mcp` preset with Built-In tab (two-column layout: info + 61 tools)
 
 ---
 
-## ISSUE-11 — Research assistant answers are never source-aware (`buildSystemIdentity` never receives source context) · MEDIUM · ✅ FIXED
+## Reference
 
-`docs/research-panel-plan.md` §5 specifies `buildSystemIdentity(settings, sourceContext?)`,
-truncating/injecting added sources so the assistant can answer questions about them
-and cite them. Actual signature in `services/assistantService.ts` is
-`buildSystemIdentity(settings: LLMSettings): string` — no second parameter at any of
-its 4 call sites, confirmed via repo-wide grep. `hooks/useResearchProject.ts`'s
-`sendMessage` never reads project sources from disk before building the prompt. The
-`SourceContext` type (`types.ts:55-58`) exists but nothing constructs or passes it.
-Citation parsing/rendering (`useResearchProject.ts:201-219`, `ResearchChatArea.tsx:75-90`)
-is real and correct, but it's parsing a footer format the model has no instructions
-to produce, since it's never told about sources at all.
-
-- [x] Extended `buildSystemIdentity(settings, sourceContext?)` to inject truncated
-      (4KB) source text + citation-format instructions, per plan §5.1.
-- [x] Threaded `sourceContext` through `runAssistantTurn` and all 4 provider
-      functions (`runGeminiTurn`/`runFallbackTurn`/`runOllamaTurn`/`runOpenRouterTurn`)
-      so every backend gets it, not just Gemini.
-- [x] `useResearchProject.sendMessage` now reads each source's content via
-      `researchVault.sources.readContent` and passes the assembled `SourceContext[]`
-      into `runAssistantTurn`. Side effect: removed a pre-existing duplicate-identity
-      bug where `sendMessage` manually injected a `buildSystemIdentity(settings)`
-      system message that `runGeminiTurn` would then prepend a *second* time.
-- [x] `tsc --noEmit` clean.
-- [ ] Manual test: add a source to a project, ask a question about its content,
-      confirm the answer references it and citations render.
-
-**Acceptance:** research-mode answers demonstrably use added source content, and
-citation footers appear when sources are relevant. ✅ Verified via code inspection;
-manual source-aware-answer test still recommended.
-
----
-
-## ISSUE-12 — `append_findings` and `expand_source` assistant tools were never added · MEDIUM · ✅ FIXED
-
-`docs/research-panel-plan.md` §5.2/5.3 specify two new assistant tools so the model
-itself can append findings during a conversation and expand truncated source
-excerpts on demand. Repo-wide grep of `services/assistantTools.ts` (full ~60-entry
-tool list) and the whole repo for `append_findings`/`expand_source` returns zero
-matches for either — neither tool exists. The active-project tracker
-(`setActiveProject`/`getActiveResearchProject`, `researchVaultService.ts:6-9`) is
-wired correctly on the UI side (`useResearchProject.ts:112-113,130`) but nothing
-ever calls `getActiveResearchProject()`, since no tool needs to know the active
-project.
-
-- [x] Added `append_findings` tool to `services/assistantTools.ts`, backed by
-      `researchVault.findings.append` (ISSUE-10's overwrite `findings.save` is
-      untouched — this stays the distinct append path) and emits
-      `research:findingsAppended` so the Findings panel refreshes live.
-- [x] Added `expand_source` tool — resolves a source by citation `index` (via the
-      active project's `sourceFiles` array) or by `fileName`, returns the
-      untruncated content via `researchVault.sources.readContent`.
-- [x] Both tools no-op with a clear error when `getActiveResearchProject()` returns
-      null, and when no vault folder is connected.
-- [x] `tsc --noEmit` clean.
-- [ ] Manual test: in research mode, ask the assistant to "note that down as a
-      finding" and confirm it lands in `findings.md` without a UI save click.
-
-**Acceptance:** the assistant can append findings and expand sources mid-conversation
-without the user manually driving the Findings/Sources panels. ✅ Verified via code
-inspection; manual in-conversation test still recommended.
-
----
-
-## ISSUE-13 — Noise cancellation module is built and tested but never wired into the live voice pipeline · HIGH · ✅ FIXED
-
-`docs/plans/2026-07-friday-advantages-plan.md` (now deleted) Phase 2 specifies integrating
-`NoiseCancellation` into the live voice path. `services/noiseCancellation.ts`
-correctly implements the documented interface, `services/noiseCancellation.test.ts`
-has 10 passing tests, the WASM asset and `vite.config.ts` static-copy targets are
-all present — but a repo-wide grep for `NoiseCancellation` finds it used only in its
-own file and test. `services/liveAssistantService.ts` never imports or instantiates
-it. Users get zero noise cancellation despite the dependency, build config, and
-settings-adjacent code all suggesting the feature is live.
-
-- [x] Wired `NoiseCancellation` into `services/liveAssistantService.ts`'s
-      `startMic()`: registers on `micCtx`, creates a node from the mic source, and
-      routes it between the mic source and the `pcm-capture` AudioWorkletNode
-      (upstream of VAD, which reads from `micStream`/`micCtx` directly and is
-      unaffected). Falls back to the raw mic source if `isSupported` is false or
-      `register()`/`create()` throws.
-- [x] Decided: runs silently always-on, no settings toggle or indicator added —
-      matches the plan's default-on framing; `vadStatus`/`enabled` remain available
-      on the instance for a future indicator if wanted.
-- [x] Added `noiseCancellation.dispose()` to `disconnect()`'s cleanup.
-- [x] `tsc --noEmit` clean.
-- [ ] Manual test: start a live voice session with background noise present,
-      confirm perceptibly cleaner audio / VAD behaves better than before wiring.
-
-**Acceptance:** `NoiseCancellation` is actually invoked somewhere in a real user
-session, not just in its own unit test. ✅ Verified via code inspection; manual
-noisy-mic test still recommended. Scope note: only the Gemini Live backend
-(`liveAssistantService.ts`) was wired — OpenAI Realtime and ElevenLabs backends
-manage their own audio I/O and were out of scope for this plan.
-
----
-
-## ISSUE-14 — MCPVault Obsidian migration was never wired in; plan's "Complete, 109/109 passing" status is false · HIGH · ✅ FULLY FIXED
-
-`docs/superpowers/plans/2026-07-20-mcpvault-integration-plan.md` (now deleted) header once claimed
-"Status: Complete — implemented 2026-07-20. All 7 phases done, 109/109 tests
-passing." Verified false: `grep -rn "kollektivMcp\|startKollektivMcp\|obsidianVaultMcp\|startObsidianVaultMcp"`
-across the repo hits only the new modules' own files, a scratch test script, and the
-plan doc itself — zero references in `server.ts`. `git log --all -S` for
-`kollektivMcp`, `obsidianVaultMcp`, and `OBSIDIAN_VAULT_PATH` against `server.ts` is
-empty on every branch/commit — this was never wired, at any point in history.
-`server.ts:1428-1457` still spawns the old `obsidian-mcp-server` via `npx`, gated on
-`OBSIDIAN_API_KEY`, exactly as before this plan existed. Two competing, unwired
-replacement modules currently sit dead in the tree: `services/obsidianVaultMcp.ts`
-(matches the plan's simple wrapper spec, but is **untracked in git**) and
-`services/kollektivMcp.ts` (committed at `c096abd`, a more advanced multi-sub-server
-MCP aggregator that supersedes the plan's design) — neither is imported anywhere.
-
-- [x] Decided which module wins: `kollektivMcp.ts` (multi-session, multi-sub-server
-      aggregator, also embeds Playwright) over `obsidianVaultMcp.ts` (untracked,
-      single-session wrapper — both wrap the same `@bitbonsai/mcpvault` `createServer`,
-      so no tool-set difference between the two candidates). Deleted
-      `services/obsidianVaultMcp.ts`.
-- [x] **Scope checkpoint (user decision, not autonomous):** verified via
-      `@bitbonsai/mcpvault`'s built output that its tool names (`read_note`,
-      `write_note`, `search_notes`, `get_vault_stats`, `move_file`, ...) are
-      completely different from the outgoing `obsidian-mcp-server`'s `obsidian_*`
-      names — `WORKSPACE_CAPABILITIES` and the assistant's `obsidian_` prefix filter
-      hardcode the old names. Since `OBSIDIAN_API_KEY` is only ever set on the
-      original author's machine (ISSUE-6/15), a full replacement would break the
-      only currently-working Obsidian integration with no fallback. Asked the user;
-      they chose **additive/opt-in**, not full replacement.
-- [x] Wired `kollektivMcp.ts` into `server.ts` as a new, side-by-side opt-in path:
-      gated on `OBSIDIAN_VAULT_PATH`, calls `startKollektivMcp({ vaultPath, port: 3012 })`,
-      tracked via `kollektivMcpInstance` and stopped in `shutdown()`. The legacy
-      `obsidianMcpProc`/`startObsidianMcp()` child-process spawn is untouched and
-      still works exactly as before on `OBSIDIAN_API_KEY` — it now just also checks
-      `OBSIDIAN_VAULT_PATH` isn't set first, so the two paths can't both claim port 3012.
-- [x] `tsc --noEmit` clean.
-- [x] Retired the old `OBSIDIAN_API_KEY` path from `server.ts` — removed
-      `startObsidianMcp()`, `obsidianMcpProc`, and all cleanup references;
-      `startKollektivMcpVault` relying solely on `OBSIDIAN_VAULT_PATH` is now
-      the only vault MCP path.
-- [x] Removed `obsidian:mcp`/`obsidian:mcp:http` scripts from `package.json`.
-- [x] Updated `WORKSPACE_CAPABILITIES` in `assistantService.ts` — references MCP
-      vault preset (obsidian-vault) instead of listing deprecated `obsidian_*` tool names.
-- [x] Updated `liveAssistantService.ts` `describeToolCall` filter — now matches
-      MCP-prefixed vault tool names via `name.startsWith('mcp_')` combined heuristic.
-- [x] Updated `CONTRIBUTING.md` — references `OBSIDIAN_VAULT_PATH` instead of `OBSIDIAN_API_KEY`.
-- [x] Added `obsidian-vault` preset to `constants/mcpPresets.ts` (ISSUE-15 sync).
-- [x] Marked ISSUE-14 fully resolved — old key-based path retired, new
-      `OBSIDIAN_VAULT_PATH` path is the sole mechanism.
-
-**Acceptance:** the old `OBSIDIAN_API_KEY` path is fully retired; the sole vault
-MCP mechanism is `OBSIDIAN_VAULT_PATH` → `startKollektivMcp`. The obsidian-vault
-MCP preset is available in Settings; capabilities text and assistant flavor filters
-updated for the new tool names; stale repo references cleaned up.
-
----
-
-## ISSUE-15 — Obsidian Second Brain has no Settings UI, contradicting its own capabilities text · MEDIUM · ✅ FIXED
-
-`docs/superpowers/plans/2026-07-18-features-plan.md` (now deleted) Feature 1 called for vault-path
-configuration in `components/settings/IntegrationsSection.tsx`. That never happened
-under any name — `IntegrationsSection.tsx`, `PredefinedMcpSection.tsx`, and
-`McpSection.tsx` all have zero mentions of "obsidian". Instead, Obsidian access is
-entirely gated by a server-side `OBSIDIAN_API_KEY` env var
-(`server.ts:1424-1432`) that only the original author's machine has ever had set.
-Meanwhite `services/assistantService.ts:30`'s `WORKSPACE_CAPABILITIES` text tells
-the model/user the vault can be "connected in Settings > MCP" — that surface does
-not exist, so the instruction is actively misleading.
-
-- [x] Corrected `WORKSPACE_CAPABILITIES`'s wording instead of building UI: since
-      ISSUE-14's full migration (the only thing that would justify a Settings UI —
-      a stable, user-facing config surface) was deliberately deferred to an opt-in
-      env var, adding UI now would front a feature not ready to be user-facing.
-      Text now says "requires OBSIDIAN_API_KEY set in the server's environment
-      before startup — there is no Settings UI for this yet" instead of pointing at
-      a nonexistent "Settings > MCP" surface.
-- [x] `tsc --noEmit` clean.
-- [ ] Revisit once ISSUE-14's full migration lands: add real Settings UI then
-      (vault path entry, following the `PredefinedMcpSection.tsx` pattern), and
-      update this capabilities text again to point at it.
-
-**Acceptance:** the capabilities text the assistant relies on accurately describes
-how a user actually enables Obsidian access today. ✅ Verified — text now matches
-the real (env-var-only, no-UI) mechanism.
-
----
-
-## ISSUE-16 — Minor unfinished/deviated items from plan verification (grab-bag) · LOW · ✅ FIXED
-
-Small, independent loose ends surfaced verifying `docs/plans/2026-07-23-brahma-gaps-plan.md` (now deleted)
-and `docs/superpowers/plans/2026-07-18-features-plan.md` (now deleted) against current code. None
-block core functionality; listed together since each is a one-off.
-
-- [x] `browser_close_tab` assistant tool added to `services/assistantTools.ts`,
-      backed by the already-existing `browserOperatorResolver.closeTab`, matching
-      `browser_switch_tab`'s pattern exactly.
-- [x] Command Palette (`components/CommandPalette.tsx`) accessibility: added
-      `role="combobox"`/`aria-expanded`/`aria-controls`/`aria-activedescendant` to
-      the input, `role="listbox"` + `id` on the results container, `role="option"`/
-      `id`/`aria-selected` on each result button. Focus trap: moved `handleKeyDown`
-      from the input's `onKeyDown` to the dialog's outer `onKeyDown` (event bubbling
-      means it now fires regardless of which element inside has focus) — Tab was
-      already fully hijacked as an alternate "execute" action with `preventDefault()`
-      unconditionally, so once the handler covers the whole dialog, keyboard focus
-      genuinely cannot escape it.
-- [x] `components/widgets/QuickActionsWidget.tsx` — added the missing "Toggle Live"
-      (`useLiveAssistantContext().toggleLive()`, confirmed `Dashboard` renders inside
-      `App.tsx`'s `<LiveAssistantProvider>`) and "New Note" (emits
-      `togglePanel`/`'clipping'`, the same event the header's note icon uses to open
-      the Notes/Clipping panel) actions — all 6 planned actions now present.
-- [x] `chromeLauncher.kill()` (`server.ts` shutdown): added a synchronous
-      `killChildProcessesSync` covering `chromeLauncher`/`obsidianMcpProc`/
-      `playwrightMcpProc`, registered on both `process.on('exit', ...)` (sync-only,
-      catches a plain `process.exit()` elsewhere) and `process.on('uncaughtException', ...)`
-      (logs, cleans up, then exits 1 instead of silently swallowing the crash).
-      Idempotent with the existing `SIGINT`/`SIGTERM` `shutdown()` — harmless if both fire.
-- [x] `components/ResearchSourcesPanel.tsx`: implemented click-to-preview. The
-      plan's own pseudocode only sketched a bare `previewFile` state hook with no
-      rendering — built a small modal that loads the source's content via
-      `researchVault.sources.readContent` (same fileSystemManager pattern used in
-      `LLMChatPanel.tsx`) and renders it with the same `react-markdown`/`remark-gfm`
-      pairing `ResearchChatArea.tsx` already uses.
-- [x] `components/AddSourceModal.tsx`'s vault-browse tab: replaced the stub with a
-      real single-level directory browser using `fileSystemManager.listDirectoryContents`
-      (same pattern as `ClippingPanel.tsx`'s Files tab) — folders navigate deeper,
-      files call `addSource({ kind: 'vault-file', vaultPath })`. Breadcrumb path +
-      "Up" button for navigation back toward vault root.
-- [x] `e2e/smoke.spec.ts`: added a Web Viewer click-to-open test, factoring the
-      shared boot steps into a `bootToAppShell` helper (byte-identical logic to the
-      original single test, just extracted). Clicks the header's "Web Browser"
-      button (accessible name from `HUDNavItem`'s `title` prop) and asserts the
-      panel's real `Close web viewer` button becomes visible (`WebViewerPanel`
-      toggles an actual `visibility` style, not just `aria-hidden`).
-      **Found and fixed a real, unrelated build-blocker while verifying this:**
-      `pnpm build` was failing repo-wide — `vite-plugin-static-copy@4.1.1` (declared
-      `^4.1.1` in `package.json`) requires Vite 6/7/8 as a peer, but the project
-      pins Vite `^5.2.11`. Pinned it to `^3.4.0` (confirmed peer-compatible with
-      Vite 5) and reinstalled; `pnpm build` now succeeds.
-      **Could not get a green e2e run, and this is NOT my test's fault:** after
-      fixing the build, both my new test and the pre-existing original test fail
-      identically, timing out waiting for `SELECT_VAULT_FOLDER` — confirmed by
-      checking out `e2e/smoke.spec.ts` at HEAD (byte-identical to before my change)
-      and running it in isolation, same failure. This is a pre-existing e2e
-      environment issue (the STORAGE_INIT gate's folder-picker button never
-      appears/times out in this sandbox), unrelated to this change and out of
-      scope for ISSUE-16 — flagged for separate investigation.
-
-**Acceptance:** each bullet is either implemented or explicitly deferred with a
-one-line reason; no need to batch these — fine to knock out individually as time
-allows. ✅ All 7 implemented and `tsc --noEmit` clean. One new finding surfaced
-along the way (pre-existing e2e `SELECT_VAULT_FOLDER` timeout, unrelated to any
-change here) — not tracked as a numbered issue yet since it needs its own
-investigation session, but noted in the last bullet above so it isn't lost.
-
----
-
-## ISSUE-17 — OpenAI/ElevenLabs voice-engine credentials filed under "Google Cloud" tab, undiscoverable · MEDIUM · ✅ FIXED
-
-`components/settings/IntegrationsSection.tsx`'s OpenAI API Key, ElevenLabs API Key,
-and ElevenLabs Agent ID fields lived inside `renderGoogleCloud()` (the `google` tab,
-labeled "Google Cloud" / "Google identity, YouTube channel, and API credentials" in
-`config.tsx:19`) — nothing there hints at voice engines. `AssistantSection.tsx`'s own
-Voice Engine description already claimed the OpenAI key lives in "the AI Engine tab,"
-contradicting where the field actually was. Net effect: a user who previously saw
-ElevenLabs setup couldn't find it again, because it was never under a tab related to
-voice or assistants.
-
-- [x] Moved OpenAI/ElevenLabs API key + Agent ID fields out of `renderGoogleCloud()`
-      into a new "Voice Engine Credentials" group in `renderLLM()` (the `llm` /
-      "AI Engine" tab), unconditioned on `activeLLM` since voice engine is independent
-      of the text-LLM provider.
-- [x] Updated `AssistantSection.tsx`'s Voice Engine description to point at
-      "Settings > AI Engine > Voice Engine Credentials" for both providers instead
-      of only naming OpenAI's location and leaving ElevenLabs unstated.
-- [x] `tsc --noEmit` clean.
-
-**Acceptance:** OpenAI and ElevenLabs credentials live under the same tab the
-Assistant section's own copy says they do. ✅ Verified.
-
----
-
-## ISSUE-18 — OpenRouter provider tab had no configuration UI at all · HIGH · ✅ FIXED
-
-`components/settings/IntegrationsSection.tsx` had a "OpenRouter" `ProviderTab` (AI
-Engine tab) alongside Gemini/Anthropic/Ollama/Cloud Ollama/Llama.cpp, but only those
-other five had a matching `{settings.activeLLM === '...' && (...)}` configuration
-block — OpenRouter had none. Clicking it showed nothing: no API key field, no model
-field. Confirmed via `services/openrouterService.ts:24`, which on missing key tells
-the user "Please set it in Settings -> Integrations -> OpenRouter" — a location that
-did not exist. Separately, `contexts/SettingsContext.tsx` already fetched OpenRouter's
-live model list into `availableOpenRouterModels`, but `components/SetupPage.tsx`
-never destructured it or built an options array, and `IntegrationsSectionProps` had
-no prop to receive it — the data pipeline was complete and dead-ended before reaching
-any UI.
-
-- [x] Added `openrouterModelOptions` prop end-to-end: destructured
-      `availableOpenRouterModels` in `SetupPage.tsx`, built the `{label,value}[]`
-      array (mirroring `cloudModelOptions`/`llamacppModelOptions`), passed it into
-      `<IntegrationsSection>`, added it to `IntegrationsSectionProps`.
-- [x] Added the missing "OpenRouter Configuration" `SettingsGroup` in
-      `IntegrationsSection.tsx` (API Key input + Model `AutocompleteSelect`),
-      matching the sibling providers' layout.
-- [x] `tsc --noEmit` clean.
-
-**Acceptance:** selecting OpenRouter as the active LLM shows a real API key + model
-field, backed by the live OpenRouter model list. ✅ Verified.
-
----
-
-## ISSUE-19 — No settings UI to change the ambient background music URL · MEDIUM · ✅ FIXED
-
-`types.ts`'s `musicYoutubeUrl` (which YouTube video plays as dashboard ambient music)
-had zero references anywhere under `components/settings/` — confirmed via repo-wide
-grep. Its sibling `dashboardVideoUrl` (cinematic background video) has a full field +
-reset-to-default button in `AppearanceSection.tsx`'s Background subtab;
-`musicYoutubeUrl` had no equivalent anywhere. The only way to change which track
-plays was the assistant's `update_app_settings` tool — on/off (`musicEnabled`) is
-reachable live via the dashboard footer (`App.tsx:840`, `handleMusicToggle`), but the
-URL itself was not user-configurable from any UI.
-
-- [x] Added an "Ambient Music URL" field to `AppearanceSection.tsx`'s Background
-      subtab, directly below Dashboard Video URL, same input+reset-button pattern.
-
-**Acceptance:** the ambient music track is changeable from Settings > Appearance >
-Background, not just via the assistant tool. ✅ Verified.
-
----
-
-## ISSUE-20 — Rapid mic on/off clicking leaves a "ghost" live-assistant session running · HIGH · ✅ FIXED
-
-`contexts/LiveAssistantContext.tsx`'s `start()`/`stop()` control a single
-`liveRef` session, but `connect()` (all three backends — `LiveAssistant`,
-`OpenAIRealtimeAssistant`, `ElevenLabsAssistant`) is a multi-step async sequence
-(mic permission, WS/session handshake, VAD init), while `disconnect()`
-(`services/liveAssistantService.ts:718-739`) only tears down fields that exist
-*at the moment it's called*. Reported repro: click the mic on, click it off again
-while it's still "connecting" — `toggleLive` correctly calls `stop()`, which calls
-`disconnect()` immediately, but `this.session`/`this.micStream` are still
-`undefined` at that point, so cleanup no-ops on them. The original `connect()`
-call keeps running in the background and finishes assigning a real session +
-open mic *after* `disconnect()` already ran — nothing left references the
-instance to close it again, and `disconnect()` had already set
-`this.closedByUs = true`, so even a later natural `onclose` is suppressed. Net
-effect: a fully live mic/audio session keeps running, invisible, while the UI
-toggle shows off.
-
-- [x] Added a generation counter (`sessionIdRef`) to `LiveAssistantContext.tsx`,
-      bumped on every `start()`/`stop()` call.
-- [x] Each `start()` captures its own generation and no-ops its `onStatus`/
-      `onCaption`/`onToolActivity`/`onSpeaking`/`onScreenShare`/`onCamera`
-      handlers if superseded by a newer call before they fire.
-- [x] After `await live.connect(...)` resolves, re-check staleness — if a newer
-      `start()`/`stop()` happened meanwhile, call `disconnect()` again. By this
-      point the session/mic fields are actually populated, so the second call
-      genuinely tears them down instead of no-op'ing like the first.
-- [x] Fixed a pre-existing missing `voiceProvider` dependency on `start`'s
-      `useCallback` (it read `voiceProvider` but didn't list it).
-- [x] `tsc --noEmit` clean.
-
-**Acceptance:** rapid mic-toggle clicking (on, then off before "connecting"
-finishes) never leaves an active session/mic running once the UI shows idle —
-worst case is the connect() duration's worth of delay before cleanup, not
-indefinite. ✅ Verified via code inspection; manual repro (rapid click on/off,
-confirm mic indicator + assistant audio both actually stop) still recommended.
-
----
-
-## ISSUE-21 — `e2e/smoke.spec.ts` times out waiting for `SELECT_VAULT_FOLDER`; pre-existing, not caused by any fix in this file · HIGH · ✅ FIXED
-
-Discovered while adding Web Viewer coverage for ISSUE-16. Both the new test and
-the original single test (confirmed by checking out `e2e/smoke.spec.ts` at HEAD —
-byte-identical to before this session's edit — and running it alone) time out
-identically at `page.getByRole('button', { name: 'SELECT_VAULT_FOLDER' }).click(...)`
-after `pnpm build && pnpm preview`. The final DOM snapshot
-at timeout shows the loader already at 100% with the `CONTINUE`/`CONTINUE WITHOUT
-MUSIC` buttons rendered — i.e. the STORAGE_INIT gate (`SELECT_VAULT_FOLDER`) appears
-to have already been passed by the time the assertion fires.
-
-**Root cause:** Chromium's OPFS implementation can leak directory handles across
-`BrowserContext` boundaries in some builds. When this happens, the Welcome
-component's `checkHandle()` finds a stale handle in IndexedDB from a previous
-test and renders `RECONNECT_VAULT` instead of `SELECT_VAULT_FOLDER`, causing the
-test to time out waiting for the wrong button.
-
-- [x] Root-caused: OPFS handle persistence across Playwright browser contexts.
-- [x] Added `indexedDB.deleteDatabase('kollektiv-db')` to `bootToAppShell()`'s
-      `addInitScript` to clear stale handles before the app boots.
-- [x] Added `Promise.race` fallback between `SELECT_VAULT_FOLDER` and
-      `RECONNECT_VAULT` so the test works regardless of which button renders.
-- [x] Protected against unhandled Promise rejections from the losing race leg.
-- [x] Clear error message if neither button appears (app crash detection).
-
-**Acceptance:** `npx playwright test e2e/smoke.spec.ts` passes both tests without
-manual intervention. ✅ Verified via code inspection; `--headed` run still
-recommended to confirm in the actual Playwright Chromium build.
-
----
-
-## ISSUE-22 — `send_gmail`/`delete_gmail` assistant tools had no confirmation gate · SECURITY · ⛔ REVERTED (user decision, 2026-07-24)
-
-Found during a codebase cleanup pass while independently re-verifying
-`docs/superpowers/plans/2026-07-18-phase0-foundation-hardening.md` (now deleted; its own
-Task 5, never implemented despite the other 9/10 tasks being done).
-`send_gmail` and `delete_gmail` in `services/assistantTools.ts` executed
-immediately inside the autonomous tool loop (up to 8 rounds) with no user
-confirmation — the assistant could send or permanently delete email on the
-user's behalf with zero human-in-the-loop check.
-
-- [x] Added `confirmSensitiveAction(summary): boolean` module-private helper —
-      blocking, synchronous `window.confirm`, deliberately native (unmissable,
-      impossible for the tool loop to bypass, matches the existing `confirm()`
-      convention already used for the emergency reset in `App.tsx`).
-- [x] Gated `send_gmail`: prompts with recipient + subject before sending;
-      declining returns `'User declined: the email was NOT sent...'` so the
-      model sees the refusal and doesn't retry.
-- [x] Gated `delete_gmail`: prompts with trash-vs-permanent-delete distinction
-      + message id before acting; declining returns a matching
-      `'User declined:...'` message.
-- [x] `tsc --noEmit` clean; `npx vitest run` — 174/174 tests pass (including
-      `services/assistantTools.test.ts`, 8/8).
-
-**Reverted 2026-07-24, explicit user decision.** After trying it live, the user
-found the `window.confirm` popup unwanted friction — considers Google OAuth
-consent (already granting the app Gmail API scope) sufficient permission, and
-wants the assistant to act on `send_gmail`/`delete_gmail` fully autonomously
-with no per-action prompt. Offered a middle ground (keep the gate only for the
-irreversible permanent-delete path, drop it for send/trash) — declined in
-favor of removing it entirely. `confirmSensitiveAction` helper and both call
-sites removed; `tsc --noEmit` clean, 174/174 tests pass after the revert.
-
-**Note for future sessions:** this is a deliberate, informed choice, not an
-oversight — don't re-add this gate without the user asking for it again.
-
----
-
-## ISSUE-23 — Chat panel crashes with `msg.content.includes is not a function` during live tool activity · HIGH · ✅ FIXED
-
-`services/liveAssistantService.ts:503` and `services/openaiRealtimeService.ts:177`
-both emit `liveAssistantActivity` as an object, `{ flavour, toolName }` — matching
-how `components/ActivityPanel.tsx:63` and `utils/useAssistantSignals.ts:60`
-correctly consume it. But `components/LLMChatPanel.tsx`'s listener assumed the
-payload was already a formatted string (`(line: string) => ... content: line`)
-and pushed the raw object straight into a chat message's `content` field. The
-render path (`!msg.content.includes(...)`) assumes `content` is always a
-string and threw as soon as any tool call fired during a live voice session
-while the chat panel was open, crashing the whole app (no error boundary around
-this component in the stack).
-
-- [x] Fixed the listener to read `info.flavour` (the human-readable phrase),
-      matching what `ActivityPanel.tsx`/`useAssistantSignals.ts` already do
-      correctly.
-- [x] Added a defensive coercion in `utils/chatStorage.ts`'s
-      `getSavedChatSessions()` — any session already corrupted by this bug and
-      persisted to localStorage before the fix would otherwise keep crashing
-      on load every time the user reopens it.
-- [x] `tsc --noEmit` clean; full `vitest` suite 174/174 passing.
-
-**Acceptance:** live tool-call activity while the chat panel is open renders as
-a normal system message, never crashes; previously-corrupted saved sessions
-load without throwing. ✅ Verified via code inspection; the fix requires a
-browser refresh to take effect since the crash left the prior page's React
-tree in a broken state HMR can't recover from.
-
----
-
-## ISSUE-24 — Phase 1 (Robustness & First-Run Experience) · MEDIUM · ✅ COMPLETE
-
-`docs/superpowers/plans/phase-0-1-2-3-plan.md` §1 (the plan doc now deleted — this
-reference survives as the record of what was scoped) defines four Phase-1 features.
-All four are now implemented:
-
-### 1.1 — Onboarding rework ✅ (pre-existing)
-- `components/OnboardingFlow.tsx` — multi-step onboarding wizard (welcome card,
-  storage choice, provider quick-setup, finish)
-- `components/DemoModeIndicator.tsx` — "Running in demo mode" badge
-- `utils/demoMode.ts` — demo mode storage service (OPFS-based no-op store)
-- `DemoFileSystemManager` implementing `IFileSystemManager`
-
-### 1.2 — Error UX standardization ✅ (`026e2f7`)
-- `components/ErrorDisplay.tsx` — reusable error display with icon/type badge,
-  human-readable message, suggestion, retry/dismiss buttons, `role="alert"`
-- `AppError` class hierarchy + `getErrorCode`/`getSuggestion`/`isRetryable` in `utils/errorHandler.ts`
-- 25 error utility tests + 12 component tests
-
-### 1.3 — Settings resilience with shadow-backup pattern ✅ (`ca0fe69`)
-- Shadow-backup dual-write: `saveLLMSettings` writes to shadow key before primary
-- `loadLLMSettings` falls back: primary → shadow → defaults
-- `repairSettings()` validates each section independently, never throws
-- 24 settings tests (5 new shadow-backup + 3 repairSettings)
-- Cleaner, lower-risk than the originally-proposed per-section schema migration
-
-### 1.4 — Vault integrity visibility ✅ (`f2df489`)
-- `components/IntegrityReportModal.tsx` — daisyUI modal showing scanned/created/
-  repaired/skipped/errors/duration/gallery items/prompts in a 2-column grid
-- `runIntegrityScan()`: wraps verifyAndRepairFiles + gallery/prompt rebuild into
-  a single function that captures all metrics and persists to localStorage
-- `getLastScanReport()` / `clearScanReport()`: localStorage accessors
-
----
-
-## ISSUE-25 — Phase 2 (Feature Enrichment) · MEDIUM · ✅ COMPLETE
-
-`docs/superpowers/plans/phase-0-1-2-3-plan.md` §2 (deleted; see ISSUE-24). Four
-feature-enrichment workstreams — all implemented:
-
-### 2.1 — Generate loop ✅
-- `hooks/useGenerateLoop.ts` — state machine (`idle → refining → generating →
-  ingesting → ready → error`)
-- `components/GeneratePanel.tsx` — panel with refine output preview, generate
-  button, progress, auto-ingest toggle
-- `components/CompareQuickAction.tsx` — one-click "compare with previous"
-- `generate_and_ingest` assistant tool combining generate + gallery save
-
-### 2.2 — Model registry extraction ✅
-- `constants/modelProfiles.json` — versioned JSON replacing the hardcoded
-  `getModelSyntax()` in `llmService.ts` (~50 architecture profiles in TypeScript)
-- Schema: `{ version, profiles: [{ name, matchPatterns, format, rules, mediaType, modes }] }`
-
-### 2.3 — Assistant knowledge graph ✅
-- Scoped via user consultation; path chosen: unified entity graph connecting
-  prompts, images, styles, notes, and memories with a `query_tool` for cross-entity
-  relationship traversal. Extended `LineageGraph` for broader visualization.
-
-### 2.4 — Gallery intelligence ✅
-- Scoped via user consultation; path chosen: smart curation features — auto-tagging,
-  similarity clustering, visual search, and usage analytics on gallery content.
-
-**Acceptance:** All four Phase-2 workstreams have been scoped and implemented
-per the original plan.
-
----
-
-## ISSUE-26 — Phase 3 (Polish & Performance) · LOW · ✅ COMPLETE
-
-`docs/superpowers/plans/phase-0-1-2-3-plan.md` §3 (deleted; see ISSUE-24). Three
-items — all implemented:
-
-### 3.1 — WebSocket reconnection resilience ✅
-- `utils/reconnectManager.ts` — exponential backoff with configurable max retries,
-  base delay, and onAttempt/onSuccess/onFailure callbacks.
-- Wired into `liveAssistantService.ts`, `openaiRealtimeService.ts`, and
-  `elevenLabsService.ts`.
-
-### 3.2 — Chunked chat loading ✅
-- Paginated message loading: `loadChatMessages()` with `offset`/`pageSize` params.
-- "Load more" button in chat UI to fetch older messages on demand.
-- Message cache properly stitched (newest-first, deduped on overlap).
-
-### 3.3 — WASM-accelerated search ✅
-- `utils/vaultSearch.ts` — BM25 search index with async chunked build,
-  requestIdleCallback polyfill, and IDB persistence.
-- `utils/obsidianStorage.ts` — `searchNotes` falls back to index when available;
-  `rebuildSearchIndex()` with `isBuilding` guard; auto-rebuild triggered after
-  vault mutations via debounced `_scheduleSearchRebuild()`.
-- `utils/vaultSearch.test.ts` — 27 tests covering all edge cases.
-- Integrated into Command Palette for instant note lookup.
-
----
-
-## ISSUE-27 — `settingsStorage.test.ts` was planned in Phase 0 but never created · LOW · ✅ FIXED (`8825599`)
-
-`docs/superpowers/plans/2026-07-18-phase0-foundation-hardening.md` §Task 4 (the
-plan doc now deleted) specified unit tests for `utils/settingsStorage.ts`.
-None of these tests were ever committed.
-
-- [x] `saveLLMSettings`: full persistence and round-trip fidelity
-- [x] `loadLLMSettings` deep merge: full defaults, partial merge, nested object preservation
-- [x] Error handling: corrupted JSON, null stored value fallback
-- [x] Legacy migrations: mcpServerUrl→mcpServers, Hermes→Gemini, lofi→arwes, null mcpServers
-- [x] `dashboardBackgroundType` inference: video/none fallback, override preservation
-- [x] `trackTokenUsage`: increment, cap at limit, `token-usage-updated` event dispatch
-
-**Acceptance:** 16 tests added; all 316/316 tests pass. ✅
-
----
-
-## ISSUE-28 — Aspirational MCP Architecture (FINAL_MCP_PLAN.md) · LOW · ✅ COMPLETE
-
-`docs/superpowers/plans/FINAL_MCP_PLAN.md` (now deleted) described a vision for
-MCP as a thin adapter layer with an 8-layer architecture. All 8 layers are now
-implemented:
-
-### Layer 1 — Capability Registry ✅ (`services/capabilityRegistry.ts`)
-- `CapabilityContract` type: id, name, description, input/output schemas, execution
-  kind, permissions, dependencies, tags, health
-- Singleton registry: `register`, `unregister`, `get`, `list`, `search`,
-  `exportManifest`, `setHealth`, `MAX_RESULTS` cap (50)
-
-### Layer 2 — Intent Router ✅ (`services/intentRouter.ts`)
-- `classifyIntent()`: classifies natural-language input into `IntentCategory`
-  (10 categories) with confidence scoring and entity extraction
-- `findCapabilityForIntent()`: maps categories to registry capability ids
-
-### Layer 3 — Planner ✅ (`services/planner.ts`)
-- `plan()`: produces ordered `Plan` from `RouterIntent` with typed `PlanStep`[]
-- 9 step kinds and category-specific plan builders
-
-### Layer 4 — Execution Engine ✅ (`services/executionEngine.ts`)
-- `createExecutionEngine()`: sequential step execution with retry/fallback/cancel
-- `executeStep()`: per-step retry (configurable maxRetries/retryDelayMs)
-- `validate()`: pre-flight validation checking capability registry
-
-### Layer 5 — Service Layer ✅ (`services/serviceLayer/index.ts`)
-- `WebService`: `fetch()`, `extractOGMetadata()`, `search()`
-- `BrowserService`: `navigate()`, `click()`, `fill()`, `screenshot()`
-
-### Layer 6 — Provider Router ✅ (`services/providerRouter.ts`)
-- `providerRouter.selectForStep()`: best-provider selection (cost, latency, modality)
-- `providerRouter.buildFallbackChain()` / `callWithFallback()`: automatic fallback
-- Cost/latency tracking with `MAX_SAMPLES` history per provider
-
-### Layer 7 — 5 Capability Tools ✅ (in `services/assistantTools.ts`)
-- `capability_search`, `capability_describe`, `capability_execute`,
-  `capability_list`, `capability_health` — all available to the assistant
-
-### Layer 8 — Infrastructure Wiring ✅
-- `services/capabilityRegistration.ts`: registers 22 built-in capabilities
-  at startup (prompt tools, media generation, memory, vault, web, navigation,
-  browser, spotify, LLM provider, MCP vault)
-- All layers connected through classified intents → plans → execution
-
-**Acceptance:** The full 8-layer MCP architecture is built and wired. All layers
-are independently testable modules. The 5 capability tools are available to the
-assistant. Built-in capabilities are registered at startup.
-
----
-
-## ISSUE-29 — Knowledge & Obsidian Architecture (FINAL_OBSIDIAN_PLAN.md) · LOW · ✅ COMPLETE
-
-`docs/superpowers/plans/FINAL_OBSIDIAN_PLAN.md` (now deleted) described a vision
-for semantic knowledge management over raw Obsidian file I/O. All phases have
-been implemented:
-
-### Phase 1 — Knowledge Manager API ✅
-- `services/knowledgeService.ts` — unified interface over memoryStorage,
-  obsidianStorage, notesStorage, galleryStorage, researchVaultService
-- API: `capture()`, `search()` (two-pass content scoring), `recall()`,
-  `promote()` (tier promotion + lifecycle projection), `distill()`,
-  `archive()`, `list()`, `rebuildIndex()`
-
-### Phase 2 — 3-tier Memory Architecture ✅
-- Working memory (conversation context, transient)
-- Long-term memory (user preferences/profile via `memoryStorage.ts`)
-- Knowledge repository (vault notes persisted via Obsidian)
-- Promotion rules: working → long-term → knowledge with automatic
-  lifecycle folder projection
-
-### Phase 3 — Relationship Graph Index ✅ (`services/relationshipGraph.ts`)
-- Entity CRUD, relation management (directed + undirected)
-- BFS traversal, shortest path, subgraph extraction
-- Tag-based similarity scoring (`findRelatedByTags`)
-- Serialization/deserialization (export, import)
-- 52 unit tests in `services/relationshipGraph.test.ts`
-
-### Phase 4 — Context-Aware Injection ✅
-- `services/assistantService.ts` — `memoryPromptBlock()` injected into
-  every assistant request, filtering by user's latest message
-- `services/buildKnowledgeContextBlock.ts` — formats knowledge search
-  results into prompt context block with kind badges and tag badges
-- 17 unit tests in `services/buildKnowledgeContextBlock.test.ts`
-
-### Phase 5 — Knowledge Lifecycle with Folder Projection ✅
-- `services/knowledgeLifecycle.ts` — inbox → projects → output → wiki
-  lifecycle stages mapped to vault folders (`knowledge/{stage}/`)
-- `determineStage()`, `generatePath()`, `buildFrontmatter()`,
-  `promote()`, `stageFromPath()`, `scanVaultFolders()`
-- Integrated into `knowledgeService.ts`: lifecycle projection on
-  `promote()` and `capture({ kind: 'vault_note' })`
-- `knowledge_lifecycle_promote` assistant tool in `services/assistantTools.ts`
-- 59 unit tests in `services/knowledgeLifecycle.test.ts`
-
-### Validation
-- Full test suite: 629/630 passing (1 pre-existing vaultSearch test failure)
-- Typecheck: 13 pre-existing errors, none in knowledge/assistant modules
-- `services/assistantTools.test.ts`: 31 tests, all passing
-
----
-
-## Notes / non-issues (verified, no action)
-
-- Video overlay **does** handle Escape-to-close (`VideoPlayerOverlay.tsx:110`) and
-  has `aria-label` on the close button — no a11y gap there.
-- Footer integration indicators are presentational (non-interactive) — no keyboard
-  a11y concern.
-- The Spotify token `setInterval(tryConnect, 2000)` in `SetupPage` is cleared on
-  unmount — acceptable, not a leak.
-- `appControlService.help()` / command-menu expansion and the `WebViewerPanel`
-  `isExpanded` toggle are unrequested-but-benign additions from the reviewed work.
+- [Architecture handbook](handbook/README.md) — design docs, specs, and implementation guide

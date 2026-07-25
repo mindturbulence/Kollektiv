@@ -3,7 +3,14 @@ node_modules/
 local_storage/
 dist/
 *.log
+
+# Trash / artifacts — never commit these
 nul
+C:Users*_errors.txt
+obsidian-notes-list.md
+.superpowers/
+.fallow/
+.firecrawl/
 
 # Secrets
 .env

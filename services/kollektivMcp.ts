@@ -219,6 +219,11 @@ export async function startKollektivMcp(
         "Access-Control-Allow-Headers",
         "Content-Type, Authorization, MCP-Session-ID, Accept"
       );
+      // Expose mcp-session-id so the browser's JavaScript can read this
+      // response header cross-origin. Without this, the client-side
+      // mcpService.ts cannot capture the session ID after initialize,
+      // causing every subsequent call to fail with "Session not found".
+      res.setHeader("Access-Control-Expose-Headers", "mcp-session-id");
 
       if (req.method === "OPTIONS") {
         res.writeHead(204);

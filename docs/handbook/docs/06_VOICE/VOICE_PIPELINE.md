@@ -1,32 +1,103 @@
 # Voice Pipeline
 
-## STT
+## Architecture Overview
 
-Speech-to-text is the first step in the voice experience. The pipeline should capture microphone input, stream partial transcripts, and connect those transcripts to the assistant or a prompt-action workflow without introducing too much latency.
+The voice experience uses a layered pipeline rather than a monolithic feature:
 
-## Planning
+1. Capture audio and produce a transcript
+2. Hand the transcript to the same planning logic used for typed input
+3. Route the resulting action through the assistant tool loop or the generation layer
+4. Render spoken output back to the user with interruption support
 
-Once speech is captured, the system should decide whether the user intends a conversational response, an action, or a simple command. The planner should interpret the spoken request in the same way it interprets typed input.
+## Voice Backends
+
+Three backends are supported, selected via `LLMSettings.voiceProvider`:
+
+| Backend | Service file | Protocol | Features |
+|---------|-------------|----------|----------|
+| Gemini Live | `liveAssistantService.ts` | WebSocket + WebRTC | Full duplex, tool execution, interruption, screen share, camera |
+| OpenAI Realtime | `openaiRealtimeService.ts` | WebSocket | Full duplex, function calling, interruptions |
+| ElevenLabs | `elevenLabsService.ts` | HTTP + WebSocket | Agent-based conversation, TTS |
+
+All three backends are managed by `contexts/LiveAssistantContext.tsx` which provides a unified `start()`/`stop()`/`toggleLive()` interface.
+
+## STT (Speech-to-Text)
+
+- **Gemini Live:** Server-side STT via Gemini's Live API (WebRTC)
+- **OpenAI Realtime:** Server-side STT via GPT-4o Realtime
+- **ElevenLabs:** Server-side STT via ElevenLabs agent pipeline
+
+## Noise Cancellation
+
+**File:** `services/noiseCancellation.ts`
+**WASM:** `simple-rnnoise-wasm` (RNNoise-based)
+
+- Loaded dynamically via `await import('simple-rnnoise-wasm')`
+- Registered on the mic's `AudioContext` as a custom AudioNode
+- Sits between the mic source and the PCM-capture AudioWorkletNode (upstream of VAD)
+- Falls back to raw mic source if WASM fails to load or register
+- Wired into `liveAssistantService.ts`'s `startMic()` flow
+- Disposed on `disconnect()`
+- **Auto-started, no user toggle** — runs silently always-on
+
+**Tests:** 10 unit tests in `services/noiseCancellation.test.ts`
+
+## VAD (Voice Activity Detection)
+
+**File:** `services/voiceActivityService.ts`
+
+Detects when the user is speaking. Works with the noise-cancelled audio stream to reduce false triggers from background noise.
 
 ## Streaming
 
-Streaming is essential for voice responsiveness. Partial text should flow through the UI quickly, and the assistant should be able to respond incrementally rather than waiting for the entire utterance to finish.
+- Partial text flows through the UI incrementally (via `onCaption` callback)
+- Gemini Live and OpenAI Realtime support native streaming
+- ElevenLabs uses agent-level streaming
 
-## TTS
+## TTS (Text-to-Speech)
 
-Text-to-speech is used to make the assistant feel alive and responsive. The system should support clear output and a reliable way to stop or interrupt speech when the user begins speaking again.
+- **Gemini Live:** Server-side TTS via Gemini API (WebRTC output)
+- **OpenAI Realtime:** Server-side TTS via GPT-4o
+- **ElevenLabs:** ElevenLabs TTS (high-quality voice synthesis)
 
 ## Interruptions
 
-Interruption handling is a core part of the voice experience. The app should be able to cancel speech, stop tool execution, or replace an ongoing response when a more urgent instruction arrives.
+All three backends support interruption:
+- User starts speaking → system stops current assistant speech
+- Tool execution can be cancelled mid-flight
+- `LiveAssistantContext` generation counter prevents stale connections
 
-## Voice Architecture Notes
+## WebSocket Reconnection
 
-The voice experience in the current app is designed as a layered pipeline rather than a monolithic feature:
+**File:** `utils/reconnectManager.ts`
 
-1. capture audio and produce a transcript
-2. hand the transcript to the same planning logic used for typed input
-3. route the resulting action through the assistant tool loop or the generation layer
-4. render spoken output back to the user with interruption support
+Exponential backoff reconnection with configurable parameters:
+- `baseDelay`: initial delay (default 1000ms)
+- `maxRetries`: maximum retry attempts
+- `onAttempt`/`onSuccess`/`onFailure` callbacks for UI state updates
 
-This keeps live voice behavior aligned with the rest of the product rather than introducing a second, parallel execution path.
+Wired into all three voice backends:
+- `liveAssistantService.ts` — Gemini Live reconnection
+- `openaiRealtimeService.ts` — OpenAI Realtime reconnection  
+- `elevenLabsService.ts` — ElevenLabs reconnection
+
+## Ghost Session Prevention
+
+**Issue:** Rapid mic on/off clicking could leave a ghost session running (ISSUE-20, fixed).
+
+**Fix in `LiveAssistantContext.tsx`:**
+- Generation counter (`sessionIdRef`) bumped on every `start()`/`stop()` call
+- Each `start()` captures its own generation and no-ops handlers if superseded
+- After `connect()` resolves, re-checks staleness and disconnects if a newer call happened
+- Fixed pre-existing missing `voiceProvider` dependency on `start`'s `useCallback`
+
+## Captions
+
+`LiveCaptionOverlay` renders real-time voice captions as an overlay on non-assistant pages. Hidden during `activeTab === 'assistant'` (the full-screen Assistant page has its own caption UI).
+
+## Audio Settings
+
+- `voiceProvider`: Selects backend (`gemini_live` / `openai_realtime` / `elevenlabs`)
+- `assistantVoice`: Voice model selection
+- `assistantLanguage`: Language for voice interactions
+- Assistant persona settings also affect voice behavior

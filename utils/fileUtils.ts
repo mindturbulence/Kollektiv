@@ -466,11 +466,24 @@ class LocalFileSystemManager implements IFileSystemManager {
         this.initPromise = (async () => {
             try {
                 const handle = await getHandle<FileSystemDirectoryHandle>('app-data-dir');
-                if (handle && (await this.verifyPermission(handle, false))) {
-                    this.appDirHandle = handle;
-                    this.appDirectoryName = handle.name;
-                    this.isInitialized = true;
-                    return true;
+                if (handle) {
+                    // Try non-interactive (queryPermission) first — fastest path.
+                    if (await this.verifyPermission(handle, false)) {
+                        this.appDirHandle = handle;
+                        this.appDirectoryName = handle.name;
+                        this.isInitialized = true;
+                        return true;
+                    }
+                    // Handle exists but queryPermission returned 'prompt' (common after page
+                    // reload). Try requestPermission interactively — Chrome will show the
+                    // permission prompt for the previously-granted folder.
+                    if (await this.verifyPermission(handle, true)) {
+                        this.appDirHandle = handle;
+                        this.appDirectoryName = handle.name;
+                        this.isInitialized = true;
+                        return true;
+                    }
+                    console.warn("Storage handle found in IndexedDB but permission denied after interactive request.");
                 }
             } catch (error) {
                 console.error("Error during LocalFileSystemManager init:", error);
