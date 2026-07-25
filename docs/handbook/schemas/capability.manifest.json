@@ -1,0 +1,51 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Capability Manifest",
+  "type": "object",
+  "required": ["id", "name", "description", "input", "output", "execution"],
+  "properties": {
+    "id": {
+      "type": "string",
+      "description": "Stable capability identifier"
+    },
+    "name": {
+      "type": "string",
+      "description": "Human-readable capability name"
+    },
+    "description": {
+      "type": "string",
+      "description": "What the capability does"
+    },
+    "input": {
+      "type": "object",
+      "description": "Input contract for the capability"
+    },
+    "output": {
+      "type": "object",
+      "description": "Output contract for the capability"
+    },
+    "execution": {
+      "type": "object",
+      "properties": {
+        "kind": {
+          "type": "string",
+          "enum": ["local", "provider", "assistant-tool", "mcp"]
+        },
+        "provider": {
+          "type": "string"
+        },
+        "requiresConfirmation": {
+          "type": "boolean"
+        }
+      },
+      "required": ["kind"]
+    },
+    "permissions": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    }
+  },
+  "additionalProperties": false
+}
