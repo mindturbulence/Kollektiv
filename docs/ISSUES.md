@@ -711,48 +711,38 @@ tree in a broken state HMR can't recover from.
 
 ---
 
-## ISSUE-24 — Phase 1 (Robustness & First-Run Experience) not started · MEDIUM
+## ISSUE-24 — Phase 1 (Robustness & First-Run Experience) · MEDIUM · ✅ COMPLETE
 
 `docs/superpowers/plans/phase-0-1-2-3-plan.md` §1 (the plan doc now deleted — this
-reference survives as the record of what was scoped) defines four Phase-1 features
-that were never built. All are independent of each other. None block the app's
-core functionality but all improve survival rate for new users:
+reference survives as the record of what was scoped) defines four Phase-1 features.
+All four are now implemented:
 
-### 1.1 — Onboarding rework (files never created)
+### 1.1 — Onboarding rework ✅ (pre-existing)
 - `components/OnboardingFlow.tsx` — multi-step onboarding wizard (welcome card,
   storage choice, provider quick-setup, finish)
 - `components/DemoModeIndicator.tsx` — "Running in demo mode" badge
 - `utils/demoMode.ts` — demo mode storage service (OPFS-based no-op store)
 - `DemoFileSystemManager` implementing `IFileSystemManager`
 
-The File System Access folder-picker gate is the #1 abandonment point per the plan.
-Users on Firefox/Safari hit a dead end. Demo mode would let them try the app
-without choosing a storage folder.
-
-### 1.2 — Error UX standardization (files never created)
+### 1.2 — Error UX standardization ✅ (`026e2f7`)
 - `components/ErrorDisplay.tsx` — reusable error display with icon/type badge,
-  human-readable message, suggestion, retry/dismiss buttons
-- `AppError` class hierarchy + `getErrorCode`/`getSuggestion` in `utils/errorHandler.ts`
-- Standardized error handling across all LLM services
+  human-readable message, suggestion, retry/dismiss buttons, `role="alert"`
+- `AppError` class hierarchy + `getErrorCode`/`getSuggestion`/`isRetryable` in `utils/errorHandler.ts`
+- 25 error utility tests + 12 component tests
 
-### 1.3 — Settings resilience with versioned migration (not implemented)
-Current settings (`kollektivSettingsV4`) is a single JSON blob. A malformed write
-can brick settings. Plan called for `SettingsSchema` with per-section fallback (v5):
-- `saveLLMSettings` serializes sections individually
-- `loadLLMSettings` falls back section-by-section, not all-or-nothing
-- `repairSettings()` that validates every section independently
-- v4 → v5 migration preserves all data
+### 1.3 — Settings resilience with shadow-backup pattern ✅ (`ca0fe69`)
+- Shadow-backup dual-write: `saveLLMSettings` writes to shadow key before primary
+- `loadLLMSettings` falls back: primary → shadow → defaults
+- `repairSettings()` validates each section independently, never throws
+- 24 settings tests (5 new shadow-backup + 3 repairSettings)
+- Cleaner, lower-risk than the originally-proposed per-section schema migration
 
-### 1.4 — Vault integrity visibility (not implemented)
-- `components/IntegrityReportModal.tsx` — shows files scanned, repaired, orphaned
-- `verifyAndRepairFiles()` returns detailed `IntegrityReport` (scanned, repaired,
-  orphaned, errors, duration)
-- Settings > App section shows last scan timestamp + "Run scan" button
-
-**Acceptance:** Each feature would make the app more survivable for a new user on
-an unfamiliar browser, but none block existing functionality. Best tackled as a
-single focused sprint since they share the same theme (first-run experience) and
-share `fileSystemManager`/`errorHandler` as dependencies.
+### 1.4 — Vault integrity visibility ✅ (`f2df489`)
+- `components/IntegrityReportModal.tsx` — daisyUI modal showing scanned/created/
+  repaired/skipped/errors/duration/gallery items/prompts in a 2-column grid
+- `runIntegrityScan()`: wraps verifyAndRepairFiles + gallery/prompt rebuild into
+  a single function that captures all metrics and persists to localStorage
+- `getLastScanReport()` / `clearScanReport()`: localStorage accessors
 
 ---
 
