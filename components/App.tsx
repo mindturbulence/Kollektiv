@@ -55,10 +55,9 @@ import { ScreenControlOverlay } from './ScreenControlOverlay';
 import { motion, AnimatePresence } from 'motion/react';
 import { shellVariants } from './AnimatedPanels';
 import TransitionOverlay, { type TransitionOverlayHandle } from './transitions/TransitionOverlay';
-import { useTransitionDirector } from './transitions/useTransitionDirector';
-import type { FxKind } from './transitions/routeFx';
 import { useBootSequence } from '../hooks/useBootSequence';
 import { useAppTheme } from '../hooks/useAppTheme';
+import { usePageTransitions } from '../hooks/usePageTransitions';
 
 
 type PromptsPageState = { 
@@ -314,24 +313,12 @@ const AppContent: React.FC = () => {
     }, [isInitialized]);
 
 
-    // --- Context Shift Engine: page transition orchestration ---
-    const [pageFxKind, setPageFxKind] = useState<FxKind>('module-boot');
-    const activeTabRef = useRef(activeTab);
-    activeTabRef.current = activeTab;
-
-    const { navigate: directorNavigate } = useTransitionDirector({
-        overlayRef: transitionOverlayHandleRef,
+    const { pageFxKind, handleNavigate } = usePageTransitions({
+        activeTab,
+        setActiveTab,
         contentRef,
-        getActiveTab: () => activeTabRef.current,
-        commit: (tag, kind) => {
-            setPageFxKind(kind);
-            setActiveTab(tag);
-        },
+        transitionOverlayHandleRef,
     });
-
-    const handleNavigate = useCallback((tab: ActiveTab) => {
-        directorNavigate(tab);
-    }, [directorNavigate]);
 
     const showGlobalFeedback = useCallback((message: string, isError = false) => {
         setGlobalFeedback({ message, type: isError ? 'error' : 'success' });
