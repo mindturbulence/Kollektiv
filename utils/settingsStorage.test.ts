@@ -3,14 +3,15 @@ import {
   saveLLMSettings,
   loadLLMSettings,
   defaultLLMSettings,
-  resetAllSettings,
   trackTokenUsage,
+  repairSettings,
 } from './settingsStorage';
 import type { LLMSettings } from '../types';
 
 // ── Helpers ──
 
 const SETTINGS_KEY = 'kollektivSettingsV4';
+const SETTINGS_SHADOW_KEY = 'kollektivSettingsV4_shadow';
 
 beforeEach(() => {
   const store = new Map<string, string>();
@@ -29,12 +30,6 @@ afterEach(() => {
   vi.restoreAllMocks();
 });
 
-// ── Helpers to build partial state ──
-
-function makePartial(overrides: Partial<LLMSettings>): Partial<LLMSettings> {
-  return overrides;
-}
-
 // ── Tests ──
 
 describe('saveLLMSettings', () => {
@@ -52,7 +47,7 @@ describe('saveLLMSettings', () => {
       ...defaultLLMSettings,
       geminiApiKey: 'AIza-roundtrip',
       assistantName: 'RoundTrip',
-      activeThemeMode: 'light',
+      activeThemeMode: 'dark',
       lightTheme: 'cupcake',
       storageProvider: 'drive',
       driveFolderId: 'folder-xyz',
@@ -192,6 +187,79 @@ describe('loadLLMSettings — dashboardBackgroundType inference', () => {
 
     const loaded = loadLLMSettings();
     expect(loaded.dashboardBackgroundType).toBe('image');
+  });
+});
+
+describe('saveLLMSettings — shadow backup', () => {
+  it('writes to both primary and shadow keys', () => {
+    const settings = { ...defaultLLMSettings, geminiApiKey: 'shadow-test' };
+    saveLLMSettings(settings);
+
+    const primaryRaw = localStorage.getItem(SETTINGS_KEY);
+    const shadowRaw = localStorage.getItem(SETTINGS_SHADOW_KEY);
+    expect(primaryRaw).not.toBeNull();
+    expect(shadowRaw).not.toBeNull();
+    expect(JSON.parse(primaryRaw!)).toEqual(settings);
+    expect(JSON.parse(shadowRaw!)).toEqual(settings);
+  });
+});
+
+describe('loadLLMSettings — shadow recovery', () => {
+  it('returns defaults when both primary and shadow are absent', () => {
+    const loaded = loadLLMSettings();
+    expect(loaded).toEqual(defaultLLMSettings);
+  });
+
+  it('falls back to shadow when primary has corrupt JSON', () => {
+    localStorage.setItem(SETTINGS_KEY, '{{garbage}}');
+    localStorage.setItem(SETTINGS_SHADOW_KEY, JSON.stringify({ geminiApiKey: 'from-shadow' }));
+
+    const loaded = loadLLMSettings();
+    expect(loaded.geminiApiKey).toBe('from-shadow');
+  });
+
+  it('falls back to shadow when primary is absent', () => {
+    localStorage.setItem(SETTINGS_SHADOW_KEY, JSON.stringify({ geminiApiKey: 'shadow-only' }));
+
+    const loaded = loadLLMSettings();
+    expect(loaded.geminiApiKey).toBe('shadow-only');
+  });
+
+  it('uses primary when both exist and primary is valid', () => {
+    localStorage.setItem(SETTINGS_KEY, JSON.stringify({ geminiApiKey: 'primary' }));
+    localStorage.setItem(SETTINGS_SHADOW_KEY, JSON.stringify({ geminiApiKey: 'shadow' }));
+
+    const loaded = loadLLMSettings();
+    expect(loaded.geminiApiKey).toBe('primary');
+  });
+});
+
+describe('repairSettings', () => {
+  it('preserves valid fields, replaces corrupted nested objects with defaults', () => {
+    const repaired = repairSettings({
+      geminiApiKey: 'keep-me',
+      geminiTokenUsage: { used: 'bad' as any, limit: 1_000_000 },
+      youtube: null as any,
+      mcpServers: [{ id: 'valid', name: 'OK', url: '', enabled: true }, { name: 'no-id' } as any],
+    });
+
+    expect(repaired.geminiApiKey).toBe('keep-me');
+    expect(repaired.geminiTokenUsage.used).toBe(0); // corrupted → reset to default
+    expect(repaired.geminiTokenUsage.limit).toBe(1_000_000); // preserved
+    expect(repaired.youtube).toEqual({ isConnected: false }); // corrupted → default
+    expect(repaired.mcpServers).toHaveLength(1); // only the valid entry
+    expect(repaired.mcpServers[0].id).toBe('valid');
+  });
+
+  it('returns full defaults for an empty input', () => {
+    const repaired = repairSettings({});
+    expect(repaired).toEqual(defaultLLMSettings);
+  });
+
+  it('never throws on unexpected input', () => {
+    expect(() => repairSettings(null as any)).not.toThrow();
+    expect(() => repairSettings(undefined as any)).not.toThrow();
+    expect(() => repairSettings({ geminiTokenUsage: 'totally-wrong' as any })).not.toThrow();
   });
 });
 
