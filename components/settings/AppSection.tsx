@@ -8,6 +8,7 @@ import { UploadIcon, DownloadIcon } from '../icons';
 import { useSettings } from '../../contexts/SettingsContext';
 import { isGoogleAuthValid, requestSilentTokenRefresh, trySilentRefreshWithWait } from '../../utils/googleAuth';
 import { verifyAndRepairFiles, rebuildGalleryDatabase, rebuildPromptDatabase, optimizeManifests } from '../../utils/integrity';
+import { UI_STRINGS } from '../../constants/uiStrings';
 
 interface AppSectionProps {
     activeSubTab: string;
@@ -284,16 +285,16 @@ const AppSection: React.FC<AppSectionProps> = ({
                         audioService.playClick();
                         if (!isGoogleAuthValid(settings.googleIdentity)) {
                             if (settings.googleIdentity?.isConnected) {
-                                showGlobalFeedback("Refreshing Google session...", false);
+                                showGlobalFeedback(UI_STRINGS.googleRefreshing, false);
                                 const refreshed = await trySilentRefreshWithWait(settings.googleIdentity);
                                 if (!refreshed) {
-                                    showGlobalFeedback("Your Google session has expired. Reconnecting...", true);
+                                    showGlobalFeedback(UI_STRINGS.googleSessionExpiredReconnecting, true);
                                     setActiveSubTab('general');
                                     handleAuthConnect('google');
                                     return;
                                 }
                             } else {
-                                showGlobalFeedback("Connect your Google account first.", true);
+                                showGlobalFeedback(UI_STRINGS.googleConnectFirst, true);
                                 setActiveSubTab('general');
                                 handleAuthConnect('google');
                                 return;
@@ -318,16 +319,16 @@ const AppSection: React.FC<AppSectionProps> = ({
                         audioService.playClick();
                         if (!isGoogleAuthValid(settings.googleIdentity)) {
                             if (settings.googleIdentity?.isConnected) {
-                                showGlobalFeedback("Refreshing Google session...", false);
+                                showGlobalFeedback(UI_STRINGS.googleRefreshing, false);
                                 const refreshed = await trySilentRefreshWithWait(settings.googleIdentity);
                                 if (!refreshed) {
-                                    showGlobalFeedback("Your Google session has expired. Reconnecting...", true);
+                                    showGlobalFeedback(UI_STRINGS.googleSessionExpiredReconnecting, true);
                                     setActiveSubTab('general');
                                     handleAuthConnect('google');
                                     return;
                                 }
                             } else {
-                                showGlobalFeedback("Connect your Google account first.", true);
+                                showGlobalFeedback(UI_STRINGS.googleConnectFirst, true);
                                 setActiveSubTab('general');
                                 handleAuthConnect('google');
                                 return;

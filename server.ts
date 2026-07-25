@@ -328,6 +328,12 @@ async function startServer() {
       if (!isValidProxyTarget(target)) {
         return res.status(400).json({ error: 'x-target-url must be a valid http(s) URL' });
       }
+      if (!isAllowedProxyTarget(target)) {
+        return res.status(403).json({
+          error: 'Target host is not in the proxy allowlist',
+          message: 'Add the host in Settings > Integrations, or route through a configured backend.',
+        });
+      }
 
       const subPath = req.url;
       const targetUrl = `${target.replace(/\/+$/, '')}${subPath}`;
