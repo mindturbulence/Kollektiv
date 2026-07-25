@@ -111,4 +111,41 @@ describe('notesStorage', () => {
     expect(ls).toHaveLength(1);
     expect(ls[0].title).toBe('dual');
   });
+
+  // ── Idempotency ──
+
+  it('does not re-read localStorage on second call (same-session early return)', async () => {
+    const legacyData = [{ id: 'n1', title: 'legacy', content: 'old', createdAt: 100, updatedAt: 100 }];
+    _lsStore.set('assistantNotes', JSON.stringify(legacyData));
+
+    const getItemSpy = vi.spyOn(globalThis.localStorage, 'getItem');
+
+    await initNotesStore();
+    expect(getItemSpy).toHaveBeenCalledWith('assistantNotes');
+    expect(getNotesSync()).toHaveLength(1);
+    getItemSpy.mockClear();
+
+    await initNotesStore();
+    expect(getItemSpy).not.toHaveBeenCalled();
+    expect(getNotesSync()).toHaveLength(1);
+  });
+
+  it('does not re-migrate after _testReset when migration flag exists', async () => {
+    const legacyData = [{ id: 'n2', title: 'persisted', content: 'data', createdAt: 200, updatedAt: 200 }];
+    _lsStore.set('assistantNotes', JSON.stringify(legacyData));
+    await initNotesStore();
+    expect(getNotesSync()).toHaveLength(1);
+
+    _store.set('keyval:migrated_notes_v2', true);
+
+    _testReset();
+    _lsStore.clear();
+
+    const getItemSpy = vi.spyOn(globalThis.localStorage, 'getItem');
+
+    await initNotesStore();
+    expect(getItemSpy).not.toHaveBeenCalledWith('assistantNotes');
+    expect(getNotesSync()).toHaveLength(1);
+    expect(getNotesSync()[0].title).toBe('persisted');
+  });
 });

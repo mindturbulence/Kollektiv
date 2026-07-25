@@ -49,6 +49,13 @@ let _sessionsCache: ChatSessionStored[] = [];
 let _messagesCache = new Map<string, ChatMessageStored[]>();
 let _initialized = false;
 
+/** @internal test hook — resets module state. Not for production use. */
+export const _testReset = (): void => {
+  _sessionsCache = [];
+  _messagesCache = new Map();
+  _initialized = false;
+};
+
 // ── Boot init — called once from App boot sequence ────────────────────
 
 export async function initChatStore(): Promise<void> {
@@ -208,7 +215,7 @@ export async function saveChatSession(session: ChatSession): Promise<void> {
   }));
 
   for (const msg of messages) {
-    await db.add(MESSAGES_STORE, msg);
+    await db.put(MESSAGES_STORE, msg);
   }
 
   // Update caches

@@ -88,11 +88,61 @@ describe('memoryStorage', () => {
     expect(getMemoriesSync()).toHaveLength(1);
   });
 
-  it('builds a prompt block, empty when no memories', async () => {
-    await initMemoriesStore();
-    expect(memoryPromptBlock()).toBe('');
-    await addMemory('speaks German');
-    expect(memoryPromptBlock()).toContain('speaks German');
+  describe('memoryPromptBlock contract', () => {
+    const HEADER = 'Persistent memories about the user from earlier sessions (use them, do not recite them unprompted):';
+
+    it('returns empty string when no memories exist', async () => {
+      await initMemoriesStore();
+      expect(memoryPromptBlock()).toBe('');
+    });
+
+    it('returns empty string when cache is empty (no init)', () => {
+      _testReset();
+      expect(memoryPromptBlock()).toBe('');
+    });
+
+    it('is synchronous — returns string, not Promise', async () => {
+      await initMemoriesStore();
+      const result = memoryPromptBlock();
+      expect(typeof result).toBe('string');
+      // If it were a Promise, 'then' would be a function
+      expect((result as any).then).toBeUndefined();
+    });
+
+    it('includes the header line when memories exist', async () => {
+      await initMemoriesStore();
+      await addMemory('speaks German');
+      expect(memoryPromptBlock()).toContain(HEADER);
+    });
+
+    it('formats each memory as a bullet line after the header (newest first)', async () => {
+      await initMemoriesStore();
+      await addMemory('speaks German');
+      await addMemory('prefers 85mm portraits');
+      const block = memoryPromptBlock();
+      const lines = block.split('\n');
+      expect(lines[0]).toBe(HEADER);
+      // Newest first: prefers 85mm portraits was added second
+      expect(lines[1]).toBe('- prefers 85mm portraits');
+      expect(lines[2]).toBe('- speaks German');
+    });
+
+    it('does not have a trailing newline', async () => {
+      await initMemoriesStore();
+      await addMemory('test fact');
+      const block = memoryPromptBlock();
+      expect(block.endsWith('\n')).toBe(false);
+    });
+
+    it('ignores memories that were deleted', async () => {
+      await initMemoriesStore();
+      const m = await addMemory('temporary');
+      await addMemory('permanent');
+      await deleteMemory(m!.id);
+      const block = memoryPromptBlock();
+      expect(block).toContain('- permanent');
+      expect(block).not.toContain('- temporary');
+    });
   });
 
   it('dual-writes to localStorage on add', async () => {
@@ -101,6 +151,51 @@ describe('memoryStorage', () => {
     const ls = JSON.parse(localStorage.getItem('assistantMemories') || '[]');
     expect(ls).toHaveLength(1);
     expect(ls[0].fact).toBe('dual-write test');
+  });
+
+  // ── Idempotency ──
+
+  it('does not re-read localStorage on second call (same-session early return)', async () => {
+    // Seed localStorage with legacy data
+    const legacyData = [{ id: '1', fact: 'migrated', createdAt: 100 }];
+    _lsStore.set('assistantMemories', JSON.stringify(legacyData));
+
+    const getItemSpy = vi.spyOn(globalThis.localStorage, 'getItem');
+
+    // First call: migrates from localStorage
+    await initMemoriesStore();
+    expect(getItemSpy).toHaveBeenCalledWith('assistantMemories');
+    expect(getMemoriesSync()).toHaveLength(1);
+    getItemSpy.mockClear();
+
+    // Second call: _initialized guard returns early, no localStorage read
+    await initMemoriesStore();
+    expect(getItemSpy).not.toHaveBeenCalled();
+    expect(getMemoriesSync()).toHaveLength(1);
+  });
+
+  it('does not re-migrate after _testReset when migration flag exists', async () => {
+    // First call — migrate from localStorage into IDB
+    const legacyData = [{ id: '2', fact: 'persisted fact', createdAt: 200 }];
+    _lsStore.set('assistantMemories', JSON.stringify(legacyData));
+    await initMemoriesStore();
+    expect(getMemoriesSync()).toHaveLength(1);
+    expect(getMemoriesSync()[0].fact).toBe('persisted fact');
+
+    // Manually seed migration flag (mock put/get key-style mismatch workaround)
+    _store.set('keyval:migrated_memories_v2', true);
+
+    // Simulate new session
+    _testReset();
+    _lsStore.clear(); // No legacy data in localStorage on reload
+
+    const getItemSpy = vi.spyOn(globalThis.localStorage, 'getItem');
+
+    // Re-init: should skip migration, load from IDB
+    await initMemoriesStore();
+    expect(getItemSpy).not.toHaveBeenCalledWith('assistantMemories');
+    expect(getMemoriesSync()).toHaveLength(1);
+    expect(getMemoriesSync()[0].fact).toBe('persisted fact');
   });
 
   it('returns null when IDB write fails', async () => {

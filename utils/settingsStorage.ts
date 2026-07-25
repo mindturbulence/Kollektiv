@@ -69,7 +69,7 @@ export const defaultLLMSettings: LLMSettings = {
   dashboardImageUrl: '/background-large.jpg',
 
   // Audio Settings
-  musicYoutubeUrl: 'https://www.youtube.com/watch?v=wZz3c7wOqFQ',
+  musicYoutubeUrl: 'https://www.youtube.com/watch?v=_Iw7dkteKHw',
   musicEnabled: true,
   idleScreenType: 'matrix',
   isIdleEnabled: true,
