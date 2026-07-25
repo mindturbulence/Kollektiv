@@ -17,6 +17,7 @@ import { executeAssistantTool, AssistantTool } from './assistantTools';
 import { loadMcpAssistantTools } from './mcpAssistantTools';
 import { browserControlService } from './browserControlService';
 import { externalBrowserService } from './externalBrowserService';
+import { ReconnectManager } from '../utils/reconnectManager';
 
 export interface OpenAILiveHandlers {
     onStatus: (s: 'connecting' | 'live' | 'closed' | 'error', detail?: string) => void;
@@ -51,6 +52,19 @@ export class OpenAIRealtimeAssistant {
     private settings!: LLMSettings;
     private mcpTools: AssistantTool[] = [];
     private ephemeralKey: string | null = null;
+    private reconnectManager = new ReconnectManager({
+        maxRetries: 5,
+        baseDelayMs: 1000,
+        onAttempt: (attempt, _delay) => {
+            this.handlers?.onStatus('connecting', `Reconnecting (${attempt}/5)…`);
+        },
+        onSuccess: () => {
+            this.handlers?.onStatus('live');
+        },
+        onFailure: (msg) => {
+            this.handlers?.onStatus('error', msg);
+        },
+    });
 
     async connect(settings: LLMSettings, handlers: OpenAILiveHandlers): Promise<void> {
         this.settings = settings;
@@ -128,6 +142,20 @@ export class OpenAIRealtimeAssistant {
         const answerSdp = await sdpResponse.text();
         await this.pc.setRemoteDescription({ type: 'answer', sdp: answerSdp });
 
+        // Monitor peer connection state for unexpected drops
+        this.pc.onconnectionstatechange = () => {
+            const state = this.pc?.connectionState;
+            if (state === 'disconnected' || state === 'failed') {
+                console.error('[OpenAIRealtime] connection lost', state);
+                handlers.onStatus('error', `Connection ${state}`);
+                this.reconnectManager.start(async () => {
+                    this.disconnect();
+                    await this.connect(this.settings, this.handlers);
+                });
+            }
+        };
+
+        this.reconnectManager.reportSuccess();
         handlers.onStatus('live');
         console.debug('[OpenAIRealtime] connected');
     }
@@ -219,6 +247,7 @@ export class OpenAIRealtimeAssistant {
 
     disconnect(): void {
         this.ephemeralKey = null;
+        this.reconnectManager.cancel();
         this.stopScreenShare();
         this.stopCamera();
         if (this.audioEl) {

@@ -6,6 +6,60 @@ import { parseActionBlock, visibleText } from './assistantProtocol';
 import { getOllamaConfig } from './ollamaService';
 import { memoryPromptBlock } from '../utils/memoryStorage';
 import { loadMcpAssistantTools } from './mcpAssistantTools';
+import type { WorkingMemoryEntry } from './memoryTierService';
+
+/**
+ * Build an optional "Relevant Knowledge" block for the assistant's system prompt.
+ *
+ * Searches the knowledge index (long-term + knowledge tiers), memory tier service
+ * (working memory), and relationship graph for items relevant to the user's
+ * latest message. Returns a formatted string suitable for injection into
+ * buildSystemIdentity(), or an empty string if nothing relevant is found.
+ *
+ * This is async because knowledgeService.search() and memoryTierService.searchAll()
+ * both perform async reads. It's called by each turn runner before building the
+ * system identity — buildSystemIdentity itself remains synchronous.
+ */
+export async function buildKnowledgeContextBlock(context: string): Promise<string> {
+    const q = context.trim();
+    if (!q) return '';
+
+    const sections: string[] = [];
+
+    // 1. Knowledge service: search long-term + knowledge tiers for relevant vault content
+    try {
+        const { knowledgeService } = await import('./knowledgeService');
+        const results = await knowledgeService.search({
+            query: q,
+            kinds: ['memory', 'note', 'vault_note', 'prompt'],
+            tiers: ['long-term', 'knowledge'],
+            maxResults: 8,
+        });
+        if (results.length > 0) {
+            const items = results.map((r) => {
+                const tagStr = r.ref.tags.length ? ` [${r.ref.tags.slice(0, 3).join(', ')}${r.ref.tags.length > 3 ? '…' : ''}]` : '';
+                const snippet = r.snippet && r.snippet !== r.ref.title
+                    ? `\n    ${r.snippet.replace(/\n/g, '\n    ').slice(0, 200)}`
+                    : '';
+                return `- [${r.ref.kind}] ${r.ref.title}${tagStr}${snippet}`;
+            });
+            sections.push(`## Vault Knowledge\n\nUseful context from your notes and memories:\n${items.join('\n')}`);
+        }
+    } catch { /* knowledge service unavailable — skip */ }
+
+    // 2. Memory tier service: search working memory for recent context
+    try {
+        const { memoryTierService } = await import('./memoryTierService');
+        const allResults = await memoryTierService.searchAll(q, 5);
+        const workingEntries = allResults.filter((r): r is { kind: 'working'; workingEntry: WorkingMemoryEntry; snippet: string; score: number } => r.kind === 'working');
+        if (workingEntries.length > 0) {
+            sections.push(`## Recent Conversation Context\n\nFrom the current session:\n${workingEntries.map((r) => `- ${r.snippet.replace(/\n/g, ' ').slice(0, 150)}`).join('\n')}`);
+        }
+    } catch { /* memory tier service unavailable — skip */ }
+
+    if (sections.length === 0) return '';
+    return `\n\n${sections.join('\n\n')}`;
+}
 
 export type ChatMsg = { role: 'user' | 'assistant' | 'system'; content: string; attachments?: { data: string; mimeType: string; fileName?: string }[] };
 
@@ -27,7 +81,7 @@ const WORKSPACE_CAPABILITIES = `Workspace pages and what's on them. Call the nam
 - Abstractor (Media Analyzer): reverse-engineer a prompt from an image the user attached to the chat = abstract_image (fails if no image is attached — it cannot read files off disk, only chat attachments). UI-only: Read Metadata (needs the original file, not available from chat), Save Workflow, Copy Raw.
 - YouTube Search & Play: search YouTube = youtube_search, play a YouTube video = play_media.
 - Spotify (requires Spotify connected in Settings > Integrations > Spotify): list your playlists = spotify_list_playlists, get playlist tracks = spotify_get_playlist_tracks, play track/playlist = play_media.
-- Obsidian Second Brain (connect vault in Settings > Integrations > Obsidian Second Brain): search vault = obsidian_search_notes, read a note = obsidian_get_note, create/overwrite note = obsidian_write_note, list folder = obsidian_list_notes, list all tags = obsidian_list_tags, append to note/section = obsidian_append_to_note, find-and-replace = obsidian_patch_note / obsidian_replace_in_note, manage frontmatter key = obsidian_manage_frontmatter, add/remove/list tags = obsidian_manage_tags, delete note = obsidian_delete_note, open in viewer = obsidian_open_in_ui.
+- Obsidian Second Brain: enables vault tools (search, read, write, list, manage tags/frontmatter, delete notes) via MCP. Toggle the obsidian-vault preset in Settings > MCP Servers > Predefined, with OBSIDIAN_VAULT_PATH set on the server.
 Elsewhere: long-term memory = remember/list_memories/forget, manage your Notes panel = save_note/list_notes/update_note/delete_note, save a text/markdown file into the vault (shows in Notes panel > Files) = save_file, show a web page to the user in the in-app viewer = open_web_page, play a YouTube video or Spotify track in the in-app media player = play_media, search the live web = web_search, read a web page yourself = fetch_url, search/save the prompt library = search_prompts/save_prompt, search the gallery = search_gallery, get/delete gallery items = get_gallery_item/delete_gallery_item, save content to gallery = save_to_gallery, search cheatsheets = search_cheatsheets, change settings = update_settings, navigate the app = navigate, browse discovery collections = list_discovery_collections/search_discovery_prompts.
 - Gmail (requires Google Identity connected in Settings > App > Storage): read emails = read_gmail (list/search/read), send emails = send_gmail, trash/delete emails = delete_gmail.
 - MCP Servers (Settings > MCP Servers): see what's configured = list_mcp_servers, turn a Predefined server (Firecrawl, Brave Search, Playwright) on/off = toggle_mcp_server — all Predefined servers are off by default, only enable one when the user asks.
@@ -42,8 +96,14 @@ Elsewhere: long-term memory = remember/list_memories/forget, manage your Notes p
  * llmService.ts's masterRolePrompt handling); it was never reaching the
  * assistant's own identity, so its "applied to every LLM request" description
  * was false for the one place users talk to the AI directly. Prepending it
- * here, same convention as llmService.ts (prepend, blank-line separated). */
-export const buildSystemIdentity = (settings: LLMSettings, sourceContext?: SourceContext[]): string => {
+ * here, same convention as llmService.ts (prepend, blank-line separated).
+ *
+ * @param context Optional user message text used to filter memories via
+ *   memoryPromptBlock(context). Only memories relevant to the user's latest
+ *   message are injected, saving tokens.
+ * @param knowledgeBlock Optional pre-computed knowledge context block (from
+ *   buildKnowledgeContextBlock). Injected after memories, before pinned sources. */
+export const buildSystemIdentity = (settings: LLMSettings, sourceContext?: SourceContext[], context?: string, knowledgeBlock?: string): string => {
     const name = settings.assistantName?.trim() || 'the Kollektiv assistant';
     const lines = [
         `You are ${name}, embedded in a local-first creative suite for prompt engineering and media management. Be concise. Use your tools to act on the app when the user asks for something the tools can do; report what you did.`,
@@ -58,8 +118,8 @@ export const buildSystemIdentity = (settings: LLMSettings, sourceContext?: Sourc
     const withMasterRole = settings.masterRolePrompt?.trim()
         ? `${settings.masterRolePrompt.trim()}\n\n${identity}`
         : identity;
-    const memoryBlock = memoryPromptBlock();
-    let result = `${withMasterRole}\n\n${WORKSPACE_CAPABILITIES}${memoryBlock ? `\n\n${memoryBlock}` : ''}`;
+    const memoryBlock = memoryPromptBlock(context);
+    let result = `${withMasterRole}\n\n${WORKSPACE_CAPABILITIES}${memoryBlock ? `\n\n${memoryBlock}` : ''}${knowledgeBlock || ''}`;
     if (sourceContext?.length) {
         result += `\n\n## Pinned Sources\n\n`;
         sourceContext.forEach((s, i) => {
@@ -99,6 +159,9 @@ export async function* runAssistantTurn(messages: ChatMsg[], settings: LLMSettin
     }
 }
 
+const latestUserMessage = (messages: ChatMsg[]): string =>
+    [...messages].reverse().find(m => m.role === 'user')?.content || '';
+
 const latestAttachments = (messages: ChatMsg[]) =>
     [...messages].reverse().find(m => m.role === 'user' && m.attachments?.length)?.attachments;
 
@@ -109,7 +172,9 @@ async function* runGeminiTurn(messages: ChatMsg[], settings: LLMSettings, source
     const allTools = mcpTools.length ? [...ASSISTANT_TOOLS, ...mcpTools] : ASSISTANT_TOOLS;
     const ai = getGeminiClient(settings);
     const model = settings.llmModel || 'gemini-3.5-flash';
-    const systemText = [buildSystemIdentity(settings, sourceContext), ...messages.filter(m => m.role === 'system').map(m => m.content)].join('\n\n');
+    const context = latestUserMessage(messages);
+    const knowledgeBlock = await buildKnowledgeContextBlock(context);
+    const systemText = [buildSystemIdentity(settings, sourceContext, context, knowledgeBlock), ...messages.filter(m => m.role === 'system').map(m => m.content)].join('\n\n');
     const attachments = latestAttachments(messages);
     const contents: any[] = messages
         .filter(m => m.role !== 'system')
@@ -179,8 +244,10 @@ async function* runFallbackTurn(messages: ChatMsg[], settings: LLMSettings, sour
     // it — streamChat would otherwise inject it a second time.
     const chatSettings: LLMSettings = { ...settings, activeLLM: provider as LLMSettings['activeLLM'], masterRolePrompt: '' };
     const attachments = latestAttachments(messages);
+    const context = latestUserMessage(messages);
+    const knowledgeBlock = await buildKnowledgeContextBlock(context);
     const convo: ChatMsg[] = [
-        { role: 'system', content: fallbackProtocolPrompt(buildSystemIdentity(settings, sourceContext), allTools) },
+        { role: 'system', content: fallbackProtocolPrompt(buildSystemIdentity(settings, sourceContext, context, knowledgeBlock), allTools) },
         ...messages.filter(m => m.role !== 'system'),
     ];
 
@@ -221,9 +288,11 @@ async function* runOllamaTurn(messages: ChatMsg[], settings: LLMSettings, source
         yield { type: 'turn_end' };
         return;
     }
+    const context = latestUserMessage(messages);
     const attachments = latestAttachments(messages);
+    const knowledgeBlock = await buildKnowledgeContextBlock(context);
     const convo: any[] = [
-        { role: 'system', content: buildSystemIdentity(settings, sourceContext) },
+        { role: 'system', content: buildSystemIdentity(settings, sourceContext, context, knowledgeBlock) },
         ...messages.filter(m => m.role !== 'system').map(m => {
             const msg: any = { role: m.role, content: m.content };
             const images = (m.attachments || [])
@@ -295,9 +364,11 @@ async function* runOpenRouterTurn(messages: ChatMsg[], settings: LLMSettings, so
         return;
     }
     const model = settings.openrouterModel || 'openrouter/auto';
+    const context = latestUserMessage(messages);
     const attachments = latestAttachments(messages);
+    const knowledgeBlock = await buildKnowledgeContextBlock(context);
     const convo: any[] = [
-        { role: 'system', content: buildSystemIdentity(settings, sourceContext) },
+        { role: 'system', content: buildSystemIdentity(settings, sourceContext, context, knowledgeBlock) },
         ...messages.filter(m => m.role !== 'system').map(m => {
             const images = (m.attachments || []).filter(a => a.mimeType.startsWith('image/'));
             if (!images.length) return { role: m.role, content: m.content };

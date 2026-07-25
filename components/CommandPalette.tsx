@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { searchCommands, type CommandItem } from '../constants/commandRegistry';
+import { isObsidianConnected, searchNotes, getNote, openNoteInPanel } from '../utils/obsidianStorage';
 
 interface CommandPaletteProps {
   isOpen: boolean;
@@ -18,18 +19,69 @@ const CommandPalette: React.FC<CommandPaletteProps> = ({ isOpen, onClose }) => {
     if (isOpen) {
       setQuery('');
       setSelectedIndex(0);
+      setVaultResults([]);
+      setVaultLoading(false);
       setTimeout(() => inputRef.current?.focus(), 50);
     }
   }, [isOpen]);
 
+  // ── Static command search ─────────────────────────────────────────
   const results = useMemo(() => searchCommands(query), [query]);
 
-  // Clamp selected index on results change
+  // ── Vault note search ─────────────────────────────────────────────
+  const [vaultResults, setVaultResults] = useState<CommandItem[]>([]);
+  const [vaultLoading, setVaultLoading] = useState(false);
+
   useEffect(() => {
-    if (selectedIndex >= results.length) {
-      setSelectedIndex(Math.max(0, results.length - 1));
+    // Only search vault when query is ≥3 chars and vault is connected
+    const trimmed = query.trim();
+    if (trimmed.length < 3 || !isObsidianConnected()) {
+      setVaultResults([]);
+      setVaultLoading(false);
+      return;
     }
-  }, [results.length, selectedIndex]);
+
+    setVaultLoading(true);
+    const timer = setTimeout(async () => {
+      try {
+        const notes = await searchNotes(trimmed, 6);
+        setVaultResults(
+          notes.map((n) => ({
+            id: `vault-note-${n.path}`,
+            label: n.title,
+            category: 'Vault Notes' as const,
+            keywords: [n.path, n.title],
+            detail: n.path,
+            execute: async () => {
+              const note = await getNote(n.path);
+              if (note) openNoteInPanel(note);
+            },
+          })),
+        );
+      } catch {
+        setVaultResults([]);
+      } finally {
+        setVaultLoading(false);
+      }
+    }, 200); // 200ms debounce
+
+    return () => {
+      clearTimeout(timer);
+      setVaultLoading(false);
+    };
+  }, [query]);
+
+  // Clamp selected index on results + vault results change
+  const totalResults = useMemo(
+    () => [...results, ...vaultResults],
+    [results, vaultResults],
+  );
+
+  useEffect(() => {
+    if (selectedIndex >= totalResults.length) {
+      setSelectedIndex(Math.max(0, totalResults.length - 1));
+    }
+  }, [totalResults.length, selectedIndex]);
 
   const execute = useCallback((cmd: CommandItem) => {
     cmd.execute();
@@ -37,26 +89,27 @@ const CommandPalette: React.FC<CommandPaletteProps> = ({ isOpen, onClose }) => {
   }, [onClose]);
 
   const handleKeyDown = useCallback((e: React.KeyboardEvent) => {
+    const len = totalResults.length;
     switch (e.key) {
       case 'ArrowDown':
         e.preventDefault();
-        setSelectedIndex(i => (i + 1) % Math.max(1, results.length));
+        setSelectedIndex(i => (i + 1) % Math.max(1, len));
         break;
       case 'ArrowUp':
         e.preventDefault();
-        setSelectedIndex(i => (i - 1 + results.length) % Math.max(1, results.length));
+        setSelectedIndex(i => (i - 1 + len) % Math.max(1, len));
         break;
       case 'Enter':
       case 'Tab':
         e.preventDefault();
-        if (results[selectedIndex]) execute(results[selectedIndex]);
+        if (totalResults[selectedIndex]) execute(totalResults[selectedIndex]);
         break;
       case 'Escape':
         e.preventDefault();
         onClose();
         break;
     }
-  }, [results, selectedIndex, execute, onClose]);
+  }, [totalResults, selectedIndex, execute, onClose]);
 
   // Auto-scroll selected into view
   useEffect(() => {
@@ -65,16 +118,17 @@ const CommandPalette: React.FC<CommandPaletteProps> = ({ isOpen, onClose }) => {
     el?.scrollIntoView({ block: 'nearest' });
   }, [selectedIndex]);
 
-  // Group results by category for display
+  // Group results by category for display (commands + vault notes)
   const grouped = useMemo(() => {
+    const all = [...results, ...vaultResults];
     const map = new Map<string, CommandItem[]>();
-    for (const cmd of results) {
+    for (const cmd of all) {
       const list = map.get(cmd.category) || [];
       list.push(cmd);
       map.set(cmd.category, list);
     }
     return Array.from(map.entries());
-  }, [results]);
+  }, [results, vaultResults]);
 
   return (
     <AnimatePresence>
@@ -116,14 +170,22 @@ const CommandPalette: React.FC<CommandPaletteProps> = ({ isOpen, onClose }) => {
                 aria-expanded={isOpen}
                 aria-controls="command-palette-listbox"
                 aria-autocomplete="list"
-                aria-activedescendant={results[selectedIndex] ? `cmd-option-${selectedIndex}` : undefined}
+                aria-activedescendant={totalResults[selectedIndex] ? `cmd-option-${selectedIndex}` : undefined}
               />
               <kbd className="text-[9px] font-mono uppercase tracking-widest text-base-content/20 border border-base-content/10 px-1.5 py-0.5">⌘K</kbd>
             </div>
 
             {/* Results */}
             <div ref={listRef} id="command-palette-listbox" role="listbox" className="max-h-[400px] overflow-y-auto custom-scrollbar py-2">
-              {grouped.length === 0 ? (
+              {grouped.length === 0 && vaultLoading ? (
+                <div className="px-5 py-8 text-center text-xs font-mono text-base-content/20 uppercase tracking-widest flex flex-col items-center gap-3">
+                  <span className="relative flex h-2.5 w-2.5">
+                    <span className="absolute inline-flex h-full w-full rounded-full bg-primary opacity-60 animate-ping" />
+                    <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-primary" />
+                  </span>
+                  searching vault…
+                </div>
+              ) : grouped.length === 0 ? (
                 <div className="px-5 py-8 text-center text-xs font-mono text-base-content/20 uppercase tracking-widest">
                   No matching commands
                 </div>
@@ -134,7 +196,7 @@ const CommandPalette: React.FC<CommandPaletteProps> = ({ isOpen, onClose }) => {
                       {category}
                     </div>
                     {commands.map((cmd) => {
-                      const globalIdx = results.indexOf(cmd);
+                      const globalIdx = totalResults.indexOf(cmd);
                       return (
                         <button
                           key={cmd.id}
@@ -150,7 +212,12 @@ const CommandPalette: React.FC<CommandPaletteProps> = ({ isOpen, onClose }) => {
                               : 'text-base-content/70 hover:bg-base-content/5'
                           }`}
                         >
-                          <span className="flex-1 text-sm font-medium truncate">{cmd.label}</span>
+                          <span className="flex flex-col flex-1 min-w-0">
+                            <span className="text-sm font-medium truncate">{cmd.label}</span>
+                            {cmd.detail && (
+                              <span className="text-[10px] font-mono text-base-content/30 truncate">{cmd.detail}</span>
+                            )}
+                          </span>
                           {cmd.shortcut && (
                             <kbd className="text-[9px] font-mono text-base-content/20 border border-base-content/10 px-1.5 py-0.5 shrink-0">
                               {cmd.shortcut}

@@ -10,7 +10,7 @@ import CommandPalette from './CommandPalette';
 
 // Layout & Global Components
 import Header from './Header';
-import Welcome from './Welcome';
+import OnboardingFlow from './OnboardingFlow';
 import CustomCursor from './CustomCursor';
 import AboutModal from './AboutModal';
 import ClippingPanel from './ClippingPanel';
@@ -385,7 +385,7 @@ const AppContent: React.FC = () => {
     const handleCloseClippingPanel = useCallback(() => setIsClippingPanelOpen(false), [setIsClippingPanelOpen]);
     const handleIdleInteraction = useCallback(() => resetIdleTimer(true), [resetIdleTimer]);
 
-    if (showWelcome) return <Welcome onSetupComplete={initializeApp} />;
+    if (showWelcome) return <OnboardingFlow onSetupComplete={initializeApp} />;
 
     return (
         <LiveAssistantProvider>

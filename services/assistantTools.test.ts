@@ -135,6 +135,183 @@ describe('fallbackProtocolPrompt', () => {
     });
 });
 
+// ── Knowledge lifecycle mock ──
+
+const mockKnowledgeLifecycleRef = (overrides: Record<string, unknown> = {}) => ({
+  kind: 'note',
+  id: 'note_001',
+  title: 'Test Note',
+  sourcePath: 'knowledge/inbox/test_note.md',
+  tier: 'long-term',
+  tags: ['test'],
+  lastAccessedAt: 1000,
+  accessCount: 0,
+  ...overrides,
+});
+
+const mockKnowledgeList = vi.fn();
+const mockKnowledgeRecall = vi.fn();
+const mockKnowledgeServicePromote = vi.fn();
+const mockLifecycleStageFromPath = vi.fn();
+const mockLifecyclePromote = vi.fn();
+
+vi.mock('./knowledgeService', () => ({
+  knowledgeService: {
+    list: mockKnowledgeList,
+    recall: mockKnowledgeRecall,
+    promote: mockKnowledgeServicePromote,
+  },
+}));
+
+vi.mock('./knowledgeLifecycle', () => ({
+  knowledgeLifecycle: {
+    stageFromPath: mockLifecycleStageFromPath,
+    promote: mockLifecyclePromote,
+  },
+}));
+
+describe('knowledge_lifecycle_promote', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  it('is listed in ASSISTANT_TOOLS', () => {
+    const tool = ASSISTANT_TOOLS.find(t => t.name === 'knowledge_lifecycle_promote');
+    expect(tool).toBeDefined();
+    expect(tool!.description).toContain('lifecycle');
+    expect(tool!.parameters.required).toEqual(['kind', 'id', 'target_stage']);
+  });
+
+  it('returns error when no matching ref found', async () => {
+    mockKnowledgeList.mockReturnValue([]);
+
+    const tool = ASSISTANT_TOOLS.find(t => t.name === 'knowledge_lifecycle_promote')!;
+    const result = await tool.execute({ kind: 'note', id: 'nonexistent', target_stage: 'projects' }, {} as any);
+
+    expect(result).toContain('Error: no note item with id "nonexistent"');
+    expect(mockKnowledgeList).toHaveBeenCalledWith(['note']);
+    expect(mockKnowledgeRecall).not.toHaveBeenCalled();
+  });
+
+  it('returns error when recall fails to load content', async () => {
+    mockKnowledgeList.mockReturnValue([mockKnowledgeLifecycleRef()]);
+    mockKnowledgeRecall.mockResolvedValue(null);
+
+    const tool = ASSISTANT_TOOLS.find(t => t.name === 'knowledge_lifecycle_promote')!;
+    const result = await tool.execute({ kind: 'note', id: 'note_001', target_stage: 'projects' }, {} as any);
+
+    expect(result).toContain('Error: could not load content for item');
+    expect(mockKnowledgeRecall).toHaveBeenCalledWith(expect.objectContaining({ id: 'note_001' }));
+  });
+
+  it('returns info when item is already at the target stage', async () => {
+    mockKnowledgeList.mockReturnValue([mockKnowledgeLifecycleRef()]);
+    mockKnowledgeRecall.mockResolvedValue('Some content');
+    mockLifecycleStageFromPath.mockReturnValue('projects');
+    mockLifecyclePromote.mockResolvedValue(null);
+
+    const tool = ASSISTANT_TOOLS.find(t => t.name === 'knowledge_lifecycle_promote')!;
+    const result = await tool.execute({ kind: 'note', id: 'note_001', target_stage: 'projects' }, {} as any);
+
+    expect(result).toContain('already in the "projects" stage');
+    expect(mockLifecyclePromote).toHaveBeenCalled();
+  });
+
+  it('promotes item to the target stage on happy path', async () => {
+    mockKnowledgeList.mockReturnValue([mockKnowledgeLifecycleRef()]);
+    mockKnowledgeRecall.mockResolvedValue('Note content here');
+    mockLifecycleStageFromPath.mockReturnValue('inbox');
+    mockLifecyclePromote.mockResolvedValue({ newPath: 'knowledge/projects/note/test_note_note_001.md', stage: 'projects' });
+
+    const tool = ASSISTANT_TOOLS.find(t => t.name === 'knowledge_lifecycle_promote')!;
+    const result = await tool.execute({ kind: 'note', id: 'note_001', target_stage: 'projects' }, {} as any);
+
+    expect(result).toContain('Moved "Test Note" from inbox → projects');
+    expect(result).toContain('knowledge/projects/note/');
+    expect(mockLifecyclePromote).toHaveBeenCalledWith(
+      'knowledge/inbox/test_note.md',
+      'inbox',
+      'projects',
+      expect.objectContaining({ kind: 'note', id: 'note_001', title: 'Test Note' }),
+      'Note content here',
+    );
+    expect(mockKnowledgeServicePromote).not.toHaveBeenCalled();
+  });
+
+  it('promotes tier to knowledge when target_stage is wiki', async () => {
+    mockKnowledgeList.mockReturnValue([mockKnowledgeLifecycleRef()]);
+    mockKnowledgeRecall.mockResolvedValue('Wiki content');
+    mockLifecycleStageFromPath.mockReturnValue('projects');
+    mockLifecyclePromote.mockResolvedValue({ newPath: 'knowledge/wiki/note/test_note_note_001.md', stage: 'wiki' });
+
+    const tool = ASSISTANT_TOOLS.find(t => t.name === 'knowledge_lifecycle_promote')!;
+    await tool.execute({ kind: 'note', id: 'note_001', target_stage: 'wiki' }, {} as any);
+
+    expect(mockKnowledgeServicePromote).toHaveBeenCalledWith(
+      expect.objectContaining({ targetTier: 'knowledge' }),
+    );
+  });
+
+  it('promotes tier to knowledge when target_stage is output', async () => {
+    mockKnowledgeList.mockReturnValue([mockKnowledgeLifecycleRef()]);
+    mockKnowledgeRecall.mockResolvedValue('Output content');
+    mockLifecycleStageFromPath.mockReturnValue('inbox');
+    mockLifecyclePromote.mockResolvedValue({ newPath: 'knowledge/output/note/test_note_note_001.md', stage: 'output' });
+
+    const tool = ASSISTANT_TOOLS.find(t => t.name === 'knowledge_lifecycle_promote')!;
+    await tool.execute({ kind: 'note', id: 'note_001', target_stage: 'output' }, {} as any);
+
+    expect(mockKnowledgeServicePromote).toHaveBeenCalledWith(
+      expect.objectContaining({ targetTier: 'knowledge' }),
+    );
+  });
+
+  it('does not promote tier for inbox or projects targets', async () => {
+    mockKnowledgeList.mockReturnValue([mockKnowledgeLifecycleRef()]);
+    mockKnowledgeRecall.mockResolvedValue('Content');
+    mockLifecycleStageFromPath.mockReturnValue('inbox');
+    mockLifecyclePromote.mockResolvedValue({ newPath: 'knowledge/projects/note/test_note_note_001.md', stage: 'projects' });
+
+    const tool = ASSISTANT_TOOLS.find(t => t.name === 'knowledge_lifecycle_promote')!;
+    await tool.execute({ kind: 'note', id: 'note_001', target_stage: 'projects' }, {} as any);
+
+    expect(mockKnowledgeServicePromote).not.toHaveBeenCalled();
+  });
+
+  it('uses inbox as fallback when sourcePath is undefined', async () => {
+    const refNoPath = mockKnowledgeLifecycleRef({ sourcePath: undefined });
+    mockKnowledgeList.mockReturnValue([refNoPath]);
+    mockKnowledgeRecall.mockResolvedValue('Content');
+    mockLifecyclePromote.mockResolvedValue({ newPath: 'knowledge/projects/note/test_note_note_001.md', stage: 'projects' });
+
+    const tool = ASSISTANT_TOOLS.find(t => t.name === 'knowledge_lifecycle_promote')!;
+    const result = await tool.execute({ kind: 'note', id: 'note_001', target_stage: 'projects' }, {} as any);
+
+    expect(result).toContain('from inbox → projects');
+    // stageFromPath should NOT be called when there's no sourcePath
+    expect(mockLifecycleStageFromPath).not.toHaveBeenCalled();
+  });
+});
+
+describe('Gemini tool declarations (knowledge_lifecycle_promote)', () => {
+  it('includes knowledge_lifecycle_promote in Gemini declarations', () => {
+    const decls = geminiToolDeclarations();
+    const promote = decls.find(d => d.name === 'knowledge_lifecycle_promote');
+    expect(promote).toBeDefined();
+    expect(promote!.description).toContain('lifecycle');
+    expect(promote!.parameters.properties.kind).toBeDefined();
+    expect(promote!.parameters.properties.target_stage).toBeDefined();
+    expect(promote!.parameters.required).toContain('kind');
+  });
+
+  it('includes knowledge_lifecycle_promote in Ollama declarations', () => {
+    const decls = ollamaToolDeclarations();
+    const promote = decls.find(d => d.function.name === 'knowledge_lifecycle_promote');
+    expect(promote).toBeDefined();
+    expect(promote!.function.description).toContain('lifecycle');
+  });
+});
+
 // ── Obsidian tool error paths ──
 
 describe('Obsidian tool error paths', () => {

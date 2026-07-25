@@ -1436,12 +1436,8 @@ async function startServer() {
     });
   }
 
-  // New opt-in path: direct vault access via kollektivMcp.ts (services/kollektivMcp.ts),
-  // superseding the legacy obsidian-mcp-server child process below. Kept side-by-side
-  // (not a replacement) so the existing OBSIDIAN_API_KEY setup keeps working untouched —
-  // see ISSUE-14 in ISSUES.md: the new module's tool names (read_note, search_notes, ...)
-  // differ from the old obsidian_* names, so WORKSPACE_CAPABILITIES and the assistant's
-  // obsidian_ prefix filter haven't been migrated yet. Only one of the two paths runs.
+  // Vault MCP server — enables Obsidian vault tools when OBSIDIAN_VAULT_PATH is set in the environment.
+  // Toggle the obsidian-vault preset in Settings > MCP Servers > Predefined to connect.
   let kollektivMcpInstance: KollektivMcpInstance | null = null;
   const startKollektivMcpVault = async () => {
     if (!process.env.OBSIDIAN_VAULT_PATH) return;
@@ -1452,38 +1448,7 @@ async function startServer() {
     }
   };
 
-  // Start Obsidian MCP server as child process (opt-in: requires OBSIDIAN_API_KEY in the environment)
-  let obsidianMcpProc: ReturnType<typeof spawn> | null = null;
-  const startObsidianMcp = () => {
-    if (obsidianMcpProc) return;
-    if (process.env.OBSIDIAN_VAULT_PATH) return; // new path (above) already owns port 3012
-    if (!process.env.OBSIDIAN_API_KEY) {
-      console.log(`[Obsidian MCP] OBSIDIAN_API_KEY not set — skipping local Obsidian bridge.`);
-      return;
-    }
-    const env = {
-      ...process.env,
-      OBSIDIAN_BASE_URL: process.env.OBSIDIAN_BASE_URL || "https://127.0.0.1:27124",
-      OBSIDIAN_VERIFY_SSL: process.env.OBSIDIAN_VERIFY_SSL || "false",
-      MCP_TRANSPORT_TYPE: "http",
-      MCP_HTTP_PORT: "3012",
-    };
-    obsidianMcpProc = spawn("npx -y obsidian-mcp-server@latest", [], {
-      env,
-      shell: true, // needed on Windows
-      stdio: ["ignore", "pipe", "pipe"],
-    });
-    obsidianMcpProc.stdout?.on("data", (d) => console.log(`[Obsidian MCP] ${d.toString().trim()}`));
-    obsidianMcpProc.stderr?.on("data", (d) => console.error(`[Obsidian MCP] ${d.toString().trim()}`));
-    obsidianMcpProc.on("exit", (code) => {
-      console.log(`[Obsidian MCP] exited with code ${code}`);
-      obsidianMcpProc = null;
-    });
-    console.log(`[Obsidian MCP] starting on http://127.0.0.1:3012/mcp`);
-  };
-
   void startKollektivMcpVault();
-  startObsidianMcp();
 
   // Start Playwright MCP server as child process — no API key needed, so it
   // always starts (matches the Predefined MCP tab's Playwright preset, which
@@ -1538,10 +1503,6 @@ async function startServer() {
       console.log(`[Kollektiv MCP] shutting down...`);
       void kollektivMcpInstance.stop();
     }
-    if (obsidianMcpProc) {
-      console.log(`[Obsidian MCP] shutting down...`);
-      obsidianMcpProc.kill();
-    }
     if (playwrightMcpProc) {
       console.log(`[Playwright MCP] shutting down...`);
       playwrightMcpProc.kill();
@@ -1560,7 +1521,6 @@ async function startServer() {
   // elsewhere, either of which would otherwise leave chromeLauncher's Chrome
   // process (and the MCP child processes) orphaned.
   const killChildProcessesSync = () => {
-    if (obsidianMcpProc) obsidianMcpProc.kill();
     if (playwrightMcpProc) playwrightMcpProc.kill();
     if (chromeLauncher.isRunning) chromeLauncher.kill();
   };

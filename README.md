@@ -22,17 +22,23 @@ Kollektiv is a high-performance, local-first application designed for prompt eng
 ### 3. Creative Utilities
 *   **Grid Composer**: Build professional image grids and contact sheets with custom matting, typography overlays, and ratio control (1:1, 4:5, 9:16).
 *   **Palette Extractor**: Deconstruct visual artifacts into precise chromatic tokens and atmospheric mood data.
-*   **Video Suite**: Precision frame extraction (via FFmpeg WASM) and a video joiner for temporal consistency studies and sequence merging.
+*   **Video Suite**: Frame extraction and a video joiner for temporal consistency studies and sequence merging.
 *   **Artifact Comparison**: Synchronized viewports for pixel-accurate, side-by-side evaluation of model outputs and prompt variations.
 
 ## 🛠 Tech Stack
 
 *   **Frontend**: React 19, TypeScript, Vite
 *   **Styling**: Tailwind CSS 3, DaisyUI
-*   **Animation**: GSAP (GreenSock) & Framer Motion for cinematic UI transitions and micro-interactions.
+*   **Animation**: GSAP (GreenSock) & Motion (motion/react) for cinematic UI transitions and micro-interactions.
 *   **AI Engines**: Google Gemini API (`@google/genai`), Ollama (Local/Remote)
 *   **Storage**: Browser File System Access API, IndexedDB (`idb`)
-*   **Utilities**: FFmpeg.wasm, JSZip, UUID, Lottie
+*   **Utilities**: JSZip, UUID, Lottie
+
+> **2026-07-25 — Dependency cleanup:** Removed 9 unused runtime dependencies
+> (`@apify/actors-mcp-server`, `@babel/generator`, `@dsnp/parquetjs`,
+> `@elevenlabs/react`, `@ffmpeg/ffmpeg`, `@ffmpeg/util`, `framer-motion`,
+> `onnxruntime-web`, `vfile`) and added the missing explicit dependency
+> `@modelcontextprotocol/sdk`. Tech stack and feature descriptions above updated accordingly.
 
 ---
 

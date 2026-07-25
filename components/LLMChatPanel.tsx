@@ -9,7 +9,7 @@ import Markdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter';
 import { vscDarkPlus } from 'react-syntax-highlighter/dist/esm/styles/prism';
-import { getChatSessionsSync, getChatMessagesSync, saveChatSession, deleteChatSession, clearAllChatSessions, loadChatMessages, ChatSession, ChatSessionStored } from '../utils/chatStorage';
+import { getChatSessionsSync, saveChatSession, deleteChatSession, clearAllChatSessions, loadRecentMessages, loadMessagesBefore, ChatSession, ChatSessionStored } from '../utils/chatStorage';
 import { v4 as uuidv4 } from 'uuid';
 import { appControlService } from '../services/appControlService';
 import { appEventBus } from '../utils/eventBus';
@@ -36,6 +36,9 @@ export const LLMChatPanel: React.FC<LLMChatPanelProps> = ({ isOpen, onClose }) =
     const [researchMode, setResearchMode] = useState(false);
     const [savedSessions, setSavedSessions] = useState<ChatSessionStored[]>(() => getChatSessionsSync());
     const [activeSessionId, setActiveSessionId] = useState<string | null>(null);
+    const [hasMoreMessages, setHasMoreMessages] = useState(false);
+    const [loadedUpToTimestamp, setLoadedUpToTimestamp] = useState<number | null>(null);
+    const [isLoadingMore, setIsLoadingMore] = useState(false);
 
     // Initial load
     useEffect(() => {
@@ -70,6 +73,8 @@ export const LLMChatPanel: React.FC<LLMChatPanelProps> = ({ isOpen, onClose }) =
     const startNewSession = useCallback(() => {
         setMessages([{ role: 'system', content: `Type /help to see available local commands.` }]);
         setActiveSessionId(null);
+        setHasMoreMessages(false);
+        setLoadedUpToTimestamp(null);
         if (window.innerWidth < 768) setIsSidebarOpen(false);
     }, []);
 
@@ -77,10 +82,14 @@ export const LLMChatPanel: React.FC<LLMChatPanelProps> = ({ isOpen, onClose }) =
         const session = savedSessions.find(s => s.id === id);
         if (session) {
             setActiveSessionId(id);
-            // Load messages from IDB (sync cache first, then async refresh)
-            let stored = getChatMessagesSync(id);
-            if (!stored.length) {
-                stored = await loadChatMessages(id);
+            setHasMoreMessages(false);
+            setLoadedUpToTimestamp(null);
+
+            // Load only the most recent messages (chunked)
+            const { messages: stored, hasMore } = await loadRecentMessages(id);
+            setHasMoreMessages(hasMore);
+            if (stored.length > 0) {
+                setLoadedUpToTimestamp(stored[0].createdAt);
             }
             setMessages(stored.map(m => ({
                 role: m.role,
@@ -90,6 +99,30 @@ export const LLMChatPanel: React.FC<LLMChatPanelProps> = ({ isOpen, onClose }) =
             if (window.innerWidth < 768) setIsSidebarOpen(false);
         }
     };
+
+    const loadMoreMessages = useCallback(async () => {
+        if (!activeSessionId || isLoadingMore || !hasMoreMessages) return;
+        setIsLoadingMore(true);
+        try {
+            const { messages: older, hasMore } = await loadMessagesBefore(activeSessionId, loadedUpToTimestamp!);
+            setHasMoreMessages(hasMore);
+            if (older.length > 0) {
+                setLoadedUpToTimestamp(older[0].createdAt);
+                setMessages(prev => [
+                    ...older.map(m => ({
+                        role: m.role,
+                        content: m.content,
+                        attachments: m.attachments_json ? JSON.parse(m.attachments_json) : undefined,
+                    })),
+                    ...prev,
+                ]);
+            } else {
+                setHasMoreMessages(false);
+            }
+        } finally {
+            setIsLoadingMore(false);
+        }
+    }, [activeSessionId, isLoadingMore, hasMoreMessages, loadedUpToTimestamp]);
 
     const deleteSession = useCallback(async (id: string) => {
         await deleteChatSession(id);
@@ -519,6 +552,17 @@ ${systemResponse}` };
 
                                         {/* Messages Area */}
                                         <div className="flex-grow overflow-y-auto custom-scrollbar p-4 md:p-6 space-y-6">
+                                            {hasMoreMessages && (
+                                                <div className="flex justify-center">
+                                                    <button
+                                                        onClick={loadMoreMessages}
+                                                        disabled={isLoadingMore}
+                                                        className="btn btn-xs btn-ghost font-mono text-[10px] uppercase tracking-[0.2em] text-base-content/40 hover:text-primary/80 transition-colors disabled:opacity-30"
+                                                    >
+                                                        {isLoadingMore ? 'Loading…' : `↑ Load older messages`}
+                                                    </button>
+                                                </div>
+                                            )}
                                             {messages.map((msg, index) => (
                                                 <div key={index} className={`flex flex-col ${msg.role === 'user' ? 'items-end' : msg.role === 'system' ? 'items-center' : 'items-start'}`}>
                                                     {msg.role === 'system' && !msg.content.includes('Control Node initialized. Awaiting commands.') && (

@@ -244,8 +244,8 @@ describe('repairSettings', () => {
     });
 
     expect(repaired.geminiApiKey).toBe('keep-me');
-    expect(repaired.geminiTokenUsage.used).toBe(0); // corrupted → reset to default
-    expect(repaired.geminiTokenUsage.limit).toBe(1_000_000); // preserved
+    expect(repaired.geminiTokenUsage?.used).toBe(0); // corrupted → reset to default
+    expect(repaired.geminiTokenUsage?.limit).toBe(1_000_000); // preserved
     expect(repaired.youtube).toEqual({ isConnected: false }); // corrupted → default
     expect(repaired.mcpServers).toHaveLength(1); // only the valid entry
     expect(repaired.mcpServers[0].id).toBe('valid');

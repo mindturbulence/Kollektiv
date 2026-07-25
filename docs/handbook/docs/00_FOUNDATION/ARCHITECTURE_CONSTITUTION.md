@@ -186,7 +186,7 @@ Each `ActiveTab` maps to a top-level React component:
 | `image_compare` | `ImageCompare` | Synchronized side-by-side viewers. |
 | `color_palette_extractor` | `ColorPaletteExtractor` | Extract palette + AI mood/color naming. |
 | `resizer` | `ImageResizer` | Image resizing + Topaz upscale via server. |
-| `video_to_frames` | `VideoToFrames` | FFmpeg.wasm frame extraction. |
+| `video_to_frames` | `VideoToFrames` | Frame extraction from video uploads. |
 | `lora_editor` | `loraEditor/LoraEditorPage` | LoRA metadata/tag editor sub-app. |
 | `settings` | `SetupPage` | Settings shell over `components/settings/*` sections. |
 

@@ -1,10 +1,34 @@
 import { v4 as uuidv4 } from 'uuid';
 import { getDb } from './db';
 
+// ── Types ─────────────────────────────────────────────────────────────
+
+export type MemoryCategory =
+  | 'user_preference'
+  | 'style_pattern'
+  | 'prompt_formula'
+  | 'workflow_step'
+  | 'general';
+
+export const MEMORY_CATEGORIES: MemoryCategory[] = [
+  'user_preference',
+  'style_pattern',
+  'prompt_formula',
+  'workflow_step',
+  'general',
+];
+
 export interface MemoryEntry {
   id: string;
   fact: string;
+  category: MemoryCategory;
+  tags: string[];
   createdAt: number;
+}
+
+export interface AddMemoryOptions {
+  category?: MemoryCategory;
+  tags?: string[];
 }
 
 const STORE_NAME = 'memories' as const;
@@ -12,12 +36,9 @@ const LEGACY_LS_KEY = 'assistantMemories';
 const MIGRATION_FLAG_KEY = 'migrated_memories_v2';
 const MAX = 50;
 
-// ── Sync cache ─────────────────────────────────────────────────────────
-
 let _cache: MemoryEntry[] = [];
 let _initialized = false;
 
-/** @internal test hook — resets module state. Not for production use. */
 export const _testReset = (): void => {
   _cache = [];
   _initialized = false;
@@ -37,10 +58,9 @@ export async function initMemoriesStore(): Promise<void> {
     // IDB unavailable
   }
 
-  // Try reading from IDB
   try {
     const db = await getDb();
-    _cache = await db.getAll(STORE_NAME);
+    _cache = (await db.getAll(STORE_NAME)).map(normalizeEntry);
     _cache.sort((a, b) => b.createdAt - a.createdAt);
     if (alreadyMigrated) {
       _initialized = true;
@@ -50,16 +70,16 @@ export async function initMemoriesStore(): Promise<void> {
     _cache = [];
   }
 
-  // One-shot migration from localStorage
   try {
     const raw = localStorage.getItem(LEGACY_LS_KEY);
     if (raw) {
-      const items: MemoryEntry[] = JSON.parse(raw);
+      const items: any[] = JSON.parse(raw);
       const db = await getDb();
       for (const item of items) {
-        await db.add(STORE_NAME, item).catch(() => {});
+        const entry = normalizeEntry(item);
+        await db.add(STORE_NAME, entry).catch(() => {});
       }
-      _cache = items.sort((a, b) => b.createdAt - a.createdAt);
+      _cache = items.map(normalizeEntry).sort((a, b) => b.createdAt - a.createdAt);
     }
     const db = await getDb();
     await db.put('keyval', true, MIGRATION_FLAG_KEY).catch(() => {});
@@ -70,7 +90,17 @@ export async function initMemoriesStore(): Promise<void> {
   _initialized = true;
 }
 
-// ── Sync read (for UI useState) ───────────────────────────────────────
+function normalizeEntry(raw: any): MemoryEntry {
+  return {
+    id: raw.id,
+    fact: raw.fact,
+    category: MEMORY_CATEGORIES.includes(raw.category) ? raw.category : 'general',
+    tags: Array.isArray(raw.tags) ? raw.tags : [],
+    createdAt: raw.createdAt ?? Date.now(),
+  };
+}
+
+// ── Sync read ─────────────────────────────────────────────────────────
 
 export function getMemoriesSync(): MemoryEntry[] {
   return _cache;
@@ -81,7 +111,7 @@ export function getMemoriesSync(): MemoryEntry[] {
 export async function loadMemories(): Promise<MemoryEntry[]> {
   try {
     const db = await getDb();
-    _cache = await db.getAll(STORE_NAME);
+    _cache = (await db.getAll(STORE_NAME)).map(normalizeEntry);
     _cache.sort((a, b) => b.createdAt - a.createdAt);
   } catch {
     _cache = [];
@@ -89,22 +119,33 @@ export async function loadMemories(): Promise<MemoryEntry[]> {
   return _cache;
 }
 
-export async function addMemory(fact: string): Promise<MemoryEntry | null> {
+export async function refreshMemoryCache(): Promise<MemoryEntry[]> {
+  return loadMemories();
+}
+
+export async function addMemory(
+  fact: string,
+  options?: AddMemoryOptions,
+): Promise<MemoryEntry | null> {
   const trimmed = fact.trim();
   if (!trimmed) return null;
-  // Deduplicate against cache (fast) and IDB (authoritative)
   if (_cache.some((m) => m.fact === trimmed)) return null;
 
-  const entry: MemoryEntry = { id: uuidv4(), fact: trimmed, createdAt: Date.now() };
+  const entry: MemoryEntry = {
+    id: uuidv4(),
+    fact: trimmed,
+    category: options?.category || 'general',
+    tags: options?.tags || [],
+    createdAt: Date.now(),
+  };
 
   try {
     const db = await getDb();
     await db.add(STORE_NAME, entry);
 
-    // Enforce MAX — delete oldest entries if over limit
     const all = await db.getAll(STORE_NAME);
     if (all.length > MAX) {
-      all.sort((a, b) => a.createdAt - b.createdAt); // oldest first
+      all.sort((a, b) => a.createdAt - b.createdAt);
       const toDelete = all.slice(0, all.length - MAX);
       for (const old of toDelete) {
         await db.delete(STORE_NAME, old.id).catch(() => {});
@@ -115,7 +156,6 @@ export async function addMemory(fact: string): Promise<MemoryEntry | null> {
     return null;
   }
 
-  // Update cache (enforce max — newest first)
   _cache = [entry, ..._cache].slice(0, MAX);
   dualWriteToLocalStorage(_cache);
   return entry;
@@ -148,30 +188,78 @@ function dualWriteToLocalStorage(data: MemoryEntry[]): void {
   }
 }
 
-/**
- * System-prompt block injected by buildSystemIdentity. Empty string when
- * there is nothing remembered, so it adds zero tokens by default.
- */
-export function memoryPromptBlock(): string {
-  if (!_cache.length) return '';
-  return `Persistent memories about the user from earlier sessions (use them, do not recite them unprompted):\n${_cache.map((m) => `- ${m.fact}`).join('\n')}`;
+// ── Rich retrieval ────────────────────────────────────────────────────
+
+export function searchMemories(query: string): MemoryEntry[] {
+  const q = query.toLowerCase().trim();
+  if (!q) return _cache;
+  return _cache.filter(
+    (m) =>
+      m.fact.toLowerCase().includes(q) ||
+      m.tags.some((t) => t.toLowerCase().includes(q)),
+  );
 }
 
-/**
- * A cached block of agent memory (AGENT.md content) for use by the
- * memory consolidation service. Updated by syncAgentMemoryToVault.
- */
+export function getMemoriesByCategory(category?: MemoryCategory): MemoryEntry[] {
+  return category ? _cache.filter((m) => m.category === category) : _cache;
+}
+
+// ── Context-aware injection ───────────────────────────────────────────
+
+const STOP_WORDS = new Set([
+  'the', 'and', 'for', 'are', 'but', 'not', 'you', 'all', 'can',
+  'was', 'had', 'has', 'its', 'his', 'her', 'our', 'your', 'their',
+  'that', 'this', 'with', 'from', 'what', 'which', 'will', 'been',
+  'have', 'were', 'they', 'them', 'some', 'very', 'just', 'also',
+]);
+
+function extractKeywords(text: string): string[] {
+  return text
+    .toLowerCase()
+    .split(/[^a-z0-9äöüßèéêëàâùûæœçîïô]+/)
+    .filter((w) => w.length >= 4 && !STOP_WORDS.has(w));
+}
+
+export function memoryPromptBlock(context?: string): string {
+  if (!_cache.length) return '';
+
+  let relevant: MemoryEntry[];
+  if (context) {
+    const keywords = extractKeywords(context);
+    if (!keywords.length) {
+      relevant = _cache;
+    } else {
+      const scored = _cache.map((m) => {
+        const factLower = m.fact.toLowerCase();
+        const tagLower = m.tags.join(' ').toLowerCase();
+        const score = keywords.filter(
+          (k) => factLower.includes(k) || tagLower.includes(k),
+        ).length;
+        return { entry: m, score };
+      });
+      relevant = scored
+        .filter((s) => s.score > 0)
+        .sort((a, b) => b.score - a.score)
+        .map((s) => s.entry);
+    }
+  } else {
+    relevant = _cache;
+  }
+
+  if (!relevant.length) return '';
+
+  const lines = relevant.map(
+    (m) => `- ${m.fact}${m.tags.length ? ` [${m.tags.join(', ')}]` : ''}`,
+  );
+  return `Persistent memories about the user from earlier sessions (use them, do not recite them unprompted):\n${lines.join('\n')}`;
+}
+
 let _agentMemoryBlock: string | null = null;
 
 export function getAgentMemoryBlock(): string | null {
   return _agentMemoryBlock;
 }
 
-/**
- * Persist the consolidated AGENT.md content to both the in-memory cache
- * and the vault (via the file system manager). Currently caches in-memory;
- * vault persistence requires the FileSystemManager to be available.
- */
 export async function syncAgentMemoryToVault(content: string): Promise<void> {
   _agentMemoryBlock = content;
 }

@@ -194,6 +194,31 @@ const ImageCompare: React.FC<ImageCompareProps> = ({ isExiting = false }) => {
     const [isPickerOpen, setIsPickerOpen] = useState(false);
     const [pickerTargetIndex, setPickerTargetIndex] = useState<'A' | 'B' | null>(null);
 
+    // Listen for compare-images events fired by CompareQuickAction from the generate loop
+    useEffect(() => {
+        const handler = (e: Event) => {
+            const detail = (e as CustomEvent).detail;
+            if (!detail?.imageA || !detail?.imageB) return;
+
+            // Create ImageState for both images from blob URLs
+            const loadImg = (url: string): Promise<ImageState> =>
+                new Promise((resolve) => {
+                    const img = new Image();
+                    img.onload = () => resolve({ file: null, url, width: img.naturalWidth, height: img.naturalHeight });
+                    img.onerror = () => resolve({ file: null, url, width: 0, height: 0 });
+                    img.src = url;
+                });
+
+            Promise.all([loadImg(detail.imageA), loadImg(detail.imageB)]).then(([a, b]) => {
+                setImageA(a);
+                setImageB(b);
+            });
+        };
+
+        window.addEventListener('compare-images', handler);
+        return () => window.removeEventListener('compare-images', handler);
+    }, []);
+
     useEffect(() => {
         const url = imageA?.url;
         return () => { if (url) URL.revokeObjectURL(url); };

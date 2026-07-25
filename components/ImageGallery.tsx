@@ -11,6 +11,7 @@ import CategoryPanelToggle from './CategoryPanelToggle';
 import ItemDetailView from './ItemDetailView';
 import ConfirmationModal from './ConfirmationModal';
 import LoadingSpinner from './LoadingSpinner';
+import GalleryStatsPanel from './GalleryStatsPanel';
 import AddItemModal from './AddItemModal';
 import useLocalStorage from '../utils/useLocalStorage';
 import { audioService } from '../services/audioService';
@@ -41,6 +42,7 @@ const ImageGallery: React.FC<ImageGalleryProps> = ({
   const [mediaTypeFilter, setMediaTypeFilter] = useState<'all' | 'image' | 'video'>('all');
   const [showNsfw, setShowNsfw] = useLocalStorage<boolean>('galleryShowNsfw', false);
   const [selectedCategoryId, setSelectedCategoryId] = useState<string>('all');
+  const [isStatsPanelOpen, setIsStatsPanelOpen] = useState(false);
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [detailViewItemId, setDetailViewItemId] = useState<string | null>(null);
   const [itemToDelete, setItemToDelete] = useState<GalleryItem | null>(null);
@@ -449,6 +451,11 @@ const ImageGallery: React.FC<ImageGalleryProps> = ({
                           </div>
                         </div>
 
+                        <button onClick={() => { audioService.playClick(); setIsStatsPanelOpen(!isStatsPanelOpen); }} className={`btn btn-sm btn-ghost h-full rounded-none border-none px-6 tracking-widest uppercase btn-snake ${isStatsPanelOpen ? 'text-primary bg-primary/5' : 'text-base-content/40 hover:text-primary'}`}>
+                          <span /><span /><span /><span />
+                          STATS
+                        </button>
+
                         <button onClick={() => { audioService.playClick(); setIsAddModalOpen(true); }} className="btn btn-sm btn-primary h-full rounded-none border-none px-8 tracking-widest uppercase btn-snake-primary">
                           <span /><span /><span /><span />
                           IMPORT
@@ -487,6 +494,14 @@ const ImageGallery: React.FC<ImageGalleryProps> = ({
               </div>
             </div>
           </main>
+
+          {/* Gallery Stats Panel — overlays on the far right */}
+          <div className="absolute right-0 top-0 bottom-0 z-40">
+            <GalleryStatsPanel
+              isOpen={isStatsPanelOpen}
+              onClose={() => setIsStatsPanelOpen(false)}
+            />
+          </div>
         </div>
       </motion.section>
 

@@ -8,6 +8,7 @@
 
 import { getHandle, setHandle } from './db';
 import { appEventBus } from './eventBus';
+import { getSearchIndex, VaultNote } from './vaultSearch';
 
 // ── Types ──────────────────────────────────────────────────────────────
 
@@ -55,6 +56,8 @@ export async function initObsidianVault(): Promise<boolean> {
     if (handle && await verifyObsidianPermission(handle)) {
       _vaultHandle = handle;
       _isInitialized = true;
+      // Attempt to load cached search index; will rebuild in background if needed
+      initSearchIndex().catch(() => {});
       return true;
     }
   } catch {
@@ -87,6 +90,10 @@ export function isObsidianConnected(): boolean {
 export async function disconnectObsidianVault(): Promise<void> {
   _vaultHandle = null;
   _isInitialized = false;
+  if (_rebuildTimer !== null) {
+    clearTimeout(_rebuildTimer);
+    _rebuildTimer = null;
+  }
   try {
     const db = await (await import('./db')).getDb();
     await db.delete('keyval', HANDLE_KEY);
@@ -255,6 +262,26 @@ export function extractWikilinks(content: string): string[] {
   return links;
 }
 
+// ── Debounced search-index auto-rebuild ──────────────────────────────
+
+/**
+ * Schedule a background search-index rebuild after vault mutations.
+ * Debounced: if multiple mutations happen in quick succession, the index
+ * is only rebuilt once, 3 seconds after the last mutation.
+ */
+let _rebuildTimer: ReturnType<typeof setTimeout> | null = null;
+
+function _scheduleSearchRebuild(): void {
+  if (_rebuildTimer !== null) clearTimeout(_rebuildTimer);
+  _rebuildTimer = setTimeout(() => {
+    _rebuildTimer = null;
+    if (!_isInitialized) return;
+    rebuildSearchIndex().catch((e) =>
+      console.error('[obsidian] Auto-rebuild failed:', e),
+    );
+  }, 3000);
+}
+
 // ── Note operations ────────────────────────────────────────────────────
 
 export async function getNote(path: string): Promise<ObsidianNote | null> {
@@ -275,6 +302,7 @@ export async function getNote(path: string): Promise<ObsidianNote | null> {
 
 export async function writeNote(path: string, content: string): Promise<void> {
   await writeFile(path, content);
+  _scheduleSearchRebuild();
 }
 
 export async function appendToNote(
@@ -284,7 +312,9 @@ export async function appendToNote(
 ): Promise<void> {
   const existing = await readFile(path);
   if (existing === null) {
-    return writeFile(path, content);
+    await writeFile(path, content);
+    _scheduleSearchRebuild();
+    return;
   }
 
   if (heading) {
@@ -294,16 +324,22 @@ export async function appendToNote(
       const insertPos = match.index! + match[0].length;
       const updated =
         existing.slice(0, insertPos) + '\n' + content + '\n' + existing.slice(insertPos);
-      return writeFile(path, updated);
+      await writeFile(path, updated);
+      _scheduleSearchRebuild();
+      return;
     }
-    return writeFile(path, existing + '\n\n' + content);
+    await writeFile(path, existing + '\n\n' + content);
+    _scheduleSearchRebuild();
+    return;
   }
 
   await writeFile(path, existing + '\n\n' + content);
+  _scheduleSearchRebuild();
 }
 
 export async function deleteNoteByPath(path: string): Promise<void> {
   await deleteFile(path);
+  _scheduleSearchRebuild();
 }
 
 export async function replaceInNote(
@@ -325,6 +361,7 @@ export async function replaceInNote(
 
   if (newContent === content) return false;
   await writeFile(path, newContent);
+  _scheduleSearchRebuild();
   return true;
 }
 
@@ -343,6 +380,25 @@ export async function searchNotes(
   query: string,
   maxResults = 20
 ): Promise<{ path: string; title: string; snippet: string }[]> {
+  const searchIndex = getSearchIndex();
+
+  // Try the ranked search index first
+  if (searchIndex.isBuilt) {
+    const ranked = searchIndex.search(query, maxResults);
+    if (ranked.length > 0) {
+      // Fill in snippets from the actual file content
+      const results: { path: string; title: string; snippet: string }[] = [];
+      for (const r of ranked) {
+        const content = await readFile(r.path);
+        if (!content) continue;
+        const snippet = searchIndex.generateSnippet(content, query);
+        results.push({ path: r.path, title: r.title, snippet });
+      }
+      return results;
+    }
+  }
+
+  // Fallback: brute-force substring search (original behaviour)
   const results: { path: string; title: string; snippet: string }[] = [];
   const q = query.toLowerCase();
   for await (const notePath of walkMdFiles()) {
@@ -357,6 +413,48 @@ export async function searchNotes(
     results.push({ path: notePath, title, snippet });
   }
   return results;
+}
+
+/**
+ * Build the search index from all vault notes.
+ * Call this after vault connection, and periodically to refresh the index.
+ *
+ * If a build is already in progress, this is a no-op (returns false).
+ */
+export async function rebuildSearchIndex(): Promise<boolean> {
+  const searchIndex = getSearchIndex();
+  if (searchIndex.isBuilding) {
+    console.warn('[obsidian] Search index build already in progress — skipping');
+    return false;
+  }
+
+  const notes: VaultNote[] = [];
+
+  for await (const notePath of walkMdFiles()) {
+    const content = await readFile(notePath);
+    if (!content) continue;
+    const title = extractTitle(notePath, content);
+    notes.push({ path: notePath, title, content });
+  }
+
+  await searchIndex.build(notes);
+  return true;
+}
+
+/**
+ * Load the search index from IDB cache (fast) or trigger a background
+ * rebuild if no cached index exists.
+ */
+export async function initSearchIndex(): Promise<void> {
+  const searchIndex = getSearchIndex();
+  const loaded = await searchIndex.loadFromIdb();
+
+  if (!loaded) {
+    // No cached index — rebuild in the background
+    rebuildSearchIndex().catch((e) =>
+      console.error('[obsidian] Failed to build search index:', e),
+    );
+  }
 }
 
 // ── Frontmatter operations ─────────────────────────────────────────────
@@ -379,6 +477,7 @@ export async function setFrontmatterKey(
   const { frontmatter, body } = parseFrontmatter(content);
   frontmatter[key] = value;
   await writeFile(path, serializeWithFrontmatter(body, frontmatter));
+  _scheduleSearchRebuild();
 }
 
 export async function deleteFrontmatterKey(
@@ -390,6 +489,7 @@ export async function deleteFrontmatterKey(
   const { frontmatter, body } = parseFrontmatter(content);
   delete frontmatter[key];
   await writeFile(path, serializeWithFrontmatter(body, frontmatter));
+  _scheduleSearchRebuild();
 }
 
 export async function listTags(): Promise<{ tag: string; count: number }[]> {
@@ -439,6 +539,7 @@ export async function manageTags(
 
   frontmatter.tags = tags;
   await writeFile(path, serializeWithFrontmatter(body ?? content ?? '', frontmatter));
+  _scheduleSearchRebuild();
   return tags;
 }
 

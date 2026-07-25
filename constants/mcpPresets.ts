@@ -51,6 +51,14 @@ export const MCP_PRESETS: McpPreset[] = [
         defaultUrl: 'http://localhost:8931/mcp',
         launchNotes: 'No API key needed. Auto-started by the dev server (server.ts) on port 8931 — just toggle it on, then Ping to verify.',
     },
+    {
+        id: 'obsidian-vault',
+        name: 'Obsidian Vault',
+        description: 'Read, write, search, and manage your Obsidian vault notes via the Local REST API plugin. Requires OBSIDIAN_VAULT_PATH env var on the server.',
+        needsApiKey: false,
+        defaultUrl: 'http://127.0.0.1:3012/mcp',
+        launchNotes: 'No API key needed. Auto-started by the dev server when OBSIDIAN_VAULT_PATH is set — just toggle it on, then Ping to verify.',
+    },
 ];
 
 export function genMcpServerId(): string {
