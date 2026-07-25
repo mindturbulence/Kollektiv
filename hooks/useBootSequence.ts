@@ -43,7 +43,7 @@ export interface UseBootSequenceReturn {
  * Designed to be extracted from App.tsx — no DOM refs beyond the loader div.
  */
 export const useBootSequence = ({
-  auth,
+  auth: _auth,
   showGlobalFeedback,
   startupContinue,
 }: UseBootSequenceInput): UseBootSequenceReturn => {

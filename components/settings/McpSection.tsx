@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import type { LLMSettings, McpServerConfig } from '../../types';
 import { mcpService } from '../../services/mcpService';
 import { audioService } from '../../services/audioService';
@@ -24,7 +24,7 @@ const McpSection: React.FC<McpSectionProps> = ({ activeSubTab, settings, handleS
     if (activeSubTab !== 'mcp') return null;
 
     const [tab, setTab] = useState<McpTab>('built-in');
-    const allServers = useMemo(() => settings.mcpServers || [], [settings.mcpServers]);
+    const allServers = useMemo<McpServerConfig[]>(() => settings.mcpServers || [], [settings.mcpServers]);
     // Predefined-tab entries (tagged with presetId) live in the same array but
     // are never shown or mutated here — they merge back untouched on every write.
     const servers = allServers.filter(s => !s.presetId);
@@ -256,7 +256,7 @@ const McpSection: React.FC<McpSectionProps> = ({ activeSubTab, settings, handleS
                                                         + Add Header
                                                     </button>
                                                 </div>
-                                                {sv.headers && Object.entries(sv.headers).map(([k, v], i) => (
+                                                {sv.headers && Object.entries(sv.headers as Record<string,string>).map(([k, v], i) => (
                                                     <div key={i} className="flex items-center gap-2">
                                                         <input
                                                             type="text"

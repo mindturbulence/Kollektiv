@@ -1,4 +1,4 @@
-import helmet from 'helmet';
+
 import cors from 'cors';
 import rateLimit from 'express-rate-limit';
 import type { Request, Response, NextFunction } from 'express';
@@ -7,10 +7,10 @@ import type { Request, Response, NextFunction } from 'express';
  * Global security headers via helmet.
  * Includes a reasonable Content‑Security‑Policy.
  */
-export const securityHeaders = (req: Request, res: Response, next: NextFunction) => {
+export const securityHeaders = (_req: Request, _res: Response, next: NextFunction) => {
   // helmet already sets many headers; we add a CSP that is strict but allows inline styles for Tailwind.
   // Adjust as needed for any future inline scripts.
-  res.setHeader(
+  _res.setHeader(
     'Content-Security-Policy',
     "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:"
   );
