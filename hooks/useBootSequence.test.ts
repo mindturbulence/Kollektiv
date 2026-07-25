@@ -29,7 +29,7 @@ vi.mock('gsap', () => ({
 describe('useBootSequence', () => {
   const defaultInput = {
     auth: {},
-    setGlobalFeedback: vi.fn(),
+    showGlobalFeedback: vi.fn(),
     startupContinue: vi.fn(),
   } as const;
 
@@ -116,8 +116,9 @@ describe('useBootSequence', () => {
     const { result } = renderHook(() => useBootSequence(defaultInput));
 
     await vi.waitFor(() => {
-      expect(defaultInput.setGlobalFeedback).toHaveBeenCalledWith(
-        expect.objectContaining({ type: 'error' })
+      expect(defaultInput.showGlobalFeedback).toHaveBeenCalledWith(
+        expect.any(String),
+        true,
       );
     });
 

@@ -1,14 +1,11 @@
-import React, { useState, useEffect, useCallback, useRef, useLayoutEffect, useMemo } from 'react';
+import React, { useState, useCallback, useRef, useLayoutEffect, useMemo } from 'react';
 import { gsap } from 'gsap';
 import { useSettings } from '../contexts/SettingsContext';
 import { useAuth } from '../contexts/AuthContext';
 import useLocalStorage from '../utils/useLocalStorage';
-import { appEventBus } from '../utils/eventBus';
-import { addSavedPrompt } from '../utils/promptStorage';
-import { getNotesSync } from '../utils/notesStorage';
 import { audioService } from '../services/audioService';
 import { BusyProvider } from '../contexts/BusyContext';
-import type { ActiveTab, Idea, ActiveSettingsTab } from '../types';
+import type { ActiveTab } from '../types';
 import CommandPalette from './CommandPalette';
 
 // Layout & Global Components
@@ -58,15 +55,9 @@ import TransitionOverlay, { type TransitionOverlayHandle } from './transitions/T
 import { useBootSequence } from '../hooks/useBootSequence';
 import { useAppTheme } from '../hooks/useAppTheme';
 import { usePageTransitions } from '../hooks/usePageTransitions';
+import { useAppShell } from '../hooks/useAppShell';
+import { useAppEventBus } from '../hooks/useAppEventBus';
 
-
-type PromptsPageState = { 
-    prompt?: string, 
-    artStyle?: string, 
-    artist?: string, 
-    view?: 'enhancer' | 'composer' | 'create' | 'prompt_analyzer', 
-    id?: string 
-} | null;
 
 class ErrorBoundary extends React.Component<{ children: React.ReactNode }, { hasError: boolean, error: any, errorInfo: any }> {
     constructor(props: { children: React.ReactNode }) {
@@ -141,25 +132,6 @@ const AppContent: React.FC = () => {
     const auth = useAuth();
 
     const [activeTab, setActiveTab] = useLocalStorage<ActiveTab>('activeTab', 'dashboard');
-    const [isAboutModalOpen, setIsAboutModalOpen] = useState(false);
-    const [isClippingPanelOpen, setIsClippingPanelOpen] = useState(false);
-    const [isMediaPanelOpen, setIsMediaPanelOpen] = useState(false);
-    const [isWebViewerOpen, setIsWebViewerOpen] = useState(false);
-    const [videoPlayerUrl, setVideoPlayerUrl] = useState<string | null>(null);
-    const [isActivityPanelOpen, setIsActivityPanelOpen] = useState(false);
-    const [isChatPanelOpen, setIsChatPanelOpen] = useState(false);
-    const [isLlmPanelOpen, setIsLlmPanelOpen] = useState(false);
-    const [isCommandPaletteOpen, setIsCommandPaletteOpen] = useState(false);
-    const [collapsedPanels, setCollapsedPanels] = useLocalStorage<Record<string, boolean>>('collapsedPanels', {});
-    const [globalFeedback, setGlobalFeedback] = useState<{ message: string; type: 'success' | 'error' } | null>(null);
-
-    const [promptsPageState, setPromptsPageState] = useState<PromptsPageState>(null);
-    const [activeSettingsTab, setActiveSettingsTab] = useLocalStorage<ActiveSettingsTab>('activeSettingsTab', 'app');
-    const [activeSettingsSubTab, setActiveSettingsSubTabSetter] = useLocalStorage<string>('activeSettingsSubTab', 'general');
-
-    const [clippedIdeas, setClippedIdeas] = useLocalStorage<Idea[]>('clippedIdeas', []);
-    const [notesCount, setNotesCount] = useState(() => getNotesSync().length);
-    const [filesCount, setFilesCount] = useState(0);
 
     const currentTitle = useMemo(() => {
         const base = "KOLLEKTIV";
@@ -204,6 +176,73 @@ const AppContent: React.FC = () => {
 
     const { isUplinkActive, playerState, audioEnabled, videoId, startupContinue, handleMusicToggle, handleAudioToggle } = useAmbientMusic(settings, updateSettings);
 
+    // Hooks must be ordered to satisfy dependencies:
+    // 1. Page transitions (needs activeTab/setActiveTab from useLocalStorage)
+    // 2. App shell (needs handleNavigate from transitions)
+    // 3. Boot sequence (needs setGlobalFeedback from shell)
+
+    const { pageFxKind, handleNavigate } = usePageTransitions({
+        activeTab,
+        setActiveTab,
+        contentRef,
+        transitionOverlayHandleRef,
+    });
+
+    const shell = useAppShell({ handleNavigate });
+
+    const {
+        isAboutModalOpen,
+        isClippingPanelOpen,
+        isMediaPanelOpen,
+        isWebViewerOpen,
+        isChatPanelOpen,
+        isLlmPanelOpen,
+        isCommandPaletteOpen,
+        isActivityPanelOpen,
+        videoPlayerUrl,
+        globalFeedback,
+        promptsPageState,
+        activeSettingsTab,
+        activeSettingsSubTab,
+        clippedIdeas,
+        notesCount,
+        filesCount,
+        collapsedPanels,
+        showGlobalFeedback,
+        handleSendToPromptsPage,
+        handleClipIdea,
+        handleRemoveIdea,
+        handleClearAllIdeas,
+        handleInsertIdea,
+        handleRefineIdea,
+        handleSaveClippedIdea,
+        handleSendToEnhancer,
+        handleClearPromptsPageState,
+        handleAboutClick,
+        handleToggleClippingPanel,
+        handleToggleActivityPanel,
+        handleCloseActivityPanel,
+        handleToggleMediaPanel,
+        handleCloseMediaPanel,
+        handleToggleWebViewer,
+        handleCloseWebViewer,
+        handleCloseVideoPlayer,
+        handleToggleChatPanel,
+        handleCloseChatPanel,
+        handleCloseLlmStatus,
+        setIsLlmPanelOpen,
+        setIsAboutModalOpen,
+        setGlobalFeedback,
+        setVideoPlayerUrl,
+        setIsClippingPanelOpen,
+        setIsMediaPanelOpen,
+        setIsWebViewerOpen,
+        setIsCommandPaletteOpen,
+        setCollapsedPanels,
+        setActiveSettingsTab,
+        setActiveSettingsSubTab,
+    } = shell;
+
     const {
         bootState,
         loaderRef,
@@ -212,7 +251,7 @@ const AppContent: React.FC = () => {
         hasInitializedRef,
     } = useBootSequence({
         auth,
-        setGlobalFeedback,
+        showGlobalFeedback,
         startupContinue,
     });
 
@@ -233,39 +272,27 @@ const AppContent: React.FC = () => {
             const markers = frameWrapperRef.current?.querySelectorAll('.side-marker');
             const blindItems = Array.from(blindsRef.current!.children) as HTMLElement[];
 
-            // Initial State: Frame slightly scaled up, layout items hidden
             gsap.set(apertureRef.current, { visibility: 'visible', alpha: 1 });
-            gsap.set(appWrapperRef.current, { alpha: 1 }); // Outer wrapper visible
-            gsap.set(contentRef.current, { alpha: 0 }); // Inner content hidden
+            gsap.set(appWrapperRef.current, { alpha: 1 });
+            gsap.set(contentRef.current, { alpha: 0 });
             gsap.set(['.app-header', '.app-footer'], { opacity: 0 });
 
             blindItems.forEach((item) => {
-                gsap.set(item, {
-                    yPercent: 0,
-                    scaleX: 1,
-                    scaleY: 1
-                });
+                gsap.set(item, { yPercent: 0, scaleX: 1, scaleY: 1 });
             });
 
-            // STEP 1: Main Frame Scale In
             if (frame) {
                 tl.fromTo(frame,
                     { scale: 1.04, alpha: 1 },
                     { scale: 1, duration: 2.0, ease: "expo.out" }
                 );
-
                 if (corners && corners.length > 0) {
                     tl.fromTo(corners,
-                        {
-                            opacity: 0,
-                            x: (i) => (i % 2 === 0 ? -40 : 40),
-                            y: (i) => (i < 2 ? -40 : 40)
-                        },
+                        { opacity: 0, x: (i) => (i % 2 === 0 ? -40 : 40), y: (i) => (i < 2 ? -40 : 40) },
                         { opacity: 1, x: 0, y: 0, duration: 1.5, stagger: 0.05, ease: "expo.out" },
                         0.2
                     );
                 }
-
                 if (markers && markers.length > 0) {
                     tl.fromTo(markers,
                         { opacity: 0, scaleY: 0 },
@@ -275,219 +302,42 @@ const AppContent: React.FC = () => {
                 }
             }
 
-            // STEP 2: Blinds animation
             tl.to(blindItems, {
                 yPercent: (i) => i % 2 === 0 ? -100 : 100,
                 duration: 1.2,
-                stagger: {
-                    each: 0.05,
-                    from: "center"
-                },
+                stagger: { each: 0.05, from: "center" },
                 ease: "expo.inOut"
             }, "<0.5");
 
-            // STEP 3: App Header and Footer reveal
             tl.fromTo('.app-header',
                 { y: -30, opacity: 0 },
                 { y: 0, opacity: 1, duration: 1.0, ease: "expo.out" },
                 ">-0.4"
             );
-
             tl.fromTo('.app-footer',
                 { y: 30, opacity: 0 },
                 { y: 0, opacity: 1, duration: 1.0, ease: "expo.out" },
                 "<"
             );
-
-            // STEP 4: Reveal main content
-            tl.to(contentRef.current, {
-                alpha: 1,
-                duration: 1.0,
-                ease: "power2.out"
-            }, "<0.2");
-
+            tl.to(contentRef.current, { alpha: 1, duration: 1.0, ease: "power2.out" }, "<0.2");
             tl.set(apertureRef.current, { visibility: 'hidden', alpha: 0 });
         });
 
         return () => ctx.revert();
     }, [isInitialized]);
 
-
-    const { pageFxKind, handleNavigate } = usePageTransitions({
-        activeTab,
-        setActiveTab,
-        contentRef,
-        transitionOverlayHandleRef,
+    useAppEventBus({
+        handleNavigate,
+        handleSendToPromptsPage,
+        showGlobalFeedback,
+        isCommandPaletteOpen,
+        setIsCommandPaletteOpen,
+        setIsClippingPanelOpen,
+        setIsMediaPanelOpen,
+        setIsWebViewerOpen,
+        setVideoPlayerUrl,
+        handleClipIdea,
     });
-
-    const showGlobalFeedback = useCallback((message: string, isError = false) => {
-        setGlobalFeedback({ message, type: isError ? 'error' : 'success' });
-    }, []);
-
-    const handleSendToPromptsPage = useCallback((state: PromptsPageState) => {
-        setPromptsPageState(state);
-
-        // Map internal views to top-level navigation tabs
-        let targetBar: ActiveTab = 'crafter';
-        if (state?.view === 'enhancer') {
-            targetBar = 'refiner';
-        } else if (state?.view === 'prompt_analyzer') {
-            targetBar = 'prompt_analyzer';
-        } else if (state?.view === 'composer' || state?.view === 'create') {
-            targetBar = 'crafter';
-        } else {
-            // Fallback to generic tabs if needed,
-            // but user wants them separate so we prefer the specific ones
-            targetBar = 'crafter';
-        }
-
-        handleNavigate(targetBar);
-        showGlobalFeedback('Sent to Builder!');
-    }, [showGlobalFeedback, handleNavigate]);
-
-    useEffect(() => {
-        const navigateSub = appEventBus.on('navigate', (tab) => {
-            if (typeof tab === 'string') {
-                // Route through the director so programmatic navigation gets the
-                // same transition + SFX as header clicks.
-                handleNavigate(tab as ActiveTab);
-            }
-        });
-        const sendToSub = appEventBus.on('sendToPromptsPage', (state) => {
-            if (state && typeof state === 'object') {
-                handleSendToPromptsPage(state as PromptsPageState);
-            }
-        });
-        const feedbackSub = appEventBus.on('assistantFeedback', (payload) => {
-            const p = payload as { message: string; isError?: boolean } | undefined;
-            if (p?.message) showGlobalFeedback(p.message, !!p.isError);
-        });
-        return () => { navigateSub(); sendToSub(); feedbackSub(); };
-    }, [handleNavigate, handleSendToPromptsPage, showGlobalFeedback]);
-
-    // ── Global keyboard shortcuts ───────────────────────────────────────
-    useEffect(() => {
-        const handler = (e: KeyboardEvent) => {
-            if ((e.ctrlKey || e.metaKey) && e.key === 'k') {
-                e.preventDefault();
-                setIsCommandPaletteOpen(prev => !prev);
-            }
-            if (e.key === 'Escape' && isCommandPaletteOpen) {
-                setIsCommandPaletteOpen(false);
-            }
-        };
-        window.addEventListener('keydown', handler);
-        return () => window.removeEventListener('keydown', handler);
-    }, [isCommandPaletteOpen]);
-
-    // ── Panel toggle events (from command palette) ──────────────────────
-    useEffect(() => {
-        const off = appEventBus.on('togglePanel', (name: string) => {
-            switch (name) {
-                case 'media': setIsMediaPanelOpen(p => !p); break;
-                case 'clipping': setIsClippingPanelOpen(p => !p); break;
-                case 'webviewer': setIsWebViewerOpen(p => !p); break;
-                case 'chat': setIsChatPanelOpen(p => !p); break;
-                case 'activity': setIsActivityPanelOpen(p => !p); break;
-                case 'llm': setIsLlmPanelOpen(p => !p); break;
-            }
-        });
-        return off;
-    }, []);
-
-    // Close web viewer on tab navigation
-    useEffect(() => {
-        return appEventBus.on('navigate', () => {
-            setIsWebViewerOpen(false);
-        });
-    }, []);
-
-    // Open web viewer when assistant calls open_web_page
-    useEffect(() => {
-        return appEventBus.on('openWebPage', () => {
-            setIsWebViewerOpen(true);
-        });
-    }, []);
-
-    // Center video player — triggered when a YouTube URL is played
-    useEffect(() => {
-        return appEventBus.on('playVideo', (payload: { url: string }) => {
-            if (payload?.url) {
-                setVideoPlayerUrl(payload.url);
-            }
-        });
-    }, []);
-
-    useEffect(() => {
-        return appEventBus.on('openMediaPanel', (payload: { url: string }) => {
-            if (payload?.url) {
-                setIsMediaPanelOpen(true);
-            }
-        });
-    }, []);
-
-    const handleClipIdea = useCallback((idea: Idea) => {
-        setClippedIdeas(prev => [idea, ...prev]);
-        showGlobalFeedback(`Clipped "${idea.title}"`);
-    }, [setClippedIdeas, showGlobalFeedback]);
-
-    useEffect(() => {
-        return appEventBus.on('notesChanged', (notes: any[]) => setNotesCount(notes.length));
-    }, []);
-
-    useEffect(() => {
-        const refresh = async () => {
-            try {
-                const { fileSystemManager } = await import('../utils/fileUtils');
-                if (!fileSystemManager.isDirectorySelected()) { setFilesCount(0); return; }
-                let c = 0;
-                for await (const h of fileSystemManager.listDirectoryContents('assistant')) {
-                    if (h.kind === 'file') c++;
-                }
-                setFilesCount(c);
-            } catch { setFilesCount(0); }
-        };
-        void refresh();
-        return appEventBus.on('assistantFilesChanged', () => { void refresh(); });
-    }, []);
-
-    useEffect(() => {
-        return appEventBus.on('clipIdea', (payload) => {
-            if (payload && typeof payload === 'object' && (payload as any).prompt) {
-                const p = payload as { title?: string; prompt: string; lens?: string; source?: string };
-                handleClipIdea({
-                    id: `clip-${Date.now()}`,
-                    title: p.title || p.prompt.slice(0, 40),
-                    prompt: p.prompt,
-                    lens: p.lens || 'Assistant',
-                    source: p.source || 'Assistant',
-                });
-            }
-        });
-    }, [handleClipIdea]);
-
-    const handleRemoveIdea = useCallback((id: string) => setClippedIdeas(prev => prev.filter(idea => idea.id !== id)), [setClippedIdeas]);
-    const handleClearAllIdeas = useCallback(() => setClippedIdeas([]), [setClippedIdeas]);
-    const handleInsertIdea = useCallback((prompt: string) => {
-        handleSendToPromptsPage({ prompt, view: 'composer', id: `clip-${Date.now()}` });
-        setIsClippingPanelOpen(false);
-    }, [handleSendToPromptsPage, setIsClippingPanelOpen]);
-    const handleRefineIdea = useCallback((promptValue: string) => {
-        handleSendToPromptsPage({ prompt: promptValue, view: 'enhancer' });
-        setIsClippingPanelOpen(false);
-    }, [handleSendToPromptsPage, setIsClippingPanelOpen]);
-    const handleSaveClippedIdea = useCallback(async (idea: Idea) => {
-        try {
-            await addSavedPrompt({
-                text: idea.prompt,
-                title: idea.title,
-                tags: [idea.lens]
-            });
-            showGlobalFeedback(`"${idea.title}" saved.`);
-        } catch (e) {
-            showGlobalFeedback("Failed to save.", true);
-        }
-    }, [showGlobalFeedback]);
 
     const renderContent = () => {
         const categoryPanelProps = {
@@ -509,7 +359,7 @@ const AppContent: React.FC = () => {
             case 'prompt': return <SavedPrompts key="prompts" {...categoryPanelProps}                    onSendToEnhancer={handleSendToEnhancer} showGlobalFeedback={showGlobalFeedback} onClipIdea={handleClipIdea} isExiting={false} />;
             case 'gallery': return <ImageGallery key="gallery" {...categoryPanelProps} isSidebarPinned={false} showGlobalFeedback={showGlobalFeedback} isExiting={false} />;
 
-            case 'settings': return <SetupPage key="settings" activeSettingsTab={activeSettingsTab} setActiveSettingsTab={setActiveSettingsTab} activeSubTab={activeSettingsSubTab} setActiveSubTab={setActiveSettingsSubTabSetter} showGlobalFeedback={showGlobalFeedback} isExiting={false} />;
+            case 'settings': return <SetupPage key="settings" activeSettingsTab={activeSettingsTab} setActiveSettingsTab={setActiveSettingsTab} activeSubTab={activeSettingsSubTab} setActiveSubTab={setActiveSettingsSubTab} showGlobalFeedback={showGlobalFeedback} isExiting={false} />;
             case 'composer': return <ComposerPage key="composer" showGlobalFeedback={showGlobalFeedback} isExiting={false} />;
             case 'image_compare': return <ImageCompare key="image_compare" isExiting={false} />;
             case 'color_palette_extractor': return <ColorPaletteExtractor key="color_palette_extractor" onClipIdea={handleClipIdea} isExiting={false} />;
@@ -522,34 +372,17 @@ const AppContent: React.FC = () => {
 
 
 
-    // --- Inline-callback replacements ---
-    const handleAboutClick = useCallback(() => setIsAboutModalOpen(true), []);
-    const handleToggleClippingPanel = useCallback(() => setIsClippingPanelOpen(prev => !prev), []);
-    const handleToggleActivityPanel = useCallback(() => setIsActivityPanelOpen(prev => !prev), []);
-    const handleCloseActivityPanel = useCallback(() => setIsActivityPanelOpen(false), []);
-    const handleToggleMediaPanel = useCallback(() => setIsMediaPanelOpen(prev => !prev), []);
-    const handleCloseMediaPanel = useCallback(() => setIsMediaPanelOpen(false), []);
-    const handleToggleWebViewer = useCallback(() => setIsWebViewerOpen(prev => !prev), []);
-    const handleCloseWebViewer = useCallback(() => setIsWebViewerOpen(false), []);
-    const handleCloseVideoPlayer = useCallback(() => setVideoPlayerUrl(null), []);
-    const handleToggleChatPanel = useCallback(() => setIsChatPanelOpen(prev => {
-        if (!prev) appEventBus.emit('navigate', 'dashboard');
-        return !prev;
-    }), []);
-    const handleClearPromptsPageState = useCallback(() => setPromptsPageState(null), []);
-    const handleSendToEnhancer = useCallback((promptValue: string) => handleSendToPromptsPage({ prompt: promptValue, view: 'enhancer' }), [handleSendToPromptsPage]);
-    const handleCloseClippingPanel = useCallback(() => setIsClippingPanelOpen(false), []);
-    const handleCloseLlmStatus = useCallback(() => setIsLlmPanelOpen(false), []);
-    const handleCloseChatPanel = useCallback(() => setIsChatPanelOpen(false), []);
+    // --- Inline-callbacks that add audio-service side-effects on top of shell state ---
     const handleToggleLlmPanel = useCallback(() => {
         audioService.playClick();
         setIsLlmPanelOpen(prev => !prev);
-    }, []);
+    }, [setIsLlmPanelOpen]);
     const handleCloseAboutModal = useCallback(() => {
         audioService.playModalClose();
         setIsAboutModalOpen(false);
-    }, []);
-    const handleCloseFeedback = useCallback(() => setGlobalFeedback(null), []);
+    }, [setIsAboutModalOpen]);
+    const handleCloseFeedback = useCallback(() => setGlobalFeedback(null), [setGlobalFeedback]);
+    const handleCloseClippingPanel = useCallback(() => setIsClippingPanelOpen(false), [setIsClippingPanelOpen]);
     const handleIdleInteraction = useCallback(() => resetIdleTimer(true), [resetIdleTimer]);
 
     if (showWelcome) return <Welcome onSetupComplete={initializeApp} />;
