@@ -30,6 +30,7 @@ import { gmailTools } from './tools/gmailTools';
 import { spotifyTools } from './tools/spotifyTools';
 import { tensorArtTools } from './tools/tensorArtTools';
 import { researchTools } from './tools/researchTools';
+import { graphTools } from './tools/graphTools';
 
 // Must mirror ActiveTab in types.ts.
 const PAGES = ['dashboard', 'discovery', 'prompts', 'crafter', 'refiner', 'prompt_analyzer', 'media_analyzer', 'prompt', 'gallery', 'resizer', 'video_to_frames', 'image_compare', 'color_palette_extractor', 'composer', 'settings'];
@@ -998,6 +999,7 @@ export const ASSISTANT_TOOLS: AssistantTool[] = [
     ...spotifyTools,
     ...tensorArtTools,
     ...researchTools,
+    ...graphTools,
 
     // ─── MCP Architecture: 5 capability introspection/execution tools ────
 
