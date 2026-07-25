@@ -19,8 +19,8 @@ export interface BootState {
 export interface UseBootSequenceInput {
   /** Auth context value (stub currently, but used for dependency tracking). */
   auth: unknown;
-  /** Callback to surface a global error to the user. */
-  setGlobalFeedback: (feedback: { message: string; type: 'success' | 'error' } | null) => void;
+  /** Callback to surface a global error to the user. Pass showGlobalFeedback from the app shell. */
+  showGlobalFeedback: (message: string, isError?: boolean) => void;
   /** Called after user clicks "Continue" — unlocks the audio context and optionally starts ambient music. */
   startupContinue: (withMusic: boolean) => void;
 }
@@ -44,7 +44,7 @@ export interface UseBootSequenceReturn {
  */
 export const useBootSequence = ({
   auth,
-  setGlobalFeedback,
+  showGlobalFeedback,
   startupContinue,
 }: UseBootSequenceInput): UseBootSequenceReturn => {
   const [isInitialized, setIsInitialized] = useState(false);
@@ -112,12 +112,12 @@ export const useBootSequence = ({
       if (typeof window !== 'undefined' && (window as any).__initLog) {
         (window as any).__initLog('INIT_CATCH: ' + errorMsg);
       }
-      setGlobalFeedback({ message: `System error: ${errorMsg}`, type: 'error' });
+      showGlobalFeedback(`System error: ${errorMsg}`, true);
       setIsLoading(false);
     }
     // Removed dependency on settings to prevent re-init on theme switch
     // settings are only needed for initial storage handle check
-  }, [auth, setGlobalFeedback]);
+  }, [auth, showGlobalFeedback]);
 
   const handleInitContinue = useCallback(async (withMusic: boolean) => {
     // startupContinue handles audio system enable + music toggle logic
