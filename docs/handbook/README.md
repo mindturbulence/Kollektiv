@@ -44,6 +44,11 @@ Kollektiv is a high-performance, local-first application designed for prompt eng
 > `onnxruntime-web`, `vfile`) and added the missing explicit dependency
 > `@modelcontextprotocol/sdk`. Tech stack section above updated to match.
 
+> **2026-07-25 — Recent implementations:** Phases 1–3 of the product roadmap
+> are complete (robustness, feature enrichment, polish). Full 8-layer MCP
+> architecture and Knowledge/Obsidian architecture also implemented. See
+> [ISSUES.md](../ISSUES.md#changelog-resolved-issues) for the complete changelog.
+
 ---
 
 ## 🧭 Architecture Handbook

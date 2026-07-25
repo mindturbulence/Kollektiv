@@ -1,17 +1,72 @@
 # Memory System
 
-## Working Memory
+## 3-Tier Architecture
 
-Working memory holds the current task context: the active prompt, the active asset, the current assistant conversation, and any transient user intent from the current session. It is the short-lived substrate for immediate reasoning and tool execution.
+The memory system uses three tiers based on durability and scope:
 
-## Long-term Memory
+### 1. Working Memory
+- Holds the current task context: active prompt, active asset, current assistant conversation
+- Short-lived — cleared between sessions
+- Managed by React state and `TurnManager` conversation history
+- Transient by nature — not persisted to storage
 
-Long-term memory stores durable preferences and recurring patterns that should survive beyond a single session. This may include user style preferences, preferred providers, or repeated prompt structure choices that influence future refinement.
+### 2. Long-Term Memory
+- Stores durable user preferences and recurring patterns
+- Survives browser sessions via `localStorage`
+- Managed by `utils/memoryStorage.ts`:
+  - `addMemory(fact, opts?)` — store a remembered fact with optional category and tags
+  - `loadMemories()` — load all memories
+  - `deleteMemory(id)` — remove a memory
+  - Categories: `user_preference`, `style_pattern`, `prompt_formula`, `workflow_step`, `general`
+- Assistant tools: `remember`, `list_memories`, `search_memories`, `forget`
 
-## Knowledge Memory
+### 3. Knowledge Repository
+- Durable vault notes persisted via Obsidian
+- Managed by `utils/obsidianStorage.ts` and `services/knowledgeService.ts`
+- Promoted from working/long-term via the lifecycle system
+- Supports BM25 full-text search via `utils/vaultSearch.ts`
 
-Knowledge memory is the higher-level record of stable facts, successful workflows, and reusable project context. It should support retrieval of related prompts, useful notes, and prior outcomes so that the system improves over time rather than starting from scratch each session.
+## Memory Injection
+
+**File:** `services/assistantService.ts` — `memoryPromptBlock()`
+
+Memory is injected into every assistant request **contextually** by filtering against the user's latest message. This ensures only relevant memories are surfaced to the model:
+
+- The user's latest message is used as a query
+- `searchMemories()` filters by text overlap against memory facts and tags
+- Results are formatted as a structured `[MEMORY CTX]` block
+- Empty results produce no block (no wasted tokens)
+
+## Knowledge Context Block
+
+**File:** `services/buildKnowledgeContextBlock.ts`
+
+Formats knowledge search results into an LLM prompt context block:
+- Kind badges (memory, note, vault_note, prompt)
+- Tag badges
+- Source attribution
+- Truncation for token budget
+
+## Promotion Rules
+
+Items move through tiers with automatic lifecycle folder projection (`services/knowledgeLifecycle.ts`):
+
+1. **Working → Long-term:** Explicit user request (assistant `remember` tool) or repeated pattern detection
+2. **Long-term → Knowledge:** Manual promotion via `knowledge_lifecycle_promote` tool or `knowledgeService.promote()`
+3. **Knowledge lifecycle:** Items are projected into vault folders: `inbox/` → `projects/` → `output/` → `wiki/`
+
+## Tests
+
+- `utils/memoryStorage.test.ts` — memory CRUD and search
+- `services/buildKnowledgeContextBlock.test.ts` — 17 tests for context formatting
+- `services/knowledgeLifecycle.test.ts` — 59 tests for lifecycle and projection
+- `utils/vaultSearch.test.ts` — 27 tests for BM25 search index
 
 ## Current Repository Alignment
 
-The implementation already supports memory-like behavior through [../../../utils/memoryStorage.ts](../../../utils/memoryStorage.ts) and [../../../utils/notesStorage.ts](../../../utils/notesStorage.ts). These are the natural persistence anchors for future memory retrieval, memory summarization, and cross-session personalization workflows.
+The implementation already supports memory-like behavior through:
+- `utils/memoryStorage.ts` — durable preferences and remembered facts
+- `utils/notesStorage.ts` — in-app notes with CRUD
+- `services/knowledgeService.ts` — unified knowledge interface
+- `services/knowledgeLifecycle.ts` — lifecycle folder projection
+- `services/relationshipGraph.ts` — cross-entity relationship tracking

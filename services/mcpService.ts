@@ -269,21 +269,18 @@ async function rawRequest(
     }),
   });
 
-  if (!response.ok) {
-    return { success: false, error: `HTTP error ${response.status}` };
-  }
-
-  // Parse proxy response (proxy normalizes SSE to JSON)
+  // Parse proxy response (proxy normalizes SSE to JSON).
+  // Parse even on non-2xx so the actual error message survives.
   try {
     const proxyResult = await response.json();
     return {
       success: proxyResult.success !== false,
       data: proxyResult.data,
-      error: proxyResult.error,
+      error: proxyResult.error || (response.ok ? undefined : `HTTP error ${response.status}`),
       sessionId: proxyResult.sessionId,
     };
   } catch {
-    return { success: false, error: 'Invalid proxy response' };
+    return { success: false, error: `HTTP error ${response.status}` };
   }
 }
 

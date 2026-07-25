@@ -1,28 +1,53 @@
 # Provider Router
 
+## Implementation
+
+**File:** `services/providerRouter.ts`
+
+The provider router is a cost-aware, latency-aware selection engine that chooses the best backend for the current task.
+
 ## Routing Rules
 
-The provider router should choose the best backend for the current task based on the requested modality, provider capability, and available credentials. The goal is to preserve a consistent user experience while allowing the app to use local or remote providers depending on the environment.
+- Use the configured active provider as the default path for assistant and prompt workflows
+- Switch providers only when the current provider is unsupported for the requested feature
+- Surface explicit errors when the provider is not configured or the feature is unsupported
+- Keep the provider decision at the service layer, not in the UI page components
 
-## Cost
+## Selection Strategy
 
-Cost awareness matters even in a local-first product. Where practical, the router should prefer local execution or lower-cost models for simple tasks, then escalate to more capable providers only when the task requires it.
+`providerRouter.selectForStep()`:
+- Selects the best provider based on cost, latency, and modality requirements
+- Maintains a history of per-provider samples (`MAX_SAMPLES`)
+- Tracks cost and latency metrics for informed decisions
 
-## Latency
+## Fallback Chain
 
-Latency is a first-class product concern for assistant interactions and live workflows. Fast local or low-latency providers should be preferred when they can satisfy the request well enough.
+`providerRouter.buildFallbackChain()` / `providerRouter.callWithFallback()`:
+- Constructs an ordered fallback chain from the best provider to least preferred
+- Automatic fallback when a provider fails or times out
+- Degrades gracefully instead of failing abruptly
 
-## Fallback
+## Cost & Latency Tracking
 
-Fallback is necessary because provider availability and credentials vary. A request should degrade gracefully from a preferred provider to a less preferred option instead of failing abruptly when the first path is unavailable.
+- Per-provider cost estimates based on model pricing
+- Latency measured from historical request samples
+- `MAX_SAMPLES` configurable cap on history
 
-## Current Routing Policy
+## Active Provider Resolution
 
-The implementation favors a simple policy:
+`getActiveProvider(settings)` in `services/llmService.ts`:
+- Collapses `ollama_cloud` → `ollama`
+- Resolves `gemini`, `ollama`, `llamacpp`, `anthropic`, `openrouter`
+- Used by `requireProvider()` to gate feature access per provider
 
-- use the configured active provider as the default path for assistant and prompt workflows
-- switch providers only when the current provider is unsupported for the requested feature
-- surface explicit errors when the provider is not configured or the feature is unsupported
-- keep the provider decision at the service layer, not in the UI page components
+## Capability Gating
 
-This keeps the feature code stable while letting the provider layer adapt over time.
+`requireProvider(feature, settings, supported)`:
+- Throws `ProviderUnsupportedError` with actionable message
+- Supported feature sets:
+  - **Gemini/Ollama/llama.cpp/Anthropic:** All core features (refine, enhance, dissect, translate, analyze, generate)
+  - **OpenRouter:** Stream-only (via `ollamaToolDeclarations` format)
+
+## Tests
+
+`services/providerRouter.test.ts` — selection ordering, fallback chain, cost calculation

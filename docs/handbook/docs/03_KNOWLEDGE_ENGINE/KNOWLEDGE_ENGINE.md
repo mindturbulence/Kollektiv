@@ -2,33 +2,95 @@
 
 ## Karpathy Lifecycle
 
-The knowledge engine treats the workspace as a living knowledge base. Information is collected from prompts, gallery assets, notes, and interactions, then moved through a lightweight lifecycle of capture, refinement, storage, and retrieval.
+The knowledge engine treats the workspace as a living knowledge base organized through a **4-stage lifecycle** mapped to vault folder structure:
 
-## Promotion
+1. **inbox/** — Raw, uncategorized items awaiting triage
+2. **projects/** — Active work in progress
+3. **output/** — Completed, publishable items
+4. **wiki/** — Permanent reference documentation
 
-Not every artifact is equally valuable. The system should promote useful material into durable knowledge when it has clear signal: repeated patterns, user preferences, successful prompt formulas, or stable metadata relationships.
+**Implementation:** `services/knowledgeLifecycle.ts` — `determineStage()`, `generatePath()`, `buildFrontmatter()`, `promote()`, `stageFromPath()`, `scanVaultFolders()`
+**Tests:** 59 unit tests in `services/knowledgeLifecycle.test.ts`
 
-## Distillation
+## Knowledge Service
 
-Distillation compresses raw material into a simpler form that is easier to reuse. This can mean turning a long prompt history into a shorter preference profile or summarizing successful generation attempts into a reusable pattern.
+**File:** `services/knowledgeService.ts`
 
-## Knowledge Graph
+Unified interface over the app's storage systems:
 
-The knowledge graph is a lightweight conceptual model over prompts, assets, and relationships. It should connect prompts to styles, images to prompts, and notes to outcomes so that the app can surface meaningful associations.
+| Method | Description |
+|--------|-------------|
+| `capture(ref, content)` | Save a knowledge item (note, memory, vault file) |
+| `search(query, kinds?)` | Two-pass content scoring across all storage backends |
+| `recall(ref)` | Load content for a specific knowledge reference |
+| `promote(ref, targetTier, reason)` | Move item from working → long-term → knowledge tiers |
+| `distill(ref)` | Compress raw material into a reusable form |
+| `archive(ref)` | Move item to cold storage |
+| `list(kinds?)` | List all indexed knowledge items, optionally filtered by kind |
+| `rebuildIndex()` | Rebuild the full knowledge index from storage |
+
+## Relationship Graph
+
+**File:** `services/relationshipGraph.ts`
+
+A lightweight entity graph connecting prompts, images, styles, notes, and memories:
+
+- **Entity CRUD** — add, get, update, delete entities with metadata
+- **Relation management** — directed and undirected edges between entities
+- **BFS traversal** — find all entities reachable from a starting node
+- **Shortest path** — find optimal path between two entities
+- **Subgraph extraction** — export a focused subgraph
+- **Tag-based similarity** — `findRelatedByTags(entityId)` scoring
+- **Serialization** — export/import to/from JSON
+
+**Tests:** 52 unit tests in `services/relationshipGraph.test.ts`
+
+## Knowledge Context Injection
+
+**File:** `services/buildKnowledgeContextBlock.ts`
+
+Formats knowledge search results into an LLM prompt context block with kind badges and tag badges. Injected into every assistant request via `buildSystemIdentity()`:
+
+- Empty context → returns empty string
+- Relevant results → formatted block with source attribution
+- Service unavailable → graceful fallback message
+
+**Tests:** 17 unit tests in `services/buildKnowledgeContextBlock.test.ts`
 
 ## Retrieval
 
-Retrieval should favor structured local context over broad remote search. The knowledge engine should be able to find related prompts, similar gallery items, or prior project decisions using tags, metadata, and similarity signals when available.
+Retrieval favors structured local context over broad remote search. The knowledge engine finds related prompts, similar gallery items, and prior project decisions using:
+- Tag-based matching
+- Metadata similarity
+- Relationship graph traversal
+- Vault search index (BM25)
+
+## Memory
+
+**File:** `services/memoryTierService.ts`
+
+3-tier memory architecture:
+- **Working memory** — conversation context, transient
+- **Long-term memory** — user preferences/profile (`utils/memoryStorage.ts`)
+- **Knowledge repository** — vault notes persisted via Obsidian
+
+Promotion rules: working → long-term → knowledge with automatic lifecycle folder projection.
 
 ## Metadata
 
-Metadata is the connective tissue of the knowledge engine. Prompt text, model names, asset hashes, timestamps, and user annotations all become part of the retrieval surface.
+Prompt text, model names, asset hashes, timestamps, and user annotations all form the retrieval surface. The key storage files:
 
-## Current Repository Alignment
+- `utils/memoryStorage.ts` — durable user preferences and remembered facts
+- `utils/notesStorage.ts` — in-app notes with CRUD operations
+- `utils/galleryStorage.ts` — gallery item metadata and search
+- `utils/promptStorage.ts` — saved prompt library with lineage tracking
+- `utils/obsidianStorage.ts` — Obsidian vault read/write/search with BM25 index fallback
 
-The current implementation aligns with this model through its prompt-library, gallery, notes, and memory stores. The repository already provides the core primitives needed for a lightweight knowledge layer:
+## Assistant Tool
 
-- prompt lineage and saved prompt metadata in [../../../types.ts](../../../types.ts)
-- note and memory persistence helpers in [../../../utils/notesStorage.ts](../../../utils/notesStorage.ts) and [../../../utils/memoryStorage.ts](../../../utils/memoryStorage.ts)
-- gallery metadata and retrieval in [../../../utils/galleryStorage.ts](../../../utils/galleryStorage.ts)
-- assistant capability grounding in [../../../services/assistantService.ts](../../../services/assistantService.ts)
+`knowledge_lifecycle_promote` — lets the assistant move items between lifecycle stages:
+- Parameters: `kind` (memory/note/vault_note/prompt), `id`, `target_stage` (inbox/projects/output/wiki)
+- Validates item exists in the knowledge index
+- Determines current stage from vault path
+- Loads content, promotes to target stage, updates index
+- Auto-promotes tier to "knowledge" when moving to wiki/output

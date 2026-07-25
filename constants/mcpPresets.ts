@@ -27,37 +27,12 @@ export interface McpPreset {
 
 export const MCP_PRESETS: McpPreset[] = [
     {
-        id: 'firecrawl',
-        name: 'Firecrawl',
-        description: 'Web scraping and search that handles JS-rendered pages. Hosted — no local process required.',
-        needsApiKey: true,
-        buildUrl: (apiKey) => `https://mcp.firecrawl.dev/${apiKey}/v2/mcp`,
-        launchNotes: 'Get a free API key at firecrawl.dev — paste it below, no local setup needed.',
-    },
-    {
-        id: 'brave-search',
-        name: 'Brave Search',
-        description: 'Web, image, video, news, and local search via the official Brave Search API.',
-        needsApiKey: true,
-        defaultUrl: 'http://127.0.0.1:8080/mcp',
-        launchCommand: 'set BRAVE_API_KEY={apiKey} && npx -y @brave/brave-search-mcp-server --transport http',
-        launchNotes: 'Free API key at api-dashboard.search.brave.com. Runs locally — leave the command running in a terminal, then Ping to verify.',
-    },
-    {
-        id: 'playwright',
-        name: 'Playwright',
-        description: 'Official Microsoft browser automation — navigate, click, screenshot, extract content.',
+        id: 'kollektiv-mcp',
+        name: 'Kollektiv MCP',
+        description: 'Internal MCP control panel — browser automation, vault tools, and assistant capabilities. Auto-started by the dev server on port 3012.',
         needsApiKey: false,
-        defaultUrl: 'http://localhost:8931/mcp',
-        launchNotes: 'No API key needed. Auto-started by the dev server (server.ts) on port 8931 — just toggle it on, then Ping to verify.',
-    },
-    {
-        id: 'obsidian-vault',
-        name: 'Obsidian Vault',
-        description: 'Read, write, search, and manage your Obsidian vault notes via the Local REST API plugin. Requires OBSIDIAN_VAULT_PATH env var on the server.',
-        needsApiKey: false,
-        defaultUrl: 'http://127.0.0.1:3012/mcp',
-        launchNotes: 'No API key needed. Auto-started by the dev server when OBSIDIAN_VAULT_PATH is set — just toggle it on, then Ping to verify.',
+        defaultUrl: 'http://127.0.0.1:3012',
+        launchNotes: 'No API key needed. Auto-started by the dev server — toggle it on, then Ping to verify. Serves 60+ tools across browser automation and vault access.',
     },
 ];
 
@@ -80,7 +55,10 @@ export function upsertMcpPresetEntry(
 ): { servers: McpServerConfig[]; entry: McpServerConfig } {
     const existing = findMcpPresetEntry(servers, preset.id);
     if (existing) {
-        const updated = { ...existing, ...patch };
+        // Sync the URL from the preset on every update so that changes to
+        // preset.defaultUrl (e.g. after a server migration) propagate to
+        // existing stored entries without requiring a manual reset.
+        const updated = { ...existing, url: preset.defaultUrl || existing.url, ...patch };
         return { servers: servers.map(s => s.id === existing.id ? updated : s), entry: updated };
     }
     const created: McpServerConfig = {

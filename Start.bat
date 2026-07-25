@@ -1,1 +1,0 @@
-call pnpm dev

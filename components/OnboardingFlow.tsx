@@ -26,18 +26,35 @@ const OnboardingFlow: React.FC<OnboardingFlowProps> = ({ onSetupComplete }) => {
 
   // ── Check for existing storage handle on mount ──────────────────────
   useEffect(() => {
+    let cancelled = false;
     const checkHandle = async () => {
       try {
         const handle = await getHandle<FileSystemDirectoryHandle>('app-data-dir');
         if (handle && typeof handle.name === 'string') {
           setHasExistingHandle(true);
           setExistingDirName(handle.name);
+
+          // Auto-try reconnect — requestPermission may show the browser
+          // permission prompt for the previously-granted folder.
+          setIsLoading(true);
+          try {
+            const success = await fileSystemManager.requestExistingPermission();
+            if (!cancelled && success) {
+              setCurrentProvider('local');
+              goToStep('provider');
+              return;
+            }
+          } catch {
+            // Silently fall through — user sees RECONNECT_VAULT button
+          }
+          if (!cancelled) setIsLoading(false);
         }
       } catch (e) {
         console.warn('Failed to check existing storage handle:', e);
       }
     };
     checkHandle();
+    return () => { cancelled = true; };
   }, []);
 
   // ── Step 1: Storage selection ───────────────────────────────────────

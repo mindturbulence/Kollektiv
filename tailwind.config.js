@@ -17,6 +17,7 @@ export default {
   },
   plugins: [require("daisyui"), require("@tailwindcss/typography")],
   daisyui: {
+    logs: false,
     themes: [
       {
         Kollektiv: {

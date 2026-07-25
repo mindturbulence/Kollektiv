@@ -1,10 +1,11 @@
+import 'dotenv/config';
 import express from "express";
 import { createServer as createViteServer } from "vite";
 import path from "path";
 import http from "http";
 import net from "net";
 import multer from "multer";
-import { execFile, spawn, execSync } from "child_process";
+import { execFile, execSync } from "child_process";
 import fs from "fs";
 import os from "os";
 import { DEFAULT_ANTHROPIC_MODEL } from "./constants/llmDefaults";
@@ -54,9 +55,6 @@ function isPortFree(port: number, host: string): Promise<boolean> {
     server.listen(port, host);
   });
 }
-
-const PLAYWRIGHT_MCP_PORT = 8931;
-const PLAYWRIGHT_MCP_FALLBACK_PORT = 8932;
 
 async function startServer() {
   const app = express();
@@ -600,10 +598,7 @@ async function startServer() {
       return res.status(400).json({ success: false, error: "Missing MCP server URL" });
     }
     if (!isValidProxyTarget(url)) {
-      return res.status(400).json({ success: false, error: "MCP server URL must be a valid http(s) URL" });
-    }
-    if (!isAllowedProxyTarget(url)) {
-      return res.status(403).json({ success: false, error: "MCP server URL is not in the proxy allowlist" });
+      return res.status(400).json({ success: false, error: 'MCP server URL must be a valid http(s) URL' });
     }
 
     // Debug: log incoming headers
@@ -660,6 +655,14 @@ async function startServer() {
       }
 
       if (!response.ok) {
+        // Try to parse JSON error body from MCP server — pass it through so
+        // the client's retry logic can detect stale sessions by error message.
+        try {
+          const errData = await response.json();
+          if (errData?.error?.message && typeof errData.error.message === 'string') {
+            return res.json({ success: false, error: errData.error.message, sessionId });
+          }
+        } catch { /* not JSON — fall through to generic error */ }
         throw new Error(`MCP Server responded with status ${response.status}`);
       }
 
@@ -1436,13 +1439,15 @@ async function startServer() {
     });
   }
 
-  // Vault MCP server — enables Obsidian vault tools when OBSIDIAN_VAULT_PATH is set in the environment.
-  // Toggle the obsidian-vault preset in Settings > MCP Servers > Predefined to connect.
+  // Kollektiv MCP server — always starts on port 3012. Loads Playwright browser tools
+  // unconditionally; vault tools are added only when OBSIDIAN_VAULT_PATH is set.
   let kollektivMcpInstance: KollektivMcpInstance | null = null;
   const startKollektivMcpVault = async () => {
-    if (!process.env.OBSIDIAN_VAULT_PATH) return;
     try {
-      kollektivMcpInstance = await startKollektivMcp({ vaultPath: process.env.OBSIDIAN_VAULT_PATH, port: 3012 });
+      kollektivMcpInstance = await startKollektivMcp({
+        vaultPath: process.env.OBSIDIAN_VAULT_PATH || undefined,
+        port: 3012,
+      });
     } catch (err) {
       console.error(`[Kollektiv MCP] failed to start: ${err instanceof Error ? err.message : err}`);
     }
@@ -1450,62 +1455,11 @@ async function startServer() {
 
   void startKollektivMcpVault();
 
-  // Start Playwright MCP server as child process — no API key needed, so it
-  // always starts (matches the Predefined MCP tab's Playwright preset, which
-  // points at this same port by default).
-  // If the default port is taken, tries a fallback port.
-  let playwrightMcpProc: ReturnType<typeof spawn> | null = null;
-  const startPlaywrightMcp = async () => {
-    if (playwrightMcpProc) return;
-
-    // Check if default port is free; if not, try fallback
-    let pwPort = PLAYWRIGHT_MCP_PORT;
-    const pwFree = await isPortFree(pwPort, "127.0.0.1");
-    if (!pwFree) {
-      console.warn(`[Playwright MCP] Port ${pwPort} is in use, trying fallback port ${PLAYWRIGHT_MCP_FALLBACK_PORT}...`);
-      freePort(pwPort);
-      await new Promise(r => setTimeout(r, 500));
-      const fallbackFree = await isPortFree(PLAYWRIGHT_MCP_FALLBACK_PORT, "127.0.0.1");
-      if (fallbackFree) {
-        pwPort = PLAYWRIGHT_MCP_FALLBACK_PORT;
-        console.log(`[Playwright MCP] Using fallback port ${pwPort}.`);
-      } else {
-        console.error(`[Playwright MCP] Both ports ${PLAYWRIGHT_MCP_PORT} and ${PLAYWRIGHT_MCP_FALLBACK_PORT} are in use — skipping.`);
-        return;
-      }
-    }
-
-    playwrightMcpProc = spawn(`npx @playwright/mcp@latest --port ${pwPort}`, [], {
-      shell: true, // needed on Windows
-      stdio: ["ignore", "pipe", "pipe"],
-    });
-    playwrightMcpProc.stdout?.on("data", (d) => console.log(`[Playwright MCP] ${d.toString().trim()}`));
-    playwrightMcpProc.stderr?.on("data", (d) => {
-      const msg = d.toString().trim();
-      if (msg.includes("EADDRINUSE") || msg.includes("address already in use")) {
-        console.warn(`[Playwright MCP] Port conflict: ${msg}`);
-      } else {
-        console.error(`[Playwright MCP] ${msg}`);
-      }
-    });
-    playwrightMcpProc.on("exit", (code) => {
-      console.log(`[Playwright MCP] exited with code ${code}`);
-      playwrightMcpProc = null;
-    });
-    console.log(`[Playwright MCP] starting on http://localhost:${pwPort}/mcp`);
-  };
-
-  startPlaywrightMcp();
-
   // Cleanup on shutdown
   const shutdown = () => {
     if (kollektivMcpInstance) {
       console.log(`[Kollektiv MCP] shutting down...`);
       void kollektivMcpInstance.stop();
-    }
-    if (playwrightMcpProc) {
-      console.log(`[Playwright MCP] shutting down...`);
-      playwrightMcpProc.kill();
     }
     if (chromeLauncher.isRunning) {
       console.log(`[Chrome Launcher] shutting down...`);
@@ -1518,10 +1472,8 @@ async function startServer() {
 
   // 'exit' only allows synchronous work, so this covers the case SIGINT/SIGTERM
   // don't: a hard crash (uncaught exception) or a plain process.exit() call
-  // elsewhere, either of which would otherwise leave chromeLauncher's Chrome
-  // process (and the MCP child processes) orphaned.
+  // elsewhere that would otherwise leave chromeLauncher's Chrome process orphaned.
   const killChildProcessesSync = () => {
-    if (playwrightMcpProc) playwrightMcpProc.kill();
     if (chromeLauncher.isRunning) chromeLauncher.kill();
   };
   process.on("exit", killChildProcessesSync);
