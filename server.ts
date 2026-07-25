@@ -8,6 +8,7 @@ import { execFile, spawn, execSync } from "child_process";
 import fs from "fs";
 import os from "os";
 import { DEFAULT_ANTHROPIC_MODEL } from "./constants/llmDefaults";
+import { isAllowedProxyTarget } from "./utils/proxyTargetValidation";
 import { chromeLauncher } from "./services/chromeLauncher";
 import { startKollektivMcp, type KollektivMcpInstance } from "./services/kollektivMcp";
 
@@ -594,6 +595,9 @@ async function startServer() {
     }
     if (!isValidProxyTarget(url)) {
       return res.status(400).json({ success: false, error: "MCP server URL must be a valid http(s) URL" });
+    }
+    if (!isAllowedProxyTarget(url)) {
+      return res.status(403).json({ success: false, error: "MCP server URL is not in the proxy allowlist" });
     }
 
     // Debug: log incoming headers
