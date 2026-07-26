@@ -296,6 +296,24 @@ const toolPhrases: Record<string, Record<string, string>> = {
     },
 };
 
+/** Creative fallback variations when no specific tool description matches.
+ *  These cycle randomly on each tool call, giving the same variety as the
+ *  idle command prompts but for the "processing / doing work" state. */
+const MAGIC_FALLBACKS: string[] = [
+    `Working some quiet magic…`,
+    `Weaving digital threads…`,
+    `Connecting the pieces…`,
+    `Assembling a response…`,
+    `Sifting through signals…`,
+    `Brewing up an answer…`,
+    `Spinning the gears…`,
+    `Tracing the currents…`,
+    `Knitting thoughts together…`,
+    `Charting a path forward…`,
+    `Stirring the ether…`,
+    `Aligning the circuits…`,
+];
+
 /** Look up a translated phrase for the user's preferred language, falling back
  *  to English. Uses the same canonical language-key resolution as the
  *  Samaritan assistant page's idle prompts (utils/languageKey.ts) — previously
@@ -341,6 +359,11 @@ const describeToolCall = (name: string, _args: Record<string, any>, lang: string
         case name.startsWith('gmail_'):
             return t('inbox', lang);
         default:
+            // For English, cycle through creative fallbacks for variety.
+            // Other languages use the translated magic phrase consistently.
+            if (resolveLangKey(lang) === 'en') {
+                return MAGIC_FALLBACKS[Math.floor(Math.random() * MAGIC_FALLBACKS.length)];
+            }
             return t('magic', lang);
     }
 };
