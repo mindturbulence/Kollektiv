@@ -112,7 +112,7 @@ The engine builds model-specific system instructions via factory functions:
 
 ## Assistant Tool Catalog
 
-The assistant has 89 built-in tools (45 defined inline in `services/assistantTools.ts` plus 44 spread in from the category modules below), organized into category-specific modules under `services/tools/`:
+The assistant has 97 built-in tools (45 defined inline in `services/assistantTools.ts` plus 52 spread in from the category modules below), organized into category-specific modules under `services/tools/`:
 
 ### Core tools (in assistantTools.ts)
 
@@ -129,7 +129,7 @@ The assistant has 89 built-in tools (45 defined inline in `services/assistantToo
 
 `web_search` is free by default (multi-engine scrape via `/api/web-search`: DuckDuckGo + Brave, optionally Exa with `EXA_API_KEY`, no API key required) and only falls back to Gemini Google Search grounding when the free search returns nothing and a Gemini key is configured. The assistant can also specify which engines to use by passing an `engines` array.
 
-**Auto-save to the Assistant Notes panel** — Every web tool (`web_search`, `fetch_url`, `scrape_url`, `scrape_url_playwright`, `open_web_page`) emits its result to the Assistant Notes panel's merged feed (`appEventBus.emit('webSearchResults', …)`) directly from `execute()`, on success, unconditionally — this does **not** depend on the model calling anything afterward. `scrape_url`/`scrape_url_playwright` emit the single fetched page (title, Defuddle-extracted Markdown, author/published/site/image when present). `web_search` emits up to 3 cards: the Defuddle-extracted `fetchedContent` entries when `fetch_content: true` was passed (rich — image/byline included), otherwise the top 3 raw snippets (lightweight, no image). The Gemini last-resort fallback also emits one card (answer + source links). `send_to_web_panel` still exists but is now optional — use it only to post an additional cross-source synthesis beyond what was already auto-saved.
+**Auto-save to the Assistant Notes panel** — Every web/reach tool (`web_search`, `fetch_url`, `scrape_url`, `scrape_url_playwright`, `open_web_page`, `rss_fetch`, and the other `/api/reach/*`-backed tools) emits its result to the Assistant Notes panel's merged feed (`appEventBus.emit('webSearchResults', …)`) directly from `execute()`, on success, unconditionally — this does **not** depend on the model calling anything afterward. `scrape_url`/`scrape_url_playwright` emit the single fetched page (title, Defuddle-extracted Markdown, author/published/site/image when present). `web_search` emits up to 3 cards: the Defuddle-extracted `fetchedContent` entries when `fetch_content: true` was passed (rich — image/byline included), otherwise the top 3 raw snippets (lightweight, no image). The Gemini last-resort fallback also emits one card (answer + source links). `send_to_web_panel` still exists but is now optional — use it only to post an additional cross-source synthesis beyond what was already auto-saved.
 
 **Auto-fetch mode** — Set `fetch_content=true` to automatically fetch the full page content (as Markdown) of the top 3 search results alongside the title/URL/snippet results. The response includes a `fetchedContent` array with `{url, title, content, excerpt}` for each page. Use this when snippets alone are insufficient to answer the query or when you need the full article text.
 
@@ -157,6 +157,12 @@ Both tools call server-side endpoints (`/api/scrape-url` and `/api/scrape-url-pl
 | `services/tools/tensorArtTools.ts` | `tensorart_list_models`, `tensorart_generate` | Remote image generation |
 | `services/tools/researchTools.ts` | `append_findings`, `expand_source` | Research panel findings management |
 | `services/tools/graphTools.ts` | `find_related_knowledge` | Cross-store tag-based relations via `services/relationshipGraph.ts` — finds memories/gallery items/prompts sharing tags with a given item |
+| `services/tools/rssTools.ts` | `rss_fetch` | Fetch and parse an RSS/Atom feed (`rss-parser`), via `POST /api/reach/rss`. No API key. |
+| `services/tools/githubTools.ts` | `github_get_repo`, `github_search`, `github_get_file` | GitHub REST API v3 via `POST /api/reach/github`. Optional `GITHUB_TOKEN` (60/hr unauthenticated → 5000/hr, shared across all users of this deployment since the route is server-side). |
+| `services/tools/exaTools.ts` | `exa_search` | Standalone semantic search via Exa's rich `/search` API (category, date range, domain filters, optional full content), via `POST /api/reach/exa`. Distinct from `web_search`'s built-in Exa engine, which only supports the plain `(query, maxResults)` shape — needs `EXA_API_KEY`. |
+| `services/tools/redditTools.ts` | `reddit_fetch` | Subreddit listing, thread + comments, or keyword search via Reddit's public `.json` endpoints (no login/API key), via `POST /api/reach/reddit`. Requires a descriptive `User-Agent` (Reddit 429s generic ones); moderate rate-limit risk from datacenter IPs. |
+| `services/tools/youtubeTranscriptTools.ts` | `youtube_get_transcript` | Fetches a video's captions via `POST /api/reach/youtube-transcript`, complementing `youtube_search` (which finds videos but can't read them). Ordered fallback (`services/reachChannels/youtube/`): watch-page caption-track scrape, then the undocumented InnerTube `player` endpoint. **Elevated fragility** — both backends are unversioned and can break without notice; degrades to a clean error, never a crash. |
+| `services/tools/twitterTools.ts` | `twitter_get_tweet` | Fetches a single tweet's text/author/metrics/media via `POST /api/reach/twitter` (stricter rate limit than other reach routes). Ordered fallback (`services/reachChannels/twitter/`): the undocumented syndication CDN (rich data), then the public oEmbed endpoint (text + author only). **Highest fragility of any reach channel** — Twitter/X has actively restricted third-party read access since 2023; treat as "works today, may need a fix when it breaks," not durable infrastructure. |
 
 ### Tool execution
 

@@ -82,7 +82,16 @@ export const isAllowedProxyTarget = (
   return false;
 };
 
-const isDisallowedAddress = (hostname: string): boolean => {
+/**
+ * Pure predicate: does this hostname resolve to (or look like) a private,
+ * loopback, or link-local address? Exported separately from
+ * `isAllowedProxyTarget` so other server-side routes that fetch an
+ * arbitrary caller-supplied URL (e.g. the RSS reach channel) can reuse the
+ * SSRF check without pulling in `/proxy-remote`'s host allowlist, which
+ * exists for a different purpose (bounding blast radius for model-controlled
+ * proxy targets specifically).
+ */
+export const isDisallowedAddress = (hostname: string): boolean => {
   // Pure literal IP? Reject private/loopback/link-local.
   if (net.isIP(hostname)) {
     if (net.isIPv4(hostname)) {

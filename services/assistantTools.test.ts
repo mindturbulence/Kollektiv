@@ -32,6 +32,43 @@ vi.mock('../utils/obsidianStorage', () => ({
 }));
 
 describe('ASSISTANT_TOOLS', () => {
+    it('includes rss_fetch tool', () => {
+        const tool = ASSISTANT_TOOLS.find(t => t.name === 'rss_fetch');
+        expect(tool).toBeDefined();
+        expect(tool!.parameters.required).toContain('url');
+        expect(tool!.parameters.properties.url).toBeDefined();
+    });
+
+    it('includes github_get_repo tool', () => {
+        const tool = ASSISTANT_TOOLS.find(t => t.name === 'github_get_repo');
+        expect(tool).toBeDefined();
+        expect(tool!.parameters.required).toEqual(['owner', 'repo']);
+    });
+
+    it('includes exa_search tool', () => {
+        const tool = ASSISTANT_TOOLS.find(t => t.name === 'exa_search');
+        expect(tool).toBeDefined();
+        expect(tool!.parameters.required).toEqual(['query']);
+    });
+
+    it('includes reddit_fetch tool', () => {
+        const tool = ASSISTANT_TOOLS.find(t => t.name === 'reddit_fetch');
+        expect(tool).toBeDefined();
+        expect(tool!.parameters.required).toEqual(['op']);
+    });
+
+    it('includes youtube_get_transcript tool', () => {
+        const tool = ASSISTANT_TOOLS.find(t => t.name === 'youtube_get_transcript');
+        expect(tool).toBeDefined();
+        expect(tool!.parameters.required).toEqual(['videoId']);
+    });
+
+    it('includes twitter_get_tweet tool', () => {
+        const tool = ASSISTANT_TOOLS.find(t => t.name === 'twitter_get_tweet');
+        expect(tool).toBeDefined();
+        expect(tool!.parameters.required).toEqual(['tweetId']);
+    });
+
     it('includes get_weather tool', () => {
         const tool = ASSISTANT_TOOLS.find(t => t.name === 'get_weather');
         expect(tool).toBeDefined();

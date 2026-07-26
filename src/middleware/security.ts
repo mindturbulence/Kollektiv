@@ -69,6 +69,25 @@ export const searchRateLimiter = rateLimit({
   legacyHeaders: false,
 });
 
+// Reach-channel endpoints (RSS, GitHub, Exa, Reddit, YouTube transcript) —
+// same generous-but-real cap as search, cloned rather than shared so each
+// route family can be tuned independently later.
+export const reachRateLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 60,
+  standardHeaders: true,
+  legacyHeaders: false,
+});
+
+// Twitter/X reach endpoint — stricter cap. Of all the reach channels this is
+// the one most likely to get this deployment's shared IP flagged if hammered.
+export const twitterReachRateLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 20,
+  standardHeaders: true,
+  legacyHeaders: false,
+});
+
 // Helper to apply CORS with a configurable allowed origin (defaults to local dev).
 export const corsOptions = cors({
   origin: true,

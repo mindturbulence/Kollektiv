@@ -31,6 +31,12 @@ import { spotifyTools } from './tools/spotifyTools';
 import { tensorArtTools } from './tools/tensorArtTools';
 import { researchTools } from './tools/researchTools';
 import { graphTools } from './tools/graphTools';
+import { rssTools } from './tools/rssTools';
+import { githubTools } from './tools/githubTools';
+import { exaTools } from './tools/exaTools';
+import { redditTools } from './tools/redditTools';
+import { youtubeTranscriptTools } from './tools/youtubeTranscriptTools';
+import { twitterTools } from './tools/twitterTools';
 
 // Must mirror ActiveTab in types.ts.
 const PAGES = ['dashboard', 'discovery', 'prompts', 'crafter', 'refiner', 'prompt_analyzer', 'media_analyzer', 'prompt', 'gallery', 'resizer', 'video_to_frames', 'image_compare', 'color_palette_extractor', 'composer', 'settings'];
@@ -1192,6 +1198,12 @@ export const ASSISTANT_TOOLS: AssistantTool[] = [
     ...tensorArtTools,
     ...researchTools,
     ...graphTools,
+    ...rssTools,
+    ...githubTools,
+    ...exaTools,
+    ...redditTools,
+    ...youtubeTranscriptTools,
+    ...twitterTools,
 
     // ─── MCP Architecture: 5 capability introspection/execution tools ────
 
