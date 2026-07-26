@@ -225,6 +225,26 @@ const getVariations = (language: string | undefined): string[] => {
     return IDLE_VARIATIONS[key] || IDLE_VARIATIONS['en'];
 };
 
+/** Creative variations for the processing (AI working) state heading,
+ *  shown above the sigil while the assistant is computing. Cycles every
+ *  few seconds for the same variety as the idle command prompts. */
+const PROCESSING_VARIATIONS: string[] = [
+    'ANALYZING',
+    'FORMULATING',
+    'COMPUTING',
+    'REASONING',
+    'SYNTHESIZING',
+    'DECIPHERING',
+    'ARCHITECTING',
+    'WEAVING LOGIC',
+    'KINDLING INSIGHT',
+    'CONJURING ANSWER',
+    'BREWING THOUGHTS',
+    'ENGAGING MIND',
+    'MUSTERING THREADS',
+    'CRYSTALLIZING',
+];
+
 /** CSS triangle in the theme accent color — the Samaritan sigil. Always on
  * screen, gently pulsing; it never collapses or hides. */
 const Sigil: React.FC = () => (
@@ -369,8 +389,6 @@ const AssistantPage: React.FC = () => {
     const PROMPT = getPrompt(settings.assistantLanguage);
     const idleVariations = getVariations(settings.assistantLanguage);
 
-
-
     // displayMode follows `mode` directly — no hold mechanism since the
     // RollingCaption used for responding mode is stateless and updates
     // instantly, so there's no "reveal" timing to wait for.
@@ -379,6 +397,24 @@ const AssistantPage: React.FC = () => {
     useEffect(() => {
         setDisplayMode(mode);
     }, [mode]);
+
+    const [processingIdx, setProcessingIdx] = useState(0);
+
+    // Processing heading rotation — cycles through PROCESSING_VARIATIONS
+    // while the assistant is in processing mode.
+    useEffect(() => {
+        if (displayMode !== 'processing') return;
+        setProcessingIdx(Math.floor(Math.random() * PROCESSING_VARIATIONS.length));
+        const t = window.setInterval(() => {
+            setProcessingIdx(prev => {
+                let next;
+                do { next = Math.floor(Math.random() * PROCESSING_VARIATIONS.length); }
+                while (next === prev);
+                return next;
+            });
+        }, 4_000);
+        return () => window.clearInterval(t);
+    }, [displayMode]);
 
     // Tracks the last moment of actual conversation (responding, listening,
     // or processing) so we can detect 3 minutes of silence on the assistant
@@ -514,7 +550,9 @@ const AssistantPage: React.FC = () => {
                         )}
 
                         {displayMode === 'processing' && (
-                            <Underline text="ANALYZING">ANALYZING</Underline>
+                            <Underline text={PROCESSING_VARIATIONS[processingIdx]}>
+                                {PROCESSING_VARIATIONS[processingIdx]}
+                            </Underline>
                         )}
 
                         {displayMode === 'responding' && (
@@ -537,29 +575,20 @@ const AssistantPage: React.FC = () => {
                         <Sigil />
 
                         {/* Fixed-height slot below the sigil — processing's
-                            activity feed lives here; empty (but the same height)
+                            subtle bars live here; empty (but the same height)
                             everywhere else, so the core above never shifts. */}
                         <div className="min-h-[96px] flex flex-col items-center gap-6">
                             {displayMode === 'processing' && (
-                                <>
-                                    <div className="flex gap-1">
-                                        {Array.from({ length: 7 }).map((_, i) => (
-                                            <motion.div
-                                                key={i}
-                                                className="w-6 h-2 bg-primary"
-                                                animate={{ opacity: [0.1, 1, 0.1] }}
-                                                transition={{ duration: 0.7, repeat: Infinity, delay: i * 0.09 }}
-                                            />
-                                        ))}
-                                    </div>
-                                    <div className="flex flex-col gap-1 min-h-[64px] items-center">
-                                        {activity.map((line, i) => (
-                                            <p key={`${i}-${line}`} className="font-mono text-[10px] tracking-[0.2em] uppercase text-primary/70 truncate max-w-[60vw]">
-                                                {line}
-                                            </p>
-                                        ))}
-                                    </div>
-                                </>
+                                <div className="flex gap-1">
+                                    {Array.from({ length: 7 }).map((_, i) => (
+                                        <motion.div
+                                            key={i}
+                                            className="w-6 h-2 bg-primary"
+                                            animate={{ opacity: [0.1, 1, 0.1] }}
+                                            transition={{ duration: 0.7, repeat: Infinity, delay: i * 0.09 }}
+                                        />
+                                    ))}
+                                </div>
                             )}
                         </div>
                     </motion.div>
