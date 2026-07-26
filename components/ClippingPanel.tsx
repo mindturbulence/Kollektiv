@@ -1,13 +1,14 @@
-import React, { useRef, useEffect, useState, useCallback, useLayoutEffect } from 'react';
+import React, { useRef, useEffect, useState, useCallback, useLayoutEffect, useMemo } from 'react';
 import { createPortal } from 'react-dom';
 import { gsap } from 'gsap';
-import type { Idea } from '../types';
+import type { Idea, WebResult } from '../types';
 import type { AssistantNote } from '../utils/notesStorage';
 import { loadNotes, getNotesSync, addNote, updateNote, deleteNote, clearNotes } from '../utils/notesStorage';
 import { appEventBus } from '../utils/eventBus';
 import { fileSystemManager } from '../utils/fileUtils';
+import { serializeWithFrontmatter } from '../utils/obsidianStorage';
 import { CloseIcon, DeleteIcon, SparklesIcon, BookmarkIcon, RefreshIcon, PlusIcon, ArchiveIcon, CopyIcon, EditIcon, NoteIcon, GlobeIcon } from './icons';
-import { WebTabContent } from './WebTabContent';
+import { WebResultCard } from './WebTabContent';
 import { audioService } from '../services/audioService';
 
 interface ClippingPanelProps {
@@ -22,16 +23,12 @@ interface ClippingPanelProps {
     onSaveToLibrary: (idea: Idea) => void;
 }
 
-type PanelTab = 'clips' | 'notes' | 'files' | 'web';
+type PanelTab = 'clips' | 'assistantNotes' | 'files';
 
-interface WebResult {
-    title: string;
-    url: string;
-    markdown: string;
-    source: 'search' | 'fetch' | 'scrape' | 'playwright';
-    timestamp: number;
-    engine?: string;
-}
+/** A single entry in the merged Assistant Notes feed — a persisted note or an ephemeral web result, sorted by recency. */
+type NotesFeedEntry =
+    | { kind: 'note'; note: AssistantNote; ts: number }
+    | { kind: 'web'; result: WebResult; ts: number };
 
 const downloadBlob = (blob: Blob, filename: string) => {
     const a = document.createElement('a');
@@ -352,12 +349,12 @@ const ClippingPanel: React.FC<ClippingPanelProps> = ({
             setWebResults(prev => [...results, ...prev].slice(0, 50));
             setWebLoading(false);
             setWebError(null);
-            if (tab !== 'web') setTab('web');
+            if (tab !== 'assistantNotes') setTab('assistantNotes');
         });
         const offError = appEventBus.on('webSearchError', (error: string) => {
             setWebLoading(false);
             setWebError(error);
-            if (tab !== 'web') setTab('web');
+            if (tab !== 'assistantNotes') setTab('assistantNotes');
         });
         const offLoading = appEventBus.on('webSearchLoading', () => {
             setWebLoading(true);
@@ -469,19 +466,28 @@ const ClippingPanel: React.FC<ClippingPanelProps> = ({
         void refreshFiles();
     }, [refreshFiles]);
 
-    const handleSaveAsNote = useCallback((title: string, markdown: string) => {
+    const webResultToMarkdown = (result: WebResult): string => {
+        const frontmatter: Record<string, string> = { source: result.url };
+        if (result.author) frontmatter.author = result.author;
+        if (result.published) frontmatter.published = result.published;
+        if (result.site) frontmatter.site = result.site;
+        return serializeWithFrontmatter(result.markdown, frontmatter);
+    };
+
+    const handleSaveAsNote = useCallback((result: WebResult) => {
         audioService.playClick();
-        addNote(title, markdown, 'assistant');
+        addNote(result.title, webResultToMarkdown(result), 'assistant');
         appEventBus.emit('assistantFeedback', { message: 'Saved as note', isError: false });
     }, []);
 
-    const handleSaveToVault = useCallback(async (title: string, markdown: string) => {
+    const handleSaveToVault = useCallback(async (result: WebResult) => {
         audioService.playClick();
         if (!fileSystemManager.isDirectorySelected()) {
             appEventBus.emit('assistantFeedback', { message: 'No vault connected', isError: true });
             return;
         }
-        const safe = title.replace(/[\\/:*?"<>|]/g, '_').trim() || `web-${Date.now()}`;
+        const safe = result.title.replace(/[\\/:*?"<>|]/g, '_').trim() || `web-${Date.now()}`;
+        const markdown = webResultToMarkdown(result);
         await fileSystemManager.saveFile(`assistant/${safe}.md`, new Blob([markdown], { type: 'text/markdown' }));
         appEventBus.emit('assistantFilesChanged');
         appEventBus.emit('assistantFeedback', { message: `Saved to vault as ${safe}.md`, isError: false });
@@ -495,6 +501,15 @@ const ClippingPanel: React.FC<ClippingPanelProps> = ({
             appEventBus.emit('assistantFeedback', { message: 'Failed to copy', isError: true });
         });
     }, []);
+
+    // Merged, recency-sorted feed for the Assistant Notes tab: persisted notes + ephemeral web results.
+    const notesFeed = useMemo<NotesFeedEntry[]>(() => {
+        const entries: NotesFeedEntry[] = [
+            ...notes.map((note): NotesFeedEntry => ({ kind: 'note', note, ts: note.updatedAt })),
+            ...webResults.map((result): NotesFeedEntry => ({ kind: 'web', result, ts: result.timestamp })),
+        ];
+        return entries.sort((a, b) => b.ts - a.ts);
+    }, [notes, webResults]);
 
 
     return (
@@ -512,8 +527,8 @@ const ClippingPanel: React.FC<ClippingPanelProps> = ({
                             <div className="flex items-center gap-3">
                                 {tab === 'clips' ? (
                                     <BookmarkIcon className="w-5 h-5 text-primary" />
-                                ) : tab === 'web' ? (
-                                    <GlobeIcon className="w-5 h-5 text-primary" />
+                                ) : tab === 'files' ? (
+                                    <ArchiveIcon className="w-5 h-5 text-primary" />
                                 ) : (
                                     <NoteIcon className="w-5 h-5 text-primary" />
                                 )}
@@ -525,16 +540,10 @@ const ClippingPanel: React.FC<ClippingPanelProps> = ({
                                         Clips [{clippedIdeas.length}]
                                     </button>
                                     <button
-                                        onClick={() => { audioService.playClick(); setTab('notes'); }}
-                                        className={`px-3 py-1 text-[10px] font-black uppercase tracking-[0.3em] font-logo border border-base-300/30 border-l-0 ${tab === 'notes' ? 'bg-primary/20 text-primary' : 'opacity-50 hover:opacity-100'}`}
+                                        onClick={() => { audioService.playClick(); setTab('assistantNotes'); }}
+                                        className={`px-3 py-1 text-[10px] font-black uppercase tracking-[0.3em] font-logo border border-base-300/30 border-l-0 ${tab === 'assistantNotes' ? 'bg-primary/20 text-primary' : 'opacity-50 hover:opacity-100'}`}
                                     >
-                                        Notes [{notes.length}]
-                                    </button>
-                                    <button
-                                        onClick={() => { audioService.playClick(); setTab('web'); }}
-                                        className={`px-3 py-1 text-[10px] font-black uppercase tracking-[0.3em] font-logo border border-base-300/30 border-l-0 ${tab === 'web' ? 'bg-primary/20 text-primary' : 'opacity-50 hover:opacity-100'}`}
-                                    >
-                                        Web [{webResults.length}]
+                                        Assistant Notes [{notesFeed.length}]
                                     </button>
                                     <button
                                         onClick={() => { audioService.playClick(); setTab('files'); }}
@@ -555,7 +564,7 @@ const ClippingPanel: React.FC<ClippingPanelProps> = ({
                                         <PlusIcon className="w-5 h-5" />
                                     </button>
                                 )}
-                                {tab === 'notes' && (
+                                {tab === 'assistantNotes' && (
                                     <button
                                         onClick={() => { audioService.playClick(); addNote('', 'New note — click REVISE to edit.', 'user'); }}
                                         className="btn btn-xs btn-ghost h-8 w-8 rounded-none p-0 opacity-40 hover:opacity-100 hover:text-primary transition-all btn-snake"
@@ -575,7 +584,7 @@ const ClippingPanel: React.FC<ClippingPanelProps> = ({
                                         <DeleteIcon className="w-5 h-5" />
                                     </button>
                                 )}
-                                {tab === 'notes' && notes.length > 0 && (
+                                {tab === 'assistantNotes' && notes.length > 0 && (
                                     <button
                                         onClick={() => { audioService.playClick(); clearNotes(); }}
                                         className="btn btn-xs btn-ghost h-8 w-8 rounded-none p-0 opacity-40 hover:opacity-100 hover:text-error transition-all btn-snake"
@@ -585,14 +594,14 @@ const ClippingPanel: React.FC<ClippingPanelProps> = ({
                                         <DeleteIcon className="w-5 h-5" />
                                     </button>
                                 )}
-                                {tab === 'web' && webResults.length > 0 && (
+                                {tab === 'assistantNotes' && webResults.length > 0 && (
                                     <button
                                         onClick={() => { audioService.playClick(); setWebResults([]); }}
                                         className="btn btn-xs btn-ghost h-8 w-8 rounded-none p-0 opacity-40 hover:opacity-100 hover:text-error transition-all btn-snake"
                                         title="Clear all web results"
                                     >
                                         <span/><span/><span/><span/>
-                                        <DeleteIcon className="w-5 h-5" />
+                                        <GlobeIcon className="w-5 h-5" />
                                     </button>
                                 )}
                                 <button onClick={() => { audioService.playClick(); onClose(); }} className="btn btn-xs btn-ghost h-8 w-8 rounded-none p-0 opacity-40 hover:opacity-100 btn-snake" aria-label="Close panel">
@@ -629,20 +638,39 @@ const ClippingPanel: React.FC<ClippingPanelProps> = ({
                                 )
                             )}
 
-                            {tab === 'notes' && (
-                                notes.length > 0 ? (
-                                    <div className="flex flex-col divide-y divide-base-300/10">
-                                        {notes.map((note, index) => (
-                                            <NoteItem key={note.id} note={note} index={index} />
-                                        ))}
-                                    </div>
-                                ) : (
-                                    <div className="h-full flex flex-col items-center justify-center text-center opacity-10 py-12">
-                                        <NoteIcon className="w-16 h-16 mb-6" />
-                                        <p className="text-xl font-black uppercase tracking-widest leading-none">No Notes Yet</p>
-                                        <p className="text-[10px] font-bold uppercase tracking-[0.2em] mt-4">Ask the assistant to take a note, or add one manually</p>
-                                    </div>
-                                )
+                            {tab === 'assistantNotes' && (
+                                <div className="flex flex-col">
+                                    {(webLoading || webError) && (
+                                        <div className={`flex items-center gap-3 px-4 md:px-6 py-3 border-b border-base-300/10 text-[10px] font-black uppercase tracking-[0.2em] ${webError ? 'text-error' : 'opacity-40 animate-pulse'}`}>
+                                            {webLoading && <div className="loading loading-spinner loading-xs text-primary"></div>}
+                                            <span>{webError || 'Searching the web…'}</span>
+                                        </div>
+                                    )}
+                                    {notesFeed.length > 0 ? (
+                                        <div className="flex flex-col divide-y divide-base-300/10">
+                                            {notesFeed.map((entry, index) => (
+                                                entry.kind === 'note' ? (
+                                                    <NoteItem key={`note-${entry.note.id}`} note={entry.note} index={index} />
+                                                ) : (
+                                                    <WebResultCard
+                                                        key={`web-${entry.result.timestamp}-${index}`}
+                                                        result={entry.result}
+                                                        index={index}
+                                                        onCopy={handleCopyResult}
+                                                        onSaveNote={handleSaveAsNote}
+                                                        onSaveVault={handleSaveToVault}
+                                                    />
+                                                )
+                                            ))}
+                                        </div>
+                                    ) : (
+                                        <div className="h-full flex flex-col items-center justify-center text-center opacity-10 py-12">
+                                            <NoteIcon className="w-16 h-16 mb-6" />
+                                            <p className="text-xl font-black uppercase tracking-widest leading-none">Nothing Here Yet</p>
+                                            <p className="text-[10px] font-bold uppercase tracking-[0.2em] mt-4">Ask the assistant to take a note or search the web, or add a note manually</p>
+                                        </div>
+                                    )}
+                                </div>
                             )}
 
                             {tab === 'files' && (
@@ -676,17 +704,6 @@ const ClippingPanel: React.FC<ClippingPanelProps> = ({
                                 )
                             )}
 
-                            {tab === 'web' && (
-                                <WebTabContent
-                                    results={webResults}
-                                    loading={webLoading}
-                                    error={webError}
-                                    onClear={() => setWebResults([])}
-                                    onCopy={handleCopyResult}
-                                    onSaveNote={handleSaveAsNote}
-                                    onSaveVault={handleSaveToVault}
-                                />
-                            )}
                         </div>
                     </div>
                     <div className="absolute -top-[1px] -left-[1px] w-3 h-3 border-t border-l border-primary/15 z-20 pointer-events-none" />

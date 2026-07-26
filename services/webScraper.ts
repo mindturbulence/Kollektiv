@@ -9,8 +9,7 @@
  */
 
 import { JSDOM } from "jsdom";
-import { Readability } from "@mozilla/readability";
-import TurndownService from "turndown";
+import { Defuddle } from "defuddle/node";
 
 // ─── User-Agent rotation ─────────────────────────────────────────────
 
@@ -34,30 +33,12 @@ export interface ScrapedContent {
   content: string;         // Markdown
   textContent: string;      // Plain text (first 8000 chars)
   excerpt: string;          // ~200 char excerpt
+  author?: string;
+  published?: string;
+  site?: string;
+  image?: string;
   success: boolean;
   error?: string;
-}
-
-// ─── Turndown instance ──────────────────────────────────────────────
-
-let _turndown: TurndownService | null = null;
-
-function getTurndown(): TurndownService {
-  if (!_turndown) {
-    _turndown = new TurndownService({
-      headingStyle: "atx",
-      codeBlockStyle: "fenced",
-      bulletListMarker: "-",
-      emDelimiter: "*",
-    });
-    _turndown.remove("script");
-    _turndown.remove("style");
-    _turndown.remove("noscript");
-    _turndown.remove("nav");
-    _turndown.remove("footer");
-    _turndown.remove("aside");
-  }
-  return _turndown;
 }
 
 // ─── HTTP fetch with retry ──────────────────────────────────────────
@@ -106,75 +87,44 @@ async function fetchWithRetry(
 // ─── Content extraction ─────────────────────────────────────────────
 
 /** Exported for unit testing. */
-export function extractContent(
+export async function extractContent(
   html: string,
   sourceUrl: string,
-): { content: string; textContent: string; excerpt: string; title: string } {
+): Promise<{
+  content: string;
+  textContent: string;
+  excerpt: string;
+  title: string;
+  author?: string;
+  published?: string;
+  site?: string;
+  image?: string;
+}> {
   const dom = new JSDOM(html, { url: sourceUrl });
   const document = dom.window.document;
 
-  // Try Readability first
-  const reader = new Readability(document);
-  const article = reader.parse();
+  const result = await Defuddle(document, sourceUrl, { markdown: true });
 
-  if (article && article.textContent && article.textContent.trim().length > 100) {
-    // Convert article HTML to Markdown
-    const content = getTurndown().turndown(article.content || '');
-    const textContent = article.textContent.replace(/\s+/g, " ").trim();
-    const excerpt = textContent.slice(0, 200).trim();
-    return { content, textContent: textContent.slice(0, 8000), excerpt, title: article.title || "" };
-  }
-
-  // Fallback: manual extraction from body
-  // Strip unwanted elements
-  const selectorsToRemove = [
-    "script", "style", "noscript", "nav", "footer", "aside",
-    "header:not(article header)", ".sidebar", ".ads", ".advertisement",
-    ".menu", ".navigation", ".footer", ".header",
-  ];
-  for (const sel of selectorsToRemove) {
-    try {
-      document.querySelectorAll(sel).forEach((el) => el.remove());
-    } catch {
-      // skip invalid selectors
-    }
-  }
-
-  // Prefer main/article/.content
-  const main =
-    document.querySelector("article") ||
-    document.querySelector("main") ||
-    document.querySelector('[role="main"]') ||
-    document.querySelector(".content") ||
-    document.querySelector(".post") ||
-    document.querySelector(".entry-content") ||
-    document.body;
-
-  if (!main) {
-    return {
-      content: "",
-      textContent: "",
-      excerpt: "",
-      title: "",
-    };
-  }
-
-  const rawHtml = main.innerHTML;
-  const content = getTurndown().turndown(rawHtml);
-  const textContent = (main.textContent || "").replace(/\s+/g, " ").trim();
+  const content = result.content || "";
+  const textContent = content.replace(/\s+/g, " ").trim();
   const excerpt = textContent.slice(0, 200).trim();
-  const title =
-    document.title ||
-    document.querySelector("h1")?.textContent?.trim() ||
-    "";
 
-  return { content, textContent: textContent.slice(0, 8000), excerpt, title };
+  return {
+    content,
+    textContent: textContent.slice(0, 8000),
+    excerpt,
+    title: result.title || "",
+    author: result.author || undefined,
+    published: result.published || undefined,
+    site: result.site || undefined,
+    image: result.image || undefined,
+  };
 }
 
 // ─── Public API ─────────────────────────────────────────────────────
 
 /**
- * Scrape a URL using HTTP fetch + JSDOM + Readability.
+ * Scrape a URL using HTTP fetch + JSDOM + Defuddle.
  * Returns clean Markdown content.
  */
 export async function scrapeUrl(url: string): Promise<ScrapedContent> {
@@ -187,7 +137,7 @@ export async function scrapeUrl(url: string): Promise<ScrapedContent> {
 
   try {
     const { html, finalUrl } = await fetchWithRetry(url);
-    const { content, textContent, excerpt, title } = extractContent(html, finalUrl);
+    const { content, textContent, excerpt, title, author, published, site, image } = await extractContent(html, finalUrl);
 
     if (!content.trim()) {
       return {
@@ -207,6 +157,10 @@ export async function scrapeUrl(url: string): Promise<ScrapedContent> {
       content: content.slice(0, 50_000), // cap at 50k chars
       textContent: textContent.slice(0, 8000),
       excerpt,
+      author,
+      published,
+      site,
+      image,
       success: true,
     };
   } catch (err: any) {
@@ -247,7 +201,7 @@ export async function scrapeUrlPlaywright(url: string): Promise<ScrapedContent> 
       const finalUrl = page.url();
       await browser.close();
 
-      const { content, textContent, excerpt, title } = extractContent(html, finalUrl);
+      const { content, textContent, excerpt, title, author, published, site, image } = await extractContent(html, finalUrl);
 
       if (!content.trim()) {
         return {
@@ -267,6 +221,10 @@ export async function scrapeUrlPlaywright(url: string): Promise<ScrapedContent> 
         content: content.slice(0, 50_000),
         textContent: textContent.slice(0, 8000),
         excerpt,
+        author,
+        published,
+        site,
+        image,
         success: true,
       };
     } finally {

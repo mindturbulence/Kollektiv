@@ -93,6 +93,20 @@ export interface Idea {
   source: string;
 }
 
+/** A single web-reading tool result, shown as a card in the assistant panel. */
+export interface WebResult {
+  title: string;
+  url: string;
+  markdown: string;
+  source: 'search' | 'fetch' | 'scrape' | 'playwright';
+  timestamp: number;
+  engine?: string;
+  author?: string;
+  published?: string;
+  site?: string;
+  image?: string;
+}
+
 // --- Settings ---
 export interface YouTubeConnection {
   isConnected: boolean;

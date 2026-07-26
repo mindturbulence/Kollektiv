@@ -17,6 +17,10 @@ export interface FetchedContent {
   title: string;
   content: string;           // Full Markdown content
   excerpt: string;            // ~200 char excerpt
+  author?: string;
+  published?: string;
+  site?: string;
+  image?: string;
   success: boolean;
   error?: string;
 }

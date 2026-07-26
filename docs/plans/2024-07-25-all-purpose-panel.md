@@ -1,3 +1,10 @@
+> **Superseded.** The Notes and Web tabs described below were later merged into one "Assistant
+> Notes" tab, and web results now auto-save to the panel instead of requiring an explicit
+> `send_to_web_panel` call. See `docs/handbook/docs/01_AI_ENGINE/AI_ENGINE.md` (Web tools section)
+> and `docs/handbook/docs/00_FOUNDATION/ARCHITECTURE_CONSTITUTION.md` (Global overlay panels) for
+> current behavior. Kept here for history on why the original 4-tab, markdown-only Web tab design
+> was chosen.
+
 # Plan: All‑Purpose Panel (Clip + Notes + Web + Files)
 
 **Goal**: Merge the existing Clipping Panel, Notes Panel, Files Panel and WebViewer Panel into a single unified panel with four tabs (Clips, Notes, Files, Web). The **Web tab displays web search/scrape/fetch results as formatted Markdown** — **no URL bar, no iframe, no embedded browser**. The assistant's `web_search`, `fetch_url`, `scrape_url`, `scrape_url_playwright` tools are the default; Google (Gemini) is only a last‑resort fallback.

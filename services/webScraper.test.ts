@@ -117,8 +117,8 @@ test('adds numbers', () => {
 // ─── Tests: extractContent ─────────────────────────────────────────────
 
 describe('extractContent', () => {
-  it('extracts title and markdown content from a full article', () => {
-    const result = extractContent(ARTICLE_HTML, 'https://example.com/blog');
+  it('extracts title and markdown content from a full article', async () => {
+    const result = await extractContent(ARTICLE_HTML, 'https://example.com/blog');
     expect(result.title).toBe('Testing with Vitest — A Complete Guide');
     expect(result.content).toBeTruthy();
     expect(result.content.length).toBeGreaterThan(100);
@@ -136,23 +136,22 @@ describe('extractContent', () => {
     expect(result.textContent).not.toContain('<');
   });
 
-  it('falls back to manual extraction for minimal content', () => {
-    const result = extractContent(MINIMAL_HTML, 'https://example.com');
-    // Readability needs >100 chars — this page has ~12 chars, so fallback
+  it('handles minimal content pages', async () => {
+    const result = await extractContent(MINIMAL_HTML, 'https://example.com');
     expect(result.title).toBe('Short Page');
     expect(result.content).toBe('Hello world.');
   });
 
-  it('handles empty body gracefully', () => {
-    const result = extractContent(EMPTY_HTML, 'https://example.com');
+  it('handles empty body gracefully', async () => {
+    const result = await extractContent(EMPTY_HTML, 'https://example.com');
     expect(result.title).toBe('');
     expect(result.content).toBe('');
     expect(result.textContent).toBe('');
     expect(result.excerpt).toBe('');
   });
 
-  it('removes script, style, and noscript tags', () => {
-    const result = extractContent(SCRIPT_HTML, 'https://example.com');
+  it('removes script, style, and noscript tags', async () => {
+    const result = await extractContent(SCRIPT_HTML, 'https://example.com');
     expect(result.title).toBe('Script Test');
     expect(result.content).not.toContain('alert');
     expect(result.content).not.toContain('should be removed');
@@ -160,8 +159,8 @@ describe('extractContent', () => {
     expect(result.content).toContain('Only this text should remain');
   });
 
-  it('removes nav, sidebar, footer, ads noise', () => {
-    const result = extractContent(NOISY_HTML, 'https://example.com');
+  it('removes nav, sidebar, footer, ads noise', async () => {
+    const result = await extractContent(NOISY_HTML, 'https://example.com');
     expect(result.title).toBe('Noisy Page');
     expect(result.content).toContain('main content');
     expect(result.content).not.toContain('Nav links');
@@ -170,8 +169,8 @@ describe('extractContent', () => {
     expect(result.content).not.toContain('Footer content');
   });
 
-  it('preserves code blocks as fenced markdown', () => {
-    const result = extractContent(CODE_HTML, 'https://example.com');
+  it('preserves code blocks as fenced markdown', async () => {
+    const result = await extractContent(CODE_HTML, 'https://example.com');
     expect(result.title).toBe('Code Example');
     // The code block should be present
     expect(result.content).toContain('test');
@@ -180,38 +179,38 @@ describe('extractContent', () => {
     expect(result.content).toContain('```');
   });
 
-  it('returns empty strings when no body element exists', () => {
+  it('returns empty strings when no body element exists', async () => {
     // JSDOM can handle malformed HTML, but an empty string should produce nothing
-    const result = extractContent('<html></html>', 'https://example.com');
+    const result = await extractContent('<html></html>', 'https://example.com');
     expect(result.title).toBe('');
     expect(result.content).toBe('');
   });
 
-  it('uses document.title for the title when available', () => {
+  it('uses document.title for the title when available', async () => {
     const html = '<html><head><title>Specific Title</title></head><body><p>Content here.</p></body></html>';
-    const result = extractContent(html, 'https://example.com');
+    const result = await extractContent(html, 'https://example.com');
     expect(result.title).toBe('Specific Title');
   });
 
-  it('falls back to h1 for title when no document.title', () => {
+  it('falls back to h1 for title when no document.title', async () => {
     const html = '<html><head></head><body><h1>Fallback Title</h1><p>Content here.</p></body></html>';
-    const result = extractContent(html, 'https://example.com');
+    const result = await extractContent(html, 'https://example.com');
     expect(result.title).toBe('Fallback Title');
   });
 
-  it('caps textContent to 8000 chars', () => {
+  it('caps textContent to 8000 chars', async () => {
     // Create a page with >8000 chars of text
     const longText = 'Word '.repeat(3000); // ~15,000 chars
     const html = `<html><head><title>Long Page</title></head><body><p>${longText}</p></body></html>`;
-    const result = extractContent(html, 'https://example.com');
+    const result = await extractContent(html, 'https://example.com');
     expect(result.textContent.length).toBeLessThanOrEqual(8000);
     // content (markdown) should also be capped... no, only content is capped at 50k
     // but textContent is capped at 8000
   });
 
-  it('handles pages with only a short readable paragraph using fallback', () => {
+  it('handles pages with a short readable paragraph', async () => {
     const bodyHtml = '<html><head><title>Short Article</title></head><body><p>This is a short paragraph that is under 100 characters so Readability will not parse it as a valid article and our fallback extraction code should handle it instead.</p></body></html>';
-    const result = extractContent(bodyHtml, 'https://example.com');
+    const result = await extractContent(bodyHtml, 'https://example.com');
     expect(result.title).toBe('Short Article');
     // The main element chain should resolve to body and the content should be there
     expect(result.content.length).toBeGreaterThan(20);
@@ -303,8 +302,8 @@ describe('URL validation', () => {
 // ─── Tests: Content quality ───────────────────────────────────────────
 
 describe('extractContent markdown quality', () => {
-  it('produces valid markdown headings (atx style)', () => {
-    const result = extractContent(ARTICLE_HTML, 'https://example.com');
+  it('produces valid markdown headings (atx style)', async () => {
+    const result = await extractContent(ARTICLE_HTML, 'https://example.com');
     // Markdown headings should use # prefix
     const lines = result.content.split('\n').filter(l => l.startsWith('#'));
     expect(lines.length).toBeGreaterThanOrEqual(3);
@@ -313,14 +312,14 @@ describe('extractContent markdown quality', () => {
     expect(lines.some(l => l.startsWith('## Installation'))).toBe(true);
   });
 
-  it('produces markdown lists with hyphens', () => {
-    const result = extractContent(ARTICLE_HTML, 'https://example.com');
+  it('produces markdown lists with hyphens', async () => {
+    const result = await extractContent(ARTICLE_HTML, 'https://example.com');
     const listItems = result.content.split('\n').filter(l => l.startsWith('- '));
     expect(listItems.length).toBeGreaterThanOrEqual(4); // the 4 <li> items
   });
 
-  it('produces markdown code fences for <pre><code> blocks', () => {
-    const result = extractContent(CODE_HTML, 'https://example.com');
+  it('produces markdown code fences for <pre><code> blocks', async () => {
+    const result = await extractContent(CODE_HTML, 'https://example.com');
     expect(result.content).toContain('```');
   });
 });

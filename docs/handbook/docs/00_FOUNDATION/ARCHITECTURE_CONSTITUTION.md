@@ -257,9 +257,8 @@ Each `ActiveTab` maps to a top-level React component:
 | Panel | Component | Toggle source |
 |---|---|---|
 | Command Palette | `CommandPalette` | Ctrl+K / ⌘K. 30+ commands across Navigation, Panels, Assistant Actions, Themes. Fuzzy search with scoring. |
-| Clipping Panel | `ClippingPanel` | Paperclip icon in header. Ideas, notes, files tabs. |
+| Clipping Panel | `ClippingPanel` | Paperclip icon in header. Clips, Assistant Notes (merged notes + auto-saved web results), Files tabs. |
 | Media Panel | `MediaPanel` | YouTube/Spotify player panel. |
-| Web Viewer | `WebViewerPanel` | In-app browser for opening URLs. |
 | Chat Panel | `LLMChatPanel` | Assistant chat (text + research mode with 3-panel layout). |
 | LLM Status | `LlmStatusPanel` | Active provider, model, token usage. |
 | Activity Panel | `ActivityPanel` | Live tool-call transcript, status. |

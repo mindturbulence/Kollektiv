@@ -1,4 +1,4 @@
-import type { WildcardCategory } from '../types';
+import type { WildcardCategory, WebResult } from '../types';
 import { appControlService } from './appControlService';
 import { appEventBus } from '../utils/eventBus';
 import { getOperator } from './browserOperatorResolver';
@@ -14,16 +14,6 @@ import { refinerPresetService } from './refinerPresetService';
 import { PROMPT_DETAIL_LEVELS } from '../constants/modifiers';
 import { MCP_PRESETS, findMcpPresetEntry, upsertMcpPresetEntry } from '../constants/mcpPresets';
 import { mcpService } from './mcpService';
-
-// Web result type for all-purpose panel
-interface WebResult {
-    title: string;
-    url: string;
-    markdown: string;
-    source: 'search' | 'fetch' | 'scrape' | 'playwright';
-    timestamp: number;
-    engine?: string;
-}
 
 // Re-export ToolContext + AssistantTool from the shared module so callers
 // that import them from this file still work. New code should import from
@@ -312,7 +302,7 @@ export const ASSISTANT_TOOLS: AssistantTool[] = [
     },
     {
         name: 'web_search',
-        description: 'Search the live web for current, real-world information. Free, no API key needed by default (scrapes multiple engines: DuckDuckGo, Brave, Exa if configured). Returns a JSON object with {results: [{title, url, snippet, source}], enginesUsed: string[], engineFailures: [...], fetchedContent: [{url, title, content, excerpt}]}. **WORKFLOW:** (1) Call this tool with your query. (2) Read the returned results and fetchedContent. (3) PICK THE SINGLE MOST RELEVANT RESULT. (4) If needed, use `fetch_url`, `scrape_url`, or `scrape_url_playwright` on that URL for full markdown. (5) SYNTHESIZE a detailed, comprehensive markdown answer. (6) Call `send_to_web_panel` with your synthesized markdown to display it in the Web tab. **DO NOT dump raw results — Curate → Synthesize → Present one polished answer.** Falls back to Google Search grounding (needs Gemini API key) only if free search returns empty. Google is LAST RESORT.',
+        description: 'Search the live web for current, real-world information. Free, no API key needed by default (scrapes multiple engines: DuckDuckGo, Brave, Exa if configured). Returns a JSON object with {results: [{title, url, snippet, source}], enginesUsed: string[], engineFailures: [...], fetchedContent: [{url, title, content, excerpt}]}. The most relevant result(s) are AUTOMATICALLY saved to the Assistant Notes panel for the user — you do not need to call send_to_web_panel yourself. Use `fetch_content: true` when you need full article text (also gives the user richer panel cards with byline/image); otherwise only snippets are fetched and used for the panel. Falls back to Google Search grounding (needs Gemini API key) only if free search returns empty. Google is LAST RESORT.',
         parameters: {
             type: 'object',
             properties: {
@@ -341,33 +331,41 @@ export const ASSISTANT_TOOLS: AssistantTool[] = [
                 if (res.ok) {
                     const data = await res.json();
                     if (Array.isArray(data.results) && data.results.length > 0) {
-                        // Emit results to web panel
-                        const results: WebResult[] = [];
-                        // Add search results
-                        for (const r of data.results) {
-                            results.push({
-                                title: r.title || r.url,
-                                url: r.url,
-                                markdown: r.snippet || r.content || '',
-                                source: 'search',
-                                engine: r.source,
-                                timestamp: Date.now(),
-                            });
-                        }
-                        // Add fetched content if available
-                        if (Array.isArray(data.fetchedContent)) {
+                        // Auto-save the most relevant results to the panel — rich (Defuddle-extracted,
+                        // author/published/site/image) when full content was fetched, otherwise the
+                        // top 3 snippets, so the panel is never empty and never depends on the model
+                        // remembering to call send_to_web_panel.
+                        const panelResults: WebResult[] = [];
+                        if (Array.isArray(data.fetchedContent) && data.fetchedContent.length > 0) {
                             for (const fc of data.fetchedContent) {
-                                results.push({
+                                if (!fc.success || !fc.content) continue;
+                                panelResults.push({
                                     title: fc.title || fc.url,
                                     url: fc.url,
-                                    markdown: fc.content || fc.excerpt || '',
+                                    markdown: fc.content,
                                     source: 'fetch',
                                     engine: 'web-search',
+                                    author: fc.author,
+                                    published: fc.published,
+                                    site: fc.site,
+                                    image: fc.image,
+                                    timestamp: Date.now(),
+                                });
+                            }
+                        } else {
+                            for (const r of data.results.slice(0, 3)) {
+                                panelResults.push({
+                                    title: r.title || r.url,
+                                    url: r.url,
+                                    markdown: r.snippet || '',
+                                    source: 'search',
+                                    engine: r.source,
                                     timestamp: Date.now(),
                                 });
                             }
                         }
-                        // Return raw data to assistant for synthesis
+                        if (panelResults.length > 0) appEventBus.emit('webSearchResults', panelResults);
+                        // Return raw data to assistant for its own reasoning/answer
                         return JSON.stringify(data);
                     }
                 }
@@ -377,7 +375,20 @@ export const ASSISTANT_TOOLS: AssistantTool[] = [
             if (ctx.settings.geminiApiKey || process.env.GEMINI_API_KEY) {
                 const { googleSearchGemini } = await import('./geminiService');
                 const geminiResult = await googleSearchGemini(String(query), ctx.settings);
-
+                try {
+                    const parsed = JSON.parse(geminiResult);
+                    const sources = Array.isArray(parsed.sources) ? parsed.sources.join('\n') : '';
+                    appEventBus.emit('webSearchResults', [{
+                        title: `Web search: ${query}`,
+                        url: parsed.sources?.[0]?.split(' — ')[1] || '',
+                        markdown: `${parsed.answer || ''}${sources ? `\n\n**Sources:**\n${sources}` : ''}`,
+                        source: 'search',
+                        engine: 'google-gemini',
+                        timestamp: Date.now(),
+                    }]);
+                } catch {
+                    // Unexpected shape — skip the panel card, model still gets the raw result.
+                }
                 return geminiResult;
             }
             appEventBus.emit('webSearchError', 'Web search returned no results and no Gemini API key is configured for the Google fallback (Settings > Integrations > Gemini).');
@@ -410,7 +421,7 @@ export const ASSISTANT_TOOLS: AssistantTool[] = [
     },
     {
         name: 'fetch_url',
-        description: 'Fetch a web page by absolute URL and return its readable text as markdown. After fetching, SYNTHESIZE the content into a detailed, comprehensive markdown answer, then call `send_to_web_panel` with your synthesized markdown to display it in the Web tab. Use when you need to read a specific page deeply.',
+        description: 'Fetch a web page by absolute URL and return its readable text as markdown. The page is AUTOMATICALLY saved to the Assistant Notes panel for the user — you do not need to call send_to_web_panel yourself. Use when you need to read a specific page deeply.',
         parameters: {
             type: 'object',
             properties: { url: { type: 'string', description: 'Absolute http(s) URL.' } },
@@ -428,15 +439,18 @@ export const ASSISTANT_TOOLS: AssistantTool[] = [
             const raw = await res.text();
             const doc = new DOMParser().parseFromString(raw, 'text/html');
             doc.querySelectorAll('script, style, noscript, svg').forEach(el => el.remove());
+            const title = doc.querySelector('title')?.textContent?.trim() || doc.querySelector('h1')?.textContent?.trim() || parsed.hostname;
             const text = (doc.body?.textContent || raw).replace(/\s{3,}/g, '\n').trim();
             const markdown = text.slice(0, 8000) || 'Error: page contained no readable text.';
-            // Emit to web panel
+            if (text) {
+                appEventBus.emit('webSearchResults', [{ title, url: parsed.href, markdown, source: 'fetch', timestamp: Date.now() }]);
+            }
             return markdown;
         },
     },
     {
         name: 'scrape_url',
-        description: 'Fetch a URL and return its full content as clean Markdown (readability extraction, ~50k chars). After scraping, SYNTHESIZE the content into a detailed, comprehensive markdown answer, then call `send_to_web_panel` with your synthesized markdown to display it in the Web tab. Use for documentation, articles, blog posts — any page where you need the full text. For JS-heavy SPAs, use scrape_url_playwright instead.',
+        description: 'Fetch a URL and return its full content as clean Markdown (readability extraction, ~50k chars), plus any detected byline (author/published/site). The page is AUTOMATICALLY saved to the Assistant Notes panel for the user — you do not need to call send_to_web_panel yourself. Use for documentation, articles, blog posts — any page where you need the full text. For JS-heavy SPAs, use scrape_url_playwright instead.',
         parameters: {
             type: 'object',
             properties: { url: { type: 'string', description: 'Absolute http(s) URL to scrape.' } },
@@ -452,7 +466,13 @@ export const ASSISTANT_TOOLS: AssistantTool[] = [
                 if (!res.ok) return `Error: scrape failed (${res.status}).`;
                 const data = await res.json();
                 if (data.success && data.content) {
-                    return `# ${data.title}\n\n${data.content}`.slice(0, 50_000);
+                    appEventBus.emit('webSearchResults', [{
+                        title: data.title || url, url: data.url || url, markdown: data.content, source: 'scrape',
+                        author: data.author, published: data.published, site: data.site, image: data.image,
+                        timestamp: Date.now(),
+                    }]);
+                    const byline = [data.author && `Author: ${data.author}`, data.published && `Published: ${data.published}`, data.site && `Site: ${data.site}`].filter(Boolean).join(' | ');
+                    return `# ${data.title}\n${byline ? `${byline}\n` : ''}\n${data.content}`.slice(0, 50_000);
                 }
                 return `Scraped ${url} but no readable content found.${data.error ? ` (${data.error})` : ''}`;
             } catch (e: any) {
@@ -462,7 +482,7 @@ export const ASSISTANT_TOOLS: AssistantTool[] = [
     },
     {
         name: 'scrape_url_playwright',
-        description: 'Fetch a URL using a headless browser (Playwright) and return the full rendered content as Markdown. After scraping, SYNTHESIZE the content into a detailed, comprehensive markdown answer, then call `send_to_web_panel` with your synthesized markdown to display it in the Web tab. Use for JavaScript-heavy SPAs (React/Vue/Angular dashboards, modern doc portals) where scrape_url returns empty content. Slower (~3-5s) but renders JS-rendered pages correctly.',
+        description: 'Fetch a URL using a headless browser (Playwright) and return the full rendered content as Markdown, plus any detected byline (author/published/site). The page is AUTOMATICALLY saved to the Assistant Notes panel for the user — you do not need to call send_to_web_panel yourself. Use for JavaScript-heavy SPAs (React/Vue/Angular dashboards, modern doc portals) where scrape_url returns empty content. Slower (~3-5s) but renders JS-rendered pages correctly.',
         parameters: {
             type: 'object',
             properties: { url: { type: 'string', description: 'Absolute http(s) URL to scrape with a headless browser.' } },
@@ -478,7 +498,13 @@ export const ASSISTANT_TOOLS: AssistantTool[] = [
                 if (!res.ok) return `Error: Playwright scrape failed (${res.status}).`;
                 const data = await res.json();
                 if (data.success && data.content) {
-                    return `# ${data.title}\n\n${data.content}`.slice(0, 50_000);
+                    appEventBus.emit('webSearchResults', [{
+                        title: data.title || url, url: data.url || url, markdown: data.content, source: 'playwright',
+                        author: data.author, published: data.published, site: data.site, image: data.image,
+                        timestamp: Date.now(),
+                    }]);
+                    const byline = [data.author && `Author: ${data.author}`, data.published && `Published: ${data.published}`, data.site && `Site: ${data.site}`].filter(Boolean).join(' | ');
+                    return `# ${data.title}\n${byline ? `${byline}\n` : ''}\n${data.content}`.slice(0, 50_000);
                 }
                 return `Scraped ${url} with Playwright but no readable content found.${data.error ? ` (${data.error})` : ''}`;
             } catch (e: any) {
@@ -488,7 +514,7 @@ export const ASSISTANT_TOOLS: AssistantTool[] = [
     },
     {
         name: 'open_web_page',
-        description: 'Fetch a web page and return its readable content as markdown for YOUR analysis. After reading, SYNTHESIZE a detailed answer, then call send_to_web_panel to send the final synthesized result to the Web panel as a single detailed card. Use when the user asks to read, fetch, or show the content of a specific web page or a web_search source.',
+        description: 'Fetch a web page and return its readable content as markdown. The page is AUTOMATICALLY saved to the Assistant Notes panel for the user — you do not need to call send_to_web_panel yourself. Use when the user asks to read, fetch, or show the content of a specific web page or a web_search source.',
         parameters: {
             type: 'object',
             properties: { url: { type: 'string', description: 'Absolute http(s) URL to fetch.' } },
@@ -505,14 +531,18 @@ export const ASSISTANT_TOOLS: AssistantTool[] = [
             const raw = await res.text();
             const doc = new DOMParser().parseFromString(raw, 'text/html');
             doc.querySelectorAll('script, style, noscript, svg').forEach(el => el.remove());
+            const title = doc.querySelector('title')?.textContent?.trim() || doc.querySelector('h1')?.textContent?.trim() || parsed.hostname;
             const text = (doc.body?.textContent || raw).replace(/\s{3,}/g, '\n').trim();
             const markdown = text.slice(0, 8000) || 'Error: page contained no readable text.';
+            if (text) {
+                appEventBus.emit('webSearchResults', [{ title, url: parsed.href, markdown, source: 'fetch', timestamp: Date.now() }]);
+            }
             return markdown;
         },
     },
     {
         name: 'send_to_web_panel',
-        description: 'Send a synthesized, detailed markdown result to the Web panel (the all-purpose panel\'s Web tab). Call this AFTER you have searched/scraped, read the results, and synthesized a single comprehensive answer. Provide the title, URL, and your full synthesized markdown content. This creates ONE detailed result card in the Web panel — do not call this multiple times for the same query.',
+        description: 'OPTIONAL: post your OWN additional markdown to the Assistant Notes panel — e.g. a combined synthesis across several sources you already read. Search/fetch/scrape tools save their results to the panel automatically, so you only need this when you want to add something extra beyond what was already auto-saved.',
         parameters: {
             type: 'object',
             properties: {
@@ -520,15 +550,21 @@ export const ASSISTANT_TOOLS: AssistantTool[] = [
                 url: { type: 'string', description: 'Source URL.' },
                 markdown: { type: 'string', description: 'Full synthesized markdown content (summary, key points, analysis, context).' },
                 source: { type: 'string', description: 'Tool that produced the content (search, fetch, scrape, playwright).', enum: ['search', 'fetch', 'scrape', 'playwright'] },
+                author: { type: 'string', description: 'Article author/byline, if known.' },
+                published: { type: 'string', description: 'Publish date, if known.' },
+                site: { type: 'string', description: 'Site/publication name, if known.' },
             },
             required: ['title', 'url', 'markdown', 'source'],
         },
-        execute: async ({ title, url, markdown, source }) => {
+        execute: async ({ title, url, markdown, source, author, published, site }) => {
             appEventBus.emit('webSearchResults', [{
                 title,
                 url,
                 markdown,
                 source,
+                author,
+                published,
+                site,
                 timestamp: Date.now(),
             }]);
             return `Sent synthesized result to Web panel.`;
