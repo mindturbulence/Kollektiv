@@ -7,7 +7,7 @@ import RollingText from './RollingText';
 import TimedScrambledText from './TimedScrambledText';
 import ThemeSwitcher from './ThemeSwitcher';
 import ChromaticText from './ChromaticText';
-import { InformationCircleIcon, BookmarkIcon, Cog6ToothIcon, PowerIcon, ChatBubbleIcon, FilmIcon, GlobeIcon, TerminalIcon } from './icons';
+import { InformationCircleIcon, BookmarkIcon, Cog6ToothIcon, PowerIcon, ChatBubbleIcon, FilmIcon, TerminalIcon } from './icons';
 import { HUDNavItem } from './HUDNavItem';
 import { LiveAssistantMicButton, LiveAssistantScreenButton, LiveAssistantControlButton, LiveAssistantCameraButton, LiveAssistantCameraPreview, LiveAssistantFault } from './LiveAssistantBar';
 
@@ -117,7 +117,6 @@ const Header: React.FC<HeaderProps> = ({
   onAboutClick,
   onToggleClippingPanel,
   onToggleMediaPanel,
-  onToggleWebViewer,
   onToggleActivityPanel,
   onToggleChatPanel,
   onStandbyClick,
@@ -339,17 +338,6 @@ const Header: React.FC<HeaderProps> = ({
             title="Media Player"
           >
             <FilmIcon className="w-4 h-4" />
-          </HUDNavItem>
-          <div className="w-px h-2 bg-base-content/10 self-center" />
-          <HUDNavItem
-            onClick={(e) => {
-              e.stopPropagation();
-              audioService.playClick();
-              onToggleWebViewer?.();
-            }}
-            title="Web Browser"
-          >
-            <GlobeIcon className="w-4 h-4" />
           </HUDNavItem>
           <div className="w-px h-2 bg-base-content/10 self-center" />
           <HUDNavItem

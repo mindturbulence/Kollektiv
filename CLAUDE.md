@@ -1,5 +1,13 @@
 # Project Documentation
 
+## Documentation lookup
+
+All project documentation lives under `docs/handbook/`. Look there first for architecture, design principles, subsystem specs (AI engine, capability platform, knowledge engine, memory, MCP, voice pipeline, providers), and implementation docs — before searching elsewhere or guessing from code alone.
+
+## Plan files
+
+Store all implementation/feature plan documents in `docs/plans/` (e.g. `docs/plans/YYYY-MM-DD-<feature-name>.md`) — a single centralized location, not scattered per-skill directories (e.g. not `docs/superpowers/plans/`). This overrides any skill's default plan-save location.
+
 ## gstack
 
 For all web browsing tasks, use the `/browse` skill from gstack instead of `mcp__claude-in-chrome__*` tools.

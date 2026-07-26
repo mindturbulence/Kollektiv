@@ -82,7 +82,19 @@ const WORKSPACE_CAPABILITIES = `Workspace pages and what's on them. Call the nam
 - YouTube Search & Play: search YouTube = youtube_search, play a YouTube video = play_media.
 - Spotify (requires Spotify connected in Settings > Integrations > Spotify): list your playlists = spotify_list_playlists, get playlist tracks = spotify_get_playlist_tracks, play track/playlist = play_media.
 - Obsidian Second Brain: enables vault tools (search, read, write, list, manage tags/frontmatter, delete notes) via MCP. Toggle the obsidian-vault preset in Settings > MCP Servers > Predefined, with OBSIDIAN_VAULT_PATH set on the server.
-Elsewhere: long-term memory = remember/list_memories/forget, manage your Notes panel = save_note/list_notes/update_note/delete_note, save a text/markdown file into the vault (shows in Notes panel > Files) = save_file, show a web page to the user in the in-app viewer = open_web_page, play a YouTube video or Spotify track in the in-app media player = play_media, search the live web = web_search, read a web page yourself = fetch_url, search/save the prompt library = search_prompts/save_prompt, search the gallery = search_gallery, get/delete gallery items = get_gallery_item/delete_gallery_item, save content to gallery = save_to_gallery, search cheatsheets = search_cheatsheets, change settings = update_settings, navigate the app = navigate, browse discovery collections = list_discovery_collections/search_discovery_prompts.
+Elsewhere: long-term memory = remember/list_memories/forget, manage your Notes panel = save_note/list_notes/update_note/delete_note, save a text/markdown file into the vault (shows in Notes panel > Files) = save_file, show a web page to the user in the in-app viewer = open_web_page, play a YouTube video or Spotify track in the in-app media player = play_media, search the live web = web_search, read a web page yourself = fetch_url, scrape full page content = scrape_url, scrape JS-heavy page = scrape_url_playwright, send synthesized result to Web panel = send_to_web_panel, search/save the prompt library = search_prompts/save_prompt, search the gallery = search_gallery, get/delete gallery items = get_gallery_item/delete_gallery_item, save content to gallery = save_to_gallery, search cheatsheets = search_cheatsheets, change settings = update_settings, navigate the app = navigate, browse discovery collections = list_discovery_collections/search_discovery_prompts.
+
+Web Search Workflow (REQUIRED): When the user asks you to search the web:
+1. Call web_search with the query (use fetch_content=true if you need full page content)
+2. Read the returned results and fetchedContent
+3. PICK THE SINGLE MOST RELEVANT RESULT
+4. If you need full content, call fetch_url / scrape_url / scrape_url_playwright on that URL
+5. SYNTHESIZE a detailed, comprehensive markdown answer from the source(s)
+6. Call send_to_web_panel with your synthesized markdown to display it in the Web tab
+7. Answer the user with your synthesized answer (the Web panel will show the detailed result)
+
+DO NOT dump raw results. Curate → Synthesize → Present ONE polished answer.
+Google Search (via Gemini) is LAST RESORT only when free engines return nothing.
 - Gmail (requires Google Identity connected in Settings > App > Storage): read emails = read_gmail (list/search/read), send emails = send_gmail, trash/delete emails = delete_gmail.
 - MCP Servers (Settings > MCP Servers): see what's configured = list_mcp_servers, turn the internal Kollektiv MCP on/off = toggle_mcp_server — the Kollektiv MCP is auto-started by the dev server; toggle it on when the user needs browser or vault tools, off to free resources. Add custom MCP servers (e.g. Firecrawl, Brave Search) via the Custom tab.
 - Your own tool list (Settings > Integrations > Assistant > Tools tab): a live, searchable, categorized view of every native tool plus tools from any enabled MCP server — no tool call needed, this is a UI-only reference. Point the user there if they ask what you can do or want to browse your capabilities; use list_mcp_servers instead if they specifically want MCP server status.`;

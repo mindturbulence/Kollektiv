@@ -101,3 +101,9 @@ Tool execution is synchronous from the client's perspective — the HTTP respons
 - Vault tools only loaded if `OBSIDIAN_VAULT_PATH` is configured
 - Tool call routing prevents one sub-server from accessing another's tools
 - CORS restricted to `*` but only reachable on localhost
+
+## Related
+
+- [OBSIDIAN.md](../03_KNOWLEDGE_ENGINE/OBSIDIAN.md) — the vault tools sub-server this spec aggregates
+- [ARCHITECTURE_CONSTITUTION.md § Security Hardening](../00_FOUNDATION/ARCHITECTURE_CONSTITUTION.md#security-hardening) — the CSP `connect-src`/CORS posture this local-only server operates under
+- [AI_ENGINE.md](../01_AI_ENGINE/AI_ENGINE.md) — the `list_mcp_servers`/`toggle_mcp_server` assistant tools that manage this server from chat

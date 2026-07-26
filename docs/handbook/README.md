@@ -64,7 +64,6 @@ The architecture set is organized as a practical handbook for contributors and m
 - [docs/04_MEMORY/MEMORY_SYSTEM.md](docs/04_MEMORY/MEMORY_SYSTEM.md) — working, long-term, and knowledge memory model
 - [docs/05_MCP/MCP_SPEC.md](docs/05_MCP/MCP_SPEC.md) — MCP adapter and tool execution contract
 - [docs/06_VOICE/VOICE_PIPELINE.md](docs/06_VOICE/VOICE_PIPELINE.md) — voice capture, planning, streaming, and interruption handling
-- [docs/07_PROVIDERS/PROVIDER_ROUTER.md](docs/07_PROVIDERS/PROVIDER_ROUTER.md) — routing, cost, latency, and fallback strategy
 - [docs/08_IMPLEMENTATION/DIRECTORY_STRUCTURE.md](docs/08_IMPLEMENTATION/DIRECTORY_STRUCTURE.md) — repository layout and conventions
 - [docs/09_AI_WORKER/AI_WORKER_RULES.md](docs/09_AI_WORKER/AI_WORKER_RULES.md) — implementation and review rules
 - [docs/10_EXAMPLES/CREATE_CAPABILITY.md](docs/10_EXAMPLES/CREATE_CAPABILITY.md) — example path for adding a new capability

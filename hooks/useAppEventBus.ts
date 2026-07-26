@@ -14,46 +14,39 @@ interface UseAppEventBusInput {
   handleNavigate: (tab: ActiveTab) => void;
   handleSendToPromptsPage: (state: PromptsPageState) => void;
   showGlobalFeedback: (message: string, isError?: boolean) => void;
-  isCommandPaletteOpen: boolean;
   setIsCommandPaletteOpen: (open: boolean | ((prev: boolean) => boolean)) => void;
-  setIsClippingPanelOpen: (open: boolean | ((prev: boolean) => boolean)) => void;
   setIsMediaPanelOpen: (open: boolean | ((prev: boolean) => boolean)) => void;
-  setIsWebViewerOpen: (open: boolean | ((prev: boolean) => boolean)) => void;
+  setIsClippingPanelOpen: (open: boolean | ((prev: boolean) => boolean)) => void;
   setVideoPlayerUrl: (url: string | null) => void;
   handleClipIdea: (idea: Idea) => void;
+  isCommandPaletteOpen: boolean;
 }
 
 /**
- * All appEventBus subscriptions extracted from App.tsx.
- * Side-effect only — subscribes on mount, unsubscribes on unmount.
+ * Subscribes to global app events and triggers shell actions.
+ * Keeps event-driven logic separate from the main shell hook.
  */
 export const useAppEventBus = ({
   handleNavigate,
   handleSendToPromptsPage,
   showGlobalFeedback,
-  isCommandPaletteOpen,
   setIsCommandPaletteOpen,
-  setIsClippingPanelOpen,
   setIsMediaPanelOpen,
-  setIsWebViewerOpen,
+  setIsClippingPanelOpen,
   setVideoPlayerUrl,
   handleClipIdea,
-}: UseAppEventBusInput): void => {
-  // ── Navigation & feedback events ─────────────────────────────────────
+  isCommandPaletteOpen,
+}: UseAppEventBusInput) => {
+  // ── Navigation events ────────────────────────────────────────────────
   useEffect(() => {
-    const navigateSub = appEventBus.on('navigate', (tab) => {
-      if (typeof tab === 'string') {
-        handleNavigate(tab as ActiveTab);
-      }
+    const navigateSub = appEventBus.on('navigate', (tab: ActiveTab) => {
+      handleNavigate(tab);
     });
-    const sendToSub = appEventBus.on('sendToPromptsPage', (state) => {
-      if (state && typeof state === 'object') {
-        handleSendToPromptsPage(state as PromptsPageState);
-      }
+    const sendToSub = appEventBus.on('sendToPromptsPage', (state: PromptsPageState) => {
+      handleSendToPromptsPage(state);
     });
-    const feedbackSub = appEventBus.on('assistantFeedback', (payload) => {
-      const p = payload as { message: string; isError?: boolean } | undefined;
-      if (p?.message) showGlobalFeedback(p.message, !!p.isError);
+    const feedbackSub = appEventBus.on('assistantFeedback', (f: { message: string; isError?: boolean }) => {
+      showGlobalFeedback(f.message, f.isError);
     });
     return () => { navigateSub(); sendToSub(); feedbackSub(); };
   }, [handleNavigate, handleSendToPromptsPage, showGlobalFeedback]);
@@ -79,25 +72,11 @@ export const useAppEventBus = ({
       switch (name) {
         case 'media': setIsMediaPanelOpen(p => !p); break;
         case 'clipping': setIsClippingPanelOpen(p => !p); break;
-        case 'webviewer': setIsWebViewerOpen(p => !p); break;
         default: break;
       }
     });
     return off;
-  }, [setIsMediaPanelOpen, setIsClippingPanelOpen, setIsWebViewerOpen]);
-
-  // ── Web viewer open/close on events ──────────────────────────────────
-  useEffect(() => {
-    return appEventBus.on('navigate', () => {
-      setIsWebViewerOpen(false);
-    });
-  }, [setIsWebViewerOpen]);
-
-  useEffect(() => {
-    return appEventBus.on('openWebPage', () => {
-      setIsWebViewerOpen(true);
-    });
-  }, [setIsWebViewerOpen]);
+  }, [setIsMediaPanelOpen, setIsClippingPanelOpen]);
 
   // ── Video player ──────────────────────────────────────────────────────
   useEffect(() => {
@@ -108,25 +87,17 @@ export const useAppEventBus = ({
     });
   }, [setVideoPlayerUrl]);
 
+  // ── Clip idea from assistant ──────────────────────────────────────────
   useEffect(() => {
-    return appEventBus.on('openMediaPanel', (_payload: { url: string }) => {
-      setIsMediaPanelOpen(true);
-    });
-  }, [setIsMediaPanelOpen]);
-
-  // ── Clip idea event ──────────────────────────────────────────────────
-  useEffect(() => {
-    return appEventBus.on('clipIdea', (payload) => {
-      if (payload && typeof payload === 'object' && (payload as any).prompt) {
-        const p = payload as { title?: string; prompt: string; lens?: string; source?: string };
-        handleClipIdea({
-          id: `clip-${Date.now()}`,
-          title: p.title || p.prompt.slice(0, 40),
-          prompt: p.prompt,
-          lens: p.lens || 'Assistant',
-          source: p.source || 'Assistant',
-        });
-      }
+    return appEventBus.on('clipIdea', (p: { title: string; prompt: string; lens?: string; source?: string }) => {
+      if (!p.prompt) return;
+      handleClipIdea({
+        id: `clip-${Date.now()}`,
+        title: p.title || p.prompt.slice(0, 40),
+        prompt: p.prompt,
+        lens: p.lens || 'Assistant',
+        source: p.source || 'Assistant',
+      });
     });
   }, [handleClipIdea]);
 };

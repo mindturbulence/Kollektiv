@@ -39,7 +39,6 @@ import { VideoToFrames } from './VideoToFrames';
 import LoraEditorPage from './loraEditor/LoraEditorPage';
 import { LLMChatPanel } from './LLMChatPanel';
 import { LiveAssistantProvider } from '../contexts/LiveAssistantContext';
-import WebViewerPanel from './WebViewerPanel';
 import VideoPlayerOverlay from './VideoPlayerOverlay';
 
 import InitialLoader from './InitialLoader';
@@ -194,7 +193,6 @@ const AppContent: React.FC = () => {
         isAboutModalOpen,
         isClippingPanelOpen,
         isMediaPanelOpen,
-        isWebViewerOpen,
         isChatPanelOpen,
         isLlmPanelOpen,
         isCommandPaletteOpen,
@@ -224,8 +222,6 @@ const AppContent: React.FC = () => {
         handleCloseActivityPanel,
         handleToggleMediaPanel,
         handleCloseMediaPanel,
-        handleToggleWebViewer,
-        handleCloseWebViewer,
         handleCloseVideoPlayer,
         handleToggleChatPanel,
         handleCloseChatPanel,
@@ -236,7 +232,6 @@ const AppContent: React.FC = () => {
         setVideoPlayerUrl,
         setIsClippingPanelOpen,
         setIsMediaPanelOpen,
-        setIsWebViewerOpen,
         setIsCommandPaletteOpen,
         setCollapsedPanels,
         setActiveSettingsTab,
@@ -334,7 +329,6 @@ const AppContent: React.FC = () => {
         setIsCommandPaletteOpen,
         setIsClippingPanelOpen,
         setIsMediaPanelOpen,
-        setIsWebViewerOpen,
         setVideoPlayerUrl,
         handleClipIdea,
     });
@@ -506,7 +500,6 @@ const AppContent: React.FC = () => {
                                 onToggleClippingPanel={handleToggleClippingPanel}
                                 onToggleMediaPanel={handleToggleMediaPanel}
                                 onToggleChatPanel={handleToggleChatPanel}
-                                onToggleWebViewer={handleToggleWebViewer}
                                 onToggleActivityPanel={handleToggleActivityPanel}
                                 onStandbyClick={goIdle}
                                 clippedIdeasCount={clippedIdeas.length + notesCount + filesCount}
@@ -558,11 +551,6 @@ const AppContent: React.FC = () => {
                                     <MediaPanel
                                         isOpen={isMediaPanelOpen}
                                         onClose={handleCloseMediaPanel}
-                                    />
-
-                                    <WebViewerPanel
-                                        isOpen={isWebViewerOpen}
-                                        onClose={handleCloseWebViewer}
                                     />
 
                                     <VideoPlayerOverlay

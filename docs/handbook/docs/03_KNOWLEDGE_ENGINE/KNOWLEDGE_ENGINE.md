@@ -47,7 +47,7 @@ A lightweight entity graph connecting prompts, images, styles, notes, and memori
 
 ## Knowledge Context Injection
 
-**File:** `services/buildKnowledgeContextBlock.ts`
+**Function:** `buildKnowledgeContextBlock()` — defined inline in `services/assistantService.ts` (only its test file, `services/buildKnowledgeContextBlock.test.ts`, is a separate module)
 
 Formats knowledge search results into an LLM prompt context block with kind badges and tag badges. Injected into every assistant request via `buildSystemIdentity()`:
 
@@ -94,3 +94,9 @@ Prompt text, model names, asset hashes, timestamps, and user annotations all for
 - Determines current stage from vault path
 - Loads content, promotes to target stage, updates index
 - Auto-promotes tier to "knowledge" when moving to wiki/output
+
+## Related
+
+- [MEMORY_SYSTEM.md](../04_MEMORY/MEMORY_SYSTEM.md) — covers the same 3-tier working/long-term/knowledge model from the memory side (injection, promotion rules, tests); read both, they describe one system from two angles
+- [OBSIDIAN.md](OBSIDIAN.md) — the vault backend this engine's knowledge repository tier persists to
+- [MCP_SPEC.md](../05_MCP/MCP_SPEC.md) — how the Obsidian vault tools this engine relies on are exposed over MCP

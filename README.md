@@ -63,6 +63,12 @@ Kollektiv is a high-performance, local-first application designed for prompt eng
     Create a `.env` file in the root directory:
     ```env
     GEMINI_API_KEY=your_gemini_api_key_here
+
+    # Multi-engine web search (optional — see docs/handbook/docs/01_AI_ENGINE/AI_ENGINE.md)
+    # DEFAULT_SEARCH_ENGINES=duckduckgo,brave
+    # ALLOWED_SEARCH_ENGINES=
+    # EXA_API_KEY=your_exa_api_key_here
+    # SEARCH_MODE=request
     ```
 
 3.  **Launch**:

@@ -310,3 +310,10 @@ When adding a new capability or changing a contract:
 3. Preserve backward compatibility where possible or document the migration path.
 4. Update the implementation and any dependent UI or service module in the same change.
 5. Add tests for the contract boundary where practical, especially around parsing, persistence, and provider fallback.
+
+## 10. Related handbook docs
+
+- [CAPABILITY_SPEC.md](../docs/02_CAPABILITY_PLATFORM/CAPABILITY_SPEC.md) — the prose-level lifecycle these contracts implement
+- [AI_ENGINE.md](../docs/01_AI_ENGINE/AI_ENGINE.md) — the execution pipeline and provider catalog behind §3
+- [MCP_SPEC.md](../docs/05_MCP/MCP_SPEC.md) — the MCP tool/resource contract behind §6.1
+- [diagrams/README.md](../diagrams/README.md) — where the §7 ASCII flows above are meant to become real diagrams

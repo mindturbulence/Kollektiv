@@ -93,3 +93,9 @@ Before finishing work, confirm that:
 ## 12. What the Tooling Already Enforces (Don't Nitpick in Review)
 
 Formatting, unused locals/params, switch fallthrough, hook-dep warnings. Review attention goes to correctness, the rules above, and the spec — not to things `tsc`/ESLint already flag.
+
+## Related
+
+- [ARCHITECTURE_CONSTITUTION.md § Security Hardening](../00_FOUNDATION/ARCHITECTURE_CONSTITUTION.md#security-hardening) — current status of the `server.ts` rules in §6 above (CSP, rate limiting, validation coverage)
+- [DIRECTORY_STRUCTURE.md](../08_IMPLEMENTATION/DIRECTORY_STRUCTURE.md) — the folder layout these rules assume
+- [DESIGN_PRINCIPLES.md](../00_FOUNDATION/DESIGN_PRINCIPLES.md) — the higher-level philosophy these concrete rules implement

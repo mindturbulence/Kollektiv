@@ -117,6 +117,18 @@ Prerequisites: A Gemini API key configured for live voice, a moderately noisy en
 - [ ] 4. Confirm the VAD (voice activity detection) isn't tripping on background noise
 - [ ] **Pass if:** Noise cancellation is perceptibly active — cleaner VAD than without
 
+**ISSUE-30 — Finalize production CSP (drop Report-Only)**
+Prerequisites: A real production deploy (`pnpm build && pnpm preview`, or actual hosting), Gemini/Spotify/Google OAuth credentials configured, a running local Ollama or llama.cpp instance.
+Context: [handbook/docs/00_FOUNDATION/ARCHITECTURE_CONSTITUTION.md § Security Hardening](handbook/docs/00_FOUNDATION/ARCHITECTURE_CONSTITUTION.md#security-hardening) — `src/middleware/security.ts` ships the production CSP as `Content-Security-Policy-Report-Only`. It's already verified clean on initial page load, but the checks below need a live environment this pass couldn't reach.
+
+- [ ] 1. Start a live voice session (mic + noise cancellation + VAD) against the production build — confirm no CSP violations in DevTools Console
+- [ ] 2. Connect Spotify and use a Spotify tool/feature — confirm `connect-src` allows `accounts.spotify.com`/`api.spotify.com` with no violations
+- [ ] 3. Trigger a YouTube search tool call — confirm `www.googleapis.com` isn't blocked
+- [ ] 4. Point Settings at a running local Ollama or llama.cpp instance and fetch its model list — confirm the `http://localhost:*`/`http://127.0.0.1:*` `connect-src` entries work end-to-end (not just "nothing was listening")
+- [ ] 5. Click through the full Google Sign-In popup/redirect flow — confirm `frame-src`/`script-src` allow `accounts.google.com` for the whole flow, not just the initial script load
+- [ ] 6. Once all of the above are clean, change the `isProd` branch in `security.ts` from `Content-Security-Policy-Report-Only` to `Content-Security-Policy` (one-line header-name swap)
+- [ ] **Pass if:** All five flows run violation-free under Report-Only, then the same flows are re-verified once switched to enforced
+
 ### User-only
 
 **ISSUE-6 — Rotate Obsidian API key**
@@ -168,6 +180,8 @@ Prerequisites: A Gemini API key configured for live voice, a moderately noisy en
 | 5 | Hardcoded Anthropic model default string | ✅ Fixed — constant extracted |
 | 16 | Minor unfinished items (browser_close_tab, a11y, QuickActions, etc.) | ✅ Fixed — all 7 items implemented |
 | 27 | settingsStorage.test.ts planned but never created | ✅ Fixed — 16 tests added |
+| 32 | `providerRouter.ts` — built, tested, zero real callers, stub `call()` | ✅ Deleted — file, test, and PROVIDER_ROUTER.md handbook doc removed (see ARCHITECTURE_CONSTITUTION.md § Built But Not Wired for why) |
+| 33 | Chunked chat loading falsely flagged as unwired | ✅ False positive — `loadRecentMessages()`/`loadMessagesBefore()` are wired into `LLMChatPanel.tsx`'s "Load older messages" button; the original audit grepped the wrong function name. Docs corrected, no code change needed. |
 
 ### 🚀 Feature Phases
 
@@ -180,15 +194,16 @@ Prerequisites: A Gemini API key configured for live voice, a moderately noisy en
 | 24.4 | Vault integrity visibility: IntegrityReportModal | ✅ Done |
 | 25 | Phase 2 — Feature Enrichment | ✅ Complete — generate loop, model registry, knowledge graph, gallery intelligence |
 | 25.1 | Generate loop: state machine, panel, generate_and_ingest tool | ✅ Done |
-| 25.2 | Model registry: versioned modelProfiles.json | ✅ Done |
-| 25.3 | Assistant knowledge graph: entity graph with cross-entity query | ✅ Done |
+| 25.2 | Model registry: versioned modelProfiles.ts | ✅ Done |
+| 25.3 | Assistant knowledge graph: entity graph with cross-entity query | ⚠️ Was falsely marked done (2026-07-25 audit found `relationshipGraph.ts` built but unwired, no real tool). ✅ Actually done 2026-07-26 — see ISSUE-31 below. |
 | 25.4 | Gallery intelligence: auto-tagging, similarity clustering, visual search | ✅ Done |
-| 26 | Phase 3 — Polish & Performance | ✅ Complete — WS reconnection, chunked chat, WASM search |
+| 26 | Phase 3 — Polish & Performance | ✅ Done — all three sub-items real (26.3 just wasn't WASM) |
 | 26.1 | WebSocket reconnection with exponential backoff | ✅ Done |
-| 26.2 | Chunked chat loading with "Load more" | ✅ Done |
-| 26.3 | WASM-accelerated BM25 search with IDB persistence | ✅ Done |
-| 28 | Aspirational MCP Architecture (8 layers) | ✅ Complete — registry, intent router, planner, executor, service layer, provider router, capability tools, wiring |
-| 29 | Knowledge & Obsidian Architecture | ✅ Complete — knowledge manager, 3-tier memory, relationship graph, context injection, lifecycle projection |
+| 26.2 | Chunked chat loading with "Load more" | ✅ Done — `loadRecentMessages()`/`loadMessagesBefore()` wired into `LLMChatPanel.tsx`'s "↑ Load older messages" button. A 2026-07-25 audit falsely flagged this as unwired by checking the wrong function name (`loadChatMessages`, an unrelated helper); corrected 2026-07-26 (ISSUE-33, closed as false positive). |
+| 26.3 | BM25 search with IDB persistence | ⚠️ Real (`utils/vaultSearch.ts`, wired into Command Palette via `obsidianStorage.searchNotes()`) but plain JS, not WASM — "WASM-accelerated" was inaccurate, corrected in the handbook |
+| 28 | Aspirational MCP Architecture (8 layers) | ⚠️ 7 of 8 real — the "provider router" layer (`providerRouter.ts`) was a disconnected stub, deleted 2026-07-26 (ISSUE-32) rather than wired, since it conflicted with the app's explicit user-chooses-the-provider design |
+| 29 | Knowledge & Obsidian Architecture | ✅ Complete — knowledge manager, 3-tier memory, relationship graph (now wired, ISSUE-31), context injection, lifecycle projection |
+| 31 | Wire `relationshipGraph.ts` into a real assistant tool | ✅ Done 2026-07-26 — new `find_related_knowledge` tool (`services/tools/graphTools.ts`) rehydrates the graph from `memoryStorage`/`galleryStorage`/`promptStorage` tags on each call and exposes `findRelatedByTags` to the assistant. 6 new tests. |
 
 ### 🔧 MCP Infrastructure Hardening (2026-07-25)
 

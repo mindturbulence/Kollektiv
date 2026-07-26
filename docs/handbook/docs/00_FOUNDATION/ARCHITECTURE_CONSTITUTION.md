@@ -88,7 +88,10 @@ The repository is organized around a small number of high-value areas:
 - contexts/: shared state providers for settings, assistant status, global busy state, and auth placeholder state
 - utils/: storage helpers, integrity logic, parsers, event bus utilities, and shared data operations
 - constants/: model catalogs, defaults, presets, themes, and modifier definitions
-- docs/: product architecture, plan documents, and implementation notes
+- src/: server-side middleware and request validation — `src/middleware/security.ts` (CSP, CORS, rate limiting), `src/middleware/validate.ts`, `src/schemas/*.ts` (Zod schemas). See [Security Hardening](#security-hardening) below.
+- server.ts: the Express dev host / proxy bridge. Still one file (~1,500 lines), not yet split into `src/routes/*` + `src/services/*` — see [Security Hardening](#security-hardening).
+- public/: static assets served as-is (fonts, background images, `boot-diagnostics.js`)
+- docs/: product architecture (this handbook), issue tracker, and implementation notes
 
 ## Development and Engineering Standards
 
@@ -177,7 +180,7 @@ The roadmap focuses on four levels of maturity:
 
 Resolved existing structural defects, security issues, and test gaps.
 
-- [ ] **Still open:** Fix the production server branch (`app.get('*')` → `app.use()` fallback)
+- [x] Fix the production server branch (`app.get('*')` → `app.use()` fallback) — fixed 2026-07-18, commit `9f26ee3`
 - [x] Split App.tsx (~1,200 lines → 5 extracted hooks)
 - [x] Raise the test floor (llmService tests, E2E smoke test, settingsStorage tests)
 - [x] Security trims: proxy allowlist, confirmation gates, browser kill switch
@@ -198,29 +201,30 @@ Onboarding and error handling are now standardized.
 Generate loop, model registry, knowledge graph, and gallery intelligence implemented.
 
 - [x] Generate loop: `useGenerateLoop` state machine + `GeneratePanel` + `CompareQuickAction` + `generate_and_ingest` tool
-- [x] Model registry: `constants/modelProfiles.json` — versioned JSON replacing ~50 hardcoded profiles
+- [x] Model registry: `constants/modelProfiles.ts` — versioned catalog replacing ~50 hardcoded profiles
 - [x] Gallery intelligence: auto-tagging, similarity clustering, visual search, usage analytics
-- [x] Assistant knowledge graph: entity graph connecting prompts, images, styles, notes, memories with `query_tool`
-- [x] Assistant memory: context-aware `memoryPromptBlock()` injected into every assistant request
+- [x] Assistant knowledge graph: `services/relationshipGraph.ts` (52 tests), exposed to the assistant via the `find_related_knowledge` tool (`services/tools/graphTools.ts`, 6 tests) — rehydrates from `memoryStorage`/`galleryStorage`/`promptStorage` tags on each call. Fixed 2026-07-26 (ISSUE-31); the 2026-07-25 audit had found this built but completely disconnected, with no real tool despite being marked done.
+- [x] Assistant memory: context-aware `memoryPromptBlock()` (in `utils/memoryStorage.ts`) injected into every assistant request
 
 ### Phase 3 — Polish & Performance ✅
 
-WebSocket resilience, chunked loading, and WASM-accelerated search.
+WebSocket resilience, chunked chat loading, and search are all real. (Search just wasn't WASM — see below.)
 
 - [x] WebSocket reconnection: `reconnectManager.ts` with exponential backoff — wired into all 3 voice backends
-- [x] Chunked chat loading: paginated `loadChatMessages()` with offset/pageSize + "Load more" in UI
-- [x] WASM-accelerated search: `vaultSearch.ts` BM25 index with IDB persistence, auto-rebuild on vault mutations, integrated into Command Palette
+- [x] Chunked chat loading: `utils/chatStorage.ts`'s `loadRecentMessages()`/`loadMessagesBefore()` (cursor-based, 50-message chunks) are wired into `components/LLMChatPanel.tsx` — a "↑ Load older messages" button (`hasMoreMessages`/`isLoadingMore` state) calls `loadMoreMessages()`. A 2026-07-25 audit incorrectly flagged this as unwired by checking the wrong function name (`loadChatMessages`, an unrelated "load everything" helper, rather than the real pagination API) — corrected 2026-07-26, ISSUE-33 closed as a false positive.
+- [x] Search: `utils/vaultSearch.ts` (not `services/`) BM25 index with IDB persistence, auto-rebuild on vault mutations, wired into the Command Palette via `obsidianStorage.searchNotes()`. **Not WASM** — plain JS, despite the name of this line historically; fixed here.
 
 ### Additional completed work
 
-- **MCP Architecture (ISSUE-28):** 8-layer architecture — capability registry, intent router, planner, execution engine, service layer, provider router, 5 capability tools, 22 built-in capabilities
-- **Knowledge & Obsidian (ISSUE-29):** 5 phases — knowledge manager API, 3-tier memory, relationship graph (52 tests), context-aware injection (17 tests), knowledge lifecycle with folder projection (59 tests)
+- **MCP Architecture (ISSUE-28):** 7 of the original 8 layers — capability registry, intent router, planner, execution engine, service layer, capability tools, wiring. The "provider router" layer (`services/providerRouter.ts`) was found built-but-disconnected in the 2026-07-25 audit — its `call()` was a literal stub, and real cost/latency-aware fallback would conflict with `LLMSettings.activeLLM` being a deliberate user choice (see `getActiveProvider`/`requireProvider` in `llmService.ts`, which throw rather than silently switch providers). Deleted rather than wired, 2026-07-26 (ISSUE-32).
+- **Knowledge & Obsidian (ISSUE-29):** 5 phases — knowledge manager API, 3-tier memory, relationship graph (now wired via `find_related_knowledge`, ISSUE-31), context-aware injection (17 tests), knowledge lifecycle with folder projection (59 tests)
 - **MCP Infrastructure (2026-07-25):** Redundant Playwright child process removed, MCP server always starts, .env loading, CORS session-id fix, preset URL sync, consolidated to single Built-In tab with 61 tools
+- **CSP hardening (2026-07-25):** `src/middleware/security.ts` now branches on `NODE_ENV` — see the [Security Hardening](#security-hardening) section above for the full policy and status.
 
 ### Definition of "Ready to Think About Money"
 
 1. A stranger on a fresh machine reaches a working dashboard in under 3 minutes without help.
-2. `pnpm lint` clean, `pnpm test` green (630 tests), E2E smoke test passes.
+2. `pnpm lint` clean, `pnpm test` green (607 tests as of 2026-07-26 — this number drifts with the codebase, re-run rather than trust it), E2E smoke test passes.
 3. No assistant tool can perform a destructive external action without explicit confirmation. **(Note: ISSUE-22 revert means send_gmail/delete_gmail have no confirmation gate — user decision)**
 4. The generate→ingest→compare loop works end-to-end with at least one provider. ✅
 5. Model registry lives in data (`modelProfiles.json`). ✅
@@ -284,9 +288,64 @@ The Express server (run via `npx tsx server.ts`, default `127.0.0.1:7500`) acts 
 | `GET /api/topaz-status` / `POST /api/topaz-upscale` | Topaz Gigapixel CLI bridge (multer upload, temp files cleaned up). |
 | `/api/cdp/*` | Chrome DevTools Protocol bridge for assistant browser control (connect, click, type, navigate, etc.). |
 
+## Security Hardening
+
+Introduced from a five-axis code review of commit `ca389c8` (`src/middleware/security.ts`, `src/schemas/*.ts`, `src/middleware/validate.ts`). This section is the single source of truth for that work — the original planning doc and a later CSP-specific draft have both been folded in here and deleted.
+
+### Content-Security-Policy
+
+`securityHeaders` (in `src/middleware/security.ts`) branches on `NODE_ENV`:
+
+**Dev** — permissive by design, unchanged by this hardening pass:
+```
+default-src * data: blob:; script-src * 'unsafe-inline' https: blob: 'unsafe-eval'; style-src * 'unsafe-inline' https:; img-src * data: blob: https:; font-src * data:; connect-src * https: wss: http://localhost:* http://127.0.0.1:*; frame-src *
+```
+
+**Prod** — scoped per-host policy, shipped as `Content-Security-Policy-Report-Only` (logs violations, blocks nothing) until the manual walk-through in ISSUE-30 is clean:
+```
+default-src 'self'; script-src 'self' blob: 'wasm-unsafe-eval' https://accounts.google.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://db.onlinewebfonts.com https://api.fontshare.com; font-src 'self' data: https://fonts.gstatic.com https://cdn.fontshare.com https://db.onlinewebfonts.com; img-src 'self' data: blob: https:; connect-src 'self' https://openrouter.ai https://generativelanguage.googleapis.com https://www.googleapis.com https://wttr.in https://accounts.spotify.com https://api.spotify.com wss://generativelanguage.googleapis.com http://localhost:* http://127.0.0.1:*; frame-src https://accounts.google.com;
+```
+
+Why each non-obvious entry is there:
+- `blob:` in `script-src` — the live-assistant mic-capture `AudioWorklet` loads via `URL.createObjectURL()` in `services/liveAssistantService.ts`.
+- `'wasm-unsafe-eval'` — RNNoise (`simple-rnnoise-wasm`) and the ONNX-based VAD (`@ricky0123/vad-web`) compile WASM at runtime; both are core voice-pipeline features, not experimental extras. Scoped to WASM compilation only, unlike `'unsafe-eval'` (which dev still carries, and which also permits arbitrary `eval()`).
+- Fonts split across three hosts — `fonts.gstatic.com` (Google Fonts), `cdn.fontshare.com` (actual font binaries — a *different* subdomain than the `api.fontshare.com` CSS endpoint), `db.onlinewebfonts.com`.
+- `connect-src` stays broad because this app calls many hosts directly from the browser (OpenRouter, Gemini incl. the Live API's WebSocket, YouTube/Google APIs, wttr.in, Spotify) and proxies to **user-configured local model servers** (Ollama, llama.cpp) at arbitrary ports — hence `http://localhost:*`/`http://127.0.0.1:*` stay despite being plaintext schemes.
+- The two former inline `<script>` blocks in `index.html` (boot-error overlay, reload diagnostic) were extracted to `public/boot-diagnostics.js` so prod's `script-src` doesn't need `'unsafe-inline'`.
+- A CSP hash (`sha256-...`) is not a substitute for `'unsafe-eval'`/`'wasm-unsafe-eval'` — hashes allowlist specific inline script/style content; they don't grant the `eval()`/WASM-compile permission itself.
+
+Verified via a real `npm run build` + `NODE_ENV=production` server run + browser load: zero CSP violations on initial page load, zero inline `<script>` tags in the built `dist/index.html`. **Not yet verified:** voice assistant (needs a live mic + user gesture), Spotify/YouTube tool calls (need real OAuth/API keys), local Ollama/llama.cpp (need a running server), and the full Google Sign-In popup/redirect flow. Tracked as **ISSUE-30**; switching to enforced `Content-Security-Policy` is a one-line header-name change in `security.ts` once those checks are clean.
+
+### Rest of the review pass — actual status
+
+The rest of the original plan covered headers/CORS, input validation, rate limiting, a `server.ts` refactor, logging hygiene, and a pre-commit hook. Verified against the current code:
+
+| Area | Status |
+|---|---|
+| Security headers (`helmet`, CSP) + CORS | ✅ Done — `src/middleware/security.ts` |
+| Zod input validation | ⚠️ Partial — `src/schemas/anthropic.ts` and `topaz.ts` are wired via `validate()` into their routes in `server.ts`; `mcp.ts` and `proxy.ts` schemas exist as files but aren't wired into `/api/mcp/proxy` or the `/proxy-remote`, `/ollama-local`, `/llamacpp-local` routes |
+| Auth-endpoint rate limiting | ⚠️ Partial — `authRateLimiter` applies to `/api/openai/token` and `/api/anthropic/chat`; `/api/topaz-upscale` has validation but no rate limit |
+| Global rate limiting | ❌ Disabled — `globalRateLimiter` exists in `security.ts` but is commented out in `server.ts` ("disable global rate limiting" commit) |
+| `server.ts` refactor into `src/routes/*` + `src/services/*` | ❌ Not done — `server.ts` is still one file (~1,500 lines) |
+| Pre-commit hook (husky: lint + test + audit) | ❌ Not done — no `.husky/` directory in the repo |
+| Logging redaction (strip `Authorization`/`Cookie` from logs) | Not verified in this pass |
+
+Phase 0 in the roadmap above is marked ✅ complete, but its "Security trims" line refers to a narrower set of items (proxy allowlist, confirmation gates, browser kill switch) that did ship — it was never meant to cover the full table above. If the remaining items are picked back up, they need their own `ISSUE-N` entries in [ISSUES.md](../../../ISSUES.md).
+
+## Built But Not Wired
+
+A repo-wide audit (2026-07-25) found two modules that were fully implemented and tested but never actually called from the running app, despite the roadmap marking the features they back as done. Both resolved 2026-07-26 (design-reviewed via a Plan-agent pass, not just docs edits). A third suspected case (chunked chat loading) turned out to be a false positive from the same audit — see the note below the table. Listed here for the historical record:
+
+| Module | What it claimed to do | Resolution | Tracked as |
+|---|---|---|---|
+| `services/relationshipGraph.ts` | Entity graph connecting prompts/images/notes/memories, with a `query_tool` for the assistant | ✅ **Wired 2026-07-26.** New `find_related_knowledge` tool in `services/tools/graphTools.ts` rehydrates the graph from `memoryStorage`/`galleryStorage`/`promptStorage` tags on each call (no separate write-path plumbing needed) and exposes `findRelatedByTags`. 6 new tests in `graphTools.test.ts`. Deliberately minimal scope — relation types, `traverse`, `findPaths`, `getSubgraph` remain unused; prompt lineage is already solved separately by `SavedPrompt.lineage`. | ISSUE-31 (closed) |
+| `services/providerRouter.ts` | Cost-aware, latency-aware provider selection with automatic fallback | ❌ **Deleted 2026-07-26**, not wired. Its `call()` was a literal stub (comment: *"real wiring is in Layer 8"*) returning fake placeholder text. More fundamentally, silent cost/latency-based fallback conflicts with `getActiveProvider`/`requireProvider` in `llmService.ts`, which deliberately throw `ProviderUnsupportedError` rather than silently switch providers — `LLMSettings.activeLLM` is a user's explicit choice (local model = privacy, specific paid API = cost on their own key), not something to override automatically. | ISSUE-32 (closed) |
+
+**False positive, corrected 2026-07-26:** the original audit also flagged `utils/chatStorage.ts`'s `loadChatMessages()` as an unwired "chunked loading" feature. That was wrong — it checked the wrong function name. The real pagination API is `loadRecentMessages()`/`loadMessagesBefore()` (cursor-based, 50-message chunks), which **is** wired into `components/LLMChatPanel.tsx` via a working "↑ Load older messages" button. ISSUE-33 closed with no code change needed, just a correction to this doc and ISSUES.md.
+
 ## Known Issues and Gotchas
 
-- **Production server branch is broken.** `server.ts`'s `NODE_ENV=production` path uses `app.get('*')`, which Express 5 + path-to-regexp 8 reject. Use `vite preview` on `dist/` instead.
+- **Production CSP is Report-Only, not enforced.** See [Security Hardening](#security-hardening) above — it logs violations but blocks nothing yet. Don't treat it as a working XSS defense until ISSUE-30's checks are done.
 - **Single dev instance only.** A second dev server collides on Vite's HMR websocket port. For automated verification, use `vite build` + `vite preview --port 4173`.
 - **Service worker is disabled by design.** `sw.js` exists, but `index.html` actively unregisters all service workers on every boot. Don't rely on offline caching.
 - **Boot requires a real directory handle.** The File System Access folder picker gates the whole app. In a headless browser, stub it with OPFS: `window.showDirectoryPicker = async () => navigator.storage.getDirectory()`.
@@ -297,12 +356,13 @@ The Express server (run via `npx tsx server.ts`, default `127.0.0.1:7500`) acts 
 
 Use the architecture handbook in this order:
 
-1. Start with [VISION.md](VISION.md) for the product intent.
-2. Read [ARCHITECTURE_CONSTITUTION.md](ARCHITECTURE_CONSTITUTION.md) for the governing structure.
+1. Start with [VISION.md](VISION.md) and [DESIGN_PRINCIPLES.md](DESIGN_PRINCIPLES.md) for product intent and engineering philosophy.
+2. Read [ARCHITECTURE_CONSTITUTION.md](ARCHITECTURE_CONSTITUTION.md) (this file) for the governing structure, including [Security Hardening](#security-hardening) for the current CSP/server-hardening state.
 3. Follow [AI_ENGINE.md](../01_AI_ENGINE/AI_ENGINE.md) and [PLANNER.md](../01_AI_ENGINE/PLANNER.md) for execution flow.
-4. Review [CAPABILITY_SPEC.md](../02_CAPABILITY_PLATFORM/CAPABILITY_SPEC.md) and [PROVIDER_ROUTER.md](../07_PROVIDERS/PROVIDER_ROUTER.md) for capability and provider behavior.
-5. Consult [MEMORY_SYSTEM.md](../04_MEMORY/MEMORY_SYSTEM.md), [MCP_SPEC.md](../05_MCP/MCP_SPEC.md), and [VOICE_PIPELINE.md](../06_VOICE/VOICE_PIPELINE.md) for support layers.
+4. Review [CAPABILITY_SPEC.md](../02_CAPABILITY_PLATFORM/CAPABILITY_SPEC.md) and [CREATE_CAPABILITY.md](../10_EXAMPLES/CREATE_CAPABILITY.md) for capability behavior. (PROVIDER_ROUTER.md was removed 2026-07-26 — the module it described was dead code; provider selection is documented directly in AI_ENGINE.md's Provider Catalog.)
+5. Consult [KNOWLEDGE_ENGINE.md](../03_KNOWLEDGE_ENGINE/KNOWLEDGE_ENGINE.md), [OBSIDIAN.md](../03_KNOWLEDGE_ENGINE/OBSIDIAN.md), [MEMORY_SYSTEM.md](../04_MEMORY/MEMORY_SYSTEM.md), [MCP_SPEC.md](../05_MCP/MCP_SPEC.md), and [VOICE_PIPELINE.md](../06_VOICE/VOICE_PIPELINE.md) for support layers. Note: KNOWLEDGE_ENGINE.md and MEMORY_SYSTEM.md cover overlapping ground (the 3-tier memory model) from different angles — read both, they cross-reference each other.
 6. Use [DIRECTORY_STRUCTURE.md](../08_IMPLEMENTATION/DIRECTORY_STRUCTURE.md) and [AI_WORKER_RULES.md](../09_AI_WORKER/AI_WORKER_RULES.md) when implementing or reviewing changes.
+7. See [contracts/interfaces.md](../../contracts/interfaces.md) for implementation-facing data shapes and [diagrams/README.md](../../diagrams/README.md) for the diagram inventory.
 
 ## Decision Record
 

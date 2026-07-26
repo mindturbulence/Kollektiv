@@ -6,7 +6,8 @@ import type { AssistantNote } from '../utils/notesStorage';
 import { loadNotes, getNotesSync, addNote, updateNote, deleteNote, clearNotes } from '../utils/notesStorage';
 import { appEventBus } from '../utils/eventBus';
 import { fileSystemManager } from '../utils/fileUtils';
-import { CloseIcon, DeleteIcon, SparklesIcon, BookmarkIcon, RefreshIcon, PlusIcon, ArchiveIcon, CopyIcon, EditIcon, NoteIcon } from './icons';
+import { CloseIcon, DeleteIcon, SparklesIcon, BookmarkIcon, RefreshIcon, PlusIcon, ArchiveIcon, CopyIcon, EditIcon, NoteIcon, GlobeIcon } from './icons';
+import { WebTabContent } from './WebTabContent';
 import { audioService } from '../services/audioService';
 
 interface ClippingPanelProps {
@@ -21,7 +22,16 @@ interface ClippingPanelProps {
     onSaveToLibrary: (idea: Idea) => void;
 }
 
-type PanelTab = 'clips' | 'notes' | 'files';
+type PanelTab = 'clips' | 'notes' | 'files' | 'web';
+
+interface WebResult {
+    title: string;
+    url: string;
+    markdown: string;
+    source: 'search' | 'fetch' | 'scrape' | 'playwright';
+    timestamp: number;
+    engine?: string;
+}
 
 const downloadBlob = (blob: Blob, filename: string) => {
     const a = document.createElement('a');
@@ -307,8 +317,6 @@ const NoteItem: React.FC<{ note: AssistantNote; index: number }> = ({ note, inde
     );
 };
 
-// ─── Panel ────────────────────────────────────────────────────────
-
 const ClippingPanel: React.FC<ClippingPanelProps> = ({
     isOpen,
     onClose,
@@ -331,7 +339,36 @@ const ClippingPanel: React.FC<ClippingPanelProps> = ({
     // Files state
     const [files, setFiles] = useState<string[]>([]);
 
+    // Web results state
+    const [webResults, setWebResults] = useState<WebResult[]>([]);
+    const [webLoading, setWebLoading] = useState(false);
+    const [webError, setWebError] = useState<string | null>(null);
+
     useEffect(() => appEventBus.on('notesChanged', (n: AssistantNote[]) => setNotes(n)), []);
+
+    // Subscribe to web search results from assistant tools
+    useEffect(() => {
+        const offResults = appEventBus.on('webSearchResults', (results: WebResult[]) => {
+            setWebResults(prev => [...results, ...prev].slice(0, 50));
+            setWebLoading(false);
+            setWebError(null);
+            if (tab !== 'web') setTab('web');
+        });
+        const offError = appEventBus.on('webSearchError', (error: string) => {
+            setWebLoading(false);
+            setWebError(error);
+            if (tab !== 'web') setTab('web');
+        });
+        const offLoading = appEventBus.on('webSearchLoading', () => {
+            setWebLoading(true);
+            setWebError(null);
+        });
+        return () => {
+            offResults();
+            offError();
+            offLoading();
+        };
+    }, [tab]);
 
     const refreshFiles = useCallback(async () => {
         if (!fileSystemManager.isDirectorySelected()) { setFiles([]); return; }
@@ -432,6 +469,34 @@ const ClippingPanel: React.FC<ClippingPanelProps> = ({
         void refreshFiles();
     }, [refreshFiles]);
 
+    const handleSaveAsNote = useCallback((title: string, markdown: string) => {
+        audioService.playClick();
+        addNote(title, markdown, 'assistant');
+        appEventBus.emit('assistantFeedback', { message: 'Saved as note', isError: false });
+    }, []);
+
+    const handleSaveToVault = useCallback(async (title: string, markdown: string) => {
+        audioService.playClick();
+        if (!fileSystemManager.isDirectorySelected()) {
+            appEventBus.emit('assistantFeedback', { message: 'No vault connected', isError: true });
+            return;
+        }
+        const safe = title.replace(/[\\/:*?"<>|]/g, '_').trim() || `web-${Date.now()}`;
+        await fileSystemManager.saveFile(`assistant/${safe}.md`, new Blob([markdown], { type: 'text/markdown' }));
+        appEventBus.emit('assistantFilesChanged');
+        appEventBus.emit('assistantFeedback', { message: `Saved to vault as ${safe}.md`, isError: false });
+    }, []);
+
+    const handleCopyResult = useCallback((markdown: string) => {
+        audioService.playClick();
+        navigator.clipboard?.writeText(markdown).then(() => {
+            appEventBus.emit('assistantFeedback', { message: 'Copied to clipboard', isError: false });
+        }).catch(() => {
+            appEventBus.emit('assistantFeedback', { message: 'Failed to copy', isError: true });
+        });
+    }, []);
+
+
     return (
         <>
             <div
@@ -447,6 +512,8 @@ const ClippingPanel: React.FC<ClippingPanelProps> = ({
                             <div className="flex items-center gap-3">
                                 {tab === 'clips' ? (
                                     <BookmarkIcon className="w-5 h-5 text-primary" />
+                                ) : tab === 'web' ? (
+                                    <GlobeIcon className="w-5 h-5 text-primary" />
                                 ) : (
                                     <NoteIcon className="w-5 h-5 text-primary" />
                                 )}
@@ -462,6 +529,12 @@ const ClippingPanel: React.FC<ClippingPanelProps> = ({
                                         className={`px-3 py-1 text-[10px] font-black uppercase tracking-[0.3em] font-logo border border-base-300/30 border-l-0 ${tab === 'notes' ? 'bg-primary/20 text-primary' : 'opacity-50 hover:opacity-100'}`}
                                     >
                                         Notes [{notes.length}]
+                                    </button>
+                                    <button
+                                        onClick={() => { audioService.playClick(); setTab('web'); }}
+                                        className={`px-3 py-1 text-[10px] font-black uppercase tracking-[0.3em] font-logo border border-base-300/30 border-l-0 ${tab === 'web' ? 'bg-primary/20 text-primary' : 'opacity-50 hover:opacity-100'}`}
+                                    >
+                                        Web [{webResults.length}]
                                     </button>
                                     <button
                                         onClick={() => { audioService.playClick(); setTab('files'); }}
@@ -509,6 +582,16 @@ const ClippingPanel: React.FC<ClippingPanelProps> = ({
                                         title="Delete all notes"
                                     >
                                         <span /><span /><span /><span />
+                                        <DeleteIcon className="w-5 h-5" />
+                                    </button>
+                                )}
+                                {tab === 'web' && webResults.length > 0 && (
+                                    <button
+                                        onClick={() => { audioService.playClick(); setWebResults([]); }}
+                                        className="btn btn-xs btn-ghost h-8 w-8 rounded-none p-0 opacity-40 hover:opacity-100 hover:text-error transition-all btn-snake"
+                                        title="Clear all web results"
+                                    >
+                                        <span/><span/><span/><span/>
                                         <DeleteIcon className="w-5 h-5" />
                                     </button>
                                 )}
@@ -591,6 +674,18 @@ const ClippingPanel: React.FC<ClippingPanelProps> = ({
                                         <p className="text-[10px] font-bold uppercase tracking-[0.2em] mt-4">Ask the assistant to save a file — it lands in the vault's assistant folder</p>
                                     </div>
                                 )
+                            )}
+
+                            {tab === 'web' && (
+                                <WebTabContent
+                                    results={webResults}
+                                    loading={webLoading}
+                                    error={webError}
+                                    onClear={() => setWebResults([])}
+                                    onCopy={handleCopyResult}
+                                    onSaveNote={handleSaveAsNote}
+                                    onSaveVault={handleSaveToVault}
+                                />
                             )}
                         </div>
                     </div>

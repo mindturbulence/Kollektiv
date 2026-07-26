@@ -28,7 +28,7 @@ The memory system uses three tiers based on durability and scope:
 
 ## Memory Injection
 
-**File:** `services/assistantService.ts` — `memoryPromptBlock()`
+**Function:** `memoryPromptBlock()` — defined in `utils/memoryStorage.ts`, imported into `services/assistantService.ts`
 
 Memory is injected into every assistant request **contextually** by filtering against the user's latest message. This ensures only relevant memories are surfaced to the model:
 
@@ -39,7 +39,7 @@ Memory is injected into every assistant request **contextually** by filtering ag
 
 ## Knowledge Context Block
 
-**File:** `services/buildKnowledgeContextBlock.ts`
+**Function:** `buildKnowledgeContextBlock()` — defined inline in `services/assistantService.ts`
 
 Formats knowledge search results into an LLM prompt context block:
 - Kind badges (memory, note, vault_note, prompt)
@@ -58,7 +58,7 @@ Items move through tiers with automatic lifecycle folder projection (`services/k
 ## Tests
 
 - `utils/memoryStorage.test.ts` — memory CRUD and search
-- `services/buildKnowledgeContextBlock.test.ts` — 17 tests for context formatting
+- `services/buildKnowledgeContextBlock.test.ts` — 17 tests for context formatting (tests a function defined in `assistantService.ts`, not a same-named source file)
 - `services/knowledgeLifecycle.test.ts` — 59 tests for lifecycle and projection
 - `utils/vaultSearch.test.ts` — 27 tests for BM25 search index
 
@@ -70,3 +70,8 @@ The implementation already supports memory-like behavior through:
 - `services/knowledgeService.ts` — unified knowledge interface
 - `services/knowledgeLifecycle.ts` — lifecycle folder projection
 - `services/relationshipGraph.ts` — cross-entity relationship tracking
+
+## Related
+
+- [KNOWLEDGE_ENGINE.md](../03_KNOWLEDGE_ENGINE/KNOWLEDGE_ENGINE.md) — covers the same 3-tier model from the knowledge-lifecycle side (vault folder projection, relationship graph, retrieval); read both, they describe one system from two angles
+- [OBSIDIAN.md](../03_KNOWLEDGE_ENGINE/OBSIDIAN.md) — the vault backend the knowledge repository tier persists to

@@ -1,0 +1,181 @@
+// Global Error Interceptor for diagnosing blank screens
+(function() {
+  function displayFatalBootError(title, subtitle, detail) {
+    try {
+      const div = document.createElement('div');
+      div.id = 'fatal-boot-error-overlay';
+      div.style.position = 'fixed';
+      div.style.top = '0';
+      div.style.left = '0';
+      div.style.width = '100vw';
+      div.style.height = '100vh';
+      div.style.backgroundColor = '#0c0a09';
+      div.style.color = '#ef4444';
+      div.style.fontFamily = 'monospace';
+      div.style.padding = '2rem';
+      div.style.zIndex = '999999';
+      div.style.overflow = 'auto';
+      div.style.boxSizing = 'border-box';
+      div.innerHTML = `
+        <div style="max-width: 800px; margin: 0 auto; border: 1px solid rgba(239, 68, 68, 0.2); padding: 2rem; background: rgba(239, 68, 68, 0.05); border-radius: 4px;">
+          <h1 style="font-size: 1.5rem; margin-top: 0; font-weight: 900; letter-spacing: -0.05em; text-transform: uppercase;">⚠️ ${title}</h1>
+          <p style="color: #a8a29e; font-size: 14px; line-height: 1.6; margin-bottom: 2rem;">${subtitle}</p>
+          <pre style="background: #1c1917; padding: 1rem; border-radius: 4px; color: #f87171; overflow: auto; max-height: 50vh; text-align: left; font-size: 12px; border: 1px solid #2e2a24;">${detail}</pre>
+          <div style="margin-top: 2rem; display: flex; gap: 1rem;">
+            <button onclick="window.location.reload()" style="background-color: #ef4444; color: white; border: none; padding: 0.75rem 1.5rem; font-family: monospace; font-weight: bold; cursor: pointer; border-radius: 2px;">REBOOT_SYSTEM</button>
+            <button onclick="try { localStorage.clear(); sessionStorage.clear(); window.location.reload(); } catch(e) {}" style="background-color: transparent; color: #a8a29e; border: 1px solid #44403c; padding: 0.75rem 1.5rem; font-family: monospace; font-weight: bold; cursor: pointer; border-radius: 2px;">RESET_ALL_STORAGE</button>
+          </div>
+        </div>
+      `;
+      if (document.body) {
+        document.body.appendChild(div);
+      } else {
+        document.documentElement.appendChild(div);
+      }
+    } catch(e) {
+      console.error("Secondary error rendering boot crash ui:", e);
+    }
+  }
+
+  window.addEventListener('error', function(event) {
+    console.error('Captured Global Error:', event.error);
+    const filename = (event.filename || '').toLowerCase();
+    const message = (event.message || (event.error && event.error.message) || '').toLowerCase();
+    const errorStr = event.error ? String(event.error).toLowerCase() : '';
+
+    // Ignore cross-origin, extension, GSI, browser, or silent script errors
+    if (
+      message.includes('script error') ||
+      errorStr.includes('script error') ||
+      !filename ||
+      event.lineno === 0 ||
+      filename.includes('gsi/client') ||
+      filename.includes('chrome-extension') ||
+      filename.includes('extensions') ||
+      filename.includes('google') ||
+      filename.includes('firefox')
+    ) {
+      console.warn('Ignored cross-origin or non-critical script error:', event);
+      return;
+    }
+    displayFatalBootError(
+      'Uncaught Runtime Exception',
+      `An unhandled error occurred in <strong>${event.filename || 'unknown script'}</strong> at line <strong>${event.lineno}:${event.colno}</strong>.`,
+      event.error ? (event.error.stack || String(event.error)) : (event.message || 'No details available')
+    );
+  });
+
+  window.addEventListener('unhandledrejection', function(event) {
+    console.error('Captured Unhandled Rejection:', event.reason);
+    const reasonStr = event.reason ? (event.reason.message || String(event.reason)).toLowerCase() : '';
+    if (
+      reasonStr.includes('gsi') ||
+      reasonStr.includes('google') ||
+      reasonStr.includes('script error') ||
+      reasonStr.includes('extension')
+    ) {
+      console.warn('Ignored external unhandled promise rejection:', event.reason);
+      return;
+    }
+    displayFatalBootError(
+      'Unhandled Promise Rejection',
+      'An asynchronous task failed without being caught.',
+      event.reason ? (event.reason.stack || String(event.reason)) : 'No details available'
+    );
+  });
+})();
+
+// ── Session-storage diagnostic: persists LAST init step across reloads ──
+(function() {
+  // On page load, check if the PREVIOUS page left a trace
+  try {
+    var lastStep = sessionStorage.getItem('_init_last_step');
+    var reloadCount = parseInt(sessionStorage.getItem('_init_reload_count') || '0', 10);
+    if (lastStep) {
+      reloadCount++;
+      sessionStorage.setItem('_init_reload_count', String(reloadCount));
+      // Show diagnostic overlay
+      var div = document.createElement('div');
+      div.id = '_init_diag';
+      div.style.cssText = 'position:fixed;top:0;left:0;width:100vw;height:100vh;background:#0c0a09;color:#00ffa3;font-family:monospace;padding:2rem;z-index:999999;overflow:auto;box-sizing:border-box';
+      div.innerHTML = [
+        '<div style="max-width:800px;margin:0 auto;border:1px solid rgba(0,255,163,0.2);padding:2rem;background:rgba(0,255,163,0.03);border-radius:4px;">',
+        '<h1 style="font-size:1.2rem;margin-top:0;font-weight:900;text-transform:uppercase;color:#ef4444;">⚠️ PAGE RELOAD DETECTED</h1>',
+        '<p style="color:#a8a29e;font-size:13px;line-height:1.6;">The page was reloaded (count: ' + reloadCount + '). The last initialization step before the previous reload was:</p>',
+        '<pre style="background:#1c1917;padding:1rem;border-radius:4px;color:#f87171;overflow:auto;max-height:60vh;text-align:left;font-size:12px;border:1px solid #2e2a24;white-space:pre-wrap;">' + lastStep + '</pre>',
+        '<hr style="border-color:#2e2a24;margin:1rem 0;"/>',
+        '<p style="color:#a8a29e;font-size:11px;">After you see this, type <strong style="color:#fff;">sessionStorage.clear(); location.reload()</strong> in the console to reset.</p>',
+        '<button onclick="sessionStorage.clear(); location.reload()" style="background:#ef4444;color:white;border:none;padding:0.75rem 1.5rem;font-family:monospace;font-weight:bold;cursor:pointer;border-radius:2px;margin-top:1rem;">CLEAR AND RELOAD</button>',
+        '</div>'
+      ].join('\n');
+      document.addEventListener('DOMContentLoaded', function() {
+        (document.body || document.documentElement).appendChild(div);
+      });
+      // Also show immediately in case DOM is already ready
+      if (document.body) (document.body || document.documentElement).appendChild(div);
+    }
+  } catch(e) { console.warn('[DIAG] Error:', e); }
+
+  // Clear the step marker on a fresh successful page load (will be re-set by init code)
+  try { sessionStorage.removeItem('_init_last_step'); } catch(e) {}
+  window.__initLog = function(step) {
+    try { sessionStorage.setItem('_init_last_step', step); } catch(e) {}
+  };
+  window.__initLog('INDEX_HTML_LOADED');
+  console.log('[INIT] Diagnostic active — steps will be logged to sessionStorage.');
+})();
+
+// Critical: Ensure process global is defined before any module import starts
+window.process = {
+  env: {
+    NODE_ENV: 'development',
+    API_KEY: '',
+    GEMINI_API_KEY: ''
+  }
+};
+
+// Clean up: unregister any stale service workers left over from previous builds
+// Refrain from calling location.reload() here — that creates a refresh loop.
+if (typeof window !== 'undefined') {
+  if ('serviceWorker' in navigator) {
+    navigator.serviceWorker.getRegistrations().then(function (registrations) {
+      for (var i = 0; i < registrations.length; i++) {
+        registrations[i].unregister();
+      }
+      if (registrations.length > 0) {
+        console.log('Stale service worker(s) unregistered.');
+      }
+    }).catch(function (err) {
+      console.error('Failed to unregister service worker:', err);
+    });
+  }
+}
+
+// Critical: Load theme immediately to support "use current themes" during integrity check
+(function () {
+  try {
+    const settings = JSON.parse(localStorage.getItem('kollektivSettingsV4'));
+    if (settings) {
+      let theme = settings.activeThemeMode === 'light' ? settings.lightTheme : settings.darkTheme;
+      if (theme === 'lofi') theme = 'arwes';
+      if (theme) {
+        document.documentElement.setAttribute('data-theme', theme);
+
+        // Simple heuristic for light/dark
+        const isLight = ['light', 'cupcake', 'bumblebee', 'emerald', 'corporate', 'retro', 'cyberpunk', 'valentine', 'garden', 'pastel', 'fantasy', 'wireframe', 'cmyk', 'autumn', 'acid', 'lemonade', 'winter', 'nord'].includes(theme);
+        if (isLight) {
+          document.documentElement.classList.add('is-light-theme');
+        }
+
+        // Update theme-color meta
+        const meta = document.getElementById('theme-color-meta');
+        if (meta) {
+          if (theme === 'pipboy') meta.setAttribute('content', '#051105');
+          else if (theme === 'MindTurbulence') meta.setAttribute('content', '#0a0a0a');
+          else if (theme === 'abyss') meta.setAttribute('content', '#020617');
+          else if (isLight) meta.setAttribute('content', '#ffffff');
+        }
+      }
+    }
+  } catch (e) { }
+})();

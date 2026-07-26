@@ -39,3 +39,9 @@ The codebase should remain understandable to future contributors. Naming, state 
 - Rationale: the project is actively evolving, and strong conventions reduce the cost of change.
 - Examples: shared settings object, centralized constants, and documented development standards.
 - Anti-patterns: ad-hoc state variables, duplicated provider logic, or hidden persistence paths.
+
+## Related
+
+- [VISION.md](VISION.md) — the product goals these principles serve
+- [ARCHITECTURE_CONSTITUTION.md](ARCHITECTURE_CONSTITUTION.md) — where these principles are (and aren't yet) fully realized in the current codebase
+- [AI_WORKER_RULES.md](../09_AI_WORKER/AI_WORKER_RULES.md) — the concrete, enforced version of principle 5 (maintainability through explicit conventions)
