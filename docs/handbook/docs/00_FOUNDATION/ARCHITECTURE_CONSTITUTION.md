@@ -84,7 +84,7 @@ The vault is the repository of user work. It stores prompts, media artifacts, me
 The repository is organized around a small number of high-value areas:
 
 - components/: UI shell, feature pages, and reusable interface modules
-- services/: provider integrations, assistant orchestration, storage bridges, and non-UI logic
+- services/: provider integrations, assistant orchestration, storage bridges, multi-engine web search (`services/webSearchEngines/`), and non-UI logic
 - contexts/: shared state providers for settings, assistant status, global busy state, and auth placeholder state
 - utils/: storage helpers, integrity logic, parsers, event bus utilities, and shared data operations
 - constants/: model catalogs, defaults, presets, themes, and modifier definitions
@@ -220,6 +220,7 @@ WebSocket resilience, chunked chat loading, and search are all real. (Search jus
 - **Knowledge & Obsidian (ISSUE-29):** 5 phases — knowledge manager API, 3-tier memory, relationship graph (now wired via `find_related_knowledge`, ISSUE-31), context-aware injection (17 tests), knowledge lifecycle with folder projection (59 tests)
 - **MCP Infrastructure (2026-07-25):** Redundant Playwright child process removed, MCP server always starts, .env loading, CORS session-id fix, preset URL sync, consolidated to single Built-In tab with 61 tools
 - **CSP hardening (2026-07-25):** `src/middleware/security.ts` now branches on `NODE_ENV` — see the [Security Hardening](#security-hardening) section above for the full policy and status.
+- **Multi-engine free web search (2026-07-26):** Modular `services/webSearchEngines/` directory with DuckDuckGo, Brave, Exa (optional `EXA_API_KEY`), and Bing (Playwright-gated) engines. Orchestrator runs engines in parallel, deduplicates by URL, and interleaves results. `POST /api/web-search` route with Zod validation and rate limiter. Assistant's `web_search` tool defaults to the free path; falls back to Gemini only when empty. `fetch_content` mode fetches full page content via Defuddle for rich panel cards. Bing engine supports `SEARCH_MODE=auto|playwright|request` env var. Both plan files documented in `docs/plans/` are fully implemented.
 
 ### Definition of "Ready to Think About Money"
 
@@ -285,6 +286,7 @@ The Express server (run via `npx tsx server.ts`, default `127.0.0.1:7500`) acts 
 | `POST /api/mcp/proxy` | MCP JSON-RPC proxy (Streamable-HTTP compatible). |
 | `GET /api/health` | `{status:"ok"}`. |
 | `GET /api/topaz-status` / `POST /api/topaz-upscale` | Topaz Gigapixel CLI bridge (multer upload, temp files cleaned up). |
+| `POST /api/web-search` | Multi-engine web search (DuckDuckGo + Brave + Exa + Bing). Backs the assistant's `web_search` tool. Rate-limited (60 req/15min). |
 | `/api/cdp/*` | Chrome DevTools Protocol bridge for assistant browser control (connect, click, type, navigate, etc.). |
 
 ## Security Hardening
@@ -322,8 +324,8 @@ The rest of the original plan covered headers/CORS, input validation, rate limit
 | Area | Status |
 |---|---|
 | Security headers (`helmet`, CSP) + CORS | ✅ Done — `src/middleware/security.ts` |
-| Zod input validation | ⚠️ Partial — `src/schemas/anthropic.ts` and `topaz.ts` are wired via `validate()` into their routes in `server.ts`; `mcp.ts` and `proxy.ts` schemas exist as files but aren't wired into `/api/mcp/proxy` or the `/proxy-remote`, `/ollama-local`, `/llamacpp-local` routes |
-| Auth-endpoint rate limiting | ⚠️ Partial — `authRateLimiter` applies to `/api/openai/token` and `/api/anthropic/chat`; `/api/topaz-upscale` has validation but no rate limit |
+| Zod input validation | ⚠️ Partial — `src/schemas/anthropic.ts`, `topaz.ts`, and `webSearch.ts` are wired via `validate()` into their routes in `server.ts`; `mcp.ts` and `proxy.ts` schemas exist as files but aren't wired into `/api/mcp/proxy` or the `/proxy-remote`, `/ollama-local`, `/llamacpp-local` routes |
+| Auth-endpoint rate limiting | ⚠️ Partial — `authRateLimiter` applies to `/api/openai/token` and `/api/anthropic/chat`; `searchRateLimiter` applies to `/api/web-search`; `/api/topaz-upscale` has validation but no rate limit |
 | Global rate limiting | ❌ Disabled — `globalRateLimiter` exists in `security.ts` but is commented out in `server.ts` ("disable global rate limiting" commit) |
 | `server.ts` refactor into `src/routes/*` + `src/services/*` | ❌ Not done — `server.ts` is still one file (~1,500 lines) |
 | Pre-commit hook (husky: lint + test + audit) | ❌ Not done — no `.husky/` directory in the repo |

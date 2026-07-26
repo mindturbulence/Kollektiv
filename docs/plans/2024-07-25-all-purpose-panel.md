@@ -1,6 +1,7 @@
-> **Superseded.** The Notes and Web tabs described below were later merged into one "Assistant
-> Notes" tab, and web results now auto-save to the panel instead of requiring an explicit
-> `send_to_web_panel` call. See `docs/handbook/docs/01_AI_ENGINE/AI_ENGINE.md` (Web tools section)
+> ✅ **Superseded (implemented with different design).** The Notes and Web tabs described below were merged into one "Assistant
+> Notes" tab (3 tabs total: Clips, Assistant Notes, Files). Web results auto-save to the panel via `appEventBus.emit('webSearchResults', …)`
+> instead of requiring an explicit `send_to_web_panel` call. The `WebTabContent.tsx` component renders collapsible result cards
+> with markdown, copy, save-as-note, and save-to-vault buttons. See `docs/handbook/docs/01_AI_ENGINE/AI_ENGINE.md` (Web tools section)
 > and `docs/handbook/docs/00_FOUNDATION/ARCHITECTURE_CONSTITUTION.md` (Global overlay panels) for
 > current behavior. Kept here for history on why the original 4-tab, markdown-only Web tab design
 > was chosen.
