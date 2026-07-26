@@ -184,10 +184,7 @@ export const useAppShell = ({
   const handleCloseMediaPanel = useCallback(() => setIsMediaPanelOpen(false), []);
   const handleCloseVideoPlayer = useCallback(() => setVideoPlayerUrl(null), []);
   const handleToggleChatPanel = useCallback(() => {
-    setIsChatPanelOpen(prev => {
-      if (!prev) appEventBus.emit('navigate', 'dashboard');
-      return !prev;
-    });
+    setIsChatPanelOpen(prev => !prev);
   }, []);
   const handleCloseChatPanel = useCallback(() => setIsChatPanelOpen(false), []);
   const handleCloseLlmStatus = useCallback(() => setIsLlmPanelOpen(false), []);

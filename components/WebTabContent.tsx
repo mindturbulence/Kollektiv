@@ -1,66 +1,46 @@
 import React, { useState } from 'react';
 import type { WebResult } from '../types';
 import { audioService } from '../services/audioService';
-import { CopyIcon, ArchiveIcon } from './icons';
+import { DeleteIcon } from './icons';
+import Markdown from 'react-markdown';
+import remarkGfm from 'remark-gfm';
+
+/** Remove HTML tags from a string — keeps the text content between tags. */
+export function stripHtml(str: string): string {
+    return str.replace(/<[^>]*>/g, '');
+}
 
 export const WebResultCard: React.FC<{
     result: WebResult;
-    index: number;
-    onCopy: (markdown: string) => void;
-    onSaveNote: (result: WebResult) => void;
-    onSaveVault: (result: WebResult) => void;
-}> = ({ result, index, onCopy, onSaveNote, onSaveVault }) => {
+    onDelete?: (result: WebResult) => void;
+}> = ({ result, onDelete }) => {
     const [expanded, setExpanded] = useState(true);
-    const displayNum = String(index + 1).padStart(2, '0');
     const sourceLabel = result.engine || result.source;
 
     return (
         <div className="flex flex-col group bg-transparent transition-all duration-700 hover:bg-primary/5 w-full overflow-hidden select-none h-fit border-b border-base-300/10 relative">
             <div className="flex flex-col w-full h-full p-4 md:p-6">
                 <div className="mb-4">
-                    <div className="flex justify-between items-start mb-2">
-                        <div className="flex items-center gap-2 min-w-0">
-                            <span className="text-3xl font-black text-base-content flex-shrink-0 font-mono leading-none tracking-tighter tabular-nums opacity-20">
-                                {displayNum}
+                    <div className="flex flex-col mb-2">
+                        <span className="text-sm font-black uppercase tracking-[0.3em] text-primary/60 mb-0.5 leading-none">
+                            {result.source.toUpperCase()} · {sourceLabel}
+                        </span>
+                        <h2 className="font-black text-sm text-base-content uppercase tracking-tight font-logo leading-tight w-full" title={result.title}>
+                            {result.title}
+                        </h2>
+                        {(result.author || result.published || result.site) && (
+                            <span className="text-xs font-semibold text-base-content/50 truncate mt-1">
+                                {[result.author && `By ${result.author}`, result.published, result.site].filter(Boolean).join(' · ')}
                             </span>
-                            <div className="flex flex-col min-w-0 border-l border-base-300/30 pl-3">
-                                <span className="text-[9px] font-black uppercase tracking-[0.4em] text-primary/60 mb-1 leading-none">
-                                    {result.source.toUpperCase()} · {sourceLabel}
-                                </span>
-                                <h2 className="font-black text-sm text-base-content truncate uppercase tracking-tight font-logo leading-tight" title={result.title}>
-                                    {result.title}
-                                </h2>
-                                {(result.author || result.published || result.site) && (
-                                    <span className="text-[9px] font-bold text-base-content/40 truncate mt-0.5">
-                                        {[result.author && `By ${result.author}`, result.published, result.site].filter(Boolean).join(' · ')}
-                                    </span>
-                                )}
-                            </div>
-                        </div>
-                        <div className="flex items-center gap-2 ml-4">
+                        )}
+                        <div className="flex justify-end gap-1 -mt-8">
                             <button
-                                onClick={() => onCopy(result.markdown)}
-                                className="uppercase tracking-widest -content/30 hover:text-primary transition-all flex items-center gap-1.5 group/btn px-2 py-1 text-[9px] font-black"
-                                title="Copy markdown"
+                                onClick={() => { audioService.playClick(); onDelete?.(result); }}
+                                className="btn btn-xs btn-ghost h-8 w-8 rounded-none p-0 opacity-40 hover:opacity-100 hover:text-error transition-all btn-snake"
+                                title="Remove result"
                             >
-                                <CopyIcon className="w-3 h-3 opacity-40 group-hover/btn:opacity-100" />
-                                COPY
-                            </button>
-                            <button
-                                onClick={() => onSaveNote(result)}
-                                className="uppercase tracking-widest -content/30 hover:text-primary transition-all flex items-center gap-1.5 group/btn px-2 py-1 text-[9px] font-black"
-                                title="Save as note"
-                            >
-                                <ArchiveIcon className="w-3 h-3 opacity-40 group-hover/btn:opacity-100" />
-                                NOTE
-                            </button>
-                            <button
-                                onClick={() => onSaveVault(result)}
-                                className="uppercase tracking-widest -content/30 hover:text-primary transition-all flex items-center gap-1.5 group/btn px-2 py-1 text-[9px] font-black"
-                                title="Save to vault"
-                            >
-                                <ArchiveIcon className="w-3 h-3 opacity-40 group-hover/btn:opacity-100" />
-                                VAULT
+                                <span/><span/><span/><span/>
+                                <DeleteIcon className="w-4 h-4" />
                             </button>
                             <button
                                 onClick={() => { audioService.playClick(); setExpanded(!expanded); }}
@@ -88,8 +68,13 @@ export const WebResultCard: React.FC<{
                                     onError={(e) => { (e.currentTarget as HTMLImageElement).style.display = 'none'; }}
                                 />
                             )}
-                            <div className="prose prose-sm prose-invert max-w-none whitespace-pre-wrap text-[14px] leading-relaxed">
-                                {result.markdown}
+                            <div className="prose prose-sm prose-invert max-w-none text-[14px] leading-relaxed">
+                                <Markdown
+                                    remarkPlugins={[remarkGfm]}
+                                    components={{
+                                        a: ({node, ...props}) => <a target="_blank" rel="noopener noreferrer" {...props} />
+                                    }}
+                                >{result.markdown}</Markdown>
                             </div>
                         </>
                     )}

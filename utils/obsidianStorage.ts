@@ -367,6 +367,21 @@ export async function replaceInNote(
 
 // ── Directory operations ───────────────────────────────────────────────
 
+/**
+ * Create any of the given vault-relative folder paths that don't already
+ * exist (e.g. the knowledge lifecycle folders). No-op per path that's
+ * already there — getDirectoryHandle with create:true is idempotent.
+ */
+export async function ensureFolders(folders: string[]): Promise<void> {
+  if (!_vaultHandle) return;
+  for (const folder of folders) {
+    let handle: DirectoryHandle = _vaultHandle;
+    for (const part of folder.split('/').filter(Boolean)) {
+      handle = await handle.getDirectoryHandle(part, { create: true });
+    }
+  }
+}
+
 export async function listNotes(prefix?: string): Promise<string[]> {
   const allPaths: string[] = [];
   for await (const p of walkMdFiles()) {

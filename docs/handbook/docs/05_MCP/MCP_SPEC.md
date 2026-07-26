@@ -104,6 +104,6 @@ Tool execution is synchronous from the client's perspective — the HTTP respons
 
 ## Related
 
-- [OBSIDIAN.md](../03_KNOWLEDGE_ENGINE/OBSIDIAN.md) — the vault tools sub-server this spec aggregates
+- [OBSIDIAN.md](../03_KNOWLEDGE_ENGINE/OBSIDIAN.md) — the vault tools sub-server this spec aggregates (the server-side, `OBSIDIAN_VAULT_PATH`-driven half of OBSIDIAN.md's "two independent integrations"; the in-app assistant's `remember`/`knowledge_lifecycle_promote` tools go through the other half instead)
 - [ARCHITECTURE_CONSTITUTION.md § Security Hardening](../00_FOUNDATION/ARCHITECTURE_CONSTITUTION.md#security-hardening) — the CSP `connect-src`/CORS posture this local-only server operates under
 - [AI_ENGINE.md](../01_AI_ENGINE/AI_ENGINE.md) — the `list_mcp_servers`/`toggle_mcp_server` assistant tools that manage this server from chat

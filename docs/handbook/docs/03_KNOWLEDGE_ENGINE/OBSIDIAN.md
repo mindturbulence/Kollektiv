@@ -1,8 +1,22 @@
 # Obsidian Integration
 
+## Two independent integrations — do not conflate them
+
+There are **two separate Obsidian connections** in this codebase, each with its own vault handle, its own connect step, and its own consumers. Setting `OBSIDIAN_VAULT_PATH` does **not** give the in-app assistant chat write access to the vault — that requires the second integration below to be connected too.
+
+| | Server-side MCP bridge | Browser-side FS Access API |
+|---|---|---|
+| **File** | `services/kollektivMcp.ts` | `utils/obsidianStorage.ts` |
+| **Connect step** | `OBSIDIAN_VAULT_PATH` env var, read at server boot | User clicks "Connect" in Settings → Integrations → Obsidian (`pickObsidianVault()` → `showDirectoryPicker()`) |
+| **Vault handle** | Plain Node `fs` path | `FileSystemDirectoryHandle`, persisted in IndexedDB (`utils/db.ts`) |
+| **Consumers** | External MCP clients (Claude Code, Claude Desktop) via the 61-tool endpoint at `http://127.0.0.1:3012` — see [MCP_SPEC.md](../05_MCP/MCP_SPEC.md) | The in-app assistant's own tools: `remember`, `knowledge_lifecycle_promote`, `knowledgeService`/`knowledgeLifecycle` (see [MEMORY_SYSTEM.md](../04_MEMORY/MEMORY_SYSTEM.md)) |
+| **Reconnects on app boot?** | N/A — server reads the env var fresh each start | Yes — `initObsidianVault()` is called from `hooks/useBootSequence.ts` to reacquire a previously-granted handle |
+
+**Practical implication:** if a user has `OBSIDIAN_VAULT_PATH` set but has never clicked "Connect" in Settings, the assistant's `remember`/`knowledge_lifecycle_promote` tools silently no-op on the vault write (they still succeed locally) — `isObsidianConnected()` returns `false` and `knowledgeService.promote()`/`knowledgeLifecycle.promote()` catch and skip. This was the root cause of memories never appearing in the vault even though "the connection already worked" from the server-side/MCP-client point of view.
+
 ## Architecture
 
-Obsidian integration uses a **direct vault folder access** model via `OBSIDIAN_VAULT_PATH` env var. The old `obsidian-mcp-server` child process (port 27124, gated on `OBSIDIAN_API_KEY`) was fully retired in favor of the new MCP vault bridge.
+The server-side integration uses a **direct vault folder access** model via `OBSIDIAN_VAULT_PATH` env var. The old `obsidian-mcp-server` child process (port 27124, gated on `OBSIDIAN_API_KEY`) was fully retired in favor of the new MCP vault bridge.
 
 ## MCP Vault Bridge
 
@@ -27,6 +41,20 @@ Provides the practical integration surface:
 - `patchNote(path, content)` — partial update
 - `moveNote(from, to)` — rename/move a note
 - `listDirectory(path)` — list vault contents
+
+## Lifecycle Folder Bootstrap
+
+**Function:** `ensureFolders(folders)` in `utils/obsidianStorage.ts`
+
+Creates any of the given vault-relative folder paths that don't already exist, via `getDirectoryHandle(name, {create: true})` (idempotent — no-op per path that's already there). Called once per boot from `hooks/useBootSequence.ts`, right after `initObsidianVault()` reconnects a previously-granted handle:
+
+```
+if (await initObsidianVault()) {
+  await ensureFolders(Object.values(knowledgeLifecycle.getAllStageConfigs()).map(c => c.folder));
+}
+```
+
+This guarantees `knowledge/inbox`, `knowledge/projects`, `knowledge/output`, and `knowledge/wiki` exist in the vault as soon as it's connected, rather than only appearing the first time something happens to be promoted into them. `knowledgeService.rebuildIndex()` is also called at boot (previously dead code — nothing invoked it) so memories/notes/vault files from prior sessions are indexed and promotable, not just newly-captured items.
 
 ## Vault Search Index
 

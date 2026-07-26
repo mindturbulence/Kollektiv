@@ -6,9 +6,8 @@ import type { AssistantNote } from '../utils/notesStorage';
 import { loadNotes, getNotesSync, addNote, updateNote, deleteNote, clearNotes } from '../utils/notesStorage';
 import { appEventBus } from '../utils/eventBus';
 import { fileSystemManager } from '../utils/fileUtils';
-import { serializeWithFrontmatter } from '../utils/obsidianStorage';
 import { CloseIcon, DeleteIcon, SparklesIcon, BookmarkIcon, RefreshIcon, PlusIcon, ArchiveIcon, CopyIcon, EditIcon, NoteIcon, GlobeIcon } from './icons';
-import { WebResultCard } from './WebTabContent';
+import { WebResultCard, stripHtml } from './WebTabContent';
 import { audioService } from '../services/audioService';
 
 interface ClippingPanelProps {
@@ -65,7 +64,7 @@ const ManualClipModal: React.FC<{
 
     const modalContent = (
         <div className="fixed inset-0 bg-black/80 z-[1000] flex items-center justify-center p-4 animate-fade-in" onClick={onClose}>
-            <div className="flex flex-col bg-transparent w-full max-w-lg mx-auto relative p-[3px] corner-frame overflow-visible" onClick={e => e.stopPropagation()}>
+            <div className="flex flex-col bg-transparent w-[33vw] min-w-[400px] max-w-[700px] mx-auto relative p-[3px] corner-frame overflow-visible" onClick={e => e.stopPropagation()}>
                 <div className="bg-base-100/40 backdrop-blur-xl rounded-none w-full flex flex-col overflow-hidden relative z-10">
                     <header className="p-8 border-b border-base-300 bg-base-200/20 relative">
                         <button onClick={() => { audioService.playClick(); onClose(); }} className="absolute top-6 right-6 form-btn h-8 w-8 opacity-40 hover:opacity-100">
@@ -284,7 +283,7 @@ const NoteItem: React.FC<{ note: AssistantNote; index: number }> = ({ note, inde
                 {editing ? (
                     <textarea value={content} onChange={e => setContent(e.target.value)} className="form-textarea w-full min-h-[120px] text-sm mb-3" />
                 ) : (
-                    <p className="text-sm font-medium leading-relaxed text-base-content/70 whitespace-pre-wrap mb-3">{note.content}</p>
+                    <p className="text-sm font-medium leading-relaxed text-base-content/70 whitespace-pre-wrap mb-3">{stripHtml(note.content)}</p>
                 )}
 
                 <div className="flex justify-between items-center pt-3 border-t border-base-300/10 text-[10px] font-black">
@@ -466,41 +465,6 @@ const ClippingPanel: React.FC<ClippingPanelProps> = ({
         void refreshFiles();
     }, [refreshFiles]);
 
-    const webResultToMarkdown = (result: WebResult): string => {
-        const frontmatter: Record<string, string> = { source: result.url };
-        if (result.author) frontmatter.author = result.author;
-        if (result.published) frontmatter.published = result.published;
-        if (result.site) frontmatter.site = result.site;
-        return serializeWithFrontmatter(result.markdown, frontmatter);
-    };
-
-    const handleSaveAsNote = useCallback((result: WebResult) => {
-        audioService.playClick();
-        addNote(result.title, webResultToMarkdown(result), 'assistant');
-        appEventBus.emit('assistantFeedback', { message: 'Saved as note', isError: false });
-    }, []);
-
-    const handleSaveToVault = useCallback(async (result: WebResult) => {
-        audioService.playClick();
-        if (!fileSystemManager.isDirectorySelected()) {
-            appEventBus.emit('assistantFeedback', { message: 'No vault connected', isError: true });
-            return;
-        }
-        const safe = result.title.replace(/[\\/:*?"<>|]/g, '_').trim() || `web-${Date.now()}`;
-        const markdown = webResultToMarkdown(result);
-        await fileSystemManager.saveFile(`assistant/${safe}.md`, new Blob([markdown], { type: 'text/markdown' }));
-        appEventBus.emit('assistantFilesChanged');
-        appEventBus.emit('assistantFeedback', { message: `Saved to vault as ${safe}.md`, isError: false });
-    }, []);
-
-    const handleCopyResult = useCallback((markdown: string) => {
-        audioService.playClick();
-        navigator.clipboard?.writeText(markdown).then(() => {
-            appEventBus.emit('assistantFeedback', { message: 'Copied to clipboard', isError: false });
-        }).catch(() => {
-            appEventBus.emit('assistantFeedback', { message: 'Failed to copy', isError: true });
-        });
-    }, []);
 
     // Merged, recency-sorted feed for the Assistant Notes tab: persisted notes + ephemeral web results.
     const notesFeed = useMemo<NotesFeedEntry[]>(() => {
@@ -655,10 +619,7 @@ const ClippingPanel: React.FC<ClippingPanelProps> = ({
                                                     <WebResultCard
                                                         key={`web-${entry.result.timestamp}-${index}`}
                                                         result={entry.result}
-                                                        index={index}
-                                                        onCopy={handleCopyResult}
-                                                        onSaveNote={handleSaveAsNote}
-                                                        onSaveVault={handleSaveToVault}
+                                                        onDelete={(res) => setWebResults(prev => prev.filter(w => w.timestamp !== res.timestamp))}
                                                     />
                                                 )
                                             ))}

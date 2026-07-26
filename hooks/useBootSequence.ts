@@ -91,6 +91,26 @@ export const useBootSequence = ({
         initChatStore(),
       ]);
 
+      // ── Reconnect a previously-granted Obsidian vault and make sure the
+      // knowledge/{inbox,projects,output,wiki} lifecycle folders exist —
+      // best-effort, non-fatal if no vault was ever connected. ──
+      try {
+        const { initObsidianVault, ensureFolders } = await import('../utils/obsidianStorage');
+        if (await initObsidianVault()) {
+          const { knowledgeLifecycle } = await import('../services/knowledgeLifecycle');
+          const folders = Object.values(knowledgeLifecycle.getAllStageConfigs()).map((c) => c.folder);
+          await ensureFolders(folders);
+        }
+      } catch { /* obsidian vault is optional */ }
+
+      // ── Rebuild the knowledge index so existing memories/notes/vault files
+      // are searchable and promotable (knowledge_lifecycle_promote needs them
+      // indexed first) — best-effort, non-fatal. ──
+      try {
+        const { knowledgeService } = await import('../services/knowledgeService');
+        await knowledgeService.rebuildIndex();
+      } catch { /* non-fatal */ }
+
       // ── FAST-PATH: skip remaining async I/O for diagnostics ──
       onProgress('System Ready', 1.0);
 

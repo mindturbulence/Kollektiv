@@ -74,7 +74,7 @@ Retrieval favors structured local context over broad remote search. The knowledg
 - **Long-term memory** — user preferences/profile (`utils/memoryStorage.ts`)
 - **Knowledge repository** — vault notes persisted via Obsidian
 
-Promotion rules: working → long-term → knowledge with automatic lifecycle folder projection.
+Promotion rules: working → long-term → knowledge with automatic lifecycle folder projection. The `remember` tool auto-promotes to the knowledge (vault) tier immediately on capture — see [MEMORY_SYSTEM.md § Promotion Rules](../04_MEMORY/MEMORY_SYSTEM.md#promotion-rules) for the full picture, including which promotion paths are actually wired up versus implemented-but-dormant.
 
 ## Metadata
 
@@ -86,17 +86,18 @@ Prompt text, model names, asset hashes, timestamps, and user annotations all for
 - `utils/promptStorage.ts` — saved prompt library with lineage tracking
 - `utils/obsidianStorage.ts` — Obsidian vault read/write/search with BM25 index fallback
 
-## Assistant Tool
+## Assistant Tools
 
-`knowledge_lifecycle_promote` — lets the assistant move items between lifecycle stages:
-- Parameters: `kind` (memory/note/vault_note/prompt), `id`, `target_stage` (inbox/projects/output/wiki)
-- Validates item exists in the knowledge index
-- Determines current stage from vault path
-- Loads content, promotes to target stage, updates index
-- Auto-promotes tier to "knowledge" when moving to wiki/output
+- `remember` — captures a fact via `knowledgeService.capture()` (indexing it) and immediately calls `knowledgeService.promote({targetTier: 'knowledge'})`, writing it to the vault in the same turn. No separate promotion step needed.
+- `knowledge_lifecycle_promote` — lets the assistant move any already-indexed item between lifecycle stages on demand:
+  - Parameters: `kind` (memory/note/vault_note/prompt), `id`, `target_stage` (inbox/projects/output/wiki)
+  - Validates item exists in the knowledge index
+  - Determines current stage from vault path
+  - Loads content, promotes to target stage, updates index
+  - Auto-promotes tier to "knowledge" when moving to wiki/output
 
 ## Related
 
 - [MEMORY_SYSTEM.md](../04_MEMORY/MEMORY_SYSTEM.md) — covers the same 3-tier working/long-term/knowledge model from the memory side (injection, promotion rules, tests); read both, they describe one system from two angles
-- [OBSIDIAN.md](OBSIDIAN.md) — the vault backend this engine's knowledge repository tier persists to
-- [MCP_SPEC.md](../05_MCP/MCP_SPEC.md) — how the Obsidian vault tools this engine relies on are exposed over MCP
+- [OBSIDIAN.md](OBSIDIAN.md) — the vault backend this engine's knowledge repository tier persists to via `utils/obsidianStorage.ts` (the browser-side FS Access API integration, **not** the server-side MCP bridge — see OBSIDIAN.md's "two independent integrations" section, since they're easy to conflate)
+- [MCP_SPEC.md](../05_MCP/MCP_SPEC.md) — a separate exposure of vault tools over MCP for external clients (Claude Code, Claude Desktop); this engine does not go through it

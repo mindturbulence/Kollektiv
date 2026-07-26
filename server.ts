@@ -173,7 +173,7 @@ async function startServer() {
     }
   });
 
-  app.use(express.json());
+  app.use(express.json({ limit: '10mb' }));
 
   // --- Proxy Routes (to support local Ollama / Remote bypasses in both development and production) ---
   

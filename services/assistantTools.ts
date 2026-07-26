@@ -3,7 +3,7 @@ import { appControlService } from './appControlService';
 import { appEventBus } from '../utils/eventBus';
 import { getOperator } from './browserOperatorResolver';
 import { addNote, loadNotes, updateNote, deleteNote } from '../utils/notesStorage';
-import { addMemory, loadMemories as loadMemoryEntries, deleteMemory } from '../utils/memoryStorage';
+import { loadMemories as loadMemoryEntries, deleteMemory } from '../utils/memoryStorage';
 // Obsidian imports removed — all obsidian tools live in services/tools/obsidianTools.ts
 import { loadGalleryItems, addItemToGallery, deleteItemFromGallery, loadCategories, loadPinnedItemIds } from '../utils/galleryStorage';
 import { computeGalleryStats } from '../utils/galleryAnalytics';
@@ -731,8 +731,20 @@ export const ASSISTANT_TOOLS: AssistantTool[] = [
             const cat = category && ['user_preference', 'style_pattern', 'prompt_formula', 'workflow_step', 'general'].includes(String(category))
                 ? String(category) as any
                 : undefined;
-            const result = await addMemory(String(fact), { category: cat, tags: tagList });
-            return result ? 'Remembered.' : 'Already remembered (or empty fact).';
+            const { knowledgeService } = await import('./knowledgeService');
+            const ref = await knowledgeService.capture({
+                kind: 'memory',
+                content: String(fact),
+                tags: tagList,
+                category: cat,
+                tier: 'long-term',
+            });
+            if (!ref) return 'Already remembered (or empty fact).';
+
+            // Push it into the vault immediately so it's not local-only — non-fatal
+            // if Obsidian isn't connected (knowledgeService.promote() no-ops in that case).
+            await knowledgeService.promote({ ref, targetTier: 'knowledge', reason: 'remember tool' });
+            return 'Remembered.';
         },
     },
     {

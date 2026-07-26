@@ -347,7 +347,6 @@ ${systemResponse}` };
                         setMessages(prev => [...prev, { role: 'assistant', content: '' }]);
                     }
                     fullResponse += ev.chunk;
-                    appEventBus.emit('liveCaption', { who: 'assistant', text: ev.chunk });
                     if (ev.chunk.trim() && ev.chunk.length > 0) audioService.playType();
                     setMessages(prev => {
                         const cloned = [...prev];

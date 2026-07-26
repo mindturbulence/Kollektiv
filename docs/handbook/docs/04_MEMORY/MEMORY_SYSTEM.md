@@ -51,9 +51,10 @@ Formats knowledge search results into an LLM prompt context block:
 
 Items move through tiers with automatic lifecycle folder projection (`services/knowledgeLifecycle.ts`):
 
-1. **Working → Long-term:** Explicit user request (assistant `remember` tool) or repeated pattern detection
-2. **Long-term → Knowledge:** Manual promotion via `knowledge_lifecycle_promote` tool or `knowledgeService.promote()`
-3. **Knowledge lifecycle:** Items are projected into vault folders: `inbox/` → `projects/` → `output/` → `wiki/`
+1. **Working → Long-term:** Explicit user request (assistant `remember` tool).
+2. **Long-term → Knowledge (vault):** The `remember` tool (`services/assistantTools.ts`) now does this **immediately and automatically** — it calls `knowledgeService.capture({kind: 'memory', tier: 'long-term'})` followed by `knowledgeService.promote({targetTier: 'knowledge'})` in the same execution, so a remembered fact is indexed *and* written to `knowledge/projects/memory/*.md` in the vault as soon as it's remembered — no separate manual step required. This requires the browser-side Obsidian connection (see [OBSIDIAN.md](../03_KNOWLEDGE_ENGINE/OBSIDIAN.md#two-independent-integrations--do-not-conflate-them)) to actually be connected; if not, the capture still succeeds locally and the vault write is silently skipped.
+3. **Manual promotion:** `knowledge_lifecycle_promote` tool or `knowledgeService.promote()` can still move any indexed item between lifecycle stages (`inbox` → `projects` → `output` → `wiki`) or force a tier change directly.
+4. **Access-count auto-promotion (`services/memoryTierService.ts`) is implemented but dormant.** The service defines "3+ accesses → long-term" and "10+ accesses → knowledge" rules and is read from (`searchAll()`, used by `buildKnowledgeContextBlock()`), but the two functions that would feed it — `addToWorkingMemory()` and `trackAccess()` — have **no callers anywhere in the app**. Working memory is therefore always empty in production and this promotion path never fires. Don't rely on it or assume facts get promoted "after enough uses" until something is wired to call these.
 
 ## Tests
 
@@ -70,6 +71,10 @@ The implementation already supports memory-like behavior through:
 - `services/knowledgeService.ts` — unified knowledge interface
 - `services/knowledgeLifecycle.ts` — lifecycle folder projection
 - `services/relationshipGraph.ts` — cross-entity relationship tracking
+
+**At app boot** (`hooks/useBootSequence.ts`), after the IndexedDB stores init: the Obsidian vault handle is reconnected and the four lifecycle folders are ensured (see [OBSIDIAN.md § Lifecycle Folder Bootstrap](../03_KNOWLEDGE_ENGINE/OBSIDIAN.md#lifecycle-folder-bootstrap)), then `knowledgeService.rebuildIndex()` runs so memories/notes/vault files from prior sessions are indexed and immediately promotable — this call previously existed but had no caller anywhere in the app.
+
+**Dead code, do not build on it:** `syncAgentMemoryToVault(content)` in `utils/memoryStorage.ts` is named as if it writes to the vault but only sets an in-memory variable (`_agentMemoryBlock`) — it has zero callers anywhere in the codebase. Treat it as an unfinished stub, not a real sync path.
 
 ## Related
 
