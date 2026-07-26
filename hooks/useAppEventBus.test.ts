@@ -31,7 +31,6 @@ describe('useAppEventBus', () => {
       setIsCommandPaletteOpen: noopAny,
       setIsClippingPanelOpen: noopAny,
       setIsMediaPanelOpen: noopAny,
-      setIsWebViewerOpen: noopAny,
       setVideoPlayerUrl: noopAny,
       handleClipIdea: noopAny,
     }));
@@ -50,7 +49,6 @@ describe('useAppEventBus', () => {
       setIsCommandPaletteOpen: noopAny,
       setIsClippingPanelOpen: noopAny,
       setIsMediaPanelOpen: noopAny,
-      setIsWebViewerOpen: noopAny,
       setVideoPlayerUrl: noopAny,
       handleClipIdea: noopAny,
     }));
@@ -69,7 +67,6 @@ describe('useAppEventBus', () => {
       setIsCommandPaletteOpen: noopAny,
       setIsClippingPanelOpen: noopAny,
       setIsMediaPanelOpen: noopAny,
-      setIsWebViewerOpen: noopAny,
       setVideoPlayerUrl: noopAny,
       handleClipIdea: noopAny,
     }));
@@ -88,7 +85,6 @@ describe('useAppEventBus', () => {
       setIsCommandPaletteOpen: noopAny,
       setIsClippingPanelOpen: noopAny,
       setIsMediaPanelOpen: noopAny,
-      setIsWebViewerOpen: noopAny,
       setVideoPlayerUrl,
       handleClipIdea: noopAny,
     }));
@@ -107,7 +103,6 @@ describe('useAppEventBus', () => {
       setIsCommandPaletteOpen: noopAny,
       setIsClippingPanelOpen: noopAny,
       setIsMediaPanelOpen: noopAny,
-      setIsWebViewerOpen: noopAny,
       setVideoPlayerUrl: noopAny,
       handleClipIdea,
     }));
@@ -131,7 +126,6 @@ describe('useAppEventBus', () => {
       setIsCommandPaletteOpen: noopAny,
       setIsClippingPanelOpen: noopAny,
       setIsMediaPanelOpen: noopAny,
-      setIsWebViewerOpen: noopAny,
       setVideoPlayerUrl: noopAny,
       handleClipIdea,
     }));

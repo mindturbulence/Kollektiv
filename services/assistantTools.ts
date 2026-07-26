@@ -15,6 +15,16 @@ import { PROMPT_DETAIL_LEVELS } from '../constants/modifiers';
 import { MCP_PRESETS, findMcpPresetEntry, upsertMcpPresetEntry } from '../constants/mcpPresets';
 import { mcpService } from './mcpService';
 
+// Web result type for all-purpose panel
+interface WebResult {
+    title: string;
+    url: string;
+    markdown: string;
+    source: 'search' | 'fetch' | 'scrape' | 'playwright';
+    timestamp: number;
+    engine?: string;
+}
+
 // Re-export ToolContext + AssistantTool from the shared module so callers
 // that import them from this file still work. New code should import from
 // 'services/tools/types' directly.
@@ -302,18 +312,76 @@ export const ASSISTANT_TOOLS: AssistantTool[] = [
     },
     {
         name: 'web_search',
-        description: 'Search the web (Google) for current, real-world information. Returns an answer summary plus source URLs as JSON. Runs on Gemini grounding regardless of the assistant brain, so it needs a Gemini API key. Offer open_web_page when the user wants to SEE a result page.',
+        description: 'Search the live web for current, real-world information. Free, no API key needed by default (scrapes multiple engines: DuckDuckGo, Brave, Exa if configured). Returns a JSON object with {results: [{title, url, snippet, source}], enginesUsed: string[], engineFailures: [...], fetchedContent: [{url, title, content, excerpt}]}. **WORKFLOW:** (1) Call this tool with your query. (2) Read the returned results and fetchedContent. (3) PICK THE SINGLE MOST RELEVANT RESULT. (4) If needed, use `fetch_url`, `scrape_url`, or `scrape_url_playwright` on that URL for full markdown. (5) SYNTHESIZE a detailed, comprehensive markdown answer. (6) Call `send_to_web_panel` with your synthesized markdown to display it in the Web tab. **DO NOT dump raw results — Curate → Synthesize → Present one polished answer.** Falls back to Google Search grounding (needs Gemini API key) only if free search returns empty. Google is LAST RESORT.',
         parameters: {
             type: 'object',
-            properties: { query: { type: 'string', description: 'What to search for.' } },
+            properties: {
+                query: { type: 'string', description: 'What to search for.' },
+                engines: { type: 'array', items: { type: 'string', enum: ['duckduckgo', 'brave', 'exa'] }, description: 'Optional: specific search engines to use. Defaults to duckduckgo and brave.' },
+                fetch_content: { type: 'boolean', description: 'If true, fetches full page content (Markdown) for the top 3 result URLs. Use when snippets alone are insufficient to answer the query.' },
+            },
             required: ['query'],
         },
-        execute: async ({ query }, ctx) => {
-            if (!(ctx.settings.geminiApiKey || process.env.GEMINI_API_KEY)) {
-                return 'Error: web search needs a Gemini API key (Settings > Integrations > Gemini) — it runs on Google Search grounding.';
+        execute: async ({ query, engines, fetch_content }, ctx) => {
+            // Emit loading event
+            appEventBus.emit('webSearchLoading');
+            try {
+                const body: any = { query: String(query) };
+                if (Array.isArray(engines) && engines.length > 0) {
+                    body.engines = engines;
+                }
+                if (fetch_content === true) {
+                    body.fetchContent = true;
+                }
+                const res = await fetch('/api/web-search', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(body),
+                });
+                if (res.ok) {
+                    const data = await res.json();
+                    if (Array.isArray(data.results) && data.results.length > 0) {
+                        // Emit results to web panel
+                        const results: WebResult[] = [];
+                        // Add search results
+                        for (const r of data.results) {
+                            results.push({
+                                title: r.title || r.url,
+                                url: r.url,
+                                markdown: r.snippet || r.content || '',
+                                source: 'search',
+                                engine: r.source,
+                                timestamp: Date.now(),
+                            });
+                        }
+                        // Add fetched content if available
+                        if (Array.isArray(data.fetchedContent)) {
+                            for (const fc of data.fetchedContent) {
+                                results.push({
+                                    title: fc.title || fc.url,
+                                    url: fc.url,
+                                    markdown: fc.content || fc.excerpt || '',
+                                    source: 'fetch',
+                                    engine: 'web-search',
+                                    timestamp: Date.now(),
+                                });
+                            }
+                        }
+                        // Return raw data to assistant for synthesis
+                        return JSON.stringify(data);
+                    }
+                }
+            } catch {
+                // Network/server error on the free path — fall through to Gemini below.
             }
-            const { googleSearchGemini } = await import('./geminiService');
-            return googleSearchGemini(String(query), ctx.settings);
+            if (ctx.settings.geminiApiKey || process.env.GEMINI_API_KEY) {
+                const { googleSearchGemini } = await import('./geminiService');
+                const geminiResult = await googleSearchGemini(String(query), ctx.settings);
+
+                return geminiResult;
+            }
+            appEventBus.emit('webSearchError', 'Web search returned no results and no Gemini API key is configured for the Google fallback (Settings > Integrations > Gemini).');
+            return 'Error: web search returned no results and no Gemini API key is configured for the Google fallback (Settings > Integrations > Gemini).';
         },
     },
     {
@@ -342,7 +410,7 @@ export const ASSISTANT_TOOLS: AssistantTool[] = [
     },
     {
         name: 'fetch_url',
-        description: 'Fetch a web page by absolute URL and return its readable text (HTML stripped, truncated to ~8000 chars) for YOUR OWN reading. To show the page to the user, use open_web_page instead.',
+        description: 'Fetch a web page by absolute URL and return its readable text as markdown. After fetching, SYNTHESIZE the content into a detailed, comprehensive markdown answer, then call `send_to_web_panel` with your synthesized markdown to display it in the Web tab. Use when you need to read a specific page deeply.',
         parameters: {
             type: 'object',
             properties: { url: { type: 'string', description: 'Absolute http(s) URL.' } },
@@ -361,21 +429,109 @@ export const ASSISTANT_TOOLS: AssistantTool[] = [
             const doc = new DOMParser().parseFromString(raw, 'text/html');
             doc.querySelectorAll('script, style, noscript, svg').forEach(el => el.remove());
             const text = (doc.body?.textContent || raw).replace(/\s{3,}/g, '\n').trim();
-            return text.slice(0, 8000) || 'Error: page contained no readable text.';
+            const markdown = text.slice(0, 8000) || 'Error: page contained no readable text.';
+            // Emit to web panel
+            return markdown;
+        },
+    },
+    {
+        name: 'scrape_url',
+        description: 'Fetch a URL and return its full content as clean Markdown (readability extraction, ~50k chars). After scraping, SYNTHESIZE the content into a detailed, comprehensive markdown answer, then call `send_to_web_panel` with your synthesized markdown to display it in the Web tab. Use for documentation, articles, blog posts — any page where you need the full text. For JS-heavy SPAs, use scrape_url_playwright instead.',
+        parameters: {
+            type: 'object',
+            properties: { url: { type: 'string', description: 'Absolute http(s) URL to scrape.' } },
+            required: ['url'],
+        },
+        execute: async ({ url }) => {
+            try {
+                const res = await fetch('/api/scrape-url', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ url: String(url), mode: 'simple' }),
+                });
+                if (!res.ok) return `Error: scrape failed (${res.status}).`;
+                const data = await res.json();
+                if (data.success && data.content) {
+                    return `# ${data.title}\n\n${data.content}`.slice(0, 50_000);
+                }
+                return `Scraped ${url} but no readable content found.${data.error ? ` (${data.error})` : ''}`;
+            } catch (e: any) {
+                return `Error scraping ${url}: ${e?.message || e}`;
+            }
+        },
+    },
+    {
+        name: 'scrape_url_playwright',
+        description: 'Fetch a URL using a headless browser (Playwright) and return the full rendered content as Markdown. After scraping, SYNTHESIZE the content into a detailed, comprehensive markdown answer, then call `send_to_web_panel` with your synthesized markdown to display it in the Web tab. Use for JavaScript-heavy SPAs (React/Vue/Angular dashboards, modern doc portals) where scrape_url returns empty content. Slower (~3-5s) but renders JS-rendered pages correctly.',
+        parameters: {
+            type: 'object',
+            properties: { url: { type: 'string', description: 'Absolute http(s) URL to scrape with a headless browser.' } },
+            required: ['url'],
+        },
+        execute: async ({ url }) => {
+            try {
+                const res = await fetch('/api/scrape-url-playwright', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ url: String(url) }),
+                });
+                if (!res.ok) return `Error: Playwright scrape failed (${res.status}).`;
+                const data = await res.json();
+                if (data.success && data.content) {
+                    return `# ${data.title}\n\n${data.content}`.slice(0, 50_000);
+                }
+                return `Scraped ${url} with Playwright but no readable content found.${data.error ? ` (${data.error})` : ''}`;
+            } catch (e: any) {
+                return `Error scraping ${url} with Playwright: ${e?.message || e}`;
+            }
         },
     },
     {
         name: 'open_web_page',
-        description: 'Open a URL in the in-app web viewer panel so the USER can see the page (live embed when the site allows it, reader mode otherwise). Use when the user asks to show/open/display a web page or a web_search source.',
+        description: 'Fetch a web page and return its readable content as markdown for YOUR analysis. After reading, SYNTHESIZE a detailed answer, then call send_to_web_panel to send the final synthesized result to the Web panel as a single detailed card. Use when the user asks to read, fetch, or show the content of a specific web page or a web_search source.',
         parameters: {
             type: 'object',
-            properties: { url: { type: 'string', description: 'Absolute http(s) URL to display.' } },
+            properties: { url: { type: 'string', description: 'Absolute http(s) URL to fetch.' } },
             required: ['url'],
         },
-        execute: ({ url }) => {
+        execute: async ({ url }) => {
             try { new URL(String(url)); } catch { return 'Error: invalid URL.'; }
-            appEventBus.emit('openWebPage', { url: String(url) });
-            return `Opened ${url} in the web viewer panel.`;
+            // Fetch the page content
+            const parsed = new URL(String(url));
+            const res = await fetch(`/proxy-remote${parsed.pathname}${parsed.search}`, {
+                headers: { 'x-target-url': parsed.origin },
+            });
+            if (!res.ok) return `Error: fetch failed (${res.status} ${res.statusText}).`;
+            const raw = await res.text();
+            const doc = new DOMParser().parseFromString(raw, 'text/html');
+            doc.querySelectorAll('script, style, noscript, svg').forEach(el => el.remove());
+            const text = (doc.body?.textContent || raw).replace(/\s{3,}/g, '\n').trim();
+            const markdown = text.slice(0, 8000) || 'Error: page contained no readable text.';
+            return markdown;
+        },
+    },
+    {
+        name: 'send_to_web_panel',
+        description: 'Send a synthesized, detailed markdown result to the Web panel (the all-purpose panel\'s Web tab). Call this AFTER you have searched/scraped, read the results, and synthesized a single comprehensive answer. Provide the title, URL, and your full synthesized markdown content. This creates ONE detailed result card in the Web panel — do not call this multiple times for the same query.',
+        parameters: {
+            type: 'object',
+            properties: {
+                title: { type: 'string', description: 'Title for the result card.' },
+                url: { type: 'string', description: 'Source URL.' },
+                markdown: { type: 'string', description: 'Full synthesized markdown content (summary, key points, analysis, context).' },
+                source: { type: 'string', description: 'Tool that produced the content (search, fetch, scrape, playwright).', enum: ['search', 'fetch', 'scrape', 'playwright'] },
+            },
+            required: ['title', 'url', 'markdown', 'source'],
+        },
+        execute: async ({ title, url, markdown, source }) => {
+            appEventBus.emit('webSearchResults', [{
+                title,
+                url,
+                markdown,
+                source,
+                timestamp: Date.now(),
+            }]);
+            return `Sent synthesized result to Web panel.`;
         },
     },
     {

@@ -19,7 +19,6 @@ export interface ShellState {
   isAboutModalOpen: boolean;
   isClippingPanelOpen: boolean;
   isMediaPanelOpen: boolean;
-  isWebViewerOpen: boolean;
   isActivityPanelOpen: boolean;
   isChatPanelOpen: boolean;
   isLlmPanelOpen: boolean;
@@ -52,8 +51,6 @@ export interface ShellState {
   handleCloseActivityPanel: () => void;
   handleToggleMediaPanel: () => void;
   handleCloseMediaPanel: () => void;
-  handleToggleWebViewer: () => void;
-  handleCloseWebViewer: () => void;
   handleCloseVideoPlayer: () => void;
   handleToggleChatPanel: () => void;
   handleCloseChatPanel: () => void;
@@ -64,7 +61,6 @@ export interface ShellState {
   setVideoPlayerUrl: (url: string | null) => void;
   setIsClippingPanelOpen: (open: boolean | ((prev: boolean) => boolean)) => void;
   setIsMediaPanelOpen: (open: boolean | ((prev: boolean) => boolean)) => void;
-  setIsWebViewerOpen: (open: boolean | ((prev: boolean) => boolean)) => void;
   setIsLlmPanelOpen: (open: boolean | ((prev: boolean) => boolean)) => void;
   setIsAboutModalOpen: (open: boolean | ((prev: boolean) => boolean)) => void;
   setGlobalFeedback: (feedback: { message: string; type: 'success' | 'error' } | null) => void;
@@ -90,7 +86,6 @@ export const useAppShell = ({
   const [isAboutModalOpen, setIsAboutModalOpen] = useState(false);
   const [isClippingPanelOpen, setIsClippingPanelOpen] = useState(false);
   const [isMediaPanelOpen, setIsMediaPanelOpen] = useState(false);
-  const [isWebViewerOpen, setIsWebViewerOpen] = useState(false);
   const [videoPlayerUrl, setVideoPlayerUrl] = useState<string | null>(null);
   const [isActivityPanelOpen, setIsActivityPanelOpen] = useState(false);
   const [isChatPanelOpen, setIsChatPanelOpen] = useState(false);
@@ -187,8 +182,6 @@ export const useAppShell = ({
   const handleCloseActivityPanel = useCallback(() => setIsActivityPanelOpen(false), []);
   const handleToggleMediaPanel = useCallback(() => setIsMediaPanelOpen(prev => !prev), []);
   const handleCloseMediaPanel = useCallback(() => setIsMediaPanelOpen(false), []);
-  const handleToggleWebViewer = useCallback(() => setIsWebViewerOpen(prev => !prev), []);
-  const handleCloseWebViewer = useCallback(() => setIsWebViewerOpen(false), []);
   const handleCloseVideoPlayer = useCallback(() => setVideoPlayerUrl(null), []);
   const handleToggleChatPanel = useCallback(() => {
     setIsChatPanelOpen(prev => {
@@ -236,7 +229,6 @@ export const useAppShell = ({
     isAboutModalOpen,
     isClippingPanelOpen,
     isMediaPanelOpen,
-    isWebViewerOpen,
     isActivityPanelOpen,
     isChatPanelOpen,
     isLlmPanelOpen,
@@ -268,8 +260,6 @@ export const useAppShell = ({
     handleCloseActivityPanel,
     handleToggleMediaPanel,
     handleCloseMediaPanel,
-    handleToggleWebViewer,
-    handleCloseWebViewer,
     handleCloseVideoPlayer,
     handleToggleChatPanel,
     handleCloseChatPanel,
@@ -285,7 +275,6 @@ export const useAppShell = ({
     setPromptsPageState,
     setActiveSettingsTab,
     setActiveSettingsSubTab,
-    setIsWebViewerOpen,
     setIsLlmPanelOpen,
     setIsAboutModalOpen,
     setGlobalFeedback,

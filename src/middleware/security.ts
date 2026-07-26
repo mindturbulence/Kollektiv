@@ -59,6 +59,16 @@ export const authRateLimiter = rateLimit({
   },
 });
 
+// Multi-engine web-search endpoint. A generous but real cap keeps normal
+// chat use unaffected while avoiding hammering search engines hard enough
+// to get this deployment's IP blocked.
+export const searchRateLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 60,
+  standardHeaders: true,
+  legacyHeaders: false,
+});
+
 // Helper to apply CORS with a configurable allowed origin (defaults to local dev).
 export const corsOptions = cors({
   origin: true,

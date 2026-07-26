@@ -122,10 +122,29 @@ The assistant has 89 built-in tools (45 defined inline in `services/assistantToo
 | **Prompt library** | `search_prompts`, `save_prompt`, `refine_prompt`, `translate_prompt`, `rewrite_prompt`, `analyze_prompt`, `search_cheatsheets`, `send_to_refiner`, `save_refiner_preset`, `send_to_crafter`, `send_to_prompt_analyzer`, `list_wildcards`, `generate_crafter_prompt` | Prompt CRUD, transformation, routing |
 | **Discovery** | `list_discovery_collections`, `search_discovery_prompts` | Browse GitHub/HuggingFace collections |
 | **Gallery/media** | `search_gallery`, `get_gallery_item`, `save_to_gallery`, `delete_gallery_item`, `gallery_stats`, `abstract_image`, `generate_image`, `generate_and_ingest` | Media vault operations + generation + compare |
-| **Web** | `web_search`, `fetch_url`, `open_web_page`, `play_media`, `youtube_search`, `get_weather`, `save_file` | Web access, search, file saving |
+| **Web** | `web_search`, `scrape_url`, `scrape_url_playwright`, `fetch_url`, `open_web_page`, `play_media`, `youtube_search`, `get_weather`, `save_file` | Web access, multi-engine search (free, no API key), page scraping (HTTP + Playwright), file saving |
 | **Ideas/notes/memory** | `clip_idea`, `save_note`, `list_notes`, `update_note`, `delete_note`, `remember`, `list_memories`, `forget`, `search_memories`, `knowledge_lifecycle_promote` | Idea clipping, note CRUD, memory, knowledge lifecycle |
 | **MCP management** | `list_mcp_servers`, `toggle_mcp_server` | MCP server configuration |
 | **Capability introspection** | `capability_search`, `capability_describe`, `capability_execute`, `capability_list`, `capability_health` | MCP architecture capability tools |
+
+`web_search` is free by default (multi-engine scrape via `/api/web-search`: DuckDuckGo + Brave, optionally Exa with `EXA_API_KEY`, no API key required) and only falls back to Gemini Google Search grounding when the free search returns nothing and a Gemini key is configured. The assistant can also specify which engines to use by passing an `engines` array.
+
+**Synthesized results behavior** — When using any web tool (`web_search`, `fetch_url`, `scrape_url`, `scrape_url_playwright`, `open_web_page`), the assistant should **pick the single most relevant result** and **synthesize it into a detailed, comprehensive answer** (summary, key points, analysis, context) before the tool emits to the Web panel. The tool automatically sends only that one synthesized result to the Web tab. The assistant should NOT dump raw multiple results — instead, read/analyze, then produce ONE polished, detailed markdown response that goes to the Web panel.
+
+**Auto-fetch mode** — Set `fetch_content=true` to automatically fetch the full page content (as Markdown) of the top 3 search results alongside the title/URL/snippet results. The response includes a `fetchedContent` array with `{url, title, content, excerpt}` for each page. Use this when snippets alone are insufficient to answer the query or when you need the full article text.
+
+Bing is supported as an additional engine but requires Playwright (set `SEARCH_MODE=auto` or `SEARCH_MODE=playwright` to enable). In `request` mode (default), Bing's HTTP endpoint returns a JS shell with no results — it needs a headless browser to render the SERP. The `SEARCH_MODE` env var controls this: `request` (HTTP only), `auto` (try HTTP first, fall back to Playwright), or `playwright` (force Playwright).
+
+### Page scraping
+
+Two dedicated scraping tools are available for fetching the full content of any web page:
+
+| Tool | Description | Method | Best for |
+|---|---|---|---|
+| `scrape_url` | Fetches a URL and returns full clean Markdown content (headings, lists, code blocks preserved) | HTTP `fetch()` with retry + exponential backoff + rotating User-Agent, parsed via JSDOM + Mozilla Readability (article extraction) + Turndown (HTML→Markdown) | Most pages — blogs, documentation, articles, landing pages |
+| `scrape_url_playwright` | Fetches a URL using a headless Chromium browser and returns the fully rendered content as Markdown | Playwright headless browser (`playwright-core`), waits for `networkidle`, then extracts via JSDOM + Readability + Turndown | JavaScript-heavy SPAs (React/Vue/Angular dashboards, modern docs portals, sites where `scrape_url` returns empty content) |
+
+Both tools call server-side endpoints (`/api/scrape-url` and `/api/scrape-url-playwright`) and are rate-limited (60 req/15min). Content is capped at 50,000 characters Markdown. The underlying `scrapeUrl` function uses `@mozilla/readability` for article extraction with a fallback to manual content area detection (prefers `<article>`, `<main>`, `[role="main"]`, `.content`, `.post`, `.entry-content` in order). Noise elements (`<nav>`, `<footer>`, `<aside>`, `.sidebar`, `.ads`, `.navigation`) are stripped automatically.
 
 ### Dedicated tool modules
 
