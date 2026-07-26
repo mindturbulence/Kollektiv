@@ -9,14 +9,14 @@ const RecentActivityWidget: React.FC<RecentActivityWidgetProps> = ({ ideas }) =>
   const recent = useMemo(() => ideas.slice(0, 5), [ideas]);
 
   return (
-    <div className="bg-base-100/40 backdrop-blur-xl border border-base-content/10 p-4 relative corner-frame">
-      <div className="text-[9px] font-black uppercase tracking-[0.2em] text-primary/60 mb-3">Recent Activity</div>
+    <div className="bg-base-100/40 backdrop-blur-xl border border-base-content/10 p-4 relative corner-frame h-full flex flex-col">
+      <div className="text-[9px] font-black uppercase tracking-[0.2em] text-primary/60 mb-3 flex-shrink-0">Recent Activity</div>
       {recent.length === 0 ? (
-        <p className="text-[10px] font-mono text-base-content/20 uppercase tracking-wider py-4 text-center">
+        <p className="text-[10px] font-mono text-base-content/20 uppercase tracking-wider py-4 text-center flex-1 flex items-center justify-center">
           No recent activity
         </p>
       ) : (
-        <div className="space-y-1">
+        <div className="space-y-1 flex-1 overflow-y-auto">
           {recent.map(idea => (
             <div
               key={idea.id}
