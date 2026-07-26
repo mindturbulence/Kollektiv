@@ -135,6 +135,15 @@ The assistant has 89 built-in tools (45 defined inline in `services/assistantToo
 
 Bing is supported as an additional engine but requires Playwright (set `SEARCH_MODE=auto` or `SEARCH_MODE=playwright` to enable). In `request` mode (default), Bing's HTTP endpoint returns a JS shell with no results — it needs a headless browser to render the SERP. The `SEARCH_MODE` env var controls this: `request` (HTTP only), `auto` (try HTTP first, fall back to Playwright), or `playwright` (force Playwright).
 
+**Search engine environment variables:**
+
+| Variable | Default | Purpose |
+|---|---|---|
+| `DEFAULT_SEARCH_ENGINES` | `duckduckgo,brave` | Default engine set when no explicit `engines` param is passed |
+| `ALLOWED_SEARCH_ENGINES` | (all) | Restrict which engines can be invoked at runtime |
+| `EXA_API_KEY` | (unset) | Exa search API key; Exa engine is skipped when absent |
+| `SEARCH_MODE` | `request` | Controls Bing engine: `request` (HTTP only), `auto` (try HTTP first, fall back to Playwright), `playwright` (force Playwright) |
+
 ### Page scraping
 
 Two dedicated scraping tools are available for fetching the full content of any web page:

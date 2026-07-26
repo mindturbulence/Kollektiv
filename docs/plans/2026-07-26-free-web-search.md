@@ -1,5 +1,7 @@
 # Free Multi-Engine Web Search (Default Tool) Implementation Plan
 
+> ✅ **Completed.** All 4 tasks (DuckDuckGo engine, Brave/Exa engines, `/api/web-search` route, `web_search` tool rewrite) are implemented. Bing engine with Playwright fallback also implemented (beyond initial scope). See `docs/handbook/docs/01_AI_ENGINE/AI_ENGINE.md` § Assistant Tool Catalog (Web tools) and `services/webSearchEngines/` for the current implementation.
+
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
 **Goal:** Make the assistant's `web_search` tool work by default with no API key, by scraping **multiple search engines** server-side (inspired by the [open-websearch](https://github.com/aas-ee/open-websearch) architecture), and only fall back to the existing Gemini-grounded search when the free path comes back empty and a Gemini key happens to be configured.

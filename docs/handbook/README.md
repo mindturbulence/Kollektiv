@@ -49,6 +49,11 @@ Kollektiv is a high-performance, local-first application designed for prompt eng
 > architecture and Knowledge/Obsidian architecture also implemented. See
 > [ISSUES.md](../ISSUES.md#changelog-resolved-issues) for the complete changelog.
 
+> **2026-07-26 — Multi-engine free web search:** Modular `services/webSearchEngines/` directory
+> with DuckDuckGo, Brave, Exa, and Bing engines. Orchestrator runs engines in parallel,
+> deduplicates by URL, and interleaves results. Assistant `web_search` tool defaults to the
+> free path with Gemini fallback. See `docs/01_AI_ENGINE/AI_ENGINE.md` for details.
+
 ---
 
 ## 🧭 Architecture Handbook
