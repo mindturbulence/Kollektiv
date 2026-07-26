@@ -84,7 +84,7 @@ The vault is the repository of user work. It stores prompts, media artifacts, me
 The repository is organized around a small number of high-value areas:
 
 - components/: UI shell, feature pages, and reusable interface modules
-- services/: provider integrations, assistant orchestration, storage bridges, multi-engine web search (`services/webSearchEngines/`), and non-UI logic
+- services/: provider integrations, assistant orchestration, storage bridges, multi-engine web search (`services/webSearchEngines/`), content-reach channels (`services/reachChannels/`, `services/rssService.ts`, `services/githubService.ts`, etc.), and non-UI logic
 - contexts/: shared state providers for settings, assistant status, global busy state, and auth placeholder state
 - utils/: storage helpers, integrity logic, parsers, event bus utilities, and shared data operations
 - constants/: model catalogs, defaults, presets, themes, and modifier definitions
@@ -221,11 +221,12 @@ WebSocket resilience, chunked chat loading, and search are all real. (Search jus
 - **MCP Infrastructure (2026-07-25):** Redundant Playwright child process removed, MCP server always starts, .env loading, CORS session-id fix, preset URL sync, consolidated to single Built-In tab with 61 tools
 - **CSP hardening (2026-07-25):** `src/middleware/security.ts` now branches on `NODE_ENV` — see the [Security Hardening](#security-hardening) section above for the full policy and status.
 - **Multi-engine free web search (2026-07-26):** Modular `services/webSearchEngines/` directory with DuckDuckGo, Brave, Exa (optional `EXA_API_KEY`), and Bing (Playwright-gated) engines. Orchestrator runs engines in parallel, deduplicates by URL, and interleaves results. `POST /api/web-search` route with Zod validation and rate limiter. Assistant's `web_search` tool defaults to the free path; falls back to Gemini only when empty. `fetch_content` mode fetches full page content via Defuddle for rich panel cards. Bing engine supports `SEARCH_MODE=auto|playwright|request` env var. Both plan files documented in `docs/plans/` are fully implemented.
+- **Reach channels — 6 content-reach capabilities (2026-07-26):** Added `rss_fetch`, `github_get_repo`/`github_search`/`github_get_file`, `exa_search`, `reddit_fetch`, `youtube_get_transcript`, and `twitter_get_tweet` tools. Each backed by a `POST /api/reach/<channel>` server route with Zod validation and rate limiters. Dual-backend ordered-fallback architecture for YouTube (watch-page → InnerTube) and Twitter (syndication CDN → oEmbed). 50+ new unit tests. Fragility documented per-channel (Twitter highest, YouTube elevated). See `docs/plans/2026-07-26-reach-channels.md` for the detailed checklist.
 
 ### Definition of "Ready to Think About Money"
 
 1. A stranger on a fresh machine reaches a working dashboard in under 3 minutes without help.
-2. `pnpm lint` clean, `pnpm test` green (607 tests as of 2026-07-26 — this number drifts with the codebase, re-run rather than trust it), E2E smoke test passes.
+2. `pnpm lint` clean, `pnpm test` green (694 tests as of 2026-07-26 — this number drifts with the codebase, re-run rather than trust it), E2E smoke test passes.
 3. No assistant tool can perform a destructive external action without explicit confirmation. **(Note: ISSUE-22 revert means send_gmail/delete_gmail have no confirmation gate — user decision)**
 4. The generate→ingest→compare loop works end-to-end with at least one provider. ✅
 5. Model registry lives in data (`modelProfiles.json`). ✅
@@ -287,6 +288,12 @@ The Express server (run via `npx tsx server.ts`, default `127.0.0.1:7500`) acts 
 | `GET /api/health` | `{status:"ok"}`. |
 | `GET /api/topaz-status` / `POST /api/topaz-upscale` | Topaz Gigapixel CLI bridge (multer upload, temp files cleaned up). |
 | `POST /api/web-search` | Multi-engine web search (DuckDuckGo + Brave + Exa + Bing). Backs the assistant's `web_search` tool. Rate-limited (60 req/15min). |
+| `POST /api/reach/rss` | Fetch and parse an RSS/Atom feed via `rss-parser`. Backs `rss_fetch` tool. Rate-limited (60 req/15min). SSRF-guarded. |
+| `POST /api/reach/github` | GitHub REST API v3 — repo info, search (repos/code/issues), file/README fetch. Backs `github_get_repo`, `github_search`, `github_get_file` tools. Rate-limited (60 req/15min). |
+| `POST /api/reach/exa` | Exa semantic search with rich filters (category, date range, domain include/exclude). Backs `exa_search` tool. Rate-limited (60 req/15min). Requires `EXA_API_KEY`. |
+| `POST /api/reach/reddit` | Subreddit listing, thread + comments, or keyword search via Reddit public `.json` endpoints. Backs `reddit_fetch` tool. Rate-limited (60 req/15min). |
+| `POST /api/reach/youtube-transcript` | Fetches a video's captions via ordered fallback (watch-page scrape → InnerTube API). Backs `youtube_get_transcript` tool. Rate-limited (60 req/15min). **Elevated fragility** — undocumented endpoints. |
+| `POST /api/reach/twitter` | Fetches a single tweet via ordered fallback (syndication CDN → oEmbed). Backs `twitter_get_tweet` tool. Rate-limited (20 req/15min — stricter tier). **Highest fragility** — undocumented, actively hostile endpoints. |
 | `/api/cdp/*` | Chrome DevTools Protocol bridge for assistant browser control (connect, click, type, navigate, etc.). |
 
 ## Security Hardening
@@ -324,8 +331,8 @@ The rest of the original plan covered headers/CORS, input validation, rate limit
 | Area | Status |
 |---|---|
 | Security headers (`helmet`, CSP) + CORS | ✅ Done — `src/middleware/security.ts` |
-| Zod input validation | ⚠️ Partial — `src/schemas/anthropic.ts`, `topaz.ts`, and `webSearch.ts` are wired via `validate()` into their routes in `server.ts`; `mcp.ts` and `proxy.ts` schemas exist as files but aren't wired into `/api/mcp/proxy` or the `/proxy-remote`, `/ollama-local`, `/llamacpp-local` routes |
-| Auth-endpoint rate limiting | ⚠️ Partial — `authRateLimiter` applies to `/api/openai/token` and `/api/anthropic/chat`; `searchRateLimiter` applies to `/api/web-search`; `/api/topaz-upscale` has validation but no rate limit |
+| Zod input validation | ⚠️ Partial — `src/schemas/anthropic.ts`, `topaz.ts`, `webSearch.ts`, and `reach.ts` are wired via `validate()` into their routes in `server.ts`; `mcp.ts` and `proxy.ts` schemas exist as files but aren't wired into `/api/mcp/proxy` or the `/proxy-remote`, `/ollama-local`, `/llamacpp-local` routes |
+| Auth-endpoint rate limiting | ⚠️ Partial — `authRateLimiter` applies to `/api/openai/token` and `/api/anthropic/chat`; `searchRateLimiter` applies to `/api/web-search`; `reachRateLimiter` applies to `/api/reach/*` routes; `twitterReachRateLimiter` applies to `/api/reach/twitter` (stricter 20/15min); `/api/topaz-upscale` has validation but no rate limit |
 | Global rate limiting | ❌ Disabled — `globalRateLimiter` exists in `security.ts` but is commented out in `server.ts` ("disable global rate limiting" commit) |
 | `server.ts` refactor into `src/routes/*` + `src/services/*` | ❌ Not done — `server.ts` is still one file (~1,500 lines) |
 | Pre-commit hook (husky: lint + test + audit) | ❌ Not done — no `.husky/` directory in the repo |

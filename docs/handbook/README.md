@@ -54,6 +54,11 @@ Kollektiv is a high-performance, local-first application designed for prompt eng
 > deduplicates by URL, and interleaves results. Assistant `web_search` tool defaults to the
 > free path with Gemini fallback. See `docs/01_AI_ENGINE/AI_ENGINE.md` for details.
 
+> **2026-07-26 — Reach channels:** 6 content-reach capabilities (RSS, GitHub, Exa, Reddit,
+> YouTube Transcripts, Twitter/X) added as assistant tools. Each backed by `POST /api/reach/*`
+> server routes with Zod validation and rate limiters. Dual-backend failure handling for
+> fragile channels. 50+ new unit tests. See `docs/plans/2026-07-26-reach-channels.md`.
+
 ---
 
 ## 🧭 Architecture Handbook
