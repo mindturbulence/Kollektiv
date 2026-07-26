@@ -127,7 +127,7 @@ const FullscreenViewer: React.FC<FullscreenViewerProps> = ({ items, currentIndex
     
         loadMedia();
         return () => { isMounted = false; };
-    }, [itemGroup, currentImageIndex, mediaBlobUrl]);
+    }, [itemGroup, currentImageIndex]);
 
     useEffect(() => {
         const urls = objectUrls.current;

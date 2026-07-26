@@ -97,7 +97,7 @@ const TransitionalMedia: React.FC<{
         };
         load();
         return () => { isMounted = false; };
-    }, [url, displayUrl]);
+    }, [url]);
 
     useEffect(() => {
         const urls = objectUrls.current;

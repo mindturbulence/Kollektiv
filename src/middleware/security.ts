@@ -6,7 +6,7 @@ import type { Request, Response, NextFunction } from 'express';
 // Dev CSP: permissive by design — see docs/handbook/docs/00_FOUNDATION/ARCHITECTURE_CONSTITUTION.md
 // § Security Hardening for the per-directive rationale (blob: worklet, wasm-unsafe-eval for RNNoise/VAD, etc).
 const DEV_CSP =
-  "default-src * data: blob:; script-src * 'unsafe-inline' https: blob: 'unsafe-eval'; style-src * 'unsafe-inline' https:; img-src * data: blob: https:; font-src * data:; connect-src * https: wss: http://localhost:* http://127.0.0.1:*; frame-src *";
+  "default-src * data: blob:; script-src * 'unsafe-inline' https: blob: 'unsafe-eval'; style-src * 'unsafe-inline' https:; img-src * data: blob: https:; font-src * data:; connect-src * data: blob: https: wss: http://localhost:* http://127.0.0.1:*; frame-src *";
 
 // Prod CSP: scoped to this app's actual dependencies (see the handbook section
 // referenced above). Shipped as Report-Only until a real production build has
@@ -18,7 +18,7 @@ const PROD_CSP = [
   "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://db.onlinewebfonts.com https://api.fontshare.com",
   "font-src 'self' data: https://fonts.gstatic.com https://cdn.fontshare.com https://db.onlinewebfonts.com",
   "img-src 'self' data: blob: https:",
-  "connect-src 'self' https://openrouter.ai https://generativelanguage.googleapis.com https://www.googleapis.com https://wttr.in https://accounts.spotify.com https://api.spotify.com wss://generativelanguage.googleapis.com http://localhost:* http://127.0.0.1:*",
+  "connect-src 'self' data: blob: https://openrouter.ai https://generativelanguage.googleapis.com https://www.googleapis.com https://wttr.in https://accounts.spotify.com https://api.spotify.com wss://generativelanguage.googleapis.com http://localhost:* http://127.0.0.1:*",
   "frame-src https://accounts.google.com",
 ].join('; ');
 
