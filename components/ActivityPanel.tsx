@@ -20,8 +20,6 @@ interface ActivityEntry {
     timestamp: number;
 }
 
-type ActivityTab = 'activity' | 'transcript';
-
 // ── Props ───────────────────────────────────────────────────────────
 
 interface ActivityPanelProps {
@@ -40,12 +38,10 @@ const formatTime = (ts: number): string => {
 
 const ActivityPanel: React.FC<ActivityPanelProps> = ({ isOpen, onClose }) => {
     const panelRef = useRef<HTMLDivElement>(null);
-    const activityScrollerRef = useRef<HTMLDivElement>(null);
     const transcriptScrollerRef = useRef<HTMLDivElement>(null);
+    const footerActivityRef = useRef<HTMLDivElement>(null);
 
-    const [tab, setTab] = useState<ActivityTab>('activity');
-
-    // Activity entries (tool calls, thinking steps)
+    // Activity entries (tool calls, thinking steps) — only latest shown in footer
     const [activity, setActivity] = useState<ActivityEntry[]>([]);
 
     // Transcript entries (user + assistant captions)
@@ -126,21 +122,13 @@ const ActivityPanel: React.FC<ActivityPanelProps> = ({ isOpen, onClose }) => {
         return () => { offActivity(); offCaption(); offState(); offMode(); };
     }, []);
 
-    // ── Auto-scroll activity ────────────────────────────────────
-
-    useEffect(() => {
-        if (tab === 'activity' && activityScrollerRef.current) {
-            activityScrollerRef.current.scrollTop = activityScrollerRef.current.scrollHeight;
-        }
-    }, [activity, tab]);
-
     // ── Auto-scroll transcript ──────────────────────────────────
 
     useEffect(() => {
-        if (tab === 'transcript' && transcriptScrollerRef.current) {
+        if (transcriptScrollerRef.current) {
             transcriptScrollerRef.current.scrollTop = transcriptScrollerRef.current.scrollHeight;
         }
-    }, [transcript, tab]);
+    }, [transcript]);
 
     // ── GSAP slide animation ────────────────────────────────────
 
@@ -177,15 +165,25 @@ const ActivityPanel: React.FC<ActivityPanelProps> = ({ isOpen, onClose }) => {
 
     // ── Clear ───────────────────────────────────────────────────
 
-    const handleClearActivity = useCallback(() => {
-        audioService.playClick();
-        setActivity([]);
-    }, []);
-
     const handleClearTranscript = useCallback(() => {
         audioService.playClick();
         setTranscript([]);
     }, []);
+
+    // ── Latest activity (for footer display) ────────────────────
+
+    const latestActivity = activity.length > 0 ? activity[activity.length - 1] : null;
+
+    // ── Pulse animation on new activity ─────────────────────────
+
+    useEffect(() => {
+        if (!latestActivity || !footerActivityRef.current) return;
+        // Brief flash to signal new activity
+        gsap.fromTo(footerActivityRef.current,
+            { backgroundColor: 'rgba(255,255,255,0.08)' },
+            { backgroundColor: 'rgba(255,255,255,0)', duration: 0.6, ease: 'power2.out' }
+        );
+    }, [latestActivity]);
 
     // ── Render ──────────────────────────────────────────────────
 
@@ -198,47 +196,16 @@ const ActivityPanel: React.FC<ActivityPanelProps> = ({ isOpen, onClose }) => {
         >
             <div className="w-full h-full relative corner-frame overflow-visible flex flex-col pointer-events-auto">
                 <div className="bg-base-100/60 backdrop-blur-3xl rounded-none w-[calc(100%-6px)] h-[calc(100%-6px)] m-[3px] flex flex-col overflow-hidden relative z-10">
-                    {/* ── Header ── */}
-                    <div className="flex justify-between items-center h-16 px-6 bg-base-100/20 flex-shrink-0 border-b border-base-300/10 relative">
+                    {/* ── Header: title + close ── */}
+                    <div className="flex justify-between items-center h-14 px-6 bg-base-100/20 flex-shrink-0 border-b border-base-300/10 relative">
                         <div className="flex items-center gap-3">
-                            <TerminalIcon className="w-5 h-5 text-primary" />
-                            <div className="flex gap-0">
-                                <button
-                                    onClick={() => { audioService.playClick(); setTab('activity'); }}
-                                    className={`px-3 py-1 text-[10px] font-black uppercase tracking-[0.3em] font-logo border border-base-300/30 flex items-center gap-1.5 ${
-                                        tab === 'activity'
-                                            ? 'bg-primary/20 text-primary'
-                                            : 'opacity-50 hover:opacity-100'
-                                    }`}
-                                >
-                                    <TerminalIcon className="w-3.5 h-3.5" />
-                                    Activity
-                                </button>
-                                <button
-                                    onClick={() => { audioService.playClick(); setTab('transcript'); }}
-                                    className={`px-3 py-1 text-[10px] font-black uppercase tracking-[0.3em] font-logo border border-base-300/30 border-l-0 flex items-center gap-1.5 ${
-                                        tab === 'transcript'
-                                            ? 'bg-primary/20 text-primary'
-                                            : 'opacity-50 hover:opacity-100'
-                                    }`}
-                                >
-                                    <ChatBubbleIcon className="w-3.5 h-3.5" />
-                                    Transcript
-                                </button>
-                            </div>
+                            <ChatBubbleIcon className="w-5 h-5 text-primary" />
+                            <span className="text-base font-black uppercase tracking-[0.3em] font-logo text-base-content/80">
+                                Transcript
+                            </span>
                         </div>
                         <div className="flex items-center gap-2">
-                            {tab === 'activity' && activity.length > 0 && (
-                                <button
-                                    onClick={handleClearActivity}
-                                    className="btn btn-xs btn-ghost h-8 w-8 rounded-none p-0 opacity-40 hover:opacity-100 hover:text-error transition-all btn-snake"
-                                    title="Clear activity log"
-                                >
-                                    <span /><span /><span /><span />
-                                    <DeleteIcon className="w-5 h-5" />
-                                </button>
-                            )}
-                            {tab === 'transcript' && transcript.length > 0 && (
+                            {transcript.length > 0 && (
                                 <button
                                     onClick={handleClearTranscript}
                                     className="btn btn-xs btn-ghost h-8 w-8 rounded-none p-0 opacity-40 hover:opacity-100 hover:text-error transition-all btn-snake"
@@ -260,105 +227,95 @@ const ActivityPanel: React.FC<ActivityPanelProps> = ({ isOpen, onClose }) => {
                         <div className="absolute bottom-0 left-0 right-0 h-[1px] bg-gradient-to-r from-transparent via-primary/30 to-transparent" />
                     </div>
 
-                    {/* ── Body ── */}
+                    {/* ── Body: transcript ── */}
                     <div className="flex-grow flex flex-col overflow-hidden relative">
                         {/* Mode indicator bar */}
                         {sessionActive && (
                             <div className="flex-shrink-0 px-6 py-2 bg-primary/5 border-b border-primary/10 flex items-center gap-3">
                                 <span className="w-2 h-2 rounded-full bg-primary animate-pulse" />
-                                <span className="text-[9px] font-black uppercase tracking-[0.3em] text-primary">
+                                <span className="text-sm font-black uppercase tracking-[0.3em] text-primary">
                                     {modeLabel || 'Active'}
                                 </span>
                             </div>
                         )}
 
-                        {/* ── Activity tab ── */}
-                        {tab === 'activity' && (
-                            <div ref={activityScrollerRef} className="flex-grow overflow-y-auto relative">
-                                {activity.length > 0 ? (
-                                    <div className="flex flex-col">
-                                        {activity.map((entry) => (
-                                            <div
-                                                key={entry.id}
-                                                className="flex flex-col gap-1 px-6 py-3 border-b border-base-300/10 hover:bg-base-100/10 transition-colors"
-                                            >
-                                                <div className="flex items-center justify-between gap-3">
-                                                    <span className="text-[9px] font-black uppercase tracking-[0.2em] text-primary/60">
-                                                        Log
-                                                    </span>
-                                                    <span className="text-[9px] font-mono text-base-content/20 tabular-nums">
-                                                        {formatTime(entry.timestamp)}
-                                                    </span>
-                                                </div>
-                                                <span className="text-sm font-medium text-base-content/70 leading-relaxed">
-                                                    {entry.text}
-                                                </span>
-                                            </div>
-                                        ))}
-                                    </div>
-                                ) : (
-                                    <div className="h-full flex flex-col items-center justify-center text-center opacity-10 py-16">
-                                        <TerminalIcon className="w-16 h-16 mb-6" />
-                                        <p className="text-xl font-black uppercase tracking-widest leading-none">No Activity Yet</p>
-                                        <p className="text-[10px] font-bold uppercase tracking-[0.2em] mt-4">
-                                            Tool calls and thinking steps appear here
-                                        </p>
-                                    </div>
-                                )}
-                            </div>
-                        )}
-
-                        {/* ── Transcript tab ── */}
-                        {tab === 'transcript' && (
-                            <div ref={transcriptScrollerRef} className="flex-grow overflow-y-auto relative">
-                                {transcript.length > 0 ? (
-                                    <div className="flex flex-col">
-                                        {transcript.map((entry) => (
-                                            <div
-                                                key={entry.id}
-                                                className={`flex flex-col gap-1 px-6 py-3 border-b border-base-300/10 transition-colors ${
+                        {/* Transcript scrollable area */}
+                        <div ref={transcriptScrollerRef} className="flex-grow overflow-y-auto relative">
+                            {transcript.length > 0 ? (
+                                <div className="flex flex-col">
+                                    {transcript.map((entry) => (
+                                        <div
+                                            key={entry.id}
+                                            className={`flex flex-col gap-1 px-6 py-3 border-b border-base-300/10 transition-colors ${
+                                                entry.role === 'user'
+                                                    ? 'bg-primary/[0.02]'
+                                                    : entry.role === 'system'
+                                                    ? 'bg-base-100/20'
+                                                    : 'hover:bg-base-100/10'
+                                            }`}
+                                        >
+                                            <div className="flex items-center justify-between gap-3">
+                                                <span className={`text-sm font-black uppercase tracking-[0.2em] ${
                                                     entry.role === 'user'
-                                                        ? 'bg-primary/[0.02]'
+                                                        ? 'text-accent'
                                                         : entry.role === 'system'
-                                                        ? 'bg-base-100/20'
-                                                        : 'hover:bg-base-100/10'
-                                                }`}
-                                            >
-                                                <div className="flex items-center justify-between gap-3">
-                                                    <span className={`text-[9px] font-black uppercase tracking-[0.2em] ${
-                                                        entry.role === 'user'
-                                                            ? 'text-accent'
-                                                            : entry.role === 'system'
-                                                            ? 'text-base-content/30'
-                                                            : 'text-primary'
-                                                    }`}>
-                                                        {entry.role === 'user' ? 'You' : entry.role === 'system' ? 'Sys' : 'AI'}
-                                                    </span>
-                                                    <span className="text-[9px] font-mono text-base-content/20 tabular-nums">
-                                                        {formatTime(entry.timestamp)}
-                                                    </span>
-                                                </div>
-                                                <span className={`text-sm leading-relaxed ${
-                                                    entry.role === 'system'
-                                                        ? 'text-base-content/40 italic'
-                                                        : 'text-base-content/80'
+                                                        ? 'text-base-content/30'
+                                                        : 'text-primary'
                                                 }`}>
-                                                    {entry.content}
+                                                    {entry.role === 'user' ? 'You' : entry.role === 'system' ? 'Sys' : 'AI'}
+                                                </span>
+                                                <span className="text-sm font-mono text-base-content/20 tabular-nums">
+                                                    {formatTime(entry.timestamp)}
                                                 </span>
                                             </div>
-                                        ))}
-                                    </div>
-                                ) : (
-                                    <div className="h-full flex flex-col items-center justify-center text-center opacity-10 py-16">
-                                        <ChatBubbleIcon className="w-16 h-16 mb-6" />
-                                        <p className="text-xl font-black uppercase tracking-widest leading-none">No Transcript Yet</p>
-                                        <p className="text-[10px] font-bold uppercase tracking-[0.2em] mt-4">
-                                            Conversation history appears here
-                                        </p>
-                                    </div>
-                                )}
+                                            <span className={`text-lg leading-relaxed ${
+                                                entry.role === 'system'
+                                                    ? 'text-base-content/40 italic'
+                                                    : 'text-base-content/80'
+                                            }`}>
+                                                {entry.content}
+                                            </span>
+                                        </div>
+                                    ))}
+                                </div>
+                            ) : (
+                                <div className="h-full flex flex-col items-center justify-center text-center opacity-10 py-16">
+                                    <ChatBubbleIcon className="w-16 h-16 mb-6" />
+                                    <p className="text-xl font-black uppercase tracking-widest leading-none">No Transcript Yet</p>
+                                    <p className="text-sm font-bold uppercase tracking-[0.2em] mt-4">
+                                        Conversation history appears here
+                                    </p>
+                                </div>
+                            )}
+                        </div>
+                    </div>
+
+                    {/* ── Footer: current activity ── */}
+                    <div
+                        ref={footerActivityRef}
+                        className="flex-shrink-0 border-t border-base-300/10 bg-base-100/10 relative"
+                    >
+                        {latestActivity ? (
+                            <div className="flex items-center gap-3 px-6 py-2.5">
+                                <span className="w-1.5 h-1.5 rounded-full bg-primary animate-pulse shrink-0" />
+                                <TerminalIcon className="w-3.5 h-3.5 text-primary/60 shrink-0" />
+                                <span className="text-base font-medium text-base-content/60 truncate">
+                                    {latestActivity.text}
+                                </span>
+                                <span className="text-sm font-mono text-base-content/20 tabular-nums ml-auto shrink-0">
+                                    {formatTime(latestActivity.timestamp)}
+                                </span>
+                            </div>
+                        ) : (
+                            <div className="flex items-center gap-3 px-6 py-2.5">
+                                <span className="w-1.5 h-1.5 rounded-full bg-base-content/10 shrink-0" />
+                                <TerminalIcon className="w-3.5 h-3.5 text-base-content/10 shrink-0" />
+                                <span className="text-sm font-medium text-base-content/20 italic">
+                                    Awaiting activity…
+                                </span>
                             </div>
                         )}
+                        <div className="absolute top-0 left-0 right-0 h-[1px] bg-gradient-to-r from-transparent via-primary/20 to-transparent" />
                     </div>
                 </div>
 
