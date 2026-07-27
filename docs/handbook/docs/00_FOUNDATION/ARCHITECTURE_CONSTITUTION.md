@@ -247,7 +247,7 @@ Each `ActiveTab` maps to a top-level React component:
 | `prompt` | `SavedPrompts` | Nested, searchable prompt library with lineage/version graph, tree view, and edit/duplicate/delete. |
 | `gallery` | `ImageGallery` | Masonry media vault with categories, metadata, NSFW flag, pinning, gallery stats. |
 | `settings` | `SetupPage` | Settings shell with 5 main categories (App, Appearance, Integrations, Prompts, Gallery) and sub-tabs. |
-| `composer` | `ComposerPage` | Grid/contact-sheet builder with matting + typography, preset aspect ratios. |
+| `composer` | `ComposerPage` | Grid/contact-sheet builder with matting + typography, preset aspect ratios. Layer type is a `TextLayer \| ImageLayer` discriminated union. Panning/dragging/zooming use Pointer Events (mouse, touch, pen) with two-finger pinch-to-zoom. |
 | `image_compare` | `ImageCompare` | Synchronized side-by-side viewers with linked pan/zoom, SplitView slider, and compare/swap layout. |
 | `color_palette_extractor` | `ColorPaletteExtractor` | Extract color palette from image + AI mood/color naming. |
 | `resizer` | `ImageResizer` | Image resizing + Topaz Gigapixel upscale via server bridge. |
@@ -260,7 +260,7 @@ Each `ActiveTab` maps to a top-level React component:
 |---|---|---|
 | Command Palette | `CommandPalette` | Ctrl+K / ⌘K. 30+ commands across Navigation, Panels, Assistant Actions, Themes. Fuzzy search with scoring. |
 | Clipping Panel | `ClippingPanel` | Paperclip icon in header. Clips, Assistant Notes (merged notes + auto-saved web results), Files tabs. |
-| Media Panel | `MediaPanel` | YouTube/Spotify player panel. |
+| Media Panel | `MediaPanel` | YouTube/Spotify player panel (tabs: Video, Music, Files). YouTube plays in the separate `VideoPlayerOverlay` (center modal); Spotify plays in the side panel. The Files tab loads local files from the vault (`fileSystemManager`) and chat-attached images (via `mediaAttachment` bus event). |
 | Chat Panel | `LLMChatPanel` | Assistant chat (text + research mode with 3-panel layout). |
 | LLM Status | `LlmStatusPanel` | Active provider, model, token usage. |
 | Activity Panel | `ActivityPanel` | Live tool-call transcript, status. |

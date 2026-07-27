@@ -148,6 +148,7 @@ Context: [handbook/docs/00_FOUNDATION/ARCHITECTURE_CONSTITUTION.md § Security H
 |-------|-------|--------|
 | 6 | Hardcoded Obsidian API key in package.json scripts + server.ts | ✅ Key rotated, code fixed, old path retired |
 | 22 | send_gmail/delete_gmail confirmation gate | ⛔ Reverted by user decision |
+| 34 | Request body limit too small (413 PayloadTooLargeError) | ✅ Fixed — `express.json({ limit: '10mb' })` in server.ts |
 
 ### 🐛 Bug Fixes
 
@@ -171,6 +172,12 @@ Context: [handbook/docs/00_FOUNDATION/ARCHITECTURE_CONSTITUTION.md § Security H
 | 20 | Rapid mic on/off leaves ghost live-assistant session | ✅ Fixed — generation counter with stale-connection cleanup |
 | 21 | e2e smoke test timeout (OPFS handle persistence) | ✅ Fixed — IDB cleanup in initScript + Promise.race fallback |
 | 23 | Chat panel crashes with `msg.content.includes is not a function` | ✅ Fixed — fixed listener + defensive coercion in chatStorage |
+| 35 | Chat panel broadcasts streaming text to voice-assistant subtitle (liveCaption bleed) | ✅ Fixed — removed `appEventBus.emit('liveCaption', ...)` from LLMChatPanel.tsx |
+| 36 | Chat button forces navigation to dashboard before opening panel | ✅ Fixed — removed `appEventBus.emit('navigate', 'dashboard')` from handleToggleChatPanel in useAppShell.ts |
+| 37 | Composer Page: NaN corruption (Width/Height/Grid Cols/Rows), uncontrolled Spacing slider, RESET/grid-shrink with no confirmation | ✅ Fixed — `parseInt(x) \|\| fallback` guards, controlled slider via inverse of `getMaxGapPerGutter`, RESET and grid-shrink now route through `ConfirmationModal` |
+| 38 | Composer Page: `Layer` type conflated text/image fields (dummy color/fontFamily on image layers, `fontSize` overloaded as image-width proxy); pan/drag/zoom mouse-only | ✅ Fixed — `Layer` split into `TextLayer \| ImageLayer` discriminated union; `ItemRenderer`/`LayerRenderer` migrated to Pointer Events with pinch-to-zoom |
+| 39 | Media Panel: Spotify URI/URL hijacked into a bogus YouTube ID by an unanchored regex fallback; panel never opens when the assistant triggers Spotify playback | ✅ Fixed — Spotify parser tried before YouTube, loose YouTube fallback removed (`MediaPanel.tsx` + `VideoPlayerOverlay.tsx`), `openMediaPanel` wired to `isMediaPanelOpen` in `useAppEventBus.ts`, click-outside guarded against the video overlay's backdrop |
+| 40 | Media Panel: no Files tab, no way to stop/query playback from the assistant, `spotify_play` hard-required an auth token for a public embed | ✅ Fixed — Files tab (chat attachments + vault `fileSystemManager`), `stop_media`/`get_current_media` tools backed by `services/mediaPlaybackStore.ts`, auth-token check dropped from `spotify_play` |
 
 ### 🧹 Cleanup & Tech Debt
 
@@ -204,6 +211,16 @@ Context: [handbook/docs/00_FOUNDATION/ARCHITECTURE_CONSTITUTION.md § Security H
 | 28 | Aspirational MCP Architecture (8 layers) | ⚠️ 7 of 8 real — the "provider router" layer (`providerRouter.ts`) was a disconnected stub, deleted 2026-07-26 (ISSUE-32) rather than wired, since it conflicted with the app's explicit user-chooses-the-provider design |
 | 29 | Knowledge & Obsidian Architecture | ✅ Complete — knowledge manager, 3-tier memory, relationship graph (now wired, ISSUE-31), context injection, lifecycle projection |
 | 31 | Wire `relationshipGraph.ts` into a real assistant tool | ✅ Done 2026-07-26 — new `find_related_knowledge` tool (`services/tools/graphTools.ts`) rehydrates the graph from `memoryStorage`/`galleryStorage`/`promptStorage` tags on each call and exposes `findRelatedByTags` to the assistant. 6 new tests. |
+| 41 | Free multi-engine web search: `web_search` scrapes DuckDuckGo/Brave/Exa (Bing added beyond initial scope) via `/api/web-search`, falls back to Gemini only when the free path is empty | ✅ Done — live-verified 2026-07-27: Bing returned real results; DuckDuckGo/Brave hit connection-level/429 blocks specific to this dev container's IP (known behavior of these engines against datacenter IPs, not a code defect — request/response handling itself is correct). |
+| 42 | Reach channels: `rss_fetch`, `github_get_repo`/`github_search`/`github_get_file`, `exa_search`, `reddit_fetch`, `youtube_get_transcript`, `twitter_get_tweet` via `/api/reach/*` | ⚠️ 5/6 live-verified 2026-07-27 (see detail below) — the implementing session's sandbox had no network access to verify against real upstreams; this pass did, from a differently-restricted dev container. |
+
+**Live verification detail (2026-07-27), one dev-container run against real upstreams:**
+- ✅ **RSS** — real `hnrss.org` feed parsed correctly.
+- ✅ **GitHub** — real `facebook/react` repo metadata returned.
+- ✅ **Twitter/X** — real tweet (`jack`'s first tweet) returned via the syndication CDN backend, including metrics.
+- ✅ **Exa** — correctly reports `EXA_API_KEY not configured` (no key in this env; error path confirmed clean, not a crash).
+- ⚠️ **Reddit** — blocked (403) by Reddit itself at this container's IP; the tool's graceful-error path fired correctly. Pre-documented risk (`redditTools.ts` fragility note), not new.
+- ❌ **YouTube transcript** — both backends failed against 3 different real videos: `watchPage` fetches a valid signed caption-track URL but gets back HTTP 200 with an **empty body**; `innertube` gets `playabilityStatus.status: "UNPLAYABLE"` ("The page needs to be reloaded") even after bumping `clientVersion` to a current-looking string. Both signatures match YouTube's anti-bot wall for non-browser/datacenter-IP requests (PO-token enforcement), not an obvious code bug — **needs re-verification from the actual deployment's real (non-datacenter) network** before concluding the implementation itself is broken. If it still fails there, the fix requires a PO-token-capable request path (e.g. headless-browser-backed token minting), which is a real scope increase beyond a parsing fix.
 
 ### 🔧 MCP Infrastructure Hardening (2026-07-25)
 

@@ -152,7 +152,7 @@ const Header: React.FC<HeaderProps> = ({
   const navGroups = React.useMemo(() => [
     { id: 'home', label: 'Home', items: [], singleId: 'dashboard' as ActiveTab },
     { id: 'discovery', label: 'Discovery', items: [], singleId: 'discovery' as ActiveTab },
-    { id: 'workspaces', label: 'Workspaces', items: workspaceItems },
+    { id: 'workspaces', label: 'Workbench', items: workspaceItems },
     { id: 'vault', label: 'Vault', items: vaultItems },
     { id: 'utilities', label: 'Utilities', items: utilityItems },
   ], [workspaceItems, vaultItems, utilityItems]);

@@ -2,7 +2,8 @@ import React, { useRef, useEffect, useState, useCallback, useLayoutEffect } from
 import { gsap } from 'gsap';
 import { appEventBus } from '../utils/eventBus';
 import { audioService } from '../services/audioService';
-import { CloseIcon, YouTubeIcon, PlayIcon, FilmIcon, MusicNoteIcon, ChatBubbleIcon, EyeIcon, LinkIcon } from './icons';
+import { CloseIcon, YouTubeIcon, PlayIcon, FilmIcon, MusicNoteIcon, ChatBubbleIcon, EyeIcon, LinkIcon, DocumentIcon } from './icons';
+import { setMediaPlaybackStatus, resetMediaPlaybackStatus } from '../services/mediaPlaybackStore';
 
 // ── URL parsers ─────────────────────────────────────────────────────
 
@@ -16,20 +17,18 @@ const extractYouTubeId = (url: string): string | null => {
         const m = url.match(re);
         if (m) return m[1];
     }
-    // Try loose extract — find any 11-char alphanumeric segment if nothing else matched
-    const loose = url.match(/([a-zA-Z0-9_-]{11})/);
-    return loose?.[1] || null;
+    return null;
 };
 
-/** Extract a Spotify resource type + id from a share URL. */
+/** Extract a Spotify resource type + id from a share URL or URI. */
 const extractSpotifyUri = (url: string): { type: string; id: string } | null => {
-    const m = url.match(/open\.spotify\.com\/(track|album|playlist|episode)\/([a-zA-Z0-9]+)/);
+    const m = url.match(/(?:open\.spotify\.com\/|spotify:)(track|album|playlist|episode)[/:]([a-zA-Z0-9]+)/);
     return m ? { type: m[1], id: m[2] } : null;
 };
 
 // ── Types ───────────────────────────────────────────────────────────
 
-type MediaTab = 'video' | 'music';
+type MediaTab = 'video' | 'music' | 'files';
 
 interface MediaState {
     tab: MediaTab;
@@ -40,6 +39,13 @@ interface MediaState {
     spotifyType: string | null;
     spotifyId: string | null;
     spotifyTitle: string;
+}
+
+interface FileItem {
+    name: string;
+    kind: 'file';
+    blobUrl?: string;
+    mimeType?: string;
 }
 
 const EMPTY_STATE: MediaState = {
@@ -66,6 +72,8 @@ const MediaPanel: React.FC<MediaPanelProps> = ({ isOpen, onClose }) => {
     const [urlDraft, setUrlDraft] = useState('');
     const [media, setMedia] = useState<MediaState>(EMPTY_STATE);
     const [error, setError] = useState('');
+    const [files, setFiles] = useState<FileItem[]>([]);
+    const [filesLoading, setFilesLoading] = useState(false);
 
     // ── URL submission ───────────────────────────────────────────
 
@@ -74,31 +82,44 @@ const MediaPanel: React.FC<MediaPanelProps> = ({ isOpen, onClose }) => {
         if (!url) return;
         setError('');
 
-        // Try YouTube first
-        const videoId = extractYouTubeId(url);
-        if (videoId) {
-            setMedia(prev => ({ ...prev, tab: 'video', videoId, videoTitle: url, spotifyType: null, spotifyId: null }));
-            setTab('video');
-            setUrlDraft(url);
-            // Emit event to open center video player
-            appEventBus.emit('playVideo', { url });
-            return;
-        }
-
-        // Try Spotify
+        // Try Spotify first — its URI forms (spotify:type:id, open.spotify.com/type/id) can
+        // contain 11-char substrings that the old loose YouTube fallback would hijack.
         const spotify = extractSpotifyUri(url);
         if (spotify) {
             const label = `${spotify.type.slice(0, 1).toUpperCase()}${spotify.type.slice(1)} #${spotify.id}`;
             setMedia(prev => ({ ...prev, tab: 'music', spotifyType: spotify.type, spotifyId: spotify.id, spotifyTitle: label, videoId: null }));
             setTab('music');
             setUrlDraft(url);
+            setMediaPlaybackStatus({ playing: true, tab: 'music', spotifyType: spotify.type, spotifyId: spotify.id, title: label });
+            return;
+        }
+
+        // Try YouTube
+        const videoId = extractYouTubeId(url);
+        if (videoId) {
+            setMedia(prev => ({ ...prev, tab: 'video', videoId, videoTitle: url, spotifyType: null, spotifyId: null }));
+            setTab('video');
+            setUrlDraft(url);
+            setMediaPlaybackStatus({ playing: true, tab: 'video', videoId, title: url });
+            // Emit event to open center video player
+            appEventBus.emit('playVideo', { url });
             return;
         }
 
         setError('Paste a YouTube or Spotify URL to play.');
     }, []);
 
-    // ── Event bus: open from assistant ──────────────────────────
+    // ── Clear / stop playback ───────────────────────────────────
+
+    const handleClear = useCallback(() => {
+        audioService.playClick();
+        setMedia(EMPTY_STATE);
+        setError('');
+        setUrlDraft('');
+        resetMediaPlaybackStatus();
+    }, []);
+
+    // ── Event bus: open from assistant / stop ────────────────────
 
     useEffect(() => {
         const off = appEventBus.on('openMediaPanel', (payload: { url: string }) => {
@@ -106,6 +127,47 @@ const MediaPanel: React.FC<MediaPanelProps> = ({ isOpen, onClose }) => {
         });
         return off;
     }, [loadUrl]);
+
+    useEffect(() => {
+        return appEventBus.on('stopMedia', () => {
+            handleClear();
+        });
+    }, [handleClear]);
+
+    // ── Event bus: incoming chat attachments ───────────────────
+
+    useEffect(() => {
+        return appEventBus.on('mediaAttachment', (payload: { data: string; mimeType: string; fileName: string }) => {
+            if (!payload?.data) return;
+            // Convert data URI to blob URL for display
+            const blob = dataUriToBlob(payload.data);
+            if (!blob) return;
+            const blobUrl = URL.createObjectURL(blob);
+            setFiles(prev => {
+                // Deduplicate by file name
+                if (prev.some(f => f.name === payload.fileName)) return prev;
+                return [...prev, {
+                    name: payload.fileName,
+                    kind: 'file' as const,
+                    blobUrl,
+                    mimeType: payload.mimeType,
+                }];
+            });
+            // Switch to files tab so the user sees it
+            setTab('files');
+        });
+    }, []);
+
+/** Convert a data: URI string to a Blob. */
+function dataUriToBlob(dataUri: string): Blob | null {
+    const comma = dataUri.indexOf(',');
+    if (comma === -1) return null;
+    const mime = dataUri.slice(5, comma).split(';')[0] || 'application/octet-stream';
+    const raw = atob(dataUri.slice(comma + 1));
+    const arr = new Uint8Array(raw.length);
+    for (let i = 0; i < raw.length; i++) arr[i] = raw.charCodeAt(i);
+    return new Blob([arr], { type: mime });
+}
 
     // ── GSAP slide animation ────────────────────────────────────
 
@@ -136,6 +198,9 @@ const MediaPanel: React.FC<MediaPanelProps> = ({ isOpen, onClose }) => {
 
     useEffect(() => {
         const handleClickOutside = (event: MouseEvent) => {
+            // Skip close when the click lands on the video overlay's backdrop (assistant-triggered
+            // opens may happen while the user's next click is on the overlay).
+            if ((event.target as HTMLElement).closest('[data-video-overlay-backdrop]')) return;
             if (panelRef.current && !panelRef.current.contains(event.target as Node)) onClose();
         };
         if (isOpen) document.addEventListener('mousedown', handleClickOutside);
@@ -151,14 +216,66 @@ const MediaPanel: React.FC<MediaPanelProps> = ({ isOpen, onClose }) => {
         }
     }, [urlDraft, loadUrl]);
 
-    // ── Clear / stop playback ───────────────────────────────────
+    // ── Load files from fileSystemManager ─────────────────────
 
-    const handleClear = useCallback(() => {
-        audioService.playClick();
-        setMedia(EMPTY_STATE);
-        setError('');
-        setUrlDraft('');
-    }, []);
+    useEffect(() => {
+        if (tab !== 'files') return;
+        let cancelled = false;
+        const load = async () => {
+            setFilesLoading(true);
+            try {
+                const { fileSystemManager } = await import('../utils/fileUtils');
+                if (!fileSystemManager.isDirectorySelected()) {
+                    if (!cancelled) { setFiles([]); setFilesLoading(false); }
+                    return;
+                }
+                const items: FileItem[] = [];
+                for await (const h of fileSystemManager.listDirectoryContents('assistant')) {
+                    if (cancelled) return;
+                    if (h.kind === 'file') {
+                        let mimeType = '';
+                        const ext = h.name.split('.').pop()?.toLowerCase();
+                        if (ext === 'jpg' || ext === 'jpeg') mimeType = 'image/jpeg';
+                        else if (ext === 'png') mimeType = 'image/png';
+                        else if (ext === 'gif') mimeType = 'image/gif';
+                        else if (ext === 'webp') mimeType = 'image/webp';
+                        else if (ext === 'mp4') mimeType = 'video/mp4';
+                        else if (ext === 'webm') mimeType = 'video/webm';
+                        else if (ext === 'mp3') mimeType = 'audio/mpeg';
+                        else if (ext === 'wav') mimeType = 'audio/wav';
+                        else if (ext === 'ogg') mimeType = 'audio/ogg';
+                        else if (ext === 'm4a') mimeType = 'audio/mp4';
+                        try {
+                            const blob = await fileSystemManager.getFileAsBlob(`assistant/${h.name}`);
+                            if (cancelled) return;
+                            if (!blob) continue;
+                            items.push({
+                                name: h.name,
+                                kind: 'file',
+                                blobUrl: URL.createObjectURL(blob),
+                                mimeType,
+                            });
+                        } catch {
+                            // Skip files that fail to load
+                        }
+                    }
+                }
+                if (!cancelled) { setFiles(items); setFilesLoading(false); }
+            } catch {
+                if (!cancelled) { setFiles([]); setFilesLoading(false); }
+            }
+        };
+        void load();
+        return () => { cancelled = true; };
+    }, [tab]);
+
+    // ── Clean up blob URLs ──────────────────────────────────────
+
+    useEffect(() => {
+        return () => {
+            files.forEach(f => { if (f.blobUrl) URL.revokeObjectURL(f.blobUrl); });
+        };
+    }, [files]);
 
     // ── Render ──────────────────────────────────────────────────
 
@@ -178,8 +295,10 @@ const MediaPanel: React.FC<MediaPanelProps> = ({ isOpen, onClose }) => {
                             <div className="flex items-center gap-3">
                                 {media.tab === 'video' ? (
                                     <YouTubeIcon className="w-5 h-5 text-primary" />
-                                ) : (
+                                ) : media.tab === 'music' ? (
                                     <MusicNoteIcon className="w-5 h-5 text-primary" />
+                                ) : (
+                                    <DocumentIcon className="w-5 h-5 text-primary" />
                                 )}
                                 <div className="flex gap-0">
                                     <button
@@ -203,6 +322,17 @@ const MediaPanel: React.FC<MediaPanelProps> = ({ isOpen, onClose }) => {
                                     >
                                         <MusicNoteIcon className="w-3.5 h-3.5" />
                                         Music
+                                    </button>
+                                    <button
+                                        onClick={() => { audioService.playClick(); setTab('files'); }}
+                                        className={`px-3 py-1 text-[10px] font-black uppercase tracking-[0.3em] font-logo border border-base-300/30 border-l-0 flex items-center gap-1.5 ${
+                                            tab === 'files'
+                                                ? 'bg-primary/20 text-primary'
+                                                : 'opacity-50 hover:opacity-100'
+                                        }`}
+                                    >
+                                        <DocumentIcon className="w-3.5 h-3.5" />
+                                        Files
                                     </button>
                                 </div>
                             </div>
@@ -239,6 +369,8 @@ const MediaPanel: React.FC<MediaPanelProps> = ({ isOpen, onClose }) => {
                                 placeholder={
                                     tab === 'video'
                                         ? 'Paste YouTube URL…'
+                                        : tab === 'files'
+                                        ? 'Paste YouTube or Spotify URL…'
                                         : 'Paste Spotify URL…'
                                 }
                                 className="flex-grow min-w-0 text-[11px] font-mono text-base-content bg-base-200/50 border border-base-300/30 rounded-md px-3 py-1.5 focus:outline-none focus:border-primary/50"
@@ -321,27 +453,94 @@ const MediaPanel: React.FC<MediaPanelProps> = ({ isOpen, onClose }) => {
                                     />
                                 </div>
                             </div>
-                        ) : (
+                        ) : tab !== 'files' ? (
                             /* ── Empty state ── */
                             <div className="flex-grow flex flex-col items-center justify-center text-center opacity-10 py-16">
                                 {tab === 'video' ? (
                                     <FilmIcon className="w-16 h-16 mb-6" />
-                                ) : (
+                                ) : tab === 'music' ? (
                                     <MusicNoteIcon className="w-16 h-16 mb-6" />
+                                ) : (
+                                    <DocumentIcon className="w-16 h-16 mb-6" />
                                 )}
                                 <p className="text-xl font-black uppercase tracking-widest leading-none">
-                                    {tab === 'video' ? 'No Video Playing' : 'No Music Playing'}
+                                    {tab === 'video' ? 'No Video Playing' : tab === 'music' ? 'No Music Playing' : 'No Files'}
                                 </p>
                                 <p className="text-[10px] font-bold uppercase tracking-[0.2em] mt-4">
                                     {tab === 'video'
                                         ? 'Paste a YouTube URL above, or ask the assistant to play something'
-                                        : 'Paste a Spotify URL above, or ask the assistant to play something'}
+                                        : tab === 'music'
+                                        ? 'Paste a Spotify URL above, or ask the assistant to play something'
+                                        : 'Save files via the assistant or attach images in chat.'}
                                 </p>
+                            </div>
+                        ) : null}
+
+                        {/* ── Files Tab ── */}
+                        {tab === 'files' && (
+                            <div className="flex-grow flex flex-col overflow-hidden">
+                                {filesLoading ? (
+                                    <div className="flex-grow flex items-center justify-center">
+                                        <div className="flex flex-col items-center gap-3 opacity-40">
+                                            <div className="w-6 h-6 border-2 border-primary border-t-transparent rounded-full animate-spin" />
+                                            <p className="text-[9px] font-black uppercase tracking-[0.3em]">Loading files…</p>
+                                        </div>
+                                    </div>
+                                ) : files.length === 0 ? (
+                                    <div className="flex-grow flex flex-col items-center justify-center text-center opacity-20 py-16">
+                                        <DocumentIcon className="w-16 h-16 mb-6" />
+                                        <p className="text-xl font-black uppercase tracking-widest leading-none">No Files</p>
+                                        <p className="text-[10px] font-bold uppercase tracking-[0.2em] mt-4">
+                                            Save files via the assistant or attach images in chat.
+                                        </p>
+                                    </div>
+                                ) : (
+                                    <div className="flex-grow overflow-y-auto p-4 grid grid-cols-2 gap-3 auto-rows-max">
+                                        {files.map((file) => (
+                                            <div
+                                                key={file.name}
+                                                className="group relative bg-base-200/30 border border-base-300/20 rounded-md overflow-hidden hover:border-primary/40 transition-colors"
+                                            >
+                                                {file.mimeType?.startsWith('image/') ? (
+                                                    <img
+                                                        src={file.blobUrl}
+                                                        alt={file.name}
+                                                        className="w-full h-24 object-cover"
+                                                    />
+                                                ) : file.mimeType?.startsWith('video/') ? (
+                                                    <video
+                                                        src={file.blobUrl}
+                                                        controls
+                                                        className="w-full h-24 object-cover"
+                                                    />
+                                                ) : file.mimeType?.startsWith('audio/') ? (
+                                                    <div className="flex items-center justify-center h-24 bg-base-300/20">
+                                                        <MusicNoteIcon className="w-8 h-8 opacity-30" />
+                                                    </div>
+                                                ) : (
+                                                    <div className="flex items-center justify-center h-24 bg-base-300/20">
+                                                        <DocumentIcon className="w-8 h-8 opacity-30" />
+                                                    </div>
+                                                )}
+                                                <div className="px-2 py-1.5">
+                                                    <p className="text-[9px] font-mono truncate text-base-content/60">{file.name}</p>
+                                                    {file.mimeType?.startsWith('audio/') && file.blobUrl && (
+                                                        <audio
+                                                            src={file.blobUrl}
+                                                            controls
+                                                            className="w-full mt-1 h-8"
+                                                        />
+                                                    )}
+                                                </div>
+                                            </div>
+                                        ))}
+                                    </div>
+                                )}
                             </div>
                         )}
 
                         {/* ── Quick example links ── */}
-                        {!media.videoId && !media.spotifyId && (
+                        {!media.videoId && !media.spotifyId && tab !== 'files' && (
                             <div className="flex-shrink-0 border-t border-base-300/10 px-6 py-3">
                                 <p className="text-[8px] font-black uppercase tracking-[0.3em] text-base-content/20 mb-2">Examples:</p>
                                 <div className="flex gap-2 flex-wrap">

@@ -13,8 +13,7 @@ const extractYouTubeId = (url: string): string | null => {
         const m = url.match(re);
         if (m) return m[1];
     }
-    const loose = url.match(/([a-zA-Z0-9_-]{11})/);
-    return loose?.[1] || null;
+    return null;
 };
 
 /** Build the best-guess watch URL for the user to open directly. */
@@ -136,6 +135,7 @@ const VideoPlayerOverlay: React.FC<VideoPlayerOverlayProps> = ({ url, onClose })
             {/* Backdrop */}
             <div
                 ref={backdropRef}
+                data-video-overlay-backdrop
                 className="absolute inset-0 bg-black/70 backdrop-blur-sm cursor-pointer"
                 onClick={handleBackdropClick}
             />

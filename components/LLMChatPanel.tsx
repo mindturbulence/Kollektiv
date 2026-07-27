@@ -262,6 +262,18 @@ export const LLMChatPanel: React.FC<LLMChatPanelProps> = ({ isOpen, onClose }) =
         setInput('');
 
         const messageAttachments = attachments.length > 0 ? [...attachments] : undefined;
+        // Surface attached images in the Media Panel's Files tab
+        if (messageAttachments) {
+            for (const att of messageAttachments) {
+                if (att.mimeType.startsWith('image/')) {
+                    appEventBus.emit('mediaAttachment', {
+                        data: att.data,
+                        mimeType: att.mimeType,
+                        fileName: att.fileName || 'chat-image',
+                    });
+                }
+            }
+        }
         setAttachments([]);
 
         const newMessages = [...messages, { role: 'user' as const, content: userCommand, attachments: messageAttachments }];

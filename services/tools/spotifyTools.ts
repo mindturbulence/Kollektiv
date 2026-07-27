@@ -132,7 +132,7 @@ export const spotifyTools: AssistantTool[] = [
   },
   {
     name: 'spotify_play',
-    description: 'Play a Spotify track, album, or playlist in the Media Panel. Requires Spotify connected in Settings.',
+    description: 'Play a Spotify track, album, or playlist in the Media Panel. The embed iframe is public — no Spotify account needed for playback.',
     parameters: {
       type: 'object',
       properties: {
@@ -142,12 +142,11 @@ export const spotifyTools: AssistantTool[] = [
     },
     execute: async ({ uri }) => {
       if (typeof window === 'undefined') return 'Error: This tool requires a browser environment.';
-      const token = localStorage.getItem('spotify_access_token');
-      if (!token) return 'Error: Spotify not connected. Go to Settings > Integrations > Spotify and link your account.';
+      // The embed iframe is public — no auth token needed for playback.
       let spotifyUri = String(uri).trim();
       if (!spotifyUri.startsWith('spotify:')) {
-        if (spotifyUri.includes(':')) spotifyUri = `spotify:track:${spotifyUri}`;
-        else spotifyUri = `spotify:track:${spotifyUri}`;
+        // Bare ID — assume track type (best guess).
+        spotifyUri = `spotify:track:${spotifyUri}`;
       }
       // Import appEventBus dynamically to avoid circular dep
       const { appEventBus } = await import('../../utils/eventBus');

@@ -4,7 +4,8 @@ import { motion } from 'motion/react';
 import { gsap } from 'gsap';
 import { 
     LinkIcon, LinkOffIcon, 
-    FolderClosedIcon, PlusIcon, TypeIcon, PhotoIcon
+    FolderClosedIcon, PlusIcon, TypeIcon, PhotoIcon,
+    CloseIcon
 } from './icons';
 import useLocalStorage from '../utils/useLocalStorage';
 import GalleryPickerModal from './GalleryPickerModal';
@@ -13,24 +14,33 @@ import { fileSystemManager, fileToBase64 } from '../utils/fileUtils';
 import { addItemToGallery } from '../utils/galleryStorage';
 import { useObjectUrls } from '../utils/useObjectUrls';
 import ConfirmationModal from './ConfirmationModal';
+import { v4 as uuidv4 } from 'uuid';
 
 // --- TYPES ---
 type EditorMode = 'grid' | 'frame';
 type FrameStyle = 'minimal' | 'polaroid' | 'leica' | 'film' | 'museum' | 'bottom_only' | 'vertical_mat' | 'minimal_footer';
 type FitMode = 'cover' | 'contain';
 
-interface Layer {
+interface BaseLayer {
     id: string;
-    type: 'text' | 'image';
-    content: string; 
     x: number; // 0.0 - 1.0
     y: number; // 0.0 - 1.0
-    fontSize: number; 
+}
+interface TextLayer extends BaseLayer {
+    type: 'text';
+    content: string;
+    fontSize: number;
     color: string;
     fontFamily: string;
     bold: boolean;
     italic: boolean;
 }
+interface ImageLayer extends BaseLayer {
+    type: 'image';
+    content: string; // base64 data URL
+    width: number; // explicit rendered width in px
+}
+type Layer = TextLayer | ImageLayer;
 
 interface ImageItem {
   id: string;
@@ -93,6 +103,8 @@ const getFrameInsets = (style: FrameStyle, size: number, w: number) => {
     }
 };
 
+const getMaxGapPerGutter = (w: number, cols: number) => (w * 0.5) / (cols + 1);
+
 // --- RENDERER COMPONENTS ---
 
 const ItemRenderer: React.FC<{
@@ -104,8 +116,10 @@ const ItemRenderer: React.FC<{
     animateEntry?: boolean;
 }> = ({ item, w, h, onTransform, onRemove, animateEntry }) => {
     const containerRef = useRef<HTMLDivElement>(null);
-    const [panning, setPanning] = useState(false);
+    const isPanning = useRef(false);
     const startPos = useRef({ px: item.posX, py: item.posY, mx: 0, my: 0 });
+    const activePointers = useRef<Map<number, { x: number; y: number }>>(new Map());
+    const lastPinchDist = useRef(0);
     const { dw, dh } = calculateDrawMetrics(item.width, item.height, w, h, item.fit);
 
     useLayoutEffect(() => {
@@ -117,24 +131,49 @@ const ItemRenderer: React.FC<{
         }
     }, [animateEntry, item.id]);
 
-    const handleDown = (e: React.MouseEvent) => {
+    const handlePointerDown = (e: React.PointerEvent) => {
         if (e.button !== 0) return;
         e.preventDefault();
-        setPanning(true);
-        startPos.current = { px: item.posX, py: item.posY, mx: e.clientX, my: e.clientY };
+        (e.target as HTMLElement).setPointerCapture(e.pointerId);
+        activePointers.current.set(e.pointerId, { x: e.clientX, y: e.clientY });
+        if (activePointers.current.size === 1) {
+            startPos.current = { px: item.posX, py: item.posY, mx: e.clientX, my: e.clientY };
+            isPanning.current = true;
+        } else if (activePointers.current.size === 2) {
+            const points = Array.from(activePointers.current.values());
+            lastPinchDist.current = Math.hypot(points[0].x - points[1].x, points[0].y - points[1].y);
+        }
     };
 
-    useEffect(() => {
-        if (!panning) return;
-        const move = (e: MouseEvent) => onTransform({ 
-            posX: startPos.current.px + (e.clientX - startPos.current.mx) / w, 
-            posY: startPos.current.py + (e.clientY - startPos.current.my) / h 
-        });
-        const up = () => setPanning(false);
-        window.addEventListener('mousemove', move);
-        window.addEventListener('mouseup', up);
-        return () => { window.removeEventListener('mousemove', move); window.removeEventListener('mouseup', up); };
-    }, [panning, w, h, onTransform]);
+    const handlePointerMove = (e: React.PointerEvent) => {
+        const prev = activePointers.current.get(e.pointerId);
+        activePointers.current.set(e.pointerId, { x: e.clientX, y: e.clientY });
+
+        if (activePointers.current.size >= 2) {
+            const points = Array.from(activePointers.current.values());
+            const curDist = Math.hypot(points[0].x - points[1].x, points[0].y - points[1].y);
+            if (lastPinchDist.current > 0) {
+                const ratio = curDist / lastPinchDist.current;
+                onTransform({ scale: Math.max(0.1, Math.min(10, item.scale * ratio)) });
+            }
+            lastPinchDist.current = curDist;
+            return;
+        }
+
+        if (isPanning.current && prev) {
+            onTransform({ 
+                posX: startPos.current.px + (e.clientX - startPos.current.mx) / w, 
+                posY: startPos.current.py + (e.clientY - startPos.current.my) / h 
+            });
+        }
+        lastPinchDist.current = 0;
+    };
+
+    const handlePointerUp = (e: React.PointerEvent) => {
+        activePointers.current.delete(e.pointerId);
+        if (activePointers.current.size < 2) lastPinchDist.current = 0;
+        if (activePointers.current.size === 0) { isPanning.current = false; }
+    };
 
     const handleWheel = (e: React.WheelEvent) => {
         e.stopPropagation();
@@ -145,8 +184,12 @@ const ItemRenderer: React.FC<{
     return (
         <div 
             ref={containerRef}
-            className="w-full h-full relative overflow-hidden group cursor-grab active:cursor-grabbing bg-transparent" 
-            onMouseDown={handleDown}
+            className="w-full h-full relative overflow-hidden group cursor-grab active:cursor-grabbing bg-transparent"
+            style={{ touchAction: 'none' }}
+            onPointerDown={handlePointerDown}
+            onPointerMove={handlePointerMove}
+            onPointerUp={handlePointerUp}
+            onPointerCancel={handlePointerUp}
             onWheel={handleWheel}
         >
             <div className="absolute inset-0 pointer-events-none flex items-center justify-center transition-transform duration-75"
@@ -157,7 +200,7 @@ const ItemRenderer: React.FC<{
                 <div className="flex gap-1 pointer-events-auto">
                     <button onClick={(e) => { e.stopPropagation(); onTransform({ fit: item.fit === 'cover' ? 'contain' : 'cover' }); }} className="btn btn-xs rounded-none bg-black/40 border-none">{item.fit === 'cover' ? 'FILL' : 'FIT'}</button>
                 </div>
-                <button onMouseDown={e => e.stopPropagation()} onClick={e => { e.stopPropagation(); onRemove(); }} className="btn btn-xs btn-circle btn-error pointer-events-auto border-none">✕</button>
+                <button onPointerDown={e => e.stopPropagation()} onClick={e => { e.stopPropagation(); onRemove(); }} className="btn btn-xs btn-circle btn-error pointer-events-auto border-none"><CloseIcon className="w-3.5 h-3.5" /></button>
             </div>
         </div>
     );
@@ -173,37 +216,43 @@ const LayerRenderer: React.FC<{
     onUpdate: (u: Partial<Layer>) => void;
 }> = ({ layer, isActive, scale, contW, contH, onActivate, onUpdate }) => {
     const [dragging, setDragging] = useState(false);
+    const isDragging = useRef(false);
     const start = useRef({ x: layer.x, y: layer.y, mx: 0, my: 0 });
 
-    const handleDown = (e: React.MouseEvent) => {
+    const handlePointerDown = (e: React.PointerEvent) => {
         e.stopPropagation(); onActivate();
         if (e.button !== 0) return;
-        e.preventDefault(); setDragging(true);
+        e.preventDefault();
+        (e.target as HTMLElement).setPointerCapture(e.pointerId);
+        isDragging.current = true;
+        setDragging(true);
         start.current = { x: layer.x, y: layer.y, mx: e.clientX, my: e.clientY };
     };
 
-    useEffect(() => {
-        if (!dragging) return;
-        const move = (e: MouseEvent) => onUpdate({ 
+    const handlePointerMove = (e: React.PointerEvent) => {
+        if (!isDragging.current) return;
+        onUpdate({ 
             x: start.current.x + (e.clientX - start.current.mx) / contW, 
             y: start.current.y + (e.clientY - start.current.my) / contH 
         });
-        const up = () => setDragging(false);
-        window.addEventListener('mousemove', move);
-        window.addEventListener('mouseup', up);
-        return () => { window.removeEventListener('mousemove', move); window.removeEventListener('mouseup', up); };
-    }, [dragging, contW, contH, onUpdate]);
+    };
+
+    const handlePointerUp = () => { isDragging.current = false; setDragging(false); };
 
     return (
         <div className={`absolute select-none z-50 transition-shadow ${isActive ? 'ring-2 ring-primary ring-offset-4 ring-offset-black/50' : ''}`}
-             style={{ left: `${layer.x * 100}%`, top: `${layer.y * 100}%`, transform: 'translate(-50%, -50%)', cursor: dragging ? 'grabbing' : 'grab' }}
-             onMouseDown={handleDown} onClick={e => e.stopPropagation()}>
+             style={{ left: `${layer.x * 100}%`, top: `${layer.y * 100}%`, transform: 'translate(-50%, -50%)', cursor: dragging ? 'grabbing' : 'grab', touchAction: 'none' }}
+             onPointerDown={handlePointerDown}
+             onPointerMove={handlePointerMove}
+             onPointerUp={handlePointerUp}
+             onPointerCancel={handlePointerUp}
+             onClick={e => e.stopPropagation()}>
             {layer.type === 'text' ? (
                 <span style={{ fontSize: `${layer.fontSize * scale}px`, color: layer.color, fontFamily: layer.fontFamily, fontWeight: layer.bold ? 'bold' : 'normal', fontStyle: layer.italic ? 'italic' : 'normal', whiteSpace: 'nowrap' }}>
                     {layer.content || 'New Text'}
                 </span>
             ) : (
-                <img src={layer.content} style={{ width: `${layer.fontSize * 5 * scale}px`, height: 'auto', pointerEvents: 'none' }} draggable={false} />
+                <img src={layer.content} style={{ width: `${layer.width * scale}px`, height: 'auto', pointerEvents: 'none' }} draggable={false} />
             )}
         </div>
     );
@@ -231,7 +280,6 @@ const ComposerPage: React.FC<ComposerPageProps> = ({ showGlobalFeedback, isExiti
     const [frameMatting, setFrameMatting] = useLocalStorage('composerFrameMatting', 60);
     
     const [bgColor, setBgColor] = useLocalStorage('composerBgColor', '#FFFFFF');
-    const [outputFormat] = useLocalStorage<'png' | 'jpeg'>('composerFormat', 'jpeg');
 
     const [gridItems, setGridItems] = useState<(ImageItem | null)[]>([]);
     const [frameItem, setFrameItem] = useState<ImageItem | null>(null);
@@ -243,6 +291,11 @@ const ComposerPage: React.FC<ComposerPageProps> = ({ showGlobalFeedback, isExiti
     const [isPickerOpen, setIsPickerOpen] = useState(false);
     const [pickerTarget, setPickerTarget] = useState<number | null>(null);
     const [isVaultConfirmOpen, setIsVaultConfirmOpen] = useState(false);
+    const [isResetConfirmOpen, setIsResetConfirmOpen] = useState(false);
+    const [isShrinkConfirmOpen, setIsShrinkConfirmOpen] = useState(false);
+    const pendingGridSizeRef = useRef<{ cols: number; rows: number } | null>(null);
+    const gridFileInputRef = useRef<HTMLInputElement>(null);
+    const frameFileInputRef = useRef<HTMLInputElement>(null);
 
     useEffect(() => {
         if (mode === 'grid') {
@@ -275,7 +328,7 @@ const ComposerPage: React.FC<ComposerPageProps> = ({ showGlobalFeedback, isExiti
     // --- GSAP INTEGRATION FOR PHOTO FRAMER ---
     useLayoutEffect(() => {
         if (mode === 'frame' && framePaddingRef.current) {
-            const [t, r, b, l] = getFrameInsets(frameStyle, frameMatting, parseInt(width));
+            const [t, r, b, l] = frameInsets;
             const s = previewMetrics.scale;
             
             gsap.to(framePaddingRef.current, {
@@ -293,9 +346,7 @@ const ComposerPage: React.FC<ComposerPageProps> = ({ showGlobalFeedback, isExiti
     // Handle 50% Spacing Restriction
     const handleGapChange = (val: number) => {
         const tw = parseInt(width) || 1024;
-        const maxTotalGapsWidth = tw * 0.5; // Strictly capped at 50% of canvas
-        const totalGapsCount = gridCols + 1;
-        const maxGapPerGutter = maxTotalGapsWidth / totalGapsCount;
+        const maxGapPerGutter = getMaxGapPerGutter(tw, gridCols);
         
         // Slider max is 256. 256 = maxGapPerGutter
         const calculatedGap = (val / 256) * maxGapPerGutter;
@@ -306,7 +357,7 @@ const ComposerPage: React.FC<ComposerPageProps> = ({ showGlobalFeedback, isExiti
         const items = await Promise.all(files.filter(f => f.type.startsWith('image/')).map(file => new Promise<ImageItem>(res => {
             const url = track(URL.createObjectURL(file));
             const img = new Image();
-            img.onload = () => res({ id: Math.random().toString(36).substr(2, 9), url: url, width: img.naturalWidth, height: img.naturalHeight, scale: 1, posX: 0, posY: 0, fit: 'cover' });
+            img.onload = () => res({ id: uuidv4(), url: url, width: img.naturalWidth, height: img.naturalHeight, scale: 1, posX: 0, posY: 0, fit: 'cover' });
             img.src = url;
         })));
         if (mode === 'frame' && items.length) setFrameItem(items[0]);
@@ -349,7 +400,7 @@ const ComposerPage: React.FC<ComposerPageProps> = ({ showGlobalFeedback, isExiti
             const item = drawList[i]; if (!item) continue;
             let cx, cy, cw, ch;
             if (mode === 'frame') {
-                const [pt, pr, pb, pl] = getFrameInsets(frameStyle, frameMatting, outW);
+                const [pt, pr, pb, pl] = frameInsets;
                 cw = outW - (pr + pl); ch = outH - (pt + pb); cx = pl; cy = pt;
             } else {
                 cw = (outW - (gridGap * (gridCols + 1))) / gridCols;
@@ -371,7 +422,7 @@ const ComposerPage: React.FC<ComposerPageProps> = ({ showGlobalFeedback, isExiti
                     ctx.fillStyle = layer.color; ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.fillText(layer.content, sx, sy);
                 } else {
                     const img = new Image(); img.src = layer.content; await new Promise(r => img.onload = r);
-                    const dw = layer.fontSize * 5, dh = dw * (img.naturalHeight / img.naturalWidth);
+                    const dw = layer.width, dh = dw * (img.naturalHeight / img.naturalWidth);
                     ctx.drawImage(img, sx - dw/2, sy - dh/2, dw, dh);
                 }
                 ctx.restore();
@@ -383,8 +434,8 @@ const ComposerPage: React.FC<ComposerPageProps> = ({ showGlobalFeedback, isExiti
     const handleDownload = async () => {
         setIsProcessing(true); const canvas = await generateFinalCanvas();
         if (canvas) {
-            const link = document.createElement('a'); link.download = `composition_${Date.now()}.${outputFormat}`;
-            link.href = canvas.toDataURL(`image/${outputFormat}`, 0.95); link.click();
+            const link = document.createElement('a'); link.download = `composition_${Date.now()}.jpeg`;
+            link.href = canvas.toDataURL('image/jpeg', 0.95); link.click();
         }
         setIsProcessing(false);
     };
@@ -395,6 +446,20 @@ const ComposerPage: React.FC<ComposerPageProps> = ({ showGlobalFeedback, isExiti
         const gap = gridGap * scale, cw = (pw - (gap * (gridCols + 1))) / gridCols, ch = (ph - (gap * (gridRows + 1))) / gridRows;
         return { cw, ch, gap };
     }, [mode, previewMetrics, gridCols, gridRows, gridGap]);
+
+    const frameInsets = useMemo(() => getFrameInsets(frameStyle, frameMatting, parseInt(width) || 1024), [frameStyle, frameMatting, width]);
+
+    const applyGridSize = (cols: number, rows: number) => {
+        const size = cols * rows;
+        const willLoseImages = gridItems.slice(size).some(Boolean);
+        if (willLoseImages) {
+            pendingGridSizeRef.current = { cols, rows };
+            setIsShrinkConfirmOpen(true);
+        } else {
+            setGridCols(cols);
+            setGridRows(rows);
+        }
+    };
 
     const panelVariants = {
         hidden: { opacity: 0, scale: 0.98 },
@@ -427,13 +492,13 @@ const ComposerPage: React.FC<ComposerPageProps> = ({ showGlobalFeedback, isExiti
                         <div className="flex-grow p-6 space-y-8 overflow-y-auto bg-transparent">
                             <div className="space-y-4">
                                 <label className="text-[10px] font-black uppercase text-base-content/40 tracking-widest">Dimensions</label>
-                                <select value={aspectRatio} onChange={e => { setAspectRatio(e.target.value); const ratio = RATIOS.find(r => r.value === e.target.value)?.ratio || 1; setWidth("1024"); setHeight(String(Math.round(1024 / ratio))); }} className="form-select w-full">
+                                <select value={aspectRatio} onChange={e => { setAspectRatio(e.target.value); const ratio = RATIOS.find(r => r.value === e.target.value)?.ratio || 1; setHeight(String(Math.round((parseInt(width) || 1024) / ratio))); }} className="form-select w-full">
                                     {RATIOS.map(r => <option key={r.value} value={r.value}>{r.label}</option>)}
                                 </select>
                                 <div className="flex gap-2">
-                                    <input type="number" value={width} onChange={e => { setWidth(e.target.value); if(isLocked) setHeight(String(Math.round(parseInt(e.target.value) * (parseInt(height)/parseInt(width))))); }} className="form-input w-full" />
+                                    <input type="number" value={width} onChange={e => { const v = e.target.value; setWidth(v); const newW = parseInt(v) || 0; if (isLocked && newW) { const ratio = (parseInt(height) || 1) / (parseInt(width) || 1); setHeight(String(Math.round(newW * ratio))); } }} className="form-input w-full" />
                                     <button onClick={() => setIsLocked(!isLocked)} className={`form-btn btn-xs btn-ghost ${isLocked ? 'text-primary' : 'opacity-20'}`}>{isLocked ? <LinkIcon className="w-4 h-4"/> : <LinkOffIcon className="w-4 h-4"/>}</button>
-                                    <input type="number" value={height} onChange={e => { setHeight(e.target.value); if(isLocked) setWidth(String(Math.round(parseInt(e.target.value) * (parseInt(width)/parseInt(height))))); }} className="form-input w-full" />
+                                    <input type="number" value={height} onChange={e => { const v = e.target.value; setHeight(v); const newH = parseInt(v) || 0; if (isLocked && newH) { const ratio = (parseInt(width) || 1) / (parseInt(height) || 1); setWidth(String(Math.round(newH * ratio))); } }} className="form-input w-full" />
                                 </div>
                             </div>
 
@@ -441,11 +506,11 @@ const ComposerPage: React.FC<ComposerPageProps> = ({ showGlobalFeedback, isExiti
                                 <div className="space-y-6 animate-fade-in">
                                     <div className="space-y-4">
                                         <label className="text-[10px] font-black uppercase text-base-content/40 tracking-widest">Grid Rows & Cols</label>
-                                        <div className="flex gap-4"><input type="number" value={gridCols} onChange={e => setGridCols(Math.max(1, parseInt(e.target.value)))} className="form-input w-full" /><span className="self-center font-black opacity-20">×</span><input type="number" value={gridRows} onChange={e => setGridRows(Math.max(1, parseInt(e.target.value)))} className="form-input w-full" /></div>
+                                        <div className="flex gap-4"><input type="number" value={gridCols} onChange={e => applyGridSize(Math.max(1, parseInt(e.target.value) || 1), gridRows)} className="form-input w-full" /><span className="self-center font-black opacity-20">×</span><input type="number" value={gridRows} onChange={e => applyGridSize(gridCols, Math.max(1, parseInt(e.target.value) || 1))} className="form-input w-full" /></div>
                                     </div>
                                     <div className="space-y-2">
-                                        <div className="flex justify-between items-center"><span className="text-[10px] font-black uppercase text-base-content/20">Spacing</span></div>
-                                        <input type="range" min="0" max="256" step="1" onChange={e => handleGapChange(parseInt(e.target.value))} className="range range-xs range-primary" />
+                                        <div className="flex justify-between items-center"><span className="text-[10px] font-black uppercase text-base-content/20">Spacing</span><span className="text-[10px] font-mono font-bold text-primary">{gridGap}PX</span></div>
+                                        <input type="range" min="0" max="256" step="1" value={(() => { const tw = parseInt(width) || 1024; const maxGapPerGutter = getMaxGapPerGutter(tw, gridCols); return maxGapPerGutter > 0 ? Math.min(256, Math.round((gridGap / maxGapPerGutter) * 256)) : 0; })()} onChange={e => handleGapChange(parseInt(e.target.value))} className="range range-xs range-primary" />
                                     </div>
                                 </div>
                             ) : (
@@ -468,7 +533,7 @@ const ComposerPage: React.FC<ComposerPageProps> = ({ showGlobalFeedback, isExiti
                         </div>
 
                         <footer className="h-14 flex items-stretch flex-shrink-0 bg-base-100/10 backdrop-blur-md p-1.5 gap-1.5">
-                            <button onClick={() => { setGridItems(Array(gridCols*gridRows).fill(null)); setFrameItem(null); setLayers([]); }} className="btn btn-sm btn-ghost h-full flex-1 rounded-none tracking-wider uppercase btn-snake text-error/40 hover:text-error no-glow active:no-glow">
+                            <button onClick={() => setIsResetConfirmOpen(true)} className="btn btn-sm btn-ghost h-full flex-1 rounded-none tracking-wider uppercase btn-snake text-error/40 hover:text-error no-glow active:no-glow">
                                 <span/><span/><span/><span/>
                                 RESET
                             </button>
@@ -493,23 +558,23 @@ const ComposerPage: React.FC<ComposerPageProps> = ({ showGlobalFeedback, isExiti
                                         {item ? <ItemRenderer item={item} w={gridLayout.cw} h={gridLayout.ch} onRemove={() => setGridItems(prev => { const n = [...prev]; n[idx]=null; return n; })} onTransform={t => setGridItems(prev => { const n = [...prev]; n[idx]={...item, ...t}; return n; })} /> 
                                         : <div className="w-full h-full flex flex-col items-center justify-center gap-2 opacity-10 hover:opacity-40 transition-opacity">
                                             <button onClick={() => { setPickerTarget(idx); setIsPickerOpen(true); }} className="form-btn btn-circle btn-sm bg-transparent border-none"><FolderClosedIcon className="w-8 h-8"/></button>
-                                            <button onClick={() => { setPickerTarget(idx); (window as any).document.getElementById('grid-file-upload')?.click(); }} className="form-btn btn-circle btn-sm bg-transparent border-none"><PlusIcon className="w-8 h-8"/></button>
+                                            <button onClick={() => { setPickerTarget(idx); gridFileInputRef.current?.click(); }} className="form-btn btn-circle btn-sm bg-transparent border-none"><PlusIcon className="w-8 h-8"/></button>
                                         </div>}
                                     </div>
                                 ))}
                                 {mode === 'frame' && (
                                     <div className="w-full h-full relative">
                                         <div ref={framePaddingRef} className="w-full h-full will-change-[padding]">
-                                            {frameItem ? <ItemRenderer animateEntry item={frameItem} w={previewMetrics.width - (getFrameInsets(frameStyle, frameMatting, parseInt(width))[1]+getFrameInsets(frameStyle, frameMatting, parseInt(width))[3])*previewMetrics.scale} h={previewMetrics.height - (getFrameInsets(frameStyle, frameMatting, parseInt(width))[0]+getFrameInsets(frameStyle, frameMatting, parseInt(width))[2])*previewMetrics.scale} onRemove={() => setFrameItem(null)} onTransform={t => setFrameItem({...frameItem!, ...t})} />
+                                            {frameItem ? <ItemRenderer animateEntry item={frameItem} w={previewMetrics.width - (frameInsets[1]+frameInsets[3])*previewMetrics.scale} h={previewMetrics.height - (frameInsets[0]+frameInsets[2])*previewMetrics.scale} onRemove={() => setFrameItem(null)} onTransform={t => setFrameItem({...frameItem!, ...t})} />
                                             : <div className="w-full h-full border-2 border-dashed border-base-content/10 flex flex-col items-center justify-center gap-4 opacity-40 hover:opacity-100 transition-opacity">
                                                 <div className="flex gap-4">
                                                     <button onClick={() => setIsPickerOpen(true)} className="form-btn rounded-none tracking-widest px-8">LIBRARY</button>
-                                                    <button onClick={() => (window as any).document.getElementById('frame-file-upload')?.click()} className="form-btn form-btn-primary rounded-none tracking-widest px-8">UPLOAD</button>
+                                                    <button onClick={() => frameFileInputRef.current?.click()} className="form-btn form-btn-primary rounded-none tracking-widest px-8">UPLOAD</button>
                                                 </div>
                                             </div>}
                                         </div>
                                         {layers.map(layer => (
-                                            <LayerRenderer key={layer.id} layer={layer} isActive={activeLayerId === layer.id} scale={previewMetrics.scale} contW={previewMetrics.width} contH={previewMetrics.height} onActivate={() => setActiveLayerId(layer.id)} onUpdate={u => setLayers(prev => prev.map(s => s.id === layer.id ? {...s, ...u} : s))} />
+                                            <LayerRenderer key={layer.id} layer={layer} isActive={activeLayerId === layer.id} scale={previewMetrics.scale} contW={previewMetrics.width} contH={previewMetrics.height} onActivate={() => setActiveLayerId(layer.id)} onUpdate={u => setLayers(prev => prev.map(s => s.id === layer.id ? ({...s, ...u} as Layer) : s))} />
                                         ))}
                                     </div>
                                 )}
@@ -525,7 +590,7 @@ const ComposerPage: React.FC<ComposerPageProps> = ({ showGlobalFeedback, isExiti
                             <header className="p-6 bg-base-100/10 backdrop-blur-md flex justify-between items-center h-16">
                                 <h3 className="text-[10px] font-black uppercase tracking-[0.4em] text-primary">Layers</h3>
                                 <div className="flex gap-2">
-                                    <button onClick={() => { const n: Layer = { id: Math.random().toString(36).substr(2,9), type: 'text', content: 'New Text', x: 0.5, y: 0.5, fontSize: 80, color: '#000000', fontFamily: FONTS[0].family, bold: true, italic: false }; setLayers([...layers, n]); setActiveLayerId(n.id); }} className="btn btn-xs btn-square bg-base-200/50 border border-primary/20 text-primary hover:bg-primary hover:text-primary-content transition-all" title="Add Text Layer">
+                                    <button onClick={() => { const n: TextLayer = { id: uuidv4(), type: 'text', content: 'New Text', x: 0.5, y: 0.5, fontSize: 80, color: '#000000', fontFamily: FONTS[0].family, bold: true, italic: false }; setLayers([...layers, n]); setActiveLayerId(n.id); }} className="btn btn-xs btn-square bg-base-200/50 border border-primary/20 text-primary hover:bg-primary hover:text-primary-content transition-all" title="Add Text Layer">
                                         <TypeIcon className="w-4 h-4"/>
                                     </button>
                                     <button onClick={() => layerImageInputRef.current?.click()} className="btn btn-xs btn-square bg-base-200/50 border border-primary/20 text-primary hover:bg-primary hover:text-primary-content transition-all" title="Add Image Layer">
@@ -536,13 +601,22 @@ const ComposerPage: React.FC<ComposerPageProps> = ({ showGlobalFeedback, isExiti
                             <div className="flex-grow overflow-y-auto p-6 space-y-4 bg-transparent">
                                 {layers.map((layer, i) => (
                                     <div key={layer.id} className={`p-4 border transition-all cursor-pointer ${activeLayerId === layer.id ? 'border-primary bg-primary/5' : 'border-base-300/20'}`} onClick={() => setActiveLayerId(layer.id)}>
-                                        <div className="flex justify-between items-center mb-3"><span className="text-[9px] font-black uppercase tracking-widest opacity-40">Layer {String(i+1).padStart(2, '0')}</span><button onClick={e => { e.stopPropagation(); setLayers(prev => prev.filter(s => s.id !== layer.id)); }} className="text-error opacity-40 hover:opacity-100">✕</button></div>
+                                        <div className="flex justify-between items-center mb-3"><span className="text-[9px] font-black uppercase tracking-widest opacity-40">Layer {String(i+1).padStart(2, '0')}</span><button onClick={e => { e.stopPropagation(); setLayers(prev => prev.filter(s => s.id !== layer.id)); }} className="text-error opacity-40 hover:opacity-100"><CloseIcon className="w-3.5 h-3.5" /></button></div>
                                         {layer.type === 'text' ? <input value={layer.content} onChange={e => setLayers(prev => prev.map(s => s.id === layer.id ? {...s, content: e.target.value} : s))} className="form-input h-8 w-full bg-transparent rounded-none border-none uppercase font-bold" /> : <span className="text-[10px] font-mono opacity-30 truncate block">Image Overlay</span>}
                                         {activeLayerId === layer.id && (
                                             <div className="mt-4 pt-4 border-t border-base-300/10 space-y-4">
-                                                <div className="flex justify-between items-center"><span className="text-[9px] font-black uppercase opacity-40 text-primary">Size</span><span className="text-[10px] font-mono font-bold text-primary">{layer.fontSize}PX</span></div>
-                                                <input type="range" min="8" max="1500" value={layer.fontSize} onChange={e => { const v = parseInt(e.target.value); setLayers(prev => prev.map(s => s.id === layer.id ? {...s, fontSize: v} : s)); }} className="range range-xs range-primary" />
-                                                {layer.type === 'text' && <select value={layer.fontFamily} onChange={e => setLayers(prev => prev.map(s => s.id === layer.id ? {...s, fontFamily: e.target.value} : s))} className="form-select h-8 w-full rounded-none text-[10px] font-bold uppercase tracking-tight">{FONTS.map(f => <option key={f.family} value={f.family}>{f.name}</option>)}</select>}
+                                                {layer.type === 'text' ? (
+                                                    <>
+                                                        <div className="flex justify-between items-center"><span className="text-[9px] font-black uppercase opacity-40 text-primary">Font Size</span><span className="text-[10px] font-mono font-bold text-primary">{layer.fontSize}PX</span></div>
+                                                        <input type="range" min="8" max="1500" value={layer.fontSize} onChange={e => { const v = parseInt(e.target.value); setLayers(prev => prev.map(s => s.id === layer.id ? {...s, fontSize: v} : s)); }} className="range range-xs range-primary" />
+                                                        <select value={layer.fontFamily} onChange={e => setLayers(prev => prev.map(s => s.id === layer.id ? {...s, fontFamily: e.target.value} : s))} className="form-select h-8 w-full rounded-none text-[10px] font-bold uppercase tracking-tight">{FONTS.map(f => <option key={f.family} value={f.family}>{f.name}</option>)}</select>
+                                                    </>
+                                                ) : (
+                                                    <>
+                                                        <div className="flex justify-between items-center"><span className="text-[9px] font-black uppercase opacity-40 text-primary">Width</span><span className="text-[10px] font-mono font-bold text-primary">{layer.width}PX</span></div>
+                                                        <input type="range" min="20" max="2000" value={layer.width} onChange={e => { const v = parseInt(e.target.value); setLayers(prev => prev.map(s => s.id === layer.id ? {...s, width: v} : s)); }} className="range range-xs range-primary" />
+                                                    </>
+                                                )}
                                             </div>
                                         )}
                                     </div>
@@ -557,11 +631,13 @@ const ComposerPage: React.FC<ComposerPageProps> = ({ showGlobalFeedback, isExiti
             </div>
 
             {/* HIDDEN INPUTS */}
-            <input type="file" id="grid-file-upload" className="hidden" multiple onChange={e => handleFiles(Array.from(e.target.files || []), pickerTarget ?? undefined)} />
-            <input type="file" id="frame-file-upload" className="hidden" onChange={e => handleFiles(Array.from(e.target.files || []))} />
-            <input type="file" ref={layerImageInputRef} className="hidden" onChange={async e => { if(e.target.files?.[0]) { const b64 = await fileToBase64(e.target.files[0]); const n: Layer = { id: Math.random().toString(36).substr(2,9), type: 'image', content: b64, x: 0.5, y: 0.5, fontSize: 100, color: '', fontFamily: '', bold: false, italic: false }; setLayers([...layers, n]); setActiveLayerId(n.id); } }} />
+            <input type="file" ref={gridFileInputRef} className="hidden" multiple onChange={e => handleFiles(Array.from(e.target.files || []), pickerTarget ?? undefined)} />
+            <input type="file" ref={frameFileInputRef} className="hidden" onChange={e => handleFiles(Array.from(e.target.files || []))} />
+            <input type="file" ref={layerImageInputRef} className="hidden" onChange={async e => { if(e.target.files?.[0]) { const b64 = await fileToBase64(e.target.files[0]); const n: ImageLayer = { id: uuidv4(), type: 'image', content: b64, x: 0.5, y: 0.5, width: 500 }; setLayers([...layers, n]); setActiveLayerId(n.id); } }} />
             <GalleryPickerModal isOpen={isPickerOpen} onClose={() => { setIsPickerOpen(false); setPickerTarget(null); }} onSelect={handleLibrarySelect} selectionMode={mode === 'frame' ? 'single' : 'multiple'} typeFilter="image" />
-            <ConfirmationModal isOpen={isVaultConfirmOpen} onClose={() => setIsVaultConfirmOpen(false)} onConfirm={async () => { setIsProcessing(true); const canvas = await generateFinalCanvas(); if(canvas) { await addItemToGallery('image', [canvas.toDataURL(`image/${outputFormat}`)], ['Composer'], undefined, `composition_${Date.now()}`); showGlobalFeedback?.("Saved to library."); } setIsProcessing(false); setIsVaultConfirmOpen(false); }} title="SAVE COMPOSITION" message="Save this composition to your local folders?" btnClassName="btn-primary" />
+            <ConfirmationModal isOpen={isVaultConfirmOpen} onClose={() => setIsVaultConfirmOpen(false)} onConfirm={async () => { setIsProcessing(true); const canvas = await generateFinalCanvas(); if(canvas) { await addItemToGallery('image', [canvas.toDataURL('image/jpeg')], ['Composer'], undefined, `composition_${Date.now()}`); showGlobalFeedback?.("Saved to library."); } setIsProcessing(false); setIsVaultConfirmOpen(false); }} title="SAVE COMPOSITION" message="Save this composition to your local folders?" btnClassName="btn-primary" />
+            <ConfirmationModal isOpen={isResetConfirmOpen} onClose={() => setIsResetConfirmOpen(false)} onConfirm={() => { setGridItems(Array(gridCols*gridRows).fill(null)); setFrameItem(null); setLayers([]); setIsResetConfirmOpen(false); }} title="RESET COMPOSITION" message="Clear all images and layers? This cannot be undone." btnClassName="btn-error" />
+            <ConfirmationModal isOpen={isShrinkConfirmOpen} onClose={() => setIsShrinkConfirmOpen(false)} onConfirm={() => { const p = pendingGridSizeRef.current; if (p) { setGridCols(p.cols); setGridRows(p.rows); } setIsShrinkConfirmOpen(false); }} title="RESIZE GRID" message="Shrinking the grid will remove images already placed in the cells being cut. Continue?" btnClassName="btn-error" />
         </motion.div>
     );
 };

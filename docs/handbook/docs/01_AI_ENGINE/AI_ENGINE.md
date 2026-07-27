@@ -119,10 +119,11 @@ The assistant has 97 built-in tools (45 defined inline in `services/assistantToo
 | Category | Tools | Description |
 |---|---|---|
 | **App control** | `navigate`, `update_settings` | Move between pages, mutate settings |
+| **Media control** | `stop_media`, `get_current_media` | Stop active playback and reset the panel (`stopMedia` bus event); query current playback status (`{ playing: false }` or `{ playing: true, type: "youtube"|"spotify", id, title }` from module-level store). |
 | **Prompt library** | `search_prompts`, `save_prompt`, `refine_prompt`, `translate_prompt`, `rewrite_prompt`, `analyze_prompt`, `search_cheatsheets`, `send_to_refiner`, `save_refiner_preset`, `send_to_crafter`, `send_to_prompt_analyzer`, `list_wildcards`, `generate_crafter_prompt` | Prompt CRUD, transformation, routing |
 | **Discovery** | `list_discovery_collections`, `search_discovery_prompts` | Browse GitHub/HuggingFace collections |
 | **Gallery/media** | `search_gallery`, `get_gallery_item`, `save_to_gallery`, `delete_gallery_item`, `gallery_stats`, `abstract_image`, `generate_image`, `generate_and_ingest` | Media vault operations + generation + compare |
-| **Web** | `web_search`, `scrape_url`, `scrape_url_playwright`, `fetch_url`, `open_web_page`, `play_media`, `youtube_search`, `get_weather`, `save_file` | Web access, multi-engine search (free, no API key), page scraping (HTTP + Playwright), file saving |
+| **Web** | `web_search`, `scrape_url`, `scrape_url_playwright`, `fetch_url`, `open_web_page`, `play_media`, `youtube_search`, `get_weather`, `save_file` | Web access, multi-engine search (free, no API key), page scraping (HTTP + Playwright), file saving. `play_media` classifies URLs: YouTube → center overlay (`playVideo`), Spotify → side panel (`openMediaPanel`), unrecognized → error. |
 | **Ideas/notes/memory** | `clip_idea`, `save_note`, `list_notes`, `update_note`, `delete_note`, `remember`, `list_memories`, `forget`, `search_memories`, `knowledge_lifecycle_promote` | Idea clipping, note CRUD, memory, knowledge lifecycle |
 | **MCP management** | `list_mcp_servers`, `toggle_mcp_server` | MCP server configuration |
 | **Capability introspection** | `capability_search`, `capability_describe`, `capability_execute`, `capability_list`, `capability_health` | MCP architecture capability tools |
@@ -162,7 +163,7 @@ Both tools call server-side endpoints (`/api/scrape-url` and `/api/scrape-url-pl
 | `services/tools/browserTools.ts` | `browser_navigate`, `browser_click`, `browser_type`, `browser_scroll`, etc. (21 tools) | CDP-based browser automation |
 | `services/tools/obsidianTools.ts` | `obsidian_search_notes`, `obsidian_get_note`, `obsidian_write_note`, etc. (12+ tools) | Obsidian vault access via MCP |
 | `services/tools/gmailTools.ts` | `read_gmail`, `send_gmail`, `delete_gmail` | Google Gmail via OAuth token |
-| `services/tools/spotifyTools.ts` | `spotify_list_playlists`, `spotify_get_playlist_tracks`, `spotify_play` | Spotify playback |
+| `services/tools/spotifyTools.ts` | `spotify_list_playlists`, `spotify_get_playlist_tracks`, `spotify_play` | Spotify playback. `spotify_play` no longer requires an access token — the embed iframe is public. Auth token still required for `spotify_list_playlists` / `spotify_get_playlist_tracks`. |
 | `services/tools/tensorArtTools.ts` | `tensorart_list_models`, `tensorart_generate` | Remote image generation |
 | `services/tools/researchTools.ts` | `append_findings`, `expand_source` | Research panel findings management |
 | `services/tools/graphTools.ts` | `find_related_knowledge` | Cross-store tag-based relations via `services/relationshipGraph.ts` — finds memories/gallery items/prompts sharing tags with a given item |

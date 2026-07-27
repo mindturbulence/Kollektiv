@@ -87,6 +87,20 @@ export const useAppEventBus = ({
     });
   }, [setVideoPlayerUrl]);
 
+  // ── Media panel: open from assistant-triggered events ────────────────
+  useEffect(() => {
+    return appEventBus.on('openMediaPanel', () => {
+      setIsMediaPanelOpen(true);
+    });
+  }, [setIsMediaPanelOpen]);
+
+  // ── Stop media (from assistant stop_media tool) ──────────────────────
+  useEffect(() => {
+    return appEventBus.on('stopMedia', () => {
+      setVideoPlayerUrl(null);
+    });
+  }, [setVideoPlayerUrl]);
+
   // ── Clip idea from assistant ──────────────────────────────────────────
   useEffect(() => {
     return appEventBus.on('clipIdea', (p: { title: string; prompt: string; lens?: string; source?: string }) => {

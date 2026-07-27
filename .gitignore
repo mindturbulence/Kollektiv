@@ -36,3 +36,4 @@ scripts/test-exact-flow.mjs
 scripts/test-im-obsidian.mjs
 scripts/test-narrow*.mjs
 obsidian-notes-list.md
+.gstack/

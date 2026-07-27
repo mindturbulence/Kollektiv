@@ -587,9 +587,47 @@ export const ASSISTANT_TOOLS: AssistantTool[] = [
         execute: ({ url }) => {
             try { new URL(String(url)); } catch { return 'Error: invalid URL.'; }
             const urlStr = String(url);
-            appEventBus.emit('openMediaPanel', { url: urlStr });
-            appEventBus.emit('playVideo', { url: urlStr });
-            return `Opened ${url} in the media panel — playing now.`;
+            // Classify the URL: emit different events per type so each player gets
+            // the right payload and nothing leaks into the wrong overlay/panel.
+            const isYouTube = /(?:youtube\.com\/watch\?v=|youtu\.be\/|youtube\.com\/embed\/|youtube\.com\/shorts\/)([a-zA-Z0-9_-]{11})/.test(urlStr)
+                || /^([a-zA-Z0-9_-]{11})$/.test(urlStr);
+            const isSpotify = /(?:open\.spotify\.com\/|spotify:)(track|album|playlist|episode)[/:][a-zA-Z0-9]+/.test(urlStr);
+            if (isYouTube) {
+                appEventBus.emit('playVideo', { url: urlStr });
+                return `Playing YouTube video in the center overlay.`;
+            }
+            if (isSpotify) {
+                appEventBus.emit('openMediaPanel', { url: urlStr, isSpotifyUri: true });
+                return `Playing Spotify ${urlStr.includes('album') ? 'album' : urlStr.includes('playlist') ? 'playlist' : 'track'} in the media panel.`;
+            }
+            return `Error: unrecognized URL format — "${urlStr}". Only YouTube and Spotify URLs are supported.`;
+        },
+    },
+    {
+        name: 'stop_media',
+        description: 'Stop any currently playing media (YouTube video or Spotify track/playlist) and reset the media panel.',
+        parameters: { type: 'object', properties: {} },
+        execute: () => {
+            appEventBus.emit('stopMedia');
+            return 'Stopped any playing media and reset the panel.';
+        },
+    },
+    {
+        name: 'get_current_media',
+        description: 'Check what media (if any) is currently playing in the media panel. Returns JSON: { playing: boolean, type?: "youtube"|"spotify", id?: string, title?: string }. Use before stop_media to confirm what\'s playing, or to tell the user what\'s currently on.',
+        parameters: { type: 'object', properties: {} },
+        execute: async () => {
+            const { getMediaPlaybackStatus } = await import('./mediaPlaybackStore');
+            const s = getMediaPlaybackStatus();
+            if (!s.playing) {
+                return JSON.stringify({ playing: false });
+            }
+            return JSON.stringify({
+                playing: true,
+                type: s.videoId ? 'youtube' : 'spotify',
+                id: s.videoId || s.spotifyId,
+                title: s.title,
+            });
         },
     },
     {

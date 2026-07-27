@@ -943,9 +943,9 @@ const ImageResizer: React.FC<ImageResizerProps> = ({ isExiting = false }) => {
                                             </label>
                                         </div>
                                         <div className={`flex items-center gap-2 transition-opacity ${settings.preserveOriginal ? 'opacity-30 pointer-events-none' : ''}`}>
-                                            <input type="number" disabled={settings.preserveOriginal} value={settings.width} onChange={e => handleSettingsChange('width', (e.currentTarget as any).value ? parseInt((e.currentTarget as any).value) : '')} className="form-input w-full font-mono text-xs" placeholder="W" />
+                                            <input type="number" disabled={settings.preserveOriginal} value={settings.width} onChange={e => handleSettingsChange('width', (e.currentTarget as any).value ? (parseInt((e.currentTarget as any).value) || 0) : '')} className="form-input w-full font-mono text-xs" placeholder="W" />
                                             <button disabled={settings.preserveOriginal} onClick={() => handleSettingsChange('lockAspectRatio', !settings.lockAspectRatio)} className={`form-btn h-8 w-8 ${settings.lockAspectRatio ? 'text-primary' : 'opacity-20'}`}>{settings.lockAspectRatio ? <LinkIcon className="w-4 h-4" /> : <LinkOffIcon className="w-4 h-4" />}</button>
-                                            <input type="number" disabled={settings.preserveOriginal} value={settings.height} onChange={e => handleSettingsChange('height', (e.currentTarget as any).value ? parseInt((e.currentTarget as any).value) : '')} className="form-input w-full font-mono text-xs" placeholder="H" />
+                                            <input type="number" disabled={settings.preserveOriginal} value={settings.height} onChange={e => handleSettingsChange('height', (e.currentTarget as any).value ? (parseInt((e.currentTarget as any).value) || 0) : '')} className="form-input w-full font-mono text-xs" placeholder="H" />
                                         </div>
                                         <select
                                             disabled={settings.preserveOriginal}
