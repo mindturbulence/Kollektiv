@@ -1,0 +1,101 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://kollektiv.app/mcp-config.schema.json",
+  "title": "Kollektiv MCP Config",
+  "description": "Schema for mcp-config.json — the single source of truth for all MCP-exposed native assistant tools.",
+  "type": "object",
+  "required": ["version", "tools"],
+  "properties": {
+    "version": {
+      "type": "string",
+      "description": "Schema version for backward compatibility tracking.",
+      "enum": ["1.0.0"]
+    },
+    "tools": {
+      "type": "array",
+      "description": "All native assistant tools exposed via MCP.",
+      "items": {
+        "$ref": "#/definitions/ToolDefinition"
+      }
+    }
+  },
+  "definitions": {
+    "ToolDefinition": {
+      "type": "object",
+      "required": ["name", "description", "parameters", "executionKind", "filePath", "sourceModule", "category"],
+      "properties": {
+        "name": {
+          "type": "string",
+          "description": "Unique tool name, must match the AssistantTool name.",
+          "pattern": "^[a-z][a-z0-9_]*$"
+        },
+        "description": {
+          "type": "string",
+          "description": "Human-readable description of what the tool does."
+        },
+        "parameters": {
+          "type": "object",
+          "required": ["type"],
+          "properties": {
+            "type": {
+              "type": "string",
+              "const": "object"
+            },
+            "properties": {
+              "type": "object",
+              "description": "Map of parameter names to JSON Schema property definitions.",
+              "additionalProperties": {
+                "type": "object",
+                "properties": {
+                  "type": { "type": "string" },
+                  "description": { "type": "string" },
+                  "enum": { "type": "array" },
+                  "items": { "type": "object" }
+                },
+                "required": ["type", "description"]
+              }
+            },
+            "required": {
+              "type": "array",
+              "description": "List of required parameter names.",
+              "items": { "type": "string" }
+            }
+          }
+        },
+        "executionKind": {
+          "type": "string",
+          "description": "How the tool executes.",
+          "enum": ["browser-context", "server-context", "hybrid"]
+        },
+        "filePath": {
+          "type": "string",
+          "description": "Path to the source file containing the tool definition.",
+          "pattern": "^services/(tools/|assistantTools\\.ts)"
+        },
+        "sourceModule": {
+          "type": "string",
+          "description": "The exported array/variable that contains this tool.",
+          "pattern": "^[A-Z][A-Z_]+$"
+        },
+        "category": {
+          "type": "string",
+          "description": "Functional category for grouping.",
+          "enum": [
+            "navigation", "prompts", "web", "media", "files",
+            "memory", "generation", "settings", "mcp",
+            "gallery", "capability", "browser", "gmail",
+            "spotify", "obsidian", "research", "github",
+            "rss", "exa", "reddit", "youtube", "twitter",
+            "tensorart", "graph",
+            "search", "utility"
+          ]
+        },
+        "permissions": {
+          "type": "array",
+          "description": "Permission strings required to call this tool.",
+          "items": { "type": "string" }
+        }
+      }
+    }
+  }
+}

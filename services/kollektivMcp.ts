@@ -5,12 +5,22 @@ import { ListToolsRequestSchema, CallToolRequestSchema } from "@modelcontextprot
 import { createServer as createObsidianServer } from "@bitbonsai/mcpvault";
 import { randomUUID } from "node:crypto";
 import { createServer as createHttpServer, IncomingMessage, ServerResponse } from "http";
-import { resolve } from "node:path";
-import { existsSync } from "node:fs";
+import { resolve, dirname } from "node:path";
+import { existsSync, readFileSync } from "node:fs";
+import { fileURLToPath } from "node:url";
+
+const _thisDir = dirname(fileURLToPath(import.meta.url));
+const _repoRoot = resolve(_thisDir, "..");
+
+/** Express HTTP server port, set at startup. */
+let _httpPort = 3001;
 
 export interface KollektivMcpOptions {
   vaultPath?: string;
   port?: number;
+  /** Port the Express HTTP server is listening on (default 3001).
+   *  Used by server-context tools to call internal API endpoints. */
+  httpPort?: number;
 }
 
 export interface KollektivMcpInstance {
@@ -24,6 +34,426 @@ interface McpSubServer {
   transport: InMemoryTransport;
   tools: Array<{ name: string; [key: string]: any }>;
 }
+
+/** Schema for native tool entries in mcp-config.json */
+interface McpConfig {
+  version: string;
+  tools: McpConfigTool[];
+}
+
+interface McpConfigTool {
+  name: string;
+  description: string;
+  parameters: {
+    type: string;
+    properties: Record<string, any>;
+    required?: string[];
+  };
+  executionKind: "browser-context" | "server-context" | "hybrid";
+  filePath: string;
+  sourceModule: string;
+  category: string;
+  permissions?: string[];
+}
+
+/** Permissions that the caller must have to invoke a tool. */
+const CALLER_PERMISSIONS = new Set<string>();
+
+/**
+ * Grant permissions to the caller (e.g., "screen:share", "control:grant").
+ * Called when the browser side has verified the user has granted these.
+ */
+export function grantMcpPermissions(...perms: string[]): void {
+  for (const p of perms) CALLER_PERMISSIONS.add(p);
+}
+
+/**
+ * Revoke permissions.
+ */
+export function revokeMcpPermissions(...perms: string[]): void {
+  for (const p of perms) CALLER_PERMISSIONS.delete(p);
+}
+
+/**
+ * Check whether the caller has all required permissions.
+ */
+function checkPermissions(required: string[] | undefined): string | null {
+  if (!required || required.length === 0) return null;
+  const missing = required.filter((p) => !CALLER_PERMISSIONS.has(p));
+  return missing.length > 0
+    ? `Missing required permissions: ${missing.join(", ")}`
+    : null;
+}
+
+// ─── Load native tool definitions from mcp-config.json ─────────────────
+
+let _nativeConfig: McpConfig | null = null;
+
+function loadNativeConfig(): McpConfig {
+  if (_nativeConfig) return _nativeConfig;
+  try {
+    const configPath = resolve(_repoRoot, "mcp-config.json");
+    if (existsSync(configPath)) {
+      const raw = readFileSync(configPath, "utf-8");
+      const parsed: McpConfig = JSON.parse(raw);
+      _nativeConfig = parsed;
+      console.log(`[Kollektiv MCP] Loaded native tool config (${parsed.tools.length} tools)`);
+      return parsed;
+    }
+    console.warn("[Kollektiv MCP] mcp-config.json not found — native tools will not be exposed");
+    const fallback: McpConfig = { version: "1.0.0", tools: [] };
+    _nativeConfig = fallback;
+    return fallback;
+  } catch (err) {
+    console.warn("[Kollektiv MCP] Failed to load mcp-config.json:", err);
+    const fallback: McpConfig = { version: "1.0.0", tools: [] };
+    _nativeConfig = fallback;
+    return fallback;
+  }
+}
+
+// ─── Server-side tool executors ────────────────────────────────────────
+// These run in the Node.js process and handle tools that do not require
+// browser APIs (DOM, appEventBus, localStorage, etc.).
+//
+// Executors call either:
+//   - External HTTP APIs directly (e.g., wttr.in for weather)
+//   - The Express app's internal API endpoints (e.g., /api/reach/github)
+
+const _serverExecutors = new Map<string, (args: Record<string, any>) => Promise<{
+  content: { type: string; text: string }[];
+  isError: boolean;
+}>>();
+
+function initServerExecutors(httpPort: number): void {
+  const apiBase = `http://127.0.0.1:${httpPort}`;
+
+  _serverExecutors.clear();
+
+  // Helper: call an internal Express API route
+  const callApi = async (path: string, body: Record<string, any>) => {
+    const res = await fetch(`${apiBase}${path}`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(body),
+    });
+    const data = await res.json();
+    return { ok: res.ok, data };
+  };
+
+  // ── get_weather ───────────────────────────────────────────────────────
+  _serverExecutors.set("get_weather", async (args) => {
+    const city = String(args.city || "");
+    if (!city) {
+      return { content: [{ type: "text", text: "City is required." }], isError: true };
+    }
+    try {
+      const res = await fetch(
+        `https://wttr.in/${encodeURIComponent(city)}?format=%C+%t+%w+%h`,
+      );
+      if (!res.ok) {
+        return {
+          content: [{ type: "text", text: `Weather lookup failed: ${res.status}` }],
+          isError: true,
+        };
+      }
+      const text = await res.text();
+      return {
+        content: [{ type: "text", text: `Weather in ${city}: ${text.trim()}` }],
+        isError: false,
+      };
+    } catch (e: any) {
+      return {
+        content: [{ type: "text", text: `Weather lookup failed: ${e?.message || e}` }],
+        isError: true,
+      };
+    }
+  });
+
+  // ── github_get_repo ───────────────────────────────────────────────────
+  _serverExecutors.set("github_get_repo", async (args) => {
+    const { ok, data } = await callApi("/api/reach/github", {
+      op: "repo_info",
+      owner: String(args.owner),
+      repo: String(args.repo),
+    });
+    const text = ok ? JSON.stringify(data) : `Error: ${data?.error || "GitHub request failed"}`;
+    return { content: [{ type: "text", text }], isError: !ok };
+  });
+
+  // ── github_search ────────────────────────────────────────────────────
+  _serverExecutors.set("github_search", async (args) => {
+    const { ok, data } = await callApi("/api/reach/github", {
+      op: "search",
+      type: args.type,
+      query: String(args.query),
+      maxResults: args.maxResults ? Number(args.maxResults) : undefined,
+    });
+    const text = ok ? JSON.stringify(data) : `Error: ${data?.error || "GitHub search failed"}`;
+    return { content: [{ type: "text", text }], isError: !ok };
+  });
+
+  // ── github_get_file ──────────────────────────────────────────────────
+  _serverExecutors.set("github_get_file", async (args) => {
+    const { ok, data } = await callApi("/api/reach/github", {
+      op: "file",
+      owner: String(args.owner),
+      repo: String(args.repo),
+      path: args.path ? String(args.path) : undefined,
+      ref: args.ref ? String(args.ref) : undefined,
+    });
+    if (!ok) {
+      const text = `Error: ${data?.error || "GitHub file fetch failed"}`;
+      return { content: [{ type: "text", text }], isError: true };
+    }
+    const contentText = `${data.content}${data.truncated ? "\n\n[...truncated]" : ""}`;
+    return { content: [{ type: "text", text: contentText }], isError: false };
+  });
+
+  // ── rss_fetch ────────────────────────────────────────────────────────
+  _serverExecutors.set("rss_fetch", async (args) => {
+    const { ok, data } = await callApi("/api/reach/rss", {
+      url: String(args.url),
+      maxItems: args.maxItems ? Number(args.maxItems) : undefined,
+    });
+    const text = ok ? JSON.stringify(data) : `Error: ${data?.error || "RSS fetch failed"}`;
+    return { content: [{ type: "text", text }], isError: !ok };
+  });
+
+  // ── exa_search ───────────────────────────────────────────────────────
+  _serverExecutors.set("exa_search", async (args) => {
+    const { ok, data } = await callApi("/api/reach/exa", args);
+    const text = ok ? JSON.stringify(data) : `Error: ${data?.error || "Exa search failed"}`;
+    return { content: [{ type: "text", text }], isError: !ok };
+  });
+
+  // ── reddit_fetch ─────────────────────────────────────────────────────
+  _serverExecutors.set("reddit_fetch", async (args) => {
+    const { ok, data } = await callApi("/api/reach/reddit", args);
+    const text = ok ? JSON.stringify(data) : `Error: ${data?.error || "Reddit request failed"}`;
+    return { content: [{ type: "text", text }], isError: !ok };
+  });
+
+  // ── youtube_get_transcript ───────────────────────────────────────────
+  _serverExecutors.set("youtube_get_transcript", async (args) => {
+    const { ok, data } = await callApi("/api/reach/youtube-transcript", {
+      videoId: String(args.videoId),
+      lang: args.lang ? String(args.lang) : undefined,
+    });
+    if (!ok) {
+      return {
+        content: [{
+          type: "text",
+          text: `Transcript unavailable: ${data?.error || "fetch blocked or disabled"}.`,
+        }],
+        isError: true,
+      };
+    }
+    const text = (data.segments || []).map((s: any) => s.text).join(" ");
+    return { content: [{ type: "text", text: text || "Transcript was empty." }], isError: false };
+  });
+
+  // ── twitter_get_tweet ────────────────────────────────────────────────
+  _serverExecutors.set("twitter_get_tweet", async (args) => {
+    const { ok, data } = await callApi("/api/reach/twitter", { tweetId: String(args.tweetId) });
+    if (!ok) {
+      return {
+        content: [{ type: "text", text: `Could not fetch tweet: ${data?.error || "unknown error"}.` }],
+        isError: true,
+      };
+    }
+    return { content: [{ type: "text", text: JSON.stringify(data.tweet) }], isError: false };
+  });
+
+  // ── web_search ──────────────────────────────────────────────────────
+  // Calls the Express /api/web-search endpoint (multi-engine web search).
+  _serverExecutors.set("web_search", async (args) => {
+    const query = String(args.query || "");
+    if (!query) {
+      return { content: [{ type: "text", text: "Query is required." }], isError: true };
+    }
+    const body: Record<string, any> = { query };
+    if (Array.isArray(args.engines)) body.engines = args.engines;
+    if (args.fetch_content === true) body.fetchContent = true;
+    try {
+      const { ok, data } = await callApi("/api/web-search", body);
+      if (!ok) {
+        return {
+          content: [{ type: "text", text: `Web search failed: ${data?.error || data?.message || "unknown error"}` }],
+          isError: true,
+        };
+      }
+      return {
+        content: [{ type: "text", text: JSON.stringify(data, null, 2) }],
+        isError: false,
+      };
+    } catch (e: any) {
+      return {
+        content: [{ type: "text", text: `Web search error: ${e?.message || e}` }],
+        isError: true,
+      };
+    }
+  });
+
+  // ── scrape_url ────────────────────────────────────────────────────────
+  // Calls the Express /api/scrape-url endpoint (server-side readability extraction).
+  _serverExecutors.set("scrape_url", async (args) => {
+    const url = String(args.url || "");
+    if (!url) {
+      return { content: [{ type: "text", text: "URL is required." }], isError: true };
+    }
+    try {
+      const { ok, data } = await callApi("/api/scrape-url", { url, mode: "simple" });
+      if (!ok || !data.success) {
+        const errMsg = data?.error || "scrape failed";
+        return { content: [{ type: "text", text: `Error scraping ${url}: ${errMsg}` }], isError: true };
+      }
+      const byline = [data.author && `Author: ${data.author}`, data.published && `Published: ${data.published}`, data.site && `Site: ${data.site}`].filter(Boolean).join(" | ");
+      const text = `# ${data.title || url}\n${byline ? `${byline}\n\n` : ""}${data.content || "No readable content found."}`.slice(0, 50_000);
+      return { content: [{ type: "text", text }], isError: false };
+    } catch (e: any) {
+      return { content: [{ type: "text", text: `Error scraping ${url}: ${e?.message || e}` }], isError: true };
+    }
+  });
+
+  // ── scrape_url_playwright ─────────────────────────────────────────────
+  // Calls the Express /api/scrape-url-playwright endpoint (headless browser rendering).
+  _serverExecutors.set("scrape_url_playwright", async (args) => {
+    const url = String(args.url || "");
+    if (!url) {
+      return { content: [{ type: "text", text: "URL is required." }], isError: true };
+    }
+    try {
+      const { ok, data } = await callApi("/api/scrape-url-playwright", { url });
+      if (!ok || !data.success) {
+        const errMsg = data?.error || "Playwright scrape failed";
+        return { content: [{ type: "text", text: `Error scraping ${url} with Playwright: ${errMsg}` }], isError: true };
+      }
+      const byline = [data.author && `Author: ${data.author}`, data.published && `Published: ${data.published}`, data.site && `Site: ${data.site}`].filter(Boolean).join(" | ");
+      const text = `# ${data.title || url}\n${byline ? `${byline}\n\n` : ""}${data.content || "No readable content found."}`.slice(0, 50_000);
+      return { content: [{ type: "text", text }], isError: false };
+    } catch (e: any) {
+      return { content: [{ type: "text", text: `Error scraping ${url} with Playwright: ${e?.message || e}` }], isError: true };
+    }
+  });
+
+  // ── fetch_url / open_web_page ─────────────────────────────────────────
+  // These use DOMParser and appEventBus which are browser-only — no server-side
+  // executor needed. The Express server has no DOMParser or proxy-remote route
+  // that returns readability-extracted markdown (only raw HTML proxy).
+  // ── capability_* tools ───────────────────────────────────────────────
+  // These use the in-memory capabilityRegistry which is populated in the
+  // browser context. They cannot execute server-side until the registry is
+  // populated on the server as well.
+  // ── tensorart_* tools ─────────────────────────────────────────────────
+  // These require the tensorartService which runs in the browser.
+  // ── obsidian_* tools ──────────────────────────────────────────────────
+  // Already handled by the @bitbonsai/mcpvault sub-server.
+
+  console.log(`[Kollektiv MCP] Initialized ${_serverExecutors.size} server-side tool executors`);
+}
+
+/** Convert a native McpConfigTool to the MCP SDK tool shape. */
+function nativeToolToMcpSchema(tool: McpConfigTool) {
+  return {
+    name: tool.name,
+    description: `${tool.description} [kind: ${tool.executionKind}]`,
+    inputSchema: {
+      type: "object",
+      properties: tool.parameters.properties,
+      required: tool.parameters.required,
+    },
+  };
+}
+
+/** Convert a native McpConfigTool input to MCP tool call response. */
+async function nativeToolCallResponse(
+  tool: McpConfigTool,
+  args: Record<string, any>,
+): Promise<{ content: { type: string; text: string }[]; isError: boolean }> {
+  const missingPerms = checkPermissions(tool.permissions);
+  if (missingPerms) {
+    return {
+      content: [
+        {
+          type: "text",
+          text: JSON.stringify({
+            success: false,
+            error: missingPerms,
+            tool: tool.name,
+            hint:
+              "This tool requires browser-context permissions. Use the Kollektiv app's assistant (chat or voice) to execute it.",
+          }),
+        },
+      ],
+      isError: true,
+    };
+  }
+
+  // 1. Check server-side executor first
+  const executor = _serverExecutors.get(tool.name);
+  if (executor) {
+    try {
+      return await executor(args);
+    } catch (e: any) {
+      return {
+        content: [{
+          type: "text",
+          text: JSON.stringify({
+            success: false,
+            error: `Server-side execution error: ${e?.message || e}`,
+            tool: tool.name,
+          }),
+        }],
+        isError: true,
+      };
+    }
+  }
+
+  // 2. Browser-context tools cannot execute server-side
+  if (tool.executionKind === "browser-context") {
+    return {
+      content: [
+        {
+          type: "text",
+          text: JSON.stringify({
+            success: false,
+            error: `${tool.name} requires a browser context (DOM, appEventBus, or localStorage) to execute.`,
+            tool: tool.name,
+            description: tool.description,
+            parameters: tool.parameters,
+            args,
+            hint:
+              "This native assistant tool cannot be called from the MCP server directly. Use the Kollektiv app's chat/voice assistant instead.",
+          }),
+        },
+      ],
+      isError: true,
+    };
+  }
+
+  // 3. Server-context tools without an executor
+  return {
+    content: [
+      {
+        type: "text",
+        text: JSON.stringify({
+          success: false,
+          error: `Server-side execution for ${tool.name} is not yet implemented.`,
+          tool: tool.name,
+          description: tool.description,
+          parameters: tool.parameters,
+          args,
+          hint:
+            "This tool can be called server-side but the executor is not wired yet. Use the Kollektiv app's assistant instead.",
+        }),
+      },
+    ],
+    isError: true,
+  };
+}
+
+// ─── Existing session-scoped components ──────────────────────────────────
 
 /** Wraps an InMemoryTransport pair so concurrent callers don't clobber
  *  each other's onmessage handler.  Each call queues internally and
@@ -121,15 +551,36 @@ function createSessionServer(
   );
 
   server.setRequestHandler(ListToolsRequestSchema, async () => {
-    const allTools: Array<{ name: string; [key: string]: any }> = [];
+    // Load native tools config
+    const nativeConfig = loadNativeConfig();
+    const nativeTools = nativeConfig.tools.map((t) =>
+      nativeToolToMcpSchema(t)
+    );
+
+    // Collect sub-server tools
+    const subServerTools: Array<{ name: string; [key: string]: any }> = [];
     for (const sub of subServers) {
-      allTools.push(...sub.tools);
+      subServerTools.push(...sub.tools);
     }
+
+    const allTools = [...nativeTools, ...subServerTools];
+    console.log(
+      `[Kollektiv MCP] ListTools: ${nativeTools.length} native + ${subServerTools.length} sub-server = ${allTools.length} total`,
+    );
     return { tools: allTools };
   });
 
   server.setRequestHandler(CallToolRequestSchema, async (request) => {
     const { name: toolName, arguments: args } = request.params;
+
+    // 1. Check if it's a native tool
+    const nativeConfig = loadNativeConfig();
+    const nativeTool = nativeConfig.tools.find((t) => t.name === toolName);
+    if (nativeTool) {
+      return await nativeToolCallResponse(nativeTool, args || {});
+    }
+
+    // 2. Check sub-servers
     const sub = toolToServer.get(toolName);
     if (!sub) {
       return {
@@ -160,6 +611,10 @@ export async function startKollektivMcp(
 ): Promise<KollektivMcpInstance> {
   const vaultPath = options.vaultPath ? resolve(options.vaultPath) : undefined;
   const port = options.port ?? 3012;
+  _httpPort = options.httpPort ?? 3001;
+
+  // Initialize server-side tool executors
+  initServerExecutors(_httpPort);
 
   // ── Shared sub-servers (created once, reused across sessions) ──────────
 
@@ -203,11 +658,6 @@ export async function startKollektivMcp(
   }
 
   // ── Multi-session transport routing ────────────────────────────────────
-  //
-  // Each incoming initialize request gets its own StreamableHTTPServerTransport
-  // + Server pair.  Subsequent requests carry the mcp-session-id header and
-  // are routed to the correct session.  This lets the browser page be refreshed
-  // without getting "Server already initialized" errors.
 
   const sessions = new Map<string, Session>();
 
@@ -219,10 +669,6 @@ export async function startKollektivMcp(
         "Access-Control-Allow-Headers",
         "Content-Type, Authorization, MCP-Session-ID, Accept"
       );
-      // Expose mcp-session-id so the browser's JavaScript can read this
-      // response header cross-origin. Without this, the client-side
-      // mcpService.ts cannot capture the session ID after initialize,
-      // causing every subsequent call to fail with "Session not found".
       res.setHeader("Access-Control-Expose-Headers", "mcp-session-id");
 
       if (req.method === "OPTIONS") {
@@ -231,7 +677,6 @@ export async function startKollektivMcp(
         return;
       }
 
-      // Read body once so we can inspect it before handing off to the transport
       let body: string;
       try {
         body = await readBody(req);
@@ -255,7 +700,6 @@ export async function startKollektivMcp(
         (m: any) => m.method === "initialize",
       );
 
-      // Extract session ID from request headers
       const rawSessionId = req.headers["mcp-session-id"];
       const sessionId =
         typeof rawSessionId === "string"
@@ -264,7 +708,6 @@ export async function startKollektivMcp(
             ? rawSessionId[0]
             : undefined;
 
-      // ── Route to existing session ──────────────────────────────────────
       if (!isInitialize) {
         const session = sessionId ? sessions.get(sessionId) : undefined;
         if (!session) {
@@ -282,26 +725,18 @@ export async function startKollektivMcp(
         return;
       }
 
-      // ── New session (initialize request) ───────────────────────────────
-      //
-      // If the client includes a session ID that we recognise, resume that
-      // session instead of creating a brand-new one (handles the case where
-      // the front-end re-initialises after a reconnect).
       if (sessionId && sessions.has(sessionId)) {
         const session = sessions.get(sessionId)!;
         await session.transport.handleRequest(req, res, parsedBody);
         return;
       }
 
-      // Create transport + server for a brand-new session
       const transport = createSessionTransport(sessions);
       const server = createSessionServer(subServers, toolToServer);
       await server.connect(transport);
 
-      // Pass the pre-parsed body so the transport doesn't try to re-read
       await transport.handleRequest(req, res, parsedBody);
 
-      // Capture the session ID that the transport generated
       const newSessionId = transport.sessionId;
       if (newSessionId) {
         sessions.set(newSessionId, { transport, server });
@@ -311,8 +746,10 @@ export async function startKollektivMcp(
 
   return new Promise((resolvePromise, reject) => {
     httpServer.listen(port, "127.0.0.1", () => {
+      const nativeConfig = loadNativeConfig();
       console.log(
-        `[Kollektiv MCP] serving on http://127.0.0.1:${port} with ${subServers.length} sub-server(s) (${toolToServer.size} total tools)`,
+        `[Kollektiv MCP] serving on http://127.0.0.1:${port} with ${subServers.length} sub-server(s) ` +
+        `(${toolToServer.size} sub-server tools + ${nativeConfig.tools.length} native tools = ${toolToServer.size + nativeConfig.tools.length} total)`,
       );
       resolvePromise({
         url: `http://127.0.0.1:${port}`,

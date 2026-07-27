@@ -59,6 +59,11 @@ Kollektiv is a high-performance, local-first application designed for prompt eng
 > server routes with Zod validation and rate limiters. Dual-backend failure handling for
 > fragile channels. 50+ new unit tests. See `docs/plans/2026-07-26-reach-channels.md`.
 
+> **2026-07-26 — Native MCP tools wiring:** All ~65 native assistant tools are now registered
+> with the built-in MCP server via `mcp-config.json`. Server-side executors wired for weather,
+> GitHub, RSS, Exa, Reddit, YouTube, Twitter, and URL scraping tools. Config validation, CI gate,
+> generation script, test suite, and docs added. See `docs/mcp-tools.md` and `docs/tools-inventory.md`.
+
 ---
 
 ## 🧭 Architecture Handbook
@@ -76,6 +81,7 @@ The architecture set is organized as a practical handbook for contributors and m
 - [docs/06_VOICE/VOICE_PIPELINE.md](docs/06_VOICE/VOICE_PIPELINE.md) — voice capture, planning, streaming, and interruption handling
 - [docs/08_IMPLEMENTATION/DIRECTORY_STRUCTURE.md](docs/08_IMPLEMENTATION/DIRECTORY_STRUCTURE.md) — repository layout and conventions
 - [docs/09_AI_WORKER/AI_WORKER_RULES.md](docs/09_AI_WORKER/AI_WORKER_RULES.md) — implementation and review rules
+- [docs/08_IMPLEMENTATION/ADD_NEW_TOOL.md](docs/08_IMPLEMENTATION/ADD_NEW_TOOL.md) — step-by-step guide for adding a new assistant tool and passing MCP gates
 - [docs/10_EXAMPLES/CREATE_CAPABILITY.md](docs/10_EXAMPLES/CREATE_CAPABILITY.md) — example path for adding a new capability
 - [contracts/interfaces.md](contracts/interfaces.md) — implementation-facing contracts and data shapes
 - [diagrams/README.md](diagrams/README.md) — diagram inventory and architecture views

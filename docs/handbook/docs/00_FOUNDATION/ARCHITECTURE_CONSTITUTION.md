@@ -247,7 +247,7 @@ Each `ActiveTab` maps to a top-level React component:
 | `prompt` | `SavedPrompts` | Nested, searchable prompt library with lineage/version graph, tree view, and edit/duplicate/delete. |
 | `gallery` | `ImageGallery` | Masonry media vault with categories, metadata, NSFW flag, pinning, gallery stats. |
 | `settings` | `SetupPage` | Settings shell with 5 main categories (App, Appearance, Integrations, Prompts, Gallery) and sub-tabs. |
-| `composer` | `ComposerPage` | Grid/contact-sheet builder with matting + typography, preset aspect ratios. Layer type is a `TextLayer \| ImageLayer` discriminated union. Panning/dragging/zooming use Pointer Events (mouse, touch, pen) with two-finger pinch-to-zoom. |
+| `composer` | `ComposerPage` | Grid/contact-sheet builder with matting + typography, preset aspect ratios. Layer type is a `TextLayer \| ImageLayer` discriminated union, with text layers offering a color picker for customizable text color. Panning/dragging/zooming use Pointer Events (mouse, touch, pen) with two-finger pinch-to-zoom. |
 | `image_compare` | `ImageCompare` | Synchronized side-by-side viewers with linked pan/zoom, SplitView slider, and compare/swap layout. |
 | `color_palette_extractor` | `ColorPaletteExtractor` | Extract color palette from image + AI mood/color naming. |
 | `resizer` | `ImageResizer` | Image resizing + Topaz Gigapixel upscale via server bridge. |

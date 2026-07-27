@@ -55,6 +55,8 @@ The engine must handle:
 
 ## Provider Catalog
 
+> **UI Update:** The footer now displays real‑time indicators for all LLM providers. In addition to the existing Ollama/LLM and Google entries, separate **OpenRouter** and **LLAMA.CPP** labels appear, reflecting whether an OpenRouter model is selected (`settings.openrouterModel`) or a Llama.cpp model is configured (`settings.llamacppModel`). This gives users immediate visual feedback on the active provider.
+
 The engine supports 5 providers, selected via `LLMSettings.activeLLM`:
 
 | Provider ID | Service module | Notes |

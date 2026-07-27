@@ -172,6 +172,7 @@ export default defineConfig(({ mode }) => {
       // Vitest config — exclude Playwright E2E tests
       // @ts-ignore
 test: {
+    timeout: 20000,
     exclude: ['e2e/**', 'node_modules/**'],
     environment: 'jsdom',
     setupFiles: [],

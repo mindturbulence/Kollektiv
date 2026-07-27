@@ -34,8 +34,6 @@ vi.mock('@modelcontextprotocol/sdk/server/streamableHttp.js', () => ({
         const first = messages[0];
 
         if (first?.method === 'tools/list') {
-          // Respond with aggregated tools from both mock sub-servers
-          // Note: no mcp-session-id header — real transport only sends it on initialize
           res.writeHead(200, { 'Content-Type': 'application/json' });
           res.end(JSON.stringify({
             jsonrpc: '2.0',
@@ -55,7 +53,6 @@ vi.mock('@modelcontextprotocol/sdk/server/streamableHttp.js', () => ({
         }
 
         if (first?.method === 'tools/call') {
-          // Simulate sub-server routing: browser_* tools → playwright, others → obsidian vault
           const toolName = first.params?.name || '';
           const toolArgs = first.params?.arguments || {};
           const isBrowserTool = toolName.startsWith('browser_');
@@ -76,7 +73,6 @@ vi.mock('@modelcontextprotocol/sdk/server/streamableHttp.js', () => ({
           return;
         }
 
-        // Default: respond as initialize
         res.writeHead(200, {
           'Content-Type': 'application/json',
           'mcp-session-id': id,
@@ -102,14 +98,10 @@ vi.mock('@modelcontextprotocol/sdk/server/streamableHttp.js', () => ({
 vi.mock('@modelcontextprotocol/sdk/inMemory.js', () => ({
   InMemoryTransport: {
     createLinkedPair: vi.fn(() => {
-      // Client-side transport: SubServerClient.send() calls transport.send(msg),
-      // then waits for onmessage with matching id.  The mock send MUST trigger
-      // onmessage so send() resolves instead of hanging 15s until timeout.
       const clientTransport: Record<string, any> = {
         start: vi.fn(async () => {}),
         send: vi.fn((msg: any) => {
           if (clientTransport.onmessage) {
-            // Respond asynchronously so the SubServerClient promise settles
             setTimeout(() => {
               clientTransport.onmessage({
                 jsonrpc: '2.0',
@@ -122,7 +114,6 @@ vi.mock('@modelcontextprotocol/sdk/inMemory.js', () => ({
         onmessage: null as any,
         close: vi.fn(async () => {}),
       };
-      // Server-side transport (used by the mock MCP Server — unused)
       const serverTransport = {
         start: vi.fn(async () => {}),
         send: vi.fn(),
@@ -141,7 +132,6 @@ vi.mock('@modelcontextprotocol/sdk/types.js', () => ({
 
 vi.mock('@bitbonsai/mcpvault', () => ({
   createServer: vi.fn(() => ({
-    // Returns an object that looks like an MCP Server
     connect: vi.fn(async () => {}),
     close: vi.fn(async () => {}),
     setRequestHandler: vi.fn(),
@@ -161,8 +151,6 @@ vi.mock('node:fs', () => ({
   existsSync: vi.fn(() => true),
 }));
 
-// Mock node:crypto's randomUUID for predictable session IDs
-// Must provide both default and named exports for Vitest's hoisted mock resolution
 vi.mock('node:crypto', () => {
   const mockFn = () => 'mocked-uuid-' + Math.random().toString(36).slice(2, 10);
   return {
@@ -172,7 +160,6 @@ vi.mock('node:crypto', () => {
 });
 
 // ─── Module under test ───────────────────────────────────────────────────
-// Import after mocks are set up
 const { startKollektivMcp } = await import('./kollektivMcp');
 
 function getFreePort(): Promise<number> {
@@ -186,7 +173,9 @@ function getFreePort(): Promise<number> {
   });
 }
 
-// ─── Tests ────────────────────────────────────────────────────────────────
+// ═════════════════════════════════════════════════════════════════════════
+// ORIGINAL TESTS — Sub-server creation, port binding, MCP protocol
+// ═════════════════════════════════════════════════════════════════════════
 
 describe('startKollektivMcp', () => {
   let freePort: number;
@@ -198,7 +187,6 @@ describe('startKollektivMcp', () => {
   });
 
   afterEach(async () => {
-    // Clean up any lingering servers between tests
     const { execSync } = require('node:child_process');
     try {
       execSync(`netstat -ano | findstr ":${freePort}" | findstr "LISTENING"`, {
@@ -214,9 +202,7 @@ describe('startKollektivMcp', () => {
             try { execSync(`taskkill /F /PID ${pid}`, { timeout: 1000 }); } catch {}
           }
         });
-    } catch {
-      // No process — that's fine
-    }
+    } catch {}
   });
 
   it('starts an MCP server and returns an instance with url, port, stop', async () => {
@@ -246,7 +232,6 @@ describe('startKollektivMcp', () => {
   });
 
   it('starts without crashing when both external server providers fail', async () => {
-    // Make both creation functions throw
     const vaultMock = await import('@bitbonsai/mcpvault');
     const playwrightMock = await import('@playwright/mcp');
     (vaultMock.createServer as any).mockImplementation(() => { throw new Error('Vault unavailable'); });
@@ -265,7 +250,6 @@ describe('startKollektivMcp', () => {
   });
 
   it('rejects when the port is already in use', async () => {
-    // Start a server on the port first, then try to start kollektivMcp on the same port
     const http = require('node:http');
     const blocker = http.createServer();
     await new Promise<void>((resolve) => blocker.listen(freePort, '127.0.0.1', resolve));
@@ -284,11 +268,8 @@ describe('startKollektivMcp', () => {
       vaultPath: '/mocked/vault',
       port: freePort,
     });
-
-    // Stop the server
     await inst.stop();
 
-    // After stopping, the port should be free again
     const net = require('node:net');
     const isFree = await new Promise<boolean>((resolve) => {
       const tester = net.createServer();
@@ -322,13 +303,9 @@ describe('startKollektivMcp', () => {
         }),
       });
       expect(res.status).toBe(200);
-
-      // The response should include a session ID header (may be in body instead)
       res.headers.get('mcp-session-id');
       const body = await res.json();
       expect(body).toBeDefined();
-
-      // Session was created (mocked transport was instantiated)
       expect(mockTransports.size).toBeGreaterThanOrEqual(1);
     } finally {
       await inst.stop();
@@ -401,7 +378,6 @@ describe('startKollektivMcp', () => {
       port: freePort,
     });
     try {
-      // 1. Establish a session with initialize
       const initRes = await fetch(`http://127.0.0.1:${freePort}`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -420,7 +396,6 @@ describe('startKollektivMcp', () => {
       const sessionId = initRes.headers.get('mcp-session-id');
       expect(sessionId).toBeTruthy();
 
-      // 2. Send tools/list against the established session
       const toolsRes = await fetch(`http://127.0.0.1:${freePort}`, {
         method: 'POST',
         headers: {
@@ -440,7 +415,6 @@ describe('startKollektivMcp', () => {
       expect(toolsBody.result).toBeDefined();
       expect(Array.isArray(toolsBody.result.tools)).toBe(true);
 
-      // 3. Verify tools from both sub-servers are aggregated
       const toolNames = toolsBody.result.tools.map((t: any) => t.name);
       expect(toolNames).toContain('read_note');
       expect(toolNames).toContain('write_note');
@@ -448,8 +422,6 @@ describe('startKollektivMcp', () => {
       expect(toolNames).toContain('browser_navigate');
       expect(toolNames).toContain('browser_screenshot');
       expect(toolNames).toContain('browser_click');
-
-      // 4. Verify only 1 transport was created (by initialize call, not by tools/list)
       expect(mockTransports.size).toBe(1);
     } finally {
       await inst.stop();
@@ -462,7 +434,6 @@ describe('startKollektivMcp', () => {
       port: freePort,
     });
     try {
-      // 1. Establish a session
       const initRes = await fetch(`http://127.0.0.1:${freePort}`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -481,7 +452,6 @@ describe('startKollektivMcp', () => {
       const sessionId = initRes.headers.get('mcp-session-id');
       expect(sessionId).toBeTruthy();
 
-      // 2. Call a vault tool (read_note) — should route to obsidian sub-server
       const vaultCallRes = await fetch(`http://127.0.0.1:${freePort}`, {
         method: 'POST',
         headers: {
@@ -502,7 +472,6 @@ describe('startKollektivMcp', () => {
       const vaultBody = await vaultCallRes.json();
       expect(vaultBody.result.content[0].text).toBe('Called read_note on obsidian sub-server');
 
-      // 3. Call a browser tool (browser_navigate) — should route to playwright sub-server
       const browserCallRes = await fetch(`http://127.0.0.1:${freePort}`, {
         method: 'POST',
         headers: {
@@ -522,8 +491,6 @@ describe('startKollektivMcp', () => {
       expect(browserCallRes.status).toBe(200);
       const browserBody = await browserCallRes.json();
       expect(browserBody.result.content[0].text).toBe('Called browser_navigate on playwright sub-server');
-
-      // 4. Verify still only 1 transport (no new session created for tools/call)
       expect(mockTransports.size).toBe(1);
     } finally {
       await inst.stop();
@@ -536,7 +503,6 @@ describe('startKollektivMcp', () => {
       port: freePort,
     });
     try {
-      // First, create a session via initialize
       const res1 = await fetch(`http://127.0.0.1:${freePort}`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -554,7 +520,6 @@ describe('startKollektivMcp', () => {
       const sessionId = res1.headers.get('mcp-session-id');
       expect(sessionId).toBeTruthy();
 
-      // Send another initialize with the same session ID — should resume, not create new
       const initialTransportCount = mockTransports.size;
       const res2 = await fetch(`http://127.0.0.1:${freePort}`, {
         method: 'POST',
@@ -574,10 +539,11 @@ describe('startKollektivMcp', () => {
         }),
       });
       expect(res2.status).toBe(200);
-      // No new transport should have been created
       expect(mockTransports.size).toBe(initialTransportCount);
     } finally {
       await inst.stop();
     }
   });
 });
+
+

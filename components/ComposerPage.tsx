@@ -556,9 +556,9 @@ const ComposerPage: React.FC<ComposerPageProps> = ({ showGlobalFeedback, isExiti
                                 {mode === 'grid' && gridLayout && gridItems.map((item, idx) => (
                                     <div key={idx} className="absolute bg-transparent overflow-hidden" style={{ width: gridLayout.cw, height: gridLayout.ch, left: gridLayout.gap + (idx % gridCols) * (gridLayout.cw + gridLayout.gap), top: gridLayout.gap + Math.floor(idx / gridCols) * (gridLayout.ch + gridLayout.gap) }}>
                                         {item ? <ItemRenderer item={item} w={gridLayout.cw} h={gridLayout.ch} onRemove={() => setGridItems(prev => { const n = [...prev]; n[idx]=null; return n; })} onTransform={t => setGridItems(prev => { const n = [...prev]; n[idx]={...item, ...t}; return n; })} /> 
-                                        : <div className="w-full h-full flex flex-col items-center justify-center gap-2 opacity-10 hover:opacity-40 transition-opacity">
-                                            <button onClick={() => { setPickerTarget(idx); setIsPickerOpen(true); }} className="form-btn btn-circle btn-sm bg-transparent border-none"><FolderClosedIcon className="w-8 h-8"/></button>
-                                            <button onClick={() => { setPickerTarget(idx); gridFileInputRef.current?.click(); }} className="form-btn btn-circle btn-sm bg-transparent border-none"><PlusIcon className="w-8 h-8"/></button>
+                                        : <div className="w-full h-full flex flex-col items-center justify-center gap-2 opacity-10 hover:opacity-40 transition-opacity bg-base-200/30 rounded-md">
+                                            <button onClick={() => { setPickerTarget(idx); setIsPickerOpen(true); }} className="btn btn-circle btn-sm bg-transparent border-none text-primary"><FolderClosedIcon className="w-8 h-8"/></button>
+                                            <button onClick={() => { setPickerTarget(idx); gridFileInputRef.current?.click(); }} className="btn btn-circle btn-sm bg-transparent border-none text-primary"><PlusIcon className="w-8 h-8"/></button>
                                         </div>}
                                     </div>
                                 ))}
@@ -566,10 +566,10 @@ const ComposerPage: React.FC<ComposerPageProps> = ({ showGlobalFeedback, isExiti
                                     <div className="w-full h-full relative">
                                         <div ref={framePaddingRef} className="w-full h-full will-change-[padding]">
                                             {frameItem ? <ItemRenderer animateEntry item={frameItem} w={previewMetrics.width - (frameInsets[1]+frameInsets[3])*previewMetrics.scale} h={previewMetrics.height - (frameInsets[0]+frameInsets[2])*previewMetrics.scale} onRemove={() => setFrameItem(null)} onTransform={t => setFrameItem({...frameItem!, ...t})} />
-                                            : <div className="w-full h-full border-2 border-dashed border-base-content/10 flex flex-col items-center justify-center gap-4 opacity-40 hover:opacity-100 transition-opacity">
+                                            : <div className="w-full h-full border-2 border-dashed border-base-content/10 bg-base-200/30 flex flex-col items-center justify-center gap-4 opacity-40 hover:opacity-100 transition-opacity">
                                                 <div className="flex gap-4">
-                                                    <button onClick={() => setIsPickerOpen(true)} className="form-btn rounded-none tracking-widest px-8">LIBRARY</button>
-                                                    <button onClick={() => frameFileInputRef.current?.click()} className="form-btn form-btn-primary rounded-none tracking-widest px-8">UPLOAD</button>
+                                                    <button onClick={() => setIsPickerOpen(true)} className="btn btn-circle btn-sm bg-transparent border-none text-primary"><FolderClosedIcon className="w-8 h-8"/></button>
+                                                    <button onClick={() => frameFileInputRef.current?.click()} className="btn btn-circle btn-sm bg-transparent border-none text-primary"><PlusIcon className="w-8 h-8"/></button>
                                                 </div>
                                             </div>}
                                         </div>
@@ -610,6 +610,7 @@ const ComposerPage: React.FC<ComposerPageProps> = ({ showGlobalFeedback, isExiti
                                                         <div className="flex justify-between items-center"><span className="text-[9px] font-black uppercase opacity-40 text-primary">Font Size</span><span className="text-[10px] font-mono font-bold text-primary">{layer.fontSize}PX</span></div>
                                                         <input type="range" min="8" max="1500" value={layer.fontSize} onChange={e => { const v = parseInt(e.target.value); setLayers(prev => prev.map(s => s.id === layer.id ? {...s, fontSize: v} : s)); }} className="range range-xs range-primary" />
                                                         <select value={layer.fontFamily} onChange={e => setLayers(prev => prev.map(s => s.id === layer.id ? {...s, fontFamily: e.target.value} : s))} className="form-select h-8 w-full rounded-none text-[10px] font-bold uppercase tracking-tight">{FONTS.map(f => <option key={f.family} value={f.family}>{f.name}</option>)}</select>
+                                                        <div className="flex justify-between items-center mt-2"><span className="text-[9px] font-black uppercase opacity-40 text-primary">Color</span><input type="color" value={layer.color} onChange={e => setLayers(prev => prev.map(s => s.id === layer.id ? {...s, color: e.target.value} : s))} className="w-8 h-8 p-0 border-none bg-transparent" /></div>
                                                     </>
                                                 ) : (
                                                     <>
