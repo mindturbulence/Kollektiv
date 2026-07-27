@@ -53,8 +53,10 @@ export const isGoogleAuthValid = (identity?: GoogleIdentityConnection | null): i
 
 /** True if the token has expired (or is within the safety margin of expiring). */
 export const isTokenExpired = (identity: GoogleIdentityConnection): boolean => {
-    // Use explicit expiresAt if available, else fall back to connectedAt heuristic
-    const deadline = identity.expiresAt
+    // Use explicit expiresAt if available, else fall back to connectedAt heuristic.
+    // `!= null` and not truthiness: expiresAt === 0 means "expired at the epoch"
+    // (that's how markGoogleTokenInvalid kills a revoked token), not "unset".
+    const deadline = identity.expiresAt != null
         ? identity.expiresAt
         : (identity.connectedAt ? identity.connectedAt + GOOGLE_TOKEN_EXPIRY_MS : 0);
     return Date.now() >= deadline;
@@ -62,9 +64,29 @@ export const isTokenExpired = (identity: GoogleIdentityConnection): boolean => {
 
 /** How many ms remain before the token expires. Negative if already expired. */
 export const msUntilExpiry = (identity: GoogleIdentityConnection): number => {
-    if (identity.expiresAt) return identity.expiresAt - Date.now();
+    if (identity.expiresAt != null) return identity.expiresAt - Date.now();
     if (identity.connectedAt) return (identity.connectedAt + GOOGLE_TOKEN_EXPIRY_MS) - Date.now();
     return -1;
+};
+
+/**
+ * Mark the stored token dead after a Google API returned 401.
+ *
+ * Revoking access at myaccount.google.com changes nothing locally — the token is
+ * still stored and `expiresAt` is still in the future — so `isGoogleAuthValid`
+ * would keep returning true forever: tools hand back a dead token and Settings
+ * keeps showing the ACTIVE card with no reconnect button. Zeroing `expiresAt`
+ * flips both. `isConnected` stays true on purpose so a *genuine* expiry still
+ * routes through silent refresh; only a real revocation falls all the way
+ * through to the "AUTHENTICATE WITH GOOGLE" button.
+ */
+export const markGoogleTokenInvalid = async (): Promise<void> => {
+    try {
+        const { loadLLMSettings, saveLLMSettings } = await import('./settingsStorage');
+        const settings = loadLLMSettings();
+        if (!settings.googleIdentity?.isConnected) return;
+        saveLLMSettings({ ...settings, googleIdentity: { ...settings.googleIdentity, expiresAt: 0 } });
+    } catch { /* best-effort — never let invalidation break the caller's error path */ }
 };
 
 /** Emit an event so the SetupPage (which owns the GSI token client) can

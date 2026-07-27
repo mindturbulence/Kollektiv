@@ -12,7 +12,7 @@ All issues resolved as of **2026-07-25**. This file now serves as:
 These decisions are permanent — do not re-litigate without the user asking first.
 
 - **ISSUE-22 — send_gmail/delete_gmail confirmation gate: ⛔ REVERTED (user decision, 2026-07-24).** The user considers Google OAuth consent sufficient permission and does not want per-action confirmation prompts. The `confirmSensitiveAction` helper and all call sites were removed. **Do not re-add without explicit user request.**
-- **ISSUE-6 — Old `OBSIDIAN_API_KEY` is exposed in git history.** The key was rotated. The old `OBSIDIAN_API_KEY` path was fully retired in favor of `OBSIDIAN_VAULT_PATH` (direct vault folder access via `kollektivMcp.ts`). The rotated key is not needed by the app.
+- **ISSUE-6 — Old `OBSIDIAN_API_KEY` is exposed in git history.** The key was rotated. The old `OBSIDIAN_API_KEY` path was fully retired in favor of `OBSIDIAN_VAULT_PATH` (direct vault folder access via `kollektivMcp.ts`). **Re-verified 2026-07-27: `OBSIDIAN_API_KEY` appears in zero `.ts`/`.tsx`/`.json` files — docs only.** The app does not read it. Nothing to rotate, nothing to test; the stale "rotate the key" manual test was deleted. Setting `OBSIDIAN_VAULT_PATH` is the whole configuration.
 
 ---
 
@@ -51,18 +51,6 @@ Prerequisites: A research project active with a vault folder connected.
 - [ ] 4. Open the Findings panel — confirm the new finding text appears
 - [ ] **Pass if:** The assistant can append findings mid-conversation without a UI save click
 
-**ISSUE-20 — Rapid mic toggle (ghost session)**
-Prerequisites: A Gemini API key configured (or other live-voice backend).
-
-- [ ] 1. Open the app and start a live voice session (click the mic icon)
-- [ ] 2. **While the status shows "connecting"**, click the mic icon again to stop
-- [ ] 3. Wait 5 seconds
-- [ ] 4. Confirm the UI shows the mic as **off/idle** (no pulsing, no status indicator)
-- [ ] 5. Confirm no audio is being captured (browser tab's mic indicator is off)
-- [ ] 6. Try toggling on again — confirm a fresh session starts correctly
-- [ ] 7. Repeat steps 1-3 three times to be sure
-- [ ] **Pass if:** No ghost session lingers after rapid on/off clicking
-
 **ISSUE-21 — e2e headed smoke test**
 Prerequisites: Node.js, Playwright browsers installed (`npx playwright install chromium`).
 
@@ -89,14 +77,29 @@ Prerequisites: A Spotify Developer app with Client ID, running on a URL the Spot
 - [ ] 6. Use a Spotify tool or feature to confirm the token works
 - [ ] **Pass if:** Spotify connects end-to-end from a clean checkout
 
-**ISSUE-2 — Google silent refresh**
-Prerequisites: A Google OAuth Client ID configured, Gmail API enabled, an expired (or about-to-expire) token.
+**ISSUE-2 — Google silent refresh** ❌ **FAILED 2026-07-27 (revoke path) — root cause found, see ISSUE-44**
+Prerequisites: A Google OAuth Client ID configured, Gmail API enabled.
 
+The old step 2 ("wait for the token to expire **or manually revoke it**") conflated two different
+things. Revocation is not expiry: `prompt: ''` silent refresh cannot survive a revoked grant by
+design — Google requires fresh consent. The two cases need separate tests.
+
+*Test A — genuine expiry (the actual silent-refresh path):*
 - [ ] 1. Connect a Google account with Gmail scope
-- [ ] 2. Wait for the token to expire (or manually revoke it)
-- [ ] 3. Trigger a Gmail assistant tool (`send_gmail`, `search_gmail`, etc.)
-- [ ] 4. Confirm the tool succeeds **without** showing a full Google re-consent popup
-- [ ] **Pass if:** Silent refresh works — no full re-consent for Gmail tools
+- [ ] 2. In DevTools, edit the stored settings blob in `localStorage` and set
+      `googleIdentity.expiresAt` to a past timestamp (e.g. `1`). Do **not** revoke at Google.
+- [ ] 3. Trigger a Gmail assistant tool (`read_gmail`, `send_gmail`, …)
+- [ ] 4. Confirm the tool succeeds **without** a full Google re-consent popup
+- [ ] **Pass if:** `trySilentRefreshWithWait` → GSI → poll returns a fresh token within ~5s
+
+*Test B — revocation (recovery, not silent refresh):*
+- [ ] 1. Connect a Google account, then revoke Kollektiv's access at myaccount.google.com
+- [ ] 2. Trigger a Gmail assistant tool — it should report a 401 / session-expired error
+- [ ] 3. Open Settings > Integrations > Google Cloud
+- [ ] 4. Confirm the panel shows **AUTHENTICATE WITH GOOGLE** (not the ACTIVE profile card)
+- [ ] 5. Click it, complete consent, confirm Gmail tools work again
+- [ ] **Pass if:** The app detects the dead token itself and offers reconnect without the user
+      first having to click "Revoke Access" manually
 
 **ISSUE-11 — Source-aware answers**
 Prerequisites: A research project with at least one source file added and readable.
@@ -107,15 +110,6 @@ Prerequisites: A research project with at least one source file added and readab
 - [ ] 4. Confirm the answer references the source content specifically
 - [ ] 5. Confirm citation footers appear in the reply (e.g., `[1]`, `[2]`)
 - [ ] **Pass if:** Answers demonstrably use added source content with citations
-
-**ISSUE-13 — Noise cancellation**
-Prerequisites: A Gemini API key configured for live voice, a moderately noisy environment.
-
-- [ ] 1. Start a live voice session
-- [ ] 2. While speaking, introduce background noise (fan, music at low volume, etc.)
-- [ ] 3. Confirm the assistant's speech-to-text is still accurate
-- [ ] 4. Confirm the VAD (voice activity detection) isn't tripping on background noise
-- [ ] **Pass if:** Noise cancellation is perceptibly active — cleaner VAD than without
 
 **ISSUE-30 — Finalize production CSP (drop Report-Only)**
 Prerequisites: A real production deploy (`pnpm build && pnpm preview`, or actual hosting), Gemini/Spotify/Google OAuth credentials configured, a running local Ollama or llama.cpp instance.
@@ -129,15 +123,6 @@ Context: [handbook/docs/00_FOUNDATION/ARCHITECTURE_CONSTITUTION.md § Security H
 - [ ] 6. Once all of the above are clean, change the `isProd` branch in `security.ts` from `Content-Security-Policy-Report-Only` to `Content-Security-Policy` (one-line header-name swap)
 - [ ] **Pass if:** All five flows run violation-free under Report-Only, then the same flows are re-verified once switched to enforced
 
-### User-only
-
-**ISSUE-6 — Rotate Obsidian API key**
-- [ ] 1. Open Obsidian's Local REST API plugin settings
-- [ ] 2. Generate a new API key
-- [ ] 3. Update `OBSIDIAN_API_KEY` in your `.env` file
-- [ ] 4. Restart the dev server
-- [ ] 5. Confirm Obsidian tools still work with the new key
-
 ---
 
 ## Changelog (Resolved Issues)
@@ -148,6 +133,7 @@ Context: [handbook/docs/00_FOUNDATION/ARCHITECTURE_CONSTITUTION.md § Security H
 |-------|-------|--------|
 | 6 | Hardcoded Obsidian API key in package.json scripts + server.ts | ✅ Key rotated, code fixed, old path retired |
 | 22 | send_gmail/delete_gmail confirmation gate | ⛔ Reverted by user decision |
+| 43 | `confirmSensitiveAction` regression — the reverted Gmail confirm gate was back in the code | ✅ Fixed 2026-07-27 — ISSUES.md:14 claimed "the helper and all call sites were removed", but `services/tools/gmailTools.ts` still defined it (line 35) and called it in `send_gmail` (126) and `delete_gmail` (181). **Second time this has crept back in.** Helper + both call sites deleted again; `gmailSendDeclined`/`gmailDeleteDeclined` strings removed with them. |
 | 34 | Request body limit too small (413 PayloadTooLargeError) | ✅ Fixed — `express.json({ limit: '10mb' })` in server.ts |
 
 ### 🐛 Bug Fixes
@@ -163,13 +149,13 @@ Context: [handbook/docs/00_FOUNDATION/ARCHITECTURE_CONSTITUTION.md § Security H
 | 10 | Research "Save Findings" appends instead of overwriting | ✅ Fixed — added findings.save() overwrite path |
 | 11 | Research assistant answers never source-aware | ✅ Fixed — sourceContext threaded through all providers |
 | 12 | `append_findings`/`expand_source` assistant tools never added | ✅ Fixed — both tools added, backed by researchVault paths |
-| 13 | Noise cancellation module built but never wired into voice pipeline | ✅ Fixed — wired into liveAssistantService.ts |
+| 13 | Noise cancellation module built but never wired into voice pipeline | ✅ Fixed — wired into liveAssistantService.ts. **Manually verified PASS 2026-07-27.** |
 | 14 | MCPVault Obsidian migration never wired in | ✅ Fully fixed — kollektivMcp on port 3012 with 61 tools |
 | 15 | Obsidian Second Brain has no Settings UI | ✅ Fixed — capabilities text corrected, env-var path documented |
 | 17 | OpenAI/ElevenLabs credentials under "Google Cloud" tab | ✅ Fixed — moved to AI Engine > Voice Engine Credentials |
 | 18 | OpenRouter provider tab had no configuration UI | ✅ Fixed — API key + model fields added |
 | 19 | No settings UI for ambient background music URL | ✅ Fixed — field added to Appearance > Background |
-| 20 | Rapid mic on/off leaves ghost live-assistant session | ✅ Fixed — generation counter with stale-connection cleanup |
+| 20 | Rapid mic on/off leaves ghost live-assistant session | ✅ Fixed — generation counter with stale-connection cleanup. **Manually verified PASS 2026-07-27.** |
 | 21 | e2e smoke test timeout (OPFS handle persistence) | ✅ Fixed — IDB cleanup in initScript + Promise.race fallback |
 | 23 | Chat panel crashes with `msg.content.includes is not a function` | ✅ Fixed — fixed listener + defensive coercion in chatStorage |
 | 35 | Chat panel broadcasts streaming text to voice-assistant subtitle (liveCaption bleed) | ✅ Fixed — removed `appEventBus.emit('liveCaption', ...)` from LLMChatPanel.tsx |
@@ -177,6 +163,7 @@ Context: [handbook/docs/00_FOUNDATION/ARCHITECTURE_CONSTITUTION.md § Security H
 | 37 | Composer Page: NaN corruption (Width/Height/Grid Cols/Rows), uncontrolled Spacing slider, RESET/grid-shrink with no confirmation | ✅ Fixed — `parseInt(x) \|\| fallback` guards, controlled slider via inverse of `getMaxGapPerGutter`, RESET and grid-shrink now route through `ConfirmationModal` |
 | 38 | Composer Page: `Layer` type conflated text/image fields (dummy color/fontFamily on image layers, `fontSize` overloaded as image-width proxy); pan/drag/zoom mouse-only | ✅ Fixed — `Layer` split into `TextLayer \| ImageLayer` discriminated union; `ItemRenderer`/`LayerRenderer` migrated to Pointer Events with pinch-to-zoom |
 | 39 | Media Panel: Spotify URI/URL hijacked into a bogus YouTube ID by an unanchored regex fallback; panel never opens when the assistant triggers Spotify playback | ✅ Fixed — Spotify parser tried before YouTube, loose YouTube fallback removed (`MediaPanel.tsx` + `VideoPlayerOverlay.tsx`), `openMediaPanel` wired to `isMediaPanelOpen` in `useAppEventBus.ts`, click-outside guarded against the video overlay's backdrop |
+| 44 | Revoked Google token leaves the app permanently stuck as "connected" — assistant can't reconnect | ✅ Fixed 2026-07-27 — root cause of the ISSUE-2 revoke-path failure. Revoking at Google changes nothing locally: `accessToken` is still stored and `expiresAt` is still in the future, so `isGoogleAuthValid()` kept returning `true`. Consequences: `ensureGoogleToken` (`gmailTools.ts:17`) handed back the dead token and never even entered the refresh path, and `IntegrationsSection.tsx:265` rendered the ACTIVE profile card with only "Revoke Access" — **no AUTHENTICATE button**, so the only escape was manually clicking Revoke Access first. Nothing anywhere invalidated the identity on a 401. Fixed with `markGoogleTokenInvalid()` in `utils/googleAuth.ts` (sets `expiresAt: 0`, keeps `isConnected` so genuine expiry still silently refreshes), called on 401 from all four Gmail fetches and from `fileUtils.extractGoogleError`. **Second defect found while verifying:** `isTokenExpired`/`msUntilExpiry` tested `expiresAt` for *truthiness*, so `0` fell through to the `connectedAt + 55min` heuristic and a freshly-connected identity still read as valid — the invalidation was inert. Both now use `!= null`. New `utils/googleAuth.test.ts` covers the real implementation (every other suite mocks `googleAuth` wholesale, which is why 692 passing tests missed it). |
 | 40 | Media Panel: no Files tab, no way to stop/query playback from the assistant, `spotify_play` hard-required an auth token for a public embed | ✅ Fixed — Files tab (chat attachments + vault `fileSystemManager`), `stop_media`/`get_current_media` tools backed by `services/mediaPlaybackStore.ts`, auth-token check dropped from `spotify_play` |
 
 ### 🧹 Cleanup & Tech Debt

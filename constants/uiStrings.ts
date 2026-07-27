@@ -19,10 +19,6 @@ export const UI_STRINGS = {
   googleConnectFirst: 'Connect your Google account first.',
   googleRefreshing: 'Refreshing Google session...',
 
-  // ── Gmail tool returns (sent back to the language model) ───────────
-  gmailSendDeclined: 'User declined: the email was NOT sent. Do not retry unless the user explicitly asks again.',
-  gmailDeleteDeclined: 'User declined: the message was NOT modified. Do not retry unless the user explicitly asks again.',
-
   // ── Proxy denial (server-side) ────────────────────────────────────
   proxyTargetNotAllowed:
     'Target host is not in the proxy allowlist. Add the host in Settings > Integrations, or route through a configured backend.',

@@ -6,7 +6,7 @@
  */
 import type { AssistantTool } from './types';
 import { loadLLMSettings } from '../../utils/settingsStorage';
-import { isGoogleAuthValid } from '../../utils/googleAuth';
+import { isGoogleAuthValid, markGoogleTokenInvalid } from '../../utils/googleAuth';
 import { UI_STRINGS } from '../../constants/uiStrings';
 
 // ── Helpers ──
@@ -31,12 +31,10 @@ async function ensureGoogleToken(): Promise<{ token: string } | string> {
   return `Error: ${UI_STRINGS.googleSessionExpired}`;
 }
 
-/** Blocking, per-action user confirmation for destructive external actions. */
-const confirmSensitiveAction = (summary: string): boolean => {
-  if (typeof window === 'undefined' || typeof window.confirm !== 'function') {
-    return false;
-  }
-  return window.confirm(`The assistant wants to:\n\n${summary}\n\nAllow this?`);
+/** A 401 means the stored token is dead — expired *or* revoked at Google. Invalidate it
+ *  locally so Settings stops claiming ACTIVE and offers reconnect. */
+const noteAuthFailure = (res: Response): void => {
+  if (res.status === 401) void markGoogleTokenInvalid();
 };
 
 // ── Tools ──
@@ -69,7 +67,7 @@ export const gmailTools: AssistantTool[] = [
           const q = args.action === 'search' && args.query ? `&q=${encodeURIComponent(String(args.query))}` : '';
           const max = Math.min(Math.max(Number(args.maxResults) || 10, 1), 20);
           const res = await fetch(`${BASE}/messages?maxResults=${max}${q}&fields=messages(id,threadId,snippet,labelIds)`, { headers });
-          if (!res.ok) return `Gmail API error: ${res.status} ${res.statusText}${res.status === 401 ? ' — token expired, re-authorize in Settings.' : ''}`;
+          if (!res.ok) { noteAuthFailure(res); return `Gmail API error: ${res.status} ${res.statusText}${res.status === 401 ? ' — token expired, re-authorize in Settings.' : ''}`; }
           if (res.status === 204) return 'No messages found.';
           const data = await res.json();
           if (!data.messages?.length) return 'No messages found.';
@@ -83,7 +81,7 @@ export const gmailTools: AssistantTool[] = [
         } else if (args.action === 'read') {
           if (!args.query) return 'Error: provide a message id as the "query" parameter.';
           const res = await fetch(`${BASE}/messages/${encodeURIComponent(String(args.query))}?format=full`, { headers });
-          if (!res.ok) return `Gmail API error: ${res.status} ${res.statusText}`;
+          if (!res.ok) { noteAuthFailure(res); return `Gmail API error: ${res.status} ${res.statusText}`; }
           const msg = await res.json();
           const h = (name: string) => msg.payload?.headers?.find((x: any) => x.name === name)?.value || '';
           const extractBody = (part: any): string => {
@@ -123,9 +121,6 @@ export const gmailTools: AssistantTool[] = [
       const token = authResult.token;
       const to = String(args.to || '');
       const subject = String(args.subject || '');
-      if (!confirmSensitiveAction(`Send an email\nTo: ${to}\nSubject: ${subject}`)) {
-        return UI_STRINGS.gmailSendDeclined;
-      }
       try {
         const body = String(args.body || '');
         const cc = args.cc ? String(args.cc) : '';
@@ -149,6 +144,7 @@ export const gmailTools: AssistantTool[] = [
           body: JSON.stringify({ raw: b64url }),
         });
         if (!res.ok) {
+          noteAuthFailure(res);
           const err = await res.text().catch(() => res.statusText);
           return `Failed to send email: ${res.status} ${err}`;
         }
@@ -175,12 +171,6 @@ export const gmailTools: AssistantTool[] = [
       if (typeof authResult === 'string') return authResult;
       const token = authResult.token;
       const wantsPermanent = args.action === 'delete';
-      const summary = wantsPermanent
-        ? `PERMANENTLY DELETE (irreversible)\nGmail message: ${String(args.id)}`
-        : `Move to trash (undoable in Gmail UI)\nGmail message: ${String(args.id)}`;
-      if (!confirmSensitiveAction(summary)) {
-        return UI_STRINGS.gmailDeleteDeclined;
-      }
       try {
         const msgId = encodeURIComponent(String(args.id));
         const isPermanent = wantsPermanent;
@@ -192,6 +182,7 @@ export const gmailTools: AssistantTool[] = [
           headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
         });
         if (!res.ok) {
+          noteAuthFailure(res);
           const err = await res.text().catch(() => res.statusText);
           return `Failed to ${isPermanent ? 'delete' : 'trash'} message: ${res.status} ${err}`;
         }

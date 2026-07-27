@@ -148,6 +148,11 @@ class LocalFileSystemManager implements IFileSystemManager {
     }
 
     private async extractGoogleError(res: Response): Promise<string> {
+        // 401 = the stored token is dead (expired or revoked at Google). Invalidate it
+        // locally, otherwise isGoogleAuthValid() keeps reporting a healthy connection.
+        if (res.status === 401) {
+            void import('./googleAuth').then(m => m.markGoogleTokenInvalid());
+        }
         try {
             const txt = await res.text();
             try {
