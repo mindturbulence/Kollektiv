@@ -13,11 +13,15 @@
     "start": "npx tsx server.ts",
     "build": "vite build",
     "lint": "tsc --noEmit",
+    "validate-config": "tsx scripts/validate-mcp-config.ts",
+    "fix-config": "tsx scripts/validate-mcp-config.ts --fix",
+    "generate-mcp-config": "tsx scripts/generate-mcp-config.ts",
     "test": "vitest run",
     "test:e2e": "playwright test",
     "preview": "vite preview",
     "predeploy": "pnpm run build",
-    "deploy": "gh-pages -d dist"
+    "deploy": "gh-pages -d dist",
+    "prepare": "husky"
   },
   "packageManager": "pnpm@11.5.3",
   "dependencies": {
@@ -79,6 +83,7 @@
     "eslint": "^10.6.0",
     "eslint-plugin-react-hooks": "^7.1.1",
     "gh-pages": "^6.1.1",
+    "husky": "^9.1.7",
     "postcss": "^8.5.22",
     "tailwindcss": "^3.4.3",
     "tsx": "^4.21.0",
