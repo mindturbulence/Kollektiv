@@ -191,7 +191,7 @@ Resolved existing structural defects, security issues, and test gaps.
 
 Onboarding and error handling are now standardized.
 
-- [x] Onboarding rework: multi-step wizard (`OnboardingFlow`), demo mode (OPFS `DemoFileSystemManager`), non-Chromium indicator (`DemoModeIndicator`)
+- [x] Onboarding rework: multi-step wizard (`OnboardingFlow`), demo mode (OPFS `DemoFileSystemManager`), non-Chromium indicator (`DemoModeIndicator`). **Was shipped but unreachable** from the `useBootSequence` extraction until 2026-07-27 — the boot storage gate had been dropped, so `showWelcome` could never become true and the wizard's own last step crashed on a conditional hook. See ISSUE-45.
 - [x] Error UX pass: `ErrorDisplay` component + `AppError` class hierarchy (25 utility tests + 12 component tests)
 - [x] Settings resilience: shadow-backup dual-write pattern (`saveLLMSettings` → shadow → primary fallback)
 - [x] Vault integrity visibility: `IntegrityReportModal` + `runIntegrityScan()` with localStorage persistence

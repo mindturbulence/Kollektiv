@@ -19,6 +19,8 @@ export interface BootState {
 export interface UseBootSequenceInput {
   /** Auth context value (stub currently, but used for dependency tracking). */
   auth: unknown;
+  /** Current settings — needed to resolve the storage provider at boot. */
+  settings: LLMSettings;
   /** Callback to surface a global error to the user. Pass showGlobalFeedback from the app shell. */
   showGlobalFeedback: (message: string, isError?: boolean) => void;
   /** Called after user clicks "Continue" — unlocks the audio context and optionally starts ambient music. */
@@ -43,7 +45,8 @@ export interface UseBootSequenceReturn {
  * Designed to be extracted from App.tsx — no DOM refs beyond the loader div.
  */
 export const useBootSequence = ({
-  auth: _auth,
+  auth,
+  settings,
   showGlobalFeedback,
   startupContinue,
 }: UseBootSequenceInput): UseBootSequenceReturn => {
@@ -55,6 +58,13 @@ export const useBootSequence = ({
 
   const hasInitializedRef = useRef(false);
   const loaderRef = useRef<HTMLDivElement>(null);
+
+  // Read through refs so initializeApp keeps a stable identity — depending on
+  // settings directly would re-run the whole boot on every theme switch.
+  const settingsRef = useRef(settings);
+  settingsRef.current = settings;
+  const authRef = useRef(auth);
+  authRef.current = auth;
 
   const initializeApp = useCallback(async (customSettings?: LLMSettings) => {
     if (customSettings) {
@@ -90,6 +100,19 @@ export const useBootSequence = ({
         initMemoriesStore(),
         initChatStore(),
       ]);
+
+      // ── Storage gate: without a vault handle (or with permission revoked)
+      // there is nothing to boot into, so hand off to OnboardingFlow. This
+      // gate was dropped when the hook was extracted from App.tsx — see
+      // ISSUE-45. ──
+      const activeSettings = customSettings || settingsRef.current;
+      const { fileSystemManager } = await import('../utils/fileUtils');
+      const hasVaultAccess = await fileSystemManager.initialize(activeSettings, authRef.current as any);
+      if (!hasVaultAccess) {
+        setShowWelcome(true);
+        setIsLoading(false);
+        return;
+      }
 
       // ── Reconnect a previously-granted Obsidian vault and make sure the
       // knowledge/{inbox,projects,output,wiki} lifecycle folders exist —

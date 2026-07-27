@@ -20,49 +20,56 @@ These decisions are permanent — do not re-litigate without the user asking fir
 
 These items are **code-fixed** but need manual verification. Run with `pnpm build && pnpm preview` or `pnpm dev` in a real browser (Chrome recommended).
 
-### Quick wins (no external accounts)
+### Closed 2026-07-27 — the four "quick win" tests, all verified
 
-**ISSUE-9 — Research chat flow**
-Prerequisites: A vault folder connected, at least one research project with sources added.
+None of these need external accounts (ISSUE-9/12 used the local `GEMINI_API_KEY`). Kept here with
+their evidence rather than folded into the changelog, since the procedures are what a future pass
+would repeat.
 
-- [ ] 1. Open the app and navigate to the Assistant panel
-- [ ] 2. Open an existing research project (or create one and add a source)
-- [ ] 3. Type a message in the middle-column chat input and send it
-- [ ] 4. Confirm you get a real assistant reply (not "placeholder" or error text)
-- [ ] 5. If the source has content, confirm citations render in the reply footer
-- [ ] **Pass if:** Research chat works end-to-end with no placeholder text
+**ISSUE-9 — Research chat flow** ✅ **PASS 2026-07-27 (live Gemini)**
+Driven against the production build (`vite preview`, Gemini 3 Flash, real API key) with the OPFS
+picker stub: created a project, uploaded a markdown source containing a fact no model could know
+("the reactor sustains exactly 4,412 kelvin during phase-three ignition"), asked for it in the
+middle-column chat. Reply: **`4,412 [1].`** with a rendered citation footer
+(`Sources — [1] Kollektiv Research Source, Reactor Notes`). Real answer, no placeholder, and the
+content proves it came from the uploaded source. That incidentally satisfies **ISSUE-11**
+(source-aware answers with citations) on the same run — left open there only because ISSUE-11's
+own checklist wasn't walked step-by-step.
 
-**ISSUE-10 — Findings dedup**
-Prerequisites: A research project with at least one finding saved.
+**ISSUE-10 — Findings dedup** ✅ **VERIFIED 2026-07-27 (automated)**
+Closed by `services/researchVaultService.test.ts` (5 tests) rather than a browser walk: the
+save/append path is deterministic logic that takes its file manager as a parameter, so an
+in-memory fake exercises the real `researchVault.findings` implementation directly. Three
+consecutive `save()` calls leave exactly one copy of the final text; `append()` still preserves
+prior content with a `---` separator; a `save()` after appends collapses the file to just the
+saved text. `LocalFileSystemManager.saveFile` uses `createWritable()` (truncating by default),
+which is what makes the overwrite real at the storage layer.
 
-- [ ] 1. Open a research project's Findings panel
-- [ ] 2. Edit the findings text, click Save
-- [ ] 3. Repeat step 2 two more times (3 saves total)
-- [ ] 4. Reopen the findings file (or refresh the panel)
-- [ ] 5. Confirm the file contains exactly **one** copy of the final text, not three
-- [ ] **Pass if:** No content duplication after multiple saves
+**ISSUE-12 — Assistant append_findings** ✅ **PASS 2026-07-27 (live Gemini)**
+Same session as ISSUE-9. Asked mid-conversation: *"Note down that the key finding is that ignition
+temperature is confirmed."* The Findings panel updated without a UI save click, and reading OPFS
+directly confirmed `research-projects/reactor-study/findings.md` = `"The key finding is that
+ignition temperature is confirmed."` — so the tool really wrote the file, the
+`research:findingsAppended` event fired, and the panel re-read it.
 
-**ISSUE-12 — Assistant append_findings**
-Prerequisites: A research project active with a vault folder connected.
+⚠️ **Model-behaviour caveat, not a code defect:** on an earlier attempt with the same prompt the
+assistant answered *"OK. I've noted that…"* conversationally and the Findings panel stayed empty
+for the full 2-minute poll — Gemini apparently answered without invoking the tool. The tool path
+itself is proven correct (this run, plus `researchVaultService.test.ts`). If it recurs often,
+the fix is a stronger `append_findings` description or an explicit nudge in `buildSystemIdentity`,
+not a change to the vault code.
 
-- [ ] 1. Open a research project
-- [ ] 2. In the research chat, ask the assistant: *"Note down that the key finding is X"*
-- [ ] 3. Confirm the assistant replies that it appended the finding
-- [ ] 4. Open the Findings panel — confirm the new finding text appears
-- [ ] **Pass if:** The assistant can append findings mid-conversation without a UI save click
+**ISSUE-21 — e2e headed smoke test** ✅ **PASS 2026-07-27** — `npx playwright test e2e/smoke.spec.ts
+--headed` → **2 passed, exit 0**. Getting there required fixing two real app defects (ISSUE-45,
+below) plus two stale assumptions in the test itself:
 
-**ISSUE-21 — e2e headed smoke test**
-Prerequisites: Node.js, Playwright browsers installed (`npx playwright install chromium`).
-
-- [ ] 1. `pnpm build && pnpm preview` (or `pnpm dev`)
-- [ ] 2. In a separate terminal: `npx playwright test e2e/smoke.spec.ts --headed`
-- [ ] 3. Watch the headed browser — it should:
-     - Boot the app (wait for the vault folder selector or reconnect button)
-     - Click to proceed through setup
-     - Click the Web Viewer button in the header
-     - Confirm the Close button becomes visible
-- [ ] 4. Both tests should pass (exit code 0)
-- [ ] **Pass if:** Both e2e tests pass without timeout or manual intervention
+- `bootToAppShell` clicked the storage gate and then expected the boot loader, but ISSUE-24.1
+  turned that screen into a 3-step wizard (storage → PROVISION → finish splash). The helper now
+  walks all three. The provider step's CONTINUE button shares an accessible name with the
+  loader's, so the helper waits on the PROVISION heading to tell them apart.
+- The second test drove `WebViewerPanel`, which the All-Purpose Panel work deleted — the header
+  has no "Web Browser" button any more. Retargeted at the panel that replaced it: header
+  "Clipboard" → `ClippingPanel` → "Close panel" button visible.
 
 ### External-service tests (need live accounts)
 
@@ -164,6 +171,7 @@ Context: [handbook/docs/00_FOUNDATION/ARCHITECTURE_CONSTITUTION.md § Security H
 | 38 | Composer Page: `Layer` type conflated text/image fields (dummy color/fontFamily on image layers, `fontSize` overloaded as image-width proxy); pan/drag/zoom mouse-only | ✅ Fixed — `Layer` split into `TextLayer \| ImageLayer` discriminated union; `ItemRenderer`/`LayerRenderer` migrated to Pointer Events with pinch-to-zoom |
 | 39 | Media Panel: Spotify URI/URL hijacked into a bogus YouTube ID by an unanchored regex fallback; panel never opens when the assistant triggers Spotify playback | ✅ Fixed — Spotify parser tried before YouTube, loose YouTube fallback removed (`MediaPanel.tsx` + `VideoPlayerOverlay.tsx`), `openMediaPanel` wired to `isMediaPanelOpen` in `useAppEventBus.ts`, click-outside guarded against the video overlay's backdrop |
 | 44 | Revoked Google token leaves the app permanently stuck as "connected" — assistant can't reconnect | ✅ Fixed 2026-07-27 — root cause of the ISSUE-2 revoke-path failure. Revoking at Google changes nothing locally: `accessToken` is still stored and `expiresAt` is still in the future, so `isGoogleAuthValid()` kept returning `true`. Consequences: `ensureGoogleToken` (`gmailTools.ts:17`) handed back the dead token and never even entered the refresh path, and `IntegrationsSection.tsx:265` rendered the ACTIVE profile card with only "Revoke Access" — **no AUTHENTICATE button**, so the only escape was manually clicking Revoke Access first. Nothing anywhere invalidated the identity on a 401. Fixed with `markGoogleTokenInvalid()` in `utils/googleAuth.ts` (sets `expiresAt: 0`, keeps `isConnected` so genuine expiry still silently refreshes), called on 401 from all four Gmail fetches and from `fileUtils.extractGoogleError`. **Second defect found while verifying:** `isTokenExpired`/`msUntilExpiry` tested `expiresAt` for *truthiness*, so `0` fell through to the `connectedAt + 55min` heuristic and a freshly-connected identity still read as valid — the invalidation was inert. Both now use `!= null`. New `utils/googleAuth.test.ts` covers the real implementation (every other suite mocks `googleAuth` wholesale, which is why 692 passing tests missed it). |
+| 45 | **Onboarding unreachable — the app never asked for a vault folder, and reaching the wizard crashed it** | ✅ Fixed 2026-07-27 — found while running ISSUE-21. Two separate defects on the same path. **(a)** `hooks/useBootSequence.ts` was extracted from App.tsx in `7e861d2`/`fc8002c`, and the extraction dropped the storage gate: the pre-extraction boot called `fileSystemManager.initialize()` and did `setShowWelcome(true)` when it returned false, but in the hook `showWelcome` was initialised to `false` and the only remaining call was `setShowWelcome(false)`. It could never become true, so `App.tsx:382`'s `if (showWelcome) return <OnboardingFlow …>` was dead — the app booted straight to the loader with **no vault connected and no route to connect one except Settings > App**, and the whole ISSUE-24.1 wizard was unreachable. Gate restored in `initializeApp` (settings/auth read through refs so boot doesn't re-run on a theme switch). **(b)** With the wizard reachable again it crashed instantly with React error #310: `OnboardingFlow` declared `React.useEffect` *inside* the `step === 'finish'` branch, so the hook count changed between renders the moment the wizard hit its last step. Moved to a top-level effect guarded on `step`. 2 regression tests in `useBootSequence.test.ts` cover the gate in both directions. |
 | 40 | Media Panel: no Files tab, no way to stop/query playback from the assistant, `spotify_play` hard-required an auth token for a public embed | ✅ Fixed — Files tab (chat attachments + vault `fileSystemManager`), `stop_media`/`get_current_media` tools backed by `services/mediaPlaybackStore.ts`, auth-token check dropped from `spotify_play` |
 
 ### 🧹 Cleanup & Tech Debt

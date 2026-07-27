@@ -40,8 +40,15 @@ async function bootToAppShell(page: Page) {
     if (!gateBtn) throw new Error('Neither SELECT_VAULT_FOLDER nor RECONNECT_VAULT appeared on the Welcome screen.');
     await gateBtn.click();
 
-    // Gate 2: loader — integrity check runs, progress reaches 100%, then the
-    // CONTINUE buttons crossfade in. Headless throttles rAF, so be generous.
+    // Gate 2: PROVISION — the onboarding wizard's provider step (ISSUE-24.1).
+    // Its CONTINUE button shares an accessible name with the loader's, so wait
+    // for the step's own heading before clicking to keep the two apart.
+    await expect(page.getByRole('heading', { name: /PROVISION/ })).toBeVisible({ timeout: 30_000 });
+    await page.getByRole('button', { name: 'CONTINUE', exact: true }).click();
+
+    // Gate 3: the finish splash auto-advances after ~800ms into the boot
+    // loader, which reaches 100% and crossfades its own CONTINUE buttons in.
+    // Headless throttles rAF, so be generous.
     const continueBtn = page.getByRole('button', { name: 'CONTINUE', exact: true });
     await continueBtn.click({ timeout: 60_000 });
 
@@ -53,14 +60,15 @@ test('boots through STORAGE_INIT and loader to the app shell', async ({ page }) 
     await bootToAppShell(page);
 });
 
-test('opens the Web Viewer panel from the header', async ({ page }) => {
+// The old WebViewerPanel (iframe browser) was replaced by the all-purpose
+// ClippingPanel, whose Assistant Notes tab holds web results now. Same shape of
+// check — header button toggles an overlay panel — against a panel that exists.
+test('opens the clipping panel from the header', async ({ page }) => {
     await bootToAppShell(page);
 
-    // HUDNavItem renders as <button title="Web Browser">, and Playwright derives
+    // HUDNavItem renders as <button title="Clipboard">, and Playwright derives
     // the accessible name from `title` when there's no aria-label/text content.
-    await page.getByRole('button', { name: 'Web Browser' }).click();
+    await page.getByRole('button', { name: 'Clipboard' }).click();
 
-    // WebViewerPanel toggles a real `visibility` style (not just aria-hidden),
-    // so toBeVisible() reflects the open/closed state correctly.
-    await expect(page.getByRole('button', { name: 'Close web viewer' })).toBeVisible({ timeout: 10_000 });
+    await expect(page.getByRole('button', { name: 'Close panel' })).toBeVisible({ timeout: 10_000 });
 });

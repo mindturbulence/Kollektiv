@@ -275,6 +275,17 @@ const OnboardingFlow: React.FC<OnboardingFlowProps> = ({ onSetupComplete }) => {
     );
   };
 
+  // Auto-advance off the finish splash into the parent boot sequence. This
+  // has to stay at the top level: declaring it inside the `step === 'finish'`
+  // branch changes the hook count between renders and crashes the app with
+  // React error #310 the moment the wizard reaches its last step (ISSUE-45).
+  useEffect(() => {
+    if (step !== 'finish') return;
+    const timer = setTimeout(() => handleFinish(), 800);
+    return () => clearTimeout(timer);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [step]);
+
   // ═════════════════════════════════════════════════════════════════════
   //  STEP 1: STORAGE INIT
   // ═════════════════════════════════════════════════════════════════════
@@ -659,14 +670,9 @@ const OnboardingFlow: React.FC<OnboardingFlowProps> = ({ onSetupComplete }) => {
   // ═════════════════════════════════════════════════════════════════════
 
   if (step === 'finish') {
-    // Brief completion splash, then delegate to parent boot sequence
-    // (which shows its own InitialLoader with progress)
-    React.useEffect(() => {
-      const timer = setTimeout(() => handleFinish(), 800);
-      return () => clearTimeout(timer);
-      // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, []);
-
+    // Brief completion splash, then delegate to parent boot sequence (which
+    // shows its own InitialLoader with progress). The timer that advances off
+    // this splash lives in the top-level effect above.
     return (
       <div className="w-full h-full flex items-center justify-center p-4 bg-transparent relative overflow-hidden">
         <div className="absolute inset-0 pointer-events-none opacity-[0.03] bg-[linear-gradient(rgba(18,16,16,0)_50%,rgba(0,0,0,0.25)_50%),linear-gradient(90deg,rgba(255,0,0,0.06),rgba(0,255,0,0.02),rgba(0,0,255,0.06))] bg-[length:100%_2px,3px_100%]"></div>

@@ -7,6 +7,11 @@ const mocks = vi.hoisted(() => ({
   initMemoriesStore: vi.fn().mockResolvedValue(undefined),
   initChatStore: vi.fn().mockResolvedValue(undefined),
   gsapSet: vi.fn(),
+  fsInitialize: vi.fn().mockResolvedValue(true),
+}));
+
+vi.mock('../utils/fileUtils', () => ({
+  fileSystemManager: { initialize: mocks.fsInitialize },
 }));
 
 vi.mock('../utils/notesStorage', () => ({ initNotesStore: mocks.initNotesStore }));
@@ -29,12 +34,14 @@ vi.mock('gsap', () => ({
 describe('useBootSequence', () => {
   const defaultInput = {
     auth: {},
+    settings: {} as any,
     showGlobalFeedback: vi.fn(),
     startupContinue: vi.fn(),
   } as const;
 
   beforeEach(() => {
     vi.clearAllMocks();
+    mocks.fsInitialize.mockResolvedValue(true);
     // Mock sessionStorage
     const store: Record<string, string> = {};
     vi.spyOn(Storage.prototype, 'removeItem').mockImplementation((key) => { delete store[key]; });
@@ -58,18 +65,26 @@ describe('useBootSequence', () => {
 
   it('sets status to System Ready after init', async () => {
     const { result } = renderHook(() => useBootSequence(defaultInput));
+    // Generous timeout: initializeApp dynamically imports the real
+    // obsidianStorage/knowledgeService modules, and the first test to do so in
+    // a full parallel run pays their cold transform cost — more than
+    // vi.waitFor's 1s default.
     await vi.waitFor(() => {
       expect(result.current.bootState.initStatus).toBe('SYSTEM READY');
-    });
+    }, { timeout: 15_000 });
     expect(result.current.bootState.initProgress).toBe(1.0);
   });
 
   it('handleInitContinue transitions to ready phase', async () => {
     const { result } = renderHook(() => useBootSequence(defaultInput));
 
+    // Generous timeout: initializeApp dynamically imports the real
+    // obsidianStorage/knowledgeService modules, and the first test to do so in
+    // a full parallel run pays their cold transform cost — more than
+    // vi.waitFor's 1s default.
     await vi.waitFor(() => {
       expect(result.current.bootState.initStatus).toBe('SYSTEM READY');
-    });
+    }, { timeout: 15_000 });
 
     // Attach a fake element to the loader ref so gsap.set gets called
     (result.current.loaderRef as any).current = document.createElement('div');
@@ -88,9 +103,13 @@ describe('useBootSequence', () => {
   it('handleInitContinue with false skips music', async () => {
     const { result } = renderHook(() => useBootSequence(defaultInput));
 
+    // Generous timeout: initializeApp dynamically imports the real
+    // obsidianStorage/knowledgeService modules, and the first test to do so in
+    // a full parallel run pays their cold transform cost — more than
+    // vi.waitFor's 1s default.
     await vi.waitFor(() => {
       expect(result.current.bootState.initStatus).toBe('SYSTEM READY');
-    });
+    }, { timeout: 15_000 });
 
     act(() => {
       result.current.handleInitContinue(false);
@@ -126,6 +145,34 @@ describe('useBootSequence', () => {
     expect(result.current.bootState.phase).toBe('error');
   });
 
+  // Regression guard for ISSUE-45: the storage gate was dropped when this hook
+  // was extracted from App.tsx, so showWelcome could never become true and the
+  // onboarding wizard was unreachable on a fresh install.
+  it('shows the welcome/onboarding gate when there is no vault access', async () => {
+    mocks.fsInitialize.mockResolvedValue(false);
+
+    const { result } = renderHook(() => useBootSequence(defaultInput));
+
+    await vi.waitFor(() => {
+      expect(result.current.bootState.showWelcome).toBe(true);
+    });
+    expect(result.current.bootState.phase).toBe('initializing');
+    expect(result.current.bootState.isLoading).toBe(false);
+  });
+
+  it('stays on the loader when vault access is granted', async () => {
+    const { result } = renderHook(() => useBootSequence(defaultInput));
+
+    // Generous timeout: initializeApp dynamically imports the real
+    // obsidianStorage/knowledgeService modules, and the first test to do so in
+    // a full parallel run pays their cold transform cost — more than
+    // vi.waitFor's 1s default.
+    await vi.waitFor(() => {
+      expect(result.current.bootState.initStatus).toBe('SYSTEM READY');
+    }, { timeout: 15_000 });
+    expect(result.current.bootState.showWelcome).toBe(false);
+  });
+
   it('exposes a loader ref', () => {
     const { result } = renderHook(() => useBootSequence(defaultInput));
     expect(result.current.loaderRef).toBeDefined();
@@ -136,9 +183,13 @@ describe('useBootSequence', () => {
     const { result } = renderHook(() => useBootSequence(defaultInput));
 
     // First init runs
+    // Generous timeout: initializeApp dynamically imports the real
+    // obsidianStorage/knowledgeService modules, and the first test to do so in
+    // a full parallel run pays their cold transform cost — more than
+    // vi.waitFor's 1s default.
     await vi.waitFor(() => {
       expect(result.current.bootState.initStatus).toBe('SYSTEM READY');
-    });
+    }, { timeout: 15_000 });
 
     expect(mocks.initNotesStore).toHaveBeenCalledTimes(1);
 

@@ -246,6 +246,7 @@ const AppContent: React.FC = () => {
         hasInitializedRef,
     } = useBootSequence({
         auth,
+        settings,
         showGlobalFeedback,
         startupContinue,
     });
