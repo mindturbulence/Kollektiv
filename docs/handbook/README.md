@@ -62,7 +62,7 @@ Kollektiv is a high-performance, local-first application designed for prompt eng
 > **2026-07-26 — Native MCP tools wiring:** All ~65 native assistant tools are now registered
 > with the built-in MCP server via `mcp-config.json`. Server-side executors wired for weather,
 > GitHub, RSS, Exa, Reddit, YouTube, Twitter, and URL scraping tools. Config validation, CI gate,
-> generation script, test suite, and docs added. See `docs/mcp-tools.md` and `docs/tools-inventory.md`.
+> generation script, test suite, and docs added. See `docs/tools-inventory.md`.
 
 ---
 

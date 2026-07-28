@@ -314,7 +314,7 @@ The `--fix` mode (`scripts/validate-mcp-config.ts --fix`) infers sensible defaul
 - Server-side executors added for weather, GitHub, RSS, Exa, Reddit, YouTube, Twitter, and URL scraping tools
 - Permission model with `grantMcpPermissions()`/`revokeMcpPermissions()`
 - Test suite (`services/mcp-config.test.ts`) validates config loading and tool call routing
-- Documentation: `docs/mcp-tools.md` (usage guide) and `docs/tools-inventory.md` (complete catalog)
+- Documentation: `docs/tools-inventory.md` (complete catalog). A separate `docs/mcp-tools.md` usage guide existed alongside this spec but was removed 2026-07-28 — its config-field table, permission table, and server details had become a near-verbatim duplicate of the sections above.
 
 ### 2026-07-25 — Sub-server consolidation
 
@@ -327,7 +327,6 @@ The `--fix` mode (`scripts/validate-mcp-config.ts --fix`) infers sensible defaul
 
 ## Related
 
-- [docs/mcp-tools.md](../../../docs/mcp-tools.md) — usage guide, execution kinds, and adding new tools
 - [docs/tools-inventory.md](../../../docs/tools-inventory.md) — complete catalog of all native assistant tools
 - [OBSIDIAN.md](../03_KNOWLEDGE_ENGINE/OBSIDIAN.md) — the vault tools sub-server this spec aggregates
 - [ARCHITECTURE_CONSTITUTION.md § Security Hardening](../00_FOUNDATION/ARCHITECTURE_CONSTITUTION.md#security-hardening) — the CSP `connect-src`/CORS posture this local-only server operates under

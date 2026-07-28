@@ -495,7 +495,6 @@ pnpm build             # Build succeeds
 - [generate-mcp-config.ts](../../../scripts/generate-mcp-config.ts) — auto-generation script
 - [mcp-config.test.ts](../../../services/mcp-config.test.ts) — test suite
 - [kollektivMcp.ts](../../../services/kollektivMcp.ts) — server-side executor registration
-- [mcp-tools.md](../../../docs/mcp-tools.md) — MCP tool overview
 - [tools-inventory.md](../../../docs/tools-inventory.md) — complete tool catalog
 - [MCP_SPEC.md](../05_MCP/MCP_SPEC.md) — MCP architecture spec
 - [MCP_SPEC.md § CI Pipeline](../05_MCP/MCP_SPEC.md#ci-pipeline--validation-gates) — CI gates documentation

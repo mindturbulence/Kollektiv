@@ -4,7 +4,7 @@ Complete inventory of all native assistant tools available in the Kollektiv app.
 
 > **Source directory:** `services/tools/*.ts` (per-category tool modules) and `services/assistantTools.ts` (inline definitions + concatenation of all modules into `ASSISTANT_TOOLS`).
 > **Type definition:** `services/tools/types.ts` → `AssistantTool` interface.
-> **Total tools:** ~100 (verified by `mcp-config.json` validation)
+> **Total tools:** 108 in `ASSISTANT_TOOLS` as of 2026-07-28 (live-verified via `capability_list`); `mcp-config.json` currently registers 100 — it lags behind by the tools added in the most recent phases (e.g. `traverse_knowledge`, `find_knowledge_path`) and needs `pnpm generate-mcp-config` run against it.
 
 ---
 
@@ -198,11 +198,13 @@ Complete inventory of all native assistant tools available in the Kollektiv app.
 | `youtube_get_transcript` | Fetch YouTube video transcript/captions | `services/tools/youtubeTranscriptTools.ts` |
 | `twitter_get_tweet` | Fetch a tweet by ID or URL | `services/tools/twitterTools.ts` |
 
-### Knowledge Graph Tools (`services/tools/graphTools.ts`) — 1 tool
+### Knowledge Graph Tools (`services/tools/graphTools.ts`, `services/tools/graphTraversalTools.ts`) — 3 tools
 
 | Tool | Description |
 |------|-------------|
-| `find_related_knowledge` | Find items sharing tags across memory/gallery/prompt stores |
+| `find_related_knowledge` | Find items sharing tags across memory/gallery/prompt stores (direct neighbours only) |
+| `traverse_knowledge` | Walk outward from one item to everything connected within N hops. Added 2026-07-28 (Phase 3, ISSUE-47-adjacent work — the graph's edges are now actually populated). |
+| `find_knowledge_path` | Show the shortest chain of shared-tag links between two items. Added 2026-07-28. |
 
 ### Tensor Art Tools (`services/tools/tensorArtTools.ts`) — 2 tools
 
@@ -218,7 +220,8 @@ Complete inventory of all native assistant tools available in the Kollektiv app.
 ```
 services/
 ├── assistantTools.ts           ← Single point of assembly: concatenates ALL tools
-│   └── ASSISTANT_TOOLS[]       ← ~100 tools, the canonical array
+│   └── ASSISTANT_TOOLS[]       ← 108 tools, the canonical array — also registered into
+│                                  capabilityRegistry on module load (ISSUE-47, 2026-07-28)
 ├── tools/
 │   ├── types.ts                ← AssistantTool + ToolContext interfaces
 │   ├── browserTools.ts         ← 21 browser control tools
@@ -227,16 +230,17 @@ services/
 │   ├── spotifyTools.ts         ← 3 Spotify tools
 │   ├── tensorArtTools.ts       ← 2 Tensor Art tools
 │   ├── researchTools.ts        ← 2 research tools
-│   ├── graphTools.ts           ← 1 knowledge graph tool
+│   ├── graphTools.ts + graphTraversalTools.ts ← 3 knowledge graph tools
 │   ├── rssTools.ts             ← 1 RSS tool
 │   ├── githubTools.ts          ← 3 GitHub tools
 │   ├── exaTools.ts             ← 1 Exa search tool
 │   ├── redditTools.ts          ← 1 Reddit tool
 │   ├── youtubeTranscriptTools.ts ← 1 transcript tool
 │   └── twitterTools.ts         ← 1 Twitter/X tool
-└── capabilityRegistry.ts       ← Layer 1: capability definitions (40+ capabilities)
+└── capabilityRegistry.ts       ← Layer 1: capability definitions (108, populated from
+                                   ASSISTANT_TOOLS since ISSUE-47's fix)
 ```
 
 ## MCP Integration
 
-Native tools ARE exposed via MCP protocol. All ~100 tools are registered with the built-in Kollektiv MCP server (`services/kollektivMcp.ts`, port 3012) via `mcp-config.json`. Server-side executors are wired for weather, GitHub, RSS, Exa, Reddit, YouTube transcripts, Twitter/X, URL scraping, and web search tools. See [docs/mcp-tools.md](mcp-tools.md) for details.
+Native tools ARE exposed via MCP protocol via the built-in Kollektiv MCP server (`services/kollektivMcp.ts`, port 3012) through `mcp-config.json`, which currently registers 100 of the 108 real tools (see the note at the top of this document). Server-side executors are wired for weather, GitHub, RSS, Exa, Reddit, YouTube transcripts, Twitter/X, URL scraping, and web search tools. See [MCP_SPEC.md](../handbook/docs/05_MCP/MCP_SPEC.md) for the full server/config/CI architecture.
