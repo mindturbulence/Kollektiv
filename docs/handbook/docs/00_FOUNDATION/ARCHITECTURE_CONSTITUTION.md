@@ -218,17 +218,30 @@ WebSocket resilience, chunked chat loading, and search are all real. (Search jus
 
 ### Additional completed work
 
-- **MCP Architecture (ISSUE-28):** 7 of the original 8 layers — capability registry, intent router, planner, execution engine, service layer, capability tools, wiring. The "provider router" layer (`services/providerRouter.ts`) was found built-but-disconnected in the 2026-07-25 audit — its `call()` was a literal stub, and real cost/latency-aware fallback would conflict with `LLMSettings.activeLLM` being a deliberate user choice (see `getActiveProvider`/`requireProvider` in `llmService.ts`, which throw rather than silently switch providers). Deleted rather than wired, 2026-07-26 (ISSUE-32). **Update (2026-07-28):** ISSUE-47 resolved. `capabilityRegistry` is populated from `ASSISTANT_TOOLS` at module load (108 real capabilities), and `executionEngine.dispatchStep` really executes `capability_dispatch`/`assistant_tool` steps instead of returning stubs. `provider_call` is wired for plain-text-input dispatch to the active LLM; `mcp_call`/`persistence`/`user_confirmation` still fail honestly rather than fake success — see ISSUE-47 for the exact scope.
+- **MCP Architecture (ISSUE-28):** 7 of the original 8 layers — capability registry, intent router, planner, execution engine, service layer, capability tools, wiring. The "provider router" layer (`services/providerRouter.ts`) was found built-but-disconnected in the 2026-07-25 audit — its `call()` was a literal stub, and real cost/latency-aware fallback would conflict with `LLMSettings.activeLLM` being a deliberate user choice (see `getActiveProvider`/`requireProvider` in `llmService.ts`, which throw rather than silently switch providers). Deleted rather than wired, 2026-07-26 (ISSUE-32). The remaining 7 layers were themselves inert until Phase 4 (2026-07-28, ISSUE-47) — see below.
 - **Knowledge & Obsidian (ISSUE-29):** 5 phases — knowledge manager API, 3-tier memory, relationship graph (now wired via `find_related_knowledge`, ISSUE-31), context-aware injection (17 tests), knowledge lifecycle with folder projection (59 tests)
 - **MCP Infrastructure (2026-07-25):** Redundant Playwright child process removed, MCP server always starts, .env loading, CORS session-id fix, preset URL sync, consolidated to single Built-In tab with 61 tools
 - **CSP hardening (2026-07-25):** `src/middleware/security.ts` now branches on `NODE_ENV` — see the [Security Hardening](#security-hardening) section above for the full policy and status.
 - **Multi-engine free web search (2026-07-26):** Modular `services/webSearchEngines/` directory with DuckDuckGo, Brave, Exa (optional `EXA_API_KEY`), and Bing (Playwright-gated) engines. Orchestrator runs engines in parallel, deduplicates by URL, and interleaves results. `POST /api/web-search` route with Zod validation and rate limiter. Assistant's `web_search` tool defaults to the free path; falls back to Gemini only when empty. `fetch_content` mode fetches full page content via Defuddle for rich panel cards. Bing engine supports `SEARCH_MODE=auto|playwright|request` env var. Both plan files documented in `docs/plans/` are fully implemented.
 - **Reach channels — 6 content-reach capabilities (2026-07-26):** Added `rss_fetch`, `github_get_repo`/`github_search`/`github_get_file`, `exa_search`, `reddit_fetch`, `youtube_get_transcript`, and `twitter_get_tweet` tools. Each backed by a `POST /api/reach/<channel>` server route with Zod validation and rate limiters. Dual-backend ordered-fallback architecture for YouTube (watch-page → InnerTube) and Twitter (syndication CDN → oEmbed). 50+ new unit tests. Fragility documented per-channel (Twitter highest, YouTube elevated). See `docs/plans/2026-07-26-reach-channels.md` for the detailed checklist.
 
+### Phase 4 — Capability Expansion ✅
+
+Six phased workstreams, ordered smallest-diff-first (2026-07-28). Roadmap and per-phase task plans in `docs/plans/` at the time of writing; superseded by this section as the durable record.
+
+- [x] Provider fallback: `services/providerFallback.ts` — failure-triggered only (never cost/latency-triggered, which is what got the deleted `providerRouter.ts` removed under ISSUE-32). Opt-in ordered chain, wired into Chat and Prompt refinement in `llmService.ts`; 13 of 15 `requireProvider` call sites remain unwrapped, left as follow-on. Every fallback surfaces a real toast via `appEventBus.emit('assistantFeedback', ...)`.
+- [x] Relationship graph traversal: `traverse`/`findShortestPath`/`getSubgraph` in `services/relationshipGraph.ts` previously walked an edge set nothing populated. `services/tools/graphHydration.ts` now builds tag-derived `similar_to` edges (Jaccard-weighted) during rehydration, exposed via two new assistant tools (`services/tools/graphTraversalTools.ts`) and a read-only `VaultMapPanel` (ring layout, opened via Command Palette / `vaultMapOpen` state in `App.tsx`).
+- [x] Batch runner: `components/BatchRunnerPage.tsx` (the `batch_runner` tab) runs a chain of operations (`services/batchOperations.ts`) across many prompts or gallery items via `services/batchQueue.ts` — a sequential queue with cancel and per-item results, built directly over working services rather than the (at the time, inert) capability platform. See ISSUE-47 below for why.
+- [x] Semantic vault search: `services/embeddingService.ts` (local via Ollama's `/api/embed`, live-verified) + `utils/semanticIndex.ts` (IndexedDB vector store, hash-based resumable backfill) combine with the existing BM25 index in `utils/obsidianStorage.ts`'s `searchNotes()` for hybrid ranking. BM25 itself (`utils/vaultSearch.ts`) is untouched — every pre-existing test there still passes unmodified.
+- [x] Local image generation: `services/generationBackend.ts` defines the interface; `services/a1111Service.ts` (A1111/Forge Neo) and `services/comfyService.ts` (ComfyUI, polling over `/history` rather than WebSocket — prod CSP allows `http://localhost:*` but not `ws://localhost:*`) implement it. Proxy routes `/a1111-local` and `/comfy-local` in `server.ts` copy the `/ollama-local` transparent-proxy pattern. **Both live-verified against real running instances** — Forge Neo: full round trip, real 24s generation. ComfyUI: the first version shipped with `ckpt_name`/`clip_name`/`vae_name` all left as empty strings and wrong node wiring (separate CLIPLoader/VAELoader nodes, which are for split-encoder checkpoints like Flux/SD3, not the standard SD1.5/SDXL case) — real ComfyUI rejected all three with `value_not_in_list`. Fixed to wire off the checkpoint's own bundled CLIP/VAE outputs and to resolve a real checkpoint name from `/object_info/CheckpointLoaderSimple` before submitting; re-verified live (submit → 0 `node_errors` → executes → real PNG back). Cloud generation remains the default; `useGenerateLoop`'s phase machine is unchanged apart from backend dispatch.
+- [x] Gallery auto-tagging — see Phase 2 above (`services/autoTagService.ts`); shipped as part of this same effort but listed there since it extends "Gallery intelligence."
+
+**ISSUE-47 — the capability platform was fully inert, and is now resolved.** `capabilityRegistry.register()` was never called by any app code (confirmed: all references were reads), and `executionEngine.ts`'s `dispatchStep` returned a fabricated success string (`"dispatched (stub)"`) for all 8 step kinds regardless of whether anything ran — including from `capability_execute`, an assistant tool actually reachable from live chat. Fixed: `services/assistantTools.ts` registers all 108 `ASSISTANT_TOOLS` as capabilities on module load (`capability_search`/`list`/`describe`/`health` now return real data, live-verified), and `dispatchStep` really executes `capability_dispatch`/`assistant_tool` via `executeAssistantTool` — a tool's own `"Error:"` string now correctly fails the step. `provider_call` is wired for the one fully-generic shape (plain-text input → `streamChat`); shapes it can't handle (e.g. media generation) fail honestly. `mcp_call`/`persistence`/`user_confirmation`/`fallback` still throw explicit "not implemented" rather than fake success — a step marked `optional` is skipped gracefully by the engine either way. 18 new tests in `services/executionEngine.test.ts` (none existed before this fix), one of which caught a real design bug during writing: `capability_dispatch` was falling back to treating an unregistered id as a literal tool name, defeating the entire point of registry lookup — split from `assistant_tool`'s legitimate direct-name path before shipping. Residual, deliberately out of scope: no data-flow between plan steps, and `plan.requiresConfirmation` is computed by the planner but still not enforced anywhere.
+
 ### Definition of "Ready to Think About Money"
 
 1. A stranger on a fresh machine reaches a working dashboard in under 3 minutes without help.
-2. `pnpm lint` clean, `pnpm test` green (694 tests as of 2026-07-26 — this number drifts with the codebase, re-run rather than trust it), E2E smoke test passes.
+2. `pnpm lint` clean, `pnpm test` green (902 tests as of 2026-07-28 — this number drifts with the codebase, re-run rather than trust it), E2E smoke test passes.
 3. No assistant tool can perform a destructive external action without explicit confirmation. **(Note: ISSUE-22 revert means send_gmail/delete_gmail have no confirmation gate — user decision)**
 4. The generate→ingest→compare loop works end-to-end with at least one provider. ✅
 5. Model registry lives in data (`modelProfiles.json`). ✅
@@ -255,6 +268,7 @@ Each `ActiveTab` maps to a top-level React component:
 | `resizer` | `ImageResizer` | Image resizing + Topaz Gigapixel upscale via server bridge. |
 | `video_to_frames` | `VideoToFrames` | Frame extraction from video uploads with frame rate and resolution controls. |
 | `lora_editor` | `loraEditor/LoraEditorPage` | LoRA metadata/tag editor sub-app with safetensors parsing, hashing, online lookup, tag frequency analysis, and metadata editing. |
+| `batch_runner` | `BatchRunnerPage` | Run one capability (refine, suggest tags, describe image) across many prompts/gallery items sequentially, with progress, cancel, and a per-item report. Added 2026-07-28. |
 
 ### Global overlay panels
 
@@ -274,6 +288,7 @@ Each `ActiveTab` maps to a top-level React component:
 | Live Caption | `LiveCaptionOverlay` | Real-time voice caption overlay (hidden during Assistant page). |
 | Idle Overlay | `IdleOverlay` | Matrix/gallery screensaver. |
 | Transition Overlay | `transitions/TransitionOverlay` | Page transition aperture effect. |
+| Vault Map | `VaultMapPanel` | Read-only ring layout of tag-connected memories/gallery items/prompts (`vaultMapOpen` state). Reads the relationship graph, rehydrated on open. Added 2026-07-28. |
 
 ## Server and Bridge Endpoints
 
@@ -282,8 +297,10 @@ The Express server (run via `npx tsx server.ts`, default `127.0.0.1:7500`) acts 
 | Route | Purpose |
 |---|---|
 | `ALL /google-api/*` | Proxies to `https://www.googleapis.com` (Drive, OAuth userinfo). Rewrites `Location` headers back to local origin. |
-| `ALL /ollama-local/*` | Proxies to local Ollama (`127.0.0.1:11434`), with `localhost` and IPv6 fallbacks. Streams response. |
+| `ALL /ollama-local/*` | Proxies to local Ollama (`127.0.0.1:11434`), with `localhost` and IPv6 fallbacks. Streams response. Also backs local embeddings (`/api/embed`) for semantic vault search. |
 | `ALL /llamacpp-local/*` | Same pattern for llama.cpp (`127.0.0.1:8080`). |
+| `ALL /a1111-local/*` | Same pattern for A1111/Forge Neo (`127.0.0.1:7860`). Backs local image generation. Live-verified 2026-07-28. |
+| `ALL /comfy-local/*` | Same pattern for ComfyUI (`127.0.0.1:8188`). Backs local image generation via `services/comfyService.ts`, polling `/history` rather than a WebSocket. Live-verified 2026-07-28. |
 | `ALL /proxy-remote/*` | Generic remote proxy; target from `x-target-url` header, validated against provider allowlist. |
 | `POST /api/anthropic/chat` | Anthropic Messages API proxy (api_key + subscription modes). Streams SSE. |
 | `POST /api/mcp/proxy` | MCP JSON-RPC proxy (Streamable-HTTP compatible). |
