@@ -848,6 +848,10 @@ Expected: FAIL — `TagSuggestionRow` is not exported.
 
 Add to `components/ItemDetailView.tsx` as a named export, then render it inside the Tags `InfoRow`. Match the surrounding Tailwind class strings — reuse `form-btn wildcard-tag-btn h-auto px-2 py-0.5 lowercase tracking-tight` from line 670 for the chips.
 
+> **`settings` is already in scope.** `ItemDetailView.tsx:209` does `const { settings } = useSettings()` (hook imported at line 12), so both the modified guard and the `<TagSuggestionRow settings={settings} …/>` prop work without changing `ItemDetailView`'s signature or touching its call sites. `TagSuggestionRow` takes `settings` as a **prop** rather than calling `useSettings()` itself purely so its test needs no context provider.
+
+> **Use static imports in the real implementation.** The `await import('../services/autoTagService')` calls below keep each handler self-contained for readability, but `autoTagService` is pure logic with no heavy dependencies, so there is nothing to defer. Hoist both to a normal top-level `import { suggestTagsForItem, applyTagsToItem } from '../services/autoTagService';` matching the rest of the file. The Task 9 tests pass either way.
+
 ```tsx
 export const TagSuggestionRow: React.FC<{
   item: GalleryItem;
