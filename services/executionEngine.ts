@@ -32,6 +32,24 @@ export interface StepResult {
 
 export type PlanStatus = 'running' | 'completed' | 'failed' | 'cancelled';
 
+/** Runtime context for a single step inside a pipeline. */
+export interface StepExecutionContext {
+  stepId: string;
+  stepType: string;
+  status: 'pending' | 'running' | 'completed' | 'failed' | 'skipped';
+  input: Record<string, any>;
+  output?: any;
+  error?: string;
+  durationMs?: number;
+}
+
+/** Accumulated state while a pipeline executes. */
+export interface PipelineExecutionState {
+  planId: string;
+  steps: StepExecutionContext[];
+  stepOutputs: Record<string, any>;
+}
+
 export interface PlanResult {
   planId: string;
   status: PlanStatus;
@@ -102,13 +120,50 @@ export function createExecutionEngine(options?: EngineOptions) {
       _cancelled = false;
       const startTime = Date.now();
       const stepResults: StepResult[] = [];
+      const stepOutputs: Record<string, any> = {};
 
-      for (const step of plan.steps) {
+      for (let i = 0; i < plan.steps.length; i++) {
         if (_cancelled) {
           return finish(plan, stepResults, planObservers, startTime, 'cancelled');
         }
 
-        const result = await engine.executeStep(step, plan.intent, ctx);
+        const step = plan.steps[i];
+
+        // ── Resolve template expressions in step params ──────────
+        const unresolved = findUnresolvedTemplates(step.params, stepOutputs);
+        if (unresolved.length > 0) {
+          const errMsg = `Unresolved template${unresolved.length > 1 ? 's' : ''} in step "${step.description}": ${unresolved.join(', ')}`;
+          const failResult: StepResult = { step, status: 'failed', duration: 0, error: errMsg };
+          stepResults.push({ ...failResult, status: 'skipped' });
+          fireStepObservers(stepObservers, stepResults[stepResults.length - 1], plan);
+          if (!(step.optional && opts.skipOptionalOnError)) {
+            return finish(plan, stepResults, planObservers, startTime, 'failed', errMsg);
+          }
+          continue;
+        }
+
+        const resolvedParams = step.params ? interpolateParams(step.params, stepOutputs) : step.params;
+        const executedStep: PlanStep = resolvedParams !== step.params
+          ? { ...step, params: resolvedParams }
+          : step;
+
+        const result = await engine.executeStep(executedStep, plan.intent, ctx);
+
+        // Track output for downstream step interpolation
+        if (result.status === 'completed') {
+          const outputCtx: StepExecutionContext = {
+            stepId: `step${i + 1}`,
+            stepType: step.kind,
+            status: 'completed',
+            input: step.params ?? {},
+            output: result.output,
+            durationMs: result.duration,
+          };
+          stepOutputs[`step${i + 1}`] = outputCtx;
+          // Array index access: {{step[0].output}} resolves through outputs.step[i]
+          if (!stepOutputs.step) stepOutputs.step = [];
+          stepOutputs.step[i] = outputCtx;
+        }
 
         if (result.status === 'failed' && step.fallbackTo) {
           // Run fallback step
@@ -336,4 +391,103 @@ function finish(
   }
 
   return result;
+}
+
+// ─── Template interpolation ────────────────────────────────────────────────
+
+/**
+ * Resolve a dot- or bracket-delimited path inside an object.
+ *
+ * Supports both dot notation (`step1.output.summary`) and
+ * array-index bracket notation (`step[0].output`).
+ */
+export function getNestedProperty(obj: Record<string, any>, path: string): unknown {
+  const parts = path.split('.');
+  let current: any = obj;
+  for (const part of parts) {
+    if (current === null || current === undefined) return undefined;
+    const bracketMatch = part.match(/^(\w+)\[(\d+)\]$/);
+    if (bracketMatch) {
+      current = current[bracketMatch[1]];
+      if (current === null || current === undefined) return undefined;
+      current = current[parseInt(bracketMatch[2], 10)];
+    } else {
+      current = current[part];
+    }
+  }
+  return current;
+}
+
+/**
+ * Resolves template expressions such as `{{step1.output.summary}}` or
+ * `{{step[0].output}}` against a map of step outputs.
+ *
+ * - **Exact match** (`{{...}}` covering the whole string) returns the raw
+ *   value — preserving object/array types for downstream use.
+ * - **Embedded template** is interpolated into the surrounding string;
+ *   objects are JSON-stringified inside the string context.
+ * - **Unresolved** exact-match returns the original string; unresolved
+ *   embedded expressions substitute `""` (callers should pre-validate
+ *   to fail the step rather than silently swallowing).
+ */
+export function interpolateStepValue(
+  value: unknown,
+  outputs: Record<string, any>,
+): unknown {
+  if (typeof value !== 'string') return value;
+  const templateRegex = /\{\{\s*([a-zA-Z0-9_\[\]\.]+)\s*\}\}/g;
+
+  // Exact match — return the raw resolved value (preserves object/array)
+  const exactMatch = value.match(/^\{\{\s*([a-zA-Z0-9_\[\]\.]+)\s*\}\}$/);
+  if (exactMatch) {
+    return getNestedProperty(outputs, exactMatch[1]) ?? value;
+  }
+
+  // Embedded template — string interpolation
+  return value.replace(templateRegex, (_, path) => {
+    const resolved = getNestedProperty(outputs, path);
+    return typeof resolved === 'object'
+      ? JSON.stringify(resolved)
+      : String(resolved ?? '');
+  });
+}
+
+/** Resolve every template expression in a params map. */
+function interpolateParams(
+  params: Record<string, any> | undefined,
+  outputs: Record<string, any>,
+): Record<string, any> | undefined {
+  if (!params) return params;
+  const resolved: Record<string, any> = {};
+  for (const [key, value] of Object.entries(params)) {
+    resolved[key] = interpolateStepValue(value, outputs);
+  }
+  return resolved;
+}
+
+/**
+ * Scan the _original_ params for any `{{...}}` pattern whose path
+ * cannot be resolved in the given outputs. Returns a list of
+ * `"paramKey (path)"` strings.
+ *
+ * Callers should fail the step when this list is non-empty instead
+ * of silently substituting `""`.
+ */
+function findUnresolvedTemplates(
+  params: Record<string, any> | undefined,
+  outputs: Record<string, any>,
+): string[] {
+  if (!params) return [];
+  const templateRegex = /\{\{\s*([a-zA-Z0-9_\[\]\.]+)\s*\}\}/g;
+  const unresolved: string[] = [];
+  for (const [key, value] of Object.entries(params)) {
+    if (typeof value !== 'string') continue;
+    let match: RegExpExecArray | null;
+    while ((match = templateRegex.exec(value)) !== null) {
+      if (getNestedProperty(outputs, match[1]) === undefined) {
+        unresolved.push(`${key} (${match[1]})`);
+      }
+    }
+  }
+  return [...new Set(unresolved)];
 }

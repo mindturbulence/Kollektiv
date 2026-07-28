@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { createExecutionEngine } from './executionEngine';
+import { createExecutionEngine, getNestedProperty, interpolateStepValue } from './executionEngine';
 import { capabilityRegistry } from './capabilityRegistry';
 import type { Plan, PlanStep } from './planner';
 import type { RouterIntent } from './intentRouter';
@@ -203,5 +203,147 @@ describe('engine.execute — full plan integration', () => {
     const result = await engine.execute(p, ctx);
     expect(result.status).toBe('completed');
     expect(result.steps[0].status).toBe('skipped');
+  });
+});
+
+describe('getNestedProperty', () => {
+  it('returns value for a simple key', () => {
+    expect(getNestedProperty({ a: 1 }, 'a')).toBe(1);
+  });
+
+  it('returns undefined for a missing key', () => {
+    expect(getNestedProperty({ a: 1 }, 'b')).toBeUndefined();
+  });
+
+  it('traverses nested objects with dot notation', () => {
+    expect(getNestedProperty({ a: { b: { c: 42 } } }, 'a.b.c')).toBe(42);
+  });
+
+  it('handles array-index bracket notation', () => {
+    const obj = { step: [{ output: 'value' }] };
+    expect(getNestedProperty(obj, 'step[0].output')).toBe('value');
+  });
+
+  it('returns undefined when an intermediate is null', () => {
+    expect(getNestedProperty({ a: null }, 'a.b')).toBeUndefined();
+  });
+
+  it('handles bracket notation at the start of a chained path', () => {
+    const obj = { items: [{ name: 'foo' }] };
+    expect(getNestedProperty(obj, 'items[0].name')).toBe('foo');
+  });
+});
+
+describe('interpolateStepValue', () => {
+  const outputs = {
+    step1: { output: { summary: 'hello', count: 3, items: ['a', 'b'] } },
+  };
+
+  it('passes non-string values through unchanged', () => {
+    expect(interpolateStepValue(42, outputs)).toBe(42);
+    expect(interpolateStepValue(null, outputs)).toBeNull();
+    expect(interpolateStepValue({ a: 1 }, outputs)).toEqual({ a: 1 });
+  });
+
+  it('exact match returns the raw value preserving object type', () => {
+    const result = interpolateStepValue('{{step1.output}}', outputs);
+    expect(result).toEqual({ summary: 'hello', count: 3, items: ['a', 'b'] });
+    /* Prove it is not a string — must be the live object */
+    expect(typeof result).toBe('object');
+  });
+
+  it('exact match on nested path returns the primitive', () => {
+    expect(interpolateStepValue('{{step1.output.summary}}', outputs)).toBe('hello');
+  });
+
+  it('embedded template interpolates into the surrounding string', () => {
+    expect(interpolateStepValue('prefix {{step1.output.summary}} suffix', outputs))
+      .toBe('prefix hello suffix');
+  });
+
+  it('stringifies objects in embedded templates', () => {
+    expect(interpolateStepValue('data: {{step1.output}}', outputs))
+      .toBe('data: {"summary":"hello","count":3,"items":["a","b"]}');
+  });
+
+  it('returns the original string when an exact-match template is unresolved', () => {
+    expect(interpolateStepValue('{{missing.output}}', {})).toBe('{{missing.output}}');
+  });
+
+  it('substitutes empty string for unresolved embedded templates', () => {
+    expect(interpolateStepValue('pre {{missing.output}} post', {})).toBe('pre  post');
+  });
+
+  it('supports array-index bracket notation in templates', () => {
+    const idxOutputs = { step: [{ output: 'hello from idx' }] };
+    expect(interpolateStepValue('{{step[0].output}}', idxOutputs)).toBe('hello from idx');
+    expect(interpolateStepValue('{{step[0]}}', idxOutputs)).toEqual({ output: 'hello from idx' });
+  });
+});
+
+describe('pipeline — inter-step data flow', () => {
+  afterEach(() => { capabilityRegistry.unregister('test_pipeline'); });
+
+  it('tracks step outputs and makes them available to the next step via {{step1.output}}', async () => {
+    const engine = createExecutionEngine();
+    const p = makePlan([
+      step({ kind: 'context_assembly', description: 'emit', params: { data: 'hello' } }),
+      step({ kind: 'provider_call', description: 'consume', params: { input: '{{step1.output.params.data}}' } }),
+    ]);
+    const result = await engine.execute(p, ctx);
+    expect(result.status).toBe('completed');
+    expect(streamChat).toHaveBeenCalledWith(
+      [{ role: 'user', content: 'hello' }],
+      ctx.settings,
+    );
+  });
+
+  it('supports array-index reference {{step[0].output}}', async () => {
+    const engine = createExecutionEngine();
+    const p = makePlan([
+      step({ kind: 'context_assembly', description: 'first', params: { data: 'world' } }),
+      step({ kind: 'provider_call', description: 'second', params: { input: '{{step[0].output.params.data}}' } }),
+    ]);
+    const result = await engine.execute(p, ctx);
+    expect(result.status).toBe('completed');
+    expect(streamChat).toHaveBeenCalledWith(
+      [{ role: 'user', content: 'world' }],
+      ctx.settings,
+    );
+  });
+
+  it('fails the step when a template references an unavailable output', async () => {
+    const engine = createExecutionEngine({ maxRetries: 0 });
+    const p = makePlan([
+      step({ kind: 'context_assembly', description: 'broken-ref', params: { ref: '{{step99.output}}' } }),
+    ]);
+    const result = await engine.execute(p, ctx);
+    expect(result.status).toBe('failed');
+    expect(result.error).toMatch(/Unresolved template/);
+  });
+
+  it('unresolved template in an optional step does not fail the plan', async () => {
+    const engine = createExecutionEngine({ maxRetries: 0 });
+    const p = makePlan([
+      step({ kind: 'context_assembly', description: 'maybe-broken', params: { ref: '{{nope}}' }, optional: true }),
+    ]);
+    const result = await engine.execute(p, ctx);
+    expect(result.status).toBe('completed');
+    expect(result.steps[0].status).toBe('skipped');
+  });
+
+  it('interpolates through multiple chained steps', async () => {
+    const engine = createExecutionEngine();
+    const p = makePlan([
+      step({ kind: 'context_assembly', description: 's1', params: { value: 'first' } }),
+      step({ kind: 'context_assembly', description: 's2', params: { prev: '{{step1.output.params.value}}' } }),
+      step({ kind: 'provider_call', description: 's3', params: { input: '{{step2.output.params.prev}}' } }),
+    ]);
+    const result = await engine.execute(p, ctx);
+    expect(result.status).toBe('completed');
+    expect(streamChat).toHaveBeenCalledWith(
+      [{ role: 'user', content: 'first' }],
+      ctx.settings,
+    );
   });
 });
