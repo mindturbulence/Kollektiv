@@ -29,14 +29,24 @@ Everything below was confirmed by reading the code on 2026-07-28, not inferred f
 | Generation is cloud-only | `hooks/useGenerateLoop.ts:11` imports only `generateWithImagen`, `generateWithNanoBanana`, `generateWithVeo`; all re-exported from `geminiService` at `llmService.ts:545` |
 | No local diffusion backend exists | No `comfyui`, `/sdapi/`, or `txt2img` match anywhere outside `node_modules` |
 | Local-proxy pattern is proven | `server.ts:181-246` (`/ollama-local`) and `server.ts:249+` (`/llamacpp-local`) — transparent pass-through, streams response, IPv4 → localhost → IPv6 fallback, helpful ECONNREFUSED message |
-| Execution engine is real, not a stub | `services/executionEngine.ts` — `StepStatus`, `StepResult`, `PlanResult`, retry with `maxRetries`/`retryDelayMs`, step + plan observers, cancellation flag |
-| Capability platform is UI-unreachable | `planner`, `executionEngine`, `intentRouter` are imported by exactly one file: `services/assistantTools.ts:24-26` |
+| ~~Execution engine is real, not a stub~~ **CORRECTED — see below** | Sequencing, retry, observers, and cancellation are real. **Execution is not:** `dispatchStep` at `services/executionEngine.ts:213-249` returns `status: '... (stub)'` for all eight step kinds |
+| Capability platform is UI-unreachable **and inert** | `planner`, `executionEngine`, `intentRouter` are imported by exactly one file (`services/assistantTools.ts:24-26`), **and `capabilityRegistry.register()` is never called anywhere in app code** — the registry is empty at runtime |
 | Auto-tagging needs no schema change | `GalleryItem.tags?: string[]` already exists at `types.ts:384` |
 | A vision path already ships | `abstractImageGemini(base64ImageData, ...)` at `geminiService.ts:414` |
 | Search is keyword-only | `utils/vaultSearch.ts` — BM25 `VaultSearchIndex` class, singleton via `getSearchIndex()`, test seam `_setSearchIndex()` |
 | `providerRouter.ts` is deleted | File does not exist. Deleted 2026-07-26 under ISSUE-32 |
 | Provider switching is deliberately strict | `llmService.ts:29-33` — `requireProvider()` **throws** `ProviderUnsupportedError` rather than switching |
 | No feature backlog is queued | Every unchecked box in `docs/ISSUES.md` is a manual test checklist, not feature work |
+
+### Corrections made during task planning (2026-07-28)
+
+Three claims in this roadmap's first draft were wrong. Each was found while decomposing the phase into tasks, and each is corrected in the phase plan that found it.
+
+1. **"The batch runner is UI over a working engine — cheap."** False. The engine's dispatcher is entirely stubs and the capability registry is never populated, so the platform executes nothing. Phase 4 was restructured to build the runner directly over working services instead, and the dead platform is logged as **ISSUE-47**. See `2026-07-28-phase4-batch-runner.md`.
+2. **"Surface the graph traversal already built."** Misleading. `traverse`, `findShortestPath`, and `getSubgraph` walk a relation set that hydration never populates (`addRelation` appears zero times in `graphTools.ts`), so they return nothing today. Phase 3's first task builds the edges. See `2026-07-28-phase3-relationship-graph.md`.
+3. **`findPaths` does not exist.** The method is `findShortestPath` (`relationshipGraph.ts:410`). The wrong name originated in that file's own header comment and was copied into `ARCHITECTURE_CONSTITUTION.md` and then into this roadmap.
+
+A fourth correction, on Phase 2, changed the approach rather than a fact: there is **no single provider dispatch point** to wrap — `requireProvider` is called at 15 separate sites in `llmService.ts`. Phase 2 ships an opt-in wrapper applied to the highest-value sites, not a big-bang refactor.
 
 ### Roadmap discrepancy found
 
@@ -53,7 +63,7 @@ This matches a documented pattern in this repo — `providerRouter` was marked d
 | 1 | Auto-tagging | Smallest diff. No schema change, vision path exists, corrects a false roadmap claim |
 | 2 | Provider fallback router | Self-contained in `llmService`. Makes every later phase more resilient |
 | 3 | Relationship graph expansion | Pure additive use of built-and-tested code |
-| 4 | Batch runner | Needs 1–3 stable; surfaces the execution engine to the UI |
+| 4 | Batch runner | Needs 1–3 stable. **Not** a thin UI over the execution engine — that platform is inert (ISSUE-47); the runner is built directly over working services |
 | 5 | Semantic vault search | Largest data-migration surface of the non-generation work |
 | 6a | Forge Neo / A1111 generation | Copies the proven proxy pattern; closes the vision gap |
 | 6b | ComfyUI generation | Hardest; needs the adapter seam 6a establishes |
