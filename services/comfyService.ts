@@ -119,11 +119,14 @@ export const comfyBackend: GenerationBackend = {
 
   async listModels(settings: LLMSettings): Promise<string[]> {
     try {
-      const res = await fetch(proxyUrl(settings, '/queue'));
+      // Live-verified 2026-07-28: /object_info/CheckpointLoaderSimple is the
+      // real endpoint ComfyUI exposes for the installed checkpoint list —
+      // it's the combo values the web UI's own dropdown reads from.
+      const res = await fetch(proxyUrl(settings, '/object_info/CheckpointLoaderSimple'));
       if (!res.ok) return [];
-      // ComfyUI doesn't have a simple models endpoint via the proxy
-      // Return empty — model selection is configured in ComfyUI itself
-      return [];
+      const data = await res.json();
+      const names = data?.CheckpointLoaderSimple?.input?.required?.ckpt_name?.[0];
+      return Array.isArray(names) ? names : [];
     } catch {
       return [];
     }
@@ -134,6 +137,19 @@ export const comfyBackend: GenerationBackend = {
     settings: LLMSettings,
     signal?: AbortSignal,
   ): Promise<GenerateOutput> {
+    // ComfyUI rejects an empty ckpt_name outright (confirmed live), so a
+    // real checkpoint must be resolved before building the workflow.
+    let ckptName = params.model;
+    if (!ckptName) {
+      const models = await comfyBackend.listModels(settings);
+      if (models.length === 0) {
+        throw new Error(
+          'No ComfyUI checkpoints found. Install a checkpoint in ComfyUI, or pick one in Settings.',
+        );
+      }
+      ckptName = models[0];
+    }
+
     // Build the default txt2img workflow
     const seed = params.seed ?? Math.floor(Math.random() * 2 ** 32);
     const workflow = createDefaultWorkflow({
@@ -144,6 +160,7 @@ export const comfyBackend: GenerationBackend = {
       cfg: params.cfgScale,
       width: params.width,
       height: params.height,
+      ckptName,
     });
 
     // POST to /prompt

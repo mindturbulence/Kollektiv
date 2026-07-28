@@ -1,18 +1,25 @@
 /**
  * comfyWorkflows — Default txt2img workflow template in ComfyUI API format.
  *
- * This is a minimal txt2img workflow with the standard ComfyUI node layout.
- * Node IDs must match the workflow exported via ComfyUI's "Save (API Format)".
+ * Live-verified 2026-07-28 against a real ComfyUI 0.16.4 instance.
+ *
+ * Targets a STANDARD checkpoint (SD1.5 / SDXL) only — CheckpointLoaderSimple
+ * bundles MODEL + CLIP + VAE in one node (outputs 0/1/2), so a minimal
+ * txt2img graph wires everything off node '1' directly. An earlier version
+ * of this file used separate CLIPLoader/VAELoader nodes, which is wrong for
+ * a standard checkpoint and was confirmed live to fail ComfyUI's validation
+ * (CLIPLoader additionally requires a `type` field this workflow never set).
+ * Those nodes are for split-encoder checkpoints (Flux, SD3), which need an
+ * entirely different graph and are out of scope — import a custom workflow
+ * via the field-mapping path for those.
  *
  * Structure:
- *   1: CheckpointLoaderSimple         → loads the model
- *   4: CLIPLoader                     → loads CLIP
+ *   1: CheckpointLoaderSimple         → loads the model (MODEL/CLIP/VAE)
  *   5: EmptyLatentImage               → defines output dimensions
- *   6: CLIPTextEncode (positive)      → the positive prompt
- *   7: CLIPTextEncode (negative)      → the negative prompt
- *   8: KSampler                       → the sampling step
- *   9: VAEDecode                      → decodes latent → image
- *   10: VAELoader                     → loads the VAE
+ *   6: CLIPTextEncode (positive)      → the positive prompt, clip: ['1', 1]
+ *   7: CLIPTextEncode (negative)      → the negative prompt, clip: ['1', 1]
+ *   8: KSampler                       → the sampling step, model: ['1', 0]
+ *   9: VAEDecode                      → decodes latent → image, vae: ['1', 2]
  *   12: SaveImage                     → saves the output
  */
 
@@ -36,20 +43,16 @@ export function createDefaultWorkflow(params: {
   cfg: number;
   width: number;
   height: number;
+  /** Checkpoint filename exactly as returned by /object_info's ckpt_name list. Required — ComfyUI rejects an empty value. */
+  ckptName: string;
 }): ComfyWorkflow {
   const p = params;
   return {
-    // Checkpoint loader (model)
+    // Checkpoint loader — bundles MODEL, CLIP, and VAE (outputs 0/1/2)
     '1': {
-      inputs: { ckpt_name: '' }, // populated by the backend from settings
+      inputs: { ckpt_name: p.ckptName },
       class_type: 'CheckpointLoaderSimple',
       _meta: { title: 'Load Checkpoint' },
-    },
-    // CLIP loader
-    '4': {
-      inputs: { clip_name: '' }, // populated by the backend
-      class_type: 'CLIPLoader',
-      _meta: { title: 'Load CLIP' },
     },
     // Empty latent (output dimensions)
     '5': {
@@ -61,20 +64,20 @@ export function createDefaultWorkflow(params: {
       class_type: 'EmptyLatentImage',
       _meta: { title: 'Empty Latent Image' },
     },
-    // Positive prompt
+    // Positive prompt — uses the checkpoint's own CLIP output
     '6': {
       inputs: {
         text: p.positivePrompt,
-        clip: ['4', 0],
+        clip: ['1', 1],
       },
       class_type: 'CLIPTextEncode',
       _meta: { title: 'CLIP Text Encode (Positive Prompt)' },
     },
-    // Negative prompt
+    // Negative prompt — uses the checkpoint's own CLIP output
     '7': {
       inputs: {
         text: p.negativePrompt || '',
-        clip: ['4', 0],
+        clip: ['1', 1],
       },
       class_type: 'CLIPTextEncode',
       _meta: { title: 'CLIP Text Encode (Negative Prompt)' },
@@ -96,20 +99,14 @@ export function createDefaultWorkflow(params: {
       class_type: 'KSampler',
       _meta: { title: 'KSampler' },
     },
-    // VAE decode
+    // VAE decode — uses the checkpoint's own VAE output
     '9': {
       inputs: {
         samples: ['8', 0],
-        vae: ['10', 0],
+        vae: ['1', 2],
       },
       class_type: 'VAEDecode',
       _meta: { title: 'VAE Decode' },
-    },
-    // VAE loader
-    '10': {
-      inputs: { vae_name: '' }, // populated by the backend
-      class_type: 'VAELoader',
-      _meta: { title: 'Load VAE' },
     },
     // Save image (output)
     '12': {

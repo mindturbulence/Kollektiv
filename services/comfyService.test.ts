@@ -58,7 +58,26 @@ describe('comfyBackend', () => {
     await expect(backend.isAvailable({} as any)).resolves.toBe(false);
   });
 
-  it('listModels returns an empty array', async () => {
+  it('listModels returns the checkpoint list from /object_info', async () => {
+    vi.spyOn(globalThis, 'fetch').mockResolvedValue(
+      new Response(JSON.stringify({
+        CheckpointLoaderSimple: { input: { required: { ckpt_name: [['a.safetensors', 'b.safetensors']] } } },
+      }), { status: 200 }),
+    );
+    const backend = getBackend('comfy')!;
+    const models = await backend.listModels({} as any);
+    expect(models).toEqual(['a.safetensors', 'b.safetensors']);
+  });
+
+  it('listModels returns an empty array on a non-ok response', async () => {
+    vi.spyOn(globalThis, 'fetch').mockResolvedValue(new Response(null, { status: 502 }));
+    const backend = getBackend('comfy')!;
+    const models = await backend.listModels({} as any);
+    expect(models).toEqual([]);
+  });
+
+  it('listModels returns an empty array on network error', async () => {
+    vi.spyOn(globalThis, 'fetch').mockRejectedValue(new Error('fetch failed'));
     const backend = getBackend('comfy')!;
     const models = await backend.listModels({} as any);
     expect(models).toEqual([]);
@@ -95,6 +114,12 @@ describe('comfyBackend', () => {
         return new Response(blob, { status: 200 });
       }
 
+      if (urlStr.includes('/object_info/CheckpointLoaderSimple')) {
+        return new Response(JSON.stringify({
+          CheckpointLoaderSimple: { input: { required: { ckpt_name: [['sd15.safetensors']] } } },
+        }), { status: 200 });
+      }
+
       // /system_stats (isAvailable is NOT called directly by generate,
       // but we mock it for safety)
       if (urlStr.includes('/system_stats')) {
@@ -117,9 +142,14 @@ describe('comfyBackend', () => {
   });
 
   it('generate throws when /prompt returns an error', async () => {
-    vi.spyOn(globalThis, 'fetch').mockResolvedValue(
-      new Response('Internal error', { status: 500 }),
-    );
+    vi.spyOn(globalThis, 'fetch').mockImplementation(async (url: any) => {
+      if (url.toString().includes('/object_info/CheckpointLoaderSimple')) {
+        return new Response(JSON.stringify({
+          CheckpointLoaderSimple: { input: { required: { ckpt_name: [['sd15.safetensors']] } } },
+        }), { status: 200 });
+      }
+      return new Response('Internal error', { status: 500 });
+    });
 
     const backend = getBackend('comfy')!;
     await expect(
@@ -128,5 +158,45 @@ describe('comfyBackend', () => {
         { comfyUrl: 'http://127.0.0.1:8188' } as any,
       ),
     ).rejects.toThrow(/ComfyUI generation failed/);
+  });
+
+  it('generate throws a clear error when no checkpoints are installed', async () => {
+    vi.spyOn(globalThis, 'fetch').mockResolvedValue(
+      new Response(JSON.stringify({
+        CheckpointLoaderSimple: { input: { required: { ckpt_name: [[]] } } },
+      }), { status: 200 }),
+    );
+
+    const backend = getBackend('comfy')!;
+    await expect(
+      backend.generate(
+        { prompt: 'test', width: 512, height: 512, steps: 10, cfgScale: 7 },
+        { comfyUrl: 'http://127.0.0.1:8188' } as any,
+      ),
+    ).rejects.toThrow(/No ComfyUI checkpoints found/);
+  });
+
+  it('generate uses params.model when provided, skipping the checkpoint lookup', async () => {
+    const mockPromptId = 'test-prompt-456';
+    const fetchSpy = vi.spyOn(globalThis, 'fetch').mockImplementation(async (url: any) => {
+      const urlStr = url.toString();
+      if (urlStr.includes('/object_info')) throw new Error('should not be called when model is explicit');
+      if (urlStr.includes('/prompt')) return new Response(JSON.stringify({ prompt_id: mockPromptId }), { status: 200 });
+      if (urlStr.includes('/history/')) {
+        return new Response(JSON.stringify({
+          [mockPromptId]: { outputs: { '12': { images: [{ filename: 'x.png', subfolder: '' }] } } },
+        }), { status: 200 });
+      }
+      if (urlStr.includes('/view')) return new Response(new Blob(['x'], { type: 'image/png' }), { status: 200 });
+      return new Response(null, { status: 404 });
+    });
+
+    const backend = getBackend('comfy')!;
+    const result = await backend.generate(
+      { prompt: 'test', width: 512, height: 512, steps: 10, cfgScale: 7, model: 'explicit.safetensors' },
+      { comfyUrl: 'http://127.0.0.1:8188' } as any,
+    );
+    expect(result.dataUrl).toBeTruthy();
+    expect(fetchSpy).not.toHaveBeenCalledWith(expect.stringContaining('/object_info'), expect.anything());
   });
 });
