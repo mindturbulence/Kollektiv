@@ -170,7 +170,7 @@ This phase builds different semantics:
 1. `traverse` from a tagged gallery item returns its n-hop neighborhood with correct hop counts.
 2. `findPaths` between two artifacts sharing an intermediate tag returns at least one path.
 3. The map renders a vault of 500+ entities without blocking the main thread beyond 100ms.
-4. Rehydration cost is measured and documented; if a full rehydrate per call exceeds 500ms at realistic vault size, add caching **in this phase** rather than deferring it.
+4. Rehydration cost is measured and documented; if a full rehydrate per call exceeds 500ms at realistic vault size, add caching **in this phase** rather than deferring it. Any such cache must be **in-memory only, invalidated on any vault mutation, and never persisted** — a persisted graph cache is the write-path plumbing ISSUE-31 deliberately avoided, and it reintroduces the staleness class this phase's out-of-scope section rules out.
 
 **Risks:** Rehydrating the whole graph per tool call may not scale. The acceptance criteria force this to be measured, not assumed.
 
