@@ -433,7 +433,7 @@ export const SetupPage: React.FC<SetupPageProps> = ({
     const handleSettingsChange = useCallback((field: keyof LLMSettings, value: any) => {
         const updated = { ...settings, [field]: value };
         setSettings(updated);
-        if (['youtube', 'googleIdentity', 'spotify', 'dashboardImageUrl', 'dashboardVideoUrl', 'darkTheme', 'mcpServers', 'googleApiKey', 'storageProvider', 'driveFolderId', 'driveFolderName'].includes(field)) updateSettings(updated);
+        if (['youtube', 'googleIdentity', 'spotify', 'dashboardImageUrl', 'dashboardVideoUrl', 'darkTheme', 'mcpServers', 'googleApiKey', 'storageProvider', 'driveFolderId', 'driveFolderName', 'autoTagEnabled', 'providerFallbackEnabled', 'providerFallbackChain', 'embeddingModel', 'generationBackendId', 'comfyUrl', 'a1111Url'].includes(field)) updateSettings(updated);
         if (field === 'fontSize' && typeof window !== 'undefined') (window as any).document.documentElement.style.fontSize = `${value}px`;
         // Sync Google API key to window for assistant tools (read from googleApiKey, fallback to youtube.customApiKey)
         if (typeof window !== 'undefined') {

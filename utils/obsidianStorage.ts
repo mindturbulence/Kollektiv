@@ -402,14 +402,56 @@ export async function searchNotes(
     const ranked = searchIndex.search(query, maxResults);
     if (ranked.length > 0) {
       // Fill in snippets from the actual file content
-      const results: { path: string; title: string; snippet: string }[] = [];
+      const bm25Results: Array<{ path: string; title: string; snippet: string; score: number }> = [];
       for (const r of ranked) {
         const content = await readFile(r.path);
         if (!content) continue;
         const snippet = searchIndex.generateSnippet(content, query);
-        results.push({ path: r.path, title: r.title, snippet });
+        bm25Results.push({ path: r.path, title: r.title, snippet, score: r.score });
       }
-      return results;
+
+      // ── Hybrid ranking: combine BM25 with semantic scores ──────────
+      try {
+        // Dynamically import to keep hard dependencies optional
+        const semanticIndex = await import('./semanticIndex');
+        const embedMod = await import('../services/embeddingService');
+
+        const allVectors = await semanticIndex.getAllVectors();
+        const settings = (await import('./settingsStorage')).loadLLMSettings();
+        const queryVec = await embedMod.embedText(query, settings);
+
+        if (queryVec && queryVec.length > 0 && allVectors.length > 0) {
+          const hybrid = semanticIndex.hybridRank(bm25Results, queryVec, allVectors);
+
+          // Re-build results in hybrid order, including semantic-only neighbours
+          const pathInfo = new Map(bm25Results.map((r) => [r.path, r]));
+          const merged: typeof bm25Results = [];
+          for (const h of hybrid) {
+            const existing = pathInfo.get(h.path);
+            if (existing) {
+              merged.push(existing);
+            } else {
+              // Semantic-only neighbour — fetch content
+              const content = await readFile(h.path);
+              if (content) {
+                merged.push({
+                  path: h.path,
+                  title: extractTitle(h.path, content),
+                  snippet: searchIndex.generateSnippet(content, query),
+                  score: h.hybridScore,
+                });
+              }
+            }
+            if (merged.length >= maxResults) break;
+          }
+
+          return merged.map(({ path, title, snippet }) => ({ path, title, snippet }));
+        }
+      } catch {
+        // Semantic search unavailable — degrade silently to BM25
+      }
+
+      return bm25Results.map(({ path, title, snippet }) => ({ path, title, snippet }));
     }
   }
 

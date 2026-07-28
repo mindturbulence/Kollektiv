@@ -76,6 +76,7 @@ export type ActiveTab =
   | 'color_palette_extractor'
   | 'composer'
   | 'lora_editor'
+  | 'batch_runner'
   | 'settings';
 
 export type ActiveSettingsTab = 'app' | 'appearance' | 'integrations' | 'prompt' | 'gallery';
@@ -256,6 +257,21 @@ export interface LLMSettings {
   convertImageToJpgLocal?: boolean;
   convertImageToJpgDrive?: boolean;
   jpgCompressionQuality?: number;
+
+  // Gallery Auto-Tagging
+  autoTagEnabled: boolean;
+
+  // Provider Fallback (failure-triggered only — see ISSUE-32)
+  providerFallbackEnabled: boolean;
+  providerFallbackChain: ('gemini' | 'ollama' | 'llamacpp' | 'anthropic' | 'openrouter')[];
+
+  // Semantic search — local embedding model
+  embeddingModel: string;
+
+  // Local generation — ComfyUI backend
+  generationBackendId: string;
+  comfyUrl: string;
+  a1111Url: string;
 }
 
 // --- Prompt Generation & Library ---

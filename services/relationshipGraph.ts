@@ -10,7 +10,7 @@
  *   - getNeighbors — find directly connected entities (optionally filtered by relation type)
  *   - traverse — BFS/DFS path finding between entities
  *   - getSubgraph — extract a connected subgraph around an entity
- *   - findPaths — shortest paths between two entities
+ *   - findShortestPath — shortest paths between two entities
  *
  * The graph is decoupled from the storage layer — entities are referenced by
  * kind+id pairs (matching KnowledgeRef from knowledgeService) so any entity

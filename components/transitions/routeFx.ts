@@ -18,7 +18,7 @@ export type FxGeometry = 'shutterV' | 'shutterH' | 'doors' | 'iris' | 'irisTop' 
 /** Tabs that share the single mounted PromptsPage (AnimatePresence key 'prompts_group'). */
 const WORKSPACE_GROUP: ActiveTab[] = ['prompts', 'crafter', 'refiner', 'prompt_analyzer', 'media_analyzer'];
 const ARCHIVE_GROUP: ActiveTab[] = ['gallery', 'prompt'];
-const TOOL_GROUP: ActiveTab[] = ['image_compare', 'color_palette_extractor', 'resizer', 'video_to_frames', 'lora_editor'];
+const TOOL_GROUP: ActiveTab[] = ['image_compare', 'color_palette_extractor', 'resizer', 'video_to_frames', 'lora_editor', 'batch_runner'];
 
 export const ROUTE_LABELS: Record<ActiveTab, { name: string; sub: string; glyph: string }> = {
     dashboard: { name: 'SHELL', sub: 'RETURNING TO CORE', glyph: '◈' },
@@ -38,6 +38,7 @@ export const ROUTE_LABELS: Record<ActiveTab, { name: string; sub: string; glyph:
     resizer: { name: 'RESIZER TOOL', sub: 'ALLOCATING CANVAS', glyph: '⿴' },
     video_to_frames: { name: 'FRAME EXTRACTOR', sub: 'SLICING TIMELINE', glyph: '▧' },
     lora_editor: { name: 'LORA EDITOR', sub: 'LOADING TENSOR WEIGHTS', glyph: '◈' },
+    batch_runner: { name: 'BATCH RUNNER', sub: 'QUEUING OPERATIONS', glyph: '⏩' },
 };
 
 export interface FxMeta {

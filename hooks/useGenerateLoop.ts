@@ -9,6 +9,10 @@
 
 import { useState, useRef, useCallback } from 'react';
 import { enhancePromptStream, cleanLLMResponse, generateWithImagen, generateWithNanoBanana, generateWithVeo } from '../services/llmService';
+import { getBackend } from '../services/generationBackend';
+// Side-effect imports: register local generation backends in the registry
+import '../services/comfyService';
+import '../services/a1111Service';
 import { addItemToGallery } from '../utils/galleryStorage';
 import type { LLMSettings } from '../types';
 
@@ -147,7 +151,45 @@ export function useGenerateLoop(): UseGenerateLoopReturn {
         let generatedUrl = '';
         const target = targetAIModel.toLowerCase();
 
-        if (target.includes('imagen')) {
+        // Check for local generation backend (ComfyUI, A1111, etc.)
+        const backendId = settings.generationBackendId;
+        if (backendId && backendId !== 'cloud') {
+          const backend = getBackend(backendId);
+          if (!backend) {
+            update({
+              phase: 'error',
+              error: `Generation backend "${backendId}" not found.`,
+              progress: 0,
+              statusMessage: 'Error',
+            });
+            return;
+          }
+
+          const available = await backend.isAvailable(settings);
+          if (!available) {
+            update({
+              phase: 'error',
+              error: `Generation backend "${backend.label}" is not available.`,
+              progress: 0,
+              statusMessage: 'Error',
+            });
+            return;
+          }
+
+          update({ statusMessage: `Generating via ${backend.label}...` });
+          const output = await backend.generate(
+            {
+              prompt: refinedPrompt,
+              negativePrompt: '',
+              width: 1024,
+              height: 1024,
+              steps: 20,
+              cfgScale: 7,
+            },
+            settings,
+          );
+          generatedUrl = output.dataUrl;
+        } else if (target.includes('imagen')) {
           generatedUrl = await generateWithImagen(refinedPrompt, '1:1', settings);
         } else if (target.includes('nano banana')) {
           generatedUrl = await generateWithNanoBanana(refinedPrompt, referenceImages, '1:1', settings);

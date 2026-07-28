@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import type { LLMSettings } from '../../types';
 import { SettingRow, SettingsGroup, ProviderTab } from './primitives';
 import { audioService } from '../../services/audioService';
@@ -401,11 +401,26 @@ const IntegrationsSection: React.FC<IntegrationsSectionProps> = ({
         const [connected, setConnected] = useState(false);
         const [vaultName, setVaultName] = useState('');
 
+        // Semantic backfill state
+        const [isBackfilling, setIsBackfilling] = useState(false);
+        const [backfillProgress, setBackfillProgress] = useState<{ done: number; total: number } | null>(null);
+        const [indexStats, setIndexStats] = useState<{ count: number; approxBytes: number } | null>(null);
+        const [embeddingStatus, setEmbeddingStatus] = useState<'unknown' | 'available' | 'unavailable'>('unknown');
+        const stopRef = useRef(false);
+
         useEffect(() => {
             initObsidianVault().then(ok => {
                 setConnected(ok);
                 if (ok) setVaultName('Obsidian Vault');
             });
+            // Check index stats on mount
+            (async () => {
+                try {
+                    const { getIndexStats } = await import('../../utils/semanticIndex');
+                    const stats = await getIndexStats();
+                    setIndexStats(stats);
+                } catch { /* ignore */ }
+            })();
         }, []);
 
         const handlePick = async () => {
@@ -420,8 +435,82 @@ const IntegrationsSection: React.FC<IntegrationsSectionProps> = ({
             setVaultName('');
         };
 
+        const handleBackfill = async () => {
+            setIsBackfilling(true);
+            setBackfillProgress({ done: 0, total: 1 });
+            setEmbeddingStatus('unknown');
+
+            try {
+                const { rebuildSearchIndex, listNotes, getNote } = await import('../../utils/obsidianStorage');
+                const { backfillVectors, getIndexStats } = await import('../../utils/semanticIndex');
+                const { isEmbeddingAvailable } = await import('../../services/embeddingService');
+
+                // Check if embedding is available
+                const available = await isEmbeddingAvailable(settings);
+                setEmbeddingStatus(available ? 'available' : 'unavailable');
+                if (!available) {
+                    setIsBackfilling(false);
+                    setBackfillProgress(null);
+                    return;
+                }
+
+                // Rebuild the BM25 index first (to capture latest notes)
+                await rebuildSearchIndex();
+
+                // Get all notes from the vault
+                const paths = await listNotes();
+                const notes: Array<{ path: string; title: string; content: string }> = [];
+                for (const p of paths) {
+                    const note = await getNote(p);
+                    if (note) notes.push({ path: note.path, title: note.title, content: note.content });
+                }
+
+                if (notes.length === 0) {
+                    setIsBackfilling(false);
+                    setBackfillProgress(null);
+                    return;
+                }
+
+                stopRef.current = false;
+                await backfillVectors(notes, settings, (done, total) => {
+                    setBackfillProgress({ done, total });
+                }, () => stopRef.current);
+
+                const stats = await getIndexStats();
+                setIndexStats(stats);
+                setBackfillProgress(null);
+                setIsBackfilling(false);
+            } catch {
+                setIsBackfilling(false);
+                setBackfillProgress(null);
+            }
+        };
+
+        const handleStopBackfill = () => {
+            stopRef.current = true;
+        };
+
+        const handleClearIndex = async () => {
+            try {
+                const { clearVectors } = await import('../../utils/semanticIndex');
+                await clearVectors();
+                setIndexStats({ count: 0, approxBytes: 0 });
+            } catch { /* ignore */ }
+        };
+
+        const formatBytes = (bytes: number): string => {
+            if (bytes < 1024) return `${bytes} B`;
+            if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
+            return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
+        };
+
+        const progressPct = backfillProgress
+            ? Math.round((backfillProgress.done / backfillProgress.total) * 100)
+            : 0;
+
         return (
-            <div className="flex flex-col animate-fade-in">
+            <div className="flex flex-col animate-fade-in gap-6">
+                {/* Vault connection */}
                 <div className="bg-base-200/30 border border-base-300/10 p-6 space-y-4">
                     <h3 className="text-xs font-black uppercase tracking-widest">
                         Obsidian Second Brain
@@ -453,6 +542,81 @@ const IntegrationsSection: React.FC<IntegrationsSectionProps> = ({
                             <button onClick={() => { audioService.playClick(); handlePick(); }} className="form-btn px-6">
                                 PICK OBSIDIAN VAULT FOLDER
                             </button>
+                        </div>
+                    )}
+                </div>
+
+                {/* Semantic search controls */}
+                <div className="bg-base-200/30 border border-base-300/10 p-6 space-y-4">
+                    <h3 className="text-xs font-black uppercase tracking-widest">
+                        Semantic Search
+                    </h3>
+                    <p className="text-[10px] font-bold leading-relaxed text-base-content/60">
+                        Build a vector index of your vault notes to enable meaning-based search
+                        alongside keyword matching. All computation is local via Ollama.
+                    </p>
+
+                    {embeddingStatus === 'unavailable' && (
+                        <div className="p-4 bg-warning/5 border border-warning/30">
+                            <p className="text-[10px] font-black uppercase tracking-widest text-warning">
+                                No local embedding model found. Search will use keywords only.
+                            </p>
+                        </div>
+                    )}
+
+                    {indexStats && indexStats.count > 0 && (
+                        <div className="flex items-center gap-3 p-4 bg-info/5 border border-info/30">
+                            <span className="text-[10px] font-mono font-bold text-base-content/70">
+                                {indexStats.count} note{indexStats.count !== 1 ? 's' : ''} indexed
+                            </span>
+                            <span className="text-[9px] font-mono text-base-content/40">
+                                ~{formatBytes(indexStats.approxBytes)}
+                            </span>
+                        </div>
+                    )}
+
+                    <div className="flex flex-wrap items-center gap-3">
+                        <button
+                            onClick={() => { audioService.playClick(); handleBackfill(); }}
+                            disabled={isBackfilling || !connected}
+                            className={`form-btn px-6 ${connected ? 'form-btn-primary' : ''}`}
+                        >
+                            {isBackfilling ? 'INDEXING...' : 'BUILD SEMANTIC INDEX'}
+                        </button>
+
+                        {isBackfilling && (
+                            <button
+                                onClick={() => { audioService.playClick(); handleStopBackfill(); }}
+                                className="form-btn text-error px-4"
+                            >
+                                STOP
+                            </button>
+                        )}
+
+                        {indexStats && indexStats.count > 0 && (
+                            <button
+                                onClick={() => { audioService.playClick(); handleClearIndex(); }}
+                                className="form-btn text-error px-4"
+                            >
+                                CLEAR INDEX
+                            </button>
+                        )}
+                    </div>
+
+                    {isBackfilling && backfillProgress && (
+                        <div className="space-y-2">
+                            <div className="flex items-center justify-between text-[10px] font-mono">
+                                <span className="text-base-content/60">
+                                    {backfillProgress.done} / {backfillProgress.total}
+                                </span>
+                                <span className="text-primary">{progressPct}%</span>
+                            </div>
+                            <div className="w-full h-1 bg-base-300/30 relative overflow-hidden">
+                                <div
+                                    className="absolute inset-y-0 left-0 bg-primary transition-all duration-300 ease-out"
+                                    style={{ width: `${progressPct}%` }}
+                                />
+                            </div>
                         </div>
                     )}
                 </div>
@@ -500,6 +664,113 @@ const IntegrationsSection: React.FC<IntegrationsSectionProps> = ({
         </div>
     );
 
+    const renderLocalGeneration = () => {
+        const [connStatus, setConnStatus] = useState<'idle' | 'testing' | 'ok' | 'fail'>('idle');
+        const backendId = settings.generationBackendId || 'cloud';
+        const isLocal = backendId !== 'cloud';
+
+        const testBackend = async (id: string) => {
+            setConnStatus('testing');
+            try {
+                const { getBackend } = await import('../../services/generationBackend');
+                const backend = getBackend(id);
+                if (!backend) { setConnStatus('fail'); return; }
+                const ok = await backend.isAvailable(settings);
+                setConnStatus(ok ? 'ok' : 'fail');
+            } catch { setConnStatus('fail'); }
+        };
+
+        const urlField = () => {
+            switch (backendId) {
+                case 'comfy': return 'comfyUrl';
+                case 'a1111': return 'a1111Url';
+                default: return 'comfyUrl';
+            }
+        };
+
+        return (
+            <div className="flex flex-col animate-fade-in">
+                <SettingsGroup title="Generation Backend">
+                    <SettingRow label="Backend" desc="Choose where images are generated: cloud APIs or a local diffusion instance.">
+                        <div className="tab-group">
+                            <ProviderTab
+                                label="Cloud"
+                                isActive={!isLocal}
+                                onClick={() => handleSettingsChange('generationBackendId', 'cloud')}
+                            />
+                            <ProviderTab
+                                label="ComfyUI"
+                                isActive={isLocal && backendId === 'comfy'}
+                                onClick={() => handleSettingsChange('generationBackendId', 'comfy')}
+                            />
+                            <ProviderTab
+                                label="A1111 / Forge"
+                                isActive={isLocal && backendId === 'a1111'}
+                                onClick={() => handleSettingsChange('generationBackendId', 'a1111')}
+                            />
+                        </div>
+                    </SettingRow>
+
+                    {isLocal && (
+                        <>
+                            <SettingRow
+                                label={backendId === 'comfy' ? 'ComfyUI URL' : 'A1111 / Forge Neo URL'}
+                                desc={`The HTTP address of your ${backendId === 'comfy' ? 'ComfyUI' : 'A1111 / Forge Neo'} server.`}
+                            >
+                                <input
+                                    type="text"
+                                    value={settings[urlField() as keyof LLMSettings] as string || ''}
+                                    onChange={(e) => handleSettingsChange(urlField() as keyof LLMSettings, e.target.value)}
+                                    className="form-input w-full md:w-[620px]"
+                                    placeholder={backendId === 'comfy' ? 'http://127.0.0.1:8188' : 'http://127.0.0.1:7860'}
+                                />
+                            </SettingRow>
+
+                            <SettingRow label="Connection" desc="Test whether the backend is reachable.">
+                                <div className="flex flex-col gap-2">
+                                    <div className="flex items-center gap-3">
+                                        <button
+                                            onClick={() => testBackend(backendId)}
+                                            disabled={connStatus === 'testing'}
+                                            className="form-btn px-6"
+                                        >
+                                            {connStatus === 'testing' ? 'TESTING...' : 'TEST CONNECTION'}
+                                        </button>
+                                        {connStatus === 'ok' && (
+                                            <span className="flex items-center gap-1.5 text-[10px] font-black uppercase tracking-widest text-success">
+                                                <span className="w-1.5 h-1.5 rounded-full bg-success animate-pulse" />
+                                                Reachable
+                                            </span>
+                                        )}
+                                        {connStatus === 'fail' && (
+                                            <span className="flex items-center gap-1.5 text-[10px] font-black uppercase tracking-widest text-error">
+                                                <span className="w-1.5 h-1.5 rounded-full bg-error animate-pulse" />
+                                                Not reachable
+                                            </span>
+                                        )}
+                                    </div>
+                                </div>
+                            </SettingRow>
+                        </>
+                    )}
+
+                    {!isLocal && (
+                        <div className="p-4 bg-info/5 border border-info/20 space-y-2 mx-6 mb-6">
+                            <p className="text-[10px] font-black uppercase tracking-widest text-info leading-tight">
+                                CLOUD BACKEND
+                            </p>
+                            <p className="text-[10px] font-bold leading-relaxed text-base-content/60">
+                                In Cloud mode, image generation uses Google Gemini (Imagen, Veo, Nano Banana) as configured
+                                in the AI Engine settings. Switch to ComfyUI or A1111 / Forge Neo to generate
+                                entirely on-device without cloud costs.
+                            </p>
+                        </div>
+                    )}
+                </SettingsGroup>
+            </div>
+        );
+    };
+
     switch (activeSubTab) {
         case 'llm': return renderLLM();
         case 'assistant': return <AssistantSection activeSubTab={activeSubTab} settings={settings} handleSettingsChange={handleSettingsChange} />;
@@ -509,6 +780,7 @@ const IntegrationsSection: React.FC<IntegrationsSectionProps> = ({
         case 'cdp': return <CdpSection activeSubTab={activeSubTab} />;
         case 'tensorart': return renderTensorArt();
         case 'obsidian': return renderObsidian();
+        case 'generation': return renderLocalGeneration();
         default: return null;
     }
 };

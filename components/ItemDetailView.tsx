@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useMemo, useRef, useLayoutEffect, useCallback } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { gsap } from 'gsap';
-import type { GalleryItem, GalleryCategory } from '../types';
+import type { GalleryItem, GalleryCategory, LLMSettings } from '../types';
 import { 
     ChevronLeftIcon, ThumbTackIcon, 
     ChevronRightIcon, CloseIcon, YouTubeIcon, 
@@ -14,6 +14,7 @@ import LoadingSpinner from './LoadingSpinner';
 import AutocompleteSelect from './AutocompleteSelect';
 import YouTubePublishModal from './YouTubePublishModal';
 import { audioService } from '../services/audioService';
+import { suggestTagsForItem, applyTagsToItem } from '../services/autoTagService';
 
 interface ItemDetailViewProps {
   items: GalleryItem[];
@@ -202,6 +203,127 @@ const Thumbnail: React.FC<{
             )}
         </div>
     );
+};
+
+export const TagSuggestionRow: React.FC<{
+  item: GalleryItem;
+  settings: LLMSettings;
+  onTagsChanged: (newTags: string[]) => void;
+}> = ({ item, settings, onTagsChanged }) => {
+  const [suggestions, setSuggestions] = useState<string[] | null>(null);
+  const [selected, setSelected] = useState<Set<string>>(new Set());
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [applying, setApplying] = useState(false);
+
+  if (!settings.autoTagEnabled) return null;
+
+  const handleSuggest = async () => {
+    setIsLoading(true);
+    setError(null);
+    setSuggestions(null);
+    setSelected(new Set());
+    try {
+      const result = await suggestTagsForItem(item, settings);
+      setSuggestions(result);
+      if (result.length === 0) {
+        setError('No new tag suggestions available.');
+      }
+    } catch (err: any) {
+      setError(err?.message || 'Tag suggestion failed.');
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleToggle = (tag: string) => {
+    setSelected(prev => {
+      const next = new Set(prev);
+      if (next.has(tag)) next.delete(tag);
+      else next.add(tag);
+      return next;
+    });
+  };
+
+  const handleApply = async () => {
+    if (selected.size === 0) return;
+    setApplying(true);
+    try {
+      const newTags = await applyTagsToItem(item, Array.from(selected));
+      onTagsChanged(newTags);
+      setSuggestions(null);
+      setSelected(new Set());
+    } catch (err: any) {
+      setError(err?.message || 'Failed to apply tags.');
+    } finally {
+      setApplying(false);
+    }
+  };
+
+  return (
+    <div className="space-y-3">
+      {!suggestions && !isLoading && !error && (
+        <button
+          onClick={handleSuggest}
+          className="form-btn text-[10px] font-black uppercase tracking-widest px-4 py-2 border border-white/10 hover:border-primary/40 hover:text-primary transition-all"
+        >
+          SUGGEST TAGS
+        </button>
+      )}
+
+      {isLoading && (
+        <div className="flex items-center gap-2 text-[10px] font-mono text-base-content/50 animate-pulse">
+          <span className="w-3 h-3 rounded-full border border-primary border-t-transparent animate-spin" />
+          Analysing image...
+        </div>
+      )}
+
+      {error && (
+        <div className="text-[10px] font-mono text-error/80 p-2 bg-error/5 border border-error/20">
+          {error}
+        </div>
+      )}
+
+      {suggestions && suggestions.length > 0 && (
+        <>
+          <div className="flex flex-wrap gap-1.5">
+            {suggestions.map(tag => (
+              <button
+                key={tag}
+                onClick={() => handleToggle(tag)}
+                className={`text-[10px] font-nunito font-bold uppercase tracking-widest px-2.5 py-1 transition-all border ${
+                  selected.has(tag)
+                    ? 'bg-primary/20 text-primary border-primary/40'
+                    : 'bg-white/5 text-base-content/60 border-white/10 hover:border-primary/30 hover:text-base-content/80'
+                }`}
+              >
+                {tag}
+              </button>
+            ))}
+          </div>
+          <div className="flex gap-2">
+            <button
+              onClick={handleApply}
+              disabled={selected.size === 0 || applying}
+              className={`form-btn text-[10px] font-black uppercase tracking-widest px-4 py-1.5 transition-all ${
+                selected.size > 0 && !applying
+                  ? 'bg-primary/20 text-primary border border-primary/40 hover:bg-primary/30'
+                  : 'text-base-content/30 border border-white/5 cursor-not-allowed'
+              }`}
+            >
+              {applying ? 'APPLYING...' : `APPLY (${selected.size})`}
+            </button>
+            <button
+              onClick={() => { setSuggestions(null); setSelected(new Set()); setError(null); }}
+              className="form-btn text-[10px] font-black uppercase tracking-widest px-4 py-1.5 border border-white/10 hover:border-error/40 hover:text-error transition-all"
+            >
+              DISMISS
+            </button>
+          </div>
+        </>
+      )}
+    </div>
+  );
 };
 
 const ItemDetailView: React.FC<ItemDetailViewProps> = ({ items, currentIndex, isPinned, categories, onClose, onUpdate, onDelete, onTogglePin, onNavigate, showGlobalFeedback }) => {
@@ -663,7 +785,7 @@ const ItemDetailView: React.FC<ItemDetailViewProps> = ({ items, currentIndex, is
                                         "{item.prompt || 'None.'}"
                                     </div>
                                 </InfoRow>
-                                {tags.length > 0 && (
+                                {(tags.length > 0 || settings.autoTagEnabled) && (
                                     <InfoRow label="Tags">
                                         <div className="flex flex-wrap gap-1 mt-1">
                                             {tags.map(tag => (
@@ -671,6 +793,16 @@ const ItemDetailView: React.FC<ItemDetailViewProps> = ({ items, currentIndex, is
                                                     {tag}
                                                 </button>
                                             ))}
+                                        </div>
+                                        <div className="mt-2">
+                                            <TagSuggestionRow
+                                                item={item}
+                                                settings={settings}
+                                                onTagsChanged={(newTags) => {
+                                                    setTags(newTags);
+                                                    onUpdate(item.id, { tags: newTags });
+                                                }}
+                                            />
                                         </div>
                                     </InfoRow>
                                 )}

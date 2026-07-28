@@ -342,9 +342,11 @@ function initServerExecutors(httpPort: number): void {
   // executor needed. The Express server has no DOMParser or proxy-remote route
   // that returns readability-extracted markdown (only raw HTML proxy).
   // ── capability_* tools ───────────────────────────────────────────────
-  // These use the in-memory capabilityRegistry which is populated in the
-  // browser context. They cannot execute server-side until the registry is
-  // populated on the server as well.
+  // NOTE: The in-memory capabilityRegistry is NOT populated at runtime
+  // (capabilityRegistry.register() is never called by app code). The
+  // dispatchStep function in executionEngine.ts returns stubs for all
+  // eight step kinds. The five capability_* assistant tools return empty
+  // results. See ISSUE-47 for the full record.
   // ── tensorart_* tools ─────────────────────────────────────────────────
   // These require the tensorartService which runs in the browser.
   // ── obsidian_* tools ──────────────────────────────────────────────────

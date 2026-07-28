@@ -16,6 +16,7 @@ import AboutModal from './AboutModal';
 import ClippingPanel from './ClippingPanel';
 import MediaPanel from './MediaPanel';
 import ActivityPanel from './ActivityPanel';
+import VaultMapPanel from './VaultMapPanel';
 import LlmStatusPanel from './LlmStatusPanel';
 import FeedbackToast from './FeedbackToast';
 import Footer from './Footer';
@@ -37,6 +38,7 @@ import ColorPaletteExtractor from './ColorPaletteExtractor';
 import ImageResizer from './ImageResizer';
 import { VideoToFrames } from './VideoToFrames';
 import LoraEditorPage from './loraEditor/LoraEditorPage';
+import BatchRunnerPage from './BatchRunnerPage';
 import { LLMChatPanel } from './LLMChatPanel';
 import { LiveAssistantProvider } from '../contexts/LiveAssistantContext';
 import VideoPlayerOverlay from './VideoPlayerOverlay';
@@ -125,6 +127,7 @@ const App: React.FC = () => {
 
 const AppContent: React.FC = () => {
     const [videoError, setVideoError] = useState(false);
+    const [vaultMapOpen, setVaultMapOpen] = useState(false);
     const isFirstRevealRef = useRef(true);
 
     const { settings, updateSettings } = useSettings();
@@ -153,6 +156,7 @@ const AppContent: React.FC = () => {
             case 'resizer': return `RESIZER | ${base}`;
             case 'video_to_frames': return `VIDEO | ${base}`;
             case 'lora_editor': return `LORA | ${base}`;
+            case 'batch_runner': return `BATCH | ${base}`;
             default: return base;
         }
     }, [activeTab]);
@@ -188,6 +192,13 @@ const AppContent: React.FC = () => {
     });
 
     const shell = useAppShell({ handleNavigate });
+
+    // Listen for openVaultMap event from CommandPalette
+    React.useEffect(() => {
+        const handler = () => setVaultMapOpen(true);
+        window.addEventListener('open-vault-map', handler);
+        return () => window.removeEventListener('open-vault-map', handler);
+    }, []);
 
     const {
         isAboutModalOpen,
@@ -361,6 +372,7 @@ const AppContent: React.FC = () => {
             case 'resizer': return <ImageResizer key="resizer" isExiting={false} />;
             case 'video_to_frames': return <VideoToFrames key="video_to_frames" isExiting={false} />;
             case 'lora_editor': return <LoraEditorPage key="lora_editor" isExiting={false} />;
+            case 'batch_runner': return <BatchRunnerPage key="batch_runner" />;
             default: return <Dashboard key="default" onNavigate={handleNavigate} onClipIdea={handleClipIdea} isExiting={false} />;
         }
     };
@@ -562,6 +574,11 @@ const AppContent: React.FC = () => {
                                     <ActivityPanel
                                         isOpen={isActivityPanelOpen}
                                         onClose={handleCloseActivityPanel}
+                                    />
+
+                                    <VaultMapPanel
+                                        isOpen={vaultMapOpen}
+                                        onClose={() => setVaultMapOpen(false)}
                                     />
                                 </div>
                             </main>

@@ -39,6 +39,77 @@ const AssistantSection: React.FC<AssistantSectionProps> = ({ settings, handleSet
 
             {tab === 'persona' && (
                 <SettingsGroup title="Assistant Persona">
+                    <SettingRow label="Gallery Auto-Tagging" desc="Suggest tags from image content. Uses a vision model — costs tokens on cloud providers.">
+                        <label className="label cursor-pointer justify-start gap-4 p-0">
+                            <input
+                                type="checkbox"
+                                checked={!!settings.autoTagEnabled}
+                                onChange={(e) => handleSettingsChange('autoTagEnabled', e.target.checked)}
+                                className="toggle toggle-primary toggle-xs"
+                            />
+                            <span className="text-[10px] font-black uppercase tracking-widest">
+                                {settings.autoTagEnabled ? 'ENABLED' : 'DISABLED'}
+                            </span>
+                        </label>
+                    </SettingRow>
+
+                    <SettingRow label="Provider Fallback" desc="If your active provider fails, retry on these in order. Fallback never fires while your provider is working, and never fires for features a provider doesn't support. Adding a cloud provider means a prompt from a local model can be sent to that cloud service when the local one fails.">
+                        <div className="flex flex-col gap-4 w-full md:w-[620px]">
+                            <label className="label cursor-pointer justify-start gap-4 p-0">
+                                <input
+                                    type="checkbox"
+                                    checked={!!settings.providerFallbackEnabled}
+                                    onChange={(e) => handleSettingsChange('providerFallbackEnabled', e.target.checked)}
+                                    className="toggle toggle-primary toggle-xs"
+                                />
+                                <span className="text-[10px] font-black uppercase tracking-widest">
+                                    {settings.providerFallbackEnabled ? 'ENABLED' : 'DISABLED'}
+                                </span>
+                            </label>
+                            {settings.providerFallbackEnabled && (
+                                <div className="flex flex-col gap-2 p-4 bg-warning/5 border border-warning/20">
+                                    <p className="text-[9px] font-black uppercase text-warning tracking-widest">PRIVACY NOTICE</p>
+                                    <p className="text-[10px] font-bold leading-relaxed text-base-content/60">
+                                        Adding a cloud provider means a prompt from a local model can be sent to that cloud service when the local one fails.
+                                    </p>
+                                </div>
+                            )}
+                            <div className="flex flex-wrap gap-2">
+                                {(['ollama', 'gemini', 'anthropic', 'llamacpp', 'openrouter'] as const).map(p => {
+                                    const chain = (settings.providerFallbackChain || []) as string[];
+                                    const isSelected = chain.includes(p);
+                                    return (
+                                        <button
+                                            key={p}
+                                            type="button"
+                                            disabled={!settings.providerFallbackEnabled}
+                                            onClick={() => {
+                                                const next = isSelected
+                                                    ? chain.filter(x => x !== p)
+                                                    : [...chain, p];
+                                                handleSettingsChange('providerFallbackChain', next);
+                                            }}
+                                            className={`px-3 py-1 text-[10px] font-black uppercase tracking-widest border transition-all ${
+                                                !settings.providerFallbackEnabled
+                                                    ? 'border-base-300/10 text-base-content/20 cursor-not-allowed'
+                                                    : isSelected
+                                                        ? 'bg-primary/20 text-primary border-primary/40'
+                                                        : 'bg-white/5 text-base-content/50 border-white/10 hover:border-primary/30 hover:text-base-content/80'
+                                            }`}
+                                        >
+                                            {p}
+                                        </button>
+                                    );
+                                })}
+                            </div>
+                            {settings.providerFallbackEnabled && (
+                                <p className="text-[9px] font-mono text-base-content/30">
+                                    Chain order: {((settings.providerFallbackChain || []) as string[]).join(' → ') || '(empty — no fallback will occur)'}
+                                </p>
+                            )}
+                        </div>
+                    </SettingRow>
+
                     <SettingRow label="Assistant Name" desc="What the assistant calls itself in chat and live voice mode.">
                         <input type="text" value={settings.assistantName || ''} onChange={(e) => handleSettingsChange('assistantName', e.target.value)} className="form-input w-full md:w-[620px]" placeholder="Kollektiv" />
                     </SettingRow>

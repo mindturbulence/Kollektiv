@@ -1,10 +1,11 @@
 
 import type { EnhancementResult, LLMSettings, PromptModifiers } from '../types';
-import { translateToEnglishGemini, analyzePaletteMood as analyzePaletteMoodGemini, generatePromptFormulaGemini, refineSinglePromptGemini, abstractImageGemini, generateColorNameGemini, dissectPromptGemini, generateFocusedVariationsGemini, reconstructPromptGemini, reconstructFromIntentGemini, replaceComponentInPromptGemini, generateArtistDescriptionGemini, enhancePromptGeminiStream, refineSinglePromptGeminiStream, generateConstructorPresetGemini } from './geminiService';
-import { analyzePaletteMoodOllama, generatePromptFormulaOllama, refineSinglePromptOllama, abstractImageOllama, generateColorNameOllama, dissectPromptOllama, generateFocusedVariationsOllama, reconstructPromptOllama, replaceComponentInPromptOllama, reconstructFromIntentOllama, generateArtistDescriptionOllama, enhancePromptOllamaStream, refineSinglePromptOllamaStream } from './ollamaService';
+import { translateToEnglishGemini, analyzePaletteMood as analyzePaletteMoodGemini, generatePromptFormulaGemini, refineSinglePromptGemini, abstractImageGemini, suggestTagsRawGemini, generateColorNameGemini, dissectPromptGemini, generateFocusedVariationsGemini, reconstructPromptGemini, reconstructFromIntentGemini, replaceComponentInPromptGemini, generateArtistDescriptionGemini, enhancePromptGeminiStream, refineSinglePromptGeminiStream, generateConstructorPresetGemini } from './geminiService';
+import { analyzePaletteMoodOllama, generatePromptFormulaOllama, refineSinglePromptOllama, abstractImageOllama, suggestTagsRawOllama, generateColorNameOllama, dissectPromptOllama, generateFocusedVariationsOllama, reconstructPromptOllama, replaceComponentInPromptOllama, reconstructFromIntentOllama, generateArtistDescriptionOllama, enhancePromptOllamaStream, refineSinglePromptOllamaStream } from './ollamaService';
 import { refineSinglePromptLlamaCpp, enhancePromptLlamaCppStream, refineSinglePromptLlamaCppStream, reconstructFromIntentLlamaCpp } from './llamacppService';
 import { TARGET_VIDEO_AI_MODELS, TARGET_AUDIO_AI_MODELS } from '../constants/models';
 import { lookupModelProfile } from '../constants/modelProfiles';
+import { withProviderFallback } from './providerFallback';
 
 export type LLMProvider = 'gemini' | 'ollama' | 'llamacpp' | 'anthropic' | 'openrouter';
 
@@ -364,22 +365,25 @@ export const refineSinglePrompt = async (promptText: string, targetAIModel: stri
     const hasManualCamera = !!modifiers.cameraMovement;
     const sys = AI_ROLES.REFINER(targetAIModel, isVideo, isAudio, hasManualCamera, modifiers.videoInputType, settings.masterRolePrompt);
     
-    const provider = requireProvider('Prompt refinement', settings, ['gemini', 'ollama', 'llamacpp', 'anthropic']);
-    let raw = "";
-    
-    if (provider === 'anthropic') {
-        const { streamChatAnthropic } = await import('./anthropicService');
-        const generator = streamChatAnthropic([{ role: 'system', content: sys }, { role: 'user', content: promptText }], settings);
-        for await (const chunk of generator) {
-            raw += chunk;
+    const supported: LLMProvider[] = ['gemini', 'ollama', 'llamacpp', 'anthropic'];
+    requireProvider('Prompt refinement', settings, supported);
+    const raw = await withProviderFallback('Prompt refinement', settings, supported, async (provider) => {
+        if (provider === 'anthropic') {
+            const { streamChatAnthropic } = await import('./anthropicService');
+            let text = '';
+            for await (const chunk of streamChatAnthropic([{ role: 'system', content: sys }, { role: 'user', content: promptText }], settings)) {
+                text += chunk;
+            }
+            return text;
         }
-    } else {
-        raw = provider === 'llamacpp'
+        return provider === 'llamacpp'
             ? await refineSinglePromptLlamaCpp(promptText, settings, sys, 1024)
             : provider === 'ollama' 
                 ? await refineSinglePromptOllama(promptText, settings, sys, 1024)
                 : await refineSinglePromptGemini(promptText, '', settings, sys);
-    }
+    }, (from, to, err) => {
+        console.warn(`[Kollektiv] ${from} failed (${err.message}). Retrying on ${to}.`);
+    });
     const cleaned = cleanLLMResponse(raw);
     return cleaned;
 };
@@ -488,6 +492,16 @@ export const abstractImage = async (base64ImageData: string, promptLength: strin
     return provider === 'ollama'
         ? abstractImageOllama(base64ImageData, promptLength, targetAIModel, settings)
         : abstractImageGemini(base64ImageData, promptLength, targetAIModel, settings);
+};
+
+/** Raw tag-suggestion text from the active provider.
+ *  Vision-capable providers only — throws ProviderUnsupportedError otherwise,
+ *  because silently switching would leak a prompt the user chose to keep local. */
+export const suggestTagsRaw = async (base64ImageData: string, promptText: string, settings: LLMSettings): Promise<string> => {
+    const provider = requireProvider('Tag suggestion', settings, ['gemini', 'ollama']);
+    return provider === 'ollama'
+        ? suggestTagsRawOllama(base64ImageData, promptText, settings)
+        : suggestTagsRawGemini(base64ImageData, promptText, settings);
 };
 
 export const generatePromptFormulaWithAI = async (promptText: string, wildcards: string[], settings: LLMSettings): Promise<string> => {
@@ -614,7 +628,8 @@ export async function* streamChat(
     messages: { role: 'user' | 'assistant' | 'system', content: string, attachments?: { data: string, mimeType: string, fileName?: string }[] }[],
     settings: LLMSettings
 ): AsyncGenerator<string> {
-    const provider = requireProvider('Chat', settings, ['gemini', 'ollama', 'openrouter', 'llamacpp', 'anthropic']);
+    const supported: LLMProvider[] = ['gemini', 'ollama', 'openrouter', 'llamacpp', 'anthropic'];
+    requireProvider('Chat', settings, supported);
 
     // Process text attachments from messages before passing to specific handlers
     const processedMessages = await Promise.all(messages.map(async msg => {
@@ -681,20 +696,25 @@ export async function* streamChat(
         }
     }
 
-    if (provider === 'anthropic') {
-        const { streamChatAnthropic } = await import('./anthropicService');
-        yield* streamChatAnthropic(finalMessages, settings);
-    } else if (provider === 'openrouter') {
-        const { streamChatOpenRouter } = await import('./openrouterService');
-        yield* streamChatOpenRouter(finalMessages, settings);
-    } else if (provider === 'ollama') {
-        const { streamChatOllama } = await import('./ollamaService');
-        yield* streamChatOllama(finalMessages, settings);
-    } else if (provider === 'llamacpp') {
-        const { streamChatLlamaCpp } = await import('./llamacppService');
-        yield* streamChatLlamaCpp(finalMessages, settings);
-    } else {
-        const { streamChatGemini } = await import('./geminiService');
-        yield* streamChatGemini(finalMessages, settings);
-    }
+    const stream = await withProviderFallback('Chat', settings, supported, async (provider) => {
+        if (provider === 'anthropic') {
+            const { streamChatAnthropic } = await import('./anthropicService');
+            return streamChatAnthropic(finalMessages, settings);
+        } else if (provider === 'openrouter') {
+            const { streamChatOpenRouter } = await import('./openrouterService');
+            return streamChatOpenRouter(finalMessages, settings);
+        } else if (provider === 'ollama') {
+            const { streamChatOllama } = await import('./ollamaService');
+            return streamChatOllama(finalMessages, settings);
+        } else if (provider === 'llamacpp') {
+            const { streamChatLlamaCpp } = await import('./llamacppService');
+            return streamChatLlamaCpp(finalMessages, settings);
+        } else {
+            const { streamChatGemini } = await import('./geminiService');
+            return streamChatGemini(finalMessages, settings);
+        }
+    }, (from, to, err) => {
+        console.warn(`[Kollektiv] ${from} failed (${err.message}). Retrying on ${to}.`);
+    });
+    yield* stream;
 }

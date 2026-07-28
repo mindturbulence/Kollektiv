@@ -29,6 +29,7 @@ const NAVIGATION_COMMANDS: CommandItem[] = [
   { id: 'nav-resizer', label: 'Image Resizer', category: 'Navigation', keywords: ['scale', 'topaz', 'upscale'], execute: () => appEventBus.emit('navigate', 'resizer' as ActiveTab) },
   { id: 'nav-video', label: 'Video to Frames', category: 'Navigation', keywords: ['ffmpeg', 'extract', 'frame'], execute: () => appEventBus.emit('navigate', 'video_to_frames' as ActiveTab) },
   { id: 'nav-lora', label: 'LoRA Editor', category: 'Navigation', keywords: ['metadata', 'tags', 'model'], execute: () => appEventBus.emit('navigate', 'lora_editor' as ActiveTab) },
+  { id: 'nav-batch-runner', label: 'Batch Runner', category: 'Navigation', keywords: ['batch', 'queue', 'run', 'bulk'], execute: () => appEventBus.emit('navigate', 'batch_runner' as ActiveTab) },
   { id: 'nav-settings', label: 'Settings', category: 'Navigation', keywords: ['preferences', 'config', 'setup'], shortcut: '⌘,', execute: () => appEventBus.emit('navigate', 'settings' as ActiveTab) },
 ];
 
@@ -39,6 +40,7 @@ const PANEL_COMMANDS: CommandItem[] = [
   { id: 'panel-chat', label: 'Toggle Chat Panel', category: 'Panels', keywords: ['llm', 'conversation', 'text', 'talk'], execute: () => appEventBus.emit('togglePanel', 'chat') },
   { id: 'panel-activity', label: 'Toggle Activity Panel', category: 'Panels', keywords: ['transcript', 'tools', 'log', 'history'], execute: () => appEventBus.emit('togglePanel', 'activity') },
   { id: 'panel-llm', label: 'Toggle LLM Status', category: 'Panels', keywords: ['engine', 'provider', 'status', 'model'], execute: () => appEventBus.emit('togglePanel', 'llm') },
+  { id: 'panel-vault-map', label: 'Open Vault Map', category: 'Panels', keywords: ['graph', 'knowledge', 'connections', 'tags', 'visualize'], execute: () => window.dispatchEvent(new CustomEvent('open-vault-map')) },
 ];
 
 const ASSISTANT_COMMANDS: CommandItem[] = [

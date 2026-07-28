@@ -429,6 +429,29 @@ export const abstractImageGemini = async (base64ImageData: string, _promptLength
     } catch (err) { throw handleGeminiError(err, 'analysis'); }
 };
 
+const TAG_SYSTEM_INSTRUCTION = "Role: Visual Cataloguer. Task: list concise descriptive tags for this image covering subject, style, medium, lighting, mood, and dominant colour. Each tag is one to three words, lowercase. Output a single comma-separated line. No preamble, no numbering, no explanation.";
+
+/** Returns raw model text — parsing lives in services/autoTagService.ts. */
+export const suggestTagsRawGemini = async (base64ImageData: string, promptText: string, settings: LLMSettings): Promise<string> => {
+    try {
+        const ai = getGeminiClient(settings);
+        const parts: any[] = [{ inlineData: { mimeType: 'image/jpeg', data: base64ImageData } }];
+        if (promptText.trim()) {
+            parts.push({ text: `This image was generated from the prompt: ${promptText.trim()}` });
+        }
+        const response = await ai.models.generateContent({
+            model: getMappedModel(DEFAULT_MODEL),
+            contents: parts,
+            config: {
+                systemInstruction: TAG_SYSTEM_INSTRUCTION,
+                maxOutputTokens: 300,
+                thinkingConfig: { thinkingBudget: 0 }
+            }
+        });
+        return response.text || '';
+    } catch (err) { throw handleGeminiError(err, 'analysis'); }
+};
+
 export const generateWithImagen = async (prompt: string, aspectRatio: string = '1:1', settings?: LLMSettings): Promise<string> => {
     try {
         const apiKey = settings?.geminiApiKey || process.env.GEMINI_API_KEY;

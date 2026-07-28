@@ -20,7 +20,8 @@ export const subMenuConfig: Record<string, { id: string; label: string, icon: Re
         { id: 'spotify', label: 'Spotify', icon: <MusicNoteIcon className="w-4 h-4" />, description: "Connect your Spotify account for playlists and playback." },
         { id: 'cdp', label: 'Browser Bridge', icon: <MonitorIcon className="w-4 h-4" />, description: "External browser control via Chrome DevTools Protocol." },
         { id: 'tensorart', label: 'Tensor Art', icon: <SparklesIcon className="w-4 h-4" />, description: "AI image and video generation via Tensor Art API." },
-        { id: 'obsidian', label: 'Obsidian', icon: <BookOpenIcon className="w-4 h-4" />, description: "Connect your Obsidian vault for AI note search and editing." }
+        { id: 'obsidian', label: 'Obsidian', icon: <BookOpenIcon className="w-4 h-4" />, description: "Connect your Obsidian vault for AI note search and editing." },
+        { id: 'generation', label: 'Local Generation', icon: <SparklesIcon className="w-4 h-4" />, description: "On-device AI image generation via ComfyUI." }
     ],
     prompt: [
         { id: 'categories', label: 'Prompt Folders', icon: <FolderClosedIcon className="w-4 h-4" />, description: "Organize prompt hierarchies." },

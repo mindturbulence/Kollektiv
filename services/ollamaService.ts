@@ -599,6 +599,28 @@ let _tokenLimit = promptLength === 'Long' ? 2048 : 1024;
     } catch (err) { throw handleGeminiError(err, 'analysis'); }
 };
 
+/** Returns raw model text — parsing lives in services/autoTagService.ts.
+ *  Requires a vision-capable Ollama model (llava, llama3.2-vision, etc.). */
+export const suggestTagsRawOllama = async (base64ImageData: string, promptText: string, settings: LLMSettings): Promise<string> => {
+    try {
+        const config = getOllamaConfig(settings);
+        const instruction = "List concise descriptive tags for this image covering subject, style, medium, lighting, mood, and dominant colour. Each tag is one to three words, lowercase. Output a single comma-separated line. No preamble, no numbering, no explanation."
+            + (promptText.trim() ? `\n\nThis image was generated from the prompt: ${promptText.trim()}` : '');
+        const apiResponse = await fetch(`${config.baseUrl}/api/chat`, {
+            method: 'POST',
+            headers: config.headers,
+            body: JSON.stringify({
+                model: config.model,
+                messages: [{ role: 'user', content: instruction, images: [base64ImageData] }],
+                stream: false,
+                ...BASE_CONFIG,
+            }),
+        });
+        const data = await apiResponse.json();
+        return data.message?.content || '';
+    } catch (err) { throw handleGeminiError(err, 'analysis'); }
+};
+
 export const generatePromptFormulaOllama = async (promptText: string, settings: LLMSettings, systemInstruction: string): Promise<string> => {
     try {
         const config = getOllamaConfig(settings);

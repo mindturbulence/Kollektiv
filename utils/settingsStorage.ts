@@ -96,7 +96,22 @@ export const defaultLLMSettings: LLMSettings = {
   // Gallery
   convertImageToJpgLocal: false,
   convertImageToJpgDrive: true,
-  jpgCompressionQuality: 0.9
+  jpgCompressionQuality: 0.9,
+
+  // Gallery Auto-Tagging
+  autoTagEnabled: false,
+
+  // Provider Fallback
+  providerFallbackEnabled: false,
+  providerFallbackChain: [],
+
+  // Semantic search — local embedding model
+  embeddingModel: 'all-minilm:33m',
+
+  // Local generation — ComfyUI / A1111 backend (defaults to cloud)
+  generationBackendId: 'cloud',
+  comfyUrl: 'http://127.0.0.1:8188',
+  a1111Url: 'http://127.0.0.1:7860'
 };
 
 
@@ -182,7 +197,14 @@ function mergeSettings(parsed: Record<string, unknown>): LLMSettings {
       driveFolderName: parsed.driveFolderName ?? '',
       convertImageToJpgLocal: parsed.convertImageToJpgLocal ?? defaultLLMSettings.convertImageToJpgLocal,
       convertImageToJpgDrive: parsed.convertImageToJpgDrive ?? defaultLLMSettings.convertImageToJpgDrive,
-      jpgCompressionQuality: parsed.jpgCompressionQuality ?? defaultLLMSettings.jpgCompressionQuality
+      jpgCompressionQuality: parsed.jpgCompressionQuality ?? defaultLLMSettings.jpgCompressionQuality,
+      autoTagEnabled: parsed.autoTagEnabled ?? false,
+      providerFallbackEnabled: parsed.providerFallbackEnabled ?? false,
+      providerFallbackChain: parsed.providerFallbackChain ?? [],
+      embeddingModel: parsed.embeddingModel ?? 'all-minilm:33m',
+      generationBackendId: parsed.generationBackendId ?? 'cloud',
+      comfyUrl: parsed.comfyUrl ?? 'http://127.0.0.1:8188',
+      a1111Url: parsed.a1111Url ?? 'http://127.0.0.1:7860'
   };
 
   if (merged.darkTheme === 'lofi') {

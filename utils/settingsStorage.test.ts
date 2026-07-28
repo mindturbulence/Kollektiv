@@ -290,3 +290,40 @@ describe('trackTokenUsage', () => {
     expect(eventFired).toBe(true);
   });
 });
+
+describe('autoTagEnabled', () => {
+  it('defaults to false', () => {
+    expect(defaultLLMSettings.autoTagEnabled).toBe(false);
+  });
+
+  it('survives a save/load round trip when enabled', () => {
+    saveLLMSettings({ ...defaultLLMSettings, autoTagEnabled: true });
+    expect(loadLLMSettings().autoTagEnabled).toBe(true);
+  });
+
+  it('falls back to false when absent from stored settings', () => {
+    localStorage.setItem(SETTINGS_KEY, JSON.stringify({ activeLLM: 'gemini' }));
+    expect(loadLLMSettings().autoTagEnabled).toBe(false);
+  });
+});
+
+describe('provider fallback settings', () => {
+  it('defaults to disabled with an empty chain', () => {
+    expect(defaultLLMSettings.providerFallbackEnabled).toBe(false);
+    expect(defaultLLMSettings.providerFallbackChain).toEqual([]);
+  });
+
+  it('survives a save/load round trip', () => {
+    saveLLMSettings({ ...defaultLLMSettings, providerFallbackEnabled: true, providerFallbackChain: ['ollama'] });
+    const loaded = loadLLMSettings();
+    expect(loaded.providerFallbackEnabled).toBe(true);
+    expect(loaded.providerFallbackChain).toEqual(['ollama']);
+  });
+
+  it('falls back to safe defaults when absent', () => {
+    localStorage.setItem(SETTINGS_KEY, JSON.stringify({ activeLLM: 'gemini' }));
+    const loaded = loadLLMSettings();
+    expect(loaded.providerFallbackEnabled).toBe(false);
+    expect(loaded.providerFallbackChain).toEqual([]);
+  });
+});
