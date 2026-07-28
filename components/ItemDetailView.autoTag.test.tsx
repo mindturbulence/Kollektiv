@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { render, screen, cleanup } from '@testing-library/react';
+import { render, screen, fireEvent, waitFor, cleanup } from '@testing-library/react';
 import { TagSuggestionRow } from './ItemDetailView';
 import type { GalleryItem, LLMSettings } from '../types';
 
@@ -26,5 +26,20 @@ describe('TagSuggestionRow', () => {
     const off = { ...settings, autoTagEnabled: false };
     const { container } = render(<TagSuggestionRow item={item} settings={off} onTagsChanged={() => {}} />);
     expect(container.textContent).not.toMatch(/suggest tags/i);
+  });
+
+  it('shows suggestions after clicking suggest', async () => {
+    render(<TagSuggestionRow item={item} settings={settings} onTagsChanged={() => {}} />);
+    fireEvent.click(screen.getByText(/suggest tags/i));
+    await waitFor(() => expect(screen.getByText('sunset')).toBeTruthy());
+    expect(screen.getByText('landscape')).toBeTruthy();
+  });
+
+  it('surfaces the error message when suggestion fails', async () => {
+    const { suggestTagsForItem } = await import('../services/autoTagService');
+    (suggestTagsForItem as any).mockRejectedValueOnce(new Error('Tag suggestion is not available with the anthropic engine'));
+    render(<TagSuggestionRow item={item} settings={settings} onTagsChanged={() => {}} />);
+    fireEvent.click(screen.getByText(/suggest tags/i));
+    await waitFor(() => expect(screen.getByText(/not available with the anthropic engine/i)).toBeTruthy());
   });
 });

@@ -665,33 +665,27 @@ const IntegrationsSection: React.FC<IntegrationsSectionProps> = ({
     );
 
     const renderLocalGeneration = () => {
-        const [connStatus, setConnStatus] = useState<'idle' | 'testing' | 'ok' | 'fail'>('idle');
+        const [comfyStatus, setComfyStatus] = useState<'idle' | 'testing' | 'ok' | 'fail'>('idle');
+        const [a1111Status, setA1111Status] = useState<'idle' | 'testing' | 'ok' | 'fail'>('idle');
         const backendId = settings.generationBackendId || 'cloud';
         const isLocal = backendId !== 'cloud';
 
-        const testBackend = async (id: string) => {
-            setConnStatus('testing');
+        const testBackend = async (id: 'comfy' | 'a1111') => {
+            const setStatus = id === 'comfy' ? setComfyStatus : setA1111Status;
+            setStatus('testing');
             try {
                 const { getBackend } = await import('../../services/generationBackend');
                 const backend = getBackend(id);
-                if (!backend) { setConnStatus('fail'); return; }
+                if (!backend) { setStatus('fail'); return; }
                 const ok = await backend.isAvailable(settings);
-                setConnStatus(ok ? 'ok' : 'fail');
-            } catch { setConnStatus('fail'); }
-        };
-
-        const urlField = () => {
-            switch (backendId) {
-                case 'comfy': return 'comfyUrl';
-                case 'a1111': return 'a1111Url';
-                default: return 'comfyUrl';
-            }
+                setStatus(ok ? 'ok' : 'fail');
+            } catch { setStatus('fail'); }
         };
 
         return (
             <div className="flex flex-col animate-fade-in">
                 <SettingsGroup title="Generation Backend">
-                    <SettingRow label="Backend" desc="Choose where images are generated: cloud APIs or a local diffusion instance.">
+                    <SettingRow label="Active Backend" desc="Choose where images are generated: cloud APIs or a local diffusion instance.">
                         <div className="tab-group">
                             <ProviderTab
                                 label="Cloud"
@@ -713,44 +707,81 @@ const IntegrationsSection: React.FC<IntegrationsSectionProps> = ({
 
                     {isLocal && (
                         <>
-                            <SettingRow
-                                label={backendId === 'comfy' ? 'ComfyUI URL' : 'A1111 / Forge Neo URL'}
-                                desc={`The HTTP address of your ${backendId === 'comfy' ? 'ComfyUI' : 'A1111 / Forge Neo'} server.`}
-                            >
-                                <input
-                                    type="text"
-                                    value={settings[urlField() as keyof LLMSettings] as string || ''}
-                                    onChange={(e) => handleSettingsChange(urlField() as keyof LLMSettings, e.target.value)}
-                                    className="form-input w-full md:w-[620px]"
-                                    placeholder={backendId === 'comfy' ? 'http://127.0.0.1:8188' : 'http://127.0.0.1:7860'}
-                                />
-                            </SettingRow>
-
-                            <SettingRow label="Connection" desc="Test whether the backend is reachable.">
-                                <div className="flex flex-col gap-2">
-                                    <div className="flex items-center gap-3">
+                            {/* ComfyUI configuration */}
+                            <div className="border border-base-300/20 p-4 mx-6 mb-4 space-y-4">
+                                <h4 className="text-[10px] font-black uppercase tracking-widest text-base-content/70 flex items-center gap-2">
+                                    <span className="w-1.5 h-1.5 rounded-full bg-primary" />
+                                    ComfyUI
+                                </h4>
+                                <SettingRow label="Server URL" desc="The HTTP address of your ComfyUI instance.">
+                                    <div className="flex items-center gap-3 w-full md:w-[620px]">
+                                        <input
+                                            type="text"
+                                            value={settings.comfyUrl || ''}
+                                            onChange={(e) => handleSettingsChange('comfyUrl', e.target.value)}
+                                            className="form-input flex-1"
+                                            placeholder="http://127.0.0.1:8188"
+                                        />
                                         <button
-                                            onClick={() => testBackend(backendId)}
-                                            disabled={connStatus === 'testing'}
-                                            className="form-btn px-6"
+                                            onClick={() => testBackend('comfy')}
+                                            disabled={comfyStatus === 'testing'}
+                                            className="form-btn px-4 whitespace-nowrap"
                                         >
-                                            {connStatus === 'testing' ? 'TESTING...' : 'TEST CONNECTION'}
+                                            {comfyStatus === 'testing' ? '...' : 'TEST'}
                                         </button>
-                                        {connStatus === 'ok' && (
-                                            <span className="flex items-center gap-1.5 text-[10px] font-black uppercase tracking-widest text-success">
+                                        {comfyStatus === 'ok' && (
+                                            <span className="flex items-center gap-1.5 text-[10px] font-black uppercase tracking-widest text-success whitespace-nowrap">
                                                 <span className="w-1.5 h-1.5 rounded-full bg-success animate-pulse" />
-                                                Reachable
+                                                OK
                                             </span>
                                         )}
-                                        {connStatus === 'fail' && (
-                                            <span className="flex items-center gap-1.5 text-[10px] font-black uppercase tracking-widest text-error">
+                                        {comfyStatus === 'fail' && (
+                                            <span className="flex items-center gap-1.5 text-[10px] font-black uppercase tracking-widest text-error whitespace-nowrap">
                                                 <span className="w-1.5 h-1.5 rounded-full bg-error animate-pulse" />
-                                                Not reachable
+                                                FAIL
                                             </span>
                                         )}
                                     </div>
-                                </div>
-                            </SettingRow>
+                                </SettingRow>
+                            </div>
+
+                            {/* A1111 / Forge Neo configuration */}
+                            <div className="border border-base-300/20 p-4 mx-6 mb-4 space-y-4">
+                                <h4 className="text-[10px] font-black uppercase tracking-widest text-base-content/70 flex items-center gap-2">
+                                    <span className="w-1.5 h-1.5 rounded-full bg-secondary" />
+                                    A1111 / Forge Neo
+                                </h4>
+                                <SettingRow label="Server URL" desc="The HTTP address of your A1111 or Forge Neo instance.">
+                                    <div className="flex items-center gap-3 w-full md:w-[620px]">
+                                        <input
+                                            type="text"
+                                            value={settings.a1111Url || ''}
+                                            onChange={(e) => handleSettingsChange('a1111Url', e.target.value)}
+                                            className="form-input flex-1"
+                                            placeholder="http://127.0.0.1:7860"
+                                        />
+                                        <button
+                                            onClick={() => testBackend('a1111')}
+                                            disabled={a1111Status === 'testing'}
+                                            className="form-btn px-4 whitespace-nowrap"
+                                        >
+                                            {a1111Status === 'testing' ? '...' : 'TEST'}
+                                        </button>
+                                        {a1111Status === 'ok' && (
+                                            <span className="flex items-center gap-1.5 text-[10px] font-black uppercase tracking-widest text-success whitespace-nowrap">
+                                                <span className="w-1.5 h-1.5 rounded-full bg-success animate-pulse" />
+                                                OK
+                                            </span>
+                                        )}
+                                        {a1111Status === 'fail' && (
+                                            <span className="flex items-center gap-1.5 text-[10px] font-black uppercase tracking-widest text-error whitespace-nowrap">
+                                                <span className="w-1.5 h-1.5 rounded-full bg-error animate-pulse" />
+                                                FAIL
+                                            </span>
+                                        )}
+                                    </div>
+                                </SettingRow>
+                            </div>
                         </>
                     )}
 

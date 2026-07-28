@@ -6,6 +6,7 @@ import { refineSinglePromptLlamaCpp, enhancePromptLlamaCppStream, refineSinglePr
 import { TARGET_VIDEO_AI_MODELS, TARGET_AUDIO_AI_MODELS } from '../constants/models';
 import { lookupModelProfile } from '../constants/modelProfiles';
 import { withProviderFallback } from './providerFallback';
+import { appEventBus } from '../utils/eventBus';
 
 export type LLMProvider = 'gemini' | 'ollama' | 'llamacpp' | 'anthropic' | 'openrouter';
 
@@ -382,7 +383,7 @@ export const refineSinglePrompt = async (promptText: string, targetAIModel: stri
                 ? await refineSinglePromptOllama(promptText, settings, sys, 1024)
                 : await refineSinglePromptGemini(promptText, '', settings, sys);
     }, (from, to, err) => {
-        console.warn(`[Kollektiv] ${from} failed (${err.message}). Retrying on ${to}.`);
+        appEventBus.emit('assistantFeedback', { message: `${from} failed (${err.message}). Retrying on ${to}.`, isError: false });
     });
     const cleaned = cleanLLMResponse(raw);
     return cleaned;
@@ -714,7 +715,7 @@ export async function* streamChat(
             return streamChatGemini(finalMessages, settings);
         }
     }, (from, to, err) => {
-        console.warn(`[Kollektiv] ${from} failed (${err.message}). Retrying on ${to}.`);
+        appEventBus.emit('assistantFeedback', { message: `${from} failed (${err.message}). Retrying on ${to}.`, isError: false });
     });
     yield* stream;
 }
