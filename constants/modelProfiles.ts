@@ -30,6 +30,18 @@ export interface ModelProfile {
    * Empty for image/video models.
    */
   modes?: ('speech' | 'music' | 'sfx')[];
+  /** Whether this model honors explicit token weights. Absent = false. */
+  supportsTokenWeighting?: boolean;
+  /** Weighting dialect. Only meaningful when supportsTokenWeighting is true. */
+  weightSyntax?: "(token:weight)" | "((token))";
+  /** Minimum valid weight value. */
+  minWeight?: number;
+  /** Maximum valid weight value. */
+  maxWeight?: number;
+  /** Step increment for weight adjustment. */
+  weightStep?: number;
+  /** Whether this model supports a separate negative prompt. */
+  supportsNegativePrompt?: boolean;
 }
 
 export interface ModelProfileSchema {
@@ -233,6 +245,11 @@ export const MODEL_PROFILES: ModelProfileSchema = {
       format: 'Structured Descriptive Tags.',
       rules:
         'Mix of descriptive phrases and specific keywords. Focus on lighting (e.g., \'volumetric lighting\'), quality (e.g., \'highly detailed\'), and style (e.g., \'digital art\'). Follow the STRICT IMAGE WORKFLOW.',
+      supportsTokenWeighting: true,
+      weightSyntax: "(token:weight)",
+      minWeight: 0.1,
+      maxWeight: 2.0,
+      weightStep: 0.05,
     },
     {
       name: 'Pony / Illustrious',
@@ -241,6 +258,24 @@ export const MODEL_PROFILES: ModelProfileSchema = {
       format: 'Weighted Tags.',
       rules:
         'Start with quality scores (score_9, score_8_up, etc). Use descriptive tags for subjects, specific stylistic triggers, and Danbooru-style tagging conventions. Follow the STRICT IMAGE WORKFLOW.',
+      supportsTokenWeighting: true,
+      weightSyntax: "(token:weight)",
+      minWeight: 0.1,
+      maxWeight: 2.0,
+      weightStep: 0.05,
+    },
+    {
+      name: 'A1111 / Forge',
+      matchPatterns: ['a1111', 'forge'],
+      mediaType: 'image',
+      format: 'Structured Descriptive Tags.',
+      rules:
+        'Mix of descriptive phrases and specific keywords. Focus on lighting, quality, and style. Supports weighted tokens via the (token:weight) syntax. Follow the STRICT IMAGE WORKFLOW.',
+      supportsTokenWeighting: true,
+      weightSyntax: "(token:weight)",
+      minWeight: 0.1,
+      maxWeight: 2.0,
+      weightStep: 0.05,
     },
     {
       name: 'GPT / DALL-E',
@@ -466,35 +501,59 @@ export function lookupModelProfile(
   model: string,
   isVideo?: boolean,
   isAudio?: boolean
-): { format: string; rules: string } {
+): ModelProfile {
   const lower = model.toLowerCase();
 
   for (const p of MODEL_PROFILES.profiles) {
     for (const pattern of p.matchPatterns) {
       if (lower.includes(pattern)) {
-        return { format: p.format, rules: p.rules };
+        return p;
       }
     }
   }
 
   // Media-aware fallbacks
-  if (isVideo) {
-    return {
-      format: 'Cinematic Motion Prose.',
-      rules:
-        'One continuous shot: subject, scene, action, camera movement, lighting, and style in flowing prose. Concrete motion verbs and physically plausible dynamics.',
-    };
-  }
-  if (isAudio) {
-    return {
-      format: 'Structured Audio Description.',
-      rules:
-        'Describe sound sources, acoustic space, mood, and rhythm with precise sonic vocabulary. No visual-only language.',
-    };
-  }
+  const fallbackName = isVideo ? 'Generic Video' : isAudio ? 'Generic Audio' : 'Generic Image';
   return {
-    format: 'Natural Language.',
-    rules:
-      'Cohesive visual or conceptual description with high attention to detail and unique stylistic flair.',
+    name: fallbackName,
+    matchPatterns: [],
+    mediaType: isVideo ? 'video' : isAudio ? 'audio' : 'image',
+    format: isVideo
+      ? 'Cinematic Motion Prose.'
+      : isAudio
+        ? 'Structured Audio Description.'
+        : 'Natural Language.',
+    rules: isVideo
+      ? 'One continuous shot: subject, scene, action, camera movement, lighting, and style in flowing prose. Concrete motion verbs and physically plausible dynamics.'
+      : isAudio
+        ? 'Describe sound sources, acoustic space, mood, and rhythm with precise sonic vocabulary. No visual-only language.'
+        : 'Cohesive visual or conceptual description with high attention to detail and unique stylistic flair.',
   };
+}
+
+/**
+ * Serialize a modifier token with model-appropriate weighting syntax.
+ * For models that don't support weighting (Flux, Imagen, etc.), returns
+ * the raw token unchanged. For (token:weight) syntax models (SD, SDXL,
+ * Pony, Illustrious, A1111/Forge), emits (token:1.30). For ((token))
+ * syntax models, repeats parens proportionally. Tokens at weight 1.0
+ * are always returned plain.
+ */
+export function serializeModifierToken(
+  token: string,
+  weight: number,
+  targetModel: string,
+): string {
+  const profile = lookupModelProfile(targetModel);
+  if (!profile.supportsTokenWeighting || weight === 1.0) return token;
+
+  if (profile.weightSyntax === "(token:weight)") {
+    return `(${token}:${weight.toFixed(2)})`;
+  }
+  if (profile.weightSyntax === "((token))") {
+    const count = Math.round((weight - 1.0) / 0.1);
+    if (count > 0) return "(".repeat(count) + token + ")".repeat(count);
+    if (count < 0) return "[".repeat(-count) + token + "]".repeat(-count);
+  }
+  return token;
 }

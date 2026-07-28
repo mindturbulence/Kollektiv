@@ -2,6 +2,7 @@
 import React from 'react';
 import { audioService } from '../services/audioService';
 import type { PromptModifiers, CheatsheetCategory } from '../types';
+import { lookupModelProfile } from '../constants/modelProfiles';
 import {
     GENERAL_ASPECT_RATIOS, PROMPT_DETAIL_LEVELS, CAMERA_ANGLES, CAMERA_PROXIMITY,
     LIGHTING_OPTIONS, COMPOSITION_OPTIONS, CAMERA_TYPES, CAMERA_MODELS_BY_TYPE,
@@ -36,6 +37,8 @@ interface RefinerModifierControlsProps {
     artStyles: CheatsheetCategory[];
     customOptions?: Record<string, (string | { name: string; description?: string })[]>;
     onAddCustomOption?: (key: string, value: string) => void;
+    modifierWeights: Record<string, number>;
+    setModifierWeights: (w: Record<string, number> | ((prev: Record<string, number>) => Record<string, number>)) => void;
     setRefineText: (v: string) => void;
     setConstantModifier: (v: string) => void;
     setMediaMode: (m: 'image' | 'video' | 'audio') => void;
@@ -53,14 +56,47 @@ function mergePlain(builtin: string[], key: string, customOptions?: Record<strin
     return [...builtin, ...customStrings.filter(c => !exists.has(c.toLowerCase()))];
 }
 
+function ModifierWeightSlider({
+    modifierKey, weight, profile, onChange,
+}: {
+    modifierKey: string;
+    weight: number;
+    profile: ReturnType<typeof lookupModelProfile>;
+    onChange: (key: string, value: number) => void;
+}) {
+    if (!profile.supportsTokenWeighting) return null;
+    const min = profile.minWeight ?? 0.1;
+    const max = profile.maxWeight ?? 2.0;
+    const step = profile.weightStep ?? 0.05;
+    return (
+        <div className="flex items-center gap-3 mt-1 mb-2">
+            <input
+                type="range"
+                min={min}
+                max={max}
+                step={step}
+                value={weight}
+                onChange={e => onChange(modifierKey, parseFloat(e.target.value))}
+                className="range range-xs range-primary flex-1"
+            />
+            <span className="text-[10px] font-mono font-bold text-primary w-12 text-right">{weight.toFixed(2)}</span>
+        </div>
+    );
+}
+
 export const RefinerModifierControls: React.FC<RefinerModifierControlsProps> = ({
     activeRefineSubTab, modifiers, refineText, constantModifier, mediaMode,
     targetAIModel, promptLength, referenceImages, isMidjourney, isGoogleProduct,
     artStyles, customOptions, onAddCustomOption,
+    modifierWeights, setModifierWeights,
     setRefineText, setConstantModifier, setMediaMode,
     setTargetAIModel, setPromptLength, setReferenceImages, setModifiers,
     handlePasteRefineText
 }) => {
+    const profile = lookupModelProfile(targetAIModel);
+    const handleWeightChange = React.useCallback((key: string, value: number) => {
+        setModifierWeights(prev => ({ ...prev, [key]: value }));
+    }, [setModifierWeights]);
     switch (activeRefineSubTab) {
         case 'basic':
             return (
@@ -127,6 +163,7 @@ export const RefinerModifierControls: React.FC<RefinerModifierControlsProps> = (
                                 options={[...artStyles.flatMap(c => c.items.map(i => ({ label: i.name.toUpperCase(), value: i.name }))),
                                     ...Z_IMAGE_STYLES.map(s => ({ label: `${s.toUpperCase()} (Z-VARIANT)`, value: s }))]}
                                 placeholder="Discipline..." />
+                            {modifiers.artStyle && <ModifierWeightSlider modifierKey="artStyle" weight={modifierWeights.artStyle ?? 1.0} profile={profile} onChange={handleWeightChange} />}
                         </div>
                         <div className="form-control">
                             <label className="text-[10px] font-black uppercase text-base-content/40 tracking-widest mb-2 block">Styling Trends</label>
@@ -134,17 +171,20 @@ export const RefinerModifierControls: React.FC<RefinerModifierControlsProps> = (
                                 options={mergePlain(STYLING_TRENDS, 'artist', customOptions).map(s => ({ label: s.toUpperCase(), value: s }))}
                                 placeholder="Creator influence..."
                                 onAddCustom={onAddCustomOption ? (v) => onAddCustomOption('artist', v) : undefined} />
+                            {modifiers.artist && <ModifierWeightSlider modifierKey="artist" weight={modifierWeights.artist ?? 1.0} profile={profile} onChange={handleWeightChange} />}
                         </div>
                     </div>
                     <div className="form-control">
                         <label className="text-[10px] font-black uppercase text-base-content/40 tracking-widest mb-2 block">Aesthetics Look</label>
                         <AutocompleteSelect value={modifiers.aestheticLook || ''} onChange={(v) => setModifiers({ ...modifiers, aestheticLook: v })}
                             options={AESTHETIC_LOOKS.map(l => ({ label: l.name.toUpperCase(), value: l.name, description: l.description }))} placeholder="Look..." />
+                        {modifiers.aestheticLook && <ModifierWeightSlider modifierKey="aestheticLook" weight={modifierWeights.aestheticLook ?? 1.0} profile={profile} onChange={handleWeightChange} />}
                     </div>
                     <div className="form-control">
                         <label className="text-[10px] font-black uppercase text-base-content/40 tracking-widest mb-2 block">Digital Trend</label>
                         <AutocompleteSelect value={modifiers.digitalAesthetic || ''} onChange={(v) => setModifiers({ ...modifiers, digitalAesthetic: v })}
                             options={DIGITAL_AESTHETICS.map(t => ({ label: t.name.toUpperCase(), value: t.name, description: t.description }))} placeholder="Trend..." />
+                        {modifiers.digitalAesthetic && <ModifierWeightSlider modifierKey="digitalAesthetic" weight={modifierWeights.digitalAesthetic ?? 1.0} profile={profile} onChange={handleWeightChange} />}
                     </div>
                     <div className="pt-4">
                         <label className="text-[10px] font-black uppercase text-primary tracking-[0.3em] mb-4 block">Persona</label>
@@ -153,22 +193,26 @@ export const RefinerModifierControls: React.FC<RefinerModifierControlsProps> = (
                                 <label className="text-[10px] font-black uppercase text-base-content/40 tracking-widest mb-2 block">Facial Expressions</label>
                                 <AutocompleteSelect value={modifiers.facialExpression || ''} onChange={(v) => setModifiers({ ...modifiers, facialExpression: v })}
                                     options={FACIAL_EXPRESSIONS.map(e => ({ label: e.toUpperCase(), value: e }))} placeholder="Expression..." />
+                                {modifiers.facialExpression && <ModifierWeightSlider modifierKey="facialExpression" weight={modifierWeights.facialExpression ?? 1.0} profile={profile} onChange={handleWeightChange} />}
                             </div>
                             <div className="form-control">
                                 <label className="text-[10px] font-black uppercase text-base-content/40 tracking-widest mb-2 block">Hair Styles</label>
                                 <AutocompleteSelect value={modifiers.hairStyle || ''} onChange={(v) => setModifiers({ ...modifiers, hairStyle: v })}
                                     options={HAIR_STYLES.map(h => ({ label: h.toUpperCase(), value: h }))} placeholder="Hair..." />
+                                {modifiers.hairStyle && <ModifierWeightSlider modifierKey="hairStyle" weight={modifierWeights.hairStyle ?? 1.0} profile={profile} onChange={handleWeightChange} />}
                             </div>
                             <div className="grid grid-cols-1 gap-4">
                                 <div className="form-control">
                                     <label className="text-[10px] font-black uppercase text-base-content/40 tracking-widest mb-2 block">Eye Color</label>
                                     <AutocompleteSelect value={modifiers.eyeColor || ''} onChange={(v) => setModifiers({ ...modifiers, eyeColor: v })}
                                         options={EYE_COLORS.map(e => ({ label: e.toUpperCase(), value: e }))} placeholder="Eyes..." />
+                                    {modifiers.eyeColor && <ModifierWeightSlider modifierKey="eyeColor" weight={modifierWeights.eyeColor ?? 1.0} profile={profile} onChange={handleWeightChange} />}
                                 </div>
                                 <div className="form-control">
                                     <label className="text-[10px] font-black uppercase text-base-content/40 tracking-widest mb-2 block">Skin Texture</label>
                                     <AutocompleteSelect value={modifiers.skinTexture || ''} onChange={(v) => setModifiers({ ...modifiers, skinTexture: v })}
                                         options={SKIN_TEXTURES.map(s => ({ label: s.toUpperCase(), value: s }))} placeholder="Skin..." />
+                                    {modifiers.skinTexture && <ModifierWeightSlider modifierKey="skinTexture" weight={modifierWeights.skinTexture ?? 1.0} profile={profile} onChange={handleWeightChange} />}
                                 </div>
                             </div>
                             <div className="grid grid-cols-1 gap-4">
@@ -176,11 +220,13 @@ export const RefinerModifierControls: React.FC<RefinerModifierControlsProps> = (
                                     <label className="text-[10px] font-black uppercase text-base-content/40 tracking-widest mb-2 block">Realism Options</label>
                                     <AutocompleteSelect value={modifiers.realism || ''} onChange={(v) => setModifiers({ ...modifiers, realism: v })}
                                         options={REALISM_OPTIONS.map(r => ({ label: r.toUpperCase(), value: r }))} placeholder="Realism..." />
+                                    {modifiers.realism && <ModifierWeightSlider modifierKey="realism" weight={modifierWeights.realism ?? 1.0} profile={profile} onChange={handleWeightChange} />}
                                 </div>
                                 <div className="form-control">
                                     <label className="text-[10px] font-black uppercase text-base-content/40 tracking-widest mb-2 block">Clothing & Outfit</label>
                                     <AutocompleteSelect value={modifiers.clothing || ''} onChange={(v) => setModifiers({ ...modifiers, clothing: v })}
                                         options={CLOTHING_STYLES.map(c => ({ label: c.toUpperCase(), value: c }))} placeholder="Outfit..." />
+                                    {modifiers.clothing && <ModifierWeightSlider modifierKey="clothing" weight={modifierWeights.clothing ?? 1.0} profile={profile} onChange={handleWeightChange} />}
                                 </div>
                             </div>
                         </div>
@@ -197,6 +243,7 @@ export const RefinerModifierControls: React.FC<RefinerModifierControlsProps> = (
                         <label className="text-[10px] font-black uppercase text-base-content/40 tracking-widest mb-2 block">Photo Genre</label>
                         <AutocompleteSelect value={modifiers.photographyStyle || ''} onChange={(v) => setModifiers({ ...modifiers, photographyStyle: v })}
                             options={PHOTOGRAPHY_STYLES.map(s => ({ label: s.toUpperCase(), value: s }))} placeholder="Genre..." />
+                        {modifiers.photographyStyle && <ModifierWeightSlider modifierKey="photographyStyle" weight={modifierWeights.photographyStyle ?? 1.0} profile={profile} onChange={handleWeightChange} />}
                     </div>
                     <div className="form-control">
                         <label className="text-[10px] font-black uppercase text-base-content/40 tracking-widest mb-2 block">Aspect Ratio</label>
@@ -219,28 +266,33 @@ export const RefinerModifierControls: React.FC<RefinerModifierControlsProps> = (
                             <label className="text-[10px] font-black uppercase text-base-content/40 tracking-widest mb-2 block">Professional Camera Model</label>
                             <AutocompleteSelect value={modifiers.cameraModel || ''} onChange={(v) => setModifiers({ ...modifiers, cameraModel: v })}
                                 options={modelOptions} placeholder="Search models..." />
+                            {modifiers.cameraModel && <ModifierWeightSlider modifierKey="cameraModel" weight={modifierWeights.cameraModel ?? 1.0} profile={profile} onChange={handleWeightChange} />}
                         </div>
                         <div className="form-control">
                             <label className="text-[10px] font-black uppercase text-base-content/40 tracking-widest mb-2 block">Film Stock</label>
                             <AutocompleteSelect value={modifiers.filmStock || ''} onChange={(v) => setModifiers({ ...modifiers, filmStock: v })}
                                 options={ANALOG_FILM_STOCKS.map(s => ({ label: s.toUpperCase(), value: s }))} placeholder="Stock..." />
+                            {modifiers.filmStock && <ModifierWeightSlider modifierKey="filmStock" weight={modifierWeights.filmStock ?? 1.0} profile={profile} onChange={handleWeightChange} />}
                         </div>
                     </div>
                     <div className="form-control">
                         <label className="text-[10px] font-black uppercase text-base-content/40 tracking-widest mb-2 block">Specialty Optics</label>
                         <AutocompleteSelect value={modifiers.specialtyLens || ''} onChange={(v) => setModifiers({ ...modifiers, specialtyLens: v })}
                             options={SPECIALTY_LENS_EFFECTS.map(l => ({ label: l.name.toUpperCase(), value: l.name, description: l.description }))} placeholder="Informative Vintage/Unique optics..." />
+                        {modifiers.specialtyLens && <ModifierWeightSlider modifierKey="specialtyLens" weight={modifierWeights.specialtyLens ?? 1.0} profile={profile} onChange={handleWeightChange} />}
                     </div>
                     <div className="grid grid-cols-1 gap-4">
                         <div className="form-control">
                             <label className="text-[10px] font-black uppercase text-base-content/40 tracking-widest mb-2 block">Lens Type</label>
                             <AutocompleteSelect value={modifiers.lensType || ''} onChange={(v) => setModifiers({ ...modifiers, lensType: v })}
                                 options={LENS_TYPES.map(l => ({ label: l.toUpperCase(), value: l }))} placeholder="Glass..." />
+                            {modifiers.lensType && <ModifierWeightSlider modifierKey="lensType" weight={modifierWeights.lensType ?? 1.0} profile={profile} onChange={handleWeightChange} />}
                         </div>
                         <div className="form-control">
                             <label className="text-[10px] font-black uppercase text-base-content/40 tracking-widest mb-2 block">Shot Angle</label>
                             <AutocompleteSelect value={modifiers.cameraAngle || ''} onChange={(v) => setModifiers({ ...modifiers, cameraAngle: v })}
                                 options={CAMERA_ANGLES.map(a => ({ label: a.toUpperCase(), value: a }))} placeholder="Angle..." />
+                            {modifiers.cameraAngle && <ModifierWeightSlider modifierKey="cameraAngle" weight={modifierWeights.cameraAngle ?? 1.0} profile={profile} onChange={handleWeightChange} />}
                         </div>
                     </div>
                     <div className="grid grid-cols-1 gap-4">
@@ -248,11 +300,13 @@ export const RefinerModifierControls: React.FC<RefinerModifierControlsProps> = (
                             <label className="text-[10px] font-black uppercase text-base-content/40 tracking-widest mb-2 block">Shot Proximity</label>
                             <AutocompleteSelect value={modifiers.cameraProximity || ''} onChange={(v) => setModifiers({ ...modifiers, cameraProximity: v })}
                                 options={CAMERA_PROXIMITY.map(p => ({ label: p.toUpperCase(), value: p }))} placeholder="Distance..." />
+                            {modifiers.cameraProximity && <ModifierWeightSlider modifierKey="cameraProximity" weight={modifierWeights.cameraProximity ?? 1.0} profile={profile} onChange={handleWeightChange} />}
                         </div>
                         <div className="form-control">
                             <label className="text-[10px] font-black uppercase text-base-content/40 tracking-widest mb-2 block">Technical Settings</label>
                             <AutocompleteSelect value={modifiers.cameraSettings || ''} onChange={(v) => setModifiers({ ...modifiers, cameraSettings: v })}
                                 options={CAMERA_SETTINGS.map(s => ({ label: s.toUpperCase(), value: s }))} placeholder="Technical..." />
+                            {modifiers.cameraSettings && <ModifierWeightSlider modifierKey="cameraSettings" weight={modifierWeights.cameraSettings ?? 1.0} profile={profile} onChange={handleWeightChange} />}
                         </div>
                     </div>
                     <div className="grid grid-cols-1 gap-4">
@@ -260,17 +314,20 @@ export const RefinerModifierControls: React.FC<RefinerModifierControlsProps> = (
                             <label className="text-[10px] font-black uppercase text-base-content/40 tracking-widest mb-2 block">Camera Distortion</label>
                             <AutocompleteSelect value={modifiers.cameraEffect || ''} onChange={(v) => setModifiers({ ...modifiers, cameraEffect: v })}
                                 options={CAMERA_EFFECTS.map(s => ({ label: s.toUpperCase(), value: s }))} placeholder="Aberration..." />
+                            {modifiers.cameraEffect && <ModifierWeightSlider modifierKey="cameraEffect" weight={modifierWeights.cameraEffect ?? 1.0} profile={profile} onChange={handleWeightChange} />}
                         </div>
                         <div className="form-control">
                             <label className="text-[10px] font-black uppercase text-base-content/40 tracking-widest mb-2 block">Lighting Rig</label>
                             <AutocompleteSelect value={modifiers.lighting || ''} onChange={(v) => setModifiers({ ...modifiers, lighting: v })}
                                 options={LIGHTING_OPTIONS.map(l => ({ label: l.toUpperCase(), value: l }))} placeholder="Lighting..." />
+                            {modifiers.lighting && <ModifierWeightSlider modifierKey="lighting" weight={modifierWeights.lighting ?? 1.0} profile={profile} onChange={handleWeightChange} />}
                         </div>
                     </div>
                     <div className="form-control">
                         <label className="text-[10px] font-black uppercase text-base-content/40 tracking-widest mb-2 block">Composition Layout</label>
                         <AutocompleteSelect value={modifiers.composition || ''} onChange={(v) => setModifiers({ ...modifiers, composition: v })}
                             options={COMPOSITION_OPTIONS.map(c => ({ label: c.toUpperCase(), value: c }))} placeholder="Layout..." />
+                        {modifiers.composition && <ModifierWeightSlider modifierKey="composition" weight={modifierWeights.composition ?? 1.0} profile={profile} onChange={handleWeightChange} />}
                     </div>
                     <div className="grid grid-cols-1 gap-4">
                         <div className="form-control">
@@ -278,18 +335,21 @@ export const RefinerModifierControls: React.FC<RefinerModifierControlsProps> = (
                             <AutocompleteSelect value={modifiers.timeOfDay || ''} onChange={(v) => setModifiers({ ...modifiers, timeOfDay: v })}
                                 options={mergePlain(TIME_OF_DAY, 'timeOfDay', customOptions).map(t => ({ label: t.toUpperCase(), value: t }))}
                                 placeholder="Time..." onAddCustom={onAddCustomOption ? (v) => onAddCustomOption('timeOfDay', v) : undefined} />
+                            {modifiers.timeOfDay && <ModifierWeightSlider modifierKey="timeOfDay" weight={modifierWeights.timeOfDay ?? 1.0} profile={profile} onChange={handleWeightChange} />}
                         </div>
                         <div className="form-control">
                             <label className="text-[10px] font-black uppercase text-base-content/40 tracking-widest mb-2 block">Weather</label>
                             <AutocompleteSelect value={modifiers.weather || ''} onChange={(v) => setModifiers({ ...modifiers, weather: v })}
                                 options={mergePlain(WEATHER_OPTIONS, 'weather', customOptions).map(w => ({ label: w.toUpperCase(), value: w }))}
                                 placeholder="Weather..." onAddCustom={onAddCustomOption ? (v) => onAddCustomOption('weather', v) : undefined} />
+                            {modifiers.weather && <ModifierWeightSlider modifierKey="weather" weight={modifierWeights.weather ?? 1.0} profile={profile} onChange={handleWeightChange} />}
                         </div>
                         <div className="form-control">
                             <label className="text-[10px] font-black uppercase text-base-content/40 tracking-widest mb-2 block">Color Grade</label>
                             <AutocompleteSelect value={modifiers.colorGrade || ''} onChange={(v) => setModifiers({ ...modifiers, colorGrade: v })}
                                 options={mergePlain(COLOR_GRADES, 'colorGrade', customOptions).map(c => ({ label: c.toUpperCase(), value: c }))}
                                 placeholder="Grade..." onAddCustom={onAddCustomOption ? (v) => onAddCustomOption('colorGrade', v) : undefined} />
+                            {modifiers.colorGrade && <ModifierWeightSlider modifierKey="colorGrade" weight={modifierWeights.colorGrade ?? 1.0} profile={profile} onChange={handleWeightChange} />}
                         </div>
                     </div>
                 </div>
@@ -308,16 +368,19 @@ export const RefinerModifierControls: React.FC<RefinerModifierControlsProps> = (
                         <label className="text-[10px] font-black uppercase text-base-content/40 tracking-widest mb-2 block">Motion</label>
                         <AutocompleteSelect value={modifiers.motion || ''} onChange={(v) => setModifiers({ ...modifiers, motion: v })}
                             options={MOTION_OPTIONS.map(m => ({ label: m.name.toUpperCase(), value: m.name, description: m.description }))} placeholder="Motion..." />
+                        {modifiers.motion && <ModifierWeightSlider modifierKey="motion" weight={modifierWeights.motion ?? 1.0} profile={profile} onChange={handleWeightChange} />}
                     </div>
                     <div className="form-control">
                         <label className="text-[10px] font-black uppercase text-base-content/40 tracking-widest mb-2 block">Pathing</label>
                         <AutocompleteSelect value={modifiers.cameraMovement || ''} onChange={(v) => setModifiers({ ...modifiers, cameraMovement: v })}
                             options={CAMERA_MOVEMENT_OPTIONS.map(m => ({ label: m.name.toUpperCase(), value: m.name, description: m.description }))} placeholder="Pathing..." />
+                        {modifiers.cameraMovement && <ModifierWeightSlider modifierKey="cameraMovement" weight={modifierWeights.cameraMovement ?? 1.0} profile={profile} onChange={handleWeightChange} />}
                     </div>
                     <div className="form-control">
                         <label className="text-[10px] font-black uppercase text-base-content/40 tracking-widest mb-2 block">Video Effects</label>
                         <AutocompleteSelect value={modifiers.videoEffect || ''} onChange={(v) => setModifiers({ ...modifiers, videoEffect: v })}
                             options={VIDEO_EFFECTS.map(v => ({ label: v.toUpperCase(), value: v }))} placeholder="Effects..." />
+                        {modifiers.videoEffect && <ModifierWeightSlider modifierKey="videoEffect" weight={modifierWeights.videoEffect ?? 1.0} profile={profile} onChange={handleWeightChange} />}
                     </div>
                 </div>
             );

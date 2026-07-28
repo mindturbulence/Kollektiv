@@ -18,6 +18,7 @@ import { modifierOptionsService } from '../services/modifierOptionsService';
 import { enhancePromptStream, cleanLLMResponse, buildMidjourneyParams, dissectPrompt, generateConstructorPreset, generateWithImagen, generateWithNanoBanana, generateWithVeo } from '../services/llmService';
 import { computeWordDiff, calculateSemanticMetrics } from '../utils/diffUtils';
 import { loadArtStyles } from '../utils/artstyleStorage';
+import { saveLLMSettings } from '../utils/settingsStorage';
 import {
     PROMPT_DETAIL_LEVELS, MIDJOURNEY_VERSIONS
 } from '../constants/modifiers';
@@ -75,6 +76,15 @@ const RefinerPage: React.FC<RefinerPageProps> = ({
     const [targetAIModel, setTargetAIModel] = useState<string>(TARGET_IMAGE_AI_MODELS[0]);
     const [referenceImages, setReferenceImages] = useState<(string | null)[]>([null, null, null, null]);
     const [modifiers, setModifiers] = useState<any>({ ...DEFAULT_MODIFIERS });
+    const [modifierWeights, setModifierWeights] = useState<Record<string, number>>(
+        settings.modifierWeights ?? {}
+    );
+
+    // Persist modifierWeights on change
+    useEffect(() => {
+        const updated = { ...settings, modifierWeights };
+        saveLLMSettings(updated);
+    }, [modifierWeights]);
 
     // --- Preset Management State ---
     const [presets, setPresets] = useState<RefinerPreset[]>([]);
@@ -591,6 +601,8 @@ const RefinerPage: React.FC<RefinerPageProps> = ({
                             isMidjourney={isMidjourney}
                             isGoogleProduct={isGoogleProduct}
                             artStyles={artStyles}
+                            modifierWeights={modifierWeights}
+                            setModifierWeights={setModifierWeights}
                             setRefineText={setRefineText}
                             setConstantModifier={setConstantModifier}
                             setMediaMode={setMediaMode}

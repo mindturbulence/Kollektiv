@@ -272,6 +272,9 @@ export interface LLMSettings {
   generationBackendId: string;
   comfyUrl: string;
   a1111Url: string;
+
+  // Refiner modifier weights (survives reload)
+  modifierWeights?: Record<string, number>;
 }
 
 // --- Prompt Generation & Library ---

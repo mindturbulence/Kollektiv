@@ -111,7 +111,10 @@ export const defaultLLMSettings: LLMSettings = {
   // Local generation — ComfyUI / A1111 backend (defaults to cloud)
   generationBackendId: 'cloud',
   comfyUrl: 'http://127.0.0.1:8188',
-  a1111Url: 'http://127.0.0.1:7860'
+  a1111Url: 'http://127.0.0.1:7860',
+
+  // Refiner modifier weights
+  modifierWeights: {},
 };
 
 
