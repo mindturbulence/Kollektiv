@@ -1309,7 +1309,7 @@ export const ASSISTANT_TOOLS: AssistantTool[] = [
             },
             required: ['capability', 'input'],
         },
-        execute: async ({ capability, input }) => {
+        execute: async ({ capability, input }, ctx) => {
             const cap = capabilityRegistry.get(String(capability));
             if (!cap) return `Error: capability "${capability}" not found. Use capability_search to find valid capabilities.`;
 
@@ -1327,7 +1327,7 @@ export const ASSISTANT_TOOLS: AssistantTool[] = [
                 return `Error: plan validation failed — ${validation.errors.join('; ')}`;
             }
 
-            const result = await engine.execute(executionPlan);
+            const result = await engine.execute(executionPlan, ctx);
             return JSON.stringify({
                 planId: result.planId,
                 status: result.status,
@@ -1394,6 +1394,21 @@ export const ASSISTANT_TOOLS: AssistantTool[] = [
         },
     },
 ];
+
+// Populate the capability registry from the real tool list so
+// capability_search/describe/list/health return actual data instead of an
+// empty registry (ISSUE-47). Every tool becomes an 'assistant-tool'
+// capability, executable by name via executeAssistantTool.
+for (const tool of ASSISTANT_TOOLS) {
+    capabilityRegistry.register({
+        id: tool.name,
+        name: tool.name,
+        description: tool.description,
+        input: tool.parameters,
+        output: { type: 'string' },
+        execution: { kind: 'assistant-tool', toolName: tool.name },
+    });
+}
 
 export const executeAssistantTool = async (name: string, args: Record<string, any>, ctx: ToolContext, extraTools: AssistantTool[] = []): Promise<string> => {
     // Check control permission for browser tools.

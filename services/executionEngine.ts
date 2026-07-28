@@ -16,6 +16,7 @@
 import type { Plan, PlanStep } from './planner';
 import { capabilityRegistry } from './capabilityRegistry';
 import type { RouterIntent } from './intentRouter';
+import type { ToolContext } from './tools/types';
 
 // ─── Types ────────────────────────────────────────────────────────────────
 
@@ -97,7 +98,7 @@ export function createExecutionEngine(options?: EngineOptions) {
      *   4. Fire observers
      *   5. Continue to next step
      */
-    async execute(plan: Plan): Promise<PlanResult> {
+    async execute(plan: Plan, ctx: ToolContext): Promise<PlanResult> {
       _cancelled = false;
       const startTime = Date.now();
       const stepResults: StepResult[] = [];
@@ -107,11 +108,11 @@ export function createExecutionEngine(options?: EngineOptions) {
           return finish(plan, stepResults, planObservers, startTime, 'cancelled');
         }
 
-        const result = await engine.executeStep(step, plan.intent);
+        const result = await engine.executeStep(step, plan.intent, ctx);
 
         if (result.status === 'failed' && step.fallbackTo) {
           // Run fallback step
-          const fallbackResult = await engine.executeStep(step.fallbackTo, plan.intent);
+          const fallbackResult = await engine.executeStep(step.fallbackTo, plan.intent, ctx);
           stepResults.push(fallbackResult);
 
           // Fire step observers
@@ -151,14 +152,12 @@ export function createExecutionEngine(options?: EngineOptions) {
     /**
      * Execute a single step with retry logic.
      */
-    async executeStep(step: PlanStep, intent: RouterIntent): Promise<StepResult> {
+    async executeStep(step: PlanStep, intent: RouterIntent, ctx: ToolContext): Promise<StepResult> {
       const stepStart = Date.now();
 
       for (let attempt = 0; attempt <= opts.maxRetries; attempt++) {
         try {
-          // In production, this would dispatch to the actual capability,
-          // service layer, provider router, or assistant tool loop.
-          const output = await dispatchStep(step, intent);
+          const output = await dispatchStep(step, intent, ctx);
           const duration = Date.now() - stepStart;
           return { step, status: 'completed', duration, output };
         } catch (err: any) {
@@ -207,42 +206,94 @@ export function createExecutionEngine(options?: EngineOptions) {
 }
 
 // ─── Step dispatcher ──────────────────────────────────────────────────────
-// Lightweight — routes to the right executor based on step kind.
-// Full capability/tool dispatch is wired in Layer 8 (infrastructure).
+//
+// Real dispatch for capability_dispatch/assistant_tool (both call
+// executeAssistantTool — see below) and for the one fully-generic
+// provider_call shape (a plain text prompt, routed to the active LLM).
+// Dynamic imports of ./assistantTools and ./llmService avoid a circular
+// top-level import: assistantTools.ts imports this module already.
+//
+// Everything else (mcp_call, persistence, user_confirmation, fallback, and
+// a provider_call with no plain-text input — e.g. media generation, which
+// needs aspect ratio and gallery ingestion this layer doesn't have) throws
+// an honest "not implemented" error rather than fabricating a success. A
+// step marked `optional` is skipped gracefully by the engine on any thrown
+// error, so this never blocks a plan that doesn't depend on it.
 
-async function dispatchStep(step: PlanStep, _intent: RouterIntent): Promise<any> {
+/** Runs a real assistant tool by name and turns its own error-string
+ *  convention into a thrown error, so a failed tool call fails the step
+ *  instead of reporting a false "completed". */
+async function runAssistantTool(toolName: string, params: Record<string, any> | undefined, ctx: ToolContext): Promise<any> {
+  const { executeAssistantTool } = await import('./assistantTools');
+  const result = await executeAssistantTool(toolName, params ?? {}, ctx);
+  if (result.startsWith('Error:') || result.startsWith('Error executing')) {
+    throw new Error(result);
+  }
+  return { tool: toolName, result };
+}
+
+async function dispatchStep(step: PlanStep, intent: RouterIntent, ctx: ToolContext): Promise<any> {
   switch (step.kind) {
     case 'context_assembly':
-      return { context: 'workspace snapshot (stub)' };
+      // No side effects to perform — just bundle what the plan already has.
+      return { entities: intent.entities ?? {}, rawInput: intent.rawInput, params: step.params ?? {} };
 
     case 'capability_dispatch': {
+      // Must resolve through the registry — an unregistered id is a real
+      // "not found", not licence to treat the raw string as a tool name.
       const cap = step.capabilityId ? capabilityRegistry.get(step.capabilityId) : undefined;
       if (!cap) {
         throw new Error(`Capability "${step.capabilityId}" not found`);
       }
-      return { capability: cap.id, status: 'dispatched (stub)' };
+      if (cap.execution.kind !== 'assistant-tool' || !cap.execution.toolName) {
+        throw new Error(`Capability "${cap.id}" has execution kind "${cap.execution.kind}", which this layer does not dispatch yet.`);
+      }
+      return runAssistantTool(cap.execution.toolName, step.params, ctx);
     }
 
-    case 'provider_call':
-      return { provider: step.params?.provider || 'default', status: 'called (stub)' };
+    case 'assistant_tool': {
+      // Here capabilityId IS the tool name directly — the planner writes
+      // real tool names (e.g. 'navigate', 'remember') for this step kind.
+      if (!step.capabilityId) {
+        throw new Error('assistant_tool step has no capabilityId (tool name) to execute.');
+      }
+      return runAssistantTool(step.capabilityId, step.params, ctx);
+    }
 
-    case 'assistant_tool':
-      return { tool: step.capabilityId, status: 'dispatched (stub)' };
+    case 'provider_call': {
+      const input = step.params?.input;
+      if (typeof input !== 'string' || !input.trim()) {
+        throw new Error(
+          `provider_call step has no plain-text "input" to route to the LLM — this pathway does not yet ` +
+          `support "${step.description}". Use the dedicated UI for this action.`,
+        );
+      }
+      const { streamChat } = await import('./llmService');
+      let text = '';
+      for await (const chunk of streamChat([{ role: 'user', content: input }], ctx.settings)) {
+        text += chunk;
+      }
+      return { response: text };
+    }
+
+    case 'response_cleanup': {
+      const text = step.params?.text;
+      if (typeof text !== 'string') return { cleaned: null };
+      const { cleanLLMResponse } = await import('./llmService');
+      return { cleaned: cleanLLMResponse(text) };
+    }
 
     case 'mcp_call':
-      return { mcpTool: step.capabilityId, status: 'dispatched (stub)' };
-
-    case 'response_cleanup':
-      return { status: 'cleaned (stub)' };
+      throw new Error('mcp_call dispatch is not implemented at this layer.');
 
     case 'persistence':
-      return { status: 'persisted (stub)' };
+      throw new Error('persistence dispatch is not implemented at this layer.');
 
     case 'user_confirmation':
-      return { status: 'confirmed (stub)' };
+      throw new Error('user_confirmation dispatch is not implemented at this layer — no confirmation UI is wired here.');
 
     case 'fallback':
-      return { status: 'fallback executed (stub)' };
+      throw new Error('fallback dispatch is not implemented at this layer.');
 
     default:
       throw new Error(`Unknown step kind: ${(step as any).kind}`);
