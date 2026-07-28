@@ -1066,8 +1066,14 @@ async function startServer() {
     // any failure to reach it (port already held by a stale server.ts
     // process, firewall, whatever) makes the browser's Vite client treat it
     // as "server connection lost" and call location.reload() forever.
+    //
+    // clientPort must be set explicitly: at this point httpServer.listen()
+    // hasn't run yet (it runs after this block), so httpServer.address() is
+    // still null and Vite can't infer a port to embed in the browser's HMR
+    // client script — it embeds `undefined`, producing
+    // `ws://localhost:undefined/...` and a WebSocket constructor throw.
     const vite = await createViteServer({
-      server: { middlewareMode: true, hmr: { server: httpServer } },
+      server: { middlewareMode: true, hmr: { server: httpServer, clientPort: PORT } },
       appType: "spa",
     });
     app.use(vite.middlewares);
