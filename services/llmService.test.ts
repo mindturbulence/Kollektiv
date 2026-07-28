@@ -10,7 +10,9 @@ import {
     buildContextForEnhancer,
     getActiveProvider,
     stripReasoningTags,
+    enhancePromptStream,
 } from './llmService';
+import { enhancePromptGeminiStream } from './geminiService';
 import type { LLMSettings, PromptModifiers } from '../types';
 
 async function* chunks(arr: string[]): AsyncGenerator<string> {
@@ -84,6 +86,88 @@ describe('buildContextForEnhancer', () => {
         const mods: PromptModifiers = { musicGenre: 'Synthwave' };
         expect(buildContextForEnhancer(mods, false)).toBe('');
         expect(buildContextForEnhancer(mods, true)).toContain('Music Genre: Synthwave');
+    });
+
+    it('applies a modifier weight to the value on a weighting-capable target model', () => {
+        const out = buildContextForEnhancer(
+            { artStyle: 'Teal & Orange Blockbuster' },
+            false,
+            { artStyle: 1.35 },
+            'Stable Diffusion XL',
+        );
+        expect(out).toContain('Movement: (Teal & Orange Blockbuster:1.35)');
+    });
+
+    it('leaves the value plain on a model with no token weighting (e.g. Flux)', () => {
+        const out = buildContextForEnhancer(
+            { artStyle: 'Teal & Orange Blockbuster' },
+            false,
+            { artStyle: 1.35 },
+            'Flux.1 Dev',
+        );
+        expect(out).toContain('Movement: Teal & Orange Blockbuster');
+        expect(out).not.toContain('1.35');
+    });
+
+    it('leaves the value plain when no weight was set for that modifier', () => {
+        const out = buildContextForEnhancer({ artStyle: 'Cubism' }, false, {}, 'SDXL');
+        expect(out).toContain('Movement: Cubism');
+        expect(out).not.toMatch(/\(Cubism:/);
+    });
+
+    it('does not weight fields that have no slider (e.g. aspectRatio, zImageStyle)', () => {
+        const out = buildContextForEnhancer(
+            { aspectRatio: '16:9', zImageStyle: 'Vivid' },
+            false,
+            { aspectRatio: 1.5, zImageStyle: 1.5 },
+            'SDXL',
+        );
+        expect(out).toContain('Aspect Ratio: 16:9');
+        expect(out).toContain('Z-Image Variant: Vivid');
+        expect(out).not.toContain('1.5');
+    });
+});
+
+describe('enhancePromptStream — modifier weight wiring', () => {
+    const settings = { activeLLM: 'gemini' } as LLMSettings;
+
+    it('carries modifierWeights all the way into the text sent to the provider', async () => {
+        vi.mocked(enhancePromptGeminiStream).mockImplementation(async function* (prompt: string) {
+            yield prompt;
+        });
+
+        const stream = enhancePromptStream(
+            'a city street',
+            '',
+            'Medium',
+            'Stable Diffusion XL',
+            { artStyle: 'Teal & Orange Blockbuster' },
+            settings,
+            undefined,
+            undefined,
+            undefined,
+            { artStyle: 1.35 },
+        );
+        const out = await collect(stream);
+        expect(out).toContain('(Teal & Orange Blockbuster:1.35)');
+    });
+
+    it('sends the plain token when no modifierWeights are passed (back-compat call sites)', async () => {
+        vi.mocked(enhancePromptGeminiStream).mockImplementation(async function* (prompt: string) {
+            yield prompt;
+        });
+
+        const stream = enhancePromptStream(
+            'a city street',
+            '',
+            'Medium',
+            'Stable Diffusion XL',
+            { artStyle: 'Teal & Orange Blockbuster' },
+            settings,
+        );
+        const out = await collect(stream);
+        expect(out).toContain('Movement: Teal & Orange Blockbuster');
+        expect(out).not.toContain('1.35');
     });
 });
 

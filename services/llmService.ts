@@ -4,7 +4,7 @@ import { translateToEnglishGemini, analyzePaletteMood as analyzePaletteMoodGemin
 import { analyzePaletteMoodOllama, generatePromptFormulaOllama, refineSinglePromptOllama, abstractImageOllama, suggestTagsRawOllama, generateColorNameOllama, dissectPromptOllama, generateFocusedVariationsOllama, reconstructPromptOllama, replaceComponentInPromptOllama, reconstructFromIntentOllama, generateArtistDescriptionOllama, enhancePromptOllamaStream, refineSinglePromptOllamaStream } from './ollamaService';
 import { refineSinglePromptLlamaCpp, enhancePromptLlamaCppStream, refineSinglePromptLlamaCppStream, reconstructFromIntentLlamaCpp } from './llamacppService';
 import { TARGET_VIDEO_AI_MODELS, TARGET_AUDIO_AI_MODELS } from '../constants/models';
-import { lookupModelProfile } from '../constants/modelProfiles';
+import { lookupModelProfile, serializeModifierToken } from '../constants/modelProfiles';
 import { withProviderFallback } from './providerFallback';
 import { appEventBus } from '../utils/eventBus';
 
@@ -217,52 +217,63 @@ export const cleanLLMResponse = (text: string): string => {
         .join('\n').trim();
 };
 
-export const buildContextForEnhancer = (modifiers: PromptModifiers, isAudio: boolean = false): string => {
+export const buildContextForEnhancer = (
+    modifiers: PromptModifiers,
+    isAudio: boolean = false,
+    modifierWeights: Record<string, number> = {},
+    targetAIModel: string = ''
+): string => {
     const ctx = [];
-    
-    if (modifiers.artStyle) ctx.push(`Movement: ${modifiers.artStyle}`);
-    if (modifiers.artist) ctx.push(`Creator: ${modifiers.artist}`);
-    if (modifiers.aestheticLook) ctx.push(`Cinematic Look: ${modifiers.aestheticLook}`);
-    if (modifiers.digitalAesthetic) ctx.push(`Aesthetic: ${modifiers.digitalAesthetic}`);
-    if (modifiers.facialExpression) ctx.push(`Persona Expression: ${modifiers.facialExpression}`);
-    if (modifiers.hairStyle) ctx.push(`Hair Style: ${modifiers.hairStyle}`);
-    if (modifiers.eyeColor) ctx.push(`Eye Color: ${modifiers.eyeColor}`);
-    if (modifiers.skinTexture) ctx.push(`Skin Texture: ${modifiers.skinTexture}`);
-    if (modifiers.clothing) ctx.push(`Clothing/Outfit: ${modifiers.clothing}`);
+    // Applies model-appropriate weight syntax (e.g. SDXL's `(token:1.30)`) to a
+    // modifier value before it's dropped into the context block. Weight 1.0
+    // (the slider default, and the value for any modifier with no slider
+    // touched) returns the token unchanged — see serializeModifierToken.
+    const w = (key: string, value: string) => serializeModifierToken(value, modifierWeights[key] ?? 1.0, targetAIModel);
+
+    if (modifiers.artStyle) ctx.push(`Movement: ${w('artStyle', modifiers.artStyle)}`);
+    if (modifiers.artist) ctx.push(`Creator: ${w('artist', modifiers.artist)}`);
+    if (modifiers.aestheticLook) ctx.push(`Cinematic Look: ${w('aestheticLook', modifiers.aestheticLook)}`);
+    if (modifiers.digitalAesthetic) ctx.push(`Aesthetic: ${w('digitalAesthetic', modifiers.digitalAesthetic)}`);
+    if (modifiers.facialExpression) ctx.push(`Persona Expression: ${w('facialExpression', modifiers.facialExpression)}`);
+    if (modifiers.hairStyle) ctx.push(`Hair Style: ${w('hairStyle', modifiers.hairStyle)}`);
+    if (modifiers.eyeColor) ctx.push(`Eye Color: ${w('eyeColor', modifiers.eyeColor)}`);
+    if (modifiers.skinTexture) ctx.push(`Skin Texture: ${w('skinTexture', modifiers.skinTexture)}`);
+    if (modifiers.clothing) ctx.push(`Clothing/Outfit: ${w('clothing', modifiers.clothing)}`);
     if (modifiers.zImageStyle) ctx.push(`Z-Image Variant: ${modifiers.zImageStyle}`);
-    
+
     if (modifiers.cameraType) ctx.push(`Camera Body: ${modifiers.cameraType}`);
-    if (modifiers.cameraModel) ctx.push(`Camera Model: ${modifiers.cameraModel}`);
-    
+    if (modifiers.cameraModel) ctx.push(`Camera Model: ${w('cameraModel', modifiers.cameraModel)}`);
+
     if (modifiers.filmStock) {
+        const stock = w('filmStock', modifiers.filmStock);
         if (modifiers.cameraType === 'Analog Film Camera') {
-            ctx.push(`Authentic Analog Load: ${modifiers.filmStock} film stock`);
+            ctx.push(`Authentic Analog Load: ${stock} film stock`);
         } else if (modifiers.cameraType && modifiers.cameraType !== 'Analog Film Camera') {
-            ctx.push(`Digital Capture Post-Processed to Emulate: ${modifiers.filmStock} aesthetic`);
+            ctx.push(`Digital Capture Post-Processed to Emulate: ${stock} aesthetic`);
         } else {
-            ctx.push(`Film Reference: ${modifiers.filmStock}`);
+            ctx.push(`Film Reference: ${stock}`);
         }
     }
 
-    if (modifiers.specialtyLens) ctx.push(`Specialty Lens Characteristic: ${modifiers.specialtyLens}`);
-    if (modifiers.lensType) ctx.push(`Lens: ${modifiers.lensType}`);
-    if (modifiers.cameraAngle) ctx.push(`Angle: ${modifiers.cameraAngle}`);
-    if (modifiers.cameraProximity) ctx.push(`Framing: ${modifiers.cameraProximity}`);
-    if (modifiers.cameraSettings) ctx.push(`Settings: ${modifiers.cameraSettings}`);
-    if (modifiers.cameraEffect) ctx.push(`Effect: ${modifiers.cameraEffect}`);
-    
-    if (modifiers.lighting) ctx.push(`Lighting: ${modifiers.lighting}`);
-    if (modifiers.composition) ctx.push(`Composition: ${modifiers.composition}`);
-    if (modifiers.timeOfDay) ctx.push(`Time of Day: ${modifiers.timeOfDay}`);
-    if (modifiers.weather) ctx.push(`Weather: ${modifiers.weather}`);
-    if (modifiers.colorGrade) ctx.push(`Color Grade: ${modifiers.colorGrade}`);
-    if (modifiers.photographyStyle) ctx.push(`Genre: ${modifiers.photographyStyle}`);
+    if (modifiers.specialtyLens) ctx.push(`Specialty Lens Characteristic: ${w('specialtyLens', modifiers.specialtyLens)}`);
+    if (modifiers.lensType) ctx.push(`Lens: ${w('lensType', modifiers.lensType)}`);
+    if (modifiers.cameraAngle) ctx.push(`Angle: ${w('cameraAngle', modifiers.cameraAngle)}`);
+    if (modifiers.cameraProximity) ctx.push(`Framing: ${w('cameraProximity', modifiers.cameraProximity)}`);
+    if (modifiers.cameraSettings) ctx.push(`Settings: ${w('cameraSettings', modifiers.cameraSettings)}`);
+    if (modifiers.cameraEffect) ctx.push(`Effect: ${w('cameraEffect', modifiers.cameraEffect)}`);
+
+    if (modifiers.lighting) ctx.push(`Lighting: ${w('lighting', modifiers.lighting)}`);
+    if (modifiers.composition) ctx.push(`Composition: ${w('composition', modifiers.composition)}`);
+    if (modifiers.timeOfDay) ctx.push(`Time of Day: ${w('timeOfDay', modifiers.timeOfDay)}`);
+    if (modifiers.weather) ctx.push(`Weather: ${w('weather', modifiers.weather)}`);
+    if (modifiers.colorGrade) ctx.push(`Color Grade: ${w('colorGrade', modifiers.colorGrade)}`);
+    if (modifiers.photographyStyle) ctx.push(`Genre: ${w('photographyStyle', modifiers.photographyStyle)}`);
     if (modifiers.filmType) ctx.push(`Medium: ${modifiers.filmType}`);
     if (modifiers.aspectRatio) ctx.push(`Aspect Ratio: ${modifiers.aspectRatio}`);
 
-    if (modifiers.motion) ctx.push(`Dynamics: ${modifiers.motion}`);
-    if (modifiers.cameraMovement) ctx.push(`Camera Path: ${modifiers.cameraMovement}`);
-    if (modifiers.videoEffect) ctx.push(`Video Effect / Post-Processing: ${modifiers.videoEffect}`);
+    if (modifiers.motion) ctx.push(`Dynamics: ${w('motion', modifiers.motion)}`);
+    if (modifiers.cameraMovement) ctx.push(`Camera Path: ${w('cameraMovement', modifiers.cameraMovement)}`);
+    if (modifiers.videoEffect) ctx.push(`Video Effect / Post-Processing: ${w('videoEffect', modifiers.videoEffect)}`);
 
     if (modifiers.audioType) ctx.push(`Type: ${modifiers.audioType}`);
     if (modifiers.voiceGender) ctx.push(`Voice: ${modifiers.voiceGender}`);
@@ -333,13 +344,14 @@ export async function* enhancePromptStream(
     settings: LLMSettings,
     referenceImages?: string[],
     modifierCatalog?: string,
-    overrideProvider?: string
+    overrideProvider?: string,
+    modifierWeights?: Record<string, number>
 ): AsyncGenerator<string> {
     const isVideo = !!TARGET_VIDEO_AI_MODELS.find(m => m === targetAIModel);
     const isAudio = !!TARGET_AUDIO_AI_MODELS.find(m => m === targetAIModel);
     const hasManualCamera = !!modifiers.cameraMovement;
     const systemInstruction = AI_ROLES.ENHANCER(targetAIModel, promptLength, isVideo, isAudio, hasManualCamera, modifiers.videoInputType, modifierCatalog, settings.masterRolePrompt);
-    const context = buildContextForEnhancer(modifiers, isAudio);
+    const context = buildContextForEnhancer(modifiers, isAudio, modifierWeights, targetAIModel);
     const input = `${context}\n\n[Primary Concept]\n${originalPrompt}`;
 
     const tokenBudget = promptLength === 'Long' ? 4096 : (promptLength === 'Medium' ? 2048 : 1024);

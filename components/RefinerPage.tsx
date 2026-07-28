@@ -340,7 +340,7 @@ const RefinerPage: React.FC<RefinerPageProps> = ({
         try {
             const activeRefImages = referenceImages.filter((img): img is string => img !== null);
             const catalog = buildModifierCatalog();
-            const stream = enhancePromptStream(refineText, constantModifier, promptLength, targetAIModel, modifiers, settings, activeRefImages, catalog);
+            const stream = enhancePromptStream(refineText, constantModifier, promptLength, targetAIModel, modifiers, settings, activeRefImages, catalog, undefined, modifierWeights);
             for await (const chunk of stream) fullText += chunk;
             if (!fullText.trim()) {
                 const active = settings.activeLLM || 'ollama';
