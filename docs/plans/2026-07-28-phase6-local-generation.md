@@ -94,15 +94,15 @@ curl -s http://127.0.0.1:7860/sdapi/v1/txt2img \
 - [ ] **Step 3: Record the truth here**
 
 ```
-Backend and version (Forge Neo / Forge / A1111):
-Port:
-Launch flag needed for the API:
-txt2img request fields accepted:
-txt2img response top-level keys:
-Image encoding (raw base64 vs data URL):
-Model list response shape:
-Sampler list response shape:
-Date captured:
+Backend and version: Forge Neo, running at D:\AI-Dev\ForgeNeo
+Port: 7860
+Launch flag needed for the API: already running with API enabled — no flag change needed
+txt2img request fields accepted: prompt, negative_prompt, steps, width, height, cfg_scale, sampler_name, seed
+txt2img response top-level keys: images, parameters, info
+Image encoding: raw base64 in images[0], NO "data:" prefix — services/a1111Service.ts adds the prefix itself
+Model list response shape: GET /sdapi/v1/sd-models → [{title, model_name, hash, sha256, filename}, ...]
+Sampler list response shape: GET /sdapi/v1/samplers → [{name, aliases, options}, ...]
+Date captured: 2026-07-28, live full round trip (24.4s for an 8-step 512x512 generation)
 ```
 
 - [ ] **Step 4: Commit**
@@ -377,14 +377,22 @@ curl -s http://127.0.0.1:8188/history/<prompt_id> | head -c 800
 - [ ] **Step 3: Record the truth here**
 
 ```
-ComfyUI version:
-Port:
-/prompt request wrapper key (e.g. {"prompt": {...}}):
-/prompt response shape:
-/history response path to the output filename:
-/view query parameters needed (filename, subfolder, type):
-Node ids in the exported workflow for: positive prompt / negative prompt / seed / steps / cfg / model / width / height
-Date captured:
+ComfyUI version: 0.16.4
+Port: 8188
+/prompt request wrapper key: {"prompt": {<node graph>}}
+/prompt response shape: {prompt_id, number, node_errors}  — node_errors is {} on success
+/history response path to the output filename: data[prompt_id].outputs[<save_image_node_id>].images[0].filename (+ .subfolder)
+/view query parameters needed: filename, subfolder, type=output — GET /view?filename=...&subfolder=...&type=output
+Node ids: standard default workflow uses 1=CheckpointLoaderSimple, 5=EmptyLatentImage, 6/7=CLIPTextEncode (pos/neg), 8=KSampler, 9=VAEDecode, 12=SaveImage.
+  CRITICAL FINDING: the first version of this workflow (written before this capture) used SEPARATE CLIPLoader(4)/VAELoader(10)
+  nodes and left ckpt_name/clip_name/vae_name as empty strings. Real ComfyUI rejected all three with
+  "value_not_in_list" (received_value: ""), and CLIPLoader also failed on a missing required "type" field.
+  CheckpointLoaderSimple already outputs MODEL/CLIP/VAE at indices 0/1/2 — a standard-checkpoint (SD1.5/SDXL)
+  workflow must wire off THOSE outputs directly, not separate loader nodes. Checkpoint names come from
+  GET /object_info/CheckpointLoaderSimple → .CheckpointLoaderSimple.input.required.ckpt_name[0] (an array).
+  Fixed in commit 9677a7d; full round trip re-verified after the fix (submit → 0 node_errors → executes →
+  /history reports the output within 1s → /view returns a real 218KB PNG with correct PNG magic bytes).
+Date captured: 2026-07-28, against Forge Neo's bundled ComfyUI-family instance at :8188
 ```
 
 - [ ] **Step 4: Commit both the capture and the workflow**

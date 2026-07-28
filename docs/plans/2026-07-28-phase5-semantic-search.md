@@ -83,13 +83,15 @@ curl -s http://127.0.0.1:11434/api/embed      -d '{"model":"nomic-embed-text","i
 Fill this in before continuing. An empty block means Task 2 is not ready to start.
 
 ```
-Endpoint that worked:
-Request body:
-Response shape (top-level keys):
-Vector length:
-Model used:
-Date captured:
+Endpoint that worked: /api/embed (NOT /api/embeddings — that returned empty)
+Request body: {"model": "all-minilm:33m", "input": "<text>"}
+Response shape (top-level keys): {model, embeddings: [[...]]}  — note plural "embeddings", array of arrays
+Vector length: 384
+Model used: all-minilm:33m
+Date captured: 2026-07-28, live against a running Ollama instance
 ```
+
+**Verified against `services/embeddingService.ts` as shipped: matches exactly.** No code change needed.
 
 - [ ] **Step 4: Commit the captured contract**
 
