@@ -48,7 +48,7 @@ describe('lookupModelProfile', () => {
 
   it('does not set weighting for unknown model', () => {
     const profile = lookupModelProfile('some-unknown-model');
-    expect(profile.supportsTokenWeighting).toBeUndefined();
+    expect(profile.supportsTokenWeighting).toBe(false);
   });
 
   it('does not set weighting for DALL-E', () => {
@@ -64,7 +64,7 @@ describe('lookupModelProfile', () => {
   it('returns fallback generic profile for unrecognized model', () => {
     const profile = lookupModelProfile('nonexistent-model-xyz');
     expect(profile.name).toBe('Generic Image');
-    expect(profile.supportsTokenWeighting).toBeUndefined();
+    expect(profile.supportsTokenWeighting).toBe(false);
   });
 });
 

@@ -528,6 +528,7 @@ export function lookupModelProfile(
       : isAudio
         ? 'Describe sound sources, acoustic space, mood, and rhythm with precise sonic vocabulary. No visual-only language.'
         : 'Cohesive visual or conceptual description with high attention to detail and unique stylistic flair.',
+    supportsTokenWeighting: false,
   };
 }
 

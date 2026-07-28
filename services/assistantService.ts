@@ -63,23 +63,6 @@ export async function buildKnowledgeContextBlock(context: string): Promise<strin
         }
     } catch { /* memory tier service unavailable — skip */ }
 
-    // 3. Track memory access for the memoryPromptBlock that will be injected
-    // by buildSystemIdentity. Since buildSystemIdentity is synchronous, we
-    // perform the tracking here where we have an async context.
-    try {
-        const { knowledgeService } = await import('./knowledgeService');
-        const { memoryTierService } = await import('./memoryTierService');
-        const { loadMemories } = await import('../utils/memoryStorage');
-        const memories = await loadMemories();
-        const refs = knowledgeService.list(['memory']);
-        for (const m of memories) {
-            const ref = refs.find(r => r.id === m.id);
-            if (ref) {
-                try { await memoryTierService.trackAccess(ref); } catch { /* best-effort */ }
-            }
-        }
-    } catch { /* memory service unavailable — skip */ }
-
     if (sections.length === 0) return '';
     return `\n\n${sections.join('\n\n')}`;
 }
