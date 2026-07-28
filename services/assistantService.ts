@@ -71,8 +71,8 @@ export async function buildKnowledgeContextBlock(context: string): Promise<strin
         const { memoryTierService } = await import('./memoryTierService');
         const { loadMemories } = await import('../utils/memoryStorage');
         const memories = await loadMemories();
+        const refs = knowledgeService.list(['memory']);
         for (const m of memories) {
-            const refs = knowledgeService.list(['memory']);
             const ref = refs.find(r => r.id === m.id);
             if (ref) {
                 try { await memoryTierService.trackAccess(ref); } catch { /* best-effort */ }

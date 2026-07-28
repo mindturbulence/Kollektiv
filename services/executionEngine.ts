@@ -133,8 +133,9 @@ export function createExecutionEngine(options?: EngineOptions) {
         const unresolved = findUnresolvedTemplates(step.params, stepOutputs);
         if (unresolved.length > 0) {
           const errMsg = `Unresolved template${unresolved.length > 1 ? 's' : ''} in step "${step.description}": ${unresolved.join(', ')}`;
-          const failResult: StepResult = { step, status: 'failed', duration: 0, error: errMsg };
-          stepResults.push({ ...failResult, status: 'skipped' });
+          const stepStatus = (step.optional && opts.skipOptionalOnError) ? 'skipped' : 'failed';
+          const failResult: StepResult = { step, status: stepStatus, duration: 0, error: errMsg };
+          stepResults.push(failResult);
           fireStepObservers(stepObservers, stepResults[stepResults.length - 1], plan);
           if (!(step.optional && opts.skipOptionalOnError)) {
             return finish(plan, stepResults, planObservers, startTime, 'failed', errMsg);

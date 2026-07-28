@@ -320,6 +320,7 @@ describe('pipeline — inter-step data flow', () => {
     const result = await engine.execute(p, ctx);
     expect(result.status).toBe('failed');
     expect(result.error).toMatch(/Unresolved template/);
+    expect(result.steps[0].status).toBe('failed');
   });
 
   it('unresolved template in an optional step does not fail the plan', async () => {
