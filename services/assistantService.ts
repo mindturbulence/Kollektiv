@@ -29,6 +29,7 @@ export async function buildKnowledgeContextBlock(context: string): Promise<strin
     // 1. Knowledge service: search long-term + knowledge tiers for relevant vault content
     try {
         const { knowledgeService } = await import('./knowledgeService');
+        const { memoryTierService } = await import('./memoryTierService');
         const results = await knowledgeService.search({
             query: q,
             kinds: ['memory', 'note', 'vault_note', 'prompt'],
@@ -36,6 +37,11 @@ export async function buildKnowledgeContextBlock(context: string): Promise<strin
             maxResults: 8,
         });
         if (results.length > 0) {
+            // Track access for each search result to evaluate promotion thresholds
+            for (const r of results) {
+                try { await memoryTierService.trackAccess(r.ref); } catch { /* best-effort */ }
+            }
+
             const items = results.map((r) => {
                 const tagStr = r.ref.tags.length ? ` [${r.ref.tags.slice(0, 3).join(', ')}${r.ref.tags.length > 3 ? '…' : ''}]` : '';
                 const snippet = r.snippet && r.snippet !== r.ref.title
@@ -56,6 +62,23 @@ export async function buildKnowledgeContextBlock(context: string): Promise<strin
             sections.push(`## Recent Conversation Context\n\nFrom the current session:\n${workingEntries.map((r) => `- ${r.snippet.replace(/\n/g, ' ').slice(0, 150)}`).join('\n')}`);
         }
     } catch { /* memory tier service unavailable — skip */ }
+
+    // 3. Track memory access for the memoryPromptBlock that will be injected
+    // by buildSystemIdentity. Since buildSystemIdentity is synchronous, we
+    // perform the tracking here where we have an async context.
+    try {
+        const { knowledgeService } = await import('./knowledgeService');
+        const { memoryTierService } = await import('./memoryTierService');
+        const { loadMemories } = await import('../utils/memoryStorage');
+        const memories = await loadMemories();
+        for (const m of memories) {
+            const refs = knowledgeService.list(['memory']);
+            const ref = refs.find(r => r.id === m.id);
+            if (ref) {
+                try { await memoryTierService.trackAccess(ref); } catch { /* best-effort */ }
+            }
+        }
+    } catch { /* memory service unavailable — skip */ }
 
     if (sections.length === 0) return '';
     return `\n\n${sections.join('\n\n')}`;

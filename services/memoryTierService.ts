@@ -174,8 +174,9 @@ export const memoryTierService = {
    * in the index, then checks auto-promotion thresholds.
    */
   async trackAccess(ref: KnowledgeRef): Promise<KnowledgeRef> {
-    // Persist the access count increment in the knowledge index
-    let currentRef = knowledgeService.touchAccess(ref);
+    // Pure policy check — does NOT increment. The caller (typically
+    // knowledgeService.recall() via touchAccess()) owns the increment.
+    let currentRef = ref;
 
     // Check auto-promotion rules — working → long-term
     if (

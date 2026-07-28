@@ -868,6 +868,7 @@ export const ASSISTANT_TOOLS: AssistantTool[] = [
         },
         execute: async ({ kind, id, target_stage }) => {
             const { knowledgeService } = await import('./knowledgeService');
+            const { memoryTierService } = await import('./memoryTierService');
             const { knowledgeLifecycle } = await import('./knowledgeLifecycle');
 
             // Find the ref in the knowledge index
@@ -878,6 +879,9 @@ export const ASSISTANT_TOOLS: AssistantTool[] = [
             // Determine current lifecycle stage from vault path
             const currentStage = ref.sourcePath ? knowledgeLifecycle.stageFromPath(ref.sourcePath) : null;
             const fromStage = currentStage || 'inbox';
+
+            // Track access to evaluate promotion thresholds before loading content
+            await memoryTierService.trackAccess(ref);
 
             // Load the item's content
             const content = await knowledgeService.recall(ref);
@@ -1148,6 +1152,16 @@ export const ASSISTANT_TOOLS: AssistantTool[] = [
             const items = await loadGalleryItems();
             const item = items.find(i => i.id === String(id));
             if (!item) return `Error: no gallery item with id "${id}". Use search_gallery to find current items.`;
+
+            // Track access if this gallery item is in the knowledge index
+            try {
+                const { knowledgeService } = await import('./knowledgeService');
+                const { memoryTierService } = await import('./memoryTierService');
+                const refs = knowledgeService.list(['gallery_item']);
+                const ref = refs.find(r => r.id === String(id));
+                if (ref) await memoryTierService.trackAccess(ref);
+            } catch { /* best-effort — knowledge service may be unavailable */ }
+
             return JSON.stringify({
                 id: item.id,
                 title: item.title,
