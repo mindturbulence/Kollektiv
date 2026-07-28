@@ -53,3 +53,25 @@ export function formatJobCountWarning(jobCount: number, secondsPerJob?: number):
   const time = estimateJobTime(jobCount, secondsPerJob);
   return `This matrix will produce ${jobCount} jobs (est. ${time}). Proceed?`;
 }
+
+export interface JobCountGateResult {
+  proceed: boolean;
+  jobCount: number;
+  timeEstimate: string;
+  warningMessage: string;
+}
+
+export function checkJobCountGate(
+  jobCount: number,
+  threshold: number = 25,
+  secondsPerJob?: number,
+): JobCountGateResult {
+  const timeEstimate = estimateJobTime(jobCount, secondsPerJob);
+  const warningMessage = `This matrix will produce ${jobCount} jobs (est. ${timeEstimate}). Proceed?`;
+  return {
+    proceed: jobCount <= threshold,
+    jobCount,
+    timeEstimate,
+    warningMessage,
+  };
+}

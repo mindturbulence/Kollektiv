@@ -191,7 +191,7 @@ describe('validateWorkflowOnComfy', () => {
     );
     const workflow = { '5': { class_type: 'KSampler', inputs: {} } };
     await expect(validateWorkflowOnComfy(workflow, comfyUrl)).rejects.toThrow(
-      /Workflow validation failed/,
+      /Workflow validation failed: missing required input: seed/,
     );
   });
 

@@ -82,13 +82,11 @@ export async function validateWorkflowOnComfy(
   const nodeErrors = data.node_errors;
   if (nodeErrors != null && Object.keys(nodeErrors).length > 0) {
     const messages: string[] = [];
-    for (const [nodeId, err] of Object.entries(nodeErrors)) {
-      const msg = (err as any)?.class_type
-        ? `Node ${nodeId} (${(err as any).class_type}): ${(err as any)?.messages?.[0] ?? 'unknown error'}`
-        : `Node ${nodeId}: ${JSON.stringify(err)}`;
-      messages.push(msg);
+    for (const [, err] of Object.entries(nodeErrors)) {
+      const rawMessage = (err as any)?.messages?.[0] ?? JSON.stringify(err);
+      messages.push(rawMessage);
     }
-    throw new Error(`Workflow validation failed:\n${messages.join('\n')}`);
+    throw new Error(`Workflow validation failed: ${messages.join('; ')}`);
   }
   return workflowJson;
 }
