@@ -78,11 +78,15 @@ Each phase ships behind a settings flag and is independently revertible.
 - Modify: `docs/ISSUES.md` — log the correction
 
 **Scope:**
-- Tag suggestion from image content via the existing vision path, plus the item's `prompt` text when present
-- Tag normalization: lowercase, trim, deduplicate against the item's existing tags and against the vault's known tag vocabulary
+- Tag suggestion from image content via a vision call, plus the item's `prompt` text when present
+- Tag normalization: lowercase, trim, collapse whitespace, deduplicate against the item's existing tags
 - Explicit user accept/reject. **Suggestions are never written automatically.**
-- Single-item and multi-select batch suggestion
+- Single-item suggestion
 - Graceful degradation when the active provider has no vision support — surface `ProviderUnsupportedError`'s message, do not silently fall back
+
+**Deferred out of Phase 1** (were in this section's first draft, moved during task planning):
+- Multi-select batch suggestion. Ship the single-item path first and learn whether batching is actually wanted.
+- Canonicalizing against the vault's existing tag vocabulary (`scifi` → the already-used `sci-fi`). Needs fuzzy matching with plural and hyphen handling — a materially larger problem than exact-match dedupe, and easier to tune once real suggestions exist to inspect.
 
 **Out of scope:**
 - Similarity clustering and visual search (the other two false Phase 2 claims). Clustering depends on embeddings, which is Phase 5. Track them as open, do not mark them done.
