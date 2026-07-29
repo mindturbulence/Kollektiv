@@ -1,0 +1,382 @@
+import { NextResponse } from 'next/server'
+import { ZodSchema, ZodError } from 'zod'
+import { z } from 'zod'
+import { WORKSPACE_ISOLATION_VALUES } from './workspaces'
+
+export async function validateBody<T>(
+  request: Request,
+  schema: ZodSchema<T>
+): Promise<{ data: T } | { error: NextResponse }> {
+  try {
+    const body = await request.json()
+    const data = schema.parse(body)
+    return { data }
+  } catch (err) {
+    if (err instanceof ZodError) {
+      const messages = err.issues.map((e: z.ZodIssue) => `${e.path.join('.')}: ${e.message}`)
+      return {
+        error: NextResponse.json(
+          { error: 'Validation failed', details: messages },
+          { status: 400 }
+        ),
+      }
+    }
+    return {
+      error: NextResponse.json({ error: 'Invalid request body' }, { status: 400 }),
+    }
+  }
+}
+
+const taskMetadataSchema = z.object({
+  implementation_repo: z.string().min(1, 'implementation_repo cannot be empty').max(200).optional(),
+  code_location: z.string().min(1, 'code_location cannot be empty').max(500).optional(),
+}).catchall(z.unknown())
+
+// Field validators reused by createTaskSchema and updateTaskSchema.
+// Defaults intentionally live on createTaskSchema only — they MUST NOT apply
+// on update, otherwise a PUT that omits a field would silently overwrite the
+// stored value (e.g. PUT {title} would reset status to 'inbox' and tags to []).
+const taskFields = {
+  title: z.string().min(1, 'Title is required').max(500),
+  description: z.string().max(5000),
+  status: z.enum(['backlog', 'inbox', 'assigned', 'awaiting_owner', 'in_progress', 'review', 'quality_review', 'done', 'failed']),
+  priority: z.enum(['critical', 'high', 'medium', 'low']),
+  project_id: z.number().int().positive(),
+  assigned_to: z.string().max(100),
+  created_by: z.string().max(100),
+  due_date: z.number().int().min(0).max(4102444800), // max ~2100-01-01
+  estimated_hours: z.number().min(0).max(10000),
+  actual_hours: z.number().min(0).max(10000),
+  outcome: z.enum(['success', 'failed', 'partial', 'abandoned']),
+  error_message: z.string().max(5000),
+  resolution: z.string().max(5000),
+  feedback_rating: z.number().int().min(1).max(5),
+  feedback_notes: z.string().max(5000),
+  retry_count: z.number().int().min(0),
+  completed_at: z.number().int().min(0).max(4102444800),
+  tags: z.array(z.string().min(1).max(100)).max(50),
+  metadata: taskMetadataSchema,
+}
+
+export const createTaskSchema = z.object({
+  title: taskFields.title,
+  description: taskFields.description.optional(),
+  status: taskFields.status.default('inbox'),
+  priority: taskFields.priority.default('medium'),
+  project_id: taskFields.project_id.optional(),
+  assigned_to: taskFields.assigned_to.optional(),
+  created_by: taskFields.created_by.optional(),
+  due_date: taskFields.due_date.optional(),
+  estimated_hours: taskFields.estimated_hours.optional(),
+  actual_hours: taskFields.actual_hours.optional(),
+  outcome: taskFields.outcome.optional(),
+  error_message: taskFields.error_message.optional(),
+  resolution: taskFields.resolution.optional(),
+  feedback_rating: taskFields.feedback_rating.optional(),
+  feedback_notes: taskFields.feedback_notes.optional(),
+  retry_count: taskFields.retry_count.optional(),
+  completed_at: taskFields.completed_at.optional(),
+  tags: taskFields.tags.default([] as string[]),
+  metadata: taskFields.metadata.default({} as Record<string, unknown>),
+})
+
+// Every field optional, NO defaults — see comment above on `taskFields`.
+export const updateTaskSchema = z.object({
+  title: taskFields.title.optional(),
+  description: taskFields.description.optional(),
+  status: taskFields.status.optional(),
+  priority: taskFields.priority.optional(),
+  project_id: taskFields.project_id.optional(),
+  assigned_to: taskFields.assigned_to.optional(),
+  created_by: taskFields.created_by.optional(),
+  due_date: taskFields.due_date.optional(),
+  estimated_hours: taskFields.estimated_hours.optional(),
+  actual_hours: taskFields.actual_hours.optional(),
+  outcome: taskFields.outcome.optional(),
+  error_message: taskFields.error_message.optional(),
+  resolution: taskFields.resolution.optional(),
+  feedback_rating: taskFields.feedback_rating.optional(),
+  feedback_notes: taskFields.feedback_notes.optional(),
+  retry_count: taskFields.retry_count.optional(),
+  completed_at: taskFields.completed_at.optional(),
+  tags: taskFields.tags.optional(),
+  metadata: taskFields.metadata.optional(),
+})
+
+export const createAgentSchema = z.object({
+  name: z.string().min(1, 'Name is required').max(100),
+  openclaw_id: z.string().regex(/^[a-z0-9][a-z0-9-]*$/, 'openclaw_id must be kebab-case').max(100).optional(),
+  role: z.string().min(1, 'Role is required').max(100).optional(),
+  session_key: z.string().max(200).optional(),
+  soul_content: z.string().max(50000).optional(),
+  status: z.enum(['online', 'offline', 'busy', 'idle', 'error']).default('offline'),
+  config: z.record(z.string(), z.unknown()).default({} as Record<string, unknown>),
+  template: z.string().max(100).optional(),
+  gateway_config: z.record(z.string(), z.unknown()).optional(),
+  write_to_gateway: z.boolean().optional(),
+  provision_openclaw_workspace: z.boolean().optional(),
+  openclaw_workspace_path: z.string().min(1).max(500).optional(),
+  runtime_type: z.enum(['hermes', 'openclaw', 'claude', 'codex', 'custom']).optional(),
+})
+
+// Workspace fields (issue #677 slice 1). The `isolation` CHECK cannot live in
+// SQLite (ALTER TABLE cannot add constraints), so this enum is the enforcement
+// point for allowed values. `brand` is a free-text grouping tag; null clears it.
+const workspaceFields = {
+  name: z.string().min(1, 'Name is required').max(200),
+  slug: z.string().min(1).max(200),
+  brand: z.string().trim().min(1, 'Brand cannot be empty').max(64).nullable(),
+  isolation: z.enum(WORKSPACE_ISOLATION_VALUES),
+}
+
+export const createWorkspaceSchema = z.object({
+  name: workspaceFields.name,
+  slug: workspaceFields.slug.optional(),
+  brand: workspaceFields.brand.optional(),
+  isolation: workspaceFields.isolation.optional(),
+})
+
+// `brand`/`isolation` omitted ⇒ stored values are preserved (no defaults here,
+// same rationale as updateTaskSchema above).
+export const updateWorkspaceSchema = z.object({
+  name: workspaceFields.name,
+  brand: workspaceFields.brand.optional(),
+  isolation: workspaceFields.isolation.optional(),
+})
+
+const projectAssignmentNamesSchema = z.array(
+  z.string().trim().min(1, 'Agent name cannot be empty').max(100)
+).max(100, 'A project can have at most 100 assigned agents').superRefine((names, ctx) => {
+  if (new Set(names).size !== names.length) {
+    ctx.addIssue({ code: 'custom', message: 'Agent assignments must be unique' })
+  }
+})
+
+const booleanFlagSchema = z.union([z.boolean(), z.literal(0), z.literal(1)])
+
+export const updateProjectSchema = z.object({
+  name: z.string().trim().min(1, 'Project name cannot be empty').max(200).optional(),
+  description: z.string().max(5000).nullable().optional(),
+  ticket_prefix: z.string().max(64).optional(),
+  ticketPrefix: z.string().max(64).optional(),
+  status: z.enum(['active', 'archived']).optional(),
+  github_repo: z.string().trim().max(200).nullable().optional(),
+  deadline: z.number().int().min(0).max(4102444800).nullable().optional(),
+  color: z.string().trim().max(32).nullable().optional(),
+  github_sync_enabled: booleanFlagSchema.optional(),
+  github_default_branch: z.string().trim().min(1).max(255).optional(),
+  github_labels_initialized: booleanFlagSchema.optional(),
+  assigned_agents: projectAssignmentNamesSchema.optional(),
+}).strict().superRefine((body, ctx) => {
+  if (body.ticket_prefix !== undefined && body.ticketPrefix !== undefined) {
+    ctx.addIssue({ code: 'custom', message: 'Use only one ticket prefix field' })
+  }
+}).refine((body) => Object.keys(body).length > 0, {
+  message: 'At least one field is required',
+})
+
+export const bulkUpdateTaskStatusSchema = z.object({
+  tasks: z.array(z.object({
+    id: z.number().int().positive(),
+    status: z.enum(['backlog', 'inbox', 'assigned', 'awaiting_owner', 'in_progress', 'review', 'quality_review', 'done', 'failed']),
+  })).min(1, 'At least one task is required').max(100),
+})
+
+export const createWebhookSchema = z.object({
+  name: z.string().min(1, 'Name is required').max(200),
+  url: z.string().url('Invalid URL'),
+  events: z.array(z.string().min(1).max(200)).max(50).optional(),
+  generate_secret: z.boolean().optional(),
+})
+
+export const createAlertSchema = z.object({
+  name: z.string().min(1, 'Name is required').max(200),
+  description: z.string().max(1000).optional(),
+  entity_type: z.enum(['agent', 'task', 'session', 'activity']),
+  condition_field: z.string().min(1).max(100),
+  condition_operator: z.enum(['equals', 'not_equals', 'greater_than', 'less_than', 'contains', 'count_above', 'count_below', 'age_minutes_above']),
+  condition_value: z.string().min(1).max(500),
+  action_type: z.string().max(100).optional(),
+  action_config: z.record(z.string(), z.unknown()).optional(),
+  cooldown_minutes: z.number().min(1).max(10080).optional(),
+})
+
+export const notificationActionSchema = z.object({
+  action: z.literal('mark-delivered'),
+  agent: z.string().min(1, 'Agent name is required'),
+})
+
+export const integrationActionSchema = z.object({
+  action: z.enum(['test', 'pull', 'pull-all']),
+  integrationId: z.string().optional(),
+  category: z.string().optional(),
+})
+
+export const createPipelineSchema = z.object({
+  name: z.string().min(1, 'Name is required').max(200),
+  description: z.string().max(5000).optional(),
+  steps: z.array(z.object({
+    template_id: z.number().int().positive(),
+    on_failure: z.enum(['stop', 'continue']).default('stop'),
+  })).min(2, 'Pipeline needs at least 2 steps').max(50),
+})
+
+export const createWorkflowSchema = z.object({
+  name: z.string().min(1, 'Name is required').max(200),
+  task_prompt: z.string().min(1, 'Task prompt is required').max(10000),
+  description: z.string().max(5000).optional(),
+  model: z.string().max(100).default('sonnet'),
+  timeout_seconds: z.number().int().min(10).max(3600).default(300),
+  agent_role: z.string().max(100).optional(),
+  tags: z.array(z.string().min(1).max(100)).max(50).default([]),
+})
+
+export const createCommentSchema = z.object({
+  task_id: z.number().optional(),
+  content: z.string().min(1, 'Comment content is required'),
+  author: z.string().optional(),
+  parent_id: z.number().optional(),
+})
+
+export const createMessageSchema = z.object({
+  to: z.string().min(1, 'Recipient is required'),
+  message: z.string().min(1, 'Message is required'),
+  from: z.string().optional().default('system'),
+})
+
+export const updateSettingsSchema = z.object({
+  settings: z.record(z.string(), z.unknown()),
+})
+
+const gatewayConfigPathSchema = z.string().min(1).max(500).refine(
+  (path) => path.split('.').every(
+    (segment) => segment.length > 0 && !['__proto__', 'prototype', 'constructor'].includes(segment),
+  ),
+  'Config path contains an unsafe segment',
+)
+
+export const gatewayConfigUpdateSchema = z.object({
+  updates: z.record(gatewayConfigPathSchema, z.unknown()).refine(
+    (updates) => Object.keys(updates).length > 0 && Object.keys(updates).length <= 100,
+    'Updates must contain between 1 and 100 fields',
+  ),
+  hash: z.string().optional(),
+})
+
+export const gatewayControlSchema = z.object({
+  gateway: z.enum(['hermes', 'openclaw']),
+  action: z.enum(['start', 'stop', 'restart', 'diagnose']),
+})
+
+export const qualityReviewSchema = z.object({
+  taskId: z.number(),
+  reviewer: z.string().default('aegis'),
+  status: z.enum(['approved', 'rejected']),
+  notes: z.string().min(1, 'Notes are required for quality reviews'),
+})
+
+export const spawnAgentSchema = z.object({
+  task: z.string().min(1, 'Task is required'),
+  model: z.string().min(1, 'Model is required').optional(),
+  label: z.string().min(1, 'Label is required'),
+  timeoutSeconds: z.number().min(10).max(3600).default(300),
+})
+
+export const createUserSchema = z.object({
+  username: z.string().min(1, 'Username is required'),
+  password: z.string().min(12, 'Password must be at least 12 characters'),
+  display_name: z.string().optional(),
+  role: z.enum(['admin', 'operator', 'viewer']).default('operator'),
+  provider: z.enum(['local', 'google']).default('local'),
+  email: z.string().optional(),
+})
+
+export const createOsUserSchema = z.object({
+  username: z.string().trim().toLowerCase()
+    .regex(/^[a-z][a-z0-9_-]{1,30}[a-z0-9]$/, 'Invalid OS username'),
+  display_name: z.string().trim().min(1, 'Display name is required').max(100),
+  password: z.string().min(12, 'Password must be at least 12 characters').max(128).optional(),
+  gateway_mode: z.boolean().optional(),
+  gateway_port: z.number().int().min(1024).max(65535).optional(),
+  owner_gateway: z.string().trim().min(1).max(120).optional(),
+  dry_run: z.boolean().optional(),
+  install_openclaw: z.boolean().optional(),
+  install_claude: z.boolean().optional(),
+  install_codex: z.boolean().optional(),
+}).strict().superRefine((body, ctx) => {
+  if (body.gateway_mode && body.gateway_port === undefined) {
+    ctx.addIssue({
+      code: 'custom',
+      path: ['gateway_port'],
+      message: 'gateway_port is required in gateway mode',
+    })
+  }
+})
+
+export const installTmuxSchema = z.object({
+  confirmation: z.literal('install_tmux'),
+}).strict()
+
+export const releaseUpdateSchema = z.object({
+  targetVersion: z.string().trim().min(1).max(128),
+  confirmation: z.literal('update_mission_control'),
+}).strict()
+
+export const openClawUpdateSchema = z.object({
+  confirmation: z.literal('update_openclaw'),
+}).strict()
+
+export const openClawDoctorFixSchema = z.object({
+  confirmation: z.literal('fix_openclaw'),
+}).strict()
+
+const skillIdentifierSchema = z.string().trim().min(1).max(128).regex(
+  /^[a-zA-Z0-9._-]+$/,
+  'Only letters, numbers, dots, underscores, and hyphens are allowed',
+)
+
+export const skillMutationSchema = z.object({
+  source: skillIdentifierSchema,
+  name: skillIdentifierSchema,
+  content: z.string().max(256 * 1024, 'Skill content must not exceed 256 KiB'),
+}).strict()
+
+export const skillDeleteSchema = z.object({
+  source: skillIdentifierSchema,
+  name: skillIdentifierSchema,
+  confirmation: z.literal('delete_skill'),
+}).strict()
+
+export const backupDeleteSchema = z.object({
+  name: z.string().trim().min(1).max(255).endsWith('.db').refine(
+    (name) => !name.includes('..') && !name.includes('/') && !name.includes('\\'),
+    'Invalid backup name',
+  ),
+}).strict()
+
+export const accessRequestActionSchema = z.object({
+  request_id: z.number(),
+  action: z.enum(['approve', 'reject']),
+  role: z.enum(['admin', 'operator', 'viewer']).default('viewer'),
+  note: z.string().optional(),
+})
+
+export const connectSchema = z.object({
+  tool_name: z.string().min(1, 'Tool name is required').max(100),
+  tool_version: z.string().max(50).optional(),
+  agent_name: z.string().min(1, 'Agent name is required').max(100),
+  agent_role: z.string().max(100).optional(),
+  metadata: z.record(z.string(), z.unknown()).optional(),
+})
+
+export const githubSyncSchema = z.object({
+  action: z.enum(['sync', 'comment', 'close', 'status', 'init-labels', 'sync-project']),
+  repo: z.string().regex(/^[^/]+\/[^/]+$/, 'Repo must be owner/repo format').optional(),
+  labels: z.string().optional(),
+  state: z.enum(['open', 'closed', 'all']).optional(),
+  assignAgent: z.string().optional(),
+  issueNumber: z.number().optional(),
+  body: z.string().optional(),
+  comment: z.string().optional(),
+  project_id: z.number().optional(),
+})

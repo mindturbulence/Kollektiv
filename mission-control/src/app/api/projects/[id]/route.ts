@@ -1,0 +1,317 @@
+import { NextRequest, NextResponse } from 'next/server'
+import { getDatabase } from '@/lib/db'
+import { requireRole } from '@/lib/auth'
+import { mutationLimiter } from '@/lib/rate-limit'
+import { logger } from '@/lib/logger'
+import { updateProjectSchema, validateBody } from '@/lib/validation'
+import {
+  ensureTenantWorkspaceAccess,
+  ForbiddenError
+} from '@/lib/workspaces'
+
+function normalizePrefix(input: string): string {
+  const normalized = input.trim().toUpperCase().replace(/[^A-Z0-9]/g, '')
+  return normalized.slice(0, 12)
+}
+
+function toProjectId(raw: string): number {
+  const id = Number.parseInt(raw, 10)
+  return Number.isFinite(id) ? id : NaN
+}
+
+export async function GET(
+  request: NextRequest,
+  { params }: { params: Promise<{ id: string }> }
+) {
+  const auth = requireRole(request, 'viewer')
+  if ('error' in auth) return NextResponse.json({ error: auth.error }, { status: auth.status })
+
+  try {
+    const db = getDatabase()
+    const workspaceId = auth.user.workspace_id ?? 1
+    const tenantId = auth.user.tenant_id ?? 1
+    const forwardedFor = (request.headers.get('x-forwarded-for') || '').split(',')[0]?.trim() || null
+    ensureTenantWorkspaceAccess(db, tenantId, workspaceId, {
+      actor: auth.user.username,
+      actorId: auth.user.id,
+      route: '/api/projects/[id]',
+      ipAddress: forwardedFor,
+      userAgent: request.headers.get('user-agent'),
+    })
+    const { id } = await params
+    const projectId = toProjectId(id)
+    if (Number.isNaN(projectId)) return NextResponse.json({ error: 'Invalid project ID' }, { status: 400 })
+    const projectScope = db.prepare(`
+      SELECT p.id
+      FROM projects p
+      JOIN workspaces w ON w.id = p.workspace_id
+      WHERE p.id = ? AND p.workspace_id = ? AND w.tenant_id = ?
+      LIMIT 1
+    `).get(projectId, workspaceId, tenantId)
+    if (!projectScope) return NextResponse.json({ error: 'Project not found' }, { status: 404 })
+
+    const row = db.prepare(`
+      SELECT p.id, p.workspace_id, p.name, p.slug, p.description, p.ticket_prefix, p.ticket_counter, p.status,
+             p.github_repo, p.deadline, p.color, p.github_sync_enabled, p.github_labels_initialized, p.github_default_branch, p.created_at, p.updated_at,
+             (SELECT COUNT(*) FROM tasks t WHERE t.project_id = p.id) as task_count,
+             (SELECT GROUP_CONCAT(paa.agent_name) FROM project_agent_assignments paa WHERE paa.project_id = p.id) as assigned_agents_csv
+      FROM projects p
+      WHERE p.id = ? AND p.workspace_id = ?
+    `).get(projectId, workspaceId) as Record<string, unknown> | undefined
+    if (!row) return NextResponse.json({ error: 'Project not found' }, { status: 404 })
+
+    const project = {
+      ...row,
+      assigned_agents: row.assigned_agents_csv ? String(row.assigned_agents_csv).split(',') : [],
+      assigned_agents_csv: undefined,
+    }
+
+    return NextResponse.json({ project })
+  } catch (error) {
+    if (error instanceof ForbiddenError) {
+      return NextResponse.json({ error: error.message }, { status: error.status })
+    }
+    logger.error({ err: error }, 'GET /api/projects/[id] error')
+    return NextResponse.json({ error: 'Failed to fetch project' }, { status: 500 })
+  }
+}
+
+export async function PATCH(
+  request: NextRequest,
+  { params }: { params: Promise<{ id: string }> }
+) {
+  const auth = requireRole(request, 'operator')
+  if ('error' in auth) return NextResponse.json({ error: auth.error }, { status: auth.status })
+
+  const rateCheck = mutationLimiter(request)
+  if (rateCheck) return rateCheck
+
+  try {
+    const db = getDatabase()
+    const workspaceId = auth.user.workspace_id ?? 1
+    const tenantId = auth.user.tenant_id ?? 1
+    const forwardedFor = (request.headers.get('x-forwarded-for') || '').split(',')[0]?.trim() || null
+    ensureTenantWorkspaceAccess(db, tenantId, workspaceId, {
+      actor: auth.user.username,
+      actorId: auth.user.id,
+      route: '/api/projects/[id]',
+      ipAddress: forwardedFor,
+      userAgent: request.headers.get('user-agent'),
+    })
+    const { id } = await params
+    const projectId = toProjectId(id)
+    if (Number.isNaN(projectId)) return NextResponse.json({ error: 'Invalid project ID' }, { status: 400 })
+    const projectScope = db.prepare(`
+      SELECT p.id
+      FROM projects p
+      JOIN workspaces w ON w.id = p.workspace_id
+      WHERE p.id = ? AND p.workspace_id = ? AND w.tenant_id = ?
+      LIMIT 1
+    `).get(projectId, workspaceId, tenantId)
+    if (!projectScope) return NextResponse.json({ error: 'Project not found' }, { status: 404 })
+
+    const current = db.prepare(`SELECT id, workspace_id, slug FROM projects WHERE id = ? AND workspace_id = ?`).get(projectId, workspaceId) as {
+      id: number
+      workspace_id: number
+      slug: string
+    } | undefined
+    if (!current) return NextResponse.json({ error: 'Project not found' }, { status: 404 })
+
+    const validated = await validateBody(request, updateProjectSchema)
+    if ('error' in validated) return validated.error
+    const body = validated.data
+
+    if (current.slug === 'general' && body.status === 'archived') {
+      return NextResponse.json({ error: 'Default project cannot be archived' }, { status: 400 })
+    }
+
+    const updates: string[] = []
+    const paramsList: Array<string | number | null> = []
+
+    if (body.name !== undefined) {
+      updates.push('name = ?')
+      paramsList.push(body.name)
+    }
+    if (body.description !== undefined) {
+      updates.push('description = ?')
+      paramsList.push(body.description?.trim() || null)
+    }
+    if (body.ticket_prefix !== undefined || body.ticketPrefix !== undefined) {
+      const raw = String(body.ticket_prefix ?? body.ticketPrefix)
+      const prefix = normalizePrefix(raw)
+      if (!prefix) return NextResponse.json({ error: 'Invalid ticket prefix' }, { status: 400 })
+      const conflict = db.prepare(`
+        SELECT id FROM projects
+        WHERE workspace_id = ? AND ticket_prefix = ? AND id != ?
+      `).get(workspaceId, prefix, projectId)
+      if (conflict) return NextResponse.json({ error: 'Ticket prefix already in use' }, { status: 409 })
+      updates.push('ticket_prefix = ?')
+      paramsList.push(prefix)
+    }
+    if (body.status !== undefined) {
+      updates.push('status = ?')
+      paramsList.push(body.status)
+    }
+    if (body.github_repo !== undefined) {
+      updates.push('github_repo = ?')
+      paramsList.push(body.github_repo || null)
+    }
+    if (body.deadline !== undefined) {
+      updates.push('deadline = ?')
+      paramsList.push(body.deadline)
+    }
+    if (body.color !== undefined) {
+      updates.push('color = ?')
+      paramsList.push(body.color || null)
+    }
+    if (body.github_sync_enabled !== undefined) {
+      updates.push('github_sync_enabled = ?')
+      paramsList.push(body.github_sync_enabled ? 1 : 0)
+    }
+    if (body.github_default_branch !== undefined) {
+      updates.push('github_default_branch = ?')
+      paramsList.push(body.github_default_branch)
+    }
+    if (body.github_labels_initialized !== undefined) {
+      updates.push('github_labels_initialized = ?')
+      paramsList.push(body.github_labels_initialized ? 1 : 0)
+    }
+
+    const assignedAgents = body.assigned_agents
+    if (assignedAgents?.length) {
+      const placeholders = assignedAgents.map(() => '?').join(', ')
+      const knownAgents = db.prepare(`
+        SELECT name FROM agents
+        WHERE workspace_id = ? AND name IN (${placeholders})
+      `).all(workspaceId, ...assignedAgents) as Array<{ name: string }>
+      const knownNames = new Set(knownAgents.map((agent) => agent.name))
+      const unknownAgents = assignedAgents.filter((name) => !knownNames.has(name))
+      if (unknownAgents.length) {
+        return NextResponse.json({ error: 'Unknown project agents', details: unknownAgents }, { status: 400 })
+      }
+    }
+
+    updates.push('updated_at = unixepoch()')
+    const updateProject = db.prepare(`
+        UPDATE projects
+        SET ${updates.join(', ')}
+        WHERE id = ? AND workspace_id = ?
+      `)
+    const insertAssignment = db.prepare(`
+      INSERT OR IGNORE INTO project_agent_assignments (project_id, agent_name, role)
+      VALUES (?, ?, 'member')
+    `)
+    const updateTransaction = db.transaction(() => {
+      updateProject.run(...paramsList, projectId, workspaceId)
+
+      if (assignedAgents !== undefined) {
+        if (assignedAgents.length === 0) {
+          db.prepare('DELETE FROM project_agent_assignments WHERE project_id = ?').run(projectId)
+        } else {
+          const placeholders = assignedAgents.map(() => '?').join(', ')
+          db.prepare(`
+            DELETE FROM project_agent_assignments
+            WHERE project_id = ? AND agent_name NOT IN (${placeholders})
+          `).run(projectId, ...assignedAgents)
+          for (const agentName of assignedAgents) insertAssignment.run(projectId, agentName)
+        }
+      }
+    })
+    updateTransaction()
+
+    const projectRow = db.prepare(`
+      SELECT id, workspace_id, name, slug, description, ticket_prefix, ticket_counter, status,
+             github_repo, deadline, color, github_sync_enabled, github_labels_initialized, github_default_branch, created_at, updated_at,
+             (SELECT GROUP_CONCAT(paa.agent_name) FROM project_agent_assignments paa WHERE paa.project_id = projects.id) as assigned_agents_csv
+      FROM projects
+      WHERE id = ? AND workspace_id = ?
+    `).get(projectId, workspaceId) as Record<string, unknown>
+    const project = {
+      ...projectRow,
+      assigned_agents: projectRow.assigned_agents_csv ? String(projectRow.assigned_agents_csv).split(',') : [],
+      assigned_agents_csv: undefined,
+    }
+
+    return NextResponse.json({ project })
+  } catch (error) {
+    if (error instanceof ForbiddenError) {
+      return NextResponse.json({ error: error.message }, { status: error.status })
+    }
+    logger.error({ err: error }, 'PATCH /api/projects/[id] error')
+    return NextResponse.json({ error: 'Failed to update project' }, { status: 500 })
+  }
+}
+
+export async function DELETE(
+  request: NextRequest,
+  { params }: { params: Promise<{ id: string }> }
+) {
+  const auth = requireRole(request, 'admin')
+  if ('error' in auth) return NextResponse.json({ error: auth.error }, { status: auth.status })
+
+  const rateCheck = mutationLimiter(request)
+  if (rateCheck) return rateCheck
+
+  try {
+    const db = getDatabase()
+    const workspaceId = auth.user.workspace_id ?? 1
+    const tenantId = auth.user.tenant_id ?? 1
+    const forwardedFor = (request.headers.get('x-forwarded-for') || '').split(',')[0]?.trim() || null
+    ensureTenantWorkspaceAccess(db, tenantId, workspaceId, {
+      actor: auth.user.username,
+      actorId: auth.user.id,
+      route: '/api/projects/[id]',
+      ipAddress: forwardedFor,
+      userAgent: request.headers.get('user-agent'),
+    })
+    const { id } = await params
+    const projectId = toProjectId(id)
+    if (Number.isNaN(projectId)) return NextResponse.json({ error: 'Invalid project ID' }, { status: 400 })
+    const projectScope = db.prepare(`
+      SELECT p.id
+      FROM projects p
+      JOIN workspaces w ON w.id = p.workspace_id
+      WHERE p.id = ? AND p.workspace_id = ? AND w.tenant_id = ?
+      LIMIT 1
+    `).get(projectId, workspaceId, tenantId)
+    if (!projectScope) return NextResponse.json({ error: 'Project not found' }, { status: 404 })
+
+    const current = db.prepare(`SELECT * FROM projects WHERE id = ? AND workspace_id = ?`).get(projectId, workspaceId) as any
+    if (!current) return NextResponse.json({ error: 'Project not found' }, { status: 404 })
+    if (current.slug === 'general') {
+      return NextResponse.json({ error: 'Default project cannot be deleted' }, { status: 400 })
+    }
+
+    const mode = new URL(request.url).searchParams.get('mode') || 'archive'
+    if (mode !== 'delete') {
+      db.prepare(`UPDATE projects SET status = 'archived', updated_at = unixepoch() WHERE id = ? AND workspace_id = ?`).run(projectId, workspaceId)
+      return NextResponse.json({ success: true, mode: 'archive' })
+    }
+
+    const fallback = db.prepare(`
+      SELECT id FROM projects
+      WHERE workspace_id = ? AND slug = 'general'
+      LIMIT 1
+    `).get(workspaceId) as { id: number } | undefined
+    if (!fallback) return NextResponse.json({ error: 'Default project missing' }, { status: 500 })
+
+    const tx = db.transaction(() => {
+      db.prepare(`
+        UPDATE tasks
+        SET project_id = ?
+        WHERE workspace_id = ? AND project_id = ?
+      `).run(fallback.id, workspaceId, projectId)
+
+      db.prepare(`DELETE FROM projects WHERE id = ? AND workspace_id = ?`).run(projectId, workspaceId)
+    })
+    tx()
+
+    return NextResponse.json({ success: true, mode: 'delete' })
+  } catch (error) {
+    if (error instanceof ForbiddenError) {
+      return NextResponse.json({ error: error.message }, { status: error.status })
+    }
+    logger.error({ err: error }, 'DELETE /api/projects/[id] error')
+    return NextResponse.json({ error: 'Failed to delete project' }, { status: 500 })
+  }
+}

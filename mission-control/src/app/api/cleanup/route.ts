@@ -1,0 +1,202 @@
+import { NextRequest, NextResponse } from 'next/server'
+import { requireRole } from '@/lib/auth'
+import { getDatabase, logAuditEvent } from '@/lib/db'
+import { config } from '@/lib/config'
+import { heavyLimiter } from '@/lib/rate-limit'
+import { countStaleGatewaySessions, pruneGatewaySessionsOlderThan } from '@/lib/sessions'
+import { denyUnscopedResourceForStrictWorkspace } from '@/lib/workspace-isolation'
+
+interface CleanupResult {
+  table: string
+  deleted: number
+  cutoff_date: string
+  retention_days: number
+}
+
+/**
+ * GET /api/cleanup - Show retention policy and what would be cleaned
+ */
+export async function GET(request: NextRequest) {
+  const auth = requireRole(request, 'admin')
+  if ('error' in auth) return NextResponse.json({ error: auth.error }, { status: auth.status })
+  const isolationDeny = denyUnscopedResourceForStrictWorkspace(auth.user, 'host_administration', new URL(request.url).pathname)
+  if (isolationDeny) return isolationDeny
+
+  const db = getDatabase()
+  const workspaceId = auth.user.workspace_id ?? 1
+  const now = Math.floor(Date.now() / 1000)
+  const ret = config.retention
+
+  const preview = []
+
+  for (const { table, column, days, label, scoped } of getRetentionTargets()) {
+    if (days <= 0) {
+      preview.push({ table: label, retention_days: 0, stale_count: 0, note: 'Retention disabled (keep forever)' })
+      continue
+    }
+    const cutoff = now - days * 86400
+    try {
+      const wsClause = scoped ? ' AND workspace_id = ?' : ''
+      const params: any[] = scoped ? [cutoff, workspaceId] : [cutoff]
+      const row = db.prepare(`SELECT COUNT(*) as c FROM ${table} WHERE ${column} < ?${wsClause}`).get(...params) as any
+      preview.push({
+        table: label,
+        retention_days: days,
+        cutoff_date: new Date(cutoff * 1000).toISOString().split('T')[0],
+        stale_count: row.c,
+      })
+    } catch {
+      preview.push({ table: label, retention_days: days, stale_count: 0, note: 'Table not found' })
+    }
+  }
+
+  // Token usage file stats
+  try {
+    const { readFile } = require('fs/promises')
+    const data = JSON.parse(await readFile(config.tokensPath, 'utf-8'))
+    const cutoffMs = Date.now() - ret.tokenUsage * 86400000
+    const stale = data.filter((r: any) => r.timestamp < cutoffMs).length
+    preview.push({
+      table: 'Token Usage (file)',
+      retention_days: ret.tokenUsage,
+      cutoff_date: new Date(cutoffMs).toISOString().split('T')[0],
+      stale_count: stale,
+    })
+  } catch {
+    preview.push({ table: 'Token Usage (file)', retention_days: ret.tokenUsage, stale_count: 0, note: 'No token data file' })
+  }
+
+  if (ret.gatewaySessions > 0) {
+    preview.push({
+      table: 'Gateway Session Store',
+      retention_days: ret.gatewaySessions,
+      stale_count: countStaleGatewaySessions(ret.gatewaySessions),
+      note: 'Stored under ~/.openclaw/agents/*/sessions/sessions.json',
+    })
+  } else {
+    preview.push({ table: 'Gateway Session Store', retention_days: 0, stale_count: 0, note: 'Retention disabled (keep forever)' })
+  }
+
+  return NextResponse.json({ retention: config.retention, preview })
+}
+
+/**
+ * POST /api/cleanup - Run cleanup (admin only)
+ * Body: { dry_run?: boolean }
+ */
+export async function POST(request: NextRequest) {
+  const auth = requireRole(request, 'admin')
+  if ('error' in auth) return NextResponse.json({ error: auth.error }, { status: auth.status })
+  const isolationDeny = denyUnscopedResourceForStrictWorkspace(auth.user, 'host_administration', new URL(request.url).pathname)
+  if (isolationDeny) return isolationDeny
+
+  const rateCheck = heavyLimiter(request)
+  if (rateCheck) return rateCheck
+
+  const body = await request.json().catch(() => ({}))
+  const dryRun = body.dry_run === true
+
+  const db = getDatabase()
+  const workspaceId = auth.user.workspace_id ?? 1
+  const now = Math.floor(Date.now() / 1000)
+  const results: CleanupResult[] = []
+  let totalDeleted = 0
+
+  for (const { table, column, days, label, scoped } of getRetentionTargets()) {
+    if (days <= 0) continue
+    const cutoff = now - days * 86400
+    const wsClause = scoped ? ' AND workspace_id = ?' : ''
+    const params: any[] = scoped ? [cutoff, workspaceId] : [cutoff]
+
+    try {
+      if (dryRun) {
+        const row = db.prepare(`SELECT COUNT(*) as c FROM ${table} WHERE ${column} < ?${wsClause}`).get(...params) as any
+        results.push({
+          table: label,
+          deleted: row.c,
+          cutoff_date: new Date(cutoff * 1000).toISOString().split('T')[0],
+          retention_days: days,
+        })
+        totalDeleted += row.c
+      } else {
+        const res = db.prepare(`DELETE FROM ${table} WHERE ${column} < ?${wsClause}`).run(...params)
+        results.push({
+          table: label,
+          deleted: res.changes,
+          cutoff_date: new Date(cutoff * 1000).toISOString().split('T')[0],
+          retention_days: days,
+        })
+        totalDeleted += res.changes
+      }
+    } catch {
+      results.push({ table: label, deleted: 0, cutoff_date: '', retention_days: days })
+    }
+  }
+
+  // Clean token usage file
+  const ret = config.retention
+  if (ret.tokenUsage > 0) {
+    try {
+      const { readFile, writeFile } = require('fs/promises')
+      const raw = await readFile(config.tokensPath, 'utf-8')
+      const data = JSON.parse(raw)
+      const cutoffMs = Date.now() - ret.tokenUsage * 86400000
+      const kept = data.filter((r: any) => r.timestamp >= cutoffMs)
+      const removed = data.length - kept.length
+
+      if (!dryRun && removed > 0) {
+        await writeFile(config.tokensPath, JSON.stringify(kept, null, 2))
+      }
+
+      results.push({
+        table: 'Token Usage (file)',
+        deleted: removed,
+        cutoff_date: new Date(cutoffMs).toISOString().split('T')[0],
+        retention_days: ret.tokenUsage,
+      })
+      totalDeleted += removed
+    } catch {
+      // No token file or parse error
+    }
+  }
+
+  if (ret.gatewaySessions > 0) {
+    const sessionPrune = dryRun
+      ? { deleted: countStaleGatewaySessions(ret.gatewaySessions), filesTouched: 0 }
+      : pruneGatewaySessionsOlderThan(ret.gatewaySessions)
+    results.push({
+      table: 'Gateway Session Store',
+      deleted: sessionPrune.deleted,
+      cutoff_date: new Date(Date.now() - ret.gatewaySessions * 86400000).toISOString().split('T')[0],
+      retention_days: ret.gatewaySessions,
+    })
+    totalDeleted += sessionPrune.deleted
+  }
+
+  if (!dryRun && totalDeleted > 0) {
+    const ipAddress = request.headers.get('x-forwarded-for') || request.headers.get('x-real-ip') || 'unknown'
+    logAuditEvent({
+      action: 'data_cleanup',
+      actor: auth.user.username,
+      actor_id: auth.user.id,
+      detail: { total_deleted: totalDeleted, results },
+      ip_address: ipAddress,
+    })
+  }
+
+  return NextResponse.json({
+    dry_run: dryRun,
+    total_deleted: totalDeleted,
+    results,
+  })
+}
+
+function getRetentionTargets() {
+  const ret = config.retention
+  return [
+    { table: 'activities', column: 'created_at', days: ret.activities, label: 'Activities', scoped: true },
+    { table: 'audit_log', column: 'created_at', days: ret.auditLog, label: 'Audit Log', scoped: true },
+    { table: 'notifications', column: 'created_at', days: ret.notifications, label: 'Notifications', scoped: true },
+    { table: 'pipeline_runs', column: 'created_at', days: ret.pipelineRuns, label: 'Pipeline Runs', scoped: true },
+  ]
+}
