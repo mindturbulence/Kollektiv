@@ -26,5 +26,6 @@
     "paths": {
       "@/*" :  ["./*"]
     }
-  }
+  },
+  "exclude": ["mission-control", "node_modules"]
 }
