@@ -327,3 +327,45 @@ describe('provider fallback settings', () => {
     expect(loaded.providerFallbackChain).toEqual([]);
   });
 });
+
+describe('local generation model persistence', () => {
+  it('defaults to an empty string for both backends', () => {
+    expect(defaultLLMSettings.comfyModel).toBe('');
+    expect(defaultLLMSettings.a1111Model).toBe('');
+  });
+
+  it('survives a save/load round trip', () => {
+    saveLLMSettings({ ...defaultLLMSettings, comfyModel: 'sd15.safetensors', a1111Model: 'SDXL\\eXcursion_XL.safetensors' });
+    const loaded = loadLLMSettings();
+    expect(loaded.comfyModel).toBe('sd15.safetensors');
+    expect(loaded.a1111Model).toBe('SDXL\\eXcursion_XL.safetensors');
+  });
+
+  it('falls back to empty strings when absent from stored settings', () => {
+    localStorage.setItem(SETTINGS_KEY, JSON.stringify({ activeLLM: 'gemini' }));
+    const loaded = loadLLMSettings();
+    expect(loaded.comfyModel).toBe('');
+    expect(loaded.a1111Model).toBe('');
+  });
+});
+
+describe('local generation sampler persistence', () => {
+  it('defaults to an empty string for both backends', () => {
+    expect(defaultLLMSettings.comfySampler).toBe('');
+    expect(defaultLLMSettings.a1111Sampler).toBe('');
+  });
+
+  it('survives a save/load round trip', () => {
+    saveLLMSettings({ ...defaultLLMSettings, comfySampler: 'dpmpp_2m', a1111Sampler: 'DPM++ 2M Karras' });
+    const loaded = loadLLMSettings();
+    expect(loaded.comfySampler).toBe('dpmpp_2m');
+    expect(loaded.a1111Sampler).toBe('DPM++ 2M Karras');
+  });
+
+  it('falls back to empty strings when absent from stored settings', () => {
+    localStorage.setItem(SETTINGS_KEY, JSON.stringify({ activeLLM: 'gemini' }));
+    const loaded = loadLLMSettings();
+    expect(loaded.comfySampler).toBe('');
+    expect(loaded.a1111Sampler).toBe('');
+  });
+});

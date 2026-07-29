@@ -39,6 +39,8 @@ export const ROUTE_LABELS: Record<ActiveTab, { name: string; sub: string; glyph:
     video_to_frames: { name: 'FRAME EXTRACTOR', sub: 'SLICING TIMELINE', glyph: '▧' },
     lora_editor: { name: 'LORA EDITOR', sub: 'LOADING TENSOR WEIGHTS', glyph: '◈' },
     batch_runner: { name: 'BATCH RUNNER', sub: 'QUEUING OPERATIONS', glyph: '⏩' },
+    comfy_studio: { name: 'COMFYUI STUDIO', sub: 'INITIALIZING PIPELINE', glyph: '◈' },
+    a1111_studio: { name: 'FORGE STUDIO', sub: 'CALIBRATING NEURAL CORE', glyph: '◈' },
 };
 
 export interface FxMeta {

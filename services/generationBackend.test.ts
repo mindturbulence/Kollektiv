@@ -6,6 +6,7 @@ const fake = (id: string) => ({
   label: id,
   isAvailable: async () => true,
   listModels: async () => ['m1'],
+  listSamplers: async () => ['euler', 'dpmpp_2m'],
   generate: async () => ({ dataUrl: 'data:image/png;base64,AAA', backendId: id }),
 });
 

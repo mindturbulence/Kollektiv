@@ -5,10 +5,8 @@ import { runAssistantTurn } from '../services/assistantService';
 import { useSettings } from '../contexts/SettingsContext';
 import { CloseIcon, SparklesIcon, SidebarIcon, PlusIcon, DeleteIcon, PaperclipIcon, ArrowsMaximizeIcon } from '\.\/icons';
 import { audioService } from '../services/audioService';
-import Markdown from 'react-markdown';
-import remarkGfm from 'remark-gfm';
-import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter';
-import { vscDarkPlus } from 'react-syntax-highlighter/dist/esm/styles/prism';
+import { MessageBubble, type ChatBubbleMessage } from './MessageBubble';
+import { createChunkFlusher } from './chatStreamThrottle';
 import { getChatSessionsSync, saveChatSession, deleteChatSession, clearAllChatSessions, loadRecentMessages, loadMessagesBefore, ChatSession, ChatSessionStored } from '../utils/chatStorage';
 import { v4 as uuidv4 } from 'uuid';
 import { appControlService } from '../services/appControlService';
@@ -29,7 +27,7 @@ export const LLMChatPanel: React.FC<LLMChatPanelProps> = ({ isOpen, onClose }) =
     const { settings } = useSettings();
     const messagesEndRef = useRef<HTMLDivElement>(null);
 
-    const [messages, setMessages] = useState<{ role: 'user' | 'assistant' | 'system', content: string, attachments?: any[] }[]>([]);
+    const [messages, setMessages] = useState<ChatBubbleMessage[]>([]);
 
     const [isSidebarOpen, setIsSidebarOpen] = useState(false);
     const [isExpanded, setIsExpanded] = useState(false);
@@ -41,7 +39,7 @@ export const LLMChatPanel: React.FC<LLMChatPanelProps> = ({ isOpen, onClose }) =
     const [isLoadingMore, setIsLoadingMore] = useState(false);
 
     const startNewSession = useCallback(() => {
-        setMessages([{ role: 'system', content: `Type /help to see available local commands.` }]);
+        setMessages([{ id: uuidv4(), role: 'system', content: `Type /help to see available local commands.` }]);
         setActiveSessionId(null);
         setHasMoreMessages(false);
         setLoadedUpToTimestamp(null);
@@ -74,7 +72,7 @@ export const LLMChatPanel: React.FC<LLMChatPanelProps> = ({ isOpen, onClose }) =
         if (!isOpen) return;
         return appEventBus.on('liveAssistantActivity', (info: { flavour: string; toolName: string }) => {
             if (!info?.flavour) return;
-            setMessages(prev => [...prev, { role: 'system', content: info.flavour }]);
+            setMessages(prev => [...prev, { id: uuidv4(), role: 'system', content: info.flavour }]);
         });
     }, [isOpen]);
 
@@ -92,6 +90,7 @@ export const LLMChatPanel: React.FC<LLMChatPanelProps> = ({ isOpen, onClose }) =
                 setLoadedUpToTimestamp(stored[0].createdAt);
             }
             setMessages(stored.map(m => ({
+                id: uuidv4(),
                 role: m.role,
                 content: m.content,
                 attachments: m.attachments_json ? JSON.parse(m.attachments_json) : undefined,
@@ -110,6 +109,7 @@ export const LLMChatPanel: React.FC<LLMChatPanelProps> = ({ isOpen, onClose }) =
                 setLoadedUpToTimestamp(older[0].createdAt);
                 setMessages(prev => [
                     ...older.map(m => ({
+                        id: uuidv4(),
                         role: m.role,
                         content: m.content,
                         attachments: m.attachments_json ? JSON.parse(m.attachments_json) : undefined,
@@ -163,7 +163,7 @@ export const LLMChatPanel: React.FC<LLMChatPanelProps> = ({ isOpen, onClose }) =
         if (!activeSessionId && messages.length <= 1) {
             
             
-            setMessages([{ role: 'system', content: `Type /help to see available local commands.` }]);
+            setMessages([{ id: uuidv4(), role: 'system', content: `Type /help to see available local commands.` }]);
         }
     }, [settings.activeLLM, activeSessionId, messages.length]);
 
@@ -276,7 +276,7 @@ export const LLMChatPanel: React.FC<LLMChatPanelProps> = ({ isOpen, onClose }) =
         }
         setAttachments([]);
 
-        const newMessages = [...messages, { role: 'user' as const, content: userCommand, attachments: messageAttachments }];
+        const newMessages = [...messages, { id: uuidv4(), role: 'user' as const, content: userCommand, attachments: messageAttachments }];
         setMessages(newMessages);
 
         let currentSessionId = activeSessionId;
@@ -333,7 +333,7 @@ export const LLMChatPanel: React.FC<LLMChatPanelProps> = ({ isOpen, onClose }) =
                 systemResponse = `Error executing local command: ${err.message}`;
             }
 
-            const sysMsg = { role: 'system' as const, content: `System Command Result:
+            const sysMsg = { id: uuidv4(), role: 'system' as const, content: `System Command Result:
 ${systemResponse}` };
             setMessages(prev => {
                 const next = [...prev, sysMsg];
@@ -346,30 +346,37 @@ ${systemResponse}` };
         setIsProcessing(true);
         appEventBus.emit('chatSpeaking', { speaking: true });
 
+        let flusher: ReturnType<typeof createChunkFlusher> | undefined;
+
         try {
             const events = runAssistantTurn(newMessages, settings);
             let fullResponse = '';
             let assistantOpen = false;
+
+            flusher = createChunkFlusher((accumulated) => {
+                fullResponse += accumulated;
+                setMessages(prev => {
+                    const cloned = [...prev];
+                    cloned[cloned.length - 1] = { ...cloned[cloned.length - 1], content: fullResponse };
+                    return cloned;
+                });
+            });
 
             for await (const ev of events) {
                 if (ev.type === 'text') {
                     if (!assistantOpen) {
                         assistantOpen = true;
                         fullResponse = '';
-                        setMessages(prev => [...prev, { role: 'assistant', content: '' }]);
+                        setMessages(prev => [...prev, { id: uuidv4(), role: 'assistant', content: '' }]);
                     }
-                    fullResponse += ev.chunk;
                     if (ev.chunk.trim() && ev.chunk.length > 0) audioService.playType();
-                    setMessages(prev => {
-                        const cloned = [...prev];
-                        cloned[cloned.length - 1] = { ...cloned[cloned.length - 1], content: fullResponse };
-                        return cloned;
-                    });
+                    flusher.push(ev.chunk);
                 } else if (ev.type === 'turn_end') {
+                    flusher.flushNow();
                     assistantOpen = false;
                     setMessages(prev => { persistSession(prev, currentSessionId); return prev; });
                 } else if (ev.type === 'tool_start') {
-                    setMessages(prev => [...prev, { role: 'system', content: '...' }]);
+                    setMessages(prev => [...prev, { id: uuidv4(), role: 'system', content: '...' }]);
                 } else if (ev.type === 'tool_result') {
                     // tool result is fed back to the model automatically —
                     // the assistant will incorporate it in its natural response.
@@ -377,9 +384,11 @@ ${systemResponse}` };
                 }
             }
         } catch (error: any) {
+            if (flusher) flusher.flushNow();
             console.error('Chat error:', error);
             setMessages(prev => {
                 const next = [...prev, {
+                    id: uuidv4(),
                     role: 'system' as const,
                     content: `Error: ${error.message || 'Connection failed'}. Please check your LLM configuration.`
                 }];
@@ -575,92 +584,11 @@ ${systemResponse}` };
                                                 </div>
                                             )}
                                             {messages.map((msg, index) => (
-                                                <div key={index} className={`flex flex-col ${msg.role === 'user' ? 'items-end' : msg.role === 'system' ? 'items-center' : 'items-start'}`}>
-                                                    {msg.role === 'system' && !msg.content.includes('Control Node initialized. Awaiting commands.') && (
-                                                        <div className="text-[15px] font-mono text-warning/80 bg-warning/10 px-3 py-1.5 rounded-lg border border-warning/20 inline-block my-2">
-                                                            &gt; {msg.content}
-                                                        </div>
-                                                    )}
-
-                                                    {msg.role === 'user' && (
-                                                        <div className="bg-primary/30 text-base-content px-4 py-3 max-w-[80%] rounded-2xl rounded-tr-sm border border-primary/40 shadow-sm backdrop-blur-sm flex flex-col gap-2">
-                                                            {msg.attachments && msg.attachments.length > 0 && (
-                                                                <div className="flex flex-wrap gap-2">
-                                                                    {msg.attachments.map((att, idx) => (
-                                                                        <div key={idx} className="relative bg-black/20 rounded p-1 overflow-hidden" style={{ width: '80px', height: '80px' }}>
-                                                                            {att.mimeType.startsWith('image/') ? (
-                                                                                <img src={att.data} alt={att.fileName} className="w-full h-full object-cover rounded" />
-                                                                            ) : (
-                                                                                <div className="w-full h-full flex flex-col items-center justify-center text-xs opacity-70">
-                                                                                    <PaperclipIcon className="w-6 h-6 mb-1" />
-                                                                                    <span className="truncate w-full text-center px-1">{att.fileName}</span>
-                                                                                </div>
-                                                                            )}
-                                                                        </div>
-                                                                    ))}
-                                                                </div>
-                                                            )}
-                                                            <div className="text-[15px] whitespace-pre-wrap">{msg.content}</div>
-                                                        </div>
-                                                    )}
-
-                                                    {msg.role === 'assistant' && (
-                                                        <div className="bg-base-200/80 text-base-content px-4 py-3 max-w-[95%] rounded-2xl rounded-tl-sm border border-white/5 shadow-sm backdrop-blur-sm">
-                                                            <div className="prose prose-sm prose-invert max-w-none text-[15px] leading-relaxed">
-                                                                <Markdown
-                                                                    remarkPlugins={[remarkGfm]}
-                                                                    components={{
-                                                                        table: ({node, ...props}) => (
-                                                                            <div className="overflow-x-auto my-4 w-full">
-                                                                                <table className="table table-zebra w-full border border-base-content/10 text-[15px]" {...props} />
-                                                                            </div>
-                                                                        ),
-                                                                        th: ({node, ...props}) => <th className="bg-base-300 text-base-content/80 font-bold text-[15px]" {...props} />,
-                                                                        td: ({node, ...props}) => <td className="text-[15px]" {...props} />,
-                                                                        code({ node, inline, className, children, ...props }: any) {
-                                                                            const match = /language-(\w+)/.exec(className || '');
-                                                                            return !inline && match ? (
-                                                                                <SyntaxHighlighter
-                                                                                    {...props}
-                                                                                    style={vscDarkPlus}
-                                                                                    language={match[1]}
-                                                                                    PreTag="div"
-                                                                                    className="rounded-md my-4 !bg-base-300"
-                                                                                >
-                                                                                    {String(children).replace(/\n$/, '')}
-                                                                                </SyntaxHighlighter>
-                                                                            ) : (
-                                                                                <code {...props} className={`${className} bg-base-300 text-primary px-1.5 py-0.5 rounded text-[0.85em]`}>
-                                                                                    {children}
-                                                                                </code>
-                                                                            )
-                                                                        }
-                                                                    }}
-                                                                >
-                                                                    {msg.content}
-                                                                </Markdown>
-                                                            </div>
-                                                            {(msg as any).citations && (msg as any).citations.length > 0 && (
-                                                                <div className="mt-3 pt-3 border-t border-white/10 space-y-1">
-                                                                    <p className="text-[10px] font-mono uppercase tracking-wider opacity-40 mb-1">Sources</p>
-                                                                    {(msg as any).citations.map((c: { index: number; fileName: string; title: string }) => (
-                                                                        <div key={c.index} className="flex items-center gap-2 text-xs font-mono opacity-60 hover:opacity-100">
-                                                                            <span className="text-primary text-[10px]">[{c.index}]</span>
-                                                                            <span className="truncate">{c.title || c.fileName}</span>
-                                                                        </div>
-                                                                    ))}
-                                                                </div>
-                                                            )}
-                                                            {!msg.content && isProcessing && (
-                                                                <div className="flex space-x-1 items-center h-4 mt-2">
-                                                                    <div className="w-1.5 h-1.5 bg-primary/60 rounded-full animate-bounce [animation-delay:-0.3s]"></div>
-                                                                    <div className="w-1.5 h-1.5 bg-primary/60 rounded-full animate-bounce [animation-delay:-0.15s]"></div>
-                                                                    <div className="w-1.5 h-1.5 bg-primary/60 rounded-full animate-bounce"></div>
-                                                                </div>
-                                                            )}
-                                                        </div>
-                                                    )}
-                                                </div>
+                                                <MessageBubble
+                                                    key={msg.id}
+                                                    msg={msg}
+                                                    isTyping={index === messages.length - 1 && !msg.content && isProcessing}
+                                                />
                                             ))}
                                             <div ref={messagesEndRef} />
                                         </div>

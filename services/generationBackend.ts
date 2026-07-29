@@ -20,6 +20,17 @@ export interface GenerateParams {
   seed?: number;
   sampler?: string;
   model?: string;
+  /**
+   * When set, the backend should use this pre-built workflow JSON instead of
+   * constructing its own default workflow. Only supported by the ComfyUI backend.
+   */
+  customWorkflowJson?: Record<string, any>;
+  /**
+   * Extra module filenames (CLIP/T5/VAE) to load alongside `model` — Forge's
+   * `forge_additional_modules`, needed for split checkpoints (Flux, SD3, GGUF)
+   * that don't embed their own text encoder. Only supported by the A1111 backend.
+   */
+  additionalModules?: string[];
 }
 
 export interface GenerateOutput {
@@ -31,6 +42,13 @@ export interface GenerateOutput {
   backendId: string;
 }
 
+export interface LoraInfo {
+  name: string;
+  alias: string;
+  /** Absolute path on the backend host, used to look up a preview thumbnail. */
+  path?: string;
+}
+
 export interface GenerationBackend {
   /** Unique machine-readable id (e.g. `'comfy'`, `'a1111'`). */
   id: string;
@@ -40,6 +58,12 @@ export interface GenerationBackend {
   isAvailable(settings: LLMSettings): Promise<boolean>;
   /** List available models/checkpoints. */
   listModels(settings: LLMSettings): Promise<string[]>;
+  /** List available sampler names. */
+  listSamplers(settings: LLMSettings): Promise<string[]>;
+  /** List available LoRAs. Not every backend supports this. */
+  listLoras?(settings: LLMSettings): Promise<LoraInfo[]>;
+  /** List available textual-inversion embedding names. Not every backend supports this. */
+  listEmbeddings?(settings: LLMSettings): Promise<string[]>;
   /** Run a generation. */
   generate(params: GenerateParams, settings: LLMSettings, signal?: AbortSignal): Promise<GenerateOutput>;
 }

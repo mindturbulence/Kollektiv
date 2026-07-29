@@ -32,6 +32,12 @@ vi.mock('../utils/obsidianStorage', () => ({
 }));
 
 describe('ASSISTANT_TOOLS', () => {
+    it('navigate tool accepts the new local-generation studio pages', () => {
+        const tool = ASSISTANT_TOOLS.find(t => t.name === 'navigate');
+        expect(tool!.parameters.properties.page.enum).toContain('comfy_studio');
+        expect(tool!.parameters.properties.page.enum).toContain('a1111_studio');
+    });
+
     it('includes rss_fetch tool', () => {
         const tool = ASSISTANT_TOOLS.find(t => t.name === 'rss_fetch');
         expect(tool).toBeDefined();

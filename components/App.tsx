@@ -39,6 +39,7 @@ import ImageResizer from './ImageResizer';
 import { VideoToFrames } from './VideoToFrames';
 import LoraEditorPage from './loraEditor/LoraEditorPage';
 import BatchRunnerPage from './BatchRunnerPage';
+import LocalGenerationStudioPage from './LocalGenerationStudioPage';
 import { LLMChatPanel } from './LLMChatPanel';
 import { LiveAssistantProvider } from '../contexts/LiveAssistantContext';
 import VideoPlayerOverlay from './VideoPlayerOverlay';
@@ -157,6 +158,8 @@ const AppContent: React.FC = () => {
             case 'video_to_frames': return `VIDEO | ${base}`;
             case 'lora_editor': return `LORA | ${base}`;
             case 'batch_runner': return `BATCH | ${base}`;
+            case 'comfy_studio': return `COMFYUI | ${base}`;
+            case 'a1111_studio': return `FORGE | ${base}`;
             default: return base;
         }
     }, [activeTab]);
@@ -373,6 +376,8 @@ const AppContent: React.FC = () => {
             case 'video_to_frames': return <VideoToFrames key="video_to_frames" isExiting={false} />;
             case 'lora_editor': return <LoraEditorPage key="lora_editor" isExiting={false} />;
             case 'batch_runner': return <BatchRunnerPage key="batch_runner" />;
+            case 'comfy_studio': return <LocalGenerationStudioPage key="comfy_studio" backendId="comfy" showGlobalFeedback={showGlobalFeedback} />;
+            case 'a1111_studio': return <LocalGenerationStudioPage key="a1111_studio" backendId="a1111" showGlobalFeedback={showGlobalFeedback} />;
             default: return <Dashboard key="default" onNavigate={handleNavigate} onClipIdea={handleClipIdea} isExiting={false} />;
         }
     };

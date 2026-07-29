@@ -30,6 +30,8 @@ const NAVIGATION_COMMANDS: CommandItem[] = [
   { id: 'nav-video', label: 'Video to Frames', category: 'Navigation', keywords: ['ffmpeg', 'extract', 'frame'], execute: () => appEventBus.emit('navigate', 'video_to_frames' as ActiveTab) },
   { id: 'nav-lora', label: 'LoRA Editor', category: 'Navigation', keywords: ['metadata', 'tags', 'model'], execute: () => appEventBus.emit('navigate', 'lora_editor' as ActiveTab) },
   { id: 'nav-batch-runner', label: 'Batch Runner', category: 'Navigation', keywords: ['batch', 'queue', 'run', 'bulk'], execute: () => appEventBus.emit('navigate', 'batch_runner' as ActiveTab) },
+  { id: 'nav-comfy-studio', label: 'ComfyUI', category: 'Navigation', keywords: ['comfy', 'comfyui', 'studio', 'generate', 'local', 'stable diffusion'], execute: () => appEventBus.emit('navigate', 'comfy_studio' as ActiveTab) },
+  { id: 'nav-a1111-studio', label: 'A1111', category: 'Navigation', keywords: ['a1111', 'forge', 'studio', 'automatic1111', 'generate', 'local', 'stable diffusion'], execute: () => appEventBus.emit('navigate', 'a1111_studio' as ActiveTab) },
   { id: 'nav-settings', label: 'Settings', category: 'Navigation', keywords: ['preferences', 'config', 'setup'], shortcut: '⌘,', execute: () => appEventBus.emit('navigate', 'settings' as ActiveTab) },
 ];
 

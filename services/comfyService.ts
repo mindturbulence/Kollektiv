@@ -132,6 +132,19 @@ export const comfyBackend: GenerationBackend = {
     }
   },
 
+  async listSamplers(settings: LLMSettings): Promise<string[]> {
+    try {
+      // ComfyUI /object_info/KSampler returns a combo list for sampler_name
+      const res = await fetch(proxyUrl(settings, '/object_info/KSampler'));
+      if (!res.ok) return [];
+      const data = await res.json();
+      const names = data?.KSampler?.input?.required?.sampler_name?.[0];
+      return Array.isArray(names) ? names : [];
+    } catch {
+      return [];
+    }
+  },
+
   async generate(
     params: GenerateParams,
     settings: LLMSettings,
@@ -150,18 +163,27 @@ export const comfyBackend: GenerationBackend = {
       ckptName = models[0];
     }
 
-    // Build the default txt2img workflow
     const seed = params.seed ?? Math.floor(Math.random() * 2 ** 32);
-    const workflow = createDefaultWorkflow({
-      positivePrompt: params.prompt,
-      negativePrompt: params.negativePrompt,
-      seed,
-      steps: params.steps,
-      cfg: params.cfgScale,
-      width: params.width,
-      height: params.height,
-      ckptName,
-    });
+
+    // Build the workflow: custom injected workflow or the default txt2img workflow
+    let workflow: Record<string, any>;
+    if (params.customWorkflowJson) {
+      // Custom workflow was already parameter-injected by the caller;
+      // use it as-is (the caller handles schema-based injection)
+      workflow = params.customWorkflowJson;
+    } else {
+      workflow = createDefaultWorkflow({
+        positivePrompt: params.prompt,
+        negativePrompt: params.negativePrompt,
+        seed,
+        steps: params.steps,
+        cfg: params.cfgScale,
+        width: params.width,
+        height: params.height,
+        ckptName,
+        samplerName: params.sampler,
+      });
+    }
 
     // POST to /prompt
     const promptUrl = proxyUrl(settings, '/prompt');

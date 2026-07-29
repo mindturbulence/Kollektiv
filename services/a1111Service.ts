@@ -24,6 +24,24 @@ function proxyUrl(settings: LLMSettings, path: string): string {
   return `${settings.a1111Url || 'http://127.0.0.1:7860'}${path}`;
 }
 
+// A1111's own extra-networks UI looks for a sibling preview image next to the
+// model file, trying these suffixes in this exact order (modules/ui_extra_networks.py
+// find_preview()): "<name>.<ext>" then "<name>.preview.<ext>" for each extension.
+const PREVIEW_SUFFIXES = ['png', 'preview.png', 'jpg', 'preview.jpg', 'jpeg', 'preview.jpeg', 'webp', 'preview.webp', 'gif', 'preview.gif'];
+
+/**
+ * Candidate thumbnail URLs for a LoRA, tried in order via the stock
+ * `/sd_extra_networks/thumb?filename=<path>` endpoint (serves the first
+ * sibling preview image that exists on disk). Caller should render an
+ * <img> and advance to the next candidate on load error.
+ */
+export function getLoraPreviewCandidates(loraPath: string, settings: LLMSettings): string[] {
+  const base = loraPath.replace(/\.[^./\\]+$/, '');
+  return PREVIEW_SUFFIXES.map((suffix) =>
+    `${proxyUrl(settings, '/sd_extra_networks/thumb')}?filename=${encodeURIComponent(`${base}.${suffix}`)}`
+  );
+}
+
 // ── The adapter ──────────────────────────────────────────────────────
 
 export const a1111Backend: GenerationBackend = {
@@ -54,6 +72,45 @@ export const a1111Backend: GenerationBackend = {
     }
   },
 
+  async listSamplers(settings: LLMSettings): Promise<string[]> {
+    try {
+      const res = await fetch(proxyUrl(settings, '/sdapi/v1/samplers'), {
+        signal: AbortSignal.timeout(5000),
+      });
+      if (!res.ok) return [];
+      const samplers: Array<{ name: string }> = await res.json();
+      return samplers.map((s) => s.name);
+    } catch {
+      return [];
+    }
+  },
+
+  async listLoras(settings: LLMSettings): Promise<{ name: string; alias: string; path?: string }[]> {
+    try {
+      const res = await fetch(proxyUrl(settings, '/sdapi/v1/loras'), {
+        signal: AbortSignal.timeout(5000),
+      });
+      if (!res.ok) return [];
+      const loras: Array<{ name: string; alias?: string; path?: string }> = await res.json();
+      return loras.map((l) => ({ name: l.name, alias: l.alias || l.name, path: l.path }));
+    } catch {
+      return [];
+    }
+  },
+
+  async listEmbeddings(settings: LLMSettings): Promise<string[]> {
+    try {
+      const res = await fetch(proxyUrl(settings, '/sdapi/v1/embeddings'), {
+        signal: AbortSignal.timeout(5000),
+      });
+      if (!res.ok) return [];
+      const data: { loaded?: Record<string, unknown> } = await res.json();
+      return Object.keys(data.loaded || {});
+    } catch {
+      return [];
+    }
+  },
+
   async generate(
     params: GenerateParams,
     settings: LLMSettings,
@@ -62,7 +119,7 @@ export const a1111Backend: GenerationBackend = {
     const seed = params.seed ?? Math.floor(Math.random() * 2 ** 32);
     const sampler = params.sampler || 'Euler';
 
-    const body = {
+    const body: Record<string, any> = {
       prompt: params.prompt,
       negative_prompt: params.negativePrompt || '',
       seed,
@@ -74,6 +131,16 @@ export const a1111Backend: GenerationBackend = {
       save_images: false,
       send_images: true,
     };
+    if (params.model || params.additionalModules?.length) {
+      body.override_settings = {
+        ...(params.model ? { sd_model_checkpoint: params.model } : {}),
+        // Forge-specific: split checkpoints (Flux, SD3, GGUF) don't embed their
+        // own text encoder, so the CLIP/T5/VAE files must be loaded alongside
+        // the checkpoint or generation fails with "You do not have CLIP state dict!".
+        ...(params.additionalModules?.length ? { forge_additional_modules: params.additionalModules } : {}),
+      };
+      body.override_settings_restore_afterwards = false;
+    }
 
     const res = await fetch(proxyUrl(settings, '/sdapi/v1/txt2img'), {
       method: 'POST',
@@ -97,8 +164,12 @@ export const a1111Backend: GenerationBackend = {
       );
     }
 
-    // The first image is the primary output — base64-encoded PNG
-    const base64 = data.images[0];
+    // The first image is the primary output — base64-encoded PNG. Some
+    // A1111/Forge builds return it already wrapped in a data URI, so strip
+    // any existing prefix before re-wrapping (same convention used for
+    // externally-sourced base64 throughout this codebase, e.g. llmService.ts).
+    const rawImage = data.images[0];
+    const base64 = rawImage.includes('base64,') ? rawImage.split('base64,')[1] : rawImage;
     const dataUrl = `data:image/png;base64,${base64}`;
 
     // Parse info for the actual seed used

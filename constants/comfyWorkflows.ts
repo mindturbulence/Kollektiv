@@ -45,6 +45,8 @@ export function createDefaultWorkflow(params: {
   height: number;
   /** Checkpoint filename exactly as returned by /object_info's ckpt_name list. Required — ComfyUI rejects an empty value. */
   ckptName: string;
+  /** ComfyUI sampler name (e.g. 'euler', 'dpmpp_2m'). Defaults to 'euler'. */
+  samplerName?: string;
 }): ComfyWorkflow {
   const p = params;
   return {
@@ -88,7 +90,7 @@ export function createDefaultWorkflow(params: {
         seed: p.seed,
         steps: p.steps,
         cfg: p.cfg,
-        sampler_name: 'euler',
+        sampler_name: p.samplerName || 'euler',
         scheduler: 'normal',
         denoise: 1,
         model: ['1', 0],

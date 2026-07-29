@@ -24,9 +24,20 @@ export async function buildKnowledgeContextBlock(context: string): Promise<strin
     const q = context.trim();
     if (!q) return '';
 
-    const sections: string[] = [];
+    // Run vault-knowledge search and working-memory search concurrently --
+    // they are independent reads and do not share state.
+    const [vaultSection, workingSection] = await Promise.all([
+        buildVaultKnowledgeSection(q),
+        buildWorkingMemorySection(q),
+    ]);
 
-    // 1. Knowledge service: search long-term + knowledge tiers for relevant vault content
+    const sections = [vaultSection, workingSection].filter((s): s is string => s !== null);
+    if (sections.length === 0) return '';
+    return `\n\n${sections.join('\n\n')}`;
+}
+
+/** Search vault knowledge (long-term + knowledge tiers) and format results. */
+async function buildVaultKnowledgeSection(q: string): Promise<string | null> {
     try {
         const { knowledgeService } = await import('./knowledgeService');
         const { memoryTierService } = await import('./memoryTierService');
@@ -36,35 +47,40 @@ export async function buildKnowledgeContextBlock(context: string): Promise<strin
             tiers: ['long-term', 'knowledge'],
             maxResults: 8,
         });
-        if (results.length > 0) {
-            // Track access for each search result to evaluate promotion thresholds
-            for (const r of results) {
+        if (results.length === 0) return null;
+
+        // Track access for each search result to evaluate promotion thresholds --
+        // run all trackAccess calls concurrently, not one-at-a-time.
+        await Promise.all(
+            results.map(async (r) => {
                 try { await memoryTierService.trackAccess(r.ref); } catch { /* best-effort */ }
-            }
+            })
+        );
 
-            const items = results.map((r) => {
-                const tagStr = r.ref.tags.length ? ` [${r.ref.tags.slice(0, 3).join(', ')}${r.ref.tags.length > 3 ? '…' : ''}]` : '';
-                const snippet = r.snippet && r.snippet !== r.ref.title
-                    ? `\n    ${r.snippet.replace(/\n/g, '\n    ').slice(0, 200)}`
-                    : '';
-                return `- [${r.ref.kind}] ${r.ref.title}${tagStr}${snippet}`;
-            });
-            sections.push(`## Vault Knowledge\n\nUseful context from your notes and memories:\n${items.join('\n')}`);
-        }
-    } catch { /* knowledge service unavailable — skip */ }
+        const items = results.map((r) => {
+            const tagStr = r.ref.tags.length ? ` [${r.ref.tags.slice(0, 3).join(', ')}${r.ref.tags.length > 3 ? '…' : ''}]` : '';
+            const snippet = r.snippet && r.snippet !== r.ref.title
+                ? `\n    ${r.snippet.replace(/\n/g, '\n    ').slice(0, 200)}`
+                : '';
+            return `- [${r.ref.kind}] ${r.ref.title}${tagStr}${snippet}`;
+        });
+        return `## Vault Knowledge\n\nUseful context from your notes and memories:\n${items.join('\n')}`;
+    } catch {
+        return null; /* knowledge service unavailable — skip */
+    }
+}
 
-    // 2. Memory tier service: search working memory for recent context
+/** Search working memory for recent conversation context and format results. */
+async function buildWorkingMemorySection(q: string): Promise<string | null> {
     try {
         const { memoryTierService } = await import('./memoryTierService');
         const allResults = await memoryTierService.searchAll(q, 5);
         const workingEntries = allResults.filter((r): r is { kind: 'working'; workingEntry: WorkingMemoryEntry; snippet: string; score: number } => r.kind === 'working');
-        if (workingEntries.length > 0) {
-            sections.push(`## Recent Conversation Context\n\nFrom the current session:\n${workingEntries.map((r) => `- ${r.snippet.replace(/\n/g, ' ').slice(0, 150)}`).join('\n')}`);
-        }
-    } catch { /* memory tier service unavailable — skip */ }
-
-    if (sections.length === 0) return '';
-    return `\n\n${sections.join('\n\n')}`;
+        if (workingEntries.length === 0) return null;
+        return `## Recent Conversation Context\n\nFrom the current session:\n${workingEntries.map((r) => `- ${r.snippet.replace(/\n/g, ' ').slice(0, 150)}`).join('\n')}`;
+    } catch {
+        return null; /* memory tier service unavailable — skip */
+    }
 }
 
 export type ChatMsg = { role: 'user' | 'assistant' | 'system'; content: string; attachments?: { data: string; mimeType: string; fileName?: string }[] };

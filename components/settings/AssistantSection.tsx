@@ -137,6 +137,25 @@ const AssistantSection: React.FC<AssistantSectionProps> = ({ settings, handleSet
                     <SettingRow label="Preferred Language" desc="Always reply in this language regardless of what language you write or speak in. Leave blank to match you automatically.">
                         <input type="text" value={settings.assistantLanguage || ''} onChange={(e) => handleSettingsChange('assistantLanguage', e.target.value)} className="form-input w-full md:w-[620px]" placeholder="e.g. English, Japanese, Tagalog" />
                     </SettingRow>
+                    <SettingRow label="Voice Silence Timeout" desc="How long the assistant waits after you stop talking before it starts responding, in live voice mode. Lower feels quicker but risks cutting off natural pauses mid-sentence.">
+                        <div className="flex items-center gap-4 w-full md:w-[400px]">
+                            <input
+                                type="range"
+                                id="voice-silence-timeout"
+                                aria-label="Voice silence timeout (ms)"
+                                min={300}
+                                max={2000}
+                                step={100}
+                                value={settings.voiceSilenceTimeoutMs ?? 800}
+                                onChange={(e) => handleSettingsChange('voiceSilenceTimeoutMs', parseInt(e.target.value, 10))}
+                                className="range range-xs range-primary flex-1"
+                            />
+                            <span className="text-[11px] font-mono font-bold text-primary w-16 text-right">
+                                {settings.voiceSilenceTimeoutMs ?? 800}ms
+                            </span>
+                        </div>
+                    </SettingRow>
+
                     <SettingRow label="Personality & Style" desc="Free-form tone, quirks, or backstory — layered on top of the Master Role Concept (AI Engine tab), appended to the assistant's instructions on every provider and in live voice mode.">
                         <textarea
                             value={settings.assistantPersonality || ''}

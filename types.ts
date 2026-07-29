@@ -77,6 +77,8 @@ export type ActiveTab =
   | 'composer'
   | 'lora_editor'
   | 'batch_runner'
+  | 'comfy_studio'
+  | 'a1111_studio'
   | 'settings';
 
 export type ActiveSettingsTab = 'app' | 'appearance' | 'integrations' | 'prompt' | 'gallery';
@@ -272,9 +274,21 @@ export interface LLMSettings {
   generationBackendId: string;
   comfyUrl: string;
   a1111Url: string;
+  /** Last-selected checkpoint for each local backend, remembered across sessions. */
+  comfyModel: string;
+  a1111Model: string;
+  /** Last-selected sampler name, remembered across sessions. */
+  comfySampler: string;
+  a1111Sampler: string;
+  /** Comma-separated Forge "additional modules" (CLIP/T5/VAE filenames) required by
+   * split checkpoints (Flux, SD3, GGUF) that don't embed their own text encoder. */
+  a1111AdditionalModules: string;
 
   // Refiner modifier weights (survives reload)
   modifierWeights?: Record<string, number>;
+
+  /** Silence duration (ms) required before the voice pipeline treats the user's turn as over. Default 800. */
+  voiceSilenceTimeoutMs?: number;
 }
 
 // --- Prompt Generation & Library ---

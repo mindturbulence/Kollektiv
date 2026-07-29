@@ -112,9 +112,17 @@ export const defaultLLMSettings: LLMSettings = {
   generationBackendId: 'cloud',
   comfyUrl: 'http://127.0.0.1:8188',
   a1111Url: 'http://127.0.0.1:7860',
+  comfyModel: '',
+  a1111Model: '',
+  comfySampler: '',
+  a1111Sampler: '',
+  a1111AdditionalModules: '',
 
   // Refiner modifier weights
   modifierWeights: {},
+
+  // Voice silence timeout
+  voiceSilenceTimeoutMs: 800,
 };
 
 
@@ -207,7 +215,13 @@ function mergeSettings(parsed: Record<string, unknown>): LLMSettings {
       embeddingModel: parsed.embeddingModel ?? 'all-minilm:33m',
       generationBackendId: parsed.generationBackendId ?? 'cloud',
       comfyUrl: parsed.comfyUrl ?? 'http://127.0.0.1:8188',
-      a1111Url: parsed.a1111Url ?? 'http://127.0.0.1:7860'
+      a1111Url: parsed.a1111Url ?? 'http://127.0.0.1:7860',
+      comfyModel: parsed.comfyModel ?? '',
+      a1111Model: parsed.a1111Model ?? '',
+      comfySampler: parsed.comfySampler ?? '',
+      a1111Sampler: parsed.a1111Sampler ?? '',
+      a1111AdditionalModules: parsed.a1111AdditionalModules ?? '',
+      voiceSilenceTimeoutMs: parsed.voiceSilenceTimeoutMs ?? 800
   };
 
   if (merged.darkTheme === 'lofi') {

@@ -146,7 +146,12 @@ const Header: React.FC<HeaderProps> = ({
     { id: 'color_palette_extractor' as ActiveTab, label: 'Palette' },
     { id: 'resizer' as ActiveTab, label: 'Resizer' },
     { id: 'video_to_frames' as ActiveTab, label: 'Video' },
+  ], []);
+
+  const studioItems = React.useMemo<NavItemData[]>(() => [
     { id: 'lora_editor' as ActiveTab, label: 'LoRA Editor' },
+    { id: 'comfy_studio' as ActiveTab, label: 'ComfyUI' },
+    { id: 'a1111_studio' as ActiveTab, label: 'A1111' },
   ], []);
 
   const navGroups = React.useMemo(() => [
@@ -155,7 +160,8 @@ const Header: React.FC<HeaderProps> = ({
     { id: 'workspaces', label: 'Workbench', items: workspaceItems },
     { id: 'vault', label: 'Vault', items: vaultItems },
     { id: 'utilities', label: 'Utilities', items: utilityItems },
-  ], [workspaceItems, vaultItems, utilityItems]);
+    { id: 'studio', label: 'Studio', items: studioItems },
+  ], [workspaceItems, vaultItems, utilityItems, studioItems]);
 
   // If activeTab changes, but no menu is open, expand the group containing the active tab
   useLayoutEffect(() => {

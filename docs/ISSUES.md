@@ -1,6 +1,6 @@
 # Kollektiv — Issues & Changelog
 
-All issues resolved as of **2026-07-25**. This file now serves as:
+All issues resolved as of **2026-07-28** (last: ISSUE-47). This file now serves as:
 1. Tracker for remaining open manual tests (with step-by-step procedures)
 2. Changelog of all resolved issues (compact)
 3. Reference to [architecture handbook](handbook/README.md) for design docs
@@ -16,7 +16,7 @@ These decisions are permanent — do not re-litigate without the user asking fir
 
 ---
 
-## Open Manual Tests
+## Manual Tests
 
 These items are **code-fixed** but need manual verification. Run with `pnpm build && pnpm preview` or `pnpm dev` in a real browser (Chrome recommended).
 
@@ -208,7 +208,7 @@ Context: [handbook/docs/00_FOUNDATION/ARCHITECTURE_CONSTITUTION.md § Security H
 | 31 | Wire `relationshipGraph.ts` into a real assistant tool | ✅ Done 2026-07-26 — new `find_related_knowledge` tool (`services/tools/graphTools.ts`) rehydrates the graph from `memoryStorage`/`galleryStorage`/`promptStorage` tags on each call and exposes `findRelatedByTags` to the assistant. 6 new tests. |
 | 41 | Free multi-engine web search: `web_search` scrapes DuckDuckGo/Brave/Exa (Bing added beyond initial scope) via `/api/web-search`, falls back to Gemini only when the free path is empty | ✅ Done — live-verified 2026-07-27: Bing returned real results; DuckDuckGo/Brave hit connection-level/429 blocks specific to this dev container's IP (known behavior of these engines against datacenter IPs, not a code defect — request/response handling itself is correct). |
 | 42 | Reach channels: `rss_fetch`, `github_get_repo`/`github_search`/`github_get_file`, `exa_search`, `reddit_fetch`, `youtube_get_transcript`, `twitter_get_tweet` via `/api/reach/*` | ⚠️ 5/6 live-verified 2026-07-27 (see detail below) — the implementing session's sandbox had no network access to verify against real upstreams; this pass did, from a differently-restricted dev container. |
-| 46 | Phase 1 — Gallery Auto-Tagging: `services/autoTagService.ts`, Gemini/Ollama tag-suggestion calls, `autoTagEnabled` setting, `TagSuggestionRow` accept/reject UI in `ItemDetailView` | ✅ Done 2026-07-28 — 31 new tests, `pnpm lint` clean. Docs corrected: ARCHITECTURE_CONSTITUTION.md:205 no longer falsely claims similarity clustering and visual search as shipped. See `docs/plans/2026-07-28-phase1-gallery-auto-tagging.md`. |
+| 46 | Phase 1 — Gallery Auto-Tagging: `services/autoTagService.ts`, Gemini/Ollama tag-suggestion calls, `autoTagEnabled` setting, `TagSuggestionRow` accept/reject UI in `ItemDetailView` | ✅ Done 2026-07-28 — 31 new tests, `pnpm lint` clean. Docs corrected: ARCHITECTURE_CONSTITUTION.md:205 no longer falsely claims similarity clustering and visual search as shipped. (Implementing plan doc removed after landing, per this repo's convention — see the handbook entry.) |
 | 47 | Phase 4 — Inert capability platform: empty registry, stub dispatcher | ✅ Resolved 2026-07-28. **Registry**: `services/assistantTools.ts` now registers all 108 `ASSISTANT_TOOLS` as `assistant-tool` capabilities on module load — `capability_search`/`list`/`describe`/`health` return real data (live-verified: `capability_list` → 108 entries; `capability_search("navigate")` → real matches). **Dispatcher**: `executionEngine.ts`'s `dispatchStep` now really executes `capability_dispatch`/`assistant_tool` steps via `executeAssistantTool` (a tool's own `"Error:"` string now correctly fails the step, not a false "completed"), and `response_cleanup`/`context_assembly` do real work. `provider_call` is wired for the one fully-generic shape (plain-text input → `streamChat`); a shape it can't handle (e.g. media generation, which needs aspect ratio + gallery ingestion) fails honestly rather than faking success. `mcp_call`/`persistence`/`user_confirmation`/`fallback` still throw explicit "not implemented" — **honest failure, not a stub-success**, and steps marked `optional` are skipped gracefully by the engine. Live-verified end-to-end: `capability_execute({capability:'remember', input:'...'})` → real plan → real tool call → `status:"completed"`, zero `(stub)` text anywhere in the output. 18 new tests in `services/executionEngine.test.ts` (none existed before). **Residual, deliberately out of scope**: steps can't pass output to later steps (no data-flow between plan steps — a separate, larger design gap); several planner-referenced capability ids (`refine_prompt`, `analyze_prompt`, `generate_image`) map to real tools and now resolve correctly, but `plan.requiresConfirmation` is computed by the planner and still not enforced anywhere (pre-existing gap, not part of this fix). |
 
 **Live verification detail (2026-07-27), one dev-container run against real upstreams:**

@@ -14,6 +14,7 @@ describe('comfyBackend', () => {
       label: 'other',
       isAvailable: async () => false,
       listModels: async () => ['m1'],
+      listSamplers: async () => [],
       generate: async () => ({ dataUrl: 'x', backendId: 'comfy' }),
     };
     registerBackend(other);
@@ -198,5 +199,77 @@ describe('comfyBackend', () => {
     );
     expect(result.dataUrl).toBeTruthy();
     expect(fetchSpy).not.toHaveBeenCalledWith(expect.stringContaining('/object_info'), expect.anything());
+  });
+
+  it('generate passes params.sampler into the workflow KSampler node', async () => {
+    const mockPromptId = 'test-prompt-sampler';
+    let capturedBody: any = null;
+    vi.spyOn(globalThis, 'fetch').mockImplementation(async (url: any, init?: RequestInit) => {
+      const urlStr = url.toString();
+      if (urlStr.includes('/prompt')) {
+        capturedBody = JSON.parse(init!.body as string);
+        return new Response(JSON.stringify({ prompt_id: mockPromptId }), { status: 200 });
+      }
+      if (urlStr.includes('/history/')) {
+        return new Response(JSON.stringify({
+          [mockPromptId]: { outputs: { '12': { images: [{ filename: 'x.png', subfolder: '' }] } } },
+        }), { status: 200 });
+      }
+      if (urlStr.includes('/view')) return new Response(new Blob(['x'], { type: 'image/png' }), { status: 200 });
+      return new Response(null, { status: 404 });
+    });
+
+    const backend = getBackend('comfy')!;
+    await backend.generate(
+      { prompt: 'test', width: 512, height: 512, steps: 10, cfgScale: 7, sampler: 'dpmpp_2m', model: 'sd15.safetensors' },
+      { comfyUrl: 'http://127.0.0.1:8188' } as any,
+    );
+
+    expect(capturedBody.prompt['8'].inputs.sampler_name).toBe('dpmpp_2m');
+  });
+
+  it('listSamplers returns the sampler list from /object_info/KSampler', async () => {
+    vi.spyOn(globalThis, 'fetch').mockResolvedValue(
+      new Response(JSON.stringify({
+        KSampler: { input: { required: { sampler_name: [['euler', 'dpmpp_2m', 'ddim']] } } },
+      }), { status: 200 }),
+    );
+    const backend = getBackend('comfy')!;
+    const samplers = await backend.listSamplers({} as any);
+    expect(samplers).toEqual(['euler', 'dpmpp_2m', 'ddim']);
+  });
+
+  it('listSamplers returns empty array on error', async () => {
+    vi.spyOn(globalThis, 'fetch').mockRejectedValue(new Error('fetch failed'));
+    const backend = getBackend('comfy')!;
+    const samplers = await backend.listSamplers({} as any);
+    expect(samplers).toEqual([]);
+  });
+
+  it('generate defaults to euler when no sampler is given', async () => {
+    const mockPromptId = 'test-prompt-default-sampler';
+    let capturedBody: any = null;
+    vi.spyOn(globalThis, 'fetch').mockImplementation(async (url: any, init?: RequestInit) => {
+      const urlStr = url.toString();
+      if (urlStr.includes('/prompt')) {
+        capturedBody = JSON.parse(init!.body as string);
+        return new Response(JSON.stringify({ prompt_id: mockPromptId }), { status: 200 });
+      }
+      if (urlStr.includes('/history/')) {
+        return new Response(JSON.stringify({
+          [mockPromptId]: { outputs: { '12': { images: [{ filename: 'x.png', subfolder: '' }] } } },
+        }), { status: 200 });
+      }
+      if (urlStr.includes('/view')) return new Response(new Blob(['x'], { type: 'image/png' }), { status: 200 });
+      return new Response(null, { status: 404 });
+    });
+
+    const backend = getBackend('comfy')!;
+    await backend.generate(
+      { prompt: 'test', width: 512, height: 512, steps: 10, cfgScale: 7, model: 'sd15.safetensors' },
+      { comfyUrl: 'http://127.0.0.1:8188' } as any,
+    );
+
+    expect(capturedBody.prompt['8'].inputs.sampler_name).toBe('euler');
   });
 });

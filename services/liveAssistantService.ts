@@ -13,6 +13,14 @@ import { VoiceActivityService } from './voiceActivityService';
 import { NoiseCancellation } from './noiseCancellation';
 import { ReconnectManager } from '../utils/reconnectManager';
 
+/** Resolves the configured voice silence timeout, falling back to 800ms
+ *  for an unset or invalid (non-positive) value. Exported standalone so
+ *  it's testable without mocking the full connect() flow (WebSocket + mic). */
+export function resolveVoiceSilenceTimeoutMs(settings: LLMSettings): number {
+    const configured = settings.voiceSilenceTimeoutMs;
+    return typeof configured === 'number' && configured > 0 ? configured : 800;
+}
+
 // Single source of truth for the live model constant.
 // Verified against https://ai.google.dev/gemini-api/docs/live-api/capabilities (2026-07-10) —
 // gemini-live-2.5-flash-preview was retired; this is the current model. If connection fails
@@ -454,7 +462,7 @@ export class LiveAssistant {
 
         // Initialize turn management with VAD
         this.turnManager = new TurnManager();
-        this.turnManager.silenceTimeoutMs = 800;
+        this.turnManager.silenceTimeoutMs = resolveVoiceSilenceTimeoutMs(this.settings);
         this.turnManager.onInterruption = () => {
             console.debug('[LiveAssistant] local interruption — user spoke over AI');
             this.flushPlayback();
