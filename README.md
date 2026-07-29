@@ -25,6 +25,29 @@ Kollektiv is a high-performance, local-first application designed for prompt eng
 *   **Video Suite**: Frame extraction and a video joiner for temporal consistency studies and sequence merging.
 *   **Artifact Comparison**: Synchronized viewports for pixel-accurate, side-by-side evaluation of model outputs and prompt variations.
 
+### 4. Mission Control (Agent Ops)
+
+A second department alongside the creative suite: a self-hosted control plane for
+observing and governing external coding-agent sessions. Forked from
+[builderz-labs/mission-control](https://github.com/builderz-labs/mission-control) (MIT)
+and embedded in the Kollektiv shell at the Mission Control tab.
+
+*   **Claude Code session observability**: discovers local sessions by scanning
+    `~/.claude/projects`, with per-project grouping, token counts, and estimated cost.
+*   **Task inbox & agent registry**: assignment, quality gates, and completion tracking
+    for registered agents.
+*   **Activity, schedules, and alerts**: live event stream over SSE, cron-style schedules,
+    webhooks, and audit logs.
+*   **Themed with Kollektiv**: follows whichever of Kollektiv's themes is active.
+
+Run both departments together with `pnpm dev:all` (Kollektiv on :7500,
+Mission Control on :3100 behind `/mission-control`). `pnpm dev` still starts
+Creative mode alone.
+
+> **Platform note:** Mission Control's live terminal viewer requires tmux and is
+> therefore unavailable on Windows; its entry point is hidden. Everything else —
+> session discovery, tasks, activity, cost — is cross-platform.
+
 ## 🛠 Tech Stack
 
 *   **Frontend**: React 19, TypeScript, Vite

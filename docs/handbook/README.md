@@ -86,6 +86,7 @@ The architecture set is organized as a practical handbook for contributors and m
 - [contracts/interfaces.md](contracts/interfaces.md) — implementation-facing contracts and data shapes
 - [diagrams/README.md](diagrams/README.md) — diagram inventory and architecture views
 - [schemas/capability.manifest.json](schemas/capability.manifest.json) — example capability manifest schema
+- [../plans/2026-07-29-mission-control-fork-design.md](../plans/2026-07-29-mission-control-fork-design.md) — the Mission Control fork: integration model, platform constraints, and rejected alternatives
 
 ## 🧩 Core Schema
 
