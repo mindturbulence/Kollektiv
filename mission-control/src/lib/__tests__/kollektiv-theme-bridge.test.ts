@@ -18,6 +18,11 @@ describe('mapDaisyTokensToMcVars', () => {
     expect(vars['--color-surface-1']).toBe('oklch(96% 0 0)')
     expect(vars['--color-card']).toBe('oklch(96% 0 0)')
     expect(vars['--color-border']).toBe('oklch(92% 0 0)')
+    // --color-muted must come from b3, not b2 — b2 also feeds --color-card,
+    // and badges/pills using bg-muted are laid directly on top of bg-card
+    // surfaces, so muted == card would make those fills invisible.
+    expect(vars['--color-muted']).toBe('oklch(92% 0 0)')
+    expect(vars['--color-muted']).not.toBe(vars['--color-card'])
   })
 
   it('maps base-content to foreground', () => {
