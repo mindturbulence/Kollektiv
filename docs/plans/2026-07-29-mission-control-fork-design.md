@@ -42,17 +42,56 @@ Kollektiv (Vite/Express, :7500)          Mission Control fork (Next.js, :3000 or
 - **Subpath serving:** Mission Control's `next.config.js` needs `basePath: '/mission-control'` (and `assetPrefix`) so its own asset/API URLs resolve correctly when served from a subpath instead of the origin root.
 - **Framing:** replace the blanket `X-Frame-Options: DENY` in `src/proxy.ts` with a CSP `frame-ancestors 'self'` (drop `X-Frame-Options` or set it to `SAMEORIGIN`) — since the proxy makes Kollektiv and Mission Control same-origin, this permits the iframe embed without opening framing to arbitrary sites.
 
-## Theming
+## Theming — token bridge, not ported theme definitions
 
-- Kollektiv's active theme name gets written to a cookie (e.g. `kollektiv_theme=pipboy`) on theme switch, readable by Mission Control since they're same-origin behind the proxy.
-- Mission Control's root layout reads that cookie server-side (Next.js Server Component) and sets `data-theme` on `<html>` at render time — avoids a flash of the wrong theme.
-- `globals.css` gets 4 additional `[data-theme="..."]` blocks (`mindturbulence`, `pipboy`, `abyss`, `explorer`) defining the same CSS variable names (`--color-primary`, `--color-background`, `--color-surface-*`, etc.) already declared in its `@theme` block, mapped to Kollektiv's existing palette values for each theme.
-- The 20 component files using hardcoded Tailwind color classes get migrated to the semantic token classes (`bg-background`, `text-foreground`, etc.) so they actually respond to the swap — this is the real, bounded cost of "dynamic" over "fixed" theming.
+An earlier draft proposed hand-writing 4 theme blocks into Mission Control's CSS. **`tailwind.config.js` actually registers 43 DaisyUI themes** (`Kollektiv`, `Stellar`, `pipboy`, `abyss`, `Arc`, `sanrita`, `MindTurbulence`, `synthwave`, `cyberpunk`, `dracula`, `nord`, …), not the 4 the README highlights. Hand-porting 43 theme definitions into a second app is not viable and would drift on every change.
 
-## Agent scope (v1)
+Instead, bridge the *computed tokens* at runtime — one mechanism that covers all 43 themes and any future one:
 
-- **Claude Code**: adapt the existing PTY session-attach mechanism (`api/pty/attach`, `api/claude/sessions`, `api/claude-tasks`) to run against your machine — this is real, already-built functionality, not new protocol work.
-- **Generic `FrameworkAdapter` interface and its 5 stub files**: left in place, untouched, not wired to anything. Zero-cost to keep; gives a documented seam for a real integration later if you ever run CrewAI/AutoGen/LangGraph/OpenClaw yourself. No work is done to "support" these runtimes in v1 beyond what already exists upstream.
+- Kollektiv is DaisyUI 4 (`daisyui@4.12.24` installed). DaisyUI 4 sets OKLCH component triplets on the themed element: `--p`, `--pc`, `--s`, `--sc`, `--a`, `--ac`, `--n`, `--nc`, `--b1`, `--b2`, `--b3`, `--bc`, `--in`, `--su`, `--wa`, `--er` (verified in `node_modules/daisyui/dist/themes.css`, e.g. `[data-theme=dark] { --p: 65.69% 0.196 275.75; ... }`).
+- `hooks/useAppTheme.ts:13` already sets `data-theme` on `document.documentElement`. After it applies, Kollektiv reads those variables with `getComputedStyle` and `postMessage`s them to the Mission Control iframe.
+- Mission Control is Tailwind 4, whose `@theme` block compiles to real CSS custom properties on `:root` (confirmed against current Tailwind docs: theme variables are emitted as `:root { --color-*: … }` and are intended to be read/overridden at runtime). A small client component in Mission Control receives the message and sets `--color-primary`, `--color-background`, `--color-foreground`, `--color-surface-0..3`, `--color-border`, `--color-destructive`, `--color-success`, `--color-warning`, `--color-info` on `document.documentElement` as `oklch(<triplet>)` values.
+- No color-space conversion is needed: Mission Control's `@theme` maps `--color-primary: hsl(var(--primary))`, but overriding the final `--color-primary` token directly with an `oklch(...)` value supersedes it, and inline styles on `:root` outrank the stylesheet.
+- The 20 component files using hardcoded Tailwind color classes (`bg-gray-700`, `bg-zinc-500`, …) don't respond to token overrides. Migrating them to semantic classes (`bg-background`, `text-foreground`, `border-border`) is the real bounded cost of dynamic theming, and is scoped as its own phase so the bridge can ship and be verified before the sweep.
+
+## Agent scope (v1) — corrected for Windows
+
+An earlier draft of this spec scoped v1 around Mission Control's PTY terminal integration. **That was wrong on this machine and has been corrected.** The correction:
+
+- `src/lib/pty-manager.ts:106-109` builds its attach command as `tmux attach-session -t <id>`, and `createPtySession` throws `"tmux is not installed. Install it with: brew install tmux (macOS) or apt install tmux (Linux)"` when tmux is missing (`pty-manager.ts:252-259`). `api/pty/setup/route.ts` returns `installCommand: null` for any platform that isn't `darwin`/`linux`. tmux has no Windows build; this host is Windows 11.
+- Crucially, **Mission Control never spawns agents itself.** `createPtySession` only *attaches* to a tmux session that already exists and errors if it doesn't. tmux therefore gates exactly one feature — the live terminal viewer for externally-created sessions — not the agent-session concept.
+- Everything else is SQLite- and HTTP-driven and platform-neutral. Verified: `api/claude/sessions/route.ts` is a pure SQLite read over a `claude_sessions` table, and its POST calls `syncClaudeSessions()` in `src/lib/claude-sessions.ts`, which scans `~/.claude/projects/` with `readdirSync` + `path.join` — cross-platform. This host already has 21 project directories with `.jsonl` transcripts under `C:\Users\dwun2\.claude\projects`, so session discovery and token/cost stats populate with real data on first scan.
+
+**v1 scope, therefore:**
+
+- **Claude Code session observability (works on Windows now):** session discovery, per-project grouping, token counts, and estimated cost via `syncClaudeSessions()` — reading transcripts Claude Code already writes. Plus the platform-neutral surface: task inbox, `/api/agents` registration, activity SSE stream, memory, skills, cost tracking.
+- **Live terminal viewer: platform-gated, excluded from v1.** Left in the codebase untouched; its UI entry point is hidden when `process.platform === 'win32'` so it fails visibly at the gate rather than throwing a tmux error mid-session.
+- **Generic `FrameworkAdapter` and its 5 sibling files** (`autogen`, `crewai`, `langgraph`, `openclaw`, `claude-sdk`): left in place, untouched, unwired. Zero cost to keep; a documented seam if another runtime is ever used.
+
+**Rejected: running Mission Control inside WSL2 to get tmux.** This repo lives on `D:\`, so WSL agents would reach it through `/mnt/d/` (poor filesystem performance, unreliable file watching), `better-sqlite3` would need rebuilding against the WSL Node, and "one command center" would then straddle two operating systems. Revisit only if the terminal viewer turns out to carry the majority of Mission Control's value.
+
+## Tool sharing — Kollektiv's tools available to agents
+
+Verified seam: Kollektiv already runs its own MCP server. `server.ts:1094-1105` calls `startKollektivMcp({ port: 3012 })` on every boot, and `services/kollektivMcp.ts` serves MCP over `StreamableHTTPServerTransport` on `http://127.0.0.1:3012` (the HTTP handler does no path routing, so any path on that port is the MCP endpoint). `mcp-config.json` declares **100 tools**.
+
+Two constraints that shape what "whatever tools available" actually means:
+
+- **62 of the 100 tools are `executionKind: "browser-context"`** — they execute inside Kollektiv's browser tab, so they only work while Kollektiv is open in a browser. The other 38 are `server-context` and work headlessly.
+- **35 tools declare a `permissions` array**, gated by `CALLER_PERMISSIONS` in `services/kollektivMcp.ts:59-85`; `grantMcpPermissions()` must be called from the browser side before those tools will execute.
+
+**Mechanism.** Mission Control has no MCP *client* — its MCP-related files (`src/lib/mcp-audit.ts`, `api/mcp-audit/verify/route.ts`, `src/lib/agent-evals.ts`) audit MCP configurations, and `scripts/mc-mcp-server.cjs` exposes Mission Control itself as an MCP server. Since Mission Control also never spawns agents, it has no hook point to inject MCP config into them. So tool sharing is **not** "Mission Control configures agents." It is: register Kollektiv's MCP endpoint with Claude Code in the projects agents work in, so any agent session — including ones Mission Control observes — can call Kollektiv's tools. That is a config registration plus documentation, not an integration layer.
+
+## Framing and auth (verified specifics)
+
+Three places block the embed, all of which the fork must change:
+
+- `src/lib/csp.ts:8` — `frame-ancestors 'none'` → must become `'self'`.
+- `src/proxy.ts:132` — `response.headers.set('X-Frame-Options', 'DENY')` → `SAMEORIGIN`.
+- `next.config.js` `headers()` — a second `X-Frame-Options: DENY` → `SAMEORIGIN`.
+
+`src/proxy.ts` redirects page routes to `/login` when no session cookie is present, so the iframe shows Mission Control's login screen on first load. With `AUTH_USER`/`AUTH_PASS` seeded in `.env` that is a one-time login, and the session cookie's `SameSite=strict` is fine because the reverse proxy makes both apps same-origin.
+
+`src/lib/csp.ts:13` already permits `connect-src ... http://127.0.0.1:* http://localhost:*`, so no CSP change is needed for Mission Control's client code to reach local services.
 
 ## Auth
 
@@ -67,7 +106,9 @@ Kollektiv (Vite/Express, :7500)          Mission Control fork (Next.js, :3000 or
 
 - Hosted/public deployment (GitHub Pages can't run a persistent Node server or SQLite; this would need a separate always-on host and cross-origin auth — a materially bigger project).
 - Real integration logic for CrewAI, AutoGen, LangGraph, OpenClaw, or any runtime beyond Claude Code.
-- Deep interop between Mission Control's task registry and Kollektiv's own capability/assistant-tool platform (e.g. dispatching creative-mode work as Mission Control tasks) — the two agent systems stay separate; Mission Control governs external coding-agent sessions only.
+- The live PTY terminal viewer (tmux, Unix-only — see "Agent scope" above).
+- Building an MCP *client* inside Mission Control so its own backend can call Kollektiv tools. Tool sharing in v1 is agent-side MCP registration; a Mission Control-side client is a separate project with its own justification.
+- Dispatching Kollektiv creative work as Mission Control tasks (i.e. the reverse direction). Mission Control observes external coding-agent sessions; Kollektiv's assistant loop stays its own system.
 
 ## Testing / verification
 
