@@ -133,14 +133,21 @@ describe('apiFetch — global HTTP and network error handling', () => {
     })
   })
 
-  it('does not redirect when already on /login (avoid infinite loop)', async () => {
+  it('does not redirect when already on /mission-control/login (avoid infinite loop)', async () => {
+    // Real pathname under Next's basePath is '/mission-control/login', not '/login' —
+    // the guard must compare against the basePath-prefixed path.
     Object.defineProperty(window, 'location', {
       writable: true,
-      value: { ...realLocation, pathname: '/login', search: '', href: 'http://127.0.0.1:3000/login' },
+      value: {
+        ...realLocation,
+        pathname: '/mission-control/login',
+        search: '',
+        href: 'http://127.0.0.1:3000/mission-control/login',
+      },
     })
     global.fetch = vi.fn().mockResolvedValue(mockResponse(401))
     await expect(apiFetch('/api/auth/login', { method: 'POST' })).rejects.toThrow(ApiError)
-    expect(window.location.href).toBe('http://127.0.0.1:3000/login')
+    expect(window.location.href).toBe('http://127.0.0.1:3000/mission-control/login')
   })
 
   it('returns undefined for 204 No Content', async () => {

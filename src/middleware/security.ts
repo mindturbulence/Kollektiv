@@ -19,7 +19,7 @@ const PROD_CSP = [
   "font-src 'self' data: https://fonts.gstatic.com https://cdn.fontshare.com https://db.onlinewebfonts.com",
   "img-src 'self' data: blob: https:",
   "connect-src 'self' data: blob: https://openrouter.ai https://generativelanguage.googleapis.com https://www.googleapis.com https://wttr.in https://accounts.spotify.com https://api.spotify.com wss://generativelanguage.googleapis.com http://localhost:* http://127.0.0.1:*",
-  "frame-src https://accounts.google.com",
+  "frame-src 'self' https://accounts.google.com",
 ].join('; ');
 
 /**

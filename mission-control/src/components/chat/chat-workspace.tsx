@@ -556,8 +556,7 @@ function SessionConversationView({
   // Gate the terminal viewer on server platform: tmux is Unix-only.
   useEffect(() => {
     let cancelled = false
-    fetch('/mission-control/api/pty/setup')
-      .then(r => r.json())
+    apiFetch<{ platform?: string }>('/api/pty/setup')
       .then(d => { if (!cancelled) setTerminalSupported(isTerminalSupported(d.platform ?? '')) })
       .catch(() => { if (!cancelled) setTerminalSupported(false) })
     return () => { cancelled = true }

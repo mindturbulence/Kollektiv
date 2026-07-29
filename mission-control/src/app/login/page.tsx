@@ -5,7 +5,7 @@ import Image from 'next/image'
 import { useTranslations } from 'next-intl'
 import { Button } from '@/components/ui/button'
 import { LanguageSwitcherSelect } from '@/components/ui/language-switcher'
-import { apiFetch } from '@/lib/api-client'
+import { apiFetch, withBasePath } from '@/lib/api-client'
 import { STORAGE_GATEWAY_URL } from '@/lib/device-identity'
 
 interface GoogleCredentialResponse {
@@ -182,7 +182,7 @@ export default function LoginPage() {
     })
       .then((data) => {
         if (data.needsSetup) {
-          window.location.href = '/setup'
+          window.location.href = withBasePath('/setup')
         }
       })
       .catch(() => {
@@ -191,7 +191,7 @@ export default function LoginPage() {
   }, [])
 
   const completeLogin = useCallback(async (path: string, body: LoginRequestBody) => {
-    const res = await fetch(path, {
+    const res = await fetch(withBasePath(path), {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(body),
@@ -224,7 +224,7 @@ export default function LoginPage() {
 
     // Full reload ensures the session cookie is sent on all subsequent requests.
     // router.push() + refresh() can race and use stale RSC payloads.
-    window.location.href = '/'
+    window.location.href = withBasePath('/')
     return true
   }, [t])
 
@@ -349,7 +349,7 @@ export default function LoginPage() {
               {t('noAdminDescription')}
             </p>
             <Button
-              onClick={() => { window.location.href = '/setup' }}
+              onClick={() => { window.location.href = withBasePath('/setup') }}
               size="sm"
               className="mt-3"
             >

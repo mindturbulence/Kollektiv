@@ -6,6 +6,7 @@ import { Button } from '@/components/ui/button'
 import { Loader } from '@/components/ui/loader'
 import { useMissionControl } from '@/store'
 import { useSmartPoll } from '@/lib/use-smart-poll'
+import { withBasePath } from '@/lib/api-client'
 import { useNavigateToPanel } from '@/lib/navigation'
 import {
   LineChart, Line, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer
@@ -207,8 +208,8 @@ export function SecurityAuditPanel() {
     setIsLoading(true)
     try {
       const [auditRes, evalsRes] = await Promise.all([
-        fetch(`/api/security-audit?timeframe=${selectedTimeframe}`),
-        fetch(`/api/agents/evals?timeframe=${selectedTimeframe}`),
+        fetch(withBasePath(`/api/security-audit?timeframe=${selectedTimeframe}`)),
+        fetch(withBasePath(`/api/agents/evals?timeframe=${selectedTimeframe}`)),
       ])
       if (auditRes.ok) {
         const audit = await auditRes.json()

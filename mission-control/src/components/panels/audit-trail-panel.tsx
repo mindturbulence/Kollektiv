@@ -4,6 +4,7 @@ import { useState, useEffect, useCallback } from 'react'
 import { useTranslations } from 'next-intl'
 import { Button } from '@/components/ui/button'
 import { useSmartPoll } from '@/lib/use-smart-poll'
+import { withBasePath } from '@/lib/api-client'
 
 interface AuditEvent {
   id: number
@@ -130,7 +131,7 @@ export function AuditTrailPanel() {
       params.append('limit', limit.toString())
       params.append('offset', (page * limit).toString())
 
-      const res = await fetch(`/api/audit?${params}`)
+      const res = await fetch(withBasePath(`/api/audit?${params}`))
       if (!res.ok) {
         if (res.status === 403) {
           setError(t('adminRequired'))

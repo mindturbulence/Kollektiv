@@ -246,9 +246,9 @@ export function ActivityFeedPanel() {
         if (isAgentView) params.append('offset', (page * limit).toString())
         if (since && !isAgentView) params.append('since', Math.floor(since / 1000).toString())
 
-        const response = await fetch(`/api/activities?${params}`)
-        if (!response.ok) throw new Error('Failed to fetch activities')
-        const data = await response.json()
+        const data = await apiFetch<{ activities?: Activity[]; total?: number }>(
+          `/api/activities?${params}`
+        )
 
         if (since && !isAgentView) {
           setActivities((prev) => {

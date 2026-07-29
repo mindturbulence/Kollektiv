@@ -43,6 +43,20 @@ describe('mapDaisyTokensToMcVars', () => {
     const vars = mapDaisyTokensToMcVars({ p: '50% 0.1 200; background: url(evil)' })
     expect(vars['--color-primary']).toBeUndefined()
   })
+
+  it('keeps muted-foreground legible on light DaisyUI themes (base-content, not neutral-content)', () => {
+    // Light-theme-like input: near-white page background, dark body text, and a
+    // near-white "neutral-content" (nc) — the DaisyUI role this used to be
+    // wired to, which is unreadable against a light b1 background.
+    const vars = mapDaisyTokensToMcVars({
+      b1: '100% 0 0',
+      bc: '27% 0.02 256',
+      nc: '89.5% 0 0',
+    })
+    // muted-foreground must resolve from bc (dark, readable against b1), never nc.
+    expect(vars['--color-muted-foreground']).toBe('oklch(27% 0.02 256)')
+    expect(vars['--color-muted-foreground']).not.toBe('oklch(89.5% 0 0)')
+  })
 })
 
 describe('isKollektivThemeMessage', () => {

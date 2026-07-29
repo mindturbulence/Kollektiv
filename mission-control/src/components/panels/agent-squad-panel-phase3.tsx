@@ -22,7 +22,7 @@ import {
   CreateAgentModal
 } from './agent-detail-tabs'
 import { formatModelName, buildTaskStatParts } from '@/lib/agent-card-helpers'
-import { apiFetch, ApiError } from '@/lib/api-client'
+import { apiFetch, ApiError, withBasePath } from '@/lib/api-client'
 import { useMissionControl, type Agent } from '@/store'
 
 const log = createClientLogger('AgentSquadPhase3')
@@ -127,7 +127,7 @@ export function AgentSquadPanelPhase3() {
       } catch (apiErr) {
         if (apiErr instanceof ApiError) {
           if (apiErr.code === 'UNAUTHENTICATED') {
-            window.location.assign('/login?next=%2Fagents')
+            window.location.assign(withBasePath('/login?next=%2Fagents'))
             return
           }
           if (apiErr.code === 'FORBIDDEN') {
@@ -179,7 +179,7 @@ export function AgentSquadPanelPhase3() {
       } catch (apiErr) {
         if (apiErr instanceof ApiError) {
           if (apiErr.code === 'UNAUTHENTICATED') {
-            window.location.assign('/login?next=%2Fagents')
+            window.location.assign(withBasePath('/login?next=%2Fagents'))
             return
           }
           if (apiErr.code === 'FORBIDDEN') {

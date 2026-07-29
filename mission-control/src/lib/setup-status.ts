@@ -1,3 +1,5 @@
+import { withBasePath } from '@/lib/api-client'
+
 export interface FetchSetupStatusOptions {
   attempts?: number
   timeoutMs?: number
@@ -24,7 +26,7 @@ export async function fetchSetupStatusWithRetry(
     const timeoutId = setTimeout(() => controller.abort('timeout'), timeoutMs)
 
     try {
-      const res = await fetchFn('/api/setup', { signal: controller.signal })
+      const res = await fetchFn(withBasePath('/api/setup'), { signal: controller.signal })
       if (!res.ok) {
         throw new Error(`Setup status check failed (${res.status})`)
       }

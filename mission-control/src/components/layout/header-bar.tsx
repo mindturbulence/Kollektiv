@@ -12,6 +12,7 @@ import { ThemeSelector } from '@/components/ui/theme-selector'
 import { LanguageSwitcher } from '@/components/ui/language-switcher'
 import { DigitalClock } from '@/components/ui/digital-clock'
 import { getNavigationMetrics, navigationMetricEventName } from '@/lib/navigation-metrics'
+import { withBasePath } from '@/lib/api-client'
 
 interface SearchResult {
   type: string
@@ -252,7 +253,7 @@ export function HeaderBar() {
     }
     setSearchLoading(true)
     try {
-      const res = await fetch(`/api/search?q=${encodeURIComponent(q)}&limit=12`)
+      const res = await fetch(withBasePath(`/api/search?q=${encodeURIComponent(q)}&limit=12`))
       const data = await res.json()
       const entityResults: SearchResult[] = (data.results || []).map((r: SearchResult) => ({ ...r, source: 'entity' }))
       const merged = [...quickResults, ...entityResults].slice(0, 16)

@@ -24,6 +24,21 @@
  *   window.addEventListener('mc:auth-expired', () => showToast('Session expired'))
  */
 
+const BASE_PATH = '/mission-control'
+
+/**
+ * Prefix a same-origin path with Mission Control's basePath.
+ *
+ * `next.config.js`'s `basePath: '/mission-control'` rewrites `next/link` and
+ * `next/router` navigation automatically, but does NOT touch raw `fetch()`
+ * calls or `window.location` assignments — those escape the proxy prefix and
+ * land on the host app's root instead. Anywhere a path is handed to `fetch`
+ * or `window.location`, run it through this first.
+ */
+export function withBasePath(path: string): string {
+  return path.startsWith(BASE_PATH) ? path : `${BASE_PATH}${path}`
+}
+
 export type ApiErrorCode =
   | 'UNAUTHENTICATED'
   | 'FORBIDDEN'
@@ -52,8 +67,8 @@ function redirectToLogin(): void {
   if (typeof window === 'undefined') return
   const from = window.location.pathname + window.location.search
   // Avoid redirect loops if user is already on /login
-  if (window.location.pathname === '/login') return
-  window.location.href = `/login?from=${encodeURIComponent(from)}`
+  if (window.location.pathname === withBasePath('/login')) return
+  window.location.href = withBasePath(`/login?from=${encodeURIComponent(from)}`)
 }
 
 function emitAuthExpired(detail: { path: string; status: number }): void {
@@ -80,7 +95,7 @@ export async function apiFetch<T = unknown>(
 
   let response: Response
   try {
-    response = await fetch(path, {
+    response = await fetch(withBasePath(path), {
       credentials: 'include',
       headers: {
         Accept: 'application/json',

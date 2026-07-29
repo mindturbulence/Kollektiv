@@ -12,7 +12,7 @@ import { Loader } from '@/components/ui/loader'
 import { clearOnboardingDismissedThisSession, clearOnboardingReplayFromStart } from '@/lib/onboarding-session'
 import { resolveCoordinatorDeliveryTarget, type CoordinatorAgentRecord } from '@/lib/coordinator-routing'
 import type { GatewaySession } from '@/lib/sessions'
-import { apiFetch, ApiError } from '@/lib/api-client'
+import { apiFetch, ApiError, withBasePath } from '@/lib/api-client'
 
 interface Setting {
   key: string
@@ -197,7 +197,7 @@ export function SettingsPanel() {
         redirectOnUnauthenticated: false,
       })
       if (res.status === 401) {
-        window.location.assign('/login?next=%2Fsettings')
+        window.location.assign(withBasePath('/login?next=%2Fsettings'))
         return
       }
       if (res.status === 403) {
