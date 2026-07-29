@@ -56,8 +56,8 @@ function userAdminError(error: unknown): string | null {
 
 const roleColors: Record<string, string> = {
   admin: 'bg-red-500/20 text-red-400',
-  operator: 'bg-blue-500/20 text-blue-400',
-  viewer: 'bg-gray-500/20 text-gray-400',
+  operator: 'bg-info/20 text-blue-400',
+  viewer: 'bg-muted/20 text-muted-foreground',
 }
 
 export function UserManagementPanel() {
@@ -271,7 +271,7 @@ export function UserManagementPanel() {
       </div>
 
       {feedback && (
-        <div className={`px-3 py-2 rounded-md text-sm border ${feedback.ok ? 'bg-green-500/10 text-green-400 border-green-500/20' : 'bg-red-500/10 text-red-400 border-red-500/20'}`}>
+        <div className={`px-3 py-2 rounded-md text-sm border ${feedback.ok ? 'bg-green-500/10 text-success border-green-500/20' : 'bg-red-500/10 text-red-400 border-red-500/20'}`}>
           {feedback.text}
         </div>
       )}
@@ -472,7 +472,7 @@ export function UserManagementPanel() {
                       </div>
                     </td>
                     <td className="px-4 py-2.5 text-xs">
-                      <span className={`px-2 py-0.5 rounded-full ${u.provider === 'google' ? 'bg-blue-500/20 text-blue-300' : 'bg-gray-500/20 text-gray-300'}`}>{u.provider || 'local'}</span>
+                      <span className={`px-2 py-0.5 rounded-full ${u.provider === 'google' ? 'bg-info/20 text-info' : 'bg-muted/20 text-muted-foreground'}`}>{u.provider || 'local'}</span>
                     </td>
                     <td className="px-4 py-2.5">
                       <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${roleColors[u.role] || ''}`}>{u.role}</span>

@@ -18,7 +18,7 @@ interface DayJobSummary {
 }
 
 const AGENT_COLORS = [
-  'bg-blue-500/20 text-blue-300 border-blue-500/30',
+  'bg-info/20 text-info border-blue-500/30',
   'bg-emerald-500/20 text-emerald-300 border-emerald-500/30',
   'bg-amber-500/20 text-amber-300 border-amber-500/30',
   'bg-purple-500/20 text-purple-300 border-purple-500/30',
@@ -523,7 +523,7 @@ export function CronManagementPanel() {
 
   const getStatusColor = (status?: string) => {
     switch (status) {
-      case 'success': return 'text-green-400'
+      case 'success': return 'text-success'
       case 'error': return 'text-red-400'
       case 'running': return 'text-blue-400'
       default: return 'text-muted-foreground'
@@ -532,10 +532,10 @@ export function CronManagementPanel() {
 
   const getStatusBg = (status?: string) => {
     switch (status) {
-      case 'success': return 'bg-green-500/20'
+      case 'success': return 'bg-success/20'
       case 'error': return 'bg-red-500/20'
-      case 'running': return 'bg-blue-500/20'
-      default: return 'bg-gray-500/20'
+      case 'running': return 'bg-info/20'
+      default: return 'bg-muted/20'
     }
   }
 
@@ -728,7 +728,7 @@ export function CronManagementPanel() {
             <Button
               onClick={loadCronJobs}
               disabled={isLoading}
-              className="bg-blue-500/20 text-blue-400 border border-blue-500/30 hover:bg-blue-500/30"
+              className="bg-info/20 text-blue-400 border border-blue-500/30 hover:bg-blue-500/30"
             >
               {isLoading ? t('loading') : t('refresh')}
             </Button>
@@ -1085,7 +1085,7 @@ export function CronManagementPanel() {
                       >
                         <td className="py-2.5 pr-3">
                           <div className="flex items-center gap-2">
-                            <div className={`w-2 h-2 rounded-full shrink-0 ${job.enabled ? 'bg-green-500' : 'bg-gray-500'}`} />
+                            <div className={`w-2 h-2 rounded-full shrink-0 ${job.enabled ? 'bg-green-500' : 'bg-muted'}`} />
                             <span className="font-medium text-foreground truncate max-w-48">{job.name}</span>
                           </div>
                         </td>
@@ -1203,7 +1203,7 @@ export function CronManagementPanel() {
             <div className="flex items-center justify-between mb-4">
               <h2 className="text-xl font-semibold text-foreground">{selectedJob.name}</h2>
               <div className="flex items-center gap-2">
-                <span className={`px-2 py-1 text-xs rounded-full ${selectedJob.enabled ? 'bg-green-500/20 text-green-400 border border-green-500/30' : 'bg-gray-500/20 text-gray-400 border border-gray-500/30'}`}>
+                <span className={`px-2 py-1 text-xs rounded-full ${selectedJob.enabled ? 'bg-success/20 text-success border border-success/30' : 'bg-muted/20 text-muted-foreground border border-border/30'}`}>
                   {selectedJob.enabled ? t('enabled') : t('disabled')}
                 </span>
                 {selectedJob.lastStatus && (
@@ -1286,14 +1286,14 @@ export function CronManagementPanel() {
                   <Button
                     onClick={() => triggerJob(selectedJob, 'force')}
                     size="sm"
-                    className="bg-blue-500/20 text-blue-400 hover:bg-blue-500/30 border-blue-500/30"
+                    className="bg-info/20 text-blue-400 hover:bg-blue-500/30 border-blue-500/30"
                   >
                     {t('runNowForce')}
                   </Button>
                   <Button
                     onClick={() => triggerJob(selectedJob, 'due')}
                     size="sm"
-                    className="bg-blue-500/20 text-blue-400 hover:bg-blue-500/30 border-blue-500/30"
+                    className="bg-info/20 text-blue-400 hover:bg-blue-500/30 border-blue-500/30"
                   >
                     {t('runNowIfDue')}
                   </Button>
@@ -1303,7 +1303,7 @@ export function CronManagementPanel() {
                     size="sm"
                     className={selectedJob.enabled
                       ? 'bg-yellow-500/20 text-yellow-400 hover:bg-yellow-500/30 border-yellow-500/30'
-                      : 'bg-green-500/20 text-green-400 hover:bg-green-500/30 border-green-500/30'}
+                      : 'bg-success/20 text-success hover:bg-green-500/30 border-success/30'}
                   >
                     {selectedJob.enabled ? t('disable') : t('enable')}
                   </Button>
@@ -1618,9 +1618,9 @@ function ClaudeCodeTeamsSection() {
                 <div className="flex gap-3">
                   {Object.entries(statusCounts).map(([status, count]) => (
                     <span key={status} className={`text-xs px-2 py-1 rounded ${
-                      status === 'completed' ? 'bg-green-500/20 text-green-400' :
-                      status === 'in_progress' ? 'bg-blue-500/20 text-blue-400' :
-                      'bg-gray-500/20 text-gray-400'
+                      status === 'completed' ? 'bg-success/20 text-success' :
+                      status === 'in_progress' ? 'bg-info/20 text-blue-400' :
+                      'bg-muted/20 text-muted-foreground'
                     }`}>
                       {status}: {count}
                     </span>

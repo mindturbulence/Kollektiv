@@ -576,7 +576,7 @@ function StepGatewayLink({ isGateway, registration, onNext, onBack }: {
           <div className={`flex items-start gap-3 p-3 rounded-lg border ${
             configured ? 'border-green-400/20 bg-green-400/5' : 'border-amber-400/20 bg-amber-400/5'
           }`}>
-            <span className={`font-mono text-sm mt-0.5 ${configured ? 'text-green-400' : 'text-amber-400'}`}>
+            <span className={`font-mono text-sm mt-0.5 ${configured ? 'text-success' : 'text-amber-400'}`}>
               [{configured ? '+' : '~'}]
             </span>
             <div>
@@ -592,7 +592,7 @@ function StepGatewayLink({ isGateway, registration, onNext, onBack }: {
           <div className={`flex items-start gap-3 p-3 rounded-lg border ${
             configured ? 'border-green-400/20 bg-green-400/5' : 'border-border/20 bg-surface-1/30'
           }`}>
-            <span className={`font-mono text-sm mt-0.5 ${configured ? 'text-green-400' : 'text-muted-foreground'}`}>
+            <span className={`font-mono text-sm mt-0.5 ${configured ? 'text-success' : 'text-muted-foreground'}`}>
               [{configured ? '+' : '-'}]
             </span>
             <div>
@@ -616,7 +616,7 @@ function StepGatewayLink({ isGateway, registration, onNext, onBack }: {
               {testing ? t('testing') : t('testConnection')}
             </Button>
             {healthOk === true && (
-              <span className="text-xs text-green-400">{t('gatewayReachable')}</span>
+              <span className="text-xs text-success">{t('gatewayReachable')}</span>
             )}
             {healthOk === false && (
               <span className="text-xs text-red-400">{t('gatewayUnreachable')}</span>
@@ -670,7 +670,7 @@ function StepCredentials({
         ) : (
           <div className="space-y-3">
             <div className={`flex items-start gap-3 p-3 rounded-lg border ${status.authOk ? 'border-green-400/20 bg-green-400/5' : 'border-red-400/20 bg-red-400/5'}`}>
-              <span className={`font-mono text-sm mt-0.5 ${status.authOk ? 'text-green-400' : 'text-red-400'}`}>
+              <span className={`font-mono text-sm mt-0.5 ${status.authOk ? 'text-success' : 'text-red-400'}`}>
                 [{status.authOk ? '+' : 'x'}]
               </span>
               <div>
@@ -682,7 +682,7 @@ function StepCredentials({
             </div>
 
             <div className={`flex items-start gap-3 p-3 rounded-lg border ${status.apiKeyOk ? 'border-green-400/20 bg-green-400/5' : 'border-red-400/20 bg-red-400/5'}`}>
-              <span className={`font-mono text-sm mt-0.5 ${status.apiKeyOk ? 'text-green-400' : 'text-red-400'}`}>
+              <span className={`font-mono text-sm mt-0.5 ${status.apiKeyOk ? 'text-success' : 'text-red-400'}`}>
                 [{status.apiKeyOk ? '+' : 'x'}]
               </span>
               <div>

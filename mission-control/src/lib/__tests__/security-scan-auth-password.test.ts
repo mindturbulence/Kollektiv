@@ -19,12 +19,14 @@ describe('security scan admin password resolution', () => {
     restore('AUTH_PASS_B64', originalAuthPassB64)
   })
 
+  // On Windows, runSecurityScan triggers DB migrations + scheduler init
+  // which can take >20s. Use a generous timeout.
   it('accepts a strong base64-only password', () => {
     delete process.env.AUTH_PASS
     process.env.AUTH_PASS_B64 = Buffer.from('strong-password-123').toString('base64')
 
     expect(authPasswordCheck()).toMatchObject({ status: 'pass' })
-  })
+  }, 30_000)
 
   it('uses the plain password when base64 configuration is invalid', () => {
     process.env.AUTH_PASS = 'strong-fallback-123'

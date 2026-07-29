@@ -49,14 +49,14 @@ interface SoulTemplate {
 }
 
 const statusColors: Record<string, string> = {
-  offline: 'bg-gray-500',
+  offline: 'bg-muted',
   idle: 'bg-green-500',
   busy: 'bg-yellow-500',
   error: 'bg-red-500',
 }
 
 const statusBadgeStyles: Record<string, string> = {
-  offline: 'bg-slate-500/15 text-slate-300 border-slate-500/30',
+  offline: 'bg-muted/15 text-foreground border-border/30',
   idle: 'bg-emerald-500/15 text-emerald-300 border-emerald-500/30',
   busy: 'bg-amber-500/15 text-amber-300 border-amber-500/30',
   error: 'bg-rose-500/15 text-rose-300 border-rose-500/30',
@@ -72,7 +72,7 @@ const statusIcons: Record<string, string> = {
 const defaultCardStyle = {
   edge: 'from-slate-400/60 to-slate-600/30',
   glow: 'from-slate-500/10 via-transparent to-transparent',
-  dot: 'bg-slate-400',
+  dot: 'bg-muted',
 }
 
 const statusCardStyles: Record<string, { edge: string; glow: string; dot: string }> = {
@@ -441,7 +441,7 @@ export function AgentSquadPanelPhase3() {
 
       {/* Sync Toast */}
       {syncToast && (
-        <div className={`p-3 m-4 rounded-lg text-sm ${syncToast.includes('failed') ? 'bg-red-500/10 border border-red-500/20 text-red-400' : 'bg-green-500/10 border border-green-500/20 text-green-400'}`}>
+        <div className={`p-3 m-4 rounded-lg text-sm ${syncToast.includes('failed') ? 'bg-red-500/10 border border-red-500/20 text-red-400' : 'bg-green-500/10 border border-green-500/20 text-success'}`}>
           {syncToast}
         </div>
       )}
@@ -489,7 +489,7 @@ export function AgentSquadPanelPhase3() {
                   onClick={() => setSelectedAgent(agent)}
                 >
                   <div className={`pointer-events-none absolute inset-y-0 left-0 w-1 bg-linear-to-b ${(statusCardStyles[agent.status] || defaultCardStyle).edge}`} />
-                  {agent.hidden ? <div className="absolute top-2 right-2 text-2xs text-slate-500">hidden</div> : null}
+                  {agent.hidden ? <div className="absolute top-2 right-2 text-2xs text-muted-foreground">hidden</div> : null}
 
                   {/* Header: avatar + name + status */}
                   <div className="flex items-start justify-between mb-2">
@@ -504,7 +504,7 @@ export function AgentSquadPanelPhase3() {
                                 ? 'bg-violet-500/15 text-violet-300 border-violet-500/30'
                                 : (agent as any).source === 'gateway'
                                   ? 'bg-cyan-500/15 text-cyan-300 border-cyan-500/30'
-                                  : 'bg-slate-500/15 text-slate-300 border-slate-500/30'
+                                  : 'bg-muted/15 text-foreground border-border/30'
                             }`}>
                               {(agent as any).source}
                             </span>
@@ -581,7 +581,7 @@ export function AgentSquadPanelPhase3() {
                         }}
                         size="xs"
                         variant="ghost"
-                        className="h-6 px-2 text-xs text-blue-300 hover:bg-blue-500/15 hover:text-blue-200"
+                        className="h-6 px-2 text-xs text-info hover:bg-blue-500/15 hover:text-blue-200"
                       >
                         {t('spawn')}
                       </Button>
@@ -592,7 +592,7 @@ export function AgentSquadPanelPhase3() {
                         }}
                         size="xs"
                         variant="ghost"
-                        className="h-6 px-2 text-xs text-slate-400 hover:bg-slate-500/15 hover:text-slate-300"
+                        className="h-6 px-2 text-xs text-muted-foreground hover:bg-muted/15 hover:text-foreground"
                       >
                         {agent.hidden ? 'Unhide' : 'Hide'}
                       </Button>
@@ -1248,7 +1248,7 @@ function QuickSpawnModal({
 
         {spawnResult ? (
           <div className="space-y-4">
-            <div className="bg-green-500/10 border border-green-500/20 text-green-400 p-3 rounded-lg text-sm">
+            <div className="bg-green-500/10 border border-green-500/20 text-success p-3 rounded-lg text-sm">
               Agent spawned successfully!
             </div>
             <div className="text-sm text-foreground/80">

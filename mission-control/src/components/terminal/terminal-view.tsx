@@ -314,8 +314,8 @@ export function TerminalView({ sessionId, sessionKind, mode, onExit, onError, on
         <div className="absolute top-2 right-2 z-10">
           <span className={`text-[10px] px-1.5 py-0.5 rounded font-mono ${
             mode === 'interactive'
-              ? 'bg-green-500/15 text-green-400 border border-green-500/25'
-              : 'bg-zinc-500/15 text-zinc-400 border border-zinc-500/25'
+              ? 'bg-green-500/15 text-success border border-green-500/25'
+              : 'bg-muted/15 text-muted-foreground border border-border/25'
           }`}>
             {mode === 'interactive' ? 'INTERACTIVE' : 'READ-ONLY'}
           </span>

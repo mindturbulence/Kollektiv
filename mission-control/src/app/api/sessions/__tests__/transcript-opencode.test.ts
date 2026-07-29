@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { mkdtempSync, mkdirSync, rmSync, writeFileSync } from 'node:fs'
-import { join } from 'node:path'
+import { join, sep } from 'node:path'
 import { tmpdir } from 'node:os'
 
 let tempHome = ''
@@ -31,7 +31,7 @@ vi.mock('better-sqlite3', () => ({
         return undefined
       },
       all: (...args: any[]) => {
-        const name = dbPath ? String(dbPath).split('/').pop() || '' : ''
+        const name = dbPath ? String(dbPath).split(sep).pop() || '' : ''
         if (query.includes('FROM message')) return dbRowsByName[name] || []
         if (query.includes('FROM part')) return partRowsByMessageId[args[0]] || []
         return []

@@ -8,7 +8,7 @@ import { detectTextDirection } from '@/lib/chat-utils'
 const AGENT_COLORS: Record<string, { bg: string; text: string; border: string }> = {
   coordinator: { bg: 'bg-purple-500/10', text: 'text-purple-400', border: 'border-purple-500/20' },
   aegis: { bg: 'bg-red-500/10', text: 'text-red-400', border: 'border-red-500/20' },
-  research: { bg: 'bg-green-500/10', text: 'text-green-400', border: 'border-green-500/20' },
+  research: { bg: 'bg-green-500/10', text: 'text-success', border: 'border-green-500/20' },
   design: { bg: 'bg-pink-500/10', text: 'text-pink-400', border: 'border-pink-500/20' },
   quant: { bg: 'bg-yellow-500/10', text: 'text-yellow-400', border: 'border-yellow-500/20' },
   ops: { bg: 'bg-orange-500/10', text: 'text-orange-400', border: 'border-orange-500/20' },
@@ -102,7 +102,7 @@ function ToolCallBubble({ message }: { message: ChatMessage }) {
     ? 'text-yellow-400'
     : toolStatus === 'error'
     ? 'text-red-400'
-    : 'text-green-400'
+    : 'text-success'
 
   return (
     <div className="flex gap-2 mt-2">

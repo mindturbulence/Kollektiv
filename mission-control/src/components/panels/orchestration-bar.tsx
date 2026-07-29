@@ -268,7 +268,7 @@ export function OrchestrationBar() {
           >
             {tab === 'command' ? t('tabCommand') : tab === 'templates' ? t('tabWorkflows') : tab === 'pipelines' ? t('tabPipelines') : t('tabFleet')}
             {tab === 'fleet' && (
-              <span className={`ml-1.5 text-2xs ${errorCount > 0 ? 'text-red-400' : 'text-green-400'}`}>
+              <span className={`ml-1.5 text-2xs ${errorCount > 0 ? 'text-red-400' : 'text-success'}`}>
                 {onlineCount}/{agents.length}
               </span>
             )}
@@ -277,7 +277,7 @@ export function OrchestrationBar() {
 
         {/* Result toast inline */}
         {commandResult && (
-          <span className={`ml-auto text-xs ${commandResult.ok ? 'text-green-400' : 'text-red-400'}`}>
+          <span className={`ml-auto text-xs ${commandResult.ok ? 'text-success' : 'text-red-400'}`}>
             {commandResult.text}
           </span>
         )}
@@ -578,7 +578,7 @@ export function OrchestrationBar() {
                   <span className={`w-1.5 h-1.5 rounded-full ${
                     a.status === 'busy' ? 'bg-amber-500' :
                     a.status === 'idle' ? 'bg-green-500' :
-                    a.status === 'error' ? 'bg-red-500' : 'bg-gray-500'
+                    a.status === 'error' ? 'bg-red-500' : 'bg-muted'
                   }`} />
                   <span className="text-foreground font-medium">{a.name}</span>
                   <span className="text-muted-foreground">{a.role}</span>
@@ -593,7 +593,7 @@ export function OrchestrationBar() {
 }
 
 function FleetCard({ label, value, color }: { label: string; value: number; color?: string }) {
-  const colorClass = color === 'green' ? 'text-green-400' :
+  const colorClass = color === 'green' ? 'text-success' :
     color === 'amber' ? 'text-amber-400' :
     color === 'red' ? 'text-red-400' : 'text-foreground'
 

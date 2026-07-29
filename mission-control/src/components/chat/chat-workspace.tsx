@@ -13,6 +13,7 @@ import { SessionMessage, shouldShowTimestamp, type SessionTranscriptMessage } fr
 import { getSessionKindLabel, SessionKindAvatar } from './session-kind-brand'
 import { TerminalView } from '@/components/terminal/terminal-view'
 import { SplitPaneLayout, type SplitPane } from '@/components/terminal/split-pane-layout'
+import { isTerminalSupported } from '@/lib/terminal-availability'
 
 const log = createClientLogger('ChatWorkspace')
 
@@ -550,6 +551,17 @@ function SessionConversationView({
   const isGatewaySession = session.sessionKind === 'gateway'
   const isPtyCapableKind = session.sessionKind === 'claude-code' || session.sessionKind === 'codex-cli'
   const [viewMode, setViewMode] = useState<'terminal' | 'transcript'>('transcript')
+  const [terminalSupported, setTerminalSupported] = useState<boolean | null>(null)
+
+  // Gate the terminal viewer on server platform: tmux is Unix-only.
+  useEffect(() => {
+    let cancelled = false
+    fetch('/mission-control/api/pty/setup')
+      .then(r => r.json())
+      .then(d => { if (!cancelled) setTerminalSupported(isTerminalSupported(d.platform ?? '')) })
+      .catch(() => { if (!cancelled) setTerminalSupported(false) })
+    return () => { cancelled = true }
+  }, [])
   const prevSessionIdRef = useRef(session.sessionId)
   const transcriptScrollRef = useRef<HTMLDivElement | null>(null)
   const [continuePrompt, setContinuePrompt] = useState('')
@@ -686,7 +698,7 @@ function SessionConversationView({
               sizeClassName="w-5 h-5"
             />
           )}
-          <span className={`rounded-full px-2 py-0.5 text-[10px] ${session.active ? 'bg-green-500/20 text-green-300' : 'bg-muted text-muted-foreground'}`}>
+          <span className={`rounded-full px-2 py-0.5 text-[10px] ${session.active ? 'bg-success/20 text-green-300' : 'bg-muted text-muted-foreground'}`}>
             {session.active ? 'active' : 'idle'}
           </span>
           <span className="font-mono-tight">{getSessionKindLabel(session.sessionKind)}</span>
@@ -696,7 +708,7 @@ function SessionConversationView({
           {session.age && <span className="text-muted-foreground/40">{session.age} ago</span>}
 
           {/* Terminal/Transcript toggle for PTY-capable sessions */}
-          {isPtyCapableKind && (
+          {isPtyCapableKind && terminalSupported && (
             <div className="ml-auto flex rounded-md border border-border/50 overflow-hidden">
               <button
                 type="button"
@@ -765,7 +777,7 @@ function SessionConversationView({
       </div>
 
       {/* Terminal view (xterm.js PTY) */}
-      {isPtyCapableKind && viewMode === 'terminal' && (
+      {isPtyCapableKind && terminalSupported && viewMode === 'terminal' && (
         <div className="flex-1 min-h-0">
           <TerminalView
             sessionId={session.sessionId}
@@ -815,7 +827,7 @@ function SessionConversationView({
       <div className="border-t border-border/50 px-4 py-2">
         {continueError && <div className="mb-1 text-xs text-red-400">{continueError}</div>}
         <div className="flex items-center gap-2">
-          <span className={`font-mono-tight text-xs ${isGatewaySession ? 'text-cyan-400/60' : 'text-green-400/60'}`}>{isGatewaySession ? '>' : '$'}</span>
+          <span className={`font-mono-tight text-xs ${isGatewaySession ? 'text-cyan-400/60' : 'text-success/60'}`}>{isGatewaySession ? '>' : '$'}</span>
           <input
             value={continuePrompt}
             onChange={(e) => setContinuePrompt(e.target.value)}
@@ -867,7 +879,7 @@ function ChatIndicators({ notifications }: { notifications: Array<{ id: number; 
             key={toast.id}
             className={`flex items-center gap-2 rounded-md px-3 py-1.5 text-[11px] animate-in fade-in slide-in-from-bottom-1 ${
               isCompaction
-                ? 'bg-blue-500/10 text-blue-300 border border-blue-500/20'
+                ? 'bg-blue-500/10 text-info border border-blue-500/20'
                 : isFallback
                 ? 'bg-amber-500/10 text-amber-300 border border-amber-500/20'
                 : 'bg-surface-1 text-muted-foreground border border-border/30'
@@ -911,7 +923,7 @@ function AgentAvatar({ name, size = 'md' }: { name: string; size?: 'sm' | 'md' }
   const colors: Record<string, string> = {
     coordinator: 'bg-purple-500/20 text-purple-400',
     aegis: 'bg-red-500/20 text-red-400',
-    research: 'bg-green-500/20 text-green-400',
+    research: 'bg-success/20 text-success',
     ops: 'bg-orange-500/20 text-orange-400',
     reviewer: 'bg-teal-500/20 text-teal-400',
     content: 'bg-indigo-500/20 text-indigo-400',

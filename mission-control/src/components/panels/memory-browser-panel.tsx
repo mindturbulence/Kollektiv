@@ -87,7 +87,7 @@ function fileIcon(name: string): string {
 }
 
 function statusColor(status: 'healthy' | 'warning' | 'critical'): string {
-  if (status === 'healthy') return 'text-green-400'
+  if (status === 'healthy') return 'text-success'
   if (status === 'warning') return 'text-amber-400'
   return 'text-red-400'
 }
@@ -614,7 +614,7 @@ export function MemoryBrowserPanel() {
                         </>
                       ) : (
                         <>
-                          <button onClick={saveFile} disabled={isSaving} className="px-2 py-0.5 text-[11px] font-mono text-green-400/80 hover:text-green-400 rounded hover:bg-green-500/10 transition-colors">{isSaving ? t('saving') : t('save')}</button>
+                          <button onClick={saveFile} disabled={isSaving} className="px-2 py-0.5 text-[11px] font-mono text-success/80 hover:text-success rounded hover:bg-green-500/10 transition-colors">{isSaving ? t('saving') : t('save')}</button>
                           <button onClick={() => { setIsEditing(false); setEditedContent('') }} className="px-2 py-0.5 text-[11px] font-mono text-muted-foreground hover:text-foreground rounded hover:bg-[hsl(var(--surface-2))] transition-colors">{t('cancel')}</button>
                         </>
                       )}
@@ -894,7 +894,7 @@ function PipelineView({ result, mocGroups, isRunning, onRunAction, onNavigate }:
             <span className="text-[10px] font-mono text-muted-foreground/50">{t('filesProcessed', { count: result.filesProcessed })}</span>
           </div>
           {result.suggestions.length === 0 ? (
-            <div className="text-[11px] font-mono text-green-400/70">{t('noSuggestions')}</div>
+            <div className="text-[11px] font-mono text-success/70">{t('noSuggestions')}</div>
           ) : (
             <div className="space-y-1.5">
               {result.suggestions.map((sug, i) => <div key={i} className="text-[11px] font-mono text-muted-foreground/80 leading-relaxed">{sug}</div>)}

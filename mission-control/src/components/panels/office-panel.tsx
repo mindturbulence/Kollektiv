@@ -1682,21 +1682,21 @@ export function OfficePanel() {
                   </span>
                   <span className="min-w-0 flex-1">
                     <span className="block text-xs font-medium truncate">{agent.name}</span>
-                    <span className="block text-[10px] text-slate-300 truncate">{agent.role}</span>
-                    <span className="block text-[9px] text-slate-400 truncate">
+                    <span className="block text-[10px] text-foreground truncate">{agent.role}</span>
+                    <span className="block text-[9px] text-muted-foreground truncate">
                       {agent.last_activity || t('noRecentActivity')}
                     </span>
                   </span>
                   <span className="flex flex-col items-end gap-1">
                     <span className={`w-2 h-2 rounded-full ${statusDot[agent.status]}`} />
-                    <span className={`text-[9px] ${needsAttention ? 'text-amber-300 font-semibold' : 'text-slate-400'}`}>
+                    <span className={`text-[9px] ${needsAttention ? 'text-amber-300 font-semibold' : 'text-muted-foreground'}`}>
                       {agent.status === 'busy' ? t('activeStatus') : t('idleMinutes', { minutes: minutesIdle })}
                     </span>
                   </span>
                 </Button>
               ))}
               {filteredRosterRows.length === 0 && (
-                <div className="text-[11px] text-slate-400 px-1 py-2">{t('noWorkersInFilter')}</div>
+                <div className="text-[11px] text-muted-foreground px-1 py-2">{t('noWorkersInFilter')}</div>
               )}
             </div>
           </div>
@@ -2042,7 +2042,7 @@ export function OfficePanel() {
                       />
                       <div className={`absolute left-[8px] top-[14px] w-4 h-3 ${hashColor(agent.name)} border border-black/60`} />
                     </div>
-                    {!isMoving && <div className="text-[9px] text-slate-300 font-mono mt-0.5">#{seatLabel}</div>}
+                    {!isMoving && <div className="text-[9px] text-foreground font-mono mt-0.5">#{seatLabel}</div>}
                   </Button>
 
                   {agentActionOverrides.has(agent.id) && (
@@ -2056,7 +2056,7 @@ export function OfficePanel() {
 
                   {(transitioningAgentIds.has(agent.id) || isMoving) && (
                     <div
-                      className="absolute -translate-x-1/2 text-[9px] text-slate-200/85 font-medium px-1.5 py-0.5 rounded bg-black/45 border border-white/10"
+                      className="absolute -translate-x-1/2 text-[9px] text-foreground/85 font-medium px-1.5 py-0.5 rounded bg-black/45 border border-white/10"
                       style={{ left: `${x}%`, top: `calc(${y}% + 22px)` }}
                     >
                       {t('moving')}
@@ -2064,7 +2064,7 @@ export function OfficePanel() {
                   )}
 
                   <div
-                    className="absolute text-[9px] text-slate-500/70 font-mono pointer-events-none"
+                    className="absolute text-[9px] text-muted-foreground/70 font-mono pointer-events-none"
                     style={{ left: `${x}%`, top: `calc(${y}% + 38px)` }}
                   >
                     {zoneLabel}
@@ -2157,7 +2157,7 @@ export function OfficePanel() {
                   </div>
                   <div className="mt-1.5 space-y-1">
                     {selectedHotspot.stats.map((line) => (
-                      <div key={line} className="text-[10px] text-slate-300">{line}</div>
+                      <div key={line} className="text-[10px] text-foreground">{line}</div>
                     ))}
                   </div>
                   <div className="mt-2 grid grid-cols-3 gap-1">
@@ -2297,7 +2297,7 @@ export function OfficePanel() {
                     <div className="text-[10px] text-muted-foreground">{t('taskStatActive')}</div>
                   </div>
                   <div className="text-center bg-secondary rounded-lg p-2">
-                    <div className="text-lg font-bold text-green-400">{selectedAgent.taskStats.completed}</div>
+                    <div className="text-lg font-bold text-success">{selectedAgent.taskStats.completed}</div>
                     <div className="text-[10px] text-muted-foreground">{t('taskStatDone')}</div>
                   </div>
                 </div>

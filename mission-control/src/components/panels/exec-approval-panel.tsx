@@ -19,7 +19,7 @@ const RISK_BORDER: Record<ExecApprovalRequest['risk'], string> = {
 }
 
 const RISK_BADGE: Record<ExecApprovalRequest['risk'], { bg: string; text: string }> = {
-  low: { bg: 'bg-green-500/20', text: 'text-green-400' },
+  low: { bg: 'bg-success/20', text: 'text-success' },
   medium: { bg: 'bg-yellow-500/20', text: 'text-yellow-400' },
   high: { bg: 'bg-orange-500/20', text: 'text-orange-400' },
   critical: { bg: 'bg-red-500/20', text: 'text-red-400' },
@@ -446,7 +446,7 @@ function AgentAllowlistCard({
           {previewMatches.length > 0 && (
             <div className="space-y-1 max-h-24 overflow-auto">
               {previewMatches.slice(0, 5).map((m, i) => (
-                <div key={i} className="text-xs font-mono text-green-400 truncate">
+                <div key={i} className="text-xs font-mono text-success truncate">
                   $ {m.command}
                 </div>
               ))}
@@ -560,7 +560,7 @@ function ApprovalCard({
           <span
             className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium ${
               approval.status === 'approved'
-                ? 'bg-green-500/20 text-green-400'
+                ? 'bg-success/20 text-success'
                 : 'bg-red-500/20 text-red-400'
             }`}
           >

@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { mkdtempSync, rmSync, mkdirSync, writeFileSync } from 'node:fs'
-import { join } from 'node:path'
+import { join, sep } from 'node:path'
 import { tmpdir } from 'node:os'
 
 let tempHome = ''
@@ -20,7 +20,7 @@ vi.mock('better-sqlite3', () => ({
     return {
     prepare: (query: string) => ({
       get: (...args: any[]) => {
-        const name = dbPath ? String(dbPath).split('/').pop() || '' : ''
+        const name = dbPath ? String(dbPath).split(sep).pop() || '' : ''
         const rows = dbRowsByName[name] || dbRowsByName.default || {}
         if (query.includes('sqlite_master') && args[0] === 'session') return { name: 'session' }
         if (query.includes('sqlite_master') && args[0] === 'project') return { name: 'project' }
@@ -32,7 +32,7 @@ vi.mock('better-sqlite3', () => ({
         return undefined
       },
       all: (...args: any[]) => {
-        const name = dbPath ? String(dbPath).split('/').pop() || '' : ''
+        const name = dbPath ? String(dbPath).split(sep).pop() || '' : ''
         const rows = dbRowsByName[name] || dbRowsByName.default || {}
         if (query.includes('PRAGMA table_info(session)')) {
           const sample = rows.session?.[0] || {}

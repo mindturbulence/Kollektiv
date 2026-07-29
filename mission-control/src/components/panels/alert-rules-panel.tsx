@@ -59,8 +59,8 @@ const OPERATORS = [
 
 const ENTITY_COLORS: Record<string, string> = {
   agent: 'bg-purple-500/20 text-purple-400 border-purple-500/30',
-  task: 'bg-blue-500/20 text-blue-400 border-blue-500/30',
-  session: 'bg-green-500/20 text-green-400 border-green-500/30',
+  task: 'bg-info/20 text-blue-400 border-blue-500/30',
+  session: 'bg-success/20 text-success border-success/30',
   activity: 'bg-amber-500/20 text-amber-400 border-amber-500/30',
 }
 
@@ -167,7 +167,7 @@ export function AlertRulesPanel() {
         </div>
         <div className="bg-card border border-border rounded-lg p-3">
           <div className="text-2xs text-muted-foreground">{t('statActive')}</div>
-          <div className="text-xl font-bold text-green-400 mt-0.5">{enabledCount}</div>
+          <div className="text-xl font-bold text-success mt-0.5">{enabledCount}</div>
         </div>
         <div className="bg-card border border-border rounded-lg p-3">
           <div className="text-2xs text-muted-foreground">{t('statTotalTriggers')}</div>

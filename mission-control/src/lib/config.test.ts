@@ -2,6 +2,20 @@ import os from 'node:os'
 import path from 'node:path'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
+/**
+ * The config module uses `path.join()` internally — on Windows, a leading `/`
+ * becomes the current-drive root (e.g. `\tmp\...`).  Use `path.join()` here
+ * too so the expected values match whatever the module produces.
+ */
+function p(segment: string): string {
+  return path.join(segment)
+}
+
+/** Join path segments using `path.join()` — matches config module's behavior. */
+function j(...segments: string[]): string {
+  return path.join(...segments)
+}
+
 async function loadConfigWithEnv(env: Record<string, string | undefined>) {
   vi.resetModules()
 
@@ -61,9 +75,11 @@ describe('config data paths', () => {
       MISSION_CONTROL_TOKENS_PATH: undefined,
     })
 
+    // dataDir stores the raw env var value as-is.
+    // dbPath/tokensPath use path.join() when falling through to defaults.
     expect(config.dataDir).toBe('/tmp/mission-control-data')
-    expect(config.dbPath).toBe('/tmp/mission-control-data/mission-control.db')
-    expect(config.tokensPath).toBe('/tmp/mission-control-data/mission-control-tokens.json')
+    expect(config.dbPath).toBe(j('/tmp/mission-control-data', 'mission-control.db'))
+    expect(config.tokensPath).toBe(j('/tmp/mission-control-data', 'mission-control-tokens.json'))
   })
 
   it('respects explicit db and token path overrides', async () => {
@@ -74,6 +90,7 @@ describe('config data paths', () => {
     })
 
     expect(config.dataDir).toBe('/tmp/mission-control-data')
+    // Explicit overrides are stored as-is (not run through path.join).
     expect(config.dbPath).toBe('/tmp/custom.db')
     expect(config.tokensPath).toBe('/tmp/custom-tokens.json')
   })
@@ -87,9 +104,18 @@ describe('config data paths', () => {
       MISSION_CONTROL_TOKENS_PATH: undefined,
     })
 
-    expect(config.dataDir).toMatch(/^\/tmp\/build-scratch\/worker-[^/]+$/)
-    expect(config.dbPath).toMatch(/^\/tmp\/build-scratch\/worker-[^/]+\/mission-control\.db$/)
-    expect(config.tokensPath).toMatch(/^\/tmp\/build-scratch\/worker-[^/]+\/mission-control-tokens\.json$/)
+    // The scratch root is built via path.join, which on Windows uses `\`.
+    const scratchRoot = p('/tmp/build-scratch')
+    const sepPattern = path.sep === '\\' ? '\\\\' : '/'
+    expect(config.dataDir).toMatch(new RegExp(
+      `^${scratchRoot.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}${sepPattern}worker-[^\\/]+$`
+    ))
+    expect(config.dbPath).toMatch(new RegExp(
+      `^${scratchRoot.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}${sepPattern}worker-[^\\/]+${sepPattern}mission-control\\.db$`
+    ))
+    expect(config.tokensPath).toMatch(new RegExp(
+      `^${scratchRoot.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}${sepPattern}worker-[^\\/]+${sepPattern}mission-control-tokens\\.json$`
+    ))
   })
 
   it('allocates a distinct private scratch directory for each build worker', async () => {
@@ -117,7 +143,10 @@ describe('config data paths', () => {
     })
 
     const expectedBuildRoot = path.join(os.tmpdir(), 'mission-control-build')
-    expect(config.dataDir).toMatch(new RegExp(`^${expectedBuildRoot.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}/worker-[^/]+$`))
+    const escapedRoot = expectedBuildRoot.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
+    const sepPattern = path.sep === '\\' ? '\\\\' : '/'
+    expect(config.dataDir).toMatch(new RegExp(`^${escapedRoot}${sepPattern}worker-[^\\/]+$`))
+    // Build-specific overrides are stored as-is (not run through path.join).
     expect(config.dbPath).toBe('/tmp/build.db')
     expect(config.tokensPath).toBe('/tmp/build-tokens.json')
   })

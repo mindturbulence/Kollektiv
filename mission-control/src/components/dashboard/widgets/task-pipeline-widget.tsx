@@ -16,11 +16,11 @@ export function TaskPipelineWidget({ data }: { data: DashboardData }) {
   const total = inboxCount + assignedCount + runningTasks + reviewCount + doneCount
 
   const stages: PipelineStage[] = [
-    { label: 'Inbox', count: inboxCount, color: 'text-zinc-400', bgColor: 'bg-zinc-500', dotColor: 'bg-zinc-400' },
+    { label: 'Inbox', count: inboxCount, color: 'text-muted-foreground', bgColor: 'bg-muted', dotColor: 'bg-muted' },
     { label: 'Assigned', count: assignedCount, color: 'text-blue-400', bgColor: 'bg-blue-500', dotColor: 'bg-blue-400' },
     { label: 'Running', count: runningTasks, color: 'text-amber-400', bgColor: 'bg-amber-500', dotColor: 'bg-amber-400' },
     { label: 'Review', count: reviewCount, color: 'text-purple-400', bgColor: 'bg-purple-500', dotColor: 'bg-purple-400' },
-    { label: 'Done', count: doneCount, color: 'text-green-400', bgColor: 'bg-green-500', dotColor: 'bg-green-400' },
+    { label: 'Done', count: doneCount, color: 'text-success', bgColor: 'bg-green-500', dotColor: 'bg-green-400' },
   ]
 
   const hasBottleneck = reviewCount > 3

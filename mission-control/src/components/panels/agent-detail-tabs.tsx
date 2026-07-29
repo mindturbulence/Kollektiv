@@ -77,7 +77,7 @@ interface SoulTemplate {
 }
 
 const statusColors: Record<string, string> = {
-  offline: 'bg-gray-500',
+  offline: 'bg-muted',
   idle: 'bg-green-500',
   busy: 'bg-yellow-500',
   error: 'bg-red-500',
@@ -173,7 +173,7 @@ export function OverviewTab({
                   agent.status === status
                     ? status === 'idle' ? 'bg-emerald-500/20 text-emerald-300 border-emerald-500/40'
                     : status === 'busy' ? 'bg-amber-500/20 text-amber-300 border-amber-500/40'
-                    : 'bg-slate-500/20 text-slate-300 border-slate-500/40'
+                    : 'bg-muted/20 text-foreground border-border/40'
                     : 'bg-transparent text-muted-foreground border-border hover:border-foreground/30 hover:text-foreground'
                 }`}
               >
@@ -200,7 +200,7 @@ export function OverviewTab({
 
           {heartbeatData && (
             <div className="text-xs text-muted-foreground bg-surface-1/30 rounded px-3 py-2">
-              <span className={heartbeatData.status === 'HEARTBEAT_OK' ? 'text-green-400' : 'text-yellow-400'}>
+              <span className={heartbeatData.status === 'HEARTBEAT_OK' ? 'text-success' : 'text-yellow-400'}>
                 {heartbeatData.status}
               </span>
               {heartbeatData.total_items ? ` · ${t('workItems', { count: heartbeatData.total_items })}` : ''}
@@ -296,7 +296,7 @@ export function OverviewTab({
                 <div className="text-[10px] text-muted-foreground uppercase tracking-wide">{t('statsActive')}</div>
               </div>
               <div className="text-center">
-                <div className="text-lg font-semibold text-green-400">{agent.taskStats.completed}</div>
+                <div className="text-lg font-semibold text-success">{agent.taskStats.completed}</div>
                 <div className="text-[10px] text-muted-foreground uppercase tracking-wide">{t('statsDone')}</div>
               </div>
             </div>
@@ -329,7 +329,7 @@ export function OverviewTab({
           <div className="flex items-center justify-between mb-3">
             <h4 className="text-sm font-medium text-foreground">{t('message')}</h4>
             {messageStatus && (
-              <span className={`text-xs ${messageStatus === 'Sent' ? 'text-green-400' : 'text-rose-400'}`}>
+              <span className={`text-xs ${messageStatus === 'Sent' ? 'text-success' : 'text-rose-400'}`}>
                 {messageStatus}
               </span>
             )}
@@ -565,10 +565,10 @@ export function MemoryTab({
       </div>
 
       {/* Info Banner */}
-      <div className="bg-blue-500/10 border border-blue-500/20 rounded-lg p-3 text-xs text-blue-300">
+      <div className="bg-blue-500/10 border border-blue-500/20 rounded-lg p-3 text-xs text-info">
         <strong className="text-blue-200">{t('memoryBannerTitle')}</strong>{' '}
         {t('memoryBannerDesc')}{' '}
-        <Link href="/memory" className="text-blue-400 underline hover:text-blue-300">{t('memoryBrowserLink')}</Link> {t('memoryBannerPage')}
+        <Link href="/memory" className="text-blue-400 underline hover:text-info">{t('memoryBrowserLink')}</Link> {t('memoryBannerPage')}
       </div>
 
       {/* Memory Content */}
@@ -707,8 +707,8 @@ export function TasksTab({ agent }: { agent: Agent }) {
                 <div className="flex items-center gap-2">
                   <span className={`px-2 py-1 text-xs rounded-md font-medium ${
                     task.status === 'in_progress' ? 'bg-yellow-500/20 text-yellow-400' :
-                    task.status === 'done' ? 'bg-green-500/20 text-green-400' :
-                    task.status === 'review' ? 'bg-blue-500/20 text-blue-400' :
+                    task.status === 'done' ? 'bg-success/20 text-success' :
+                    task.status === 'review' ? 'bg-info/20 text-blue-400' :
                     task.status === 'quality_review' ? 'bg-indigo-500/20 text-indigo-400' :
                     'bg-secondary text-muted-foreground'
                   }`}>
@@ -832,8 +832,8 @@ const TEMPLATES = [
 
 const MODEL_TIER_COLORS: Record<string, string> = {
   opus: 'bg-purple-500/20 text-purple-400 border-purple-500/30',
-  sonnet: 'bg-blue-500/20 text-blue-400 border-blue-500/30',
-  haiku: 'bg-green-500/20 text-green-400 border-green-500/30',
+  sonnet: 'bg-info/20 text-blue-400 border-blue-500/30',
+  haiku: 'bg-success/20 text-success border-success/30',
 }
 
 const MODEL_TIER_LABELS: Record<string, string> = {
@@ -1038,7 +1038,7 @@ export function CreateAgentModal({
                   <div key={s} className="flex items-center gap-1.5">
                     <div className={`w-6 h-6 rounded-full flex items-center justify-center text-xs font-medium ${
                       step === s ? 'bg-primary text-primary-foreground' :
-                      step > s ? 'bg-green-500/20 text-green-400' :
+                      step > s ? 'bg-success/20 text-success' :
                       'bg-surface-2 text-muted-foreground'
                     }`}>
                       {step > s ? '\u2713' : s}
@@ -1259,7 +1259,7 @@ export function CreateAgentModal({
                           <span className="inline-block w-4 h-4 border-2 border-primary border-t-transparent rounded-full animate-spin" />
                         )}
                         {ps.status === 'done' && (
-                          <span className="text-green-400 text-sm font-bold">✓</span>
+                          <span className="text-success text-sm font-bold">✓</span>
                         )}
                         {ps.status === 'error' && (
                           <span className="text-red-400 text-sm font-bold">✕</span>
@@ -1271,7 +1271,7 @@ export function CreateAgentModal({
                       <div className="flex-1 min-w-0">
                         <span className={`text-sm ${
                           ps.status === 'error' ? 'text-red-400' :
-                          ps.status === 'done' ? 'text-green-400' :
+                          ps.status === 'done' ? 'text-success' :
                           ps.status === 'active' ? 'text-foreground' :
                           'text-muted-foreground'
                         }`}>{ps.label}</span>
@@ -1282,7 +1282,7 @@ export function CreateAgentModal({
                     </div>
                   ))}
                   {progressSteps.every(s => s.status === 'done') && (
-                    <p className="text-sm text-green-400 mt-4">{t('agentCreatedSuccess')}</p>
+                    <p className="text-sm text-success mt-4">{t('agentCreatedSuccess')}</p>
                   )}
                 </div>
               ) : (
@@ -1890,7 +1890,7 @@ export function ConfigTab({
                       <div key={doc.name} className="bg-surface-1 rounded p-3">
                         <div className="flex items-center justify-between mb-1">
                           <span className="text-xs font-mono text-foreground">{doc.name}</span>
-                          <span className={`text-2xs ${doc.exists ? 'text-green-400' : 'text-muted-foreground'}`}>
+                          <span className={`text-2xs ${doc.exists ? 'text-success' : 'text-muted-foreground'}`}>
                             {doc.exists ? t('chars', { count: doc.content.length }) : t('missing')}
                           </span>
                         </div>
@@ -1960,12 +1960,12 @@ export function ConfigTab({
             {editing ? (
               <div className="space-y-3">
                 <div>
-                  <label className="block text-xs text-green-400 font-medium mb-1">{t('allowList')}</label>
+                  <label className="block text-xs text-success font-medium mb-1">{t('allowList')}</label>
                   <div className="flex flex-wrap gap-1 mb-2">
                     {toolAllow.map((tool: string, i: number) => (
-                      <span key={`${tool}-${i}`} className="px-2 py-0.5 text-xs bg-green-500/10 text-green-400 rounded border border-green-500/20 flex items-center gap-1">
+                      <span key={`${tool}-${i}`} className="px-2 py-0.5 text-xs bg-green-500/10 text-success rounded border border-green-500/20 flex items-center gap-1">
                         {tool}
-                        <Button onClick={() => removeTool('allow', i)} variant="ghost" size="icon-xs" className="text-green-400/60 hover:text-green-400 ml-1 h-auto w-auto p-0">&times;</Button>
+                        <Button onClick={() => removeTool('allow', i)} variant="ghost" size="icon-xs" className="text-success/60 hover:text-success ml-1 h-auto w-auto p-0">&times;</Button>
                       </span>
                     ))}
                   </div>
@@ -1981,7 +1981,7 @@ export function ConfigTab({
                       onClick={() => { addTool('allow', newAllowTool); setNewAllowTool('') }}
                       variant="outline"
                       size="sm"
-                      className="bg-green-500/20 text-green-400 border-green-500/30 hover:bg-green-500/30"
+                      className="bg-success/20 text-success border-success/30 hover:bg-green-500/30"
                     >
                       {t('add')}
                     </Button>
@@ -2020,10 +2020,10 @@ export function ConfigTab({
               <>
                 {toolAllow.length > 0 && (
                   <div className="mb-2">
-                    <span className="text-xs text-green-400 font-medium">{t('allowCount', { count: toolAllow.length })}:</span>
+                    <span className="text-xs text-success font-medium">{t('allowCount', { count: toolAllow.length })}:</span>
                     <div className="flex flex-wrap gap-1 mt-1">
                       {toolAllow.map((tool: string) => (
-                        <span key={tool} className="px-2 py-0.5 text-xs bg-green-500/10 text-green-400 rounded border border-green-500/20">{tool}</span>
+                        <span key={tool} className="px-2 py-0.5 text-xs bg-green-500/10 text-success rounded border border-green-500/20">{tool}</span>
                       ))}
                     </div>
                   </div>
@@ -2436,7 +2436,7 @@ export function ToolsTab({ agent }: { agent: Agent }) {
           </p>
         </div>
         <div className="flex items-center gap-2">
-          {success && <span className="text-xs text-green-400">{t('saved')}</span>}
+          {success && <span className="text-xs text-success">{t('saved')}</span>}
           <Button onClick={handleSave} size="sm" disabled={saving || !isDirty}>
             {saving ? t('saving') : t('save')}
           </Button>
@@ -2451,12 +2451,12 @@ export function ToolsTab({ agent }: { agent: Agent }) {
 
       {/* Allow list */}
       <div className="bg-surface-1/50 rounded-lg p-4">
-        <h5 className="text-sm font-medium text-green-400 mb-2">{t('allowListCount', { count: allowList.length })}</h5>
+        <h5 className="text-sm font-medium text-success mb-2">{t('allowListCount', { count: allowList.length })}</h5>
         <div className="flex flex-wrap gap-1 mb-3">
           {allowList.map((tool, i) => (
-            <span key={`${tool}-${i}`} className="px-2 py-0.5 text-xs bg-green-500/10 text-green-400 rounded border border-green-500/20 flex items-center gap-1">
+            <span key={`${tool}-${i}`} className="px-2 py-0.5 text-xs bg-green-500/10 text-success rounded border border-green-500/20 flex items-center gap-1">
               {tool}
-              <button onClick={() => removeFromList(allowList, setAllowList, i)} className="text-green-400/60 hover:text-green-400 ml-0.5">x</button>
+              <button onClick={() => removeFromList(allowList, setAllowList, i)} className="text-success/60 hover:text-success ml-0.5">x</button>
             </span>
           ))}
           {allowList.length === 0 && <span className="text-xs text-muted-foreground">{t('noExplicitAllowList')}</span>}
@@ -2644,7 +2644,7 @@ export function ChannelsTab({ agent }: { agent: Agent }) {
                 <div className="flex gap-3 text-xs text-muted-foreground">
                   <span>{total > 0 ? t('connectedOf', { connected, total }) : t('noAccounts')}</span>
                   <span>{configured > 0 ? t('configuredCount', { count: configured }) : t('notConfigured')}</span>
-                  <span className={enabled > 0 ? 'text-green-400' : ''}>{total > 0 ? t('enabledCount', { count: enabled }) : t('disabled')}</span>
+                  <span className={enabled > 0 ? 'text-success' : ''}>{total > 0 ? t('enabledCount', { count: enabled }) : t('disabled')}</span>
                 </div>
               </div>
             )
@@ -2765,7 +2765,7 @@ export function CronTab({ agent }: { agent: Agent }) {
                       {job.schedule || job.cron || t('noSchedule')}
                     </span>
                     <span className={`px-2 py-0.5 text-xs rounded ${
-                      job.enabled ? 'bg-green-500/20 text-green-400' : 'bg-amber-500/20 text-amber-400'
+                      job.enabled ? 'bg-success/20 text-success' : 'bg-amber-500/20 text-amber-400'
                     }`}>
                       {job.enabled ? t('enabled') : t('disabled')}
                     </span>
@@ -2888,7 +2888,7 @@ export function ModelsTab({ agent }: { agent: Agent }) {
           <p className="text-xs text-muted-foreground mt-0.5">{t('modelConfigurationDesc')}</p>
         </div>
         <div className="flex items-center gap-2">
-          {success && <span className="text-xs text-green-400">{t('saved')}</span>}
+          {success && <span className="text-xs text-success">{t('saved')}</span>}
           <Button onClick={handleSave} size="sm" disabled={saving || !isDirty}>
             {saving ? t('saving') : t('save')}
           </Button>

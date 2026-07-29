@@ -430,14 +430,14 @@ export function SettingsPanel() {
 
       {/* Workspace Info */}
       {currentUser?.role === 'admin' && (
-        <div className="bg-blue-500/10 border border-blue-500/20 rounded-lg p-3 text-xs text-blue-300">
+        <div className="bg-blue-500/10 border border-blue-500/20 rounded-lg p-3 text-xs text-info">
           <strong className="text-blue-200">{t('workspaceManagementLabel')}</strong>{' '}
           {t('workspaceManagementDesc1')}{' '}
           <Button
             onClick={() => navigateToPanel('super-admin')}
             variant="link"
             size="xs"
-            className="text-blue-400 hover:text-blue-300 p-0 h-auto"
+            className="text-blue-400 hover:text-info p-0 h-auto"
           >
             {t('superAdmin')}
           </Button>{' '}
@@ -573,7 +573,7 @@ export function SettingsPanel() {
                     <p className="text-xs font-medium">Hermes Agent</p>
                     <span className={`text-2xs px-1.5 py-0.5 rounded ${
                       hermesStatus.gatewayRunning
-                        ? 'bg-green-500/15 text-green-400'
+                        ? 'bg-green-500/15 text-success'
                         : 'bg-muted text-muted-foreground'
                     }`}>
                       {hermesStatus.gatewayRunning ? 'Gateway running' : 'Gateway offline'}
@@ -643,7 +643,7 @@ export function SettingsPanel() {
       {/* Feedback */}
       {feedback && (
         <div className={`rounded-lg p-3 text-xs font-medium ${
-          feedback.ok ? 'bg-green-500/10 text-green-400' : 'bg-destructive/10 text-destructive'
+          feedback.ok ? 'bg-green-500/10 text-success' : 'bg-destructive/10 text-destructive'
         }`}>
           {feedback.text}
         </div>
@@ -1162,7 +1162,7 @@ function AccountOAuthSection() {
               <div className="flex items-center gap-2">
                 <span className="text-sm font-medium text-foreground">Google</span>
                 {isGoogleConnected ? (
-                  <span className="text-2xs px-1.5 py-0.5 rounded bg-green-500/15 text-green-400">Connected</span>
+                  <span className="text-2xs px-1.5 py-0.5 rounded bg-green-500/15 text-success">Connected</span>
                 ) : (
                   <span className="text-2xs px-1.5 py-0.5 rounded bg-muted text-muted-foreground">Not connected</span>
                 )}
@@ -1190,7 +1190,7 @@ function AccountOAuthSection() {
 
         {feedback && (
           <div className={`mt-3 rounded-md p-2.5 text-xs font-medium ${
-            feedback.ok ? 'bg-green-500/10 text-green-400' : 'bg-destructive/10 text-destructive'
+            feedback.ok ? 'bg-green-500/10 text-success' : 'bg-destructive/10 text-destructive'
           }`}>
             {feedback.text}
           </div>

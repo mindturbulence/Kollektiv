@@ -5,7 +5,10 @@ export function buildMissionControlCsp(input: { nonce: string; googleEnabled: bo
     `default-src 'self'`,
     `base-uri 'self'`,
     `object-src 'none'`,
-    `frame-ancestors 'none'`,
+    // 'self' (not 'none') so Kollektiv's shell can embed this app in a
+    // same-origin iframe behind its reverse proxy. Cross-origin framing
+    // stays blocked.
+    `frame-ancestors 'self'`,
     `script-src 'self' 'nonce-${nonce}' 'strict-dynamic' blob:${googleEnabled ? ' https://accounts.google.com' : ''}`,
     `style-src 'self' 'unsafe-inline'`,
     `style-src-elem 'self' 'unsafe-inline'`,

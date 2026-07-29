@@ -98,7 +98,7 @@ export function MetricCard({ label, value, total, subtitle, icon, color }: {
 }) {
   const colorMap = {
     blue: 'bg-blue-500/10 text-blue-400 border-blue-500/20',
-    green: 'bg-green-500/10 text-green-400 border-green-500/20',
+    green: 'bg-green-500/10 text-success border-green-500/20',
     purple: 'bg-purple-500/10 text-purple-400 border-purple-500/20',
     red: 'bg-red-500/10 text-red-400 border-red-500/20',
   }
@@ -124,10 +124,10 @@ export function SignalPill({ label, value, tone }: {
   tone: 'success' | 'warning' | 'info'
 }) {
   const toneClass = tone === 'success'
-    ? 'bg-green-500/15 border-green-500/30 text-green-300'
+    ? 'bg-green-500/15 border-success/30 text-green-300'
     : tone === 'warning'
       ? 'bg-amber-500/15 border-amber-500/30 text-amber-300'
-      : 'bg-blue-500/15 border-blue-500/30 text-blue-300'
+      : 'bg-blue-500/15 border-blue-500/30 text-info'
 
   return (
     <div className={`rounded-lg border px-2.5 py-2 ${toneClass}`}>
@@ -143,7 +143,7 @@ export function HealthRow({ label, value, status, bar }: {
   status: 'good' | 'warn' | 'bad'
   bar?: number
 }) {
-  const statusColor = status === 'good' ? 'text-green-400' : status === 'warn' ? 'text-amber-400' : 'text-red-400'
+  const statusColor = status === 'good' ? 'text-success' : status === 'warn' ? 'text-amber-400' : 'text-red-400'
 
   return (
     <div className="space-y-1">
@@ -181,7 +181,7 @@ export function LogRow({ log }: { log: LogLike }) {
         <div className={`w-1.5 h-1.5 rounded-full mt-1.5 shrink-0 ${
           log.level === 'error' ? 'bg-red-500' :
           log.level === 'warn' ? 'bg-amber-500' :
-          log.level === 'debug' ? 'bg-gray-500' :
+          log.level === 'debug' ? 'bg-muted' :
           'bg-blue-500/50'
         }`} />
         <div className="flex-1 min-w-0">

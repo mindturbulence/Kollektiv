@@ -895,13 +895,13 @@ export function SkillsPanel() {
                         ? 'bg-rose-500/10 border-rose-500/30 text-rose-300'
                         : selectedContent.security.status === 'warning'
                           ? 'bg-amber-500/10 border-amber-500/30 text-amber-300'
-                          : 'bg-slate-500/10 border-slate-500/30 text-slate-300'
+                          : 'bg-muted/10 border-border/30 text-foreground'
                     }`}>
                       <div className="font-medium mb-1">{t('security')}: {selectedContent.security.status}</div>
                       {selectedContent.security.issues.map((issue, i) => (
                         <div key={i} className="flex items-start gap-1.5 mt-1">
                           <span className={`mt-0.5 text-2xs font-mono ${
-                            issue.severity === 'critical' ? 'text-rose-400' : issue.severity === 'warning' ? 'text-amber-400' : 'text-slate-400'
+                            issue.severity === 'critical' ? 'text-rose-400' : issue.severity === 'warning' ? 'text-amber-400' : 'text-muted-foreground'
                           }`}>[{issue.severity}]</span>
                           <span>{issue.description}{issue.line ? ` (line ${issue.line})` : ''}</span>
                         </div>

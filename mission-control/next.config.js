@@ -3,6 +3,11 @@ const withNextIntl = require('next-intl/plugin')('./src/i18n/request.ts')
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   output: 'standalone',
+  // Served behind Kollektiv's Express reverse proxy at /mission-control so both
+  // apps share one origin. Without basePath, Next.js emits root-absolute asset
+  // and API URLs that escape the proxy prefix and 404.
+  basePath: '/mission-control',
+  assetPrefix: '/mission-control',
   outputFileTracingRoot: __dirname,
   outputFileTracingIncludes: {
     // These files are read from process.cwd() at runtime and therefore cannot
@@ -53,7 +58,7 @@ const nextConfig = {
       {
         source: '/:path*',
         headers: [
-          { key: 'X-Frame-Options', value: 'DENY' },
+          { key: 'X-Frame-Options', value: 'SAMEORIGIN' },
           { key: 'X-Content-Type-Options', value: 'nosniff' },
           { key: 'Referrer-Policy', value: 'strict-origin-when-cross-origin' },
           { key: 'Permissions-Policy', value: 'camera=(), microphone=(), geolocation=()' },

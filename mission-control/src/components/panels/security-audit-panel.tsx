@@ -125,13 +125,13 @@ interface AgentEvalsData {
 }
 
 const SCAN_STATUS_ICON: Record<string, string> = { pass: '+', fail: 'x', warn: '!' }
-const SCAN_STATUS_COLOR: Record<string, string> = { pass: 'text-green-400', fail: 'text-red-400', warn: 'text-amber-400' }
+const SCAN_STATUS_COLOR: Record<string, string> = { pass: 'text-success', fail: 'text-red-400', warn: 'text-amber-400' }
 
 const SEVERITY_BADGE: Record<CheckSeverity, { label: string; className: string }> = {
   critical: { label: 'C', className: 'bg-red-500/20 text-red-400' },
   high: { label: 'H', className: 'bg-orange-500/20 text-orange-400' },
   medium: { label: 'M', className: 'bg-amber-500/20 text-amber-400' },
-  low: { label: 'L', className: 'bg-blue-500/20 text-blue-300' },
+  low: { label: 'L', className: 'bg-info/20 text-info' },
 }
 
 function ScanCategoryRow({ label, icon, category, failingCount }: {
@@ -149,7 +149,7 @@ function ScanCategoryRow({ label, icon, category, failingCount }: {
           {icon}
         </span>
         <span className="flex-1 text-sm font-medium">{label}</span>
-        <span className={`text-xs tabular-nums ${category.score >= 80 ? 'text-green-400' : category.score >= 50 ? 'text-amber-400' : 'text-red-400'}`}>
+        <span className={`text-xs tabular-nums ${category.score >= 80 ? 'text-success' : category.score >= 50 ? 'text-amber-400' : 'text-red-400'}`}>
           {category.score}%
         </span>
         {failingCount > 0 && (
@@ -311,7 +311,7 @@ export function SecurityAuditPanel() {
   useSmartPoll(fetchData, 30_000)
 
   const postureColor = (score: number) => {
-    if (score >= 80) return 'text-green-400'
+    if (score >= 80) return 'text-success'
     if (score >= 60) return 'text-yellow-400'
     if (score >= 40) return 'text-orange-400'
     return 'text-red-400'
@@ -326,7 +326,7 @@ export function SecurityAuditPanel() {
 
   const postureBgColor = (level: string) => {
     switch (level) {
-      case 'hardened': return 'bg-green-500/15 text-green-400'
+      case 'hardened': return 'bg-green-500/15 text-success'
       case 'secure': return 'bg-green-500/10 text-green-300'
       case 'needs-attention': return 'bg-yellow-500/15 text-yellow-400'
       case 'at-risk': return 'bg-red-500/15 text-red-400'
@@ -514,11 +514,11 @@ export function SecurityAuditPanel() {
             <h2 className="text-xl font-semibold mb-4">{t('secretExposureAlerts')}</h2>
             {data.secretAlerts.length === 0 ? (
               <div className="flex items-center gap-2 py-4 justify-center">
-                <svg className="w-5 h-5 text-green-400" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+                <svg className="w-5 h-5 text-success" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
                   <path d="M8 1a5 5 0 015 5v2a2 2 0 01-2 2H5a2 2 0 01-2-2V6a5 5 0 015-5z" />
                   <path d="M5.5 14h5M6.5 12v2M9.5 12v2" />
                 </svg>
-                <span className="text-sm font-medium text-green-400">{t('noSecretsDetected')}</span>
+                <span className="text-sm font-medium text-success">{t('noSecretsDetected')}</span>
               </div>
             ) : (
               <div className="overflow-x-auto max-h-48 overflow-y-auto">
@@ -541,7 +541,7 @@ export function SecurityAuditPanel() {
                         <td className="py-1.5 pr-3 font-mono text-foreground">{alert.file}:{alert.line}</td>
                         <td className="py-1.5 pr-3 font-mono text-muted-foreground max-w-48 truncate">{alert.preview}</td>
                         <td className="py-1.5 pr-3">
-                          <span className={`text-2xs ${alert.resolved ? 'text-green-400' : 'text-red-400'}`}>
+                          <span className={`text-2xs ${alert.resolved ? 'text-success' : 'text-red-400'}`}>
                             {alert.resolved ? t('statusResolved') : t('statusActive')}
                           </span>
                         </td>
@@ -609,11 +609,11 @@ export function SecurityAuditPanel() {
             <h2 className="text-xl font-semibold mb-4">{t('injectionAttempts')}</h2>
             {data.injectionAttempts.length === 0 ? (
               <div className="flex items-center gap-2 py-4 justify-center">
-                <svg className="w-5 h-5 text-green-400" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+                <svg className="w-5 h-5 text-success" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
                   <path d="M8 1l6 3v4c0 3.5-2.5 6.5-6 7.5C4.5 14.5 2 11.5 2 8V4l6-3z" />
                   <path d="M5.5 8l2 2 3.5-3.5" />
                 </svg>
-                <span className="text-sm font-medium text-green-400">{t('noInjectionAttempts')}</span>
+                <span className="text-sm font-medium text-success">{t('noInjectionAttempts')}</span>
               </div>
             ) : (
               <div className="overflow-x-auto max-h-48 overflow-y-auto">
@@ -636,7 +636,7 @@ export function SecurityAuditPanel() {
                         <td className="py-1.5 pr-3 text-foreground">{attempt.source}</td>
                         <td className="py-1.5 pr-3 font-mono text-muted-foreground max-w-48 truncate">{attempt.input}</td>
                         <td className="py-1.5 pr-3">
-                          <span className={`text-2xs font-medium ${attempt.blocked ? 'text-green-400' : 'text-red-400'}`}>
+                          <span className={`text-2xs font-medium ${attempt.blocked ? 'text-success' : 'text-red-400'}`}>
                             {attempt.blocked ? t('statusBlocked') : t('statusPassed')}
                           </span>
                         </td>

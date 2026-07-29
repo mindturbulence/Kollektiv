@@ -35,7 +35,7 @@ export function TerminalToolbar({
     <div className="flex items-center justify-between px-3 py-1.5 bg-card/80 border-b border-border/50 shrink-0">
       {/* Left: Session info */}
       <div className="flex items-center gap-2 min-w-0">
-        <span className={`w-2 h-2 rounded-full shrink-0 ${isActive ? 'bg-green-500 animate-pulse' : 'bg-zinc-500'}`} />
+        <span className={`w-2 h-2 rounded-full shrink-0 ${isActive ? 'bg-green-500 animate-pulse' : 'bg-muted'}`} />
         <span className="text-xs font-medium text-foreground truncate">
           {sessionName || kindLabel}
         </span>
@@ -82,7 +82,7 @@ export function TerminalToolbar({
                     onModeChange('interactive')
                     setConfirmingInteractive(false)
                   }}
-                  className="text-[10px] text-green-400 hover:text-green-300 font-medium"
+                  className="text-[10px] text-success hover:text-green-300 font-medium"
                 >
                   Yes
                 </button>
@@ -106,8 +106,8 @@ export function TerminalToolbar({
                 }}
                 className={`text-[10px] px-1.5 py-0.5 rounded font-mono transition-colors ${
                   mode === 'interactive'
-                    ? 'bg-green-500/15 text-green-400 border border-green-500/25 hover:bg-green-500/25'
-                    : 'bg-zinc-500/15 text-zinc-400 border border-zinc-500/25 hover:bg-zinc-500/25'
+                    ? 'bg-green-500/15 text-success border border-green-500/25 hover:bg-green-500/25'
+                    : 'bg-muted/15 text-muted-foreground border border-border/25 hover:bg-muted/25'
                 }`}
               >
                 {mode === 'interactive' ? 'RW' : 'RO'}

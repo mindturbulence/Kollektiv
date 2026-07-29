@@ -41,13 +41,15 @@ describe('scanOpenClaw — gateway_auth credential handling', () => {
     rmSync(join(tmpConfigPath, '..'), { recursive: true, force: true })
   })
 
+  // On Windows, runSecurityScan triggers DB migrations + scheduler init
+  // which can take >20s. Use a generous timeout.
   it('does not crash and passes when token is a SecretRef object (regression for #670)', () => {
     writeOpenClawConfig({
       gateway: { auth: { mode: 'token', token: { source: 'file', path: '/secrets/gateway-token' } } },
     })
     expect(() => runSecurityScan()).not.toThrow()
     expect(gatewayAuthStatus()).toBe('pass')
-  })
+  }, 30_000)
 
   it('passes when password is a SecretRef object', () => {
     writeOpenClawConfig({

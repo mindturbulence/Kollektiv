@@ -90,7 +90,7 @@ export function FleetStatusWidget({ data }: { data: DashboardData }) {
           total: codexLocalSessions.length,
           sessions: codexLocalSessions,
           cost: null,
-          color: 'text-green-400',
+          color: 'text-success',
           sparkColor: '#4ade80',
           onClick: () => navigateToPanel('sessions'),
         },

@@ -57,7 +57,7 @@ export function SystemHealthWidget({ data }: { data: DashboardData }) {
           <span className="inline-flex items-center gap-1">
             Mem <span className={`font-mono-tight ${memPct > 90 ? 'text-red-400' : memPct > 70 ? 'text-amber-400' : 'text-foreground/70'}`}>{memPct}%</span>
             {memTrend === 'up' && <span className="text-amber-400">▲</span>}
-            {memTrend === 'down' && <span className="text-green-400">▼</span>}
+            {memTrend === 'down' && <span className="text-success">▼</span>}
           </span>
         )}
 

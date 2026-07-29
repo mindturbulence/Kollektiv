@@ -213,7 +213,7 @@ function ErrorCallout({ message }: { message: string | null | undefined }) {
 function ProbeResult({ probe }: { probe: ChannelStatus['probe'] }) {
   if (!probe) return null
   return (
-    <div className={`text-xs mt-2 px-2 py-1.5 rounded ${probe.ok ? 'text-green-400 bg-green-500/10' : 'text-red-400 bg-red-500/10'}`}>
+    <div className={`text-xs mt-2 px-2 py-1.5 rounded ${probe.ok ? 'text-success bg-green-500/10' : 'text-red-400 bg-red-500/10'}`}>
       Probe {probe.ok ? 'OK' : 'failed'}
       {probe.elapsedMs != null && ` - ${probe.elapsedMs}ms`}
       {probe.error && ` - ${probe.error}`}

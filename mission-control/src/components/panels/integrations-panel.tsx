@@ -304,7 +304,7 @@ export function IntegrationsPanel() {
         <div className="flex items-center gap-2">
           {opAvailable && (
             <>
-              <span className="text-2xs px-2 py-1 rounded bg-green-500/10 text-green-400 flex items-center gap-1">
+              <span className="text-2xs px-2 py-1 rounded bg-green-500/10 text-success flex items-center gap-1">
                 <span className="w-1.5 h-1.5 rounded-full bg-green-500" />
                 1P CLI
               </span>
@@ -352,7 +352,7 @@ export function IntegrationsPanel() {
       {/* Feedback */}
       {feedback && (
         <div className={`rounded-lg p-3 text-xs font-medium ${
-          feedback.ok ? 'bg-green-500/10 text-green-400' : 'bg-destructive/10 text-destructive'
+          feedback.ok ? 'bg-green-500/10 text-success' : 'bg-destructive/10 text-destructive'
         }`}>
           {feedback.text}
         </div>
@@ -377,7 +377,7 @@ export function IntegrationsPanel() {
             >
               {cat.label}
               {catConnected > 0 && (
-                <span className="ml-1.5 inline-flex items-center justify-center min-w-[16px] h-4 text-2xs rounded-full bg-green-500/15 text-green-400 px-1">
+                <span className="ml-1.5 inline-flex items-center justify-center min-w-[16px] h-4 text-2xs rounded-full bg-green-500/15 text-success px-1">
                   {catConnected}
                 </span>
               )}

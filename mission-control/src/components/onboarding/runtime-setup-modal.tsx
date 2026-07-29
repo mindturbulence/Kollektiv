@@ -162,7 +162,7 @@ function OpenClawSetup({ onClose, onComplete }: { onClose: () => void; onComplet
           <div key={s} className="flex items-center gap-2">
             <div className={`w-6 h-6 rounded-full flex items-center justify-center text-[10px] font-bold ${
               step === s ? 'bg-primary text-primary-foreground' :
-              (['onboard', 'verify', 'done'].indexOf(step) > i) ? 'bg-green-500/20 text-green-400' :
+              (['onboard', 'verify', 'done'].indexOf(step) > i) ? 'bg-success/20 text-success' :
               'bg-secondary text-muted-foreground'
             }`}>
               {(['onboard', 'verify', 'done'].indexOf(step) > i) ? (
@@ -189,7 +189,7 @@ function OpenClawSetup({ onClose, onComplete }: { onClose: () => void; onComplet
           {error && <p className="text-xs text-red-400">{error}</p>}
 
           {healthStatus?.healthy && (
-            <div className="p-3 rounded-lg border border-green-500/30 bg-green-500/5 text-xs text-green-400">
+            <div className="p-3 rounded-lg border border-success/30 bg-green-500/5 text-xs text-success">
               OpenClaw is healthy and properly configured.
             </div>
           )}
@@ -226,9 +226,9 @@ function OpenClawSetup({ onClose, onComplete }: { onClose: () => void; onComplet
 
       {step === 'done' && (
         <div className="space-y-4">
-          <div className="p-4 rounded-lg border border-green-500/30 bg-green-500/5 text-center space-y-2">
+          <div className="p-4 rounded-lg border border-success/30 bg-green-500/5 text-center space-y-2">
             <div className="text-2xl">+</div>
-            <p className="text-sm font-medium text-green-400">OpenClaw is ready</p>
+            <p className="text-sm font-medium text-success">OpenClaw is ready</p>
             <p className="text-xs text-muted-foreground">Gateway is configured and healthy. Agents can now connect.</p>
           </div>
 
@@ -377,7 +377,7 @@ function HermesSetup({ onClose, onComplete }: { onClose: () => void; onComplete:
               <div key={s} className="flex items-center gap-1.5">
                 <div className={`w-6 h-6 rounded-full flex items-center justify-center text-[10px] font-bold transition-colors ${
                   step === s ? 'bg-primary text-primary-foreground' :
-                  currentIdx > i ? 'bg-green-500/20 text-green-400' :
+                  currentIdx > i ? 'bg-success/20 text-success' :
                   'bg-secondary text-muted-foreground/50'
                 }`}>
                   {currentIdx > i ? (
@@ -417,7 +417,7 @@ function HermesSetup({ onClose, onComplete }: { onClose: () => void; onComplete:
           )}
 
           {hermesStatus?.hookInstalled && (
-            <div className="p-3 rounded-lg border border-green-500/30 bg-green-500/5 text-xs text-green-400">
+            <div className="p-3 rounded-lg border border-success/30 bg-green-500/5 text-xs text-success">
               Hook is already installed.
             </div>
           )}
@@ -690,7 +690,7 @@ function HermesSetup({ onClose, onComplete }: { onClose: () => void; onComplete:
           })()}
 
           {providerSaved && authMethod !== 'device_code' && (
-            <div className="p-2.5 rounded-lg border border-green-500/20 bg-green-500/5 text-xs text-green-400">
+            <div className="p-2.5 rounded-lg border border-green-500/20 bg-green-500/5 text-xs text-success">
               Provider key saved successfully.
             </div>
           )}
@@ -846,9 +846,9 @@ function HermesSetup({ onClose, onComplete }: { onClose: () => void; onComplete:
 
       {step === 'ready' && (
         <div className="space-y-4">
-          <div className="p-5 rounded-lg border border-green-500/30 bg-green-500/5 text-center space-y-3">
+          <div className="p-5 rounded-lg border border-success/30 bg-green-500/5 text-center space-y-3">
             <div className="text-3xl">+</div>
-            <p className="text-sm font-semibold text-green-400">Hermes is ready</p>
+            <p className="text-sm font-semibold text-success">Hermes is ready</p>
             <p className="text-xs text-muted-foreground">
               Hook installed{providerSaved ? ', provider configured' : ''}{soulContent.trim() ? ', identity set' : ''}.
               {hermesStatus?.cronJobCount > 0 && ` ${hermesStatus.cronJobCount} cron jobs detected.`}
@@ -1070,7 +1070,7 @@ function ClaudeSetup({ onClose, onComplete }: { onClose: () => void; onComplete:
             <div key={s} className="flex items-center gap-2">
               <div className={`w-6 h-6 rounded-full flex items-center justify-center text-[10px] font-bold ${
                 step === s ? 'bg-primary text-primary-foreground' :
-                currentIdx > i ? 'bg-green-500/20 text-green-400' :
+                currentIdx > i ? 'bg-success/20 text-success' :
                 'bg-secondary text-muted-foreground'
               }`}>
                 {currentIdx > i ? (
@@ -1122,9 +1122,9 @@ function ClaudeSetup({ onClose, onComplete }: { onClose: () => void; onComplete:
 
       {step === 'done' && (
         <div className="space-y-4">
-          <div className="p-4 rounded-lg border border-green-500/30 bg-green-500/5 text-center space-y-2">
+          <div className="p-4 rounded-lg border border-success/30 bg-green-500/5 text-center space-y-2">
             <div className="text-2xl">+</div>
-            <p className="text-sm font-medium text-green-400">Claude Code is ready</p>
+            <p className="text-sm font-medium text-success">Claude Code is ready</p>
             <p className="text-xs text-muted-foreground">Authenticated and available for agent tasks.</p>
             {version && <p className="text-2xs text-muted-foreground/60">v{version}</p>}
           </div>
@@ -1194,7 +1194,7 @@ function CodexSetup({ onClose, onComplete }: { onClose: () => void; onComplete: 
             <div key={s} className="flex items-center gap-2">
               <div className={`w-6 h-6 rounded-full flex items-center justify-center text-[10px] font-bold ${
                 step === s ? 'bg-primary text-primary-foreground' :
-                currentIdx > i ? 'bg-green-500/20 text-green-400' :
+                currentIdx > i ? 'bg-success/20 text-success' :
                 'bg-secondary text-muted-foreground'
               }`}>
                 {currentIdx > i ? (
@@ -1246,9 +1246,9 @@ function CodexSetup({ onClose, onComplete }: { onClose: () => void; onComplete: 
 
       {step === 'done' && (
         <div className="space-y-4">
-          <div className="p-4 rounded-lg border border-green-500/30 bg-green-500/5 text-center space-y-2">
+          <div className="p-4 rounded-lg border border-success/30 bg-green-500/5 text-center space-y-2">
             <div className="text-2xl">+</div>
-            <p className="text-sm font-medium text-green-400">Codex CLI is ready</p>
+            <p className="text-sm font-medium text-success">Codex CLI is ready</p>
             <p className="text-xs text-muted-foreground">Authenticated and available for agent tasks.</p>
             {version && <p className="text-2xs text-muted-foreground/60">v{version}</p>}
           </div>
@@ -1271,7 +1271,7 @@ function StatusCard({ label, ok, value, subtitle }: { label: string; ok?: boolea
         {value !== undefined ? (
           <span className="font-mono text-foreground">{value}</span>
         ) : (
-          <span className={ok ? 'text-green-400' : 'text-muted-foreground/40'}>
+          <span className={ok ? 'text-success' : 'text-muted-foreground/40'}>
             {ok ? '+' : '-'}
           </span>
         )}

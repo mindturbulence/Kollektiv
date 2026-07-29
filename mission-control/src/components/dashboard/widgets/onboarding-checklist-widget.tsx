@@ -147,7 +147,7 @@ export function OnboardingChecklistWidget() {
             }`}
           >
             <div className="flex items-center gap-2.5">
-              <span className={`font-mono text-xs ${item.checked ? 'text-green-400' : 'text-muted-foreground/40'}`}>
+              <span className={`font-mono text-xs ${item.checked ? 'text-success' : 'text-muted-foreground/40'}`}>
                 [{item.checked ? 'x' : ' '}]
               </span>
               <span className={item.checked ? 'line-through' : ''}>{item.label}</span>

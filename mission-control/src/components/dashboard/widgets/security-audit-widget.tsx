@@ -15,7 +15,7 @@ interface SecurityAuditResponse {
 }
 
 const postureBadge: Record<string, { label: string; className: string }> = {
-  hardened: { label: 'Hardened', className: 'bg-green-500/15 text-green-400' },
+  hardened: { label: 'Hardened', className: 'bg-green-500/15 text-success' },
   secure: { label: 'Secure', className: 'bg-green-500/10 text-green-300' },
   'needs-attention': { label: 'Needs Attention', className: 'bg-yellow-500/15 text-yellow-400' },
   'at-risk': { label: 'At Risk', className: 'bg-red-500/15 text-red-400' },

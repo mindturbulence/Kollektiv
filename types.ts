@@ -79,6 +79,7 @@ export type ActiveTab =
   | 'batch_runner'
   | 'comfy_studio'
   | 'a1111_studio'
+  | 'mission_control'
   | 'settings';
 
 export type ActiveSettingsTab = 'app' | 'appearance' | 'integrations' | 'prompt' | 'gallery';

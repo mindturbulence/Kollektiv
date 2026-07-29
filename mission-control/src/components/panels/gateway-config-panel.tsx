@@ -536,7 +536,7 @@ export function GatewayConfigPanel() {
         {/* Feedback */}
         {feedback && (
           <div className={`mx-4 mt-2 rounded-lg p-2.5 text-xs font-medium ${
-            feedback.ok ? 'bg-green-500/10 text-green-400' : 'bg-destructive/10 text-destructive'
+            feedback.ok ? 'bg-green-500/10 text-success' : 'bg-destructive/10 text-destructive'
           }`}>
             {feedback.text}
           </div>
@@ -554,7 +554,7 @@ export function GatewayConfigPanel() {
                   <span className="font-mono text-muted-foreground">{d.path}</span>
                   <span className="text-red-400 truncate max-w-24">{truncateValue(d.from)}</span>
                   <span className="text-muted-foreground">-&gt;</span>
-                  <span className="text-green-400 truncate max-w-24">{truncateValue(d.to)}</span>
+                  <span className="text-success truncate max-w-24">{truncateValue(d.to)}</span>
                 </div>
               ))}
             </div>

@@ -51,7 +51,7 @@ const activityIcons: Record<string, string> = {
 }
 
 const activityColors: Record<string, string> = {
-  task_created: 'text-green-400',
+  task_created: 'text-success',
   task_updated: 'text-blue-400',
   task_deleted: 'text-red-400',
   comment_added: 'text-purple-400',
@@ -145,7 +145,7 @@ function ActivityRow({ activity }: { activity: Activity }) {
                       <span className="text-muted-foreground">{t('entityAgent')}</span>
                       <span className="text-foreground ml-1">{activity.entity.name}</span>
                       {activity.entity.status && (
-                        <span className="ml-2 px-1.5 py-0.5 bg-green-500/10 text-green-400 rounded text-[10px]">
+                        <span className="ml-2 px-1.5 py-0.5 bg-green-500/10 text-success rounded text-[10px]">
                           {activity.entity.status}
                         </span>
                       )}
@@ -476,7 +476,7 @@ export function ActivityFeedPanel() {
                       <span
                         className={`font-medium ${
                           selectedAgentData.status === 'busy'
-                            ? 'text-green-400'
+                            ? 'text-success'
                             : selectedAgentData.status === 'idle'
                               ? 'text-yellow-400'
                               : selectedAgentData.status === 'error'

@@ -139,6 +139,14 @@ describe('workspace-scoped memory search', () => {
   })
 })
 
+/**
+ * Read a source file and normalize CRLF → LF so multi-line patterns work
+ * regardless of git's line-ending configuration.
+ */
+function readSource(path: string): string {
+  return readFileSync(join(process.cwd(), path), 'utf8').replace(/\r\n/g, '\n')
+}
+
 describe('direct session API coverage', () => {
   it('guards every deployment-global session route', () => {
     const files = [
@@ -153,16 +161,16 @@ describe('direct session API coverage', () => {
     ]
 
     for (const file of files) {
-      const source = readFileSync(join(process.cwd(), file), 'utf8')
+      const source = readSource(file)
       expect(source, file).toContain('denyUnscopedResourceForStrictWorkspace')
     }
   })
 
   it('guards indirect global session consumers', () => {
-    const statusRoute = readFileSync(join(process.cwd(), 'src/app/api/status/route.ts'), 'utf8')
-    const chatRoute = readFileSync(join(process.cwd(), 'src/app/api/chat/messages/route.ts'), 'utf8')
-    const ptyRoute = readFileSync(join(process.cwd(), 'src/app/api/pty/attach/route.ts'), 'utf8')
-    const ptyWebSocket = readFileSync(join(process.cwd(), 'src/lib/pty-websocket.ts'), 'utf8')
+    const statusRoute = readSource('src/app/api/status/route.ts')
+    const chatRoute = readSource('src/app/api/chat/messages/route.ts')
+    const ptyRoute = readSource('src/app/api/pty/attach/route.ts')
+    const ptyWebSocket = readSource('src/lib/pty-websocket.ts')
 
     expect(statusRoute).toContain("const includeGlobalRuntime = isolation === 'shared'")
     expect(statusRoute).toContain('if (includeGlobalRuntime) {')
@@ -174,13 +182,13 @@ describe('direct session API coverage', () => {
   })
 
   it('guards remaining runtime filesystem consumers', () => {
-    const filesRoute = readFileSync(join(process.cwd(), 'src/app/api/agents/[id]/files/route.ts'), 'utf8')
-    const memoryRoute = readFileSync(join(process.cwd(), 'src/app/api/memory/route.ts'), 'utf8')
-    const agentMemoryRoute = readFileSync(join(process.cwd(), 'src/app/api/agents/[id]/memory/route.ts'), 'utf8')
-    const soulRoute = readFileSync(join(process.cwd(), 'src/app/api/agents/[id]/soul/route.ts'), 'utf8')
-    const tokensRoute = readFileSync(join(process.cwd(), 'src/app/api/tokens/route.ts'), 'utf8')
-    const hermesRoute = readFileSync(join(process.cwd(), 'src/app/api/hermes/route.ts'), 'utf8')
-    const claudeTasksRoute = readFileSync(join(process.cwd(), 'src/app/api/claude-tasks/route.ts'), 'utf8')
+    const filesRoute = readSource('src/app/api/agents/[id]/files/route.ts')
+    const memoryRoute = readSource('src/app/api/memory/route.ts')
+    const agentMemoryRoute = readSource('src/app/api/agents/[id]/memory/route.ts')
+    const soulRoute = readSource('src/app/api/agents/[id]/soul/route.ts')
+    const tokensRoute = readSource('src/app/api/tokens/route.ts')
+    const hermesRoute = readSource('src/app/api/hermes/route.ts')
+    const claudeTasksRoute = readSource('src/app/api/claude-tasks/route.ts')
 
     expect(filesRoute).toContain("'agent_filesystem'")
     expect(filesRoute).toContain('atomicReplaceFileSync(safePath, content)')
@@ -197,8 +205,8 @@ describe('direct session API coverage', () => {
   })
 
   it('guards deployment-global runtime configuration operations', () => {
-    const cronRoute = readFileSync(join(process.cwd(), 'src/app/api/cron/route.ts'), 'utf8')
-    const integrationsRoute = readFileSync(join(process.cwd(), 'src/app/api/integrations/route.ts'), 'utf8')
+    const cronRoute = readSource('src/app/api/cron/route.ts')
+    const integrationsRoute = readSource('src/app/api/integrations/route.ts')
 
     expect(cronRoute.match(/'runtime_configuration'/g)).toHaveLength(2)
     expect(integrationsRoute.match(/'runtime_configuration'/g)).toHaveLength(4)
@@ -214,7 +222,7 @@ describe('direct session API coverage', () => {
     ])
 
     for (const [file, operations] of expectedOperations) {
-      const source = readFileSync(join(process.cwd(), file), 'utf8')
+      const source = readSource(file)
       expect(source.match(/'host_administration'/g), file).toHaveLength(operations)
     }
   })
@@ -232,11 +240,11 @@ describe('direct session API coverage', () => {
     ])
 
     for (const [file, operations] of runtimeFiles) {
-      const source = readFileSync(join(process.cwd(), file), 'utf8')
+      const source = readSource(file)
       expect(source.match(/'runtime_configuration'/g), file).toHaveLength(operations)
     }
     for (const [file, operations] of hostFiles) {
-      const source = readFileSync(join(process.cwd(), file), 'utf8')
+      const source = readSource(file)
       expect(source.match(/'host_administration'/g), file).toHaveLength(operations)
     }
   })
@@ -250,14 +258,14 @@ describe('direct session API coverage', () => {
     ])
 
     for (const [file, operations] of expectedOperations) {
-      const source = readFileSync(join(process.cwd(), file), 'utf8')
+      const source = readSource(file)
       expect(source.match(/["']runtime_configuration["']/g), file).toHaveLength(operations)
     }
   })
 
   it('fails closed for deployment-global background dispatch and scheduling', () => {
-    const dispatch = readFileSync(join(process.cwd(), 'src/lib/task-dispatch.ts'), 'utf8')
-    const scheduler = readFileSync(join(process.cwd(), 'src/app/api/scheduler/route.ts'), 'utf8')
+    const dispatch = readSource('src/lib/task-dispatch.ts')
+    const scheduler = readSource('src/app/api/scheduler/route.ts')
 
     expect(dispatch.match(/JOIN workspaces w ON w\.id = t\.workspace_id/g)).toHaveLength(3)
     expect(dispatch.match(/AND w\.isolation = 'shared'/g)).toHaveLength(3)
@@ -265,9 +273,9 @@ describe('direct session API coverage', () => {
   })
 
   it('guards deployment-global spawn, pipeline execution, and agent sync', () => {
-    const spawn = readFileSync(join(process.cwd(), 'src/app/api/spawn/route.ts'), 'utf8')
-    const pipelines = readFileSync(join(process.cwd(), 'src/app/api/pipelines/run/route.ts'), 'utf8')
-    const agentSync = readFileSync(join(process.cwd(), 'src/app/api/agents/sync/route.ts'), 'utf8')
+    const spawn = readSource('src/app/api/spawn/route.ts')
+    const pipelines = readSource('src/app/api/pipelines/run/route.ts')
+    const agentSync = readSource('src/app/api/agents/sync/route.ts')
 
     expect(spawn).toContain("'runtime_tasks'")
     expect(spawn).toContain("'host_administration'")
@@ -277,9 +285,9 @@ describe('direct session API coverage', () => {
   })
 
   it('binds global agent synchronization to shared workspace ownership', () => {
-    const gatewaySync = readFileSync(join(process.cwd(), 'src/lib/agent-sync.ts'), 'utf8')
-    const localSync = readFileSync(join(process.cwd(), 'src/lib/local-agent-sync.ts'), 'utf8')
-    const scheduler = readFileSync(join(process.cwd(), 'src/lib/scheduler.ts'), 'utf8')
+    const gatewaySync = readSource('src/lib/agent-sync.ts')
+    const localSync = readSource('src/lib/local-agent-sync.ts')
+    const scheduler = readSource('src/lib/scheduler.ts')
 
     expect(gatewaySync).toContain('resolveSharedRuntimeWorkspaceId(requestedWorkspaceId)')
     expect(gatewaySync.match(/workspace_id/g)?.length).toBeGreaterThanOrEqual(4)
@@ -290,8 +298,8 @@ describe('direct session API coverage', () => {
   })
 
   it('keeps scheduler routing, review, and heartbeat mutations workspace-scoped', () => {
-    const dispatch = readFileSync(join(process.cwd(), 'src/lib/task-dispatch.ts'), 'utf8')
-    const scheduler = readFileSync(join(process.cwd(), 'src/lib/scheduler.ts'), 'utf8')
+    const dispatch = readSource('src/lib/task-dispatch.ts')
+    const scheduler = readSource('src/lib/scheduler.ts')
 
     expect(dispatch).toContain("WHERE workspace_id = ?\n        AND hidden = 0")
     expect(dispatch).toContain("WHERE t.status = 'review'\n      AND w.isolation = 'shared'")

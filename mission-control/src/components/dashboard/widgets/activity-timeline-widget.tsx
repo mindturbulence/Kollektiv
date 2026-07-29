@@ -24,14 +24,14 @@ function getSourceLabel(source: string): string {
 function getStatusBadge(log: LogLike): { label: string; className: string } {
   if (log.level === 'error') return { label: 'Error', className: 'text-red-400 bg-red-500/10 border-red-500/20' }
   if (log.message.toLowerCase().includes('completed') || log.message.toLowerCase().includes('done'))
-    return { label: 'Done', className: 'text-green-400 bg-green-500/10 border-green-500/20' }
+    return { label: 'Done', className: 'text-success bg-green-500/10 border-green-500/20' }
   if (log.message.toLowerCase().includes('started') || log.message.toLowerCase().includes('running') || log.message.toLowerCase().includes('active'))
     return { label: 'Running', className: 'text-blue-400 bg-blue-500/10 border-blue-500/20' }
   if (log.message.toLowerCase().includes('idle') || log.message.toLowerCase().includes('waiting'))
-    return { label: 'Idle', className: 'text-zinc-400 bg-zinc-500/10 border-zinc-500/20' }
+    return { label: 'Idle', className: 'text-muted-foreground bg-muted/10 border-border/20' }
   if (log.level === 'warn')
     return { label: 'Warning', className: 'text-amber-400 bg-amber-500/10 border-amber-500/20' }
-  return { label: 'Info', className: 'text-zinc-400 bg-zinc-500/10 border-zinc-500/20' }
+  return { label: 'Info', className: 'text-muted-foreground bg-muted/10 border-border/20' }
 }
 
 export function ActivityTimelineWidget({ data }: { data: DashboardData }) {

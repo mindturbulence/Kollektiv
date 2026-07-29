@@ -765,7 +765,7 @@ function OrgRow({ label, initial, active, colorClass, onClick, isActiveOrg, proj
             >
               <div
                 className={`w-4 h-4 rounded flex items-center justify-center text-[8px] font-bold shrink-0 ${
-                  !project.color ? (project.status === 'active' ? 'bg-blue-500/20 text-blue-400' : 'bg-muted-foreground/10 text-muted-foreground') : ''
+                  !project.color ? (project.status === 'active' ? 'bg-info/20 text-blue-400' : 'bg-muted-foreground/10 text-muted-foreground') : ''
                 }`}
                 style={project.color ? { backgroundColor: `${project.color}33`, color: project.color } : undefined}
               >{project.ticket_prefix?.slice(0, 2) || project.name?.[0]?.toUpperCase() || 'P'}</div>
@@ -1048,7 +1048,7 @@ function ContextSwitcher({ currentUser, isAdmin, isLocal, isConnected, tenants, 
                       label={tenant.display_name}
                       initial={tenant.display_name?.[0]?.toUpperCase() || 'T'}
                       active={activeTenant?.id === tenant.id}
-                      colorClass={tenant.status === 'active' ? 'bg-green-500/20 text-green-400' : tenant.status === 'error' ? 'bg-red-500/20 text-red-400' : 'bg-yellow-500/20 text-yellow-400'}
+                      colorClass={tenant.status === 'active' ? 'bg-success/20 text-success' : tenant.status === 'error' ? 'bg-red-500/20 text-red-400' : 'bg-yellow-500/20 text-yellow-400'}
                       onClick={() => { onSwitchTenant(tenant); setOpen(false) }}
                       isActiveOrg={activeTenant?.id === tenant.id}
                       projects={projects}

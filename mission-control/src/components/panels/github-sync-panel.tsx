@@ -317,7 +317,7 @@ export function GitHubSyncPanel() {
         <div className="flex items-center gap-2">
           <span className={`text-2xs px-2 py-1 rounded flex items-center gap-1.5 ${
             tokenStatus?.connected
-              ? 'bg-green-500/10 text-green-400'
+              ? 'bg-green-500/10 text-success'
               : 'bg-destructive/10 text-destructive'
           }`}>
             <span className={`w-1.5 h-1.5 rounded-full ${
@@ -348,7 +348,7 @@ export function GitHubSyncPanel() {
       {/* Feedback */}
       {feedback && (
         <div className={`rounded-lg p-3 text-xs font-medium ${
-          feedback.ok ? 'bg-green-500/10 text-green-400' : 'bg-destructive/10 text-destructive'
+          feedback.ok ? 'bg-green-500/10 text-success' : 'bg-destructive/10 text-destructive'
         }`}>
           {feedback.text}
         </div>
@@ -576,7 +576,7 @@ export function GitHubSyncPanel() {
                     <td className="px-4 py-2">
                       <span className={`px-1.5 py-0.5 rounded text-2xs ${
                         issue.state === 'open'
-                          ? 'bg-green-500/10 text-green-400'
+                          ? 'bg-green-500/10 text-success'
                           : 'bg-purple-500/10 text-purple-400'
                       }`}>
                         {issue.state}
@@ -617,7 +617,7 @@ export function GitHubSyncPanel() {
                     <td className="px-4 py-2">
                       <span className={`px-1.5 py-0.5 rounded text-2xs ${
                         sync.status === 'success'
-                          ? 'bg-green-500/10 text-green-400'
+                          ? 'bg-green-500/10 text-success'
                           : sync.status === 'partial'
                           ? 'bg-yellow-500/10 text-yellow-400'
                           : 'bg-destructive/10 text-destructive'

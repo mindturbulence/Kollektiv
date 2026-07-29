@@ -240,7 +240,7 @@ export function PipelineTab() {
     <div className="space-y-3">
       {/* Result message */}
       {result && (
-        <div className={`text-xs px-2 py-1 rounded ${result.ok ? 'bg-green-500/10 text-green-400' : 'bg-red-500/10 text-red-400'}`}>
+        <div className={`text-xs px-2 py-1 rounded ${result.ok ? 'bg-green-500/10 text-success' : 'bg-red-500/10 text-red-400'}`}>
           {result.text}
         </div>
       )}
@@ -420,7 +420,7 @@ export function PipelineTab() {
                         <RunStepsViz steps={run.steps_snapshot} />
                         {run.status === 'running' && (
                           <div className="flex gap-1 mt-1.5">
-                            <Button onClick={() => advanceRun(run.id, true)} variant="success" size="xs" className="bg-green-500/20 text-green-400 hover:bg-green-500/30 h-6 text-2xs">
+                            <Button onClick={() => advanceRun(run.id, true)} variant="success" size="xs" className="bg-success/20 text-success hover:bg-green-500/30 h-6 text-2xs">
                               Mark Step Done
                             </Button>
                             <Button onClick={() => advanceRun(run.id, false)} variant="destructive" size="xs" className="bg-red-500/20 text-red-400 hover:bg-red-500/30 h-6 text-2xs">
@@ -480,7 +480,7 @@ function RunStepsViz({ steps }: { steps: RunStepState[] }) {
               s.status === 'completed' ? 'bg-green-500' :
               s.status === 'running' ? 'bg-amber-500 animate-pulse' :
               s.status === 'failed' ? 'bg-red-500' :
-              s.status === 'skipped' ? 'bg-gray-500' : 'bg-gray-600'
+              s.status === 'skipped' ? 'bg-muted' : 'bg-surface-2'
             }`} />
             <span className={`text-2xs whitespace-nowrap ${
               s.status === 'running' ? 'text-foreground font-medium' : 'text-muted-foreground'
@@ -502,10 +502,10 @@ function RunStepsViz({ steps }: { steps: RunStepState[] }) {
 function RunStatusBadge({ status }: { status: string }) {
   const styles: Record<string, string> = {
     running: 'bg-amber-500/20 text-amber-400',
-    completed: 'bg-green-500/20 text-green-400',
+    completed: 'bg-success/20 text-success',
     failed: 'bg-red-500/20 text-red-400',
-    cancelled: 'bg-gray-500/20 text-gray-400',
-    pending: 'bg-blue-500/20 text-blue-400',
+    cancelled: 'bg-muted/20 text-muted-foreground',
+    pending: 'bg-info/20 text-blue-400',
   }
   return (
     <span className={`text-2xs px-1.5 py-0.5 rounded-full ${styles[status] || 'bg-secondary text-muted-foreground'}`}>
@@ -535,7 +535,7 @@ function ActiveRunCard({ run, onAdvance, onCancel }: {
       </div>
       <RunStepsViz steps={run.steps_snapshot} />
       <div className="flex gap-1 mt-2">
-        <Button onClick={() => onAdvance(run.id, true)} variant="success" size="xs" className="bg-green-500/20 text-green-400 hover:bg-green-500/30 h-6 text-2xs">
+        <Button onClick={() => onAdvance(run.id, true)} variant="success" size="xs" className="bg-success/20 text-success hover:bg-green-500/30 h-6 text-2xs">
           Step Done
         </Button>
         <Button onClick={() => onAdvance(run.id, false)} variant="destructive" size="xs" className="bg-red-500/20 text-red-400 hover:bg-red-500/30 h-6 text-2xs">

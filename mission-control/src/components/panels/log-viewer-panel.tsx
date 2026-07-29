@@ -185,7 +185,7 @@ export function LogViewerPanel() {
       case 'error': return 'bg-red-500/10 border-red-500/20'
       case 'warn': return 'bg-yellow-500/10 border-yellow-500/20'
       case 'info': return 'bg-blue-500/10 border-blue-500/20'
-      case 'debug': return 'bg-gray-500/10 border-gray-500/20'
+      case 'debug': return 'bg-muted/10 border-border/20'
       default: return 'bg-secondary border-border'
     }
   }
@@ -303,7 +303,7 @@ export function LogViewerPanel() {
             </Button>
             <Button
               onClick={handleScrollToBottom}
-              className="bg-blue-500/20 text-blue-400 border border-blue-500/30 hover:bg-blue-500/30"
+              className="bg-info/20 text-blue-400 border border-blue-500/30 hover:bg-blue-500/30"
             >
               {t('bottom')}
             </Button>

@@ -194,7 +194,7 @@ function PageLoader({ steps }: { steps?: InitStep[] }) {
                   <svg className="w-3 h-3 text-green-500" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
                     <path d="M3 8.5l3.5 3.5 6.5-8" />
                   </svg>
-                  <span className="font-mono text-2xs tracking-wide text-green-400/70">
+                  <span className="font-mono text-2xs tracking-wide text-success/70">
                     Ready
                   </span>
                 </div>

@@ -642,7 +642,7 @@ export function SuperAdminPanel() {
       {feedback && (
         <div className={`px-3 py-2 rounded-md text-sm border ${
           feedback.ok
-            ? 'bg-green-500/10 text-green-400 border-green-500/20'
+            ? 'bg-green-500/10 text-success border-green-500/20'
             : 'bg-red-500/10 text-red-400 border-red-500/20'
         }`}>
           {feedback.text}
@@ -882,7 +882,7 @@ export function SuperAdminPanel() {
                         </td>
                         <td className="px-3 py-2 text-xs">
                           <span className={`px-2 py-0.5 rounded border ${
-                            tenant.status === 'active' ? 'border-green-500/30 text-green-400' :
+                            tenant.status === 'active' ? 'border-success/30 text-success' :
                             tenant.status === 'error' ? 'border-red-500/30 text-red-400' :
                             tenant.status === 'decommissioning' ? 'border-amber-500/30 text-amber-400' :
                             'border-border text-muted-foreground'

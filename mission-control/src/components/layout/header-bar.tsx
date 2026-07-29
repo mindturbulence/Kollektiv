@@ -284,9 +284,9 @@ export function HeaderBar() {
   }
   const typeColors: Record<string, string> = {
     panel: 'bg-primary/20 text-primary',
-    task: 'bg-blue-500/20 text-blue-400',
+    task: 'bg-info/20 text-blue-400',
     agent: 'bg-purple-500/20 text-purple-400',
-    activity: 'bg-green-500/20 text-green-400',
+    activity: 'bg-success/20 text-success',
     audit: 'bg-amber-500/20 text-amber-400',
     message: 'bg-cyan-500/20 text-cyan-400',
     notification: 'bg-red-500/20 text-red-400',
@@ -488,7 +488,7 @@ function ModeBadge({
   if (isConnected) {
     dotClass = 'bg-green-500'
     borderClass = 'border-green-500/25 bg-green-500/10'
-    textClass = 'text-green-400'
+    textClass = 'text-success'
     statusLabel = connection.latency != null ? `${connection.latency}ms` : th('connected')
   } else if (isReconnecting) {
     dotClass = 'bg-amber-500 animate-pulse'
@@ -527,7 +527,7 @@ function ModeBadge({
           <div className="space-y-1.5 text-muted-foreground">
             <div className="flex justify-between">
               <span>{th('status')}</span>
-              <span className={isConnected ? 'text-green-400' : isReconnecting ? 'text-amber-400' : 'text-red-400'}>
+              <span className={isConnected ? 'text-success' : isReconnecting ? 'text-amber-400' : 'text-red-400'}>
                 {isConnected ? th('connected') : isReconnecting ? th('reconnecting') : th('disconnected')}
               </span>
             </div>
@@ -543,13 +543,13 @@ function ModeBadge({
             )}
             <div className="flex justify-between">
               <span>{th('webSocket')}</span>
-              <span className={isConnected ? 'text-green-400' : 'text-red-400'}>
+              <span className={isConnected ? 'text-success' : 'text-red-400'}>
                 {isConnected ? th('live') : th('down')}
               </span>
             </div>
             <div className="flex justify-between">
               <span>{th('sse')}</span>
-              <span className={connection.sseConnected ? 'text-green-400' : 'text-muted-foreground/50'}>
+              <span className={connection.sseConnected ? 'text-success' : 'text-muted-foreground/50'}>
                 {connection.sseConnected ? th('live') : th('off')}
               </span>
             </div>
@@ -572,7 +572,7 @@ function ModeBadge({
 }
 
 function Stat({ label, value, status }: { label: string; value: string; status?: 'success' | 'error' | 'warning' }) {
-  const statusColor = status === 'success' ? 'text-green-400' : status === 'error' ? 'text-red-400' : status === 'warning' ? 'text-amber-400' : 'text-foreground'
+  const statusColor = status === 'success' ? 'text-success' : status === 'error' ? 'text-red-400' : status === 'warning' ? 'text-amber-400' : 'text-foreground'
 
   return (
     <div className="flex items-center gap-1.5 text-xs">

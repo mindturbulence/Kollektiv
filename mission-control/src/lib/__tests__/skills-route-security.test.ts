@@ -63,7 +63,11 @@ describe('Skills route security boundaries', () => {
 
     expect(response.status).toBe(200)
     expect(await readFile(join(root, 'safe-skill', 'SKILL.md'), 'utf8')).toContain('Review work')
-    expect((await stat(join(root, 'safe-skill', 'SKILL.md'))).mode & 0o777).toBe(0o600)
+    // POSIX mode bits are not fully supported on Windows — skip the exact
+    // permission assertion there, but still validate everything else.
+    if (process.platform !== 'win32') {
+      expect((await stat(join(root, 'safe-skill', 'SKILL.md'))).mode & 0o777).toBe(0o600)
+    }
     expect(auditMock).toHaveBeenCalledWith(expect.objectContaining({
       action: 'skill.upsert',
       actor: 'operator',

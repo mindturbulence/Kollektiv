@@ -164,7 +164,7 @@ export function StandupPanel() {
   // Get priority color
   const getPriorityColor = (priority: string) => {
     const colors: Record<string, string> = {
-      low: 'text-green-400',
+      low: 'text-success',
       medium: 'text-yellow-400',
       high: 'text-orange-400',
       urgent: 'text-red-400'
@@ -336,7 +336,7 @@ export function StandupPanel() {
               <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                 <div className="bg-card rounded-lg p-4 border border-border text-center">
                   <div className="text-2xl font-bold text-foreground">{standupReport.summary.totalCompleted}</div>
-                  <div className="text-sm text-green-400">{t('statCompleted')}</div>
+                  <div className="text-sm text-success">{t('statCompleted')}</div>
                 </div>
                 <div className="bg-card rounded-lg p-4 border border-border text-center">
                   <div className="text-2xl font-bold text-foreground">{standupReport.summary.totalInProgress}</div>
@@ -360,7 +360,7 @@ export function StandupPanel() {
                     {standupReport.teamAccomplishments.map(task => (
                       <div key={task.id} className="flex justify-between items-center p-2 bg-green-900/20 rounded border-l-4 border-green-500">
                         <span className="text-foreground">{task.title}</span>
-                        <span className="text-green-400 text-sm">{task.agent}</span>
+                        <span className="text-success text-sm">{task.agent}</span>
                       </div>
                     ))}
                   </div>
@@ -428,7 +428,7 @@ export function StandupPanel() {
                     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
                       {/* Completed Today */}
                       <div>
-                        <h6 className="text-green-400 font-medium mb-2">✅ {t('sectionCompleted', { count: report.completedToday.length })}</h6>
+                        <h6 className="text-success font-medium mb-2">✅ {t('sectionCompleted', { count: report.completedToday.length })}</h6>
                         <div className="space-y-1">
                           {report.completedToday.map(task => (
                             <div key={task.id} className="text-sm text-foreground/80 truncate" title={task.title}>

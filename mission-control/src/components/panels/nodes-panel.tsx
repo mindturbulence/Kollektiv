@@ -72,10 +72,10 @@ function relativeTime(ts: number): string {
 
 function statusColor(status: PresenceEntry['status']): string {
   switch (status) {
-    case 'online': return 'bg-green-500/20 text-green-400 border-green-500/30'
+    case 'online': return 'bg-success/20 text-success border-success/30'
     case 'idle': return 'bg-yellow-500/20 text-yellow-400 border-yellow-500/30'
-    case 'offline': return 'bg-zinc-500/20 text-zinc-400 border-zinc-500/30'
-    default: return 'bg-zinc-500/20 text-zinc-400 border-zinc-500/30'
+    case 'offline': return 'bg-muted/20 text-muted-foreground border-border/30'
+    default: return 'bg-muted/20 text-muted-foreground border-border/30'
   }
 }
 
@@ -170,7 +170,7 @@ export function NodesPanel() {
         <span
           className={`inline-flex items-center gap-1.5 px-2 py-0.5 rounded text-xs font-medium border ${
             connected
-              ? 'bg-green-500/10 text-green-400 border-green-500/30'
+              ? 'bg-green-500/10 text-success border-success/30'
               : 'bg-red-500/10 text-red-400 border-red-500/30'
           }`}
         >
@@ -365,7 +365,7 @@ function PendingDevicesSection({
                   )}
                   {device.remoteIp && <span>{device.remoteIp}</span>}
                   {device.isRepair && (
-                    <span className="px-1.5 py-0.5 rounded bg-blue-500/20 text-blue-400 border border-blue-500/30">
+                    <span className="px-1.5 py-0.5 rounded bg-info/20 text-blue-400 border border-blue-500/30">
                       repair
                     </span>
                   )}
@@ -377,7 +377,7 @@ function PendingDevicesSection({
               <Button
                 size="sm"
                 variant="ghost"
-                className="text-green-400 hover:text-green-300 hover:bg-green-500/10"
+                className="text-success hover:text-green-300 hover:bg-green-500/10"
                 disabled={actionLoading !== null}
                 onClick={() => handleAction('approve', device.requestId)}
               >
@@ -503,11 +503,11 @@ function PairedDevicesSection({
                   </td>
                   <td className="py-2 pr-4">
                     {device.trusted ? (
-                      <span className="inline-flex px-2 py-0.5 rounded text-xs font-medium border bg-green-500/20 text-green-400 border-green-500/30">
+                      <span className="inline-flex px-2 py-0.5 rounded text-xs font-medium border bg-success/20 text-success border-success/30">
                         {t('trusted')}
                       </span>
                     ) : (
-                      <span className="inline-flex px-2 py-0.5 rounded text-xs font-medium border bg-zinc-500/20 text-zinc-400 border-zinc-500/30">
+                      <span className="inline-flex px-2 py-0.5 rounded text-xs font-medium border bg-muted/20 text-muted-foreground border-border/30">
                         {t('untrusted')}
                       </span>
                     )}

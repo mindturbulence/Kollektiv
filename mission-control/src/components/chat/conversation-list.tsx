@@ -113,7 +113,7 @@ const STATUS_COLORS: Record<string, string> = {
   offline: 'bg-muted-foreground/30',
 }
 const TAG_COLORS: Record<string, string> = {
-  slate: 'bg-slate-500',
+  slate: 'bg-muted',
   blue: 'bg-blue-500',
   green: 'bg-green-500',
   amber: 'bg-amber-500',
@@ -395,7 +395,7 @@ export function ConversationList({ onNewConversation }: ConversationListProps) {
             className={`h-1.5 w-1.5 rounded-full shrink-0 ${online ? 'bg-green-500' : 'bg-muted-foreground/40'}`}
           />
           <span className="text-xs text-foreground truncate">{agent.name}</span>
-          {online && <span className="text-[10px] text-green-400/60 ml-auto">online</span>}
+          {online && <span className="text-[10px] text-success/60 ml-auto">online</span>}
         </div>
       </button>
     )
@@ -577,10 +577,10 @@ export function ConversationList({ onNewConversation }: ConversationListProps) {
             {activeRows.length > 0 && (
               <div>
                 <div className="px-3 pt-2.5 pb-1 flex items-center justify-between">
-                  <div className="flex items-center gap-1.5 text-[10px] uppercase tracking-wider text-green-400/70">
+                  <div className="flex items-center gap-1.5 text-[10px] uppercase tracking-wider text-success/70">
                     <span className="h-1.5 w-1.5 rounded-full bg-green-500 animate-pulse" />
                     Active
-                    <span className="text-green-400/40 font-mono">{activeRows.length}</span>
+                    <span className="text-success/40 font-mono">{activeRows.length}</span>
                   </div>
                 </div>
                 {activeRows.map(renderConversationItem)}

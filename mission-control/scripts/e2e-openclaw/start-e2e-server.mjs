@@ -68,13 +68,17 @@ function findStandaloneServer(root) {
 }
 
 function runBlocking(command, args, options = {}) {
+  // On Windows, child_process.spawn cannot resolve `.cmd` files (pnpm, npm)
+  // without passing `shell: true`. Detect this case and enable the shell.
+  const opts = {
+    cwd: repoRoot,
+    env: baseEnv,
+    stdio: 'inherit',
+    ...options,
+  }
+  if (process.platform === 'win32' && opts.shell === undefined) opts.shell = true
   return new Promise((resolve, reject) => {
-    const child = spawn(command, args, {
-      cwd: repoRoot,
-      env: baseEnv,
-      stdio: 'inherit',
-      ...options,
-    })
+    const child = spawn(command, args, opts)
     child.on('error', reject)
     child.on('exit', (code, signal) => {
       if (code === 0) return resolve(undefined)

@@ -34,7 +34,7 @@ function ProgressIndicator({ steps }: { steps: ProgressStep[] }) {
         <div key={i} className="flex items-center gap-3">
           <div className="w-5 h-5 flex items-center justify-center shrink-0">
             {step.status === 'done' && (
-              <svg className="w-5 h-5 text-green-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <svg className="w-5 h-5 text-success" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                 <path d="M20 6L9 17l-5-5" />
               </svg>
             )}
@@ -53,7 +53,7 @@ function ProgressIndicator({ steps }: { steps: ProgressStep[] }) {
           </div>
           <span className={`text-sm ${
             step.status === 'active' ? 'text-foreground font-medium' :
-            step.status === 'done' ? 'text-green-400' :
+            step.status === 'done' ? 'text-success' :
             step.status === 'error' ? 'text-destructive' :
             'text-muted-foreground'
           }`}>

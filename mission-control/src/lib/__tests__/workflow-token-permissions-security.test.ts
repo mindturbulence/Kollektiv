@@ -12,7 +12,8 @@ const workflows = [
 ]
 
 function readWorkflow(name: string): string {
-  return readFileSync(join(process.cwd(), '.github/workflows', name), 'utf8')
+  // Normalize CRLF → LF so regex patterns work on Windows too.
+  return readFileSync(join(process.cwd(), '.github/workflows', name), 'utf8').replace(/\r\n/g, '\n')
 }
 
 function topLevelPermissions(source: string): string {

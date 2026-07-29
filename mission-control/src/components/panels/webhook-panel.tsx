@@ -295,12 +295,12 @@ export function WebhookPanel() {
       {/* Test result */}
       {testResult && (
         <div className={`rounded-lg border p-3 space-y-1 ${
-          testResult.success ? 'border-green-500/30 bg-green-500/5' : 'border-red-500/30 bg-red-500/5'
+          testResult.success ? 'border-success/30 bg-green-500/5' : 'border-red-500/30 bg-red-500/5'
         }`}>
           <div className="flex items-center justify-between">
             <p className="text-xs font-semibold">
               {testResult.success ? (
-                <span className="text-green-400">{t('testSuccessful')}</span>
+                <span className="text-success">{t('testSuccessful')}</span>
               ) : (
                 <span className="text-red-400">{t('testFailed')}</span>
               )}
@@ -394,7 +394,7 @@ export function WebhookPanel() {
                     {wh.last_status !== null && (
                       <span className={`text-2xs font-mono px-1.5 py-0.5 rounded ${
                         wh.last_status >= 200 && wh.last_status < 300
-                          ? 'bg-green-500/10 text-green-400'
+                          ? 'bg-green-500/10 text-success'
                           : 'bg-red-500/10 text-red-400'
                       }`}>
                         {wh.last_status}
@@ -432,7 +432,7 @@ export function WebhookPanel() {
                     className={`text-2xs ${
                       wh.enabled
                         ? 'text-amber-400 hover:bg-amber-500/10'
-                        : 'text-green-400 hover:bg-green-500/10'
+                        : 'text-success hover:bg-green-500/10'
                     }`}
                   >
                     {wh.enabled ? t('disable') : t('enable')}
@@ -468,7 +468,7 @@ export function WebhookPanel() {
                           </span>
                           <span className={`font-mono w-8 shrink-0 ${
                             d.status_code && d.status_code >= 200 && d.status_code < 300
-                              ? 'text-green-400'
+                              ? 'text-success'
                               : 'text-red-400'
                           }`}>
                             {d.status_code ?? 'ERR'}

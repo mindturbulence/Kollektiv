@@ -73,7 +73,7 @@ const SEVERITY_BADGE: Record<CheckSeverity, { label: string; className: string }
   critical: { label: 'C', className: 'bg-red-500/20 text-red-400' },
   high: { label: 'H', className: 'bg-orange-500/20 text-orange-400' },
   medium: { label: 'M', className: 'bg-amber-500/20 text-amber-400' },
-  low: { label: 'L', className: 'bg-blue-500/20 text-blue-300' },
+  low: { label: 'L', className: 'bg-info/20 text-info' },
 }
 
 const STATUS_ICON: Record<string, string> = {
@@ -83,13 +83,13 @@ const STATUS_ICON: Record<string, string> = {
 }
 
 const STATUS_COLOR: Record<string, string> = {
-  pass: 'text-green-400',
+  pass: 'text-success',
   fail: 'text-red-400',
   warn: 'text-amber-400',
 }
 
 const OVERALL_COLOR: Record<string, string> = {
-  hardened: 'text-green-400',
+  hardened: 'text-success',
   secure: 'text-green-300',
   'needs-attention': 'text-amber-400',
   'at-risk': 'text-red-400',
@@ -343,7 +343,7 @@ export function SecurityScanCard({ compact = false, autoScan = false }: { compac
                   {meta?.icon || key[0].toUpperCase()}
                 </span>
                 <span className="flex-1 text-sm font-medium">{meta?.label || key}</span>
-                <span className={`text-xs tabular-nums ${cat.score >= 80 ? 'text-green-400' : cat.score >= 50 ? 'text-amber-400' : 'text-red-400'}`}>
+                <span className={`text-xs tabular-nums ${cat.score >= 80 ? 'text-success' : cat.score >= 50 ? 'text-amber-400' : 'text-red-400'}`}>
                   {cat.score}%
                 </span>
                 {failing.length > 0 && (

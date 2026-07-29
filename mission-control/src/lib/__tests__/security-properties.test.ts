@@ -1,10 +1,18 @@
 import { describe, expect, it } from 'vitest'
 import fc from 'fast-check'
+import path from 'node:path'
+import os from 'node:os'
 import { canonicalizeMemoryRelativePath } from '@/lib/memory-path'
 import { resolveWithin } from '@/lib/paths'
 import { setNestedConfigValue } from '@/lib/config-path'
 
-const SAFE_BASE = '/srv/mission-control/memory'
+/** Use a properly absolute temp dir so path.resolve works cross-platform. */
+const SAFE_BASE = path.resolve(os.tmpdir(), 'mc-memory-test')
+
+/** Check that `resolved` stays within `SAFE_BASE` (cross-platform separator). */
+function startsWithinSafeBase(resolved: string): boolean {
+  return resolved.startsWith(SAFE_BASE + path.sep)
+}
 const safeSegment = fc
   .stringMatching(/^[A-Za-z0-9_-]{1,20}$/)
   .filter((value) => !['__proto__', 'prototype', 'constructor'].includes(value))
@@ -26,7 +34,7 @@ describe('property-based security boundaries', () => {
         expect(canonical.split('/')).not.toContain('..')
 
         const resolved = resolveWithin(SAFE_BASE, canonical)
-        expect(resolved.startsWith(`${SAFE_BASE}/`)).toBe(true)
+        expect(startsWithinSafeBase(resolved)).toBe(true)
       }),
       { numRuns: 1000 },
     )
@@ -39,7 +47,7 @@ describe('property-based security boundaries', () => {
         (segments) => {
           const input = segments.join('/')
           expect(canonicalizeMemoryRelativePath(input)).toBe(input)
-          expect(resolveWithin(SAFE_BASE, input).startsWith(`${SAFE_BASE}/`)).toBe(true)
+          expect(startsWithinSafeBase(resolveWithin(SAFE_BASE, input))).toBe(true)
         },
       ),
       { numRuns: 500 },

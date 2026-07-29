@@ -20,7 +20,7 @@ interface SessionMessageProps {
 }
 
 const ROLE_CONFIG = {
-  user: { indicator: '$', indicatorClass: 'text-green-400', borderClass: 'border-l-green-500/40' },
+  user: { indicator: '$', indicatorClass: 'text-success', borderClass: 'border-l-green-500/40' },
   assistant: { indicator: '\u25C6', indicatorClass: 'text-primary', borderClass: 'border-l-primary/40' },
   system: { indicator: '', indicatorClass: '', borderClass: 'border-l-amber-500/20' },
 } as const
@@ -109,7 +109,7 @@ function ToolUsePart({ name, input }: { name: string; input: string }) {
 function ToolResultPart({ content, isError }: { content: string; isError?: boolean }) {
   const [open, setOpen] = useState(false)
   const icon = isError ? '\u2717' : '\u2713'
-  const colorClass = isError ? 'text-red-400/70' : 'text-green-400/50'
+  const colorClass = isError ? 'text-red-400/70' : 'text-success/50'
   return (
     <details open={open} onToggle={(e) => setOpen((e.target as HTMLDetailsElement).open)}>
       <summary className={`cursor-pointer select-none font-mono-tight text-[11px] ${colorClass} hover:brightness-125`}>

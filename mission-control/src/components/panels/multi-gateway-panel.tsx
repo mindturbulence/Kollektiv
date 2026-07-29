@@ -327,7 +327,7 @@ export function MultiGatewayPanel() {
                         <span className="text-sm font-semibold text-foreground">{dg.user}</span>
                         <span className={`text-2xs px-1.5 py-0.5 rounded font-medium ${
                           dg.active
-                            ? 'bg-green-500/20 text-green-400 border border-green-500/30'
+                            ? 'bg-success/20 text-success border border-success/30'
                             : 'bg-red-500/20 text-red-400 border border-red-500/30'
                         }`}>
                           {dg.active ? t('running') : t('stopped')}
@@ -407,12 +407,12 @@ export function MultiGatewayPanel() {
                     <div className="flex items-center gap-2">
                       <span className={`w-2 h-2 rounded-full ${conn.status === 'connected' ? 'bg-green-500' : 'bg-red-500'}`} />
                       <span className="text-sm font-semibold text-foreground">{conn.agent_name}</span>
-                      <span className="text-2xs px-1.5 py-0.5 rounded bg-blue-500/20 text-blue-400 border border-blue-500/30 font-medium">
+                      <span className="text-2xs px-1.5 py-0.5 rounded bg-info/20 text-blue-400 border border-blue-500/30 font-medium">
                         {conn.tool_name}{conn.tool_version ? ` v${conn.tool_version}` : ''}
                       </span>
                       <span className={`text-2xs px-1.5 py-0.5 rounded font-medium ${
                         conn.status === 'connected'
-                          ? 'bg-green-500/20 text-green-400 border border-green-500/30'
+                          ? 'bg-success/20 text-success border border-success/30'
                           : 'bg-red-500/20 text-red-400 border border-red-500/30'
                       }`}>
                         {conn.status.toUpperCase()}
@@ -477,7 +477,7 @@ function GatewayCard({ gateway, health, historyEntries = [], isProbing, isCurren
 
   return (
     <div className={`bg-card border rounded-lg p-4 transition-smooth ${
-      isCurrentlyConnected ? 'border-green-500/30 bg-green-500/5' : 'border-border'
+      isCurrentlyConnected ? 'border-success/30 bg-green-500/5' : 'border-border'
     }`}>
       <div className="flex items-start justify-between gap-3">
         <div className="flex-1 min-w-0">
@@ -490,7 +490,7 @@ function GatewayCard({ gateway, health, historyEntries = [], isProbing, isCurren
               </span>
             ) : null}
             {isCurrentlyConnected && (
-              <span className="text-2xs px-1.5 py-0.5 rounded bg-green-500/20 text-green-400 border border-green-500/30 font-medium">
+              <span className="text-2xs px-1.5 py-0.5 rounded bg-success/20 text-success border border-success/30 font-medium">
                 {t('connectedBadge')}
               </span>
             )}
@@ -592,7 +592,7 @@ function GatewayCard({ gateway, health, historyEntries = [], isProbing, isCurren
             <Button
               onClick={onConnect}
               size="xs"
-              className="text-2xs bg-blue-500/20 text-blue-400 hover:bg-blue-500/30"
+              className="text-2xs bg-info/20 text-blue-400 hover:bg-blue-500/30"
               title={t('connectToGateway')}
             >
               {t('connect')}

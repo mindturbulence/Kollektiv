@@ -93,14 +93,14 @@ interface MentionOption {
 }
 
 const STATUS_COLUMN_KEYS = [
-  { key: 'backlog', titleKey: 'colBacklog', color: 'bg-slate-500/20 text-slate-400' },
+  { key: 'backlog', titleKey: 'colBacklog', color: 'bg-muted/20 text-muted-foreground' },
   { key: 'inbox', titleKey: 'colInbox', color: 'bg-secondary text-foreground' },
-  { key: 'assigned', titleKey: 'colAssigned', color: 'bg-blue-500/20 text-blue-400' },
+  { key: 'assigned', titleKey: 'colAssigned', color: 'bg-info/20 text-blue-400' },
   { key: 'awaiting_owner', titleKey: 'colAwaitingOwner', color: 'bg-orange-500/20 text-orange-400' },
   { key: 'in_progress', titleKey: 'colInProgress', color: 'bg-yellow-500/20 text-yellow-400' },
   { key: 'review', titleKey: 'colReview', color: 'bg-purple-500/20 text-purple-400' },
   { key: 'quality_review', titleKey: 'colQualityReview', color: 'bg-indigo-500/20 text-indigo-400' },
-  { key: 'done', titleKey: 'colDone', color: 'bg-green-500/20 text-green-400' },
+  { key: 'done', titleKey: 'colDone', color: 'bg-success/20 text-success' },
   { key: 'failed', titleKey: 'colFailed', color: 'bg-red-500/20 text-red-400' },
 ]
 
@@ -724,13 +724,13 @@ export function TaskBoardPanel() {
       return 'bg-orange-500/20 text-orange-400 border-orange-500/30'
     }
     if (lowerTag.includes('feature') || lowerTag.includes('enhancement')) {
-      return 'bg-green-500/20 text-green-400 border-green-500/30'
+      return 'bg-success/20 text-success border-success/30'
     }
     if (lowerTag.includes('research') || lowerTag.includes('analysis')) {
       return 'bg-purple-500/20 text-purple-400 border-purple-500/30'
     }
     if (lowerTag.includes('deploy') || lowerTag.includes('release')) {
-      return 'bg-blue-500/20 text-blue-400 border-blue-500/30'
+      return 'bg-info/20 text-blue-400 border-blue-500/30'
     }
     return 'bg-muted-foreground/10 text-muted-foreground border-muted-foreground/20'
   }
@@ -905,8 +905,8 @@ export function TaskBoardPanel() {
                       <span className="font-medium text-foreground truncate">{request.label}</span>
                       <span className={`px-1.5 py-0.5 text-xs rounded-full ${
                         request.status === 'pending' ? 'bg-yellow-500/20 text-yellow-400' :
-                        request.status === 'running' ? 'bg-blue-500/20 text-blue-400' :
-                        request.status === 'completed' ? 'bg-green-500/20 text-green-400' :
+                        request.status === 'running' ? 'bg-info/20 text-blue-400' :
+                        request.status === 'completed' ? 'bg-success/20 text-success' :
                         'bg-red-500/20 text-red-400'
                       }`}>
                         {request.status}
@@ -1017,7 +1017,7 @@ export function TaskBoardPanel() {
                               href={`https://github.com/${task.github_repo}/issues/${task.github_issue_number}`}
                               target="_blank"
                               rel="noopener noreferrer"
-                              className="text-[10px] px-1.5 py-0.5 rounded bg-[#24292e]/30 text-gray-300 hover:text-white font-mono flex items-center gap-1 transition-colors"
+                              className="text-[10px] px-1.5 py-0.5 rounded bg-card/40 text-muted-foreground hover:text-foreground font-mono flex items-center gap-1 transition-colors"
                               onClick={(e) => e.stopPropagation()}
                               title={`GitHub issue #${task.github_issue_number}`}
                             >
@@ -1033,7 +1033,7 @@ export function TaskBoardPanel() {
                               className={`text-[10px] px-1.5 py-0.5 rounded font-mono flex items-center gap-1 transition-colors ${
                                 task.github_pr_state === 'merged' ? 'bg-purple-500/20 text-purple-400' :
                                 task.github_pr_state === 'closed' ? 'bg-red-500/20 text-red-400' :
-                                'bg-green-500/20 text-green-400'
+                                'bg-success/20 text-success'
                               }`}
                               onClick={(e) => e.stopPropagation()}
                               title={`PR #${task.github_pr_number} (${task.github_pr_state || 'open'})`}
@@ -1091,7 +1091,7 @@ export function TaskBoardPanel() {
                         task.priority === 'critical' ? 'bg-red-500/20 text-red-400' :
                         task.priority === 'high' ? 'bg-orange-500/20 text-orange-400' :
                         task.priority === 'medium' ? 'bg-yellow-500/20 text-yellow-400' :
-                        'bg-green-500/20 text-green-400'
+                        'bg-success/20 text-success'
                       }`}>
                         {t(`priority_${task.priority}` as any)}
                       </span>
@@ -1433,12 +1433,12 @@ function TaskDetailModal({
   const dialogRef = useFocusTrap(onClose)
 
   const statusColors: Record<string, string> = {
-    inbox: 'bg-zinc-500/15 text-zinc-400 border-zinc-500/25',
+    inbox: 'bg-muted/15 text-muted-foreground border-border/25',
     assigned: 'bg-blue-500/15 text-blue-400 border-blue-500/25',
     in_progress: 'bg-amber-500/15 text-amber-400 border-amber-500/25',
     review: 'bg-purple-500/15 text-purple-400 border-purple-500/25',
     quality_review: 'bg-purple-500/15 text-purple-400 border-purple-500/25',
-    done: 'bg-green-500/15 text-green-400 border-green-500/25',
+    done: 'bg-green-500/15 text-success border-green-500/25',
     failed: 'bg-red-500/15 text-red-400 border-red-500/25',
     awaiting_owner: 'bg-orange-500/15 text-orange-400 border-orange-500/25',
   }
@@ -1448,7 +1448,7 @@ function TaskDetailModal({
     urgent: 'bg-red-500/15 text-red-400 border-red-500/25',
     high: 'bg-orange-500/15 text-orange-400 border-orange-500/25',
     medium: 'bg-yellow-500/15 text-yellow-400 border-yellow-500/25',
-    low: 'bg-green-500/15 text-green-400 border-green-500/25',
+    low: 'bg-green-500/15 text-success border-green-500/25',
   }
 
   return (
@@ -1535,7 +1535,7 @@ function TaskDetailModal({
                   if (res.ok) onClose()
                 } catch { /* ignore */ }
               }}
-              className="text-xs px-3 py-1.5 rounded bg-blue-500/20 text-blue-400 hover:bg-blue-500/30 border border-blue-500/30 transition-colors"
+              className="text-xs px-3 py-1.5 rounded bg-info/20 text-blue-400 hover:bg-blue-500/30 border border-blue-500/30 transition-colors"
             >
               {t('retryTask')}
             </button>
@@ -1673,7 +1673,7 @@ function TaskDetailModal({
                         className={`inline-flex items-center gap-1 text-xs px-2 py-1 rounded-md border font-mono transition-colors ${
                           task.github_pr_state === 'merged' ? 'bg-purple-500/10 border-purple-500/25 text-purple-400' :
                           task.github_pr_state === 'closed' ? 'bg-red-500/10 border-red-500/25 text-red-400' :
-                          'bg-green-500/10 border-green-500/25 text-green-400'
+                          'bg-green-500/10 border-green-500/25 text-success'
                         }`}
                       >
                         <svg className="w-3 h-3" viewBox="0 0 16 16" fill="currentColor"><path d="M7.177 3.073L9.573.677A.25.25 0 0110 .854v4.792a.25.25 0 01-.427.177L7.177 3.427a.25.25 0 010-.354zM3.75 2.5a.75.75 0 100 1.5.75.75 0 000-1.5zm-2.25.75a2.25 2.25 0 113 2.122v5.256a2.251 2.251 0 11-1.5 0V5.372A2.25 2.25 0 011.5 3.25zM11 2.5h-1V4h1a1 1 0 011 1v5.628a2.251 2.251 0 101.5 0V5A2.5 2.5 0 0011 2.5zm1 10.25a.75.75 0 111.5 0 .75.75 0 01-1.5 0zM3.75 12a.75.75 0 100 1.5.75.75 0 000-1.5z"/></svg>
@@ -1713,7 +1713,7 @@ function TaskDetailModal({
             <div id="tabpanel-comments" role="tabpanel" aria-label={t('tabComments')} className="mt-6">
             <div className="flex items-center justify-between mb-3">
               <h4 className="text-lg font-semibold text-foreground">{t('tabComments')}</h4>
-              <Button variant="link" size="xs" onClick={fetchComments} className="text-blue-400 hover:text-blue-300">
+              <Button variant="link" size="xs" onClick={fetchComments} className="text-blue-400 hover:text-info">
                 {t('refresh')}
               </Button>
             </div>
@@ -1758,7 +1758,7 @@ function TaskDetailModal({
             </form>
 
             <div className="mt-5 bg-blue-500/5 border border-blue-500/15 rounded-lg p-3 text-xs text-muted-foreground space-y-1">
-              <div className="font-medium text-blue-300">How notifications work</div>
+              <div className="font-medium text-info">How notifications work</div>
               <div><strong className="text-foreground">Comments</strong> are persisted on the task and notify all subscribers. Subscribers are auto-added when they: create the task, are assigned to it, comment on it, or are @mentioned.</div>
               <div><strong className="text-foreground">Broadcasts</strong> send a one-time notification to all current subscribers without creating a comment record.</div>
             </div>
@@ -1912,13 +1912,13 @@ function TaskSessionFeed({ sessionId, agentName, isLive }: { sessionId: string; 
           )}
           <span className="font-mono text-muted-foreground/50">{sessionId.slice(0, 12)}...</span>
           {isLive && (
-            <span className="flex items-center gap-1 text-green-400">
+            <span className="flex items-center gap-1 text-success">
               <span className="inline-block h-1.5 w-1.5 rounded-full bg-green-400 animate-pulse" />
               {t('live')}
             </span>
           )}
         </div>
-        <Button variant="link" size="xs" onClick={fetchTranscript} className="text-blue-400 hover:text-blue-300">
+        <Button variant="link" size="xs" onClick={fetchTranscript} className="text-blue-400 hover:text-info">
           {t('refresh')}
         </Button>
       </div>
@@ -1968,7 +1968,7 @@ function ClaudeCodeTasksSection() {
   }, {})
 
   const statusColor = (s: string) =>
-    s === 'completed' ? 'text-green-400' :
+    s === 'completed' ? 'text-success' :
     s === 'in_progress' ? 'text-blue-400' :
     s === 'blocked' ? 'text-red-400' :
     s === 'awaiting_owner' ? 'text-orange-400' :
@@ -2075,7 +2075,7 @@ function HermesCronSection() {
                   {job.schedule || t('noSchedule')}
                 </span>
                 <span className="text-foreground flex-1 truncate">{job.prompt || job.id}</span>
-                <span className={`text-[10px] px-1.5 py-0.5 rounded ${job.enabled ? 'bg-green-500/15 text-green-400' : 'bg-muted text-muted-foreground'}`}>
+                <span className={`text-[10px] px-1.5 py-0.5 rounded ${job.enabled ? 'bg-green-500/15 text-success' : 'bg-muted text-muted-foreground'}`}>
                   {job.enabled ? t('enabled') : t('disabled')}
                 </span>
                 {job.lastRunAt && (

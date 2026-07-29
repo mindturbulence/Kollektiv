@@ -328,6 +328,7 @@ The `--fix` mode (`scripts/validate-mcp-config.ts --fix`) infers sensible defaul
 ## Related
 
 - [docs/tools-inventory.md](../../../docs/tools-inventory.md) — complete catalog of all native assistant tools
+- [KOLLEKTIV_TOOLS_FOR_AGENTS.md](./KOLLEKTIV_TOOLS_FOR_AGENTS.md) — making Kollektiv's tools available to Mission Control agents
 - [OBSIDIAN.md](../03_KNOWLEDGE_ENGINE/OBSIDIAN.md) — the vault tools sub-server this spec aggregates
 - [ARCHITECTURE_CONSTITUTION.md § Security Hardening](../00_FOUNDATION/ARCHITECTURE_CONSTITUTION.md#security-hardening) — the CSP `connect-src`/CORS posture this local-only server operates under
 - [AI_ENGINE.md](../01_AI_ENGINE/AI_ENGINE.md) — the `list_mcp_servers`/`toggle_mcp_server` assistant tools that manage this server from chat
