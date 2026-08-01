@@ -4,6 +4,7 @@ import { PanelLine, ScanLine, pageVariants, pageHeaderVariants, pageBodyVariants
 import type { LoraInfo } from '../services/generationBackend';
 import { getLoraPreviewCandidates } from '../services/a1111Service';
 import type { LLMSettings } from '../types';
+import { RefreshIcon } from './icons';
 
 interface ExtraNetworksPanelProps {
   /** False when the active backend has no LoRA/embedding listing API (e.g. ComfyUI). */
@@ -134,10 +135,10 @@ const ExtraNetworksPanel: React.FC<ExtraNetworksPanelProps> = ({
               <button
                 onClick={onRefresh}
                 disabled={loading}
-                className="font-sf-mono text-[9px] tracking-widest text-base-content/40 hover:text-base-content transition-all bg-base-100/5 disabled:opacity-20 px-2 hover:bg-base-100/10 shrink-0"
+                className="flex items-center justify-center text-base-content/40 hover:text-base-content transition-all bg-base-100/5 disabled:opacity-20 px-2 hover:bg-base-100/10 shrink-0"
                 title={`Refresh ${activeTab === 'lora' ? 'LoRA' : 'textual inversion'} list from backend`}
               >
-                {loading ? '...' : 'REFRESH'}
+                <RefreshIcon className={`w-3.5 h-3.5 ${loading ? 'animate-spin' : ''}`} />
               </button>
             </motion.header>
             <motion.div

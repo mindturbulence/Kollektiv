@@ -5,7 +5,7 @@
  */
 
 import { useState, useRef, useCallback, useEffect } from 'react';
-import { getBackend, type LoraInfo } from '../services/generationBackend';
+import { getBackend, type LoraInfo, type ModuleInfo } from '../services/generationBackend';
 // Side-effect imports: register the local generation backends in the registry
 import '../services/comfyService';
 import '../services/a1111Service';
@@ -47,6 +47,13 @@ export interface StudioState {
   /** Empty when the backend doesn't support listEmbeddings (e.g. ComfyUI). */
   embeddings: string[];
   loadingEmbeddings: boolean;
+  /**
+   * Available CLIP/T5/VAE module entries (Forge `/sdapi/v1/sd-modules`), each
+   * typed by the directory it lives in. Empty when the backend doesn't support
+   * listModules (ComfyUI) or the server doesn't expose the endpoint (vanilla A1111).
+   */
+  modules: ModuleInfo[];
+  loadingModules: boolean;
   resultUrl: string | null;
   resultSeed: number | null;
   galleryItemId: string | null;
@@ -64,6 +71,8 @@ const INITIAL_STATE: StudioState = {
   loadingLoras: false,
   embeddings: [],
   loadingEmbeddings: false,
+  modules: [],
+  loadingModules: false,
   resultUrl: null,
   resultSeed: null,
   galleryItemId: null,
@@ -77,6 +86,7 @@ export interface UseLocalGenerationStudioReturn {
   refreshSamplers: (settings: LLMSettings) => Promise<void>;
   refreshLoras: (settings: LLMSettings) => Promise<void>;
   refreshEmbeddings: (settings: LLMSettings) => Promise<void>;
+  refreshModules: (settings: LLMSettings) => Promise<void>;
   generate: (params: StudioParams, settings: LLMSettings) => Promise<void>;
   cancel: () => void;
   reset: () => void;
@@ -131,6 +141,14 @@ export function useLocalGenerationStudio(backendId: StudioBackendId): UseLocalGe
     update({ loadingEmbeddings: true });
     const embeddings = await backend.listEmbeddings(settings);
     update({ embeddings, loadingEmbeddings: false });
+  }, [backendId, update]);
+
+  const refreshModules = useCallback(async (settings: LLMSettings) => {
+    const backend = getBackend(backendId);
+    if (!backend?.listModules) return;
+    update({ loadingModules: true });
+    const modules = await backend.listModules(settings);
+    update({ modules, loadingModules: false });
   }, [backendId, update]);
 
   const generate = useCallback(async (params: StudioParams, settings: LLMSettings) => {
@@ -210,5 +228,5 @@ export function useLocalGenerationStudio(backendId: StudioBackendId): UseLocalGe
     return () => { abortRef.current?.abort(); };
   }, []);
 
-  return { state, checkAvailability, refreshModels, refreshSamplers, refreshLoras, refreshEmbeddings, generate, cancel, reset };
+  return { state, checkAvailability, refreshModels, refreshSamplers, refreshLoras, refreshEmbeddings, refreshModules, generate, cancel, reset };
 }

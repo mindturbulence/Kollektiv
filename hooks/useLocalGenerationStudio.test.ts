@@ -20,6 +20,10 @@ const mockA1111Backend = {
   listSamplers: vi.fn(async () => ['Euler']),
   listLoras: vi.fn(async () => [{ name: 'add_detail', alias: 'add_detail' }]),
   listEmbeddings: vi.fn(async () => ['easynegative']),
+  listModules: vi.fn(async () => [
+    { name: 'clip_l.safetensors', type: 'clip' },
+    { name: 'ae.safetensors', type: 'vae' },
+  ]),
   generate: vi.fn(async () => ({ dataUrl: 'data:image/png;base64,x', seed: 42, backendId: 'a1111' })),
 };
 
@@ -105,6 +109,22 @@ describe('useLocalGenerationStudio', () => {
     const { result } = renderHook(() => useLocalGenerationStudio('a1111'));
     await act(async () => { await result.current.refreshEmbeddings({} as any); });
     expect(result.current.state.embeddings).toEqual(['easynegative']);
+  });
+
+  it('refreshModules is a no-op when the backend does not support it', async () => {
+    const { result } = renderHook(() => useLocalGenerationStudio('comfy'));
+    await act(async () => { await result.current.refreshModules({} as any); });
+    expect(result.current.state.modules).toEqual([]);
+    expect(result.current.state.loadingModules).toBe(false);
+  });
+
+  it('refreshModules populates modules for a backend that supports it', async () => {
+    const { result } = renderHook(() => useLocalGenerationStudio('a1111'));
+    await act(async () => { await result.current.refreshModules({} as any); });
+    expect(result.current.state.modules).toEqual([
+      { name: 'clip_l.safetensors', type: 'clip' },
+      { name: 'ae.safetensors', type: 'vae' },
+    ]);
   });
 
   it('generate goes idle -> generating -> done and ingests into the gallery', async () => {

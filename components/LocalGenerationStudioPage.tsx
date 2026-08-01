@@ -1,17 +1,18 @@
-import React, { useState, useEffect, useLayoutEffect, useCallback, useRef } from 'react';
+import React, { useState, useEffect, useLayoutEffect, useCallback, useMemo, useRef } from 'react';
 import { motion } from 'motion/react';
 import { PanelLine, ScanLine, pageVariants, pageHeaderVariants, pageBodyVariants, pageFooterVariants } from './AnimatedPanels';
 import { useSettings } from '../contexts/SettingsContext';
 import { useLocalGenerationStudio, type StudioBackendId, type StudioParams } from '../hooks/useLocalGenerationStudio';
 import WorkflowImportModal from './WorkflowImportModal';
 import ExtraNetworksPanel from './ExtraNetworksPanel';
-import type { LoraInfo } from '../services/generationBackend';
+import type { LoraInfo, AdditionalModuleType } from '../services/generationBackend';
 import {
   injectWorkflowParameters,
   type SavedWorkflowEntry,
 } from '../services/comfyWorkflowParser';
 import { loadWorkflowSchemas, deleteWorkflowSchema } from '../utils/workflowStorage';
 import { loadPresets, savePreset, deletePreset, generatePresetId, type GenerationPreset } from '../utils/presetStorage';
+import { RefreshIcon } from './icons';
 
 interface LocalGenerationStudioPageProps {
   backendId: StudioBackendId;
@@ -26,6 +27,16 @@ interface BackendMeta {
   /** Fallback sampler list used when the backend is unreachable or hasn't responded yet. */
   fallbackSamplers: string[];
 }
+
+// Segment order for the Additional Modules picker — mirrors how Forge's own
+// "VAE / Text Encoder" multiselect groups files, plus forward-compat types.
+const MODULE_GROUP_ORDER: { type: AdditionalModuleType; label: string }[] = [
+  { type: 'text_encoder', label: 'Text Encoders' },
+  { type: 'vae', label: 'VAE' },
+  { type: 'clip', label: 'CLIP' },
+  { type: 'unet', label: 'UNet' },
+  { type: 'other', label: 'Other' },
+];
 
 const BACKEND_META: Record<StudioBackendId, BackendMeta> = {
   comfy: {
@@ -47,7 +58,7 @@ const BACKEND_META: Record<StudioBackendId, BackendMeta> = {
 const LocalGenerationStudioPage: React.FC<LocalGenerationStudioPageProps> = ({ backendId, showGlobalFeedback }) => {
   const { settings, updateSettings } = useSettings();
   const meta = BACKEND_META[backendId];
-  const { state, checkAvailability, refreshModels, refreshSamplers, refreshLoras, refreshEmbeddings, generate, cancel, reset } = useLocalGenerationStudio(backendId);
+  const { state, checkAvailability, refreshModels, refreshSamplers, refreshLoras, refreshEmbeddings, refreshModules, generate, cancel, reset } = useLocalGenerationStudio(backendId);
   const supportsExtraNetworks = backendId === 'a1111';
 
   const [prompt, setPrompt] = useState('');
@@ -108,6 +119,7 @@ const LocalGenerationStudioPage: React.FC<LocalGenerationStudioPageProps> = ({ b
     refreshSamplers(settings);
     refreshLoras(settings);
     refreshEmbeddings(settings);
+    refreshModules(settings);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [backendId, serverUrl]);
 
@@ -124,6 +136,46 @@ const LocalGenerationStudioPage: React.FC<LocalGenerationStudioPageProps> = ({ b
     setAdditionalModulesText(value);
     updateSettings({ ...settings, a1111AdditionalModules: value });
   }, [settings, updateSettings]);
+
+  // ── Additional modules multi-select ────────────────────────────────
+  // The persisted value stays a comma-separated string (preset/settings
+  // compatibility); the checkbox list is derived from it.
+  const selectedModules = useMemo(
+    () => additionalModulesText.split(',').map((m) => m.trim()).filter(Boolean),
+    [additionalModulesText],
+  );
+  // Persisted names that aren't in the scanned list (manual entries, or files
+  // added to the server after the last scan) — surfaced as removable chips so
+  // nothing silently disappears when the scanned list is available.
+  const manualModules = useMemo(
+    () => selectedModules.filter((m) => !state.modules.some((mod) => mod.name === m)),
+    [selectedModules, state.modules],
+  );
+
+  // Scanned modules bucketed by type (text encoder / vae / clip / unet / other),
+  // each bucket sorted alphabetically for stable ordering.
+  const moduleGroups = useMemo(() => {
+    return MODULE_GROUP_ORDER
+      .map((group) => ({
+        ...group,
+        modules: state.modules
+          .filter((m) => m.type === group.type)
+          .map((m) => m.name)
+          .sort(),
+      }))
+      .filter((group) => group.modules.length > 0);
+  }, [state.modules]);
+
+  const toggleModule = useCallback((name: string) => {
+    const current = additionalModulesText.split(',').map((m) => m.trim()).filter(Boolean);
+    const next = current.includes(name) ? current.filter((m) => m !== name) : [...current, name];
+    setAdditionalModulesPersist(next.join(', '));
+  }, [additionalModulesText, setAdditionalModulesPersist]);
+
+  const removeManualModule = useCallback((name: string) => {
+    const next = additionalModulesText.split(',').map((m) => m.trim()).filter(Boolean).filter((m) => m !== name);
+    setAdditionalModulesPersist(next.join(', '));
+  }, [additionalModulesText, setAdditionalModulesPersist]);
 
   // ── Presets ─────────────────────────────────────────────────────────
   // Applies model/sampler/additionalModules in one updateSettings call —
@@ -372,7 +424,7 @@ const LocalGenerationStudioPage: React.FC<LocalGenerationStudioPageProps> = ({ b
             variants={pageBodyVariants}
             initial="hidden"
             animate="visible"
-            className="flex-grow p-6 overflow-y-auto custom-scrollbar bg-transparent flex flex-col gap-4"
+            className="flex-grow p-6 overflow-y-auto overflow-x-hidden custom-scrollbar bg-transparent flex flex-col gap-4"
           >
             {backendId === 'comfy' && (
               <div>
@@ -383,7 +435,7 @@ const LocalGenerationStudioPage: React.FC<LocalGenerationStudioPageProps> = ({ b
                   <select
                     value={activeWorkflowId}
                     onChange={(e) => setActiveWorkflowId(e.target.value)}
-                    className="form-input flex-1 text-xs"
+                    className="form-input flex-1 min-w-0 text-xs"
                   >
                     <option value="__default__">Default (txt2img)</option>
                     {workflowEntries.map((entry) => (
@@ -420,7 +472,8 @@ const LocalGenerationStudioPage: React.FC<LocalGenerationStudioPageProps> = ({ b
                 <select
                   value={model}
                   onChange={(e) => setModel(e.target.value)}
-                  className="form-input flex-1 text-xs"
+                  className="form-input flex-1 min-w-0 text-xs"
+                  title={model || undefined}
                 >
                   <option value="">{state.loadingModels ? 'Loading…' : 'Auto (first available)'}</option>
                   {state.models.map((m) => <option key={m} value={m}>{m}</option>)}
@@ -428,27 +481,92 @@ const LocalGenerationStudioPage: React.FC<LocalGenerationStudioPageProps> = ({ b
                 <button
                   onClick={() => refreshModels(settings)}
                   disabled={state.loadingModels}
-                  className="form-btn px-3 text-[10px] whitespace-nowrap"
+                  className="form-btn px-2 shrink-0"
+                  title="Refresh checkpoint list from backend"
                 >
-                  {state.loadingModels ? '...' : 'REFRESH'}
+                  <RefreshIcon className={`w-3.5 h-3.5 ${state.loadingModels ? 'animate-spin' : ''}`} />
                 </button>
               </div>
             </div>
 
             {backendId === 'a1111' && (
               <div>
-                <label className="text-[10px] font-bold uppercase tracking-widest text-base-content/40 block mb-2">
-                  Additional Modules
-                </label>
-                <input
-                  type="text"
-                  value={additionalModulesText}
-                  onChange={(e) => setAdditionalModulesPersist(e.target.value)}
-                  className="form-input w-full text-xs"
-                  placeholder="clip_l.safetensors, t5xxl_fp16.safetensors, ae.safetensors"
-                />
+                <div className="flex items-center justify-between mb-2">
+                  <label className="text-[10px] font-bold uppercase tracking-widest text-base-content/40">
+                    Additional Modules
+                  </label>
+                  <button
+                    onClick={() => refreshModules(settings)}
+                    disabled={state.loadingModules}
+                    className="form-btn px-2 shrink-0"
+                    title="Rescan available CLIP/T5/VAE modules from the server"
+                  >
+                    <RefreshIcon className={`w-3 h-3 ${state.loadingModules ? 'animate-spin' : ''}`} />
+                  </button>
+                </div>
+
+                {state.modules.length > 0 ? (
+                  <div className="border border-base-300/20 max-h-44 overflow-y-auto custom-scrollbar divide-y divide-base-300/10">
+                    {moduleGroups.map((group) => (
+                      <div key={group.type}>
+                        <div className="px-2 pt-1.5 pb-0.5 flex items-center justify-between text-[10px] font-bold uppercase tracking-widest text-base-content/30">
+                          {group.label}
+                          <span className="text-base-content/20 font-mono">{group.modules.length}</span>
+                        </div>
+                        {group.modules.map((m) => {
+                          const checked = selectedModules.includes(m);
+                          return (
+                            <label
+                              key={m}
+                              className="flex items-center gap-2 px-2 py-1.5 cursor-pointer hover:bg-base-100/40 text-xs"
+                            >
+                              <input
+                                type="checkbox"
+                                checked={checked}
+                                onChange={() => toggleModule(m)}
+                                className="checkbox checkbox-xs checkbox-primary rounded-none"
+                              />
+                              <span className="truncate" title={m}>{m}</span>
+                            </label>
+                          );
+                        })}
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <input
+                    type="text"
+                    value={additionalModulesText}
+                    onChange={(e) => setAdditionalModulesPersist(e.target.value)}
+                    className="form-input w-full text-xs"
+                    placeholder="clip_l.safetensors, t5xxl_fp16.safetensors, ae.safetensors"
+                  />
+                )}
+
+                {state.modules.length > 0 && manualModules.length > 0 && (
+                  <div className="flex flex-wrap gap-1 mt-2">
+                    {manualModules.map((m) => (
+                      <span
+                        key={m}
+                        className="inline-flex items-center gap-1 px-2 py-0.5 bg-base-100/40 border border-base-300/20 text-[9px] font-mono"
+                      >
+                        {m}
+                        <button
+                          onClick={() => removeManualModule(m)}
+                          className="text-base-content/40 hover:text-error transition-colors"
+                          title="Remove"
+                        >
+                          ✕
+                        </button>
+                      </span>
+                    ))}
+                  </div>
+                )}
+
                 <p className="text-[9px] text-base-content/30 mt-1">
-                  Comma-separated CLIP/T5/VAE filenames for split checkpoints (Flux, SD3, GGUF) that don't embed their own text encoder — fixes "You do not have CLIP state dict!".
+                  {state.modules.length > 0
+                    ? 'CLIP/T5/VAE modules scanned from the server (Forge /sdapi/v1/sd-modules). Required by split checkpoints (Flux, SD3, GGUF) that don\'t embed their own text encoder — fixes "You do not have CLIP state dict!".'
+                    : 'Comma-separated CLIP/T5/VAE filenames for split checkpoints (Flux, SD3, GGUF) that don\'t embed their own text encoder — fixes "You do not have CLIP state dict!". The server did not expose a module list (vanilla A1111).'}
                 </p>
               </div>
             )}
@@ -480,7 +598,7 @@ const LocalGenerationStudioPage: React.FC<LocalGenerationStudioPageProps> = ({ b
                 )}
               </label>
               <div className="flex items-center gap-2">
-                <select value={sampler} onChange={(e) => setSamplerPersist(e.target.value)} className="form-input flex-1 text-xs">
+                <select value={sampler} onChange={(e) => setSamplerPersist(e.target.value)} className="form-input flex-1 min-w-0 text-xs" title={sampler || undefined}>
                   {(state.samplers.length > 0 ? state.samplers : meta.fallbackSamplers).map((s) => (
                     <option key={s} value={s}>{s}</option>
                   ))}
@@ -488,10 +606,10 @@ const LocalGenerationStudioPage: React.FC<LocalGenerationStudioPageProps> = ({ b
                 <button
                   onClick={() => refreshSamplers(settings)}
                   disabled={state.loadingSamplers}
-                  className="form-btn px-2 text-[9px] whitespace-nowrap"
+                  className="form-btn px-2 shrink-0"
                   title="Refresh sampler list from backend"
                 >
-                  {state.loadingSamplers ? '...' : 'REFRESH'}
+                  <RefreshIcon className={`w-3.5 h-3.5 ${state.loadingSamplers ? 'animate-spin' : ''}`} />
                 </button>
               </div>
             </div>

@@ -49,6 +49,18 @@ export interface LoraInfo {
   path?: string;
 }
 
+/**
+ * Category of a Forge additional module, derived from the directory the file
+ * lives in under the install (`models/VAE`, `models/text_encoder`, ...).
+ */
+export type AdditionalModuleType = 'vae' | 'text_encoder' | 'clip' | 'unet' | 'other';
+
+export interface ModuleInfo {
+  /** Basename Forge matches on, e.g. `clip_l.safetensors` — what goes into `forge_additional_modules`. */
+  name: string;
+  type: AdditionalModuleType;
+}
+
 export interface GenerationBackend {
   /** Unique machine-readable id (e.g. `'comfy'`, `'a1111'`). */
   id: string;
@@ -64,6 +76,12 @@ export interface GenerationBackend {
   listLoras?(settings: LLMSettings): Promise<LoraInfo[]>;
   /** List available textual-inversion embedding names. Not every backend supports this. */
   listEmbeddings?(settings: LLMSettings): Promise<string[]>;
+  /**
+   * List available CLIP/T5/VAE module filenames — Forge's `/sdapi/v1/sd-modules`.
+   * Needed for split checkpoints (Flux, SD3, GGUF) that don't embed their own
+   * text encoder. Not every backend supports this (vanilla A1111 returns nothing).
+   */
+  listModules?(settings: LLMSettings): Promise<ModuleInfo[]>;
   /** Run a generation. */
   generate(params: GenerateParams, settings: LLMSettings, signal?: AbortSignal): Promise<GenerateOutput>;
 }

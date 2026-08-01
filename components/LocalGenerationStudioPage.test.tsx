@@ -15,6 +15,8 @@ const mockState = {
   loadingLoras: false,
   embeddings: [] as string[],
   loadingEmbeddings: false,
+  modules: [] as { name: string; type: string }[],
+  loadingModules: false,
   resultUrl: null as string | null,
   resultSeed: null as number | null,
   galleryItemId: null as string | null,
@@ -27,6 +29,7 @@ const hookMocks = {
   refreshSamplers: vi.fn(),
   refreshLoras: vi.fn(),
   refreshEmbeddings: vi.fn(),
+  refreshModules: vi.fn(),
   generate: vi.fn(),
   cancel: vi.fn(),
   reset: vi.fn(),
@@ -36,18 +39,16 @@ vi.mock('../hooks/useLocalGenerationStudio', () => ({
   useLocalGenerationStudio: () => ({ state: mockState, ...hookMocks }),
 }));
 
-const { mockUpdateSettings } = vi.hoisted(() => ({
+const { mockUpdateSettings, mockSettings } = vi.hoisted(() => ({
   mockUpdateSettings: vi.fn(),
+  mockSettings: {
+    comfyUrl: 'http://127.0.0.1:8188', comfyModel: '',
+    a1111Url: 'http://127.0.0.1:7860', a1111Model: '', a1111Sampler: '', a1111AdditionalModules: '',
+  },
 }));
 
 vi.mock('../contexts/SettingsContext', () => ({
-  useSettings: () => ({
-    settings: {
-      comfyUrl: 'http://127.0.0.1:8188', comfyModel: '',
-      a1111Url: 'http://127.0.0.1:7860', a1111Model: '', a1111Sampler: '', a1111AdditionalModules: '',
-    },
-    updateSettings: mockUpdateSettings,
-  }),
+  useSettings: () => ({ settings: mockSettings, updateSettings: mockUpdateSettings }),
 }));
 
 // Mock WorkflowImportModal to keep tests focused on the parent
@@ -106,6 +107,8 @@ describe('LocalGenerationStudioPage', () => {
     vi.clearAllMocks();
     mockLoadWorkflowSchemas.mockResolvedValue([]);
     mockLoadPresets.mockResolvedValue([]);
+    mockSettings.a1111AdditionalModules = '';
+    mockState.modules = [];
   });
 
   it('renders the backend label in the heading', () => {
@@ -157,6 +160,87 @@ describe('LocalGenerationStudioPage', () => {
     render(<LocalGenerationStudioPage backendId="a1111" showGlobalFeedback={vi.fn()} />);
     expect(screen.queryByText(/Default \(txt2img\)/i)).toBeNull();
     expect(screen.queryByText(/\+ IMPORT/i)).toBeNull();
+  });
+
+  it('renders scanned modules as checkboxes and toggling persists them to settings', () => {
+    mockState.modules = [
+      { name: 'clip_l.safetensors', type: 'text_encoder' },
+      { name: 't5xxl_fp16.safetensors', type: 'text_encoder' },
+      { name: 'ae.safetensors', type: 'vae' },
+    ];
+    render(<LocalGenerationStudioPage backendId="a1111" showGlobalFeedback={vi.fn()} />);
+
+    // Toggle one module on
+    fireEvent.click(screen.getByRole('checkbox', { name: /clip_l\.safetensors/i }));
+    expect(mockUpdateSettings).toHaveBeenCalledWith(expect.objectContaining({
+      a1111AdditionalModules: 'clip_l.safetensors',
+    }));
+
+    // Toggle it off again
+    fireEvent.click(screen.getByRole('checkbox', { name: /clip_l\.safetensors/i }));
+    expect(mockUpdateSettings).toHaveBeenLastCalledWith(expect.objectContaining({
+      a1111AdditionalModules: '',
+    }));
+  });
+
+  it('groups scanned modules into type segments with headers', () => {
+    mockState.modules = [
+      { name: 'clip_l.safetensors', type: 'text_encoder' },
+      { name: 't5xxl_fp16.safetensors', type: 'text_encoder' },
+      { name: 'ae.safetensors', type: 'vae' },
+      { name: 'vae-ft-mse.safetensors', type: 'vae' },
+      { name: 'flux_unet.safetensors', type: 'unet' },
+      { name: 'mystery.safetensors', type: 'other' },
+    ];
+    render(<LocalGenerationStudioPage backendId="a1111" showGlobalFeedback={vi.fn()} />);
+    expect(screen.getByText('Text Encoders')).toBeTruthy();
+    expect(screen.getByText('VAE')).toBeTruthy();
+    expect(screen.getByText('UNet')).toBeTruthy();
+    expect(screen.getByText('Other')).toBeTruthy();
+  });
+
+  it('keeps manual entries not present in the scanned list visible as removable chips', () => {
+    mockSettings.a1111AdditionalModules = 'custom_te.safetensors';
+    mockState.modules = [
+      { name: 'clip_l.safetensors', type: 'text_encoder' },
+      { name: 'ae.safetensors', type: 'vae' },
+    ];
+    render(<LocalGenerationStudioPage backendId="a1111" showGlobalFeedback={vi.fn()} />);
+
+    // The custom entry is preserved as a removable chip even though it's not in the scanned list
+    expect(screen.getByText('custom_te.safetensors')).toBeTruthy();
+    expect(screen.queryByRole('checkbox', { name: /custom_te\.safetensors/i })).toBeNull();
+
+    // Removing the chip clears the persisted value
+    fireEvent.click(screen.getByTitle(/Remove/i));
+    expect(mockUpdateSettings).toHaveBeenCalledWith(expect.objectContaining({
+      a1111AdditionalModules: '',
+    }));
+  });
+
+  it('falls back to the free-text input when no module list is available (vanilla A1111)', () => {
+    mockState.modules = [];
+    render(<LocalGenerationStudioPage backendId="a1111" showGlobalFeedback={vi.fn()} />);
+    const input = screen.getByPlaceholderText(/clip_l\.safetensors, t5xxl_fp16\.safetensors, ae\.safetensors/i);
+    fireEvent.change(input, { target: { value: 'clip_l.safetensors' } });
+    expect(mockUpdateSettings).toHaveBeenCalledWith(expect.objectContaining({
+      a1111AdditionalModules: 'clip_l.safetensors',
+    }));
+  });
+
+  it('refreshes the module list on mount for the A1111 backend', () => {
+    render(<LocalGenerationStudioPage backendId="a1111" showGlobalFeedback={vi.fn()} />);
+    expect(hookMocks.refreshModules).toHaveBeenCalled();
+  });
+
+  it('renders refresh actions as icon-only buttons with tooltips', () => {
+    render(<LocalGenerationStudioPage backendId="a1111" showGlobalFeedback={vi.fn()} />);
+    expect(screen.getByTitle('Refresh checkpoint list from backend')).toBeTruthy();
+    expect(screen.getByTitle('Refresh sampler list from backend')).toBeTruthy();
+    expect(screen.getByTitle('Rescan available CLIP/T5/VAE modules from the server')).toBeTruthy();
+    // Icon-only: no text labels remain on the refresh/scan actions
+    expect(screen.queryByText('REFRESH')).toBeNull();
+    expect(screen.queryByText('SCAN')).toBeNull();
   });
 
   it('opens the import modal when +IMPORT is clicked', () => {
