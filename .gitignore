@@ -16,12 +16,6 @@ obsidian-notes-list.md
 .env
 .env.local
 
-# Mission Control runtime state (SQLite DB, auto-generated secrets, build output)
-mission-control/.data/
-mission-control/.next/
-mission-control/node_modules/
-mission-control/.env
-
 # Scratch / scripted-edit artifacts — never commit these
 *.bak
 *.bak[0-9]*
@@ -41,5 +35,6 @@ scripts/test-debug-hang*.mjs
 scripts/test-exact-flow.mjs
 scripts/test-im-obsidian.mjs
 scripts/test-narrow*.mjs
+scripts/fix-tools*.cjs
 obsidian-notes-list.md
 .gstack/

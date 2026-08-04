@@ -57,7 +57,7 @@ Kollektiv is a high-performance, local-first application designed for prompt eng
 > **2026-07-26 — Reach channels:** 6 content-reach capabilities (RSS, GitHub, Exa, Reddit,
 > YouTube Transcripts, Twitter/X) added as assistant tools. Each backed by `POST /api/reach/*`
 > server routes with Zod validation and rate limiters. Dual-backend failure handling for
-> fragile channels. 50+ new unit tests. See `docs/plans/2026-07-26-reach-channels.md`.
+> fragile channels. 50+ new unit tests.
 
 > **2026-07-26 — Native MCP tools wiring:** All ~65 native assistant tools are now registered
 > with the built-in MCP server via `mcp-config.json`. Server-side executors wired for weather,
@@ -86,7 +86,6 @@ The architecture set is organized as a practical handbook for contributors and m
 - [contracts/interfaces.md](contracts/interfaces.md) — implementation-facing contracts and data shapes
 - [diagrams/README.md](diagrams/README.md) — diagram inventory and architecture views
 - [schemas/capability.manifest.json](schemas/capability.manifest.json) — example capability manifest schema
-- [../plans/2026-07-29-mission-control-fork-design.md](../plans/2026-07-29-mission-control-fork-design.md) — the Mission Control fork: integration model, platform constraints, and rejected alternatives
 
 ## 🧩 Core Schema
 
