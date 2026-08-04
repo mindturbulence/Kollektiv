@@ -161,7 +161,6 @@ const Header: React.FC<HeaderProps> = ({
     { id: 'vault', label: 'Vault', items: vaultItems },
     { id: 'utilities', label: 'Utilities', items: utilityItems },
     { id: 'studio', label: 'Studio', items: studioItems },
-    { id: 'mission-control', label: 'Mission', items: [], singleId: 'mission_control' as ActiveTab },
   ], [workspaceItems, vaultItems, utilityItems, studioItems]);
 
   // If activeTab changes, but no menu is open, expand the group containing the active tab

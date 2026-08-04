@@ -32,7 +32,6 @@ import SavedPrompts from './SavedPrompts';
 import ImageGallery from './ImageGallery';
 
 import { SetupPage } from './SetupPage';
-import MissionControlPage from './MissionControlPage';
 import ComposerPage from './ComposerPage';
 import ImageCompare from './ImageCompare';
 import ColorPaletteExtractor from './ColorPaletteExtractor';
@@ -161,7 +160,6 @@ const AppContent: React.FC = () => {
             case 'batch_runner': return `BATCH | ${base}`;
             case 'comfy_studio': return `COMFYUI | ${base}`;
             case 'a1111_studio': return `FORGE | ${base}`;
-            case 'mission_control': return `MISSION CONTROL | ${base}`;
             default: return base;
         }
     }, [activeTab]);
@@ -380,7 +378,6 @@ const AppContent: React.FC = () => {
             case 'batch_runner': return <BatchRunnerPage key="batch_runner" />;
             case 'comfy_studio': return <LocalGenerationStudioPage key="comfy_studio" backendId="comfy" showGlobalFeedback={showGlobalFeedback} />;
             case 'a1111_studio': return <LocalGenerationStudioPage key="a1111_studio" backendId="a1111" showGlobalFeedback={showGlobalFeedback} />;
-            case 'mission_control': return <MissionControlPage key="mission_control" />;
             default: return <Dashboard key="default" onNavigate={handleNavigate} onClipIdea={handleClipIdea} isExiting={false} />;
         }
     };
