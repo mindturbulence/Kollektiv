@@ -167,13 +167,6 @@ async function startServer() {
     }
   });
 
-  // Mission Control reverse proxy — forwards /mission-control/* to the Next.js process.
-  // Mounted at root level (not under '/mission-control') because Express would strip
-  // the prefix from req.url, removing the basePath the MC server needs. The proxy
-  // uses its own pathFilter internally to match /mission-control/*.
-  // Also mounted BEFORE express.json() so it receives the raw, un-consumed request
-  // body stream. Express body parsers consume the stream, which would leave
-  // http-proxy-middleware unable to forward POST/PUT bodies to the MC server.
   app.use(express.json({ limit: '10mb' }));
 
   // --- Proxy Routes (to support local Ollama / Remote bypasses in both development and production) ---
@@ -1111,7 +1104,6 @@ async function startServer() {
 
   void startKollektivMcpVault();
 
-  // WebSocket upgrade forwarding for Mission Control (SSE, PTY terminal, etc.)
   // Cleanup on shutdown
   const shutdown = () => {
     if (kollektivMcpInstance) {
