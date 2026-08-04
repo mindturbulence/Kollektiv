@@ -28,6 +28,7 @@ Kollektiv is a high-performance, local-first application designed for prompt eng
 - **Palette Extractor**: Deconstruct a visual artifact into mood and chromatic tokens.
 - **Video Suite**: Extract frames, join clips, and compare outputs across prompts or models.
 - **Artifact Comparison**: Compare side-by-side outputs with synchronized views.
+- **ComfyUI / A1111 Studio**: Dedicated generation pages for local ComfyUI and A1111/Forge Neo instances — checkpoint picker, full parameter controls, Generate/Cancel, and result preview with gallery ingestion.
 
 ## 🛠 Tech Stack
 
@@ -63,6 +64,13 @@ Kollektiv is a high-performance, local-first application designed for prompt eng
 > with the built-in MCP server via `mcp-config.json`. Server-side executors wired for weather,
 > GitHub, RSS, Exa, Reddit, YouTube, Twitter, and URL scraping tools. Config validation, CI gate,
 > generation script, test suite, and docs added. See `docs/tools-inventory.md`.
+
+> **2026-07-29 — Assistant responsiveness + Studio pages:** Parallelized DB round-trips in
+> `buildKnowledgeContextBlock` (up to 8 sequential → concurrent), made voice turn-taking silence
+> timeout configurable (300–2000ms slider), memoized `MessageBubble` so streaming re-renders only
+> the active bubble, and batched streamed chunks into one state update per animation frame. Added
+> dedicated ComfyUI and A1111/Forge Neo generation pages with checkpoint persistence, full param
+> controls, and gallery ingestion. 1200 tests.
 
 ---
 
