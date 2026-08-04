@@ -76,7 +76,7 @@ const Dashboard: React.FC<DashboardProps> = ({ isExiting = false }) => {
                             </p>
                         </div>
                         <div className="overflow-hidden">
-                            <h1 ref={titleRef} className={`text-7xl md:text-8xl uppercase text-base-content flex items-center tracking-widest leading-none translate-y-[2px] ${isPipboyTheme ? 'font-monofonto' : 'font-monoton'}`}>
+                            <h1 ref={titleRef} className={`dashboard-wordmark uppercase text-base-content flex items-center tracking-widest leading-none translate-y-[2px] ${isPipboyTheme ? 'font-monofonto' : 'font-monoton'}`}>
                                 <ChromaticText>Kollektiv</ChromaticText>
                                 <span className="text-primary italic animate-pulse">.</span>
                             </h1>

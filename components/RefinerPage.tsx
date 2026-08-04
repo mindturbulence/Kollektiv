@@ -12,10 +12,8 @@ import CodeSnippetModal from './CodeSnippetModal';
 import JSONBreakdownModal from './JSONBreakdownModal';
 import { audioService } from '../services/audioService';
 import { refinerPresetService, type RefinerPreset } from '../services/refinerPresetService';
-import { useGenerateLoop } from '../hooks/useGenerateLoop';
-import GeneratePanel from './GeneratePanel';
 import { modifierOptionsService } from '../services/modifierOptionsService';
-import { enhancePromptStream, cleanLLMResponse, buildMidjourneyParams, dissectPrompt, generateConstructorPreset, generateWithImagen, generateWithNanoBanana, generateWithVeo } from '../services/llmService';
+import { enhancePromptStream, cleanLLMResponse, buildMidjourneyParams, generateWithImagen, generateWithNanoBanana, generateWithVeo } from '../services/llmService';
 import { computeWordDiff, calculateSemanticMetrics } from '../utils/diffUtils';
 import { loadArtStyles } from '../utils/artstyleStorage';
 import { saveLLMSettings } from '../utils/settingsStorage';
@@ -110,15 +108,6 @@ const RefinerPage: React.FC<RefinerPageProps> = ({
     const [directMediaResult, setDirectMediaResult] = useState<{ url: string; type: 'image' | 'video'; target: string; prompt: string } | null>(null);
 
     // ── Generate Loop Integration ───────────────────────────────────
-    const {
-      state: generateState,
-      startGenerate,
-      reset: resetGenerate,
-      autoIngest,
-      setAutoIngest,
-      previousResult,
-    } = useGenerateLoop();
-
     // --- Handlers ---
 
     const buildModifierCatalog = useCallback(() => {
@@ -134,19 +123,6 @@ const RefinerPage: React.FC<RefinerPageProps> = ({
         }
         return catalog.join('\\n');
     }, [artStyles, mediaMode, customOptions]);
-
-    const handleStartGenerate = useCallback(() => {
-      const activeRefImages = referenceImages.filter((img): img is string => img !== null);
-      const catalog = buildModifierCatalog();
-      startGenerate({
-        rawPrompt: refineText || '',
-        constantModifier,
-        targetAIModel,
-        settings,
-        referenceImages: activeRefImages,
-        modifierCatalog: catalog,
-      });
-    }, [refineText, constantModifier, targetAIModel, settings, referenceImages, startGenerate, buildModifierCatalog]);
 
     const [activeRefineSubTab, setActiveRefineSubTab] = useState<RefineSubTab>('basic');
     const refineScrollerRef = useRef<HTMLDivElement>(null);
@@ -433,27 +409,11 @@ const RefinerPage: React.FC<RefinerPageProps> = ({
         showGlobalFeedback('Breakdown exported.');
     }, [jsonData, showGlobalFeedback]);
 
-    const handleSaveAsPreset = async (suggestionText: string) => {
-        showGlobalFeedback('Analyzing for Constructor...');
-        setIsBusy(true);
-        try {
-            const catalog = buildModifierCatalog();
-            const { prompt, modifiers: m, constantModifier: cm } = await dissectPrompt(suggestionText, settings, catalog, targetAIModel);
-            const flatComponents: Record<string, string> = { prompt, ...m };
-            if (cm) flatComponents.constantModifier = cm;
-            const result = await generateConstructorPreset(flatComponents, settings, catalog);
-            setModifiers({ ...DEFAULT_MODIFIERS, ...result.modifiers });
-            setRefineText(result.prompt);
-            if (result.constantModifier) setConstantModifier(result.constantModifier);
-            setNewPresetName(`Constructor: ${suggestionText.substring(0, 20)}...`);
-            setIsSavePresetModalOpen(true);
-            showGlobalFeedback('Mapped to Refiner.');
-        } catch (e) {
-            console.error('Save as Preset failed:', e);
-            showGlobalFeedback('Analysis failed.', true);
-        } finally {
-            setIsBusy(false);
-        }
+    const handleSaveAsPreset = () => {
+        // Presets are a direct snapshot of the active construction state. Saving
+        // must never analyze or replace it through an LLM.
+        setNewPresetName('');
+        setIsSavePresetModalOpen(true);
     };
 
     const handlePasteRefineText = async () => {
@@ -800,16 +760,6 @@ const RefinerPage: React.FC<RefinerPageProps> = ({
                         </motion.footer>
                     )}
 
-                    {/* Generate Loop Panel — always visible at the bottom of the output column */}
-                    <GeneratePanel
-                        state={generateState}
-                        onStart={handleStartGenerate}
-                        onReset={resetGenerate}
-                        autoIngest={autoIngest}
-                        onToggleAutoIngest={() => setAutoIngest(!autoIngest)}
-                        disabled={isLoadingRefine || !(refineText || '').trim()}
-                        previousResult={previousResult}
-                    />
                 </div>
                 <div className="absolute -top-[1px] -left-[1px] w-3 h-3 border-t border-l border-primary/15 z-20 pointer-events-none" />
                 <div className="absolute -top-[1px] -right-[1px] w-3 h-3 border-t border-r border-primary/15 z-20 pointer-events-none" />
@@ -876,9 +826,8 @@ const RefinerPage: React.FC<RefinerPageProps> = ({
                         initial="hidden"
                         animate="visible"
                         exit="exit"
-                        className="flex-grow overflow-y-auto p-4 space-y-1"
+                        className="flex-grow overflow-y-auto"
                     >
-                        <span className="text-[10px] font-black uppercase tracking-widest text-base-content/30 block mb-4">Active Construction</span>
                         {activeConstructionItems.length === 0 ? (
                             <p className="text-[11px] font-mono text-base-content/20 py-8 text-center">No modifiers active yet.</p>
                         ) : (
@@ -902,8 +851,8 @@ const RefinerPage: React.FC<RefinerPageProps> = ({
                         exit="exit"
                         className="h-14 flex items-stretch flex-shrink-0 bg-base-100/10 backdrop-blur-md p-1.5 gap-1.5 panel-footer"
                     >
-                        <button onClick={() => { audioService.playClick(); handleSaveAsPreset(refineText); }}
-                            disabled={!refineText.trim()}
+                        <button onClick={() => { audioService.playClick(); handleSaveAsPreset(); }}
+                            disabled={isSavingPreset}
                             className="btn btn-sm btn-ghost h-full flex-1 rounded-none tracking-wider text-primary text-xs disabled:opacity-20 btn-snake">
                             <span /><span /><span /><span />SAVE AS PRESET
                         </button>

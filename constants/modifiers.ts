@@ -141,7 +141,20 @@ export const DIGITAL_AESTHETICS: DescriptiveOption[] = [
     { name: 'Coquette Academia', description: 'Plaid, Bow Ties, Glasses, Studious Yet Feminine' },
     { name: 'Brat Green', description: 'Lime Green, Y2K Revival, Messy Attitude, Slimy Aesthetic' },
     { name: 'Seapunk', description: 'Aquatic, 90s Internet, Cyan, Shell Motifs, Neon' },
-    { name: 'Normcore', description: 'Unassuming, Anti-Fashion, Practical, Generic Minimal' }
+    { name: 'Normcore', description: 'Unassuming, Anti-Fashion, Practical, Generic Minimal' },
+    { name: 'Poetcore', description: 'Literary Romance, Inky Neutrals, Soft Layers, Handwritten Details' },
+    { name: 'Aliencore', description: 'Bionic Shapes, Iridescent Skin, Otherworldly Gloss, Acid Tones' },
+    { name: 'Circuscore', description: 'Theatrical Stripes, Carnival Color, Playful Drama, Vintage Spectacle' },
+    { name: '80s Maximalism', description: 'Power Shoulders, Lacquered Color, High Drama, Opulent Excess' },
+    { name: 'Sportif', description: 'Technical Sportswear, Refined Tailoring, Performance Details, Clean Energy' },
+    { name: 'Modern Heirloom', description: 'Vintage Craft, Rich Patina, Sentimental Objects, Collected Layers' },
+    { name: 'Tactile Minimalism', description: 'Quiet Forms, Handmade Texture, Soft Neutrals, Material Warmth' },
+    { name: 'Neo-Medieval', description: 'Heraldic Motifs, Chainmail Texture, Illuminated Color, Future Fantasy' },
+    { name: 'Analog Craft Revival', description: 'Visible Paper Grain, Hand-Drawn Marks, Imperfect Print, Human Touch' },
+    { name: 'Soft Industrial', description: 'Brushed Metal, Translucent Plastic, Rounded Utility, Gentle Light' },
+    { name: 'Night Garden', description: 'Botanical Darkness, Wet Foliage, Jewel Tones, Nocturnal Romance' },
+    { name: 'Desert Modern', description: 'Sun-Baked Earth Tones, Sculptural Forms, Sparse Luxury, Long Shadows' },
+    { name: 'Hyperlocal Nostalgia', description: 'Everyday Landmarks, Community Ephemera, Familiar Texture, Memory Haze' }
 ];
 
 // --- Movie Aesthetics / Cinematic Looks ---
@@ -205,7 +218,19 @@ export const AESTHETIC_LOOKS: DescriptiveOption[] = [
     { name: 'Sinners', description: 'Period Gothic South, Blood Red, Spiritual Horror' },
     { name: 'K-Drama Soft Look', description: 'Soft Diffuse, Warm Flush, Flattering Skin Tone, Romantic' },
     { name: 'Midsommar', description: 'Overexposed Flower, Bright Pastel, Daylight Horror' },
-    { name: 'Parasite', description: 'Class Divide Framing, Rain-Soaked, Naturalistic' }
+    { name: 'Parasite', description: 'Class Divide Framing, Rain-Soaked, Naturalistic' },
+    { name: 'Tactile Editorial', description: 'Paper Grain, Tactile Materials, Imperfect Detail, Art-Directed Layout' },
+    { name: 'Warm Minimalism', description: 'Soft Neutrals, Natural Materials, Generous Space, Quiet Refinement' },
+    { name: 'Neo-Medieval Fantasy', description: 'Illuminated Manuscript Color, Ornate Metalwork, Heraldic Drama, Future Myth' },
+    { name: 'Botanical Surrealism', description: 'Overscaled Flora, Dream Logic, Saturated Nature, Sculptural Forms' },
+    { name: 'Sculptural Softness', description: 'Inflated Forms, Rounded Silhouettes, Diffused Light, Gentle Color' },
+    { name: 'Artisanal Collage', description: 'Cut Paper, Scanned Texture, Layered Ephemera, Handmade Composition' },
+    { name: 'Contemporary Gothic', description: 'Black Lacquer, Romantic Shadows, Deep Crimson, Modern Silhouettes' },
+    { name: 'High-Gloss Camp', description: 'Exaggerated Glamour, Lacquered Surfaces, Bold Color, Playful Excess' },
+    { name: 'Techno-Organic', description: 'Biomorphic Technology, Translucent Surfaces, Living Systems, Clean Futurism' },
+    { name: 'Documentary Intimacy', description: 'Natural Light, Close Observation, Honest Texture, Unposed Moments' },
+    { name: 'Post-Digital Nostalgia', description: 'Early-Web Artifacts, Soft Compression, Retro Interface, Sentimental Tech' },
+    { name: 'Future Folk', description: 'Traditional Craft Motifs, Experimental Materials, Mythic Color, Handmade Future' }
 ];
 
 // --- Refiner Dropdown Options ---
@@ -356,7 +381,27 @@ export const SPECIALTY_LENS_EFFECTS: DescriptiveOption[] = [
     { name: 'Cine-Nikkor Retro Vignetting', description: 'Retro cinema lens look with heavy vignetting and soft edge falloff.' },
     { name: 'Wollensak Raptar Soft Rendering', description: 'Mid-century soft-rendering lens used for classic glamor portraits.' },
     { name: 'Aerochrome Lens Filter Aesthetic', description: 'Mimics infrared film, turning greens into vibrant pinks and reds.' },
-    { name: 'Infrared Wood Effect Optics', description: 'Captures heat signatures, making foliage appear snowy white and skies black.' }
+    { name: 'Infrared Wood Effect Optics', description: 'Captures heat signatures, making foliage appear snowy white and skies black.' },
+    { name: 'Carl Zeiss Jena Biotar Swirl', description: 'Classic double-Gauss rendering with a sharp center and energetic swirled edge bokeh.' },
+    { name: 'Carl Zeiss Jena Pancolar 3D Pop', description: 'Strong micro-contrast and subject separation with a crisp, dimensional vintage look.' },
+    { name: 'Carl Zeiss Jena Flektogon Close-Focus Field Curve', description: 'Dramatic close focus with curved focus falloff and richly textured wide-angle detail.' },
+    { name: 'Meyer-Optik Primoplan Soft Glow', description: 'Gentle spherical-aberration glow with a painterly, romantic wide-open portrait look.' },
+    { name: 'Meyer-Optik Orestor 15-Blade Bokeh', description: 'Long-aperture-blade design that keeps defocused highlights round and smooth when stopped down.' },
+    { name: 'Dallmeyer 3B Radial Blur', description: 'Sharp central subject surrounded by a dramatic radial whirl and soft falloff.' },
+    { name: 'Canon FD SSC Cinematic Flare', description: 'Warm color, lowered contrast, and expressive sun flare for an unmistakably analog frame.' },
+    { name: 'Canon FL Dreamy Low Contrast', description: 'Earlier manual Canon rendering with hazy highlights, soft contrast, and flare-prone character.' },
+    { name: 'Minolta Rokkor Velvet Glow', description: 'Warm color transitions, smooth skin rendering, and a subtle wide-open glow.' },
+    { name: 'Olympus Zuiko Compact Flare', description: 'Small vintage optic character with gentle veiling flare, rich color, and soft edge falloff.' },
+    { name: 'Nikkor AI-S Classic 3D Separation', description: 'Crisp manual-focus contrast, natural color, and clean subject-to-background separation.' },
+    { name: 'Konica Hexanon Amber Rendering', description: 'Warm amber-biased color, fine detail, and a restrained analog glow.' },
+    { name: 'Contax Zeiss Planar Micro-Contrast', description: 'High local contrast with rich tonal separation and refined, dimensional focus transitions.' },
+    { name: 'Leica Summar Uncoated Flare', description: 'Pre-war uncoated softness with pronounced veiling flare and luminous haloed highlights.' },
+    { name: 'Jupiter-8 Sonnar Glow', description: 'Classic Sonnar softness with gentle highlight bloom and a compact rangefinder feel.' },
+    { name: 'Mir-1 Wide-Angle Sunstar', description: 'Vintage Soviet wide angle with pronounced sunstars, flare, and bold edge character.' },
+    { name: 'Tair-11A 20-Blade Portrait Bokeh', description: 'Twenty-blade aperture produces exceptionally round, smooth background highlights.' },
+    { name: 'Pentacon 50mm Rainbow Bokeh', description: 'Playful soap-bubble highlights with colorful flare and a lively M42 vintage character.' },
+    { name: 'Kodak Aero Ektar Atmospheric Bloom', description: 'Ultra-fast aerial optic look with shallow focus, gentle bloom, and cinematic softness.' },
+    { name: 'Lomo OKC Cinema Lens Character', description: 'Soviet cinema-glass texture with soft corners, organic flare, and lower contrast.' }
 ];
 
 export const FILM_TYPES = [
@@ -596,7 +641,36 @@ export const CAMERA_MOVEMENT_OPTIONS: DescriptiveOption[] = [
     { name: 'Periscope Probe Move', description: 'Low-angle probe lens tracking parallel to ground.' },
     { name: 'Roll-Locked FPV Dive', description: 'FPV drone maintaining level horizon while diving.' },
     { name: 'Step-Printed Handheld', description: 'Handheld with staccato frame-doubled motion.' },
-    { name: 'Slider Close-Up', description: 'Precise short-distance slider movement for detail.' }
+    { name: 'Slider Close-Up', description: 'Precise short-distance slider movement for detail.' },
+    { name: 'Pan Right', description: 'Smooth horizontal pivot from left to right, ending on a clear composition.' },
+    { name: 'Pan Left', description: 'Smooth horizontal pivot from right to left, ending on a clear composition.' },
+    { name: 'Whip Pan Right', description: 'Rapid rightward pivot with brief motion blur that settles on a new target.' },
+    { name: 'Whip Pan Left', description: 'Rapid leftward pivot with brief motion blur that settles on a new target.' },
+    { name: 'Fast Zoom In', description: 'Quick, decisive optical zoom toward the main subject.' },
+    { name: 'Fast Zoom Out', description: 'Quick, decisive optical zoom that opens up the surrounding scene.' },
+    { name: 'Crash Zoom In', description: 'Punchy, ultra-fast zoom into a readable focal point.' },
+    { name: 'Crash Zoom Out', description: 'Punchy, ultra-fast zoom away to reveal the wider setting.' },
+    { name: 'Dolly Out', description: 'Controlled physical pull-back that reveals more of the environment.' },
+    { name: 'Fast Dolly Out', description: 'Rapid physical pull-back for an abrupt reveal or impact.' },
+    { name: 'Slider Right', description: 'Short, controlled slide right that creates foreground-to-background parallax.' },
+    { name: 'Slider Left', description: 'Short, controlled slide left that creates foreground-to-background parallax.' },
+    { name: 'Push Past / Pass-By', description: 'Forward glide past a near foreground object into the space beyond.' },
+    { name: 'Arc Right', description: 'Measured curved move around the subject toward its right side.' },
+    { name: 'Arc Left', description: 'Measured curved move around the subject toward its left side.' },
+    { name: 'Orbit Clockwise', description: 'Smooth clockwise circle around a centered subject at a consistent radius.' },
+    { name: 'Orbit Counterclockwise', description: 'Smooth counterclockwise circle around a centered subject at a consistent radius.' },
+    { name: 'Follow Shot (Over-the-Shoulder)', description: 'Track behind the subject at shoulder height, keeping their route visible ahead.' },
+    { name: 'Reverse Tracking Shot', description: 'Move backward ahead of a walking subject while maintaining front-facing framing.' },
+    { name: 'Low Tracking Shot', description: 'Track alongside the action from ground or below-waist height.' },
+    { name: 'Vehicle Tracking Shot', description: 'Match a vehicle’s pace while holding it stable against a moving environment.' },
+    { name: 'Chase Shot', description: 'Fast, reactive follow move that stays close to a moving subject.' },
+    { name: 'Drone Push In', description: 'Controlled aerial glide forward toward a subject or destination.' },
+    { name: 'Drone Pull Back', description: 'Controlled aerial retreat that progressively reveals the landscape.' },
+    { name: 'Helicopter-Style Aerial', description: 'Broad, high-altitude flight path with stable large-scale framing.' },
+    { name: 'First-Person View', description: 'Human eye-height forward movement from the character’s perspective.' },
+    { name: 'Infinite Zoom', description: 'Continuous centered zoom inward, accelerating into the next visual world.' },
+    { name: 'Earth Zoom Out', description: 'Rapid pull from a local point outward through city, landscape, and planet scale.' },
+    { name: 'Pass-Through Movement', description: 'Centered glide through a visible surface, barrier, or opening into a new space.' }
 ];
 
 export const MOTION_OPTIONS: DescriptiveOption[] = [
@@ -932,7 +1006,30 @@ export const WEATHER_OPTIONS = [
     'Sunny Clear', 'Heavy Humidity', 'Tornado Sky'
 ];
 
-export const STYLING_TRENDS: string[] = [];
+export const STYLING_TRENDS: DescriptiveOption[] = [
+    { name: 'Poetcore', description: 'Literary Romance, Inky Neutrals, Soft Layers, Handwritten Details' },
+    { name: 'Aliencore', description: 'Bionic Shapes, Iridescent Skin, Otherworldly Gloss, Acid Tones' },
+    { name: 'Circuscore', description: 'Theatrical Stripes, Carnival Color, Playful Drama, Vintage Spectacle' },
+    { name: '80s Maximalism', description: 'Power Shoulders, Lacquered Color, High Drama, Opulent Excess' },
+    { name: 'Sportif', description: 'Technical Sportswear, Refined Tailoring, Performance Details, Clean Energy' },
+    { name: 'Modern Heirloom', description: 'Vintage Craft, Rich Patina, Sentimental Objects, Collected Layers' },
+    { name: 'Tactile Minimalism', description: 'Quiet Forms, Handmade Texture, Soft Neutrals, Material Warmth' },
+    { name: 'Neo-Medieval', description: 'Heraldic Motifs, Chainmail Texture, Illuminated Color, Future Fantasy' },
+    { name: 'Analog Craft Revival', description: 'Visible Paper Grain, Hand-Drawn Marks, Imperfect Print, Human Touch' },
+    { name: 'Soft Industrial', description: 'Brushed Metal, Translucent Plastic, Rounded Utility, Gentle Light' },
+    { name: 'Night Garden', description: 'Botanical Darkness, Wet Foliage, Jewel Tones, Nocturnal Romance' },
+    { name: 'Desert Modern', description: 'Sun-Baked Earth Tones, Sculptural Forms, Sparse Luxury, Long Shadows' },
+    { name: 'Hyperlocal Nostalgia', description: 'Everyday Landmarks, Community Ephemera, Familiar Texture, Memory Haze' },
+    { name: 'Romantic Utility', description: 'Practical Shapes, Soft Fabrics, Feminine Detail, Everyday Elegance' },
+    { name: 'Power Dressing Revival', description: 'Strong Shoulders, Precise Tailoring, Confident Proportion, Polished Authority' },
+    { name: 'Refined Grunge', description: 'Washed Texture, Dark Layers, Distressed Detail, Deliberate Edge' },
+    { name: 'Modern Bohemia', description: 'Relaxed Layers, Artisan Pattern, Sun-Faded Color, Free-Spirited Ease' },
+    { name: 'Contemporary Preppy', description: 'Clean Knitwear, Collegiate Detail, Crisp Stripes, Relaxed Structure' },
+    { name: 'Sculptural Tailoring', description: 'Architectural Volume, Precise Seams, Strong Silhouette, Gallery Polish' },
+    { name: 'Eclectic Maximalism', description: 'Layered Pattern, Collected Color, Bold Accessories, Joyful Excess' },
+    { name: 'Quiet Luxury', description: 'Fine Natural Fibers, Understated Palette, Timeless Cut, Discreet Quality' },
+    { name: 'Retro Futurism', description: 'Optimistic Space Age, Chrome Curves, Vintage Tech, Saturated Color' }
+];
 
 export const COLOR_GRADES = [
     'Teal & Orange Blockbuster', 'Bleach Bypass', 'Day-for-Night',
@@ -941,5 +1038,19 @@ export const COLOR_GRADES = [
     'Infrared False Color', 'Warm Golden Glow', 'Cold Blue Tint',
     'Green Toxic / Sickness', 'Magenta / Pink Dream', 'Amber Vintage',
     'LUT: Cinematic LUT', 'Technicolor Three-Strip', 'Black & White High Contrast',
-    'Silver Retention (Bleach Bypass)', 'Fade in Film'
+    'Silver Retention (Bleach Bypass)', 'Fade in Film',
+    'Kodak Vision3 500T Tungsten', 'Kodak Vision3 250D Daylight',
+    'Kodak Portra Soft Pastel', 'Kodak Ektar Vivid Color',
+    'Fujifilm Eterna Soft Cinema', 'Fujifilm Velvia Rich Landscape',
+    'Agfa Warm Vintage', 'Polaroid Faded Instant', 'Super 8 Home Movie',
+    '16mm Documentary Grain', 'ECN-2 Film Negative', 'Chrome Slide Film',
+    'Cyan & Amber Contrast', 'Emerald & Gold', 'Purple & Teal Neon',
+    'Neon Noir Night', 'Moonlit Steel Blue', 'Desert Dust Ochre',
+    'Sun-Bleached Western', 'Rainy Urban Sodium Vapor', 'Gothic Crimson & Black',
+    'Pastel Spring Bloom', 'Earthy Terracotta', 'Jewel Tone Luxury',
+    'Monochrome Silver Gelatin', 'Noir Green Shadows', 'Clean Editorial Neutral',
+    'Warm Skin Tone Commercial', 'Cool Minimalist Editorial', 'Soft Matte Contrast',
+    'Rich Blacks & Warm Highlights', 'Lifted Shadows Film Fade', 'High-Contrast Chrome',
+    'Muted Documentary Naturalism', 'Split-Tone Blue Shadows / Orange Highlights',
+    'Selective Color Accent'
 ];

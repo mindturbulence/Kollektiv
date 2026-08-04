@@ -56,6 +56,17 @@ function mergePlain(builtin: string[], key: string, customOptions?: Record<strin
     return [...builtin, ...customStrings.filter(c => !exists.has(c.toLowerCase()))];
 }
 
+function mergeDescriptive(
+    builtin: { name: string; description: string }[],
+    key: string,
+    customOptions?: Record<string, (string | { name: string; description?: string })[]>,
+): { name: string; description?: string }[] {
+    if (!customOptions?.[key]?.length) return builtin;
+    const customEntries = customOptions[key].map(entry => typeof entry === 'string' ? { name: entry } : entry);
+    const exists = new Set(builtin.map(entry => entry.name.toLowerCase()));
+    return [...builtin, ...customEntries.filter(entry => !exists.has(entry.name.toLowerCase()))];
+}
+
 function ModifierWeightSlider({
     modifierKey, weight, profile, onChange,
 }: {
@@ -160,15 +171,15 @@ export const RefinerModifierControls: React.FC<RefinerModifierControlsProps> = (
                             <label className="text-[10px] font-black uppercase text-base-content/40 tracking-widest mb-2 block">Visual Discipline</label>
                             <AutocompleteSelect value={modifiers.artStyle || ''}
                                 onChange={(v) => setModifiers({ ...modifiers, artStyle: v })}
-                                options={[...artStyles.flatMap(c => c.items.map(i => ({ label: i.name.toUpperCase(), value: i.name }))),
-                                    ...Z_IMAGE_STYLES.map(s => ({ label: `${s.toUpperCase()} (Z-VARIANT)`, value: s }))]}
+                                options={[...artStyles.flatMap(c => c.items.map(i => ({ label: i.name.toUpperCase(), value: i.name, description: i.description }))),
+                                    ...Z_IMAGE_STYLES.map(s => ({ label: s.toUpperCase(), value: s }))]}
                                 placeholder="Discipline..." />
                             {modifiers.artStyle && <ModifierWeightSlider modifierKey="artStyle" weight={modifierWeights.artStyle ?? 1.0} profile={profile} onChange={handleWeightChange} />}
                         </div>
                         <div className="form-control">
                             <label className="text-[10px] font-black uppercase text-base-content/40 tracking-widest mb-2 block">Styling Trends</label>
                             <AutocompleteSelect value={modifiers.artist || ''} onChange={(v) => setModifiers({ ...modifiers, artist: v })}
-                                options={mergePlain(STYLING_TRENDS, 'artist', customOptions).map(s => ({ label: s.toUpperCase(), value: s }))}
+                                options={mergeDescriptive(STYLING_TRENDS, 'artist', customOptions).map(s => ({ label: s.name.toUpperCase(), value: s.name, description: s.description }))}
                                 placeholder="Creator influence..."
                                 onAddCustom={onAddCustomOption ? (v) => onAddCustomOption('artist', v) : undefined} />
                             {modifiers.artist && <ModifierWeightSlider modifierKey="artist" weight={modifierWeights.artist ?? 1.0} profile={profile} onChange={handleWeightChange} />}

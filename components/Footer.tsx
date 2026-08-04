@@ -241,10 +241,12 @@ const Footer: React.FC<FooterProps> = ({
                 <div className={`flex gap-4 ${mainFontClass} items-center pl-4 ps-6 border-l border-base-content/10`}>
                     <span className="arwes-label uppercase tracking-widest text-primary/60 leading-none inline-block">INT</span>
                     <IntegrationItem label="VLT" active={fileSystemManager.isDirectorySelected()} />
-                    <IntegrationItem label="OPR" active={!!settings.openrouterModel} />
+                    <IntegrationItem label="OLM" active={!!(settings.geminiApiKey || process.env.GEMINI_API_KEY) || settings.activeLLM?.includes('ollama')} />
+                    {/* OpenRouter provider indicator */}
+                    <IntegrationItem label="ORT" active={!!settings.openrouterModel} />
                     {/* Llama.cpp provider indicator */}
                     <IntegrationItem label="LCP" active={!!settings.llamacppModel} />
-                    <IntegrationItem label="GLE" active={isGoogleAuthValid(settings.googleIdentity)} />
+                    <IntegrationItem label="GLG" active={isGoogleAuthValid(settings.googleIdentity)} />
                     <IntegrationItem label="SPO" active={!!settings.spotify?.isConnected} />
                     <IntegrationItem label="TRT" active={!!settings.tensorartApiKey} />
                     <IntegrationItem label={`MCP: ${(settings.mcpServers || []).filter(s => s.enabled).length}`} active={(settings.mcpServers || []).filter(s => s.enabled).length > 0} />
