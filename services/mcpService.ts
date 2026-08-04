@@ -321,7 +321,16 @@ export const mcpService = {
       const resultObj = payload.result || payload;
       return resultObj.tools || (Array.isArray(resultObj) ? resultObj : []);
     } catch (err: any) {
-      console.error("Failed to list MCP tools:", err);
+      const msg = String(err?.message || err || '');
+      // A down/unreachable server is routine (user hasn't started it yet) —
+      // surface as a warning, not an error, to avoid console noise on every
+      // app load / assistant connect.
+      const isUnreachable = /connection refused|ECONNREFUSED|dns resolution failed|ENOTFOUND|failed to fetch|load failed/i.test(msg);
+      if (isUnreachable) {
+        console.warn(`MCP server unreachable (skipping): ${msg}`);
+      } else {
+        console.error("Failed to list MCP tools:", err);
+      }
       throw err;
     }
   },

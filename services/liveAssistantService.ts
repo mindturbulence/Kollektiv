@@ -29,6 +29,63 @@ const LIVE_MODEL = 'gemini-3.1-flash-live-preview';
 const MIC_RATE = 16000;      // Live API input requirement
 const SPEAKER_RATE = 24000;  // Live API output rate
 
+/** Maximum number of function declarations the Gemini Live API accepts in a single
+ *  session setup. Documented at:
+ *   https://firebase.google.com/docs/ai-logic/function-calling#step-3 (Firebase AI Logic)
+ *   https://cloud.google.com/gemini-enterprise-agent-platform/reference/models/function-calling (Vertex)
+ *  Both sources state: "The maximum number of function declarations that can be
+ *  provided with the request is 128." Sending more causes the server to close the
+ *  session with 1011 "Internal error encountered." within seconds of opening.
+ *  Exported so the selection helper and its tests can reference the same value. */
+export const LIVE_API_MAX_FUNCTION_DECLARATIONS = 128;
+
+/** Pick which tools to advertise to the Gemini Live session, enforcing the
+ *  documented 128-declaration cap. Built-in tools are prioritized (they power
+ *  the core assistant experience — navigate, search_prompts, refine_prompt,
+ *  browser_*, etc.) and any MCP tools fill the remaining slots. When the
+ *  combined set exceeds the cap, the surplus MCP tools are dropped and a
+ *  warning is logged naming the omitted prefixes so the user can disable
+ *  MCP servers in Settings → MCP if they want a different mix.
+ *
+ *  Pure / synchronous so the test suite can drive it without mocking the SDK. */
+export function selectLiveTools(
+    builtInTools: AssistantTool[],
+    mcpTools: AssistantTool[],
+    max = LIVE_API_MAX_FUNCTION_DECLARATIONS,
+): AssistantTool[] {
+    if (builtInTools.length >= max) {
+        // Built-ins alone saturate the budget — MCP tools get dropped entirely.
+        const omitted = mcpTools.map((t) => t.name.split('_')[1] || t.name);
+        if (mcpTools.length > 0) {
+            console.warn(
+                `[LiveAssistant] Built-in tools (${builtInTools.length}) already fill the ` +
+                `Gemini Live ${max}-function-declaration cap; dropping ${mcpTools.length} ` +
+                `MCP tool(s). MCP servers in use: ${omitted.join(', ')}.`,
+            );
+        }
+        return builtInTools.slice(0, max);
+    }
+    const remaining = max - builtInTools.length;
+    if (mcpTools.length <= remaining) {
+        return [...builtInTools, ...mcpTools];
+    }
+    const keptMcp = mcpTools.slice(0, remaining);
+    const omittedPrefixes = new Set<string>();
+    for (const t of mcpTools.slice(remaining)) {
+        // Names are prefixed `mcp_<serverId>_<toolName>` (see mcpAssistantTools.ts).
+        const parts = t.name.split('_');
+        omittedPrefixes.add(parts[1] || t.name);
+    }
+    console.warn(
+        `[LiveAssistant] Tool list (${builtInTools.length} built-in + ${mcpTools.length} MCP ` +
+        `= ${builtInTools.length + mcpTools.length}) exceeds the Gemini Live ` +
+        `${max}-function-declaration cap; dropping ${mcpTools.length - remaining} ` +
+        `MCP tool(s). Affected MCP server IDs: ${Array.from(omittedPrefixes).join(', ')}. ` +
+        `Disable those servers in Settings → MCP if you want a different mix.`,
+    );
+    return [...builtInTools, ...keptMcp];
+}
+
 /** flavour: localized flavored phrase for the Samaritan assistant screen.
  *  toolName: humanized raw tool name for the Activity panel log. Two separate
  *  fields because those two surfaces intentionally show different text for
@@ -396,9 +453,23 @@ export class LiveAssistant {
     private handlers!: LiveHandlers;
     private turnManager: TurnManager | null = null;
     private vadService: VoiceActivityService | null = null;
+    /** In-flight VAD init promise. Teardown must not close the mic AudioContext
+     *  while this is pending — closing the context aborts the worklet's
+     *  addModule() with "Unable to load a worklet's module" (AbortError). */
+    private vadInitPromise: Promise<void> | null = null;
     private settings!: LLMSettings;
     private mcpTools: AssistantTool[] = [];
     private closedByUs = false;
+    /** Whether the Gemini Live WebSocket is currently open. Guards realtime
+     *  input sends so closed sockets don't get spammed with PCM/video frames
+     *  (each one makes the SDK log "WebSocket is already in CLOSING or CLOSED
+     *  state" — a burst of ~30 lines per close). */
+    private sessionOpen = false;
+    /** Most recent error detail from the SDK's onerror callback. Gemini often
+     *  closes with the generic "Internal error encountered." (1011) while the
+     *  real reason (invalid key, model access, quota) arrives in onerror — keep
+     *  it so the close path can surface it instead of the generic reason. */
+    private lastSessionError: string | null = null;
     private reconnectManager = new ReconnectManager({
         maxRetries: 5,
         baseDelayMs: 1000,
@@ -420,11 +491,23 @@ export class LiveAssistant {
         handlers.onStatus('connecting');
         const ai = getGeminiClient(settings);
         
-        // Load MCP tools (cached) and combine with built-in tools
+        // Load MCP tools (cached) and combine with built-in tools.
+        // The Gemini Live API caps session setups at 128 function declarations
+        // (see LIVE_API_MAX_FUNCTION_DECLARATIONS); sending more causes the
+        // server to close with 1011 "Internal error encountered." Built-in
+        // tools are kept whole, MCP tools fill the remaining budget.
         const mcpTools = await loadMcpAssistantTools(settings);
         this.mcpTools = mcpTools;
+        const liveTools = selectLiveTools(ASSISTANT_TOOLS, mcpTools);
         const allTools = mcpTools.length ? [...ASSISTANT_TOOLS, ...mcpTools] : ASSISTANT_TOOLS;
-        
+        console.log(
+            '[LiveAssistant] connecting with',
+            allTools.length, 'total tools (',
+            ASSISTANT_TOOLS.length, 'built-in +', mcpTools.length, 'MCP);',
+            'sending', liveTools.length, 'to Live API (cap:',
+            LIVE_API_MAX_FUNCTION_DECLARATIONS, ')',
+        );
+
         this.session = await ai.live.connect({
             model: LIVE_MODEL,
             config: {
@@ -433,21 +516,41 @@ export class LiveAssistant {
                 speechConfig: {
                     voiceConfig: { prebuiltVoiceConfig: { voiceName: settings.assistantVoice || 'Kore' } },
                 },
-                tools: [{ functionDeclarations: geminiToolDeclarations(allTools) as any }],
+                tools: [{ functionDeclarations: geminiToolDeclarations(liveTools) as any }],
                 inputAudioTranscription: {},
                 outputAudioTranscription: {},
             },
             callbacks: {
-                onopen: () => handlers.onStatus('live'),
+                onopen: () => {
+                    this.sessionOpen = true;
+                    handlers.onStatus('live');
+                },
                 onmessage: (msg: any) => { void this.handleMessage(msg); },
                 onerror: (e: any) => {
                     console.error('[LiveAssistant] session error', e);
-                    handlers.onStatus('error', e?.message || 'live session error');
+                    const detail = typeof e?.message === 'string' && e.message ? e.message : 'live session error';
+                    this.lastSessionError = detail;
+                    handlers.onStatus('error', detail);
                 },
                 onclose: (e: CloseEvent) => {
                     if (this.closedByUs) return;
-                    console.error('[LiveAssistant] session closed unexpectedly', e?.code, e?.reason);
-                    handlers.onStatus('error', e?.reason || `Live session closed unexpectedly (code ${e?.code ?? '?'})`);
+                    // The socket is dead. Stop the mic immediately (startMic
+                    // re-creates it on reconnect) and clear sessionOpen so the
+                    // screen/camera frame loops stop calling sendRealtimeInput()
+                    // on a CLOSING/CLOSED socket.
+                    this.sessionOpen = false;
+                    this.stopMic();
+                    const reason = e?.reason || this.lastSessionError || `Live session closed unexpectedly (code ${e?.code ?? '?'})`;
+                    console.error('[LiveAssistant] session closed unexpectedly', e?.code, reason);
+                    handlers.onStatus('error', reason);
+                    // 1011 = permanent server rejection (invalid/expired API key,
+                    // model access, quota). Reconnecting hits the same wall every
+                    // time, so surface the error and stop instead of retrying.
+                    if (e?.code === 1011) {
+                        this.reconnectManager.cancel();
+                        this.disconnect();
+                        return;
+                    }
                     // Start exponential backoff reconnection
                     this.reconnectManager.start(async () => {
                         this.disconnect();
@@ -483,16 +586,20 @@ export class LiveAssistant {
         if (this.micCtx && this.micStream) {
             try {
                 const vadService = new VoiceActivityService(this.turnManager);
-                await vadService.start({
+                const init = vadService.start({
                     audioContext: this.micCtx,
                     stream: this.micStream,
                     turnManager: this.turnManager,
                     baseAssetPath: '/',
                     onnxWASMBasePath: '/',
                 });
+                this.vadInitPromise = init;
+                await init;
+                this.vadInitPromise = null;
                 this.vadService = vadService;
                 console.debug('[LiveAssistant] VAD started');
             } catch (err) {
+                this.vadInitPromise = null;
                 console.warn('[LiveAssistant] VAD initialization failed, continuing without VAD:', err);
                 // Graceful degradation — continue without VAD
             }
@@ -515,7 +622,17 @@ export class LiveAssistant {
         this.micNode = new AudioWorkletNode(this.micCtx, 'pcm-capture');
         const actualRate = this.micCtx.sampleRate;
         this.micNode.port.onmessage = (ev: MessageEvent<Float32Array>) => {
-            if (!this.session) return;
+            if (!this.session || !this.sessionOpen) return;
+            // The SDK's send() does NOT throw on a CLOSING/CLOSED socket — the
+            // browser just logs "WebSocket is already in CLOSING or CLOSED
+            // state" for every call. Check the raw socket state so we stop
+            // pushing the moment it leaves OPEN instead of spamming until the
+            // (later) onclose callback fires.
+            if (!this.isSessionSocketOpen()) {
+                this.sessionOpen = false;
+                this.stopMic();
+                return;
+            }
             const pcm = floatTo16(resampleTo(ev.data, actualRate, MIC_RATE));
             const b64 = toBase64(new Uint8Array(pcm.buffer));
             try {
@@ -602,7 +719,7 @@ export class LiveAssistant {
     private scheduleVerificationFrame(): void {
         // Delay to let the page settle after the action (DOM updates, animations)
         setTimeout(async () => {
-            if (this.closedByUs || !this.session) return;
+            if (this.closedByUs || !this.session || !this.sessionOpen || !this.isSessionSocketOpen()) return;
 
             // Skip if the AI is currently speaking — sending a frame mid-response
             // would interrupt its audio output with new visual context that may
@@ -694,6 +811,8 @@ export class LiveAssistant {
             videoEl: this.screenVideoEl,
             maxDim: 1024,
             send: (b64, w, h) => {
+                if (!this.sessionOpen) return;
+                if (!this.isSessionSocketOpen()) { this.sessionOpen = false; return; }
                 browserControlService.setCaptureSize(w, h);
                 externalBrowserService.setCaptureSize(w, h);
                 // Cache the latest frame for in-app screenshot capture
@@ -728,6 +847,8 @@ export class LiveAssistant {
             videoEl: this.cameraVideoEl,
             maxDim: 720,
             send: (b64) => {
+                if (!this.sessionOpen) return;
+                if (!this.isSessionSocketOpen()) { this.sessionOpen = false; return; }
                 try {
                     this.session?.sendRealtimeInput({ video: { data: b64, mimeType: 'image/jpeg' } });
                 } catch { /* session mid-close */ }
@@ -777,8 +898,39 @@ export class LiveAssistant {
         this.handlers?.onScreenShare(false);
     }
 
+    /** True while the Gemini Live WebSocket is OPEN (readyState 1). Reads the
+     *  SDK's raw socket because send() silently drops on CLOSING/CLOSED
+     *  sockets while the browser logs an error per call — we must gate sends on
+     *  the real socket state, not just our (delayed) onclose-driven flag. */
+    private isSessionSocketOpen(): boolean {
+        const rawWs = this.session?.conn?.ws;
+        return typeof WebSocket !== 'undefined' && !!rawWs && rawWs.readyState === WebSocket.OPEN;
+    }
+
+    /** Stop the mic graph (PCM worklet node, stream tracks, AudioContext). */
+    private stopMic(): void {
+        this.micNode?.port.close();
+        this.micNode?.disconnect();
+        this.micNode = null;
+        this.micStream?.getTracks().forEach(t => t.stop());
+        this.micStream = null;
+        const ctx = this.micCtx;
+        this.micCtx = null;
+        // If a VAD init is still loading its worklet on this context, closing
+        // now aborts the addModule(). Close only once the pending init settles.
+        const pendingVadInit = this.vadInitPromise;
+        this.vadInitPromise = null;
+        const closeCtx = () => { if (ctx && ctx.state !== 'closed') void ctx.close(); };
+        if (pendingVadInit) {
+            void pendingVadInit.catch(() => {}).then(closeCtx);
+        } else {
+            closeCtx();
+        }
+    }
+
     disconnect(): void {
         this.closedByUs = true;
+        this.sessionOpen = false;
         this.reconnectManager.cancel();
         // Clean up VAD before stopping mic (VAD needs the stream to be alive)
         if (this.vadService) {
@@ -792,12 +944,7 @@ export class LiveAssistant {
         this.flushPlayback();
         this.noiseCancellation?.dispose();
         this.noiseCancellation = null;
-        this.micNode?.port.close();
-        this.micNode?.disconnect();
-        this.micNode = null;
-        this.micStream?.getTracks().forEach(t => t.stop());
-        this.micStream = null;
-        void this.micCtx?.close(); this.micCtx = null;
+        this.stopMic();
         void this.outCtx?.close(); this.outCtx = null;
         try { this.session?.close(); } catch { /* already closed */ }
         this.session = null;
