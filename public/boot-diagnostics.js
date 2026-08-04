@@ -4,26 +4,39 @@
     try {
       const div = document.createElement('div');
       div.id = 'fatal-boot-error-overlay';
-      div.style.position = 'fixed';
-      div.style.top = '0';
-      div.style.left = '0';
-      div.style.width = '100vw';
-      div.style.height = '100vh';
-      div.style.backgroundColor = '#0c0a09';
-      div.style.color = '#ef4444';
-      div.style.fontFamily = 'monospace';
-      div.style.padding = '2rem';
-      div.style.zIndex = '999999';
-      div.style.overflow = 'auto';
-      div.style.boxSizing = 'border-box';
+      Object.assign(div.style, {
+        position: 'fixed',
+        top: '0',
+        left: '0',
+        width: '100vw',
+        height: '100vh',
+        backgroundColor: 'oklch(var(--b1))',
+        color: 'oklch(var(--bc))',
+        fontFamily: '"Space Grotesk", sans-serif',
+        padding: '2rem',
+        zIndex: '999999',
+        overflow: 'auto',
+        boxSizing: 'border-box',
+        display: 'flex',
+        flexDirection: 'column',
+        alignItems: 'center',
+        justifyContent: 'center',
+        textAlign: 'center'
+      });
       div.innerHTML = `
-        <div style="max-width: 800px; margin: 0 auto; border: 1px solid rgba(239, 68, 68, 0.2); padding: 2rem; background: rgba(239, 68, 68, 0.05); border-radius: 4px;">
-          <h1 style="font-size: 1.5rem; margin-top: 0; font-weight: 900; letter-spacing: -0.05em; text-transform: uppercase;">⚠️ ${title}</h1>
-          <p style="color: #a8a29e; font-size: 14px; line-height: 1.6; margin-bottom: 2rem;">${subtitle}</p>
-          <pre style="background: #1c1917; padding: 1rem; border-radius: 4px; color: #f87171; overflow: auto; max-height: 50vh; text-align: left; font-size: 12px; border: 1px solid #2e2a24;">${detail}</pre>
-          <div style="margin-top: 2rem; display: flex; gap: 1rem;">
-            <button onclick="window.location.reload()" style="background-color: #ef4444; color: white; border: none; padding: 0.75rem 1.5rem; font-family: monospace; font-weight: bold; cursor: pointer; border-radius: 2px;">REBOOT_SYSTEM</button>
-            <button onclick="try { localStorage.clear(); sessionStorage.clear(); window.location.reload(); } catch(e) {}" style="background-color: transparent; color: #a8a29e; border: 1px solid #44403c; padding: 0.75rem 1.5rem; font-family: monospace; font-weight: bold; cursor: pointer; border-radius: 2px;">RESET_ALL_STORAGE</button>
+        <div style="max-width: 500px; width: 90%; padding: 2rem; border-radius: 6px; background: oklch(var(--b2)); border: 1px solid oklch(var(--p) / 0.2); box-shadow: 0 0 30px oklch(var(--p) / 0.3);">
+          <div class="font-logo" style="font-size: 3rem; font-weight: bold; letter-spacing: 0.04em; margin-bottom: 1.5rem; color: oklch(var(--p));">KOLLEKTIV</div>
+          <h1 style="font-size: 1.75rem; font-weight: 900; margin: 0 0 1rem 0; letter-spacing: -0.02em; color: oklch(var(--bc));">⚠️ ${title}</h1>
+          <p style="color: oklch(var(--bc) / 0.8); font-size: 1.125rem; line-height: 1.6; margin-bottom: 1.5rem; max-width: 400px;">${subtitle}</p>
+          <div style="background: oklch(var(--b3)); border-radius: 4px; padding: 1.5rem; margin-bottom: 2rem; max-height: 40vh; overflow: auto; text-align: left; font-family: 'JetBrains Mono', monospace; font-size: 0.875rem; line-height: 1.5; color: oklch(var(--bc) / 0.7); border: 1px solid oklch(var(--p) / 0.15);">
+${detail}
+          </div>
+          <div style="display: flex; flex-direction: column; gap: 1rem; width: 100%; max-width: 400px;">
+            <button onclick="window.location.reload()" style="background: oklch(var(--p)); color: oklch(var(--pc)); border: none; padding: 0.875rem 1.5rem; font-family: 'JetBrains Mono', monospace; font-weight: 600; text-transform: uppercase; letter-spacing: 0.14em; border-radius: 3px; cursor: pointer; transition: all 0.16s ease;">REBOOT_SYSTEM</button>
+            <button onclick="try { localStorage.clear(); sessionStorage.clear(); window.location.reload(); } catch(e) {}" style="background: transparent; color: oklch(var(--bc) / 0.7); border: 1px solid oklch(var(--bc) / 0.2); padding: 0.875rem 1.5rem; font-family: 'JetBrains Mono', monospace; font-weight: 600; text-transform: uppercase; letter-spacing: 0.14em; border-radius: 3px; cursor: pointer; transition: all 0.16s ease;">RESET_ALL_STORAGE</button>
+          </div>
+          <div style="margin-top: 2rem; font-size: 0.875rem; color: oklch(var(--bc) / 0.5); max-width: 400px;">
+            💡 Tip: Check your server connection or try <code>sessionStorage.clear(); location.reload()</code> in console
           </div>
         </div>
       `;
@@ -59,8 +72,8 @@
       return;
     }
     displayFatalBootError(
-      'Uncaught Runtime Exception',
-      `An unhandled error occurred in <strong>${event.filename || 'unknown script'}</strong> at line <strong>${event.lineno}:${event.colno}</strong>.`,
+      'Application Error',
+      `An error occurred in <strong>${event.filename || 'unknown script'}</strong> at line <strong>${event.lineno}:${event.colno}</strong>.`,
       event.error ? (event.error.stack || String(event.error)) : (event.message || 'No details available')
     );
   });
@@ -78,8 +91,8 @@
       return;
     }
     displayFatalBootError(
-      'Unhandled Promise Rejection',
-      'An asynchronous task failed without being caught.',
+      'Async Task Failed',
+      'An asynchronous operation failed without being caught.',
       event.reason ? (event.reason.stack || String(event.reason)) : 'No details available'
     );
   });
@@ -89,30 +102,54 @@
 (function() {
   // On page load, check if the PREVIOUS page left a trace
   try {
-    var lastStep = sessionStorage.getItem('_init_last_step');
-    var reloadCount = parseInt(sessionStorage.getItem('_init_reload_count') || '0', 10);
+    const lastStep = sessionStorage.getItem('_init_last_step');
+    const reloadCount = parseInt(sessionStorage.getItem('_init_reload_count') || '0', 10);
     if (lastStep) {
-      reloadCount++;
-      sessionStorage.setItem('_init_reload_count', String(reloadCount));
+      sessionStorage.setItem('_init_reload_count', String(reloadCount + 1));
       // Show diagnostic overlay
-      var div = document.createElement('div');
+      const div = document.createElement('div');
       div.id = '_init_diag';
-      div.style.cssText = 'position:fixed;top:0;left:0;width:100vw;height:100vh;background:#0c0a09;color:#00ffa3;font-family:monospace;padding:2rem;z-index:999999;overflow:auto;box-sizing:border-box';
-      div.innerHTML = [
-        '<div style="max-width:800px;margin:0 auto;border:1px solid rgba(0,255,163,0.2);padding:2rem;background:rgba(0,255,163,0.03);border-radius:4px;">',
-        '<h1 style="font-size:1.2rem;margin-top:0;font-weight:900;text-transform:uppercase;color:#ef4444;">⚠️ PAGE RELOAD DETECTED</h1>',
-        '<p style="color:#a8a29e;font-size:13px;line-height:1.6;">The page was reloaded (count: ' + reloadCount + '). The last initialization step before the previous reload was:</p>',
-        '<pre style="background:#1c1917;padding:1rem;border-radius:4px;color:#f87171;overflow:auto;max-height:60vh;text-align:left;font-size:12px;border:1px solid #2e2a24;white-space:pre-wrap;">' + lastStep + '</pre>',
-        '<hr style="border-color:#2e2a24;margin:1rem 0;"/>',
-        '<p style="color:#a8a29e;font-size:11px;">After you see this, type <strong style="color:#fff;">sessionStorage.clear(); location.reload()</strong> in the console to reset.</p>',
-        '<button onclick="sessionStorage.clear(); location.reload()" style="background:#ef4444;color:white;border:none;padding:0.75rem 1.5rem;font-family:monospace;font-weight:bold;cursor:pointer;border-radius:2px;margin-top:1rem;">CLEAR AND RELOAD</button>',
-        '</div>'
-      ].join('\n');
-      document.addEventListener('DOMContentLoaded', function() {
-        (document.body || document.documentElement).appendChild(div);
+      Object.assign(div.style, {
+        position: 'fixed',
+        top: '0',
+        left: '0',
+        width: '100vw',
+        height: '100vh',
+        backgroundColor: 'oklch(var(--b1))',
+        color: 'oklch(var(--bc))',
+        fontFamily: '"Space Grotesk", sans-serif',
+        padding: '2rem',
+        zIndex: '999999',
+        overflow: 'auto',
+        boxSizing: 'border-box',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center'
       });
-      // Also show immediately in case DOM is already ready
-      if (document.body) (document.body || document.documentElement).appendChild(div);
+      div.innerHTML = `
+        <div style="max-width: 500px; width: 90%; padding: 2rem; border-radius: 6px; background: oklch(var(--b2)); border: 1px solid oklch(var(--p) / 0.2); box-shadow: 0 0 30px oklch(var(--p) / 0.3); text-align: center;">
+          <div class="font-logo" style="font-size: 2.5rem; font-weight: bold; letter-spacing: 0.04em; margin-bottom: 1.5rem; color: oklch(var(--p));">KOLLEKTIV</div>
+          <h1 style="font-size: 1.75rem; font-weight: 900; margin: 0 0 1rem 0; letter-spacing: -0.02em; color: oklch(var(--p));">⚠️ PAGE RELOAD DETECTED</h1>
+          <p style="color: oklch(var(--bc) / 0.8); font-size: 1.125rem; line-height: 1.6; margin-bottom: 1.5rem; max-width: 400px;">
+            The page was reloaded <strong>${reloadCount + 1}</strong> time${reloadCount === 0 ? '' : 's'}. The last initialization step before the previous reload was:
+          </p>
+          <div style="background: oklch(var(--b3)); border-radius: 4px; padding: 1.5rem; margin-bottom: 2rem; max-height: 40vh; overflow: auto; text-align: left; font-family: 'JetBrains Mono', monospace; font-size: 0.875rem; line-height: 1.5; color: oklch(var(--bc) / 0.7); border: 1px solid oklch(var(--p) / 0.15);">
+${lastStep}
+          </div>
+          <div style="margin-top: 1.5rem; font-size: 0.875rem; color: oklch(var(--bc) / 0.5); max-width: 400px;">
+            💡 To reset, type <code>sessionStorage.clear(); location.reload()</code> in the console
+          </div>
+          <button onclick="sessionStorage.clear(); location.reload()" 
+                  style="background: oklch(var(--p)); color: oklch(var(--pc)); border: none; padding: 0.875rem 1.5rem; font-family: 'JetBrains Mono', monospace; font-weight: 600; text-transform: uppercase; letter-spacing: 0.14em; border-radius: 3px; cursor: pointer; transition: all 0.16s ease;">
+            CLEAR AND RELOAD
+          </button>
+        </div>
+      `;
+      if (document.body) {
+        document.body.appendChild(div);
+      } else {
+        document.documentElement.appendChild(div);
+      }
     }
   } catch(e) { console.warn('[DIAG] Error:', e); }
 

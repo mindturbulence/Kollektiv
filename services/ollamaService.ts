@@ -95,6 +95,19 @@ export const fetchOllamaModels = async (settings: LLMSettings, useCloud: boolean
             return [];
         }
 
+        // The public ollama.com registry has no CORS-enabled /api endpoint — a
+        // base URL pointing there is a misconfiguration (the real endpoints are
+        // localhost:11434 or a tunnel/cloud host). Skip the auto-fetch so it
+        // doesn't fire a CORS preflight failure into the console on every load.
+        if (targetUrl) {
+            try {
+                const targetHost = new URL(targetUrl).hostname;
+                if (targetHost === 'ollama.com' || targetHost.endsWith('.ollama.com')) {
+                    return [];
+                }
+            } catch { /* not a valid URL — fall through */ }
+        }
+
         // Optimization: If we are in a cloud environment (HTTPS) and targeting a local proxy, 
         // skip the automatic fetch to avoid console/terminal noise if Ollama isn't running.
         // Users can still manually refresh or test connection in settings.
