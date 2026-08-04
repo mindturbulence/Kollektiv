@@ -38,3 +38,4 @@ scripts/test-narrow*.mjs
 scripts/fix-tools*.cjs
 obsidian-notes-list.md
 .gstack/
+.topaz-tmp/
