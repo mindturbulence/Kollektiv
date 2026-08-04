@@ -340,6 +340,11 @@ button:active {
   font-family: "Nunito", sans-serif !important;
 }
 
+/* Dashboard wordmark scales fluidly without exceeding its desktop display size. */
+.dashboard-wordmark {
+  font-size: clamp(2.5rem, 7vw, 6rem);
+}
+
 /* Logo Font Preservation */
 .font-logo {
   font-family: "Space Grotesk", sans-serif !important;

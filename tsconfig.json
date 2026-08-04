@@ -27,5 +27,5 @@
       "@/*" :  ["./*"]
     }
   },
-  "exclude": ["mission-control", "node_modules"]
+  "exclude": ["node_modules"]
 }

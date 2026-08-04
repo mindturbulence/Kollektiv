@@ -10,8 +10,6 @@
   "homepage": "https://mindturbulence.github.io/Kollektiv/",
   "scripts": {
     "dev": "npx tsx server.ts",
-    "dev:mc": "pnpm --dir mission-control dev",
-    "dev:all": "concurrently -n kollektiv,mission-control -c green,cyan \"pnpm dev\" \"pnpm dev:mc\"",
     "start": "npx tsx server.ts",
     "build": "vite build",
     "lint": "tsc --noEmit",

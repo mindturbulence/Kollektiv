@@ -40,6 +40,28 @@ export const ART_STYLES_DATA: CheatsheetCategory[] = [
     ]
   },
   {
+    category: 'Contemporary Image Directions',
+    description: 'Modern visual disciplines for distinctive editorial, commercial, and generative image work.',
+    items: [
+      { id: 'ci-1', name: 'Mixed Media Collage', description: 'Layered paper, photography, paint, and scanned material for tactile composition.', imageUrls: [] },
+      { id: 'ci-2', name: 'Paper Cutout', description: 'Layered cut-paper shapes with graphic shadows and handcrafted depth.', imageUrls: [] },
+      { id: 'ci-3', name: 'Claymation', description: 'Tactile stop-motion look with modeled forms and soft studio light.', imageUrls: [] },
+      { id: 'ci-4', name: '3D Clay Render', description: 'Soft, matte 3D forms with rounded geometry and playful material detail.', imageUrls: [] },
+      { id: 'ci-5', name: 'Isometric Illustration', description: 'Precise angled perspective for structured scenes, spaces, and systems.', imageUrls: [] },
+      { id: 'ci-6', name: 'Blueprint Drawing', description: 'Technical line work, annotations, and measured construction on a blue ground.', imageUrls: [] },
+      { id: 'ci-7', name: 'Scientific Illustration', description: 'Observational botanical or zoological detail with exacting rendered form.', imageUrls: [] },
+      { id: 'ci-8', name: 'Graphic Novel Ink', description: 'Expressive black ink, bold shadows, kinetic lines, and sequential-art energy.', imageUrls: [] },
+      { id: 'ci-9', name: 'Children’s Book Illustration', description: 'Friendly shapes, clear storytelling, rich color, and imaginative character design.', imageUrls: [] },
+      { id: 'ci-10', name: 'Airbrush Art', description: 'Smooth gradients, luminous highlights, and retro-futurist painted finish.', imageUrls: [] },
+      { id: 'ci-11', name: 'Screen Print', description: 'Limited inks, bold shapes, registration texture, and poster-like graphic impact.', imageUrls: [] },
+      { id: 'ci-12', name: 'Textile Art', description: 'Woven fibers, embroidery, quilting, and visible handmade surface texture.', imageUrls: [] },
+      { id: 'ci-13', name: 'Monochrome Line Art', description: 'Restrained single-color linework with clear silhouette and negative space.', imageUrls: [] },
+      { id: 'ci-14', name: 'Experimental Typography', description: 'Expressive letterforms used as a central visual material and composition tool.', imageUrls: [] },
+      { id: 'ci-15', name: 'Product Visualization', description: 'Polished studio rendering focused on material, proportion, and hero lighting.', imageUrls: [] },
+      { id: 'ci-16', name: 'Editorial Illustration', description: 'Concept-led imagery with a clear visual metaphor for articles and campaigns.', imageUrls: [] }
+    ]
+  },
+  {
     category: 'Photographic',
     description: 'Capturing the evolution of light, optics, and technical imagery in the physical world.',
     items: [

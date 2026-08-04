@@ -240,15 +240,15 @@ const Footer: React.FC<FooterProps> = ({
 
                 <div className={`flex gap-4 ${mainFontClass} items-center pl-4 ps-6 border-l border-base-content/10`}>
                     <span className="arwes-label uppercase tracking-widest text-primary/60 leading-none inline-block">INT</span>
-                    <IntegrationItem label="VAULT" active={fileSystemManager.isDirectorySelected()} />
-                    <IntegrationItem label={(settings.activeLLM === 'ollama_cloud' ? 'OLLAMA' : settings.activeLLM?.toUpperCase()) || 'LLM'} active={!!(settings.geminiApiKey || process.env.GEMINI_API_KEY) || settings.activeLLM?.includes('ollama')} />
+                    <IntegrationItem label="VLT" active={fileSystemManager.isDirectorySelected()} />
+                    <IntegrationItem label="OLM" active={!!(settings.geminiApiKey || process.env.GEMINI_API_KEY) || settings.activeLLM?.includes('ollama')} />
                     {/* OpenRouter provider indicator */}
-                    <IntegrationItem label="OPENROUTER" active={!!settings.openrouterModel} />
+                    <IntegrationItem label="ORT" active={!!settings.openrouterModel} />
                     {/* Llama.cpp provider indicator */}
-                    <IntegrationItem label="LLAMA.CPP" active={!!settings.llamacppModel} />
-                    <IntegrationItem label="GOOGLE" active={isGoogleAuthValid(settings.googleIdentity)} />
-                    <IntegrationItem label="SPOTIFY" active={!!settings.spotify?.isConnected} />
-                    <IntegrationItem label="TENSORART" active={!!settings.tensorartApiKey} />
+                    <IntegrationItem label="LCP" active={!!settings.llamacppModel} />
+                    <IntegrationItem label="GLG" active={isGoogleAuthValid(settings.googleIdentity)} />
+                    <IntegrationItem label="SPO" active={!!settings.spotify?.isConnected} />
+                    <IntegrationItem label="TRT" active={!!settings.tensorartApiKey} />
                     <IntegrationItem label={`MCP: ${(settings.mcpServers || []).filter(s => s.enabled).length}`} active={(settings.mcpServers || []).filter(s => s.enabled).length > 0} />
                     <DemoModeIndicator />
                 </div>
