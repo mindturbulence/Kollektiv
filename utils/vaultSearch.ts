@@ -37,6 +37,8 @@ export interface VaultNote {
   path: string;
   title: string;
   content: string;
+  /** Discriminator for non-vault documents (WP5): 'vault_note' | 'gallery_item' | 'prompt'. */
+  kind?: string;
 }
 
 export interface SearchResult {
@@ -264,6 +266,43 @@ export class VaultSearchIndex {
       _ric(processChunk, { timeout: 5000 });
     });
   }
+
+  /**
+   * Add a single document to the already-built index (WP5).
+   * Useful for indexing gallery items and prompts without a full rebuild.
+   */
+  addDocument(note: VaultNote): void {
+    if (!this.built) return;
+    const body = stripMarkdown(stripFrontmatter(note.content));
+    const tokens = tokenize(body);
+    const docId = note.path;
+
+    this.docs.set(docId, {
+      id: docId,
+      path: note.path,
+      title: note.title,
+      bodyLength: tokens.length,
+    });
+
+    // Update inverted index
+    const termFreq = new Map<string, number>();
+    for (const t of tokens) {
+      termFreq.set(t, (termFreq.get(t) || 0) + 1);
+    }
+    for (const [term, tf] of termFreq) {
+      let postings = this.invertedIndex.get(term);
+      if (!postings) {
+        if (this.invertedIndex.size >= MAX_INDEX_TERMS) continue;
+        postings = new Map();
+        this.invertedIndex.set(term, postings);
+      }
+      postings.set(docId, { tf });
+    }
+
+    this.totalDocs++;
+    this.avgDocLength = (this.avgDocLength * (this.totalDocs - 1) + tokens.length) / this.totalDocs;
+  }
+
 
   /**
    * Search the index for notes matching the query.

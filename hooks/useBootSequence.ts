@@ -160,6 +160,10 @@ export const useBootSequence = ({
           const { indexWikilinksIntoGraph } = await import('../utils/obsidianStorage');
           await indexWikilinksIntoGraph();
         } catch { /* non-fatal */ }
+        try {
+          const { indexGalleryAndPrompts } = await import('../utils/obsidianStorage');
+          await indexGalleryAndPrompts();
+        } catch { /* non-fatal */ }
       }
 
       // ── FAST-PATH: skip remaining async I/O for diagnostics ──

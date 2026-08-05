@@ -695,3 +695,67 @@ async function _findNoteByTitle(title: string): Promise<string | null> {
   }
   return null;
 }
+// ── Gallery + Prompt search indexing (WP5) ────────────────────────────
+
+/**
+ * Feed gallery items and saved prompts into the BM25 search index as
+ * VaultNote-shaped documents with a `kind` discriminator.
+ *
+ * Call once at boot after initSearchIndex() succeeds.
+ */
+export async function indexGalleryAndPrompts(): Promise<number> {
+  const { getSearchIndex } = await import('./vaultSearch');
+  type VaultNote = import('./vaultSearch').VaultNote;
+  const searchIndex = getSearchIndex();
+  if (!searchIndex.isBuilt) return 0;
+
+  let count = 0;
+
+  // Index gallery items
+  try {
+    const { loadGalleryItems } = await import('./galleryStorage');
+    const items = await loadGalleryItems();
+    for (const item of items) {
+      const parts: string[] = [];
+      if (item.title) parts.push(item.title);
+      if (item.prompt) parts.push(item.prompt);
+      if (item.notes) parts.push(item.notes);
+      if (item.tags?.length) parts.push(item.tags.join(' '));
+
+      const note: VaultNote = {
+        path: `gallery://${item.id}`,
+        title: item.title || `Gallery Item ${item.id}`,
+        content: parts.join('\n'),
+        kind: 'gallery_item',
+      };
+      searchIndex.addDocument(note);
+      count++;
+    }
+  } catch { /* gallery unavailable */ }
+
+  // Index saved prompts
+  try {
+    const { loadSavedPrompts } = await import('./promptStorage');
+    const prompts = await loadSavedPrompts();
+    for (const p of prompts) {
+      const parts: string[] = [];
+      if (p.title) parts.push(p.title);
+      if (p.text) parts.push(p.text);
+      if (p.tags?.length) parts.push(p.tags.join(' '));
+
+      const note: VaultNote = {
+        path: `prompt://${p.id}`,
+        title: p.title || `Prompt ${p.id}`,
+        content: parts.join('\n'),
+        kind: 'prompt',
+      };
+      searchIndex.addDocument(note);
+      count++;
+    }
+  } catch { /* prompt storage unavailable */ }
+
+  if (count > 0) {
+    console.log(`[obsidian] Indexed ${count} gallery/prompt items into search`);
+  }
+  return count;
+}
