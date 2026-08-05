@@ -1,7 +1,9 @@
 import React, { useState, useEffect, useMemo, useRef, useLayoutEffect, useCallback } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { gsap } from 'gsap';
-import type { GalleryItem, GalleryCategory, LLMSettings } from '../types';
+import type { GalleryItem, GalleryCategory, LLMSettings, Generation } from '../types';
+import { getGeneration } from '../utils/generationStorage';
+import { appEventBus } from '../utils/eventBus';
 import { 
     ChevronLeftIcon, ThumbTackIcon, 
     ChevronRightIcon, CloseIcon, YouTubeIcon, 
@@ -360,6 +362,7 @@ const ItemDetailView: React.FC<ItemDetailViewProps> = ({ items, currentIndex, is
 
   const [isPublishModalOpen, setIsPublishModalOpen] = useState(false);
   const [videoBlob, setVideoBlob] = useState<Blob | null>(null);
+  const [generation, setGeneration] = useState<Generation | null>(null);
 
   useEffect(() => {
     if (item) {
@@ -379,6 +382,12 @@ const ItemDetailView: React.FC<ItemDetailViewProps> = ({ items, currentIndex, is
         setIsEditing(false);
         setTagInput('');
         setMetadata(null);
+        // Load the linked generation record (WP4)
+        if (item.generationId) {
+          getGeneration(item.generationId).then((g) => setGeneration(g ?? null)).catch(() => setGeneration(null));
+        } else {
+          setGeneration(null);
+        }
     }
   }, [item]);
 
@@ -831,6 +840,53 @@ const ItemDetailView: React.FC<ItemDetailViewProps> = ({ items, currentIndex, is
                                                 <div className="flex flex-col gap-1">
                                                     <span className="text-[11px] font-mono tracking-widest text-base-content/30 uppercase">SAMPLE COUNT</span>
                                                     <ScramblingText text={`${activeImageIndex + 1} OF ${currentMediaUrls.length}`} className="text-base-content/70" />
+                                                </div>
+                                            </div>
+                                        )}
+
+                                        {/* Generation params (WP4) */}
+                                        {generation && (
+                                            <div className="grid grid-cols-2 gap-x-8 gap-y-4 mt-4 pt-4 border-t border-white/5">
+                                                {generation.params.model && (
+                                                    <div className="flex flex-col gap-1">
+                                                        <span className="text-[11px] font-mono tracking-widest text-base-content/30 uppercase">MODEL</span>
+                                                        <ScramblingText text={generation.params.model} className="text-base-content/70" />
+                                                    </div>
+                                                )}
+                                                {generation.params.sampler && (
+                                                    <div className="flex flex-col gap-1">
+                                                        <span className="text-[11px] font-mono tracking-widest text-base-content/30 uppercase">SAMPLER</span>
+                                                        <ScramblingText text={generation.params.sampler} className="text-base-content/70" />
+                                                    </div>
+                                                )}
+                                                <div className="flex flex-col gap-1">
+                                                    <span className="text-[11px] font-mono tracking-widest text-base-content/30 uppercase">STEPS</span>
+                                                    <ScramblingText text={String(generation.params.steps)} className="text-base-content/70" />
+                                                </div>
+                                                <div className="flex flex-col gap-1">
+                                                    <span className="text-[11px] font-mono tracking-widest text-base-content/30 uppercase">CFG</span>
+                                                    <ScramblingText text={String(generation.params.cfgScale)} className="text-base-content/70" />
+                                                </div>
+                                                {generation.resolvedSeed != null && (
+                                                    <div className="flex flex-col gap-1">
+                                                        <span className="text-[11px] font-mono tracking-widest text-base-content/30 uppercase">SEED</span>
+                                                        <ScramblingText text={String(generation.resolvedSeed)} className="text-base-content/70" />
+                                                    </div>
+                                                )}
+                                                <div className="flex flex-col gap-1">
+                                                    <span className="text-[11px] font-mono tracking-widest text-base-content/30 uppercase">BACKEND</span>
+                                                    <ScramblingText text={generation.backendId} className="text-base-content/70" />
+                                                </div>
+                                                <div className="col-span-2">
+                                                    <button
+                                                        onClick={() => {
+                                                            appEventBus.emit('navigate', generation.params.model?.includes('comfy') ? 'comfy_studio' : 'a1111_studio');
+                                                            showGlobalFeedback?.('Settings loaded from generation');
+                                                        }}
+                                                        className="btn btn-xs btn-ghost text-primary tracking-wider uppercase mt-2"
+                                                    >
+                                                        LOAD THESE SETTINGS
+                                                    </button>
                                                 </div>
                                             </div>
                                         )}
