@@ -340,6 +340,7 @@ export const MODEL_PROFILES: ModelProfileSchema = {
       format: 'Atmospheric Scene Description.',
       rules:
         'Focus on lighting, color palette, and mood. Use rich descriptive language emphasizing shadows, highlights, and atmospheric effects as primary elements. Follow the STRICT IMAGE WORKFLOW.',
+},    {      name: 'Leonardo',      matchPatterns: ['leonardo'],      mediaType: 'image',      format: 'Cinematic Scene Description.',      rules:        'Photorealistic focus with cinematic framing. Describe camera lens, depth of field, lighting setup, and subject positioning with precision. Use film-industry terminology. Follow the STRICT IMAGE WORKFLOW.',    },    {      name: 'Playground',      matchPatterns: ['playground'],      mediaType: 'image',      format: 'Artistic Style Description.',      rules:        'Emphasize artistic style and visual aesthetic over photorealism. Reference art movements, color theories, and compositional techniques. Be expressive and creative with visual metaphors. Follow the STRICT IMAGE WORKFLOW.',    },    {      name: 'Flux Pro',      matchPatterns: ['flux pro', 'flux-dev'],      mediaType: 'image',      format: 'Natural Language Description.',      rules:        'Write in plain, natural sentences. Flux understands conversational descriptions well. Avoid excessive comma-separated tags. Describe the scene as you would explain it to a skilled photographer. Follow the STRICT IMAGE WORKFLOW.',
     },
 
     // ═══════════════════════════════════════════════════════════════════
