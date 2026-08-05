@@ -71,6 +71,12 @@ BM25 full-text search engine built on top of the Obsidian vault:
 
 **Tests:** 27 unit tests in `utils/vaultSearch.test.ts`
 
+**Boot wiring (2026-08-05/06, WP1 of the Kollektiv adaptation roadmap — see [ARCHITECTURE_CONSTITUTION.md § Phase 7](../00_FOUNDATION/ARCHITECTURE_CONSTITUTION.md)):** `initSearchIndex()` had zero callers until this landed — the index never built, so `searchNotes()` always fell through to the brute-force substring scan. Now called from `useBootSequence.ts` right after `initObsidianVault()` succeeds.
+
+**Non-vault documents (WP5):** `indexGalleryAndPrompts()` feeds gallery items and saved prompts into the same index as `gallery://<id>` / `prompt://<id>` pseudo-paths (`kind: 'gallery_item' | 'prompt'`). `searchNotes()` resolves their content from the gallery/prompt manifests directly, not `readFile()` — that function only resolves real vault-relative paths, so these hits were silently dropped (and could zero out an otherwise-good result set) until fixed same session.
+
+**Wikilinks → relationship graph (WP1):** `indexWikilinksIntoGraph()` walks the vault once, resolving `[[Target]]` links to note paths via a single title/filename index (not a re-walk per link), and adds them as `references` edges weighted above the tag-derived `similar_to` edges from `graphHydration.ts`. Runs once at boot, and — since `hydrateKnowledgeGraph()` calls `relationshipGraph.clear()` on every call (see [ARCHITECTURE_CONSTITUTION.md § Phase 7](../00_FOUNDATION/ARCHITECTURE_CONSTITUTION.md)) — again on every hydration, so opening `VaultMapPanel` no longer silently wipes them.
+
 ## File Watcher
 
 Note operations are synchronous (read/write/delete). The vault search index listens for mutation events from `obsidianStorage.ts` and auto-rebuilds on changes via a debounced observer pattern.
