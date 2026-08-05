@@ -420,6 +420,40 @@ export interface GalleryItem {
   // YouTube Publication tracking
   youtubeUrl?: string;
   publishedAt?: number;
+  /** Link to the Generation record that produced this item (undefined = legacy or manual upload). */
+  generationId?: string;
+  /** Inert — defined now to avoid a second migration later (D8). */
+  projectId?: string;
+}
+
+// --- Generations (WP3) ------------------------------------------------
+
+import type { GenerateParams } from './services/generationBackend';
+
+/**
+ * A durable record of a single generation run.
+ * One Generation → N GalleryItems (matrix / batch).
+ */
+export interface Generation {
+  id: string;
+  createdAt: number;
+  promptId?: string;
+  /** The prompt text AS SENT to the backend. */
+  promptText: string;
+  negativePromptText?: string;
+  /** Partial modifiers for explainability, not just repeatability. */
+  modifiers?: Partial<PromptModifiers>;
+  /** Local backend id, MCP tool id, or 'external:<name>'. */
+  backendId: string;
+  params: GenerateParams;
+  resolvedSeed?: number;
+  resultItemIds: string[];
+  parentGenerationId?: string;
+  status: 'ok' | 'failed' | 'cancelled';
+  error?: string;
+  batchId?: string;
+  /** Inert — defined now to avoid a second migration later (D8). */
+  projectId?: string;
 }
 
 export interface GalleryCategory {

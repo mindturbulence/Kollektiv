@@ -160,11 +160,36 @@ export const loadGalleryItems = async (): Promise<GalleryItem[]> => {
         .sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0));
 };
 
-export const addItemToGallery = async (type: 'image' | 'video', urls: string[], sources: string[], categoryId?: string, defaultTitle?: string, tags?: string[], notes?: string, prompt?: string, isNsfw?: boolean): Promise<GalleryItem> => {
-    const { data: manifest, safeToSave } = await getManifest();
-    if (!safeToSave) throw new ManifestWriteBlockedError(MANIFEST_NAME);
-    const category = manifest.categories.find(c => c.id === categoryId);
-    const categoryName = category?.name;
+export interface AddItemOptions {
+  categoryId?: string;
+  defaultTitle?: string;
+  tags?: string[];
+  notes?: string;
+  prompt?: string;
+  isNsfw?: boolean;
+  /** Link to the Generation record that produced this item (WP3). */
+  generationId?: string;
+}
+
+export const addItemToGallery = async (
+  type: 'image' | 'video',
+  urls: string[],
+  sources: string[],
+  categoryIdOrOptions?: string | AddItemOptions,
+  defaultTitle?: string,
+  tags?: string[],
+  notes?: string,
+  prompt?: string,
+  isNsfw?: boolean,
+): Promise<GalleryItem> => {
+  // Support both legacy positional args and new options bag
+  const opts: AddItemOptions = typeof categoryIdOrOptions === 'string' || categoryIdOrOptions === undefined
+    ? { categoryId: categoryIdOrOptions, defaultTitle, tags, notes, prompt, isNsfw }
+    : categoryIdOrOptions;
+  const { data: manifest, safeToSave } = await getManifest();
+  if (!safeToSave) throw new ManifestWriteBlockedError(MANIFEST_NAME);
+  const category = manifest.categories.find(c => c.id === opts.categoryId);
+  const categoryName = category?.name;
 
     const newItemId = `item_${Date.now()}_${uuidv4().substring(0, 6)}`;
 
@@ -204,19 +229,20 @@ export const addItemToGallery = async (type: 'image' | 'video', urls: string[], 
         throw new Error("Failed to save any media files.");
     }
     
-    const newItem: GalleryItem = {
-        id: newItemId,
-        createdAt: Date.now(),
-        type,
-        urls: successfulUrls,
-        sources,
-        title: defaultTitle || `Untitled Group (${sources.length} ${type}${sources.length > 1 ? 's' : ''})`,
-        prompt: prompt || '',
-        categoryId: categoryId || undefined,
-        tags: tags || [],
-        notes: notes || undefined,
-        isNsfw: !!isNsfw,
-    };
+  const newItem: GalleryItem = {
+    id: newItemId,
+    createdAt: Date.now(),
+    type,
+    urls: successfulUrls,
+    sources,
+    title: opts.defaultTitle || `Untitled Group (${sources.length} ${type}${sources.length > 1 ? 's' : ''})`,
+    prompt: opts.prompt || '',
+    categoryId: opts.categoryId || undefined,
+    tags: opts.tags || [],
+    notes: opts.notes || undefined,
+    isNsfw: !!opts.isNsfw,
+    generationId: opts.generationId,
+  };
 
     manifest.galleryItems.unshift(newItem);
     await saveManifest(manifest);
