@@ -202,7 +202,20 @@ export const a1111Backend: GenerationBackend = {
       body.override_settings_restore_afterwards = false;
     }
 
-    const res = await fetch(proxyUrl(settings, '/sdapi/v1/txt2img'), {
+    // WP11: Use img2img endpoint when initImage is provided
+    const isImg2Img = !!params.initImage;
+    const endpoint = isImg2Img ? '/sdapi/v1/img2img' : '/sdapi/v1/txt2img';
+
+    if (isImg2Img && params.initImage) {
+      // Extract base64 data from data URL
+      const base64Data = params.initImage.includes(',')
+        ? params.initImage.split(',')[1]
+        : params.initImage;
+      body.init_images = [base64Data];
+      body.denoising_strength = params.denoisingStrength ?? 0.75;
+    }
+
+    const res = await fetch(proxyUrl(settings, endpoint), {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(body),

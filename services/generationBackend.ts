@@ -31,8 +31,15 @@ export interface GenerateParams {
    * that don't embed their own text encoder. Only supported by the A1111 backend.
    */
   additionalModules?: string[];
-}
+  /**
+   * Source image for img2img mode (WP11). When set, the backend uses img2img
+   * instead of txt2img. Format: data:image/png;base64,... or a URL.
+   */
+  initImage?: string;
+  /** Denoising strength for img2img (0 = no change, 1 = full regeneration). Default: 0.75. */
+  denoisingStrength?: number;
 
+}
 export interface GenerateOutput {
   /** Full `data:image/png;base64,...` URL */
   dataUrl: string;
