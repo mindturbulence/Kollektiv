@@ -34,6 +34,8 @@ import { graphTools } from './tools/graphTools';
 import { graphTraversalTools } from './tools/graphTraversalTools';
 import { rssTools } from './tools/rssTools';
 import { extractStoryAssetsTool } from './tools/storyAssetExtractor';
+import { matrixGeneratorTool } from './tools/matrixGeneratorTool';
+import { comfyWorkflowTool } from './tools/comfyWorkflowTool';
 import { githubTools } from './tools/githubTools';
 import { exaTools } from './tools/exaTools';
 import { redditTools } from './tools/redditTools';
@@ -1267,6 +1269,8 @@ export const ASSISTANT_TOOLS: AssistantTool[] = [
     ...graphTraversalTools,
     ...rssTools,
     extractStoryAssetsTool,
+    matrixGeneratorTool,
+    comfyWorkflowTool,
     ...githubTools,
     ...exaTools,
     ...redditTools,

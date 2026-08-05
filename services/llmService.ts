@@ -238,6 +238,7 @@ export const buildContextForEnhancer = (
     if (modifiers.hairStyle) ctx.push(`Hair Style: ${w('hairStyle', modifiers.hairStyle)}`);
     if (modifiers.eyeColor) ctx.push(`Eye Color: ${w('eyeColor', modifiers.eyeColor)}`);
     if (modifiers.skinTexture) ctx.push(`Skin Texture: ${w('skinTexture', modifiers.skinTexture)}`);
+    if (modifiers.realism) ctx.push(`Realism Engine: ${w('realism', modifiers.realism)}`);
     if (modifiers.clothing) ctx.push(`Clothing/Outfit: ${w('clothing', modifiers.clothing)}`);
     if (modifiers.zImageStyle) ctx.push(`Z-Image Variant: ${modifiers.zImageStyle}`);
 
