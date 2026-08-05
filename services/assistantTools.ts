@@ -33,6 +33,7 @@ import { researchTools } from './tools/researchTools';
 import { graphTools } from './tools/graphTools';
 import { graphTraversalTools } from './tools/graphTraversalTools';
 import { rssTools } from './tools/rssTools';
+import { extractStoryAssetsTool } from './tools/storyAssetExtractor';
 import { githubTools } from './tools/githubTools';
 import { exaTools } from './tools/exaTools';
 import { redditTools } from './tools/redditTools';
@@ -1265,6 +1266,7 @@ export const ASSISTANT_TOOLS: AssistantTool[] = [
     ...graphTools,
     ...graphTraversalTools,
     ...rssTools,
+    extractStoryAssetsTool,
     ...githubTools,
     ...exaTools,
     ...redditTools,
