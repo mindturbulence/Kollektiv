@@ -454,8 +454,11 @@ export interface Generation {
   batchId?: string;
   /** Inert — defined now to avoid a second migration later (D8). */
   projectId?: string;
+  /** Composite quality score from implicit signals (WP10), 0-1. */
+  score?: number;
+  /** When the score was last updated. */
+  scoredAt?: number;
 }
-
 export interface GalleryCategory {
   id: string;
   name: string;
