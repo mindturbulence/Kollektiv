@@ -5,7 +5,7 @@
  */
 
 import { fileSystemManager } from './fileUtils';
-import { loadManifestSafe, ManifestWriteBlockedError, type ManifestLoad } from './manifestStore';
+import { loadManifestSafe, ManifestWriteBlockedError, stampSchemaVersion, type ManifestLoad } from './manifestStore';
 
 const MANIFEST_NAME = 'generation_presets_manifest.json';
 
@@ -50,7 +50,7 @@ const getManifest = (): Promise<ManifestLoad<PresetManifest>> =>
 const saveManifest = async (manifest: PresetManifest) => {
   await fileSystemManager.saveFile(
     MANIFEST_NAME,
-    new Blob([JSON.stringify(manifest, null, 2)], { type: 'application/json' }),
+    new Blob([JSON.stringify(stampSchemaVersion(manifest as any), null, 2)], { type: 'application/json' }),
   );
 };
 

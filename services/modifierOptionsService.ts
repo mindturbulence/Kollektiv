@@ -1,5 +1,5 @@
 import { fileSystemManager } from '../utils/fileUtils';
-import { loadManifestSafe, ManifestWriteBlockedError } from '../utils/manifestStore';
+import { loadManifestSafe, ManifestWriteBlockedError, stampSchemaVersion } from '../utils/manifestStore';
 
 const MANIFEST_NAME = 'modifier_options_manifest.json';
 
@@ -28,7 +28,7 @@ export class ModifierOptionsService {
   private async saveManifest(manifest: ModifierOptionsManifest): Promise<void> {
     await fileSystemManager.saveFile(
       MANIFEST_NAME,
-      new Blob([JSON.stringify(manifest, null, 2)], { type: 'application/json' })
+      new Blob([JSON.stringify(stampSchemaVersion(manifest as any), null, 2)], { type: 'application/json' })
     );
   }
 

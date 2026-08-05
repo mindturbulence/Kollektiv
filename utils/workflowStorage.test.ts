@@ -24,6 +24,7 @@ vi.mock('./manifestStore', () => ({
       });
     },
   ),
+  stampSchemaVersion: (m: any) => m,
   ManifestWriteBlockedError: class extends Error {
     constructor(name: string) {
       super(`Write blocked: ${name}`);

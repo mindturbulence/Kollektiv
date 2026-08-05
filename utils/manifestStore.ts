@@ -1,6 +1,20 @@
 import { fileSystemManager } from './fileUtils';
 import { forceParseJson } from './integrity';
 
+// ── Schema versioning (WP2) ──────────────────────────────────────────
+
+/** Current manifest schema version. Bump when the manifest shape changes. */
+export const SCHEMA_VERSION = 2;
+
+/**
+ * Stamp `schemaVersion` onto a manifest object before writing.
+ * Use in every `saveManifest` call:
+ *   await saveFile(name, new Blob([JSON.stringify(stampSchemaVersion(manifest))]));
+ */
+export function stampSchemaVersion<T extends Record<string, unknown>>(manifest: T): T {
+  return { ...manifest, schemaVersion: SCHEMA_VERSION } as T;
+}
+
 export interface ManifestLoad<T> {
     data: T;
     /**

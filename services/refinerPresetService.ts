@@ -1,6 +1,6 @@
 import { fileSystemManager } from '../utils/fileUtils';
 import type { PromptModifiers } from '../types';
-import { loadManifestSafe, ManifestWriteBlockedError } from '../utils/manifestStore';
+import { loadManifestSafe, ManifestWriteBlockedError, stampSchemaVersion } from '../utils/manifestStore';
 
 const MANIFEST_NAME = 'refiner_presets_manifest.json';
 
@@ -30,7 +30,7 @@ const getManifest = () =>
 
 class RefinerPresetService {
   private async saveManifest(manifest: PresetsManifest): Promise<void> {
-    await fileSystemManager.saveFile(MANIFEST_NAME, new Blob([JSON.stringify(manifest, null, 2)], { type: 'application/json' }));
+    await fileSystemManager.saveFile(MANIFEST_NAME, new Blob([JSON.stringify(stampSchemaVersion(manifest as any), null, 2)], { type: 'application/json' }));
   }
 
   public async loadPresets(): Promise<RefinerPreset[]> {

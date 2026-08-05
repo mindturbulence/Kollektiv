@@ -4,7 +4,7 @@ import { fileSystemManager } from './fileUtils';
 import { v4 as uuidv4 } from 'uuid';
 import { loadLLMSettings } from './settingsStorage';
 import { convertToJpgWithMetadata } from './imageFormatTools';
-import { loadManifestSafe, ManifestWriteBlockedError, type ManifestLoad } from './manifestStore';
+import { loadManifestSafe, ManifestWriteBlockedError, stampSchemaVersion, type ManifestLoad } from './manifestStore';
 
 interface GalleryManifest {
   galleryItems: GalleryItem[];
@@ -29,7 +29,7 @@ const getManifest = (): Promise<ManifestLoad<GalleryManifest>> =>
     );
 
 const saveManifest = async (manifest: GalleryManifest) => {
-    await fileSystemManager.saveFile(MANIFEST_NAME, new Blob([JSON.stringify(manifest, null, 2)], { type: 'application/json' }));
+    await fileSystemManager.saveFile(MANIFEST_NAME, new Blob([JSON.stringify(stampSchemaVersion(manifest as any), null, 2)], { type: 'application/json' }));
 };
 
 const getItemMetadataPath = (item: GalleryItem, categories: GalleryCategory[]) => {

@@ -4,7 +4,7 @@
  */
 
 import { fileSystemManager } from './fileUtils';
-import { loadManifestSafe, type ManifestLoad } from './manifestStore';
+import { loadManifestSafe, stampSchemaVersion, type ManifestLoad } from './manifestStore';
 import type { SavedWorkflowEntry } from '../services/comfyWorkflowParser';
 
 const MANIFEST_NAME = 'comfy_workflows_manifest.json';
@@ -33,7 +33,7 @@ const getManifest = (): Promise<ManifestLoad<WorkflowManifest>> =>
 const saveManifest = async (manifest: WorkflowManifest) => {
   await fileSystemManager.saveFile(
     MANIFEST_NAME,
-    new Blob([JSON.stringify(manifest, null, 2)], { type: 'application/json' }),
+    new Blob([JSON.stringify(stampSchemaVersion(manifest as any), null, 2)], { type: 'application/json' }),
   );
 };
 

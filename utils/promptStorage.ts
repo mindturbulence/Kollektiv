@@ -2,7 +2,7 @@
 import type { SavedPrompt, PromptCategory, PromptVersionNode } from '../types';
 import { fileSystemManager } from './fileUtils';
 import { v4 as uuidv4 } from 'uuid';
-import { loadManifestSafe, ManifestWriteBlockedError, type ManifestLoad } from './manifestStore';
+import { loadManifestSafe, ManifestWriteBlockedError, stampSchemaVersion, type ManifestLoad } from './manifestStore';
 
 interface PromptManifest {
   prompts: SavedPrompt[];
@@ -26,7 +26,7 @@ const getManifest = (): Promise<ManifestLoad<PromptManifest>> =>
     );
 
 const saveManifest = async (manifest: PromptManifest) => {
-    await fileSystemManager.saveFile(MANIFEST_NAME, new Blob([JSON.stringify(manifest, null, 2)], { type: 'application/json' }));
+    await fileSystemManager.saveFile(MANIFEST_NAME, new Blob([JSON.stringify(stampSchemaVersion(manifest as any), null, 2)], { type: 'application/json' }));
 };
 
 const _loadPromptsWithText = async (prompts: SavedPrompt[]): Promise<SavedPrompt[]> => {
