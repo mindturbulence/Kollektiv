@@ -262,4 +262,35 @@ export function getAgentMemoryBlock(): string | null {
 
 export async function syncAgentMemoryToVault(content: string): Promise<void> {
   _agentMemoryBlock = content;
+
+  // Write a structured memory note to the Obsidian vault via knowledgeLifecycle.
+  // This makes assistant memories visible and searchable in the vault.
+  try {
+    const { isObsidianConnected } = await import('./obsidianStorage');
+    if (!isObsidianConnected()) return;
+
+    const { knowledgeLifecycle } = await import('../services/knowledgeLifecycle');
+    const { writeNote } = await import('./obsidianStorage');
+    const { loadMemories } = await import('./memoryStorage');
+
+    const memories = await loadMemories();
+    if (memories.length === 0) return;
+
+    const lines = memories.map(
+      (m) => `- ${m.fact}${m.tags.length ? ` [${m.tags.join(', ')}]` : ''}`,
+    );
+    const body = `# Agent Memory\n\nPersistent memories about the user from earlier sessions.\n\n${lines.join('\n')}\n`;
+
+    const stage = knowledgeLifecycle.determineStage('memory', 'long-term', ['agent-memory']);
+    const path = knowledgeLifecycle.generatePath(stage, 'memory', 'agent-memory', 'Agent Memory');
+    const frontmatter = knowledgeLifecycle.buildFrontmatter(
+      stage,
+      { kind: 'memory', title: 'Agent Memory', tags: ['agent-memory'], tier: 'long-term' },
+      { source: 'memoryStorage' },
+    );
+
+    await writeNote(path, frontmatter + body);
+  } catch {
+    // Non-fatal — vault sync is best-effort
+  }
 }

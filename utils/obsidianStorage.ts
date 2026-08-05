@@ -611,3 +611,87 @@ export function openNoteInPanel(note: ObsidianNote): void {
 function escapeRegex(str: string): string {
   return str.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 }
+
+// ── Wikilink → Relationship Graph indexing (WP1) ─────────────────────
+
+/**
+ * Walk all vault notes, extract [[wikilinks]], and add them as explicit
+ * edges in the relationship graph.  Edges are weighted above the
+ * tag-derived `similar_to` edges so hand-authored links take precedence.
+ *
+ * Call once at boot after initSearchIndex() succeeds.
+ */
+export async function indexWikilinksIntoGraph(): Promise<number> {
+  const { relationshipGraph } = await import('../services/relationshipGraph');
+  let edgeCount = 0;
+
+  for await (const notePath of walkMdFiles()) {
+    const content = await readFile(notePath);
+    if (!content) continue;
+
+    const title = extractTitle(notePath, content);
+    const sourceId = notePath;
+
+    // Ensure the source note exists as a graph entity
+    if (!relationshipGraph.hasEntity('vault_note', sourceId)) {
+      const { frontmatter } = parseFrontmatter(content);
+      const tags: string[] = Array.isArray(frontmatter.tags) ? frontmatter.tags : [];
+      relationshipGraph.addEntity('vault_note', sourceId, title, tags);
+    }
+
+    const targets = extractWikilinks(content);
+    for (const targetTitle of targets) {
+      // Find the target note path by title (case-insensitive)
+      const targetPath = await _findNoteByTitle(targetTitle);
+      if (!targetPath) continue; // target doesn't exist in vault
+
+      const targetId = targetPath;
+
+      // Ensure the target note exists as a graph entity
+      if (!relationshipGraph.hasEntity('vault_note', targetId)) {
+        const targetContent = await readFile(targetPath);
+        if (!targetContent) continue;
+        const targetExtractedTitle = extractTitle(targetPath, targetContent);
+        const { frontmatter } = parseFrontmatter(targetContent);
+        const tags: string[] = Array.isArray(frontmatter.tags) ? frontmatter.tags : [];
+        relationshipGraph.addEntity('vault_note', targetId, targetExtractedTitle, tags);
+      }
+
+      // Add explicit wikilink edge (weight 0.8 — above tag-derived 0.5)
+      const existing = relationshipGraph.getRelationsBetween(
+        'vault_note', sourceId, 'vault_note', targetId,
+      );
+      const hasWikilink = existing.some((r) => r.type === 'references');
+      if (!hasWikilink) {
+        relationshipGraph.addRelation(
+          'references',
+          'vault_note', sourceId,
+          'vault_note', targetId,
+          0.8,
+        );
+        edgeCount++;
+      }
+    }
+  }
+
+  console.log(`[obsidian] Indexed ${edgeCount} wikilink edges into relationship graph`);
+  return edgeCount;
+}
+
+/**
+ * Find a note path by its title (case-insensitive, exact match after
+ * stripping .md extension).
+ */
+async function _findNoteByTitle(title: string): Promise<string | null> {
+  const normalised = title.toLowerCase().replace(/\.md$/, '');
+  for await (const notePath of walkMdFiles()) {
+    const content = await readFile(notePath);
+    if (!content) continue;
+    const noteTitle = extractTitle(notePath, content);
+    if (noteTitle.toLowerCase() === normalised) return notePath;
+    // Also match by filename
+    const fileName = notePath.split('/').pop()?.replace(/\.md$/, '') || '';
+    if (fileName.toLowerCase() === normalised) return notePath;
+  }
+  return null;
+}

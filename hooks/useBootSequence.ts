@@ -117,14 +117,26 @@ export const useBootSequence = ({
       // ── Reconnect a previously-granted Obsidian vault and make sure the
       // knowledge/{inbox,projects,output,wiki} lifecycle folders exist —
       // best-effort, non-fatal if no vault was ever connected. ──
+      let obsidianReady = false;
       try {
         const { initObsidianVault, ensureFolders } = await import('../utils/obsidianStorage');
         if (await initObsidianVault()) {
+          obsidianReady = true;
           const { knowledgeLifecycle } = await import('../services/knowledgeLifecycle');
           const folders = Object.values(knowledgeLifecycle.getAllStageConfigs()).map((c) => c.folder);
           await ensureFolders(folders);
         }
       } catch { /* obsidian vault is optional */ }
+
+      // ── Wake the vault search index (WP1): ensure BM25 / hybrid rank is
+      // loaded from IDB or rebuilt in the background. Without this call the
+      // search falls through to brute-force substring scan. ──
+      if (obsidianReady) {
+        try {
+          const { initSearchIndex } = await import('../utils/obsidianStorage');
+          await initSearchIndex();
+        } catch { /* non-fatal */ }
+      }
 
       // ── Rebuild the knowledge index so existing memories/notes/vault files
       // are searchable and promotable (knowledge_lifecycle_promote needs them
@@ -133,6 +145,22 @@ export const useBootSequence = ({
         const { knowledgeService } = await import('../services/knowledgeService');
         await knowledgeService.rebuildIndex();
       } catch { /* non-fatal */ }
+
+      // ── WP1: Sync agent memory to the vault as structured notes, and
+      // index wikilinks into the relationship graph. ──
+      if (obsidianReady) {
+        try {
+          const { syncAgentMemoryToVault, getAgentMemoryBlock } = await import('../utils/memoryStorage');
+          const memBlock = getAgentMemoryBlock();
+          if (memBlock) {
+            await syncAgentMemoryToVault(memBlock);
+          }
+        } catch { /* non-fatal */ }
+        try {
+          const { indexWikilinksIntoGraph } = await import('../utils/obsidianStorage');
+          await indexWikilinksIntoGraph();
+        } catch { /* non-fatal */ }
+      }
 
       // ── FAST-PATH: skip remaining async I/O for diagnostics ──
       onProgress('System Ready', 1.0);
