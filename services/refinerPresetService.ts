@@ -4,6 +4,10 @@ import { loadManifestSafe, ManifestWriteBlockedError, stampSchemaVersion } from 
 
 const MANIFEST_NAME = 'refiner_presets_manifest.json';
 
+export type RefinerPresetKind =
+  | 'character' | 'scene' | 'world' | 'camera'
+  | 'lighting' | 'style' | 'composition' | 'palette' | 'general';
+
 export interface RefinerPreset {
   name: string;
   modifiers: PromptModifiers;
@@ -12,6 +16,16 @@ export interface RefinerPreset {
   promptLength: string;
   constantModifier?: string;
   refineText?: string;
+  /** Creative asset kind (WP8) — classifies the preset's purpose. */
+  kind?: RefinerPresetKind;
+  /** Tags for filtering and discovery. */
+  tags?: string[];
+  /** Freeform notes — backstory, world rules, scene notes. */
+  freeform?: string;
+  /** Gallery item id to use as a preview thumbnail. */
+  previewItemId?: string;
+  /** How many times this preset has been used. */
+  useCount?: number;
 }
 
 interface PresetsManifest {
