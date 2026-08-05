@@ -7,7 +7,7 @@ import { audioService } from '../../services/audioService';
 import { UploadIcon, DownloadIcon } from '../icons';
 import { useSettings } from '../../contexts/SettingsContext';
 import { isGoogleAuthValid, requestSilentTokenRefresh, trySilentRefreshWithWait } from '../../utils/googleAuth';
-import { verifyAndRepairFiles, rebuildGalleryDatabase, rebuildPromptDatabase, optimizeManifests } from '../../utils/integrity';
+import { verifyAndRepairFiles, rebuildGalleryDatabase, rebuildPromptDatabase, optimizeManifests, getGenerationCoverageReport } from '../../utils/integrity';
 import { UI_STRINGS } from '../../constants/uiStrings';
 
 interface AppSectionProps {
@@ -108,8 +108,14 @@ const AppSection: React.FC<AppSectionProps> = ({
             setMaintenanceMsg("OPTIMIZING_MANIFESTS...");
             await optimizeManifests((msg) => setMaintenanceMsg(msg));
 
+            setMaintenanceMsg("CHECKING_GENERATION_COVERAGE...");
+            const coverage = await getGenerationCoverageReport();
+
             setMaintenanceProgress(100);
-            showGlobalFeedback("Vault synchronized successfully.");
+            showGlobalFeedback(
+                `Vault synchronized successfully. ${coverage.itemsWithoutGenerationPct}% of gallery items have no linked generation` +
+                (coverage.danglingGenerations > 0 ? `; ${coverage.danglingGenerations} generation(s) reference deleted items.` : '.')
+            );
         } catch (error: any) {
             console.error("Sync Vault Error:", error);
             showGlobalFeedback(`Sync Error: ${error.message || 'Unknown error'}`, true);

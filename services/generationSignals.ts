@@ -13,8 +13,8 @@
  */
 
 import { loadGenerations, saveGeneration } from '../utils/generationStorage';
-import { loadGalleryItems } from '../utils/galleryStorage';
-import type { Generation } from '../types';
+import { loadGalleryItems, loadPinnedItemIds } from '../utils/galleryStorage';
+import type { Generation, GalleryItem } from '../types';
 
 // ── Signal weights (strongest first) ───────────────────────────────────
 
@@ -38,11 +38,35 @@ const WEIGHTS = {
 // ── Scoring ────────────────────────────────────────────────────────────
 
 /**
+ * Build a key → count map of how often each (backendId, seed) pair recurs
+ * across generations. A count > 1 means those params were used more than
+ * once — the cheapest available evidence of "param reuse" without adding
+ * new event tracking to the WP4 "Load these settings" button.
+ */
+function buildSeedReuseCounts(gens: Generation[]): Map<string, number> {
+  const counts = new Map<string, number>();
+  for (const g of gens) {
+    if (g.resolvedSeed == null) continue;
+    const key = `${g.backendId}:${g.resolvedSeed}`;
+    counts.set(key, (counts.get(key) || 0) + 1);
+  }
+  return counts;
+}
+
+/**
  * Compute a composite quality score for a generation based on its
  * gallery items' signals. Returns 0-1.
  */
-function computeScore(gen: Generation, items: Map<string, any>): number {
+function computeScore(
+  gen: Generation,
+  items: Map<string, GalleryItem>,
+  pinnedIds: Set<string>,
+  seedReuseCounts: Map<string, number>,
+): number {
   if (gen.resultItemIds.length === 0) return 0;
+
+  const reused = gen.resolvedSeed != null
+    && (seedReuseCounts.get(`${gen.backendId}:${gen.resolvedSeed}`) || 0) > 1;
 
   let totalScore = 0;
   let count = 0;
@@ -66,6 +90,11 @@ function computeScore(gen: Generation, items: Map<string, any>): number {
       score += WEIGHTS.publish;
     }
 
+    // Param reuse: this generation's (backend, seed) pair recurs elsewhere
+    if (reused) {
+      score += WEIGHTS.paramReuse;
+    }
+
     // Naming: not "Untitled Group"
     if (item.title && !item.title.startsWith('Untitled Group')) {
       score += WEIGHTS.naming;
@@ -81,8 +110,8 @@ function computeScore(gen: Generation, items: Map<string, any>): number {
       score += WEIGHTS.tags;
     }
 
-    // Pinned
-    if (item.isPinned) {
+    // Pinned — tracked via the gallery manifest's pinnedIds[], not a field on the item
+    if (pinnedIds.has(itemId)) {
       score += WEIGHTS.pinned;
     }
 
@@ -103,10 +132,12 @@ export async function scoreAllGenerations(): Promise<number> {
   const gens = await loadGenerations();
   const items = await loadGalleryItems();
   const itemMap = new Map(items.map(i => [i.id, i]));
+  const pinnedIds = new Set(await loadPinnedItemIds());
+  const seedReuseCounts = buildSeedReuseCounts(gens);
 
   let scored = 0;
   for (const gen of gens) {
-    const newScore = computeScore(gen, itemMap);
+    const newScore = computeScore(gen, itemMap, pinnedIds, seedReuseCounts);
     // Only update if score changed meaningfully (> 0.01)
     if (gen.score == null || Math.abs(gen.score - newScore) > 0.01) {
       gen.score = Math.round(newScore * 100) / 100;
@@ -130,8 +161,10 @@ export async function scoreGeneration(genId: string): Promise<number> {
 
   const items = await loadGalleryItems();
   const itemMap = new Map(items.map(i => [i.id, i]));
+  const pinnedIds = new Set(await loadPinnedItemIds());
+  const seedReuseCounts = buildSeedReuseCounts(gens);
 
-  const score = computeScore(gen, itemMap);
+  const score = computeScore(gen, itemMap, pinnedIds, seedReuseCounts);
   gen.score = Math.round(score * 100) / 100;
   gen.scoredAt = Date.now();
   await saveGeneration(gen);

@@ -28,9 +28,10 @@ export const comfyWorkflowTool: AssistantTool = {
     },
     required: ['workflowJson'],
   },
-  execute: async (args) => {
+  execute: async (args, ctx) => {
     const workflowStr = args.workflowJson as string;
     const shouldValidate = args.validate === true;
+    const comfyUrl = ctx?.settings?.comfyUrl;
 
     let workflow: Record<string, any>;
     try {
@@ -61,10 +62,12 @@ export const comfyWorkflowTool: AssistantTool = {
 
     // Validate if requested
     let validationResult = '';
-    if (shouldValidate) {
+    if (shouldValidate && !comfyUrl) {
+      validationResult = '\n\n**Validation skipped:** no ComfyUI URL configured (Settings > Generation > ComfyUI URL).';
+    } else if (shouldValidate) {
       try {
         const { validateWorkflowOnComfy } = await import('../comfyWorkflowParser');
-        const result = await validateWorkflowOnComfy(workflow, {} as any);
+        const result = await validateWorkflowOnComfy(workflow, comfyUrl!);
         const errors = result.node_errors || {};
         const errorCount = Object.keys(errors).length;
         validationResult = errorCount === 0

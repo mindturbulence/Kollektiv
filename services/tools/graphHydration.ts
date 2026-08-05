@@ -17,6 +17,7 @@ import type { KnowledgeKind } from '../knowledgeService';
 import { loadMemories } from '../../utils/memoryStorage';
 import { loadGalleryItems } from '../../utils/galleryStorage';
 import { loadSavedPrompts } from '../../utils/promptStorage';
+import { indexWikilinksIntoGraph } from '../../utils/obsidianStorage';
 
 /** Above this many tagged entities, edge building is skipped rather than
  *  freezing the UI. The map degrades to entities-only, which is still
@@ -75,6 +76,16 @@ export async function hydrateKnowledgeGraph(): Promise<{ entities: number; relat
     }
   } else {
     console.warn(`[graphHydration] ${tagged.length} tagged entities exceeds ${MAX_TAGGED_ENTITIES}; skipping edge build.`);
+  }
+
+  // Restore hand-authored wikilink edges (WP1). relationshipGraph.clear() above
+  // wipes them along with everything else, so they must be rebuilt every
+  // hydration, not just once at boot — otherwise the first VaultMapPanel open
+  // (or any graph-tool call) silently drops them.
+  try {
+    relations += await indexWikilinksIntoGraph();
+  } catch (e) {
+    console.warn('[graphHydration] wikilink indexing failed:', e);
   }
 
   return { entities, relations, ms: performance.now() - started };

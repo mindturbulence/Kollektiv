@@ -14,8 +14,6 @@ type PromptsPageState = {
 } | null;
 
 export interface ShellState {
-  activeTab: ActiveTab;
-  setActiveTab: (tab: ActiveTab) => void;
   isAboutModalOpen: boolean;
   isClippingPanelOpen: boolean;
   isMediaPanelOpen: boolean;
@@ -82,7 +80,6 @@ export interface UseAppShellInput {
 export const useAppShell = ({
   handleNavigate,
 }: UseAppShellInput): ShellState => {
-  const [activeTab, setActiveTab] = useLocalStorage<ActiveTab>('activeTab', 'dashboard');
   const [isAboutModalOpen, setIsAboutModalOpen] = useState(false);
   const [isClippingPanelOpen, setIsClippingPanelOpen] = useState(false);
   const [isMediaPanelOpen, setIsMediaPanelOpen] = useState(false);
@@ -221,8 +218,6 @@ export const useAppShell = ({
   }, []);
 
   return {
-    activeTab,
-    setActiveTab,
     isAboutModalOpen,
     isClippingPanelOpen,
     isMediaPanelOpen,

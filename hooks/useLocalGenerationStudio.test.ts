@@ -35,6 +35,10 @@ vi.mock('../services/a1111Service', () => ({}));
 vi.mock('../utils/galleryStorage', () => ({
   addItemToGallery: vi.fn(async () => ({ id: 'item-1' })),
 }));
+vi.mock('../utils/generationStorage', () => ({
+  createGeneration: vi.fn((p: any) => ({ id: 'gen-1', createdAt: Date.now(), resultItemIds: [], status: 'ok', ...p })),
+  saveGeneration: vi.fn(async () => {}),
+}));
 
 import { useLocalGenerationStudio } from './useLocalGenerationStudio';
 

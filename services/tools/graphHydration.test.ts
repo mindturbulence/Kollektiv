@@ -1,14 +1,16 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { relationshipGraph } from '../relationshipGraph';
 
-const { loadMemories, loadGalleryItems, loadSavedPrompts } = vi.hoisted(() => ({
+const { loadMemories, loadGalleryItems, loadSavedPrompts, indexWikilinksIntoGraph } = vi.hoisted(() => ({
   loadMemories: vi.fn(async () => [] as any[]),
   loadGalleryItems: vi.fn(async () => [] as any[]),
   loadSavedPrompts: vi.fn(async () => [] as any[]),
+  indexWikilinksIntoGraph: vi.fn(async () => 0),
 }));
 vi.mock('../../utils/memoryStorage', () => ({ loadMemories }));
 vi.mock('../../utils/galleryStorage', () => ({ loadGalleryItems }));
 vi.mock('../../utils/promptStorage', () => ({ loadSavedPrompts }));
+vi.mock('../../utils/obsidianStorage', () => ({ indexWikilinksIntoGraph }));
 
 import { hydrateKnowledgeGraph } from './graphHydration';
 
@@ -17,6 +19,14 @@ describe('hydrateKnowledgeGraph', () => {
     loadMemories.mockResolvedValue([]);
     loadGalleryItems.mockResolvedValue([]);
     loadSavedPrompts.mockResolvedValue([]);
+    indexWikilinksIntoGraph.mockResolvedValue(0);
+  });
+
+  it('re-runs wikilink indexing on every hydration so relationshipGraph.clear() does not silently drop them (WP1 regression)', async () => {
+    indexWikilinksIntoGraph.mockResolvedValue(3);
+    const stats = await hydrateKnowledgeGraph();
+    expect(indexWikilinksIntoGraph).toHaveBeenCalled();
+    expect(stats.relations).toBeGreaterThanOrEqual(3);
   });
 
   it('adds entities from all three stores', async () => {

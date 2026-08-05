@@ -9,11 +9,12 @@
 
 import { useState, useRef, useCallback } from 'react';
 import { enhancePromptStream, cleanLLMResponse, generateWithImagen, generateWithNanoBanana, generateWithVeo } from '../services/llmService';
-import { getBackend } from '../services/generationBackend';
+import { getBackend, type GenerateParams } from '../services/generationBackend';
 // Side-effect imports: register local generation backends in the registry
 import '../services/comfyService';
 import '../services/a1111Service';
 import { addItemToGallery } from '../utils/galleryStorage';
+import { createGeneration, saveGeneration } from '../utils/generationStorage';
 import type { LLMSettings } from '../types';
 
 export type GeneratePhase = 'idle' | 'refining' | 'generating' | 'ingesting' | 'ready' | 'error';
@@ -150,6 +151,9 @@ export function useGenerateLoop(): UseGenerateLoopReturn {
 
         let generatedUrl = '';
         const target = targetAIModel.toLowerCase();
+        let usedBackendId = '';
+        let generateParams: GenerateParams = { prompt: refinedPrompt, width: 0, height: 0, steps: 0, cfgScale: 0 };
+        let resolvedSeed: number | undefined;
 
         // Check for local generation backend (ComfyUI, A1111, etc.)
         const backendId = settings.generationBackendId;
@@ -177,24 +181,27 @@ export function useGenerateLoop(): UseGenerateLoopReturn {
           }
 
           update({ statusMessage: `Generating via ${backend.label}...` });
-          const output = await backend.generate(
-            {
-              prompt: refinedPrompt,
-              negativePrompt: '',
-              width: 1024,
-              height: 1024,
-              steps: 20,
-              cfgScale: 7,
-            },
-            settings,
-          );
+          generateParams = {
+            prompt: refinedPrompt,
+            negativePrompt: '',
+            width: 1024,
+            height: 1024,
+            steps: 20,
+            cfgScale: 7,
+          };
+          const output = await backend.generate(generateParams, settings);
           generatedUrl = output.dataUrl;
+          usedBackendId = backend.id;
+          resolvedSeed = output.seed;
         } else if (target.includes('imagen')) {
           generatedUrl = await generateWithImagen(refinedPrompt, '1:1', settings);
+          usedBackendId = 'imagen';
         } else if (target.includes('nano banana')) {
           generatedUrl = await generateWithNanoBanana(refinedPrompt, referenceImages, '1:1', settings);
+          usedBackendId = 'nano-banana';
         } else if (target.includes('veo')) {
           generatedUrl = await generateWithVeo(refinedPrompt, (msg) => update({ statusMessage: msg }), '16:9', settings);
+          usedBackendId = 'veo';
         } else {
           // Unsupported model — skip generation and just mark the refined prompt as ready
           update({ phase: 'ready', progress: 100, statusMessage: 'Prompt ready (model does not support direct generation).' });
@@ -206,16 +213,22 @@ export function useGenerateLoop(): UseGenerateLoopReturn {
         // ── 3. INGESTING ──────────────────────────────────────────
         if (autoIngest && generatedUrl) {
           update({ phase: 'ingesting', progress: 80, statusMessage: 'Saving to gallery...' });
-          const item = await addItemToGallery(
-            mediaType,
-            [generatedUrl],
-            ['Generate Loop'],
-            undefined,
-            undefined,
-            [],
-            undefined,
-            refinedPrompt
-          );
+
+          const gen = createGeneration({
+            promptText: refinedPrompt,
+            backendId: usedBackendId,
+            params: generateParams,
+            resolvedSeed,
+          });
+
+          const item = await addItemToGallery(mediaType, [generatedUrl], ['Generate Loop'], {
+            prompt: refinedPrompt,
+            generationId: gen.id,
+          });
+
+          gen.resultItemIds = [item.id];
+          await saveGeneration(gen);
+
           update({ galleryItemId: item.id, progress: 95, statusMessage: 'Saved to gallery.' });
         }
 

@@ -5,15 +5,39 @@
  */
 
 import { useState, useRef, useCallback, useEffect } from 'react';
-import { getBackend, type LoraInfo, type ModuleInfo } from '../services/generationBackend';
+import { getBackend, type GenerateParams, type LoraInfo, type ModuleInfo } from '../services/generationBackend';
 // Side-effect imports: register the local generation backends in the registry
 import '../services/comfyService';
 import '../services/a1111Service';
 import { addItemToGallery } from '../utils/galleryStorage';
+import { createGeneration, saveGeneration } from '../utils/generationStorage';
 import type { LLMSettings } from '../types';
 
 export type StudioBackendId = 'comfy' | 'a1111';
 export type StudioPhase = 'idle' | 'checking' | 'generating' | 'done' | 'error';
+
+// ── Pending params handoff (WP4) ───────────────────────────────────────
+// "Load these settings" (ItemDetailView) needs to hand a Generation's params
+// to a studio page that may not be mounted yet — the `navigate` event on
+// appEventBus only carries a tab id, not a payload. Mirrors the existing
+// _agentMemoryBlock module-level-variable pattern (utils/memoryStorage.ts):
+// set before navigating, consumed once by the target page on mount.
+let _pendingStudioParams: { backendId: StudioBackendId; params: GenerateParams } | null = null;
+
+/** Stash params for the named studio backend to pick up once it mounts. */
+export function setPendingStudioParams(backendId: StudioBackendId, params: GenerateParams): void {
+  _pendingStudioParams = { backendId, params };
+}
+
+/** Consume (and clear) pending params if they were staged for this backend. */
+export function consumePendingStudioParams(backendId: StudioBackendId): GenerateParams | null {
+  if (_pendingStudioParams && _pendingStudioParams.backendId === backendId) {
+    const params = _pendingStudioParams.params;
+    _pendingStudioParams = null;
+    return params;
+  }
+  return null;
+}
 
 export interface StudioParams {
   prompt: string;
@@ -31,6 +55,10 @@ export interface StudioParams {
   customWorkflowJson?: Record<string, any>;
   /** Extra CLIP/T5/VAE module filenames for split checkpoints (A1111/Forge only). */
   additionalModules?: string[];
+  /** Source image for img2img (WP11). data:...;base64,... — set to switch from txt2img to img2img. */
+  initImage?: string;
+  /** Denoising strength for img2img (0 = no change, 1 = full regeneration). Default: 0.75. */
+  denoisingStrength?: number;
 }
 
 export interface StudioState {
@@ -170,34 +198,39 @@ export function useLocalGenerationStudio(backendId: StudioBackendId): UseLocalGe
     });
 
     try {
-      const output = await backend.generate(
-        {
-          prompt: params.prompt,
-          negativePrompt: params.negativePrompt || undefined,
-          width: params.width,
-          height: params.height,
-          steps: params.steps,
-          cfgScale: params.cfgScale,
-          seed: params.seed ?? undefined,
-          sampler: params.sampler || undefined,
-          model: params.model || undefined,
-          customWorkflowJson: params.customWorkflowJson,
-          additionalModules: params.additionalModules,
-        },
-        settings,
-        controller.signal,
-      );
+      const generateParams: GenerateParams = {
+        prompt: params.prompt,
+        negativePrompt: params.negativePrompt || undefined,
+        width: params.width,
+        height: params.height,
+        steps: params.steps,
+        cfgScale: params.cfgScale,
+        seed: params.seed ?? undefined,
+        sampler: params.sampler || undefined,
+        model: params.model || undefined,
+        customWorkflowJson: params.customWorkflowJson,
+        additionalModules: params.additionalModules,
+        initImage: params.initImage,
+        denoisingStrength: params.denoisingStrength,
+      };
 
-      const item = await addItemToGallery(
-        'image',
-        [output.dataUrl],
-        [backend.label],
-        undefined,
-        undefined,
-        [],
-        undefined,
-        params.prompt,
-      );
+      const output = await backend.generate(generateParams, settings, controller.signal);
+
+      const gen = createGeneration({
+        promptText: params.prompt,
+        negativePromptText: params.negativePrompt || undefined,
+        backendId: backend.id,
+        params: generateParams,
+        resolvedSeed: output.seed,
+      });
+
+      const item = await addItemToGallery('image', [output.dataUrl], [backend.label], {
+        prompt: params.prompt,
+        generationId: gen.id,
+      });
+
+      gen.resultItemIds = [item.id];
+      await saveGeneration(gen);
 
       update({
         phase: 'done',

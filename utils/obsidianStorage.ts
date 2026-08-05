@@ -401,10 +401,44 @@ export async function searchNotes(
   if (searchIndex.isBuilt) {
     const ranked = searchIndex.search(query, maxResults);
     if (ranked.length > 0) {
-      // Fill in snippets from the actual file content
+      // WP5 indexed gallery items and saved prompts under gallery://<id> /
+      // prompt://<id> pseudo-paths — readFile() only resolves real
+      // vault-relative paths, so those always returned null and got dropped.
+      // Batch-load their source manifests once (not per hit) and resolve
+      // content from there; real vault notes still go through readFile.
+      const needsGallery = ranked.some((r) => r.path.startsWith('gallery://'));
+      const needsPrompts = ranked.some((r) => r.path.startsWith('prompt://'));
+      const [galleryItems, savedPrompts] = await Promise.all([
+        needsGallery ? (await import('./galleryStorage')).loadGalleryItems() : Promise.resolve([]),
+        needsPrompts ? (await import('./promptStorage')).loadSavedPrompts() : Promise.resolve([]),
+      ]);
+      const galleryById = new Map(galleryItems.map((i) => [i.id, i]));
+      const promptById = new Map(savedPrompts.map((p) => [p.id, p]));
+
+      const resolveDocContent = async (path: string): Promise<string | null> => {
+        if (path.startsWith('gallery://')) {
+          const item = galleryById.get(path.slice('gallery://'.length));
+          if (!item) return null;
+          return [item.title, item.prompt, item.notes, item.tags?.join(' ')].filter(Boolean).join('\n');
+        }
+        if (path.startsWith('prompt://')) {
+          const p = promptById.get(path.slice('prompt://'.length));
+          if (!p) return null;
+          return [p.title, p.text, p.tags?.join(' ')].filter(Boolean).join('\n');
+        }
+        return readFile(path);
+      };
+
+      const resolveDocTitle = (path: string, content: string): string => {
+        if (path.startsWith('gallery://')) return galleryById.get(path.slice('gallery://'.length))?.title || path;
+        if (path.startsWith('prompt://')) return promptById.get(path.slice('prompt://'.length))?.title || path;
+        return extractTitle(path, content);
+      };
+
+      // Fill in snippets from the actual content
       const bm25Results: Array<{ path: string; title: string; snippet: string; score: number }> = [];
       for (const r of ranked) {
-        const content = await readFile(r.path);
+        const content = await resolveDocContent(r.path);
         if (!content) continue;
         const snippet = searchIndex.generateSnippet(content, query);
         bm25Results.push({ path: r.path, title: r.title, snippet, score: r.score });
@@ -432,11 +466,11 @@ export async function searchNotes(
               merged.push(existing);
             } else {
               // Semantic-only neighbour — fetch content
-              const content = await readFile(h.path);
+              const content = await resolveDocContent(h.path);
               if (content) {
                 merged.push({
                   path: h.path,
-                  title: extractTitle(h.path, content),
+                  title: resolveDocTitle(h.path, content),
                   snippet: searchIndex.generateSnippet(content, query),
                   score: h.hybridScore,
                 });
@@ -625,36 +659,42 @@ export async function indexWikilinksIntoGraph(): Promise<number> {
   const { relationshipGraph } = await import('../services/relationshipGraph');
   let edgeCount = 0;
 
+  // Single pass: read every note once, build a title/filename → path index
+  // so target resolution below is an O(1) lookup instead of re-walking the
+  // whole vault per wikilink (was O(notes × links)).
+  const notes: Array<{ path: string; content: string; title: string; tags: string[] }> = [];
+  const byTitle = new Map<string, string>();
+
   for await (const notePath of walkMdFiles()) {
     const content = await readFile(notePath);
     if (!content) continue;
-
     const title = extractTitle(notePath, content);
-    const sourceId = notePath;
+    const { frontmatter } = parseFrontmatter(content);
+    const tags: string[] = Array.isArray(frontmatter.tags) ? frontmatter.tags : [];
+    notes.push({ path: notePath, content, title, tags });
 
-    // Ensure the source note exists as a graph entity
+    const fileName = notePath.split('/').pop()?.replace(/\.md$/, '') || '';
+    byTitle.set(title.toLowerCase(), notePath);
+    byTitle.set(fileName.toLowerCase(), notePath);
+  }
+
+  for (const note of notes) {
+    const sourceId = note.path;
     if (!relationshipGraph.hasEntity('vault_note', sourceId)) {
-      const { frontmatter } = parseFrontmatter(content);
-      const tags: string[] = Array.isArray(frontmatter.tags) ? frontmatter.tags : [];
-      relationshipGraph.addEntity('vault_note', sourceId, title, tags);
+      relationshipGraph.addEntity('vault_note', sourceId, note.title, note.tags);
     }
 
-    const targets = extractWikilinks(content);
+    const targets = extractWikilinks(note.content);
     for (const targetTitle of targets) {
-      // Find the target note path by title (case-insensitive)
-      const targetPath = await _findNoteByTitle(targetTitle);
+      const targetPath = byTitle.get(targetTitle.toLowerCase().replace(/\.md$/, ''));
       if (!targetPath) continue; // target doesn't exist in vault
+      if (targetPath === sourceId) continue; // skip self-links
 
       const targetId = targetPath;
-
-      // Ensure the target note exists as a graph entity
       if (!relationshipGraph.hasEntity('vault_note', targetId)) {
-        const targetContent = await readFile(targetPath);
-        if (!targetContent) continue;
-        const targetExtractedTitle = extractTitle(targetPath, targetContent);
-        const { frontmatter } = parseFrontmatter(targetContent);
-        const tags: string[] = Array.isArray(frontmatter.tags) ? frontmatter.tags : [];
-        relationshipGraph.addEntity('vault_note', targetId, targetExtractedTitle, tags);
+        const target = notes.find((n) => n.path === targetPath);
+        if (!target) continue;
+        relationshipGraph.addEntity('vault_note', targetId, target.title, target.tags);
       }
 
       // Add explicit wikilink edge (weight 0.8 — above tag-derived 0.5)
@@ -678,23 +718,6 @@ export async function indexWikilinksIntoGraph(): Promise<number> {
   return edgeCount;
 }
 
-/**
- * Find a note path by its title (case-insensitive, exact match after
- * stripping .md extension).
- */
-async function _findNoteByTitle(title: string): Promise<string | null> {
-  const normalised = title.toLowerCase().replace(/\.md$/, '');
-  for await (const notePath of walkMdFiles()) {
-    const content = await readFile(notePath);
-    if (!content) continue;
-    const noteTitle = extractTitle(notePath, content);
-    if (noteTitle.toLowerCase() === normalised) return notePath;
-    // Also match by filename
-    const fileName = notePath.split('/').pop()?.replace(/\.md$/, '') || '';
-    if (fileName.toLowerCase() === normalised) return notePath;
-  }
-  return null;
-}
 // ── Gallery + Prompt search indexing (WP5) ────────────────────────────
 
 /**

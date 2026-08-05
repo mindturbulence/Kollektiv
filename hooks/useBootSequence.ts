@@ -150,10 +150,12 @@ export const useBootSequence = ({
       // index wikilinks into the relationship graph. ──
       if (obsidianReady) {
         try {
-          const { syncAgentMemoryToVault, getAgentMemoryBlock } = await import('../utils/memoryStorage');
-          const memBlock = getAgentMemoryBlock();
-          if (memBlock) {
-            await syncAgentMemoryToVault(memBlock);
+          const { syncAgentMemoryToVault, getMemoriesSync, memoryPromptBlock } = await import('../utils/memoryStorage');
+          // getAgentMemoryBlock() only ever reflects a PRIOR syncAgentMemoryToVault
+          // call — nothing else sets it — so gating on it here was a no-op that
+          // never fired. Gate on whether there's anything to sync instead.
+          if (getMemoriesSync().length > 0) {
+            await syncAgentMemoryToVault(memoryPromptBlock());
           }
         } catch { /* non-fatal */ }
         try {

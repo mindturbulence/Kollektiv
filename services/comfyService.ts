@@ -10,7 +10,7 @@
 
 import type { GenerateParams, GenerateOutput, GenerationBackend } from './generationBackend';
 import type { LLMSettings } from '../types';
-import { createDefaultWorkflow } from '../constants/comfyWorkflows';
+import { createDefaultWorkflow, createImg2ImgWorkflow } from '../constants/comfyWorkflows';
 import { registerBackend } from './generationBackend';
 
 // ── Helpers ────────────────────────────────────────────────────────────
@@ -100,6 +100,81 @@ async function fetchImageAsDataUrl(
   });
 }
 
+/**
+ * Upload a data-URL image to ComfyUI's /upload/image so a workflow's
+ * LoadImage node can reference it by filename (ComfyUI reads LoadImage's
+ * `image` input from files already on the server — it can't take inline
+ * base64 like A1111's init_images).
+ */
+async function uploadImageToComfy(
+  dataUrl: string,
+  settings: LLMSettings,
+  signal?: AbortSignal,
+): Promise<{ name: string; subfolder: string }> {
+  const fetched = await fetch(dataUrl);
+  const blob = await fetched.blob();
+  const ext = blob.type.split('/')[1]?.split('+')[0] || 'png';
+
+  const form = new FormData();
+  form.append('image', blob, `init.${ext}`);
+  form.append('overwrite', 'true');
+
+  const res = await fetch(proxyUrl(settings, '/upload/image'), { method: 'POST', body: form, signal });
+  if (!res.ok) {
+    const text = await res.text().catch(() => '');
+    throw new Error(`ComfyUI image upload failed (${res.status}): ${text.slice(0, 300)}`);
+  }
+  const data = await res.json();
+  if (!data.name) throw new Error(`ComfyUI image upload did not return a filename: ${JSON.stringify(data)}`);
+  return { name: data.name, subfolder: data.subfolder || '' };
+}
+
+/** Find a node's required input field whose declared type matches `type` exactly. */
+function findInputFieldByType(nodeInfo: any, nodeClass: string, type: string): string | undefined {
+  const required = nodeInfo?.[nodeClass]?.input?.required || {};
+  for (const [field, spec] of Object.entries(required)) {
+    if (Array.isArray(spec) && spec[0] === type) return field;
+  }
+  return undefined;
+}
+
+/**
+ * Resolve LoadImage's/VAEEncode's actual input field names from ComfyUI's
+ * own /object_info live, instead of hardcoding them — see the "Phase 4
+ * lesson" note in constants/comfyWorkflows.ts. Throws a specific, actionable
+ * error naming what changed rather than sending a workflow ComfyUI will
+ * reject with a cryptic node_errors response.
+ */
+async function resolveImg2ImgNodeFields(settings: LLMSettings): Promise<{
+  loadImageField: string;
+  vaeEncodePixelsField: string;
+  vaeEncodeVaeField: string;
+}> {
+  const [loadImageRes, vaeEncodeRes] = await Promise.all([
+    fetch(proxyUrl(settings, '/object_info/LoadImage')),
+    fetch(proxyUrl(settings, '/object_info/VAEEncode')),
+  ]);
+  if (!loadImageRes.ok || !vaeEncodeRes.ok) {
+    throw new Error('Could not read ComfyUI /object_info for LoadImage/VAEEncode — is ComfyUI reachable?');
+  }
+  const loadImageInfo = await loadImageRes.json();
+  const vaeEncodeInfo = await vaeEncodeRes.json();
+
+  const loadImageRequired = loadImageInfo?.LoadImage?.input?.required || {};
+  if (!('image' in loadImageRequired)) {
+    throw new Error(`ComfyUI's LoadImage node has no "image" input on this server (found: ${Object.keys(loadImageRequired).join(', ') || 'none'}) — img2img is not compatible with this ComfyUI version.`);
+  }
+
+  const vaeEncodePixelsField = findInputFieldByType(vaeEncodeInfo, 'VAEEncode', 'IMAGE');
+  const vaeEncodeVaeField = findInputFieldByType(vaeEncodeInfo, 'VAEEncode', 'VAE');
+  if (!vaeEncodePixelsField || !vaeEncodeVaeField) {
+    const found = Object.keys(vaeEncodeInfo?.VAEEncode?.input?.required || {});
+    throw new Error(`ComfyUI's VAEEncode node inputs don't match the expected IMAGE/VAE pair on this server (found: ${found.join(', ') || 'none'}) — img2img is not compatible with this ComfyUI version.`);
+  }
+
+  return { loadImageField: 'image', vaeEncodePixelsField, vaeEncodeVaeField };
+}
+
 // ── The adapter ──────────────────────────────────────────────────────
 
 export const comfyBackend: GenerationBackend = {
@@ -165,12 +240,32 @@ export const comfyBackend: GenerationBackend = {
 
     const seed = params.seed ?? Math.floor(Math.random() * 2 ** 32);
 
-    // Build the workflow: custom injected workflow or the default txt2img workflow
+    // Build the workflow: custom injected workflow, img2img, or default txt2img
     let workflow: Record<string, any>;
     if (params.customWorkflowJson) {
       // Custom workflow was already parameter-injected by the caller;
       // use it as-is (the caller handles schema-based injection)
       workflow = params.customWorkflowJson;
+    } else if (params.initImage) {
+      // WP11: img2img — upload the source image, resolve LoadImage/VAEEncode's
+      // real input fields from /object_info, then build the img2img graph.
+      const [{ name: imageFilename, subfolder: imageSubfolder }, fields] = await Promise.all([
+        uploadImageToComfy(params.initImage, settings, signal),
+        resolveImg2ImgNodeFields(settings),
+      ]);
+      workflow = createImg2ImgWorkflow({
+        positivePrompt: params.prompt,
+        negativePrompt: params.negativePrompt,
+        seed,
+        steps: params.steps,
+        cfg: params.cfgScale,
+        ckptName,
+        samplerName: params.sampler,
+        imageFilename,
+        imageSubfolder,
+        denoise: params.denoisingStrength ?? 0.75,
+        ...fields,
+      });
     } else {
       workflow = createDefaultWorkflow({
         positivePrompt: params.prompt,

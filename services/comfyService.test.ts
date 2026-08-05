@@ -272,4 +272,155 @@ describe('comfyBackend', () => {
 
     expect(capturedBody.prompt['8'].inputs.sampler_name).toBe('euler');
   });
+
+  // ── img2img (WP11) ──────────────────────────────────────────────────
+  describe('generate — img2img (params.initImage)', () => {
+    const INIT_IMAGE = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNk+A8AAQUBAScY42YAAAAASUVORK5CYII=';
+    const mockPromptId = 'test-prompt-img2img';
+
+    function baseRoutes(urlStr: string): Response | null {
+      if (urlStr.startsWith('data:')) return new Response(new Blob(['png-bytes'], { type: 'image/png' }), { status: 200 });
+      if (urlStr.includes('/object_info/CheckpointLoaderSimple')) {
+        return new Response(JSON.stringify({ CheckpointLoaderSimple: { input: { required: { ckpt_name: [['sd15.safetensors']] } } } }), { status: 200 });
+      }
+      if (urlStr.includes('/history/')) {
+        return new Response(JSON.stringify({
+          [mockPromptId]: { outputs: { '12': { images: [{ filename: 'out.png', subfolder: '' }] } } },
+        }), { status: 200 });
+      }
+      if (urlStr.includes('/view')) return new Response(new Blob(['x'], { type: 'image/png' }), { status: 200 });
+      return null;
+    }
+
+    it('uploads the init image and builds a LoadImage → VAEEncode workflow instead of EmptyLatentImage', async () => {
+      let capturedPromptBody: any = null;
+      let uploadedFormData: FormData | null = null;
+
+      vi.spyOn(globalThis, 'fetch').mockImplementation(async (url: any, init?: RequestInit) => {
+        const urlStr = url.toString();
+        if (urlStr.includes('/upload/image')) {
+          uploadedFormData = init!.body as FormData;
+          return new Response(JSON.stringify({ name: 'init_0001.png', subfolder: '' }), { status: 200 });
+        }
+        if (urlStr.includes('/object_info/LoadImage')) {
+          return new Response(JSON.stringify({ LoadImage: { input: { required: { image: [['a.png']] } } } }), { status: 200 });
+        }
+        if (urlStr.includes('/object_info/VAEEncode')) {
+          return new Response(JSON.stringify({
+            VAEEncode: { input: { required: { pixels: ['IMAGE', {}], vae: ['VAE', {}] } } },
+          }), { status: 200 });
+        }
+        if (urlStr.includes('/prompt')) {
+          capturedPromptBody = JSON.parse(init!.body as string);
+          return new Response(JSON.stringify({ prompt_id: mockPromptId }), { status: 200 });
+        }
+        return baseRoutes(urlStr) ?? new Response(null, { status: 404 });
+      });
+
+      const backend = getBackend('comfy')!;
+      const result = await backend.generate(
+        { prompt: 'test', width: 512, height: 512, steps: 10, cfgScale: 7, model: 'sd15.safetensors', initImage: INIT_IMAGE, denoisingStrength: 0.4 },
+        { comfyUrl: 'http://127.0.0.1:8188' } as any,
+      );
+
+      expect(result.dataUrl).toBeTruthy();
+      expect(uploadedFormData).toBeInstanceOf(FormData);
+      expect((uploadedFormData as any as FormData).get('image')).toBeInstanceOf(Blob);
+
+      // LoadImage node present, referencing the uploaded filename
+      const loadImageNode = Object.values(capturedPromptBody.prompt).find((n: any) => n.class_type === 'LoadImage') as any;
+      expect(loadImageNode.inputs.image).toBe('init_0001.png');
+
+      // VAEEncode wired from LoadImage's output, using the field names resolved from /object_info
+      const vaeEncodeNode = Object.values(capturedPromptBody.prompt).find((n: any) => n.class_type === 'VAEEncode') as any;
+      expect(vaeEncodeNode.inputs.pixels).toEqual([expect.any(String), 0]);
+      expect(vaeEncodeNode.inputs.vae).toEqual([expect.any(String), 2]);
+
+      // No EmptyLatentImage in an img2img graph
+      expect(Object.values(capturedPromptBody.prompt).some((n: any) => n.class_type === 'EmptyLatentImage')).toBe(false);
+
+      // Denoising strength flows into KSampler, not the txt2img default of 1
+      const ksamplerNode = Object.values(capturedPromptBody.prompt).find((n: any) => n.class_type === 'KSampler') as any;
+      expect(ksamplerNode.inputs.denoise).toBe(0.4);
+      expect(ksamplerNode.inputs.latent_image[0]).toBe(Object.keys(capturedPromptBody.prompt).find((id) => capturedPromptBody.prompt[id].class_type === 'VAEEncode'));
+    });
+
+    it('defaults denoising strength to 0.75 when not specified', async () => {
+      let capturedPromptBody: any = null;
+      vi.spyOn(globalThis, 'fetch').mockImplementation(async (url: any, init?: RequestInit) => {
+        const urlStr = url.toString();
+        if (urlStr.includes('/upload/image')) return new Response(JSON.stringify({ name: 'a.png', subfolder: '' }), { status: 200 });
+        if (urlStr.includes('/object_info/LoadImage')) return new Response(JSON.stringify({ LoadImage: { input: { required: { image: [['a.png']] } } } }), { status: 200 });
+        if (urlStr.includes('/object_info/VAEEncode')) return new Response(JSON.stringify({ VAEEncode: { input: { required: { pixels: ['IMAGE', {}], vae: ['VAE', {}] } } } }), { status: 200 });
+        if (urlStr.includes('/prompt')) {
+          capturedPromptBody = JSON.parse(init!.body as string);
+          return new Response(JSON.stringify({ prompt_id: mockPromptId }), { status: 200 });
+        }
+        return baseRoutes(urlStr) ?? new Response(null, { status: 404 });
+      });
+
+      const backend = getBackend('comfy')!;
+      await backend.generate(
+        { prompt: 'test', width: 512, height: 512, steps: 10, cfgScale: 7, model: 'sd15.safetensors', initImage: INIT_IMAGE },
+        { comfyUrl: 'http://127.0.0.1:8188' } as any,
+      );
+
+      const ksamplerNode = Object.values(capturedPromptBody.prompt).find((n: any) => n.class_type === 'KSampler') as any;
+      expect(ksamplerNode.inputs.denoise).toBe(0.75);
+    });
+
+    it('throws a specific error instead of a malformed workflow when VAEEncode has no IMAGE/VAE typed inputs on this server', async () => {
+      vi.spyOn(globalThis, 'fetch').mockImplementation(async (url: any) => {
+        const urlStr = url.toString();
+        if (urlStr.includes('/upload/image')) return new Response(JSON.stringify({ name: 'a.png', subfolder: '' }), { status: 200 });
+        if (urlStr.includes('/object_info/LoadImage')) return new Response(JSON.stringify({ LoadImage: { input: { required: { image: [['a.png']] } } } }), { status: 200 });
+        if (urlStr.includes('/object_info/VAEEncode')) return new Response(JSON.stringify({ VAEEncode: { input: { required: { something_else: ['STRING', {}] } } } }), { status: 200 });
+        return baseRoutes(urlStr) ?? new Response(null, { status: 404 });
+      });
+
+      const backend = getBackend('comfy')!;
+      await expect(
+        backend.generate(
+          { prompt: 'test', width: 512, height: 512, steps: 10, cfgScale: 7, model: 'sd15.safetensors', initImage: INIT_IMAGE },
+          { comfyUrl: 'http://127.0.0.1:8188' } as any,
+        ),
+      ).rejects.toThrow(/VAEEncode node inputs don't match/);
+    });
+
+    it('throws a specific error when LoadImage has no "image" input on this server', async () => {
+      vi.spyOn(globalThis, 'fetch').mockImplementation(async (url: any) => {
+        const urlStr = url.toString();
+        if (urlStr.includes('/upload/image')) return new Response(JSON.stringify({ name: 'a.png', subfolder: '' }), { status: 200 });
+        if (urlStr.includes('/object_info/LoadImage')) return new Response(JSON.stringify({ LoadImage: { input: { required: { file: [['a.png']] } } } }), { status: 200 });
+        if (urlStr.includes('/object_info/VAEEncode')) return new Response(JSON.stringify({ VAEEncode: { input: { required: { pixels: ['IMAGE', {}], vae: ['VAE', {}] } } } }), { status: 200 });
+        return baseRoutes(urlStr) ?? new Response(null, { status: 404 });
+      });
+
+      const backend = getBackend('comfy')!;
+      await expect(
+        backend.generate(
+          { prompt: 'test', width: 512, height: 512, steps: 10, cfgScale: 7, model: 'sd15.safetensors', initImage: INIT_IMAGE },
+          { comfyUrl: 'http://127.0.0.1:8188' } as any,
+        ),
+      ).rejects.toThrow(/LoadImage node has no "image" input/);
+    });
+
+    it('throws when the image upload itself fails', async () => {
+      vi.spyOn(globalThis, 'fetch').mockImplementation(async (url: any) => {
+        const urlStr = url.toString();
+        if (urlStr.includes('/upload/image')) return new Response('server error', { status: 500 });
+        if (urlStr.includes('/object_info/LoadImage')) return new Response(JSON.stringify({ LoadImage: { input: { required: { image: [['a.png']] } } } }), { status: 200 });
+        if (urlStr.includes('/object_info/VAEEncode')) return new Response(JSON.stringify({ VAEEncode: { input: { required: { pixels: ['IMAGE', {}], vae: ['VAE', {}] } } } }), { status: 200 });
+        return baseRoutes(urlStr) ?? new Response(null, { status: 404 });
+      });
+
+      const backend = getBackend('comfy')!;
+      await expect(
+        backend.generate(
+          { prompt: 'test', width: 512, height: 512, steps: 10, cfgScale: 7, model: 'sd15.safetensors', initImage: INIT_IMAGE },
+          { comfyUrl: 'http://127.0.0.1:8188' } as any,
+        ),
+      ).rejects.toThrow(/ComfyUI image upload failed/);
+    });
+  });
 });

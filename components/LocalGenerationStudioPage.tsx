@@ -2,9 +2,10 @@ import React, { useState, useEffect, useLayoutEffect, useCallback, useMemo, useR
 import { motion } from 'motion/react';
 import { PanelLine, ScanLine, pageVariants, pageHeaderVariants, pageBodyVariants, pageFooterVariants } from './AnimatedPanels';
 import { useSettings } from '../contexts/SettingsContext';
-import { useLocalGenerationStudio, type StudioBackendId, type StudioParams } from '../hooks/useLocalGenerationStudio';
+import { useLocalGenerationStudio, consumePendingStudioParams, type StudioBackendId, type StudioParams } from '../hooks/useLocalGenerationStudio';
 import WorkflowImportModal from './WorkflowImportModal';
 import ExtraNetworksPanel from './ExtraNetworksPanel';
+import GalleryPickerModal from './GalleryPickerModal';
 import type { LoraInfo, AdditionalModuleType } from '../services/generationBackend';
 import {
   injectWorkflowParameters,
@@ -12,7 +13,9 @@ import {
 } from '../services/comfyWorkflowParser';
 import { loadWorkflowSchemas, deleteWorkflowSchema } from '../utils/workflowStorage';
 import { loadPresets, savePreset, deletePreset, generatePresetId, type GenerationPreset } from '../utils/presetStorage';
-import { RefreshIcon } from './icons';
+import { fileSystemManager } from '../utils/fileUtils';
+import type { GalleryItem } from '../types';
+import { RefreshIcon, CloseIcon } from './icons';
 
 interface LocalGenerationStudioPageProps {
   backendId: StudioBackendId;
@@ -76,6 +79,27 @@ const LocalGenerationStudioPage: React.FC<LocalGenerationStudioPageProps> = ({ b
   const [additionalModulesText, setAdditionalModulesText] = useState(settings.a1111AdditionalModules || '');
   const [showNegativePrompt, setShowNegativePrompt] = useState(false);
   const promptRef = useRef<HTMLTextAreaElement>(null);
+
+  // ── img2img reference image (WP11) ──────────────────────────────────
+  const [initImage, setInitImage] = useState<string | null>(null);
+  const [denoisingStrength, setDenoisingStrength] = useState(0.75);
+  const [isRefPickerOpen, setIsRefPickerOpen] = useState(false);
+
+  const handleReferenceSelect = useCallback(async (items: GalleryItem[]) => {
+    setIsRefPickerOpen(false);
+    const picked = items[0];
+    if (!picked) return;
+    const blob = await fileSystemManager.getFileAsBlob(picked.urls[0]);
+    if (!blob) { showGlobalFeedback('Could not load the selected image.', true); return; }
+    const dataUrl = await new Promise<string>((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = () => resolve(reader.result as string);
+      reader.onerror = () => reject(new Error('Failed to read image'));
+      reader.readAsDataURL(blob);
+    }).catch(() => null);
+    if (dataUrl) setInitImage(dataUrl);
+    else showGlobalFeedback('Could not read the selected image.', true);
+  }, [showGlobalFeedback]);
 
   // Autogrow the prompt textarea with its content, capped so a huge paste
   // doesn't push the result area out of view — scrolls internally past that.
@@ -176,6 +200,32 @@ const LocalGenerationStudioPage: React.FC<LocalGenerationStudioPageProps> = ({ b
     const next = additionalModulesText.split(',').map((m) => m.trim()).filter(Boolean).filter((m) => m !== name);
     setAdditionalModulesPersist(next.join(', '));
   }, [additionalModulesText, setAdditionalModulesPersist]);
+
+  // ── Load params from a Generation record (WP4 "Load these settings") ──
+  // ItemDetailView stashes params via setPendingStudioParams before emitting
+  // `navigate` — appEventBus's navigate event only carries a tab id, this
+  // page may not even be mounted yet when it's emitted. Consumed once here.
+  useEffect(() => {
+    const pending = consumePendingStudioParams(backendId);
+    if (!pending) return;
+    setPrompt(pending.prompt || '');
+    setNegativePrompt(pending.negativePrompt || '');
+    setWidth(pending.width || 1024);
+    setHeight(pending.height || 1024);
+    setSteps(pending.steps || 20);
+    setCfgScale(pending.cfgScale || 7);
+    if (pending.seed != null) {
+      setRandomizeSeed(false);
+      setSeedText(String(pending.seed));
+    }
+    if (pending.sampler) setSampler(pending.sampler);
+    updateSettings({
+      ...settings,
+      ...(pending.model ? { [meta.modelField]: pending.model } : {}),
+      ...(pending.sampler ? { [meta.samplerField]: pending.sampler } : {}),
+    });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [backendId]);
 
   // ── Presets ─────────────────────────────────────────────────────────
   // Applies model/sampler/additionalModules in one updateSettings call —
@@ -285,6 +335,11 @@ const LocalGenerationStudioPage: React.FC<LocalGenerationStudioPageProps> = ({ b
       sampler,
       model,
       additionalModules,
+      // A custom workflow's graph is user-defined and unrelated to the
+      // LoadImage/VAEEncode nodes img2img injects — only apply the reference
+      // image to the default workflow, not an imported custom one.
+      initImage: activeWorkflowId === '__default__' && initImage ? initImage : undefined,
+      denoisingStrength,
     };
 
     // If a custom workflow is active, pre-inject parameters into it
@@ -592,6 +647,37 @@ const LocalGenerationStudioPage: React.FC<LocalGenerationStudioPageProps> = ({ b
 
             <div>
               <label className="text-[10px] font-bold uppercase tracking-widest text-base-content/40 block mb-2">
+                Reference Image (img2img)
+                {activeWorkflowId !== '__default__' && initImage && (
+                  <span className="text-[9px] text-warning ml-2 italic normal-case">ignored while a custom workflow is active</span>
+                )}
+              </label>
+              {initImage ? (
+                <div className="flex items-center gap-3">
+                  <img src={initImage} alt="Reference" className="w-14 h-14 object-cover rounded border border-white/10" />
+                  <div className="flex-1 min-w-0">
+                    <label className="text-[9px] text-base-content/40 block mb-1">Denoising strength: {denoisingStrength.toFixed(2)}</label>
+                    <input
+                      type="range"
+                      min={0} max={1} step={0.05}
+                      value={denoisingStrength}
+                      onChange={(e) => setDenoisingStrength(parseFloat(e.target.value))}
+                      className="w-full"
+                    />
+                  </div>
+                  <button onClick={() => setInitImage(null)} className="form-btn px-2 shrink-0" title="Clear reference image">
+                    <CloseIcon className="w-3.5 h-3.5" />
+                  </button>
+                </div>
+              ) : (
+                <button onClick={() => setIsRefPickerOpen(true)} className="form-btn w-full text-xs">
+                  Choose from gallery...
+                </button>
+              )}
+            </div>
+
+            <div>
+              <label className="text-[10px] font-bold uppercase tracking-widest text-base-content/40 block mb-2">
                 Sampler
                 {state.loadingSamplers && (
                   <span className="text-[9px] text-base-content/20 ml-2 italic">loading...</span>
@@ -796,6 +882,16 @@ const LocalGenerationStudioPage: React.FC<LocalGenerationStudioPageProps> = ({ b
         isOpen={showImportModal}
         onClose={() => setShowImportModal(false)}
         onImported={handleWorkflowImported}
+      />
+
+      {/* ── Reference Image Picker (img2img, WP11) ────────────────────── */}
+      <GalleryPickerModal
+        isOpen={isRefPickerOpen}
+        onClose={() => setIsRefPickerOpen(false)}
+        onSelect={handleReferenceSelect}
+        selectionMode="single"
+        typeFilter="image"
+        title="Choose a reference image"
       />
     </div>
   );

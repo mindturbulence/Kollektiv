@@ -193,6 +193,10 @@ describe('engine.execute — full plan integration', () => {
     const result = await engine.execute(p, ctx);
     expect(result.status).toBe('failed');
     expect(result.error).toMatch(/not found/);
+    // Regression guard: this exact failure path used to unconditionally
+    // relabel the step 'skipped' even though it just failed the whole plan —
+    // stepResults must agree with the plan-level status, not contradict it.
+    expect(result.steps[0].status).toBe('failed');
   });
 
   it('skips an optional step that fails instead of failing the whole plan', async () => {

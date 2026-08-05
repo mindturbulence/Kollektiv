@@ -8,6 +8,9 @@ const mocks = vi.hoisted(() => ({
   initChatStore: vi.fn().mockResolvedValue(undefined),
   gsapSet: vi.fn(),
   fsInitialize: vi.fn().mockResolvedValue(true),
+  getMemoriesSync: vi.fn().mockReturnValue([]),
+  memoryPromptBlock: vi.fn().mockReturnValue(''),
+  syncAgentMemoryToVault: vi.fn().mockResolvedValue(undefined),
 }));
 
 vi.mock('../utils/fileUtils', () => ({
@@ -15,8 +18,20 @@ vi.mock('../utils/fileUtils', () => ({
 }));
 
 vi.mock('../utils/notesStorage', () => ({ initNotesStore: mocks.initNotesStore }));
-vi.mock('../utils/memoryStorage', () => ({ initMemoriesStore: mocks.initMemoriesStore }));
+vi.mock('../utils/memoryStorage', () => ({
+  initMemoriesStore: mocks.initMemoriesStore,
+  getMemoriesSync: mocks.getMemoriesSync,
+  memoryPromptBlock: mocks.memoryPromptBlock,
+  syncAgentMemoryToVault: mocks.syncAgentMemoryToVault,
+}));
 vi.mock('../utils/chatStorage', () => ({ initChatStore: mocks.initChatStore }));
+vi.mock('../utils/obsidianStorage', () => ({
+  initObsidianVault: vi.fn().mockResolvedValue(true),
+  ensureFolders: vi.fn().mockResolvedValue(undefined),
+  initSearchIndex: vi.fn().mockResolvedValue(undefined),
+  indexWikilinksIntoGraph: vi.fn().mockResolvedValue(0),
+  indexGalleryAndPrompts: vi.fn().mockResolvedValue(undefined),
+}));
 vi.mock('gsap', () => ({
   gsap: {
     set: mocks.gsapSet,
@@ -171,6 +186,31 @@ describe('useBootSequence', () => {
       expect(result.current.bootState.initStatus).toBe('SYSTEM READY');
     }, { timeout: 15_000 });
     expect(result.current.bootState.showWelcome).toBe(false);
+  });
+
+  // Regression guard: the old gate checked getAgentMemoryBlock(), which is
+  // only ever set BY syncAgentMemoryToVault itself — nothing else set it, so
+  // the sync never fired on a normal boot. Gate on actual memory presence.
+  it('syncs agent memory to the vault when memories exist', async () => {
+    mocks.getMemoriesSync.mockReturnValue([{ id: 'm1', fact: 'likes cats', category: 'general', tags: [], createdAt: 1 }]);
+    mocks.memoryPromptBlock.mockReturnValue('- likes cats');
+
+    renderHook(() => useBootSequence(defaultInput));
+
+    await vi.waitFor(() => {
+      expect(mocks.syncAgentMemoryToVault).toHaveBeenCalledWith('- likes cats');
+    }, { timeout: 15_000 });
+  });
+
+  it('does not sync agent memory to the vault when there are no memories', async () => {
+    mocks.getMemoriesSync.mockReturnValue([]);
+
+    const { result } = renderHook(() => useBootSequence(defaultInput));
+
+    await vi.waitFor(() => {
+      expect(result.current.bootState.initStatus).toBe('SYSTEM READY');
+    }, { timeout: 15_000 });
+    expect(mocks.syncAgentMemoryToVault).not.toHaveBeenCalled();
   });
 
   it('exposes a loader ref', () => {

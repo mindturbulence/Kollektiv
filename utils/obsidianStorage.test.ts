@@ -1,10 +1,20 @@
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, vi, afterEach } from 'vitest';
 import {
   parseFrontmatter,
   serializeWithFrontmatter,
   extractTitle,
   extractWikilinks,
+  searchNotes,
 } from './obsidianStorage';
+import { VaultSearchIndex, _setSearchIndex } from './vaultSearch';
+
+const mockLoadGalleryItems = vi.fn(async () => [] as any[]);
+vi.mock('./galleryStorage', () => ({
+  loadGalleryItems: () => mockLoadGalleryItems(),
+}));
+vi.mock('./promptStorage', () => ({
+  loadSavedPrompts: async () => [],
+}));
 
 describe('parseFrontmatter', () => {
   it('returns empty frontmatter for content without frontmatter', () => {
@@ -85,6 +95,30 @@ describe('extractTitle', () => {
 
   it('strips .md extension in fallback', () => {
     expect(extractTitle('note.md', 'no heading')).toBe('note');
+  });
+});
+
+describe('searchNotes — gallery/prompt pseudo-paths (WP5 regression)', () => {
+  afterEach(() => {
+    _setSearchIndex(undefined as any);
+    mockLoadGalleryItems.mockReset();
+  });
+
+  it('resolves content for a gallery:// hit instead of dropping it (readFile cannot read pseudo-paths)', async () => {
+    mockLoadGalleryItems.mockResolvedValue([
+      { id: 'item1', title: 'Rooftop Scene', prompt: 'a rooftop at golden hour', notes: '', tags: ['cinematic'] },
+    ]);
+
+    const index = new VaultSearchIndex();
+    await index.build([]); // built=true, no docs yet
+    index.addDocument({ path: 'gallery://item1', title: 'Rooftop Scene', content: 'a rooftop at golden hour cinematic', kind: 'gallery_item' });
+    _setSearchIndex(index);
+
+    const results = await searchNotes('rooftop', 10);
+
+    expect(results).toHaveLength(1);
+    expect(results[0]).toMatchObject({ path: 'gallery://item1', title: 'Rooftop Scene' });
+    expect(results[0].snippet).toContain('rooftop');
   });
 });
 

@@ -74,7 +74,7 @@ The implementation already supports memory-like behavior through:
 
 **At app boot** (`hooks/useBootSequence.ts`), after the IndexedDB stores init: the Obsidian vault handle is reconnected and the four lifecycle folders are ensured (see [OBSIDIAN.md § Lifecycle Folder Bootstrap](../03_KNOWLEDGE_ENGINE/OBSIDIAN.md#lifecycle-folder-bootstrap)), then `knowledgeService.rebuildIndex()` runs so memories/notes/vault files from prior sessions are indexed and immediately promotable — this call previously existed but had no caller anywhere in the app.
 
-**Dead code, do not build on it:** `syncAgentMemoryToVault(content)` in `utils/memoryStorage.ts` is named as if it writes to the vault but only sets an in-memory variable (`_agentMemoryBlock`) — it has zero callers anywhere in the codebase. Treat it as an unfinished stub, not a real sync path.
+`syncAgentMemoryToVault(content)` in `utils/memoryStorage.ts` writes a structured "Agent Memory" note under `knowledge/**` via `knowledgeLifecycle`, and sets the in-memory `_agentMemoryBlock` returned by `getAgentMemoryBlock()`. Called from `useBootSequence.ts` once the vault is connected, gated on `getMemoriesSync().length > 0` (not on `getAgentMemoryBlock()`, which only ever reflects a prior call to this same function).
 
 ## Related
 

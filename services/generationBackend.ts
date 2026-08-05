@@ -38,7 +38,11 @@ export interface GenerateParams {
   initImage?: string;
   /** Denoising strength for img2img (0 = no change, 1 = full regeneration). Default: 0.75. */
   denoisingStrength?: number;
-
+  /**
+   * Opaque invocation arguments for backends with no fixed parameter shape
+   * (e.g. an MCP tool call — WP6). Not read by the A1111/ComfyUI backends.
+   */
+  raw?: Record<string, unknown>;
 }
 export interface GenerateOutput {
   /** Full `data:image/png;base64,...` URL */

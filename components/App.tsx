@@ -134,6 +134,9 @@ const AppContent: React.FC = () => {
     const { settings, updateSettings } = useSettings();
     const auth = useAuth();
 
+    // Sole source of truth for the active tab — useAppShell used to declare its own
+    // independent copy under the same localStorage key with no cross-sync, which
+    // nothing ever read; that copy was removed rather than kept "in sync".
     const [activeTab, setActiveTab] = useLocalStorage<ActiveTab>('activeTab', 'dashboard');
 
     const currentTitle = useMemo(() => {

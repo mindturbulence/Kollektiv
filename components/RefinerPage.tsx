@@ -12,6 +12,7 @@ import CodeSnippetModal from './CodeSnippetModal';
 import JSONBreakdownModal from './JSONBreakdownModal';
 import { audioService } from '../services/audioService';
 import { refinerPresetService, type RefinerPreset } from '../services/refinerPresetService';
+import { recordExternalCopy } from '../services/externalCopyRecorder';
 import { modifierOptionsService } from '../services/modifierOptionsService';
 import { enhancePromptStream, cleanLLMResponse, buildMidjourneyParams, generateWithImagen, generateWithNanoBanana, generateWithVeo } from '../services/llmService';
 import { computeWordDiff, calculateSemanticMetrics } from '../utils/diffUtils';
@@ -386,7 +387,15 @@ const RefinerPage: React.FC<RefinerPageProps> = ({
                 .then(() => showGlobalFeedback('Token copied to buffer.'))
                 .catch((err: any) => console.error('Failed to copy text: ', err));
         }
-    }, [showGlobalFeedback]);
+        // WP7: copying the refined prompt out is the hand-off point for external
+        // services with no API — record it so it's a tracked Generation, not an
+        // untracked action. Best-effort, never blocks the copy itself.
+        recordExternalCopy({
+            serviceName: targetAIModel,
+            promptText: text,
+            modifiers,
+        }).catch((err) => console.error('[ExternalCopy] Failed to record copy:', err));
+    }, [showGlobalFeedback, targetAIModel, modifiers]);
 
     const handleCopyJson = useCallback(() => {
         if (!jsonData) return;

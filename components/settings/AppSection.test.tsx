@@ -35,6 +35,7 @@ vi.mock('../../utils/integrity', () => ({
     rebuildGalleryDatabase: vi.fn(async (_cb: any) => {}),
     rebuildPromptDatabase: vi.fn(async (_cb: any) => {}),
     optimizeManifests: vi.fn(async (_cb: any) => {}),
+    getGenerationCoverageReport: vi.fn(async () => ({ totalItems: 0, itemsWithoutGenerationPct: 0, danglingGenerations: 0 })),
 }));
 
 vi.mock('../icons', () => ({

@@ -39,6 +39,7 @@ vi.mock('../services/modifierOptionsService', () => ({
 }));
 vi.mock('../utils/artstyleStorage', () => ({ loadArtStyles: mocks.loadArtStyles }));
 vi.mock('../utils/settingsStorage', () => ({ saveLLMSettings: vi.fn() }));
+vi.mock('../services/externalCopyRecorder', () => ({ recordExternalCopy: vi.fn().mockResolvedValue('gen_1') }));
 vi.mock('../services/llmService', () => ({
     enhancePromptStream: vi.fn(), cleanLLMResponse: (value: string) => value,
     buildMidjourneyParams: () => '', dissectPrompt: mocks.dissectPrompt,

@@ -186,12 +186,16 @@ export function createExecutionEngine(options?: EngineOptions) {
             }
           }
         } else if (result.status === 'failed') {
-          stepResults.push({ ...result, status: 'skipped' });
+          // Only optional-and-configured-to-skip steps get marked 'skipped' —
+          // otherwise this step is what fails the plan, and stepResults must
+          // say 'failed' too, not silently disagree with the plan's own status.
+          const skip = step.optional && opts.skipOptionalOnError;
+          stepResults.push(skip ? { ...result, status: 'skipped' } : result);
 
           // Fire step observers
           fireStepObservers(stepObservers, stepResults[stepResults.length - 1], plan);
 
-          if (!(step.optional && opts.skipOptionalOnError)) {
+          if (!skip) {
             return finish(plan, stepResults, planObservers, startTime, 'failed', result.error);
           }
         } else {

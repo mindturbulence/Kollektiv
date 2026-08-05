@@ -39,12 +39,11 @@ describe('detectMcpMedia', () => {
     expect(result.video).toBe('https://example.com/output.mp4');
   });
 
-  it('detects base64 image in text output', () => {
+  it('does not treat a base64 URL embedded in a text block as media (only typed blocks count)', () => {
     const result = detectMcpMedia([
       { type: 'text', text: 'Result: data:image/jpeg;base64,/9j/4AAQ...' },
     ]);
-    expect(result.hasMedia).toBe(true);
-    expect(result.mediaType).toBe('image');
+    expect(result.hasMedia).toBe(false);
   });
 
   it('returns hasMedia false for text-only output', () => {
@@ -65,10 +64,9 @@ describe('detectMcpMedia', () => {
     expect(result.mediaType).toBe('image');
   });
 
-  it('handles plain string with video URL', () => {
+  it('does not treat a bare video URL string as media (no typed video block)', () => {
     const result = detectMcpMedia('https://example.com/video.mp4');
-    expect(result.hasMedia).toBe(true);
-    expect(result.mediaType).toBe('video');
+    expect(result.hasMedia).toBe(false);
   });
 });
 

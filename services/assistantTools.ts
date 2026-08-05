@@ -6,6 +6,7 @@ import { addNote, loadNotes, updateNote, deleteNote } from '../utils/notesStorag
 import { loadMemories as loadMemoryEntries, deleteMemory } from '../utils/memoryStorage';
 // Obsidian imports removed — all obsidian tools live in services/tools/obsidianTools.ts
 import { loadGalleryItems, addItemToGallery, deleteItemFromGallery, loadCategories, loadPinnedItemIds } from '../utils/galleryStorage';
+import { createGeneration, saveGeneration } from '../utils/generationStorage';
 import { computeGalleryStats } from '../utils/galleryAnalytics';
 import { loadLLMSettings, saveLLMSettings } from '../utils/settingsStorage';
 import { refineSinglePrompt, reconstructFromIntent, dissectPrompt, translateToEnglish, generateConstructorPreset, abstractImage, generateWithImagen, generateWithNanoBanana, generateWithVeo, enhancePromptStream, cleanLLMResponse } from './llmService';
@@ -36,6 +37,7 @@ import { rssTools } from './tools/rssTools';
 import { extractStoryAssetsTool } from './tools/storyAssetExtractor';
 import { matrixGeneratorTool } from './tools/matrixGeneratorTool';
 import { comfyWorkflowTool } from './tools/comfyWorkflowTool';
+import { scoreGenerationsTool } from './tools/generationSignalsTool';
 import { githubTools } from './tools/githubTools';
 import { exaTools } from './tools/exaTools';
 import { redditTools } from './tools/redditTools';
@@ -951,7 +953,17 @@ export const ASSISTANT_TOOLS: AssistantTool[] = [
         }
         // Save to gallery so it persists and is findable.
         const mediaType = m === 'veo' ? 'video' : 'image';
-        const item = await addItemToGallery(mediaType, [dataUrl], ['AI Generation'], undefined, undefined, [], undefined, String(prompt));
+        const gen = createGeneration({
+            promptText: String(prompt),
+            backendId: m,
+            params: { prompt: String(prompt), width: 0, height: 0, steps: 0, cfgScale: 0 },
+        });
+        const item = await addItemToGallery(mediaType, [dataUrl], ['AI Generation'], {
+            prompt: String(prompt),
+            generationId: gen.id,
+        });
+        gen.resultItemIds = [item.id];
+        await saveGeneration(gen);
                 return JSON.stringify({
                     success: true,
                     galleryId: item.id,
@@ -1017,7 +1029,17 @@ export const ASSISTANT_TOOLS: AssistantTool[] = [
 
                 // 3. Ingest
                 const mediaType = m === 'veo' ? 'video' : 'image';
-                const item = await addItemToGallery(mediaType, [dataUrl], ['Generate Loop'], undefined, undefined, [], undefined, refinedPrompt);
+                const gen = createGeneration({
+                    promptText: refinedPrompt,
+                    backendId: m,
+                    params: { prompt: refinedPrompt, width: 0, height: 0, steps: 0, cfgScale: 0 },
+                });
+                const item = await addItemToGallery(mediaType, [dataUrl], ['Generate Loop'], {
+                    prompt: refinedPrompt,
+                    generationId: gen.id,
+                });
+                gen.resultItemIds = [item.id];
+                await saveGeneration(gen);
 
                 return JSON.stringify({
                     success: true,
@@ -1216,15 +1238,29 @@ export const ASSISTANT_TOOLS: AssistantTool[] = [
             const tagList = tags ? String(tags).split(',').map(t => t.trim()).filter(Boolean) : [];
             const p = prompt ? String(prompt) : '';
             try {
-                if (contentType === 'image') {
-                    const item = await addItemToGallery('image', [String(content)], ['Assistant'], undefined, String(title), tagList, undefined, p);
-                    return `Saved image "${item.title}" to gallery (id: ${item.id}).`;
-                } else if (contentType === 'video') {
-                    const item = await addItemToGallery('video', [String(content)], ['Assistant'], undefined, String(title), tagList, undefined, p);
-                    return `Saved video "${item.title}" to gallery (id: ${item.id}).`;
+                if (contentType === 'image' || contentType === 'video') {
+                    const gen = createGeneration({
+                        promptText: p,
+                        backendId: 'external:assistant-save',
+                        params: { prompt: p, width: 0, height: 0, steps: 0, cfgScale: 0 },
+                    });
+                    const item = await addItemToGallery(contentType, [String(content)], ['Assistant'], {
+                        defaultTitle: String(title),
+                        tags: tagList,
+                        prompt: p,
+                        generationId: gen.id,
+                    });
+                    gen.resultItemIds = [item.id];
+                    await saveGeneration(gen);
+                    return `Saved ${contentType} "${item.title}" to gallery (id: ${item.id}).`;
                 } else {
                     // Save a text-only note to the gallery (stored as an item with empty urls).
-                    const item = await addItemToGallery('image', [], ['Assistant'], undefined, String(title), tagList, String(content), p);
+                    const item = await addItemToGallery('image', [], ['Assistant'], {
+                        defaultTitle: String(title),
+                        tags: tagList,
+                        notes: String(content),
+                        prompt: p,
+                    });
                     return `Saved note "${item.title}" to gallery (id: ${item.id}).`;
                 }
             } catch (e: any) {
@@ -1271,6 +1307,7 @@ export const ASSISTANT_TOOLS: AssistantTool[] = [
     extractStoryAssetsTool,
     matrixGeneratorTool,
     comfyWorkflowTool,
+    scoreGenerationsTool,
     ...githubTools,
     ...exaTools,
     ...redditTools,

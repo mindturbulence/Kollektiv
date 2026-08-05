@@ -123,6 +123,95 @@ export function createDefaultWorkflow(params: {
 }
 
 /**
+ * img2img variant of createDefaultWorkflow (WP11): swaps EmptyLatentImage
+ * for LoadImage → VAEEncode and sets KSampler's denoise below 1. The
+ * LoadImage/VAEEncode input field names are passed in rather than hardcoded
+ * — comfyService.ts resolves them live from /object_info first (see the
+ * historical note atop this file re: guessing node fields vs. reading them).
+ */
+export function createImg2ImgWorkflow(params: {
+  positivePrompt: string;
+  negativePrompt?: string;
+  seed: number;
+  steps: number;
+  cfg: number;
+  ckptName: string;
+  samplerName?: string;
+  /** Filename returned by ComfyUI's /upload/image, to feed into LoadImage. */
+  imageFilename: string;
+  imageSubfolder?: string;
+  denoise: number;
+  /** LoadImage's required input field holding the filename — verified to exist, but always 'image' in stock ComfyUI. */
+  loadImageField: string;
+  /** VAEEncode's required input field of type IMAGE, resolved from /object_info. */
+  vaeEncodePixelsField: string;
+  /** VAEEncode's required input field of type VAE, resolved from /object_info. */
+  vaeEncodeVaeField: string;
+}): ComfyWorkflow {
+  const p = params;
+  return {
+    '1': {
+      inputs: { ckpt_name: p.ckptName },
+      class_type: 'CheckpointLoaderSimple',
+      _meta: { title: 'Load Checkpoint' },
+    },
+    // Source image for img2img (WP11) — filename must already exist on the
+    // ComfyUI server, i.e. uploaded via /upload/image before this is sent.
+    '2': {
+      inputs: { [p.loadImageField]: p.imageSubfolder ? `${p.imageSubfolder}/${p.imageFilename}` : p.imageFilename },
+      class_type: 'LoadImage',
+      _meta: { title: 'Load Image' },
+    },
+    // Encode the loaded image into the checkpoint's own VAE latent space
+    '3': {
+      inputs: {
+        [p.vaeEncodePixelsField]: ['2', 0],
+        [p.vaeEncodeVaeField]: ['1', 2],
+      },
+      class_type: 'VAEEncode',
+      _meta: { title: 'VAE Encode' },
+    },
+    '6': {
+      inputs: { text: p.positivePrompt, clip: ['1', 1] },
+      class_type: 'CLIPTextEncode',
+      _meta: { title: 'CLIP Text Encode (Positive Prompt)' },
+    },
+    '7': {
+      inputs: { text: p.negativePrompt || '', clip: ['1', 1] },
+      class_type: 'CLIPTextEncode',
+      _meta: { title: 'CLIP Text Encode (Negative Prompt)' },
+    },
+    '8': {
+      inputs: {
+        seed: p.seed,
+        steps: p.steps,
+        cfg: p.cfg,
+        sampler_name: p.samplerName || 'euler',
+        scheduler: 'normal',
+        // < 1.0 — the whole point of img2img is partial regeneration from '3', not a fresh empty latent.
+        denoise: p.denoise,
+        model: ['1', 0],
+        positive: ['6', 0],
+        negative: ['7', 0],
+        latent_image: ['3', 0],
+      },
+      class_type: 'KSampler',
+      _meta: { title: 'KSampler' },
+    },
+    '9': {
+      inputs: { samples: ['8', 0], vae: ['1', 2] },
+      class_type: 'VAEDecode',
+      _meta: { title: 'VAE Decode' },
+    },
+    '12': {
+      inputs: { filename_prefix: 'kollektiv_comfy_img2img', images: ['9', 0] },
+      class_type: 'SaveImage',
+      _meta: { title: 'Save Image' },
+    },
+  };
+}
+
+/**
  * Substitute runtime values into a workflow loaded from JSON.
  * Walks the graph and writes the values into the matching node inputs.
  */

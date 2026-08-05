@@ -35,8 +35,10 @@ const hookMocks = {
   reset: vi.fn(),
 };
 
+const mockConsumePendingStudioParams = vi.fn((_backendId?: string) => null as any);
 vi.mock('../hooks/useLocalGenerationStudio', () => ({
   useLocalGenerationStudio: () => ({ state: mockState, ...hookMocks }),
+  consumePendingStudioParams: (backendId: string) => mockConsumePendingStudioParams(backendId),
 }));
 
 const { mockUpdateSettings, mockSettings } = vi.hoisted(() => ({
@@ -109,6 +111,40 @@ describe('LocalGenerationStudioPage', () => {
     mockLoadPresets.mockResolvedValue([]);
     mockSettings.a1111AdditionalModules = '';
     mockState.modules = [];
+  });
+
+  // Regression guard (WP4): "Load these settings" stashes a Generation's
+  // params via setPendingStudioParams before navigating here; this page must
+  // pick them up on mount rather than silently ignoring them.
+  it('applies pending studio params from a loaded generation on mount', async () => {
+    mockConsumePendingStudioParams.mockReturnValueOnce({
+      prompt: 'a loaded fox',
+      negativePrompt: 'blurry',
+      width: 768,
+      height: 512,
+      steps: 25,
+      cfgScale: 5,
+      seed: 42,
+      sampler: 'DPM++ 2M',
+      model: 'flux1-dev.safetensors',
+    });
+
+    render(<LocalGenerationStudioPage backendId="a1111" showGlobalFeedback={vi.fn()} />);
+
+    await waitFor(() => {
+      expect((screen.getByPlaceholderText(/a photo of/i) as HTMLTextAreaElement).value).toBe('a loaded fox');
+    });
+    expect(mockUpdateSettings).toHaveBeenCalledWith(expect.objectContaining({
+      a1111Model: 'flux1-dev.safetensors',
+      a1111Sampler: 'DPM++ 2M',
+    }));
+  });
+
+  it('does nothing when there are no pending studio params', () => {
+    mockConsumePendingStudioParams.mockReturnValueOnce(null);
+    render(<LocalGenerationStudioPage backendId="a1111" showGlobalFeedback={vi.fn()} />);
+    expect((screen.getByPlaceholderText(/a photo of/i) as HTMLTextAreaElement).value).toBe('');
+    expect(mockUpdateSettings).not.toHaveBeenCalled();
   });
 
   it('renders the backend label in the heading', () => {

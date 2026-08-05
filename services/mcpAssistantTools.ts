@@ -1,6 +1,7 @@
 import type { LLMSettings, McpServerConfig } from '../types';
 import type { AssistantTool } from './assistantTools';
 import { mcpService } from './mcpService';
+import { detectMcpMedia, bridgeMcpGeneration } from './mcpGenerationBridge';
 
 const cache = new Map<string, { url: string; at: number; tools: AssistantTool[] }>();
 const TTL_MS = 60_000;
@@ -87,7 +88,24 @@ export const loadMcpAssistantTools = async (settings: LLMSettings): Promise<Assi
             const text = Array.isArray(out)
               ? out.map((i: any) => i?.text ?? JSON.stringify(i)).join('\n')
               : typeof out === 'string' ? out : JSON.stringify(out);
-            return text.slice(0, 8000);
+
+            // WP6: if the tool returned image/video content, bridge it into the
+            // gallery + a Generation record so it's reproducible, not just text.
+            let bridgeNote = '';
+            if (detectMcpMedia(out).hasMedia) {
+              const promptArg = typeof args?.prompt === 'string' ? args.prompt : undefined;
+              const itemId = await bridgeMcpGeneration({
+                serverId: sv.id,
+                serverName: sv.name,
+                toolName: t.name,
+                toolArgs: args || {},
+                output: out,
+                prompt: promptArg,
+              });
+              if (itemId) bridgeNote = `\n\n[Saved to gallery as item ${itemId}]`;
+            }
+
+            return text.slice(0, 8000) + bridgeNote;
           },
         };
       });

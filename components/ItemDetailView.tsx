@@ -4,6 +4,7 @@ import { gsap } from 'gsap';
 import type { GalleryItem, GalleryCategory, LLMSettings, Generation } from '../types';
 import { getGeneration } from '../utils/generationStorage';
 import { appEventBus } from '../utils/eventBus';
+import { setPendingStudioParams, type StudioBackendId } from '../hooks/useLocalGenerationStudio';
 import { 
     ChevronLeftIcon, ThumbTackIcon, 
     ChevronRightIcon, CloseIcon, YouTubeIcon, 
@@ -382,11 +383,17 @@ const ItemDetailView: React.FC<ItemDetailViewProps> = ({ items, currentIndex, is
         setIsEditing(false);
         setTagInput('');
         setMetadata(null);
-        // Load the linked generation record (WP4)
+        // Load the linked generation record (WP4). Clear synchronously and
+        // guard the resolve with `cancelled` — otherwise a fast arrow-key
+        // navigation can let a stale promise paint the previous item's
+        // generation onto whatever item is showing when it finally resolves.
+        setGeneration(null);
         if (item.generationId) {
-          getGeneration(item.generationId).then((g) => setGeneration(g ?? null)).catch(() => setGeneration(null));
-        } else {
-          setGeneration(null);
+          let cancelled = false;
+          getGeneration(item.generationId)
+            .then((g) => { if (!cancelled) setGeneration(g ?? null); })
+            .catch(() => { if (!cancelled) setGeneration(null); });
+          return () => { cancelled = true; };
         }
     }
   }, [item]);
@@ -877,17 +884,21 @@ const ItemDetailView: React.FC<ItemDetailViewProps> = ({ items, currentIndex, is
                                                     <span className="text-[11px] font-mono tracking-widest text-base-content/30 uppercase">BACKEND</span>
                                                     <ScramblingText text={generation.backendId} className="text-base-content/70" />
                                                 </div>
-                                                <div className="col-span-2">
-                                                    <button
-                                                        onClick={() => {
-                                                            appEventBus.emit('navigate', generation.params.model?.includes('comfy') ? 'comfy_studio' : 'a1111_studio');
-                                                            showGlobalFeedback?.('Settings loaded from generation');
-                                                        }}
-                                                        className="btn btn-xs btn-ghost text-primary tracking-wider uppercase mt-2"
-                                                    >
-                                                        LOAD THESE SETTINGS
-                                                    </button>
-                                                </div>
+                                                {(generation.backendId === 'comfy' || generation.backendId === 'a1111') && (
+                                                    <div className="col-span-2">
+                                                        <button
+                                                            onClick={() => {
+                                                                const backendId = generation.backendId as StudioBackendId;
+                                                                setPendingStudioParams(backendId, generation.params);
+                                                                appEventBus.emit('navigate', backendId === 'comfy' ? 'comfy_studio' : 'a1111_studio');
+                                                                showGlobalFeedback?.('Settings loaded from generation');
+                                                            }}
+                                                            className="btn btn-xs btn-ghost text-primary tracking-wider uppercase mt-2"
+                                                        >
+                                                            LOAD THESE SETTINGS
+                                                        </button>
+                                                    </div>
+                                                )}
                                             </div>
                                         )}
                                     </div>

@@ -55,6 +55,11 @@ const fileManifest: FileManifestEntry[] = [
         path: 'cheatsheet.json',
         type: 'json',
         getDefaultContent: () => ([]),
+    },
+    {
+        path: 'generations.json',
+        type: 'json',
+        getDefaultContent: () => ({ entries: [] }),
     }
 ];
 
@@ -434,6 +439,31 @@ export const optimizeManifests = async (onProgress: (msg: string) => void): Prom
         fileSystemManager.storageProvider = originalProvider;
     }
 };
+
+/**
+ * Reports how much of the gallery is backed by a reproducible Generation record (WP3).
+ * Dynamic imports avoid a static cycle (integrity.ts <- manifestStore.ts <- galleryStorage.ts).
+ */
+export interface GenerationCoverageReport {
+    totalItems: number;
+    itemsWithoutGenerationPct: number;
+    danglingGenerations: number;
+}
+
+export async function getGenerationCoverageReport(): Promise<GenerationCoverageReport> {
+    const { loadGalleryItems } = await import('./galleryStorage');
+    const { loadGenerations } = await import('./generationStorage');
+    const [items, generations] = await Promise.all([loadGalleryItems(), loadGenerations()]);
+
+    const totalItems = items.length;
+    const itemsWithoutGeneration = items.filter((i) => !i.generationId).length;
+    const itemsWithoutGenerationPct = totalItems === 0 ? 0 : Math.round((itemsWithoutGeneration / totalItems) * 100);
+
+    const itemIds = new Set(items.map((i) => i.id));
+    const danglingGenerations = generations.filter((g) => g.resultItemIds.some((id) => !itemIds.has(id))).length;
+
+    return { totalItems, itemsWithoutGenerationPct, danglingGenerations };
+}
 
 // --- Main Verification and File Repair Logic ---
 export const verifyAndRepairFiles = async (onProgress: (message: string, progress?: number) => void, _settings: LLMSettings): Promise<boolean> => {

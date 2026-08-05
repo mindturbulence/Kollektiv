@@ -35,8 +35,13 @@ export interface McpToolResult {
 
 /**
  * Inspect MCP tool output to detect image/video content.
- * MCP tools may return content as an array of {type, text} objects,
- * or as a plain string.
+ *
+ * Only trusts explicit, typed signals: a structured `{type:'image'|'video'}`
+ * content block (the server declaring media on purpose), or a plain string
+ * that IS a data URL in its entirety. Deliberately does not regex-scan
+ * arbitrary tool text for embedded URLs/base64 — that would bridge any MCP
+ * tool's incidental output (docs, logs, unrelated links) into the gallery,
+ * not just tools that actually generate media.
  */
 export function detectMcpMedia(output: unknown): McpToolResult {
   if (!output) return { hasMedia: false };
@@ -50,23 +55,12 @@ export function detectMcpMedia(output: unknown): McpToolResult {
       if (block.type === 'video' && block.video) {
         return { hasMedia: true, mediaType: 'video', video: block.video };
       }
-      // Check for base64 data URLs in text blocks
-      if (block.type === 'text' && typeof block.text === 'string') {
-        const imgMatch = block.text.match(/data:image\/[^;]+;base64,[A-Za-z0-9+/=]+/);
-        if (imgMatch) {
-          return { hasMedia: true, mediaType: 'image', image: imgMatch[0] };
-        }
-      }
     }
   }
 
-  // Plain string output — check for data URLs or media URLs
-  if (typeof output === 'string') {
-    const imgMatch = output.match(/data:image\/[^;]+;base64,[A-Za-z0-9+/=]+/);
-    if (imgMatch) return { hasMedia: true, mediaType: 'image', image: imgMatch[0] };
-
-    const vidMatch = output.match(/https?:\/\/[^\s]+\.(mp4|webm|mov)/i);
-    if (vidMatch) return { hasMedia: true, mediaType: 'video', video: vidMatch[0] };
+  // Plain string output that IS a data URL (not merely containing one).
+  if (typeof output === 'string' && /^data:image\/[^;]+;base64,[A-Za-z0-9+/=]+$/.test(output.trim())) {
+    return { hasMedia: true, mediaType: 'image', image: output.trim() };
   }
 
   return { hasMedia: false };
@@ -103,6 +97,7 @@ export async function bridgeMcpGeneration(params: {
       height: 0,
       steps: 0,
       cfgScale: 0,
+      raw: params.toolArgs,
     };
 
     const gen = createGeneration({
