@@ -52,6 +52,33 @@ const IntegrationsSection: React.FC<IntegrationsSectionProps> = ({
     currentOrigin,
     siblingOrigin,
 }) => {
+    // ── Obsidian section state (hoisted — hooks must never be called conditionally) ──
+    const [connected, setConnected] = useState(false);
+    const [vaultName, setVaultName] = useState('');
+    const [isBackfilling, setIsBackfilling] = useState(false);
+    const [backfillProgress, setBackfillProgress] = useState<{ done: number; total: number } | null>(null);
+    const [indexStats, setIndexStats] = useState<{ count: number; approxBytes: number } | null>(null);
+    const [embeddingStatus, setEmbeddingStatus] = useState<'unknown' | 'available' | 'unavailable'>('unknown');
+    const stopRef = useRef(false);
+
+    useEffect(() => {
+        initObsidianVault().then(ok => {
+            setConnected(ok);
+            if (ok) setVaultName('Obsidian Vault');
+        });
+        (async () => {
+            try {
+                const { getIndexStats } = await import('../../utils/semanticIndex');
+                const stats = await getIndexStats();
+                setIndexStats(stats);
+            } catch { /* ignore */ }
+        })();
+    }, []);
+
+    // ── Local generation section state ──────────────────────────────────────────
+    const [comfyStatus, setComfyStatus] = useState<'idle' | 'testing' | 'ok' | 'fail'>('idle');
+    const [a1111Status, setA1111Status] = useState<'idle' | 'testing' | 'ok' | 'fail'>('idle');
+
     const renderLLM = () => (
         <div className="flex flex-col animate-fade-in pb-12">
             <SettingRow label="Neural Intelligence Core" desc="Choose the primary processing engine for prompt construction. Every engine is optimized with custom directives.">
@@ -398,30 +425,6 @@ const IntegrationsSection: React.FC<IntegrationsSectionProps> = ({
     );}
 
     const renderObsidian = () => {
-        const [connected, setConnected] = useState(false);
-        const [vaultName, setVaultName] = useState('');
-
-        // Semantic backfill state
-        const [isBackfilling, setIsBackfilling] = useState(false);
-        const [backfillProgress, setBackfillProgress] = useState<{ done: number; total: number } | null>(null);
-        const [indexStats, setIndexStats] = useState<{ count: number; approxBytes: number } | null>(null);
-        const [embeddingStatus, setEmbeddingStatus] = useState<'unknown' | 'available' | 'unavailable'>('unknown');
-        const stopRef = useRef(false);
-
-        useEffect(() => {
-            initObsidianVault().then(ok => {
-                setConnected(ok);
-                if (ok) setVaultName('Obsidian Vault');
-            });
-            // Check index stats on mount
-            (async () => {
-                try {
-                    const { getIndexStats } = await import('../../utils/semanticIndex');
-                    const stats = await getIndexStats();
-                    setIndexStats(stats);
-                } catch { /* ignore */ }
-            })();
-        }, []);
 
         const handlePick = async () => {
             const ok = await pickObsidianVault();
@@ -665,8 +668,6 @@ const IntegrationsSection: React.FC<IntegrationsSectionProps> = ({
     );
 
     const renderLocalGeneration = () => {
-        const [comfyStatus, setComfyStatus] = useState<'idle' | 'testing' | 'ok' | 'fail'>('idle');
-        const [a1111Status, setA1111Status] = useState<'idle' | 'testing' | 'ok' | 'fail'>('idle');
         const backendId = settings.generationBackendId || 'cloud';
         const isLocal = backendId !== 'cloud';
 
