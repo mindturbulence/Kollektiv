@@ -530,3 +530,37 @@ export const savePinnedItemIds = async (ids: string[]): Promise<void> => {
     manifest.pinnedIds = ids;
     await saveManifest(manifest);
 };
+
+/**
+ * Atomically replaces URLs inside a single gallery item's `urls` array.
+ * Caller is responsible for saving the new files and deleting the old ones;
+ * this function only patches the manifest and the item's sidecar metadata JSON.
+ *
+ * @param itemId  The gallery item to patch.
+ * @param urlMap  Map of oldUrl → newUrl. Unmapped URLs are left unchanged.
+ */
+export const replaceGalleryItemUrls = async (
+    itemId: string,
+    urlMap: Map<string, string>,
+): Promise<void> => {
+    const { data: manifest, safeToSave } = await getManifest();
+    if (!safeToSave) throw new ManifestWriteBlockedError(MANIFEST_NAME);
+
+    const idx = manifest.galleryItems.findIndex(i => i.id === itemId);
+    if (idx === -1) return;
+
+    const original = manifest.galleryItems[idx];
+    let changed = false;
+    const newUrls = original.urls.map(u => {
+        const replacement = urlMap.get(u);
+        if (replacement !== undefined) { changed = true; return replacement; }
+        return u;
+    });
+
+    if (!changed) return;
+
+    const updated: GalleryItem = { ...original, urls: newUrls };
+    manifest.galleryItems[idx] = updated;
+    await saveManifest(manifest);
+    await saveItemMetadata(updated, manifest.categories);
+};
