@@ -1,0 +1,16 @@
+{
+  "manifest_version": 3,
+  "name": "Kollektiv Assistant Panel",
+  "version": "1.1.0",
+  "description": "Kollektiv's floating assistant avatar, pinned as an always-visible browser side panel. Requires the Kollektiv app to be running (URL configurable).",
+  "permissions": ["sidePanel", "storage"],
+  "background": {
+    "service_worker": "background.js"
+  },
+  "action": {
+    "default_title": "Kollektiv Assistant"
+  },
+  "side_panel": {
+    "default_path": "sidepanel.html"
+  }
+}

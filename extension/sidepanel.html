@@ -1,0 +1,127 @@
+<!doctype html>
+<html>
+  <head>
+    <meta charset="UTF-8" />
+    <style>
+      html, body {
+        margin: 0;
+        padding: 0;
+        height: 100%;
+        overflow: hidden;
+        background: #020617; /* slate-950 — matches while the iframe loads */
+        font-family: 'JetBrains Mono', 'Space Mono', monospace;
+      }
+      /* Top bar: settings gear + current target. Thin, out of the way. */
+      #panel-bar {
+        position: absolute;
+        top: 0; left: 0; right: 0;
+        height: 22px;
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        padding: 0 6px;
+        background: #0b1120;
+        border-bottom: 1px solid rgba(0, 255, 163, 0.15);
+        z-index: 2;
+      }
+      #settings-btn {
+        background: none;
+        border: none;
+        color: rgba(148, 163, 184, 0.8);
+        cursor: pointer;
+        font-size: 13px;
+        line-height: 1;
+        padding: 2px 4px;
+      }
+      #settings-btn:hover { color: #00ffa3; }
+      #current-url {
+        flex: 1;
+        font-size: 9px;
+        color: rgba(148, 163, 184, 0.45);
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        letter-spacing: 0.05em;
+      }
+      /* Settings form — hidden by default, slides over the iframe. */
+      #settings-form {
+        position: absolute;
+        top: 22px; left: 0; right: 0;
+        padding: 10px;
+        background: #0b1120;
+        border-bottom: 1px solid rgba(0, 255, 163, 0.25);
+        z-index: 3;
+        display: flex;
+        flex-direction: column;
+        gap: 6px;
+      }
+      #settings-form[hidden] { display: none; }
+      #settings-form label {
+        font-size: 9px;
+        letter-spacing: 0.15em;
+        color: rgba(148, 163, 184, 0.7);
+        text-transform: uppercase;
+      }
+      #url-input {
+        width: 100%;
+        box-sizing: border-box;
+        background: #020617;
+        border: 1px solid rgba(0, 255, 163, 0.3);
+        color: #e2e8f0;
+        font-family: inherit;
+        font-size: 11px;
+        padding: 6px 8px;
+        outline: none;
+      }
+      #url-input:focus { border-color: #00ffa3; }
+      #save-btn {
+        align-self: flex-start;
+        background: rgba(0, 255, 163, 0.12);
+        border: 1px solid rgba(0, 255, 163, 0.4);
+        color: #00ffa3;
+        cursor: pointer;
+        font-family: inherit;
+        font-size: 9px;
+        letter-spacing: 0.2em;
+        text-transform: uppercase;
+        padding: 5px 14px;
+      }
+      #save-btn:hover { background: rgba(0, 255, 163, 0.22); }
+      #url-error {
+        font-size: 9px;
+        color: #f87171;
+        letter-spacing: 0.05em;
+      }
+      #url-error[hidden] { display: none; }
+      iframe {
+        position: absolute;
+        top: 22px;
+        border: 0;
+        width: 100%;
+        height: calc(100% - 22px);
+        display: block;
+      }
+    </style>
+  </head>
+  <body>
+    <!--
+      Kollektiv side panel. The iframe targets the user-configured Kollektiv
+      URL (chrome.storage.sync, defaults to http://127.0.0.1:7500) + the
+      '#avatar-panel' embed surface. The embed is a separate JS realm: state
+      flows in via the 'kollektiv-avatar' BroadcastChannel relay, commands
+      flow back the same way — see utils/assistantAvatarStore.ts.
+    -->
+    <div id="panel-bar">
+      <button id="settings-btn" title="Kollektiv URL settings" aria-label="Kollektiv URL settings">⚙</button>
+      <span id="current-url"></span>
+    </div>
+    <form id="settings-form" hidden>
+      <label for="url-input">Kollektiv URL</label>
+      <input id="url-input" type="text" spellcheck="false" placeholder="http://127.0.0.1:7500" />
+      <p id="url-error" hidden>Invalid URL — use an http(s) address, e.g. http://127.0.0.1:7500</p>
+      <button id="save-btn" type="button">Save</button>
+    </form>
+    <iframe id="kollektiv-frame" allow="microphone" title="Kollektiv Assistant"></iframe>
+    <script src="panel.js"></script>
+  </body>
+</html>

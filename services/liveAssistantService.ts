@@ -11,6 +11,7 @@ import { resolveLangKey } from '../utils/languageKey';
 import { TurnManager } from './turnManager';
 import { VoiceActivityService } from './voiceActivityService';
 import { NoiseCancellation } from './noiseCancellation';
+import { voiceLevelService } from './voiceLevelService';
 import { ReconnectManager } from '../utils/reconnectManager';
 
 /** Resolves the configured voice silence timeout, falling back to 800ms
@@ -440,6 +441,7 @@ export class LiveAssistant {
     private micNode: AudioWorkletNode | null = null;
     private noiseCancellation: NoiseCancellation | null = null;
     private outCtx: AudioContext | null = null;
+    private outBus: GainNode | null = null;
     private nextStart = 0;
     private playing = new Set<AudioBufferSourceNode>();
     private screenStream: MediaStream | null = null;
@@ -718,7 +720,7 @@ export class LiveAssistant {
      *  the frame is only sent when audio playback is not active. */
     private scheduleVerificationFrame(): void {
         // Delay to let the page settle after the action (DOM updates, animations)
-        setTimeout(async () => {
+        setTimeout(() => void (async () => {
             if (this.closedByUs || !this.session || !this.sessionOpen || !this.isSessionSocketOpen()) return;
 
             // Skip if the AI is currently speaking — sending a frame mid-response
@@ -740,13 +742,18 @@ export class LiveAssistant {
                 // The AI can still proceed based on text tool results.
                 console.warn('[LiveAssistant] verification frame failed:', (err as Error)?.message);
             }
-        }, 1200);
+        })(), 1200);
     }
 
     private playChunk(bytes: Uint8Array): void {
         if (!this.outCtx) {
             this.outCtx = new AudioContext({ sampleRate: SPEAKER_RATE });
             this.nextStart = 0;
+            // One output bus per context, side-tapped once for the avatar meter.
+            // Tapping per chunk would meter the last-QUEUED chunk, not the one playing.
+            this.outBus = this.outCtx.createGain();
+            this.outBus.connect(this.outCtx.destination);
+            voiceLevelService.tap(this.outBus);
         }
         void this.outCtx.resume();
         const i16 = new Int16Array(bytes.buffer, bytes.byteOffset, Math.floor(bytes.byteLength / 2));
@@ -756,7 +763,7 @@ export class LiveAssistant {
         buf.copyToChannel(f32, 0);
         const src = this.outCtx.createBufferSource();
         src.buffer = buf;
-        src.connect(this.outCtx.destination);
+        src.connect(this.outBus ?? this.outCtx.destination);
         const startAt = Math.max(this.outCtx.currentTime, this.nextStart);
         src.start(startAt);
         this.nextStart = startAt + buf.duration;
@@ -945,7 +952,8 @@ export class LiveAssistant {
         this.noiseCancellation?.dispose();
         this.noiseCancellation = null;
         this.stopMic();
-        void this.outCtx?.close(); this.outCtx = null;
+        voiceLevelService.untap();
+        void this.outCtx?.close(); this.outCtx = null; this.outBus = null;
         try { this.session?.close(); } catch { /* already closed */ }
         this.session = null;
     }

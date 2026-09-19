@@ -17,6 +17,7 @@ import { executeAssistantTool, AssistantTool } from './assistantTools';
 import { loadMcpAssistantTools } from './mcpAssistantTools';
 import { browserControlService } from './browserControlService';
 import { externalBrowserService } from './externalBrowserService';
+import { voiceLevelService } from './voiceLevelService';
 import { ReconnectManager } from '../utils/reconnectManager';
 
 export interface OpenAILiveHandlers {
@@ -97,6 +98,18 @@ export class OpenAIRealtimeAssistant {
             if (this.audioEl) {
                 this.audioEl.srcObject = e.streams[0];
             }
+            // Avatar metering side-tap — observe the remote stream without
+            // touching the <audio> playback path (cosmetic; failures ignored).
+            // ontrack can fire again on renegotiation: close the previous
+            // metering context first so contexts don't accumulate.
+            try {
+                if (this.outCtx && this.outCtx.state !== 'closed') void this.outCtx.close();
+                this.outCtx = new AudioContext();
+                // Created outside a user gesture — may start suspended and meter silence.
+                void this.outCtx.resume();
+                const srcNode = this.outCtx.createMediaStreamSource(e.streams[0]);
+                voiceLevelService.tap(srcNode);
+            } catch { /* metering only */ }
             this.handlers.onSpeaking(true);
             this.handlers.onTurnState?.('responding');
         };
@@ -264,6 +277,7 @@ export class OpenAIRealtimeAssistant {
         }
         this.micStream?.getTracks().forEach(t => t.stop());
         this.micStream = null;
+        voiceLevelService.untap();
         void this.outCtx?.close();
         this.outCtx = null;
     }

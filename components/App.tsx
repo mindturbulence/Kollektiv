@@ -43,6 +43,8 @@ import LocalGenerationStudioPage from './LocalGenerationStudioPage';
 import { LLMChatPanel } from './LLMChatPanel';
 import { LiveAssistantProvider } from '../contexts/LiveAssistantContext';
 import VideoPlayerOverlay from './VideoPlayerOverlay';
+import FloatingAssistantAvatar from './FloatingAssistantAvatar';
+import AssistantAvatarBridge from './AssistantAvatarBridge';
 
 import InitialLoader from './InitialLoader';
 import PageFrame from './PageFrame';
@@ -404,6 +406,9 @@ const AppContent: React.FC = () => {
 
     return (
         <LiveAssistantProvider>
+        {/* Avatar store bridge — headless; feeds the floating widget, the
+            Document PiP pop-out and the extension side panel. */}
+        <AssistantAvatarBridge />
         <div className="h-full w-full overflow-hidden relative font-sans">
             {isLoading && (
                 <div ref={loaderRef} className="fixed inset-0 z-[1000]">
@@ -627,6 +632,9 @@ const AppContent: React.FC = () => {
             )}
             <TabTitleManager defaultTitle={currentTitle} />
             <CustomCursor />
+            {/* Floating avatar: hidden on the assistant page — the fullscreen
+                Samaritan view IS the avatar's expanded form. */}
+            <FloatingAssistantAvatar hidden={activeTab === 'assistant'} />
             <LiveCaptionOverlay hidden={activeTab === 'assistant'} />
             <ScreenControlOverlay />
             {isInitialized && (

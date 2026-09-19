@@ -5,6 +5,30 @@ import App from './components/App';
 import { SettingsProvider } from './contexts/SettingsContext';
 import { AuthProvider } from './contexts/AuthContext';
 
+// --- Embed surfaces -------------------------------------------------------
+// #avatar-panel renders ONLY the floating avatar panel — mounted as an iframe
+// inside the Kollektiv browser extension's side panel. It lives outside the
+// main app's JS realm, so it consumes avatar state over the BroadcastChannel
+// relay (see utils/assistantAvatarStore) instead of the in-app store.
+// Must run before the main app mounts so the shell never flashes in the frame.
+const EMBED_ROUTES: Record<string, React.ComponentType> = {
+  'avatar-panel': React.lazy(() => import('./components/AssistantAvatarPanelEmbed')),
+};
+
+const embedRoute = typeof window !== 'undefined' ? window.location.hash.replace(/^#\/?/, '') : '';
+const EmbedComponent = EMBED_ROUTES[embedRoute];
+
+function renderEmbedSurface() {
+  if (!EmbedComponent) return false;
+  const root = ReactDOM.createRoot(document.getElementById('root')!);
+  root.render(
+    <React.Suspense fallback={null}>
+      <EmbedComponent />
+    </React.Suspense>,
+  );
+  return true;
+}
+
 // --- Environment Shims ---
 // Ensure 'process' is defined for libraries that expect a Node-like environment
 if (typeof (window as any).process === 'undefined') {
@@ -52,11 +76,14 @@ function startApp() {
   if (typeof (window as any).document === 'undefined') {
     return;
   }
-  
+
   const rootElement = (window as any).document.getElementById('root');
   if (!rootElement) {
     throw new Error("Fatal: Could not find the root element to mount the application.");
   }
+
+  // Embed surfaces replace the whole app — no shell, no providers.
+  if (renderEmbedSurface()) return;
   
   const root = ReactDOM.createRoot(rootElement);
   root.render(

@@ -71,8 +71,13 @@ export const VideoToFrames: React.FC<VideoToFramesProps> = ({ isExiting = false 
     const mediaRecorderRef = useRef<any>(null);
     const recordedChunksRef = useRef<Blob[]>([]);
     const animationFrameRef = useRef<number | null>(null);
-    
+    const batchProcessVideoRef = useRef<HTMLVideoElement>(null);
+
     const [isPickerOpen, setIsPickerOpen] = useState(false);
+
+    // Batch extraction state
+    const [isBatchMode, setIsBatchMode] = useState(false);
+    const [batchVideoFiles, setBatchVideoFiles] = useState<Array<{id: string; url: string; title: string}>>([]);
 
     // Sync Join Resolution if Keep Ratio is enabled
     useEffect(() => {
@@ -84,7 +89,7 @@ export const VideoToFrames: React.FC<VideoToFramesProps> = ({ isExiting = false 
 
     useEffect(() => {
         const mimeType = outputFormat === 'mp4' ? 'video/mp4' : 'video/webm';
-        setIsFormatSupported((window as any).MediaRecorder?.isTypeSupported(mimeType));
+        setIsFormatSupported(typeof MediaRecorder !== 'undefined' && MediaRecorder.isTypeSupported(mimeType));
     }, [outputFormat]);
 
     const handleExtractorFileSelect = (file: File) => {
@@ -99,13 +104,22 @@ export const VideoToFrames: React.FC<VideoToFramesProps> = ({ isExiting = false 
         if (!items.length) return;
 
         if (activeTab === 'extractor') {
-            const gItem = items[0];
-            const blob = await fileSystemManager.getFileAsBlob(gItem.urls[0]);
-            if (!blob) return;
-            if (extractorUrl) revoke(extractorUrl);
-            setExtractorUrl(track(URL.createObjectURL(blob)));
-            setExtractorVideo(gItem.title);
-            setFrames(prev => { prev.forEach(f => revoke(f.url)); return []; });
+            if (isBatchMode) {
+                const newItems = await Promise.all(items.map(async (gItem) => {
+                    const blob = await fileSystemManager.getFileAsBlob(gItem.urls[0]);
+                    if (!blob) return null;
+                    return { id: gItem.id + Math.random().toString(36).substr(2, 5), url: track(URL.createObjectURL(blob)), title: gItem.title };
+                }));
+                setBatchVideoFiles(prev => [...prev, ...newItems.filter((x): x is NonNullable<typeof x> => x !== null)]);
+            } else {
+                const gItem = items[0];
+                const blob = await fileSystemManager.getFileAsBlob(gItem.urls[0]);
+                if (!blob) return;
+                if (extractorUrl) revoke(extractorUrl);
+                setExtractorUrl(track(URL.createObjectURL(blob)));
+                setExtractorVideo(gItem.title);
+                setFrames(prev => { prev.forEach(f => revoke(f.url)); return []; });
+            }
         } else {
             // Joiner Mode
             const newVideos = await Promise.all(items.map(async (gItem): Promise<JoinableVideo | null> => {
@@ -113,70 +127,86 @@ export const VideoToFrames: React.FC<VideoToFramesProps> = ({ isExiting = false 
                 if (!blob) return null;
                 const url = track(URL.createObjectURL(blob));
                 const metadata = await new Promise<{duration: number, width: number, height: number}>((res) => {
-                    const v = (window as any).document.createElement('video');
+                    const v = document.createElement('video');
                     v.src = url;
-                    v.onloadedmetadata = () => res({
-                        duration: v.duration,
-                        width: v.videoWidth,
-                        height: v.videoHeight
-                    });
+                    v.onloadedmetadata = () => res({ duration: v.duration, width: v.videoWidth, height: v.videoHeight });
                 });
-                return { 
-                    id: gItem.id + Math.random().toString(36).substr(2, 5), 
-                    file: null, 
-                    url, 
-                    duration: metadata.duration,
-                    width: metadata.width,
-                    height: metadata.height,
-                    title: gItem.title
-                };
+                return { id: gItem.id + Math.random().toString(36).substr(2, 5), file: null, url, duration: metadata.duration, width: metadata.width, height: metadata.height, title: gItem.title };
             }));
             const validVideos = newVideos.filter((v): v is JoinableVideo => v !== null);
             setJoinFiles(prev => [...prev, ...validVideos]);
         }
     };
 
-    const extractSingleFrame = useCallback(async (time: number): Promise<ExtractedFrame | null> => {
-        const video = extractorVideoRef.current;
+    const handleExtractorReset = () => {
+        if (extractorUrl) revoke(extractorUrl);
+        setExtractorUrl('');
+        setExtractorVideo(null);
+        setFrames(prev => { prev.forEach(f => revoke(f.url)); return []; });
+        setExtractionProgress(0);
+        setBatchVideoFiles(prev => { prev.forEach(v => revoke(v.url)); return []; });
+    };
+
+    const handleJoinerReset = () => {
+        setJoinFiles(prev => { prev.forEach(v => revoke(v.url)); return []; });
+        if (joinedVideoUrl) revoke(joinedVideoUrl);
+        setJoinedVideoUrl(null);
+        setJoiningProgress(0);
+    };
+
+    const handleBatchVideoAdd = (files: FileList | null) => {
+        if (!files) return;
+        const newItems = Array.from(files)
+            .filter(f => f.type.startsWith('video/'))
+            .map(file => ({ id: Math.random().toString(36).substr(2, 9), url: track(URL.createObjectURL(file)), title: file.name }));
+        setBatchVideoFiles(prev => [...prev, ...newItems]);
+    };
+
+    const removeBatchVideo = (id: string) => {
+        setBatchVideoFiles(prev => prev.filter(v => { if (v.id === id) { revoke(v.url); return false; } return true; }));
+    };
+
+    const extractSingleFrame = useCallback(async (time: number, videoEl?: HTMLVideoElement): Promise<ExtractedFrame | null> => {
+        const video = videoEl ?? extractorVideoRef.current;
         if (!video) return null;
 
         return new Promise((resolve) => {
             const onSeeked = () => {
-                (video as any).removeEventListener('seeked', onSeeked);
-                const canvas = (window as any).document.createElement('canvas');
-                canvas.width = (video as any).videoWidth;
-                canvas.height = (video as any).videoHeight;
+                video.removeEventListener('seeked', onSeeked);
+                const canvas = document.createElement('canvas');
+                canvas.width = video.videoWidth;
+                canvas.height = video.videoHeight;
                 const ctx = canvas.getContext('2d');
                 if (ctx) {
                     ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
-                    canvas.toBlob((blob: any) => {
+                    canvas.toBlob((blob) => {
                         if (blob) {
-                            resolve({
-                                id: Math.random().toString(36).substr(2, 9),
-                                url: track(URL.createObjectURL(blob)),
-                                timestamp: time,
-                                blob
-                            });
+                            resolve({ id: Math.random().toString(36).substr(2, 9), url: track(URL.createObjectURL(blob)), timestamp: time, blob });
                         } else resolve(null);
                     }, 'image/jpeg', 0.95);
                 } else resolve(null);
             };
-            (video as any).addEventListener('seeked', onSeeked);
-            (video as any).currentTime = Math.min(time, (video as any).duration - 0.1);
+            video.addEventListener('seeked', onSeeked);
+            video.currentTime = Math.min(time, video.duration - 0.1);
         });
     }, [track]);
 
-    const handleBatchExtract = async () => {
+    const calcStep = () => {
+        let step = intervalValue;
+        if (intervalUnit === 'minutes') step = intervalValue * 60;
+        if (intervalUnit === 'frames') step = intervalValue * (1 / 30);
+        return step > 0 ? step : 1;
+    };
+
+    // Single-video extract (existing behaviour)
+    const handleExtract = async () => {
         const video = extractorVideoRef.current;
         if (!video || isExtracting) return;
         setIsExtracting(true);
         setExtractionProgress(0);
-        const duration = (video as any).duration;
+        const duration = video.duration;
         const newFrames: ExtractedFrame[] = [];
-        let step = intervalValue;
-        if (intervalUnit === 'minutes') step = intervalValue * 60;
-        if (intervalUnit === 'frames') step = intervalValue * (1/30);
-        if (step <= 0) step = 1;
+        const step = calcStep();
         for (let t = 0; t <= duration; t += step) {
             const frame = await extractSingleFrame(t);
             if (frame) newFrames.push(frame);
@@ -186,10 +216,42 @@ export const VideoToFrames: React.FC<VideoToFramesProps> = ({ isExiting = false 
         setIsExtracting(false);
     };
 
+    // Batch-mode extract: runs each queued video through a hidden <video> element
+    const handleBatchJobExtract = async () => {
+        const processorEl = batchProcessVideoRef.current;
+        if (!processorEl || batchVideoFiles.length === 0 || isExtracting) return;
+        setIsExtracting(true);
+        setExtractionProgress(0);
+        const allFrames: ExtractedFrame[] = [];
+        const step = calcStep();
+
+        for (let vi = 0; vi < batchVideoFiles.length; vi++) {
+            const bv = batchVideoFiles[vi];
+            const loaded = await new Promise<boolean>((resolve) => {
+                processorEl.onloadedmetadata = () => resolve(true);
+                processorEl.onerror = () => resolve(false);
+                processorEl.src = bv.url;
+                processorEl.load();
+            });
+            const duration = processorEl.duration;
+            // Unplayable file, or Infinity duration (MediaRecorder webm) — skip rather than hang/loop forever.
+            if (!loaded || !Number.isFinite(duration)) continue;
+            for (let t = 0; t <= duration; t += step) {
+                const frame = await extractSingleFrame(t, processorEl);
+                if (frame) allFrames.push(frame);
+                const overall = ((vi + t / duration) / batchVideoFiles.length) * 100;
+                setExtractionProgress(overall);
+            }
+        }
+
+        setFrames(prev => [...allFrames, ...prev]);
+        setIsExtracting(false);
+    };
+
     const handleCaptureCurrent = async () => {
         const video = extractorVideoRef.current;
         if (!video) return;
-        const frame = await extractSingleFrame((video as any).currentTime);
+        const frame = await extractSingleFrame(video.currentTime);
         if (frame) setFrames(prev => [frame, ...prev]);
     };
 
@@ -198,7 +260,7 @@ export const VideoToFrames: React.FC<VideoToFramesProps> = ({ isExiting = false 
         const zip = new JSZip();
         frames.forEach((f, i) => { zip.file(`frame_${String(i).padStart(3, '0')}_${f.timestamp.toFixed(2)}s.jpg`, f.blob); });
         const content = await zip.generateAsync({ type: "blob" });
-        const link = (window as any).document.createElement('a');
+        const link = document.createElement('a');
         link.href = URL.createObjectURL(content);
         const vidTitle = typeof extractorVideo === 'string' ? extractorVideo : extractorVideo?.name || 'video';
         link.download = `frames_${vidTitle}.zip`;
@@ -211,13 +273,9 @@ export const VideoToFrames: React.FC<VideoToFramesProps> = ({ isExiting = false 
         const newVideos = await Promise.all(Array.from(files).map(async (file) => {
             const url = track(URL.createObjectURL(file));
             const metadata = await new Promise<{duration: number, width: number, height: number}>((res) => {
-                const v = (window as any).document.createElement('video');
+                const v = document.createElement('video');
                 v.src = url;
-                v.onloadedmetadata = () => res({
-                    duration: v.duration,
-                    width: v.videoWidth,
-                    height: v.videoHeight
-                });
+                v.onloadedmetadata = () => res({ duration: v.duration, width: v.videoWidth, height: v.videoHeight });
             });
             return { 
                 id: Math.random().toString(36).substr(2, 9), 
@@ -232,30 +290,35 @@ export const VideoToFrames: React.FC<VideoToFramesProps> = ({ isExiting = false 
         setJoinFiles(prev => [...prev, ...newVideos]);
     };
 
-    const handleJoinVideos = async () => {
+    const handleJoinVideos = () => {
         if (joinFiles.length < 1 || isJoining) return;
         setIsJoining(true); setJoiningProgress(0); recordedChunksRef.current = [];
-        const streamVideo = joinVideoRef.current; const streamCanvas = joinCanvasRef.current;
+        const streamVideo = joinVideoRef.current;
+        const streamCanvas = joinCanvasRef.current;
         if (!streamVideo || !streamCanvas) { setIsJoining(false); return; }
-        const ctx = (streamCanvas as any).getContext('2d');
+        const ctx = streamCanvas.getContext('2d');
         if (!ctx) { setIsJoining(false); return; }
-        (streamCanvas as any).width = joinRes.width; (streamCanvas as any).height = joinRes.height;
-        const stream = (streamCanvas as any).captureStream(30);
-        
+        streamCanvas.width = joinRes.width;
+        streamCanvas.height = joinRes.height;
+        // captureStream exists in Chromium but is absent from the TS DOM lib we target — single unchecked cast
+        type CanvasCaptureStream = HTMLCanvasElement & { captureStream(fps: number): MediaStream };
+        const capturable = streamCanvas as CanvasCaptureStream;
+        const stream = capturable.captureStream(30);
+
         let mimeType = 'video/webm;codecs=vp8';
         if (outputFormat === 'mp4') {
             const mp4Types = ['video/mp4;codecs=h264', 'video/mp4;codecs=avc1', 'video/mp4'];
-            const supported = mp4Types.find(t => (window as any).MediaRecorder.isTypeSupported(t));
+            const supported = mp4Types.find(t => MediaRecorder.isTypeSupported(t));
             if (supported) mimeType = supported;
         } else {
             const webmTypes = ['video/webm;codecs=vp9', 'video/webm;codecs=vp8', 'video/webm'];
-            const supported = webmTypes.find(t => (window as any).MediaRecorder.isTypeSupported(t));
+            const supported = webmTypes.find(t => MediaRecorder.isTypeSupported(t));
             if (supported) mimeType = supported;
         }
 
-        const recorder = new (window as any).MediaRecorder(stream, { mimeType, videoBitsPerSecond: 8000000 });
+        const recorder = new MediaRecorder(stream, { mimeType, videoBitsPerSecond: 8000000 });
         mediaRecorderRef.current = recorder;
-        recorder.ondataavailable = (e: any) => { if (e.data.size > 0) recordedChunksRef.current.push(e.data); };
+        recorder.ondataavailable = (e: BlobEvent) => { if (e.data.size > 0) recordedChunksRef.current.push(e.data); };
         recorder.onstop = () => {
             const blob = new Blob(recordedChunksRef.current, { type: recorder.mimeType });
             setJoinedVideoUrl(track(URL.createObjectURL(blob))); setIsJoining(false);
@@ -264,22 +327,26 @@ export const VideoToFrames: React.FC<VideoToFramesProps> = ({ isExiting = false 
         };
         let currentIndex = 0;
         const drawLoop = () => {
-            ctx.fillStyle = 'black'; ctx.fillRect(0, 0, (streamCanvas as any).width, (streamCanvas as any).height);
-            const vWidth = (streamVideo as any).videoWidth || 1; const vHeight = (streamVideo as any).videoHeight || 1;
-            const cWidth = (streamCanvas as any).width; const cHeight = (streamCanvas as any).height;
+            ctx.fillStyle = 'black'; ctx.fillRect(0, 0, streamCanvas.width, streamCanvas.height);
+            const vWidth = streamVideo.videoWidth || 1;
+            const vHeight = streamVideo.videoHeight || 1;
+            const cWidth = streamCanvas.width;
+            const cHeight = streamCanvas.height;
             let dx = 0, dy = 0, dw = cWidth, dh = cHeight;
-            if (joinFit === 'contain') { const scale = Math.min(cWidth / vWidth, cHeight / vHeight); dw = vWidth * scale; dh = vHeight * scale; dx = (cWidth / 2) - (dw / 2); dy = (cHeight / 2) - (dh / 2); }
-            else { const scale = Math.max(cWidth / vWidth, cHeight / vHeight); dw = vWidth * scale; dh = vHeight * scale; dx = (cWidth / 2) - (dw / 2); dy = (cHeight / 2) - (dh / 2); }
-            ctx.drawImage(streamVideo, dx, dy, dw, dh); animationFrameRef.current = requestAnimationFrame(drawLoop);
+            if (joinFit === 'contain') { const scale = Math.min(cWidth / vWidth, cHeight / vHeight); dw = vWidth * scale; dh = vHeight * scale; dx = (cWidth - dw) / 2; dy = (cHeight - dh) / 2; }
+            else { const scale = Math.max(cWidth / vWidth, cHeight / vHeight); dw = vWidth * scale; dh = vHeight * scale; dx = (cWidth - dw) / 2; dy = (cHeight - dh) / 2; }
+            ctx.drawImage(streamVideo, dx, dy, dw, dh);
+            animationFrameRef.current = requestAnimationFrame(drawLoop);
         };
         const playNext = async () => {
             if (currentIndex >= joinFiles.length) { setTimeout(() => recorder.stop(), 500); return; }
-            const currentVideo = joinFiles[currentIndex]; (streamVideo as any).src = currentVideo.url;
-            await new Promise<void>((resolve) => { (streamVideo as any).onloadeddata = () => resolve(); });
-            try { await (streamVideo as any).play(); currentIndex++; setJoiningProgress((currentIndex / joinFiles.length) * 100); }
-            catch (err) { recorder.stop(); }
+            const currentVideo = joinFiles[currentIndex];
+            streamVideo.src = currentVideo.url;
+            await new Promise<void>((resolve) => { streamVideo.onloadeddata = () => resolve(); });
+            try { await streamVideo.play(); currentIndex++; setJoiningProgress((currentIndex / joinFiles.length) * 100); }
+            catch { recorder.stop(); }
         };
-        (streamVideo as any).onended = playNext; recorder.start(); drawLoop(); playNext();
+        streamVideo.onended = () => void playNext(); recorder.start(); drawLoop(); void playNext();
     };
 
     const removeJoinItem = (id: string) => { setJoinFiles(prev => prev.filter(v => { if (v.id === id) { revoke(v.url); return false; } return true; })); };
@@ -328,10 +395,10 @@ export const VideoToFrames: React.FC<VideoToFramesProps> = ({ isExiting = false 
                             {activeTab === 'extractor' ? (
                                 <div className="space-y-6">
                                     <div>
-                                        <label className="text-[10px] font-black uppercase text-base-content/40 tracking-widest mb-4 block">Extraction settings</label>
+                                        <label className="text-[10px] font-black uppercase text-base-content/40 tracking-widest mb-4 block">Extraction Settings</label>
                                         <div className="form-control mb-4">
                                             <label className="label py-1"><span className="label-text text-[10px] font-black uppercase text-base-content/30">Step Unit</span></label>
-                                            <select className="form-select w-full" value={intervalUnit} onChange={(e) => setIntervalUnit((e.currentTarget as any).value as ExtractionUnit)}>
+                                            <select className="form-select w-full" value={intervalUnit} onChange={(e) => setIntervalUnit(e.currentTarget.value as ExtractionUnit)}>
                                                 <option value="seconds">Seconds</option>
                                                 <option value="minutes">Minutes</option>
                                                 <option value="frames">Frames</option>
@@ -339,8 +406,38 @@ export const VideoToFrames: React.FC<VideoToFramesProps> = ({ isExiting = false 
                                         </div>
                                         <div className="form-control">
                                             <label className="label py-1"><span className="label-text text-[10px] font-black uppercase text-base-content/30">Interval</span></label>
-                                            <input type="number" step="0.1" min="0.1" value={intervalValue} onChange={(e) => setIntervalValue(parseFloat((e.currentTarget as any).value) || 1)} className="form-input w-full font-mono" />
+                                            <input type="number" step="0.1" min="0.1" value={intervalValue} onChange={(e) => setIntervalValue(parseFloat(e.currentTarget.value) || 1)} className="form-input w-full font-mono" />
                                         </div>
+                                    </div>
+                                    <div>
+                                        <label className="cursor-pointer label p-0 gap-4 mb-4">
+                                            <span className="text-[10px] font-black uppercase text-base-content/40 tracking-widest">Batch Job</span>
+                                            <input type="checkbox" checked={isBatchMode} onChange={e => { setIsBatchMode(e.target.checked); if (!e.target.checked) setBatchVideoFiles(prev => { prev.forEach(v => revoke(v.url)); return []; }); }} className="toggle toggle-xs toggle-primary" />
+                                        </label>
+                                        {isBatchMode && (
+                                            <div className="space-y-3">
+                                                <div className="space-y-2">
+                                                    <span className="text-[10px] font-black uppercase text-base-content/30">Video Queue</span>
+                                                    <div className="flex gap-2">
+                                                        <button onClick={() => document.getElementById('batch-extractor-files')?.click()} className="form-btn h-6 flex-1 text-base-content/60 hover:text-primary">ADD FILES</button>
+                                                        <button onClick={() => setIsPickerOpen(true)} className="form-btn h-6 flex-1 text-primary hover:underline">LIBRARY</button>
+                                                    </div>
+                                                </div>
+                                                <input id="batch-extractor-files" type="file" multiple accept="video/*" className="hidden" onChange={e => handleBatchVideoAdd(e.currentTarget.files)} />
+                                                <div className="space-y-1">
+                                                    {batchVideoFiles.map((v, i) => (
+                                                        <div key={v.id} className="flex items-center gap-3 group py-1.5 px-2 bg-base-100/10">
+                                                            <span className="text-[10px] font-mono text-base-content/30 w-5 shrink-0">{i + 1}</span>
+                                                            <p className="text-[10px] font-black uppercase truncate flex-grow leading-tight">{v.title}</p>
+                                                            <button onClick={() => removeBatchVideo(v.id)} className="form-btn h-5 w-5 text-error opacity-0 group-hover:opacity-100 transition-opacity text-[10px]">✕</button>
+                                                        </div>
+                                                    ))}
+                                                    {batchVideoFiles.length === 0 && (
+                                                        <div className="py-8 text-center opacity-10 uppercase font-black tracking-widest text-[9px]">No videos queued</div>
+                                                    )}
+                                                </div>
+                                            </div>
+                                        )}
                                     </div>
                                 </div>
                             ) : (
@@ -382,7 +479,7 @@ export const VideoToFrames: React.FC<VideoToFramesProps> = ({ isExiting = false 
                                             <select 
                                                 disabled={keepOriginalRatio}
                                                 className="form-select w-full disabled:opacity-40" 
-                                                onChange={(e) => { const [w, h] = (e.currentTarget as any).value.split('x').map(Number); setJoinRes({ width: w, height: h }); }} 
+                                                onChange={(e) => { const [w, h] = e.currentTarget.value.split('x').map(Number); setJoinRes({ width: w, height: h }); }} 
                                                 value={`${joinRes.width}x${joinRes.height}`}
                                             >
                                                 {keepOriginalRatio && joinFiles.length > 0 && (
@@ -400,11 +497,11 @@ export const VideoToFrames: React.FC<VideoToFramesProps> = ({ isExiting = false 
                                         <div className="flex justify-between items-center">
                                             <label className="text-[10px] font-black uppercase text-base-content/40 tracking-widest">Video Queue</label>
                                             <div className="flex gap-2">
-                                                <button onClick={() => (window as any).document.getElementById('joiner-files')?.click()} className="form-btn h-6 px-2 -content/60 hover:text-primary">ADD FILES</button>
+                                                <button onClick={() => document.getElementById('joiner-files')?.click()} className="form-btn h-6 px-2 text-base-content/60 hover:text-primary">ADD FILES</button>
                                                 <button onClick={() => setIsPickerOpen(true)} className="form-btn h-6 px-2 text-primary hover:underline">LIBRARY</button>
                                             </div>
                                         </div>
-                                        <input id="joiner-files" type="file" multiple accept="video/*" className="hidden" onChange={(e) => handleJoinFilesSelect((e.currentTarget as any).files)}/>
+                                        <input id="joiner-files" type="file" multiple accept="video/*" className="hidden" onChange={(e) => void handleJoinFilesSelect(e.currentTarget.files)}/>
                                         
                                         <div className="space-y-2">
                                             {joinFiles.map((v, i) => (
@@ -439,31 +536,48 @@ export const VideoToFrames: React.FC<VideoToFramesProps> = ({ isExiting = false 
                         >
                             {activeTab === 'extractor' ? (
                                 <>
-                                    <button onClick={handleCaptureCurrent} disabled={!extractorVideo || isExtracting} className="btn btn-sm btn-ghost h-full flex-1 rounded-none tracking-wider uppercase btn-snake">
+                                    <button onClick={handleExtractorReset} disabled={isExtracting} className={`btn btn-sm btn-ghost h-full rounded-none tracking-wider uppercase btn-snake text-error hover:text-error ${isBatchMode ? 'flex-1' : 'px-4'}`}>
                                         <span/><span/><span/><span/>
-                                        CAPTURE
+                                        RESET
                                     </button>
-                                    <button onClick={handleBatchExtract} disabled={!extractorVideo || isExtracting} className="btn btn-sm btn-primary h-full flex-1 rounded-none tracking-wider uppercase btn-snake-primary">
+                                    {!isBatchMode && (
+                                        <button onClick={() => void handleCaptureCurrent()} disabled={!extractorVideo || isExtracting} className="btn btn-sm btn-ghost h-full flex-1 rounded-none tracking-wider uppercase btn-snake">
+                                            <span/><span/><span/><span/>
+                                            CAPTURE
+                                        </button>
+                                    )}
+                                    <button
+                                        onClick={() => void (isBatchMode ? handleBatchJobExtract() : handleExtract())}
+                                        disabled={isBatchMode ? batchVideoFiles.length === 0 || isExtracting : !extractorVideo || isExtracting}
+                                        className="btn btn-sm btn-primary h-full flex-1 rounded-none tracking-wider uppercase btn-snake-primary"
+                                    >
                                         <span/><span/><span/><span/>
-                                        EXTRACT
+                                        {isBatchMode ? 'RUN BATCH' : 'EXTRACT'}
                                     </button>
                                     {frames.length > 0 && (
-                                        <button onClick={downloadAllFrames} className="btn btn-sm btn-ghost h-full px-4 rounded-none tracking-wider uppercase btn-snake">
+                                        <button onClick={() => void downloadAllFrames()} className="btn btn-sm btn-ghost h-full px-4 rounded-none tracking-wider uppercase btn-snake">
                                             <span/><span/><span/><span/>
                                             ZIP ({frames.length})
                                         </button>
                                     )}
                                 </>
                             ) : (
-                                <button onClick={handleJoinVideos} disabled={joinFiles.length < 1 || isJoining} className="btn btn-sm btn-primary h-full flex-1 rounded-none tracking-wider uppercase btn-snake-primary">
-                                    <span/><span/><span/><span/>
-                                    {isJoining ? 'PROCESSING...' : 'JOIN VIDEOS'}
-                                </button>
+                                <>
+                                    <button onClick={handleJoinerReset} disabled={isJoining} className="btn btn-sm btn-ghost h-full px-4 rounded-none tracking-wider uppercase btn-snake text-error hover:text-error">
+                                        <span/><span/><span/><span/>
+                                        RESET
+                                    </button>
+                                    <button onClick={handleJoinVideos} disabled={joinFiles.length < 1 || isJoining} className="btn btn-sm btn-primary h-full flex-1 rounded-none tracking-wider uppercase btn-snake-primary">
+                                        <span/><span/><span/><span/>
+                                        {isJoining ? 'PROCESSING...' : 'JOIN VIDEOS'}
+                                    </button>
+                                </>
                             )}
                         </motion.footer>
                     </div>
                 </motion.aside>
 
+                {!(isBatchMode && activeTab === 'extractor') && (
                 <motion.main 
                     variants={panelVariants}
                     initial="hidden"
@@ -479,6 +593,8 @@ export const VideoToFrames: React.FC<VideoToFramesProps> = ({ isExiting = false 
                     <div className="flex flex-col h-full w-full overflow-hidden relative z-10 bg-base-100/40 backdrop-blur-xl">
                         {activeTab === 'extractor' ? (
                             <div className="flex-grow flex flex-col p-4 lg:p-6 overflow-hidden bg-transparent">
+                                {/* Hidden video element used exclusively by batch extractor */}
+                                <video ref={batchProcessVideoRef} className="hidden" preload="auto" />
                                 <div className="flex-grow bg-transparent relative flex items-center justify-center overflow-hidden">
                                     {extractorUrl ? (
                                         <video ref={extractorVideoRef} src={extractorUrl} className="w-full h-full object-contain" controls />
@@ -489,13 +605,13 @@ export const VideoToFrames: React.FC<VideoToFramesProps> = ({ isExiting = false 
                                                 <p className="text-2xl font-black uppercase tracking-widest">Load Source Video</p>
                                             </div>
                                             <div className="flex justify-center gap-4">
-                                                <button onClick={() => (window as any).document.getElementById('extractor-file')?.click()} className="form-btn h-12 px-8">UPLOAD FILE</button>
+                                                <button onClick={() => document.getElementById('extractor-file')?.click()} className="form-btn h-12 px-8">UPLOAD FILE</button>
                                                 <button onClick={() => setIsPickerOpen(true)} className="form-btn form-btn-primary h-12 px-8">OPEN LIBRARY</button>
                                             </div>
                                         </div>
                                     )}
                                 </div>
-                                <input id="extractor-file" type="file" accept="video/*" className="hidden" onChange={(e) => (e.currentTarget as any).files?.[0] && handleExtractorFileSelect((e.currentTarget as any).files[0])}/>
+                                <input id="extractor-file" type="file" accept="video/*" className="hidden" onChange={(e) => { const f = e.currentTarget.files?.[0]; if (f) handleExtractorFileSelect(f); }}/>
                             </div>
                         ) : (
                             <div className="flex-grow flex flex-col items-center justify-center p-4 lg:p-6 overflow-hidden bg-transparent">
@@ -528,6 +644,11 @@ export const VideoToFrames: React.FC<VideoToFramesProps> = ({ isExiting = false 
                         )}
                     </div>
                 </motion.main>
+                )}
+                {/* Hidden batch-process video kept in DOM regardless of layout mode */}
+                {isBatchMode && activeTab === 'extractor' && (
+                    <video ref={batchProcessVideoRef} className="hidden" preload="auto" />
+                )}
 
                 {activeTab === 'extractor' && (
                     <motion.aside 
@@ -535,7 +656,7 @@ export const VideoToFrames: React.FC<VideoToFramesProps> = ({ isExiting = false 
                         initial="hidden"
                         animate={isExiting ? "exit" : "visible"}
                         exit="exit"
-                        className="w-full lg:w-[480px] flex-shrink-0 flex flex-col relative p-[3px] corner-frame overflow-visible z-10"
+                        className={`${isBatchMode ? 'flex-grow' : 'w-full lg:w-[480px] flex-shrink-0'} flex flex-col relative p-[3px] corner-frame overflow-visible z-10`}
                     >
                         <PanelLine position="top" delay={0.4} />
                         <PanelLine position="bottom" delay={0.5} />
@@ -561,7 +682,7 @@ export const VideoToFrames: React.FC<VideoToFramesProps> = ({ isExiting = false 
                                 animate="visible"
                                 className="flex-grow p-6 overflow-y-auto bg-transparent"
                             >
-                                <div className="grid grid-cols-2 gap-px bg-transparent">
+                                <div className={`grid ${isBatchMode ? 'grid-cols-3 lg:grid-cols-4' : 'grid-cols-2'} gap-px bg-transparent`}>
                                     {frames.map(f => (
                                         <div key={f.id} className="group relative aspect-square bg-transparent overflow-hidden">
                                             <div className="w-full h-full relative">
@@ -589,7 +710,7 @@ export const VideoToFrames: React.FC<VideoToFramesProps> = ({ isExiting = false 
             <GalleryPickerModal 
                 isOpen={isPickerOpen}
                 onClose={() => setIsPickerOpen(false)}
-                onSelect={handleLibrarySelect}
+                onSelect={(items) => void handleLibrarySelect(items)}
                 selectionMode={activeTab === 'extractor' ? 'single' : 'multiple'}
                 typeFilter="video"
                 title={activeTab === 'extractor' ? "Select video for extraction" : "Select videos to join"}
