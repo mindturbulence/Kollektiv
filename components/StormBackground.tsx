@@ -25,6 +25,8 @@ import React, { useEffect, useRef } from 'react';
  *   onlook's crimson mix. Everything else is parameter-matched.
  * - Ambient strike flashes default OFF (onlook has none); knob `strikeGain`
  *   re-enables them.
+ * - Dark primaries get a luminance floor (knob `minGlow`, default 0.32) so
+ *   themes like autumn / MindTurbulence stay visible on the near-black base.
  * - prefers-reduced-motion: single static paint, no trail, no tracking.
  *
  * Boot-safety guards: paused when tab hidden; context retry with backoff;
@@ -125,6 +127,7 @@ uniform float uTime;
 uniform vec2 uRes;
 uniform vec3 uBolt;
 uniform float uTrailGain;
+uniform float uMinGlow;
 uniform float uStrike;
 uniform float uStrikeX;
 uniform float uStrikeY;
@@ -219,13 +222,18 @@ void main(){
   // Base, also displaced (onlook displaces everything below the fbm layer).
   vec3 col=gradientBase(uv+offset);
 
+  // Theme color with a perceived-luminance floor: dark primaries (autumn,
+  // MindTurbulence, fantasy, light) are scaled up so the wake stays visible
+  // on the near-black base; bright primaries pass through untouched (x1).
+  vec3 boltCol=uBolt*max(1.0,uMinGlow/max(dot(uBolt,vec3(0.2126,0.7152,0.0722)),0.001));
+
   // Trail added over base at their x2.5 readout strength (mix(bg, bg+c, s)
   // with additive blend == base + color*s). Color = theme primary (the twist).
   float strength=min(ti*2.5,1.0);
-  col+=uBolt*strength*uTrailGain;
+  col+=boltCol*strength*uTrailGain;
 
   // Optional ambient strike flash (off by default - onlook has none).
-  col+=uBolt*bolt(uv*vec2(aspect,1.0),t)*uStrike*0.8;
+  col+=boltCol*bolt(uv*vec2(aspect,1.0),t)*uStrike*0.8;
 
   gl_FragColor=vec4(col,1.0);
 }`;
@@ -360,7 +368,13 @@ const StormBackground: React.FC = () => {
                         const n = parseInt(hex.slice(0, 6), 16);
                         if (!isNaN(n)) rgb = [((n >> 16) & 255) / 255, ((n >> 8) & 255) / 255, (n & 255) / 255];
                     }
-                    if (rgb && rgb.every(v => isFinite(v) && v >= 0 && v <= 1)) boltColor = rgb;
+                    // High-chroma primaries (magenta, pure red) can produce tiny
+                    // negative linear excursions from oklch rounding - clamp to
+                    // sRGB gamut rather than rejecting the color outright.
+                    if (rgb) {
+                        rgb = [Math.min(1, Math.max(0, rgb[0])), Math.min(1, Math.max(0, rgb[1])), Math.min(1, Math.max(0, rgb[2]))];
+                    }
+                    if (rgb && rgb.every(v => isFinite(v))) boltColor = rgb;
                 } catch { /* keep last color */ }
             };
             readBoltColor();
@@ -387,6 +401,7 @@ const StormBackground: React.FC = () => {
                 liquifyMix: 0.25,   // their exact value
                 liquifyAmp: 0.0025, // their exact value
                 trailGain: 1.0,     // composite brightness of the trail
+                minGlow: 0.32,      // luminance floor for dark primaries (0 disables; 0.32 ~ dimmest normal theme)
                 strikeGain: 0,      // ambient strikes OFF (onlook has none); 0.8 to enable
                 ambientMin: 60,     // s between ambient strikes (min) — off unless enabled
                 ambientMax: 120,    // s between ambient strikes (max)
@@ -457,7 +472,7 @@ const StormBackground: React.FC = () => {
             const compUni = {
                 trail: uni(compProg, 'uTrail'), time: uni(compProg, 'uTime'),
                 res: uni(compProg, 'uRes'), bolt: uni(compProg, 'uBolt'),
-                gain: uni(compProg, 'uTrailGain'), strike: uni(compProg, 'uStrike'),
+                gain: uni(compProg, 'uTrailGain'), minGlow: uni(compProg, 'uMinGlow'), strike: uni(compProg, 'uStrike'),
                 strikeX: uni(compProg, 'uStrikeX'), strikeY: uni(compProg, 'uStrikeY'),
                 debug: uni(compProg, 'uDebug'),
             };
@@ -507,6 +522,7 @@ const StormBackground: React.FC = () => {
                 gl.uniform2f(compUni.res, W, H);
                 gl.uniform3f(compUni.bolt, boltColor[0], boltColor[1], boltColor[2]);
                 gl.uniform1f(compUni.gain, knobs.trailGain);
+                gl.uniform1f(compUni.minGlow, knobs.minGlow);
                 gl.uniform1f(compUni.strike, strike * knobs.strikeGain);
                 gl.uniform1f(compUni.strikeX, strikeX);
                 gl.uniform1f(compUni.strikeY, strikeY);
