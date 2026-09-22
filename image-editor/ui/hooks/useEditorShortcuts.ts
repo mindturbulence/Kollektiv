@@ -6,6 +6,7 @@
 
 import { useEffect } from 'react';
 import { dispatch, getSnapshot } from '../../core/store';
+import { undo, redo } from '../../core/history/HistoryManager';
 import type { ToolId } from '../../core/types';
 
 const TOOL_KEYMAP: Record<string, ToolId> = {
@@ -70,7 +71,7 @@ export function useEditorShortcuts(options: UseEditorShortcutsOptions): void {
             return;
           case 'z':
             e.preventDefault();
-            // Undo/redo are no-ops in M1 (no history stack yet).
+            if (e.shiftKey) redo(); else undo();
             return;
           case 's':
             e.preventDefault();
@@ -79,6 +80,18 @@ export function useEditorShortcuts(options: UseEditorShortcutsOptions): void {
           case 'o':
             e.preventDefault();
             onImport();
+            return;
+          case 'l':
+            e.preventDefault();
+            dispatch({ type: 'OPEN_ADJUSTMENT', panel: 'levels' });
+            return;
+          case 'm':
+            e.preventDefault();
+            dispatch({ type: 'OPEN_ADJUSTMENT', panel: 'curves' });
+            return;
+          case 'u':
+            e.preventDefault();
+            dispatch({ type: 'OPEN_ADJUSTMENT', panel: 'hue-sat' });
             return;
           default:
             return;

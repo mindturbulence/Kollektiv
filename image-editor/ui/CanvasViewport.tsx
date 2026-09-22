@@ -6,6 +6,7 @@
 import React, { forwardRef, useEffect, useImperativeHandle, useRef, useState, useSyncExternalStore } from 'react';
 import { CanvasRenderer } from '../core/renderer/CanvasRenderer';
 import { getSnapshot, subscribe } from '../core/store';
+import { BrushEngine } from '../core/paint/BrushEngine';
 
 export interface CanvasViewportHandle {
   fitToViewport: () => void;
@@ -104,12 +105,20 @@ const CanvasViewport = forwardRef<CanvasViewportHandle, CanvasViewportProps>(({ 
   };
 
   const handlePointerDown = (e: React.PointerEvent<HTMLDivElement>) => {
-    const tool = getSnapshot().activeTool;
-    if (isSpaceDown || tool === 'hand') {
+    const { activeTool, activeLayerId } = getSnapshot();
+    if (isSpaceDown || activeTool === 'hand') {
       isPanningRef.current = true;
       setIsPanning(true);
       lastPointerIdRef.current = e.pointerId;
       e.currentTarget.setPointerCapture(e.pointerId);
+    } else if ((activeTool === 'brush' || activeTool === 'eraser') && activeLayerId) {
+      lastPointerIdRef.current = e.pointerId;
+      e.currentTarget.setPointerCapture(e.pointerId);
+      const pt = rendererRef.current?.getCanvasPoint(e.clientX, e.clientY);
+      if (pt) {
+        BrushEngine.beginStroke(activeLayerId);
+        BrushEngine.addPoint(pt.x, pt.y, e.pressure || 0.5, activeTool === 'eraser');
+      }
     }
   };
 
@@ -119,6 +128,10 @@ const CanvasViewport = forwardRef<CanvasViewportHandle, CanvasViewportProps>(({ 
 
     if (isPanningRef.current && lastPointerIdRef.current === e.pointerId) {
       renderer.panBy(e.movementX, e.movementY);
+    } else if (BrushEngine.isStroking && lastPointerIdRef.current === e.pointerId) {
+      const pt = renderer.getCanvasPoint(e.clientX, e.clientY);
+      const tool = getSnapshot().activeTool;
+      BrushEngine.addPoint(pt.x, pt.y, e.pressure || 0.5, tool === 'eraser');
     }
 
     const canvas = editorCanvasRef.current;
@@ -131,6 +144,7 @@ const CanvasViewport = forwardRef<CanvasViewportHandle, CanvasViewportProps>(({ 
 
   const handlePointerUp = (e: React.PointerEvent<HTMLDivElement>) => {
     if (lastPointerIdRef.current === e.pointerId) {
+      if (BrushEngine.isStroking) BrushEngine.endStroke();
       isPanningRef.current = false;
       setIsPanning(false);
       lastPointerIdRef.current = null;

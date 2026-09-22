@@ -14,6 +14,7 @@ import type { EditorState, ImageLayer, Layer } from '../types';
 import { getSnapshot, subscribe, dispatch } from '../store';
 import { NATIVE_BLEND_MODES, ZOOM_STOPS } from '../types';
 import * as ThumbnailCache from '../thumbnails/ThumbnailCache';
+import { AdjustmentEngine } from '../adjust/AdjustmentEngine';
 
 const EMPTY_BG = '#0F120C';
 const ZOOM_MIN = 0.125;
@@ -249,8 +250,8 @@ export class CanvasRenderer {
   }
 
   private drawImageLayer(ctx: CanvasRenderingContext2D, layer: ImageLayer): void {
-    const bitmap = layer.bitmap;
-    // A closed/detached ImageBitmap reports zero dimensions — skip silently.
+    // Use preview bitmap if an adjustment panel has an active preview for this layer
+    const bitmap = AdjustmentEngine.getPreviewBitmap(layer.id) ?? layer.bitmap;
     if (!bitmap || bitmap.width === 0 || bitmap.height === 0) return;
 
     const transform = layer.transform;

@@ -19,6 +19,10 @@ import LayersPanel from './LayersPanel';
 import StatusBar from './StatusBar';
 import NewDocumentModal from './NewDocumentModal';
 import { useEditorShortcuts } from './hooks/useEditorShortcuts';
+import FloatingPanelHost from './FloatingPanelHost';
+import LevelsPanel from './adjustments/LevelsPanel';
+import CurvesPanel from './adjustments/CurvesPanel';
+import HueSaturationPanel from './adjustments/HueSaturationPanel';
 
 const MIN_VIEWPORT_WIDTH = 1024;
 
@@ -70,10 +74,11 @@ const UnsavedChangesModal: React.FC<{
   }
   return null;
 };
-
 const ImageEditorPage: React.FC<ImageEditorPageProps> = ({ openPayload, showGlobalFeedback, isExiting }) => {
   const viewportRef = useRef<CanvasViewportHandle>(null);
   const isDirty = useSyncExternalStore(subscribe, () => getSnapshot().isDirty);
+  const openAdjustments = useSyncExternalStore(subscribe, () => getSnapshot().openAdjustments);
+  const activeLayerId = useSyncExternalStore(subscribe, () => getSnapshot().activeLayerId);
 
   const [viewportWidth, setViewportWidth] = useState(
     typeof window !== 'undefined' ? window.innerWidth : MIN_VIEWPORT_WIDTH,
@@ -295,6 +300,17 @@ const ImageEditorPage: React.FC<ImageEditorPageProps> = ({ openPayload, showGlob
       )}
 
     </div>
+    <FloatingPanelHost>
+      {activeLayerId && openAdjustments.has('levels') && (
+        <LevelsPanel layerId={activeLayerId} onClose={() => dispatch({ type: 'CLOSE_ADJUSTMENT', panel: 'levels' })} />
+      )}
+      {activeLayerId && openAdjustments.has('curves') && (
+        <CurvesPanel layerId={activeLayerId} onClose={() => dispatch({ type: 'CLOSE_ADJUSTMENT', panel: 'curves' })} />
+      )}
+      {activeLayerId && openAdjustments.has('hue-sat') && (
+        <HueSaturationPanel layerId={activeLayerId} onClose={() => dispatch({ type: 'CLOSE_ADJUSTMENT', panel: 'hue-sat' })} />
+      )}
+    </FloatingPanelHost>
     </>
   );
 };

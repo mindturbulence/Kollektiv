@@ -38,6 +38,7 @@ function createDefaultState(): EditorState {
     dirtyLayerIds: new Set(),
     history: [],
     historyIndex: -1,
+    openAdjustments: new Set(),
   };
 }
 
@@ -189,6 +190,36 @@ export function dispatch(action: EditorAction): void {
       for (const id of action.layerIds) next.delete(id);
       if (next.size === prev.dirtyLayerIds.size) return;
       _state = { ...prev, dirtyLayerIds: next };
+      break;
+    }
+
+    case 'REPLACE_LAYER_BITMAP': {
+      if (!prev.document) return;
+      const layers = prev.document.layers.map(l =>
+        l.id === action.layerId && l.type === 'image'
+          ? { ...l, bitmap: action.bitmap }
+          : l
+      );
+      if (layers === prev.document.layers) return;
+      const dirty = new Set(prev.dirtyLayerIds);
+      dirty.add(action.layerId);
+      _state = { ...prev, isDirty: true, document: { ...prev.document, layers }, dirtyLayerIds: dirty };
+      break;
+    }
+
+    case 'OPEN_ADJUSTMENT': {
+      if (prev.openAdjustments.has(action.panel)) return;
+      const next = new Set(prev.openAdjustments);
+      next.add(action.panel);
+      _state = { ...prev, openAdjustments: next };
+      break;
+    }
+
+    case 'CLOSE_ADJUSTMENT': {
+      if (!prev.openAdjustments.has(action.panel)) return;
+      const next = new Set(prev.openAdjustments);
+      next.delete(action.panel);
+      _state = { ...prev, openAdjustments: next };
       break;
     }
 

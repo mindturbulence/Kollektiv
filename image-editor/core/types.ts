@@ -279,6 +279,10 @@ export type EditorAction =
   | { type: 'REORDER_LAYERS'; orderedIds: string[] }
   | { type: 'MARK_LAYER_DIRTY'; layerId: string }
   | { type: 'CLEAR_DIRTY_LAYERS'; layerIds: Set<string> }
+  // M3 — pixel replace + adjustment panel state
+  | { type: 'REPLACE_LAYER_BITMAP'; layerId: string; bitmap: ImageBitmap }
+  | { type: 'OPEN_ADJUSTMENT'; panel: AdjustmentPanel }
+  | { type: 'CLOSE_ADJUSTMENT'; panel: AdjustmentPanel }
   // History
   | { type: 'PUSH_HISTORY'; command: HistoryCommand }
   | { type: 'UNDO' }
@@ -303,4 +307,9 @@ export interface EditorState {
   history: HistoryCommand[];
   /** Index of the last applied command; -1 = nothing applied / all undone. */
   historyIndex: number;
+  /** Which adjustment floating panels are currently open. */
+  openAdjustments: Set<AdjustmentPanel>;
 }
+
+/** Adjustment panel identifiers. */
+export type AdjustmentPanel = 'levels' | 'curves' | 'hue-sat';
