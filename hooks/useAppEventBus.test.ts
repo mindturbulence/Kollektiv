@@ -33,6 +33,7 @@ describe('useAppEventBus', () => {
       setIsMediaPanelOpen: noopAny,
       setVideoPlayerUrl: noopAny,
       handleClipIdea: noopAny,
+      setEditorOpenPayload: noopAny,
     }));
     expect(handlers['navigate'].length).toBeGreaterThanOrEqual(1);
     expect(handlers['sendToPromptsPage'].length).toBe(1);
@@ -51,6 +52,7 @@ describe('useAppEventBus', () => {
       setIsMediaPanelOpen: noopAny,
       setVideoPlayerUrl: noopAny,
       handleClipIdea: noopAny,
+      setEditorOpenPayload: noopAny,
     }));
 
     handlers['navigate'].forEach((h) => h('dashboard'));
@@ -69,6 +71,7 @@ describe('useAppEventBus', () => {
       setIsMediaPanelOpen: noopAny,
       setVideoPlayerUrl: noopAny,
       handleClipIdea: noopAny,
+      setEditorOpenPayload: noopAny,
     }));
 
     handlers['assistantFeedback'][0]({ message: 'hello', isError: true });
@@ -87,6 +90,7 @@ describe('useAppEventBus', () => {
       setIsMediaPanelOpen: noopAny,
       setVideoPlayerUrl,
       handleClipIdea: noopAny,
+      setEditorOpenPayload: noopAny,
     }));
 
     handlers['playVideo'][0]({ url: 'https://example.com/video.mp4' });
@@ -105,6 +109,7 @@ describe('useAppEventBus', () => {
       setIsMediaPanelOpen: noopAny,
       setVideoPlayerUrl: noopAny,
       handleClipIdea,
+      setEditorOpenPayload: noopAny,
     }));
 
     handlers['clipIdea'][0]({ prompt: 'A long prompt goes here', title: 'T', lens: 'L', source: 'S' });
@@ -128,6 +133,7 @@ describe('useAppEventBus', () => {
       setIsMediaPanelOpen: noopAny,
       setVideoPlayerUrl: noopAny,
       handleClipIdea,
+      setEditorOpenPayload: noopAny,
     }));
 
     handlers['clipIdea'][0]({});

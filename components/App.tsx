@@ -39,6 +39,8 @@ import ImageResizer from './ImageResizer';
 import { VideoToFrames } from './VideoToFrames';
 import LoraEditorPage from './loraEditor/LoraEditorPage';
 import BatchRunnerPage from './BatchRunnerPage';
+import ImageEditorPage from '../image-editor/ui/ImageEditorPage';
+import type { EditorOpenPayload } from '../image-editor/core/types';
 import LocalGenerationStudioPage from './LocalGenerationStudioPage';
 import { LLMChatPanel } from './LLMChatPanel';
 import { LiveAssistantProvider } from '../contexts/LiveAssistantContext';
@@ -139,6 +141,7 @@ const AppContent: React.FC = () => {
     // independent copy under the same localStorage key with no cross-sync, which
     // nothing ever read; that copy was removed rather than kept "in sync".
     const [activeTab, setActiveTab] = useLocalStorage<ActiveTab>('activeTab', 'dashboard');
+    const [editorOpenPayload, setEditorOpenPayload] = useState<EditorOpenPayload | undefined>(undefined);
 
     const currentTitle = useMemo(() => {
         const base = "KOLLEKTIV";
@@ -164,6 +167,7 @@ const AppContent: React.FC = () => {
             case 'batch_runner': return `BATCH | ${base}`;
             case 'comfy_studio': return `COMFYUI | ${base}`;
             case 'a1111_studio': return `FORGE | ${base}`;
+            case 'image_editor': return `IMAGE EDITOR | ${base}`;
             default: return base;
         }
     }, [activeTab]);
@@ -350,6 +354,7 @@ const AppContent: React.FC = () => {
         setIsMediaPanelOpen,
         setVideoPlayerUrl,
         handleClipIdea,
+        setEditorOpenPayload,
     });
 
     const renderContent = () => {
@@ -381,6 +386,7 @@ const AppContent: React.FC = () => {
             case 'lora_editor': return <LoraEditorPage key="lora_editor" isExiting={false} />;
             case 'batch_runner': return <BatchRunnerPage key="batch_runner" />;
             case 'comfy_studio': return <LocalGenerationStudioPage key="comfy_studio" backendId="comfy" showGlobalFeedback={showGlobalFeedback} />;
+            case 'image_editor': return <ImageEditorPage key="image_editor" openPayload={editorOpenPayload} showGlobalFeedback={showGlobalFeedback} isExiting={false} />;
             default: return <Dashboard key="default" onNavigate={handleNavigate} onClipIdea={handleClipIdea} isExiting={false} />;
         }
     };

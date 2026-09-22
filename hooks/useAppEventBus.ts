@@ -1,5 +1,6 @@
 import { useEffect } from 'react';
 import { appEventBus } from '../utils/eventBus';
+import type { EditorOpenPayload } from '../image-editor/core/types';
 import type { ActiveTab, Idea } from '../types';
 
 type PromptsPageState = {
@@ -19,6 +20,7 @@ interface UseAppEventBusInput {
   setIsClippingPanelOpen: (open: boolean | ((prev: boolean) => boolean)) => void;
   setVideoPlayerUrl: (url: string | null) => void;
   handleClipIdea: (idea: Idea) => void;
+  setEditorOpenPayload: (payload: EditorOpenPayload | undefined) => void;
   isCommandPaletteOpen: boolean;
 }
 
@@ -35,6 +37,7 @@ export const useAppEventBus = ({
   setIsClippingPanelOpen,
   setVideoPlayerUrl,
   handleClipIdea,
+  setEditorOpenPayload,
   isCommandPaletteOpen,
 }: UseAppEventBusInput) => {
   // ── Navigation events ────────────────────────────────────────────────
@@ -50,6 +53,18 @@ export const useAppEventBus = ({
     });
     return () => { navigateSub(); sendToSub(); feedbackSub(); };
   }, [handleNavigate, handleSendToPromptsPage, showGlobalFeedback]);
+
+  // ── Open in editor (from Gallery ImageCard EDIT button) ──────────────
+  useEffect(() => {
+    return appEventBus.on('openInEditor', (payload: { galleryItemId: string; url: string } | { blob: Blob }) => {
+      if ('galleryItemId' in payload) {
+        setEditorOpenPayload({ kind: 'gallery', galleryItemId: payload.galleryItemId, url: payload.url });
+      } else {
+        setEditorOpenPayload({ kind: 'blob', blob: payload.blob });
+      }
+      handleNavigate('image_editor');
+    });
+  }, [setEditorOpenPayload, handleNavigate]);
 
   // ── Global keyboard shortcuts ────────────────────────────────────────
   useEffect(() => {

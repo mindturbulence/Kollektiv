@@ -74,6 +74,7 @@ export type ActiveTab =
   | 'video_to_frames'
   | 'image_compare'
   | 'color_palette_extractor'
+  | 'image_editor'
   | 'composer'
   | 'lora_editor'
   | 'batch_runner'
