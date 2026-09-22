@@ -5,15 +5,21 @@
 
 import React, { forwardRef, useEffect, useImperativeHandle, useRef, useState, useSyncExternalStore } from 'react';
 import { CanvasRenderer } from '../core/renderer/CanvasRenderer';
-import { getSnapshot, subscribe } from '../core/store';
+import { getSnapshot, subscribe, dispatch as editorDispatch } from '../core/store';
 import { BrushEngine } from '../core/paint/BrushEngine';
 import { SelectionEngine } from '../core/selection/SelectionEngine';
 import { TransformEngine, getGizmoHandles, hitTestGizmo } from '../core/transform/TransformEngine';
+import { TypeTool } from '../core/text/TypeTool';
+import { ShapeTool } from '../core/shape/ShapeTool';
+import { floodFillFromBitmap } from '../core/selection/FloodFill';
+import TypeInput from './TypeInput';
+import type { ImageLayer } from '../core/types';
 
 export interface CanvasViewportHandle {
   fitToViewport: () => void;
   zoomIn: () => void;
   zoomOut: () => void;
+  setWandTolerance: (v: number) => void;
 }
 
 interface CanvasViewportProps {
@@ -33,9 +39,12 @@ const CanvasViewport = forwardRef<CanvasViewportHandle, CanvasViewportProps>(({ 
 
   const activeTool = useSyncExternalStore(subscribe, () => getSnapshot().activeTool);
   const [isSpaceDown, setIsSpaceDown] = useState(false);
-  const [isPanning, setIsPanning] = useState(false);
+  const [isPanning,  setIsPanning]  = useState(false);
+  const [isTyping,   setIsTyping]   = useState(false);
   const isPanningRef = useRef(false);
   const lastPointerIdRef = useRef<number | null>(null);
+  // Magic Wand tolerance — exposed via ToolHeader; module-level ref shared without re-render
+  const wandToleranceRef = useRef(32);
 
   // Zoom is only read here to toggle pixelated image-rendering at high zoom —
   // everything else reads the store imperatively inside the renderer.
@@ -81,6 +90,7 @@ const CanvasViewport = forwardRef<CanvasViewportHandle, CanvasViewportProps>(({ 
       const rect = canvas.getBoundingClientRect();
       renderer.zoomAt(100, rect.left + rect.width / 2, rect.top + rect.height / 2);
     },
+    setWandTolerance: (v: number) => { wandToleranceRef.current = v; },
   }), []);
 
   useEffect(() => {
@@ -146,6 +156,32 @@ const CanvasViewport = forwardRef<CanvasViewportHandle, CanvasViewportProps>(({ 
       return;
     }
 
+    if (activeTool === 'type') {
+      // Begin inline text editing at click position
+      TypeTool.beginEdit(pt.x, pt.y, () => setIsTyping(false));
+      setIsTyping(true);
+      return;
+    }
+
+    if ((activeTool === 'shape-rect' || activeTool === 'shape-ellipse') && doc) {
+      ShapeTool.setKind(activeTool === 'shape-rect' ? 'rect' : 'ellipse');
+      ShapeTool.beginShape(pt.x, pt.y);
+      lastPointerIdRef.current = e.pointerId;
+      e.currentTarget.setPointerCapture(e.pointerId);
+      return;
+    }
+
+    if (activeTool === 'magic-wand' && activeLayerId && doc) {
+      const layer = doc.layers.find(l => l.id === activeLayerId) as ImageLayer | undefined;
+      if (layer?.type === 'image') {
+        const tolerance = wandToleranceRef.current;
+        floodFillFromBitmap(layer.bitmap, pt.x, pt.y, tolerance, true)
+          .then(sel => editorDispatch({ type: 'SET_SELECTION', selection: sel }))
+          .catch(console.error);
+      }
+      return;
+    }
+
     if (activeTool === 'move' && activeLayerId && doc) {
       const layer = doc.layers.find(l => l.id === activeLayerId);
       if (layer && layer.type === 'image') {
@@ -179,6 +215,8 @@ const CanvasViewport = forwardRef<CanvasViewportHandle, CanvasViewportProps>(({ 
         SelectionEngine.updateMarquee(pt.x, pt.y);
       } else if (tool === 'crop') {
         SelectionEngine.updateCrop(pt.x, pt.y);
+      } else if (tool === 'shape-rect' || tool === 'shape-ellipse') {
+        ShapeTool.updateShape(pt.x, pt.y);
       }
     } else if (TransformEngine.isDragging() && lastPointerIdRef.current === e.pointerId) {
       TransformEngine.updateDrag(pt);
@@ -205,6 +243,8 @@ const CanvasViewport = forwardRef<CanvasViewportHandle, CanvasViewportProps>(({ 
         SelectionEngine.endMarquee(pt.x, pt.y, tool === 'marquee-rect' ? 'rect' : 'ellipse');
       } else if (tool === 'crop') {
         SelectionEngine.commitCrop(pt.x, pt.y);
+      } else if ((tool === 'shape-rect' || tool === 'shape-ellipse') && pt) {
+        ShapeTool.commitShape();
       }
     }
 
@@ -241,6 +281,9 @@ const CanvasViewport = forwardRef<CanvasViewportHandle, CanvasViewportProps>(({ 
       >
         <canvas ref={editorCanvasRef} className="absolute inset-0" />
         <canvas ref={overlayCanvasRef} className="absolute inset-0 pointer-events-none" />
+        {isTyping && (
+          <TypeInput canvasEl={editorCanvasRef.current} onDone={() => setIsTyping(false)} />
+        )}
       </div>
     </div>
   );

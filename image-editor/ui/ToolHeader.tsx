@@ -7,7 +7,15 @@ import React, { useSyncExternalStore } from 'react';
 import { dispatch, getSnapshot, subscribe } from '../core/store';
 import { TransformEngine } from '../core/transform/TransformEngine';
 import { SelectionEngine } from '../core/selection/SelectionEngine';
+import { TypeTool } from '../core/text/TypeTool';
+import { ShapeTool } from '../core/shape/ShapeTool';
 import type { ToolId, ImageLayer } from '../core/types';
+import type { CanvasViewportHandle } from './CanvasViewport';
+
+// CanvasViewportHandle is used by WandControls to update tolerance — passed as a prop
+interface ToolHeaderProps {
+  viewportRef?: React.RefObject<CanvasViewportHandle | null>;
+}
 
 const TOOL_HINTS: Partial<Record<ToolId, string>> = {
   move: 'Move: drag to reposition the active layer',
@@ -139,9 +147,102 @@ const SelectionControls: React.FC = () => {
   );
 };
 
+// ─── Type controls ────────────────────────────────────────────────────────
+
+const TypeControls: React.FC = () => {
+  const s = TypeTool.settings;
+  const [, forceUpdate] = React.useState(0);
+  const update = () => forceUpdate(n => n + 1);
+
+  return (
+    <div className="flex items-center gap-3 px-3">
+      <label className="flex items-center gap-1 text-[10px] font-mono text-base-content/60">
+        Family
+        <input type="text" className="w-28 bg-transparent border border-base-content/20 px-1 text-[10px] font-mono"
+          defaultValue={s.fontFamily}
+          onBlur={e => { TypeTool.updateSettings({ fontFamily: e.target.value }); update(); }} />
+      </label>
+      <label className="flex items-center gap-1 text-[10px] font-mono text-base-content/60">
+        Size
+        <input type="number" className="w-14 bg-transparent border border-base-content/20 px-1 text-right text-[10px] font-mono"
+          min={6} max={512} defaultValue={s.fontSize}
+          onBlur={e => { TypeTool.updateSettings({ fontSize: Number(e.target.value) }); update(); }} />
+      </label>
+      <label className="flex items-center gap-1 text-[10px] font-mono text-base-content/60">
+        Color
+        <input type="color" className="w-7 h-5 border-none bg-transparent cursor-pointer"
+          defaultValue={s.color}
+          onInput={e => { TypeTool.updateSettings({ color: (e.target as HTMLInputElement).value }); update(); }} />
+      </label>
+      <label className="flex items-center gap-1 text-[10px] font-mono text-base-content/60">
+        Weight
+        <select className="bg-transparent border border-base-content/20 text-[10px] font-mono"
+          defaultValue={String(s.fontWeight)}
+          onChange={e => { TypeTool.updateSettings({ fontWeight: Number(e.target.value) }); update(); }}>
+          <option value="300">Light</option>
+          <option value="400">Regular</option>
+          <option value="700">Bold</option>
+          <option value="900">Black</option>
+        </select>
+      </label>
+      <span className="text-[9px] font-mono text-base-content/35">Click canvas to place text · Ctrl+Enter to confirm</span>
+    </div>
+  );
+};
+
+// ─── Shape controls ───────────────────────────────────────────────────────
+
+const ShapeControls: React.FC = () => {
+  const { colors } = useSyncExternalStore(subscribe, () => ({ colors: getSnapshot().colors }));
+  const kind = ShapeTool.getKind();
+
+  return (
+    <div className="flex items-center gap-3 px-3">
+      <span className="text-[10px] font-mono text-base-content/50">
+        {kind === 'rect' ? 'Rectangle' : 'Ellipse'} · Drag to draw
+      </span>
+      <label className="flex items-center gap-1 text-[10px] font-mono text-base-content/60">
+        Fill
+        <input type="color" className="w-7 h-5 border-none bg-transparent cursor-pointer"
+          value={colors.foreground}
+          onChange={e => dispatch({ type: 'SET_COLORS', colors: { foreground: e.target.value } })} />
+      </label>
+    </div>
+  );
+};
+
+// ─── Wand controls ────────────────────────────────────────────────────────
+
+const WandControls: React.FC<{ viewportRef?: React.RefObject<CanvasViewportHandle | null> }> = ({ viewportRef }) => {
+  const [tolerance, setTolerance] = React.useState(32);
+  const hasSelection = useSyncExternalStore(subscribe, () => getSnapshot().selection !== null);
+  return (
+    <div className="flex items-center gap-3 px-3">
+      <label className="flex items-center gap-2 text-[10px] font-mono text-base-content/60">
+        Tolerance
+        <input type="range" className="range range-xs range-primary w-24" min={0} max={255} value={tolerance}
+          onChange={e => {
+            const v = Number(e.target.value);
+            setTolerance(v);
+            viewportRef?.current?.setWandTolerance(v);
+          }} />
+        <span className="w-8 text-right">{tolerance}</span>
+      </label>
+      <label className="flex items-center gap-1 text-[10px] font-mono text-base-content/60">
+        <input type="checkbox" className="checkbox checkbox-xs" defaultChecked /> Contiguous
+      </label>
+      {hasSelection && (
+        <button type="button" className="text-[10px] font-mono text-base-content/60 hover:text-primary border border-base-content/15 hover:border-primary px-2 py-0.5" onClick={() => SelectionEngine.deselect()}>
+          Deselect
+        </button>
+      )}
+    </div>
+  );
+};
+
 // ─── ToolHeader ────────────────────────────────────────────────────────────
 
-const ToolHeader: React.FC = () => {
+const ToolHeader: React.FC<ToolHeaderProps> = ({ viewportRef }) => {
   const activeTool = useSyncExternalStore(subscribe, () => getSnapshot().activeTool);
 
   return (
@@ -152,6 +253,12 @@ const ToolHeader: React.FC = () => {
         <TransformControls />
       ) : (activeTool === 'marquee-rect' || activeTool === 'marquee-ellipse') ? (
         <SelectionControls />
+      ) : activeTool === 'type' ? (
+        <TypeControls />
+      ) : (activeTool === 'shape-rect' || activeTool === 'shape-ellipse') ? (
+        <ShapeControls />
+      ) : activeTool === 'magic-wand' ? (
+        <WandControls viewportRef={viewportRef} />
       ) : (
         <span className="px-3 text-[10px] font-mono text-base-content/50 uppercase tracking-wide truncate">
           {TOOL_HINTS[activeTool] ?? 'No options for this tool'}

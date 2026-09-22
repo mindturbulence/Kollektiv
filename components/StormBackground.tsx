@@ -150,9 +150,11 @@ float pnoise(vec2 p){
   return mix(mix(a,b,w.x),mix(c,d,w.x),w.y);
 }
 
-// fbm — onlook's structure: 6 octaves, amp 0.25, gain 0.594, each octave
+// fbm - onlook's structure: 6 octaves, amp 0.25, gain 0.594, each octave
 // rotate(1.25 rad) and scale 2.5, domain shifted by 100.
-const mat2 OCT = mat2(cos(1.25),sin(1.25),-sin(1.25),cos(1.25))*2.5;
+// Matrix precomputed (cos(1.25), sin(1.25)) * 2.5 - GLSL ES 1.00 forbids
+// built-in calls in global const initializers.
+const mat2 OCT = mat2(0.7883060, 2.3724615, -2.3724615, 0.7883060);
 float fbm(vec2 st){
   float value=0.0;
   float amp=0.25;
@@ -165,7 +167,7 @@ float fbm(vec2 st){
   return value;
 }
 
-// Base: onlook layer 0 — rotated linear gradient 0x151515 -> black + dither.
+// Base: onlook layer 0 - rotated linear gradient 0x151515 -> black + dither.
 vec3 gradientBase(vec2 uv){
   vec2 c=uv-0.5;
   float ang=(0.0783-0.5)*2.0*PI;
@@ -184,7 +186,7 @@ float bolt(vec2 p,float t){
   float acc=0.0;
   vec2 cp=vec2(uStrikeX,uStrikeY*0.62);
   acc+=exp(-length((p-cp)*vec2(1.9,1.15))*2.6)*0.55;
-  return acc*uStrike;
+  return acc; // NOTE: scaled once at the call site (x uStrike x strikeGain)
 }
 
 void main(){
@@ -192,7 +194,7 @@ void main(){
   float aspect=uRes.x/uRes.y;
   float t=uTime;
 
-  // Displacement field — onlook layer 2, exact structure and constants.
+  // Displacement field - onlook layer 2, exact structure and constants.
   float multiplier=6.0*(0.15/((aspect+1.0)/2.0));
   vec2 pos=vec2(0.5685640362225097,0.6510996119016818);
   vec2 st=((uv-pos)*vec2(aspect,1.0))*multiplier*aspect;
@@ -222,7 +224,7 @@ void main(){
   float strength=min(ti*2.5,1.0);
   col+=uBolt*strength*uTrailGain;
 
-  // Optional ambient strike flash (off by default — onlook has none).
+  // Optional ambient strike flash (off by default - onlook has none).
   col+=uBolt*bolt(uv*vec2(aspect,1.0),t)*uStrike*0.8;
 
   gl_FragColor=vec4(col,1.0);

@@ -7,7 +7,7 @@
 
 import { dispatch, getSnapshot } from '../store';
 import { pushCommand } from '../history/HistoryManager';
-import type { BlendMode, HistoryCommand, ImageLayer, Layer } from '../types';
+import type { BlendMode, HistoryCommand, ImageLayer, Layer, TextLayer, ShapeLayer, Rect } from '../types';
 
 function findLayer(layerId: string): Layer | undefined {
   return getSnapshot().document?.layers.find(l => l.id === layerId);
@@ -158,4 +158,93 @@ export function duplicateLayer(layerId: string): void {
     undo: () => dispatch({ type: 'REMOVE_LAYER', layerId: clone.id }),
   };
   pushCommand(cmd);
+}
+
+// ─── Text layer factory ───────────────────────────────────────────────────────
+
+export interface AddTextLayerOptions {
+  text:     string;
+  x:        number;
+  y:        number;
+  fontFamily?: string;
+  fontSize?:   number;
+  fontWeight?: number;
+  color?:      string;
+}
+
+export function addTextLayer(opts: AddTextLayerOptions): string {
+  const { document: doc, activeLayerId } = getSnapshot();
+  if (!doc) return '';
+
+  const fs     = opts.fontSize   ?? 48;
+  const family = opts.fontFamily ?? 'sans-serif';
+  // Estimate text bounds (actual measurement requires canvas.measureText)
+  const estWidth  = opts.text.length * fs * 0.6;
+  const estHeight = fs * 1.4;
+
+  const layer: TextLayer = {
+    id:        crypto.randomUUID(),
+    name:      'Text',
+    type:      'text',
+    text:      opts.text,
+    font:      { family, size: fs, weight: opts.fontWeight ?? 400 },
+    color:     opts.color ?? '#ffffff',
+    transform: {
+      origin:   { x: opts.x - estWidth / 2, y: opts.y - estHeight / 2 },
+      size:     { width: Math.max(100, estWidth), height: Math.max(40, estHeight) },
+      rotation: 0, flipH: false, flipV: false,
+    },
+    opacity:   100,
+    blendMode: 'normal',
+    visible:   true,
+  };
+
+  const insertAfterIndex = doc.layers.findIndex(l => l.id === activeLayerId);
+  const cmd: HistoryCommand = {
+    id: crypto.randomUUID(), label: 'Add text layer', timestamp: Date.now(),
+    do:   () => dispatch({ type: 'ADD_LAYER', layer, insertAfterIndex: insertAfterIndex >= 0 ? insertAfterIndex : undefined }),
+    undo: () => dispatch({ type: 'REMOVE_LAYER', layerId: layer.id }),
+  };
+  pushCommand(cmd);
+  return layer.id;
+}
+
+// ─── Shape layer factory ──────────────────────────────────────────────────────
+
+export interface AddShapeLayerOptions {
+  shape:   'rect' | 'ellipse';
+  bounds:  Rect;
+  fill?:   string;
+  stroke?: { color: string; width: number };
+}
+
+export function addShapeLayer(opts: AddShapeLayerOptions): string {
+  const { document: doc, activeLayerId, colors } = getSnapshot();
+  if (!doc) return '';
+
+  const layer: ShapeLayer = {
+    id:        crypto.randomUUID(),
+    name:      opts.shape === 'rect' ? 'Rectangle' : 'Ellipse',
+    type:      'shape',
+    shape:     opts.shape,
+    fill:      opts.fill ?? colors.foreground,
+    stroke:    opts.stroke,
+    transform: {
+      origin:   { x: opts.bounds.x, y: opts.bounds.y },
+      size:     { width: Math.max(1, opts.bounds.width), height: Math.max(1, opts.bounds.height) },
+      rotation: 0, flipH: false, flipV: false,
+    },
+    opacity:   100,
+    blendMode: 'normal',
+    visible:   true,
+  };
+
+  const insertAfterIndex = doc.layers.findIndex(l => l.id === activeLayerId);
+  const cmd: HistoryCommand = {
+    id: crypto.randomUUID(), label: `Add ${opts.shape}`, timestamp: Date.now(),
+    do:   () => dispatch({ type: 'ADD_LAYER', layer, insertAfterIndex: insertAfterIndex >= 0 ? insertAfterIndex : undefined }),
+    undo: () => dispatch({ type: 'REMOVE_LAYER', layerId: layer.id }),
+  };
+  pushCommand(cmd);
+  return layer.id;
 }

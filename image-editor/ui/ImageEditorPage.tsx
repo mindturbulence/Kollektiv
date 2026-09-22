@@ -268,7 +268,7 @@ const ImageEditorPage: React.FC<ImageEditorPageProps> = ({ openPayload, showGlob
       <div className="flex-1 flex flex-row min-h-0">
         <ToolRail />
         <div className="flex-1 flex flex-col min-w-0">
-          <ToolHeader />
+          <ToolHeader viewportRef={viewportRef} />
           <CanvasViewport ref={viewportRef} onCursorMove={setCursorPos} />
         </div>
         <LayersPanel />

@@ -10,7 +10,7 @@
 // Viewport.panX/panY are CSS-px offsets of the document center from the
 // canvas center. Viewport.zoom maps document px → CSS px.
 
-import type { EditorState, ImageLayer, Layer } from '../types';
+import type { EditorState, ImageLayer, Layer, TextLayer, ShapeLayer } from '../types';
 import { getSnapshot, subscribe, dispatch } from '../store';
 import { NATIVE_BLEND_MODES, ZOOM_STOPS } from '../types';
 import * as ThumbnailCache from '../thumbnails/ThumbnailCache';
@@ -380,9 +380,11 @@ export class CanvasRenderer {
       return;
     }
 
-    // M1 only composites raster image layers; other layer types are no-ops for now.
-    if (layer.type !== 'image') return;
-    this.drawImageLayer(ctx, layer);
+    // Route to per-type draw methods (M3.5 adds text + shape rendering).
+    if      (layer.type === 'image') this.drawImageLayer(ctx, layer);
+    else if (layer.type === 'text')  this.drawTextLayer(ctx, layer);
+    else if (layer.type === 'shape') this.drawShapeLayer(ctx, layer);
+    // adjustment / group handled above
   }
 
   private drawImageLayer(ctx: CanvasRenderingContext2D, layer: ImageLayer): void {
@@ -420,6 +422,74 @@ export class CanvasRenderer {
 
     ctx.restore();
   }
+  private drawTextLayer(ctx: CanvasRenderingContext2D, layer: TextLayer): void {
+    if (!layer.text.trim()) return;
+    const { transform, font, color, opacity, blendMode } = layer;
+
+    ctx.save();
+    ctx.globalAlpha = Math.max(0, Math.min(1, opacity / 100));
+    ctx.globalCompositeOperation = (NATIVE_BLEND_MODES as readonly string[]).includes(blendMode)
+      ? (blendMode as GlobalCompositeOperation) : 'source-over';
+
+    // Centre-of-layer transform (matches drawImageLayer convention)
+    ctx.translate(
+      transform.origin.x + transform.size.width  / 2,
+      transform.origin.y + transform.size.height / 2,
+    );
+    ctx.rotate((transform.rotation * Math.PI) / 180);
+    if (transform.flipH) ctx.scale(-1, 1);
+    if (transform.flipV) ctx.scale(1, -1);
+
+    ctx.font = `${font.weight} ${font.size}px "${font.family}", sans-serif`;
+    ctx.fillStyle = color;
+    ctx.textAlign   = (layer as TextLayer & { alignment?: CanvasTextAlign }).alignment ?? 'left';
+    ctx.textBaseline = 'top';
+
+    const lineH = font.size * 1.25;
+    layer.text.split('\n').forEach((line, i) => {
+      ctx.fillText(line, -transform.size.width / 2, -transform.size.height / 2 + i * lineH);
+    });
+
+    ctx.restore();
+  }
+
+  private drawShapeLayer(ctx: CanvasRenderingContext2D, layer: ShapeLayer): void {
+    const { transform, shape, fill, stroke, opacity, blendMode } = layer;
+
+    ctx.save();
+    ctx.globalAlpha = Math.max(0, Math.min(1, opacity / 100));
+    ctx.globalCompositeOperation = (NATIVE_BLEND_MODES as readonly string[]).includes(blendMode)
+      ? (blendMode as GlobalCompositeOperation) : 'source-over';
+
+    ctx.translate(
+      transform.origin.x + transform.size.width  / 2,
+      transform.origin.y + transform.size.height / 2,
+    );
+    ctx.rotate((transform.rotation * Math.PI) / 180);
+    if (transform.flipH) ctx.scale(-1, 1);
+    if (transform.flipV) ctx.scale(1, -1);
+
+    const hw = transform.size.width  / 2;
+    const hh = transform.size.height / 2;
+
+    ctx.fillStyle = fill;
+    ctx.beginPath();
+    if (shape === 'rect') {
+      ctx.rect(-hw, -hh, transform.size.width, transform.size.height);
+    } else {
+      ctx.ellipse(0, 0, hw, hh, 0, 0, Math.PI * 2);
+    }
+    ctx.fill();
+
+    if (stroke) {
+      ctx.strokeStyle = stroke.color;
+      ctx.lineWidth   = stroke.width;
+      ctx.stroke();
+    }
+
+    ctx.restore();
+  }
+
 
   /**
    * Regenerates cached thumbnails for every layer in `dirtyLayerIds`, then
