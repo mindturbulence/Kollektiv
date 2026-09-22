@@ -9,6 +9,7 @@ import { dispatch, getSnapshot } from '../../core/store';
 import { undo, redo } from '../../core/history/HistoryManager';
 import { SelectionEngine } from '../../core/selection/SelectionEngine';
 import { TransformEngine } from '../../core/transform/TransformEngine';
+import { GradientTool } from '../../core/gradient/GradientTool';
 import type { ToolId } from '../../core/types';
 
 const TOOL_KEYMAP: Record<string, ToolId> = {
@@ -95,6 +96,10 @@ export function useEditorShortcuts(options: UseEditorShortcutsOptions): void {
             e.preventDefault();
             dispatch({ type: 'OPEN_ADJUSTMENT', panel: 'hue-sat' });
             return;
+          case 'e':
+            e.preventDefault();
+            dispatch({ type: 'OPEN_ADJUSTMENT', panel: 'exposure' });
+            return;
           case 'd':
             e.preventDefault();
             SelectionEngine.deselect();
@@ -108,6 +113,8 @@ export function useEditorShortcuts(options: UseEditorShortcutsOptions): void {
       if (key === 'escape') {
         TransformEngine.cancelDrag();
         SelectionEngine.cancelDrag();
+        SelectionEngine.cancelLasso();
+        GradientTool.cancel();
         return;
       }
 

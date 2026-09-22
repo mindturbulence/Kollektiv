@@ -13,8 +13,13 @@ import type { Rect, Point, Selection } from '../types';
 
 // ─── Internal drag state ─────────────────────────────────────────────────────
 
-let _dragStart: Point | null = null;
-let _liveBounds: Rect | null = null;
+let _dragStart:  Point | null = null;
+let _liveBounds: Rect  | null = null;
+
+// ─── Lasso state ─────────────────────────────────────────────────────────────
+
+let _lassoPoints: Point[] = [];
+let _lassoActive  = false;
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 
@@ -108,4 +113,51 @@ export const SelectionEngine = {
     // Full inversion (raster mask) deferred
     void docWidth; void docHeight;
   },
+
+  // ── Lasso freehand ─────────────────────────────────────────────────────────
+
+  beginLasso(docX: number, docY: number): void {
+    _lassoPoints = [{ x: docX, y: docY }];
+    _lassoActive = true;
+  },
+
+  addLassoPoint(docX: number, docY: number): void {
+    if (!_lassoActive) return;
+    const last = _lassoPoints[_lassoPoints.length - 1];
+    // Thin — skip if too close to last point (< 2px)
+    if (last && Math.hypot(docX - last.x, docY - last.y) < 2) return;
+    _lassoPoints.push({ x: docX, y: docY });
+  },
+
+  endLasso(): void {
+    if (!_lassoActive || _lassoPoints.length < 3) {
+      _lassoPoints = [];
+      _lassoActive = false;
+      dispatch({ type: 'SET_SELECTION', selection: null });
+      return;
+    }
+    const points = [..._lassoPoints];
+    _lassoPoints = [];
+    _lassoActive = false;
+
+    // Compute bounding box of the polygon
+    let minX = points[0].x, maxX = points[0].x;
+    let minY = points[0].y, maxY = points[0].y;
+    for (const p of points) {
+      if (p.x < minX) minX = p.x;
+      if (p.x > maxX) maxX = p.x;
+      if (p.y < minY) minY = p.y;
+      if (p.y > maxY) maxY = p.y;
+    }
+    const bounds = { x: minX, y: minY, width: maxX - minX, height: maxY - minY };
+
+    dispatch({
+      type: 'SET_SELECTION',
+      selection: { shape: { kind: 'polygon', points }, bounds, feather: 0 },
+    });
+  },
+
+  getLassoPoints(): Point[] { return _lassoPoints; },
+  isLassoActive(): boolean { return _lassoActive; },
+  cancelLasso(): void { _lassoPoints = []; _lassoActive = false; },
 };

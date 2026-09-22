@@ -17,6 +17,7 @@ import * as ThumbnailCache from '../thumbnails/ThumbnailCache';
 import { AdjustmentEngine } from '../adjust/AdjustmentEngine';
 import { SelectionEngine } from '../selection/SelectionEngine';
 import { getGizmoHandles, docToCanvas } from '../transform/TransformEngine';
+import { GradientTool } from '../gradient/GradientTool';
 
 const EMPTY_BG = '#0F120C';
 const ZOOM_MIN = 0.125;
@@ -201,13 +202,21 @@ export class CanvasRenderer {
       const w  = br.x - tl.x;
       const h  = br.y - tl.y;
 
-      const isEllipse = sel?.shape.kind === 'ellipse' && !liveSel;
+      const isEllipse  = sel?.shape.kind === 'ellipse'  && !liveSel;
+      const isPolygon  = sel?.shape.kind === 'polygon'  && !liveSel;
       ctx.save();
       ctx.lineWidth = 1;
-      // Animated dash offset — stored on the renderer instance
       const dashOff = ((Date.now() / 80) % 8);
 
-      if (isEllipse) {
+      if (isPolygon && sel?.shape.kind === 'polygon') {
+        const pts = sel.shape.points.map(p => docToCanvas(p.x, p.y, viewport, W, H, docW, docH));
+        ctx.beginPath();
+        if (pts.length > 0) {
+          ctx.moveTo(pts[0].x, pts[0].y);
+          for (let i = 1; i < pts.length; i++) ctx.lineTo(pts[i].x, pts[i].y);
+          ctx.closePath();
+        }
+      } else if (isEllipse) {
         ctx.beginPath();
         ctx.ellipse(tl.x + w / 2, tl.y + h / 2, Math.abs(w / 2), Math.abs(h / 2), 0, 0, Math.PI * 2);
       } else {
@@ -225,6 +234,49 @@ export class CanvasRenderer {
       ctx.restore();
 
       // Ants animate on pointermove (drawOverlay called each frame). Static when cursor is still — M4 scope.
+    }
+
+    // ── Live lasso polygon ────────────────────────────────────────────────────
+    if (SelectionEngine.isLassoActive()) {
+      const pts = SelectionEngine.getLassoPoints().map(p => docToCanvas(p.x, p.y, viewport, W, H, docW, docH));
+      if (pts.length >= 2) {
+        ctx.save();
+        ctx.strokeStyle = '#C0F04C';
+        ctx.lineWidth = 1.5;
+        ctx.setLineDash([3, 3]);
+        ctx.beginPath();
+        ctx.moveTo(pts[0].x, pts[0].y);
+        for (let i = 1; i < pts.length; i++) ctx.lineTo(pts[i].x, pts[i].y);
+        ctx.stroke();
+        ctx.setLineDash([]);
+        ctx.restore();
+      }
+    }
+
+    // ── Gradient vector ───────────────────────────────────────────────────────
+    if ((activeTool === 'gradient') && GradientTool.isDragging()) {
+      const gs = GradientTool.getLiveStart();
+      const ge = GradientTool.getLiveEnd();
+      if (gs && ge) {
+        const csStart = docToCanvas(gs.x, gs.y, viewport, W, H, docW, docH);
+        const csEnd   = docToCanvas(ge.x, ge.y, viewport, W, H, docW, docH);
+        ctx.save();
+        // Gradient preview line
+        ctx.strokeStyle = 'rgba(255,255,255,0.85)';
+        ctx.lineWidth = 1.5;
+        ctx.beginPath();
+        ctx.moveTo(csStart.x, csStart.y);
+        ctx.lineTo(csEnd.x,   csEnd.y);
+        ctx.stroke();
+        // Start circle
+        ctx.fillStyle = 'white'; ctx.strokeStyle = '#C0F04C'; ctx.lineWidth = 1;
+        ctx.beginPath(); ctx.arc(csStart.x, csStart.y, 5, 0, Math.PI * 2);
+        ctx.fill(); ctx.stroke();
+        // End circle
+        ctx.beginPath(); ctx.arc(csEnd.x, csEnd.y, 5, 0, Math.PI * 2);
+        ctx.fill(); ctx.stroke();
+        ctx.restore();
+      }
     }
 
     // ── Crop rect overlay ────────────────────────────────────────────────────

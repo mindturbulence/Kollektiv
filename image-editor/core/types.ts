@@ -314,4 +314,4 @@ export interface EditorState {
 }
 
 /** Adjustment panel identifiers. */
-export type AdjustmentPanel = 'levels' | 'curves' | 'hue-sat';
+export type AdjustmentPanel = 'levels' | 'curves' | 'hue-sat' | 'exposure';

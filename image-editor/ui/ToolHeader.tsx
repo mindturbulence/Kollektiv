@@ -9,6 +9,7 @@ import { TransformEngine } from '../core/transform/TransformEngine';
 import { SelectionEngine } from '../core/selection/SelectionEngine';
 import { TypeTool } from '../core/text/TypeTool';
 import { ShapeTool } from '../core/shape/ShapeTool';
+import { GradientTool } from '../core/gradient/GradientTool';
 import type { ToolId, ImageLayer } from '../core/types';
 import type { CanvasViewportHandle } from './CanvasViewport';
 
@@ -240,6 +241,27 @@ const WandControls: React.FC<{ viewportRef?: React.RefObject<CanvasViewportHandl
   );
 };
 
+// ─── Gradient controls ────────────────────────────────────────────────────
+
+const GradientControls: React.FC = () => {
+  const [, forceUpdate] = React.useState(0);
+  const kind = GradientTool.getKind();
+  return (
+    <div className="flex items-center gap-3 px-3">
+      <span className="text-[10px] font-mono text-base-content/50">Drag to define gradient direction</span>
+      <div className="flex border border-base-content/20">
+        {(['linear', 'radial'] as const).map(k => (
+          <button key={k} type="button"
+            className={`px-2 py-0.5 text-[10px] font-mono uppercase ${kind === k ? 'bg-primary/10 text-primary' : 'text-base-content/60 hover:text-primary'}`}
+            onClick={() => { GradientTool.setKind(k); forceUpdate(n => n + 1); }}>
+            {k}
+          </button>
+        ))}
+      </div>
+    </div>
+  );
+};
+
 // ─── ToolHeader ────────────────────────────────────────────────────────────
 
 const ToolHeader: React.FC<ToolHeaderProps> = ({ viewportRef }) => {
@@ -251,7 +273,7 @@ const ToolHeader: React.FC<ToolHeaderProps> = ({ viewportRef }) => {
         <BrushControls />
       ) : activeTool === 'move' ? (
         <TransformControls />
-      ) : (activeTool === 'marquee-rect' || activeTool === 'marquee-ellipse') ? (
+      ) : (activeTool === 'marquee-rect' || activeTool === 'marquee-ellipse' || activeTool === 'lasso-freehand') ? (
         <SelectionControls />
       ) : activeTool === 'type' ? (
         <TypeControls />
@@ -259,6 +281,8 @@ const ToolHeader: React.FC<ToolHeaderProps> = ({ viewportRef }) => {
         <ShapeControls />
       ) : activeTool === 'magic-wand' ? (
         <WandControls viewportRef={viewportRef} />
+      ) : activeTool === 'gradient' ? (
+        <GradientControls />
       ) : (
         <span className="px-3 text-[10px] font-mono text-base-content/50 uppercase tracking-wide truncate">
           {TOOL_HINTS[activeTool] ?? 'No options for this tool'}

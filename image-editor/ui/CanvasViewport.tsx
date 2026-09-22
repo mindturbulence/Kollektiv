@@ -12,6 +12,7 @@ import { TransformEngine, getGizmoHandles, hitTestGizmo } from '../core/transfor
 import { TypeTool } from '../core/text/TypeTool';
 import { ShapeTool } from '../core/shape/ShapeTool';
 import { floodFillFromBitmap } from '../core/selection/FloodFill';
+import { GradientTool } from '../core/gradient/GradientTool';
 import TypeInput from './TypeInput';
 import type { ImageLayer } from '../core/types';
 
@@ -182,6 +183,20 @@ const CanvasViewport = forwardRef<CanvasViewportHandle, CanvasViewportProps>(({ 
       return;
     }
 
+    if (activeTool === 'lasso-freehand') {
+      SelectionEngine.beginLasso(pt.x, pt.y);
+      lastPointerIdRef.current = e.pointerId;
+      e.currentTarget.setPointerCapture(e.pointerId);
+      return;
+    }
+
+    if (activeTool === 'gradient') {
+      GradientTool.beginGradient(pt.x, pt.y);
+      lastPointerIdRef.current = e.pointerId;
+      e.currentTarget.setPointerCapture(e.pointerId);
+      return;
+    }
+
     if (activeTool === 'move' && activeLayerId && doc) {
       const layer = doc.layers.find(l => l.id === activeLayerId);
       if (layer && layer.type === 'image') {
@@ -217,6 +232,10 @@ const CanvasViewport = forwardRef<CanvasViewportHandle, CanvasViewportProps>(({ 
         SelectionEngine.updateCrop(pt.x, pt.y);
       } else if (tool === 'shape-rect' || tool === 'shape-ellipse') {
         ShapeTool.updateShape(pt.x, pt.y);
+      } else if (tool === 'lasso-freehand') {
+        SelectionEngine.addLassoPoint(pt.x, pt.y);
+      } else if (tool === 'gradient') {
+        GradientTool.updateGradient(pt.x, pt.y);
       }
     } else if (TransformEngine.isDragging() && lastPointerIdRef.current === e.pointerId) {
       TransformEngine.updateDrag(pt);
@@ -237,13 +256,19 @@ const CanvasViewport = forwardRef<CanvasViewportHandle, CanvasViewportProps>(({ 
 
     if (BrushEngine.isStroking) BrushEngine.endStroke();
 
+    if (SelectionEngine.isLassoActive()) SelectionEngine.endLasso();
+
+    if (GradientTool.isDragging() && pt) {
+      GradientTool.commitGradient(pt.x, pt.y).catch(console.error);
+    }
+
     if (SelectionEngine.isDragging() && pt) {
       const tool = getSnapshot().activeTool;
       if (tool === 'marquee-rect' || tool === 'marquee-ellipse') {
         SelectionEngine.endMarquee(pt.x, pt.y, tool === 'marquee-rect' ? 'rect' : 'ellipse');
       } else if (tool === 'crop') {
         SelectionEngine.commitCrop(pt.x, pt.y);
-      } else if ((tool === 'shape-rect' || tool === 'shape-ellipse') && pt) {
+      } else if (tool === 'shape-rect' || tool === 'shape-ellipse') {
         ShapeTool.commitShape();
       }
     }
@@ -262,9 +287,12 @@ const CanvasViewport = forwardRef<CanvasViewportHandle, CanvasViewportProps>(({ 
 
   const cursorClass = isPanning
     ? 'cursor-grabbing'
-    : isSpaceDown || activeTool === 'hand'
-      ? 'cursor-grab'
-      : 'cursor-default';
+    : isSpaceDown || activeTool === 'hand' ? 'cursor-grab'
+    : (activeTool === 'type' || activeTool === 'shape-rect' || activeTool === 'shape-ellipse'
+       || activeTool === 'marquee-rect' || activeTool === 'marquee-ellipse'
+       || activeTool === 'lasso-freehand' || activeTool === 'crop'
+       || activeTool === 'magic-wand' || activeTool === 'gradient') ? 'cursor-crosshair'
+    : 'cursor-default';
 
   return (
     <div className="flex-1 overflow-hidden relative bg-base-100">

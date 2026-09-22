@@ -8,6 +8,7 @@ import {
     CloseIcon
 } from './icons';
 import useLocalStorage from '../utils/useLocalStorage';
+import { appEventBus } from '../utils/eventBus';
 import GalleryPickerModal from './GalleryPickerModal';
 import type { GalleryItem } from '../types';
 import { fileSystemManager, fileToBase64 } from '../utils/fileUtils';
@@ -544,6 +545,20 @@ const ComposerPage: React.FC<ComposerPageProps> = ({ showGlobalFeedback, isExiti
                             <button onClick={() => setIsVaultConfirmOpen(true)} disabled={isProcessing || (mode==='grid'?!gridItems.some(Boolean):!frameItem)} className="btn btn-sm btn-primary h-full flex-[1.5] rounded-none tracking-[0.2em] uppercase btn-snake-primary no-glow active:no-glow">
                                 <span/><span/><span/><span/>
                                 SAVE
+                            </button>
+                            <button
+                              onClick={async () => {
+                                const canvas = await generateFinalCanvas();
+                                if (!canvas) return;
+                                canvas.toBlob(blob => {
+                                  if (blob) appEventBus.emit('openInEditor', { blob });
+                                }, 'image/png');
+                              }}
+                              disabled={isProcessing || (mode === 'grid' ? !gridItems.some(Boolean) : !frameItem)}
+                              className="btn btn-sm btn-ghost h-full flex-1 rounded-none tracking-wider uppercase btn-snake no-glow active:no-glow"
+                            >
+                              <span/><span/><span/><span/>
+                              EDIT
                             </button>
                         </footer>
                     </div>

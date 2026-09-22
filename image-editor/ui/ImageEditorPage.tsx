@@ -23,6 +23,7 @@ import FloatingPanelHost from './FloatingPanelHost';
 import LevelsPanel from './adjustments/LevelsPanel';
 import CurvesPanel from './adjustments/CurvesPanel';
 import HueSaturationPanel from './adjustments/HueSaturationPanel';
+import ExposurePanel from './adjustments/ExposurePanel';
 
 const MIN_VIEWPORT_WIDTH = 1024;
 
@@ -309,6 +310,9 @@ const ImageEditorPage: React.FC<ImageEditorPageProps> = ({ openPayload, showGlob
       )}
       {activeLayerId && openAdjustments.has('hue-sat') && (
         <HueSaturationPanel layerId={activeLayerId} onClose={() => dispatch({ type: 'CLOSE_ADJUSTMENT', panel: 'hue-sat' })} />
+      )}
+      {activeLayerId && openAdjustments.has('exposure') && (
+        <ExposurePanel layerId={activeLayerId} onClose={() => dispatch({ type: 'CLOSE_ADJUSTMENT', panel: 'exposure' })} />
       )}
     </FloatingPanelHost>
     </>
