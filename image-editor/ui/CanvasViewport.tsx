@@ -13,6 +13,7 @@ import { TypeTool } from '../core/text/TypeTool';
 import { ShapeTool } from '../core/shape/ShapeTool';
 import { floodFillFromBitmap } from '../core/selection/FloodFill';
 import { GradientTool } from '../core/gradient/GradientTool';
+import { CloneStampTool } from '../core/paint/CloneStampTool';
 import TypeInput from './TypeInput';
 import type { ImageLayer } from '../core/types';
 
@@ -183,10 +184,56 @@ const CanvasViewport = forwardRef<CanvasViewportHandle, CanvasViewportProps>(({ 
       return;
     }
 
+    if (activeTool === 'eyedropper' && doc) {
+      // Composite all visible layers onto a 1×1 OffscreenCanvas at the click point
+      const oc  = new OffscreenCanvas(doc.width, doc.height);
+      const ctx2 = oc.getContext('2d')!;
+      ;[...doc.layers].reverse().forEach(layer => {
+        if (!layer.visible || layer.type !== 'image') return;
+        ctx2.save();
+        ctx2.globalAlpha = layer.opacity / 100;
+        ctx2.globalCompositeOperation = layer.blendMode as GlobalCompositeOperation;
+        ctx2.drawImage(layer.bitmap, layer.transform.origin.x, layer.transform.origin.y,
+          layer.transform.size.width, layer.transform.size.height);
+        ctx2.restore();
+      });
+      const px = Math.round(Math.max(0, Math.min(doc.width  - 1, pt.x)));
+      const py = Math.round(Math.max(0, Math.min(doc.height - 1, pt.y)));
+      const { data } = ctx2.getImageData(px, py, 1, 1);
+      const hex = '#' + [data[0], data[1], data[2]]
+        .map(v => v.toString(16).padStart(2, '0')).join('');
+      editorDispatch({ type: 'SET_COLORS', colors: { foreground: hex } });
+      return;
+    }
+
     if (activeTool === 'lasso-freehand') {
       SelectionEngine.beginLasso(pt.x, pt.y);
       lastPointerIdRef.current = e.pointerId;
       e.currentTarget.setPointerCapture(e.pointerId);
+      return;
+    }
+
+    if (activeTool === 'lasso-poly') {
+      if (e.detail === 2) {
+        // Double-click: close polygon
+        SelectionEngine.commitPolyLasso();
+      } else if (!SelectionEngine.isPolyActive()) {
+        SelectionEngine.beginPolyLasso(pt.x, pt.y);
+      } else {
+        SelectionEngine.addPolyVertex(pt.x, pt.y);
+      }
+      return;
+    }
+
+    if (activeTool === 'clone-stamp' && activeLayerId) {
+      if (e.altKey) {
+        CloneStampTool.setSource(pt.x, pt.y);
+      } else if (CloneStampTool.sourcePoint) {
+        lastPointerIdRef.current = e.pointerId;
+        e.currentTarget.setPointerCapture(e.pointerId);
+        CloneStampTool.beginStroke(activeLayerId);
+        CloneStampTool.addPoint(pt.x, pt.y, e.pressure || 0.5);
+      }
       return;
     }
 
@@ -237,8 +284,15 @@ const CanvasViewport = forwardRef<CanvasViewportHandle, CanvasViewportProps>(({ 
       } else if (tool === 'gradient') {
         GradientTool.updateGradient(pt.x, pt.y);
       }
+    } else if (CloneStampTool.isStroking && lastPointerIdRef.current === e.pointerId) {
+      CloneStampTool.addPoint(pt.x, pt.y, e.pressure || 0.5);
     } else if (TransformEngine.isDragging() && lastPointerIdRef.current === e.pointerId) {
       TransformEngine.updateDrag(pt);
+    }
+
+    // Lasso-poly rubber-band always updates on move (no capture needed)
+    if (getSnapshot().activeTool === 'lasso-poly') {
+      SelectionEngine.updatePolyRubber(pt.x, pt.y);
     }
 
     const canvas = editorCanvasRef.current;
@@ -255,7 +309,7 @@ const CanvasViewport = forwardRef<CanvasViewportHandle, CanvasViewportProps>(({ 
     const pt = renderer?.getCanvasPoint(e.clientX, e.clientY);
 
     if (BrushEngine.isStroking) BrushEngine.endStroke();
-
+    if (CloneStampTool.isStroking) CloneStampTool.endStroke();
     if (SelectionEngine.isLassoActive()) SelectionEngine.endLasso();
 
     if (GradientTool.isDragging() && pt) {
@@ -290,8 +344,9 @@ const CanvasViewport = forwardRef<CanvasViewportHandle, CanvasViewportProps>(({ 
     : isSpaceDown || activeTool === 'hand' ? 'cursor-grab'
     : (activeTool === 'type' || activeTool === 'shape-rect' || activeTool === 'shape-ellipse'
        || activeTool === 'marquee-rect' || activeTool === 'marquee-ellipse'
-       || activeTool === 'lasso-freehand' || activeTool === 'crop'
-       || activeTool === 'magic-wand' || activeTool === 'gradient') ? 'cursor-crosshair'
+       || activeTool === 'lasso-freehand' || activeTool === 'lasso-poly'
+       || activeTool === 'crop' || activeTool === 'magic-wand'
+       || activeTool === 'gradient' || activeTool === 'clone-stamp') ? 'cursor-crosshair'
     : 'cursor-default';
 
   return (

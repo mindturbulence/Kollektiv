@@ -18,6 +18,7 @@ import { AdjustmentEngine } from '../adjust/AdjustmentEngine';
 import { SelectionEngine } from '../selection/SelectionEngine';
 import { getGizmoHandles, docToCanvas } from '../transform/TransformEngine';
 import { GradientTool } from '../gradient/GradientTool';
+import { CloneStampTool } from '../paint/CloneStampTool';
 
 const EMPTY_BG = '#0F120C';
 const ZOOM_MIN = 0.125;
@@ -253,6 +254,31 @@ export class CanvasRenderer {
       }
     }
 
+    // ── Lasso polygonal rubber-band ───────────────────────────────────────────
+    if (SelectionEngine.isPolyActive()) {
+      const pts = SelectionEngine.getPolyPoints().map(p => docToCanvas(p.x, p.y, viewport, W, H, docW, docH));
+      const rubber = docToCanvas(SelectionEngine.getPolyRubber().x, SelectionEngine.getPolyRubber().y, viewport, W, H, docW, docH);
+      ctx.save();
+      ctx.strokeStyle = '#C0F04C';
+      ctx.lineWidth = 1.5;
+      ctx.setLineDash([4, 3]);
+      ctx.beginPath();
+      if (pts.length > 0) {
+        ctx.moveTo(pts[0].x, pts[0].y);
+        for (let i = 1; i < pts.length; i++) ctx.lineTo(pts[i].x, pts[i].y);
+        ctx.lineTo(rubber.x, rubber.y);
+      }
+      ctx.stroke();
+      ctx.setLineDash([]);
+      // Vertex dots
+      ctx.fillStyle = 'white'; ctx.strokeStyle = '#C0F04C'; ctx.lineWidth = 1;
+      for (const p of pts) {
+        ctx.beginPath(); ctx.arc(p.x, p.y, 3, 0, Math.PI * 2);
+        ctx.fill(); ctx.stroke();
+      }
+      ctx.restore();
+    }
+
     // ── Gradient vector ───────────────────────────────────────────────────────
     if ((activeTool === 'gradient') && GradientTool.isDragging()) {
       const gs = GradientTool.getLiveStart();
@@ -275,6 +301,25 @@ export class CanvasRenderer {
         // End circle
         ctx.beginPath(); ctx.arc(csEnd.x, csEnd.y, 5, 0, Math.PI * 2);
         ctx.fill(); ctx.stroke();
+        ctx.restore();
+      }
+    }
+
+    // ── Clone stamp source indicator ─────────────────────────────────────────
+    if (activeTool === 'clone-stamp') {
+      const src = CloneStampTool.sourcePoint;
+      if (src) {
+        const cs = docToCanvas(src.x, src.y, viewport, W, H, docW, docH);
+        ctx.save();
+        ctx.strokeStyle = '#C0F04C'; ctx.lineWidth = 1;
+        ctx.fillStyle = 'rgba(192,240,76,0.15)';
+        ctx.beginPath(); ctx.arc(cs.x, cs.y, 8, 0, Math.PI * 2);
+        ctx.fill(); ctx.stroke();
+        // Crosshair
+        ctx.beginPath();
+        ctx.moveTo(cs.x - 10, cs.y); ctx.lineTo(cs.x + 10, cs.y);
+        ctx.moveTo(cs.x, cs.y - 10); ctx.lineTo(cs.x, cs.y + 10);
+        ctx.stroke();
         ctx.restore();
       }
     }

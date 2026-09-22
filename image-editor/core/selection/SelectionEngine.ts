@@ -21,6 +21,12 @@ let _liveBounds: Rect  | null = null;
 let _lassoPoints: Point[] = [];
 let _lassoActive  = false;
 
+// ─── Lasso polygonal state ────────────────────────────────────────────────────
+
+let _polyPoints:  Point[] = [];
+let _polyActive   = false;
+let _polyRubber:  Point   = { x: 0, y: 0 }; // current cursor position
+
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 
 /** Normalize two corners into a Rect (positive width/height). */
@@ -160,4 +166,50 @@ export const SelectionEngine = {
   getLassoPoints(): Point[] { return _lassoPoints; },
   isLassoActive(): boolean { return _lassoActive; },
   cancelLasso(): void { _lassoPoints = []; _lassoActive = false; },
+
+  // ── Lasso polygonal ────────────────────────────────────────────────────────
+
+  beginPolyLasso(docX: number, docY: number): void {
+    _polyPoints  = [{ x: docX, y: docY }];
+    _polyActive  = true;
+    _polyRubber  = { x: docX, y: docY };
+  },
+
+  addPolyVertex(docX: number, docY: number): void {
+    if (!_polyActive) return;
+    _polyPoints.push({ x: docX, y: docY });
+  },
+
+  updatePolyRubber(docX: number, docY: number): void {
+    if (!_polyActive) return;
+    _polyRubber = { x: docX, y: docY };
+  },
+
+  commitPolyLasso(): void {
+    if (!_polyActive || _polyPoints.length < 3) {
+      _polyPoints = []; _polyActive = false; return;
+    }
+    const points = [..._polyPoints];
+    _polyPoints = []; _polyActive = false;
+
+    let minX = points[0].x, maxX = points[0].x;
+    let minY = points[0].y, maxY = points[0].y;
+    for (const p of points) {
+      if (p.x < minX) minX = p.x; if (p.x > maxX) maxX = p.x;
+      if (p.y < minY) minY = p.y; if (p.y > maxY) maxY = p.y;
+    }
+    dispatch({
+      type: 'SET_SELECTION',
+      selection: {
+        shape:  { kind: 'polygon', points },
+        bounds: { x: minX, y: minY, width: maxX - minX, height: maxY - minY },
+        feather: 0,
+      },
+    });
+  },
+
+  cancelPolyLasso(): void { _polyPoints = []; _polyActive = false; },
+  getPolyPoints():  Point[] { return _polyPoints; },
+  getPolyRubber():  Point   { return _polyRubber; },
+  isPolyActive():   boolean { return _polyActive; },
 };

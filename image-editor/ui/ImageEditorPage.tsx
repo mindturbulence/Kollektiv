@@ -24,6 +24,7 @@ import LevelsPanel from './adjustments/LevelsPanel';
 import CurvesPanel from './adjustments/CurvesPanel';
 import HueSaturationPanel from './adjustments/HueSaturationPanel';
 import ExposurePanel from './adjustments/ExposurePanel';
+import ExportModal from './ExportModal';
 
 const MIN_VIEWPORT_WIDTH = 1024;
 
@@ -89,7 +90,8 @@ const ImageEditorPage: React.FC<ImageEditorPageProps> = ({ openPayload, showGlob
   const [isSaving, setIsSaving] = useState(false);
   const [pendingUnsavedAction, setPendingUnsavedAction] = useState<(() => void) | null>(null);
   const [showRecovery, setShowRecovery] = useState(false);
-  const [isRestoring, setIsRestoring] = useState(false);
+  const [isRestoring,    setIsRestoring]    = useState(false);
+  const [isExportOpen,   setIsExportOpen]   = useState(false);
 
   useEffect(() => {
     const handleResize = () => setViewportWidth(window.innerWidth);
@@ -166,18 +168,7 @@ const ImageEditorPage: React.FC<ImageEditorPageProps> = ({ openPayload, showGlob
       setIsSaving(false);
     }
   }, [isSaving, showGlobalFeedback]);
-
-  const handleExport = useCallback(async () => {
-    const doc = getSnapshot().document;
-    if (!doc) return;
-    const blob = await exportToBlob(doc, 'png');
-    const url = URL.createObjectURL(blob);
-    const link = window.document.createElement('a');
-    link.href = url;
-    link.download = `${doc.title || 'untitled'}.png`;
-    link.click();
-    URL.revokeObjectURL(url);
-  }, []);
+  const handleExport = useCallback(() => setIsExportOpen(true), []);
 
   const handleImport = useCallback(async () => {
     const file = await openFilePicker();
@@ -282,6 +273,8 @@ const ImageEditorPage: React.FC<ImageEditorPageProps> = ({ openPayload, showGlob
         onClose={() => setIsNewDocOpen(false)}
         onCreate={handleCreateDocument}
       />
+
+      <ExportModal isOpen={isExportOpen} onClose={() => setIsExportOpen(false)} />
 
       {pendingUnsavedAction && (
         <UnsavedChangesModal
