@@ -7,6 +7,8 @@ import React, { forwardRef, useEffect, useImperativeHandle, useRef, useState, us
 import { CanvasRenderer } from '../core/renderer/CanvasRenderer';
 import { getSnapshot, subscribe } from '../core/store';
 import { BrushEngine } from '../core/paint/BrushEngine';
+import { SelectionEngine } from '../core/selection/SelectionEngine';
+import { TransformEngine, getGizmoHandles, hitTestGizmo } from '../core/transform/TransformEngine';
 
 export interface CanvasViewportHandle {
   fitToViewport: () => void;
@@ -105,33 +107,81 @@ const CanvasViewport = forwardRef<CanvasViewportHandle, CanvasViewportProps>(({ 
   };
 
   const handlePointerDown = (e: React.PointerEvent<HTMLDivElement>) => {
-    const { activeTool, activeLayerId } = getSnapshot();
+    const { activeTool, activeLayerId, document: doc, viewport } = getSnapshot();
+    const renderer = rendererRef.current;
+    if (!renderer) return;
+    const pt = renderer.getCanvasPoint(e.clientX, e.clientY);
+
     if (isSpaceDown || activeTool === 'hand') {
       isPanningRef.current = true;
       setIsPanning(true);
       lastPointerIdRef.current = e.pointerId;
       e.currentTarget.setPointerCapture(e.pointerId);
-    } else if ((activeTool === 'brush' || activeTool === 'eraser') && activeLayerId) {
-      lastPointerIdRef.current = e.pointerId;
-      e.currentTarget.setPointerCapture(e.pointerId);
-      const pt = rendererRef.current?.getCanvasPoint(e.clientX, e.clientY);
-      if (pt) {
+      return;
+    }
+
+    if (activeTool === 'zoom') {
+      renderer.zoomAt(e.altKey ? 100 : -100, e.clientX, e.clientY);
+      return;
+    }
+
+    lastPointerIdRef.current = e.pointerId;
+    e.currentTarget.setPointerCapture(e.pointerId);
+
+    if (activeTool === 'brush' || activeTool === 'eraser') {
+      if (activeLayerId) {
         BrushEngine.beginStroke(activeLayerId);
         BrushEngine.addPoint(pt.x, pt.y, e.pressure || 0.5, activeTool === 'eraser');
       }
+      return;
+    }
+
+    if (activeTool === 'marquee-rect' || activeTool === 'marquee-ellipse') {
+      SelectionEngine.beginMarquee(pt.x, pt.y);
+      return;
+    }
+
+    if (activeTool === 'crop') {
+      SelectionEngine.beginCrop(pt.x, pt.y);
+      return;
+    }
+
+    if (activeTool === 'move' && activeLayerId && doc) {
+      const layer = doc.layers.find(l => l.id === activeLayerId);
+      if (layer && layer.type === 'image') {
+        const canvas = editorCanvasRef.current!;
+        const { width: cssW, height: cssH } = canvas.getBoundingClientRect();
+        const handles = getGizmoHandles(layer.transform, viewport, cssW, cssH, doc.width, doc.height);
+        const cssX = e.clientX - canvas.getBoundingClientRect().left;
+        const cssY = e.clientY - canvas.getBoundingClientRect().top;
+        const hit = hitTestGizmo({ x: cssX, y: cssY }, handles);
+        if (hit) {
+          TransformEngine.beginDrag(hit, activeLayerId, pt);
+        }
+      }
+      return;
     }
   };
 
   const handlePointerMove = (e: React.PointerEvent<HTMLDivElement>) => {
     const renderer = rendererRef.current;
     if (!renderer) return;
+    const pt = renderer.getCanvasPoint(e.clientX, e.clientY);
 
     if (isPanningRef.current && lastPointerIdRef.current === e.pointerId) {
       renderer.panBy(e.movementX, e.movementY);
     } else if (BrushEngine.isStroking && lastPointerIdRef.current === e.pointerId) {
-      const pt = renderer.getCanvasPoint(e.clientX, e.clientY);
       const tool = getSnapshot().activeTool;
       BrushEngine.addPoint(pt.x, pt.y, e.pressure || 0.5, tool === 'eraser');
+    } else if (SelectionEngine.isDragging() && lastPointerIdRef.current === e.pointerId) {
+      const tool = getSnapshot().activeTool;
+      if (tool === 'marquee-rect' || tool === 'marquee-ellipse') {
+        SelectionEngine.updateMarquee(pt.x, pt.y);
+      } else if (tool === 'crop') {
+        SelectionEngine.updateCrop(pt.x, pt.y);
+      }
+    } else if (TransformEngine.isDragging() && lastPointerIdRef.current === e.pointerId) {
+      TransformEngine.updateDrag(pt);
     }
 
     const canvas = editorCanvasRef.current;
@@ -139,17 +189,31 @@ const CanvasViewport = forwardRef<CanvasViewportHandle, CanvasViewportProps>(({ 
       const rect = canvas.getBoundingClientRect();
       renderer.drawOverlay(e.clientX - rect.left, e.clientY - rect.top);
     }
-    onCursorMove?.(renderer.getCanvasPoint(e.clientX, e.clientY));
+    onCursorMove?.(pt);
   };
 
   const handlePointerUp = (e: React.PointerEvent<HTMLDivElement>) => {
-    if (lastPointerIdRef.current === e.pointerId) {
-      if (BrushEngine.isStroking) BrushEngine.endStroke();
-      isPanningRef.current = false;
-      setIsPanning(false);
-      lastPointerIdRef.current = null;
-      e.currentTarget.releasePointerCapture(e.pointerId);
+    if (lastPointerIdRef.current !== e.pointerId) return;
+    const renderer = rendererRef.current;
+    const pt = renderer?.getCanvasPoint(e.clientX, e.clientY);
+
+    if (BrushEngine.isStroking) BrushEngine.endStroke();
+
+    if (SelectionEngine.isDragging() && pt) {
+      const tool = getSnapshot().activeTool;
+      if (tool === 'marquee-rect' || tool === 'marquee-ellipse') {
+        SelectionEngine.endMarquee(pt.x, pt.y, tool === 'marquee-rect' ? 'rect' : 'ellipse');
+      } else if (tool === 'crop') {
+        SelectionEngine.commitCrop(pt.x, pt.y);
+      }
     }
+
+    if (TransformEngine.isDragging()) TransformEngine.endDrag();
+
+    isPanningRef.current = false;
+    setIsPanning(false);
+    lastPointerIdRef.current = null;
+    e.currentTarget.releasePointerCapture(e.pointerId);
   };
 
   const handlePointerLeave = () => {

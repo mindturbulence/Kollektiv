@@ -283,6 +283,8 @@ export type EditorAction =
   | { type: 'REPLACE_LAYER_BITMAP'; layerId: string; bitmap: ImageBitmap }
   | { type: 'OPEN_ADJUSTMENT'; panel: AdjustmentPanel }
   | { type: 'CLOSE_ADJUSTMENT'; panel: AdjustmentPanel }
+  // M4 — crop
+  | { type: 'CROP_DOCUMENT'; rect: Rect }
   // History
   | { type: 'PUSH_HISTORY'; command: HistoryCommand }
   | { type: 'UNDO' }

@@ -3,35 +3,34 @@ import React, { useEffect, useRef } from 'react';
 /**
  * StormBackground — onlook.com-style storm background for the boot loader.
  *
- * Technique (studied from onlook.com's public scene file, /scenes/flow-background.json —
- * a Unicorn Studio export; implementation below is ORIGINAL, written from scratch,
- * since their repo is AGPL-3.0 and kollektiv is GPL-3.0 — see CLAUDE.md "License hygiene"):
+ * COMPOSITION (parameter-exact to onlook.com's public Unicorn Studio scene,
+ * /scenes/flow-background.json — mirrored from their dumped constants; the GLSL
+ * below is ORIGINAL, written from scratch: their runtime is proprietary and
+ * their repo AGPL-3.0 vs kollektiv GPL-3.0 — see CLAUDE.md "License hygiene"):
  *
- * 1. Trail pass (ping-pong FBO, half resolution): a feedback buffer that each frame
- *    advects the previous frame along the stored movement direction (the trail *flows*),
- *    applies a time-varying swirl, decays exponentially, and strokes in a capsule
- *    distance field between the previous and current mouse position with a sharp
- *    pow(s, 6) core. This is what gives the "crackling lightning follows the cursor"
- *    look — persistence + flow, which a per-frame uniform can never reproduce.
- * 2. Composite pass: near-black base + fbm domain-warped clouds; the trail texture is
- *    SAMPLED THROUGH the cloud noise (uv + fbm offset) so the light smears and snakes
- *    through the smoke, then tinted with the theme's primary color.
- * 3. Optional ambient strike flashes (kollektiv twist, knob-gated, subtle).
+ * 1. Base: rotated linear gradient #151515 -> black (their exact 0.0824 gray,
+ *    rotation -2.649 rad, dither 0.005). NO cloud brightness — the "clouds" on
+ *    onlook are just the wake being warped by noise.
+ * 2. Trail pass (ping-pong FBO at 0.5x): feedback buffer, capsule distance
+ *    stroke (pow(s,6)), advection along stored motion direction, liquify swirl
+ *    on the dissipating wake (their exact mix 0.25 / amp 0.0025), decay
+ *    0.87^60/s ≈ 6.0, read out at x2.5 strength and ADDED over the base.
+ * 3. Displacement: whole image sampled at uv + (f*2 + r*0.31) where r,f are
+ *    fbm fields (6 octaves, amp 0.25, gain 0.594, rotate-scale 2.5/octave,
+ *    drift t*0.0072, center 0.569/0.651) — this is what makes the light snake
+ *    through "clouds".
  *
- * The twist (user request): trail/bolt color = current theme's `primary`, read live
- * from a hidden `.text-primary` probe and re-read on data-theme changes.
+ * Deviations from 1:1 (deliberate, user-approved twist + platform):
+ * - Wake/bolt color = current theme's `primary` (oklch-probed, live) instead of
+ *   onlook's crimson mix. Everything else is parameter-matched.
+ * - Ambient strike flashes default OFF (onlook has none); knob `strikeGain`
+ *   re-enables them.
+ * - prefers-reduced-motion: single static paint, no trail, no tracking.
  *
- * Boot-safety guards (this renders while the app initializes):
- * - 30fps cap, composite at 0.75x scale, trail sim at 0.5x, DPR capped at 1.5
- * - paused while the tab is hidden; torn down with the loader
- * - context acquisition retried with backoff (contexts can be momentarily unavailable
- *   during early page boot); webglcontextlost/restored handled
- * - NO WEBGL_lose_context in cleanup — React StrictMode double-mounts this effect on
- *   the same canvas in dev, and a force-lost context would wedge the remount forever
- * - silent fallback: if anything fails to init, the plain loader remains
- *
- * Accessibility: honors prefers-reduced-motion (static clouds, no trail, no strikes,
- * no cursor tracking).
+ * Boot-safety guards: paused when tab hidden; context retry with backoff;
+ * webglcontextlost/restored handled; NO WEBGL_lose_context in cleanup (React
+ * StrictMode double-mounts on the same canvas in dev — a force-lost context
+ * would wedge the remount forever).
  */
 
 const VERT = 'attribute vec2 p;varying vec2 vUv;void main(){vUv=p*0.5+0.5;gl_Position=vec4(p,0.,1.);}';
@@ -52,6 +51,8 @@ uniform float uRadius;
 uniform float uAdvect;
 uniform float uSwirl;
 uniform float uTime;
+uniform float uLiqMix;
+uniform float uLiqAmp;
 
 vec2 asp(vec2 p){ return vec2(p.x*uAspect, p.y); }
 
@@ -59,6 +60,22 @@ float capsuleDist(vec2 p, vec2 a, vec2 b){
   vec2 pa=p-a, ba=b-a;
   float h=clamp(dot(pa,ba)/max(dot(ba,ba),1e-6),0.0,1.0);
   return length(pa-ba*h);
+}
+
+// Liquify swirl (onlook idiom): 5 rotation/sine-perturbation octaves. Rotation
+// steps sum to 3 full turns (net 0) so distortion stays local; ripple phase
+// travels along dir (the stored motion direction) so the dying wake ripples
+// the way it moved. Applied in proportion to DISSIPATED energy - the bright
+// core stays coherent, the fading wake curls into ripples.
+vec2 liquify(vec2 st, vec2 dir, float t){
+  for(int i=1;i<=5;i++){
+    float fi=float(i);
+    float ang=fi*1.2566371; // i/5 * 2PI
+    float ca=cos(ang), sa=sin(ang);
+    st=vec2(st.x*ca-st.y*sa, st.x*sa+st.y*ca);
+    st+=vec2(uLiqAmp*cos(fi*6.0*st.y+t*0.02*dir.x), uLiqAmp*sin(fi*6.0*st.x+t*0.02*dir.y));
+  }
+  return st;
 }
 
 void main(){
@@ -70,9 +87,11 @@ void main(){
   dir=dirLen>1e-4?dir/dirLen:vec2(0.0,1.0);
 
   // Advection: pull intensity from upstream along its own flow direction,
-  // plus a slow swirl so the trail curls like gas instead of fading in place.
+  // plus a slow swirl and the liquify curl on the dissipating wake.
   vec2 swirl=vec2(cos(uTime*0.7+uv.y*6.0),sin(uTime*0.6+uv.x*6.0))*uSwirl*(1.0-inten);
-  vec2 su=clamp(uv-dir*uAdvect*inten+swirl,vec2(0.001),vec2(0.999));
+  vec2 baseUv=uv-dir*uAdvect*inten+swirl;
+  vec2 liqUv=liquify(baseUv-dir*0.005,dir,uTime);
+  vec2 su=clamp(mix(baseUv,liqUv,(1.0-inten)*uLiqMix),vec2(0.001),vec2(0.999));
   vec3 s=texture2D(uPrev,su).rgb;
   inten=s.r;
   vec2 sdir=s.gb*2.0-1.0;
@@ -98,7 +117,7 @@ void main(){
   gl_FragColor=vec4(clamp(inten,0.0,1.0),dir*0.5+0.5,1.0);
 }`;
 
-// ---- Pass 2: composite (base + clouds + trail-through-smoke + strikes) ----
+// ---- Pass 2: composite (gradient base + trail additive + fbm displacement) --
 const COMP_FRAG = `precision highp float;
 varying vec2 vUv;
 uniform sampler2D uTrail;
@@ -109,38 +128,61 @@ uniform float uTrailGain;
 uniform float uStrike;
 uniform float uStrikeX;
 uniform float uStrikeY;
+uniform float uDebug;
+
+const float PI = 3.14159265359;
 
 float hash(vec2 p){p=fract(p*vec2(123.34,456.21));p+=dot(p,p+45.32);return fract(p.x*p.y);}
-float noise(vec2 p){
+float rand01(vec2 co){return fract(sin(dot(co.xy,vec2(12.9898,78.233)))*43758.5453);}
+
+// Perlin-style gradient noise (public-domain idiom), signed output ~[-0.7,0.7]
+vec2 gdir(vec2 p){
+  float a=hash(p)*6.2831853;
+  return vec2(cos(a),sin(a));
+}
+float pnoise(vec2 p){
   vec2 i=floor(p),f=fract(p);
-  f=f*f*(3.0-2.0*f);
-  float a=hash(i),b=hash(i+vec2(1.0,0.0)),c=hash(i+vec2(0.0,1.0)),d=hash(i+vec2(1.0,1.0));
-  return mix(mix(a,b,f.x),mix(c,d,f.x),f.y);
+  vec2 w=f*f*(3.0-2.0*f);
+  float a=dot(gdir(i),f);
+  float b=dot(gdir(i+vec2(1,0)),f-vec2(1,0));
+  float c=dot(gdir(i+vec2(0,1)),f-vec2(0,1));
+  float d=dot(gdir(i+vec2(1,1)),f-vec2(1,1));
+  return mix(mix(a,b,w.x),mix(c,d,w.x),w.y);
 }
-float fbm(vec2 p){
-  float v=0.0,a=0.5;
-  mat2 r=mat2(0.8,0.6,-0.6,0.8);
-  for(int i=0;i<5;i++){v+=a*noise(p);p=r*p*2.03;a*=0.5;}
-  return v;
+
+// fbm — onlook's structure: 6 octaves, amp 0.25, gain 0.594, each octave
+// rotate(1.25 rad) and scale 2.5, domain shifted by 100.
+const mat2 OCT = mat2(cos(1.25),sin(1.25),-sin(1.25),cos(1.25))*2.5;
+float fbm(vec2 st){
+  float value=0.0;
+  float amp=0.25;
+  for(int i=0;i<6;i++){
+    value+=amp*pnoise(st);
+    st=OCT*st;
+    st+=100.0;
+    amp*=0.594;
+  }
+  return value;
 }
-float bend(vec2 p,float t){return (fbm(p*1.6+t*0.35)-0.5)*0.55;}
+
+// Base: onlook layer 0 — rotated linear gradient 0x151515 -> black + dither.
+vec3 gradientBase(vec2 uv){
+  vec2 c=uv-0.5;
+  float ang=(0.0783-0.5)*2.0*PI;
+  float ca=cos(ang), sa=sin(ang);
+  c=vec2(c.x*ca-c.y*sa, c.x*sa+c.y*ca);
+  float p=clamp(c.x+0.5,0.0,1.0);
+  vec3 col=mix(vec3(0.08235294117647059),vec3(0.0),clamp(p/0.5,0.0,1.0));
+  col+=rand01(gl_FragCoord.xy)*0.005;
+  return col;
+}
 
 float bolt(vec2 p,float t){
   if(uStrike<=0.001) return 0.0;
   float inCol=step(0.0,p.y)*step(p.y,uStrikeY);
   if(inCol<0.5) return 0.0;
-  float x0=uStrikeX;
   float acc=0.0;
-  for(int i=0;i<3;i++){
-    float fi=float(i);
-    float amp=(fi+1.0)*0.09;
-    float off=bend(vec2(x0*2.4,p.y*0.9),t*1.6+fi*7.3)*amp;
-    float d=abs(p.x-(x0+off));
-    float w=(0.012-fi*0.003)*(0.8+0.6*sin(t*40.0+fi*2.0));
-    acc+=smoothstep(w,0.0,d);
-    acc+=exp(-d*34.0)*0.5;
-  }
-  vec2 cp=vec2(x0,uStrikeY*0.62);
+  vec2 cp=vec2(uStrikeX,uStrikeY*0.62);
   acc+=exp(-length((p-cp)*vec2(1.9,1.15))*2.6)*0.55;
   return acc*uStrike;
 }
@@ -148,36 +190,40 @@ float bolt(vec2 p,float t){
 void main(){
   vec2 uv=vUv;
   float aspect=uRes.x/uRes.y;
-  vec2 p=uv*vec2(aspect,1.0);
   float t=uTime;
 
-  // Clouds (domain-warped fbm)
-  float q=fbm(p*1.7+vec2(t*0.013,-t*0.008));
-  float r=fbm(p*2.6+q*1.4+vec2(-t*0.02,t*0.014));
-  float cloud=smoothstep(0.25,0.95,r*0.75+q*0.35);
+  // Displacement field — onlook layer 2, exact structure and constants.
+  float multiplier=6.0*(0.15/((aspect+1.0)/2.0));
+  vec2 pos=vec2(0.5685640362225097,0.6510996119016818);
+  vec2 st=((uv-pos)*vec2(aspect,1.0))*multiplier*aspect;
+  float rotA=0.135*-1.0*2.0*PI;
+  float rc=cos(rotA), rs=sin(rotA);
+  st=vec2(st.x*rc-st.y*rs, st.x*rs+st.y*rc);
+  vec2 drift=vec2(t*0.005)*1.44;
+  float tt=t*0.025;
+  vec2 r=vec2(
+    fbm(st-drift+vec2(1.7,9.2)+tt),
+    fbm(st-drift+vec2(8.2,1.3)+tt)
+  );
+  float f=fbm(st+r-drift+tt)*0.31;
+  vec2 offset=f*2.0+r*0.31;
 
-  // The key move: sample the trail THROUGH the cloud noise so the light
-  // smears and snakes through the smoke (onlook's fbm displacement layer).
-  vec2 warp=vec2(
-    fbm(p*3.0+vec2(t*0.05,0.0)),
-    fbm(p*3.0+vec2(0.0,t*0.04)+7.3)
-  )-0.5;
-  float ti=texture2D(uTrail,uv+warp*0.045).r;
+  // Trail sampled through the displacement (onlook displaces the composite).
+  float ti=texture2D(uTrail,uv+offset).r;
 
-  // Base: near-black storm gradient + cloud shading
-  vec3 dark=vec3(0.024,0.028,0.036);
-  vec3 col=mix(dark*1.15,vec3(0.115,0.13,0.16),cloud);
+  // Debug: render the raw (displaced) trail buffer.
+  if(uDebug>0.5){ gl_FragColor=vec4(ti,ti*0.6,0.0,1.0); return; }
 
-  // Trail light: sharp theme-colored core + wide soft glow, wrapped by cloud density
-  col+=uBolt*(pow(ti,1.6)*1.5+pow(ti,0.35)*0.22)*uTrailGain*(0.55+0.45*cloud);
+  // Base, also displaced (onlook displaces everything below the fbm layer).
+  vec3 col=gradientBase(uv+offset);
 
-  // Ambient strike flash (kollektiv twist, subtle)
-  col+=uBolt*bolt(p,t)*0.8;
+  // Trail added over base at their x2.5 readout strength (mix(bg, bg+c, s)
+  // with additive blend == base + color*s). Color = theme primary (the twist).
+  float strength=min(ti*2.5,1.0);
+  col+=uBolt*strength*uTrailGain;
 
-  col=mix(col,dark,0.25);
-
-  float lum=dot(col,vec3(0.2126,0.7152,0.0722));
-  col=mix(col,col/max(lum,0.001)*0.55,step(0.55,lum));
+  // Optional ambient strike flash (off by default — onlook has none).
+  col+=uBolt*bolt(uv*vec2(aspect,1.0),t)*uStrike*0.8;
 
   gl_FragColor=vec4(col,1.0);
 }`;
@@ -257,7 +303,7 @@ const StormBackground: React.FC = () => {
             };
             const uni = (prog: WebGLProgram, n: string) => gl.getUniformLocation(prog, n);
 
-            // --- Ping-pong trail targets (half resolution, NPOT-safe params) ---
+            // --- Ping-pong trail targets (0.5x — onlook's userDownsample) ---
             const makeTarget = (w: number, h: number) => {
                 const tex = gl.createTexture();
                 gl.bindTexture(gl.TEXTURE_2D, tex);
@@ -280,7 +326,6 @@ const StormBackground: React.FC = () => {
             document.body.appendChild(probe);
             let boltColor: [number, number, number] = [0.75, 0.94, 0.3]; // Kollektiv lime fallback
             // DaisyUI v5 resolves to oklch() strings — computed color is NOT rgb.
-            // Convert oklch -> oklab -> linear sRGB -> sRGB.
             const oklchToRgb = (L: number, C: number, Hdeg: number): [number, number, number] => {
                 const h = (Hdeg * Math.PI) / 180;
                 const a = C * Math.cos(h), b = C * Math.sin(h);
@@ -327,26 +372,28 @@ const StormBackground: React.FC = () => {
                 probe.remove();
             });
 
-            // Live tuning knobs — the loop READS these every frame, so mutating
-            // window.__STORM__.* in devtools applies instantly.
+            // Live tuning knobs — the loop READS these every frame. Defaults are
+            // parameter-matched to onlook's scene (see header); theme color and
+            // optional strikes are the kollektiv twist.
             const knobs = {
-                fps: 30,
-                brush: 0.55,        // stroke strength while the cursor moves
-                radius: 0.055,      // stroke radius (uv units)
-                trailDecay: 5.0,    // trail fade rate (/s) — lower = longer persistence
-                advect: 0.02,       // how far the trail flows per unit intensity
-                swirl: 0.004,       // curl in the flow
+                fps: 60,            // onlook runs 60
+                brush: 1.0,         // stroke strength (saturates instantly)
+                radius: 0.18,       // stroke radius (their effective ~0.32 in aspect space)
+                trailDecay: 6.0,    // their 0.87^60/s
+                advect: 0.03,       // flow per unit intensity
+                swirl: 0.006,       // curl in the flow
+                liquifyMix: 0.25,   // their exact value
+                liquifyAmp: 0.0025, // their exact value
                 trailGain: 1.0,     // composite brightness of the trail
-                strikeGain: 0.8,    // ambient strike flash brightness
-                ambientMin: 7,      // s between ambient strikes (min)
-                ambientMax: 14,     // s between ambient strikes (max)
-                firstStrike: 3,     // s until the first ambient strike
+                strikeGain: 0,      // ambient strikes OFF (onlook has none); 0.8 to enable
+                ambientMin: 60,     // s between ambient strikes (min) — off unless enabled
+                ambientMax: 120,    // s between ambient strikes (max)
+                firstStrike: 60,    // s until the first ambient strike
+                debug: 0,           // 1 = render raw trail buffer (dev diagnostics)
             };
 
-            // Render sizes: composite at 0.75x (DPR-capped), trail at half of that.
-            // needsRepaint must exist BEFORE resize() runs (reduced-motion repaint-once).
+            // Render sizes: composite at 1x CSS pixels (onlook dpi:1), trail at 0.5x.
             let needsRepaint = true;
-            const SCALE = 0.75;
             let W = 1, H = 1, TW = 1, TH = 1;
             let targets: { tex: WebGLTexture; fbo: WebGLFramebuffer }[] = [];
             let readIdx = 0;
@@ -358,9 +405,8 @@ const StormBackground: React.FC = () => {
                 targets = [];
             };
             const resize = () => {
-                const dpr = Math.min(window.devicePixelRatio || 1, 1.5);
-                const w = Math.max(1, Math.round(canvas.clientWidth * dpr * SCALE));
-                const h = Math.max(1, Math.round(canvas.clientHeight * dpr * SCALE));
+                const w = Math.max(1, Math.round(canvas.clientWidth));
+                const h = Math.max(1, Math.round(canvas.clientHeight));
                 if (w === W && h === H && targets.length === 2) return;
                 W = w; H = h;
                 canvas.width = W;
@@ -392,7 +438,7 @@ const StormBackground: React.FC = () => {
             window.addEventListener('pointermove', onMove, { passive: true });
             teardown.push(() => window.removeEventListener('pointermove', onMove));
 
-            // Ambient strikes (kollektiv twist, kept subtle)
+            // Ambient strikes (kollektiv twist, off by default)
             let strike = 0, strikeX = 0.5, strikeY = 0;
             const strikeQueue: { x: number; strength: number }[] = [];
             let nextAmbient = knobs.firstStrike;
@@ -403,6 +449,7 @@ const StormBackground: React.FC = () => {
                 aspect: uni(trailProg, 'uAspect'), decay: uni(trailProg, 'uDecay'),
                 brush: uni(trailProg, 'uBrush'), radius: uni(trailProg, 'uRadius'),
                 advect: uni(trailProg, 'uAdvect'), swirl: uni(trailProg, 'uSwirl'),
+                liqMix: uni(trailProg, 'uLiqMix'), liqAmp: uni(trailProg, 'uLiqAmp'),
                 time: uni(trailProg, 'uTime'),
             };
             const compUni = {
@@ -410,6 +457,7 @@ const StormBackground: React.FC = () => {
                 res: uni(compProg, 'uRes'), bolt: uni(compProg, 'uBolt'),
                 gain: uni(compProg, 'uTrailGain'), strike: uni(compProg, 'uStrike'),
                 strikeX: uni(compProg, 'uStrikeX'), strikeY: uni(compProg, 'uStrikeY'),
+                debug: uni(compProg, 'uDebug'),
             };
 
             let last = performance.now();
@@ -435,6 +483,8 @@ const StormBackground: React.FC = () => {
                 gl.uniform1f(trailUni.radius, knobs.radius);
                 gl.uniform1f(trailUni.advect, knobs.advect);
                 gl.uniform1f(trailUni.swirl, knobs.swirl);
+                gl.uniform1f(trailUni.liqMix, knobs.liquifyMix);
+                gl.uniform1f(trailUni.liqAmp, knobs.liquifyAmp);
                 gl.uniform1f(trailUni.time, simT);
                 gl.drawArrays(gl.TRIANGLES, 0, 3);
                 gl.bindFramebuffer(gl.FRAMEBUFFER, null);
@@ -458,6 +508,7 @@ const StormBackground: React.FC = () => {
                 gl.uniform1f(compUni.strike, strike * knobs.strikeGain);
                 gl.uniform1f(compUni.strikeX, strikeX);
                 gl.uniform1f(compUni.strikeY, strikeY);
+                gl.uniform1f(compUni.debug, knobs.debug);
                 gl.drawArrays(gl.TRIANGLES, 0, 3);
             };
 
@@ -468,7 +519,7 @@ const StormBackground: React.FC = () => {
                 if (reduced) {
                     if (!needsRepaint) return;
                     needsRepaint = false;
-                    simT += 0.016; // gentle static cloud phase
+                    simT += 0.016;
                     composite();
                     return;
                 }
@@ -482,24 +533,25 @@ const StormBackground: React.FC = () => {
 
                 simT += dt;
 
-                // ambient strike scheduling
-                nextAmbient -= dt;
-                if (nextAmbient <= 0) {
-                    strikeQueue.push({
-                        x: 0.15 + Math.random() * 0.7,
-                        strength: 0.55 + Math.random() * 0.45,
-                    });
-                    nextAmbient = knobs.ambientMin + Math.random() * Math.max(0, knobs.ambientMax - knobs.ambientMin);
-                }
-                if (strike <= 0.001 && strikeQueue.length > 0) {
-                    const s = strikeQueue.shift();
-                    if (s) {
-                        strikeX = s.x;
-                        strikeY = 0.3 + Math.random() * 0.55;
-                        strike = s.strength;
+                if (knobs.strikeGain > 0) {
+                    nextAmbient -= dt;
+                    if (nextAmbient <= 0) {
+                        strikeQueue.push({
+                            x: 0.15 + Math.random() * 0.7,
+                            strength: 0.55 + Math.random() * 0.45,
+                        });
+                        nextAmbient = knobs.ambientMin + Math.random() * Math.max(0, knobs.ambientMax - knobs.ambientMin);
                     }
+                    if (strike <= 0.001 && strikeQueue.length > 0) {
+                        const s = strikeQueue.shift();
+                        if (s) {
+                            strikeX = s.x;
+                            strikeY = 0.3 + Math.random() * 0.55;
+                            strike = s.strength;
+                        }
+                    }
+                    strike *= Math.exp(-dt * 3.2);
                 }
-                strike *= Math.exp(-dt * 3.2);
 
                 stepTrail(dt);
                 composite();
@@ -518,6 +570,27 @@ const StormBackground: React.FC = () => {
                         strikeQueue.push({ x: x ?? 0.5, strength });
                     },
                     clearQueue() { strikeQueue.length = 0; },
+                    debugTrail() {
+                        if (targets.length !== 2) return { error: 'no targets' };
+                        const px = new Uint8Array(TW * TH * 4);
+                        gl.bindFramebuffer(gl.FRAMEBUFFER, targets[readIdx].fbo);
+                        gl.readPixels(0, 0, TW, TH, gl.RGBA, gl.UNSIGNED_BYTE, px);
+                        gl.bindFramebuffer(gl.FRAMEBUFFER, null);
+                        let mx = 0, sum = 0, lit = 0;
+                        for (let i = 0; i < px.length; i += 4) {
+                            const v = px[i];
+                            sum += v;
+                            if (v > 0) lit++;
+                            if (v > mx) mx = v;
+                        }
+                        return {
+                            maxR: mx,
+                            meanR: Number((sum / (TW * TH)).toFixed(2)),
+                            litPixels: lit,
+                            total: TW * TH,
+                            fbStatus: gl.checkFramebufferStatus(gl.FRAMEBUFFER),
+                        };
+                    },
                     state() {
                         return {
                             trailSize: [TW, TH],

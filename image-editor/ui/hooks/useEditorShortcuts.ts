@@ -7,6 +7,8 @@
 import { useEffect } from 'react';
 import { dispatch, getSnapshot } from '../../core/store';
 import { undo, redo } from '../../core/history/HistoryManager';
+import { SelectionEngine } from '../../core/selection/SelectionEngine';
+import { TransformEngine } from '../../core/transform/TransformEngine';
 import type { ToolId } from '../../core/types';
 
 const TOOL_KEYMAP: Record<string, ToolId> = {
@@ -93,13 +95,23 @@ export function useEditorShortcuts(options: UseEditorShortcutsOptions): void {
             e.preventDefault();
             dispatch({ type: 'OPEN_ADJUSTMENT', panel: 'hue-sat' });
             return;
+          case 'd':
+            e.preventDefault();
+            SelectionEngine.deselect();
+            return;
           default:
             return;
         }
       }
 
+      // Escape: cancel in-progress transform drag
+      if (key === 'escape') {
+        TransformEngine.cancelDrag();
+        SelectionEngine.cancelDrag();
+        return;
+      }
+
       // Unmodified single-letter tool shortcuts.
-      if (e.altKey || e.shiftKey) return;
       const tool = TOOL_KEYMAP[key];
       if (!tool) return;
       e.preventDefault();

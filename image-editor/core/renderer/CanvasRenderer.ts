@@ -15,6 +15,8 @@ import { getSnapshot, subscribe, dispatch } from '../store';
 import { NATIVE_BLEND_MODES, ZOOM_STOPS } from '../types';
 import * as ThumbnailCache from '../thumbnails/ThumbnailCache';
 import { AdjustmentEngine } from '../adjust/AdjustmentEngine';
+import { SelectionEngine } from '../selection/SelectionEngine';
+import { getGizmoHandles, docToCanvas } from '../transform/TransformEngine';
 
 const EMPTY_BG = '#0F120C';
 const ZOOM_MIN = 0.125;
@@ -151,32 +153,161 @@ export class CanvasRenderer {
     };
   }
 
-  /** Draws UI chrome (brush cursor ring) on the overlay canvas. cursorX/Y are canvas-local CSS px. */
+  /** Draws all overlay chrome: brush cursor, selection marching ants, transform gizmo, crop rect. */
   drawOverlay(cursorX: number, cursorY: number): void {
-    const ctx = this.overlayCtx;
+    const ctx   = this.overlayCtx;
+    const state = getSnapshot();
+    const dpr   = this.dpr;
+    const W     = this.cssWidth;
+    const H     = this.cssHeight;
+
     ctx.setTransform(1, 0, 0, 1, 0, 0);
     ctx.clearRect(0, 0, this.overlayCanvas.width, this.overlayCanvas.height);
-
-    const state = getSnapshot();
-    if (state.activeTool !== 'brush' && state.activeTool !== 'eraser') return;
-
-    const radius = (state.brush.size / 2) * state.viewport.zoom;
-    if (radius <= 0) return;
-
     ctx.save();
-    ctx.scale(this.dpr, this.dpr);
-    ctx.beginPath();
-    ctx.arc(cursorX, cursorY, radius, 0, Math.PI * 2);
-    ctx.lineWidth = 1;
-    ctx.strokeStyle = 'rgba(255,255,255,0.9)';
-    ctx.stroke();
-    ctx.beginPath();
-    ctx.arc(cursorX, cursorY, radius, 0, Math.PI * 2);
-    ctx.setLineDash([2, 2]);
-    ctx.strokeStyle = 'rgba(0,0,0,0.9)';
-    ctx.stroke();
+    ctx.scale(dpr, dpr);
+
+    const { viewport, activeTool, document: doc } = state;
+    const docW = doc?.width  ?? 0;
+    const docH = doc?.height ?? 0;
+
+    // ── Brush cursor ring ────────────────────────────────────────────────────
+    if (activeTool === 'brush' || activeTool === 'eraser') {
+      const radius = (state.brush.size / 2) * viewport.zoom;
+      if (radius > 0) {
+        ctx.beginPath();
+        ctx.arc(cursorX, cursorY, radius, 0, Math.PI * 2);
+        ctx.lineWidth = 1;
+        ctx.strokeStyle = 'rgba(255,255,255,0.9)';
+        ctx.stroke();
+        ctx.beginPath();
+        ctx.arc(cursorX, cursorY, radius, 0, Math.PI * 2);
+        ctx.setLineDash([2, 2]);
+        ctx.strokeStyle = 'rgba(0,0,0,0.9)';
+        ctx.stroke();
+        ctx.setLineDash([]);
+      }
+    }
+
+    if (!doc) { ctx.restore(); return; }
+
+    // ── Selection marching ants ──────────────────────────────────────────────
+    const sel = state.selection ?? null;
+    const liveSel = SelectionEngine.getLiveBounds();
+    const antsBounds = liveSel ?? sel?.bounds ?? null;
+
+    if (antsBounds) {
+      const tl = docToCanvas(antsBounds.x,                   antsBounds.y,                    viewport, W, H, docW, docH);
+      const br = docToCanvas(antsBounds.x + antsBounds.width, antsBounds.y + antsBounds.height, viewport, W, H, docW, docH);
+      const w  = br.x - tl.x;
+      const h  = br.y - tl.y;
+
+      const isEllipse = sel?.shape.kind === 'ellipse' && !liveSel;
+      ctx.save();
+      ctx.lineWidth = 1;
+      // Animated dash offset — stored on the renderer instance
+      const dashOff = ((Date.now() / 80) % 8);
+
+      if (isEllipse) {
+        ctx.beginPath();
+        ctx.ellipse(tl.x + w / 2, tl.y + h / 2, Math.abs(w / 2), Math.abs(h / 2), 0, 0, Math.PI * 2);
+      } else {
+        ctx.beginPath();
+        ctx.rect(tl.x, tl.y, w, h);
+      }
+      ctx.strokeStyle = 'white';
+      ctx.setLineDash([4, 4]);
+      ctx.lineDashOffset = -dashOff;
+      ctx.stroke();
+      ctx.strokeStyle = 'black';
+      ctx.lineDashOffset = 4 - dashOff;
+      ctx.stroke();
+      ctx.setLineDash([]);
+      ctx.restore();
+
+      // Ants animate on pointermove (drawOverlay called each frame). Static when cursor is still — M4 scope.
+    }
+
+    // ── Crop rect overlay ────────────────────────────────────────────────────
+    if (activeTool === 'crop' && SelectionEngine.isDragging()) {
+      const cb = SelectionEngine.getLiveBounds();
+      if (cb) {
+        const tl = docToCanvas(cb.x,             cb.y,              viewport, W, H, docW, docH);
+        const br = docToCanvas(cb.x + cb.width,  cb.y + cb.height,  viewport, W, H, docW, docH);
+        // Darken outside the crop
+        ctx.fillStyle = 'rgba(0,0,0,0.45)';
+        ctx.fillRect(0, 0, W, tl.y);
+        ctx.fillRect(0, tl.y, tl.x, br.y - tl.y);
+        ctx.fillRect(br.x, tl.y, W - br.x, br.y - tl.y);
+        ctx.fillRect(0, br.y, W, H - br.y);
+        // Crop rect border
+        ctx.strokeStyle = 'rgba(255,255,255,0.9)';
+        ctx.lineWidth = 1;
+        ctx.strokeRect(tl.x, tl.y, br.x - tl.x, br.y - tl.y);
+        // Rule-of-thirds guides
+        ctx.strokeStyle = 'rgba(255,255,255,0.25)';
+        for (let i = 1; i < 3; i++) {
+          const rx = tl.x + (br.x - tl.x) * i / 3;
+          const ry = tl.y + (br.y - tl.y) * i / 3;
+          ctx.beginPath(); ctx.moveTo(rx, tl.y); ctx.lineTo(rx, br.y); ctx.stroke();
+          ctx.beginPath(); ctx.moveTo(tl.x, ry); ctx.lineTo(br.x, ry); ctx.stroke();
+        }
+      }
+    }
+
+    // ── Transform gizmo ──────────────────────────────────────────────────────
+    if (activeTool === 'move' && state.activeLayerId) {
+      const layer = doc.layers.find(l => l.id === state.activeLayerId);
+      if (layer && layer.type === 'image') {
+        const handles = getGizmoHandles(layer.transform, viewport, W, H, docW, docH);
+
+        // Bounding box
+        ctx.save();
+        ctx.strokeStyle = '#C0F04C';
+        ctx.lineWidth = 1;
+        ctx.setLineDash([4, 3]);
+        ctx.beginPath();
+        ctx.moveTo(handles.tl.x, handles.tl.y);
+        ctx.lineTo(handles.tr.x, handles.tr.y);
+        ctx.lineTo(handles.br.x, handles.br.y);
+        ctx.lineTo(handles.bl.x, handles.bl.y);
+        ctx.closePath();
+        ctx.stroke();
+        ctx.setLineDash([]);
+
+        // Rotate handle line
+        ctx.strokeStyle = 'rgba(192,240,76,0.6)';
+        ctx.lineWidth = 1;
+        ctx.beginPath();
+        ctx.moveTo(handles.tc.x, handles.tc.y);
+        ctx.lineTo(handles.rotate.x, handles.rotate.y);
+        ctx.stroke();
+        ctx.restore();
+
+        // Corner/edge handles (filled squares)
+        const EDGE_HANDLES: Array<keyof typeof handles> = ['tl','tc','tr','ml','mr','bl','bc','br'];
+        for (const hid of EDGE_HANDLES) {
+          const pt = handles[hid as keyof typeof handles] as { x: number; y: number };
+          ctx.fillStyle = 'white';
+          ctx.strokeStyle = '#C0F04C';
+          ctx.lineWidth = 1;
+          ctx.fillRect(pt.x - 4, pt.y - 4, 8, 8);
+          ctx.strokeRect(pt.x - 4, pt.y - 4, 8, 8);
+        }
+
+        // Rotate handle (circle)
+        ctx.beginPath();
+        ctx.arc(handles.rotate.x, handles.rotate.y, 5, 0, Math.PI * 2);
+        ctx.fillStyle = 'white';
+        ctx.strokeStyle = '#C0F04C';
+        ctx.lineWidth = 1;
+        ctx.fill(); ctx.stroke();
+      }
+    }
+
     ctx.restore();
   }
+
+  /** Called from marching-ants RAF loop to trigger an overlay repaint. */
 
   // ─── Internal ───────────────────────────────────────────────────────────
 
@@ -221,6 +352,11 @@ export class CanvasRenderer {
     ctx.scale(viewport.zoom, viewport.zoom);
     // Shift so (0,0) in this frame is the document's top-left corner.
     ctx.translate(-document.width / 2, -document.height / 2);
+
+    // Clip rendering to document bounds — required for correct crop display.
+    ctx.beginPath();
+    ctx.rect(0, 0, document.width, document.height);
+    ctx.clip();
 
     // index 0 = topmost → draw last.
     for (let i = document.layers.length - 1; i >= 0; i--) {

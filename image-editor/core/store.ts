@@ -223,6 +223,37 @@ export function dispatch(action: EditorAction): void {
       break;
     }
 
+    case 'CROP_DOCUMENT': {
+      if (!prev.document) return;
+      const { rect } = action;
+      const layers = prev.document.layers.map(l => {
+        if (l.type !== 'image') return l;
+        return {
+          ...l,
+          transform: {
+            ...l.transform,
+            origin: {
+              x: l.transform.origin.x - rect.x,
+              y: l.transform.origin.y - rect.y,
+            },
+          },
+        };
+      });
+      _state = {
+        ...prev,
+        isDirty: true,
+        document: {
+          ...prev.document,
+          width: rect.width,
+          height: rect.height,
+          layers,
+          updatedAt: Date.now(),
+        },
+        selection: null,
+      };
+      break;
+    }
+
     case 'PUSH_HISTORY': {
       // Drop any redo branch (commands after current index)
       const trimmed = prev.history.slice(0, prev.historyIndex + 1);
