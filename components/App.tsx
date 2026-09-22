@@ -43,7 +43,6 @@ import LocalGenerationStudioPage from './LocalGenerationStudioPage';
 import { LLMChatPanel } from './LLMChatPanel';
 import { LiveAssistantProvider } from '../contexts/LiveAssistantContext';
 import VideoPlayerOverlay from './VideoPlayerOverlay';
-import FloatingAssistantAvatar from './FloatingAssistantAvatar';
 import AssistantAvatarBridge from './AssistantAvatarBridge';
 
 import InitialLoader from './InitialLoader';
@@ -382,7 +381,6 @@ const AppContent: React.FC = () => {
             case 'lora_editor': return <LoraEditorPage key="lora_editor" isExiting={false} />;
             case 'batch_runner': return <BatchRunnerPage key="batch_runner" />;
             case 'comfy_studio': return <LocalGenerationStudioPage key="comfy_studio" backendId="comfy" showGlobalFeedback={showGlobalFeedback} />;
-            case 'a1111_studio': return <LocalGenerationStudioPage key="a1111_studio" backendId="a1111" showGlobalFeedback={showGlobalFeedback} />;
             default: return <Dashboard key="default" onNavigate={handleNavigate} onClipIdea={handleClipIdea} isExiting={false} />;
         }
     };
@@ -632,9 +630,6 @@ const AppContent: React.FC = () => {
             )}
             <TabTitleManager defaultTitle={currentTitle} />
             <CustomCursor />
-            {/* Floating avatar: hidden on the assistant page — the fullscreen
-                Samaritan view IS the avatar's expanded form. */}
-            <FloatingAssistantAvatar hidden={activeTab === 'assistant'} />
             <LiveCaptionOverlay hidden={activeTab === 'assistant'} />
             <ScreenControlOverlay />
             {isInitialized && (

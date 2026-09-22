@@ -5,6 +5,8 @@ import { useAssistantSignals } from '../utils/useAssistantSignals';
 import { useSettings } from '../contexts/SettingsContext';
 import { resolveLangKey } from '../utils/languageKey';
 import AssistantBackdrop from './AssistantBackdrop';
+import { isPipSupported, openAssistantPip } from '../utils/assistantPip';
+import { audioService } from '../services/audioService';
 
 /** All translated prompts, keyed by canonical language key ("en", "es", …). */
 const PROMPT_TRANSLATIONS: Record<string, string> = {
@@ -464,8 +466,23 @@ const AssistantPage: React.FC = () => {
             <div className="absolute top-4 inset-x-0 flex justify-center font-mono text-[9px] tracking-[0.4em] uppercase text-base-content/30 pointer-events-none">
                 {status === 'live' ? 'UPLINK ACTIVE' : status.toUpperCase()}
             </div>
-            <div className="absolute bottom-4 inset-x-0 flex justify-center font-mono text-[9px] tracking-[0.4em] uppercase text-base-content/30 pointer-events-none">
-                CTRL+SPACE TO END
+            <div className="absolute bottom-4 inset-x-0 flex flex-col items-center gap-1 pointer-events-none">
+                {isPipSupported() && (
+                    <button
+                        className="font-mono text-[9px] tracking-[0.4em] uppercase text-base-content/30 hover:text-primary cursor-pointer pointer-events-auto transition-colors"
+                        onClick={async () => {
+                            audioService.playClick();
+                            try { await openAssistantPip(); }
+                            catch (err) { console.warn('[AssistantPage] pop-out failed:', (err as Error)?.message); }
+                        }}
+                        title="Pop out — always-on-top mini avatar"
+                    >
+                        POP OUT
+                    </button>
+                )}
+                <span className="font-mono text-[9px] tracking-[0.4em] uppercase text-base-content/30">
+                    CTRL+SPACE TO END
+                </span>
             </div>
 
             {status === 'error' ? (
