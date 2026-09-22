@@ -1,6 +1,26 @@
-import React, { useState, useEffect, useRef, useLayoutEffect } from 'react';
+import React, { useState, useEffect, useRef, useLayoutEffect, lazy, Suspense } from 'react';
 import { gsap } from 'gsap';
 import ChromaticText from './ChromaticText';
+
+// Lazy: own chunk — keeps the storm off the critical boot path AND avoids
+// perturbing index-chunk module evaluation order (static import here triggered
+// a prod-bundle TDZ crash; root cause was StormBackground's declaration order,
+// now fixed — lazy split kept for the boot-path benefit).
+const StormBackground = lazy(() => import('./StormBackground'));
+
+// Error boundary: if the storm ever throws (or its chunk fails to load), the
+// loader must degrade to plain — never unmount the whole app under it.
+class StormBoundary extends React.Component<{ children: React.ReactNode }, { failed: boolean }> {
+    constructor(props: { children: React.ReactNode }) {
+        super(props);
+        this.state = { failed: false };
+    }
+    static getDerivedStateFromError() { return { failed: true }; }
+    componentDidCatch(err: unknown) {
+        console.warn('[StormBackground] crashed, falling back to plain loader:', err);
+    }
+    render() { return this.state.failed ? null : this.props.children; }
+}
 
 const InitialLoader: React.FC<{ status: string; progress: number | null; onContinue: (withMusic: boolean) => void }> = ({ status, progress, onContinue }) => {
     const textWrapperRef = useRef<HTMLHeadingElement>(null);
@@ -108,6 +128,11 @@ const InitialLoader: React.FC<{ status: string; progress: number | null; onConti
 
     return (
         <div id="initial-loader" className="fixed inset-0 z-[500] flex flex-col items-center justify-center bg-base-100 text-base-content overflow-hidden select-none font-sans" style={{ background: 'oklch(var(--b1))', opacity: 1 }}>
+            <StormBoundary>
+                <Suspense fallback={null}>
+                    <StormBackground />
+                </Suspense>
+            </StormBoundary>
             <div className="absolute inset-0 bg-grid-texture opacity-[0.03] pointer-events-none"></div>
             <div className="absolute inset-0 pointer-events-none opacity-20" style={{ backgroundImage: 'linear-gradient(transparent 50%, rgba(0, 0, 0, 0.25) 50%)', backgroundSize: '100% 4px', zIndex: 1 }}></div>
 
