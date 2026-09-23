@@ -141,14 +141,17 @@ const Header: React.FC<HeaderProps> = ({
   ], []);
 
   const utilityItems = React.useMemo<NavItemData[]>(() => [
+    { id: 'assets_manager' as ActiveTab, label: 'Assets' },
     { id: 'composer' as ActiveTab, label: 'Composer' },
     { id: 'image_compare' as ActiveTab, label: 'Compare' },
     { id: 'color_palette_extractor' as ActiveTab, label: 'Palette' },
     { id: 'resizer' as ActiveTab, label: 'Resizer' },
+    { id: 'converter' as ActiveTab, label: 'Converter' },
     { id: 'video_to_frames' as ActiveTab, label: 'Video' },
   ], []);
 
   const studioItems = React.useMemo<NavItemData[]>(() => [
+    { id: 'image_editor' as ActiveTab, label: 'Image Editor' },
     { id: 'lora_editor' as ActiveTab, label: 'LoRA Editor' },
     { id: 'comfy_studio' as ActiveTab, label: 'ComfyUI' },
     { id: 'a1111_studio' as ActiveTab, label: 'A1111' },

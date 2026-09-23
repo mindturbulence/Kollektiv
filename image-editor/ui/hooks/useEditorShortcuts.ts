@@ -20,6 +20,7 @@ const TOOL_KEYMAP: Record<string, ToolId> = {
   c: 'crop',
   b: 'brush',
   e: 'eraser',
+  s: 'clone-stamp',
   g: 'gradient',
   u: 'shape-rect',
   t: 'type',
@@ -114,7 +115,17 @@ export function useEditorShortcuts(options: UseEditorShortcutsOptions): void {
         TransformEngine.cancelDrag();
         SelectionEngine.cancelDrag();
         SelectionEngine.cancelLasso();
+        SelectionEngine.cancelPolyLasso();
         GradientTool.cancel();
+        return;
+      }
+
+      // Shift+L: polygon lasso (plain L is freehand lasso).
+      if (key === 'l' && e.shiftKey) {
+        e.preventDefault();
+        if (getSnapshot().activeTool !== 'lasso-poly') {
+          dispatch({ type: 'SET_ACTIVE_TOOL', tool: 'lasso-poly' });
+        }
         return;
       }
 

@@ -7,14 +7,16 @@
 
 import { getSnapshot, dispatch } from '../store';
 import { pushCommand } from '../history/HistoryManager';
+import { findLayerById } from '../layers/layerTree';
 import type { BrushPoint, HistoryCommand, ImageLayer } from '../types';
 
 // ─── Internal state ──────────────────────────────────────────────────────────
 
 let _layerId:    string | null = null;
+let _target:     'color' | 'mask' = 'color';
 let _canvas:     OffscreenCanvas | null = null;
 let _ctx:        OffscreenCanvasRenderingContext2D | null = null;
-let _prevBitmap: ImageBitmap | null = null;   // layer bitmap before stroke (for undo)
+let _prevBitmap: ImageBitmap | null = null;   // layer bitmap (or mask bitmap) before stroke, for undo
 let _points:     BrushPoint[] = [];
 let _isStroking  = false;
 
@@ -43,20 +45,28 @@ function paintStamp(x: number, y: number, pressure: number, isEraser: boolean): 
   const radius = Math.max(0.5, (brush.size / 2) * Math.max(0.1, pressure));
   const alpha  = (brush.opacity / 100) * (brush.flow / 100) * Math.max(0.1, pressure);
 
+  // Mask painting only ever reads the alpha channel at composite time (destination-in
+  // in CanvasRenderer), so the RGB fill is irrelevant there — only whether this stroke
+  // adds opacity (reveal) or removes it (hide) matters. "Brush" hides, "Eraser" reveals.
+  // Color target: brush=source-over, eraser=destination-out.
+  // Mask target: inverted — brush HIDES (destination-out), eraser REVEALS (source-over).
+  const subtracting = _target === 'mask' ? !isEraser : isEraser;
+  const compositeOp = subtracting ? 'destination-out' : 'source-over';
+  const fillColor = _target === 'mask' ? '#000000' : (isEraser ? 'black' : colors.foreground);
+
   _ctx.save();
   _ctx.globalAlpha = alpha;
-  _ctx.globalCompositeOperation = isEraser ? 'destination-out' : 'source-over';
+  _ctx.globalCompositeOperation = compositeOp;
 
   if (brush.hardness >= 0.99) {
-    _ctx.fillStyle = isEraser ? 'black' : colors.foreground;
+    _ctx.fillStyle = fillColor;
     _ctx.beginPath();
     _ctx.arc(x, y, radius, 0, Math.PI * 2);
     _ctx.fill();
   } else {
     const innerR = radius * brush.hardness;
     const grad = _ctx.createRadialGradient(x, y, innerR, x, y, radius);
-    const col = isEraser ? 'black' : colors.foreground;
-    grad.addColorStop(0, col);
+    grad.addColorStop(0, fillColor);
     grad.addColorStop(1, 'transparent');
     _ctx.fillStyle = grad;
     _ctx.beginPath();
@@ -71,16 +81,20 @@ function paintStamp(x: number, y: number, pressure: number, isEraser: boolean): 
 export const BrushEngine = {
   get isStroking(): boolean { return _isStroking; },
 
-  beginStroke(layerId: string): void {
+  beginStroke(layerId: string, target: 'color' | 'mask' = 'color'): void {
     const { document: doc } = getSnapshot();
-    const layer = doc?.layers.find(l => l.id === layerId) as ImageLayer | undefined;
+    const layer = (doc && findLayerById(doc.layers, layerId)) as ImageLayer | undefined;
     if (!layer || layer.type !== 'image') return;
+    if (target === 'mask' && !layer.mask) return; // caller must add a mask first (LayerManager.addMask)
+
+    const sourceBitmap = target === 'mask' ? layer.mask!.bitmap : layer.bitmap;
 
     _layerId    = layerId;
-    _prevBitmap = layer.bitmap;
-    _canvas     = new OffscreenCanvas(layer.intrinsicWidth, layer.intrinsicHeight);
+    _target     = target;
+    _prevBitmap = sourceBitmap;
+    _canvas     = new OffscreenCanvas(sourceBitmap.width, sourceBitmap.height);
     _ctx        = _canvas.getContext('2d');
-    _ctx?.drawImage(layer.bitmap, 0, 0);
+    _ctx?.drawImage(sourceBitmap, 0, 0);
     _points     = [];
     _isStroking = true;
   },
@@ -106,6 +120,7 @@ export const BrushEngine = {
     _isStroking = false;
 
     const layerId    = _layerId;
+    const target     = _target;
     const prevBitmap = _prevBitmap;
     const canvas     = _canvas;
 
@@ -116,13 +131,14 @@ export const BrushEngine = {
     _prevBitmap = null;
     _points     = [];
 
+    const actionType = target === 'mask' ? 'REPLACE_LAYER_MASK_BITMAP' : 'REPLACE_LAYER_BITMAP';
     createImageBitmap(canvas).then((newBitmap) => {
       const cmd: HistoryCommand = {
         id:        crypto.randomUUID(),
-        label:     'Brush stroke',
+        label:     target === 'mask' ? 'Mask stroke' : 'Brush stroke',
         timestamp: Date.now(),
-        do:   () => dispatch({ type: 'REPLACE_LAYER_BITMAP', layerId, bitmap: newBitmap }),
-        undo: () => dispatch({ type: 'REPLACE_LAYER_BITMAP', layerId, bitmap: prevBitmap }),
+        do:   () => dispatch({ type: actionType, layerId, bitmap: newBitmap }),
+        undo: () => dispatch({ type: actionType, layerId, bitmap: prevBitmap }),
       };
       pushCommand(cmd);
     });
@@ -136,6 +152,7 @@ export const BrushEngine = {
     _canvas     = null;
     _ctx        = null;
     _layerId    = null;
+    _target     = 'color';
     _prevBitmap = null;
     _points     = [];
   },

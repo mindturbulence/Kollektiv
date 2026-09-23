@@ -21,6 +21,7 @@ interface UseAppEventBusInput {
   setVideoPlayerUrl: (url: string | null) => void;
   handleClipIdea: (idea: Idea) => void;
   setEditorOpenPayload: (payload: EditorOpenPayload | undefined) => void;
+  setConverterOpenFiles: (files: File[] | undefined) => void;
   isCommandPaletteOpen: boolean;
 }
 
@@ -38,6 +39,7 @@ export const useAppEventBus = ({
   setVideoPlayerUrl,
   handleClipIdea,
   setEditorOpenPayload,
+  setConverterOpenFiles,
   isCommandPaletteOpen,
 }: UseAppEventBusInput) => {
   // ── Navigation events ────────────────────────────────────────────────
@@ -65,6 +67,14 @@ export const useAppEventBus = ({
       handleNavigate('image_editor');
     });
   }, [setEditorOpenPayload, handleNavigate]);
+
+  // ── Open in converter (from Assets Manager selection toolbar) ────────
+  useEffect(() => {
+    return appEventBus.on('openInConverter', (payload: { files: File[] }) => {
+      setConverterOpenFiles(payload.files);
+      handleNavigate('converter');
+    });
+  }, [setConverterOpenFiles, handleNavigate]);
 
   // ── Global keyboard shortcuts ────────────────────────────────────────
   useEffect(() => {

@@ -5,6 +5,7 @@ import FloatingPanel from '../FloatingPanel';
 import { AdjustmentEngine } from '../../core/adjust/AdjustmentEngine';
 import { pushCommand } from '../../core/history/HistoryManager';
 import { dispatch, getSnapshot } from '../../core/store';
+import { findLayerById } from '../../core/layers/layerTree';
 import type { AdjustmentChannel, ImageLayer } from '../../core/types';
 
 interface LevelsPanelProps { layerId: string; onClose: () => void; }
@@ -58,7 +59,8 @@ const LevelsPanel: React.FC<LevelsPanelProps> = ({ layerId, onClose }) => {
   // Capture source bitmap at open time
   const sourceRef = useRef<ImageBitmap | null>(null);
   useEffect(() => {
-    const layer = getSnapshot().document?.layers.find(l => l.id === layerId) as ImageLayer | undefined;
+    const doc = getSnapshot().document;
+    const layer = (doc && findLayerById(doc.layers, layerId)) as ImageLayer | undefined;
     sourceRef.current = layer?.bitmap ?? null;
     return () => { AdjustmentEngine.clearPreview(layerId); };
   }, [layerId]);

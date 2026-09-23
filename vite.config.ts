@@ -17,6 +17,32 @@ export default defineConfig(({ mode }) => {
         viteStaticCopy({
             targets: [
                 {
+                    // magick-wasm: './magick.wasm' export maps to the x86
+                    // (32-bit wasm) binary — the one matching the ESM glue in
+                    // dist/index.js that Vite bundles into convertWorker.
+                    // x64 needs 158 imports; the glue provides only 122
+                    // (verified via WebAssembly.Module.imports) — pairing the
+                    // two fails at instantiate with LinkError import #122.
+                    src: 'node_modules/@imagemagick/magick-wasm/dist/x86/magick.wasm',
+                    dest: '',
+                },
+                {
+                    // ffmpeg single-thread core (plan W2/P3): pinned as a
+                    // dependency and static-copied — never fetched from a CDN
+                    // at runtime (local-first: zero external requests).
+                    // MUST be the ESM variant: @ffmpeg/ffmpeg 0.12 spawns a
+                    // module-type worker, where importScripts is undefined,
+                    // so it loads the core via dynamic import — the UMD build
+                    // has no default export and fails with
+                    // ERROR_IMPORT_FAILURE ("failed to import ffmpeg-core.js").
+                    src: 'node_modules/@ffmpeg/core/dist/esm/ffmpeg-core.js',
+                    dest: 'ffmpeg',
+                },
+                {
+                    src: 'node_modules/@ffmpeg/core/dist/esm/ffmpeg-core.wasm',
+                    dest: 'ffmpeg',
+                },
+                {
                     src: 'node_modules/simple-rnnoise-wasm/dist/rnnoise.wasm',
                     dest: '',
                 },

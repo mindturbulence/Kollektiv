@@ -10,7 +10,7 @@ import { dispatch, getSnapshot, resetStore, subscribe } from '../core/store';
 import type { EditorOpenPayload } from '../core/types';
 import { exportToBlob, importFromPayload, openFilePicker, importImage, createBlankDocument } from '../core/io/FileIO';
 import * as AutosaveService from '../core/autosave/AutosaveService';
-import { saveToGallery, willConvertToJpeg } from './GalleryBridge';
+import { getSourceItemMeta, saveToGallery, willConvertToJpeg } from './GalleryBridge';
 import EditorToolbar from './EditorToolbar';
 import ToolRail from './ToolRail';
 import ToolHeader from './ToolHeader';
@@ -25,6 +25,7 @@ import CurvesPanel from './adjustments/CurvesPanel';
 import HueSaturationPanel from './adjustments/HueSaturationPanel';
 import ExposurePanel from './adjustments/ExposurePanel';
 import ExportModal from './ExportModal';
+import ColorPicker from './ColorPicker';
 
 const MIN_VIEWPORT_WIDTH = 1024;
 
@@ -80,6 +81,7 @@ const ImageEditorPage: React.FC<ImageEditorPageProps> = ({ openPayload, showGlob
   const viewportRef = useRef<CanvasViewportHandle>(null);
   const isDirty = useSyncExternalStore(subscribe, () => getSnapshot().isDirty);
   const openAdjustments = useSyncExternalStore(subscribe, () => getSnapshot().openAdjustments);
+  const colorPickerTarget = useSyncExternalStore(subscribe, () => getSnapshot().colorPickerTarget);
   const activeLayerId = useSyncExternalStore(subscribe, () => getSnapshot().activeLayerId);
 
   const [viewportWidth, setViewportWidth] = useState(
@@ -92,6 +94,7 @@ const ImageEditorPage: React.FC<ImageEditorPageProps> = ({ openPayload, showGlob
   const [showRecovery, setShowRecovery] = useState(false);
   const [isRestoring,    setIsRestoring]    = useState(false);
   const [isExportOpen,   setIsExportOpen]   = useState(false);
+  const sourceMetaRef = useRef<{ categoryId?: string; tags?: string[] } | null>(null);
 
   useEffect(() => {
     const handleResize = () => setViewportWidth(window.innerWidth);
@@ -112,6 +115,11 @@ const ImageEditorPage: React.FC<ImageEditorPageProps> = ({ openPayload, showGlob
   useEffect(() => {
     let cancelled = false;
     if (openPayload) {
+      if (openPayload.kind === 'gallery') {
+        getSourceItemMeta(openPayload.galleryItemId).then((meta) => {
+          if (!cancelled) sourceMetaRef.current = meta;
+        });
+      }
       importFromPayload(openPayload)
         .then((doc) => {
           if (cancelled) return;
@@ -158,7 +166,12 @@ const ImageEditorPage: React.FC<ImageEditorPageProps> = ({ openPayload, showGlob
     setIsSaving(true);
     try {
       const blob = await exportToBlob(doc, 'png');
-      await saveToGallery(blob, { title: doc.title, generationId: doc.sourceGalleryItemId });
+      await saveToGallery(blob, {
+        title: doc.title,
+        generationId: doc.sourceGalleryItemId,
+        categoryId: sourceMetaRef.current?.categoryId,
+        tags: sourceMetaRef.current?.tags,
+      });
       dispatch({ type: 'SET_DIRTY', dirty: false });
       await AutosaveService.clearSavedDocument();
       showGlobalFeedback?.('Saved to library.');
@@ -306,6 +319,9 @@ const ImageEditorPage: React.FC<ImageEditorPageProps> = ({ openPayload, showGlob
       )}
       {activeLayerId && openAdjustments.has('exposure') && (
         <ExposurePanel layerId={activeLayerId} onClose={() => dispatch({ type: 'CLOSE_ADJUSTMENT', panel: 'exposure' })} />
+      )}
+      {colorPickerTarget && (
+        <ColorPicker target={colorPickerTarget} onClose={() => dispatch({ type: 'SET_COLOR_PICKER_TARGET', target: null })} />
       )}
     </FloatingPanelHost>
     </>

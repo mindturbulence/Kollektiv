@@ -5,6 +5,7 @@ import FloatingPanel from '../FloatingPanel';
 import { AdjustmentEngine } from '../../core/adjust/AdjustmentEngine';
 import { pushCommand } from '../../core/history/HistoryManager';
 import { dispatch, getSnapshot } from '../../core/store';
+import { findLayerById } from '../../core/layers/layerTree';
 import type { ImageLayer } from '../../core/types';
 
 interface HueSaturationPanelProps { layerId: string; onClose: () => void; }
@@ -19,7 +20,8 @@ const HueSaturationPanel: React.FC<HueSaturationPanelProps> = ({ layerId, onClos
   const rafRef    = useRef<number | null>(null);
 
   useEffect(() => {
-    const layer = getSnapshot().document?.layers.find(l => l.id === layerId) as ImageLayer | undefined;
+    const doc = getSnapshot().document;
+    const layer = (doc && findLayerById(doc.layers, layerId)) as ImageLayer | undefined;
     sourceRef.current = layer?.bitmap ?? null;
     return () => { AdjustmentEngine.clearPreview(layerId); };
   }, [layerId]);

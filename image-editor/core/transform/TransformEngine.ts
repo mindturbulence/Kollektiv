@@ -8,6 +8,7 @@
 
 import { dispatch, getSnapshot } from '../store';
 import { pushCommand } from '../history/HistoryManager';
+import { findLayerById } from '../layers/layerTree';
 import type { LayerTransform, Point, Viewport, HistoryCommand, ImageLayer } from '../types';
 
 // ─── Handle identifiers ───────────────────────────────────────────────────────
@@ -179,7 +180,7 @@ export const TransformEngine = {
 
   beginDrag(handle: HandleId, layerId: string, startDoc: Point): void {
     const { document: doc } = getSnapshot();
-    const layer = doc?.layers.find(l => l.id === layerId);
+    const layer = doc && findLayerById(doc.layers, layerId);
     if (!layer || layer.type !== 'image') return;
     _dragging   = true;
     _handleId   = handle;
@@ -233,7 +234,8 @@ export const TransformEngine = {
   },
 
   flipHorizontal(layerId: string): void {
-    const layer = getSnapshot().document?.layers.find(l => l.id === layerId);
+    const doc = getSnapshot().document;
+    const layer = doc && findLayerById(doc.layers, layerId);
     if (!layer) return;
     const before = layer.transform;
     const after  = { ...before, flipH: !before.flipH };
@@ -245,7 +247,8 @@ export const TransformEngine = {
   },
 
   flipVertical(layerId: string): void {
-    const layer = getSnapshot().document?.layers.find(l => l.id === layerId);
+    const doc = getSnapshot().document;
+    const layer = doc && findLayerById(doc.layers, layerId);
     if (!layer) return;
     const before = layer.transform;
     const after  = { ...before, flipV: !before.flipV };
@@ -258,7 +261,8 @@ export const TransformEngine = {
 
   /** Reset rotation to 0 with undo. */
   resetRotation(layerId: string): void {
-    const layer = getSnapshot().document?.layers.find(l => l.id === layerId);
+    const doc = getSnapshot().document;
+    const layer = doc && findLayerById(doc.layers, layerId);
     if (!layer) return;
     const before = layer.transform;
     const after  = { ...before, rotation: 0 };

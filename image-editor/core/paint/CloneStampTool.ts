@@ -5,6 +5,7 @@
 
 import { getSnapshot, dispatch } from '../store';
 import { pushCommand } from '../history/HistoryManager';
+import { findLayerById } from '../layers/layerTree';
 import type { HistoryCommand, ImageLayer } from '../types';
 
 // ─── State ───────────────────────────────────────────────────────────────────
@@ -55,7 +56,7 @@ export const CloneStampTool = {
   setSource(docX: number, docY: number): void {
     const { activeLayerId, document: doc } = getSnapshot();
     if (!activeLayerId || !doc) return;
-    const layer = doc.layers.find(l => l.id === activeLayerId);
+    const layer = findLayerById(doc.layers, activeLayerId);
     if (!layer || layer.type !== 'image') return;
 
     _sourceBitmap  = layer.bitmap;
@@ -65,7 +66,7 @@ export const CloneStampTool = {
   beginStroke(destLayerId: string): void {
     if (!_sourceBitmap || !_sourcePoint) return;
     const { document: doc } = getSnapshot();
-    const destLayer = doc?.layers.find(l => l.id === destLayerId) as ImageLayer | undefined;
+    const destLayer = (doc && findLayerById(doc.layers, destLayerId)) as ImageLayer | undefined;
     if (!destLayer || destLayer.type !== 'image') return;
 
     _destLayerId = destLayerId;

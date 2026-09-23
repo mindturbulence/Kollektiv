@@ -45,7 +45,7 @@ import { youtubeTranscriptTools } from './tools/youtubeTranscriptTools';
 import { twitterTools } from './tools/twitterTools';
 
 // Must mirror ActiveTab in types.ts.
-const PAGES = ['dashboard', 'discovery', 'prompts', 'crafter', 'refiner', 'prompt_analyzer', 'media_analyzer', 'prompt', 'gallery', 'resizer', 'video_to_frames', 'image_compare', 'color_palette_extractor', 'composer', 'batch_runner', 'comfy_studio', 'a1111_studio', 'settings'];
+const PAGES = ['dashboard', 'discovery', 'prompts', 'crafter', 'refiner', 'prompt_analyzer', 'media_analyzer', 'prompt', 'gallery', 'resizer', 'converter', 'assets_manager', 'video_to_frames', 'image_compare', 'color_palette_extractor', 'composer', 'batch_runner', 'comfy_studio', 'a1111_studio', 'settings'];
 
 export const ASSISTANT_TOOLS: AssistantTool[] = [
     {

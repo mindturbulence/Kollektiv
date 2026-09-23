@@ -6,6 +6,7 @@
 import React, { forwardRef, useEffect, useImperativeHandle, useRef, useState, useSyncExternalStore } from 'react';
 import { CanvasRenderer } from '../core/renderer/CanvasRenderer';
 import { getSnapshot, subscribe, dispatch as editorDispatch } from '../core/store';
+import { findLayerById } from '../core/layers/layerTree';
 import { BrushEngine } from '../core/paint/BrushEngine';
 import { SelectionEngine } from '../core/selection/SelectionEngine';
 import { TransformEngine, getGizmoHandles, hitTestGizmo } from '../core/transform/TransformEngine';
@@ -142,7 +143,7 @@ const CanvasViewport = forwardRef<CanvasViewportHandle, CanvasViewportProps>(({ 
 
     if (activeTool === 'brush' || activeTool === 'eraser') {
       if (activeLayerId) {
-        BrushEngine.beginStroke(activeLayerId);
+        BrushEngine.beginStroke(activeLayerId, getSnapshot().paintTarget);
         BrushEngine.addPoint(pt.x, pt.y, e.pressure || 0.5, activeTool === 'eraser');
       }
       return;
@@ -174,7 +175,7 @@ const CanvasViewport = forwardRef<CanvasViewportHandle, CanvasViewportProps>(({ 
     }
 
     if (activeTool === 'magic-wand' && activeLayerId && doc) {
-      const layer = doc.layers.find(l => l.id === activeLayerId) as ImageLayer | undefined;
+      const layer = findLayerById(doc.layers, activeLayerId) as ImageLayer | undefined;
       if (layer?.type === 'image') {
         const tolerance = wandToleranceRef.current;
         floodFillFromBitmap(layer.bitmap, pt.x, pt.y, tolerance, true)
@@ -245,7 +246,7 @@ const CanvasViewport = forwardRef<CanvasViewportHandle, CanvasViewportProps>(({ 
     }
 
     if (activeTool === 'move' && activeLayerId && doc) {
-      const layer = doc.layers.find(l => l.id === activeLayerId);
+      const layer = findLayerById(doc.layers, activeLayerId);
       if (layer && layer.type === 'image') {
         const canvas = editorCanvasRef.current!;
         const { width: cssW, height: cssH } = canvas.getBoundingClientRect();

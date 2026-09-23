@@ -5,6 +5,7 @@
 
 import React, { useSyncExternalStore } from 'react';
 import { dispatch, getSnapshot, subscribe } from '../core/store';
+import { findLayerById } from '../core/layers/layerTree';
 import { TransformEngine } from '../core/transform/TransformEngine';
 import { SelectionEngine } from '../core/selection/SelectionEngine';
 import { TypeTool } from '../core/text/TypeTool';
@@ -22,8 +23,10 @@ const TOOL_HINTS: Partial<Record<ToolId, string>> = {
   move: 'Move: drag to reposition the active layer',
   'marquee-rect': 'Marquee: drag to select a rectangular region',
   'lasso-freehand': 'Lasso: drag to draw a freehand selection',
+  'lasso-poly': 'Polygon Lasso: click to place points, double-click to close',
   'magic-wand': 'Magic Wand: click to select similar-colored pixels',
   crop: 'Crop: drag handles, press Enter to apply',
+  'clone-stamp': 'Clone Stamp: Alt+click to set source, then drag to paint',
   gradient: 'Gradient: drag to draw a linear gradient',
   'shape-rect': 'Shape: drag to draw a rectangle',
   type: 'Type: click on the canvas to place a text layer',
@@ -100,11 +103,13 @@ const BrushControls: React.FC = () => {
 // ─── Transform controls ────────────────────────────────────────────────────
 
 const TransformControls: React.FC = () => {
-  const { activeLayerId, document: doc } = useSyncExternalStore(subscribe, () => ({
-    activeLayerId: getSnapshot().activeLayerId,
-    document: getSnapshot().document,
-  }));
-  const layer = doc?.layers.find(l => l.id === activeLayerId) as ImageLayer | undefined;
+  // Two separate calls, not one object-returning selector: useSyncExternalStore
+  // compares snapshots by reference on every render, and a `() => ({...})`
+  // selector returns a new object every call — an infinite render loop
+  // (React error #185), not just a wasted re-render.
+  const activeLayerId = useSyncExternalStore(subscribe, () => getSnapshot().activeLayerId);
+  const doc = useSyncExternalStore(subscribe, () => getSnapshot().document);
+  const layer = (doc && activeLayerId && findLayerById(doc.layers, activeLayerId)) as ImageLayer | undefined;
   if (!layer || layer.type !== 'image') {
     return <span className="px-3 text-[10px] font-mono text-base-content/50">Select a layer to transform</span>;
   }
@@ -194,7 +199,7 @@ const TypeControls: React.FC = () => {
 // ─── Shape controls ───────────────────────────────────────────────────────
 
 const ShapeControls: React.FC = () => {
-  const { colors } = useSyncExternalStore(subscribe, () => ({ colors: getSnapshot().colors }));
+  const colors = useSyncExternalStore(subscribe, () => getSnapshot().colors);
   const kind = ShapeTool.getKind();
 
   return (
@@ -269,11 +274,11 @@ const ToolHeader: React.FC<ToolHeaderProps> = ({ viewportRef }) => {
 
   return (
     <div className="h-9 flex-shrink-0 flex items-center bg-base-100/85 backdrop-blur-md border-b border-base-content/5 overflow-x-auto">
-      {(activeTool === 'brush' || activeTool === 'eraser') ? (
+      {(activeTool === 'brush' || activeTool === 'eraser' || activeTool === 'clone-stamp') ? (
         <BrushControls />
       ) : activeTool === 'move' ? (
         <TransformControls />
-      ) : (activeTool === 'marquee-rect' || activeTool === 'marquee-ellipse' || activeTool === 'lasso-freehand') ? (
+      ) : (activeTool === 'marquee-rect' || activeTool === 'marquee-ellipse' || activeTool === 'lasso-freehand' || activeTool === 'lasso-poly') ? (
         <SelectionControls />
       ) : activeTool === 'type' ? (
         <TypeControls />

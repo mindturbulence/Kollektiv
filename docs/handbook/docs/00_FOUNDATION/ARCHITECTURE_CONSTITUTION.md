@@ -104,6 +104,18 @@ The engineering contract for this repository is explicit:
 - New settings must be added through the shared settings object and persistence flow so they survive reloads correctly.
 - Secrets and long-lived credentials must never be committed to source control.
 
+### Web Worker pattern (established by the Converter feature)
+
+`workers/convertWorker.ts` (magick-wasm) and `workers/ffmpegWorker.ts` (ffmpeg.wasm) set the convention for CPU-bound wasm work. Any new worker must follow it:
+
+- **Dedicated worker per engine, never the main thread.** wasm encoding blocks whatever thread instantiates it; the UI never pays for it.
+- **Message protocol** lives in `services/convert/protocol.ts`: `{id, kind:'convert'|'cancel'|'probe'}` → `{kind:'result'|'progress'|'probe-result'}`. ArrayBuffers are **transferred**, not copied; a `probe` message warms/validates the engine without running a fake job.
+- **Serial queue inside the worker** — one heavy wasm job at a time; the worker owns its queue, the main thread owns cancellation and lifecycle.
+- **Manager on the main thread** (`ConvertWorkerManager`, `audioVideoConverter`): cancel via terminate + restart-ONCE policy, cancel-all on page unmount (no leaked workers), watchdog timer per job.
+- **wasm binaries ship via `viteStaticCopy`** into dist and are fetched from the origin (magick) or lazily via cached blob URLs (ffmpeg ~32MB core, single-thread only — GH Pages cannot serve COOP/COEP headers).
+- **Pairing warning:** magick-wasm ships two binaries — `./magick.wasm` (x86 wasm, 122 imports) and `./x64/magick.wasm` (158 imports). The ESM glue Vite bundles matches the **x86** binary; copying the x64 one fails at runtime with `LinkError: Import #122 "a" "ob": function import requires a callable`. Verify wasm exports/imports pair with the bundled glue via `WebAssembly.Module.imports()` before bumping the package.
+- **ffmpeg core variant warning:** @ffmpeg/ffmpeg 0.12 spawns a **module-type** worker, so its loader cannot use `importScripts` and pulls the core via dynamic `import()` — the core must be the **ESM** build (`dist/esm/ffmpeg-core.js`). The UMD build has no default export and fails with `ERROR_IMPORT_FAILURE` ("failed to import ffmpeg-core.js"), an error message that does not name the real cause. Verified live by `e2e/converter-av.verify.spec.ts` (opt-in via `CONVERTER_AV_VERIFY=1`; excluded from CI because it downloads nothing but does transcode real audio).
+
 ## Contribution Workflow
 
 ### Prerequisites

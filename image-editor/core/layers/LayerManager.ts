@@ -7,10 +7,12 @@
 
 import { dispatch, getSnapshot } from '../store';
 import { pushCommand } from '../history/HistoryManager';
-import type { BlendMode, HistoryCommand, ImageLayer, Layer, TextLayer, ShapeLayer, Rect } from '../types';
+import { findLayerById } from './layerTree';
+import type { BlendMode, HistoryCommand, ImageLayer, Layer, LayerMask, TextLayer, ShapeLayer, Rect } from '../types';
 
 function findLayer(layerId: string): Layer | undefined {
-  return getSnapshot().document?.layers.find(l => l.id === layerId);
+  const layers = getSnapshot().document?.layers;
+  return layers ? findLayerById(layers, layerId) : undefined;
 }
 
 type LayerPatch = Partial<Omit<ImageLayer, 'bitmap' | 'id' | 'type'>>;
@@ -156,6 +158,86 @@ export function duplicateLayer(layerId: string): void {
     timestamp: Date.now(),
     do: () => dispatch({ type: 'ADD_LAYER', layer: clone, insertAfterIndex }),
     undo: () => dispatch({ type: 'REMOVE_LAYER', layerId: clone.id }),
+  };
+  pushCommand(cmd);
+}
+
+// ─── Masks ───────────────────────────────────────────────────────────────────
+// Painted via BrushEngine (paintTarget: 'mask') — see BrushEngine.ts. The mask
+// alpha-multiplies the layer's color bitmap in CanvasRenderer.drawImageLayer.
+
+/** Adds a fully-visible (opaque white) mask to an image layer, sized to its bitmap. */
+export async function addMask(layerId: string): Promise<void> {
+  const layer = findLayer(layerId);
+  if (!layer || layer.type !== 'image' || layer.mask) return;
+
+  const oc = new OffscreenCanvas(layer.intrinsicWidth, layer.intrinsicHeight);
+  const ctx = oc.getContext('2d');
+  if (!ctx) return;
+  ctx.fillStyle = '#000000';
+  ctx.fillRect(0, 0, oc.width, oc.height);
+  const bitmap = await createImageBitmap(oc);
+
+  const mask: LayerMask = { bitmap, enabled: true, invert: false, feather: 0 };
+  pushCommand(makeLayerUpdateCmd(`Add mask to "${layer.name}"`, layerId, { mask: undefined }, { mask }));
+}
+
+/** Removes an image layer's mask entirely. */
+export function removeMask(layerId: string): void {
+  const layer = findLayer(layerId);
+  if (!layer || layer.type !== 'image' || !layer.mask) return;
+  pushCommand(makeLayerUpdateCmd(`Remove mask from "${layer.name}"`, layerId, { mask: layer.mask }, { mask: undefined }));
+}
+
+// ─── Groups ────────────────────────────────────────────────────────────────
+// V1 scope: only top-level layers can be grouped/ungrouped (no grouping a
+// selection that already spans into an existing group). Group opacity/blend
+// mode are NOT yet composited as a unit — CanvasRenderer draws children
+// straight through — so grouping is organizational (visibility, collapse,
+// bulk move) for now, not a non-destructive compositing unit.
+
+/** Wraps the given top-level layers into a new group at the position of the
+ *  topmost selected layer, preserving their relative order as children. */
+export function groupLayers(layerIds: string[]): void {
+  const { document: doc } = getSnapshot();
+  if (!doc || layerIds.length === 0) return;
+  const idSet = new Set(layerIds);
+  const selected = doc.layers.filter(l => idSet.has(l.id));
+  if (selected.length === 0) return;
+
+  const insertIndex = doc.layers.reduce(
+    (min, l, i) => (idSet.has(l.id) ? Math.min(min, i) : min),
+    doc.layers.length,
+  );
+  const groupId = crypto.randomUUID();
+  const groupName = selected.length === 1 ? `${selected[0].name} group` : 'Group';
+
+  const cmd: HistoryCommand = {
+    id: crypto.randomUUID(),
+    label: `Group ${selected.length} layer${selected.length > 1 ? 's' : ''}`,
+    timestamp: Date.now(),
+    do: () => dispatch({ type: 'GROUP_LAYERS', layerIds, groupId, groupName, insertIndex }),
+    undo: () => dispatch({ type: 'UNGROUP_LAYER', groupId }),
+  };
+  pushCommand(cmd);
+}
+
+/** Splices a group's children back into its parent's position, in order. */
+export function ungroupLayer(groupId: string): void {
+  const { document: doc } = getSnapshot();
+  if (!doc) return;
+  const group = doc.layers.find(l => l.id === groupId);
+  if (!group || group.type !== 'group') return;
+  const layerIds = group.children.map(c => c.id);
+  const insertIndex = doc.layers.findIndex(l => l.id === groupId);
+  const groupName = group.name;
+
+  const cmd: HistoryCommand = {
+    id: crypto.randomUUID(),
+    label: `Ungroup "${groupName}"`,
+    timestamp: Date.now(),
+    do: () => dispatch({ type: 'UNGROUP_LAYER', groupId }),
+    undo: () => dispatch({ type: 'GROUP_LAYERS', layerIds, groupId, groupName, insertIndex }),
   };
   pushCommand(cmd);
 }

@@ -98,6 +98,10 @@ export const defaultLLMSettings: LLMSettings = {
   convertImageToJpgDrive: true,
   jpgCompressionQuality: 0.9,
 
+  // Converter (plan W5): defaults persisted across sessions
+  converterDefaultTargetId: 'webp',
+  converterQuality: 80,
+
   // Gallery Auto-Tagging
   autoTagEnabled: false,
 

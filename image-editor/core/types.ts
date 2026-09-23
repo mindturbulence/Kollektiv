@@ -70,7 +70,7 @@ interface LayerBase {
   blendMode: BlendMode;
   visible: boolean;
   locked?: boolean;
-  mask?: LayerMask;       // V2
+  mask?: LayerMask;       // painted via BrushEngine, applied in CanvasRenderer.applyMask
 }
 
 export interface ImageLayer extends LayerBase {
@@ -277,10 +277,15 @@ export type EditorAction =
   | { type: 'ADD_LAYER'; layer: Layer; insertAfterIndex?: number }
   | { type: 'REMOVE_LAYER'; layerId: string }
   | { type: 'REORDER_LAYERS'; orderedIds: string[] }
+  | { type: 'GROUP_LAYERS'; layerIds: string[]; groupId: string; groupName: string; insertIndex: number }
+  | { type: 'UNGROUP_LAYER'; groupId: string }
   | { type: 'MARK_LAYER_DIRTY'; layerId: string }
+  | { type: 'SET_PAINT_TARGET'; target: 'color' | 'mask' }
+  | { type: 'SET_COLOR_PICKER_TARGET'; target: 'foreground' | 'background' | null }
   | { type: 'CLEAR_DIRTY_LAYERS'; layerIds: Set<string> }
   // M3 — pixel replace + adjustment panel state
   | { type: 'REPLACE_LAYER_BITMAP'; layerId: string; bitmap: ImageBitmap }
+  | { type: 'REPLACE_LAYER_MASK_BITMAP'; layerId: string; bitmap: ImageBitmap }
   | { type: 'OPEN_ADJUSTMENT'; panel: AdjustmentPanel }
   | { type: 'CLOSE_ADJUSTMENT'; panel: AdjustmentPanel }
   // M4 — crop
@@ -311,6 +316,10 @@ export interface EditorState {
   historyIndex: number;
   /** Which adjustment floating panels are currently open. */
   openAdjustments: Set<AdjustmentPanel>;
+  /** Whether Brush/Erase paint into the active layer's color bitmap or its mask. */
+  paintTarget: 'color' | 'mask';
+  /** Which swatch the ColorPicker floating panel is currently editing, if open. */
+  colorPickerTarget: 'foreground' | 'background' | null;
 }
 
 /** Adjustment panel identifiers. */

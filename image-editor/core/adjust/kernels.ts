@@ -117,20 +117,9 @@ export function applyCurves(
 }
 
 // ─── Hue / Saturation ─────────────────────────────────────────────────────────
-
-function rgbToHsl(r: number, g: number, b: number): [number, number, number] {
-  const rn = r / 255, gn = g / 255, bn = b / 255;
-  const max = Math.max(rn, gn, bn), min = Math.min(rn, gn, bn);
-  const l = (max + min) / 2;
-  if (max === min) return [0, 0, l];
-  const d = max - min;
-  const s = l > 0.5 ? d / (2 - max - min) : d / (max + min);
-  let h = 0;
-  if (max === rn)      h = ((gn - bn) / d + (gn < bn ? 6 : 0)) / 6;
-  else if (max === gn) h = ((bn - rn) / d + 2) / 6;
-  else                 h = ((rn - gn) / d + 4) / 6;
-  return [h, s, l];
-}
+// Inlined (no tuple-returning helpers): the previous rgbToHsl/hslToRgb pair
+// allocated a fresh [number, number, number] per pixel, which at 16.7M pixels
+// (4096x4096) cost ~3.75s of GC pressure alone. Scratch numbers only, no arrays.
 
 function hue2rgb(p: number, q: number, t: number): number {
   if (t < 0) t += 1;
@@ -141,17 +130,6 @@ function hue2rgb(p: number, q: number, t: number): number {
   return p;
 }
 
-function hslToRgb(h: number, s: number, l: number): [number, number, number] {
-  if (s === 0) { const v = Math.round(l * 255); return [v, v, v]; }
-  const q = l < 0.5 ? l * (1 + s) : l + s - l * s;
-  const p = 2 * l - q;
-  return [
-    Math.max(0, Math.min(255, Math.round(hue2rgb(p, q, h + 1 / 3) * 255))),
-    Math.max(0, Math.min(255, Math.round(hue2rgb(p, q, h) * 255))),
-    Math.max(0, Math.min(255, Math.round(hue2rgb(p, q, h - 1 / 3) * 255))),
-  ];
-}
-
 export function applyHueSaturation(
   pixels: Uint8ClampedArray,
   hueShift: number,
@@ -160,18 +138,43 @@ export function applyHueSaturation(
   colorize: boolean,
 ): void {
   const n = pixels.length;
+  const colorizeH = ((hueShift + 180) % 360) / 360;
+  const colorizeS = Math.max(0, Math.min(1, 0.5 + saturation / 200));
+
   for (let i = 0; i < n; i += 4) {
-    let [h, s, l] = rgbToHsl(pixels[i], pixels[i + 1], pixels[i + 2]);
-    if (colorize) {
-      h = ((hueShift + 180) % 360) / 360;
-      s = Math.max(0, Math.min(1, 0.5 + saturation / 200));
+    const rn = pixels[i] / 255, gn = pixels[i + 1] / 255, bn = pixels[i + 2] / 255;
+    const max = Math.max(rn, gn, bn), min = Math.min(rn, gn, bn);
+    let h: number, s: number;
+    const l = (max + min) / 2;
+    if (max === min) {
+      h = 0; s = 0;
     } else {
-      h = (((h * 360 + hueShift) % 360) + 360) / 360 % 1;
-      s = Math.max(0, Math.min(1, s * (1 + saturation / 100)));
-      l = Math.max(0, Math.min(1, l + lightness / 100));
+      const d = max - min;
+      s = l > 0.5 ? d / (2 - max - min) : d / (max + min);
+      if (max === rn)      h = ((gn - bn) / d + (gn < bn ? 6 : 0)) / 6;
+      else if (max === gn) h = ((bn - rn) / d + 2) / 6;
+      else                 h = ((rn - gn) / d + 4) / 6;
     }
-    const [r, g, b] = hslToRgb(h, s, l);
-    pixels[i] = r; pixels[i + 1] = g; pixels[i + 2] = b;
+
+    let outH: number, outS: number, outL: number;
+    if (colorize) {
+      outH = colorizeH; outS = colorizeS; outL = l;
+    } else {
+      outH = (((h * 360 + hueShift) % 360) + 360) / 360 % 1;
+      outS = Math.max(0, Math.min(1, s * (1 + saturation / 100)));
+      outL = Math.max(0, Math.min(1, l + lightness / 100));
+    }
+
+    if (outS === 0) {
+      const v = Math.round(outL * 255);
+      pixels[i] = v; pixels[i + 1] = v; pixels[i + 2] = v;
+    } else {
+      const q = outL < 0.5 ? outL * (1 + outS) : outL + outS - outL * outS;
+      const p = 2 * outL - q;
+      pixels[i]     = Math.max(0, Math.min(255, Math.round(hue2rgb(p, q, outH + 1 / 3) * 255)));
+      pixels[i + 1] = Math.max(0, Math.min(255, Math.round(hue2rgb(p, q, outH) * 255)));
+      pixels[i + 2] = Math.max(0, Math.min(255, Math.round(hue2rgb(p, q, outH - 1 / 3) * 255)));
+    }
   }
 }
 

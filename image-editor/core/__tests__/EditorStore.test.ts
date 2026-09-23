@@ -258,4 +258,77 @@ describe('EditorStore', () => {
       unsubscribe();
     });
   });
+
+  describe('GROUP_LAYERS / UNGROUP_LAYER', () => {
+    it('wraps selected top-level layers into a group, preserving relative order', () => {
+      const a = makeLayer('a');
+      const b = makeLayer('b');
+      const c = makeLayer('c');
+      dispatch({ type: 'SET_DOCUMENT', document: makeDoc([a, b, c]) });
+
+      dispatch({ type: 'GROUP_LAYERS', layerIds: [a.id, c.id], groupId: 'g1', groupName: 'Group', insertIndex: 0 });
+
+      const layers = getSnapshot().document!.layers;
+      expect(layers).toHaveLength(2); // [group, b]
+      expect(layers[0].type).toBe('group');
+      expect(layers[1].id).toBe(b.id);
+      const group = layers[0] as Extract<Layer, { type: 'group' }>;
+      expect(group.children.map(c => c.id)).toEqual([a.id, c.id]);
+      expect(getSnapshot().activeLayerId).toBe('g1');
+    });
+
+    it('ungroups back to the original flat order at the group position', () => {
+      const a = makeLayer('a');
+      const b = makeLayer('b');
+      const c = makeLayer('c');
+      dispatch({ type: 'SET_DOCUMENT', document: makeDoc([a, b, c]) });
+      dispatch({ type: 'GROUP_LAYERS', layerIds: [a.id, c.id], groupId: 'g1', groupName: 'Group', insertIndex: 0 });
+
+      dispatch({ type: 'UNGROUP_LAYER', groupId: 'g1' });
+
+      const layers = getSnapshot().document!.layers;
+      expect(layers.map(l => l.id)).toEqual([a.id, c.id, b.id]);
+    });
+
+    it('finds, patches, and removes a layer nested inside a group', () => {
+      const a = makeLayer('a');
+      const b = makeLayer('b');
+      dispatch({ type: 'SET_DOCUMENT', document: makeDoc([a, b]) });
+      dispatch({ type: 'GROUP_LAYERS', layerIds: [a.id], groupId: 'g1', groupName: 'Group', insertIndex: 0 });
+
+      dispatch({ type: 'UPDATE_LAYER', layerId: a.id, patch: { opacity: 42 } });
+      const group = getSnapshot().document!.layers.find(l => l.id === 'g1') as Extract<Layer, { type: 'group' }>;
+      expect(group.children[0].opacity).toBe(42);
+
+      dispatch({ type: 'REMOVE_LAYER', layerId: a.id });
+      const groupAfterRemove = getSnapshot().document!.layers.find(l => l.id === 'g1') as Extract<Layer, { type: 'group' }>;
+      expect(groupAfterRemove.children).toHaveLength(0);
+    });
+  });
+
+  describe('REPLACE_LAYER_MASK_BITMAP', () => {
+    it('replaces only the mask bitmap, leaving the color bitmap untouched', () => {
+      const layer = makeLayer('a');
+      const maskBitmap = { width: 100, height: 100, close: () => {} } as unknown as ImageBitmap;
+      layer.mask = { bitmap: maskBitmap, enabled: true, invert: false, feather: 0 };
+      dispatch({ type: 'SET_DOCUMENT', document: makeDoc([layer]) });
+
+      const newMaskBitmap = { width: 100, height: 100, close: () => {} } as unknown as ImageBitmap;
+      dispatch({ type: 'REPLACE_LAYER_MASK_BITMAP', layerId: layer.id, bitmap: newMaskBitmap });
+
+      const updated = getSnapshot().document!.layers[0] as ImageLayer;
+      expect(updated.mask?.bitmap).toBe(newMaskBitmap);
+      expect(updated.bitmap).toBe(layer.bitmap);
+    });
+
+    it('is a no-op for a layer with no mask', () => {
+      const layer = makeLayer('a');
+      dispatch({ type: 'SET_DOCUMENT', document: makeDoc([layer]) });
+      const before = getSnapshot().document;
+
+      dispatch({ type: 'REPLACE_LAYER_MASK_BITMAP', layerId: layer.id, bitmap: {} as ImageBitmap });
+
+      expect(getSnapshot().document).toBe(before);
+    });
+  });
 });

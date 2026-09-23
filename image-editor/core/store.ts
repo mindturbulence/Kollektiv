@@ -6,7 +6,8 @@
 //
 // Pattern: getSnapshot() / subscribe(fn) / dispatch(action)
 
-import type { EditorState, EditorAction, Viewport, BrushSettings, ColorPair, Layer } from './types';
+import type { EditorState, EditorAction, Viewport, BrushSettings, ColorPair, Layer, GroupLayer } from './types';
+import { findLayerById, updateLayerById, removeLayerById } from './layers/layerTree';
 
 // ─── Default State ────────────────────────────────────────────────────────────
 
@@ -39,6 +40,8 @@ function createDefaultState(): EditorState {
     history: [],
     historyIndex: -1,
     openAdjustments: new Set(),
+    paintTarget: 'color',
+    colorPickerTarget: null,
   };
 }
 
@@ -81,12 +84,18 @@ export function dispatch(action: EditorAction): void {
         dirtyLayerIds: action.document
           ? new Set(action.document.layers.map(l => l.id))
           : new Set(),
+        paintTarget: 'color',
       };
       break;
 
     case 'SET_ACTIVE_LAYER':
       if (prev.activeLayerId === action.layerId) return;
-      _state = { ...prev, activeLayerId: action.layerId };
+      _state = { ...prev, activeLayerId: action.layerId, paintTarget: 'color' };
+      break;
+
+    case 'SET_PAINT_TARGET':
+      if (prev.paintTarget === action.target) return;
+      _state = { ...prev, paintTarget: action.target };
       break;
 
     case 'SET_ACTIVE_TOOL':
@@ -108,6 +117,11 @@ export function dispatch(action: EditorAction): void {
 
     case 'SET_COLORS':
       _state = { ...prev, colors: { ...prev.colors, ...action.colors } };
+      break;
+
+    case 'SET_COLOR_PICKER_TARGET':
+      if (prev.colorPickerTarget === action.target) return;
+      _state = { ...prev, colorPickerTarget: action.target };
       break;
 
     case 'SET_BRUSH':
@@ -176,6 +190,51 @@ export function dispatch(action: EditorAction): void {
       break;
     }
 
+    case 'GROUP_LAYERS': {
+      if (!prev.document) return;
+      const layers = prev.document.layers;
+      const idSet = new Set(action.layerIds);
+      const selected = layers.filter(l => idSet.has(l.id));
+      if (selected.length === 0) return;
+      const remaining = layers.filter(l => !idSet.has(l.id));
+      const group: GroupLayer = {
+        id: action.groupId,
+        name: action.groupName,
+        type: 'group',
+        children: selected,
+        transform: { origin: { x: 0, y: 0 }, size: { width: prev.document.width, height: prev.document.height }, rotation: 0, flipH: false, flipV: false },
+        opacity: 100,
+        blendMode: 'normal',
+        visible: true,
+      };
+      const insertAt = Math.min(action.insertIndex, remaining.length);
+      const newLayers = [...remaining];
+      newLayers.splice(insertAt, 0, group);
+      _state = {
+        ...prev,
+        isDirty: true,
+        activeLayerId: group.id,
+        document: { ...prev.document, layers: newLayers },
+      };
+      break;
+    }
+
+    case 'UNGROUP_LAYER': {
+      if (!prev.document) return;
+      const layers = prev.document.layers;
+      const idx = layers.findIndex(l => l.id === action.groupId && l.type === 'group');
+      if (idx < 0) return;
+      const group = layers[idx] as GroupLayer;
+      const newLayers = [...layers.slice(0, idx), ...group.children, ...layers.slice(idx + 1)];
+      _state = {
+        ...prev,
+        isDirty: true,
+        activeLayerId: group.children[0]?.id ?? prev.activeLayerId,
+        document: { ...prev.document, layers: newLayers },
+      };
+      break;
+    }
+
     case 'MARK_LAYER_DIRTY': {
       if (prev.dirtyLayerIds.has(action.layerId)) return;
       const next = new Set(prev.dirtyLayerIds);
@@ -195,15 +254,23 @@ export function dispatch(action: EditorAction): void {
 
     case 'REPLACE_LAYER_BITMAP': {
       if (!prev.document) return;
-      const layers = prev.document.layers.map(l =>
-        l.id === action.layerId && l.type === 'image'
-          ? { ...l, bitmap: action.bitmap }
-          : l
-      );
+      const layers = updateLayerById(prev.document.layers, action.layerId, { bitmap: action.bitmap } as Partial<Layer>);
       if (layers === prev.document.layers) return;
       const dirty = new Set(prev.dirtyLayerIds);
       dirty.add(action.layerId);
       _state = { ...prev, isDirty: true, document: { ...prev.document, layers }, dirtyLayerIds: dirty };
+      break;
+    }
+
+    case 'REPLACE_LAYER_MASK_BITMAP': {
+      if (!prev.document) return;
+      const target = findLayerById(prev.document.layers, action.layerId);
+      if (!target || target.type !== 'image' || !target.mask) return;
+      const layers = updateLayerById(prev.document.layers, action.layerId, {
+        mask: { ...target.mask, bitmap: action.bitmap },
+      } as Partial<Layer>);
+      if (layers === prev.document.layers) return;
+      _state = { ...prev, isDirty: true, document: { ...prev.document, layers } };
       break;
     }
 
@@ -298,17 +365,9 @@ export function resetStore(): void {
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 
 function patchLayer(layers: Layer[], id: string, patch: Partial<Layer>): Layer[] {
-  let changed = false;
-  const result = layers.map(l => {
-    if (l.id === id) {
-      changed = true;
-      return { ...l, ...patch } as Layer;
-    }
-    return l;
-  });
-  return changed ? result : layers;
+  return updateLayerById(layers, id, patch);
 }
 
 function removeLayer(layers: Layer[], id: string): Layer[] {
-  return layers.filter(l => l.id !== id);
+  return removeLayerById(layers, id);
 }

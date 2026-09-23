@@ -164,6 +164,17 @@ Structural ops store field before/after values. A 50-step history on a 3000×300
 
 **⚠️ Toolchain cost is unpriced.** Verified this session: no `cargo`, `rustc`, or `wasm-pack` on PATH; no `Cargo.toml` anywhere in the repo; `pnpm lint` is `tsc --noEmit` only and `pnpm build` is bare `vite build`. Adding this crate means a new toolchain install, a pre-build step nothing currently runs, a checked-in `pkg/` artifact or a CI Rust job, and a `cargo test` tier (§10) outside the existing `pnpm test`. That is a real M3 cost the milestone does not budget. Cheaper alternative worth measuring first: the same kernels as plain TypeScript in the existing worker. Levels/Curves/Hue-Sat are LUT-and-multiply loops over `Uint8ClampedArray`; on 9M pixels in a worker they are plausibly fast enough, and the WASM crate can be added later behind the same `AdjustmentEngine` interface if profiling proves it necessary. **Benchmark the TS version before committing to Rust.**
 
+**✅ Benchmarked 2026-09-23** (Node/V8, single-threaded, 4096×4096 = 16.7M px, `image-editor/core/adjust/kernels.ts` as shipped):
+
+| Kernel | Commit latency |
+|---|---|
+| Levels | 49ms |
+| Curves | 50ms |
+| Exposure | 89ms |
+| Hue/Saturation | 2,114ms (down from 3,751ms after removing a per-pixel tuple allocation in `applyHueSaturation` — see kernels.ts history) |
+
+Levels/Curves/Exposure are comfortably fast enough in TS — no WASM case for them. Hue/Saturation is the outlier: its per-pixel RGB↔HSL round trip doesn't reduce to a byte LUT the way the other three do, and 2.1s on the largest supported canvas is a real "commit and wait" delay, worker-thread or not. **Decision: ship Hue/Saturation as TS for V1** (it already runs off the main thread via `adjust.worker.ts`, so it costs a spinner, not jank) **and revisit WASM only for this one kernel if it comes up as a user complaint** — the other three don't justify the toolchain cost this section prices out above.
+
 ### WASM module API (crate: `kollektiv-imgproc`)
 
 ```rust
@@ -352,7 +363,7 @@ Route addition: add `'image_editor'` to `ActiveTab` in `types.ts` + `case 'image
 - Adjustment dialogs show live GPU preview while dragging; commit result on apply; each commit undoable.
 - Brush/Erase paint smoothly at natural speed with pressure sensitivity; each stroke one undoable command.
 - Levels and Hue-Sat kernels pass against known pixel pairs (Vitest on the TS path, `cargo test` if WASM was adopted).
-- Commit latency on a 4096×4096 layer measured and recorded — this number is what decides whether WASM is needed at all.
+- Commit latency on a 4096×4096 layer measured and recorded — this number is what decides whether WASM is needed at all. **Done — see §4 benchmark table (2026-09-23): Levels/Curves/Exposure all under 100ms, Hue/Saturation ~2.1s; TS-first stands, WASM deferred.**
 
 ### M3.5 — Mask painting + Gradient + Shape + Type
 **Scope**: Mask painting reuses `BrushEngine` painting onto a `LayerMask.bitmap` instead of the color layer. Gradient tool (linear/radial, foreground-to-background or foreground-to-transparent). Shape tool (rect/ellipse, editable, not rasterized). Type tool (text layers with inline paragraph editing, font/size/color/alignment).
