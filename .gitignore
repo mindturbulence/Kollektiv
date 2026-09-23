@@ -39,3 +39,5 @@ scripts/fix-tools*.cjs
 obsidian-notes-list.md
 .gstack/
 .topaz-tmp/
+.tmp-verify/
+probe-import.mjs

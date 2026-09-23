@@ -71,9 +71,12 @@ export type ActiveTab =
   | 'gallery'
 
   | 'resizer'
+  | 'converter'
+  | 'assets_manager'
   | 'video_to_frames'
   | 'image_compare'
   | 'color_palette_extractor'
+  | 'image_editor'
   | 'composer'
   | 'lora_editor'
   | 'batch_runner'
@@ -259,6 +262,10 @@ export interface LLMSettings {
   convertImageToJpgLocal?: boolean;
   convertImageToJpgDrive?: boolean;
   jpgCompressionQuality?: number;
+
+  // Converter (plan W5): defaults persisted across sessions
+  converterDefaultTargetId?: string;
+  converterQuality?: number;
 
   // Gallery Auto-Tagging
   autoTagEnabled: boolean;

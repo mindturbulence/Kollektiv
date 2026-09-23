@@ -27,7 +27,11 @@
   "dependencies": {
     "@bitbonsai/mcpvault": "^0.12.1",
     "@elevenlabs/client": "^1.15.1",
+    "@ffmpeg/core": "0.12.10",
+    "@ffmpeg/ffmpeg": "^0.12.15",
+    "@ffmpeg/util": "^0.12.2",
     "@google/genai": "^1.12.0",
+    "@imagemagick/magick-wasm": "^0.0.43",
     "@modelcontextprotocol/sdk": "^1.10.0",
     "@playwright/mcp": "^0.0.78",
     "@ricky0123/vad-web": "^0.0.30",

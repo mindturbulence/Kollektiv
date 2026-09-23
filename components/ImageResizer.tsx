@@ -1,7 +1,7 @@
 import React, { useState, useRef, useCallback, useEffect } from 'react';
 import { motion } from 'motion/react';
 import { TerminalText, PanelLine, ScanLine, panelVariants, sectionWipeVariants, contentVariants } from './AnimatedPanels';
-import JSZip from 'jszip';
+import { downloadZip, makeUniqueName } from '../utils/zipDownload';
 import { UploadIcon, CropIcon, LinkIcon, LinkOffIcon } from './icons';
 import { COMPOSER_PRESETS } from '../constants';
 
@@ -672,18 +672,15 @@ const ImageResizer: React.FC<ImageResizerProps> = ({ isExiting = false }) => {
             // Also offer a ZIP of all successful upscales
             const good = results.filter((r): r is ImageItem & { processed: NonNullable<ImageItem['processed']> } => r.status === 'done' && !!r.processed);
             if (good.length > 1) {
-                const zip = new JSZip();
-                good.forEach((img) => {
-                    const name = img.file.name.replace(/\.[^.]+$/, '') + '_x4.png';
-                    zip.file(name, img.processed.blob);
-                });
-                const content = await zip.generateAsync({ type: 'blob' });
-                const zipUrl = URL.createObjectURL(content);
-                const link = document.createElement('a');
-                link.href = zipUrl;
-                link.download = `ai_upscaled_${Date.now()}.zip`;
-                link.click();
-                setTimeout(() => URL.revokeObjectURL(zipUrl), 1000);
+                const taken = new Set<string>();
+                await downloadZip(
+                    good.map((img) => ({
+                        name: makeUniqueName(img.file.name.replace(/\.[^.]+$/, '') + '_x4', 'png', taken),
+                        content: img.processed.blob,
+                    })),
+                    `ai_upscaled_${Date.now()}.zip`,
+                    { revokeAfterMs: 1000 },
+                );
             }
 
             setIsDownloading(false);
@@ -702,25 +699,19 @@ const ImageResizer: React.FC<ImageResizerProps> = ({ isExiting = false }) => {
         const successfulResults = results.filter((r): r is ImageItem & { processed: NonNullable<ImageItem['processed']> } => !!(r.status === 'done' && r.processed));
 
         if (successfulResults.length > 0) {
-            const zip = new JSZip();
-            successfulResults.forEach((img, index) => {
-                const extension = settings.format;
-                const originalName = img.file.name.substring(0, img.file.name.lastIndexOf('.'));
-                let newName = settings.renamePrefix ? `${settings.renamePrefix}${originalName}` : originalName;
-                if (settings.renameSequentially) {
-                    newName = `${settings.renamePrefix}${String(index + 1).padStart(3, '0')}`;
-                }
-                zip.file(`${newName}.${extension}`, img.processed.blob);
-            });
-
-            const content = await zip.generateAsync({ type: "blob" });
-            if (typeof window !== 'undefined') {
-                const link = (window as any).document.createElement("a");
-                link.href = URL.createObjectURL(content);
-                link.download = `resized_images_${Date.now()}.zip`;
-                link.click();
-                URL.revokeObjectURL(link.href);
-            }
+            const taken = new Set<string>();
+            await downloadZip(
+                successfulResults.map((img, index) => {
+                    const extension = settings.format;
+                    const originalName = img.file.name.substring(0, img.file.name.lastIndexOf('.'));
+                    let newName = settings.renamePrefix ? `${settings.renamePrefix}${originalName}` : originalName;
+                    if (settings.renameSequentially) {
+                        newName = `${settings.renamePrefix}${String(index + 1).padStart(3, '0')}`;
+                    }
+                    return { name: makeUniqueName(newName, extension, taken), content: img.processed.blob };
+                }),
+                `resized_images_${Date.now()}.zip`,
+            );
         }
 
         setIsDownloading(false);

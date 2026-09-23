@@ -4,6 +4,7 @@ import { gsap } from 'gsap';
 import type { GalleryItem } from '../types';
 import { ImageBrokenIcon, ThumbTackIcon, PlayIcon } from './icons';
 import { fileSystemManager } from '../utils/fileUtils';
+import { appEventBus } from '../utils/eventBus';
 import type { GalleryViewMode } from './ImageGallery';
 
 interface ImageCardProps {
@@ -289,6 +290,17 @@ const ImageCard: React.FC<ImageCardProps> = memo(({ item, viewMode, onOpenDetail
                     <span className={`font-black uppercase tracking-[0.3em] bg-primary/10 text-primary border border-primary/20 backdrop-blur-md shadow-lg ${styles.badge} opacity-0 group-hover:opacity-100 transition-opacity duration-500`}>
                         {item.urls.length} {item.type.toUpperCase()}{item.urls.length > 1 ? 'S' : ''}
                     </span>
+                    {item.type === 'image' && (
+                        <button
+                            className="ml-auto font-black uppercase tracking-[0.3em] text-[9px] bg-primary/10 text-primary border border-primary/20 backdrop-blur-md px-2 py-1 opacity-0 group-hover:opacity-100 transition-opacity duration-500 pointer-events-auto hover:bg-primary/20"
+                            onClick={(e) => {
+                                e.stopPropagation();
+                                appEventBus.emit('openInEditor', { galleryItemId: item.id, url: item.urls[0] });
+                            }}
+                        >
+                            EDIT
+                        </button>
+                    )}
                 </div>
             )}
         </div>

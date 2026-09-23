@@ -3,7 +3,7 @@ import { motion } from 'motion/react';
 import { TerminalText, PanelLine, ScanLine, panelVariants, sectionWipeVariants, contentVariants } from './AnimatedPanels';
 import { FilmIcon, PlayIcon } from './icons';
 import LoadingSpinner from './LoadingSpinner';
-import JSZip from 'jszip';
+import { downloadZip, makeUniqueName } from '../utils/zipDownload';
 import { COMPOSER_PRESETS } from '../constants';
 import GalleryPickerModal from './GalleryPickerModal';
 import type { GalleryItem } from '../types';
@@ -257,15 +257,13 @@ export const VideoToFrames: React.FC<VideoToFramesProps> = ({ isExiting = false 
 
     const downloadAllFrames = async () => {
         if (frames.length === 0) return;
-        const zip = new JSZip();
-        frames.forEach((f, i) => { zip.file(`frame_${String(i).padStart(3, '0')}_${f.timestamp.toFixed(2)}s.jpg`, f.blob); });
-        const content = await zip.generateAsync({ type: "blob" });
-        const link = document.createElement('a');
-        link.href = URL.createObjectURL(content);
+        const taken = new Set<string>();
+        const entries = frames.map((f, i) => ({
+            name: makeUniqueName(`frame_${String(i).padStart(3, '0')}_${f.timestamp.toFixed(2)}s`, 'jpg', taken),
+            content: f.blob,
+        }));
         const vidTitle = typeof extractorVideo === 'string' ? extractorVideo : extractorVideo?.name || 'video';
-        link.download = `frames_${vidTitle}.zip`;
-        link.click();
-        URL.revokeObjectURL(link.href);
+        await downloadZip(entries, `frames_${vidTitle}.zip`, { revokeAfterMs: 1000 });
     };
 
     const handleJoinFilesSelect = async (files: FileList | null) => {

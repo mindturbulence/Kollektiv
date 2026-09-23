@@ -36,6 +36,10 @@ All project documentation lives under `docs/handbook/`. Look there first for arc
 
 Store all implementation/feature plan documents in `docs/plans/` (e.g. `docs/plans/YYYY-MM-DD-<feature-name>.md`) — a single centralized location, not scattered per-skill directories (e.g. not `docs/superpowers/plans/`). This overrides any skill's default plan-save location.
 
+## License hygiene (MANDATORY)
+
+Kollektiv is GPL-3.0; VERT (VERT-sh/VERT) is AGPL-3.0. The planned Converter feature (docs/plans/utilities-vert-conversion-plan.md) must use the underlying libraries only (`@imagemagick/magick-wasm`, `@ffmpeg/ffmpeg` — Apache/LGPL/GPL-compatible) and must NEVER port or copy VERT's source code (its SvelteKit glue, converters, or UI) — importing AGPL code would force this entire repo to AGPL-3.0.
+
 ## Code Quality Rules (STRICT)
 
 These rules are mandatory. Follow them without exception.

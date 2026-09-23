@@ -33,6 +33,8 @@ describe('useAppEventBus', () => {
       setIsMediaPanelOpen: noopAny,
       setVideoPlayerUrl: noopAny,
       handleClipIdea: noopAny,
+      setEditorOpenPayload: noopAny,
+      setConverterOpenFiles: noopAny,
     }));
     expect(handlers['navigate'].length).toBeGreaterThanOrEqual(1);
     expect(handlers['sendToPromptsPage'].length).toBe(1);
@@ -51,6 +53,8 @@ describe('useAppEventBus', () => {
       setIsMediaPanelOpen: noopAny,
       setVideoPlayerUrl: noopAny,
       handleClipIdea: noopAny,
+      setEditorOpenPayload: noopAny,
+      setConverterOpenFiles: noopAny,
     }));
 
     handlers['navigate'].forEach((h) => h('dashboard'));
@@ -69,6 +73,8 @@ describe('useAppEventBus', () => {
       setIsMediaPanelOpen: noopAny,
       setVideoPlayerUrl: noopAny,
       handleClipIdea: noopAny,
+      setEditorOpenPayload: noopAny,
+      setConverterOpenFiles: noopAny,
     }));
 
     handlers['assistantFeedback'][0]({ message: 'hello', isError: true });
@@ -87,10 +93,35 @@ describe('useAppEventBus', () => {
       setIsMediaPanelOpen: noopAny,
       setVideoPlayerUrl,
       handleClipIdea: noopAny,
+      setEditorOpenPayload: noopAny,
+      setConverterOpenFiles: noopAny,
     }));
 
     handlers['playVideo'][0]({ url: 'https://example.com/video.mp4' });
     expect(setVideoPlayerUrl).toHaveBeenCalledWith('https://example.com/video.mp4');
+  });
+
+  it('openInConverter event queues files and navigates to converter', () => {
+    const handleNavigate = vi.fn();
+    const setConverterOpenFiles = vi.fn();
+    renderHook(() => useAppEventBus({
+      handleNavigate,
+      handleSendToPromptsPage: noopAny,
+      showGlobalFeedback: noopAny,
+      isCommandPaletteOpen: false,
+      setIsCommandPaletteOpen: noopAny,
+      setIsClippingPanelOpen: noopAny,
+      setIsMediaPanelOpen: noopAny,
+      setVideoPlayerUrl: noopAny,
+      handleClipIdea: noopAny,
+      setEditorOpenPayload: noopAny,
+      setConverterOpenFiles,
+    }));
+
+    const files = [new File(['a'], 'a.png'), new File(['b'], 'b.png')];
+    handlers['openInConverter'][0]({ files });
+    expect(setConverterOpenFiles).toHaveBeenCalledWith(files);
+    expect(handleNavigate).toHaveBeenCalledWith('converter');
   });
 
   it('clipIdea event calls handleClipIdea with synthesized Idea', () => {
@@ -105,6 +136,8 @@ describe('useAppEventBus', () => {
       setIsMediaPanelOpen: noopAny,
       setVideoPlayerUrl: noopAny,
       handleClipIdea,
+      setEditorOpenPayload: noopAny,
+      setConverterOpenFiles: noopAny,
     }));
 
     handlers['clipIdea'][0]({ prompt: 'A long prompt goes here', title: 'T', lens: 'L', source: 'S' });
@@ -128,6 +161,8 @@ describe('useAppEventBus', () => {
       setIsMediaPanelOpen: noopAny,
       setVideoPlayerUrl: noopAny,
       handleClipIdea,
+      setEditorOpenPayload: noopAny,
+      setConverterOpenFiles: noopAny,
     }));
 
     handlers['clipIdea'][0]({});
