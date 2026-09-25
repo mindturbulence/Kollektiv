@@ -337,17 +337,27 @@ describe('startKollektivMcp', () => {
     }
   });
 
-  it('handles OPTIONS preflight requests', async () => {
+  it('rejects browser-originated requests (no CORS, cross-site POST blocked)', async () => {
     const inst = await startKollektivMcp({
       vaultPath: '/mocked/vault',
       port: freePort,
     });
     try {
-      const res = await fetch(`http://127.0.0.1:${freePort}`, {
+      const preflight = await fetch(`http://127.0.0.1:${freePort}`, {
         method: 'OPTIONS',
+        headers: { Origin: 'https://evil.example' },
       });
-      expect(res.status).toBe(204);
-      expect(res.headers.get('access-control-allow-origin')).toBe('*');
+      expect(preflight.status).toBe(403);
+      expect(preflight.headers.get('access-control-allow-origin')).toBeNull();
+
+      // A CORS "simple request" executes server-side even without CORS headers —
+      // this is the drive-by path the guard exists for.
+      const simple = await fetch(`http://127.0.0.1:${freePort}`, {
+        method: 'POST',
+        headers: { Origin: 'https://evil.example', 'Content-Type': 'text/plain' },
+        body: JSON.stringify({ jsonrpc: '2.0', id: 1, method: 'tools/list' }),
+      });
+      expect(simple.status).toBe(403);
     } finally {
       await inst.stop();
     }

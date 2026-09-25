@@ -1,5 +1,8 @@
 # TODO: Assets Manager for Kollektiv (Utilities submenu)
 
+> **Cross-cutting (2026-09-24):** the [whole-app revision plan](2026-09-24-app-review-and-revision-plan.md) introduces a shared `Modal` (D2), font-size tokens (D1) and z-index tokens (D3). New Assets Manager UI (metadata panel, batch-rename preview, delete confirm) should use them rather than adding more hand-rolled overlays. Task 15's hard-delete double confirm must use the app modal, not `window.confirm`.
+
+
 Companion to `2026-09-23-assets-manager.md`. Check off as phases complete.
 
 ## Phase 1 — Foundation

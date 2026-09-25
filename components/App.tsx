@@ -146,20 +146,19 @@ const AppContent: React.FC = () => {
     const [editorOpenPayload, setEditorOpenPayload] = useState<EditorOpenPayload | undefined>(undefined);
     const [converterOpenFiles, setConverterOpenFiles] = useState<File[] | undefined>(undefined);
 
-    // Clear the one-shot open payload once the editor tab is left, so a later
-    // return via a plain nav link (Studio menu) starts blank instead of
-    // silently reloading whatever gallery item was last opened into it.
+    // Clear one-shot open payloads only when their tab is LEFT, so a later return
+    // via a plain nav link starts blank. Must key on the transition, not on
+    // "activeTab !== owner": the payload is set while still on the source tab and
+    // the director commits the new tab only after the cover animation, so a
+    // mismatch check wiped the payload before the target page ever mounted.
+    const prevTabRef = useRef(activeTab);
     useEffect(() => {
-        if (activeTab !== 'image_editor' && editorOpenPayload !== undefined) {
-            setEditorOpenPayload(undefined);
-        }
-    }, [activeTab, editorOpenPayload]);
-
-    useEffect(() => {
-        if (activeTab !== 'converter' && converterOpenFiles !== undefined) {
-            setConverterOpenFiles(undefined);
-        }
-    }, [activeTab, converterOpenFiles]);
+        const prev = prevTabRef.current;
+        prevTabRef.current = activeTab;
+        if (prev === activeTab) return;
+        if (prev === 'image_editor') setEditorOpenPayload(undefined);
+        if (prev === 'converter') setConverterOpenFiles(undefined);
+    }, [activeTab]);
 
     const currentTitle = useMemo(() => {
         const base = "KOLLEKTIV";

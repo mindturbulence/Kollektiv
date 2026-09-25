@@ -3,7 +3,8 @@
 // Reads the current foreground color from EditorStore only for the
 // 'blank' + background:'foreground' case — everything else is pure.
 
-import type { BlendMode, EditorDocument, EditorOpenPayload, ImageLayer } from '../types';
+import type { EditorDocument, EditorOpenPayload, ImageLayer } from '../types';
+import { LayerPainter } from '../renderer/LayerPainter';
 import { getSnapshot } from '../store';
 
 /** Builds a flat ImageLayer wrapping a decoded/generated ImageBitmap. */
@@ -83,8 +84,11 @@ export async function createBlankDocument(
   };
 }
 
-/** Resolves any EditorOpenPayload (gallery / blob / blank) into a complete EditorDocument. */
-export async function importFromPayload(payload: EditorOpenPayload): Promise<EditorDocument> {
+/** Resolves a blob/blank payload into a complete EditorDocument. Gallery payloads
+ *  are resolved to a blob by ui/GalleryBridge first — core never touches the vault. */
+export async function importFromPayload(
+  payload: Exclude<EditorOpenPayload, { kind: 'gallery' }>,
+): Promise<EditorDocument> {
   if (payload.kind === 'blank') {
     const foregroundColor =
       payload.background === 'foreground' ? getSnapshot().colors.foreground : undefined;
@@ -92,24 +96,17 @@ export async function importFromPayload(payload: EditorOpenPayload): Promise<Edi
   }
 
   let bitmap: ImageBitmap;
-  let title: string;
-
-  if (payload.kind === 'gallery') {
-    const response = await fetch(payload.url);
-    if (!response.ok) throw new Error(`Failed to fetch gallery image: ${response.status}`);
-    const blob = await response.blob();
-    bitmap = await createImageBitmap(blob);
-    title = 'Untitled';
-  } else {
+  try {
     bitmap = await createImageBitmap(payload.blob);
-    title = payload.title ?? 'Untitled';
+  } catch {
+    throw new Error(`Unsupported image format${payload.blob.type ? `: ${payload.blob.type}` : ''}`);
   }
 
   const layer = bitmapToLayer(bitmap, 'Background');
   const now = Date.now();
   return {
     id: crypto.randomUUID(),
-    title,
+    title: payload.title ?? 'Untitled',
     width: bitmap.width,
     height: bitmap.height,
     resolution: 72,
@@ -118,24 +115,11 @@ export async function importFromPayload(payload: EditorOpenPayload): Promise<Edi
     activeLayerId: layer.id,
     createdAt: now,
     updatedAt: now,
-    sourceGalleryItemId: payload.kind === 'gallery' ? payload.galleryItemId : undefined,
   };
 }
 
-/** Canvas2D has no 'normal' composite op — it's 'source-over'. V2-only modes
- *  (dissolve, linear-*, vivid-light, etc.) have no native equivalent yet and
- *  fall back to 'source-over' until the WebGL2 blend path lands. */
-function toCompositeOperation(blendMode: BlendMode): GlobalCompositeOperation {
-  if (blendMode === 'normal') return 'source-over';
-  const native: readonly string[] = [
-    'multiply', 'screen', 'overlay', 'darken', 'lighten',
-    'color-dodge', 'color-burn', 'hard-light', 'soft-light',
-    'difference', 'exclusion', 'hue', 'saturation', 'color', 'luminosity',
-  ];
-  return native.includes(blendMode) ? (blendMode as GlobalCompositeOperation) : 'source-over';
-}
-
-/** Flattens all visible layers into a single Blob for export/save. */
+/** Flattens the document exactly as the viewport shows it (groups, masks,
+ *  text/shape layers, native + WebGL2 blend modes) into a single Blob. */
 export async function exportToBlob(
   document: EditorDocument,
   format: 'png' | 'jpeg',
@@ -145,20 +129,23 @@ export async function exportToBlob(
   const ctx = oc.getContext('2d');
   if (!ctx) throw new Error('Failed to acquire 2D context for export');
 
-  // document.layers: index 0 = topmost — composite bottom-to-top.
-  for (const layer of [...document.layers].reverse()) {
-    if (!layer.visible || layer.type !== 'image') continue;
-    const { origin, size, rotation, flipH, flipV } = layer.transform;
-    ctx.save();
-    ctx.globalAlpha = layer.opacity / 100;
-    ctx.globalCompositeOperation = toCompositeOperation(layer.blendMode);
-    const cx = origin.x + size.width / 2;
-    const cy = origin.y + size.height / 2;
-    ctx.translate(cx, cy);
-    if (rotation) ctx.rotate((rotation * Math.PI) / 180);
-    ctx.scale(flipH ? -1 : 1, flipV ? -1 : 1);
-    ctx.drawImage(layer.bitmap, -size.width / 2, -size.height / 2, size.width, size.height);
-    ctx.restore();
+  if (format === 'jpeg') {
+    // JPEG has no alpha; browsers flatten to black by default, the UI promises white.
+    ctx.fillStyle = '#ffffff';
+    ctx.fillRect(0, 0, document.width, document.height);
+  }
+
+  // Same cast CanvasRenderer uses for its offscreen scratch: the two context
+  // types share the drawing subset LayerPainter uses but aren't related in lib.dom.
+  const painterCtx = ctx as unknown as CanvasRenderingContext2D;
+  const painter = new LayerPainter(false);
+  try {
+    // document.layers: index 0 = topmost — composite bottom-to-top.
+    for (let i = document.layers.length - 1; i >= 0; i--) {
+      painter.drawLayer(painterCtx, document.layers[i]);
+    }
+  } finally {
+    painter.dispose();
   }
 
   return oc.convertToBlob({

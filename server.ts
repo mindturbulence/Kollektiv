@@ -12,7 +12,7 @@ import { isAllowedProxyTarget } from "./utils/proxyTargetValidation";
 import { chromeLauncher } from "./services/chromeLauncher";
 import { startKollektivMcp, type KollektivMcpInstance } from "./services/kollektivMcp";
 // Security and validation middleware
-import { securityHeaders, authRateLimiter, corsOptions } from "./src/middleware/security";
+import { securityHeaders, authRateLimiter, sameOriginGuard } from "./src/middleware/security";
 import { validate } from "./src/middleware/validate";
 // Route routers
 import reachRoutes from "./routes/reachRoutes";
@@ -73,16 +73,8 @@ async function startServer() {
   // Explicit opt-in only: HOST=0.0.0.0 for containerized/cloud runs. Never inferred from PORT.
   const HOST = process.env.HOST || "127.0.0.1";
 
-  // In development we relax cross‑origin restrictions to allow the frontend to
-  // communicate with the backend from any origin. In production you may want to
-  // reinstate a stricter check.
-  // This middleware simply passes through all requests.
-  app.use((_req, _res, next) => {
-    next();
-  });
-
   // Apply security middlewares
-  app.use(corsOptions);
+  app.use(sameOriginGuard(!["127.0.0.1", "localhost", "::1"].includes(HOST)));
   app.use(securityHeaders);
   // app.use(globalRateLimiter); // Disabled rate limiting per request
 
