@@ -1,7 +1,8 @@
 import React, { createContext, useContext, useRef, useState, useCallback, useEffect } from 'react';
-import { LiveAssistant, type LiveHandlers } from '../services/liveAssistantService';
-import { OpenAIRealtimeAssistant, type OpenAILiveHandlers } from '../services/openaiRealtimeService';
-import { ElevenLabsAssistant } from '../services/elevenLabsService';
+// Type-only: the voice backends (livekit, ElevenLabs, VAD/onnxruntime) load on first start().
+import type { LiveAssistant, LiveHandlers } from '../services/liveAssistantService';
+import type { OpenAIRealtimeAssistant, OpenAILiveHandlers } from '../services/openaiRealtimeService';
+import type { ElevenLabsAssistant } from '../services/elevenLabsService';
 import { useSettings } from './SettingsContext';
 import { appEventBus } from '../utils/eventBus';
 import { audioService } from '../services/audioService';
@@ -123,11 +124,22 @@ export const LiveAssistantProvider: React.FC<{ children: React.ReactNode }> = ({
             onTurnState: (state) => console.debug('[LiveAssistant] turn state:', state),
         };
 
-        const live = voiceProvider === 'openai_realtime'
-            ? new OpenAIRealtimeAssistant()
-            : voiceProvider === 'elevenlabs'
-                ? new ElevenLabsAssistant()
-                : new LiveAssistant();
+        let live: LiveAssistant | OpenAIRealtimeAssistant | ElevenLabsAssistant;
+        setStatus('connecting'); // cover the first-use chunk fetch so a second toggle means stop
+        try {
+            live = voiceProvider === 'openai_realtime'
+                ? new (await import('../services/openaiRealtimeService')).OpenAIRealtimeAssistant()
+                : voiceProvider === 'elevenlabs'
+                    ? new (await import('../services/elevenLabsService')).ElevenLabsAssistant()
+                    : new (await import('../services/liveAssistantService')).LiveAssistant();
+        } catch (e: any) {
+            if (!isStale()) {
+                setStatus('error');
+                setError(e?.message || 'Failed to load voice assistant');
+            }
+            return;
+        }
+        if (isStale()) return; // toggled away while the chunk was loading; nothing to tear down yet
         liveRef.current = live;
         try {
             await live.connect(settings, handlers as any);
