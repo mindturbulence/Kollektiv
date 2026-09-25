@@ -546,13 +546,13 @@ export const RefinerModifierControls: React.FC<RefinerModifierControlsProps> = (
                                             onRemove={() => { const next = [...referenceImages]; next[idx] = null; setReferenceImages(next); }} />
                                     ))}
                                 </div>
-                                <p className="text-[8px] font-bold text-base-content/60 uppercase leading-relaxed mt-auto">Grounding context for consistent subject or style preservation.</p>
+                                <p className="text-[8px] font-bold text-base-content/60 leading-relaxed mt-auto">Grounding context for consistent subject or style preservation.</p>
                             </div>
                         </>
                     ) : (
                         <div className="text-center py-20 opacity-20">
                             <Cog6ToothIcon className="w-12 h-12 mx-auto mb-4" />
-                            <p className="text-2xs font-normal text-xs font-sf-mono uppercase tracking-widest text-center">No platform extensions available</p>
+                            <p className="text-2xs font-normal text-xs font-sf-mono tracking-wide text-center">No platform extensions available</p>
                         </div>
                     )}
                 </div>

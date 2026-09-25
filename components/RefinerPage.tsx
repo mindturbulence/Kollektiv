@@ -689,7 +689,7 @@ const RefinerPage: React.FC<RefinerPageProps> = ({
                                                     </div>
                                                 )}
                                                 <div className="flex-grow flex flex-col space-y-3 min-h-[220px]">
-                                                    <span className="text-xs font-bold uppercase tracking-wider text-base-content/60">Word-by-Word Compare View</span>
+                                                    <span className="text-xs font-bold tracking-wide text-base-content/60">Word-by-word compare view</span>
                                                     <div className="flex-grow border border-base-content/10 bg-base-200/40 p-5 rounded font-mono text-sm md:text-base leading-relaxed overflow-y-auto selection:bg-primary/20">
                                                         {diffAnalysis && diffAnalysis.diff.map((token: any, idx: number) => {
                                                             if (token.type === 'added') return <span key={idx} className="bg-emerald-500/10 text-emerald-400 font-semibold px-1 rounded border border-emerald-500/15 inline-block m-[1px] transition-colors hover:bg-emerald-500/20" title="Added visual descriptor">{token.text}</span>;
@@ -697,7 +697,7 @@ const RefinerPage: React.FC<RefinerPageProps> = ({
                                                             return <span key={idx} className="text-base-content/80 inline-block m-[1px]">{token.text}</span>;
                                                         })}
                                                     </div>
-                                                    <div className="flex gap-6 text-2xs md:text-xs uppercase text-base-content/60 font-medium">
+                                                    <div className="flex gap-6 text-2xs md:text-xs text-base-content/60 font-medium">
                                                         <div className="flex items-center gap-1.5"><span className="w-3 h-3 bg-emerald-500/20 border border-emerald-500/45 rounded inline-block" /> ✨ New creative details added</div>
                                                         <div className="flex items-center gap-1.5"><span className="w-3 h-3 bg-error/20 border border-error/45 rounded inline-block" /> ✂️ Old words cleaned up / rewritten</div>
                                                     </div>

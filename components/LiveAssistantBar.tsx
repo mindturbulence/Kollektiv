@@ -64,7 +64,7 @@ export const LiveAssistantFault: React.FC<{ hidden?: boolean }> = ({ hidden = fa
                             <div className="flex-1 p-4 pr-10">
                                 <div className="flex items-center gap-2 mb-1">
                                     <AlertTriangleIcon className="w-4 h-4 text-error" />
-                                    <span className="text-2xs font-black uppercase tracking-[0.2em] text-error">SYSTEM FAULT</span>
+                                    <span className="text-2xs font-black uppercase tracking-[0.2em] text-error">Error</span>
                                 </div>
                                 <p className="text-2xs font-bold uppercase tracking-wider text-base-content/80 leading-relaxed">{error}</p>
                             </div>

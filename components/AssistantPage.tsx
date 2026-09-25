@@ -463,8 +463,8 @@ const AssistantPage: React.FC = () => {
             <AssistantBackdrop mode={displayMode} />
 
             {/* Status readouts, centered top and bottom */}
-            <div className="absolute top-4 inset-x-0 flex justify-center font-mono text-2xs tracking-[0.4em] uppercase text-base-content/60 pointer-events-none">
-                {status === 'live' ? 'UPLINK ACTIVE' : status.toUpperCase()}
+            <div className="absolute top-4 inset-x-0 flex justify-center font-mono text-2xs tracking-[0.2em] text-base-content/60 pointer-events-none">
+                {{ live: 'Connected', connecting: 'Connecting...', error: 'Error', idle: 'Idle' }[status]}
             </div>
             <div className="absolute bottom-4 inset-x-0 flex flex-col items-center gap-1 pointer-events-none">
                 {isPipSupported() && (
@@ -487,7 +487,7 @@ const AssistantPage: React.FC = () => {
 
             {status === 'error' ? (
                 <div className="relative z-10 flex flex-col items-center gap-6 max-w-3xl px-8 text-center">
-                    <p className="font-mono text-xl md:text-3xl tracking-[0.4em] uppercase text-error">SYSTEM FAULT</p>
+                    <p className="font-mono text-xl md:text-3xl tracking-[0.4em] uppercase text-error">Error</p>
                     <p className="font-mono text-2xs tracking-[0.2em] uppercase text-base-content/60 leading-relaxed">{error}</p>
                 </div>
             ) : (
@@ -513,7 +513,7 @@ const AssistantPage: React.FC = () => {
                             its position never shifts with the text's presence or
                             length. */}
                         {displayMode === 'connecting' && (
-                            <Stage text="ESTABLISHING UPLINK..." wordTime={450} />
+                            <Stage text="CONNECTING..." wordTime={450} />
                         )}
 
                         {displayMode === 'command' && (

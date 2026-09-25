@@ -406,7 +406,7 @@ const ImageCompare: React.FC<ImageCompareProps> = ({ isExiting = false }) => {
                             {!imageA || !imageB ? (
                                 <div className="w-full h-full flex flex-col items-center justify-center text-center p-12 opacity-60">
                                     <RefreshIcon className="w-24 h-24 mb-6" />
-                                    <p className="text-xl font-black uppercase tracking-widest">Awaiting Dual Input Sequence</p>
+                                    <p className="text-xl font-black tracking-wide">Add two images to compare</p>
                                 </div>
                             ) : viewMode === 'split' ? (
                                 <SplitView key="split" imageA={imageA} imageB={imageB} transform={transform} />
