@@ -23,6 +23,7 @@ interface HeaderProps {
   onStandbyClick: (e: React.MouseEvent) => void;
   clippedIdeasCount: number;
   onToggleChatPanel?: () => void;
+  onOpenCommandPalette?: () => void;
 }
 
 interface NavItemData {
@@ -120,9 +121,12 @@ const Header: React.FC<HeaderProps> = ({
   onToggleActivityPanel,
   onToggleChatPanel,
   onStandbyClick,
-  clippedIdeasCount
+  clippedIdeasCount,
+  onOpenCommandPalette
 }) => {
   const { settings } = useSettings();
+  // `prompts` renders the Crafter composer, so it lights up Crafter in the nav.
+  const navTab: ActiveTab = activeTab === 'prompts' ? 'crafter' : activeTab;
   const navRef = useRef<HTMLDivElement>(null);
   const [activeMenu, setActiveMenu] = useState<string | null>(null);
   const containerRefs = useRef<Record<string, HTMLDivElement | null>>({});
@@ -132,6 +136,7 @@ const Header: React.FC<HeaderProps> = ({
     { id: 'refiner' as ActiveTab, label: 'Refiner' },
     { id: 'prompt_analyzer' as ActiveTab, label: 'Analyzer' },
     { id: 'media_analyzer' as ActiveTab, label: 'Abstractor' },
+    { id: 'batch_runner', label: 'Batch' },
   ], []);
 
   const vaultItems = React.useMemo<NavItemData[]>(() => [
@@ -141,8 +146,6 @@ const Header: React.FC<HeaderProps> = ({
 
   const utilityItems = React.useMemo<NavItemData[]>(() => [
     { id: 'assets_manager' as ActiveTab, label: 'Assets' },
-    { id: 'composer' as ActiveTab, label: 'Composer' },
-    { id: 'image_compare' as ActiveTab, label: 'Compare' },
     { id: 'color_palette_extractor' as ActiveTab, label: 'Palette' },
     { id: 'resizer' as ActiveTab, label: 'Resizer' },
     { id: 'converter' as ActiveTab, label: 'Converter' },
@@ -151,6 +154,8 @@ const Header: React.FC<HeaderProps> = ({
 
   const studioItems = React.useMemo<NavItemData[]>(() => [
     { id: 'image_editor' as ActiveTab, label: 'Image Editor' },
+    { id: 'composer' as ActiveTab, label: 'Composer' },
+    { id: 'image_compare' as ActiveTab, label: 'Compare' },
     { id: 'lora_editor' as ActiveTab, label: 'LoRA Editor' },
     { id: 'comfy_studio' as ActiveTab, label: 'ComfyUI' },
     { id: 'a1111_studio' as ActiveTab, label: 'A1111' },
@@ -174,21 +179,21 @@ const Header: React.FC<HeaderProps> = ({
   const prevTabRef = React.useRef<ActiveTab | null>(null);
   useLayoutEffect(() => {
     const prevTab = prevTabRef.current;
-    prevTabRef.current = activeTab;
-    if (prevTab === activeTab) return; // same tab — activeMenu flip, not a navigation
+    prevTabRef.current = navTab;
+    if (prevTab === navTab) return; // same tab — activeMenu flip, not a navigation
     if (activeMenu) return;            // the user has a menu open — don't fight them
     const activeGroup = navGroups.find(g =>
-      (g.items && g.items.some(item => item.id === activeTab)) ||
-      (g.singleId === activeTab)
+      (g.items && g.items.some(item => item.id === navTab)) ||
+      (g.singleId === navTab)
     );
     if (activeGroup && !activeGroup.singleId) {
       setActiveMenu(activeGroup.id);
     }
-  }, [activeTab, activeMenu, navGroups]);
+  }, [navTab, activeMenu, navGroups]);
 
   const isGroupCurrent = (groupId: string) => {
     const group = navGroups.find(g => g.id === groupId);
-    return group?.items.some(item => item.id === activeTab);
+    return group?.items.some(item => item.id === navTab);
   };
 
   // Removed internal entry animation as it is now coordinated from App.tsx
@@ -323,6 +328,22 @@ const Header: React.FC<HeaderProps> = ({
             …
           </button>
           <div className={`${iconsOpen ? 'flex' : 'hidden'} xl:flex gap-1 items-center absolute xl:static top-full right-0 mt-2 xl:mt-0 p-1 xl:p-0 bg-base-200 xl:bg-transparent border border-base-content/10 xl:border-0 shadow-xl xl:shadow-none`}>
+            {onOpenCommandPalette && (
+              <>
+                <HUDNavItem
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    audioService.playClick();
+                    setIconsOpen(false);
+                    onOpenCommandPalette();
+                  }}
+                  title="Command palette (Ctrl+K)"
+                >
+                  <kbd className="font-rajdhani text-[10px] leading-none tracking-widest uppercase border border-primary/40 px-1 py-0.5">Ctrl K</kbd>
+                </HUDNavItem>
+                <div className="w-px h-2 bg-base-content/10 self-center" />
+              </>
+            )}
             <LiveAssistantScreenButton />
             <LiveAssistantCameraButton />
             <LiveAssistantControlButton />
@@ -431,7 +452,7 @@ const Header: React.FC<HeaderProps> = ({
                   key={item.id}
                   label={item.label}
                   isActive={isExpanded}
-                  isCurrent={activeTab === item.id}
+                  isCurrent={navTab === item.id}
                   onClick={() => onNavigate(item.id)}
                 />
               ))}

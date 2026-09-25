@@ -559,6 +559,7 @@ const AppContent: React.FC = () => {
                                 onToggleActivityPanel={handleToggleActivityPanel}
                                 onStandbyClick={goIdle}
                                 clippedIdeasCount={clippedIdeas.length + notesCount + filesCount}
+                                onOpenCommandPalette={() => setIsCommandPaletteOpen(true)}
                             />
                         </div>
 

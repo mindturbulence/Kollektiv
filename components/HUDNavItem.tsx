@@ -21,6 +21,7 @@ export const HUDNavItem: React.FC<{
       whileHover="hover"
       className="group relative p-2 text-primary no-glow transition-colors duration-300 pointer-events-auto z-[99999]"
       title={title}
+      aria-label={title}
     >
       {children}
 
