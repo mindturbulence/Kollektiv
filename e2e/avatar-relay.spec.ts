@@ -45,7 +45,10 @@ async function bootToAppShell(page: Page) {
     await expect(page.locator('.app-header')).toBeVisible({ timeout: 30_000 });
 }
 
-test.describe('Assistant avatar relay', () => {
+// FloatingAssistantAvatar was removed in 42aee0d (Sep 22): replaced by a
+// pop-out button on AssistantPage. These tests are skipped until the relay
+// protocol is re-tested against the new surface.
+test.describe.skip('Assistant avatar relay', () => {
     test('floating avatar widget mounts on the app shell', async ({ page }) => {
         await bootToAppShell(page);
         // Portal-rendered into <body>; identified by its aria-label.

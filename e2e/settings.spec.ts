@@ -12,6 +12,16 @@ async function bootToSettings(page: Page) {
             dir.requestPermission = async () => 'granted' as const;
             return dir;
         };
+        // Headless Chromium defaults to prefers-reduced-motion: reduce. The
+        // Settings panel uses framer-motion with opacity:0 initial state and
+        // animates to opacity:1. Without this patch the animation may not run,
+        // keeping SYSTEM HUB invisible indefinitely.
+        const realMatchMedia = window.matchMedia.bind(window);
+        window.matchMedia = (q: string) => {
+            const mql = realMatchMedia(q);
+            if (!q.includes('prefers-reduced-motion')) return mql;
+            return Object.create(mql, { matches: { value: false }, media: { value: q } });
+        };
     });
 
     await page.goto('/');
