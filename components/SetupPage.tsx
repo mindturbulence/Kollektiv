@@ -664,7 +664,7 @@ export const SetupPage: React.FC<SetupPageProps> = ({
         <>
             <motion.section
                 variants={panelVariants}
-                initial="hidden"
+                initial={false}
                 animate={isExiting ? "exit" : "visible"}
                 custom={0.4}
                 className="w-full h-full"
