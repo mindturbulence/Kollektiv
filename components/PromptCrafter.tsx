@@ -775,7 +775,7 @@ const PromptCrafter = ({ onSaveToLibrary, onClip, onSendToEnhancer, onSendToRefi
                                         setPromptText('');
                                     }}
                                     onMouseEnter={() => audioService.playHover()}
-                                    className="font-sf-mono text-2xs tracking-widest text-base-content/40 hover:text-base-content transition-all bg-base-100/5 px-2 py-1.5 hover:bg-base-100/10"
+                                    className="font-sf-mono text-2xs tracking-widest text-base-content/60 hover:text-base-content transition-all bg-base-100/5 px-2 py-1.5 hover:bg-base-100/10"
                                 >
                                     CLEAR
                                 </button>
@@ -820,7 +820,7 @@ const PromptCrafter = ({ onSaveToLibrary, onClip, onSendToEnhancer, onSendToRefi
                                         audioService.playClick();
                                         setSelectedRecipeId('');
                                     }}
-                                    className="text-2xs font-sf-mono tracking-wider text-base-content/40 hover:text-base-content"
+                                    className="text-2xs font-sf-mono tracking-wider text-base-content/60 hover:text-base-content"
                                 >
                                     RELEASE FORMULA (KEEP TEXT)
                                 </button>
@@ -846,7 +846,7 @@ const PromptCrafter = ({ onSaveToLibrary, onClip, onSendToEnhancer, onSendToRefi
 
                         {/* Generative Media Skill Toggles */}
                         <div className="px-6 py-3 bg-base-100/5 border-b border-primary/10 flex flex-col sm:flex-row gap-4 items-start sm:items-center justify-between z-20 relative">
-                            <span className="text-2xs font-black uppercase tracking-wider text-base-content/50">Add Creative Enhancers:</span>
+                            <span className="text-2xs font-black uppercase tracking-wider text-base-content/60">Add Creative Enhancers:</span>
                             <div className="flex flex-wrap gap-4">
                                 <label className="flex items-center gap-2 cursor-pointer group select-none relative" title="Describe dynamic movement sequencing across time keys for video clips">
                                     <input 
@@ -957,7 +957,7 @@ const PromptCrafter = ({ onSaveToLibrary, onClip, onSendToEnhancer, onSendToRefi
                                     </div>
                                 </div>
                             ) : (
-                                <div className="h-full flex flex-col items-center justify-center text-center opacity-10">
+                                <div className="h-full flex flex-col items-center justify-center text-center opacity-60">
                                     <SparklesIcon className="w-16 h-16 mx-auto mb-4" />
                                     <p className="text-xl text-xs font-sf-mono uppercase tracking-widest">Awaiting generated prompt</p>
                                 </div>
@@ -1081,7 +1081,7 @@ const PromptCrafter = ({ onSaveToLibrary, onClip, onSendToEnhancer, onSendToRefi
                                 />
                             ))
                         ) : (
-                            <div className="h-full flex flex-col items-center justify-center text-center opacity-10">
+                            <div className="h-full flex flex-col items-center justify-center text-center opacity-60">
                                 <SparklesIcon className="w-12 h-12 mb-4" />
                                 <p className="text-2xs text-xs font-sf-mono uppercase tracking-widest leading-relaxed">Generated prompts mapped to session index will appear here</p>
                             </div>
@@ -1101,11 +1101,11 @@ const PromptCrafter = ({ onSaveToLibrary, onClip, onSendToEnhancer, onSendToRefi
                         <div className="bg-base-100/40 backdrop-blur-xl rounded-none w-full overflow-hidden relative z-10">
                             <header className="px-8 py-6 panel-header">
                                 <h3 className="text-2xl font-black tracking-tighter text-base-content leading-none uppercase">SAVE TEMPLATE<span className="text-primary">.</span></h3>
-                                <p className="text-2xs font-normal text-xs font-sf-mono uppercase tracking-widest text-base-content/30 mt-1.5">Preset Registration</p>
+                                <p className="text-2xs font-normal text-xs font-sf-mono uppercase tracking-widest text-base-content/60 mt-1.5">Preset Registration</p>
                             </header>
                             <div className="p-8">
                                 <div className="form-control">
-                                    <label className="text-2xs font-black uppercase tracking-[0.2em] text-base-content/40 mb-2">Template Identity</label>
+                                    <label className="text-2xs font-black uppercase tracking-[0.2em] text-base-content/60 mb-2">Template Identity</label>
                                     <input
                                         type="text"
                                         value={templateName}

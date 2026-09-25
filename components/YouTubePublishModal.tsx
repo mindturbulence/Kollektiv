@@ -78,7 +78,7 @@ const YouTubePublishModal: React.FC<YouTubePublishModalProps> = ({
                           PUBLISH<span className="text-primary">.</span>
                       </h3>
                   </div>
-                  <p className="text-2xs font-black uppercase tracking-[0.4em] text-base-content/30 mt-1.5">External Repository Uplink</p>
+                  <p className="text-2xs font-black uppercase tracking-[0.4em] text-base-content/60 mt-1.5">External Repository Uplink</p>
               </div>
               <button onClick={onClose} className="p-2 text-error/30 hover:text-error transition-all hover:scale-110">
                   <CloseIcon className="w-5 h-5" />
@@ -93,15 +93,15 @@ const YouTubePublishModal: React.FC<YouTubePublishModalProps> = ({
                  <div className="flex justify-between items-end"><span className="text-2xs font-black uppercase tracking-widest text-primary">Transmitting Payload</span><span className="text-sm font-mono font-bold">{Math.round(progress)}%</span></div>
                  <progress className="progress progress-primary w-full h-1" value={progress} max="100"></progress>
               </div>
-              <p className="text-2xs font-black uppercase tracking-[0.3em] text-base-content/40 animate-pulse">DO NOT INTERRUPT SIGNAL</p>
+              <p className="text-2xs font-black uppercase tracking-[0.3em] text-base-content/60 animate-pulse">DO NOT INTERRUPT SIGNAL</p>
             </div>
           ) : (
             <>
-              <div className="form-control"><label className="text-2xs font-black uppercase tracking-[0.2em] text-base-content/40 mb-3">Transmission ID</label><input type="text" value={title} onChange={e => setTitle(e.target.value)} className="form-input w-full uppercase" placeholder="ENTER TITLE..." /></div>
-              <div className="form-control"><label className="text-2xs font-black uppercase tracking-[0.2em] text-base-content/40 mb-3">Metadata Packet</label><textarea value={description} onChange={e => setDescription(e.target.value)} className="form-textarea w-full min-h-[120px]" placeholder="ENTER DESCRIPTION..." /></div>
+              <div className="form-control"><label className="text-2xs font-black uppercase tracking-[0.2em] text-base-content/60 mb-3">Transmission ID</label><input type="text" value={title} onChange={e => setTitle(e.target.value)} className="form-input w-full uppercase" placeholder="ENTER TITLE..." /></div>
+              <div className="form-control"><label className="text-2xs font-black uppercase tracking-[0.2em] text-base-content/60 mb-3">Metadata Packet</label><textarea value={description} onChange={e => setDescription(e.target.value)} className="form-textarea w-full min-h-[120px]" placeholder="ENTER DESCRIPTION..." /></div>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6 animate-fade-in">
                   <div className="form-control">
-                      <label className="text-2xs font-black uppercase tracking-[0.2em] text-base-content/40 mb-3">Signal Visibility</label>
+                      <label className="text-2xs font-black uppercase tracking-[0.2em] text-base-content/60 mb-3">Signal Visibility</label>
                       <div className="form-tab-group">
                           <button onClick={() => setPrivacy('public')} className={`form-tab-item ${privacy === 'public' ? 'active' : ''}`}>PUBLIC</button>
                           <button onClick={() => setPrivacy('unlisted')} className={`form-tab-item border-x border-base-300 ${privacy === 'unlisted' ? 'active' : ''}`}>UNLISTED</button>
@@ -109,7 +109,7 @@ const YouTubePublishModal: React.FC<YouTubePublishModalProps> = ({
                       </div>
                   </div>
                   <div className="form-control">
-                      <label className="text-2xs font-black uppercase tracking-[0.2em] text-base-content/40 mb-3">Protocol Format</label>
+                      <label className="text-2xs font-black uppercase tracking-[0.2em] text-base-content/60 mb-3">Protocol Format</label>
                       <div className="form-tab-group">
                           <button onClick={() => setPublishAsShorts(false)} className={`form-tab-item ${!publishAsShorts ? 'active' : ''}`}>STANDARD</button>
                           <button onClick={() => setPublishAsShorts(true)} className={`form-tab-item border-l border-base-300 ${publishAsShorts ? 'active' : ''}`}>REEL</button>

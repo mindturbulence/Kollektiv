@@ -275,11 +275,11 @@ const TransitionOverlay = forwardRef<TransitionOverlayHandle>((_props, ref) => {
 
                 <div ref={glyphRef} className="text-3xl text-primary/80 fx-hud-blink font-mono" />
                 <div ref={nameRef} className="text-lg md:text-2xl font-black uppercase tracking-[0.5em] text-base-content font-mono" />
-                <div ref={subRef} className="text-2xs uppercase tracking-[0.35em] text-base-content/40 font-mono" />
+                <div ref={subRef} className="text-2xs uppercase tracking-[0.35em] text-base-content/60 font-mono" />
                 <div className="w-48 h-px bg-base-content/10 mt-2 overflow-hidden">
                     <div ref={progressRef} className="fx-hud-progress w-full" style={{ transform: 'scaleX(0)' }} />
                 </div>
-                <div ref={hexRef} className="text-2xs tracking-[0.25em] text-primary/40 font-mono mt-1" />
+                <div ref={hexRef} className="text-2xs tracking-[0.25em] text-primary/60 font-mono mt-1" />
             </div>
         </div>
     );

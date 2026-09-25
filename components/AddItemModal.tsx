@@ -173,7 +173,7 @@ const modalContent = (
                   <h3 className="text-xl font-black tracking-tighter text-base-content leading-none">
                       IMPORT<span className="text-primary">.</span>
                   </h3>
-                  <p className="text-2xs font-black uppercase tracking-[0.4em] text-base-content/30 mt-1.5">Local Archival Accession</p>
+                  <p className="text-2xs font-black uppercase tracking-[0.4em] text-base-content/60 mt-1.5">Local Archival Accession</p>
               </div>
               <button onClick={onClose} className="p-2 text-error/30 hover:text-error transition-all hover:scale-110">
                   <CloseIcon className="w-5 h-5" />
@@ -187,9 +187,9 @@ const modalContent = (
                           onClick={() => (fileInputRef.current as any)?.click()}
                           className={`p-20 border-4 border-dashed rounded-none text-center cursor-pointer transition-all ${isDragging ? 'border-primary bg-primary/10' : 'border-base-300 hover:border-primary/50 bg-transparent'}`}
                       >
-                          <UploadIcon className="w-16 h-16 mx-auto text-base-content/20 mb-4"/>
-                          <p className="text-sm font-black uppercase tracking-[0.2em] text-base-content/40">Drop artifacts here or click to browse</p>
-                          <p className="text-2xs font-bold text-base-content/20 mt-4 uppercase">Batch processing enabled for image sequences</p>
+                          <UploadIcon className="w-16 h-16 mx-auto text-base-content/60 mb-4"/>
+                          <p className="text-sm font-black uppercase tracking-[0.2em] text-base-content/60">Drop artifacts here or click to browse</p>
+                          <p className="text-2xs font-bold text-base-content/60 mt-4 uppercase">Batch processing enabled for image sequences</p>
                       </div>
                   ) : (
                       <div className="grid grid-cols-2 sm:grid-cols-4 md:grid-cols-6 lg:grid-cols-8 gap-px bg-base-100/40 backdrop-blur-xl">
@@ -235,7 +235,7 @@ const modalContent = (
                           <button 
                               type="button" 
                               onClick={() => (fileInputRef.current as any)?.click()}
-                              className="aspect-square bg-transparent flex flex-col items-center justify-center text-base-content/20 hover:text-primary hover:bg-primary/10 transition-all group border-2 border-dashed border-transparent hover:border-primary/50"
+                              className="aspect-square bg-transparent flex flex-col items-center justify-center text-base-content/60 hover:text-primary hover:bg-primary/10 transition-all group border-2 border-dashed border-transparent hover:border-primary/50"
                           >
                               <UploadIcon className="w-8 h-8 mb-2 group-hover:scale-110 transition-transform"/>
                               <span className="text-[8px] font-black uppercase tracking-widest">Add more</span>
@@ -249,11 +249,11 @@ const modalContent = (
                       {/* Row 1: Title, Folder, NSFW */}
                       <div className="flex flex-col md:flex-row gap-4 items-start md:items-end">
                           <div className="form-control flex-grow w-full">
-                              <label className="text-2xs font-black uppercase tracking-[0.2em] text-base-content/40 mb-2">Item Identity</label>
+                              <label className="text-2xs font-black uppercase tracking-[0.2em] text-base-content/60 mb-2">Item Identity</label>
                               <input type="text" value={title} onChange={(e) => setTitle((e.currentTarget as any).value)} className="form-input w-full" placeholder="Artifact title..." required />
                           </div>
                           <div className="form-control w-full md:w-[420px]">
-                              <label className="text-2xs font-black uppercase tracking-[0.2em] text-base-content/40 mb-2">Registry Folder</label>
+                              <label className="text-2xs font-black uppercase tracking-[0.2em] text-base-content/60 mb-2">Registry Folder</label>
                               <AutocompleteSelect 
                                 value={categoryId} 
                                 onChange={setCategoryId} 
@@ -264,14 +264,14 @@ const modalContent = (
                           <div className="form-control flex-shrink-0 h-10 flex justify-center mb-0 md:mb-1">
                               <label className="label cursor-pointer justify-start gap-3 p-0 hover:bg-primary/10 transition-colors px-3 h-full bg-base-100/40 backdrop-blur-xl">
                                   <input type="checkbox" checked={isNsfw} onChange={(e) => setIsNsfw((e.currentTarget as any).checked)} className="checkbox checkbox-primary rounded-none checkbox-sm" />
-                                  <span className="text-2xs font-black uppercase tracking-[0.2em] text-base-content/40">NSFW</span>
+                                  <span className="text-2xs font-black uppercase tracking-[0.2em] text-base-content/60">NSFW</span>
                               </label>
                           </div>
                       </div>
 
                       {/* Row 2: Tags */}
                       <div className="form-control">
-                          <label className="text-2xs font-black uppercase tracking-[0.2em] text-base-content/40 mb-2">Neural Tags</label>
+                          <label className="text-2xs font-black uppercase tracking-[0.2em] text-base-content/60 mb-2">Neural Tags</label>
                           <div className="flex flex-wrap items-center gap-2 p-3 bg-base-100/40 backdrop-blur-xl rounded-none min-h-[52px]">
                               {tags.map(tag => (
                                   <div key={tag} className="flex items-center gap-2 bg-base-100/40 backdrop-blur-xl text-2xs font-black uppercase tracking-widest px-2.5 py-1.5">
@@ -285,7 +285,7 @@ const modalContent = (
 
                       {/* Row 3: Notes */}
                       <div className="form-control">
-                          <label className="text-2xs font-black uppercase tracking-[0.2em] text-base-content/40 mb-2">Vault Documentation</label>
+                          <label className="text-2xs font-black uppercase tracking-[0.2em] text-base-content/60 mb-2">Vault Documentation</label>
                           <textarea value={notes} onChange={(e) => setNotes((e.currentTarget as any).value)} className="form-textarea w-full min-h-[120px]" placeholder="Archive additional details or prompt context..." />
                       </div>
                   </div>

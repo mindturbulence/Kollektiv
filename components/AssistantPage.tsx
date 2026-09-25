@@ -463,13 +463,13 @@ const AssistantPage: React.FC = () => {
             <AssistantBackdrop mode={displayMode} />
 
             {/* Status readouts, centered top and bottom */}
-            <div className="absolute top-4 inset-x-0 flex justify-center font-mono text-2xs tracking-[0.4em] uppercase text-base-content/30 pointer-events-none">
+            <div className="absolute top-4 inset-x-0 flex justify-center font-mono text-2xs tracking-[0.4em] uppercase text-base-content/60 pointer-events-none">
                 {status === 'live' ? 'UPLINK ACTIVE' : status.toUpperCase()}
             </div>
             <div className="absolute bottom-4 inset-x-0 flex flex-col items-center gap-1 pointer-events-none">
                 {isPipSupported() && (
                     <button
-                        className="font-mono text-2xs tracking-[0.4em] uppercase text-base-content/30 hover:text-primary cursor-pointer pointer-events-auto transition-colors"
+                        className="font-mono text-2xs tracking-[0.4em] uppercase text-base-content/60 hover:text-primary cursor-pointer pointer-events-auto transition-colors"
                         onClick={async () => {
                             audioService.playClick();
                             try { await openAssistantPip(); }
@@ -480,7 +480,7 @@ const AssistantPage: React.FC = () => {
                         POP OUT
                     </button>
                 )}
-                <span className="font-mono text-2xs tracking-[0.4em] uppercase text-base-content/30">
+                <span className="font-mono text-2xs tracking-[0.4em] uppercase text-base-content/60">
                     CTRL+SPACE TO END
                 </span>
             </div>
@@ -488,7 +488,7 @@ const AssistantPage: React.FC = () => {
             {status === 'error' ? (
                 <div className="relative z-10 flex flex-col items-center gap-6 max-w-3xl px-8 text-center">
                     <p className="font-mono text-xl md:text-3xl tracking-[0.4em] uppercase text-error">SYSTEM FAULT</p>
-                    <p className="font-mono text-2xs tracking-[0.2em] uppercase text-base-content/50 leading-relaxed">{error}</p>
+                    <p className="font-mono text-2xs tracking-[0.2em] uppercase text-base-content/60 leading-relaxed">{error}</p>
                 </div>
             ) : (
                 <AnimatePresence mode="popLayout">

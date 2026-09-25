@@ -156,7 +156,7 @@ const CommandPalette: React.FC<CommandPaletteProps> = ({ isOpen, onClose }) => {
           >
             {/* Search input */}
             <div className="flex items-center gap-3 px-5 py-3 border-b border-base-content/10">
-              <svg className="w-4 h-4 text-base-content/30 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+              <svg className="w-4 h-4 text-base-content/60 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                 <path strokeLinecap="round" strokeLinejoin="round" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
               </svg>
               <input
@@ -174,13 +174,13 @@ const CommandPalette: React.FC<CommandPaletteProps> = ({ isOpen, onClose }) => {
                 aria-autocomplete="list"
                 aria-activedescendant={totalResults[selectedIndex] ? `cmd-option-${selectedIndex}` : undefined}
               />
-              <kbd className="text-2xs font-mono uppercase tracking-widest text-base-content/20 border border-base-content/10 px-1.5 py-0.5">⌘K</kbd>
+              <kbd className="text-2xs font-mono uppercase tracking-widest text-base-content/60 border border-base-content/10 px-1.5 py-0.5">⌘K</kbd>
             </div>
 
             {/* Results */}
             <div ref={listRef} id="command-palette-listbox" role="listbox" className="max-h-[400px] overflow-y-auto custom-scrollbar py-2">
               {grouped.length === 0 && vaultLoading ? (
-                <div className="px-5 py-8 text-center text-xs font-mono text-base-content/20 uppercase tracking-widest flex flex-col items-center gap-3">
+                <div className="px-5 py-8 text-center text-xs font-mono text-base-content/60 uppercase tracking-widest flex flex-col items-center gap-3">
                   <span className="relative flex h-2.5 w-2.5">
                     <span className="absolute inline-flex h-full w-full rounded-full bg-primary opacity-60 animate-ping" />
                     <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-primary" />
@@ -188,13 +188,13 @@ const CommandPalette: React.FC<CommandPaletteProps> = ({ isOpen, onClose }) => {
                   searching vault…
                 </div>
               ) : grouped.length === 0 ? (
-                <div className="px-5 py-8 text-center text-xs font-mono text-base-content/20 uppercase tracking-widest">
+                <div className="px-5 py-8 text-center text-xs font-mono text-base-content/60 uppercase tracking-widest">
                   No matching commands
                 </div>
               ) : (
                 grouped.map(([category, commands]) => (
                   <div key={category}>
-                    <div className="px-5 py-1.5 text-2xs font-black uppercase tracking-[0.2em] text-base-content/20">
+                    <div className="px-5 py-1.5 text-2xs font-black uppercase tracking-[0.2em] text-base-content/60">
                       {category}
                     </div>
                     {commands.map((cmd) => {
@@ -217,11 +217,11 @@ const CommandPalette: React.FC<CommandPaletteProps> = ({ isOpen, onClose }) => {
                           <span className="flex flex-col flex-1 min-w-0">
                             <span className="text-sm font-medium truncate">{cmd.label}</span>
                             {cmd.detail && (
-                              <span className="text-2xs font-mono text-base-content/30 truncate">{cmd.detail}</span>
+                              <span className="text-2xs font-mono text-base-content/60 truncate">{cmd.detail}</span>
                             )}
                           </span>
                           {cmd.shortcut && (
-                            <kbd className="text-2xs font-mono text-base-content/20 border border-base-content/10 px-1.5 py-0.5 shrink-0">
+                            <kbd className="text-2xs font-mono text-base-content/60 border border-base-content/10 px-1.5 py-0.5 shrink-0">
                               {cmd.shortcut}
                             </kbd>
                           )}
@@ -234,7 +234,7 @@ const CommandPalette: React.FC<CommandPaletteProps> = ({ isOpen, onClose }) => {
             </div>
 
             {/* Footer hint */}
-            <div className="flex items-center gap-4 px-5 py-2 border-t border-base-content/5 text-2xs font-mono text-base-content/20">
+            <div className="flex items-center gap-4 px-5 py-2 border-t border-base-content/5 text-2xs font-mono text-base-content/60">
               <span>↑↓ Navigate</span>
               <span>↵ Execute</span>
               <span>Esc Close</span>

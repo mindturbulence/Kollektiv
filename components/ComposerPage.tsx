@@ -480,11 +480,11 @@ const ComposerPage: React.FC<ComposerPageProps> = ({ showGlobalFeedback, isExiti
                 <aside className="w-full lg:w-96 flex-shrink-0 flex flex-col relative p-[3px] corner-frame overflow-visible z-10">
                     <div className="flex flex-col h-full w-full overflow-hidden relative z-10 bg-base-100/40 backdrop-blur-xl">
                         <div className="h-14 flex items-stretch flex-shrink-0 bg-base-100/10 backdrop-blur-md p-1.5 gap-1.5">
-                            <button onClick={() => setMode('grid')} className={`btn btn-sm h-full rounded-none flex-1 font-normal text-2xs tracking-wider uppercase px-1 truncate btn-snake font-display no-glow ${mode === 'grid' ? 'btn-ghost text-primary font-black active:no-glow' : 'btn-ghost text-base-content/40 hover:text-primary hover:no-glow'}`}>
+                            <button onClick={() => setMode('grid')} className={`btn btn-sm h-full rounded-none flex-1 font-normal text-2xs tracking-wider uppercase px-1 truncate btn-snake font-display no-glow ${mode === 'grid' ? 'btn-ghost text-primary font-black active:no-glow' : 'btn-ghost text-base-content/60 hover:text-primary hover:no-glow'}`}>
                                 <span/><span/><span/><span/>
                                 GRID BUILDER
                             </button>
-                            <button onClick={() => setMode('frame')} className={`btn btn-sm h-full rounded-none flex-1 font-normal text-2xs tracking-wider uppercase px-1 truncate btn-snake font-display no-glow ${mode === 'frame' ? 'btn-ghost text-primary font-black active:no-glow' : 'btn-ghost text-base-content/40 hover:text-primary hover:no-glow'}`}>
+                            <button onClick={() => setMode('frame')} className={`btn btn-sm h-full rounded-none flex-1 font-normal text-2xs tracking-wider uppercase px-1 truncate btn-snake font-display no-glow ${mode === 'frame' ? 'btn-ghost text-primary font-black active:no-glow' : 'btn-ghost text-base-content/60 hover:text-primary hover:no-glow'}`}>
                                 <span/><span/><span/><span/>
                                 IMAGE FRAMER
                             </button>
@@ -492,7 +492,7 @@ const ComposerPage: React.FC<ComposerPageProps> = ({ showGlobalFeedback, isExiti
                         
                         <div className="flex-grow p-6 space-y-8 overflow-y-auto bg-transparent">
                             <div className="space-y-4">
-                                <label className="text-2xs font-black uppercase text-base-content/40 tracking-widest">Dimensions</label>
+                                <label className="text-2xs font-black uppercase text-base-content/60 tracking-widest">Dimensions</label>
                                 <select value={aspectRatio} onChange={e => { setAspectRatio(e.target.value); const ratio = RATIOS.find(r => r.value === e.target.value)?.ratio || 1; setHeight(String(Math.round((parseInt(width) || 1024) / ratio))); }} className="form-select w-full">
                                     {RATIOS.map(r => <option key={r.value} value={r.value}>{r.label}</option>)}
                                 </select>
@@ -506,29 +506,29 @@ const ComposerPage: React.FC<ComposerPageProps> = ({ showGlobalFeedback, isExiti
                             {mode === 'grid' ? (
                                 <div className="space-y-6 animate-fade-in">
                                     <div className="space-y-4">
-                                        <label className="text-2xs font-black uppercase text-base-content/40 tracking-widest">Grid Rows & Cols</label>
+                                        <label className="text-2xs font-black uppercase text-base-content/60 tracking-widest">Grid Rows & Cols</label>
                                         <div className="flex gap-4"><input type="number" value={gridCols} onChange={e => applyGridSize(Math.max(1, parseInt(e.target.value) || 1), gridRows)} className="form-input w-full" /><span className="self-center font-black opacity-20">×</span><input type="number" value={gridRows} onChange={e => applyGridSize(gridCols, Math.max(1, parseInt(e.target.value) || 1))} className="form-input w-full" /></div>
                                     </div>
                                     <div className="space-y-2">
-                                        <div className="flex justify-between items-center"><span className="text-2xs font-black uppercase text-base-content/20">Spacing</span><span className="text-2xs font-mono font-bold text-primary">{gridGap}PX</span></div>
+                                        <div className="flex justify-between items-center"><span className="text-2xs font-black uppercase text-base-content/60">Spacing</span><span className="text-2xs font-mono font-bold text-primary">{gridGap}PX</span></div>
                                         <input type="range" min="0" max="256" step="1" value={(() => { const tw = parseInt(width) || 1024; const maxGapPerGutter = getMaxGapPerGutter(tw, gridCols); return maxGapPerGutter > 0 ? Math.min(256, Math.round((gridGap / maxGapPerGutter) * 256)) : 0; })()} onChange={e => handleGapChange(parseInt(e.target.value))} className="range range-xs range-primary" />
                                     </div>
                                 </div>
                             ) : (
                                 <div className="space-y-6 animate-fade-in">
                                     <div className="space-y-4">
-                                        <label className="text-2xs font-black uppercase text-base-content/40 tracking-widest mb-2 block">Matting Style</label>
+                                        <label className="text-2xs font-black uppercase text-base-content/60 tracking-widest mb-2 block">Matting Style</label>
                                         <select value={frameStyle} onChange={e => setFrameStyle(e.target.value as FrameStyle)} className="form-select w-full"><option value="minimal">Minimal Uniform</option><option value="polaroid">Polaroid Weighted</option><option value="bottom_only">Gallery (Bottom Focus)</option><option value="leica">Leica Style</option><option value="vertical_mat">Vertical Offset</option></select>
                                     </div>
                                     <div className="space-y-2">
-                                        <div className="flex justify-between items-center"><span className="text-2xs font-black uppercase text-base-content/20">Depth</span><span className="text-2xs font-mono font-bold text-primary">{frameMatting}PX</span></div>
+                                        <div className="flex justify-between items-center"><span className="text-2xs font-black uppercase text-base-content/60">Depth</span><span className="text-2xs font-mono font-bold text-primary">{frameMatting}PX</span></div>
                                         <input type="range" min="0" max={Math.floor(parseInt(width)*0.25)} value={frameMatting} onChange={e => setFrameMatting(parseInt(e.target.value))} className="range range-xs range-primary" />
                                     </div>
                                 </div>
                             )}
 
                             <div className="space-y-4 pt-6 border-t border-base-300/20">
-                                <div className="flex justify-between items-center"><span className="text-2xs font-black uppercase text-base-content/40 tracking-widest">Background</span><input type="color" value={bgColor} onChange={e => setBgColor(e.target.value)} className="w-8 h-8 rounded-none border-none cursor-pointer" /></div>
+                                <div className="flex justify-between items-center"><span className="text-2xs font-black uppercase text-base-content/60 tracking-widest">Background</span><input type="color" value={bgColor} onChange={e => setBgColor(e.target.value)} className="w-8 h-8 rounded-none border-none cursor-pointer" /></div>
                                 <button onClick={() => { if(mode==='grid') setGridItems(prev => prev.map(i => i ? {...i, posX: 0, posY: 0, scale: 1} : null)); else { if(frameItem) setFrameItem({...frameItem, posX:0, posY:0, scale:1}); setLayers(prev => prev.map(s => ({...s, x:0.5, y:0.5}))); } }} className="form-btn btn-xs rounded-none w-full tracking-widest uppercase mt-4">Reset Viewport</button>
                             </div>
                         </div>
@@ -571,7 +571,7 @@ const ComposerPage: React.FC<ComposerPageProps> = ({ showGlobalFeedback, isExiti
                                 {mode === 'grid' && gridLayout && gridItems.map((item, idx) => (
                                     <div key={idx} className="absolute bg-transparent overflow-hidden" style={{ width: gridLayout.cw, height: gridLayout.ch, left: gridLayout.gap + (idx % gridCols) * (gridLayout.cw + gridLayout.gap), top: gridLayout.gap + Math.floor(idx / gridCols) * (gridLayout.ch + gridLayout.gap) }}>
                                         {item ? <ItemRenderer item={item} w={gridLayout.cw} h={gridLayout.ch} onRemove={() => setGridItems(prev => { const n = [...prev]; n[idx]=null; return n; })} onTransform={t => setGridItems(prev => { const n = [...prev]; n[idx]={...item, ...t}; return n; })} /> 
-                                        : <div className="w-full h-full flex flex-col items-center justify-center gap-2 opacity-10 hover:opacity-40 transition-opacity bg-base-200/30 rounded-md">
+                                        : <div className="w-full h-full flex flex-col items-center justify-center gap-2 opacity-60 hover:opacity-40 transition-opacity bg-base-200/30 rounded-md">
                                             <button onClick={() => { setPickerTarget(idx); setIsPickerOpen(true); }} className="btn btn-circle btn-sm bg-transparent border-none text-primary"><FolderClosedIcon className="w-8 h-8"/></button>
                                             <button onClick={() => { setPickerTarget(idx); gridFileInputRef.current?.click(); }} className="btn btn-circle btn-sm bg-transparent border-none text-primary"><PlusIcon className="w-8 h-8"/></button>
                                         </div>}
@@ -638,7 +638,7 @@ const ComposerPage: React.FC<ComposerPageProps> = ({ showGlobalFeedback, isExiti
                                     </div>
                                 ))}
                                 {layers.length === 0 && (
-                                    <div className="py-12 text-center opacity-10 uppercase font-black tracking-widest text-xs">No layers added</div>
+                                    <div className="py-12 text-center opacity-60 uppercase font-black tracking-widest text-xs">No layers added</div>
                                 )}
                             </div>
                         </div>

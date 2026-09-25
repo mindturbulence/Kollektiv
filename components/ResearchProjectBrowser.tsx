@@ -103,7 +103,7 @@ export const ResearchProjectBrowser: React.FC = () => {
             onClick={() => setIsCreating(true)}
             className="w-full border-2 border-dashed border-white/10 hover:border-primary/30 rounded-lg py-6 flex flex-col items-center gap-2 transition-colors group cursor-pointer"
           >
-            <PlusIcon className="w-5 h-5 text-primary/50 group-hover:text-primary/80 transition-colors" />
+            <PlusIcon className="w-5 h-5 text-primary/60 group-hover:text-primary/80 transition-colors" />
             <span className="text-xs font-mono uppercase tracking-wider opacity-40 group-hover:opacity-70 transition-colors">
               New Project
             </span>

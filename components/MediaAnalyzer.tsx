@@ -303,7 +303,7 @@ export const MediaAnalyzer: React.FC<MediaAnalyzerProps> = ({
                                             </div>
                                             <div className="flex flex-col gap-2">
                                                 <TerminalText text="Select Image or Video" delay={2.4} className="text-2xs font-black uppercase block" centered />
-                                                <TerminalText text="MP4, WEBM, JPG, PNG" delay={2.9} className="text-2xs font-bold text-base-content/40 uppercase block" centered />
+                                                <TerminalText text="MP4, WEBM, JPG, PNG" delay={2.9} className="text-2xs font-bold text-base-content/60 uppercase block" centered />
                                             </div>
                                         </div>
                                     ) : (
@@ -338,7 +338,7 @@ export const MediaAnalyzer: React.FC<MediaAnalyzerProps> = ({
                                     <div className="flex flex-col space-y-3 p-3 bg-base-content/5 rounded border border-base-content/5 animate-fade-in mt-2">
                                         <div className="flex justify-between items-center pb-1.5 border-b border-primary/10">
                                             <span className="text-2xs font-black uppercase tracking-wider text-primary">Kinematic Matcher</span>
-                                            <span className="text-[7px] font-mono text-base-content/30">Active: {selectedFrameTime.toFixed(1)}s</span>
+                                            <span className="text-[7px] font-mono text-base-content/60">Active: {selectedFrameTime.toFixed(1)}s</span>
                                         </div>
                                         
                                         {/* Timeline slots */}
@@ -362,7 +362,7 @@ export const MediaAnalyzer: React.FC<MediaAnalyzerProps> = ({
                                                         />
                                                     ) : (
                                                         <div className="w-full h-8 bg-black/40 rounded flex items-center justify-center border border-dashed border-base-content/10">
-                                                            <span className="text-[6px] font-mono text-base-content/30">EMPTY</span>
+                                                            <span className="text-[6px] font-mono text-base-content/60">EMPTY</span>
                                                         </div>
                                                     )}
                                                 </button>
@@ -474,9 +474,9 @@ export const MediaAnalyzer: React.FC<MediaAnalyzerProps> = ({
                             {metadataResults && (
                                 <button
                                     onClick={() => metadataResults && setActiveResultType('metadata')}
-                                    className="text-2xs font-black uppercase tracking-[0.4em] font-sf-mono text-primary/30 hover:text-primary/60 transition-colors"
+                                    className="text-2xs font-black uppercase tracking-[0.4em] font-sf-mono text-primary/60 hover:text-primary/60 transition-colors"
                                 >
-                                    <TerminalText text="METADATA" delay={2.2} className={activeResultType === 'metadata' ? 'text-primary' : 'text-primary/30'} />
+                                    <TerminalText text="METADATA" delay={2.2} className={activeResultType === 'metadata' ? 'text-primary' : 'text-primary/60'} />
                                 </button>
                             )}
                         </div>
@@ -534,7 +534,7 @@ export const MediaAnalyzer: React.FC<MediaAnalyzerProps> = ({
                                 >
                                     <section className="space-y-4">
                                         <div className="flex justify-between items-center">
-                                            <TerminalText text="POSITIVE PROMPT" delay={2.4} className="text-2xs font-black uppercase text-primary/40" />
+                                            <TerminalText text="POSITIVE PROMPT" delay={2.4} className="text-2xs font-black uppercase text-primary/60" />
                                             <div className="flex gap-1.5 h-8">
                                                 <button
                                                     onClick={() => onRefine(metadataResults.prompt)}
@@ -561,11 +561,11 @@ export const MediaAnalyzer: React.FC<MediaAnalyzerProps> = ({
 
                                     {filteredParams.length > 0 && (
                                         <section className="space-y-4 pt-6 panel-header">
-                                            <TerminalText text="TECHNICAL PARAMETERS" delay={2.6} className="text-2xs font-black uppercase text-primary/40" />
+                                            <TerminalText text="TECHNICAL PARAMETERS" delay={2.6} className="text-2xs font-black uppercase text-primary/60" />
                                             <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-x-4 gap-y-4">
                                                 {filteredParams.map(([key, val]) => (
                                                     <div key={key} className="flex flex-col border-b border-base-300/30 pb-2">
-                                                        <span className="text-[8px] font-black uppercase text-base-content/20 tracking-widest mb-1 truncate" title={key}>{key}</span>
+                                                        <span className="text-[8px] font-black uppercase text-base-content/60 tracking-widest mb-1 truncate" title={key}>{key}</span>
                                                         <span className="text-xs font-mono font-bold text-base-content/60 break-words">{val}</span>
                                                     </div>
                                                 ))}
@@ -575,7 +575,7 @@ export const MediaAnalyzer: React.FC<MediaAnalyzerProps> = ({
 
                                     <section className="space-y-4 pt-6 panel-header">
                                         <div className="flex justify-between items-center">
-                                            <TerminalText text="RAW STREAM" delay={2.8} className="text-2xs font-black uppercase text-base-content/20" />
+                                            <TerminalText text="RAW STREAM" delay={2.8} className="text-2xs font-black uppercase text-base-content/60" />
                                             <button
                                                 onClick={handleCopyRaw}
                                                 disabled={!metadataResults.raw && !metadataResults.workflow}
@@ -585,7 +585,7 @@ export const MediaAnalyzer: React.FC<MediaAnalyzerProps> = ({
                                                 {copiedRaw ? 'OK' : 'COPY'}
                                             </button>
                                         </div>
-                                        <div className="p-3 bg-transparent text-2xs font-mono text-base-content/30 break-words leading-relaxed max-h-32 overflow-y-auto">
+                                        <div className="p-3 bg-transparent text-2xs font-mono text-base-content/60 break-words leading-relaxed max-h-32 overflow-y-auto">
                                             {metadataResults.raw || 'EMPTY STREAM.'}
                                         </div>
                                     </section>
@@ -600,7 +600,7 @@ export const MediaAnalyzer: React.FC<MediaAnalyzerProps> = ({
                                     </div>
                                     <div className="flex flex-col gap-2">
                                         <TerminalText text="Awaiting Neural Input" delay={2.4} className="text-2xs font-black uppercase block" centered />
-                                        <TerminalText text="SYSTEM_IDLE_STATE" delay={2.9} className="text-2xs font-bold text-base-content/40 uppercase block" centered />
+                                        <TerminalText text="SYSTEM_IDLE_STATE" delay={2.9} className="text-2xs font-bold text-base-content/60 uppercase block" centered />
                                     </div>
                                 </motion.div>
                             )}

@@ -5,7 +5,7 @@ export const SettingRow: React.FC<{ label: string, desc?: string, children: Reac
     <div className="p-6 flex flex-col md:flex-row md:items-center justify-between gap-6 group hover:bg-base-200/30 transition-all">
         <div className="max-w-md min-w-0">
             <h4 className="text-sm font-black uppercase tracking-widest text-base-content/70 group-hover:text-primary transition-colors">{label}</h4>
-            {desc && <p className="text-2xs font-medium text-base-content/40 mt-1 uppercase leading-relaxed">{desc}</p>}
+            {desc && <p className="text-2xs font-medium text-base-content/60 mt-1 uppercase leading-relaxed">{desc}</p>}
         </div>
         <div className="flex-shrink-0 w-full md:w-auto">
             {children}
@@ -45,7 +45,7 @@ export const SetupNavItem: React.FC<SetupNavItemProps> = ({ label, icon, isActiv
 export const SettingsGroup: React.FC<{ title: string; children: React.ReactNode }> = ({ title, children }) => (
     <div className="mb-6">
         <div className="px-6 py-3 border-b border-base-content/10">
-            <h3 className="text-2xs font-black uppercase tracking-[0.3em] text-base-content/30">{title}</h3>
+            <h3 className="text-2xs font-black uppercase tracking-[0.3em] text-base-content/60">{title}</h3>
         </div>
         {children}
     </div>

@@ -21,7 +21,7 @@ const MetadataItem: React.FC<{ label: string; value: string }> = ({ label, value
     return (
         <div className="flex items-center gap-2">
             <span className={`arwes-label uppercase tracking-widest text-primary/60 leading-none inline-block ${fontClass}`}>{label}</span>
-            <span className={`uppercase tracking-widest text-base-content/40 leading-none inline-block ${fontClass}`}>{value}</span>
+            <span className={`uppercase tracking-widest text-base-content/60 leading-none inline-block ${fontClass}`}>{value}</span>
         </div>
     );
 };
@@ -59,7 +59,7 @@ const BatteryStatus: React.FC = () => {
     return (
         <div className="flex items-center gap-2">
             <span className={`arwes-label uppercase tracking-widest text-primary/60 leading-none inline-block ${fontClass}`}>PWR</span>
-            <span className={`uppercase tracking-widest text-base-content/40 leading-none inline-block ${fontClass}`}>
+            <span className={`uppercase tracking-widest text-base-content/60 leading-none inline-block ${fontClass}`}>
                 {battery.level}%
             </span>
         </div>
@@ -75,7 +75,7 @@ const IntegrationItem: React.FC<{
     const fontClass = isPipboyTheme ? 'font-fixedsys text-2xs' : 'font-rajdhani text-xs font-normal';
 
     return (
-        <span className={`uppercase tracking-widest transition-colors duration-500 leading-none inline-block ${fontClass} ${active ? 'text-base-content/40' : 'text-base-content/20'}`}>
+        <span className={`uppercase tracking-widest transition-colors duration-500 leading-none inline-block ${fontClass} ${active ? 'text-base-content/60' : 'text-base-content/60'}`}>
             {label}
         </span>
     );
@@ -302,7 +302,7 @@ const Footer: React.FC<FooterProps> = ({
                         className="flex items-center gap-2 group transition-all"
                     >
                         <span className={`arwes-label uppercase tracking-widest text-primary/60 group-hover:text-primary leading-none inline-block ${mainFontClass}`}>SFX</span>
-                        <span className={`uppercase tracking-widest leading-none inline-block ${audioEnabled ? 'text-base-content/40' : 'text-base-content/20'} ${mainFontClass}`}>{audioEnabled ? 'ON' : 'OFF'}</span>
+                        <span className={`uppercase tracking-widest leading-none inline-block ${audioEnabled ? 'text-base-content/60' : 'text-base-content/60'} ${mainFontClass}`}>{audioEnabled ? 'ON' : 'OFF'}</span>
                     </button>
 
                     <div className="w-[1px] h-3 bg-base-content/10" />
@@ -313,7 +313,7 @@ const Footer: React.FC<FooterProps> = ({
                         className="flex items-center gap-2 group transition-all"
                     >
                         <span className={`arwes-label uppercase tracking-widest text-primary/60 group-hover:text-primary leading-none inline-block ${mainFontClass}`}>MSC</span>
-                        <span className={`uppercase tracking-widest leading-none inline-block ${playerState === 'playing' ? 'text-base-content/40' : 'text-base-content/20'} ${mainFontClass}`}>
+                        <span className={`uppercase tracking-widest leading-none inline-block ${playerState === 'playing' ? 'text-base-content/60' : 'text-base-content/60'} ${mainFontClass}`}>
                             {playerState === 'playing' ? 'ON' : playerState === 'syncing' ? 'SYNC' : 'OFF'}
                         </span>
 

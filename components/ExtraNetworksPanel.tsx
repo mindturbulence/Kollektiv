@@ -48,7 +48,7 @@ const TabButton: React.FC<{ active: boolean; onClick: () => void; children: Reac
   <button
     onClick={onClick}
     className={`flex-1 h-full text-2xs font-black uppercase tracking-widest transition-colors ${
-      active ? 'text-primary' : 'text-base-content/30 hover:text-base-content/60'
+      active ? 'text-primary' : 'text-base-content/60 hover:text-base-content/60'
     }`}
   >
     {children}
@@ -60,7 +60,7 @@ const TabButton: React.FC<{ active: boolean; onClick: () => void; children: Reac
 const NetworkThumbnail: React.FC<{ candidates: string[]; alt: string }> = ({ candidates, alt }) => {
   const [idx, setIdx] = useState(0);
   if (idx >= candidates.length) {
-    return <span className="text-base-content/10 text-2xl select-none">◈</span>;
+    return <span className="text-base-content/60 text-2xl select-none">◈</span>;
   }
   return (
     <img
@@ -83,7 +83,7 @@ const NetworkCard: React.FC<{ label: string; title: string; onClick: () => void;
     className="group flex flex-col rounded border border-base-content/10 overflow-hidden cursor-pointer select-none hover:border-primary/40 hover:bg-primary/5 transition-colors"
   >
     <div className="w-full aspect-square bg-base-content/5 flex items-center justify-center overflow-hidden">
-      {thumbCandidates?.length ? <NetworkThumbnail candidates={thumbCandidates} alt={label} /> : <span className="text-base-content/10 text-2xl select-none">◈</span>}
+      {thumbCandidates?.length ? <NetworkThumbnail candidates={thumbCandidates} alt={label} /> : <span className="text-base-content/60 text-2xl select-none">◈</span>}
     </div>
     <div className="px-2 py-1.5">
       <span className="text-2xs font-black uppercase tracking-[0.1em] text-base-content/70 group-hover:text-primary break-words line-clamp-2">
@@ -135,7 +135,7 @@ const ExtraNetworksPanel: React.FC<ExtraNetworksPanelProps> = ({
               <button
                 onClick={onRefresh}
                 disabled={loading}
-                className="flex items-center justify-center text-base-content/40 hover:text-base-content transition-all bg-base-100/5 disabled:opacity-20 px-2 hover:bg-base-100/10 shrink-0"
+                className="flex items-center justify-center text-base-content/60 hover:text-base-content transition-all bg-base-100/5 disabled:opacity-20 px-2 hover:bg-base-100/10 shrink-0"
                 title={`Refresh ${activeTab === 'lora' ? 'LoRA' : 'textual inversion'} list from backend`}
               >
                 <RefreshIcon className={`w-3.5 h-3.5 ${loading ? 'animate-spin' : ''}`} />
@@ -148,16 +148,16 @@ const ExtraNetworksPanel: React.FC<ExtraNetworksPanelProps> = ({
               className="flex-grow overflow-y-auto custom-scrollbar p-3"
             >
               {loading ? (
-                <p className="text-2xs text-base-content/20 italic p-6 text-center">Loading…</p>
+                <p className="text-2xs text-base-content/60 italic p-6 text-center">Loading…</p>
               ) : activeTab === 'lora' ? (
                 loras.length === 0 ? (
-                  <p className="text-2xs text-base-content/20 italic p-6 text-center">No LoRAs found.</p>
+                  <p className="text-2xs text-base-content/60 italic p-6 text-center">No LoRAs found.</p>
                 ) : (
                   <div className="grid grid-cols-3 gap-2">
                     {groupByFolder(loras, (l) => l.alias).map(({ folder, items }) => (
                       <React.Fragment key={folder || '(root)'}>
                         {folder && (
-                          <div className="col-span-3 text-2xs font-black uppercase tracking-widest text-base-content/40 pt-2 first:pt-0 pb-1 truncate" title={folder}>
+                          <div className="col-span-3 text-2xs font-black uppercase tracking-widest text-base-content/60 pt-2 first:pt-0 pb-1 truncate" title={folder}>
                             {folder}
                           </div>
                         )}
@@ -175,13 +175,13 @@ const ExtraNetworksPanel: React.FC<ExtraNetworksPanelProps> = ({
                   </div>
                 )
               ) : embeddings.length === 0 ? (
-                <p className="text-2xs text-base-content/20 italic p-6 text-center">No embeddings found.</p>
+                <p className="text-2xs text-base-content/60 italic p-6 text-center">No embeddings found.</p>
               ) : (
                 <div className="grid grid-cols-3 gap-2">
                   {groupByFolder(embeddings, (name) => name).map(({ folder, items }) => (
                     <React.Fragment key={folder || '(root)'}>
                       {folder && (
-                        <div className="col-span-3 text-2xs font-black uppercase tracking-widest text-base-content/40 pt-2 first:pt-0 pb-1 truncate" title={folder}>
+                        <div className="col-span-3 text-2xs font-black uppercase tracking-widest text-base-content/60 pt-2 first:pt-0 pb-1 truncate" title={folder}>
                           {folder}
                         </div>
                       )}
@@ -207,7 +207,7 @@ const ExtraNetworksPanel: React.FC<ExtraNetworksPanelProps> = ({
               animate="visible"
               className="h-16 flex items-center flex-shrink-0 bg-base-100/80 backdrop-blur-md px-4 panel-header overflow-visible relative z-[800]"
             >
-              <span className="text-2xs font-black uppercase tracking-widest text-base-content/40">Extra Networks</span>
+              <span className="text-2xs font-black uppercase tracking-widest text-base-content/60">Extra Networks</span>
             </motion.header>
             <motion.div
               variants={pageBodyVariants}

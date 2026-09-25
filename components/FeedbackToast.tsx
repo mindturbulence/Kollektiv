@@ -79,7 +79,7 @@ const FeedbackToast: React.FC<FeedbackToastProps> = ({ isOpen, onClose, message,
                 onClick={onClose}
                 className="absolute top-2 right-2 p-1 hover:bg-base-content/10 transition-colors rounded-none"
               >
-                <CloseIcon className="w-3.5 h-3.5 text-base-content/40" />
+                <CloseIcon className="w-3.5 h-3.5 text-base-content/60" />
               </button>
 
               {/* Progress bar at bottom */}

@@ -26,7 +26,7 @@ const FallingText = () => {
             {drops.map((drop) => (
                 <motion.div
                     key={drop.id}
-                    className="absolute font-mono text-[8px] md:text-2xs text-primary/40 font-bold"
+                    className="absolute font-mono text-[8px] md:text-2xs text-primary/60 font-bold"
                     style={{ 
                         left: `${drop.x}%`, 
                         writingMode: 'vertical-rl', 

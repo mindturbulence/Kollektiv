@@ -113,7 +113,7 @@ const TransformControls: React.FC = () => {
   // image-only guard made them immovable from the header too).
   const layer = doc && activeLayerId ? findLayerById(doc.layers, activeLayerId) : undefined;
   if (!layer) {
-    return <span className="px-3 text-2xs font-mono text-base-content/50">Select a layer to transform</span>;
+    return <span className="px-3 text-2xs font-mono text-base-content/60">Select a layer to transform</span>;
   }
   const t = layer.transform;
   const setW = (v: number) => dispatch({ type: 'UPDATE_LAYER', layerId: layer.id, patch: { transform: { ...t, size: { ...t.size, width: Math.max(1, v) } } } });
@@ -145,7 +145,7 @@ const SelectionControls: React.FC = () => {
   const hasSelection = useSyncExternalStore(subscribe, () => getSnapshot().selection !== null);
   return (
     <div className="flex items-center gap-3 px-3">
-      <span className="text-2xs font-mono text-base-content/50">Drag to select · Hold Shift to add</span>
+      <span className="text-2xs font-mono text-base-content/60">Drag to select · Hold Shift to add</span>
       {hasSelection && (
         <button type="button" className="text-2xs font-mono text-base-content/60 hover:text-primary border border-base-content/15 hover:border-primary px-2 py-0.5" onClick={() => SelectionEngine.deselect()}>
           Deselect (Ctrl+D)
@@ -206,7 +206,7 @@ const ShapeControls: React.FC = () => {
 
   return (
     <div className="flex items-center gap-3 px-3">
-      <span className="text-2xs font-mono text-base-content/50">
+      <span className="text-2xs font-mono text-base-content/60">
         {kind === 'rect' ? 'Rectangle' : 'Ellipse'} · Drag to draw
       </span>
       <label className="flex items-center gap-1 text-2xs font-mono text-base-content/60">
@@ -255,7 +255,7 @@ const GradientControls: React.FC = () => {
   const kind = GradientTool.getKind();
   return (
     <div className="flex items-center gap-3 px-3">
-      <span className="text-2xs font-mono text-base-content/50">Drag to define gradient direction</span>
+      <span className="text-2xs font-mono text-base-content/60">Drag to define gradient direction</span>
       <div className="flex border border-base-content/20">
         {(['linear', 'radial'] as const).map(k => (
           <button key={k} type="button"
@@ -291,7 +291,7 @@ const ToolHeader: React.FC<ToolHeaderProps> = ({ viewportRef }) => {
       ) : activeTool === 'gradient' ? (
         <GradientControls />
       ) : (
-        <span className="px-3 text-2xs font-mono text-base-content/50 uppercase tracking-wide truncate">
+        <span className="px-3 text-2xs font-mono text-base-content/60 uppercase tracking-wide truncate">
           {TOOL_HINTS[activeTool] ?? 'No options for this tool'}
         </span>
       )}

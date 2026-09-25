@@ -54,7 +54,7 @@ export const ResearchSourcesPanel: React.FC = () => {
                 onClick={() => openPreview(s.path)}
                 className="flex items-center gap-2.5 truncate text-base-content/70 hover:text-base-content min-w-0"
               >
-                <BookOpenIcon className="w-3.5 h-3.5 shrink-0 text-primary/40" />
+                <BookOpenIcon className="w-3.5 h-3.5 shrink-0 text-primary/60" />
                 <span className="truncate">{s.title}</span>
               </button>
               <button

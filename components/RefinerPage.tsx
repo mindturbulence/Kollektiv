@@ -543,7 +543,7 @@ const RefinerPage: React.FC<RefinerPageProps> = ({
                                 key={tab.id}
                                 onClick={() => { audioService.playClick(); setActiveRefineSubTab(tab.id); }}
                                 onMouseEnter={() => audioService.playHover()}
-                                className={`btn btn-sm h-full rounded-none flex-1 font-normal text-xs tracking-widest uppercase px-1 truncate btn-snake font-display shadow-none drop-shadow-none ${activeRefineSubTab === tab.id ? 'btn-ghost text-primary no-glow' : 'btn-ghost text-base-content/40 hover:text-primary hover:no-glow'}`}
+                                className={`btn btn-sm h-full rounded-none flex-1 font-normal text-xs tracking-widest uppercase px-1 truncate btn-snake font-display shadow-none drop-shadow-none ${activeRefineSubTab === tab.id ? 'btn-ghost text-primary no-glow' : 'btn-ghost text-base-content/60 hover:text-primary hover:no-glow'}`}
                             >
                                 <span /><span /><span /><span />
                                 {tab.label}
@@ -604,7 +604,7 @@ const RefinerPage: React.FC<RefinerPageProps> = ({
                         </button>
                         <button data-ai-id="refiner-export-code" onClick={() => { audioService.playClick(); setIsCodeExportModalOpen(true); }}
                             disabled={!resultsRefine?.suggestions[0]}
-                            className="btn btn-sm btn-ghost h-full rounded-none flex-1 tracking-wider text-base-content/40 hover:text-primary border-1 btn-snake">
+                            className="btn btn-sm btn-ghost h-full rounded-none flex-1 tracking-wider text-base-content/60 hover:text-primary border-1 btn-snake">
                             <span /><span /><span /><span />EXPORT CODE
                         </button>
                         {isGoogleProduct && (
@@ -670,9 +670,9 @@ const RefinerPage: React.FC<RefinerPageProps> = ({
                                     <div className="p-5 md:p-5 lg:p-5 w-full animate-fade-in group flex flex-col h-full overflow-y-auto space-y-5">
                                         <div className="flex border-b border-base-content/10 gap-6 mb-1">
                                             <button onClick={() => { audioService.playClick(); setOutputTab('prose'); }}
-                                                className={`pb-2.5 text-xs md:text-sm font-bold uppercase tracking-wider transition-all relative ${outputTab === 'prose' ? 'text-primary border-b-2 border-primary' : 'text-base-content/30 hover:text-base-content/60'}`}>✨ Refined Prompt</button>
+                                                className={`pb-2.5 text-xs md:text-sm font-bold uppercase tracking-wider transition-all relative ${outputTab === 'prose' ? 'text-primary border-b-2 border-primary' : 'text-base-content/60 hover:text-base-content/60'}`}>✨ Refined Prompt</button>
                                             <button onClick={() => { audioService.playClick(); setOutputTab('diff'); }}
-                                                className={`pb-2.5 text-xs md:text-sm font-bold uppercase tracking-wider transition-all relative ${outputTab === 'diff' ? 'text-primary border-b-2 border-primary' : 'text-base-content/30 hover:text-base-content/60'}`}>🔍 Compare Changes</button>
+                                                className={`pb-2.5 text-xs md:text-sm font-bold uppercase tracking-wider transition-all relative ${outputTab === 'diff' ? 'text-primary border-b-2 border-primary' : 'text-base-content/60 hover:text-base-content/60'}`}>🔍 Compare Changes</button>
                                         </div>
                                         {outputTab === 'prose' ? (
                                             <div className="flex flex-col">
@@ -682,14 +682,14 @@ const RefinerPage: React.FC<RefinerPageProps> = ({
                                             <div className="flex-grow flex flex-col space-y-5 animate-fade-in h-full">
                                                 {diffAnalysis && (
                                                     <div className="grid grid-cols-2 md:grid-cols-4 gap-4 bg-base-content/5 p-4 rounded border border-base-content/5">
-                                                        <div className="flex flex-col justify-between"><span className="text-2xs md:text-xs font-bold uppercase tracking-wider text-base-content/60 leading-none mb-1.5">Original Idea Kept</span><span className="text-xl md:text-2xl font-bold font-mono text-primary leading-none mb-1">{diffAnalysis.metrics.semanticOverlap}%</span><span className="text-2xs md:text-xs text-base-content/40 font-medium leading-none">Kept your main concept</span></div>
-                                                        <div className="flex flex-col justify-between"><span className="text-2xs md:text-xs font-bold uppercase tracking-wider text-base-content/60 leading-none mb-1.5">Added Details</span><span className="text-xl md:text-2xl font-bold font-mono text-primary leading-none mb-1">{diffAnalysis.metrics.expansionRatio}x</span><span className="text-2xs md:text-xs text-base-content/40 font-medium leading-none">More descriptive words</span></div>
-                                                        <div className="flex flex-col justify-between"><span className="text-2xs md:text-xs font-bold uppercase tracking-wider text-base-content/60 leading-none mb.1.5">Style Quality</span><span className="text-xl md:text-2xl font-bold font-mono text-primary leading-none mb-1">{diffAnalysis.metrics.enrichmentPurity}%</span><span className="text-2xs md:text-xs text-base-content/40 font-medium leading-none">High-quality trigger tags</span></div>
-                                                        <div className="flex flex-col justify-between"><span className="text-2xs md:text-xs font-bold uppercase tracking-wider text-base-content/60 leading-none mb-1.5">Aesthetic Upgrade</span><span className="text-xl md:text-2xl font-bold font-mono text-primary leading-none mb-1">{diffAnalysis.metrics.aestheticImprovement}%</span><span className="text-2xs md:text-xs text-base-content/40 font-medium leading-none">Our computed rating</span></div>
+                                                        <div className="flex flex-col justify-between"><span className="text-2xs md:text-xs font-bold uppercase tracking-wider text-base-content/60 leading-none mb-1.5">Original Idea Kept</span><span className="text-xl md:text-2xl font-bold font-mono text-primary leading-none mb-1">{diffAnalysis.metrics.semanticOverlap}%</span><span className="text-2xs md:text-xs text-base-content/60 font-medium leading-none">Kept your main concept</span></div>
+                                                        <div className="flex flex-col justify-between"><span className="text-2xs md:text-xs font-bold uppercase tracking-wider text-base-content/60 leading-none mb-1.5">Added Details</span><span className="text-xl md:text-2xl font-bold font-mono text-primary leading-none mb-1">{diffAnalysis.metrics.expansionRatio}x</span><span className="text-2xs md:text-xs text-base-content/60 font-medium leading-none">More descriptive words</span></div>
+                                                        <div className="flex flex-col justify-between"><span className="text-2xs md:text-xs font-bold uppercase tracking-wider text-base-content/60 leading-none mb.1.5">Style Quality</span><span className="text-xl md:text-2xl font-bold font-mono text-primary leading-none mb-1">{diffAnalysis.metrics.enrichmentPurity}%</span><span className="text-2xs md:text-xs text-base-content/60 font-medium leading-none">High-quality trigger tags</span></div>
+                                                        <div className="flex flex-col justify-between"><span className="text-2xs md:text-xs font-bold uppercase tracking-wider text-base-content/60 leading-none mb-1.5">Aesthetic Upgrade</span><span className="text-xl md:text-2xl font-bold font-mono text-primary leading-none mb-1">{diffAnalysis.metrics.aestheticImprovement}%</span><span className="text-2xs md:text-xs text-base-content/60 font-medium leading-none">Our computed rating</span></div>
                                                     </div>
                                                 )}
                                                 <div className="flex-grow flex flex-col space-y-3 min-h-[220px]">
-                                                    <span className="text-xs font-bold uppercase tracking-wider text-base-content/50">Word-by-Word Compare View</span>
+                                                    <span className="text-xs font-bold uppercase tracking-wider text-base-content/60">Word-by-Word Compare View</span>
                                                     <div className="flex-grow border border-base-content/10 bg-base-200/40 p-5 rounded font-mono text-sm md:text-base leading-relaxed overflow-y-auto selection:bg-primary/20">
                                                         {diffAnalysis && diffAnalysis.diff.map((token: any, idx: number) => {
                                                             if (token.type === 'added') return <span key={idx} className="bg-emerald-500/10 text-emerald-400 font-semibold px-1 rounded border border-emerald-500/15 inline-block m-[1px] transition-colors hover:bg-emerald-500/20" title="Added visual descriptor">{token.text}</span>;
@@ -697,7 +697,7 @@ const RefinerPage: React.FC<RefinerPageProps> = ({
                                                             return <span key={idx} className="text-base-content/80 inline-block m-[1px]">{token.text}</span>;
                                                         })}
                                                     </div>
-                                                    <div className="flex gap-6 text-2xs md:text-xs uppercase text-base-content/40 font-medium">
+                                                    <div className="flex gap-6 text-2xs md:text-xs uppercase text-base-content/60 font-medium">
                                                         <div className="flex items-center gap-1.5"><span className="w-3 h-3 bg-emerald-500/20 border border-emerald-500/45 rounded inline-block" /> ✨ New creative details added</div>
                                                         <div className="flex items-center gap-1.5"><span className="w-3 h-3 bg-error/20 border border-error/45 rounded inline-block" /> ✂️ Old words cleaned up / rewritten</div>
                                                     </div>
@@ -726,12 +726,12 @@ const RefinerPage: React.FC<RefinerPageProps> = ({
                                             <div className="absolute bottom-0 right-0 w-3 h-3 border-b border-r border-primary/40 z-30 pointer-events-none" />
                                         </div>
                                         <div className="flex justify-between items-center px-2">
-                                            <span className="text-2xs font-black uppercase tracking-[0.3em] text-primary/40">{directMediaResult.target} Render Output</span>
-                                            <button onClick={() => setDirectMediaResult(null)} className="uppercase tracking-widest text-base-content/20 hover:text-primary transition-colors">Terminate Visual</button>
+                                            <span className="text-2xs font-black uppercase tracking-[0.3em] text-primary/60">{directMediaResult.target} Render Output</span>
+                                            <button onClick={() => setDirectMediaResult(null)} className="uppercase tracking-widest text-base-content/60 hover:text-primary transition-colors">Terminate Visual</button>
                                         </div>
                                     </div>
                                 ) : (
-                                    <div className="flex-grow flex flex-col items-center justify-center text-center py-32 opacity-10">
+                                    <div className="flex-grow flex flex-col items-center justify-center text-center py-32 opacity-60">
                                         <span className="p-8"><SparklesIcon className="w-14 h-14" /></span>
                                         <p className="font-rajdhani text-xs font-sf-mono uppercase tracking-widest">Awaiting sequence initiation</p>
                                     </div>
@@ -815,7 +815,7 @@ const RefinerPage: React.FC<RefinerPageProps> = ({
                                 <button
                                     onClick={() => { audioService.playClick(); handleClearConstruction(); }}
                                     onMouseEnter={() => audioService.playHover()}
-                                    className="font-sf-mono text-2xs tracking-widest text-base-content/40 hover:text-base-content transition-all bg-base-100/5 px-2 py-1.5 hover:bg-base-100/10"
+                                    className="font-sf-mono text-2xs tracking-widest text-base-content/60 hover:text-base-content transition-all bg-base-100/5 px-2 py-1.5 hover:bg-base-100/10"
                                 >
                                     CLEAR
                                 </button>
@@ -838,7 +838,7 @@ const RefinerPage: React.FC<RefinerPageProps> = ({
                         className="flex-grow overflow-y-auto"
                     >
                         {activeConstructionItems.length === 0 ? (
-                            <p className="text-2xs font-mono text-base-content/20 py-8 text-center">No modifiers active yet.</p>
+                            <p className="text-2xs font-mono text-base-content/60 py-8 text-center">No modifiers active yet.</p>
                         ) : (
                             activeConstructionItems.map((item) => (
                                 <PropertyCard
@@ -875,10 +875,10 @@ const RefinerPage: React.FC<RefinerPageProps> = ({
                     <div className="bg-base-200/95 backdrop-blur-xl p-8 border border-primary/20 shadow-[0_0_60px_oklch(var(--p)/0.2)] max-w-md w-full mx-4 relative corner-frame">
                         <div className="flex items-center justify-between mb-6">
                             <span className="text-sm font-black uppercase tracking-widest text-primary">REGISTER PRESET</span>
-                            <button onClick={() => setIsSavePresetModalOpen(false)} className="text-base-content/30 hover:text-primary"><CloseIcon className="w-5 h-5" /></button>
+                            <button onClick={() => setIsSavePresetModalOpen(false)} className="text-base-content/60 hover:text-primary"><CloseIcon className="w-5 h-5" /></button>
                         </div>
                         <div className="form-control mb-4">
-                            <label className="text-2xs font-bold text-base-content/40 uppercase tracking-widest mb-2 block">Name</label>
+                            <label className="text-2xs font-bold text-base-content/60 uppercase tracking-widest mb-2 block">Name</label>
                             <input type="text" value={newPresetName} onChange={(e) => setNewPresetName(e.target.value)}
                                 className="form-input w-full" placeholder="e.g. Cinematic Portrait" autoFocus />
                         </div>

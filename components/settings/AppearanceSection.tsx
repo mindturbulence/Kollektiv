@@ -149,7 +149,7 @@ const AppearanceSection: React.FC<AppearanceSectionProps> = ({
                                     handleSettingsChange('idleTimeoutMinutes', Math.max(1, Math.min(60, val)));
                                 }}
                                 className="form-input w-20 text-center font-mono font-bold bg-base-300"
-                            />                                <span className="text-2xs font-black uppercase tracking-widest text-base-content/40">Min</span>
+                            />                                <span className="text-2xs font-black uppercase tracking-widest text-base-content/60">Min</span>
                                     </div>
                                 </SettingRow>
                             </>

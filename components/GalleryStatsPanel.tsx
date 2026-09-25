@@ -52,7 +52,7 @@ const GalleryStatsPanel: React.FC<GalleryStatsPanelProps> = ({ isOpen, onClose }
               </span>
               <button
                 onClick={() => { audioService.playClick(); onClose(); }}
-                className="btn btn-xs btn-ghost rounded-none tracking-widest text-base-content/40 hover:text-error text-2xs"
+                className="btn btn-xs btn-ghost rounded-none tracking-widest text-base-content/60 hover:text-error text-2xs"
               >
                 CLOSE
               </button>
@@ -155,7 +155,7 @@ const GalleryStatsPanel: React.FC<GalleryStatsPanelProps> = ({ isOpen, onClose }
 const SummaryCard: React.FC<{ label: string; value: number }> = ({ label, value }) => (
   <div className="bg-base-200/30 border border-base-content/10 p-3 flex flex-col items-center">
     <span className="text-lg font-bold font-mono text-base-content">{value}</span>
-    <span className="text-[8px] font-mono uppercase tracking-widest text-base-content/40 mt-0.5">
+    <span className="text-[8px] font-mono uppercase tracking-widest text-base-content/60 mt-0.5">
       {label}
     </span>
   </div>
@@ -193,7 +193,7 @@ const BarList: React.FC<{ items: BarItem[] }> = ({ items }) => (
             className="absolute inset-y-0 left-0 bg-primary/50"
           />
         </div>
-        <span className="text-2xs font-mono text-base-content/40 w-6 text-right flex-shrink-0">
+        <span className="text-2xs font-mono text-base-content/60 w-6 text-right flex-shrink-0">
           {item.value}
         </span>
       </div>
@@ -209,7 +209,7 @@ const TagList: React.FC<{ items: { tag: string; count: number }[] }> = ({ items 
         className="text-2xs font-mono px-2 py-0.5 border border-base-content/10 bg-base-200/40 text-base-content/70"
       >
         {item.tag}
-        <span className="text-base-content/30 ml-1">×{item.count}</span>
+        <span className="text-base-content/60 ml-1">×{item.count}</span>
       </span>
     ))}
   </div>
@@ -230,7 +230,7 @@ const TimelineChart: React.FC<{ buckets: { period: string; count: number }[] }> 
             transition={{ duration: 0.4, delay: i * 0.02, ease: 'easeOut' }}
             className="w-full bg-primary/40 hover:bg-primary/60 transition-colors min-h-[2px]"
           />
-          <span className="text-[7px] font-mono text-base-content/20 -rotate-45 origin-left whitespace-nowrap absolute bottom-0 translate-y-full left-1/2 -translate-x-1/2">
+          <span className="text-[7px] font-mono text-base-content/60 -rotate-45 origin-left whitespace-nowrap absolute bottom-0 translate-y-full left-1/2 -translate-x-1/2">
             {bucket.period.slice(-2)}
           </span>
         </div>

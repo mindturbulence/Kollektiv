@@ -75,7 +75,7 @@ const FgBgSwatches: React.FC = () => {
     <div className="relative w-11 h-14 flex-shrink-0 flex items-center justify-center">
       <button
         type="button"
-        className="absolute top-4 left-1 p-0.5 text-base-content/40 hover:text-base-content/80"
+        className="absolute top-4 left-1 p-0.5 text-base-content/60 hover:text-base-content/80"
         aria-label="Reset to black/white"
         title="Reset to black/white (default colors)"
         onClick={resetColors}
@@ -84,7 +84,7 @@ const FgBgSwatches: React.FC = () => {
       </button>
       <button
         type="button"
-        className="absolute top-0 right-0 p-0.5 text-base-content/40 hover:text-base-content/80"
+        className="absolute top-0 right-0 p-0.5 text-base-content/60 hover:text-base-content/80"
         aria-label="Swap foreground/background"
         title="Swap foreground/background"
         onClick={swapColors}

@@ -85,7 +85,7 @@ const ExposurePanel: React.FC<ExposurePanelProps> = ({ layerId, onClose }) => {
               onChange={e => set(Math.max(min, Math.min(max, Number(e.target.value))))} />
           </label>
         ))}
-        <button type="button" className="text-2xs font-mono text-base-content/50 hover:text-primary"
+        <button type="button" className="text-2xs font-mono text-base-content/60 hover:text-primary"
           onClick={() => { setExposure(0); setOffset(0); setGammaCorrection(1.0); }}>
           Reset to defaults
         </button>

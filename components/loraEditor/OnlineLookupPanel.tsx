@@ -25,7 +25,7 @@ const OnlineLookupPanel: React.FC<OnlineLookupPanelProps> = ({ state }) => {
     }, [source, data]);
 
     if (!source) {
-        return <div className="h-full flex items-center justify-center text-xs text-base-content/40 uppercase tracking-widest">No matching resource found</div>;
+        return <div className="h-full flex items-center justify-center text-xs text-base-content/60 uppercase tracking-widest">No matching resource found</div>;
     }
 
     const modelUrl = source === 'civitai'

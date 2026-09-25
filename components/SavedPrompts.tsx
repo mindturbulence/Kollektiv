@@ -342,7 +342,7 @@ const SavedPrompts: React.FC<SavedPromptsProps> = ({
                               <div className="flex">
                                   <div className="px-6 py-2 flex flex-col items-center justify-center">
                                       <span className="text-3xl font-black tracking-tighter leading-none">{sortedAndFilteredPrompts.length}</span>
-                                      <span className="text-[8px] uppercase font-black text-base-content/30 tracking-[0.2em] mt-1">Saved Prompts</span>
+                                      <span className="text-[8px] uppercase font-black text-base-content/60 tracking-[0.2em] mt-1">Saved Prompts</span>
                                   </div>
                               </div>
                           </div>
@@ -406,7 +406,7 @@ const SavedPrompts: React.FC<SavedPromptsProps> = ({
                           ))}
                       </div>
                   ) : (
-                      <div className="h-full flex flex-col items-center justify-center text-center py-40 opacity-10">
+                      <div className="h-full flex flex-col items-center justify-center text-center py-40 opacity-60">
                           <ArchiveIcon className="w-20 h-20 mb-6" />
                           <h3 className="text-3xl font-black uppercase tracking-widest">Library Empty</h3>
                           <p className="text-2xs font-bold uppercase tracking-[0.3em] mt-4">Awaiting content input</p>

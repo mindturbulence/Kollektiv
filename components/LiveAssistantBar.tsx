@@ -69,7 +69,7 @@ export const LiveAssistantFault: React.FC<{ hidden?: boolean }> = ({ hidden = fa
                                 <p className="text-2xs font-bold uppercase tracking-wider text-base-content/80 leading-relaxed">{error}</p>
                             </div>
                             <button onClick={() => setError('')} className="absolute top-2 right-2 p-1 hover:bg-base-content/10 transition-colors rounded-none">
-                                <CloseIcon className="w-3.5 h-3.5 text-base-content/40" />
+                                <CloseIcon className="w-3.5 h-3.5 text-base-content/60" />
                             </button>
                         </div>
                     </motion.div>

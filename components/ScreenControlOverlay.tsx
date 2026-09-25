@@ -39,7 +39,7 @@ export const ScreenControlOverlay: React.FC = () => {
                                     <div className="text-2xs font-black uppercase tracking-[0.15em] text-warning">
                                         Assistant Control
                                     </div>
-                                    <div className="text-2xs font-medium uppercase tracking-wider text-base-content/50 mt-0.5">
+                                    <div className="text-2xs font-medium uppercase tracking-wider text-base-content/60 mt-0.5">
                                         Active — click to release
                                     </div>
                                 </div>

@@ -29,7 +29,7 @@ export const WebResultCard: React.FC<{
                             {result.title}
                         </h2>
                         {(result.author || result.published || result.site) && (
-                            <span className="text-xs font-semibold text-base-content/50 truncate mt-1">
+                            <span className="text-xs font-semibold text-base-content/60 truncate mt-1">
                                 {[result.author && `By ${result.author}`, result.published, result.site].filter(Boolean).join(' · ')}
                             </span>
                         )}

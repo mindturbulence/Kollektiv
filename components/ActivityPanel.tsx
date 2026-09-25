@@ -259,18 +259,18 @@ const ActivityPanel: React.FC<ActivityPanelProps> = ({ isOpen, onClose }) => {
                                                     entry.role === 'user'
                                                         ? 'text-accent'
                                                         : entry.role === 'system'
-                                                        ? 'text-base-content/30'
+                                                        ? 'text-base-content/60'
                                                         : 'text-primary'
                                                 }`}>
                                                     {entry.role === 'user' ? 'You' : entry.role === 'system' ? 'Sys' : 'AI'}
                                                 </span>
-                                                <span className="text-sm font-mono text-base-content/20 tabular-nums">
+                                                <span className="text-sm font-mono text-base-content/60 tabular-nums">
                                                     {formatTime(entry.timestamp)}
                                                 </span>
                                             </div>
                                             <span className={`text-lg leading-relaxed ${
                                                 entry.role === 'system'
-                                                    ? 'text-base-content/40 italic'
+                                                    ? 'text-base-content/60 italic'
                                                     : 'text-base-content/80'
                                             }`}>
                                                 {entry.content}
@@ -279,7 +279,7 @@ const ActivityPanel: React.FC<ActivityPanelProps> = ({ isOpen, onClose }) => {
                                     ))}
                                 </div>
                             ) : (
-                                <div className="h-full flex flex-col items-center justify-center text-center opacity-10 py-16">
+                                <div className="h-full flex flex-col items-center justify-center text-center opacity-60 py-16">
                                     <ChatBubbleIcon className="w-16 h-16 mb-6" />
                                     <p className="text-xl font-black uppercase tracking-widest leading-none">No Transcript Yet</p>
                                     <p className="text-sm font-bold uppercase tracking-[0.2em] mt-4">
@@ -302,15 +302,15 @@ const ActivityPanel: React.FC<ActivityPanelProps> = ({ isOpen, onClose }) => {
                                 <span className="text-base font-medium text-base-content/60 truncate">
                                     {latestActivity.text}
                                 </span>
-                                <span className="text-sm font-mono text-base-content/20 tabular-nums ml-auto shrink-0">
+                                <span className="text-sm font-mono text-base-content/60 tabular-nums ml-auto shrink-0">
                                     {formatTime(latestActivity.timestamp)}
                                 </span>
                             </div>
                         ) : (
                             <div className="flex items-center gap-3 px-6 py-2.5">
                                 <span className="w-1.5 h-1.5 rounded-full bg-base-content/10 shrink-0" />
-                                <TerminalIcon className="w-3.5 h-3.5 text-base-content/10 shrink-0" />
-                                <span className="text-sm font-medium text-base-content/20 italic">
+                                <TerminalIcon className="w-3.5 h-3.5 text-base-content/60 shrink-0" />
+                                <span className="text-sm font-medium text-base-content/60 italic">
                                     Awaiting activity…
                                 </span>
                             </div>

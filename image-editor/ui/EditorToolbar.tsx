@@ -35,7 +35,7 @@ const DocumentTitle: React.FC = () => {
   const [draft, setDraft] = useState(title ?? '');
 
   if (title === null) {
-    return <span className="text-sm font-display text-base-content/40 uppercase tracking-wide">No document</span>;
+    return <span className="text-sm font-display text-base-content/60 uppercase tracking-wide">No document</span>;
   }
 
   if (isEditing) {

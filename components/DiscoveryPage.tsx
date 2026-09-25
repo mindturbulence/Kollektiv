@@ -121,7 +121,7 @@ const DetailPanel: React.FC<{
         <div className="h-full flex flex-col relative">
             <div className="flex-grow flex flex-col p-8 space-y-8 overflow-y-auto custom-scrollbar">
                 <div className="space-y-1">
-                    <span className="text-2xs uppercase tracking-[0.2em] text-base-content/50 shrink-0">Title</span>
+                    <span className="text-2xs uppercase tracking-[0.2em] text-base-content/60 shrink-0">Title</span>
                     <h2 className="text-[34px] font-rajdhani tracking-tighter leading-tight break-all text-primary/80">
                         <TypewriterText
                             text={prompt.category || 'Archive Record'}
@@ -132,7 +132,7 @@ const DetailPanel: React.FC<{
                 </div>
 
                 <div className="space-y-3 flex-grow flex flex-col min-h-0">
-                    <span className="text-2xs uppercase tracking-[0.2em] text-base-content/50 shrink-0">Prompt</span>
+                    <span className="text-2xs uppercase tracking-[0.2em] text-base-content/60 shrink-0">Prompt</span>
                     <div className="p-0 bg-base-100/50 backdrop-blur-sm relative flex-grow overflow-y-auto custom-scrollbar">
                         <p className="text-[16px] font-rajdhani leading-relaxed  transition-colors">
                             {isTitleDone ? (
@@ -476,13 +476,13 @@ const DiscoveryPage: React.FC<DiscoveryPageProps> = ({
                             <div className="space-y-4">
                                 <div className="flex items-center gap-3">
                                     <div className={`w-2 h-2 rounded-full ${isLoading ? 'bg-primary animate-pulse' : 'bg-success shadow-[0_0_8px_rgba(34,197,94,0.4)]'}`} />
-                                    <span className="text-2xs font-rajdhani font-bold uppercase tracking-[0.2em] text-base-content/40">
+                                    <span className="text-2xs font-rajdhani font-bold uppercase tracking-[0.2em] text-base-content/60">
                                         {isLoading ? 'SYNCING_BITSTREAM' : 'UPLINK_ESTABLISHED'}
                                     </span>
                                 </div>
 
                                 <div className="space-y-1.5">
-                                    <div className="flex justify-between text-[8px] font-mono text-base-content/20 uppercase tracking-widest">
+                                    <div className="flex justify-between text-[8px] font-mono text-base-content/60 uppercase tracking-widest">
                                         <span>Signal_Strength</span>
                                         <span>99.9%</span>
                                     </div>
@@ -537,7 +537,7 @@ const DiscoveryPage: React.FC<DiscoveryPageProps> = ({
                         </div>
 
                         {/* Table Header */}
-                        <div className="flex items-center px-5 py-5 border-b border-primary/10 bg-white/[0.05] text-xs font-rajdhani uppercase tracking-[0.3em] text-base-content/50">
+                        <div className="flex items-center px-5 py-5 border-b border-primary/10 bg-white/[0.05] text-xs font-rajdhani uppercase tracking-[0.3em] text-base-content/60">
                             <div className="w-[250px] shrink-0">Title</div>
                             <div className="flex-grow px-4 ml-4">Prompt</div>
                         </div>
@@ -581,7 +581,7 @@ const DiscoveryPage: React.FC<DiscoveryPageProps> = ({
                                             data-ai-id="discovery-load-more"
                                             onClick={handleLoadMore}
                                             disabled={isLoadingMore}
-                                            className="w-full py-6 flex items-center justify-center gap-3 text-xs font-rajdhani uppercase tracking-[0.4em] text-base-content/20 hover:text-primary transition-colors border-b border-white/5"
+                                            className="w-full py-6 flex items-center justify-center gap-3 text-xs font-rajdhani uppercase tracking-[0.4em] text-base-content/60 hover:text-primary transition-colors border-b border-white/5"
                                         >
                                             {isLoadingMore ? (
                                                 <>
@@ -595,7 +595,7 @@ const DiscoveryPage: React.FC<DiscoveryPageProps> = ({
                                     )}
 
                                     {prompts.length === 0 && !isLoading && !hasMore && (
-                                        <div className="py-20 text-center opacity-10">
+                                        <div className="py-20 text-center opacity-60">
                                             <p className="text-xs font-black uppercase tracking-widest">No Data Syncable</p>
                                         </div>
                                     )}
@@ -605,7 +605,7 @@ const DiscoveryPage: React.FC<DiscoveryPageProps> = ({
 
                         {/* Center Panel Footer */}
                         <div className="h-10 flex items-center justify-end px-6 border-t border-white/10 bg-white/[0.02] text-xs shrink-0">
-                            <div className="flex items-center font-rajdhani gap-2 text-base-content/30 text-xs uppercase tracking-[0.2em]">
+                            <div className="flex items-center font-rajdhani gap-2 text-base-content/60 text-xs uppercase tracking-[0.2em]">
                                 <span className="font-medium">RECORDS</span>
                                 <span className="text-primary/60 font-bold">{prompts.length}</span>
                             </div>

@@ -41,7 +41,7 @@ const AboutModal: React.FC<AboutModalProps> = ({ isOpen, onClose }) => {
                             ABOUT<span className="text-primary">.</span>
                           </h3>
                       </div>
-                      <p className="text-2xs font-black uppercase tracking-[0.4em] text-base-content/30 mt-1.5">Version 2.5.0</p>
+                      <p className="text-2xs font-black uppercase tracking-[0.4em] text-base-content/60 mt-1.5">Version 2.5.0</p>
                   </div>
                   <button onClick={onClose} className="p-2 text-error/30 hover:text-error transition-all hover:scale-110" aria-label="Close modal">
                     <CloseIcon className="w-5 h-5" />
@@ -65,7 +65,7 @@ const AboutModal: React.FC<AboutModalProps> = ({ isOpen, onClose }) => {
                     </div>
 
                     <div className="space-y-4">
-                        <span className="text-2xs font-black uppercase tracking-[0.2em] text-base-content/30">Links</span>
+                        <span className="text-2xs font-black uppercase tracking-[0.2em] text-base-content/60">Links</span>
                         <div className="flex flex-wrap gap-4">
                             <a href="https://civitai.com/user/mndtrblnc" target="_blank" rel="noopener noreferrer" onMouseEnter={() => audioService.playHover()} className="form-btn h-8 px-4">Civitai</a>
                             <a href="https://tensor.art/u/678345605994702141" target="_blank" rel="noopener noreferrer" onMouseEnter={() => audioService.playHover()} className="form-btn h-8 px-4">Tensor.Art</a>

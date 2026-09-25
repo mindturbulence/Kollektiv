@@ -174,7 +174,7 @@ export const SuggestionItem: React.FC<SuggestionItemProps> = ({
                     </div>
                     <div className="flex justify-between items-center">
                          <span className="text-2xs font-black uppercase tracking-[0.2em] text-primary/60">{targetAI} Result Archive</span>
-                         <button onClick={() => setMediaUrl(null)} className="uppercase tracking-widest text-base-content/30 hover:text-primary transition-colors">Close Archive</button>
+                         <button onClick={() => setMediaUrl(null)} className="uppercase tracking-widest text-base-content/60 hover:text-primary transition-colors">Close Archive</button>
                     </div>
                 </div>
             ) : (
@@ -228,14 +228,14 @@ export const SuggestionItem: React.FC<SuggestionItemProps> = ({
                                             <div className="flex gap-4">
                                                 <button
                                                     onClick={handleCopyJson}
-                                                    className="uppercase tracking-widest text-base-content/40 hover:text-primary transition-colors flex items-center gap-1.5"
+                                                    className="uppercase tracking-widest text-base-content/60 hover:text-primary transition-colors flex items-center gap-1.5"
                                                 >
                                                     <CopyIcon className="w-3 h-3" />
                                                     {jsonCopied ? 'COPIED' : 'COPY RAW'}
                                                 </button>
                                                 <button
                                                     onClick={handleDownloadJson}
-                                                    className="uppercase tracking-widest text-base-content/40 hover:text-primary transition-colors flex items-center gap-1.5"
+                                                    className="uppercase tracking-widest text-base-content/60 hover:text-primary transition-colors flex items-center gap-1.5"
                                                 >
                                                     <DownloadIcon className="w-3 h-3" />
                                                     DOWNLOAD
@@ -266,7 +266,7 @@ export const SuggestionItem: React.FC<SuggestionItemProps> = ({
                             <div className="flex items-center gap-6">
                                 <button
                                     onClick={() => setIsJsonOpen(!isJsonOpen)}
-                                    className={`text-2xs font-black uppercase tracking-widest transition-colors flex items-center gap-2 group/btn ${isJsonOpen ? 'text-primary' : 'text-base-content/30 hover:text-primary'}`}
+                                    className={`text-2xs font-black uppercase tracking-widest transition-colors flex items-center gap-2 group/btn ${isJsonOpen ? 'text-primary' : 'text-base-content/60 hover:text-primary'}`}
                                 >
                                     <BracesIcon className={`w-3.5 h-3.5 group-hover/btn:scale-110 transition-transform ${isJsonOpen ? 'opacity-100 animate-pulse' : 'opacity-40'}`} />
                                     {isJsonOpen ? 'CLOSE JSON' : 'JSON VERSION'}

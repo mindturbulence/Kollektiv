@@ -77,9 +77,9 @@ const MigrationModal: React.FC<MigrationModalProps> = ({
           <header className="px-8 py-4 bg-transparent relative flex-shrink-0">
               <h3 id="migration-title" className="text-xl font-black tracking-tighter text-primary leading-none uppercase">
                 {isPush ? 'MIGRATION' : 'PULL SYNC'}
-                <span className="text-base-content/20">.</span>
+                <span className="text-base-content/60">.</span>
               </h3>
-              <p className="text-2xs font-black uppercase tracking-[0.3em] text-base-content/40 mt-1.5 font-mono">
+              <p className="text-2xs font-black uppercase tracking-[0.3em] text-base-content/60 mt-1.5 font-mono">
                 {isPush ? 'LOCAL TO GOOGLE DRIVE' : 'GOOGLE DRIVE TO LOCAL'}
               </p>
           </header>
@@ -105,7 +105,7 @@ const MigrationModal: React.FC<MigrationModalProps> = ({
                       <h4 className="text-xs font-bold font-mono text-base-content/90 truncate bg-black/20 p-3 select-all border border-white/5">
                           {duplicateFile}
                       </h4>
-                      <p className="text-2xs uppercase tracking-normal leading-relaxed text-base-content/50 font-mono">
+                      <p className="text-2xs uppercase tracking-normal leading-relaxed text-base-content/60 font-mono">
                           This file already exists in your target Google Drive folder. Please specify the desired resolution:
                       </p>
                       
@@ -139,7 +139,7 @@ const MigrationModal: React.FC<MigrationModalProps> = ({
                                       {phase === 'converting' ? `${Math.round(convertingProgress)}%` : (phase === 'idle' ? '0%' : '100%')}
                                   </span>
                               </div>
-                              <p className="text-2xs text-base-content/50 font-mono truncate h-4">
+                              <p className="text-2xs text-base-content/60 font-mono truncate h-4">
                                   {phase === 'converting' 
                                     ? convertingMessage 
                                     : (phase === 'idle' 
@@ -167,7 +167,7 @@ const MigrationModal: React.FC<MigrationModalProps> = ({
                                       {phase === 'uploading' ? `${Math.round(uploadingProgress)}%` : (phase === 'complete' ? '100%' : '0%')}
                                   </span>
                               </div>
-                              <p className="text-2xs text-base-content/50 font-mono truncate h-4">
+                              <p className="text-2xs text-base-content/60 font-mono truncate h-4">
                                   {phase === 'uploading' 
                                     ? uploadingMessage 
                                     : (phase === 'complete' 

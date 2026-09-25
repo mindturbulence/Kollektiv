@@ -55,7 +55,7 @@ export const ErrorDisplay: React.FC<ErrorDisplayProps> = ({
           </p>
 
           {suggestion && (
-            <p className="text-xs text-base-content/50 mt-2 italic">
+            <p className="text-xs text-base-content/60 mt-2 italic">
               {suggestion}
             </p>
           )}

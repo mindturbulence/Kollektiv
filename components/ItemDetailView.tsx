@@ -51,7 +51,7 @@ const formatFileSize = (bytes: number) => {
 const InfoRow: React.FC<{ label: string, children: React.ReactNode, action?: React.ReactNode }> = ({ label, children, action }) => (
     <div className="space-y-1.5">
         <div className="flex justify-between items-center pr-1">
-            <h4 className="text-xs font-nunito font-semibold text-base-content/50 uppercase tracking-[0.15em]">{label}</h4>
+            <h4 className="text-xs font-nunito font-semibold text-base-content/60 uppercase tracking-[0.15em]">{label}</h4>
             {action && <div className="flex items-center">{action}</div>}
         </div>
         {children}
@@ -275,7 +275,7 @@ export const TagSuggestionRow: React.FC<{
       )}
 
       {isLoading && (
-        <div className="flex items-center gap-2 text-2xs font-mono text-base-content/50 animate-pulse">
+        <div className="flex items-center gap-2 text-2xs font-mono text-base-content/60 animate-pulse">
           <span className="w-3 h-3 rounded-full border border-primary border-t-transparent animate-spin" />
           Analysing image...
         </div>
@@ -311,7 +311,7 @@ export const TagSuggestionRow: React.FC<{
               className={`form-btn text-2xs font-black uppercase tracking-widest px-4 py-1.5 transition-all ${
                 selected.size > 0 && !applying
                   ? 'bg-primary/20 text-primary border border-primary/40 hover:bg-primary/30'
-                  : 'text-base-content/30 border border-white/5 cursor-not-allowed'
+                  : 'text-base-content/60 border border-white/5 cursor-not-allowed'
               }`}
             >
               {applying ? 'APPLYING...' : `APPLY (${selected.size})`}
@@ -703,10 +703,10 @@ const ItemDetailView: React.FC<ItemDetailViewProps> = ({ items, currentIndex, is
             <aside ref={rightPanelRef} className="w-full lg:w-96 flex flex-col overflow-hidden border-l border-white/5 bg-base-100/40 backdrop-blur-xl">
                 <header ref={headerRef} className="flex-shrink-0 h-16 px-6 flex items-center justify-between border-b border-white/5 bg-base-100/10 backdrop-blur-md">
                     <div className="flex items-center gap-3">
-                        <button onClick={(e) => { e.stopPropagation(); audioService.playClick(); onTogglePin(item.id); }} className={`p-1.5 transition-all ${isPinned ? 'text-primary' : 'text-base-content/20 hover:text-base-content/60'}`}>
+                        <button onClick={(e) => { e.stopPropagation(); audioService.playClick(); onTogglePin(item.id); }} className={`p-1.5 transition-all ${isPinned ? 'text-primary' : 'text-base-content/60 hover:text-base-content/60'}`}>
                             <ThumbTackIcon className="w-5 h-5" />
                         </button>
-                        <span className="text-2xs font-nunito font-bold uppercase tracking-[0.2em] text-base-content/40">Details</span>
+                        <span className="text-2xs font-nunito font-bold uppercase tracking-[0.2em] text-base-content/60">Details</span>
                     </div>
 
                     <button onClick={handleClose} className="p-2 text-red-500 hover:text-red-400 hover:bg-red-500/10 rounded-full transition-all group/close">
@@ -763,7 +763,7 @@ const ItemDetailView: React.FC<ItemDetailViewProps> = ({ items, currentIndex, is
                                     label="POST TITLE" 
                                     action={
                                         <div className="flex items-center gap-2">
-                                            <ScramblingText text={item.id} className="text-2xs font-mono text-base-content/30" />
+                                            <ScramblingText text={item.id} className="text-2xs font-mono text-base-content/60" />
                                         </div>
                                     }
                                 >
@@ -790,7 +790,7 @@ const ItemDetailView: React.FC<ItemDetailViewProps> = ({ items, currentIndex, is
                                     action={
                                         <button 
                                             onClick={handleCopyPrompt}
-                                            className={`p-1 transition-all duration-300 cursor-pointer ${isCopied ? 'text-primary scale-110' : 'text-base-content/20 hover:text-primary'}`}
+                                            className={`p-1 transition-all duration-300 cursor-pointer ${isCopied ? 'text-primary scale-110' : 'text-base-content/60 hover:text-primary'}`}
                                             title="Copy Prompt"
                                         >
                                             {isCopied ? <CheckIcon className="w-3.5 h-3.5" /> : <CopyIcon className="w-3.5 h-3.5" />}
@@ -833,19 +833,19 @@ const ItemDetailView: React.FC<ItemDetailViewProps> = ({ items, currentIndex, is
                                         {metadata && (
                                             <div className="grid grid-cols-2 gap-x-8 gap-y-4">
                                                 <div className="flex flex-col gap-1">
-                                                    <span className="text-2xs font-mono tracking-widest text-base-content/30 uppercase">RESOLUTION</span>
+                                                    <span className="text-2xs font-mono tracking-widest text-base-content/60 uppercase">RESOLUTION</span>
                                                     <ScramblingText text={`${metadata.width} × ${metadata.height}`} className="text-base-content/70" />
                                                 </div>
                                                 <div className="flex flex-col gap-1">
-                                                    <span className="text-2xs font-mono tracking-widest text-base-content/30 uppercase">ASPECT RATIO</span>
+                                                    <span className="text-2xs font-mono tracking-widest text-base-content/60 uppercase">ASPECT RATIO</span>
                                                     <ScramblingText text={metadata.ratio} className="text-base-content/70" />
                                                 </div>
                                                 <div className="flex flex-col gap-1">
-                                                    <span className="text-2xs font-mono tracking-widest text-base-content/30 uppercase">FILE SIZE</span>
+                                                    <span className="text-2xs font-mono tracking-widest text-base-content/60 uppercase">FILE SIZE</span>
                                                     <ScramblingText text={formatFileSize(metadata.size)} className="text-base-content/70" />
                                                 </div>
                                                 <div className="flex flex-col gap-1">
-                                                    <span className="text-2xs font-mono tracking-widest text-base-content/30 uppercase">SAMPLE COUNT</span>
+                                                    <span className="text-2xs font-mono tracking-widest text-base-content/60 uppercase">SAMPLE COUNT</span>
                                                     <ScramblingText text={`${activeImageIndex + 1} OF ${currentMediaUrls.length}`} className="text-base-content/70" />
                                                 </div>
                                             </div>
@@ -856,32 +856,32 @@ const ItemDetailView: React.FC<ItemDetailViewProps> = ({ items, currentIndex, is
                                             <div className="grid grid-cols-2 gap-x-8 gap-y-4 mt-4 pt-4 border-t border-white/5">
                                                 {generation.params.model && (
                                                     <div className="flex flex-col gap-1">
-                                                        <span className="text-2xs font-mono tracking-widest text-base-content/30 uppercase">MODEL</span>
+                                                        <span className="text-2xs font-mono tracking-widest text-base-content/60 uppercase">MODEL</span>
                                                         <ScramblingText text={generation.params.model} className="text-base-content/70" />
                                                     </div>
                                                 )}
                                                 {generation.params.sampler && (
                                                     <div className="flex flex-col gap-1">
-                                                        <span className="text-2xs font-mono tracking-widest text-base-content/30 uppercase">SAMPLER</span>
+                                                        <span className="text-2xs font-mono tracking-widest text-base-content/60 uppercase">SAMPLER</span>
                                                         <ScramblingText text={generation.params.sampler} className="text-base-content/70" />
                                                     </div>
                                                 )}
                                                 <div className="flex flex-col gap-1">
-                                                    <span className="text-2xs font-mono tracking-widest text-base-content/30 uppercase">STEPS</span>
+                                                    <span className="text-2xs font-mono tracking-widest text-base-content/60 uppercase">STEPS</span>
                                                     <ScramblingText text={String(generation.params.steps)} className="text-base-content/70" />
                                                 </div>
                                                 <div className="flex flex-col gap-1">
-                                                    <span className="text-2xs font-mono tracking-widest text-base-content/30 uppercase">CFG</span>
+                                                    <span className="text-2xs font-mono tracking-widest text-base-content/60 uppercase">CFG</span>
                                                     <ScramblingText text={String(generation.params.cfgScale)} className="text-base-content/70" />
                                                 </div>
                                                 {generation.resolvedSeed != null && (
                                                     <div className="flex flex-col gap-1">
-                                                        <span className="text-2xs font-mono tracking-widest text-base-content/30 uppercase">SEED</span>
+                                                        <span className="text-2xs font-mono tracking-widest text-base-content/60 uppercase">SEED</span>
                                                         <ScramblingText text={String(generation.resolvedSeed)} className="text-base-content/70" />
                                                     </div>
                                                 )}
                                                 <div className="flex flex-col gap-1">
-                                                    <span className="text-2xs font-mono tracking-widest text-base-content/30 uppercase">BACKEND</span>
+                                                    <span className="text-2xs font-mono tracking-widest text-base-content/60 uppercase">BACKEND</span>
                                                     <ScramblingText text={generation.backendId} className="text-base-content/70" />
                                                 </div>
                                                 {(generation.backendId === 'comfy' || generation.backendId === 'a1111') && (

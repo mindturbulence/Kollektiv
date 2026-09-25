@@ -51,7 +51,7 @@ const ExportModal: React.FC<ExportModalProps> = ({ isOpen, onClose }) => {
         <div className="p-4 space-y-4">
           {/* Format */}
           <div>
-            <p className="text-2xs font-mono text-base-content/50 uppercase tracking-widest mb-2">Format</p>
+            <p className="text-2xs font-mono text-base-content/60 uppercase tracking-widest mb-2">Format</p>
             <div className="flex gap-2">
               {(['png', 'jpeg'] as const).map(f => (
                 <button key={f} type="button"

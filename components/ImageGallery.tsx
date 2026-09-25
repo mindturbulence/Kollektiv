@@ -383,7 +383,7 @@ const ImageGallery: React.FC<ImageGalleryProps> = ({
                           <div className="flex">
                             <div className="px-6 py-2 flex flex-col items-center justify-center">
                               <span className="text-3xl font-black tracking-tighter leading-none">{sortedAndFilteredItems.length}</span>
-                              <span className="text-[8px] uppercase font-black text-base-content/30 tracking-[0.2em] mt-1">Images</span>
+                              <span className="text-[8px] uppercase font-black text-base-content/60 tracking-[0.2em] mt-1">Images</span>
                             </div>
                           </div>
                         </div>
@@ -407,7 +407,7 @@ const ImageGallery: React.FC<ImageGalleryProps> = ({
 
                         {/* NSFW Toggle */}
                         <div className="flex items-center gap-3 px-6 border-x border-white/10 bg-white/5 mr-px">
-                          <span className="text-2xs font-black uppercase text-base-content/40 tracking-widest">NSFW</span>
+                          <span className="text-2xs font-black uppercase text-base-content/60 tracking-widest">NSFW</span>
                           <input
                             type="checkbox"
                             checked={showNsfw}
@@ -451,7 +451,7 @@ const ImageGallery: React.FC<ImageGalleryProps> = ({
                           </div>
                         </div>
 
-                        <button onClick={() => { audioService.playClick(); setIsStatsPanelOpen(!isStatsPanelOpen); }} className={`btn btn-sm btn-ghost h-full rounded-none border-none px-6 tracking-widest uppercase btn-snake ${isStatsPanelOpen ? 'text-primary bg-primary/5' : 'text-base-content/40 hover:text-primary'}`}>
+                        <button onClick={() => { audioService.playClick(); setIsStatsPanelOpen(!isStatsPanelOpen); }} className={`btn btn-sm btn-ghost h-full rounded-none border-none px-6 tracking-widest uppercase btn-snake ${isStatsPanelOpen ? 'text-primary bg-primary/5' : 'text-base-content/60 hover:text-primary'}`}>
                           <span /><span /><span /><span />
                           STATS
                         </button>
@@ -483,7 +483,7 @@ const ImageGallery: React.FC<ImageGalleryProps> = ({
                         ))}
                       </div>
                     ) : (
-                      <div className="text-center py-32 flex flex-col items-center opacity-10"><h3 className="text-xl font-black uppercase tracking-tighter">No items found</h3></div>
+                      <div className="text-center py-32 flex flex-col items-center opacity-60"><h3 className="text-xl font-black uppercase tracking-tighter">No items found</h3></div>
                     )}
                     {targetDisplayCount < sortedAndFilteredItems.length && (
                       <div ref={lastElementRef} className="py-20 flex justify-center bg-transparent"><span className="loading loading-spinner loading-md opacity-20"></span></div>

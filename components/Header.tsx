@@ -103,7 +103,7 @@ const NavItem: React.FC<{
         audioService.playClick();
         onClick();
       }}
-      className={`px-3 h-full flex items-center font-normal uppercase tracking-widest leading-none transition-all duration-300 whitespace-nowrap overflow-hidden opacity-0 translate-y-[10px] ${isPipboyTheme ? 'font-fixedsys text-xs' : 'font-rajdhani text-xs font-normal'} ${isCurrent ? 'text-primary no-glow is-active' : 'text-base-content/30 hover:text-primary hover:no-glow'}`}
+      className={`px-3 h-full flex items-center font-normal uppercase tracking-widest leading-none transition-all duration-300 whitespace-nowrap overflow-hidden opacity-0 translate-y-[10px] ${isPipboyTheme ? 'font-fixedsys text-xs' : 'font-rajdhani text-xs font-normal'} ${isCurrent ? 'text-primary no-glow is-active' : 'text-base-content/60 hover:text-primary hover:no-glow'}`}
     >
       <RollingText text={label} hoverClassName="text-primary" />
     </button>
@@ -286,7 +286,7 @@ const Header: React.FC<HeaderProps> = ({
                     onClick={() => handleParentClick(group)}
                     onMouseEnter={() => audioService.playHover()}
                     aria-expanded={group.singleId ? undefined : isExpanded}
-                    className={`parent-nav-item font-normal uppercase tracking-widest relative z-10 px-3 h-full flex items-center leading-none transition-all duration-500 hover:text-primary hover:no-glow ${isPipboyTheme ? 'font-fixedsys text-xs' : 'font-rajdhani text-xs font-normal'} ${isExpanded || isCurrent || (group.singleId === activeTab) ? 'text-base-content no-glow is-active' : 'text-base-content/30'}`}
+                    className={`parent-nav-item font-normal uppercase tracking-widest relative z-10 px-3 h-full flex items-center leading-none transition-all duration-500 hover:text-primary hover:no-glow ${isPipboyTheme ? 'font-fixedsys text-xs' : 'font-rajdhani text-xs font-normal'} ${isExpanded || isCurrent || (group.singleId === activeTab) ? 'text-base-content no-glow is-active' : 'text-base-content/60'}`}
                   >
                     <RollingText text={group.label} hoverClassName="text-primary" />
                   </button>

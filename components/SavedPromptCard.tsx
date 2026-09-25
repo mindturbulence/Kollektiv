@@ -149,7 +149,7 @@ const SavedPromptCard: React.FC<SavedPromptCardProps> = memo(({
         {/* Footer Section - Date and Actions */}
         <div className="pt-8 flex justify-between items-center mt-8 border-t border-base-300/10">
             <div className="flex flex-col">
-                <time className="text-sm font-mono font-bold text-base-content/40 tabular-nums uppercase">
+                <time className="text-sm font-mono font-bold text-base-content/60 tabular-nums uppercase">
                     {fullDate}
                 </time>
             </div>

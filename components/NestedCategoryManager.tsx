@@ -107,7 +107,7 @@ const CategoryItem: React.FC<{
                 <div className="flex items-center gap-2 flex-grow min-w-0">
                     <button 
                         onClick={() => { audioService.playClick(); setIsLocalExpanded(!isLocalExpanded); }}
-                        className={`p-1.5 transition-transform text-base-content/40 hover:text-primary ${children.length === 0 ? 'opacity-0 pointer-events-none' : ''} ${isLocalExpanded ? 'rotate-0' : '-rotate-90'}`}
+                        className={`p-1.5 transition-transform text-base-content/60 hover:text-primary ${children.length === 0 ? 'opacity-0 pointer-events-none' : ''} ${isLocalExpanded ? 'rotate-0' : '-rotate-90'}`}
                     >
                         <ChevronDownIcon className="w-3.5 h-3.5" />
                     </button>
@@ -162,7 +162,7 @@ const CategoryItem: React.FC<{
                                 >
                                     {category.name}
                                 </span>
-                                <span className="text-[8px] font-mono text-base-content/20 flex-shrink-0">#{category.id.slice(-4)}</span>
+                                <span className="text-[8px] font-mono text-base-content/60 flex-shrink-0">#{category.id.slice(-4)}</span>
                             </div>
                         )}
                     </div>
@@ -173,7 +173,7 @@ const CategoryItem: React.FC<{
                     {/* Parent Selector (reparenting) - 100% stable folder moves */}
                     {!isEditing && (
                         <div className="flex items-center gap-2">
-                            <span className="text-2xs font-mono text-base-content/40 uppercase tracking-wider hidden md:inline">Folder Placement:</span>
+                            <span className="text-2xs font-mono text-base-content/60 uppercase tracking-wider hidden md:inline">Folder Placement:</span>
                             <select
                                 value={category.parentId || ''}
                                 onChange={(e) => {
@@ -199,7 +199,7 @@ const CategoryItem: React.FC<{
                         <button 
                             onClick={() => { audioService.playClick(); onMove(category.id, 'up'); }} 
                             disabled={index === 0} 
-                            className="p-1 px-2.5 text-base-content/50 hover:text-primary disabled:opacity-10 disabled:pointer-events-none transition-colors border-r border-base-300/30" 
+                            className="p-1 px-2.5 text-base-content/60 hover:text-primary disabled:opacity-10 disabled:pointer-events-none transition-colors border-r border-base-300/30" 
                             title="Sort Up"
                         >
                             <ChevronDownIcon className="w-3.5 h-3.5 rotate-180"/>
@@ -207,7 +207,7 @@ const CategoryItem: React.FC<{
                         <button 
                             onClick={() => { audioService.playClick(); onMove(category.id, 'down'); }} 
                             disabled={index === siblings.length - 1} 
-                            className="p-1 px-2.5 text-base-content/50 hover:text-primary disabled:opacity-10 disabled:pointer-events-none transition-colors" 
+                            className="p-1 px-2.5 text-base-content/60 hover:text-primary disabled:opacity-10 disabled:pointer-events-none transition-colors" 
                             title="Sort Down"
                         >
                             <ChevronDownIcon className="w-3.5 h-3.5"/>
@@ -360,10 +360,10 @@ export const NestedCategoryManager: React.FC<NestedCategoryManagerProps> = ({
             <div className="flex justify-between items-center">
                 <h3 className="text-xs font-black uppercase tracking-[0.4em] text-primary">{title}</h3>
                 <div className="flex gap-1.5">
-                    <button onClick={() => { audioService.playClick(); setIsAllExpanded(!isAllExpanded); }} className="p-2 text-primary/40 hover:text-primary transition-colors" title={isAllExpanded ? 'Collapse All' : 'Expand All'}>
+                    <button onClick={() => { audioService.playClick(); setIsAllExpanded(!isAllExpanded); }} className="p-2 text-primary/60 hover:text-primary transition-colors" title={isAllExpanded ? 'Collapse All' : 'Expand All'}>
                         <ChevronDownIcon className={`w-5 h-5 transition-transform ${isAllExpanded ? 'rotate-0' : '-rotate-90'}`} />
                     </button>
-                    <button onClick={() => { audioService.playClick(); void handleSortAZ(); }} className="p-2 text-primary/40 hover:text-primary transition-colors" title="Sort Recursive A-Z">
+                    <button onClick={() => { audioService.playClick(); void handleSortAZ(); }} className="p-2 text-primary/60 hover:text-primary transition-colors" title="Sort Recursive A-Z">
                         <RefreshIcon className="w-5 h-5" />
                     </button>
                     <button 
@@ -430,7 +430,7 @@ export const NestedCategoryManager: React.FC<NestedCategoryManagerProps> = ({
                         </header>
                         <div className="p-8 space-y-6">
                             <div className="form-control">
-                                <label className="text-2xs font-black uppercase tracking-widest text-base-content/40 mb-2">Folder Name</label>
+                                <label className="text-2xs font-black uppercase tracking-widest text-base-content/60 mb-2">Folder Name</label>
                                 <input type="text" value={addName} onChange={e => setAddName((e.currentTarget as any).value)} className="form-input w-full" autoFocus onKeyDown={e => e.key === 'Enter' && handleConfirmAdd()} />
                             </div>
                         </div>

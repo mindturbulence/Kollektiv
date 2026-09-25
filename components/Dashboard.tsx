@@ -71,7 +71,7 @@ const Dashboard: React.FC<DashboardProps> = ({ isExiting = false }) => {
                 <div className="flex-1 flex flex-col items-center justify-center pointer-events-none">
                     <motion.div variants={pageVariants} className="flex flex-col items-center text-center">
                         <div className="overflow-hidden mb-4">
-                            <p ref={headerTextRef} className="text-sm tracking-[1.5em] font-normal uppercase text-primary/40">
+                            <p ref={headerTextRef} className="text-sm tracking-[1.5em] font-normal uppercase text-primary/60">
                                 MINDTURBULENCE'S
                             </p>
                         </div>
@@ -82,7 +82,7 @@ const Dashboard: React.FC<DashboardProps> = ({ isExiting = false }) => {
                             </h1>
                         </div>
                         <div className="overflow-hidden py-2">
-                            <p ref={taglineRef} className="text-xs font-normal uppercase text-base-content/30 max-w-2xl leading-relaxed tracking-[0.5em]">
+                            <p ref={taglineRef} className="text-xs font-normal uppercase text-base-content/60 max-w-2xl leading-relaxed tracking-[0.5em]">
                                 Precision tools for Generative Media Creation
                             </p>
                         </div>

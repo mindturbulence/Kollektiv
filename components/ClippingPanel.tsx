@@ -73,12 +73,12 @@ const ManualClipModal: React.FC<{
                         <h3 className="text-3xl font-black tracking-tighter text-base-content leading-none">
                             NEW CLIP<span className="text-primary">.</span>
                         </h3>
-                        <p className="text-2xs font-black uppercase tracking-[0.4em] text-base-content/30 mt-2">Manual Archival Record</p>
+                        <p className="text-2xs font-black uppercase tracking-[0.4em] text-base-content/60 mt-2">Manual Archival Record</p>
                     </header>
 
                     <div className="p-8 space-y-6">
                         <div className="form-control">
-                            <label className="text-2xs font-black uppercase tracking-[0.2em] text-base-content/40 mb-2">Entry Identity</label>
+                            <label className="text-2xs font-black uppercase tracking-[0.2em] text-base-content/60 mb-2">Entry Identity</label>
                             <input
                                 type="text"
                                 placeholder="TITLE..."
@@ -89,7 +89,7 @@ const ManualClipModal: React.FC<{
                             />
                         </div>
                         <div className="form-control">
-                            <label className="text-2xs font-black uppercase tracking-[0.2em] text-base-content/40 mb-2">Prompt Token Data</label>
+                            <label className="text-2xs font-black uppercase tracking-[0.2em] text-base-content/60 mb-2">Prompt Token Data</label>
                             <textarea
                                 placeholder="TOKEN STREAM..."
                                 value={text}
@@ -594,7 +594,7 @@ const ClippingPanel: React.FC<ClippingPanelProps> = ({
                                         ))}
                                     </div>
                                 ) : (
-                                    <div className="h-full flex flex-col items-center justify-center text-center opacity-10 py-12">
+                                    <div className="h-full flex flex-col items-center justify-center text-center opacity-60 py-12">
                                         <BookmarkIcon className="w-16 h-16 mb-6" />
                                         <p className="text-xl font-black uppercase tracking-widest leading-none">Archives Empty</p>
                                         <p className="text-2xs font-bold uppercase tracking-[0.2em] mt-4">Clip tokens from the library or add manually</p>
@@ -625,7 +625,7 @@ const ClippingPanel: React.FC<ClippingPanelProps> = ({
                                             ))}
                                         </div>
                                     ) : (
-                                        <div className="h-full flex flex-col items-center justify-center text-center opacity-10 py-12">
+                                        <div className="h-full flex flex-col items-center justify-center text-center opacity-60 py-12">
                                             <NoteIcon className="w-16 h-16 mb-6" />
                                             <p className="text-xl font-black uppercase tracking-widest leading-none">Nothing Here Yet</p>
                                             <p className="text-2xs font-bold uppercase tracking-[0.2em] mt-4">Ask the assistant to take a note or search the web, or add a note manually</p>
@@ -657,7 +657,7 @@ const ClippingPanel: React.FC<ClippingPanelProps> = ({
                                         ))}
                                     </div>
                                 ) : (
-                                    <div className="h-full flex flex-col items-center justify-center text-center opacity-10 py-12">
+                                    <div className="h-full flex flex-col items-center justify-center text-center opacity-60 py-12">
                                         <ArchiveIcon className="w-16 h-16 mb-6" />
                                         <p className="text-xl font-black uppercase tracking-widest leading-none">No Files Yet</p>
                                         <p className="text-2xs font-bold uppercase tracking-[0.2em] mt-4">Ask the assistant to save a file — it lands in the vault's assistant folder</p>

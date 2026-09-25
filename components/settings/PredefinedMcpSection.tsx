@@ -64,12 +64,12 @@ const PredefinedMcpSection: React.FC<PredefinedMcpSectionProps> = ({ settings, h
                             <div className="flex items-center gap-2">
                                 <span className="text-sm font-black uppercase tracking-wider">{preset.name}</span>
                                 {st?.toolCount !== undefined && (
-                                    <span className="text-2xs font-mono text-base-content/40 border border-base-content/10 px-1.5 py-0.5">
+                                    <span className="text-2xs font-mono text-base-content/60 border border-base-content/10 px-1.5 py-0.5">
                                         {st.toolCount} tools
                                     </span>
                                 )}
                             </div>
-                            <p className="text-2xs font-medium text-base-content/40 mt-0.5">{preset.description}</p>
+                            <p className="text-2xs font-medium text-base-content/60 mt-0.5">{preset.description}</p>
                         </div>
                     </div>
                     <div className="flex items-center gap-3 flex-shrink-0">
@@ -95,13 +95,13 @@ const PredefinedMcpSection: React.FC<PredefinedMcpSectionProps> = ({ settings, h
                 </div>
 
                 <div className="border-t border-base-content/10 px-5 py-4 flex flex-col gap-4">
-                    <div className="flex items-center gap-2 text-2xs font-mono text-base-content/50">
-                        <span className="uppercase font-black tracking-wider text-2xs text-base-content/30">URL</span>
+                    <div className="flex items-center gap-2 text-2xs font-mono text-base-content/60">
+                        <span className="uppercase font-black tracking-wider text-2xs text-base-content/60">URL</span>
                         <code className="text-primary/80 select-all">{preset.defaultUrl}</code>
                     </div>
 
                     {preset.launchNotes && (
-                        <p className="text-2xs font-mono text-base-content/40 leading-relaxed">{preset.launchNotes}</p>
+                        <p className="text-2xs font-mono text-base-content/60 leading-relaxed">{preset.launchNotes}</p>
                     )}
 
                     {st && (
@@ -116,11 +116,11 @@ const PredefinedMcpSection: React.FC<PredefinedMcpSectionProps> = ({ settings, h
             {/* ── Right column: Available tools list ── */}
             <div className="border border-base-content/10 bg-base-100/20 transition-all self-start">
                 <div className="px-5 py-3 border-b border-base-content/10">
-                    <h4 className="text-2xs font-black uppercase tracking-[0.3em] text-base-content/30 flex items-center gap-2">
+                    <h4 className="text-2xs font-black uppercase tracking-[0.3em] text-base-content/60 flex items-center gap-2">
                         <CpuChipIcon className="w-3.5 h-3.5" />
                         Available Tools
                         {st?.toolCount !== undefined && (
-                            <span className="text-2xs font-mono text-base-content/40 border border-base-content/10 px-1.5 py-0.5">{st.toolCount}</span>
+                            <span className="text-2xs font-mono text-base-content/60 border border-base-content/10 px-1.5 py-0.5">{st.toolCount}</span>
                         )}
                     </h4>
                 </div>
@@ -134,7 +134,7 @@ const PredefinedMcpSection: React.FC<PredefinedMcpSectionProps> = ({ settings, h
                                     </code>
                                 </div>
                                 {tool.description && (
-                                    <p className="text-2xs font-medium text-base-content/40 mt-0.5 leading-relaxed line-clamp-2">
+                                    <p className="text-2xs font-medium text-base-content/60 mt-0.5 leading-relaxed line-clamp-2">
                                         {tool.description}
                                     </p>
                                 )}
@@ -142,8 +142,8 @@ const PredefinedMcpSection: React.FC<PredefinedMcpSectionProps> = ({ settings, h
                         ))
                     ) : (
                         <div className="flex flex-col items-center justify-center py-12 gap-3">
-                            <CpuChipIcon className="w-8 h-8 text-base-content/10" />
-                            <p className="text-2xs font-bold uppercase tracking-widest text-base-content/30 text-center px-4">
+                            <CpuChipIcon className="w-8 h-8 text-base-content/60" />
+                            <p className="text-2xs font-bold uppercase tracking-widest text-base-content/60 text-center px-4">
                                 {st?.checking
                                     ? 'Loading tools...'
                                     : st?.connected === false

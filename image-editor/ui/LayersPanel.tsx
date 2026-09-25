@@ -64,7 +64,7 @@ const LayerThumbnail: React.FC<{ layer: Layer }> = ({ layer }) => {
 
   if (layer.type === 'group') {
     return (
-      <div className="w-6 h-6 flex-shrink-0 flex items-center justify-center text-base-content/50">
+      <div className="w-6 h-6 flex-shrink-0 flex items-center justify-center text-base-content/60">
         {/* Rendered by the caller (open/closed depends on expand state) */}
       </div>
     );
@@ -72,7 +72,7 @@ const LayerThumbnail: React.FC<{ layer: Layer }> = ({ layer }) => {
 
   if (layer.type !== 'image') {
     return (
-      <div className="w-6 h-6 flex-shrink-0 flex items-center justify-center border border-base-content/10 bg-base-300 text-base-content/40">
+      <div className="w-6 h-6 flex-shrink-0 flex items-center justify-center border border-base-content/10 bg-base-300 text-base-content/60">
         <PhotoIcon className="w-3.5 h-3.5" />
       </div>
     );
@@ -136,7 +136,7 @@ const LayerRow: React.FC<{
       {isGroup ? (
         <button
           type="button"
-          className="flex-shrink-0 p-0.5 text-base-content/50 hover:text-base-content"
+          className="flex-shrink-0 p-0.5 text-base-content/60 hover:text-base-content"
           aria-label={isExpanded ? 'Collapse group' : 'Expand group'}
           onClick={(e) => { e.stopPropagation(); onToggleExpand(); }}
         >
@@ -154,7 +154,7 @@ const LayerRow: React.FC<{
       )}
 
       {isGroup ? (
-        <div className="w-6 h-6 flex-shrink-0 flex items-center justify-center text-base-content/50">
+        <div className="w-6 h-6 flex-shrink-0 flex items-center justify-center text-base-content/60">
           {isExpanded ? <FolderOpenIcon className="w-3.5 h-3.5" /> : <FolderClosedIcon className="w-3.5 h-3.5" />}
         </div>
       ) : (
@@ -182,7 +182,7 @@ const LayerRow: React.FC<{
         ) : (
           <button
             type="button"
-            className="flex-shrink-0 px-0.5 text-2xs font-mono leading-none text-base-content/30 hover:text-base-content/70"
+            className="flex-shrink-0 px-0.5 text-2xs font-mono leading-none text-base-content/60 hover:text-base-content/70"
             aria-label="Add mask"
             title="Add mask"
             onClick={(e) => { e.stopPropagation(); void LayerManager.addMask(layer.id); }}
@@ -217,7 +217,7 @@ const LayerRow: React.FC<{
       {isGroup ? (
         <button
           type="button"
-          className="flex-shrink-0 p-0.5 text-base-content/40 hover:text-base-content/80"
+          className="flex-shrink-0 p-0.5 text-base-content/60 hover:text-base-content/80"
           aria-label="Ungroup"
           title="Ungroup"
           onClick={(e) => { e.stopPropagation(); LayerManager.ungroupLayer(layer.id); }}
@@ -227,7 +227,7 @@ const LayerRow: React.FC<{
       ) : (
         <button
           type="button"
-          className="flex-shrink-0 p-0.5 text-base-content/40 hover:text-base-content/80"
+          className="flex-shrink-0 p-0.5 text-base-content/60 hover:text-base-content/80"
           aria-label={layer.locked ? 'Unlock layer' : 'Lock layer'}
           onClick={(e) => { e.stopPropagation(); dispatch({ type: 'UPDATE_LAYER', layerId: layer.id, patch: { locked: !layer.locked } }); }}
         >

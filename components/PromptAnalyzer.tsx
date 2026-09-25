@@ -568,7 +568,7 @@ export const PromptAnalyzer: React.FC<PromptAnalyzerProps> = ({
                                             <div className="p-6 space-y-8 flex-grow">
                                                 {/* Core Prompt Section */}
                                                 <div className="space-y-3">
-                                                    <label className="text-2xs font-black uppercase tracking-widest text-base-content/40 block">Subject / Core Idea</label>
+                                                    <label className="text-2xs font-black uppercase tracking-widest text-base-content/60 block">Subject / Core Idea</label>
                                                     <AutoTextArea
                                                         value={subjectPrompt}
                                                         onChange={(e) => setSubjectPrompt(e.target.value)}
@@ -583,7 +583,7 @@ export const PromptAnalyzer: React.FC<PromptAnalyzerProps> = ({
                                                         {modifierSegments.map(seg => (
                                                             <div key={seg.id} className="flex flex-col space-y-2 group">
                                                                 <div className="flex justify-between items-center px-1">
-                                                                    <label className="text-xs font-black uppercase tracking-widest text-base-content/40">{getModifierLabel(seg.key)}</label>
+                                                                    <label className="text-xs font-black uppercase tracking-widest text-base-content/60">{getModifierLabel(seg.key)}</label>
                                                                     <button
                                                                         onClick={() => removeSegment(seg.id)}
                                                                         className="opacity-0 group-hover:opacity-100 text-error transition-all p-1 hover:bg-error/10 rounded"
@@ -610,7 +610,7 @@ export const PromptAnalyzer: React.FC<PromptAnalyzerProps> = ({
                                                                     e.preventDefault();
                                                                     setShowAddDropdown(!showAddDropdown);
                                                                 }}
-                                                                className="w-full h-10 border border-dashed border-base-content/10 hover:border-primary/40 hover:bg-primary/5 transition-all flex items-center justify-center gap-2 text-2xs font-black uppercase tracking-widest text-base-content/20 hover:text-primary/60 cursor-pointer rounded-none bg-base-100/5"
+                                                                className="w-full h-10 border border-dashed border-base-content/10 hover:border-primary/40 hover:bg-primary/5 transition-all flex items-center justify-center gap-2 text-2xs font-black uppercase tracking-widest text-base-content/60 hover:text-primary/60 cursor-pointer rounded-none bg-base-100/5"
                                                             >
                                                                 <PlusIcon className="w-4 h-4" /> ADD MODIFIERS
                                                             </button>
@@ -621,7 +621,7 @@ export const PromptAnalyzer: React.FC<PromptAnalyzerProps> = ({
                                                                 >
                                                                     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-1">
                                                                         {availableModifierKeys.filter(k => !modifierSegments.some(s => s.key === k)).length === 0 ? (
-                                                                            <div className="text-2xs text-base-content/40 p-2 col-span-full">All modifiers added</div>
+                                                                            <div className="text-2xs text-base-content/60 p-2 col-span-full">All modifiers added</div>
                                                                         ) : (
                                                                             availableModifierKeys.filter(k => !modifierSegments.some(s => s.key === k)).map(key => (
                                                                                 <button
@@ -655,7 +655,7 @@ export const PromptAnalyzer: React.FC<PromptAnalyzerProps> = ({
                                                     {customParameters.length > 0 && (
                                                         <div className="pt-6 border-t border-base-content/5 mt-4 space-y-4">
                                                             <div className="flex items-center justify-between px-1">
-                                                                <label className="text-xs font-black uppercase tracking-widest text-base-content/40">Suggested Parameters</label>
+                                                                <label className="text-xs font-black uppercase tracking-widest text-base-content/60">Suggested Parameters</label>
                                                                 <span className="text-xs font-mono opacity-40 uppercase tracking-tighter">{customParameters.length}/10</span>
                                                             </div>
                                                             <div className="grid grid-cols-1 md:grid-cols-2 gap-x-4 gap-y-4">
@@ -827,7 +827,7 @@ export const PromptAnalyzer: React.FC<PromptAnalyzerProps> = ({
                                                         onClick={() => setSourceTab('original')}
                                                         className={`text-2xs font-black uppercase tracking-widest px-3 py-1.5 transition-all ${sourceTab === 'original'
                                                             ? 'text-primary'
-                                                            : 'text-base-content/40 hover:text-base-content/60'
+                                                            : 'text-base-content/60 hover:text-base-content/60'
                                                             }`}
                                                     >
                                                         ORIGINAL
@@ -838,7 +838,7 @@ export const PromptAnalyzer: React.FC<PromptAnalyzerProps> = ({
                                                             onClick={() => setSourceTab('natural')}
                                                             className={`text-2xs font-black uppercase tracking-widest px-3 py-1.5 transition-all ${sourceTab === 'natural'
                                                                 ? 'text-secondary'
-                                                                : 'text-base-content/40 hover:text-base-content/60'
+                                                                : 'text-base-content/60 hover:text-base-content/60'
                                                                 }`}
                                                         >
                                                             NATURAL
@@ -853,7 +853,7 @@ export const PromptAnalyzer: React.FC<PromptAnalyzerProps> = ({
                                                             showGlobalFeedback('Source prompt copied');
                                                         }
                                                     }}
-                                                    className="text-2xs font-black uppercase tracking-[0.2em] text-primary/40 hover:text-primary transition-colors px-3 py-1.5"
+                                                    className="text-2xs font-black uppercase tracking-[0.2em] text-primary/60 hover:text-primary transition-colors px-3 py-1.5"
                                                 >
                                                     COPY
                                                 </button>
@@ -870,7 +870,7 @@ export const PromptAnalyzer: React.FC<PromptAnalyzerProps> = ({
                                                             : (naturalLanguage || '...')}"
                                                     </blockquote>
                                                 ) : (
-                                                    <div className="h-full flex items-center justify-center opacity-10">
+                                                    <div className="h-full flex items-center justify-center opacity-60">
                                                         <ArchiveIcon className="w-12 h-12" />
                                                     </div>
                                                 )}
@@ -891,7 +891,7 @@ export const PromptAnalyzer: React.FC<PromptAnalyzerProps> = ({
                                                         "{modifiedPrompt}"
                                                     </blockquote>
                                                 ) : (
-                                                    <div className="h-full flex items-center justify-center opacity-10">
+                                                    <div className="h-full flex items-center justify-center opacity-60">
                                                         <SparklesIcon className="w-12 h-12" />
                                                     </div>
                                                 )}

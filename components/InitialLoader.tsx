@@ -140,8 +140,8 @@ const InitialLoader: React.FC<{ status: string; progress: number | null; onConti
                 <div className="mb-6 px-4 flex flex-col items-center">
                     <h1 ref={textWrapperRef} className="flex flex-col items-center text-2xl md:text-4xl font-normal tracking-widest uppercase select-none leading-none translate-y-[2px]">
                         <div className="grid grid-cols-1 grid-rows-1 font-monoton">
-                            <span className="text-base-content/10 block leading-none py-2 row-start-1 col-start-1">
-                                <ChromaticText enabled={false}>Kollektiv</ChromaticText><span className="text-primary/10 italic">.</span>
+                            <span className="text-base-content/60 block leading-none py-2 row-start-1 col-start-1">
+                                <ChromaticText enabled={false}>Kollektiv</ChromaticText><span className="text-primary/60 italic">.</span>
                             </span>
 
                             <div
@@ -176,7 +176,7 @@ const InitialLoader: React.FC<{ status: string; progress: number | null; onConti
                                 <span className="text-2xs font-mono font-bold text-primary/60 tracking-widest">{smoothPercentage}%</span>
                             </div>
 
-                            <div className="flex flex-col items-start justify-end min-h-[48px] max-h-[48px] overflow-hidden leading-snug w-full px-6 text-2xs font-mono font-bold uppercase tracking-widest text-left text-base-content/40">
+                            <div className="flex flex-col items-start justify-end min-h-[48px] max-h-[48px] overflow-hidden leading-snug w-full px-6 text-2xs font-mono font-bold uppercase tracking-widest text-left text-base-content/60">
                                 {history.slice(-2).map((h, idx) => (
                                     <div key={idx} className="opacity-40 w-full truncate">{h}</div>
                                 ))}
@@ -193,7 +193,7 @@ const InitialLoader: React.FC<{ status: string; progress: number | null; onConti
                             CONTINUE
                         </button>
                         <button
-                            className="text-xs font-rajdhani uppercase tracking-widest font-normal text-base-content/30 hover:text-base-content px-4 py-2 transition-colors bg-transparent hover:bg-transparent"
+                            className="text-xs font-rajdhani uppercase tracking-widest font-normal text-base-content/60 hover:text-base-content px-4 py-2 transition-colors bg-transparent hover:bg-transparent"
                             onClick={() => handleContinue(false)}
                         >
                             CONTINUE WITHOUT MUSIC
@@ -202,8 +202,8 @@ const InitialLoader: React.FC<{ status: string; progress: number | null; onConti
                 </div>
             </div>
 
-            <div className="absolute bottom-8 left-1/2 -translate-x-1/2 text-2xs font-mono uppercase tracking-widest text-base-content/40 opacity-70 flex flex-col items-center gap-0.5">
-                <span className="font-bold text-base-content/30 text-[8px]">Built by</span>
+            <div className="absolute bottom-8 left-1/2 -translate-x-1/2 text-2xs font-mono uppercase tracking-widest text-base-content/60 opacity-70 flex flex-col items-center gap-0.5">
+                <span className="font-bold text-base-content/60 text-[8px]">Built by</span>
                 <span className="text-primary font-bold">MindTurbulence</span>
             </div>
         </div>

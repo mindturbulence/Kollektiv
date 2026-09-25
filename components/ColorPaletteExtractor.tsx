@@ -40,7 +40,7 @@ const ColorCard: React.FC<{ color: ColorInfo }> = ({ color }) => {
             <div className="h-32 w-full" style={{ backgroundColor: color.hex }}></div>
             <div className="p-4">
                 <p className="font-black tracking-tighter text-xl text-base-content mb-3">{color.name}</p>
-                <div className="text-2xs space-y-2 font-mono font-bold uppercase tracking-widest text-base-content/40">
+                <div className="text-2xs space-y-2 font-mono font-bold uppercase tracking-widest text-base-content/60">
                     <p className="flex justify-between items-center pb-1"><span>HEX</span> <span className="cursor-pointer hover:text-primary transition-colors" onClick={() => handleCopy('HEX', color.hex)}>{copied && copiedValue === 'HEX' ? 'OK' : color.hex}</span></p>
                     <p className="flex justify-between items-center pb-1"><span>RGB</span> <span className="cursor-pointer hover:text-primary transition-colors" onClick={() => handleCopy('RGB', `${Math.round(color.rgb[0])},${Math.round(color.rgb[1])},${Math.round(color.rgb[2])}`)}>{copied && copiedValue === 'RGB' ? 'OK' : `${Math.round(color.rgb[0])}, ${Math.round(color.rgb[1])}, ${Math.round(color.rgb[2])}`}</span></p>
                     <p className="flex justify-between items-center"><span>HSL</span> <span className="cursor-pointer hover:text-primary transition-colors" onClick={() => handleCopy('HSL', color.hsl)}>{copied && copiedValue === 'HSL' ? 'OK' : color.hsl}</span></p>
@@ -275,7 +275,7 @@ export const ColorPaletteExtractor: React.FC<ColorPaletteExtractorProps> = ({ on
                         </div>
                         <div className="space-y-4">
                              <div className="space-y-4">
-                                 <div className="flex justify-between items-end"><span className="text-2xs font-black uppercase text-base-content/30">Nodes</span><span className="text-2xs font-mono font-bold text-primary">{numClusters}</span></div>
+                                 <div className="flex justify-between items-end"><span className="text-2xs font-black uppercase text-base-content/60">Nodes</span><span className="text-2xs font-mono font-bold text-primary">{numClusters}</span></div>
                                  <input type="range" min="2" max="12" value={numClusters} onChange={(e) => setNumClusters(Number((e.currentTarget as any).value))} className="range range-xs range-primary" disabled={!imageFile || isLoading}/>
                             </div>
                             <button onClick={() => imagePreviewUrl && extractPalette(imagePreviewUrl, numClusters)} disabled={!imageFile || isLoading} className="form-btn form-btn-secondary w-full h-10">
@@ -323,7 +323,7 @@ export const ColorPaletteExtractor: React.FC<ColorPaletteExtractorProps> = ({ on
                                 </div>
                             </div>
                          ) : (
-                            <div className="h-full flex flex-col items-center justify-center text-center opacity-10 p-12">
+                            <div className="h-full flex flex-col items-center justify-center text-center opacity-60 p-12">
                                 <PaletteIcon className="w-24 h-24 mb-6" />
                                 <p className="text-xl font-black uppercase tracking-widest">Awaiting Extraction Sequence</p>
                             </div>
@@ -337,7 +337,7 @@ export const ColorPaletteExtractor: React.FC<ColorPaletteExtractorProps> = ({ on
                             animate="visible"
                             className="h-14 flex items-stretch flex-shrink-0 bg-base-100/10 backdrop-blur-md p-1.5 gap-1.5"
                         >
-                            <button onClick={handleClipPalette} className="btn btn-sm btn-ghost h-full flex-1 rounded-none tracking-wider uppercase btn-snake text-primary/40 hover:text-primary">
+                            <button onClick={handleClipPalette} className="btn btn-sm btn-ghost h-full flex-1 rounded-none tracking-wider uppercase btn-snake text-primary/60 hover:text-primary">
                                 <span/><span/><span/><span/>
                                 <BookmarkIcon className="w-3.5 h-3.5 mr-1.5" /> CLIP DATA TO ARCHIVE
                             </button>

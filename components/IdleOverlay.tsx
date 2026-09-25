@@ -166,7 +166,7 @@ const IdleOverlay: React.FC<{ isVisible: boolean; onInteraction: () => void }> =
                             </h1>
                         </div>
                         <div className="overflow-hidden py-1">
-                            <p className="text-xs font-normal uppercase text-base-content/40 max-w-2xl leading-relaxed tracking-[0.5em]">
+                            <p className="text-xs font-normal uppercase text-base-content/60 max-w-2xl leading-relaxed tracking-[0.5em]">
                                 Precision tools for Generative Media Creation
                             </p>
                         </div>
@@ -177,7 +177,7 @@ const IdleOverlay: React.FC<{ isVisible: boolean; onInteraction: () => void }> =
 
             <div className="absolute bottom-12 left-1/2 -translate-x-1/2 flex flex-col items-center gap-2 pointer-events-none">
                 <span className="text-xs font-black uppercase tracking-[0.6em] text-primary animate-pulse drop-shadow-[0_0_8px_oklch(var(--p))]">System Standby</span>
-                <span className="text-2xs font-black text-base-content/20 uppercase tracking-[0.4em]">Hover your mouse to resume</span>
+                <span className="text-2xs font-black text-base-content/60 uppercase tracking-[0.4em]">Hover your mouse to resume</span>
             </div>
         </div>
     );

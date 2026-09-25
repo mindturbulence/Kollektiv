@@ -301,11 +301,11 @@ const IntegrationsSection: React.FC<IntegrationsSectionProps> = ({
                         <p className="text-2xs font-mono text-base-content/60 break-all select-all py-1 bg-black/20 px-2">{currentOrigin}</p>
                         {siblingOrigin && (
                             <>
-                                <p className="text-[8px] font-bold text-base-content/40 uppercase tracking-wider mt-1">SHARED PREVIEW ORIGIN</p>
+                                <p className="text-[8px] font-bold text-base-content/60 uppercase tracking-wider mt-1">SHARED PREVIEW ORIGIN</p>
                                 <p className="text-2xs font-mono text-base-content/60 break-all select-all py-1 bg-black/20 px-2">{siblingOrigin}</p>
                             </>
                         )}
-                        <p className="text-[8px] font-bold text-base-content/30 uppercase leading-relaxed mt-2">Add both URLs to 'Authorized JavaScript origins' in your Google Cloud Console.</p>
+                        <p className="text-[8px] font-bold text-base-content/60 uppercase leading-relaxed mt-2">Add both URLs to 'Authorized JavaScript origins' in your Google Cloud Console.</p>
                     </div>
                 </div>
             </SettingRow>
@@ -346,7 +346,7 @@ const IntegrationsSection: React.FC<IntegrationsSectionProps> = ({
                     </div>
                 ) : (
                     <div className="flex flex-col gap-3">
-                        <p className="text-2xs font-mono text-base-content/40">
+                        <p className="text-2xs font-mono text-base-content/60">
                             One authentication enables Drive sync, YouTube publishing, and Gmail tools.
                         </p>
                         <button onClick={() => { audioService.playClick(); handleAuthConnect('google'); }} className="form-btn px-6 self-start">AUTHENTICATE WITH GOOGLE</button>
@@ -538,7 +538,7 @@ const IntegrationsSection: React.FC<IntegrationsSectionProps> = ({
                         </div>
                     ) : (
                         <div className="space-y-3">
-                            <p className="text-2xs font-mono text-base-content/40">
+                            <p className="text-2xs font-mono text-base-content/60">
                                 Pick the folder containing your Obsidian vault. The assistant will be able to
                                 search notes, read them, create new ones, and edit existing ones.
                             </p>
@@ -572,7 +572,7 @@ const IntegrationsSection: React.FC<IntegrationsSectionProps> = ({
                             <span className="text-2xs font-mono font-bold text-base-content/70">
                                 {indexStats.count} note{indexStats.count !== 1 ? 's' : ''} indexed
                             </span>
-                            <span className="text-2xs font-mono text-base-content/40">
+                            <span className="text-2xs font-mono text-base-content/60">
                                 ~{formatBytes(indexStats.approxBytes)}
                             </span>
                         </div>

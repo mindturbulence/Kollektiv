@@ -409,12 +409,12 @@ const AssetsManagerPage: React.FC<AssetsManagerPageProps> = ({ isExiting = false
                 />
               ))}
               {roots.length === 0 && (
-                <p className="text-2xs font-mono uppercase text-base-content/30 p-1">Drop a folder here, or ADD above.</p>
+                <p className="text-2xs font-mono uppercase text-base-content/60 p-1">Drop a folder here, or ADD above.</p>
               )}
             </div>
             <div className="flex-grow overflow-y-auto p-2">
               {isScanningTree && (
-                <div className="flex items-center gap-2 text-2xs font-mono uppercase text-base-content/40 p-2">
+                <div className="flex items-center gap-2 text-2xs font-mono uppercase text-base-content/60 p-2">
                   <LoadingSpinner className="w-3 h-3" /> Scanning folders…
                 </div>
               )}
@@ -430,7 +430,7 @@ const AssetsManagerPage: React.FC<AssetsManagerPageProps> = ({ isExiting = false
                 />
               )}
               {!selectedRoot && !isScanningTree && (
-                <p className="text-2xs font-mono uppercase text-base-content/30 p-2">Select a root to browse.</p>
+                <p className="text-2xs font-mono uppercase text-base-content/60 p-2">Select a root to browse.</p>
               )}
             </div>
           </div>
@@ -451,7 +451,7 @@ const AssetsManagerPage: React.FC<AssetsManagerPageProps> = ({ isExiting = false
           <div className="flex flex-col h-full w-full overflow-hidden relative z-10 bg-base-100/40 backdrop-blur-xl">
             <motion.header variants={sectionWipeVariants} custom={1.2} initial="hidden" animate="visible" className="p-4 bg-base-100/10 flex justify-between items-center">
               <TerminalText text={selectedFolderPath || (selectedRoot ? selectedRoot.name : 'NO FOLDER SELECTED')} delay={0.8} className="text-2xs font-black uppercase text-primary truncate" />
-              <span className="text-2xs font-mono font-bold text-base-content/20 uppercase flex-shrink-0">
+              <span className="text-2xs font-mono font-bold text-base-content/60 uppercase flex-shrink-0">
                 {folderFiles.length} IMAGE{folderFiles.length === 1 ? '' : 'S'}
               </span>
             </motion.header>
@@ -573,7 +573,7 @@ function findNodeByPath(tree: DirectoryNode, path: string): DirectoryNode | null
 const WelcomeState: React.FC<{ onAddRoot: () => void; isExiting: boolean }> = ({ onAddRoot, isExiting }) => (
   <motion.div variants={panelVariants} initial="hidden" animate={isExiting ? 'exit' : 'visible'} className="h-full w-full flex flex-col items-center justify-center text-center gap-4 px-6">
     <TerminalText text="ASSETS MANAGER" delay={0.3} className="text-lg font-black uppercase tracking-widest text-primary" centered />
-    <p className="text-2xs font-mono uppercase tracking-widest text-base-content/50 max-w-md">
+    <p className="text-2xs font-mono uppercase tracking-widest text-base-content/60 max-w-md">
       Browse any local folder(s) as image roots. Nothing leaves this machine.
     </p>
     <button className="form-btn form-btn-primary h-10 px-6 mt-2" onClick={onAddRoot}>
@@ -611,7 +611,7 @@ const RootRow: React.FC<{
       </button>
     )}
     <button
-      className="w-4 h-4 flex-shrink-0 opacity-0 group-hover:opacity-100 text-base-content/30 hover:text-error"
+      className="w-4 h-4 flex-shrink-0 opacity-0 group-hover:opacity-100 text-base-content/60 hover:text-error"
       onClick={e => { e.stopPropagation(); onRemove(); }}
       aria-label={`Remove root ${root.name}`}
     >
@@ -933,7 +933,7 @@ const SelectionToolbar: React.FC<{
         <EditIcon className="w-4 h-4" /> Edit
       </button>
       <div className="w-px h-5 bg-base-content/10" />
-      <button onClick={onDeselect} className="p-1.5 text-base-content/40 hover:text-error transition-colors" aria-label="Deselect all">
+      <button onClick={onDeselect} className="p-1.5 text-base-content/60 hover:text-error transition-colors" aria-label="Deselect all">
         <CloseIcon className="w-4 h-4" />
       </button>
     </motion.div>

@@ -67,7 +67,7 @@ const NewDocumentModal: React.FC<NewDocumentModalProps> = ({ isOpen, onClose, on
             Open or Create
           </h3>
           <div className="flex-1" />
-          <button type="button" className="self-center p-1 text-base-content/50 hover:text-base-content" onClick={onClose} aria-label="Close">
+          <button type="button" className="self-center p-1 text-base-content/60 hover:text-base-content" onClick={onClose} aria-label="Close">
             <CloseIcon className="w-4 h-4" />
           </button>
         </header>
@@ -91,17 +91,17 @@ const NewDocumentModal: React.FC<NewDocumentModalProps> = ({ isOpen, onClose, on
           >
             <UploadIcon className="w-5 h-5" />
             <span className="text-sm font-display">Open image…</span>
-            <span className="text-2xs text-base-content/50">or drop a file here · Ctrl+O</span>
+            <span className="text-2xs text-base-content/60">or drop a file here · Ctrl+O</span>
           </button>
 
-          <div className="flex items-center gap-3 text-2xs font-mono uppercase tracking-wide text-base-content/40">
+          <div className="flex items-center gap-3 text-2xs font-mono uppercase tracking-wide text-base-content/60">
             <span className="flex-1 border-t border-base-content/10" />
             or start blank
             <span className="flex-1 border-t border-base-content/10" />
           </div>
 
           <div className="flex items-center gap-3">
-            <label className="flex-1 flex flex-col gap-1 text-2xs font-mono uppercase tracking-wide text-base-content/50">
+            <label className="flex-1 flex flex-col gap-1 text-2xs font-mono uppercase tracking-wide text-base-content/60">
               Width
               <input
                 type="number"
@@ -112,8 +112,8 @@ const NewDocumentModal: React.FC<NewDocumentModalProps> = ({ isOpen, onClose, on
                 onChange={(e) => setWidth(Number(e.target.value))}
               />
             </label>
-            <span className="mt-4 text-base-content/40">×</span>
-            <label className="flex-1 flex flex-col gap-1 text-2xs font-mono uppercase tracking-wide text-base-content/50">
+            <span className="mt-4 text-base-content/60">×</span>
+            <label className="flex-1 flex flex-col gap-1 text-2xs font-mono uppercase tracking-wide text-base-content/60">
               Height
               <input
                 type="number"
@@ -143,7 +143,7 @@ const NewDocumentModal: React.FC<NewDocumentModalProps> = ({ isOpen, onClose, on
           </div>
 
           <div className="flex flex-col gap-1.5">
-            <span className="text-2xs font-mono uppercase tracking-wide text-base-content/50">Background</span>
+            <span className="text-2xs font-mono uppercase tracking-wide text-base-content/60">Background</span>
             <div className="flex gap-4">
               {(['white', 'transparent'] as Background[]).map((bg) => (
                 <label key={bg} className="flex items-center gap-1.5 text-sm text-base-content/80 cursor-pointer">

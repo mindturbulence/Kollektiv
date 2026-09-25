@@ -27,7 +27,7 @@ const LiveAssistantMiniWidget: React.FC = () => {
           <div className="text-2xs font-bold uppercase tracking-wider text-base-content/70">
             {modeLabel}
           </div>
-          <div className="text-[8px] font-mono uppercase tracking-wider text-base-content/30 mt-0.5">
+          <div className="text-[8px] font-mono uppercase tracking-wider text-base-content/60 mt-0.5">
             {isActive ? 'Ctrl+Space to end' : 'Ctrl+Space to start'}
           </div>
         </div>

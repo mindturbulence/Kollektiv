@@ -56,7 +56,7 @@ const VaultStatsWidget: React.FC = () => {
             className={`flex flex-col items-start p-2 bg-base-200/30 hover:bg-base-200/50 transition-colors text-left ${item.page ? 'cursor-pointer' : ''}`}
           >
             <span className="text-xl font-bold font-mono text-base-content">{item.value}</span>
-            <span className="text-2xs font-mono uppercase tracking-wider text-base-content/40">{item.label}</span>
+            <span className="text-2xs font-mono uppercase tracking-wider text-base-content/60">{item.label}</span>
           </button>
         ))}
       </div>

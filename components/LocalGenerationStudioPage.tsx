@@ -451,7 +451,7 @@ const LocalGenerationStudioPage: React.FC<LocalGenerationStudioPageProps> = ({ b
                 </button>
                 <button
                   onClick={() => { setShowSaveInput(false); setNewPresetName(''); }}
-                  className="font-sf-mono text-2xs tracking-widest text-base-content/40 hover:text-base-content transition-all bg-base-100/5 px-2 py-1.5 hover:bg-base-100/10 shrink-0"
+                  className="font-sf-mono text-2xs tracking-widest text-base-content/60 hover:text-base-content transition-all bg-base-100/5 px-2 py-1.5 hover:bg-base-100/10 shrink-0"
                 >
                   ✕
                 </button>
@@ -460,7 +460,7 @@ const LocalGenerationStudioPage: React.FC<LocalGenerationStudioPageProps> = ({ b
               <button
                 onClick={() => setShowSaveInput(true)}
                 title="Save current settings as a preset"
-                className="font-sf-mono text-2xs tracking-widest text-base-content/40 hover:text-base-content transition-all bg-base-100/5 px-2 py-1.5 hover:bg-base-100/10 shrink-0 whitespace-nowrap"
+                className="font-sf-mono text-2xs tracking-widest text-base-content/60 hover:text-base-content transition-all bg-base-100/5 px-2 py-1.5 hover:bg-base-100/10 shrink-0 whitespace-nowrap"
               >
                 + SAVE
               </button>
@@ -483,7 +483,7 @@ const LocalGenerationStudioPage: React.FC<LocalGenerationStudioPageProps> = ({ b
           >
             {backendId === 'comfy' && (
               <div>
-                <label className="text-2xs font-bold uppercase tracking-widest text-base-content/40 block mb-2">
+                <label className="text-2xs font-bold uppercase tracking-widest text-base-content/60 block mb-2">
                   Workflow
                 </label>
                 <div className="flex items-center gap-2">
@@ -520,7 +520,7 @@ const LocalGenerationStudioPage: React.FC<LocalGenerationStudioPageProps> = ({ b
             )}
 
             <div>
-              <label className="text-2xs font-bold uppercase tracking-widest text-base-content/40 block mb-2">
+              <label className="text-2xs font-bold uppercase tracking-widest text-base-content/60 block mb-2">
                 Checkpoint
               </label>
               <div className="flex items-center gap-2">
@@ -547,7 +547,7 @@ const LocalGenerationStudioPage: React.FC<LocalGenerationStudioPageProps> = ({ b
             {backendId === 'a1111' && (
               <div>
                 <div className="flex items-center justify-between mb-2">
-                  <label className="text-2xs font-bold uppercase tracking-widest text-base-content/40">
+                  <label className="text-2xs font-bold uppercase tracking-widest text-base-content/60">
                     Additional Modules
                   </label>
                   <button
@@ -564,9 +564,9 @@ const LocalGenerationStudioPage: React.FC<LocalGenerationStudioPageProps> = ({ b
                   <div className="border border-base-300/20 max-h-44 overflow-y-auto custom-scrollbar divide-y divide-base-300/10">
                     {moduleGroups.map((group) => (
                       <div key={group.type}>
-                        <div className="px-2 pt-1.5 pb-0.5 flex items-center justify-between text-2xs font-bold uppercase tracking-widest text-base-content/30">
+                        <div className="px-2 pt-1.5 pb-0.5 flex items-center justify-between text-2xs font-bold uppercase tracking-widest text-base-content/60">
                           {group.label}
-                          <span className="text-base-content/20 font-mono">{group.modules.length}</span>
+                          <span className="text-base-content/60 font-mono">{group.modules.length}</span>
                         </div>
                         {group.modules.map((m) => {
                           const checked = selectedModules.includes(m);
@@ -608,7 +608,7 @@ const LocalGenerationStudioPage: React.FC<LocalGenerationStudioPageProps> = ({ b
                         {m}
                         <button
                           onClick={() => removeManualModule(m)}
-                          className="text-base-content/40 hover:text-error transition-colors"
+                          className="text-base-content/60 hover:text-error transition-colors"
                           title="Remove"
                         >
                           ✕
@@ -618,7 +618,7 @@ const LocalGenerationStudioPage: React.FC<LocalGenerationStudioPageProps> = ({ b
                   </div>
                 )}
 
-                <p className="text-2xs text-base-content/30 mt-1">
+                <p className="text-2xs text-base-content/60 mt-1">
                   {state.modules.length > 0
                     ? 'CLIP/T5/VAE modules scanned from the server (Forge /sdapi/v1/sd-modules). Required by split checkpoints (Flux, SD3, GGUF) that don\'t embed their own text encoder — fixes "You do not have CLIP state dict!".'
                     : 'Comma-separated CLIP/T5/VAE filenames for split checkpoints (Flux, SD3, GGUF) that don\'t embed their own text encoder — fixes "You do not have CLIP state dict!". The server did not expose a module list (vanilla A1111).'}
@@ -628,25 +628,25 @@ const LocalGenerationStudioPage: React.FC<LocalGenerationStudioPageProps> = ({ b
 
             <div className="grid grid-cols-2 gap-3">
               <div>
-                <label className="text-2xs font-bold uppercase tracking-widest text-base-content/40 block mb-2">Width</label>
+                <label className="text-2xs font-bold uppercase tracking-widest text-base-content/60 block mb-2">Width</label>
                 <input type="number" value={width} onChange={(e) => setWidth(parseInt(e.target.value, 10) || 512)} className="form-input w-full text-xs" step={64} min={64} />
               </div>
               <div>
-                <label className="text-2xs font-bold uppercase tracking-widest text-base-content/40 block mb-2">Height</label>
+                <label className="text-2xs font-bold uppercase tracking-widest text-base-content/60 block mb-2">Height</label>
                 <input type="number" value={height} onChange={(e) => setHeight(parseInt(e.target.value, 10) || 512)} className="form-input w-full text-xs" step={64} min={64} />
               </div>
               <div>
-                <label className="text-2xs font-bold uppercase tracking-widest text-base-content/40 block mb-2">Steps</label>
+                <label className="text-2xs font-bold uppercase tracking-widest text-base-content/60 block mb-2">Steps</label>
                 <input type="number" value={steps} onChange={(e) => setSteps(parseInt(e.target.value, 10) || 1)} className="form-input w-full text-xs" min={1} max={150} />
               </div>
               <div>
-                <label className="text-2xs font-bold uppercase tracking-widest text-base-content/40 block mb-2">CFG Scale</label>
+                <label className="text-2xs font-bold uppercase tracking-widest text-base-content/60 block mb-2">CFG Scale</label>
                 <input type="number" value={cfgScale} onChange={(e) => setCfgScale(parseFloat(e.target.value) || 1)} className="form-input w-full text-xs" step={0.5} min={1} max={30} />
               </div>
             </div>
 
             <div>
-              <label className="text-2xs font-bold uppercase tracking-widest text-base-content/40 block mb-2">
+              <label className="text-2xs font-bold uppercase tracking-widest text-base-content/60 block mb-2">
                 Reference Image (img2img)
                 {activeWorkflowId !== '__default__' && initImage && (
                   <span className="text-2xs text-warning ml-2 italic normal-case">ignored while a custom workflow is active</span>
@@ -656,7 +656,7 @@ const LocalGenerationStudioPage: React.FC<LocalGenerationStudioPageProps> = ({ b
                 <div className="flex items-center gap-3">
                   <img src={initImage} alt="Reference" className="w-14 h-14 object-cover rounded border border-white/10" />
                   <div className="flex-1 min-w-0">
-                    <label className="text-2xs text-base-content/40 block mb-1">Denoising strength: {denoisingStrength.toFixed(2)}</label>
+                    <label className="text-2xs text-base-content/60 block mb-1">Denoising strength: {denoisingStrength.toFixed(2)}</label>
                     <input
                       type="range"
                       min={0} max={1} step={0.05}
@@ -677,10 +677,10 @@ const LocalGenerationStudioPage: React.FC<LocalGenerationStudioPageProps> = ({ b
             </div>
 
             <div>
-              <label className="text-2xs font-bold uppercase tracking-widest text-base-content/40 block mb-2">
+              <label className="text-2xs font-bold uppercase tracking-widest text-base-content/60 block mb-2">
                 Sampler
                 {state.loadingSamplers && (
-                  <span className="text-2xs text-base-content/20 ml-2 italic">loading...</span>
+                  <span className="text-2xs text-base-content/60 ml-2 italic">loading...</span>
                 )}
               </label>
               <div className="flex items-center gap-2">
@@ -701,7 +701,7 @@ const LocalGenerationStudioPage: React.FC<LocalGenerationStudioPageProps> = ({ b
             </div>
 
             <div>
-              <label className="text-2xs font-bold uppercase tracking-widest text-base-content/40 block mb-2">Seed</label>
+              <label className="text-2xs font-bold uppercase tracking-widest text-base-content/60 block mb-2">Seed</label>
               <div className="flex items-center gap-2">
                 <input
                   type="number"
@@ -711,7 +711,7 @@ const LocalGenerationStudioPage: React.FC<LocalGenerationStudioPageProps> = ({ b
                   className="form-input flex-1 text-xs disabled:opacity-30"
                   placeholder="random"
                 />
-                <label className="flex items-center gap-1.5 text-2xs text-base-content/50 whitespace-nowrap">
+                <label className="flex items-center gap-1.5 text-2xs text-base-content/60 whitespace-nowrap">
                   <input type="checkbox" checked={randomizeSeed} onChange={(e) => setRandomizeSeed(e.target.checked)} />
                   Random
                 </label>
@@ -738,7 +738,7 @@ const LocalGenerationStudioPage: React.FC<LocalGenerationStudioPageProps> = ({ b
               </button>
             )}
             {(state.phase === 'done' || state.phase === 'error') && (
-              <button onClick={reset} className="btn btn-sm btn-ghost h-full rounded-none flex-1 tracking-wider text-base-content/40 hover:text-primary border-1 btn-snake">
+              <button onClick={reset} className="btn btn-sm btn-ghost h-full rounded-none flex-1 tracking-wider text-base-content/60 hover:text-primary border-1 btn-snake">
                 <span /><span /><span /><span />CLEAR
               </button>
             )}
@@ -771,7 +771,7 @@ const LocalGenerationStudioPage: React.FC<LocalGenerationStudioPageProps> = ({ b
           >
             <div>
               <h1 className="text-lg font-black uppercase tracking-tighter">{meta.label} Studio</h1>
-              <p className="text-xs text-base-content/40 mt-1">
+              <p className="text-xs text-base-content/60 mt-1">
                 Generate directly against your local {meta.label} instance.
               </p>
             </div>
@@ -796,7 +796,7 @@ const LocalGenerationStudioPage: React.FC<LocalGenerationStudioPageProps> = ({ b
           >
             <div className="flex-1 min-h-0 flex flex-col items-center justify-center bg-base-300/10 rounded">
               {state.phase === 'generating' && (
-                <div className="text-2xs font-bold uppercase tracking-widest text-base-content/40 animate-pulse">
+                <div className="text-2xs font-bold uppercase tracking-widest text-base-content/60 animate-pulse">
                   Generating via {meta.label}...
                 </div>
               )}
@@ -808,13 +808,13 @@ const LocalGenerationStudioPage: React.FC<LocalGenerationStudioPageProps> = ({ b
               {state.phase === 'done' && state.resultUrl && (
                 <div className="flex flex-col items-center gap-2 p-4">
                   <img src={state.resultUrl} alt="Generated result" className="max-h-[60vh] max-w-full rounded shadow-lg" />
-                  <div className="text-2xs text-base-content/30">
+                  <div className="text-2xs text-base-content/60">
                     Seed: {state.resultSeed} · Saved to gallery
                   </div>
                 </div>
               )}
               {state.phase === 'idle' && !state.resultUrl && (
-                <p className="text-2xs text-base-content/20 uppercase tracking-widest">
+                <p className="text-2xs text-base-content/60 uppercase tracking-widest">
                   Enter a prompt and click Generate
                 </p>
               )}
@@ -824,10 +824,10 @@ const LocalGenerationStudioPage: React.FC<LocalGenerationStudioPageProps> = ({ b
             <div className="shrink-0 flex flex-col gap-2">
               <div>
                 <div className="flex items-center justify-between mb-2">
-                  <label className="text-2xs font-bold uppercase tracking-widest text-base-content/40">Prompt</label>
+                  <label className="text-2xs font-bold uppercase tracking-widest text-base-content/60">Prompt</label>
                   <button
                     onClick={() => setShowNegativePrompt((v) => !v)}
-                    className="text-2xs font-bold uppercase tracking-wider text-base-content/30 hover:text-base-content/60 transition-colors"
+                    className="text-2xs font-bold uppercase tracking-wider text-base-content/60 hover:text-base-content/60 transition-colors"
                   >
                     {showNegativePrompt ? 'Hide' : 'Show'} Negative Prompt
                   </button>
@@ -844,7 +844,7 @@ const LocalGenerationStudioPage: React.FC<LocalGenerationStudioPageProps> = ({ b
 
               {showNegativePrompt && (
                 <div>
-                  <label className="text-2xs font-bold uppercase tracking-widest text-base-content/40 block mb-2">Negative Prompt</label>
+                  <label className="text-2xs font-bold uppercase tracking-widest text-base-content/60 block mb-2">Negative Prompt</label>
                   <textarea
                     value={negativePrompt}
                     onChange={(e) => setNegativePrompt(e.target.value)}

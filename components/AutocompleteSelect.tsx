@@ -186,7 +186,7 @@ const AutocompleteSelect: React.FC<AutocompleteSelectProps> = ({
             </li>
           ))
         ) : (
-          <li className="px-4 py-4 uppercase tracking-widest text-base-content/30 text-center">
+          <li className="px-4 py-4 uppercase tracking-widest text-base-content/60 text-center">
             No matches found
           </li>
         )}
@@ -201,7 +201,7 @@ const AutocompleteSelect: React.FC<AutocompleteSelectProps> = ({
         onMouseEnter={() => audioService.playHover()}
         className={`form-select flex items-center justify-between cursor-pointer hover:border-primary ${fontClass}`}
       >
-        <span className={`truncate ${!selectedOption ? 'text-base-content/30' : 'text-base-content'}`}>
+        <span className={`truncate ${!selectedOption ? 'text-base-content/60' : 'text-base-content'}`}>
           {selectedOption ? selectedOption.label : placeholder || 'Select option...'}
         </span>
         <div className="flex items-center gap-1.5 ml-2">
@@ -214,7 +214,7 @@ const AutocompleteSelect: React.FC<AutocompleteSelectProps> = ({
                     <CloseIcon className="w-3.5 h-3.5" />
                 </button>
             )}
-            <ChevronDownIcon className={`w-4 h-4 text-base-content/40 transition-transform ${isDropdownOpen ? 'rotate-180' : ''}`} />
+            <ChevronDownIcon className={`w-4 h-4 text-base-content/60 transition-transform ${isDropdownOpen ? 'rotate-180' : ''}`} />
         </div>
       </div>
 

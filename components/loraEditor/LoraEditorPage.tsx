@@ -215,7 +215,7 @@ const LoraEditorPage: React.FC<LoraEditorPageProps> = ({ isExiting = false }) =>
                         <TerminalText text="LORA EDITOR" delay={2.0} className="text-2xs font-black uppercase text-primary" />
                         {state.file && (
                             <div className="flex items-center gap-4">
-                                <span className="text-2xs font-mono text-base-content/40 truncate max-w-xs">{state.file.name}</span>
+                                <span className="text-2xs font-mono text-base-content/60 truncate max-w-xs">{state.file.name}</span>
                                 <button onClick={handleReset} className="form-btn h-7 px-3 text-2xs">CLEAR</button>
                                 <button onClick={() => setIsSettingsOpen(true)} className="form-btn h-7 px-3 text-2xs">SETTINGS</button>
                             </div>
@@ -236,9 +236,9 @@ const LoraEditorPage: React.FC<LoraEditorPageProps> = ({ isExiting = false }) =>
                             >
                                 <label className={`w-full h-full rounded-none flex flex-col items-center justify-center cursor-pointer transition-all ${isDragging ? 'bg-primary/10' : 'hover:bg-base-200/20'}`}>
                                     <input type="file" accept=".safetensors,.gguf" className="hidden" onChange={(e) => e.target.files && handleFiles(e.target.files)} />
-                                    <UploadIcon className="w-16 h-16 text-base-content/20 mb-6" />
+                                    <UploadIcon className="w-16 h-16 text-base-content/60 mb-6" />
                                     <h2 className="text-2xl font-black uppercase tracking-tighter">DROP LORA FILE</h2>
-                                    <p className="text-2xs font-bold uppercase tracking-[0.3em] text-base-content/40 mt-2 px-4 text-center">.safetensors or .gguf — drop or click to select</p>
+                                    <p className="text-2xs font-bold uppercase tracking-[0.3em] text-base-content/60 mt-2 px-4 text-center">.safetensors or .gguf — drop or click to select</p>
                                     {loadError && (
                                         <p className="text-2xs font-bold uppercase tracking-widest text-error mt-4 px-4 text-center">{loadError}</p>
                                     )}
@@ -254,7 +254,7 @@ const LoraEditorPage: React.FC<LoraEditorPageProps> = ({ isExiting = false }) =>
                                         <button
                                             key={id}
                                             onClick={() => setActiveTab(id)}
-                                            className={`px-3 h-8 text-2xs font-black uppercase tracking-widest transition-colors ${activeTab === id ? 'text-primary border-b-2 border-primary' : 'text-base-content/40 hover:text-base-content'}`}
+                                            className={`px-3 h-8 text-2xs font-black uppercase tracking-widest transition-colors ${activeTab === id ? 'text-primary border-b-2 border-primary' : 'text-base-content/60 hover:text-base-content'}`}
                                         >
                                             {label}
                                         </button>

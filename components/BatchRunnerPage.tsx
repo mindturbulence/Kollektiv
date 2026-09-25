@@ -69,7 +69,7 @@ const BatchRunnerPage: React.FC = () => {
       {/* Header */}
       <div className="mb-6">
         <h1 className="text-lg font-black uppercase tracking-tighter">Batch Runner</h1>
-        <p className="text-xs text-base-content/40 mt-1">
+        <p className="text-xs text-base-content/60 mt-1">
           Run an operation across multiple items with live progress.
         </p>
       </div>
@@ -79,7 +79,7 @@ const BatchRunnerPage: React.FC = () => {
         <div className="w-72 shrink-0 flex flex-col gap-4 overflow-y-auto custom-scrollbar pr-2">
           {/* Operation picker */}
           <div>
-            <label className="text-2xs font-bold uppercase tracking-widest text-base-content/40 block mb-2">
+            <label className="text-2xs font-bold uppercase tracking-widest text-base-content/60 block mb-2">
               Operation
             </label>
             <div className="flex flex-col gap-1">
@@ -94,7 +94,7 @@ const BatchRunnerPage: React.FC = () => {
                   }`}
                 >
                   {op.label}
-                  <span className="block text-2xs text-base-content/30 mt-0.5">
+                  <span className="block text-2xs text-base-content/60 mt-0.5">
                     {op.inputKind === 'prompt' ? 'Saved prompts' : 'Gallery items'}
                   </span>
                 </button>
@@ -104,13 +104,13 @@ const BatchRunnerPage: React.FC = () => {
 
           {/* Input source */}
           <div>
-            <label className="text-2xs font-bold uppercase tracking-widest text-base-content/40 block mb-2">
+            <label className="text-2xs font-bold uppercase tracking-widest text-base-content/60 block mb-2">
               {inputTab === 'prompt' ? 'Saved Prompts' : 'Gallery Items'}
             </label>
             {loadingInputs ? (
-              <div className="text-2xs text-base-content/30 animate-pulse">Loading…</div>
+              <div className="text-2xs text-base-content/60 animate-pulse">Loading…</div>
             ) : items.length === 0 ? (
-              <div className="text-2xs text-base-content/20">No items found.</div>
+              <div className="text-2xs text-base-content/60">No items found.</div>
             ) : (
               <div className="flex flex-col gap-0.5 max-h-[300px] overflow-y-auto custom-scrollbar">
                 {items.map(item => {
@@ -123,7 +123,7 @@ const BatchRunnerPage: React.FC = () => {
                       className={`text-left px-2 py-1 text-2xs font-mono rounded truncate transition-colors ${
                         selectedIds.has(item.id)
                           ? 'bg-primary/10 text-primary'
-                          : 'text-base-content/50 hover:bg-base-content/5'
+                          : 'text-base-content/60 hover:bg-base-content/5'
                       }`}
                     >
                       {display}
@@ -136,7 +136,7 @@ const BatchRunnerPage: React.FC = () => {
 
           {/* Pre-run summary */}
           <div className="bg-base-300/20 border border-base-content/10 rounded p-3 text-2xs">
-            <div className="text-base-content/30 uppercase tracking-wider mb-1">Summary</div>
+            <div className="text-base-content/60 uppercase tracking-wider mb-1">Summary</div>
             <div className="text-base-content/60">
               {selectedItems.length} item{selectedItems.length !== 1 ? 's' : ''} · {activeProvider}
             </div>
@@ -163,7 +163,7 @@ const BatchRunnerPage: React.FC = () => {
             {state.summary && !state.running && (
               <button
                 onClick={reset}
-                className="h-8 px-3 text-2xs font-bold uppercase tracking-widest rounded bg-base-content/5 text-base-content/30 hover:bg-base-content/10 transition-colors"
+                className="h-8 px-3 text-2xs font-bold uppercase tracking-widest rounded bg-base-content/5 text-base-content/60 hover:bg-base-content/10 transition-colors"
               >
                 Clear
               </button>
@@ -181,7 +181,7 @@ const BatchRunnerPage: React.FC = () => {
                   style={{ width: `${state.total > 0 ? (state.doneCount / state.total) * 100 : 0}%` }}
                 />
               </div>
-              <div className="text-2xs text-base-content/30 mt-1">
+              <div className="text-2xs text-base-content/60 mt-1">
                 {state.doneCount} / {state.total} complete
               </div>
             </div>
@@ -192,7 +192,7 @@ const BatchRunnerPage: React.FC = () => {
               <span className="text-green-500/70">{state.summary.completed} done</span>
               {state.summary.failed > 0 && <span className="text-error/70">{state.summary.failed} failed</span>}
               {state.summary.cancelled && <span className="text-warning/70">Cancelled</span>}
-              <span className="text-base-content/30">{(state.summary.totalMs / 1000).toFixed(1)}s</span>
+              <span className="text-base-content/60">{(state.summary.totalMs / 1000).toFixed(1)}s</span>
             </div>
           )}
 
@@ -200,7 +200,7 @@ const BatchRunnerPage: React.FC = () => {
           <div className="flex-1 overflow-y-auto custom-scrollbar space-y-1">
             {state.results.length === 0 && !state.running && (
               <div className="flex items-center justify-center h-full">
-                <p className="text-2xs text-base-content/20 uppercase tracking-widest">
+                <p className="text-2xs text-base-content/60 uppercase tracking-widest">
                   Select items and run a batch
                 </p>
               </div>
@@ -229,7 +229,7 @@ const BatchRunnerPage: React.FC = () => {
                     <div className="text-error/70 truncate mt-0.5">{r.error}</div>
                   )}
                   {r.status === 'done' && r.output && (
-                    <div className="text-base-content/40 truncate mt-0.5">
+                    <div className="text-base-content/60 truncate mt-0.5">
                       {typeof r.output === 'string' ? r.output.slice(0, 120) : JSON.stringify(r.output).slice(0, 120)}
                       {r.output && (typeof r.output === 'string' ? r.output.length > 120 : JSON.stringify(r.output).length > 120) ? '…' : ''}
                     </div>

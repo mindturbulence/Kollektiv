@@ -90,8 +90,8 @@ const McpSection: React.FC<McpSectionProps> = ({ activeSubTab, settings, handleS
     return (
         <div className="flex flex-col animate-fade-in pb-12">
             <div className="px-6 py-4 border-b border-base-content/10">
-                <h3 className="text-2xs font-black uppercase tracking-[0.3em] text-base-content/30">Model Context Protocol</h3>
-                <p className="text-2xs font-medium text-base-content/40 mt-1 uppercase leading-relaxed">
+                <h3 className="text-2xs font-black uppercase tracking-[0.3em] text-base-content/60">Model Context Protocol</h3>
+                <p className="text-2xs font-medium text-base-content/60 mt-1 uppercase leading-relaxed">
                     Connect to MCP servers for extended AI tools. Tools are exposed to the assistant as <code className="text-primary px-1 bg-base-100/50">mcp_&lt;server&gt;_&lt;tool&gt;</code>.
                 </p>
                 <div className="flex gap-0 mt-4">
@@ -128,8 +128,8 @@ const McpSection: React.FC<McpSectionProps> = ({ activeSubTab, settings, handleS
 
                     {servers.length === 0 && (
                         <div className="flex flex-col items-center justify-center py-20 gap-4">
-                            <CpuChipIcon className="w-12 h-12 text-base-content/10" />
-                            <p className="text-2xs font-bold uppercase tracking-widest text-base-content/30">No custom MCP servers configured</p>
+                            <CpuChipIcon className="w-12 h-12 text-base-content/60" />
+                            <p className="text-2xs font-bold uppercase tracking-widest text-base-content/60">No custom MCP servers configured</p>
                             <button onClick={addServer} className="form-btn px-4 text-2xs font-black uppercase tracking-widest">
                                 <PlusIcon className="w-3.5 h-3.5 inline mr-1" />
                                 Add your first server
@@ -154,15 +154,15 @@ const McpSection: React.FC<McpSectionProps> = ({ activeSubTab, settings, handleS
                                                 <div className="flex items-center gap-2">
                                                     <span className="text-sm font-black uppercase tracking-wider truncate">{sv.name}</span>
                                                     {st?.toolCount !== undefined && (
-                                                        <span className="text-2xs font-mono text-base-content/40 border border-base-content/10 px-1.5 py-0.5">
+                                                        <span className="text-2xs font-mono text-base-content/60 border border-base-content/10 px-1.5 py-0.5">
                                                             {st.toolCount} tools
                                                         </span>
                                                     )}
-                                                    <span className={`text-2xs font-black uppercase px-1.5 py-0.5 ${sv.enabled ? 'bg-success/10 text-success border border-success/30' : 'bg-base-content/5 text-base-content/30 border border-base-content/10'}`}>
+                                                    <span className={`text-2xs font-black uppercase px-1.5 py-0.5 ${sv.enabled ? 'bg-success/10 text-success border border-success/30' : 'bg-base-content/5 text-base-content/60 border border-base-content/10'}`}>
                                                         {sv.enabled ? 'Active' : 'Disabled'}
                                                     </span>
                                                 </div>
-                                                <p className="text-2xs font-mono text-base-content/40 truncate mt-0.5">{sv.url}</p>
+                                                <p className="text-2xs font-mono text-base-content/60 truncate mt-0.5">{sv.url}</p>
                                             </div>
                                         </div>
                                         <div className="flex items-center gap-1.5 flex-shrink-0">
@@ -193,7 +193,7 @@ const McpSection: React.FC<McpSectionProps> = ({ activeSubTab, settings, handleS
                                         <div className="border-t border-primary/20 px-5 py-4 flex flex-col gap-4 animate-fade-in">
                                             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                                                 <div className="flex flex-col gap-1">
-                                                    <label className="text-2xs font-black uppercase tracking-widest text-base-content/40">Server Name</label>
+                                                    <label className="text-2xs font-black uppercase tracking-widest text-base-content/60">Server Name</label>
                                                     <input
                                                         type="text"
                                                         value={sv.name}
@@ -203,7 +203,7 @@ const McpSection: React.FC<McpSectionProps> = ({ activeSubTab, settings, handleS
                                                     />
                                                 </div>
                                                 <div className="flex flex-col gap-1">
-                                                    <label className="text-2xs font-black uppercase tracking-widest text-base-content/40">Server URL</label>
+                                                    <label className="text-2xs font-black uppercase tracking-widest text-base-content/60">Server URL</label>
                                                     <input
                                                         type="text"
                                                         value={sv.url}
@@ -216,8 +216,8 @@ const McpSection: React.FC<McpSectionProps> = ({ activeSubTab, settings, handleS
 
                                             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                                                 <div className="flex flex-col gap-1">
-                                                    <label className="text-2xs font-black uppercase tracking-widest text-base-content/40">
-                                                        API Key <span className="text-base-content/20 font-normal">(optional, sent as Bearer token)</span>
+                                                    <label className="text-2xs font-black uppercase tracking-widest text-base-content/60">
+                                                        API Key <span className="text-base-content/60 font-normal">(optional, sent as Bearer token)</span>
                                                     </label>
                                                     <input
                                                         type="password"
@@ -243,8 +243,8 @@ const McpSection: React.FC<McpSectionProps> = ({ activeSubTab, settings, handleS
                                             {/* Custom headers */}
                                             <div className="flex flex-col gap-2">
                                                 <div className="flex items-center justify-between">
-                                                    <label className="text-2xs font-black uppercase tracking-widest text-base-content/40">
-                                                        Custom Headers <span className="text-base-content/20 font-normal">(optional)</span>
+                                                    <label className="text-2xs font-black uppercase tracking-widest text-base-content/60">
+                                                        Custom Headers <span className="text-base-content/60 font-normal">(optional)</span>
                                                     </label>
                                                     <button
                                                         onClick={() => {

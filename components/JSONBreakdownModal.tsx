@@ -43,12 +43,12 @@ const JSONBreakdownModal: React.FC<JSONBreakdownModalProps> = ({
                                     </div>
                                     <div className="flex flex-col">
                                         <h3 className="text-xl font-black tracking-tighter text-base-content leading-none uppercase italic">DATA ANATOMY<span className="text-primary">.</span></h3>
-                                        <p className="text-2xs font-black uppercase tracking-[0.4em] text-base-content/30 mt-1.5">Processed Breakdown Structure</p>
+                                        <p className="text-2xs font-black uppercase tracking-[0.4em] text-base-content/60 mt-1.5">Processed Breakdown Structure</p>
                                     </div>
                                 </div>
                                 <button 
                                     onClick={onClose}
-                                    className="p-2 text-base-content/30 hover:text-primary transition-all hover:scale-110"
+                                    className="p-2 text-base-content/60 hover:text-primary transition-all hover:scale-110"
                                 >
                                     <CloseIcon className="w-5 h-5" />
                                 </button>

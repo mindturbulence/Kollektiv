@@ -160,7 +160,7 @@ export const AddSourceModal: React.FC<AddSourceModalProps> = ({ open, onClose })
                       disabled={isAddingSource}
                       className="w-full flex items-center gap-2 px-3 py-1.5 text-xs font-mono text-left hover:bg-base-300/40 border-b border-white/5 last:border-b-0"
                     >
-                      {entry.kind === 'directory' ? '📁' : <BookOpenIcon className="w-3.5 h-3.5 text-primary/40 shrink-0" />}
+                      {entry.kind === 'directory' ? '📁' : <BookOpenIcon className="w-3.5 h-3.5 text-primary/60 shrink-0" />}
                       <span className="truncate">{entry.name}</span>
                     </button>
                   ))

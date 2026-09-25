@@ -12,7 +12,7 @@ const RecentActivityWidget: React.FC<RecentActivityWidgetProps> = ({ ideas }) =>
     <div className="bg-base-100/40 backdrop-blur-xl border border-base-content/10 p-4 relative corner-frame h-full flex flex-col">
       <div className="text-2xs font-black uppercase tracking-[0.2em] text-primary/60 mb-3 flex-shrink-0">Recent Activity</div>
       {recent.length === 0 ? (
-        <p className="text-2xs font-mono text-base-content/20 uppercase tracking-wider py-4 text-center flex-1 flex items-center justify-center">
+        <p className="text-2xs font-mono text-base-content/60 uppercase tracking-wider py-4 text-center flex-1 flex items-center justify-center">
           No recent activity
         </p>
       ) : (
@@ -20,10 +20,10 @@ const RecentActivityWidget: React.FC<RecentActivityWidgetProps> = ({ ideas }) =>
           {recent.map(idea => (
             <div
               key={idea.id}
-              className="text-2xs font-mono text-base-content/50 truncate py-1 border-b border-base-content/5 last:border-0"
+              className="text-2xs font-mono text-base-content/60 truncate py-1 border-b border-base-content/5 last:border-0"
               title={idea.prompt}
             >
-              <span className="text-primary/40 mr-2">•</span>
+              <span className="text-primary/60 mr-2">•</span>
               {idea.title || idea.prompt.slice(0, 50)}
             </div>
           ))}

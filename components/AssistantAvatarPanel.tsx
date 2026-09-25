@@ -33,7 +33,7 @@ export const AssistantAvatarPanel: React.FC<{ surface: AvatarPanelSurface }> = (
         return (
             <div className="h-screen w-screen flex flex-col items-center justify-center gap-3 bg-base-100 select-none">
                 <div className="w-0 h-0 border-l-[10px] border-r-[10px] border-b-[16px] border-l-transparent border-r-transparent border-b-primary opacity-30" />
-                <p className="font-mono text-2xs tracking-[0.3em] uppercase text-base-content/40">
+                <p className="font-mono text-2xs tracking-[0.3em] uppercase text-base-content/60">
                     AWAITING UPLINK
                 </p>
                 <p className="font-mono text-[8px] tracking-[0.2em] uppercase text-base-content/25">

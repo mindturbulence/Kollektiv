@@ -91,10 +91,10 @@ const AssistantSection: React.FC<AssistantSectionProps> = ({ settings, handleSet
                                             }}
                                             className={`px-3 py-1 text-2xs font-black uppercase tracking-widest border transition-all ${
                                                 !settings.providerFallbackEnabled
-                                                    ? 'border-base-300/10 text-base-content/20 cursor-not-allowed'
+                                                    ? 'border-base-300/10 text-base-content/60 cursor-not-allowed'
                                                     : isSelected
                                                         ? 'bg-primary/20 text-primary border-primary/40'
-                                                        : 'bg-white/5 text-base-content/50 border-white/10 hover:border-primary/30 hover:text-base-content/80'
+                                                        : 'bg-white/5 text-base-content/60 border-white/10 hover:border-primary/30 hover:text-base-content/80'
                                             }`}
                                         >
                                             {p}
@@ -103,7 +103,7 @@ const AssistantSection: React.FC<AssistantSectionProps> = ({ settings, handleSet
                                 })}
                             </div>
                             {settings.providerFallbackEnabled && (
-                                <p className="text-2xs font-mono text-base-content/30">
+                                <p className="text-2xs font-mono text-base-content/60">
                                     Chain order: {((settings.providerFallbackChain || []) as string[]).join(' → ') || '(empty — no fallback will occur)'}
                                 </p>
                             )}
@@ -114,7 +114,7 @@ const AssistantSection: React.FC<AssistantSectionProps> = ({ settings, handleSet
                         <input type="text" value={settings.assistantName || ''} onChange={(e) => handleSettingsChange('assistantName', e.target.value)} className="form-input w-full md:w-[620px]" placeholder="Kollektiv" />
                     </SettingRow>
                     <SettingRow label="Assistant Brain" desc="The chat assistant now always follows the active engine from Settings > AI Engine — the same one Crafter/Refiner/etc. use. Switch it there and the chat panel switches with it. Live voice conversations always run on Gemini Live with the voice below, regardless of that engine.">
-                        <p className="text-xs font-mono text-base-content/50">
+                        <p className="text-xs font-mono text-base-content/60">
                             Currently: <span className="text-primary">{settings.activeLLM}</span> — change it under <span className="text-base-content/70">Settings &gt; AI Engine</span>.
                         </p>
                     </SettingRow>

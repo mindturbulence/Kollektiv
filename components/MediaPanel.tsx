@@ -397,7 +397,7 @@ function dataUriToBlob(dataUri: string): Blob | null {
                         {tab === 'video' && media.videoId ? (
                             <div className="flex-grow flex flex-col">
                                 {/* Video title bar */}
-                                <div className="px-4 py-2 text-2xs font-black uppercase tracking-[0.2em] text-base-content/40 truncate border-b border-base-300/10 flex items-center gap-2">
+                                <div className="px-4 py-2 text-2xs font-black uppercase tracking-[0.2em] text-base-content/60 truncate border-b border-base-300/10 flex items-center gap-2">
                                     <EyeIcon className="w-3.5 h-3.5 text-primary" />
                                     <span>{media.videoTitle}</span>
                                 </div>
@@ -405,10 +405,10 @@ function dataUriToBlob(dataUri: string): Blob | null {
                                 <div className="flex-grow flex flex-col items-center justify-center px-8 py-8 overflow-y-auto">
                                     <div className="max-w-md text-center">
                                         <YouTubeIcon className="w-12 h-12 mx-auto mb-4 opacity-20" />
-                                        <p className="text-2xs font-black uppercase tracking-[0.25em] text-base-content/30 mb-2">
+                                        <p className="text-2xs font-black uppercase tracking-[0.25em] text-base-content/60 mb-2">
                                             Now Playing in Center Player
                                         </p>
-                                        <p className="text-2xs font-mono text-base-content/20 leading-relaxed">
+                                        <p className="text-2xs font-mono text-base-content/60 leading-relaxed">
                                             The video is playing in the center of the screen.
                                             <br />
                                             If the embed fails, open it directly on YouTube.
@@ -427,7 +427,7 @@ function dataUriToBlob(dataUri: string): Blob | null {
 
                                         {/* Video metadata stub */}
                                         <div className="mt-8 pt-6 border-t border-base-300/10 w-full">
-                                            <div className="flex items-center gap-2 justify-center text-2xs font-mono text-base-content/30">
+                                            <div className="flex items-center gap-2 justify-center text-2xs font-mono text-base-content/60">
                                                 <ChatBubbleIcon className="w-3.5 h-3.5" />
                                                 <span className="uppercase tracking-widest">Comments &amp; description coming soon</span>
                                             </div>
@@ -438,7 +438,7 @@ function dataUriToBlob(dataUri: string): Blob | null {
                         ) : tab === 'music' && media.spotifyId ? (
                             <div className="flex-grow flex flex-col">
                                 {/* Track info bar */}
-                                <div className="px-4 py-2 text-2xs font-black uppercase tracking-[0.2em] text-base-content/40 truncate border-b border-base-300/10">
+                                <div className="px-4 py-2 text-2xs font-black uppercase tracking-[0.2em] text-base-content/60 truncate border-b border-base-300/10">
                                     {media.spotifyTitle}
                                 </div>
                                 {/* Spotify embed */}
@@ -455,7 +455,7 @@ function dataUriToBlob(dataUri: string): Blob | null {
                             </div>
                         ) : tab !== 'files' ? (
                             /* ── Empty state ── */
-                            <div className="flex-grow flex flex-col items-center justify-center text-center opacity-10 py-16">
+                            <div className="flex-grow flex flex-col items-center justify-center text-center opacity-60 py-16">
                                 {tab === 'video' ? (
                                     <FilmIcon className="w-16 h-16 mb-6" />
                                 ) : tab === 'music' ? (
@@ -542,17 +542,17 @@ function dataUriToBlob(dataUri: string): Blob | null {
                         {/* ── Quick example links ── */}
                         {!media.videoId && !media.spotifyId && tab !== 'files' && (
                             <div className="flex-shrink-0 border-t border-base-300/10 px-6 py-3">
-                                <p className="text-[8px] font-black uppercase tracking-[0.3em] text-base-content/20 mb-2">Examples:</p>
+                                <p className="text-[8px] font-black uppercase tracking-[0.3em] text-base-content/60 mb-2">Examples:</p>
                                 <div className="flex gap-2 flex-wrap">
                                     <button
                                         onClick={() => loadUrl('https://www.youtube.com/watch?v=dQw4w9WgXcQ')}
-                                        className="text-[8px] font-mono text-primary/40 hover:text-primary/80 transition-colors underline underline-offset-2"
+                                        className="text-[8px] font-mono text-primary/60 hover:text-primary/80 transition-colors underline underline-offset-2"
                                     >
                                         youtube.com/watch?v=...
                                     </button>
                                     <button
                                         onClick={() => loadUrl('https://open.spotify.com/track/3n3Ppam7vLzC2UjO3yfoU')}
-                                        className="text-[8px] font-mono text-primary/40 hover:text-primary/80 transition-colors underline underline-offset-2"
+                                        className="text-[8px] font-mono text-primary/60 hover:text-primary/80 transition-colors underline underline-offset-2"
                                     >
                                         open.spotify.com/track/...
                                     </button>

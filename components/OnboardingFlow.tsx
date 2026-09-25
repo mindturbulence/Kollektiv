@@ -312,7 +312,7 @@ const OnboardingFlow: React.FC<OnboardingFlowProps> = ({ onSetupComplete }) => {
               STORAGE_INIT<span className="text-primary italic">.</span>
             </h1>
 
-            <p className="text-2xs font-black text-base-content/40 mb-8 uppercase tracking-[0.3em] leading-relaxed">
+            <p className="text-2xs font-black text-base-content/60 mb-8 uppercase tracking-[0.3em] leading-relaxed">
               Establish local vault connection, cloud sync, or launch demo mode to synchronize neural templates and visual assets.
             </p>
 
@@ -330,7 +330,7 @@ const OnboardingFlow: React.FC<OnboardingFlowProps> = ({ onSetupComplete }) => {
                 className={`px-4 py-2 text-2xs font-mono font-bold tracking-widest transition-all rounded-none border ${
                   currentProvider === 'local'
                     ? 'border-primary/40 bg-primary/10 text-primary'
-                    : 'border-white/10 hover:border-white/20 text-base-content/40'
+                    : 'border-white/10 hover:border-white/20 text-base-content/60'
                 }`}
               >
                 LOCAL_SANDBOX
@@ -347,7 +347,7 @@ const OnboardingFlow: React.FC<OnboardingFlowProps> = ({ onSetupComplete }) => {
                 className={`px-4 py-2 text-2xs font-mono font-bold tracking-widest transition-all rounded-none border ${
                   currentProvider === 'drive'
                     ? 'border-primary/40 bg-primary/10 text-primary'
-                    : 'border-white/10 hover:border-white/20 text-base-content/40'
+                    : 'border-white/10 hover:border-white/20 text-base-content/60'
                 }`}
               >
                 GOOGLE_DRIVE_CLOUD
@@ -361,7 +361,7 @@ const OnboardingFlow: React.FC<OnboardingFlowProps> = ({ onSetupComplete }) => {
                 className={`px-4 py-2 text-2xs font-mono font-bold tracking-widest transition-all rounded-none border ${
                   currentProvider === 'demo'
                     ? 'border-primary/40 bg-primary/10 text-primary'
-                    : 'border-white/10 hover:border-white/20 text-base-content/40'
+                    : 'border-white/10 hover:border-white/20 text-base-content/60'
                 }`}
               >
                 DEMO_MODE
@@ -377,7 +377,7 @@ const OnboardingFlow: React.FC<OnboardingFlowProps> = ({ onSetupComplete }) => {
                         <div className="absolute top-0 right-0 px-2 py-0.5 bg-primary/10 text-[8px] font-black tracking-widest text-primary uppercase font-mono">
                           Authenticated
                         </div>
-                        <span className="text-2xs font-black uppercase tracking-widest text-base-content/30 block mb-1">
+                        <span className="text-2xs font-black uppercase tracking-widest text-base-content/60 block mb-1">
                           Google Identity
                         </span>
                         <span className="text-xs font-mono font-bold truncate block text-primary/80">
@@ -434,12 +434,12 @@ const OnboardingFlow: React.FC<OnboardingFlowProps> = ({ onSetupComplete }) => {
                         COPY
                       </button>
                     </div>
-                    <p className="text-[8px] font-bold text-base-content/40 leading-normal uppercase">
+                    <p className="text-[8px] font-bold text-base-content/60 leading-normal uppercase">
                       Then, generate your own custom OAuth Client ID in your Google Cloud Console, and input it below to link your
                       custom project:
                     </p>
                     <div className="space-y-1.5">
-                      <label className="text-[8px] font-black uppercase tracking-wider text-base-content/50 block">
+                      <label className="text-[8px] font-black uppercase tracking-wider text-base-content/60 block">
                         Custom Client ID
                       </label>
                       <input
@@ -468,10 +468,10 @@ const OnboardingFlow: React.FC<OnboardingFlowProps> = ({ onSetupComplete }) => {
                     <div className="absolute top-0 right-0 px-2 py-0.5 bg-accent/10 text-[8px] font-black tracking-widest text-accent uppercase font-mono">
                       No Permission Required
                     </div>
-                    <span className="text-2xs font-black uppercase tracking-widest text-base-content/30 block mb-1">
+                    <span className="text-2xs font-black uppercase tracking-widest text-base-content/60 block mb-1">
                       Demo Mode
                     </span>
-                    <p className="text-2xs font-bold text-base-content/50 leading-relaxed uppercase tracking-wider">
+                    <p className="text-2xs font-bold text-base-content/60 leading-relaxed uppercase tracking-wider">
                       Browse the full interface without granting folder access.
                       <br />
                       Data is stored temporarily in the browser sandbox and may
@@ -499,7 +499,7 @@ const OnboardingFlow: React.FC<OnboardingFlowProps> = ({ onSetupComplete }) => {
                       audioService.playClick();
                       setCurrentProvider('local');
                     }}
-                    className="text-2xs font-mono font-bold uppercase tracking-widest text-base-content/30 hover:text-base-content/60 transition-colors mx-auto block"
+                    className="text-2xs font-mono font-bold uppercase tracking-widest text-base-content/60 hover:text-base-content/60 transition-colors mx-auto block"
                   >
                     Choose a real vault folder instead
                   </button>
@@ -513,7 +513,7 @@ const OnboardingFlow: React.FC<OnboardingFlowProps> = ({ onSetupComplete }) => {
                         <div className="absolute top-0 right-0 px-2 py-0.5 bg-primary/10 text-[8px] font-black tracking-widest text-primary uppercase">
                           Cached_Path
                         </div>
-                        <span className="text-2xs font-black uppercase tracking-widest text-base-content/30 block mb-1">
+                        <span className="text-2xs font-black uppercase tracking-widest text-base-content/60 block mb-1">
                           Previous Folder
                         </span>
                         <span className="text-xs font-mono font-bold truncate block text-primary/80">
@@ -595,15 +595,15 @@ const OnboardingFlow: React.FC<OnboardingFlowProps> = ({ onSetupComplete }) => {
               PROVISION<span className="text-primary italic">.</span>
             </h1>
 
-            <p className="text-2xs font-black text-base-content/40 mb-10 uppercase tracking-[0.3em] leading-relaxed">
+            <p className="text-2xs font-black text-base-content/60 mb-10 uppercase tracking-[0.3em] leading-relaxed">
               Optionally configure your AI engine provider to begin interacting with the assistant.
             </p>
 
             <div className="space-y-6 text-left">
               {/* Gemini API Key */}
               <div className="space-y-2">
-                <label className="text-2xs font-black uppercase tracking-widest text-base-content/50 block">
-                  Gemini API Key <span className="text-base-content/20">(recommended)</span>
+                <label className="text-2xs font-black uppercase tracking-widest text-base-content/60 block">
+                  Gemini API Key <span className="text-base-content/60">(recommended)</span>
                 </label>
                 <input
                   type="password"
@@ -614,7 +614,7 @@ const OnboardingFlow: React.FC<OnboardingFlowProps> = ({ onSetupComplete }) => {
                   placeholder="AIzaSy..."
                   className="w-full text-2xs font-mono bg-black/40 border border-primary/20 p-3 text-base-content placeholder-base-content/25 focus:outline-none focus:border-primary/50 transition-colors"
                 />
-                <p className="text-[8px] font-bold text-base-content/30 uppercase tracking-wider">
+                <p className="text-[8px] font-bold text-base-content/60 uppercase tracking-wider">
                   Get your free API key at{' '}
                   <a
                     href="https://aistudio.google.com/apikey"
@@ -629,7 +629,7 @@ const OnboardingFlow: React.FC<OnboardingFlowProps> = ({ onSetupComplete }) => {
 
               {/* LLM Model quick-select */}
               <div className="space-y-2">
-                <label className="text-2xs font-black uppercase tracking-widest text-base-content/50 block">Model</label>
+                <label className="text-2xs font-black uppercase tracking-widest text-base-content/60 block">Model</label>
                 <select
                   value={settings.llmModel || 'gemini-2.5-flash'}
                   onChange={(e) => {
@@ -651,7 +651,7 @@ const OnboardingFlow: React.FC<OnboardingFlowProps> = ({ onSetupComplete }) => {
               <button onClick={handleSaveProvider} className="form-btn form-btn-primary w-full h-12 text-2xs">
                 CONTINUE
               </button>
-              <button onClick={handleSkipProvider} className="text-2xs font-mono font-bold uppercase tracking-widest text-base-content/20 hover:text-base-content/50 transition-colors">
+              <button onClick={handleSkipProvider} className="text-2xs font-mono font-bold uppercase tracking-widest text-base-content/60 hover:text-base-content/50 transition-colors">
                 Skip — I'll configure this later
               </button>
             </div>
@@ -684,7 +684,7 @@ const OnboardingFlow: React.FC<OnboardingFlowProps> = ({ onSetupComplete }) => {
           <h1 className="text-3xl font-black tracking-tighter text-base-content uppercase font-sf-mono">
             SYSTEM READY<span className="text-primary italic">.</span>
           </h1>
-          <p className="text-2xs font-black text-base-content/30 mt-4 uppercase tracking-[0.3em]">
+          <p className="text-2xs font-black text-base-content/60 mt-4 uppercase tracking-[0.3em]">
             Initializing environment...
           </p>
         </div>

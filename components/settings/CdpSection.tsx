@@ -204,7 +204,7 @@ export const CdpSection: React.FC<CdpSectionProps> = ({ activeSubTab }) => {
                             isConnected ? (selectedId ? 'bg-success/5 border-success/30 text-success' : 'bg-info/5 border-info/30 text-info') :
                             connState === 'error' ? 'bg-error/5 border-error/30 text-error' :
                             connState === 'unknown' ? 'bg-warning/5 border-warning/30 text-warning' :
-                            'bg-base-300/30 border-base-content/20 text-base-content/40'
+                            'bg-base-300/30 border-base-content/20 text-base-content/60'
                         }`}>
                             <span className={`w-1.5 h-1.5 rounded-full ${
                                 isConnected ? (selectedId ? 'bg-success' : 'bg-info') :
@@ -215,7 +215,7 @@ export const CdpSection: React.FC<CdpSectionProps> = ({ activeSubTab }) => {
                             {statusText}
                         </span>
                         {browserInfo && (
-                            <span className="text-2xs font-mono text-base-content/40 truncate max-w-[200px]">
+                            <span className="text-2xs font-mono text-base-content/60 truncate max-w-[200px]">
                                 {browserInfo}
                             </span>
                         )}
@@ -261,12 +261,12 @@ export const CdpSection: React.FC<CdpSectionProps> = ({ activeSubTab }) => {
             {isConnected && (
                 <SettingsGroup title="Browser Tabs">
                     <div className="px-6 py-3 border-b border-base-content/10 flex justify-end">
-                        <button onClick={() => { audioService.playClick(); void handleRefreshTargets(); }} className="flex items-center gap-1.5 text-2xs font-black uppercase tracking-widest text-base-content/30 hover:text-primary transition-colors">
+                        <button onClick={() => { audioService.playClick(); void handleRefreshTargets(); }} className="flex items-center gap-1.5 text-2xs font-black uppercase tracking-widest text-base-content/60 hover:text-primary transition-colors">
                             <RefreshIcon className="w-3 h-3" /> REFRESH
                         </button>
                     </div>
                     {targets.length === 0 ? (
-                        <div className="p-6 text-2xs font-mono text-base-content/30 uppercase tracking-wider text-center">
+                        <div className="p-6 text-2xs font-mono text-base-content/60 uppercase tracking-wider text-center">
                             No browser tabs found.
                         </div>
                     ) : (
@@ -282,7 +282,7 @@ export const CdpSection: React.FC<CdpSectionProps> = ({ activeSubTab }) => {
                                     <p className="text-2xs font-black uppercase tracking-wider truncate text-base-content/80">
                                         {t.title || '(untitled)'}
                                     </p>
-                                    <p className="text-2xs font-mono text-base-content/30 truncate mt-0.5">
+                                    <p className="text-2xs font-mono text-base-content/60 truncate mt-0.5">
                                         {t.url}
                                     </p>
                                 </div>
@@ -301,7 +301,7 @@ export const CdpSection: React.FC<CdpSectionProps> = ({ activeSubTab }) => {
                         <p className="text-2xs font-black uppercase tracking-wider text-primary/60 mb-2">
                             Browser is running on port {launchedPort}
                         </p>
-                        <p className="text-xs font-mono text-base-content/40 leading-relaxed">
+                        <p className="text-xs font-mono text-base-content/60 leading-relaxed">
                             Open a tab in the launched Chrome window, then click <span className="text-primary">REFRESH</span> above to see it here.
                             <br />
                             Select a tab, then use the assistant's browser tools to control it.
@@ -321,7 +321,7 @@ export const CdpSection: React.FC<CdpSectionProps> = ({ activeSubTab }) => {
 
                     {BROWSER_COMMANDS.map((b, i) => (
                         <div key={i} className="space-y-2">
-                            <p className="text-2xs font-black uppercase tracking-wider text-base-content/40">{b.name}</p>
+                            <p className="text-2xs font-black uppercase tracking-wider text-base-content/60">{b.name}</p>
                             <div className="flex items-center gap-2">
                                 <code className="flex-1 text-sm font-mono bg-black/30 px-4 py-3 text-primary break-all select-all">
                                     {b.cmd}

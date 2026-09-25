@@ -53,7 +53,7 @@ const IntegrationHealthWidget: React.FC = () => {
             className={`flex items-center justify-between px-3 py-2.5 text-xs font-mono uppercase tracking-wider border transition-colors w-full text-left ${
               inte.connected
                 ? 'text-emerald-400/70 border-emerald-400/20 bg-emerald-400/5 hover:bg-emerald-400/10'
-                : 'text-base-content/30 border-base-content/10 bg-base-content/5 hover:bg-base-content/10'
+                : 'text-base-content/60 border-base-content/10 bg-base-content/5 hover:bg-base-content/10'
             }`}
           >
             <span>{inte.label}</span>

@@ -158,9 +158,9 @@ const DropZone: React.FC<{ onFilesAdded: (files: File[]) => void }> = ({ onFiles
                 onClick={() => (fileInputRef.current as any)?.click()}
             >
                 <input type="file" ref={fileInputRef} multiple accept="image/*" className="hidden" onChange={handleFileChange} />
-                <UploadIcon className="w-16 h-16 text-base-content/20 mb-6" />
+                <UploadIcon className="w-16 h-16 text-base-content/60 mb-6" />
                 <h2 className="text-2xl font-black uppercase tracking-tighter">UPLOAD IMAGES</h2>
-                <p className="text-2xs font-bold uppercase tracking-[0.3em] text-base-content/40 mt-2 px-4 text-center">Drop images or click to select files</p>
+                <p className="text-2xs font-bold uppercase tracking-[0.3em] text-base-content/60 mt-2 px-4 text-center">Drop images or click to select files</p>
             </div>
         </div>
     );
@@ -204,7 +204,7 @@ const ImageCard: React.FC<{
             </div>
             <div className="p-4 space-y-1">
                 <p className="text-xs lg:text-sm font-black uppercase tracking-widest text-base-content truncate" title={item.file.name}>{item.file.name}</p>
-                <p className="text-2xs lg:text-xs font-mono text-base-content/40">{item.originalWidth}×{item.originalHeight}</p>
+                <p className="text-2xs lg:text-xs font-mono text-base-content/60">{item.originalWidth}×{item.originalHeight}</p>
                 {item.status === 'error' && <p className="text-2xs lg:text-xs text-error font-black uppercase">{item.errorMessage}</p>}
                 {item.status === 'done' && item.processed && <p className="text-2xs lg:text-xs text-success font-black uppercase">{item.processed.width}×{item.processed.height} • {formatBytes(item.processed.size)}</p>}
             </div>
@@ -792,7 +792,7 @@ const ImageResizer: React.FC<ImageResizerProps> = ({ isExiting = false }) => {
                         >
                             {/* Mode Toggle */}
                             <div className="space-y-2">
-                                <label className="text-2xs font-black uppercase tracking-widest text-base-content/40">Processing Mode</label>
+                                <label className="text-2xs font-black uppercase tracking-widest text-base-content/60">Processing Mode</label>
                                 <div className="form-tab-group w-full">
                                     <button
                                         className={`form-tab-item flex-1 ${mode === 'standard' ? 'active' : ''}`}
@@ -814,7 +814,7 @@ const ImageResizer: React.FC<ImageResizerProps> = ({ isExiting = false }) => {
                                 <div className="space-y-4 animate-fade-in">
                                     {/* Engine selector */}
                                     <div className="space-y-2">
-                                        <label className="text-2xs font-black uppercase tracking-widest text-base-content/40">Engine</label>
+                                        <label className="text-2xs font-black uppercase tracking-widest text-base-content/60">Engine</label>
                                         <div className="form-tab-group w-full">
                                             <button
                                                 className={`form-tab-item flex-1 ${aiEngine === 'litert' ? 'active' : ''}`}
@@ -874,7 +874,7 @@ const ImageResizer: React.FC<ImageResizerProps> = ({ isExiting = false }) => {
                                                 <div className="space-y-2">
                                                     <div className="flex justify-between text-2xs font-mono font-bold">
                                                         <span className="text-primary">PROCESSING TILES</span>
-                                                        <span className="text-base-content/40">{aiProgress} / {aiProgressTotal}</span>
+                                                        <span className="text-base-content/60">{aiProgress} / {aiProgressTotal}</span>
                                                     </div>
                                                     <div className="w-full h-1 bg-base-300/50 relative overflow-hidden">
                                                         <div
@@ -896,12 +896,12 @@ const ImageResizer: React.FC<ImageResizerProps> = ({ isExiting = false }) => {
                                                 server and processed by the desktop app.
                                             </p>
                                             {topazChecking ? (
-                                            <div className="flex items-center gap-2 text-2xs font-mono text-base-content/40">
+                                            <div className="flex items-center gap-2 text-2xs font-mono text-base-content/60">
                                                 <span className="loading loading-spinner loading-xs" />
                                                 Checking server…
                                             </div>
                                         ) : topazAvailable ? (
-                                            <div className="flex items-center gap-2 text-2xs font-mono text-base-content/40">
+                                            <div className="flex items-center gap-2 text-2xs font-mono text-base-content/60">
                                                 <span className="w-1.5 h-1.5 rounded-full bg-success/60 animate-pulse" />
                                                 Server connected — engine available
                                             </div>
@@ -916,7 +916,7 @@ const ImageResizer: React.FC<ImageResizerProps> = ({ isExiting = false }) => {
 
                                     {/* Output format info (AI mode) */}
                                     <div className="p-4 bg-base-300/20 border border-base-300/30">
-                                        <p className="text-2xs font-mono text-base-content/40">
+                                        <p className="text-2xs font-mono text-base-content/60">
                                             Output: <span className="text-base-content/70">PNG</span> (lossless) ·
                                             4× original resolution
                                         </p>
@@ -927,9 +927,9 @@ const ImageResizer: React.FC<ImageResizerProps> = ({ isExiting = false }) => {
                                 <>
                                     <div className="space-y-4">
                                         <div className="flex justify-between items-center">
-                                            <label className="text-2xs font-black uppercase tracking-widest text-base-content/40">Target Resolution</label>
+                                            <label className="text-2xs font-black uppercase tracking-widest text-base-content/60">Target Resolution</label>
                                             <label className="cursor-pointer label p-0 gap-2">
-                                                <span className="text-2xs font-black uppercase text-base-content/40 tracking-widest">Original</span>
+                                                <span className="text-2xs font-black uppercase text-base-content/60 tracking-widest">Original</span>
                                                 <input type="checkbox" checked={settings.preserveOriginal} onChange={e => handleSettingsChange('preserveOriginal', (e.currentTarget as any).checked)} className="checkbox checkbox-xs checkbox-primary rounded-none" />
                                             </label>
                                         </div>
@@ -960,17 +960,17 @@ const ImageResizer: React.FC<ImageResizerProps> = ({ isExiting = false }) => {
                                     </div>
 
                                     <div className="space-y-4">
-                                        <label className="text-2xs font-black uppercase tracking-widest text-base-content/40">Cropping</label>
+                                        <label className="text-2xs font-black uppercase tracking-widest text-base-content/60">Cropping</label>
                                         <div className={`form-control transition-opacity ${settings.preserveOriginal ? 'opacity-30 pointer-events-none' : ''}`}>
                                             <label className="cursor-pointer label p-0 gap-4">
-                                                <span className="text-2xs font-black uppercase text-base-content/40 tracking-widest flex items-center gap-2"><CropIcon className="w-3.5 h-3.5" /> Enable Smart Crop</span>
+                                                <span className="text-2xs font-black uppercase text-base-content/60 tracking-widest flex items-center gap-2"><CropIcon className="w-3.5 h-3.5" /> Enable Smart Crop</span>
                                                 <input type="checkbox" disabled={settings.preserveOriginal} checked={settings.enableCropping && !settings.preserveOriginal} onChange={e => handleSettingsChange('enableCropping', (e.currentTarget as any).checked)} className="toggle toggle-xs toggle-primary" />
                                             </label>
                                         </div>
                                     </div>
 
                                     <div className="space-y-6">
-                                        <label className="text-2xs font-black uppercase tracking-widest text-base-content/40">Output Files</label>
+                                        <label className="text-2xs font-black uppercase tracking-widest text-base-content/60">Output Files</label>
                                         <div className="space-y-4">
                                             <div className="flex items-center gap-2">
                                                 <select value={settings.format} onChange={e => handleSettingsChange('format', (e.currentTarget as any).value as 'jpeg' | 'png' | 'webp')} className="form-select w-full">
@@ -984,7 +984,7 @@ const ImageResizer: React.FC<ImageResizerProps> = ({ isExiting = false }) => {
                                             </div>
                                             <input type="text" value={settings.renamePrefix} onChange={e => handleSettingsChange('renamePrefix', (e.currentTarget as any).value)} className="form-input w-full font-bold text-xs" placeholder="FILE_PREFIX_" />
                                             <label className="cursor-pointer label p-0 gap-4">
-                                                <span className="text-2xs font-black uppercase text-base-content/40 tracking-widest">Sequential Naming</span>
+                                                <span className="text-2xs font-black uppercase text-base-content/60 tracking-widest">Sequential Naming</span>
                                                 <input type="checkbox" checked={settings.renameSequentially} onChange={e => handleSettingsChange('renameSequentially', (e.currentTarget as any).checked)} className="checkbox checkbox-xs checkbox-primary rounded-none" />
                                             </label>
                                         </div>

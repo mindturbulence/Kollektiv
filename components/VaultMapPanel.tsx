@@ -136,14 +136,14 @@ const VaultMapPanel: React.FC<VaultMapPanelProps> = ({ isOpen, onClose }) => {
           <div className="flex items-center gap-3">
             <h2 className="text-sm font-bold tracking-wide text-base-content/80">Vault Map</h2>
             {!loading && stats.entities > 0 && (
-              <span className="text-2xs font-mono text-base-content/30">
+              <span className="text-2xs font-mono text-base-content/60">
                 {stats.entities} items · {stats.relations} links
               </span>
             )}
           </div>
           <button
             onClick={onClose}
-            className="text-base-content/30 hover:text-base-content/70 transition-colors text-lg leading-none px-1"
+            className="text-base-content/60 hover:text-base-content/70 transition-colors text-lg leading-none px-1"
             aria-label="Close vault map"
           >
             ✕
@@ -158,7 +158,7 @@ const VaultMapPanel: React.FC<VaultMapPanelProps> = ({ isOpen, onClose }) => {
                 <span className="absolute inline-flex h-full w-full rounded-full bg-primary opacity-60 animate-ping" />
                 <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-primary" />
               </span>
-              <span className="text-xs font-mono text-base-content/30 uppercase tracking-widest">
+              <span className="text-xs font-mono text-base-content/60 uppercase tracking-widest">
                 Hydrating graph…
               </span>
             </div>
@@ -166,10 +166,10 @@ const VaultMapPanel: React.FC<VaultMapPanelProps> = ({ isOpen, onClose }) => {
             <div className="absolute inset-0 flex items-center justify-center">
               <div className="text-center max-w-sm px-6">
                 <div className="text-3xl mb-3 opacity-30">🕸️</div>
-                <p className="text-sm font-medium text-base-content/50 mb-1">
+                <p className="text-sm font-medium text-base-content/60 mb-1">
                   Nothing tagged yet
                 </p>
-                <p className="text-xs font-mono text-base-content/30">
+                <p className="text-xs font-mono text-base-content/60">
                   Add tags to gallery items or prompts to see connections.
                 </p>
               </div>
@@ -192,7 +192,7 @@ const VaultMapPanel: React.FC<VaultMapPanelProps> = ({ isOpen, onClose }) => {
                   stroke="currentColor"
                   strokeWidth={Math.max(1, e.weight * 4)}
                   strokeOpacity={Math.max(0.08, e.weight * 0.5)}
-                  className="text-base-content/40"
+                  className="text-base-content/60"
                 />
               ))}
 
@@ -223,7 +223,7 @@ const VaultMapPanel: React.FC<VaultMapPanelProps> = ({ isOpen, onClose }) => {
               ))}
 
               {/* Legend */}
-              <g transform={`translate(12, ${svgSize.height - 50})`} fontSize={9} className="text-base-content/40">
+              <g transform={`translate(12, ${svgSize.height - 50})`} fontSize={9} className="text-base-content/60">
                 {Object.entries(KIND_COLORS).map(([kind, color], i) => (
                   <g key={kind} transform={`translate(0, ${i * 16})`}>
                     <circle cx={4} cy={-2} r={4} fill={color} opacity={0.8} />

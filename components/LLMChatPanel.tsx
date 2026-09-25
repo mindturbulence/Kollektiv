@@ -449,7 +449,7 @@ ${systemResponse}` };
                                                 <h3 className="font-rajdhani text-[20px] uppercase tracking-[0.3em] truncate">{getChatTitle()}</h3>
                                                 {activeSessionId && <span className="font-rajdhani opacity-40 text-[20px] shrink-0">:&nbsp;{activeSessionId.substring(0, 4)}</span>}
                                             </div>
-                                            <p className="text-2xs uppercase tracking-[0.3em] text-base-content/50 font-mono hidden md:block truncate">
+                                            <p className="text-2xs uppercase tracking-[0.3em] text-base-content/60 font-mono hidden md:block truncate">
                                                 {getChatSubtitle()}
                                             </p>
                                         </div>
@@ -577,7 +577,7 @@ ${systemResponse}` };
                                                     <button
                                                         onClick={loadMoreMessages}
                                                         disabled={isLoadingMore}
-                                                        className="btn btn-xs btn-ghost font-mono text-2xs uppercase tracking-[0.2em] text-base-content/40 hover:text-primary/80 transition-colors disabled:opacity-30"
+                                                        className="btn btn-xs btn-ghost font-mono text-2xs uppercase tracking-[0.2em] text-base-content/60 hover:text-primary/80 transition-colors disabled:opacity-30"
                                                     >
                                                         {isLoadingMore ? 'Loading…' : `↑ Load older messages`}
                                                     </button>
@@ -606,11 +606,11 @@ ${systemResponse}` };
                                                                 className="text-left py-1.5 px-3 hover:bg-white/10 rounded-md transition-colors flex flex-col w-full"
                                                             >
                                                                 <span className="text-primary text-xs font-mono leading-relaxed mb-1">{c.cmd.replace('/', '')}</span>
-                                                                <span className="text-base-content/50 text-xs leading-relaxed">{c.desc}</span>
+                                                                <span className="text-base-content/60 text-xs leading-relaxed">{c.desc}</span>
                                                             </button>
                                                         ))}
                                                     </div>
-                                                    <div className="bg-base-200 border-t border-white/10 p-2 text-xs text-base-content/40 flex items-center font-mono">
+                                                    <div className="bg-base-200 border-t border-white/10 p-2 text-xs text-base-content/60 flex items-center font-mono">
                                                         <span className="text-base-content/60 mr-1">/</span> Type to filter
                                                     </div>
                                                 </div>

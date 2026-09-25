@@ -22,7 +22,7 @@ const PromptLibraryModal: React.FC<PromptLibraryModalProps> = ({ isOpen, onClose
                             <h3 className="text-xl font-black tracking-tighter text-base-content leading-none uppercase">
                                 Prompt Library<span className="text-primary">.</span>
                             </h3>
-                            <p className="text-2xs font-black uppercase tracking-[0.4em] text-base-content/30 mt-1.5">Neural Pattern Archival Access</p>
+                            <p className="text-2xs font-black uppercase tracking-[0.4em] text-base-content/60 mt-1.5">Neural Pattern Archival Access</p>
                         </div>
                         <button onClick={onClose} className="p-2 text-error/30 hover:text-error transition-all hover:scale-110">
                             <CloseIcon className="w-5 h-5" />
@@ -51,7 +51,7 @@ const PromptLibraryModal: React.FC<PromptLibraryModalProps> = ({ isOpen, onClose
                                             "{item.text}"
                                         </p>
                                         <div className="mt-2 flex justify-end">
-                                            <span className="text-2xs font-black uppercase tracking-widest text-primary/40 group-hover:text-primary transition-all flex items-center gap-1">
+                                            <span className="text-2xs font-black uppercase tracking-widest text-primary/60 group-hover:text-primary transition-all flex items-center gap-1">
                                                 LOAD PATTERN <ArrowRightIcon className="w-2.5 h-2.5" />
                                             </span>
                                         </div>

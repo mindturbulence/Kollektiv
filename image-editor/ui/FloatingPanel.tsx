@@ -86,7 +86,7 @@ const FloatingPanel: React.FC<FloatingPanelProps> = ({
         </span>
         <button
           type="button"
-          className="p-1 text-base-content/50 hover:text-base-content"
+          className="p-1 text-base-content/60 hover:text-base-content"
           aria-label="Close"
           onClick={onClose}
         >

@@ -169,7 +169,7 @@ const CurvesPanel: React.FC<CurvesPanelProps> = ({ layerId, onClose }) => {
         onKeyDown={handleKeyDown}
         tabIndex={0}
       />
-      <p className="text-2xs font-mono text-base-content/40 mt-1">Click to add points · Delete to remove · Drag to move</p>
+      <p className="text-2xs font-mono text-base-content/60 mt-1">Click to add points · Delete to remove · Drag to move</p>
     </FloatingPanel>
   );
 };

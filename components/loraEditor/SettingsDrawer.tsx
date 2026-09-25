@@ -89,7 +89,7 @@ const SettingsDrawer: React.FC<SettingsDrawerProps> = ({ isOpen, onClose, settin
                         {tab === 'customFields' && (
                             <SettingsGroup title="Custom Fields">
                                 <div className="p-6 space-y-3">
-                                    <p className="text-2xs text-base-content/40 uppercase tracking-widest leading-relaxed">
+                                    <p className="text-2xs text-base-content/60 uppercase tracking-widest leading-relaxed">
                                         JavaScript expressions evaluated in order. Available: fileMetadata, civitaiMetadata, arcencielMetadata, basemodelMetadata, vaeMetadata, customMetadata (earlier fields), safetensorsFile.
                                     </p>
                                     {settings.customFields.map((field, i) => (

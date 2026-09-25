@@ -248,7 +248,7 @@ const PromptDetailView: React.FC<PromptDetailViewProps> = ({
                         <div className="flex-grow p-1.5 relative overflow-hidden flex flex-col bg-transparent">
                             <div className="flex flex-col gap-4 px-6 pt-6">
                                 <div className="form-control w-full space-y-2">
-                                    <label className="font-nunito font-semibold text-xs tracking-widest text-base-content/40 uppercase">Prompt Title</label>
+                                    <label className="font-nunito font-semibold text-xs tracking-widest text-base-content/60 uppercase">Prompt Title</label>
                                     <input 
                                         type="text" 
                                         value={editedTitle}
@@ -259,7 +259,7 @@ const PromptDetailView: React.FC<PromptDetailViewProps> = ({
                                 </div>
                                 <div className="grid grid-cols-1 xl:grid-cols-2 gap-4">
                                     <div className="form-control w-full space-y-2">
-                                        <label className="font-nunito font-semibold text-xs tracking-widest text-base-content/40 uppercase">Category</label>
+                                        <label className="font-nunito font-semibold text-xs tracking-widest text-base-content/60 uppercase">Category</label>
                                         <select 
                                             value={editedCategoryId}
                                             onChange={(e) => setEditedCategoryId(e.target.value)}
@@ -272,7 +272,7 @@ const PromptDetailView: React.FC<PromptDetailViewProps> = ({
                                         </select>
                                     </div>
                                     <div className="form-control w-full space-y-2">
-                                        <label className="font-nunito font-semibold text-xs tracking-widest text-base-content/40 uppercase">Tags</label>
+                                        <label className="font-nunito font-semibold text-xs tracking-widest text-base-content/60 uppercase">Tags</label>
                                         <div className="flex flex-wrap items-center gap-2 p-2 bg-base-300/50 focus-within:bg-base-300/80 border-none transition-colors min-h-[3rem] rounded-md">
                                             {editedTags.map(tag => (
                                                 <div key={tag} className="flex items-center gap-1 bg-primary/20 text-xs font-semibold px-2 py-1 text-primary rounded-sm">
@@ -329,10 +329,10 @@ const PromptDetailView: React.FC<PromptDetailViewProps> = ({
                         <header ref={headerRef} className="flex-shrink-0 h-16 px-6 flex items-center justify-between border-b border-base-300/30 bg-base-200/20">
                             <div className="form-tab-group !w-auto">
                                 <button onClick={() => handleNavigation('prev')} className="form-tab-item px-4"><ChevronLeftIcon className="w-4 h-4" /></button>
-                                <span className="flex items-center px-4 font-mono text-xs font-bold text-base-content/40 border-x border-base-content/10">{currentIndex + 1} / {prompts.length}</span>
+                                <span className="flex items-center px-4 font-mono text-xs font-bold text-base-content/60 border-x border-base-content/10">{currentIndex + 1} / {prompts.length}</span>
                                 <button onClick={() => handleNavigation('next')} className="form-tab-item px-4"><ChevronRightIcon className="w-4 h-4" /></button>
                             </div>
-                            <button onClick={handleClose} className="p-2 text-base-content/40 hover:-content transition-all hover:scale-110">
+                            <button onClick={handleClose} className="p-2 text-base-content/60 hover:-content transition-all hover:scale-110">
                                 <CloseIcon className="w-5 h-5 stroke-[2]"/>
                             </button>
                         </header>
