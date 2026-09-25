@@ -2,7 +2,7 @@ import React from 'react';
 import type { LLMSettings } from '../../types';
 import { SettingRow, SettingsGroup } from './primitives';
 import { audioService } from '../../services/audioService';
-import { DAISYUI_DARK_THEMES } from '../../constants';
+import { THEMES } from '../../constants';
 import { defaultLLMSettings } from '../../utils/settingsStorage';
 import { RefreshIcon } from '../icons';
 
@@ -24,7 +24,7 @@ const AppearanceSection: React.FC<AppearanceSectionProps> = ({
             <SettingsGroup title="Theming">
             <SettingRow label="Obscure Cycle Theme" desc="Visual palette used when in dark mode.">
                 <select value={settings.darkTheme} onChange={(e) => handleSettingsChange('darkTheme', (e.currentTarget as any).value)} className="form-select w-64">
-                    {DAISYUI_DARK_THEMES.map(t => <option key={t} value={t}>{t.toUpperCase()}</option>)}
+                    {THEMES.map(t => <option key={t} value={t}>{t.toUpperCase()}</option>)}
                 </select>
             </SettingRow>
             <SettingRow label="Interface Scale" desc="Global font sizing for the dashboard and workspaces.">

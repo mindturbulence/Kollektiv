@@ -1,8 +1,8 @@
-export const DAISYUI_DARK_THEMES = [
-  "Kollektiv", "abyss", "acid", "aqua", "Arc", "arwes", "autumn", "black", "bumblebee", "business", 
-  "cmyk", "coffee", "corporate", "cupcake", "cyberpunk", "dark", "dim", "dracula", 
-  "emerald", "fantasy", "forest", "garden", "Hiigara", "isac",
-  "lemonade", "light", "luxury", "MindTurbulence", "night", "nord", 
-  "orange", "pastel", "pipboy", "retro", "starfield", "Stellar", "sunset", "synthwave", "valentine", 
-  "Vanguard", "winter", "wireframe"
+export const THEMES = [
+  "Kollektiv", "abyss", "Arc", "arwes", "black", "business",
+  "coffee", "cyberpunk", "dark", "dim", "dracula",
+  "forest", "Hiigara", "isac",
+  "luxury", "MindTurbulence", "night", "nord",
+  "orange", "pipboy", "starfield", "Stellar", "sunset", "synthwave",
+  "Vanguard"
 ];

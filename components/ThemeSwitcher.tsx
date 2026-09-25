@@ -1,6 +1,6 @@
 import React from 'react';
 import { useSettings } from '../contexts/SettingsContext';
-import { DAISYUI_DARK_THEMES } from '../constants';
+import { THEMES } from '../constants';
 import { audioService } from '../services/audioService';
 import { motion } from 'motion/react';
 import { PaletteIcon } from './icons';
@@ -10,9 +10,9 @@ const ThemeSwitcher: React.FC = () => {
 
   const cycleToNextTheme = () => {
     audioService.playClick();
-    const currentIndex = DAISYUI_DARK_THEMES.indexOf(settings.darkTheme);
-    const nextIndex = (currentIndex + 1) % DAISYUI_DARK_THEMES.length;
-    updateSettings({ ...settings, darkTheme: DAISYUI_DARK_THEMES[nextIndex], activeThemeMode: 'dark' });
+    const currentIndex = THEMES.indexOf(settings.darkTheme);
+    const nextIndex = (currentIndex + 1) % THEMES.length;
+    updateSettings({ ...settings, darkTheme: THEMES[nextIndex], activeThemeMode: 'dark' });
   };
 
   return (
