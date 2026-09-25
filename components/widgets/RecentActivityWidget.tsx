@@ -1,5 +1,7 @@
 import React, { useMemo } from 'react';
-import type { Idea } from '../../types';
+import type { Idea, ActiveTab } from '../../types';
+import { appEventBus } from '../../utils/eventBus';
+import EmptyState from '../EmptyState';
 
 interface RecentActivityWidgetProps {
   ideas: Idea[];
@@ -12,9 +14,12 @@ const RecentActivityWidget: React.FC<RecentActivityWidgetProps> = ({ ideas }) =>
     <div className="bg-base-100/40 backdrop-blur-xl border border-base-content/10 p-4 relative corner-frame h-full flex flex-col">
       <div className="text-2xs font-black uppercase tracking-[0.2em] text-primary/60 mb-3 flex-shrink-0">Recent Activity</div>
       {recent.length === 0 ? (
-        <p className="text-2xs font-mono text-base-content/60 uppercase tracking-wider py-4 text-center flex-1 flex items-center justify-center">
-          No recent activity
-        </p>
+        <EmptyState
+          title="No recent activity"
+          body="Clipped ideas show up here."
+          action={{ label: 'Craft your first prompt', onClick: () => appEventBus.emit('navigate', 'crafter' as ActiveTab) }}
+          className="py-4 flex-1 justify-center"
+        />
       ) : (
         <div className="space-y-1 flex-1 overflow-y-auto">
           {recent.map(idea => (

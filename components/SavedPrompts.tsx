@@ -17,6 +17,7 @@ import CategoryPanelToggle from './CategoryPanelToggle';
 import PromptEditorModal from './PromptEditorModal';
 import LoadingSpinner from './LoadingSpinner';
 import PromptDetailView from './PromptDetailView';
+import EmptyState from './EmptyState';
 import { pageVariants } from './AnimatedPanels';
 
 interface SavedPromptsProps {
@@ -405,12 +406,16 @@ const SavedPrompts: React.FC<SavedPromptsProps> = ({
                               </div>
                           ))}
                       </div>
+                  ) : prompts.length === 0 ? (
+                      <EmptyState
+                          icon={<ArchiveIcon className="w-16 h-16" />}
+                          title="No prompts yet"
+                          body="Save your first prompt to start the library."
+                          action={{ label: 'Add prompt', onClick: () => { setPromptToEdit(null); setIsEditorModalOpen(true); } }}
+                          className="py-40"
+                      />
                   ) : (
-                      <div className="h-full flex flex-col items-center justify-center text-center py-40 opacity-60">
-                          <ArchiveIcon className="w-20 h-20 mb-6" />
-                          <h3 className="text-3xl font-black uppercase tracking-widest">Library Empty</h3>
-                          <p className="text-2xs font-bold uppercase tracking-[0.3em] mt-4">Awaiting content input</p>
-                      </div>
+                      <EmptyState title="No matches" body="Try another search or folder." className="py-40" />
                   )}
                   
                   {/* Scroll Target for Infinite Loading */}

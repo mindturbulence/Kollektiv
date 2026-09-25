@@ -4,6 +4,7 @@ import { v4 as uuidv4 } from 'uuid';
 import { appEventBus } from '../utils/eventBus';
 import { audioService } from '../services/audioService';
 import { CloseIcon, DeleteIcon, TerminalIcon, ChatBubbleIcon } from './icons';
+import EmptyState from './EmptyState';
 
 // ── Types ───────────────────────────────────────────────────────────
 
@@ -279,13 +280,12 @@ const ActivityPanel: React.FC<ActivityPanelProps> = ({ isOpen, onClose }) => {
                                     ))}
                                 </div>
                             ) : (
-                                <div className="h-full flex flex-col items-center justify-center text-center opacity-60 py-16">
-                                    <ChatBubbleIcon className="w-16 h-16 mb-6" />
-                                    <p className="text-xl font-black uppercase tracking-widest leading-none">No Transcript Yet</p>
-                                    <p className="text-sm font-bold uppercase tracking-[0.2em] mt-4">
-                                        Conversation history appears here
-                                    </p>
-                                </div>
+                                <EmptyState
+                                    icon={<ChatBubbleIcon className="w-16 h-16" />}
+                                    title="No transcript yet"
+                                    body="Start a live session and the conversation appears here."
+                                    className="h-full justify-center py-16"
+                                />
                             )}
                         </div>
                     </div>

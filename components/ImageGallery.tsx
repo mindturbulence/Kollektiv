@@ -5,7 +5,8 @@ import type { GalleryItem, GalleryCategory } from '../types';
 import { loadGalleryItems, addItemToGallery, updateItemInGallery, deleteItemFromGallery, loadPinnedItemIds, savePinnedItemIds, loadCategories } from '../utils/galleryStorage';
 import ImageCard from './ImageCard';
 import TreeView, { TreeViewItem } from './TreeView';
-import { SearchIcon, CloseIcon } from './icons';
+import { SearchIcon, CloseIcon, UploadIcon } from './icons';
+import EmptyState from './EmptyState';
 import { pageVariants } from './AnimatedPanels';
 import CategoryPanelToggle from './CategoryPanelToggle';
 import ItemDetailView from './ItemDetailView';
@@ -482,8 +483,16 @@ const ImageGallery: React.FC<ImageGalleryProps> = ({
                           </div>
                         ))}
                       </div>
+                    ) : items.length === 0 ? (
+                      <EmptyState
+                        icon={<UploadIcon className="w-16 h-16" />}
+                        title="No images yet"
+                        body="Import images or videos to start your library."
+                        action={{ label: 'Import', onClick: () => { audioService.playClick(); setIsAddModalOpen(true); } }}
+                        className="py-32"
+                      />
                     ) : (
-                      <div className="text-center py-32 flex flex-col items-center opacity-60"><h3 className="text-xl font-black uppercase tracking-tighter">No items found</h3></div>
+                      <EmptyState title="No matches" body="Try another search, folder, or filter." className="py-32" />
                     )}
                     {targetDisplayCount < sortedAndFilteredItems.length && (
                       <div ref={lastElementRef} className="py-20 flex justify-center bg-transparent"><span className="loading loading-spinner loading-md opacity-20"></span></div>
