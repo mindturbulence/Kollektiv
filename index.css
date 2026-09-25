@@ -147,16 +147,19 @@ h6,
   font-family: "Nunito", sans-serif !important;
 }
 
-button:not(.tab):not(.btn-sm):not(.dropdown):not(.font-normal) {
+/* button:where(...) = specificity (0,0,1): beats Tailwind preflight's `button`
+   reset by source order, but loses to any utility class (absolute, text-[10px],
+   overflow-visible…). The old (0,4,1) selector beat every utility, clipped
+   tooltips via overflow:hidden and made press feedback lag via transition:all. */
+button:where(:not(.tab):not(.btn-sm):not(.dropdown):not(.font-normal)) {
   font-family: "Nunito", sans-serif;
   font-weight: 700;
   font-size: 12px;
   text-transform: uppercase;
   letter-spacing: 0.1em;
   position: relative;
-  overflow: hidden;
-  transition: all 0.3s ease;
   z-index: 1;
+  transition: color 0.15s ease, background-color 0.15s ease, border-color 0.15s ease, opacity 0.15s ease, transform 0.12s ease;
 }
 
 button {
@@ -188,13 +191,15 @@ button:active {
   border-color: transparent !important;
 }
 
-.btn-snake span {
+/* Decorative border edges only — the four empty <span/>s. A bare `span` also
+   matched label spans ("Add Prompt" was pulled out of flow over its icon). */
+.btn-snake > span:empty {
   position: absolute;
   display: block;
   pointer-events: none;
 }
 
-.btn-snake span:nth-child(1) {
+.btn-snake > span:empty:nth-child(1) {
   top: 0;
   left: -100%;
   width: 100%;
@@ -202,12 +207,12 @@ button:active {
   background: linear-gradient(90deg, transparent, oklch(var(--p)));
 }
 
-.btn-snake:hover span:nth-child(1) {
+.btn-snake:hover > span:empty:nth-child(1) {
   left: 100%;
   transition: 0.5s;
 }
 
-.btn-snake span:nth-child(2) {
+.btn-snake > span:empty:nth-child(2) {
   top: -100%;
   right: 0;
   width: 2px;
@@ -215,13 +220,13 @@ button:active {
   background: linear-gradient(180deg, transparent, oklch(var(--p)));
 }
 
-.btn-snake:hover span:nth-child(2) {
+.btn-snake:hover > span:empty:nth-child(2) {
   top: 100%;
   transition: 0.5s;
   transition-delay: 0.125s;
 }
 
-.btn-snake span:nth-child(3) {
+.btn-snake > span:empty:nth-child(3) {
   bottom: 0;
   right: -100%;
   width: 100%;
@@ -229,13 +234,13 @@ button:active {
   background: linear-gradient(270deg, transparent, oklch(var(--p)));
 }
 
-.btn-snake:hover span:nth-child(3) {
+.btn-snake:hover > span:empty:nth-child(3) {
   right: 100%;
   transition: 0.5s;
   transition-delay: 0.25s;
 }
 
-.btn-snake span:nth-child(4) {
+.btn-snake > span:empty:nth-child(4) {
   bottom: -100%;
   left: 0;
   width: 2px;
@@ -243,7 +248,7 @@ button:active {
   background: linear-gradient(360deg, transparent, oklch(var(--p)));
 }
 
-.btn-snake:hover span:nth-child(4) {
+.btn-snake:hover > span:empty:nth-child(4) {
   bottom: 100%;
   transition: 0.5s;
   transition-delay: 0.375s;
@@ -266,13 +271,13 @@ button:active {
   background: oklch(var(--p) / 0.8);
 }
 
-.btn-snake-primary span {
+.btn-snake-primary > span:empty {
   position: absolute;
   display: block;
   pointer-events: none;
 }
 
-.btn-snake-primary span:nth-child(1) {
+.btn-snake-primary > span:empty:nth-child(1) {
   top: 0;
   left: -100%;
   width: 100%;
@@ -280,12 +285,12 @@ button:active {
   background: linear-gradient(90deg, transparent, oklch(var(--pc)));
 }
 
-.btn-snake-primary:hover span:nth-child(1) {
+.btn-snake-primary:hover > span:empty:nth-child(1) {
   left: 100%;
   transition: 0.5s;
 }
 
-.btn-snake-primary span:nth-child(2) {
+.btn-snake-primary > span:empty:nth-child(2) {
   top: -100%;
   right: 0;
   width: 2px;
@@ -293,13 +298,13 @@ button:active {
   background: linear-gradient(180deg, transparent, oklch(var(--pc)));
 }
 
-.btn-snake-primary:hover span:nth-child(2) {
+.btn-snake-primary:hover > span:empty:nth-child(2) {
   top: 100%;
   transition: 0.5s;
   transition-delay: 0.125s;
 }
 
-.btn-snake-primary span:nth-child(3) {
+.btn-snake-primary > span:empty:nth-child(3) {
   bottom: 0;
   right: -100%;
   width: 100%;
@@ -307,13 +312,13 @@ button:active {
   background: linear-gradient(270deg, transparent, oklch(var(--pc)));
 }
 
-.btn-snake-primary:hover span:nth-child(3) {
+.btn-snake-primary:hover > span:empty:nth-child(3) {
   right: 100%;
   transition: 0.5s;
   transition-delay: 0.25s;
 }
 
-.btn-snake-primary span:nth-child(4) {
+.btn-snake-primary > span:empty:nth-child(4) {
   bottom: -100%;
   left: 0;
   width: 2px;
@@ -321,7 +326,7 @@ button:active {
   background: linear-gradient(360deg, transparent, oklch(var(--pc)));
 }
 
-.btn-snake-primary:hover span:nth-child(4) {
+.btn-snake-primary:hover > span:empty:nth-child(4) {
   bottom: 100%;
   transition: 0.5s;
   transition-delay: 0.375s;
@@ -468,31 +473,6 @@ button:active {
   text-shadow: none;
   box-shadow: none;
   filter: none;
-}
-
-.form-btn:hover {
-  background-color: oklch(var(--p));
-  color: oklch(var(--pc));
-  border-color: oklch(var(--p));
-}
-
-.form-btn:active {
-  transform: scale(0.98);
-}
-
-.form-btn:disabled {
-  opacity: 0.5;
-  pointer-events: none;
-}
-
-.form-btn-primary {
-  background-color: oklch(var(--p));
-  color: oklch(var(--pc));
-  border-color: oklch(var(--p));
-}
-
-.form-btn-primary:hover {
-  background-color: oklch(var(--p) / 0.8);
 }
 
 /* --- SHINE TEXT EFFECT --- */

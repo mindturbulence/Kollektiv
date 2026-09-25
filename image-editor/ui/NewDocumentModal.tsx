@@ -1,10 +1,11 @@
 // ─── Kollektiv Image Editor — New Document Modal ───────────────────────────
-// Blank canvas creation. DaisyUI modal chrome matching AddItemModal/
-// ConfirmationModal (backdrop blur, centered card, portal-rendered).
+// Entry point when the editor opens without a payload: open an existing image
+// (picker or drop) or create a blank canvas. DaisyUI modal chrome matching
+// AddItemModal/ConfirmationModal (backdrop blur, centered card, portal-rendered).
 
 import React, { useState } from 'react';
 import { createPortal } from 'react-dom';
-import { CloseIcon } from '../../components/icons';
+import { CloseIcon, UploadIcon } from '../../components/icons';
 
 type Background = 'white' | 'transparent' | 'foreground';
 
@@ -24,13 +25,16 @@ interface NewDocumentModalProps {
   isOpen: boolean;
   onClose: () => void;
   onCreate: (width: number, height: number, background: Background) => void | Promise<void>;
+  onOpenImage: () => void;
+  onDropFile: (file: File) => void;
 }
 
-const NewDocumentModal: React.FC<NewDocumentModalProps> = ({ isOpen, onClose, onCreate }) => {
+const NewDocumentModal: React.FC<NewDocumentModalProps> = ({ isOpen, onClose, onCreate, onOpenImage, onDropFile }) => {
   const [width, setWidth] = useState(1024);
   const [height, setHeight] = useState(1024);
   const [background, setBackground] = useState<Background>('white');
   const [isCreating, setIsCreating] = useState(false);
+  const [isDragOver, setIsDragOver] = useState(false);
 
   if (!isOpen) return null;
 
@@ -58,7 +62,7 @@ const NewDocumentModal: React.FC<NewDocumentModalProps> = ({ isOpen, onClose, on
       >
         <header className="panel-header h-9 px-4">
           <h3 id="new-document-title" className="self-center text-xs font-display uppercase tracking-widest text-base-content/80">
-            New Document
+            Open or Create
           </h3>
           <div className="flex-1" />
           <button type="button" className="self-center p-1 text-base-content/50 hover:text-base-content" onClick={onClose} aria-label="Close">
@@ -67,6 +71,33 @@ const NewDocumentModal: React.FC<NewDocumentModalProps> = ({ isOpen, onClose, on
         </header>
 
         <div className="p-4 flex flex-col gap-4">
+          <button
+            type="button"
+            className={`w-full flex flex-col items-center justify-center gap-2 py-6 border border-dashed transition-colors ${
+              isDragOver ? 'border-primary bg-primary/10 text-primary' : 'border-base-content/20 text-base-content/70 hover:border-primary/50 hover:text-primary'
+            }`}
+            onClick={onOpenImage}
+            onDragOver={(e) => { if (e.dataTransfer.types.includes('Files')) { e.preventDefault(); setIsDragOver(true); } }}
+            onDragLeave={() => setIsDragOver(false)}
+            onDrop={(e) => {
+              e.preventDefault();
+              e.stopPropagation();
+              setIsDragOver(false);
+              const file = e.dataTransfer.files?.[0];
+              if (file) onDropFile(file);
+            }}
+          >
+            <UploadIcon className="w-5 h-5" />
+            <span className="text-sm font-display">Open image…</span>
+            <span className="text-[11px] text-base-content/50">or drop a file here · Ctrl+O</span>
+          </button>
+
+          <div className="flex items-center gap-3 text-[10px] font-mono uppercase tracking-wide text-base-content/40">
+            <span className="flex-1 border-t border-base-content/10" />
+            or start blank
+            <span className="flex-1 border-t border-base-content/10" />
+          </div>
+
           <div className="flex items-center gap-3">
             <label className="flex-1 flex flex-col gap-1 text-[10px] font-mono uppercase tracking-wide text-base-content/50">
               Width
@@ -138,7 +169,7 @@ const NewDocumentModal: React.FC<NewDocumentModalProps> = ({ isOpen, onClose, on
             onClick={handleCreate}
             disabled={isCreating || width < 1 || height < 1}
           >
-            {isCreating ? 'Creating…' : 'Create'}
+            {isCreating ? 'Creating…' : 'Create Blank'}
           </button>
         </footer>
       </div>

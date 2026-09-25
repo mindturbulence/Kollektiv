@@ -4,6 +4,7 @@
 
 import { addItemToGallery, loadGalleryItems } from '../../utils/galleryStorage';
 import { loadLLMSettings } from '../../utils/settingsStorage';
+import { fileSystemManager } from '../../utils/fileUtils';
 import type { GalleryItem } from '../../types';
 
 export interface SaveToGalleryOptions {
@@ -28,15 +29,28 @@ export async function saveToGallery(blob: Blob, opts: SaveToGalleryOptions): Pro
   }
 }
 
-/** Looks up the category/tags of the gallery item an editor session was opened from,
- *  so a re-saved edit can inherit them instead of landing uncategorized. */
+/** Gallery item URLs are usually vault-relative paths (only data:/http/blob: are
+ *  directly fetchable) — resolve them the same way ImageCard does. */
+export async function loadGalleryImage(url: string): Promise<Blob> {
+  if (/^(data:|https?:|blob:)/.test(url)) {
+    const res = await fetch(url);
+    if (!res.ok) throw new Error(`Failed to fetch gallery image: ${res.status}`);
+    return res.blob();
+  }
+  const blob = await fileSystemManager.getFileAsBlob(url);
+  if (!blob) throw new Error('Gallery image not found in vault');
+  return blob;
+}
+
+/** Looks up the title/category/tags of the gallery item an editor session was opened
+ *  from, so a re-saved edit can inherit them instead of landing uncategorized. */
 export async function getSourceItemMeta(
   galleryItemId: string,
-): Promise<{ categoryId?: string; tags?: string[] } | null> {
+): Promise<{ title?: string; categoryId?: string; tags?: string[] } | null> {
   const items = await loadGalleryItems();
   const item = items.find((i) => i.id === galleryItemId);
   if (!item) return null;
-  return { categoryId: item.categoryId, tags: item.tags };
+  return { title: item.title, categoryId: item.categoryId, tags: item.tags };
 }
 
 /** Returns true if the current settings would JPEG-convert the saved image (destroying alpha). */

@@ -28,6 +28,14 @@ Be direct, concise, and practical.
 
 **The agent's job is not to make the user feel right. The agent's job is to help the user think better.**
 
+## Jev first (MANDATORY)
+
+Before starting any task, check whether it contains a decision Jev can make: picking one option from a list, scoring on a scale, or a yes/no probability (sorting, triage, classification, routing, prioritising). If it does, use the `jev` skill (`~/.claude/skills/jev/`) for that decision first, then do the writing yourself. **Jev decides, you write.**
+
+- If Jev's confidence is below 0.6, or a yes/no answer falls between 0.3 and 0.7, make the call yourself and say so.
+- Anything sent to Jev leaves this machine (OpenRouter → TypeSafe). **Ask the user before sending private text**: this repo's source code, user data, credentials, or client content. Made-up or public text is fine.
+- Skip Jev for tasks with no such decision (writing or editing code, debugging, explaining). Never let a Jev failure block work: on any error, carry on without it.
+
 ## Documentation lookup
 
 All project documentation lives under `docs/handbook/`. Look there first for architecture, design principles, subsystem specs (AI engine, capability platform, knowledge engine, memory, MCP, voice pipeline, providers), and implementation docs — before searching elsewhere or guessing from code alone.

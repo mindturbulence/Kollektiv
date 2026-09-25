@@ -276,21 +276,29 @@ Colors taken entirely from the active DaisyUI CSS variables — no hardcoded val
 ### Entry from Composer
 `ComposerPage.tsx` gains an **"Edit in Editor"** button alongside Save/Export. Calls `generateFinalCanvas()`, converts via `canvas.toBlob()`, emits `appEventBus.emit('openInEditor', { blob })`. Same ingestion path as Gallery entry.
 
-### Blank canvas entry
-A **"New"** button in `EditorToolbar` (or navigating to `image_editor` with no payload) opens `NewDocumentModal`:
-- Width × height numeric inputs
-- Common presets (1024×1024, 1920×1080, 512×512) as quick-pick chips
-- Lock-aspect-ratio toggle
-- Resolution/DPI field (cosmetic metadata only)
-- Background choice: White / Transparent / Foreground Color
-- Styled reusing `AddItemModal.tsx` modal chrome (backdrop blur, centered card, `.panel-footer` action row)
+### Entry with no payload: "Open or Create" (revised 2026-09-24)
+> **Why revised:** the original spec made the no-payload entry blank-canvas-only, so an *image* editor opened from the Studio menu could not open an image. The Gallery→EDIT path also failed (a payload race, and vault-relative URLs that were `fetch`ed). See [2026-09-24 review §1](2026-09-24-app-review-and-revision-plan.md).
+
+Navigating to `image_editor` with no payload, or pressing **New** in `EditorToolbar`, opens `NewDocumentModal` titled **"Open or Create"**:
+- **Primary: "Open image…"**. This is a dashed drop zone that is also a button (native file picker, `image/*`), with the hint "or drop a file here · Ctrl+O". A picked or dropped file becomes a document sized to the image, titled from the filename.
+- Divider: "or start blank".
+- Blank canvas: width × height, presets (1024², 1920×1080, 512²), background White / Transparent. The button reads **"Create Blank"**.
+- *Still to do:* a lock-aspect toggle, a "Foreground" background choice, and **"Recent from Vault"**: the last 6 gallery images as thumbnails, one click to open (reuse `ImageCard` thumbnail loading via `GalleryBridge.loadGalleryImage`).
+
+**Drop anywhere on the editor.** With no document, the file becomes the document. With a document open, it is placed as a new top layer through the undoable `LayerManager.addLayer`. **Ctrl+O** follows the same rule. Errors (HEIC in Chromium/Firefox, oversize, corrupt) surface through `showGlobalFeedback`; they are never swallowed.
+
+**Vault images** are resolved by `GalleryBridge.loadGalleryImage(url)`: data:/http/blob: URLs are fetched, and anything else is read through `fileSystemManager.getFileAsBlob`. `core/io/FileIO` never touches the vault.
+
+**Recovery prompt.** *Current:* a blocking "Unsaved Work Found" dialog at z-1100 (above the start modal). *Target:* when the editor opened with a payload (Gallery/Composer/Assets), show a non-blocking banner, "Recover previous session?", and confirm before replacing the opened image.
+
+**Adjustments entry (new).** Adjustments open only by shortcut today (Ctrl+L/M/U/E). Add an **Adjust** menu in `EditorToolbar` listing Levels, Curves, Hue/Saturation and Exposure with their shortcuts. Disable it with a tooltip when the active layer isn't an image layer (today a panel opened on text or shape silently does nothing). Ctrl+E conflicts with Merge Down (§4), so move Exposure to Ctrl+Shift+E.
 
 ### Exit — Save to Gallery
 Top-right of `EditorToolbar`: primary **"Save to Gallery"** button (`.form-btn-primary`) flattens composite → `canvas.toBlob()` → `GalleryBridge.saveToGallery(...)` → global feedback toast ("Saved to library.") → `setActiveTab('gallery')`. Always route through `GalleryBridge` rather than calling `addItemToGallery` directly — see engineering plan §7 for the `generationId` options-bag form and the JPG-conversion guard.
 
-**⚠️ Transparency warning UI required.** `addItemToGallery` silently re-encodes to JPEG when the active storage provider's conversion flag is on (default `true` for Drive, `false` for local — `utils/settingsStorage.ts:92,97-98`). When conversion is active, the Save flow must warn before writing (warn unconditionally on the conversion flag — do *not* alpha-scan the composite to decide, that is 16M reads at 4096²) ("Vault JPG conversion will flatten transparency — save as PNG instead?"), not fail silently. This is an M1 blocker, not polish.
+**⚠️ Transparency warning UI required.** `addItemToGallery` silently re-encodes to JPEG when the active storage provider's conversion flag is on (default `true` for Drive, `false` for local — `utils/settingsStorage.ts:92,97-98`). When conversion is active, the Save flow must warn before writing (warn unconditionally on the conversion flag — do *not* alpha-scan the composite to decide, that is 16M reads at 4096²) ("Vault JPG conversion is enabled, so transparent areas will be flattened. Save anyway?" — the old "save as PNG instead?" copy offered a choice that did not exist). *Target:* the app modal, not `window.confirm`, not fail silently. This is an M1 blocker, not polish.
 
-If the document originated from an existing gallery item: offer a small dropdown next to Save — **"Save as New"** (new `GalleryItem`) vs **"Update Original"** (replaces in place via `updateItemInGallery`).
+If the document originated from an existing gallery item: offer a small dropdown next to Save — **"Save as New"** *(not yet built — every save currently creates a new item; Phase 1 E8)* (new `GalleryItem`) vs **"Update Original"** (replaces in place via `updateItemInGallery`).
 
 ### Export
 Secondary **"Export"** button opens `ExportModal`: format radio (PNG / JPEG), quality slider (JPEG only, 0–100, with estimated file-size readout), **Download** button → `URL.createObjectURL` + `<a download>` (matches `ComposerPage.tsx`'s existing download flow).

@@ -432,3 +432,47 @@ That cut removes the WebGL2 shader pipeline, the Rust toolchain, `earcut`, recur
 
 - `psd.js` (§7) — license and maintenance status asserted but not verified this session. V2 concern.
 - §8's ~850MB–1GB peak RAM figure is an estimate, not a measurement. Worth a real profile at M2 before treating 4096×4096 as the safe ceiling.
+
+---
+
+## 12. Status and Re-plan (2026-09-24)
+
+> Source: [whole-app review](2026-09-24-app-review-and-revision-plan.md). Full defect list with file:line evidence is in [review-2026-09-24/image-editor.md](review-2026-09-24/image-editor.md).
+
+### What happened to the §11 decision
+
+§11's re-cut was never formally decided. In practice the team built most of the **defer** column (Wand, Lasso, Gradient, Shape, Type, masks, groups, the 9 WebGL2 blend modes), while the **keep** column shipped broken: crop is not undoable, the brush paints in the wrong place on transformed layers, and the marquee has no effect. The feature count grew and the core loop stayed untrustworthy.
+
+### Milestone status
+
+| Milestone | Status | Blocking defects |
+|---|---|---|
+| M1 viewport/import/zoom/export/Gallery round-trip | **Fixed 2026-09-24**, except round-trip metadata | Gallery→EDIT payload race and vault-path fetch fixed. Export now flattens via the shared `LayerPainter` (identical to the viewport). *Open:* save duplicates the item, `generationId` carries the gallery id (E8) |
+| M2 layers/undo/autosave | Partial | Autosave JPEG destroys alpha and drops masks (C3). History used full bitmaps with no byte cap (H3). Nested delete is broken (H12). *Fixed:* history is now cleared on document load |
+| M3 adjustments + brush | Partial | No live stroke preview, dotted strokes (H4/H5). The Curves preview ignores mid points (M3) |
+| M3.5 masks/gradient/shape/type | Partial | Masks share the C1 coordinate bug. Text/shape can't be moved or edited (H9) |
+| M4 selections/transform/crop | Partial / broken | Selections affect nothing (H7). Crop is not undoable and skips non-image layers (C2). Rotated-layer resize drifts (M2) |
+
+### Architecture change made
+
+`core/renderer/LayerPainter.ts` now owns all layer drawing: image, text and shape layers, groups, masks, and native plus manual (WebGL2) blend modes. `CanvasRenderer` (on-screen) and `FileIO.exportToBlob` (offscreen, its own compositor instance, `showAdjustmentPreviews=false`) both use it, so export can no longer diverge from what the user sees. **Merge down, flatten, the eyedropper and mask export should reuse it too**; don't write a third compositor.
+
+`FileIO.importFromPayload` accepts only `blob` and `blank` payloads. Gallery payloads are resolved to a Blob by `ui/GalleryBridge.loadGalleryImage` first, so core stays vault-agnostic.
+
+### M5: "make editing real" (adopted; no new tools until done)
+
+Order follows the review's §4 and the revision plan's Phase 1–2 (Jev-prioritised):
+
+1. **Correctness:** `docToLayer` for all pixel tools (C1). Crop as a HistoryCommand across all layer types with Enter/Esc confirm (C2). `disposeTools()` on document change and unmount (M12). A `SET_TITLE` action so renames stop abusing `SET_DOCUMENT`.
+2. **Autosave integrity:** PNG/lossless WebP plus masks, with a format version (C3). A non-blocking recovery banner when a payload is present (M11).
+3. **Brush:** live preview, spaced stamping, correct clone radius and pressure, fresh source (H4–H6).
+4. **Selection clipping** for brush, eraser, clone, gradient, fill and adjustments (H7), plus fill and delete-in-selection.
+5. **Layer basics:** a blank layer (H11), nested delete (H12), merge down and flatten via `LayerPainter`, one history entry per slider drag (H8).
+6. **Upload workflow:** Image Size and Canvas Size, crop to selection, paste, mask → B/W PNG, a `MAX_DIM` guard (H13).
+7. **Gallery round-trip:** real `generationId`/prompt, Update Original vs Save as New (H10/E8).
+8. **Text/shape usability** (H9).
+9. **History memory:** a byte cap plus `.close()` now, dirty-rect diffs immediately after (H3). This must land before 8k documents are routine.
+
+**Tests required per item:** a unit test for `docToLayer` (rotate/flip/scale/crop cases), crop undo/redo, and an autosave round-trip that preserves alpha and masks. Extend `e2e/image-editor.spec.ts` with brush → Levels → Save. That spec runs with **full motion** on purpose; keep it that way.
+
+**Deferred until M5 ships:** adjustment layers, a history panel, more blend modes, and Wand/Lasso polish beyond the O(n²) flood-fill fix.

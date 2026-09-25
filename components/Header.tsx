@@ -277,6 +277,7 @@ const Header: React.FC<HeaderProps> = ({
                   <button
                     onClick={() => handleParentClick(group)}
                     onMouseEnter={() => audioService.playHover()}
+                    aria-expanded={group.singleId ? undefined : isExpanded}
                     className={`parent-nav-item font-normal uppercase tracking-widest relative z-10 px-3 h-full flex items-center leading-none transition-all duration-500 hover:text-primary hover:no-glow ${isPipboyTheme ? 'font-fixedsys text-[12px]' : 'font-rajdhani text-[12px] font-normal'} ${isExpanded || isCurrent || (group.singleId === activeTab) ? 'text-base-content no-glow is-active' : 'text-base-content/30'}`}
                   >
                     <RollingText text={group.label} hoverClassName="text-primary" />
@@ -285,6 +286,9 @@ const Header: React.FC<HeaderProps> = ({
                   <div
                     ref={el => { if (el) containerRefs.current[group.id] = el; }}
                     className="overflow-hidden opacity-0 w-0 flex items-center bg-transparent h-full pointer-events-auto"
+                    // Collapsed groups are only visually hidden (GSAP width/opacity), so
+                    // take them out of the tab order and a11y tree too.
+                    inert={!isExpanded}
                   >
                     <div className="flex items-center px-0 h-full gap-0">
                       {group.items.filter(item => item.enabled !== false).map((item) => (

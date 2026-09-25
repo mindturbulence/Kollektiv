@@ -665,17 +665,15 @@ export async function startKollektivMcp(
 
   const httpServer = createHttpServer(
     async (req: IncomingMessage, res: ServerResponse) => {
-      res.setHeader("Access-Control-Allow-Origin", "*");
-      res.setHeader("Access-Control-Allow-Methods", "GET, POST, OPTIONS");
-      res.setHeader(
-        "Access-Control-Allow-Headers",
-        "Content-Type, Authorization, MCP-Session-ID, Accept"
-      );
-      res.setHeader("Access-Control-Expose-Headers", "mcp-session-id");
-
-      if (req.method === "OPTIONS") {
-        res.writeHead(204);
-        res.end();
+      // Callers are the app server's /api/mcp/proxy and native MCP clients — none
+      // are browsers, so any request carrying an Origin is a website trying to
+      // drive vault/browser tools (a cross-site text/plain POST would otherwise
+      // execute, since the body is JSON-parsed regardless of Content-Type).
+      // The Host check blocks DNS rebinding. No CORS headers are sent at all.
+      const hostname = (req.headers.host ?? "").replace(/:\d+$/, "");
+      if (req.headers.origin || !["127.0.0.1", "localhost", "[::1]"].includes(hostname)) {
+        res.writeHead(403, { "Content-Type": "application/json" });
+        res.end(JSON.stringify({ error: "Browser-originated requests are not allowed" }));
         return;
       }
 

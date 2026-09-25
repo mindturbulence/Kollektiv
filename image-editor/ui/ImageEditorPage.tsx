@@ -7,10 +7,11 @@
 import React, { useCallback, useEffect, useRef, useState, useSyncExternalStore } from 'react';
 import { createPortal } from 'react-dom';
 import { dispatch, getSnapshot, resetStore, subscribe } from '../core/store';
-import type { EditorOpenPayload } from '../core/types';
+import type { EditorDocument, EditorOpenPayload } from '../core/types';
 import { exportToBlob, importFromPayload, openFilePicker, importImage, createBlankDocument } from '../core/io/FileIO';
 import * as AutosaveService from '../core/autosave/AutosaveService';
-import { getSourceItemMeta, saveToGallery, willConvertToJpeg } from './GalleryBridge';
+import { addLayer } from '../core/layers/LayerManager';
+import { getSourceItemMeta, loadGalleryImage, saveToGallery, willConvertToJpeg } from './GalleryBridge';
 import EditorToolbar from './EditorToolbar';
 import ToolRail from './ToolRail';
 import ToolHeader from './ToolHeader';
@@ -77,6 +78,13 @@ const UnsavedChangesModal: React.FC<{
   }
   return null;
 };
+/** Replaces the open document. Undo history belongs to the previous document —
+ *  keeping it would let redo splice the old document's layers into the new one. */
+function loadDocument(doc: EditorDocument | null): void {
+  dispatch({ type: 'SET_DOCUMENT', document: doc });
+  dispatch({ type: 'CLEAR_HISTORY' });
+}
+
 const ImageEditorPage: React.FC<ImageEditorPageProps> = ({ openPayload, showGlobalFeedback, isExiting }) => {
   const viewportRef = useRef<CanvasViewportHandle>(null);
   const isDirty = useSyncExternalStore(subscribe, () => getSnapshot().isDirty);
@@ -94,7 +102,7 @@ const ImageEditorPage: React.FC<ImageEditorPageProps> = ({ openPayload, showGlob
   const [showRecovery, setShowRecovery] = useState(false);
   const [isRestoring,    setIsRestoring]    = useState(false);
   const [isExportOpen,   setIsExportOpen]   = useState(false);
-  const sourceMetaRef = useRef<{ categoryId?: string; tags?: string[] } | null>(null);
+  const sourceMetaRef = useRef<{ title?: string; categoryId?: string; tags?: string[] } | null>(null);
 
   useEffect(() => {
     const handleResize = () => setViewportWidth(window.innerWidth);
@@ -115,15 +123,21 @@ const ImageEditorPage: React.FC<ImageEditorPageProps> = ({ openPayload, showGlob
   useEffect(() => {
     let cancelled = false;
     if (openPayload) {
-      if (openPayload.kind === 'gallery') {
-        getSourceItemMeta(openPayload.galleryItemId).then((meta) => {
-          if (!cancelled) sourceMetaRef.current = meta;
-        });
-      }
-      importFromPayload(openPayload)
-        .then((doc) => {
+      const load = async () => {
+        if (openPayload.kind !== 'gallery') return { doc: await importFromPayload(openPayload), meta: null };
+        const [blob, meta] = await Promise.all([
+          loadGalleryImage(openPayload.url),
+          getSourceItemMeta(openPayload.galleryItemId).catch(() => null),
+        ]);
+        const doc = await importFromPayload({ kind: 'blob', blob, title: meta?.title });
+        doc.sourceGalleryItemId = openPayload.galleryItemId;
+        return { doc, meta };
+      };
+      load()
+        .then(({ doc, meta }) => {
           if (cancelled) return;
-          dispatch({ type: 'SET_DOCUMENT', document: doc });
+          sourceMetaRef.current = meta;
+          loadDocument(doc);
           requestAnimationFrame(() => viewportRef.current?.fitToViewport());
         })
         .catch((err) => {
@@ -152,15 +166,16 @@ const ImageEditorPage: React.FC<ImageEditorPageProps> = ({ openPayload, showGlob
   const handleZoomIn = useCallback(() => viewportRef.current?.zoomIn(), []);
   const handleZoomOut = useCallback(() => viewportRef.current?.zoomOut(), []);
 
-  const handleSaveToGallery = useCallback(async () => {
+  /** Resolves true only when the document was actually saved. */
+  const handleSaveToGallery = useCallback(async (): Promise<boolean> => {
     const doc = getSnapshot().document;
-    if (!doc || isSaving) return;
+    if (!doc || isSaving) return false;
 
     if (willConvertToJpeg()) {
       const proceed = window.confirm(
-        'Vault JPG conversion is enabled — saving will flatten transparency. Save as PNG instead?\n\nOK = Save Anyway   Cancel = Abort',
+        'Vault JPG conversion is enabled, so transparent areas will be flattened to a solid background.\n\nSave anyway?',
       );
-      if (!proceed) return;
+      if (!proceed) return false;
     }
 
     setIsSaving(true);
@@ -175,32 +190,17 @@ const ImageEditorPage: React.FC<ImageEditorPageProps> = ({ openPayload, showGlob
       dispatch({ type: 'SET_DIRTY', dirty: false });
       await AutosaveService.clearSavedDocument();
       showGlobalFeedback?.('Saved to library.');
+      return true;
     } catch (err) {
       showGlobalFeedback?.(`Failed to save: ${err instanceof Error ? err.message : String(err)}`, true);
+      return false;
     } finally {
       setIsSaving(false);
     }
   }, [isSaving, showGlobalFeedback]);
   const handleExport = useCallback(() => setIsExportOpen(true), []);
 
-  const handleImport = useCallback(async () => {
-    const file = await openFilePicker();
-    if (!file) return;
-    const layer = await importImage(file);
-    dispatch({ type: 'ADD_LAYER', layer, insertAfterIndex: -1 });
-  }, []);
-
-  const handleCreateDocument = useCallback(
-    async (width: number, height: number, background: 'white' | 'transparent' | 'foreground') => {
-      const doc = await createBlankDocument(width, height, background);
-      dispatch({ type: 'SET_DOCUMENT', document: doc });
-      setIsNewDocOpen(false);
-      requestAnimationFrame(() => viewportRef.current?.fitToViewport());
-    },
-    [],
-  );
-
-  /** Any action that discards the current document (New Document) is routed through
+  /** Any action that discards the current document (New Document, Open Image) is routed through
    *  this guard so unsaved work always gets a Save/Discard/Cancel choice first. */
   const runWithUnsavedGuard = useCallback((action: () => void) => {
     if (getSnapshot().isDirty) {
@@ -209,6 +209,79 @@ const ImageEditorPage: React.FC<ImageEditorPageProps> = ({ openPayload, showGlob
       action();
     }
   }, []);
+
+  /** Opens an image file as a new document sized to the image. */
+  const openFileAsDocument = useCallback(async (file: File) => {
+    try {
+      const doc = await importFromPayload({
+        kind: 'blob',
+        blob: file,
+        title: file.name.replace(/\.[^.]+$/, '') || undefined,
+      });
+      sourceMetaRef.current = null;
+      loadDocument(doc);
+      setIsNewDocOpen(false);
+      requestAnimationFrame(() => viewportRef.current?.fitToViewport());
+    } catch (err) {
+      showGlobalFeedback?.(`Failed to open image: ${err instanceof Error ? err.message : String(err)}`, true);
+    }
+  }, [showGlobalFeedback]);
+
+  /** With a document open, a file becomes a new top layer; without one, it becomes the document. */
+  const openOrPlaceFile = useCallback(async (file: File) => {
+    if (!file.type.startsWith('image/')) {
+      showGlobalFeedback?.(`Not an image: ${file.name}`, true);
+      return;
+    }
+    if (!getSnapshot().document) {
+      await openFileAsDocument(file);
+      return;
+    }
+    try {
+      addLayer(await importImage(file));
+    } catch (err) {
+      showGlobalFeedback?.(`Failed to import image: ${err instanceof Error ? err.message : String(err)}`, true);
+    }
+  }, [openFileAsDocument, showGlobalFeedback]);
+
+  const handleImport = useCallback(async () => {
+    const file = await openFilePicker();
+    if (file) await openOrPlaceFile(file);
+  }, [openOrPlaceFile]);
+
+  /** Only reachable from the Open-or-Create modal, which is shown either with no
+   *  document or after New already passed the unsaved guard — guarding again would
+   *  re-prompt after the user just chose Discard (isDirty is still true then). */
+  const handleOpenImage = useCallback(async () => {
+    const file = await openFilePicker();
+    if (file) await openFileAsDocument(file);
+  }, [openFileAsDocument]);
+
+  const [isDragOver, setIsDragOver] = useState(false);
+  const handleDragOver = useCallback((e: React.DragEvent) => {
+    if (!e.dataTransfer.types.includes('Files')) return;
+    e.preventDefault();
+    e.dataTransfer.dropEffect = 'copy';
+    setIsDragOver(true);
+  }, []);
+  const handleDrop = useCallback((e: React.DragEvent) => {
+    setIsDragOver(false);
+    const file = e.dataTransfer.files?.[0];
+    if (!file) return;
+    e.preventDefault();
+    void openOrPlaceFile(file);
+  }, [openOrPlaceFile]);
+
+  const handleCreateDocument = useCallback(
+    async (width: number, height: number, background: 'white' | 'transparent' | 'foreground') => {
+      const doc = await createBlankDocument(width, height, background);
+      loadDocument(doc);
+      setIsNewDocOpen(false);
+      requestAnimationFrame(() => viewportRef.current?.fitToViewport());
+    },
+    [],
+  );
+
 
   useEditorShortcuts({
     onFitToViewport: handleFitToViewport,
@@ -225,7 +298,7 @@ const ImageEditorPage: React.FC<ImageEditorPageProps> = ({ openPayload, showGlob
   return (
     <>
       {showRecovery && (
-        <div className="fixed inset-0 z-[200] flex items-center justify-center bg-base-100/80 backdrop-blur-md">
+        <div className="fixed inset-0 z-[1100] flex items-center justify-center bg-base-100/80 backdrop-blur-md" role="dialog" aria-modal="true">
           <div className="bg-base-300 border border-base-content/10 p-6 max-w-sm w-full shadow-2xl">
             <h2 className="font-display text-lg uppercase tracking-widest text-primary mb-2">Unsaved Work Found</h2>
             <p className="text-sm text-base-content/70 mb-6">
@@ -239,7 +312,7 @@ const ImageEditorPage: React.FC<ImageEditorPageProps> = ({ openPayload, showGlob
                   setIsRestoring(true);
                   try {
                     const doc = await AutosaveService.restoreSavedDocument();
-                    if (doc) dispatch({ type: 'SET_DOCUMENT', document: doc });
+                    if (doc) loadDocument(doc);
                   } finally {
                     setIsRestoring(false);
                     setShowRecovery(false);
@@ -270,7 +343,12 @@ const ImageEditorPage: React.FC<ImageEditorPageProps> = ({ openPayload, showGlob
         isSaving={isSaving}
       />
 
-      <div className="flex-1 flex flex-row min-h-0">
+      <div
+        className={`flex-1 flex flex-row min-h-0 ${isDragOver ? 'ring-2 ring-inset ring-primary/60' : ''}`}
+        onDragOver={handleDragOver}
+        onDragLeave={(e) => { if (e.currentTarget === e.target) setIsDragOver(false); }}
+        onDrop={handleDrop}
+      >
         <ToolRail />
         <div className="flex-1 flex flex-col min-w-0">
           <ToolHeader viewportRef={viewportRef} />
@@ -285,6 +363,8 @@ const ImageEditorPage: React.FC<ImageEditorPageProps> = ({ openPayload, showGlob
         isOpen={isNewDocOpen}
         onClose={() => setIsNewDocOpen(false)}
         onCreate={handleCreateDocument}
+        onOpenImage={handleOpenImage}
+        onDropFile={(file) => void openFileAsDocument(file)}
       />
 
       <ExportModal isOpen={isExportOpen} onClose={() => setIsExportOpen(false)} />
@@ -298,10 +378,10 @@ const ImageEditorPage: React.FC<ImageEditorPageProps> = ({ openPayload, showGlob
             action();
           }}
           onSave={async () => {
-            await handleSaveToGallery();
+            const saved = await handleSaveToGallery();
             const action = pendingUnsavedAction;
             setPendingUnsavedAction(null);
-            action?.();
+            if (saved) action?.();
           }}
         />
       )}

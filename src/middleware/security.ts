@@ -1,5 +1,4 @@
 
-import cors from 'cors';
 import rateLimit from 'express-rate-limit';
 import type { Request, Response, NextFunction } from 'express';
 
@@ -88,8 +87,32 @@ export const twitterReachRateLimiter = rateLimit({
   legacyHeaders: false,
 });
 
-// Helper to apply CORS with a configurable allowed origin (defaults to local dev).
-export const corsOptions = cors({
-  origin: true,
-  credentials: true,
-});
+const LOOPBACK_HOSTS = new Set(['localhost', '127.0.0.1', '[::1]']);
+
+/** Rejects cross-site and DNS-rebinding requests. The app, its extension panel
+ *  (which iframes the app) and MCP clients are all same-origin or Origin-less, so
+ *  no legitimate caller needs CORS. The previous `cors({ origin: true, credentials: true })`
+ *  let any website the user visited drive the unauthenticated /api/cdp/* browser
+ *  routes and read their responses.
+ *  @param allowAnyHost true only when the operator explicitly bound a non-loopback
+ *  HOST (LAN/container) — the Origin check still applies there. */
+export function sameOriginGuard(allowAnyHost: boolean) {
+  return (req: Request, res: Response, next: NextFunction) => {
+    const host = req.headers.host ?? '';
+    const hostname = host.replace(/:\d+$/, '');
+    if (!allowAnyHost && !LOOPBACK_HOSTS.has(hostname)) {
+      res.status(403).json({ error: 'Host not allowed' });
+      return;
+    }
+    const origin = req.headers.origin;
+    if (origin) {
+      let originHost: string | null = null;
+      try { originHost = new URL(origin).host; } catch { /* malformed → reject */ }
+      if (originHost !== host) {
+        res.status(403).json({ error: 'Cross-origin request blocked' });
+        return;
+      }
+    }
+    next();
+  };
+}
