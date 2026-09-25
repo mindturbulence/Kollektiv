@@ -391,7 +391,7 @@ const PromptCrafter = ({ onSaveToLibrary, onClip, onSendToEnhancer, onSendToRefi
             setIsLoading(false);
             return;
         }
-        loadData();
+        void loadData();
     }, [loadData]);
 
     useEffect(() => {
@@ -503,14 +503,14 @@ const PromptCrafter = ({ onSaveToLibrary, onClip, onSendToEnhancer, onSendToRefi
         if (generatedPrompt && !savedResults.includes(generatedPrompt)) {
             const newResults = [generatedPrompt, ...savedResults];
             setSavedResults(newResults);
-            crafterService.saveSavedResults(newResults);
+            void crafterService.saveSavedResults(newResults);
         }
     };
 
     const handleDeleteSavedResult = (index: number) => {
         const newResults = savedResults.filter((_, i) => i !== index);
         setSavedResults(newResults);
-        crafterService.saveSavedResults(newResults);
+        void crafterService.saveSavedResults(newResults);
     };
 
     const handleClip = useCallback(() => {
@@ -689,7 +689,7 @@ const PromptCrafter = ({ onSaveToLibrary, onClip, onSendToEnhancer, onSendToRefi
                         <button
                             onClick={() => {
                                 audioService.playClick();
-                                loadData();
+                                void loadData();
                             }}
                             disabled={isImporting}
                             className="btn btn-sm btn-ghost h-full rounded-none flex-1 tracking-wider text-primary border-1 disabled:opacity-30 disabled:cursor-not-allowed btn-snake"
@@ -976,7 +976,7 @@ const PromptCrafter = ({ onSaveToLibrary, onClip, onSendToEnhancer, onSendToRefi
                         <button
                             onClick={() => {
                                 audioService.playClick();
-                                handleTranslate();
+                                void handleTranslate();
                             }}
                             disabled={!generatedPrompt || !!aiAction}
                             className="btn btn-sm btn-ghost h-full rounded-none flex-1 tracking-wider text-primary border-1 disabled:opacity-30 disabled:cursor-not-allowed btn-snake"
@@ -987,7 +987,7 @@ const PromptCrafter = ({ onSaveToLibrary, onClip, onSendToEnhancer, onSendToRefi
                         <button
                             onClick={() => {
                                 audioService.playClick();
-                                handleReconstruct();
+                                void handleReconstruct();
                             }}
                             disabled={!generatedPrompt || !!aiAction}
                             className="btn btn-sm btn-ghost h-full rounded-none flex-1 tracking-wider text-primary border-1 disabled:opacity-30 disabled:cursor-not-allowed btn-snake"
@@ -1073,7 +1073,7 @@ const PromptCrafter = ({ onSaveToLibrary, onClip, onSendToEnhancer, onSendToRefi
                                     key={`${idx}-${res.substring(0, 10)}`}
                                     text={res}
                                     onCopy={(txt) => {
-                                        if (navigator.clipboard) navigator.clipboard.writeText(txt);
+                                        if (navigator.clipboard) void navigator.clipboard.writeText(txt);
                                     }}
                                     onSaveToLibrary={(txt) => onSaveToLibrary(txt, promptText)}
                                     onDelete={() => handleDeleteSavedResult(idx)}

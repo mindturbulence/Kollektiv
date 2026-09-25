@@ -183,7 +183,7 @@ export const ColorPaletteExtractor: React.FC<ColorPaletteExtractorProps> = ({ on
         if (imagePreviewUrl) URL.revokeObjectURL(imagePreviewUrl);
         const url = URL.createObjectURL(file);
         setImagePreviewUrl(url);
-        extractPalette(url, numClusters);
+        void extractPalette(url, numClusters);
         setError(null);
     } else if(file) setError('Invalid relic type.');
   };
@@ -198,7 +198,7 @@ export const ColorPaletteExtractor: React.FC<ColorPaletteExtractorProps> = ({ on
       if (imagePreviewUrl) URL.revokeObjectURL(imagePreviewUrl);
       const url = URL.createObjectURL(blob);
       setImagePreviewUrl(url);
-      extractPalette(url, numClusters);
+      void extractPalette(url, numClusters);
       setError(null);
   };
 

@@ -62,11 +62,11 @@ const IntegrationsSection: React.FC<IntegrationsSectionProps> = ({
     const stopRef = useRef(false);
 
     useEffect(() => {
-        initObsidianVault().then(ok => {
+        void initObsidianVault().then(ok => {
             setConnected(ok);
             if (ok) setVaultName('Obsidian Vault');
         });
-        (async () => {
+        void (async () => {
             try {
                 const { getIndexStats } = await import('../../utils/semanticIndex');
                 const stats = await getIndexStats();
@@ -169,7 +169,7 @@ const IntegrationsSection: React.FC<IntegrationsSectionProps> = ({
                         <div className="space-y-4">
                             <div className="flex w-full md:w-[620px]">
                                 <input type="text" value={settings.ollamaCloudBaseUrl} onChange={(e) => handleSettingsChange('ollamaCloudBaseUrl', (e.currentTarget as any).value)} className="form-input flex-1" placeholder="https://api.ollama-host.com" />
-                                <button onClick={() => { audioService.playClick(); handleTestOllamaConnection(true); }} disabled={isTestingOllama} className="form-btn px-4 border-l-0">{isTestingOllama ? '...' : 'PING'}</button>
+                                <button onClick={() => { audioService.playClick(); void handleTestOllamaConnection(true); }} disabled={isTestingOllama} className="form-btn px-4 border-l-0">{isTestingOllama ? '...' : 'PING'}</button>
                             </div>
                             {ollamaTestResult && (
                                 <div className={`flex items-center gap-2 text-2xs font-black uppercase tracking-widest px-3 py-1.5 border ${ollamaTestResult.success ? 'bg-success/5 border-success/30 text-success' : 'bg-error/5 border-error/30 text-error'} animate-fade-in md:w-[620px]`}>
@@ -215,7 +215,7 @@ const IntegrationsSection: React.FC<IntegrationsSectionProps> = ({
                         <div className="space-y-4">
                             <div className="flex w-full md:w-[620px]">
                                 <input type="text" value={settings.ollamaBaseUrl} onChange={(e) => handleSettingsChange('ollamaBaseUrl', (e.currentTarget as any).value)} className="form-input flex-1" />
-                                <button onClick={() => { audioService.playClick(); handleTestOllamaConnection(false); }} disabled={isTestingOllama} className="form-btn px-4 border-l-0">PING</button>
+                                <button onClick={() => { audioService.playClick(); void handleTestOllamaConnection(false); }} disabled={isTestingOllama} className="form-btn px-4 border-l-0">PING</button>
                             </div>
                             {ollamaTestResult && (
                                 <div className={`flex items-center gap-2 text-2xs font-black uppercase tracking-widest px-3 py-1.5 border ${ollamaTestResult.success ? 'bg-success/5 border-success/30 text-success' : 'bg-error/5 border-error/30 text-error'} animate-fade-in md:w-[620px]`}>
@@ -246,7 +246,7 @@ const IntegrationsSection: React.FC<IntegrationsSectionProps> = ({
                         <div className="space-y-4">
                             <div className="flex w-full md:w-[620px]">
                                 <input type="text" value={settings.llamacppBaseUrl || ''} onChange={(e) => handleSettingsChange('llamacppBaseUrl', (e.currentTarget as any).value)} className="form-input flex-1" />
-                                <button onClick={() => { audioService.playClick(); handleTestLlamaCppConnection(); }} disabled={isTestingLlamaCpp} className="form-btn px-4 border-l-0">{isTestingLlamaCpp ? '...' : 'PING'}</button>
+                                <button onClick={() => { audioService.playClick(); void handleTestLlamaCppConnection(); }} disabled={isTestingLlamaCpp} className="form-btn px-4 border-l-0">{isTestingLlamaCpp ? '...' : 'PING'}</button>
                             </div>
                             {llamacppTestResult && (
                                 <div className={`flex items-center gap-2 text-2xs font-black uppercase tracking-widest px-3 py-1.5 border ${llamacppTestResult.success ? 'bg-success/5 border-success/30 text-success' : 'bg-error/5 border-error/30 text-error'} animate-fade-in md:w-[620px]`}>
@@ -532,7 +532,7 @@ const IntegrationsSection: React.FC<IntegrationsSectionProps> = ({
                                     Connected {vaultName ? `— ${vaultName}` : ''}
                                 </span>
                             </div>
-                            <button onClick={() => { audioService.playClick(); handleDisconnect(); }} className="form-btn text-error px-4">
+                            <button onClick={() => { audioService.playClick(); void handleDisconnect(); }} className="form-btn text-error px-4">
                                 Disconnect
                             </button>
                         </div>
@@ -542,7 +542,7 @@ const IntegrationsSection: React.FC<IntegrationsSectionProps> = ({
                                 Pick the folder containing your Obsidian vault. The assistant will be able to
                                 search notes, read them, create new ones, and edit existing ones.
                             </p>
-                            <button onClick={() => { audioService.playClick(); handlePick(); }} className="form-btn px-6">
+                            <button onClick={() => { audioService.playClick(); void handlePick(); }} className="form-btn px-6">
                                 PICK OBSIDIAN VAULT FOLDER
                             </button>
                         </div>
@@ -580,7 +580,7 @@ const IntegrationsSection: React.FC<IntegrationsSectionProps> = ({
 
                     <div className="flex flex-wrap items-center gap-3">
                         <button
-                            onClick={() => { audioService.playClick(); handleBackfill(); }}
+                            onClick={() => { audioService.playClick(); void handleBackfill(); }}
                             disabled={isBackfilling || !connected}
                             className={`form-btn px-6 ${connected ? 'form-btn-primary' : ''}`}
                         >
@@ -598,7 +598,7 @@ const IntegrationsSection: React.FC<IntegrationsSectionProps> = ({
 
                         {indexStats && indexStats.count > 0 && (
                             <button
-                                onClick={() => { audioService.playClick(); handleClearIndex(); }}
+                                onClick={() => { audioService.playClick(); void handleClearIndex(); }}
                                 className="form-btn text-error px-4"
                             >
                                 CLEAR INDEX

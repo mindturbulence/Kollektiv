@@ -80,16 +80,18 @@ const useResearchProject = (settings: LLMSettings, fileManager: IFileSystemManag
   useEffect(() => {
     if (!projectSlug || messages.length === 0 || !fm) return;
     if (saveTimerRef.current) clearTimeout(saveTimerRef.current);
-    saveTimerRef.current = setTimeout(async () => {
-      try {
-        const p = projectRef.current;
-        if (!p) return;
-        p.messages = messagesRef.current;
-        p.sourceFiles = sourcesRef.current;
-        await researchVault.projects.save(projectSlug, p, fm);
-      } catch (e) {
-        console.error('[ResearchVault] autosave failed:', e);
-      }
+    saveTimerRef.current = setTimeout(() => {
+      void (async () => {
+        try {
+          const p = projectRef.current;
+          if (!p) return;
+          p.messages = messagesRef.current;
+          p.sourceFiles = sourcesRef.current;
+          await researchVault.projects.save(projectSlug, p, fm);
+        } catch (e) {
+          console.error('[ResearchVault] autosave failed:', e);
+        }
+      })();
     }, 2000);
   }, [messages, projectSlug, fm]);
 
@@ -126,7 +128,7 @@ const useResearchProject = (settings: LLMSettings, fileManager: IFileSystemManag
     setFindings('');
     setError(null);
     appEventBus.emit('research:projectClosed', {});
-    import('../services/researchVaultService').then(m => m.setActiveProject(null));
+    void import('../services/researchVaultService').then(m => m.setActiveProject(null));
   }, []);
 
   // Add source
@@ -255,10 +257,9 @@ const useResearchProject = (settings: LLMSettings, fileManager: IFileSystemManag
   // Listen for findingsAppended events (from assistant tools)
   useEffect(() => {
     if (!fm || !projectSlug) return;
-    return appEventBus.on('research:findingsAppended', async ({ slug }: { slug: string }) => {
+    return appEventBus.on('research:findingsAppended', ({ slug }: { slug: string }) => {
       if (slug === projectSlug) {
-        const fnd = await researchVault.findings.load(slug, fm);
-        setFindings(fnd);
+        void researchVault.findings.load(slug, fm).then(setFindings);
       }
     });
   }, [fm, projectSlug]);

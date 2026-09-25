@@ -48,7 +48,7 @@ const PredefinedMcpSection: React.FC<PredefinedMcpSectionProps> = ({ settings, h
         if (!preset) return;
         const { servers: next, entry: updated } = upsertMcpPresetEntry(servers, preset, { enabled });
         updateServers(next);
-        if (enabled && updated.url) testConnection(updated);
+        if (enabled && updated.url) void testConnection(updated);
     };
 
     if (!preset) return null;
@@ -77,7 +77,7 @@ const PredefinedMcpSection: React.FC<PredefinedMcpSectionProps> = ({ settings, h
                             <button
                                 onClick={() => {
                                     audioService.playClick();
-                                    testConnection({ ...(entry || { id: '' }), url: effectiveUrl } as McpServerConfig);
+                                    void testConnection({ ...(entry || { id: '' }), url: effectiveUrl } as McpServerConfig);
                                 }}
                                 disabled={st?.checking}
                                 className="form-btn px-3 py-1.5 text-2xs font-black uppercase tracking-widest disabled:opacity-30"

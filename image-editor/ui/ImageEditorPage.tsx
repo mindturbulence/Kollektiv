@@ -176,7 +176,7 @@ const ImageEditorPage: React.FC<ImageEditorPageProps> = ({ openPayload, showGlob
   }, []);
 
   useEffect(() => {
-    AutosaveService.hasSavedDocument().then((has) => {
+    void AutosaveService.hasSavedDocument().then((has) => {
       if (!has) return;
       if (openPayload) {
         // A gallery/blob payload is opening — banner, not modal (M11), so the
@@ -392,8 +392,8 @@ const ImageEditorPage: React.FC<ImageEditorPageProps> = ({ openPayload, showGlob
     onFitToViewport: handleFitToViewport,
     onZoomIn: handleZoomIn,
     onZoomOut: handleZoomOut,
-    onSave: handleSaveToGallery,
-    onImport: handleImport,
+    onSave: () => { void handleSaveToGallery(); },
+    onImport: () => { void handleImport(); },
     onPaste: () => void handlePaste(),
     onImageSize: () => setIsImageSizeOpen(true),
     onCanvasSize: () => setIsCanvasSizeOpen(true),
@@ -436,7 +436,7 @@ const ImageEditorPage: React.FC<ImageEditorPageProps> = ({ openPayload, showGlob
               <button
                 className="form-btn rounded-none flex-1 text-xs"
                 onClick={() => {
-                  AutosaveService.clearSavedDocument();
+                  void AutosaveService.clearSavedDocument();
                   setShowRecovery(false);
                 }}
               >
@@ -478,7 +478,7 @@ const ImageEditorPage: React.FC<ImageEditorPageProps> = ({ openPayload, showGlob
             type="button"
             className="text-xs font-mono px-2 py-0.5 border border-base-content/20 hover:border-primary hover:text-primary"
             onClick={() => {
-              AutosaveService.clearSavedDocument();
+              void AutosaveService.clearSavedDocument();
               setShowRecoveryBanner(false);
             }}
           >

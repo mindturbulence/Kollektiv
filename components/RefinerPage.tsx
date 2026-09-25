@@ -265,7 +265,7 @@ const RefinerPage: React.FC<RefinerPageProps> = ({
                 setErrorRefine({ message: "Reference data offline." });
             }
         };
-        loadData();
+        void loadData();
     }, []);
 
     // Load Presets
@@ -279,7 +279,7 @@ const RefinerPage: React.FC<RefinerPageProps> = ({
     }, []);
 
     useEffect(() => {
-        loadPresets();
+        void loadPresets();
     }, [loadPresets]);
 
     // Reset model on media mode change
@@ -597,7 +597,7 @@ const RefinerPage: React.FC<RefinerPageProps> = ({
                         </button>
                         <button
                             data-ai-id="refiner-improve"
-                            onClick={() => { audioService.playClick(); handleEnhance(); }}
+                            onClick={() => { audioService.playClick(); void handleEnhance(); }}
                             disabled={isLoadingRefine || !(refineText || '').trim()}
                             className="btn btn-sm btn-ghost h-full rounded-none flex-1 tracking-wider text-primary border-1 disabled:opacity-30 disabled:cursor-not-allowed btn-snake">
                             <span /><span /><span /><span />{isLoadingRefine ? '...' : 'IMPROVE'}
@@ -608,7 +608,7 @@ const RefinerPage: React.FC<RefinerPageProps> = ({
                             <span /><span /><span /><span />EXPORT CODE
                         </button>
                         {isGoogleProduct && (
-                            <button data-ai-id="refiner-render" onClick={() => { audioService.playClick(); handleDirectGenerate(); }}
+                            <button data-ai-id="refiner-render" onClick={() => { audioService.playClick(); void handleDirectGenerate(); }}
                                 disabled={isLoadingRefine || !(refineText || '').trim()}
                                 className="btn btn-sm btn-ghost h-full rounded-none flex-1 tracking-wider text-primary border-0 disabled:opacity-30 disabled:cursor-not-allowed btn-snake">
                                 <span /><span /><span /><span />{isLoadingRefine ? '...' : 'RENDER'}

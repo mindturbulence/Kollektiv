@@ -158,10 +158,10 @@ const EditorToolbar: React.FC<EditorToolbarProps> = ({
 
   const toggleFullscreen = () => {
     if (window.document.fullscreenElement) {
-      window.document.exitFullscreen();
+      void window.document.exitFullscreen();
       setIsFullscreen(false);
     } else {
-      window.document.documentElement.requestFullscreen();
+      void window.document.documentElement.requestFullscreen();
       setIsFullscreen(true);
     }
   };

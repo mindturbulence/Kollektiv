@@ -12,7 +12,7 @@ const MetadataPanel: React.FC<MetadataPanelProps> = ({ fileMetadata }) => {
     const json = JSON.stringify(fileMetadata, null, 2);
 
     const handleCopy = useCallback(() => {
-        navigator.clipboard.writeText(json).then(() => {
+        void navigator.clipboard.writeText(json).then(() => {
             setCopied(true);
             setTimeout(() => setCopied(false), 1500);
         });

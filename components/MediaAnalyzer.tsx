@@ -214,7 +214,7 @@ export const MediaAnalyzer: React.FC<MediaAnalyzerProps> = ({
     const handleCopyRaw = () => {
         const textToCopy = metadataResults?.raw || metadataResults?.workflow || '';
         if (!textToCopy) return;
-        navigator.clipboard.writeText(textToCopy);
+        void navigator.clipboard.writeText(textToCopy);
         setCopiedRaw(true);
         setTimeout(() => setCopiedRaw(false), 2000);
     };

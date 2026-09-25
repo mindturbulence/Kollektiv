@@ -92,7 +92,7 @@ const SavedPrompts: React.FC<SavedPromptsProps> = ({
             vel = 0;
             skewSetter(0);
             scaleSetter(1);
-            columnRefs.current.forEach(col => col && gsap.set(col, { y: 0 }));
+            columnRefs.current.forEach(col => { if (col) gsap.set(col, { y: 0 }); });
         }
     };
 
@@ -163,7 +163,7 @@ const SavedPrompts: React.FC<SavedPromptsProps> = ({
       }
   }, []);
 
-  useEffect(() => { refreshData(); }, [refreshData]);
+  useEffect(() => { void refreshData(); }, [refreshData]);
 
   // Intersection Observer for Infinite Scroll
   useEffect(() => {

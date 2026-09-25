@@ -60,7 +60,7 @@ const SavedPromptCard: React.FC<SavedPromptCardProps> = memo(({
   const handleCopy = useCallback((e: React.MouseEvent) => {
     e.stopPropagation();
     if(navigator.clipboard) {
-      navigator.clipboard.writeText(prompt.text).then(() => {
+      void navigator.clipboard.writeText(prompt.text).then(() => {
         setCopied(true);
         setTimeout(() => setCopied(false), 2000);
       });

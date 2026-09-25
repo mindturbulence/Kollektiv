@@ -99,7 +99,7 @@ const TransitionalMedia: React.FC<{
                 setIsLoading(false);
             }
         };
-        load();
+        void load();
         return () => { isMounted = false; };
     }, [url]);
 
@@ -172,7 +172,7 @@ const Thumbnail: React.FC<{
                 setBlobUrl(objectUrl);
             }
         };
-        loadMedia();
+        void loadMedia();
         return () => { isActiveThumb = false; if (objectUrl) URL.revokeObjectURL(objectUrl); };
     }, [url]);
 
@@ -414,7 +414,7 @@ const ItemDetailView: React.FC<ItemDetailViewProps> = ({ items, currentIndex, is
         // For video/image dimensions, we'll wait for the media to load and trigger onLoaded
         setMetadata(prev => ({ ...prev, size, width: prev?.width || 0, height: prev?.height || 0, ratio: prev?.ratio || '' }));
     };
-    loadMetadata();
+    void loadMetadata();
   }, [activeImageIndex, item, isEditing, editableSamples]);
 
   const handleMediaLoad = (e: React.SyntheticEvent<HTMLImageElement | HTMLVideoElement>) => {
@@ -588,7 +588,7 @@ const ItemDetailView: React.FC<ItemDetailViewProps> = ({ items, currentIndex, is
 
   const handleCopyPrompt = () => {
       audioService.playClick();
-      navigator.clipboard.writeText(item.prompt || '');
+      void navigator.clipboard.writeText(item.prompt || '');
       setIsCopied(true);
       setTimeout(() => setIsCopied(false), 2000);
   };

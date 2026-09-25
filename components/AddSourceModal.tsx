@@ -114,7 +114,7 @@ export const AddSourceModal: React.FC<AddSourceModalProps> = ({ open, onClose })
                 onChange={e => setUrl(e.target.value)}
                 placeholder="https://example.com/article"
                 className="w-full bg-base-300/50 border border-white/10 rounded px-3 py-2 text-sm font-mono focus:outline-none focus:border-primary/50"
-                onKeyDown={e => { if (e.key === 'Enter') handleAddUrl(); }}
+                onKeyDown={e => { if (e.key === 'Enter') void handleAddUrl(); }}
               />
               {error && <p className="text-xs text-error">{error}</p>}
               <button

@@ -214,7 +214,7 @@ export const useBootSequence = ({
 
   useEffect(() => {
     if (!hasInitializedRef.current) {
-      initializeApp();
+      void initializeApp();
     }
   }, [initializeApp]);
 

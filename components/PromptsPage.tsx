@@ -71,7 +71,7 @@ const PromptsPage: React.FC<PromptsPageProps> = ({
             setPromptCategories(await loadPromptCategories());
             setSavedPrompts(await loadSavedPrompts());
         };
-        load();
+        void load();
     }, []);
 
     useEffect(() => {

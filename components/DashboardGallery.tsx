@@ -35,7 +35,7 @@ const GalleryCard: React.FC<{ url: string }> = memo(({ url }) => {
             }
         };
 
-        loadMedia();
+        void loadMedia();
         return () => {
             isActive = false;
             if (objectUrlRef.current) {

@@ -24,7 +24,7 @@ export const ResearchProjectBrowser: React.FC = () => {
     }
   }, [fm]);
 
-  useEffect(() => { loadProjects(); }, [loadProjects]);
+  useEffect(() => { void loadProjects(); }, [loadProjects]);
 
   const handleCreate = async () => {
     if (!fm || !newTitle.trim()) return;
@@ -85,7 +85,7 @@ export const ResearchProjectBrowser: React.FC = () => {
               onChange={e => setNewTitle(e.target.value)}
               placeholder="Project title"
               className="w-full bg-base-300/50 border border-white/10 rounded px-3 py-2.5 text-sm font-mono focus:outline-none focus:border-primary/50 transition-colors"
-              onKeyDown={e => { if (e.key === 'Enter') handleCreate(); }}
+              onKeyDown={e => { if (e.key === 'Enter') void handleCreate(); }}
               autoFocus
             />
             {error && <p className="text-xs text-error">{error}</p>}

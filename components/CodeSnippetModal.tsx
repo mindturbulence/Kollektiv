@@ -87,7 +87,7 @@ console.log(data);`;
     }, [selectedLanguage, promptText, useStreaming, wrapExpress, addErrorHandling]);
 
     const handleCopy = () => {
-        navigator.clipboard.writeText(codeSnippet);
+        void navigator.clipboard.writeText(codeSnippet);
         setCopied(true);
         setTimeout(() => setCopied(false), 2000);
     };

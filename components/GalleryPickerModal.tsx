@@ -68,7 +68,7 @@ const PickerItem: React.FC<{
         
         // Add minimal delay to prevent overwhelming OPFS
         const timer = setTimeout(() => {
-            load();
+            void load();
         }, 10 + Math.random() * 50);
 
         return () => { 
@@ -134,7 +134,7 @@ const GalleryPickerModal: React.FC<GalleryPickerModalProps> = ({
     useEffect(() => {
         if (isOpen) {
             setIsLoading(true);
-            Promise.all([loadGalleryItems(), loadCategories()]).then(([loadedItems, loadedCats]) => {
+            void Promise.all([loadGalleryItems(), loadCategories()]).then(([loadedItems, loadedCats]) => {
                 setItems(loadedItems);
                 setCategories(loadedCats);
                 setIsLoading(false);

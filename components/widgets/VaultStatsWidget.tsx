@@ -32,9 +32,9 @@ const VaultStatsWidget: React.FC = () => {
   };
 
   useEffect(() => {
-    refresh();
-    const off1 = appEventBus.on('notesChanged', refresh);
-    const off2 = appEventBus.on('assistantFilesChanged', refresh);
+    void refresh();
+    const off1 = appEventBus.on('notesChanged', () => { void refresh(); });
+    const off2 = appEventBus.on('assistantFilesChanged', () => { void refresh(); });
     return () => { off1(); off2(); };
   }, []);
 

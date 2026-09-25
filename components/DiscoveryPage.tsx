@@ -293,7 +293,7 @@ const DiscoveryPage: React.FC<DiscoveryPageProps> = ({
                 setActiveCollection(cols[0]);
             }
         };
-        load();
+        void load();
     }, []);
 
     useEffect(() => {
@@ -349,7 +349,7 @@ const DiscoveryPage: React.FC<DiscoveryPageProps> = ({
             }
         };
 
-        loadContent();
+        void loadContent();
     }, [activeCollection, debouncedSearchQuery, showGlobalFeedback]);
 
     const handleLoadMore = async () => {
@@ -407,7 +407,7 @@ const DiscoveryPage: React.FC<DiscoveryPageProps> = ({
     const isSearching = searchQuery !== debouncedSearchQuery;
 
     const handleCopy = useCallback((text: string) => {
-        navigator.clipboard.writeText(text);
+        void navigator.clipboard.writeText(text);
         audioService.playClick();
         showGlobalFeedback('SCRIPT_COPIED');
     }, [showGlobalFeedback]);

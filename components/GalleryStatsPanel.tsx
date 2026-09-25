@@ -31,7 +31,7 @@ const GalleryStatsPanel: React.FC<GalleryStatsPanelProps> = ({ isOpen, onClose }
   }, []);
 
   useEffect(() => {
-    if (isOpen) refresh();
+    if (isOpen) void refresh();
   }, [isOpen, refresh]);
 
   return (

@@ -42,27 +42,29 @@ const CommandPalette: React.FC<CommandPaletteProps> = ({ isOpen, onClose }) => {
     }
 
     setVaultLoading(true);
-    const timer = setTimeout(async () => {
-      try {
-        const notes = await searchNotes(trimmed, 6);
-        setVaultResults(
-          notes.map((n) => ({
-            id: `vault-note-${n.path}`,
-            label: n.title,
-            category: 'Vault Notes' as const,
-            keywords: [n.path, n.title],
-            detail: n.path,
-            execute: async () => {
-              const note = await getNote(n.path);
-              if (note) openNoteInPanel(note);
-            },
-          })),
-        );
-      } catch {
-        setVaultResults([]);
-      } finally {
-        setVaultLoading(false);
-      }
+    const timer = setTimeout(() => {
+      void (async () => {
+        try {
+          const notes = await searchNotes(trimmed, 6);
+          setVaultResults(
+            notes.map((n) => ({
+              id: `vault-note-${n.path}`,
+              label: n.title,
+              category: 'Vault Notes' as const,
+              keywords: [n.path, n.title],
+              detail: n.path,
+              execute: async () => {
+                const note = await getNote(n.path);
+                if (note) openNoteInPanel(note);
+              },
+            })),
+          );
+        } catch {
+          setVaultResults([]);
+        } finally {
+          setVaultLoading(false);
+        }
+      })();
     }, 200); // 200ms debounce
 
     return () => {

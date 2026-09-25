@@ -209,7 +209,7 @@ const ImageCompare: React.FC<ImageCompareProps> = ({ isExiting = false }) => {
                     img.src = url;
                 });
 
-            Promise.all([loadImg(detail.imageA), loadImg(detail.imageB)]).then(([a, b]) => {
+            void Promise.all([loadImg(detail.imageA), loadImg(detail.imageB)]).then(([a, b]) => {
                 setImageA(a);
                 setImageB(b);
             });

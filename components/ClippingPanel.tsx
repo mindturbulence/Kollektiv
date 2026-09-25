@@ -245,7 +245,7 @@ const NoteItem: React.FC<{ note: AssistantNote; index: number }> = ({ note, inde
     }, [note.title, note.content]);
 
     const handleSave = () => {
-        updateNote(note.id, { title: title.trim() || note.title, content });
+        void updateNote(note.id, { title: title.trim() || note.title, content });
         setEditing(false);
     };
 
@@ -271,7 +271,7 @@ const NoteItem: React.FC<{ note: AssistantNote; index: number }> = ({ note, inde
                         </div>
                     </div>
                     <button
-                        onClick={() => { audioService.playClick(); deleteNote(note.id); }}
+                        onClick={() => { audioService.playClick(); void deleteNote(note.id); }}
                         className="btn btn-xs btn-ghost h-8 w-8 rounded-none p-0 hover:text-error transition-colors btn-snake ml-4"
                         title="Delete note"
                     >
@@ -383,7 +383,7 @@ const ClippingPanel: React.FC<ClippingPanelProps> = ({
 
     useEffect(() => {
         if (isOpen) {
-            (async () => {
+            void (async () => {
                 const loaded = await loadNotes();
                 setNotes(loaded);
             })();
@@ -530,7 +530,7 @@ const ClippingPanel: React.FC<ClippingPanelProps> = ({
                                 )}
                                 {tab === 'assistantNotes' && (
                                     <button
-                                        onClick={() => { audioService.playClick(); addNote('', 'New note — click REVISE to edit.', 'user'); }}
+                                        onClick={() => { audioService.playClick(); void addNote('', 'New note — click REVISE to edit.', 'user'); }}
                                         className="btn btn-xs btn-ghost h-8 w-8 rounded-none p-0 opacity-40 hover:opacity-100 hover:text-primary transition-all btn-snake"
                                         title="New note"
                                     >
@@ -550,7 +550,7 @@ const ClippingPanel: React.FC<ClippingPanelProps> = ({
                                 )}
                                 {tab === 'assistantNotes' && notes.length > 0 && (
                                     <button
-                                        onClick={() => { audioService.playClick(); clearNotes(); }}
+                                        onClick={() => { audioService.playClick(); void clearNotes(); }}
                                         className="btn btn-xs btn-ghost h-8 w-8 rounded-none p-0 opacity-40 hover:opacity-100 hover:text-error transition-all btn-snake"
                                         title="Delete all notes"
                                     >

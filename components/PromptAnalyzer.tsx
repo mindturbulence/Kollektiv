@@ -110,7 +110,7 @@ export const PromptAnalyzer: React.FC<PromptAnalyzerProps> = ({
                 console.error('Error loading cheatsheet categories in analyzer:', err);
             }
         };
-        loadCategories();
+        void loadCategories();
     }, []);
 
     // --- Filters ---
@@ -756,7 +756,7 @@ export const PromptAnalyzer: React.FC<PromptAnalyzerProps> = ({
                                                     setIsRewriting(false);
                                                 }
                                             } else {
-                                                handleDissect();
+                                                void handleDissect();
                                             }
                                         }}
                                         disabled={isAnalyzing || isRewriting || (!hasBreakdown && !promptInput.trim())}
@@ -849,7 +849,7 @@ export const PromptAnalyzer: React.FC<PromptAnalyzerProps> = ({
                                                     onClick={() => {
                                                         const textToCopy = sourceTab === 'original' ? (promptInput || reconstructedPrompt) : naturalLanguage;
                                                         if (textToCopy) {
-                                                            navigator.clipboard.writeText(textToCopy);
+                                                            void navigator.clipboard.writeText(textToCopy);
                                                             showGlobalFeedback('Source prompt copied');
                                                         }
                                                     }}
@@ -912,7 +912,7 @@ export const PromptAnalyzer: React.FC<PromptAnalyzerProps> = ({
                                     <button
                                         onClick={() => {
                                             if (modifiedPrompt) {
-                                                navigator.clipboard.writeText(modifiedPrompt);
+                                                void navigator.clipboard.writeText(modifiedPrompt);
                                                 showGlobalFeedback('Copied to clipboard');
                                             }
                                         }}

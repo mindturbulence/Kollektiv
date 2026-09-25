@@ -510,7 +510,7 @@ const GallerySection: React.FC<GallerySectionProps> = ({
                                 desc="Package all gallery artifacts into a single ZIP archive for backup."
                             >
                                 <button
-                                    onClick={() => { audioService.playClick(); createZipAndDownload([], 'gallery_archive.zip'); }}
+                                    onClick={() => { audioService.playClick(); void createZipAndDownload([], 'gallery_archive.zip'); }}
                                     className="form-btn form-btn-primary px-6"
                                 >
                                     <DownloadIcon className="w-4 h-4 mr-2" />

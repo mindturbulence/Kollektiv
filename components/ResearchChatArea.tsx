@@ -136,7 +136,7 @@ export const ResearchChatArea: React.FC = () => {
             onKeyDown={e => {
               if (e.key === 'Enter' && !e.shiftKey) {
                 e.preventDefault();
-                handleSubmit();
+                void handleSubmit();
               }
             }}
             placeholder="Ask about your sources..."

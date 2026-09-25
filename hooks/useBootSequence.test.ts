@@ -105,7 +105,7 @@ describe('useBootSequence', () => {
     (result.current.loaderRef as any).current = document.createElement('div');
 
     act(() => {
-      result.current.handleInitContinue(true);
+      void result.current.handleInitContinue(true);
     });
 
     expect(result.current.bootState.isInitialized).toBe(true);
@@ -127,7 +127,7 @@ describe('useBootSequence', () => {
     }, { timeout: 15_000 });
 
     act(() => {
-      result.current.handleInitContinue(false);
+      void result.current.handleInitContinue(false);
     });
 
     expect(defaultInput.startupContinue).toHaveBeenCalledWith(false);

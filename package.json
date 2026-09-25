@@ -12,6 +12,7 @@
     "start": "npx tsx server.ts",
     "build": "vite build",
     "lint": "tsc --noEmit",
+    "lint:eslint": "eslint components hooks utils services contexts image-editor src --ext .ts,.tsx",
     "validate-config": "tsx scripts/validate-mcp-config.ts",
     "fix-config": "tsx scripts/validate-mcp-config.ts --fix",
     "generate-mcp-config": "tsx scripts/generate-mcp-config.ts",

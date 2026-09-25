@@ -12,7 +12,7 @@ export const ResearchFindingsPanel: React.FC = () => {
   useEffect(() => { setEditText(findings); }, [findings]);
 
   const handleSave = () => {
-    saveFindings(editText);
+    void saveFindings(editText);
     setIsEditing(false);
   };
 

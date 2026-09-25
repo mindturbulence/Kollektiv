@@ -218,7 +218,7 @@ const Footer: React.FC<FooterProps> = ({
                 setVaultCount(items.filter(i => !i.isNsfw).length);
             } catch (e) { console.error(e); }
         };
-        fetch();
+        void fetch();
         const timer = setInterval(() => setTime(new Date().toLocaleTimeString()), 1000);
         return () => clearInterval(timer);
     }, []);

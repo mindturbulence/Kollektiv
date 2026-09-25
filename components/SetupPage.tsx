@@ -221,7 +221,7 @@ export const SetupPage: React.FC<SetupPageProps> = ({
                     callback: (response: any) => {
                         if (authTimeoutRef.current) { window.clearTimeout(authTimeoutRef.current); authTimeoutRef.current = null; }
                         if (response.error) { setIsWorking(false); setMaintenanceMsg(""); setMaintenanceProgress(0); if (response.error !== 'popup_closed') showGlobalFeedback(`Authentication failed: ${response.error}`, true); return; }
-                        if (response.access_token) handleAuthResponse(response.access_token, authModeRef.current, response.expires_in);
+                        if (response.access_token) void handleAuthResponse(response.access_token, authModeRef.current, response.expires_in);
                         else { setIsWorking(false); setMaintenanceMsg(""); }
                     },
                 });
@@ -285,7 +285,7 @@ export const SetupPage: React.FC<SetupPageProps> = ({
         const clientId = settings.spotify?.customClientId || process.env.SPOTIFY_CLIENT_ID || '';
         if (!clientId || clientId.includes('PLACEHOLDER')) { spotifyPkceRef.current = null; return; }
         const verifier = generateCodeVerifier();
-        generateCodeChallenge(verifier).then(challenge => {
+        void generateCodeChallenge(verifier).then(challenge => {
             spotifyPkceRef.current = { verifier, challenge };
         });
     }, [settings.spotify?.customClientId, generateCodeVerifier, generateCodeChallenge]);
@@ -427,7 +427,7 @@ export const SetupPage: React.FC<SetupPageProps> = ({
     useEffect(() => {
         const subTabs = subMenuConfig[activeSettingsTab] || [];
         if (!subTabs.some(st => st.id === activeSubTab)) setActiveSubTab(subTabs[0]?.id || '');
-        if (activeSettingsTab === 'prompt') loadPromptCategories().then(setPromptCategories);
+        if (activeSettingsTab === 'prompt') void loadPromptCategories().then(setPromptCategories);
     }, [activeSettingsTab, activeSubTab, setActiveSubTab]);
 
     const handleSettingsChange = useCallback((field: keyof LLMSettings, value: any) => {
@@ -460,7 +460,7 @@ export const SetupPage: React.FC<SetupPageProps> = ({
             const url = isCloud ? settings.ollamaCloudBaseUrl : settings.ollamaBaseUrl;
             const result = await testOllamaConnection(url);
             setOllamaTestResult(result);
-            if (result.success) refreshOllamaModels();
+            if (result.success) void refreshOllamaModels();
         } catch (e) { setOllamaTestResult({ success: false, message: "CRITICAL PING FAILURE" }); }
         setIsTestingOllama(false);
     };
@@ -472,7 +472,7 @@ export const SetupPage: React.FC<SetupPageProps> = ({
             const apiKey = settings.llamacppApiKey;
             const result = await testLlamaCppConnection(url, apiKey);
             setLlamaCppTestResult(result);
-            if (result.success) { refreshOllamaModels(); showGlobalFeedback("Llama.cpp connection established (200 OK)", false); }
+            if (result.success) { void refreshOllamaModels(); showGlobalFeedback("Llama.cpp connection established (200 OK)", false); }
             else { showGlobalFeedback(`Llama.cpp connection failed: ${result.message}`, true); }
         } catch (e: any) { setLlamaCppTestResult({ success: false, message: "CRITICAL PING FAILURE" }); showGlobalFeedback(`Llama.cpp ping error: ${e.message || e}`, true); }
         setIsTestingLlamaCpp(false);

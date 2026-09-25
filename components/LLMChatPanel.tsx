@@ -151,7 +151,7 @@ export const LLMChatPanel: React.FC<LLMChatPanelProps> = ({ isOpen, onClose }) =
         const title = firstUser ? (firstUser.content.length > 30 ? firstUser.content.substring(0, 30) + '...' : firstUser.content) : 'New Chat Session';
 
         const newSession: ChatSession = { id, title, messages: currentMessages, updatedAt: Date.now() };
-        saveChatSession(newSession);
+        void saveChatSession(newSession);
 
         // Refresh session list without losing focus
         setSavedSessions(getChatSessionsSync());
@@ -510,10 +510,10 @@ ${systemResponse}` };
                                                         <div className="text-center p-4 text-xs font-mono opacity-30 mt-4">No saved sessions</div>
                                                     )}
                                                     {savedSessions.map(session => (
-                                                        <div key={session.id} className={`group flex items-center justify-between p-2.5 rounded-md cursor-pointer transition-colors ${activeSessionId === session.id ? 'bg-primary/10 text-primary border border-primary/20' : 'hover:bg-base-200 text-base-content/70 border border-transparent'}`} onClick={() => loadSession(session.id)}>
+                                                        <div key={session.id} className={`group flex items-center justify-between p-2.5 rounded-md cursor-pointer transition-colors ${activeSessionId === session.id ? 'bg-primary/10 text-primary border border-primary/20' : 'hover:bg-base-200 text-base-content/70 border border-transparent'}`} onClick={() => void loadSession(session.id)}>
                                                             <div className="truncate text-xs font-mono">{session.title}</div>
                                                             <button
-                                                                onClick={(e) => { e.stopPropagation(); deleteSession(session.id); }}
+                                                                onClick={(e) => { e.stopPropagation(); void deleteSession(session.id); }}
                                                                 className="opacity-0 group-hover:opacity-100 p-1 text-error/60 hover:text-error transition-all"
                                                             >
                                                                 <DeleteIcon className="w-3.5 h-3.5" />
@@ -644,7 +644,7 @@ ${systemResponse}` };
                                                     onKeyDown={(e) => {
                                                         if (e.key === 'Enter' && !e.shiftKey) {
                                                             e.preventDefault();
-                                                            handleSubmit(e as any);
+                                                            void handleSubmit(e as any);
                                                         }
                                                     }}
                                                     placeholder="Enter command directive..."

@@ -66,8 +66,8 @@ export const CdpSection: React.FC<CdpSectionProps> = ({ activeSubTab }) => {
     }, [selectedId]);
 
     useEffect(() => {
-        refreshStatus();
-        const iv = setInterval(refreshStatus, 3000);
+        void refreshStatus();
+        const iv = setInterval(() => { void refreshStatus(); }, 3000);
         return () => clearInterval(iv);
     }, [refreshStatus]);
 
@@ -133,7 +133,7 @@ export const CdpSection: React.FC<CdpSectionProps> = ({ activeSubTab }) => {
 
     // On mount, check if Chrome was already auto-launched
     useEffect(() => {
-        (async () => {
+        void (async () => {
             try {
                 const st = await externalBrowserService.launchStatus();
                 if (st.isRunning && st.port) {
@@ -176,7 +176,7 @@ export const CdpSection: React.FC<CdpSectionProps> = ({ activeSubTab }) => {
     ];
 
     const copyToClipboard = (text: string) => {
-        navigator.clipboard.writeText(text).then(() => {
+        void navigator.clipboard.writeText(text).then(() => {
             setCopied(true);
             setTimeout(() => setCopied(false), 2000);
         });
@@ -234,16 +234,16 @@ export const CdpSection: React.FC<CdpSectionProps> = ({ activeSubTab }) => {
                             disabled={isConnected}
                         />
                         {isConnected ? (
-                            <button onClick={() => { audioService.playClick(); handleDisconnect(); }} className="form-btn text-error px-4 flex items-center gap-2">
+                            <button onClick={() => { audioService.playClick(); void handleDisconnect(); }} className="form-btn text-error px-4 flex items-center gap-2">
                                 <PowerIcon className="w-3.5 h-3.5" /> DISCONNECT
                             </button>
                         ) : (
                             <div className="flex gap-2">
-                                <button onClick={() => { audioService.playClick(); handleConnect(); }} disabled={connecting} className="form-btn px-4 flex items-center gap-2">
+                                <button onClick={() => { audioService.playClick(); void handleConnect(); }} disabled={connecting} className="form-btn px-4 flex items-center gap-2">
                                     {connecting ? '...' : <PowerIcon className="w-3.5 h-3.5" />}
                                     {connecting ? 'CONNECTING' : 'CONNECT'}
                                 </button>
-                                <button onClick={() => { audioService.playClick(); handleLaunchBrowser(); }} disabled={launching} className="form-btn px-4 flex items-center gap-2 text-primary border-primary/30 hover:bg-primary/10">
+                                <button onClick={() => { audioService.playClick(); void handleLaunchBrowser(); }} disabled={launching} className="form-btn px-4 flex items-center gap-2 text-primary border-primary/30 hover:bg-primary/10">
                                     {launching ? '...' : <PowerIcon className="w-3.5 h-3.5" />}
                                     {launching ? 'LAUNCHING...' : 'LAUNCH BROWSER'}
                                 </button>
@@ -261,7 +261,7 @@ export const CdpSection: React.FC<CdpSectionProps> = ({ activeSubTab }) => {
             {isConnected && (
                 <SettingsGroup title="Browser Tabs">
                     <div className="px-6 py-3 border-b border-base-content/10 flex justify-end">
-                        <button onClick={() => { audioService.playClick(); handleRefreshTargets(); }} className="flex items-center gap-1.5 text-2xs font-black uppercase tracking-widest text-base-content/30 hover:text-primary transition-colors">
+                        <button onClick={() => { audioService.playClick(); void handleRefreshTargets(); }} className="flex items-center gap-1.5 text-2xs font-black uppercase tracking-widest text-base-content/30 hover:text-primary transition-colors">
                             <RefreshIcon className="w-3 h-3" /> REFRESH
                         </button>
                     </div>
@@ -273,7 +273,7 @@ export const CdpSection: React.FC<CdpSectionProps> = ({ activeSubTab }) => {
                         targets.map(t => (
                             <div
                                 key={t.id}
-                                onClick={() => { audioService.playClick(); handleSelectTarget(t); }}
+                                onClick={() => { audioService.playClick(); void handleSelectTarget(t); }}
                                 className={`p-4 flex items-center justify-between gap-4 cursor-pointer transition-all border-b border-base-content/5 hover:bg-base-200/30 ${
                                     selectedId === t.id ? 'bg-primary/5 border-l-2 border-l-primary' : ''
                                 }`}

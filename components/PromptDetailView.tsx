@@ -185,7 +185,7 @@ const PromptDetailView: React.FC<PromptDetailViewProps> = ({
   }, [currentIndex, prompts.length, onNavigate]);
 
   const handleCopyToClipboard = (text: string) => {
-      navigator.clipboard.writeText(text).then(() => {
+      void navigator.clipboard.writeText(text).then(() => {
         setCopied(true);
         showGlobalFeedback("Copied.");
         setTimeout(() => setCopied(false), 2000);

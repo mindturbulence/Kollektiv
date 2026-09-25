@@ -163,7 +163,7 @@ export const CloneStampTool = {
     _lastStamp   = null;
     _clipPath    = null;
 
-    createImageBitmap(canvas).then(newBitmap => {
+    void createImageBitmap(canvas).then(newBitmap => {
       const cmd: HistoryCommand = {
         id: crypto.randomUUID(), label: 'Clone stamp stroke', timestamp: Date.now(),
         // H3: declare held bitmaps so the byte-cap can account and free them.

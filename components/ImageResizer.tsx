@@ -399,7 +399,7 @@ const ImageResizer: React.FC<ImageResizerProps> = ({ isExiting = false }) => {
     useEffect(() => {
         if (mode === 'ai_upscale' && aiEngine === 'litert' && !aiModel && aiStatus === 'idle') {
             setAiStatus('loading');
-            (async () => {
+            void (async () => {
                 try {
                     // Load the LiteRT.js runtime from CDN (WASM files also from CDN)
                     // @ts-expect-error — CDN URL import; runtime loads from jsDelivr
@@ -530,7 +530,7 @@ const ImageResizer: React.FC<ImageResizerProps> = ({ isExiting = false }) => {
             img.src = originalUrl;
         }));
 
-        Promise.all(promises).then(newItems => {
+        void Promise.all(promises).then(newItems => {
             const validItems = newItems.filter((i): i is ImageItem => i !== null);
             const targetW = settings.width ? Number(settings.width) : null;
             const targetH = settings.height ? Number(settings.height) : null;

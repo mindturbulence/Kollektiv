@@ -125,7 +125,7 @@ const FullscreenViewer: React.FC<FullscreenViewerProps> = ({ items, currentIndex
             }
         };
     
-        loadMedia();
+        void loadMedia();
         return () => { isMounted = false; };
     }, [itemGroup, currentImageIndex]);
 
@@ -401,7 +401,7 @@ const FullscreenViewer: React.FC<FullscreenViewerProps> = ({ items, currentIndex
                     >
                         {isSlideshowPlaying ? <PauseIcon className="w-6 h-6"/> : <PlayIcon className="w-6 h-6"/>}
                     </button>
-                    <button onClick={(e) => { e.stopPropagation(); handleDownload() }} className="p-2 text-white/40 hover:text-white transition-colors" title="Download"><DownloadIcon className="w-6 h-6"/></button>
+                    <button onClick={(e) => { e.stopPropagation(); void handleDownload(); }} className="p-2 text-white/40 hover:text-white transition-colors" title="Download"><DownloadIcon className="w-6 h-6"/></button>
                     <button onClick={(e) => { e.stopPropagation(); setZoom(1); setPosition({x:0, y:0}); }} className="p-2 text-white/40 hover:text-white transition-colors" title="Reset view"><CenterIcon className="w-6 h-6"/></button>
                     <button onClick={handleClose} className="p-2 text-error/40 hover:text-error transition-colors" title="Close"><CloseIcon className="w-6 h-6"/></button>
                 </div>

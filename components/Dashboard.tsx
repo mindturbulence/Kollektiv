@@ -40,7 +40,7 @@ const Dashboard: React.FC<DashboardProps> = ({ isExiting = false }) => {
                 setGallery(items.filter(i => !i.isNsfw));
             } catch (e) { console.error(e); } finally { setIsLoading(false); }
         };
-        fetch();
+        void fetch();
     }, []);
 
     if (isLoading) return <div className="h-full w-full flex items-center justify-center bg-transparent"><LoadingSpinner /></div>;

@@ -113,17 +113,17 @@ const TransitionOverlay = forwardRef<TransitionOverlayHandle>((_props, ref) => {
                 activeTl.current = tl;
 
                 if (geometry === 'shutterV') {
-                    parts.forEach((el, i) => gsap.set(el, { scaleY: 0, transformOrigin: i % 2 === 0 ? 'top center' : 'bottom center' }));
+                    parts.forEach((el, i) => { gsap.set(el, { scaleY: 0, transformOrigin: i % 2 === 0 ? 'top center' : 'bottom center' }); });
                     tl.to(parts, { scaleY: 1, duration: FX_TIMING.coverDuration, ease: 'power3.inOut', stagger: { each: FX_TIMING.coverStagger, from: 'center' } });
                 } else if (geometry === 'shutterH') {
-                    parts.forEach((el, i) => gsap.set(el, { scaleX: 0, transformOrigin: i % 2 === 0 ? 'left center' : 'right center' }));
+                    parts.forEach((el, i) => { gsap.set(el, { scaleX: 0, transformOrigin: i % 2 === 0 ? 'left center' : 'right center' }); });
                     tl.to(parts, { scaleX: 1, duration: FX_TIMING.coverDuration, ease: 'power3.inOut', stagger: { each: FX_TIMING.coverStagger, from: 'start' } });
                 } else if (geometry === 'doors') {
-                    parts.forEach((el, i) => gsap.set(el, { scaleX: 0, transformOrigin: i % 2 === 0 ? 'left center' : 'right center' }));
+                    parts.forEach((el, i) => { gsap.set(el, { scaleX: 0, transformOrigin: i % 2 === 0 ? 'left center' : 'right center' }); });
                     tl.to(parts, { scaleX: 1, duration: FX_TIMING.coverDuration, ease: 'power2.in', stagger: { each: FX_TIMING.coverStagger, from: 'edges' } });
                 } else if (geometry === 'shards') {
                     const offsets = [{ yPercent: -101 }, { xPercent: 101 }, { yPercent: 101 }, { xPercent: -101 }];
-                    parts.forEach((el, i) => gsap.set(el, { xPercent: 0, yPercent: 0, ...offsets[i % 4] }));
+                    parts.forEach((el, i) => { gsap.set(el, { xPercent: 0, yPercent: 0, ...offsets[i % 4] }); });
                     tl.to(parts, { xPercent: 0, yPercent: 0, duration: FX_TIMING.coverDuration, ease: 'power3.inOut', stagger: FX_TIMING.coverStagger });
                 } else {
                     const origin = geometry === 'irisTop' ? '50% 10%' : '50% 45%';
@@ -204,7 +204,7 @@ const TransitionOverlay = forwardRef<TransitionOverlayHandle>((_props, ref) => {
                     }, '-=0.05');
                 } else if (geometry === 'shards') {
                     const outs = [{ yPercent: -101 }, { xPercent: 101 }, { yPercent: 101 }, { xPercent: -101 }];
-                    parts.forEach((el, i) => tl.to(el, { ...outs[i % 4], duration: FX_TIMING.revealDuration, ease: 'power3.out' }, i === 0 ? '-=0.05' : `<${FX_TIMING.revealStagger}`));
+                    parts.forEach((el, i) => { tl.to(el, { ...outs[i % 4], duration: FX_TIMING.revealDuration, ease: 'power3.out' }, i === 0 ? '-=0.05' : `<${FX_TIMING.revealStagger}`); });
                 } else {
                     const origin = geometry === 'irisTop' ? '50% 10%' : '50% 45%';
                     tl.to(parts[0], { clipPath: `circle(0% at ${origin})`, duration: FX_TIMING.revealDuration, ease: 'power3.out' }, '-=0.05');

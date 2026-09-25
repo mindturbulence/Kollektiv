@@ -82,7 +82,7 @@ const VaultMapPanel: React.FC<VaultMapPanelProps> = ({ isOpen, onClose }) => {
     if (!isOpen) return;
     let cancelled = false;
 
-    (async () => {
+    void (async () => {
       setLoading(true);
       try {
         const s = await hydrateKnowledgeGraph();

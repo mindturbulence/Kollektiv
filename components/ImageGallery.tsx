@@ -117,7 +117,7 @@ const ImageGallery: React.FC<ImageGalleryProps> = ({
         vel = 0;
         skewSetter(0);
         scaleSetter(1);
-        columnRefs.current.forEach(col => col && gsap.set(col, { y: 0 }));
+        columnRefs.current.forEach(col => { if (col) gsap.set(col, { y: 0 }); });
       }
     };
 
@@ -171,9 +171,9 @@ const ImageGallery: React.FC<ImageGalleryProps> = ({
   }, []);
 
   useEffect(() => {
-    refreshData();
+    void refreshData();
     const handleHealed = () => {
-      refreshData();
+      void refreshData();
     };
     window.addEventListener('gallery-manifest-healed', handleHealed);
     return () => window.removeEventListener('gallery-manifest-healed', handleHealed);
@@ -363,7 +363,7 @@ const ImageGallery: React.FC<ImageGalleryProps> = ({
               <div className="flex flex-col h-full w-full overflow-hidden relative z-10">
               {detailViewItemId && (
                 <ItemDetailView
-                  items={sortedAndFilteredItems} currentIndex={sortedAndFilteredItems.findIndex(i => i.id === detailViewItemId)} isPinned={pinnedItemIds.includes(detailViewItemId)} categories={categories} onClose={() => setDetailViewItemId(null)} onUpdate={handleUpdateItem} onDelete={(i) => setItemToDelete(i)} onTogglePin={(id) => { const n = pinnedItemIds.includes(id) ? pinnedItemIds.filter(pid => pid !== id) : [id, ...pinnedItemIds]; setPinnedItemIds(n); savePinnedItemIds(n); }} onNavigate={(idx) => setDetailViewItemId(sortedAndFilteredItems[idx].id)} showGlobalFeedback={showGlobalFeedback}
+                  items={sortedAndFilteredItems} currentIndex={sortedAndFilteredItems.findIndex(i => i.id === detailViewItemId)} isPinned={pinnedItemIds.includes(detailViewItemId)} categories={categories} onClose={() => setDetailViewItemId(null)} onUpdate={handleUpdateItem} onDelete={(i) => setItemToDelete(i)} onTogglePin={(id) => { const n = pinnedItemIds.includes(id) ? pinnedItemIds.filter(pid => pid !== id) : [id, ...pinnedItemIds]; setPinnedItemIds(n); void savePinnedItemIds(n); }} onNavigate={(idx) => setDetailViewItemId(sortedAndFilteredItems[idx].id)} showGlobalFeedback={showGlobalFeedback}
                 />
               )}
 
@@ -507,7 +507,7 @@ const ImageGallery: React.FC<ImageGalleryProps> = ({
 
       <AddItemModal isOpen={isAddModalOpen} onClose={() => setIsAddModalOpen(false)} onAddItem={handleAddItem} categories={categories} />
       {itemToDelete && (
-        <ConfirmationModal isOpen={!!itemToDelete} onClose={() => setItemToDelete(null)} onConfirm={() => { handleDeleteItem(itemToDelete); setItemToDelete(null); }} title="DELETE ITEM" message={`Permanently delete "${itemToDelete.title}"?`} />
+        <ConfirmationModal isOpen={!!itemToDelete} onClose={() => setItemToDelete(null)} onConfirm={() => { void handleDeleteItem(itemToDelete); setItemToDelete(null); }} title="DELETE ITEM" message={`Permanently delete "${itemToDelete.title}"?`} />
       )}
     </>
   );

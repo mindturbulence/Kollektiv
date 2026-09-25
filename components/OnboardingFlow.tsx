@@ -53,7 +53,7 @@ const OnboardingFlow: React.FC<OnboardingFlowProps> = ({ onSetupComplete }) => {
         console.warn('Failed to check existing storage handle:', e);
       }
     };
-    checkHandle();
+    void checkHandle();
     return () => { cancelled = true; };
   }, []);
 
@@ -425,7 +425,7 @@ const OnboardingFlow: React.FC<OnboardingFlowProps> = ({ onSetupComplete }) => {
                       <button
                         type="button"
                         onClick={() => {
-                          navigator.clipboard.writeText(window.location.origin);
+                          void navigator.clipboard.writeText(window.location.origin);
                           setError('ORIGIN COPIED TO CLIPBOARD');
                           setTimeout(() => setError(null), 3000);
                         }}

@@ -120,7 +120,7 @@ const LocalGenerationStudioPage: React.FC<LocalGenerationStudioPageProps> = ({ b
 
   // Load saved workflows on mount
   useEffect(() => {
-    loadWorkflowSchemas().then(setWorkflowEntries);
+    void loadWorkflowSchemas().then(setWorkflowEntries);
   }, []);
 
   // ── Preset state ────────────────────────────────────────────────────
@@ -131,19 +131,19 @@ const LocalGenerationStudioPage: React.FC<LocalGenerationStudioPageProps> = ({ b
   const backendPresets = presets.filter((p) => p.backendId === backendId);
 
   useEffect(() => {
-    loadPresets().then(setPresets);
+    void loadPresets().then(setPresets);
   }, []);
 
   const model = (settings as any)[meta.modelField] || '';
   const serverUrl = (settings as any)[meta.urlField] || '';
 
   useEffect(() => {
-    checkAvailability(settings);
-    refreshModels(settings);
-    refreshSamplers(settings);
-    refreshLoras(settings);
-    refreshEmbeddings(settings);
-    refreshModules(settings);
+    void checkAvailability(settings);
+    void refreshModels(settings);
+    void refreshSamplers(settings);
+    void refreshLoras(settings);
+    void refreshEmbeddings(settings);
+    void refreshModules(settings);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [backendId, serverUrl]);
 
@@ -360,12 +360,12 @@ const LocalGenerationStudioPage: React.FC<LocalGenerationStudioPageProps> = ({ b
         if (entry.schema.targetInputs.seed.length > 0) {
           // The workflow already has size config; just pass the injected JSON
         }
-        generate({ ...params, customWorkflowJson: injected }, settings);
+        void generate({ ...params, customWorkflowJson: injected }, settings);
         return;
       }
     }
 
-    generate(params, settings);
+    void generate(params, settings);
   }, [
     prompt, negativePrompt, width, height, steps, cfgScale,
     seedText, randomizeSeed, sampler, model, state.phase,
@@ -437,7 +437,7 @@ const LocalGenerationStudioPage: React.FC<LocalGenerationStudioPageProps> = ({ b
                   type="text"
                   value={newPresetName}
                   onChange={(e) => setNewPresetName(e.target.value)}
-                  onKeyDown={(e) => { if (e.key === 'Enter') handleSavePreset(); }}
+                  onKeyDown={(e) => { if (e.key === 'Enter') void handleSavePreset(); }}
                   placeholder="Preset name"
                   autoFocus
                   className="form-input text-2xs h-8 w-28 shrink-0"

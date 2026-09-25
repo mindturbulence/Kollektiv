@@ -82,7 +82,7 @@ const McpSection: React.FC<McpSectionProps> = ({ activeSubTab, settings, handleS
         if (tab !== 'custom') return;
         for (const sv of servers) {
             if (sv.enabled && sv.url && statuses[sv.id] === undefined) {
-                testConnection(sv);
+                void testConnection(sv);
             }
         }
     }, [servers, tab, statuses]);
@@ -173,7 +173,7 @@ const McpSection: React.FC<McpSectionProps> = ({ activeSubTab, settings, handleS
                                                 {isEditing ? 'Close' : 'Edit'}
                                             </button>
                                             <button
-                                                onClick={() => { audioService.playClick(); testConnection(sv); }}
+                                                onClick={() => { audioService.playClick(); void testConnection(sv); }}
                                                 disabled={st?.checking || !sv.url}
                                                 className="form-btn px-3 text-2xs font-black uppercase tracking-widest disabled:opacity-30"
                                             >

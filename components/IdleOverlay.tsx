@@ -16,7 +16,7 @@ const IdleOverlay: React.FC<{ isVisible: boolean; onInteraction: () => void }> =
 
     useEffect(() => {
         if (isVisible && settings.idleScreenType === 'gallery') {
-            loadGalleryItems().then(items => setGalleryItems(items.filter(i => !i.isNsfw)));
+            void loadGalleryItems().then(items => setGalleryItems(items.filter(i => !i.isNsfw)));
         }
     }, [isVisible, settings.idleScreenType]);
 

@@ -282,7 +282,7 @@ export const NestedCategoryManager: React.FC<NestedCategoryManagerProps> = ({
   const [addName, setAddName] = useState('');
 
   useEffect(() => {
-    loadFn().then(setCategories);
+    void loadFn().then(setCategories);
   }, [loadFn]);
 
   const handleReorder = async (id: string, direction: 'up' | 'down' | 'top' | 'bottom') => {
@@ -363,7 +363,7 @@ export const NestedCategoryManager: React.FC<NestedCategoryManagerProps> = ({
                     <button onClick={() => { audioService.playClick(); setIsAllExpanded(!isAllExpanded); }} className="p-2 text-primary/40 hover:text-primary transition-colors" title={isAllExpanded ? 'Collapse All' : 'Expand All'}>
                         <ChevronDownIcon className={`w-5 h-5 transition-transform ${isAllExpanded ? 'rotate-0' : '-rotate-90'}`} />
                     </button>
-                    <button onClick={() => { audioService.playClick(); handleSortAZ(); }} className="p-2 text-primary/40 hover:text-primary transition-colors" title="Sort Recursive A-Z">
+                    <button onClick={() => { audioService.playClick(); void handleSortAZ(); }} className="p-2 text-primary/40 hover:text-primary transition-colors" title="Sort Recursive A-Z">
                         <RefreshIcon className="w-5 h-5" />
                     </button>
                     <button 
@@ -436,7 +436,7 @@ export const NestedCategoryManager: React.FC<NestedCategoryManagerProps> = ({
                         </div>
                         <footer className="p-4 border-t border-base-300 flex justify-end gap-2 bg-transparent">
                             <button onClick={() => { audioService.playClick(); setIsAddModalOpen(false); }} className="form-btn px-8">Abort</button>
-                            <button onClick={() => { audioService.playClick(); handleConfirmAdd(); }} disabled={!addName.trim()} className="form-btn form-btn-primary px-8 shadow-lg">Create</button>
+                            <button onClick={() => { audioService.playClick(); void handleConfirmAdd(); }} disabled={!addName.trim()} className="form-btn form-btn-primary px-8 shadow-lg">Create</button>
                         </footer>
                     </div>
                 </div>

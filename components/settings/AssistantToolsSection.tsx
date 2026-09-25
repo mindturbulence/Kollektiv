@@ -70,7 +70,7 @@ const AssistantToolsSection: React.FC<AssistantToolsSectionProps> = ({ settings 
     useEffect(() => {
         let cancelled = false;
         setMcpLoading(true);
-        loadMcpAssistantTools(settings).then(tools => {
+        void loadMcpAssistantTools(settings).then(tools => {
             if (!cancelled) { setMcpTools(tools); setMcpLoading(false); }
         });
         return () => { cancelled = true; };

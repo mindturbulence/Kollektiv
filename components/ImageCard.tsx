@@ -101,7 +101,7 @@ const Media: React.FC<{
                 idleHandleRef.current = (window as any).setTimeout(() => startLoading(), 50) as any;
             }
         };
-        loadMedia();
+        void loadMedia();
         return () => { isActive = false; cleanup(); };
     }, [url, isInView]);
 

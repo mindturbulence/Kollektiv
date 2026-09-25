@@ -493,7 +493,7 @@ const AppContent: React.FC = () => {
                                 <button
                                     onClick={() => {
                                         hasInitializedRef.current = false;
-                                        initializeApp(); 
+                                        void initializeApp();
                                     }}
                                     className="form-btn form-btn-primary h-10"
                                 >

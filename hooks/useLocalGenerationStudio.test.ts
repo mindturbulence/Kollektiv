@@ -83,7 +83,7 @@ describe('useLocalGenerationStudio', () => {
     let resolve!: (v: any) => void;
     mockBackend.listSamplers.mockReturnValueOnce(new Promise((r) => { resolve = r; }));
     const { result } = renderHook(() => useLocalGenerationStudio('comfy'));
-    act(() => { result.current.refreshSamplers({} as any); });
+    act(() => { void result.current.refreshSamplers({} as any); });
     expect(result.current.state.loadingSamplers).toBe(true);
     await act(async () => { resolve(['euler']); });
     expect(result.current.state.loadingSamplers).toBe(false);

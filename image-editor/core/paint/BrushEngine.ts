@@ -188,7 +188,7 @@ export const BrushEngine = {
     _clipPath   = null;
 
     const actionType = target === 'mask' ? 'REPLACE_LAYER_MASK_BITMAP' : 'REPLACE_LAYER_BITMAP';
-    createImageBitmap(canvas).then((newBitmap) => {
+    void createImageBitmap(canvas).then((newBitmap) => {
       const cmd: HistoryCommand = {
         id:        crypto.randomUUID(),
         label:     target === 'mask' ? 'Mask stroke' : 'Brush stroke',

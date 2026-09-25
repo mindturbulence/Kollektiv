@@ -30,7 +30,7 @@ const BatchRunnerPage: React.FC = () => {
 
     let cancelled = false;
 
-    (async () => {
+    void (async () => {
       const loaded = kind === 'prompt'
         ? await loadSavedPrompts()
         : await loadGalleryItems();
@@ -52,7 +52,7 @@ const BatchRunnerPage: React.FC = () => {
 
   const handleRun = useCallback(() => {
     if (!selectedOpId || selectedItems.length === 0 || state.running) return;
-    start(selectedOpId, selectedItems, settings);
+    void start(selectedOpId, selectedItems, settings);
   }, [selectedOpId, selectedItems, state.running, start, settings]);
 
   const toggleId = (id: string) => {

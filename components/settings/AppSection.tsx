@@ -65,7 +65,7 @@ const AppSection: React.FC<AppSectionProps> = ({
                 console.warn("Error checking cached handle:", e);
             }
         };
-        checkCached();
+        void checkCached();
     }, []);
 
     useEffect(() => {
@@ -258,7 +258,7 @@ const AppSection: React.FC<AppSectionProps> = ({
             <SettingsGroup title="Data Management">
             <SettingRow label="Sync & Reorganize" desc="Verify manifests and move files to correct category folders.">
                 <button
-                    onClick={() => { audioService.playClick(); handleIntegrityCheck(); }}
+                    onClick={() => { audioService.playClick(); void handleIntegrityCheck(); }}
                     disabled={isSyncing}
                     className="form-btn px-6"
                 >
@@ -267,7 +267,7 @@ const AppSection: React.FC<AppSectionProps> = ({
             </SettingRow>
             <SettingRow label="Full Archival Export" desc="Generate a complete ZIP archive of all local data and files.">
                 <button
-                    onClick={() => { audioService.playClick(); createZipAndDownload([], 'kollektiv_backup.zip'); }}
+                    onClick={() => { audioService.playClick(); void createZipAndDownload([], 'kollektiv_backup.zip'); }}
                     disabled={isWorking}
                     className="form-btn form-btn-primary px-6"
                 >
