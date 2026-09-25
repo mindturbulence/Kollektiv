@@ -21,6 +21,7 @@ import CanvasViewport, { type CanvasViewportHandle } from './CanvasViewport';
 import LayersPanel from './LayersPanel';
 import StatusBar from './StatusBar';
 import NewDocumentModal from './NewDocumentModal';
+import Modal from '../../components/Modal';
 import { ImageSizeDialog, CanvasSizeDialog } from './SizeDialogs';
 import { useEditorShortcuts } from './hooks/useEditorShortcuts';
 import FloatingPanelHost from './FloatingPanelHost';
@@ -409,43 +410,46 @@ const ImageEditorPage: React.FC<ImageEditorPageProps> = ({ openPayload, showGlob
 
   return (
     <>
-      {showRecovery && (
-        <div className="fixed inset-0 z-[1100] flex items-center justify-center bg-base-100/80 backdrop-blur-md" role="dialog" aria-modal="true">
-          <div className="bg-base-300 border border-base-content/10 p-6 max-w-sm w-full shadow-2xl">
-            <h2 className="font-display text-lg uppercase tracking-widest text-primary mb-2">Unsaved Work Found</h2>
-            <p className="text-sm text-base-content/70 mb-6">
-              A previous editing session was interrupted. Restore it or start fresh.
-            </p>
-            <div className="flex gap-3">
-              <button
-                className="form-btn-primary form-btn rounded-none flex-1 text-xs"
-                disabled={isRestoring}
-                onClick={async () => {
-                  setIsRestoring(true);
-                  try {
-                    const doc = await AutosaveService.restoreSavedDocument();
-                    if (doc) loadDocument(doc);
-                  } finally {
-                    setIsRestoring(false);
-                    setShowRecovery(false);
-                  }
-                }}
-              >
-                {isRestoring ? 'Restoring…' : 'Restore'}
-              </button>
-              <button
-                className="form-btn rounded-none flex-1 text-xs"
-                onClick={() => {
-                  void AutosaveService.clearSavedDocument();
+      <Modal
+        isOpen={showRecovery}
+        // Dismissing defers the choice to the banner so the autosave is never dropped silently.
+        onClose={() => { setShowRecovery(false); setShowRecoveryBanner(true); }}
+        title="Unsaved Work Found"
+        size="sm"
+      >
+        <div className="p-5">
+          <p className="text-sm text-base-content/70 mb-6">
+            A previous editing session was interrupted. Restore it or start fresh.
+          </p>
+          <div className="flex gap-3">
+            <button
+              className="form-btn-primary form-btn rounded-none flex-1 text-xs"
+              disabled={isRestoring}
+              onClick={async () => {
+                setIsRestoring(true);
+                try {
+                  const doc = await AutosaveService.restoreSavedDocument();
+                  if (doc) loadDocument(doc);
+                } finally {
+                  setIsRestoring(false);
                   setShowRecovery(false);
-                }}
-              >
-                Discard
-              </button>
-            </div>
+                }
+              }}
+            >
+              {isRestoring ? 'Restoring…' : 'Restore'}
+            </button>
+            <button
+              className="form-btn rounded-none flex-1 text-xs"
+              onClick={() => {
+                void AutosaveService.clearSavedDocument();
+                setShowRecovery(false);
+              }}
+            >
+              Discard
+            </button>
           </div>
         </div>
-      )}
+      </Modal>
       <div className={`w-full h-full flex flex-col bg-base-100 overflow-hidden ${isExiting ? 'pointer-events-none opacity-0 transition-opacity duration-200' : ''}`}>
       {showRecoveryBanner && (
         <div className="flex items-center gap-3 px-4 h-10 flex-shrink-0 bg-warning/15 border-b border-warning/30">
@@ -525,49 +529,45 @@ const ImageEditorPage: React.FC<ImageEditorPageProps> = ({ openPayload, showGlob
 
       <ExportModal isOpen={isExportOpen} onClose={() => setIsExportOpen(false)} />
 
-      {saveChoice && (
-        <div className="fixed inset-0 bg-black/40 backdrop-blur-xl z-[1000] flex items-center justify-center p-4 animate-fade-in" role="dialog" aria-modal="true">
-          <div className="bg-base-100/95 backdrop-blur-xl w-full max-w-sm rounded-none border border-base-content/10 overflow-hidden" onClick={(e) => e.stopPropagation()}>
-            <div className="p-5">
-              <h3 className="text-sm font-display uppercase tracking-widest text-base-content/80 mb-2">Save to library</h3>
-              {saveChoice.jpegWarning && (
-                <p className="text-sm text-base-content/60 mb-2">
-                  The vault will re-encode this image as JPG, flattening transparent areas to a solid background.
-                </p>
-              )}
-              {saveChoice.canUpdateOriginal ? (
-                <p className="text-sm text-base-content/60">
-                  You opened this image from the library. Update the original in place, or save this edit as a new item?
-                </p>
-              ) : null}
-            </div>
-            <footer className="panel-footer h-11 p-1.5 gap-1.5">
-              <button type="button" className="form-btn flex-1 rounded-none" onClick={() => setSaveChoice(null)}>Cancel</button>
-              {saveChoice.canUpdateOriginal && (
-                <button
-                  type="button"
-                  className="form-btn flex-1 rounded-none"
-                  onClick={async () => {
-                    setSaveChoice(null);
-                    await doSaveToGallery(true);
-                  }}
-                >
-                  Update original
-                </button>
-              )}
-              <button
-                type="button"
-                className="form-btn form-btn-primary flex-1 rounded-none"
-                onClick={async () => {
-                  setSaveChoice(null);
-                  await doSaveToGallery(false);                }}
-              >
-                Save as new{saveChoice.jpegWarning ? ' (JPG)' : ''}
-              </button>
-            </footer>
-          </div>
+      <Modal isOpen={saveChoice !== null} onClose={() => setSaveChoice(null)} title="Save to library" size="sm">
+        <div className="p-5">
+          {saveChoice?.jpegWarning && (
+            <p className="text-sm text-base-content/60 mb-2">
+              The vault will re-encode this image as JPG, flattening transparent areas to a solid background.
+            </p>
+          )}
+          {saveChoice?.canUpdateOriginal && (
+            <p className="text-sm text-base-content/60">
+              You opened this image from the library. Update the original in place, or save this edit as a new item?
+            </p>
+          )}
         </div>
-      )}
+        <footer className="panel-footer h-11 p-1.5 gap-1.5">
+          <button type="button" className="form-btn flex-1 rounded-none" onClick={() => setSaveChoice(null)}>Cancel</button>
+          {saveChoice?.canUpdateOriginal && (
+            <button
+              type="button"
+              className="form-btn flex-1 rounded-none"
+              onClick={async () => {
+                setSaveChoice(null);
+                await doSaveToGallery(true);
+              }}
+            >
+              Update original
+            </button>
+          )}
+          <button
+            type="button"
+            className="form-btn form-btn-primary flex-1 rounded-none"
+            onClick={async () => {
+              setSaveChoice(null);
+              await doSaveToGallery(false);
+            }}
+          >
+            Save as new{saveChoice?.jpegWarning ? ' (JPG)' : ''}
+          </button>
+        </footer>
+      </Modal>
 
       {pendingUnsavedAction && (
         <UnsavedChangesModal
