@@ -520,7 +520,7 @@ const ConverterPage: React.FC<ConverterPageProps> = ({ isExiting = false, showGl
 
             {/* Actions */}
             <div className="p-4 flex flex-col gap-2 border-t border-base-content/10">
-              <button className="form-btn h-10 btn-primary" disabled={isRunning || rows.length === 0} onClick={() => void handleConvertAll()}>
+              <button className="form-btn h-10 btn-primary" disabled={isRunning || rows.length === 0} title={rows.length === 0 ? "Add files to convert first" : undefined} onClick={() => void handleConvertAll()}>
                 {isRunning ? 'CONVERTING…' : 'CONVERT ALL'}
               </button>
               {isRunning && (

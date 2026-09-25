@@ -79,7 +79,7 @@ export const PromptTxtImportModal: React.FC<PromptTxtImportModalProps> = ({ isOp
                         <span/><span/><span/><span/>
                         ABORT
                     </button>
-                    <button onClick={handleSubmit} disabled={!selectedFile} className="btn btn-sm btn-primary h-full flex-1 rounded-none tracking-wider uppercase btn-snake-primary">
+                    <button onClick={handleSubmit} disabled={!selectedFile} title={!selectedFile ? "Select a .txt file first" : undefined} className="btn btn-sm btn-primary h-full flex-1 rounded-none tracking-wider uppercase btn-snake-primary">
                         <span/><span/><span/><span/>
                         INGEST ZIP
                     </button>

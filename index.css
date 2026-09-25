@@ -422,9 +422,13 @@ button:active {
   border-color: oklch(var(--bc) / 0.2);
 }
 
+/* disabled state */
+button:disabled,
+[disabled],
 .form-btn:disabled {
-  opacity: 0.3;
+  opacity: 0.4;
   cursor: not-allowed;
+  border-style: dashed;
 }
 
 .form-btn-primary {

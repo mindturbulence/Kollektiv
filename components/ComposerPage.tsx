@@ -542,7 +542,7 @@ const ComposerPage: React.FC<ComposerPageProps> = ({ showGlobalFeedback, isExiti
                                 <span/><span/><span/><span/>
                                 DOWNLOAD
                             </button>
-                            <button onClick={() => setIsVaultConfirmOpen(true)} disabled={isProcessing || (mode==='grid'?!gridItems.some(Boolean):!frameItem)} className="btn btn-sm btn-primary h-full flex-[1.5] rounded-none tracking-[0.2em] uppercase btn-snake-primary no-glow active:no-glow">
+                            <button onClick={() => setIsVaultConfirmOpen(true)} disabled={isProcessing || (mode==='grid'?!gridItems.some(Boolean):!frameItem)} title={(mode==='grid'?!gridItems.some(Boolean):!frameItem) ? 'Add an image first' : undefined} className="btn btn-sm btn-primary h-full flex-[1.5] rounded-none tracking-[0.2em] uppercase btn-snake-primary no-glow active:no-glow">
                                 <span/><span/><span/><span/>
                                 SAVE
                             </button>

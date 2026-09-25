@@ -278,7 +278,7 @@ export const ColorPaletteExtractor: React.FC<ColorPaletteExtractorProps> = ({ on
                                  <div className="flex justify-between items-end"><span className="text-2xs font-black uppercase text-base-content/60">Nodes</span><span className="text-2xs font-mono font-bold text-primary">{numClusters}</span></div>
                                  <input type="range" min="2" max="12" value={numClusters} onChange={(e) => setNumClusters(Number((e.currentTarget as any).value))} className="range range-xs range-primary" disabled={!imageFile || isLoading}/>
                             </div>
-                            <button onClick={() => imagePreviewUrl && extractPalette(imagePreviewUrl, numClusters)} disabled={!imageFile || isLoading} className="form-btn form-btn-secondary w-full h-10">
+                            <button onClick={() => imagePreviewUrl && extractPalette(imagePreviewUrl, numClusters)} disabled={!imageFile || isLoading} title={!imageFile ? "Select an image first" : undefined} className="form-btn form-btn-secondary w-full h-10">
                                 {isLoading ? 'ANALYZING...' : 'RE-SCAN SPECTRUM'}
                             </button>
                         </div>

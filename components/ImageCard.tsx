@@ -30,7 +30,6 @@ const Media: React.FC<{
     
     const containerRef = useRef<HTMLDivElement>(null);
     const mediaRef = useRef<HTMLImageElement | HTMLVideoElement | null>(null);
-    const shutterRef = useRef<HTMLDivElement>(null);
     const videoRef = useRef<HTMLVideoElement | null>(null);
     const objectUrlRef = useRef<string | null>(null);
     const idleHandleRef = useRef<number | null>(null);
@@ -107,19 +106,10 @@ const Media: React.FC<{
 
     // GSAP Reveal Animation
     useLayoutEffect(() => {
-        if (isLoaded && isInView && mediaRef.current && shutterRef.current) {
-            const tl = gsap.timeline({
-                defaults: { ease: "power4.inOut" }
-            });
-
-            tl.fromTo(shutterRef.current, 
-                { clipPath: 'inset(0% 0% 0% 0%)' },
-                { clipPath: 'inset(0% 0% 100% 0%)', duration: 1.8 }
-            )
-            .fromTo(mediaRef.current, 
+        if (isLoaded && isInView && mediaRef.current) {
+            gsap.fromTo(mediaRef.current,
                 { scale: 1.2, filter: 'grayscale(50%) brightness(0.3)' },
-                { scale: 1, filter: 'grayscale(0%) brightness(1)', duration: 2.4 },
-                "-=1.4"
+                { scale: 1, filter: 'grayscale(0%) brightness(1)', duration: 0.3, ease: "power2.out" }
             );
         }
     }, [isLoaded, isInView]);
@@ -127,19 +117,11 @@ const Media: React.FC<{
     // Hover Animation
     useEffect(() => {
         if (!mediaRef.current) return;
-        if (isHovered) {
-            gsap.to(mediaRef.current, {
-                scale: 1.1,
-                duration: 2.5,
-                ease: "power2.out"
-            });
-        } else {
-            gsap.to(mediaRef.current, {
-                scale: 1,
-                duration: 1.5,
-                ease: "power2.inOut"
-            });
-        }
+        gsap.to(mediaRef.current, {
+            scale: isHovered ? 1.1 : 1,
+            duration: 0.2,
+            ease: "power2.out"
+        });
     }, [isHovered]);
 
     // Manual video playback control based on hover
@@ -162,12 +144,6 @@ const Media: React.FC<{
             className="relative w-full bg-transparent overflow-hidden flex items-center justify-center group/media"
             style={{ minHeight: minH }}
         >
-            {/* Shutter Overlay */}
-            <div 
-                ref={shutterRef}
-                className="absolute inset-0 bg-transparent z-20 pointer-events-none"
-            />
-
             {!displayUrl ? (
                  <div className="w-full h-48 bg-transparent animate-pulse"></div>
             ) : hasError ? (
@@ -183,14 +159,14 @@ const Media: React.FC<{
                             mediaRef.current = el;
                         }}
                         src={displayUrl} 
-                        className="w-full h-full object-cover will-change-transform" 
+                        className="w-full h-full object-cover" 
                         muted 
                         playsInline 
                         loop
                         preload="metadata"
                         onLoadedData={handleLoad}
                     />
-                    <div className={`absolute inset-0 flex items-center justify-center pointer-events-none z-10 transition-opacity duration-500 ${isHovered ? 'opacity-0' : 'opacity-100'}`}>
+                    <div className={`absolute inset-0 flex items-center justify-center pointer-events-none z-10 transition-opacity duration-200 ${isHovered ? 'opacity-0' : 'opacity-100'}`}>
                         <div className="bg-black/40 backdrop-blur-sm p-2 rounded-none border border-white/10 shadow-2xl">
                             <PlayIcon className="w-4 h-4 text-white fill-current" />
                         </div>
@@ -202,7 +178,7 @@ const Media: React.FC<{
                         ref={mediaRef as React.RefObject<HTMLImageElement>}
                         src={displayUrl} 
                         alt={title} 
-                        className="w-full h-full object-cover will-change-transform" 
+                        className="w-full h-full object-cover" 
                         loading="lazy" 
                         onLoad={handleLoad}
                     />
@@ -229,7 +205,7 @@ const ImageCard: React.FC<ImageCardProps> = memo(({ item, viewMode, onOpenDetail
       onClick={() => onOpenDetailView()}
       onMouseEnter={() => setIsHovered(true)}
       onMouseLeave={() => setIsHovered(false)}
-      className={`relative group bg-transparent cursor-pointer overflow-hidden select-none transition-all duration-700`}
+      className={`relative group bg-transparent cursor-pointer overflow-hidden select-none`}
     >
       <Media
         url={item.urls[0]}
@@ -239,19 +215,19 @@ const ImageCard: React.FC<ImageCardProps> = memo(({ item, viewMode, onOpenDetail
         isHovered={isHovered}
       />
 
-      <div className="absolute inset-0 bg-gradient-to-t from-transparent via-transparent to-transparent opacity-90 group-hover:opacity-40 transition-opacity duration-1000 z-10 pointer-events-none"></div>
+      <div className="absolute inset-0 bg-gradient-to-t from-transparent via-transparent to-transparent opacity-90 group-hover:opacity-40 transition-opacity duration-200 z-10 pointer-events-none"></div>
 
       <div className={`absolute inset-0 flex flex-col ${styles.padding} z-30 pointer-events-none`}>
         
-        <div className="flex items-center gap-4 mb-auto opacity-70 group-hover:opacity-100 transition-opacity duration-500">
+        <div className="flex items-center gap-4 mb-auto opacity-70 group-hover:opacity-100 transition-opacity duration-200">
             {viewMode !== 'compact' && (
-                <span className={`${styles.label} font-mono font-black text-primary tracking-[0.3em] uppercase whitespace-nowrap drop-shadow-sm opacity-0 group-hover:opacity-100 transition-opacity duration-500`}>
+                <span className={`${styles.label} font-mono font-black text-primary tracking-[0.3em] uppercase whitespace-nowrap drop-shadow-sm opacity-0 group-hover:opacity-100 transition-opacity duration-200`}>
                     ID#{item.id.slice(-4).toUpperCase()}
                 </span>
             )}
-            <div className={`flex-grow h-px bg-primary/30 opacity-0 group-hover:opacity-100 transition-opacity duration-500 ${viewMode === 'compact' ? 'opacity-40' : ''}`}></div>
+            <div className={`flex-grow h-px bg-primary/30 opacity-0 group-hover:opacity-100 transition-opacity duration-200 ${viewMode === 'compact' ? 'opacity-40' : ''}`}></div>
             {item.isNsfw && (
-                <div className={`${viewMode === 'focus' ? 'px-4 py-1.5 text-2xs' : 'px-2 py-1 text-2xs'} badge badge-warning rounded-none font-black uppercase h-auto border-none opacity-0 group-hover:opacity-100 transition-opacity duration-500`}>NSFW</div>
+                <div className={`${viewMode === 'focus' ? 'px-4 py-1.5 text-2xs' : 'px-2 py-1 text-2xs'} badge badge-warning rounded-none font-black uppercase h-auto border-none opacity-0 group-hover:opacity-100 transition-opacity duration-200`}>NSFW</div>
             )}
             {isPinned && (
                 <div className="text-primary drop-shadow-md flex-shrink-0">
@@ -261,23 +237,23 @@ const ImageCard: React.FC<ImageCardProps> = memo(({ item, viewMode, onOpenDetail
         </div>
 
         <div className={styles.gap}>
-            <div className="group-hover:translate-y-0 transition-all duration-1000 ease-[cubic-bezier(0.65,0,0.35,1)] translate-y-2">
+            <div className="group-hover:translate-y-0 transition-transform duration-200 ease-out translate-y-2">
                 {viewMode === 'focus' && showCategory && categoryName && (
-                    <span className={`${styles.label} font-black uppercase tracking-[0.3em] text-primary/60 block mb-1 opacity-0 group-hover:opacity-100 transition-opacity duration-700`}>
+                    <span className={`${styles.label} font-black uppercase tracking-[0.3em] text-primary/60 block mb-1 opacity-0 group-hover:opacity-100 transition-opacity duration-200`}>
                         {categoryName}
                     </span>
                 )}
                 
                 {viewMode === 'focus' && (
-                    <h3 className={`${styles.title} font-black text-white uppercase leading-[1] line-clamp-2 transition-colors duration-700 group-hover:text-primary opacity-0 group-hover:opacity-100 drop-shadow-md font-logo`}>
+                    <h3 className={`${styles.title} font-black text-white uppercase leading-[1] line-clamp-2 transition-colors duration-200 group-hover:text-primary opacity-0 group-hover:opacity-100 drop-shadow-md font-logo`}>
                         {item.title}
                     </h3>
                 )}
 
                 {viewMode === 'focus' && (
-                    <div className="grid transition-[grid-template-rows] duration-1000 ease-[cubic-bezier(0.65,0,0.35,1)] grid-rows-[0fr] group-hover:grid-rows-[1fr]">
+                    <div className="grid transition-[grid-template-rows] duration-200 ease-out grid-rows-[0fr] group-hover:grid-rows-[1fr]">
                         <div className="overflow-hidden">
-                            <p className="text-[14px] font-bold uppercase tracking-[0.2em] text-white/50 leading-relaxed pt-6 opacity-0 group-hover:opacity-100 transition-opacity duration-1000">
+                            <p className="text-[14px] font-bold uppercase tracking-[0.2em] text-white/50 leading-relaxed pt-6 opacity-0 group-hover:opacity-100 transition-opacity duration-200">
                                 {item.notes ? `"${item.notes}"` : "NO NOTES ARCHIVED"}
                             </p>
                         </div>
@@ -286,13 +262,13 @@ const ImageCard: React.FC<ImageCardProps> = memo(({ item, viewMode, onOpenDetail
             </div>
 
             {viewMode !== 'compact' && (
-                <div className="flex items-center pt-4 opacity-70 group-hover:opacity-100 transition-opacity duration-500 pointer-events-auto">
-                    <span className={`font-black uppercase tracking-[0.3em] bg-primary/10 text-primary border border-primary/20 backdrop-blur-md shadow-lg ${styles.badge} opacity-0 group-hover:opacity-100 transition-opacity duration-500`}>
+                <div className="flex items-center pt-4 opacity-70 group-hover:opacity-100 transition-opacity duration-200 pointer-events-auto">
+                    <span className={`font-black uppercase tracking-[0.3em] bg-primary/10 text-primary border border-primary/20 backdrop-blur-md shadow-lg ${styles.badge} opacity-0 group-hover:opacity-100 transition-opacity duration-200`}>
                         {item.urls.length} {item.type.toUpperCase()}{item.urls.length > 1 ? 'S' : ''}
                     </span>
                     {item.type === 'image' && (
                         <button
-                            className="ml-auto font-black uppercase tracking-[0.3em] text-2xs bg-primary/10 text-primary border border-primary/20 backdrop-blur-md px-2 py-1 opacity-0 group-hover:opacity-100 transition-opacity duration-500 pointer-events-auto hover:bg-primary/20"
+                            className="ml-auto font-black uppercase tracking-[0.3em] text-2xs bg-primary/10 text-primary border border-primary/20 backdrop-blur-md px-2 py-1 opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-auto hover:bg-primary/20"
                             onClick={(e) => {
                                 e.stopPropagation();
                                 appEventBus.emit('openInEditor', { galleryItemId: item.id, url: item.urls[0] });

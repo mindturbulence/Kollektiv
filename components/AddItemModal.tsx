@@ -302,7 +302,7 @@ const modalContent = (
                   <span/><span/><span/><span/>
                   ABORT
               </button>
-              <button type="submit" className="btn btn-sm btn-primary h-full flex-1 rounded-none tracking-wider uppercase btn-snake-primary" disabled={files.length === 0 || isProcessing}>
+              <button type="submit" className="btn btn-sm btn-primary h-full flex-1 rounded-none tracking-wider uppercase btn-snake-primary" disabled={files.length === 0 || isProcessing} title={files.length === 0 ? "Add a file first" : undefined}>
                   <span/><span/><span/><span/>
                   {isProcessing ? 'INGESTING...' : 'COMMIT TO VAULT'}
               </button>
