@@ -546,7 +546,8 @@ const AppContent: React.FC = () => {
                         ref={appWrapperRef}
                         className="w-full h-full flex flex-col overflow-hidden relative z-0 bg-transparent rounded-none p-4 md:p-6"
                     >
-                        <div className="app-header flex-shrink-0">
+                        {/* relative z-20: Header's absolute submenu row must paint above <main> (z-10) */}
+                        <div className="app-header flex-shrink-0 relative z-20">
                             <Header
                                 onNavigate={handleNavigate}
                                 activeTab={activeTab}

@@ -1,4 +1,4 @@
-import React, { useState, useRef, useLayoutEffect, useCallback } from 'react';
+import React, { useState, useRef, useLayoutEffect, useEffect, useCallback } from 'react';
 import type { ActiveTab } from '../types';
 import { audioService } from '../services/audioService';
 import { useSettings } from '../contexts/SettingsContext';
@@ -125,7 +125,6 @@ const Header: React.FC<HeaderProps> = ({
   const { settings } = useSettings();
   const navRef = useRef<HTMLDivElement>(null);
   const [activeMenu, setActiveMenu] = useState<string | null>(null);
-  const switchingRef = useRef(false);
   const containerRefs = useRef<Record<string, HTMLDivElement | null>>({});
 
   const workspaceItems = React.useMemo<NavItemData[]>(() => [
@@ -202,7 +201,8 @@ const Header: React.FC<HeaderProps> = ({
     gsap.set([navItems, separators], { y: 0, autoAlpha: 1 });
   }, [isInitialized]);
 
-  // Handle Container sliding via GSAP
+  // Submenu rows are stacked absolutely under the header, so switching groups
+  // is a crossfade: no width animation, no layout reflow.
   useLayoutEffect(() => {
     navGroups.forEach(group => {
       const container = containerRefs.current[group.id];
@@ -210,18 +210,18 @@ const Header: React.FC<HeaderProps> = ({
 
       if (activeMenu === group.id) {
         gsap.to(container, {
-          width: 'auto',
           opacity: 1,
-          duration: 0.6,
+          y: 0,
+          duration: 0.4,
           ease: "power2.out",
           overwrite: true
         });
       } else {
-        // Delay container slide until letters have started sliding down
+        // Delay the row fade until the letters have started sliding down
         gsap.to(container, {
-          width: 0,
           opacity: 0,
-          duration: 0.5,
+          y: -4,
+          duration: 0.3,
           delay: 0.3,
           ease: "power2.inOut",
           overwrite: true
@@ -230,9 +230,26 @@ const Header: React.FC<HeaderProps> = ({
     });
   }, [activeMenu, navGroups]);
 
-  const handleParentClick = useCallback((group: typeof navGroups[0]) => {
-    if (switchingRef.current) return;
+  // Below xl the icon cluster collapses into a "…" popover.
+  const [iconsOpen, setIconsOpen] = useState(false);
+  const iconsRef = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    if (!iconsOpen) return;
+    const onPointerDown = (e: PointerEvent) => {
+      if (!iconsRef.current?.contains(e.target as Node)) setIconsOpen(false);
+    };
+    const onKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') setIconsOpen(false);
+    };
+    document.addEventListener('pointerdown', onPointerDown);
+    document.addEventListener('keydown', onKeyDown);
+    return () => {
+      document.removeEventListener('pointerdown', onPointerDown);
+      document.removeEventListener('keydown', onKeyDown);
+    };
+  }, [iconsOpen]);
 
+  const handleParentClick = useCallback((group: typeof navGroups[0]) => {
     audioService.playClick();
 
     if (group.singleId) {
@@ -248,32 +265,22 @@ const Header: React.FC<HeaderProps> = ({
       return;
     }
 
-    if (activeMenu) {
-      switchingRef.current = true;
-      audioService.playSlide();
-      setActiveMenu(null);
-      setTimeout(() => {
-        setActiveMenu(group.id);
-        audioService.playSlide();
-        switchingRef.current = false;
-      }, 900);
-    } else {
-      setActiveMenu(group.id);
-      audioService.playSlide();
-    }
+    setActiveMenu(group.id);
+    audioService.playSlide();
   }, [activeMenu, onNavigate]);
 
   return (
-    <header className="flex-shrink-0 flex flex-col h-12 bg-base-200/20 backdrop-blur-md border-b border-base-content/10 z-50 relative">
-      <div ref={navRef} className="flex flex-grow items-center relative z-50 px-6 gap-4">
+    <header className="flex-shrink-0 h-12 bg-base-200/20 backdrop-blur-md border-b border-base-content/10 z-50 relative">
+      <div ref={navRef} className="grid grid-cols-[auto_minmax(0,1fr)_auto] items-center h-full relative z-50 px-6 gap-4">
 
         {/* Left Side Logo */}
-        <Logo onNavigate={onNavigate} />
-
-        <div className="w-px h-6 bg-base-content/10 mx-2" />
+        <div className="flex items-center shrink-0 h-full">
+          <Logo onNavigate={onNavigate} />
+          <div className="w-px h-6 bg-base-content/10 mx-2" />
+        </div>
 
         {/* Menu Items (Left Aligned) */}
-        <div className="flex items-center gap-0">
+        <div className="flex items-center gap-0 h-full min-w-0 overflow-hidden">
           {navGroups.map((group, groupIdx) => {
             const isExpanded = activeMenu === group.id;
             const isCurrent = isGroupCurrent(group.id);
@@ -281,133 +288,156 @@ const Header: React.FC<HeaderProps> = ({
 
             return (
               <React.Fragment key={group.id}>
-                <div className="flex items-center gap-0">
-                  <button
-                    onClick={() => handleParentClick(group)}
-                    onMouseEnter={() => audioService.playHover()}
-                    aria-expanded={group.singleId ? undefined : isExpanded}
-                    className={`parent-nav-item font-normal uppercase tracking-widest relative z-10 px-3 h-full flex items-center leading-none transition-all duration-500 hover:text-primary hover:no-glow ${isPipboyTheme ? 'font-fixedsys text-xs' : 'font-rajdhani text-xs font-normal'} ${isExpanded || isCurrent || (group.singleId === activeTab) ? 'text-base-content no-glow is-active' : 'text-base-content/60'}`}
-                  >
-                    <RollingText text={group.label} hoverClassName="text-primary" />
-                  </button>
-
-                  <div
-                    ref={el => { if (el) containerRefs.current[group.id] = el; }}
-                    className="overflow-hidden opacity-0 w-0 flex items-center bg-transparent h-full pointer-events-auto"
-                    // Collapsed groups are only visually hidden (GSAP width/opacity), so
-                    // take them out of the tab order and a11y tree too.
-                    inert={!isExpanded}
-                  >
-                    <div className="flex items-center px-0 h-full gap-0">
-                      {group.items.filter(item => item.enabled !== false).map((item) => (
-                        <NavItem
-                          key={item.id}
-                          label={item.label}
-                          isActive={activeMenu === group.id}
-                          isCurrent={activeTab === item.id}
-                          onClick={() => onNavigate(item.id)}
-                        />
-                      ))}
-                    </div>
-                  </div>
-                </div>
+                <button
+                  onClick={() => handleParentClick(group)}
+                  onMouseEnter={() => audioService.playHover()}
+                  aria-expanded={group.singleId ? undefined : isExpanded}
+                  className={`parent-nav-item shrink-0 whitespace-nowrap font-normal uppercase tracking-widest relative z-10 px-3 h-full flex items-center leading-none transition-all duration-500 hover:text-primary hover:no-glow ${isPipboyTheme ? 'font-fixedsys text-xs' : 'font-rajdhani text-xs font-normal'} ${isExpanded || isCurrent || (group.singleId === activeTab) ? 'text-base-content no-glow is-active' : 'text-base-content/60'}`}
+                >
+                  <RollingText text={group.label} hoverClassName="text-primary" />
+                </button>
 
                 {groupIdx < navGroups.length - 1 && (
-                  <div className="nav-separator nav-separator-line w-[1px] h-3 opacity-30 mx-0" />
+                  <div className="nav-separator nav-separator-line shrink-0 w-[1px] h-3 opacity-30 mx-0" />
                 )}
               </React.Fragment>
             );
           })}
         </div>
 
-        {/* Right Side Controls */}
-        <div className="ml-auto flex gap-1 items-center relative z-[9999] pointer-events-auto">
-          <LiveAssistantScreenButton />
-          <LiveAssistantCameraButton />
-          <LiveAssistantControlButton />
-          <HUDNavItem
+        {/* Right Side Controls: inline at xl+, a "…" popover below */}
+        <div ref={iconsRef} className="shrink-0 flex items-center relative z-[9999] pointer-events-auto">
+          <button
+            type="button"
             onClick={(e) => {
               e.stopPropagation();
               audioService.playClick();
-              onAboutClick();
+              setIconsOpen(open => !open);
             }}
-            title="About"
+            onMouseEnter={() => audioService.playHover()}
+            aria-label="More controls"
+            aria-haspopup="true"
+            aria-expanded={iconsOpen}
+            className="xl:hidden p-2 text-primary text-base leading-none"
           >
-            <InformationCircleIcon className="w-4 h-4" />
-          </HUDNavItem>
-          <div className="w-px h-2 bg-base-content/10 self-center" />
-          <LiveAssistantMicButton />
-          <LiveAssistantFault hidden={activeTab === 'assistant'} />
-          <LiveAssistantCameraPreview hidden={activeTab === 'assistant'} />
-          <div className="w-px h-2 bg-base-content/10 self-center" />
-          <HUDNavItem
-            onClick={(e) => {
-              e.stopPropagation();
-              audioService.playClick();                    onToggleChatPanel?.();
-                }}
-                            title="Chat"
-                          >
-                            <ChatBubbleIcon className="w-4 h-4" />
-                          </HUDNavItem>
-          <div className="w-px h-2 bg-base-content/10 self-center" />
-          <HUDNavItem
-            onClick={(e) => {
-              e.stopPropagation();
-              audioService.playClick();
-              onToggleMediaPanel?.();
-            }}
-            title="Media Player"
-          >
-            <FilmIcon className="w-4 h-4" />
-          </HUDNavItem>
-          <div className="w-px h-2 bg-base-content/10 self-center" />
-          <HUDNavItem
-            onClick={(e) => {
-              e.stopPropagation();
-              audioService.playClick();
-              onToggleActivityPanel?.();
-            }}
-            title="Activity & Transcript"
-          >
-            <TerminalIcon className="w-4 h-4" />
-          </HUDNavItem>
-
-          <ThemeSwitcher />
-          <div className="w-px h-2 bg-base-content/10 self-center" />
-          <HUDNavItem
-            onClick={(e) => {
-              e.stopPropagation();
-              audioService.playClick();
-              onToggleClippingPanel();
-            }}
-            badge={clippedIdeasCount}
-            title="Clipboard"
-          >
-            <BookmarkIcon className="w-4 h-4" />
-          </HUDNavItem>
-          <div className="w-px h-2 bg-base-content/10 self-center" />
-          <HUDNavItem
-            onClick={(e) => {
-              e.stopPropagation();
-              audioService.playClick();
-              onNavigate('settings' as ActiveTab);
-            }}
-            title="Settings"
-          >
-            <Cog6ToothIcon className="w-4 h-4" />
-          </HUDNavItem>
-          <div className="w-px h-2 bg-base-content/10 self-center" />
-          <HUDNavItem
-            onClick={(e) => {
-              e.stopPropagation();
-              audioService.playClick();
-              onStandbyClick(e);
-            }}
-            title="Standby"
-          >
-            <PowerIcon className="w-4 h-4" />
-          </HUDNavItem>
+            …
+          </button>
+          <div className={`${iconsOpen ? 'flex' : 'hidden'} xl:flex gap-1 items-center absolute xl:static top-full right-0 mt-2 xl:mt-0 p-1 xl:p-0 bg-base-200 xl:bg-transparent border border-base-content/10 xl:border-0 shadow-xl xl:shadow-none`}>
+            <LiveAssistantScreenButton />
+            <LiveAssistantCameraButton />
+            <LiveAssistantControlButton />
+            <HUDNavItem
+              onClick={(e) => {
+                e.stopPropagation();
+                audioService.playClick();
+                onAboutClick();
+              }}
+              title="About"
+            >
+              <InformationCircleIcon className="w-4 h-4" />
+            </HUDNavItem>
+            <div className="w-px h-2 bg-base-content/10 self-center" />
+            <LiveAssistantMicButton />
+            <LiveAssistantFault hidden={activeTab === 'assistant'} />
+            <LiveAssistantCameraPreview hidden={activeTab === 'assistant'} />
+            <div className="w-px h-2 bg-base-content/10 self-center" />
+            <HUDNavItem
+              onClick={(e) => {
+                e.stopPropagation();
+                audioService.playClick();                    onToggleChatPanel?.();
+                  }}
+                              title="Chat"
+                            >
+                              <ChatBubbleIcon className="w-4 h-4" />
+                            </HUDNavItem>
+            <div className="w-px h-2 bg-base-content/10 self-center" />
+            <HUDNavItem
+              onClick={(e) => {
+                e.stopPropagation();
+                audioService.playClick();
+                onToggleMediaPanel?.();
+              }}
+              title="Media Player"
+            >
+              <FilmIcon className="w-4 h-4" />
+            </HUDNavItem>
+            <div className="w-px h-2 bg-base-content/10 self-center" />
+            <HUDNavItem
+              onClick={(e) => {
+                e.stopPropagation();
+                audioService.playClick();
+                onToggleActivityPanel?.();
+              }}
+              title="Activity & Transcript"
+            >
+              <TerminalIcon className="w-4 h-4" />
+            </HUDNavItem>
+  
+            <ThemeSwitcher />
+            <div className="w-px h-2 bg-base-content/10 self-center" />
+            <HUDNavItem
+              onClick={(e) => {
+                e.stopPropagation();
+                audioService.playClick();
+                onToggleClippingPanel();
+              }}
+              badge={clippedIdeasCount}
+              title="Clipboard"
+            >
+              <BookmarkIcon className="w-4 h-4" />
+            </HUDNavItem>
+            <div className="w-px h-2 bg-base-content/10 self-center" />
+            <HUDNavItem
+              onClick={(e) => {
+                e.stopPropagation();
+                audioService.playClick();
+                onNavigate('settings' as ActiveTab);
+              }}
+              title="Settings"
+            >
+              <Cog6ToothIcon className="w-4 h-4" />
+            </HUDNavItem>
+            <div className="w-px h-2 bg-base-content/10 self-center" />
+            <HUDNavItem
+              onClick={(e) => {
+                e.stopPropagation();
+                audioService.playClick();
+                onStandbyClick(e);
+              }}
+              title="Standby"
+            >
+              <PowerIcon className="w-4 h-4" />
+            </HUDNavItem>
+          </div>
         </div>
+      </div>
+
+      {/* Submenu rows overlay below the header bar, stacked so switching
+          groups crossfades instead of reflowing the header width. */}
+      <div className="absolute top-full left-0 right-0 h-9 z-40 pointer-events-none">
+        {navGroups.filter(group => group.items.length > 0).map(group => {
+          const isExpanded = activeMenu === group.id;
+          return (
+            <div
+              key={group.id}
+              ref={el => { if (el) containerRefs.current[group.id] = el; }}
+              className={`absolute inset-0 flex items-center px-6 opacity-0 bg-base-200/95 border-b border-base-content/10 ${isExpanded ? 'pointer-events-auto' : ''}`}
+              // Collapsed groups are only visually hidden (GSAP opacity), so
+              // take them out of the tab order and a11y tree too.
+              inert={!isExpanded}
+            >
+              {group.items.filter(item => item.enabled !== false).map((item) => (
+                <NavItem
+                  key={item.id}
+                  label={item.label}
+                  isActive={isExpanded}
+                  isCurrent={activeTab === item.id}
+                  onClick={() => onNavigate(item.id)}
+                />
+              ))}
+            </div>
+          );
+        })}
       </div>
     </header>
   );
