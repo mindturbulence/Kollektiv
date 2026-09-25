@@ -116,7 +116,7 @@ console.log(data);`;
                             <div className="p-6 flex gap-6 overflow-auto">
                                 <div className="w-1/3 space-y-4">
                                     <div className="form-control">
-                                        <label className="text-[10px] uppercase font-black text-base-content/50">Language</label>
+                                        <label className="text-2xs uppercase font-black text-base-content/50">Language</label>
                                         <select id="code_language_select" className="select select-sm w-full bg-base-200" value={selectedLanguage} onChange={(e) => setSelectedLanguage(e.target.value as any)}>
                                             <option value="gemini">Gemini SDK</option>
                                             <option value="fetch">Standard Fetch</option>

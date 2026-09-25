@@ -73,7 +73,7 @@ const SettingsDrawer: React.FC<SettingsDrawerProps> = ({ isOpen, onClose, settin
                                     <textarea value={settings.summaryFields} onChange={(e) => set('summaryFields', e.target.value)} rows={6} className="form-textarea w-full font-mono text-xs" spellCheck={false} />
                                 </SettingRow>
                                 <SettingRow label="Custom Dashboard Template" desc="HTML template with {{field}} placeholders. {{field?}} omits the field entirely when undefined.">
-                                    <textarea value={settings.customTemplate} onChange={(e) => set('customTemplate', e.target.value)} rows={16} className="form-textarea w-full font-mono text-[10px]" spellCheck={false} />
+                                    <textarea value={settings.customTemplate} onChange={(e) => set('customTemplate', e.target.value)} rows={16} className="form-textarea w-full font-mono text-2xs" spellCheck={false} />
                                 </SettingRow>
                             </SettingsGroup>
                         )}
@@ -89,7 +89,7 @@ const SettingsDrawer: React.FC<SettingsDrawerProps> = ({ isOpen, onClose, settin
                         {tab === 'customFields' && (
                             <SettingsGroup title="Custom Fields">
                                 <div className="p-6 space-y-3">
-                                    <p className="text-[10px] text-base-content/40 uppercase tracking-widest leading-relaxed">
+                                    <p className="text-2xs text-base-content/40 uppercase tracking-widest leading-relaxed">
                                         JavaScript expressions evaluated in order. Available: fileMetadata, civitaiMetadata, arcencielMetadata, basemodelMetadata, vaeMetadata, customMetadata (earlier fields), safetensorsFile.
                                     </p>
                                     {settings.customFields.map((field, i) => (
@@ -99,7 +99,7 @@ const SettingsDrawer: React.FC<SettingsDrawerProps> = ({ isOpen, onClose, settin
                                             <button onClick={() => removeCustomField(i)} className="form-btn h-8 px-2 text-error/60 hover:text-error flex-shrink-0">X</button>
                                         </div>
                                     ))}
-                                    <button onClick={addCustomField} className="form-btn h-8 px-3 text-[10px]">ADD CUSTOM FIELD</button>
+                                    <button onClick={addCustomField} className="form-btn h-8 px-3 text-2xs">ADD CUSTOM FIELD</button>
                                 </div>
                             </SettingsGroup>
                         )}

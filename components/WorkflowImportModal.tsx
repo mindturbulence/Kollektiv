@@ -304,14 +304,14 @@ const WorkflowImportModal: React.FC<WorkflowImportModalProps> = ({
     return (
       <div key={paramKey} className="mb-3">
         <div className="flex items-center justify-between mb-1">
-          <label className="text-[10px] font-bold uppercase tracking-widest text-base-content/50">
+          <label className="text-2xs font-bold uppercase tracking-widest text-base-content/50">
             {PARAM_LABELS[paramKey]}
           </label>
-          <span className="text-[9px] text-base-content/20 italic">{PARAM_DESCRIPTIONS[paramKey]}</span>
+          <span className="text-2xs text-base-content/20 italic">{PARAM_DESCRIPTIONS[paramKey]}</span>
         </div>
 
         {keys.length === 0 && (
-          <p className="text-[10px] text-base-content/20 italic px-1">No targets — param will be skipped.</p>
+          <p className="text-2xs text-base-content/20 italic px-1">No targets — param will be skipped.</p>
         )}
 
         {keys.map((key, idx) => (
@@ -319,7 +319,7 @@ const WorkflowImportModal: React.FC<WorkflowImportModalProps> = ({
             <select
               value={key}
               onChange={(e) => changeTarget(paramKey, idx, e.target.value)}
-              className="form-input flex-1 text-[10px] h-7"
+              className="form-input flex-1 text-2xs h-7"
             >
               {key === '' && <option value="">— select —</option>}
               {choices.map((c) => (
@@ -330,7 +330,7 @@ const WorkflowImportModal: React.FC<WorkflowImportModalProps> = ({
             </select>
             <button
               onClick={() => removeTarget(paramKey, idx)}
-              className="text-[9px] text-error/50 hover:text-error transition-colors px-1"
+              className="text-2xs text-error/50 hover:text-error transition-colors px-1"
               title="Remove this target"
             >
               ✕
@@ -341,7 +341,7 @@ const WorkflowImportModal: React.FC<WorkflowImportModalProps> = ({
         {keys.length > 0 && keys.some((k) => k !== '') && (
           <button
             onClick={() => addTarget(paramKey)}
-            className="text-[9px] text-primary/50 hover:text-primary transition-colors uppercase tracking-wider mt-0.5"
+            className="text-2xs text-primary/50 hover:text-primary transition-colors uppercase tracking-wider mt-0.5"
           >
             + Add another {PARAM_LABELS[paramKey]} target
           </button>
@@ -370,7 +370,7 @@ const WorkflowImportModal: React.FC<WorkflowImportModalProps> = ({
               <h3 className="text-xl font-black tracking-tighter text-base-content leading-none">
                 WORKFLOW<span className="text-primary">.</span>
               </h3>
-              <p className="text-[10px] font-black uppercase tracking-[0.4em] text-base-content/30 mt-1.5">
+              <p className="text-2xs font-black uppercase tracking-[0.4em] text-base-content/30 mt-1.5">
                 Custom ComfyUI Workflow Import
               </p>
             </div>
@@ -418,7 +418,7 @@ const WorkflowImportModal: React.FC<WorkflowImportModalProps> = ({
                 <p className="text-sm font-black uppercase tracking-[0.2em] text-base-content/40">
                   Drop ComfyUI API-format JSON here
                 </p>
-                <p className="text-[10px] text-base-content/20 mt-2">
+                <p className="text-2xs text-base-content/20 mt-2">
                   Export from ComfyUI via &ldquo;Save (API Format)&rdquo; or drag a web-ui export
                 </p>
               </div>
@@ -433,21 +433,21 @@ const WorkflowImportModal: React.FC<WorkflowImportModalProps> = ({
             <div className="flex overflow-y-auto min-h-0">
               {/* Left: Node Explorer */}
               <div className="w-64 shrink-0 border-r border-base-300/30 p-4 overflow-y-auto">
-                <h4 className="text-[10px] font-bold uppercase tracking-widest text-base-content/40 mb-2">
+                <h4 className="text-2xs font-bold uppercase tracking-widest text-base-content/40 mb-2">
                   Node Explorer
                 </h4>
                 <div className="space-y-1">
                   {nodeList.map((node) => (
                     <div
                       key={node.nodeId}
-                      className="text-[10px] font-mono px-2 py-1 rounded bg-base-300/10 border border-base-300/10"
+                      className="text-2xs font-mono px-2 py-1 rounded bg-base-300/10 border border-base-300/10"
                     >
                       <div className="font-bold text-primary/70">
                         #{node.nodeId} {node.title || node.classType}
                       </div>
                       <div className="text-base-content/30 truncate">{node.classType}</div>
                       {node.inputFields.length > 0 && (
-                        <div className="text-base-content/20 text-[9px] mt-0.5">
+                        <div className="text-base-content/20 text-2xs mt-0.5">
                           inputs: {node.inputFields.join(', ')}
                         </div>
                       )}
@@ -459,25 +459,25 @@ const WorkflowImportModal: React.FC<WorkflowImportModalProps> = ({
                   <div className="flex gap-1">
                     <button
                       onClick={handleResetAuto}
-                      className="flex-1 text-[9px] py-1 font-bold uppercase tracking-widest rounded bg-base-content/5 text-base-content/30 hover:bg-base-content/10 transition-colors"
+                      className="flex-1 text-2xs py-1 font-bold uppercase tracking-widest rounded bg-base-content/5 text-base-content/30 hover:bg-base-content/10 transition-colors"
                     >
                       Auto-Detect
                     </button>
                     <button
                       onClick={() => setShowRaw(!showRaw)}
-                      className="text-[9px] px-2 font-bold uppercase tracking-widest rounded bg-base-content/5 text-base-content/30 hover:bg-base-content/10 transition-colors"
+                      className="text-2xs px-2 font-bold uppercase tracking-widest rounded bg-base-content/5 text-base-content/30 hover:bg-base-content/10 transition-colors"
                       title="Toggle raw JSON view"
                     >
                       <BracesIcon className="w-3 h-3" />
                     </button>
                   </div>
-                  <label className="text-[10px] font-bold uppercase tracking-widest text-base-content/40 block">
+                  <label className="text-2xs font-bold uppercase tracking-widest text-base-content/40 block">
                     Label
                   </label>
                   <input
                     value={workflowLabel}
                     onChange={(e) => setWorkflowLabel(e.target.value)}
-                    className="form-input w-full text-[10px]"
+                    className="form-input w-full text-2xs"
                     placeholder="My Custom Workflow"
                   />
                 </div>
@@ -485,10 +485,10 @@ const WorkflowImportModal: React.FC<WorkflowImportModalProps> = ({
 
               {/* Right: Parameter Mapping */}
               <div className="flex-1 p-4 overflow-y-auto">
-                <h4 className="text-[10px] font-bold uppercase tracking-widest text-base-content/40 mb-3">
+                <h4 className="text-2xs font-bold uppercase tracking-widest text-base-content/40 mb-3">
                   Parameter Mapping
                 </h4>
-                <p className="text-[9px] text-base-content/20 mb-4 italic">
+                <p className="text-2xs text-base-content/20 mb-4 italic">
                   Map each studio parameter to the corresponding node input in your workflow.
                   Multiple targets are supported (e.g. dual CLIPTextEncode nodes).
                 </p>
@@ -500,7 +500,7 @@ const WorkflowImportModal: React.FC<WorkflowImportModalProps> = ({
           {/* ── Raw JSON overlay preview ────────────────────────── */}
           {showRaw && rawJson && (
             <div className="border-t border-base-300/30 p-4 max-h-48 overflow-y-auto bg-black/20">
-              <pre className="text-[9px] font-mono text-primary/50 whitespace-pre-wrap">
+              <pre className="text-2xs font-mono text-primary/50 whitespace-pre-wrap">
                 {JSON.stringify(rawJson, null, 2)}
               </pre>
             </div>

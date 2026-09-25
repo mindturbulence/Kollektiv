@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { fileSystemManager, setActiveFileManager } from '../utils/fileUtils';
-import { getHandle } from '../utils/db';
+import { getHandle, requestPersistentStorage } from '../utils/db';
 import { FolderClosedIcon, AppLogoIcon, RefreshIcon } from './icons';
 import { audioService } from '../services/audioService';
 import { useSettings } from '../contexts/SettingsContext';
@@ -273,6 +273,9 @@ const OnboardingFlow: React.FC<OnboardingFlowProps> = ({ onSetupComplete }) => {
     Promise.resolve(onSetupComplete(updatedSettings)).catch((err) =>
       console.error('[OnboardingFlow] initializeApp failed:', err)
     );
+    // Mark storage persistent so the browser can't evict the vault handle,
+    // notes, memories and chats under storage pressure. Fire-and-forget.
+    requestPersistentStorage().catch(() => {});
   };
 
   // Auto-advance off the finish splash into the parent boot sequence. This
@@ -309,7 +312,7 @@ const OnboardingFlow: React.FC<OnboardingFlowProps> = ({ onSetupComplete }) => {
               STORAGE_INIT<span className="text-primary italic">.</span>
             </h1>
 
-            <p className="text-[10px] font-black text-base-content/40 mb-8 uppercase tracking-[0.3em] leading-relaxed">
+            <p className="text-2xs font-black text-base-content/40 mb-8 uppercase tracking-[0.3em] leading-relaxed">
               Establish local vault connection, cloud sync, or launch demo mode to synchronize neural templates and visual assets.
             </p>
 
@@ -324,7 +327,7 @@ const OnboardingFlow: React.FC<OnboardingFlowProps> = ({ onSetupComplete }) => {
                   setCurrentProvider('local');
                   setError(null);
                 }}
-                className={`px-4 py-2 text-[10px] font-mono font-bold tracking-widest transition-all rounded-none border ${
+                className={`px-4 py-2 text-2xs font-mono font-bold tracking-widest transition-all rounded-none border ${
                   currentProvider === 'local'
                     ? 'border-primary/40 bg-primary/10 text-primary'
                     : 'border-white/10 hover:border-white/20 text-base-content/40'
@@ -341,7 +344,7 @@ const OnboardingFlow: React.FC<OnboardingFlowProps> = ({ onSetupComplete }) => {
                   setCurrentProvider('drive');
                   setError(null);
                 }}
-                className={`px-4 py-2 text-[10px] font-mono font-bold tracking-widest transition-all rounded-none border ${
+                className={`px-4 py-2 text-2xs font-mono font-bold tracking-widest transition-all rounded-none border ${
                   currentProvider === 'drive'
                     ? 'border-primary/40 bg-primary/10 text-primary'
                     : 'border-white/10 hover:border-white/20 text-base-content/40'
@@ -355,7 +358,7 @@ const OnboardingFlow: React.FC<OnboardingFlowProps> = ({ onSetupComplete }) => {
                   setCurrentProvider('demo');
                   setError(null);
                 }}
-                className={`px-4 py-2 text-[10px] font-mono font-bold tracking-widest transition-all rounded-none border ${
+                className={`px-4 py-2 text-2xs font-mono font-bold tracking-widest transition-all rounded-none border ${
                   currentProvider === 'demo'
                     ? 'border-primary/40 bg-primary/10 text-primary'
                     : 'border-white/10 hover:border-white/20 text-base-content/40'
@@ -374,7 +377,7 @@ const OnboardingFlow: React.FC<OnboardingFlowProps> = ({ onSetupComplete }) => {
                         <div className="absolute top-0 right-0 px-2 py-0.5 bg-primary/10 text-[8px] font-black tracking-widest text-primary uppercase font-mono">
                           Authenticated
                         </div>
-                        <span className="text-[9px] font-black uppercase tracking-widest text-base-content/30 block mb-1">
+                        <span className="text-2xs font-black uppercase tracking-widest text-base-content/30 block mb-1">
                           Google Identity
                         </span>
                         <span className="text-xs font-mono font-bold truncate block text-primary/80">
@@ -407,16 +410,16 @@ const OnboardingFlow: React.FC<OnboardingFlowProps> = ({ onSetupComplete }) => {
 
                   {/* ADVANCED CLOUD CONFIGURATION TROUBLESHOOTING */}
                   <div className="p-4 bg-accent/5 border border-accent/20 rounded-none text-left space-y-3 mt-4">
-                    <h4 className="text-[10px] font-black uppercase tracking-widest text-accent">
+                    <h4 className="text-2xs font-black uppercase tracking-widest text-accent">
                       OAuth / Origin Troubleshooting
                     </h4>
-                    <p className="text-[10px] font-bold text-base-content/60 leading-normal uppercase">
+                    <p className="text-2xs font-bold text-base-content/60 leading-normal uppercase">
                       If you get{' '}
                       <code className="text-accent bg-black/30 px-1 py-0.5 font-mono">400: origin_mismatch</code>, add this exact
                       URL as your <strong>Authorized JavaScript origin</strong> in Google Cloud Console:
                     </p>
                     <div className="flex items-center gap-2">
-                      <code className="text-[9px] font-mono bg-black/40 px-2 py-1 select-all break-all text-accent w-full block">
+                      <code className="text-2xs font-mono bg-black/40 px-2 py-1 select-all break-all text-accent w-full block">
                         {window.location.origin}
                       </code>
                       <button
@@ -453,7 +456,7 @@ const OnboardingFlow: React.FC<OnboardingFlowProps> = ({ onSetupComplete }) => {
                           updateSettings(updated as any);
                         }}
                         placeholder="407408718192-example.apps.googleusercontent.com"
-                        className="w-full text-[10px] font-mono bg-black/40 border border-primary/20 p-2 text-base-content placeholder-base-content/25 focus:outline-none focus:border-primary/50"
+                        className="w-full text-2xs font-mono bg-black/40 border border-primary/20 p-2 text-base-content placeholder-base-content/25 focus:outline-none focus:border-primary/50"
                       />
                     </div>
                   </div>
@@ -465,10 +468,10 @@ const OnboardingFlow: React.FC<OnboardingFlowProps> = ({ onSetupComplete }) => {
                     <div className="absolute top-0 right-0 px-2 py-0.5 bg-accent/10 text-[8px] font-black tracking-widest text-accent uppercase font-mono">
                       No Permission Required
                     </div>
-                    <span className="text-[9px] font-black uppercase tracking-widest text-base-content/30 block mb-1">
+                    <span className="text-2xs font-black uppercase tracking-widest text-base-content/30 block mb-1">
                       Demo Mode
                     </span>
-                    <p className="text-[10px] font-bold text-base-content/50 leading-relaxed uppercase tracking-wider">
+                    <p className="text-2xs font-bold text-base-content/50 leading-relaxed uppercase tracking-wider">
                       Browse the full interface without granting folder access.
                       <br />
                       Data is stored temporarily in the browser sandbox and may
@@ -489,14 +492,14 @@ const OnboardingFlow: React.FC<OnboardingFlowProps> = ({ onSetupComplete }) => {
                     LAUNCH_DEMO
                   </button>
 
-                  <div className="divider text-[10px] font-black opacity-10 font-mono">OR</div>
+                  <div className="divider text-2xs font-black opacity-10 font-mono">OR</div>
 
                   <button
                     onClick={() => {
                       audioService.playClick();
                       setCurrentProvider('local');
                     }}
-                    className="text-[9px] font-mono font-bold uppercase tracking-widest text-base-content/30 hover:text-base-content/60 transition-colors mx-auto block"
+                    className="text-2xs font-mono font-bold uppercase tracking-widest text-base-content/30 hover:text-base-content/60 transition-colors mx-auto block"
                   >
                     Choose a real vault folder instead
                   </button>
@@ -510,7 +513,7 @@ const OnboardingFlow: React.FC<OnboardingFlowProps> = ({ onSetupComplete }) => {
                         <div className="absolute top-0 right-0 px-2 py-0.5 bg-primary/10 text-[8px] font-black tracking-widest text-primary uppercase">
                           Cached_Path
                         </div>
-                        <span className="text-[9px] font-black uppercase tracking-widest text-base-content/30 block mb-1">
+                        <span className="text-2xs font-black uppercase tracking-widest text-base-content/30 block mb-1">
                           Previous Folder
                         </span>
                         <span className="text-xs font-mono font-bold truncate block text-primary/80">
@@ -529,7 +532,7 @@ const OnboardingFlow: React.FC<OnboardingFlowProps> = ({ onSetupComplete }) => {
                         )}
                         RECONNECT_VAULT
                       </button>
-                      <div className="divider text-[10px] font-black opacity-10 font-mono">OR</div>
+                      <div className="divider text-2xs font-black opacity-10 font-mono">OR</div>
                       <button
                         onClick={handleSelectDirectory}
                         disabled={isLoading}
@@ -561,7 +564,7 @@ const OnboardingFlow: React.FC<OnboardingFlowProps> = ({ onSetupComplete }) => {
 
             {error && (
               <div className="mt-8 p-4 bg-error/5 border border-error/20 rounded-none">
-                <p className="text-error font-black text-[10px] uppercase tracking-widest leading-relaxed font-mono">{error}</p>
+                <p className="text-error font-black text-2xs uppercase tracking-widest leading-relaxed font-mono">{error}</p>
               </div>
             )}
           </div>
@@ -592,14 +595,14 @@ const OnboardingFlow: React.FC<OnboardingFlowProps> = ({ onSetupComplete }) => {
               PROVISION<span className="text-primary italic">.</span>
             </h1>
 
-            <p className="text-[10px] font-black text-base-content/40 mb-10 uppercase tracking-[0.3em] leading-relaxed">
+            <p className="text-2xs font-black text-base-content/40 mb-10 uppercase tracking-[0.3em] leading-relaxed">
               Optionally configure your AI engine provider to begin interacting with the assistant.
             </p>
 
             <div className="space-y-6 text-left">
               {/* Gemini API Key */}
               <div className="space-y-2">
-                <label className="text-[9px] font-black uppercase tracking-widest text-base-content/50 block">
+                <label className="text-2xs font-black uppercase tracking-widest text-base-content/50 block">
                   Gemini API Key <span className="text-base-content/20">(recommended)</span>
                 </label>
                 <input
@@ -609,7 +612,7 @@ const OnboardingFlow: React.FC<OnboardingFlowProps> = ({ onSetupComplete }) => {
                     updateSettings({ ...settings, geminiApiKey: e.target.value } as any);
                   }}
                   placeholder="AIzaSy..."
-                  className="w-full text-[11px] font-mono bg-black/40 border border-primary/20 p-3 text-base-content placeholder-base-content/25 focus:outline-none focus:border-primary/50 transition-colors"
+                  className="w-full text-2xs font-mono bg-black/40 border border-primary/20 p-3 text-base-content placeholder-base-content/25 focus:outline-none focus:border-primary/50 transition-colors"
                 />
                 <p className="text-[8px] font-bold text-base-content/30 uppercase tracking-wider">
                   Get your free API key at{' '}
@@ -626,13 +629,13 @@ const OnboardingFlow: React.FC<OnboardingFlowProps> = ({ onSetupComplete }) => {
 
               {/* LLM Model quick-select */}
               <div className="space-y-2">
-                <label className="text-[9px] font-black uppercase tracking-widest text-base-content/50 block">Model</label>
+                <label className="text-2xs font-black uppercase tracking-widest text-base-content/50 block">Model</label>
                 <select
                   value={settings.llmModel || 'gemini-2.5-flash'}
                   onChange={(e) => {
                     updateSettings({ ...settings, llmModel: e.target.value } as any);
                   }}
-                  className="w-full text-[11px] font-mono bg-black/40 border border-primary/20 p-3 text-base-content focus:outline-none focus:border-primary/50 transition-colors appearance-none"
+                  className="w-full text-2xs font-mono bg-black/40 border border-primary/20 p-3 text-base-content focus:outline-none focus:border-primary/50 transition-colors appearance-none"
                 >
                   <option value="gemini-2.5-flash">Gemini 2.5 Flash</option>
                   <option value="gemini-2.5-pro">Gemini 2.5 Pro</option>
@@ -645,10 +648,10 @@ const OnboardingFlow: React.FC<OnboardingFlowProps> = ({ onSetupComplete }) => {
 
             {/* Actions */}
             <div className="flex flex-col gap-3 mt-10">
-              <button onClick={handleSaveProvider} className="form-btn form-btn-primary w-full h-12 text-[10px]">
+              <button onClick={handleSaveProvider} className="form-btn form-btn-primary w-full h-12 text-2xs">
                 CONTINUE
               </button>
-              <button onClick={handleSkipProvider} className="text-[10px] font-mono font-bold uppercase tracking-widest text-base-content/20 hover:text-base-content/50 transition-colors">
+              <button onClick={handleSkipProvider} className="text-2xs font-mono font-bold uppercase tracking-widest text-base-content/20 hover:text-base-content/50 transition-colors">
                 Skip — I'll configure this later
               </button>
             </div>
@@ -681,7 +684,7 @@ const OnboardingFlow: React.FC<OnboardingFlowProps> = ({ onSetupComplete }) => {
           <h1 className="text-3xl font-black tracking-tighter text-base-content uppercase font-sf-mono">
             SYSTEM READY<span className="text-primary italic">.</span>
           </h1>
-          <p className="text-[9px] font-black text-base-content/30 mt-4 uppercase tracking-[0.3em]">
+          <p className="text-2xs font-black text-base-content/30 mt-4 uppercase tracking-[0.3em]">
             Initializing environment...
           </p>
         </div>

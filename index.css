@@ -347,7 +347,7 @@ button:active {
 
 /* Dashboard wordmark scales fluidly without exceeding its desktop display size. */
 .dashboard-wordmark {
-  font-size: clamp(2.5rem, 7vw, 6rem);
+  font-size: clamp(1.5rem, 3.5vw, 3.5rem);
 }
 
 /* Logo Font Preservation */

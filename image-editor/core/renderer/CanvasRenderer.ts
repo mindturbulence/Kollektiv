@@ -20,6 +20,7 @@ import { findLayerById } from '../layers/layerTree';
 import { LayerPainter } from './LayerPainter';
 import { GradientTool } from '../gradient/GradientTool';
 import { CloneStampTool } from '../paint/CloneStampTool';
+import { BrushEngine } from '../paint/BrushEngine';
 
 const EMPTY_BG = '#0F120C';
 const ZOOM_MIN = 0.125;
@@ -58,6 +59,11 @@ export class CanvasRenderer {
 
   start(): void {
     this.unsubscribe = subscribe(this.onStoreChange);
+    // Live stroke preview (review H4): brush/clone addPoint mutates an
+    // OffscreenCanvas directly without dispatching, so the store never
+    // notifies. Register this renderer as the frame pump for stroke updates.
+    BrushEngine.setRequestFrame(this.scheduleFrame);
+    CloneStampTool.setRequestFrame(this.scheduleFrame);
     this.syncSize();
 
     const container = this.canvas.parentElement;
@@ -84,6 +90,8 @@ export class CanvasRenderer {
       this.unsubscribe();
       this.unsubscribe = null;
     }
+    BrushEngine.setRequestFrame(null);
+    CloneStampTool.setRequestFrame(null);
     if (this.resizeObserver) {
       this.resizeObserver.disconnect();
       this.resizeObserver = null;
@@ -329,36 +337,31 @@ export class CanvasRenderer {
     }
 
     // ── Crop rect overlay ────────────────────────────────────────────────────
+    // Two states: live drag (during the pointer gesture) and the committed
+    // *pending* rect awaiting Enter/Esc (review C2 — crop no longer commits
+    // irreversibly on mouse-up). The pending state shows a hint label.
     if (activeTool === 'crop' && SelectionEngine.isDragging()) {
       const cb = SelectionEngine.getLiveBounds();
-      if (cb) {
-        const tl = docToCanvas(cb.x,             cb.y,              viewport, W, H, docW, docH);
-        const br = docToCanvas(cb.x + cb.width,  cb.y + cb.height,  viewport, W, H, docW, docH);
-        // Darken outside the crop
-        ctx.fillStyle = 'rgba(0,0,0,0.45)';
-        ctx.fillRect(0, 0, W, tl.y);
-        ctx.fillRect(0, tl.y, tl.x, br.y - tl.y);
-        ctx.fillRect(br.x, tl.y, W - br.x, br.y - tl.y);
-        ctx.fillRect(0, br.y, W, H - br.y);
-        // Crop rect border
-        ctx.strokeStyle = 'rgba(255,255,255,0.9)';
-        ctx.lineWidth = 1;
-        ctx.strokeRect(tl.x, tl.y, br.x - tl.x, br.y - tl.y);
-        // Rule-of-thirds guides
-        ctx.strokeStyle = 'rgba(255,255,255,0.25)';
-        for (let i = 1; i < 3; i++) {
-          const rx = tl.x + (br.x - tl.x) * i / 3;
-          const ry = tl.y + (br.y - tl.y) * i / 3;
-          ctx.beginPath(); ctx.moveTo(rx, tl.y); ctx.lineTo(rx, br.y); ctx.stroke();
-          ctx.beginPath(); ctx.moveTo(tl.x, ry); ctx.lineTo(br.x, ry); ctx.stroke();
-        }
-      }
+      if (cb) this.drawCropRect(ctx, cb, viewport, W, H, docW, docH);
+    } else if (activeTool === 'crop' && state.pendingCrop) {
+      const pb = state.pendingCrop;
+      this.drawCropRect(ctx, pb, viewport, W, H, docW, docH);
+      // Enter/Esc hint centred under the rect
+      const br = docToCanvas(pb.x, pb.y + pb.height, viewport, W, H, docW, docH);
+      ctx.save();
+      ctx.font = '10px "Nunito", sans-serif';
+      ctx.fillStyle = 'rgba(255,255,255,0.85)';
+      ctx.textAlign = 'center';
+      ctx.fillText('Enter to apply · Esc to cancel', br.x, br.y + 16);
+      ctx.restore();
     }
 
     // ── Transform gizmo ──────────────────────────────────────────────────────
     if (activeTool === 'move' && state.activeLayerId) {
+      // Gizmo renders for every layer type (review H9 — text and shape layers
+      // were excluded, leaving them immovable).
       const layer = findLayerById(doc.layers, state.activeLayerId);
-      if (layer && layer.type === 'image') {
+      if (layer) {
         const handles = getGizmoHandles(layer.transform, viewport, W, H, docW, docH);
 
         // Bounding box
@@ -408,6 +411,36 @@ export class CanvasRenderer {
     ctx.restore();
   }
 
+  /** Draws the darkened outside + rule-of-thirds overlay for a crop rect
+   *  (shared between the live drag and the pending rect). */
+  private drawCropRect(
+    ctx: CanvasRenderingContext2D,
+    cb: { x: number; y: number; width: number; height: number },
+    viewport: { zoom: number; panX: number; panY: number },
+    W: number, H: number, docW: number, docH: number,
+  ): void {
+    const tl = docToCanvas(cb.x,             cb.y,              viewport, W, H, docW, docH);
+    const br = docToCanvas(cb.x + cb.width,  cb.y + cb.height,  viewport, W, H, docW, docH);
+    // Darken outside the crop
+    ctx.fillStyle = 'rgba(0,0,0,0.45)';
+    ctx.fillRect(0, 0, W, tl.y);
+    ctx.fillRect(0, tl.y, tl.x, br.y - tl.y);
+    ctx.fillRect(br.x, tl.y, W - br.x, br.y - tl.y);
+    ctx.fillRect(0, br.y, W, H - br.y);
+    // Crop rect border
+    ctx.strokeStyle = 'rgba(255,255,255,0.9)';
+    ctx.lineWidth = 1;
+    ctx.strokeRect(tl.x, tl.y, br.x - tl.x, br.y - tl.y);
+    // Rule-of-thirds guides
+    ctx.strokeStyle = 'rgba(255,255,255,0.25)';
+    for (let i = 1; i < 3; i++) {
+      const rx = tl.x + (br.x - tl.x) * i / 3;
+      const ry = tl.y + (br.y - tl.y) * i / 3;
+      ctx.beginPath(); ctx.moveTo(rx, tl.y); ctx.lineTo(rx, br.y); ctx.stroke();
+      ctx.beginPath(); ctx.moveTo(tl.x, ry); ctx.lineTo(br.x, ry); ctx.stroke();
+    }
+  }
+
   /** Called from marching-ants RAF loop to trigger an overlay repaint. */
 
   // ─── Internal ───────────────────────────────────────────────────────────
@@ -416,10 +449,10 @@ export class CanvasRenderer {
     this.scheduleFrame();
   };
 
-  private scheduleFrame(): void {
+  private scheduleFrame = (): void => {
     if (this.rafId !== null) return;
     this.rafId = requestAnimationFrame(this.frame);
-  }
+  };
 
   private frame = (): void => {
     this.rafId = null;

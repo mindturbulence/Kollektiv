@@ -60,7 +60,7 @@ export const ReferenceSlot: React.FC<{
                     </div>
                 </>
             ) : (
-                <span className="text-[9px] font-black uppercase tracking-widest text-base-content/20">SLOT {index + 1}</span>
+                <span className="text-2xs font-black uppercase tracking-widest text-base-content/20">SLOT {index + 1}</span>
             )}
             <input ref={inputRef} type="file" accept="image/*" onChange={handleFile} className="hidden" />
         </div>

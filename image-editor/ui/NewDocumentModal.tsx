@@ -6,6 +6,7 @@
 import React, { useState } from 'react';
 import { createPortal } from 'react-dom';
 import { CloseIcon, UploadIcon } from '../../components/icons';
+import { MAX_DIM } from '../core/io/FileIO';
 
 type Background = 'white' | 'transparent' | 'foreground';
 
@@ -39,7 +40,8 @@ const NewDocumentModal: React.FC<NewDocumentModalProps> = ({ isOpen, onClose, on
   if (!isOpen) return null;
 
   const handleCreate = async () => {
-    if (width < 1 || height < 1 || isCreating) return;
+    // H13: the HTML max=8192 attribute is advisory only — enforce in code.
+    if (width < 1 || height < 1 || width > MAX_DIM || height > MAX_DIM || isCreating) return;
     setIsCreating(true);
     try {
       await onCreate(Math.round(width), Math.round(height), background);
@@ -89,17 +91,17 @@ const NewDocumentModal: React.FC<NewDocumentModalProps> = ({ isOpen, onClose, on
           >
             <UploadIcon className="w-5 h-5" />
             <span className="text-sm font-display">Open image…</span>
-            <span className="text-[11px] text-base-content/50">or drop a file here · Ctrl+O</span>
+            <span className="text-2xs text-base-content/50">or drop a file here · Ctrl+O</span>
           </button>
 
-          <div className="flex items-center gap-3 text-[10px] font-mono uppercase tracking-wide text-base-content/40">
+          <div className="flex items-center gap-3 text-2xs font-mono uppercase tracking-wide text-base-content/40">
             <span className="flex-1 border-t border-base-content/10" />
             or start blank
             <span className="flex-1 border-t border-base-content/10" />
           </div>
 
           <div className="flex items-center gap-3">
-            <label className="flex-1 flex flex-col gap-1 text-[10px] font-mono uppercase tracking-wide text-base-content/50">
+            <label className="flex-1 flex flex-col gap-1 text-2xs font-mono uppercase tracking-wide text-base-content/50">
               Width
               <input
                 type="number"
@@ -111,7 +113,7 @@ const NewDocumentModal: React.FC<NewDocumentModalProps> = ({ isOpen, onClose, on
               />
             </label>
             <span className="mt-4 text-base-content/40">×</span>
-            <label className="flex-1 flex flex-col gap-1 text-[10px] font-mono uppercase tracking-wide text-base-content/50">
+            <label className="flex-1 flex flex-col gap-1 text-2xs font-mono uppercase tracking-wide text-base-content/50">
               Height
               <input
                 type="number"
@@ -129,7 +131,7 @@ const NewDocumentModal: React.FC<NewDocumentModalProps> = ({ isOpen, onClose, on
               <button
                 key={preset.label}
                 type="button"
-                className="px-2.5 py-1 text-[10px] font-mono border border-base-content/15 text-base-content/60 hover:text-primary hover:border-primary/40 transition-colors"
+                className="px-2.5 py-1 text-2xs font-mono border border-base-content/15 text-base-content/60 hover:text-primary hover:border-primary/40 transition-colors"
                 onClick={() => {
                   setWidth(preset.width);
                   setHeight(preset.height);
@@ -141,7 +143,7 @@ const NewDocumentModal: React.FC<NewDocumentModalProps> = ({ isOpen, onClose, on
           </div>
 
           <div className="flex flex-col gap-1.5">
-            <span className="text-[10px] font-mono uppercase tracking-wide text-base-content/50">Background</span>
+            <span className="text-2xs font-mono uppercase tracking-wide text-base-content/50">Background</span>
             <div className="flex gap-4">
               {(['white', 'transparent'] as Background[]).map((bg) => (
                 <label key={bg} className="flex items-center gap-1.5 text-sm text-base-content/80 cursor-pointer">
@@ -167,7 +169,7 @@ const NewDocumentModal: React.FC<NewDocumentModalProps> = ({ isOpen, onClose, on
             type="button"
             className="form-btn form-btn-primary flex-1 rounded-none"
             onClick={handleCreate}
-            disabled={isCreating || width < 1 || height < 1}
+            disabled={isCreating || width < 1 || height < 1 || width > MAX_DIM || height > MAX_DIM}
           >
             {isCreating ? 'Creating…' : 'Create Blank'}
           </button>

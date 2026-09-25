@@ -8,6 +8,7 @@
 
 import type { EditorState, EditorAction, Viewport, BrushSettings, ColorPair, Layer, GroupLayer } from './types';
 import { findLayerById, updateLayerById, removeLayerById } from './layers/layerTree';
+import { trimHistoryToCap, closeDroppedHistoryBitmaps, collectDocumentBitmaps } from './history/bitmapAccounting';
 
 // ─── Default State ────────────────────────────────────────────────────────────
 
@@ -40,6 +41,7 @@ function createDefaultState(): EditorState {
     history: [],
     historyIndex: -1,
     openAdjustments: new Set(),
+    pendingCrop: null,
     paintTarget: 'color',
     colorPickerTarget: null,
   };
@@ -87,6 +89,20 @@ export function dispatch(action: EditorAction): void {
         paintTarget: 'color',
       };
       break;
+
+    case 'SET_TITLE': {
+      // M5 leftover: rename = title-only mutation. No viewport/selection/
+      // paintTarget resets (those belong to SET_DOCUMENT / opening a doc).
+      if (!prev.document) return;
+      const title = action.title.trim();
+      if (!title || title === prev.document.title) return;
+      _state = {
+        ...prev,
+        isDirty: true,
+        document: { ...prev.document, title, updatedAt: Date.now() },
+      };
+      break;
+    }
 
     case 'SET_ACTIVE_LAYER':
       if (prev.activeLayerId === action.layerId) return;
@@ -148,8 +164,12 @@ export function dispatch(action: EditorAction): void {
     case 'ADD_LAYER': {
       if (!prev.document) return;
       const layers = [...prev.document.layers];
+      // `insertAfterIndex` means "insert at the active layer's index" — the new
+      // layer lands ABOVE it (index 0 = topmost), not below. The old `+ 1` put
+      // new blank layers underneath the active one, so painting on them showed
+      // nothing (caught by the H11 unit test).
       const insertAt = action.insertAfterIndex !== undefined
-        ? action.insertAfterIndex + 1
+        ? action.insertAfterIndex
         : 0;
       layers.splice(insertAt, 0, action.layer);
       _state = {
@@ -171,6 +191,90 @@ export function dispatch(action: EditorAction): void {
         isDirty: true,
         activeLayerId: prev.activeLayerId === action.layerId ? nextActiveId : prev.activeLayerId,
         document: { ...prev.document, layers },
+      };
+      break;
+    }
+
+    case 'INSERT_LAYER_AT': {
+      // M5 item 5 / review H12. Two modes, discriminated by the snapshot:
+      // - Restore (remove-undo): the layer being inserted IS at `index` in the
+      //   pre-removal snapshot — reinstate the snapshot verbatim.
+      // - Insert (duplicate): the layer is NEW — splice it into the snapshot
+      //   at `index`, pushing the current occupant down.
+      if (!prev.document) return;
+      const { layer, parentId, index, siblingsSnapshot } = action;
+      const isRestore = siblingsSnapshot[index]?.id === layer.id;
+      const nextSiblings = isRestore
+        ? siblingsSnapshot
+        : (() => {
+            const arr = [...siblingsSnapshot];
+            arr.splice(Math.min(index, arr.length), 0, layer);
+            return arr;
+          })();
+      const layers = parentId === null
+        ? nextSiblings
+        : rebuildGroupChildren(prev.document.layers, parentId, nextSiblings);
+      if (!layers) return; // stale group id — refuse
+      _state = {
+        ...prev,
+        isDirty: true,
+        activeLayerId: layer.id,
+        document: { ...prev.document, layers },
+        dirtyLayerIds: new Set([...prev.dirtyLayerIds, layer.id]),
+      };
+      break;
+    }
+
+    case 'SET_LAYERS': {
+      // M5 item 5: flatten swaps the whole top-level stack (undo restores it).
+      if (!prev.document) return;
+      _state = {
+        ...prev,
+        isDirty: true,
+        activeLayerId: action.layers[0]?.id ?? null,
+        document: { ...prev.document, layers: action.layers },
+        dirtyLayerIds: new Set(action.layers.flatMap(l => l.type === 'image' ? [l.id] : [])),
+      };
+      break;
+    }
+
+    case 'REPLACE_TOP_LEVEL_PAIR': {
+      // M5 item 5: merge-down replaces [upper, below] with one rasterized layer.
+      if (!prev.document) return;
+      const idx = prev.document.layers.findIndex(l => l.id === action.upperId);
+      const belowIdx = prev.document.layers.findIndex(l => l.id === action.belowId);
+      if (idx < 0 || belowIdx !== idx + 1) return; // pair no longer adjacent
+      const layers = [...prev.document.layers];
+      layers.splice(idx, 2, action.mergedLayer);
+      _state = {
+        ...prev,
+        isDirty: true,
+        activeLayerId: action.mergedLayer.id,
+        document: { ...prev.document, layers },
+        dirtyLayerIds: new Set([...prev.dirtyLayerIds, action.mergedLayer.id]),
+      };
+      break;
+    }
+
+    case 'RESTORE_TOP_LEVEL_PAIR': {
+      if (!prev.document) return;
+      const layers = [...prev.document.layers];
+      // After do() the merged layer sits exactly where the pair was — remove it,
+      // then splice the original pair back at that index.
+      if (layers[action.index]?.id === action.upper.id) return; // already restored (stale redo)
+      layers.splice(action.index, 1);
+      const insertAt = Math.min(action.index, layers.length);
+      layers.splice(insertAt, 0, action.upper, action.below);
+      _state = {
+        ...prev,
+        isDirty: true,
+        activeLayerId: action.upper.id,
+        document: { ...prev.document, layers },
+        dirtyLayerIds: new Set([
+          ...prev.dirtyLayerIds,
+          ...(action.upper.type === 'image' ? [action.upper.id] : []),
+          ...(action.below.type === 'image' ? [action.below.id] : []),
+        ]),
       };
       break;
     }
@@ -290,22 +394,13 @@ export function dispatch(action: EditorAction): void {
       break;
     }
 
-    case 'CROP_DOCUMENT': {
+    case 'APPLY_CROP': {
       if (!prev.document) return;
       const { rect } = action;
-      const layers = prev.document.layers.map(l => {
-        if (l.type !== 'image') return l;
-        return {
-          ...l,
-          transform: {
-            ...l.transform,
-            origin: {
-              x: l.transform.origin.x - rect.x,
-              y: l.transform.origin.y - rect.y,
-            },
-          },
-        };
-      });
+      // Shift EVERY layer type recursively through groups (review C2): the old
+      // code moved only top-level image layers, so text and shape overlays sat
+      // in the wrong place after a crop and group children never moved at all.
+      const layers = shiftLayersBy(prev.document.layers, rect.x, rect.y);
       _state = {
         ...prev,
         isDirty: true,
@@ -321,15 +416,92 @@ export function dispatch(action: EditorAction): void {
       break;
     }
 
-    case 'PUSH_HISTORY': {
-      // Drop any redo branch (commands after current index)
-      const trimmed = prev.history.slice(0, prev.historyIndex + 1);
-      const MAX_HISTORY = 50;
-      const clamped = trimmed.length >= MAX_HISTORY ? trimmed.slice(trimmed.length - MAX_HISTORY + 1) : trimmed;
+    case 'RESTORE_CROP': {
+      if (!prev.document) return;
       _state = {
         ...prev,
-        history: [...clamped, action.command],
-        historyIndex: clamped.length,
+        isDirty: true,
+        document: {
+          ...prev.document,
+          width: action.width,
+          height: action.height,
+          layers: action.layers,
+          updatedAt: Date.now(),
+        },
+        selection: null,
+      };
+      break;
+    }
+
+    case 'SET_PENDING_CROP': {
+      const next = action.rect;
+      if (prev.pendingCrop === next) return;
+      _state = { ...prev, pendingCrop: next };
+      break;
+    }
+
+    case 'RESAMPLE_LAYER': {
+      // M5 item 6 — Image Size: swap one image layer's bitmap for a resampled
+      // one. size (rendered size) follows the resample so the layer's doc-space
+      // footprint matches its new intrinsic pixels 1:1.
+      if (!prev.document) return;
+      const target = findLayerById(prev.document.layers, action.layerId);
+      if (!target || target.type !== 'image') return;
+      const layers = updateLayerById(prev.document.layers, action.layerId, {
+        bitmap: action.bitmap,
+        intrinsicWidth: action.intrinsicWidth,
+        intrinsicHeight: action.intrinsicHeight,
+        transform: {
+          ...target.transform,
+          size: { ...action.size },
+        },
+      } as Partial<Layer>);
+      if (layers === prev.document.layers) return;
+      const dirty = new Set(prev.dirtyLayerIds);
+      dirty.add(action.layerId);
+      _state = { ...prev, isDirty: true, document: { ...prev.document, layers }, dirtyLayerIds: dirty };
+      break;
+    }
+
+    case 'RESIZE_CANVAS': {
+      // M5 item 6 — Canvas Size: change document dimensions and shift every
+      // layer so the anchored edge stays put. dx/dy = how far the content
+      // origin moves (anchorOffset); shiftLayersBy SUBTRACTS, so pass the
+      // negation to move content BY dx/dy.
+      if (!prev.document) return;
+      const layers = shiftLayersBy(prev.document.layers, -action.dx, -action.dy);
+      _state = {
+        ...prev,
+        isDirty: true,
+        document: {
+          ...prev.document,
+          width: action.width,
+          height: action.height,
+          layers,
+          updatedAt: Date.now(),
+        },
+        selection: null,
+      };
+      break;
+    }
+
+    case 'PUSH_HISTORY': {
+      // Drop any redo branch (commands after current index) — its bitmaps that
+      // nothing else holds are closed by the accounting module (review H3):
+      // trimHistoryToCap sees the FULL previous stack, so redo-dropped commands
+      // are treated the same as byte-evicted ones.
+      const trimmed = prev.history.slice(0, prev.historyIndex + 1);
+      const afterAppend = [...trimmed, action.command];
+      // Byte cap, not just count (review H3): 50 full-bitmap commands on a 4k
+      // layer ≈ 3.2 GB. Cap by unique decoded bytes; evict oldest-first, close
+      // evicted/dropped bitmaps that neither surviving commands nor the live
+      // document reference.
+      const live = collectDocumentBitmaps(prev.document);
+      const clamped = trimHistoryToCap(afterAppend, prev.history, live);
+      _state = {
+        ...prev,
+        history: clamped,
+        historyIndex: clamped.length - 1,
       };
       break;
     }
@@ -348,6 +520,7 @@ export function dispatch(action: EditorAction): void {
 
     case 'CLEAR_HISTORY': {
       if (prev.history.length === 0) return;
+      closeDroppedHistoryBitmaps(prev.history, collectDocumentBitmaps(prev.document));
       _state = { ...prev, history: [], historyIndex: -1 };
       break;
     }
@@ -356,8 +529,10 @@ export function dispatch(action: EditorAction): void {
   if (_state !== prev) notify();
 }
 
-/** Reset store to initial state (call when unmounting ImageEditorPage). */
+/** Reset store to initial state (call when unmounting ImageEditorPage).
+ *  History bitmaps that the document no longer holds are closed (review H3). */
 export function resetStore(): void {
+  closeDroppedHistoryBitmaps(_state.history, collectDocumentBitmaps(_state.document));
   _state = createDefaultState();
   notify();
 }
@@ -370,4 +545,41 @@ function patchLayer(layers: Layer[], id: string, patch: Partial<Layer>): Layer[]
 
 function removeLayer(layers: Layer[], id: string): Layer[] {
   return removeLayerById(layers, id);
+}
+
+/** Recursively offsets the origin of every layer (all types, through groups)
+ *  by (dx, dy). Pure — returns new objects, does not mutate. */
+function shiftLayersBy(layers: Layer[], dx: number, dy: number): Layer[] {
+  return layers.map(layer =>
+    layer.type === 'group'
+      ? { ...layer, children: shiftLayersBy(layer.children, dx, dy) }
+      : {
+          ...layer,
+          transform: {
+            ...layer.transform,
+            origin: { x: layer.transform.origin.x - dx, y: layer.transform.origin.y - dy },
+          },
+        },
+  );
+}
+
+/** Replaces group `groupId`'s children with `children` (INSERT_LAYER_AT undo).
+ *  Returns null when the group no longer exists (stale undo — refuse). */
+function rebuildGroupChildren(layers: Layer[], groupId: string, children: Layer[]): Layer[] | null {
+  let found = false;
+  const result = layers.map((layer) => {
+    if (layer.id === groupId && layer.type === 'group') {
+      found = true;
+      return { ...layer, children };
+    }
+    if (layer.type === 'group') {
+      const nested = rebuildGroupChildren(layer.children, groupId, children);
+      if (nested) {
+        found = true;
+        return { ...layer, children: nested };
+      }
+    }
+    return layer;
+  });
+  return found ? result : null;
 }

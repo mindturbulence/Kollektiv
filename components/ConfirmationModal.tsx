@@ -45,7 +45,7 @@ const ConfirmationModal: React.FC<ConfirmationModalProps> = ({ isOpen, onClose, 
         <div className="bg-base-100/40 backdrop-blur-xl rounded-none w-full overflow-hidden relative z-10">
           <header className="px-8 py-4 bg-transparent relative flex-shrink-0">
               <h3 id="confirmation-title" className="text-xl font-black tracking-tighter text-error leading-none uppercase">CONFIRM<span className="text-base-content/20">.</span></h3>
-              <p className="text-[10px] font-black uppercase tracking-[0.3em] text-base-content/40 mt-1.5">{title}</p>
+              <p className="text-2xs font-black uppercase tracking-[0.3em] text-base-content/40 mt-1.5">{title}</p>
           </header>
           
           <div className="p-8 flex-grow">

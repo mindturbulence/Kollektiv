@@ -1,6 +1,7 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { SelectionEngine } from '../selection/SelectionEngine';
 import { dispatch, getSnapshot, resetStore } from '../store';
+import { undo, redo } from '../history/HistoryManager';
 import type { EditorDocument, ImageLayer } from '../types';
 
 // ─── Mock store dispatch so unit tests don't need a real document ─────────────
@@ -101,22 +102,47 @@ describe('SelectionEngine — deselect', () => {
 });
 
 describe('SelectionEngine — crop', () => {
-  it('commitCrop updates document dimensions', () => {
+  it('commitCrop stages a pending rect without changing the document', () => {
+    // E2: crop no longer commits on mouse-up — it becomes a pending rect
+    // that Enter applies / Esc cancels.
     SelectionEngine.beginCrop(50, 50);
     SelectionEngine.commitCrop(200, 200);
+    expect(getSnapshot().pendingCrop).toEqual({ x: 50, y: 50, width: 150, height: 150 });
+    expect(getSnapshot().document!.width).toBe(500); // unchanged (test doc is 500×500)
+  });
+
+  it('applyCrop updates document dimensions and is undoable', () => {
+    SelectionEngine.beginCrop(50, 50);
+    SelectionEngine.commitCrop(200, 200);
+    expect(SelectionEngine.applyCrop()).toBe(true);
     const doc = getSnapshot().document!;
     expect(doc.width).toBe(150);
     expect(doc.height).toBe(150);
+    // Undo restores the pre-crop dimensions (review C2: crop was irreversible).
+    undo();
+    expect(getSnapshot().document!.width).toBe(500);
+    expect(getSnapshot().document!.height).toBe(500);
+    redo();
+    expect(getSnapshot().document!.width).toBe(150);
   });
 
-  it('commitCrop shifts layer origins by -cropX, -cropY', () => {
+  it('applyCrop shifts layer origins of every layer type, including group children', () => {
     SelectionEngine.beginCrop(50, 50);
     SelectionEngine.commitCrop(200, 200);
+    SelectionEngine.applyCrop();
     const layer = getSnapshot().document!.layers[0];
     if (layer.type === 'image') {
       expect(layer.transform.origin.x).toBe(-50);
       expect(layer.transform.origin.y).toBe(-50);
     }
+  });
+
+  it('cancelCrop drops the pending rect with no state change', () => {
+    SelectionEngine.beginCrop(50, 50);
+    SelectionEngine.commitCrop(200, 200);
+    SelectionEngine.cancelCrop();
+    expect(getSnapshot().pendingCrop).toBeNull();
+    expect(getSnapshot().document!.width).toBe(500); // unchanged
   });
 
   it('too-small crop (<4px) is ignored', () => {

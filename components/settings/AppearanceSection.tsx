@@ -29,7 +29,7 @@ const AppearanceSection: React.FC<AppearanceSectionProps> = ({
             </SettingRow>
             <SettingRow label="Interface Scale" desc="Global font sizing for the dashboard and workspaces.">
                 <div className="flex items-center gap-4 w-48">
-                    <input type="range" min={10} max={18} value={settings.fontSize} onChange={(e) => handleSettingsChange('fontSize', Number((e.currentTarget as any).value))} className="range range-xs range-primary" />                                <span className="text-[10px] font-mono font-bold text-primary">{settings.fontSize}PX</span>
+                    <input type="range" min={10} max={18} value={settings.fontSize} onChange={(e) => handleSettingsChange('fontSize', Number((e.currentTarget as any).value))} className="range range-xs range-primary" />                                <span className="text-2xs font-mono font-bold text-primary">{settings.fontSize}PX</span>
                              </div>
                         </SettingRow>
                     </SettingsGroup>
@@ -125,13 +125,13 @@ const AppearanceSection: React.FC<AppearanceSectionProps> = ({
                         <div className="flex bg-white/5 p-1 rounded-none border border-white/10">
                             <button
                                 onClick={() => { audioService.playClick(); handleSettingsChange('idleScreenType', 'matrix'); }}
-                                className={`px-4 py-2 text-[10px] font-black uppercase tracking-widest transition-all ${settings.idleScreenType === 'matrix' ? 'bg-primary text-primary-content shadow-lg' : 'text-white/40 hover:text-white'}`}
+                                className={`px-4 py-2 text-2xs font-black uppercase tracking-widest transition-all ${settings.idleScreenType === 'matrix' ? 'bg-primary text-primary-content shadow-lg' : 'text-white/40 hover:text-white'}`}
                             >
                                 Falling Codes
                             </button>
                             <button
                                 onClick={() => { audioService.playClick(); handleSettingsChange('idleScreenType', 'gallery'); }}
-                                className={`px-4 py-2 text-[10px] font-black uppercase tracking-widest transition-all ${settings.idleScreenType === 'gallery' ? 'bg-primary text-primary-content shadow-lg' : 'text-white/40 hover:text-white'}`}
+                                className={`px-4 py-2 text-2xs font-black uppercase tracking-widest transition-all ${settings.idleScreenType === 'gallery' ? 'bg-primary text-primary-content shadow-lg' : 'text-white/40 hover:text-white'}`}
                             >
                                 Neural Gallery
                             </button>
@@ -149,7 +149,7 @@ const AppearanceSection: React.FC<AppearanceSectionProps> = ({
                                     handleSettingsChange('idleTimeoutMinutes', Math.max(1, Math.min(60, val)));
                                 }}
                                 className="form-input w-20 text-center font-mono font-bold bg-base-300"
-                            />                                <span className="text-[10px] font-black uppercase tracking-widest text-base-content/40">Min</span>
+                            />                                <span className="text-2xs font-black uppercase tracking-widest text-base-content/40">Min</span>
                                     </div>
                                 </SettingRow>
                             </>

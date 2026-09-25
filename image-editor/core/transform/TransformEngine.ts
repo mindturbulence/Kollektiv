@@ -9,7 +9,7 @@
 import { dispatch, getSnapshot } from '../store';
 import { pushCommand } from '../history/HistoryManager';
 import { findLayerById } from '../layers/layerTree';
-import type { LayerTransform, Point, Viewport, HistoryCommand, ImageLayer } from '../types';
+import type { LayerTransform, Point, Viewport, HistoryCommand, Layer } from '../types';
 
 // ─── Handle identifiers ───────────────────────────────────────────────────────
 
@@ -164,7 +164,7 @@ function applyHandle(base: LayerTransform, handle: HandleId, dx: number, dy: num
 
 // ─── Dispatch helpers ─────────────────────────────────────────────────────────
 
-type LayerPatch = Partial<Omit<ImageLayer, 'bitmap' | 'id' | 'type'>>;
+type LayerPatch = Partial<Pick<Layer, 'transform'>>;
 
 function patchTransform(layerId: string, xform: LayerTransform): void {
   const patch: LayerPatch = { transform: xform };
@@ -180,8 +180,11 @@ export const TransformEngine = {
 
   beginDrag(handle: HandleId, layerId: string, startDoc: Point): void {
     const { document: doc } = getSnapshot();
+    // Text and shape layers transform exactly like image layers — the math has
+    // no image-specific parts (review H9: the old guard made text/shape
+    // immovable and unresizable).
     const layer = doc && findLayerById(doc.layers, layerId);
-    if (!layer || layer.type !== 'image') return;
+    if (!layer) return;
     _dragging   = true;
     _handleId   = handle;
     _layerId    = layerId;

@@ -43,7 +43,7 @@ export const PromptTxtImportModal: React.FC<PromptTxtImportModalProps> = ({ isOp
                         <h3 className="text-xl font-black tracking-tighter text-base-content leading-none">
                             IMPORT<span className="text-primary">.</span>
                         </h3>
-                        <p className="text-[10px] font-black uppercase tracking-[0.4em] text-base-content/30 mt-1.5">Bulk Token Archival Module</p>
+                        <p className="text-2xs font-black uppercase tracking-[0.4em] text-base-content/30 mt-1.5">Bulk Token Archival Module</p>
                     </div>
                     <button onClick={handleClose} className="p-2 text-error/30 hover:text-error transition-all hover:scale-110">
                         <CloseIcon className="w-5 h-5" />
@@ -65,7 +65,7 @@ export const PromptTxtImportModal: React.FC<PromptTxtImportModalProps> = ({ isOp
                     </div>
 
                     <div className="form-control">
-                        <label className="text-[10px] font-black uppercase tracking-[0.2em] text-base-content/40 mb-2">Category Destination</label>
+                        <label className="text-2xs font-black uppercase tracking-[0.2em] text-base-content/40 mb-2">Category Destination</label>
                         <select value={categoryId} onChange={(e) => setCategoryId((e.currentTarget as any).value)} className="form-select w-full">
                             <option value="">Global Repository</option>
                             {categories.map(cat => <option key={cat.id} value={cat.id}>{cat.name}</option>)}

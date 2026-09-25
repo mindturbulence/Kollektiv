@@ -173,7 +173,7 @@ const modalContent = (
                   <h3 className="text-xl font-black tracking-tighter text-base-content leading-none">
                       IMPORT<span className="text-primary">.</span>
                   </h3>
-                  <p className="text-[10px] font-black uppercase tracking-[0.4em] text-base-content/30 mt-1.5">Local Archival Accession</p>
+                  <p className="text-2xs font-black uppercase tracking-[0.4em] text-base-content/30 mt-1.5">Local Archival Accession</p>
               </div>
               <button onClick={onClose} className="p-2 text-error/30 hover:text-error transition-all hover:scale-110">
                   <CloseIcon className="w-5 h-5" />
@@ -189,7 +189,7 @@ const modalContent = (
                       >
                           <UploadIcon className="w-16 h-16 mx-auto text-base-content/20 mb-4"/>
                           <p className="text-sm font-black uppercase tracking-[0.2em] text-base-content/40">Drop artifacts here or click to browse</p>
-                          <p className="text-[9px] font-bold text-base-content/20 mt-4 uppercase">Batch processing enabled for image sequences</p>
+                          <p className="text-2xs font-bold text-base-content/20 mt-4 uppercase">Batch processing enabled for image sequences</p>
                       </div>
                   ) : (
                       <div className="grid grid-cols-2 sm:grid-cols-4 md:grid-cols-6 lg:grid-cols-8 gap-px bg-base-100/40 backdrop-blur-xl">
@@ -218,7 +218,7 @@ const modalContent = (
                                               <ChevronLeftIcon className="w-4 h-4" />
                                           </button>
                                           <div className="bg-transparent px-1.5 flex items-center">
-                                              <span className="text-[9px] font-black">{index + 1}</span>
+                                              <span className="text-2xs font-black">{index + 1}</span>
                                           </div>
                                           <button 
                                               type="button" 
@@ -249,11 +249,11 @@ const modalContent = (
                       {/* Row 1: Title, Folder, NSFW */}
                       <div className="flex flex-col md:flex-row gap-4 items-start md:items-end">
                           <div className="form-control flex-grow w-full">
-                              <label className="text-[10px] font-black uppercase tracking-[0.2em] text-base-content/40 mb-2">Item Identity</label>
+                              <label className="text-2xs font-black uppercase tracking-[0.2em] text-base-content/40 mb-2">Item Identity</label>
                               <input type="text" value={title} onChange={(e) => setTitle((e.currentTarget as any).value)} className="form-input w-full" placeholder="Artifact title..." required />
                           </div>
                           <div className="form-control w-full md:w-[420px]">
-                              <label className="text-[10px] font-black uppercase tracking-[0.2em] text-base-content/40 mb-2">Registry Folder</label>
+                              <label className="text-2xs font-black uppercase tracking-[0.2em] text-base-content/40 mb-2">Registry Folder</label>
                               <AutocompleteSelect 
                                 value={categoryId} 
                                 onChange={setCategoryId} 
@@ -264,35 +264,35 @@ const modalContent = (
                           <div className="form-control flex-shrink-0 h-10 flex justify-center mb-0 md:mb-1">
                               <label className="label cursor-pointer justify-start gap-3 p-0 hover:bg-primary/10 transition-colors px-3 h-full bg-base-100/40 backdrop-blur-xl">
                                   <input type="checkbox" checked={isNsfw} onChange={(e) => setIsNsfw((e.currentTarget as any).checked)} className="checkbox checkbox-primary rounded-none checkbox-sm" />
-                                  <span className="text-[10px] font-black uppercase tracking-[0.2em] text-base-content/40">NSFW</span>
+                                  <span className="text-2xs font-black uppercase tracking-[0.2em] text-base-content/40">NSFW</span>
                               </label>
                           </div>
                       </div>
 
                       {/* Row 2: Tags */}
                       <div className="form-control">
-                          <label className="text-[10px] font-black uppercase tracking-[0.2em] text-base-content/40 mb-2">Neural Tags</label>
+                          <label className="text-2xs font-black uppercase tracking-[0.2em] text-base-content/40 mb-2">Neural Tags</label>
                           <div className="flex flex-wrap items-center gap-2 p-3 bg-base-100/40 backdrop-blur-xl rounded-none min-h-[52px]">
                               {tags.map(tag => (
-                                  <div key={tag} className="flex items-center gap-2 bg-base-100/40 backdrop-blur-xl text-[10px] font-black uppercase tracking-widest px-2.5 py-1.5">
+                                  <div key={tag} className="flex items-center gap-2 bg-base-100/40 backdrop-blur-xl text-2xs font-black uppercase tracking-widest px-2.5 py-1.5">
                                       <span>{tag}</span>
                                       <button type="button" onClick={() => setTags(tags.filter(t => t !== tag))} className="text-error hover:text-error-content transition-colors">&times;</button>
                                   </div>
                               ))}
-                              <input type="text" value={tagInput} onChange={(e) => setTagInput((e.currentTarget as any).value)} onKeyDown={handleTagInputKeyDown} className="flex-grow bg-transparent outline-none text-[10px] font-bold uppercase tracking-widest px-1 h-8" placeholder="ADD TOKEN..."/>
+                              <input type="text" value={tagInput} onChange={(e) => setTagInput((e.currentTarget as any).value)} onKeyDown={handleTagInputKeyDown} className="flex-grow bg-transparent outline-none text-2xs font-bold uppercase tracking-widest px-1 h-8" placeholder="ADD TOKEN..."/>
                           </div>
                       </div>
 
                       {/* Row 3: Notes */}
                       <div className="form-control">
-                          <label className="text-[10px] font-black uppercase tracking-[0.2em] text-base-content/40 mb-2">Vault Documentation</label>
+                          <label className="text-2xs font-black uppercase tracking-[0.2em] text-base-content/40 mb-2">Vault Documentation</label>
                           <textarea value={notes} onChange={(e) => setNotes((e.currentTarget as any).value)} className="form-textarea w-full min-h-[120px]" placeholder="Archive additional details or prompt context..." />
                       </div>
                   </div>
 
                   {error && (
                       <div className="p-4 bg-error/10 border border-error/20 rounded-none">
-                          <p className="text-error font-bold text-[10px] uppercase tracking-widest">{error}</p>
+                          <p className="text-error font-bold text-2xs uppercase tracking-widest">{error}</p>
                       </div>
                   )}
               </div>

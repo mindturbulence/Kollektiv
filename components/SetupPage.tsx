@@ -84,11 +84,11 @@ const MaintenanceOverlay: React.FC<{ progress: number, message: string }> = ({ p
                 </div>
                 <div className={`flex flex-col items-center gap-4 transition-all duration-500 ${progress >= 100 ? 'opacity-0 translate-y-4' : 'opacity-100 translate-y-0'}`}>
                     <div className="flex flex-col items-center gap-2">
-                        <p className="text-[10px] font-mono font-bold uppercase tracking-[0.5em] text-center text-base-content/40">{message || 'DIAGNOSTIC_ACTIVE'}</p>
+                        <p className="text-2xs font-mono font-bold uppercase tracking-[0.5em] text-center text-base-content/40">{message || 'DIAGNOSTIC_ACTIVE'}</p>
                         <div className="w-32 h-[1px] bg-base-content/10 relative overflow-hidden">
                             <div className="absolute inset-y-0 left-0 bg-primary transition-all duration-500 ease-out" style={{ width: `${progress}%` }} />
                         </div>
-                        <span className="text-[10px] font-mono font-bold text-primary/60">{Math.round(progress)}%</span>
+                        <span className="text-2xs font-mono font-bold text-primary/60">{Math.round(progress)}%</span>
                     </div>
                 </div>
             </div>
@@ -673,7 +673,7 @@ export const SetupPage: React.FC<SetupPageProps> = ({
                     {/* Left Sidebar - System Hub */}
                     <aside className="hidden lg:flex flex-col bg-base-100/30 border-r border-white/5 overflow-hidden">
                         <div className="h-16 flex items-center px-6 border-b border-white/5 flex-shrink-0">
-                            <h2 className="text-[10px] font-black uppercase tracking-[0.3em] text-base-content/30">SYSTEM HUB</h2>
+                            <h2 className="text-2xs font-black uppercase tracking-[0.3em] text-base-content/30">SYSTEM HUB</h2>
                         </div>
                         <div ref={navScrollRef} className="flex-grow overflow-y-auto custom-scrollbar px-4 py-4">
                             <ul className="space-y-1">
@@ -701,7 +701,7 @@ export const SetupPage: React.FC<SetupPageProps> = ({
                                 <button
                                     key={cat.id}
                                     onClick={() => handleMainTabClick(cat.id)}
-                                    className={`flex items-center gap-1.5 px-3 py-1.5 text-[10px] font-black uppercase tracking-widest whitespace-nowrap transition-colors border ${activeSettingsTab === cat.id ? 'bg-primary/10 text-primary border-primary/30' : 'text-base-content/40 border-transparent hover:text-base-content/70'}`}
+                                    className={`flex items-center gap-1.5 px-3 py-1.5 text-2xs font-black uppercase tracking-widest whitespace-nowrap transition-colors border ${activeSettingsTab === cat.id ? 'bg-primary/10 text-primary border-primary/30' : 'text-base-content/40 border-transparent hover:text-base-content/70'}`}
                                 >
                                     {cat.icon}
                                     {cat.label}
@@ -714,7 +714,7 @@ export const SetupPage: React.FC<SetupPageProps> = ({
                                     <button
                                         key={sub.id}
                                         onClick={() => { audioService.playClick(); setActiveSubTab(sub.id); }}
-                                        className={`flex items-center gap-2 py-4 text-[10px] font-black uppercase tracking-widest border-b-2 transition-all whitespace-nowrap ${activeSubTab === sub.id ? 'border-primary text-primary' : 'border-transparent text-base-content/30 hover:text-base-content/60'}`}
+                                        className={`flex items-center gap-2 py-4 text-2xs font-black uppercase tracking-widest border-b-2 transition-all whitespace-nowrap ${activeSubTab === sub.id ? 'border-primary text-primary' : 'border-transparent text-base-content/30 hover:text-base-content/60'}`}
                                     >
                                         {sub.icon}
                                         {sub.label}
@@ -725,10 +725,12 @@ export const SetupPage: React.FC<SetupPageProps> = ({
 
                         {renderActiveTabContent()}
 
-                        <footer className="flex flex-row h-14 items-stretch p-1.5 gap-1.5 flex-shrink-0 panel-footer">
-                            <button onClick={() => { audioService.playClick(); handleCancel(); }} className="form-btn flex-1">Abort</button>
-                            <button onClick={() => { audioService.playClick(); saveSettings(); }} className="form-btn form-btn-primary flex-1 shadow-lg">Confirm</button>
-                        </footer>
+                        {JSON.stringify(settings) !== JSON.stringify(globalSettings) && (
+                          <footer className="flex flex-row h-14 items-stretch p-1.5 gap-1.5 flex-shrink-0 panel-footer">
+                              <button onClick={() => { audioService.playClick(); handleCancel(); }} className="form-btn flex-1">Discard</button>
+                              <button onClick={() => { audioService.playClick(); saveSettings(); }} className="form-btn form-btn-primary flex-1 shadow-lg">Save changes</button>
+                          </footer>
+                        )}
                     </main>
                 </div>
             </motion.section>

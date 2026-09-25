@@ -16,7 +16,7 @@ import { isGoogleAuthValid } from '../utils/googleAuth';
 const MetadataItem: React.FC<{ label: string; value: string }> = ({ label, value }) => {
     const { settings } = useSettings();
     const isPipboyTheme = settings.darkTheme === 'pipboy';
-    const fontClass = isPipboyTheme ? 'font-fixedsys text-[11px]' : 'font-rajdhani text-[12px] font-normal';
+    const fontClass = isPipboyTheme ? 'font-fixedsys text-2xs' : 'font-rajdhani text-xs font-normal';
 
     return (
         <div className="flex items-center gap-2">
@@ -30,7 +30,7 @@ const BatteryStatus: React.FC = () => {
     const [battery, setBattery] = useState<{ level: number, charging: boolean } | null>(null);
     const { settings } = useSettings();
     const isPipboyTheme = settings.darkTheme === 'pipboy';
-    const fontClass = isPipboyTheme ? 'font-fixedsys text-[11px]' : 'font-rajdhani text-[12px] font-normal';
+    const fontClass = isPipboyTheme ? 'font-fixedsys text-2xs' : 'font-rajdhani text-xs font-normal';
 
     useEffect(() => {
         // Battery API is not available in all browsers
@@ -72,7 +72,7 @@ const IntegrationItem: React.FC<{
 }> = ({ label, active }) => {
     const { settings } = useSettings();
     const isPipboyTheme = settings.darkTheme === 'pipboy';
-    const fontClass = isPipboyTheme ? 'font-fixedsys text-[11px]' : 'font-rajdhani text-[12px] font-normal';
+    const fontClass = isPipboyTheme ? 'font-fixedsys text-2xs' : 'font-rajdhani text-xs font-normal';
 
     return (
         <span className={`uppercase tracking-widest transition-colors duration-500 leading-none inline-block ${fontClass} ${active ? 'text-base-content/40' : 'text-base-content/20'}`}>
@@ -209,7 +209,7 @@ const Footer: React.FC<FooterProps> = ({
     const { controlEnabled } = useLiveAssistantContext();
     const liveLabel = liveStatus === 'error' ? 'FAULT' : ASSISTANT_LABEL[liveMode];
     const isPipboyTheme = settings.darkTheme === 'pipboy';
-    const mainFontClass = isPipboyTheme ? 'font-fixedsys text-[11px]' : 'font-rajdhani text-[12px] font-normal';
+    const mainFontClass = isPipboyTheme ? 'font-fixedsys text-2xs' : 'font-rajdhani text-xs font-normal';
 
     useEffect(() => {
         const fetch = async () => {

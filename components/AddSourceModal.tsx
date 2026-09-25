@@ -132,7 +132,7 @@ export const AddSourceModal: React.FC<AddSourceModalProps> = ({ open, onClose })
               <p className="text-xs font-mono opacity-50">
                 Browse files from your vault to add as sources.
               </p>
-              <div className="flex items-center gap-2 text-[11px] font-mono opacity-60">
+              <div className="flex items-center gap-2 text-2xs font-mono opacity-60">
                 <span className="truncate">/{vaultPath}</span>
                 {vaultPath && (
                   <button

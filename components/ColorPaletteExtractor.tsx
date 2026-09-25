@@ -40,7 +40,7 @@ const ColorCard: React.FC<{ color: ColorInfo }> = ({ color }) => {
             <div className="h-32 w-full" style={{ backgroundColor: color.hex }}></div>
             <div className="p-4">
                 <p className="font-black tracking-tighter text-xl text-base-content mb-3">{color.name}</p>
-                <div className="text-[10px] space-y-2 font-mono font-bold uppercase tracking-widest text-base-content/40">
+                <div className="text-2xs space-y-2 font-mono font-bold uppercase tracking-widest text-base-content/40">
                     <p className="flex justify-between items-center pb-1"><span>HEX</span> <span className="cursor-pointer hover:text-primary transition-colors" onClick={() => handleCopy('HEX', color.hex)}>{copied && copiedValue === 'HEX' ? 'OK' : color.hex}</span></p>
                     <p className="flex justify-between items-center pb-1"><span>RGB</span> <span className="cursor-pointer hover:text-primary transition-colors" onClick={() => handleCopy('RGB', `${Math.round(color.rgb[0])},${Math.round(color.rgb[1])},${Math.round(color.rgb[2])}`)}>{copied && copiedValue === 'RGB' ? 'OK' : `${Math.round(color.rgb[0])}, ${Math.round(color.rgb[1])}, ${Math.round(color.rgb[2])}`}</span></p>
                     <p className="flex justify-between items-center"><span>HSL</span> <span className="cursor-pointer hover:text-primary transition-colors" onClick={() => handleCopy('HSL', color.hsl)}>{copied && copiedValue === 'HSL' ? 'OK' : color.hsl}</span></p>
@@ -240,7 +240,7 @@ export const ColorPaletteExtractor: React.FC<ColorPaletteExtractorProps> = ({ on
                         exit="exit"
                         className="p-6 bg-base-100/10 backdrop-blur-md"
                     >
-                        <TerminalText text="CHROMIC SOURCE" delay={2.0} className="text-[10px] font-black uppercase text-primary" />
+                        <TerminalText text="CHROMIC SOURCE" delay={2.0} className="text-2xs font-black uppercase text-primary" />
                     </motion.header>
                     <motion.div 
                         variants={contentVariants}
@@ -261,7 +261,7 @@ export const ColorPaletteExtractor: React.FC<ColorPaletteExtractorProps> = ({ on
                                 <>
                                     <div className="text-center p-6 opacity-20">
                                         <UploadIcon className="w-10 h-10 mx-auto mb-2"/>
-                                        <p className="text-[10px] font-black uppercase tracking-widest">Load Source</p>
+                                        <p className="text-2xs font-black uppercase tracking-widest">Load Source</p>
                                     </div>
                                     <div className="flex gap-2">
                                         <button onClick={(e) => { e.stopPropagation(); (fileInputRef.current as any).click(); }} className="form-btn h-8 px-4">UPLOAD</button>
@@ -275,7 +275,7 @@ export const ColorPaletteExtractor: React.FC<ColorPaletteExtractorProps> = ({ on
                         </div>
                         <div className="space-y-4">
                              <div className="space-y-4">
-                                 <div className="flex justify-between items-end"><span className="text-[10px] font-black uppercase text-base-content/30">Nodes</span><span className="text-[10px] font-mono font-bold text-primary">{numClusters}</span></div>
+                                 <div className="flex justify-between items-end"><span className="text-2xs font-black uppercase text-base-content/30">Nodes</span><span className="text-2xs font-mono font-bold text-primary">{numClusters}</span></div>
                                  <input type="range" min="2" max="12" value={numClusters} onChange={(e) => setNumClusters(Number((e.currentTarget as any).value))} className="range range-xs range-primary" disabled={!imageFile || isLoading}/>
                             </div>
                             <button onClick={() => imagePreviewUrl && extractPalette(imagePreviewUrl, numClusters)} disabled={!imageFile || isLoading} className="form-btn form-btn-secondary w-full h-10">
@@ -312,7 +312,7 @@ export const ColorPaletteExtractor: React.FC<ColorPaletteExtractorProps> = ({ on
                             <div className="space-y-12 animate-fade-in">
                                 {mood && (
                                     <div className="flex flex-col gap-2">
-                                        <span className="text-[10px] font-black uppercase tracking-widest text-primary/60">Identified Mood</span>
+                                        <span className="text-2xs font-black uppercase tracking-widest text-primary/60">Identified Mood</span>
                                         <p className="text-5xl font-black tracking-tighter text-base-content uppercase leading-none">{mood}</p>
                                     </div>
                                 )}

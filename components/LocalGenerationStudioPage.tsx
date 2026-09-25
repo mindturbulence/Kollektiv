@@ -424,7 +424,7 @@ const LocalGenerationStudioPage: React.FC<LocalGenerationStudioPageProps> = ({ b
             <select
               value={activePresetId}
               onChange={(e) => handlePresetSelect(e.target.value)}
-              className="form-input flex-1 min-w-0 text-[10px] h-8"
+              className="form-input flex-1 min-w-0 text-2xs h-8"
             >
               <option value="">Preset: None</option>
               {backendPresets.map((preset) => (
@@ -440,18 +440,18 @@ const LocalGenerationStudioPage: React.FC<LocalGenerationStudioPageProps> = ({ b
                   onKeyDown={(e) => { if (e.key === 'Enter') handleSavePreset(); }}
                   placeholder="Preset name"
                   autoFocus
-                  className="form-input text-[10px] h-8 w-28 shrink-0"
+                  className="form-input text-2xs h-8 w-28 shrink-0"
                 />
                 <button
                   onClick={handleSavePreset}
                   disabled={!newPresetName.trim()}
-                  className="font-sf-mono text-[9px] tracking-widest text-primary/60 hover:text-primary transition-all bg-primary/5 disabled:opacity-20 px-2 py-1.5 hover:bg-primary/10 shrink-0"
+                  className="font-sf-mono text-2xs tracking-widest text-primary/60 hover:text-primary transition-all bg-primary/5 disabled:opacity-20 px-2 py-1.5 hover:bg-primary/10 shrink-0"
                 >
                   SAVE
                 </button>
                 <button
                   onClick={() => { setShowSaveInput(false); setNewPresetName(''); }}
-                  className="font-sf-mono text-[9px] tracking-widest text-base-content/40 hover:text-base-content transition-all bg-base-100/5 px-2 py-1.5 hover:bg-base-100/10 shrink-0"
+                  className="font-sf-mono text-2xs tracking-widest text-base-content/40 hover:text-base-content transition-all bg-base-100/5 px-2 py-1.5 hover:bg-base-100/10 shrink-0"
                 >
                   ✕
                 </button>
@@ -460,7 +460,7 @@ const LocalGenerationStudioPage: React.FC<LocalGenerationStudioPageProps> = ({ b
               <button
                 onClick={() => setShowSaveInput(true)}
                 title="Save current settings as a preset"
-                className="font-sf-mono text-[9px] tracking-widest text-base-content/40 hover:text-base-content transition-all bg-base-100/5 px-2 py-1.5 hover:bg-base-100/10 shrink-0 whitespace-nowrap"
+                className="font-sf-mono text-2xs tracking-widest text-base-content/40 hover:text-base-content transition-all bg-base-100/5 px-2 py-1.5 hover:bg-base-100/10 shrink-0 whitespace-nowrap"
               >
                 + SAVE
               </button>
@@ -469,7 +469,7 @@ const LocalGenerationStudioPage: React.FC<LocalGenerationStudioPageProps> = ({ b
               <button
                 onClick={handleDeletePreset}
                 title="Delete this preset"
-                className="font-sf-mono text-[9px] tracking-widest text-error/40 hover:text-error transition-all bg-error/5 px-2 py-1.5 hover:bg-error/10 shrink-0"
+                className="font-sf-mono text-2xs tracking-widest text-error/40 hover:text-error transition-all bg-error/5 px-2 py-1.5 hover:bg-error/10 shrink-0"
               >
                 DELETE
               </button>
@@ -483,7 +483,7 @@ const LocalGenerationStudioPage: React.FC<LocalGenerationStudioPageProps> = ({ b
           >
             {backendId === 'comfy' && (
               <div>
-                <label className="text-[10px] font-bold uppercase tracking-widest text-base-content/40 block mb-2">
+                <label className="text-2xs font-bold uppercase tracking-widest text-base-content/40 block mb-2">
                   Workflow
                 </label>
                 <div className="flex items-center gap-2">
@@ -501,7 +501,7 @@ const LocalGenerationStudioPage: React.FC<LocalGenerationStudioPageProps> = ({ b
                   </select>
                   <button
                     onClick={() => setShowImportModal(true)}
-                    className="form-btn px-2 text-[9px] whitespace-nowrap font-bold uppercase tracking-wider"
+                    className="form-btn px-2 text-2xs whitespace-nowrap font-bold uppercase tracking-wider"
                     title="Import custom workflow"
                   >
                     + IMPORT
@@ -509,7 +509,7 @@ const LocalGenerationStudioPage: React.FC<LocalGenerationStudioPageProps> = ({ b
                   {activeWorkflowId !== '__default__' && (
                     <button
                       onClick={handleDeleteWorkflow}
-                      className="form-btn px-2 text-[9px] whitespace-nowrap font-bold uppercase tracking-wider text-error/60 hover:text-error transition-colors"
+                      className="form-btn px-2 text-2xs whitespace-nowrap font-bold uppercase tracking-wider text-error/60 hover:text-error transition-colors"
                       title="Delete this workflow"
                     >
                       ✕
@@ -520,7 +520,7 @@ const LocalGenerationStudioPage: React.FC<LocalGenerationStudioPageProps> = ({ b
             )}
 
             <div>
-              <label className="text-[10px] font-bold uppercase tracking-widest text-base-content/40 block mb-2">
+              <label className="text-2xs font-bold uppercase tracking-widest text-base-content/40 block mb-2">
                 Checkpoint
               </label>
               <div className="flex items-center gap-2">
@@ -547,7 +547,7 @@ const LocalGenerationStudioPage: React.FC<LocalGenerationStudioPageProps> = ({ b
             {backendId === 'a1111' && (
               <div>
                 <div className="flex items-center justify-between mb-2">
-                  <label className="text-[10px] font-bold uppercase tracking-widest text-base-content/40">
+                  <label className="text-2xs font-bold uppercase tracking-widest text-base-content/40">
                     Additional Modules
                   </label>
                   <button
@@ -564,7 +564,7 @@ const LocalGenerationStudioPage: React.FC<LocalGenerationStudioPageProps> = ({ b
                   <div className="border border-base-300/20 max-h-44 overflow-y-auto custom-scrollbar divide-y divide-base-300/10">
                     {moduleGroups.map((group) => (
                       <div key={group.type}>
-                        <div className="px-2 pt-1.5 pb-0.5 flex items-center justify-between text-[10px] font-bold uppercase tracking-widest text-base-content/30">
+                        <div className="px-2 pt-1.5 pb-0.5 flex items-center justify-between text-2xs font-bold uppercase tracking-widest text-base-content/30">
                           {group.label}
                           <span className="text-base-content/20 font-mono">{group.modules.length}</span>
                         </div>
@@ -603,7 +603,7 @@ const LocalGenerationStudioPage: React.FC<LocalGenerationStudioPageProps> = ({ b
                     {manualModules.map((m) => (
                       <span
                         key={m}
-                        className="inline-flex items-center gap-1 px-2 py-0.5 bg-base-100/40 border border-base-300/20 text-[9px] font-mono"
+                        className="inline-flex items-center gap-1 px-2 py-0.5 bg-base-100/40 border border-base-300/20 text-2xs font-mono"
                       >
                         {m}
                         <button
@@ -618,7 +618,7 @@ const LocalGenerationStudioPage: React.FC<LocalGenerationStudioPageProps> = ({ b
                   </div>
                 )}
 
-                <p className="text-[9px] text-base-content/30 mt-1">
+                <p className="text-2xs text-base-content/30 mt-1">
                   {state.modules.length > 0
                     ? 'CLIP/T5/VAE modules scanned from the server (Forge /sdapi/v1/sd-modules). Required by split checkpoints (Flux, SD3, GGUF) that don\'t embed their own text encoder — fixes "You do not have CLIP state dict!".'
                     : 'Comma-separated CLIP/T5/VAE filenames for split checkpoints (Flux, SD3, GGUF) that don\'t embed their own text encoder — fixes "You do not have CLIP state dict!". The server did not expose a module list (vanilla A1111).'}
@@ -628,35 +628,35 @@ const LocalGenerationStudioPage: React.FC<LocalGenerationStudioPageProps> = ({ b
 
             <div className="grid grid-cols-2 gap-3">
               <div>
-                <label className="text-[10px] font-bold uppercase tracking-widest text-base-content/40 block mb-2">Width</label>
+                <label className="text-2xs font-bold uppercase tracking-widest text-base-content/40 block mb-2">Width</label>
                 <input type="number" value={width} onChange={(e) => setWidth(parseInt(e.target.value, 10) || 512)} className="form-input w-full text-xs" step={64} min={64} />
               </div>
               <div>
-                <label className="text-[10px] font-bold uppercase tracking-widest text-base-content/40 block mb-2">Height</label>
+                <label className="text-2xs font-bold uppercase tracking-widest text-base-content/40 block mb-2">Height</label>
                 <input type="number" value={height} onChange={(e) => setHeight(parseInt(e.target.value, 10) || 512)} className="form-input w-full text-xs" step={64} min={64} />
               </div>
               <div>
-                <label className="text-[10px] font-bold uppercase tracking-widest text-base-content/40 block mb-2">Steps</label>
+                <label className="text-2xs font-bold uppercase tracking-widest text-base-content/40 block mb-2">Steps</label>
                 <input type="number" value={steps} onChange={(e) => setSteps(parseInt(e.target.value, 10) || 1)} className="form-input w-full text-xs" min={1} max={150} />
               </div>
               <div>
-                <label className="text-[10px] font-bold uppercase tracking-widest text-base-content/40 block mb-2">CFG Scale</label>
+                <label className="text-2xs font-bold uppercase tracking-widest text-base-content/40 block mb-2">CFG Scale</label>
                 <input type="number" value={cfgScale} onChange={(e) => setCfgScale(parseFloat(e.target.value) || 1)} className="form-input w-full text-xs" step={0.5} min={1} max={30} />
               </div>
             </div>
 
             <div>
-              <label className="text-[10px] font-bold uppercase tracking-widest text-base-content/40 block mb-2">
+              <label className="text-2xs font-bold uppercase tracking-widest text-base-content/40 block mb-2">
                 Reference Image (img2img)
                 {activeWorkflowId !== '__default__' && initImage && (
-                  <span className="text-[9px] text-warning ml-2 italic normal-case">ignored while a custom workflow is active</span>
+                  <span className="text-2xs text-warning ml-2 italic normal-case">ignored while a custom workflow is active</span>
                 )}
               </label>
               {initImage ? (
                 <div className="flex items-center gap-3">
                   <img src={initImage} alt="Reference" className="w-14 h-14 object-cover rounded border border-white/10" />
                   <div className="flex-1 min-w-0">
-                    <label className="text-[9px] text-base-content/40 block mb-1">Denoising strength: {denoisingStrength.toFixed(2)}</label>
+                    <label className="text-2xs text-base-content/40 block mb-1">Denoising strength: {denoisingStrength.toFixed(2)}</label>
                     <input
                       type="range"
                       min={0} max={1} step={0.05}
@@ -677,10 +677,10 @@ const LocalGenerationStudioPage: React.FC<LocalGenerationStudioPageProps> = ({ b
             </div>
 
             <div>
-              <label className="text-[10px] font-bold uppercase tracking-widest text-base-content/40 block mb-2">
+              <label className="text-2xs font-bold uppercase tracking-widest text-base-content/40 block mb-2">
                 Sampler
                 {state.loadingSamplers && (
-                  <span className="text-[9px] text-base-content/20 ml-2 italic">loading...</span>
+                  <span className="text-2xs text-base-content/20 ml-2 italic">loading...</span>
                 )}
               </label>
               <div className="flex items-center gap-2">
@@ -701,7 +701,7 @@ const LocalGenerationStudioPage: React.FC<LocalGenerationStudioPageProps> = ({ b
             </div>
 
             <div>
-              <label className="text-[10px] font-bold uppercase tracking-widest text-base-content/40 block mb-2">Seed</label>
+              <label className="text-2xs font-bold uppercase tracking-widest text-base-content/40 block mb-2">Seed</label>
               <div className="flex items-center gap-2">
                 <input
                   type="number"
@@ -711,7 +711,7 @@ const LocalGenerationStudioPage: React.FC<LocalGenerationStudioPageProps> = ({ b
                   className="form-input flex-1 text-xs disabled:opacity-30"
                   placeholder="random"
                 />
-                <label className="flex items-center gap-1.5 text-[10px] text-base-content/50 whitespace-nowrap">
+                <label className="flex items-center gap-1.5 text-2xs text-base-content/50 whitespace-nowrap">
                   <input type="checkbox" checked={randomizeSeed} onChange={(e) => setRandomizeSeed(e.target.checked)} />
                   Random
                 </label>
@@ -776,13 +776,13 @@ const LocalGenerationStudioPage: React.FC<LocalGenerationStudioPageProps> = ({ b
               </p>
             </div>
             {state.available === false && (
-              <div className="flex items-center gap-2 text-[10px] font-black uppercase tracking-widest text-error shrink-0">
+              <div className="flex items-center gap-2 text-2xs font-black uppercase tracking-widest text-error shrink-0">
                 <span className="w-1.5 h-1.5 rounded-full bg-error animate-pulse" />
                 Not reachable at {serverUrl}
               </div>
             )}
             {state.available === true && (
-              <div className="flex items-center gap-2 text-[10px] font-black uppercase tracking-widest text-success shrink-0">
+              <div className="flex items-center gap-2 text-2xs font-black uppercase tracking-widest text-success shrink-0">
                 <span className="w-1.5 h-1.5 rounded-full bg-success animate-pulse" />
                 Connected
               </div>
@@ -796,25 +796,25 @@ const LocalGenerationStudioPage: React.FC<LocalGenerationStudioPageProps> = ({ b
           >
             <div className="flex-1 min-h-0 flex flex-col items-center justify-center bg-base-300/10 rounded">
               {state.phase === 'generating' && (
-                <div className="text-[10px] font-bold uppercase tracking-widest text-base-content/40 animate-pulse">
+                <div className="text-2xs font-bold uppercase tracking-widest text-base-content/40 animate-pulse">
                   Generating via {meta.label}...
                 </div>
               )}
               {state.phase === 'error' && (
-                <div className="text-[10px] font-bold uppercase tracking-widest text-error px-6 text-center">
+                <div className="text-2xs font-bold uppercase tracking-widest text-error px-6 text-center">
                   {state.error}
                 </div>
               )}
               {state.phase === 'done' && state.resultUrl && (
                 <div className="flex flex-col items-center gap-2 p-4">
                   <img src={state.resultUrl} alt="Generated result" className="max-h-[60vh] max-w-full rounded shadow-lg" />
-                  <div className="text-[10px] text-base-content/30">
+                  <div className="text-2xs text-base-content/30">
                     Seed: {state.resultSeed} · Saved to gallery
                   </div>
                 </div>
               )}
               {state.phase === 'idle' && !state.resultUrl && (
-                <p className="text-[10px] text-base-content/20 uppercase tracking-widest">
+                <p className="text-2xs text-base-content/20 uppercase tracking-widest">
                   Enter a prompt and click Generate
                 </p>
               )}
@@ -824,10 +824,10 @@ const LocalGenerationStudioPage: React.FC<LocalGenerationStudioPageProps> = ({ b
             <div className="shrink-0 flex flex-col gap-2">
               <div>
                 <div className="flex items-center justify-between mb-2">
-                  <label className="text-[10px] font-bold uppercase tracking-widest text-base-content/40">Prompt</label>
+                  <label className="text-2xs font-bold uppercase tracking-widest text-base-content/40">Prompt</label>
                   <button
                     onClick={() => setShowNegativePrompt((v) => !v)}
-                    className="text-[9px] font-bold uppercase tracking-wider text-base-content/30 hover:text-base-content/60 transition-colors"
+                    className="text-2xs font-bold uppercase tracking-wider text-base-content/30 hover:text-base-content/60 transition-colors"
                   >
                     {showNegativePrompt ? 'Hide' : 'Show'} Negative Prompt
                   </button>
@@ -844,7 +844,7 @@ const LocalGenerationStudioPage: React.FC<LocalGenerationStudioPageProps> = ({ b
 
               {showNegativePrompt && (
                 <div>
-                  <label className="text-[10px] font-bold uppercase tracking-widest text-base-content/40 block mb-2">Negative Prompt</label>
+                  <label className="text-2xs font-bold uppercase tracking-widest text-base-content/40 block mb-2">Negative Prompt</label>
                   <textarea
                     value={negativePrompt}
                     onChange={(e) => setNegativePrompt(e.target.value)}

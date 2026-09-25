@@ -449,7 +449,7 @@ ${systemResponse}` };
                                                 <h3 className="font-rajdhani text-[20px] uppercase tracking-[0.3em] truncate">{getChatTitle()}</h3>
                                                 {activeSessionId && <span className="font-rajdhani opacity-40 text-[20px] shrink-0">:&nbsp;{activeSessionId.substring(0, 4)}</span>}
                                             </div>
-                                            <p className="text-[10px] uppercase tracking-[0.3em] text-base-content/50 font-mono hidden md:block truncate">
+                                            <p className="text-2xs uppercase tracking-[0.3em] text-base-content/50 font-mono hidden md:block truncate">
                                                 {getChatSubtitle()}
                                             </p>
                                         </div>
@@ -472,14 +472,14 @@ ${systemResponse}` };
                                     <div className="flex items-center gap-0.5 border border-white/10 rounded">
                                         <button
                                             onClick={() => setResearchMode(false)}
-                                            className={`btn btn-xs rounded-none px-2 py-1 text-[10px] font-mono uppercase tracking-wider transition-colors ${!researchMode ? 'bg-primary/20 text-primary' : 'opacity-50 hover:opacity-80'}`}
+                                            className={`btn btn-xs rounded-none px-2 py-1 text-2xs font-mono uppercase tracking-wider transition-colors ${!researchMode ? 'bg-primary/20 text-primary' : 'opacity-50 hover:opacity-80'}`}
                                             aria-pressed={!researchMode}
                                         >
                                             Chat
                                         </button>
                                         <button
                                             onClick={() => setResearchMode(true)}
-                                            className={`btn btn-xs rounded-none px-2 py-1 text-[10px] font-mono uppercase tracking-wider transition-colors ${researchMode ? 'bg-primary/20 text-primary' : 'opacity-50 hover:opacity-80'}`}
+                                            className={`btn btn-xs rounded-none px-2 py-1 text-2xs font-mono uppercase tracking-wider transition-colors ${researchMode ? 'bg-primary/20 text-primary' : 'opacity-50 hover:opacity-80'}`}
                                             aria-pressed={researchMode}
                                         >
                                             Research
@@ -541,7 +541,7 @@ ${systemResponse}` };
                                                 <div
                                                     role="status"
                                                     aria-live="polite"
-                                                    className="absolute left-1/2 -translate-x-1/2 top-2 z-30 pointer-events-none inline-flex items-center gap-2 px-3 py-1 bg-primary/15 border border-primary/40 rounded-full text-[10px] font-mono uppercase tracking-[0.3em] text-primary"
+                                                    className="absolute left-1/2 -translate-x-1/2 top-2 z-30 pointer-events-none inline-flex items-center gap-2 px-3 py-1 bg-primary/15 border border-primary/40 rounded-full text-2xs font-mono uppercase tracking-[0.3em] text-primary"
                                                 >
                                                     <span className="relative flex h-2 w-2">
                                                         <span className="absolute inline-flex h-full w-full rounded-full bg-primary opacity-60 animate-ping" />
@@ -577,7 +577,7 @@ ${systemResponse}` };
                                                     <button
                                                         onClick={loadMoreMessages}
                                                         disabled={isLoadingMore}
-                                                        className="btn btn-xs btn-ghost font-mono text-[10px] uppercase tracking-[0.2em] text-base-content/40 hover:text-primary/80 transition-colors disabled:opacity-30"
+                                                        className="btn btn-xs btn-ghost font-mono text-2xs uppercase tracking-[0.2em] text-base-content/40 hover:text-primary/80 transition-colors disabled:opacity-30"
                                                     >
                                                         {isLoadingMore ? 'Loading…' : `↑ Load older messages`}
                                                     </button>
@@ -605,8 +605,8 @@ ${systemResponse}` };
                                                                 onClick={() => insertCommand(c.cmd)}
                                                                 className="text-left py-1.5 px-3 hover:bg-white/10 rounded-md transition-colors flex flex-col w-full"
                                                             >
-                                                                <span className="text-primary text-[12px] font-mono leading-relaxed mb-1">{c.cmd.replace('/', '')}</span>
-                                                                <span className="text-base-content/50 text-[12px] leading-relaxed">{c.desc}</span>
+                                                                <span className="text-primary text-xs font-mono leading-relaxed mb-1">{c.cmd.replace('/', '')}</span>
+                                                                <span className="text-base-content/50 text-xs leading-relaxed">{c.desc}</span>
                                                             </button>
                                                         ))}
                                                     </div>

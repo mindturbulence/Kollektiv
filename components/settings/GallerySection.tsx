@@ -248,7 +248,7 @@ const GallerySection: React.FC<GallerySectionProps> = ({
                             <h3 className="text-lg font-black tracking-tighter text-base-content leading-none uppercase">
                                 JPG Vault Converter
                             </h3>
-                            <p className="text-[10px] font-black uppercase tracking-[0.3em] text-base-content/40 mt-1 truncate">
+                            <p className="text-2xs font-black uppercase tracking-[0.3em] text-base-content/40 mt-1 truncate">
                                 {phase === 'scanning'   ? 'SCANNING LOCAL STORAGE...'                                       :
                                  phase === 'scanned'    ? `${targets.length} NON-JPG FILE${targets.length !== 1 ? 'S' : ''} FOUND` :
                                  phase === 'converting' ? `CONVERTING ${convertProgress} / ${targets.length}`               :
@@ -275,7 +275,7 @@ const GallerySection: React.FC<GallerySectionProps> = ({
                             <div className="space-y-4 animate-fade-in">
                                 <div className="flex items-center gap-3">
                                     <RefreshIcon className="w-4 h-4 text-primary animate-spin flex-shrink-0" />
-                                    <span className="text-[11px] font-mono text-base-content/70">
+                                    <span className="text-2xs font-mono text-base-content/70">
                                         Scanning gallery images… {scanProgress}%
                                     </span>
                                 </div>
@@ -285,7 +285,7 @@ const GallerySection: React.FC<GallerySectionProps> = ({
                                         style={{ width: `${scanProgress}%` }}
                                     />
                                 </div>
-                                <p className="text-[10px] font-mono text-base-content/30">
+                                <p className="text-2xs font-mono text-base-content/30">
                                     Checking {scanTotal} image item{scanTotal !== 1 ? 's' : ''} for non-JPG formats…
                                 </p>
                             </div>
@@ -300,10 +300,10 @@ const GallerySection: React.FC<GallerySectionProps> = ({
                                     <div className="flex items-center gap-3 p-4 bg-success/5 border border-success/20">
                                         <CheckIcon className="w-5 h-5 text-success flex-shrink-0" />
                                         <div>
-                                            <p className="text-[11px] font-black uppercase tracking-widest text-success">
+                                            <p className="text-2xs font-black uppercase tracking-widest text-success">
                                                 All images are already JPG
                                             </p>
-                                            <p className="text-[10px] font-mono text-base-content/40 mt-0.5">
+                                            <p className="text-2xs font-mono text-base-content/40 mt-0.5">
                                                 Scanned {scanTotal} item{scanTotal !== 1 ? 's' : ''} — nothing to convert.
                                             </p>
                                         </div>
@@ -312,10 +312,10 @@ const GallerySection: React.FC<GallerySectionProps> = ({
                                     <div className="flex items-start gap-3 p-4 bg-primary/5 border border-primary/20">
                                         <PhotoIcon className="w-5 h-5 text-primary flex-shrink-0 mt-0.5" />
                                         <div>
-                                            <p className="text-[11px] font-black uppercase tracking-widest text-primary">
+                                            <p className="text-2xs font-black uppercase tracking-widest text-primary">
                                                 {targets.length} image{targets.length !== 1 ? 's' : ''} will be converted
                                             </p>
-                                            <p className="text-[10px] font-mono text-base-content/40 mt-0.5">
+                                            <p className="text-2xs font-mono text-base-content/40 mt-0.5">
                                                 PNG, WebP, and other non-JPG formats → JPG. Originals are replaced.
                                             </p>
                                         </div>
@@ -327,10 +327,10 @@ const GallerySection: React.FC<GallerySectionProps> = ({
                                     <>
                                         <div className="space-y-3">
                                             <div className="flex items-center justify-between">
-                                                <label className="text-[10px] font-black uppercase tracking-widest text-base-content/50">
+                                                <label className="text-2xs font-black uppercase tracking-widest text-base-content/50">
                                                     JPG Compression Quality
                                                 </label>
-                                                <span className="text-[11px] font-mono font-bold text-primary">
+                                                <span className="text-2xs font-mono font-bold text-primary">
                                                     {Math.round(quality * 100)}%
                                                 </span>
                                             </div>
@@ -341,7 +341,7 @@ const GallerySection: React.FC<GallerySectionProps> = ({
                                                 onChange={e => setQuality(Number(e.currentTarget.value))}
                                                 className="range range-xs range-primary w-full"
                                             />
-                                            <div className="flex justify-between text-[9px] font-mono text-base-content/30">
+                                            <div className="flex justify-between text-2xs font-mono text-base-content/30">
                                                 <span>10% SMALL</span>
                                                 <span>100% LOSSLESS</span>
                                             </div>
@@ -350,7 +350,7 @@ const GallerySection: React.FC<GallerySectionProps> = ({
                                         {/* Destructive-action warning */}
                                         <div className="flex items-start gap-2 p-3 bg-warning/5 border border-warning/15">
                                             <AlertTriangleIcon className="w-4 h-4 text-warning flex-shrink-0 mt-0.5" />
-                                            <p className="text-[10px] font-mono text-base-content/50 leading-relaxed">
+                                            <p className="text-2xs font-mono text-base-content/50 leading-relaxed">
                                                 Original files will be permanently replaced with JPG versions.
                                                 All metadata (prompts, tags, notes) is preserved in the gallery JSON.
                                                 This action cannot be undone.
@@ -365,7 +365,7 @@ const GallerySection: React.FC<GallerySectionProps> = ({
                         {phase === 'converting' && (
                             <div className="space-y-4 animate-fade-in">
                                 <div className="space-y-2">
-                                    <div className="flex justify-between text-[10px] font-mono font-bold">
+                                    <div className="flex justify-between text-2xs font-mono font-bold">
                                         <span className="text-primary">CONVERTING</span>
                                         <span className="text-base-content/40">
                                             {convertProgress} / {targets.length}
@@ -383,7 +383,7 @@ const GallerySection: React.FC<GallerySectionProps> = ({
                                     </div>
                                 </div>
                                 {currentFile && (
-                                    <p className="text-[10px] font-mono text-base-content/40 truncate">
+                                    <p className="text-2xs font-mono text-base-content/40 truncate">
                                         → {currentFile}
                                     </p>
                                 )}
@@ -396,13 +396,13 @@ const GallerySection: React.FC<GallerySectionProps> = ({
                                 <div className="flex items-center gap-3 p-4 bg-success/5 border border-success/20">
                                     <CheckIcon className="w-5 h-5 text-success flex-shrink-0" />
                                     <div>
-                                        <p className="text-[11px] font-black uppercase tracking-widest text-success">
+                                        <p className="text-2xs font-black uppercase tracking-widest text-success">
                                             {wasStopped
                                                 ? `Stopped — converted ${convertProgress} of ${targets.length} image${targets.length !== 1 ? 's' : ''}`
                                                 : `${convertProgress} image${convertProgress !== 1 ? 's' : ''} converted successfully`}
                                         </p>
                                         {convertErrors.length > 0 && (
-                                            <p className="text-[10px] font-mono text-warning mt-0.5">
+                                            <p className="text-2xs font-mono text-warning mt-0.5">
                                                 {convertErrors.length} error{convertErrors.length !== 1 ? 's' : ''} occurred — see below
                                             </p>
                                         )}
@@ -413,7 +413,7 @@ const GallerySection: React.FC<GallerySectionProps> = ({
                                 {convertErrors.length > 0 && (
                                     <div className="p-3 bg-error/5 border border-error/15 max-h-36 overflow-y-auto custom-scrollbar space-y-1">
                                         {convertErrors.map((err, i) => (
-                                            <p key={i} className="text-[9px] font-mono text-error/70 leading-relaxed">
+                                            <p key={i} className="text-2xs font-mono text-error/70 leading-relaxed">
                                                 {err}
                                             </p>
                                         ))}
@@ -557,7 +557,7 @@ const GallerySection: React.FC<GallerySectionProps> = ({
                                             onChange={(e) => handleSettingsChange('jpgCompressionQuality', Number(e.currentTarget.value))}
                                             className="range range-xs range-primary"
                                         />
-                                        <span className="text-[10px] font-mono font-bold text-primary">
+                                        <span className="text-2xs font-mono font-bold text-primary">
                                             {Math.round((settings.jpgCompressionQuality || 0.9) * 100)}%
                                         </span>
                                     </div>

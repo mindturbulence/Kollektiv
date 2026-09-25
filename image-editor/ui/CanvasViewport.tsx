@@ -15,8 +15,9 @@ import { ShapeTool } from '../core/shape/ShapeTool';
 import { floodFillFromBitmap } from '../core/selection/FloodFill';
 import { GradientTool } from '../core/gradient/GradientTool';
 import { CloneStampTool } from '../core/paint/CloneStampTool';
+import { docToLayer } from '../core/geometry/docToLayer';
 import TypeInput from './TypeInput';
-import type { ImageLayer } from '../core/types';
+import type { ImageLayer, TextLayer, Layer } from '../core/types';
 
 export interface CanvasViewportHandle {
   fitToViewport: () => void;
@@ -34,6 +35,27 @@ const CHECKERBOARD_STYLE: React.CSSProperties = {
   backgroundSize: '16px 16px',
 };
 
+/** M5 leftover — topmost text layer whose doc-space bounds contain `pt`, for
+ *  double-click re-edit. AABB only: a rotated layer still hits on its
+ *  unrotated bounds (acceptable for re-edit hit-testing). */
+function findTextLayerAt(layers: Layer[], pt: { x: number; y: number }): TextLayer | null {
+  const walk = (list: Layer[]): TextLayer | null => {
+    for (let i = 0; i < list.length; i++) {
+      const layer = list[i];
+      if (layer.type === 'group') {
+        const nested = walk(layer.children);
+        if (nested) return nested;
+      } else if (layer.type === 'text') {
+        const { origin, size } = layer.transform;
+        if (pt.x >= origin.x && pt.x <= origin.x + size.width &&
+            pt.y >= origin.y && pt.y <= origin.y + size.height) return layer;
+      }
+    }
+    return null;
+  };
+  return walk(layers);
+}
+
 const CanvasViewport = forwardRef<CanvasViewportHandle, CanvasViewportProps>(({ onCursorMove }, ref) => {
   const containerRef = useRef<HTMLDivElement>(null);
   const editorCanvasRef = useRef<HTMLCanvasElement>(null);
@@ -48,6 +70,27 @@ const CanvasViewport = forwardRef<CanvasViewportHandle, CanvasViewportProps>(({ 
   const lastPointerIdRef = useRef<number | null>(null);
   // Magic Wand tolerance — exposed via ToolHeader; module-level ref shared without re-render
   const wandToleranceRef = useRef(32);
+
+  /** Maps a document-space point into the active layer's bitmap space (E1).
+   *  Every pixel tool (brush, eraser, clone, mask, wand) stamps into the layer
+   *  bitmap, which is rendered through the layer transform — painting doc
+   *  coords directly lands in the wrong place on any moved/scaled/rotated/
+   *  flipped/cropped layer (review C1). Returns null when the pointer is off
+   *  the layer; callers skip the stroke instead of painting a distant corner. */
+  const getLayerPoint = (docPt: { x: number; y: number }, layer: ImageLayer): { x: number; y: number } | null =>
+    docToLayer(docPt.x, docPt.y, {
+      transform: layer.transform,
+      intrinsicWidth: layer.intrinsicWidth,
+      intrinsicHeight: layer.intrinsicHeight,
+    });
+
+  /** Scale factor from doc px to layer bitmap px along the layer's local axes
+   *  (uniform per axis is assumed — brush radius uses the mean). */
+  const getLayerScale = (layer: ImageLayer): number => {
+    const { size } = layer.transform;
+    if (size.width <= 0 || size.height <= 0) return 1;
+    return (layer.intrinsicWidth / size.width + layer.intrinsicHeight / size.height) / 2;
+  };
 
   // Zoom is only read here to toggle pixelated image-rendering at high zoom —
   // everything else reads the store imperatively inside the renderer.
@@ -143,8 +186,14 @@ const CanvasViewport = forwardRef<CanvasViewportHandle, CanvasViewportProps>(({ 
 
     if (activeTool === 'brush' || activeTool === 'eraser') {
       if (activeLayerId) {
-        BrushEngine.beginStroke(activeLayerId, getSnapshot().paintTarget);
-        BrushEngine.addPoint(pt.x, pt.y, e.pressure || 0.5, activeTool === 'eraser');
+        const layer = findLayerById(doc?.layers ?? [], activeLayerId);
+        if (layer?.type === 'image') {
+          const layerPt = getLayerPoint(pt, layer);
+          if (layerPt) {
+            BrushEngine.beginStroke(activeLayerId, getSnapshot().paintTarget, getLayerScale(layer));
+            BrushEngine.addPoint(layerPt.x, layerPt.y, e.pressure || 0.5, activeTool === 'eraser');
+          }
+        }
       }
       return;
     }
@@ -160,6 +209,16 @@ const CanvasViewport = forwardRef<CanvasViewportHandle, CanvasViewportProps>(({ 
     }
 
     if (activeTool === 'type') {
+      // M5 leftover: double-clicking an existing text layer re-opens the edit
+      // box prefilled with its text instead of starting a fresh one.
+      if (e.detail === 2 && doc) {
+        const hit = findTextLayerAt(doc.layers, pt);
+        if (hit) {
+          TypeTool.beginEditExisting(hit.id, pt.x, pt.y, () => setIsTyping(false));
+          setIsTyping(true);
+          return;
+        }
+      }
       // Begin inline text editing at click position
       TypeTool.beginEdit(pt.x, pt.y, () => setIsTyping(false));
       setIsTyping(true);
@@ -177,10 +236,13 @@ const CanvasViewport = forwardRef<CanvasViewportHandle, CanvasViewportProps>(({ 
     if (activeTool === 'magic-wand' && activeLayerId && doc) {
       const layer = findLayerById(doc.layers, activeLayerId) as ImageLayer | undefined;
       if (layer?.type === 'image') {
-        const tolerance = wandToleranceRef.current;
-        floodFillFromBitmap(layer.bitmap, pt.x, pt.y, tolerance, true)
-          .then(sel => editorDispatch({ type: 'SET_SELECTION', selection: sel }))
-          .catch(console.error);
+        const layerPt = getLayerPoint(pt, layer);
+        if (layerPt) {
+          const tolerance = wandToleranceRef.current;
+          floodFillFromBitmap(layer.bitmap, layerPt.x, layerPt.y, tolerance, true)
+            .then(sel => editorDispatch({ type: 'SET_SELECTION', selection: sel }))
+            .catch(console.error);
+        }
       }
       return;
     }
@@ -228,12 +290,20 @@ const CanvasViewport = forwardRef<CanvasViewportHandle, CanvasViewportProps>(({ 
 
     if (activeTool === 'clone-stamp' && activeLayerId) {
       if (e.altKey) {
-        CloneStampTool.setSource(pt.x, pt.y);
+        const layer = findLayerById(doc?.layers ?? [], activeLayerId);
+        const layerPt = layer?.type === 'image' ? getLayerPoint(pt, layer) : null;
+        if (layerPt) CloneStampTool.setSource(layerPt.x, layerPt.y, getLayerScale(layer as ImageLayer));
       } else if (CloneStampTool.sourcePoint) {
-        lastPointerIdRef.current = e.pointerId;
-        e.currentTarget.setPointerCapture(e.pointerId);
-        CloneStampTool.beginStroke(activeLayerId);
-        CloneStampTool.addPoint(pt.x, pt.y, e.pressure || 0.5);
+        const layer = findLayerById(doc?.layers ?? [], activeLayerId);
+        if (layer?.type === 'image') {
+          const layerPt = getLayerPoint(pt, layer);
+          if (layerPt) {
+            lastPointerIdRef.current = e.pointerId;
+            e.currentTarget.setPointerCapture(e.pointerId);
+            CloneStampTool.beginStroke(activeLayerId);
+            CloneStampTool.addPoint(layerPt.x, layerPt.y, e.pressure || 0.5);
+          }
+        }
       }
       return;
     }
@@ -246,8 +316,20 @@ const CanvasViewport = forwardRef<CanvasViewportHandle, CanvasViewportProps>(({ 
     }
 
     if (activeTool === 'move' && activeLayerId && doc) {
+      // M5 leftover: double-click on a text layer re-opens inline editing
+      // (the standard re-edit affordance) before the gizmo takes the click.
+      if (e.detail === 2) {
+        const hit = findTextLayerAt(doc.layers, pt);
+        if (hit) {
+          TypeTool.beginEditExisting(hit.id, pt.x, pt.y, () => setIsTyping(false));
+          setIsTyping(true);
+          return;
+        }
+      }
+      // Gizmo works for every layer type — text and shape transform like image
+      // layers (review H9; the old image-only guard made them immovable).
       const layer = findLayerById(doc.layers, activeLayerId);
-      if (layer && layer.type === 'image') {
+      if (layer) {
         const canvas = editorCanvasRef.current!;
         const { width: cssW, height: cssH } = canvas.getBoundingClientRect();
         const handles = getGizmoHandles(layer.transform, viewport, cssW, cssH, doc.width, doc.height);
@@ -267,11 +349,20 @@ const CanvasViewport = forwardRef<CanvasViewportHandle, CanvasViewportProps>(({ 
     if (!renderer) return;
     const pt = renderer.getCanvasPoint(e.clientX, e.clientY);
 
+    // Layer-space point for pixel tools (E1): only computed while a stroke is
+    // active, and only when the pointer is inside the layer's bounds.
+    const layerPointFor = (layerId: string | null): { x: number; y: number } | null => {
+      const doc = getSnapshot().document;
+      const layer = doc && layerId ? (findLayerById(doc.layers, layerId) as ImageLayer | undefined) : undefined;
+      return layer?.type === 'image' ? getLayerPoint(pt, layer) : null;
+    };
+
     if (isPanningRef.current && lastPointerIdRef.current === e.pointerId) {
       renderer.panBy(e.movementX, e.movementY);
     } else if (BrushEngine.isStroking && lastPointerIdRef.current === e.pointerId) {
       const tool = getSnapshot().activeTool;
-      BrushEngine.addPoint(pt.x, pt.y, e.pressure || 0.5, tool === 'eraser');
+      const layerPt = layerPointFor(BrushEngine.activeLayerId);
+      if (layerPt) BrushEngine.addPoint(layerPt.x, layerPt.y, e.pressure || 0.5, tool === 'eraser');
     } else if (SelectionEngine.isDragging() && lastPointerIdRef.current === e.pointerId) {
       const tool = getSnapshot().activeTool;
       if (tool === 'marquee-rect' || tool === 'marquee-ellipse') {
@@ -286,7 +377,8 @@ const CanvasViewport = forwardRef<CanvasViewportHandle, CanvasViewportProps>(({ 
         GradientTool.updateGradient(pt.x, pt.y);
       }
     } else if (CloneStampTool.isStroking && lastPointerIdRef.current === e.pointerId) {
-      CloneStampTool.addPoint(pt.x, pt.y, e.pressure || 0.5);
+      const layerPt = layerPointFor(CloneStampTool.activeLayerId);
+      if (layerPt) CloneStampTool.addPoint(layerPt.x, layerPt.y, e.pressure || 0.5);
     } else if (TransformEngine.isDragging() && lastPointerIdRef.current === e.pointerId) {
       TransformEngine.updateDrag(pt);
     }

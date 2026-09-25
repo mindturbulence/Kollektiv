@@ -36,10 +36,10 @@ export const ScreenControlOverlay: React.FC = () => {
                             <div className="flex-1 flex items-center gap-3 px-4 py-3">
                                 <CursorIcon className="w-5 h-5 text-warning shrink-0" />
                                 <div className="flex-1 min-w-0">
-                                    <div className="text-[11px] font-black uppercase tracking-[0.15em] text-warning">
+                                    <div className="text-2xs font-black uppercase tracking-[0.15em] text-warning">
                                         Assistant Control
                                     </div>
-                                    <div className="text-[10px] font-medium uppercase tracking-wider text-base-content/50 mt-0.5">
+                                    <div className="text-2xs font-medium uppercase tracking-wider text-base-content/50 mt-0.5">
                                         Active — click to release
                                     </div>
                                 </div>
@@ -49,7 +49,7 @@ export const ScreenControlOverlay: React.FC = () => {
                                         audioService.playClick();
                                         revokeControl();
                                     }}
-                                    className="px-3 py-1.5 text-[10px] font-black uppercase tracking-[0.15em] 
+                                    className="px-3 py-1.5 text-2xs font-black uppercase tracking-[0.15em] 
                                                bg-warning/20 text-warning border border-warning/30
                                                hover:bg-warning/30 transition-colors"
                                 >

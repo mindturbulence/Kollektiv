@@ -79,7 +79,7 @@ const BatchRunnerPage: React.FC = () => {
         <div className="w-72 shrink-0 flex flex-col gap-4 overflow-y-auto custom-scrollbar pr-2">
           {/* Operation picker */}
           <div>
-            <label className="text-[10px] font-bold uppercase tracking-widest text-base-content/40 block mb-2">
+            <label className="text-2xs font-bold uppercase tracking-widest text-base-content/40 block mb-2">
               Operation
             </label>
             <div className="flex flex-col gap-1">
@@ -94,7 +94,7 @@ const BatchRunnerPage: React.FC = () => {
                   }`}
                 >
                   {op.label}
-                  <span className="block text-[9px] text-base-content/30 mt-0.5">
+                  <span className="block text-2xs text-base-content/30 mt-0.5">
                     {op.inputKind === 'prompt' ? 'Saved prompts' : 'Gallery items'}
                   </span>
                 </button>
@@ -104,13 +104,13 @@ const BatchRunnerPage: React.FC = () => {
 
           {/* Input source */}
           <div>
-            <label className="text-[10px] font-bold uppercase tracking-widest text-base-content/40 block mb-2">
+            <label className="text-2xs font-bold uppercase tracking-widest text-base-content/40 block mb-2">
               {inputTab === 'prompt' ? 'Saved Prompts' : 'Gallery Items'}
             </label>
             {loadingInputs ? (
-              <div className="text-[10px] text-base-content/30 animate-pulse">Loading…</div>
+              <div className="text-2xs text-base-content/30 animate-pulse">Loading…</div>
             ) : items.length === 0 ? (
-              <div className="text-[10px] text-base-content/20">No items found.</div>
+              <div className="text-2xs text-base-content/20">No items found.</div>
             ) : (
               <div className="flex flex-col gap-0.5 max-h-[300px] overflow-y-auto custom-scrollbar">
                 {items.map(item => {
@@ -120,7 +120,7 @@ const BatchRunnerPage: React.FC = () => {
                     <button
                       key={item.id}
                       onClick={() => toggleId(item.id)}
-                      className={`text-left px-2 py-1 text-[10px] font-mono rounded truncate transition-colors ${
+                      className={`text-left px-2 py-1 text-2xs font-mono rounded truncate transition-colors ${
                         selectedIds.has(item.id)
                           ? 'bg-primary/10 text-primary'
                           : 'text-base-content/50 hover:bg-base-content/5'
@@ -135,7 +135,7 @@ const BatchRunnerPage: React.FC = () => {
           </div>
 
           {/* Pre-run summary */}
-          <div className="bg-base-300/20 border border-base-content/10 rounded p-3 text-[10px]">
+          <div className="bg-base-300/20 border border-base-content/10 rounded p-3 text-2xs">
             <div className="text-base-content/30 uppercase tracking-wider mb-1">Summary</div>
             <div className="text-base-content/60">
               {selectedItems.length} item{selectedItems.length !== 1 ? 's' : ''} · {activeProvider}
@@ -147,7 +147,7 @@ const BatchRunnerPage: React.FC = () => {
             {state.running ? (
               <button
                 onClick={cancel}
-                className="flex-1 h-8 text-[10px] font-bold uppercase tracking-widest rounded bg-error/20 text-error hover:bg-error/30 transition-colors"
+                className="flex-1 h-8 text-2xs font-bold uppercase tracking-widest rounded bg-error/20 text-error hover:bg-error/30 transition-colors"
               >
                 Cancel ({state.doneCount}/{state.total})
               </button>
@@ -155,7 +155,7 @@ const BatchRunnerPage: React.FC = () => {
               <button
                 onClick={handleRun}
                 disabled={!selectedOpId || selectedItems.length === 0}
-                className="flex-1 h-8 text-[10px] font-bold uppercase tracking-widest rounded bg-primary/20 text-primary hover:bg-primary/30 disabled:opacity-20 disabled:cursor-not-allowed transition-colors"
+                className="flex-1 h-8 text-2xs font-bold uppercase tracking-widest rounded bg-primary/20 text-primary hover:bg-primary/30 disabled:opacity-20 disabled:cursor-not-allowed transition-colors"
               >
                 Run
               </button>
@@ -163,7 +163,7 @@ const BatchRunnerPage: React.FC = () => {
             {state.summary && !state.running && (
               <button
                 onClick={reset}
-                className="h-8 px-3 text-[10px] font-bold uppercase tracking-widest rounded bg-base-content/5 text-base-content/30 hover:bg-base-content/10 transition-colors"
+                className="h-8 px-3 text-2xs font-bold uppercase tracking-widest rounded bg-base-content/5 text-base-content/30 hover:bg-base-content/10 transition-colors"
               >
                 Clear
               </button>
@@ -181,14 +181,14 @@ const BatchRunnerPage: React.FC = () => {
                   style={{ width: `${state.total > 0 ? (state.doneCount / state.total) * 100 : 0}%` }}
                 />
               </div>
-              <div className="text-[10px] text-base-content/30 mt-1">
+              <div className="text-2xs text-base-content/30 mt-1">
                 {state.doneCount} / {state.total} complete
               </div>
             </div>
           )}
 
           {state.summary && !state.running && (
-            <div className="mb-3 flex gap-3 text-[10px]">
+            <div className="mb-3 flex gap-3 text-2xs">
               <span className="text-green-500/70">{state.summary.completed} done</span>
               {state.summary.failed > 0 && <span className="text-error/70">{state.summary.failed} failed</span>}
               {state.summary.cancelled && <span className="text-warning/70">Cancelled</span>}
@@ -200,7 +200,7 @@ const BatchRunnerPage: React.FC = () => {
           <div className="flex-1 overflow-y-auto custom-scrollbar space-y-1">
             {state.results.length === 0 && !state.running && (
               <div className="flex items-center justify-center h-full">
-                <p className="text-[10px] text-base-content/20 uppercase tracking-widest">
+                <p className="text-2xs text-base-content/20 uppercase tracking-widest">
                   Select items and run a batch
                 </p>
               </div>
@@ -208,7 +208,7 @@ const BatchRunnerPage: React.FC = () => {
             {state.results.map((r, i) => (
               <div
                 key={i}
-                className={`flex items-start gap-2 px-3 py-2 rounded text-[10px] font-mono ${
+                className={`flex items-start gap-2 px-3 py-2 rounded text-2xs font-mono ${
                   r.status === 'done' ? 'bg-green-500/5 border border-green-500/10' :
                   r.status === 'failed' ? 'bg-error/5 border border-error/10' :
                   r.status === 'cancelled' ? 'bg-warning/5 border border-warning/10' :

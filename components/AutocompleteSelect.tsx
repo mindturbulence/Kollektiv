@@ -163,7 +163,7 @@ const AutocompleteSelect: React.FC<AutocompleteSelectProps> = ({
               className="w-full text-left px-3 py-2 text-xs font-bold font-rajdhani transition-colors flex flex-col gap-0.5 text-accent"
             >
               <span>ADD &ldquo;{searchQuery}&rdquo;</span>
-              <span className="text-[11px] opacity-60 tracking-normal">Add as custom option</span>
+              <span className="text-2xs opacity-60 tracking-normal">Add as custom option</span>
             </button>
           </li>
         )}
@@ -178,7 +178,7 @@ const AutocompleteSelect: React.FC<AutocompleteSelectProps> = ({
               >
                 <span>{option.label}</span>
                 {option.description && (
-                  <span className={`text-[11px] opacity-60 ${fontClass} tracking-normal leading-tight ${value === option.value ? 'opacity-90' : ''}`}>
+                  <span className={`text-2xs opacity-60 ${fontClass} tracking-normal leading-tight ${value === option.value ? 'opacity-90' : ''}`}>
                     {option.description}
                   </span>
                 )}

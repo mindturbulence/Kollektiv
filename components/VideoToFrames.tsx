@@ -373,11 +373,11 @@ export const VideoToFrames: React.FC<VideoToFramesProps> = ({ isExiting = false 
                             exit="exit"
                             className="h-14 flex items-stretch flex-shrink-0 bg-base-100/10 backdrop-blur-md p-1.5 gap-1.5"
                         >
-                            <button onClick={() => setActiveTab('extractor')} className={`btn btn-sm h-full rounded-none flex-1 font-normal text-[11px] tracking-wider uppercase px-1 truncate btn-snake font-display ${activeTab === 'extractor' ? 'btn-ghost text-primary font-black no-glow' : 'btn-ghost text-base-content/40 hover:text-primary hover:no-glow'}`}>
+                            <button onClick={() => setActiveTab('extractor')} className={`btn btn-sm h-full rounded-none flex-1 font-normal text-2xs tracking-wider uppercase px-1 truncate btn-snake font-display ${activeTab === 'extractor' ? 'btn-ghost text-primary font-black no-glow' : 'btn-ghost text-base-content/40 hover:text-primary hover:no-glow'}`}>
                                 <span/><span/><span/><span/>
                                 FRAME EXTRACTOR
                             </button>
-                            <button onClick={() => setActiveTab('joiner')} className={`btn btn-sm h-full rounded-none flex-1 font-normal text-[11px] tracking-wider uppercase px-1 truncate btn-snake font-display ${activeTab === 'joiner' ? 'btn-ghost text-primary font-black no-glow' : 'btn-ghost text-base-content/40 hover:text-primary hover:no-glow'}`}>
+                            <button onClick={() => setActiveTab('joiner')} className={`btn btn-sm h-full rounded-none flex-1 font-normal text-2xs tracking-wider uppercase px-1 truncate btn-snake font-display ${activeTab === 'joiner' ? 'btn-ghost text-primary font-black no-glow' : 'btn-ghost text-base-content/40 hover:text-primary hover:no-glow'}`}>
                                 <span/><span/><span/><span/>
                                 VIDEO JOINER
                             </button>
@@ -393,9 +393,9 @@ export const VideoToFrames: React.FC<VideoToFramesProps> = ({ isExiting = false 
                             {activeTab === 'extractor' ? (
                                 <div className="space-y-6">
                                     <div>
-                                        <label className="text-[10px] font-black uppercase text-base-content/40 tracking-widest mb-4 block">Extraction Settings</label>
+                                        <label className="text-2xs font-black uppercase text-base-content/40 tracking-widest mb-4 block">Extraction Settings</label>
                                         <div className="form-control mb-4">
-                                            <label className="label py-1"><span className="label-text text-[10px] font-black uppercase text-base-content/30">Step Unit</span></label>
+                                            <label className="label py-1"><span className="label-text text-2xs font-black uppercase text-base-content/30">Step Unit</span></label>
                                             <select className="form-select w-full" value={intervalUnit} onChange={(e) => setIntervalUnit(e.currentTarget.value as ExtractionUnit)}>
                                                 <option value="seconds">Seconds</option>
                                                 <option value="minutes">Minutes</option>
@@ -403,19 +403,19 @@ export const VideoToFrames: React.FC<VideoToFramesProps> = ({ isExiting = false 
                                             </select>
                                         </div>
                                         <div className="form-control">
-                                            <label className="label py-1"><span className="label-text text-[10px] font-black uppercase text-base-content/30">Interval</span></label>
+                                            <label className="label py-1"><span className="label-text text-2xs font-black uppercase text-base-content/30">Interval</span></label>
                                             <input type="number" step="0.1" min="0.1" value={intervalValue} onChange={(e) => setIntervalValue(parseFloat(e.currentTarget.value) || 1)} className="form-input w-full font-mono" />
                                         </div>
                                     </div>
                                     <div>
                                         <label className="cursor-pointer label p-0 gap-4 mb-4">
-                                            <span className="text-[10px] font-black uppercase text-base-content/40 tracking-widest">Batch Job</span>
+                                            <span className="text-2xs font-black uppercase text-base-content/40 tracking-widest">Batch Job</span>
                                             <input type="checkbox" checked={isBatchMode} onChange={e => { setIsBatchMode(e.target.checked); if (!e.target.checked) setBatchVideoFiles(prev => { prev.forEach(v => revoke(v.url)); return []; }); }} className="toggle toggle-xs toggle-primary" />
                                         </label>
                                         {isBatchMode && (
                                             <div className="space-y-3">
                                                 <div className="space-y-2">
-                                                    <span className="text-[10px] font-black uppercase text-base-content/30">Video Queue</span>
+                                                    <span className="text-2xs font-black uppercase text-base-content/30">Video Queue</span>
                                                     <div className="flex gap-2">
                                                         <button onClick={() => document.getElementById('batch-extractor-files')?.click()} className="form-btn h-6 flex-1 text-base-content/60 hover:text-primary">ADD FILES</button>
                                                         <button onClick={() => setIsPickerOpen(true)} className="form-btn h-6 flex-1 text-primary hover:underline">LIBRARY</button>
@@ -425,13 +425,13 @@ export const VideoToFrames: React.FC<VideoToFramesProps> = ({ isExiting = false 
                                                 <div className="space-y-1">
                                                     {batchVideoFiles.map((v, i) => (
                                                         <div key={v.id} className="flex items-center gap-3 group py-1.5 px-2 bg-base-100/10">
-                                                            <span className="text-[10px] font-mono text-base-content/30 w-5 shrink-0">{i + 1}</span>
-                                                            <p className="text-[10px] font-black uppercase truncate flex-grow leading-tight">{v.title}</p>
-                                                            <button onClick={() => removeBatchVideo(v.id)} className="form-btn h-5 w-5 text-error opacity-0 group-hover:opacity-100 transition-opacity text-[10px]">✕</button>
+                                                            <span className="text-2xs font-mono text-base-content/30 w-5 shrink-0">{i + 1}</span>
+                                                            <p className="text-2xs font-black uppercase truncate flex-grow leading-tight">{v.title}</p>
+                                                            <button onClick={() => removeBatchVideo(v.id)} className="form-btn h-5 w-5 text-error opacity-0 group-hover:opacity-100 transition-opacity text-2xs">✕</button>
                                                         </div>
                                                     ))}
                                                     {batchVideoFiles.length === 0 && (
-                                                        <div className="py-8 text-center opacity-10 uppercase font-black tracking-widest text-[9px]">No videos queued</div>
+                                                        <div className="py-8 text-center opacity-10 uppercase font-black tracking-widest text-2xs">No videos queued</div>
                                                     )}
                                                 </div>
                                             </div>
@@ -441,9 +441,9 @@ export const VideoToFrames: React.FC<VideoToFramesProps> = ({ isExiting = false 
                             ) : (
                                 <div className="space-y-8">
                                      <div>
-                                        <label className="text-[10px] font-black uppercase text-base-content/40 tracking-widest mb-4 block">Output Format</label>
+                                        <label className="text-2xs font-black uppercase text-base-content/40 tracking-widest mb-4 block">Output Format</label>
                                          <div className="form-control mb-4">
-                                            <label className="label py-1"><span className="label-text text-[10px] font-black uppercase text-base-content/30">Container</span></label>
+                                            <label className="label py-1"><span className="label-text text-2xs font-black uppercase text-base-content/30">Container</span></label>
                                             <div className="form-tab-group w-full">
                                                 <button 
                                                     onClick={() => setOutputFormat('webm')} 
@@ -466,7 +466,7 @@ export const VideoToFrames: React.FC<VideoToFramesProps> = ({ isExiting = false 
                                         </div>
                                         <div className="form-control mb-4">
                                             <label className="cursor-pointer label p-0 gap-4 mb-3">
-                                                <span className="text-[10px] font-black uppercase text-base-content/40 tracking-widest">Keep Original Ratio</span>
+                                                <span className="text-2xs font-black uppercase text-base-content/40 tracking-widest">Keep Original Ratio</span>
                                                 <input 
                                                     type="checkbox" 
                                                     checked={keepOriginalRatio} 
@@ -493,7 +493,7 @@ export const VideoToFrames: React.FC<VideoToFramesProps> = ({ isExiting = false 
                                     </div>
                                     <div className="space-y-4">
                                         <div className="flex justify-between items-center">
-                                            <label className="text-[10px] font-black uppercase text-base-content/40 tracking-widest">Video Queue</label>
+                                            <label className="text-2xs font-black uppercase text-base-content/40 tracking-widest">Video Queue</label>
                                             <div className="flex gap-2">
                                                 <button onClick={() => document.getElementById('joiner-files')?.click()} className="form-btn h-6 px-2 text-base-content/60 hover:text-primary">ADD FILES</button>
                                                 <button onClick={() => setIsPickerOpen(true)} className="form-btn h-6 px-2 text-primary hover:underline">LIBRARY</button>
@@ -509,16 +509,16 @@ export const VideoToFrames: React.FC<VideoToFramesProps> = ({ isExiting = false 
                                                     </div>
                                                     <div className="flex-grow min-w-0">
                                                         <div className="flex items-center gap-2 min-w-0">
-                                                            <p className="text-[11px] font-black truncate uppercase flex-grow leading-tight">{v.title}</p>
-                                                            {i === 0 && keepOriginalRatio && <div className="badge badge-primary rounded-none font-black text-[9px] tracking-widest px-2 py-0.5">SOURCE RATIO</div>}
+                                                            <p className="text-2xs font-black truncate uppercase flex-grow leading-tight">{v.title}</p>
+                                                            {i === 0 && keepOriginalRatio && <div className="badge badge-primary rounded-none font-black text-2xs tracking-widest px-2 py-0.5">SOURCE RATIO</div>}
                                                         </div>
-                                                        <p className="text-[10px] opacity-40 font-mono mt-1">{formatTime(v.duration)} • {v.width}x{v.height}</p>
+                                                        <p className="text-2xs opacity-40 font-mono mt-1">{formatTime(v.duration)} • {v.width}x{v.height}</p>
                                                     </div>
                                                     <button onClick={() => removeJoinItem(v.id)} className="form-btn h-6 w-6 text-error opacity-0 group-hover:opacity-100 transition-opacity">✕</button>
                                                 </div>
                                             ))}
                                             {joinFiles.length === 0 && (
-                                                <div className="py-12 text-center opacity-10 uppercase font-black tracking-widest text-[9px]">Awaiting sequence</div>
+                                                <div className="py-12 text-center opacity-10 uppercase font-black tracking-widest text-2xs">Awaiting sequence</div>
                                             )}
                                         </div>
                                     </div>
@@ -670,8 +670,8 @@ export const VideoToFrames: React.FC<VideoToFramesProps> = ({ isExiting = false 
                                 exit="exit"
                                 className="p-6 bg-base-100/10 backdrop-blur-md flex justify-between items-center"
                             >
-                                <TerminalText text="EXTRACTED FRAMES" delay={2.0} className="text-[10px] font-black uppercase text-primary" />
-                                <span className="text-[10px] font-mono font-bold text-base-content/20 uppercase">{frames.length} FILES</span>
+                                <TerminalText text="EXTRACTED FRAMES" delay={2.0} className="text-2xs font-black uppercase text-primary" />
+                                <span className="text-2xs font-mono font-bold text-base-content/20 uppercase">{frames.length} FILES</span>
                             </motion.header>
                             <motion.div 
                                 variants={contentVariants}
@@ -687,7 +687,7 @@ export const VideoToFrames: React.FC<VideoToFramesProps> = ({ isExiting = false 
                                                 <img src={f.url} className="w-full h-full object-cover media-monochrome group-hover:filter-none transition-all duration-500" alt="frame"/>
                                             </div>
                                             <div className="absolute inset-0 bg-primary/20 opacity-0 group-hover:opacity-100 transition-opacity flex flex-col justify-end p-3">
-                                                <p className="text-[9px] text-white font-mono font-black mb-2 uppercase">{formatTime(f.timestamp)}</p>
+                                                <p className="text-2xs text-white font-mono font-black mb-2 uppercase">{formatTime(f.timestamp)}</p>
                                                 <div className="flex gap-2">
                                                     <a href={f.url} download={`frame_${f.timestamp.toFixed(2)}s.jpg`} className="form-btn h-8 flex-grow">SAVE</a>
                                                     <button onClick={() => setFrames(prev => prev.filter(x => { if (x.id === f.id) { revoke(x.url); return false; } return true; }))} className="form-btn h-8 w-8 text-error">✕</button>

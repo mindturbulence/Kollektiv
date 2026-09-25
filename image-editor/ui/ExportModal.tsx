@@ -45,17 +45,17 @@ const ExportModal: React.FC<ExportModalProps> = ({ isOpen, onClose }) => {
         onClick={e => e.stopPropagation()}
       >
         <header className="panel-header h-9 px-3 flex items-center">
-          <h2 className="text-[10px] font-display uppercase tracking-widest text-base-content/70">Export</h2>
+          <h2 className="text-2xs font-display uppercase tracking-widest text-base-content/70">Export</h2>
         </header>
 
         <div className="p-4 space-y-4">
           {/* Format */}
           <div>
-            <p className="text-[10px] font-mono text-base-content/50 uppercase tracking-widest mb-2">Format</p>
+            <p className="text-2xs font-mono text-base-content/50 uppercase tracking-widest mb-2">Format</p>
             <div className="flex gap-2">
               {(['png', 'jpeg'] as const).map(f => (
                 <button key={f} type="button"
-                  className={`flex-1 py-1.5 text-[10px] font-mono uppercase border ${format === f ? 'border-primary text-primary bg-primary/10' : 'border-base-content/20 text-base-content/60 hover:border-base-content/40'}`}
+                  className={`flex-1 py-1.5 text-2xs font-mono uppercase border ${format === f ? 'border-primary text-primary bg-primary/10' : 'border-base-content/20 text-base-content/60 hover:border-base-content/40'}`}
                   onClick={() => setFormat(f)}>
                   {f.toUpperCase()}
                 </button>
@@ -65,7 +65,7 @@ const ExportModal: React.FC<ExportModalProps> = ({ isOpen, onClose }) => {
 
           {/* Quality (JPEG only) */}
           {format === 'jpeg' && (
-            <label className="flex items-center gap-3 text-[10px] font-mono text-base-content/60">
+            <label className="flex items-center gap-3 text-2xs font-mono text-base-content/60">
               <span className="w-14 flex-shrink-0">Quality</span>
               <input type="range" className="range range-xs range-primary flex-1" min={1} max={100} value={quality}
                 onChange={e => setQuality(Number(e.target.value))} />
@@ -75,7 +75,7 @@ const ExportModal: React.FC<ExportModalProps> = ({ isOpen, onClose }) => {
 
           {/* Alpha warning for JPEG */}
           {format === 'jpeg' && (
-            <p className="text-[9px] font-mono text-warning/70">
+            <p className="text-2xs font-mono text-warning/70">
               ⚠ JPEG does not support transparency — alpha channel will be flattened to white.
             </p>
           )}

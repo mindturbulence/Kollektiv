@@ -60,30 +60,34 @@ Priority is Jev's score (0 = P3 … 3 = P0) with its confidence; the effort buck
 
 ### Phase 1: Trust and data safety (next 1–2 weeks)
 
+**Status 2026-09-25:** E1–E5, E8, E9, the M11 banner, **M5 item 5** (H11/H12/merge/flatten/H8), **item 6** (Image Size, Canvas Size, crop-to-selection, paste, mask export, H13 MAX_DIM), **item 9** (H3 history byte cap + `.close()`) and **M5 leftovers** (SET_TITLE, fill/delete-in-selection, gradient clip, text re-edit) are **landed and verified** (tsc clean, 1487/1487 tests). Details in `image-editor-engineering-plan.md` §12 "M5 progress". **Ops row:** GitHub Pages killed 2026-09-25 (deploy.yml, `gh-pages` dep, `homepage`, `predeploy`/`deploy` scripts removed; Pages had been publishing a bundle containing the leaked key); key-rotation checklist issued to the user; history purge deferred (see the ops row). Dirty-rect diffs (H3 plan-aligned phase) deferred.
+
 | ID | Work | Prio (conf) | Effort | Notes |
 |---|---|---|---|---|
-| E3 | Autosave: store layers as PNG (or lossless WebP), serialize masks, version the record and drop old JPEG records | 2.99 (0.99) | medium | Data loss inside the data-loss-prevention feature. `AutosaveService.ts:28,117` |
-| T5 | `utils/db.ts`: reset `_dbPromise` on rejection, add `blocking(){db.close()}`, call `navigator.storage.persist()` after onboarding | 2.96 (0.96) | small **(C)** | Protects the vault handle, notes, memories and chats from eviction |
-| E8 | Gallery round-trip: pass through the source's `generationId`/`prompt` (not the gallery id), add a **Update original / Save as new** choice, share one `shouldConvertToJpg()` helper, replace `window.confirm` with the app modal | 2.95 (0.95) | medium | Title passthrough already done (0.5) |
-| E2 | Crop as a HistoryCommand that shifts every layer type recursively. Pending rect with Enter/Esc (the ToolHeader already promises this) | 2.88 (0.88) | medium | |
-| E9 | Text/shape: drop the `type !== 'image'` gizmo guards, double-click to re-edit text, `measureText` bounds, default text colour = foreground | 2.84 (0.84) | medium **(C)** | |
-| E1 | One `docToLayer(pt, transform, intrinsic)` at the CanvasViewport pointer step, used by brush, eraser, clone, mask and wand; scale the radius too | 2.82 (0.82) | medium | Unit-test the mapping (rotate/flip/scale/crop) |
-| E5 | Selection clipping: `getSelectionClip()` → Path2D or mask, applied in `paintStamp`, gradient, fill and adjustment commit. Add fill selection / delete-in-selection | 2.79 (0.79) | medium | Turns 4 decorative tools into functional ones |
-| E4 | Live stroke preview and spaced stamping (`max(1, r·0.25)`). Clone radius and pressure, fresh source per stroke, `disposeTools()` on doc change/unmount | 2.61 (0.61) | medium **(C)** | Jev said small at 0.42; it touches BrushEngine, CloneStamp and the renderer |
-| — | Recovery prompt when opened with a payload: a non-blocking banner, confirm before replacing | **(C)** P1 | small | Review M11 |
-| — | Ops: rotate the leaked Gemini key; decide whether to purge history with `git filter-repo` | P0 **(C)** | small | User action; destructive history rewrite needs explicit approval |
+| E3 | ✅ Done 2026-09-25 — autosave stores layers as lossless PNG, serializes masks, formatVersion 2, old JPEG records discarded | 2.99 (0.99) | medium | Data loss inside the data-loss-prevention feature. `AutosaveService.ts:28,117` |
+| T5 | ✅ Done 2026-09-25 — `_dbPromise` reset on rejection, `blocking()` reopens, `requestPersistentStorage()` called from OnboardingFlow handleFinish | 2.96 (0.96) | small **(C)** | Protects the vault handle, notes, memories and chats from eviction |
+| E8 | ✅ Done 2026-09-25 — source `generationId`/`prompt` passthrough, savedItemId → Update-original path via `updateItemInGallery`, `window.confirm` replaced by the app modal; the save modal now offers Update-original vs Save-as-new whenever a library original exists (JPEG warning folds into the same dialog) | 2.95 (0.95) | medium | Title passthrough already done (0.5) |
+| E2 | ✅ Done 2026-09-25 — pending crop rect with Enter/Esc; APPLY_CROP/RESTORE_CROP HistoryCommand shifts every layer type recursively through groups | 2.88 (0.88) | medium | |
+| E9 | ✅ Done 2026-09-25 — gizmo guards dropped (viewport, renderer, TransformEngine, ToolHeader), `measureText` bounds, default text colour = foreground; double-click (Type or Move tool) re-opens a text layer prefilled, commit is undoable via `updateTextLayer` | 2.84 (0.84) | medium **(C)** | |
+| E1 | ✅ Done 2026-09-25 — `core/geometry/docToLayer.ts` at the CanvasViewport pointer step for brush/eraser/clone/wand (mask rides the brush path), radius scaled by intrinsic/size; 9 unit tests | 2.82 (0.82) | medium | Unit-test the mapping (rotate/flip/scale/crop) |
+| E5 | ✅ Done 2026-09-25 — `getSelectionClip()` (Path2D, raster masks sampled to runs) + bitmap-space transform; brush and clone clip every stamp; gradient clips via `destination-in`; `fillSelection` (Shift+F5) and `deleteInSelection` (Delete/Alt+Backspace) with undo; adjustment commits lerp through a per-pixel selection coverage map (feather-aware) and the GPU preview clips to match | 2.79 (0.79) | medium | Turns 4 decorative tools into functional ones |
+| E4 | ✅ Done 2026-09-25 — live stroke preview via scratch canvas + renderer frame pump, spaced stamping both tools, clone radius `size/2·scale·pressure` + per-stroke source, `disposeTools()` on doc change/unmount | 2.61 (0.61) | medium **(C)** | Jev said small at 0.42; it touches BrushEngine, CloneStamp and the renderer |
+| — | ✅ Done 2026-09-25 — recovery with a payload is a non-blocking banner with explicit Restore/Discard | **(C)** P1 | small | Review M11 |
+| — | ✅ Ops 2026-09-25 — **Rotation verified complete.** New key in `.env` (`AQ.Ab8R…`) authenticates (HTTP 200 on `generativelanguage.googleapis.com/v1beta/models`); the leaked `AIzaSyDVSaEY…` key is **dead** (`API_KEY_INVALID`). Leak scope corrected: ONE key leaked, via the tracked `.env` (early commits) and the built Pages bundle at `c41fbfe` (same key); the `85b9546` "inline key" was a `placeholder="AIzaSy..."` false alarm. History purge remains the only open item (deferred; now cosmetic — key is dead). HEAD verified clean; `.env` untracked | P0 **(C)** | small | Rotation was the actual security fix; the purge is now purely cosmetic |
+
+**Key-rotation checklist (2026-09-25 — verified executed):** 1) old `AIzaSyDVSaEY…` key deleted/revoked (confirmed dead via API probe); 2) new key live in `.env` and confirmed loading through Vite (`loadEnv` → `define['process.env.GEMINI_API_KEY']`, dev-only inline; production bundles inline an empty string since the leak fix); 3) no second key existed — Cloud Console audit optional; 4) recommended hardening: API-key restrictions (HTTP referrer) on the new key.
 
 ### Phase 2: Feel (weeks 2–4)
 
 | ID | Work | Prio (conf) | Effort | Notes |
 |---|---|---|---|---|
-| E7 | Editor basics: new blank layer ("+" creates a transparent layer, "Place image…" moves to its own button), Image Size, Canvas Size, paste (Ctrl+V), merge down / flatten (reuse `LayerPainter`), export mask as B/W PNG, `[`/`]` brush size | 2.43 **(C)** P1 | large **(C)** | The upload/inpaint-prep workflow |
+| E7 | ✅ Done 2026-09-25 — audited: every sub-item shipped via M5 items 5+6 (blank-layer `+`, separate Place-image button, Image Size Ctrl+J, Canvas Size Ctrl+K, paste Ctrl+V, merge down/flatten, mask export Ctrl+Shift+M, `[`/`]` brush size) | 2.43 **(C)** P1 | large **(C)** | The upload/inpaint-prep workflow |
 | E6 | History memory: byte cap (~512 MB) and `.close()` evicted bitmaps now; dirty-rect diffs next | 2.33 **(C)** P1 | medium | Blocks routine 4k/8k use |
-| M1 | Route transition: cover 220 ms / hold 80 ms / reveal 320 ms `power3.out` (about 650 ms total). Full cinematic only on the first visit per module, then a 150 ms crossfade. Make it interruptible; wrap `run()` in try/finally | 2.23 (0.70) | small | Also fix the Header re-expanding the old group (motion #3) |
-| M3 | RollingText: render the real label once (`aria-label` or an `sr-only` span), with the duplicate letters `aria-hidden` | 2.13 (0.74) | small | Also unblocks e2e selectors |
+| M1 | ✅ Done 2026-09-25 — retimed to cover 220 ms / hold 80 ms / reveal 320 ms `power3.out` (about 650 ms; `FX_TIMING` in `routeFx.ts`); full cinematic only on first visit per session (`visited` set in the director), repeats crossfade 150 ms; director `run()` wrapped in try/finally plus a 4 s deadline race per overlay await (un-wedges killed timelines, review #4); latest-wins now includes the origin tab (review #2); mid-reveal navigation routes through the crossfade path instead of chaining a second cinematic (review #5); overlay blocks pointer input during cover, releases at reveal start (review #2); Header auto-expand gated on an actual tab change, fixing the old-group reopen (motion #3) | 2.23 (0.70) | small | Also fix the Header re-expanding the old group (motion #3) |
+| M3 | ✅ Done 2026-09-25 — RollingText renders the real label once as an `sr-only` span; every animated letter span is `aria-hidden` (screen readers previously read "HHoommee", e2e selectors matched duplicates) | 2.13 (0.74) | small | Also unblocks e2e selectors |
 | D1 | Type scale: add Tailwind `fontSize` tokens (`2xs`=11px floor, `xs`=12px). Codemod `text-[9px]`/`[10px]` → tokens; cap `tracking` at 0.1em; drop `font-black` from body copy | 2.03 (0.89) | medium **(C)** | Biggest single legibility win |
 | D2 | One modal: extend `ConfirmationModal` into `Modal` (labels, Escape, focus trap/restore, `role=dialog`, `aria-labelledby`, exit animation), then migrate the 36 overlays incrementally, starting with the image editor's three | 1.93 (0.85) | large **(C)** | |
-| M2 | Stop the IdleOverlay rAF when hidden (depend on `isVisible`, cache the computed colour). ChromaticText: pause when disabled or hidden, drop the random flashes | 1.78 (0.74) | small | Constant CPU drain |
+| M2 | ✅ Done 2026-09-25 — IdleOverlay matrix rAF only starts when `isVisible` (dep added; previously burned CPU 24/7 while autoAlpha: 0) and theme colours are cached once per run instead of two `getComputedStyle` calls per drawn frame; ChromaticText stops its rAF loop entirely when disabled or off-screen (IntersectionObserver) and the contrast-flash random moved out of render into the tick state | 1.78 (0.74) | small | Constant CPU drain |
 | D3 | z-index tokens (`base/raised/dropdown/overlay/modal/toast/system`) in the Tailwind config. Replace the 34 arbitrary values | 1.72 (0.72) | medium | |
 
 ### Phase 2b: Layout and legibility (from the visual walk and critique; Jev-scored)
@@ -122,7 +126,7 @@ Priority is Jev's score (0 = P3 … 3 = P0) with its confidence; the effort buck
 
 1. **GitHub Pages (T4, Jev 0.79 at conf 0.21, so my call):** kill it. The app needs `server.ts` for most features, and the Pages build has been broken since July without anyone noticing. Delete `deploy.yml`, `gh-pages`, the `deploy`/`predeploy` scripts and `homepage`, unless a static demo mode is wanted.
 2. **Git history purge** of the leaked key: rotation is mandatory; the purge (`git filter-repo` plus force-push) is optional and destructive.
-3. **Image Editor scope:** confirm the M5 freeze (no new tools until Phase 1's E-items land).
+3. **Image Editor scope:** confirm the M5 freeze (no new tools until Phase 1's E-items land). *Update 2026-09-25: E-items landed; freeze effectively satisfied — new decision needed only if new tools are wanted.*
 
 ---
 

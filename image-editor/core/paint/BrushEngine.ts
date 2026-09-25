@@ -8,6 +8,7 @@
 import { getSnapshot, dispatch } from '../store';
 import { pushCommand } from '../history/HistoryManager';
 import { findLayerById } from '../layers/layerTree';
+import { selectionClipInBitmapSpace } from '../geometry/selectionClip';
 import type { BrushPoint, HistoryCommand, ImageLayer } from '../types';
 
 // ─── Internal state ──────────────────────────────────────────────────────────
@@ -19,6 +20,13 @@ let _ctx:        OffscreenCanvasRenderingContext2D | null = null;
 let _prevBitmap: ImageBitmap | null = null;   // layer bitmap (or mask bitmap) before stroke, for undo
 let _points:     BrushPoint[] = [];
 let _isStroking  = false;
+let _docScale   = 1;   // bitmap px per doc px — scales the brush radius (E1)
+let _lastStamp:  { x: number; y: number } | null = null; // for spaced stamping (H5)
+let _clipPath:   Path2D | null = null; // active selection, in bitmap space (E5)
+
+/** Frame pump: the active CanvasRenderer registers scheduleFrame so stroke
+ *  stamps (which mutate an OffscreenCanvas, not the store) repaint live. */
+let _requestFrame: (() => void) | null = null;
 
 // ─── Catmull-Rom helpers ──────────────────────────────────────────────────────
 
@@ -42,7 +50,9 @@ function paintStamp(x: number, y: number, pressure: number, isEraser: boolean): 
   if (!_ctx) return;
   const { brush, colors } = getSnapshot();
 
-  const radius = Math.max(0.5, (brush.size / 2) * Math.max(0.1, pressure));
+  // Brush size is authored in document px; the stamp lands in bitmap px, so
+  // scale the radius by the layer's bitmap/doc ratio (E1).
+  const radius = Math.max(0.5, (brush.size / 2) * _docScale * Math.max(0.1, pressure));
   const alpha  = (brush.opacity / 100) * (brush.flow / 100) * Math.max(0.1, pressure);
 
   // Mask painting only ever reads the alpha channel at composite time (destination-in
@@ -57,6 +67,8 @@ function paintStamp(x: number, y: number, pressure: number, isEraser: boolean): 
   _ctx.save();
   _ctx.globalAlpha = alpha;
   _ctx.globalCompositeOperation = compositeOp;
+  // Clip to the active selection (E5) — captured at beginStroke in bitmap space.
+  if (_clipPath) _ctx.clip(_clipPath);
 
   if (brush.hardness >= 0.99) {
     _ctx.fillStyle = fillColor;
@@ -74,6 +86,35 @@ function paintStamp(x: number, y: number, pressure: number, isEraser: boolean): 
     _ctx.fill();
   }
   _ctx.restore();
+}  /** Stamps along the segment from the last stamp to (x,y) at fixed spacing
+ *  (review H5): one stamp per pointer event leaves dotted gaps on fast strokes.
+ *  Spacing = max(1, r·0.25), with the radius in bitmap px. */
+function stampSpaced(x: number, y: number, pressure: number, isEraser: boolean): void {
+  const { brush } = getSnapshot();
+  const radius = Math.max(0.5, (brush.size / 2) * _docScale * Math.max(0.1, pressure));
+  const spacing = Math.max(1, radius * 0.25);
+
+  if (!_lastStamp) {
+    paintStamp(x, y, pressure, isEraser);
+    _lastStamp = { x, y };
+    _requestFrame?.(); // repaint the live stroke preview (H4)
+    return;
+  }
+
+  const dx = x - _lastStamp.x;
+  const dy = y - _lastStamp.y;
+  const dist = Math.hypot(dx, dy);
+  if (dist < spacing) return; // too close — skip (keeps slow strokes even)
+
+  const steps = Math.floor(dist / spacing);
+  for (let i = 1; i <= steps; i++) {
+    const t = (i * spacing) / dist;
+    paintStamp(_lastStamp.x + dx * t, _lastStamp.y + dy * t, pressure, isEraser);
+  }
+  // Carry the remainder so the next segment continues from where we stopped.
+  const covered = steps * spacing;
+  _lastStamp = { x: _lastStamp.x + (dx * covered) / dist, y: _lastStamp.y + (dy * covered) / dist };
+  _requestFrame?.(); // repaint the live stroke preview (H4)
 }
 
 // ─── Public API ───────────────────────────────────────────────────────────────
@@ -81,7 +122,11 @@ function paintStamp(x: number, y: number, pressure: number, isEraser: boolean): 
 export const BrushEngine = {
   get isStroking(): boolean { return _isStroking; },
 
-  beginStroke(layerId: string, target: 'color' | 'mask' = 'color'): void {
+  /** Layer id currently being painted — the viewport maps doc coords into this
+   *  layer's bitmap space before calling addPoint. Null between strokes. */
+  get activeLayerId(): string | null { return _layerId; },
+
+  beginStroke(layerId: string, target: 'color' | 'mask' = 'color', docScale = 1): void {
     const { document: doc } = getSnapshot();
     const layer = (doc && findLayerById(doc.layers, layerId)) as ImageLayer | undefined;
     if (!layer || layer.type !== 'image') return;
@@ -91,11 +136,20 @@ export const BrushEngine = {
 
     _layerId    = layerId;
     _target     = target;
+    _docScale   = docScale > 0 ? docScale : 1;
     _prevBitmap = sourceBitmap;
     _canvas     = new OffscreenCanvas(sourceBitmap.width, sourceBitmap.height);
     _ctx        = _canvas.getContext('2d');
     _ctx?.drawImage(sourceBitmap, 0, 0);
     _points     = [];
+    _lastStamp  = null;
+    // Capture the selection clip in bitmap space once per stroke (E5) — the
+    // selection is doc-space; transform it through the layer matrix.
+    _clipPath   = selectionClipInBitmapSpace({
+      transform: layer.transform,
+      intrinsicWidth: layer.intrinsicWidth,
+      intrinsicHeight: layer.intrinsicHeight,
+    });
     _isStroking = true;
   },
 
@@ -109,9 +163,9 @@ export const BrushEngine = {
     if (_points.length >= 4) {
       const i = _points.length - 1;
       const smoothed = catmullRom(_points[i - 3], _points[i - 2], _points[i - 1], _points[i], 0.5);
-      paintStamp(smoothed.x, smoothed.y, pressure, isEraser);
+      stampSpaced(smoothed.x, smoothed.y, pressure, isEraser);
     } else {
-      paintStamp(x, y, pressure, isEraser);
+      stampSpaced(x, y, pressure, isEraser);
     }
   },
 
@@ -130,6 +184,8 @@ export const BrushEngine = {
     _ctx        = null;
     _prevBitmap = null;
     _points     = [];
+    _lastStamp  = null;
+    _clipPath   = null;
 
     const actionType = target === 'mask' ? 'REPLACE_LAYER_MASK_BITMAP' : 'REPLACE_LAYER_BITMAP';
     createImageBitmap(canvas).then((newBitmap) => {
@@ -137,6 +193,8 @@ export const BrushEngine = {
         id:        crypto.randomUUID(),
         label:     target === 'mask' ? 'Mask stroke' : 'Brush stroke',
         timestamp: Date.now(),
+        // H3: declare held bitmaps so the byte-cap can account and free them.
+        bitmapRefs: { 'new (do)': newBitmap, 'prev (undo)': prevBitmap },
         do:   () => dispatch({ type: actionType, layerId, bitmap: newBitmap }),
         undo: () => dispatch({ type: actionType, layerId, bitmap: prevBitmap }),
       };
@@ -144,8 +202,15 @@ export const BrushEngine = {
     });
   },
 
-  /** In M3, live stroke preview is not implemented — returns null. */
-  getScratchBitmap(): ImageBitmap | null { return null; },
+  /** Registers the renderer's frame pump so stamps repaint the live preview.
+   *  Pass null to unregister (renderer stop). */
+  setRequestFrame(fn: (() => void) | null): void { _requestFrame = fn; },
+
+  /** Live stroke preview (review H4): the in-progress stroke canvas, in the
+   *  layer's bitmap space. The renderer draws it in place of layer.bitmap for
+   *  the stroking layer so users see pixels as they paint, not only on
+   *  pointerup. Null when no stroke is active. */
+  getScratchBitmap(): OffscreenCanvas | null { return _isStroking ? _canvas : null; },
 
   dispose(): void {
     _isStroking = false;
@@ -155,5 +220,8 @@ export const BrushEngine = {
     _target     = 'color';
     _prevBitmap = null;
     _points     = [];
+    _lastStamp  = null;
+    _clipPath   = null;
+    _docScale   = 1;
   },
 };

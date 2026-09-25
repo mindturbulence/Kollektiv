@@ -268,21 +268,21 @@ export const TagSuggestionRow: React.FC<{
       {!suggestions && !isLoading && !error && (
         <button
           onClick={handleSuggest}
-          className="form-btn text-[10px] font-black uppercase tracking-widest px-4 py-2 border border-white/10 hover:border-primary/40 hover:text-primary transition-all"
+          className="form-btn text-2xs font-black uppercase tracking-widest px-4 py-2 border border-white/10 hover:border-primary/40 hover:text-primary transition-all"
         >
           SUGGEST TAGS
         </button>
       )}
 
       {isLoading && (
-        <div className="flex items-center gap-2 text-[10px] font-mono text-base-content/50 animate-pulse">
+        <div className="flex items-center gap-2 text-2xs font-mono text-base-content/50 animate-pulse">
           <span className="w-3 h-3 rounded-full border border-primary border-t-transparent animate-spin" />
           Analysing image...
         </div>
       )}
 
       {error && (
-        <div className="text-[10px] font-mono text-error/80 p-2 bg-error/5 border border-error/20">
+        <div className="text-2xs font-mono text-error/80 p-2 bg-error/5 border border-error/20">
           {error}
         </div>
       )}
@@ -294,7 +294,7 @@ export const TagSuggestionRow: React.FC<{
               <button
                 key={tag}
                 onClick={() => handleToggle(tag)}
-                className={`text-[10px] font-nunito font-bold uppercase tracking-widest px-2.5 py-1 transition-all border ${
+                className={`text-2xs font-nunito font-bold uppercase tracking-widest px-2.5 py-1 transition-all border ${
                   selected.has(tag)
                     ? 'bg-primary/20 text-primary border-primary/40'
                     : 'bg-white/5 text-base-content/60 border-white/10 hover:border-primary/30 hover:text-base-content/80'
@@ -308,7 +308,7 @@ export const TagSuggestionRow: React.FC<{
             <button
               onClick={handleApply}
               disabled={selected.size === 0 || applying}
-              className={`form-btn text-[10px] font-black uppercase tracking-widest px-4 py-1.5 transition-all ${
+              className={`form-btn text-2xs font-black uppercase tracking-widest px-4 py-1.5 transition-all ${
                 selected.size > 0 && !applying
                   ? 'bg-primary/20 text-primary border border-primary/40 hover:bg-primary/30'
                   : 'text-base-content/30 border border-white/5 cursor-not-allowed'
@@ -318,7 +318,7 @@ export const TagSuggestionRow: React.FC<{
             </button>
             <button
               onClick={() => { setSuggestions(null); setSelected(new Set()); setError(null); }}
-              className="form-btn text-[10px] font-black uppercase tracking-widest px-4 py-1.5 border border-white/10 hover:border-error/40 hover:text-error transition-all"
+              className="form-btn text-2xs font-black uppercase tracking-widest px-4 py-1.5 border border-white/10 hover:border-error/40 hover:text-error transition-all"
             >
               DISMISS
             </button>
@@ -658,7 +658,7 @@ const ItemDetailView: React.FC<ItemDetailViewProps> = ({ items, currentIndex, is
                     <div className="absolute top-6 left-6 right-6 flex justify-between items-center pointer-events-none z-30">
                         <div className="pointer-events-auto flex items-center gap-2 bg-black/40 backdrop-blur-md p-1 border border-white/5">
                             <button onClick={() => handleGlobalNavigate('prev')} className="p-1.5 text-white/30 hover:text-primary transition-colors"><ChevronLeftIcon className="w-4 h-4" /></button>
-                            <span className="font-mono text-[10px] font-bold text-white/60 px-2">{currentIndex + 1} / {items.length}</span>
+                            <span className="font-mono text-2xs font-bold text-white/60 px-2">{currentIndex + 1} / {items.length}</span>
                             <button onClick={() => handleGlobalNavigate('next')} className="p-1.5 text-white/30 hover:text-primary transition-colors"><ChevronRightIcon className="w-4 h-4" /></button>
                         </div>
                     </div>
@@ -706,7 +706,7 @@ const ItemDetailView: React.FC<ItemDetailViewProps> = ({ items, currentIndex, is
                         <button onClick={(e) => { e.stopPropagation(); audioService.playClick(); onTogglePin(item.id); }} className={`p-1.5 transition-all ${isPinned ? 'text-primary' : 'text-base-content/20 hover:text-base-content/60'}`}>
                             <ThumbTackIcon className="w-5 h-5" />
                         </button>
-                        <span className="text-[10px] font-nunito font-bold uppercase tracking-[0.2em] text-base-content/40">Details</span>
+                        <span className="text-2xs font-nunito font-bold uppercase tracking-[0.2em] text-base-content/40">Details</span>
                     </div>
 
                     <button onClick={handleClose} className="p-2 text-red-500 hover:text-red-400 hover:bg-red-500/10 rounded-full transition-all group/close">
@@ -732,13 +732,13 @@ const ItemDetailView: React.FC<ItemDetailViewProps> = ({ items, currentIndex, is
                                             onChange={e => setIsNsfw(e.target.checked)} 
                                             className="toggle toggle-primary toggle-xs" 
                                         />
-                                        <span className="text-[10px] font-nunito font-bold uppercase tracking-widest text-base-content/60">Not Safe For Work</span>
+                                        <span className="text-2xs font-nunito font-bold uppercase tracking-widest text-base-content/60">Not Safe For Work</span>
                                     </label>
                                 </InfoRow>
                                 <InfoRow label="Neural Tags">
                                     <div className="flex flex-wrap items-center gap-2 p-3 bg-white/5 min-h-[52px]">
                                         {tags.map(tag => (
-                                            <div key={tag} className="flex items-center gap-2 bg-primary/10 text-[10px] font-nunito font-bold uppercase tracking-widest px-2.1 py-0.5">
+                                            <div key={tag} className="flex items-center gap-2 bg-primary/10 text-2xs font-nunito font-bold uppercase tracking-widest px-2.1 py-0.5">
                                                 <span>{tag}</span>
                                                 <button type="button" onClick={() => { audioService.playClick(); setTags(tags.filter(t => t !== tag)); }} className="text-error hover:text-error-content transition-colors leading-none">&times;</button>
                                             </div>
@@ -748,7 +748,7 @@ const ItemDetailView: React.FC<ItemDetailViewProps> = ({ items, currentIndex, is
                                             value={tagInput} 
                                             onChange={(e) => setTagInput(e.target.value)} 
                                             onKeyDown={handleTagInputKeyDown} 
-                                            className="bg-transparent border-none focus:outline-none focus:ring-0 text-[10px] font-nunito font-bold uppercase tracking-widest px-1 h-8" 
+                                            className="bg-transparent border-none focus:outline-none focus:ring-0 text-2xs font-nunito font-bold uppercase tracking-widest px-1 h-8" 
                                             placeholder="ADD TOKEN..."
                                         />
                                     </div>
@@ -763,7 +763,7 @@ const ItemDetailView: React.FC<ItemDetailViewProps> = ({ items, currentIndex, is
                                     label="POST TITLE" 
                                     action={
                                         <div className="flex items-center gap-2">
-                                            <ScramblingText text={item.id} className="text-[10px] font-mono text-base-content/30" />
+                                            <ScramblingText text={item.id} className="text-2xs font-mono text-base-content/30" />
                                         </div>
                                     }
                                 >
@@ -773,7 +773,7 @@ const ItemDetailView: React.FC<ItemDetailViewProps> = ({ items, currentIndex, is
                                             {item.isNsfw && (
                                                 <div className="flex items-center gap-2">
                                                     <span className="w-1.5 h-1.5 rounded-full bg-warning animate-pulse"></span>
-                                                    <span className="text-[10px] font-nunito font-bold uppercase tracking-widest text-warning">Not Safe For Work</span>
+                                                    <span className="text-2xs font-nunito font-bold uppercase tracking-widest text-warning">Not Safe For Work</span>
                                                 </div>
                                             )}
                                             {isPublishable && (
@@ -833,19 +833,19 @@ const ItemDetailView: React.FC<ItemDetailViewProps> = ({ items, currentIndex, is
                                         {metadata && (
                                             <div className="grid grid-cols-2 gap-x-8 gap-y-4">
                                                 <div className="flex flex-col gap-1">
-                                                    <span className="text-[11px] font-mono tracking-widest text-base-content/30 uppercase">RESOLUTION</span>
+                                                    <span className="text-2xs font-mono tracking-widest text-base-content/30 uppercase">RESOLUTION</span>
                                                     <ScramblingText text={`${metadata.width} × ${metadata.height}`} className="text-base-content/70" />
                                                 </div>
                                                 <div className="flex flex-col gap-1">
-                                                    <span className="text-[11px] font-mono tracking-widest text-base-content/30 uppercase">ASPECT RATIO</span>
+                                                    <span className="text-2xs font-mono tracking-widest text-base-content/30 uppercase">ASPECT RATIO</span>
                                                     <ScramblingText text={metadata.ratio} className="text-base-content/70" />
                                                 </div>
                                                 <div className="flex flex-col gap-1">
-                                                    <span className="text-[11px] font-mono tracking-widest text-base-content/30 uppercase">FILE SIZE</span>
+                                                    <span className="text-2xs font-mono tracking-widest text-base-content/30 uppercase">FILE SIZE</span>
                                                     <ScramblingText text={formatFileSize(metadata.size)} className="text-base-content/70" />
                                                 </div>
                                                 <div className="flex flex-col gap-1">
-                                                    <span className="text-[11px] font-mono tracking-widest text-base-content/30 uppercase">SAMPLE COUNT</span>
+                                                    <span className="text-2xs font-mono tracking-widest text-base-content/30 uppercase">SAMPLE COUNT</span>
                                                     <ScramblingText text={`${activeImageIndex + 1} OF ${currentMediaUrls.length}`} className="text-base-content/70" />
                                                 </div>
                                             </div>
@@ -856,32 +856,32 @@ const ItemDetailView: React.FC<ItemDetailViewProps> = ({ items, currentIndex, is
                                             <div className="grid grid-cols-2 gap-x-8 gap-y-4 mt-4 pt-4 border-t border-white/5">
                                                 {generation.params.model && (
                                                     <div className="flex flex-col gap-1">
-                                                        <span className="text-[11px] font-mono tracking-widest text-base-content/30 uppercase">MODEL</span>
+                                                        <span className="text-2xs font-mono tracking-widest text-base-content/30 uppercase">MODEL</span>
                                                         <ScramblingText text={generation.params.model} className="text-base-content/70" />
                                                     </div>
                                                 )}
                                                 {generation.params.sampler && (
                                                     <div className="flex flex-col gap-1">
-                                                        <span className="text-[11px] font-mono tracking-widest text-base-content/30 uppercase">SAMPLER</span>
+                                                        <span className="text-2xs font-mono tracking-widest text-base-content/30 uppercase">SAMPLER</span>
                                                         <ScramblingText text={generation.params.sampler} className="text-base-content/70" />
                                                     </div>
                                                 )}
                                                 <div className="flex flex-col gap-1">
-                                                    <span className="text-[11px] font-mono tracking-widest text-base-content/30 uppercase">STEPS</span>
+                                                    <span className="text-2xs font-mono tracking-widest text-base-content/30 uppercase">STEPS</span>
                                                     <ScramblingText text={String(generation.params.steps)} className="text-base-content/70" />
                                                 </div>
                                                 <div className="flex flex-col gap-1">
-                                                    <span className="text-[11px] font-mono tracking-widest text-base-content/30 uppercase">CFG</span>
+                                                    <span className="text-2xs font-mono tracking-widest text-base-content/30 uppercase">CFG</span>
                                                     <ScramblingText text={String(generation.params.cfgScale)} className="text-base-content/70" />
                                                 </div>
                                                 {generation.resolvedSeed != null && (
                                                     <div className="flex flex-col gap-1">
-                                                        <span className="text-[11px] font-mono tracking-widest text-base-content/30 uppercase">SEED</span>
+                                                        <span className="text-2xs font-mono tracking-widest text-base-content/30 uppercase">SEED</span>
                                                         <ScramblingText text={String(generation.resolvedSeed)} className="text-base-content/70" />
                                                     </div>
                                                 )}
                                                 <div className="flex flex-col gap-1">
-                                                    <span className="text-[11px] font-mono tracking-widest text-base-content/30 uppercase">BACKEND</span>
+                                                    <span className="text-2xs font-mono tracking-widest text-base-content/30 uppercase">BACKEND</span>
                                                     <ScramblingText text={generation.backendId} className="text-base-content/70" />
                                                 </div>
                                                 {(generation.backendId === 'comfy' || generation.backendId === 'a1111') && (

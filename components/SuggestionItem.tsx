@@ -156,7 +156,7 @@ export const SuggestionItem: React.FC<SuggestionItemProps> = ({
             {isGenerating ? (
                 <div className="flex flex-col items-center justify-center py-12 text-center space-y-6">
                     <LoadingSpinner size={48} />
-                    <p className="font-black text-[10px] uppercase tracking-[0.2em] text-primary animate-pulse">{loadingMsg}</p>
+                    <p className="font-black text-2xs uppercase tracking-[0.2em] text-primary animate-pulse">{loadingMsg}</p>
                 </div>
             ) : mediaUrl ? (
                 <div className="space-y-4 animate-fade-in">
@@ -173,7 +173,7 @@ export const SuggestionItem: React.FC<SuggestionItemProps> = ({
                         </div>
                     </div>
                     <div className="flex justify-between items-center">
-                         <span className="text-[9px] font-black uppercase tracking-[0.2em] text-primary/60">{targetAI} Result Archive</span>
+                         <span className="text-2xs font-black uppercase tracking-[0.2em] text-primary/60">{targetAI} Result Archive</span>
                          <button onClick={() => setMediaUrl(null)} className="uppercase tracking-widest text-base-content/30 hover:text-primary transition-colors">Close Archive</button>
                     </div>
                 </div>
@@ -182,7 +182,7 @@ export const SuggestionItem: React.FC<SuggestionItemProps> = ({
                     {/* Header Section */}
                     <div className="mb-6 space-y-3">
                         <div className="flex items-center justify-between gap-3">
-                            <span className="text-[10px] font-black uppercase tracking-[0.4em] text-primary">
+                            <span className="text-2xs font-black uppercase tracking-[0.4em] text-primary">
                                 {isAbstraction ? 'ANALYZED MEDIA' : (targetAI || 'REFINED RESULT')}
                             </span>
                             <div className="flex gap-1">
@@ -204,7 +204,7 @@ export const SuggestionItem: React.FC<SuggestionItemProps> = ({
 
                     {generationError && (
                         <div className="p-2 bg-error/10 border border-error/20 mt-4 animate-fade-in">
-                             <p className="text-error font-bold text-[9px] uppercase tracking-widest">{generationError}</p>
+                             <p className="text-error font-bold text-2xs uppercase tracking-widest">{generationError}</p>
                         </div>
                     )}
 
@@ -223,7 +223,7 @@ export const SuggestionItem: React.FC<SuggestionItemProps> = ({
                                         <header className="flex justify-between items-center mb-4">
                                             <div className="flex items-center gap-2">
                                                 <BracesIcon className="w-3.5 h-3.5 text-primary" />
-                                                <span className="text-[10px] font-black uppercase tracking-widest text-primary">Processed Anatomy</span>
+                                                <span className="text-2xs font-black uppercase tracking-widest text-primary">Processed Anatomy</span>
                                             </div>
                                             <div className="flex gap-4">
                                                 <button
@@ -242,7 +242,7 @@ export const SuggestionItem: React.FC<SuggestionItemProps> = ({
                                                 </button>
                                             </div>
                                         </header>
-                                        <pre className="text-[11px] font-mono text-base-content/70 leading-relaxed overflow-x-auto whitespace-pre-wrap max-h-80 custom-scrollbar">
+                                        <pre className="text-2xs font-mono text-base-content/70 leading-relaxed overflow-x-auto whitespace-pre-wrap max-h-80 custom-scrollbar">
                                             {JSON.stringify(jsonData, null, 2)}
                                         </pre>
                                     </div>
@@ -266,7 +266,7 @@ export const SuggestionItem: React.FC<SuggestionItemProps> = ({
                             <div className="flex items-center gap-6">
                                 <button
                                     onClick={() => setIsJsonOpen(!isJsonOpen)}
-                                    className={`text-[10px] font-black uppercase tracking-widest transition-colors flex items-center gap-2 group/btn ${isJsonOpen ? 'text-primary' : 'text-base-content/30 hover:text-primary'}`}
+                                    className={`text-2xs font-black uppercase tracking-widest transition-colors flex items-center gap-2 group/btn ${isJsonOpen ? 'text-primary' : 'text-base-content/30 hover:text-primary'}`}
                                 >
                                     <BracesIcon className={`w-3.5 h-3.5 group-hover/btn:scale-110 transition-transform ${isJsonOpen ? 'opacity-100 animate-pulse' : 'opacity-40'}`} />
                                     {isJsonOpen ? 'CLOSE JSON' : 'JSON VERSION'}

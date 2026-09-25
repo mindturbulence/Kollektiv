@@ -14,7 +14,7 @@ interface SavedPromptCardProps {
 }
 
 const KeywordTag: React.FC<{ text: string }> = ({ text }) => (
-    <span className="bg-base-100/40 backdrop-blur-xl text-base-content text-[9px] font-black uppercase tracking-widest py-1.5 px-3 rounded-none">
+    <span className="bg-base-100/40 backdrop-blur-xl text-base-content text-2xs font-black uppercase tracking-widest py-1.5 px-3 rounded-none">
         {text}
     </span>
 );
@@ -85,7 +85,7 @@ const SavedPromptCard: React.FC<SavedPromptCardProps> = memo(({
         {/* Header Section - Category Label and Menu Button Aligned */}
         <div className="mb-6 space-y-3">
           <div className="flex items-center gap-3">
-             <span className="text-[10px] font-black uppercase tracking-[0.4em] text-primary/60">{displayCategory}</span>
+             <span className="text-2xs font-black uppercase tracking-[0.4em] text-primary/60">{displayCategory}</span>
              <div className="flex-grow h-px bg-base-300/50"></div>
              
               <div className="relative flex-shrink-0" ref={menuRef}>
@@ -112,7 +112,7 @@ const SavedPromptCard: React.FC<SavedPromptCardProps> = memo(({
               {title}
             </h2>
             <div className="flex items-center gap-4 opacity-40">
-                <span className="text-[9px] font-mono font-bold uppercase tracking-widest">ID: {prompt.id ? prompt.id.slice(-6) : 'N/A'}</span>
+                <span className="text-2xs font-mono font-bold uppercase tracking-widest">ID: {prompt.id ? prompt.id.slice(-6) : 'N/A'}</span>
             </div>
           </div>
         </div>

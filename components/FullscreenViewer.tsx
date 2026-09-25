@@ -421,8 +421,8 @@ const FullscreenViewer: React.FC<FullscreenViewerProps> = ({ items, currentIndex
                                 </span>
                             </div>
                             <div className="flex items-center gap-3 opacity-30">
-                                <span className="text-[11px] font-mono font-normal uppercase tracking-widest text-white/50">Registry ID:</span>
-                                <span className="text-[11px] font-mono font-normal uppercase tracking-widest text-white">
+                                <span className="text-2xs font-mono font-normal uppercase tracking-widest text-white/50">Registry ID:</span>
+                                <span className="text-2xs font-mono font-normal uppercase tracking-widest text-white">
                                     <ScramblingText text={itemGroup.id} />
                                 </span>
                             </div>
@@ -433,31 +433,31 @@ const FullscreenViewer: React.FC<FullscreenViewerProps> = ({ items, currentIndex
                             {metadata && (
                                 <>
                                     <div className="flex items-center gap-3">
-                                        <span className="text-[11px] font-mono font-normal text-white/30 uppercase tracking-widest whitespace-nowrap pt-0.5">Resolution:</span>
+                                        <span className="text-2xs font-mono font-normal text-white/30 uppercase tracking-widest whitespace-nowrap pt-0.5">Resolution:</span>
                                         <div className="min-w-[120px] flex items-center">
-                                            <ScramblingText className="text-[11px] font-mono font-normal text-white tracking-tighter" text={`${metadata.width} × ${metadata.height}`} />
+                                            <ScramblingText className="text-2xs font-mono font-normal text-white tracking-tighter" text={`${metadata.width} × ${metadata.height}`} />
                                         </div>
                                     </div>
                                     <div className="w-px h-5 bg-white/5" />
                                     <div className="flex items-center gap-3">
-                                        <span className="text-[11px] font-mono font-normal text-white/30 uppercase tracking-widest whitespace-nowrap pt-0.5">Aspect Ratio:</span>
+                                        <span className="text-2xs font-mono font-normal text-white/30 uppercase tracking-widest whitespace-nowrap pt-0.5">Aspect Ratio:</span>
                                         <div className="min-w-[60px] flex items-center">
-                                            <ScramblingText className="text-[11px] font-mono font-normal text-white tracking-tighter" text={metadata.ratio} />
+                                            <ScramblingText className="text-2xs font-mono font-normal text-white tracking-tighter" text={metadata.ratio} />
                                         </div>
                                     </div>
                                     <div className="w-px h-5 bg-white/5" />
                                     <div className="flex items-center gap-3">
-                                        <span className="text-[11px] font-mono font-normal text-white/30 uppercase tracking-widest whitespace-nowrap pt-0.5">File Size:</span>
+                                        <span className="text-2xs font-mono font-normal text-white/30 uppercase tracking-widest whitespace-nowrap pt-0.5">File Size:</span>
                                         <div className="min-w-[80px] flex items-center">
-                                            <ScramblingText className="text-[11px] font-mono font-normal text-white tracking-tighter" text={formatFileSize(metadata.size)} />
+                                            <ScramblingText className="text-2xs font-mono font-normal text-white tracking-tighter" text={formatFileSize(metadata.size)} />
                                         </div>
                                     </div>
                                 </>
                             )}
                             <div className="w-px h-5 bg-white/5" />
                             <div className="flex items-center gap-3">
-                                <span className="text-[11px] font-mono font-normal text-white/30 uppercase tracking-widest whitespace-nowrap">Media Library:</span>
-                                <span className="text-[11px] font-mono font-normal text-white tracking-tighter min-w-[50px]">
+                                <span className="text-2xs font-mono font-normal text-white/30 uppercase tracking-widest whitespace-nowrap">Media Library:</span>
+                                <span className="text-2xs font-mono font-normal text-white tracking-tighter min-w-[50px]">
                                     {String(currentImageIndex + 1).padStart(2, '0')} / {String(itemGroup.urls.length).padStart(2, '0')}
                                 </span>
                             </div>

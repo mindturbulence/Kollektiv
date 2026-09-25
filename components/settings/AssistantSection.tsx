@@ -24,13 +24,13 @@ const AssistantSection: React.FC<AssistantSectionProps> = ({ settings, handleSet
                 <div className="flex gap-0">
                     <button
                         onClick={() => setTab('persona')}
-                        className={`px-3 py-1 text-[10px] font-black uppercase tracking-[0.3em] font-logo border border-base-300/30 ${tab === 'persona' ? 'bg-primary/20 text-primary' : 'opacity-50 hover:opacity-100'}`}
+                        className={`px-3 py-1 text-2xs font-black uppercase tracking-[0.3em] font-logo border border-base-300/30 ${tab === 'persona' ? 'bg-primary/20 text-primary' : 'opacity-50 hover:opacity-100'}`}
                     >
                         Persona
                     </button>
                     <button
                         onClick={() => setTab('tools')}
-                        className={`px-3 py-1 text-[10px] font-black uppercase tracking-[0.3em] font-logo border border-base-300/30 border-l-0 ${tab === 'tools' ? 'bg-primary/20 text-primary' : 'opacity-50 hover:opacity-100'}`}
+                        className={`px-3 py-1 text-2xs font-black uppercase tracking-[0.3em] font-logo border border-base-300/30 border-l-0 ${tab === 'tools' ? 'bg-primary/20 text-primary' : 'opacity-50 hover:opacity-100'}`}
                     >
                         Tools
                     </button>
@@ -47,7 +47,7 @@ const AssistantSection: React.FC<AssistantSectionProps> = ({ settings, handleSet
                                 onChange={(e) => handleSettingsChange('autoTagEnabled', e.target.checked)}
                                 className="toggle toggle-primary toggle-xs"
                             />
-                            <span className="text-[10px] font-black uppercase tracking-widest">
+                            <span className="text-2xs font-black uppercase tracking-widest">
                                 {settings.autoTagEnabled ? 'ENABLED' : 'DISABLED'}
                             </span>
                         </label>
@@ -62,14 +62,14 @@ const AssistantSection: React.FC<AssistantSectionProps> = ({ settings, handleSet
                                     onChange={(e) => handleSettingsChange('providerFallbackEnabled', e.target.checked)}
                                     className="toggle toggle-primary toggle-xs"
                                 />
-                                <span className="text-[10px] font-black uppercase tracking-widest">
+                                <span className="text-2xs font-black uppercase tracking-widest">
                                     {settings.providerFallbackEnabled ? 'ENABLED' : 'DISABLED'}
                                 </span>
                             </label>
                             {settings.providerFallbackEnabled && (
                                 <div className="flex flex-col gap-2 p-4 bg-warning/5 border border-warning/20">
-                                    <p className="text-[9px] font-black uppercase text-warning tracking-widest">PRIVACY NOTICE</p>
-                                    <p className="text-[10px] font-bold leading-relaxed text-base-content/60">
+                                    <p className="text-2xs font-black uppercase text-warning tracking-widest">PRIVACY NOTICE</p>
+                                    <p className="text-2xs font-bold leading-relaxed text-base-content/60">
                                         Adding a cloud provider means a prompt from a local model can be sent to that cloud service when the local one fails.
                                     </p>
                                 </div>
@@ -89,7 +89,7 @@ const AssistantSection: React.FC<AssistantSectionProps> = ({ settings, handleSet
                                                     : [...chain, p];
                                                 handleSettingsChange('providerFallbackChain', next);
                                             }}
-                                            className={`px-3 py-1 text-[10px] font-black uppercase tracking-widest border transition-all ${
+                                            className={`px-3 py-1 text-2xs font-black uppercase tracking-widest border transition-all ${
                                                 !settings.providerFallbackEnabled
                                                     ? 'border-base-300/10 text-base-content/20 cursor-not-allowed'
                                                     : isSelected
@@ -103,7 +103,7 @@ const AssistantSection: React.FC<AssistantSectionProps> = ({ settings, handleSet
                                 })}
                             </div>
                             {settings.providerFallbackEnabled && (
-                                <p className="text-[9px] font-mono text-base-content/30">
+                                <p className="text-2xs font-mono text-base-content/30">
                                     Chain order: {((settings.providerFallbackChain || []) as string[]).join(' → ') || '(empty — no fallback will occur)'}
                                 </p>
                             )}
@@ -150,7 +150,7 @@ const AssistantSection: React.FC<AssistantSectionProps> = ({ settings, handleSet
                                 onChange={(e) => handleSettingsChange('voiceSilenceTimeoutMs', parseInt(e.target.value, 10))}
                                 className="range range-xs range-primary flex-1"
                             />
-                            <span className="text-[11px] font-mono font-bold text-primary w-16 text-right">
+                            <span className="text-2xs font-mono font-bold text-primary w-16 text-right">
                                 {settings.voiceSilenceTimeoutMs ?? 800}ms
                             </span>
                         </div>

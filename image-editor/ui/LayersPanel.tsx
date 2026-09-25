@@ -182,7 +182,7 @@ const LayerRow: React.FC<{
         ) : (
           <button
             type="button"
-            className="flex-shrink-0 px-0.5 text-[9px] font-mono leading-none text-base-content/30 hover:text-base-content/70"
+            className="flex-shrink-0 px-0.5 text-2xs font-mono leading-none text-base-content/30 hover:text-base-content/70"
             aria-label="Add mask"
             title="Add mask"
             onClick={(e) => { e.stopPropagation(); void LayerManager.addMask(layer.id); }}
@@ -254,6 +254,8 @@ const LayersPanel: React.FC = () => {
   const [expandedIds, setExpandedIds] = useState<Set<string>>(new Set());
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const lastClickedRef = useRef<string | null>(null);
+  // H8: opacity value when the current drag/keyboard edit started.
+  const opacityBeforeDragRef = useRef<number | null>(null);
 
   useEffect(() => {
     const handlePointerMove = (e: PointerEvent) => {
@@ -311,14 +313,39 @@ const LayersPanel: React.FC = () => {
     lastClickedRef.current = id;
   };
 
-  const handleAddLayer = async () => {
+  // H11: "+" creates a transparent blank layer (the standard touch-up /
+  // inpaint-mask workflow); importing an image got its own button.
+  const handleAddLayer = () => {
+    void LayerManager.addBlankLayer();
+  };
+
+  const handlePlaceImage = async () => {
     const file = await openFilePicker();
     if (!file) return;
     const layer = await importImage(file);
     LayerManager.addLayer(layer);
   };
 
+  const handleDuplicateLayer = () => {
+    if (activeLayerId) LayerManager.duplicateLayer(activeLayerId);
+  };
+
+  const handleMergeDown = () => {
+    void LayerManager.mergeDown().then((ok) => {
+      if (!ok) showMergeHint();
+    });
+  };
+
+  const handleFlatten = () => {
+    void LayerManager.flattenImage();
+  };
+
+  /** No toast host in this panel — hint via the disabled merge button state.
+   *  Kept as a named no-op so the failure path is explicit, not silent. */
+  const showMergeHint = () => {};
+
   const handleDeleteLayer = () => {
+    // Nested-aware (H12): removeLayer locates the layer anywhere in the tree.
     LayerManager.removeActiveLayer();
   };
 
@@ -338,6 +365,12 @@ const LayersPanel: React.FC = () => {
     [...(selectedIds.size > 0 ? selectedIds : activeLayerId ? [activeLayerId] : [])]
       .every((id) => layers.some((l) => l.id === id));
 
+  // Merge-down needs an active TOP-LEVEL layer with a non-group layer beneath.
+  const activeTopLevelIndex = activeLayerId ? layers.findIndex(l => l.id === activeLayerId) : -1;
+  const canMergeDown = activeTopLevelIndex >= 0 &&
+    activeTopLevelIndex < layers.length - 1 &&
+    layers[activeTopLevelIndex + 1].type !== 'group';
+
   return (
     <div className="relative flex-shrink-0 flex bg-base-200" style={{ width }}>
       <div
@@ -349,7 +382,7 @@ const LayersPanel: React.FC = () => {
       />
       <div className="flex-1 flex flex-col min-w-0 border-l border-base-content/5">
         <header className="panel-header h-9 px-3 flex-shrink-0">
-          <h3 className="self-center text-[10px] font-display uppercase tracking-widest text-base-content/70">
+          <h3 className="self-center text-2xs font-display uppercase tracking-widest text-base-content/70">
             Layers
           </h3>
         </header>
@@ -376,7 +409,7 @@ const LayersPanel: React.FC = () => {
               ))}
             </optgroup>
           </select>
-          <label className="flex items-center gap-2 text-[10px] font-mono text-base-content/60">
+          <label className="flex items-center gap-2 text-2xs font-mono text-base-content/60">
             Opacity
             <input
               type="range"
@@ -385,10 +418,34 @@ const LayersPanel: React.FC = () => {
               max={100}
               value={activeLayer?.opacity ?? 100}
               disabled={!activeLayer || activeLayerIsGroup}
+              // H8: drag live WITHOUT history (a drag used to push dozens of
+              // commands and evict real undo history), then ONE command on
+              // commit (pointerup / key release).
+              onPointerDown={(e) => {
+                opacityBeforeDragRef.current = activeLayer?.opacity ?? 100;
+                e.currentTarget.setPointerCapture(e.pointerId);
+              }}
               onChange={(e) =>
                 activeLayerId &&
-                LayerManager.setLayerOpacity(activeLayerId, Number(e.target.value))
+                LayerManager.setLayerOpacityLive(activeLayerId, Number(e.target.value))
               }
+              onPointerUp={() => {
+                if (activeLayerId && opacityBeforeDragRef.current !== null) {
+                  LayerManager.commitLayerOpacity(activeLayerId, opacityBeforeDragRef.current);
+                  opacityBeforeDragRef.current = null;
+                }
+              }}
+              onKeyDown={() => {
+                if (opacityBeforeDragRef.current === null) {
+                  opacityBeforeDragRef.current = activeLayer?.opacity ?? 100;
+                }
+              }}
+              onBlur={() => {
+                if (activeLayerId && opacityBeforeDragRef.current !== null) {
+                  LayerManager.commitLayerOpacity(activeLayerId, opacityBeforeDragRef.current);
+                  opacityBeforeDragRef.current = null;
+                }
+              }}
             />
             <span className="w-8 text-right">{activeLayerIsGroup ? '—' : `${activeLayer?.opacity ?? 100}%`}</span>
           </label>
@@ -437,10 +494,35 @@ const LayersPanel: React.FC = () => {
           <button
             type="button"
             className="flex-1 flex items-center justify-center text-base-content/60 hover:text-primary"
-            aria-label="Add layer"
+            aria-label="New blank layer"
+            title="New blank layer"
+            disabled={!document}
             onClick={handleAddLayer}
           >
             <PlusIcon className="w-4 h-4" />
+          </button>
+          <button
+            type="button"
+            className="flex-1 flex items-center justify-center text-base-content/60 hover:text-primary disabled:opacity-30"
+            aria-label="Place image as layer"
+            title="Place image as layer"
+            disabled={!document}
+            onClick={() => void handlePlaceImage()}
+          >
+            <PhotoIcon className="w-4 h-4" />
+          </button>
+          <button
+            type="button"
+            className="flex-1 flex items-center justify-center text-base-content/60 hover:text-primary disabled:opacity-30"
+            aria-label="Duplicate layer"
+            title="Duplicate layer"
+            disabled={!activeLayer || activeLayerIsGroup}
+            onClick={handleDuplicateLayer}
+          >
+            <svg viewBox="0 0 24 24" className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth="1.8">
+              <rect x="9" y="9" width="11" height="11" rx="1" />
+              <path d="M5 15H4a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1h10a1 1 0 0 1 1 1v1" />
+            </svg>
           </button>
           <button
             type="button"
@@ -456,12 +538,35 @@ const LayersPanel: React.FC = () => {
             type="button"
             className="flex-1 flex items-center justify-center text-base-content/60 hover:text-error disabled:opacity-30"
             aria-label="Delete layer"
+            title="Delete layer"
             disabled={!activeLayerId}
             onClick={handleDeleteLayer}
           >
             <DeleteIcon className="w-4 h-4" />
           </button>
         </footer>
+        <div className="h-7 flex-shrink-0 flex items-center gap-1 px-1 border-t border-base-content/5">
+          <button
+            type="button"
+            className="flex-1 px-1 py-0.5 text-2xs font-mono uppercase tracking-wide text-base-content/60 hover:text-primary border border-base-content/15 hover:border-primary disabled:opacity-30 disabled:cursor-not-allowed"
+            aria-label="Merge down"
+            title="Merge the active layer into the one beneath it"
+            disabled={!activeLayer || activeLayerIsGroup || !canMergeDown}
+            onClick={handleMergeDown}
+          >
+            Merge down
+          </button>
+          <button
+            type="button"
+            className="flex-1 px-1 py-0.5 text-2xs font-mono uppercase tracking-wide text-base-content/60 hover:text-primary border border-base-content/15 hover:border-primary disabled:opacity-30 disabled:cursor-not-allowed"
+            aria-label="Flatten image"
+            title="Flatten all layers into one background"
+            disabled={!document || layers.length < 2}
+            onClick={handleFlatten}
+          >
+            Flatten
+          </button>
+        </div>
       </div>
     </div>
   );

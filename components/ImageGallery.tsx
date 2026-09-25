@@ -330,7 +330,7 @@ const ImageGallery: React.FC<ImageGalleryProps> = ({
             <div className={`flex flex-col h-full w-full bg-base-100/50 backdrop-blur-xl relative overflow-hidden transition-all duration-300 ${isCategoryPanelCollapsed ? 'opacity-0 invisible' : 'opacity-100 visible'}`}>
               <div className={`flex flex-col h-full w-full overflow-hidden relative z-10 transition-opacity duration-200 ${isCategoryPanelCollapsed ? 'opacity-0 invisible' : 'opacity-100 visible'}`}>
               <div className="flex-shrink-0 h-14 px-6 flex items-center border-b border-white/5">
-                <h3 className="text-[11px] font-black uppercase tracking-[0.3em] text-primary">Category Folder</h3>
+                <h3 className="text-2xs font-black uppercase tracking-[0.3em] text-primary">Category Folder</h3>
               </div>
               <div className="flex-shrink-0 h-14 px-2 mt-4">
                 <div className="flex items-center h-full relative px-4">
@@ -340,7 +340,7 @@ const ImageGallery: React.FC<ImageGalleryProps> = ({
                     value={categorySearchQuery}
                     onChange={(e) => setCategorySearchQuery(e.target.value)}
                     placeholder="SEARCH FOLDERS..."
-                    className="form-input w-full h-full bg-transparent border-none focus:outline-none focus:ring-0 pl-12 pr-10 text-[11px] tracking-widest"
+                    className="form-input w-full h-full bg-transparent border-none focus:outline-none focus:ring-0 pl-12 pr-10 text-2xs tracking-widest"
                   />
                   {categorySearchQuery && (
                     <button
@@ -375,7 +375,7 @@ const ImageGallery: React.FC<ImageGalleryProps> = ({
                       <div className="p-4 md:p-6">
                         <div className="flex flex-col md:flex-row md:items-end justify-between gap-4">
                           <div className="space-y-1">
-                            <span className="text-[10px] font-black uppercase tracking-[0.6em] text-primary/60 block">{parentCategoryName}</span>
+                            <span className="text-2xs font-black uppercase tracking-[0.6em] text-primary/60 block">{parentCategoryName}</span>
                             <h1 className="text-3xl lg:text-4xl font-black tracking-tighter text-base-content leading-none uppercase font-sf-mono">
                               {currentCategoryName}<span className="text-primary">.</span>
                             </h1>
@@ -390,9 +390,9 @@ const ImageGallery: React.FC<ImageGalleryProps> = ({
                       </div>
                     </header>
 
-                    <div className="sticky top-0 z-30 bg-base-100/40 backdrop-blur-xl h-14 panel-transparent">
-                      <div className="flex items-stretch h-full w-full">
-                        <div className="flex-grow flex items-center relative">
+                    <div className="sticky top-0 z-30 bg-base-100/40 backdrop-blur-xl min-h-[3.5rem] h-auto panel-transparent">
+                      <div className="flex flex-wrap items-stretch w-full">
+                        <div className="flex-grow xl:flex-1 w-full xl:w-auto flex items-center relative h-14">
                           <SearchIcon className="absolute left-6 w-4 h-4 opacity-20 pointer-events-none" />
                           <input type="text" value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} placeholder="SEARCH IMAGES..." className="form-input input-lg w-full h-full bg-transparent border-none focus:outline-none focus:ring-0 pl-14 pr-12" />
                           {searchQuery && (
@@ -407,7 +407,7 @@ const ImageGallery: React.FC<ImageGalleryProps> = ({
 
                         {/* NSFW Toggle */}
                         <div className="flex items-center gap-3 px-6 border-x border-white/10 bg-white/5 mr-px">
-                          <span className="text-[10px] font-black uppercase text-base-content/40 tracking-widest">NSFW</span>
+                          <span className="text-2xs font-black uppercase text-base-content/40 tracking-widest">NSFW</span>
                           <input
                             type="checkbox"
                             checked={showNsfw}
@@ -420,15 +420,15 @@ const ImageGallery: React.FC<ImageGalleryProps> = ({
                         <div className="flex items-stretch">
                           {/* View Modes */}
                           <div className="form-tab-group h-full rounded-none">
-                            <button onClick={() => { audioService.playClick(); setViewMode('compact'); }} className={`btn btn-xs btn-ghost h-full border-none rounded-none px-6 font-black text-[10px] tracking-widest uppercase btn-snake ${viewMode === 'compact' ? 'active bg-primary/10 text-primary no-glow' : 'hover:no-glow'}`}>
+                            <button onClick={() => { audioService.playClick(); setViewMode('compact'); }} className={`btn btn-xs btn-ghost h-full border-none rounded-none px-6 font-black text-2xs tracking-widest uppercase btn-snake ${viewMode === 'compact' ? 'active bg-primary/10 text-primary no-glow' : 'hover:no-glow'}`}>
                               <span /><span /><span /><span />
                               SML
                             </button>
-                            <button onClick={() => { audioService.playClick(); setViewMode('default'); }} className={`btn btn-xs btn-ghost h-full border-none rounded-none px-6 font-black text-[10px] tracking-widest uppercase btn-snake ${viewMode === 'default' ? 'active bg-primary/10 text-primary no-glow' : 'hover:no-glow'}`}>
+                            <button onClick={() => { audioService.playClick(); setViewMode('default'); }} className={`btn btn-xs btn-ghost h-full border-none rounded-none px-6 font-black text-2xs tracking-widest uppercase btn-snake ${viewMode === 'default' ? 'active bg-primary/10 text-primary no-glow' : 'hover:no-glow'}`}>
                               <span /><span /><span /><span />
                               MED
                             </button>
-                            <button onClick={() => { audioService.playClick(); setViewMode('focus'); }} className={`btn btn-xs btn-ghost h-full border-none rounded-none px-6 font-black text-[10px] tracking-widest uppercase btn-snake ${viewMode === 'focus' ? 'active bg-primary/10 text-primary no-glow' : 'hover:no-glow'}`}>
+                            <button onClick={() => { audioService.playClick(); setViewMode('focus'); }} className={`btn btn-xs btn-ghost h-full border-none rounded-none px-6 font-black text-2xs tracking-widest uppercase btn-snake ${viewMode === 'focus' ? 'active bg-primary/10 text-primary no-glow' : 'hover:no-glow'}`}>
                               <span /><span /><span /><span />
                               LRG
                             </button>
@@ -436,15 +436,15 @@ const ImageGallery: React.FC<ImageGalleryProps> = ({
 
                           {/* Media Type Filters */}
                           <div className="form-tab-group h-full rounded-none">
-                            <button onClick={() => { audioService.playClick(); setMediaTypeFilter('all'); }} className={`btn btn-xs btn-ghost h-full border-none rounded-none px-6 font-black text-[10px] tracking-widest uppercase btn-snake ${mediaTypeFilter === 'all' ? 'active bg-primary/10 text-primary no-glow' : 'hover:no-glow'}`}>
+                            <button onClick={() => { audioService.playClick(); setMediaTypeFilter('all'); }} className={`btn btn-xs btn-ghost h-full border-none rounded-none px-6 font-black text-2xs tracking-widest uppercase btn-snake ${mediaTypeFilter === 'all' ? 'active bg-primary/10 text-primary no-glow' : 'hover:no-glow'}`}>
                               <span /><span /><span /><span />
                               ALL
                             </button>
-                            <button onClick={() => { audioService.playClick(); setMediaTypeFilter('image'); }} className={`btn btn-xs btn-ghost h-full border-none rounded-none px-6 font-black text-[10px] tracking-widest uppercase btn-snake ${mediaTypeFilter === 'image' ? 'active bg-primary/10 text-primary no-glow' : 'hover:no-glow'}`}>
+                            <button onClick={() => { audioService.playClick(); setMediaTypeFilter('image'); }} className={`btn btn-xs btn-ghost h-full border-none rounded-none px-6 font-black text-2xs tracking-widest uppercase btn-snake ${mediaTypeFilter === 'image' ? 'active bg-primary/10 text-primary no-glow' : 'hover:no-glow'}`}>
                               <span /><span /><span /><span />
                               IMG
                             </button>
-                            <button onClick={() => { audioService.playClick(); setMediaTypeFilter('video'); }} className={`btn btn-xs btn-ghost h-full border-none rounded-none px-6 font-black text-[10px] tracking-widest uppercase btn-snake ${mediaTypeFilter === 'video' ? 'active bg-primary/10 text-primary no-glow' : 'hover:no-glow'}`}>
+                            <button onClick={() => { audioService.playClick(); setMediaTypeFilter('video'); }} className={`btn btn-xs btn-ghost h-full border-none rounded-none px-6 font-black text-2xs tracking-widest uppercase btn-snake ${mediaTypeFilter === 'video' ? 'active bg-primary/10 text-primary no-glow' : 'hover:no-glow'}`}>
                               <span /><span /><span /><span />
                               VID
                             </button>
@@ -456,7 +456,7 @@ const ImageGallery: React.FC<ImageGalleryProps> = ({
                           STATS
                         </button>
 
-                        <button onClick={() => { audioService.playClick(); setIsAddModalOpen(true); }} className="btn btn-sm btn-primary h-full rounded-none border-none px-8 tracking-widest uppercase btn-snake-primary">
+                        <button onClick={() => { audioService.playClick(); setIsAddModalOpen(true); }} className="btn btn-sm btn-primary h-14 shrink-0 ml-auto rounded-none border-none px-8 tracking-widest uppercase btn-snake-primary">
                           <span /><span /><span /><span />
                           IMPORT
                         </button>

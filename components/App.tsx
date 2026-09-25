@@ -379,7 +379,9 @@ const AppContent: React.FC = () => {
 
     const renderContent = () => {
         const categoryPanelProps = {
-            isCategoryPanelCollapsed: !!collapsedPanels[activeTab],
+            isCategoryPanelCollapsed: collapsedPanels[activeTab] !== undefined
+                ? !!collapsedPanels[activeTab]
+                : window.innerWidth < 1280,
             onToggleCategoryPanel: () => {
                 setCollapsedPanels(p => ({ ...p, [activeTab]: !p[activeTab] }));
             },

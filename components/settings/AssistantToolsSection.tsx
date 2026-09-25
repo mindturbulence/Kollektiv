@@ -123,7 +123,7 @@ const AssistantToolsSection: React.FC<AssistantToolsSectionProps> = ({ settings 
             </div>
 
             {mcpLoading && (
-                <div className="px-6 pb-2 flex items-center gap-2 text-[9px] font-black uppercase tracking-widest text-base-content/30">
+                <div className="px-6 pb-2 flex items-center gap-2 text-2xs font-black uppercase tracking-widest text-base-content/30">
                     <span className="w-1.5 h-1.5 rounded-full bg-warning animate-pulse" />
                     Checking enabled MCP servers...
                 </div>
@@ -145,11 +145,11 @@ const AssistantToolsSection: React.FC<AssistantToolsSectionProps> = ({ settings 
                                 <div className="flex items-center gap-2 flex-wrap">
                                     <span className="text-base font-black uppercase tracking-wider">{t.name}</span>
                                     {t.source === 'native' ? (
-                                        <span className="text-[9px] font-black uppercase px-1.5 py-0.5 bg-base-content/5 text-base-content/30 border border-base-content/10">
+                                        <span className="text-2xs font-black uppercase px-1.5 py-0.5 bg-base-content/5 text-base-content/30 border border-base-content/10">
                                             Native
                                         </span>
                                     ) : (
-                                        <span className="text-[9px] font-black uppercase px-1.5 py-0.5 bg-info/10 text-info border border-info/30">
+                                        <span className="text-2xs font-black uppercase px-1.5 py-0.5 bg-info/10 text-info border border-info/30">
                                             {t.serverLabel}
                                         </span>
                                     )}

@@ -1,5 +1,6 @@
 import { forwardRef, useImperativeHandle, useRef, useEffect } from 'react';
 import { gsap } from 'gsap';
+import { FX_TIMING } from './routeFx';
 import type { FxGeometry } from './routeFx';
 
 /**
@@ -101,6 +102,9 @@ const TransitionOverlay = forwardRef<TransitionOverlayHandle>((_props, ref) => {
 
                 hideAllGeometries();
                 gsap.set(root, { visibility: 'visible' });
+                // Motion review #2: the cover must swallow clicks so a stray
+                // click can't land on the still-visible outgoing page.
+                gsap.set(root, { pointerEvents: 'auto' });
                 gsap.set(wrap, { display: geometry.startsWith('iris') ? 'block' : 'flex' });
                 gsap.set(hudRef.current, { opacity: 0 });
                 gsap.set(progressRef.current, { scaleX: 0 });
@@ -110,27 +114,27 @@ const TransitionOverlay = forwardRef<TransitionOverlayHandle>((_props, ref) => {
 
                 if (geometry === 'shutterV') {
                     parts.forEach((el, i) => gsap.set(el, { scaleY: 0, transformOrigin: i % 2 === 0 ? 'top center' : 'bottom center' }));
-                    tl.to(parts, { scaleY: 1, duration: 0.34, ease: 'power3.inOut', stagger: { each: 0.028, from: 'center' } });
+                    tl.to(parts, { scaleY: 1, duration: FX_TIMING.coverDuration, ease: 'power3.inOut', stagger: { each: FX_TIMING.coverStagger, from: 'center' } });
                 } else if (geometry === 'shutterH') {
                     parts.forEach((el, i) => gsap.set(el, { scaleX: 0, transformOrigin: i % 2 === 0 ? 'left center' : 'right center' }));
-                    tl.to(parts, { scaleX: 1, duration: 0.3, ease: 'power3.inOut', stagger: { each: 0.024, from: 'start' } });
+                    tl.to(parts, { scaleX: 1, duration: FX_TIMING.coverDuration, ease: 'power3.inOut', stagger: { each: FX_TIMING.coverStagger, from: 'start' } });
                 } else if (geometry === 'doors') {
                     parts.forEach((el, i) => gsap.set(el, { scaleX: 0, transformOrigin: i % 2 === 0 ? 'left center' : 'right center' }));
-                    tl.to(parts, { scaleX: 1, duration: 0.32, ease: 'power4.inOut', stagger: { each: 0.03, from: 'edges' } });
+                    tl.to(parts, { scaleX: 1, duration: FX_TIMING.coverDuration, ease: 'power2.in', stagger: { each: FX_TIMING.coverStagger, from: 'edges' } });
                 } else if (geometry === 'shards') {
                     const offsets = [{ yPercent: -101 }, { xPercent: 101 }, { yPercent: 101 }, { xPercent: -101 }];
                     parts.forEach((el, i) => gsap.set(el, { xPercent: 0, yPercent: 0, ...offsets[i % 4] }));
-                    tl.to(parts, { xPercent: 0, yPercent: 0, duration: 0.36, ease: 'power3.inOut', stagger: 0.04 });
+                    tl.to(parts, { xPercent: 0, yPercent: 0, duration: FX_TIMING.coverDuration, ease: 'power3.inOut', stagger: FX_TIMING.coverStagger });
                 } else {
                     const origin = geometry === 'irisTop' ? '50% 10%' : '50% 45%';
                     gsap.set(parts[0], { clipPath: `circle(0% at ${origin})` });
-                    tl.to(parts[0], { clipPath: `circle(142% at ${origin})`, duration: 0.42, ease: 'power4.in' });
+                    tl.to(parts[0], { clipPath: `circle(142% at ${origin})`, duration: FX_TIMING.coverDuration, ease: 'power2.in' });
                 }
 
                 // HUD dressing rides the tail of the cover
                 tl.add(() => {
                     if (glyphRef.current) glyphRef.current.textContent = label.glyph;
-                    if (nameRef.current) scrambleCancel.current = scrambleTo(nameRef.current, label.name, 520);
+                    if (nameRef.current) scrambleCancel.current = scrambleTo(nameRef.current, label.name, FX_TIMING.scrambleMs);
                     if (subRef.current) subRef.current.textContent = label.sub;
                     if (hexRef.current) {
                         hexRef.current.textContent = hexLine();
@@ -166,7 +170,7 @@ const TransitionOverlay = forwardRef<TransitionOverlayHandle>((_props, ref) => {
                 const tl = gsap.timeline({
                     onComplete: () => {
                         stopDressing();
-                        gsap.set(root, { visibility: 'hidden' });
+                        gsap.set(root, { visibility: 'hidden', pointerEvents: 'none' });
                         if (sweepRef.current) gsap.set(sweepRef.current, { display: 'none' });
                         hideAllGeometries();
                         resolve();
@@ -174,32 +178,36 @@ const TransitionOverlay = forwardRef<TransitionOverlayHandle>((_props, ref) => {
                 });
                 activeTl.current = tl;
 
+                // Motion review #2: hand control back to the page the moment
+                // the geometry starts opening.
+                tl.set(root, { pointerEvents: 'none' }, '<');
+
                 tl.to(hudRef.current, { opacity: 0, duration: 0.14, ease: 'power2.in' });
 
                 if (geometry === 'shutterV') {
                     tl.to(parts, {
-                        scaleY: 0, duration: 0.55, ease: 'expo.inOut',
+                        scaleY: 0, duration: FX_TIMING.revealDuration, ease: 'power3.out',
                         transformOrigin: (i: number) => (i % 2 === 0 ? 'bottom center' : 'top center'),
-                        stagger: { each: 0.03, from: 'edges' }
+                        stagger: { each: FX_TIMING.revealStagger, from: 'edges' }
                     }, '-=0.05');
                 } else if (geometry === 'shutterH') {
                     tl.to(parts, {
-                        scaleX: 0, duration: 0.52, ease: 'expo.inOut',
+                        scaleX: 0, duration: FX_TIMING.revealDuration, ease: 'power3.out',
                         transformOrigin: (i: number) => (i % 2 === 0 ? 'right center' : 'left center'),
-                        stagger: { each: 0.026, from: 'end' }
+                        stagger: { each: FX_TIMING.revealStagger, from: 'end' }
                     }, '-=0.05');
                 } else if (geometry === 'doors') {
                     tl.to(parts, {
-                        scaleX: 0, duration: 0.56, ease: 'expo.inOut',
+                        scaleX: 0, duration: FX_TIMING.revealDuration, ease: 'power3.out',
                         transformOrigin: (i: number) => (i % 2 === 0 ? 'left center' : 'right center'),
-                        stagger: { each: 0.032, from: 'center' }
+                        stagger: { each: FX_TIMING.revealStagger, from: 'center' }
                     }, '-=0.05');
                 } else if (geometry === 'shards') {
                     const outs = [{ yPercent: -101 }, { xPercent: 101 }, { yPercent: 101 }, { xPercent: -101 }];
-                    parts.forEach((el, i) => tl.to(el, { ...outs[i % 4], duration: 0.5, ease: 'expo.inOut' }, i === 0 ? '-=0.05' : '<0.045'));
+                    parts.forEach((el, i) => tl.to(el, { ...outs[i % 4], duration: FX_TIMING.revealDuration, ease: 'power3.out' }, i === 0 ? '-=0.05' : `<${FX_TIMING.revealStagger}`));
                 } else {
                     const origin = geometry === 'irisTop' ? '50% 10%' : '50% 45%';
-                    tl.to(parts[0], { clipPath: `circle(0% at ${origin})`, duration: 0.6, ease: 'expo.inOut' }, '-=0.05');
+                    tl.to(parts[0], { clipPath: `circle(0% at ${origin})`, duration: FX_TIMING.revealDuration, ease: 'power3.out' }, '-=0.05');
                 }
 
                 // Light leads the curtain: a specular sweep crosses the incoming
@@ -208,7 +216,7 @@ const TransitionOverlay = forwardRef<TransitionOverlayHandle>((_props, ref) => {
                     tl.set(sweepRef.current, { display: 'block' }, '<');
                     tl.fromTo(sweepRef.current,
                         { xPercent: -120 },
-                        { xPercent: 120, duration: 0.65, ease: 'power2.inOut' },
+                        { xPercent: 120, duration: FX_TIMING.sweepDuration, ease: 'power2.inOut' },
                         '<0.1'
                     );
                 }
@@ -267,11 +275,11 @@ const TransitionOverlay = forwardRef<TransitionOverlayHandle>((_props, ref) => {
 
                 <div ref={glyphRef} className="text-3xl text-primary/80 fx-hud-blink font-mono" />
                 <div ref={nameRef} className="text-lg md:text-2xl font-black uppercase tracking-[0.5em] text-base-content font-mono" />
-                <div ref={subRef} className="text-[10px] uppercase tracking-[0.35em] text-base-content/40 font-mono" />
+                <div ref={subRef} className="text-2xs uppercase tracking-[0.35em] text-base-content/40 font-mono" />
                 <div className="w-48 h-px bg-base-content/10 mt-2 overflow-hidden">
                     <div ref={progressRef} className="fx-hud-progress w-full" style={{ transform: 'scaleX(0)' }} />
                 </div>
-                <div ref={hexRef} className="text-[9px] tracking-[0.25em] text-primary/40 font-mono mt-1" />
+                <div ref={hexRef} className="text-2xs tracking-[0.25em] text-primary/40 font-mono mt-1" />
             </div>
         </div>
     );

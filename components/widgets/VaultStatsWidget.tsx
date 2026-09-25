@@ -47,7 +47,7 @@ const VaultStatsWidget: React.FC = () => {
 
   return (
     <div className="bg-base-100/40 backdrop-blur-xl border border-base-content/10 p-4 relative corner-frame">
-      <div className="text-[9px] font-black uppercase tracking-[0.2em] text-primary/60 mb-3">Vault Stats</div>
+      <div className="text-2xs font-black uppercase tracking-[0.2em] text-primary/60 mb-3">Vault Stats</div>
       <div className="grid grid-cols-2 gap-2">
         {items.map(item => (
           <button
@@ -56,7 +56,7 @@ const VaultStatsWidget: React.FC = () => {
             className={`flex flex-col items-start p-2 bg-base-200/30 hover:bg-base-200/50 transition-colors text-left ${item.page ? 'cursor-pointer' : ''}`}
           >
             <span className="text-xl font-bold font-mono text-base-content">{item.value}</span>
-            <span className="text-[9px] font-mono uppercase tracking-wider text-base-content/40">{item.label}</span>
+            <span className="text-2xs font-mono uppercase tracking-wider text-base-content/40">{item.label}</span>
           </button>
         ))}
       </div>

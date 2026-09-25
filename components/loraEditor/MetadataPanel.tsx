@@ -21,7 +21,7 @@ const MetadataPanel: React.FC<MetadataPanelProps> = ({ fileMetadata }) => {
     return (
         <div className="flex flex-col h-full overflow-hidden">
             <div className="flex justify-end p-2 border-b border-base-content/10">
-                <button onClick={handleCopy} className="form-btn h-7 px-3 text-[10px] flex items-center gap-2">
+                <button onClick={handleCopy} className="form-btn h-7 px-3 text-2xs flex items-center gap-2">
                     <CopyIcon className="w-3 h-3" /> {copied ? 'COPIED' : 'COPY'}
                 </button>
             </div>

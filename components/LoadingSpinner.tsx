@@ -26,7 +26,7 @@ const FallingText = () => {
             {drops.map((drop) => (
                 <motion.div
                     key={drop.id}
-                    className="absolute font-mono text-[8px] md:text-[10px] text-primary/40 font-bold"
+                    className="absolute font-mono text-[8px] md:text-2xs text-primary/40 font-bold"
                     style={{ 
                         left: `${drop.x}%`, 
                         writingMode: 'vertical-rl', 
@@ -141,7 +141,7 @@ const LoadingSpinner: React.FC<{ size?: string | number, className?: string, tex
             </motion.span>
           </div>
           
-          <div className="font-mono text-primary/70 text-[11px] md:text-xs uppercase tracking-widest flex items-center space-x-2">
+          <div className="font-mono text-primary/70 text-2xs md:text-xs uppercase tracking-widest flex items-center space-x-2">
             <span>Snsr</span>
             <div className="flex space-x-[3px] h-[8px] md:h-3">
               {[...Array(8)].map((_, i) => (

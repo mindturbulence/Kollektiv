@@ -263,7 +263,7 @@ export const MediaAnalyzer: React.FC<MediaAnalyzerProps> = ({
                         exit="exit"
                         className="p-6 h-16 flex items-center justify-between bg-base-100/10 backdrop-blur-md panel-header flex-shrink-0 z-20 border-b border-primary/10"
                     >
-                        <TerminalText text="MEDIA INPUT" delay={2.0} className="text-[10px] font-black uppercase font-sf-mono text-primary" />
+                        <TerminalText text="MEDIA INPUT" delay={2.0} className="text-2xs font-black uppercase font-sf-mono text-primary" />
                     </motion.header>
 
                     <div className="flex flex-col flex-grow min-h-0 overflow-hidden">
@@ -302,8 +302,8 @@ export const MediaAnalyzer: React.FC<MediaAnalyzerProps> = ({
                                                 <PhotoIcon className="w-10 h-10" />
                                             </div>
                                             <div className="flex flex-col gap-2">
-                                                <TerminalText text="Select Image or Video" delay={2.4} className="text-[10px] font-black uppercase block" centered />
-                                                <TerminalText text="MP4, WEBM, JPG, PNG" delay={2.9} className="text-[9px] font-bold text-base-content/40 uppercase block" centered />
+                                                <TerminalText text="Select Image or Video" delay={2.4} className="text-2xs font-black uppercase block" centered />
+                                                <TerminalText text="MP4, WEBM, JPG, PNG" delay={2.9} className="text-2xs font-bold text-base-content/40 uppercase block" centered />
                                             </div>
                                         </div>
                                     ) : (
@@ -337,7 +337,7 @@ export const MediaAnalyzer: React.FC<MediaAnalyzerProps> = ({
                                 {fileType === 'video' && (
                                     <div className="flex flex-col space-y-3 p-3 bg-base-content/5 rounded border border-base-content/5 animate-fade-in mt-2">
                                         <div className="flex justify-between items-center pb-1.5 border-b border-primary/10">
-                                            <span className="text-[9px] font-black uppercase tracking-wider text-primary">Kinematic Matcher</span>
+                                            <span className="text-2xs font-black uppercase tracking-wider text-primary">Kinematic Matcher</span>
                                             <span className="text-[7px] font-mono text-base-content/30">Active: {selectedFrameTime.toFixed(1)}s</span>
                                         </div>
                                         
@@ -417,7 +417,7 @@ export const MediaAnalyzer: React.FC<MediaAnalyzerProps> = ({
                                     exit="exit"
                                     onClick={handleAnalyze}
                                     disabled={isLoading || !sourceFile}
-                                    className={`btn btn-sm btn-ghost h-full rounded-none flex-1 text-[10px] tracking-wider border-1 disabled:opacity-30 disabled:cursor-not-allowed btn-snake ${activeResultType === 'abstraction' ? 'text-primary' : ''} disabled:opacity-30 disabled:cursor-not-allowed`}
+                                    className={`btn btn-sm btn-ghost h-full rounded-none flex-1 text-2xs tracking-wider border-1 disabled:opacity-30 disabled:cursor-not-allowed btn-snake ${activeResultType === 'abstraction' ? 'text-primary' : ''} disabled:opacity-30 disabled:cursor-not-allowed`}
                                 >
                                     <span /><span /><span /><span />
                                     {isLoading && activeResultType === 'abstraction' ? '...' : 'ANALYZE'}
@@ -430,7 +430,7 @@ export const MediaAnalyzer: React.FC<MediaAnalyzerProps> = ({
                                     exit="exit"
                                     onClick={handleReadMetadata}
                                     disabled={isLoading || !sourceFile || fileType !== 'image'}
-                                    className={`btn btn-sm btn-ghost h-full rounded-none flex-1 text-[10px] tracking-wider border-1 disabled:opacity-30 disabled:cursor-not-allowed btn-snake ${activeResultType === 'metadata' ? 'text-primary' : ''} disabled:opacity-30 disabled:cursor-not-allowed`}
+                                    className={`btn btn-sm btn-ghost h-full rounded-none flex-1 text-2xs tracking-wider border-1 disabled:opacity-30 disabled:cursor-not-allowed btn-snake ${activeResultType === 'metadata' ? 'text-primary' : ''} disabled:opacity-30 disabled:cursor-not-allowed`}
                                 >
                                     <span /><span /><span /><span />
                                     {isLoading && activeResultType === 'metadata' ? '...' : 'READ'}
@@ -470,11 +470,11 @@ export const MediaAnalyzer: React.FC<MediaAnalyzerProps> = ({
                         className="p-6 h-16 flex items-center justify-between bg-base-100/10 backdrop-blur-md panel-header flex-shrink-0 z-20 border-b border-primary/10"
                     >
                         <div className="flex items-center gap-1.5">
-                            <TerminalText text="ANALYZED MEDIA" delay={2.2} className="text-[10px] font-black uppercase font-sf-mono text-primary" />
+                            <TerminalText text="ANALYZED MEDIA" delay={2.2} className="text-2xs font-black uppercase font-sf-mono text-primary" />
                             {metadataResults && (
                                 <button
                                     onClick={() => metadataResults && setActiveResultType('metadata')}
-                                    className="text-[10px] font-black uppercase tracking-[0.4em] font-sf-mono text-primary/30 hover:text-primary/60 transition-colors"
+                                    className="text-2xs font-black uppercase tracking-[0.4em] font-sf-mono text-primary/30 hover:text-primary/60 transition-colors"
                                 >
                                     <TerminalText text="METADATA" delay={2.2} className={activeResultType === 'metadata' ? 'text-primary' : 'text-primary/30'} />
                                 </button>
@@ -494,7 +494,7 @@ export const MediaAnalyzer: React.FC<MediaAnalyzerProps> = ({
                             {error && (
                                 <motion.div variants={contentVariants} className="p-6">
                                     <div className="alert alert-error rounded-none border-2 border-error/20 bg-transparent">
-                                        <span className="font-black uppercase text-[10px] tracking-widest text-error">{error}</span>
+                                        <span className="font-black uppercase text-2xs tracking-widest text-error">{error}</span>
                                     </div>
                                 </motion.div>
                             )}
@@ -507,7 +507,7 @@ export const MediaAnalyzer: React.FC<MediaAnalyzerProps> = ({
                                     <ScanLine delay={0} />
                                     <div className="relative z-10 flex flex-col items-center">
                                         <LoadingSpinner className="w-16 h-16 text-primary mb-8" />
-                                        <h3 className="text-[10px] font-black uppercase tracking-[0.5em] text-primary animate-pulse mb-2">{loadingMessage}</h3>
+                                        <h3 className="text-2xs font-black uppercase tracking-[0.5em] text-primary animate-pulse mb-2">{loadingMessage}</h3>
                                     </div>
                                 </motion.div>
                             ) : activeResultType === 'abstraction' && abstractionResults ? (
@@ -534,7 +534,7 @@ export const MediaAnalyzer: React.FC<MediaAnalyzerProps> = ({
                                 >
                                     <section className="space-y-4">
                                         <div className="flex justify-between items-center">
-                                            <TerminalText text="POSITIVE PROMPT" delay={2.4} className="text-[9px] font-black uppercase text-primary/40" />
+                                            <TerminalText text="POSITIVE PROMPT" delay={2.4} className="text-2xs font-black uppercase text-primary/40" />
                                             <div className="flex gap-1.5 h-8">
                                                 <button
                                                     onClick={() => onRefine(metadataResults.prompt)}
@@ -561,7 +561,7 @@ export const MediaAnalyzer: React.FC<MediaAnalyzerProps> = ({
 
                                     {filteredParams.length > 0 && (
                                         <section className="space-y-4 pt-6 panel-header">
-                                            <TerminalText text="TECHNICAL PARAMETERS" delay={2.6} className="text-[9px] font-black uppercase text-primary/40" />
+                                            <TerminalText text="TECHNICAL PARAMETERS" delay={2.6} className="text-2xs font-black uppercase text-primary/40" />
                                             <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-x-4 gap-y-4">
                                                 {filteredParams.map(([key, val]) => (
                                                     <div key={key} className="flex flex-col border-b border-base-300/30 pb-2">
@@ -575,7 +575,7 @@ export const MediaAnalyzer: React.FC<MediaAnalyzerProps> = ({
 
                                     <section className="space-y-4 pt-6 panel-header">
                                         <div className="flex justify-between items-center">
-                                            <TerminalText text="RAW STREAM" delay={2.8} className="text-[9px] font-black uppercase text-base-content/20" />
+                                            <TerminalText text="RAW STREAM" delay={2.8} className="text-2xs font-black uppercase text-base-content/20" />
                                             <button
                                                 onClick={handleCopyRaw}
                                                 disabled={!metadataResults.raw && !metadataResults.workflow}
@@ -585,7 +585,7 @@ export const MediaAnalyzer: React.FC<MediaAnalyzerProps> = ({
                                                 {copiedRaw ? 'OK' : 'COPY'}
                                             </button>
                                         </div>
-                                        <div className="p-3 bg-transparent text-[9px] font-mono text-base-content/30 break-words leading-relaxed max-h-32 overflow-y-auto">
+                                        <div className="p-3 bg-transparent text-2xs font-mono text-base-content/30 break-words leading-relaxed max-h-32 overflow-y-auto">
                                             {metadataResults.raw || 'EMPTY STREAM.'}
                                         </div>
                                     </section>
@@ -599,8 +599,8 @@ export const MediaAnalyzer: React.FC<MediaAnalyzerProps> = ({
                                         <SparklesIcon className="w-10 h-10" />
                                     </div>
                                     <div className="flex flex-col gap-2">
-                                        <TerminalText text="Awaiting Neural Input" delay={2.4} className="text-[10px] font-black uppercase block" centered />
-                                        <TerminalText text="SYSTEM_IDLE_STATE" delay={2.9} className="text-[9px] font-bold text-base-content/40 uppercase block" centered />
+                                        <TerminalText text="Awaiting Neural Input" delay={2.4} className="text-2xs font-black uppercase block" centered />
+                                        <TerminalText text="SYSTEM_IDLE_STATE" delay={2.9} className="text-2xs font-bold text-base-content/40 uppercase block" centered />
                                     </div>
                                 </motion.div>
                             )}

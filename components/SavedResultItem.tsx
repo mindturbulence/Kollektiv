@@ -47,7 +47,7 @@ const SavedResultItem: React.FC<SavedResultItemProps> = ({ text, onCopy, onSaveT
                         <div className="flex items-center gap-2 min-w-0">
                             <ArchiveIcon className="w-5 h-5 text-primary opacity-30 flex-shrink-0" />
                             <div className="flex flex-col min-w-0 border-l border-base-300/30 pl-3">
-                                <span className="text-[9px] font-black uppercase tracking-[0.4em] text-primary/60 mb-1 leading-none">
+                                <span className="text-2xs font-black uppercase tracking-[0.4em] text-primary/60 mb-1 leading-none">
                                     SAVED RESULT
                                 </span>
                                 <h2 className="font-black text-sm text-base-content truncate uppercase tracking-tight font-logo leading-tight">

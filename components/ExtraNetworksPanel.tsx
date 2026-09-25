@@ -47,7 +47,7 @@ const leafName = (name: string): string => {
 const TabButton: React.FC<{ active: boolean; onClick: () => void; children: React.ReactNode }> = ({ active, onClick, children }) => (
   <button
     onClick={onClick}
-    className={`flex-1 h-full text-[10px] font-black uppercase tracking-widest transition-colors ${
+    className={`flex-1 h-full text-2xs font-black uppercase tracking-widest transition-colors ${
       active ? 'text-primary' : 'text-base-content/30 hover:text-base-content/60'
     }`}
   >
@@ -86,7 +86,7 @@ const NetworkCard: React.FC<{ label: string; title: string; onClick: () => void;
       {thumbCandidates?.length ? <NetworkThumbnail candidates={thumbCandidates} alt={label} /> : <span className="text-base-content/10 text-2xl select-none">◈</span>}
     </div>
     <div className="px-2 py-1.5">
-      <span className="text-[10px] font-black uppercase tracking-[0.1em] text-base-content/70 group-hover:text-primary break-words line-clamp-2">
+      <span className="text-2xs font-black uppercase tracking-[0.1em] text-base-content/70 group-hover:text-primary break-words line-clamp-2">
         {label}
       </span>
     </div>
@@ -114,7 +114,7 @@ const ExtraNetworksPanel: React.FC<ExtraNetworksPanelProps> = ({
       variants={pageVariants}
       initial="hidden"
       animate="visible"
-      className="w-[34rem] shrink-0 h-full min-h-0 hidden lg:flex flex-col relative p-[3px] corner-frame overflow-visible"
+      className="w-[22rem] shrink-0 h-full min-h-0 hidden 2xl:flex flex-col relative p-[3px] corner-frame overflow-visible"
     >
       <PanelLine position="top" delay={0.8} />
       <PanelLine position="bottom" delay={0.9} />
@@ -148,16 +148,16 @@ const ExtraNetworksPanel: React.FC<ExtraNetworksPanelProps> = ({
               className="flex-grow overflow-y-auto custom-scrollbar p-3"
             >
               {loading ? (
-                <p className="text-[10px] text-base-content/20 italic p-6 text-center">Loading…</p>
+                <p className="text-2xs text-base-content/20 italic p-6 text-center">Loading…</p>
               ) : activeTab === 'lora' ? (
                 loras.length === 0 ? (
-                  <p className="text-[10px] text-base-content/20 italic p-6 text-center">No LoRAs found.</p>
+                  <p className="text-2xs text-base-content/20 italic p-6 text-center">No LoRAs found.</p>
                 ) : (
                   <div className="grid grid-cols-3 gap-2">
                     {groupByFolder(loras, (l) => l.alias).map(({ folder, items }) => (
                       <React.Fragment key={folder || '(root)'}>
                         {folder && (
-                          <div className="col-span-3 text-[9px] font-black uppercase tracking-widest text-base-content/40 pt-2 first:pt-0 pb-1 truncate" title={folder}>
+                          <div className="col-span-3 text-2xs font-black uppercase tracking-widest text-base-content/40 pt-2 first:pt-0 pb-1 truncate" title={folder}>
                             {folder}
                           </div>
                         )}
@@ -175,13 +175,13 @@ const ExtraNetworksPanel: React.FC<ExtraNetworksPanelProps> = ({
                   </div>
                 )
               ) : embeddings.length === 0 ? (
-                <p className="text-[10px] text-base-content/20 italic p-6 text-center">No embeddings found.</p>
+                <p className="text-2xs text-base-content/20 italic p-6 text-center">No embeddings found.</p>
               ) : (
                 <div className="grid grid-cols-3 gap-2">
                   {groupByFolder(embeddings, (name) => name).map(({ folder, items }) => (
                     <React.Fragment key={folder || '(root)'}>
                       {folder && (
-                        <div className="col-span-3 text-[9px] font-black uppercase tracking-widest text-base-content/40 pt-2 first:pt-0 pb-1 truncate" title={folder}>
+                        <div className="col-span-3 text-2xs font-black uppercase tracking-widest text-base-content/40 pt-2 first:pt-0 pb-1 truncate" title={folder}>
                           {folder}
                         </div>
                       )}
@@ -207,7 +207,7 @@ const ExtraNetworksPanel: React.FC<ExtraNetworksPanelProps> = ({
               animate="visible"
               className="h-16 flex items-center flex-shrink-0 bg-base-100/80 backdrop-blur-md px-4 panel-header overflow-visible relative z-[800]"
             >
-              <span className="text-[10px] font-black uppercase tracking-widest text-base-content/40">Extra Networks</span>
+              <span className="text-2xs font-black uppercase tracking-widest text-base-content/40">Extra Networks</span>
             </motion.header>
             <motion.div
               variants={pageBodyVariants}
@@ -215,7 +215,7 @@ const ExtraNetworksPanel: React.FC<ExtraNetworksPanelProps> = ({
               animate="visible"
               className="flex-grow p-6"
             >
-              <p className="text-[10px] text-base-content/25 leading-relaxed">
+              <p className="text-2xs text-base-content/25 leading-relaxed">
                 LoRA and textual-inversion browsing needs the A1111/Forge API — not available for this backend.
               </p>
             </motion.div>

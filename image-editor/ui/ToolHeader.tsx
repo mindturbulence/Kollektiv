@@ -11,7 +11,7 @@ import { SelectionEngine } from '../core/selection/SelectionEngine';
 import { TypeTool } from '../core/text/TypeTool';
 import { ShapeTool } from '../core/shape/ShapeTool';
 import { GradientTool } from '../core/gradient/GradientTool';
-import type { ToolId, ImageLayer } from '../core/types';
+import type { ToolId } from '../core/types';
 import type { CanvasViewportHandle } from './CanvasViewport';
 
 // CanvasViewportHandle is used by WandControls to update tolerance — passed as a prop
@@ -44,7 +44,7 @@ const Slider: React.FC<{
   suffix?: string;
   onChange: (value: number) => void;
 }> = ({ label, value, min, max, step = 1, suffix = '', onChange }) => (
-  <label className="flex items-center gap-1.5 text-[10px] font-mono text-base-content/60 whitespace-nowrap">
+  <label className="flex items-center gap-1.5 text-2xs font-mono text-base-content/60 whitespace-nowrap">
     {label}
     <input
       type="range"
@@ -109,9 +109,11 @@ const TransformControls: React.FC = () => {
   // (React error #185), not just a wasted re-render.
   const activeLayerId = useSyncExternalStore(subscribe, () => getSnapshot().activeLayerId);
   const doc = useSyncExternalStore(subscribe, () => getSnapshot().document);
-  const layer = (doc && activeLayerId && findLayerById(doc.layers, activeLayerId)) as ImageLayer | undefined;
-  if (!layer || layer.type !== 'image') {
-    return <span className="px-3 text-[10px] font-mono text-base-content/50">Select a layer to transform</span>;
+  // Text and shape layers transform like image layers (review H9 — the old
+  // image-only guard made them immovable from the header too).
+  const layer = doc && activeLayerId ? findLayerById(doc.layers, activeLayerId) : undefined;
+  if (!layer) {
+    return <span className="px-3 text-2xs font-mono text-base-content/50">Select a layer to transform</span>;
   }
   const t = layer.transform;
   const setW = (v: number) => dispatch({ type: 'UPDATE_LAYER', layerId: layer.id, patch: { transform: { ...t, size: { ...t.size, width: Math.max(1, v) } } } });
@@ -120,19 +122,19 @@ const TransformControls: React.FC = () => {
 
   return (
     <div className="flex items-center gap-3 px-3">
-      <label className="flex items-center gap-1 text-[10px] font-mono text-base-content/60">
-        W <input type="number" className="w-16 bg-transparent border border-base-content/20 px-1 text-right text-[10px] font-mono" value={Math.round(t.size.width)} onChange={e => setW(Number(e.target.value))} />
+      <label className="flex items-center gap-1 text-2xs font-mono text-base-content/60">
+        W <input type="number" className="w-16 bg-transparent border border-base-content/20 px-1 text-right text-2xs font-mono" value={Math.round(t.size.width)} onChange={e => setW(Number(e.target.value))} />
       </label>
-      <label className="flex items-center gap-1 text-[10px] font-mono text-base-content/60">
-        H <input type="number" className="w-16 bg-transparent border border-base-content/20 px-1 text-right text-[10px] font-mono" value={Math.round(t.size.height)} onChange={e => setH(Number(e.target.value))} />
+      <label className="flex items-center gap-1 text-2xs font-mono text-base-content/60">
+        H <input type="number" className="w-16 bg-transparent border border-base-content/20 px-1 text-right text-2xs font-mono" value={Math.round(t.size.height)} onChange={e => setH(Number(e.target.value))} />
       </label>
-      <label className="flex items-center gap-1 text-[10px] font-mono text-base-content/60">
-        ° <input type="number" className="w-14 bg-transparent border border-base-content/20 px-1 text-right text-[10px] font-mono" value={Math.round(t.rotation)} onChange={e => setRot(Number(e.target.value))} />
+      <label className="flex items-center gap-1 text-2xs font-mono text-base-content/60">
+        ° <input type="number" className="w-14 bg-transparent border border-base-content/20 px-1 text-right text-2xs font-mono" value={Math.round(t.rotation)} onChange={e => setRot(Number(e.target.value))} />
       </label>
       <div className="h-4 w-px bg-base-content/10" />
-      <button type="button" className="text-[10px] font-mono text-base-content/60 hover:text-primary px-1 border border-base-content/15 hover:border-primary" onClick={() => activeLayerId && TransformEngine.flipHorizontal(activeLayerId)}>↔ Flip H</button>
-      <button type="button" className="text-[10px] font-mono text-base-content/60 hover:text-primary px-1 border border-base-content/15 hover:border-primary" onClick={() => activeLayerId && TransformEngine.flipVertical(activeLayerId)}>↕ Flip V</button>
-      <button type="button" className="text-[10px] font-mono text-base-content/60 hover:text-primary px-1 border border-base-content/15 hover:border-primary" onClick={() => activeLayerId && TransformEngine.resetRotation(activeLayerId)}>Reset °</button>
+      <button type="button" className="text-2xs font-mono text-base-content/60 hover:text-primary px-1 border border-base-content/15 hover:border-primary" onClick={() => activeLayerId && TransformEngine.flipHorizontal(activeLayerId)}>↔ Flip H</button>
+      <button type="button" className="text-2xs font-mono text-base-content/60 hover:text-primary px-1 border border-base-content/15 hover:border-primary" onClick={() => activeLayerId && TransformEngine.flipVertical(activeLayerId)}>↕ Flip V</button>
+      <button type="button" className="text-2xs font-mono text-base-content/60 hover:text-primary px-1 border border-base-content/15 hover:border-primary" onClick={() => activeLayerId && TransformEngine.resetRotation(activeLayerId)}>Reset °</button>
     </div>
   );
 };
@@ -143,9 +145,9 @@ const SelectionControls: React.FC = () => {
   const hasSelection = useSyncExternalStore(subscribe, () => getSnapshot().selection !== null);
   return (
     <div className="flex items-center gap-3 px-3">
-      <span className="text-[10px] font-mono text-base-content/50">Drag to select · Hold Shift to add</span>
+      <span className="text-2xs font-mono text-base-content/50">Drag to select · Hold Shift to add</span>
       {hasSelection && (
-        <button type="button" className="text-[10px] font-mono text-base-content/60 hover:text-primary border border-base-content/15 hover:border-primary px-2 py-0.5" onClick={() => SelectionEngine.deselect()}>
+        <button type="button" className="text-2xs font-mono text-base-content/60 hover:text-primary border border-base-content/15 hover:border-primary px-2 py-0.5" onClick={() => SelectionEngine.deselect()}>
           Deselect (Ctrl+D)
         </button>
       )}
@@ -162,27 +164,27 @@ const TypeControls: React.FC = () => {
 
   return (
     <div className="flex items-center gap-3 px-3">
-      <label className="flex items-center gap-1 text-[10px] font-mono text-base-content/60">
+      <label className="flex items-center gap-1 text-2xs font-mono text-base-content/60">
         Family
-        <input type="text" className="w-28 bg-transparent border border-base-content/20 px-1 text-[10px] font-mono"
+        <input type="text" className="w-28 bg-transparent border border-base-content/20 px-1 text-2xs font-mono"
           defaultValue={s.fontFamily}
           onBlur={e => { TypeTool.updateSettings({ fontFamily: e.target.value }); update(); }} />
       </label>
-      <label className="flex items-center gap-1 text-[10px] font-mono text-base-content/60">
+      <label className="flex items-center gap-1 text-2xs font-mono text-base-content/60">
         Size
-        <input type="number" className="w-14 bg-transparent border border-base-content/20 px-1 text-right text-[10px] font-mono"
+        <input type="number" className="w-14 bg-transparent border border-base-content/20 px-1 text-right text-2xs font-mono"
           min={6} max={512} defaultValue={s.fontSize}
           onBlur={e => { TypeTool.updateSettings({ fontSize: Number(e.target.value) }); update(); }} />
       </label>
-      <label className="flex items-center gap-1 text-[10px] font-mono text-base-content/60">
+      <label className="flex items-center gap-1 text-2xs font-mono text-base-content/60">
         Color
         <input type="color" className="w-7 h-5 border-none bg-transparent cursor-pointer"
           defaultValue={s.color}
           onInput={e => { TypeTool.updateSettings({ color: (e.target as HTMLInputElement).value }); update(); }} />
       </label>
-      <label className="flex items-center gap-1 text-[10px] font-mono text-base-content/60">
+      <label className="flex items-center gap-1 text-2xs font-mono text-base-content/60">
         Weight
-        <select className="bg-transparent border border-base-content/20 text-[10px] font-mono"
+        <select className="bg-transparent border border-base-content/20 text-2xs font-mono"
           defaultValue={String(s.fontWeight)}
           onChange={e => { TypeTool.updateSettings({ fontWeight: Number(e.target.value) }); update(); }}>
           <option value="300">Light</option>
@@ -191,7 +193,7 @@ const TypeControls: React.FC = () => {
           <option value="900">Black</option>
         </select>
       </label>
-      <span className="text-[9px] font-mono text-base-content/35">Click canvas to place text · Ctrl+Enter to confirm</span>
+      <span className="text-2xs font-mono text-base-content/35">Click canvas to place text · Ctrl+Enter to confirm</span>
     </div>
   );
 };
@@ -204,10 +206,10 @@ const ShapeControls: React.FC = () => {
 
   return (
     <div className="flex items-center gap-3 px-3">
-      <span className="text-[10px] font-mono text-base-content/50">
+      <span className="text-2xs font-mono text-base-content/50">
         {kind === 'rect' ? 'Rectangle' : 'Ellipse'} · Drag to draw
       </span>
-      <label className="flex items-center gap-1 text-[10px] font-mono text-base-content/60">
+      <label className="flex items-center gap-1 text-2xs font-mono text-base-content/60">
         Fill
         <input type="color" className="w-7 h-5 border-none bg-transparent cursor-pointer"
           value={colors.foreground}
@@ -224,7 +226,7 @@ const WandControls: React.FC<{ viewportRef?: React.RefObject<CanvasViewportHandl
   const hasSelection = useSyncExternalStore(subscribe, () => getSnapshot().selection !== null);
   return (
     <div className="flex items-center gap-3 px-3">
-      <label className="flex items-center gap-2 text-[10px] font-mono text-base-content/60">
+      <label className="flex items-center gap-2 text-2xs font-mono text-base-content/60">
         Tolerance
         <input type="range" className="range range-xs range-primary w-24" min={0} max={255} value={tolerance}
           onChange={e => {
@@ -234,11 +236,11 @@ const WandControls: React.FC<{ viewportRef?: React.RefObject<CanvasViewportHandl
           }} />
         <span className="w-8 text-right">{tolerance}</span>
       </label>
-      <label className="flex items-center gap-1 text-[10px] font-mono text-base-content/60">
+      <label className="flex items-center gap-1 text-2xs font-mono text-base-content/60">
         <input type="checkbox" className="checkbox checkbox-xs" defaultChecked /> Contiguous
       </label>
       {hasSelection && (
-        <button type="button" className="text-[10px] font-mono text-base-content/60 hover:text-primary border border-base-content/15 hover:border-primary px-2 py-0.5" onClick={() => SelectionEngine.deselect()}>
+        <button type="button" className="text-2xs font-mono text-base-content/60 hover:text-primary border border-base-content/15 hover:border-primary px-2 py-0.5" onClick={() => SelectionEngine.deselect()}>
           Deselect
         </button>
       )}
@@ -253,11 +255,11 @@ const GradientControls: React.FC = () => {
   const kind = GradientTool.getKind();
   return (
     <div className="flex items-center gap-3 px-3">
-      <span className="text-[10px] font-mono text-base-content/50">Drag to define gradient direction</span>
+      <span className="text-2xs font-mono text-base-content/50">Drag to define gradient direction</span>
       <div className="flex border border-base-content/20">
         {(['linear', 'radial'] as const).map(k => (
           <button key={k} type="button"
-            className={`px-2 py-0.5 text-[10px] font-mono uppercase ${kind === k ? 'bg-primary/10 text-primary' : 'text-base-content/60 hover:text-primary'}`}
+            className={`px-2 py-0.5 text-2xs font-mono uppercase ${kind === k ? 'bg-primary/10 text-primary' : 'text-base-content/60 hover:text-primary'}`}
             onClick={() => { GradientTool.setKind(k); forceUpdate(n => n + 1); }}>
             {k}
           </button>
@@ -289,7 +291,7 @@ const ToolHeader: React.FC<ToolHeaderProps> = ({ viewportRef }) => {
       ) : activeTool === 'gradient' ? (
         <GradientControls />
       ) : (
-        <span className="px-3 text-[10px] font-mono text-base-content/50 uppercase tracking-wide truncate">
+        <span className="px-3 text-2xs font-mono text-base-content/50 uppercase tracking-wide truncate">
           {TOOL_HINTS[activeTool] ?? 'No options for this tool'}
         </span>
       )}

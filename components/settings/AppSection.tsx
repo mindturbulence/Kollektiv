@@ -184,7 +184,7 @@ const AppSection: React.FC<AppSectionProps> = ({
                 <SettingRow label="Google Drive Sync" desc={settings.googleIdentity?.isConnected ? `Connected as: ${settings.googleIdentity.email}` : "Credentials required to sync with cloud folders."}>
                     {settings.googleIdentity?.isConnected ? (
                         <div className="flex items-center space-x-2">
-                            <div className="text-[10px] font-black tracking-widest text-primary font-mono bg-primary/10 px-3 py-1.5 uppercase">
+                            <div className="text-2xs font-black tracking-widest text-primary font-mono bg-primary/10 px-3 py-1.5 uppercase">
                                 ACTIVE_SYNC
                             </div>
                             <button

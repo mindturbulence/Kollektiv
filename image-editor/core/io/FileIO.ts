@@ -7,6 +7,28 @@ import type { EditorDocument, EditorOpenPayload, ImageLayer } from '../types';
 import { LayerPainter } from '../renderer/LayerPainter';
 import { getSnapshot } from '../store';
 
+/** Maximum dimension for any bitmap the editor will hold (review H13). 8192 is
+ *  the universal safe floor; every brush stroke allocates a full-layer canvas
+ *  and the WebGL2 blend path uploads layer-sized textures, so uncapped imports
+ *  (a 12k panorama) made the tools throw or the GPU context fail later, far
+ *  from the import that caused it. */
+export const MAX_DIM = 8192;
+
+/** HEIC MIME types (iPhone photos) — Chrome/Firefox can't decode them and the
+ *  generic "Unsupported format" gave the user no path forward. */
+const HEIC_TYPES = /^image\/hei[cf]$/i;
+
+function heicHint(fileType: string): string {
+  return HEIC_TYPES.test(fileType)
+    ? ' — HEIC isn\'t supported by this browser. Convert it via the Converter tab first.'
+    : '';
+}
+
+/** True when either dimension exceeds MAX_DIM. */
+export function exceedsMaxDim(width: number, height: number): boolean {
+  return width > MAX_DIM || height > MAX_DIM;
+}
+
 /** Builds a flat ImageLayer wrapping a decoded/generated ImageBitmap. */
 function bitmapToLayer(bitmap: ImageBitmap, name: string): ImageLayer {
   return {
@@ -29,13 +51,21 @@ function bitmapToLayer(bitmap: ImageBitmap, name: string): ImageLayer {
   };
 }
 
-/** Decodes a File (PNG/JPEG/WebP/HEIC/…) off the main thread into an ImageLayer. */
+/** Decodes a File (PNG/JPEG/WebP/HEIC/…) off the main thread into an ImageLayer.
+ *  Enforces MAX_DIM (review H13 — oversize imports previously failed later,
+ *  silently, inside the tools). */
 export async function importImage(file: File): Promise<ImageLayer> {
   let bitmap: ImageBitmap;
   try {
     bitmap = await createImageBitmap(file);
   } catch {
-    throw new Error(`Unsupported format: ${file.type}`);
+    throw new Error(`Unsupported format: ${file.type}${heicHint(file.type)}`);
+  }
+  if (exceedsMaxDim(bitmap.width, bitmap.height)) {
+    bitmap.close();
+    throw new Error(
+      `Image is ${bitmap.width}×${bitmap.height}px — the editor supports up to ${MAX_DIM}px per side. Scale it down first (Converter tab).`,
+    );
   }
   return bitmapToLayer(bitmap, file.name.replace(/\.[^.]+$/, '') || 'Imported Image');
 }
@@ -60,14 +90,22 @@ async function createBlankBitmap(
   return createImageBitmap(oc);
 }
 
-/** Creates a new single-layer document filled with the given background. */
+/** Creates a new single-layer document filled with the given background.
+ *  Enforces MAX_DIM (review H13 — the NewDocumentModal's max=8192 was an HTML
+ *  attribute only; typing 30000 made OffscreenCanvas throw silently). */
 export async function createBlankDocument(
   width: number,
   height: number,
   background: 'white' | 'transparent' | 'foreground',
   foregroundColor?: string,
 ): Promise<EditorDocument> {
-  const bitmap = await createBlankBitmap(width, height, background, foregroundColor);
+  const w = Math.round(width);
+  const h = Math.round(height);
+  if (w < 1 || h < 1) throw new Error('Document dimensions must be at least 1px.');
+  if (exceedsMaxDim(w, h)) {
+    throw new Error(`Document is ${w}×${h}px — the editor supports up to ${MAX_DIM}px per side.`);
+  }
+  const bitmap = await createBlankBitmap(w, h, background, foregroundColor);
   const layer = bitmapToLayer(bitmap, 'Background');
   const now = Date.now();
   return {
@@ -99,7 +137,13 @@ export async function importFromPayload(
   try {
     bitmap = await createImageBitmap(payload.blob);
   } catch {
-    throw new Error(`Unsupported image format${payload.blob.type ? `: ${payload.blob.type}` : ''}`);
+    throw new Error(`Unsupported image format${payload.blob.type ? `: ${payload.blob.type}${heicHint(payload.blob.type)}` : ''}`);
+  }
+  if (exceedsMaxDim(bitmap.width, bitmap.height)) {
+    bitmap.close();
+    throw new Error(
+      `Image is ${bitmap.width}×${bitmap.height}px — the editor supports up to ${MAX_DIM}px per side.`,
+    );
   }
 
   const layer = bitmapToLayer(bitmap, 'Background');
@@ -152,6 +196,40 @@ export async function exportToBlob(
     type: format === 'jpeg' ? 'image/jpeg' : 'image/png',
     quality: quality !== undefined ? quality / 100 : 0.92,
   });
+}
+
+/** Renders the active image layer's mask as a black/white PNG (inpaint prep:
+ *  white = masked/inpainted area). Uses the mask bitmap directly — white pixels
+ *  are "protected, kept" in most inpainters, so the export maps mask-opaque →
+ *  white. Throws when the layer has no mask. */
+export async function exportMaskToBlob(layer: ImageLayer): Promise<Blob> {
+  if (!layer.mask) throw new Error(`Layer "${layer.name}" has no mask to export.`);
+  const oc = new OffscreenCanvas(layer.mask.bitmap.width, layer.mask.bitmap.height);
+  const ctx = oc.getContext('2d');
+  if (!ctx) throw new Error('Failed to acquire 2D context for mask export');
+  ctx.drawImage(layer.mask.bitmap, 0, 0);
+  return oc.convertToBlob({ type: 'image/png' });
+}
+
+/** Downscales/upscales a bitmap to the target size (Image Size resample).
+ *  Returns a NEW bitmap; the caller is responsible for closing the old one
+ *  (the source may still be referenced by history undo commands). */
+export async function resampleBitmap(
+  source: ImageBitmap,
+  targetWidth: number,
+  targetHeight: number,
+): Promise<ImageBitmap> {
+  if (targetWidth < 1 || targetHeight < 1) throw new Error('Target size must be at least 1px.');
+  if (exceedsMaxDim(targetWidth, targetHeight)) {
+    throw new Error(`Target size ${targetWidth}×${targetHeight}px exceeds the ${MAX_DIM}px limit.`);
+  }
+  const oc = new OffscreenCanvas(targetWidth, targetHeight);
+  const ctx = oc.getContext('2d');
+  if (!ctx) throw new Error('Failed to acquire 2D context for resample');
+  ctx.imageSmoothingEnabled = true;
+  ctx.imageSmoothingQuality = 'high';
+  ctx.drawImage(source, 0, 0, targetWidth, targetHeight);
+  return createImageBitmap(oc);
 }
 
 /** Opens the native file picker restricted to images. Resolves null if the user cancels. */

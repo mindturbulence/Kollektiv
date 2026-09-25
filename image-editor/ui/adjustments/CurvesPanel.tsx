@@ -79,7 +79,7 @@ const CurvesPanel: React.FC<CurvesPanelProps> = ({ layerId, onClose }) => {
     if (rafRef.current !== null) cancelAnimationFrame(rafRef.current);
     rafRef.current = requestAnimationFrame(() => {
       if (!sourceRef.current) return;
-      AdjustmentEngine.updatePreview(layerId, sourceRef.current, { kind: 'curves', channel, points });
+      void AdjustmentEngine.updatePreview(layerId, sourceRef.current, { kind: 'curves', channel, points });
     });
   }, [layerId, channel, points]);
 
@@ -151,7 +151,7 @@ const CurvesPanel: React.FC<CurvesPanelProps> = ({ layerId, onClose }) => {
       <div className="flex gap-1 mb-3">
         {channels.map(ch => (
           <button key={ch} type="button"
-            className={`px-2 py-0.5 text-[10px] font-mono uppercase border ${channel === ch ? 'border-primary text-primary bg-primary/10' : 'border-base-content/20 text-base-content/60'}`}
+            className={`px-2 py-0.5 text-2xs font-mono uppercase border ${channel === ch ? 'border-primary text-primary bg-primary/10' : 'border-base-content/20 text-base-content/60'}`}
             onClick={() => { setChannel(ch); setPoints([{ x: 0, y: 0 }, { x: 255, y: 255 }]); setSelectedIdx(null); }}>
             {ch.toUpperCase()}
           </button>
@@ -169,7 +169,7 @@ const CurvesPanel: React.FC<CurvesPanelProps> = ({ layerId, onClose }) => {
         onKeyDown={handleKeyDown}
         tabIndex={0}
       />
-      <p className="text-[9px] font-mono text-base-content/40 mt-1">Click to add points · Delete to remove · Drag to move</p>
+      <p className="text-2xs font-mono text-base-content/40 mt-1">Click to add points · Delete to remove · Drag to move</p>
     </FloatingPanel>
   );
 };

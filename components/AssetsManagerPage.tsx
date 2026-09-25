@@ -387,7 +387,7 @@ const AssetsManagerPage: React.FC<AssetsManagerPageProps> = ({ isExiting = false
           <div className="flex flex-col h-full overflow-hidden relative z-10 bg-base-100/40 backdrop-blur-xl">
             <div className="p-4 bg-base-100/10 flex justify-between items-center">
               <TerminalText text="ASSET ROOTS" delay={0.6} className="text-xs font-black uppercase text-primary" />
-              <button className="form-btn h-7 px-2 text-[10px]" onClick={() => void handleAddRoot()} aria-label="Add folder root">
+              <button className="form-btn h-7 px-2 text-2xs" onClick={() => void handleAddRoot()} aria-label="Add folder root">
                 + ADD
               </button>
             </div>
@@ -409,12 +409,12 @@ const AssetsManagerPage: React.FC<AssetsManagerPageProps> = ({ isExiting = false
                 />
               ))}
               {roots.length === 0 && (
-                <p className="text-[10px] font-mono uppercase text-base-content/30 p-1">Drop a folder here, or ADD above.</p>
+                <p className="text-2xs font-mono uppercase text-base-content/30 p-1">Drop a folder here, or ADD above.</p>
               )}
             </div>
             <div className="flex-grow overflow-y-auto p-2">
               {isScanningTree && (
-                <div className="flex items-center gap-2 text-[10px] font-mono uppercase text-base-content/40 p-2">
+                <div className="flex items-center gap-2 text-2xs font-mono uppercase text-base-content/40 p-2">
                   <LoadingSpinner className="w-3 h-3" /> Scanning folders…
                 </div>
               )}
@@ -430,7 +430,7 @@ const AssetsManagerPage: React.FC<AssetsManagerPageProps> = ({ isExiting = false
                 />
               )}
               {!selectedRoot && !isScanningTree && (
-                <p className="text-[10px] font-mono uppercase text-base-content/30 p-2">Select a root to browse.</p>
+                <p className="text-2xs font-mono uppercase text-base-content/30 p-2">Select a root to browse.</p>
               )}
             </div>
           </div>
@@ -450,8 +450,8 @@ const AssetsManagerPage: React.FC<AssetsManagerPageProps> = ({ isExiting = false
           <ScanLine delay={3.5} />
           <div className="flex flex-col h-full w-full overflow-hidden relative z-10 bg-base-100/40 backdrop-blur-xl">
             <motion.header variants={sectionWipeVariants} custom={1.2} initial="hidden" animate="visible" className="p-4 bg-base-100/10 flex justify-between items-center">
-              <TerminalText text={selectedFolderPath || (selectedRoot ? selectedRoot.name : 'NO FOLDER SELECTED')} delay={0.8} className="text-[10px] font-black uppercase text-primary truncate" />
-              <span className="text-[10px] font-mono font-bold text-base-content/20 uppercase flex-shrink-0">
+              <TerminalText text={selectedFolderPath || (selectedRoot ? selectedRoot.name : 'NO FOLDER SELECTED')} delay={0.8} className="text-2xs font-black uppercase text-primary truncate" />
+              <span className="text-2xs font-mono font-bold text-base-content/20 uppercase flex-shrink-0">
                 {folderFiles.length} IMAGE{folderFiles.length === 1 ? '' : 'S'}
               </span>
             </motion.header>
@@ -461,7 +461,7 @@ const AssetsManagerPage: React.FC<AssetsManagerPageProps> = ({ isExiting = false
               ) : folderFiles.length === 0 ? (
                 <div className="h-full min-h-[240px] flex flex-col items-center justify-center text-center opacity-30">
                   <p className="text-xs font-black uppercase tracking-[0.4em]">No Images Here</p>
-                  <p className="text-[9px] font-mono uppercase tracking-widest mt-2">
+                  <p className="text-2xs font-mono uppercase tracking-widest mt-2">
                     {selectedRoot ? 'Pick another folder in the sidebar' : 'Select a root to begin'}
                   </p>
                 </div>
@@ -488,7 +488,7 @@ const AssetsManagerPage: React.FC<AssetsManagerPageProps> = ({ isExiting = false
                   </div>
                   {visibleCount < folderFiles.length && (
                     <div className="flex justify-center py-4">
-                      <button className="form-btn h-9 px-6 text-[10px]" onClick={() => setVisibleCount(v => v + PAGE_SIZE)}>
+                      <button className="form-btn h-9 px-6 text-2xs" onClick={() => setVisibleCount(v => v + PAGE_SIZE)}>
                         LOAD MORE ({folderFiles.length - visibleCount} remaining)
                       </button>
                     </div>
@@ -573,7 +573,7 @@ function findNodeByPath(tree: DirectoryNode, path: string): DirectoryNode | null
 const WelcomeState: React.FC<{ onAddRoot: () => void; isExiting: boolean }> = ({ onAddRoot, isExiting }) => (
   <motion.div variants={panelVariants} initial="hidden" animate={isExiting ? 'exit' : 'visible'} className="h-full w-full flex flex-col items-center justify-center text-center gap-4 px-6">
     <TerminalText text="ASSETS MANAGER" delay={0.3} className="text-lg font-black uppercase tracking-widest text-primary" centered />
-    <p className="text-[11px] font-mono uppercase tracking-widest text-base-content/50 max-w-md">
+    <p className="text-2xs font-mono uppercase tracking-widest text-base-content/50 max-w-md">
       Browse any local folder(s) as image roots. Nothing leaves this machine.
     </p>
     <button className="form-btn form-btn-primary h-10 px-6 mt-2" onClick={onAddRoot}>
@@ -603,7 +603,7 @@ const RootRow: React.FC<{
     <span className="truncate flex-grow" title={root.name}>{root.name}</span>
     {root.status !== 'granted' && (
       <button
-        className="text-[10px] text-warning hover:text-primary flex-shrink-0"
+        className="text-2xs text-warning hover:text-primary flex-shrink-0"
         onClick={e => { e.stopPropagation(); onReconnect(); }}
         aria-label={`Reconnect ${root.name}`}
       >
@@ -720,7 +720,7 @@ const AssetCard: React.FC<{
       {selected && <CheckIcon className="w-3.5 h-3.5 text-primary-content" />}
     </div>
     <div className="absolute inset-0 flex flex-col justify-end p-2 bg-gradient-to-t from-black/80 to-transparent opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none">
-      <p className="text-[9px] font-mono truncate text-white text-left" title={file.name}>{file.name}</p>
+      <p className="text-2xs font-mono truncate text-white text-left" title={file.name}>{file.name}</p>
     </div>
   </button>
 );
@@ -886,7 +886,7 @@ const Lightbox: React.FC<{
       </div>
 
       {files.length > 1 && (
-        <div className="absolute bottom-4 left-1/2 -translate-x-1/2 z-[110] text-[10px] font-mono uppercase bg-black/40 py-1 px-3 rounded-full text-white/70">
+        <div className="absolute bottom-4 left-1/2 -translate-x-1/2 z-[110] text-2xs font-mono uppercase bg-black/40 py-1 px-3 rounded-full text-white/70">
           {index + 1} / {files.length}
         </div>
       )}
@@ -916,19 +916,19 @@ const SelectionToolbar: React.FC<{
       role="toolbar"
       aria-label="Selection actions"
     >
-      <span className="text-[10px] font-mono font-black uppercase text-primary pl-2">{count} SELECTED</span>
+      <span className="text-2xs font-mono font-black uppercase text-primary pl-2">{count} SELECTED</span>
       <div className="w-px h-5 bg-base-content/10" />
-      <button disabled={busy} onClick={onExport} className="flex items-center gap-1.5 px-3 py-1.5 rounded-full text-[10px] font-mono uppercase text-base-content/70 hover:text-primary hover:bg-base-100/40 transition-colors disabled:opacity-40">
+      <button disabled={busy} onClick={onExport} className="flex items-center gap-1.5 px-3 py-1.5 rounded-full text-2xs font-mono uppercase text-base-content/70 hover:text-primary hover:bg-base-100/40 transition-colors disabled:opacity-40">
         <DownloadIcon className="w-4 h-4" /> Export
       </button>
-      <button disabled={busy} onClick={onConvert} className="flex items-center gap-1.5 px-3 py-1.5 rounded-full text-[10px] font-mono uppercase text-base-content/70 hover:text-primary hover:bg-base-100/40 transition-colors disabled:opacity-40">
+      <button disabled={busy} onClick={onConvert} className="flex items-center gap-1.5 px-3 py-1.5 rounded-full text-2xs font-mono uppercase text-base-content/70 hover:text-primary hover:bg-base-100/40 transition-colors disabled:opacity-40">
         <RefreshIcon className="w-4 h-4" /> Convert
       </button>
       <button
         disabled={busy || !onEdit}
         onClick={onEdit}
         title={onEdit ? undefined : 'Select exactly one image to edit'}
-        className="flex items-center gap-1.5 px-3 py-1.5 rounded-full text-[10px] font-mono uppercase text-base-content/70 hover:text-primary hover:bg-base-100/40 transition-colors disabled:opacity-40"
+        className="flex items-center gap-1.5 px-3 py-1.5 rounded-full text-2xs font-mono uppercase text-base-content/70 hover:text-primary hover:bg-base-100/40 transition-colors disabled:opacity-40"
       >
         <EditIcon className="w-4 h-4" /> Edit
       </button>

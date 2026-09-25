@@ -8,9 +8,11 @@ import React, { useCallback, useEffect, useRef, useState, useSyncExternalStore }
 import { createPortal } from 'react-dom';
 import { dispatch, getSnapshot, resetStore, subscribe } from '../core/store';
 import type { EditorDocument, EditorOpenPayload } from '../core/types';
-import { exportToBlob, importFromPayload, openFilePicker, importImage, createBlankDocument } from '../core/io/FileIO';
+import { exportToBlob, importFromPayload, openFilePicker, importImage, createBlankDocument, exportMaskToBlob } from '../core/io/FileIO';
 import * as AutosaveService from '../core/autosave/AutosaveService';
-import { addLayer } from '../core/layers/LayerManager';
+import { disposeTools } from '../core/toolsRegistry';
+import { addLayer, cropToSelection } from '../core/layers/LayerManager';
+import { findLayerById } from '../core/layers/layerTree';
 import { getSourceItemMeta, loadGalleryImage, saveToGallery, willConvertToJpeg } from './GalleryBridge';
 import EditorToolbar from './EditorToolbar';
 import ToolRail from './ToolRail';
@@ -19,6 +21,7 @@ import CanvasViewport, { type CanvasViewportHandle } from './CanvasViewport';
 import LayersPanel from './LayersPanel';
 import StatusBar from './StatusBar';
 import NewDocumentModal from './NewDocumentModal';
+import { ImageSizeDialog, CanvasSizeDialog } from './SizeDialogs';
 import { useEditorShortcuts } from './hooks/useEditorShortcuts';
 import FloatingPanelHost from './FloatingPanelHost';
 import LevelsPanel from './adjustments/LevelsPanel';
@@ -79,10 +82,14 @@ const UnsavedChangesModal: React.FC<{
   return null;
 };
 /** Replaces the open document. Undo history belongs to the previous document —
- *  keeping it would let redo splice the old document's layers into the new one. */
+ *  keeping it would let redo splice the old document's layers into the new one.
+ *  Tool singletons are disposed too: a stale clone source or an in-flight
+ *  stroke must not bleed across documents (review M12/H6). */
 function loadDocument(doc: EditorDocument | null): void {
+  disposeTools();
   dispatch({ type: 'SET_DOCUMENT', document: doc });
   dispatch({ type: 'CLEAR_HISTORY' });
+  dispatch({ type: 'SET_PENDING_CROP', rect: null });
 }
 
 const ImageEditorPage: React.FC<ImageEditorPageProps> = ({ openPayload, showGlobalFeedback, isExiting }) => {
@@ -102,7 +109,21 @@ const ImageEditorPage: React.FC<ImageEditorPageProps> = ({ openPayload, showGlob
   const [showRecovery, setShowRecovery] = useState(false);
   const [isRestoring,    setIsRestoring]    = useState(false);
   const [isExportOpen,   setIsExportOpen]   = useState(false);
-  const sourceMetaRef = useRef<{ title?: string; categoryId?: string; tags?: string[] } | null>(null);
+  /** Recovery found while a payload was opening: shown as a non-blocking
+   *  banner (M11) — the old modal sat over the just-opened image and Restore
+   *  replaced it silently. */
+  const [showRecoveryBanner, setShowRecoveryBanner] = useState(false);
+  const sourceMetaRef = useRef<{ title?: string; categoryId?: string; tags?: string[]; generationId?: string; prompt?: string } | null>(null);
+  /** Gallery item id written by the last save — Ctrl+S again then offers
+   *  "Update original" instead of duplicating (review H10). */
+  const savedItemIdRef = useRef<string | null>(null);
+  /** Non-null when the save flow needs a user decision in the app modal
+   *  (E8 leftover): the JPEG-flattening warning and/or the Update-original vs
+   *  Save-as-new choice when a library original exists to update. */
+  const [saveChoice, setSaveChoice] = useState<null | { jpegWarning: boolean; canUpdateOriginal: boolean }>(null);
+  // M5 item 6 — Image Size / Canvas Size dialogs.
+  const [isImageSizeOpen, setIsImageSizeOpen] = useState(false);
+  const [isCanvasSizeOpen, setIsCanvasSizeOpen] = useState(false);
 
   useEffect(() => {
     const handleResize = () => setViewportWidth(window.innerWidth);
@@ -137,6 +158,8 @@ const ImageEditorPage: React.FC<ImageEditorPageProps> = ({ openPayload, showGlob
         .then(({ doc, meta }) => {
           if (cancelled) return;
           sourceMetaRef.current = meta;
+          // Update-original target (E8): only meaningful for gallery sources.
+          savedItemIdRef.current = openPayload.kind === 'gallery' ? openPayload.galleryItemId : null;
           loadDocument(doc);
           requestAnimationFrame(() => viewportRef.current?.fitToViewport());
         })
@@ -154,8 +177,17 @@ const ImageEditorPage: React.FC<ImageEditorPageProps> = ({ openPayload, showGlob
 
   useEffect(() => {
     AutosaveService.hasSavedDocument().then((has) => {
-      if (has) setShowRecovery(true);
+      if (!has) return;
+      if (openPayload) {
+        // A gallery/blob payload is opening — banner, not modal (M11), so the
+        // opened image stays visible and Restore requires an explicit choice.
+        setShowRecoveryBanner(true);
+      } else {
+        setShowRecovery(true);
+      }
     });
+    // Mount-only; openPayload is a one-shot instruction.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   useEffect(() => {
@@ -166,30 +198,29 @@ const ImageEditorPage: React.FC<ImageEditorPageProps> = ({ openPayload, showGlob
   const handleZoomIn = useCallback(() => viewportRef.current?.zoomIn(), []);
   const handleZoomOut = useCallback(() => viewportRef.current?.zoomOut(), []);
 
-  /** Resolves true only when the document was actually saved. */
-  const handleSaveToGallery = useCallback(async (): Promise<boolean> => {
+  /** The actual save. `updateOriginal` picks in-place update vs new item.
+   *  Resolves true only when the document was actually saved. */
+  const doSaveToGallery = useCallback(async (updateOriginal: boolean): Promise<boolean> => {
     const doc = getSnapshot().document;
     if (!doc || isSaving) return false;
-
-    if (willConvertToJpeg()) {
-      const proceed = window.confirm(
-        'Vault JPG conversion is enabled, so transparent areas will be flattened to a solid background.\n\nSave anyway?',
-      );
-      if (!proceed) return false;
-    }
 
     setIsSaving(true);
     try {
       const blob = await exportToBlob(doc, 'png');
-      await saveToGallery(blob, {
+      const item = await saveToGallery(blob, {
         title: doc.title,
-        generationId: doc.sourceGalleryItemId,
+        // The SOURCE item's generation record id and prompt (E8) — not the
+        // gallery item id, which broke lineage lookups (review H10).
+        generationId: sourceMetaRef.current?.generationId,
+        prompt: sourceMetaRef.current?.prompt,
         categoryId: sourceMetaRef.current?.categoryId,
         tags: sourceMetaRef.current?.tags,
+        updateItemId: updateOriginal ? (savedItemIdRef.current ?? undefined) : undefined,
       });
+      savedItemIdRef.current = item.id;
       dispatch({ type: 'SET_DIRTY', dirty: false });
       await AutosaveService.clearSavedDocument();
-      showGlobalFeedback?.('Saved to library.');
+      showGlobalFeedback?.(updateOriginal ? 'Updated original in library.' : 'Saved to library.');
       return true;
     } catch (err) {
       showGlobalFeedback?.(`Failed to save: ${err instanceof Error ? err.message : String(err)}`, true);
@@ -198,6 +229,26 @@ const ImageEditorPage: React.FC<ImageEditorPageProps> = ({ openPayload, showGlob
       setIsSaving(false);
     }
   }, [isSaving, showGlobalFeedback]);
+
+  /** Save entry point. When JPG conversion would flatten alpha, or a library
+   *  original exists to update (E8 leftover — the update path was wired but
+   *  never user-selectable), the decision goes through the app modal
+   *  (window.confirm contradicted its own buttons, review H10). Plain saves
+   *  with no original proceed directly with no modal. */
+  const handleSaveToGallery = useCallback(async (): Promise<boolean> => {
+    const doc = getSnapshot().document;
+    if (!doc || isSaving) return false;
+    const jpegWarning = willConvertToJpeg();
+    const canUpdateOriginal = !!savedItemIdRef.current;
+    if (jpegWarning || canUpdateOriginal) {
+      setSaveChoice({ jpegWarning, canUpdateOriginal });
+      // The modal resolves through doSaveToGallery; report not-saved for now —
+      // callers (unsaved-changes guard) treat the modal path as cancelled
+      // (same convention as the old jpeg-confirm modal).
+      return false;
+    }
+    return doSaveToGallery(false);
+  }, [isSaving, doSaveToGallery]);
   const handleExport = useCallback(() => setIsExportOpen(true), []);
 
   /** Any action that discards the current document (New Document, Open Image) is routed through
@@ -249,6 +300,55 @@ const ImageEditorPage: React.FC<ImageEditorPageProps> = ({ openPayload, showGlob
     if (file) await openOrPlaceFile(file);
   }, [openOrPlaceFile]);
 
+  /** M5 item 6 — paste an image from the system clipboard (Ctrl+V). Same
+   *  routing as a dropped file: no document → becomes the document; with one →
+   *  becomes a new layer. */
+  const handlePaste = useCallback(async () => {
+    try {
+      const items = await navigator.clipboard.read();
+      for (const item of items) {
+        const imageType = item.types.find((t) => t.startsWith('image/'));
+        if (imageType) {
+          const blob = await item.getType(imageType);
+          const ext = imageType.split('/')[1]?.split('+')[0] ?? 'png';
+          const file = new File([blob], `pasted-image.${ext}`, { type: imageType });
+          await openOrPlaceFile(file);
+          return;
+        }
+      }
+      showGlobalFeedback?.('Clipboard has no image to paste.');
+    } catch {
+      // Clipboard API denied/unavailable (Firefox needs user gesture + paste
+      // event; Ctrl+V here IS a gesture, but permission may still be refused).
+      showGlobalFeedback?.('Couldn\'t read the clipboard — use "Place image as layer" instead.', true);
+    }
+  }, [openOrPlaceFile, showGlobalFeedback]);
+
+  /** Exports the active image layer's mask as a B/W PNG (inpaint prep). */
+  const handleExportMask = useCallback(async () => {
+    const doc = getSnapshot().document;
+    const layer = doc && activeLayerId ? findLayerById(doc.layers, activeLayerId) : undefined;
+    if (!layer || layer.type !== 'image') {
+      showGlobalFeedback?.('Select an image layer to export its mask.', true);
+      return;
+    }
+    if (!layer.mask) {
+      showGlobalFeedback?.(`Layer "${layer.name}" has no mask — add one with the +M chip first.`, true);
+      return;
+    }
+    try {
+      const blob = await exportMaskToBlob(layer);
+      const url = URL.createObjectURL(blob);
+      const link = window.document.createElement('a');
+      link.href = url;
+      link.download = `${layer.name}-mask.png`;
+      link.click();
+      URL.revokeObjectURL(url);
+    } catch (err) {
+      showGlobalFeedback?.(`Mask export failed: ${err instanceof Error ? err.message : String(err)}`, true);
+    }
+  }, [activeLayerId, showGlobalFeedback]);
+
   /** Only reachable from the Open-or-Create modal, which is shown either with no
    *  document or after New already passed the unsaved guard — guarding again would
    *  re-prompt after the user just chose Discard (isDirty is still true then). */
@@ -274,12 +374,17 @@ const ImageEditorPage: React.FC<ImageEditorPageProps> = ({ openPayload, showGlob
 
   const handleCreateDocument = useCallback(
     async (width: number, height: number, background: 'white' | 'transparent' | 'foreground') => {
-      const doc = await createBlankDocument(width, height, background);
-      loadDocument(doc);
-      setIsNewDocOpen(false);
-      requestAnimationFrame(() => viewportRef.current?.fitToViewport());
+      try {
+        const doc = await createBlankDocument(width, height, background);
+        loadDocument(doc);
+        setIsNewDocOpen(false);
+        requestAnimationFrame(() => viewportRef.current?.fitToViewport());
+      } catch (err) {
+        // H13: oversize/invalid dimensions now throw with a real message.
+        showGlobalFeedback?.(err instanceof Error ? err.message : String(err), true);
+      }
     },
-    [],
+    [showGlobalFeedback],
   );
 
 
@@ -289,6 +394,13 @@ const ImageEditorPage: React.FC<ImageEditorPageProps> = ({ openPayload, showGlob
     onZoomOut: handleZoomOut,
     onSave: handleSaveToGallery,
     onImport: handleImport,
+    onPaste: () => void handlePaste(),
+    onImageSize: () => setIsImageSizeOpen(true),
+    onCanvasSize: () => setIsCanvasSizeOpen(true),
+    onCropToSelection: () => {
+      if (!cropToSelection()) showGlobalFeedback?.('Make a selection first.');
+    },
+    onExportMask: () => void handleExportMask(),
   });
 
   if (viewportWidth < MIN_VIEWPORT_WIDTH) {
@@ -335,12 +447,53 @@ const ImageEditorPage: React.FC<ImageEditorPageProps> = ({ openPayload, showGlob
         </div>
       )}
       <div className={`w-full h-full flex flex-col bg-base-100 overflow-hidden ${isExiting ? 'pointer-events-none opacity-0 transition-opacity duration-200' : ''}`}>
+      {showRecoveryBanner && (
+        <div className="flex items-center gap-3 px-4 h-10 flex-shrink-0 bg-warning/15 border-b border-warning/30">
+          <span className="text-xs font-mono text-base-content/80 flex-1">
+            An autosaved session was found. Restoring will replace the current image.
+          </span>
+          <button
+            type="button"
+            className="text-xs font-mono px-2 py-0.5 border border-base-content/20 hover:border-primary hover:text-primary"
+            disabled={isRestoring}
+            onClick={async () => {
+              setIsRestoring(true);
+              try {
+                const doc = await AutosaveService.restoreSavedDocument();
+                if (doc) {
+                  sourceMetaRef.current = null;
+                  savedItemIdRef.current = null;
+                  loadDocument(doc);
+                  requestAnimationFrame(() => viewportRef.current?.fitToViewport());
+                }
+              } finally {
+                setIsRestoring(false);
+                setShowRecoveryBanner(false);
+              }
+            }}
+          >
+            {isRestoring ? 'Restoring…' : 'Restore'}
+          </button>
+          <button
+            type="button"
+            className="text-xs font-mono px-2 py-0.5 border border-base-content/20 hover:border-primary hover:text-primary"
+            onClick={() => {
+              AutosaveService.clearSavedDocument();
+              setShowRecoveryBanner(false);
+            }}
+          >
+            Discard
+          </button>
+        </div>
+      )}
       <EditorToolbar
         onNewDocument={() => runWithUnsavedGuard(() => setIsNewDocOpen(true))}
         onFitToViewport={handleFitToViewport}
         onExport={handleExport}
         onSaveToGallery={handleSaveToGallery}
         isSaving={isSaving}
+        onImageSize={() => setIsImageSizeOpen(true)}
+        onCanvasSize={() => setIsCanvasSizeOpen(true)}
       />
 
       <div
@@ -367,7 +520,54 @@ const ImageEditorPage: React.FC<ImageEditorPageProps> = ({ openPayload, showGlob
         onDropFile={(file) => void openFileAsDocument(file)}
       />
 
+      <ImageSizeDialog isOpen={isImageSizeOpen} onClose={() => setIsImageSizeOpen(false)} />
+      <CanvasSizeDialog isOpen={isCanvasSizeOpen} onClose={() => setIsCanvasSizeOpen(false)} />
+
       <ExportModal isOpen={isExportOpen} onClose={() => setIsExportOpen(false)} />
+
+      {saveChoice && (
+        <div className="fixed inset-0 bg-black/40 backdrop-blur-xl z-[1000] flex items-center justify-center p-4 animate-fade-in" role="dialog" aria-modal="true">
+          <div className="bg-base-100/95 backdrop-blur-xl w-full max-w-sm rounded-none border border-base-content/10 overflow-hidden" onClick={(e) => e.stopPropagation()}>
+            <div className="p-5">
+              <h3 className="text-sm font-display uppercase tracking-widest text-base-content/80 mb-2">Save to library</h3>
+              {saveChoice.jpegWarning && (
+                <p className="text-sm text-base-content/60 mb-2">
+                  The vault will re-encode this image as JPG, flattening transparent areas to a solid background.
+                </p>
+              )}
+              {saveChoice.canUpdateOriginal ? (
+                <p className="text-sm text-base-content/60">
+                  You opened this image from the library. Update the original in place, or save this edit as a new item?
+                </p>
+              ) : null}
+            </div>
+            <footer className="panel-footer h-11 p-1.5 gap-1.5">
+              <button type="button" className="form-btn flex-1 rounded-none" onClick={() => setSaveChoice(null)}>Cancel</button>
+              {saveChoice.canUpdateOriginal && (
+                <button
+                  type="button"
+                  className="form-btn flex-1 rounded-none"
+                  onClick={async () => {
+                    setSaveChoice(null);
+                    await doSaveToGallery(true);
+                  }}
+                >
+                  Update original
+                </button>
+              )}
+              <button
+                type="button"
+                className="form-btn form-btn-primary flex-1 rounded-none"
+                onClick={async () => {
+                  setSaveChoice(null);
+                  await doSaveToGallery(false);                }}
+              >
+                Save as new{saveChoice.jpegWarning ? ' (JPG)' : ''}
+              </button>
+            </footer>
+          </div>
+        </div>
+      )}
 
       {pendingUnsavedAction && (
         <UnsavedChangesModal

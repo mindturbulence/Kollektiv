@@ -43,7 +43,7 @@ const JSONBreakdownModal: React.FC<JSONBreakdownModalProps> = ({
                                     </div>
                                     <div className="flex flex-col">
                                         <h3 className="text-xl font-black tracking-tighter text-base-content leading-none uppercase italic">DATA ANATOMY<span className="text-primary">.</span></h3>
-                                        <p className="text-[10px] font-black uppercase tracking-[0.4em] text-base-content/30 mt-1.5">Processed Breakdown Structure</p>
+                                        <p className="text-2xs font-black uppercase tracking-[0.4em] text-base-content/30 mt-1.5">Processed Breakdown Structure</p>
                                     </div>
                                 </div>
                                 <button 
@@ -56,7 +56,7 @@ const JSONBreakdownModal: React.FC<JSONBreakdownModalProps> = ({
 
                             <div className="p-8 flex-1 overflow-hidden min-h-0">
                                 <div className="bg-black/20 rounded-none border border-primary/10 p-6 relative group h-full flex flex-col">
-                                    <pre className="text-[12px] font-mono text-primary/80 leading-relaxed overflow-y-auto custom-scrollbar whitespace-pre-wrap selection:bg-primary/20 flex-1">
+                                    <pre className="text-xs font-mono text-primary/80 leading-relaxed overflow-y-auto custom-scrollbar whitespace-pre-wrap selection:bg-primary/20 flex-1">
                                         {JSON.stringify(jsonData, null, 4)}
                                     </pre>
                                     

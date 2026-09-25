@@ -176,7 +176,7 @@ const VideoPlayerOverlay: React.FC<VideoPlayerOverlayProps> = ({ url, onClose })
                                     href={watchUrl}
                                     target="_blank"
                                     rel="noopener noreferrer"
-                                    className="text-[10px] font-black uppercase tracking-widest text-white/70 hover:text-white truncate transition-colors"
+                                    className="text-2xs font-black uppercase tracking-widest text-white/70 hover:text-white truncate transition-colors"
                                     onClick={(e) => e.stopPropagation()}
                                 >
                                     Watch on YouTube
@@ -184,7 +184,7 @@ const VideoPlayerOverlay: React.FC<VideoPlayerOverlayProps> = ({ url, onClose })
                             </div>
                             <button
                                 onClick={handleOpenInYoutube}
-                                className="flex items-center gap-1.5 px-3 py-1.5 text-[9px] font-black uppercase tracking-widest bg-red-600 hover:bg-red-500 text-white rounded transition-colors"
+                                className="flex items-center gap-1.5 px-3 py-1.5 text-2xs font-black uppercase tracking-widest bg-red-600 hover:bg-red-500 text-white rounded transition-colors"
                             >
                                 <LinkIcon className="w-3 h-3" />
                                 Open in YouTube

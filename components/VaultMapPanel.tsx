@@ -136,7 +136,7 @@ const VaultMapPanel: React.FC<VaultMapPanelProps> = ({ isOpen, onClose }) => {
           <div className="flex items-center gap-3">
             <h2 className="text-sm font-bold tracking-wide text-base-content/80">Vault Map</h2>
             {!loading && stats.entities > 0 && (
-              <span className="text-[10px] font-mono text-base-content/30">
+              <span className="text-2xs font-mono text-base-content/30">
                 {stats.entities} items · {stats.relations} links
               </span>
             )}

@@ -131,12 +131,12 @@ const CategoryItem: React.FC<{
                                             setEditValue(category.name);
                                         }
                                     }}
-                                    className="form-input h-8 w-full font-bold uppercase text-[11px] focus:outline-none"
+                                    className="form-input h-8 w-full font-bold uppercase text-2xs focus:outline-none"
                                     placeholder="Enter category name..."
                                 />
                                 <button 
                                     onClick={() => { audioService.playClick(); handleRename(); }}
-                                    className="p-1 px-2.5 h-8 bg-success/20 hover:bg-success/30 text-success border border-success/30 transition-colors uppercase font-bold text-[10px] flex items-center justify-center"
+                                    className="p-1 px-2.5 h-8 bg-success/20 hover:bg-success/30 text-success border border-success/30 transition-colors uppercase font-bold text-2xs flex items-center justify-center"
                                     title="Save Rename"
                                 >
                                     <CheckIcon className="w-3.5 h-3.5" />
@@ -147,7 +147,7 @@ const CategoryItem: React.FC<{
                                         setIsEditing(false); 
                                         setEditValue(category.name); 
                                     }}
-                                    className="p-1 px-2.5 h-8 bg-base-300 hover:bg-base-200 text-base-content/60 border border-base-300 transition-colors uppercase font-bold text-[10px] flex items-center justify-center"
+                                    className="p-1 px-2.5 h-8 bg-base-300 hover:bg-base-200 text-base-content/60 border border-base-300 transition-colors uppercase font-bold text-2xs flex items-center justify-center"
                                     title="Cancel"
                                 >
                                     <CloseIcon className="w-3.5 h-3.5" />
@@ -173,7 +173,7 @@ const CategoryItem: React.FC<{
                     {/* Parent Selector (reparenting) - 100% stable folder moves */}
                     {!isEditing && (
                         <div className="flex items-center gap-2">
-                            <span className="text-[9px] font-mono text-base-content/40 uppercase tracking-wider hidden md:inline">Folder Placement:</span>
+                            <span className="text-2xs font-mono text-base-content/40 uppercase tracking-wider hidden md:inline">Folder Placement:</span>
                             <select
                                 value={category.parentId || ''}
                                 onChange={(e) => {
@@ -181,7 +181,7 @@ const CategoryItem: React.FC<{
                                     const val = e.target.value;
                                     onReparent(category.id, val ? val : undefined);
                                 }}
-                                className="select select-xs select-bordered font-mono text-[9px] uppercase font-bold tracking-wider h-7 bg-base-200/50 hover:bg-base-200 border-base-300/50 rounded-none max-w-[150px] focus:outline-none"
+                                className="select select-xs select-bordered font-mono text-2xs uppercase font-bold tracking-wider h-7 bg-base-200/50 hover:bg-base-200 border-base-300/50 rounded-none max-w-[150px] focus:outline-none"
                                 title="Move folder to another placement in tree"
                             >
                                 <option value="">[ROOT DIRECTORY]</option>
@@ -426,11 +426,11 @@ export const NestedCategoryManager: React.FC<NestedCategoryManagerProps> = ({
                     <div className="bg-base-100/40 backdrop-blur-xl rounded-none w-full overflow-hidden relative z-10">
                         <header className="p-8 border-b border-base-300 bg-transparent">
                             <h3 className="text-4xl font-black tracking-tighter text-base-content uppercase leading-none">New Folder</h3>
-                            {addParentId && <p className="text-[10px] font-black uppercase tracking-widest text-primary mt-2">Nesting under: {categories.find(c => c.id === addParentId)?.name}</p>}
+                            {addParentId && <p className="text-2xs font-black uppercase tracking-widest text-primary mt-2">Nesting under: {categories.find(c => c.id === addParentId)?.name}</p>}
                         </header>
                         <div className="p-8 space-y-6">
                             <div className="form-control">
-                                <label className="text-[10px] font-black uppercase tracking-widest text-base-content/40 mb-2">Folder Name</label>
+                                <label className="text-2xs font-black uppercase tracking-widest text-base-content/40 mb-2">Folder Name</label>
                                 <input type="text" value={addName} onChange={e => setAddName((e.currentTarget as any).value)} className="form-input w-full" autoFocus onKeyDown={e => e.key === 'Enter' && handleConfirmAdd()} />
                             </div>
                         </div>

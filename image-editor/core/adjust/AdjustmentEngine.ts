@@ -8,6 +8,7 @@
 
 import { dispatch } from '../store';
 import { AdjustmentPreview } from './AdjustmentPreview';
+import { buildSelectionClip, buildSelectionCoverage, lerpPixelsInto } from './selectionMask';
 import type { AdjustmentDef, HistoryCommand } from '../types';
 
 let _preview: AdjustmentPreview | null = null;
@@ -19,12 +20,31 @@ export const AdjustmentEngine = {
    * Fast GPU pass — call on every slider onChange.
    * Updates the preview bitmap and triggers a CanvasRenderer repaint via MARK_LAYER_DIRTY.
    */
-  updatePreview(layerId: string, sourceBitmap: ImageBitmap, adjustment: AdjustmentDef): void {
+  async updatePreview(layerId: string, sourceBitmap: ImageBitmap, adjustment: AdjustmentDef): Promise<void> {
     if (!_preview || _preview.needsResize(sourceBitmap.width, sourceBitmap.height)) {
       _preview?.dispose();
       _preview = new AdjustmentPreview(sourceBitmap.width, sourceBitmap.height);
     }
-    const bitmap = _preview.render(sourceBitmap, adjustment);
+    const adjustedBitmap = _preview.render(sourceBitmap, adjustment);
+    // E5 remainder — mask the GPU preview to the active selection so what the
+    // user sees matches the masked commit: unadjusted bitmap outside the
+    // clip, adjusted bitmap through the clip. Degrades to the unmasked
+    // preview when canvas compositing is unavailable (jsdom).
+    const clip = buildSelectionClip(layerId, sourceBitmap.width, sourceBitmap.height);
+    let bitmap = adjustedBitmap;
+    if (clip) {
+      const oc = new OffscreenCanvas(sourceBitmap.width, sourceBitmap.height);
+      const ctx = oc.getContext('2d');
+      if (ctx) {
+        ctx.drawImage(sourceBitmap, 0, 0);            // outside: untouched
+        ctx.save();
+        ctx.clip(clip);
+        ctx.drawImage(adjustedBitmap, 0, 0);          // inside: adjusted
+        ctx.restore();
+        _previewBitmaps.get(layerId)?.close();
+        bitmap = await createImageBitmap(oc);
+      }
+    }
     _previewBitmaps.get(layerId)?.close();
     _previewBitmaps.set(layerId, bitmap);
     dispatch({ type: 'MARK_LAYER_DIRTY', layerId });
@@ -71,11 +91,25 @@ export const AdjustmentEngine = {
 
       const w = sourceBitmap.width, h = sourceBitmap.height;
 
+      // E5 remainder — the ORIGINAL pixels stay on the main thread for the
+      // selection lerp (worker returns adjusted-only). Copied, not aliased:
+      // pixelData's buffer is transferred to the worker below.
+      const originalPixels = new Uint8ClampedArray(imageData.data); // copy
+      // Per-pixel selection coverage (null = no selection, unmasked commit).
+      const coverage = buildSelectionCoverage(layerId, w, h);
+
       const onMessage = (e: MessageEvent) => {
         if (e.data.requestId !== requestId) return;
         _worker!.removeEventListener('message', onMessage);
 
         if (e.data.type === 'error') { reject(new Error(e.data.message)); return; }
+
+        // E5 remainder — selection lerp: blend the worker's adjusted pixels
+        // back toward the originals weighted by selection coverage, so only
+        // selected pixels (fully or partially, feather) receive the change.
+        if (coverage) {
+          lerpPixelsInto(new Uint8ClampedArray(e.data.pixelData), originalPixels, coverage);
+        }
 
         createImageBitmap(
           new ImageData(new Uint8ClampedArray(e.data.pixelData), e.data.width, e.data.height)
@@ -84,6 +118,8 @@ export const AdjustmentEngine = {
             id: crypto.randomUUID(),
             label: `Apply ${adjustment.kind}`,
             timestamp: Date.now(),
+            // H3: declare held bitmaps so the byte-cap can account and free them.
+            bitmapRefs: { 'new (do)': newBitmap, 'source (undo)': sourceBitmap },
             do:   () => dispatch({ type: 'REPLACE_LAYER_BITMAP', layerId, bitmap: newBitmap }),
             undo: () => dispatch({ type: 'REPLACE_LAYER_BITMAP', layerId, bitmap: sourceBitmap }),
           };

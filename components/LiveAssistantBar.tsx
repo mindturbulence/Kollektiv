@@ -64,9 +64,9 @@ export const LiveAssistantFault: React.FC<{ hidden?: boolean }> = ({ hidden = fa
                             <div className="flex-1 p-4 pr-10">
                                 <div className="flex items-center gap-2 mb-1">
                                     <AlertTriangleIcon className="w-4 h-4 text-error" />
-                                    <span className="text-[10px] font-black uppercase tracking-[0.2em] text-error">SYSTEM FAULT</span>
+                                    <span className="text-2xs font-black uppercase tracking-[0.2em] text-error">SYSTEM FAULT</span>
                                 </div>
-                                <p className="text-[11px] font-bold uppercase tracking-wider text-base-content/80 leading-relaxed">{error}</p>
+                                <p className="text-2xs font-bold uppercase tracking-wider text-base-content/80 leading-relaxed">{error}</p>
                             </div>
                             <button onClick={() => setError('')} className="absolute top-2 right-2 p-1 hover:bg-base-content/10 transition-colors rounded-none">
                                 <CloseIcon className="w-3.5 h-3.5 text-base-content/40" />
@@ -160,7 +160,7 @@ export const LiveAssistantCameraPreview: React.FC<{ hidden?: boolean }> = ({ hid
                 muted
                 className="w-full h-full object-cover scale-x-[-1]"
             />
-            <div className="absolute top-1 left-1 px-1.5 py-0.5 bg-base-100/80 text-[9px] font-black uppercase tracking-[0.2em] text-primary">
+            <div className="absolute top-1 left-1 px-1.5 py-0.5 bg-base-100/80 text-2xs font-black uppercase tracking-[0.2em] text-primary">
                 CAM
             </div>
         </div>,

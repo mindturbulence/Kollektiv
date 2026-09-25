@@ -2,8 +2,9 @@
 // Persists the current EditorDocument to IndexedDB (via idb) so an
 // interrupted session can be recovered on next load. Pure engine module —
 // zero React imports. ImageBitmap pixel data cannot be structured-cloned
-// into IDB, so each ImageLayer's bitmap is re-encoded to a JPEG ArrayBuffer
-// on save and decoded back to an ImageBitmap on restore.
+// into IDB, so each ImageLayer's bitmap is re-encoded losslessly (PNG) on
+// save and decoded back to an ImageBitmap on restore (review C3: JPEG
+// destroyed alpha — transparent pixels came back opaque black).
 
 import { openDB, type IDBPDatabase } from 'idb';
 import type {
@@ -16,21 +17,26 @@ import type {
   ShapeLayer,
   TextLayer,
   Layer,
+  LayerMask,
   LayerTransform,
 } from '../types';
 import { getSnapshot, subscribe } from '../store';
 
 const DB_NAME = 'kollektiv-editor-autosave';
-const DB_VERSION = 1;
+const DB_VERSION = 2; // v2: PNG blobs + serialized masks (was JPEG, no masks)
 const STORE_NAME = 'documents';
 const AUTOSAVE_KEY = 'current';
 const AUTOSAVE_DEBOUNCE_MS = 2000;
-const AUTOSAVE_JPEG_QUALITY = 0.85;
+
+/** Bump whenever SerializedLayer/AutosaveRecord changes shape. Records with a
+ *  lower version are discarded on restore instead of misdecoded — a restore
+ *  from an incompatible format must never hand the user corrupt pixels. */
+const AUTOSAVE_FORMAT_VERSION = 2;
 
 // ─── Serialized layer shapes ────────────────────────────────────────────────
 // Mirrors `Layer` minus non-serializable `ImageBitmap` fields (layer.bitmap,
-// layer.mask.bitmap). Masks are a V2 stub with no current producer, so they
-// are dropped rather than serialized.
+// layer.mask.bitmap). Layer masks ARE serialized (review C3: they were dropped
+// because the old comment predated the mask producer that now exists).
 
 interface SerializedLayerBase {
   id: string;
@@ -42,10 +48,18 @@ interface SerializedLayerBase {
   locked?: boolean;
 }
 
+/** A mask minus its bitmap — the bitmap rides in layerBlobs under `${id}::mask`. */
+interface SerializedMask {
+  enabled: boolean;
+  invert: boolean;
+  feather: number;
+}
+
 interface SerializedImageLayer extends SerializedLayerBase {
   type: 'image';
   intrinsicWidth: number;
   intrinsicHeight: number;
+  mask?: SerializedMask;
 }
 
 interface SerializedGroupLayer extends SerializedLayerBase {
@@ -82,9 +96,12 @@ type SerializedLayer =
 type AutosaveMetadata = Omit<EditorDocument, 'layers'>;
 
 interface AutosaveRecord {
+  formatVersion: number;
   metadata: AutosaveMetadata;
   layerTree: SerializedLayer[];
-  /** layerId → JPEG-encoded ArrayBuffer, for 'image' layers only. */
+  /** layerId → PNG-encoded ArrayBuffer ('image' layers), `${layerId}::mask` →
+   *  mask bitmap buffers. Lossless on purpose: transparent pixels must survive
+   *  the round trip (review C3). */
   layerBlobs: Record<string, ArrayBuffer>;
 }
 
@@ -114,21 +131,37 @@ function deserializedBase(meta: SerializedLayer): SerializedLayerBase {
   return base;
 }
 
-async function bitmapToJpegBuffer(bitmap: ImageBitmap): Promise<ArrayBuffer> {
+async function bitmapToLosslessBuffer(bitmap: ImageBitmap): Promise<ArrayBuffer> {
   const canvas = new OffscreenCanvas(bitmap.width, bitmap.height);
   const ctx = canvas.getContext('2d');
   if (!ctx) throw new Error('Failed to acquire 2D context for autosave encoding');
   ctx.drawImage(bitmap, 0, 0);
-  const blob = await canvas.convertToBlob({ type: 'image/jpeg', quality: AUTOSAVE_JPEG_QUALITY });
+  // PNG, not JPEG: JPEG has no alpha channel, so transparent pixels round-trip
+  // as opaque black — silent data loss inside the data-loss-prevention feature
+  // (review C3). PNG is lossless; the extra bytes are the cost of correctness.
+  const blob = await canvas.convertToBlob({ type: 'image/png' });
   return blob.arrayBuffer();
 }
 
 async function serializeLayer(layer: Layer, blobs: Record<string, ArrayBuffer>): Promise<SerializedLayer> {
   const base = serializedBase(layer);
   switch (layer.type) {
-    case 'image':
-      blobs[layer.id] = await bitmapToJpegBuffer(layer.bitmap);
-      return { ...base, type: 'image', intrinsicWidth: layer.intrinsicWidth, intrinsicHeight: layer.intrinsicHeight };
+    case 'image': {
+      blobs[layer.id] = await bitmapToLosslessBuffer(layer.bitmap);
+      const meta: SerializedImageLayer = {
+        ...base,
+        type: 'image',
+        intrinsicWidth: layer.intrinsicWidth,
+        intrinsicHeight: layer.intrinsicHeight,
+      };
+      if (layer.mask) {
+        // Serialize the mask bitmap alongside the layer bitmap (review C3 —
+        // masks were silently dropped). Flags travel on the layer meta.
+        blobs[`${layer.id}::mask`] = await bitmapToLosslessBuffer(layer.mask.bitmap);
+        meta.mask = { enabled: layer.mask.enabled, invert: layer.mask.invert, feather: layer.mask.feather };
+      }
+      return meta;
+    }
     case 'group':
       return { ...base, type: 'group', children: await Promise.all(layer.children.map((child) => serializeLayer(child, blobs))) };
     case 'adjustment':
@@ -152,7 +185,7 @@ async function deserializeLayer(meta: SerializedLayer, blobs: Record<string, Arr
     case 'image': {
       const buf = blobs[meta.id];
       if (!buf) throw new Error(`Autosave record missing blob for image layer ${meta.id}`);
-      const bitmap = await createImageBitmap(new Blob([buf], { type: 'image/jpeg' }));
+      const bitmap = await createImageBitmap(new Blob([buf], { type: 'image/png' }));
       const layer: ImageLayer = {
         ...base,
         type: 'image',
@@ -160,6 +193,20 @@ async function deserializeLayer(meta: SerializedLayer, blobs: Record<string, Arr
         intrinsicWidth: meta.intrinsicWidth,
         intrinsicHeight: meta.intrinsicHeight,
       };
+      if (meta.mask) {
+        const maskBuf = blobs[`${meta.id}::mask`];
+        if (maskBuf) {
+          const maskBitmap = await createImageBitmap(new Blob([maskBuf], { type: 'image/png' }));
+          layer.mask = {
+            bitmap: maskBitmap,
+            enabled: meta.mask.enabled,
+            invert: meta.mask.invert,
+            feather: meta.mask.feather,
+          } as ImageLayer['mask'] as LayerMask;
+        }
+        // A missing mask blob for a masked layer is corrupt — drop the mask
+        // rather than restoring a fully-opaque (visually mask-removed) layer.
+      }
       return layer;
     }
     case 'group': {
@@ -205,7 +252,7 @@ async function saveDocument(doc: EditorDocument): Promise<void> {
   const { layers, ...metadata } = doc;
   const layerBlobs: Record<string, ArrayBuffer> = {};
   const layerTree = await Promise.all(layers.map((layer) => serializeLayer(layer, layerBlobs)));
-  const record: AutosaveRecord = { metadata, layerTree, layerBlobs };
+  const record: AutosaveRecord = { formatVersion: AUTOSAVE_FORMAT_VERSION, metadata, layerTree, layerBlobs };
   const db = await getDB();
   await db.put(STORE_NAME, record, AUTOSAVE_KEY);
 }
@@ -249,14 +296,21 @@ export async function hasSavedDocument(): Promise<boolean> {
 
 /**
  * Reads and decodes the autosaved document, reassembling ImageBitmaps from
- * their stored JPEG bytes. Returns null on any error (corrupt/missing
- * autosave is dropped silently rather than surfaced as a hard failure).
+ * their stored lossless (PNG) bytes. Returns null on any error, including a
+ * record written by an older format version (review C3: old JPEG-alpha-losing
+ * records are discarded, not misdecoded — restoring them would hand the user
+ * black transparent pixels; the debounce immediately writes a fresh record).
  */
 export async function restoreSavedDocument(): Promise<EditorDocument | null> {
   try {
     const db = await getDB();
     const record = (await db.get(STORE_NAME, AUTOSAVE_KEY)) as AutosaveRecord | undefined;
     if (!record) return null;
+    if (record.formatVersion !== AUTOSAVE_FORMAT_VERSION) {
+      console.warn(`Discarding autosave with format version ${record.formatVersion} (expected ${AUTOSAVE_FORMAT_VERSION})`);
+      await clearSavedDocument();
+      return null;
+    }
     const layers = await Promise.all(record.layerTree.map((meta) => deserializeLayer(meta, record.layerBlobs)));
     return { ...record.metadata, layers };
   } catch (err) {

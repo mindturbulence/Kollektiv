@@ -47,12 +47,12 @@ const GalleryStatsPanel: React.FC<GalleryStatsPanelProps> = ({ isOpen, onClose }
           <div className="w-[420px] h-full flex flex-col overflow-hidden">
             {/* Header */}
             <div className="h-14 flex items-center justify-between px-4 border-b border-base-content/10 flex-shrink-0">
-              <span className="text-[10px] font-black uppercase tracking-[0.3em] text-primary">
+              <span className="text-2xs font-black uppercase tracking-[0.3em] text-primary">
                 GALLERY ANALYTICS
               </span>
               <button
                 onClick={() => { audioService.playClick(); onClose(); }}
-                className="btn btn-xs btn-ghost rounded-none tracking-widest text-base-content/40 hover:text-error text-[9px]"
+                className="btn btn-xs btn-ghost rounded-none tracking-widest text-base-content/40 hover:text-error text-2xs"
               >
                 CLOSE
               </button>
@@ -163,7 +163,7 @@ const SummaryCard: React.FC<{ label: string; value: number }> = ({ label, value 
 
 const Section: React.FC<{ title: string; children: React.ReactNode }> = ({ title, children }) => (
   <div className="space-y-2">
-    <span className="text-[9px] font-black uppercase tracking-[0.2em] text-primary/60 block">
+    <span className="text-2xs font-black uppercase tracking-[0.2em] text-primary/60 block">
       {title}
     </span>
     <div className="bg-base-200/20 border border-base-content/5 p-3 space-y-1.5">
@@ -182,7 +182,7 @@ const BarList: React.FC<{ items: BarItem[] }> = ({ items }) => (
   <div className="space-y-1">
     {items.map((item, i) => (
       <div key={i} className="flex items-center gap-2">
-        <span className="text-[10px] font-mono text-base-content/70 w-28 truncate flex-shrink-0" title={item.label}>
+        <span className="text-2xs font-mono text-base-content/70 w-28 truncate flex-shrink-0" title={item.label}>
           {item.label}
         </span>
         <div className="flex-1 h-3 bg-base-300/30 relative overflow-hidden">
@@ -193,7 +193,7 @@ const BarList: React.FC<{ items: BarItem[] }> = ({ items }) => (
             className="absolute inset-y-0 left-0 bg-primary/50"
           />
         </div>
-        <span className="text-[10px] font-mono text-base-content/40 w-6 text-right flex-shrink-0">
+        <span className="text-2xs font-mono text-base-content/40 w-6 text-right flex-shrink-0">
           {item.value}
         </span>
       </div>
@@ -206,7 +206,7 @@ const TagList: React.FC<{ items: { tag: string; count: number }[] }> = ({ items 
     {items.map((item, i) => (
       <span
         key={i}
-        className="text-[9px] font-mono px-2 py-0.5 border border-base-content/10 bg-base-200/40 text-base-content/70"
+        className="text-2xs font-mono px-2 py-0.5 border border-base-content/10 bg-base-200/40 text-base-content/70"
       >
         {item.tag}
         <span className="text-base-content/30 ml-1">×{item.count}</span>

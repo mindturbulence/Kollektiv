@@ -108,14 +108,17 @@ describe('EditorStore', () => {
   });
 
   describe('ADD_LAYER', () => {
-    it('inserts at the correct index, activates the new layer, and marks dirty', () => {
+    it('inserts ABOVE the referenced layer (index 0 = topmost), activates the new layer, and marks dirty', () => {
       const layer1 = makeLayer('a');
       dispatch({ type: 'SET_DOCUMENT', document: makeDoc([layer1]) });
       const layer2 = makeLayer('b');
       dispatch({ type: 'ADD_LAYER', layer: layer2, insertAfterIndex: 0 });
 
       const snap = getSnapshot();
-      expect(snap.document!.layers.map(l => l.id)).toEqual([layer1.id, layer2.id]);
+      // insertAfterIndex 0 = the active (topmost) layer; the new layer lands
+      // above it in z-order, i.e. at the same array index (H11 fix — the old
+      // `+1` slid new layers underneath the active one).
+      expect(snap.document!.layers.map(l => l.id)).toEqual([layer2.id, layer1.id]);
       expect(snap.activeLayerId).toBe(layer2.id);
       expect(snap.isDirty).toBe(true);
     });

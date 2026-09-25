@@ -53,13 +53,26 @@ export interface FxMeta {
 }
 
 export const FX_META: Record<Exclude<FxKind, 'context-switch'>, FxMeta> = {
-    'module-boot': { geometry: 'shutterV', hold: 400 },
-    'shell-return': { geometry: 'iris', hold: 180 },
-    'vault-decompress': { geometry: 'shutterH', hold: 320 },
-    'system-access': { geometry: 'doors', hold: 380 },
-    'uplink': { geometry: 'irisTop', hold: 260 },
-    'tool-mount': { geometry: 'shards', hold: 220 },
+    'module-boot': { geometry: 'shutterV', hold: 80 },
+    'shell-return': { geometry: 'iris', hold: 80 },
+    'vault-decompress': { geometry: 'shutterH', hold: 80 },
+    'system-access': { geometry: 'doors', hold: 80 },
+    'uplink': { geometry: 'irisTop', hold: 80 },
+    'tool-mount': { geometry: 'shards', hold: 80 },
 };
+
+/* M1 route-transition retiming (review #1 / motion.md §2):
+   every geometry now targets cover 220 ms + hold 80 ms + reveal 320 ms —
+   about 650 ms total instead of the measured 1.5–1.77 s. The HUD dressing
+   (scramble, hex ticker) rides the new tail; it just reads faster. */
+export const FX_TIMING = {
+    coverDuration: 0.22,   // s — geometry close
+    coverStagger: 0.012,   // s — strip stagger
+    revealDuration: 0.32,  // s — geometry open
+    revealStagger: 0.015,  // s
+    sweepDuration: 0.4,    // s — light sweep
+    scrambleMs: 80,        // ms — HUD name scramble (was 520)
+} as const;
 
 export const resolveFx = (from: ActiveTab, to: ActiveTab): FxKind => {
     if (WORKSPACE_GROUP.includes(from) && WORKSPACE_GROUP.includes(to)) return 'context-switch';
@@ -73,3 +86,20 @@ export const resolveFx = (from: ActiveTab, to: ActiveTab): FxKind => {
 
 export const prefersReducedMotion = (): boolean =>
     typeof window !== 'undefined' && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+/** M1: the full cinematic plays only on the FIRST visit to each module per
+ *  session; repeat visits get a 150 ms opacity crossfade (--duration-quick,
+ *  --ease-smooth-out). Returned Promise resolves after the fade — the caller
+ *  commits the tab at that point (content behind is invisible mid-fade). */
+export function crossfade(el: HTMLElement | null, ms = 150): Promise<void> {
+    if (!el || typeof window === 'undefined') return Promise.resolve();
+    return new Promise((resolve) => {
+        el.style.transition = `opacity ${ms}ms var(--ease-smooth-out, ease-out)`;
+        el.style.opacity = '0';
+        window.setTimeout(() => {
+            el.style.opacity = '1';
+            el.style.transition = '';
+            resolve();
+        }, ms);
+    });
+}

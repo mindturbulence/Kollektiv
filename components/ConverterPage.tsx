@@ -392,12 +392,12 @@ const ConverterPage: React.FC<ConverterPageProps> = ({ isExiting = false, showGl
         onClick={() => fileInputRef.current?.click()}
         className={`mx-6 mt-4 flex-shrink-0 border border-dashed px-6 py-5 text-left transition-colors ${isDragging ? 'border-primary bg-primary/10' : 'border-base-content/20 hover:border-primary/50'}`}
       >
-        <TerminalText text="DROP FILES OR CLICK TO BROWSE — IMAGES · AUDIO · VIDEO" delay={0.3} className="text-[11px] font-black uppercase tracking-widest text-primary" centered />
-        <p className="text-[9px] font-mono uppercase tracking-[0.3em] text-base-content/40 mt-2 text-center">nothing leaves this machine</p>
+        <TerminalText text="DROP FILES OR CLICK TO BROWSE — IMAGES · AUDIO · VIDEO" delay={0.3} className="text-2xs font-black uppercase tracking-widest text-primary" centered />
+        <p className="text-2xs font-mono uppercase tracking-[0.3em] text-base-content/40 mt-2 text-center">nothing leaves this machine</p>
       </motion.button>
 
       {capWarning && (
-        <div className="mx-6 mt-2 text-[10px] font-mono uppercase tracking-widest text-warning" role="alert">
+        <div className="mx-6 mt-2 text-2xs font-mono uppercase tracking-widest text-warning" role="alert">
           ⚠ {capWarning}
         </div>
       )}
@@ -423,14 +423,14 @@ const ConverterPage: React.FC<ConverterPageProps> = ({ isExiting = false, showGl
               animate="visible"
               className="p-4 bg-base-100/10 flex justify-between items-center"
             >
-              <TerminalText text="BATCH QUEUE" delay={1.0} className="text-[10px] font-black uppercase text-primary" />
-              <span className="text-[10px] font-mono font-bold text-base-content/20 uppercase">{rows.length} FILES</span>
+              <TerminalText text="BATCH QUEUE" delay={1.0} className="text-2xs font-black uppercase text-primary" />
+              <span className="text-2xs font-mono font-bold text-base-content/20 uppercase">{rows.length} FILES</span>
             </motion.header>
             <motion.div variants={contentVariants} custom={2.2} initial="hidden" animate="visible" className="flex-grow overflow-y-auto p-3" aria-live="polite">
               {rows.length === 0 ? (
                 <div className="h-full min-h-[240px] flex flex-col items-center justify-center text-center opacity-30">
                   <p className="text-xs font-black uppercase tracking-[0.4em]">Queue is Empty</p>
-                  <p className="text-[9px] font-mono uppercase tracking-widest mt-2">Drop media above to begin</p>
+                  <p className="text-2xs font-mono uppercase tracking-widest mt-2">Drop media above to begin</p>
                 </div>
               ) : (
                 <ul className="flex flex-col gap-px">
@@ -461,12 +461,12 @@ const ConverterPage: React.FC<ConverterPageProps> = ({ isExiting = false, showGl
           <PanelLine position="bottom" delay={0.6} />
           <div className="flex flex-col h-full overflow-hidden relative z-10 bg-base-100/40 backdrop-blur-xl">
             <div className="p-4 bg-base-100/10">
-              <TerminalText text="CONVERSION SETTINGS" delay={1.4} className="text-[10px] font-black uppercase text-primary" />
+              <TerminalText text="CONVERSION SETTINGS" delay={1.4} className="text-2xs font-black uppercase text-primary" />
             </div>
             <div className="flex-grow overflow-y-auto p-4 flex flex-col gap-5">
               {/* Target format */}
               <div>
-                <p className="text-[9px] font-mono uppercase tracking-[0.25em] text-base-content/50 mb-2">Target Format</p>
+                <p className="text-2xs font-mono uppercase tracking-[0.25em] text-base-content/50 mb-2">Target Format</p>
                 <FormatGroup label="IMAGE" formats={IMAGE_TARGET_FORMATS} selected={globalTarget} onSelect={handleTargetChange} />
                 <div className="mt-2">
                   <FormatGroup label="AUDIO" formats={AUDIO_TARGET_FORMATS} selected={globalTarget} onSelect={handleTargetChange} />
@@ -479,8 +479,8 @@ const ConverterPage: React.FC<ConverterPageProps> = ({ isExiting = false, showGl
               {/* Quality */}
               <div>
                 <div className="flex justify-between items-baseline mb-1">
-                  <p className="text-[9px] font-mono uppercase tracking-[0.25em] text-base-content/50">Quality</p>
-                  <span className="text-[10px] font-mono text-primary">{quality}</span>
+                  <p className="text-2xs font-mono uppercase tracking-[0.25em] text-base-content/50">Quality</p>
+                  <span className="text-2xs font-mono text-primary">{quality}</span>
                 </div>
                 <input
                   type="range"
@@ -494,7 +494,7 @@ const ConverterPage: React.FC<ConverterPageProps> = ({ isExiting = false, showGl
               </div>
 
               {/* AV engine state */}
-              <div className="text-[9px] font-mono uppercase tracking-widest">
+              <div className="text-2xs font-mono uppercase tracking-widest">
                 <p className="text-base-content/50 mb-1 tracking-[0.25em]">Audio/Video Engine</p>
                 {avState === 'ready' && <span className="text-success">● CORE READY</span>}
                 {avState === 'loading' && (
@@ -513,7 +513,7 @@ const ConverterPage: React.FC<ConverterPageProps> = ({ isExiting = false, showGl
                 {avState === 'idle' && <span className="text-base-content/30">○ NOT LOADED (loads on first A/V job)</span>}
               </div>
 
-              <p className="text-[9px] font-mono text-base-content/30 leading-relaxed uppercase tracking-wider">
+              <p className="text-2xs font-mono text-base-content/30 leading-relaxed uppercase tracking-wider">
                 Video targets short clips (&le;60s, &le;1080p). Longer sources are rejected before queueing.
               </p>
             </div>
@@ -542,7 +542,7 @@ const ConverterPage: React.FC<ConverterPageProps> = ({ isExiting = false, showGl
       </div>
 
       {/* ④ STATUS BAR */}
-      <div className="flex-shrink-0 px-6 py-2 border-t border-base-content/10 flex items-center justify-between text-[10px] font-mono uppercase tracking-widest">
+      <div className="flex-shrink-0 px-6 py-2 border-t border-base-content/10 flex items-center justify-between text-2xs font-mono uppercase tracking-widest">
         <span className="text-base-content/50">
           {doneCount}/{totalCount} converted
           {isRunning && <span className="text-primary animate-pulse"> · RUNNING</span>}
@@ -570,7 +570,7 @@ const FormatGroup: React.FC<{
           role="radio"
           aria-checked={selected === f.id}
           onClick={() => onSelect(f.id)}
-          className={`px-2 h-7 text-[10px] font-mono uppercase tracking-wider border transition-colors ${
+          className={`px-2 h-7 text-2xs font-mono uppercase tracking-wider border transition-colors ${
             selected === f.id ? 'border-primary text-primary bg-primary/10' : 'border-base-content/15 text-base-content/60 hover:border-primary/40'
           }`}
         >
@@ -609,25 +609,25 @@ const QueueRowItem: React.FC<{
       {/* status LED with text equivalent */}
       <span className={`w-2 h-2 rounded-full flex-shrink-0 ${meta.led}`} aria-label={meta.label} title={meta.label} />
       <div className="min-w-0 flex-grow">
-        <p className="text-[11px] font-mono truncate" title={row.file.name}>
+        <p className="text-2xs font-mono truncate" title={row.file.name}>
           {row.file.name}
         </p>
         {row.status === 'done' ? (
-          <p className="text-[9px] font-mono text-base-content/40 uppercase tracking-wider">
+          <p className="text-2xs font-mono text-base-content/40 uppercase tracking-wider">
             → {row.outputName} · {(row.outputSize! / 1024).toFixed(0)} KB
             {row.durationMs !== undefined && ` · ${(row.durationMs / 1000).toFixed(1)}s`}
           </p>
         ) : row.status === 'error' ? (
-          <p className="text-[9px] font-mono text-error uppercase tracking-wider">{row.error}</p>
+          <p className="text-2xs font-mono text-error uppercase tracking-wider">{row.error}</p>
         ) : (
-          <p className="text-[9px] font-mono text-base-content/30 uppercase tracking-wider">
+          <p className="text-2xs font-mono text-base-content/30 uppercase tracking-wider">
             {row.ext.toUpperCase()} → {effectiveTarget.toUpperCase()}
           </p>
         )}
       </div>
       {targets.length > 0 && row.status !== 'done' && (
         <select
-          className="bg-transparent border border-base-content/15 text-[10px] font-mono uppercase px-1 py-0.5 hover:border-primary/40"
+          className="bg-transparent border border-base-content/15 text-2xs font-mono uppercase px-1 py-0.5 hover:border-primary/40"
           value={row.targetId}
           onChange={e => onTargetChange(e.target.value)}
           aria-label={`Override target for ${row.file.name}`}
@@ -641,7 +641,7 @@ const QueueRowItem: React.FC<{
         </select>
       )}
       {row.status === 'done' && row.outputUrl && (
-        <a href={row.outputUrl} download={row.outputName} className="text-[10px] font-mono uppercase tracking-wider text-primary hover:no-underline">
+        <a href={row.outputUrl} download={row.outputName} className="text-2xs font-mono uppercase tracking-wider text-primary hover:no-underline">
           SAVE
         </a>
       )}

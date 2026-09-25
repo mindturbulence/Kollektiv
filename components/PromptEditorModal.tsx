@@ -171,7 +171,7 @@ const PromptEditorModal: React.FC<PromptEditorModalProps> = ({ isOpen, onClose, 
                   <h3 className="text-xl font-black tracking-tighter text-base-content leading-none">
                       {editingPrompt?.id ? 'EDIT' : 'ADD'}<span className="text-primary">.</span>
                   </h3>
-                  <p className="text-[10px] font-black uppercase tracking-[0.4em] text-base-content/30 mt-1.5">Modify prompt details and tags</p>
+                  <p className="text-2xs font-black uppercase tracking-[0.4em] text-base-content/30 mt-1.5">Modify prompt details and tags</p>
               </div>
               <button onClick={handleClose} className="p-2 text-error/30 hover:text-error transition-all hover:scale-110">
                   <CloseIcon className="w-5 h-5" />
@@ -181,7 +181,7 @@ const PromptEditorModal: React.FC<PromptEditorModalProps> = ({ isOpen, onClose, 
           <div ref={bodyRef} className="p-10 space-y-8 flex-grow overflow-y-auto custom-scrollbar bg-transparent">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
                 <div className="form-control">
-                  <label className="text-[10px] font-black uppercase tracking-[0.2em] text-base-content/40 mb-2">Prompt Title</label>
+                  <label className="text-2xs font-black uppercase tracking-[0.2em] text-base-content/40 mb-2">Prompt Title</label>
                   <input
                     type="text"
                     value={title}
@@ -191,7 +191,7 @@ const PromptEditorModal: React.FC<PromptEditorModalProps> = ({ isOpen, onClose, 
                   />
                 </div>
                 <div className="form-control">
-                  <label className="text-[10px] font-black uppercase tracking-[0.2em] text-base-content/40 mb-2">Select Category</label>
+                  <label className="text-2xs font-black uppercase tracking-[0.2em] text-base-content/40 mb-2">Select Category</label>
                   <AutocompleteSelect 
                     value={categoryId} 
                     onChange={setCategoryId} 
@@ -202,7 +202,7 @@ const PromptEditorModal: React.FC<PromptEditorModalProps> = ({ isOpen, onClose, 
             </div>
 
             <div className="form-control">
-              <label className="text-[10px] font-black uppercase tracking-[0.2em] text-base-content/40 mb-2">Prompt Text</label>
+              <label className="text-2xs font-black uppercase tracking-[0.2em] text-base-content/40 mb-2">Prompt Text</label>
               <textarea
                 ref={textAreaRef}
                 value={text}
@@ -214,10 +214,10 @@ const PromptEditorModal: React.FC<PromptEditorModalProps> = ({ isOpen, onClose, 
             </div>
 
             <div className="form-control">
-              <label className="text-[10px] font-black uppercase tracking-[0.2em] text-base-content/40 mb-2">Metadata Tags</label>
+              <label className="text-2xs font-black uppercase tracking-[0.2em] text-base-content/40 mb-2">Metadata Tags</label>
               <div className="flex flex-wrap items-center gap-2 p-4 bg-base-100/20 border border-base-content/10 rounded-none min-h-[60px]">
                   {tags.map(tag => (
-                      <div key={tag} className="flex items-center gap-2 bg-primary/10 text-[10px] font-black uppercase tracking-widest px-3 py-1.5 text-primary">
+                      <div key={tag} className="flex items-center gap-2 bg-primary/10 text-2xs font-black uppercase tracking-widest px-3 py-1.5 text-primary">
                           <span>{tag}</span>
                           <button type="button" onClick={() => handleRemoveTag(tag)} className="text-error hover:text-white transition-colors">&times;</button>
                       </div>

@@ -13,6 +13,10 @@ export default {
         display: ["Nunito", "Inter", "Plus Jakarta Sans", "sans-serif"],
         mono: ["JetBrains Mono", "monospace"],
       },
+      fontSize: {
+        '2xs': ['11px', { lineHeight: '1.4' }],
+        'xs': ['12px', { lineHeight: '1.5' }],
+      },
       colors: {},
     },
   },

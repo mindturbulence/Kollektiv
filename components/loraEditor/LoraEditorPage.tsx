@@ -212,19 +212,19 @@ const LoraEditorPage: React.FC<LoraEditorPageProps> = ({ isExiting = false }) =>
                 <ScanLine delay={3.5} />
                 <div className="flex flex-col h-full w-full overflow-hidden relative z-10 bg-base-100/40 backdrop-blur-xl">
                     <motion.header variants={sectionWipeVariants} custom={1.2} initial="hidden" animate="visible" className="p-6 bg-base-100/10 backdrop-blur-md flex items-center justify-between">
-                        <TerminalText text="LORA EDITOR" delay={2.0} className="text-[10px] font-black uppercase text-primary" />
+                        <TerminalText text="LORA EDITOR" delay={2.0} className="text-2xs font-black uppercase text-primary" />
                         {state.file && (
                             <div className="flex items-center gap-4">
-                                <span className="text-[10px] font-mono text-base-content/40 truncate max-w-xs">{state.file.name}</span>
-                                <button onClick={handleReset} className="form-btn h-7 px-3 text-[10px]">CLEAR</button>
-                                <button onClick={() => setIsSettingsOpen(true)} className="form-btn h-7 px-3 text-[10px]">SETTINGS</button>
+                                <span className="text-2xs font-mono text-base-content/40 truncate max-w-xs">{state.file.name}</span>
+                                <button onClick={handleReset} className="form-btn h-7 px-3 text-2xs">CLEAR</button>
+                                <button onClick={() => setIsSettingsOpen(true)} className="form-btn h-7 px-3 text-2xs">SETTINGS</button>
                             </div>
                         )}
                     </motion.header>
                     <div className="flex-grow p-6 bg-transparent relative flex flex-col overflow-hidden">
                         {isLoading ? (
                             <div className="w-full h-full flex flex-col items-center justify-center gap-3">
-                                <span className="text-[10px] font-mono uppercase tracking-widest text-primary animate-pulse">{loadingMessage || 'Processing...'}</span>
+                                <span className="text-2xs font-mono uppercase tracking-widest text-primary animate-pulse">{loadingMessage || 'Processing...'}</span>
                             </div>
                         ) : !state.file ? (
                             <div
@@ -238,9 +238,9 @@ const LoraEditorPage: React.FC<LoraEditorPageProps> = ({ isExiting = false }) =>
                                     <input type="file" accept=".safetensors,.gguf" className="hidden" onChange={(e) => e.target.files && handleFiles(e.target.files)} />
                                     <UploadIcon className="w-16 h-16 text-base-content/20 mb-6" />
                                     <h2 className="text-2xl font-black uppercase tracking-tighter">DROP LORA FILE</h2>
-                                    <p className="text-[10px] font-bold uppercase tracking-[0.3em] text-base-content/40 mt-2 px-4 text-center">.safetensors or .gguf — drop or click to select</p>
+                                    <p className="text-2xs font-bold uppercase tracking-[0.3em] text-base-content/40 mt-2 px-4 text-center">.safetensors or .gguf — drop or click to select</p>
                                     {loadError && (
-                                        <p className="text-[10px] font-bold uppercase tracking-widest text-error mt-4 px-4 text-center">{loadError}</p>
+                                        <p className="text-2xs font-bold uppercase tracking-widest text-error mt-4 px-4 text-center">{loadError}</p>
                                     )}
                                 </label>
                             </div>
@@ -254,7 +254,7 @@ const LoraEditorPage: React.FC<LoraEditorPageProps> = ({ isExiting = false }) =>
                                         <button
                                             key={id}
                                             onClick={() => setActiveTab(id)}
-                                            className={`px-3 h-8 text-[10px] font-black uppercase tracking-widest transition-colors ${activeTab === id ? 'text-primary border-b-2 border-primary' : 'text-base-content/40 hover:text-base-content'}`}
+                                            className={`px-3 h-8 text-2xs font-black uppercase tracking-widest transition-colors ${activeTab === id ? 'text-primary border-b-2 border-primary' : 'text-base-content/40 hover:text-base-content'}`}
                                         >
                                             {label}
                                         </button>

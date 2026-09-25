@@ -8,6 +8,8 @@ import type { ImageLayer, Layer, TextLayer, ShapeLayer } from '../types';
 import { NATIVE_BLEND_MODES } from '../types';
 import { AdjustmentEngine } from '../adjust/AdjustmentEngine';
 import { BlendCompositor, MANUAL_BLEND_MODES, type ManualBlendMode } from './BlendCompositor';
+import { BrushEngine } from '../paint/BrushEngine';
+import { CloneStampTool } from '../paint/CloneStampTool';
 
 export class LayerPainter {
   // Scratch canvas reused across frames for mask alpha-compositing — resized
@@ -123,10 +125,23 @@ export class LayerPainter {
   }
 
   private drawImageLayer(ctx: CanvasRenderingContext2D, layer: ImageLayer): void {
-    let bitmap: ImageBitmap | OffscreenCanvas =
-      (this.showAdjustmentPreviews ? AdjustmentEngine.getPreviewBitmap(layer.id) : null) ?? layer.bitmap;
+    // Live stroke preview (review H4): while a brush or clone stroke is in
+    // flight on this layer, draw the stroke's scratch canvas instead of the
+    // committed bitmap — pixels appear as they're painted, not on pointerup.
+    // Mask-target strokes preview the raw color bitmap too (mask compositing
+    // happens at composite time, so previewing the source is honest enough
+    // for stroke placement; the committed mask is applied on endStroke).
+    const liveStroke =
+      (BrushEngine.isStroking && BrushEngine.activeLayerId === layer.id ? BrushEngine.getScratchBitmap() : null) ??
+      (CloneStampTool.isStroking && CloneStampTool.activeLayerId === layer.id ? CloneStampTool.getScratchCanvas() : null);
+
+    let bitmap: ImageBitmap | OffscreenCanvas = liveStroke ??
+      ((this.showAdjustmentPreviews ? AdjustmentEngine.getPreviewBitmap(layer.id) : null) ?? layer.bitmap);
     if (!bitmap || bitmap.width === 0 || bitmap.height === 0) return;
-    if (layer.mask?.enabled) {
+    // Masks are NOT applied during a live stroke on this layer: the stroke is
+    // already in bitmap space and the mask pass would need the un-stroked mask
+    // bitmap — skip so the preview matches what the stroke is doing.
+    if (layer.mask?.enabled && !liveStroke) {
       bitmap = this.applyMask(bitmap as ImageBitmap, layer.mask);
     }
 

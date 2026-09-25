@@ -775,12 +775,12 @@ const PromptCrafter = ({ onSaveToLibrary, onClip, onSendToEnhancer, onSendToRefi
                                         setPromptText('');
                                     }}
                                     onMouseEnter={() => audioService.playHover()}
-                                    className="font-sf-mono text-[9px] tracking-widest text-base-content/40 hover:text-base-content transition-all bg-base-100/5 px-2 py-1.5 hover:bg-base-100/10"
+                                    className="font-sf-mono text-2xs tracking-widest text-base-content/40 hover:text-base-content transition-all bg-base-100/5 px-2 py-1.5 hover:bg-base-100/10"
                                 >
                                     CLEAR
                                 </button>
                                 <button
-                                    className="font-sf-mono text-[9px] tracking-widest text-error/40 hover:text-error transition-all mr-1 bg-error/5 disabled:bg-transparent px-2 py-1.5 hover:bg-error/10 disabled:opacity-20"
+                                    className="font-sf-mono text-2xs tracking-widest text-error/40 hover:text-error transition-all mr-1 bg-error/5 disabled:bg-transparent px-2 py-1.5 hover:bg-error/10 disabled:opacity-20"
                                     onClick={() => {
                                         audioService.playClick();
                                         handleDeleteTemplateClick();
@@ -812,7 +812,7 @@ const PromptCrafter = ({ onSaveToLibrary, onClip, onSendToEnhancer, onSendToRefi
                         {/* Elegant recipe identifier banner if recipe is currently selected */}
                         {selectedRecipeId && (
                             <div className="px-6 py-2 bg-primary/5 border-b border-primary/10 flex items-center justify-between gap-3 flex-shrink-0 z-20">
-                                <span className="text-[10px] font-bold font-sf-mono tracking-wider text-primary">
+                                <span className="text-2xs font-bold font-sf-mono tracking-wider text-primary">
                                     ACTIVE BLUEPRINT: {selectedRecipeName.toUpperCase()}
                                 </span>
                                 <button
@@ -820,7 +820,7 @@ const PromptCrafter = ({ onSaveToLibrary, onClip, onSendToEnhancer, onSendToRefi
                                         audioService.playClick();
                                         setSelectedRecipeId('');
                                     }}
-                                    className="text-[9px] font-sf-mono tracking-wider text-base-content/40 hover:text-base-content"
+                                    className="text-2xs font-sf-mono tracking-wider text-base-content/40 hover:text-base-content"
                                 >
                                     RELEASE FORMULA (KEEP TEXT)
                                 </button>
@@ -846,7 +846,7 @@ const PromptCrafter = ({ onSaveToLibrary, onClip, onSendToEnhancer, onSendToRefi
 
                         {/* Generative Media Skill Toggles */}
                         <div className="px-6 py-3 bg-base-100/5 border-b border-primary/10 flex flex-col sm:flex-row gap-4 items-start sm:items-center justify-between z-20 relative">
-                            <span className="text-[11px] font-black uppercase tracking-wider text-base-content/50">Add Creative Enhancers:</span>
+                            <span className="text-2xs font-black uppercase tracking-wider text-base-content/50">Add Creative Enhancers:</span>
                             <div className="flex flex-wrap gap-4">
                                 <label className="flex items-center gap-2 cursor-pointer group select-none relative" title="Describe dynamic movement sequencing across time keys for video clips">
                                     <input 
@@ -855,7 +855,7 @@ const PromptCrafter = ({ onSaveToLibrary, onClip, onSendToEnhancer, onSendToRefi
                                         onChange={() => { audioService.playClick(); setEnableTemporal(!enableTemporal); }} 
                                         className="checkbox checkbox-xs rounded-none border-primary/40 checked:border-primary checked:bg-primary/20"
                                     />
-                                    <span className="text-[10px] font-sf-mono font-bold uppercase tracking-wider text-base-content/60 group-hover:text-primary transition-colors">
+                                    <span className="text-2xs font-sf-mono font-bold uppercase tracking-wider text-base-content/60 group-hover:text-primary transition-colors">
                                         Smooth Video Motion
                                     </span>
                                 </label>
@@ -866,7 +866,7 @@ const PromptCrafter = ({ onSaveToLibrary, onClip, onSendToEnhancer, onSendToRefi
                                         onChange={() => { audioService.playClick(); setEnableAcoustic(!enableAcoustic); }} 
                                         className="checkbox checkbox-xs rounded-none border-primary/40 checked:border-primary checked:bg-primary/20"
                                     />
-                                    <span className="text-[10px] font-sf-mono font-bold uppercase tracking-wider text-base-content/60 group-hover:text-primary transition-colors">
+                                    <span className="text-2xs font-sf-mono font-bold uppercase tracking-wider text-base-content/60 group-hover:text-primary transition-colors">
                                         Sound & Music Beats
                                     </span>
                                 </label>
@@ -877,7 +877,7 @@ const PromptCrafter = ({ onSaveToLibrary, onClip, onSendToEnhancer, onSendToRefi
                                         onChange={() => { audioService.playClick(); setEnableSpatial(!enableSpatial); }} 
                                         className="checkbox checkbox-xs rounded-none border-primary/40 checked:border-primary checked:bg-primary/20"
                                     />
-                                    <span className="text-[10px] font-sf-mono font-bold uppercase tracking-wider text-base-content/60 group-hover:text-primary transition-colors">
+                                    <span className="text-2xs font-sf-mono font-bold uppercase tracking-wider text-base-content/60 group-hover:text-primary transition-colors">
                                         3D Shapes & Spatial Grid
                                     </span>
                                 </label>
@@ -898,7 +898,7 @@ const PromptCrafter = ({ onSaveToLibrary, onClip, onSendToEnhancer, onSendToRefi
                                     setPromptText('');
                                 }}
                                 onMouseEnter={() => audioService.playHover()}
-                                className="btn btn-sm btn-ghost h-full rounded-none flex-1 tracking-wider text-primary border-1 disabled:opacity-30 disabled:cursor-not-allowed btn-snake text-[10px]"
+                                className="btn btn-sm btn-ghost h-full rounded-none flex-1 tracking-wider text-primary border-1 disabled:opacity-30 disabled:cursor-not-allowed btn-snake text-2xs"
                             >
                                 <span /><span /><span /><span />
                                 RESET DRAFT
@@ -909,7 +909,7 @@ const PromptCrafter = ({ onSaveToLibrary, onClip, onSendToEnhancer, onSendToRefi
                                     handleSaveTemplateClick();
                                 }}
                                 onMouseEnter={() => audioService.playHover()}
-                                className="btn btn-sm btn-ghost h-full rounded-none flex-1 tracking-wider text-primary border-1 disabled:opacity-30 disabled:cursor-not-allowed btn-snake text-[10px]"
+                                className="btn btn-sm btn-ghost h-full rounded-none flex-1 tracking-wider text-primary border-1 disabled:opacity-30 disabled:cursor-not-allowed btn-snake text-2xs"
                             >
                                 <span /><span /><span /><span />
                                 SAVE TEMPLATE
@@ -919,7 +919,7 @@ const PromptCrafter = ({ onSaveToLibrary, onClip, onSendToEnhancer, onSendToRefi
                                 onClick={handlePreviewWildcards}
                                 onMouseEnter={() => audioService.playHover()}
                                 disabled={!promptText.trim()}
-                                className="btn btn-sm btn-ghost h-full rounded-none flex-1 tracking-wider text-primary border-1 disabled:opacity-30 disabled:cursor-not-allowed btn-snake text-[10px]"
+                                className="btn btn-sm btn-ghost h-full rounded-none flex-1 tracking-wider text-primary border-1 disabled:opacity-30 disabled:cursor-not-allowed btn-snake text-2xs"
                             >
                                 <span /><span /><span /><span />
                                 PREVIEW WILDCARDS
@@ -929,7 +929,7 @@ const PromptCrafter = ({ onSaveToLibrary, onClip, onSendToEnhancer, onSendToRefi
                                 onClick={handleGeneratePrompt}
                                 onMouseEnter={() => audioService.playHover()}
                                 disabled={!promptText.trim()}
-                                className="btn btn-sm btn-ghost h-full rounded-none flex-1 tracking-wider text-primary border-1 disabled:opacity-30 disabled:cursor-not-allowed btn-snake text-[10px]"
+                                className="btn btn-sm btn-ghost h-full rounded-none flex-1 tracking-wider text-primary border-1 disabled:opacity-30 disabled:cursor-not-allowed btn-snake text-2xs"
                             >
                                 <span /><span /><span /><span />
                                 GENERATE PROMPT
@@ -947,7 +947,7 @@ const PromptCrafter = ({ onSaveToLibrary, onClip, onSendToEnhancer, onSendToRefi
                             {aiAction && (
                                 <div className="absolute inset-0 bg-base-100/20 backdrop-blur-sm flex flex-col items-center justify-center z-10 animate-fade-in">
                                     <LoadingSpinner />
-                                    <p className="text-[10px] font-normal text-[12px] font-sf-mono uppercase tracking-widest text-primary animate-pulse mt-4">{aiAction}</p>
+                                    <p className="text-2xs font-normal text-xs font-sf-mono uppercase tracking-widest text-primary animate-pulse mt-4">{aiAction}</p>
                                 </div>
                             )}
                             {generatedPrompt ? (
@@ -959,7 +959,7 @@ const PromptCrafter = ({ onSaveToLibrary, onClip, onSendToEnhancer, onSendToRefi
                             ) : (
                                 <div className="h-full flex flex-col items-center justify-center text-center opacity-10">
                                     <SparklesIcon className="w-16 h-16 mx-auto mb-4" />
-                                    <p className="text-xl text-[12px] font-sf-mono uppercase tracking-widest">Awaiting generated prompt</p>
+                                    <p className="text-xl text-xs font-sf-mono uppercase tracking-widest">Awaiting generated prompt</p>
                                 </div>
                             )}
                         </motion.div>
@@ -1083,7 +1083,7 @@ const PromptCrafter = ({ onSaveToLibrary, onClip, onSendToEnhancer, onSendToRefi
                         ) : (
                             <div className="h-full flex flex-col items-center justify-center text-center opacity-10">
                                 <SparklesIcon className="w-12 h-12 mb-4" />
-                                <p className="text-[10px] text-[12px] font-sf-mono uppercase tracking-widest leading-relaxed">Generated prompts mapped to session index will appear here</p>
+                                <p className="text-2xs text-xs font-sf-mono uppercase tracking-widest leading-relaxed">Generated prompts mapped to session index will appear here</p>
                             </div>
                         )}
                     </motion.div>
@@ -1101,11 +1101,11 @@ const PromptCrafter = ({ onSaveToLibrary, onClip, onSendToEnhancer, onSendToRefi
                         <div className="bg-base-100/40 backdrop-blur-xl rounded-none w-full overflow-hidden relative z-10">
                             <header className="px-8 py-6 panel-header">
                                 <h3 className="text-2xl font-black tracking-tighter text-base-content leading-none uppercase">SAVE TEMPLATE<span className="text-primary">.</span></h3>
-                                <p className="text-[10px] font-normal text-[12px] font-sf-mono uppercase tracking-widest text-base-content/30 mt-1.5">Preset Registration</p>
+                                <p className="text-2xs font-normal text-xs font-sf-mono uppercase tracking-widest text-base-content/30 mt-1.5">Preset Registration</p>
                             </header>
                             <div className="p-8">
                                 <div className="form-control">
-                                    <label className="text-[10px] font-black uppercase tracking-[0.2em] text-base-content/40 mb-2">Template Identity</label>
+                                    <label className="text-2xs font-black uppercase tracking-[0.2em] text-base-content/40 mb-2">Template Identity</label>
                                     <input
                                         type="text"
                                         value={templateName}

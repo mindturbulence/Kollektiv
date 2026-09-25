@@ -103,7 +103,7 @@ const NavItem: React.FC<{
         audioService.playClick();
         onClick();
       }}
-      className={`px-3 h-full flex items-center font-normal uppercase tracking-widest leading-none transition-all duration-300 whitespace-nowrap overflow-hidden opacity-0 translate-y-[10px] ${isPipboyTheme ? 'font-fixedsys text-[12px]' : 'font-rajdhani text-[12px] font-normal'} ${isCurrent ? 'text-primary no-glow is-active' : 'text-base-content/30 hover:text-primary hover:no-glow'}`}
+      className={`px-3 h-full flex items-center font-normal uppercase tracking-widest leading-none transition-all duration-300 whitespace-nowrap overflow-hidden opacity-0 translate-y-[10px] ${isPipboyTheme ? 'font-fixedsys text-xs' : 'font-rajdhani text-xs font-normal'} ${isCurrent ? 'text-primary no-glow is-active' : 'text-base-content/30 hover:text-primary hover:no-glow'}`}
     >
       <RollingText text={label} hoverClassName="text-primary" />
     </button>
@@ -166,16 +166,24 @@ const Header: React.FC<HeaderProps> = ({
     { id: 'studio', label: 'Studio', items: studioItems },
   ], [workspaceItems, vaultItems, utilityItems, studioItems]);
 
-  // If activeTab changes, but no menu is open, expand the group containing the active tab
+  // Auto-expand the group containing the active tab — but only when the tab
+  // CHANGES (motion review #3). The old effect also ran when activeMenu was
+  // nulled by handleParentClick: at that moment activeTab still pointed at the
+  // PREVIOUS page (the transition commits ~0.5s later), so the old group
+  // reopened immediately on the way out and then never re-synced after the
+  // commit. Gating on an actual tab change fixes both.
+  const prevTabRef = React.useRef<ActiveTab | null>(null);
   useLayoutEffect(() => {
-    if (!activeMenu) {
-      const activeGroup = navGroups.find(g =>
-        (g.items && g.items.some(item => item.id === activeTab)) ||
-        (g.singleId === activeTab)
-      );
-      if (activeGroup && !activeGroup.singleId) {
-        setActiveMenu(activeGroup.id);
-      }
+    const prevTab = prevTabRef.current;
+    prevTabRef.current = activeTab;
+    if (prevTab === activeTab) return; // same tab — activeMenu flip, not a navigation
+    if (activeMenu) return;            // the user has a menu open — don't fight them
+    const activeGroup = navGroups.find(g =>
+      (g.items && g.items.some(item => item.id === activeTab)) ||
+      (g.singleId === activeTab)
+    );
+    if (activeGroup && !activeGroup.singleId) {
+      setActiveMenu(activeGroup.id);
     }
   }, [activeTab, activeMenu, navGroups]);
 
@@ -278,7 +286,7 @@ const Header: React.FC<HeaderProps> = ({
                     onClick={() => handleParentClick(group)}
                     onMouseEnter={() => audioService.playHover()}
                     aria-expanded={group.singleId ? undefined : isExpanded}
-                    className={`parent-nav-item font-normal uppercase tracking-widest relative z-10 px-3 h-full flex items-center leading-none transition-all duration-500 hover:text-primary hover:no-glow ${isPipboyTheme ? 'font-fixedsys text-[12px]' : 'font-rajdhani text-[12px] font-normal'} ${isExpanded || isCurrent || (group.singleId === activeTab) ? 'text-base-content no-glow is-active' : 'text-base-content/30'}`}
+                    className={`parent-nav-item font-normal uppercase tracking-widest relative z-10 px-3 h-full flex items-center leading-none transition-all duration-500 hover:text-primary hover:no-glow ${isPipboyTheme ? 'font-fixedsys text-xs' : 'font-rajdhani text-xs font-normal'} ${isExpanded || isCurrent || (group.singleId === activeTab) ? 'text-base-content no-glow is-active' : 'text-base-content/30'}`}
                   >
                     <RollingText text={group.label} hoverClassName="text-primary" />
                   </button>

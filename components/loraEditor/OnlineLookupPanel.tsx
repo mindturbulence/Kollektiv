@@ -36,7 +36,7 @@ const OnlineLookupPanel: React.FC<OnlineLookupPanelProps> = ({ state }) => {
 
     return (
         <div className="flex flex-col h-full overflow-auto p-4 gap-4">
-            <div className="text-[10px] uppercase tracking-widest opacity-40">Source: {source === 'civitai' ? 'CivitAI' : 'Arc En Ciel'}</div>
+            <div className="text-2xs uppercase tracking-widest opacity-40">Source: {source === 'civitai' ? 'CivitAI' : 'Arc En Ciel'}</div>
             <table className="text-xs font-mono">
                 <tbody>
                     <tr><td className="opacity-50 pr-4 align-top">Model URL</td><td><a href={modelUrl!} target="_blank" rel="noreferrer" className="text-primary hover:underline break-all">{modelUrl}</a></td></tr>

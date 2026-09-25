@@ -65,11 +65,11 @@ const FeedbackToast: React.FC<FeedbackToastProps> = ({ isOpen, onClose, message,
               <div className="flex-1 p-4 pr-10">
                 <div className="flex items-center gap-2 mb-1">
                   {currentTheme.icon}
-                  <span className={`text-[10px] font-black uppercase tracking-[0.2em] ${currentTheme.textColor}`}>
+                  <span className={`text-2xs font-black uppercase tracking-[0.2em] ${currentTheme.textColor}`}>
                     {currentTheme.label}.SYS
                   </span>
                 </div>
-                <p className="text-[11px] font-bold uppercase tracking-wider text-base-content/80 leading-relaxed">
+                <p className="text-2xs font-bold uppercase tracking-wider text-base-content/80 leading-relaxed">
                   {message}
                 </p>
               </div>

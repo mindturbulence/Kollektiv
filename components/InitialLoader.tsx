@@ -173,10 +173,10 @@ const InitialLoader: React.FC<{ status: string; progress: number | null; onConti
                                         style={{ width: `${smoothPercentage}%` }}
                                     />
                                 </div>
-                                <span className="text-[9px] font-mono font-bold text-primary/60 tracking-widest">{smoothPercentage}%</span>
+                                <span className="text-2xs font-mono font-bold text-primary/60 tracking-widest">{smoothPercentage}%</span>
                             </div>
 
-                            <div className="flex flex-col items-start justify-end min-h-[48px] max-h-[48px] overflow-hidden leading-snug w-full px-6 text-[10px] font-mono font-bold uppercase tracking-widest text-left text-base-content/40">
+                            <div className="flex flex-col items-start justify-end min-h-[48px] max-h-[48px] overflow-hidden leading-snug w-full px-6 text-2xs font-mono font-bold uppercase tracking-widest text-left text-base-content/40">
                                 {history.slice(-2).map((h, idx) => (
                                     <div key={idx} className="opacity-40 w-full truncate">{h}</div>
                                 ))}
@@ -187,7 +187,7 @@ const InitialLoader: React.FC<{ status: string; progress: number | null; onConti
 
                     <div ref={actionButtonsRef} className={`absolute inset-0 flex flex-col items-center justify-center gap-4 transition-opacity duration-1000 ${isComplete ? 'opacity-100 pointer-events-auto' : 'opacity-0 pointer-events-none'}`}>
                         <button
-                            className="form-btn form-btn-primary w-48 h-10 text-[10px]"
+                            className="form-btn form-btn-primary w-48 h-10 text-2xs"
                             onClick={() => handleContinue(true)}
                         >
                             CONTINUE
@@ -202,7 +202,7 @@ const InitialLoader: React.FC<{ status: string; progress: number | null; onConti
                 </div>
             </div>
 
-            <div className="absolute bottom-8 left-1/2 -translate-x-1/2 text-[10px] font-mono uppercase tracking-widest text-base-content/40 opacity-70 flex flex-col items-center gap-0.5">
+            <div className="absolute bottom-8 left-1/2 -translate-x-1/2 text-2xs font-mono uppercase tracking-widest text-base-content/40 opacity-70 flex flex-col items-center gap-0.5">
                 <span className="font-bold text-base-content/30 text-[8px]">Built by</span>
                 <span className="text-primary font-bold">MindTurbulence</span>
             </div>

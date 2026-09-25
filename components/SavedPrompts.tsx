@@ -281,7 +281,7 @@ const SavedPrompts: React.FC<SavedPromptsProps> = ({
             <div className={`flex flex-col h-full w-full bg-base-100/50 backdrop-blur-xl relative overflow-hidden transition-all duration-300 ${isCategoryPanelCollapsed ? 'opacity-0 invisible' : 'opacity-100 visible'}`}>
               <div className={`flex flex-col h-full w-full overflow-hidden relative z-10 transition-opacity duration-200 ${isCategoryPanelCollapsed ? 'opacity-0 invisible' : 'opacity-100 visible'}`}>
               <div className="flex-shrink-0 h-14 px-6 flex items-center border-b border-white/5">
-                <h3 className="text-[11px] font-black uppercase tracking-[0.3em] text-primary">Category Folder</h3>
+                <h3 className="text-2xs font-black uppercase tracking-[0.3em] text-primary">Category Folder</h3>
               </div>
               <div className="flex-shrink-0 h-14 px-2 mt-4">
                 <div className="flex items-center h-full relative px-4">
@@ -334,7 +334,7 @@ const SavedPrompts: React.FC<SavedPromptsProps> = ({
                       <div className="p-4 md:p-6">
                           <div className="flex flex-col md:flex-row md:items-end justify-between gap-4">
                               <div className="space-y-1">
-                                  <span className="text-[10px] font-black uppercase tracking-[0.6em] text-primary/60 block">LIBRARY INDEX</span>
+                                  <span className="text-2xs font-black uppercase tracking-[0.6em] text-primary/60 block">LIBRARY INDEX</span>
                                   <h1 className="text-3xl lg:text-4xl font-black tracking-tighter text-base-content leading-none uppercase font-sf-mono">
                                       {currentCategoryName}<span className="text-primary">.</span>
                                   </h1>
@@ -368,11 +368,11 @@ const SavedPrompts: React.FC<SavedPromptsProps> = ({
                       
                       <div className="flex items-stretch flex-shrink-0">
                           <div className="form-tab-group h-full rounded-none">
-                              <button onClick={() => { setSortOrder('newest'); setDisplayCount(30); }} className={`btn btn-xs btn-ghost h-full border-none rounded-none px-6 font-black text-[10px] tracking-widest uppercase btn-snake ${sortOrder === 'newest' ? 'active bg-primary/10 text-primary no-glow' : 'hover:no-glow'}`}>
+                              <button onClick={() => { setSortOrder('newest'); setDisplayCount(30); }} className={`btn btn-xs btn-ghost h-full border-none rounded-none px-6 font-black text-2xs tracking-widest uppercase btn-snake ${sortOrder === 'newest' ? 'active bg-primary/10 text-primary no-glow' : 'hover:no-glow'}`}>
                                   <span/><span/><span/><span/>
                                   BY DATE
                               </button>
-                              <button onClick={() => { setSortOrder('title'); setDisplayCount(30); }} className={`btn btn-xs btn-ghost h-full border-none rounded-none px-6 font-black text-[10px] tracking-widest uppercase btn-snake ${sortOrder === 'title' ? 'active bg-primary/10 text-primary no-glow' : 'hover:no-glow'}`}>
+                              <button onClick={() => { setSortOrder('title'); setDisplayCount(30); }} className={`btn btn-xs btn-ghost h-full border-none rounded-none px-6 font-black text-2xs tracking-widest uppercase btn-snake ${sortOrder === 'title' ? 'active bg-primary/10 text-primary no-glow' : 'hover:no-glow'}`}>
                                   <span/><span/><span/><span/>
                                   BY NAME
                               </button>
@@ -409,7 +409,7 @@ const SavedPrompts: React.FC<SavedPromptsProps> = ({
                       <div className="h-full flex flex-col items-center justify-center text-center py-40 opacity-10">
                           <ArchiveIcon className="w-20 h-20 mb-6" />
                           <h3 className="text-3xl font-black uppercase tracking-widest">Library Empty</h3>
-                          <p className="text-[10px] font-bold uppercase tracking-[0.3em] mt-4">Awaiting content input</p>
+                          <p className="text-2xs font-bold uppercase tracking-[0.3em] mt-4">Awaiting content input</p>
                       </div>
                   )}
                   

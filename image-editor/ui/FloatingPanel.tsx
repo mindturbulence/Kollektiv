@@ -81,7 +81,7 @@ const FloatingPanel: React.FC<FloatingPanelProps> = ({
         className="h-9 flex-shrink-0 flex items-center px-3 bg-base-100/90 border-b border-base-content/10 cursor-move select-none"
         onPointerDown={onTitlePointerDown}
       >
-        <span className="flex-1 text-[10px] font-display uppercase tracking-widest text-base-content/70">
+        <span className="flex-1 text-2xs font-display uppercase tracking-widest text-base-content/70">
           {title}
         </span>
         <button

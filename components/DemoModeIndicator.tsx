@@ -18,7 +18,7 @@ const DemoModeIndicator: React.FC = () => {
   if (!active) return null;
 
   return (
-    <span className="uppercase tracking-widest text-accent font-mono text-[9px] font-black inline-flex items-center gap-1.5">
+    <span className="uppercase tracking-widest text-accent font-mono text-2xs font-black inline-flex items-center gap-1.5">
       <span className="w-1.5 h-1.5 rounded-full bg-accent animate-pulse" />
       DEMO MODE
     </span>

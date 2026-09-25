@@ -33,7 +33,7 @@ export const AssistantAvatarPanel: React.FC<{ surface: AvatarPanelSurface }> = (
         return (
             <div className="h-screen w-screen flex flex-col items-center justify-center gap-3 bg-base-100 select-none">
                 <div className="w-0 h-0 border-l-[10px] border-r-[10px] border-b-[16px] border-l-transparent border-r-transparent border-b-primary opacity-30" />
-                <p className="font-mono text-[9px] tracking-[0.3em] uppercase text-base-content/40">
+                <p className="font-mono text-2xs tracking-[0.3em] uppercase text-base-content/40">
                     AWAITING UPLINK
                 </p>
                 <p className="font-mono text-[8px] tracking-[0.2em] uppercase text-base-content/25">
@@ -108,7 +108,7 @@ const PanelButton: React.FC<{
         aria-pressed={pressed}
         disabled={disabled}
         className={`font-mono uppercase border transition-colors text-center w-full ${
-            small ? 'text-[8px] tracking-[0.2em] py-1.5 px-1' : 'text-[10px] tracking-[0.25em] py-2 px-2'
+            small ? 'text-[8px] tracking-[0.2em] py-1.5 px-1' : 'text-2xs tracking-[0.25em] py-2 px-2'
         } ${
             disabled
                 ? 'border-base-content/10 text-base-content/25 cursor-not-allowed'

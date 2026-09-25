@@ -173,7 +173,7 @@ const Media: React.FC<{
             ) : hasError ? (
                 <div className="flex flex-col items-center justify-center p-8 text-center bg-transparent w-full aspect-square">
                     <ImageBrokenIcon className="w-8 h-8 text-warning/20" />
-                    <p className="text-warning/30 text-[10px] font-black uppercase mt-2">Buffer Corrupt</p>
+                    <p className="text-warning/30 text-2xs font-black uppercase mt-2">Buffer Corrupt</p>
                 </div>
             ) : type === 'video' ? (
                 <div className="w-full h-full relative overflow-hidden">
@@ -216,10 +216,10 @@ const ImageCard: React.FC<ImageCardProps> = memo(({ item, viewMode, onOpenDetail
   const [isHovered, setIsHovered] = useState(false);
   
   const styles = {
-    title: viewMode === 'focus' ? 'text-3xl md:text-5xl tracking-tighter' : viewMode === 'compact' ? 'text-[12px]' : 'text-xl tracking-tight',
-    label: viewMode === 'focus' ? 'text-[11px]' : viewMode === 'compact' ? 'text-[9px]' : 'text-[10px]',
+    title: viewMode === 'focus' ? 'text-3xl md:text-5xl tracking-tighter' : viewMode === 'compact' ? 'text-xs' : 'text-xl tracking-tight',
+    label: viewMode === 'focus' ? 'text-2xs' : viewMode === 'compact' ? 'text-2xs' : 'text-2xs',
     padding: viewMode === 'focus' ? 'p-10 lg:p-14' : viewMode === 'compact' ? 'p-3' : 'p-6',
-    badge: viewMode === 'focus' ? 'px-4 py-2 text-[11px]' : viewMode === 'compact' ? 'px-2 py-1 text-[10px]' : 'px-2 py-1 text-[9px]',
+    badge: viewMode === 'focus' ? 'px-4 py-2 text-2xs' : viewMode === 'compact' ? 'px-2 py-1 text-2xs' : 'px-2 py-1 text-2xs',
     iconSize: viewMode === 'focus' ? 'w-6 h-6' : 'w-4 h-4',
     gap: viewMode === 'focus' ? 'space-y-6' : 'space-y-2'
   };
@@ -251,7 +251,7 @@ const ImageCard: React.FC<ImageCardProps> = memo(({ item, viewMode, onOpenDetail
             )}
             <div className={`flex-grow h-px bg-primary/30 opacity-0 group-hover:opacity-100 transition-opacity duration-500 ${viewMode === 'compact' ? 'opacity-40' : ''}`}></div>
             {item.isNsfw && (
-                <div className={`${viewMode === 'focus' ? 'px-4 py-1.5 text-[11px]' : 'px-2 py-1 text-[10px]'} badge badge-warning rounded-none font-black uppercase h-auto border-none opacity-0 group-hover:opacity-100 transition-opacity duration-500`}>NSFW</div>
+                <div className={`${viewMode === 'focus' ? 'px-4 py-1.5 text-2xs' : 'px-2 py-1 text-2xs'} badge badge-warning rounded-none font-black uppercase h-auto border-none opacity-0 group-hover:opacity-100 transition-opacity duration-500`}>NSFW</div>
             )}
             {isPinned && (
                 <div className="text-primary drop-shadow-md flex-shrink-0">
@@ -292,7 +292,7 @@ const ImageCard: React.FC<ImageCardProps> = memo(({ item, viewMode, onOpenDetail
                     </span>
                     {item.type === 'image' && (
                         <button
-                            className="ml-auto font-black uppercase tracking-[0.3em] text-[9px] bg-primary/10 text-primary border border-primary/20 backdrop-blur-md px-2 py-1 opacity-0 group-hover:opacity-100 transition-opacity duration-500 pointer-events-auto hover:bg-primary/20"
+                            className="ml-auto font-black uppercase tracking-[0.3em] text-2xs bg-primary/10 text-primary border border-primary/20 backdrop-blur-md px-2 py-1 opacity-0 group-hover:opacity-100 transition-opacity duration-500 pointer-events-auto hover:bg-primary/20"
                             onClick={(e) => {
                                 e.stopPropagation();
                                 appEventBus.emit('openInEditor', { galleryItemId: item.id, url: item.urls[0] });

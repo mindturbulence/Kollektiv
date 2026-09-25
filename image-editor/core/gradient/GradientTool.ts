@@ -5,6 +5,7 @@
 
 import { addLayer } from '../layers/LayerManager';
 import { getSnapshot } from '../store';
+import { SelectionEngine } from '../selection/SelectionEngine';
 import type { Point, ImageLayer } from '../types';
 
 export type GradientKind = 'linear' | 'radial';
@@ -62,6 +63,16 @@ export const GradientTool = {
 
     ctx.fillStyle = grad;
     ctx.fillRect(0, 0, doc.width, doc.height);
+
+    // Selection clip (M5 leftover): a gradient should only land inside the
+    // active selection, like every other paint tool. The gradient canvas is    // document-sized, so the doc-space selection Path2D applies 1:1 — no    // bitmap-space transform needed. destination-in keeps only the pixels    // inside the clip (transparent outside); skipped when nothing is selected.
+    const clip = SelectionEngine.getSelectionClip();
+    if (clip) {
+      ctx.globalCompositeOperation = 'destination-in';
+      ctx.fillStyle = '#ffffff';
+      ctx.fill(clip);
+      ctx.globalCompositeOperation = 'source-over';
+    }
 
     const bitmap = await createImageBitmap(oc);
 

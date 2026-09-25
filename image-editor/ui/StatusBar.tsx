@@ -15,7 +15,7 @@ const StatusBar: React.FC<StatusBarProps> = ({ cursorPos }) => {
   const { isBusy } = useBusy();
 
   return (
-    <div className="h-7 flex-shrink-0 flex items-center gap-4 px-3 bg-base-100/85 backdrop-blur-md border-t border-base-content/5 font-mono text-[10px] text-base-content/60">
+    <div className="h-7 flex-shrink-0 flex items-center gap-4 px-3 bg-base-100/85 backdrop-blur-md border-t border-base-content/5 font-mono text-2xs text-base-content/60">
       <span>{Math.round(zoom * 100)}%</span>
       <span>
         {cursorPos ? `X: ${Math.round(cursorPos.x)}, Y: ${Math.round(cursorPos.y)}` : 'X: —, Y: —'}

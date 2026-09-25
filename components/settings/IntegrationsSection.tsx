@@ -172,7 +172,7 @@ const IntegrationsSection: React.FC<IntegrationsSectionProps> = ({
                                 <button onClick={() => { audioService.playClick(); handleTestOllamaConnection(true); }} disabled={isTestingOllama} className="form-btn px-4 border-l-0">{isTestingOllama ? '...' : 'PING'}</button>
                             </div>
                             {ollamaTestResult && (
-                                <div className={`flex items-center gap-2 text-[9px] font-black uppercase tracking-widest px-3 py-1.5 border ${ollamaTestResult.success ? 'bg-success/5 border-success/30 text-success' : 'bg-error/5 border-error/30 text-error'} animate-fade-in md:w-[620px]`}>
+                                <div className={`flex items-center gap-2 text-2xs font-black uppercase tracking-widest px-3 py-1.5 border ${ollamaTestResult.success ? 'bg-success/5 border-success/30 text-success' : 'bg-error/5 border-error/30 text-error'} animate-fade-in md:w-[620px]`}>
                                     <span className={`w-1.5 h-1.5 rounded-full ${ollamaTestResult.success ? 'bg-success' : 'bg-error'} animate-pulse`}></span>
                                     {ollamaTestResult.message}
                                 </div>
@@ -186,7 +186,7 @@ const IntegrationsSection: React.FC<IntegrationsSectionProps> = ({
                         <div className="flex flex-col gap-4">
                             <label className="label cursor-pointer justify-start gap-4 p-0">
                                 <input type="checkbox" checked={settings.ollamaCloudUseGoogleAuth} onChange={e => handleSettingsChange('ollamaCloudUseGoogleAuth', e.target.checked)} className="toggle toggle-primary toggle-xs" />
-                                <span className="text-[10px] font-black uppercase tracking-widest">Use Linked Google Token</span>
+                                <span className="text-2xs font-black uppercase tracking-widest">Use Linked Google Token</span>
                             </label>
                             {!settings.ollamaCloudUseGoogleAuth && (
                                 <input type="password" value={settings.ollamaCloudApiKey} onChange={(e) => handleSettingsChange('ollamaCloudApiKey', (e.currentTarget as any).value)} className="form-input w-full md:w-[620px]" placeholder="SECRET_API_TOKEN" />
@@ -218,16 +218,16 @@ const IntegrationsSection: React.FC<IntegrationsSectionProps> = ({
                                 <button onClick={() => { audioService.playClick(); handleTestOllamaConnection(false); }} disabled={isTestingOllama} className="form-btn px-4 border-l-0">PING</button>
                             </div>
                             {ollamaTestResult && (
-                                <div className={`flex items-center gap-2 text-[9px] font-black uppercase tracking-widest px-3 py-1.5 border ${ollamaTestResult.success ? 'bg-success/5 border-success/30 text-success' : 'bg-error/5 border-error/30 text-error'} animate-fade-in md:w-[620px]`}>
+                                <div className={`flex items-center gap-2 text-2xs font-black uppercase tracking-widest px-3 py-1.5 border ${ollamaTestResult.success ? 'bg-success/5 border-success/30 text-success' : 'bg-error/5 border-error/30 text-error'} animate-fade-in md:w-[620px]`}>
                                     <span className={`w-1.5 h-1.5 rounded-full ${ollamaTestResult.success ? 'bg-success' : 'bg-error'} animate-pulse`}></span>
                                     {ollamaTestResult.message}
                                 </div>
                             )}
                             <div className="p-4 bg-info/5 border border-info/20 rounded-none space-y-3 md:w-[620px]">
-                                <h5 className="text-[10px] font-black uppercase tracking-widest text-info flex items-center gap-2">
+                                <h5 className="text-2xs font-black uppercase tracking-widest text-info flex items-center gap-2">
                                     <InformationCircleIcon className="w-3.5 h-3.5" /> CORS POLICY GUIDE
                                 </h5>
-                                <p className="text-[10px] font-bold uppercase tracking-tight text-base-content/60 leading-relaxed">
+                                <p className="text-2xs font-bold uppercase tracking-tight text-base-content/60 leading-relaxed">
                                     For local access, set <code className="text-primary px-1 bg-base-100">OLLAMA_ORIGINS</code> to <code className="text-primary">*</code> or <code className="text-primary">{currentOrigin}</code> in your system variables.
                                 </p>
                             </div>
@@ -249,16 +249,16 @@ const IntegrationsSection: React.FC<IntegrationsSectionProps> = ({
                                 <button onClick={() => { audioService.playClick(); handleTestLlamaCppConnection(); }} disabled={isTestingLlamaCpp} className="form-btn px-4 border-l-0">{isTestingLlamaCpp ? '...' : 'PING'}</button>
                             </div>
                             {llamacppTestResult && (
-                                <div className={`flex items-center gap-2 text-[9px] font-black uppercase tracking-widest px-3 py-1.5 border ${llamacppTestResult.success ? 'bg-success/5 border-success/30 text-success' : 'bg-error/5 border-error/30 text-error'} animate-fade-in md:w-[620px]`}>
+                                <div className={`flex items-center gap-2 text-2xs font-black uppercase tracking-widest px-3 py-1.5 border ${llamacppTestResult.success ? 'bg-success/5 border-success/30 text-success' : 'bg-error/5 border-error/30 text-error'} animate-fade-in md:w-[620px]`}>
                                     <span className={`w-1.5 h-1.5 rounded-full ${llamacppTestResult.success ? 'bg-success' : 'bg-error'} animate-pulse`}></span>
                                     {llamacppTestResult.message}
                                 </div>
                             )}
                             <div className="p-4 bg-info/5 border border-info/20 rounded-none space-y-3 md:w-[620px]">
-                                <h5 className="text-[10px] font-black uppercase tracking-widest text-info flex items-center gap-2">
+                                <h5 className="text-2xs font-black uppercase tracking-widest text-info flex items-center gap-2">
                                     <InformationCircleIcon className="w-3.5 h-3.5" /> CORS POLICY GUIDE
                                 </h5>
-                                <p className="text-[10px] font-bold uppercase tracking-tight text-base-content/60 leading-relaxed">
+                                <p className="text-2xs font-bold uppercase tracking-tight text-base-content/60 leading-relaxed">
                                     To allow web access, ensure llama.cpp is compiled and running with the <code className="text-primary px-1 bg-base-100">--cors</code> flag.
                                 </p>
                             </div>
@@ -297,12 +297,12 @@ const IntegrationsSection: React.FC<IntegrationsSectionProps> = ({
                 <div className="flex flex-col gap-2 w-full max-w-md">
                     <input type="text" value={settings.youtube?.customClientId || ''} onChange={(e) => handleSettingsChange('youtube', { ...settings.youtube, customClientId: e.target.value })} className="form-input w-full" placeholder="407408718192-..." />
                     <div className="p-4 bg-primary/5 border border-primary/20 space-y-2">
-                        <p className="text-[9px] font-black uppercase text-primary tracking-widest leading-tight">AUTHORIZED ORIGINS</p>
-                        <p className="text-[10px] font-mono text-base-content/60 break-all select-all py-1 bg-black/20 px-2">{currentOrigin}</p>
+                        <p className="text-2xs font-black uppercase text-primary tracking-widest leading-tight">AUTHORIZED ORIGINS</p>
+                        <p className="text-2xs font-mono text-base-content/60 break-all select-all py-1 bg-black/20 px-2">{currentOrigin}</p>
                         {siblingOrigin && (
                             <>
                                 <p className="text-[8px] font-bold text-base-content/40 uppercase tracking-wider mt-1">SHARED PREVIEW ORIGIN</p>
-                                <p className="text-[10px] font-mono text-base-content/60 break-all select-all py-1 bg-black/20 px-2">{siblingOrigin}</p>
+                                <p className="text-2xs font-mono text-base-content/60 break-all select-all py-1 bg-black/20 px-2">{siblingOrigin}</p>
                             </>
                         )}
                         <p className="text-[8px] font-bold text-base-content/30 uppercase leading-relaxed mt-2">Add both URLs to 'Authorized JavaScript origins' in your Google Cloud Console.</p>
@@ -322,9 +322,9 @@ const IntegrationsSection: React.FC<IntegrationsSectionProps> = ({
                             <img src={settings.googleIdentity!.picture} className="w-12 h-12 rounded-full bg-black" alt="profile" />
                             <div className="min-w-0">
                                 <p className="text-sm font-black uppercase truncate">{settings.googleIdentity!.name}</p>
-                                <p className="text-[10px] font-mono opacity-40 truncate">{settings.googleIdentity!.email}</p>
+                                <p className="text-2xs font-mono opacity-40 truncate">{settings.googleIdentity!.email}</p>
                             </div>
-                            <span className="text-[9px] font-black uppercase px-2 py-1 border bg-success/5 border-success/30 text-success ml-auto">ACTIVE</span>
+                            <span className="text-2xs font-black uppercase px-2 py-1 border bg-success/5 border-success/30 text-success ml-auto">ACTIVE</span>
                         </div>
 
                         {settings.youtube?.isConnected && (
@@ -332,7 +332,7 @@ const IntegrationsSection: React.FC<IntegrationsSectionProps> = ({
                                 <img src={settings.youtube.thumbnailUrl} className="w-10 h-10 rounded-none bg-black" alt="channel" />
                                 <div className="min-w-0">
                                     <p className="text-xs font-black uppercase truncate">{settings.youtube.channelName}</p>
-                                    <p className="text-[9px] font-mono opacity-40 uppercase">{settings.youtube.subscriberCount} subscribers · {settings.youtube.videoCount} videos</p>
+                                    <p className="text-2xs font-mono opacity-40 uppercase">{settings.youtube.subscriberCount} subscribers · {settings.youtube.videoCount} videos</p>
                                 </div>
                             </div>
                         )}
@@ -346,7 +346,7 @@ const IntegrationsSection: React.FC<IntegrationsSectionProps> = ({
                     </div>
                 ) : (
                     <div className="flex flex-col gap-3">
-                        <p className="text-[10px] font-mono text-base-content/40">
+                        <p className="text-2xs font-mono text-base-content/40">
                             One authentication enables Drive sync, YouTube publishing, and Gmail tools.
                         </p>
                         <button onClick={() => { audioService.playClick(); handleAuthConnect('google'); }} className="form-btn px-6 self-start">AUTHENTICATE WITH GOOGLE</button>
@@ -375,7 +375,7 @@ const IntegrationsSection: React.FC<IntegrationsSectionProps> = ({
             <SettingRow label="Client Secret" desc="Spotify Developer Dashboard OAuth Client Secret.">
                 <input type="password" value={spotify?.customClientSecret || ''} onChange={(e) => handleSettingsChange('spotify', { ...spotify, customClientSecret: e.target.value })} className="form-input w-full max-w-md" placeholder="..." />
             </SettingRow>
-            <div className="px-4 py-3 mb-2 rounded-md border border-warning/30 bg-warning/5 text-[11px] font-mono leading-relaxed">
+            <div className="px-4 py-3 mb-2 rounded-md border border-warning/30 bg-warning/5 text-2xs font-mono leading-relaxed">
                 <span className="font-bold text-warning uppercase tracking-wider">⚠ Requires Spotify Premium</span>
                 <br />
                 The Spotify Developer app owner must have an active <strong>Spotify Premium</strong> subscription.
@@ -387,7 +387,7 @@ const IntegrationsSection: React.FC<IntegrationsSectionProps> = ({
             </div>
             <SettingRow label="Account Integration" desc="Connect to your Spotify account for playlist access and playback.">
                 <div className="flex flex-col gap-4 w-full max-w-lg">
-                    <div className={`inline-flex items-center gap-2 px-3 py-1.5 rounded-md text-[10px] font-mono font-bold uppercase tracking-wider border ${connectionStatus.cls}`}>
+                    <div className={`inline-flex items-center gap-2 px-3 py-1.5 rounded-md text-2xs font-mono font-bold uppercase tracking-wider border ${connectionStatus.cls}`}>
                         <span className={`w-2 h-2 rounded-full ${isTokenExpired ? 'bg-warning' : spotify?.isConnected ? 'bg-success' : 'bg-neutral'}`} />
                         {connectionStatus.label}
                     </div>
@@ -400,9 +400,9 @@ const IntegrationsSection: React.FC<IntegrationsSectionProps> = ({
                                 </div>
                                 <div className="min-w-0">
                                     <p className="text-sm font-black uppercase truncate">{spotify.displayName || 'Spotify User'}</p>
-                                    <p className="text-[10px] font-mono opacity-40 uppercase">{spotify.email || 'Connected'}</p>
+                                    <p className="text-2xs font-mono opacity-40 uppercase">{spotify.email || 'Connected'}</p>
                                     {isTokenExpired && (
-                                        <p className="text-[10px] font-mono text-warning mt-1">Token expired — click Re-link to refresh</p>
+                                        <p className="text-2xs font-mono text-warning mt-1">Token expired — click Re-link to refresh</p>
                                     )}
                                 </div>
                             </div>
@@ -518,7 +518,7 @@ const IntegrationsSection: React.FC<IntegrationsSectionProps> = ({
                     <h3 className="text-xs font-black uppercase tracking-widest">
                         Obsidian Second Brain
                     </h3>
-                    <p className="text-[10px] font-bold leading-relaxed text-base-content/60">
+                    <p className="text-2xs font-bold leading-relaxed text-base-content/60">
                         Connect your Obsidian vault to let the AI assistant search, read, and write notes.
                         Your vault is a folder containing <code className="text-primary px-1 bg-base-100">.obsidian/</code>
                         and your markdown notes.
@@ -528,7 +528,7 @@ const IntegrationsSection: React.FC<IntegrationsSectionProps> = ({
                         <div className="space-y-4">
                             <div className="flex items-center gap-3 p-4 bg-success/5 border border-success/30">
                                 <span className="w-2 h-2 bg-success rounded-full animate-pulse" />
-                                <span className="text-[10px] font-black uppercase tracking-widest text-success">
+                                <span className="text-2xs font-black uppercase tracking-widest text-success">
                                     Connected {vaultName ? `— ${vaultName}` : ''}
                                 </span>
                             </div>
@@ -538,7 +538,7 @@ const IntegrationsSection: React.FC<IntegrationsSectionProps> = ({
                         </div>
                     ) : (
                         <div className="space-y-3">
-                            <p className="text-[10px] font-mono text-base-content/40">
+                            <p className="text-2xs font-mono text-base-content/40">
                                 Pick the folder containing your Obsidian vault. The assistant will be able to
                                 search notes, read them, create new ones, and edit existing ones.
                             </p>
@@ -554,14 +554,14 @@ const IntegrationsSection: React.FC<IntegrationsSectionProps> = ({
                     <h3 className="text-xs font-black uppercase tracking-widest">
                         Semantic Search
                     </h3>
-                    <p className="text-[10px] font-bold leading-relaxed text-base-content/60">
+                    <p className="text-2xs font-bold leading-relaxed text-base-content/60">
                         Build a vector index of your vault notes to enable meaning-based search
                         alongside keyword matching. All computation is local via Ollama.
                     </p>
 
                     {embeddingStatus === 'unavailable' && (
                         <div className="p-4 bg-warning/5 border border-warning/30">
-                            <p className="text-[10px] font-black uppercase tracking-widest text-warning">
+                            <p className="text-2xs font-black uppercase tracking-widest text-warning">
                                 No local embedding model found. Search will use keywords only.
                             </p>
                         </div>
@@ -569,10 +569,10 @@ const IntegrationsSection: React.FC<IntegrationsSectionProps> = ({
 
                     {indexStats && indexStats.count > 0 && (
                         <div className="flex items-center gap-3 p-4 bg-info/5 border border-info/30">
-                            <span className="text-[10px] font-mono font-bold text-base-content/70">
+                            <span className="text-2xs font-mono font-bold text-base-content/70">
                                 {indexStats.count} note{indexStats.count !== 1 ? 's' : ''} indexed
                             </span>
-                            <span className="text-[9px] font-mono text-base-content/40">
+                            <span className="text-2xs font-mono text-base-content/40">
                                 ~{formatBytes(indexStats.approxBytes)}
                             </span>
                         </div>
@@ -608,7 +608,7 @@ const IntegrationsSection: React.FC<IntegrationsSectionProps> = ({
 
                     {isBackfilling && backfillProgress && (
                         <div className="space-y-2">
-                            <div className="flex items-center justify-between text-[10px] font-mono">
+                            <div className="flex items-center justify-between text-2xs font-mono">
                                 <span className="text-base-content/60">
                                     {backfillProgress.done} / {backfillProgress.total}
                                 </span>
@@ -654,12 +654,12 @@ const IntegrationsSection: React.FC<IntegrationsSectionProps> = ({
             </SettingsGroup>
             <SettingsGroup title="Usage">
                 <div className="p-4 bg-info/5 border border-info/20 space-y-2">
-                    <p className="text-[10px] font-black uppercase text-info tracking-widest leading-tight">HOW IT WORKS</p>
-                    <p className="text-[10px] font-bold leading-relaxed text-base-content/60">
+                    <p className="text-2xs font-black uppercase text-info tracking-widest leading-tight">HOW IT WORKS</p>
+                    <p className="text-2xs font-bold leading-relaxed text-base-content/60">
                         Once configured, the AI assistant can generate images and videos by calling Tensor Art models.
                         Just tell the assistant what you want — it will pick the right model, write the prompt, and deliver the result.
                     </p>
-                    <p className="text-[10px] font-bold leading-relaxed text-base-content/60 mt-2">
+                    <p className="text-2xs font-bold leading-relaxed text-base-content/60 mt-2">
                         Examples: <em>"Create an image of a cyberpunk city using Flux"</em> or <em>"Make a video of a waterfall"</em>.
                     </p>
                 </div>
@@ -710,7 +710,7 @@ const IntegrationsSection: React.FC<IntegrationsSectionProps> = ({
                         <>
                             {/* ComfyUI configuration */}
                             <div className="border border-base-300/20 p-4 mx-6 mb-4 space-y-4">
-                                <h4 className="text-[10px] font-black uppercase tracking-widest text-base-content/70 flex items-center gap-2">
+                                <h4 className="text-2xs font-black uppercase tracking-widest text-base-content/70 flex items-center gap-2">
                                     <span className="w-1.5 h-1.5 rounded-full bg-primary" />
                                     ComfyUI
                                 </h4>
@@ -731,13 +731,13 @@ const IntegrationsSection: React.FC<IntegrationsSectionProps> = ({
                                             {comfyStatus === 'testing' ? '...' : 'TEST'}
                                         </button>
                                         {comfyStatus === 'ok' && (
-                                            <span className="flex items-center gap-1.5 text-[10px] font-black uppercase tracking-widest text-success whitespace-nowrap">
+                                            <span className="flex items-center gap-1.5 text-2xs font-black uppercase tracking-widest text-success whitespace-nowrap">
                                                 <span className="w-1.5 h-1.5 rounded-full bg-success animate-pulse" />
                                                 OK
                                             </span>
                                         )}
                                         {comfyStatus === 'fail' && (
-                                            <span className="flex items-center gap-1.5 text-[10px] font-black uppercase tracking-widest text-error whitespace-nowrap">
+                                            <span className="flex items-center gap-1.5 text-2xs font-black uppercase tracking-widest text-error whitespace-nowrap">
                                                 <span className="w-1.5 h-1.5 rounded-full bg-error animate-pulse" />
                                                 FAIL
                                             </span>
@@ -748,7 +748,7 @@ const IntegrationsSection: React.FC<IntegrationsSectionProps> = ({
 
                             {/* A1111 / Forge Neo configuration */}
                             <div className="border border-base-300/20 p-4 mx-6 mb-4 space-y-4">
-                                <h4 className="text-[10px] font-black uppercase tracking-widest text-base-content/70 flex items-center gap-2">
+                                <h4 className="text-2xs font-black uppercase tracking-widest text-base-content/70 flex items-center gap-2">
                                     <span className="w-1.5 h-1.5 rounded-full bg-secondary" />
                                     A1111 / Forge Neo
                                 </h4>
@@ -769,13 +769,13 @@ const IntegrationsSection: React.FC<IntegrationsSectionProps> = ({
                                             {a1111Status === 'testing' ? '...' : 'TEST'}
                                         </button>
                                         {a1111Status === 'ok' && (
-                                            <span className="flex items-center gap-1.5 text-[10px] font-black uppercase tracking-widest text-success whitespace-nowrap">
+                                            <span className="flex items-center gap-1.5 text-2xs font-black uppercase tracking-widest text-success whitespace-nowrap">
                                                 <span className="w-1.5 h-1.5 rounded-full bg-success animate-pulse" />
                                                 OK
                                             </span>
                                         )}
                                         {a1111Status === 'fail' && (
-                                            <span className="flex items-center gap-1.5 text-[10px] font-black uppercase tracking-widest text-error whitespace-nowrap">
+                                            <span className="flex items-center gap-1.5 text-2xs font-black uppercase tracking-widest text-error whitespace-nowrap">
                                                 <span className="w-1.5 h-1.5 rounded-full bg-error animate-pulse" />
                                                 FAIL
                                             </span>
@@ -788,10 +788,10 @@ const IntegrationsSection: React.FC<IntegrationsSectionProps> = ({
 
                     {!isLocal && (
                         <div className="p-4 bg-info/5 border border-info/20 space-y-2 mx-6 mb-6">
-                            <p className="text-[10px] font-black uppercase tracking-widest text-info leading-tight">
+                            <p className="text-2xs font-black uppercase tracking-widest text-info leading-tight">
                                 CLOUD BACKEND
                             </p>
-                            <p className="text-[10px] font-bold leading-relaxed text-base-content/60">
+                            <p className="text-2xs font-bold leading-relaxed text-base-content/60">
                                 In Cloud mode, image generation uses Google Gemini (Imagen, Veo, Nano Banana) as configured
                                 in the AI Engine settings. Switch to ComfyUI or A1111 / Forge Neo to generate
                                 entirely on-device without cloud costs.

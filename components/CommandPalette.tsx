@@ -172,7 +172,7 @@ const CommandPalette: React.FC<CommandPaletteProps> = ({ isOpen, onClose }) => {
                 aria-autocomplete="list"
                 aria-activedescendant={totalResults[selectedIndex] ? `cmd-option-${selectedIndex}` : undefined}
               />
-              <kbd className="text-[9px] font-mono uppercase tracking-widest text-base-content/20 border border-base-content/10 px-1.5 py-0.5">⌘K</kbd>
+              <kbd className="text-2xs font-mono uppercase tracking-widest text-base-content/20 border border-base-content/10 px-1.5 py-0.5">⌘K</kbd>
             </div>
 
             {/* Results */}
@@ -192,7 +192,7 @@ const CommandPalette: React.FC<CommandPaletteProps> = ({ isOpen, onClose }) => {
               ) : (
                 grouped.map(([category, commands]) => (
                   <div key={category}>
-                    <div className="px-5 py-1.5 text-[9px] font-black uppercase tracking-[0.2em] text-base-content/20">
+                    <div className="px-5 py-1.5 text-2xs font-black uppercase tracking-[0.2em] text-base-content/20">
                       {category}
                     </div>
                     {commands.map((cmd) => {
@@ -215,11 +215,11 @@ const CommandPalette: React.FC<CommandPaletteProps> = ({ isOpen, onClose }) => {
                           <span className="flex flex-col flex-1 min-w-0">
                             <span className="text-sm font-medium truncate">{cmd.label}</span>
                             {cmd.detail && (
-                              <span className="text-[10px] font-mono text-base-content/30 truncate">{cmd.detail}</span>
+                              <span className="text-2xs font-mono text-base-content/30 truncate">{cmd.detail}</span>
                             )}
                           </span>
                           {cmd.shortcut && (
-                            <kbd className="text-[9px] font-mono text-base-content/20 border border-base-content/10 px-1.5 py-0.5 shrink-0">
+                            <kbd className="text-2xs font-mono text-base-content/20 border border-base-content/10 px-1.5 py-0.5 shrink-0">
                               {cmd.shortcut}
                             </kbd>
                           )}
@@ -232,7 +232,7 @@ const CommandPalette: React.FC<CommandPaletteProps> = ({ isOpen, onClose }) => {
             </div>
 
             {/* Footer hint */}
-            <div className="flex items-center gap-4 px-5 py-2 border-t border-base-content/5 text-[9px] font-mono text-base-content/20">
+            <div className="flex items-center gap-4 px-5 py-2 border-t border-base-content/5 text-2xs font-mono text-base-content/20">
               <span>↑↓ Navigate</span>
               <span>↵ Execute</span>
               <span>Esc Close</span>

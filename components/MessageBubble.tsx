@@ -82,10 +82,10 @@ const MessageBubbleImpl: React.FC<{ msg: ChatBubbleMessage; isTyping: boolean }>
                 </div>
                 {msg.citations && msg.citations.length > 0 && (
                     <div className="mt-3 pt-3 border-t border-white/10 space-y-1">
-                        <p className="text-[10px] font-mono uppercase tracking-wider opacity-40 mb-1">Sources</p>
+                        <p className="text-2xs font-mono uppercase tracking-wider opacity-40 mb-1">Sources</p>
                         {msg.citations.map((c) => (
                             <div key={c.index} className="flex items-center gap-2 text-xs font-mono opacity-60 hover:opacity-100">
-                                <span className="text-primary text-[10px]">[{c.index}]</span>
+                                <span className="text-primary text-2xs">[{c.index}]</span>
                                 <span className="truncate">{c.title || c.fileName}</span>
                             </div>
                         ))}

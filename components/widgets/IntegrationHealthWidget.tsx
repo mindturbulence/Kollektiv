@@ -1,10 +1,18 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import { useSettings } from '../../contexts/SettingsContext';
 import { isGoogleAuthValid } from '../../utils/googleAuth';
 import { appEventBus } from '../../utils/eventBus';
+import { fileSystemManager } from '../../utils/fileUtils';
 
 const IntegrationHealthWidget: React.FC = () => {
   const { settings } = useSettings();
+  const [vaultConnected, setVaultConnected] = useState(fileSystemManager.isDirectorySelected());
+
+  useEffect(() => {
+    const check = () => setVaultConnected(fileSystemManager.isDirectorySelected());
+    const off = appEventBus.on('vaultConnected' as any, check);
+    return off;
+  }, []);
 
   const integrations = [
     {
@@ -14,7 +22,7 @@ const IntegrationHealthWidget: React.FC = () => {
     },
     {
       label: 'Vault',
-      connected: true, // Always shown as connected if we reach dashboard
+      connected: vaultConnected,
       key: 'vault' as const,
     },
     {
@@ -36,20 +44,22 @@ const IntegrationHealthWidget: React.FC = () => {
 
   return (
     <div className="bg-base-100/40 backdrop-blur-xl border border-base-content/10 p-4 relative corner-frame h-full flex flex-col">
-      <div className="text-[9px] font-black uppercase tracking-[0.2em] text-primary/60 mb-3 flex-shrink-0">Integrations</div>
+      <div className="text-2xs font-black uppercase tracking-[0.2em] text-primary/60 mb-3 flex-shrink-0">Integrations</div>
       <div className="flex flex-col gap-2 flex-1 overflow-y-auto">
         {integrations.map(inte => (
           <button
             key={inte.key}
             onClick={() => appEventBus.emit('navigate', 'settings' as any)}
-            className={`flex items-center gap-3 px-3 py-2.5 text-xs font-mono uppercase tracking-wider border transition-colors w-full text-left ${
+            className={`flex items-center justify-between px-3 py-2.5 text-xs font-mono uppercase tracking-wider border transition-colors w-full text-left ${
               inte.connected
                 ? 'text-emerald-400/70 border-emerald-400/20 bg-emerald-400/5 hover:bg-emerald-400/10'
                 : 'text-base-content/30 border-base-content/10 bg-base-content/5 hover:bg-base-content/10'
             }`}
           >
-            <span className="text-sm">{inte.connected ? '✅' : '❌'}</span>
             <span>{inte.label}</span>
+            <span className={`text-2xs tracking-[0.15em] ${inte.connected ? 'text-emerald-400/60' : 'text-base-content/25'}`}>
+              {inte.connected ? 'Connected' : 'Not set up'}
+            </span>
           </button>
         ))}
       </div>

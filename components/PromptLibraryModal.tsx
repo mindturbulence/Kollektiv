@@ -22,7 +22,7 @@ const PromptLibraryModal: React.FC<PromptLibraryModalProps> = ({ isOpen, onClose
                             <h3 className="text-xl font-black tracking-tighter text-base-content leading-none uppercase">
                                 Prompt Library<span className="text-primary">.</span>
                             </h3>
-                            <p className="text-[10px] font-black uppercase tracking-[0.4em] text-base-content/30 mt-1.5">Neural Pattern Archival Access</p>
+                            <p className="text-2xs font-black uppercase tracking-[0.4em] text-base-content/30 mt-1.5">Neural Pattern Archival Access</p>
                         </div>
                         <button onClick={onClose} className="p-2 text-error/30 hover:text-error transition-all hover:scale-110">
                             <CloseIcon className="w-5 h-5" />
@@ -44,14 +44,14 @@ const PromptLibraryModal: React.FC<PromptLibraryModalProps> = ({ isOpen, onClose
                                         className="p-5 text-left border border-base-content/5 hover:border-primary/40 hover:bg-primary/5 transition-all group flex flex-col gap-3"
                                     >
                                         <div className="flex justify-between items-start">
-                                            <span className="text-[10px] font-black uppercase tracking-widest text-primary/60 group-hover:text-primary transition-colors">{item.title || 'Untitled Pattern'}</span>
-                                            <span className="text-[9px] font-mono opacity-20">{new Date(item.createdAt).toLocaleDateString()}</span>
+                                            <span className="text-2xs font-black uppercase tracking-widest text-primary/60 group-hover:text-primary transition-colors">{item.title || 'Untitled Pattern'}</span>
+                                            <span className="text-2xs font-mono opacity-20">{new Date(item.createdAt).toLocaleDateString()}</span>
                                         </div>
                                         <p className="text-sm line-clamp-3 italic opacity-60 group-hover:opacity-100 transition-opacity leading-relaxed">
                                             "{item.text}"
                                         </p>
                                         <div className="mt-2 flex justify-end">
-                                            <span className="text-[9px] font-black uppercase tracking-widest text-primary/40 group-hover:text-primary transition-all flex items-center gap-1">
+                                            <span className="text-2xs font-black uppercase tracking-widest text-primary/40 group-hover:text-primary transition-all flex items-center gap-1">
                                                 LOAD PATTERN <ArrowRightIcon className="w-2.5 h-2.5" />
                                             </span>
                                         </div>

@@ -13,7 +13,7 @@ const LiveAssistantMiniWidget: React.FC = () => {
 
   return (
     <div className="bg-base-100/40 backdrop-blur-xl border border-base-content/10 p-4 relative corner-frame">
-      <div className="text-[9px] font-black uppercase tracking-[0.2em] text-primary/60 mb-3">Assistant</div>
+      <div className="text-2xs font-black uppercase tracking-[0.2em] text-primary/60 mb-3">Assistant</div>
       <button
         onClick={() => appEventBus.emit('navigate', 'assistant' as any)}
         className={`w-full flex items-center gap-3 p-3 border transition-all duration-300 ${
@@ -24,7 +24,7 @@ const LiveAssistantMiniWidget: React.FC = () => {
       >
         <div className={`w-2 h-2 rounded-full ${isActive ? 'bg-primary animate-pulse' : 'bg-base-content/20'}`} />
         <div className="flex-1 text-left">
-          <div className="text-[11px] font-bold uppercase tracking-wider text-base-content/70">
+          <div className="text-2xs font-bold uppercase tracking-wider text-base-content/70">
             {modeLabel}
           </div>
           <div className="text-[8px] font-mono uppercase tracking-wider text-base-content/30 mt-0.5">
