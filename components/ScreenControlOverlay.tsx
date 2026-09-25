@@ -23,7 +23,7 @@ export const ScreenControlOverlay: React.FC = () => {
                     animate={{ opacity: 1, y: 0, scale: 1 }}
                     exit={{ opacity: 0, y: -20, scale: 0.95 }}
                     transition={{ duration: 0.2, ease: 'easeOut' }}
-                    className="fixed top-4 right-4 z-[9999]"
+                    className="fixed top-4 right-4 z-system"
                 >
                     <div className="relative p-[1px] corner-frame overflow-visible shadow-2xl min-w-[240px] pointer-events-auto">
                         {/* Pulsing border ring */}

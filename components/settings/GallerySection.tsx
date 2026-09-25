@@ -231,7 +231,7 @@ const GallerySection: React.FC<GallerySectionProps> = ({
 
     const modalContent = converterOpen ? (
         <div
-            className="fixed inset-0 bg-black/60 backdrop-blur-xl z-[1000] flex items-center justify-center p-4 animate-fade-in"
+            className="fixed inset-0 bg-black/60 backdrop-blur-xl z-modal flex items-center justify-center p-4 animate-fade-in"
             onClick={phase === 'scanning' || phase === 'converting' ? undefined : handleClose}
             role="dialog"
             aria-modal="true"

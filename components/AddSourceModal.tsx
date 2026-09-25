@@ -74,7 +74,7 @@ export const AddSourceModal: React.FC<AddSourceModalProps> = ({ open, onClose })
   if (!open) return null;
 
   return (
-    <div className="fixed inset-0 z-[300] flex items-center justify-center bg-black/50">
+    <div className="fixed inset-0 z-modal flex items-center justify-center bg-black/50">
       <div className="bg-base-200 border border-white/10 rounded-lg shadow-2xl w-full max-w-md mx-4">
         {/* Header */}
         <div className="flex items-center justify-between px-4 py-3 border-b border-white/5">

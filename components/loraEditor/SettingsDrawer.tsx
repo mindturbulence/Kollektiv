@@ -31,7 +31,7 @@ const SettingsDrawer: React.FC<SettingsDrawerProps> = ({ isOpen, onClose, settin
             {isOpen && (
                 <motion.div
                     initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
-                    className="fixed inset-0 z-[600] bg-base-100/80 backdrop-blur-sm flex justify-end"
+                    className="fixed inset-0 z-modal bg-base-100/80 backdrop-blur-sm flex justify-end"
                     onClick={onClose}
                 >
                     <motion.div

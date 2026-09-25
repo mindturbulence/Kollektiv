@@ -297,7 +297,7 @@ const FullscreenViewer: React.FC<FullscreenViewerProps> = ({ items, currentIndex
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
             transition={{ duration: 0.4, ease: "easeInOut" }}
-            className="fixed inset-0 bg-black/95 z-[1000] group select-none overflow-hidden"
+            className="fixed inset-0 bg-black/95 z-modal group select-none overflow-hidden"
             onClick={handleClose}
             onMouseMove={handleMouseMove}
             onMouseUp={handleMouseUp}
@@ -371,7 +371,7 @@ const FullscreenViewer: React.FC<FullscreenViewerProps> = ({ items, currentIndex
                 </motion.div>
 
                 {/* Navigation Controls - High Z-index for visibility */}
-                <div className="pointer-events-none absolute inset-0 z-[100]">
+                <div className="pointer-events-none absolute inset-0 z-base">
                     {/* Unified Navigation (Items & Groups) - Docked to far edges */}
                     <div className="absolute inset-y-0 left-0 w-32 flex items-center justify-center">
                         <button 
@@ -393,7 +393,7 @@ const FullscreenViewer: React.FC<FullscreenViewerProps> = ({ items, currentIndex
                     </div>
                 </div>
 
-                <div className="absolute top-8 right-8 z-[110] flex items-center gap-4 pointer-events-auto">
+                <div className="absolute top-8 right-8 z-raised flex items-center gap-4 pointer-events-auto">
                     <button 
                         onClick={(e) => { e.stopPropagation(); setIsSlideshowPlaying(!isSlideshowPlaying); }} 
                         className={`p-2 transition-all duration-300 ${isSlideshowPlaying ? 'text-primary scale-110' : 'text-white/40 hover:text-white'}`} 

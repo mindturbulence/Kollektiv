@@ -79,7 +79,7 @@ export const ResearchSourcesPanel: React.FC = () => {
       <AddSourceModal open={isAddModalOpen} onClose={() => setIsAddModalOpen(false)} />
       {previewFile && (
         <div
-          className="fixed inset-0 z-[300] flex items-center justify-center bg-base-300/50 backdrop-blur-sm p-8"
+          className="fixed inset-0 z-modal flex items-center justify-center bg-base-300/50 backdrop-blur-sm p-8"
           onClick={() => setPreviewFile(null)}
         >
           <div

@@ -127,7 +127,7 @@ const InitialLoader: React.FC<{ status: string; progress: number | null; onConti
     };
 
     return (
-        <div id="initial-loader" className="fixed inset-0 z-[500] flex flex-col items-center justify-center bg-base-100 text-base-content overflow-hidden select-none font-sans" style={{ background: 'oklch(var(--b1))', opacity: 1 }}>
+        <div id="initial-loader" className="fixed inset-0 z-modal flex flex-col items-center justify-center bg-base-100 text-base-content overflow-hidden select-none font-sans" style={{ background: 'oklch(var(--b1))', opacity: 1 }}>
             <StormBoundary>
                 <Suspense fallback={null}>
                     <StormBackground />

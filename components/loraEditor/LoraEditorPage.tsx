@@ -280,7 +280,7 @@ const LoraEditorPage: React.FC<LoraEditorPageProps> = ({ isExiting = false }) =>
                 onChange={setSettings}
             />
             {feedback && (
-                <div className={`fixed bottom-6 right-6 z-[700] px-4 py-3 text-xs font-bold uppercase tracking-widest ${feedback.isError ? 'bg-error text-error-content' : 'bg-primary text-primary-content'}`}>
+                <div className={`fixed bottom-6 right-6 z-toast px-4 py-3 text-xs font-bold uppercase tracking-widest ${feedback.isError ? 'bg-error text-error-content' : 'bg-primary text-primary-content'}`}>
                     {feedback.message}
                 </div>
             )}

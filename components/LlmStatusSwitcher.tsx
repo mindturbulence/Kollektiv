@@ -40,7 +40,7 @@ const LlmStatusSwitcher: React.FC<LlmStatusSwitcherProps> = ({ onClick, isOpen }
     }
 
     return (
-        <div className="relative w-full z-[730] pointer-events-auto flex items-center">
+        <div className="relative w-full z-dropdown pointer-events-auto flex items-center">
             <a
                 href="#"
                 onClick={(e) => {

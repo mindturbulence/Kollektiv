@@ -128,7 +128,7 @@ const ExtraNetworksPanel: React.FC<ExtraNetworksPanelProps> = ({
               variants={pageHeaderVariants}
               initial="hidden"
               animate="visible"
-              className="h-16 flex items-stretch flex-shrink-0 bg-base-100/80 backdrop-blur-md p-2 gap-1.5 panel-header overflow-visible relative z-[800]"
+              className="h-16 flex items-stretch flex-shrink-0 bg-base-100/80 backdrop-blur-md p-2 gap-1.5 panel-header overflow-visible relative z-overlay"
             >
               <TabButton active={activeTab === 'lora'} onClick={() => setActiveTab('lora')}>LoRA</TabButton>
               <TabButton active={activeTab === 'ti'} onClick={() => setActiveTab('ti')}>Textual Inversion</TabButton>
@@ -205,7 +205,7 @@ const ExtraNetworksPanel: React.FC<ExtraNetworksPanelProps> = ({
               variants={pageHeaderVariants}
               initial="hidden"
               animate="visible"
-              className="h-16 flex items-center flex-shrink-0 bg-base-100/80 backdrop-blur-md px-4 panel-header overflow-visible relative z-[800]"
+              className="h-16 flex items-center flex-shrink-0 bg-base-100/80 backdrop-blur-md px-4 panel-header overflow-visible relative z-overlay"
             >
               <span className="text-2xs font-black uppercase tracking-widest text-base-content/60">Extra Networks</span>
             </motion.header>

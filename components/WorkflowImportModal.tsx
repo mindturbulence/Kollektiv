@@ -356,7 +356,7 @@ const WorkflowImportModal: React.FC<WorkflowImportModalProps> = ({
 
   const modalContent = (
     <div
-      className="fixed inset-0 bg-black/40 backdrop-blur-xl z-[1000] flex items-center justify-center p-4 animate-fade-in"
+      className="fixed inset-0 bg-black/40 backdrop-blur-xl z-modal flex items-center justify-center p-4 animate-fade-in"
       onClick={handleClose}
     >
       <div

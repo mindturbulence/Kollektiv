@@ -715,7 +715,7 @@ export const VideoToFrames: React.FC<VideoToFramesProps> = ({ isExiting = false 
             />
 
             {isExtracting && (
-                <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[100] flex flex-col items-center justify-center text-center">
+                <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-modal flex flex-col items-center justify-center text-center">
                     <LoadingSpinner />
                     <p className="font-black text-xs uppercase tracking-[0.4em] text-primary animate-pulse mt-6">EXTRACTING FRAMES: {Math.round(extractionProgress)}%</p>
                 </div>

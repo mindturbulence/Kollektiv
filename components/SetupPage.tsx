@@ -56,7 +56,7 @@ const MaintenanceOverlay: React.FC<{ progress: number, message: string }> = ({ p
     }, [progress]);
 
     return (
-        <div className="fixed inset-0 bg-base-100 z-[500] flex flex-col items-center justify-center overflow-hidden select-none">
+        <div className="fixed inset-0 bg-base-100 z-modal flex flex-col items-center justify-center overflow-hidden select-none">
             <div className="absolute inset-0 bg-grid-texture opacity-[0.03] pointer-events-none"></div>
             <div className="absolute inset-0 flex items-center justify-center pointer-events-none overflow-hidden">
                 <span

@@ -24,7 +24,7 @@ const JSONBreakdownModal: React.FC<JSONBreakdownModalProps> = ({
         <AnimatePresence>
             {isOpen && (
                 <div 
-                    className="fixed inset-0 bg-black/80 backdrop-blur-xl z-[2000] flex items-center justify-center p-4 md:p-8 overflow-hidden"
+                    className="fixed inset-0 bg-black/80 backdrop-blur-xl z-modal flex items-center justify-center p-4 md:p-8 overflow-hidden"
                     onClick={onClose}
                 >
                     <motion.div

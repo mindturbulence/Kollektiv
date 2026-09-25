@@ -107,7 +107,7 @@ const LlmStatusPanel: React.FC<LlmStatusPanelProps> = ({ isOpen, onClose }) => {
   return (
     <div
       ref={panelRef}
-      className="absolute top-0 left-0 bottom-0 w-full md:w-[400px] bg-transparent z-[55] -translate-x-full pointer-events-none"
+      className="absolute top-0 left-0 bottom-0 w-full md:w-[400px] bg-transparent z-dropdown -translate-x-full pointer-events-none"
       style={{ visibility: "hidden" }}
       aria-hidden={!isOpen}
     >

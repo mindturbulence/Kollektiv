@@ -194,7 +194,7 @@ const ImageCard: React.FC<{
                 </figure>
                 <button
                     onClick={onRemove}
-                    className="absolute top-2 right-2 z-[999] bg-error text-error-content hover:bg-error/80 transition-all shadow-lg pointer-events-auto flex items-center justify-center w-6 h-6 rounded-full opacity-0 group-hover:opacity-100"
+                    className="absolute top-2 right-2 z-dropdown bg-error text-error-content hover:bg-error/80 transition-all shadow-lg pointer-events-auto flex items-center justify-center w-6 h-6 rounded-full opacity-0 group-hover:opacity-100"
                     title="Remove Image"
                 >
                     <svg xmlns="http://www.w3.org/2000/svg" className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">

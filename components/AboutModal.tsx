@@ -19,7 +19,7 @@ const AboutModal: React.FC<AboutModalProps> = ({ isOpen, onClose }) => {
             animate={{ backdropFilter: 'blur(20px)', opacity: 1 }}
             exit={{ backdropFilter: 'blur(0px)', opacity: 0 }}
             transition={{ duration: 0.4, ease: [0.23, 1, 0.32, 1] }}
-            className="fixed inset-0 bg-black/20 z-[1000] flex items-center justify-center p-4"
+            className="fixed inset-0 bg-black/20 z-modal flex items-center justify-center p-4"
             onClick={onClose}
             role="dialog"
             aria-modal="true"

@@ -19,7 +19,7 @@ export const HUDNavItem: React.FC<{
       }}
       initial="initial"
       whileHover="hover"
-      className="group relative p-2 text-primary no-glow transition-colors duration-300 pointer-events-auto z-[99999]"
+      className="group relative p-2 text-primary no-glow transition-colors duration-300 pointer-events-auto z-system"
       title={title}
       aria-label={title}
     >

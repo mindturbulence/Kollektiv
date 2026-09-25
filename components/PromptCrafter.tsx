@@ -743,7 +743,7 @@ const PromptCrafter = ({ onSaveToLibrary, onClip, onSendToEnhancer, onSendToRefi
                         initial="hidden"
                         animate="visible"
                         exit="exit"
-                        className="flex-shrink-0 flex flex-col bg-base-100/10 p-3 gap-2 panel-header relative z-[800] overflow-visible border-b border-primary/10"
+                        className="flex-shrink-0 flex flex-col bg-base-100/10 p-3 gap-2 panel-header relative z-overlay overflow-visible border-b border-primary/10"
                     >
                         {/* Row 1: Template Selection with Clear & Delete controls right next to it */}
                         <div className="flex flex-col sm:flex-row gap-2.5 items-center w-full justify-between overflow-visible">

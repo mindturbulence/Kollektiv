@@ -55,7 +55,7 @@ const UnsavedChangesModal: React.FC<{
 }> = ({ onSave, onDiscard, onCancel }) => {
   const modalContent = (
     <div
-      className="fixed inset-0 bg-black/40 backdrop-blur-xl z-[1000] flex items-center justify-center p-4 animate-fade-in"
+      className="fixed inset-0 bg-black/40 backdrop-blur-xl z-modal flex items-center justify-center p-4 animate-fade-in"
       onClick={onCancel}
       role="dialog"
       aria-modal="true"

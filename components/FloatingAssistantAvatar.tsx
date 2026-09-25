@@ -130,7 +130,7 @@ export const FloatingAssistantAvatar: React.FC<{ hidden?: boolean }> = ({ hidden
     return createPortal(
         <div
             ref={ref}
-            className={`fixed z-[1500] group ${dragging ? 'cursor-grabbing' : 'cursor-grab'}`}
+            className={`fixed z-toast group ${dragging ? 'cursor-grabbing' : 'cursor-grab'}`}
             style={{
                 left: pos.x,
                 top: pos.y,

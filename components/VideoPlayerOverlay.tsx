@@ -129,7 +129,7 @@ const VideoPlayerOverlay: React.FC<VideoPlayerOverlayProps> = ({ url, onClose })
     return (
         <div
             ref={overlayRef}
-            className="fixed inset-0 z-[900] flex items-center justify-center"
+            className="fixed inset-0 z-modal flex items-center justify-center"
             style={{ display: 'none', visibility: 'hidden' }}
         >
             {/* Backdrop */}

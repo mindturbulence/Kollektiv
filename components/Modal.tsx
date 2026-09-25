@@ -68,7 +68,7 @@ const Modal: React.FC<ModalProps> = ({ isOpen, onClose, title, children, classNa
           animate={{ opacity: 1 }}
           exit={{ opacity: 0 }}
           transition={{ duration: 0.15 }}
-          className="fixed inset-0 bg-black/40 backdrop-blur-xl z-[1000] flex items-center justify-center p-4"
+          className="fixed inset-0 bg-black/40 backdrop-blur-xl z-modal flex items-center justify-center p-4"
           // Target check so a drag that starts inside the panel doesn't close it.
           onMouseDown={(e) => { if (e.target === e.currentTarget) onClose(); }}
           onKeyDown={handleKeyDown}

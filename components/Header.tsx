@@ -311,7 +311,7 @@ const Header: React.FC<HeaderProps> = ({
         </div>
 
         {/* Right Side Controls: inline at xl+, a "…" popover below */}
-        <div ref={iconsRef} className="shrink-0 flex items-center relative z-[9999] pointer-events-auto">
+        <div ref={iconsRef} className="shrink-0 flex items-center relative z-system pointer-events-auto">
           <button
             type="button"
             onClick={(e) => {

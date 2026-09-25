@@ -58,7 +58,7 @@ const PageFrame: React.FC<PageFrameProps> = ({
     }, [isInitialized, frameWrapperRef, scanTopRef, scanRightRef, scanBottomRef, scanLeftRef]);
 
     return (
-        <div ref={frameWrapperRef} className="fixed inset-0 z-[1000] pointer-events-none p-4 md:p-6">
+        <div ref={frameWrapperRef} className="fixed inset-0 z-overlay pointer-events-none p-4 md:p-6">
             <div className="w-full h-full border border-base-content/5 relative main-app-frame">
                 <div className="absolute inset-0 overflow-hidden pointer-events-none z-0">
                     <span ref={scanTopRef} className="absolute top-0 left-[-100%] w-full h-[2px] bg-gradient-to-r from-transparent via-primary to-transparent z-10 opacity-0" />

@@ -817,7 +817,7 @@ const Lightbox: React.FC<{
       animate={{ opacity: 1 }}
       exit={{ opacity: 0 }}
       transition={{ duration: 0.3, ease: 'easeInOut' }}
-      className="fixed inset-0 bg-black/95 z-[1000] select-none overflow-hidden"
+      className="fixed inset-0 bg-black/95 z-modal select-none overflow-hidden"
       onClick={onClose}
       onMouseMove={handleMouseMove}
       onMouseUp={() => setIsPanning(false)}
@@ -851,7 +851,7 @@ const Lightbox: React.FC<{
 
       {/* Edge-docked prev/next — same pattern as FullscreenViewer, always vertically centered on the true viewport. */}
       {files.length > 1 && (
-        <div className="pointer-events-none absolute inset-0 z-[100]">
+        <div className="pointer-events-none absolute inset-0 z-base">
           <div className="absolute inset-y-0 left-0 w-32 flex items-center justify-center">
             <button
               onClick={e => { e.stopPropagation(); goPrev(); }}
@@ -873,7 +873,7 @@ const Lightbox: React.FC<{
         </div>
       )}
 
-      <div className="absolute top-8 right-8 z-[110] flex items-center gap-4 pointer-events-auto">
+      <div className="absolute top-8 right-8 z-raised flex items-center gap-4 pointer-events-auto">
         <button onClick={e => { e.stopPropagation(); handleDownload(); }} className="p-2 text-white/40 hover:text-white transition-colors" title="Download" aria-label="Download">
           <DownloadIcon className="w-6 h-6" />
         </button>
@@ -886,7 +886,7 @@ const Lightbox: React.FC<{
       </div>
 
       {files.length > 1 && (
-        <div className="absolute bottom-4 left-1/2 -translate-x-1/2 z-[110] text-2xs font-mono uppercase bg-black/40 py-1 px-3 rounded-full text-white/70">
+        <div className="absolute bottom-4 left-1/2 -translate-x-1/2 z-raised text-2xs font-mono uppercase bg-black/40 py-1 px-3 rounded-full text-white/70">
           {index + 1} / {files.length}
         </div>
       )}
@@ -912,7 +912,7 @@ const SelectionToolbar: React.FC<{
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
       exit={{ opacity: 0, y: 20 }}
-      className="fixed bottom-6 left-1/2 -translate-x-1/2 z-[900] flex items-center gap-3 bg-base-300/95 backdrop-blur-xl border border-base-content/10 rounded-full px-4 py-2 shadow-xl"
+      className="fixed bottom-6 left-1/2 -translate-x-1/2 z-overlay flex items-center gap-3 bg-base-300/95 backdrop-blur-xl border border-base-content/10 rounded-full px-4 py-2 shadow-xl"
       role="toolbar"
       aria-label="Selection actions"
     >

@@ -440,7 +440,7 @@ const AppContent: React.FC = () => {
         <AssistantAvatarBridge />
         <div className="h-full w-full overflow-hidden relative font-sans">
             {isLoading && (
-                <div ref={loaderRef} className="fixed inset-0 z-[1000]">
+                <div ref={loaderRef} className="fixed inset-0 z-system">
                     <InitialLoader status={initStatus} progress={initProgress} onContinue={handleInitContinue} />
                 </div>
             )}
@@ -529,7 +529,7 @@ const AppContent: React.FC = () => {
                 <>
                     <div
                         ref={apertureRef}
-                        className="fixed inset-4 md:inset-6 z-[900] pointer-events-none"
+                        className="fixed inset-4 md:inset-6 z-overlay pointer-events-none"
                         style={{ visibility: 'hidden' }}
                     >
                         <div ref={blindsRef} className="absolute inset-0 flex flex-row">

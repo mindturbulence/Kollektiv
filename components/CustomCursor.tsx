@@ -103,7 +103,7 @@ const CustomCursor: React.FC = () => {
     return (
         <div
             ref={cursorRef}
-            className="fixed top-1 left-1 pointer-events-none z-[9999] opacity-0 flex items-center text-primary"
+            className="fixed top-1 left-1 pointer-events-none z-system opacity-0 flex items-center text-primary"
             style={{ width: 'auto', height: '40px' }}
         >
             <div className={`relative flex items-center justify-center transition-opacity duration-300 ${isBusy ? 'opacity-0' : 'opacity-100'}`}>

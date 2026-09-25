@@ -536,7 +536,7 @@ const RefinerPage: React.FC<RefinerPageProps> = ({
                         initial="hidden"
                         animate="visible"
                         exit="exit"
-                        className="h-16 flex items-stretch flex-shrink-0 bg-base-100/80 backdrop-blur-md p-2 gap-1.5 panel-header overflow-visible relative z-[800]"
+                        className="h-16 flex items-stretch flex-shrink-0 bg-base-100/80 backdrop-blur-md p-2 gap-1.5 panel-header overflow-visible relative z-overlay"
                     >
                         {tabs.map(tab => (
                             <button
@@ -641,7 +641,7 @@ const RefinerPage: React.FC<RefinerPageProps> = ({
                         initial="hidden"
                         animate="visible"
                         exit="exit"
-                        className="p-6 h-16 flex justify-between items-center bg-base-100/80 backdrop-blur-md panel-header overflow-visible relative z-[800] gap-4"
+                        className="p-6 h-16 flex justify-between items-center bg-base-100/80 backdrop-blur-md panel-header overflow-visible relative z-overlay gap-4"
                     >
                         <motion.div variants={reverseTextVariants}>
                             <TerminalText text={`REFINED PROMPT : ${targetAIModel}`} delay={2.6} className="text-xs font-sf-mono uppercase text-primary" />
@@ -796,7 +796,7 @@ const RefinerPage: React.FC<RefinerPageProps> = ({
                         initial="hidden"
                         animate="visible"
                         exit="exit"
-                        className="h-16 flex items-stretch relative z-[800] bg-base-100/80 panel-header overflow-visible"
+                        className="h-16 flex items-stretch relative z-overlay bg-base-100/80 panel-header overflow-visible"
                     >
                         <div className="flex items-center gap-2 w-full h-full px-3 overflow-visible">
                             <div className="flex-1 min-w-0 overflow-visible flex items-center">
@@ -871,7 +871,7 @@ const RefinerPage: React.FC<RefinerPageProps> = ({
 
             {/* Modals */}
             {isSavePresetModalOpen && (
-                <div className="fixed inset-0 z-[9999] flex items-center justify-center">
+                <div className="fixed inset-0 z-system flex items-center justify-center">
                     <div className="bg-base-200/95 backdrop-blur-xl p-8 border border-primary/20 shadow-[0_0_60px_oklch(var(--p)/0.2)] max-w-md w-full mx-4 relative corner-frame">
                         <div className="flex items-center justify-between mb-6">
                             <span className="text-sm font-black uppercase tracking-widest text-primary">REGISTER PRESET</span>

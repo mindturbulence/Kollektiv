@@ -420,7 +420,7 @@ ${systemResponse}` };
             {isOpen && (
                 <>
                     <div
-                        className="fixed inset-0 bg-transparent z-[190] pointer-events-auto"
+                        className="fixed inset-0 bg-transparent z-dropdown pointer-events-auto"
                         onClick={() => { audioService.playClick(); onClose(); }}
                     />
                     <motion.div
@@ -428,7 +428,7 @@ ${systemResponse}` };
                         animate={{ x: 0, opacity: 1 }}
                         exit={{ x: '100%', opacity: 0 }}
                         transition={{ type: "spring", stiffness: 300, damping: 30 }}
-                        className={`fixed top-[84px] right-[42px] bottom-[var(--footer-h,81px)] bg-transparent z-[200] pointer-events-auto shadow-2xl transition-[left,width] duration-300 ${(isExpanded || researchMode) ? 'left-[42px] w-auto' : 'w-full md:w-[400px] lg:w-[480px]'}`}
+                        className={`fixed top-[84px] right-[42px] bottom-[var(--footer-h,81px)] bg-transparent z-overlay pointer-events-auto shadow-2xl transition-[left,width] duration-300 ${(isExpanded || researchMode) ? 'left-[42px] w-auto' : 'w-full md:w-[400px] lg:w-[480px]'}`}
                     >
                         <div className="w-full h-full relative corner-frame overflow-visible flex flex-col">
                             <div className="bg-base-100/90 backdrop-blur-3xl rounded-none w-[calc(100%-6px)] h-[calc(100%-6px)] m-[3px] flex flex-col overflow-hidden relative z-10 border border-white/5">
@@ -596,7 +596,7 @@ ${systemResponse}` };
                                         {/* Input Area */}
                                         <div className="p-4 border-t border-white/5 bg-base-200/30 shrink-0 relative">
                                             {showCommandMenu && (
-                                                <div className="absolute bottom-[calc(100%-1rem)] left-4 mb-2 w-72 bg-base-300 border border-white/10 rounded-xl shadow-xl overflow-hidden z-[100]">
+                                                <div className="absolute bottom-[calc(100%-1rem)] left-4 mb-2 w-72 bg-base-300 border border-white/10 rounded-xl shadow-xl overflow-hidden z-dropdown">
                                                     <div className="max-h-80 overflow-y-auto w-full flex flex-col p-1 custom-scrollbar">
                                                         {availableCommands.filter(c => input.startsWith('/') ? c.cmd.toLowerCase().includes(input.toLowerCase().split(' ')[0]) : true).map((c, i) => (
                                                             <button

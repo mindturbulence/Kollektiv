@@ -52,7 +52,7 @@ export const LiveAssistantFault: React.FC<{ hidden?: boolean }> = ({ hidden = fa
     return createPortal(
         <AnimatePresence>
             {show && (
-                <div className="fixed inset-0 z-[3000] flex items-center justify-center pointer-events-none px-8">
+                <div className="fixed inset-0 z-toast flex items-center justify-center pointer-events-none px-8">
                     <motion.div
                         initial={{ opacity: 0, scale: 0.95 }}
                         animate={{ opacity: 1, scale: 1 }}
@@ -152,7 +152,7 @@ export const LiveAssistantCameraPreview: React.FC<{ hidden?: boolean }> = ({ hid
     if (!cameraActive || !activeCameraStream) return null;
 
     return createPortal(
-        <div className="fixed bottom-24 right-4 w-48 h-36 rounded-md overflow-hidden border border-primary/50 shadow-2xl z-[2100] bg-base-300">
+        <div className="fixed bottom-24 right-4 w-48 h-36 rounded-md overflow-hidden border border-primary/50 shadow-2xl z-toast bg-base-300">
             <video
                 ref={ref}
                 autoPlay

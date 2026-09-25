@@ -37,7 +37,7 @@ const ExportModal: React.FC<ExportModalProps> = ({ isOpen, onClose }) => {
 
   const modalContent = (
     <div
-      className="fixed inset-0 z-[300] flex items-center justify-center bg-black/50 backdrop-blur-md"
+      className="fixed inset-0 z-modal flex items-center justify-center bg-black/50 backdrop-blur-md"
       onClick={onClose}
     >
       <div

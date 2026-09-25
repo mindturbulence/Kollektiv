@@ -419,7 +419,7 @@ const LocalGenerationStudioPage: React.FC<LocalGenerationStudioPageProps> = ({ b
             variants={pageHeaderVariants}
             initial="hidden"
             animate="visible"
-            className="h-16 flex items-center flex-shrink-0 bg-base-100/80 backdrop-blur-md px-3 gap-1.5 panel-header overflow-visible relative z-[800]"
+            className="h-16 flex items-center flex-shrink-0 bg-base-100/80 backdrop-blur-md px-3 gap-1.5 panel-header overflow-visible relative z-overlay"
           >
             <select
               value={activePresetId}
@@ -767,7 +767,7 @@ const LocalGenerationStudioPage: React.FC<LocalGenerationStudioPageProps> = ({ b
             variants={pageHeaderVariants}
             initial="hidden"
             animate="visible"
-            className="px-6 h-16 flex justify-between items-center bg-base-100/80 backdrop-blur-md panel-header overflow-visible relative z-[800] gap-4"
+            className="px-6 h-16 flex justify-between items-center bg-base-100/80 backdrop-blur-md panel-header overflow-visible relative z-overlay gap-4"
           >
             <div>
               <h1 className="text-lg font-black uppercase tracking-tighter">{meta.label} Studio</h1>

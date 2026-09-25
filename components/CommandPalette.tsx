@@ -140,7 +140,7 @@ const CommandPalette: React.FC<CommandPaletteProps> = ({ isOpen, onClose }) => {
           animate={{ opacity: 1 }}
           exit={{ opacity: 0 }}
           transition={{ duration: 0.15 }}
-          className="fixed inset-0 z-[9999] flex items-start justify-center pt-[15vh] bg-base-300/30 backdrop-blur-sm"
+          className="fixed inset-0 z-system flex items-start justify-center pt-[15vh] bg-base-300/30 backdrop-blur-sm"
           onClick={() => onClose()}
         >
           <motion.div

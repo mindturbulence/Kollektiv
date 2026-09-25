@@ -226,11 +226,11 @@ const Footer: React.FC<FooterProps> = ({
 
 
     return (
-        <footer className="flex-shrink-0 px-8 py-4 bg-base-200/20 backdrop-blur-md z-[700] flex flex-row items-center justify-between select-none whitespace-nowrap relative pointer-events-auto border-t border-base-content/10 mt-auto">
+        <footer className="flex-shrink-0 px-8 py-4 bg-base-200/20 backdrop-blur-md z-overlay flex flex-row items-center justify-between select-none whitespace-nowrap relative pointer-events-auto border-t border-base-content/10 mt-auto">
             {/* Background Technical Noise */}
             <div className="absolute inset-0 pointer-events-none opacity-[0.03] bg-[url('https://www.transparenttextures.com/patterns/stardust.png')]"></div>
 
-            <div className="flex items-center h-full gap-4 bg-transparent relative z-[710] pointer-events-auto">
+            <div className="flex items-center h-full gap-4 bg-transparent relative z-raised pointer-events-auto">
                 <div className="flex gap-3 items-center">
                     <span className={`arwes-label uppercase tracking-widest text-primary/60 leading-none inline-block ${mainFontClass}`}>ENG</span>
                     <div className="min-w-[120px] flex items-center">
@@ -254,7 +254,7 @@ const Footer: React.FC<FooterProps> = ({
                 </div>
             </div>
 
-            <div className="flex-1 flex items-center justify-center h-full relative z-[705] pointer-events-none">
+            <div className="flex-1 flex items-center justify-center h-full relative z-base pointer-events-none">
                 <AnimatePresence mode="wait">
                     {liveStatus !== 'idle' && (
                         <motion.button
@@ -276,7 +276,7 @@ const Footer: React.FC<FooterProps> = ({
                 </AnimatePresence>
             </div>
 
-            <div className="flex flex-row items-center h-full gap-6 relative z-[710] pointer-events-auto">
+            <div className="flex flex-row items-center h-full gap-6 relative z-raised pointer-events-auto">
                 <div className="flex items-center gap-6">
                     <div className="hidden md:flex items-center gap-6">
                         {liveStatus === 'live' && (

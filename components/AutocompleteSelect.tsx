@@ -133,7 +133,7 @@ const AutocompleteSelect: React.FC<AutocompleteSelectProps> = ({
   const dropdownMenu = isDropdownOpen ? (
     <div 
       ref={dropdownRef}
-      className={`fixed z-[12000] flex ${dropdownPos.isUpward ? 'flex-col-reverse' : 'flex-col'} overflow-hidden animate-fade-in bg-base-100 border border-base-300 shadow-2xl rounded-none ${dropdownPos.isUpward ? 'mb-1' : 'mt-1'}`}
+      className={`fixed z-system flex ${dropdownPos.isUpward ? 'flex-col-reverse' : 'flex-col'} overflow-hidden animate-fade-in bg-base-100 border border-base-300 shadow-2xl rounded-none ${dropdownPos.isUpward ? 'mb-1' : 'mt-1'}`}
       style={{ 
         top: dropdownPos.top !== 'auto' ? `${dropdownPos.top}px` : 'auto', 
         bottom: dropdownPos.bottom !== 'auto' ? `${dropdownPos.bottom}px` : 'auto', 
@@ -195,7 +195,7 @@ const AutocompleteSelect: React.FC<AutocompleteSelectProps> = ({
   ) : null;
 
   return (
-    <div className={`relative w-full ${isDropdownOpen ? 'z-[9999]' : 'z-10'} ${className}`} ref={wrapperRef}>
+    <div className={`relative w-full ${isDropdownOpen ? 'z-dropdown' : 'z-10'} ${className}`} ref={wrapperRef}>
       <div 
         onClick={handleToggle}
         onMouseEnter={() => audioService.playHover()}

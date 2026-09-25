@@ -241,7 +241,7 @@ const TransitionOverlay = forwardRef<TransitionOverlayHandle>((_props, ref) => {
     return (
         <div
             ref={rootRef}
-            className="absolute inset-0 z-[1000] pointer-events-none overflow-hidden"
+            className="absolute inset-0 z-system pointer-events-none overflow-hidden"
             style={{ visibility: 'hidden' }}
             aria-hidden="true"
         >

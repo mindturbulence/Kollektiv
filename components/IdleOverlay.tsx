@@ -137,7 +137,7 @@ const IdleOverlay: React.FC<{ isVisible: boolean; onInteraction: () => void }> =
     return (
         <div
             ref={containerRef}
-            className="fixed inset-0 z-[9999] bg-transparent backdrop-blur-3xl cursor-none pointer-events-auto"
+            className="fixed inset-0 z-system bg-transparent backdrop-blur-3xl cursor-none pointer-events-auto"
             style={{ opacity: 0, visibility: 'hidden' }}
             onClick={onInteraction}
             onMouseMove={onInteraction}
@@ -153,7 +153,7 @@ const IdleOverlay: React.FC<{ isVisible: boolean; onInteraction: () => void }> =
                     <DashboardGallery items={galleryItems} />
                     <div className="absolute inset-0 bg-base-100/40 pointer-events-none" />
 
-                    <div className="absolute inset-0 flex flex-col items-center justify-center z-[30] pointer-events-none text-center">
+                    <div className="absolute inset-0 flex flex-col items-center justify-center z-raised pointer-events-none text-center">
                         <div className="overflow-hidden py-1 mb-2">
                             <p className="text-xs font-normal uppercase tracking-[1.5em] text-primary/60">
                                 MINDTURBULENCE'S

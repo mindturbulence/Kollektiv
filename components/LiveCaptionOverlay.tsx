@@ -37,7 +37,7 @@ const LiveCaptionOverlay: React.FC<{ hidden?: boolean }> = ({ hidden = false }) 
     if (hidden) return null;
 
     return (
-        <div className="fixed bottom-[88px] inset-x-0 z-[720] flex justify-center pointer-events-none px-8">
+        <div className="fixed bottom-[88px] inset-x-0 z-overlay flex justify-center pointer-events-none px-8">
             <AnimatePresence>
                 {caption && (
                     <motion.div

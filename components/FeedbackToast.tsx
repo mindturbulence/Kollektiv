@@ -55,7 +55,7 @@ const FeedbackToast: React.FC<FeedbackToastProps> = ({ isOpen, onClose, message,
           initial={{ opacity: 0, y: 20, scale: 0.95 }}
           animate={{ opacity: 1, y: 0, scale: 1 }}
           exit={{ opacity: 0, scale: 0.95, transition: { duration: 0.2 } }}
-          className="fixed bottom-8 right-8 z-[3000] flex items-center gap-4 pointer-events-auto"
+          className="fixed bottom-8 right-8 z-toast flex items-center gap-4 pointer-events-auto"
         >
           <div className="relative p-[1px] corner-frame overflow-visible shadow-2xl min-w-[320px] max-w-md">
             <div className={`flex items-stretch h-full w-full overflow-hidden relative z-10 ${currentTheme.bgColor} backdrop-blur-xl border ${currentTheme.borderColor}`}>

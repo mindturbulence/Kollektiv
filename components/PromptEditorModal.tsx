@@ -159,7 +159,7 @@ const PromptEditorModal: React.FC<PromptEditorModalProps> = ({ isOpen, onClose, 
   if (!isOpen) return null;
 
   const modalContent = (
-    <div ref={overlayRef} className="fixed inset-0 bg-black/60 backdrop-blur-xl z-[1000] flex items-center justify-center p-4 overflow-hidden" onClick={handleClose}>
+    <div ref={overlayRef} className="fixed inset-0 bg-black/60 backdrop-blur-xl z-modal flex items-center justify-center p-4 overflow-hidden" onClick={handleClose}>
       <div 
         ref={modalRef}
         className="w-full max-w-3xl mx-auto flex flex-col max-h-[90vh] relative p-[3px] corner-frame overflow-visible shadow-2xl" 

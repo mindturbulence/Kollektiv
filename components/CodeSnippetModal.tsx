@@ -95,7 +95,7 @@ console.log(data);`;
     return (
         <AnimatePresence>
             {isOpen && (
-                <div id="code_snippet_modal_overlay" className="fixed inset-0 bg-black/80 backdrop-blur-xl z-[2000] flex items-center justify-center p-4 md:p-8" onClick={onClose}>
+                <div id="code_snippet_modal_overlay" className="fixed inset-0 bg-black/80 backdrop-blur-xl z-modal flex items-center justify-center p-4 md:p-8" onClick={onClose}>
                     <motion.div
                         id="code_snippet_modal_container"
                         initial={{ opacity: 0, scale: 0.9 }}
