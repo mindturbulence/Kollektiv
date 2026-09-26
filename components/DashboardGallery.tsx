@@ -10,6 +10,7 @@ interface DashboardGalleryProps {
 
 const GalleryCard: React.FC<{ url: string }> = memo(({ url }) => {
     const [displayUrl, setDisplayUrl] = useState<string | null>(null);
+    const [failed, setFailed] = useState(false);
     const objectUrlRef = useRef<string | null>(null);
     const containerRef = useRef<HTMLDivElement>(null);
     const imgRef = useRef<HTMLImageElement>(null);
@@ -114,6 +115,7 @@ const GalleryCard: React.FC<{ url: string }> = memo(({ url }) => {
         };
     }, []);
 
+    if (failed) return null;
     if (!displayUrl) return <div className="w-full aspect-[4/5] bg-base-content/5 animate-pulse" />;
 
     return (
@@ -126,6 +128,7 @@ const GalleryCard: React.FC<{ url: string }> = memo(({ url }) => {
                 className="w-full h-full object-cover grayscale opacity-20 transition-[filter,opacity] duration-1000 will-change-transform"
                 style={{ filter: 'grayscale(1)' }}
                 referrerPolicy="no-referrer"
+                onError={() => setFailed(true)}
             />
             
             {/* Layer 2: Color Image (Visible during active shader) */}
@@ -171,8 +174,9 @@ const DashboardGallery: React.FC<DashboardGalleryProps> = ({ items }) => {
         
         // If we don't have enough images, use some placeholders to fill the space
         if (urls.length < 15) {
+            const base = import.meta.env.BASE_URL;
             const placeholders = Array.from({ length: 15 - urls.length }).map((_, i) => ({
-                url: `https://picsum.photos/seed/kollektiv-${i}/600/800`,
+                url: `${base}dashboard-fill/fill-${String(i).padStart(2, '0')}.jpg`,
                 id: `placeholder-${i}`
             }));
             return [...urls, ...placeholders];
