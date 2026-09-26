@@ -412,10 +412,11 @@ const AssetsManagerPage: React.FC<AssetsManagerPageProps> = ({ isExiting = false
                 <p className="text-2xs font-mono uppercase text-base-content/60 p-1">Drop a folder here, or ADD above.</p>
               )}
             </div>
-            <div className="flex-grow overflow-y-auto p-2">
+            <div className="flex-grow overflow-y-auto p-2 relative">
               {isScanningTree && (
-                <div className="flex items-center gap-2 text-2xs font-mono uppercase text-base-content/60 p-2">
-                  <LoadingSpinner className="w-3 h-3" /> Scanning folders…
+                <div className="absolute inset-0 flex flex-col items-center justify-center gap-3 pointer-events-none">
+                  <LoadingSpinner size={40} />
+                  <p className="text-2xs font-mono uppercase tracking-widest text-base-content/60">Scanning folders…</p>
                 </div>
               )}
               {tree && (
@@ -496,38 +497,35 @@ const AssetsManagerPage: React.FC<AssetsManagerPageProps> = ({ isExiting = false
                 </>
               )}
             </motion.div>
+            <AnimatePresence>
+              {(isListingFolder || isDecodingThumbs) && (
+                <motion.div
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  exit={{ opacity: 0 }}
+                  className="absolute inset-0 z-raised flex flex-col items-center justify-center gap-3 pointer-events-none"
+                >
+                  <LoadingSpinner size={56} />
+                  {isListingFolder ? (
+                    <p className="text-xs font-mono uppercase tracking-widest text-base-content/70">
+                      Scanning folder… {listProgress ? `${listProgress.scannedFiles} files found` : ''}
+                    </p>
+                  ) : (
+                    <>
+                      <p className="text-xs font-mono uppercase tracking-widest text-base-content/70">
+                        Loading assets… {decodePercent}%
+                      </p>
+                      <div className="w-40 h-1 bg-base-content/10 rounded-full overflow-hidden">
+                        <div className="h-full bg-primary rounded-full transition-[width]" style={{ width: `${decodePercent}%` }} />
+                      </div>
+                    </>
+                  )}
+                </motion.div>
+              )}
+            </AnimatePresence>
           </div>
         </motion.section>
       </div>
-
-      <AnimatePresence>
-        {(isListingFolder || isDecodingThumbs) && (
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            className="fixed inset-0 z-40 flex items-center justify-center pointer-events-none"
-          >
-            <div className="flex flex-col items-center gap-3 bg-base-300/80 backdrop-blur-md rounded-lg px-8 py-6 border border-base-content/10">
-              <LoadingSpinner className="w-6 h-6" />
-              {isListingFolder ? (
-                <p className="text-xs font-mono uppercase tracking-widest text-base-content/70">
-                  Scanning folder… {listProgress ? `${listProgress.scannedFiles} files found` : ''}
-                </p>
-              ) : (
-                <>
-                  <p className="text-xs font-mono uppercase tracking-widest text-base-content/70">
-                    Loading assets… {decodePercent}%
-                  </p>
-                  <div className="w-40 h-1 bg-base-content/10 rounded-full overflow-hidden">
-                    <div className="h-full bg-primary rounded-full transition-[width]" style={{ width: `${decodePercent}%` }} />
-                  </div>
-                </>
-              )}
-            </div>
-          </motion.div>
-        )}
-      </AnimatePresence>
 
       <AnimatePresence>
         {selectedIds.size > 0 && (
@@ -703,7 +701,7 @@ const AssetCard: React.FC<{
       <img src={url} alt={file.name} className="w-full h-auto object-cover" loading="lazy" draggable={false} />
     ) : (
       <div className="w-full aspect-square flex items-center justify-center">
-        <LoadingSpinner className="w-4 h-4 opacity-40" />
+        <LoadingSpinner size={16} className="opacity-40" />
       </div>
     )}
     <div
@@ -845,7 +843,7 @@ const Lightbox: React.FC<{
             draggable={false}
           />
         ) : (
-          <LoadingSpinner className="w-8 h-8" />
+          <LoadingSpinner size={32} />
         )}
       </div>
 
