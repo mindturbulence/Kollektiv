@@ -17,6 +17,9 @@ interface UseAppEventBusInput {
   isCommandPaletteOpen: boolean;
   /** Cycles the active theme — shared code path with the header's ThemeSwitcher. */
   handleCycleTheme?: () => void;
+  handleToggleChatPanel?: () => void;
+  handleToggleActivityPanel?: () => void;
+  handleToggleLlmPanel?: () => void;
 }
 
 /**
@@ -36,6 +39,9 @@ export const useAppEventBus = ({
   setConverterOpenFiles,
   isCommandPaletteOpen,
   handleCycleTheme,
+  handleToggleChatPanel,
+  handleToggleActivityPanel,
+  handleToggleLlmPanel,
 }: UseAppEventBusInput) => {
   // ── Navigation events ────────────────────────────────────────────────
   useEffect(() => {
@@ -94,15 +100,17 @@ export const useAppEventBus = ({
 
   // ── Panel toggle events (from command palette) ───────────────────────
   useEffect(() => {
-    const off = appEventBus.on('togglePanel', (name: string) => {
+    const off = appEventBus.on('togglePanel', (name) => {
       switch (name) {
         case 'media': setIsMediaPanelOpen(p => !p); break;
         case 'clipping': setIsClippingPanelOpen(p => !p); break;
-        default: break;
+        case 'chat': handleToggleChatPanel?.(); break;
+        case 'activity': handleToggleActivityPanel?.(); break;
+        case 'llm': handleToggleLlmPanel?.(); break;
       }
     });
     return off;
-  }, [setIsMediaPanelOpen, setIsClippingPanelOpen]);
+  }, [setIsMediaPanelOpen, setIsClippingPanelOpen, handleToggleChatPanel, handleToggleActivityPanel, handleToggleLlmPanel]);
 
   // ── Video player ──────────────────────────────────────────────────────
   useEffect(() => {

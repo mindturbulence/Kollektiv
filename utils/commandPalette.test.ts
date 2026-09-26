@@ -151,8 +151,9 @@ describe('command registry integrity', () => {
             .map(c => c.id);
         expect(panelLabels).toContain('panel-media');
         expect(panelLabels).toContain('panel-clipping');
-        expect(panelLabels).toContain('panel-webviewer');
         expect(panelLabels).toContain('panel-chat');
+        expect(panelLabels).toContain('panel-activity');
+        expect(panelLabels).toContain('panel-llm');
     });
 });
 

@@ -40,7 +40,6 @@ const NAVIGATION_COMMANDS: CommandItem[] = [
 const PANEL_COMMANDS: CommandItem[] = [
   { id: 'panel-media', label: 'Toggle Media Panel', category: 'Panels', keywords: ['music', 'youtube', 'spotify', 'player'], execute: () => appEventBus.emit('togglePanel', 'media') },
   { id: 'panel-clipping', label: 'Toggle Clipping Panel', category: 'Panels', keywords: ['clipboard', 'ideas', 'buffer', 'notes'], execute: () => appEventBus.emit('togglePanel', 'clipping') },
-  { id: 'panel-webviewer', label: 'Toggle Web Viewer', category: 'Panels', keywords: ['browser', 'web', 'page', 'url'], execute: () => appEventBus.emit('togglePanel', 'webviewer') },
   { id: 'panel-chat', label: 'Toggle Chat Panel', category: 'Panels', keywords: ['llm', 'conversation', 'text', 'talk'], execute: () => appEventBus.emit('togglePanel', 'chat') },
   { id: 'panel-activity', label: 'Toggle Activity Panel', category: 'Panels', keywords: ['transcript', 'tools', 'log', 'history'], execute: () => appEventBus.emit('togglePanel', 'activity') },
   { id: 'panel-llm', label: 'Toggle LLM Status', category: 'Panels', keywords: ['engine', 'provider', 'status', 'model'], execute: () => appEventBus.emit('togglePanel', 'llm') },

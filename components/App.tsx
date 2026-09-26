@@ -368,6 +368,11 @@ const AppContent: React.FC = () => {
         updateSettings({ ...settings, darkTheme: getNextTheme(settings.darkTheme), activeThemeMode: 'dark' });
     }, [settings, updateSettings]);
 
+    const handleToggleLlmPanel = useCallback(() => {
+        audioService.playClick();
+        setIsLlmPanelOpen(prev => !prev);
+    }, [setIsLlmPanelOpen]);
+
     useAppEventBus({
         handleNavigate,
         handleSendToPromptsPage,
@@ -381,6 +386,9 @@ const AppContent: React.FC = () => {
         setEditorOpenPayload,
         setConverterOpenFiles,
         handleCycleTheme,
+        handleToggleChatPanel,
+        handleToggleActivityPanel,
+        handleToggleLlmPanel,
     });
 
     const renderContent = () => {
@@ -425,10 +433,6 @@ const AppContent: React.FC = () => {
 
 
     // --- Inline-callbacks that add audio-service side-effects on top of shell state ---
-    const handleToggleLlmPanel = useCallback(() => {
-        audioService.playClick();
-        setIsLlmPanelOpen(prev => !prev);
-    }, [setIsLlmPanelOpen]);
     const handleCloseAboutModal = useCallback(() => {
         audioService.playModalClose();
         setIsAboutModalOpen(false);

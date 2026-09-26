@@ -18,7 +18,6 @@ interface HeaderProps {
   onAboutClick: () => void;
   onToggleClippingPanel: () => void;
   onToggleMediaPanel?: () => void;
-  onToggleWebViewer?: () => void;
   onToggleActivityPanel?: () => void;
   onStandbyClick: (e: React.MouseEvent) => void;
   clippedIdeasCount: number;

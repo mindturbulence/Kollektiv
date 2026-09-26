@@ -25,7 +25,7 @@ export interface AppEvents {
   navigate: ActiveTab;
   assistantFeedback: { message: string; isError?: boolean };
   sendToPromptsPage: PromptsPageState;
-  togglePanel: 'media' | 'clipping' | 'webviewer' | 'chat' | 'activity' | 'llm';
+  togglePanel: 'media' | 'clipping' | 'chat' | 'activity' | 'llm';
   /** Palette "Next Theme" command — cycles the active DaisyUI theme. */
   cycleTheme: void;
   openInEditor: OpenInEditorPayload;
