@@ -243,7 +243,10 @@ async function deserializeLayer(meta: SerializedLayer, blobs: Record<string, Arr
 function getDB(): Promise<IDBPDatabase> {
   return openDB(DB_NAME, DB_VERSION, {
     upgrade(db) {
-      db.createObjectStore(STORE_NAME);
+      // The v1→v2 bump keeps the same store; re-creating it throws ConstraintError,
+      // which aborts the upgrade and fails every later open. Old records are
+      // discarded on read by the formatVersion check in restoreSavedDocument.
+      if (!db.objectStoreNames.contains(STORE_NAME)) db.createObjectStore(STORE_NAME);
     },
   });
 }
@@ -321,6 +324,10 @@ export async function restoreSavedDocument(): Promise<EditorDocument | null> {
 
 /** Deletes the autosaved document, e.g. after an explicit save or discard. */
 export async function clearSavedDocument(): Promise<void> {
-  const db = await getDB();
-  await db.delete(STORE_NAME, AUTOSAVE_KEY);
+  try {
+    const db = await getDB();
+    await db.delete(STORE_NAME, AUTOSAVE_KEY);
+  } catch (err) {
+    console.error('Failed to clear autosaved document:', err);
+  }
 }

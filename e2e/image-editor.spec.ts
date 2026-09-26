@@ -77,6 +77,27 @@ test.describe('Image Editor entry', () => {
         await expect(page.getByText('red-banner', { exact: true })).toBeVisible();
     });
 
+    test('upgrades a v1 autosave database left by an older build', async ({ page }) => {
+        // A pre-2026-09-25 install has the 'documents' store at v1 with a JPEG-era record.
+        await page.addInitScript(() => {
+            if (sessionStorage.getItem('e2e-autosave-v1')) return;
+            sessionStorage.setItem('e2e-autosave-v1', '1');
+            indexedDB.deleteDatabase('kollektiv-editor-autosave');
+            const req = indexedDB.open('kollektiv-editor-autosave', 1);
+            req.onupgradeneeded = () => {
+                req.result.createObjectStore('documents').put({ metadata: {}, layerTree: [] }, 'current');
+            };
+            req.onsuccess = () => req.result.close();
+        });
+        await bootToAppShell(page, 'image_editor');
+        await expect(page.getByRole('button', { name: /Open image/ })).toBeVisible({ timeout: 30_000 });
+
+        await expect.poll(() => page.evaluate(async () =>
+            (await indexedDB.databases()).find(d => d.name === 'kollektiv-editor-autosave')?.version,
+        ), { timeout: 10_000 }).toBe(2);
+        await expect(page.getByText('Async Task Failed')).toHaveCount(0);
+    });
+
     test('Gallery EDIT opens the item in the editor (animated route)', async ({ page }) => {
         await bootToAppShell(page, 'gallery');
         const png = await makePng(page);
