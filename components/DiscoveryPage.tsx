@@ -560,7 +560,7 @@ const DiscoveryPage: React.FC<DiscoveryPageProps> = ({
                                             initial="hidden"
                                             animate="visible"
                                             onClick={() => { audioService.playClick(); setSelectedPrompt(p); }}
-                                            className={`group px-5 py-4 flex items-center transition-all cursor-pointer relative border-b border-primary/10 overflow-hidden ${selectedPrompt?.id === p.id
+                                            className={`group px-5 py-4 flex items-center transition-colors cursor-pointer relative border-b border-primary/10 overflow-hidden ${selectedPrompt?.id === p.id
                                                 ? 'bg-primary/5'
                                                 : 'bg-transparent hover:bg-white/[0.02]'
                                                 }`}

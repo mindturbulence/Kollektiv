@@ -94,7 +94,7 @@ const CategoryItem: React.FC<{
     return (
         <div className="flex flex-col">
             <div 
-                className={`group relative flex flex-col md:flex-row md:items-center justify-between gap-4 py-3 pr-4 border-b border-base-300/45 transition-all duration-200 
+                className={`group relative flex flex-col md:flex-row md:items-center justify-between gap-4 py-3 pr-4 border-b border-base-300/45 transition-colors duration-200 
                     ${isEditing ? 'bg-primary/5' : 'hover:bg-base-200/40'}`}
                 style={{ paddingLeft: `${(level * 24) + 12}px` }}
             >
@@ -218,7 +218,7 @@ const CategoryItem: React.FC<{
                     <div className="flex items-center gap-1 border-l border-base-300/40 pl-3">
                         <button 
                             onClick={() => { audioService.playClick(); onAddSub(category.id); }} 
-                            className="p-1.5 bg-primary/5 hover:bg-primary/10 text-primary border border-primary/20 transition-all flex items-center justify-center" 
+                            className="p-1.5 bg-primary/5 hover:bg-primary/10 text-primary border border-primary/20 transition-colors flex items-center justify-center" 
                             title="New Nest Subfolder"
                         >
                             <PlusIcon className="w-3.5 h-3.5"/>
@@ -227,7 +227,7 @@ const CategoryItem: React.FC<{
                         {!isEditing && (
                             <button 
                                 onClick={() => { audioService.playClick(); setIsEditing(true); }} 
-                                className="p-1.5 bg-info/5 hover:bg-info/10 text-info border border-info/20 transition-all flex items-center justify-center" 
+                                className="p-1.5 bg-info/5 hover:bg-info/10 text-info border border-info/20 transition-colors flex items-center justify-center" 
                                 title="Rename Folder"
                             >
                                 <EditIcon className="w-3.5 h-3.5"/>
@@ -236,7 +236,7 @@ const CategoryItem: React.FC<{
                         
                         <button 
                             onClick={() => { audioService.playClick(); onDelete(category); }} 
-                            className="p-1.5 bg-error/5 hover:bg-error/10 text-error border border-error/20 transition-all flex items-center justify-center" 
+                            className="p-1.5 bg-error/5 hover:bg-error/10 text-error border border-error/20 transition-colors flex items-center justify-center" 
                             title="Purge Empty or Filled Folder"
                         >
                             <DeleteIcon className="w-3.5 h-3.5"/>

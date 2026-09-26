@@ -326,9 +326,9 @@ const ImageGallery: React.FC<ImageGalleryProps> = ({
         className="flex flex-col h-full bg-transparent w-full relative overflow-hidden"
       >
         <div className="flex flex-row h-full w-full overflow-hidden relative z-10 gap-6 bg-transparent">
-          <aside className={`relative z-20 flex-shrink-0 transition-all duration-300 ease-in-out flex flex-col overflow-visible ${isCategoryPanelCollapsed ? 'w-0 p-0' : 'w-96 p-[3px] corner-frame'}`}>
+          <aside className={`relative z-20 flex-shrink-0 transition-[width,padding] duration-300 ease-in-out flex flex-col overflow-visible ${isCategoryPanelCollapsed ? 'w-0 p-0' : 'w-96 p-[3px] corner-frame'}`}>
             <CategoryPanelToggle isCollapsed={isCategoryPanelCollapsed} onToggle={onToggleCategoryPanel} position="right" />
-            <div className={`flex flex-col h-full w-full bg-base-100/50 backdrop-blur-xl relative overflow-hidden transition-all duration-300 ${isCategoryPanelCollapsed ? 'opacity-0 invisible' : 'opacity-100 visible'}`}>
+            <div className={`flex flex-col h-full w-full bg-base-100/50 backdrop-blur-xl relative overflow-hidden transition-opacity duration-300 ${isCategoryPanelCollapsed ? 'opacity-0 invisible' : 'opacity-100 visible'}`}>
               <div className={`flex flex-col h-full w-full overflow-hidden relative z-10 transition-opacity duration-200 ${isCategoryPanelCollapsed ? 'opacity-0 invisible' : 'opacity-100 visible'}`}>
               <div className="flex-shrink-0 h-14 px-6 flex items-center border-b border-white/5">
                 <h3 className="text-2xs font-black uppercase tracking-[0.3em] text-primary">Category Folder</h3>
@@ -369,7 +369,7 @@ const ImageGallery: React.FC<ImageGalleryProps> = ({
               )}
 
 
-              <div className={`flex flex-col h-full overflow-hidden transition-all duration-300 ${detailViewItemId ? 'blur-sm pointer-events-none' : ''}`}>
+              <div className={`flex flex-col h-full overflow-hidden transition-[filter] duration-300 ${detailViewItemId ? 'blur-sm pointer-events-none' : ''}`}>
                 <div className="relative flex-grow overflow-hidden">
                   <div ref={scrollerRef} className="h-full w-full overflow-y-auto">
                     <header className="bg-transparent">

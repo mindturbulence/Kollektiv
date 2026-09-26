@@ -332,12 +332,17 @@ button:active {
   transition-delay: 0.375s;
 }
 
-/* Force Nunito for bold caps UI elements */
-.uppercase,
-.tracking-widest,
-.tracking-\[0\.4em\],
-.font-black,
-.font-display {
+/* Force Nunito for bold caps UI elements. Excludes .font-mono/.font-sf-mono
+   (D4): this rule has the same specificity as Tailwind's .font-mono utility
+   and comes after @tailwind utilities, so without the :not() it silently won
+   on source order for every element that combined font-mono with
+   .uppercase/.tracking-*, overriding the mono font everywhere outside the
+   few theme-scoped rules (e.g. [data-theme="Kollektiv"] .font-mono). */
+.uppercase:not(.font-mono):not(.font-sf-mono),
+.tracking-widest:not(.font-mono):not(.font-sf-mono),
+.tracking-\[0\.4em\]:not(.font-mono):not(.font-sf-mono),
+.font-black:not(.font-mono):not(.font-sf-mono),
+.font-display:not(.font-mono):not(.font-sf-mono) {
   font-family: "Nunito", sans-serif;
 }
 
@@ -370,7 +375,7 @@ button:active {
   font-family: "Nunito", sans-serif;
   font-size: 13px;
   font-weight: 400;
-  transition: all 0.2s ease;
+  transition: border-color 0.2s ease, background-color 0.2s ease, box-shadow 0.2s ease;
   color: oklch(var(--bc));
 }
 
@@ -408,7 +413,7 @@ button:active {
   font-weight: 900;
   text-transform: uppercase;
   letter-spacing: 0.2em;
-  transition: all 0.2s cubic-bezier(0.23, 1, 0.32, 1);
+  transition: transform var(--duration-press, 120ms) var(--ease-smooth-out, ease), background-color var(--duration-quick, 150ms) ease, color var(--duration-quick, 150ms) ease, border-color var(--duration-quick, 150ms) ease, opacity var(--duration-quick, 150ms) ease;
   cursor: pointer;
   display: inline-flex;
   align-items: center;
@@ -459,7 +464,7 @@ button:disabled,
   font-size: 12px;
   font-weight: 600;
   cursor: pointer;
-  transition: all 0.2s ease;
+  transition: color 0.2s ease, background-color 0.2s ease;
   border: none;
   background: transparent;
   color: oklch(var(--bc) / 0.4);
@@ -552,7 +557,7 @@ button:disabled,
   font-family: "Nunito", sans-serif;
   font-size: 12px;
   font-weight: 600;
-  transition: all 0.2s ease;
+  transition: color 0.2s ease;
   cursor: pointer;
   user-select: none;
   border: 1px solid transparent;
@@ -1910,7 +1915,7 @@ footer.footer {
   .reveal-on-scroll {
     opacity: 0;
     transform: translateY(30px);
-    transition: all 1s cubic-bezier(0.2, 1, 0.3, 1);
+    transition: opacity 1s cubic-bezier(0.2, 1, 0.3, 1), transform 1s cubic-bezier(0.2, 1, 0.3, 1);
   }
 
   .reveal-on-scroll.revealed {
@@ -2550,7 +2555,7 @@ footer.footer {
   position: relative;
   overflow: hidden;
   border-radius: 0 !important;
-  transition: all 0.2s ease-out;
+  transition: background-color 0.2s ease-out, box-shadow 0.2s ease-out;
 }
 
 [data-theme="arwes"] .btn-primary::after {
@@ -2656,9 +2661,11 @@ footer.footer {
   --duration-very-slow: 500ms;
   --ease-smooth-out: cubic-bezier(0.22, 1, 0.36, 1);
   --ease-sharp-in: cubic-bezier(0.7, 0, 0.84, 0);
+  --duration-press: 120ms;
+  --ease-in-out: cubic-bezier(0.65, 0, 0.35, 1);
   /* OS-shell extensions */
   --fx-derez: 320ms;
-  --fx-hold: 260ms;
+  --fx-hold: 80ms; /* mirrors FX_META.hold in routeFx.ts (M1 retiming) */
   --fx-strip-stagger: 28ms;
   --fx-flash: 600ms;
 }

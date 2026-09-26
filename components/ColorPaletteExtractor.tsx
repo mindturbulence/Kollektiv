@@ -250,7 +250,7 @@ export const ColorPaletteExtractor: React.FC<ColorPaletteExtractorProps> = ({ on
                         className="flex-grow p-6 flex flex-col gap-6 overflow-y-auto bg-transparent"
                     >
                          <div 
-                            className={`relative flex-grow min-h-[200px] border-2 border-dashed rounded-none flex flex-col items-center justify-center cursor-pointer transition-all gap-4 group ${isDragging ? 'border-primary bg-primary/10' : 'border-base-300 hover:border-primary/50'}`}
+                            className={`relative flex-grow min-h-[200px] border-2 border-dashed rounded-none flex flex-col items-center justify-center cursor-pointer transition-colors gap-4 group ${isDragging ? 'border-primary bg-primary/10' : 'border-base-300 hover:border-primary/50'}`}
                             style={{ backgroundImage: imagePreviewUrl ? `url(${imagePreviewUrl})` : 'none', backgroundSize: 'contain', backgroundPosition: 'center', backgroundRepeat: 'no-repeat' }}
                             onDrop={(e) => { e.preventDefault(); setIsDragging(false); handleFileSelect((e.dataTransfer as any)?.files?.[0] || null); }}
                             onDragOver={(e) => { e.preventDefault(); setIsDragging(true); }}
@@ -270,7 +270,7 @@ export const ColorPaletteExtractor: React.FC<ColorPaletteExtractorProps> = ({ on
                                 </>
                             )}
                             {imagePreviewUrl && (
-                                <button onClick={handleRemoveImage} className="form-btn h-8 w-8 text-error absolute top-2 right-2 opacity-0 group-hover:opacity-100 shadow-xl transition-all">✕</button>
+                                <button onClick={handleRemoveImage} className="form-btn h-8 w-8 text-error absolute top-2 right-2 opacity-0 group-hover:opacity-100 shadow-xl transition-opacity">✕</button>
                             )}
                         </div>
                         <div className="space-y-4">

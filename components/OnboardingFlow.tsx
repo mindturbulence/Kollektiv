@@ -327,7 +327,7 @@ const OnboardingFlow: React.FC<OnboardingFlowProps> = ({ onSetupComplete }) => {
                   setCurrentProvider('local');
                   setError(null);
                 }}
-                className={`px-4 py-2 text-2xs font-mono font-bold tracking-widest transition-all rounded-none border ${
+                className={`px-4 py-2 text-2xs font-mono font-bold tracking-widest transition-colors rounded-none border ${
                   currentProvider === 'local'
                     ? 'border-primary/40 bg-primary/10 text-primary'
                     : 'border-white/10 hover:border-white/20 text-base-content/60'
@@ -344,7 +344,7 @@ const OnboardingFlow: React.FC<OnboardingFlowProps> = ({ onSetupComplete }) => {
                   setCurrentProvider('drive');
                   setError(null);
                 }}
-                className={`px-4 py-2 text-2xs font-mono font-bold tracking-widest transition-all rounded-none border ${
+                className={`px-4 py-2 text-2xs font-mono font-bold tracking-widest transition-colors rounded-none border ${
                   currentProvider === 'drive'
                     ? 'border-primary/40 bg-primary/10 text-primary'
                     : 'border-white/10 hover:border-white/20 text-base-content/60'
@@ -358,7 +358,7 @@ const OnboardingFlow: React.FC<OnboardingFlowProps> = ({ onSetupComplete }) => {
                   setCurrentProvider('demo');
                   setError(null);
                 }}
-                className={`px-4 py-2 text-2xs font-mono font-bold tracking-widest transition-all rounded-none border ${
+                className={`px-4 py-2 text-2xs font-mono font-bold tracking-widest transition-colors rounded-none border ${
                   currentProvider === 'demo'
                     ? 'border-primary/40 bg-primary/10 text-primary'
                     : 'border-white/10 hover:border-white/20 text-base-content/60'

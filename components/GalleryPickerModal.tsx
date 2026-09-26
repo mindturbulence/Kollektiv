@@ -82,7 +82,7 @@ const PickerItem: React.FC<{
         <div 
             ref={containerRef}
             onClick={onToggle}
-            className={`relative aspect-square bg-transparent cursor-pointer overflow-hidden group border-2 transition-all ${isSelected ? 'border-primary ring-2 ring-primary/20' : 'border-transparent hover:border-primary/50'}`}
+            className={`relative aspect-square bg-transparent cursor-pointer overflow-hidden group border-2 transition-[border-color,box-shadow] ${isSelected ? 'border-primary ring-2 ring-primary/20' : 'border-transparent hover:border-primary/50'}`}
         >
             {thumbUrl ? (
                 <div className="w-full h-full relative">
@@ -258,7 +258,7 @@ const GalleryPickerModal: React.FC<GalleryPickerModalProps> = ({
                         </h3>
                         <p className="text-2xs font-black uppercase tracking-[0.4em] text-base-content/60 mt-1.5">{title}</p>
                     </div>
-                    <button onClick={onClose} className="p-2 text-error/30 hover:text-error transition-all hover:scale-110">
+                    <button onClick={onClose} className="p-2 text-error/30 hover:text-error transition-[color,transform] hover:scale-110">
                         <CloseIcon className="w-6 h-6" />
                     </button>
                 </header>

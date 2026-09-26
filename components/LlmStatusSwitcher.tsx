@@ -49,7 +49,7 @@ const LlmStatusSwitcher: React.FC<LlmStatusSwitcherProps> = ({ onClick, isOpen }
                     onClick(e);
                 }}
                 title={tooltipText}
-                className="inline-flex items-center group transition-all bg-transparent border-none p-0 cursor-pointer text-left"
+                className="inline-flex items-center group bg-transparent border-none p-0 cursor-pointer text-left"
             >
                 <span className={`uppercase tracking-[0.1em] font-normal transition-colors leading-none inline-block shine-text ${settings.darkTheme === 'pipboy' ? 'font-fixedsys text-2xs' : 'font-rajdhani text-xs'} ${isOpen ? '' : 'group-hover:opacity-80'}`}>
                     {displayText}

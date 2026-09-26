@@ -140,7 +140,7 @@ const AssistantToolsSection: React.FC<AssistantToolsSectionProps> = ({ settings 
                         {tools.map(t => (
                             <div
                                 key={`${t.source}-${t.name}`}
-                                className="border border-base-content/10 hover:border-base-content/20 bg-base-100/20 transition-all px-5 py-3"
+                                className="border border-base-content/10 hover:border-base-content/20 bg-base-100/20 transition-colors px-5 py-3"
                             >
                                 <div className="flex items-center gap-2 flex-wrap">
                                     <span className="text-base font-black uppercase tracking-wider">{t.name}</span>

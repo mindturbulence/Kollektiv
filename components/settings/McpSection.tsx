@@ -144,7 +144,7 @@ const McpSection: React.FC<McpSectionProps> = ({ activeSubTab, settings, handleS
                             return (
                                 <div
                                     key={sv.id}
-                                    className={`border transition-all ${isEditing ? 'border-primary/40 bg-primary/5' : 'border-base-content/10 hover:border-base-content/20 bg-base-100/20'}`}
+                                    className={`border transition-colors ${isEditing ? 'border-primary/40 bg-primary/5' : 'border-base-content/10 hover:border-base-content/20 bg-base-100/20'}`}
                                 >
                                     {/* Header row */}
                                     <div className="flex items-center justify-between px-5 py-3 gap-4">

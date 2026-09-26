@@ -332,7 +332,7 @@ const PromptDetailView: React.FC<PromptDetailViewProps> = ({
                                 <span className="flex items-center px-4 font-mono text-xs font-bold text-base-content/60 border-x border-base-content/10">{currentIndex + 1} / {prompts.length}</span>
                                 <button onClick={() => handleNavigation('next')} className="form-tab-item px-4"><ChevronRightIcon className="w-4 h-4" /></button>
                             </div>
-                            <button onClick={handleClose} className="p-2 text-base-content/60 hover:-content transition-all hover:scale-110">
+                            <button onClick={handleClose} className="p-2 text-base-content/60 hover:-content transition-[color,transform] hover:scale-110">
                                 <CloseIcon className="w-5 h-5 stroke-[2]"/>
                             </button>
                         </header>

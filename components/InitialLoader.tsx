@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef, useLayoutEffect, lazy, Suspense } from 'react';
 import { gsap } from 'gsap';
 import ChromaticText from './ChromaticText';
+import { prefersReducedMotion } from './transitions/routeFx';
 
 // Lazy: own chunk — keeps the storm off the critical boot path AND avoids
 // perturbing index-chunk module evaluation order (static import here triggered
@@ -79,6 +80,12 @@ const InitialLoader: React.FC<{ status: string; progress: number | null; onConti
 
     useLayoutEffect(() => {
         if (!textWrapperRef.current) return;
+        if (prefersReducedMotion()) {
+            gsap.set(textWrapperRef.current, { yPercent: 0, autoAlpha: 1 });
+            if (logoFillRef.current) gsap.set(logoFillRef.current, { width: '100%' });
+            if (systemTextRef.current) gsap.set(systemTextRef.current, { y: 0, autoAlpha: 1 });
+            return;
+        }
         gsap.fromTo(textWrapperRef.current,
             { yPercent: 100, autoAlpha: 0 },
             { yPercent: 0, autoAlpha: 1, duration: 1.5, ease: "expo.out" }
@@ -164,12 +171,12 @@ const InitialLoader: React.FC<{ status: string; progress: number | null; onConti
                 </div>
 
                 <div className="relative h-28 w-80">
-                    <div ref={progressStatusRef} className={`absolute inset-0 flex flex-col items-center gap-4 transition-all duration-1000 origin-center ${isComplete ? 'opacity-0 scale-95 pointer-events-none' : 'opacity-100 scale-100'}`}>
+                    <div ref={progressStatusRef} className={`absolute inset-0 flex flex-col items-center gap-4 transition-[opacity,transform] duration-1000 origin-center ${isComplete ? 'opacity-0 scale-95 pointer-events-none' : 'opacity-100 scale-100'}`}>
                         <div className="flex flex-col items-center gap-2 w-full">
                             <div className="flex flex-col items-center gap-1 mb-2">
                                 <div className="w-48 h-[2px] bg-base-content/10 relative overflow-hidden rounded-full">
                                     <div
-                                        className="absolute inset-y-0 left-0 bg-primary transition-all duration-500 ease-out"
+                                        className="absolute inset-y-0 left-0 bg-primary transition-[width] duration-500 ease-out"
                                         style={{ width: `${smoothPercentage}%` }}
                                     />
                                 </div>

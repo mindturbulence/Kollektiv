@@ -177,14 +177,14 @@ const Thumbnail: React.FC<{
     }, [url]);
 
     return (
-        <div className={`flex-shrink-0 flex flex-col items-center gap-2 group/thumb transition-all duration-300 ${isEditing ? 'w-16' : 'w-12'}`}>
+        <div className={`flex-shrink-0 flex flex-col items-center gap-2 group/thumb transition-[width] duration-300 ${isEditing ? 'w-16' : 'w-12'}`}>
             <div 
                 onClick={(e) => { 
                     e.preventDefault(); 
                     audioService.playClick();
                     onClick(); 
                 }} 
-                className={`relative w-12 h-12 aspect-square overflow-hidden transition-all duration-300 ease-out focus:outline-none cursor-pointer ${isActive ? 'scale-110 z-20 opacity-100 ring-2 ring-primary ring-offset-2 ring-offset-black' : 'opacity-40 hover:opacity-100'}`}
+                className={`relative w-12 h-12 aspect-square overflow-hidden transition-[transform,opacity,box-shadow] duration-300 ease-out focus:outline-none cursor-pointer ${isActive ? 'scale-110 z-20 opacity-100 ring-2 ring-primary ring-offset-2 ring-offset-black' : 'opacity-40 hover:opacity-100'}`}
             >
                 {blobUrl ? (type === 'video' ? <video src={blobUrl} className="w-full h-full object-cover bg-black" /> : <img src={blobUrl} alt="Thumb" className="w-full h-full object-cover bg-black" />) : <div className="w-full h-full bg-transparent animate-pulse" />}
             </div>
@@ -198,7 +198,7 @@ const Thumbnail: React.FC<{
                         audioService.playClick();
                         onRemove?.(); 
                     }} 
-                    className="w-5 h-5 flex items-center justify-center bg-red-600/90 text-white rounded-full shadow-lg opacity-40 group-hover/thumb:opacity-100 transition-all hover:scale-125 hover:bg-red-500 active:scale-90"
+                    className="w-5 h-5 flex items-center justify-center bg-red-600/90 text-white rounded-full shadow-lg opacity-40 group-hover/thumb:opacity-100 transition-[opacity,transform,background-color] hover:scale-125 hover:bg-red-500 active:scale-90"
                     title="Remove item"
                 >
                     <CloseIcon className="w-3 h-3 stroke-[3]" />
@@ -268,7 +268,7 @@ export const TagSuggestionRow: React.FC<{
       {!suggestions && !isLoading && !error && (
         <button
           onClick={handleSuggest}
-          className="form-btn text-2xs font-black uppercase tracking-widest px-4 py-2 border border-white/10 hover:border-primary/40 hover:text-primary transition-all"
+          className="form-btn text-2xs font-black uppercase tracking-widest px-4 py-2 border border-white/10 hover:border-primary/40 hover:text-primary transition-colors"
         >
           SUGGEST TAGS
         </button>
@@ -294,7 +294,7 @@ export const TagSuggestionRow: React.FC<{
               <button
                 key={tag}
                 onClick={() => handleToggle(tag)}
-                className={`text-2xs font-nunito font-bold uppercase tracking-widest px-2.5 py-1 transition-all border ${
+                className={`text-2xs font-nunito font-bold uppercase tracking-widest px-2.5 py-1 transition-colors border ${
                   selected.has(tag)
                     ? 'bg-primary/20 text-primary border-primary/40'
                     : 'bg-white/5 text-base-content/60 border-white/10 hover:border-primary/30 hover:text-base-content/80'
@@ -308,7 +308,7 @@ export const TagSuggestionRow: React.FC<{
             <button
               onClick={handleApply}
               disabled={selected.size === 0 || applying}
-              className={`form-btn text-2xs font-black uppercase tracking-widest px-4 py-1.5 transition-all ${
+              className={`form-btn text-2xs font-black uppercase tracking-widest px-4 py-1.5 transition-colors ${
                 selected.size > 0 && !applying
                   ? 'bg-primary/20 text-primary border border-primary/40 hover:bg-primary/30'
                   : 'text-base-content/60 border border-white/5 cursor-not-allowed'
@@ -318,7 +318,7 @@ export const TagSuggestionRow: React.FC<{
             </button>
             <button
               onClick={() => { setSuggestions(null); setSelected(new Set()); setError(null); }}
-              className="form-btn text-2xs font-black uppercase tracking-widest px-4 py-1.5 border border-white/10 hover:border-error/40 hover:text-error transition-all"
+              className="form-btn text-2xs font-black uppercase tracking-widest px-4 py-1.5 border border-white/10 hover:border-error/40 hover:text-error transition-colors"
             >
               DISMISS
             </button>
@@ -649,8 +649,8 @@ const ItemDetailView: React.FC<ItemDetailViewProps> = ({ items, currentIndex, is
                     {currentMediaUrls.length > 1 && (
                         <div className="pointer-events-none absolute inset-0 z-20 flex items-center">
                             <div className="w-full flex justify-between px-6">
-                                <button onClick={(e) => { e.stopPropagation(); handleInnerNavigate('prev'); }} className="pointer-events-auto p-4 text-white/20 hover:text-primary transition-all duration-300 opacity-0 group-hover:opacity-100 scale-90 hover:scale-125"><ChevronLeftIcon className="w-16 h-16" /></button>
-                                <button onClick={(e) => { e.stopPropagation(); handleInnerNavigate('next'); }} className="pointer-events-auto p-4 text-white/20 hover:text-primary transition-all duration-300 opacity-0 group-hover:opacity-100 scale-90 hover:scale-125"><ChevronRightIcon className="w-16 h-16" /></button>
+                                <button onClick={(e) => { e.stopPropagation(); handleInnerNavigate('prev'); }} className="pointer-events-auto p-4 text-white/20 hover:text-primary transition-[color,opacity,transform] duration-300 opacity-0 group-hover:opacity-100 scale-90 hover:scale-125"><ChevronLeftIcon className="w-16 h-16" /></button>
+                                <button onClick={(e) => { e.stopPropagation(); handleInnerNavigate('next'); }} className="pointer-events-auto p-4 text-white/20 hover:text-primary transition-[color,opacity,transform] duration-300 opacity-0 group-hover:opacity-100 scale-90 hover:scale-125"><ChevronRightIcon className="w-16 h-16" /></button>
                             </div>
                         </div>
                     )}
@@ -664,10 +664,10 @@ const ItemDetailView: React.FC<ItemDetailViewProps> = ({ items, currentIndex, is
                     </div>
                 </div>
 
-                <div className={`h-24 flex-shrink-0 bg-black/40 border-t border-white/5 relative flex flex-col items-center justify-center group/deck transition-all duration-500 ${isEditing ? 'h-28' : 'h-24'}`}>
-                    <button onClick={(e) => { e.stopPropagation(); handleInnerNavigate('prev'); }} className="absolute left-2 z-50 p-2 text-white/10 hover:text-primary opacity-0 group-hover/deck:opacity-100 top-1/2 -translate-y-1/2 transition-all"><ChevronLeftIcon className="w-5 h-5" /></button>
+                <div className={`h-24 flex-shrink-0 bg-black/40 border-t border-white/5 relative flex flex-col items-center justify-center group/deck transition-[height] duration-500 ${isEditing ? 'h-28' : 'h-24'}`}>
+                    <button onClick={(e) => { e.stopPropagation(); handleInnerNavigate('prev'); }} className="absolute left-2 z-50 p-2 text-white/10 hover:text-primary opacity-0 group-hover/deck:opacity-100 top-1/2 -translate-y-1/2 transition-[opacity,color]"><ChevronLeftIcon className="w-5 h-5" /></button>
                     
-                    <div ref={carouselViewportRef} className="w-[calc(100%-4rem)] h-20 relative overflow-visible flex items-center z-10 px-2 transition-all">
+                    <div ref={carouselViewportRef} className="w-[calc(100%-4rem)] h-20 relative overflow-visible flex items-center z-10 px-2">
                         <div ref={carouselTrackRef} className="absolute flex items-center h-full gap-4 px-4 will-change-transform">
                             {editableSamples.map((sample, idx) => (
                                 <Thumbnail 
@@ -683,7 +683,7 @@ const ItemDetailView: React.FC<ItemDetailViewProps> = ({ items, currentIndex, is
                             {isEditing && (
                                 <button 
                                     onClick={() => fileInputRef.current?.click()}
-                                    className="flex-shrink-0 w-12 h-12 border border-dashed border-white/20 flex items-center justify-center hover:bg-white/5 hover:border-primary/40 transition-all group/add self-start mt-0"
+                                    className="flex-shrink-0 w-12 h-12 border border-dashed border-white/20 flex items-center justify-center hover:bg-white/5 hover:border-primary/40 transition-colors group/add self-start mt-0"
                                 >
                                     <PlusIcon className="w-4 h-4 text-white/20 group-hover:text-primary transition-colors" />
                                 </button>
@@ -696,20 +696,20 @@ const ItemDetailView: React.FC<ItemDetailViewProps> = ({ items, currentIndex, is
                         <div className="absolute inset-y-0 right-0 w-8 bg-gradient-to-l from-black via-black/40 to-transparent"></div>
                     </div>
 
-                    <button onClick={(e) => { e.stopPropagation(); handleInnerNavigate('next'); }} className="absolute right-2 z-50 p-2 text-white/10 hover:text-primary opacity-0 group-hover/deck:opacity-100 top-1/2 -translate-y-1/2 transition-all"><ChevronRightIcon className="w-5 h-5" /></button>
+                    <button onClick={(e) => { e.stopPropagation(); handleInnerNavigate('next'); }} className="absolute right-2 z-50 p-2 text-white/10 hover:text-primary opacity-0 group-hover/deck:opacity-100 top-1/2 -translate-y-1/2 transition-[opacity,color]"><ChevronRightIcon className="w-5 h-5" /></button>
                 </div>
             </main>
 
             <aside ref={rightPanelRef} className="w-full lg:w-96 flex flex-col overflow-hidden border-l border-white/5 bg-base-100/40 backdrop-blur-xl">
                 <header ref={headerRef} className="flex-shrink-0 h-16 px-6 flex items-center justify-between border-b border-white/5 bg-base-100/10 backdrop-blur-md">
                     <div className="flex items-center gap-3">
-                        <button onClick={(e) => { e.stopPropagation(); audioService.playClick(); onTogglePin(item.id); }} className={`p-1.5 transition-all ${isPinned ? 'text-primary' : 'text-base-content/60 hover:text-base-content/60'}`}>
+                        <button onClick={(e) => { e.stopPropagation(); audioService.playClick(); onTogglePin(item.id); }} className={`p-1.5 transition-colors ${isPinned ? 'text-primary' : 'text-base-content/60 hover:text-base-content/60'}`}>
                             <ThumbTackIcon className="w-5 h-5" />
                         </button>
                         <span className="text-2xs font-nunito font-bold uppercase tracking-[0.2em] text-base-content/60">Details</span>
                     </div>
 
-                    <button onClick={handleClose} className="p-2 text-red-500 hover:text-red-400 hover:bg-red-500/10 rounded-full transition-all group/close">
+                    <button onClick={handleClose} className="p-2 text-red-500 hover:text-red-400 hover:bg-red-500/10 rounded-full transition-colors group/close">
                         <CloseIcon className="w-5 h-5 stroke-[2.5]" />
                     </button>
                 </header>
@@ -777,7 +777,7 @@ const ItemDetailView: React.FC<ItemDetailViewProps> = ({ items, currentIndex, is
                                                 </div>
                                             )}
                                             {isPublishable && (
-                                                <button onClick={handlePublishClick} className="btn btn-xs btn-ghost gap-2 border-white/10 hover:border-primary px-3 tracking-widest uppercase text-white/40 hover:text-primary transition-all">
+                                                <button onClick={handlePublishClick} className="btn btn-xs btn-ghost gap-2 border-white/10 hover:border-primary px-3 tracking-widest uppercase text-white/40 hover:text-primary transition-colors">
                                                     <YouTubeIcon className="w-3 h-3" />
                                                     Publish
                                                 </button>
@@ -790,7 +790,7 @@ const ItemDetailView: React.FC<ItemDetailViewProps> = ({ items, currentIndex, is
                                     action={
                                         <button 
                                             onClick={handleCopyPrompt}
-                                            className={`p-1 transition-all duration-300 cursor-pointer ${isCopied ? 'text-primary scale-110' : 'text-base-content/60 hover:text-primary'}`}
+                                            className={`p-1 transition-[color,transform] duration-300 cursor-pointer ${isCopied ? 'text-primary scale-110' : 'text-base-content/60 hover:text-primary'}`}
                                             title="Copy Prompt"
                                         >
                                             {isCopied ? <CheckIcon className="w-3.5 h-3.5" /> : <CopyIcon className="w-3.5 h-3.5" />}

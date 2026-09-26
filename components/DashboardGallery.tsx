@@ -123,7 +123,7 @@ const GalleryCard: React.FC<{ url: string }> = memo(({ url }) => {
                 ref={imgRef}
                 src={displayUrl} 
                 alt="" 
-                className="w-full h-full object-cover grayscale opacity-20 transition-all duration-1000 will-change-transform"
+                className="w-full h-full object-cover grayscale opacity-20 transition-[filter,opacity] duration-1000 will-change-transform"
                 style={{ filter: 'grayscale(1)' }}
                 referrerPolicy="no-referrer"
             />

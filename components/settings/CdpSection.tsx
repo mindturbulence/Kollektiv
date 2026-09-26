@@ -274,7 +274,7 @@ export const CdpSection: React.FC<CdpSectionProps> = ({ activeSubTab }) => {
                             <div
                                 key={t.id}
                                 onClick={() => { audioService.playClick(); void handleSelectTarget(t); }}
-                                className={`p-4 flex items-center justify-between gap-4 cursor-pointer transition-all border-b border-base-content/5 hover:bg-base-200/30 ${
+                                className={`p-4 flex items-center justify-between gap-4 cursor-pointer transition-colors border-b border-base-content/5 hover:bg-base-200/30 ${
                                     selectedId === t.id ? 'bg-primary/5 border-l-2 border-l-primary' : ''
                                 }`}
                             >

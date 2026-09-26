@@ -120,7 +120,7 @@ export const ResearchProjectBrowser: React.FC = () => {
               <div
                 key={p.slug}
                 onClick={() => openProject(p.slug)}
-                className="group bg-base-200/20 border border-white/5 hover:border-primary/30 rounded-lg px-4 py-3.5 cursor-pointer transition-all flex items-center justify-between"
+                className="group bg-base-200/20 border border-white/5 hover:border-primary/30 rounded-lg px-4 py-3.5 cursor-pointer transition-colors flex items-center justify-between"
               >
                 <div className="min-w-0">
                   <h3 className="text-sm font-mono text-base-content/80 truncate">{p.title}</h3>
@@ -130,7 +130,7 @@ export const ResearchProjectBrowser: React.FC = () => {
                 </div>
                 <button
                   onClick={(e) => handleDelete(p.slug, e)}
-                  className="opacity-0 group-hover:opacity-100 p-1.5 text-error/40 hover:text-error transition-all shrink-0 ml-2"
+                  className="opacity-0 group-hover:opacity-100 p-1.5 text-error/40 hover:text-error transition-[opacity,color] shrink-0 ml-2"
                   aria-label="Delete project"
                 >
                   <DeleteIcon className="w-3.5 h-3.5" />

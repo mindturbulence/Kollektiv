@@ -150,7 +150,7 @@ const ClippedIdeaItem: React.FC<{
     const displayNum = String(index + 1).padStart(2, '0');
 
     return (
-        <div className="flex flex-col group bg-transparent transition-all duration-700 hover:bg-primary/5 w-full overflow-hidden select-none h-fit border-b border-base-300/10 relative">
+        <div className="flex flex-col group bg-transparent transition-colors duration-700 hover:bg-primary/5 w-full overflow-hidden select-none h-fit border-b border-base-300/10 relative">
             <div className="flex flex-col w-full h-full p-4 md:p-6">
                 <div className="mb-4">
                     <div className="flex justify-between items-start">
@@ -187,28 +187,28 @@ const ClippedIdeaItem: React.FC<{
                 <div className="flex justify-between items-center mt-2 pt-4 border-t border-base-300/10">
                     <button
                         onClick={handleCopy}
-                        className="uppercase tracking-widest -content/30 hover:text-primary transition-all flex items-center gap-1.5 group/btn"
+                        className="uppercase tracking-widest -content/30 hover:text-primary transition-colors flex items-center gap-1.5 group/btn"
                     >
                         <CopyIcon className="w-3 h-3 opacity-40 group-hover/btn:opacity-100" />
                         {copied ? 'COPIED' : 'COPY'}
                     </button>
                     <button
                         onClick={() => { audioService.playClick(); onInsert(idea.prompt); }}
-                        className="uppercase tracking-widest -content/30 hover:text-primary transition-all flex items-center gap-1.5 group/btn"
+                        className="uppercase tracking-widest -content/30 hover:text-primary transition-colors flex items-center gap-1.5 group/btn"
                     >
                         <RefreshIcon className="w-3 h-3 opacity-40 group-hover/btn:opacity-100" />
                         CRAFT
                     </button>
                      <button
                         onClick={() => { audioService.playClick(); onRefine(idea.prompt); }}
-                        className="uppercase tracking-widest -content/30 hover:text-primary transition-all flex items-center gap-1.5 group/btn"
+                        className="uppercase tracking-widest -content/30 hover:text-primary transition-colors flex items-center gap-1.5 group/btn"
                     >
                         <SparklesIcon className="w-3 h-3 opacity-40 group-hover/btn:opacity-100" />
                         REFINE
                     </button>
                     <button
                         onClick={() => { audioService.playClick(); onSave(idea); }}
-                        className="uppercase tracking-widest -content/30 hover:text-primary transition-all flex items-center gap-1.5 group/btn"
+                        className="uppercase tracking-widest -content/30 hover:text-primary transition-colors flex items-center gap-1.5 group/btn"
                     >
                         <ArchiveIcon className="w-3 h-3 opacity-40 group-hover/btn:opacity-100" />
                         SAVE
@@ -250,7 +250,7 @@ const NoteItem: React.FC<{ note: AssistantNote; index: number }> = ({ note, inde
     };
 
     return (
-        <div className="flex flex-col group bg-transparent transition-all duration-700 hover:bg-primary/5 w-full overflow-hidden select-none border-b border-base-300/10 relative">
+        <div className="flex flex-col group bg-transparent transition-colors duration-700 hover:bg-primary/5 w-full overflow-hidden select-none border-b border-base-300/10 relative">
             <div className="flex flex-col w-full p-4 md:p-6">
                 <div className="flex justify-between items-start mb-3">
                     <div className="flex items-center gap-2 min-w-0">
@@ -287,11 +287,11 @@ const NoteItem: React.FC<{ note: AssistantNote; index: number }> = ({ note, inde
                 )}
 
                 <div className="flex justify-between items-center pt-3 border-t border-base-300/10 text-2xs font-black">
-                    <button onClick={handleCopy} className="uppercase tracking-widest hover:text-primary transition-all flex items-center gap-1.5 group/btn">
+                    <button onClick={handleCopy} className="uppercase tracking-widest hover:text-primary transition-colors flex items-center gap-1.5 group/btn">
                         <CopyIcon className="w-3 h-3 opacity-40 group-hover/btn:opacity-100" />
                         {copied ? 'COPIED' : 'COPY'}
                     </button>
-                    <button onClick={handleDownload} className="uppercase tracking-widest hover:text-primary transition-all flex items-center gap-1.5 group/btn">
+                    <button onClick={handleDownload} className="uppercase tracking-widest hover:text-primary transition-colors flex items-center gap-1.5 group/btn">
                         <ArchiveIcon className="w-3 h-3 opacity-40 group-hover/btn:opacity-100" />
                         DOWNLOAD
                     </button>
@@ -301,7 +301,7 @@ const NoteItem: React.FC<{ note: AssistantNote; index: number }> = ({ note, inde
                             <button onClick={() => { audioService.playClick(); handleSave(); }} className="uppercase tracking-widest text-primary">Save</button>
                         </div>
                     ) : (
-                        <button onClick={() => { audioService.playClick(); setEditing(true); }} className="uppercase tracking-widest hover:text-primary transition-all flex items-center gap-1.5 group/btn">
+                        <button onClick={() => { audioService.playClick(); setEditing(true); }} className="uppercase tracking-widest hover:text-primary transition-colors flex items-center gap-1.5 group/btn">
                             <EditIcon className="w-3 h-3 opacity-40 group-hover/btn:opacity-100" />
                             REVISE
                         </button>
@@ -521,7 +521,7 @@ const ClippingPanel: React.FC<ClippingPanelProps> = ({
                                 {tab === 'clips' && (
                                     <button
                                         onClick={() => { audioService.playClick(); setIsModalOpen(true); }}
-                                        className="btn btn-xs btn-ghost h-8 w-8 rounded-none p-0 opacity-40 hover:opacity-100 hover:text-primary transition-all btn-snake"
+                                        className="btn btn-xs btn-ghost h-8 w-8 rounded-none p-0 opacity-40 hover:opacity-100 hover:text-primary transition-[opacity,color] btn-snake"
                                         title="Manual Entry"
                                     >
                                         <span/><span/><span/><span/>
@@ -531,7 +531,7 @@ const ClippingPanel: React.FC<ClippingPanelProps> = ({
                                 {tab === 'assistantNotes' && (
                                     <button
                                         onClick={() => { audioService.playClick(); void addNote('', 'New note — click REVISE to edit.', 'user'); }}
-                                        className="btn btn-xs btn-ghost h-8 w-8 rounded-none p-0 opacity-40 hover:opacity-100 hover:text-primary transition-all btn-snake"
+                                        className="btn btn-xs btn-ghost h-8 w-8 rounded-none p-0 opacity-40 hover:opacity-100 hover:text-primary transition-[opacity,color] btn-snake"
                                         title="New note"
                                     >
                                         <span /><span /><span /><span />
@@ -541,7 +541,7 @@ const ClippingPanel: React.FC<ClippingPanelProps> = ({
                                 {tab === 'clips' && clippedIdeas.length > 0 && (
                                     <button
                                         onClick={() => { audioService.playClick(); onClearAll(); }}
-                                        className="btn btn-xs btn-ghost h-8 w-8 rounded-none p-0 opacity-40 hover:opacity-100 hover:text-error transition-all btn-snake"
+                                        className="btn btn-xs btn-ghost h-8 w-8 rounded-none p-0 opacity-40 hover:opacity-100 hover:text-error transition-[opacity,color] btn-snake"
                                         title="Purge All Clips"
                                     >
                                         <span/><span/><span/><span/>
@@ -551,7 +551,7 @@ const ClippingPanel: React.FC<ClippingPanelProps> = ({
                                 {tab === 'assistantNotes' && notes.length > 0 && (
                                     <button
                                         onClick={() => { audioService.playClick(); void clearNotes(); }}
-                                        className="btn btn-xs btn-ghost h-8 w-8 rounded-none p-0 opacity-40 hover:opacity-100 hover:text-error transition-all btn-snake"
+                                        className="btn btn-xs btn-ghost h-8 w-8 rounded-none p-0 opacity-40 hover:opacity-100 hover:text-error transition-[opacity,color] btn-snake"
                                         title="Delete all notes"
                                     >
                                         <span /><span /><span /><span />
@@ -561,7 +561,7 @@ const ClippingPanel: React.FC<ClippingPanelProps> = ({
                                 {tab === 'assistantNotes' && webResults.length > 0 && (
                                     <button
                                         onClick={() => { audioService.playClick(); setWebResults([]); }}
-                                        className="btn btn-xs btn-ghost h-8 w-8 rounded-none p-0 opacity-40 hover:opacity-100 hover:text-error transition-all btn-snake"
+                                        className="btn btn-xs btn-ghost h-8 w-8 rounded-none p-0 opacity-40 hover:opacity-100 hover:text-error transition-[opacity,color] btn-snake"
                                         title="Clear all web results"
                                     >
                                         <span/><span/><span/><span/>
@@ -644,11 +644,11 @@ const ClippingPanel: React.FC<ClippingPanelProps> = ({
                                                     <span className="text-sm font-mono truncate" title={`assistant/${name}`}>{name}</span>
                                                 </div>
                                                 <div className="flex items-center gap-4 text-2xs font-black flex-shrink-0 ml-4">
-                                                    <button onClick={() => { void handleDownloadFile(name); }} className="uppercase tracking-widest hover:text-primary transition-all flex items-center gap-1.5">
+                                                    <button onClick={() => { void handleDownloadFile(name); }} className="uppercase tracking-widest hover:text-primary transition-colors flex items-center gap-1.5">
                                                         <ArchiveIcon className="w-3 h-3 opacity-40" />
                                                         DOWNLOAD
                                                     </button>
-                                                    <button onClick={() => { void handleDeleteFile(name); }} className="uppercase tracking-widest hover:text-error transition-all flex items-center gap-1.5">
+                                                    <button onClick={() => { void handleDeleteFile(name); }} className="uppercase tracking-widest hover:text-error transition-colors flex items-center gap-1.5">
                                                         <DeleteIcon className="w-3 h-3 opacity-40" />
                                                         DELETE
                                                     </button>

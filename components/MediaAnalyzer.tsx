@@ -347,7 +347,7 @@ export const MediaAnalyzer: React.FC<MediaAnalyzerProps> = ({
                                                 <button
                                                     key={seconds}
                                                     onClick={() => handleSeekFrame(seconds)}
-                                                    className={`p-1.5 flex flex-col items-center justify-center border transition-all rounded ${
+                                                    className={`p-1.5 flex flex-col items-center justify-center border transition-colors rounded ${
                                                         selectedFrameTime === seconds 
                                                             ? 'border-primary bg-primary/15' 
                                                             : 'border-base-content/10 bg-base-200/50 hover:border-primary/40'

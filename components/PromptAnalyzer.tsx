@@ -53,7 +53,7 @@ const AutoTextArea: React.FC<React.TextareaHTMLAttributes<HTMLTextAreaElement>> 
         <textarea
             {...props}
             ref={textareaRef}
-            className={`w-full overflow-hidden transition-all duration-200 outline-none ${props.className || ''}`}
+            className={`w-full overflow-hidden transition-[height] duration-200 outline-none ${props.className || ''}`}
         />
     );
 };
@@ -586,7 +586,7 @@ export const PromptAnalyzer: React.FC<PromptAnalyzerProps> = ({
                                                                     <label className="text-xs font-black uppercase tracking-widest text-base-content/60">{getModifierLabel(seg.key)}</label>
                                                                     <button
                                                                         onClick={() => removeSegment(seg.id)}
-                                                                        className="opacity-0 group-hover:opacity-100 text-error transition-all p-1 hover:bg-error/10 rounded"
+                                                                        className="opacity-0 group-hover:opacity-100 text-error transition-[opacity,background-color] p-1 hover:bg-error/10 rounded"
                                                                     >
                                                                         <CloseIcon className="w-3.5 h-3.5" />
                                                                     </button>
@@ -610,7 +610,7 @@ export const PromptAnalyzer: React.FC<PromptAnalyzerProps> = ({
                                                                     e.preventDefault();
                                                                     setShowAddDropdown(!showAddDropdown);
                                                                 }}
-                                                                className="w-full h-10 border border-dashed border-base-content/10 hover:border-primary/40 hover:bg-primary/5 transition-all flex items-center justify-center gap-2 text-2xs font-black uppercase tracking-widest text-base-content/60 hover:text-primary/60 cursor-pointer rounded-none bg-base-100/5"
+                                                                className="w-full h-10 border border-dashed border-base-content/10 hover:border-primary/40 hover:bg-primary/5 transition-colors flex items-center justify-center gap-2 text-2xs font-black uppercase tracking-widest text-base-content/60 hover:text-primary/60 cursor-pointer rounded-none bg-base-100/5"
                                                             >
                                                                 <PlusIcon className="w-4 h-4" /> ADD MODIFIERS
                                                             </button>
@@ -825,7 +825,7 @@ export const PromptAnalyzer: React.FC<PromptAnalyzerProps> = ({
                                                     <button
                                                         type="button"
                                                         onClick={() => setSourceTab('original')}
-                                                        className={`text-2xs font-black uppercase tracking-widest px-3 py-1.5 transition-all ${sourceTab === 'original'
+                                                        className={`text-2xs font-black uppercase tracking-widest px-3 py-1.5 transition-colors ${sourceTab === 'original'
                                                             ? 'text-primary'
                                                             : 'text-base-content/60 hover:text-base-content/60'
                                                             }`}
@@ -836,7 +836,7 @@ export const PromptAnalyzer: React.FC<PromptAnalyzerProps> = ({
                                                         <button
                                                             type="button"
                                                             onClick={() => setSourceTab('natural')}
-                                                            className={`text-2xs font-black uppercase tracking-widest px-3 py-1.5 transition-all ${sourceTab === 'natural'
+                                                            className={`text-2xs font-black uppercase tracking-widest px-3 py-1.5 transition-colors ${sourceTab === 'natural'
                                                                 ? 'text-secondary'
                                                                 : 'text-base-content/60 hover:text-base-content/60'
                                                                 }`}

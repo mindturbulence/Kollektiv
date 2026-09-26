@@ -154,7 +154,7 @@ const DropZone: React.FC<{ onFilesAdded: (files: File[]) => void }> = ({ onFiles
             onDragEnter={() => setIsDragging(true)} onDragOver={(e) => e.preventDefault()} onDragLeave={() => setIsDragging(false)} onDrop={handleDrop}
         >
             <div
-                className={`w-full h-full rounded-none flex flex-col items-center justify-center cursor-pointer transition-all ${isDragging ? 'bg-primary/10' : 'hover:bg-base-200/20'}`}
+                className={`w-full h-full rounded-none flex flex-col items-center justify-center cursor-pointer transition-colors ${isDragging ? 'bg-primary/10' : 'hover:bg-base-200/20'}`}
                 onClick={() => (fileInputRef.current as any)?.click()}
             >
                 <input type="file" ref={fileInputRef} multiple accept="image/*" className="hidden" onChange={handleFileChange} />
@@ -194,7 +194,7 @@ const ImageCard: React.FC<{
                 </figure>
                 <button
                     onClick={onRemove}
-                    className="absolute top-2 right-2 z-dropdown bg-error text-error-content hover:bg-error/80 transition-all shadow-lg pointer-events-auto flex items-center justify-center w-6 h-6 rounded-full opacity-0 group-hover:opacity-100"
+                    className="absolute top-2 right-2 z-dropdown bg-error text-error-content hover:bg-error/80 transition-[background-color,opacity] shadow-lg pointer-events-auto flex items-center justify-center w-6 h-6 rounded-full opacity-0 group-hover:opacity-100"
                     title="Remove Image"
                 >
                     <svg xmlns="http://www.w3.org/2000/svg" className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -878,7 +878,7 @@ const ImageResizer: React.FC<ImageResizerProps> = ({ isExiting = false }) => {
                                                     </div>
                                                     <div className="w-full h-1 bg-base-300/50 relative overflow-hidden">
                                                         <div
-                                                            className="absolute inset-y-0 left-0 bg-primary transition-all duration-300"
+                                                            className="absolute inset-y-0 left-0 bg-primary transition-[width] duration-300"
                                                             style={{ width: `${(aiProgress / aiProgressTotal) * 100}%` }}
                                                         />
                                                     </div>

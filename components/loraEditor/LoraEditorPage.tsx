@@ -234,7 +234,7 @@ const LoraEditorPage: React.FC<LoraEditorPageProps> = ({ isExiting = false }) =>
                                 onDragLeave={() => setIsDragging(false)}
                                 onDrop={(e) => { e.preventDefault(); setIsDragging(false); void handleFiles(e.dataTransfer.files); }}
                             >
-                                <label className={`w-full h-full rounded-none flex flex-col items-center justify-center cursor-pointer transition-all ${isDragging ? 'bg-primary/10' : 'hover:bg-base-200/20'}`}>
+                                <label className={`w-full h-full rounded-none flex flex-col items-center justify-center cursor-pointer transition-colors ${isDragging ? 'bg-primary/10' : 'hover:bg-base-200/20'}`}>
                                     <input type="file" accept=".safetensors,.gguf" className="hidden" onChange={(e) => e.target.files && handleFiles(e.target.files)} />
                                     <UploadIcon className="w-16 h-16 text-base-content/60 mb-6" />
                                     <h2 className="text-2xl font-black uppercase tracking-tighter">DROP LORA FILE</h2>

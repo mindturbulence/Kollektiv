@@ -616,7 +616,7 @@ const IntegrationsSection: React.FC<IntegrationsSectionProps> = ({
                             </div>
                             <div className="w-full h-1 bg-base-300/30 relative overflow-hidden">
                                 <div
-                                    className="absolute inset-y-0 left-0 bg-primary transition-all duration-300 ease-out"
+                                    className="absolute inset-y-0 left-0 bg-primary transition-[width] duration-300 ease-out"
                                     style={{ width: `${progressPct}%` }}
                                 />
                             </div>

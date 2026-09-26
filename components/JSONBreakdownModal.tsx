@@ -48,7 +48,7 @@ const JSONBreakdownModal: React.FC<JSONBreakdownModalProps> = ({
                                 </div>
                                 <button 
                                     onClick={onClose}
-                                    className="p-2 text-base-content/60 hover:text-primary transition-all hover:scale-110"
+                                    className="p-2 text-base-content/60 hover:text-primary transition-[color,transform] hover:scale-110"
                                 >
                                     <CloseIcon className="w-5 h-5" />
                                 </button>

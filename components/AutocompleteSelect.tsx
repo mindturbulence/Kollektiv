@@ -208,7 +208,7 @@ const AutocompleteSelect: React.FC<AutocompleteSelectProps> = ({
             {value && (
                 <button 
                     onClick={handleClear}
-                    className="form-btn autocomplete-clear-btn p-1 -mr-1 hover:text-error opacity-20 hover:opacity-100 transition-all border-none bg-transparent h-auto w-auto min-h-0"
+                    className="form-btn autocomplete-clear-btn p-1 -mr-1 hover:text-error opacity-20 hover:opacity-100 transition-[color,opacity] border-none bg-transparent h-auto w-auto min-h-0"
                     title="Clear Selection"
                 >
                     <CloseIcon className="w-3.5 h-3.5" />

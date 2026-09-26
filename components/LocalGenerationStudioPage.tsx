@@ -445,13 +445,13 @@ const LocalGenerationStudioPage: React.FC<LocalGenerationStudioPageProps> = ({ b
                 <button
                   onClick={handleSavePreset}
                   disabled={!newPresetName.trim()}
-                  className="font-sf-mono text-2xs tracking-widest text-primary/60 hover:text-primary transition-all bg-primary/5 disabled:opacity-20 px-2 py-1.5 hover:bg-primary/10 shrink-0"
+                  className="font-sf-mono text-2xs tracking-widest text-primary/60 hover:text-primary transition-colors bg-primary/5 disabled:opacity-20 px-2 py-1.5 hover:bg-primary/10 shrink-0"
                 >
                   SAVE
                 </button>
                 <button
                   onClick={() => { setShowSaveInput(false); setNewPresetName(''); }}
-                  className="font-sf-mono text-2xs tracking-widest text-base-content/60 hover:text-base-content transition-all bg-base-100/5 px-2 py-1.5 hover:bg-base-100/10 shrink-0"
+                  className="font-sf-mono text-2xs tracking-widest text-base-content/60 hover:text-base-content transition-colors bg-base-100/5 px-2 py-1.5 hover:bg-base-100/10 shrink-0"
                 >
                   ✕
                 </button>
@@ -460,7 +460,7 @@ const LocalGenerationStudioPage: React.FC<LocalGenerationStudioPageProps> = ({ b
               <button
                 onClick={() => setShowSaveInput(true)}
                 title="Save current settings as a preset"
-                className="font-sf-mono text-2xs tracking-widest text-base-content/60 hover:text-base-content transition-all bg-base-100/5 px-2 py-1.5 hover:bg-base-100/10 shrink-0 whitespace-nowrap"
+                className="font-sf-mono text-2xs tracking-widest text-base-content/60 hover:text-base-content transition-colors bg-base-100/5 px-2 py-1.5 hover:bg-base-100/10 shrink-0 whitespace-nowrap"
               >
                 + SAVE
               </button>
@@ -469,7 +469,7 @@ const LocalGenerationStudioPage: React.FC<LocalGenerationStudioPageProps> = ({ b
               <button
                 onClick={handleDeletePreset}
                 title="Delete this preset"
-                className="font-sf-mono text-2xs tracking-widest text-error/40 hover:text-error transition-all bg-error/5 px-2 py-1.5 hover:bg-error/10 shrink-0"
+                className="font-sf-mono text-2xs tracking-widest text-error/40 hover:text-error transition-colors bg-error/5 px-2 py-1.5 hover:bg-error/10 shrink-0"
               >
                 DELETE
               </button>

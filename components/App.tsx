@@ -1,5 +1,7 @@
 import React, { useState, useCallback, useEffect, useRef, useLayoutEffect, useMemo } from 'react';
 import { gsap } from 'gsap';
+import { MotionConfig } from 'motion/react';
+import { prefersReducedMotion } from './transitions/routeFx';
 import { useSettings } from '../contexts/SettingsContext';
 import { useAuth } from '../contexts/AuthContext';
 import useLocalStorage from '../utils/useLocalStorage';
@@ -81,7 +83,7 @@ class ErrorBoundary extends React.Component<{ children: React.ReactNode }, { has
                     <h1 className="text-4xl font-black uppercase tracking-tighter mb-4">CRITICAL ERROR</h1>
                     <p className="text-base-content/60 font-bold uppercase tracking-widest mb-4">The application encountered an unrecoverable state.</p>
 
-                    <div className="bg-error/10 border border-error/20 p-4 mb-8 max-w-4xl w-full overflow-auto transition-all animate-fade-in shadow-2xl">
+                    <div className="bg-error/10 border border-error/20 p-4 mb-8 max-w-4xl w-full overflow-auto animate-fade-in shadow-2xl">
                         <div className="text-xs text-error font-mono font-black uppercase tracking-widest mb-2 border-b border-error/20 pb-1">Trace Summary</div>
                         <code className="text-xs text-error font-mono break-words whitespace-pre-wrap text-left block max-h-[30vh]">
                             {typeof this.state.error === 'object' ? (this.state.error.stack || this.state.error.message || JSON.stringify(this.state.error)) : String(this.state.error)}
@@ -356,6 +358,11 @@ const AppContent: React.FC = () => {
             );
             tl.to(contentRef.current, { alpha: 1, duration: 1.0, ease: "power2.out" }, "<0.2");
             tl.set(apertureRef.current, { visibility: 'hidden', alpha: 0 });
+
+            // Reduced motion: jump the fully-built timeline to its end state
+            // instead of skipping construction — every to/from/set below still
+            // lands correctly, and onComplete-style side effects aren't lost.
+            if (prefersReducedMotion()) tl.progress(1);
         });
 
         return () => ctx.revert();
@@ -432,6 +439,7 @@ const AppContent: React.FC = () => {
     if (showWelcome) return <OnboardingFlow onSetupComplete={initializeApp} />;
 
     return (
+        <MotionConfig reducedMotion="user">
         <LiveAssistantProvider>
         {/* Avatar store bridge — headless; feeds the floating widget, the
             Document PiP pop-out and the extension side panel. */}
@@ -683,6 +691,7 @@ const AppContent: React.FC = () => {
             </div>
         </div>
         </LiveAssistantProvider>
+        </MotionConfig>
     );
 };
 

@@ -281,7 +281,7 @@ const GallerySection: React.FC<GallerySectionProps> = ({
                                 </div>
                                 <div className="w-full h-1.5 bg-base-300/50 relative overflow-hidden">
                                     <div
-                                        className="absolute inset-y-0 left-0 bg-primary transition-all duration-200 ease-out"
+                                        className="absolute inset-y-0 left-0 bg-primary transition-[width] duration-200 ease-out"
                                         style={{ width: `${scanProgress}%` }}
                                     />
                                 </div>
@@ -373,7 +373,7 @@ const GallerySection: React.FC<GallerySectionProps> = ({
                                     </div>
                                     <div className="w-full h-1.5 bg-base-300/50 relative overflow-hidden">
                                         <div
-                                            className="absolute inset-y-0 left-0 bg-primary transition-all duration-200 ease-out"
+                                            className="absolute inset-y-0 left-0 bg-primary transition-[width] duration-200 ease-out"
                                             style={{
                                                 width: targets.length > 0
                                                     ? `${(convertProgress / targets.length) * 100}%`

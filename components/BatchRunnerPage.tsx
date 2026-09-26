@@ -177,7 +177,7 @@ const BatchRunnerPage: React.FC = () => {
             <div className="mb-3">
               <div className="h-1.5 bg-base-300/30 rounded-full overflow-hidden">
                 <div
-                  className="h-full bg-primary rounded-full transition-all duration-300"
+                  className="h-full bg-primary rounded-full transition-[width] duration-300"
                   style={{ width: `${state.total > 0 ? (state.doneCount / state.total) * 100 : 0}%` }}
                 />
               </div>

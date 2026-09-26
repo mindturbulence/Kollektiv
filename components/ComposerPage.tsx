@@ -567,7 +567,7 @@ const ComposerPage: React.FC<ComposerPageProps> = ({ showGlobalFeedback, isExiti
                 <main className="flex-grow flex flex-col relative p-[3px] corner-frame overflow-visible z-10 bg-transparent">
                     <div className="flex flex-col h-full w-full overflow-hidden relative z-10 bg-base-100/40 backdrop-blur-xl">
                         <div ref={previewContainerRef} className="flex-grow bg-transparent flex items-center justify-center p-12 overflow-hidden" onMouseDown={e => { if(e.target === e.currentTarget) setActiveLayerId(null); }}>
-                            <div id="framer-canvas-root" className="relative transition-all duration-500 overflow-hidden" style={{ width: previewMetrics.width, height: previewMetrics.height, backgroundColor: bgColor }}>
+                            <div id="framer-canvas-root" className="relative transition-[width,height] duration-500 overflow-hidden" style={{ width: previewMetrics.width, height: previewMetrics.height, backgroundColor: bgColor }}>
                                 {mode === 'grid' && gridLayout && gridItems.map((item, idx) => (
                                     <div key={idx} className="absolute bg-transparent overflow-hidden" style={{ width: gridLayout.cw, height: gridLayout.ch, left: gridLayout.gap + (idx % gridCols) * (gridLayout.cw + gridLayout.gap), top: gridLayout.gap + Math.floor(idx / gridCols) * (gridLayout.ch + gridLayout.gap) }}>
                                         {item ? <ItemRenderer item={item} w={gridLayout.cw} h={gridLayout.ch} onRemove={() => setGridItems(prev => { const n = [...prev]; n[idx]=null; return n; })} onTransform={t => setGridItems(prev => { const n = [...prev]; n[idx]={...item, ...t}; return n; })} /> 
@@ -605,17 +605,17 @@ const ComposerPage: React.FC<ComposerPageProps> = ({ showGlobalFeedback, isExiti
                             <header className="p-6 bg-base-100/10 backdrop-blur-md flex justify-between items-center h-16">
                                 <h3 className="text-2xs font-black uppercase tracking-[0.4em] text-primary">Layers</h3>
                                 <div className="flex gap-2">
-                                    <button onClick={() => { const n: TextLayer = { id: uuidv4(), type: 'text', content: 'New Text', x: 0.5, y: 0.5, fontSize: 80, color: '#000000', fontFamily: FONTS[0].family, bold: true, italic: false }; setLayers([...layers, n]); setActiveLayerId(n.id); }} className="btn btn-xs btn-square bg-base-200/50 border border-primary/20 text-primary hover:bg-primary hover:text-primary-content transition-all" title="Add Text Layer">
+                                    <button onClick={() => { const n: TextLayer = { id: uuidv4(), type: 'text', content: 'New Text', x: 0.5, y: 0.5, fontSize: 80, color: '#000000', fontFamily: FONTS[0].family, bold: true, italic: false }; setLayers([...layers, n]); setActiveLayerId(n.id); }} className="btn btn-xs btn-square bg-base-200/50 border border-primary/20 text-primary hover:bg-primary hover:text-primary-content transition-colors" title="Add Text Layer">
                                         <TypeIcon className="w-4 h-4"/>
                                     </button>
-                                    <button onClick={() => layerImageInputRef.current?.click()} className="btn btn-xs btn-square bg-base-200/50 border border-primary/20 text-primary hover:bg-primary hover:text-primary-content transition-all" title="Add Image Layer">
+                                    <button onClick={() => layerImageInputRef.current?.click()} className="btn btn-xs btn-square bg-base-200/50 border border-primary/20 text-primary hover:bg-primary hover:text-primary-content transition-colors" title="Add Image Layer">
                                         <PhotoIcon className="w-4 h-4"/>
                                     </button>
                                 </div>
                             </header>
                             <div className="flex-grow overflow-y-auto p-6 space-y-4 bg-transparent">
                                 {layers.map((layer, i) => (
-                                    <div key={layer.id} className={`p-4 border transition-all cursor-pointer ${activeLayerId === layer.id ? 'border-primary bg-primary/5' : 'border-base-300/20'}`} onClick={() => setActiveLayerId(layer.id)}>
+                                    <div key={layer.id} className={`p-4 border transition-colors cursor-pointer ${activeLayerId === layer.id ? 'border-primary bg-primary/5' : 'border-base-300/20'}`} onClick={() => setActiveLayerId(layer.id)}>
                                         <div className="flex justify-between items-center mb-3"><span className="text-2xs font-black uppercase tracking-widest opacity-40">Layer {String(i+1).padStart(2, '0')}</span><button onClick={e => { e.stopPropagation(); setLayers(prev => prev.filter(s => s.id !== layer.id)); }} className="text-error opacity-40 hover:opacity-100"><CloseIcon className="w-3.5 h-3.5" /></button></div>
                                         {layer.type === 'text' ? <input value={layer.content} onChange={e => setLayers(prev => prev.map(s => s.id === layer.id ? {...s, content: e.target.value} : s))} className="form-input h-8 w-full bg-transparent rounded-none border-none uppercase font-bold" /> : <span className="text-2xs font-mono opacity-30 truncate block">Image Overlay</span>}
                                         {activeLayerId === layer.id && (

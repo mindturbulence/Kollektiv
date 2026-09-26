@@ -109,7 +109,7 @@ const CustomCursor: React.FC = () => {
             <div className={`relative flex items-center justify-center transition-opacity duration-300 ${isBusy ? 'opacity-0' : 'opacity-100'}`}>
                 <div 
                     ref={innerRef}
-                    className={`w-5 h-5 border rounded-full flex items-center justify-center overflow-hidden cursor-inner transition-all duration-300 ease-out border-primary text-primary ${isHovering ? 'scale-[1.8] bg-primary/20 border-opacity-100' : 'scale-100 bg-transparent border-opacity-60'}`}
+                    className={`w-5 h-5 border rounded-full flex items-center justify-center overflow-hidden cursor-inner transition-[transform,background-color,border-color] duration-300 ease-out border-primary text-primary ${isHovering ? 'scale-[1.8] bg-primary/20 border-opacity-100' : 'scale-100 bg-transparent border-opacity-60'}`}
                     style={{ borderRadius: '50%', borderStyle: 'solid' }}
                 >
                     {/* Rotating Half-Circle */}

@@ -376,7 +376,7 @@ const WorkflowImportModal: React.FC<WorkflowImportModalProps> = ({
             </div>
             <button
               onClick={handleClose}
-              className="p-2 text-error/30 hover:text-error transition-all hover:scale-110"
+              className="p-2 text-error/30 hover:text-error transition-[color,transform] hover:scale-110"
             >
               <CloseIcon className="w-5 h-5" />
             </button>
@@ -398,7 +398,7 @@ const WorkflowImportModal: React.FC<WorkflowImportModalProps> = ({
                 }}
                 onDragLeave={() => setIsDragging(false)}
                 onClick={() => fileInputRef.current?.click()}
-                className={`p-16 border-4 border-dashed rounded-none text-center cursor-pointer transition-all ${
+                className={`p-16 border-4 border-dashed rounded-none text-center cursor-pointer transition-colors ${
                   isDragging
                     ? 'border-primary bg-primary/10'
                     : 'border-base-300 hover:border-primary/50 bg-transparent'
