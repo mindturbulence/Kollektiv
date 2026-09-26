@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React from 'react';
 import { useSettings } from '../../contexts/SettingsContext';
 import { isGoogleAuthValid } from '../../utils/googleAuth';
 import { appEventBus } from '../../utils/eventBus';
@@ -6,13 +6,7 @@ import { fileSystemManager } from '../../utils/fileUtils';
 
 const IntegrationHealthWidget: React.FC = () => {
   const { settings } = useSettings();
-  const [vaultConnected, setVaultConnected] = useState(fileSystemManager.isDirectorySelected());
-
-  useEffect(() => {
-    const check = () => setVaultConnected(fileSystemManager.isDirectorySelected());
-    const off = appEventBus.on('vaultConnected' as any, check);
-    return off;
-  }, []);
+  const vaultConnected = fileSystemManager.isDirectorySelected();
 
   const integrations = [
     {
@@ -49,7 +43,7 @@ const IntegrationHealthWidget: React.FC = () => {
         {integrations.map(inte => (
           <button
             key={inte.key}
-            onClick={() => appEventBus.emit('navigate', 'settings' as any)}
+            onClick={() => appEventBus.emit('navigate', 'settings')}
             className={`flex items-center justify-between px-3 py-2.5 text-xs font-mono uppercase tracking-wider border transition-colors w-full text-left ${
               inte.connected
                 ? 'text-emerald-400/70 border-emerald-400/20 bg-emerald-400/5 hover:bg-emerald-400/10'

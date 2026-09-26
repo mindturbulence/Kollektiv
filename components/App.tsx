@@ -62,6 +62,7 @@ import { useAppTheme } from '../hooks/useAppTheme';
 import { usePageTransitions } from '../hooks/usePageTransitions';
 import { useAppShell } from '../hooks/useAppShell';
 import { useAppEventBus } from '../hooks/useAppEventBus';
+import { getNextTheme } from '../constants/themes';
 
 
 class ErrorBoundary extends React.Component<{ children: React.ReactNode }, { hasError: boolean, error: any, errorInfo: any }> {
@@ -361,6 +362,17 @@ const AppContent: React.FC = () => {
         return () => ctx.revert();
     }, [isInitialized]);
 
+    // Shares the cycling logic with the header's ThemeSwitcher (constants/themes.ts)
+    // so the command palette's "Next Theme" command does the same thing as the button.
+    const handleCycleTheme = useCallback(() => {
+        updateSettings({ ...settings, darkTheme: getNextTheme(settings.darkTheme), activeThemeMode: 'dark' });
+    }, [settings, updateSettings]);
+
+    const handleToggleLlmPanel = useCallback(() => {
+        audioService.playClick();
+        setIsLlmPanelOpen(prev => !prev);
+    }, [setIsLlmPanelOpen]);
+
     useAppEventBus({
         handleNavigate,
         handleSendToPromptsPage,
@@ -373,6 +385,10 @@ const AppContent: React.FC = () => {
         handleClipIdea,
         setEditorOpenPayload,
         setConverterOpenFiles,
+        handleCycleTheme,
+        handleToggleChatPanel,
+        handleToggleActivityPanel,
+        handleToggleLlmPanel,
     });
 
     const renderContent = () => {
@@ -417,10 +433,6 @@ const AppContent: React.FC = () => {
 
 
     // --- Inline-callbacks that add audio-service side-effects on top of shell state ---
-    const handleToggleLlmPanel = useCallback(() => {
-        audioService.playClick();
-        setIsLlmPanelOpen(prev => !prev);
-    }, [setIsLlmPanelOpen]);
     const handleCloseAboutModal = useCallback(() => {
         audioService.playModalClose();
         setIsAboutModalOpen(false);

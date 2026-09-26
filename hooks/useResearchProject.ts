@@ -108,7 +108,6 @@ const useResearchProject = (settings: LLMSettings, fileManager: IFileSystemManag
       setSources(p.sourceFiles || []);
       setFindings(fnd);
       setProjectSlug(slug);
-      appEventBus.emit('research:projectOpened', { slug });
       // Also notify the active-project tracker for assistant tools
       const { setActiveProject } = await import('../services/researchVaultService');
       setActiveProject(slug);
@@ -127,7 +126,6 @@ const useResearchProject = (settings: LLMSettings, fileManager: IFileSystemManag
     setSources([]);
     setFindings('');
     setError(null);
-    appEventBus.emit('research:projectClosed', {});
     void import('../services/researchVaultService').then(m => m.setActiveProject(null));
   }, []);
 
@@ -142,7 +140,6 @@ const useResearchProject = (settings: LLMSettings, fileManager: IFileSystemManag
       // Reload sources
       const p = await researchVault.projects.open(projectSlug, fm);
       setSources(p.sourceFiles || []);
-      appEventBus.emit('research:sourceAdded', { slug: projectSlug, fileName: 'source' });
       return { ok: true };
     } catch (e: any) {
       const msg = `Failed to add source: ${e?.message || e}`;
@@ -159,7 +156,6 @@ const useResearchProject = (settings: LLMSettings, fileManager: IFileSystemManag
     try {
       await researchVault.sources.remove(projectSlug, fileName, fm);
       setSources(prev => prev.filter(s => s.path !== `sources/${fileName}`));
-      appEventBus.emit('research:sourceRemoved', { slug: projectSlug, fileName });
     } catch (e: any) {
       setError(`Failed to remove source: ${e?.message || e}`);
     }

@@ -168,4 +168,74 @@ describe('useAppEventBus', () => {
     handlers['clipIdea'][0]({});
     expect(handleClipIdea).not.toHaveBeenCalled();
   });
+
+  it('cycleTheme event routes through handleCycleTheme (palette "Next Theme")', () => {
+    const handleCycleTheme = vi.fn();
+    renderHook(() => useAppEventBus({
+      handleNavigate: noopAny,
+      handleSendToPromptsPage: noopAny,
+      showGlobalFeedback: noopAny,
+      isCommandPaletteOpen: false,
+      setIsCommandPaletteOpen: noopAny,
+      setIsClippingPanelOpen: noopAny,
+      setIsMediaPanelOpen: noopAny,
+      setVideoPlayerUrl: noopAny,
+      handleClipIdea: noopAny,
+      setEditorOpenPayload: noopAny,
+      setConverterOpenFiles: noopAny,
+      handleCycleTheme,
+    }));
+
+    expect(handlers['cycleTheme'].length).toBe(1);
+    handlers['cycleTheme'][0]();
+    expect(handleCycleTheme).toHaveBeenCalledTimes(1);
+  });
+
+  it('togglePanel routes chat/activity/llm to their shell toggles', () => {
+    const handleToggleChatPanel = vi.fn();
+    const handleToggleActivityPanel = vi.fn();
+    const handleToggleLlmPanel = vi.fn();
+    renderHook(() => useAppEventBus({
+      handleNavigate: noopAny,
+      handleSendToPromptsPage: noopAny,
+      showGlobalFeedback: noopAny,
+      isCommandPaletteOpen: false,
+      setIsCommandPaletteOpen: noopAny,
+      setIsClippingPanelOpen: noopAny,
+      setIsMediaPanelOpen: noopAny,
+      setVideoPlayerUrl: noopAny,
+      handleClipIdea: noopAny,
+      setEditorOpenPayload: noopAny,
+      setConverterOpenFiles: noopAny,
+      handleToggleChatPanel,
+      handleToggleActivityPanel,
+      handleToggleLlmPanel,
+    }));
+
+    const toggle = handlers['togglePanel'].at(-1)!;
+    toggle('chat');
+    toggle('activity');
+    toggle('llm');
+    expect(handleToggleChatPanel).toHaveBeenCalledTimes(1);
+    expect(handleToggleActivityPanel).toHaveBeenCalledTimes(1);
+    expect(handleToggleLlmPanel).toHaveBeenCalledTimes(1);
+  });
+
+  it('does not subscribe to cycleTheme when handleCycleTheme is omitted', () => {
+    renderHook(() => useAppEventBus({
+      handleNavigate: noopAny,
+      handleSendToPromptsPage: noopAny,
+      showGlobalFeedback: noopAny,
+      isCommandPaletteOpen: false,
+      setIsCommandPaletteOpen: noopAny,
+      setIsClippingPanelOpen: noopAny,
+      setIsMediaPanelOpen: noopAny,
+      setVideoPlayerUrl: noopAny,
+      handleClipIdea: noopAny,
+      setEditorOpenPayload: noopAny,
+      setConverterOpenFiles: noopAny,
+    }));
+
+    expect(handlers['cycleTheme']).toBeUndefined();
+  });
 });

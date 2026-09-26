@@ -1,4 +1,5 @@
 import { appEventBus } from '../utils/eventBus';
+import type { ActiveTab } from '../types';
 import { loadSavedPrompts, addSavedPrompt } from '../utils/promptStorage';
 import { loadCheatsheet } from '../utils/cheatsheetStorage';
 import { getChatSessionsSync } from '../utils/chatStorage';
@@ -7,7 +8,10 @@ import { loadGalleryItems } from '../utils/galleryStorage';
 
 export const appControlService = {
     navigate: (page: string) => {
-        appEventBus.emit('navigate', page);
+        // `page` is LLM/user-controlled free text, not a checked ActiveTab. The
+        // renderer's page switch already falls back to Dashboard for unknown
+        // tabs, so an invalid value here is a no-op, not a crash.
+        appEventBus.emit('navigate', page as ActiveTab);
         return "Navigated to " + page;
     },
     
