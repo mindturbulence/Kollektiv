@@ -1,7 +1,6 @@
-import { useState, useRef, useCallback } from 'react';
+import { useRef, useCallback } from 'react';
 import { useTransitionDirector } from '../components/transitions/useTransitionDirector';
 import type { TransitionOverlayHandle } from '../components/transitions/TransitionOverlay';
-import type { FxKind } from '../components/transitions/routeFx';
 import type { ActiveTab } from '../types';
 
 interface UsePageTransitionsInput {
@@ -12,7 +11,6 @@ interface UsePageTransitionsInput {
 }
 
 interface UsePageTransitionsReturn {
-  pageFxKind: FxKind;
   handleNavigate: (tab: ActiveTab) => void;
 }
 
@@ -27,7 +25,6 @@ export const usePageTransitions = ({
   contentRef,
   transitionOverlayHandleRef,
 }: UsePageTransitionsInput): UsePageTransitionsReturn => {
-  const [pageFxKind, setPageFxKind] = useState<FxKind>('module-boot');
   const activeTabRef = useRef(activeTab);
   activeTabRef.current = activeTab;
 
@@ -35,15 +32,12 @@ export const usePageTransitions = ({
     overlayRef: transitionOverlayHandleRef,
     contentRef,
     getActiveTab: () => activeTabRef.current,
-    commit: (tag, kind) => {
-      setPageFxKind(kind);
-      setActiveTab(tag);
-    },
+    commit: (tag) => setActiveTab(tag),
   });
 
   const handleNavigate = useCallback((tab: ActiveTab) => {
     directorNavigate(tab);
   }, [directorNavigate]);
 
-  return { pageFxKind, handleNavigate };
+  return { handleNavigate };
 };

@@ -56,8 +56,6 @@ import { useAmbientMusic } from '../utils/useAmbientMusic';
 
 import LiveCaptionOverlay from './LiveCaptionOverlay';
 import { ScreenControlOverlay } from './ScreenControlOverlay';
-import { motion, AnimatePresence } from 'motion/react';
-import { shellVariants } from './AnimatedPanels';
 import TransitionOverlay, { type TransitionOverlayHandle } from './transitions/TransitionOverlay';
 import { useBootSequence } from '../hooks/useBootSequence';
 import { useAppTheme } from '../hooks/useAppTheme';
@@ -214,7 +212,7 @@ const AppContent: React.FC = () => {
     // 2. App shell (needs handleNavigate from transitions)
     // 3. Boot sequence (needs setGlobalFeedback from shell)
 
-    const { pageFxKind, handleNavigate } = usePageTransitions({
+    const { handleNavigate } = usePageTransitions({
         activeTab,
         setActiveTab,
         contentRef,
@@ -569,19 +567,12 @@ const AppContent: React.FC = () => {
                                 <TransitionOverlay ref={transitionOverlayHandleRef} />
 
                                 <div ref={contentRef} className="h-full w-full z-10 relative">
-                                    <AnimatePresence mode="wait" custom={pageFxKind}>
-                                        <motion.div
-                                            key={['crafter', 'refiner', 'prompt_analyzer', 'media_analyzer', 'prompts'].includes(activeTab) ? 'prompts_group' : activeTab}
-                                            custom={pageFxKind}
-                                            variants={shellVariants}
-                                            initial="hidden"
-                                            animate="visible"
-                                            exit="exit"
-                                            className="h-full w-full"
-                                        >
-                                            {renderContent()}
-                                        </motion.div>
-                                    </AnimatePresence>
+                                    <div
+                                        key={['crafter', 'refiner', 'prompt_analyzer', 'media_analyzer', 'prompts'].includes(activeTab) ? 'prompts_group' : activeTab}
+                                        className="h-full w-full"
+                                    >
+                                        {renderContent()}
+                                    </div>
 
                                     <ClippingPanel
                                         isOpen={isClippingPanelOpen}

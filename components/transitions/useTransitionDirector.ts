@@ -58,9 +58,9 @@ export const useTransitionDirector = (opts: DirectorOpts) => {
 
     const run = useCallback(async (tab: ActiveTab) => {
         const { overlayRef, contentRef, getActiveTab, commit } = optsRef.current;
+        const kind = resolveFx(getActiveTab(), tab);
+        let committed = false;
         try {
-            const from = getActiveTab();
-            const kind = resolveFx(from, tab);
             const visited = visitedRef.current;
 
             // Repeat visit, sibling workspace switch, or reduced motion: no
@@ -101,6 +101,7 @@ export const useTransitionDirector = (opts: DirectorOpts) => {
             pendingRef.current = null;
             contentRef.current?.removeAttribute('data-fx');
             commit(target, kind);
+            committed = true;
             visited.add(target);
             audioService.playType();
 
@@ -137,6 +138,15 @@ export const useTransitionDirector = (opts: DirectorOpts) => {
                 contentRef.current?.removeAttribute('data-fx');
                 enterTimerRef.current = null;
             }, 1500);
+        } catch {
+            // Cover missed its deadline (slow/throttled frame loop): skip the
+            // cinematic but never drop the navigation itself.
+            overlayRef.current?.abort();
+            if (!committed) {
+                const target = pendingRef.current ?? tab;
+                commit(target, kind);
+                visitedRef.current.add(target);
+            }
         } finally {
             // Recovery path (review #4): if a cover/reveal promise never
             // resolves (timeline killed on unmount/HMR, or abort), the director

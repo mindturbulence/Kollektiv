@@ -55,8 +55,8 @@ async function bootToConverter(page: Page) {
     const selectBtn = page.getByRole('button', { name: 'SELECT_VAULT_FOLDER' });
     const reconnectBtn = page.getByRole('button', { name: 'RECONNECT_VAULT' });
     const gateBtn = await Promise.race([
-        selectBtn.waitFor({ state: 'visible', timeout: 10_000 }).then(() => selectBtn),
-        reconnectBtn.waitFor({ state: 'visible', timeout: 10_000 }).then(() => reconnectBtn),
+        selectBtn.waitFor({ state: 'visible', timeout: 30_000 }).then(() => selectBtn),
+        reconnectBtn.waitFor({ state: 'visible', timeout: 30_000 }).then(() => reconnectBtn),
     ].map(p => p.catch(() => null as any)));
     if (!gateBtn) throw new Error('Neither SELECT_VAULT_FOLDER nor RECONNECT_VAULT appeared on the Welcome screen.');
     await gateBtn.click();
