@@ -3,7 +3,7 @@ export const THEMES = [
   "coffee", "cyberpunk", "dark", "dim", "dracula",
   "forest", "Hiigara", "isac",
   "luxury", "MindTurbulence", "night", "nord",
-  "orange", "pipboy", "starfield", "Stellar", "sunset", "synthwave",
+  "orange", "pipboy", "sanrita", "starfield", "Stellar", "sunset", "synthwave",
   "Vanguard"
 ];
 

@@ -937,10 +937,9 @@ button:disabled,
   box-shadow: 0 15px 25px -5px oklch(var(--p) / 0.4);
 }
 
+/* Not .main-app-frame: a blurred translucent layer on the app-wide frame veils every page. */
 [data-theme="sanrita"] .card,
 [data-theme="sanrita"] .bg-base-100,
-[data-theme="sanrita"] .border-base-300,
-[data-theme="sanrita"] .main-app-frame,
 [data-theme="sanrita"] .corner-frame {
   background: rgba(255, 255, 255, 0.7) !important;
   backdrop-filter: blur(24px);
@@ -954,9 +953,11 @@ button:disabled,
   border-color: rgba(0, 0, 0, 0.06) !important;
 }
 
-[data-theme="sanrita"] .text-primary {
-  color: oklch(var(--p)) !important;
-  filter: drop-shadow(0 0 4px oklch(var(--p) / 0.2));
+/* The global [data-theme] neon glow (later in this file) smears text on a light base. */
+[data-theme="sanrita"] .text-primary,
+[data-theme="sanrita"] .text-secondary {
+  text-shadow: none !important;
+  filter: none !important;
 }
 
 [data-theme="sanrita"] .bg-base-200 {

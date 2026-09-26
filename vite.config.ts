@@ -199,7 +199,7 @@ export default defineConfig(({ mode }) => {
       // @ts-ignore
 test: {
     timeout: 20000,
-    exclude: ['e2e/**', 'node_modules/**'],
+    exclude: ['e2e/**', 'node_modules/**', '.claude/**'],
     environment: 'jsdom',
     setupFiles: [],
 },

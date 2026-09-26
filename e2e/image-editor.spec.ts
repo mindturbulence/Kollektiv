@@ -18,8 +18,16 @@ async function bootToAppShell(page: Page, initialTab: string) {
         window.matchMedia = (q: string) => {
             const mql = realMatchMedia(q);
             if (!q.includes('prefers-reduced-motion')) return mql;
-            // `matches` is a prototype getter — shadow it, don't assign it.
-            return Object.create(mql, { matches: { value: false }, media: { value: q } });
+            // Native MediaQueryList methods throw "Illegal invocation" unless bound to the real list
+            // (motion's MotionConfig reducedMotion="user" subscribes via addEventListener).
+            return {
+                matches: false, media: q, onchange: null,
+                addEventListener: mql.addEventListener.bind(mql),
+                removeEventListener: mql.removeEventListener.bind(mql),
+                addListener: mql.addListener.bind(mql),
+                removeListener: mql.removeListener.bind(mql),
+                dispatchEvent: mql.dispatchEvent.bind(mql),
+            } as MediaQueryList;
         };
         // Once: clean state + starting tab (init scripts re-run on every load).
         if (sessionStorage.getItem('e2e-seeded')) return;
