@@ -1,4 +1,5 @@
-import React, { useEffect, useState, useRef } from 'react';
+import React, { useEffect, useId, useRef, useState } from 'react';
+import { createPortal } from 'react-dom';
 import { hydrateKnowledgeGraph } from '../services/tools/graphHydration';
 import { relationshipGraph } from '../services/relationshipGraph';
 import type { GraphEntity, Relation } from '../services/relationshipGraph';
@@ -76,7 +77,22 @@ const VaultMapPanel: React.FC<VaultMapPanelProps> = ({ isOpen, onClose }) => {
   const [loading, setLoading] = useState(true);
   const [stats, setStats] = useState({ entities: 0, relations: 0 });
   const svgRef = useRef<SVGSVGElement>(null);
+  const closeButtonRef = useRef<HTMLButtonElement>(null);
   const [svgSize, setSvgSize] = useState({ width: 500, height: 500 });
+  const titleId = useId();
+
+  // Focus the close button on open, and close on Escape while open — mirrors
+  // the shared Modal (components/Modal.tsx) behaviour for a panel whose own
+  // full-bleed layout doesn't fit Modal's centered max-w shell.
+  useEffect(() => {
+    if (!isOpen) return;
+    closeButtonRef.current?.focus();
+    const onKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') onClose();
+    };
+    document.addEventListener('keydown', onKeyDown);
+    return () => document.removeEventListener('keydown', onKeyDown);
+  }, [isOpen, onClose]);
 
   useEffect(() => {
     if (!isOpen) return;
@@ -120,11 +136,19 @@ const VaultMapPanel: React.FC<VaultMapPanelProps> = ({ isOpen, onClose }) => {
 
   const { nodes, edges } = layout(entities, relations, cx, cy, rMax);
 
-  return (
+  // Portaled to <body> and given inert while closed — otherwise it sits
+  // inside the page content's z-10 stacking context (paints under the z-20
+  // header) and, despite opacity-0/pointer-events-none, stayed in the tab
+  // order on every page.
+  const panel = (
     <div
-      className={`fixed inset-0 z-50 transition-opacity duration-300 ${
+      className={`fixed inset-0 z-modal transition-opacity duration-300 ${
         isOpen ? 'opacity-100 pointer-events-auto' : 'opacity-0 pointer-events-none'
       }`}
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby={titleId}
+      inert={!isOpen}
     >
       {/* Backdrop */}
       <div className="absolute inset-0 bg-base-300/60 backdrop-blur-sm" onClick={onClose} />
@@ -134,7 +158,7 @@ const VaultMapPanel: React.FC<VaultMapPanelProps> = ({ isOpen, onClose }) => {
         {/* Header */}
         <div className="flex items-center justify-between px-5 py-3 border-b border-base-content/10 shrink-0">
           <div className="flex items-center gap-3">
-            <h2 className="text-sm font-bold tracking-wide text-base-content/80">Vault Map</h2>
+            <h2 id={titleId} className="text-sm font-bold tracking-wide text-base-content/80">Vault Map</h2>
             {!loading && stats.entities > 0 && (
               <span className="text-2xs font-mono text-base-content/60">
                 {stats.entities} items · {stats.relations} links
@@ -142,6 +166,7 @@ const VaultMapPanel: React.FC<VaultMapPanelProps> = ({ isOpen, onClose }) => {
             )}
           </div>
           <button
+            ref={closeButtonRef}
             onClick={onClose}
             className="text-base-content/60 hover:text-base-content/70 transition-colors text-lg leading-none px-1"
             aria-label="Close vault map"
@@ -237,6 +262,8 @@ const VaultMapPanel: React.FC<VaultMapPanelProps> = ({ isOpen, onClose }) => {
       </div>
     </div>
   );
+
+  return typeof document !== 'undefined' ? createPortal(panel, document.body) : null;
 };
 
 export { VaultMapPanel };
