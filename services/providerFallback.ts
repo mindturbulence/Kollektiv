@@ -9,8 +9,27 @@
  * distinction before changing anything here.
  */
 
-import { ProviderUnsupportedError, type LLMProvider } from './llmService';
 import type { LLMSettings } from '../types';
+
+export type LLMProvider = 'gemini' | 'ollama' | 'llamacpp' | 'anthropic' | 'openrouter';
+
+export const getActiveProvider = (settings: LLMSettings): LLMProvider => {
+  switch (settings.activeLLM) {
+    case 'ollama':
+    case 'ollama_cloud': return 'ollama';
+    case 'llamacpp': return 'llamacpp';
+    case 'anthropic': return 'anthropic';
+    case 'openrouter': return 'openrouter';
+    default: return 'gemini';
+  }
+};
+
+export class ProviderUnsupportedError extends Error {
+  constructor(feature: string, provider: LLMProvider, supported: LLMProvider[]) {
+    super(`${feature} is not available with the ${provider} engine (supported: ${supported.join(', ')}). Switch the AI Engine in Settings > Integrations.`);
+    this.name = 'ProviderUnsupportedError';
+  }
+}
 
 /** 4xx codes that mean "the user must fix configuration", not "try again". */
 const NON_RETRIABLE_STATUS = /\b(400|401|402|403|404|422)\b/;
@@ -38,8 +57,6 @@ export function isRetriableProviderError(err: unknown): boolean {
   if (NON_RETRIABLE_STATUS.test(msg)) return false;
   return RETRIABLE_PATTERNS.some(p => p.test(msg));
 }
-
-import { getActiveProvider } from './llmService';
 
 /**
  * Run an operation on the active provider, falling back through the

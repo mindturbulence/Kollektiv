@@ -271,7 +271,6 @@ export async function syncAgentMemoryToVault(content: string): Promise<void> {
 
     const { knowledgeLifecycle } = await import('../services/knowledgeLifecycle');
     const { writeNote } = await import('./obsidianStorage');
-    const { loadMemories } = await import('./memoryStorage');
 
     const memories = await loadMemories();
     if (memories.length === 0) return;

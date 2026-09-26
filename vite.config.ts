@@ -178,7 +178,7 @@ export default defineConfig(({ mode }) => {
       },
       optimizeDeps: {
         exclude: ['@ffmpeg/ffmpeg', '@ffmpeg/util'],
-        include: ['react-markdown', 'remark-gfm', 'vfile']
+        include: ['react-markdown', 'remark-gfm']
       },
       define: {
         'process.env.NODE_ENV': JSON.stringify(env.NODE_ENV || 'development'),

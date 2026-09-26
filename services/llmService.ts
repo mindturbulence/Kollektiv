@@ -5,28 +5,10 @@ import { analyzePaletteMoodOllama, generatePromptFormulaOllama, refineSingleProm
 import { refineSinglePromptLlamaCpp, enhancePromptLlamaCppStream, refineSinglePromptLlamaCppStream, reconstructFromIntentLlamaCpp } from './llamacppService';
 import { TARGET_VIDEO_AI_MODELS, TARGET_AUDIO_AI_MODELS } from '../constants/models';
 import { lookupModelProfile, serializeModifierToken } from '../constants/modelProfiles';
-import { withProviderFallback } from './providerFallback';
+import { withProviderFallback, getActiveProvider, ProviderUnsupportedError, type LLMProvider } from './providerFallback';
 import { appEventBus } from '../utils/eventBus';
 
-export type LLMProvider = 'gemini' | 'ollama' | 'llamacpp' | 'anthropic' | 'openrouter';
-
-export const getActiveProvider = (settings: LLMSettings): LLMProvider => {
-    switch (settings.activeLLM) {
-        case 'ollama':
-        case 'ollama_cloud': return 'ollama';
-        case 'llamacpp': return 'llamacpp';
-        case 'anthropic': return 'anthropic';
-        case 'openrouter': return 'openrouter';
-        default: return 'gemini';
-    }
-};
-
-export class ProviderUnsupportedError extends Error {
-    constructor(feature: string, provider: LLMProvider, supported: LLMProvider[]) {
-        super(`${feature} is not available with the ${provider} engine (supported: ${supported.join(', ')}). Switch the AI Engine in Settings > Integrations.`);
-        this.name = 'ProviderUnsupportedError';
-    }
-}
+export { getActiveProvider, ProviderUnsupportedError, type LLMProvider };
 
 const requireProvider = (feature: string, settings: LLMSettings, supported: LLMProvider[]): LLMProvider => {
     const provider = getActiveProvider(settings);

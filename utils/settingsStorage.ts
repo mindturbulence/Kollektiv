@@ -1,7 +1,6 @@
 
 import { LLMSettings } from '../types';
 import { clearAllHandles } from './db';
-import { fileSystemManager } from './fileUtils';
 import { DEFAULT_ANTHROPIC_MODEL } from '../constants/llmDefaults';
 import { THEMES } from '../constants/themes';
 
@@ -339,6 +338,7 @@ export const loadLLMSettings = (): LLMSettings => {
 
 export const resetAllSettings = async () => {
     // First, clear all files from the managed directory
+    const { fileSystemManager } = await import('./fileUtils');
     await fileSystemManager.reset();
     // Then, remove settings from local storage
     if (typeof window !== 'undefined') {
