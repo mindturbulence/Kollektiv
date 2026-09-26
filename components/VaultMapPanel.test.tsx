@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { render, screen, waitFor, cleanup } from '@testing-library/react';
+import { render, screen, waitFor, cleanup, fireEvent } from '@testing-library/react';
 import { VaultMapPanel } from './VaultMapPanel';
 
 beforeEach(cleanup);
@@ -28,6 +28,26 @@ describe('VaultMapPanel', () => {
     render(<VaultMapPanel isOpen={true} onClose={() => {}} />);
     await waitFor(() => expect(screen.getByText(/2 items/i)).toBeTruthy());
     expect(screen.getByText(/1 link/i)).toBeTruthy();
+  });
+
+  it('is inert while closed so it is out of tab order and click-through', async () => {
+    render(<VaultMapPanel isOpen={false} onClose={() => {}} />);
+    const dialog = await screen.findByRole('dialog', { hidden: true });
+    expect(dialog.hasAttribute('inert')).toBe(true);
+  });
+
+  it('is not inert while open', async () => {
+    render(<VaultMapPanel isOpen={true} onClose={() => {}} />);
+    const dialog = await screen.findByRole('dialog');
+    expect(dialog.hasAttribute('inert')).toBe(false);
+  });
+
+  it('closes on Escape while open', async () => {
+    const onClose = vi.fn();
+    render(<VaultMapPanel isOpen={true} onClose={onClose} />);
+    await screen.findByRole('dialog');
+    fireEvent.keyDown(document, { key: 'Escape' });
+    expect(onClose).toHaveBeenCalledTimes(1);
   });
 
   it('shows an empty state when the vault has no tagged items', async () => {

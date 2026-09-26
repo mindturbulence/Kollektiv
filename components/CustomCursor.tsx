@@ -22,6 +22,7 @@ const CustomCursor: React.FC = () => {
         gsap.set(inner, { scale: 1 });
 
         const moveCursor = (e: MouseEvent) => {
+            if (!Number.isFinite(e.clientX) || !Number.isFinite(e.clientY)) return;
             setCoords({ x: e.clientX, y: e.clientY });
             
             gsap.to(cursor, {

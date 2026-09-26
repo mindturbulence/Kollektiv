@@ -2,6 +2,7 @@ import React, { useEffect, useRef, useState } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { appEventBus } from '../utils/eventBus';
 import { useAssistantSignals } from '../utils/useAssistantSignals';
+import { getPreviousTab } from '../utils/tabHistory';
 import { useSettings } from '../contexts/SettingsContext';
 import { resolveLangKey } from '../utils/languageKey';
 import AssistantBackdrop from './AssistantBackdrop';
@@ -450,11 +451,23 @@ const AssistantPage: React.FC = () => {
         return () => window.clearInterval(t);
     }, [idleShown, idleVariations.length]);
 
-    // Session over — return home. Also bounces straight out if someone lands
-    // here without an active session. Errors linger long enough to read.
+    // Session over — return to whichever tab the user was on before, not always
+    // Home. Also bounces straight out if someone lands here without an active
+    // session. Errors linger long enough to read. `navigatedRef` guards against
+    // firing twice: LiveAssistantContext also clears its own 'error' status
+    // after 4000ms, which would otherwise re-trigger this effect's 800ms leg.
+    const navigatedRef = useRef(false);
+    useEffect(() => {
+        if (status === 'connecting' || status === 'live') navigatedRef.current = false;
+    }, [status]);
     useEffect(() => {
         if (status !== 'idle' && status !== 'error') return;
-        const t = setTimeout(() => appEventBus.emit('navigate', 'dashboard'), status === 'error' ? 4000 : 800);
+        if (navigatedRef.current) return;
+        const t = setTimeout(() => {
+            navigatedRef.current = true;
+            const target = getPreviousTab('assistant');
+            if (target) appEventBus.emit('navigate', target);
+        }, status === 'error' ? 4000 : 800);
         return () => clearTimeout(t);
     }, [status]);
 

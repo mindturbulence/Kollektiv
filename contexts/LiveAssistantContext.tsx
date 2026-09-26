@@ -68,6 +68,15 @@ export const LiveAssistantProvider: React.FC<{ children: React.ReactNode }> = ({
         appEventBus.emit('liveAssistantState', { status, speaking });
     }, [status, speaking]);
 
+    // Nothing else ever moves status out of 'error' — toggleLive from 'error'
+    // calls start() (not stop()), so without this the footer's "Error" label
+    // would stick forever until the next connection attempt succeeds.
+    useEffect(() => {
+        if (status !== 'error') return;
+        const t = setTimeout(() => setStatus('idle'), 4000);
+        return () => clearTimeout(t);
+    }, [status]);
+
     const stop = useCallback(() => {
         sessionIdRef.current++; // invalidate any in-flight start()
         liveRef.current?.disconnect();
