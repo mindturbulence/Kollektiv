@@ -39,8 +39,6 @@ export function isRetriableProviderError(err: unknown): boolean {
   return RETRIABLE_PATTERNS.some(p => p.test(msg));
 }
 
-import { getActiveProvider } from './llmService';
-
 /**
  * Run an operation on the active provider, falling back through the
  * user's chain only on genuine runtime failure.
@@ -55,6 +53,7 @@ export async function withProviderFallback<T>(
   run: (provider: LLMProvider) => Promise<T>,
   onFallback?: (from: LLMProvider, to: LLMProvider, err: Error) => void,
 ): Promise<T> {
+  const { getActiveProvider } = await import('./llmService');
   const active = getActiveProvider(settings);
   try {
     return await run(active);
