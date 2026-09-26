@@ -28,6 +28,7 @@ React 19, function components + hooks throughout. Class components **only** for 
 - **Stable callbacks.** Functions used inside `useEffect` deps or passed to children should be `useCallback`-wrapped. Don't wrap trivial inline handlers.
 - **Effects clean up.** Any `addEventListener`, `setInterval`, `setTimeout`, or GSAP tween started in an effect returns a teardown.
 - **`key` on lists and on remounts.** Use deliberate `key` values to control remount behavior; comment non-obvious keys.
+- **Cross-component events go through the typed bus.** `utils/eventBus.ts` declares every event in the `AppEvents` interface. A new event gets a key and payload type there first; `emit`/`on` then type-check. Don't emit an event nothing listens to.
 
 ## 3. Styling
 
@@ -36,7 +37,13 @@ Tailwind 3 + DaisyUI 4 utility classes. No CSS-in-JS, no styled-components.
 - **Buttons use the `form-btn` class.** Don't hand-roll button styling when `form-btn` (± a modifier) covers it.
 - **Inputs use `form-input`.** Same reasoning.
 - **Theme-aware.** Don't hardcode colours that break a theme; use DaisyUI tokens (`text-primary`, `bg-base-200`, `text-error`, `border-success/30`, …).
-- **Reduced motion.** GSAP/Framer animations must degrade for `prefers-reduced-motion`. New animation adds an explicit check.
+- **Reduced motion.** `motion` animations are covered globally by `<MotionConfig reducedMotion="user">` in `App.tsx`. GSAP is not — a new GSAP timeline checks `prefersReducedMotion()` (`components/transitions/routeFx.ts`) and jumps to its end state.
+- **Use the tokens, not arbitrary values.** Type: `text-2xs` (11px) / `text-xs` (12px), not `text-[10px]`. Layering: `z-base`/`z-raised`/`z-dropdown`/`z-overlay`/`z-modal`/`z-toast`/`z-system`, not `z-[N]`. Motion: `duration-press`/`quick`/`fast`/`medium`/`slow` and `ease-smooth-out`/`sharp-in`/`in-out-strong` (CSS vars in `index.css`).
+- **No `transition-all`.** Name the properties that actually change (`transition-colors`, `transition-opacity`, `transition-[width]`, …). The repo is at zero.
+- **Readable text ≥ `/60` opacity** of `base-content`; decorative ≥ `/50`.
+- **Dialogs use `components/Modal.tsx`; empty states use `components/EmptyState.tsx`.** Don't hand-roll another `fixed inset-0` overlay.
+- **Themes are light and dark.** `sanrita` is a light theme, so hard-coded `white`/`black` (`text-white`, `bg-black/40`, …) breaks it — use DaisyUI tokens. The selectable list is `THEMES` in `constants/themes.ts`; adding one there runs it through `utils/themeContrast.test.ts`.
+
 
 ## 4. State, Settings and Storage
 
@@ -87,7 +94,9 @@ Before finishing work, confirm that:
 ## 11. Testing
 
 - **Unit:** Vitest (`pnpm test`). Cover high-risk *pure* logic first (string helpers, migration/defaults, serialization). New pure, non-trivial logic ships with a test.
-- **E2E:** Playwright (`pnpm test:e2e`). One smoke test (boot with OPFS-stubbed picker → dashboard) is the canary refactors rely on.
+- **E2E:** Playwright (`pnpm test:e2e`), also a CI job. Specs: `smoke`, `settings`, `converter`, `converter-av.verify`, `image-editor` (full-motion route path), and `avatar-relay` (skipped; predates the floating avatar's removal). All boot through the OPFS-stubbed picker. Headless quirks (motion, boot timing, `matchMedia` stubs) are listed under *Known Issues and Gotchas* in [ARCHITECTURE_CONSTITUTION.md](../00_FOUNDATION/ARCHITECTURE_CONSTITUTION.md#known-issues-and-gotchas).
+- **Vitest ignores `e2e/**` and `.claude/**`** (the latter so agent worktrees under `.claude/worktrees/` are never collected).
+- **Lint:** `pnpm lint` (`tsc`) must pass and gates the pre-push hook. `pnpm lint:eslint` is non-blocking in CI while its backlog is cleared — don't add new errors.
 - New logic should be testable, and regressions should be caught at the smallest useful level.
 
 ## 12. What the Tooling Already Enforces (Don't Nitpick in Review)

@@ -155,7 +155,8 @@ The engineering contract for this repository is explicit:
 | `pnpm test:e2e` | Playwright E2E tests |
 | `pnpm build` | Production bundle (`vite build`) |
 | `pnpm preview` | Serve the built bundle |
-| `pnpm deploy` | Builds then `gh-pages -d dist` |
+| `pnpm lint:eslint` | ESLint (type-aware). Runs in CI as a **non-blocking** step until the backlog is cleared — see the revision plan's remaining-work table |
+| `pnpm validate-config` | Validates the generated MCP config (also the pre-commit hook) |
 
 ### Branching & commits
 
@@ -298,10 +299,23 @@ Twelve work packages (2026-08-05/06), originally tracked in `docs/plans/2026-08-
 - [x] **WP11 — Local img2img / reference input.** `GenerateParams` gained `initImage`/`denoisingStrength`. `services/a1111Service.ts` shipped correctly (`/sdapi/v1/img2img`, `init_images[]`, `denoising_strength` — matches A1111's real API). **`services/comfyService.ts`'s half was never implemented at all** — `params.initImage` was silently ignored, producing a txt2img result with no error, and the roadmap's explicit instruction to resolve node inputs from `/object_info` (a named past failure mode in this codebase — see the Phase 4 ComfyUI checkpoint entry above) was never attempted. Built in this session: `uploadImageToComfy()` posts to ComfyUI's `/upload/image`, `resolveImg2ImgNodeFields()` reads `/object_info/LoadImage` and `/object_info/VAEEncode` live and resolves the real input field names (matching `VAEEncode`'s `IMAGE`/`VAE`-typed inputs by declared type rather than hardcoding `pixels`/`vae`) rather than guessing, throwing a specific error naming what changed if a server's schema doesn't match. `constants/comfyWorkflows.ts` gained `createImg2ImgWorkflow()` — `LoadImage → VAEEncode → KSampler` with `denoise < 1`, replacing `EmptyLatentImage`. `LocalGenerationStudioPage.tsx` also had zero UI to reach any of this (no reference-image picker existed) — added a "Reference Image (img2img)" panel using the existing `GalleryPickerModal`, with a denoising-strength slider.
 - [x] **WP12 — Ship the orphans, fix the defects.** `matrixGeneratorTool`/`comfyWorkflowTool` (`services/tools/`) expose `matrixGenerator.ts`/`comfyWorkflowParser.ts` as assistant tools; `checkJobCountGate()` stays at 25. **`comfyWorkflowTool` shipped with `validateWorkflowOnComfy(workflow, {} as any)`** — the function's second parameter is `comfyUrl: string`, so any `validate: true` call threw a generic `comfyUrl.replace is not a function` before any request was sent, making the tool's own loudly-documented "this really submits" warning describe an unreachable code path. Fixed to read `ctx.settings.comfyUrl` and skip validation with a clear message when unset, rather than crash. `modifiers.realism` fix (`buildContextForEnhancer` now reads it) shipped correctly. Two items were listed as fixed but weren't touched: `activeTab` was independently declared in both `App.tsx` and `hooks/useAppShell.ts` under the same `useLocalStorage` key — turned out to be dead state, not a live divergence bug: `useAppShell`'s copy had zero readers and zero writers anywhere in the app (App.tsx destructures `shell` but never reads `shell.activeTab`), so it was deleted rather than "kept in sync." `executionEngine.ts`'s non-optional-step failure path (`else if (result.status === 'failed')`) unconditionally relabeled the step `'skipped'` even when it was about to fail the whole plan — fixed to only do that when the step is actually optional-and-configured-to-skip, matching the two other failure branches in the same function that already got this right.
 
+### Phase 8 — Whole-App Review and Revision (2026-09-24 → 26)
+
+Driven by a five-axis review (design system, motion, visual walk, tech stack, image editor) with Jev-scored priorities. The plan and its **verified remaining-work table** live in `docs/plans/2026-09-24-app-review-and-revision-plan.md`; per-axis findings in `docs/plans/review-2026-09-24/`. Durable outcomes:
+
+- [x] **Security (Phase 0 of the plan):** CORS reflection on the CDP routes and `Access-Control-Allow-Origin: *` on the MCP server replaced by `sameOriginGuard`. Leaked Gemini key rotated and confirmed dead; GitHub Pages deploy removed.
+- [x] **Image editor correctness (M5 / E1–E9):** layer-transform-aware tools, undoable crop, lossless autosave, working selections, bounded history.
+- [x] **Design-system foundations:** `text-2xs`/`text-xs` type tokens, z-index tokens (`base`…`system`), motion tokens (`--duration-press` 120 ms, `--ease-in-out`, `--fx-hold` 80 ms, mapped into Tailwind), zero `transition-all`, one disabled-state style, shared `Modal` and `EmptyState` components, contrast floor (readable text ≥ `/60`).
+- [x] **Themes:** `constants/themes.ts` `THEMES` is the selectable list, guarded by `utils/themeContrast.test.ts` (primary/base ≥ 4.5:1, content/base ≥ 7:1; three known failures pinned). `sanrita` is the selectable light theme.
+- [x] **Motion:** route transitions retimed (~650 ms, cinematic only on first visit, then a 150 ms crossfade). `<MotionConfig reducedMotion="user">` wraps the app, and the GSAP boot reveals jump to their end state under reduced motion. The page shell is a plain keyed `div` — `AnimatePresence mode="wait"` there intermittently never finished the old page's exit, so the new page never mounted. `useTransitionDirector` aborts the overlay and still commits if `cover()` misses its 4 s deadline.
+- [x] **Typed event bus:** `utils/eventBus.ts` exports `AppEvents` (event name → payload); `emit`/`on` are compile-checked. Command-palette Next Theme and the Chat/Activity/LLM panel toggles now work.
+- [x] **Tech:** entry chunk 4.1 MB → 2.6 MB (PrismLight, lazy voice services); promise-misuse ESLint errors fixed; CI runs on `main` + `development` with a Playwright job (full e2e green); unused `helmet`/`cors`/`vfile` removed; `llmService` ↔ `providerFallback` import cycle removed.
+- [ ] **Open:** see the plan's remaining-work table (E6 dirty-rect history, ~37 overlays still to migrate to `Modal`, ESLint backlog of 300 errors, TerminalText reveal delays, motion.md leftovers, light-theme hard-coded colours, CSP enforcement).
+
 ### Definition of "Ready to Think About Money"
 
 1. A stranger on a fresh machine reaches a working dashboard in under 3 minutes without help.
-2. `pnpm lint` clean, `pnpm test` green (1244 tests as of 2026-08-06 — this number drifts with the codebase, re-run rather than trust it), E2E smoke test passes.
+2. `pnpm lint` clean, `pnpm test` green (1549 tests as of 2026-09-26 — this number drifts with the codebase, re-run rather than trust it), E2E smoke test passes.
 3. No assistant tool can perform a destructive external action without explicit confirmation. **(Note: ISSUE-22 revert means send_gmail/delete_gmail have no confirmation gate — user decision)**
 4. The generate→ingest→compare loop works end-to-end with at least one provider. ✅
 5. Model registry lives in data (`modelProfiles.json`). ✅
@@ -311,8 +325,6 @@ Twelve work packages (2026-08-05/06), originally tracked in `docs/plans/2026-08-
 
 Each `ActiveTab` maps to a top-level React component:
 
-| Tab | Component | What it does |
-|---|---|---|
 | Tab | Component | What it does |
 |---|---|---|
 | `dashboard` | `Dashboard` | Landing HUD, gallery montage, idea clipping. Ambient video background, music player, idle overlay. |
@@ -336,7 +348,7 @@ Each `ActiveTab` maps to a top-level React component:
 
 | Panel | Component | Toggle source |
 |---|---|---|
-| Command Palette | `CommandPalette` | Ctrl+K / ⌘K. 30+ commands across Navigation, Panels, Assistant Actions, Themes. Fuzzy search with scoring. |
+| Command Palette | `CommandPalette` | Ctrl+K / ⌘K. 30+ commands across Navigation, Panels, Assistant Actions, Themes. Fuzzy search with scoring. Commands emit typed `appEventBus` events (`navigate`, `togglePanel`, `cycleTheme`, …) handled in `hooks/useAppEventBus.ts`. |
 | Clipping Panel | `ClippingPanel` | Paperclip icon in header. Clips, Assistant Notes (merged notes + auto-saved web results), Files tabs. |
 | Media Panel | `MediaPanel` | YouTube/Spotify player panel (tabs: Video, Music, Files). YouTube plays in the separate `VideoPlayerOverlay` (center modal); Spotify plays in the side panel. The Files tab loads local files from the vault (`fileSystemManager`) and chat-attached images (via `mediaAttachment` bus event). |
 | Chat Panel | `LLMChatPanel` | Assistant chat (text + research mode with 3-panel layout). |
@@ -344,12 +356,13 @@ Each `ActiveTab` maps to a top-level React component:
 | Activity Panel | `ActivityPanel` | Live tool-call transcript, status. |
 | Video Player | `VideoPlayerOverlay` | YouTube video overlay player. |
 | About Modal | `AboutModal` | App info. |
+| Modal (shared base) | `Modal` | Focus trap/restore, Escape, `role=dialog`, `aria-labelledby`. New dialogs should use it; older overlays are being migrated (revision plan, D2). |
 | Feedback Toast | `FeedbackToast` | Global success/error messages. |
 | Page Frame | `PageFrame` | Scan-line overlay, corner accents, side markers. |
 | Screen Control | `ScreenControlOverlay` | Screen-share + browser control permission UI. |
 | Live Caption | `LiveCaptionOverlay` | Real-time voice caption overlay (hidden during Assistant page). |
 | Idle Overlay | `IdleOverlay` | Matrix/gallery screensaver. |
-| Transition Overlay | `transitions/TransitionOverlay` | Page transition aperture effect. |
+| Transition Overlay | `transitions/TransitionOverlay` | Page transition cover/hold/reveal, sequenced by `transitions/useTransitionDirector.ts` (first visit per session: ~650 ms cinematic; repeat visits: 150 ms crossfade). The page it covers is a plain keyed `div` in `App.tsx` — don't reintroduce a shell `AnimatePresence mode="wait"`. |
 | Vault Map | `VaultMapPanel` | Read-only ring layout of tag-connected memories/gallery items/prompts (`vaultMapOpen` state). Reads the relationship graph, rehydrated on open. Added 2026-07-28. |
 
 ## Server and Bridge Endpoints
@@ -411,12 +424,12 @@ The rest of the original plan covered headers/CORS, input validation, rate limit
 
 | Area | Status |
 |---|---|
-| Security headers (`helmet`, CSP) + CORS | ✅ Done — `src/middleware/security.ts` |
+| CSP header + CORS | ✅ Done — `securityHeaders` sets only the CSP header (helmet was never used and was removed 2026-09-26); `sameOriginGuard` (same file, unit-tested) rejects cross-origin requests to the CDP routes and MCP proxy |
 | Zod input validation | ⚠️ Partial — `src/schemas/anthropic.ts`, `topaz.ts`, `webSearch.ts`, and `reach.ts` are wired via `validate()` into their routes in `server.ts`; `mcp.ts` and `proxy.ts` schemas exist as files but aren't wired into `/api/mcp/proxy` or the `/proxy-remote`, `/ollama-local`, `/llamacpp-local` routes |
 | Auth-endpoint rate limiting | ⚠️ Partial — `authRateLimiter` applies to `/api/openai/token` and `/api/anthropic/chat`; `searchRateLimiter` applies to `/api/web-search`; `reachRateLimiter` applies to `/api/reach/*` routes; `twitterReachRateLimiter` applies to `/api/reach/twitter` (stricter 20/15min); `/api/topaz-upscale` has validation but no rate limit |
 | Global rate limiting | ❌ Disabled — `globalRateLimiter` exists in `security.ts` but is commented out in `server.ts` ("disable global rate limiting" commit) |
-| `server.ts` refactor into `src/routes/*` + `src/services/*` | ❌ Not done — `server.ts` is still one file (~1,500 lines) |
-| Pre-commit hook (husky: lint + test + audit) | ❌ Not done — no `.husky/` directory in the repo |
+| `server.ts` refactor into routers | ⚠️ Partial — five routers extracted to `routes/` (Phase 5); `server.ts` is ~1,150 lines |
+| Git hooks (husky) | ✅ Done — `.husky/pre-commit` runs `pnpm validate-config`; `.husky/pre-push` runs `pnpm lint && pnpm test`. No dependency-audit step |
 | Logging redaction (strip `Authorization`/`Cookie` from logs) | Not verified in this pass |
 
 Phase 0 in the roadmap above is marked ✅ complete, but its "Security trims" line refers to a narrower set of items (proxy allowlist, confirmation gates, browser kill switch) that did ship — it was never meant to cover the full table above. If the remaining items are picked back up, they need their own `ISSUE-N` entries in [ISSUES.md](../../../ISSUES.md).
@@ -441,7 +454,7 @@ A repo-wide audit (2026-07-25) found two modules that were fully implemented and
 - **Vite HMR `clientPort` must be set explicitly** (fixed 2026-07-29, `server.ts`). `createViteServer({hmr: {server: httpServer}})` runs before `httpServer.listen()` in the dev bootstrap, so `httpServer.address()` is still `null` at that point and Vite can't infer a port for the browser's HMR client script — it embeds `undefined`, producing `ws://localhost:undefined/...` and a `WebSocket` constructor `SyntaxError` on every page load (which then triggers the app's own reload-loop protection). Fixed by passing `hmr.clientPort: PORT` explicitly, since `PORT` is already resolved before Vite is created. If this error reappears, check that the fix wasn't reverted by an unrelated `server.ts` edit near the Vite middleware block.
 - **Service worker is disabled by design.** `sw.js` exists, but `index.html` actively unregisters all service workers on every boot. Don't rely on offline caching.
 - **Boot requires a real directory handle.** The File System Access folder picker gates the whole app. In a headless browser, stub it with OPFS: `window.showDirectoryPicker = async () => navigator.storage.getDirectory()`.
-- **Headless Chrome quirks:** defaults to `prefers-reduced-motion: reduce`, throttles rAF, and triggers idle standby fast. Animate with state polling instead of racing screenshots.
+- **Headless / Playwright quirks:** under this repo's Playwright config `prefers-reduced-motion` measures **false** (full-motion paths run; re-verified 2026-09-26). rAF is throttled and idle standby triggers fast, so poll state (`localStorage.activeTab`, `[data-fx]`) instead of racing screenshots. The first wave of parallel workers boots in 45–60 s, so boot-gate waits need ≥30 s. If a test stubs `window.matchMedia`, bind every method to the real `MediaQueryList` — `motion`'s `MotionConfig reducedMotion="user"` calls `addEventListener`, and an `Object.create(mql)` stub throws "Illegal invocation" and crashes the app.
 - **`activeTab` persists** across reloads via `useLocalStorage`, owned solely by `App.tsx`. `hooks/useAppShell.ts` used to declare an independent copy under the same key with no cross-sync — nothing ever read it, so it was deleted (2026-08-06, Phase 7 WP12) rather than kept "in sync". If you need the active tab inside a hook consumed by `App.tsx`, thread it through as a param the way `usePageTransitions`/`useAppShell({handleNavigate})` already do — don't re-declare it.
 
 ## Cross-document Map

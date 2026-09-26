@@ -37,7 +37,7 @@ Kollektiv is a high-performance, local-first application designed for prompt eng
 - **Animation**: GSAP and Motion (motion/react)
 - **AI Engines**: Google Gemini, Ollama, OpenRouter, llama.cpp, Anthropic
 - **Storage**: File System Access API, IndexedDB, optional Google Drive integration
-- **Utilities**: JSZip, UUID, Lottie
+- **Utilities**: JSZip, UUID, ffmpeg.wasm and ImageMagick WASM (Converter)
 
 > **2026-07-25 — Dependency cleanup:** Removed 9 unused runtime dependencies
 > (`@apify/actors-mcp-server`, `@babel/generator`, `@dsnp/parquetjs`,
@@ -71,6 +71,14 @@ Kollektiv is a high-performance, local-first application designed for prompt eng
 > the active bubble, and batched streamed chunks into one state update per animation frame. Added
 > dedicated ComfyUI and A1111/Forge Neo generation pages with checkpoint persistence, full param
 > controls, and gallery ingestion. 1200 tests.
+
+> **2026-09-26 — Whole-app review and revision:** Cross-origin CDP/MCP access closed
+> (`sameOriginGuard`), image editor made correct (transforms, crop, lossless autosave,
+> selections), design tokens for type/z-index/motion, shared `Modal` and `EmptyState`,
+> typed `AppEvents` event bus, entry bundle 4.1 → 2.6 MB, CI with a Playwright job, and the
+> `sanrita` light theme. Unused `helmet`/`cors`/`vfile` removed. 1549 tests, e2e green.
+> Record: [ARCHITECTURE_CONSTITUTION.md → Phase 8](docs/00_FOUNDATION/ARCHITECTURE_CONSTITUTION.md);
+> open items: `docs/plans/2026-09-24-app-review-and-revision-plan.md` → "Remaining work".
 
 ---
 
@@ -149,10 +157,14 @@ Upon first launch, Kollektiv will prompt you to establish a local vault connecti
 
 Kollektiv includes specialized UI environments designed for high-focus creative sessions:
 
+- **Kollektiv** (default): acid-lime HUD on near-black
 - **MindTurbulence**: high-contrast, neon-cyberpunk interface with sharp geometric accents
 - **Pip-Boy**: retro-futuristic CRT aesthetic with digital jitter and terminal typography
 - **Abyss**: deep dark mode for absolute focus
-- **Explorer**: NASAPUNK-inspired industrial interface for technical research
+- **Vanguard** / **Hiigara**: amber and blue HUD variants
+- **Sanrita**: the light theme — deep green accent on a near-white base
+
+26 themes are selectable in Settings → Appearance or cycled with the header palette button / the command palette's "Next Theme". The list lives in `constants/themes.ts` and every entry is contrast-checked by `utils/themeContrast.test.ts`.
 
 ---
 

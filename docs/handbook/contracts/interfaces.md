@@ -55,6 +55,22 @@ These contracts are consumed by:
 - [utils/promptStorage.ts](../../../utils/promptStorage.ts)
 - [utils/galleryStorage.ts](../../../utils/galleryStorage.ts)
 
+### 2.3 App event bus
+
+Primary definition: [utils/eventBus.ts](../../../utils/eventBus.ts)
+
+`AppEvents` maps every app-wide event name to its payload type (24 events as of 2026-09-26). `appEventBus.emit`, `on` and `off` are generic over it, so a wrong event name or payload is a compile error, and `void` events take no payload argument.
+
+Main groups:
+
+- Shell: `navigate` (`ActiveTab`), `togglePanel` (`'media' | 'clipping' | 'chat' | 'activity' | 'llm'`), `cycleTheme`, `sendToPromptsPage`, `assistantFeedback` (`{ message, isError? }`)
+- Editors: `openInEditor` (gallery item or blob), `openInConverter` (`{ files }`)
+- Assistant and live voice: `liveAssistantState`, `liveCaption`, `liveAssistantActivity`, `chatSpeaking`, `clipIdea`
+- Vault change notifications: `notesChanged`, `assistantFilesChanged`, `chatSessionsChanged`, `research:findingsAppended`
+- Media and search: `playVideo`, `openMediaPanel`, `stopMedia`, `mediaAttachment`, `webSearchResults`/`webSearchError`/`webSearchLoading`
+
+App-shell listeners live in [hooks/useAppEventBus.ts](../../../hooks/useAppEventBus.ts); the Command Palette's commands ([constants/commandRegistry.ts](../../../constants/commandRegistry.ts)) are the largest emitter. To add an event, add its key and payload type to `AppEvents` first, and don't add an event with no listener.
+
 ## 3. AI engine contracts
 
 ### 3.1 LLM provider contract
