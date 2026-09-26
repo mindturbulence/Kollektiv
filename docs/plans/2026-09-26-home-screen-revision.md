@@ -18,7 +18,7 @@
 | Vault Stats (4 tiles) | Gallery tile works. Notes, Memories and Files are buttons that do nothing (`VaultStatsWidget.tsx:40-42`, `page: null`) | 3 of 4 inert |
 | Recent Activity | Clipped ideas only; rows can't be clicked. Stale: Home keeps its own `useLocalStorage('clippedIdeas')` copy (`Dashboard.tsx:29`), so a new clip only shows after leaving and re-entering Home | dead end, stale |
 | Centre wordmark + tagline | Decoration. About 45% of the width at 1440 | decoration |
-| Background montage (`DashboardGallery`) | With fewer than 15 vault images it fills tiles with `picsum.photos` stock photos (`DashboardGallery.tsx:175`) — ~30 external requests in a local-first app, and it looks like the user's own gallery | misleading |
+| Background montage (`DashboardGallery`) | Deliberate design (user decision, 2026-09-26): with fewer than 15 vault images it fills the remaining tiles with stock photos so an empty vault still shows the signature montage. **Keep.** The one real problem is the source: fill photos come from `picsum.photos` (`DashboardGallery.tsx:175`), so every Home open makes ~30 third-party requests, and offline those tiles render as broken images (no `onError` fallback) | keep; fix the photo source |
 | `LiveAssistantMiniWidget` | Not imported anywhere | dead code |
 
 At 1024×768: quick-action labels wrap, the Integrations list overflows and hides the MCP row with no scroll cue, and panels at `bg-base-100/40` let photos show through the text.
@@ -65,15 +65,17 @@ Verify: unit tests for the cursor guard and the redirect target; e2e that ends a
 
 ### Phase 1 — new Home: "Resume"
 
-Layout: a solid panel background (no montage), a small wordmark in a corner, and content in the space the centre column used to waste.
+Layout: **the montage stays as the background**, exactly as today (the user's own images first, stock fill up to 15). The Resume content sits on top of it in readable panels (raise panel opacity from `bg-base-100/40` so photos don't show through text — the design review's legibility finding). A small wordmark in a corner; the Resume content uses the space the centre column used to waste.
 
-1. **Recent media** — the latest ~12 `GalleryItem`s by `createdAt` (`types.ts:417`, a number) as a thumbnail grid from the user's own vault. Click opens the item's detail view; a secondary action opens it in the Image Editor (existing `openInEditor` event). An empty vault shows one `EmptyState` with an Import action — never stock photos.
+0. **Bundle the fill photos locally.** Download ~15 picsum photos once (free to reuse), ship them in `public/dashboard-fill/` (~1–2 MB, compressed WebP), and point the `urls.length < 15` fill in `DashboardGallery.tsx` at them instead of `picsum.photos`. Same look, works offline, no third-party requests. Add an `onError` that hides a tile which fails to load, as a safety net.
+
+1. **Recent media** — the latest ~12 `GalleryItem`s by `createdAt` (`types.ts:417`, a number) as a thumbnail grid from the user's own vault. Click opens the item's detail view; a secondary action opens it in the Image Editor (existing `openInEditor` event). With an empty vault this list shows one `EmptyState` with an Import action; the montage behind it still fills with the bundled photos.
 2. **Recent prompts** — the latest ~8 `SavedPrompt`s by `createdAt` (`types.ts:380`, a number). Click opens the prompt in the library. `SavedPrompt` has no `updatedAt`, so this is "recently added", not "recently edited".
 3. **Recently used tools** — the last ~6 distinct tabs visited, as large one-click tiles. **New data:** record tab visits in a small localStorage list, written from the one place navigation commits (`usePageTransitions`' `commit`). This is the only new tracking in the plan.
 4. **Setup warning, only when broken** — one banner when the vault is disconnected or no AI provider is configured, linking straight to the right **Integrations** sub-tab (not Application → General). When everything works, nothing shows.
-5. **Delete** Quick Actions, Integrations, Vault Stats and Recent Activity. Clipped ideas already live in the Clipboard panel. Remove the picsum fallback in `DashboardGallery.tsx`, and delete the component if Home no longer uses it.
+5. **Delete** Quick Actions, Integrations, Vault Stats and Recent Activity. Clipped ideas already live in the Clipboard panel. `DashboardGallery` stays.
 
-Verify: 1024×768 and 1440×900 screenshots in Kollektiv and `sanrita`; an e2e that imports an image and a prompt, returns Home, and opens each from the Resume lists; unit tests for the tab-history store (dedupe, cap, ignores `dashboard`).
+Verify: 1024×768 and 1440×900 screenshots in Kollektiv and `sanrita`, with an empty vault (all fill photos) and with a few items; an offline check that the montage still fills (no request to `picsum.photos` in the network log); an e2e that imports an image and a prompt, returns Home, and opens each from the Resume lists; unit tests for the tab-history store (dedupe, cap, ignores `dashboard`).
 
 ### Phase 2 — decide with data (optional)
 
@@ -82,7 +84,7 @@ A local-only counter of Home entries by source (boot, logo, `⌘1`, palette) for
 ## 5. Decisions needed from the user
 
 1. **B (Resume page) or A (remove Home)?** Recommended: B.
-2. **Keep the brand moment?** The wordmark and glitch montage are the product's signature. Plan B keeps a small wordmark and drops the montage. Keep the montage using only the user's own images instead?
+2. ~~Keep the brand moment?~~ **Decided 2026-09-26:** the montage stays, including the stock fill for an empty or thin vault; the fill photos move from `picsum.photos` to bundled local files.
 3. **"Recent" means recently added (available today) or recently opened/edited (needs new tracking per item)?** The plan uses recently added, plus recently used tools.
 
 ## Out of scope, noted
