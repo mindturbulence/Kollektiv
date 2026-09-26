@@ -205,8 +205,7 @@ const Header: React.FC<HeaderProps> = ({
     gsap.set([navItems, separators], { y: 0, autoAlpha: 1 });
   }, [isInitialized]);
 
-  // Submenu rows are stacked absolutely under the header, so switching groups
-  // is a crossfade: no width animation, no layout reflow.
+  // Submenus slide open inline next to their group label (GSAP width).
   useLayoutEffect(() => {
     navGroups.forEach(group => {
       const container = containerRefs.current[group.id];
@@ -214,18 +213,18 @@ const Header: React.FC<HeaderProps> = ({
 
       if (activeMenu === group.id) {
         gsap.to(container, {
+          width: 'auto',
           opacity: 1,
-          y: 0,
-          duration: 0.4,
+          duration: 0.6,
           ease: "power2.out",
           overwrite: true
         });
       } else {
-        // Delay the row fade until the letters have started sliding down
+        // Delay container slide until letters have started sliding down
         gsap.to(container, {
+          width: 0,
           opacity: 0,
-          y: -4,
-          duration: 0.3,
+          duration: 0.5,
           delay: 0.3,
           ease: "power2.inOut",
           overwrite: true
@@ -233,6 +232,8 @@ const Header: React.FC<HeaderProps> = ({
       }
     });
   }, [activeMenu, navGroups]);
+
+  const switchingRef = useRef(false);
 
   // Below xl the icon cluster collapses into a "…" popover.
   const [iconsOpen, setIconsOpen] = useState(false);
@@ -254,6 +255,7 @@ const Header: React.FC<HeaderProps> = ({
   }, [iconsOpen]);
 
   const handleParentClick = useCallback((group: typeof navGroups[0]) => {
+    if (switchingRef.current) return;
     audioService.playClick();
 
     if (group.singleId) {
@@ -269,8 +271,20 @@ const Header: React.FC<HeaderProps> = ({
       return;
     }
 
-    setActiveMenu(group.id);
-    audioService.playSlide();
+    if (activeMenu) {
+      // Close the open group first, then slide the new one out.
+      switchingRef.current = true;
+      audioService.playSlide();
+      setActiveMenu(null);
+      setTimeout(() => {
+        setActiveMenu(group.id);
+        audioService.playSlide();
+        switchingRef.current = false;
+      }, 900);
+    } else {
+      setActiveMenu(group.id);
+      audioService.playSlide();
+    }
   }, [activeMenu, onNavigate]);
 
   return (
@@ -300,6 +314,28 @@ const Header: React.FC<HeaderProps> = ({
                 >
                   <RollingText text={group.label} hoverClassName="text-primary" />
                 </button>
+
+                {group.items.length > 0 && (
+                  <div
+                    ref={el => { if (el) containerRefs.current[group.id] = el; }}
+                    className="shrink-0 overflow-hidden opacity-0 w-0 flex items-center h-full"
+                    // Collapsed groups are only visually hidden (GSAP width/opacity), so
+                    // take them out of the tab order and a11y tree too.
+                    inert={!isExpanded}
+                  >
+                    <div className="flex items-center h-full">
+                      {group.items.filter(item => item.enabled !== false).map((item) => (
+                        <NavItem
+                          key={item.id}
+                          label={item.label}
+                          isActive={isExpanded}
+                          isCurrent={navTab === item.id}
+                          onClick={() => onNavigate(item.id)}
+                        />
+                      ))}
+                    </div>
+                  </div>
+                )}
 
                 {groupIdx < navGroups.length - 1 && (
                   <div className="nav-separator nav-separator-line shrink-0 w-[1px] h-3 opacity-30 mx-0" />
@@ -430,34 +466,6 @@ const Header: React.FC<HeaderProps> = ({
             </HUDNavItem>
           </div>
         </div>
-      </div>
-
-      {/* Submenu rows overlay below the header bar, stacked so switching
-          groups crossfades instead of reflowing the header width. */}
-      <div className="absolute top-full left-0 right-0 h-9 z-40 pointer-events-none">
-        {navGroups.filter(group => group.items.length > 0).map(group => {
-          const isExpanded = activeMenu === group.id;
-          return (
-            <div
-              key={group.id}
-              ref={el => { if (el) containerRefs.current[group.id] = el; }}
-              className={`absolute inset-0 flex items-center px-6 opacity-0 bg-base-200/95 border-b border-base-content/10 ${isExpanded ? 'pointer-events-auto' : ''}`}
-              // Collapsed groups are only visually hidden (GSAP opacity), so
-              // take them out of the tab order and a11y tree too.
-              inert={!isExpanded}
-            >
-              {group.items.filter(item => item.enabled !== false).map((item) => (
-                <NavItem
-                  key={item.id}
-                  label={item.label}
-                  isActive={isExpanded}
-                  isCurrent={navTab === item.id}
-                  onClick={() => onNavigate(item.id)}
-                />
-              ))}
-            </div>
-          );
-        })}
       </div>
     </header>
   );
