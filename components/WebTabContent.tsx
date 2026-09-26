@@ -18,7 +18,7 @@ export const WebResultCard: React.FC<{
     const sourceLabel = result.engine || result.source;
 
     return (
-        <div className="flex flex-col group bg-transparent transition-all duration-700 hover:bg-primary/5 w-full overflow-hidden select-none h-fit border-b border-base-300/10 relative">
+        <div className="flex flex-col group bg-transparent transition-colors duration-700 hover:bg-primary/5 w-full overflow-hidden select-none h-fit border-b border-base-300/10 relative">
             <div className="flex flex-col w-full h-full p-4 md:p-6">
                 <div className="mb-4">
                     <div className="flex flex-col mb-2">
@@ -36,7 +36,7 @@ export const WebResultCard: React.FC<{
                         <div className="flex justify-end gap-1 -mt-8">
                             <button
                                 onClick={() => { audioService.playClick(); onDelete?.(result); }}
-                                className="btn btn-xs btn-ghost h-8 w-8 rounded-none p-0 opacity-40 hover:opacity-100 hover:text-error transition-all btn-snake"
+                                className="btn btn-xs btn-ghost h-8 w-8 rounded-none p-0 opacity-40 hover:opacity-100 hover:text-error transition-[opacity,color] btn-snake"
                                 title="Remove result"
                             >
                                 <span/><span/><span/><span/>

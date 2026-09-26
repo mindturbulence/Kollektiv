@@ -112,13 +112,13 @@ const MigrationModal: React.FC<MigrationModalProps> = ({
                       <div className="flex gap-2.5 mt-2">
                           <button
                             onClick={() => onResolveDuplicate?.('replace')}
-                            className="flex-1 py-3 px-4 border border-primary/20 bg-primary/15 hover:bg-primary/25 text-primary text-xs font-bold uppercase transition-all font-mono"
+                            className="flex-1 py-3 px-4 border border-primary/20 bg-primary/15 hover:bg-primary/25 text-primary text-xs font-bold uppercase transition-colors font-mono"
                           >
                             Replace Existing
                           </button>
                           <button
                             onClick={() => onResolveDuplicate?.('copy')}
-                            className="flex-1 py-3 px-4 border border-secondary/20 bg-secondary/15 hover:bg-secondary/25 text-secondary text-xs font-bold uppercase transition-all font-mono"
+                            className="flex-1 py-3 px-4 border border-secondary/20 bg-secondary/15 hover:bg-secondary/25 text-secondary text-xs font-bold uppercase transition-colors font-mono"
                           >
                             Keep Both (Copy)
                           </button>
@@ -149,7 +149,7 @@ const MigrationModal: React.FC<MigrationModalProps> = ({
                               </p>
                               <div className="h-1.5 w-full bg-base-300 rounded overflow-hidden">
                                   <div 
-                                      className="h-full bg-[#00ffa3] transition-all duration-300 ease-out" 
+                                      className="h-full bg-[#00ffa3] transition-[width] duration-300 ease-out" 
                                       style={{ 
                                           width: `${phase === 'converting' ? convertingProgress : (phase === 'idle' ? 0 : 100)}%` 
                                       }} 
@@ -177,7 +177,7 @@ const MigrationModal: React.FC<MigrationModalProps> = ({
                               </p>
                               <div className="h-1.5 w-full bg-base-300 rounded overflow-hidden">
                                   <div 
-                                      className="h-full bg-secondary transition-all duration-300 ease-out" 
+                                      className="h-full bg-secondary transition-[width] duration-300 ease-out" 
                                       style={{ 
                                           width: `${phase === 'uploading' ? uploadingProgress : (phase === 'complete' ? 100 : 0)}%` 
                                       }} 
@@ -196,7 +196,7 @@ const MigrationModal: React.FC<MigrationModalProps> = ({
                               </div>
                               <div className="h-2.5 w-full bg-base-300 rounded overflow-hidden">
                                   <div 
-                                      className="h-full bg-primary transition-all duration-300 ease-out" 
+                                      className="h-full bg-primary transition-[width] duration-300 ease-out" 
                                       style={{ width: `${progress}%` }} 
                                   />
                               </div>
@@ -215,14 +215,14 @@ const MigrationModal: React.FC<MigrationModalProps> = ({
                               {isPaused ? (
                                   <button
                                       onClick={onResume}
-                                      className="px-4 py-1.5 bg-emerald-500/10 border border-emerald-500/20 hover:bg-emerald-500/20 text-emerald-400 text-2xs font-mono font-bold uppercase tracking-wider transition-all flex items-center gap-1.5"
+                                      className="px-4 py-1.5 bg-emerald-500/10 border border-emerald-500/20 hover:bg-emerald-500/20 text-emerald-400 text-2xs font-mono font-bold uppercase tracking-wider transition-colors flex items-center gap-1.5"
                                   >
                                       <span>▶</span> RESUME_MIGRATION
                                   </button>
                               ) : (
                                   <button
                                       onClick={onPause}
-                                      className="px-4 py-1.5 bg-amber-500/10 border border-amber-500/20 hover:bg-amber-500/20 text-amber-400 text-2xs font-mono font-bold uppercase tracking-wider transition-all flex items-center gap-1.5"
+                                      className="px-4 py-1.5 bg-amber-500/10 border border-amber-500/20 hover:bg-amber-500/20 text-amber-400 text-2xs font-mono font-bold uppercase tracking-wider transition-colors flex items-center gap-1.5"
                                   >
                                       <span>⏸</span> PAUSE_MIGRATION
                                   </button>

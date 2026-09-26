@@ -10,7 +10,7 @@ export const PropertyCard: React.FC<{
 }> = ({ label, value, onClear, onClick, active }) => (
     <div
         onClick={onClick}
-        className={`group relative p-4 transition-all duration-300 cursor-pointer select-none flex flex-col justify-center min-h-[5rem] last:border-b-0 border-b border-base-content/5 ${active ? 'bg-primary/5' : 'hover:bg-base-content/5'}`}
+        className={`group relative p-4 transition-colors duration-300 cursor-pointer select-none flex flex-col justify-center min-h-[5rem] last:border-b-0 border-b border-base-content/5 ${active ? 'bg-primary/5' : 'hover:bg-base-content/5'}`}
     >
         <div className="flex items-center justify-between gap-2 mb-1.5">
             <span className={`text-xs font-black uppercase tracking-[0.2em] ${active ? 'text-primary' : 'text-base-content/60'}`}>{label}</span>
@@ -50,7 +50,7 @@ export const ReferenceSlot: React.FC<{
     return (
         <div
             onClick={() => !url && inputRef.current?.click()}
-            className={`relative flex items-center justify-center border border-dashed rounded-none cursor-pointer overflow-hidden group transition-all min-h-[60px] ${url ? 'border-base-content/20' : 'border-base-content/10 hover:border-base-content/30 hover:bg-base-content/5'}`}
+            className={`relative flex items-center justify-center border border-dashed rounded-none cursor-pointer overflow-hidden group transition-colors min-h-[60px] ${url ? 'border-base-content/20' : 'border-base-content/10 hover:border-base-content/30 hover:bg-base-content/5'}`}
         >
             {url ? (
                 <>

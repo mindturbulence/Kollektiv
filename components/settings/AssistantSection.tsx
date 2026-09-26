@@ -89,7 +89,7 @@ const AssistantSection: React.FC<AssistantSectionProps> = ({ settings, handleSet
                                                     : [...chain, p];
                                                 handleSettingsChange('providerFallbackChain', next);
                                             }}
-                                            className={`px-3 py-1 text-2xs font-black uppercase tracking-widest border transition-all ${
+                                            className={`px-3 py-1 text-2xs font-black uppercase tracking-widest border transition-colors ${
                                                 !settings.providerFallbackEnabled
                                                     ? 'border-base-300/10 text-base-content/60 cursor-not-allowed'
                                                     : isSelected

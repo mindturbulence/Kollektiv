@@ -17,6 +17,18 @@ export default {
         '2xs': ['11px', { lineHeight: '1.4' }],
         'xs': ['12px', { lineHeight: '1.5' }],
       },
+      transitionDuration: {
+        press: 'var(--duration-press)',
+        quick: 'var(--duration-quick)',
+        fast: 'var(--duration-fast)',
+        medium: 'var(--duration-medium)',
+        slow: 'var(--duration-slow)',
+      },
+      transitionTimingFunction: {
+        'smooth-out': 'var(--ease-smooth-out)',
+        'sharp-in': 'var(--ease-sharp-in)',
+        'in-out-strong': 'var(--ease-in-out)',
+      },
       colors: {},
       zIndex: {
         'base': '1',

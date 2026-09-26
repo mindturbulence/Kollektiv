@@ -24,7 +24,7 @@ const QuickActionsWidget: React.FC = () => {
       <div className="text-2xs font-black uppercase tracking-[0.2em] text-primary/60 mb-3">Quick Actions</div>
       <button
         onClick={() => appEventBus.emit('navigate', 'crafter' as ActiveTab)}
-        className="w-full mb-2 px-3 py-3 text-2xs font-black uppercase tracking-wider bg-primary/15 hover:bg-primary/25 text-primary border border-primary/30 hover:border-primary/50 transition-all duration-200 text-center"
+        className="w-full mb-2 px-3 py-3 text-2xs font-black uppercase tracking-wider bg-primary/15 hover:bg-primary/25 text-primary border border-primary/30 hover:border-primary/50 transition-colors duration-200 text-center"
       >
         + New Prompt
       </button>
@@ -33,7 +33,7 @@ const QuickActionsWidget: React.FC = () => {
           <button
             key={action.label}
             onClick={action.onClick}
-            className="px-3 py-2 text-2xs font-bold uppercase tracking-wider bg-base-200/30 hover:bg-primary/10 hover:text-primary border border-base-content/10 hover:border-primary/30 transition-all duration-200 text-left"
+            className="px-3 py-2 text-2xs font-bold uppercase tracking-wider bg-base-200/30 hover:bg-primary/10 hover:text-primary border border-base-content/10 hover:border-primary/30 transition-colors duration-200 text-left"
           >
             {action.label}
           </button>

@@ -151,7 +151,7 @@ export const SuggestionItem: React.FC<SuggestionItemProps> = ({
   const isVideo = targetAI.toLowerCase().includes('veo');
 
   return (
-    <div className="flex flex-col group bg-transparent transition-all duration-700 hover:bg-primary/5 w-full overflow-hidden select-none h-fit border-b border-base-content/5 last:border-b-0">
+    <div className="flex flex-col group bg-transparent transition-colors duration-700 hover:bg-primary/5 w-full overflow-hidden select-none h-fit border-b border-base-content/5 last:border-b-0">
         <div className="p-6 md:p-8 flex flex-col w-full h-full">
             {isGenerating ? (
                 <div className="flex flex-col items-center justify-center py-12 text-center space-y-6">

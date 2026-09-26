@@ -173,7 +173,7 @@ const PromptEditorModal: React.FC<PromptEditorModalProps> = ({ isOpen, onClose, 
                   </h3>
                   <p className="text-2xs font-black uppercase tracking-[0.4em] text-base-content/60 mt-1.5">Modify prompt details and tags</p>
               </div>
-              <button onClick={handleClose} className="p-2 text-error/30 hover:text-error transition-all hover:scale-110">
+              <button onClick={handleClose} className="p-2 text-error/30 hover:text-error transition-[color,transform] hover:scale-110">
                   <CloseIcon className="w-5 h-5" />
               </button>
           </header>

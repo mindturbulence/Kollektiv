@@ -73,7 +73,7 @@ const ImageSlot: React.FC<{
 
     return (
         <div
-            className={`p-6 border-2 border-dashed transition-all flex flex-col items-center justify-center text-center cursor-pointer gap-4 ${isDragging ? 'border-primary bg-primary/10' : 'border-base-300 hover:border-primary/50'}`}
+            className={`p-6 border-2 border-dashed transition-colors flex flex-col items-center justify-center text-center cursor-pointer gap-4 ${isDragging ? 'border-primary bg-primary/10' : 'border-base-300 hover:border-primary/50'}`}
             onDragOver={(e) => { e.preventDefault(); setIsDragging(true); }}
             onDragLeave={() => setIsDragging(false)}
             onDrop={handleDrop}

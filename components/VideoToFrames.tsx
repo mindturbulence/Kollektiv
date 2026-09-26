@@ -684,7 +684,7 @@ export const VideoToFrames: React.FC<VideoToFramesProps> = ({ isExiting = false 
                                     {frames.map(f => (
                                         <div key={f.id} className="group relative aspect-square bg-transparent overflow-hidden">
                                             <div className="w-full h-full relative">
-                                                <img src={f.url} className="w-full h-full object-cover media-monochrome group-hover:filter-none transition-all duration-500" alt="frame"/>
+                                                <img src={f.url} className="w-full h-full object-cover media-monochrome group-hover:filter-none transition-[filter] duration-500" alt="frame"/>
                                             </div>
                                             <div className="absolute inset-0 bg-primary/20 opacity-0 group-hover:opacity-100 transition-opacity flex flex-col justify-end p-3">
                                                 <p className="text-2xs text-white font-mono font-black mb-2 uppercase">{formatTime(f.timestamp)}</p>

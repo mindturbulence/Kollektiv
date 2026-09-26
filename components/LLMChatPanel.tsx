@@ -514,7 +514,7 @@ ${systemResponse}` };
                                                             <div className="truncate text-xs font-mono">{session.title}</div>
                                                             <button
                                                                 onClick={(e) => { e.stopPropagation(); void deleteSession(session.id); }}
-                                                                className="opacity-0 group-hover:opacity-100 p-1 text-error/60 hover:text-error transition-all"
+                                                                className="opacity-0 group-hover:opacity-100 p-1 text-error/60 hover:text-error transition-[opacity,color]"
                                                             >
                                                                 <DeleteIcon className="w-3.5 h-3.5" />
                                                             </button>

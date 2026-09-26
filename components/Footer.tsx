@@ -301,7 +301,7 @@ const Footer: React.FC<FooterProps> = ({
                         onClick={onAudioToggle}
                         onMouseEnter={() => audioService.playHover()}
                         title={`Sound effects: ${audioEnabled ? 'on' : 'off'}`}
-                        className="flex items-center gap-2 group transition-all"
+                        className="flex items-center gap-2 group"
                     >
                         <span className={`arwes-label uppercase tracking-widest text-primary/60 group-hover:text-primary leading-none inline-block ${mainFontClass}`}>SFX</span>
                         <span className={`uppercase tracking-widest leading-none inline-block ${audioEnabled ? 'text-base-content/60' : 'text-base-content/60'} ${mainFontClass}`}>{audioEnabled ? 'ON' : 'OFF'}</span>
@@ -313,7 +313,7 @@ const Footer: React.FC<FooterProps> = ({
                         onClick={onMusicToggle}
                         onMouseEnter={() => audioService.playHover()}
                         title={`Ambient music: ${playerState === 'playing' ? 'on' : playerState === 'syncing' ? 'loading' : 'off'}`}
-                        className="flex items-center gap-2 group transition-all"
+                        className="flex items-center gap-2 group"
                     >
                         <span className={`arwes-label uppercase tracking-widest text-primary/60 group-hover:text-primary leading-none inline-block ${mainFontClass}`}>MSC</span>
                         <span className={`uppercase tracking-widest leading-none inline-block ${playerState === 'playing' ? 'text-base-content/60' : 'text-base-content/60'} ${mainFontClass}`}>

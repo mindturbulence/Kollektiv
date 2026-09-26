@@ -164,7 +164,7 @@ const modalContent = (
         onDragOver={(e) => { e.preventDefault(); setIsDragging(true); }}
         onDragLeave={() => setIsDragging(false)}
         onDrop={handleDrop}
-        className={`flex flex-col bg-transparent w-full max-w-5xl mx-auto relative p-[3px] corner-frame overflow-visible max-h-[95vh] transition-all duration-300 ${isDragging ? 'ring-2 ring-primary' : ''}`} 
+        className={`flex flex-col bg-transparent w-full max-w-5xl mx-auto relative p-[3px] corner-frame overflow-visible max-h-[95vh] transition-[box-shadow] duration-300 ${isDragging ? 'ring-2 ring-primary' : ''}`} 
         onClick={e => e.stopPropagation()}
       >
         <div className="bg-base-100/40 backdrop-blur-xl rounded-none w-full flex flex-col overflow-hidden relative z-10">
@@ -175,7 +175,7 @@ const modalContent = (
                   </h3>
                   <p className="text-2xs font-black uppercase tracking-[0.4em] text-base-content/60 mt-1.5">Local Archival Accession</p>
               </div>
-              <button onClick={onClose} className="p-2 text-error/30 hover:text-error transition-all hover:scale-110">
+              <button onClick={onClose} className="p-2 text-error/30 hover:text-error transition-[color,transform] hover:scale-110">
                   <CloseIcon className="w-5 h-5" />
               </button>
           </header>
@@ -185,7 +185,7 @@ const modalContent = (
                   {!hasFiles ? (
                       <div 
                           onClick={() => (fileInputRef.current as any)?.click()}
-                          className={`p-20 border-4 border-dashed rounded-none text-center cursor-pointer transition-all ${isDragging ? 'border-primary bg-primary/10' : 'border-base-300 hover:border-primary/50 bg-transparent'}`}
+                          className={`p-20 border-4 border-dashed rounded-none text-center cursor-pointer transition-colors ${isDragging ? 'border-primary bg-primary/10' : 'border-base-300 hover:border-primary/50 bg-transparent'}`}
                       >
                           <UploadIcon className="w-16 h-16 mx-auto text-base-content/60 mb-4"/>
                           <p className="text-sm font-black uppercase tracking-[0.2em] text-base-content/60">Drop artifacts here or click to browse</p>
@@ -196,9 +196,9 @@ const modalContent = (
                           {previews.map((p, index) => (
                               <div key={`${p.name}-${index}`} className="relative aspect-square bg-base-100/40 backdrop-blur-xl group overflow-hidden">
                                   {p.type === 'image' ? (
-                                      <img src={p.url} alt={p.name} className="w-full h-full object-cover grayscale opacity-80 group-hover:grayscale-0 group-hover:opacity-100 transition-all duration-500" />
+                                      <img src={p.url} alt={p.name} className="w-full h-full object-cover grayscale opacity-80 group-hover:grayscale-0 group-hover:opacity-100 transition-[filter,opacity] duration-500" />
                                   ) : (
-                                      <video src={p.url} className="w-full h-full object-cover grayscale group-hover:grayscale-0 transition-all duration-500" />
+                                      <video src={p.url} className="w-full h-full object-cover grayscale group-hover:grayscale-0 transition-[filter] duration-500" />
                                   )}
                                   <div className="absolute inset-0 bg-primary/10 opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none"></div>
                                   
@@ -235,7 +235,7 @@ const modalContent = (
                           <button 
                               type="button" 
                               onClick={() => (fileInputRef.current as any)?.click()}
-                              className="aspect-square bg-transparent flex flex-col items-center justify-center text-base-content/60 hover:text-primary hover:bg-primary/10 transition-all group border-2 border-dashed border-transparent hover:border-primary/50"
+                              className="aspect-square bg-transparent flex flex-col items-center justify-center text-base-content/60 hover:text-primary hover:bg-primary/10 transition-colors group border-2 border-dashed border-transparent hover:border-primary/50"
                           >
                               <UploadIcon className="w-8 h-8 mb-2 group-hover:scale-110 transition-transform"/>
                               <span className="text-[8px] font-black uppercase tracking-widest">Add more</span>

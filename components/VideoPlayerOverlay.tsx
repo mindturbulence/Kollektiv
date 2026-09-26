@@ -149,7 +149,7 @@ const VideoPlayerOverlay: React.FC<VideoPlayerOverlayProps> = ({ url, onClose })
                 {/* Close button */}
                 <button
                     onClick={onClose}
-                    className="absolute top-3 right-3 z-20 w-9 h-9 flex items-center justify-center bg-black/50 hover:bg-black/80 rounded-full transition-all opacity-60 hover:opacity-100 text-white"
+                    className="absolute top-3 right-3 z-20 w-9 h-9 flex items-center justify-center bg-black/50 hover:bg-black/80 rounded-full transition-[background-color,opacity] opacity-60 hover:opacity-100 text-white"
                     aria-label="Close video player"
                 >
                     <CloseIcon className="w-5 h-5" />

@@ -56,7 +56,7 @@ const PredefinedMcpSection: React.FC<PredefinedMcpSectionProps> = ({ settings, h
     return (
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 px-6 py-4">
             {/* ── Left column: Kollektiv MCP info card ── */}
-            <div className="border border-base-content/10 bg-base-100/20 transition-all self-start">
+            <div className="border border-base-content/10 bg-base-100/20 self-start">
                 <div className="flex items-center justify-between px-5 py-4 gap-4">
                     <div className="flex items-center gap-3 min-w-0 flex-1">
                         <div className={`w-2.5 h-2.5 rounded-full flex-shrink-0 ${st?.checking ? 'bg-warning animate-pulse' : st?.connected ? 'bg-success' : st?.connected === false ? 'bg-error' : 'bg-base-content/20'}`} />
@@ -114,7 +114,7 @@ const PredefinedMcpSection: React.FC<PredefinedMcpSectionProps> = ({ settings, h
             </div>
 
             {/* ── Right column: Available tools list ── */}
-            <div className="border border-base-content/10 bg-base-100/20 transition-all self-start">
+            <div className="border border-base-content/10 bg-base-100/20 self-start">
                 <div className="px-5 py-3 border-b border-base-content/10">
                     <h4 className="text-2xs font-black uppercase tracking-[0.3em] text-base-content/60 flex items-center gap-2">
                         <CpuChipIcon className="w-3.5 h-3.5" />

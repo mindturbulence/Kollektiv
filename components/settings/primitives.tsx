@@ -2,7 +2,7 @@ import React from 'react';
 import { audioService } from '../../services/audioService';
 
 export const SettingRow: React.FC<{ label: string, desc?: string, children: React.ReactNode }> = ({ label, desc, children }) => (
-    <div className="p-6 flex flex-col md:flex-row md:items-center justify-between gap-6 group hover:bg-base-200/30 transition-all">
+    <div className="p-6 flex flex-col md:flex-row md:items-center justify-between gap-6 group hover:bg-base-200/30 transition-colors">
         <div className="max-w-md min-w-0">
             <h4 className="text-sm font-black uppercase tracking-widest text-base-content/70 group-hover:text-primary transition-colors">{label}</h4>
             {desc && <p className="text-2xs font-medium text-base-content/60 mt-1 uppercase leading-relaxed">{desc}</p>}

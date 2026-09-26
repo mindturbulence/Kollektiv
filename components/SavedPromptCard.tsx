@@ -80,7 +80,7 @@ const SavedPromptCard: React.FC<SavedPromptCardProps> = memo(({
       });
 
   return (
-    <div className="flex flex-col group bg-transparent transition-all duration-700 hover:bg-primary/5 w-full overflow-hidden select-none h-fit">
+    <div className="flex flex-col group bg-transparent transition-colors duration-700 hover:bg-primary/5 w-full overflow-hidden select-none h-fit">
       <div className="p-6 md:p-8 flex flex-col w-full h-full">
         {/* Header Section - Category Label and Menu Button Aligned */}
         <div className="mb-6 space-y-3">
@@ -91,7 +91,7 @@ const SavedPromptCard: React.FC<SavedPromptCardProps> = memo(({
               <div className="relative flex-shrink-0" ref={menuRef}>
                 <button
                   onClick={(e) => { e.stopPropagation(); setIsMenuOpen(!isMenuOpen); }}
-                  className={`btn btn-xs btn-ghost h-8 w-8 rounded-none p-0 transition-all btn-snake ${isMenuOpen ? 'bg-transparent' : 'opacity-20 group-hover:opacity-100'}`}
+                  className={`btn btn-xs btn-ghost h-8 w-8 rounded-none p-0 transition-[opacity,background-color] btn-snake ${isMenuOpen ? 'bg-transparent' : 'opacity-20 group-hover:opacity-100'}`}
                   title="Prompt options"
                 >
                   <span/><span/><span/><span/>
@@ -120,7 +120,7 @@ const SavedPromptCard: React.FC<SavedPromptCardProps> = memo(({
         {/* Content Section - The Prompt Text */}
         <div className="flex-grow space-y-6">
             <div className="relative group/content">
-                <div className={`relative transition-all duration-700 ease-[cubic-bezier(0.23,1,0.32,1)] ${isExpanded ? 'max-h-[2000px]' : 'max-h-[78px] overflow-hidden'}`}>
+                <div className={`relative transition-[max-height] duration-700 ease-[cubic-bezier(0.23,1,0.32,1)] ${isExpanded ? 'max-h-[2000px]' : 'max-h-[78px] overflow-hidden'}`}>
                     <p 
                         ref={textRef} 
                         className={`text-base font-medium leading-relaxed text-base-content/80 italic ${!isExpanded ? 'line-clamp-3' : ''}`}
@@ -133,7 +133,7 @@ const SavedPromptCard: React.FC<SavedPromptCardProps> = memo(({
             {canExpand && (
                 <button 
                     onClick={(e) => { e.stopPropagation(); setIsExpanded(!isExpanded); }} 
-                    className="text-primary uppercase tracking-[0.2em] hover:underline transition-all active:scale-95"
+                    className="text-primary uppercase tracking-[0.2em] hover:underline transition-transform active:scale-95"
                 >
                     {isExpanded ? 'Collapse' : 'Expand'}
                 </button>

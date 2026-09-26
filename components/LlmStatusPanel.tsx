@@ -150,7 +150,7 @@ const LlmStatusPanel: React.FC<LlmStatusPanelProps> = ({ isOpen, onClose }) => {
                     onClick={() =>
                       handleProviderAndModelSelect("gemini", model.id)
                     }
-                    className={`rounded-none text-2xs font-rajdhani uppercase tracking-widest py-2 w-full text-left px-8 border-l-2 transition-all ${settings.llmModel === model.id && settings.activeLLM === "gemini" ? "text-primary bg-primary/5 border-primary shadow-[inset_10px_0_20px_-10px_rgba(var(--p),0.1)]" : "text-base-content/60 hover:text-base-content hover:bg-base-content/5 border-transparent"}`}
+                    className={`rounded-none text-2xs font-rajdhani uppercase tracking-widest py-2 w-full text-left px-8 border-l-2 transition-[color,background-color,border-color,box-shadow] ${settings.llmModel === model.id && settings.activeLLM === "gemini" ? "text-primary bg-primary/5 border-primary shadow-[inset_10px_0_20px_-10px_rgba(var(--p),0.1)]" : "text-base-content/60 hover:text-base-content hover:bg-base-content/5 border-transparent"}`}
                   >
                     {model.name}
                   </button>
@@ -172,7 +172,7 @@ const LlmStatusPanel: React.FC<LlmStatusPanelProps> = ({ isOpen, onClose }) => {
                       onClick={() =>
                         handleProviderAndModelSelect("ollama", model)
                       }
-                      className={`rounded-none text-2xs font-rajdhani uppercase tracking-widest py-2 w-full text-left px-8 border-l-2 transition-all ${settings.ollamaModel === model && settings.activeLLM === "ollama" ? "text-secondary bg-secondary/5 border-secondary shadow-[inset_10px_0_20px_-10px_rgba(var(--s),0.1)]" : "text-base-content/60 hover:text-base-content hover:bg-base-content/5 border-transparent"}`}
+                      className={`rounded-none text-2xs font-rajdhani uppercase tracking-widest py-2 w-full text-left px-8 border-l-2 transition-[color,background-color,border-color,box-shadow] ${settings.ollamaModel === model && settings.activeLLM === "ollama" ? "text-secondary bg-secondary/5 border-secondary shadow-[inset_10px_0_20px_-10px_rgba(var(--s),0.1)]" : "text-base-content/60 hover:text-base-content hover:bg-base-content/5 border-transparent"}`}
                     >
                       {model}
                     </button>
@@ -188,7 +188,7 @@ const LlmStatusPanel: React.FC<LlmStatusPanelProps> = ({ isOpen, onClose }) => {
                       onClick={() =>
                         handleProviderAndModelSelect("ollama_cloud", model)
                       }
-                      className={`rounded-none text-2xs font-rajdhani uppercase tracking-widest py-2 w-full text-left px-8 border-l-2 transition-all ${settings.ollamaCloudModel === model && settings.activeLLM === "ollama_cloud" ? "text-primary bg-primary/5 border-primary shadow-[inset_10px_0_20px_-10px_rgba(var(--p),0.1)]" : "text-base-content/60 hover:text-base-content hover:bg-base-content/5 border-transparent"}`}
+                      className={`rounded-none text-2xs font-rajdhani uppercase tracking-widest py-2 w-full text-left px-8 border-l-2 transition-[color,background-color,border-color,box-shadow] ${settings.ollamaCloudModel === model && settings.activeLLM === "ollama_cloud" ? "text-primary bg-primary/5 border-primary shadow-[inset_10px_0_20px_-10px_rgba(var(--p),0.1)]" : "text-base-content/60 hover:text-base-content hover:bg-base-content/5 border-transparent"}`}
                     >
                       {model}
                     </button>
@@ -219,7 +219,7 @@ const LlmStatusPanel: React.FC<LlmStatusPanelProps> = ({ isOpen, onClose }) => {
                       onClick={() =>
                         handleProviderAndModelSelect("llamacpp", model)
                       }
-                      className={`rounded-none text-2xs font-rajdhani uppercase tracking-widest py-2 w-full text-left px-8 border-l-2 transition-all ${settings.llamacppModel === model && settings.activeLLM === "llamacpp" ? "text-primary bg-primary/5 border-primary shadow-[inset_10px_0_20px_-10px_rgba(var(--p),0.1)]" : "text-base-content/60 hover:text-base-content hover:bg-base-content/5 border-transparent"}`}
+                      className={`rounded-none text-2xs font-rajdhani uppercase tracking-widest py-2 w-full text-left px-8 border-l-2 transition-[color,background-color,border-color,box-shadow] ${settings.llamacppModel === model && settings.activeLLM === "llamacpp" ? "text-primary bg-primary/5 border-primary shadow-[inset_10px_0_20px_-10px_rgba(var(--p),0.1)]" : "text-base-content/60 hover:text-base-content hover:bg-base-content/5 border-transparent"}`}
                     >
                       {model}
                     </button>
@@ -231,7 +231,7 @@ const LlmStatusPanel: React.FC<LlmStatusPanelProps> = ({ isOpen, onClose }) => {
                       onClick={() =>
                         handleProviderAndModelSelect("llamacpp", settings.llamacppModel || "default")
                       }
-                      className={`rounded-none text-2xs font-rajdhani uppercase tracking-widest py-2 w-full text-left px-8 border-l-2 transition-all ${settings.activeLLM === "llamacpp" ? "text-primary bg-primary/5 border-primary shadow-[inset_10px_0_20px_-10px_rgba(var(--p),0.1)]" : "text-base-content/60 hover:text-base-content hover:bg-base-content/5 border-transparent"}`}
+                      className={`rounded-none text-2xs font-rajdhani uppercase tracking-widest py-2 w-full text-left px-8 border-l-2 transition-[color,background-color,border-color,box-shadow] ${settings.activeLLM === "llamacpp" ? "text-primary bg-primary/5 border-primary shadow-[inset_10px_0_20px_-10px_rgba(var(--p),0.1)]" : "text-base-content/60 hover:text-base-content hover:bg-base-content/5 border-transparent"}`}
                     >
                       {settings.llamacppModel || "default"}
                     </button>
@@ -250,7 +250,7 @@ const LlmStatusPanel: React.FC<LlmStatusPanelProps> = ({ isOpen, onClose }) => {
                   onClick={() =>
                     handleProviderAndModelSelect("openrouter", settings.openrouterModel || "openrouter/auto")
                   }
-                  className={`rounded-none text-2xs font-rajdhani uppercase tracking-widest py-2 w-full text-left px-8 border-l-2 transition-all ${settings.activeLLM === "openrouter" ? "text-info bg-info/5 border-info shadow-[inset_10px_0_20px_-10px_rgba(var(--in),0.1)]" : "text-base-content/60 hover:text-base-content hover:bg-base-content/5 border-transparent"}`}
+                  className={`rounded-none text-2xs font-rajdhani uppercase tracking-widest py-2 w-full text-left px-8 border-l-2 transition-[color,background-color,border-color,box-shadow] ${settings.activeLLM === "openrouter" ? "text-info bg-info/5 border-info shadow-[inset_10px_0_20px_-10px_rgba(var(--in),0.1)]" : "text-base-content/60 hover:text-base-content hover:bg-base-content/5 border-transparent"}`}
                 >
                   {settings.openrouterModel || "openrouter/auto"}
                 </button>

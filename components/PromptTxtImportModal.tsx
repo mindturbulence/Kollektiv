@@ -45,7 +45,7 @@ export const PromptTxtImportModal: React.FC<PromptTxtImportModalProps> = ({ isOp
                         </h3>
                         <p className="text-2xs font-black uppercase tracking-[0.4em] text-base-content/60 mt-1.5">Bulk Token Archival Module</p>
                     </div>
-                    <button onClick={handleClose} className="p-2 text-error/30 hover:text-error transition-all hover:scale-110">
+                    <button onClick={handleClose} className="p-2 text-error/30 hover:text-error transition-[color,transform] hover:scale-110">
                         <CloseIcon className="w-5 h-5" />
                     </button>
                 </header>
@@ -56,7 +56,7 @@ export const PromptTxtImportModal: React.FC<PromptTxtImportModalProps> = ({ isOp
                         onDragOver={(e) => { e.preventDefault(); setIsDragging(true); }} 
                         onDragLeave={() => setIsDragging(false)}
                         onClick={() => { audioService.playClick(); (fileInputRef.current as any)?.click(); }}
-                        className={`p-16 border-4 border-dashed rounded-none text-center cursor-pointer transition-all ${isDragging ? 'border-primary bg-primary/10' : 'border-base-300 hover:border-primary/50 bg-transparent'}`}
+                        className={`p-16 border-4 border-dashed rounded-none text-center cursor-pointer transition-colors ${isDragging ? 'border-primary bg-primary/10' : 'border-base-300 hover:border-primary/50 bg-transparent'}`}
                     >
                         <input type="file" ref={fileInputRef} onChange={(e) => { const file = (e.currentTarget as any).files?.[0]; if (file?.type === 'application/zip') { setSelectedFile(file); setError(null); } else setError("Valid .zip required."); }} className="hidden" accept=".zip"/>
                         <UploadIcon className="w-12 h-12 mx-auto text-base-content/60 mb-4"/>

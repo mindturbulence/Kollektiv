@@ -60,7 +60,7 @@ const MaintenanceOverlay: React.FC<{ progress: number, message: string }> = ({ p
             <div className="absolute inset-0 bg-grid-texture opacity-[0.03] pointer-events-none"></div>
             <div className="absolute inset-0 flex items-center justify-center pointer-events-none overflow-hidden">
                 <span
-                    className={`text-[25vw] font-black opacity-[0.03] leading-none select-none transition-all duration-500 ease-out ${settings.darkTheme === 'pipboy' ? 'font-monofonto' : 'font-logo'}`}
+                    className={`text-[25vw] font-black opacity-[0.03] leading-none select-none transition-transform duration-500 ease-out ${settings.darkTheme === 'pipboy' ? 'font-monofonto' : 'font-logo'}`}
                     style={{ transform: `translateY(${(100 - progress) * 0.2}px)` }}
                 >
                     {Math.round(progress).toString().padStart(2, '0')}
@@ -73,7 +73,7 @@ const MaintenanceOverlay: React.FC<{ progress: number, message: string }> = ({ p
                             Kollektiv<span className="text-primary/60 italic">.</span>
                         </span>
                         <div
-                            className="row-start-1 col-start-1 h-full overflow-hidden transition-all duration-700 ease-out border-r border-base-content/20"
+                            className="row-start-1 col-start-1 h-full overflow-hidden transition-[width] duration-700 ease-out border-r border-base-content/20"
                             style={{ width: `${progress}%` }}
                         >
                             <span className="text-base-content block whitespace-nowrap leading-none py-2 drop-shadow-[0_0_20px_rgba(var(--bc),0.15)]">
@@ -82,11 +82,11 @@ const MaintenanceOverlay: React.FC<{ progress: number, message: string }> = ({ p
                         </div>
                     </h1>
                 </div>
-                <div className={`flex flex-col items-center gap-4 transition-all duration-500 ${progress >= 100 ? 'opacity-0 translate-y-4' : 'opacity-100 translate-y-0'}`}>
+                <div className={`flex flex-col items-center gap-4 transition-[opacity,transform] duration-500 ${progress >= 100 ? 'opacity-0 translate-y-4' : 'opacity-100 translate-y-0'}`}>
                     <div className="flex flex-col items-center gap-2">
                         <p className="text-2xs font-mono font-bold uppercase tracking-[0.5em] text-center text-base-content/60">{message || 'DIAGNOSTIC_ACTIVE'}</p>
                         <div className="w-32 h-[1px] bg-base-content/10 relative overflow-hidden">
-                            <div className="absolute inset-y-0 left-0 bg-primary transition-all duration-500 ease-out" style={{ width: `${progress}%` }} />
+                            <div className="absolute inset-y-0 left-0 bg-primary transition-[width] duration-500 ease-out" style={{ width: `${progress}%` }} />
                         </div>
                         <span className="text-2xs font-mono font-bold text-primary/60">{Math.round(progress)}%</span>
                     </div>
@@ -714,7 +714,7 @@ export const SetupPage: React.FC<SetupPageProps> = ({
                                     <button
                                         key={sub.id}
                                         onClick={() => { audioService.playClick(); setActiveSubTab(sub.id); }}
-                                        className={`flex items-center gap-2 py-4 text-2xs font-black uppercase tracking-widest border-b-2 transition-all whitespace-nowrap ${activeSubTab === sub.id ? 'border-primary text-primary' : 'border-transparent text-base-content/60 hover:text-base-content/60'}`}
+                                        className={`flex items-center gap-2 py-4 text-2xs font-black uppercase tracking-widest border-b-2 transition-colors whitespace-nowrap ${activeSubTab === sub.id ? 'border-primary text-primary' : 'border-transparent text-base-content/60 hover:text-base-content/60'}`}
                                     >
                                         {sub.icon}
                                         {sub.label}

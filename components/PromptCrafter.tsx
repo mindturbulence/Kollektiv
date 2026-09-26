@@ -775,12 +775,12 @@ const PromptCrafter = ({ onSaveToLibrary, onClip, onSendToEnhancer, onSendToRefi
                                         setPromptText('');
                                     }}
                                     onMouseEnter={() => audioService.playHover()}
-                                    className="font-sf-mono text-2xs tracking-widest text-base-content/60 hover:text-base-content transition-all bg-base-100/5 px-2 py-1.5 hover:bg-base-100/10"
+                                    className="font-sf-mono text-2xs tracking-widest text-base-content/60 hover:text-base-content transition-colors bg-base-100/5 px-2 py-1.5 hover:bg-base-100/10"
                                 >
                                     CLEAR
                                 </button>
                                 <button
-                                    className="font-sf-mono text-2xs tracking-widest text-error/40 hover:text-error transition-all mr-1 bg-error/5 disabled:bg-transparent px-2 py-1.5 hover:bg-error/10 disabled:opacity-20"
+                                    className="font-sf-mono text-2xs tracking-widest text-error/40 hover:text-error transition-colors mr-1 bg-error/5 disabled:bg-transparent px-2 py-1.5 hover:bg-error/10 disabled:opacity-20"
                                     onClick={() => {
                                         audioService.playClick();
                                         handleDeleteTemplateClick();

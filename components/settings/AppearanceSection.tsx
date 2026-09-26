@@ -125,13 +125,13 @@ const AppearanceSection: React.FC<AppearanceSectionProps> = ({
                         <div className="flex bg-white/5 p-1 rounded-none border border-white/10">
                             <button
                                 onClick={() => { audioService.playClick(); handleSettingsChange('idleScreenType', 'matrix'); }}
-                                className={`px-4 py-2 text-2xs font-black uppercase tracking-widest transition-all ${settings.idleScreenType === 'matrix' ? 'bg-primary text-primary-content shadow-lg' : 'text-white/40 hover:text-white'}`}
+                                className={`px-4 py-2 text-2xs font-black uppercase tracking-widest transition-[background-color,color,box-shadow] ${settings.idleScreenType === 'matrix' ? 'bg-primary text-primary-content shadow-lg' : 'text-white/40 hover:text-white'}`}
                             >
                                 Falling Codes
                             </button>
                             <button
                                 onClick={() => { audioService.playClick(); handleSettingsChange('idleScreenType', 'gallery'); }}
-                                className={`px-4 py-2 text-2xs font-black uppercase tracking-widest transition-all ${settings.idleScreenType === 'gallery' ? 'bg-primary text-primary-content shadow-lg' : 'text-white/40 hover:text-white'}`}
+                                className={`px-4 py-2 text-2xs font-black uppercase tracking-widest transition-[background-color,color,box-shadow] ${settings.idleScreenType === 'gallery' ? 'bg-primary text-primary-content shadow-lg' : 'text-white/40 hover:text-white'}`}
                             >
                                 Neural Gallery
                             </button>

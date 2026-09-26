@@ -135,7 +135,7 @@ const ExtraNetworksPanel: React.FC<ExtraNetworksPanelProps> = ({
               <button
                 onClick={onRefresh}
                 disabled={loading}
-                className="flex items-center justify-center text-base-content/60 hover:text-base-content transition-all bg-base-100/5 disabled:opacity-20 px-2 hover:bg-base-100/10 shrink-0"
+                className="flex items-center justify-center text-base-content/60 hover:text-base-content transition-colors bg-base-100/5 disabled:opacity-20 px-2 hover:bg-base-100/10 shrink-0"
                 title={`Refresh ${activeTab === 'lora' ? 'LoRA' : 'textual inversion'} list from backend`}
               >
                 <RefreshIcon className={`w-3.5 h-3.5 ${loading ? 'animate-spin' : ''}`} />

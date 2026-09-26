@@ -209,7 +209,7 @@ const ActivityPanel: React.FC<ActivityPanelProps> = ({ isOpen, onClose }) => {
                             {transcript.length > 0 && (
                                 <button
                                     onClick={handleClearTranscript}
-                                    className="btn btn-xs btn-ghost h-8 w-8 rounded-none p-0 opacity-40 hover:opacity-100 hover:text-error transition-all btn-snake"
+                                    className="btn btn-xs btn-ghost h-8 w-8 rounded-none p-0 opacity-40 hover:opacity-100 hover:text-error transition-[opacity,color] btn-snake"
                                     title="Clear transcript"
                                 >
                                     <span /><span /><span /><span />

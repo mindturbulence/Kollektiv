@@ -80,7 +80,7 @@ const YouTubePublishModal: React.FC<YouTubePublishModalProps> = ({
                   </div>
                   <p className="text-2xs font-black uppercase tracking-[0.4em] text-base-content/60 mt-1.5">External Repository Uplink</p>
               </div>
-              <button onClick={onClose} className="p-2 text-error/30 hover:text-error transition-all hover:scale-110">
+              <button onClick={onClose} className="p-2 text-error/30 hover:text-error transition-[color,transform] hover:scale-110">
                   <CloseIcon className="w-5 h-5" />
               </button>
           </header>

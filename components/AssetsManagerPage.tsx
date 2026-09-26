@@ -520,7 +520,7 @@ const AssetsManagerPage: React.FC<AssetsManagerPageProps> = ({ isExiting = false
                     Loading assets… {decodePercent}%
                   </p>
                   <div className="w-40 h-1 bg-base-content/10 rounded-full overflow-hidden">
-                    <div className="h-full bg-primary rounded-full transition-all" style={{ width: `${decodePercent}%` }} />
+                    <div className="h-full bg-primary rounded-full transition-[width]" style={{ width: `${decodePercent}%` }} />
                   </div>
                 </>
               )}
@@ -855,7 +855,7 @@ const Lightbox: React.FC<{
           <div className="absolute inset-y-0 left-0 w-32 flex items-center justify-center">
             <button
               onClick={e => { e.stopPropagation(); goPrev(); }}
-              className="pointer-events-auto p-4 text-white hover:text-primary transition-all duration-300 opacity-40 hover:opacity-100 scale-100 hover:scale-110"
+              className="pointer-events-auto p-4 text-white hover:text-primary transition-[color,opacity,transform] duration-300 opacity-40 hover:opacity-100 scale-100 hover:scale-110"
               aria-label="Previous image"
             >
               <ChevronLeftIcon className="w-12 h-12" />
@@ -864,7 +864,7 @@ const Lightbox: React.FC<{
           <div className="absolute inset-y-0 right-0 w-32 flex items-center justify-center">
             <button
               onClick={e => { e.stopPropagation(); goNext(); }}
-              className="pointer-events-auto p-4 text-white hover:text-primary transition-all duration-300 opacity-40 hover:opacity-100 scale-100 hover:scale-110"
+              className="pointer-events-auto p-4 text-white hover:text-primary transition-[color,opacity,transform] duration-300 opacity-40 hover:opacity-100 scale-100 hover:scale-110"
               aria-label="Next image"
             >
               <ChevronRightIcon className="w-12 h-12" />

@@ -340,7 +340,7 @@ function dataUriToBlob(dataUri: string): Blob | null {
                                 {media.videoId || media.spotifyId ? (
                                     <button
                                         onClick={handleClear}
-                                        className="btn btn-xs btn-ghost h-8 w-8 rounded-none p-0 opacity-40 hover:opacity-100 hover:text-error transition-all btn-snake"
+                                        className="btn btn-xs btn-ghost h-8 w-8 rounded-none p-0 opacity-40 hover:opacity-100 hover:text-error transition-[opacity,color] btn-snake"
                                         title="Stop playback"
                                     >
                                         <span /><span /><span /><span />

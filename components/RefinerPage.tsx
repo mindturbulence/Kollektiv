@@ -670,9 +670,9 @@ const RefinerPage: React.FC<RefinerPageProps> = ({
                                     <div className="p-5 md:p-5 lg:p-5 w-full animate-fade-in group flex flex-col h-full overflow-y-auto space-y-5">
                                         <div className="flex border-b border-base-content/10 gap-6 mb-1">
                                             <button onClick={() => { audioService.playClick(); setOutputTab('prose'); }}
-                                                className={`pb-2.5 text-xs md:text-sm font-bold uppercase tracking-wider transition-all relative ${outputTab === 'prose' ? 'text-primary border-b-2 border-primary' : 'text-base-content/60 hover:text-base-content/60'}`}>✨ Refined Prompt</button>
+                                                className={`pb-2.5 text-xs md:text-sm font-bold uppercase tracking-wider transition-colors relative ${outputTab === 'prose' ? 'text-primary border-b-2 border-primary' : 'text-base-content/60 hover:text-base-content/60'}`}>✨ Refined Prompt</button>
                                             <button onClick={() => { audioService.playClick(); setOutputTab('diff'); }}
-                                                className={`pb-2.5 text-xs md:text-sm font-bold uppercase tracking-wider transition-all relative ${outputTab === 'diff' ? 'text-primary border-b-2 border-primary' : 'text-base-content/60 hover:text-base-content/60'}`}>🔍 Compare Changes</button>
+                                                className={`pb-2.5 text-xs md:text-sm font-bold uppercase tracking-wider transition-colors relative ${outputTab === 'diff' ? 'text-primary border-b-2 border-primary' : 'text-base-content/60 hover:text-base-content/60'}`}>🔍 Compare Changes</button>
                                         </div>
                                         {outputTab === 'prose' ? (
                                             <div className="flex flex-col">
@@ -815,7 +815,7 @@ const RefinerPage: React.FC<RefinerPageProps> = ({
                                 <button
                                     onClick={() => { audioService.playClick(); handleClearConstruction(); }}
                                     onMouseEnter={() => audioService.playHover()}
-                                    className="font-sf-mono text-2xs tracking-widest text-base-content/60 hover:text-base-content transition-all bg-base-100/5 px-2 py-1.5 hover:bg-base-100/10"
+                                    className="font-sf-mono text-2xs tracking-widest text-base-content/60 hover:text-base-content transition-colors bg-base-100/5 px-2 py-1.5 hover:bg-base-100/10"
                                 >
                                     CLEAR
                                 </button>
@@ -823,7 +823,7 @@ const RefinerPage: React.FC<RefinerPageProps> = ({
                                     onClick={() => { audioService.playClick(); handleDeletePresetClick(); }}
                                     onMouseEnter={() => audioService.playHover()}
                                     disabled={!selectedPreset}
-                                    className="font-sf-mono text-2xs tracking-widest text-error/40 hover:text-error transition-all bg-error/5 disabled:bg-transparent px-2 py-1.5 hover:bg-error/10 disabled:opacity-20"
+                                    className="font-sf-mono text-2xs tracking-widest text-error/40 hover:text-error transition-colors bg-error/5 disabled:bg-transparent px-2 py-1.5 hover:bg-error/10 disabled:opacity-20"
                                 >
                                     DELETE
                                 </button>

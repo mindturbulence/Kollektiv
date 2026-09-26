@@ -376,7 +376,7 @@ const FullscreenViewer: React.FC<FullscreenViewerProps> = ({ items, currentIndex
                     <div className="absolute inset-y-0 left-0 w-32 flex items-center justify-center">
                         <button 
                             onClick={(e) => { e.stopPropagation(); handleUnifiedNavigation('prev'); }} 
-                            className="pointer-events-auto p-4 text-white hover:text-primary transition-all duration-300 opacity-40 hover:opacity-100 scale-100 hover:scale-110" 
+                            className="pointer-events-auto p-4 text-white hover:text-primary transition-[color,opacity,transform] duration-300 opacity-40 hover:opacity-100 scale-100 hover:scale-110" 
                             aria-label="Previous"
                         >
                             <ChevronLeftIcon className="w-16 h-16" />
@@ -385,7 +385,7 @@ const FullscreenViewer: React.FC<FullscreenViewerProps> = ({ items, currentIndex
                     <div className="absolute inset-y-0 right-0 w-32 flex items-center justify-center">
                         <button 
                             onClick={(e) => { e.stopPropagation(); handleUnifiedNavigation('next'); }} 
-                            className="pointer-events-auto p-4 text-white hover:text-primary transition-all duration-300 opacity-40 hover:opacity-100 scale-100 hover:scale-110" 
+                            className="pointer-events-auto p-4 text-white hover:text-primary transition-[color,opacity,transform] duration-300 opacity-40 hover:opacity-100 scale-100 hover:scale-110" 
                             aria-label="Next"
                         >
                             <ChevronRightIcon className="w-16 h-16" />
@@ -396,7 +396,7 @@ const FullscreenViewer: React.FC<FullscreenViewerProps> = ({ items, currentIndex
                 <div className="absolute top-8 right-8 z-raised flex items-center gap-4 pointer-events-auto">
                     <button 
                         onClick={(e) => { e.stopPropagation(); setIsSlideshowPlaying(!isSlideshowPlaying); }} 
-                        className={`p-2 transition-all duration-300 ${isSlideshowPlaying ? 'text-primary scale-110' : 'text-white/40 hover:text-white'}`} 
+                        className={`p-2 transition-[color,transform] duration-300 ${isSlideshowPlaying ? 'text-primary scale-110' : 'text-white/40 hover:text-white'}`}
                         title={isSlideshowPlaying ? "Pause Slideshow" : "Play Slideshow"}
                     >
                         {isSlideshowPlaying ? <PauseIcon className="w-6 h-6"/> : <PlayIcon className="w-6 h-6"/>}
