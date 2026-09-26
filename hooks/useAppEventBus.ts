@@ -1,15 +1,7 @@
 import { useEffect } from 'react';
-import { appEventBus } from '../utils/eventBus';
+import { appEventBus, type PromptsPageState, type OpenInEditorPayload } from '../utils/eventBus';
 import type { EditorOpenPayload } from '../image-editor/core/types';
 import type { ActiveTab, Idea } from '../types';
-
-type PromptsPageState = {
-  prompt?: string;
-  artStyle?: string;
-  artist?: string;
-  view?: 'enhancer' | 'composer' | 'create' | 'prompt_analyzer';
-  id?: string;
-} | null;
 
 interface UseAppEventBusInput {
   handleNavigate: (tab: ActiveTab) => void;
@@ -23,6 +15,8 @@ interface UseAppEventBusInput {
   setEditorOpenPayload: (payload: EditorOpenPayload | undefined) => void;
   setConverterOpenFiles: (files: File[] | undefined) => void;
   isCommandPaletteOpen: boolean;
+  /** Cycles the active theme — shared code path with the header's ThemeSwitcher. */
+  handleCycleTheme?: () => void;
 }
 
 /**
@@ -41,24 +35,31 @@ export const useAppEventBus = ({
   setEditorOpenPayload,
   setConverterOpenFiles,
   isCommandPaletteOpen,
+  handleCycleTheme,
 }: UseAppEventBusInput) => {
   // ── Navigation events ────────────────────────────────────────────────
   useEffect(() => {
-    const navigateSub = appEventBus.on('navigate', (tab: ActiveTab) => {
+    const navigateSub = appEventBus.on('navigate', (tab) => {
       handleNavigate(tab);
     });
-    const sendToSub = appEventBus.on('sendToPromptsPage', (state: PromptsPageState) => {
+    const sendToSub = appEventBus.on('sendToPromptsPage', (state) => {
       handleSendToPromptsPage(state);
     });
-    const feedbackSub = appEventBus.on('assistantFeedback', (f: { message: string; isError?: boolean }) => {
+    const feedbackSub = appEventBus.on('assistantFeedback', (f) => {
       showGlobalFeedback(f.message, f.isError);
     });
     return () => { navigateSub(); sendToSub(); feedbackSub(); };
   }, [handleNavigate, handleSendToPromptsPage, showGlobalFeedback]);
 
+  // ── Theme cycling (from command palette "Next Theme") ────────────────
+  useEffect(() => {
+    if (!handleCycleTheme) return;
+    return appEventBus.on('cycleTheme', handleCycleTheme);
+  }, [handleCycleTheme]);
+
   // ── Open in editor (from Gallery ImageCard EDIT button) ──────────────
   useEffect(() => {
-    return appEventBus.on('openInEditor', (payload: { galleryItemId: string; url: string } | { blob: Blob }) => {
+    return appEventBus.on('openInEditor', (payload: OpenInEditorPayload) => {
       if ('galleryItemId' in payload) {
         setEditorOpenPayload({ kind: 'gallery', galleryItemId: payload.galleryItemId, url: payload.url });
       } else {
@@ -128,7 +129,7 @@ export const useAppEventBus = ({
 
   // ── Clip idea from assistant ──────────────────────────────────────────
   useEffect(() => {
-    return appEventBus.on('clipIdea', (p: { title: string; prompt: string; lens?: string; source?: string }) => {
+    return appEventBus.on('clipIdea', (p) => {
       if (!p.prompt) return;
       handleClipIdea({
         id: `clip-${Date.now()}`,

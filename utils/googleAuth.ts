@@ -93,7 +93,7 @@ export const markGoogleTokenInvalid = async (): Promise<void> => {
  *  attempt a silent token refresh. Returns true if a refresh was requested. */
 export const requestSilentTokenRefresh = (identity?: GoogleIdentityConnection | null): boolean => {
     if (!isGoogleAuthValid(identity) && identity?.isConnected) {
-        appEventBus.emit('googleTokenRefreshRequested', {});
+        appEventBus.emit('googleTokenRefreshRequested');
         return true;
     }
     return false;
@@ -119,7 +119,7 @@ export const trySilentRefreshWithWait = async (
     }
 
     // Trigger silent refresh via event bus (works when SetupPage is mounted)
-    appEventBus.emit('googleTokenRefreshRequested', {});
+    appEventBus.emit('googleTokenRefreshRequested');
 
     // Also try calling the GSI token client directly in case SetupPage is not mounted
     // (the event bus listener is only active when SetupPage is rendered).

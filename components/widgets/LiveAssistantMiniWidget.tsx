@@ -15,7 +15,7 @@ const LiveAssistantMiniWidget: React.FC = () => {
     <div className="bg-base-100/40 backdrop-blur-xl border border-base-content/10 p-4 relative corner-frame">
       <div className="text-2xs font-black uppercase tracking-[0.2em] text-primary/60 mb-3">Assistant</div>
       <button
-        onClick={() => appEventBus.emit('navigate', 'assistant' as any)}
+        onClick={() => appEventBus.emit('navigate', 'assistant')}
         className={`w-full flex items-center gap-3 p-3 border transition-all duration-300 ${
           isActive
             ? 'border-primary/30 bg-primary/5'

@@ -295,11 +295,12 @@ export const browserTools: AssistantTool[] = [
         }
 
         const loop = new VisionLoop(operator, ctx.settings, {
-            onActivity: (text: string) => {
-                appEventBus.emit('assistantFeedback', { type: 'activity', text });
-            },
+            // onActivity fires once per vision-loop step — too frequent for a
+            // toast per step, and the old emit's payload didn't match the
+            // assistantFeedback listener's shape anyway (it always rendered blank).
+            onActivity: () => {},
             onError: (err: string) => {
-                appEventBus.emit('assistantFeedback', { type: 'error', text: err });
+                appEventBus.emit('assistantFeedback', { message: err, isError: true });
             },
         });
 

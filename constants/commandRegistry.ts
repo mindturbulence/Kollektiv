@@ -55,7 +55,7 @@ const ASSISTANT_COMMANDS: CommandItem[] = [
 ];
 
 const THEME_COMMANDS: CommandItem[] = [
-  { id: 'theme-next', label: 'Next Theme', category: 'Themes', keywords: ['switch theme', 'cycle', 'change look'], execute: () => appEventBus.emit('cycleTheme', {}) },
+  { id: 'theme-next', label: 'Next Theme', category: 'Themes', keywords: ['switch theme', 'cycle', 'change look'], execute: () => appEventBus.emit('cycleTheme') },
 ];
 
 export const ALL_COMMANDS: CommandItem[] = [

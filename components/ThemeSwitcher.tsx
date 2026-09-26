@@ -1,6 +1,6 @@
 import React from 'react';
 import { useSettings } from '../contexts/SettingsContext';
-import { THEMES } from '../constants';
+import { getNextTheme } from '../constants/themes';
 import { audioService } from '../services/audioService';
 import { motion } from 'motion/react';
 import { PaletteIcon } from './icons';
@@ -10,9 +10,7 @@ const ThemeSwitcher: React.FC = () => {
 
   const cycleToNextTheme = () => {
     audioService.playClick();
-    const currentIndex = THEMES.indexOf(settings.darkTheme);
-    const nextIndex = (currentIndex + 1) % THEMES.length;
-    updateSettings({ ...settings, darkTheme: THEMES[nextIndex], activeThemeMode: 'dark' });
+    updateSettings({ ...settings, darkTheme: getNextTheme(settings.darkTheme), activeThemeMode: 'dark' });
   };
 
   return (
