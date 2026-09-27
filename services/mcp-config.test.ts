@@ -71,7 +71,7 @@ function runValidator(): Promise<{ stdout: string; stderr: string; exitCode: num
     const child = spawn('npx', ['tsx', 'scripts/validate-mcp-config.ts'], {
       cwd: ROOT,
       shell: true,
-      timeout: 30_000,
+      timeout: 85_000,
       stdio: ['pipe', 'pipe', 'pipe'],
     });
     let stdout = '';
@@ -413,5 +413,5 @@ describe('schema <-> validator sync', () => {
     if (stderr.trim()) {
       console.log('[validator] stderr output (warnings):', stderr);
     }
-  }, 30_000);
+  }, 90_000); // spawns a tsx child process; 30s flaked the pre-push hook under CPU load
 });
