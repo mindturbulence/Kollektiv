@@ -9,6 +9,7 @@ import ThemeSwitcher from './ThemeSwitcher';
 import ChromaticText from './ChromaticText';
 import { InformationCircleIcon, BookmarkIcon, Cog6ToothIcon, PowerIcon, ChatBubbleIcon, FilmIcon, TerminalIcon } from './icons';
 import { HUDNavItem } from './HUDNavItem';
+import { NAV_GROUPS, toNavTab } from '../constants/navigation';
 import { LiveAssistantMicButton, LiveAssistantScreenButton, LiveAssistantControlButton, LiveAssistantCameraButton, LiveAssistantCameraPreview, LiveAssistantFault } from './LiveAssistantBar';
 
 interface HeaderProps {
@@ -23,12 +24,6 @@ interface HeaderProps {
   clippedIdeasCount: number;
   onToggleChatPanel?: () => void;
   onOpenCommandPalette?: () => void;
-}
-
-interface NavItemData {
-  id: ActiveTab;
-  label: string;
-  enabled?: boolean;
 }
 
 const Logo: React.FC<{ onNavigate: (tab: ActiveTab) => void }> = ({ onNavigate }) => {
@@ -124,50 +119,12 @@ const Header: React.FC<HeaderProps> = ({
   onOpenCommandPalette
 }) => {
   const { settings } = useSettings();
-  // `prompts` renders the Crafter composer, so it lights up Crafter in the nav.
-  const navTab: ActiveTab = activeTab === 'prompts' ? 'crafter' : activeTab;
+  const navTab = toNavTab(activeTab);
   const navRef = useRef<HTMLDivElement>(null);
   const [activeMenu, setActiveMenu] = useState<string | null>(null);
   const containerRefs = useRef<Record<string, HTMLDivElement | null>>({});
 
-  const workspaceItems = React.useMemo<NavItemData[]>(() => [
-    { id: 'crafter' as ActiveTab, label: 'Crafter' },
-    { id: 'refiner' as ActiveTab, label: 'Refiner' },
-    { id: 'prompt_analyzer' as ActiveTab, label: 'Analyzer' },
-    { id: 'media_analyzer' as ActiveTab, label: 'Abstractor' },
-    { id: 'batch_runner', label: 'Batch' },
-  ], []);
-
-  const vaultItems = React.useMemo<NavItemData[]>(() => [
-    { id: 'prompt' as ActiveTab, label: 'Prompt' },
-    { id: 'gallery' as ActiveTab, label: 'Media' },
-  ], []);
-
-  const utilityItems = React.useMemo<NavItemData[]>(() => [
-    { id: 'assets_manager' as ActiveTab, label: 'Assets' },
-    { id: 'color_palette_extractor' as ActiveTab, label: 'Palette' },
-    { id: 'resizer' as ActiveTab, label: 'Resizer' },
-    { id: 'converter' as ActiveTab, label: 'Converter' },
-    { id: 'video_to_frames' as ActiveTab, label: 'Video' },
-  ], []);
-
-  const studioItems = React.useMemo<NavItemData[]>(() => [
-    { id: 'image_editor' as ActiveTab, label: 'Image Editor' },
-    { id: 'composer' as ActiveTab, label: 'Composer' },
-    { id: 'image_compare' as ActiveTab, label: 'Compare' },
-    { id: 'lora_editor' as ActiveTab, label: 'LoRA Editor' },
-    { id: 'comfy_studio' as ActiveTab, label: 'ComfyUI' },
-    { id: 'a1111_studio' as ActiveTab, label: 'A1111' },
-  ], []);
-
-  const navGroups = React.useMemo(() => [
-    { id: 'home', label: 'Home', items: [], singleId: 'dashboard' as ActiveTab },
-    { id: 'discovery', label: 'Discovery', items: [], singleId: 'discovery' as ActiveTab },
-    { id: 'workspaces', label: 'Workbench', items: workspaceItems },
-    { id: 'vault', label: 'Vault', items: vaultItems },
-    { id: 'utilities', label: 'Utilities', items: utilityItems },
-    { id: 'studio', label: 'Studio', items: studioItems },
-  ], [workspaceItems, vaultItems, utilityItems, studioItems]);
+  const navGroups = NAV_GROUPS;
 
   // Auto-expand the group containing the active tab — but only when the tab
   // CHANGES (motion review #3). The old effect also ran when activeMenu was

@@ -7,7 +7,7 @@ import { useAuth } from '../contexts/AuthContext';
 import useLocalStorage from '../utils/useLocalStorage';
 import { audioService } from '../services/audioService';
 import { BusyProvider } from '../contexts/BusyContext';
-import type { ActiveTab } from '../types';
+import type { ActiveTab, ActiveSettingsTab } from '../types';
 import CommandPalette from './CommandPalette';
 
 // Layout & Global Components
@@ -408,8 +408,14 @@ const AppContent: React.FC = () => {
             },
         };
 
+        const openSettings = (tab: ActiveSettingsTab, subTab: string) => {
+            setActiveSettingsTab(tab);
+            setActiveSettingsSubTab(subTab);
+            handleNavigate('settings');
+        };
+
         switch (activeTab) {
-            case 'dashboard': return <Dashboard key="dashboard" onNavigate={handleNavigate} onClipIdea={handleClipIdea} isExiting={false} />;
+            case 'dashboard': return <Dashboard key="dashboard" onNavigate={handleNavigate} onOpenSettings={openSettings} isExiting={false} />;
             case 'assistant': return <AssistantPage key="assistant" />;
             case 'discovery': return <DiscoveryPage key="discovery" isExiting={false} onClipIdea={handleClipIdea} onSendToBuilder={handleSendToPromptsPage} showGlobalFeedback={showGlobalFeedback} />;
             case 'prompts': return <PromptsPage key="prompts" onClipIdea={handleClipIdea} initialState={promptsPageState}                            onStateHandled={handleClearPromptsPageState} showGlobalFeedback={showGlobalFeedback} isExiting={false} onSendToBuilder={handleSendToPromptsPage} />;
@@ -433,7 +439,7 @@ const AppContent: React.FC = () => {
             case 'comfy_studio': return <LocalGenerationStudioPage key="comfy_studio" backendId="comfy" showGlobalFeedback={showGlobalFeedback} />;
             case 'a1111_studio': return <LocalGenerationStudioPage key="a1111_studio" backendId="a1111" showGlobalFeedback={showGlobalFeedback} />;
             case 'image_editor': return <ImageEditorPage key="image_editor" openPayload={editorOpenPayload} showGlobalFeedback={showGlobalFeedback} isExiting={false} />;
-            default: return <Dashboard key="default" onNavigate={handleNavigate} onClipIdea={handleClipIdea} isExiting={false} />;
+            default: return <Dashboard key="default" onNavigate={handleNavigate} onOpenSettings={openSettings} isExiting={false} />;
         }
     };
 
