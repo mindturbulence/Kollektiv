@@ -153,6 +153,7 @@ const Header: React.FC<HeaderProps> = ({
 
   const studioItems = React.useMemo<NavItemData[]>(() => [
     { id: 'image_editor' as ActiveTab, label: 'Image Editor' },
+    { id: 'video_editor' as ActiveTab, label: 'Video Editor' },
     { id: 'composer' as ActiveTab, label: 'Composer' },
     { id: 'image_compare' as ActiveTab, label: 'Compare' },
     { id: 'lora_editor' as ActiveTab, label: 'LoRA Editor' },

@@ -7,15 +7,18 @@ import { listRoots, addRoot, addRootFromHandle, removeRoot, requestRootPermissio
 import { scanDirectoryTree, listFolderFiles } from '../services/assets/directoryScanner';
 import { moveFilesToFolder } from '../services/assets/fileOps';
 import type { AssetFile, AssetRootState, DirectoryNode, ScanProgress } from '../services/assets/types';
-import { IMAGE_SOURCE_EXTS } from '../constants/converterFormats';
+import { IMAGE_SOURCE_EXTS, SUPPORTED_SOURCE_EXTS } from '../constants/converterFormats';
 import { downloadZip } from '../utils/zipDownload';
 import { appEventBus } from '../utils/eventBus';
-import { FolderClosedIcon, FolderOpenIcon, ChevronRightIcon, ChevronDownIcon, CloseIcon, ChevronLeftIcon, CenterIcon, DownloadIcon, CheckIcon, EditIcon, RefreshIcon } from './icons';
+import { openInVideoEditor } from '../video-editor/bridge/openInVideoEditor';
+import { FolderClosedIcon, FolderOpenIcon, ChevronRightIcon, ChevronDownIcon, CloseIcon, ChevronLeftIcon, CenterIcon, DownloadIcon, CheckIcon, EditIcon, RefreshIcon, FilmIcon } from './icons';
 import LoadingSpinner from './LoadingSpinner';
 
 // ── Constants ─────────────────────────────────────────────────────────
 
 const IMAGE_EXT_SET = new Set(IMAGE_SOURCE_EXTS);
+// Video, image and audio — everything the converter can already read.
+const VIDEO_EDITOR_EXT_SET = new Set(SUPPORTED_SOURCE_EXTS);
 // ponytail: page cap keeps 10k+ image folders from choking the grid; bump if
 // virtualization is ever needed instead.
 const PAGE_SIZE = 200;
@@ -366,6 +369,20 @@ const AssetsManagerPage: React.FC<AssetsManagerPageProps> = ({ isExiting = false
     }
   }, [getSelectedFiles, showGlobalFeedback]);
 
+  const handleOpenInVideoEditor = useCallback(async () => {
+    const files = getSelectedFiles();
+    if (files.length === 0) return;
+    setIsBusy(true);
+    try {
+      const blobs = await Promise.all(files.map(async (f) => ({ blob: await f.handle.getFile(), name: f.name })));
+      openInVideoEditor(blobs);
+    } catch (e) {
+      showGlobalFeedback?.(e instanceof Error ? e.message : 'Could not open in video editor.');
+    } finally {
+      setIsBusy(false);
+    }
+  }, [getSelectedFiles, showGlobalFeedback]);
+
   // ── Render ──────────────────────────────────────────────────────────
 
   if (rootsLoaded && roots.length === 0) {
@@ -535,6 +552,7 @@ const AssetsManagerPage: React.FC<AssetsManagerPageProps> = ({ isExiting = false
             onExport={() => void handleExport()}
             onConvert={() => void handleSendToConverter()}
             onEdit={selectedIds.size === 1 ? () => void handleEditInImageEditor() : undefined}
+            onOpenInVideoEditor={getSelectedFiles().every(f => VIDEO_EDITOR_EXT_SET.has(f.ext)) ? () => void handleOpenInVideoEditor() : undefined}
             onDeselect={clearSelection}
           />
         )}
@@ -903,8 +921,9 @@ const SelectionToolbar: React.FC<{
   onExport: () => void;
   onConvert: () => void;
   onEdit: (() => void) | undefined;
+  onOpenInVideoEditor: (() => void) | undefined;
   onDeselect: () => void;
-}> = ({ count, busy, onExport, onConvert, onEdit, onDeselect }) => {
+}> = ({ count, busy, onExport, onConvert, onEdit, onOpenInVideoEditor, onDeselect }) => {
   const content = (
     <motion.div
       initial={{ opacity: 0, y: 20 }}
@@ -929,6 +948,14 @@ const SelectionToolbar: React.FC<{
         className="flex items-center gap-1.5 px-3 py-1.5 rounded-full text-2xs font-mono uppercase text-base-content/70 hover:text-primary hover:bg-base-100/40 transition-colors disabled:opacity-40"
       >
         <EditIcon className="w-4 h-4" /> Edit
+      </button>
+      <button
+        disabled={busy || !onOpenInVideoEditor}
+        onClick={onOpenInVideoEditor}
+        title={onOpenInVideoEditor ? undefined : 'Select video, image or audio files to open in the video editor'}
+        className="flex items-center gap-1.5 px-3 py-1.5 rounded-full text-2xs font-mono uppercase text-base-content/70 hover:text-primary hover:bg-base-100/40 transition-colors disabled:opacity-40"
+      >
+        <FilmIcon className="w-4 h-4" /> Video Editor
       </button>
       <div className="w-px h-5 bg-base-content/10" />
       <button onClick={onDeselect} className="p-1.5 text-base-content/60 hover:text-error transition-colors" aria-label="Deselect all">

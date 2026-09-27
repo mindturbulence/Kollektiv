@@ -34,7 +34,26 @@ export interface ProbeRequest {
   kind: 'probe';
 }
 
+/**
+ * Video-export ffmpeg fallback (plan §4/§7 export, WebCodecs unavailable):
+ * one JPEG per output frame plus an optional WAV mixdown, muxed into an
+ * mp4/webm through the same serial queue as ordinary convert jobs.
+ */
+export interface EncodeFramesRequest {
+  id: string;
+  kind: 'encodeFrames';
+  /** One JPEG-encoded frame per output frame, in order; transferred into the worker. */
+  frames: ArrayBuffer[];
+  fps: number;
+  container: 'mp4' | 'webm';
+  /** WAV bytes (PCM16); omitted when the export has no audible clips. */
+  audio?: ArrayBuffer;
+}
+
 export type WorkerRequest = ConvertRequestBase | CancelRequest | ProbeRequest;
+
+/** ffmpegWorker.ts only — convertWorker.ts (magick) never receives encodeFrames jobs. */
+export type FfmpegWorkerRequest = WorkerRequest | EncodeFramesRequest;
 
 export interface WorkerProgress {
   id: string;
