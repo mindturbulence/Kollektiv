@@ -143,7 +143,7 @@ export interface Project {
 
 // ─── Editor state (store) ─────────────────────────────────────────────────────
 
-export type EditorTool = 'select' | 'razor';
+export type EditorTool = 'select' | 'razor' | 'slip' | 'slide';
 
 export interface EditorState {
   project: Project | null;
