@@ -18,6 +18,7 @@ import PromptEditorModal from './PromptEditorModal';
 import LoadingSpinner from './LoadingSpinner';
 import PromptDetailView from './PromptDetailView';
 import EmptyState from './EmptyState';
+import { takePendingOpen } from '../utils/pendingOpen';
 import { pageVariants } from './AnimatedPanels';
 
 interface SavedPromptsProps {
@@ -123,6 +124,13 @@ const SavedPrompts: React.FC<SavedPromptsProps> = ({
       else sorted.sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0));
       return sorted;
   }, [prompts, selectedCategoryId, sortOrder, searchQuery]);
+
+  // Home's "recent prompts" asks for a prompt to open once the library has loaded.
+  useEffect(() => {
+    if (isLoading) return;
+    const id = takePendingOpen('prompt');
+    if (id && sortedAndFilteredPrompts.some(p => p.id === id)) setDetailViewPromptId(id);
+  }, [isLoading, sortedAndFilteredPrompts]);
 
   useEffect(() => {
     const node = gridRef.current;
