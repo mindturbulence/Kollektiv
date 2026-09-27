@@ -16,6 +16,7 @@ import GalleryStatsPanel from './GalleryStatsPanel';
 import AddItemModal from './AddItemModal';
 import useLocalStorage from '../utils/useLocalStorage';
 import { audioService } from '../services/audioService';
+import { takePendingOpen } from '../utils/pendingOpen';
 
 interface ImageGalleryProps {
   isCategoryPanelCollapsed: boolean;
@@ -218,6 +219,14 @@ const ImageGallery: React.FC<ImageGalleryProps> = ({
   }, [items, selectedCategoryId, searchQuery, sortOrder, pinnedItemIds, mediaTypeFilter, showNsfw]);
 
   const displayedItems = useMemo(() => sortedAndFilteredItems.slice(0, displayCount), [sortedAndFilteredItems, displayCount]);
+
+  // Home's "recent media" asks for an item to open; only open it if it's in the
+  // visible list (an NSFW item with NSFW hidden would give ItemDetailView index -1).
+  useEffect(() => {
+    if (isLoading) return;
+    const id = takePendingOpen('gallery');
+    if (id && sortedAndFilteredItems.some(i => i.id === id)) setDetailViewItemId(id);
+  }, [isLoading, sortedAndFilteredItems]);
 
   useEffect(() => {
     if (displayedItems.length > 0 && gridRef.current) {
