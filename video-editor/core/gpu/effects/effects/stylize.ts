@@ -1375,10 +1375,7 @@ function buildAsciiAtlas(ramp: string, font: string): EffectDataTexturePayload {
   const data = new Uint8Array(width * height * 4)
 
   const canvas = typeof OffscreenCanvas !== 'undefined' ? new OffscreenCanvas(width, height) : null
-  const ctx = canvas?.getContext('2d', { willReadFrequently: true }) as
-    | OffscreenCanvasRenderingContext2D
-    | null
-    | undefined
+  const ctx = canvas?.getContext('2d', { willReadFrequently: true })
   if (!ctx) {
     data.fill(255) // No canvas available: solid coverage so the effect still draws.
     return { width, height, depth: 1, data }
@@ -1391,7 +1388,7 @@ function buildAsciiAtlas(ramp: string, font: string): EffectDataTexturePayload {
   ctx.textAlign = 'center'
   ctx.textBaseline = 'middle'
   for (let i = 0; i < chars.length; i++) {
-    ctx.fillText(chars[i]!, i * cell + cell / 2, cell / 2 + 1)
+    ctx.fillText(chars[i], i * cell + cell / 2, cell / 2 + 1)
   }
   const img = ctx.getImageData(0, 0, width, height).data
   for (let i = 0; i < width * height; i++) {

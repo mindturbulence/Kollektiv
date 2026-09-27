@@ -4,11 +4,11 @@ import { DEFAULT_TRANSFORM } from '../../types';
 
 // ─── mediabunny: fake enough to drive the WebCodecs export path ─────────────
 const mediabunnyState = {
-  canEncodeVideo: vi.fn(async () => true),
-  canEncodeAudio: vi.fn(async () => true),
+  canEncodeVideo: vi.fn(async (..._args: unknown[]) => true),
+  canEncodeAudio: vi.fn(async (..._args: unknown[]) => true),
   outputCancel: vi.fn(async () => undefined),
   outputFinalize: vi.fn(async () => undefined),
-  videoSourceAdd: vi.fn(async () => undefined),
+  videoSourceAdd: vi.fn(async (..._args: unknown[]) => undefined),
   videoSourceClose: vi.fn(),
 };
 
@@ -64,7 +64,7 @@ vi.mock('../../render', () => ({
 }));
 
 // ─── ffmpeg fallback route ───────────────────────────────────────────────────
-const encodeFramesMock = vi.fn(async () => ({ id: 'x', kind: 'result' as const, ok: true as const, data: new ArrayBuffer(8), mime: 'video/mp4', byteLength: 8 }));
+const encodeFramesMock = vi.fn(async (..._args: unknown[]) => ({ id: 'x', kind: 'result' as const, ok: true as const, data: new ArrayBuffer(8), mime: 'video/mp4', byteLength: 8 }));
 const cancelMock = vi.fn();
 vi.mock('../../../../services/convert/audioVideoConverter', () => ({
   audioVideoConverter: {

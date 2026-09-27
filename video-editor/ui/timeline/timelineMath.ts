@@ -72,6 +72,18 @@ export function clipsInViewport(clips: Clip[], zoom: number, scrollLeft: number,
   });
 }
 
+/** Earliest start >= `from` where [start, start+duration) overlaps no clip on `trackId`.
+ *  Mirrors placement.ts's private earliestFreeStart, scoped to one specific track
+ *  (a drag-drop onto a track row wants that row, not "any" compatible track). */
+export function freeStartOnTrack(clips: Clip[], trackId: string, from: number, duration: number): number {
+  const onTrack = clips.filter(c => c.trackId === trackId).sort((a, b) => a.start - b.start);
+  let t = Math.max(0, from);
+  for (const c of onTrack) {
+    if (c.start < t + duration && c.start + c.duration > t) t = c.start + c.duration;
+  }
+  return t;
+}
+
 export interface Cut { trackId: string; fromClipId: string; toClipId: string; time: number }
 
 /** Adjacent same-track clip pairs (cuts), sorted by track then time. */

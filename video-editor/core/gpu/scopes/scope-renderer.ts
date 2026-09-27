@@ -45,7 +45,7 @@ export class ScopeRenderer {
 
   configureCanvas(canvas: HTMLCanvasElement): GPUCanvasContext | null {
     try {
-      const ctx = canvas.getContext('webgpu') as GPUCanvasContext | null
+      const ctx = canvas.getContext('webgpu')
       if (!ctx) return null
       ctx.configure({ device: this.device, format: this.format, alphaMode: 'opaque' })
       return ctx

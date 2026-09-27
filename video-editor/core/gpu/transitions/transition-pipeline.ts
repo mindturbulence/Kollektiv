@@ -340,7 +340,7 @@ export class TransitionPipeline {
       this.outputCanvas.height !== height
     ) {
       this.outputCanvas = new OffscreenCanvas(width, height)
-      const ctx = this.outputCanvas.getContext('webgpu') as GPUCanvasContext | null
+      const ctx = this.outputCanvas.getContext('webgpu')
       if (!ctx) return null
       ctx.configure({ device: this.device, format: this.format, alphaMode: 'premultiplied' })
       this.outputCtx = ctx

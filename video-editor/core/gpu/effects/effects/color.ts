@@ -1437,7 +1437,7 @@ export const GRADIENT_MAP_PRESETS: Record<string, string[]> = {
   grayscale: ['#000000', '#ffffff'],
 }
 
-const GRADIENT_MAP_DEFAULT_CUSTOM = GRADIENT_MAP_PRESETS.inferno!.join(', ')
+const GRADIENT_MAP_DEFAULT_CUSTOM = GRADIENT_MAP_PRESETS.inferno.join(', ')
 
 /** Resolve a preset/custom selection to an ordered list of normalized RGB stops. */
 function gradientMapStops(preset: string, customStops: string): [number, number, number][] {
@@ -1447,14 +1447,14 @@ function gradientMapStops(preset: string, customStops: string): [number, number,
           .split(',')
           .map((s) => s.trim())
           .filter((s) => s.length > 0)
-      : (GRADIENT_MAP_PRESETS[preset] ?? GRADIENT_MAP_PRESETS.inferno!)
+      : (GRADIENT_MAP_PRESETS[preset] ?? GRADIENT_MAP_PRESETS.inferno)
   const stops = hexes.map((h) => parseHexColorRgb(h, [0, 0, 0]))
   if (stops.length === 0)
     return [
       [0, 0, 0],
       [1, 1, 1],
     ]
-  if (stops.length === 1) return [stops[0]!, stops[0]!]
+  if (stops.length === 1) return [stops[0], stops[0]]
   return stops
 }
 
@@ -1468,8 +1468,8 @@ function buildGradientMapLut(stops: [number, number, number][]): EffectDataTextu
     const scaled = t * segments
     const idx = Math.min(Math.floor(scaled), segments - 1)
     const f = scaled - idx
-    const a = stops[idx]!
-    const b = stops[idx + 1]!
+    const a = stops[idx]
+    const b = stops[idx + 1]
     data[i * 4] = Math.round((a[0] + (b[0] - a[0]) * f) * 255)
     data[i * 4 + 1] = Math.round((a[1] + (b[1] - a[1]) * f) * 255)
     data[i * 4 + 2] = Math.round((a[2] + (b[2] - a[2]) * f) * 255)

@@ -14,8 +14,8 @@ function computeMonotoneTangents(points: CurvePoint[]): number[] {
   const segmentCount = points.length - 1
   const slopes = new Array<number>(segmentCount)
   for (let i = 0; i < segmentCount; i += 1) {
-    const left = points[i]!
-    const right = points[i + 1]!
+    const left = points[i]
+    const right = points[i + 1]
     const width = Math.max(0.000001, right.x - left.x)
     slopes[i] = (right.y - left.y) / width
   }
@@ -25,22 +25,22 @@ function computeMonotoneTangents(points: CurvePoint[]): number[] {
   tangents[points.length - 1] = slopes[segmentCount - 1]!
 
   for (let i = 1; i < points.length - 1; i += 1) {
-    const prev = slopes[i - 1]!
-    const next = slopes[i]!
+    const prev = slopes[i - 1]
+    const next = slopes[i]
     tangents[i] = prev * next <= 0 ? 0 : (prev + next) / 2
   }
 
   // Fritsch-Carlson slope limiter to preserve monotonicity.
   for (let i = 0; i < segmentCount; i += 1) {
-    const slope = slopes[i]!
+    const slope = slopes[i]
     if (Math.abs(slope) < 0.000001) {
       tangents[i] = 0
       tangents[i + 1] = 0
       continue
     }
 
-    const a = tangents[i]! / slope
-    const b = tangents[i + 1]! / slope
+    const a = tangents[i] / slope
+    const b = tangents[i + 1] / slope
     const magnitude = a * a + b * b
     if (magnitude > 9) {
       const scale = 3 / Math.sqrt(magnitude)
@@ -82,13 +82,13 @@ function normalizeCurvePoints(points: CurvePoint[] | undefined): CurvePoint[] {
     ]
   }
 
-  if (deduped[0]!.x > 0.0001) {
-    deduped.unshift({ x: 0, y: deduped[0]!.y })
+  if (deduped[0].x > 0.0001) {
+    deduped.unshift({ x: 0, y: deduped[0].y })
   } else {
-    deduped[0] = { x: 0, y: deduped[0]!.y }
+    deduped[0] = { x: 0, y: deduped[0].y }
   }
 
-  const last = deduped[deduped.length - 1]!
+  const last = deduped[deduped.length - 1]
   if (last.x < 0.9999) {
     deduped.push({ x: 1, y: last.y })
   } else if (Math.abs(last.x - 1) > 0.0001) {
@@ -102,28 +102,28 @@ export function evaluateMonotoneCurve(points: CurvePoint[] | undefined, x: numbe
   const normalized = normalizeCurvePoints(points)
   const input = clamp(x, 0, 1)
 
-  if (input <= normalized[0]!.x) return normalized[0]!.y
-  if (input >= normalized[normalized.length - 1]!.x) return normalized[normalized.length - 1]!.y
+  if (input <= normalized[0].x) return normalized[0].y
+  if (input >= normalized[normalized.length - 1].x) return normalized[normalized.length - 1].y
 
   let segmentIndex = normalized.length - 2
   for (let i = 0; i < normalized.length - 1; i += 1) {
-    const left = normalized[i]!
-    const right = normalized[i + 1]!
+    const left = normalized[i]
+    const right = normalized[i + 1]
     if (input >= left.x && input <= right.x) {
       segmentIndex = i
       break
     }
   }
 
-  const left = normalized[segmentIndex]!
-  const right = normalized[segmentIndex + 1]!
+  const left = normalized[segmentIndex]
+  const right = normalized[segmentIndex + 1]
   const width = Math.max(0.000001, right.x - left.x)
   const t = clamp((input - left.x) / width, 0, 1)
   const t2 = t * t
   const t3 = t2 * t
   const tangents = computeMonotoneTangents(normalized)
-  const m0 = tangents[segmentIndex]!
-  const m1 = tangents[segmentIndex + 1]!
+  const m0 = tangents[segmentIndex]
+  const m1 = tangents[segmentIndex + 1]
 
   const h00 = 2 * t3 - 3 * t2 + 1
   const h10 = t3 - 2 * t2 + t

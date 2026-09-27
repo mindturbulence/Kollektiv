@@ -37,7 +37,7 @@ function fakeCanvas(ctx: CanvasRenderingContext2D, width = 1920, height = 1080) 
 
 function bitmapLayer(overrides: Partial<Transform> = {}, effects: Effect[] = []): RenderLayer {
   return {
-    source: { width: 100, height: 50, close: () => {} } as unknown as ImageBitmap,
+    source: { width: 100, height: 50, close: () => {} },
     transform: { ...DEFAULT_TRANSFORM, ...overrides },
     effects,
   };

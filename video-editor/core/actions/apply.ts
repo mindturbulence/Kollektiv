@@ -16,7 +16,6 @@
 import type {
   Clip,
   EditAction,
-  Marker,
   MediaItem,
   Project,
   ProjectSettings,

@@ -125,8 +125,8 @@ function parseDataLine(line: string, state: CubeParseState): void {
   const offset = state.entryIndex * 4
   for (let c = 0; c < 3; c++) {
     const raw = parseFloatToken(tokens[c], `data entry ${state.entryIndex}`)
-    const min = state.domainMin[c] as number
-    const max = state.domainMax[c] as number
+    const min = state.domainMin[c]
+    const max = state.domainMax[c]
     state.data[offset + c] = quantizeChannel(raw, min, max)
   }
   state.data[offset + 3] = 255

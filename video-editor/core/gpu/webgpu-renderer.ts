@@ -111,7 +111,7 @@ class WebGpuRenderer implements Renderer {
     ctx.scale(t.scale, t.scale);
     const w = source.width;
     const h = source.height;
-    ctx.drawImage(source as CanvasImageSource, -w / 2, -h / 2, w, h);
+    ctx.drawImage(source, -w / 2, -h / 2, w, h);
     ctx.restore();
   }
 

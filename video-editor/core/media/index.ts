@@ -67,13 +67,17 @@ interface VideoSession {
   current: CanvasSinkFrame | null;
   next: CanvasSinkFrame | null;
   done: boolean;
+  /** Tail of this session's work queue: iterator steps must never interleave. */
+  queue: Promise<unknown>;
 }
 
 export function createMediaEngine(loadSeam: () => Promise<MediabunnySeam> = loadRealMediabunnySeam): MediaEngine {
   let seam: MediabunnySeam | null = null;
   const ensureSeam = async (): Promise<MediabunnySeam> => (seam ??= await loadSeam());
 
-  const videoSessions = new Map<string, VideoSession>();
+  // Promises, not sessions: concurrent first calls must share one Input
+  // (a second one would be orphaned and never disposed).
+  const videoSessions = new Map<string, Promise<VideoSession | null>>();
   const imageBitmaps = new Map<string, ImageBitmap>();
   const audioBuffers = new Map<string, AudioBuffer>();
 
@@ -85,9 +89,16 @@ export function createMediaEngine(loadSeam: () => Promise<MediabunnySeam> = load
     return bitmap;
   }
 
-  async function getOrCreateVideoSession(mediaId: string, file: Blob): Promise<VideoSession | null> {
-    const cached = videoSessions.get(mediaId);
-    if (cached) return cached;
+  function getOrCreateVideoSession(mediaId: string, file: Blob): Promise<VideoSession | null> {
+    let pending = videoSessions.get(mediaId);
+    if (!pending) {
+      pending = createVideoSession(file);
+      videoSessions.set(mediaId, pending);
+    }
+    return pending;
+  }
+
+  async function createVideoSession(file: Blob): Promise<VideoSession | null> {
     const s = await ensureSeam();
     const input = s.createInput(file);
     const track = await input.getPrimaryVideoTrack();
@@ -104,8 +115,8 @@ export function createMediaEngine(loadSeam: () => Promise<MediabunnySeam> = load
       current: null,
       next: null,
       done: false,
+      queue: Promise.resolve(),
     };
-    videoSessions.set(mediaId, session);
     return session;
   }
 
@@ -133,7 +144,7 @@ export function createMediaEngine(loadSeam: () => Promise<MediabunnySeam> = load
 
     while (true) {
       if (!session.next && !session.done) {
-        const step = await session.iterator!.next();
+        const step = await session.iterator.next();
         if (step.done) {
           session.done = true;
         } else {
@@ -219,7 +230,7 @@ export function createMediaEngine(loadSeam: () => Promise<MediabunnySeam> = load
     }
   }
 
-  async function drawThumbnailCanvas(source: CanvasImageSource, srcW: number, srcH: number): Promise<string> {
+  function drawThumbnailCanvas(source: CanvasImageSource, srcW: number, srcH: number): string {
     const height = Math.max(1, Math.round((THUMBNAIL_WIDTH * srcH) / Math.max(1, srcW)));
     const canvas = document.createElement('canvas');
     canvas.width = THUMBNAIL_WIDTH;
@@ -246,9 +257,12 @@ export function createMediaEngine(loadSeam: () => Promise<MediabunnySeam> = load
       const session = await getOrCreateVideoSession(mediaId, file);
       if (!session) return null;
       const t = clamp(sourceTime, 0, Math.max(0, session.duration - 1e-6));
-      const frame = await stepToFrame(session, t);
-      if (!frame) return null;
-      return createImageBitmap(frame.canvas);
+      const run = session.queue.then(async () => {
+        const frame = await stepToFrame(session, t);
+        return frame ? createImageBitmap(frame.canvas) : null;
+      });
+      session.queue = run.catch(() => undefined);
+      return run;
     },
 
     async getAudioBuffer(mediaId: string, file: Blob, ctx: BaseAudioContext): Promise<AudioBuffer | null> {
@@ -266,7 +280,7 @@ export function createMediaEngine(loadSeam: () => Promise<MediabunnySeam> = load
       if (kind === 'image') {
         const bitmap = await createImageBitmap(file);
         try {
-          return await drawThumbnailCanvas(bitmap, bitmap.width, bitmap.height);
+          return drawThumbnailCanvas(bitmap, bitmap.width, bitmap.height);
         } finally {
           bitmap.close();
         }
@@ -279,7 +293,7 @@ export function createMediaEngine(loadSeam: () => Promise<MediabunnySeam> = load
         const sink = track.createCanvasSink({ width: THUMBNAIL_WIDTH, fit: 'contain' });
         const frame = await sink.getCanvas(Math.max(0, sourceTime));
         if (!frame) return undefined;
-        return await drawThumbnailCanvas(frame.canvas, track.displayWidth, track.displayHeight);
+        return drawThumbnailCanvas(frame.canvas, track.displayWidth, track.displayHeight);
       } finally {
         input.dispose();
       }
@@ -288,10 +302,13 @@ export function createMediaEngine(loadSeam: () => Promise<MediabunnySeam> = load
     waveform,
 
     dispose(mediaId?: string): void {
-      const disposeVideo = (id: string, session: VideoSession) => {
-        void session.iterator?.return?.(undefined);
-        session.input.dispose();
+      const disposeVideo = (id: string, pending: Promise<VideoSession | null>) => {
         videoSessions.delete(id);
+        // Close only after queued decode steps finish, never mid-step.
+        void pending.then(session => session?.queue.then(async () => {
+          await session.iterator?.return?.(undefined);
+          session.input.dispose();
+        }));
       };
       const disposeImage = (id: string, bitmap: ImageBitmap) => {
         bitmap.close();

@@ -12,18 +12,18 @@ vi.mock('../../core/store', async () => {
 
 // jsdom has neither of these; the drag/zoom code paths depend on them.
 if (!window.PointerEvent) {
-  window.PointerEvent = class PointerEvent extends MouseEvent {
+  class FakePointerEvent extends MouseEvent {
     pointerId: number;
     constructor(type: string, params: MouseEventInit & { pointerId?: number } = {}) {
       super(type, params);
       this.pointerId = params.pointerId ?? 1;
     }
-  };
+  }
+  window.PointerEvent = FakePointerEvent as unknown as typeof PointerEvent;
 }
 Element.prototype.setPointerCapture = vi.fn();
 Element.prototype.releasePointerCapture = vi.fn();
 if (typeof ResizeObserver === 'undefined') {
-  // @ts-expect-error -- jsdom has no ResizeObserver
   window.ResizeObserver = class { observe() {} disconnect() {} unobserve() {} };
 }
 
@@ -57,7 +57,7 @@ afterEach(cleanup);
 function stubWideRect(el: Element) {
   vi.spyOn(el, 'getBoundingClientRect').mockReturnValue({
     left: 0, right: 400, width: 400, top: 0, bottom: 50, height: 50, x: 0, y: 0, toJSON() {},
-  } as DOMRect);
+  });
 }
 
 describe('Timeline', () => {
@@ -103,9 +103,9 @@ describe('Timeline', () => {
     const zoom = getSnapshot().zoom;
     const c1 = screen.getByTestId('ve-clip-c1');
     const width = 5 * zoom;
-    vi.spyOn(c1, 'getBoundingClientRect').mockReturnValue({ left: 2 * zoom, right: 2 * zoom + width, width, top: 0, bottom: 50, height: 50, x: 0, y: 0, toJSON() {} } as DOMRect);
+    vi.spyOn(c1, 'getBoundingClientRect').mockReturnValue({ left: 2 * zoom, right: 2 * zoom + width, width, top: 0, bottom: 50, height: 50, x: 0, y: 0, toJSON() {} });
     const tracksScroll = screen.getByTestId('ve-track-row-v1').parentElement!;
-    vi.spyOn(tracksScroll, 'getBoundingClientRect').mockReturnValue({ left: 0, right: 2000, width: 2000, top: 0, bottom: 500, height: 500, x: 0, y: 0, toJSON() {} } as DOMRect);
+    vi.spyOn(tracksScroll, 'getBoundingClientRect').mockReturnValue({ left: 0, right: 2000, width: 2000, top: 0, bottom: 500, height: 500, x: 0, y: 0, toJSON() {} });
     // pointerdown near the right edge
     fireEvent.pointerDown(c1, { clientX: 2 * zoom + width - 1, clientY: 10 });
     fireEvent(window, new PointerEvent('pointermove', { clientX: 2 * zoom + width + zoom, clientY: 10 }));
@@ -177,5 +177,33 @@ describe('Timeline', () => {
     expect(getSnapshot().zoom).toBe(2000);
     realDispatch({ type: 'setZoom', zoom: -50 });
     expect(getSnapshot().zoom).toBe(2);
+  });
+
+  // jsdom has no native DragEvent constructor; a plain MouseEvent carries
+  // clientX/Y and we attach dataTransfer manually (React's drag handlers just
+  // read properties off the native event, they don't require a DragEvent).
+  function makeDropEvent(clientX: number, mediaId: string): Event {
+    const event = new MouseEvent('drop', { clientX, bubbles: true, cancelable: true });
+    Object.defineProperty(event, 'dataTransfer', { value: { getData: () => mediaId } });
+    return event;
+  }
+
+  it('dropping a compatible media item on a track adds a clip at the drop time', () => {
+    render(<Timeline />);
+    const zoom = getSnapshot().zoom;
+    const row = screen.getByTestId('ve-track-row-v1');
+    stubWideRect(row.parentElement!); // tracks-scroll container, read by clipStartTimeAt
+    fireEvent(row, makeDropEvent(15 * zoom, 'm1'));
+    expect(realDispatch).toHaveBeenCalledWith(expect.objectContaining({
+      type: 'addClip',
+      clip: expect.objectContaining({ trackId: 'v1', mediaId: 'm1', start: 15, duration: 20 }),
+    }));
+  });
+
+  it('ignores a drop of an incompatible media kind onto a track', () => {
+    render(<Timeline />);
+    const row = screen.getByTestId('ve-track-row-a1'); // audio track, media is video
+    fireEvent(row, makeDropEvent(0, 'm1'));
+    expect(realDispatch).not.toHaveBeenCalledWith(expect.objectContaining({ type: 'addClip' }));
   });
 });

@@ -14,6 +14,7 @@ import type { Compositor, MediaEngine, PlaybackController, Renderer, VideoEditor
 import { useEditorSelector } from './hooks/useEditorState';
 import { PROJECT_PRESETS, DEFAULT_FPS, createDefaultProject } from './placement';
 import { importMediaFiles } from './importMedia';
+import { listProjects, loadProject, startAutosave, type ProjectSummary } from '../core/autosave';
 import EditorToolbar from './EditorToolbar';
 import MediaBin from './MediaBin';
 import Preview from './Preview';
@@ -35,7 +36,13 @@ interface CoreEngines {
   error: string | null;
 }
 
-const NewProjectPanel: React.FC<{ onCreate: (name: string, width: number, height: number) => void }> = ({ onCreate }) => {
+interface NewProjectPanelProps {
+  onCreate: (name: string, width: number, height: number) => void;
+  recent: ProjectSummary | null;
+  onResume: (id: string) => void;
+}
+
+const NewProjectPanel: React.FC<NewProjectPanelProps> = ({ onCreate, recent, onResume }) => {
   const [name, setName] = useState('Untitled project');
   const [presetIndex, setPresetIndex] = useState(0);
   const preset = PROJECT_PRESETS[presetIndex];
@@ -76,7 +83,12 @@ const NewProjectPanel: React.FC<{ onCreate: (name: string, width: number, height
           </div>
           <p className="text-2xs font-mono text-base-content/60">{DEFAULT_FPS} fps · tracks: Video 1, Video 2, Audio 1, Text 1</p>
         </div>
-        <footer className="panel-footer h-11 p-1.5">
+        <footer className="panel-footer h-11 p-1.5 gap-1.5">
+          {recent && (
+            <button type="button" className="form-btn flex-1 rounded-none truncate" onClick={() => onResume(recent.id)}>
+              Resume {recent.name}
+            </button>
+          )}
           <button type="submit" className="form-btn form-btn-primary flex-1 rounded-none">Create project</button>
         </footer>
       </form>
@@ -98,6 +110,30 @@ const VideoEditorPage: React.FC<VideoEditorPageProps> = ({ openPayload, showGlob
   const payloadHandledRef = useRef(false);
 
   const reportError = useCallback((message: string) => showGlobalFeedback?.(message, true), [showGlobalFeedback]);
+  const [recent, setRecent] = useState<ProjectSummary | null>(null);
+
+  // Autosave while the editor is open; stopping flushes any pending save.
+  useEffect(() => startAutosave({ onError: (err) => reportError(`Autosave failed: ${errorMessage(err)}`) }), [reportError]);
+
+  // Most recently saved project, offered on the New Project panel.
+  useEffect(() => {
+    if (hasProject) return;
+    let cancelled = false;
+    listProjects()
+      .then(list => { if (!cancelled) setRecent(list[0] ?? null); })
+      .catch(() => { /* IDB unavailable: just no resume option */ });
+    return () => { cancelled = true; };
+  }, [hasProject]);
+
+  const openSaved = useCallback(async (id: string) => {
+    try {
+      const project = await loadProject(id);
+      if (project) dispatch({ type: 'loadProject', project });
+      else reportError('That video project no longer exists.');
+    } catch (err) {
+      reportError(`Couldn't open project: ${errorMessage(err)}`);
+    }
+  }, [reportError]);
 
   // Media engine + compositor: page lifetime.
   useEffect(() => {
@@ -162,7 +198,7 @@ const VideoEditorPage: React.FC<VideoEditorPageProps> = ({ openPayload, showGlob
     if (!openPayload || payloadHandledRef.current) return;
     if (openPayload.kind === 'project') {
       payloadHandledRef.current = true;
-      reportError('Opening saved video projects is not available yet.');
+      void openSaved(openPayload.projectId);
       return;
     }
     if (!core.media) {
@@ -180,7 +216,7 @@ const VideoEditorPage: React.FC<VideoEditorPageProps> = ({ openPayload, showGlob
       dispatch({ type: 'loadProject', project: createDefaultProject(first || 'Untitled project', preset.width, preset.height) });
     }
     void importFiles(openPayload.files);
-  }, [openPayload, core, importFiles, reportError]);
+  }, [openPayload, core, importFiles, reportError, openSaved]);
 
   // Space toggles playback unless focus is in a control that uses Space itself.
   useEffect(() => {
@@ -204,7 +240,7 @@ const VideoEditorPage: React.FC<VideoEditorPageProps> = ({ openPayload, showGlob
       <EditorToolbar onExport={() => setIsExportOpen(true)} />
 
       {!hasProject ? (
-        <NewProjectPanel onCreate={createProject} />
+        <NewProjectPanel onCreate={createProject} recent={recent} onResume={(id) => void openSaved(id)} />
       ) : (
         <>
           <div className="flex-1 flex flex-row min-h-0">

@@ -162,6 +162,8 @@ describe('createMediaEngine — getVideoFrame caching and clamping', () => {
     await engine.getVideoFrame('m3', blob('video/mp4'), 0);
     expect(createInputCalls).toBe(1);
     engine.dispose('m3');
+    // Disposal waits for the session's queued decode steps.
+    await new Promise(resolve => setTimeout(resolve, 0));
     expect(disposeCalls.length).toBe(1);
     await engine.getVideoFrame('m3', blob('video/mp4'), 0);
     expect(createInputCalls).toBe(2);
@@ -198,5 +200,27 @@ describe('createMediaEngine — getAudioBuffer caching', () => {
     const b = await engine.getAudioBuffer('m4', blob('audio/mpeg'), ctx);
     expect(a).toBe(b);
     expect(audioSinkCalls).toBe(1);
+  });
+});
+
+describe('createMediaEngine — concurrent getVideoFrame', () => {
+  it('shares one session and serializes steps when calls overlap', async () => {
+    let createInputCalls = 0;
+    const { seam } = fakeSeam([0, 1 / 30, 2 / 30, 3 / 30], 5);
+    const countingSeam: MediabunnySeam = {
+      createInput: (file) => {
+        createInputCalls++;
+        return seam.createInput(file);
+      },
+    };
+    const engine = createMediaEngine(async () => countingSeam);
+    const file = blob('video/mp4');
+    const frames = await Promise.all([
+      engine.getVideoFrame('mc', file, 0),
+      engine.getVideoFrame('mc', file, 2 / 30),
+      engine.getVideoFrame('mc', file, 1 / 30),
+    ]);
+    expect(createInputCalls).toBe(1);
+    expect(frames.every(f => f !== null)).toBe(true);
   });
 });

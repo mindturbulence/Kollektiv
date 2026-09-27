@@ -99,4 +99,28 @@ describe('startAutosave', () => {
     await vi.advanceTimersByTimeAsync(1500);
     expect(deps.save).not.toHaveBeenCalled();
   });
+
+  it('flushes a pending dirty save when stopped (leaving the editor)', async () => {
+    const deps = makeDeps();
+    const stop = startAutosave(deps);
+    snapshot = { ...snapshot, isDirty: true };
+    fire();
+    await vi.advanceTimersByTimeAsync(500); // still inside the debounce window
+    stop();
+    expect(deps.save).toHaveBeenCalledTimes(1);
+    await vi.waitFor(() => expect(deps.markSaved).toHaveBeenCalledTimes(1));
+  });
+
+  it('keeps the store dirty when the project changed while a save was in flight', async () => {
+    let resolveSave: () => void = () => {};
+    const deps = makeDeps({ save: vi.fn(() => new Promise<void>(r => { resolveSave = r; })) });
+    startAutosave(deps);
+    snapshot = { ...snapshot, isDirty: true };
+    fire();
+    await vi.advanceTimersByTimeAsync(1500); // save #1 starts
+    snapshot = { ...snapshot, project: { ...snapshot.project!, name: 'edited mid-save' } };
+    resolveSave();
+    await vi.advanceTimersByTimeAsync(0);
+    expect(deps.markSaved).not.toHaveBeenCalled();
+  });
 });

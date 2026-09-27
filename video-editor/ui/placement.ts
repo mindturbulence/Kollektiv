@@ -76,11 +76,17 @@ function baseClip(trackId: string, start: number, duration: number): Clip {
   };
 }
 
-/** A clip for `media` at the playhead, or null when no compatible unlocked track exists. */
+/**
+ * A clip for `media` on the main (first unlocked) track of its kind, at the
+ * first free spot at or after the playhead — so repeated "Add" appends a
+ * sequence instead of stacking layers. Null when no such track exists.
+ */
 export function createClipForMedia(project: Project, media: MediaItem, at: number): Clip | null {
-  const placement = findPlacement(project, media.kind === 'audio' ? 'audio' : 'video', at, media.duration);
-  if (!placement) return null;
-  return { ...baseClip(placement.trackId, placement.start, media.duration), mediaId: media.id };
+  const kind: TrackKind = media.kind === 'audio' ? 'audio' : 'video';
+  const track = project.tracks.find(t => t.kind === kind && !t.locked);
+  if (!track) return null;
+  const start = earliestFreeStart(project.clips, track.id, at, media.duration);
+  return { ...baseClip(track.id, start, media.duration), mediaId: media.id };
 }
 
 export function createTextClip(project: Project, at: number): Clip | null {

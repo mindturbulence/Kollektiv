@@ -4,12 +4,20 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { dispatch } from '../../core/store';
 import { useEditorSelector } from '../hooks/useEditorState';
-import type { Clip, MediaItem, Track, TrackKind } from '../../core/types';
+import type { Clip, Marker, MediaItem, Track, TrackKind } from '../../core/types';
+import { DEFAULT_TRANSFORM } from '../../core/types';
 import {
   formatTimecode, frameSnap, snapTime, collectSnapPoints, trimBounds,
-  clipsInViewport, findCuts, canAcceptClip, clampZoom,
+  clipsInViewport, findCuts, canAcceptClip, clampZoom, freeStartOnTrack,
 } from './timelineMath';
+import { MEDIA_DRAG_MIME } from '../placement';
 import { EyeIcon, LockIcon, LockOpenIcon, PlusIcon, ScissorsIcon } from '../../../components/icons';
+
+// Stable fallbacks so memo/callback deps don't change every render without a project.
+const NO_TRACKS: Track[] = [];
+const NO_CLIPS: Clip[] = [];
+const NO_MEDIA: MediaItem[] = [];
+const NO_MARKERS: Marker[] = [];
 
 const HEADER_W = 176;
 const RULER_H = 28;
@@ -53,11 +61,11 @@ const Timeline: React.FC = () => {
   const [viewportWidth, setViewportWidth] = useState(0);
   const [drag, setDrag] = useState<DragPreview>(null);
 
-  const tracks = project?.tracks ?? [];
-  const clips = project?.clips ?? [];
-  const media = project?.media ?? [];
+  const tracks = project?.tracks ?? NO_TRACKS;
+  const clips = project?.clips ?? NO_CLIPS;
+  const media = project?.media ?? NO_MEDIA;
   const mediaById = useMemo(() => new Map<string, MediaItem>(media.map(m => [m.id, m])), [media]);
-  const markers = project?.markers ?? [];
+  const markers = project?.markers ?? NO_MARKERS;
 
   const maxEnd = useMemo(() => clips.reduce((m, c) => Math.max(m, c.start + c.duration), 0), [clips]);
   const contentWidth = Math.max(viewportWidth, (maxEnd + 30) * zoom);
@@ -305,6 +313,27 @@ const Timeline: React.FC = () => {
     setDrag({ kind: 'marquee', pointerId: e.pointerId, originX: x, originY: y, x, y });
   };
 
+  // ─── media-bin drop: add a clip on the target track at the drop time ──────
+  const onDropMedia = (e: React.DragEvent<HTMLDivElement>, track: Track) => {
+    const mediaId = e.dataTransfer.getData(MEDIA_DRAG_MIME);
+    if (!mediaId || !project) return;
+    e.preventDefault();
+    const item = mediaById.get(mediaId);
+    if (!item) return;
+    const requiredKind: TrackKind = item.kind === 'audio' ? 'audio' : 'video';
+    if (track.kind !== requiredKind || track.locked) return;
+    const dropTime = frameSnap(clipStartTimeAt(e.clientX), project.settings.fps);
+    const start = freeStartOnTrack(clips, track.id, dropTime, item.duration);
+    dispatch({
+      type: 'addClip',
+      clip: {
+        id: crypto.randomUUID(), trackId: track.id, mediaId: item.id, start, duration: item.duration,
+        inPoint: 0, speed: 1, volume: 1, fadeIn: 0, fadeOut: 0,
+        transform: { ...DEFAULT_TRANSFORM }, keyframes: [], effects: [],
+      },
+    });
+  };
+
   const cutsByTrack = useMemo(() => {
     const map = new Map<string, ReturnType<typeof findCuts>>();
     for (const t of tracks) map.set(t.id, findCuts(clips.filter(c => c.trackId === t.id)));
@@ -402,6 +431,7 @@ const Timeline: React.FC = () => {
                 onClipPointerUpRazor={onClipPointerUpRazor}
                 cuts={cutsByTrack.get(track.id) ?? []}
                 transitions={project.transitions}
+                onDropMedia={onDropMedia}
               />
             ))}
             <div className="absolute top-0 bottom-0 w-px bg-primary pointer-events-none z-raised" style={{ left: playhead * zoom }} />
@@ -529,11 +559,14 @@ const TrackRow: React.FC<{
   onClipPointerUpRazor: (e: React.PointerEvent, clip: Clip) => void;
   cuts: ReturnType<typeof findCuts>;
   transitions: { id: string; fromClipId: string; toClipId: string }[];
-}> = ({ top, track, clips, mediaById, zoom, selectedClipIds, tool, drag, onClipPointerDown, onClipPointerUpRazor, cuts, transitions }) => (
+  onDropMedia: (e: React.DragEvent<HTMLDivElement>, track: Track) => void;
+}> = ({ top, track, clips, mediaById, zoom, selectedClipIds, tool, drag, onClipPointerDown, onClipPointerUpRazor, cuts, transitions, onDropMedia }) => (
   <div
     className="absolute left-0 right-0 border-b border-base-content/5"
     style={{ top, height: ROW_H }}
     data-testid={`ve-track-row-${track.id}`}
+    onDragOver={(e) => e.preventDefault()}
+    onDrop={(e) => onDropMedia(e, track)}
   >
     {clips.map(clip => {
       const isDraggingThis = drag?.kind === 'move' && drag.clipIds.includes(clip.id);

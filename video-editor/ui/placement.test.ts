@@ -34,6 +34,12 @@ describe('placement', () => {
     expect(createClipForMedia(p, audio, 0)?.trackId).toBe(p.tracks[2].id);
   });
 
+  it('appends media after existing clips on the main track instead of stacking', () => {
+    const p = withClip(createDefaultProject('p', 100, 100), 0, 0, 1.5);
+    const video = { id: 'v', kind: 'video', duration: 1.5 } as MediaItem;
+    expect(createClipForMedia(p, video, 0)).toMatchObject({ trackId: p.tracks[0].id, start: 1.5 });
+  });
+
   it('formats timecode', () => {
     expect(formatTimecode(61.5, 30)).toBe('01:01:15');
     expect(formatTimecode(3600, 30)).toBe('01:00:00:00');

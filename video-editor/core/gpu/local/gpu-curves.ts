@@ -144,7 +144,7 @@ export function readGpuCurvesChannelControl(
 ): GpuCurvesChannelControl {
   const keys = getGpuCurvesChannelParamKeys(channel)
   const hasExplicitPoints = [keys.shadowX, keys.shadowY, keys.highlightX, keys.highlightY].some(
-    (key) => typeof params[key] === 'number' && Number.isFinite(params[key] as number),
+    (key) => typeof params[key] === 'number' && Number.isFinite(params[key]),
   )
 
   if (hasExplicitPoints) {

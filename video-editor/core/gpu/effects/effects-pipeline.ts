@@ -163,7 +163,7 @@ export class EffectsPipeline {
         if (!adapter) return null
         const device = await adapter.requestDevice()
         EffectsPipeline._cachedDevice = device
-        device.lost.then(() => {
+        void device.lost.then(() => {
           if (EffectsPipeline._cachedDevice === device) {
             EffectsPipeline._cachedDevice = null
           }
@@ -490,7 +490,7 @@ export class EffectsPipeline {
     let outputView = outputTex === this.pingTexture ? this.pingView! : this.pongView!
 
     for (let effectIndex = 0; effectIndex < effects.length; effectIndex++) {
-      const effect = effects[effectIndex]!
+      const effect = effects[effectIndex]
       const definition = getGpuEffect(effect.type)
       if (!definition) continue
 
@@ -599,7 +599,7 @@ export class EffectsPipeline {
 
   configureCanvas(canvas: HTMLCanvasElement | OffscreenCanvas): GPUCanvasContext | null {
     try {
-      const ctx = canvas.getContext('webgpu') as GPUCanvasContext | null
+      const ctx = canvas.getContext('webgpu')
       if (!ctx) return null
       ctx.configure({ device: this.device, format: this.format, alphaMode: 'premultiplied' })
       return ctx
@@ -730,14 +730,14 @@ export class EffectsPipeline {
     const isPingFinal = finalTex === this.pingTexture
     const blitBindGroup = isPingFinal
       ? (this.blitBindGroupPing ??= this.device.createBindGroup({
-          layout: this.blitBindGroupLayout!,
+          layout: this.blitBindGroupLayout,
           entries: [
             { binding: 0, resource: this.sampler },
             { binding: 1, resource: this.pingView! },
           ],
         }))
       : (this.blitBindGroupPong ??= this.device.createBindGroup({
-          layout: this.blitBindGroupLayout!,
+          layout: this.blitBindGroupLayout,
           entries: [
             { binding: 0, resource: this.sampler },
             { binding: 1, resource: this.pongView! },
@@ -747,7 +747,7 @@ export class EffectsPipeline {
     drawFullscreenCanvasPass({
       device: this.device,
       context: outCtx,
-      pipeline: this.blitPipeline!,
+      pipeline: this.blitPipeline,
       bindGroup: blitBindGroup,
       encoder: commandEncoder,
     })
@@ -968,14 +968,14 @@ export class EffectsPipeline {
     const isPingFinal = finalTex === this.pingTexture
     const blitBindGroup = isPingFinal
       ? (this.blitBindGroupPing ??= this.device.createBindGroup({
-          layout: this.blitBindGroupLayout!,
+          layout: this.blitBindGroupLayout,
           entries: [
             { binding: 0, resource: this.sampler },
             { binding: 1, resource: this.pingView! },
           ],
         }))
       : (this.blitBindGroupPong ??= this.device.createBindGroup({
-          layout: this.blitBindGroupLayout!,
+          layout: this.blitBindGroupLayout,
           entries: [
             { binding: 0, resource: this.sampler },
             { binding: 1, resource: this.pongView! },
@@ -985,7 +985,7 @@ export class EffectsPipeline {
     drawFullscreenCanvasPass({
       device: this.device,
       context: outCtx,
-      pipeline: this.blitPipeline!,
+      pipeline: this.blitPipeline,
       bindGroup: blitBindGroup,
       encoder: commandEncoder,
     })

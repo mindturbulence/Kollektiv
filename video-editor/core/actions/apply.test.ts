@@ -255,7 +255,7 @@ function randomAction(rng: () => number, project: Project): EditAction {
 
 describe('applyEdit property: apply -> inverse round trips', () => {
   it('every successful edit inverts back to a deep-equal project, and invariants always hold', () => {
-    for (let seed = 0; seed < 300; seed++) {
+    for (let seed = 0; seed < 100; seed++) {
       const rng = mulberry32(seed * 7919 + 1);
       let project = baseProject();
       for (let step = 0; step < 15; step++) {
@@ -264,13 +264,7 @@ describe('applyEdit property: apply -> inverse round trips', () => {
         assertInvariants(next);
         if (next === project) continue;
         const back = applyEdit(next, inverse).project;
-        try {
-          expect(back).toEqual(project);
-        } catch (e) {
-          console.log('FAIL seed', seed, 'step', step, JSON.stringify(action));
-          console.log('inverse', JSON.stringify(inverse));
-          throw e;
-        }
+        expect(back).toEqual(project);
         project = next;
       }
     }

@@ -135,18 +135,27 @@ export function startAutosave(deps: AutosaveDeps = {}): () => void {
 
   let handle: ReturnType<typeof setTimeout> | undefined;
 
+  const saveNow = () => {
+    const { project, isDirty } = getSnapshot();
+    if (!project || !isDirty) return;
+    save(project)
+      .then(() => {
+        // Edits made while this save was in flight already scheduled another
+        // save; clearing the flag now would make that one skip.
+        if (getSnapshot().project === project) markSaved();
+      })
+      .catch(onError);
+  };
+
   const schedule = () => {
     clearTimeout(handle);
-    handle = setTimeout(() => {
-      const { project, isDirty } = getSnapshot();
-      if (!project || !isDirty) return;
-      save(project).then(markSaved).catch(onError);
-    }, debounceMs);
+    handle = setTimeout(saveNow, debounceMs);
   };
 
   const unsub = subscribe(schedule);
   return () => {
     unsub();
     clearTimeout(handle);
+    saveNow(); // leaving the editor must not drop the last debounce window
   };
 }
