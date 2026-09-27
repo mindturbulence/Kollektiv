@@ -3,7 +3,7 @@ import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { render, screen, fireEvent, cleanup, within, act } from '@testing-library/react';
 import Timeline from './Timeline';
 import { dispatch as realDispatch, __resetForTests, getSnapshot } from '../../core/store';
-import type { Project } from '../../core/types';
+import type { Clip, Project } from '../../core/types';
 
 vi.mock('../../core/store', async () => {
   const actual = await vi.importActual<typeof import('../../core/store')>('../../core/store');
@@ -36,7 +36,11 @@ function makeProject(): Project {
       { id: 'a1', kind: 'audio', name: 'Audio 1', muted: false, hidden: false, locked: false },
     ],
     clips: [
-      { id: 'c1', trackId: 'v1', mediaId: 'm1', start: 2, duration: 5, inPoint: 0, speed: 1, volume: 1, fadeIn: 0, fadeOut: 0, transform: { x: 0, y: 0, scale: 1, rotation: 0, opacity: 1, fit: 'contain' }, keyframes: [], effects: [] },
+      {
+        id: 'c1', trackId: 'v1', mediaId: 'm1', start: 2, duration: 5, inPoint: 0, speed: 1, volume: 1, fadeIn: 0, fadeOut: 0,
+        transform: { x: 0, y: 0, scale: 1, rotation: 0, opacity: 1, fit: 'contain' },
+        keyframes: [{ id: 'k1', time: 1, property: 'opacity', value: 0.5, easing: 'linear' }], effects: [],
+      },
       { id: 'c2', trackId: 'v1', mediaId: 'm1', start: 7, duration: 4, inPoint: 0, speed: 1, volume: 1, fadeIn: 0, fadeOut: 0, transform: { x: 0, y: 0, scale: 1, rotation: 0, opacity: 1, fit: 'contain' }, keyframes: [], effects: [] },
     ],
     transitions: [],
@@ -205,5 +209,116 @@ describe('Timeline', () => {
     const row = screen.getByTestId('ve-track-row-a1'); // audio track, media is video
     fireEvent(row, makeDropEvent(0, 'm1'));
     expect(realDispatch).not.toHaveBeenCalledWith(expect.objectContaining({ type: 'addClip' }));
+  });
+
+  // ─── tool shortcuts ────────────────────────────────────────────────────────
+
+  it('V/C/Y/U keys switch tools while the timeline is focused', () => {
+    render(<Timeline />);
+    const root = screen.getByTestId('ve-timeline');
+    fireEvent.keyDown(root, { key: 'y' });
+    expect(getSnapshot().tool).toBe('slip');
+    fireEvent.keyDown(root, { key: 'u' });
+    expect(getSnapshot().tool).toBe('slide');
+    fireEvent.keyDown(root, { key: 'c' });
+    expect(getSnapshot().tool).toBe('razor');
+    fireEvent.keyDown(root, { key: 'v' });
+    expect(getSnapshot().tool).toBe('select');
+  });
+
+  // ─── slip tool ──────────────────────────────────────────────────────────────
+
+  it('slip drag dispatches a single clamped updateClip(inPoint) on pointerup', () => {
+    render(<Timeline />);
+    act(() => realDispatch({ type: 'setTool', tool: 'slip' }));
+    const zoom = getSnapshot().zoom;
+    const c1 = screen.getByTestId('ve-clip-c1'); // start 2, duration 5, inPoint 0, media duration 20
+    stubWideRect(c1);
+    fireEvent.pointerDown(c1, { clientX: 200, clientY: 10 });
+    // Drag far right: 100s of timeline delta clamps to maxInPoint = 20 - 5 = 15.
+    fireEvent(window, new PointerEvent('pointermove', { clientX: 200 + 100 * zoom, clientY: 10 }));
+    fireEvent(window, new PointerEvent('pointerup', { clientX: 200 + 100 * zoom, clientY: 10 }));
+    expect(realDispatch).toHaveBeenCalledWith({ type: 'updateClip', clipId: 'c1', patch: { inPoint: 15 } });
+    expect(getSnapshot().project!.clips.find(c => c.id === 'c1')!.inPoint).toBe(15);
+  });
+
+  it('slip drag with no net movement dispatches nothing', () => {
+    render(<Timeline />);
+    act(() => realDispatch({ type: 'setTool', tool: 'slip' }));
+    const c1 = screen.getByTestId('ve-clip-c1');
+    stubWideRect(c1);
+    fireEvent.pointerDown(c1, { clientX: 200, clientY: 10 });
+    fireEvent(window, new PointerEvent('pointerup', { clientX: 200, clientY: 10 }));
+    expect(realDispatch).not.toHaveBeenCalledWith(expect.objectContaining({ type: 'updateClip' }));
+  });
+
+  // ─── slide tool ─────────────────────────────────────────────────────────────
+
+  function loadSlideProject() {
+    const base = makeProject();
+    const left: Clip = { ...base.clips[0], id: 'left', start: 0, duration: 5, inPoint: 0, keyframes: [] };
+    const mid: Clip = { ...base.clips[0], id: 'mid', start: 5, duration: 3, inPoint: 5, keyframes: [] };
+    const right: Clip = { ...base.clips[0], id: 'right', start: 8, duration: 5, inPoint: 10, keyframes: [] };
+    act(() => realDispatch({ type: 'loadProject', project: { ...base, clips: [left, mid, right] } }));
+    vi.mocked(realDispatch).mockClear();
+  }
+
+  it('slide drag dispatches one batch that moves the clip and trims both neighbors', () => {
+    render(<Timeline />);
+    loadSlideProject();
+    act(() => realDispatch({ type: 'setTool', tool: 'slide' }));
+    const zoom = getSnapshot().zoom;
+    const mid = screen.getByTestId('ve-clip-mid');
+    stubWideRect(mid);
+    fireEvent.pointerDown(mid, { clientX: 200, clientY: 10 });
+    fireEvent(window, new PointerEvent('pointermove', { clientX: 200 + 1 * zoom, clientY: 10 }));
+    fireEvent(window, new PointerEvent('pointerup', { clientX: 200 + 1 * zoom, clientY: 10 }));
+    expect(realDispatch).toHaveBeenCalledWith({
+      type: 'batch',
+      label: 'Slide clip',
+      actions: [
+        { type: 'trimClip', clipId: 'right', edge: 'start', time: 9, ripple: false },
+        { type: 'moveClip', clipId: 'mid', start: 6, trackId: 'v1' },
+        { type: 'trimClip', clipId: 'left', edge: 'end', time: 6, ripple: false },
+      ],
+    });
+    const clips = getSnapshot().project!.clips;
+    expect(clips.find(c => c.id === 'left')!.duration).toBeCloseTo(6);
+    expect(clips.find(c => c.id === 'mid')!.start).toBeCloseTo(6);
+    expect(clips.find(c => c.id === 'right')!.start).toBeCloseTo(9);
+
+    // One undo step restores all three clips — the batch dispatch is atomic.
+    act(() => realDispatch({ type: 'undo' }));
+    const restored = getSnapshot().project!.clips;
+    expect(restored.find(c => c.id === 'left')!.duration).toBeCloseTo(5);
+    expect(restored.find(c => c.id === 'mid')!.start).toBeCloseTo(5);
+    expect(restored.find(c => c.id === 'right')!.start).toBeCloseTo(8);
+  });
+
+  it('slide has no effect on a clip with an open end (missing neighbor)', () => {
+    render(<Timeline />);
+    loadSlideProject();
+    act(() => realDispatch({ type: 'setTool', tool: 'slide' }));
+    const left = screen.getByTestId('ve-clip-left'); // no left neighbor
+    stubWideRect(left);
+    fireEvent.pointerDown(left, { clientX: 200, clientY: 10 });
+    expect(realDispatch).not.toHaveBeenCalledWith(expect.objectContaining({ type: 'batch', label: 'Slide clip' }));
+  });
+
+  // ─── keyframe diamonds ──────────────────────────────────────────────────────
+
+  it('renders a keyframe diamond and clicking it seeks the playhead without selecting or splitting', () => {
+    render(<Timeline />);
+    const diamond = screen.getByLabelText('Keyframe at 00:03:00'); // c1.start=2 + kf.time=1 = 3s
+    fireEvent.pointerDown(diamond, { clientX: 200, clientY: 10 });
+    fireEvent.pointerUp(diamond);
+    fireEvent.click(diamond);
+    expect(realDispatch).toHaveBeenCalledWith({ type: 'setPlayhead', time: 3 });
+    expect(realDispatch).not.toHaveBeenCalledWith(expect.objectContaining({ type: 'select' }));
+
+    act(() => realDispatch({ type: 'setTool', tool: 'razor' }));
+    vi.mocked(realDispatch).mockClear();
+    fireEvent.pointerUp(diamond);
+    expect(realDispatch).not.toHaveBeenCalledWith(expect.objectContaining({ type: 'splitClip' }));
   });
 });

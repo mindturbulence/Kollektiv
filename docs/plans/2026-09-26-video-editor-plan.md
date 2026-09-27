@@ -1,17 +1,27 @@
 # Video Editor — research and plan (freecut × openreel)
 
-Status (2026-09-27): **v1 built on `feat/video-editor`.** The v2 engines (`core/engines`) and the WebGPU port (`core/gpu`) exist as tested standalone modules but are not wired into render/playback yet.
+Status (2026-09-27): **v1 shipped to `main`. v2 is built on `feat/video-editor-v2`.** v2 adds:
+- keyframes (Inspector diamonds, prev/next navigation, keyframe markers on timeline clips);
+- slip and slide tools (V/C/Y/U shortcuts);
+- a color panel (lift/gamma/gain wheels, curves, HSL) and chroma key, rendered on Canvas2D and in the WebGPU renderer;
+- scopes (WebGPU only);
+- SRT caption import and export;
+- a saved-project list (open, rename, duplicate, delete), with media blobs garbage-collected by reference count.
 
-Phase 0 exit criteria:
-1. Harvested modules typecheck with no `as any` against unpatched mediabunny 1.60.0: **met**.
-2. Preview and MP4 export in the built app with no COOP/COEP: **met** by `e2e/video-editor.spec.ts`. It exports a frame-accurate 3.0 s 1080p H.264/AAC MP4 and a VP9/Opus WebM, then checks that autosave plus Resume survive a reload.
-3. ffmpeg fallback when `VideoEncoder` is missing: **unit-tested only**, not yet run in a browser.
-4. Zero third-party requests: not yet measured.
+`ui/timeline` now uses `core/timeline` for its snap and placement math.
+
+Phase 0 exit criteria (all **met**):
+1. Harvested modules typecheck with no `as any` against unpatched mediabunny 1.60.0.
+2. Preview and export work in the built app with no COOP/COEP. `e2e/video-editor.spec.ts` exports a frame-accurate 3.0 s 1080p H.264/AAC MP4 and a VP9/Opus WebM, and checks that autosave plus Resume survive a reload.
+3. The ffmpeg fallback works when `VideoEncoder` is missing. `e2e/video-editor-fallback.spec.ts` produces a 3.000 s H.264/AAC MP4.
+4. The editor makes zero third-party requests (`e2e/video-editor-network.spec.ts`). The requests that remain come from the app shell: fonts and Google scripts in `index.html`, the Footer's model ticker, the Pexels home montage, and `VideoPlayerOverlay` resuming a queued YouTube video on boot.
 
 Open items:
-- Wire `core/engines` and `core/gpu` into render and playback (v2).
-- `ui/timeline/timelineMath.ts` duplicates the snap and placement math in `core/timeline`. Consolidate them.
-- Media blobs are not garbage-collected when a project is deleted.
+- The preview still uses the Canvas2D renderer. `createPreferredRenderer` (WebGPU) is ready, but no GPU-only effect is exposed in the UI yet, and it hasn't been run against a real GPU.
+- Transitions in the WebGPU renderer ignore layer transforms.
+- The WebM fallback has not been verified.
+- Curve points can't be edited from the keyboard.
+- The Timeline's own mini tool buttons duplicate the toolbar's.
 
 Note: every Playwright run wipes `test-results/`, so the research clones listed below are gone. Re-clone at the pinned SHAs if needed.
 Date: 2026-09-26.

@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import { baseProject, makeMarker } from '../actions/fixtures';
-import { clipAt, findFreeSlot, frameQuantize, projectDuration } from './placement';
+import { baseProject, makeClip, makeMedia, makeMarker } from '../actions/fixtures';
+import { clipAt, findCuts, findFreeSlot, frameQuantize, projectDuration, trimBounds } from './placement';
 
 describe('clipAt', () => {
   it('finds the clip covering a time on a track, or null', () => {
@@ -41,5 +41,38 @@ describe('findFreeSlot', () => {
     const project = baseProject();
     const withGap = { ...project, clips: project.clips.filter(c => c.id !== 'c2').map(c => (c.id === 'c1' ? c : { ...c, start: c.start + 20 })) };
     expect(findFreeSlot(withGap, 't1', 2)).toBe(5);
+  });
+});
+
+describe('trimBounds', () => {
+  it('clamps the start edge to source inPoint availability', () => {
+    const c = makeClip('c1', 't1', { start: 2, duration: 3, inPoint: 1, mediaId: 'm1' });
+    const b = trimBounds(c, 'start', makeMedia('m1'));
+    expect(b.min).toBeCloseTo(1, 5); // 2 - 1/1
+    expect(b.max).toBeLessThan(c.start + c.duration);
+  });
+  it('clamps the end edge to remaining source duration', () => {
+    const c = makeClip('c1', 't1', { start: 0, duration: 3, inPoint: 8, mediaId: 'm1' }); // media.duration=10, so 2s left
+    const b = trimBounds(c, 'end', makeMedia('m1', { duration: 10 }));
+    expect(b.max).toBeCloseTo(2, 5);
+  });
+  it('is unbounded for clips without media (text/image without a source limit)', () => {
+    const c = makeClip('c1', 't1', { mediaId: undefined, start: 0, duration: 3, inPoint: 0 });
+    const b = trimBounds(c, 'end', undefined);
+    expect(b.max).toBe(Infinity);
+  });
+});
+
+describe('findCuts', () => {
+  it('finds an adjacent same-track pair as a cut', () => {
+    const a = makeClip('a', 't1', { start: 0, duration: 5 });
+    const b = makeClip('b', 't1', { start: 5, duration: 3 });
+    const cuts = findCuts([a, b]);
+    expect(cuts).toEqual([{ trackId: 't1', fromClipId: 'a', toClipId: 'b', time: 5 }]);
+  });
+  it('ignores clips with a gap between them', () => {
+    const a = makeClip('a', 't1', { start: 0, duration: 5 });
+    const b = makeClip('b', 't1', { start: 6, duration: 3 });
+    expect(findCuts([a, b])).toEqual([]);
   });
 });

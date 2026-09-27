@@ -1,5 +1,51 @@
 import { describe, expect, it, vi, beforeEach, afterEach } from 'vitest';
-import { splitProjectForStorage, joinStoredProject, startAutosave } from './index';
+
+// Minimal in-memory fake standing in for `idb`'s openDB — no fake-indexeddb
+// dependency in this repo, and jsdom doesn't implement IndexedDB. Enough
+// surface (transaction/objectStore/get/put/delete/getAll) for deleteProject,
+// renameProject, duplicateProject and their callers below.
+const { fakeStores, resetFakeDb } = vi.hoisted(() => {
+  type Store = Map<string, unknown>;
+  let stores: { projects: Store; media: Store };
+  const reset = () => { stores = { projects: new Map(), media: new Map() }; };
+  reset();
+  return { fakeStores: () => stores, resetFakeDb: reset };
+});
+vi.mock('idb', () => ({
+  openDB: vi.fn(async () => {
+    const stores = fakeStores();
+    const storeApi = (name: 'projects' | 'media') => ({
+      get: async (key: string) => stores[name].get(key),
+      getAll: async () => Array.from(stores[name].values()),
+      put: async (val: unknown, key: string) => { stores[name].set(key, val); },
+      delete: async (key: string) => { stores[name].delete(key); },
+    });
+    return {
+      transaction: (_names: string[]) => ({
+        objectStore: (name: 'projects' | 'media') => storeApi(name),
+        done: Promise.resolve(),
+      }),
+      get: async (name: 'projects' | 'media', key: string) => stores[name].get(key),
+      getAll: async (name: 'projects' | 'media') => Array.from(stores[name].values()),
+      put: async (name: 'projects' | 'media', val: unknown, key: string) => { stores[name].set(key, val); },
+      delete: async (name: 'projects' | 'media', key: string) => { stores[name].delete(key); },
+    };
+  }),
+}));
+
+import {
+  splitProjectForStorage,
+  joinStoredProject,
+  startAutosave,
+  unreferencedMediaIds,
+  saveProject,
+  loadProject,
+  deleteProject,
+  renameProject,
+  duplicateProject,
+  estimateStorage,
+  listProjects,
+} from './index';
 import { makeMedia, makeProject } from '../actions/fixtures';
 import type { EditorState, Project } from '../types';
 
@@ -122,5 +168,84 @@ describe('startAutosave', () => {
     resolveSave();
     await vi.advanceTimersByTimeAsync(0);
     expect(deps.markSaved).not.toHaveBeenCalled();
+  });
+});
+
+describe('unreferencedMediaIds (pure GC reference counting)', () => {
+  it('flags media only the deleted project used', () => {
+    expect(unreferencedMediaIds(['m1', 'm2'], [['m2', 'm3']])).toEqual(['m1']);
+  });
+
+  it('keeps media still referenced by another remaining project', () => {
+    expect(unreferencedMediaIds(['m1'], [['m1']])).toEqual([]);
+  });
+
+  it('dedupes the deleted project media ids', () => {
+    expect(unreferencedMediaIds(['m1', 'm1'], [])).toEqual(['m1']);
+  });
+});
+
+describe('deleteProject / renameProject / duplicateProject (IDB-backed)', () => {
+  beforeEach(() => resetFakeDb());
+
+  it('GCs a media blob no other project references, in the same delete', async () => {
+    const shared = makeMedia('shared');
+    const onlyMine = makeMedia('onlyMine');
+    const p1 = makeProject({ id: 'p1', media: [shared, onlyMine] });
+    const p2 = makeProject({ id: 'p2', media: [shared] });
+    await saveProject(p1);
+    await saveProject(p2);
+
+    await deleteProject('p1');
+
+    expect(await loadProject('p2')).toBeTruthy();
+    expect(fakeStores().media.has('onlyMine')).toBe(false);
+    expect(fakeStores().media.has('shared')).toBe(true);
+  });
+
+  it('renameProject updates the name and bumps updatedAt', async () => {
+    const project = makeProject({ id: 'p1', name: 'Old name', updatedAt: 0 });
+    await saveProject(project);
+
+    await renameProject('p1', 'New name');
+
+    const [summary] = await listProjects();
+    expect(summary.name).toBe('New name');
+    expect(summary.updatedAt).toBeGreaterThan(0);
+  });
+
+  it('duplicateProject clones metadata under a new id, sharing media ids', async () => {
+    const media = makeMedia('m1');
+    const project = makeProject({ id: 'p1', name: 'Original', media: [media] });
+    await saveProject(project);
+
+    const newId = await duplicateProject('p1');
+    if (!newId) throw new Error('expected a new project id');
+
+    expect(newId).not.toBe('p1');
+    const summaries = await listProjects();
+    expect(summaries.map((s) => s.id).sort()).toEqual(['p1', newId].sort());
+    // Same media store record — the blob was never copied.
+    expect(fakeStores().media.get('m1')).toBeDefined();
+  });
+
+  it('duplicateProject returns null for a missing project', async () => {
+    expect(await duplicateProject('nope')).toBeNull();
+  });
+});
+
+describe('estimateStorage', () => {
+  it('returns usage/quota when the Storage API is available', async () => {
+    const estimate = vi.fn().mockResolvedValue({ usage: 100, quota: 1000 });
+    vi.stubGlobal('navigator', { storage: { estimate } });
+
+    expect(await estimateStorage()).toEqual({ usage: 100, quota: 1000 });
+    vi.unstubAllGlobals();
+  });
+
+  it('returns null when unavailable', async () => {
+    vi.stubGlobal('navigator', {});
+    expect(await estimateStorage()).toBeNull();
+    vi.unstubAllGlobals();
   });
 });

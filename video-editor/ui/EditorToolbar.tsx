@@ -1,25 +1,29 @@
 // ─── Kollektiv Video Editor — Toolbar ────────────────────────────────────────
-// 44px top bar: project name · undo/redo · select/razor · snapping · export.
+// 44px top bar: project name · undo/redo · timeline tools · snapping · export.
 
 import React from 'react';
 import { dispatch } from '../core/store';
 import type { EditorTool } from '../core/types';
 import { useEditorSelector } from './hooks/useEditorState';
-import { UndoIcon, RedoIcon, CursorIcon, ScissorsIcon, DownloadIcon } from '../../components/icons';
+import CaptionsMenu from './captions/CaptionsMenu';
+import { UndoIcon, RedoIcon, CursorIcon, ScissorsIcon, MoveIcon, ViewColumnsIcon, DownloadIcon } from '../../components/icons';
 
 interface EditorToolbarProps {
   onExport: () => void;
+  onError: (message: string) => void;
 }
 
 const iconBtn = (enabled: boolean, active = false) =>
   `tooltip tooltip-bottom p-1.5 ${active ? 'text-primary bg-primary/10' : enabled ? 'text-base-content/70 hover:text-primary' : 'text-base-content/25 cursor-not-allowed'}`;
 
 const TOOLS: Array<{ tool: EditorTool; label: string; Icon: typeof CursorIcon }> = [
-  { tool: 'select', label: 'Select', Icon: CursorIcon },
-  { tool: 'razor', label: 'Razor', Icon: ScissorsIcon },
+  { tool: 'select', label: 'Select (V)', Icon: CursorIcon },
+  { tool: 'razor', label: 'Razor (C)', Icon: ScissorsIcon },
+  { tool: 'slip', label: 'Slip (Y)', Icon: MoveIcon },
+  { tool: 'slide', label: 'Slide (U)', Icon: ViewColumnsIcon },
 ];
 
-const EditorToolbar: React.FC<EditorToolbarProps> = ({ onExport }) => {
+const EditorToolbar: React.FC<EditorToolbarProps> = ({ onExport, onError }) => {
   const name = useEditorSelector(s => s.project?.name ?? null);
   const isDirty = useEditorSelector(s => s.isDirty);
   const canUndo = useEditorSelector(s => s.canUndo);
@@ -63,6 +67,8 @@ const EditorToolbar: React.FC<EditorToolbarProps> = ({ onExport }) => {
       </div>
 
       <div className="flex-1" />
+
+      <CaptionsMenu onError={onError} />
 
       <button type="button" className="form-btn form-btn-primary rounded-none h-8 px-3 text-xs flex items-center gap-1.5"
         disabled={!hasProject} onClick={onExport}>

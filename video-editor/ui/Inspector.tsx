@@ -8,10 +8,17 @@ import { dispatch, getSnapshot } from '../core/store';
 import type { Clip, EditAction, Effect, TextStyle, Transform } from '../core/types';
 import { useEditorSelector } from './hooks/useEditorState';
 import { createTextClip } from './placement';
+import { commitPropertyValue, valueAt } from './keyframes/keyframeOps';
+import KeyframeButton from './keyframes/KeyframeButton';
+import KeyframeNav from './keyframes/KeyframeNav';
+import ColorPanel from './color/ColorPanel';
+import Scopes from './color/Scopes';
 import { DeleteIcon, TypeIcon } from '../../components/icons';
 
 interface InspectorProps {
   onError: (message: string) => void;
+  /** Preview canvas, sampled by the scopes. */
+  scopeSource: React.RefObject<HTMLCanvasElement | null>;
 }
 
 type ClipPatch = Extract<EditAction, { type: 'updateClip' }>['patch'];
@@ -32,9 +39,11 @@ interface SliderProps {
   step: number;
   onCommit: (value: number) => void;
   format?: (value: number) => string;
+  /** Trailing control, e.g. a keyframe toggle. */
+  adornment?: React.ReactNode;
 }
 
-export const Slider: React.FC<SliderProps> = ({ label, value, min, max, step, onCommit, format }) => {
+export const Slider: React.FC<SliderProps> = ({ label, value, min, max, step, onCommit, format, adornment }) => {
   const [draft, setDraft] = useState<number | null>(null);
   const shown = draft ?? value;
   const commit = () => {
@@ -49,6 +58,7 @@ export const Slider: React.FC<SliderProps> = ({ label, value, min, max, step, on
         onChange={(e) => setDraft(Number(e.target.value))}
         onPointerUp={commit} onKeyUp={commit} onBlur={commit} />
       <span className="w-10 text-right tabular-nums">{format ? format(shown) : shown.toFixed(2)}</span>
+      {adornment}
     </label>
   );
 };
@@ -150,10 +160,12 @@ const EffectsSection: React.FC<{ clip: Clip }> = ({ clip }) => {
   );
 };
 
-const Inspector: React.FC<InspectorProps> = ({ onError }) => {
+const Inspector: React.FC<InspectorProps> = ({ onError, scopeSource }) => {
+  const [showScopes, setShowScopes] = useState(false);
   const clip = useEditorSelector(s => (s.selectedClipIds.length ? s.project?.clips.find(c => c.id === s.selectedClipIds[0]) : undefined));
   const media = useEditorSelector(s => (clip?.mediaId ? s.project?.media.find(m => m.id === clip.mediaId) : undefined));
   const settings = useEditorSelector(s => s.project?.settings);
+  const playhead = useEditorSelector(s => s.playhead);
   const hasProject = !!settings;
 
   const addText = () => {
@@ -168,8 +180,19 @@ const Inspector: React.FC<InspectorProps> = ({ onError }) => {
     dispatch({ type: 'select', clipIds: [textClip.id] });
   };
 
-  const setTransform = (key: keyof Omit<Transform, 'fit'>, value: number) => {
-    if (clip) update(clip, { transform: { ...clip.transform, [key]: value } });
+  const fps = settings?.fps ?? 30;
+  type Animatable = Exclude<keyof Omit<Transform, 'fit'>, never> | 'volume';
+  // Keyframe-aware: shows the animated value at the playhead; once a property
+  // has keyframes, committing writes a keyframe there instead of the base value.
+  const animated = (key: Animatable) => {
+    if (!clip) return { value: 0, onCommit: () => undefined, adornment: null };
+    const local = playhead - clip.start;
+    const value = valueAt(clip, key, local);
+    return {
+      value,
+      onCommit: (v: number) => update(clip, commitPropertyValue(clip, key, local, fps, v)),
+      adornment: <KeyframeButton clip={clip} property={key} playhead={playhead} fps={fps} value={value} />,
+    };
   };
 
   const isVisual = !!clip && (!!clip.text || media?.kind !== 'audio');
@@ -192,22 +215,24 @@ const Inspector: React.FC<InspectorProps> = ({ onError }) => {
       {!clip ? (
         <p className="p-4 text-xs text-base-content/60">Select a clip on the timeline to edit it, or add a text title.</p>
       ) : (
-        <div className="flex-1 overflow-y-auto">
+        // Keyed by clip: inputs hold drafts that commit on blur, and switching
+        // clips mid-edit must drop the draft, not commit it onto the new clip.
+        <div key={clip.id} className="flex-1 overflow-y-auto">
           {clip.text && <TextSection clip={{ ...clip, text: clip.text }} />}
 
           {isVisual && settings && (
-            <Section title="Transform">
-              <Slider label="X" value={clip.transform.x} min={-settings.width} max={settings.width} step={1} format={v => `${Math.round(v)}`} onCommit={v => setTransform('x', v)} />
-              <Slider label="Y" value={clip.transform.y} min={-settings.height} max={settings.height} step={1} format={v => `${Math.round(v)}`} onCommit={v => setTransform('y', v)} />
-              <Slider label="Scale" value={clip.transform.scale} min={0.1} max={4} step={0.01} onCommit={v => setTransform('scale', v)} />
-              <Slider label="Rotation" value={clip.transform.rotation} min={-180} max={180} step={1} format={v => `${Math.round(v)}°`} onCommit={v => setTransform('rotation', v)} />
-              <Slider label="Opacity" value={clip.transform.opacity} min={0} max={1} step={0.01} format={v => `${Math.round(v * 100)}%`} onCommit={v => setTransform('opacity', v)} />
+            <Section title="Transform" action={<KeyframeNav clip={clip} playhead={playhead} fps={fps} />}>
+              <Slider label="X" {...animated('x')} min={-settings.width} max={settings.width} step={1} format={v => `${Math.round(v)}`} />
+              <Slider label="Y" {...animated('y')} min={-settings.height} max={settings.height} step={1} format={v => `${Math.round(v)}`} />
+              <Slider label="Scale" {...animated('scale')} min={0.1} max={4} step={0.01} />
+              <Slider label="Rotation" {...animated('rotation')} min={-180} max={180} step={1} format={v => `${Math.round(v)}°`} />
+              <Slider label="Opacity" {...animated('opacity')} min={0} max={1} step={0.01} format={v => `${Math.round(v * 100)}%`} />
             </Section>
           )}
 
           {hasAudio && (
             <Section title="Audio">
-              <Slider label="Volume" value={clip.volume} min={0} max={2} step={0.01} format={v => `${Math.round(v * 100)}%`} onCommit={v => update(clip, { volume: v })} />
+              <Slider label="Volume" {...animated('volume')} min={0} max={2} step={0.01} format={v => `${Math.round(v * 100)}%`} />
             </Section>
           )}
 
@@ -222,6 +247,19 @@ const Inspector: React.FC<InspectorProps> = ({ onError }) => {
           </Section>
 
           {isVisual && <EffectsSection clip={clip} />}
+          {isVisual && !clip.text && (
+            <Section title="Color">
+              <ColorPanel clip={clip} onCommit={effects => update(clip, { effects })} />
+            </Section>
+          )}
+          {isVisual && (
+            <Section title="Scopes" action={
+              <button type="button" aria-pressed={showScopes} className="text-2xs font-mono text-base-content/60 hover:text-primary"
+                onClick={() => setShowScopes(v => !v)}>{showScopes ? 'Hide' : 'Show'}</button>
+            }>
+              {showScopes && <Scopes source={scopeSource.current} active={showScopes} />}
+            </Section>
+          )}
         </div>
       )}
     </aside>

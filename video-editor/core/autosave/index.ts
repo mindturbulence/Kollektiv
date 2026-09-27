@@ -29,6 +29,8 @@ export interface ProjectSummary {
   name: string;
   createdAt: number;
   updatedAt: number;
+  /** Cheap: comes straight off the stored project metadata, no media reads. */
+  clipCount: number;
 }
 
 function getDB(): Promise<IDBPDatabase> {
@@ -96,17 +98,67 @@ export async function listProjects(): Promise<ProjectSummary[]> {
   const db = await getDB();
   const all = (await db.getAll(PROJECTS_STORE)) as StoredProject[];
   return all
-    .map((p) => ({ id: p.id, name: p.name, createdAt: p.createdAt, updatedAt: p.updatedAt }))
+    .map((p) => ({ id: p.id, name: p.name, createdAt: p.createdAt, updatedAt: p.updatedAt, clipCount: p.clips.length }))
     .sort((a, b) => b.updatedAt - a.updatedAt);
 }
 
-/** Deletes a project record. Its media blobs are left in place: media ids are
- *  not guaranteed unique to one project, and unreferenced-blob GC is out of
- *  scope for v1 (ponytail: add a sweep keyed off listProjects() if IDB quota
- *  pressure shows up in practice). */
+/** Pure reference-counting: media ids used by the project being deleted that
+ *  no other remaining project still references. Media ids are shared across
+ *  projects (duplicateProject reuses them), so a blob is only safe to GC once
+ *  nothing points at it. */
+export function unreferencedMediaIds(deletedMediaIds: string[], remainingProjectsMediaIds: string[][]): string[] {
+  const stillUsed = new Set(remainingProjectsMediaIds.flat());
+  return [...new Set(deletedMediaIds)].filter((id) => !stillUsed.has(id));
+}
+
+/** Deletes a project record and GCs any media blob no longer referenced by
+ *  another project, in one transaction — a partial delete must never happen. */
 export async function deleteProject(id: string): Promise<void> {
   const db = await getDB();
-  await db.delete(PROJECTS_STORE, id);
+  const tx = db.transaction([PROJECTS_STORE, MEDIA_STORE], 'readwrite');
+  const projectsStore = tx.objectStore(PROJECTS_STORE);
+  const mediaStore = tx.objectStore(MEDIA_STORE);
+  const deleted = (await projectsStore.get(id)) as StoredProject | undefined;
+  if (deleted) {
+    const remaining = ((await projectsStore.getAll()) as StoredProject[]).filter((p) => p.id !== id);
+    const orphaned = unreferencedMediaIds(
+      deleted.media.map((m) => m.id),
+      remaining.map((p) => p.media.map((m) => m.id)),
+    );
+    await Promise.all([projectsStore.delete(id), ...orphaned.map((mid) => mediaStore.delete(mid))]);
+  } else {
+    await projectsStore.delete(id);
+  }
+  await tx.done;
+}
+
+/** Renames a project in place, bumping updatedAt. No-op if the project is gone. */
+export async function renameProject(id: string, name: string): Promise<void> {
+  const db = await getDB();
+  const stored = (await db.get(PROJECTS_STORE, id)) as StoredProject | undefined;
+  if (!stored) return;
+  await db.put(PROJECTS_STORE, { ...stored, name, updatedAt: Date.now() }, id);
+}
+
+/** Clones a project's metadata under a new id, sharing its media ids (the
+ *  blobs themselves aren't copied — that's why deleteProject GC is reference
+ *  counted). Returns the new project id. */
+export async function duplicateProject(id: string): Promise<string | null> {
+  const db = await getDB();
+  const stored = (await db.get(PROJECTS_STORE, id)) as StoredProject | undefined;
+  if (!stored) return null;
+  const newId = crypto.randomUUID();
+  const now = Date.now();
+  await db.put(PROJECTS_STORE, { ...stored, id: newId, name: `${stored.name} copy`, createdAt: now, updatedAt: now }, newId);
+  return newId;
+}
+
+/** Best-effort storage usage for a settings/projects panel. Null when the
+ *  Storage API isn't available (older browsers, some private modes). */
+export async function estimateStorage(): Promise<{ usage: number; quota: number } | null> {
+  if (typeof navigator === 'undefined' || !navigator.storage?.estimate) return null;
+  const { usage, quota } = await navigator.storage.estimate();
+  return { usage: usage ?? 0, quota: quota ?? 0 };
 }
 
 interface AutosaveDeps {

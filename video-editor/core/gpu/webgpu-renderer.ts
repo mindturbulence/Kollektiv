@@ -14,11 +14,23 @@ import { EffectsPipeline } from './effects/effects-pipeline'
 import type { GpuEffectInstance } from './effects/types'
 import { TransitionPipeline } from './transitions/transition-pipeline'
 import { resolveGpuEffect, resolveGpuEffectParams, resolveGpuTransition } from './adapter'
+import { COLOR_GRADE, CHROMA_KEY } from '../effect-params'
+import { resolvePixelEffects, applyPixelEffectSteps, resolveFitDimensions } from '../render/pixel-effects'
 
+// 'colorGrade' and 'chromaKey' are always handled by the CPU path below
+// (applyPixelEffectsToCanvas), never by the freecut GPU registry:
+//   - colorGrade has no GPU mapping — its wheels/curves/HSL params.value JSON
+//     doesn't match any gpu-effects/color.ts shader's flat param shape.
+//   - chromaKey has an adapter mapping ('gpu-chroma-key'), but that shader
+//     only supports two preset key colors (green/blue, via a 'select' param)
+//     and reads `softness`, not our `edgeSoftness` — it can't render our
+//     arbitrary-RGB ChromaKeySettings, so using it would silently diverge
+//     from the Canvas2D output. See core/render/pixel-effects.ts.
 function toGpuEffectInstances(effects: Effect[]): GpuEffectInstance[] {
   const instances: GpuEffectInstance[] = []
   for (const effect of effects) {
     if (!effect.enabled) continue
+    if (effect.type === COLOR_GRADE || effect.type === CHROMA_KEY) continue
     const def = resolveGpuEffect(effect)
     if (!def) continue
     instances.push({
@@ -30,6 +42,24 @@ function toGpuEffectInstances(effects: Effect[]): GpuEffectInstance[] {
     })
   }
   return instances
+}
+
+/** Runs colorGrade/chromaKey on `source` via a fresh canvas (never reused —
+ *  transitions hold `from` and `to` sources alive at the same time, so a
+ *  shared scratch canvas would let one overwrite the other). Returns `source`
+ *  unchanged if no 2D context is available. */
+function applyPixelEffectsToCanvas(
+  source: OffscreenCanvas,
+  effects: Effect[],
+): OffscreenCanvas {
+  const steps = resolvePixelEffects(effects)
+  if (steps.length === 0) return source
+  const ctx = source.getContext('2d', { willReadFrequently: true })
+  if (!ctx) return source
+  const imageData = ctx.getImageData(0, 0, source.width, source.height)
+  applyPixelEffectSteps(imageData, steps)
+  ctx.putImageData(imageData, 0, 0)
+  return source
 }
 
 function rasterizeText(text: string, style: TextStyle, width: number, height: number): OffscreenCanvas {
@@ -94,9 +124,14 @@ class WebGpuRenderer implements Renderer {
     const rasterized: OffscreenCanvas | ImageBitmap = 'text' in layer.source
       ? rasterizeText(layer.source.text, layer.source.style, w, h)
       : layer.source;
+
+    const pixelSteps = resolvePixelEffects(layer.effects);
     const gpuEffects = toGpuEffectInstances(layer.effects);
-    if (gpuEffects.length === 0) return rasterized;
-    const asCanvas = rasterized instanceof OffscreenCanvas ? rasterized : bitmapToCanvas(rasterized, w, h);
+    if (pixelSteps.length === 0 && gpuEffects.length === 0) return rasterized;
+
+    let asCanvas = rasterized instanceof OffscreenCanvas ? rasterized : bitmapToCanvas(rasterized, w, h);
+    if (pixelSteps.length > 0) asCanvas = applyPixelEffectsToCanvas(asCanvas, layer.effects);
+    if (gpuEffects.length === 0) return asCanvas;
     const out = this.effects.applyEffectsToCanvas(asCanvas, gpuEffects);
     return out ?? asCanvas;
   }
@@ -104,14 +139,16 @@ class WebGpuRenderer implements Renderer {
   private drawLayer(layer: RenderLayer, source: LayerSource): void {
     const ctx = this.ctx2d;
     const t = layer.transform;
+    // Match Canvas2D: clamp opacity and fit the source into the canvas box
+    // per transform.fit instead of drawing at native source dimensions —
+    // native-size drawing put every non-canvas-sized clip at the wrong scale.
+    const { width, height } = resolveFitDimensions(t.fit, source.width, source.height, this.canvas.width, this.canvas.height);
     ctx.save();
-    ctx.globalAlpha = t.opacity;
+    ctx.globalAlpha = Math.max(0, Math.min(1, t.opacity));
     ctx.translate(this.canvas.width / 2 + t.x, this.canvas.height / 2 + t.y);
     ctx.rotate((t.rotation * Math.PI) / 180);
     ctx.scale(t.scale, t.scale);
-    const w = source.width;
-    const h = source.height;
-    ctx.drawImage(source, -w / 2, -h / 2, w, h);
+    ctx.drawImage(source, -width / 2, -height / 2, width, height);
     ctx.restore();
   }
 
