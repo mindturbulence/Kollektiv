@@ -45,6 +45,7 @@ export const NAV_GROUPS: NavGroup[] = [
   {
     id: 'studio', label: 'Studio', items: [
       { id: 'image_editor', label: 'Image Editor' },
+      { id: 'video_editor', label: 'Video Editor' },
       { id: 'composer', label: 'Composer' },
       { id: 'image_compare', label: 'Compare' },
       { id: 'lora_editor', label: 'LoRA Editor' },

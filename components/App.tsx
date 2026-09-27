@@ -22,6 +22,7 @@ import VaultMapPanel from './VaultMapPanel';
 import LlmStatusPanel from './LlmStatusPanel';
 import FeedbackToast from './FeedbackToast';
 import Footer from './Footer';
+import LoadingSpinner from './LoadingSpinner';
 import IdleOverlay from './IdleOverlay';
 import { TabTitleManager } from './TabTitleManager';
 
@@ -45,6 +46,11 @@ import LoraEditorPage from './loraEditor/LoraEditorPage';
 import BatchRunnerPage from './BatchRunnerPage';
 import ImageEditorPage from '../image-editor/ui/ImageEditorPage';
 import type { EditorOpenPayload } from '../image-editor/core/types';
+import type { VideoEditorOpenPayload } from '../video-editor/core/types';
+import { subscribeVideoEditorOpen, takePendingVideoEditorPayload } from '../video-editor/bridge/openInVideoEditor';
+// Own chunk: video-editor pulls in its own media/render/export engines and
+// must not add to the ~4MB main entry (plan §7).
+const VideoEditorPage = React.lazy(() => import('../video-editor/ui/VideoEditorPage'));
 import LocalGenerationStudioPage from './LocalGenerationStudioPage';
 import { LLMChatPanel } from './LLMChatPanel';
 import { LiveAssistantProvider } from '../contexts/LiveAssistantContext';
@@ -145,7 +151,13 @@ const AppContent: React.FC = () => {
     // nothing ever read; that copy was removed rather than kept "in sync".
     const [activeTab, setActiveTab] = useLocalStorage<ActiveTab>('activeTab', 'dashboard');
     const [editorOpenPayload, setEditorOpenPayload] = useState<EditorOpenPayload | undefined>(undefined);
+    const [videoEditorOpenPayload, setVideoEditorOpenPayload] = useState<VideoEditorOpenPayload | undefined>(() => takePendingVideoEditorPayload());
     const [converterOpenFiles, setConverterOpenFiles] = useState<File[] | undefined>(undefined);
+
+    // Bridge from Assets Manager / Gallery (video-editor/bridge/openInVideoEditor.ts)
+    // — navigation itself rides the existing generic 'navigate' bus event
+    // (useAppEventBus.ts), only the payload needs this direct subscription.
+    useEffect(() => subscribeVideoEditorOpen(setVideoEditorOpenPayload), []);
 
     // Clear one-shot open payloads only when their tab is LEFT, so a later return
     // via a plain nav link starts blank. Must key on the transition, not on
@@ -158,6 +170,7 @@ const AppContent: React.FC = () => {
         prevTabRef.current = activeTab;
         if (prev === activeTab) return;
         if (prev === 'image_editor') setEditorOpenPayload(undefined);
+        if (prev === 'video_editor') setVideoEditorOpenPayload(undefined);
         if (prev === 'converter') setConverterOpenFiles(undefined);
     }, [activeTab]);
 
@@ -188,6 +201,7 @@ const AppContent: React.FC = () => {
             case 'comfy_studio': return `COMFYUI | ${base}`;
             case 'a1111_studio': return `FORGE | ${base}`;
             case 'image_editor': return `IMAGE EDITOR | ${base}`;
+            case 'video_editor': return `VIDEO EDITOR | ${base}`;
             default: return base;
         }
     }, [activeTab]);
@@ -439,6 +453,11 @@ const AppContent: React.FC = () => {
             case 'comfy_studio': return <LocalGenerationStudioPage key="comfy_studio" backendId="comfy" showGlobalFeedback={showGlobalFeedback} />;
             case 'a1111_studio': return <LocalGenerationStudioPage key="a1111_studio" backendId="a1111" showGlobalFeedback={showGlobalFeedback} />;
             case 'image_editor': return <ImageEditorPage key="image_editor" openPayload={editorOpenPayload} showGlobalFeedback={showGlobalFeedback} isExiting={false} />;
+            case 'video_editor': return (
+                <React.Suspense key="video_editor" fallback={<div className="flex items-center justify-center w-full h-full"><LoadingSpinner text="LOADING" /></div>}>
+                    <VideoEditorPage openPayload={videoEditorOpenPayload} showGlobalFeedback={showGlobalFeedback} isExiting={false} />
+                </React.Suspense>
+            );
             default: return <Dashboard key="default" onNavigate={handleNavigate} onOpenSettings={openSettings} isExiting={false} />;
         }
     };

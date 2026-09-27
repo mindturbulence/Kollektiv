@@ -5,7 +5,7 @@
  * The UI binds CoreLoadError recovery to `precheckFailed + retryLoad()`.
  * All jobs run in the dedicated ffmpeg worker — never the main thread.
  */
-import type { WorkerResponse, WorkerSuccess, ProbeRequest } from './protocol';
+import type { EncodeFramesRequest, WorkerResponse, WorkerSuccess, ProbeRequest } from './protocol';
 import { CONVERT_ERROR_CODES } from './protocol';
 import { CONVERTER_LIMITS } from '../../constants/converterFormats';
 
@@ -90,17 +90,17 @@ class AudioVideoConverter {
     return this.worker;
   }
 
-  private execInWorker(req: { id: string; kind: 'convert'; data: ArrayBuffer; fileName: string; targetId: string; quality?: number }): Promise<WorkerSuccess> {
+  /** Generalised so the video-export ffmpeg fallback (encodeFrames) shares the same queue, watchdog and cancel/restart policy as convert jobs. */
+  private execInWorker<TReq extends { id: string }>(req: TReq, transferables: Transferable[], timeoutMs: number): Promise<WorkerSuccess> {
     const worker = this.ensureWorker();
     return new Promise<WorkerSuccess>((resolve, reject) => {
       const timer = window.setTimeout(() => {
         this.pending.delete(req.id);
         this.terminate();
         reject(new Error(`${CONVERT_ERROR_CODES.TIMEOUT}: job exceeded watchdog`));
-      }, CONVERTER_LIMITS.FFMPEG_TIMEOUT_MS);
+      }, timeoutMs);
       this.pending.set(req.id, { resolve, reject, timer });
-      const copy = req.data.slice(0);
-      worker.postMessage(req, [copy]);
+      worker.postMessage(req, transferables);
     });
   }
 
@@ -109,8 +109,36 @@ class AudioVideoConverter {
       this.setLoadState('loading');
     }
     try {
-      const result = await this.execInWorker({ kind: 'convert', ...req });
+      const copy = req.data.slice(0);
+      const result = await this.execInWorker({ kind: 'convert' as const, ...req }, [copy], CONVERTER_LIMITS.FFMPEG_TIMEOUT_MS);
       // First success implies the core is loaded and usable.
+      if (this.loadState !== 'ready') this.setLoadState('ready');
+      return result;
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : String(err);
+      if (msg.includes(CONVERT_ERROR_CODES.CORE_LOAD)) {
+        this.setLoadState('failed');
+      }
+      throw err;
+    }
+  }
+
+  /**
+   * Video-export ffmpeg fallback (plan §4/§7 export): mux rendered frames +
+   * an optional WAV mixdown into mp4/webm through the SAME worker/queue as
+   * ordinary convert jobs. `id` also doubles as the cancel key for `cancel()`.
+   */
+  async encodeFrames(
+    req: { id: string; frames: ArrayBuffer[]; fps: number; container: 'mp4' | 'webm'; audio?: ArrayBuffer },
+    timeoutMs = CONVERTER_LIMITS.FFMPEG_TIMEOUT_MS,
+  ): Promise<WorkerSuccess> {
+    if (this.loadState === 'idle' || this.loadState === 'loading') {
+      this.setLoadState('loading');
+    }
+    const message: EncodeFramesRequest = { kind: 'encodeFrames', ...req };
+    const transferables: Transferable[] = [...req.frames, ...(req.audio ? [req.audio] : [])];
+    try {
+      const result = await this.execInWorker(message, transferables, timeoutMs);
       if (this.loadState !== 'ready') this.setLoadState('ready');
       return result;
     } catch (err) {
