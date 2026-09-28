@@ -26,6 +26,7 @@ Kollektiv is a high-performance, local-first application designed for prompt eng
 
 - **Grid Composer**: Build image grids, contact sheets, and composite layouts.
 - **Palette Extractor**: Deconstruct a visual artifact into mood and chromatic tokens.
+- **Video Editor**: Multi-track timeline for shorts and reels, with trim, split, ripple, slip and slide, transitions, keyframes, color grading and chroma key, text titles, SRT captions, and autosaved projects. Exports MP4 or WebM locally, via WebCodecs or an ffmpeg.wasm fallback. The Assets Manager can open files in it.
 - **Video Suite**: Extract frames, join clips, and compare outputs across prompts or models.
 - **Artifact Comparison**: Compare side-by-side outputs with synchronized views.
 - **ComfyUI / A1111 Studio**: Dedicated generation pages for local ComfyUI and A1111/Forge Neo instances — checkpoint picker, full parameter controls, Generate/Cancel, and result preview with gallery ingestion.
@@ -80,6 +81,14 @@ Kollektiv is a high-performance, local-first application designed for prompt eng
 > Record: [ARCHITECTURE_CONSTITUTION.md → Phase 8](docs/00_FOUNDATION/ARCHITECTURE_CONSTITUTION.md);
 > open items: `docs/plans/2026-09-24-app-review-and-revision-plan.md` → "Remaining work".
 
+> **2026-09-28 — Video Editor (v1 + v2):** A new `video_editor` tab, built from selected MIT
+> ports of openreel-video and FreeCut on mediabunny and WebCodecs, with no COOP/COEP needed.
+> It covers timeline editing, keyframes, color and chroma key, captions, autosave and a project
+> list, and exports MP4 or WebM with an ffmpeg.wasm fallback. The fallback work found that
+> ffmpeg.wasm's VP9 and stereo Opus encoders crash, which had broken the Converter's video→WebM
+> target; both now use VP8 + Vorbis. 1898 tests; three editor e2e specs green.
+> Record: [VIDEO_EDITOR.md](docs/07_VIDEO_EDITOR/VIDEO_EDITOR.md).
+
 ---
 
 ## 🧭 Architecture Handbook
@@ -95,6 +104,7 @@ The architecture set is organized as a practical handbook for contributors and m
 - [docs/04_MEMORY/MEMORY_SYSTEM.md](docs/04_MEMORY/MEMORY_SYSTEM.md) — working, long-term, and knowledge memory model
 - [docs/05_MCP/MCP_SPEC.md](docs/05_MCP/MCP_SPEC.md) — MCP adapter and tool execution contract
 - [docs/06_VOICE/VOICE_PIPELINE.md](docs/06_VOICE/VOICE_PIPELINE.md) — voice capture, planning, streaming, and interruption handling
+- [docs/07_VIDEO_EDITOR/VIDEO_EDITOR.md](docs/07_VIDEO_EDITOR/VIDEO_EDITOR.md) — multi-track video editor: architecture, export paths, ffmpeg.wasm codec limits, tests
 - [docs/08_IMPLEMENTATION/DIRECTORY_STRUCTURE.md](docs/08_IMPLEMENTATION/DIRECTORY_STRUCTURE.md) — repository layout and conventions
 - [docs/09_AI_WORKER/AI_WORKER_RULES.md](docs/09_AI_WORKER/AI_WORKER_RULES.md) — implementation and review rules
 - [docs/08_IMPLEMENTATION/ADD_NEW_TOOL.md](docs/08_IMPLEMENTATION/ADD_NEW_TOOL.md) — step-by-step guide for adding a new assistant tool and passing MCP gates

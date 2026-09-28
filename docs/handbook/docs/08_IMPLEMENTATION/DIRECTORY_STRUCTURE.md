@@ -7,6 +7,7 @@ This repository is organized around a single app root rather than a formal monor
 - components/: React UI shell and feature screens. Shared primitives: `Modal.tsx`, `EmptyState.tsx`, `AnimatedPanels.tsx`; route transitions in `components/transitions/` (`useTransitionDirector.ts`, `TransitionOverlay.tsx`, `routeFx.ts`)
 - hooks/: app-shell hooks extracted from `App.tsx` (`useBootSequence`, `useAppShell`, `useAppEventBus`, `usePageTransitions`, `useAppTheme`) plus feature hooks
 - image-editor/: the layered image editor (core document model, tools, WebGL renderer, UI)
+- video-editor/: the multi-track video editor. `core/` is framework-free (contract `types.ts`, store, actions, media, playback, render, export, autosave); `ui/` is React. Ported files and MIT notices are listed in `video-editor/THIRD_PARTY.md`. See [VIDEO_EDITOR.md](../07_VIDEO_EDITOR/VIDEO_EDITOR.md)
 - services/: provider integrations, assistant orchestration, multi-engine web search (`services/webSearchEngines/`), content-reach channels (`services/reachChannels/youtube/`, `services/reachChannels/twitter/`, `services/rssService.ts`, `services/githubService.ts`, `services/exaService.ts`, `services/redditService.ts`), and non-UI logic
 - contexts/: shared React state providers
 - utils/: helpers, storage, event bus, parsers, and integrity logic

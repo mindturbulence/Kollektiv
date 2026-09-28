@@ -115,6 +115,7 @@ The engineering contract for this repository is explicit:
 - **wasm binaries ship via `viteStaticCopy`** into dist and are fetched from the origin (magick) or lazily via cached blob URLs (ffmpeg ~32MB core, single-thread only — GH Pages cannot serve COOP/COEP headers).
 - **Pairing warning:** magick-wasm ships two binaries — `./magick.wasm` (x86 wasm, 122 imports) and `./x64/magick.wasm` (158 imports). The ESM glue Vite bundles matches the **x86** binary; copying the x64 one fails at runtime with `LinkError: Import #122 "a" "ob": function import requires a callable`. Verify wasm exports/imports pair with the bundled glue via `WebAssembly.Module.imports()` before bumping the package.
 - **ffmpeg core variant warning:** @ffmpeg/ffmpeg 0.12 spawns a **module-type** worker, so its loader cannot use `importScripts` and pulls the core via dynamic `import()` — the core must be the **ESM** build (`dist/esm/ffmpeg-core.js`). The UMD build has no default export and fails with `ERROR_IMPORT_FAILURE` ("failed to import ffmpeg-core.js"), an error message that does not name the real cause. Verified live by `e2e/converter-av.verify.spec.ts` (opt-in via `CONVERTER_AV_VERIFY=1`; excluded from CI because it downloads nothing but does transcode real audio).
+- **ffmpeg core codec warning (`@ffmpeg/core` 0.12.10):** `libvpx-vp9`, with any input, and `libopus` with stereo input abort with `RuntimeError: memory access out of bounds`. WebM therefore uses **VP8 + Vorbis** (`libvpx` + `libvorbis`) in both the Converter target and the video editor's `encodeFrames` fallback. Unit tests mock ffmpeg, so verify any codec-arg change with a real run. The quickest real run executes the core in Node; the recipe is in [VIDEO_EDITOR.md § Export](../07_VIDEO_EDITOR/VIDEO_EDITOR.md#export). The worker also serves `kind:'encodeFrames'` jobs (JPEG frames + WAV → mp4/webm) from the same serial queue and watchdog.
 
 ## Contribution Workflow
 
@@ -312,10 +313,21 @@ Driven by a five-axis review (design system, motion, visual walk, tech stack, im
 - [x] **Tech:** entry chunk 4.1 MB → 2.6 MB (PrismLight, lazy voice services); promise-misuse ESLint errors fixed; CI runs on `main` + `development` with a Playwright job (full e2e green); unused `helmet`/`cors`/`vfile` removed; `llmService` ↔ `providerFallback` import cycle removed.
 - [ ] **Open:** see the plan's remaining-work table (E6 dirty-rect history, ~37 overlays still to migrate to `Modal`, ESLint backlog of 300 errors, TerminalText reveal delays, motion.md leftovers, light-theme hard-coded colours, CSP enforcement).
 
+### Phase 9 — Video Editor (2026-09-26 → 28)
+
+Research, Jev feature triage and phase status are in `docs/plans/2026-09-26-video-editor-plan.md`. The subsystem is described in [VIDEO_EDITOR.md](../07_VIDEO_EDITOR/VIDEO_EDITOR.md).
+
+- [x] **Approach from measurement:** neither openreel nor FreeCut was adopted wholesale. Their minimal cores pulled in 81k and 159k lines, and both need `COEP: require-corp`. A thin editor core with a shared contract (`video-editor/core/types.ts`) instead takes small MIT leaf ports, each with a provenance header, listed in `video-editor/THIRD_PARTY.md`.
+- [x] **v1:** timeline, undoable actions (a property-tested inverse for every action), mediabunny decode, Canvas2D preview, WebCodecs export, lazy route, Assets Manager bridge, and IndexedDB autosave with Resume. Built by 10 parallel agents on disjoint paths.
+- [x] **v2:** keyframes, slip and slide, color grading and chroma key (CPU pixel path shared by both renderers), WebGPU scopes, SRT captions, a project list with reference-counted media GC, and FreeCut's GPU effects and transitions behind `createPreferredRenderer`.
+- [x] **Phase 0 criteria verified in a browser:** export without COOP/COEP; an ffmpeg.wasm fallback for MP4 and WebM; zero third-party requests caused by the editor.
+- [x] **Bugs caught by real runs, not unit tests:** concurrent frame requests leaked mediabunny decoders; autosave dropped the last edit on exit and marked mid-save edits as saved; the Volume slider baked fades into the base level; and the ffmpeg.wasm VP9 and stereo Opus crash broke the Converter's WebM target too.
+- [ ] **Open:** make WebGPU the preview renderer once it has been checked on a real GPU. `VideoPlayerOverlay` autoplaying YouTube on boot sits outside the editor but was surfaced by its network audit.
+
 ### Definition of "Ready to Think About Money"
 
 1. A stranger on a fresh machine reaches a working dashboard in under 3 minutes without help.
-2. `pnpm lint` clean, `pnpm test` green (1549 tests as of 2026-09-26 — this number drifts with the codebase, re-run rather than trust it), E2E smoke test passes.
+2. `pnpm lint` clean, `pnpm test` green (1898 tests as of 2026-09-28 — this number drifts with the codebase, re-run rather than trust it), E2E smoke test passes.
 3. No assistant tool can perform a destructive external action without explicit confirmation. **(Note: ISSUE-22 revert means send_gmail/delete_gmail have no confirmation gate — user decision)**
 4. The generate→ingest→compare loop works end-to-end with at least one provider. ✅
 5. Model registry lives in data (`modelProfiles.json`). ✅
@@ -339,6 +351,7 @@ Each `ActiveTab` maps to a top-level React component:
 | `color_palette_extractor` | `ColorPaletteExtractor` | Extract color palette from image + AI mood/color naming. |
 | `resizer` | `ImageResizer` | Image resizing + Topaz Gigapixel upscale via server bridge. |
 | `video_to_frames` | `VideoToFrames` | Frame extraction from video uploads with frame rate and resolution controls. |
+| `video_editor` | `video-editor/ui/VideoEditorPage` (lazy) | Multi-track video editor: timeline editing, keyframes, color and chroma key, SRT captions, autosaved projects, and MP4/WebM export (WebCodecs, or an ffmpeg.wasm fallback). Opened from the nav or from the Assets Manager ("Open in Video Editor"). Added 2026-09-27; see [VIDEO_EDITOR.md](../07_VIDEO_EDITOR/VIDEO_EDITOR.md). |
 | `lora_editor` | `loraEditor/LoraEditorPage` | LoRA metadata/tag editor sub-app with safetensors parsing, hashing, online lookup, tag frequency analysis, and metadata editing. |
 | `batch_runner` | `BatchRunnerPage` | Run one capability (refine, suggest tags, describe image) across many prompts/gallery items sequentially, with progress, cancel, and a per-item report. Added 2026-07-28. |
 | `comfy_studio` | `LocalGenerationStudioPage` | Dedicated ComfyUI generation page — checkpoint picker, prompt/negative-prompt/width/height/steps/cfg/sampler/seed controls, Generate/Cancel, and result preview with gallery ingestion. Added 2026-07-29. img2img reference-image picker + denoising-strength slider added 2026-08-06 (Phase 7, WP11). |
